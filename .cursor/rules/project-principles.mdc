@@ -1,0 +1,15 @@
+---
+description: Core stack, pace, TDD, and security defaults for Better LSAT QBank
+alwaysApply: true
+---
+
+# Project principles
+
+- **Package manager**: Use **pnpm** for all JS installs and scripts (`pnpm install`, `pnpm --filter web …`). Do not introduce npm/yarn lockfiles or `npm install` in docs or CI unless migrating off pnpm.
+- **Product**: LSAT prep platform (7Sage-like) with **LawHub Provider / LSAC** vendor APIs (OAuth client credentials server-side only).
+- **Stack**: **React** (Vite) + **Supabase** (Postgres, Auth, Edge Functions) + **shadcn/ui** for UI.
+- **Pace**: Fast iteration; **backend first, UI later** unless the task is explicitly UI-only.
+- **Business logic**: **Edge Functions only**—domain rules, authoritative validation, orchestration (including LawHub), and mutating workflows live in `supabase/functions/**` (especially `*.service.ts` / `*.repository.ts`). The frontend is a thin client: render state, capture input, call `lib/api/*`; no business rules in components or hooks beyond trivial UX (e.g. trim display, loading flags).
+- **Coupling**: Keep UI **decoupled** from persistence—call backend through a **thin API layer** (e.g. `supabase.functions.invoke` wrappers in `web/src/lib/api/`). Edge function internals should stay easy to refactor (controller → service → repository → mapper).
+- **TDD**: Prefer **tests first** for new behavior—**Vitest** in `web/`, **`deno test`** under `supabase/functions/`. Mock **fetch**, Supabase clients, and `invoke` at boundaries.
+- **Security**: Start with **simple, broad** RLS (e.g. owner rows) and tighten before production. **Never** put LSAC client secrets or LawHub tokens in the browser or `VITE_*` env.

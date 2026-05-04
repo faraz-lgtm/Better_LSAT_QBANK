@@ -1,0 +1,11 @@
+{
+  "name": "better-lsat-qbank",
+  "private": true,
+  "packageManager": "pnpm@9.15.9",
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "dev:prod": "pnpm --filter web dev:prod",
+    "test:edge": "deno test supabase/functions --allow-env",
+    "import:api-json": "deno run --allow-read --allow-env scripts/import_api_json.ts"
+  }
+}

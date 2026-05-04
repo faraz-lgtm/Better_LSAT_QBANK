@@ -1,0 +1,18 @@
+---
+description: Layered Edge Function modules and shared server code
+globs: supabase/functions/**/*.ts
+alwaysApply: false
+---
+
+# Supabase Edge Functions
+
+- **Business logic belongs here**—not in the React app. Put domain rules, workflow branching, LawHub calls, and authoritative validation in **`*.service.ts`** (orchestration) and **`*.repository.ts`** (persistence). The frontend should only invoke functions and render results.
+- One **feature folder** per function (e.g. `supabase/functions/users/`).
+- **Layers** (same basename prefix):
+  - `*.controller.ts` — HTTP: method/body, status codes, CORS.
+  - `*.service.ts` — Orchestration; call LawHub when needed; no raw SQL.
+  - `*.repository.ts` — Supabase **service role** DB access only.
+  - `*.mapper.ts` — Pure mapping LawHub/LSAC JSON ↔ app types (unit-test heavily).
+- **`index.ts`** — Thin entry: `Deno.serve` → controller only.
+- **Shared** HTTP/token helpers → `supabase/functions/_shared/` (inject `fetch` for tests).
+- **Secrets**: LSAC + service role keys via **Supabase secrets** / local env—never commit.
