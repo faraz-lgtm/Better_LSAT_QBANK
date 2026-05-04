@@ -1,5 +1,7 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 
+import type { PrepLessonType } from '../_shared/prep-lesson-type.ts'
+
 export type PrepCourseRow = {
   id: string
   slug: string
@@ -15,7 +17,7 @@ export type PrepLessonRow = {
   course_id: string
   slug: string
   title: string
-  lesson_type: 'video' | 'text'
+  lesson_type: PrepLessonType
   sort_order: number
   summary: string | null
   duration_minutes: number | null
@@ -140,7 +142,7 @@ export function createPrepCourseRepository(client: SupabaseClient) {
       courseId: string
       slug: string
       title: string
-      lessonType: 'video' | 'text'
+      lessonType: PrepLessonType
       sortOrder: number
       summary: string | null
       durationMinutes: number | null
@@ -192,7 +194,7 @@ export function createPrepCourseRepository(client: SupabaseClient) {
     async updateLesson(input: {
       lessonId: string
       title?: string
-      lessonType?: 'video' | 'text'
+      lessonType?: PrepLessonType
       sortOrder?: number
       summary?: string | null
       durationMinutes?: number | null

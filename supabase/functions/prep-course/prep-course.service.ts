@@ -1,3 +1,4 @@
+import { isPrepLessonType, type PrepLessonType } from '../_shared/prep-lesson-type.ts'
 import type { PrepCourseRepository } from './prep-course.repository.ts'
 
 export class AuthorizationError extends Error {
@@ -53,20 +54,15 @@ export function createPrepCourseService(deps: { repository: PrepCourseRepository
     }
   }
 
-  function validateLessonPayload(input: {
-    lessonType: 'video' | 'text'
-    videoUrl?: string | null
+  function validateLessonCreatePayload(input: {
+    lessonType: PrepLessonType
     textContent?: string | null
   }): void {
-    if (input.lessonType === 'video') {
-      if (!input.videoUrl || !input.videoUrl.trim()) {
-        throw new Error('videoUrl is required for video lessons')
-      }
+    if (!isPrepLessonType(input.lessonType)) {
+      throw new Error('lessonType is invalid')
     }
-    if (input.lessonType === 'text') {
-      if (!input.textContent || !input.textContent.trim()) {
-        throw new Error('textContent is required for text lessons')
-      }
+    if (!input.textContent?.trim()) {
+      throw new Error('textContent is required')
     }
   }
 
@@ -116,7 +112,7 @@ export function createPrepCourseService(deps: { repository: PrepCourseRepository
         courseId: string
         slug: string
         title: string
-        lessonType: 'video' | 'text'
+        lessonType: PrepLessonType
         sortOrder: number
         summary?: string | null
         durationMinutes?: number | null
@@ -130,7 +126,7 @@ export function createPrepCourseService(deps: { repository: PrepCourseRepository
       if (!Number.isInteger(input.sortOrder) || input.sortOrder <= 0) {
         throw new Error('sortOrder must be a positive integer')
       }
-      validateLessonPayload(input)
+      validateLessonCreatePayload(input)
       return await deps.repository.addLesson({
         courseId: input.courseId,
         slug: normalizeSlug(input.slug),
@@ -164,7 +160,7 @@ export function createPrepCourseService(deps: { repository: PrepCourseRepository
       input: {
         lessonId: string
         title?: string
-        lessonType?: 'video' | 'text'
+        lessonType?: PrepLessonType
         sortOrder?: number
         summary?: string | null
         durationMinutes?: number | null
@@ -178,12 +174,11 @@ export function createPrepCourseService(deps: { repository: PrepCourseRepository
       if (input.sortOrder !== undefined && (!Number.isInteger(input.sortOrder) || input.sortOrder <= 0)) {
         throw new Error('sortOrder must be a positive integer')
       }
-      if (input.lessonType) {
-        validateLessonPayload({
-          lessonType: input.lessonType,
-          videoUrl: input.videoUrl,
-          textContent: input.textContent,
-        })
+      if (input.lessonType !== undefined && !isPrepLessonType(input.lessonType)) {
+        throw new Error('lessonType is invalid')
+      }
+      if (input.textContent !== undefined && !(input.textContent ?? '').trim()) {
+        throw new Error('textContent cannot be empty')
       }
       return await deps.repository.updateLesson({
         lessonId: input.lessonId,

@@ -6,6 +6,6 @@
     "dev": "pnpm --filter web dev",
     "dev:prod": "pnpm --filter web dev:prod",
     "test:edge": "deno test supabase/functions --allow-env",
-    "import:api-json": "deno run --allow-read --allow-env scripts/import_api_json.ts"
+    "import:api-json": "deno run --allow-read --allow-env --allow-net scripts/import_api_json.ts"
   }
 }

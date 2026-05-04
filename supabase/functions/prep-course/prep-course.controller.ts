@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { isPrepLessonType } from '../_shared/prep-lesson-type.ts'
 import { createPrepCourseRepository, createServiceRoleClient } from './prep-course.repository.ts'
 import { AuthorizationError, createPrepCourseService, EntitlementError } from './prep-course.service.ts'
 
@@ -120,8 +121,13 @@ export async function handlePrepCourseRequest(req: Request): Promise<Response> {
           { status: 400 },
         )
       }
-      if (lessonType !== 'video' && lessonType !== 'text') {
-        return json({ error: 'lessonType must be video or text' }, { status: 400 })
+      if (!isPrepLessonType(lessonType)) {
+        return json(
+          {
+            error: 'lessonType must be one of: video_text, active_drill, adaptive_drill, rep_work',
+          },
+          { status: 400 },
+        )
       }
 
       const lesson = await service.adminAddLesson(user.id, {
@@ -155,8 +161,13 @@ export async function handlePrepCourseRequest(req: Request): Promise<Response> {
       const lessonId = readString(body, 'lessonId')
       if (!lessonId) return json({ error: 'lessonId is required' }, { status: 400 })
       const lessonType = readString(body, 'lessonType')
-      if (lessonType !== undefined && lessonType !== 'video' && lessonType !== 'text') {
-        return json({ error: 'lessonType must be video or text' }, { status: 400 })
+      if (lessonType !== undefined && !isPrepLessonType(lessonType)) {
+        return json(
+          {
+            error: 'lessonType must be one of: video_text, active_drill, adaptive_drill, rep_work',
+          },
+          { status: 400 },
+        )
       }
       const lesson = await service.adminUpdateLesson(user.id, {
         lessonId,

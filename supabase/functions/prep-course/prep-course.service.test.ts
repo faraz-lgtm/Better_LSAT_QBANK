@@ -1,4 +1,5 @@
 import { assertEquals, assertRejects } from 'jsr:@std/assert@1'
+import type { PrepLessonType } from '../_shared/prep-lesson-type.ts'
 import type { PrepCourseRow, PrepLessonRow, ProfileRoleRow } from './prep-course.repository.ts'
 import { createPrepCourseService } from './prep-course.service.ts'
 
@@ -19,7 +20,7 @@ function mockRepo(
       courseId: string
       slug: string
       title: string
-      lessonType: 'video' | 'text'
+      lessonType: PrepLessonType
       sortOrder: number
       summary: string | null
       durationMinutes: number | null
@@ -36,7 +37,7 @@ function mockRepo(
     updateLesson: (input: {
       lessonId: string
       title?: string
-      lessonType?: 'video' | 'text'
+      lessonType?: PrepLessonType
       sortOrder?: number
       summary?: string | null
       durationMinutes?: number | null
@@ -66,12 +67,12 @@ function mockRepo(
     course_id: 'course-1',
     slug: 'lesson-1',
     title: 'Lesson 1',
-    lesson_type: 'video',
+    lesson_type: 'video_text',
     sort_order: 1,
     summary: null,
     duration_minutes: 3,
     video_url: 'https://example.com/video',
-    text_content: null,
+    text_content: '<p>Lesson body</p>',
     is_published: true,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
@@ -162,13 +163,14 @@ Deno.test('prep-course service validates lesson type payload', async () => {
     () =>
       service.adminAddLesson('admin-1', {
         courseId: 'course-1',
-        slug: 'video-without-url',
-        title: 'Missing URL',
-        lessonType: 'video',
+        slug: 'lesson-without-body',
+        title: 'Missing body',
+        lessonType: 'video_text',
         sortOrder: 1,
+        textContent: null,
       }),
     Error,
-    'videoUrl is required',
+    'textContent is required',
   )
 })
 

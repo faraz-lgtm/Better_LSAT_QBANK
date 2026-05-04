@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2"
+import { coercePrepLessonType } from "../_shared/prep-lesson-type.ts"
 import { createAdminRepository, createServiceRoleClient } from "./admin.repository.ts"
 import { AuthorizationError, createAdminService } from "./admin.service.ts"
 
@@ -133,6 +134,21 @@ export async function handleAdminRequest(req: Request): Promise<Response> {
       if (!questionId || !data) return json({ error: "questionId and data are required" }, { status: 400 })
       return json({ row: await service.updateQuestionMeta(user.id, questionId, data) })
     }
+    if (action === "admin-reserve-question-video-upload") {
+      const questionId = readString(body, "questionId")
+      const fileExtension = readString(body, "fileExtension")
+      if (!questionId || !fileExtension) {
+        return json({ error: "questionId and fileExtension are required" }, { status: 400 })
+      }
+      try {
+        return json(await service.reserveQuestionVideoUpload(user.id, questionId, fileExtension))
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Reserve failed"
+        if (msg === "Question not found") return json({ error: msg }, { status: 404 })
+        if (msg.startsWith("Invalid file extension")) return json({ error: msg }, { status: 400 })
+        throw e
+      }
+    }
     if (action === "admin-dashboard") {
       return json(await service.getDashboard(user.id))
     }
@@ -182,7 +198,7 @@ export async function handleAdminRequest(req: Request): Promise<Response> {
           slug,
           summary: readString(body, "summary"),
           durationMinutes: readNumber(body, "durationMinutes"),
-          lessonType: (readString(body, "lessonType") as "video" | "text" | undefined) ?? "text",
+          lessonType: coercePrepLessonType(readString(body, "lessonType")),
           videoUrl: readString(body, "videoUrl"),
           textContent: readString(body, "textContent"),
           isPublished: readBoolean(body, "isPublished"),

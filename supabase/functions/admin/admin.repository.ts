@@ -1,5 +1,7 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2"
 
+import type { PrepLessonType } from "../_shared/prep-lesson-type.ts"
+
 type Json = Record<string, unknown>
 
 export type QuestionTypeRow = {
@@ -55,6 +57,14 @@ export function createServiceRoleClient(): SupabaseClient {
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
   if (!url || !key) throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
   return createClient(url, key)
+}
+
+/** e.g. LSAC094 → 94; used so PrepTests sort by PT number (highest first), not string collation quirks. */
+function lsacPrepTestOrdinal(moduleId: string): number | null {
+  const m = /^LSAC(\d+)$/i.exec(moduleId.trim())
+  if (!m) return null
+  const n = Number(m[1])
+  return Number.isFinite(n) ? n : null
 }
 
 export function createAdminRepository(client: SupabaseClient) {
@@ -374,7 +384,12 @@ export function createAdminRepository(client: SupabaseClient) {
       })
 
       normalizedRows.sort((a, b) => {
-        const first = collator.compare(a.module_id, b.module_id)
+        const na = lsacPrepTestOrdinal(a.module_id)
+        const nb = lsacPrepTestOrdinal(b.module_id)
+        if (na !== null && nb !== null && na !== nb) return nb - na
+        if (na !== null && nb === null) return -1
+        if (na === null && nb !== null) return 1
+        const first = collator.compare(b.module_id, a.module_id)
         if (first !== 0) return first
         return collator.compare(a.title ?? "", b.title ?? "")
       })
@@ -736,6 +751,15 @@ export function createAdminRepository(client: SupabaseClient) {
       return { ...data, sectionOptions }
     },
 
+    async adminQuestionExists(questionId: string): Promise<boolean> {
+      const { count, error } = await client
+        .from("admin_questions")
+        .select("id", { count: "exact", head: true })
+        .eq("id", questionId)
+      if (error) throw error
+      return (count ?? 0) > 0
+    },
+
     async getPassageById(passageId: string): Promise<{ id: string; section_id: string } | null> {
       const { data, error } = await client.from("admin_passages").select("id,section_id").eq("id", passageId).maybeSingle()
       if (error) throw error
@@ -1095,7 +1119,7 @@ export function createAdminRepository(client: SupabaseClient) {
       title: string
       summary?: string | null
       durationMinutes?: number | null
-      lessonType?: "video" | "text"
+      lessonType?: PrepLessonType
       videoUrl?: string | null
       textContent?: string | null
       isPublished?: boolean
@@ -1114,7 +1138,7 @@ export function createAdminRepository(client: SupabaseClient) {
           title: input.title,
           summary: input.summary ?? null,
           duration_minutes: input.durationMinutes ?? null,
-          lesson_type: input.lessonType ?? "text",
+          lesson_type: input.lessonType ?? "video_text",
           video_url: input.videoUrl ?? null,
           text_content: input.textContent ?? "Draft lesson content",
           is_published: input.isPublished ?? false,
@@ -1154,6 +1178,22 @@ export function createAdminRepository(client: SupabaseClient) {
         if (error) throw error
       }
       return this.listLessons(courseId)
+    },
+
+    async getLessonLessonType(lessonId: string): Promise<string | null> {
+      const { data, error } = await client.from("prep_lessons").select("lesson_type").eq("id", lessonId).maybeSingle()
+      if (error) throw error
+      const row = data as { lesson_type?: string } | null
+      return row?.lesson_type ? String(row.lesson_type) : null
+    },
+
+    async countLessonQuestions(lessonId: string): Promise<number> {
+      const { count, error } = await client
+        .from("lesson_questions")
+        .select("id", { count: "exact", head: true })
+        .eq("lesson_id", lessonId)
+      if (error) throw error
+      return count ?? 0
     },
 
     async resolveQuestionIdFromReference(input: string): Promise<string | null> {

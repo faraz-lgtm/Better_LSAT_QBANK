@@ -1,3 +1,6 @@
+import { browserFacingSupabaseApiBaseUrl } from "../_shared/browser-facing-supabase-url.ts"
+import { QUESTION_EXPLANATION_VIDEOS_BUCKET } from "../_shared/question-explanation-videos.ts"
+import { coercePrepLessonType, isPrepLessonType } from "../_shared/prep-lesson-type.ts"
 import type { AdminRepository } from "./admin.repository.ts"
 
 export class AuthorizationError extends Error {
@@ -136,6 +139,28 @@ export function createAdminService(deps: { repository: AdminRepository }) {
       return deps.repository.updateQuestionMeta(questionId, patch)
     },
 
+    async reserveQuestionVideoUpload(userId: string, questionId: string, fileExtension: string) {
+      await requireAdmin(userId)
+      const ext = fileExtension.replace(/^\./, "").trim().toLowerCase()
+      const allowed = new Set(["webm", "mp4", "mov", "m4v", "mkv"])
+      if (!allowed.has(ext)) {
+        throw new Error("Invalid file extension; use webm, mp4, mov, m4v, or mkv")
+      }
+      const exists = await deps.repository.adminQuestionExists(questionId)
+      if (!exists) throw new Error("Question not found")
+      const path = `${questionId}/${crypto.randomUUID()}.${ext}`
+      const supabaseUrl = browserFacingSupabaseApiBaseUrl()
+      if (!supabaseUrl) throw new Error("SUPABASE_URL is not configured")
+      const encodedPath = path.split("/").map(encodeURIComponent).join("/")
+      const publicUrl =
+        `${supabaseUrl}/storage/v1/object/public/${QUESTION_EXPLANATION_VIDEOS_BUCKET}/${encodedPath}`
+      return {
+        bucket: QUESTION_EXPLANATION_VIDEOS_BUCKET,
+        path,
+        publicUrl,
+      }
+    },
+
     async getDashboard(userId: string) {
       await requireAdmin(userId)
       const { rows: prepTests } = await deps.repository.listPrepTests()
@@ -200,7 +225,7 @@ export function createAdminService(deps: { repository: AdminRepository }) {
         slug: string
         summary?: string
         durationMinutes?: number
-        lessonType?: "video" | "text"
+        lessonType?: string
         videoUrl?: string
         textContent?: string
         isPublished?: boolean
@@ -213,7 +238,7 @@ export function createAdminService(deps: { repository: AdminRepository }) {
         slug: input.slug.trim(),
         summary: input.summary?.trim() || null,
         durationMinutes: typeof input.durationMinutes === "number" ? input.durationMinutes : null,
-        lessonType: input.lessonType ?? "text",
+        lessonType: coercePrepLessonType(input.lessonType),
         videoUrl: input.videoUrl?.trim() || null,
         textContent: input.textContent?.trim() || "Draft lesson content",
         isPublished: input.isPublished,
@@ -229,7 +254,12 @@ export function createAdminService(deps: { repository: AdminRepository }) {
       if (input.summary === null) patch.summary = null
       if (typeof input.durationMinutes === "number") patch.duration_minutes = input.durationMinutes
       if (input.durationMinutes === null) patch.duration_minutes = null
-      if (typeof input.lessonType === "string") patch.lesson_type = input.lessonType
+      if (typeof input.lessonType === "string") {
+        if (!isPrepLessonType(input.lessonType)) {
+          throw new Error("Invalid lessonType")
+        }
+        patch.lesson_type = input.lessonType
+      }
       if (typeof input.videoUrl === "string") patch.video_url = input.videoUrl.trim()
       if (input.videoUrl === null) patch.video_url = null
       if (typeof input.textContent === "string") patch.text_content = input.textContent
@@ -249,6 +279,18 @@ export function createAdminService(deps: { repository: AdminRepository }) {
 
     async linkQuestionToLesson(userId: string, lessonId: string, questionRef: string, sortOrder?: number) {
       await requireAdmin(userId)
+      const lessonType = await deps.repository.getLessonLessonType(lessonId)
+      if (!lessonType) throw new Error("Lesson not found")
+      if (lessonType === "video_text" || lessonType === "rep_work") {
+        throw new Error("This lesson type does not support linking PrepTest questions.")
+      }
+      const linkedCount = await deps.repository.countLessonQuestions(lessonId)
+      if (lessonType === "active_drill" && linkedCount >= 1) {
+        throw new Error("Active drill lessons can only include one linked question.")
+      }
+      if (lessonType === "adaptive_drill" && linkedCount >= 5) {
+        throw new Error("Adaptive drill lessons can include at most five linked questions.")
+      }
       const questionId = await deps.repository.resolveQuestionIdFromReference(questionRef)
       if (!questionId) {
         throw new Error("Question not found. Use UUID or format: PT 92 · S2 · Q4")
