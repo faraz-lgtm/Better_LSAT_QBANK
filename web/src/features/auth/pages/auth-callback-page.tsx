@@ -36,6 +36,7 @@ function AuthCallbackPage() {
       try {
         const url = new URL(window.location.href)
         const code = url.searchParams.get("code")
+        const flowType = url.searchParams.get("type")
         const authError = url.searchParams.get("error_description") ?? url.searchParams.get("error")
 
         if (authError) throw new Error(authError)
@@ -44,6 +45,11 @@ function AuthCallbackPage() {
         const hasSession = await authApi.hasSession()
         if (!isActive) return
         if (!hasSession) throw new Error("Auth session not found. Please request a new login link.")
+
+        if (flowType === "recovery") {
+          navigate("/reset-password", { replace: true })
+          return
+        }
 
         const profile = await usersApi.getMyProfile()
         navigate(getPostAuthDestination(profile), { replace: true })

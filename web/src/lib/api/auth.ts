@@ -29,6 +29,13 @@ export function createAuthApi(supabase: SupabaseClient) {
       if (error) throw error
     },
 
+    async sendPasswordResetEmail(email: string, redirectTo: string): Promise<void> {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo,
+      })
+      if (error) throw error
+    },
+
     async exchangeCodeForSession(code: string): Promise<void> {
       const { error } = await supabase.auth.exchangeCodeForSession(code)
       if (error) throw error
@@ -55,4 +62,8 @@ export function createAuthApi(supabase: SupabaseClient) {
 
 export function getAuthCallbackUrl() {
   return `${window.location.origin}/auth/callback`
+}
+
+export function getPasswordResetCallbackUrl() {
+  return `${window.location.origin}/auth/callback?type=recovery`
 }

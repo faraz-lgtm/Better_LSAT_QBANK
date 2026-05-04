@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -157,9 +157,9 @@ function LoginPage() {
                 <Checkbox size="sm" />
                 Keep me login
               </label>
-              <button type="button" className="figma-text-sm figma-track-sm font-semibold text-[#0d47a1]">
+              <Link to="/forgot-password" className="figma-text-sm figma-track-sm font-semibold text-[#0d47a1]">
                 Forgot Password?
-              </button>
+              </Link>
             </div>
             <Button
               type="button"

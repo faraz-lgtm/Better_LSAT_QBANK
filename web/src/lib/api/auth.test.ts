@@ -63,4 +63,29 @@ describe("createAuthApi", () => {
 
     expect(updateUser).toHaveBeenCalledWith({ password: "super-secret" })
   })
+
+  it("sendPasswordResetEmail calls resetPasswordForEmail with redirect", async () => {
+    const resetPasswordForEmail = vi.fn().mockResolvedValue({ error: null })
+    const api = createAuthApi(mockSupabase({ resetPasswordForEmail }))
+
+    await api.sendPasswordResetEmail(
+      "user@example.com",
+      "http://localhost:5173/auth/callback?type=recovery",
+    )
+
+    expect(resetPasswordForEmail).toHaveBeenCalledWith("user@example.com", {
+      redirectTo: "http://localhost:5173/auth/callback?type=recovery",
+    })
+  })
+
+  it("sendPasswordResetEmail surfaces supabase error", async () => {
+    const resetPasswordForEmail = vi
+      .fn()
+      .mockResolvedValue({ error: new Error("rate limit") })
+    const api = createAuthApi(mockSupabase({ resetPasswordForEmail }))
+
+    await expect(
+      api.sendPasswordResetEmail("user@example.com", "http://localhost/cb"),
+    ).rejects.toThrow("rate limit")
+  })
 })

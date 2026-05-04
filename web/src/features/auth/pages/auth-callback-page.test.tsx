@@ -45,4 +45,27 @@ describe("AuthCallbackPage", () => {
     expect(await screen.findByText(/onboarding view/i)).toBeInTheDocument()
     expect(authMock.exchangeCodeForSession).toHaveBeenCalledWith("test-code")
   })
+
+  it("redirects to /reset-password when callback type is recovery", async () => {
+    authMock.exchangeCodeForSession.mockResolvedValue({ error: null })
+    authMock.getSession.mockResolvedValue({
+      data: { session: { user: { id: "u1" } } },
+      error: null,
+    })
+    window.history.pushState({}, "", "/auth/callback?code=test-code&type=recovery")
+
+    render(
+      <MemoryRouter initialEntries={["/auth/callback?code=test-code&type=recovery"]}>
+        <Routes>
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="/reset-password" element={<p>Reset password view</p>} />
+          <Route path="/onboarding" element={<p>Onboarding view</p>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText(/reset password view/i)).toBeInTheDocument()
+    expect(authMock.exchangeCodeForSession).toHaveBeenCalledWith("test-code")
+    expect(invokeMock).not.toHaveBeenCalled()
+  })
 })

@@ -2,6 +2,32 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
+## Supabase Auth URL configuration (production)
+
+Magic links, OAuth callbacks, and password-reset emails are constructed from the
+**Site URL** and **Redirect URLs allow-list** configured in the **hosted** Supabase
+project (Authentication -> URL Configuration). The local `supabase/config.toml`
+governs only the local stack. If production emails point at `localhost`, the
+Dashboard config is the source of truth that needs fixing.
+
+For project `ymitqvbxrauychrkkhqp` set:
+
+- **Site URL**: `https://better-lsat-qbank.vercel.app`
+- **Redirect URLs** (keep localhost entries for dev):
+  - `https://better-lsat-qbank.vercel.app/auth/callback`
+  - `https://better-lsat-qbank.vercel.app/auth/callback?type=recovery`
+  - `https://*-better-lsat-qbank-*.vercel.app/auth/callback` (Vercel preview deploys)
+  - `http://localhost:5173/auth/callback`
+  - `http://127.0.0.1:5173/auth/callback`
+  - `http://localhost:5173/auth/callback?type=recovery`
+  - `http://127.0.0.1:5173/auth/callback?type=recovery`
+
+The frontend always passes the current-origin callback via
+`getAuthCallbackUrl()` / `getPasswordResetCallbackUrl()` in
+`src/lib/api/auth.ts`, so once the allow-list is correct, links sent from
+production resolve to production and links sent from localhost resolve to
+localhost.
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
