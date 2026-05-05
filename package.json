@@ -6,6 +6,13 @@
     "dev": "pnpm --filter web dev",
     "dev:prod": "pnpm --filter web dev:prod",
     "test:edge": "deno test supabase/functions --allow-env",
-    "import:api-json": "deno run --allow-read --allow-env --allow-net scripts/import_api_json.ts"
+    "import:api-json": "deno run --allow-read --allow-env --allow-net scripts/import_api_json.ts",
+    "postinstall": "simple-git-hooks"
+  },
+  "devDependencies": {
+    "simple-git-hooks": "^2.13.1"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm --filter web exec tsc -b"
   }
 }

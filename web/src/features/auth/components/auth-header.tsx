@@ -101,7 +101,7 @@ function AuthHeader({
     }
   }, [])
 
-  const brandHref = variant === "app" ? "/app" : "/login"
+  const brandHref = "/login"
 
   return (
     <header className="sticky top-0 z-20 border-b border-[#dfe1e7] bg-[#f5f9ff]/95 backdrop-blur">
