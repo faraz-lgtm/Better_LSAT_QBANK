@@ -1292,7 +1292,9 @@ export function createAdminRepository(client: SupabaseClient) {
     async listLessonQuestions(lessonId: string) {
       const { data, error } = await client
         .from("lesson_questions")
-        .select("id,sort_order,admin_questions(id,question_number,stem_text,source,source_label,admin_sections(section_number,admin_prep_tests(title)))")
+        .select(
+          "id,sort_order,admin_questions(id,question_number,stem_text,source,source_label,admin_sections(section_number,section_type,title,admin_prep_tests(module_id,title)))",
+        )
         .eq("lesson_id", lessonId)
         .order("sort_order")
       if (error) throw error

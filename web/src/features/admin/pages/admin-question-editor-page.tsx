@@ -443,7 +443,7 @@ function AdminQuestionEditorPage() {
           <p className="text-xs text-[var(--text2)]">
             {videoUrl ? (
               <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-[var(--accent)] underline">
-                View video
+                Video link
               </a>
             ) : (
               "No video linked"

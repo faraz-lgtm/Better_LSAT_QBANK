@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogRoot, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { fileExtensionForVideoUpload } from "@/features/admin/lib/video-upload-helpers"
-import { videoUrlSummary } from "@/features/admin/lib/video-url-summary"
 import { createAdminApi } from "@/lib/api/admin"
 
 type AdminApi = ReturnType<typeof createAdminApi>
@@ -40,6 +39,7 @@ function VideoExplanationModal({
   const fileRef = useRef<HTMLInputElement>(null)
 
   const recordPath = `/admin/preptests/${prepTestId}/sections/${sectionId}/questions/${questionId}/record`
+  const currentUrl = currentVideoUrl.trim()
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
@@ -95,7 +95,16 @@ function VideoExplanationModal({
             Video explanation
           </DialogTitle>
           <DialogDescription className="sr-only">Add a video by pasting a URL, uploading a file, or recording in a new tab.</DialogDescription>
-          <p className="text-muted-foreground text-sm">Current: {videoUrlSummary(currentVideoUrl)}</p>
+          <div className="text-muted-foreground text-sm">
+            Current:{" "}
+            {currentUrl ? (
+              <a href={currentUrl} target="_blank" rel="noopener noreferrer" className="font-medium underline">
+                Video link
+              </a>
+            ) : (
+              "No video linked"
+            )}
+          </div>
         </DialogHeader>
 
         <div className="flex gap-1 rounded-lg border border-border p-1">

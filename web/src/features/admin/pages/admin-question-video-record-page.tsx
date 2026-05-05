@@ -15,50 +15,14 @@ import type {
   ShapeAnnotation,
   TextAnnotation,
 } from "@/features/admin/lib/annotations/types"
+import {
+  buildQuestionPreviewLeftHtml,
+  choicesToPreviewRows,
+  firstOrSelf,
+} from "@/features/admin/lib/question-content-preview"
 import { sanitizeAdminHtml } from "@/features/admin/lib/sanitize-admin-html"
 import { useAnnotationState } from "@/features/admin/hooks/use-annotation-state"
 import { useAdminApi } from "@/features/admin/use-admin-api"
-
-function firstOrSelf<T extends Record<string, unknown>>(v: T | T[] | null | undefined): T | null {
-  if (v == null) return null
-  return Array.isArray(v) ? (v[0] ?? null) : v
-}
-
-function buildLeftHtml(question: Record<string, unknown>): string {
-  const sec = firstOrSelf(question.admin_sections as Record<string, unknown> | Record<string, unknown>[] | undefined)
-  const st = String(sec?.section_type ?? "").toUpperCase()
-  if (st === "RC") {
-    const passage = firstOrSelf(sec?.admin_passages as Record<string, unknown> | Record<string, unknown>[] | undefined)
-    return sanitizeAdminHtml(passage?.content)
-  }
-  if (st === "LG") {
-    const game = firstOrSelf(sec?.admin_logic_games as Record<string, unknown> | Record<string, unknown>[] | undefined)
-    const setup = sanitizeAdminHtml(game?.setup_text)
-    const rules = sanitizeAdminHtml(game?.rules_text)
-    return `${setup}<div class="mt-4">${rules}</div>`
-  }
-  return sanitizeAdminHtml(question.stimulus_text)
-}
-
-function optionLetterFromIndex(idx: number): string {
-  return String.fromCharCode(65 + idx)
-}
-
-function choicesToRows(raw: unknown): Array<{ letter: string; html: string }> {
-  const arr = Array.isArray(raw) ? raw : []
-  return arr.map((choice, idx) => {
-    const letter = optionLetterFromIndex(idx)
-    if (typeof choice === "string") {
-      return { letter, html: sanitizeAdminHtml(choice) }
-    }
-    if (choice && typeof choice === "object") {
-      const o = choice as Record<string, unknown>
-      const L = typeof o.optionLetter === "string" ? o.optionLetter : letter
-      return { letter: L, html: sanitizeAdminHtml(o.optionContent) }
-    }
-    return { letter, html: "" }
-  })
-}
 
 function pickRecorderMime(): string | undefined {
   const candidates = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
@@ -708,9 +672,9 @@ function AdminQuestionVideoRecordPage() {
     )
   }
 
-  const leftHtml = buildLeftHtml(question)
+  const leftHtml = buildQuestionPreviewLeftHtml(question)
   const stemHtml = sanitizeAdminHtml(question.stem_text)
-  const rows = choicesToRows(question.choices)
+  const rows = choicesToPreviewRows(question.choices)
   const qn = question.question_number != null ? String(question.question_number) : "—"
   const sec = firstOrSelf(question.admin_sections as Record<string, unknown> | Record<string, unknown>[] | undefined)
   const sectionLabel = String(sec?.section_type ?? sec?.title ?? "")

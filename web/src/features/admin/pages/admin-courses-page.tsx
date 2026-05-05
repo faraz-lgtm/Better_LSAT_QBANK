@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Image as ImageIcon, SquarePlay } from "lucide-react"
+import { Eye, Image as ImageIcon, SquarePlay } from "lucide-react"
 import {
   BtnBold,
   BtnBulletList,
@@ -14,6 +14,8 @@ import {
 } from "react-simple-wysiwyg"
 
 import { AdminLessonStatusDropdown } from "@/features/admin/components/admin-lesson-status-dropdown"
+import { LessonQuestionPreviewModal } from "@/features/admin/components/lesson-question-preview-modal"
+import { formatSectionOptionLabel } from "@/features/admin/lib/admin-section-display"
 import { normalizeLessonStatus, type PrepLessonStatus } from "@/features/admin/lib/prep-lesson-status"
 import { useAdminApi } from "@/features/admin/use-admin-api"
 import {
@@ -54,6 +56,8 @@ type PrepTestSection = {
   id: string
   section_number: number | null
   section_id: string | null
+  section_type?: string | null
+  title?: string | null
   admin_questions?: Array<{
     id: string
     question_number: number | null
@@ -68,6 +72,8 @@ type LessonQuestionRow = {
     question_number: number | null
     admin_sections?: {
       section_number: number | null
+      section_type?: string | null
+      title?: string | null
       admin_prep_tests?: {
         module_id?: string | null
         title?: string | null
@@ -259,6 +265,7 @@ function AdminCoursesPage() {
   const [questionOptions, setQuestionOptions] = useState<Array<{ id: string; question_number: number | null }>>([])
   const [selectedQuestionRef, setSelectedQuestionRef] = useState("")
   const [linkedQuestions, setLinkedQuestions] = useState<LessonQuestionRow[]>([])
+  const [previewQuestionId, setPreviewQuestionId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [courseForm, setCourseForm] = useState({
     title: "",
@@ -1006,7 +1013,7 @@ function AdminCoursesPage() {
                           ({linkedQuestions.length}/{linkedQuestionCap} linked)
                         </p>
                       </div>
-                      <div className="grid gap-2 md:grid-cols-3">
+                      <div className="grid gap-2 md:grid-cols-4">
                         <select
                           className="admin-select"
                           value={selectedPrepTestId}
@@ -1031,8 +1038,7 @@ function AdminCoursesPage() {
                           <option value="">Select Section</option>
                           {sectionOptions.map((section) => (
                             <option key={String(section.id)} value={String(section.id)}>
-                              S{Number(section.section_number ?? 0)}
-                              {section.section_id ? ` · ${section.section_id}` : ""}
+                              {formatSectionOptionLabel(section)}
                             </option>
                           ))}
                         </select>
@@ -1049,6 +1055,16 @@ function AdminCoursesPage() {
                             </option>
                           ))}
                         </select>
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn-ghost h-10 justify-center"
+                          disabled={!selectedQuestionRef}
+                          onClick={() => setPreviewQuestionId(selectedQuestionRef || null)}
+                          aria-label="Preview selected question"
+                          title="Preview selected question"
+                        >
+                          <Eye className="size-4" aria-hidden />
+                        </button>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <button
@@ -1057,8 +1073,20 @@ function AdminCoursesPage() {
                           disabled={!canLinkMore || !selectedQuestionRef}
                           onClick={() => {
                             if (!adminApi || !selectedLesson?.id || !selectedQuestionRef || !canLinkMore) return
-                            void adminApi
-                              .linkQuestionToLesson(selectedLesson.id, selectedQuestionRef)
+                            const selectedLessonType = normalizeLessonStatus(selectedLesson.lesson_type)
+                            const draftLessonType = normalizeLessonStatus(lessonForm.lessonType)
+                            const persistTypePromise =
+                              selectedLessonType !== draftLessonType
+                                ? adminApi.updateLesson(selectedLesson.id, { lessonType: draftLessonType }).then(() => {
+                                    setLessons((prev) =>
+                                      prev.map((lesson) =>
+                                        lesson.id === selectedLesson.id ? { ...lesson, lesson_type: draftLessonType } : lesson,
+                                      ),
+                                    )
+                                  })
+                                : Promise.resolve()
+                            void persistTypePromise
+                              .then(() => adminApi.linkQuestionToLesson(selectedLesson.id, selectedQuestionRef))
                               .then(() => {
                                 setSelectedQuestionRef("")
                                 return adminApi.listLessonQuestions(selectedLesson.id)
@@ -1088,7 +1116,7 @@ function AdminCoursesPage() {
                               <th className="px-3 py-2 text-left font-medium text-[#666d80]">PrepTest</th>
                               <th className="px-3 py-2 text-left font-medium text-[#666d80]">Section</th>
                               <th className="px-3 py-2 text-left font-medium text-[#666d80]">Question</th>
-                              <th className="px-3 py-2 text-left font-medium text-[#666d80]" />
+                              <th className="px-3 py-2 text-right font-medium text-[#666d80]">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1101,30 +1129,42 @@ function AdminCoursesPage() {
                                   <td className="px-3 py-2 text-[#1a1b25]">{row.sort_order}</td>
                                   <td className="px-3 py-2 text-[#1a1b25]">{prep?.module_id ?? prep?.title ?? "-"}</td>
                                   <td className="px-3 py-2 text-[#666d80]">
-                                    {section?.section_number ? `S${section.section_number}` : "-"}
+                                    {section && (section.section_number != null || section.section_type || section.title)
+                                      ? formatSectionOptionLabel(section)
+                                      : "-"}
                                   </td>
                                   <td className="px-3 py-2 text-[#666d80]">
                                     {q?.question_number ? `Q${q.question_number}` : q?.id ?? "-"}
                                   </td>
-                                  <td className="px-3 py-2">
-                                    <button
-                                      type="button"
-                                      className="admin-btn admin-btn-ghost !px-2 !py-1"
-                                      onClick={() => {
-                                        if (!adminApi || !selectedLessonId) return
-                                        void adminApi
-                                          .unlinkQuestionFromLesson(row.id)
-                                          .then(() => adminApi.listLessonQuestions(selectedLessonId))
-                                          .then((rows) => {
-                                            setLinkedQuestions((rows as LessonQuestionRow[]) ?? [])
-                                          })
-                                          .catch((e) => {
-                                            setError(e instanceof Error ? e.message : "Failed to unlink question")
-                                          })
-                                      }}
-                                    >
-                                      Unlink
-                                    </button>
+                                  <td className="px-3 py-2 text-right">
+                                    <div className="flex flex-wrap justify-end gap-1">
+                                      <button
+                                        type="button"
+                                        className="admin-btn admin-btn-ghost !px-2 !py-1"
+                                        disabled={!q?.id}
+                                        onClick={() => setPreviewQuestionId(q?.id ?? null)}
+                                      >
+                                        Preview
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="admin-btn admin-btn-ghost !px-2 !py-1"
+                                        onClick={() => {
+                                          if (!adminApi || !selectedLessonId) return
+                                          void adminApi
+                                            .unlinkQuestionFromLesson(row.id)
+                                            .then(() => adminApi.listLessonQuestions(selectedLessonId))
+                                            .then((rows) => {
+                                              setLinkedQuestions((rows as LessonQuestionRow[]) ?? [])
+                                            })
+                                            .catch((e) => {
+                                              setError(e instanceof Error ? e.message : "Failed to unlink question")
+                                            })
+                                        }}
+                                      >
+                                        Unlink
+                                      </button>
+                                    </div>
                                   </td>
                                 </tr>
                               )
@@ -1174,6 +1214,14 @@ function AdminCoursesPage() {
           </div>
         </div>
       )}
+      <LessonQuestionPreviewModal
+        open={previewQuestionId != null}
+        onOpenChange={(open) => {
+          if (!open) setPreviewQuestionId(null)
+        }}
+        questionId={previewQuestionId}
+        adminApi={adminApi}
+      />
     </section>
   )
 }
