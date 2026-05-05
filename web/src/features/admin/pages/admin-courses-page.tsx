@@ -113,6 +113,20 @@ const LESSON_TYPE_EDIT_LABEL: Record<PrepLessonStatus, string> = {
   rep_work: "REP WORK",
 }
 
+const LESSON_TYPE_LIST_LABEL: Record<PrepLessonStatus, string> = {
+  video_text: "Video + Text",
+  active_drill: "Active Drill",
+  adaptive_drill: "Adaptive Drill",
+  rep_work: "Rep Work",
+}
+
+const LESSON_TYPE_BADGE_CLASS: Record<PrepLessonStatus, string> = {
+  video_text: "border-[#bfd8ff] bg-[#edf4ff] text-[#1f4c9a]",
+  active_drill: "border-[#b7eedf] bg-[#e8faf6] text-[#206d5b]",
+  adaptive_drill: "border-[#d8c9ff] bg-[#f3edff] text-[#5b3aa8]",
+  rep_work: "border-[#ffe5b7] bg-[#fff6e0] text-[#956321]",
+}
+
 function escapeHtmlAttr(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -811,18 +825,30 @@ function AdminCoursesPage() {
               </button>
             </div>
             {lessons.map((lesson) => (
-              <button
-                key={lesson.id}
-                type="button"
-                className={`lesson-item w-full text-left ${selectedLessonId === lesson.id ? "active" : ""}`}
-                onClick={() => setSelectedLessonId(lesson.id)}
-              >
-                <span className="drag-handle">▸</span>
-                <div className="lesson-info">
-                  <div className="lesson-name">{lesson.title || "Untitled lesson"}</div>
-                  <div className="lesson-meta">{lesson.slug}</div>
-                </div>
-              </button>
+              (() => {
+                const lessonType = normalizeLessonStatus(lesson.lesson_type)
+                return (
+                  <button
+                    key={lesson.id}
+                    type="button"
+                    className={`lesson-item w-full text-left ${selectedLessonId === lesson.id ? "active" : ""}`}
+                    onClick={() => setSelectedLessonId(lesson.id)}
+                  >
+                    <span className="drag-handle">▸</span>
+                    <div className="lesson-info">
+                      <div className="lesson-name">{lesson.title || "Untitled lesson"}</div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="lesson-meta">{lesson.slug}</span>
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold leading-none ${LESSON_TYPE_BADGE_CLASS[lessonType]}`}
+                        >
+                          {LESSON_TYPE_LIST_LABEL[lessonType]}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })()
             ))}
             <div className="p-3">
               <button

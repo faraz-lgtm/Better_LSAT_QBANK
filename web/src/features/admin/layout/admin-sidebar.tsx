@@ -11,7 +11,6 @@ const links: Array<{ to: string; label: string; section: "Content" | "Settings";
   { to: "/admin/taxonomy", label: "Taxonomy", section: "Settings" },
   { to: "/admin/config", label: "Config", section: "Settings" },
   { to: "/admin/users", label: "Users", section: "Settings" },
-  { to: "/admin/you-try", label: "You Try", section: "Settings" },
 ]
 
 function AdminSidebar() {
