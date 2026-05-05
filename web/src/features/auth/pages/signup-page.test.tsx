@@ -1,8 +1,9 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { MemoryRouter } from "react-router-dom"
+import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
 
+import { SignupCheckEmailPage } from "./signup-check-email-page"
 import { SignupPage } from "./signup-page"
 
 const authMock = {
@@ -37,8 +38,11 @@ describe("SignupPage", () => {
     const user = userEvent.setup()
 
     render(
-      <MemoryRouter>
-        <SignupPage />
+      <MemoryRouter initialEntries={["/signup"]}>
+        <Routes>
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/signup/check-email" element={<SignupCheckEmailPage />} />
+        </Routes>
       </MemoryRouter>,
     )
 
@@ -47,6 +51,7 @@ describe("SignupPage", () => {
     await user.click(screen.getByRole("button", { name: /send magic link/i }))
 
     expect(authMock.signInWithOtp).toHaveBeenCalled()
-    expect(await screen.findByText(/magic link sent/i)).toBeInTheDocument()
+    expect(await screen.findByRole("heading", { name: /check your email/i })).toBeInTheDocument()
+    expect(screen.getByText(/new@example\.com/)).toBeInTheDocument()
   })
 })

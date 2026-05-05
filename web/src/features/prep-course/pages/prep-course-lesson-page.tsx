@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 
-import { AuthHeader } from "@/features/auth/components/auth-header"
 import { LessonContentRenderer } from "@/features/prep-course/components/lesson-content-renderer"
 import { PrepCourseLessonList } from "@/features/prep-course/components/prep-course-lesson-list"
+import { StudentMain } from "@/features/student/components/student-main"
+import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
 import { createPrepCourseApi, type PrepCourse, type PrepLesson } from "@/lib/api/prep-course"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -51,14 +52,17 @@ function PrepCourseLessonPage() {
   }, [courseSlug, lessonSlug, prepCourseApi])
 
   return (
-    <div className="auth-page flex min-h-svh flex-col bg-[#f5f9ff]">
-      <AuthHeader ctaLabel="Log In" ctaHref="/login" variant="app" />
-      <main className="mx-auto flex w-full max-w-[1220px] flex-1 flex-col gap-4 px-4 py-6">
-        <div className="ds-body-xs ds-text-muted tracking-[0.24px]">
-          Learn / Prep Course / <span className="ds-text-accent">{course?.title ?? "Lesson"}</span>
-        </div>
-        {error && <p className="text-xs text-[#95122b]">{error}</p>}
-        <section className="grid gap-4 lg:grid-cols-[320px_1fr]">
+    <>
+      <StudentSubnavStrip
+        crumbs={[
+          { label: "Learn", href: "/app/prep-course" },
+          { label: course?.title ?? "Prep Course", href: "/app/prep-course" },
+          { label: lesson?.title ?? "Lesson" },
+        ]}
+      />
+      <StudentMain>
+        {error && <p className="mb-4 text-xs text-[#95122b]">{error}</p>}
+        <section className="grid gap-4 lg:grid-cols-[288px_1fr]">
           {showLessons && course ? (
             <PrepCourseLessonList course={course} lessons={lessons} activeLessonSlug={lesson?.slug} />
           ) : (
@@ -79,7 +83,9 @@ function PrepCourseLessonPage() {
                 <div className="mt-2 flex items-center gap-4 ds-body-sm ds-text-muted">
                   <span>{course?.title}</span>
                   <span>{lesson.duration_minutes ?? 0} mins</span>
-                  <span>Lesson {lesson.sort_order} of {lessons.length || 1}</span>
+                  <span>
+                    Lesson {lesson.sort_order} of {lessons.length || 1}
+                  </span>
                 </div>
                 <div className="mt-4">
                   <div className="mb-2 flex items-center justify-between text-xs">
@@ -94,10 +100,10 @@ function PrepCourseLessonPage() {
             ) : null}
           </div>
         </section>
-      </main>
+      </StudentMain>
 
       <footer className="border-t border-[#dfe1e7] bg-[#f2f7ff]">
-        <div className="mx-auto flex w-full max-w-[1220px] items-center justify-between px-4 py-3">
+        <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between px-4 py-3 md:px-6">
           <button
             type="button"
             onClick={() => setShowLessons((value) => !value)}
@@ -117,7 +123,7 @@ function PrepCourseLessonPage() {
           </div>
         </div>
       </footer>
-    </div>
+    </>
   )
 }
 

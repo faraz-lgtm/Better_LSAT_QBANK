@@ -38,6 +38,12 @@ const DEFAULT_TAXONOMY: Record<"LR" | "LG" | "RC", string[]> = {
   ],
 }
 
+function normalizeLessonTypeForQuestionLinking(value: string): string {
+  const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, "_")
+  if (normalized === "video" || normalized === "text") return "video_text"
+  return normalized
+}
+
 export function createAdminService(deps: { repository: AdminRepository }) {
   async function requireAdmin(userId: string): Promise<void> {
     const role = await deps.repository.getProfileRole(userId)
@@ -281,19 +287,24 @@ export function createAdminService(deps: { repository: AdminRepository }) {
       await requireAdmin(userId)
       const lessonType = await deps.repository.getLessonLessonType(lessonId)
       if (!lessonType) throw new Error("Lesson not found")
-      if (lessonType === "video_text" || lessonType === "rep_work") {
-        throw new Error("This lesson type does not support linking PrepTest questions.")
-      }
-      const linkedCount = await deps.repository.countLessonQuestions(lessonId)
-      if (lessonType === "active_drill" && linkedCount >= 1) {
-        throw new Error("Active drill lessons can only include one linked question.")
-      }
-      if (lessonType === "adaptive_drill" && linkedCount >= 5) {
-        throw new Error("Adaptive drill lessons can include at most five linked questions.")
-      }
+      const normalizedLessonType = normalizeLessonTypeForQuestionLinking(lessonType)
       const questionId = await deps.repository.resolveQuestionIdFromReference(questionRef)
       if (!questionId) {
         throw new Error("Question not found. Use UUID or format: PT 92 · S2 · Q4")
+      }
+      const questionSource = await deps.repository.getQuestionSourceById(questionId)
+      // Keep strict lesson-type limits for LSAC PrepTest content only.
+      if (questionSource !== "PLATFORM") {
+        if (normalizedLessonType === "video_text" || normalizedLessonType === "rep_work") {
+          throw new Error("This lesson type does not support linking PrepTest questions.")
+        }
+        const linkedCount = await deps.repository.countLessonQuestions(lessonId)
+        if (normalizedLessonType === "active_drill" && linkedCount >= 1) {
+          throw new Error("Active drill lessons can only include one linked question.")
+        }
+        if (normalizedLessonType === "adaptive_drill" && linkedCount >= 5) {
+          throw new Error("Adaptive drill lessons can include at most five linked questions.")
+        }
       }
       return deps.repository.linkQuestionToLesson({ lessonId, questionId, sortOrder })
     },

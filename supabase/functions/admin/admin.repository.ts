@@ -760,6 +760,14 @@ export function createAdminRepository(client: SupabaseClient) {
       return (count ?? 0) > 0
     },
 
+    async getQuestionSourceById(questionId: string): Promise<"LSAC" | "PLATFORM" | null> {
+      const { data, error } = await client.from("admin_questions").select("source").eq("id", questionId).maybeSingle()
+      if (error) throw error
+      const source = typeof data?.source === "string" ? data.source.toUpperCase() : ""
+      if (source === "LSAC" || source === "PLATFORM") return source
+      return null
+    },
+
     async getPassageById(passageId: string): Promise<{ id: string; section_id: string } | null> {
       const { data, error } = await client.from("admin_passages").select("id,section_id").eq("id", passageId).maybeSingle()
       if (error) throw error

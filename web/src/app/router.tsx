@@ -1,13 +1,23 @@
 import { type ReactElement, useEffect, useState } from "react"
 import { Navigate, Outlet, RouterProvider, createBrowserRouter, useLocation } from "react-router-dom"
 
+import { StudentAppShell } from "@/features/app-shell/student-app-shell"
 import { LoginPage } from "@/features/auth/pages/login-page"
 import { SignupPage } from "@/features/auth/pages/signup-page"
+import { SignupCheckEmailPage } from "@/features/auth/pages/signup-check-email-page"
+import { ForgotPasswordPage } from "@/features/auth/pages/forgot-password-page"
+import { ResetPasswordPage } from "@/features/auth/pages/reset-password-page"
 import { AuthCallbackPage } from "@/features/auth/pages/auth-callback-page"
 import { OnboardingPage } from "@/features/auth/pages/onboarding-page"
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
 import { PrepCoursePage } from "@/features/prep-course/pages/prep-course-page"
 import { PrepCourseLessonPage } from "@/features/prep-course/pages/prep-course-lesson-page"
+import { AnalyticsPage } from "@/features/student/pages/analytics-page"
+import { ExplanationsPage } from "@/features/student/pages/explanations-page"
+import { PracticeBlindReviewPage } from "@/features/student/pages/practice-blind-review-page"
+import { PracticeDrillsPage } from "@/features/student/pages/practice-drills-page"
+import { PracticePrepTestPage } from "@/features/student/pages/practice-preptest-page"
+import { PracticeSectionsPage } from "@/features/student/pages/practice-sections-page"
 import { AdminShell } from "@/features/admin/layout/admin-shell"
 import { AdminDashboardPage } from "@/features/admin/pages/admin-dashboard-page"
 import { AdminTaxonomyPage } from "@/features/admin/pages/admin-taxonomy-page"
@@ -154,11 +164,30 @@ const router = createBrowserRouter([
   { path: "/", element: <Navigate to="/login" replace /> },
   { path: "/login", element: <PublicOnly><LoginPage /></PublicOnly> },
   { path: "/signup", element: <SignupPage /> },
+  { path: "/signup/check-email", element: <SignupCheckEmailPage /> },
+  { path: "/forgot-password", element: <ForgotPasswordPage /> },
+  { path: "/reset-password", element: <ResetPasswordPage /> },
   { path: "/auth/callback", element: <AuthCallbackPage /> },
   { path: "/onboarding", element: <OnboardingPage /> },
-  { path: "/app", element: <RequireRole requiredRole="student"><DashboardPage /></RequireRole> },
-  { path: "/app/prep-course", element: <RequireRole requiredRole="student"><PrepCoursePage /></RequireRole> },
-  { path: "/app/prep-course/:courseSlug/:lessonSlug", element: <RequireRole requiredRole="student"><PrepCourseLessonPage /></RequireRole> },
+  {
+    path: "/app",
+    element: (
+      <RequireRole requiredRole="student">
+        <StudentAppShell />
+      </RequireRole>
+    ),
+    children: [
+      { index: true, element: <DashboardPage /> },
+      { path: "learn/explanations", element: <ExplanationsPage /> },
+      { path: "prep-course", element: <PrepCoursePage /> },
+      { path: "prep-course/:courseSlug/:lessonSlug", element: <PrepCourseLessonPage /> },
+      { path: "practice/drills", element: <PracticeDrillsPage /> },
+      { path: "practice/sections", element: <PracticeSectionsPage /> },
+      { path: "practice/preptest", element: <PracticePrepTestPage /> },
+      { path: "practice/blind-review", element: <PracticeBlindReviewPage /> },
+      { path: "analytics", element: <AnalyticsPage /> },
+    ],
+  },
   {
     path: "/admin",
     element: (

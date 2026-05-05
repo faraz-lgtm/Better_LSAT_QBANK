@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -44,10 +44,10 @@ function TermsCheckbox({ checked, onChange }: TermsCheckboxProps) {
 }
 
 function SignupPage() {
+  const navigate = useNavigate()
   const [email, setEmail] = useState("")
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const authApi = useMemo(() => {
@@ -70,10 +70,9 @@ function SignupPage() {
 
     setIsSubmitting(true)
     setError(null)
-    setMessage(null)
     try {
       await authApi.sendMagicLink(email.trim(), getAuthCallbackUrl())
-      setMessage("Magic link sent. Check your inbox to continue onboarding.")
+      navigate("/signup/check-email", { replace: true, state: { email: email.trim() } })
     } catch (authError) {
       setError(authError instanceof Error ? authError.message : "Unable to send magic link.")
     } finally {
@@ -93,7 +92,6 @@ function SignupPage() {
 
     setIsSubmitting(true)
     setError(null)
-    setMessage(null)
     try {
       await authApi.signInWithGoogle(getAuthCallbackUrl())
     } catch (authError) {
@@ -133,7 +131,6 @@ function SignupPage() {
             {isSubmitting ? "Sending..." : "Send magic link"}
           </Button>
 
-          {message && <p className="figma-text-sm figma-track-sm text-center text-[#0d47a1]">{message}</p>}
           {error && <p className="figma-text-sm figma-track-sm text-center text-[#df1c41]">{error}</p>}
 
           <Divider />
