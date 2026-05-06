@@ -10,7 +10,15 @@ export function buildQuestionPreviewLeftHtml(question: Record<string, unknown>):
   const st = String(sec?.section_type ?? "").toUpperCase()
   if (st === "RC") {
     const passage = firstOrSelf(sec?.admin_passages as Record<string, unknown> | Record<string, unknown>[] | undefined)
-    return sanitizeAdminHtml(passage?.content)
+    const rcCandidates = [
+      passage?.content,
+      passage?.passage_text,
+      passage?.stimulus_text,
+      question.passage_text,
+      question.stimulus_text,
+    ]
+    const firstNonEmpty = rcCandidates.find((v) => typeof v === "string" && v.trim().length > 0)
+    return sanitizeAdminHtml(firstNonEmpty)
   }
   if (st === "LG") {
     const game = firstOrSelf(sec?.admin_logic_games as Record<string, unknown> | Record<string, unknown>[] | undefined)
