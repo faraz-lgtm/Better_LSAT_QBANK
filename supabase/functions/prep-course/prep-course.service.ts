@@ -22,8 +22,12 @@ function normalizeSlug(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, '-')
 }
 
-export function createPrepCourseService(deps: { repository: PrepCourseRepository }) {
-  const bypassEntitlement = Deno.env.get('PREP_COURSE_BYPASS_ENTITLEMENT') === 'true'
+export function createPrepCourseService(deps: {
+  repository: PrepCourseRepository
+  enforceEntitlement?: boolean
+}) {
+  // Temporary default: keep prep content accessible while LSAC entitlement data stabilizes.
+  const enforceEntitlement = deps.enforceEntitlement === true
 
   async function requireAdmin(userId: string): Promise<void> {
     const profile = await deps.repository.getProfileRole(userId)
@@ -33,8 +37,7 @@ export function createPrepCourseService(deps: { repository: PrepCourseRepository
   }
 
   async function requireLearnerAccess(userId: string): Promise<void> {
-    // Local-dev escape hatch while LSAC linking/subscription data is incomplete.
-    if (bypassEntitlement) return
+    if (!enforceEntitlement) return
 
     const profile = await deps.repository.getProfileRole(userId)
     if (!profile) {

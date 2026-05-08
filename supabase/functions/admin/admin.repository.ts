@@ -52,6 +52,18 @@ export type QuestionAnalysisLinkRow = {
   updated_at: string
 }
 
+export type BulkImportLessonRow = {
+  lesson_slug: string
+  lesson_title: string
+  lesson_type: PrepLessonType
+  sort_order: number
+  summary: string | null
+  duration_minutes: number | null
+  video_url: string | null
+  text_content: string
+  lesson_is_published: boolean
+}
+
 export function createServiceRoleClient(): SupabaseClient {
   const url = Deno.env.get("SUPABASE_URL")
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
@@ -1078,6 +1090,18 @@ export function createAdminRepository(client: SupabaseClient) {
       return data ?? []
     },
 
+    async getCourseById(courseId: string) {
+      const { data, error } = await client.from("prep_courses").select("*").eq("id", courseId).maybeSingle()
+      if (error) throw error
+      return data
+    },
+
+    async getCourseBySlug(courseSlug: string) {
+      const { data, error } = await client.from("prep_courses").select("*").eq("slug", courseSlug).maybeSingle()
+      if (error) throw error
+      return data
+    },
+
     async createCourse(input: {
       slug: string
       title: string
@@ -1117,6 +1141,29 @@ export function createAdminRepository(client: SupabaseClient) {
 
     async listLessons(courseId: string) {
       const { data, error } = await client.from("prep_lessons").select("*").eq("course_id", courseId).order("sort_order")
+      if (error) throw error
+      return data ?? []
+    },
+
+    async bulkUpsertLessons(courseId: string, rows: BulkImportLessonRow[]) {
+      if (rows.length === 0) return []
+      const payload = rows.map((row) => ({
+        course_id: courseId,
+        slug: row.lesson_slug,
+        title: row.lesson_title,
+        lesson_type: row.lesson_type,
+        sort_order: row.sort_order,
+        summary: row.summary,
+        duration_minutes: row.duration_minutes,
+        video_url: row.video_url,
+        text_content: row.text_content,
+        is_published: row.lesson_is_published,
+        updated_at: new Date().toISOString(),
+      }))
+      const { data, error } = await client
+        .from("prep_lessons")
+        .upsert(payload, { onConflict: "course_id,slug" })
+        .select("*")
       if (error) throw error
       return data ?? []
     },

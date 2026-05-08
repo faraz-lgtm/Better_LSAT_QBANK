@@ -4,7 +4,6 @@ import { Link, useParams } from "react-router-dom"
 import { LessonContentRenderer } from "@/features/prep-course/components/lesson-content-renderer"
 import { PrepCourseLessonList } from "@/features/prep-course/components/prep-course-lesson-list"
 import { StudentMain } from "@/features/student/components/student-main"
-import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
 import { createPrepCourseApi, type PrepCourse, type PrepLesson } from "@/lib/api/prep-course"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -53,13 +52,6 @@ function PrepCourseLessonPage() {
 
   return (
     <>
-      <StudentSubnavStrip
-        crumbs={[
-          { label: "Learn", href: "/app/prep-course" },
-          { label: course?.title ?? "Prep Course", href: "/app/prep-course" },
-          { label: lesson?.title ?? "Lesson" },
-        ]}
-      />
       <StudentMain>
         {error && <p className="mb-4 text-xs text-[#95122b]">{error}</p>}
         <section className="grid gap-4 lg:grid-cols-[288px_1fr]">

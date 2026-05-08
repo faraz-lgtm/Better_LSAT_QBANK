@@ -127,6 +127,21 @@
 /* Auth routes: keep light surfaces and readable headings even when OS prefers dark */
 .auth-page {
   color-scheme: light;
+  --text: #667085;
+  --text-h: #121a26;
+  --background: #ffffff;
+  --foreground: #121a26;
+  --card: #ffffff;
+  --card-foreground: #121a26;
+  --popover: #ffffff;
+  --popover-foreground: #121a26;
+  --primary: #121a26;
+  --primary-foreground: #ffffff;
+  --secondary: #f9fbfc;
+  --secondary-foreground: #121a26;
+  --muted: #f9fbfc;
+  --muted-foreground: #667085;
+  --accent-foreground: #121a26;
   color: #0d0d12;
   background-color: #f5f9ff;
   overflow-x: clip;

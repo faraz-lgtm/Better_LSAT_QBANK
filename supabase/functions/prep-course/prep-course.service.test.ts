@@ -181,11 +181,12 @@ Deno.test('prep-course service returns course and lessons by slug', async () => 
   assertEquals(out.lessons.length, 1)
 })
 
-Deno.test('prep-course service blocks access when LSAC link is missing', async () => {
+Deno.test('prep-course service blocks access when entitlement enforcement is enabled', async () => {
   const service = createPrepCourseService({
     repository: mockRepo({
       getProfileRole: async () => ({ id: 'user-1', role: 'student', student_coaching_id: null }),
     }),
+    enforceEntitlement: true,
   })
   await assertRejects(
     () => service.listCourses('user-1'),

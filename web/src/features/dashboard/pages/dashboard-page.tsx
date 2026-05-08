@@ -2,16 +2,20 @@ import { useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { StudentMain } from "@/features/student/components/student-main"
-import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
 import { filterDrills, mockStudentDrills } from "@/features/student/lib/mock-drills"
 import type { UserProfile } from "@/lib/api/users"
 import { createUsersApi } from "@/lib/api/users"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-import { Clock, HelpCircle, Target } from "lucide-react"
+import { Brain, ChevronRight, Clock, HelpCircle, Target } from "lucide-react"
 
 function chipStyles(active: boolean) {
   if (active) return "bg-[#0d47a1] text-white border-[#0d47a1]"
   return "bg-[#f5f9ff] text-[#0d47a1] border-[#dfe1e7]"
+}
+
+function difficultyLabel(level: "hardest"): string {
+  if (level === "hardest") return "Hardest"
+  return "Hardest"
 }
 
 function DashboardPage() {
@@ -19,7 +23,6 @@ function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [loadingProfile, setLoadingProfile] = useState(true)
   const [activeFilter, setActiveFilter] = useState<"all" | "lr" | "rc">("all")
-  const [drillTab, setDrillTab] = useState<"in_progress" | "saved" | "recent">("in_progress")
 
   const usersApi = useMemo(() => {
     try {
@@ -66,7 +69,6 @@ function DashboardPage() {
 
   return (
     <>
-      <StudentSubnavStrip crumbs={[{ label: "Dashboard" }]} />
       <StudentMain>
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-3xl font-semibold text-[#082c6b]">Dashboard</h1>
@@ -76,58 +78,44 @@ function DashboardPage() {
         </div>
 
         <div className="mb-6 grid gap-4 md:grid-cols-3">
-          <article className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-[0px_5px_10px_0px_rgba(13,13,18,0.04)]">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#666d80]">All time</span>
+          <article className="rounded-2xl border border-[#dfe1e7] bg-white px-6 py-4 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+            <div className="mb-[10px] flex h-10 items-start justify-between">
+              <span className="flex size-10 items-center justify-center rounded-[14px] bg-[#eceff3] text-[#62748e]">
+                <Clock className="size-5" />
+              </span>
+              <span className="rounded-full bg-[#f1f5f9] px-2 py-1 text-xs font-medium leading-4 text-[#62748e]">All time</span>
             </div>
-            <p className="mt-3 text-3xl font-semibold text-[#082c6b]">142h</p>
-            <p className="mt-1 text-sm text-[#666d80]">Total study time</p>
+            <p className="text-2xl font-bold leading-8 text-[#0f172b]">142h</p>
+            <p className="mt-[10px] text-[13px] font-normal leading-[18.571px] text-[#62748e]">Total Study Time</p>
           </article>
-          <article className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-[0px_5px_10px_0px_rgba(13,13,18,0.04)]">
-            <span className="text-xs font-semibold text-[#666d80]">+3% this week</span>
-            <p className="mt-3 text-3xl font-semibold text-[#082c6b]">78%</p>
-            <p className="mt-1 text-sm text-[#666d80]">Overall accuracy</p>
+          <article className="rounded-2xl border border-[#dfe1e7] bg-white px-6 py-4 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+            <div className="mb-[10px] flex h-10 items-start justify-between">
+              <span className="flex size-10 items-center justify-center rounded-[14px] bg-[#eceff3] text-[#62748e]">
+                <Target className="size-5" />
+              </span>
+              <span className="rounded-full bg-[#f1f5f9] px-2 py-1 text-xs font-medium leading-4 text-[#62748e]">
+                +3% this week
+              </span>
+            </div>
+            <p className="text-2xl font-bold leading-8 text-[#0f172b]">78%</p>
+            <p className="mt-[10px] text-[13px] font-normal leading-[18.571px] text-[#62748e]">Overall Accuracy</p>
           </article>
-          <article className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-[0px_5px_10px_0px_rgba(13,13,18,0.04)]">
-            <span className="text-xs font-semibold text-[#666d80]">Practice + Tests</span>
-            <p className="mt-3 text-3xl font-semibold text-[#082c6b]">1,847</p>
-            <p className="mt-1 text-sm text-[#666d80]">Questions answered</p>
+          <article className="rounded-2xl border border-[#dfe1e7] bg-white px-6 py-4 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+            <div className="mb-[10px] flex h-10 items-start justify-between">
+              <span className="flex size-10 items-center justify-center rounded-[14px] bg-[#eceff3] text-[#62748e]">
+                <Brain className="size-5" />
+              </span>
+              <span className="rounded-full bg-[#f1f5f9] px-2 py-1 text-xs font-medium leading-4 text-[#62748e]">
+                Practice + Tests
+              </span>
+            </div>
+            <p className="text-2xl font-bold leading-8 text-[#0f172b]">1,847</p>
+            <p className="mt-[10px] text-[13px] font-normal leading-[18.571px] text-[#62748e]">Questions Answered</p>
           </article>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1fr_400px]">
           <section className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-[0px_5px_10px_0px_rgba(13,13,18,0.04)]">
-            <div className="mb-4 flex flex-col gap-3 border-b border-[#dfe1e7] pb-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={drillTab === "in_progress" ? "default" : "outline"}
-                  className="rounded-xl"
-                  onClick={() => setDrillTab("in_progress")}
-                >
-                  In progress
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={drillTab === "saved" ? "default" : "outline"}
-                  className="rounded-xl"
-                  onClick={() => setDrillTab("saved")}
-                >
-                  Saved for later
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={drillTab === "recent" ? "default" : "outline"}
-                  className="rounded-xl"
-                  onClick={() => setDrillTab("recent")}
-                >
-                  Recently completed
-                </Button>
-              </div>
-            </div>
             <div className="mb-4 flex flex-wrap gap-2">
               <button
                 type="button"
@@ -170,7 +158,19 @@ function DashboardPage() {
                         </div>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-[#082c6b]">{drill.title}</h3>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <h3 className="text-xl font-bold leading-[1.35] text-[#062357]">{drill.title}</h3>
+                          <div className="flex h-10 items-center gap-[10px] rounded-[10px] bg-white px-[10px]">
+                            <div className="flex items-center gap-1.5">
+                              {Array.from({ length: 5 }).map((_, index) => (
+                                <span key={index} className="h-4 w-1.5 rounded-full bg-[#df1c41]" aria-hidden />
+                              ))}
+                            </div>
+                            <span className="text-xs font-semibold tracking-[0.24px] text-[#df1c41]">
+                              {difficultyLabel(drill.difficulty)}
+                            </span>
+                          </div>
+                        </div>
                         <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-[#666d80]">
                           <div className="flex items-center gap-1">
                             <Target className="size-3.5 text-[#0d47a1]" />
@@ -197,18 +197,17 @@ function DashboardPage() {
                         <div className="mt-2 h-2 rounded-full bg-[#dfe1e7]">
                           <div className="h-2 rounded-full bg-[#0d47a1]" style={{ width: `${drill.progressPct}%` }} />
                         </div>
-                        <p className="mt-2 text-right text-[10px] text-[#666d80]">Last attempt: {drill.lastAttempt}</p>
                       </div>
                     </div>
-                    <div className="flex items-end lg:ml-auto">
+                    <div className="flex flex-col items-stretch gap-2 lg:ml-auto lg:items-end">
                       <button
                         type="button"
-                        className={`w-full rounded-2xl px-6 py-2 text-xs font-semibold text-white lg:w-auto ${
-                          drill.accent === "mint" ? "bg-[#45bda4]" : "bg-[#f7994a]"
-                        }`}
+                        className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-[#0b4e6e] bg-[#0d47a1] px-4 py-2 text-base font-semibold tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] hover:bg-[#0d47a1]/90 lg:w-auto"
                       >
-                        Continue Drill
+                        <span>Continue</span>
+                        <ChevronRight className="size-5" />
                       </button>
+                      <p className="text-right text-xs tracking-[0.24px] text-[#6a7282]">Last attempt: {drill.lastAttempt}</p>
                     </div>
                   </div>
                 </article>

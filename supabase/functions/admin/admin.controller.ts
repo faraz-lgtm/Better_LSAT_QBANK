@@ -155,6 +155,23 @@ export async function handleAdminRequest(req: Request): Promise<Response> {
     if (action === "admin-list-courses") {
       return json({ rows: await service.listCourses(user.id) })
     }
+    if (action === "admin-bulk-import-dry-run") {
+      const courseId = readString(body, "courseId")
+      const fileName = readString(body, "fileName")
+      const fileBytesBase64 = readString(body, "fileBytesBase64")
+      if (!fileName || !fileBytesBase64) {
+        return json({ error: "fileName and fileBytesBase64 are required" }, { status: 400 })
+      }
+      return json(await service.bulkImportDryRun(user.id, { courseId, fileName, fileBytesBase64 }))
+    }
+    if (action === "admin-bulk-import-commit") {
+      const courseId = readString(body, "courseId")
+      const importToken = readString(body, "importToken")
+      if (!importToken) {
+        return json({ error: "importToken is required" }, { status: 400 })
+      }
+      return json(await service.bulkImportCommit(user.id, { courseId, importToken }))
+    }
     if (action === "admin-create-course") {
       const title = readString(body, "title")
       const slug = readString(body, "slug")

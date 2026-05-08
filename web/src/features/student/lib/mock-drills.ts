@@ -7,6 +7,7 @@ export type StudentDrill = {
   timeLabel: string
   lastAttempt: string
   accent: "orange" | "mint"
+  difficulty: "hardest"
 }
 
 export const mockStudentDrills: StudentDrill[] = [
@@ -19,6 +20,7 @@ export const mockStudentDrills: StudentDrill[] = [
     timeLabel: "15 min",
     lastAttempt: "2 days ago",
     accent: "orange",
+    difficulty: "hardest",
   },
   {
     id: "d2",
@@ -29,6 +31,7 @@ export const mockStudentDrills: StudentDrill[] = [
     timeLabel: "15 min",
     lastAttempt: "2 days ago",
     accent: "mint",
+    difficulty: "hardest",
   },
   {
     id: "d3",
@@ -39,6 +42,7 @@ export const mockStudentDrills: StudentDrill[] = [
     timeLabel: "15 min",
     lastAttempt: "2 days ago",
     accent: "orange",
+    difficulty: "hardest",
   },
   {
     id: "d4",
@@ -49,6 +53,7 @@ export const mockStudentDrills: StudentDrill[] = [
     timeLabel: "15 min",
     lastAttempt: "2 days ago",
     accent: "orange",
+    difficulty: "hardest",
   },
 ]
 

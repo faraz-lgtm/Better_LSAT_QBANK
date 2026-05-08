@@ -11,6 +11,40 @@ export type AdminQuestionType = {
   is_active: boolean
 }
 
+export type AdminBulkImportPreviewRow = {
+  lesson_slug: string
+  lesson_title: string
+  lesson_type: "video_text" | "active_drill" | "adaptive_drill" | "rep_work"
+  sort_order: number
+  summary: string | null
+  duration_minutes: number | null
+  video_url: string | null
+  text_content: string
+  lesson_is_published: boolean
+  status: "insert" | "update" | "invalid"
+  errors: string[]
+}
+
+export type AdminBulkImportDryRunResult = {
+  course: {
+    id: string | null
+    slug: string
+    title: string
+    description: string | null
+    is_published: boolean
+  }
+  importToken: string
+  expiresAt: string
+  counts: {
+    totalRows: number
+    insertCount: number
+    updateCount: number
+    invalidCount: number
+    validCount: number
+  }
+  rows: AdminBulkImportPreviewRow[]
+}
+
 export function createAdminApi(supabase: SupabaseClient) {
   async function invokeAdmin<T>(options: InvokeOptions): Promise<{ data: T | null; error: unknown }> {
     const maybeAuth = (supabase as unknown as {
@@ -182,6 +216,30 @@ export function createAdminApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       return data?.rows ?? []
+    },
+
+    async bulkImportDryRun(payload: { courseId?: string; fileName: string; fileBytesBase64: string }) {
+      const { data, error } = await invokeAdmin<AdminBulkImportDryRunResult>({
+        method: "POST",
+        body: { action: "admin-bulk-import-dry-run", ...payload },
+      })
+      if (error) throw error
+      if (!data) throw new Error("No dry-run response returned")
+      return data
+    },
+
+    async bulkImportCommit(payload: { courseId?: string; importToken: string }) {
+      const { data, error } = await invokeAdmin<{
+        success: boolean
+        courseId: string
+        counts: { inserted: number; updated: number; upserted: number; finalLessonCount: number }
+      }>({
+        method: "POST",
+        body: { action: "admin-bulk-import-commit", ...payload },
+      })
+      if (error) throw error
+      if (!data) throw new Error("No commit response returned")
+      return data
     },
 
     async createCourse(payload: {

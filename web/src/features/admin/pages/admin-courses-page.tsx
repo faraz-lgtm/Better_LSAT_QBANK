@@ -18,6 +18,7 @@ import { LessonQuestionPreviewModal } from "@/features/admin/components/lesson-q
 import { formatSectionOptionLabel } from "@/features/admin/lib/admin-section-display"
 import { normalizeLessonStatus, type PrepLessonStatus } from "@/features/admin/lib/prep-lesson-status"
 import { useAdminApi } from "@/features/admin/use-admin-api"
+import type { AdminBulkImportDryRunResult } from "@/lib/api/admin"
 import {
   isRepWorkJson,
   parseRepWorkFromTextContent,
@@ -89,6 +90,23 @@ function slugify(value: string): string {
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result
+      if (typeof result !== "string") {
+        reject(new Error("Failed to read file"))
+        return
+      }
+      const base64 = result.includes(",") ? result.split(",")[1] ?? "" : result
+      resolve(base64)
+    }
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read file"))
+    reader.readAsDataURL(file)
+  })
 }
 
 function parseDurationInputToMinutes(raw: string): number | null {
@@ -264,7 +282,7 @@ type LessonFormState = {
 function AdminCoursesPage() {
   const adminApi = useAdminApi()
   const [courses, setCourses] = useState<CourseRow[]>([])
-  const [mode, setMode] = useState<"list" | "create" | "builder">("list")
+  const [mode, setMode] = useState<"list" | "create" | "builder" | "bulk">("list")
   const [isSavingCourse, setIsSavingCourse] = useState(false)
   const [isSavingLesson, setIsSavingLesson] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -281,6 +299,11 @@ function AdminCoursesPage() {
   const [linkedQuestions, setLinkedQuestions] = useState<LessonQuestionRow[]>([])
   const [previewQuestionId, setPreviewQuestionId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [bulkFile, setBulkFile] = useState<File | null>(null)
+  const [bulkPreview, setBulkPreview] = useState<AdminBulkImportDryRunResult | null>(null)
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [bulkCommitting, setBulkCommitting] = useState(false)
+  const [bulkError, setBulkError] = useState<string | null>(null)
   const [courseForm, setCourseForm] = useState({
     title: "",
     slug: "",
@@ -603,34 +626,204 @@ function AdminCoursesPage() {
     }
   }
 
+  async function runBulkDryRun() {
+    if (!adminApi) return
+    if (!bulkFile) {
+      setBulkError("Upload a DOCX file before dry-run.")
+      return
+    }
+    if (!bulkFile.name.toLowerCase().endsWith(".docx")) {
+      setBulkError("Only .docx files are supported.")
+      return
+    }
+    setBulkBusy(true)
+    setBulkError(null)
+    setBulkPreview(null)
+    try {
+      const fileBytesBase64 = await fileToBase64(bulkFile)
+      const result = await adminApi.bulkImportDryRun({
+        fileName: bulkFile.name,
+        fileBytesBase64,
+      })
+      setBulkPreview(result)
+    } catch (e) {
+      setBulkError(e instanceof Error ? e.message : "Dry-run failed")
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
+  async function commitBulkImport() {
+    if (!adminApi || !bulkPreview) return
+    if (bulkPreview.counts.invalidCount > 0) {
+      setBulkError("Resolve invalid rows in dry-run before committing.")
+      return
+    }
+    setBulkCommitting(true)
+    setBulkError(null)
+    try {
+      const result = await adminApi.bulkImportCommit({
+        importToken: bulkPreview.importToken,
+      })
+      await reloadCoursesAndSelect(String(result.courseId))
+      const rows = (await adminApi.listLessons(String(result.courseId))) as LessonRow[]
+      setLessons(rows)
+      setBulkPreview(null)
+      setBulkFile(null)
+      window.alert(
+        `Bulk import completed.\nInserted: ${result.counts.inserted}\nUpdated: ${result.counts.updated}\nTotal lessons now: ${result.counts.finalLessonCount}`,
+      )
+    } catch (e) {
+      setBulkError(e instanceof Error ? e.message : "Bulk import commit failed")
+    } finally {
+      setBulkCommitting(false)
+    }
+  }
+
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="admin-typo-h1">
-            {mode === "create" ? "Create New Course" : mode === "builder" ? "Course Builder" : "Courses"}
+            {mode === "create"
+              ? "Create New Course"
+              : mode === "builder"
+                ? "Course Builder"
+                : mode === "bulk"
+                  ? "Bulk Import"
+                  : "Courses"}
           </h1>
           <p className="admin-typo-subtitle mt-1">
             {mode === "create"
               ? "Set up the basic details for your new course before building the curriculum."
+              : mode === "bulk"
+                ? "Upload DOCX, run pre-vetting dry-run, then commit import."
               : "Build structured learning paths from lessons and PrepTest questions"}
           </p>
         </div>
-        {mode !== "create" && (
-          <button
-            type="button"
-            className="admin-btn admin-btn-primary"
-            onClick={() => {
-              setMode("create")
-              setEditingCourseId(null)
-              setCourseForm({ title: "", slug: "", description: "", estimatedDuration: "" })
-            }}
-          >
-            + New course
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {mode !== "create" && mode !== "bulk" && (
+            <button
+              type="button"
+              className="admin-btn admin-btn-ghost"
+              onClick={() => {
+                setMode("bulk")
+                setBulkError(null)
+              }}
+            >
+              Bulk import
+            </button>
+          )}
+          {mode !== "create" && (
+            <button
+              type="button"
+              className="admin-btn admin-btn-primary"
+              onClick={() => {
+                setMode("create")
+                setEditingCourseId(null)
+                setCourseForm({ title: "", slug: "", description: "", estimatedDuration: "" })
+              }}
+            >
+              + New course
+            </button>
+          )}
+        </div>
       </div>
       {error && <p className="text-sm text-[var(--red)]">{error}</p>}
+      {mode === "bulk" && (
+        <div className="table-wrap">
+          <div className="table-header">
+            <div className="table-title">Bulk Import (DOCX)</div>
+          </div>
+          <div className="space-y-4 p-4">
+            {bulkError ? <p className="text-sm text-[var(--red)]">{bulkError}</p> : null}
+            <div className="grid gap-3 md:grid-cols-1">
+              <div className="md:col-span-1">
+                <label className="admin-label">DOCX syllabus file</label>
+                <input
+                  type="file"
+                  accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  className="admin-input mt-1"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null
+                    setBulkFile(file)
+                    setBulkPreview(null)
+                    setBulkError(null)
+                  }}
+                />
+                <p className="mt-1 text-xs text-[var(--text3)]">{bulkFile ? `Selected: ${bulkFile.name}` : "No file selected"}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" className="admin-btn admin-btn-primary" disabled={bulkBusy} onClick={() => void runBulkDryRun()}>
+                {bulkBusy ? "Running dry-run..." : "Run dry-run preview"}
+              </button>
+              <button type="button" className="admin-btn admin-btn-ghost" onClick={() => setMode("list")}>
+                Back
+              </button>
+            </div>
+
+            {bulkPreview ? (
+              <div className="space-y-3 rounded-lg border border-[var(--border)] bg-[var(--surface2)] p-3">
+                <div className="grid gap-2 text-xs sm:grid-cols-5">
+                  <div><span className="font-semibold">Rows:</span> {bulkPreview.counts.totalRows}</div>
+                  <div><span className="font-semibold">Valid:</span> {bulkPreview.counts.validCount}</div>
+                  <div><span className="font-semibold">Insert:</span> {bulkPreview.counts.insertCount}</div>
+                  <div><span className="font-semibold">Update:</span> {bulkPreview.counts.updateCount}</div>
+                  <div><span className="font-semibold">Invalid:</span> {bulkPreview.counts.invalidCount}</div>
+                </div>
+                <div className="max-h-[50vh] overflow-auto rounded border border-[var(--border)] bg-white">
+                  <table className="w-full min-w-[980px] text-xs">
+                    <thead className="sticky top-0 bg-[#f6f8fa]">
+                      <tr className="border-b border-[var(--border)]">
+                        <th className="px-2 py-2 text-left">Status</th>
+                        <th className="px-2 py-2 text-left">Sort</th>
+                        <th className="px-2 py-2 text-left">Slug</th>
+                        <th className="px-2 py-2 text-left">Title</th>
+                        <th className="px-2 py-2 text-left">Type</th>
+                        <th className="px-2 py-2 text-left">Summary</th>
+                        <th className="px-2 py-2 text-left">Duration</th>
+                        <th className="px-2 py-2 text-left">Published</th>
+                        <th className="px-2 py-2 text-left">Errors</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bulkPreview.rows.map((row, idx) => (
+                        <tr key={`${row.lesson_slug}-${idx}`} className="border-b border-[var(--border)]">
+                          <td className="px-2 py-2">
+                            <span className={row.status === "invalid" ? "text-[var(--red)]" : row.status === "insert" ? "text-[#206d5b]" : "text-[#1f4c9a]"}>
+                              {row.status}
+                            </span>
+                          </td>
+                          <td className="px-2 py-2">{row.sort_order}</td>
+                          <td className="px-2 py-2">{row.lesson_slug}</td>
+                          <td className="px-2 py-2">{row.lesson_title}</td>
+                          <td className="px-2 py-2">{row.lesson_type}</td>
+                          <td className="max-w-[260px] truncate px-2 py-2" title={row.summary ?? ""}>{row.summary ?? "-"}</td>
+                          <td className="px-2 py-2">{row.duration_minutes ?? "-"}</td>
+                          <td className="px-2 py-2">{row.lesson_is_published ? "true" : "false"}</td>
+                          <td className="max-w-[300px] px-2 py-2 text-[var(--red)]">{row.errors.join("; ") || "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-[var(--text3)]">Token expires at: {new Date(bulkPreview.expiresAt).toLocaleString()}</p>
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn-primary"
+                    disabled={bulkCommitting || bulkPreview.counts.invalidCount > 0}
+                    onClick={() => void commitBulkImport()}
+                  >
+                    {bulkCommitting ? "Importing..." : "Commit import"}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
       {mode === "list" && (
         <div className="table-wrap">
           <div className="table-header">
