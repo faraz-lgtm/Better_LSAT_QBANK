@@ -8,7 +8,14 @@ import { createPrepCourseApi, type PrepCourse, type PrepLesson } from "@/lib/api
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 function PrepCourseLessonPage() {
-  const { courseSlug = "prep-course", lessonSlug = "" } = useParams()
+  const { courseSlug: courseSlugParam, lessonSlug: lessonSlugParam } = useParams<{
+    courseSlug: string
+    lessonSlug: string
+  }>()
+  const courseSlug = courseSlugParam?.trim() ?? ""
+  const lessonSlug = lessonSlugParam?.trim() ?? ""
+  const paramsValid = courseSlug.length > 0 && lessonSlug.length > 0
+
   const [course, setCourse] = useState<PrepCourse | null>(null)
   const [lesson, setLesson] = useState<PrepLesson | null>(null)
   const [lessons, setLessons] = useState<PrepLesson[]>([])
@@ -26,14 +33,21 @@ function PrepCourseLessonPage() {
   useEffect(() => {
     let alive = true
     async function load() {
+      if (!paramsValid) return
       if (!prepCourseApi) {
         if (alive) setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
         return
       }
+      if (alive) {
+        setError(null)
+        setCourse(null)
+        setLessons([])
+        setLesson(null)
+      }
       try {
         const [courseData, lessonData] = await Promise.all([
           prepCourseApi.getCourse(courseSlug),
-          prepCourseApi.getLesson(courseSlug, lessonSlug || "intro-logical-reasoning"),
+          prepCourseApi.getLesson(courseSlug, lessonSlug),
         ])
         if (!alive) return
         setCourse(courseData.course)
@@ -48,7 +62,15 @@ function PrepCourseLessonPage() {
     return () => {
       alive = false
     }
-  }, [courseSlug, lessonSlug, prepCourseApi])
+  }, [paramsValid, courseSlug, lessonSlug, prepCourseApi])
+
+  if (!paramsValid) {
+    return (
+      <StudentMain>
+        <p className="text-sm text-[#95122b]">Invalid lesson link. A course and lesson slug are required in the URL.</p>
+      </StudentMain>
+    )
+  }
 
   return (
     <>

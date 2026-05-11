@@ -43,9 +43,11 @@ const appNavItems: AppNavItem[] = [
     icon: BarChart3,
     options: [
       { label: "Overview", to: "/app/analytics" },
-      { label: "Drills", to: "/app/practice/drills" },
-      { label: "Sections", to: "/app/practice/sections" },
-      { label: "PrepTest", to: "/app/practice/preptest" },
+      { label: "Priorities", to: "/app/analytics?tab=priorities" },
+      { label: "Practice history", to: "/app/analytics?tab=history" },
+      { label: "Drills", to: "/app/analytics?tab=drills" },
+      { label: "Sections", to: "/app/analytics?tab=sections" },
+      { label: "PrepTest", to: "/app/analytics?tab=preptest" },
     ],
   },
 ]

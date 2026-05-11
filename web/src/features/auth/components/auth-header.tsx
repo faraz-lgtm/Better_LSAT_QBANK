@@ -31,6 +31,8 @@ const navMenus: Array<{ key: NavMenuKey; label: string; items: Array<{ label: st
     label: "Analytics",
     items: [
       { label: "Overview", href: "/app/analytics" },
+      { label: "Priorities", href: "/app/analytics?tab=priorities" },
+      { label: "Practice history", href: "/app/analytics?tab=history" },
       { label: "Drills", href: "/app/analytics?tab=drills" },
       { label: "Sections", href: "/app/analytics?tab=sections" },
       { label: "PrepTest", href: "/app/analytics?tab=preptest" },

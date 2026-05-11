@@ -46,7 +46,10 @@ export type AdminBulkImportDryRunResult = {
 }
 
 export function createAdminApi(supabase: SupabaseClient) {
-  async function invokeAdmin<T>(options: InvokeOptions): Promise<{ data: T | null; error: unknown }> {
+  async function invokeAdminFn<T>(
+    functionName: string,
+    options: InvokeOptions,
+  ): Promise<{ data: T | null; error: unknown }> {
     const maybeAuth = (supabase as unknown as {
       auth?: { getSession?: () => Promise<{ data: { session: { access_token?: string } | null } }> }
     }).auth
@@ -57,16 +60,19 @@ export function createAdminApi(supabase: SupabaseClient) {
     if (accessToken) {
       const nextHeaders = headers ?? {}
       nextHeaders.Authorization = `Bearer ${accessToken}`
-      return supabase.functions.invoke<T>("admin", { ...options, headers: nextHeaders })
+      return supabase.functions.invoke<T>(functionName, { ...options, headers: nextHeaders })
     }
-    return supabase.functions.invoke<T>("admin", options)
+    return supabase.functions.invoke<T>(functionName, options)
   }
 
   async function reserveQuestionVideoUploadInner(questionId: string, fileExtension: string) {
-    const { data, error } = await invokeAdmin<{ bucket: string; path: string; publicUrl: string }>({
-      method: "POST",
-      body: { action: "admin-reserve-question-video-upload", questionId, fileExtension },
-    })
+    const { data, error } = await invokeAdminFn<{ bucket: string; path: string; publicUrl: string }>(
+      "admin-reserve-question-video-upload",
+      {
+        method: "POST",
+        body: { questionId, fileExtension },
+      },
+    )
     if (error) throw error
     if (!data?.bucket || !data.path || !data.publicUrl) throw new Error("Invalid reserve response")
     return data
@@ -74,27 +80,27 @@ export function createAdminApi(supabase: SupabaseClient) {
 
   return {
     async bootstrapProjection() {
-      const { data, error } = await invokeAdmin<{ success: boolean }>({
+      const { data, error } = await invokeAdminFn<{ success: boolean }>("admin-bootstrap-projection", {
         method: "POST",
-        body: { action: "admin-bootstrap-projection" },
+        body: {},
       })
       if (error) throw error
       return data?.success ?? false
     },
 
     async listQuestionTypes() {
-      const { data, error } = await invokeAdmin<{ rows: AdminQuestionType[] }>({
+      const { data, error } = await invokeAdminFn<{ rows: AdminQuestionType[] }>("admin-list-question-types", {
         method: "POST",
-        body: { action: "admin-list-question-types" },
+        body: {},
       })
       if (error) throw error
       return data?.rows ?? []
     },
 
     async createQuestionType(payload: { name: string; sectionType: "LR" | "RC" | "LG" }) {
-      const { data, error } = await invokeAdmin<{ row: AdminQuestionType }>({
+      const { data, error } = await invokeAdminFn<{ row: AdminQuestionType }>("admin-create-question-type", {
         method: "POST",
-        body: { action: "admin-create-question-type", ...payload },
+        body: { ...payload },
       })
       if (error) throw error
       if (!data?.row) throw new Error("No taxonomy row returned")
@@ -102,9 +108,9 @@ export function createAdminApi(supabase: SupabaseClient) {
     },
 
     async updateQuestionType(id: string, payload: Partial<{ name: string; isActive: boolean }>) {
-      const { data, error } = await invokeAdmin<{ row: AdminQuestionType }>({
+      const { data, error } = await invokeAdminFn<{ row: AdminQuestionType }>("admin-update-question-type", {
         method: "POST",
-        body: { action: "admin-update-question-type", id, ...payload },
+        body: { id, ...payload },
       })
       if (error) throw error
       if (!data?.row) throw new Error("No taxonomy row returned")
@@ -112,9 +118,9 @@ export function createAdminApi(supabase: SupabaseClient) {
     },
 
     async deactivateQuestionType(id: string) {
-      const { data, error } = await invokeAdmin<{ row: AdminQuestionType }>({
+      const { data, error } = await invokeAdminFn<{ row: AdminQuestionType }>("admin-deactivate-question-type", {
         method: "POST",
-        body: { action: "admin-deactivate-question-type", id },
+        body: { id },
       })
       if (error) throw error
       if (!data?.row) throw new Error("No taxonomy row returned")
@@ -122,18 +128,18 @@ export function createAdminApi(supabase: SupabaseClient) {
     },
 
     async seedDefaultQuestionTypes() {
-      const { data, error } = await invokeAdmin<{ seeded: number; skipped: number }>({
+      const { data, error } = await invokeAdminFn<{ seeded: number; skipped: number }>("admin-seed-default-question-types", {
         method: "POST",
-        body: { action: "admin-seed-default-question-types" },
+        body: {},
       })
       if (error) throw error
       return data ?? { seeded: 0, skipped: 0 }
     },
 
     async listPrepTests(limit = 10, offset = 0, contentFilter?: string) {
-      const { data, error } = await invokeAdmin<{ rows: unknown[]; total: number }>({
+      const { data, error } = await invokeAdminFn<{ rows: unknown[]; total: number }>("admin-list-preptests", {
         method: "POST",
-        body: { action: "admin-list-preptests", limit, offset, contentFilter },
+        body: { limit, offset, contentFilter },
       })
       if (error) throw error
       return {
@@ -143,9 +149,9 @@ export function createAdminApi(supabase: SupabaseClient) {
     },
 
     async getPrepTestDetail(prepTestId: string) {
-      const { data, error } = await invokeAdmin<{ prepTest: unknown; stats: unknown }>({
+      const { data, error } = await invokeAdminFn<{ prepTest: unknown; stats: unknown }>("admin-get-preptest-detail", {
         method: "POST",
-        body: { action: "admin-get-preptest-detail", prepTestId },
+        body: { prepTestId },
       })
       if (error) throw error
       if (!data) throw new Error("No prep test detail returned")
@@ -153,11 +159,11 @@ export function createAdminApi(supabase: SupabaseClient) {
     },
 
     async getNextQuestionForPrepTest(prepTestId: string) {
-      const { data, error } = await invokeAdmin<{
+      const { data, error } = await invokeAdminFn<{
         nextQuestion: { id: string; sectionId: string; sectionNumber: number; questionNumber: number }
-      }>({
+      }>("admin-get-next-question-for-preptest", {
         method: "POST",
-        body: { action: "admin-get-next-question-for-preptest", prepTestId },
+        body: { prepTestId },
       })
       if (error) throw error
       if (!data?.nextQuestion) throw new Error("No question found for this PrepTest")
@@ -165,19 +171,22 @@ export function createAdminApi(supabase: SupabaseClient) {
     },
 
     async getQuestionEditorPayload(questionId: string) {
-      const { data, error } = await invokeAdmin<{ question: unknown; adjacent: unknown; taxonomy: AdminQuestionType[] }>({
-        method: "POST",
-        body: { action: "admin-get-question-editor-payload", questionId },
-      })
+      const { data, error } = await invokeAdminFn<{ question: unknown; adjacent: unknown; taxonomy: AdminQuestionType[] }>(
+        "admin-get-question-editor-payload",
+        {
+          method: "POST",
+          body: { questionId },
+        },
+      )
       if (error) throw error
       if (!data) throw new Error("No question payload returned")
       return data
     },
 
     async updateQuestionMeta(questionId: string, payload: Record<string, unknown>) {
-      const { data, error } = await invokeAdmin<{ row: unknown }>({
+      const { data, error } = await invokeAdminFn<{ row: unknown }>("admin-update-question-meta", {
         method: "POST",
-        body: { action: "admin-update-question-meta", questionId, data: payload },
+        body: { questionId, data: payload },
       })
       if (error) throw error
       return data?.row
@@ -201,27 +210,27 @@ export function createAdminApi(supabase: SupabaseClient) {
     },
 
     async getDashboard() {
-      const { data, error } = await invokeAdmin<{ prepTests: unknown[] }>({
+      const { data, error } = await invokeAdminFn<{ prepTests: unknown[] }>("admin-dashboard", {
         method: "POST",
-        body: { action: "admin-dashboard" },
+        body: {},
       })
       if (error) throw error
       return data?.prepTests ?? []
     },
 
     async listCourses() {
-      const { data, error } = await invokeAdmin<{ rows: unknown[] }>({
+      const { data, error } = await invokeAdminFn<{ rows: unknown[] }>("admin-list-courses", {
         method: "POST",
-        body: { action: "admin-list-courses" },
+        body: {},
       })
       if (error) throw error
       return data?.rows ?? []
     },
 
     async bulkImportDryRun(payload: { courseId?: string; fileName: string; fileBytesBase64: string }) {
-      const { data, error } = await invokeAdmin<AdminBulkImportDryRunResult>({
+      const { data, error } = await invokeAdminFn<AdminBulkImportDryRunResult>("admin-bulk-import-dry-run", {
         method: "POST",
-        body: { action: "admin-bulk-import-dry-run", ...payload },
+        body: { ...payload },
       })
       if (error) throw error
       if (!data) throw new Error("No dry-run response returned")
@@ -229,13 +238,13 @@ export function createAdminApi(supabase: SupabaseClient) {
     },
 
     async bulkImportCommit(payload: { courseId?: string; importToken: string }) {
-      const { data, error } = await invokeAdmin<{
+      const { data, error } = await invokeAdminFn<{
         success: boolean
         courseId: string
         counts: { inserted: number; updated: number; upserted: number; finalLessonCount: number }
-      }>({
+      }>("admin-bulk-import-commit", {
         method: "POST",
-        body: { action: "admin-bulk-import-commit", ...payload },
+        body: { ...payload },
       })
       if (error) throw error
       if (!data) throw new Error("No commit response returned")
@@ -248,36 +257,36 @@ export function createAdminApi(supabase: SupabaseClient) {
       description?: string
       isPublished?: boolean
     }) {
-      const { data, error } = await invokeAdmin<{ row: unknown }>({
+      const { data, error } = await invokeAdminFn<{ row: unknown }>("admin-create-course", {
         method: "POST",
-        body: { action: "admin-create-course", ...payload },
+        body: { ...payload },
       })
       if (error) throw error
       return data?.row
     },
 
     async updateCourse(courseId: string, data: Record<string, unknown>) {
-      const { data: out, error } = await invokeAdmin<{ row: unknown }>({
+      const { data: out, error } = await invokeAdminFn<{ row: unknown }>("admin-update-course", {
         method: "POST",
-        body: { action: "admin-update-course", courseId, data },
+        body: { courseId, data },
       })
       if (error) throw error
       return out?.row
     },
 
     async deleteCourse(courseId: string) {
-      const { data, error } = await invokeAdmin<{ success: boolean }>({
+      const { data, error } = await invokeAdminFn<{ success: boolean }>("admin-delete-course", {
         method: "POST",
-        body: { action: "admin-delete-course", courseId },
+        body: { courseId },
       })
       if (error) throw error
       return data?.success ?? false
     },
 
     async listLessons(courseId: string) {
-      const { data, error } = await invokeAdmin<{ rows: unknown[] }>({
+      const { data, error } = await invokeAdminFn<{ rows: unknown[] }>("admin-list-lessons", {
         method: "POST",
-        body: { action: "admin-list-lessons", courseId },
+        body: { courseId },
       })
       if (error) throw error
       return data?.rows ?? []
@@ -294,153 +303,153 @@ export function createAdminApi(supabase: SupabaseClient) {
       textContent?: string
       isPublished?: boolean
     }) {
-      const { data, error } = await invokeAdmin<{ row: unknown }>({
+      const { data, error } = await invokeAdminFn<{ row: unknown }>("admin-create-lesson", {
         method: "POST",
-        body: { action: "admin-create-lesson", ...payload },
+        body: { ...payload },
       })
       if (error) throw error
       return data?.row
     },
 
     async updateLesson(lessonId: string, data: Record<string, unknown>) {
-      const { data: out, error } = await invokeAdmin<{ row: unknown }>({
+      const { data: out, error } = await invokeAdminFn<{ row: unknown }>("admin-update-lesson", {
         method: "POST",
-        body: { action: "admin-update-lesson", lessonId, data },
+        body: { lessonId, data },
       })
       if (error) throw error
       return out?.row
     },
 
     async deleteLesson(lessonId: string) {
-      const { data, error } = await invokeAdmin<{ success: boolean }>({
+      const { data, error } = await invokeAdminFn<{ success: boolean }>("admin-delete-lesson", {
         method: "POST",
-        body: { action: "admin-delete-lesson", lessonId },
+        body: { lessonId },
       })
       if (error) throw error
       return data?.success ?? false
     },
 
     async reorderLessons(courseId: string, lessonIds: string[]) {
-      const { data, error } = await invokeAdmin<{ rows: unknown[] }>({
+      const { data, error } = await invokeAdminFn<{ rows: unknown[] }>("admin-reorder-lessons", {
         method: "POST",
-        body: { action: "admin-reorder-lessons", courseId, lessonIds },
+        body: { courseId, lessonIds },
       })
       if (error) throw error
       return data?.rows ?? []
     },
 
     async listLessonQuestions(lessonId: string) {
-      const { data, error } = await invokeAdmin<{ rows: unknown[] }>({
+      const { data, error } = await invokeAdminFn<{ rows: unknown[] }>("admin-list-lesson-questions", {
         method: "POST",
-        body: { action: "admin-list-lesson-questions", lessonId },
+        body: { lessonId },
       })
       if (error) throw error
       return data?.rows ?? []
     },
 
     async linkQuestionToLesson(lessonId: string, questionRef: string) {
-      const { data, error } = await invokeAdmin<{ row: unknown }>({
+      const { data, error } = await invokeAdminFn<{ row: unknown }>("admin-link-question-to-lesson", {
         method: "POST",
-        body: { action: "admin-link-question-to-lesson", lessonId, questionRef },
+        body: { lessonId, questionRef },
       })
       if (error) throw error
       return data?.row
     },
 
     async unlinkQuestionFromLesson(lessonQuestionId: string) {
-      const { data, error } = await invokeAdmin<{ success: boolean }>({
+      const { data, error } = await invokeAdminFn<{ success: boolean }>("admin-unlink-question-from-lesson", {
         method: "POST",
-        body: { action: "admin-unlink-question-from-lesson", lessonQuestionId },
+        body: { lessonQuestionId },
       })
       if (error) throw error
       return data?.success ?? false
     },
 
     async createYouTryQuestion(payload: Record<string, unknown>) {
-      const { data, error } = await invokeAdmin<{ row: unknown }>({
+      const { data, error } = await invokeAdminFn<{ row: unknown }>("admin-create-you-try-question", {
         method: "POST",
-        body: { action: "admin-create-you-try-question", ...payload },
+        body: { ...payload },
       })
       if (error) throw error
       return data?.row
     },
 
     async updateYouTryQuestion(questionId: string, payload: Record<string, unknown>) {
-      const { data, error } = await invokeAdmin<{ row: unknown }>({
+      const { data, error } = await invokeAdminFn<{ row: unknown }>("admin-update-you-try-question", {
         method: "POST",
-        body: { action: "admin-update-you-try-question", questionId, data: payload },
+        body: { questionId, data: payload },
       })
       if (error) throw error
       return data?.row
     },
 
     async listYouTryQuestions() {
-      const { data, error } = await invokeAdmin<{ rows: unknown[] }>({
+      const { data, error } = await invokeAdminFn<{ rows: unknown[] }>("admin-list-you-try-questions", {
         method: "POST",
-        body: { action: "admin-list-you-try-questions" },
+        body: {},
       })
       if (error) throw error
       return data?.rows ?? []
     },
 
     async getYouTryQuestion(questionId: string) {
-      const { data, error } = await invokeAdmin<{ row: unknown }>({
+      const { data, error } = await invokeAdminFn<{ row: unknown }>("admin-get-you-try-question", {
         method: "POST",
-        body: { action: "admin-get-you-try-question", questionId },
+        body: { questionId },
       })
       if (error) throw error
       return data?.row
     },
 
     async getPlatformConfig() {
-      const { data, error } = await invokeAdmin<{ row: Record<string, unknown> | null }>({
+      const { data, error } = await invokeAdminFn<{ row: Record<string, unknown> | null }>("admin-get-platform-config", {
         method: "POST",
-        body: { action: "admin-get-platform-config" },
+        body: {},
       })
       if (error) throw error
       return data?.row ?? null
     },
 
     async upsertPlatformConfig(payload: Record<string, unknown>) {
-      const { data, error } = await invokeAdmin<{ row: Record<string, unknown> }>({
+      const { data, error } = await invokeAdminFn<{ row: Record<string, unknown> }>("admin-upsert-platform-config", {
         method: "POST",
-        body: { action: "admin-upsert-platform-config", data: payload },
+        body: { data: payload },
       })
       if (error) throw error
       return data?.row
     },
 
     async listScoreTables() {
-      const { data, error } = await invokeAdmin<{ rows: unknown[] }>({
+      const { data, error } = await invokeAdminFn<{ rows: unknown[] }>("admin-list-score-tables", {
         method: "POST",
-        body: { action: "admin-list-score-tables" },
+        body: {},
       })
       if (error) throw error
       return data?.rows ?? []
     },
 
     async getScoreTable(scoreTableId: string) {
-      const { data, error } = await invokeAdmin<{ row: unknown }>({
+      const { data, error } = await invokeAdminFn<{ row: unknown }>("admin-get-score-table", {
         method: "POST",
-        body: { action: "admin-get-score-table", scoreTableId },
+        body: { scoreTableId },
       })
       if (error) throw error
       return data?.row
     },
 
     async updateScoreRow(scoreRowId: string, payload: Record<string, unknown>) {
-      const { data, error } = await invokeAdmin<{ row: unknown }>({
+      const { data, error } = await invokeAdminFn<{ row: unknown }>("admin-update-score-row", {
         method: "POST",
-        body: { action: "admin-update-score-row", scoreRowId, data: payload },
+        body: { scoreRowId, data: payload },
       })
       if (error) throw error
       return data?.row
     },
 
     async listUsers(limit = 100) {
-      const { data, error } = await invokeAdmin<{ rows: unknown[] }>({
+      const { data, error } = await invokeAdminFn<{ rows: unknown[] }>("admin-list-users", {
         method: "POST",
-        body: { action: "admin-list-users", limit },
+        body: { limit },
       })
       if (error) throw error
       return data?.rows ?? []
@@ -452,18 +461,18 @@ export function createAdminApi(supabase: SupabaseClient) {
       fullName?: string
       role?: "student" | "admin"
     }) {
-      const { data, error } = await invokeAdmin<{ row: unknown }>({
+      const { data, error } = await invokeAdminFn<{ row: unknown }>("admin-create-user", {
         method: "POST",
-        body: { action: "admin-create-user", ...payload },
+        body: { ...payload },
       })
       if (error) throw error
       return data?.row
     },
 
     async getUserDetail(userId: string) {
-      const { data, error } = await invokeAdmin<{ profile: unknown; tests: unknown[] }>({
+      const { data, error } = await invokeAdminFn<{ profile: unknown; tests: unknown[] }>("admin-get-user-detail", {
         method: "POST",
-        body: { action: "admin-get-user-detail", userId },
+        body: { userId },
       })
       if (error) throw error
       if (!data) throw new Error("No user detail returned")
