@@ -7,6 +7,7 @@ import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { createAuthApi } from "@/lib/api/auth"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
 const MIN_PASSWORD_LENGTH = 6
 
@@ -72,7 +73,7 @@ function ResetPasswordPage() {
       await authApi.updatePassword(password)
       navigate("/app", { replace: true })
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : "Unable to update password.")
+      setError(updateError instanceof Error ? formatSupabaseCallError(updateError) : "Unable to update password.")
     } finally {
       setIsSubmitting(false)
     }

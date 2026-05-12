@@ -459,6 +459,13 @@ function AnalyticsDrillsPage() {
     [navigate],
   )
 
+  const handleOpenPractice = useCallback(
+    (id: string) => {
+      navigate(`/app/practice/preptest?testId=${encodeURIComponent(id)}`)
+    },
+    [navigate],
+  )
+
   return (
     <>
       <StudentSubnavStrip
@@ -534,6 +541,7 @@ function AnalyticsDrillsPage() {
           onBookmarkedOnlyChange={setBookmarkedOnly}
           onToggleBookmark={handleToggleBookmark}
           onSelectEntry={handleSelectEntry}
+          onOpenPractice={handleOpenPractice}
         />
       </StudentMain>
     </>

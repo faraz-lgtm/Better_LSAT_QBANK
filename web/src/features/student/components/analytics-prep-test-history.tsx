@@ -35,11 +35,11 @@ function ScoreMetric({
 function RowMenu({
   entry,
   onToggleBookmark,
-  onSelectEntry,
+  onOpenPractice,
 }: {
   entry: PrepTestHistoryEntry
   onToggleBookmark: (id: string) => void
-  onSelectEntry?: (id: string) => void
+  onOpenPractice?: (id: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -79,19 +79,19 @@ function RowMenu({
           role="menu"
           className="absolute right-0 z-30 mt-2 min-w-[200px] overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
         >
-          {onSelectEntry ? (
+          {onOpenPractice ? (
             <li role="presentation">
               <button
                 type="button"
                 role="menuitem"
                 onClick={() => {
-                  onSelectEntry(entry.id)
+                  onOpenPractice(entry.id)
                   setOpen(false)
                 }}
                 className="flex h-10 w-full items-center gap-2 rounded-xl px-3 text-sm font-medium tracking-[0.02em] text-[#062357] transition-colors hover:bg-[#f6f8fa]"
               >
                 <ExternalLink className="size-4 text-[#666d80]" aria-hidden />
-                Open PrepTest
+                Practice this PrepTest
               </button>
             </li>
           ) : null}
@@ -127,12 +127,14 @@ function PrepTestHistoryRow({
   isLast,
   onToggleBookmark,
   onSelectEntry,
+  onOpenPractice,
 }: {
   entry: PrepTestHistoryEntry
   isFirst: boolean
   isLast: boolean
   onToggleBookmark: (id: string) => void
   onSelectEntry?: (id: string) => void
+  onOpenPractice?: (id: string) => void
 }) {
   const labelClickable = Boolean(onSelectEntry)
   return (
@@ -182,7 +184,7 @@ function PrepTestHistoryRow({
         <ScoreMetric label="BR" value={entry.blindReviewScore} max={entry.blindReviewMax} barColor="#df1c41" />
       </div>
       <div className="flex h-full w-[97px] items-center justify-center px-3">
-        <RowMenu entry={entry} onToggleBookmark={onToggleBookmark} onSelectEntry={onSelectEntry} />
+        <RowMenu entry={entry} onToggleBookmark={onToggleBookmark} onOpenPractice={onOpenPractice} />
       </div>
     </div>
   )
@@ -193,7 +195,10 @@ type AnalyticsPrepTestHistoryProps = {
   bookmarkedOnly: boolean
   onBookmarkedOnlyChange: (next: boolean) => void
   onToggleBookmark: (id: string) => void
+  /** Opens analytics results for the PrepTest (row title and primary navigation). */
   onSelectEntry?: (id: string) => void
+  /** Opens the timed practice flow for the PrepTest (overflow menu). */
+  onOpenPractice?: (id: string) => void
 }
 
 function AnalyticsPrepTestHistory({
@@ -202,6 +207,7 @@ function AnalyticsPrepTestHistory({
   onBookmarkedOnlyChange,
   onToggleBookmark,
   onSelectEntry,
+  onOpenPractice,
 }: AnalyticsPrepTestHistoryProps) {
   return (
     <section className="rounded-3xl border border-[#dfe1e7] bg-white p-6">
@@ -236,6 +242,7 @@ function AnalyticsPrepTestHistory({
               isLast={index === visibleEntries.length - 1}
               onToggleBookmark={onToggleBookmark}
               onSelectEntry={onSelectEntry}
+              onOpenPractice={onOpenPractice}
             />
           ))
         )}

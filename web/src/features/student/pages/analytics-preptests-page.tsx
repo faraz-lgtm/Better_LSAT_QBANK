@@ -381,6 +381,13 @@ function AnalyticsPrepTestsPage() {
 
   const handleSelectEntry = useCallback(
     (id: string) => {
+      navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)
+    },
+    [navigate],
+  )
+
+  const handleOpenPractice = useCallback(
+    (id: string) => {
       navigate(`/app/practice/preptest?testId=${encodeURIComponent(id)}`)
     },
     [navigate],
@@ -471,6 +478,7 @@ function AnalyticsPrepTestsPage() {
           onBookmarkedOnlyChange={setBookmarkedOnly}
           onToggleBookmark={handleToggleBookmark}
           onSelectEntry={handleSelectEntry}
+          onOpenPractice={handleOpenPractice}
         />
       </StudentMain>
     </>

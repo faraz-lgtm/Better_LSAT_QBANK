@@ -4,6 +4,7 @@ import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
 import { getPostAuthDestination } from "@/lib/auth/post-auth-redirect"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
 function AuthCallbackPage() {
   const navigate = useNavigate()
@@ -55,7 +56,11 @@ function AuthCallbackPage() {
         navigate(getPostAuthDestination(profile), { replace: true })
       } catch (callbackError) {
         if (!isActive) return
-        setError(callbackError instanceof Error ? callbackError.message : "Unable to complete authentication.")
+        setError(
+          callbackError instanceof Error
+            ? formatSupabaseCallError(callbackError)
+            : "Unable to complete authentication.",
+        )
       }
     }
 

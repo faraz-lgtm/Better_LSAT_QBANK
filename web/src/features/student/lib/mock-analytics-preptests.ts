@@ -49,6 +49,20 @@ export type PrepTestRecord = {
  */
 export const mockPrepTestRecords: PrepTestRecord[] = [
   {
+    id: "pt145",
+    prepTestNumber: 145,
+    takenAt: "2025-10-03",
+    bookmarked: false,
+    lrCorrect: 33,
+    lrMax: 51,
+    rcCorrect: 33,
+    rcMax: 27,
+    scaledScore: 167,
+    percentile: 90.6,
+    blindReviewScaled: 167,
+    blindReviewPercentile: 91,
+  },
+  {
     id: "pt150",
     prepTestNumber: 150,
     takenAt: "2025-11-04",
