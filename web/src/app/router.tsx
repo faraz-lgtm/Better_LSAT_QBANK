@@ -13,10 +13,15 @@ import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
 import { PrepCoursePage } from "@/features/prep-course/pages/prep-course-page"
 import { PrepCourseLessonPage } from "@/features/prep-course/pages/prep-course-lesson-page"
 import { AnalyticsPage } from "@/features/student/pages/analytics-page"
+import { ExplanationQuestionDetailPage } from "@/features/student/pages/explanation-question-detail-page"
 import { ExplanationsPage } from "@/features/student/pages/explanations-page"
 import { PracticeBlindReviewPage } from "@/features/student/pages/practice-blind-review-page"
+import { LrDrillSessionPage } from "@/features/student/pages/lr-drill-session-page"
+import { LrNewDrillPage } from "@/features/student/pages/lr-new-drill-page"
 import { PracticeDrillsPage } from "@/features/student/pages/practice-drills-page"
 import { PracticePrepTestPage } from "@/features/student/pages/practice-preptest-page"
+import { PracticeRcSectionPage } from "@/features/student/pages/practice-rc-section-page"
+import { RcSectionSessionPage } from "@/features/student/pages/rc-section-session-page"
 import { PracticeSectionsPage } from "@/features/student/pages/practice-sections-page"
 import { AdminShell } from "@/features/admin/layout/admin-shell"
 import { AdminDashboardPage } from "@/features/admin/pages/admin-dashboard-page"
@@ -179,10 +184,15 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: "learn/explanations", element: <ExplanationsPage /> },
+      { path: "learn/explanations/q/:questionKey", element: <ExplanationQuestionDetailPage /> },
       { path: "prep-course", element: <PrepCoursePage /> },
       { path: "prep-course/:courseSlug/:lessonSlug", element: <PrepCourseLessonPage /> },
       { path: "practice/drills", element: <PracticeDrillsPage /> },
+      { path: "practice/drills/lr/new", element: <LrNewDrillPage /> },
+      { path: "practice/drills/lr/session", element: <LrDrillSessionPage /> },
       { path: "practice/sections", element: <PracticeSectionsPage /> },
+      { path: "practice/sections/rc", element: <PracticeRcSectionPage /> },
+      { path: "practice/sections/rc/session", element: <RcSectionSessionPage /> },
       { path: "practice/preptest", element: <PracticePrepTestPage /> },
       { path: "practice/blind-review", element: <PracticeBlindReviewPage /> },
       { path: "analytics", element: <AnalyticsPage /> },
