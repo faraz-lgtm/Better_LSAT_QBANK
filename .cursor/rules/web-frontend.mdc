@@ -1,0 +1,13 @@
+---
+description: React UI, shadcn, and API boundary for the web app
+globs: web/**/*
+alwaysApply: false
+---
+
+# Web frontend
+
+- **pnpm**: Install and run scripts with **pnpm** from the repo root (`pnpm install`, `pnpm --filter web dev`, `pnpm --filter web test`).
+- **UI**: Prefer **shadcn/ui** primitives from `@/components/ui/*` for new screens; keep Tailwind tokens/theme consistent with `components.json`.
+- **Data**: UI components and hooks use **`web/src/lib/api/*`** factories (e.g. `createUsersApi(client)`), not scattered `createClient` or raw `functions.invoke` calls.
+- **Supabase client**: Single browser client factory—`web/src/lib/supabase/client.ts` (`getSupabaseBrowserClient`)—import only where you wire auth/session or pass into API factories.
+- **No business logic here**: Do not implement domain rules, LawHub/LSAC orchestration, or authoritative validation in components or hooks—delegate to Edge Functions via the API layer. The web app may map DTOs to display shape only.

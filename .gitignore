@@ -1,0 +1,9 @@
+.DS_Store
+.env
+.env.local
+.env.*.local
+web/.env.local
+web/.agents/
+supabase/functions/.env
+node_modules/
+package-lock.json

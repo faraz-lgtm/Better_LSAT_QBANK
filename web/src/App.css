@@ -1,0 +1,23 @@
+.dashboard {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.card {
+  border: 1px solid #d0d7de;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.error {
+  color: #b42318;
+  margin-top: 0.5rem;
+}
