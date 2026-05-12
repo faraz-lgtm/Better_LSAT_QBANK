@@ -461,7 +461,7 @@ function AnalyticsDrillsPage() {
 
   const handleOpenPractice = useCallback(
     (id: string) => {
-      navigate(`/app/practice/preptest?testId=${encodeURIComponent(id)}`)
+      navigate(`/app/practice/preptest/${encodeURIComponent(id)}`)
     },
     [navigate],
   )

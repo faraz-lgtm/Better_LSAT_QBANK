@@ -644,7 +644,7 @@ function AnalyticsPrepTestResultsPage() {
             </button>
             <button
               type="button"
-              onClick={() => navigate(`/app/practice/preptest?testId=${encodeURIComponent(record.id)}`)}
+              onClick={() => navigate(`/app/practice/preptest/${encodeURIComponent(record.id)}`)}
               className="inline-flex h-10 items-center gap-2 rounded-2xl bg-[#df1c41] px-4 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#df1c41]/90"
             >
               <FolderOpen className="size-4 shrink-0" aria-hidden />

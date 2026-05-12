@@ -20,6 +20,7 @@ import { ExplanationsPage } from "@/features/student/pages/explanations-page"
 import { PracticeBlindReviewPage } from "@/features/student/pages/practice-blind-review-page"
 import { PracticeDrillsPage } from "@/features/student/pages/practice-drills-page"
 import { PracticePrepTestPage } from "@/features/student/pages/practice-preptest-page"
+import { PracticePrepTestsListPage } from "@/features/student/pages/practice-preptests-list-page"
 import { PracticePrepTestSectionPage } from "@/features/student/pages/practice-preptest-section-page"
 import { PracticeSectionsPage } from "@/features/student/pages/practice-sections-page"
 
@@ -41,7 +42,8 @@ function AppRoutes() {
         <Route path="practice/drills" element={<PracticeDrillsPage />} />
         <Route path="practice/sections" element={<PracticeSectionsPage />} />
         <Route path="practice/preptest/:testId/section/:sectionId" element={<PracticePrepTestSectionPage />} />
-        <Route path="practice/preptest" element={<PracticePrepTestPage />} />
+        <Route path="practice/preptest/:testId" element={<PracticePrepTestPage />} />
+        <Route path="practice/preptest" element={<PracticePrepTestsListPage />} />
         <Route path="practice/blind-review" element={<PracticeBlindReviewPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="analytics/drills" element={<AnalyticsDrillsPage />} />

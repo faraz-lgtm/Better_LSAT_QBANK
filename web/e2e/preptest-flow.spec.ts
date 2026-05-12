@@ -3,12 +3,16 @@ import { expect, test } from "@playwright/test"
 const artifacts = "e2e-artifacts"
 
 test.describe("Practice PrepTest flow", () => {
-  test("hub → section without login (emulator dev server)", async ({ page }) => {
-    await page.goto("/app/practice/preptest?testId=pt145")
-    await expect(page).toHaveURL(/\/app\/practice\/preptest/)
-    await expect(page.getByRole("status")).toContainText(/PrepTest UI preview/i)
+  test("list → hub → section without login (emulator dev server)", async ({ page }) => {
+    await page.goto("/app/practice/preptest")
+    await expect(page).toHaveURL(/\/app\/practice\/preptest$/)
+    await expect(page.getByRole("heading", { name: "PrepTests", level: 2 })).toBeVisible()
+    await expect(page.getByRole("heading", { name: /Start your PrepTest/i })).toBeVisible()
+    await page.screenshot({ path: `${artifacts}/preptest-00-list.png`, fullPage: true })
+
+    await page.getByTestId("preptest-list-row-pt145").getByRole("button", { name: "Start" }).click()
+    await expect(page).toHaveURL(/\/app\/practice\/preptest\/pt145$/)
     await expect(page.getByRole("heading", { name: /Ready to begin your test/i })).toBeVisible()
-    await expect(page.getByText("PT 145")).toBeVisible()
     await page.screenshot({ path: `${artifacts}/preptest-01-hub.png`, fullPage: true })
 
     await page.getByRole("button", { name: /Start Section/i }).click()
@@ -17,9 +21,14 @@ test.describe("Practice PrepTest flow", () => {
     await page.screenshot({ path: `${artifacts}/preptest-02-section.png`, fullPage: true })
   })
 
-  test("preview does not unlock the rest of /app", async ({ page }) => {
+  test("legacy ?testId= redirects to hub path", async ({ page }) => {
     await page.goto("/app/practice/preptest?testId=pt145")
-    await expect(page.getByRole("heading", { name: /Ready to begin your test/i })).toBeVisible()
+    await expect(page).toHaveURL(/\/app\/practice\/preptest\/pt145$/)
+  })
+
+  test("preview does not unlock the rest of /app", async ({ page }) => {
+    await page.goto("/app/practice/preptest")
+    await expect(page.getByRole("heading", { name: "PrepTests", level: 2 })).toBeVisible()
     await page.goto("/app")
     await expect(page).toHaveURL(/\/login/)
   })
@@ -41,10 +50,10 @@ test.describe("Practice PrepTest flow (optional signed-in check)", () => {
     await page.waitForURL(/\/app|\/onboarding|\/admin/, { timeout: 45_000 })
 
     if (page.url().includes("/onboarding")) {
-      await page.goto("/app/practice/preptest?testId=pt145")
+      await page.goto("/app/practice/preptest/pt145")
     }
 
-    await page.goto("/app/practice/preptest?testId=pt145")
+    await page.goto("/app/practice/preptest/pt145")
     await expect(page.getByRole("heading", { name: /Ready to begin your test/i })).toBeVisible({
       timeout: 30_000,
     })

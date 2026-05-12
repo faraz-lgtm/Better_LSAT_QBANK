@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { createMemoryRouter, RouterProvider } from "react-router-dom"
 import { describe, expect, it } from "vitest"
@@ -9,7 +9,7 @@ import { PracticePrepTestSectionPage } from "@/features/student/pages/practice-p
 function renderPrepTestRoutes(initialPath: string) {
   const router = createMemoryRouter(
     [
-      { path: "/app/practice/preptest", element: <PracticePrepTestPage /> },
+      { path: "/app/practice/preptest/:testId", element: <PracticePrepTestPage /> },
       {
         path: "/app/practice/preptest/:testId/section/:sectionId",
         element: <PracticePrepTestSectionPage />,
@@ -24,10 +24,10 @@ function renderPrepTestRoutes(initialPath: string) {
 describe("PracticePrepTestPage + section navigation", () => {
   it("shows hub content for testId and navigates to section on Start Section", async () => {
     const user = userEvent.setup()
-    const router = renderPrepTestRoutes("/app/practice/preptest?testId=pt145")
+    const router = renderPrepTestRoutes("/app/practice/preptest/pt145")
 
     expect(await screen.findByRole("heading", { name: /Ready to begin your test/i })).toBeInTheDocument()
-    expect(screen.getByText("PT 145")).toBeInTheDocument()
+    expect(within(screen.getByRole("main")).getByText("PT 145")).toBeInTheDocument()
     expect(screen.getByRole("heading", { name: /Test Section/i })).toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: /Start Section/i }))

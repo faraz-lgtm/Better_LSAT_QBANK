@@ -32,7 +32,7 @@ const appNavItems: AppNavItem[] = [
     options: [
       { label: "Drills", to: "/app/practice/drills" },
       { label: "Sections", to: "/app/practice/sections" },
-      { label: "PrepTest", to: "/app/practice/preptest" },
+      { label: "PrepTests", to: "/app/practice/preptest" },
       { label: "Blind Review", to: "/app/practice/blind-review" },
     ],
   },

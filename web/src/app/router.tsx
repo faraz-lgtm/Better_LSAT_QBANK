@@ -21,6 +21,7 @@ import { ExplanationsPage } from "@/features/student/pages/explanations-page"
 import { PracticeBlindReviewPage } from "@/features/student/pages/practice-blind-review-page"
 import { PracticeDrillsPage } from "@/features/student/pages/practice-drills-page"
 import { PracticePrepTestPage } from "@/features/student/pages/practice-preptest-page"
+import { PracticePrepTestsListPage } from "@/features/student/pages/practice-preptests-list-page"
 import { PracticePrepTestSectionPage } from "@/features/student/pages/practice-preptest-section-page"
 import { PracticeSectionsPage } from "@/features/student/pages/practice-sections-page"
 import { AdminShell } from "@/features/admin/layout/admin-shell"
@@ -204,7 +205,8 @@ const router = createBrowserRouter([
       { path: "practice/drills", element: <PracticeDrillsPage /> },
       { path: "practice/sections", element: <PracticeSectionsPage /> },
       { path: "practice/preptest/:testId/section/:sectionId", element: <PracticePrepTestSectionPage /> },
-      { path: "practice/preptest", element: <PracticePrepTestPage /> },
+      { path: "practice/preptest/:testId", element: <PracticePrepTestPage /> },
+      { path: "practice/preptest", element: <PracticePrepTestsListPage /> },
       { path: "practice/blind-review", element: <PracticeBlindReviewPage /> },
       { path: "analytics", element: <AnalyticsPage /> },
       { path: "analytics/drills", element: <AnalyticsDrillsPage /> },

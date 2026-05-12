@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Link, useNavigate, useSearchParams } from "react-router-dom"
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom"
 
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
@@ -97,10 +97,9 @@ function PrepTestSectionRow({
 
 function PracticePrepTestPage() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const testIdParam = searchParams.get("testId")
+  const { testId: testIdParam } = useParams<{ testId: string }>()
 
-  const detail = useMemo(() => getPrepTestPracticeDetail(testIdParam), [testIdParam])
+  const detail = useMemo(() => getPrepTestPracticeDetail(testIdParam ?? null), [testIdParam])
   const [timingId, setTimingId] = useState(detail.defaultTimingId)
   const [formatId, setFormatId] = useState(detail.defaultFormatId)
 
@@ -109,9 +108,13 @@ function PracticePrepTestPage() {
     setFormatId(detail.defaultFormatId)
   }, [detail.testId, detail.defaultTimingId, detail.defaultFormatId])
 
+  if (!testIdParam) {
+    return <Navigate to="/app/practice/preptest" replace />
+  }
+
   return (
     <>
-      <StudentSubnavStrip crumbs={[{ label: "Practice", href: "/app/practice/drills" }, { label: "PrepTest" }]} />
+      <StudentSubnavStrip crumbs={[{ label: "Practice", href: "/app/practice/drills" }, { label: "PrepTests", href: "/app/practice/preptest" }, { label: detail.label }]} />
       <StudentMain>
         <PrepTestPreviewNotice />
         <div className="mb-6 flex items-center justify-between gap-4">

@@ -30,7 +30,7 @@ function PracticePrepTestSectionPage() {
   const detail = useMemo(() => getPrepTestPracticeDetail(testIdParam ?? null), [testIdParam])
   const section = detail.sections.find((s) => s.id === sectionId)
 
-  const hubHref = `/app/practice/preptest?testId=${encodeURIComponent(detail.testId)}`
+  const hubHref = `/app/practice/preptest/${encodeURIComponent(detail.testId)}`
 
   const [secondsLeft, setSecondsLeft] = useState(() =>
     section ? parseTimeDisplayToSeconds(section.timeDisplay) : 35 * 60,
@@ -66,7 +66,8 @@ function PracticePrepTestSectionPage() {
         title={detail.label}
         crumbs={[
           { label: "Practice", href: "/app/practice/drills" },
-          { label: "PrepTest", href: hubHref },
+          { label: "PrepTests", href: "/app/practice/preptest" },
+          { label: detail.label, href: hubHref },
           { label: section.shortTitle },
         ]}
       />
