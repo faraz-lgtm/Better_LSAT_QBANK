@@ -41,6 +41,19 @@ export type PrepCourseEligibilityRow = {
   fetched_at: string
 }
 
+export type PrepLessonLinkedQuestionRef = {
+  sort_order: number
+  question_id: string
+  prep_test_id: string
+  section_id: string
+  question_number: number | null
+  prep_test_module_id: string | null
+  prep_test_title: string | null
+  section_number: number | null
+  section_type: string | null
+  section_title: string | null
+}
+
 export function createServiceRoleClient(): SupabaseClient {
   const url = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -116,6 +129,55 @@ export function createPrepCourseRepository(client: SupabaseClient) {
         .maybeSingle()
       if (error) throw error
       return data as PrepLessonRow | null
+    },
+
+    async listLessonLinkedQuestionRefs(lessonId: string): Promise<PrepLessonLinkedQuestionRef[]> {
+      const { data, error } = await client
+        .from('lesson_questions')
+        .select(
+          'sort_order, admin_questions(id, question_number, admin_sections(id, prep_test_id, section_number, section_type, title, admin_prep_tests(id, module_id, title)))',
+        )
+        .eq('lesson_id', lessonId)
+        .order('sort_order')
+      if (error) throw error
+      type Nested = {
+        sort_order: number
+        admin_questions: {
+          id: string
+          question_number: number | null
+          admin_sections: {
+            id: string
+            prep_test_id: string
+            section_number: number | null
+            section_type: string | null
+            title: string | null
+            admin_prep_tests: { id: string; module_id: string | null; title: string | null } | null
+          } | null
+        } | null
+      }
+      const rows = (data ?? []) as unknown as Nested[]
+      const out: PrepLessonLinkedQuestionRef[] = []
+      for (const row of rows) {
+        const q = row.admin_questions
+        const sec = q?.admin_sections
+        const pt = sec?.admin_prep_tests
+        if (!q || !sec) continue
+        const prepTestId = sec.prep_test_id || pt?.id
+        if (!prepTestId) continue
+        out.push({
+          sort_order: row.sort_order,
+          question_id: q.id,
+          prep_test_id: prepTestId,
+          section_id: sec.id,
+          question_number: q.question_number,
+          prep_test_module_id: pt?.module_id ?? null,
+          prep_test_title: pt?.title ?? null,
+          section_number: sec.section_number,
+          section_type: sec.section_type,
+          section_title: sec.title,
+        })
+      }
+      return out
     },
 
     async createCourse(input: {

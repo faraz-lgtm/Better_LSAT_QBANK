@@ -4,13 +4,19 @@ import { Link, useParams } from "react-router-dom"
 import { LessonContentRenderer } from "@/features/prep-course/components/lesson-content-renderer"
 import { PrepCourseLessonList } from "@/features/prep-course/components/prep-course-lesson-list"
 import { StudentMain } from "@/features/student/components/student-main"
-import { createPrepCourseApi, type PrepCourse, type PrepLesson } from "@/lib/api/prep-course"
+import {
+  createPrepCourseApi,
+  type PrepCourse,
+  type PrepLesson,
+  type PrepLessonLinkedQuestionRef,
+} from "@/lib/api/prep-course"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 function PrepCourseLessonPage() {
   const { courseSlug = "prep-course", lessonSlug = "" } = useParams()
   const [course, setCourse] = useState<PrepCourse | null>(null)
   const [lesson, setLesson] = useState<PrepLesson | null>(null)
+  const [linkedQuestionRefs, setLinkedQuestionRefs] = useState<PrepLessonLinkedQuestionRef[]>([])
   const [lessons, setLessons] = useState<PrepLesson[]>([])
   const [error, setError] = useState<string | null>(null)
   const [showLessons, setShowLessons] = useState(true)
@@ -39,6 +45,7 @@ function PrepCourseLessonPage() {
         setCourse(courseData.course)
         setLessons(courseData.lessons)
         setLesson(lessonData.lesson)
+        setLinkedQuestionRefs(lessonData.linkedQuestionRefs)
       } catch (e) {
         if (!alive) return
         setError(e instanceof Error ? e.message : "Failed to load lesson")
@@ -62,7 +69,11 @@ function PrepCourseLessonPage() {
           )}
 
           <div className="space-y-4">
-            {lesson ? <LessonContentRenderer lesson={lesson} /> : <div className="ds-body-sm ds-text-muted">Loading lesson...</div>}
+            {lesson ? (
+              <LessonContentRenderer lesson={lesson} linkedQuestionRefs={linkedQuestionRefs} />
+            ) : (
+              <div className="ds-body-sm ds-text-muted">Loading lesson...</div>
+            )}
 
             {lesson ? (
               <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">

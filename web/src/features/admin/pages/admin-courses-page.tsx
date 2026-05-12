@@ -1,19 +1,9 @@
 import { useEffect, useMemo, useState } from "react"
-import { Eye, Image as ImageIcon, SquarePlay } from "lucide-react"
-import {
-  BtnBold,
-  BtnBulletList,
-  BtnItalic,
-  BtnNumberedList,
-  BtnUnderline,
-  Editor,
-  EditorProvider,
-  Separator,
-  Toolbar,
-  createButton,
-} from "react-simple-wysiwyg"
+import { Eye } from "lucide-react"
+import { Link } from "react-router-dom"
 
 import { AdminLessonStatusDropdown } from "@/features/admin/components/admin-lesson-status-dropdown"
+import { AdminTipTapEditor } from "@/features/admin/components/admin-tip-tap-editor"
 import { LessonQuestionPreviewModal } from "@/features/admin/components/lesson-question-preview-modal"
 import { formatSectionOptionLabel } from "@/features/admin/lib/admin-section-display"
 import { normalizeLessonStatus, type PrepLessonStatus } from "@/features/admin/lib/prep-lesson-status"
@@ -72,10 +62,13 @@ type LessonQuestionRow = {
     id: string
     question_number: number | null
     admin_sections?: {
+      id?: string
+      prep_test_id?: string | null
       section_number: number | null
       section_type?: string | null
       title?: string | null
       admin_prep_tests?: {
+        id?: string
         module_id?: string | null
         title?: string | null
       } | null
@@ -145,85 +138,9 @@ const LESSON_TYPE_BADGE_CLASS: Record<PrepLessonStatus, string> = {
   rep_work: "border-[#ffe5b7] bg-[#fff6e0] text-[#956321]",
 }
 
-function escapeHtmlAttr(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
+function adminRecordQuery(lessonId: string, lessonDrill: "active" | "adaptive"): string {
+  return new URLSearchParams({ lessonId, lessonDrill }).toString()
 }
-
-function isSafeHttpMediaUrl(raw: string): boolean {
-  const t = raw.trim().toLowerCase()
-  if (!t) return false
-  if (t.startsWith("javascript:") || t.startsWith("data:") || t.startsWith("vbscript:")) return false
-  return t.startsWith("https://") || t.startsWith("http://") || t.startsWith("/")
-}
-
-function youtubeEmbedUrl(url: string): string | null {
-  try {
-    const u = new URL(url.trim())
-    if (u.hostname === "youtu.be") {
-      const id = u.pathname.replace(/^\//, "").split("/")[0]
-      return id ? `https://www.youtube.com/embed/${id}` : null
-    }
-    if (u.hostname === "www.youtube.com" || u.hostname === "youtube.com" || u.hostname === "m.youtube.com") {
-      if (u.pathname === "/watch") {
-        const id = u.searchParams.get("v")
-        return id ? `https://www.youtube.com/embed/${id}` : null
-      }
-      const embed = u.pathname.match(/^\/embed\/([^/]+)/)
-      if (embed?.[1]) return `https://www.youtube.com/embed/${embed[1]}`
-    }
-  } catch {
-    /* ignore */
-  }
-  return null
-}
-
-function vimeoEmbedUrl(url: string): string | null {
-  try {
-    const u = new URL(url.trim())
-    if (!u.hostname.includes("vimeo.com")) return null
-    const m = u.pathname.match(/\/(?:video\/)?(\d+)/)
-    return m?.[1] ? `https://player.vimeo.com/video/${m[1]}` : null
-  } catch {
-    return null
-  }
-}
-
-const BtnInsertImage = createButton("Insert image", <ImageIcon className="size-4" aria-hidden />, () => {
-  const raw = window.prompt("Image URL (https://…)", "https://")
-  if (raw == null) return
-  const url = raw.trim()
-  if (!url || !isSafeHttpMediaUrl(url)) return
-  document.execCommand(
-    "insertHTML",
-    false,
-    `<p><img src="${escapeHtmlAttr(url)}" alt="" style="max-width:100%;height:auto" /></p>`,
-  )
-})
-
-const BtnInsertVideo = createButton("Insert video", <SquarePlay className="size-4" aria-hidden />, () => {
-  const raw = window.prompt("Video URL (YouTube, Vimeo, or direct .mp4/.webm)", "https://")
-  if (raw == null) return
-  const url = raw.trim()
-  if (!url) return
-  const yt = youtubeEmbedUrl(url)
-  const vm = vimeoEmbedUrl(url)
-  let html: string
-  if (yt) {
-    html = `<p><iframe src="${escapeHtmlAttr(yt)}" title="Embedded video" width="560" height="315" style="max-width:100%;aspect-ratio:16/9;border:0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe></p>`
-  } else if (vm) {
-    html = `<p><iframe src="${escapeHtmlAttr(vm)}" title="Embedded video" width="560" height="315" style="max-width:100%;aspect-ratio:16/9;border:0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe></p>`
-  } else if (isSafeHttpMediaUrl(url)) {
-    html = `<p><video controls playsinline src="${escapeHtmlAttr(url)}" style="max-width:100%;height:auto"></video></p>`
-  } else {
-    window.alert("Use a full https URL (YouTube, Vimeo, or a direct video file link).")
-    return
-  }
-  document.execCommand("insertHTML", false, html)
-})
 
 function AdminRichBlock({
   label,
@@ -241,29 +158,7 @@ function AdminRichBlock({
   return (
     <div className="flex flex-col gap-4 rounded-[10px] border border-[#dfe1e7] bg-white p-4">
       <p className={labelClassName}>{label}</p>
-      <div className="overflow-hidden rounded-[10px] border border-[#dfe1e7] bg-white">
-        <EditorProvider>
-          <div className="flex flex-wrap items-center gap-1 border-b border-[#dfe1e7] bg-[#f6f8fa] px-3 py-2">
-            <Toolbar>
-              <BtnBold />
-              <BtnItalic />
-              <BtnUnderline />
-              <BtnBulletList />
-              <BtnNumberedList />
-              <Separator />
-              <BtnInsertImage />
-              <BtnInsertVideo />
-            </Toolbar>
-          </div>
-          <Editor
-            value={value || "<p></p>"}
-            onChange={(e) => onChange(e.target.value)}
-            containerProps={{
-              style: { minHeight, background: "#fff", padding: "1rem" },
-            }}
-          />
-        </EditorProvider>
-      </div>
+      <AdminTipTapEditor value={value || "<p></p>"} onChange={onChange} minHeight={minHeight} />
     </div>
   )
 }
@@ -438,7 +333,6 @@ function AdminCoursesPage() {
       base.repWorkPairs = parsed.pairs
     }
     // Editor state is intentionally reset when the selected lesson row changes.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync local form to server row
     setLessonForm(base)
   }, [selectedLesson])
 
@@ -1200,12 +1094,14 @@ function AdminCoursesPage() {
                       </>
                     ) : (
                       <>
-                        {lessonForm.lessonType === "video_text" && (
+                        {(lessonForm.lessonType === "video_text" ||
+                          lessonForm.lessonType === "active_drill" ||
+                          lessonForm.lessonType === "adaptive_drill") && (
                           <div>
                             <label className="admin-label">Video URL (optional)</label>
                             <input
                               className="admin-input mt-1"
-                              placeholder="https://"
+                              placeholder="https:// (YouTube embed, Vimeo, or direct link)"
                               value={lessonForm.videoUrl}
                               onChange={(e) => setLessonForm((prev) => ({ ...prev, videoUrl: e.target.value }))}
                             />
@@ -1215,7 +1111,13 @@ function AdminCoursesPage() {
                           label={lessonForm.lessonType === "video_text" ? "Lesson body" : "Instructions"}
                           value={lessonForm.textContent}
                           onChange={(html) => setLessonForm((p) => ({ ...p, textContent: html }))}
-                          minHeight={lessonForm.lessonType === "video_text" ? 200 : 160}
+                          minHeight={
+                            lessonForm.lessonType === "video_text" ||
+                            lessonForm.lessonType === "active_drill" ||
+                            lessonForm.lessonType === "adaptive_drill"
+                              ? 200
+                              : 160
+                          }
                         />
                       </>
                     )}
@@ -1343,6 +1245,14 @@ function AdminCoursesPage() {
                               const q = row.admin_questions
                               const section = q?.admin_sections
                               const prep = section?.admin_prep_tests
+                              const prepTestRouteId = section?.prep_test_id ?? prep?.id
+                              const sectionRouteId = section?.id
+                              const drill: "active" | "adaptive" =
+                                normalizeLessonStatus(lessonForm.lessonType) === "active_drill" ? "active" : "adaptive"
+                              const recordTo =
+                                selectedLesson?.id && prepTestRouteId && sectionRouteId && q?.id
+                                  ? `/admin/preptests/${prepTestRouteId}/sections/${sectionRouteId}/questions/${q.id}/record?${adminRecordQuery(selectedLesson.id, drill)}`
+                                  : null
                               return (
                                 <tr key={row.id} className="border-b border-[#dfe1e7]">
                                   <td className="px-3 py-2 text-[#1a1b25]">{row.sort_order}</td>
@@ -1365,6 +1275,16 @@ function AdminCoursesPage() {
                                       >
                                         Preview
                                       </button>
+                                      {recordTo ? (
+                                        <Link
+                                          className="admin-btn admin-btn-ghost !px-2 !py-1"
+                                          to={recordTo}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                        >
+                                          Record
+                                        </Link>
+                                      ) : null}
                                       <button
                                         type="button"
                                         className="admin-btn admin-btn-ghost !px-2 !py-1"
