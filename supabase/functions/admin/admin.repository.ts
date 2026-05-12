@@ -772,6 +772,15 @@ export function createAdminRepository(client: SupabaseClient) {
       return (count ?? 0) > 0
     },
 
+    async adminLessonExists(lessonId: string): Promise<boolean> {
+      const { count, error } = await client
+        .from("prep_lessons")
+        .select("id", { count: "exact", head: true })
+        .eq("id", lessonId)
+      if (error) throw error
+      return (count ?? 0) > 0
+    },
+
     async getQuestionSourceById(questionId: string): Promise<"LSAC" | "PLATFORM" | null> {
       const { data, error } = await client.from("admin_questions").select("source").eq("id", questionId).maybeSingle()
       if (error) throw error

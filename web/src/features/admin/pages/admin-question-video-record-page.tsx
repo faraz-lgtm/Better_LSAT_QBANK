@@ -5,7 +5,7 @@ import "@/features/admin/admin-theme.css"
 import { AnnotationToolbar } from "@/features/admin/components/annotation-toolbar"
 import { AnnotationTextBox } from "@/features/admin/components/annotation-text-box"
 import { Button } from "@/components/ui/button"
-import { ADMIN_QUESTION_VIDEO_SAVED } from "@/features/admin/lib/admin-question-video-messages"
+import { ADMIN_LESSON_VIDEO_SAVED, ADMIN_QUESTION_VIDEO_SAVED } from "@/features/admin/lib/admin-question-video-messages"
 import { drawAllAnnotations, drawAnnotation, drawShapePreview } from "@/features/admin/lib/annotations/draw"
 import { hitTest } from "@/features/admin/lib/annotations/hit-test"
 import type {
@@ -226,6 +226,7 @@ function AdminQuestionVideoRecordPage() {
   const { prepTestId, sectionId, questionId } = useParams()
   const lessonId = searchParams.get("lessonId")?.trim() ?? ""
   const lessonDrill = searchParams.get("lessonDrill")?.trim() ?? ""
+  const lessonVideoLessonId = searchParams.get("lessonVideoLessonId")?.trim() ?? ""
   const [scopedQuestions, setScopedQuestions] = useState<Array<{ prepTestId: string; sectionId: string; questionId: string }>>([])
   const [question, setQuestion] = useState<Record<string, unknown> | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -698,15 +699,28 @@ function AdminQuestionVideoRecordPage() {
       const blob = new Blob(chunksRef.current, { type: rec.mimeType || "video/webm" })
       const ext = extensionFromBlob(blob)
       const contentType = blob.type || "video/webm"
-      const url = await adminApi.uploadQuestionVideoBlob(questionId, blob, contentType, ext)
-      await adminApi.updateQuestionMeta(questionId, { video_url: url })
-      setSavedUrl(url)
-      setStatusMsg("Saved. You can close this tab.")
-      if (window.opener && !window.opener.closed) {
-        window.opener.postMessage(
-          { type: ADMIN_QUESTION_VIDEO_SAVED, questionId, videoUrl: url },
-          window.location.origin,
-        )
+      if (lessonVideoLessonId) {
+        const url = await adminApi.uploadLessonVideoBlob(lessonVideoLessonId, blob, contentType, ext)
+        await adminApi.updateLesson(lessonVideoLessonId, { videoUrl: url })
+        setSavedUrl(url)
+        setStatusMsg("Saved to lesson. You can close this tab.")
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage(
+            { type: ADMIN_LESSON_VIDEO_SAVED, lessonId: lessonVideoLessonId, videoUrl: url },
+            window.location.origin,
+          )
+        }
+      } else {
+        const url = await adminApi.uploadQuestionVideoBlob(questionId, blob, contentType, ext)
+        await adminApi.updateQuestionMeta(questionId, { video_url: url })
+        setSavedUrl(url)
+        setStatusMsg("Saved. You can close this tab.")
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage(
+            { type: ADMIN_QUESTION_VIDEO_SAVED, questionId, videoUrl: url },
+            window.location.origin,
+          )
+        }
       }
     } catch (e) {
       setStatusMsg(e instanceof Error ? e.message : "Upload failed")

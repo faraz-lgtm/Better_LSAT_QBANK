@@ -5,7 +5,9 @@ import { Link } from "react-router-dom"
 import { AdminLessonStatusDropdown } from "@/features/admin/components/admin-lesson-status-dropdown"
 import { AdminTipTapEditor } from "@/features/admin/components/admin-tip-tap-editor"
 import { LessonQuestionPreviewModal } from "@/features/admin/components/lesson-question-preview-modal"
+import { VideoExplanationModal } from "@/features/admin/components/video-explanation-modal"
 import { formatSectionOptionLabel } from "@/features/admin/lib/admin-section-display"
+import { ADMIN_LESSON_VIDEO_SAVED } from "@/features/admin/lib/admin-question-video-messages"
 import { normalizeLessonStatus, type PrepLessonStatus } from "@/features/admin/lib/prep-lesson-status"
 import { useAdminApi } from "@/features/admin/use-admin-api"
 import type { AdminBulkImportDryRunResult } from "@/lib/api/admin"
@@ -55,25 +57,50 @@ type PrepTestSection = {
   }>
 }
 
+type AdminPrepTestRef = {
+  id?: string
+  module_id?: string | null
+  title?: string | null
+}
+
+type AdminSectionRef = {
+  id?: string
+  prep_test_id?: string | null
+  section_number: number | null
+  section_type?: string | null
+  title?: string | null
+  admin_prep_tests?: AdminPrepTestRef | AdminPrepTestRef[] | null
+}
+
+type AdminQuestionRef = {
+  id: string
+  question_number: number | null
+  admin_sections?: AdminSectionRef | AdminSectionRef[] | null
+}
+
 type LessonQuestionRow = {
   id: string
   sort_order: number
-  admin_questions?: {
-    id: string
-    question_number: number | null
-    admin_sections?: {
-      id?: string
-      prep_test_id?: string | null
-      section_number: number | null
-      section_type?: string | null
-      title?: string | null
-      admin_prep_tests?: {
-        id?: string
-        module_id?: string | null
-        title?: string | null
-      } | null
-    } | null
-  } | null
+  admin_questions?: AdminQuestionRef | AdminQuestionRef[] | null
+}
+
+/** PostgREST can return a single embedded FK row as either an object or a one-element array. */
+function unwrapEmbedded<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null
+  if (Array.isArray(value)) return (value[0] ?? null) as T | null
+  return value as T | null
+}
+
+function compareQuestionNumber(
+  a: { question_number: number | null },
+  b: { question_number: number | null },
+): number {
+  const an = a.question_number
+  const bn = b.question_number
+  if (an == null && bn == null) return 0
+  if (an == null) return 1
+  if (bn == null) return -1
+  return an - bn
 }
 
 function slugify(value: string): string {
@@ -193,6 +220,7 @@ function AdminCoursesPage() {
   const [selectedQuestionRef, setSelectedQuestionRef] = useState("")
   const [linkedQuestions, setLinkedQuestions] = useState<LessonQuestionRow[]>([])
   const [previewQuestionId, setPreviewQuestionId] = useState<string | null>(null)
+  const [drillVideoModalOpen, setDrillVideoModalOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [bulkFile, setBulkFile] = useState<File | null>(null)
   const [bulkPreview, setBulkPreview] = useState<AdminBulkImportDryRunResult | null>(null)
@@ -313,6 +341,34 @@ function AdminCoursesPage() {
   }, [lessonForm.lessonType])
   const showQuestionLinking = linkedQuestionCap > 0
   const canLinkMore = linkedQuestions.length < linkedQuestionCap
+
+  const drillRecordContext = useMemo(() => {
+    if (lessonForm.lessonType !== "active_drill" && lessonForm.lessonType !== "adaptive_drill") return null
+    const sorted = [...linkedQuestions].sort((a, b) => a.sort_order - b.sort_order)
+    const row = sorted[0]
+    const q = unwrapEmbedded(row?.admin_questions)
+    if (!q?.id) return null
+    const section = unwrapEmbedded(q.admin_sections)
+    if (!section?.id) return null
+    const prepTest = unwrapEmbedded(section.admin_prep_tests)
+    const prepTestId = section.prep_test_id ?? prepTest?.id
+    if (prepTestId == null || String(prepTestId) === "") return null
+    return { prepTestId: String(prepTestId), sectionId: String(section.id), questionId: String(q.id) }
+  }, [lessonForm.lessonType, linkedQuestions])
+
+  useEffect(() => {
+    function onMessage(ev: MessageEvent) {
+      if (ev.origin !== window.location.origin) return
+      const d = ev.data as { type?: string; lessonId?: string; videoUrl?: string } | null
+      if (!d || typeof d !== "object") return
+      if (d.type !== ADMIN_LESSON_VIDEO_SAVED) return
+      if (String(d.lessonId ?? "") !== String(selectedLessonId ?? "")) return
+      const videoUrl = typeof d.videoUrl === "string" ? d.videoUrl : ""
+      setLessonForm((prev) => ({ ...prev, videoUrl }))
+    }
+    window.addEventListener("message", onMessage)
+    return () => window.removeEventListener("message", onMessage)
+  }, [selectedLessonId])
 
   useEffect(() => {
     if (!selectedLesson) return
@@ -500,7 +556,9 @@ function AdminCoursesPage() {
   function onSelectSection(sectionId: string) {
     setSelectedSectionId(sectionId)
     const section = sectionOptions.find((item) => String(item.id) === sectionId)
-    const questions = (section?.admin_questions ?? []) as Array<{ id: string; question_number: number | null }>
+    const questions = [...((section?.admin_questions ?? []) as Array<{ id: string; question_number: number | null }>)].sort(
+      compareQuestionNumber,
+    )
     setQuestionOptions(questions)
     setSelectedQuestionRef("")
   }
@@ -1094,9 +1152,7 @@ function AdminCoursesPage() {
                       </>
                     ) : (
                       <>
-                        {(lessonForm.lessonType === "video_text" ||
-                          lessonForm.lessonType === "active_drill" ||
-                          lessonForm.lessonType === "adaptive_drill") && (
+                        {lessonForm.lessonType === "video_text" && (
                           <div>
                             <label className="admin-label">Video URL (optional)</label>
                             <input
@@ -1107,17 +1163,41 @@ function AdminCoursesPage() {
                             />
                           </div>
                         )}
+                        {(lessonForm.lessonType === "active_drill" || lessonForm.lessonType === "adaptive_drill") &&
+                        selectedLesson &&
+                        adminApi ? (
+                          <div className="space-y-2">
+                            <span className="block text-xs font-semibold uppercase tracking-[0.06em] text-[#666d80]">
+                              Lesson intro video
+                            </span>
+                            <p className="text-xs text-[#36394a]">
+                              {lessonForm.videoUrl.trim() ? (
+                                <a
+                                  href={lessonForm.videoUrl.trim()}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-medium text-[#0d47a1] underline"
+                                >
+                                  Video link
+                                </a>
+                              ) : (
+                                "No video linked"
+                              )}
+                            </p>
+                            <button
+                              type="button"
+                              className="w-full rounded-[6px] border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-2 text-sm font-medium text-[#1a1b25] transition-colors hover:bg-white"
+                              onClick={() => setDrillVideoModalOpen(true)}
+                            >
+                              Add or change video…
+                            </button>
+                          </div>
+                        ) : null}
                         <AdminRichBlock
                           label={lessonForm.lessonType === "video_text" ? "Lesson body" : "Instructions"}
                           value={lessonForm.textContent}
                           onChange={(html) => setLessonForm((p) => ({ ...p, textContent: html }))}
-                          minHeight={
-                            lessonForm.lessonType === "video_text" ||
-                            lessonForm.lessonType === "active_drill" ||
-                            lessonForm.lessonType === "adaptive_drill"
-                              ? 200
-                              : 160
-                          }
+                          minHeight={lessonForm.lessonType === "video_text" ? 200 : 160}
                         />
                       </>
                     )}
@@ -1242,9 +1322,9 @@ function AdminCoursesPage() {
                           </thead>
                           <tbody>
                             {linkedQuestions.map((row) => {
-                              const q = row.admin_questions
-                              const section = q?.admin_sections
-                              const prep = section?.admin_prep_tests
+                              const q = unwrapEmbedded(row.admin_questions)
+                              const section = unwrapEmbedded(q?.admin_sections)
+                              const prep = unwrapEmbedded(section?.admin_prep_tests)
                               const prepTestRouteId = section?.prep_test_id ?? prep?.id
                               const sectionRouteId = section?.id
                               const drill: "active" | "adaptive" =
@@ -1361,6 +1441,25 @@ function AdminCoursesPage() {
         questionId={previewQuestionId}
         adminApi={adminApi}
       />
+      {selectedLesson && adminApi && (lessonForm.lessonType === "active_drill" || lessonForm.lessonType === "adaptive_drill") ? (
+        <VideoExplanationModal
+          mode="lessonDrill"
+          open={drillVideoModalOpen}
+          onOpenChange={setDrillVideoModalOpen}
+          lessonId={selectedLesson.id}
+          recordPrepTestId={drillRecordContext?.prepTestId ?? ""}
+          recordSectionId={drillRecordContext?.sectionId ?? ""}
+          recordQuestionId={drillRecordContext?.questionId ?? ""}
+          lessonDrillQuery={lessonForm.lessonType === "active_drill" ? "active" : "adaptive"}
+          currentVideoUrl={lessonForm.videoUrl}
+          adminApi={adminApi}
+          recordDisabled={!drillRecordContext}
+          recordDisabledReason="Link at least one PrepTest question before recording."
+          onVideoUrlSaved={(url) => {
+            setLessonForm((prev) => ({ ...prev, videoUrl: url ?? "" }))
+          }}
+        />
+      ) : null}
     </section>
   )
 }
