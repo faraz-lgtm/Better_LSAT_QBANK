@@ -90,48 +90,7 @@
 
   --sidebar-border: oklch(0.922 0 0);
 
-  --sidebar-ring: oklch(0.708 0 0);
-
-  --greyscale-100: #dfe1e7;
-  --greyscale-25: #f6f8fa;
-  --shadow-medium: 0 5px 10px -2px rgba(13, 13, 18, 0.04), 0 4px 8px -1px rgba(13, 13, 18, 0.02);
-  --color-student-heading: #062357;
-  --color-student-cta: #0047ab;
-  --color-student-accent: #0d47a1;
-  --lr-row: #fffbeb;
-  --lr-badge-bg: #fef3c7;
-  --lr-badge-text: #ae8b00;
-  --lr-outline-purple: #7f0ac2;
-  --rc-row: #fff3ea;
-  --rc-badge-bg: #ff9d51;
-  --rc-badge-text: #ffffff;
-  --rc-progress: #ff9d51;
-  --rc-header-text: #ea580c;
-  --rc-outline-mint: #40c4aa;
-  --drill-progress-lr: #9d1be8;
-  --drill-danger: #dc2626;
-  --drill-easy: #fbbf24;
-  --drill-medium: #f97316;
-  --slate-bar-empty: #cbd5e1;
-  /** Light blue row when a PrepTest accordion is open (explanations list). */
-  --student-expanded-row: #e8f2fc;
-  /** Pure red for emphasis (e.g. explanation analytics / difficulty meters). */
-  --student-red: #ff0000;
-  /** Light blue segments in multi-bar difficulty meters. */
-  --student-meter-light: #93c5fd;
-
-  /** Explanations list — PrepTest badge (Figma: peach fill, orange ring, stacked PT + number). */
-  --explanation-pt-badge-bg: #fff5ec;
-  --explanation-pt-badge-border: #f28c33;
-  --explanation-pt-badge-text: #f28c33;
-  /** Alternating closed PrepTest row background. */
-  --explanation-list-row-alt: #f4f7fb;
-  /** Nested passage accordion panel (explanations). */
-  --explanation-passage-panel-bg: #fafbfd;
-  /** PrepTest accordion card — 14px on all corners. */
-  --explanation-prep-test-card-radius: 14px 14px 14px 14px;
-  /** PrepTest / section / passage chips — 14px on all corners (not circles). */
-  --explanation-badge-radius: 14px 14px 14px 14px;
+  --sidebar-ring: oklch(0.708 0 0)
 }
 
 @media (prefers-color-scheme: dark) {

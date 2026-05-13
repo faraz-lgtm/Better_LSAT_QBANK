@@ -1,13 +1,21 @@
 import { useEffect, useMemo, useState } from "react"
-import { Eye } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Eye, Image as ImageIcon, SquarePlay } from "lucide-react"
+import {
+  BtnBold,
+  BtnBulletList,
+  BtnItalic,
+  BtnNumberedList,
+  BtnUnderline,
+  Editor,
+  EditorProvider,
+  Separator,
+  Toolbar,
+  createButton,
+} from "react-simple-wysiwyg"
 
 import { AdminLessonStatusDropdown } from "@/features/admin/components/admin-lesson-status-dropdown"
-import { AdminTipTapEditor } from "@/features/admin/components/admin-tip-tap-editor"
 import { LessonQuestionPreviewModal } from "@/features/admin/components/lesson-question-preview-modal"
-import { VideoExplanationModal } from "@/features/admin/components/video-explanation-modal"
 import { formatSectionOptionLabel } from "@/features/admin/lib/admin-section-display"
-import { ADMIN_LESSON_VIDEO_SAVED } from "@/features/admin/lib/admin-question-video-messages"
 import { normalizeLessonStatus, type PrepLessonStatus } from "@/features/admin/lib/prep-lesson-status"
 import { useAdminApi } from "@/features/admin/use-admin-api"
 import type { AdminBulkImportDryRunResult } from "@/lib/api/admin"
@@ -57,50 +65,22 @@ type PrepTestSection = {
   }>
 }
 
-type AdminPrepTestRef = {
-  id?: string
-  module_id?: string | null
-  title?: string | null
-}
-
-type AdminSectionRef = {
-  id?: string
-  prep_test_id?: string | null
-  section_number: number | null
-  section_type?: string | null
-  title?: string | null
-  admin_prep_tests?: AdminPrepTestRef | AdminPrepTestRef[] | null
-}
-
-type AdminQuestionRef = {
-  id: string
-  question_number: number | null
-  admin_sections?: AdminSectionRef | AdminSectionRef[] | null
-}
-
 type LessonQuestionRow = {
   id: string
   sort_order: number
-  admin_questions?: AdminQuestionRef | AdminQuestionRef[] | null
-}
-
-/** PostgREST can return a single embedded FK row as either an object or a one-element array. */
-function unwrapEmbedded<T>(value: T | T[] | null | undefined): T | null {
-  if (value == null) return null
-  if (Array.isArray(value)) return (value[0] ?? null) as T | null
-  return value as T | null
-}
-
-function compareQuestionNumber(
-  a: { question_number: number | null },
-  b: { question_number: number | null },
-): number {
-  const an = a.question_number
-  const bn = b.question_number
-  if (an == null && bn == null) return 0
-  if (an == null) return 1
-  if (bn == null) return -1
-  return an - bn
+  admin_questions?: {
+    id: string
+    question_number: number | null
+    admin_sections?: {
+      section_number: number | null
+      section_type?: string | null
+      title?: string | null
+      admin_prep_tests?: {
+        module_id?: string | null
+        title?: string | null
+      } | null
+    } | null
+  } | null
 }
 
 function slugify(value: string): string {
@@ -165,9 +145,85 @@ const LESSON_TYPE_BADGE_CLASS: Record<PrepLessonStatus, string> = {
   rep_work: "border-[#ffe5b7] bg-[#fff6e0] text-[#956321]",
 }
 
-function adminRecordQuery(lessonId: string, lessonDrill: "active" | "adaptive"): string {
-  return new URLSearchParams({ lessonId, lessonDrill }).toString()
+function escapeHtmlAttr(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
 }
+
+function isSafeHttpMediaUrl(raw: string): boolean {
+  const t = raw.trim().toLowerCase()
+  if (!t) return false
+  if (t.startsWith("javascript:") || t.startsWith("data:") || t.startsWith("vbscript:")) return false
+  return t.startsWith("https://") || t.startsWith("http://") || t.startsWith("/")
+}
+
+function youtubeEmbedUrl(url: string): string | null {
+  try {
+    const u = new URL(url.trim())
+    if (u.hostname === "youtu.be") {
+      const id = u.pathname.replace(/^\//, "").split("/")[0]
+      return id ? `https://www.youtube.com/embed/${id}` : null
+    }
+    if (u.hostname === "www.youtube.com" || u.hostname === "youtube.com" || u.hostname === "m.youtube.com") {
+      if (u.pathname === "/watch") {
+        const id = u.searchParams.get("v")
+        return id ? `https://www.youtube.com/embed/${id}` : null
+      }
+      const embed = u.pathname.match(/^\/embed\/([^/]+)/)
+      if (embed?.[1]) return `https://www.youtube.com/embed/${embed[1]}`
+    }
+  } catch {
+    /* ignore */
+  }
+  return null
+}
+
+function vimeoEmbedUrl(url: string): string | null {
+  try {
+    const u = new URL(url.trim())
+    if (!u.hostname.includes("vimeo.com")) return null
+    const m = u.pathname.match(/\/(?:video\/)?(\d+)/)
+    return m?.[1] ? `https://player.vimeo.com/video/${m[1]}` : null
+  } catch {
+    return null
+  }
+}
+
+const BtnInsertImage = createButton("Insert image", <ImageIcon className="size-4" aria-hidden />, () => {
+  const raw = window.prompt("Image URL (https://…)", "https://")
+  if (raw == null) return
+  const url = raw.trim()
+  if (!url || !isSafeHttpMediaUrl(url)) return
+  document.execCommand(
+    "insertHTML",
+    false,
+    `<p><img src="${escapeHtmlAttr(url)}" alt="" style="max-width:100%;height:auto" /></p>`,
+  )
+})
+
+const BtnInsertVideo = createButton("Insert video", <SquarePlay className="size-4" aria-hidden />, () => {
+  const raw = window.prompt("Video URL (YouTube, Vimeo, or direct .mp4/.webm)", "https://")
+  if (raw == null) return
+  const url = raw.trim()
+  if (!url) return
+  const yt = youtubeEmbedUrl(url)
+  const vm = vimeoEmbedUrl(url)
+  let html: string
+  if (yt) {
+    html = `<p><iframe src="${escapeHtmlAttr(yt)}" title="Embedded video" width="560" height="315" style="max-width:100%;aspect-ratio:16/9;border:0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe></p>`
+  } else if (vm) {
+    html = `<p><iframe src="${escapeHtmlAttr(vm)}" title="Embedded video" width="560" height="315" style="max-width:100%;aspect-ratio:16/9;border:0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe></p>`
+  } else if (isSafeHttpMediaUrl(url)) {
+    html = `<p><video controls playsinline src="${escapeHtmlAttr(url)}" style="max-width:100%;height:auto"></video></p>`
+  } else {
+    window.alert("Use a full https URL (YouTube, Vimeo, or a direct video file link).")
+    return
+  }
+  document.execCommand("insertHTML", false, html)
+})
 
 function AdminRichBlock({
   label,
@@ -185,7 +241,29 @@ function AdminRichBlock({
   return (
     <div className="flex flex-col gap-4 rounded-[10px] border border-[#dfe1e7] bg-white p-4">
       <p className={labelClassName}>{label}</p>
-      <AdminTipTapEditor value={value || "<p></p>"} onChange={onChange} minHeight={minHeight} />
+      <div className="overflow-hidden rounded-[10px] border border-[#dfe1e7] bg-white">
+        <EditorProvider>
+          <div className="flex flex-wrap items-center gap-1 border-b border-[#dfe1e7] bg-[#f6f8fa] px-3 py-2">
+            <Toolbar>
+              <BtnBold />
+              <BtnItalic />
+              <BtnUnderline />
+              <BtnBulletList />
+              <BtnNumberedList />
+              <Separator />
+              <BtnInsertImage />
+              <BtnInsertVideo />
+            </Toolbar>
+          </div>
+          <Editor
+            value={value || "<p></p>"}
+            onChange={(e) => onChange(e.target.value)}
+            containerProps={{
+              style: { minHeight, background: "#fff", padding: "1rem" },
+            }}
+          />
+        </EditorProvider>
+      </div>
     </div>
   )
 }
@@ -220,7 +298,6 @@ function AdminCoursesPage() {
   const [selectedQuestionRef, setSelectedQuestionRef] = useState("")
   const [linkedQuestions, setLinkedQuestions] = useState<LessonQuestionRow[]>([])
   const [previewQuestionId, setPreviewQuestionId] = useState<string | null>(null)
-  const [drillVideoModalOpen, setDrillVideoModalOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [bulkFile, setBulkFile] = useState<File | null>(null)
   const [bulkPreview, setBulkPreview] = useState<AdminBulkImportDryRunResult | null>(null)
@@ -342,34 +419,6 @@ function AdminCoursesPage() {
   const showQuestionLinking = linkedQuestionCap > 0
   const canLinkMore = linkedQuestions.length < linkedQuestionCap
 
-  const drillRecordContext = useMemo(() => {
-    if (lessonForm.lessonType !== "active_drill" && lessonForm.lessonType !== "adaptive_drill") return null
-    const sorted = [...linkedQuestions].sort((a, b) => a.sort_order - b.sort_order)
-    const row = sorted[0]
-    const q = unwrapEmbedded(row?.admin_questions)
-    if (!q?.id) return null
-    const section = unwrapEmbedded(q.admin_sections)
-    if (!section?.id) return null
-    const prepTest = unwrapEmbedded(section.admin_prep_tests)
-    const prepTestId = section.prep_test_id ?? prepTest?.id
-    if (prepTestId == null || String(prepTestId) === "") return null
-    return { prepTestId: String(prepTestId), sectionId: String(section.id), questionId: String(q.id) }
-  }, [lessonForm.lessonType, linkedQuestions])
-
-  useEffect(() => {
-    function onMessage(ev: MessageEvent) {
-      if (ev.origin !== window.location.origin) return
-      const d = ev.data as { type?: string; lessonId?: string; videoUrl?: string } | null
-      if (!d || typeof d !== "object") return
-      if (d.type !== ADMIN_LESSON_VIDEO_SAVED) return
-      if (String(d.lessonId ?? "") !== String(selectedLessonId ?? "")) return
-      const videoUrl = typeof d.videoUrl === "string" ? d.videoUrl : ""
-      setLessonForm((prev) => ({ ...prev, videoUrl }))
-    }
-    window.addEventListener("message", onMessage)
-    return () => window.removeEventListener("message", onMessage)
-  }, [selectedLessonId])
-
   useEffect(() => {
     if (!selectedLesson) return
     const lessonType = normalizeLessonStatus(selectedLesson.lesson_type)
@@ -389,6 +438,7 @@ function AdminCoursesPage() {
       base.repWorkPairs = parsed.pairs
     }
     // Editor state is intentionally reset when the selected lesson row changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync local form to server row
     setLessonForm(base)
   }, [selectedLesson])
 
@@ -556,9 +606,7 @@ function AdminCoursesPage() {
   function onSelectSection(sectionId: string) {
     setSelectedSectionId(sectionId)
     const section = sectionOptions.find((item) => String(item.id) === sectionId)
-    const questions = [...((section?.admin_questions ?? []) as Array<{ id: string; question_number: number | null }>)].sort(
-      compareQuestionNumber,
-    )
+    const questions = (section?.admin_questions ?? []) as Array<{ id: string; question_number: number | null }>
     setQuestionOptions(questions)
     setSelectedQuestionRef("")
   }
@@ -1157,42 +1205,12 @@ function AdminCoursesPage() {
                             <label className="admin-label">Video URL (optional)</label>
                             <input
                               className="admin-input mt-1"
-                              placeholder="https:// (YouTube embed, Vimeo, or direct link)"
+                              placeholder="https://"
                               value={lessonForm.videoUrl}
                               onChange={(e) => setLessonForm((prev) => ({ ...prev, videoUrl: e.target.value }))}
                             />
                           </div>
                         )}
-                        {(lessonForm.lessonType === "active_drill" || lessonForm.lessonType === "adaptive_drill") &&
-                        selectedLesson &&
-                        adminApi ? (
-                          <div className="space-y-2">
-                            <span className="block text-xs font-semibold uppercase tracking-[0.06em] text-[#666d80]">
-                              Lesson intro video
-                            </span>
-                            <p className="text-xs text-[#36394a]">
-                              {lessonForm.videoUrl.trim() ? (
-                                <a
-                                  href={lessonForm.videoUrl.trim()}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="font-medium text-[#0d47a1] underline"
-                                >
-                                  Video link
-                                </a>
-                              ) : (
-                                "No video linked"
-                              )}
-                            </p>
-                            <button
-                              type="button"
-                              className="w-full rounded-[6px] border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-2 text-sm font-medium text-[#1a1b25] transition-colors hover:bg-white"
-                              onClick={() => setDrillVideoModalOpen(true)}
-                            >
-                              Add or change video…
-                            </button>
-                          </div>
-                        ) : null}
                         <AdminRichBlock
                           label={lessonForm.lessonType === "video_text" ? "Lesson body" : "Instructions"}
                           value={lessonForm.textContent}
@@ -1322,17 +1340,9 @@ function AdminCoursesPage() {
                           </thead>
                           <tbody>
                             {linkedQuestions.map((row) => {
-                              const q = unwrapEmbedded(row.admin_questions)
-                              const section = unwrapEmbedded(q?.admin_sections)
-                              const prep = unwrapEmbedded(section?.admin_prep_tests)
-                              const prepTestRouteId = section?.prep_test_id ?? prep?.id
-                              const sectionRouteId = section?.id
-                              const drill: "active" | "adaptive" =
-                                normalizeLessonStatus(lessonForm.lessonType) === "active_drill" ? "active" : "adaptive"
-                              const recordTo =
-                                selectedLesson?.id && prepTestRouteId && sectionRouteId && q?.id
-                                  ? `/admin/preptests/${prepTestRouteId}/sections/${sectionRouteId}/questions/${q.id}/record?${adminRecordQuery(selectedLesson.id, drill)}`
-                                  : null
+                              const q = row.admin_questions
+                              const section = q?.admin_sections
+                              const prep = section?.admin_prep_tests
                               return (
                                 <tr key={row.id} className="border-b border-[#dfe1e7]">
                                   <td className="px-3 py-2 text-[#1a1b25]">{row.sort_order}</td>
@@ -1355,16 +1365,6 @@ function AdminCoursesPage() {
                                       >
                                         Preview
                                       </button>
-                                      {recordTo ? (
-                                        <Link
-                                          className="admin-btn admin-btn-ghost !px-2 !py-1"
-                                          to={recordTo}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                        >
-                                          Record
-                                        </Link>
-                                      ) : null}
                                       <button
                                         type="button"
                                         className="admin-btn admin-btn-ghost !px-2 !py-1"
@@ -1441,25 +1441,6 @@ function AdminCoursesPage() {
         questionId={previewQuestionId}
         adminApi={adminApi}
       />
-      {selectedLesson && adminApi && (lessonForm.lessonType === "active_drill" || lessonForm.lessonType === "adaptive_drill") ? (
-        <VideoExplanationModal
-          mode="lessonDrill"
-          open={drillVideoModalOpen}
-          onOpenChange={setDrillVideoModalOpen}
-          lessonId={selectedLesson.id}
-          recordPrepTestId={drillRecordContext?.prepTestId ?? ""}
-          recordSectionId={drillRecordContext?.sectionId ?? ""}
-          recordQuestionId={drillRecordContext?.questionId ?? ""}
-          lessonDrillQuery={lessonForm.lessonType === "active_drill" ? "active" : "adaptive"}
-          currentVideoUrl={lessonForm.videoUrl}
-          adminApi={adminApi}
-          recordDisabled={!drillRecordContext}
-          recordDisabledReason="Link at least one PrepTest question before recording."
-          onVideoUrlSaved={(url) => {
-            setLessonForm((prev) => ({ ...prev, videoUrl: url ?? "" }))
-          }}
-        />
-      ) : null}
     </section>
   )
 }

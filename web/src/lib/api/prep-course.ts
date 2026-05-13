@@ -26,19 +26,6 @@ export type PrepLesson = {
   updated_at: string
 }
 
-export type PrepLessonLinkedQuestionRef = {
-  sort_order: number
-  question_id: string
-  prep_test_id: string
-  section_id: string
-  question_number: number | null
-  prep_test_module_id: string | null
-  prep_test_title: string | null
-  section_number: number | null
-  section_type: string | null
-  section_title: string | null
-}
-
 export function createPrepCourseApi(supabase: SupabaseClient) {
   async function invokePrepCourse<T>(
     options: Parameters<SupabaseClient["functions"]["invoke"]>[1],
@@ -82,21 +69,14 @@ export function createPrepCourseApi(supabase: SupabaseClient) {
       return data
     },
 
-    async getLesson(
-      courseSlug: string,
-      lessonSlug: string,
-    ): Promise<{ course: PrepCourse; lesson: PrepLesson; linkedQuestionRefs: PrepLessonLinkedQuestionRef[] }> {
-      const { data, error } = await invokePrepCourse<{
-        course: PrepCourse
-        lesson: PrepLesson
-        linkedQuestionRefs?: PrepLessonLinkedQuestionRef[]
-      }>({
+    async getLesson(courseSlug: string, lessonSlug: string): Promise<{ course: PrepCourse; lesson: PrepLesson }> {
+      const { data, error } = await invokePrepCourse<{ course: PrepCourse; lesson: PrepLesson }>({
         method: "POST",
         body: { action: "get-lesson", courseSlug, lessonSlug },
       })
       if (error) throw error
       if (!data?.course || !data.lesson) throw new Error("No lesson returned from prep-course")
-      return { course: data.course, lesson: data.lesson, linkedQuestionRefs: data.linkedQuestionRefs ?? [] }
+      return data
     },
 
     async adminCreateCourse(input: {

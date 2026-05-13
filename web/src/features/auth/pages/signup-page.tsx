@@ -9,6 +9,7 @@ import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { createAuthApi, getAuthCallbackUrl } from "@/lib/api/auth"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
 function Divider() {
   return (
@@ -74,7 +75,7 @@ function SignupPage() {
       await authApi.sendMagicLink(email.trim(), getAuthCallbackUrl())
       navigate("/signup/check-email", { replace: true, state: { email: email.trim() } })
     } catch (authError) {
-      setError(authError instanceof Error ? authError.message : "Unable to send magic link.")
+      setError(authError instanceof Error ? formatSupabaseCallError(authError) : "Unable to send magic link.")
     } finally {
       setIsSubmitting(false)
     }
@@ -95,7 +96,7 @@ function SignupPage() {
     try {
       await authApi.signInWithGoogle(getAuthCallbackUrl())
     } catch (authError) {
-      setError(authError instanceof Error ? authError.message : "Unable to continue with Google.")
+      setError(authError instanceof Error ? formatSupabaseCallError(authError) : "Unable to continue with Google.")
       setIsSubmitting(false)
     }
   }

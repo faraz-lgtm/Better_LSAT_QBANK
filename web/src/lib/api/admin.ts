@@ -72,16 +72,6 @@ export function createAdminApi(supabase: SupabaseClient) {
     return data
   }
 
-  async function reserveLessonVideoUploadInner(lessonId: string, fileExtension: string) {
-    const { data, error } = await invokeAdmin<{ bucket: string; path: string; publicUrl: string }>({
-      method: "POST",
-      body: { action: "admin-reserve-lesson-video-upload", lessonId, fileExtension },
-    })
-    if (error) throw error
-    if (!data?.bucket || !data.path || !data.publicUrl) throw new Error("Invalid reserve response")
-    return data
-  }
-
   return {
     async bootstrapProjection() {
       const { data, error } = await invokeAdmin<{ success: boolean }>({
@@ -197,25 +187,9 @@ export function createAdminApi(supabase: SupabaseClient) {
       return reserveQuestionVideoUploadInner(questionId, fileExtension)
     },
 
-    async reserveLessonVideoUpload(lessonId: string, fileExtension: string) {
-      return reserveLessonVideoUploadInner(lessonId, fileExtension)
-    },
-
     /** Reserves a storage path (admin edge), uploads with the caller's session (RLS), returns public object URL for `video_url`. */
     async uploadQuestionVideoBlob(questionId: string, blob: Blob, contentType: string, fileExtension: string) {
       const reserved = await reserveQuestionVideoUploadInner(questionId, fileExtension)
-      const { error: uploadError } = await supabase.storage.from(reserved.bucket).upload(reserved.path, blob, {
-        contentType,
-        upsert: true,
-      })
-      if (uploadError) throw uploadError
-      const { data: pub } = supabase.storage.from(reserved.bucket).getPublicUrl(reserved.path)
-      if (!pub?.publicUrl) throw new Error("Could not resolve public video URL")
-      return pub.publicUrl
-    },
-
-    async uploadLessonVideoBlob(lessonId: string, blob: Blob, contentType: string, fileExtension: string) {
-      const reserved = await reserveLessonVideoUploadInner(lessonId, fileExtension)
       const { error: uploadError } = await supabase.storage.from(reserved.bucket).upload(reserved.path, blob, {
         contentType,
         upsert: true,

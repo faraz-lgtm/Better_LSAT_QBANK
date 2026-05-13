@@ -3,22 +3,25 @@ export type SectionModeCard = {
   title: string
   subtitle: string
   section: "LR" | "RC"
-  ctaLabel: "New Drill" | "Start Drill"
+  questionCount: number
+  timeMinutes: number
 }
 
 export const mockSectionModeCards: SectionModeCard[] = [
   {
     id: "lr-timed",
     title: "Logical Reasoning",
-    subtitle: "16-20 Questions",
+    subtitle: "Timed section from your practice pool",
     section: "LR",
-    ctaLabel: "New Drill",
+    questionCount: 25,
+    timeMinutes: 35,
   },
   {
     id: "rc-timed",
     title: "Reading Comprehension",
-    subtitle: "4 Passages",
+    subtitle: "Timed section from your practice pool",
     section: "RC",
-    ctaLabel: "Start Drill",
+    questionCount: 27,
+    timeMinutes: 35,
   },
 ]
