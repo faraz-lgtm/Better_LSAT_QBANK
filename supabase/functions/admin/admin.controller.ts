@@ -149,21 +149,6 @@ export async function handleAdminRequest(req: Request): Promise<Response> {
         throw e
       }
     }
-    if (action === "admin-reserve-lesson-video-upload") {
-      const lessonId = readString(body, "lessonId")
-      const fileExtension = readString(body, "fileExtension")
-      if (!lessonId || !fileExtension) {
-        return json({ error: "lessonId and fileExtension are required" }, { status: 400 })
-      }
-      try {
-        return json(await service.reserveLessonVideoUpload(user.id, lessonId, fileExtension))
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : "Reserve failed"
-        if (msg === "Lesson not found") return json({ error: msg }, { status: 404 })
-        if (msg.startsWith("Invalid file extension")) return json({ error: msg }, { status: 400 })
-        throw e
-      }
-    }
     if (action === "admin-dashboard") {
       return json(await service.getDashboard(user.id))
     }

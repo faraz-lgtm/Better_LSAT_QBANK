@@ -508,28 +508,6 @@ export function createAdminService(deps: { repository: AdminRepository }) {
       }
     },
 
-    async reserveLessonVideoUpload(userId: string, lessonId: string, fileExtension: string) {
-      await requireAdmin(userId)
-      const ext = fileExtension.replace(/^\./, "").trim().toLowerCase()
-      const allowed = new Set(["webm", "mp4", "mov", "m4v", "mkv"])
-      if (!allowed.has(ext)) {
-        throw new Error("Invalid file extension; use webm, mp4, mov, m4v, or mkv")
-      }
-      const exists = await deps.repository.adminLessonExists(lessonId)
-      if (!exists) throw new Error("Lesson not found")
-      const path = `lessons/${lessonId}/${crypto.randomUUID()}.${ext}`
-      const supabaseUrl = browserFacingSupabaseApiBaseUrl()
-      if (!supabaseUrl) throw new Error("SUPABASE_URL is not configured")
-      const encodedPath = path.split("/").map(encodeURIComponent).join("/")
-      const publicUrl =
-        `${supabaseUrl}/storage/v1/object/public/${QUESTION_EXPLANATION_VIDEOS_BUCKET}/${encodedPath}`
-      return {
-        bucket: QUESTION_EXPLANATION_VIDEOS_BUCKET,
-        path,
-        publicUrl,
-      }
-    },
-
     async getDashboard(userId: string) {
       await requireAdmin(userId)
       const { rows: prepTests } = await deps.repository.listPrepTests()

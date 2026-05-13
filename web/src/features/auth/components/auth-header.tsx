@@ -22,7 +22,7 @@ const navMenus: Array<{ key: NavMenuKey; label: string; items: Array<{ label: st
     items: [
       { label: "Drills", href: "/app/practice/drills" },
       { label: "Sections", href: "/app/practice/sections" },
-      { label: "PrepTest", href: "/app/practice/preptest" },
+      { label: "PrepTests", href: "/app/practice/preptest" },
       { label: "Blind Review", href: "/app/practice/blind-review" },
     ],
   },

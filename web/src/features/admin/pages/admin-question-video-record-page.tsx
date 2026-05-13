@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
+import { Link, useParams } from "react-router-dom"
 
 import "@/features/admin/admin-theme.css"
 import { AnnotationToolbar } from "@/features/admin/components/annotation-toolbar"
 import { AnnotationTextBox } from "@/features/admin/components/annotation-text-box"
 import { Button } from "@/components/ui/button"
-import { ADMIN_LESSON_VIDEO_SAVED, ADMIN_QUESTION_VIDEO_SAVED } from "@/features/admin/lib/admin-question-video-messages"
+import { ADMIN_QUESTION_VIDEO_SAVED } from "@/features/admin/lib/admin-question-video-messages"
 import { drawAllAnnotations, drawAnnotation, drawShapePreview } from "@/features/admin/lib/annotations/draw"
 import { hitTest } from "@/features/admin/lib/annotations/hit-test"
 import type {
@@ -23,31 +23,6 @@ import {
 import { sanitizeAdminHtml } from "@/features/admin/lib/sanitize-admin-html"
 import { useAnnotationState } from "@/features/admin/hooks/use-annotation-state"
 import { useAdminApi } from "@/features/admin/use-admin-api"
-
-type LessonQuestionScopeRow = {
-  admin_questions?: {
-    id: string
-    admin_sections?: {
-      id?: string
-      prep_test_id?: string | null
-      admin_prep_tests?: { id?: string } | null
-    } | null
-  } | null
-}
-
-function mapLessonQuestionsToScope(rows: unknown[]): Array<{ prepTestId: string; sectionId: string; questionId: string }> {
-  const out: Array<{ prepTestId: string; sectionId: string; questionId: string }> = []
-  for (const row of rows) {
-    const r = row as LessonQuestionScopeRow
-    const q = r.admin_questions
-    const sec = q?.admin_sections
-    if (!q?.id || !sec?.id) continue
-    const prepTestId = sec.prep_test_id ?? sec.admin_prep_tests?.id
-    if (!prepTestId) continue
-    out.push({ prepTestId, sectionId: sec.id, questionId: q.id })
-  }
-  return out
-}
 
 function pickRecorderMime(): string | undefined {
   const candidates = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
@@ -221,13 +196,7 @@ function applyMoveDelta(ann: Annotation, dx: number, dy: number): Partial<Annota
 
 function AdminQuestionVideoRecordPage() {
   const adminApi = useAdminApi()
-  const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
   const { prepTestId, sectionId, questionId } = useParams()
-  const lessonId = searchParams.get("lessonId")?.trim() ?? ""
-  const lessonDrill = searchParams.get("lessonDrill")?.trim() ?? ""
-  const lessonVideoLessonId = searchParams.get("lessonVideoLessonId")?.trim() ?? ""
-  const [scopedQuestions, setScopedQuestions] = useState<Array<{ prepTestId: string; sectionId: string; questionId: string }>>([])
   const [question, setQuestion] = useState<Record<string, unknown> | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [annotateMode, setAnnotateMode] = useState(false)
@@ -287,43 +256,6 @@ function AdminQuestionVideoRecordPage() {
       alive = false
     }
   }, [adminApi, questionId])
-
-  useEffect(() => {
-    let alive = true
-    async function loadScope() {
-      if (!adminApi || !lessonId) {
-        if (alive) setScopedQuestions([])
-        return
-      }
-      try {
-        const rows = await adminApi.listLessonQuestions(lessonId)
-        if (!alive) return
-        let mapped = mapLessonQuestionsToScope(rows)
-        if (lessonDrill === "active") {
-          mapped = mapped.slice(0, 1)
-        }
-        setScopedQuestions(mapped)
-      } catch {
-        if (alive) setScopedQuestions([])
-      }
-    }
-    void loadScope()
-    return () => {
-      alive = false
-    }
-  }, [adminApi, lessonId, lessonDrill])
-
-  useEffect(() => {
-    if (!lessonId || scopedQuestions.length === 0 || !questionId) return
-    const ok = scopedQuestions.some((x) => x.questionId === questionId)
-    if (!ok) {
-      const t = scopedQuestions[0]!
-      navigate(
-        `/admin/preptests/${t.prepTestId}/sections/${t.sectionId}/questions/${t.questionId}/record?${searchParams.toString()}`,
-        { replace: true },
-      )
-    }
-  }, [lessonId, scopedQuestions, questionId, navigate, searchParams])
 
   useEffect(() => {
     if (!toastMsg) return
@@ -699,28 +631,15 @@ function AdminQuestionVideoRecordPage() {
       const blob = new Blob(chunksRef.current, { type: rec.mimeType || "video/webm" })
       const ext = extensionFromBlob(blob)
       const contentType = blob.type || "video/webm"
-      if (lessonVideoLessonId) {
-        const url = await adminApi.uploadLessonVideoBlob(lessonVideoLessonId, blob, contentType, ext)
-        await adminApi.updateLesson(lessonVideoLessonId, { videoUrl: url })
-        setSavedUrl(url)
-        setStatusMsg("Saved to lesson. You can close this tab.")
-        if (window.opener && !window.opener.closed) {
-          window.opener.postMessage(
-            { type: ADMIN_LESSON_VIDEO_SAVED, lessonId: lessonVideoLessonId, videoUrl: url },
-            window.location.origin,
-          )
-        }
-      } else {
-        const url = await adminApi.uploadQuestionVideoBlob(questionId, blob, contentType, ext)
-        await adminApi.updateQuestionMeta(questionId, { video_url: url })
-        setSavedUrl(url)
-        setStatusMsg("Saved. You can close this tab.")
-        if (window.opener && !window.opener.closed) {
-          window.opener.postMessage(
-            { type: ADMIN_QUESTION_VIDEO_SAVED, questionId, videoUrl: url },
-            window.location.origin,
-          )
-        }
+      const url = await adminApi.uploadQuestionVideoBlob(questionId, blob, contentType, ext)
+      await adminApi.updateQuestionMeta(questionId, { video_url: url })
+      setSavedUrl(url)
+      setStatusMsg("Saved. You can close this tab.")
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage(
+          { type: ADMIN_QUESTION_VIDEO_SAVED, questionId, videoUrl: url },
+          window.location.origin,
+        )
       }
     } catch (e) {
       setStatusMsg(e instanceof Error ? e.message : "Upload failed")
@@ -760,12 +679,6 @@ function AdminQuestionVideoRecordPage() {
   const sec = firstOrSelf(question.admin_sections as Record<string, unknown> | Record<string, unknown>[] | undefined)
   const sectionLabel = String(sec?.section_type ?? sec?.title ?? "")
 
-  const scopeIndex = questionId ? scopedQuestions.findIndex((x) => x.questionId === questionId) : -1
-  const prevScope = scopeIndex > 0 ? scopedQuestions[scopeIndex - 1] : null
-  const nextScope =
-    scopeIndex >= 0 && scopeIndex < scopedQuestions.length - 1 ? scopedQuestions[scopeIndex + 1]! : null
-  const showCourseQuestionNav = Boolean(lessonId) && scopedQuestions.length > 1
-
   const columnPointerEvents = annotateMode || editingTextId ? ("none" as const) : ("auto" as const)
   const canvasPointerClass =
     annotateMode && !editingTextId ? "pointer-events-auto touch-none" : "pointer-events-none touch-none"
@@ -780,41 +693,6 @@ function AdminQuestionVideoRecordPage() {
         </Button>
         <span className="text-muted-foreground">Q{qn}</span>
         {sectionLabel ? <span className="rounded bg-muted px-1.5 py-0.5 text-xs">{sectionLabel}</span> : null}
-        {showCourseQuestionNav ? (
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={!prevScope}
-              onClick={() => {
-                if (!prevScope) return
-                navigate(
-                  `/admin/preptests/${prevScope.prepTestId}/sections/${prevScope.sectionId}/questions/${prevScope.questionId}/record?${searchParams.toString()}`,
-                )
-              }}
-            >
-              ← Prev
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={!nextScope}
-              onClick={() => {
-                if (!nextScope) return
-                navigate(
-                  `/admin/preptests/${nextScope.prepTestId}/sections/${nextScope.sectionId}/questions/${nextScope.questionId}/record?${searchParams.toString()}`,
-                )
-              }}
-            >
-              Next →
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              {scopeIndex + 1}/{scopedQuestions.length}
-            </span>
-          </>
-        ) : null}
         <Button
           type="button"
           variant={annotateMode ? "default" : "outline"}

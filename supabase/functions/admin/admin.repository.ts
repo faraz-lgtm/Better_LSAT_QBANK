@@ -772,15 +772,6 @@ export function createAdminRepository(client: SupabaseClient) {
       return (count ?? 0) > 0
     },
 
-    async adminLessonExists(lessonId: string): Promise<boolean> {
-      const { count, error } = await client
-        .from("prep_lessons")
-        .select("id", { count: "exact", head: true })
-        .eq("id", lessonId)
-      if (error) throw error
-      return (count ?? 0) > 0
-    },
-
     async getQuestionSourceById(questionId: string): Promise<"LSAC" | "PLATFORM" | null> {
       const { data, error } = await client.from("admin_questions").select("source").eq("id", questionId).maybeSingle()
       if (error) throw error
@@ -1349,7 +1340,7 @@ export function createAdminRepository(client: SupabaseClient) {
       const { data, error } = await client
         .from("lesson_questions")
         .select(
-          "id,sort_order,admin_questions(id,question_number,stem_text,source,source_label,admin_sections(id,prep_test_id,section_number,section_type,title,admin_prep_tests(id,module_id,title)))",
+          "id,sort_order,admin_questions(id,question_number,stem_text,source,source_label,admin_sections(section_number,section_type,title,admin_prep_tests(module_id,title)))",
         )
         .eq("lesson_id", lessonId)
         .order("sort_order")

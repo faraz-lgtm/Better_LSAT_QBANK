@@ -1,6 +1,6 @@
 import { assertEquals, assertRejects } from 'jsr:@std/assert@1'
 import type { PrepLessonType } from '../_shared/prep-lesson-type.ts'
-import type { PrepCourseRow, PrepLessonLinkedQuestionRef, PrepLessonRow, ProfileRoleRow } from './prep-course.repository.ts'
+import type { PrepCourseRow, PrepLessonRow, ProfileRoleRow } from './prep-course.repository.ts'
 import { createPrepCourseService } from './prep-course.service.ts'
 
 function mockRepo(
@@ -51,7 +51,6 @@ function mockRepo(
       subscription_type: string | null
       fetched_at: string
     } | null>
-    listLessonLinkedQuestionRefs: (lessonId: string) => Promise<PrepLessonLinkedQuestionRef[]>
   }> = {},
 ) {
   const course: PrepCourseRow = {
@@ -127,8 +126,6 @@ function mockRepo(
     updateLesson:
       overrides.updateLesson ??
       (async (input) => ({ ...lesson, id: input.lessonId })),
-    listLessonLinkedQuestionRefs:
-      overrides.listLessonLinkedQuestionRefs ?? (async () => []),
   }
 }
 
