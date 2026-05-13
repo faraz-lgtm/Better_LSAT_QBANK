@@ -12,10 +12,15 @@ import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
 import { PrepCourseLessonPage } from "@/features/prep-course/pages/prep-course-lesson-page"
 import { PrepCoursePage } from "@/features/prep-course/pages/prep-course-page"
 import { AnalyticsPage } from "@/features/student/pages/analytics-page"
+import { ExplanationQuestionDetailPage } from "@/features/student/pages/explanation-question-detail-page"
 import { ExplanationsPage } from "@/features/student/pages/explanations-page"
 import { PracticeBlindReviewPage } from "@/features/student/pages/practice-blind-review-page"
+import { LrDrillSessionPage } from "@/features/student/pages/lr-drill-session-page"
+import { LrNewDrillPage } from "@/features/student/pages/lr-new-drill-page"
 import { PracticeDrillsPage } from "@/features/student/pages/practice-drills-page"
 import { PracticePrepTestPage } from "@/features/student/pages/practice-preptest-page"
+import { PracticeRcSectionPage } from "@/features/student/pages/practice-rc-section-page"
+import { RcSectionSessionPage } from "@/features/student/pages/rc-section-session-page"
 import { PracticeSectionsPage } from "@/features/student/pages/practice-sections-page"
 
 function AppRoutes() {
@@ -31,10 +36,15 @@ function AppRoutes() {
       <Route path="/app" element={<StudentAppShell />}>
         <Route index element={<DashboardPage />} />
         <Route path="learn/explanations" element={<ExplanationsPage />} />
+        <Route path="learn/explanations/q/:questionKey" element={<ExplanationQuestionDetailPage />} />
         <Route path="prep-course" element={<PrepCoursePage />} />
         <Route path="prep-course/:courseSlug/:lessonSlug" element={<PrepCourseLessonPage />} />
         <Route path="practice/drills" element={<PracticeDrillsPage />} />
+        <Route path="practice/drills/lr/new" element={<LrNewDrillPage />} />
+        <Route path="practice/drills/lr/session" element={<LrDrillSessionPage />} />
         <Route path="practice/sections" element={<PracticeSectionsPage />} />
+        <Route path="practice/sections/rc" element={<PracticeRcSectionPage />} />
+        <Route path="practice/sections/rc/session" element={<RcSectionSessionPage />} />
         <Route path="practice/preptest" element={<PracticePrepTestPage />} />
         <Route path="practice/blind-review" element={<PracticeBlindReviewPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
