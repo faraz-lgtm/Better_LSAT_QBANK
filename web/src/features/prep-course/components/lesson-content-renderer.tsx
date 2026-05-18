@@ -6,6 +6,7 @@ import type { PrepLesson, PrepLessonLinkedQuestionRef } from "@/lib/api/prep-cou
 type LessonContentRendererProps = {
   lesson: PrepLesson
   linkedQuestionRefs?: PrepLessonLinkedQuestionRef[]
+  hideTitle?: boolean
 }
 
 function HtmlBlock({ html, className }: { html: string; className?: string }) {
@@ -125,7 +126,7 @@ function LessonDrillLinkedQuestions({
   )
 }
 
-function LessonContentRenderer({ lesson, linkedQuestionRefs = [] }: LessonContentRendererProps) {
+function LessonContentRenderer({ lesson, linkedQuestionRefs = [], hideTitle = false }: LessonContentRendererProps) {
   const type = lesson.lesson_type
   const legacyVideo = type === "video"
   const videoText = type === "video_text" || legacyVideo
@@ -138,8 +139,11 @@ function LessonContentRenderer({ lesson, linkedQuestionRefs = [] }: LessonConten
     return (
       <article className="space-y-6 rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
         <div>
-          <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>
-          <HtmlBlock html={instructions} className="rep-instructions ds-body-sm mt-4 leading-7 text-[#36394a] [&_p]:mb-3" />
+          {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
+          <HtmlBlock
+            html={instructions}
+            className={`rep-instructions ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
+          />
         </div>
         <ol className="space-y-8">
           {pairs.map((pair, i) => (
@@ -190,11 +194,14 @@ function LessonContentRenderer({ lesson, linkedQuestionRefs = [] }: LessonConten
     return (
       <div className="space-y-6">
         <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
-          <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>
+          {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
           {lesson.text_content ? (
-            <HtmlBlock html={lesson.text_content} className="ds-body-sm mt-4 leading-7 text-[#36394a] [&_p]:mb-3" />
+            <HtmlBlock
+              html={lesson.text_content}
+              className={`ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
+            />
           ) : (
-            <p className="ds-body-sm mt-4 leading-7 text-[#36394a]">No notes available.</p>
+            <p className={`ds-body-sm leading-7 text-[#36394a] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
           )}
         </article>
         <LessonDrillLinkedQuestions
@@ -208,11 +215,14 @@ function LessonContentRenderer({ lesson, linkedQuestionRefs = [] }: LessonConten
 
   return (
     <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
-      <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>
+      {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
       {lesson.text_content ? (
-        <HtmlBlock html={lesson.text_content} className="ds-body-sm mt-4 leading-7 text-[#36394a] [&_p]:mb-3" />
+        <HtmlBlock
+          html={lesson.text_content}
+          className={`ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
+        />
       ) : (
-        <p className="ds-body-sm mt-4 leading-7 text-[#36394a]">No notes available.</p>
+        <p className={`ds-body-sm leading-7 text-[#36394a] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
       )}
     </article>
   )

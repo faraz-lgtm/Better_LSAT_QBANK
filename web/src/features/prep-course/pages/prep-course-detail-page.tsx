@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { Link, Navigate, useParams } from "react-router-dom"
 
 import { PrepCourseLessonFooter } from "@/features/prep-course/components/prep-course-lesson-footer"
 import { PrepCourseLessonPanel } from "@/features/prep-course/components/prep-course-lesson-panel"
@@ -14,16 +14,17 @@ import {
 } from "@/lib/api/prep-course"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
-function PrepCourseLessonPage() {
-  const navigate = useNavigate()
-  const { courseSlug = "prep-course", lessonSlug = "" } = useParams()
+function PrepCourseDetailPage() {
+  const { courseSlug } = useParams<{ courseSlug: string }>()
   const [course, setCourse] = useState<PrepCourse | null>(null)
-  const [lesson, setLesson] = useState<PrepLesson | null>(null)
-  const [linkedQuestionRefs, setLinkedQuestionRefs] = useState<PrepLessonLinkedQuestionRef[]>([])
   const [lessons, setLessons] = useState<PrepLesson[]>([])
+  const [selectedLessonSlug, setSelectedLessonSlug] = useState<string | null>(null)
   const [completedLessonSlugs, setCompletedLessonSlugs] = useState<Set<string>>(() => new Set())
+  const [activeLesson, setActiveLesson] = useState<PrepLesson | null>(null)
+  const [linkedQuestionRefs, setLinkedQuestionRefs] = useState<PrepLessonLinkedQuestionRef[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [lessonLoading, setLessonLoading] = useState(false)
   const [showSidebar, setShowSidebar] = useState(true)
 
   const prepCourseApi = useMemo(() => {
@@ -40,6 +41,7 @@ function PrepCourseLessonPage() {
   }, [completedLessonSlugs.size, lessons.length])
 
   useEffect(() => {
+    if (!courseSlug) return
     let alive = true
     async function load() {
       if (!prepCourseApi) {
@@ -49,23 +51,15 @@ function PrepCourseLessonPage() {
         }
         return
       }
-      if (!lessonSlug) {
-        if (alive) setLoading(false)
-        return
-      }
       try {
-        const [courseData, lessonData] = await Promise.all([
-          prepCourseApi.getCourse(courseSlug),
-          prepCourseApi.getLesson(courseSlug, lessonSlug),
-        ])
+        const data = await prepCourseApi.getCourse(courseSlug)
         if (!alive) return
-        setCourse(courseData.course)
-        setLessons(courseData.lessons)
-        setLesson(lessonData.lesson)
-        setLinkedQuestionRefs(lessonData.linkedQuestionRefs)
+        setCourse(data.course)
+        setLessons(data.lessons)
+        setSelectedLessonSlug(data.lessons[0]?.slug ?? null)
       } catch (e) {
         if (!alive) return
-        setError(e instanceof Error ? e.message : "Failed to load lesson")
+        setError(e instanceof Error ? e.message : "Failed to load prep course")
       } finally {
         if (alive) setLoading(false)
       }
@@ -74,33 +68,60 @@ function PrepCourseLessonPage() {
     return () => {
       alive = false
     }
-  }, [courseSlug, lessonSlug, prepCourseApi])
+  }, [prepCourseApi, courseSlug])
+
+  useEffect(() => {
+    if (!courseSlug || !selectedLessonSlug || !prepCourseApi) return
+    let alive = true
+    async function loadLesson() {
+      setLessonLoading(true)
+      try {
+        const data = await prepCourseApi.getLesson(courseSlug, selectedLessonSlug)
+        if (!alive) return
+        setActiveLesson(data.lesson)
+        setLinkedQuestionRefs(data.linkedQuestionRefs)
+      } catch (e) {
+        if (!alive) return
+        setError(e instanceof Error ? e.message : "Failed to load lesson")
+        setActiveLesson(null)
+        setLinkedQuestionRefs([])
+      } finally {
+        if (alive) setLessonLoading(false)
+      }
+    }
+    void loadLesson()
+    return () => {
+      alive = false
+    }
+  }, [prepCourseApi, courseSlug, selectedLessonSlug])
 
   function handleMarkComplete() {
-    if (!lesson) return
+    if (!selectedLessonSlug) return
     setCompletedLessonSlugs((prev) => {
       const next = new Set(prev)
-      next.add(lesson.slug)
+      next.add(selectedLessonSlug)
       return next
     })
-    const nextSlug = nextLessonSlug(lessons, lesson.slug)
-    if (nextSlug && course) {
-      navigate(`/app/prep-course/${course.slug}/${nextSlug}`)
-    }
+    const nextSlug = nextLessonSlug(lessons, selectedLessonSlug)
+    if (nextSlug) setSelectedLessonSlug(nextSlug)
+  }
+
+  if (!courseSlug) {
+    return <Navigate to="/app/prep-course" replace />
   }
 
   if (loading) {
     return (
       <StudentMain>
-        <p className="ds-body-sm ds-text-muted">Loading lesson...</p>
+        <p className="ds-body-sm ds-text-muted">Loading prep course...</p>
       </StudentMain>
     )
   }
 
-  if (!course || !lesson) {
+  if (!course || lessons.length === 0) {
     return (
       <StudentMain>
-        <p className="text-sm text-[#95122b]">{error ?? "Lesson not found."}</p>
+        <p className="text-sm text-[#95122b]">{error ?? "No prep course content found."}</p>
         <Link to="/app/prep-course" className="mt-3 inline-block text-sm font-medium text-[#0d47a1]">
           Back to courses
         </Link>
@@ -115,22 +136,25 @@ function PrepCourseLessonPage() {
       <StudentMain className="max-w-[1280px] pb-24 pt-0">
         {error ? <p className="mb-4 text-xs text-[#95122b]">{error}</p> : null}
 
-        <section className={`grid gap-6 ${showSidebar ? "lg:grid-cols-[300px_1fr]" : "grid-cols-1"}`}>
+        <section
+          className={`grid gap-6 ${showSidebar ? "lg:grid-cols-[300px_1fr]" : "grid-cols-1"}`}
+        >
           {showSidebar ? (
             <PrepCourseLessonSidebar
               course={course}
               lessons={lessons}
-              activeLessonSlug={lesson.slug}
+              activeLessonSlug={selectedLessonSlug ?? undefined}
               completedLessonSlugs={completedLessonSlugs}
               progressPercent={progressPercent}
-              onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
+              onSelectLesson={setSelectedLessonSlug}
             />
           ) : null}
 
           <PrepCourseLessonPanel
             course={course}
-            lesson={lesson}
+            lesson={activeLesson}
             linkedQuestionRefs={linkedQuestionRefs}
+            loading={lessonLoading}
             courseContentHref={courseContentHref}
           />
         </section>
@@ -140,9 +164,10 @@ function PrepCourseLessonPage() {
         showSidebar={showSidebar}
         onToggleSidebar={() => setShowSidebar((v) => !v)}
         onMarkComplete={handleMarkComplete}
+        markCompleteDisabled={!activeLesson || lessonLoading}
       />
     </>
   )
 }
 
-export { PrepCourseLessonPage }
+export { PrepCourseDetailPage }
