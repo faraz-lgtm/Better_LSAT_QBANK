@@ -32,7 +32,7 @@ const appNavItems: AppNavItem[] = [
     options: [
       { label: "Drills", to: "/app/practice/drills" },
       { label: "Sections", to: "/app/practice/sections" },
-      { label: "PrepTest", to: "/app/practice/preptest" },
+      { label: "PrepTests", to: "/app/practice/preptest" },
       { label: "Blind Review", to: "/app/practice/blind-review" },
     ],
   },
@@ -45,9 +45,9 @@ const appNavItems: AppNavItem[] = [
       { label: "Overview", to: "/app/analytics" },
       { label: "Priorities", to: "/app/analytics?tab=priorities" },
       { label: "Practice history", to: "/app/analytics?tab=history" },
-      { label: "Drills", to: "/app/analytics?tab=drills" },
-      { label: "Sections", to: "/app/analytics?tab=sections" },
-      { label: "PrepTest", to: "/app/analytics?tab=preptest" },
+      { label: "Drills", to: "/app/analytics/drills" },
+      { label: "Sections", to: "/app/analytics/sections" },
+      { label: "PrepTest", to: "/app/analytics/preptests" },
     ],
   },
 ]
@@ -100,8 +100,10 @@ function StudentAppHeader() {
   }, [])
 
   useEffect(() => {
-    setOpenMenu(null)
-    setOpenProfileMenu(false)
+    queueMicrotask(() => {
+      setOpenMenu(null)
+      setOpenProfileMenu(false)
+    })
   }, [pathname])
 
   useEffect(() => {
@@ -130,8 +132,17 @@ function StudentAppHeader() {
     <header className="sticky top-0 z-20 bg-[#f5f9ff]/95 backdrop-blur">
       <div className="figma-container auth-header-inner mx-auto flex h-[92px] w-full items-center justify-between">
         <div className="flex h-[60px] items-center gap-8 rounded-[20px] bg-[#edf3ff] px-6">
-          <Link to="/app" className="text-base font-extrabold leading-[1.5] tracking-[0.02em] text-[#0d47a1]">
-            betterLSAT
+          <Link
+            to="/app"
+            className="flex h-10 items-center"
+            aria-label="betterLSAT home"
+          >
+            <img
+              src="/brand-logo.png"
+              alt="betterLSAT"
+              className="h-[22px] w-auto select-none"
+              draggable={false}
+            />
           </Link>
           <nav ref={navRef} className="flex items-center gap-6">
             {appNavItems.map((item) => {
@@ -205,7 +216,7 @@ function StudentAppHeader() {
               </span>
               <span className="flex flex-col items-start text-left leading-[1.5] text-[#062357]">
                 <span className="text-base font-semibold tracking-[0.02em]">{displayName}</span>
-                <span className="max-w-[210px] truncate text-xs font-normal tracking-[0.02em] text-[#666d80]">
+                <span className="max-w-[210px] truncate text-xs font-normal tracking-[0.02em] text-black">
                   {email ?? "student@example.com"}
                 </span>
               </span>

@@ -13,19 +13,12 @@ import {
 import { Button } from "@/components/ui/button"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
-import { createAnalyticsApi, type AnalyticsOverview, type KindBreakdownSection, type PracticeSessionSummary, type PriorityRow, type TrajectoryPoint } from "@/lib/api/analytics"
-import { createPracticeApi, type PracticeSessionKind } from "@/lib/api/practice"
+import { createAnalyticsApi, type AnalyticsOverview, type PracticeSessionSummary, type PriorityRow, type TrajectoryPoint } from "@/lib/api/analytics"
+import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { Bookmark, Loader2 } from "lucide-react"
 
-const VALID_TABS = new Set([
-  "overview",
-  "priorities",
-  "history",
-  "drills",
-  "sections",
-  "preptest",
-])
+const VALID_TABS = new Set(["overview", "priorities", "history"])
 
 function tabFromSearch(raw: string | null): string {
   if (raw && VALID_TABS.has(raw)) return raw
@@ -41,106 +34,6 @@ function formatShortDate(iso: string): string {
   }
 }
 
-function KindBreakdownView({ sessionKind, title }: { sessionKind: PracticeSessionKind; title: string }) {
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [sections, setSections] = useState<KindBreakdownSection[]>([])
-  const [total, setTotal] = useState(0)
-
-  const analyticsApi = useMemo(() => {
-    try {
-      return createAnalyticsApi(getSupabaseBrowserClient())
-    } catch {
-      return null
-    }
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    const timer = window.setTimeout(() => {
-      if (cancelled) return
-      if (!analyticsApi) {
-        setLoading(false)
-        setError("Supabase env is missing.")
-        return
-      }
-      setLoading(true)
-      setError(null)
-      void analyticsApi
-        .getKindBreakdown(sessionKind)
-        .then((d) => {
-          if (!cancelled) {
-            setSections(d.sections)
-            setTotal(d.totalAnswered)
-          }
-        })
-        .catch((e) => {
-          if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load")
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false)
-        })
-    }, 0)
-    return () => {
-      cancelled = true
-      window.clearTimeout(timer)
-    }
-  }, [analyticsApi, sessionKind])
-
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-[#666d80]">
-        <Loader2 className="size-4 animate-spin" aria-hidden />
-        Loading {title}…
-      </div>
-    )
-  }
-  if (error) {
-    return <p className="text-sm text-red-600">{error}</p>
-  }
-  if (total === 0) {
-    return (
-      <p className="rounded-xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-6 text-sm text-[#666d80]">
-        No {title.toLowerCase()} answers recorded yet. When you use practice mode with the live API, accuracy by section
-        will appear here.
-      </p>
-    )
-  }
-
-  if (sections.length === 0) {
-    return (
-      <p className="rounded-xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-6 text-sm text-[#666d80]">
-        {total} answer{total === 1 ? "" : "s"} in {title.toLowerCase()} sessions, but section types are not set on those
-        questions yet—breakdown by LR/RC/LG will appear once metadata is present.
-      </p>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-[#666d80]">
-        {total} question{total === 1 ? "" : "s"} logged in {title.toLowerCase()} sessions.
-      </p>
-      <div className="grid gap-3 sm:grid-cols-3">
-        {sections.map((s) => (
-          <article key={s.sectionType} className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-sm">
-            <p className="text-xs font-bold text-[#0d47a1]">{s.sectionType}</p>
-            <p className="mt-3 text-2xl font-semibold text-[#082c6b]">{s.accuracyPct}%</p>
-            <p className="mt-1 text-xs text-[#666d80]">
-              {s.correct}/{s.total} correct
-            </p>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#e8ecf2]">
-              <div
-                className="h-full rounded-full bg-[#0d47a1]"
-                style={{ width: `${Math.min(100, s.accuracyPct)}%` }}
-              />
-            </div>
-          </article>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 function PrioritiesTab() {
   const [loading, setLoading] = useState(true)
@@ -519,9 +412,6 @@ function AnalyticsPage() {
     { id: "overview", label: "Overview" },
     { id: "priorities", label: "Priorities" },
     { id: "history", label: "Practice history" },
-    { id: "drills", label: "Drills" },
-    { id: "sections", label: "Sections" },
-    { id: "preptest", label: "PrepTest" },
   ]
 
   return (
@@ -556,9 +446,6 @@ function AnalyticsPage() {
         {tab === "overview" ? <OverviewTab /> : null}
         {tab === "priorities" ? <PrioritiesTab /> : null}
         {tab === "history" ? <HistoryTab /> : null}
-        {tab === "drills" ? <KindBreakdownView sessionKind="DRILL" title="Drills" /> : null}
-        {tab === "sections" ? <KindBreakdownView sessionKind="SECTION" title="Sections" /> : null}
-        {tab === "preptest" ? <KindBreakdownView sessionKind="PREPTEST" title="PrepTest" /> : null}
       </StudentMain>
     </>
   )

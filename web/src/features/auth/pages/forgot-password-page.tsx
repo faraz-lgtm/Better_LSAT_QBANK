@@ -7,6 +7,7 @@ import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { createAuthApi, getPasswordResetCallbackUrl } from "@/lib/api/auth"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
 function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
@@ -34,7 +35,7 @@ function ForgotPasswordPage() {
       await authApi.sendPasswordResetEmail(email.trim(), getPasswordResetCallbackUrl())
       setMessage("Reset link sent. Check your inbox to continue.")
     } catch (resetError) {
-      setError(resetError instanceof Error ? resetError.message : "Unable to send reset link.")
+      setError(resetError instanceof Error ? formatSupabaseCallError(resetError) : "Unable to send reset link.")
     } finally {
       setIsSubmitting(false)
     }

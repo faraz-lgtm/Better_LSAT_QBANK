@@ -11,6 +11,7 @@ import { createAuthApi, getAuthCallbackUrl } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
 import { getPostAuthDestination } from "@/lib/auth/post-auth-redirect"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
 function LoginPage() {
   const navigate = useNavigate()
@@ -50,7 +51,7 @@ function LoginPage() {
       await authApi.sendMagicLink(magicEmail.trim(), getAuthCallbackUrl())
       setMessage("Magic link sent. Check your inbox to continue.")
     } catch (authError) {
-      setError(authError instanceof Error ? authError.message : "Unable to send magic link.")
+      setError(authError instanceof Error ? formatSupabaseCallError(authError) : "Unable to send magic link.")
     } finally {
       setIsMagicLoading(false)
     }
@@ -69,7 +70,7 @@ function LoginPage() {
       const profile = await usersApi.getMyProfile()
       navigate(getPostAuthDestination(profile), { replace: true })
     } catch (authError) {
-      setError(authError instanceof Error ? authError.message : "Unable to sign in with email and password.")
+      setError(authError instanceof Error ? formatSupabaseCallError(authError) : "Unable to sign in with email and password.")
     } finally {
       setIsPasswordLoading(false)
     }
@@ -86,7 +87,7 @@ function LoginPage() {
     try {
       await authApi.signInWithGoogle(getAuthCallbackUrl())
     } catch (authError) {
-      setError(authError instanceof Error ? authError.message : "Unable to continue with Google.")
+      setError(authError instanceof Error ? formatSupabaseCallError(authError) : "Unable to continue with Google.")
       setIsGoogleLoading(false)
     }
   }

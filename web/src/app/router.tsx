@@ -10,14 +10,20 @@ import { ResetPasswordPage } from "@/features/auth/pages/reset-password-page"
 import { AuthCallbackPage } from "@/features/auth/pages/auth-callback-page"
 import { OnboardingPage } from "@/features/auth/pages/onboarding-page"
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
-import { PrepCourseOutlinePage } from "@/features/prep-course/pages/prep-course-outline-page"
-import { PrepCoursePage } from "@/features/prep-course/pages/prep-course-page"
+import { PrepCourseDetailPage } from "@/features/prep-course/pages/prep-course-detail-page"
 import { PrepCourseLessonPage } from "@/features/prep-course/pages/prep-course-lesson-page"
+import { PrepCourseListPage } from "@/features/prep-course/pages/prep-course-list-page"
+import { AnalyticsDrillsPage } from "@/features/student/pages/analytics-drills-page"
 import { AnalyticsPage } from "@/features/student/pages/analytics-page"
+import { AnalyticsPrepTestResultsPage } from "@/features/student/pages/analytics-prep-test-results-page"
+import { AnalyticsPrepTestsPage } from "@/features/student/pages/analytics-preptests-page"
+import { AnalyticsSectionsPage } from "@/features/student/pages/analytics-sections-page"
 import { ExplanationsPage } from "@/features/student/pages/explanations-page"
 import { PracticeBlindReviewPage } from "@/features/student/pages/practice-blind-review-page"
 import { PracticeDrillsPage } from "@/features/student/pages/practice-drills-page"
 import { PracticePrepTestPage } from "@/features/student/pages/practice-preptest-page"
+import { PracticePrepTestsListPage } from "@/features/student/pages/practice-preptests-list-page"
+import { PracticePrepTestSectionPage } from "@/features/student/pages/practice-preptest-section-page"
 import { PracticeSectionsPage } from "@/features/student/pages/practice-sections-page"
 import { AdminShell } from "@/features/admin/layout/admin-shell"
 import { AdminDashboardPage } from "@/features/admin/pages/admin-dashboard-page"
@@ -34,6 +40,7 @@ import { AdminUsersPage } from "@/features/admin/pages/admin-users-page"
 import { AdminUserDetailPage } from "@/features/admin/pages/admin-user-detail-page"
 import { createUsersApi, type UserProfile } from "@/lib/api/users"
 import { getPostAuthDestination } from "@/lib/auth/post-auth-redirect"
+import { allowsPrepTestUnauthenticatedPreview } from "@/lib/dev/prep-test-ui-preview"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 function PublicOnly({ children }: { children: ReactElement }) {
@@ -101,6 +108,11 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
 
+  const studentPrepTestUiPreview =
+    requiredRole === "student" &&
+    allowsPrepTestUnauthenticatedPreview() &&
+    location.pathname.startsWith("/app/practice/preptest")
+
   useEffect(() => {
     let alive = true
     const supabase = getSupabaseBrowserClient()
@@ -151,9 +163,18 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
     }
   }, [])
 
-  if (isAuthenticated === null) return null
-  if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: location.pathname }} />
-  if (!profile) return null
+  if (isAuthenticated === null) {
+    if (studentPrepTestUiPreview) return children
+    return null
+  }
+  if (!isAuthenticated) {
+    if (studentPrepTestUiPreview) return children
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  }
+  if (!profile) {
+    if (studentPrepTestUiPreview) return children
+    return null
+  }
   if (requiredRole === "admin" && profile.role !== "admin" && profile.role !== "super_admin") {
     return <Navigate to="/app" replace />
   }
@@ -180,14 +201,20 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: "learn/explanations", element: <ExplanationsPage /> },
-      { path: "prep-course", element: <PrepCoursePage /> },
-      { path: "prep-course/:courseSlug", element: <PrepCourseOutlinePage /> },
+      { path: "prep-course", element: <PrepCourseListPage /> },
+      { path: "prep-course/:courseSlug", element: <PrepCourseDetailPage /> },
       { path: "prep-course/:courseSlug/:lessonSlug", element: <PrepCourseLessonPage /> },
       { path: "practice/drills", element: <PracticeDrillsPage /> },
       { path: "practice/sections", element: <PracticeSectionsPage /> },
-      { path: "practice/preptest", element: <PracticePrepTestPage /> },
+      { path: "practice/preptest/:testId/section/:sectionId", element: <PracticePrepTestSectionPage /> },
+      { path: "practice/preptest/:testId", element: <PracticePrepTestPage /> },
+      { path: "practice/preptest", element: <PracticePrepTestsListPage /> },
       { path: "practice/blind-review", element: <PracticeBlindReviewPage /> },
       { path: "analytics", element: <AnalyticsPage /> },
+      { path: "analytics/drills", element: <AnalyticsDrillsPage /> },
+      { path: "analytics/sections", element: <AnalyticsSectionsPage /> },
+      { path: "analytics/preptests", element: <AnalyticsPrepTestsPage /> },
+      { path: "analytics/preptests/results/:testId", element: <AnalyticsPrepTestResultsPage /> },
     ],
   },
   {

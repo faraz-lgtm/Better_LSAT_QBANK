@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright flow screenshots (regenerate with npm run e2e:preptest)
+e2e-artifacts/*.png
+
+# Playwright test output
+test-results/
