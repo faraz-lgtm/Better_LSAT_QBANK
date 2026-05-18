@@ -10,8 +10,9 @@ import { ResetPasswordPage } from "@/features/auth/pages/reset-password-page"
 import { AuthCallbackPage } from "@/features/auth/pages/auth-callback-page"
 import { OnboardingPage } from "@/features/auth/pages/onboarding-page"
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
-import { PrepCoursePage } from "@/features/prep-course/pages/prep-course-page"
+import { PrepCourseDetailPage } from "@/features/prep-course/pages/prep-course-detail-page"
 import { PrepCourseLessonPage } from "@/features/prep-course/pages/prep-course-lesson-page"
+import { PrepCourseListPage } from "@/features/prep-course/pages/prep-course-list-page"
 import { AnalyticsDrillsPage } from "@/features/student/pages/analytics-drills-page"
 import { AnalyticsPage } from "@/features/student/pages/analytics-page"
 import { AnalyticsPrepTestResultsPage } from "@/features/student/pages/analytics-prep-test-results-page"
@@ -200,7 +201,8 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: "learn/explanations", element: <ExplanationsPage /> },
-      { path: "prep-course", element: <PrepCoursePage /> },
+      { path: "prep-course", element: <PrepCourseListPage /> },
+      { path: "prep-course/:courseSlug", element: <PrepCourseDetailPage /> },
       { path: "prep-course/:courseSlug/:lessonSlug", element: <PrepCourseLessonPage /> },
       { path: "practice/drills", element: <PracticeDrillsPage /> },
       { path: "practice/sections", element: <PracticeSectionsPage /> },

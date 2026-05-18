@@ -2,8 +2,13 @@ import { describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createUsersApi } from './users'
 
-function mockSupabase(invokeImpl: ReturnType<typeof vi.fn>): SupabaseClient {
+function mockSupabase(invokeImpl: ReturnType<typeof vi.fn>, accessToken: string | null = null): SupabaseClient {
   return {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({
+        data: { session: accessToken ? { access_token: accessToken } : null },
+      }),
+    },
     functions: { invoke: invokeImpl },
   } as unknown as SupabaseClient
 }
@@ -19,27 +24,32 @@ describe('createUsersApi', () => {
     expect(invoke).toHaveBeenCalledWith('users', { method: 'GET' })
   })
 
-  it('ping invokes users function with POST body', async () => {
+  it('ping invokes users-ping with POST body', async () => {
     const invoke = vi.fn().mockResolvedValue({
       data: { ok: true, module: 'users' },
       error: null,
     })
-    const api = createUsersApi(mockSupabase(invoke))
+    const api = createUsersApi(mockSupabase(invoke, 't1'))
     const out = await api.ping()
     expect(out.module).toBe('users')
-    expect(invoke).toHaveBeenCalledWith('users', { method: 'POST', body: {} })
+    expect(invoke).toHaveBeenCalledWith('users-ping', {
+      method: 'POST',
+      body: {},
+      headers: { Authorization: 'Bearer t1' },
+    })
   })
 
-  it('lawHubTokenCheck sends lawhub-token-check action', async () => {
+  it('lawHubTokenCheck calls users-lawhub-token-check', async () => {
     const invoke = vi.fn().mockResolvedValue({
       data: { ok: true, lawhub: 'connected' },
       error: null,
     })
     const api = createUsersApi(mockSupabase(invoke))
     await api.lawHubTokenCheck()
-    expect(invoke).toHaveBeenCalledWith('users', {
+    expect(invoke).toHaveBeenCalledWith('users-lawhub-token-check', {
       method: 'POST',
-      body: { action: 'lawhub-token-check' },
+      body: {},
+      headers: {},
     })
   })
 
@@ -55,19 +65,19 @@ describe('createUsersApi', () => {
       isPrepPlusRequired: true,
       isPrepPlusIncludedFromVendor: false,
     })
-    expect(invoke).toHaveBeenCalledWith('users', {
+    expect(invoke).toHaveBeenCalledWith('users-lawhub-invite', {
       method: 'POST',
       body: {
-        action: 'lawhub-invite',
         firstName: 'A',
         lastName: 'B',
         isPrepPlusRequired: true,
         isPrepPlusIncludedFromVendor: false,
       },
+      headers: {},
     })
   })
 
-  it('getEntitlementState requests entitlement action', async () => {
+  it('getEntitlementState requests users-get-entitlement-state', async () => {
     const invoke = vi.fn().mockResolvedValue({
       data: {
         entitlement: {
@@ -83,19 +93,21 @@ describe('createUsersApi', () => {
     const api = createUsersApi(mockSupabase(invoke))
     const entitlement = await api.getEntitlementState()
     expect(entitlement.accessState).toBe('FULL_ACCESS')
-    expect(invoke).toHaveBeenCalledWith('users', {
+    expect(invoke).toHaveBeenCalledWith('users-get-entitlement-state', {
       method: 'POST',
-      body: { action: 'get-entitlement-state' },
+      body: {},
+      headers: {},
     })
   })
 
-  it('adminListProfiles sends admin list action', async () => {
+  it('adminListProfiles sends users-admin-list-profiles', async () => {
     const row = {
       id: 'u1',
       email: 'admin@example.com',
       full_name: 'Admin',
       role: 'admin' as const,
       student_coaching_id: null,
+      is_first_time_login: false,
       created_at: '2026-01-01T00:00:00Z',
       updated_at: '2026-01-01T00:00:00Z',
     }
@@ -105,9 +117,10 @@ describe('createUsersApi', () => {
     })
     const api = createUsersApi(mockSupabase(invoke))
     const rows = await api.adminListProfiles(25)
-    expect(invoke).toHaveBeenCalledWith('users', {
+    expect(invoke).toHaveBeenCalledWith('users-admin-list-profiles', {
       method: 'POST',
-      body: { action: 'admin-list-profiles', limit: 25 },
+      body: { limit: 25 },
+      headers: {},
     })
     expect(rows).toEqual([row])
   })

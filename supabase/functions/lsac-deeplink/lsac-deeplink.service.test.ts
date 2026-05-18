@@ -11,6 +11,7 @@ Deno.test('createLsacDeeplinkService builds URL from server values', async () =>
       full_name: null,
       role: 'student',
       student_coaching_id: 'coach-9',
+      is_first_time_login: false,
       created_at: '2026-01-01T00:00:00Z',
       updated_at: '2026-01-01T00:00:00Z',
     }),

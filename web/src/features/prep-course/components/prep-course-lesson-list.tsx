@@ -11,7 +11,7 @@ type PrepCourseLessonListProps = {
 function PrepCourseLessonList({ course, lessons, activeLessonSlug }: PrepCourseLessonListProps) {
   return (
     <aside className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
-      <h2 className="ds-heading-3 ds-text-heading">Course Modules</h2>
+      <h2 className="ds-heading-3 ds-text-heading">Lessons</h2>
       <div className="mt-4 space-y-2">
         {lessons.map((lesson) => {
           const active = lesson.slug === activeLessonSlug

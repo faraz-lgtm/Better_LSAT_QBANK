@@ -64,6 +64,22 @@ export type BulkImportLessonRow = {
   lesson_is_published: boolean
 }
 
+export type BulkImportTokenCourse = {
+  id: string | null
+  slug: string
+  title: string
+  description: string | null
+  is_published: boolean
+}
+
+export type BulkImportTokenPayload = {
+  token: string
+  userId: string
+  course: BulkImportTokenCourse
+  rows: BulkImportLessonRow[]
+  expiresAtIso: string
+}
+
 export function createServiceRoleClient(): SupabaseClient {
   const url = Deno.env.get("SUPABASE_URL")
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
@@ -1166,6 +1182,42 @@ export function createAdminRepository(client: SupabaseClient) {
         .select("*")
       if (error) throw error
       return data ?? []
+    },
+
+    async createBulkImportToken(payload: BulkImportTokenPayload) {
+      const { data, error } = await client
+        .from("admin_bulk_import_tokens")
+        .insert({
+          token: payload.token,
+          user_id: payload.userId,
+          course: payload.course,
+          rows: payload.rows,
+          expires_at: payload.expiresAtIso,
+        })
+        .select("token,user_id,course,rows,expires_at,created_at")
+        .single()
+      if (error) throw error
+      return data
+    },
+
+    async getBulkImportToken(token: string) {
+      const { data, error } = await client
+        .from("admin_bulk_import_tokens")
+        .select("token,user_id,course,rows,expires_at,created_at")
+        .eq("token", token)
+        .maybeSingle()
+      if (error) throw error
+      return data
+    },
+
+    async deleteBulkImportToken(token: string) {
+      const { error } = await client.from("admin_bulk_import_tokens").delete().eq("token", token)
+      if (error) throw error
+    },
+
+    async deleteExpiredBulkImportTokens(nowIso: string) {
+      const { error } = await client.from("admin_bulk_import_tokens").delete().lte("expires_at", nowIso)
+      if (error) throw error
     },
 
     async createLesson(input: {

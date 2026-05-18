@@ -23,8 +23,7 @@ describe("createPrepCourseApi", () => {
     await api.listCourses()
 
     expect(invoke).toHaveBeenCalledWith("prep-course", {
-      method: "POST",
-      body: { action: "list-courses" },
+      method: "GET",
       headers: { Authorization: "Bearer token-1" },
     })
   })

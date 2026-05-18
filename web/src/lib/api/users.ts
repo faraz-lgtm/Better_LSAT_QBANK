@@ -85,6 +85,26 @@ export function createUsersApi(supabase: SupabaseClient) {
     })
   }
 
+  async function invokeUsersPost<T>(
+    functionName: string,
+    body?: Record<string, unknown>,
+  ): Promise<{ data: T | null; error: unknown }> {
+    const maybeAuth = (supabase as unknown as {
+      auth?: { getSession?: () => Promise<{ data: { session: { access_token?: string } | null } }> }
+    }).auth
+    const sessionResult = maybeAuth?.getSession ? await maybeAuth.getSession() : null
+    const accessToken = sessionResult?.data?.session?.access_token
+    const headers: Record<string, string> = {}
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`
+    }
+    return await supabase.functions.invoke<T>(functionName, {
+      method: 'POST',
+      body: body ?? {},
+      headers,
+    })
+  }
+
   return {
     async getMyProfile(): Promise<UserProfile | null> {
       const { data, error } = await invokeUsers<{ profile: UserProfile | null }>({ method: 'GET' })
@@ -93,60 +113,45 @@ export function createUsersApi(supabase: SupabaseClient) {
     },
 
     async getEntitlementState(): Promise<UserEntitlement> {
-      const { data, error } = await invokeUsers<{ entitlement: UserEntitlement }>({
-        method: 'POST',
-        body: { action: 'get-entitlement-state' },
-      })
+      const { data, error } = await invokeUsersPost<{ entitlement: UserEntitlement }>('users-get-entitlement-state')
       if (error) throw error
       if (!data?.entitlement) throw new Error('No entitlement payload returned')
       return data.entitlement
     },
 
     async ping(): Promise<{ ok: boolean; module: string }> {
-      const { data, error } = await invokeUsers<{ ok: boolean; module: string }>({
-        method: 'POST',
-        body: {},
-      })
+      const { data, error } = await invokeUsersPost<{ ok: boolean; module: string }>('users-ping')
       if (error) throw error
       if (!data) throw new Error('Empty users function response')
       return data
     },
 
     async syncProfileFromLsac(lsacStudent: Record<string, unknown>): Promise<UserProfile> {
-      const { data, error } = await invokeUsers<{ profile: UserProfile }>({
-        method: 'POST',
-        body: { action: 'sync-lsac', lsacStudent },
-      })
+      const { data, error } = await invokeUsersPost<{ profile: UserProfile }>('users-sync-lsac', { lsacStudent })
       if (error) throw error
       if (!data?.profile) throw new Error('No profile in response')
       return data.profile
     },
 
     async lawHubTokenCheck(): Promise<{ ok: boolean; lawhub: string }> {
-      const { data, error } = await invokeUsers<{
+      const { data, error } = await invokeUsersPost<{
         ok: boolean
         lawhub: string
-      }>({ method: 'POST', body: { action: 'lawhub-token-check' } })
+      }>('users-lawhub-token-check')
       if (error) throw error
       if (!data) throw new Error('Empty lawhub-token-check response')
       return data
     },
 
     async lawHubLookupEmail(): Promise<UserProfile> {
-      const { data, error } = await invokeUsers<{ profile: UserProfile }>({
-        method: 'POST',
-        body: { action: 'lawhub-lookup-email' },
-      })
+      const { data, error } = await invokeUsersPost<{ profile: UserProfile }>('users-lawhub-lookup-email')
       if (error) throw error
       if (!data?.profile) throw new Error('No profile in response')
       return data.profile
     },
 
     async lawHubRefresh(): Promise<UserProfile> {
-      const { data, error } = await invokeUsers<{ profile: UserProfile }>({
-        method: 'POST',
-        body: { action: 'lawhub-refresh' },
-      })
+      const { data, error } = await invokeUsersPost<{ profile: UserProfile }>('users-lawhub-refresh')
       if (error) throw error
       if (!data?.profile) throw new Error('No profile in response')
       return data.profile
@@ -158,82 +163,63 @@ export function createUsersApi(supabase: SupabaseClient) {
       isPrepPlusRequired: boolean
       isPrepPlusIncludedFromVendor: boolean
     }): Promise<UserProfile> {
-      const { data, error } = await invokeUsers<{ profile: UserProfile }>({
-        method: 'POST',
-        body: { action: 'lawhub-invite', ...input },
-      })
+      const { data, error } = await invokeUsersPost<{ profile: UserProfile }>('users-lawhub-invite', { ...input })
       if (error) throw error
       if (!data?.profile) throw new Error('No profile in response')
       return data.profile
     },
 
     async lawHubUpgradeSelf(): Promise<unknown> {
-      const { data, error } = await invokeUsers<{ upgrade: unknown }>({
-        method: 'POST',
-        body: { action: 'lawhub-upgrade-self' },
-      })
+      const { data, error } = await invokeUsersPost<{ upgrade: unknown }>('users-lawhub-upgrade-self')
       if (error) throw error
       return data?.upgrade
     },
 
     async lawHubTestInstances(): Promise<unknown> {
-      const { data, error } = await invokeUsers<{ instances: unknown }>({
-        method: 'POST',
-        body: { action: 'lawhub-test-instances' },
-      })
+      const { data, error } = await invokeUsersPost<{ instances: unknown }>('users-lawhub-test-instances')
       if (error) throw error
       return data?.instances
     },
 
     async lawHubLogLogin(): Promise<void> {
-      const { error } = await invokeUsers({
-        method: 'POST',
-        body: { action: 'lawhub-log-login' },
-      })
+      const { error } = await invokeUsersPost('users-lawhub-log-login')
       if (error) throw error
     },
 
     async completeFirstLogin(): Promise<UserProfile> {
-      const { data, error } = await invokeUsers<{ profile: UserProfile }>({
-        method: 'POST',
-        body: { action: 'complete-first-login' },
-      })
+      const { data, error } = await invokeUsersPost<{ profile: UserProfile }>('users-complete-first-login')
       if (error) throw error
       if (!data?.profile) throw new Error('No profile in response')
       return data.profile
     },
 
     async adminListProfiles(limit = 200): Promise<UserProfile[]> {
-      const { data, error } = await invokeUsers<{ rows: UserProfile[] }>({
-        method: 'POST',
-        body: { action: 'admin-list-profiles', limit },
-      })
+      const { data, error } = await invokeUsersPost<{ rows: UserProfile[] }>('users-admin-list-profiles', { limit })
       if (error) throw error
       return data?.rows ?? []
     },
 
     async adminListLsacSnapshots(limit = 200): Promise<AdminStudentSnapshot[]> {
-      const { data, error } = await invokeUsers<{ rows: AdminStudentSnapshot[] }>({
-        method: 'POST',
-        body: { action: 'admin-list-lsac-snapshots', limit },
-      })
+      const { data, error } = await invokeUsersPost<{ rows: AdminStudentSnapshot[] }>(
+        'users-admin-list-lsac-snapshots',
+        { limit },
+      )
       if (error) throw error
       return data?.rows ?? []
     },
 
     async adminListLsacTestInstances(limit = 200): Promise<AdminTestInstance[]> {
-      const { data, error } = await invokeUsers<{ rows: AdminTestInstance[] }>({
-        method: 'POST',
-        body: { action: 'admin-list-lsac-test-instances', limit },
-      })
+      const { data, error } = await invokeUsersPost<{ rows: AdminTestInstance[] }>(
+        'users-admin-list-lsac-test-instances',
+        { limit },
+      )
       if (error) throw error
       return data?.rows ?? []
     },
 
     async adminListLsacLogEvents(limit = 200): Promise<AdminLogEvent[]> {
-      const { data, error } = await invokeUsers<{ rows: AdminLogEvent[] }>({
-        method: 'POST',
-        body: { action: 'admin-list-lsac-log-events', limit },
+      const { data, error } = await invokeUsersPost<{ rows: AdminLogEvent[] }>('users-admin-list-lsac-log-events', {
+        limit,
       })
       if (error) throw error
       return data?.rows ?? []
