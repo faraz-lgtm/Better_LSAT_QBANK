@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react"
+import { Link } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogRoot, DialogTitle } from "@/components/ui/dialog"
@@ -8,8 +9,7 @@ import { createAdminApi } from "@/lib/api/admin"
 
 type AdminApi = ReturnType<typeof createAdminApi>
 
-type VideoExplanationModalPropsQuestion = {
-  mode?: "question"
+type VideoExplanationModalProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   questionId: string
@@ -20,67 +20,37 @@ type VideoExplanationModalPropsQuestion = {
   onVideoUrlSaved: (url: string | null) => void
 }
 
-type VideoExplanationModalPropsLessonDrill = {
-  mode: "lessonDrill"
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  lessonId: string
-  recordPrepTestId: string
-  recordSectionId: string
-  recordQuestionId: string
-  lessonDrillQuery: "active" | "adaptive"
-  currentVideoUrl: string
-  adminApi: AdminApi
-  onVideoUrlSaved: (url: string | null) => void
-  recordDisabled?: boolean
-  recordDisabledReason?: string
-}
-
-export type VideoExplanationModalProps = VideoExplanationModalPropsQuestion | VideoExplanationModalPropsLessonDrill
-
 type TabId = "paste" | "upload" | "record"
 
-function VideoExplanationModal(props: VideoExplanationModalProps) {
-  const isLessonDrill = props.mode === "lessonDrill"
-  const questionId = isLessonDrill ? props.recordQuestionId : props.questionId
-  const prepTestId = isLessonDrill ? props.recordPrepTestId : props.prepTestId
-  const sectionId = isLessonDrill ? props.recordSectionId : props.sectionId
-  const lessonId = isLessonDrill ? props.lessonId : ""
-
+function VideoExplanationModal({
+  open,
+  onOpenChange,
+  questionId,
+  prepTestId,
+  sectionId,
+  currentVideoUrl,
+  adminApi,
+  onVideoUrlSaved,
+}: VideoExplanationModalProps) {
   const [tab, setTab] = useState<TabId>("paste")
-  const [pasteValue, setPasteValue] = useState(props.currentVideoUrl)
+  const [pasteValue, setPasteValue] = useState(currentVideoUrl)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const recordPath = (() => {
-    const base = `/admin/preptests/${prepTestId}/sections/${sectionId}/questions/${questionId}/record`
-    if (props.mode === "lessonDrill") {
-      const qs = new URLSearchParams({
-        lessonId: props.lessonId,
-        lessonDrill: props.lessonDrillQuery,
-        lessonVideoLessonId: props.lessonId,
-      })
-      return `${base}?${qs.toString()}`
-    }
-    return base
-  })()
-
-  const currentUrl = props.currentVideoUrl.trim()
-  const dialogTitle = isLessonDrill ? "Lesson intro video" : "Video explanation"
-  const recordDisabled = isLessonDrill && props.recordDisabled
-  const recordDisabledReason = isLessonDrill ? props.recordDisabledReason : undefined
+  const recordPath = `/admin/preptests/${prepTestId}/sections/${sectionId}/questions/${questionId}/record`
+  const currentUrl = currentVideoUrl.trim()
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
       if (next) {
-        setPasteValue(props.currentVideoUrl)
+        setPasteValue(currentVideoUrl)
         setTab("paste")
         setError(null)
       }
-      props.onOpenChange(next)
+      onOpenChange(next)
     },
-    [props],
+    [currentVideoUrl, onOpenChange],
   )
 
   async function savePaste() {
@@ -88,13 +58,9 @@ function VideoExplanationModal(props: VideoExplanationModalProps) {
     setError(null)
     try {
       const v = pasteValue.trim() || null
-      if (isLessonDrill) {
-        await props.adminApi.updateLesson(lessonId, { videoUrl: v })
-      } else {
-        await props.adminApi.updateQuestionMeta(props.questionId, { video_url: v })
-      }
-      props.onVideoUrlSaved(v)
-      props.onOpenChange(false)
+      await adminApi.updateQuestionMeta(questionId, { video_url: v })
+      onVideoUrlSaved(v)
+      onOpenChange(false)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed")
     } finally {
@@ -110,16 +76,10 @@ function VideoExplanationModal(props: VideoExplanationModalProps) {
     setError(null)
     try {
       const ext = fileExtensionForVideoUpload(file)
-      if (isLessonDrill) {
-        const url = await props.adminApi.uploadLessonVideoBlob(lessonId, file, file.type || `video/${ext}`, ext)
-        await props.adminApi.updateLesson(lessonId, { videoUrl: url })
-        props.onVideoUrlSaved(url)
-      } else {
-        const url = await props.adminApi.uploadQuestionVideoBlob(props.questionId, file, file.type || `video/${ext}`, ext)
-        await props.adminApi.updateQuestionMeta(props.questionId, { video_url: url })
-        props.onVideoUrlSaved(url)
-      }
-      props.onOpenChange(false)
+      const url = await adminApi.uploadQuestionVideoBlob(questionId, file, file.type || `video/${ext}`, ext)
+      await adminApi.updateQuestionMeta(questionId, { video_url: url })
+      onVideoUrlSaved(url)
+      onOpenChange(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed")
     } finally {
@@ -128,11 +88,11 @@ function VideoExplanationModal(props: VideoExplanationModalProps) {
   }
 
   return (
-    <DialogRoot open={props.open} onOpenChange={handleOpenChange}>
+    <DialogRoot open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle className="!text-[#000000]" style={{ color: "#000000" }}>
-            {dialogTitle}
+            Video explanation
           </DialogTitle>
           <DialogDescription className="sr-only">Add a video by pasting a URL, uploading a file, or recording in a new tab.</DialogDescription>
           <div className="text-muted-foreground text-sm">
@@ -191,35 +151,19 @@ function VideoExplanationModal(props: VideoExplanationModalProps) {
         {tab === "record" ? (
           <div className="grid gap-2 text-sm">
             <p className="text-muted-foreground">
-              {isLessonDrill
-                ? "Opens a full-page recorder with the linked PrepTest question. When you finish, the new video URL is saved on this lesson (not the question explanation)."
-                : "Opens a full-page recorder with the question layout. When you finish, the new video URL is sent back to this editor automatically if this tab stays open."}
+              Opens a full-page recorder with the question layout. When you finish, the new video URL is sent back to this editor automatically
+              if this tab stays open.
             </p>
-            {recordDisabled ? (
-              <p className="text-muted-foreground text-xs">{recordDisabledReason ?? "Recording is not available."}</p>
-            ) : null}
-            {recordDisabled ? (
-              <Button type="button" variant="secondary" disabled>
+            <Button type="button" variant="secondary" asChild>
+              <Link to={recordPath} target="_blank" rel="noopener noreferrer" onClick={() => onOpenChange(false)}>
                 Open recorder in new tab
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  const abs = new URL(recordPath, window.location.origin).href
-                  window.open(abs, "_blank", "noopener,noreferrer")
-                  props.onOpenChange(false)
-                }}
-              >
-                Open recorder in new tab
-              </Button>
-            )}
+              </Link>
+            </Button>
           </div>
         ) : null}
 
         <DialogFooter className="gap-2 sm:justify-between">
-          <Button type="button" variant="ghost" disabled={busy} onClick={() => props.onOpenChange(false)}>
+          <Button type="button" variant="ghost" disabled={busy} onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           {tab === "paste" ? (

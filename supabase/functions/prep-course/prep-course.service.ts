@@ -94,11 +94,7 @@ export function createPrepCourseService(deps: {
       if (!course) throw new Error('Course not found')
       const lesson = await deps.repository.getPublishedLessonBySlug(course.id, normalizeSlug(lessonSlug))
       if (!lesson) throw new Error('Lesson not found')
-      const drill =
-        lesson.lesson_type === 'active_drill' || lesson.lesson_type === 'adaptive_drill'
-          ? await deps.repository.listLessonLinkedQuestionRefs(lesson.id)
-          : []
-      return { course, lesson, linkedQuestionRefs: drill }
+      return { course, lesson }
     },
 
     async adminCreateCourse(

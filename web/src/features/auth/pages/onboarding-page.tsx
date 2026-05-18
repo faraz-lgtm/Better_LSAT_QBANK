@@ -10,6 +10,7 @@ import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
 import { isGoogleLinkedUser } from "@/lib/auth/oauth-provider"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13
 
@@ -69,7 +70,7 @@ function OnboardingPage() {
         if (profile?.full_name) setFullName(profile.full_name)
       } catch (e) {
         if (!alive) return
-        setError(e instanceof Error ? e.message : "Unable to load onboarding details.")
+        setError(e instanceof Error ? formatSupabaseCallError(e) : "Unable to load onboarding details.")
       } finally {
         if (alive) setIsLoading(false)
       }
@@ -105,7 +106,7 @@ function OnboardingPage() {
       await usersApi.completeFirstLogin()
       navigate("/app", { replace: true })
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to complete onboarding.")
+      setError(e instanceof Error ? formatSupabaseCallError(e) : "Unable to complete onboarding.")
     } finally {
       setIsSubmitting(false)
     }
