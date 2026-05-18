@@ -12,7 +12,16 @@ import {
   type PracticePrepTestListFilter,
   type PracticePrepTestListRow,
 } from "@/features/student/lib/mock-practice-preptest-list"
-import { ChevronDown, ChevronRight, ChevronUp, CircleAlert, Lock, MoreVertical, RefreshCw, Settings } from "lucide-react"
+import {
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  CircleAlert,
+  ExternalLink,
+  Lock,
+  MoreVertical,
+  RefreshCw,
+} from "lucide-react"
 
 const FILTER_TABS: { id: PracticePrepTestListFilter; label: string }[] = [
   { id: "all", label: "All Test" },
@@ -46,7 +55,7 @@ function PtBadge({ number, tone }: { number: number; tone: "default" | "muted" |
       >
         PT
       </span>
-      <span className="text-2xl font-bold leading-[1.3]">{number}</span>
+      <span className="text-xl font-bold leading-[1.3]">{number}</span>
     </div>
   )
 }
@@ -66,14 +75,14 @@ function CompletedPrepTestCard({
   const headerRow = (
     <div
       className={cn(
-        "flex min-h-[110px] flex-wrap items-center gap-4 border-[#dfe1e7] px-6 py-3 sm:flex-nowrap sm:py-0",
+        "flex min-h-[96px] flex-wrap items-center gap-4 border-[#dfe1e7] px-6 py-4 sm:flex-nowrap",
         expanded ? "border-b bg-white" : "",
       )}
     >
       <div className="flex min-w-0 flex-1 items-center gap-6">
         <PtBadge number={row.prepTestNumber} tone="success" />
         <div className="flex min-w-0 flex-col gap-2">
-          <p className="text-2xl font-bold leading-[1.3] text-[#287f6e]">
+          <p className="text-xl font-bold leading-[1.3] text-[#287f6e]">
             <span className="font-bold">C</span>
             <span className="font-bold" style={{ fontFamily: "Montserrat, ui-sans-serif, system-ui, sans-serif" }}>
               ompleted
@@ -90,7 +99,7 @@ function CompletedPrepTestCard({
               <p className="w-full text-center text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#287f6e]">
                 Score
               </p>
-              <p className="text-center text-4xl font-bold leading-none text-[#287f6e]">{summaryScore}</p>
+              <p className="text-center text-[36px] font-bold leading-none text-[#287f6e]">{summaryScore}</p>
             </div>
             <button
               type="button"
@@ -276,14 +285,14 @@ function PrepTestListCard({
 
   return (
     <article
-      className="flex min-h-[110px] w-full flex-wrap items-center gap-4 rounded-2xl border border-[#dfe1e7] bg-white px-6 py-3 shadow-[0px_1px_1px_rgba(13,13,18,0.06)] sm:flex-nowrap sm:py-0"
+      className="flex min-h-[96px] w-full flex-wrap items-center gap-4 rounded-2xl border border-[#dfe1e7] bg-white px-6 py-4 shadow-[0px_1px_1px_rgba(13,13,18,0.06)] sm:flex-nowrap"
       data-testid={`preptest-list-row-${row.id}`}
     >
       <div className="flex min-w-0 flex-1 items-center gap-6">
         <PtBadge number={row.prepTestNumber} tone={badgeTone} />
         <div className="flex min-w-0 flex-col gap-2">
-          <p className={cn("truncate text-2xl font-bold leading-[1.3]", titleClass)}>{row.title}</p>
-          <p className="truncate text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">{row.subtitle}</p>
+          <p className={cn("truncate text-xl font-bold leading-[1.3]", titleClass)}>{row.title}</p>
+          <p className="truncate text-sm font-medium leading-[1.5] tracking-[0.02em] text-[#666d80]">{row.subtitle}</p>
         </div>
       </div>
       <div className="flex w-full shrink-0 items-center justify-end gap-3 sm:w-auto">
@@ -327,25 +336,25 @@ function PracticePrepTestsListPage() {
       <StudentMain>
         <PrepTestPreviewNotice />
 
-        <div className="mb-6 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <p className="max-w-[908px] text-sm font-medium leading-[1.5] tracking-[0.02em] text-[#666d80] md:text-base">
+        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <p className="max-w-[908px] text-sm font-medium leading-[1.5] tracking-[0.02em] text-[#666d80]">
             Try a free PrepTest to gauge your starting point and see how to improve. When you&apos;re done, our
             analytics will tell you what to work on.
           </p>
           <button
             type="button"
-            className="inline-flex shrink-0 items-center gap-2 self-start rounded-2xl py-2 pl-2 pr-4 text-xs font-semibold leading-[1.5] tracking-[0.02em] text-[#0d47a1] transition-colors hover:bg-[#e8eef9] lg:self-center"
+            className="inline-flex shrink-0 items-center gap-1.5 self-start text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#0d47a1] transition-colors hover:underline sm:self-center"
           >
             PrepTest settings
-            <Settings className="size-4 shrink-0" aria-hidden />
+            <ExternalLink className="size-4 shrink-0" aria-hidden />
           </button>
         </div>
 
-        <section className="mb-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">Start your PrepTest</h2>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end lg:flex-1">
-              <div className="flex flex-wrap gap-3">
+        <section className="mb-4 space-y-4">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <h2 className="shrink-0 text-[24px] font-bold leading-[1.3] text-[#062357]">Start your PrepTest</h2>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end xl:min-w-0 xl:flex-1">
+              <div className="flex flex-wrap gap-2">
                 {FILTER_TABS.map((tab) => {
                   const active = filter === tab.id
                   const label = tab.id === "all" ? "All Test" : filterCountLabel(mockPracticePrepTestListRows, tab.id)
@@ -355,7 +364,7 @@ function PracticePrepTestsListPage() {
                       type="button"
                       onClick={() => setFilter(tab.id)}
                       className={cn(
-                        "inline-flex h-[52px] items-center justify-center rounded-2xl border px-4 text-base shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors",
+                        "inline-flex h-10 items-center justify-center rounded-2xl border px-4 text-sm shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors",
                         active
                           ? "border-[#0b4e6e] bg-[#0d47a1] font-semibold text-white"
                           : "border-[#dfe1e7] bg-white font-medium text-[#666d80] hover:bg-[#f6f8fa]",
@@ -366,7 +375,7 @@ function PracticePrepTestsListPage() {
                   )
                 })}
               </div>
-              <div className="relative w-full shrink-0 sm:w-[160px]">
+              <div className="relative w-full shrink-0 sm:w-[140px]">
                 <label htmlFor="preptest-sort" className="sr-only">
                   Sort PrepTests
                 </label>
@@ -374,7 +383,7 @@ function PracticePrepTestsListPage() {
                   id="preptest-sort"
                   value={sort}
                   onChange={(e) => setSort(e.target.value as (typeof SORT_OPTIONS)[number])}
-                  className="h-[52px] w-full appearance-none rounded-2xl border border-[#dfe1e7] bg-white px-3 pr-10 text-base font-medium text-[#666d80] focus:outline-none focus:ring-2 focus:ring-[#0d47a1]/25"
+                  className="h-10 w-full appearance-none rounded-2xl border border-[#dfe1e7] bg-white px-3 pr-9 text-sm font-medium text-[#666d80] focus:outline-none focus:ring-2 focus:ring-[#0d47a1]/25"
                 >
                   {SORT_OPTIONS.map((o) => (
                     <option key={o} value={o}>
@@ -382,13 +391,13 @@ function PracticePrepTestsListPage() {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-5 -translate-y-1/2 text-[#666d80]" />
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#666d80]" />
               </div>
             </div>
           </div>
         </section>
 
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           {rows.map((row) => (
             <PrepTestListCard
               key={row.id}

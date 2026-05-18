@@ -13,7 +13,7 @@ export type StudentDrill = {
 export const mockStudentDrills: StudentDrill[] = [
   {
     id: "d1",
-    section: "LR",
+    section: "RC",
     title: "Causal reasoning drill",
     progressPct: 45,
     answered: "45/100",
@@ -24,7 +24,7 @@ export const mockStudentDrills: StudentDrill[] = [
   },
   {
     id: "d2",
-    section: "LR",
+    section: "RC",
     title: "Comparative drill",
     progressPct: 45,
     answered: "45/100",

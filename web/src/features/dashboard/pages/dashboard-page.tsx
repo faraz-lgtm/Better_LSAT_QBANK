@@ -1,21 +1,17 @@
 import { useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { ContinueDrillCard, studentDrillToContinueCard } from "@/features/student/components/continue-drill-card"
 import { StudentMain } from "@/features/student/components/student-main"
 import { filterDrills, mockStudentDrills } from "@/features/student/lib/mock-drills"
 import type { UserProfile } from "@/lib/api/users"
 import { createUsersApi } from "@/lib/api/users"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-import { Brain, ChevronRight, Clock, HelpCircle, Target } from "lucide-react"
+import { Brain, Clock, Target } from "lucide-react"
 
 function chipStyles(active: boolean) {
   if (active) return "bg-[#0d47a1] text-white border-[#0d47a1]"
   return "bg-[#f5f9ff] text-[#0d47a1] border-[#dfe1e7]"
-}
-
-function difficultyLabel(level: "hardest"): string {
-  if (level === "hardest") return "Hardest"
-  return "Hardest"
 }
 
 function DashboardPage() {
@@ -142,75 +138,7 @@ function DashboardPage() {
 
             <div className="flex flex-col gap-4">
               {filteredDrills.map((drill) => (
-                <article key={drill.id} className="rounded-2xl border border-[#dfe1e7] bg-[#f9fbfc] p-4">
-                  <div className="flex flex-col gap-4 lg:flex-row">
-                    <div className="flex gap-4">
-                      <div className="flex flex-col items-center gap-2">
-                        <span
-                          className={`rounded-lg px-2 py-1 text-xs font-semibold text-white ${
-                            drill.accent === "mint" ? "bg-[#45bda4]" : "bg-[#f7994a]"
-                          }`}
-                        >
-                          {drill.section}
-                        </span>
-                        <div className="flex size-16 items-center justify-center rounded-full border-4 border-[#dfe1e7] text-sm font-bold text-[#082c6b]">
-                          {drill.progressPct}%
-                        </div>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <h3 className="text-xl font-bold leading-[1.35] text-[#062357]">{drill.title}</h3>
-                          <div className="flex h-10 items-center gap-[10px] rounded-[10px] bg-white px-[10px]">
-                            <div className="flex items-center gap-1.5">
-                              {Array.from({ length: 5 }).map((_, index) => (
-                                <span key={index} className="h-4 w-1.5 rounded-full bg-[#df1c41]" aria-hidden />
-                              ))}
-                            </div>
-                            <span className="text-xs font-semibold tracking-[0.24px] text-[#df1c41]">
-                              {difficultyLabel(drill.difficulty)}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-[#666d80]">
-                          <div className="flex items-center gap-1">
-                            <Target className="size-3.5 text-[#0d47a1]" />
-                            <div>
-                              <p>Progress</p>
-                              <p className="font-semibold text-[#082c6b]">{drill.progressPct}%</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <HelpCircle className="size-3.5 text-[#0d47a1]" />
-                            <div>
-                              <p>Questions</p>
-                              <p className="font-semibold text-[#082c6b]">{drill.answered}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="size-3.5 text-[#0d47a1]" />
-                            <div>
-                              <p>Time</p>
-                              <p className="font-semibold text-[#082c6b]">{drill.timeLabel}</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-2 h-2 rounded-full bg-[#dfe1e7]">
-                          <div className="h-2 rounded-full bg-[#0d47a1]" style={{ width: `${drill.progressPct}%` }} />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-stretch gap-2 lg:ml-auto lg:items-end">
-                      <button
-                        type="button"
-                        className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-[#0b4e6e] bg-[#0d47a1] px-4 py-2 text-base font-semibold tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] hover:bg-[#0d47a1]/90 lg:w-auto"
-                      >
-                        <span>Continue</span>
-                        <ChevronRight className="size-5" />
-                      </button>
-                      <p className="text-right text-xs tracking-[0.24px] text-[#6a7282]">Last attempt: {drill.lastAttempt}</p>
-                    </div>
-                  </div>
-                </article>
+                <ContinueDrillCard key={drill.id} drill={studentDrillToContinueCard(drill)} />
               ))}
             </div>
           </section>
@@ -264,3 +192,4 @@ function DashboardPage() {
 }
 
 export { DashboardPage }
+

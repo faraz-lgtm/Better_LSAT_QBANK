@@ -1,18 +1,8 @@
-import { useMemo, useState } from "react"
+import { useState } from "react"
 
+import { ContinueDrillCard, type ContinueDrillCardDrill } from "@/features/student/components/continue-drill-card"
 import { StudentMain } from "@/features/student/components/student-main"
-import { ExternalLink, LineChart, ListChecks, Timer } from "lucide-react"
-
-type ContinueDrill = {
-  id: string
-  section: "LR" | "RC"
-  title: string
-  progressPct: number
-  questions: string
-  timeLabel: string
-  lastAttempt: string
-  progressColor: string
-}
+import { ExternalLink, LineChart } from "lucide-react"
 
 type TagDrill = {
   id: string
@@ -24,7 +14,7 @@ type TagDrill = {
   difficultyColor: string
 }
 
-const continueDrills: ContinueDrill[] = [
+const continueDrills: ContinueDrillCardDrill[] = [
   {
     id: "cd-1",
     section: "LR",
@@ -86,96 +76,11 @@ const tagDrills: TagDrill[] = [
   },
 ]
 
-function sectionBadgeTone(section: "LR" | "RC"): string {
-  return section === "LR" ? "bg-[#fffbeb] text-[#ae8b00]" : "bg-[#fff3ea] text-[#ff9d51]"
-}
-
 function filterPill(active: boolean): string {
   if (active) return "border-[#0b4e6e] bg-[#0d47a1] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
   return "border-[#dfe1e7] bg-white text-[#0d47a1] shadow-[0px_1px_2px_rgba(13,13,18,0.06)]"
 }
 
-function ContinueDrillCard({ drill }: { drill: ContinueDrill }) {
-  const ringFill = useMemo(
-    () => `conic-gradient(from 270deg, ${drill.progressColor} ${drill.progressPct}%, #dfe1e7 ${drill.progressPct}% 100%)`,
-    [drill.progressColor, drill.progressPct],
-  )
-
-  return (
-    <article className="rounded-3xl bg-[#f6f8fa] p-6">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <div className="flex gap-4">
-          <div className="w-12 shrink-0">
-            <div className={`flex h-16 w-12 items-center justify-center rounded-2xl text-xl font-bold ${sectionBadgeTone(drill.section)}`}>
-              {drill.section}
-            </div>
-            <div className="relative mt-3 flex size-11 items-center justify-center rounded-full" style={{ background: ringFill }}>
-              <div className="absolute inset-[4px] rounded-full bg-[#f6f8fa]" />
-              <span className="relative text-xs font-semibold text-[#4b5565]">{drill.progressPct}%</span>
-            </div>
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-[28px] font-bold leading-[1.2] text-[#062357]">{drill.title}</h3>
-              <div className="flex h-10 items-center gap-2 rounded-[10px] bg-white px-[10px]">
-                <div className="flex gap-1.5">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <span key={index} className="h-4 w-1.5 rounded-full bg-[#df1c41]" />
-                  ))}
-                </div>
-                <span className="text-xs font-semibold tracking-[0.24px] text-[#df1c41]">Hardest</span>
-              </div>
-            </div>
-
-            <div className="mt-3 flex flex-wrap items-center gap-5">
-              <div className="flex min-w-[180px] items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-[10px] bg-[#eceff3] text-[#9ca3af]">
-                  <LineChart className="size-4" />
-                </span>
-                <div>
-                  <p className="text-xs text-[#666d80]">Progress</p>
-                  <p className="text-sm font-semibold tracking-[0.28px] text-[#1a1b25]">{drill.progressPct}%</p>
-                </div>
-              </div>
-              <div className="flex min-w-[180px] items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-[10px] bg-[#eceff3] text-[#9ca3af]">
-                  <ListChecks className="size-4" />
-                </span>
-                <div>
-                  <p className="text-xs text-[#666d80]">Questions</p>
-                  <p className="text-sm font-semibold tracking-[0.28px] text-[#1a1b25]">{drill.questions}</p>
-                </div>
-              </div>
-              <div className="flex min-w-[160px] items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-[10px] bg-[#eceff3] text-[#9ca3af]">
-                  <Timer className="size-4" />
-                </span>
-                <div>
-                  <p className="text-xs text-[#666d80]">Time</p>
-                  <p className="text-sm font-semibold tracking-[0.28px] text-[#1a1b25]">{drill.timeLabel}</p>
-                </div>
-              </div>
-              <p className="ml-auto text-xs tracking-[0.24px] text-[#6a7282]">Last attempt: {drill.lastAttempt}</p>
-            </div>
-
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#eceff3]">
-              <div className="h-full rounded-full" style={{ width: `${drill.progressPct}%`, backgroundColor: drill.progressColor }} />
-            </div>
-          </div>
-        </div>
-        <div className="lg:ml-auto">
-          <button
-            type="button"
-            className="inline-flex h-12 items-center gap-2 rounded-2xl border border-[#0b4e6e] bg-[#0d47a1] px-4 text-base font-semibold tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] hover:bg-[#0d47a1]/90"
-          >
-            Continue
-            <span aria-hidden>›</span>
-          </button>
-        </div>
-      </div>
-    </article>
-  )
-}
 
 function PracticeDrillsPage() {
   const [continueFilter, setContinueFilter] = useState<"all" | "lr" | "rc">("all")
