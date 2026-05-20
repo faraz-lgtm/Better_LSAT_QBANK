@@ -119,6 +119,7 @@ function ResetPasswordPage() {
               <Input
                 size="lg"
                 type="password"
+                autoComplete="new-password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="Enter a new password"
@@ -132,6 +133,7 @@ function ResetPasswordPage() {
               <Input
                 size="lg"
                 type="password"
+                autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
                 placeholder="Re-enter your new password"

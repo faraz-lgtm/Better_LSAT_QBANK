@@ -64,6 +64,22 @@ export type BulkImportLessonRow = {
   lesson_is_published: boolean
 }
 
+export type BulkImportTokenCourse = {
+  id: string | null
+  slug: string
+  title: string
+  description: string | null
+  is_published: boolean
+}
+
+export type BulkImportTokenPayload = {
+  token: string
+  userId: string
+  course: BulkImportTokenCourse
+  rows: BulkImportLessonRow[]
+  expiresAtIso: string
+}
+
 export function createServiceRoleClient(): SupabaseClient {
   const url = Deno.env.get("SUPABASE_URL")
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
@@ -1139,16 +1155,230 @@ export function createAdminRepository(client: SupabaseClient) {
       return { success: true }
     },
 
+    async listModules(courseId: string) {
+      const { data, error } = await client
+        .from("prep_course_modules")
+        .select("*")
+        .eq("course_id", courseId)
+        .order("sort_order")
+      if (error) throw error
+      return data ?? []
+    },
+
+    async createModule(input: { courseId: string; title: string; durationMinutes?: number | null }) {
+      const { count, error: countErr } = await client
+        .from("prep_course_modules")
+        .select("id", { count: "exact", head: true })
+        .eq("course_id", input.courseId)
+      if (countErr) throw countErr
+      const { data, error } = await client
+        .from("prep_course_modules")
+        .insert({
+          course_id: input.courseId,
+          title: input.title,
+          sort_order: (count ?? 0) + 1,
+          duration_minutes: input.durationMinutes ?? null,
+        })
+        .select("*")
+        .single()
+      if (error) throw error
+      return data
+    },
+
+    async updateModule(moduleId: string, patch: Json) {
+      const { data, error } = await client
+        .from("prep_course_modules")
+        .update({ ...patch, updated_at: new Date().toISOString() })
+        .eq("id", moduleId)
+        .select("*")
+        .single()
+      if (error) throw error
+      return data
+    },
+
+    async deleteModule(moduleId: string) {
+      const { error } = await client.from("prep_course_modules").delete().eq("id", moduleId)
+      if (error) throw error
+      return { success: true }
+    },
+
+    async reorderModules(courseId: string, moduleIds: string[]) {
+      for (let i = 0; i < moduleIds.length; i += 1) {
+        const { error } = await client
+          .from("prep_course_modules")
+          .update({ sort_order: i + 1, updated_at: new Date().toISOString() })
+          .eq("id", moduleIds[i])
+          .eq("course_id", courseId)
+        if (error) throw error
+      }
+      return this.listModules(courseId)
+    },
+
+    async listSections(moduleId: string) {
+      const { data, error } = await client
+        .from("prep_course_sections")
+        .select("*")
+        .eq("module_id", moduleId)
+        .order("sort_order")
+      if (error) throw error
+      return data ?? []
+    },
+
+    async createSection(input: { moduleId: string; title: string; durationMinutes?: number | null }) {
+      const { count, error: countErr } = await client
+        .from("prep_course_sections")
+        .select("id", { count: "exact", head: true })
+        .eq("module_id", input.moduleId)
+      if (countErr) throw countErr
+      const { data, error } = await client
+        .from("prep_course_sections")
+        .insert({
+          module_id: input.moduleId,
+          title: input.title,
+          sort_order: (count ?? 0) + 1,
+          duration_minutes: input.durationMinutes ?? null,
+        })
+        .select("*")
+        .single()
+      if (error) throw error
+      return data
+    },
+
+    async updateSection(sectionId: string, patch: Json) {
+      const { data, error } = await client
+        .from("prep_course_sections")
+        .update({ ...patch, updated_at: new Date().toISOString() })
+        .eq("id", sectionId)
+        .select("*")
+        .single()
+      if (error) throw error
+      return data
+    },
+
+    async deleteSection(sectionId: string) {
+      const { error } = await client.from("prep_course_sections").delete().eq("id", sectionId)
+      if (error) throw error
+      return { success: true }
+    },
+
+    async reorderSections(moduleId: string, sectionIds: string[]) {
+      for (let i = 0; i < sectionIds.length; i += 1) {
+        const { error } = await client
+          .from("prep_course_sections")
+          .update({ sort_order: i + 1, updated_at: new Date().toISOString() })
+          .eq("id", sectionIds[i])
+          .eq("module_id", moduleId)
+        if (error) throw error
+      }
+      return this.listSections(moduleId)
+    },
+
+    async getSectionById(sectionId: string) {
+      const { data, error } = await client
+        .from("prep_course_sections")
+        .select("*,prep_course_modules(id,course_id)")
+        .eq("id", sectionId)
+        .maybeSingle()
+      if (error) throw error
+      return data
+    },
+
+    async ensureDefaultModuleSection(courseId: string): Promise<string> {
+      const modules = await this.listModules(courseId)
+      let moduleId: string
+      if (modules.length === 0) {
+        const mod = await this.createModule({ courseId, title: "Module 1" })
+        moduleId = String((mod as { id: string }).id)
+      } else {
+        moduleId = String((modules[0] as { id: string }).id)
+      }
+      const sections = await this.listSections(moduleId)
+      if (sections.length === 0) {
+        const sec = await this.createSection({ moduleId, title: "General" })
+        return String((sec as { id: string }).id)
+      }
+      return String((sections[0] as { id: string }).id)
+    },
+
+    async listCurriculum(courseId: string) {
+      const modules = await this.listModules(courseId)
+      const moduleIds = modules.map((m) => String((m as { id: string }).id))
+      if (moduleIds.length === 0) {
+        return { modules: [] }
+      }
+
+      const { data: sections, error: secErr } = await client
+        .from("prep_course_sections")
+        .select("*")
+        .in("module_id", moduleIds)
+        .order("sort_order")
+      if (secErr) throw secErr
+
+      const sectionIds = (sections ?? []).map((s) => String((s as { id: string }).id))
+      let lessons: unknown[] = []
+      if (sectionIds.length > 0) {
+        const { data: lessonRows, error: lessonErr } = await client
+          .from("prep_lessons")
+          .select("*")
+          .in("section_id", sectionIds)
+          .order("sort_order")
+        if (lessonErr) throw lessonErr
+        lessons = lessonRows ?? []
+      }
+
+      const sectionsByModule = new Map<string, unknown[]>()
+      for (const section of sections ?? []) {
+        const moduleId = String((section as { module_id: string }).module_id)
+        const list = sectionsByModule.get(moduleId) ?? []
+        list.push(section)
+        sectionsByModule.set(moduleId, list)
+      }
+
+      const lessonsBySection = new Map<string, unknown[]>()
+      for (const lesson of lessons) {
+        const sectionId = String((lesson as { section_id: string }).section_id)
+        const list = lessonsBySection.get(sectionId) ?? []
+        list.push(lesson)
+        lessonsBySection.set(sectionId, list)
+      }
+
+      const nestedModules = modules.map((mod) => {
+        const modId = String((mod as { id: string }).id)
+        const modSections = (sectionsByModule.get(modId) ?? []).map((section) => {
+          const sectionRow = section as Record<string, unknown> & { id: string }
+          const sectionId = String(sectionRow.id)
+          return {
+            ...sectionRow,
+            lessons: lessonsBySection.get(sectionId) ?? [],
+          }
+        })
+        return { ...(mod as Record<string, unknown>), sections: modSections }
+      })
+
+      return { modules: nestedModules }
+    },
+
     async listLessons(courseId: string) {
       const { data, error } = await client.from("prep_lessons").select("*").eq("course_id", courseId).order("sort_order")
       if (error) throw error
       return data ?? []
     },
 
-    async bulkUpsertLessons(courseId: string, rows: BulkImportLessonRow[]) {
+    async listLessonsBySection(sectionId: string) {
+      const { data, error } = await client
+        .from("prep_lessons")
+        .select("*")
+        .eq("section_id", sectionId)
+        .order("sort_order")
+      if (error) throw error
+      return data ?? []
+    },
+
+    async bulkUpsertLessons(courseId: string, sectionId: string, rows: BulkImportLessonRow[]) {
       if (rows.length === 0) return []
       const payload = rows.map((row) => ({
         course_id: courseId,
+        section_id: sectionId,
         slug: row.lesson_slug,
         title: row.lesson_title,
         lesson_type: row.lesson_type,
@@ -1168,8 +1398,45 @@ export function createAdminRepository(client: SupabaseClient) {
       return data ?? []
     },
 
+    async createBulkImportToken(payload: BulkImportTokenPayload) {
+      const { data, error } = await client
+        .from("admin_bulk_import_tokens")
+        .insert({
+          token: payload.token,
+          user_id: payload.userId,
+          course: payload.course,
+          rows: payload.rows,
+          expires_at: payload.expiresAtIso,
+        })
+        .select("token,user_id,course,rows,expires_at,created_at")
+        .single()
+      if (error) throw error
+      return data
+    },
+
+    async getBulkImportToken(token: string) {
+      const { data, error } = await client
+        .from("admin_bulk_import_tokens")
+        .select("token,user_id,course,rows,expires_at,created_at")
+        .eq("token", token)
+        .maybeSingle()
+      if (error) throw error
+      return data
+    },
+
+    async deleteBulkImportToken(token: string) {
+      const { error } = await client.from("admin_bulk_import_tokens").delete().eq("token", token)
+      if (error) throw error
+    },
+
+    async deleteExpiredBulkImportTokens(nowIso: string) {
+      const { error } = await client.from("admin_bulk_import_tokens").delete().lte("expires_at", nowIso)
+      if (error) throw error
+    },
+
     async createLesson(input: {
       courseId: string
+      sectionId: string
       slug: string
       title: string
       summary?: string | null
@@ -1182,13 +1449,14 @@ export function createAdminRepository(client: SupabaseClient) {
       const { count, error: countErr } = await client
         .from("prep_lessons")
         .select("id", { count: "exact", head: true })
-        .eq("course_id", input.courseId)
+        .eq("section_id", input.sectionId)
       if (countErr) throw countErr
       const existingLessonCount = count ?? 0
       const { data, error } = await client
         .from("prep_lessons")
         .insert({
           course_id: input.courseId,
+          section_id: input.sectionId,
           slug: input.slug,
           title: input.title,
           summary: input.summary ?? null,
@@ -1222,17 +1490,17 @@ export function createAdminRepository(client: SupabaseClient) {
       return { success: true }
     },
 
-    async reorderLessons(courseId: string, lessonIds: string[]) {
+    async reorderLessons(sectionId: string, lessonIds: string[]) {
       for (let i = 0; i < lessonIds.length; i += 1) {
         const lessonId = lessonIds[i]
         const { error } = await client
           .from("prep_lessons")
           .update({ sort_order: i + 1, updated_at: new Date().toISOString() })
           .eq("id", lessonId)
-          .eq("course_id", courseId)
+          .eq("section_id", sectionId)
         if (error) throw error
       }
-      return this.listLessons(courseId)
+      return this.listLessonsBySection(sectionId)
     },
 
     async getLessonLessonType(lessonId: string): Promise<string | null> {

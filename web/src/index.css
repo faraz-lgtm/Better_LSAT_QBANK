@@ -90,7 +90,39 @@
 
   --sidebar-border: oklch(0.922 0 0);
 
-  --sidebar-ring: oklch(0.708 0 0)
+  --sidebar-ring: oklch(0.708 0 0);
+
+  --greyscale-100: #dfe1e7;
+  --greyscale-25: #f6f8fa;
+  --shadow-medium: 0 5px 10px -2px rgba(13, 13, 18, 0.04), 0 4px 8px -1px rgba(13, 13, 18, 0.02);
+  --color-student-heading: #062357;
+  --color-student-cta: #0047ab;
+  --color-student-accent: #0d47a1;
+  --lr-row: #fffbeb;
+  --lr-badge-bg: #fef3c7;
+  --lr-badge-text: #ae8b00;
+  --lr-outline-purple: #7f0ac2;
+  --rc-row: #fff3ea;
+  --rc-badge-bg: #ff9d51;
+  --rc-badge-text: #ffffff;
+  --rc-progress: #ff9d51;
+  --rc-header-text: #ea580c;
+  --rc-outline-mint: #40c4aa;
+  --drill-progress-lr: #9d1be8;
+  --drill-danger: #dc2626;
+  --drill-easy: #fbbf24;
+  --drill-medium: #f97316;
+  --slate-bar-empty: #cbd5e1;
+  --student-expanded-row: #e8f2fc;
+  --student-red: #ff0000;
+  --student-meter-light: #93c5fd;
+  --explanation-pt-badge-bg: #fff5ec;
+  --explanation-pt-badge-border: #f28c33;
+  --explanation-pt-badge-text: #f28c33;
+  --explanation-list-row-alt: #f4f7fb;
+  --explanation-passage-panel-bg: #fafbfd;
+  --explanation-prep-test-card-radius: 14px 14px 14px 14px;
+  --explanation-badge-radius: 14px 14px 14px 14px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -514,4 +546,29 @@ code {
 
 .ds-text-muted {
   color: #666d80;
+}
+
+.lsat-html-content {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: var(--foreground);
+}
+
+.lsat-html-content p {
+  margin-bottom: 0.75rem;
+}
+
+.lsat-html-content p:last-child {
+  margin-bottom: 0;
+}
+
+.lsat-html-content blockquote {
+  margin-left: 1rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--greyscale-100, #dfe1e7);
+}
+
+.lsat-html-content .ss-line-number {
+  color: var(--muted-foreground);
 }

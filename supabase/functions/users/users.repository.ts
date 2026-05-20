@@ -52,6 +52,54 @@ export type LsacLogEventRow = {
   created_at: string
 }
 
+export type StudentStudyPreferencesRow = {
+  user_id: string
+  username: string | null
+  planned_lsat_window: string | null
+  planned_lsat_date: string | null
+  law_school_cycle: string | null
+  goal_score: number | null
+  starting_score: number | null
+  study_days: string[]
+  study_hours_label: string | null
+  wants_lessons: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type OfficialLsatScoreRow = {
+  id: string
+  user_id: string
+  test_label: string
+  test_date: string | null
+  scaled_score: number | null
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export type StudentStudyPreferencesUpsertInput = {
+  userId: string
+  username?: string | null
+  plannedLsatWindow?: string | null
+  plannedLsatDate?: string | null
+  lawSchoolCycle?: string | null
+  goalScore?: number | null
+  startingScore?: number | null
+  studyDays?: string[]
+  studyHoursLabel?: string | null
+  wantsLessons?: boolean
+}
+
+export type OfficialLsatScoreUpsertInput = {
+  userId: string
+  id?: string
+  testLabel: string
+  testDate?: string | null
+  scaledScore?: number | null
+  sortOrder?: number
+}
+
 export function createServiceRoleClient(): SupabaseClient {
   const url = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -262,6 +310,96 @@ export function createUsersRepository(client: SupabaseClient) {
         .limit(limit)
       if (error) throw error
       return (data ?? []) as LsacLogEventRow[]
+    },
+
+    async getStudyPreferencesByUserId(userId: string): Promise<StudentStudyPreferencesRow | null> {
+      const { data, error } = await client
+        .from('student_study_preferences')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle()
+      if (error) throw error
+      return data as StudentStudyPreferencesRow | null
+    },
+
+    async upsertStudyPreferences(
+      input: StudentStudyPreferencesUpsertInput,
+    ): Promise<StudentStudyPreferencesRow> {
+      const now = new Date().toISOString()
+      const existing = await this.getStudyPreferencesByUserId(input.userId)
+
+      const row = {
+        user_id: input.userId,
+        username: input.username !== undefined ? input.username : (existing?.username ?? null),
+        planned_lsat_window:
+          input.plannedLsatWindow !== undefined
+            ? input.plannedLsatWindow
+            : (existing?.planned_lsat_window ?? null),
+        planned_lsat_date:
+          input.plannedLsatDate !== undefined
+            ? input.plannedLsatDate
+            : (existing?.planned_lsat_date ?? null),
+        law_school_cycle:
+          input.lawSchoolCycle !== undefined
+            ? input.lawSchoolCycle
+            : (existing?.law_school_cycle ?? null),
+        goal_score:
+          input.goalScore !== undefined ? input.goalScore : (existing?.goal_score ?? null),
+        starting_score:
+          input.startingScore !== undefined
+            ? input.startingScore
+            : (existing?.starting_score ?? null),
+        study_days: input.studyDays !== undefined ? input.studyDays : (existing?.study_days ?? []),
+        study_hours_label:
+          input.studyHoursLabel !== undefined
+            ? input.studyHoursLabel
+            : (existing?.study_hours_label ?? null),
+        wants_lessons:
+          input.wantsLessons !== undefined
+            ? input.wantsLessons
+            : (existing?.wants_lessons ?? false),
+        updated_at: now,
+      }
+
+      const { data, error } = await client
+        .from('student_study_preferences')
+        .upsert(row, { onConflict: 'user_id' })
+        .select()
+        .single()
+      if (error) throw error
+      return data as StudentStudyPreferencesRow
+    },
+
+    async listOfficialLsatScores(userId: string): Promise<OfficialLsatScoreRow[]> {
+      const { data, error } = await client
+        .from('student_official_lsat_scores')
+        .select('*')
+        .eq('user_id', userId)
+        .order('sort_order', { ascending: true })
+        .order('test_date', { ascending: false, nullsFirst: false })
+      if (error) throw error
+      return (data ?? []) as OfficialLsatScoreRow[]
+    },
+
+    async upsertOfficialLsatScore(input: OfficialLsatScoreUpsertInput): Promise<OfficialLsatScoreRow> {
+      const now = new Date().toISOString()
+      const row: Record<string, unknown> = {
+        user_id: input.userId,
+        test_label: input.testLabel,
+        test_date: input.testDate ?? null,
+        scaled_score: input.scaledScore ?? null,
+        sort_order: input.sortOrder ?? 0,
+        updated_at: now,
+      }
+      if (input.id) row.id = input.id
+
+      const { data, error } = await client
+        .from('student_official_lsat_scores')
+        .upsert(row, { onConflict: 'id' })
+        .select()
+        .single()
+      if (error) throw error
+      return data as OfficialLsatScoreRow
     },
   }
 }

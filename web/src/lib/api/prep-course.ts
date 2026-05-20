@@ -13,6 +13,7 @@ export type PrepCourse = {
 export type PrepLesson = {
   id: string
   course_id: string
+  section_id?: string
   slug: string
   title: string
   lesson_type: "video" | "text" | "video_text" | "active_drill" | "adaptive_drill" | "rep_work"
@@ -26,13 +27,61 @@ export type PrepLesson = {
   updated_at: string
 }
 
+export type PrepLessonLinkedQuestionRef = {
+  question_id: string
+  question_number: number | null
+  prep_test_module_id: string | null
+  prep_test_title: string | null
+  section_number: number | null
+  section_type: string | null
+  section_title: string | null
+}
+
+export type PrepLessonActiveDrillAttempt = {
+  sessionId: string
+  completedAt: string
+  rawScore: number
+  questionCount: number
+  elapsedSeconds: number
+  answers: Array<{
+    questionId: string
+    selectedAnswer: string
+    isCorrect: boolean
+  }>
+}
+
+export type PrepCourseSection = {
+  id: string
+  module_id: string
+  title: string
+  sort_order: number
+  duration_minutes: number | null
+  lessons: PrepLesson[]
+}
+
+export type PrepCourseModule = {
+  id: string
+  course_id: string
+  title: string
+  sort_order: number
+  duration_minutes: number | null
+  sections: PrepCourseSection[]
+}
+
+export type PrepCourseCurriculum = {
+  modules: PrepCourseModule[]
+}
+
 export function createPrepCourseApi(supabase: SupabaseClient) {
-  async function invokePrepCourse<T>(
+  async function invokePrepCourseFn<T>(
+    functionName: string,
     options: Parameters<SupabaseClient["functions"]["invoke"]>[1],
   ): Promise<{ data: T | null; error: unknown }> {
-    const maybeAuth = (supabase as unknown as {
-      auth?: { getSession?: () => Promise<{ data: { session: { access_token?: string } | null } }> }
-    }).auth
+    const maybeAuth = (
+      supabase as unknown as {
+        auth?: { getSession?: () => Promise<{ data: { session: { access_token?: string } | null } }> }
+      }
+    ).auth
     const sessionResult = maybeAuth?.getSession ? await maybeAuth.getSession() : null
     const accessToken = sessionResult?.data?.session?.access_token
     const baseHeaders = (options?.headers as Record<string, string> | undefined) ?? undefined
@@ -41,42 +90,80 @@ export function createPrepCourseApi(supabase: SupabaseClient) {
     if (accessToken) {
       const nextHeaders = headers ?? {}
       nextHeaders.Authorization = `Bearer ${accessToken}`
-      return await supabase.functions.invoke<T>("prep-course", {
+      return await supabase.functions.invoke<T>(functionName, {
         ...options,
         headers: nextHeaders,
       })
     }
-    return await supabase.functions.invoke<T>("prep-course", options)
+    return await supabase.functions.invoke<T>(functionName, options)
+  }
+
+  function prepCourseGetName(query: Record<string, string>): string {
+    const q = new URLSearchParams(query).toString()
+    return q ? `prep-course?${q}` : "prep-course"
   }
 
   return {
     async listCourses(): Promise<PrepCourse[]> {
-      const { data, error } = await invokePrepCourse<{ courses: PrepCourse[] }>({
-        method: "POST",
-        body: { action: "list-courses" },
+      const { data, error } = await invokePrepCourseFn<{ courses: PrepCourse[] }>(prepCourseGetName({}), {
+        method: "GET",
       })
       if (error) throw error
       return data?.courses ?? []
     },
 
-    async getCourse(courseSlug: string): Promise<{ course: PrepCourse; lessons: PrepLesson[] }> {
-      const { data, error } = await invokePrepCourse<{ course: PrepCourse; lessons: PrepLesson[] }>({
-        method: "POST",
-        body: { action: "get-course", courseSlug },
-      })
+    async getCourse(courseSlug: string): Promise<{
+      course: PrepCourse
+      lessons: PrepLesson[]
+      curriculum?: PrepCourseCurriculum
+      completedLessonSlugs?: string[]
+    }> {
+      const { data, error } = await invokePrepCourseFn<{
+        course: PrepCourse
+        lessons: PrepLesson[]
+        curriculum?: PrepCourseCurriculum
+        completedLessonSlugs?: string[]
+      }>(prepCourseGetName({ courseSlug }), { method: "GET" })
       if (error) throw error
       if (!data?.course) throw new Error("No course returned from prep-course")
       return data
     },
 
-    async getLesson(courseSlug: string, lessonSlug: string): Promise<{ course: PrepCourse; lesson: PrepLesson }> {
-      const { data, error } = await invokePrepCourse<{ course: PrepCourse; lesson: PrepLesson }>({
+    async completeLesson(
+      courseSlug: string,
+      lessonSlug: string,
+    ): Promise<{ completedLessonSlugs: string[] }> {
+      const { data, error } = await invokePrepCourseFn<{ completedLessonSlugs: string[] }>("prep-course", {
         method: "POST",
-        body: { action: "get-lesson", courseSlug, lessonSlug },
+        body: { courseSlug, lessonSlug },
       })
       if (error) throw error
+      return { completedLessonSlugs: data?.completedLessonSlugs ?? [] }
+    },
+
+    async getLesson(
+      courseSlug: string,
+      lessonSlug: string,
+    ): Promise<{
+      course: PrepCourse
+      lesson: PrepLesson
+      linkedQuestionRefs: PrepLessonLinkedQuestionRef[]
+      activeDrillAttempt: PrepLessonActiveDrillAttempt | null
+    }> {
+      const { data, error } = await invokePrepCourseFn<{
+        course: PrepCourse
+        lesson: PrepLesson
+        linkedQuestionRefs?: PrepLessonLinkedQuestionRef[]
+        activeDrillAttempt?: PrepLessonActiveDrillAttempt | null
+      }>(prepCourseGetName({ courseSlug, lessonSlug }), { method: "GET" })
+      if (error) throw error
       if (!data?.course || !data.lesson) throw new Error("No lesson returned from prep-course")
-      return data
+      return {
+        course: data.course,
+        lesson: data.lesson,
+        linkedQuestionRefs: data.linkedQuestionRefs ?? [],
+        activeDrillAttempt: data.activeDrillAttempt ?? null,
+      }
     },
 
     async adminCreateCourse(input: {
@@ -85,9 +172,9 @@ export function createPrepCourseApi(supabase: SupabaseClient) {
       description?: string | null
       isPublished?: boolean
     }): Promise<PrepCourse> {
-      const { data, error } = await invokePrepCourse<{ course: PrepCourse }>({
+      const { data, error } = await invokePrepCourseFn<{ course: PrepCourse }>("prep-course-admin-create-course", {
         method: "POST",
-        body: { action: "admin-create-course", ...input },
+        body: { ...input },
       })
       if (error) throw error
       if (!data?.course) throw new Error("No course returned from prep-course")
@@ -106,9 +193,9 @@ export function createPrepCourseApi(supabase: SupabaseClient) {
       textContent?: string | null
       isPublished?: boolean
     }): Promise<PrepLesson> {
-      const { data, error } = await invokePrepCourse<{ lesson: PrepLesson }>({
+      const { data, error } = await invokePrepCourseFn<{ lesson: PrepLesson }>("prep-course-admin-add-lesson", {
         method: "POST",
-        body: { action: "admin-add-lesson", ...input },
+        body: { ...input },
       })
       if (error) throw error
       if (!data?.lesson) throw new Error("No lesson returned from prep-course")

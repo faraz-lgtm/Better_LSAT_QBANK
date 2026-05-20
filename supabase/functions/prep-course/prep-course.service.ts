@@ -1,5 +1,5 @@
 import { isPrepLessonType, type PrepLessonType } from '../_shared/prep-lesson-type.ts'
-import type { PrepCourseRepository } from './prep-course.repository.ts'
+import type { PrepCourseRepository, PrepLessonActiveDrillAttempt } from './prep-course.repository.ts'
 
 export class AuthorizationError extends Error {
   constructor(message: string) {
@@ -20,6 +20,63 @@ export class EntitlementError extends Error {
 
 function normalizeSlug(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, '-')
+}
+
+function drillQuestionIdsFromMetadata(metadata: Record<string, unknown>): string[] {
+  const raw = metadata.questionIds
+  if (!Array.isArray(raw)) return []
+  return raw.filter((id): id is string => typeof id === 'string' && id.length > 0)
+}
+
+function latestAnswersByQuestion(
+  events: Array<{
+    question_id: string
+    selected_answer: string
+    is_correct: boolean
+    created_at: string
+  }>,
+): Map<string, { questionId: string; selectedAnswer: string; isCorrect: boolean }> {
+  const byQuestion = new Map<string, { questionId: string; selectedAnswer: string; isCorrect: boolean }>()
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i]!
+    if (!byQuestion.has(e.question_id)) {
+      byQuestion.set(e.question_id, {
+        questionId: e.question_id,
+        selectedAnswer: e.selected_answer,
+        isCorrect: e.is_correct,
+      })
+    }
+  }
+  return byQuestion
+}
+
+async function buildActiveDrillAttempt(
+  repository: PrepCourseRepository,
+  userId: string,
+  lessonId: string,
+): Promise<PrepLessonActiveDrillAttempt | null> {
+  const session = await repository.getLatestLessonDrillAttempt(userId, lessonId)
+  if (!session?.completed_at) return null
+
+  const questionIds = drillQuestionIdsFromMetadata(session.metadata)
+  const questionCount = questionIds.length > 0 ? questionIds.length : 1
+  const events = await repository.listAnswerEventsForSession(session.id, userId)
+  const answers = [...latestAnswersByQuestion(events).values()]
+
+  const started = new Date(session.started_at).getTime()
+  const completed = new Date(session.completed_at).getTime()
+  const elapsedSeconds = Number.isFinite(started) && Number.isFinite(completed)
+    ? Math.max(0, Math.round((completed - started) / 1000))
+    : 0
+
+  return {
+    sessionId: session.id,
+    completedAt: session.completed_at,
+    rawScore: session.raw_score ?? 0,
+    questionCount,
+    elapsedSeconds,
+    answers,
+  }
 }
 
 export function createPrepCourseService(deps: {
@@ -84,8 +141,21 @@ export function createPrepCourseService(deps: {
       await requireLearnerAccess(userId)
       const course = await deps.repository.getPublishedCourseBySlug(normalizeSlug(courseSlug))
       if (!course) throw new Error('Course not found')
+      const curriculum = await deps.repository.listPublishedCurriculum(course.id)
       const lessons = await deps.repository.listPublishedLessonsByCourse(course.id)
-      return { course, lessons }
+      const completedLessonSlugs = await deps.repository.listCompletedLessonSlugsByCourse(userId, course.id)
+      return { course, lessons, curriculum, completedLessonSlugs }
+    },
+
+    async completeLesson(userId: string, courseSlug: string, lessonSlug: string) {
+      await requireLearnerAccess(userId)
+      const course = await deps.repository.getPublishedCourseBySlug(normalizeSlug(courseSlug))
+      if (!course) throw new Error('Course not found')
+      const lesson = await deps.repository.getPublishedLessonBySlug(course.id, normalizeSlug(lessonSlug))
+      if (!lesson) throw new Error('Lesson not found')
+      await deps.repository.upsertLessonCompletion(userId, lesson.id)
+      const completedLessonSlugs = await deps.repository.listCompletedLessonSlugsByCourse(userId, course.id)
+      return { completedLessonSlugs }
     },
 
     async getLesson(userId: string, courseSlug: string, lessonSlug: string) {
@@ -94,7 +164,14 @@ export function createPrepCourseService(deps: {
       if (!course) throw new Error('Course not found')
       const lesson = await deps.repository.getPublishedLessonBySlug(course.id, normalizeSlug(lessonSlug))
       if (!lesson) throw new Error('Lesson not found')
-      return { course, lesson }
+
+      const linkedQuestionRefs = await deps.repository.listLessonLinkedQuestions(lesson.id)
+      const activeDrillAttempt =
+        lesson.lesson_type === 'active_drill' || lesson.lesson_type === 'adaptive_drill'
+          ? await buildActiveDrillAttempt(deps.repository, userId, lesson.id)
+          : null
+
+      return { course, lesson, linkedQuestionRefs, activeDrillAttempt }
     },
 
     async adminCreateCourse(

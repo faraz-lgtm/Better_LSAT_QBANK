@@ -8,7 +8,7 @@ import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
-import { isGoogleLinkedUser } from "@/lib/auth/oauth-provider"
+import { userNeedsPasswordSetup } from "@/lib/auth/password-setup"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
@@ -26,6 +26,7 @@ function OnboardingPage() {
   const [studyHours, setStudyHours] = useState("1-2 hours/day")
   const [wantsLessons, setWantsLessons] = useState<"no" | "yes">("no")
   const [goalScore, setGoalScore] = useState("180")
+  const [lawSchoolCycle, setLawSchoolCycle] = useState("")
   const [startingScore, setStartingScore] = useState("I haven't taken an LSAT yet")
   const [predictedScore, setPredictedScore] = useState(25)
   const [password, setPassword] = useState("")
@@ -62,11 +63,15 @@ function OnboardingPage() {
         return
       }
       try {
-        const [user, profile] = await Promise.all([authApi.getCurrentUser(), usersApi.getMyProfile()])
+        const [user, session, profile] = await Promise.all([
+          authApi.getCurrentUser(),
+          authApi.getSession(),
+          usersApi.getMyProfile(),
+        ])
         if (!alive) return
         if (!user) return navigate("/login", { replace: true })
         if (profile && !profile.is_first_time_login) return navigate("/app", { replace: true })
-        setRequiresPassword(!isGoogleLinkedUser(user))
+        setRequiresPassword(userNeedsPasswordSetup(user, session))
         if (profile?.full_name) setFullName(profile.full_name)
       } catch (e) {
         if (!alive) return
@@ -103,6 +108,17 @@ function OnboardingPage() {
     setError(null)
     try {
       if (requiresPassword) await authApi.updatePassword(password)
+      await usersApi.saveOnboarding({
+        fullName,
+        username,
+        plannedLsatWindow,
+        lawSchoolCycle: lawSchoolCycle.trim() || null,
+        goalScore,
+        startingScore,
+        studyDays,
+        studyHoursLabel: studyHours,
+        wantsLessons: wantsLessons === "yes",
+      })
       await usersApi.completeFirstLogin()
       navigate("/app", { replace: true })
     } catch (e) {
@@ -173,8 +189,22 @@ function OnboardingPage() {
                   />
                   {requiresPassword && (
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Create password" className="rounded-2xl bg-[#f5f9ff]" />
-                      <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm password" className="rounded-2xl bg-[#f5f9ff]" />
+                      <Input
+                        type="password"
+                        autoComplete="new-password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Create password"
+                        className="rounded-2xl bg-[#f5f9ff]"
+                      />
+                      <Input
+                        type="password"
+                        autoComplete="new-password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm password"
+                        className="rounded-2xl bg-[#f5f9ff]"
+                      />
                     </div>
                   )}
                 </>
@@ -216,7 +246,15 @@ function OnboardingPage() {
                 </>
               )}
               {step === 6 && (
-                <Select value={goalScore} onChange={(e) => setGoalScore(e.target.value)} options={Array.from({ length: 61 }).map((_, i) => ({ label: String(120 + i), value: String(120 + i) }))} className="h-[52px] rounded-2xl bg-[#f5f9ff]" />
+                <>
+                  <Select value={goalScore} onChange={(e) => setGoalScore(e.target.value)} options={Array.from({ length: 61 }).map((_, i) => ({ label: String(120 + i), value: String(120 + i) }))} className="h-[52px] rounded-2xl bg-[#f5f9ff]" />
+                  <Input
+                    value={lawSchoolCycle}
+                    onChange={(e) => setLawSchoolCycle(e.target.value)}
+                    placeholder="Law school admission cycle (e.g. 2027)"
+                    className="rounded-2xl bg-[#f5f9ff]"
+                  />
+                </>
               )}
               {step === 7 && (
                 <Select value={startingScore} onChange={(e) => setStartingScore(e.target.value)} options={[

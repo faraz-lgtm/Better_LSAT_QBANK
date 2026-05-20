@@ -361,24 +361,325 @@ authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
 allow_dynamic_registration = false
 
-[functions.users]
-# Auth is validated inside users.controller.ts via Supabase auth.getUser.
-# Keep gateway verification off to avoid algorithm mismatch rejections (e.g. ES256).
+# Each function: verify_jwt matches prior monolith (LawHub import fns stay gateway-verified).
+# Auth for student/admin JSON endpoints is enforced in-handler via getUser().
+
+[functions.admin-bootstrap-projection]
 verify_jwt = false
 
-[functions.lsac-deeplink]
-verify_jwt = true
+[functions.admin-bulk-import-commit]
+verify_jwt = false
+
+[functions.admin-bulk-import-dry-run]
+verify_jwt = false
+
+[functions.admin-create-course]
+verify_jwt = false
+
+[functions.admin-create-lesson]
+verify_jwt = false
+
+[functions.admin-create-module]
+verify_jwt = false
+
+[functions.admin-create-section]
+verify_jwt = false
+
+[functions.admin-create-question-type]
+verify_jwt = false
+
+[functions.admin-create-user]
+verify_jwt = false
+
+[functions.admin-create-you-try-question]
+verify_jwt = false
+
+[functions.admin-dashboard]
+verify_jwt = false
+
+[functions.admin-deactivate-question-type]
+verify_jwt = false
+
+[functions.admin-delete-course]
+verify_jwt = false
+
+[functions.admin-delete-lesson]
+verify_jwt = false
+
+[functions.admin-delete-module]
+verify_jwt = false
+
+[functions.admin-delete-section]
+verify_jwt = false
+
+[functions.admin-get-next-question-for-preptest]
+verify_jwt = false
+
+[functions.admin-get-platform-config]
+verify_jwt = false
+
+[functions.admin-get-preptest-detail]
+verify_jwt = false
+
+[functions.admin-get-question-editor-payload]
+verify_jwt = false
+
+[functions.admin-get-score-table]
+verify_jwt = false
+
+[functions.admin-get-user-detail]
+verify_jwt = false
+
+[functions.admin-get-you-try-question]
+verify_jwt = false
+
+[functions.admin-link-question-to-lesson]
+verify_jwt = false
+
+[functions.admin-list-courses]
+verify_jwt = false
+
+[functions.admin-list-curriculum]
+verify_jwt = false
+
+[functions.admin-list-lesson-questions]
+verify_jwt = false
+
+[functions.admin-list-lessons]
+verify_jwt = false
+
+[functions.admin-list-preptests]
+verify_jwt = false
+
+[functions.admin-list-question-types]
+verify_jwt = false
+
+[functions.admin-list-score-tables]
+verify_jwt = false
+
+[functions.admin-list-users]
+verify_jwt = false
+
+[functions.admin-list-you-try-questions]
+verify_jwt = false
+
+[functions.admin-reorder-lessons]
+verify_jwt = false
+
+[functions.admin-reorder-modules]
+verify_jwt = false
+
+[functions.admin-reorder-sections]
+verify_jwt = false
+
+[functions.admin-reserve-question-video-upload]
+verify_jwt = false
+
+[functions.admin-seed-default-question-types]
+verify_jwt = false
+
+[functions.admin-unlink-question-from-lesson]
+verify_jwt = false
+
+[functions.admin-update-course]
+verify_jwt = false
+
+[functions.admin-update-lesson]
+verify_jwt = false
+
+[functions.admin-update-module]
+verify_jwt = false
+
+[functions.admin-update-section]
+verify_jwt = false
+
+[functions.admin-update-question-meta]
+verify_jwt = false
+
+[functions.admin-update-question-type]
+verify_jwt = false
+
+[functions.admin-update-score-row]
+verify_jwt = false
+
+[functions.admin-update-you-try-question]
+verify_jwt = false
+
+[functions.admin-upsert-platform-config]
+verify_jwt = false
+
+[functions.prep-explanation-detail]
+verify_jwt = false
+
+[functions.prep-explanations]
+verify_jwt = false
+
+[functions.prep-explanations-list]
+verify_jwt = false
+
+[functions.prep-explanations-prep-tests]
+verify_jwt = false
+
+[functions.prep-explanations-prep-test-tree]
+verify_jwt = false
+
+[functions.analytics-kind-breakdown]
+verify_jwt = false
+
+[functions.analytics-overview]
+verify_jwt = false
+
+[functions.analytics-priorities]
+verify_jwt = false
+
+[functions.analytics-sessions]
+verify_jwt = false
+
+[functions.analytics-trajectory]
+verify_jwt = false
+
+[functions.analytics-prep-test-detail]
+verify_jwt = false
+
+[functions.practice-start-blind-review]
+verify_jwt = false
+
+[functions.practice-complete-blind-review]
+verify_jwt = false
+
+[functions.practice-list-blind-review-pool]
+verify_jwt = false
+
+[functions.practice-get-blind-review-detail]
+verify_jwt = false
 
 [functions.lsac-content-import]
+verify_jwt = true
+
+[functions.lsac-deeplink]
 verify_jwt = true
 
 [functions.lsac-sync]
 verify_jwt = false
 
+[functions.practice-complete-session]
+verify_jwt = false
+
+[functions.practice-create-session]
+verify_jwt = false
+
+[functions.practice-submit-answer]
+verify_jwt = false
+
+[functions.practice-update-session]
+verify_jwt = false
+
+[functions.practice-start-drill]
+verify_jwt = false
+
+[functions.practice-start-lesson-drill]
+verify_jwt = false
+
+[functions.practice-get-drill-session]
+verify_jwt = false
+
+[functions.practice-drill-pool-stats]
+verify_jwt = false
+
+[functions.practice-list-section-pool]
+verify_jwt = false
+
+[functions.practice-start-section]
+verify_jwt = false
+
+[functions.practice-get-section-session]
+verify_jwt = false
+
+[functions.practice-list-prep-test-pool]
+verify_jwt = false
+
+[functions.practice-get-prep-test-detail]
+verify_jwt = false
+
+[functions.practice-start-prep-test]
+verify_jwt = false
+
+[functions.practice-complete-prep-test]
+verify_jwt = false
+
+[functions.prep-course-admin-add-lesson]
+verify_jwt = false
+
+[functions.prep-course-admin-create-course]
+verify_jwt = false
+
+[functions.prep-course-admin-update-course]
+verify_jwt = false
+
+[functions.prep-course-admin-update-lesson]
+verify_jwt = false
+
 [functions.prep-course]
 verify_jwt = false
 
-[functions.admin]
+[functions.users-admin-list-lsac-log-events]
+verify_jwt = false
+
+[functions.users-admin-list-lsac-snapshots]
+verify_jwt = false
+
+[functions.users-admin-list-lsac-test-instances]
+verify_jwt = false
+
+[functions.users-admin-list-profiles]
+verify_jwt = false
+
+[functions.users-complete-first-login]
+verify_jwt = false
+
+[functions.users-get-entitlement-state]
+verify_jwt = false
+
+[functions.users-lawhub-invite]
+verify_jwt = false
+
+[functions.users-lawhub-log-login]
+verify_jwt = false
+
+[functions.users-lawhub-lookup-email]
+verify_jwt = false
+
+[functions.users-lawhub-refresh]
+verify_jwt = false
+
+[functions.users-lawhub-test-instances]
+verify_jwt = false
+
+[functions.users-lawhub-token-check]
+verify_jwt = false
+
+[functions.users-lawhub-upgrade-self]
+verify_jwt = false
+
+[functions.users-ping]
+verify_jwt = false
+
+[functions.users-save-onboarding]
+verify_jwt = false
+
+[functions.users-get-study-context]
+verify_jwt = false
+
+[functions.users-update-study-preferences]
+verify_jwt = false
+
+[functions.users-upsert-official-score]
+verify_jwt = false
+
+[functions.users-sync-lsac]
+verify_jwt = false
+
+[functions.users]
 verify_jwt = false
 
 [edge_runtime]

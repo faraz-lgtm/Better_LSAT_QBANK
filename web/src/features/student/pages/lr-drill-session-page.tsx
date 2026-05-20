@@ -66,7 +66,7 @@ function LrDrillQuestionPanel({ question, questionNumber, findQuery }: LrDrillQu
           <LrDrillOptionRow
             key={index}
             index={index}
-            text={choice}
+            html={choice}
             selected={selectedChoice === index}
             hidden={Boolean(hiddenChoices[index])}
             onSelect={() => setSelectedChoice(index)}

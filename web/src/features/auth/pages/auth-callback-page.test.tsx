@@ -21,6 +21,7 @@ describe("AuthCallbackPage", () => {
     authMock.exchangeCodeForSession.mockReset()
     authMock.getSession.mockReset()
     invokeMock.mockReset()
+    sessionStorage.clear()
     window.history.pushState({}, "", "/")
   })
 

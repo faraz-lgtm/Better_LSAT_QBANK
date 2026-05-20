@@ -1,7 +1,7 @@
 import { browserFacingSupabaseApiBaseUrl } from "../_shared/browser-facing-supabase-url.ts"
 import { QUESTION_EXPLANATION_VIDEOS_BUCKET } from "../_shared/question-explanation-videos.ts"
 import { coercePrepLessonType, isPrepLessonType, type PrepLessonType } from "../_shared/prep-lesson-type.ts"
-import type { AdminRepository } from "./admin.repository.ts"
+import type { AdminRepository, BulkImportTokenCourse as RepoBulkImportTokenCourse } from "./admin.repository.ts"
 import JSZip from "npm:jszip@3.10.1"
 import { XMLParser } from "npm:fast-xml-parser@4.5.0"
 
@@ -66,20 +66,7 @@ type BulkImportPreviewLesson = BulkImportNormalizedLesson & {
   errors: string[]
 }
 
-type BulkImportTokenPayload = {
-  userId: string
-  course: {
-    id: string | null
-    slug: string
-    title: string
-    description: string | null
-    is_published: boolean
-  }
-  rows: BulkImportNormalizedLesson[]
-  expiresAt: number
-}
-
-const bulkImportTokenStore = new Map<string, BulkImportTokenPayload>()
+type BulkImportTokenCourse = RepoBulkImportTokenCourse
 
 function decodeBase64ToUint8Array(value: string): Uint8Array {
   const normalized = value.replace(/^data:.*;base64,/, "")
@@ -304,13 +291,6 @@ async function convertDocxToRawRows(input: {
   return rows
 }
 
-function pruneExpiredBulkTokens() {
-  const now = Date.now()
-  for (const [token, payload] of bulkImportTokenStore.entries()) {
-    if (payload.expiresAt <= now) bulkImportTokenStore.delete(token)
-  }
-}
-
 function normalizeDryRunRows(
   rawRows: Array<Record<string, unknown>>,
   existingBySlug: Map<string, { id: string }>,
@@ -530,7 +510,7 @@ export function createAdminService(deps: { repository: AdminRepository }) {
       input: { courseId?: string; fileName: string; fileBytesBase64: string },
     ) {
       await requireAdmin(userId)
-      pruneExpiredBulkTokens()
+      await deps.repository.deleteExpiredBulkImportTokens(new Date().toISOString())
       if (!input.fileName.toLowerCase().endsWith(".docx")) throw new Error("Only .docx files are supported")
 
       const bytes = decodeBase64ToUint8Array(input.fileBytesBase64)
@@ -576,17 +556,19 @@ export function createAdminService(deps: { repository: AdminRepository }) {
         description: course ? (course.description ? String(course.description) : null) : uploadedCourseDescription,
         is_published: course ? Boolean(course.is_published) : uploadedCoursePublished,
       }
-      bulkImportTokenStore.set(importToken, {
+      const expiresAt = Date.now() + BULK_IMPORT_TOKEN_TTL_MS
+      await deps.repository.createBulkImportToken({
+        token: importToken,
         userId,
         course: resolvedCourse,
         rows: validRows,
-        expiresAt: Date.now() + BULK_IMPORT_TOKEN_TTL_MS,
+        expiresAtIso: new Date(expiresAt).toISOString(),
       })
 
       return {
         course: resolvedCourse,
         importToken,
-        expiresAt: new Date(Date.now() + BULK_IMPORT_TOKEN_TTL_MS).toISOString(),
+        expiresAt: new Date(expiresAt).toISOString(),
         counts: {
           totalRows: previewRows.length,
           insertCount,
@@ -600,16 +582,31 @@ export function createAdminService(deps: { repository: AdminRepository }) {
 
     async bulkImportCommit(userId: string, input: { courseId?: string; importToken: string }) {
       await requireAdmin(userId)
-      pruneExpiredBulkTokens()
-      const tokenPayload = bulkImportTokenStore.get(input.importToken)
+      await deps.repository.deleteExpiredBulkImportTokens(new Date().toISOString())
+      const tokenPayload = await deps.repository.getBulkImportToken(input.importToken)
       if (!tokenPayload) throw new Error("Dry-run token is invalid or expired. Run dry-run again.")
-      if (tokenPayload.userId !== userId) throw new AuthorizationError("Import token belongs to a different user.")
-      if (tokenPayload.expiresAt <= Date.now()) {
-        bulkImportTokenStore.delete(input.importToken)
+
+      const tokenUserId = String((tokenPayload as { user_id?: unknown }).user_id ?? "")
+      if (tokenUserId !== userId) throw new AuthorizationError("Import token belongs to a different user.")
+
+      const expiresAtMs = Date.parse(String((tokenPayload as { expires_at?: unknown }).expires_at ?? ""))
+      if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) {
+        await deps.repository.deleteBulkImportToken(input.importToken)
         throw new Error("Dry-run token expired. Run dry-run again.")
       }
 
-      let resolvedCourseId = tokenPayload.course.id
+      const tokenCourseRaw = ((tokenPayload as { course?: unknown }).course ?? {}) as Partial<BulkImportTokenCourse>
+      const tokenCourse: BulkImportTokenCourse = {
+        id: typeof tokenCourseRaw.id === "string" ? tokenCourseRaw.id : null,
+        slug: typeof tokenCourseRaw.slug === "string" ? tokenCourseRaw.slug : "imported-course",
+        title: typeof tokenCourseRaw.title === "string" ? tokenCourseRaw.title : "Imported Course",
+        description: typeof tokenCourseRaw.description === "string" ? tokenCourseRaw.description : null,
+        is_published: Boolean(tokenCourseRaw.is_published),
+      }
+      const tokenRowsRaw = ((tokenPayload as { rows?: unknown }).rows ?? []) as unknown[]
+      const tokenRows = tokenRowsRaw as BulkImportNormalizedLesson[]
+
+      let resolvedCourseId = tokenCourse.id
       if (input.courseId && resolvedCourseId && input.courseId !== resolvedCourseId) {
         throw new Error("Import token does not match selected course.")
       }
@@ -617,21 +614,21 @@ export function createAdminService(deps: { repository: AdminRepository }) {
         resolvedCourseId = input.courseId
       }
       if (!resolvedCourseId) {
-        const existingBySlug = await deps.repository.getCourseBySlug(tokenPayload.course.slug)
+        const existingBySlug = await deps.repository.getCourseBySlug(tokenCourse.slug)
         if (existingBySlug) {
           resolvedCourseId = String(existingBySlug.id)
         } else {
-          let nextSlug = tokenPayload.course.slug
+          let nextSlug = tokenCourse.slug
           let suffix = 2
           while (await deps.repository.getCourseBySlug(nextSlug)) {
-            nextSlug = `${tokenPayload.course.slug}-${suffix}`
+            nextSlug = `${tokenCourse.slug}-${suffix}`
             suffix += 1
           }
           const created = await deps.repository.createCourse({
             slug: nextSlug,
-            title: tokenPayload.course.title,
-            description: tokenPayload.course.description,
-            isPublished: tokenPayload.course.is_published,
+            title: tokenCourse.title,
+            description: tokenCourse.description,
+            isPublished: tokenCourse.is_published,
           })
           resolvedCourseId = String(created.id)
         }
@@ -639,11 +636,12 @@ export function createAdminService(deps: { repository: AdminRepository }) {
 
       const existing = await deps.repository.listLessons(resolvedCourseId)
       const existingSlugs = new Set(existing.map((row) => String((row as { slug?: unknown }).slug ?? "")))
-      const insertCount = tokenPayload.rows.filter((row) => !existingSlugs.has(row.lesson_slug)).length
-      const updateCount = tokenPayload.rows.length - insertCount
+      const insertCount = tokenRows.filter((row) => !existingSlugs.has(row.lesson_slug)).length
+      const updateCount = tokenRows.length - insertCount
 
-      const upserted = await deps.repository.bulkUpsertLessons(resolvedCourseId, tokenPayload.rows)
-      bulkImportTokenStore.delete(input.importToken)
+      const defaultSectionId = await deps.repository.ensureDefaultModuleSection(resolvedCourseId)
+      const upserted = await deps.repository.bulkUpsertLessons(resolvedCourseId, defaultSectionId, tokenRows)
+      await deps.repository.deleteBulkImportToken(input.importToken)
       const finalLessons = await deps.repository.listLessons(resolvedCourseId)
 
       return {
@@ -697,10 +695,90 @@ export function createAdminService(deps: { repository: AdminRepository }) {
       return deps.repository.listLessons(courseId)
     },
 
+    async listCurriculum(userId: string, courseId: string) {
+      await requireAdmin(userId)
+      return deps.repository.listCurriculum(courseId)
+    },
+
+    async createModule(
+      userId: string,
+      input: { courseId: string; title: string; durationMinutes?: number | null },
+    ) {
+      await requireAdmin(userId)
+      const title = input.title.trim()
+      if (!title) throw new Error("Module title is required")
+      return deps.repository.createModule({
+        courseId: input.courseId,
+        title,
+        durationMinutes: input.durationMinutes ?? null,
+      })
+    },
+
+    async updateModule(userId: string, moduleId: string, input: Record<string, unknown>) {
+      await requireAdmin(userId)
+      const patch: Record<string, unknown> = {}
+      if (typeof input.title === "string") {
+        const title = input.title.trim()
+        if (!title) throw new Error("Module title is required")
+        patch.title = title
+      }
+      if (typeof input.durationMinutes === "number") patch.duration_minutes = input.durationMinutes
+      if (input.durationMinutes === null) patch.duration_minutes = null
+      return deps.repository.updateModule(moduleId, patch)
+    },
+
+    async deleteModule(userId: string, moduleId: string) {
+      await requireAdmin(userId)
+      return deps.repository.deleteModule(moduleId)
+    },
+
+    async reorderModules(userId: string, courseId: string, moduleIds: string[]) {
+      await requireAdmin(userId)
+      return deps.repository.reorderModules(courseId, moduleIds)
+    },
+
+    async createSection(
+      userId: string,
+      input: { moduleId: string; title: string; durationMinutes?: number | null },
+    ) {
+      await requireAdmin(userId)
+      const title = input.title.trim()
+      if (!title) throw new Error("Section title is required")
+      return deps.repository.createSection({
+        moduleId: input.moduleId,
+        title,
+        durationMinutes: input.durationMinutes ?? null,
+      })
+    },
+
+    async updateSection(userId: string, sectionId: string, input: Record<string, unknown>) {
+      await requireAdmin(userId)
+      const patch: Record<string, unknown> = {}
+      if (typeof input.title === "string") {
+        const title = input.title.trim()
+        if (!title) throw new Error("Section title is required")
+        patch.title = title
+      }
+      if (typeof input.durationMinutes === "number") patch.duration_minutes = input.durationMinutes
+      if (input.durationMinutes === null) patch.duration_minutes = null
+      return deps.repository.updateSection(sectionId, patch)
+    },
+
+    async deleteSection(userId: string, sectionId: string) {
+      await requireAdmin(userId)
+      return deps.repository.deleteSection(sectionId)
+    },
+
+    async reorderSections(userId: string, moduleId: string, sectionIds: string[]) {
+      await requireAdmin(userId)
+      return deps.repository.reorderSections(moduleId, sectionIds)
+    },
+
     async createLesson(
       userId: string,
       input: {
         courseId: string
+        sectionId: string
         title: string
         slug: string
         summary?: string
@@ -712,8 +790,16 @@ export function createAdminService(deps: { repository: AdminRepository }) {
       },
     ) {
       await requireAdmin(userId)
+      const section = await deps.repository.getSectionById(input.sectionId)
+      if (!section) throw new Error("Section not found")
+      const moduleRow = (section as { prep_course_modules?: { course_id?: string } | null }).prep_course_modules
+      const sectionCourseId = moduleRow?.course_id ? String(moduleRow.course_id) : null
+      if (sectionCourseId !== input.courseId) {
+        throw new Error("Section does not belong to this course")
+      }
       return deps.repository.createLesson({
         courseId: input.courseId,
+        sectionId: input.sectionId,
         title: input.title.trim(),
         slug: input.slug.trim(),
         summary: input.summary?.trim() || null,
@@ -752,9 +838,9 @@ export function createAdminService(deps: { repository: AdminRepository }) {
       return deps.repository.deleteLesson(lessonId)
     },
 
-    async reorderLessons(userId: string, courseId: string, lessonIds: string[]) {
+    async reorderLessons(userId: string, sectionId: string, lessonIds: string[]) {
       await requireAdmin(userId)
-      return deps.repository.reorderLessons(courseId, lessonIds)
+      return deps.repository.reorderLessons(sectionId, lessonIds)
     },
 
     async linkQuestionToLesson(userId: string, lessonId: string, questionRef: string, sortOrder?: number) {

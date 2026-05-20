@@ -1,0 +1,264 @@
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
+
+export function createServiceRoleClient(): SupabaseClient {
+  const url = Deno.env.get('SUPABASE_URL')
+  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  if (!url || !key) {
+    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+  }
+  return createClient(url, key)
+}
+
+export type PrepTestRow = {
+  id: string
+  module_id: string
+  title: string | null
+  imported_at: string | null
+}
+
+export type PrepTestTreeQuestionRow = {
+  id: string
+  question_number: number | null
+  source_group_id: string | null
+  stem_text: string | null
+  stimulus_text: string | null
+  explanation: string | null
+  video_url: string | null
+  difficulty: number | null
+}
+
+export type PrepTestTreePassageRow = {
+  id: string
+  source_group_id: string | null
+  content: string | null
+  topic_tag: string | null
+}
+
+export type PrepTestTreeLogicGameRow = {
+  id: string
+  source_group_id: string | null
+  setup_text: string | null
+  rules_text: string | null
+}
+
+export type PrepTestTreeSectionRow = {
+  id: string
+  section_id: string | null
+  section_number: number | null
+  section_type: 'LR' | 'RC' | 'LG' | null
+  title: string | null
+  admin_passages?: PrepTestTreePassageRow[] | null
+  admin_logic_games?: PrepTestTreeLogicGameRow[] | null
+  admin_questions?: PrepTestTreeQuestionRow[] | null
+}
+
+export type PrepTestTreePrepTestRow = {
+  id: string
+  module_id: string
+  title: string | null
+  admin_sections?: PrepTestTreeSectionRow[] | null
+}
+
+export type QuestionDetailRow = {
+  id: string
+  question_number: number | null
+  source_group_id: string | null
+  stimulus_text: string | null
+  stem_text: string | null
+  choices: unknown
+  correct_answer: string | null
+  explanation: string | null
+  video_url: string | null
+  difficulty: number | null
+  question_types: { name: string } | { name: string }[] | null
+  admin_sections: {
+    id: string
+    section_type: 'LR' | 'RC' | 'LG' | null
+    section_number: number | null
+    title: string | null
+    admin_prep_tests: { id: string; title: string; module_id: string } | { id: string; title: string; module_id: string }[] | null
+    admin_passages?: PrepTestTreePassageRow[] | null
+    admin_logic_games?: PrepTestTreeLogicGameRow[] | null
+  } | {
+    id: string
+    section_type: 'LR' | 'RC' | 'LG' | null
+    section_number: number | null
+    title: string | null
+    admin_prep_tests: { id: string; title: string; module_id: string } | { id: string; title: string; module_id: string }[] | null
+    admin_passages?: PrepTestTreePassageRow[] | null
+    admin_logic_games?: PrepTestTreeLogicGameRow[] | null
+  }[] | null
+}
+
+const prepTestTreeSelect = `
+  id,
+  module_id,
+  title,
+  admin_sections (
+    id,
+    section_id,
+    section_number,
+    section_type,
+    title,
+    admin_passages ( id, source_group_id, content, topic_tag ),
+    admin_logic_games ( id, source_group_id, setup_text, rules_text ),
+    admin_questions (
+      id,
+      question_number,
+      source_group_id,
+      stem_text,
+      stimulus_text,
+      explanation,
+      video_url,
+      difficulty
+    )
+  )
+`
+
+const questionDetailSelect = `
+  id,
+  question_number,
+  source_group_id,
+  stimulus_text,
+  stem_text,
+  choices,
+  correct_answer,
+  explanation,
+  video_url,
+  difficulty,
+  question_types ( name ),
+  admin_sections (
+    id,
+    section_type,
+    section_number,
+    title,
+    admin_prep_tests ( id, title, module_id ),
+    admin_passages ( id, source_group_id, content, topic_tag ),
+    admin_logic_games ( id, source_group_id, setup_text, rules_text )
+  )
+`
+
+export function createExplanationsRepository(client: SupabaseClient) {
+  return {
+    async listAllPrepTestRows(): Promise<PrepTestRow[]> {
+      const { data, error } = await client
+        .from('admin_prep_tests')
+        .select('id,module_id,title,imported_at')
+      if (error) throw error
+      return (data as PrepTestRow[]) ?? []
+    },
+
+    async resolvePrepTestGroup(prepTestId: string): Promise<{
+      primary: PrepTestRow
+      prepTestIds: string[]
+      baseModuleId: string
+    }> {
+      const { data: primary, error: primaryErr } = await client
+        .from('admin_prep_tests')
+        .select('id,module_id,title,imported_at')
+        .eq('id', prepTestId)
+        .single()
+      if (primaryErr) throw primaryErr
+
+      const moduleId = String(primary.module_id ?? '')
+      const isSplitModule = /^LSAC\d+:.+$/i.test(moduleId)
+      if (!isSplitModule) {
+        return {
+          primary: primary as PrepTestRow,
+          prepTestIds: [String(primary.id)],
+          baseModuleId: moduleId,
+        }
+      }
+
+      const baseModuleId = moduleId.split(':')[0] ?? moduleId
+      const { data: groupedRows, error: groupedErr } = await client
+        .from('admin_prep_tests')
+        .select('id,module_id,title,imported_at')
+        .ilike('module_id', `${baseModuleId}:%`)
+        .order('module_id', { ascending: true })
+      if (groupedErr) throw groupedErr
+
+      const rows = (groupedRows ?? []) as PrepTestRow[]
+      return {
+        primary: primary as PrepTestRow,
+        prepTestIds: rows.length > 0 ? rows.map((row) => String(row.id)) : [String(primary.id)],
+        baseModuleId,
+      }
+    },
+
+    async fetchPrepTestTreeRows(prepTestIds: string[]): Promise<PrepTestTreePrepTestRow[]> {
+      const { data, error } = await client
+        .from('admin_prep_tests')
+        .select(prepTestTreeSelect)
+        .in('id', prepTestIds)
+      if (error) throw error
+      return (data as PrepTestTreePrepTestRow[]) ?? []
+    },
+
+    async fetchQuestionStatsForPrepTestIds(prepTestIds: string[]): Promise<{
+      questionCount: number
+      explainedCount: number
+    }> {
+      if (prepTestIds.length === 0) return { questionCount: 0, explainedCount: 0 }
+
+      const { data: sections, error: secErr } = await client
+        .from('admin_sections')
+        .select('id')
+        .in('prep_test_id', prepTestIds)
+      if (secErr) throw secErr
+      const sectionIds = ((sections ?? []) as { id: string }[]).map((s) => s.id)
+      if (sectionIds.length === 0) return { questionCount: 0, explainedCount: 0 }
+
+      const { data: questions, error: qErr } = await client
+        .from('admin_questions')
+        .select('id,explanation,video_url')
+        .in('section_id', sectionIds)
+      if (qErr) throw qErr
+
+      const rows = (questions ?? []) as { id: string; explanation: string | null; video_url: string | null }[]
+      let explainedCount = 0
+      for (const q of rows) {
+        const hasExpl = (q.explanation?.trim() ?? '').length > 0
+        const hasVid = (q.video_url?.trim() ?? '').length > 0
+        if (hasExpl || hasVid) explainedCount += 1
+      }
+      return { questionCount: rows.length, explainedCount }
+    },
+
+    async getQuestionDetail(questionId: string): Promise<QuestionDetailRow | null> {
+      const { data, error } = await client
+        .from('admin_questions')
+        .select(questionDetailSelect)
+        .eq('id', questionId)
+        .maybeSingle()
+      if (error) throw error
+      return (data as QuestionDetailRow | null) ?? null
+    },
+
+    async listLatestAnswerStatusByQuestionIds(
+      userId: string,
+      questionIds: string[],
+    ): Promise<Map<string, 'answered' | 'in_process'>> {
+      const out = new Map<string, 'answered' | 'in_process'>()
+      if (questionIds.length === 0) return out
+
+      const { data, error } = await client
+        .from('answer_events')
+        .select('question_id, practice_session_id, created_at')
+        .eq('user_id', userId)
+        .in('question_id', questionIds)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+
+      const seen = new Set<string>()
+      for (const row of (data ?? []) as { question_id: string; practice_session_id: string }[]) {
+        if (seen.has(row.question_id)) continue
+        seen.add(row.question_id)
+        out.set(row.question_id, 'answered')
+      }
+      return out
+    },
+  }
+}
+
+export type ExplanationsRepository = ReturnType<typeof createExplanationsRepository>
