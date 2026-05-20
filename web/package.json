@@ -16,6 +16,7 @@
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.8",
     "@reduxjs/toolkit": "^2.11.2",
+    "@supabase/functions-js": "^2.103.0",
     "@supabase/supabase-js": "^2.103.0",
     "@tailwindcss/vite": "^4.2.2",
     "@tiptap/core": "^3.23.5",

@@ -20,6 +20,9 @@ importers:
       '@reduxjs/toolkit':
         specifier: ^2.11.2
         version: 2.11.2(react-redux@9.2.0(@types/react@19.2.14)(react@19.2.5)(redux@5.0.1))(react@19.2.5)
+      '@supabase/functions-js':
+        specifier: ^2.103.0
+        version: 2.103.0
       '@supabase/supabase-js':
         specifier: ^2.103.0
         version: 2.103.0
