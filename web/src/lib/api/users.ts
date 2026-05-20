@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+import { handleUsersInvokeError } from '@/lib/auth/handle-unauthorized-session'
+
 export type AccessState = 'AUTH_REQUIRED' | 'LSAC_REQUIRED' | 'FULL_ACCESS'
 
 export type UserEntitlement = {
@@ -56,6 +58,45 @@ export type AdminLogEvent = {
   created_at: string
 }
 
+export type StudentStudyPreferences = {
+  userId: string
+  username: string | null
+  plannedLsatWindow: string | null
+  plannedLsatDate: string | null
+  lawSchoolCycle: string | null
+  goalScore: number | null
+  startingScore: number | null
+  studyDays: string[]
+  studyHoursLabel: string | null
+  wantsLessons: boolean
+}
+
+export type OfficialLsatScore = {
+  id: string
+  testLabel: string
+  testDate: string | null
+  scaledScore: number | null
+  sortOrder: number
+}
+
+export type StudentStudyContext = {
+  preferences: StudentStudyPreferences | null
+  officialScores: OfficialLsatScore[]
+}
+
+export type SaveOnboardingInput = {
+  fullName: string
+  username?: string | null
+  plannedLsatWindow?: string | null
+  plannedLsatDate?: string | null
+  lawSchoolCycle?: string | null
+  goalScore?: string | number | null
+  startingScore?: string | number | null
+  studyDays?: string[]
+  studyHoursLabel?: string | null
+  wantsLessons?: boolean
+}
+
 /**
  * Users domain API over Edge Functions. Inject `SupabaseClient` so tests can mock `functions.invoke`.
  */
@@ -71,18 +112,21 @@ export function createUsersApi(supabase: SupabaseClient) {
 
     const baseHeaders = (options?.headers as Record<string, string> | undefined) ?? undefined
     const headers = baseHeaders ? { ...baseHeaders } : undefined
+    let result: { data: T | null; error: unknown }
     if (accessToken) {
       const nextHeaders = headers ?? {}
       nextHeaders.Authorization = `Bearer ${accessToken}`
-      return await supabase.functions.invoke<T>('users', {
+      result = await supabase.functions.invoke<T>('users', {
         ...options,
         headers: nextHeaders,
       })
+    } else {
+      result = await supabase.functions.invoke<T>('users', {
+        ...options,
+      })
     }
-
-    return await supabase.functions.invoke<T>('users', {
-      ...options,
-    })
+    if (result.error) await handleUsersInvokeError(supabase, result.error)
+    return result
   }
 
   async function invokeUsersPost<T>(
@@ -98,11 +142,13 @@ export function createUsersApi(supabase: SupabaseClient) {
     if (accessToken) {
       headers.Authorization = `Bearer ${accessToken}`
     }
-    return await supabase.functions.invoke<T>(functionName, {
+    const result = await supabase.functions.invoke<T>(functionName, {
       method: 'POST',
       body: body ?? {},
       headers,
     })
+    if (result.error) await handleUsersInvokeError(supabase, result.error)
+    return result
   }
 
   return {
@@ -187,10 +233,62 @@ export function createUsersApi(supabase: SupabaseClient) {
     },
 
     async completeFirstLogin(): Promise<UserProfile> {
-      const { data, error } = await invokeUsersPost<{ profile: UserProfile }>('users-complete-first-login')
+      const { data, error } = await invokeUsersPost<{ profile: UserProfile }>('users', {
+        action: 'users-complete-first-login',
+      })
       if (error) throw error
       if (!data?.profile) throw new Error('No profile in response')
       return data.profile
+    },
+
+    async saveOnboarding(input: SaveOnboardingInput): Promise<{
+      profile: UserProfile
+      preferences: StudentStudyPreferences
+    }> {
+      const { data, error } = await invokeUsersPost<{
+        profile: UserProfile
+        preferences: StudentStudyPreferences
+      }>('users-save-onboarding', { ...input })
+      if (error) throw error
+      if (!data?.profile || !data.preferences) throw new Error('No onboarding payload returned')
+      return data
+    },
+
+    async getStudyContext(): Promise<StudentStudyContext> {
+      const { data, error } = await invokeUsersPost<StudentStudyContext>('users-get-study-context')
+      if (error) throw error
+      if (!data) throw new Error('No study context returned')
+      return data
+    },
+
+    async updateStudyPreferences(input: {
+      plannedLsatDate?: string | null
+      lawSchoolCycle?: string | null
+      goalScore?: number | null
+    }): Promise<StudentStudyPreferences> {
+      const { data, error } = await invokeUsersPost<{ preferences: StudentStudyPreferences }>(
+        'users-update-study-preferences',
+        input,
+      )
+      if (error) throw error
+      if (!data?.preferences) throw new Error('No preferences returned')
+      return data.preferences
+    },
+
+    async upsertOfficialScore(input: {
+      id?: string
+      testLabel: string
+      testDate?: string | null
+      scaledScore?: number | null
+      sortOrder?: number
+    }): Promise<OfficialLsatScore> {
+      const { data, error } = await invokeUsersPost<{ score: OfficialLsatScore }>(
+        'users-upsert-official-score',
+        input,
+      )
+      if (error) throw error
+      if (!data?.score) throw new Error('No score returned')
+      return data.score
     },
 
     async adminListProfiles(limit = 200): Promise<UserProfile[]> {

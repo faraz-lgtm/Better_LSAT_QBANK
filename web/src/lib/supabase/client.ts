@@ -18,7 +18,8 @@ export function getSupabaseBrowserClient() {
       flowType: 'pkce',
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: true,
+      // Callback route exchanges the code explicitly (avoids double exchange with detectSessionInUrl).
+      detectSessionInUrl: false,
     },
   })
   return browserClient

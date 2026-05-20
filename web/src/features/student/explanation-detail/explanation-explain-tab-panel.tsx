@@ -3,6 +3,7 @@ import { FolderOpen, Video } from "lucide-react"
 
 import { Select } from "@/components/ui/select"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
+import { HtmlContent } from "@/lib/html/html-content"
 
 type ExplanationExplainTabPanelProps = {
   videos: ExplanationQuestionDetailView["videos"]
@@ -21,21 +22,32 @@ function VideoExplanationCard({ v }: { v: ExplanationQuestionDetailView["videos"
           <FolderOpen className="size-5 shrink-0 text-[color:var(--color-student-accent)]" aria-hidden />
           <span className="font-semibold text-[color:var(--color-student-heading)]">{v.authorTitle}</span>
         </div>
-        <div className="w-full min-w-[200px] max-w-xs sm:w-56">
-          <Select
-            aria-label={v.dropdownLabel}
-            value={variant}
-            onChange={(e) => setVariant(e.target.value)}
-            options={v.dropdownOptions}
-            className="h-10 rounded-xl border-[color:var(--greyscale-100)] text-sm font-medium text-[color:var(--color-student-heading)]"
-          />
-        </div>
+        {v.dropdownOptions.length > 1 ? (
+          <div className="w-full min-w-[200px] max-w-xs sm:w-56">
+            <Select
+              aria-label={v.dropdownLabel}
+              value={variant}
+              onChange={(e) => setVariant(e.target.value)}
+              options={v.dropdownOptions}
+              className="h-10 rounded-xl border-[color:var(--greyscale-100)] text-sm font-medium text-[color:var(--color-student-heading)]"
+            />
+          </div>
+        ) : null}
       </div>
       <div className="p-4 md:p-5">
-        <div className="mb-3 flex min-h-[280px] flex-col items-center justify-center rounded-xl bg-[#3f4654] text-center text-white">
-          <Video className="mb-3 size-12 opacity-90" aria-hidden />
-          <p className="text-sm font-medium text-slate-200">Video explanation will load</p>
-        </div>
+        {v.videoUrl ? (
+          <video controls className="mb-3 max-h-[50vh] w-full rounded-xl bg-black" src={v.videoUrl} />
+        ) : v.explanationHtml ? (
+          <HtmlContent
+            html={v.explanationHtml}
+            className="mb-3 max-w-none space-y-2 text-sm leading-relaxed text-[color:var(--text)] [&_a]:text-[color:var(--color-student-accent)] [&_img]:max-w-full [&_p]:my-2"
+          />
+        ) : (
+          <div className="mb-3 flex min-h-[280px] flex-col items-center justify-center rounded-xl bg-[#3f4654] text-center text-white">
+            <Video className="mb-3 size-12 opacity-90" aria-hidden />
+            <p className="text-sm font-medium text-slate-200">No explanation content yet</p>
+          </div>
+        )}
         <p className="mt-3 text-xs text-[color:var(--text)]">{v.postedLine}</p>
       </div>
     </article>
@@ -43,6 +55,14 @@ function VideoExplanationCard({ v }: { v: ExplanationQuestionDetailView["videos"
 }
 
 function ExplanationExplainTabPanel({ videos }: ExplanationExplainTabPanelProps) {
+  if (videos.length === 0) {
+    return (
+      <p className="text-sm text-[color:var(--text)]">
+        No written or video explanation has been published for this question yet.
+      </p>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {videos.map((v) => (

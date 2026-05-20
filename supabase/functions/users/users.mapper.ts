@@ -34,6 +34,69 @@ function asOptionalString(v: unknown): string | undefined {
   return typeof v === 'string' ? v : undefined
 }
 
+import type {
+  OfficialLsatScoreRow,
+  StudentStudyPreferencesRow,
+} from './users.repository.ts'
+
+export type StudentStudyPreferencesDto = {
+  userId: string
+  username: string | null
+  plannedLsatWindow: string | null
+  plannedLsatDate: string | null
+  lawSchoolCycle: string | null
+  goalScore: number | null
+  startingScore: number | null
+  studyDays: string[]
+  studyHoursLabel: string | null
+  wantsLessons: boolean
+}
+
+export type OfficialLsatScoreDto = {
+  id: string
+  testLabel: string
+  testDate: string | null
+  scaledScore: number | null
+  sortOrder: number
+}
+
+export function parseLsatScoreValue(raw: unknown): number | null {
+  if (typeof raw === 'number' && Number.isInteger(raw) && raw >= 120 && raw <= 180) {
+    return raw
+  }
+  if (typeof raw !== 'string') return null
+  const trimmed = raw.trim()
+  if (!trimmed || trimmed === "I haven't taken an LSAT yet") return null
+  const n = Number.parseInt(trimmed, 10)
+  if (!Number.isInteger(n) || n < 120 || n > 180) return null
+  return n
+}
+
+export function mapStudyPreferencesRow(row: StudentStudyPreferencesRow): StudentStudyPreferencesDto {
+  return {
+    userId: row.user_id,
+    username: row.username,
+    plannedLsatWindow: row.planned_lsat_window,
+    plannedLsatDate: row.planned_lsat_date,
+    lawSchoolCycle: row.law_school_cycle,
+    goalScore: row.goal_score,
+    startingScore: row.starting_score,
+    studyDays: row.study_days ?? [],
+    studyHoursLabel: row.study_hours_label,
+    wantsLessons: row.wants_lessons,
+  }
+}
+
+export function mapOfficialScoreRow(row: OfficialLsatScoreRow): OfficialLsatScoreDto {
+  return {
+    id: row.id,
+    testLabel: row.test_label,
+    testDate: row.test_date,
+    scaledScore: row.scaled_score,
+    sortOrder: row.sort_order,
+  }
+}
+
 /** Maps LawHub GET student / invite response JSON into our profile row. */
 export function mapLawHubStudentRecordToProfileUpsert(
   userId: string,

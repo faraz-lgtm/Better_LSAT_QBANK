@@ -31,6 +31,17 @@ export async function handlePrepCourseRequest(req: Request): Promise<Response> {
       return json(data, {}, corsHeaders)
     }
 
+    if (req.method === 'POST') {
+      const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
+      const courseSlug = typeof body.courseSlug === 'string' ? body.courseSlug : ''
+      const lessonSlug = typeof body.lessonSlug === 'string' ? body.lessonSlug : ''
+      if (!courseSlug.trim() || !lessonSlug.trim()) {
+        return json({ error: 'courseSlug and lessonSlug are required' }, { status: 400 }, corsHeaders)
+      }
+      const data = await service.completeLesson(auth.user.id, courseSlug, lessonSlug)
+      return json(data, {}, corsHeaders)
+    }
+
     return json({ error: 'Method not allowed' }, { status: 405 }, corsHeaders)
   } catch (error) {
     if (error instanceof AuthorizationError) {

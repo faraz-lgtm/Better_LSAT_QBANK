@@ -1,5 +1,6 @@
-import { useMemo, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { useNavigate, useParams } from "react-router-dom"
+import { Loader2 } from "lucide-react"
 import {
   Bookmark,
   CheckCircle2,
@@ -16,7 +17,6 @@ import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
 import {
-  getPrepTestResultsDetail,
   type PrepTestAboutMeta,
   type PrepTestPassageSummary,
   type PrepTestQuestionResultRow,
@@ -26,7 +26,8 @@ import {
   type PrepTestSectionSummary,
   type QuestionResultStatus,
 } from "@/features/student/lib/mock-analytics-prep-test-results"
-import { mockPrepTestRecords } from "@/features/student/lib/mock-analytics-preptests"
+import { mapPrepTestDetailToResults } from "@/features/student/analytics/map-prep-test-results"
+import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
 
 const QUESTION_FILTER_OPTIONS = ["Question", "Passage", "Incorrect only"] as const
 
@@ -47,16 +48,6 @@ const DIFFICULTY: Record<
   Medium: { dots: 3, color: "#ff6f00", inactive: "#ced0e7" },
   Hard: { dots: 4, color: "#df1c41", inactive: "#ced0e7" },
   Hardest: { dots: 5, color: "#df1c41", inactive: "#ced0e7" },
-}
-
-function formatTestTitle(prepTestNumber: number, takenAtIso: string): string {
-  const d = new Date(takenAtIso)
-  const formatted = d.toLocaleDateString(undefined, {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  })
-  return `PT${prepTestNumber} - ${formatted}`
 }
 
 function QuestionOutcomeIcon({ status }: { status: QuestionResultStatus }) {
@@ -609,17 +600,59 @@ function AboutPrepTestCard({
 function AnalyticsPrepTestResultsPage() {
   const { testId = "" } = useParams<{ testId: string }>()
   const navigate = useNavigate()
+  const analyticsApi = useAnalyticsApi()
+  const practiceApi = usePracticeApi()
   const [questionFilter, setQuestionFilter] = useState<(typeof QUESTION_FILTER_OPTIONS)[number]>("Question")
   const [excludeFromAnalytics, setExcludeFromAnalytics] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [detail, setDetail] = useState<PrepTestResultsDetail | null>(null)
+  const [completedAt, setCompletedAt] = useState<string>("")
+  const [prepTestId, setPrepTestId] = useState<string>("")
 
-  const record = useMemo(
-    () => mockPrepTestRecords.find((r) => r.id === testId) ?? mockPrepTestRecords[0],
-    [testId],
-  )
+  useEffect(() => {
+    if (!analyticsApi || !testId) {
+      setLoading(false)
+      if (!testId) setError("Missing session id")
+      return
+    }
+    setLoading(true)
+    void analyticsApi
+      .getPrepTestSessionDetail(testId)
+      .then((api) => {
+        setDetail(mapPrepTestDetailToResults(api))
+        setCompletedAt(api.completedAt)
+        setPrepTestId(api.prepTestId)
+        setExcludeFromAnalytics(api.excluded)
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
+      .finally(() => setLoading(false))
+  }, [analyticsApi, testId])
 
-  const detail: PrepTestResultsDetail = useMemo(() => getPrepTestResultsDetail(testId || record.id), [testId, record.id])
+  const pageTitle = useMemo(() => {
+    if (!completedAt) return "PrepTest results"
+    const d = new Date(completedAt)
+    const formatted = d.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })
+    return `PrepTest — ${formatted}`
+  }, [completedAt])
 
-  const pageTitle = formatTestTitle(record.prepTestNumber, record.takenAt)
+  if (loading) {
+    return (
+      <StudentMain>
+        <div className="flex items-center gap-2 text-sm text-[#666d80]">
+          <Loader2 className="size-4 animate-spin" aria-hidden />
+          Loading results…
+        </div>
+      </StudentMain>
+    )
+  }
+  if (error || !detail) {
+    return (
+      <StudentMain>
+        <p className="text-sm text-red-600">{error ?? "Results not found"}</p>
+      </StudentMain>
+    )
+  }
 
   return (
     <>
@@ -644,7 +677,7 @@ function AnalyticsPrepTestResultsPage() {
             </button>
             <button
               type="button"
-              onClick={() => navigate(`/app/practice/preptest/${encodeURIComponent(record.id)}`)}
+              onClick={() => navigate(`/app/practice/preptest/${encodeURIComponent(prepTestId || testId)}`)}
               className="inline-flex h-10 items-center gap-2 rounded-2xl bg-[#df1c41] px-4 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#df1c41]/90"
             >
               <FolderOpen className="size-4 shrink-0" aria-hidden />
@@ -673,7 +706,12 @@ function AnalyticsPrepTestResultsPage() {
         <AboutPrepTestCard
           meta={detail.about}
           excludeFromAnalytics={excludeFromAnalytics}
-          onExcludeFromAnalyticsChange={setExcludeFromAnalytics}
+          onExcludeFromAnalyticsChange={(next) => {
+            setExcludeFromAnalytics(next)
+            if (practiceApi && testId) {
+              void practiceApi.updateSession({ sessionId: testId, excluded: next })
+            }
+          }}
         />
       </StudentMain>
     </>

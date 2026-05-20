@@ -20,6 +20,7 @@ Deno.serve(async (req) => {
       sessionId: body.sessionId,
       questionId: body.questionId,
       selectedAnswer: body.selectedAnswer,
+      blindReview: body.blindReview,
     })
     return json(out, {}, CORS_EDGE_NARROW)
   } catch (e) {

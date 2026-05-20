@@ -379,6 +379,12 @@ verify_jwt = false
 [functions.admin-create-lesson]
 verify_jwt = false
 
+[functions.admin-create-module]
+verify_jwt = false
+
+[functions.admin-create-section]
+verify_jwt = false
+
 [functions.admin-create-question-type]
 verify_jwt = false
 
@@ -398,6 +404,12 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.admin-delete-lesson]
+verify_jwt = false
+
+[functions.admin-delete-module]
+verify_jwt = false
+
+[functions.admin-delete-section]
 verify_jwt = false
 
 [functions.admin-get-next-question-for-preptest]
@@ -427,6 +439,9 @@ verify_jwt = false
 [functions.admin-list-courses]
 verify_jwt = false
 
+[functions.admin-list-curriculum]
+verify_jwt = false
+
 [functions.admin-list-lesson-questions]
 verify_jwt = false
 
@@ -451,6 +466,12 @@ verify_jwt = false
 [functions.admin-reorder-lessons]
 verify_jwt = false
 
+[functions.admin-reorder-modules]
+verify_jwt = false
+
+[functions.admin-reorder-sections]
+verify_jwt = false
+
 [functions.admin-reserve-question-video-upload]
 verify_jwt = false
 
@@ -464,6 +485,12 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.admin-update-lesson]
+verify_jwt = false
+
+[functions.admin-update-module]
+verify_jwt = false
+
+[functions.admin-update-section]
 verify_jwt = false
 
 [functions.admin-update-question-meta]
@@ -484,7 +511,16 @@ verify_jwt = false
 [functions.prep-explanation-detail]
 verify_jwt = false
 
+[functions.prep-explanations]
+verify_jwt = false
+
 [functions.prep-explanations-list]
+verify_jwt = false
+
+[functions.prep-explanations-prep-tests]
+verify_jwt = false
+
+[functions.prep-explanations-prep-test-tree]
 verify_jwt = false
 
 [functions.analytics-kind-breakdown]
@@ -500,6 +536,21 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.analytics-trajectory]
+verify_jwt = false
+
+[functions.analytics-prep-test-detail]
+verify_jwt = false
+
+[functions.practice-start-blind-review]
+verify_jwt = false
+
+[functions.practice-complete-blind-review]
+verify_jwt = false
+
+[functions.practice-list-blind-review-pool]
+verify_jwt = false
+
+[functions.practice-get-blind-review-detail]
 verify_jwt = false
 
 [functions.lsac-content-import]
@@ -521,6 +572,39 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.practice-update-session]
+verify_jwt = false
+
+[functions.practice-start-drill]
+verify_jwt = false
+
+[functions.practice-start-lesson-drill]
+verify_jwt = false
+
+[functions.practice-get-drill-session]
+verify_jwt = false
+
+[functions.practice-drill-pool-stats]
+verify_jwt = false
+
+[functions.practice-list-section-pool]
+verify_jwt = false
+
+[functions.practice-start-section]
+verify_jwt = false
+
+[functions.practice-get-section-session]
+verify_jwt = false
+
+[functions.practice-list-prep-test-pool]
+verify_jwt = false
+
+[functions.practice-get-prep-test-detail]
+verify_jwt = false
+
+[functions.practice-start-prep-test]
+verify_jwt = false
+
+[functions.practice-complete-prep-test]
 verify_jwt = false
 
 [functions.prep-course-admin-add-lesson]
@@ -578,6 +662,18 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.users-ping]
+verify_jwt = false
+
+[functions.users-save-onboarding]
+verify_jwt = false
+
+[functions.users-get-study-context]
+verify_jwt = false
+
+[functions.users-update-study-preferences]
+verify_jwt = false
+
+[functions.users-upsert-official-score]
 verify_jwt = false
 
 [functions.users-sync-lsac]

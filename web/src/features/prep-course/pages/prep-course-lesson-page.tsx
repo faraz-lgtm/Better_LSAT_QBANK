@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 
 import { PrepCourseLessonFooter } from "@/features/prep-course/components/prep-course-lesson-footer"
 import { PrepCourseLessonPanel } from "@/features/prep-course/components/prep-course-lesson-panel"
 import { PrepCourseLessonSidebar } from "@/features/prep-course/components/prep-course-lesson-sidebar"
-import { nextLessonSlug } from "@/features/prep-course/lib/prep-course-format"
+import { isPrepCourseDrillLessonType, nextLessonSlug } from "@/features/prep-course/lib/prep-course-format"
 import { StudentMain } from "@/features/student/components/student-main"
+import { createPracticeApi } from "@/lib/api/practice"
 import {
   createPrepCourseApi,
   type PrepCourse,
   type PrepLesson,
+  type PrepLessonActiveDrillAttempt,
   type PrepLessonLinkedQuestionRef,
 } from "@/lib/api/prep-course"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -26,15 +28,27 @@ function PrepCourseLessonPage() {
   const [course, setCourse] = useState<PrepCourse | null>(null)
   const [lesson, setLesson] = useState<PrepLesson | null>(null)
   const [linkedQuestionRefs, setLinkedQuestionRefs] = useState<PrepLessonLinkedQuestionRef[]>([])
+  const [activeDrillAttempt, setActiveDrillAttempt] = useState<PrepLessonActiveDrillAttempt | null>(null)
   const [lessons, setLessons] = useState<PrepLesson[]>([])
   const [completedLessonSlugs, setCompletedLessonSlugs] = useState<Set<string>>(() => new Set())
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [savingComplete, setSavingComplete] = useState(false)
+  const [startingDrill, setStartingDrill] = useState(false)
   const [showSidebar, setShowSidebar] = useState(true)
+  const lessonContentRef = useRef<HTMLDivElement>(null)
 
   const prepCourseApi = useMemo(() => {
     try {
       return createPrepCourseApi(getSupabaseBrowserClient())
+    } catch {
+      return null
+    }
+  }, [])
+
+  const practiceApi = useMemo(() => {
+    try {
+      return createPracticeApi(getSupabaseBrowserClient())
     } catch {
       return null
     }
@@ -61,6 +75,7 @@ function PrepCourseLessonPage() {
         return
       }
       if (alive) {
+        setLoading(true)
         setError(null)
         setCourse(null)
         setLessons([])
@@ -74,8 +89,10 @@ function PrepCourseLessonPage() {
         if (!alive) return
         setCourse(courseData.course)
         setLessons(courseData.lessons)
+        setCompletedLessonSlugs(new Set(courseData.completedLessonSlugs ?? []))
         setLesson(lessonData.lesson)
-        setLinkedQuestionRefs(lessonData.linkedQuestionRefs)
+        setLinkedQuestionRefs(lessonData.linkedQuestionRefs ?? [])
+        setActiveDrillAttempt(lessonData.activeDrillAttempt ?? null)
       } catch (e) {
         if (!alive) return
         setError(e instanceof Error ? e.message : "Failed to load lesson")
@@ -89,6 +106,10 @@ function PrepCourseLessonPage() {
     }
   }, [paramsValid, courseSlug, lessonSlug, prepCourseApi])
 
+  const handleReviewDrill = useCallback(() => {
+    lessonContentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }, [])
+
   if (!paramsValid) {
     return (
       <StudentMain>
@@ -97,16 +118,39 @@ function PrepCourseLessonPage() {
     )
   }
 
-  function handleMarkComplete() {
-    if (!lesson) return
-    setCompletedLessonSlugs((prev) => {
-      const next = new Set(prev)
-      next.add(lesson.slug)
-      return next
-    })
-    const nextSlug = nextLessonSlug(lessons, lesson.slug)
-    if (nextSlug && course) {
-      navigate(`/app/prep-course/${course.slug}/${nextSlug}`)
+  const isPrepCourseDrill = lesson ? isPrepCourseDrillLessonType(lesson.lesson_type) : false
+  const drillCompleted = Boolean(activeDrillAttempt)
+
+  async function handleStartDrill() {
+    if (!lesson || !course || !practiceApi || startingDrill) return
+    setStartingDrill(true)
+    setError(null)
+    try {
+      const { session } = await practiceApi.startLessonDrill({ lessonId: lesson.id })
+      const returnTo = `/app/prep-course/${course.slug}/${lesson.slug}`
+      navigate(`/app/practice/drills/session/${session.id}?returnTo=${encodeURIComponent(returnTo)}`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to start drill")
+    } finally {
+      setStartingDrill(false)
+    }
+  }
+
+  async function handleMarkComplete() {
+    if (!lesson || !course || !prepCourseApi || savingComplete) return
+    setSavingComplete(true)
+    setError(null)
+    try {
+      const { completedLessonSlugs: slugs } = await prepCourseApi.completeLesson(course.slug, lesson.slug)
+      setCompletedLessonSlugs(new Set(slugs))
+      const nextSlug = nextLessonSlug(lessons, lesson.slug)
+      if (nextSlug) {
+        navigate(`/app/prep-course/${course.slug}/${nextSlug}`)
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save lesson progress")
+    } finally {
+      setSavingComplete(false)
     }
   }
 
@@ -148,19 +192,35 @@ function PrepCourseLessonPage() {
             />
           ) : null}
 
-          <PrepCourseLessonPanel
-            course={course}
-            lesson={lesson}
-            linkedQuestionRefs={linkedQuestionRefs}
-            courseContentHref={courseContentHref}
-          />
+          <div ref={lessonContentRef}>
+            <PrepCourseLessonPanel
+              course={course}
+              lesson={lesson}
+              linkedQuestionRefs={linkedQuestionRefs}
+              activeDrillAttempt={activeDrillAttempt}
+              courseContentHref={courseContentHref}
+              onReviewDrill={handleReviewDrill}
+              onStartDrill={() => void handleStartDrill()}
+              startingDrill={startingDrill}
+            />
+          </div>
         </section>
       </StudentMain>
 
       <PrepCourseLessonFooter
         showSidebar={showSidebar}
         onToggleSidebar={() => setShowSidebar((v) => !v)}
-        onMarkComplete={handleMarkComplete}
+        onMarkComplete={() => void handleMarkComplete()}
+        markCompleteDisabled={savingComplete || (isPrepCourseDrill && !drillCompleted)}
+        primaryAction={
+          isPrepCourseDrill && !drillCompleted
+            ? {
+                label: startingDrill ? "Starting…" : "Start Drill",
+                onClick: () => void handleStartDrill(),
+                disabled: startingDrill,
+              }
+            : null
+        }
       />
     </>
   )

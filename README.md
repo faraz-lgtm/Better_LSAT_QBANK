@@ -51,7 +51,7 @@ LSAT prep platform (7Sage-style) using **React** (Vite), **Supabase** (Auth, Pos
    Optional: run a single function while iterating:
 
    ```bash
-   supabase functions serve users --env-file supabase/functions/.env
+   supabase functions serve users prep-explanations --env-file supabase/functions/.env
    supabase functions serve lsac-deeplink --env-file supabase/functions/.env
    supabase functions serve lsac-content-import --env-file supabase/functions/.env
    supabase functions serve lsac-sync --env-file supabase/functions/.env

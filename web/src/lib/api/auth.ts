@@ -47,6 +47,12 @@ export function createAuthApi(supabase: SupabaseClient) {
       return Boolean(data.session)
     },
 
+    async getSession() {
+      const { data, error } = await supabase.auth.getSession()
+      if (error) throw error
+      return data.session
+    },
+
     async getCurrentUser() {
       const { data, error } = await supabase.auth.getUser()
       if (error) throw error

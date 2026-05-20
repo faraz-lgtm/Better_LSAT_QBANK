@@ -15,9 +15,11 @@ import {
   filterPrepTestsByTimeRange,
   getPrepTestHistoryEntries,
   getPrepTestProgressPoints,
-  mockPrepTestRecords,
   type PrepTestProgressPoint,
+  type PrepTestRecord,
 } from "@/features/student/lib/mock-analytics-preptests"
+import { mapSessionToPrepTestRecord } from "@/features/student/analytics/map-analytics"
+import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
 
 const Y_AXIS_LABELS = [100, 84, 68, 52, 36, 20] as const
 const BOOKMARKS_STORAGE_KEY = "analytics:preptests:bookmarks"
@@ -320,15 +322,35 @@ function loadBookmarks(initial: Record<string, boolean>): Record<string, boolean
 
 function AnalyticsPrepTestsPage() {
   const navigate = useNavigate()
+  const analyticsApi = useAnalyticsApi()
+  const practiceApi = usePracticeApi()
+  const [loading, setLoading] = useState(true)
+  const [prepRecords, setPrepRecords] = useState<PrepTestRecord[]>([])
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
   const [scoreTab, setScoreTab] = useState<ScoreTab>("raw")
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
   const [historySort, setHistorySort] = useState<HistorySort>("date-desc")
   const initialBookmarks = useMemo(
-    () => Object.fromEntries(mockPrepTestRecords.map((record) => [record.id, record.bookmarked])),
-    [],
+    () => Object.fromEntries(prepRecords.map((record) => [record.id, record.bookmarked])),
+    [prepRecords],
   )
   const [bookmarks, setBookmarks] = useState<Record<string, boolean>>(() => loadBookmarks(initialBookmarks))
+
+  useEffect(() => {
+    if (!analyticsApi) {
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    void analyticsApi
+      .getSessions({ kind: "PREPTEST", limit: 100 })
+      .then(({ sessions }) => {
+        setPrepRecords(
+          sessions.map(mapSessionToPrepTestRecord).filter((r): r is PrepTestRecord => r != null),
+        )
+      })
+      .finally(() => setLoading(false))
+  }, [analyticsApi])
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -340,8 +362,8 @@ function AnalyticsPrepTestsPage() {
   }, [bookmarks])
 
   const records = useMemo(
-    () => mockPrepTestRecords.map((record) => ({ ...record, bookmarked: bookmarks[record.id] ?? record.bookmarked })),
-    [bookmarks],
+    () => prepRecords.map((record) => ({ ...record, bookmarked: bookmarks[record.id] ?? record.bookmarked })),
+    [bookmarks, prepRecords],
   )
 
   const rangedRecords = useMemo(() => filterPrepTestsByTimeRange(records, timeRange), [records, timeRange])
@@ -375,9 +397,16 @@ function AnalyticsPrepTestsPage() {
     [historyEntries, bookmarkedOnly],
   )
 
-  const handleToggleBookmark = useCallback((id: string) => {
-    setBookmarks((current) => ({ ...current, [id]: !current[id] }))
-  }, [])
+  const handleToggleBookmark = useCallback(
+    (id: string) => {
+      const next = !(bookmarks[id] ?? false)
+      setBookmarks((current) => ({ ...current, [id]: next }))
+      if (practiceApi) {
+        void practiceApi.updateSession({ sessionId: id, bookmarked: next })
+      }
+    },
+    [bookmarks, practiceApi],
+  )
 
   const handleSelectEntry = useCallback(
     (id: string) => {
@@ -407,6 +436,10 @@ function AnalyticsPrepTestsPage() {
           <h1 className="text-2xl font-bold leading-[1.3] text-[#062357]">PrepTests</h1>
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
         </div>
+
+        {loading ? (
+          <p className="mb-6 text-sm text-[#666d80]">Loading PrepTest analytics…</p>
+        ) : null}
 
         <section className="mb-6 rounded-3xl border border-[#dfe1e7] bg-white p-6">
           {stats ? (

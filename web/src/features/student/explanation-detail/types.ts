@@ -16,6 +16,8 @@ export type ExplanationVideoBlock = {
   dropdownLabel: string
   dropdownOptions: { value: string; label: string }[]
   postedLine: string
+  videoUrl?: string | null
+  explanationHtml?: string | null
 }
 
 export type ExplanationAnswerPopularityRow = {
@@ -71,4 +73,5 @@ export type ExplanationQuestionDetailView = {
     history: ExplanationHistoryRow[]
   }
   neighbors: { prevRouteKey: string | null; nextRouteKey: string | null }
+  hasExplanationTab: boolean
 }

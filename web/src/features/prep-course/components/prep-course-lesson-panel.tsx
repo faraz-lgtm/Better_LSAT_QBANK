@@ -2,25 +2,48 @@ import { Link } from "react-router-dom"
 import { Bookmark } from "lucide-react"
 
 import { LessonContentRenderer } from "@/features/prep-course/components/lesson-content-renderer"
-import { lessonMetaLine } from "@/features/prep-course/lib/prep-course-format"
-import type { PrepCourse, PrepLesson, PrepLessonLinkedQuestionRef } from "@/lib/api/prep-course"
+import { PrepCourseLessonTypeBadge } from "@/features/prep-course/components/prep-course-lesson-type-badge"
+import { isPrepCourseDrillLessonType, lessonMetaLine } from "@/features/prep-course/lib/prep-course-format"
+import type {
+  PrepCourse,
+  PrepLesson,
+  PrepLessonActiveDrillAttempt,
+  PrepLessonLinkedQuestionRef,
+} from "@/lib/api/prep-course"
 
 type PrepCourseLessonPanelProps = {
   course: PrepCourse
   lesson: PrepLesson | null
   linkedQuestionRefs?: PrepLessonLinkedQuestionRef[]
+  activeDrillAttempt?: PrepLessonActiveDrillAttempt | null
   loading?: boolean
   courseContentHref: string
+  onReviewDrill?: () => void
+  onStartDrill?: () => void
+  startingDrill?: boolean
 }
 
 function PrepCourseLessonPanel({
   course,
   lesson,
   linkedQuestionRefs = [],
+  activeDrillAttempt = null,
   loading = false,
   courseContentHref,
+  onReviewDrill,
+  onStartDrill,
+  startingDrill = false,
 }: PrepCourseLessonPanelProps) {
-  const breadcrumbTopic = lesson?.summary?.trim() || lesson?.title || "Lesson"
+  const isPrepCourseDrill = lesson ? isPrepCourseDrillLessonType(lesson.lesson_type) : false
+  const breadcrumbTopic = isPrepCourseDrill
+    ? lesson?.title ?? "Lesson"
+    : lesson?.summary?.trim() || lesson?.title || "Lesson"
+  const headerMeta =
+    lesson && !loading
+      ? lessonMetaLine(lesson, course.title, {
+          activeDrillAttempted: isPrepCourseDrill ? Boolean(activeDrillAttempt) : true,
+        })
+      : null
 
   return (
     <div className="min-w-0 space-y-6">
@@ -34,7 +57,11 @@ function PrepCourseLessonPanel({
           Prep Course
         </Link>
         <span className="text-[#dfe1e7]">/</span>
-        <Link to={courseContentHref} className="hover:text-[#0d47a1]">
+        <Link
+          to={courseContentHref}
+          state={lesson ? { activeLessonSlug: lesson.slug } : undefined}
+          className="hover:text-[#0d47a1]"
+        >
           Course Content
         </Link>
         <span className="text-[#dfe1e7]">/</span>
@@ -47,10 +74,15 @@ function PrepCourseLessonPanel({
         <>
           <header className="flex items-start justify-between gap-4 border-b border-[#dfe1e7] pb-6">
             <div className="min-w-0">
-              <h1 className="font-serif text-[32px] font-bold leading-[1.25] text-[#062357] md:text-[40px]">
-                {lesson.title}
-              </h1>
-              <p className="mt-2 text-sm tracking-[0.02em] text-[#666d80]">{lessonMetaLine(lesson, course.title)}</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="font-serif text-[32px] font-bold leading-[1.25] text-[#062357] md:text-[40px]">
+                  {lesson.title}
+                </h1>
+                <PrepCourseLessonTypeBadge lessonType={lesson.lesson_type} className="self-center" />
+              </div>
+              {headerMeta ? (
+                <p className="mt-2 text-sm tracking-[0.02em] text-[#666d80]">{headerMeta}</p>
+              ) : null}
             </div>
             <button
               type="button"
@@ -64,7 +96,11 @@ function PrepCourseLessonPanel({
           <LessonContentRenderer
             lesson={lesson}
             linkedQuestionRefs={linkedQuestionRefs}
+            activeDrillAttempt={activeDrillAttempt}
             hideTitle
+            onReviewDrill={onReviewDrill}
+            onStartDrill={onStartDrill}
+            startingDrill={startingDrill}
           />
         </>
       ) : (

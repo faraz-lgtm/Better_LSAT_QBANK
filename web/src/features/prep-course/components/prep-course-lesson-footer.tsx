@@ -7,6 +7,11 @@ type PrepCourseLessonFooterProps = {
   onToggleSidebar: () => void
   onMarkComplete: () => void
   markCompleteDisabled?: boolean
+  primaryAction?: {
+    label: string
+    onClick: () => void
+    disabled?: boolean
+  } | null
 }
 
 function PrepCourseLessonFooter({
@@ -14,6 +19,7 @@ function PrepCourseLessonFooter({
   onToggleSidebar,
   onMarkComplete,
   markCompleteDisabled = false,
+  primaryAction = null,
 }: PrepCourseLessonFooterProps) {
   return (
     <footer className="fixed inset-x-0 bottom-0 z-20 border-t border-[#dfe1e7] bg-[#f2f7ff]">
@@ -27,15 +33,27 @@ function PrepCourseLessonFooter({
           <ArrowLeft className="mr-2 size-4" />
           {showSidebar ? "Hide Lesson" : "Show All Lesson"}
         </Button>
-        <Button
-          type="button"
-          onClick={onMarkComplete}
-          disabled={markCompleteDisabled}
-          className="h-10 rounded-2xl bg-[#0d47a1] px-5 text-sm font-semibold tracking-[0.02em] text-white hover:bg-[#0b3d8c] disabled:opacity-50"
-        >
-          Mark Complete &amp; Continue
-          <ArrowRight className="ml-2 size-4" />
-        </Button>
+        {primaryAction ? (
+          <Button
+            type="button"
+            onClick={primaryAction.onClick}
+            disabled={primaryAction.disabled}
+            className="h-10 cursor-pointer rounded-2xl bg-[#0d47a1] px-5 text-sm font-semibold tracking-[0.02em] text-white hover:bg-[#0b3d8c] disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {primaryAction.label}
+            <ArrowRight className="ml-2 size-4" />
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            onClick={onMarkComplete}
+            disabled={markCompleteDisabled}
+            className="h-10 rounded-2xl bg-[#0d47a1] px-5 text-sm font-semibold tracking-[0.02em] text-white hover:bg-[#0b3d8c] disabled:opacity-50"
+          >
+            Mark Complete &amp; Continue
+            <ArrowRight className="ml-2 size-4" />
+          </Button>
+        )}
       </div>
     </footer>
   )

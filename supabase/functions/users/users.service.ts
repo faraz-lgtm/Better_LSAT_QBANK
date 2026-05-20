@@ -7,8 +7,13 @@ import type { LsacStudentPayload } from './users.mapper.ts'
 import {
   mapLawHubStudentRecordToProfileUpsert,
   mapLsacStudentToProfileUpsert,
+  mapOfficialScoreRow,
+  mapStudyPreferencesRow,
+  parseLsatScoreValue,
+  type OfficialLsatScoreDto,
+  type StudentStudyPreferencesDto,
 } from './users.mapper.ts'
-import type { UsersRepository } from './users.repository.ts'
+import type { ProfileRow, UsersRepository } from './users.repository.ts'
 
 export class AuthorizationError extends Error {
   constructor(message: string) {
@@ -291,6 +296,118 @@ export function createUsersService(deps: UsersServiceDeps) {
         })
         throw error
       }
+    },
+
+    async saveOnboarding(
+      userId: string,
+      input: {
+        fullName: string
+        username?: string | null
+        plannedLsatWindow?: string | null
+        plannedLsatDate?: string | null
+        lawSchoolCycle?: string | null
+        goalScore?: unknown
+        startingScore?: unknown
+        studyDays?: string[]
+        studyHoursLabel?: string | null
+        wantsLessons?: boolean
+      },
+    ): Promise<{ profile: ProfileRow; preferences: StudentStudyPreferencesDto }> {
+      const goalScore = parseLsatScoreValue(input.goalScore)
+      const startingScore = parseLsatScoreValue(input.startingScore)
+
+      const existing = await deps.repository.getProfileById(userId)
+      const profile = await deps.repository.upsertProfile({
+        id: userId,
+        email: existing?.email ?? null,
+        full_name: input.fullName.trim() || null,
+        student_coaching_id: existing?.student_coaching_id ?? null,
+      })
+
+      const preferencesRow = await deps.repository.upsertStudyPreferences({
+        userId,
+        username: input.username?.trim() || null,
+        plannedLsatWindow: input.plannedLsatWindow ?? null,
+        plannedLsatDate: input.plannedLsatDate ?? null,
+        lawSchoolCycle: input.lawSchoolCycle?.trim() || null,
+        goalScore,
+        startingScore,
+        studyDays: input.studyDays ?? [],
+        studyHoursLabel: input.studyHoursLabel ?? null,
+        wantsLessons: input.wantsLessons ?? false,
+      })
+
+      if (startingScore != null) {
+        const existing = await deps.repository.listOfficialLsatScores(userId)
+        const hasStarting = existing.some((s) => s.test_label === 'Starting score')
+        if (!hasStarting) {
+          await deps.repository.upsertOfficialLsatScore({
+            userId,
+            testLabel: 'Starting score',
+            scaledScore: startingScore,
+            sortOrder: 0,
+          })
+        }
+      }
+
+      return {
+        profile,
+        preferences: mapStudyPreferencesRow(preferencesRow),
+      }
+    },
+
+    async getStudyContext(userId: string): Promise<{
+      preferences: StudentStudyPreferencesDto | null
+      officialScores: OfficialLsatScoreDto[]
+    }> {
+      const [preferencesRow, scoreRows] = await Promise.all([
+        deps.repository.getStudyPreferencesByUserId(userId),
+        deps.repository.listOfficialLsatScores(userId),
+      ])
+      return {
+        preferences: preferencesRow ? mapStudyPreferencesRow(preferencesRow) : null,
+        officialScores: scoreRows.map(mapOfficialScoreRow),
+      }
+    },
+
+    async updateStudyPreferences(
+      userId: string,
+      input: {
+        plannedLsatDate?: string | null
+        lawSchoolCycle?: string | null
+        goalScore?: number | null
+      },
+    ): Promise<StudentStudyPreferencesDto> {
+      const row = await deps.repository.upsertStudyPreferences({
+        userId,
+        plannedLsatDate: input.plannedLsatDate,
+        lawSchoolCycle: input.lawSchoolCycle,
+        goalScore: input.goalScore,
+      })
+      return mapStudyPreferencesRow(row)
+    },
+
+    async upsertOfficialScore(
+      userId: string,
+      input: {
+        id?: string
+        testLabel: string
+        testDate?: string | null
+        scaledScore?: number | null
+        sortOrder?: number
+      },
+    ): Promise<OfficialLsatScoreDto> {
+      const label = input.testLabel.trim()
+      if (!label) throw new Error('testLabel is required')
+      const row = await deps.repository.upsertOfficialLsatScore({
+        userId,
+        id: input.id,
+        testLabel: label,
+        testDate: input.testDate ?? null,
+        scaledScore: input.scaledScore ?? null,
+        sortOrder: input.sortOrder,
+      })
+      return mapOfficialScoreRow(row)
     },
 
     async adminListProfiles(userId: string, limit = 200) {

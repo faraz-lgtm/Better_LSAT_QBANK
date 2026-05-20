@@ -38,6 +38,14 @@ function mockRepo(overrides: Partial<{
   listLsacLogEvents: (limit?: number) => Promise<LsacLogEventRow[]>
   getLatestStudentSnapshotByUserId: (userId: string) => Promise<LatestLsacSnapshotRow | null>
   markFirstTimeLogin: (userId: string, isFirstTimeLogin: boolean) => Promise<ProfileRow>
+  getStudyPreferencesByUserId: (userId: string) => Promise<import('./users.repository.ts').StudentStudyPreferencesRow | null>
+  upsertStudyPreferences: (
+    input: import('./users.repository.ts').StudentStudyPreferencesUpsertInput,
+  ) => Promise<import('./users.repository.ts').StudentStudyPreferencesRow>
+  listOfficialLsatScores: (userId: string) => Promise<import('./users.repository.ts').OfficialLsatScoreRow[]>
+  upsertOfficialLsatScore: (
+    input: import('./users.repository.ts').OfficialLsatScoreUpsertInput,
+  ) => Promise<import('./users.repository.ts').OfficialLsatScoreRow>
 }> = {}) {
   const baseRow: ProfileRow = {
     id: 'x',
@@ -84,6 +92,40 @@ function mockRepo(overrides: Partial<{
     markFirstTimeLogin:
       overrides.markFirstTimeLogin ??
       (async (userId, isFirstTimeLogin) => ({ ...baseRow, id: userId, is_first_time_login: isFirstTimeLogin })),
+    getStudyPreferencesByUserId:
+      overrides.getStudyPreferencesByUserId ??
+      (async () => null),
+    upsertStudyPreferences:
+      overrides.upsertStudyPreferences ??
+      (async (input) => ({
+        user_id: input.userId,
+        username: input.username ?? null,
+        planned_lsat_window: input.plannedLsatWindow ?? null,
+        planned_lsat_date: input.plannedLsatDate ?? null,
+        law_school_cycle: input.lawSchoolCycle ?? null,
+        goal_score: input.goalScore ?? null,
+        starting_score: input.startingScore ?? null,
+        study_days: input.studyDays ?? [],
+        study_hours_label: input.studyHoursLabel ?? null,
+        wants_lessons: input.wantsLessons ?? false,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      })),
+    listOfficialLsatScores:
+      overrides.listOfficialLsatScores ??
+      (async () => []),
+    upsertOfficialLsatScore:
+      overrides.upsertOfficialLsatScore ??
+      (async (input) => ({
+        id: input.id ?? 'score-1',
+        user_id: input.userId,
+        test_label: input.testLabel,
+        test_date: input.testDate ?? null,
+        scaled_score: input.scaledScore ?? null,
+        sort_order: input.sortOrder ?? 0,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      })),
   }
 }
 
@@ -398,4 +440,93 @@ Deno.test('createUsersService.inviteSelfViaLawHub skips outbound call when LSAC_
       Deno.env.set('LSAC_SKIP_CALLS', previous)
     }
   }
+})
+
+Deno.test('saveOnboarding upserts profile and preferences and seeds starting score', async () => {
+  let scoreUpserted = false
+  const repository = mockRepo({
+    upsertProfile: async (row) => ({
+      id: row.id,
+      email: row.email,
+      full_name: row.full_name,
+      role: 'student',
+      student_coaching_id: row.student_coaching_id,
+      is_first_time_login: true,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }),
+    upsertOfficialLsatScore: async () => {
+      scoreUpserted = true
+      return {
+        id: 'score-1',
+        user_id: 'user-1',
+        test_label: 'Starting score',
+        test_date: null,
+        scaled_score: 155,
+        sort_order: 0,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      }
+    },
+  })
+  const service = createUsersService({ repository, lawHub: null })
+  const out = await service.saveOnboarding('user-1', {
+    fullName: 'Ada Lovelace',
+    username: 'ada',
+    plannedLsatWindow: '3_6_months',
+    goalScore: '170',
+    startingScore: '155',
+    studyDays: ['monday'],
+    studyHoursLabel: '1-2 hours/day',
+    wantsLessons: true,
+  })
+  assertEquals(out.profile.full_name, 'Ada Lovelace')
+  assertEquals(out.preferences.goalScore, 170)
+  assertEquals(out.preferences.startingScore, 155)
+  assertEquals(scoreUpserted, true)
+})
+
+Deno.test('getStudyContext returns preferences and scores', async () => {
+  const repository = mockRepo({
+    getStudyPreferencesByUserId: async () => ({
+      user_id: 'user-1',
+      username: 'ada',
+      planned_lsat_window: '3_6_months',
+      planned_lsat_date: null,
+      law_school_cycle: '2027',
+      goal_score: 170,
+      starting_score: 155,
+      study_days: [],
+      study_hours_label: null,
+      wants_lessons: false,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }),
+    listOfficialLsatScores: async () => [
+      {
+        id: 'score-1',
+        user_id: 'user-1',
+        test_label: 'June 2025',
+        test_date: '2025-06-01',
+        scaled_score: 159,
+        sort_order: 1,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+    ],
+  })
+  const service = createUsersService({ repository, lawHub: null })
+  const ctx = await service.getStudyContext('user-1')
+  assertEquals(ctx.preferences?.lawSchoolCycle, '2027')
+  assertEquals(ctx.officialScores.length, 1)
+  assertEquals(ctx.officialScores[0]?.scaledScore, 159)
+})
+
+Deno.test('upsertOfficialScore requires non-empty label', async () => {
+  const service = createUsersService({ repository: mockRepo(), lawHub: null })
+  await assertRejects(
+    () => service.upsertOfficialScore('user-1', { testLabel: '  ' }),
+    Error,
+    'testLabel is required',
+  )
 })

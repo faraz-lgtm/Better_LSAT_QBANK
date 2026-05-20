@@ -194,16 +194,81 @@ export async function handleAdminMicro(req: Request, slug: string): Promise<Resp
       if (!courseId) return json({ error: "courseId is required" }, { status: 400 }, corsHeaders)
       return json({ rows: await service.listLessons(user.id, courseId) }, {}, corsHeaders)
     }
-    if (action === "admin-create-lesson") {
+    if (action === "admin-list-curriculum") {
+      const courseId = readString(body, "courseId")
+      if (!courseId) return json({ error: "courseId is required" }, { status: 400 }, corsHeaders)
+      return json(await service.listCurriculum(user.id, courseId), {}, corsHeaders)
+    }
+    if (action === "admin-create-module") {
       const courseId = readString(body, "courseId")
       const title = readString(body, "title")
+      if (!courseId || !title) return json({ error: "courseId and title are required" }, { status: 400 }, corsHeaders)
+      return json({
+        row: await service.createModule(user.id, {
+          courseId,
+          title,
+          durationMinutes: readNumber(body, "durationMinutes"),
+        }),
+      }, {}, corsHeaders)
+    }
+    if (action === "admin-update-module") {
+      const moduleId = readString(body, "moduleId")
+      const data = body.data as Record<string, unknown> | undefined
+      if (!moduleId || !data) return json({ error: "moduleId and data are required" }, { status: 400 }, corsHeaders)
+      return json({ row: await service.updateModule(user.id, moduleId, data) }, {}, corsHeaders)
+    }
+    if (action === "admin-delete-module") {
+      const moduleId = readString(body, "moduleId")
+      if (!moduleId) return json({ error: "moduleId is required" }, { status: 400 }, corsHeaders)
+      return json(await service.deleteModule(user.id, moduleId), {}, corsHeaders)
+    }
+    if (action === "admin-reorder-modules") {
+      const courseId = readString(body, "courseId")
+      const moduleIds = Array.isArray(body.moduleIds) ? body.moduleIds.map(String) : []
+      if (!courseId) return json({ error: "courseId is required" }, { status: 400 }, corsHeaders)
+      return json({ rows: await service.reorderModules(user.id, courseId, moduleIds) }, {}, corsHeaders)
+    }
+    if (action === "admin-create-section") {
+      const moduleId = readString(body, "moduleId")
+      const title = readString(body, "title")
+      if (!moduleId || !title) return json({ error: "moduleId and title are required" }, { status: 400 }, corsHeaders)
+      return json({
+        row: await service.createSection(user.id, {
+          moduleId,
+          title,
+          durationMinutes: readNumber(body, "durationMinutes"),
+        }),
+      }, {}, corsHeaders)
+    }
+    if (action === "admin-update-section") {
+      const sectionId = readString(body, "sectionId")
+      const data = body.data as Record<string, unknown> | undefined
+      if (!sectionId || !data) return json({ error: "sectionId and data are required" }, { status: 400 }, corsHeaders)
+      return json({ row: await service.updateSection(user.id, sectionId, data) }, {}, corsHeaders)
+    }
+    if (action === "admin-delete-section") {
+      const sectionId = readString(body, "sectionId")
+      if (!sectionId) return json({ error: "sectionId is required" }, { status: 400 }, corsHeaders)
+      return json(await service.deleteSection(user.id, sectionId), {}, corsHeaders)
+    }
+    if (action === "admin-reorder-sections") {
+      const moduleId = readString(body, "moduleId")
+      const sectionIds = Array.isArray(body.sectionIds) ? body.sectionIds.map(String) : []
+      if (!moduleId) return json({ error: "moduleId is required" }, { status: 400 }, corsHeaders)
+      return json({ rows: await service.reorderSections(user.id, moduleId, sectionIds) }, {}, corsHeaders)
+    }
+    if (action === "admin-create-lesson") {
+      const courseId = readString(body, "courseId")
+      const sectionId = readString(body, "sectionId")
+      const title = readString(body, "title")
       const slug = readString(body, "slug")
-      if (!courseId || !title || !slug) {
-        return json({ error: "courseId, title and slug are required" }, { status: 400 }, corsHeaders)
+      if (!courseId || !sectionId || !title || !slug) {
+        return json({ error: "courseId, sectionId, title and slug are required" }, { status: 400 }, corsHeaders)
       }
       return json({
         row: await service.createLesson(user.id, {
           courseId,
+          sectionId,
           title,
           slug,
           summary: readString(body, "summary"),
@@ -227,10 +292,10 @@ export async function handleAdminMicro(req: Request, slug: string): Promise<Resp
       return json(await service.deleteLesson(user.id, lessonId), {}, corsHeaders)
     }
     if (action === "admin-reorder-lessons") {
-      const courseId = readString(body, "courseId")
+      const sectionId = readString(body, "sectionId")
       const lessonIds = Array.isArray(body.lessonIds) ? body.lessonIds.map(String) : []
-      if (!courseId) return json({ error: "courseId is required" }, { status: 400 }, corsHeaders)
-      return json({ rows: await service.reorderLessons(user.id, courseId, lessonIds) }, {}, corsHeaders)
+      if (!sectionId) return json({ error: "sectionId is required" }, { status: 400 }, corsHeaders)
+      return json({ rows: await service.reorderLessons(user.id, sectionId, lessonIds) }, {}, corsHeaders)
     }
     if (action === "admin-link-question-to-lesson") {
       const lessonId = readString(body, "lessonId")

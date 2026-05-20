@@ -68,6 +68,46 @@ function priorityLevel(gap: number, attempts: number): 'high' | 'medium' | 'low'
   return 'low'
 }
 
+function difficultyLabel(n: number | null): 'Easiest' | 'Easy' | 'Medium' | 'Hard' | 'Hardest' {
+  if (n == null || n <= 1) return 'Easiest'
+  if (n === 2) return 'Easy'
+  if (n === 3) return 'Medium'
+  if (n === 4) return 'Hard'
+  return 'Hardest'
+}
+
+function latestEventsByQuestion(
+  events: {
+    question_id: string
+    is_correct: boolean
+    selected_answer: string
+    practice_session_id: string
+    created_at: string
+  }[],
+): Map<string, { is_correct: boolean; selected_answer: string }> {
+  const sorted = [...events].sort((a, b) => a.created_at.localeCompare(b.created_at))
+  const map = new Map<string, { is_correct: boolean; selected_answer: string }>()
+  for (const e of sorted) {
+    map.set(e.question_id, { is_correct: e.is_correct, selected_answer: e.selected_answer })
+  }
+  return map
+}
+
+function eventsAtCompletion(
+  events: {
+    question_id: string
+    is_correct: boolean
+    selected_answer: string
+    practice_session_id: string
+    created_at: string
+  }[],
+  completedAt: string,
+): Map<string, { is_correct: boolean; selected_answer: string }> {
+  const cutoff = new Date(completedAt).getTime()
+  const before = events.filter((e) => new Date(e.created_at).getTime() <= cutoff)
+  return latestEventsByQuestion(before)
+}
+
 function headlineFromQuestionMeta(row: QuestionExplanationMetaRow): {
   prepTestTitle: string
   sectionType: 'LR' | 'RC' | 'LG' | null
@@ -100,6 +140,14 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
       const bestScaledScore = scaledScores.length ? Math.max(...scaledScores) : null
       const averageScaledScore = scaledScores.length
         ? round1(scaledScores.reduce((a, b) => a + b, 0) / scaledScores.length)
+        : null
+
+      const percentiles = completedPreptests
+        .map((r) => r.percentile)
+        .filter((p): p is number => p !== null && p !== undefined)
+      const bestPercentile = percentiles.length ? Math.max(...percentiles) : null
+      const averagePercentile = percentiles.length
+        ? round1(percentiles.reduce((a, b) => a + b, 0) / percentiles.length)
         : null
 
       const drillAccuracyPct =
@@ -146,6 +194,8 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
       return {
         bestScaledScore,
         averageScaledScore,
+        bestPercentile,
+        averagePercentile,
         completedPrepTestCount: completedPreptests.length,
         totalQuestionsAnswered,
         drillAccuracyPct,
@@ -166,6 +216,11 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
           rawScore: r.raw_score,
           scaledScore: r.scaled_score,
           percentile: r.percentile,
+          regularRawScore: r.raw_score,
+          regularScaledScore: r.scaled_score,
+          blindReviewRawScore: r.blind_review_raw_score,
+          blindReviewScaledScore: r.blind_review_scaled_score,
+          blindReviewPercentile: r.blind_review_percentile,
           completedAt: r.completed_at,
         }
       })
@@ -173,12 +228,20 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
 
     async getPriorities(userId: string) {
       const events = await deps.repository.listAnswerEventsWithTypes(userId)
+      const diffEvents = await deps.repository.listAnswerEventsWithTypeDifficulty(userId)
       const byType = new Map<string, { correct: number; total: number }>()
+      const difficultyByType = new Map<string, number[]>()
       for (const e of events) {
         const cur = byType.get(e.question_type_id) ?? { correct: 0, total: 0 }
         cur.total += 1
         if (e.is_correct) cur.correct += 1
         byType.set(e.question_type_id, cur)
+      }
+      for (const e of diffEvents) {
+        if (!e.question_type_id || e.difficulty == null) continue
+        const arr = difficultyByType.get(e.question_type_id) ?? []
+        arr.push(e.difficulty)
+        difficultyByType.set(e.question_type_id, arr)
       }
       const ids = [...byType.keys()]
       const types = await deps.repository.listQuestionTypesByIds(ids)
@@ -190,6 +253,11 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
         const goal = meta?.goal_accuracy != null ? Number(meta.goal_accuracy) : null
         const gap = goal != null ? round1(goal - accuracyPct) : null
         const pl = gap != null ? priorityLevel(gap, total) : priorityLevel(0, total)
+        const diffs = difficultyByType.get(questionTypeId) ?? []
+        const difficulty =
+          diffs.length > 0 ? Math.round(diffs.reduce((a, b) => a + b, 0) / diffs.length) : null
+        const avgPerTest =
+          meta?.avg_per_test != null ? Number(meta.avg_per_test) : null
         return {
           questionTypeId,
           name: meta?.name ?? 'Unknown type',
@@ -200,6 +268,9 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
           goalAccuracy: goal,
           gap,
           priorityLevel: pl,
+          difficulty,
+          averagePerTest: avgPerTest,
+          reviewCount: total,
         }
       })
 
@@ -238,11 +309,15 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
           return {
             id: s.id,
             kind: s.kind,
+            prepTestId: s.prep_test_id,
             startedAt: s.started_at,
             completedAt: s.completed_at,
             rawScore: s.raw_score,
             scaledScore: s.scaled_score,
             percentile: s.percentile,
+            blindReviewRawScore: s.blind_review_raw_score,
+            blindReviewScaledScore: s.blind_review_scaled_score,
+            blindReviewPercentile: s.blind_review_percentile,
             bookmarked: s.bookmarked,
             excluded: s.excluded,
             metadata: s.metadata,
@@ -313,6 +388,99 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
         return (a.questionNumber ?? 0) - (b.questionNumber ?? 0)
       })
       return { explanations }
+    },
+
+    async getPrepTestSessionDetail(userId: string, sessionId: string) {
+      const session = await deps.repository.getPracticeSession(sessionId, userId)
+      if (!session || session.kind !== 'PREPTEST' || !session.completed_at) {
+        throw new Error('PrepTest session not found or not completed')
+      }
+      const prepTestId = session.prep_test_id
+      if (!prepTestId) throw new Error('PrepTest session missing prep_test_id')
+
+      const apt = relOne(session.admin_prep_tests)
+      const sectionSessions = await deps.repository.listSectionSessionsForPrepTest(userId, prepTestId)
+      const sectionIds = sectionSessions.map((s) => s.id)
+      const events = await deps.repository.listAnswerEventsForSessions(sectionIds, userId)
+      const latest = latestEventsByQuestion(events)
+
+      const completedAt = session.completed_at
+      const atCompletion = eventsAtCompletion(events, completedAt)
+
+      const questionsRaw = await deps.repository.listPrepTestQuestionsWithMeta(prepTestId)
+      let correct = 0
+      let total = 0
+      const questionRows: Array<{
+        id: string
+        number: number
+        title: string
+        tags: string[]
+        difficulty: ReturnType<typeof difficultyLabel>
+        difficultyDots: number
+        actualCorrect: boolean
+        blindReviewCorrect: boolean
+        correctLetter: string
+        selectedLetter: string | null
+        sectionType: 'LR' | 'RC' | 'LG' | null
+        sectionNumber: number | null
+      }> = []
+
+      for (const row of questionsRaw) {
+        const qid = String(row.id)
+        const sec = relOne(
+          row.admin_sections as
+            | { section_type: 'LR' | 'RC' | 'LG' | null; section_number: number | null }
+            | { section_type: 'LR' | 'RC' | 'LG' | null; section_number: number | null }[]
+            | null,
+        )
+        const qt = relOne(row.question_types as { name: string } | { name: string }[] | null)
+        const diff = typeof row.difficulty === 'number' ? row.difficulty : null
+        const initial = atCompletion.get(qid)
+        const final = latest.get(qid)
+        total += 1
+        if (initial?.is_correct) correct += 1
+        const stem = typeof row.stem_text === 'string' ? row.stem_text.trim() : ''
+        const title =
+          qt?.name?.trim() ||
+          (stem.length > 60 ? `${stem.slice(0, 60)}…` : stem) ||
+          `Question ${row.question_number ?? total}`
+        questionRows.push({
+          id: qid,
+          number: typeof row.question_number === 'number' ? row.question_number : total,
+          title,
+          tags: qt?.name ? [qt.name] : [],
+          difficulty: difficultyLabel(diff),
+          difficultyDots: diff ?? 3,
+          actualCorrect: initial?.is_correct ?? false,
+          blindReviewCorrect: final?.is_correct ?? false,
+          correctLetter: typeof row.correct_answer === 'string' ? row.correct_answer.trim().toUpperCase().slice(0, 1) : 'A',
+          selectedLetter: final?.selected_answer ?? initial?.selected_answer ?? null,
+          sectionType: sec?.section_type ?? null,
+          sectionNumber: sec?.section_number ?? null,
+        })
+      }
+
+      const incorrect = total - correct
+      const scaled = session.scaled_score ?? session.raw_score ?? 0
+      const blindScaled = session.blind_review_scaled_score ?? session.blind_review_raw_score ?? scaled
+
+      return {
+        sessionId: session.id,
+        prepTestId,
+        prepTestTitle: apt?.title ?? 'PrepTest',
+        moduleId: apt?.module_id ?? null,
+        completedAt: session.completed_at,
+        startedAt: session.started_at,
+        excluded: session.excluded,
+        totalQuestions: total,
+        scaledScore: scaled,
+        blindReviewScore: blindScaled,
+        correct,
+        incorrect,
+        percentile: session.percentile,
+        blindReviewPercentile: session.blind_review_percentile,
+        questions: questionRows,
+      }
     },
 
     async getExplanationDetail(_userId: string, questionId: string): Promise<ExplanationDetailPayload> {

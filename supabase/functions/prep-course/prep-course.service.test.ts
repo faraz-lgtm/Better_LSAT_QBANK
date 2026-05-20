@@ -9,7 +9,26 @@ function mockRepo(
     listPublishedCourses: () => Promise<PrepCourseRow[]>
     getPublishedCourseBySlug: (slug: string) => Promise<PrepCourseRow | null>
     listPublishedLessonsByCourse: (courseId: string) => Promise<PrepLessonRow[]>
+    listPublishedCurriculum: (courseId: string) => Promise<{
+      modules: Array<{
+        id: string
+        course_id: string
+        title: string
+        sort_order: number
+        duration_minutes: number | null
+        sections: Array<{
+          id: string
+          module_id: string
+          title: string
+          sort_order: number
+          duration_minutes: number | null
+          lessons: PrepLessonRow[]
+        }>
+      }>
+    }>
     getPublishedLessonBySlug: (courseId: string, lessonSlug: string) => Promise<PrepLessonRow | null>
+    listCompletedLessonSlugsByCourse: (userId: string, courseId: string) => Promise<string[]>
+    upsertLessonCompletion: (userId: string, lessonId: string) => Promise<void>
     createCourse: (input: {
       slug: string
       title: string
@@ -51,6 +70,38 @@ function mockRepo(
       subscription_type: string | null
       fetched_at: string
     } | null>
+    listLessonLinkedQuestions: (lessonId: string) => Promise<
+      Array<{
+        question_id: string
+        question_number: number | null
+        prep_test_module_id: string | null
+        prep_test_title: string | null
+        section_number: number | null
+        section_type: string | null
+        section_title: string | null
+      }>
+    >
+    getLatestLessonDrillAttempt: (
+      userId: string,
+      lessonId: string,
+    ) => Promise<{
+      id: string
+      started_at: string
+      completed_at: string | null
+      raw_score: number | null
+      metadata: Record<string, unknown>
+    } | null>
+    listAnswerEventsForSession: (
+      sessionId: string,
+      userId: string,
+    ) => Promise<
+      Array<{
+        question_id: string
+        selected_answer: string
+        is_correct: boolean
+        created_at: string
+      }>
+    >
   }> = {},
 ) {
   const course: PrepCourseRow = {
@@ -65,6 +116,7 @@ function mockRepo(
   const lesson: PrepLessonRow = {
     id: 'lesson-1',
     course_id: 'course-1',
+    section_id: 'section-1',
     slug: 'lesson-1',
     title: 'Lesson 1',
     lesson_type: 'video_text',
@@ -96,12 +148,41 @@ function mockRepo(
     getPublishedCourseBySlug:
       overrides.getPublishedCourseBySlug ??
       (async () => course),
+    listPublishedCurriculum:
+      overrides.listPublishedCurriculum ??
+      (async () => ({
+        modules: [
+          {
+            id: 'mod-1',
+            course_id: 'course-1',
+            title: 'Module 1',
+            sort_order: 1,
+            duration_minutes: null,
+            sections: [
+              {
+                id: 'section-1',
+                module_id: 'mod-1',
+                title: 'General',
+                sort_order: 1,
+                duration_minutes: null,
+                lessons: [lesson],
+              },
+            ],
+          },
+        ],
+      })),
     listPublishedLessonsByCourse:
       overrides.listPublishedLessonsByCourse ??
       (async () => [lesson]),
     getPublishedLessonBySlug:
       overrides.getPublishedLessonBySlug ??
-      (async () => lesson),
+      (async (_courseId, slug) => (slug === lesson.slug ? lesson : null)),
+    listCompletedLessonSlugsByCourse:
+      overrides.listCompletedLessonSlugsByCourse ??
+      (async () => []),
+    upsertLessonCompletion:
+      overrides.upsertLessonCompletion ??
+      (async () => {}),
     createCourse:
       overrides.createCourse ??
       (async (input) => ({ ...course, ...input, is_published: input.isPublished })),
@@ -126,6 +207,15 @@ function mockRepo(
     updateLesson:
       overrides.updateLesson ??
       (async (input) => ({ ...lesson, id: input.lessonId })),
+    listLessonLinkedQuestions:
+      overrides.listLessonLinkedQuestions ??
+      (async () => []),
+    getLatestLessonDrillAttempt:
+      overrides.getLatestLessonDrillAttempt ??
+      (async () => null),
+    listAnswerEventsForSession:
+      overrides.listAnswerEventsForSession ??
+      (async () => []),
   }
 }
 
@@ -179,6 +269,106 @@ Deno.test('prep-course service returns course and lessons by slug', async () => 
   const out = await service.getCourseWithLessons('user-1', 'PREP COURSE')
   assertEquals(out.course.slug, 'prep-course')
   assertEquals(out.lessons.length, 1)
+  assertEquals(out.curriculum.modules.length, 1)
+  assertEquals(out.completedLessonSlugs, [])
+})
+
+Deno.test('prep-course service returns completed lesson slugs with course', async () => {
+  const service = createPrepCourseService({
+    repository: mockRepo({
+      listCompletedLessonSlugsByCourse: async () => ['lesson-1'],
+    }),
+  })
+  const out = await service.getCourseWithLessons('user-1', 'prep-course')
+  assertEquals(out.completedLessonSlugs, ['lesson-1'])
+})
+
+Deno.test('prep-course service completeLesson upserts and returns slugs', async () => {
+  let upserted = false
+  const service = createPrepCourseService({
+    repository: mockRepo({
+      upsertLessonCompletion: async (userId, lessonId) => {
+        upserted = true
+        assertEquals(userId, 'user-1')
+        assertEquals(lessonId, 'lesson-1')
+      },
+      listCompletedLessonSlugsByCourse: async () => ['lesson-1'],
+    }),
+  })
+  const out = await service.completeLesson('user-1', 'prep-course', 'lesson-1')
+  assertEquals(upserted, true)
+  assertEquals(out.completedLessonSlugs, ['lesson-1'])
+})
+
+Deno.test('prep-course service completeLesson rejects missing lesson', async () => {
+  const service = createPrepCourseService({
+    repository: mockRepo({
+      getPublishedLessonBySlug: async () => null,
+    }),
+  })
+  await assertRejects(
+    () => service.completeLesson('user-1', 'prep-course', 'missing'),
+    Error,
+    'Lesson not found',
+  )
+})
+
+Deno.test('prep-course getLesson returns linked questions and active drill attempt', async () => {
+  const activeLesson: PrepLessonRow = {
+    id: 'lesson-drill',
+    course_id: 'course-1',
+    section_id: 'section-1',
+    slug: 'active-drill-1',
+    title: 'Active Drill',
+    lesson_type: 'active_drill',
+    sort_order: 1,
+    summary: 'Practice one question.',
+    duration_minutes: 0,
+    video_url: null,
+    text_content: '<p>Full content after drill.</p>',
+    is_published: true,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  }
+  const service = createPrepCourseService({
+    repository: mockRepo({
+      getPublishedLessonBySlug: async (_courseId, slug) =>
+        slug === activeLesson.slug ? activeLesson : null,
+      listLessonLinkedQuestions: async () => [
+        {
+          question_id: 'q-99',
+          question_number: 5,
+          prep_test_module_id: 'LSAC133',
+          prep_test_title: null,
+          section_number: 2,
+          section_type: 'LR',
+          section_title: null,
+        },
+      ],
+      getLatestLessonDrillAttempt: async () => ({
+        id: 'sess-drill',
+        started_at: '2026-01-01T00:00:00Z',
+        completed_at: '2026-01-01T00:05:00Z',
+        raw_score: 1,
+        metadata: { questionIds: ['q-99'], lessonId: 'lesson-drill' },
+      }),
+      listAnswerEventsForSession: async () => [
+        {
+          question_id: 'q-99',
+          selected_answer: 'C',
+          is_correct: true,
+          created_at: '2026-01-01T00:01:00Z',
+        },
+      ],
+    }),
+  })
+  const out = await service.getLesson('user-1', 'prep-course', 'active-drill-1')
+  assertEquals(out.lesson.lesson_type, 'active_drill')
+  assertEquals(out.linkedQuestionRefs.length, 1)
+  assertEquals(out.linkedQuestionRefs[0]?.question_id, 'q-99')
+  assertEquals(out.activeDrillAttempt?.rawScore, 1)
+  assertEquals(out.activeDrillAttempt?.questionCount, 1)
+  assertEquals(out.activeDrillAttempt?.elapsedSeconds, 300)
 })
 
 Deno.test('prep-course service blocks access when entitlement enforcement is enabled', async () => {

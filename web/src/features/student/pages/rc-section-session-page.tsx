@@ -71,7 +71,7 @@ function RcQuestionPanel({ question, questionNumber, findQuery }: RcQuestionPane
           <LrDrillOptionRow
             key={index}
             index={index}
-            text={choice}
+            html={choice}
             selected={selectedChoice === index}
             hidden={Boolean(hiddenChoices[index])}
             onSelect={() => setSelectedChoice(index)}

@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { Loader2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
@@ -9,15 +10,11 @@ import {
   takeLastByTimeRange,
   type TimeRangeValue,
 } from "@/features/student/components/time-range-filter"
-import {
-  mockLrSectionProgress,
-  mockLrSectionSummary,
-  mockRcSectionProgress,
-  mockRcSectionSummary,
-  type SectionProgressPoint,
-  type SectionSummary,
-} from "@/features/student/lib/mock-analytics-sections"
-import { mockPrepTestHistory } from "@/features/student/lib/mock-analytics-drills"
+import type { SectionProgressPoint, SectionSummary } from "@/features/student/lib/mock-analytics-sections"
+import { mapPrepTestSessionToHistoryEntry } from "@/features/student/analytics/map-analytics"
+import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
+import type { KindBreakdownSection, PracticeSessionSummary } from "@/lib/api/analytics"
+import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 
 const Y_AXIS_LABELS = [100, 84, 68, 52, 36, 20] as const
 
@@ -207,21 +204,99 @@ function SectionColumn({
   )
 }
 
+function sectionSummaryFromSessions(
+  sessions: PracticeSessionSummary[],
+  sectionType: "LR" | "RC",
+  breakdown?: KindBreakdownSection,
+): SectionSummary {
+  const filtered = sessions.filter((s) => s.sectionType === sectionType && s.completedAt)
+  const scores = filtered.map((s) => s.rawScore ?? 0)
+  const best = scores.length ? Math.max(...scores) : 0
+  const avgAcc = breakdown?.accuracyPct ?? 0
+  return {
+    bestScore: String(best),
+    bestAccent: "#0d47a1",
+    averageScore: `${avgAcc}%`,
+    averageAccent: sectionType === "LR" ? "#ae8b00" : "#ff9d51",
+  }
+}
+
+function sectionProgressFromSessions(
+  sessions: PracticeSessionSummary[],
+  sectionType: "LR" | "RC",
+): SectionProgressPoint[] {
+  return sessions
+    .filter((s) => s.sectionType === sectionType && s.completedAt)
+    .sort((a, b) => new Date(a.completedAt!).getTime() - new Date(b.completedAt!).getTime())
+    .map((s, i) => ({
+      label: s.sectionTitle?.slice(0, 8) ?? `Sec ${i + 1}`,
+      rawScore: s.rawScore ?? 0,
+      ptEquivalent: s.scaledScore ?? s.rawScore ?? 0,
+    }))
+}
+
 function AnalyticsSectionsPage() {
+  const analyticsApi = useAnalyticsApi()
+  const practiceApi = usePracticeApi()
+  const [loading, setLoading] = useState(true)
+  const [sectionSessions, setSectionSessions] = useState<PracticeSessionSummary[]>([])
+  const [prepHistory, setPrepHistory] = useState<PrepTestHistoryEntry[]>([])
+  const [breakdownSections, setBreakdownSections] = useState<KindBreakdownSection[]>([])
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
   const [lrScoreTab, setLrScoreTab] = useState<SectionScoreTab>("ptEquivalent")
   const [rcScoreTab, setRcScoreTab] = useState<SectionScoreTab>("ptEquivalent")
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
-  const [bookmarks, setBookmarks] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(mockPrepTestHistory.map((entry) => [entry.id, entry.bookmarked])),
+  const [bookmarks, setBookmarks] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    if (!analyticsApi) {
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    void Promise.all([
+      analyticsApi.getSessions({ kind: "SECTION", limit: 100 }),
+      analyticsApi.getSessions({ kind: "PREPTEST", limit: 50 }),
+      analyticsApi.getKindBreakdown("SECTION"),
+    ])
+      .then(([sections, preptests, breakdown]) => {
+        setSectionSessions(sections.sessions)
+        setPrepHistory(
+          preptests.sessions.map(mapPrepTestSessionToHistoryEntry).filter((e): e is PrepTestHistoryEntry => e != null),
+        )
+        setBreakdownSections(breakdown.sections)
+        setBookmarks(
+          Object.fromEntries(
+            preptests.sessions.map((s) => [s.id, s.bookmarked]),
+          ),
+        )
+      })
+      .finally(() => setLoading(false))
+  }, [analyticsApi])
+
+  const lrBreakdown = breakdownSections.find((s) => s.sectionType === "LR")
+  const rcBreakdown = breakdownSections.find((s) => s.sectionType === "RC")
+  const lrSummary = useMemo(
+    () => sectionSummaryFromSessions(sectionSessions, "LR", lrBreakdown),
+    [sectionSessions, lrBreakdown],
+  )
+  const rcSummary = useMemo(
+    () => sectionSummaryFromSessions(sectionSessions, "RC", rcBreakdown),
+    [sectionSessions, rcBreakdown],
   )
 
-  const lrPoints = useMemo(() => takeLastByTimeRange(mockLrSectionProgress, timeRange), [timeRange])
-  const rcPoints = useMemo(() => takeLastByTimeRange(mockRcSectionProgress, timeRange), [timeRange])
+  const lrPoints = useMemo(
+    () => takeLastByTimeRange(sectionProgressFromSessions(sectionSessions, "LR"), timeRange),
+    [sectionSessions, timeRange],
+  )
+  const rcPoints = useMemo(
+    () => takeLastByTimeRange(sectionProgressFromSessions(sectionSessions, "RC"), timeRange),
+    [sectionSessions, timeRange],
+  )
 
   const entries = useMemo(
-    () => mockPrepTestHistory.map((entry) => ({ ...entry, bookmarked: bookmarks[entry.id] ?? entry.bookmarked })),
-    [bookmarks],
+    () => prepHistory.map((entry) => ({ ...entry, bookmarked: bookmarks[entry.id] ?? entry.bookmarked })),
+    [bookmarks, prepHistory],
   )
 
   const visibleEntries = useMemo(() => {
@@ -230,7 +305,11 @@ function AnalyticsSectionsPage() {
   }, [entries, bookmarkedOnly, timeRange])
 
   function handleToggleBookmark(id: string) {
-    setBookmarks((current) => ({ ...current, [id]: !current[id] }))
+    const next = !(bookmarks[id] ?? false)
+    setBookmarks((current) => ({ ...current, [id]: next }))
+    if (practiceApi) {
+      void practiceApi.updateSession({ sessionId: id, bookmarked: next })
+    }
   }
 
   return (
@@ -243,6 +322,12 @@ function AnalyticsSectionsPage() {
         ]}
       />
       <StudentMain>
+        {loading ? (
+          <div className="mb-4 flex items-center gap-2 text-sm text-[#666d80]">
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+            Loading section analytics…
+          </div>
+        ) : null}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-2xl font-bold leading-[1.3] text-[#062357]">Section</h1>
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
@@ -256,7 +341,7 @@ function AnalyticsSectionsPage() {
               badgeBg="#fffbeb"
               badgeColor="#ae8b00"
               progressTitle="LR PROGRESS"
-              summary={mockLrSectionSummary}
+              summary={lrSummary}
               points={lrPoints}
               scoreTab={lrScoreTab}
               onScoreTabChange={setLrScoreTab}
@@ -268,7 +353,7 @@ function AnalyticsSectionsPage() {
               badgeBg="#fff3ea"
               badgeColor="#ff9d51"
               progressTitle="RC PROGRESS"
-              summary={mockRcSectionSummary}
+              summary={rcSummary}
               points={rcPoints}
               scoreTab={rcScoreTab}
               onScoreTabChange={setRcScoreTab}

@@ -25,6 +25,53 @@ export type AdminBulkImportPreviewRow = {
   errors: string[]
 }
 
+export type PrepCourseModuleRow = {
+  id: string
+  course_id: string
+  title: string
+  sort_order: number
+  duration_minutes: number | null
+  created_at: string
+  updated_at: string
+}
+
+export type PrepCourseSectionRow = {
+  id: string
+  module_id: string
+  title: string
+  sort_order: number
+  duration_minutes: number | null
+  created_at: string
+  updated_at: string
+}
+
+export type PrepCourseLessonRow = {
+  id: string
+  course_id: string
+  section_id: string
+  slug: string
+  title: string
+  summary: string | null
+  video_url: string | null
+  text_content: string | null
+  duration_minutes: number | null
+  lesson_type: "video_text" | "active_drill" | "adaptive_drill" | "rep_work"
+  is_published: boolean
+  sort_order: number
+}
+
+export type PrepCourseSectionWithLessons = PrepCourseSectionRow & {
+  lessons: PrepCourseLessonRow[]
+}
+
+export type PrepCourseModuleWithSections = PrepCourseModuleRow & {
+  sections: PrepCourseSectionWithLessons[]
+}
+
+export type PrepCourseCurriculum = {
+  modules: PrepCourseModuleWithSections[]
+}
+
 export type AdminBulkImportDryRunResult = {
   course: {
     id: string | null
@@ -292,8 +339,90 @@ export function createAdminApi(supabase: SupabaseClient) {
       return data?.rows ?? []
     },
 
+    async listCurriculum(courseId: string): Promise<PrepCourseCurriculum> {
+      const { data, error } = await invokeAdminFn<PrepCourseCurriculum>("admin-list-curriculum", {
+        method: "POST",
+        body: { courseId },
+      })
+      if (error) throw error
+      return data ?? { modules: [] }
+    },
+
+    async createModule(payload: { courseId: string; title: string; durationMinutes?: number | null }) {
+      const { data, error } = await invokeAdminFn<{ row: PrepCourseModuleRow }>("admin-create-module", {
+        method: "POST",
+        body: payload,
+      })
+      if (error) throw error
+      return data?.row
+    },
+
+    async updateModule(moduleId: string, data: Record<string, unknown>) {
+      const { data: out, error } = await invokeAdminFn<{ row: PrepCourseModuleRow }>("admin-update-module", {
+        method: "POST",
+        body: { moduleId, data },
+      })
+      if (error) throw error
+      return out?.row
+    },
+
+    async deleteModule(moduleId: string) {
+      const { data, error } = await invokeAdminFn<{ success: boolean }>("admin-delete-module", {
+        method: "POST",
+        body: { moduleId },
+      })
+      if (error) throw error
+      return data?.success ?? false
+    },
+
+    async reorderModules(courseId: string, moduleIds: string[]) {
+      const { data, error } = await invokeAdminFn<{ rows: PrepCourseModuleRow[] }>("admin-reorder-modules", {
+        method: "POST",
+        body: { courseId, moduleIds },
+      })
+      if (error) throw error
+      return data?.rows ?? []
+    },
+
+    async createSection(payload: { moduleId: string; title: string; durationMinutes?: number | null }) {
+      const { data, error } = await invokeAdminFn<{ row: PrepCourseSectionRow }>("admin-create-section", {
+        method: "POST",
+        body: payload,
+      })
+      if (error) throw error
+      return data?.row
+    },
+
+    async updateSection(sectionId: string, data: Record<string, unknown>) {
+      const { data: out, error } = await invokeAdminFn<{ row: PrepCourseSectionRow }>("admin-update-section", {
+        method: "POST",
+        body: { sectionId, data },
+      })
+      if (error) throw error
+      return out?.row
+    },
+
+    async deleteSection(sectionId: string) {
+      const { data, error } = await invokeAdminFn<{ success: boolean }>("admin-delete-section", {
+        method: "POST",
+        body: { sectionId },
+      })
+      if (error) throw error
+      return data?.success ?? false
+    },
+
+    async reorderSections(moduleId: string, sectionIds: string[]) {
+      const { data, error } = await invokeAdminFn<{ rows: PrepCourseSectionRow[] }>("admin-reorder-sections", {
+        method: "POST",
+        body: { moduleId, sectionIds },
+      })
+      if (error) throw error
+      return data?.rows ?? []
+    },
+
     async createLesson(payload: {
       courseId: string
+      sectionId: string
       title: string
       slug: string
       summary?: string
@@ -329,10 +458,10 @@ export function createAdminApi(supabase: SupabaseClient) {
       return data?.success ?? false
     },
 
-    async reorderLessons(courseId: string, lessonIds: string[]) {
+    async reorderLessons(sectionId: string, lessonIds: string[]) {
       const { data, error } = await invokeAdminFn<{ rows: unknown[] }>("admin-reorder-lessons", {
         method: "POST",
-        body: { courseId, lessonIds },
+        body: { sectionId, lessonIds },
       })
       if (error) throw error
       return data?.rows ?? []

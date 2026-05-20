@@ -4,6 +4,7 @@ import { ChevronRight, Sparkles } from "lucide-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
+import { HtmlContent } from "@/lib/html/html-content"
 import { cn } from "@/lib/utils"
 
 type ExplanationQuestionTabPanelProps = {
@@ -26,13 +27,10 @@ function ExplanationQuestionTabPanel({ view }: ExplanationQuestionTabPanelProps)
           </button>
         </CardHeader>
         <CardContent className="pt-4">
-          <div className="max-h-[min(70vh,520px)] overflow-y-auto text-justify text-[15px] leading-relaxed text-[color:var(--text-h)]">
-            {view.passage.body.split("\n\n").map((para, i) => (
-              <p key={i} className={i > 0 ? "mt-4" : undefined}>
-                {para}
-              </p>
-            ))}
-          </div>
+          <HtmlContent
+            html={view.passage.body}
+            className="max-h-[min(70vh,520px)] overflow-y-auto text-justify text-[15px] leading-relaxed text-[color:var(--text-h)]"
+          />
         </CardContent>
       </Card>
 
@@ -44,7 +42,10 @@ function ExplanationQuestionTabPanel({ view }: ExplanationQuestionTabPanelProps)
           <Switch checked={showCorrect} onChange={(e) => setShowCorrect(e.target.checked)} aria-label="Show correct answer" />
         </CardHeader>
         <CardContent className="space-y-5 pt-4">
-          <p className="mb-2 text-base font-semibold leading-snug text-[color:var(--color-student-heading)]">{view.questionStem}</p>
+          <HtmlContent
+            html={view.questionStem}
+            className="mb-2 text-base font-semibold leading-snug text-[color:var(--color-student-heading)]"
+          />
           <ul className="mt-2 space-y-3">
             {view.choices.map((c) => {
               const isCorrect = c.id === view.correctChoiceId
@@ -61,7 +62,7 @@ function ExplanationQuestionTabPanel({ view }: ExplanationQuestionTabPanelProps)
                     <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-[color:var(--greyscale-100)] text-sm font-bold text-[color:var(--text)]">
                       {c.index}
                     </span>
-                    <span className="min-w-0 flex-1">{c.text}</span>
+                    <HtmlContent html={c.text} className="min-w-0 flex-1" />
                     <ChevronRight className="size-4 shrink-0 text-[#94a3b8]" aria-hidden />
                   </button>
                 </li>

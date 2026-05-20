@@ -46,6 +46,7 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
   let limit = 20
   let offset = 0
   let sessionKind: PracticeSessionKind | undefined
+  let sessionId: string | undefined
 
   if (req.method === 'GET') {
     const kindParam = url.searchParams.get('kind')
@@ -55,6 +56,8 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
     limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 20))
     offset = Math.max(0, Number(url.searchParams.get('offset')) || 0)
     sessionKind = sk && isSessionKind(sk) ? sk : undefined
+    const sid = url.searchParams.get('sessionId')
+    sessionId = typeof sid === 'string' && sid.length > 0 ? sid : undefined
   } else {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
     const readNum = (v: unknown, fallback: number) => {
@@ -68,6 +71,7 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
     limit = Math.min(100, Math.max(1, readNum(body.limit, 20)))
     offset = Math.max(0, readNum(body.offset, 0))
     sessionKind = skRaw && isSessionKind(skRaw) ? skRaw : undefined
+    sessionId = typeof body.sessionId === 'string' && body.sessionId.length > 0 ? body.sessionId : undefined
   }
 
   const service = createAnalyticsService({
@@ -102,6 +106,18 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
       }
       const data = await service.getKindBreakdown(user.id, sessionKind)
       return json(data, {}, corsHeaders)
+    }
+    if (resource === 'prep-test-detail') {
+      if (!sessionId) {
+        return json({ error: 'sessionId is required' }, { status: 400 }, corsHeaders)
+      }
+      try {
+        const data = await service.getPrepTestSessionDetail(user.id, sessionId)
+        return json(data, {}, corsHeaders)
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Not found'
+        return json({ error: msg }, { status: 404 }, corsHeaders)
+      }
     }
 
     return json({ error: 'Unknown analytics slug' }, { status: 400 }, corsHeaders)

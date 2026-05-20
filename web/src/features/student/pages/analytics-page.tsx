@@ -1,22 +1,30 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts"
+import { Loader2, Bookmark } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
-import { createAnalyticsApi, type AnalyticsOverview, type PracticeSessionSummary, type PriorityRow, type TrajectoryPoint } from "@/lib/api/analytics"
-import { createPracticeApi } from "@/lib/api/practice"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-import { Bookmark, Loader2 } from "lucide-react"
+import {
+  ScoreProgressChart,
+  ScoreProgressTabs,
+  SectionCard,
+  StatTile,
+  type ScoreProgressTab,
+} from "@/features/student/analytics/components/analytics-overview-ui"
+import {
+  mapOverviewToHeadlineStats,
+  mapOverviewToSecondaryStats,
+  mapPrioritiesToSections,
+  mapTrajectoryToScoreProgress,
+} from "@/features/student/analytics/map-analytics"
+import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
+import {
+  TimeRangeFilter,
+  takeLastByTimeRange,
+  type TimeRangeValue,
+} from "@/features/student/components/time-range-filter"
+import type { AnalyticsOverview, PracticeSessionSummary, PriorityRow } from "@/lib/api/analytics"
 
 const VALID_TABS = new Set(["overview", "priorities", "history"])
 
@@ -27,53 +35,30 @@ function tabFromSearch(raw: string | null): string {
 
 function formatShortDate(iso: string): string {
   try {
-    const d = new Date(iso)
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" })
   } catch {
     return iso
   }
 }
 
-
 function PrioritiesTab() {
+  const analyticsApi = useAnalyticsApi()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [rows, setRows] = useState<PriorityRow[]>([])
 
-  const analyticsApi = useMemo(() => {
-    try {
-      return createAnalyticsApi(getSupabaseBrowserClient())
-    } catch {
-      return null
-    }
-  }, [])
-
   useEffect(() => {
-    let cancelled = false
-    const timer = window.setTimeout(() => {
-      if (cancelled) return
-      if (!analyticsApi) {
-        setLoading(false)
-        setError("Supabase env is missing.")
-        return
-      }
-      setLoading(true)
-      void analyticsApi
-        .getPriorities()
-        .then((p) => {
-          if (!cancelled) setRows(p)
-        })
-        .catch((e) => {
-          if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load")
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false)
-        })
-    }, 0)
-    return () => {
-      cancelled = true
-      window.clearTimeout(timer)
+    if (!analyticsApi) {
+      setLoading(false)
+      setError("Supabase env is missing.")
+      return
     }
+    setLoading(true)
+    void analyticsApi
+      .getPriorities()
+      .then(setRows)
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
+      .finally(() => setLoading(false))
   }, [analyticsApi])
 
   if (loading) {
@@ -121,30 +106,12 @@ function PrioritiesTab() {
             {r.goalAccuracy != null ? (
               <span>
                 Goal: <strong className="text-[#082c6b]">{r.goalAccuracy}%</strong>
-                {r.gap != null ? (
-                  <span className="ml-1">
-                    (gap:{" "}
-                    <span className="font-semibold text-[#082c6b]">{r.gap > 0 ? `+${r.gap}` : r.gap}</span>)
-                  </span>
-                ) : null}
               </span>
             ) : null}
             <span>
               Attempts: <strong className="text-[#082c6b]">{r.attemptCount}</strong>
             </span>
           </div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#e8ecf2]">
-            <div className="h-full rounded-full bg-[#0d47a1]" style={{ width: `${Math.min(100, r.accuracyPct)}%` }} />
-          </div>
-          {r.goalAccuracy != null ? (
-            <div
-              className="relative -mt-2 h-0"
-              style={{ marginLeft: `${Math.min(100, r.goalAccuracy)}%` }}
-              title={`Goal ${r.goalAccuracy}%`}
-            >
-              <div className="absolute bottom-0 h-3 w-px -translate-x-1/2 bg-[#df1c41]" />
-            </div>
-          ) : null}
         </li>
       ))}
     </ul>
@@ -152,46 +119,22 @@ function PrioritiesTab() {
 }
 
 function HistoryTab() {
+  const analyticsApi = useAnalyticsApi()
+  const practiceApi = usePracticeApi()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [sessions, setSessions] = useState<PracticeSessionSummary[]>([])
   const [pendingId, setPendingId] = useState<string | null>(null)
 
-  const analyticsApi = useMemo(() => {
-    try {
-      return createAnalyticsApi(getSupabaseBrowserClient())
-    } catch {
-      return null
-    }
-  }, [])
-  const practiceApi = useMemo(() => {
-    try {
-      return createPracticeApi(getSupabaseBrowserClient())
-    } catch {
-      return null
-    }
-  }, [])
-
-  const load = useCallback(async () => {
+  useEffect(() => {
     if (!analyticsApi) return
     setLoading(true)
-    setError(null)
-    try {
-      const { sessions: s } = await analyticsApi.getSessions({ limit: 50, offset: 0 })
-      setSessions(s)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load")
-    } finally {
-      setLoading(false)
-    }
+    void analyticsApi
+      .getSessions({ limit: 50, offset: 0 })
+      .then(({ sessions: s }) => setSessions(s))
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
+      .finally(() => setLoading(false))
   }, [analyticsApi])
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void load()
-    }, 0)
-    return () => window.clearTimeout(timer)
-  }, [load])
 
   async function toggleBookmark(s: PracticeSessionSummary) {
     if (!practiceApi) return
@@ -207,9 +150,7 @@ function HistoryTab() {
     }
   }
 
-  if (!analyticsApi) {
-    return <p className="text-sm text-red-600">Supabase env is missing.</p>
-  }
+  if (!analyticsApi) return <p className="text-sm text-red-600">Supabase env is missing.</p>
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-[#666d80]">
@@ -262,56 +203,44 @@ function HistoryTab() {
 }
 
 function OverviewTab() {
+  const analyticsApi = useAnalyticsApi()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null)
-  const [trajectory, setTrajectory] = useState<TrajectoryPoint[]>([])
-
-  const analyticsApi = useMemo(() => {
-    try {
-      return createAnalyticsApi(getSupabaseBrowserClient())
-    } catch {
-      return null
-    }
-  }, [])
+  const [scoreTab, setScoreTab] = useState<ScoreProgressTab>("both")
+  const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
+  const [trajectory, setTrajectory] = useState<ReturnType<typeof mapTrajectoryToScoreProgress>>([])
+  const [sections, setSections] = useState<ReturnType<typeof mapPrioritiesToSections>>([])
 
   useEffect(() => {
-    let cancelled = false
-    const timer = window.setTimeout(() => {
-      if (cancelled) return
-      if (!analyticsApi) {
-        setLoading(false)
-        setError("Supabase env is missing.")
-        return
-      }
-      setLoading(true)
-      void Promise.all([analyticsApi.getOverview(), analyticsApi.getTrajectory()])
-        .then(([o, t]) => {
-          if (!cancelled) {
-            setOverview(o)
-            setTrajectory(t)
-          }
-        })
-        .catch((e) => {
-          if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load")
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false)
-        })
-    }, 0)
-    return () => {
-      cancelled = true
-      window.clearTimeout(timer)
+    if (!analyticsApi) {
+      setLoading(false)
+      setError("Supabase env is missing.")
+      return
     }
-  }, [analyticsApi])
+    setLoading(true)
+    void Promise.all([
+      analyticsApi.getOverview(),
+      analyticsApi.getTrajectory(),
+      analyticsApi.getPriorities(),
+    ])
+      .then(([o, t, p]) => {
+        setOverview(o)
+        const filtered = takeLastByTimeRange(t, timeRange)
+        setTrajectory(mapTrajectoryToScoreProgress(filtered))
+        setSections(mapPrioritiesToSections(p))
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
+      .finally(() => setLoading(false))
+  }, [analyticsApi, timeRange])
 
-  const chartData = useMemo(
-    () =>
-      trajectory.map((p) => ({
-        shortDate: formatShortDate(p.completedAt),
-        score: p.scaledScore ?? p.rawScore ?? 0,
-      })),
-    [trajectory],
+  const headlineStats = useMemo(
+    () => (overview ? mapOverviewToHeadlineStats(overview) : []),
+    [overview],
+  )
+  const secondaryStats = useMemo(
+    () => (overview ? mapOverviewToSecondaryStats(overview) : []),
+    [overview],
   )
 
   if (loading) {
@@ -323,78 +252,64 @@ function OverviewTab() {
     )
   }
   if (error) return <p className="text-sm text-red-600">{error}</p>
-  if (!overview) return null
 
   return (
     <>
-      <div className="mb-8 grid gap-4 md:grid-cols-3">
-        <article className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold text-[#666d80]">Best scaled (PrepTest)</p>
-          <p className="mt-2 text-3xl font-semibold text-[#082c6b]">
-            {overview.bestScaledScore != null ? overview.bestScaledScore : "—"}
-          </p>
-          <p className="mt-1 text-sm text-[#666d80]">Across {overview.completedPrepTestCount} completed tests</p>
-        </article>
-        <article className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold text-[#666d80]">Avg scaled (PrepTest)</p>
-          <p className="mt-2 text-3xl font-semibold text-[#082c6b]">
-            {overview.averageScaledScore != null ? overview.averageScaledScore : "—"}
-          </p>
-          <p className="mt-1 text-sm text-[#666d80]">When score table exists</p>
-        </article>
-        <article className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold text-[#666d80]">Questions answered</p>
-          <p className="mt-2 text-3xl font-semibold text-[#082c6b]">{overview.totalQuestionsAnswered}</p>
-          <p className="mt-1 text-sm text-[#666d80]">All modes</p>
-        </article>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold leading-[1.3] text-[#062357]">Overview</h1>
+        <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
       </div>
 
-      <div className="mb-8 grid gap-4 md:grid-cols-3">
-        <article className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold text-[#666d80]">Drill accuracy</p>
-          <p className="mt-2 text-3xl font-semibold text-[#082c6b]">
-            {overview.drillAccuracyPct != null ? `${overview.drillAccuracyPct}%` : "—"}
-          </p>
-          <p className="mt-1 text-sm text-[#666d80]">{overview.totalDrillQuestionsAnswered} drill answers</p>
-        </article>
-        <article className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold text-[#666d80]">Avg LR missed / PrepTest</p>
-          <p className="mt-2 text-3xl font-semibold text-[#082c6b]">
-            {overview.averageLrMissedPerPrepTest != null ? overview.averageLrMissedPerPrepTest : "—"}
-          </p>
-          <p className="mt-1 text-sm text-[#666d80]">Latest attempt per question</p>
-        </article>
-        <article className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold text-[#666d80]">Avg RC missed / PrepTest</p>
-          <p className="mt-2 text-3xl font-semibold text-[#082c6b]">
-            {overview.averageRcMissedPerPrepTest != null ? overview.averageRcMissedPerPrepTest : "—"}
-          </p>
-          <p className="mt-1 text-sm text-[#666d80]">Latest attempt per question</p>
-        </article>
-      </div>
-
-      <section className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-sm md:p-6">
-        <h2 className="text-lg font-semibold text-[#082c6b]">Score trajectory</h2>
-        <p className="mt-1 text-sm text-[#666d80]">Completed PrepTests over time (scaled when available, else raw).</p>
-        {chartData.length === 0 ? (
-          <p className="mt-6 text-sm text-[#666d80]">Complete a PrepTest to see your trajectory.</p>
-        ) : (
-          <div className="mt-6 h-[280px] w-full min-w-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e8ecf2" />
-                <XAxis dataKey="shortDate" tick={{ fontSize: 12, fill: "#666d80" }} />
-                <YAxis domain={["auto", "auto"]} tick={{ fontSize: 12, fill: "#666d80" }} />
-                <Tooltip
-                  contentStyle={{ borderRadius: 12, border: "1px solid #dfe1e7" }}
-                  formatter={(value: number) => [value, "Score"]}
-                />
-                <Line type="monotone" dataKey="score" stroke="#0d47a1" strokeWidth={2} dot={{ r: 4, fill: "#0d47a1" }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+      <section className="mb-6 flex w-full flex-col gap-6 rounded-3xl border border-[#dfe1e7] bg-white p-6">
+        <div className="grid gap-6 md:grid-cols-2">
+          {headlineStats.map((stat) => (
+            <StatTile key={stat.id} stat={stat} />
+          ))}
+        </div>
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+          {secondaryStats.map((stat) => (
+            <StatTile key={stat.id} stat={stat} />
+          ))}
+        </div>
       </section>
+
+      <section className="mb-6 rounded-3xl border border-[#dfe1e7] bg-white p-6">
+        <div className="flex flex-col gap-[18px] rounded-2xl bg-[#f6f8fa] p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <h2 className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
+              PREPTESTS SCORE PROGRESS
+            </h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                to="/app/analytics/preptests"
+                className="flex h-10 items-center justify-center rounded-2xl border border-[#0b4e6e] bg-[#0d47a1] px-4 text-sm font-semibold tracking-[0.02em] text-white shadow-[0px_1px_1px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0d47a1]/90"
+              >
+                PrepTests
+              </Link>
+              <ScoreProgressTabs value={scoreTab} onChange={setScoreTab} />
+            </div>
+          </div>
+          <ScoreProgressChart points={trajectory} tab={scoreTab} />
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-6 border-t border-[#e5e7eb] pt-5">
+            <span className="flex items-center gap-2 text-sm leading-[1.5] tracking-[0.02em] text-[#666d80]">
+              <span className="size-4 rounded-full bg-[#0d47a1]" aria-hidden />
+              Regular Score
+            </span>
+            <span className="flex items-center gap-2 text-sm leading-[1.5] tracking-[0.02em] text-[#666d80]">
+              <span className="size-4 rounded-full bg-[#ae8b00]" aria-hidden />
+              Blind Review
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {sections.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-6 text-sm text-[#666d80]">
+          Question-type breakdown appears once you answer questions linked to LR/RC types.
+        </p>
+      ) : (
+        sections.map((section) => <SectionCard key={section.id} section={section} />)
+      )}
     </>
   )
 }
@@ -416,7 +331,9 @@ function AnalyticsPage() {
 
   return (
     <>
-      <StudentSubnavStrip crumbs={[{ label: "Analytics" }]} />
+      <StudentSubnavStrip
+        crumbs={[{ label: "Analytics" }, { label: "Foundations" }, { label: "Overview" }]}
+      />
       <StudentMain>
         <div className="mb-6 flex flex-col justify-between gap-4 border-b border-[#dfe1e7] pb-6 md:flex-row md:items-end">
           <div>
