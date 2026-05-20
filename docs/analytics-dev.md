@@ -61,4 +61,4 @@ curl -sS -X POST 'http://127.0.0.1:54321/functions/v1/analytics-overview' \
   -d '{}'
 ```
 
-Other read endpoints: `analytics-trajectory`, `analytics-priorities`, `analytics-sessions`, `analytics-kind-breakdown` (requires `"sessionKind":"DRILL"` or `SECTION` / `PREPTEST` in the body or query string). Student explanations library: `prep-explanations-list` (PrepTest questions with admin-authored explanation or video), `prep-explanation-detail` (requires `questionId`; no practice-history requirement).
+Other read endpoints: `analytics-trajectory`, `analytics-priorities`, `analytics-sessions`, `analytics-kind-breakdown` (requires `"sessionKind":"DRILL"` or `SECTION` / `PREPTEST` in the body or query string). Student explanations library: `prep-explanations-prep-tests` (grouped PrepTest list), `prep-explanations-prep-test-tree` (requires `prepTestId`), `prep-explanation-detail` (requires `questionId`), and legacy `prep-explanations-list` (flat catalog of questions with explanation or video).

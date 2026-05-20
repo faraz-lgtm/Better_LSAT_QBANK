@@ -15,6 +15,7 @@ export type PrepCourseRow = {
 export type PrepLessonRow = {
   id: string
   course_id: string
+  section_id: string
   slug: string
   title: string
   lesson_type: PrepLessonType
@@ -28,6 +29,34 @@ export type PrepLessonRow = {
   updated_at: string
 }
 
+export type PrepCourseModuleRow = {
+  id: string
+  course_id: string
+  title: string
+  sort_order: number
+  duration_minutes: number | null
+}
+
+export type PrepCourseSectionRow = {
+  id: string
+  module_id: string
+  title: string
+  sort_order: number
+  duration_minutes: number | null
+}
+
+export type PrepCourseSectionWithLessons = PrepCourseSectionRow & {
+  lessons: PrepLessonRow[]
+}
+
+export type PrepCourseModuleWithSections = PrepCourseModuleRow & {
+  sections: PrepCourseSectionWithLessons[]
+}
+
+export type PrepCourseCurriculum = {
+  modules: PrepCourseModuleWithSections[]
+}
+
 export type ProfileRoleRow = {
   id: string
   role: 'student' | 'admin'
@@ -39,6 +68,37 @@ export type PrepCourseEligibilityRow = {
   linked: boolean | null
   subscription_type: string | null
   fetched_at: string
+}
+
+export type PrepLessonLinkedQuestionRef = {
+  question_id: string
+  question_number: number | null
+  prep_test_module_id: string | null
+  prep_test_title: string | null
+  section_number: number | null
+  section_type: string | null
+  section_title: string | null
+}
+
+export type PrepLessonDrillSessionRow = {
+  id: string
+  started_at: string
+  completed_at: string | null
+  raw_score: number | null
+  metadata: Record<string, unknown>
+}
+
+export type PrepLessonActiveDrillAttempt = {
+  sessionId: string
+  completedAt: string
+  rawScore: number
+  questionCount: number
+  elapsedSeconds: number
+  answers: Array<{
+    questionId: string
+    selectedAnswer: string
+    isCorrect: boolean
+  }>
 }
 
 export function createServiceRoleClient(): SupabaseClient {
@@ -96,14 +156,75 @@ export function createPrepCourseRepository(client: SupabaseClient) {
     },
 
     async listPublishedLessonsByCourse(courseId: string): Promise<PrepLessonRow[]> {
-      const { data, error } = await client
-        .from('prep_lessons')
-        .select('*')
+      const curriculum = await this.listPublishedCurriculum(courseId)
+      const lessons: PrepLessonRow[] = []
+      for (const mod of curriculum.modules) {
+        for (const section of mod.sections) {
+          for (const lesson of section.lessons) {
+            lessons.push(lesson)
+          }
+        }
+      }
+      return lessons
+    },
+
+    async listPublishedCurriculum(courseId: string): Promise<PrepCourseCurriculum> {
+      const { data: modules, error: modErr } = await client
+        .from('prep_course_modules')
+        .select('id,course_id,title,sort_order,duration_minutes')
         .eq('course_id', courseId)
-        .eq('is_published', true)
         .order('sort_order', { ascending: true })
-      if (error) throw error
-      return (data ?? []) as PrepLessonRow[]
+      if (modErr) throw modErr
+      const moduleRows = (modules ?? []) as PrepCourseModuleRow[]
+      if (moduleRows.length === 0) {
+        return { modules: [] }
+      }
+
+      const moduleIds = moduleRows.map((m) => m.id)
+      const { data: sections, error: secErr } = await client
+        .from('prep_course_sections')
+        .select('id,module_id,title,sort_order,duration_minutes')
+        .in('module_id', moduleIds)
+        .order('sort_order', { ascending: true })
+      if (secErr) throw secErr
+
+      const sectionRows = (sections ?? []) as PrepCourseSectionRow[]
+      const sectionIds = sectionRows.map((s) => s.id)
+      let lessonRows: PrepLessonRow[] = []
+      if (sectionIds.length > 0) {
+        const { data: lessons, error: lessonErr } = await client
+          .from('prep_lessons')
+          .select('*')
+          .in('section_id', sectionIds)
+          .eq('is_published', true)
+          .order('sort_order', { ascending: true })
+        if (lessonErr) throw lessonErr
+        lessonRows = (lessons ?? []) as PrepLessonRow[]
+      }
+
+      const sectionsByModule = new Map<string, PrepCourseSectionRow[]>()
+      for (const section of sectionRows) {
+        const list = sectionsByModule.get(section.module_id) ?? []
+        list.push(section)
+        sectionsByModule.set(section.module_id, list)
+      }
+
+      const lessonsBySection = new Map<string, PrepLessonRow[]>()
+      for (const lesson of lessonRows) {
+        const list = lessonsBySection.get(lesson.section_id) ?? []
+        list.push(lesson)
+        lessonsBySection.set(lesson.section_id, list)
+      }
+
+      const nestedModules: PrepCourseModuleWithSections[] = moduleRows.map((mod) => ({
+        ...mod,
+        sections: (sectionsByModule.get(mod.id) ?? []).map((section) => ({
+          ...section,
+          lessons: lessonsBySection.get(section.id) ?? [],
+        })),
+      }))
+
+      return { modules: nestedModules }
     },
 
     async getPublishedLessonBySlug(courseId: string, lessonSlug: string): Promise<PrepLessonRow | null> {
@@ -116,6 +237,102 @@ export function createPrepCourseRepository(client: SupabaseClient) {
         .maybeSingle()
       if (error) throw error
       return data as PrepLessonRow | null
+    },
+
+    async listCompletedLessonSlugsByCourse(userId: string, courseId: string): Promise<string[]> {
+      const lessons = await this.listPublishedLessonsByCourse(courseId)
+      if (lessons.length === 0) return []
+      const lessonIds = lessons.map((l) => l.id)
+      const { data, error } = await client
+        .from('prep_lesson_completions')
+        .select('lesson_id')
+        .eq('user_id', userId)
+        .in('lesson_id', lessonIds)
+      if (error) throw error
+      const completedIds = new Set(
+        ((data ?? []) as Array<{ lesson_id: string }>).map((row) => row.lesson_id),
+      )
+      return lessons.filter((l) => completedIds.has(l.id)).map((l) => l.slug)
+    },
+
+    async upsertLessonCompletion(userId: string, lessonId: string): Promise<void> {
+      const { error } = await client
+        .from('prep_lesson_completions')
+        .upsert(
+          { user_id: userId, lesson_id: lessonId, completed_at: new Date().toISOString() },
+          { onConflict: 'user_id,lesson_id' },
+        )
+      if (error) throw error
+    },
+
+    async listLessonLinkedQuestions(lessonId: string): Promise<PrepLessonLinkedQuestionRef[]> {
+      const { data, error } = await client
+        .from('lesson_questions')
+        .select(
+          'sort_order,admin_questions(id,question_number,admin_sections(section_number,section_type,title,admin_prep_tests(module_id,title)))',
+        )
+        .eq('lesson_id', lessonId)
+        .order('sort_order', { ascending: true })
+      if (error) throw error
+
+      return ((data ?? []) as Array<Record<string, unknown>>).map((row) => {
+        const q = row.admin_questions as Record<string, unknown> | null
+        const section = q?.admin_sections as Record<string, unknown> | null
+        const prep = section?.admin_prep_tests as Record<string, unknown> | null
+        return {
+          question_id: String(q?.id ?? ''),
+          question_number: typeof q?.question_number === 'number' ? q.question_number : null,
+          prep_test_module_id: prep?.module_id != null ? String(prep.module_id) : null,
+          prep_test_title: prep?.title != null ? String(prep.title) : null,
+          section_number: typeof section?.section_number === 'number' ? section.section_number : null,
+          section_type: section?.section_type != null ? String(section.section_type) : null,
+          section_title: section?.title != null ? String(section.title) : null,
+        }
+      }).filter((ref) => ref.question_id.length > 0)
+    },
+
+    async getLatestLessonDrillAttempt(
+      userId: string,
+      lessonId: string,
+    ): Promise<PrepLessonDrillSessionRow | null> {
+      const { data, error } = await client
+        .from('practice_sessions')
+        .select('id,started_at,completed_at,raw_score,metadata')
+        .eq('user_id', userId)
+        .eq('kind', 'DRILL')
+        .not('completed_at', 'is', null)
+        .filter('metadata->>lessonId', 'eq', lessonId)
+        .order('completed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (error) throw error
+      return (data as PrepLessonDrillSessionRow | null) ?? null
+    },
+
+    async listAnswerEventsForSession(
+      sessionId: string,
+      userId: string,
+    ): Promise<
+      Array<{
+        question_id: string
+        selected_answer: string
+        is_correct: boolean
+        created_at: string
+      }>
+    > {
+      const { data, error } = await client
+        .from('answer_events')
+        .select('question_id,selected_answer,is_correct,created_at')
+        .eq('practice_session_id', sessionId)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as Array<{
+        question_id: string
+        selected_answer: string
+        is_correct: boolean
+        created_at: string
+      }>
     },
 
     async createCourse(input: {

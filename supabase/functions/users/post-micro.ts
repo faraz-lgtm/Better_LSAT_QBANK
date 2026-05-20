@@ -2,7 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import { CORS_EDGE_NARROW, json } from '../_shared/edge-http.ts'
 import { createUsersRepository, createServiceRoleClient } from './users.repository.ts'
 import { AuthorizationError, createUsersService } from './users.service.ts'
-import type { LsacStudentPayload } from './users.mapper.ts'
+import { parseLsatScoreValue, type LsacStudentPayload } from './users.mapper.ts'
 
 const corsHeaders = CORS_EDGE_NARROW
 
@@ -147,6 +147,86 @@ export async function handleUsersPostMicro(req: Request, slug: string): Promise<
     if (action === 'users-complete-first-login') {
       const profile = await service.markFirstTimeLoginComplete(user.id)
       return json({ profile }, {}, corsHeaders)
+    }
+
+    if (action === 'users-save-onboarding') {
+      const fullName = typeof body.fullName === 'string' ? body.fullName : ''
+      if (!fullName.trim()) {
+        return json({ error: 'fullName is required' }, { status: 400 }, corsHeaders)
+      }
+      const result = await service.saveOnboarding(user.id, {
+        fullName,
+        username: typeof body.username === 'string' ? body.username : null,
+        plannedLsatWindow:
+          typeof body.plannedLsatWindow === 'string' ? body.plannedLsatWindow : null,
+        plannedLsatDate: typeof body.plannedLsatDate === 'string' ? body.plannedLsatDate : null,
+        lawSchoolCycle: typeof body.lawSchoolCycle === 'string' ? body.lawSchoolCycle : null,
+        goalScore: body.goalScore,
+        startingScore: body.startingScore,
+        studyDays: Array.isArray(body.studyDays)
+          ? body.studyDays.filter((d): d is string => typeof d === 'string')
+          : undefined,
+        studyHoursLabel:
+          typeof body.studyHoursLabel === 'string' ? body.studyHoursLabel : null,
+        wantsLessons: typeof body.wantsLessons === 'boolean' ? body.wantsLessons : undefined,
+      })
+      return json(result, {}, corsHeaders)
+    }
+
+    if (action === 'users-get-study-context') {
+      const context = await service.getStudyContext(user.id)
+      return json(context, {}, corsHeaders)
+    }
+
+    if (action === 'users-update-study-preferences') {
+      const goalScoreRaw = body.goalScore
+      const goalScore =
+        goalScoreRaw === null || goalScoreRaw === undefined
+          ? undefined
+          : parseLsatScoreValue(goalScoreRaw)
+      const preferences = await service.updateStudyPreferences(user.id, {
+        plannedLsatDate:
+          body.plannedLsatDate === null
+            ? null
+            : typeof body.plannedLsatDate === 'string'
+              ? body.plannedLsatDate
+              : undefined,
+        lawSchoolCycle:
+          body.lawSchoolCycle === null
+            ? null
+            : typeof body.lawSchoolCycle === 'string'
+              ? body.lawSchoolCycle
+              : undefined,
+        goalScore,
+      })
+      return json({ preferences }, {}, corsHeaders)
+    }
+
+    if (action === 'users-upsert-official-score') {
+      const testLabel = typeof body.testLabel === 'string' ? body.testLabel : ''
+      if (!testLabel.trim()) {
+        return json({ error: 'testLabel is required' }, { status: 400 }, corsHeaders)
+      }
+      const scaledScore =
+        body.scaledScore === null || body.scaledScore === undefined
+          ? null
+          : parseLsatScoreValue(body.scaledScore)
+      const score = await service.upsertOfficialScore(user.id, {
+        id: typeof body.id === 'string' ? body.id : undefined,
+        testLabel,
+        testDate:
+          body.testDate === null
+            ? null
+            : typeof body.testDate === 'string'
+              ? body.testDate
+              : undefined,
+        scaledScore,
+        sortOrder:
+          typeof body.sortOrder === 'number' && Number.isInteger(body.sortOrder)
+            ? body.sortOrder
+            : undefined,
+      })
+      return json({ score }, {}, corsHeaders)
     }
 
     if (action === 'users-ping') {

@@ -55,4 +55,177 @@ describe("createPracticeApi", () => {
       headers: { Authorization: "Bearer token-1" },
     })
   })
+
+  it("startDrill invokes practice-start-drill", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        session: { id: "drill-1", kind: "DRILL" },
+        metadata: { sectionType: "LR", questionIds: ["q1"], questionCount: 1 },
+        questions: [],
+        answers: [],
+        drillLabel: null,
+      },
+      error: null,
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+
+    const out = await api.startDrill({ sectionType: "LR", questionCount: 5 })
+
+    expect(out.session.id).toBe("drill-1")
+    expect(invoke).toHaveBeenCalledWith("practice-start-drill", {
+      method: "POST",
+      body: expect.objectContaining({ sectionType: "LR", questionCount: 5 }),
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
+
+  it("listSectionPool invokes practice-list-section-pool", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        sections: [
+          {
+            id: "sec-1",
+            sectionId: "SEED900-LR-1",
+            sectionNumber: 1,
+            sectionType: "LR",
+            title: "Logical Reasoning",
+            moduleId: "LSAC900",
+            prepTestId: "pt-900",
+            prepTestTitle: "PrepTest Alpha",
+            questionCount: 3,
+            timeMinutes: 35,
+          },
+        ],
+      },
+      error: null,
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+
+    const out = await api.listSectionPool({ sectionType: "LR" })
+
+    expect(out.sections).toHaveLength(1)
+    expect(invoke).toHaveBeenCalledWith("practice-list-section-pool", {
+      method: "POST",
+      body: { sectionType: "LR" },
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
+
+  it("startSection invokes practice-start-section", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        session: { id: "section-sess-1", kind: "SECTION" },
+        metadata: { sectionType: "LR", questionIds: ["q1", "q2"] },
+        section: { id: "sec-1", sectionType: "LR", questionCount: 2, timeMinutes: 35 },
+        questions: [],
+        answers: [],
+        sessionLabel: "PrepTest — LR",
+      },
+      error: null,
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+
+    const out = await api.startSection({ sectionId: "sec-1" })
+
+    expect(out.session.id).toBe("section-sess-1")
+    expect(invoke).toHaveBeenCalledWith("practice-start-section", {
+      method: "POST",
+      body: { sectionId: "sec-1", timing: undefined, showAnswers: undefined },
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
+
+  it("listPrepTestPool invokes practice-list-prep-test-pool", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        prepTests: [
+          {
+            id: "pt-900",
+            moduleId: "LSAC900",
+            title: "PrepTest Alpha",
+            prepTestNumber: "900",
+            questionCount: 5,
+            sectionCount: 3,
+            practiceableSectionCount: 2,
+            timeMinutes: 70,
+            status: "fresh",
+            scaledScore: null,
+            openPrepTestSessionId: null,
+          },
+        ],
+      },
+      error: null,
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+
+    const out = await api.listPrepTestPool({ filter: "fresh" })
+
+    expect(out.prepTests).toHaveLength(1)
+    expect(invoke).toHaveBeenCalledWith("practice-list-prep-test-pool", {
+      method: "POST",
+      body: { filter: "fresh" },
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
+
+  it("startPrepTest invokes practice-start-prep-test", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        prepTestSession: { id: "pt-sess-1", kind: "PREPTEST", metadata: {} },
+        detail: { prepTest: { id: "pt-900", label: "PT 900" }, status: "in_progress" },
+      },
+      error: null,
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+
+    const out = await api.startPrepTest({ prepTestId: "pt-900", timing: "standard" })
+
+    expect(out.prepTestSession.id).toBe("pt-sess-1")
+    expect(invoke).toHaveBeenCalledWith("practice-start-prep-test", {
+      method: "POST",
+      body: { prepTestId: "pt-900", timing: "standard", format: undefined },
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
+
+  it("getSectionSession invokes practice-get-section-session", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        session: { id: "section-sess-1", kind: "SECTION" },
+        metadata: { sectionType: "RC", questionIds: ["q1"] },
+        section: { id: "sec-2", sectionType: "RC", questionCount: 1, timeMinutes: 35 },
+        questions: [],
+        answers: [],
+        sessionLabel: null,
+      },
+      error: null,
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+
+    const out = await api.getSectionSession("section-sess-1")
+
+    expect(out.session.id).toBe("section-sess-1")
+    expect(invoke).toHaveBeenCalledWith("practice-get-section-session", {
+      method: "POST",
+      body: { sessionId: "section-sess-1" },
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
+
+  it("getDrillPoolStats invokes practice-drill-pool-stats", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: { selectedCount: 10, totalCount: 100 },
+      error: null,
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+
+    const stats = await api.getDrillPoolStats({ sectionType: "RC", status: "fresh" })
+
+    expect(stats.selectedCount).toBe(10)
+    expect(invoke).toHaveBeenCalledWith("practice-drill-pool-stats", {
+      method: "POST",
+      body: { sectionType: "RC", questionTypeId: undefined, difficulty: undefined, status: "fresh" },
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
 })

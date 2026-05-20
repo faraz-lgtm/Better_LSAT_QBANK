@@ -1,10 +1,19 @@
+import { extractPrepTestQuestionRef } from '../_shared/prep-question-ref.ts'
 import type {
   AnswerEventRow,
+  DrillPoolQuestionRow,
   PracticeRepository,
   PracticeSessionKind,
   PracticeSessionRow,
   QuestionDetailRow,
 } from './practice.repository.ts'
+import {
+  mapDrillQuestionRow,
+  pickDrillQuestionIds,
+  prepTestNumberFromModuleId,
+  type DrillQuestionPayload,
+} from './practice.mapper.ts'
+import type { PrepTestDetailRow, PrepTestPoolRow } from './practice.repository.ts'
 
 export class PracticeValidationError extends Error {
   constructor(message: string) {
@@ -39,6 +48,12 @@ function latestAnswerByQuestion(events: AnswerEventRow[]): Map<string, AnswerEve
   return byQuestion
 }
 
+function drillQuestionIdsFromMetadata(metadata: Record<string, unknown>): string[] {
+  const raw = metadata.questionIds
+  if (!Array.isArray(raw)) return []
+  return raw.filter((id): id is string => typeof id === 'string' && id.length > 0)
+}
+
 function assertQuestionAllowedForSession(
   session: PracticeSessionRow,
   question: QuestionDetailRow,
@@ -54,6 +69,484 @@ function assertQuestionAllowedForSession(
     if (question.section_id !== session.section_id) {
       throw new PracticeValidationError('Question does not belong to this section')
     }
+  } else if (session.kind === 'DRILL') {
+    const allowed = drillQuestionIdsFromMetadata(session.metadata)
+    if (!allowed.includes(question.id)) {
+      throw new PracticeValidationError('Question does not belong to this drill session')
+    }
+  }
+}
+
+function parseSectionType(value: unknown): 'LR' | 'RC' | null {
+  return value === 'LR' || value === 'RC' ? value : null
+}
+
+function parseQuestionCount(value: unknown): number {
+  const n = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10)
+  if (!Number.isFinite(n) || n < 1) return 1
+  return Math.min(25, Math.floor(n))
+}
+
+function filterPoolByStatus(
+  pool: DrillPoolQuestionRow[],
+  status: unknown,
+  answeredIds: Set<string>,
+): DrillPoolQuestionRow[] {
+  if (status !== 'fresh') return pool
+  return pool.filter((q) => !answeredIds.has(q.id))
+}
+
+export type DrillSessionMetadata = {
+  sectionType: 'LR' | 'RC'
+  questionCount: number
+  timing: string
+  showAnswers: string
+  selection?: string
+  questionTypeId?: string | null
+  tagLabel?: string | null
+  difficulty?: string | null
+  status?: string
+  questionIds: string[]
+  title?: string | null
+  lessonId?: string | null
+  source?: string | null
+}
+
+export type DrillAnswerState = {
+  questionId: string
+  selectedAnswer: string
+  isCorrect: boolean
+}
+
+export type DrillSessionResponse = {
+  session: PracticeSessionRow
+  metadata: DrillSessionMetadata
+  questions: DrillQuestionPayload[]
+  answers: DrillAnswerState[]
+  drillLabel: string | null
+}
+
+export type SectionSessionMetadata = {
+  sectionType: 'LR' | 'RC'
+  timing: string
+  showAnswers: string
+  questionIds: string[]
+  prepTestTitle?: string | null
+  sectionTitle?: string | null
+  answeredQuestionIds?: string[]
+}
+
+export type SectionPoolItem = {
+  id: string
+  sectionId: string | null
+  sectionNumber: number | null
+  sectionType: 'LR' | 'RC'
+  title: string | null
+  moduleId: string | null
+  prepTestId: string
+  prepTestTitle: string | null
+  questionCount: number
+  timeMinutes: number
+}
+
+export type SectionSessionResponse = {
+  session: PracticeSessionRow
+  metadata: SectionSessionMetadata
+  section: SectionPoolItem
+  questions: DrillQuestionPayload[]
+  answers: DrillAnswerState[]
+  sessionLabel: string | null
+}
+
+function sectionTypeForPool(value: string | null | undefined): 'LR' | 'RC' | null {
+  return value === 'LR' || value === 'RC' ? value : null
+}
+
+function defaultTimeMinutes(sectionType: 'LR' | 'RC'): number {
+  return sectionType === 'LR' ? 35 : 35
+}
+
+export type PrepTestPracticeStatus = 'fresh' | 'in_progress' | 'completed'
+
+export type PrepTestPoolItem = {
+  id: string
+  moduleId: string
+  title: string | null
+  prepTestNumber: string | null
+  questionCount: number
+  sectionCount: number
+  practiceableSectionCount: number
+  timeMinutes: number
+  status: PrepTestPracticeStatus
+  scaledScore: number | null
+  openPrepTestSessionId: string | null
+}
+
+export type PrepTestDetailSection = {
+  id: string
+  sectionId: string | null
+  sectionNumber: number | null
+  sectionType: 'LR' | 'RC' | 'LG'
+  title: string | null
+  questionCount: number
+  timeMinutes: number
+  practiceable: boolean
+  unlocked: boolean
+  answeredCount: number
+  completed: boolean
+  activeSectionSessionId: string | null
+}
+
+export type PrepTestSessionMetadata = {
+  timing: string
+  format: string
+  sectionIds: string[]
+  prepTestTitle?: string | null
+  answeredQuestionIds?: string[]
+}
+
+export type PrepTestDetailResponse = {
+  prepTest: {
+    id: string
+    moduleId: string
+    title: string | null
+    prepTestNumber: string | null
+    label: string
+    questionCount: number
+    totalMinutes: number
+    sectionCount: number
+    practiceableSectionCount: number
+  }
+  sections: PrepTestDetailSection[]
+  prepTestSession: PracticeSessionRow | null
+  status: PrepTestPracticeStatus
+  allPracticeableSectionsComplete: boolean
+  timingOptions: { id: string; label: string }[]
+  formatOptions: { id: string; label: string }[]
+  defaultTimingId: string
+  defaultFormatId: string
+}
+
+export type BlindReviewStatus = 'eligible' | 'in_progress' | 'completed'
+
+export type BlindReviewPoolItem = {
+  id: string
+  moduleId: string
+  title: string | null
+  prepTestNumber: string | null
+  label: string
+  questionCount: number
+  status: BlindReviewStatus
+  scaledScore: number | null
+  blindReviewScaledScore: number | null
+  completedAt: string | null
+  blindReviewCompletedAt: string | null
+}
+
+export type BlindReviewDetailSection = PrepTestDetailSection & {
+  sectionSessionId: string | null
+}
+
+export type BlindReviewDetailResponse = {
+  prepTest: PrepTestDetailResponse['prepTest']
+  sections: BlindReviewDetailSection[]
+  blindReview: {
+    status: BlindReviewStatus
+    scaledScore: number | null
+    blindReviewScaledScore: number | null
+    blindReviewPercentile: number | null
+    prepTestSessionId: string
+  }
+}
+
+function practiceableSectionsFromRow(
+  sections: Array<{ id: string; sectionType: 'LR' | 'RC' | 'LG'; questionCount: number }>,
+): Array<{ id: string; sectionType: 'LR' | 'RC'; questionCount: number }> {
+  return sections
+    .filter((s) => (s.sectionType === 'LR' || s.sectionType === 'RC') && s.questionCount > 0)
+    .map((s) => ({ id: s.id, sectionType: s.sectionType as 'LR' | 'RC', questionCount: s.questionCount }))
+}
+
+function prepTestLabel(moduleId: string, title: string | null, prepTestNumber: string | null): string {
+  if (prepTestNumber) return `PT ${prepTestNumber}`
+  return title?.trim() || moduleId
+}
+
+function answeredIdsFromMetadata(metadata: Record<string, unknown>): number {
+  const ids = metadata.answeredQuestionIds
+  return Array.isArray(ids) ? ids.length : 0
+}
+
+function questionIdsFromMetadata(metadata: Record<string, unknown>): number {
+  const ids = metadata.questionIds
+  return Array.isArray(ids) ? ids.length : 0
+}
+
+function derivePrepTestStatus(
+  practiceableSectionIds: string[],
+  sessions: PracticeSessionRow[],
+): {
+  status: PrepTestPracticeStatus
+  scaledScore: number | null
+  openPrepTestSessionId: string | null
+} {
+  const completedPrepTest = sessions.find((s) => s.kind === 'PREPTEST' && s.completed_at)
+  if (completedPrepTest) {
+    return {
+      status: 'completed',
+      scaledScore: completedPrepTest.scaled_score,
+      openPrepTestSessionId: null,
+    }
+  }
+
+  const sectionSessions = sessions.filter((s) => s.kind === 'SECTION' && s.section_id)
+  const completedSectionIds = new Set(
+    sectionSessions.filter((s) => s.completed_at && s.section_id).map((s) => s.section_id!),
+  )
+
+  const allSectionsDone =
+    practiceableSectionIds.length > 0 &&
+    practiceableSectionIds.every((id) => completedSectionIds.has(id))
+
+  if (allSectionsDone) {
+    const lastCompleted = sectionSessions.find((s) => s.completed_at)
+    return {
+      status: 'completed',
+      scaledScore: lastCompleted?.scaled_score ?? null,
+      openPrepTestSessionId: null,
+    }
+  }
+
+  const openPrepTest = sessions.find((s) => s.kind === 'PREPTEST' && !s.completed_at)
+  const hasSectionActivity = sectionSessions.length > 0
+
+  if (openPrepTest || hasSectionActivity) {
+    return {
+      status: 'in_progress',
+      scaledScore: null,
+      openPrepTestSessionId: openPrepTest?.id ?? null,
+    }
+  }
+
+  return { status: 'fresh', scaledScore: null, openPrepTestSessionId: null }
+}
+
+function buildPrepTestDetail(
+  row: PrepTestDetailRow,
+  sessions: PracticeSessionRow[],
+  prepTestSession: PracticeSessionRow | null,
+): PrepTestDetailResponse {
+  const practiceable = practiceableSectionsFromRow(row.sections)
+  const practiceableIds = practiceable.map((s) => s.id)
+  const { status } = derivePrepTestStatus(practiceableIds, sessions)
+
+  const sectionSessionsBySectionId = new Map<string, PracticeSessionRow[]>()
+  for (const s of sessions.filter((x) => x.kind === 'SECTION' && x.section_id)) {
+    const list = sectionSessionsBySectionId.get(s.section_id!) ?? []
+    list.push(s)
+    sectionSessionsBySectionId.set(s.section_id!, list)
+  }
+
+  const sections: PrepTestDetailSection[] = row.sections.map((sec) => {
+    const isPracticeable = sec.sectionType === 'LR' || sec.sectionType === 'RC'
+    const secSessions = sectionSessionsBySectionId.get(sec.id) ?? []
+    const latest = secSessions[0] ?? null
+    const answeredCount = latest ? answeredIdsFromMetadata(latest.metadata) : 0
+    const totalQs = latest ? questionIdsFromMetadata(latest.metadata) : sec.questionCount
+    const completed = Boolean(latest?.completed_at)
+
+    return {
+      id: sec.id,
+      sectionId: sec.sectionId,
+      sectionNumber: sec.sectionNumber,
+      sectionType: sec.sectionType,
+      title: sec.title,
+      questionCount: sec.questionCount,
+      timeMinutes: 35,
+      practiceable: isPracticeable && sec.questionCount > 0,
+      unlocked: isPracticeable && sec.questionCount > 0,
+      answeredCount,
+      completed,
+      activeSectionSessionId: latest && !latest.completed_at ? latest.id : null,
+    }
+  })
+
+  const questionCount = practiceable.reduce((sum, s) => sum + s.questionCount, 0)
+  const prepTestNumber = prepTestNumberFromModuleId(row.moduleId)
+  const label = prepTestLabel(row.moduleId, row.title, prepTestNumber)
+  const allPracticeableSectionsComplete = practiceableIds.every((id) => {
+    const secSessions = sectionSessionsBySectionId.get(id) ?? []
+    return secSessions.some((s) => s.completed_at)
+  })
+
+  const meta = prepTestSession?.metadata ?? {}
+  const defaultTimingId = typeof meta.timing === 'string' ? meta.timing : 'standard'
+  const defaultFormatId = typeof meta.format === 'string' ? meta.format : 'four'
+
+  return {
+    prepTest: {
+      id: row.id,
+      moduleId: row.moduleId,
+      title: row.title,
+      prepTestNumber,
+      label,
+      questionCount,
+      totalMinutes: practiceable.length * 35,
+      sectionCount: row.sections.length,
+      practiceableSectionCount: practiceable.length,
+    },
+    sections,
+    prepTestSession,
+    status,
+    allPracticeableSectionsComplete,
+    timingOptions: [
+      { id: 'unlimited', label: 'Unlimited' },
+      { id: 'standard', label: 'Standard (35 min / section)' },
+      { id: 'strict', label: 'Strict official timing' },
+    ],
+    formatOptions: [
+      { id: 'four', label: '4 scored sections' },
+      { id: 'exp', label: 'With experimental' },
+    ],
+    defaultTimingId,
+    defaultFormatId,
+  }
+}
+
+function blindReviewStateFromSessions(sessions: PracticeSessionRow[]): {
+  status: BlindReviewStatus | null
+  prepTestSession: PracticeSessionRow | null
+} {
+  const completedPrepTest = sessions.find((s) => s.kind === 'PREPTEST' && s.completed_at)
+  if (!completedPrepTest) {
+    return { status: null, prepTestSession: null }
+  }
+  if (completedPrepTest.blind_review_completed_at) {
+    return { status: 'completed', prepTestSession: completedPrepTest }
+  }
+  if (completedPrepTest.metadata.blindReviewActive === true) {
+    return { status: 'in_progress', prepTestSession: completedPrepTest }
+  }
+  return { status: 'eligible', prepTestSession: completedPrepTest }
+}
+
+function blindReviewPoolItemFromRow(
+  row: PrepTestPoolRow,
+  sessions: PracticeSessionRow[],
+): BlindReviewPoolItem | null {
+  const practiceable = practiceableSectionsFromRow(row.sections)
+  if (practiceable.length === 0) return null
+
+  const { status, prepTestSession } = blindReviewStateFromSessions(sessions)
+  if (!status || !prepTestSession) return null
+
+  const questionCount = practiceable.reduce((sum, s) => sum + s.questionCount, 0)
+  const prepTestNumber = prepTestNumberFromModuleId(row.moduleId)
+  const label = prepTestLabel(row.moduleId, row.title, prepTestNumber)
+
+  return {
+    id: row.id,
+    moduleId: row.moduleId,
+    title: row.title,
+    prepTestNumber,
+    label,
+    questionCount,
+    status,
+    scaledScore: prepTestSession.scaled_score,
+    blindReviewScaledScore: prepTestSession.blind_review_scaled_score,
+    completedAt: prepTestSession.completed_at,
+    blindReviewCompletedAt: prepTestSession.blind_review_completed_at,
+  }
+}
+
+function buildBlindReviewDetail(
+  row: PrepTestDetailRow,
+  sessions: PracticeSessionRow[],
+  prepTestSession: PracticeSessionRow,
+): BlindReviewDetailResponse {
+  const practiceable = practiceableSectionsFromRow(row.sections)
+  const { status } = blindReviewStateFromSessions(sessions)
+  if (!status) {
+    throw new PracticeValidationError('PrepTest is not eligible for blind review')
+  }
+
+  const sectionSessionsBySectionId = new Map<string, PracticeSessionRow[]>()
+  for (const s of sessions.filter((x) => x.kind === 'SECTION' && x.section_id)) {
+    const list = sectionSessionsBySectionId.get(s.section_id!) ?? []
+    list.push(s)
+    sectionSessionsBySectionId.set(s.section_id!, list)
+  }
+
+  const sections: BlindReviewDetailSection[] = row.sections.map((sec) => {
+    const isPracticeable = sec.sectionType === 'LR' || sec.sectionType === 'RC'
+    const secSessions = sectionSessionsBySectionId.get(sec.id) ?? []
+    const latest = secSessions[0] ?? null
+    const answeredCount = latest ? answeredIdsFromMetadata(latest.metadata) : 0
+    const completed = Boolean(latest?.completed_at)
+
+    return {
+      id: sec.id,
+      sectionId: sec.sectionId,
+      sectionNumber: sec.sectionNumber,
+      sectionType: sec.sectionType,
+      title: sec.title,
+      questionCount: sec.questionCount,
+      timeMinutes: 35,
+      practiceable: isPracticeable && sec.questionCount > 0,
+      unlocked: isPracticeable && sec.questionCount > 0,
+      answeredCount,
+      completed,
+      activeSectionSessionId: latest && !latest.completed_at ? latest.id : null,
+      sectionSessionId: latest?.completed_at ? latest.id : null,
+    }
+  })
+
+  const questionCount = practiceable.reduce((sum, s) => sum + s.questionCount, 0)
+  const prepTestNumber = prepTestNumberFromModuleId(row.moduleId)
+  const label = prepTestLabel(row.moduleId, row.title, prepTestNumber)
+
+  return {
+    prepTest: {
+      id: row.id,
+      moduleId: row.moduleId,
+      title: row.title,
+      prepTestNumber,
+      label,
+      questionCount,
+      totalMinutes: practiceable.length * 35,
+      sectionCount: row.sections.length,
+      practiceableSectionCount: practiceable.length,
+    },
+    sections,
+    blindReview: {
+      status,
+      scaledScore: prepTestSession.scaled_score,
+      blindReviewScaledScore: prepTestSession.blind_review_scaled_score,
+      blindReviewPercentile: prepTestSession.blind_review_percentile,
+      prepTestSessionId: prepTestSession.id,
+    },
+  }
+}
+
+function poolItemFromRow(row: PrepTestPoolRow, sessions: PracticeSessionRow[]): PrepTestPoolItem {
+  const practiceable = practiceableSectionsFromRow(row.sections)
+  const practiceableIds = practiceable.map((s) => s.id)
+  const { status, scaledScore, openPrepTestSessionId } = derivePrepTestStatus(practiceableIds, sessions)
+  const questionCount = practiceable.reduce((sum, s) => sum + s.questionCount, 0)
+  const prepTestNumber = prepTestNumberFromModuleId(row.moduleId)
+
+  return {
+    id: row.id,
+    moduleId: row.moduleId,
+    title: row.title,
+    prepTestNumber,
+    questionCount,
+    sectionCount: row.sections.length,
+    practiceableSectionCount: practiceable.length,
+    timeMinutes: practiceable.length * 35,
+    status,
+    scaledScore,
+    openPrepTestSessionId,
   }
 }
 
@@ -120,7 +613,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
     async submitAnswer(
       userId: string,
-      body: { sessionId?: unknown; questionId?: unknown; selectedAnswer?: unknown },
+      body: { sessionId?: unknown; questionId?: unknown; selectedAnswer?: unknown; blindReview?: unknown },
     ): Promise<{ event: AnswerEventRow }> {
       const sessionId = typeof body.sessionId === 'string' ? body.sessionId : ''
       const questionId = typeof body.questionId === 'string' ? body.questionId : ''
@@ -129,10 +622,31 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (!questionId) throw new PracticeValidationError('questionId is required')
       if (!selectedRaw.trim()) throw new PracticeValidationError('selectedAnswer is required')
 
+      const blindReview = body.blindReview === true
+
       const session = await deps.repository.getSessionById(sessionId, userId)
       if (!session) throw new PracticeForbiddenError('Session not found')
-      if (session.completed_at) {
+
+      if (session.completed_at && !blindReview) {
         throw new PracticeValidationError('Cannot submit answers to a completed session')
+      }
+
+      if (blindReview) {
+        if (session.kind !== 'SECTION' || !session.prep_test_id) {
+          throw new PracticeValidationError('Blind review answers require a section session tied to a PrepTest')
+        }
+        const ptSessions = await deps.repository.listUserSessionsForPrepTest(userId, session.prep_test_id)
+        const prepTestSession = ptSessions.find((s) => s.kind === 'PREPTEST' && s.completed_at)
+        if (!prepTestSession) {
+          throw new PracticeValidationError('Complete the PrepTest before blind review')
+        }
+        if (prepTestSession.blind_review_completed_at) {
+          throw new PracticeValidationError('Blind review is already completed for this PrepTest')
+        }
+        const meta = prepTestSession.metadata
+        if (meta.blindReviewActive !== true) {
+          throw new PracticeValidationError('Start blind review for this PrepTest first')
+        }
       }
 
       const question = await deps.repository.getQuestionDetail(questionId)
@@ -157,6 +671,20 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         difficulty: question.difficulty,
         sessionKind: session.kind,
       })
+
+      if (session.kind === 'DRILL' || session.kind === 'SECTION') {
+        const existing = Array.isArray(session.metadata.answeredQuestionIds)
+          ? (session.metadata.answeredQuestionIds as string[])
+          : []
+        if (!existing.includes(questionId)) {
+          const nextMeta = {
+            ...session.metadata,
+            answeredQuestionIds: [...existing, questionId],
+          }
+          await deps.repository.updateSession(sessionId, userId, { metadata: nextMeta })
+        }
+      }
+
       return { event }
     },
 
@@ -219,6 +747,724 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       }
 
       const sessionRow = await deps.repository.updateSession(sessionId, userId, patch)
+      return { session: sessionRow }
+    },
+
+    async getDrillPoolStats(
+      userId: string,
+      body: {
+        sectionType?: unknown
+        questionTypeId?: unknown
+        difficulty?: unknown
+        status?: unknown
+      },
+    ): Promise<{ selectedCount: number; totalCount: number }> {
+      const sectionType = parseSectionType(body.sectionType)
+      if (!sectionType) throw new PracticeValidationError('sectionType must be LR or RC')
+
+      const questionTypeId =
+        typeof body.questionTypeId === 'string' && body.questionTypeId ? body.questionTypeId : null
+      const difficulty =
+        body.difficulty === 'easy' || body.difficulty === 'hard' || body.difficulty === 'adaptive'
+          ? body.difficulty
+          : null
+
+      const totalPool = await deps.repository.listDrillPoolQuestions({
+        sectionType,
+        questionTypeId,
+        difficulty: difficulty === 'adaptive' ? null : difficulty,
+      })
+
+      const answeredIds = new Set(await deps.repository.listUserAnsweredQuestionIds(userId))
+      const selectedPool = filterPoolByStatus(totalPool, body.status ?? 'fresh', answeredIds)
+
+      return {
+        selectedCount: selectedPool.length,
+        totalCount: totalPool.length,
+      }
+    },
+
+    async startDrill(
+      userId: string,
+      body: {
+        sectionType?: unknown
+        questionCount?: unknown
+        timing?: unknown
+        showAnswers?: unknown
+        selection?: unknown
+        questionTypeId?: unknown
+        tagLabel?: unknown
+        difficulty?: unknown
+        status?: unknown
+        title?: unknown
+      },
+    ): Promise<DrillSessionResponse> {
+      const sectionType = parseSectionType(body.sectionType)
+      if (!sectionType) throw new PracticeValidationError('sectionType must be LR or RC')
+
+      const questionCount = parseQuestionCount(body.questionCount)
+      const timing = typeof body.timing === 'string' ? body.timing : 'unlimited'
+      const showAnswers = typeof body.showAnswers === 'string' ? body.showAnswers : 'end'
+      const selection = typeof body.selection === 'string' ? body.selection : 'auto'
+      const questionTypeId =
+        typeof body.questionTypeId === 'string' && body.questionTypeId ? body.questionTypeId : null
+      const tagLabel = typeof body.tagLabel === 'string' ? body.tagLabel : null
+      const title = typeof body.title === 'string' ? body.title : tagLabel
+      const difficulty =
+        body.difficulty === 'easy' || body.difficulty === 'hard' || body.difficulty === 'adaptive'
+          ? body.difficulty
+          : 'adaptive'
+      const status = typeof body.status === 'string' ? body.status : 'fresh'
+
+      const pool = await deps.repository.listDrillPoolQuestions({
+        sectionType,
+        questionTypeId,
+        difficulty: difficulty === 'adaptive' ? null : difficulty,
+      })
+
+      const answeredIds = new Set(await deps.repository.listUserAnsweredQuestionIds(userId))
+      const filtered = filterPoolByStatus(pool, status, answeredIds)
+
+      const questionIds = pickDrillQuestionIds(filtered, sectionType, questionCount)
+      if (questionIds.length === 0) {
+        throw new PracticeValidationError('No questions available for this drill configuration')
+      }
+
+      const metadata: DrillSessionMetadata = {
+        sectionType,
+        questionCount: questionIds.length,
+        timing,
+        showAnswers,
+        selection,
+        questionTypeId,
+        tagLabel,
+        difficulty,
+        status,
+        questionIds,
+        title,
+      }
+
+      const session = await deps.repository.insertSession({
+        userId,
+        kind: 'DRILL',
+        prepTestId: null,
+        sectionId: null,
+        metadata: metadata as unknown as Record<string, unknown>,
+      })
+
+      const rows = await deps.repository.getDrillQuestionRowsByIds(questionIds)
+      const questions = rows.map(mapDrillQuestionRow)
+
+      return {
+        session,
+        metadata,
+        questions,
+        answers: [],
+        drillLabel: title ?? null,
+      }
+    },
+
+    async startLessonDrill(
+      userId: string,
+      body: { lessonId?: unknown },
+    ): Promise<DrillSessionResponse> {
+      const lessonId = typeof body.lessonId === 'string' ? body.lessonId.trim() : ''
+      if (!lessonId) throw new PracticeValidationError('lessonId is required')
+
+      const lesson = await deps.repository.getPublishedPrepLessonById(lessonId)
+      if (!lesson || !lesson.is_published) {
+        throw new PracticeValidationError('Lesson not found')
+      }
+      const isActive = lesson.lesson_type === 'active_drill'
+      const isAdaptive = lesson.lesson_type === 'adaptive_drill'
+      if (!isActive && !isAdaptive) {
+        throw new PracticeValidationError('Lesson is not a prep-course drill')
+      }
+
+      let questionIds = await deps.repository.listLessonQuestionIds(lessonId)
+
+      if (isActive) {
+        if (questionIds.length > 1) {
+          throw new PracticeValidationError('Active drill lessons must have exactly one linked question')
+        }
+        let questionId = questionIds[0] ?? null
+        if (!questionId) {
+          const ref = extractPrepTestQuestionRef(lesson.summary, lesson.text_content, lesson.title)
+          if (!ref) {
+            throw new PracticeValidationError('No PrepTest question reference found for this lesson')
+          }
+          const resolvedId = await deps.repository.resolveQuestionIdFromReference(ref)
+          if (!resolvedId) {
+            throw new PracticeValidationError(`PrepTest question not found: ${ref}`)
+          }
+          questionId = resolvedId
+          questionIds = [resolvedId]
+        }
+      } else {
+        if (questionIds.length === 0) {
+          throw new PracticeValidationError('No questions are linked to this adaptive drill lesson')
+        }
+        if (questionIds.length > 5) {
+          throw new PracticeValidationError('Adaptive drill lessons can include at most five linked questions')
+        }
+      }
+
+      const firstQuestionId = questionIds[0]!
+      const questionDetail = await deps.repository.getQuestionDetail(firstQuestionId)
+      if (!questionDetail) {
+        throw new PracticeValidationError('Linked question not found')
+      }
+
+      const sectionType = parseSectionType(questionDetail.admin_sections?.section_type)
+      if (!sectionType) {
+        throw new PracticeValidationError('Linked question must be LR or RC')
+      }
+
+      const metadata: DrillSessionMetadata = {
+        sectionType,
+        questionCount: questionIds.length,
+        timing: 'unlimited',
+        showAnswers: 'end',
+        selection: 'manual',
+        questionIds,
+        title: lesson.title,
+        lessonId: lesson.id,
+        source: isActive ? 'prep_course_active_drill' : 'prep_course_adaptive_drill',
+      }
+
+      const session = await deps.repository.insertSession({
+        userId,
+        kind: 'DRILL',
+        prepTestId: null,
+        sectionId: null,
+        metadata: metadata as unknown as Record<string, unknown>,
+      })
+
+      const rows = await deps.repository.getDrillQuestionRowsByIds(questionIds)
+      const questions = rows.map(mapDrillQuestionRow)
+
+      return {
+        session,
+        metadata,
+        questions,
+        answers: [],
+        drillLabel: lesson.title,
+      }
+    },
+
+    async getDrillSession(userId: string, body: { sessionId?: unknown }): Promise<DrillSessionResponse> {
+      const sessionId = typeof body.sessionId === 'string' ? body.sessionId : ''
+      if (!sessionId) throw new PracticeValidationError('sessionId is required')
+
+      const session = await deps.repository.getSessionById(sessionId, userId)
+      if (!session) throw new PracticeForbiddenError('Session not found')
+      if (session.kind !== 'DRILL') {
+        throw new PracticeValidationError('Session is not a drill')
+      }
+
+      const metaRaw = session.metadata
+      const sectionType = parseSectionType(metaRaw.sectionType)
+      if (!sectionType) throw new PracticeValidationError('Invalid drill session metadata')
+
+      const questionIds = drillQuestionIdsFromMetadata(metaRaw)
+      const metadata: DrillSessionMetadata = {
+        sectionType,
+        questionCount:
+          typeof metaRaw.questionCount === 'number'
+            ? metaRaw.questionCount
+            : questionIds.length,
+        timing: typeof metaRaw.timing === 'string' ? metaRaw.timing : 'unlimited',
+        showAnswers: typeof metaRaw.showAnswers === 'string' ? metaRaw.showAnswers : 'end',
+        selection: typeof metaRaw.selection === 'string' ? metaRaw.selection : 'auto',
+        questionTypeId:
+          typeof metaRaw.questionTypeId === 'string' ? metaRaw.questionTypeId : null,
+        tagLabel: typeof metaRaw.tagLabel === 'string' ? metaRaw.tagLabel : null,
+        difficulty: typeof metaRaw.difficulty === 'string' ? metaRaw.difficulty : null,
+        status: typeof metaRaw.status === 'string' ? metaRaw.status : 'fresh',
+        questionIds,
+        title: typeof metaRaw.title === 'string' ? metaRaw.title : null,
+      }
+
+      const rows = await deps.repository.getDrillQuestionRowsByIds(questionIds)
+      const questions = rows.map(mapDrillQuestionRow)
+
+      const events = await deps.repository.listAnswerEventsForSession(sessionId, userId)
+      const latest = latestAnswerByQuestion(events)
+      const answers: DrillAnswerState[] = [...latest.values()].map((e) => ({
+        questionId: e.question_id,
+        selectedAnswer: e.selected_answer,
+        isCorrect: e.is_correct,
+      }))
+
+      return {
+        session,
+        metadata,
+        questions,
+        answers,
+        drillLabel: metadata.title ?? null,
+      }
+    },
+
+    async listSectionPool(
+      _userId: string,
+      body: { sectionType?: unknown },
+    ): Promise<{ sections: SectionPoolItem[] }> {
+      const filterType = sectionTypeForPool(
+        typeof body.sectionType === 'string' ? body.sectionType : undefined,
+      )
+      const rows = await deps.repository.listSectionPoolRows(
+        filterType ? { sectionType: filterType } : {},
+      )
+      const sections: SectionPoolItem[] = rows
+        .map((row) => {
+          const st = sectionTypeForPool(row.sectionType)
+          if (!st) return null
+          return {
+            id: row.id,
+            sectionId: row.sectionId,
+            sectionNumber: row.sectionNumber,
+            sectionType: st,
+            title: row.title,
+            moduleId: row.moduleId,
+            prepTestId: row.prepTestId,
+            prepTestTitle: row.prepTestTitle,
+            questionCount: row.questionCount,
+            timeMinutes: defaultTimeMinutes(st),
+          }
+        })
+        .filter((s): s is SectionPoolItem => s != null && s.questionCount > 0)
+      return { sections }
+    },
+
+    async startSection(
+      userId: string,
+      body: {
+        sectionId?: unknown
+        timing?: unknown
+        showAnswers?: unknown
+      },
+    ): Promise<SectionSessionResponse> {
+      const sectionId = typeof body.sectionId === 'string' ? body.sectionId : ''
+      if (!sectionId) throw new PracticeValidationError('sectionId is required')
+
+      const section = await deps.repository.getSectionDetail(sectionId)
+      if (!section) throw new PracticeValidationError('sectionId not found')
+
+      const sectionType = sectionTypeForPool(section.section_type)
+      if (!sectionType) {
+        throw new PracticeValidationError('Only LR and RC sections are supported for practice')
+      }
+
+      const questionIds = await deps.repository.listQuestionIdsBySectionId(sectionId)
+      if (questionIds.length === 0) {
+        throw new PracticeValidationError('This section has no questions available')
+      }
+
+      const timing = typeof body.timing === 'string' ? body.timing : '35'
+      const showAnswers = typeof body.showAnswers === 'string' ? body.showAnswers : 'end'
+
+      const pt = section.admin_prep_tests
+      const prepTestTitle = pt?.title?.trim() || pt?.module_id || null
+      const sectionTitle = section.title?.trim() || null
+
+      const metadata: SectionSessionMetadata = {
+        sectionType,
+        timing,
+        showAnswers,
+        questionIds,
+        prepTestTitle,
+        sectionTitle,
+        answeredQuestionIds: [],
+      }
+
+      const session = await deps.repository.insertSession({
+        userId,
+        kind: 'SECTION',
+        prepTestId: section.prep_test_id,
+        sectionId,
+        metadata: metadata as unknown as Record<string, unknown>,
+      })
+
+      const rows = await deps.repository.getDrillQuestionRowsByIds(questionIds)
+      const questions = rows.map(mapDrillQuestionRow)
+
+      const poolItem: SectionPoolItem = {
+        id: section.id,
+        sectionId: section.section_id,
+        sectionNumber: section.section_number,
+        sectionType,
+        title: sectionTitle,
+        moduleId: section.module_id,
+        prepTestId: section.prep_test_id,
+        prepTestTitle,
+        questionCount: questionIds.length,
+        timeMinutes: defaultTimeMinutes(sectionType),
+      }
+
+      const sessionLabel = [prepTestTitle, sectionTitle].filter(Boolean).join(' — ') || null
+
+      return {
+        session,
+        metadata,
+        section: poolItem,
+        questions,
+        answers: [],
+        sessionLabel,
+      }
+    },
+
+    async getSectionSession(userId: string, body: { sessionId?: unknown }): Promise<SectionSessionResponse> {
+      const sessionId = typeof body.sessionId === 'string' ? body.sessionId : ''
+      if (!sessionId) throw new PracticeValidationError('sessionId is required')
+
+      const session = await deps.repository.getSessionById(sessionId, userId)
+      if (!session) throw new PracticeForbiddenError('Session not found')
+      if (session.kind !== 'SECTION') {
+        throw new PracticeValidationError('Session is not a section practice session')
+      }
+      if (!session.section_id) {
+        throw new PracticeValidationError('Section session missing section_id')
+      }
+
+      const metaRaw = session.metadata
+      const sectionType = sectionTypeForPool(metaRaw.sectionType as string)
+      if (!sectionType) throw new PracticeValidationError('Invalid section session metadata')
+
+      const questionIds = drillQuestionIdsFromMetadata(metaRaw)
+      const metadata: SectionSessionMetadata = {
+        sectionType,
+        timing: typeof metaRaw.timing === 'string' ? metaRaw.timing : '35',
+        showAnswers: typeof metaRaw.showAnswers === 'string' ? metaRaw.showAnswers : 'end',
+        questionIds,
+        prepTestTitle: typeof metaRaw.prepTestTitle === 'string' ? metaRaw.prepTestTitle : null,
+        sectionTitle: typeof metaRaw.sectionTitle === 'string' ? metaRaw.sectionTitle : null,
+        answeredQuestionIds: Array.isArray(metaRaw.answeredQuestionIds)
+          ? (metaRaw.answeredQuestionIds as string[])
+          : [],
+      }
+
+      const sectionDetail = await deps.repository.getSectionDetail(session.section_id)
+      const pt = sectionDetail?.admin_prep_tests
+
+      const poolItem: SectionPoolItem = {
+        id: session.section_id,
+        sectionId: sectionDetail?.section_id ?? null,
+        sectionNumber: sectionDetail?.section_number ?? null,
+        sectionType,
+        title: metadata.sectionTitle ?? sectionDetail?.title ?? null,
+        moduleId: sectionDetail?.module_id ?? null,
+        prepTestId: session.prep_test_id ?? sectionDetail?.prep_test_id ?? '',
+        prepTestTitle: metadata.prepTestTitle ?? pt?.title ?? pt?.module_id ?? null,
+        questionCount: questionIds.length,
+        timeMinutes: defaultTimeMinutes(sectionType),
+      }
+
+      const rows = await deps.repository.getDrillQuestionRowsByIds(questionIds)
+      const questions = rows.map(mapDrillQuestionRow)
+
+      const events = await deps.repository.listAnswerEventsForSession(sessionId, userId)
+      const latest = latestAnswerByQuestion(events)
+      const answers: DrillAnswerState[] = [...latest.values()].map((e) => ({
+        questionId: e.question_id,
+        selectedAnswer: e.selected_answer,
+        isCorrect: e.is_correct,
+      }))
+
+      const sessionLabel =
+        [metadata.prepTestTitle, metadata.sectionTitle].filter(Boolean).join(' — ') || null
+
+      return {
+        session,
+        metadata,
+        section: poolItem,
+        questions,
+        answers,
+        sessionLabel,
+      }
+    },
+
+    async listPrepTestPool(
+      userId: string,
+      body: { filter?: unknown },
+    ): Promise<{ prepTests: PrepTestPoolItem[] }> {
+      const rows = await deps.repository.listPrepTestPoolRows()
+      const filter =
+        body.filter === 'fresh' || body.filter === 'in_progress' || body.filter === 'completed'
+          ? body.filter
+          : null
+
+      const items: PrepTestPoolItem[] = []
+      for (const row of rows) {
+        if (practiceableSectionsFromRow(row.sections).length === 0) continue
+        const sessions = await deps.repository.listUserSessionsForPrepTest(userId, row.id)
+        const item = poolItemFromRow(row, sessions)
+        if (filter && item.status !== filter) continue
+        items.push(item)
+      }
+
+      return { prepTests: items }
+    },
+
+    async getPrepTestDetail(
+      userId: string,
+      body: { prepTestId?: unknown },
+    ): Promise<PrepTestDetailResponse> {
+      const prepTestId = typeof body.prepTestId === 'string' ? body.prepTestId : ''
+      if (!prepTestId) throw new PracticeValidationError('prepTestId is required')
+
+      const row = await deps.repository.getPrepTestDetailRow(prepTestId)
+      if (!row) throw new PracticeValidationError('prepTestId not found')
+
+      const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
+      const prepTestSession =
+        sessions.find((s) => s.kind === 'PREPTEST' && !s.completed_at) ?? null
+
+      return buildPrepTestDetail(row, sessions, prepTestSession)
+    },
+
+    async startPrepTest(
+      userId: string,
+      body: { prepTestId?: unknown; timing?: unknown; format?: unknown },
+    ): Promise<{ prepTestSession: PracticeSessionRow; detail: PrepTestDetailResponse }> {
+      const prepTestId = typeof body.prepTestId === 'string' ? body.prepTestId : ''
+      if (!prepTestId) throw new PracticeValidationError('prepTestId is required')
+
+      const row = await deps.repository.getPrepTestDetailRow(prepTestId)
+      if (!row) throw new PracticeValidationError('prepTestId not found')
+
+      const practiceable = practiceableSectionsFromRow(row.sections)
+      if (practiceable.length === 0) {
+        throw new PracticeValidationError('This PrepTest has no practiceable LR/RC sections')
+      }
+
+      const timing = typeof body.timing === 'string' ? body.timing : 'standard'
+      const format = typeof body.format === 'string' ? body.format : 'four'
+      const prepTestNumber = prepTestNumberFromModuleId(row.moduleId)
+      const prepTestTitle = row.title?.trim() || prepTestLabel(row.moduleId, row.title, prepTestNumber)
+
+      const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
+      let prepTestSession =
+        sessions.find((s) => s.kind === 'PREPTEST' && !s.completed_at) ?? null
+
+      if (!prepTestSession) {
+        const metadata: PrepTestSessionMetadata = {
+          timing,
+          format,
+          sectionIds: practiceable.map((s) => s.id),
+          prepTestTitle,
+          answeredQuestionIds: [],
+        }
+        prepTestSession = await deps.repository.insertSession({
+          userId,
+          kind: 'PREPTEST',
+          prepTestId,
+          sectionId: null,
+          metadata: metadata as unknown as Record<string, unknown>,
+        })
+        sessions.unshift(prepTestSession)
+      } else if (typeof body.timing === 'string' || typeof body.format === 'string') {
+        const nextMeta = {
+          ...prepTestSession.metadata,
+          ...(typeof body.timing === 'string' ? { timing } : {}),
+          ...(typeof body.format === 'string' ? { format } : {}),
+        }
+        prepTestSession = await deps.repository.updateSession(prepTestSession.id, userId, {
+          metadata: nextMeta,
+        })
+      }
+
+      const detail = buildPrepTestDetail(row, sessions, prepTestSession)
+      return { prepTestSession, detail }
+    },
+
+    async completePrepTest(
+      userId: string,
+      body: { prepTestId?: unknown },
+    ): Promise<{ session: PracticeSessionRow }> {
+      const prepTestId = typeof body.prepTestId === 'string' ? body.prepTestId : ''
+      if (!prepTestId) throw new PracticeValidationError('prepTestId is required')
+
+      const row = await deps.repository.getPrepTestDetailRow(prepTestId)
+      if (!row) throw new PracticeValidationError('prepTestId not found')
+
+      const practiceableIds = practiceableSectionsFromRow(row.sections).map((s) => s.id)
+      const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
+
+      const completedSectionSessions = sessions.filter(
+        (s) => s.kind === 'SECTION' && s.completed_at && s.section_id && practiceableIds.includes(s.section_id),
+      )
+
+      if (completedSectionSessions.length < practiceableIds.length) {
+        throw new PracticeValidationError('Complete all practiceable sections before finishing the PrepTest')
+      }
+
+      let rawScore = 0
+      for (const secSession of completedSectionSessions) {
+        if (typeof secSession.raw_score === 'number') {
+          rawScore += secSession.raw_score
+        } else {
+          const events = await deps.repository.listAnswerEventsForSession(secSession.id, userId)
+          const latest = latestAnswerByQuestion(events)
+          for (const e of latest.values()) {
+            if (e.is_correct) rawScore += 1
+          }
+        }
+      }
+
+      let prepTestSession =
+        sessions.find((s) => s.kind === 'PREPTEST' && !s.completed_at) ??
+        sessions.find((s) => s.kind === 'PREPTEST') ??
+        null
+
+      if (!prepTestSession) {
+        const practiceable = practiceableSectionsFromRow(row.sections)
+        const prepTestNumber = prepTestNumberFromModuleId(row.moduleId)
+        prepTestSession = await deps.repository.insertSession({
+          userId,
+          kind: 'PREPTEST',
+          prepTestId,
+          sectionId: null,
+          metadata: {
+            timing: 'standard',
+            format: 'four',
+            sectionIds: practiceable.map((s) => s.id),
+            prepTestTitle: row.title?.trim() || prepTestLabel(row.moduleId, row.title, prepTestNumber),
+          },
+        })
+      }
+
+      if (prepTestSession.completed_at) {
+        throw new PracticeValidationError('PrepTest is already completed')
+      }
+
+      const now = new Date().toISOString()
+      let scaledScore: number | null = null
+      let percentile: number | null = null
+      const scoreRow = await deps.repository.getScoreRowForRaw(prepTestId, rawScore)
+      if (scoreRow) {
+        scaledScore = scoreRow.scaled_score
+        percentile = scoreRow.percentile
+      }
+
+      const sessionRow = await deps.repository.updateSession(prepTestSession.id, userId, {
+        completed_at: now,
+        raw_score: rawScore,
+        scaled_score: scaledScore,
+        percentile,
+      })
+
+      return { session: sessionRow }
+    },
+
+    async listBlindReviewPool(
+      userId: string,
+      _body: Record<string, unknown>,
+    ): Promise<{ prepTests: BlindReviewPoolItem[] }> {
+      const rows = await deps.repository.listPrepTestPoolRows()
+      const items: BlindReviewPoolItem[] = []
+      for (const row of rows) {
+        const sessions = await deps.repository.listUserSessionsForPrepTest(userId, row.id)
+        const item = blindReviewPoolItemFromRow(row, sessions)
+        if (item) items.push(item)
+      }
+      return { prepTests: items }
+    },
+
+    async getBlindReviewDetail(
+      userId: string,
+      body: { prepTestId?: unknown },
+    ): Promise<BlindReviewDetailResponse> {
+      const prepTestId = typeof body.prepTestId === 'string' ? body.prepTestId : ''
+      if (!prepTestId) throw new PracticeValidationError('prepTestId is required')
+
+      const row = await deps.repository.getPrepTestDetailRow(prepTestId)
+      if (!row) throw new PracticeValidationError('prepTestId not found')
+
+      const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
+      const { prepTestSession } = blindReviewStateFromSessions(sessions)
+      if (!prepTestSession) {
+        throw new PracticeValidationError('Complete the PrepTest before blind review')
+      }
+
+      return buildBlindReviewDetail(row, sessions, prepTestSession)
+    },
+
+    async startBlindReview(
+      userId: string,
+      body: { prepTestId?: unknown },
+    ): Promise<{ session: PracticeSessionRow }> {
+      const prepTestId = typeof body.prepTestId === 'string' ? body.prepTestId : ''
+      if (!prepTestId) throw new PracticeValidationError('prepTestId is required')
+
+      const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
+      const prepTestSession =
+        sessions.find((s) => s.kind === 'PREPTEST' && s.completed_at) ??
+        sessions.find((s) => s.kind === 'PREPTEST')
+      if (!prepTestSession?.completed_at) {
+        throw new PracticeValidationError('Complete the PrepTest before starting blind review')
+      }
+      if (prepTestSession.blind_review_completed_at) {
+        throw new PracticeValidationError('Blind review is already completed for this PrepTest')
+      }
+
+      const sessionRow = await deps.repository.updateSession(prepTestSession.id, userId, {
+        metadata: { ...prepTestSession.metadata, blindReviewActive: true },
+      })
+      return { session: sessionRow }
+    },
+
+    async completeBlindReview(
+      userId: string,
+      body: { prepTestId?: unknown; sessionId?: unknown },
+    ): Promise<{ session: PracticeSessionRow }> {
+      const prepTestIdFromBody = typeof body.prepTestId === 'string' ? body.prepTestId : ''
+      const sessionIdFromBody = typeof body.sessionId === 'string' ? body.sessionId : ''
+
+      let prepTestId = prepTestIdFromBody
+      if (!prepTestId && sessionIdFromBody) {
+        const row = await deps.repository.getSessionById(sessionIdFromBody, userId)
+        if (!row || row.kind !== 'PREPTEST') {
+          throw new PracticeValidationError('sessionId must be a PrepTest session')
+        }
+        prepTestId = row.prep_test_id ?? ''
+      }
+      if (!prepTestId) throw new PracticeValidationError('prepTestId or sessionId is required')
+
+      const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
+      const prepTestSession = sessions.find((s) => s.kind === 'PREPTEST' && s.completed_at)
+      if (!prepTestSession) {
+        throw new PracticeValidationError('No completed PrepTest session found')
+      }
+      if (prepTestSession.blind_review_completed_at) {
+        throw new PracticeValidationError('Blind review is already completed for this PrepTest')
+      }
+
+      const sectionSessions = sessions.filter((s) => s.kind === 'SECTION' && s.completed_at && s.section_id)
+      const sectionIds = sectionSessions.map((s) => s.id)
+      const events = await deps.repository.listAnswerEventsForSessions(sectionIds, userId)
+      const latest = latestAnswerByQuestion(events)
+
+      let correct = 0
+      for (const e of latest.values()) {
+        if (e.is_correct) correct += 1
+      }
+      const blindReviewRaw = correct
+      let blindReviewScaled: number | null = null
+      let blindReviewPercentile: number | null = null
+      const scoreRow = await deps.repository.getScoreRowForRaw(prepTestId, blindReviewRaw)
+      if (scoreRow) {
+        blindReviewScaled = scoreRow.scaled_score
+        blindReviewPercentile = scoreRow.percentile
+      }
+
+      const now = new Date().toISOString()
+      const sessionRow = await deps.repository.updateSession(prepTestSession.id, userId, {
+        blind_review_raw_score: blindReviewRaw,
+        blind_review_scaled_score: blindReviewScaled,
+        blind_review_percentile: blindReviewPercentile,
+        blind_review_completed_at: now,
+        metadata: { ...prepTestSession.metadata, blindReviewActive: false },
+      })
       return { session: sessionRow }
     },
   }

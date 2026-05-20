@@ -17,6 +17,10 @@ export type CompletedPreptestRow = {
   raw_score: number | null
   scaled_score: number | null
   percentile: number | null
+  blind_review_raw_score: number | null
+  blind_review_scaled_score: number | null
+  blind_review_percentile: number | null
+  blind_review_completed_at: string | null
   prep_test_id: string | null
   /** Supabase may return object or single-element array for FK joins */
   admin_prep_tests: { title: string; module_id: string } | { title: string; module_id: string }[] | null
@@ -27,6 +31,7 @@ export type QuestionTypeRow = {
   name: string
   section_type: 'LR' | 'RC' | 'LG'
   goal_accuracy: number | null
+  avg_per_test: number | null
 }
 
 export type PracticeSessionListRow = {
@@ -39,6 +44,9 @@ export type PracticeSessionListRow = {
   raw_score: number | null
   scaled_score: number | null
   percentile: number | null
+  blind_review_raw_score: number | null
+  blind_review_scaled_score: number | null
+  blind_review_percentile: number | null
   bookmarked: boolean
   excluded: boolean
   metadata: Record<string, unknown>
@@ -101,6 +109,10 @@ export function createAnalyticsRepository(client: SupabaseClient) {
           raw_score,
           scaled_score,
           percentile,
+          blind_review_raw_score,
+          blind_review_scaled_score,
+          blind_review_percentile,
+          blind_review_completed_at,
           prep_test_id,
           admin_prep_tests ( title, module_id )
         `,
@@ -117,7 +129,9 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       if (sessionIds.length === 0) return []
       const { data, error } = await client
         .from('answer_events')
-        .select('practice_session_id, question_id, is_correct, section_type, created_at')
+        .select(
+          'practice_session_id, question_id, is_correct, selected_answer, section_type, created_at',
+        )
         .eq('user_id', userId)
         .in('practice_session_id', sessionIds)
         .order('created_at', { ascending: true })
@@ -126,6 +140,7 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         practice_session_id: string
         question_id: string
         is_correct: boolean
+        selected_answer: string
         section_type: 'LR' | 'RC' | 'LG' | null
         created_at: string
       }[]) ?? []
@@ -141,11 +156,105 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       return (data as { question_type_id: string; is_correct: boolean }[]) ?? []
     },
 
+    async listAnswerEventsWithTypeDifficulty(userId: string) {
+      const { data, error } = await client
+        .from('answer_events')
+        .select('question_type_id, difficulty')
+        .eq('user_id', userId)
+        .not('question_type_id', 'is', null)
+      if (error) throw error
+      return (data as { question_type_id: string; difficulty: number | null }[]) ?? []
+    },
+
+    async getPracticeSession(sessionId: string, userId: string) {
+      const { data, error } = await client
+        .from('practice_sessions')
+        .select(
+          `
+          id,
+          kind,
+          prep_test_id,
+          completed_at,
+          started_at,
+          raw_score,
+          scaled_score,
+          percentile,
+          blind_review_raw_score,
+          blind_review_scaled_score,
+          blind_review_percentile,
+          blind_review_completed_at,
+          excluded,
+          metadata,
+          admin_prep_tests ( title, module_id )
+        `,
+        )
+        .eq('id', sessionId)
+        .eq('user_id', userId)
+        .maybeSingle()
+      if (error) throw error
+      return data as {
+        id: string
+        kind: string
+        prep_test_id: string | null
+        completed_at: string | null
+        started_at: string
+        raw_score: number | null
+        scaled_score: number | null
+        percentile: number | null
+        blind_review_raw_score: number | null
+        blind_review_scaled_score: number | null
+        blind_review_percentile: number | null
+        blind_review_completed_at: string | null
+        excluded: boolean
+        metadata: Record<string, unknown>
+        admin_prep_tests: { title: string; module_id: string } | { title: string; module_id: string }[] | null
+      } | null
+    },
+
+    async listSectionSessionsForPrepTest(userId: string, prepTestId: string) {
+      const { data, error } = await client
+        .from('practice_sessions')
+        .select('id, section_id, completed_at, raw_score')
+        .eq('user_id', userId)
+        .eq('prep_test_id', prepTestId)
+        .eq('kind', 'SECTION')
+        .not('completed_at', 'is', null)
+      if (error) throw error
+      return (data as { id: string; section_id: string | null; completed_at: string; raw_score: number | null }[]) ?? []
+    },
+
+    async listPrepTestQuestionsWithMeta(prepTestId: string) {
+      const { data, error } = await client
+        .from('admin_questions')
+        .select(
+          `
+          id,
+          question_number,
+          stem_text,
+          correct_answer,
+          difficulty,
+          question_type_id,
+          question_types ( name ),
+          admin_sections!inner (
+            id,
+            section_type,
+            section_number,
+            title,
+            prep_test_id
+          )
+        `,
+        )
+        .eq('admin_sections.prep_test_id', prepTestId)
+        .order('question_number', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as Array<Record<string, unknown>>
+    },
+
     async listQuestionTypesByIds(ids: string[]): Promise<QuestionTypeRow[]> {
       if (ids.length === 0) return []
       const { data, error } = await client
         .from('question_types')
-        .select('id, name, section_type, goal_accuracy')
+        .select('id, name, section_type, goal_accuracy, avg_per_test')
         .in('id', ids)
         .eq('is_active', true)
       if (error) throw error
@@ -172,6 +281,9 @@ export function createAnalyticsRepository(client: SupabaseClient) {
           raw_score,
           scaled_score,
           percentile,
+          blind_review_raw_score,
+          blind_review_scaled_score,
+          blind_review_percentile,
           bookmarked,
           excluded,
           metadata,

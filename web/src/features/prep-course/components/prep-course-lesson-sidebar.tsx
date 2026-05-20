@@ -1,5 +1,6 @@
 import { Check, Circle } from "lucide-react"
 
+import { PrepCourseLessonTypeBadge } from "@/features/prep-course/components/prep-course-lesson-type-badge"
 import {
   formatCourseHoursLabel,
   formatDurationShort,
@@ -91,6 +92,10 @@ function PrepCourseLessonSidebar({
                     )}
                   </span>
                   <span className="min-w-0 flex-1 truncate">{lesson.title}</span>
+                  <PrepCourseLessonTypeBadge
+                    lessonType={lesson.lesson_type}
+                    variant={isActive ? "onPrimary" : "default"}
+                  />
                   <span className={`shrink-0 text-xs ${isActive ? "text-white/85" : "text-[#666d80]"}`}>
                     {formatDurationShort(lesson.duration_minutes)}
                   </span>

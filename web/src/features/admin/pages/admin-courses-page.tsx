@@ -13,12 +13,24 @@ import {
   createButton,
 } from "react-simple-wysiwyg"
 
+import { AdminCurriculumTree } from "@/features/admin/components/course-builder/admin-curriculum-tree"
+import { AdminLessonQuickAdd } from "@/features/admin/components/course-builder/admin-lesson-quick-add"
+import { CurriculumMetaEditor } from "@/features/admin/components/course-builder/curriculum-meta-editor"
 import { AdminLessonStatusDropdown } from "@/features/admin/components/admin-lesson-status-dropdown"
 import { LessonQuestionPreviewModal } from "@/features/admin/components/lesson-question-preview-modal"
+import {
+  flattenLessonsFromCurriculum,
+  formatMinutesAsDuration,
+  parseDurationInputToMinutes,
+  type BuilderSelection,
+} from "@/features/admin/lib/course-builder-utils"
 import { formatSectionOptionLabel } from "@/features/admin/lib/admin-section-display"
 import { normalizeLessonStatus, type PrepLessonStatus } from "@/features/admin/lib/prep-lesson-status"
 import { useAdminApi } from "@/features/admin/use-admin-api"
-import type { AdminBulkImportDryRunResult } from "@/lib/api/admin"
+import type {
+  AdminBulkImportDryRunResult,
+  PrepCourseCurriculum,
+} from "@/lib/api/admin"
 import {
   isRepWorkJson,
   parseRepWorkFromTextContent,
@@ -37,6 +49,7 @@ type CourseRow = {
 type LessonRow = {
   id: string
   course_id: string
+  section_id: string
   slug: string
   title: string
   summary: string | null
@@ -109,40 +122,11 @@ function fileToBase64(file: File): Promise<string> {
   })
 }
 
-function parseDurationInputToMinutes(raw: string): number | null {
-  const t = raw.trim()
-  if (!t) return null
-  const hMatch = t.match(/(\d+(?:\.\d+)?)\s*h(?:ours?)?/i)
-  const mMatch = t.match(/(\d+(?:\.\d+)?)\s*m(?:in(?:utes?)?)?/i)
-  if (hMatch || mMatch) {
-    const h = hMatch ? Number(hMatch[1]) : 0
-    const m = mMatch ? Number(mMatch[1]) : 0
-    const total = Math.round(h * 60 + m)
-    return Number.isFinite(total) ? total : null
-  }
-  const n = Number(t.replace(/,/g, ""))
-  return Number.isFinite(n) ? Math.round(n) : null
-}
-
 const LESSON_TYPE_EDIT_LABEL: Record<PrepLessonStatus, string> = {
   video_text: "VIDEO + TEXT",
   active_drill: "ACTIVE DRILL",
   adaptive_drill: "ADAPTIVE DRILL",
   rep_work: "REP WORK",
-}
-
-const LESSON_TYPE_LIST_LABEL: Record<PrepLessonStatus, string> = {
-  video_text: "Video + Text",
-  active_drill: "Active Drill",
-  adaptive_drill: "Adaptive Drill",
-  rep_work: "Rep Work",
-}
-
-const LESSON_TYPE_BADGE_CLASS: Record<PrepLessonStatus, string> = {
-  video_text: "border-[#bfd8ff] bg-[#edf4ff] text-[#1f4c9a]",
-  active_drill: "border-[#b7eedf] bg-[#e8faf6] text-[#206d5b]",
-  adaptive_drill: "border-[#d8c9ff] bg-[#f3edff] text-[#5b3aa8]",
-  rep_work: "border-[#ffe5b7] bg-[#fff6e0] text-[#956321]",
 }
 
 function escapeHtmlAttr(value: string): string {
@@ -288,7 +272,15 @@ function AdminCoursesPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null)
   const [selectedCourseId, setSelectedCourseId] = useState<string>("")
+  const [curriculum, setCurriculum] = useState<PrepCourseCurriculum>({ modules: [] })
   const [lessons, setLessons] = useState<LessonRow[]>([])
+  const [builderSelection, setBuilderSelection] = useState<BuilderSelection | null>(null)
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set())
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
+  const [moduleForm, setModuleForm] = useState({ title: "", durationInput: "" })
+  const [sectionForm, setSectionForm] = useState({ title: "", durationInput: "" })
+  const [isSavingModule, setIsSavingModule] = useState(false)
+  const [isSavingSection, setIsSavingSection] = useState(false)
   const [selectedLessonId, setSelectedLessonId] = useState("")
   const [prepTestOptions, setPrepTestOptions] = useState<PrepTestOption[]>([])
   const [selectedPrepTestId, setSelectedPrepTestId] = useState("")
@@ -371,36 +363,64 @@ function AdminCoursesPage() {
 
   useEffect(() => {
     let alive = true
-    async function loadLessons() {
-      if (!adminApi || !selectedCourseId) return
+    async function loadCurriculum() {
+      if (!adminApi || !selectedCourseId || mode !== "builder") return
       try {
-        const rows = (await adminApi.listLessons(selectedCourseId)) as LessonRow[]
+        const tree = await adminApi.listCurriculum(selectedCourseId)
         if (!alive) return
-        setLessons(rows)
-        if (rows[0]) {
-          setSelectedLessonId(String(rows[0].id))
-        } else {
-          setSelectedLessonId("")
-          setLessonForm({
-            title: "",
-            slug: "",
-            videoUrl: "",
-            textContent: "",
-            durationMinutes: "",
-            lessonType: "video_text",
-            repWorkInstructions: "<p></p>",
-            repWorkPairs: [{ question: "<p></p>", answer: "<p></p>" }],
-          })
+        setCurriculum(tree)
+        const flat = flattenLessonsFromCurriculum(tree) as LessonRow[]
+        setLessons(flat)
+        if (flat[0] && !builderSelection) {
+          setBuilderSelection({ kind: "lesson", id: flat[0].id })
+          setSelectedLessonId(flat[0].id)
+        }
+        if (tree.modules[0]) {
+          setExpandedModules((prev) => new Set([...prev, tree.modules[0].id]))
+          const firstSection = tree.modules[0].sections[0]
+          if (firstSection) {
+            setExpandedSections((prev) => new Set([...prev, firstSection.id]))
+          }
         }
       } catch (e) {
-        if (alive) setError(e instanceof Error ? e.message : "Failed to load lessons")
+        if (alive) setError(e instanceof Error ? e.message : "Failed to load curriculum")
       }
     }
-    void loadLessons()
+    void loadCurriculum()
     return () => {
       alive = false
     }
-  }, [adminApi, selectedCourseId])
+  }, [adminApi, selectedCourseId, mode])
+
+  useEffect(() => {
+    if (!builderSelection) return
+    if (builderSelection.kind === "lesson") {
+      setSelectedLessonId(builderSelection.id)
+      return
+    }
+    setSelectedLessonId("")
+    if (builderSelection.kind === "module") {
+      const mod = curriculum.modules.find((m) => m.id === builderSelection.id)
+      if (mod) {
+        setModuleForm({
+          title: mod.title,
+          durationInput: formatMinutesAsDuration(mod.duration_minutes),
+        })
+      }
+    }
+    if (builderSelection.kind === "section") {
+      for (const mod of curriculum.modules) {
+        const sec = mod.sections.find((s) => s.id === builderSelection.id)
+        if (sec) {
+          setSectionForm({
+            title: sec.title,
+            durationInput: formatMinutesAsDuration(sec.duration_minutes),
+          })
+          break
+        }
+      }
+    }
+  }, [builderSelection, curriculum])
 
   const selectedCourse = useMemo(
     () => courses.find((course) => String(course.id) === selectedCourseId) ?? null,
@@ -476,6 +496,19 @@ function AdminCoursesPage() {
     setSelectedCourseId(fallback)
   }
 
+  async function reloadCurriculum(select?: BuilderSelection) {
+    if (!adminApi || !selectedCourseId) return
+    const tree = await adminApi.listCurriculum(selectedCourseId)
+    setCurriculum(tree)
+    const flat = flattenLessonsFromCurriculum(tree) as LessonRow[]
+    setLessons(flat)
+    if (select) {
+      setBuilderSelection(select)
+      if (select.kind === "lesson") setSelectedLessonId(select.id)
+    }
+    return tree
+  }
+
   async function createCourse() {
     if (!adminApi) return
     if (!courseForm.title.trim()) {
@@ -528,14 +561,56 @@ function AdminCoursesPage() {
     }
   }
 
-  async function addLesson() {
+  async function addModule() {
     if (!adminApi || !selectedCourseId) return
-    const baseTitle = `Lesson ${lessons.length + 1}`
+    setError(null)
+    try {
+      const count = curriculum.modules.length
+      const row = await adminApi.createModule({
+        courseId: selectedCourseId,
+        title: `Module ${count + 1}`,
+      })
+      if (!row) throw new Error("Module was not created")
+      await reloadCurriculum({ kind: "module", id: row.id })
+      setExpandedModules((prev) => new Set([...prev, row.id]))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create module")
+    }
+  }
+
+  async function addSection(moduleId: string) {
+    if (!adminApi) return
+    setError(null)
+    try {
+      const mod = curriculum.modules.find((m) => m.id === moduleId)
+      const count = mod?.sections.length ?? 0
+      const row = await adminApi.createSection({
+        moduleId,
+        title: `Section ${count + 1}`,
+      })
+      if (!row) throw new Error("Section was not created")
+      await reloadCurriculum({ kind: "section", id: row.id })
+      setExpandedSections((prev) => new Set([...prev, row.id]))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create section")
+    }
+  }
+
+  async function addLesson(sectionId: string) {
+    if (!adminApi || !selectedCourseId) return
+    let lessonCount = 0
+    for (const mod of curriculum.modules) {
+      for (const sec of mod.sections) {
+        if (sec.id === sectionId) lessonCount = sec.lessons.length
+      }
+    }
+    const baseTitle = `Lesson ${lessonCount + 1}`
     const baseSlug = `${selectedCourse?.slug ?? "course"}-lesson-${lessons.length + 1}`
     setError(null)
     try {
       const row = (await adminApi.createLesson({
         courseId: selectedCourseId,
+        sectionId,
         title: baseTitle,
         slug: baseSlug,
         summary: "",
@@ -545,11 +620,69 @@ function AdminCoursesPage() {
         lessonType: "video_text",
       })) as LessonRow | undefined
       if (!row) throw new Error("Lesson was not created")
-      const nextRows = (await adminApi.listLessons(selectedCourseId)) as LessonRow[]
-      setLessons(nextRows)
-      setSelectedLessonId(row.id)
+      await reloadCurriculum({ kind: "lesson", id: row.id })
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create lesson")
+    }
+  }
+
+  async function saveModule() {
+    if (!adminApi || builderSelection?.kind !== "module") return
+    setIsSavingModule(true)
+    setError(null)
+    try {
+      await adminApi.updateModule(builderSelection.id, {
+        title: moduleForm.title.trim(),
+        durationMinutes: parseDurationInputToMinutes(moduleForm.durationInput),
+      })
+      await reloadCurriculum(builderSelection)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save module")
+    } finally {
+      setIsSavingModule(false)
+    }
+  }
+
+  async function deleteModule(moduleId: string) {
+    if (!adminApi) return
+    if (!window.confirm("Delete this module and all its sections and lessons?")) return
+    setError(null)
+    try {
+      await adminApi.deleteModule(moduleId)
+      setBuilderSelection(null)
+      await reloadCurriculum()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to delete module")
+    }
+  }
+
+  async function saveSection() {
+    if (!adminApi || builderSelection?.kind !== "section") return
+    setIsSavingSection(true)
+    setError(null)
+    try {
+      await adminApi.updateSection(builderSelection.id, {
+        title: sectionForm.title.trim(),
+        durationMinutes: parseDurationInputToMinutes(sectionForm.durationInput),
+      })
+      await reloadCurriculum(builderSelection)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save section")
+    } finally {
+      setIsSavingSection(false)
+    }
+  }
+
+  async function deleteSection(sectionId: string) {
+    if (!adminApi) return
+    if (!window.confirm("Delete this section and all its lessons?")) return
+    setError(null)
+    try {
+      await adminApi.deleteSection(sectionId)
+      setBuilderSelection(null)
+      await reloadCurriculum()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to delete section")
     }
   }
 
@@ -577,9 +710,7 @@ function AdminCoursesPage() {
       if (options?.publish === true) payload.isPublished = true
       if (options?.publish === false) payload.isPublished = false
       await adminApi.updateLesson(selectedLessonId, payload)
-      if (!selectedCourseId) return
-      const nextRows = (await adminApi.listLessons(selectedCourseId)) as LessonRow[]
-      setLessons(nextRows)
+      await reloadCurriculum({ kind: "lesson", id: selectedLessonId })
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update lesson")
     } finally {
@@ -618,9 +749,11 @@ function AdminCoursesPage() {
     setError(null)
     try {
       await adminApi.deleteLesson(lessonId)
-      const nextRows = (await adminApi.listLessons(selectedCourseId)) as LessonRow[]
-      setLessons(nextRows)
-      setSelectedLessonId(nextRows[0]?.id ?? "")
+      const tree = await reloadCurriculum()
+      const flat = tree ? (flattenLessonsFromCurriculum(tree) as LessonRow[]) : []
+      const nextId = flat[0]?.id ?? ""
+      setBuilderSelection(nextId ? { kind: "lesson", id: nextId } : null)
+      setSelectedLessonId(nextId)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete lesson")
     }
@@ -666,8 +799,9 @@ function AdminCoursesPage() {
         importToken: bulkPreview.importToken,
       })
       await reloadCoursesAndSelect(String(result.courseId))
-      const rows = (await adminApi.listLessons(String(result.courseId))) as LessonRow[]
-      setLessons(rows)
+      const tree = await adminApi.listCurriculum(String(result.courseId))
+      setCurriculum(tree)
+      setLessons(flattenLessonsFromCurriculum(tree) as LessonRow[])
       setBulkPreview(null)
       setBulkFile(null)
       window.alert(
@@ -1017,45 +1151,67 @@ function AdminCoursesPage() {
                 Back
               </button>
             </div>
-            {lessons.map((lesson) => (
-              (() => {
-                const lessonType = normalizeLessonStatus(lesson.lesson_type)
-                return (
-                  <button
-                    key={lesson.id}
-                    type="button"
-                    className={`lesson-item w-full text-left ${selectedLessonId === lesson.id ? "active" : ""}`}
-                    onClick={() => setSelectedLessonId(lesson.id)}
-                  >
-                    <span className="drag-handle">▸</span>
-                    <div className="lesson-info">
-                      <div className="lesson-name">{lesson.title || "Untitled lesson"}</div>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="lesson-meta">{lesson.slug}</span>
-                        <span
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold leading-none ${LESSON_TYPE_BADGE_CLASS[lessonType]}`}
-                        >
-                          {LESSON_TYPE_LIST_LABEL[lessonType]}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                )
-              })()
-            ))}
-            <div className="p-3">
-              <button
-                type="button"
-                className="admin-btn admin-btn-ghost w-full justify-center border-dashed border-[var(--border2)]"
-                onClick={() => void addLesson()}
-              >
-                + Add Lesson
-              </button>
-            </div>
+            <AdminCurriculumTree
+              curriculum={curriculum}
+              selection={builderSelection}
+              expandedModules={expandedModules}
+              expandedSections={expandedSections}
+              onToggleModule={(moduleId) =>
+                setExpandedModules((prev) => {
+                  const next = new Set(prev)
+                  if (next.has(moduleId)) next.delete(moduleId)
+                  else next.add(moduleId)
+                  return next
+                })
+              }
+              onToggleSection={(sectionId) =>
+                setExpandedSections((prev) => {
+                  const next = new Set(prev)
+                  if (next.has(sectionId)) next.delete(sectionId)
+                  else next.add(sectionId)
+                  return next
+                })
+              }
+              onSelect={setBuilderSelection}
+              onAddModule={() => void addModule()}
+              onAddSection={(moduleId) => void addSection(moduleId)}
+              onAddLesson={(sectionId) => void addLesson(sectionId)}
+            />
           </div>
-          <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-              {!selectedLesson ? (
-                <p className="text-sm text-[#666d80]">Create or select a lesson to edit its content.</p>
+          <div className="flex min-h-0 min-w-0 flex-1">
+            <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6">
+              {builderSelection?.kind === "module" ? (
+                <CurriculumMetaEditor
+                  badge="Editing module"
+                  titleLabel="Module Title"
+                  title={moduleForm.title}
+                  durationInput={moduleForm.durationInput}
+                  isSaving={isSavingModule}
+                  onTitleChange={(title) => setModuleForm((p) => ({ ...p, title }))}
+                  onDurationChange={(durationInput) => setModuleForm((p) => ({ ...p, durationInput }))}
+                  onSave={() => void saveModule()}
+                  onDelete={() => void deleteModule(builderSelection.id)}
+                  deleteLabel="Delete module"
+                />
+              ) : builderSelection?.kind === "section" ? (
+                <CurriculumMetaEditor
+                  badge="Editing section"
+                  titleLabel="Section Title"
+                  title={sectionForm.title}
+                  durationInput={sectionForm.durationInput}
+                  isSaving={isSavingSection}
+                  onTitleChange={(title) => setSectionForm((p) => ({ ...p, title }))}
+                  onDurationChange={(durationInput) => setSectionForm((p) => ({ ...p, durationInput }))}
+                  onSave={() => void saveSection()}
+                  onDelete={() => void deleteSection(builderSelection.id)}
+                  deleteLabel="Delete section"
+                />
+              ) : !selectedLesson ? (
+                <p className="text-sm text-[#666d80]">
+                  {curriculum.modules.length === 0
+                    ? "Add a module to start building your curriculum."
+                    : "Select a module, section, or lesson to edit."}
+                </p>
               ) : (
                 <div className="mx-auto flex max-w-[736px] flex-col gap-6">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1430,6 +1586,31 @@ function AdminCoursesPage() {
                   </div>
                 </div>
               )}
+          </div>
+          {selectedLesson ? (
+            <AdminLessonQuickAdd
+              onAddVideo={() => {
+                setLessonForm((p) => ({ ...p, lessonType: "video_text" }))
+                document.getElementById("lesson-instructions-anchor")?.scrollIntoView({ behavior: "smooth" })
+              }}
+              onAddText={() => {
+                document.getElementById("lesson-instructions-anchor")?.scrollIntoView({ behavior: "smooth" })
+              }}
+              onAddImage={() => {
+                const raw = window.prompt("Image URL (https://…)", "https://")
+                if (raw == null) return
+                const url = raw.trim()
+                if (!url) return
+                setLessonForm((p) => ({
+                  ...p,
+                  textContent: `${p.textContent || "<p></p>"}<p><img src="${url}" alt="" /></p>`,
+                }))
+              }}
+              onAddQuestion={() => {
+                document.getElementById("lesson-link-questions")?.scrollIntoView({ behavior: "smooth" })
+              }}
+            />
+          ) : null}
           </div>
         </div>
       )}

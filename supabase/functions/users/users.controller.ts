@@ -22,6 +22,22 @@ export async function handleUsersRequest(req: Request): Promise<Response> {
       return json({ profile, entitlement }, {}, corsHeaders)
     }
 
+    if (req.method === 'POST') {
+      const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
+      const action = typeof body.action === 'string' ? body.action : ''
+
+      if (action === 'users-complete-first-login') {
+        const profile = await service.markFirstTimeLoginComplete(auth.user.id)
+        return json({ profile }, {}, corsHeaders)
+      }
+
+      return json(
+        { error: action ? `Unknown action: ${action}` : 'Missing action in request body' },
+        { status: 400 },
+        corsHeaders,
+      )
+    }
+
     return json({ error: 'Method not allowed' }, { status: 405 }, corsHeaders)
   } catch (e) {
     if (e instanceof AuthorizationError) {

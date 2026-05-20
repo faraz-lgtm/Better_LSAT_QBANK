@@ -1,5 +1,21 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
+import type {
+  ExplanationDetailPayload,
+  ExplanationPrepTestListItem,
+  ExplanationPrepTestNode,
+} from "@/features/student/explanation-detail/explanation-tree-types"
+
+export type {
+  ExplanationDetailPayload,
+  ExplanationPrepTestListItem,
+  ExplanationPrepTestNode,
+  ExplanationQuestionNode,
+  ExplanationSectionNode,
+  ExplanationPassageNode,
+} from "@/features/student/explanation-detail/explanation-tree-types"
+
+/** @deprecated Flat catalog row; kept for legacy list endpoint consumers. */
 export type ExplanationsSummaryRow = {
   questionId: string
   prepTestTitle: string
@@ -11,19 +27,9 @@ export type ExplanationsSummaryRow = {
   lastAttemptedAt: string
 }
 
-export type ExplanationDetailPayload = {
-  questionId: string
-  prepTestTitle: string
-  sectionType: "LR" | "RC" | "LG" | null
-  questionNumber: number | null
-  topicName: string
-  explanationHtml: string | null
-  videoUrl: string | null
-}
-
 export function createExplanationsApi(supabase: SupabaseClient) {
   async function invokeExplanationsFn<T>(
-    functionName: string,
+    action: string,
     body: Record<string, unknown>,
   ): Promise<{ data: T | null; error: unknown }> {
     const maybeAuth = supabase as unknown as {
@@ -35,21 +41,51 @@ export function createExplanationsApi(supabase: SupabaseClient) {
     if (accessToken) {
       headers.Authorization = `Bearer ${accessToken}`
     }
-    return await supabase.functions.invoke<T>(functionName, {
+    return await supabase.functions.invoke<T>("prep-explanations", {
       method: "POST",
-      body,
+      body: { action, ...body },
       headers,
     })
   }
 
   return {
-    async listExplanations(): Promise<ExplanationsSummaryRow[]> {
-      const { data, error } = await invokeExplanationsFn<{ explanations: ExplanationsSummaryRow[] }>(
-        "prep-explanations-list",
-        {},
+    async listPrepTests(options?: {
+      page?: number
+      pageSize?: number
+      sort?: "newest" | "oldest"
+    }): Promise<{
+      prepTests: ExplanationPrepTestListItem[]
+      total: number
+      page: number
+      pageSize: number
+    }> {
+      const { data, error } = await invokeExplanationsFn<{
+        prepTests: ExplanationPrepTestListItem[]
+        total: number
+        page: number
+        pageSize: number
+      }>("prep-explanations-prep-tests", {
+        page: options?.page ?? 1,
+        pageSize: options?.pageSize ?? 5,
+        sort: options?.sort ?? "newest",
+      })
+      if (error) throw error
+      return {
+        prepTests: data?.prepTests ?? [],
+        total: data?.total ?? 0,
+        page: data?.page ?? 1,
+        pageSize: data?.pageSize ?? 5,
+      }
+    },
+
+    async getPrepTestTree(prepTestId: string): Promise<ExplanationPrepTestNode> {
+      const { data, error } = await invokeExplanationsFn<{ prepTest: ExplanationPrepTestNode }>(
+        "prep-explanations-prep-test-tree",
+        { prepTestId },
       )
       if (error) throw error
-      return data?.explanations ?? []
+      if (!data?.prepTest) throw new Error("No PrepTest tree returned")
+      return data.prepTest
     },
 
     async getExplanationDetail(questionId: string): Promise<ExplanationDetailPayload> {
@@ -59,6 +95,16 @@ export function createExplanationsApi(supabase: SupabaseClient) {
       if (error) throw error
       if (!data) throw new Error("No explanation detail returned")
       return data
+    },
+
+    /** Legacy flat catalog of questions with explanation content. */
+    async listExplanations(): Promise<ExplanationsSummaryRow[]> {
+      const { data, error } = await invokeExplanationsFn<{ explanations: ExplanationsSummaryRow[] }>(
+        "prep-explanations-list",
+        {},
+      )
+      if (error) throw error
+      return data?.explanations ?? []
     },
   }
 }

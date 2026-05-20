@@ -9,6 +9,7 @@ import TextAlign from "@tiptap/extension-text-align"
 import { TextStyle } from "@tiptap/extension-text-style"
 import Underline from "@tiptap/extension-underline"
 import Youtube from "@tiptap/extension-youtube"
+import type { Editor } from "@tiptap/core"
 import { EditorContent, useEditor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 
@@ -115,7 +116,7 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
         style: `min-height:${minHeight}px`,
       },
     },
-    onUpdate: ({ editor: ed }) => {
+    onUpdate: ({ editor: ed }: { editor: Editor }) => {
       onChange(ed.getHTML())
     },
   })

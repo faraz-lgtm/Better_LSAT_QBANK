@@ -1,19 +1,20 @@
 import { Eye } from "lucide-react"
 
+import { HtmlContent } from "@/lib/html/html-content"
 import { cn } from "@/lib/utils"
 
 const letters = ["A", "B", "C", "D", "E"] as const
 
 type LrDrillOptionRowProps = {
   index: number
-  text: string
+  html: string
   selected: boolean
   hidden: boolean
   onSelect: () => void
   onToggleHidden: () => void
 }
 
-function LrDrillOptionRow({ index, text, selected, hidden, onSelect, onToggleHidden }: LrDrillOptionRowProps) {
+function LrDrillOptionRow({ index, html, selected, hidden, onSelect, onToggleHidden }: LrDrillOptionRowProps) {
   const letter = letters[index] ?? String(index + 1)
   return (
     <div
@@ -40,7 +41,7 @@ function LrDrillOptionRow({ index, text, selected, hidden, onSelect, onToggleHid
         >
           {letter}
         </span>
-        <span className={cn("min-w-0 pt-0.5", hidden && "line-through")}>{text}</span>
+        <HtmlContent html={html} className={cn("min-w-0 flex-1 pt-0.5", hidden && "line-through")} />
       </button>
       <div className="flex shrink-0 items-center border-l pr-2 pl-1" style={{ borderColor: "var(--greyscale-100)" }}>
         <button

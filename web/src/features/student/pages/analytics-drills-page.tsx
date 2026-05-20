@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Loader2 } from "lucide-react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { ArrowDownAZ, ArrowUpAZ, ChevronDown, X } from "lucide-react"
 
@@ -12,17 +13,22 @@ import {
 } from "@/features/student/components/time-range-filter"
 import type { AnalyticsStat } from "@/features/student/lib/mock-analytics"
 import {
-  DRILL_TYPES,
   buildDrillStatTiles,
   computeDrillStats,
   filterDrillsByTimeRange,
   filterDrillsByType,
-  findDrillType,
   getDrillProgressPoints,
-  mockDrillRecords,
-  mockPrepTestHistory,
   type DrillProgressPoint,
+  type DrillRecord,
+  type DrillType,
 } from "@/features/student/lib/mock-analytics-drills"
+import {
+  buildDrillTypesFromPriorities,
+  mapPrepTestSessionToHistoryEntry,
+  mapSessionToDrillRecord,
+} from "@/features/student/analytics/map-analytics"
+import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
+import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 
 const Y_AXIS_LABELS = [100, 84, 68, 52, 36, 20] as const
 const BOOKMARKS_STORAGE_KEY = "analytics:drills:bookmarks"
@@ -195,9 +201,11 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
 function DrillTypeMenu({
   value,
   onChange,
+  types,
 }: {
   value: string | null
   onChange: (next: string | null) => void
+  types: DrillType[]
 }) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -220,7 +228,7 @@ function DrillTypeMenu({
     }
   }, [open])
 
-  const activeType = findDrillType(value)
+  const activeType = value ? types.find((t) => t.id === value) ?? null : null
   const label = activeType ? activeType.label : "All drill types"
 
   return (
@@ -258,7 +266,7 @@ function DrillTypeMenu({
               All drill types
             </button>
           </li>
-          {DRILL_TYPES.map((type) => {
+          {types.map((type) => {
             const active = type.id === value
             return (
               <li key={type.id} role="presentation">
@@ -374,18 +382,48 @@ function loadBookmarks(initial: Record<string, boolean>): Record<string, boolean
 
 function AnalyticsDrillsPage() {
   const navigate = useNavigate()
+  const analyticsApi = useAnalyticsApi()
+  const practiceApi = usePracticeApi()
   const [searchParams, setSearchParams] = useSearchParams()
   const typeFromUrl = searchParams.get("type")
+
+  const [loading, setLoading] = useState(true)
+  const [drillRecords, setDrillRecords] = useState<DrillRecord[]>([])
+  const [drillTypes, setDrillTypes] = useState<DrillType[]>([])
+  const [prepHistory, setPrepHistory] = useState<PrepTestHistoryEntry[]>([])
 
   const [scoreTab, setScoreTab] = useState<ScoreTab>("ptEquivalent")
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
   const [historySort, setHistorySort] = useState<HistorySort>("date-desc")
   const initialBookmarks = useMemo(
-    () => Object.fromEntries(mockPrepTestHistory.map((entry) => [entry.id, entry.bookmarked])),
-    [],
+    () => Object.fromEntries(prepHistory.map((entry) => [entry.id, entry.bookmarked])),
+    [prepHistory],
   )
   const [bookmarks, setBookmarks] = useState<Record<string, boolean>>(() => loadBookmarks(initialBookmarks))
+
+  useEffect(() => {
+    if (!analyticsApi) {
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    void Promise.all([
+      analyticsApi.getSessions({ kind: "DRILL", limit: 100 }),
+      analyticsApi.getSessions({ kind: "PREPTEST", limit: 50 }),
+      analyticsApi.getPriorities(),
+    ])
+      .then(([drills, preptests, priorities]) => {
+        setDrillRecords(
+          drills.sessions.map(mapSessionToDrillRecord).filter((r): r is DrillRecord => r != null),
+        )
+        setPrepHistory(
+          preptests.sessions.map(mapPrepTestSessionToHistoryEntry).filter((e): e is PrepTestHistoryEntry => e != null),
+        )
+        setDrillTypes(buildDrillTypesFromPriorities(priorities))
+      })
+      .finally(() => setLoading(false))
+  }, [analyticsApi])
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -396,7 +434,10 @@ function AnalyticsDrillsPage() {
     }
   }, [bookmarks])
 
-  const activeType = useMemo(() => findDrillType(typeFromUrl), [typeFromUrl])
+  const activeType = useMemo(
+    () => (typeFromUrl ? drillTypes.find((t) => t.id === typeFromUrl) ?? null : null),
+    [typeFromUrl, drillTypes],
+  )
 
   const handleSelectType = useCallback(
     (next: string | null) => {
@@ -412,17 +453,17 @@ function AnalyticsDrillsPage() {
   )
 
   const filteredRecords = useMemo(() => {
-    const byType = filterDrillsByType(mockDrillRecords, activeType?.id ?? null)
+    const byType = filterDrillsByType(drillRecords, activeType?.id ?? null)
     return filterDrillsByTimeRange(byType, timeRange)
-  }, [activeType, timeRange])
+  }, [activeType, timeRange, drillRecords])
 
   const stats = useMemo(() => computeDrillStats(filteredRecords), [filteredRecords])
   const statTiles = useMemo(() => (stats ? buildDrillStatTiles(stats) : null), [stats])
   const progressPoints = useMemo(() => getDrillProgressPoints(filteredRecords), [filteredRecords])
 
   const entries = useMemo(
-    () => mockPrepTestHistory.map((entry) => ({ ...entry, bookmarked: bookmarks[entry.id] ?? entry.bookmarked })),
-    [bookmarks],
+    () => prepHistory.map((entry) => ({ ...entry, bookmarked: bookmarks[entry.id] ?? entry.bookmarked })),
+    [bookmarks, prepHistory],
   )
 
   const sortedEntries = useMemo(() => {
@@ -448,22 +489,34 @@ function AnalyticsDrillsPage() {
     [sortedEntries, bookmarkedOnly],
   )
 
-  const handleToggleBookmark = useCallback((id: string) => {
-    setBookmarks((current) => ({ ...current, [id]: !current[id] }))
-  }, [])
+  const handleToggleBookmark = useCallback(
+    (id: string) => {
+      const next = !(bookmarks[id] ?? false)
+      setBookmarks((current) => ({ ...current, [id]: next }))
+      if (practiceApi) {
+        void practiceApi.updateSession({ sessionId: id, bookmarked: next })
+      }
+    },
+    [bookmarks, practiceApi],
+  )
 
   const handleSelectEntry = useCallback(
     (id: string) => {
-      navigate(`/app/analytics/preptests`, { state: { focusId: id } })
+      navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)
     },
     [navigate],
   )
 
   const handleOpenPractice = useCallback(
-    (id: string) => {
-      navigate(`/app/practice/preptest/${encodeURIComponent(id)}`)
+    (sessionId: string) => {
+      const entry = prepHistory.find((e) => e.id === sessionId)
+      if (entry) {
+        navigate(`/app/analytics/preptests/results/${encodeURIComponent(sessionId)}`)
+        return
+      }
+      navigate("/app/practice/preptest")
     },
-    [navigate],
+    [navigate, prepHistory],
   )
 
   return (
@@ -477,6 +530,12 @@ function AnalyticsDrillsPage() {
         ]}
       />
       <StudentMain>
+        {loading ? (
+          <div className="mb-4 flex items-center gap-2 text-sm text-[#666d80]">
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+            Loading drill analytics…
+          </div>
+        ) : null}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold leading-[1.3] text-[#062357]">Drills</h1>
@@ -497,7 +556,7 @@ function AnalyticsDrillsPage() {
             ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <DrillTypeMenu value={activeType?.id ?? null} onChange={handleSelectType} />
+            <DrillTypeMenu value={activeType?.id ?? null} onChange={handleSelectType} types={drillTypes} />
             <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
           </div>
         </div>

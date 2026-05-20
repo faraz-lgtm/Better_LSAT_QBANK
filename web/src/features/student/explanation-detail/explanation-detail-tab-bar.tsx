@@ -10,6 +10,7 @@ type ExplanationDetailTabBarProps = {
   onTabChange: (t: ExplanationDetailTabId) => void
   prevHref: string | null
   nextHref: string | null
+  hasExplanationTab?: boolean
 }
 
 const TABS: { id: ExplanationDetailTabId; label: string }[] = [
@@ -18,7 +19,7 @@ const TABS: { id: ExplanationDetailTabId; label: string }[] = [
   { id: "analytics", label: "Analytics" },
 ]
 
-function ExplanationDetailTabBar({ tab, onTabChange, prevHref, nextHref }: ExplanationDetailTabBarProps) {
+function ExplanationDetailTabBar({ tab, onTabChange, prevHref, nextHref, hasExplanationTab = true }: ExplanationDetailTabBarProps) {
   return (
     <div className="flex flex-wrap items-center justify-start gap-3 lg:justify-end">
       <div
@@ -29,16 +30,19 @@ function ExplanationDetailTabBar({ tab, onTabChange, prevHref, nextHref }: Expla
       >
         {TABS.map(({ id, label }) => {
           const active = tab === id
+          const disabled = id === "explanation" && !hasExplanationTab
           return (
             <button
               key={id}
               type="button"
               role="tab"
               aria-selected={active}
+              disabled={disabled}
               onClick={() => onTabChange(id)}
               className={cn(
                 "rounded-lg px-4 py-2 text-sm font-semibold transition-colors",
                 active ? "text-white shadow-sm" : "bg-transparent hover:opacity-90",
+                disabled && "cursor-not-allowed opacity-40",
               )}
               style={
                 active

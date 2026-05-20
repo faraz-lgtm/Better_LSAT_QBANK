@@ -1,16 +1,26 @@
 import { useMemo, useState } from "react"
 
+import { ActiveDrillIntroCard } from "@/features/prep-course/components/active-drill/active-drill-intro-card"
+import { ActiveDrillQuestionSummary } from "@/features/prep-course/components/active-drill/active-drill-question-summary"
+import { ActiveDrillResultBar } from "@/features/prep-course/components/active-drill/active-drill-result-bar"
+import { AdaptiveDrillResultsPanel } from "@/features/prep-course/components/lesson-drill/adaptive-drill-results-panel"
+import { LessonDrillIntroCard } from "@/features/prep-course/components/lesson-drill/lesson-drill-intro-card"
 import { parseRepWorkFromTextContent, isRepWorkJson } from "@/lib/rep-work-content"
-import type { PrepLesson, PrepLessonLinkedQuestionRef } from "@/lib/api/prep-course"
+import type {
+  PrepLesson,
+  PrepLessonActiveDrillAttempt,
+  PrepLessonLinkedQuestionRef,
+} from "@/lib/api/prep-course"
+import { HtmlContent } from "@/lib/html/html-content"
 
 type LessonContentRendererProps = {
   lesson: PrepLesson
   linkedQuestionRefs?: PrepLessonLinkedQuestionRef[]
+  activeDrillAttempt?: PrepLessonActiveDrillAttempt | null
   hideTitle?: boolean
-}
-
-function HtmlBlock({ html, className }: { html: string; className?: string }) {
-  return <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
+  onReviewDrill?: () => void
+  onStartDrill?: () => void
+  startingDrill?: boolean
 }
 
 function youtubeEmbedUrl(url: string): string | null {
@@ -126,7 +136,15 @@ function LessonDrillLinkedQuestions({
   )
 }
 
-function LessonContentRenderer({ lesson, linkedQuestionRefs = [], hideTitle = false }: LessonContentRendererProps) {
+function LessonContentRenderer({
+  lesson,
+  linkedQuestionRefs = [],
+  activeDrillAttempt = null,
+  hideTitle = false,
+  onReviewDrill,
+  onStartDrill,
+  startingDrill = false,
+}: LessonContentRendererProps) {
   const type = lesson.lesson_type
   const legacyVideo = type === "video"
   const videoText = type === "video_text" || legacyVideo
@@ -134,13 +152,75 @@ function LessonContentRenderer({ lesson, linkedQuestionRefs = [], hideTitle = fa
   const hasVideo = Boolean(lesson.video_url?.trim())
   const showVideo = hasVideo && (videoText || isDrill)
 
+  if (type === "adaptive_drill") {
+    if (activeDrillAttempt) {
+      return (
+        <div className="space-y-6">
+          <AdaptiveDrillResultsPanel
+            attempt={activeDrillAttempt}
+            linkedQuestionRefs={linkedQuestionRefs}
+            onReview={onReviewDrill}
+          />
+          {lesson.text_content ? (
+            <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+              {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
+              <HtmlContent
+                html={lesson.text_content}
+                className={`ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
+              />
+            </article>
+          ) : null}
+        </div>
+      )
+    }
+    return (
+      <LessonDrillIntroCard
+        lesson={lesson}
+        linked={linkedQuestionRefs}
+        onStartDrill={onStartDrill}
+        startingDrill={startingDrill}
+      />
+    )
+  }
+
+  if (type === "active_drill") {
+    if (activeDrillAttempt) {
+      const linked = linkedQuestionRefs[0] ?? null
+      return (
+        <div className="space-y-6">
+          <ActiveDrillResultBar attempt={activeDrillAttempt} onReview={onReviewDrill} />
+          {lesson.text_content ? (
+            <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+              {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
+              <HtmlContent
+                html={lesson.text_content}
+                className={`ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
+              />
+            </article>
+          ) : null}
+          {linked ? (
+            <ActiveDrillQuestionSummary linked={linked} attempt={activeDrillAttempt} />
+          ) : null}
+        </div>
+      )
+    }
+    return (
+      <ActiveDrillIntroCard
+        lesson={lesson}
+        linked={linkedQuestionRefs[0] ?? null}
+        onStartDrill={onStartDrill}
+        startingDrill={startingDrill}
+      />
+    )
+  }
+
   if (type === "rep_work" || isRepWorkJson(lesson.text_content)) {
     const { instructions, pairs } = parseRepWorkFromTextContent(lesson.text_content)
     return (
       <article className="space-y-6 rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
         <div>
           {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
-          <HtmlBlock
+          <HtmlContent
             html={instructions}
             className={`rep-instructions ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
           />
@@ -149,9 +229,9 @@ function LessonContentRenderer({ lesson, linkedQuestionRefs = [], hideTitle = fa
           {pairs.map((pair, i) => (
             <li key={i} className="rounded-xl border border-[#dfe1e7] bg-[#f6f8fa] p-5">
               <p className="ds-body-sm font-semibold text-[#1a1b25]">Question {i + 1}</p>
-              <HtmlBlock html={pair.question} className="ds-body-sm mt-3 leading-7 text-[#36394a] [&_p]:mb-3" />
+              <HtmlContent html={pair.question} className="ds-body-sm mt-3 leading-7 text-[#36394a] [&_p]:mb-3" />
               <p className="ds-body-sm mt-6 font-semibold text-[#1a1b25]">Answer</p>
-              <HtmlBlock html={pair.answer} className="ds-body-sm mt-3 leading-7 text-[#36394a] [&_p]:mb-3" />
+              <HtmlContent html={pair.answer} className="ds-body-sm mt-3 leading-7 text-[#36394a] [&_p]:mb-3" />
             </li>
           ))}
         </ol>
@@ -176,7 +256,7 @@ function LessonContentRenderer({ lesson, linkedQuestionRefs = [], hideTitle = fa
         </div>
         {lesson.text_content ? (
           <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
-            <HtmlBlock html={lesson.text_content} className="ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3" />
+            <HtmlContent html={lesson.text_content} className="ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3" />
           </article>
         ) : null}
         {isDrill ? (
@@ -196,7 +276,7 @@ function LessonContentRenderer({ lesson, linkedQuestionRefs = [], hideTitle = fa
         <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
           {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
           {lesson.text_content ? (
-            <HtmlBlock
+            <HtmlContent
               html={lesson.text_content}
               className={`ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
             />
@@ -217,7 +297,7 @@ function LessonContentRenderer({ lesson, linkedQuestionRefs = [], hideTitle = fa
     <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
       {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
       {lesson.text_content ? (
-        <HtmlBlock
+        <HtmlContent
           html={lesson.text_content}
           className={`ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
         />

@@ -13,6 +13,7 @@ export type PrepCourse = {
 export type PrepLesson = {
   id: string
   course_id: string
+  section_id?: string
   slug: string
   title: string
   lesson_type: "video" | "text" | "video_text" | "active_drill" | "adaptive_drill" | "rep_work"
@@ -24,6 +25,51 @@ export type PrepLesson = {
   is_published: boolean
   created_at: string
   updated_at: string
+}
+
+export type PrepLessonLinkedQuestionRef = {
+  question_id: string
+  question_number: number | null
+  prep_test_module_id: string | null
+  prep_test_title: string | null
+  section_number: number | null
+  section_type: string | null
+  section_title: string | null
+}
+
+export type PrepLessonActiveDrillAttempt = {
+  sessionId: string
+  completedAt: string
+  rawScore: number
+  questionCount: number
+  elapsedSeconds: number
+  answers: Array<{
+    questionId: string
+    selectedAnswer: string
+    isCorrect: boolean
+  }>
+}
+
+export type PrepCourseSection = {
+  id: string
+  module_id: string
+  title: string
+  sort_order: number
+  duration_minutes: number | null
+  lessons: PrepLesson[]
+}
+
+export type PrepCourseModule = {
+  id: string
+  course_id: string
+  title: string
+  sort_order: number
+  duration_minutes: number | null
+  sections: PrepCourseSection[]
+}
+
+export type PrepCourseCurriculum = {
+  modules: PrepCourseModule[]
 }
 
 export function createPrepCourseApi(supabase: SupabaseClient) {
@@ -66,24 +112,58 @@ export function createPrepCourseApi(supabase: SupabaseClient) {
       return data?.courses ?? []
     },
 
-    async getCourse(courseSlug: string): Promise<{ course: PrepCourse; lessons: PrepLesson[] }> {
-      const { data, error } = await invokePrepCourseFn<{ course: PrepCourse; lessons: PrepLesson[] }>(
-        prepCourseGetName({ courseSlug }),
-        { method: "GET" },
-      )
+    async getCourse(courseSlug: string): Promise<{
+      course: PrepCourse
+      lessons: PrepLesson[]
+      curriculum?: PrepCourseCurriculum
+      completedLessonSlugs?: string[]
+    }> {
+      const { data, error } = await invokePrepCourseFn<{
+        course: PrepCourse
+        lessons: PrepLesson[]
+        curriculum?: PrepCourseCurriculum
+        completedLessonSlugs?: string[]
+      }>(prepCourseGetName({ courseSlug }), { method: "GET" })
       if (error) throw error
       if (!data?.course) throw new Error("No course returned from prep-course")
       return data
     },
 
-    async getLesson(courseSlug: string, lessonSlug: string): Promise<{ course: PrepCourse; lesson: PrepLesson }> {
-      const { data, error } = await invokePrepCourseFn<{ course: PrepCourse; lesson: PrepLesson }>(
-        prepCourseGetName({ courseSlug, lessonSlug }),
-        { method: "GET" },
-      )
+    async completeLesson(
+      courseSlug: string,
+      lessonSlug: string,
+    ): Promise<{ completedLessonSlugs: string[] }> {
+      const { data, error } = await invokePrepCourseFn<{ completedLessonSlugs: string[] }>("prep-course", {
+        method: "POST",
+        body: { courseSlug, lessonSlug },
+      })
+      if (error) throw error
+      return { completedLessonSlugs: data?.completedLessonSlugs ?? [] }
+    },
+
+    async getLesson(
+      courseSlug: string,
+      lessonSlug: string,
+    ): Promise<{
+      course: PrepCourse
+      lesson: PrepLesson
+      linkedQuestionRefs: PrepLessonLinkedQuestionRef[]
+      activeDrillAttempt: PrepLessonActiveDrillAttempt | null
+    }> {
+      const { data, error } = await invokePrepCourseFn<{
+        course: PrepCourse
+        lesson: PrepLesson
+        linkedQuestionRefs?: PrepLessonLinkedQuestionRef[]
+        activeDrillAttempt?: PrepLessonActiveDrillAttempt | null
+      }>(prepCourseGetName({ courseSlug, lessonSlug }), { method: "GET" })
       if (error) throw error
       if (!data?.course || !data.lesson) throw new Error("No lesson returned from prep-course")
-      return data
+      return {
+        course: data.course,
+        lesson: data.lesson,
+        linkedQuestionRefs: data.linkedQuestionRefs ?? [],
+        activeDrillAttempt: data.activeDrillAttempt ?? null,
+      }
     },
 
     async adminCreateCourse(input: {

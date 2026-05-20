@@ -134,13 +134,13 @@ function StudentAppHeader() {
         <div className="flex h-[60px] items-center gap-8 rounded-[20px] bg-[#edf3ff] px-6">
           <Link
             to="/app"
-            className="flex h-10 items-center"
+            className="flex h-10 shrink-0 items-center"
             aria-label="betterLSAT home"
           >
             <img
-              src="/brand-logo.png"
+              src="/betterLSAT_LOGO.png"
               alt="betterLSAT"
-              className="h-[22px] w-auto select-none"
+              className="h-8 w-auto max-w-[200px] object-contain object-left select-none"
               draggable={false}
             />
           </Link>

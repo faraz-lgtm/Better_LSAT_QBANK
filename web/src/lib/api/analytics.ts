@@ -5,6 +5,8 @@ import type { PracticeSessionKind } from "@/lib/api/practice"
 export type AnalyticsOverview = {
   bestScaledScore: number | null
   averageScaledScore: number | null
+  bestPercentile: number | null
+  averagePercentile: number | null
   completedPrepTestCount: number
   totalQuestionsAnswered: number
   drillAccuracyPct: number | null
@@ -20,6 +22,11 @@ export type TrajectoryPoint = {
   rawScore: number | null
   scaledScore: number | null
   percentile: number | null
+  regularRawScore: number | null
+  regularScaledScore: number | null
+  blindReviewRawScore: number | null
+  blindReviewScaledScore: number | null
+  blindReviewPercentile: number | null
   completedAt: string
 }
 
@@ -33,16 +40,54 @@ export type PriorityRow = {
   goalAccuracy: number | null
   gap: number | null
   priorityLevel: "high" | "medium" | "low"
+  difficulty: number | null
+  averagePerTest: number | null
+  reviewCount: number
+}
+
+export type PrepTestSessionDetail = {
+  sessionId: string
+  prepTestId: string
+  prepTestTitle: string
+  moduleId: string | null
+  completedAt: string
+  startedAt: string
+  excluded: boolean
+  totalQuestions: number
+  scaledScore: number
+  blindReviewScore: number
+  correct: number
+  incorrect: number
+  percentile: number | null
+  blindReviewPercentile: number | null
+  questions: Array<{
+    id: string
+    number: number
+    title: string
+    tags: string[]
+    difficulty: "Easiest" | "Easy" | "Medium" | "Hard" | "Hardest"
+    difficultyDots: number
+    actualCorrect: boolean
+    blindReviewCorrect: boolean
+    correctLetter: string
+    selectedLetter: string | null
+    sectionType: "LR" | "RC" | "LG" | null
+    sectionNumber: number | null
+  }>
 }
 
 export type PracticeSessionSummary = {
   id: string
   kind: PracticeSessionKind
+  prepTestId?: string | null
   startedAt: string
   completedAt: string | null
   rawScore: number | null
   scaledScore: number | null
   percentile: number | null
+  blindReviewRawScore?: number | null
+  blindReviewScaledScore?: number | null
+  blindReviewPercentile?: number | null
   bookmarked: boolean
   excluded: boolean
   metadata: Record<string, unknown>
@@ -135,6 +180,15 @@ export function createAnalyticsApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       if (!data) throw new Error("No breakdown returned from analytics")
+      return data
+    },
+
+    async getPrepTestSessionDetail(sessionId: string): Promise<PrepTestSessionDetail> {
+      const { data, error } = await invokeAnalyticsFn<PrepTestSessionDetail>("analytics-prep-test-detail", {
+        sessionId,
+      })
+      if (error) throw error
+      if (!data) throw new Error("No PrepTest detail returned from analytics")
       return data
     },
   }

@@ -16,31 +16,60 @@ function mockSupabase(functionsInvoke: ReturnType<typeof vi.fn>, accessToken = "
 }
 
 describe("createExplanationsApi", () => {
-  it("listExplanations invokes prep-explanations-list", async () => {
+  it("listPrepTests invokes prep-explanations-prep-tests", async () => {
     const invoke = vi.fn().mockResolvedValue({
       data: {
-        explanations: [
+        prepTests: [
           {
-            questionId: "q1",
-            prepTestTitle: "PT 1",
-            sectionType: "LR" as const,
-            questionNumber: 2,
-            topicName: "Flaw",
-            hasWrittenExplanation: true,
-            hasVideo: false,
-            lastAttemptedAt: "2026-01-01T00:00:00Z",
+            id: "pt1",
+            title: "PrepTest 159",
+            moduleId: "LSAC159",
+            prepTestNumber: "159",
+            questionCount: 100,
+            explainedCount: 12,
           },
         ],
+        total: 12,
+        page: 2,
+        pageSize: 5,
       },
       error: null,
     })
     const api = createExplanationsApi(mockSupabase(invoke))
-    const rows = await api.listExplanations()
-    expect(rows).toHaveLength(1)
-    expect(rows[0]?.questionId).toBe("q1")
-    expect(invoke).toHaveBeenCalledWith("prep-explanations-list", {
+    const result = await api.listPrepTests({ page: 2, pageSize: 5, sort: "oldest" })
+    expect(result.prepTests).toHaveLength(1)
+    expect(result.prepTests[0]?.id).toBe("pt1")
+    expect(result.total).toBe(12)
+    expect(invoke).toHaveBeenCalledWith("prep-explanations", {
       method: "POST",
-      body: {},
+      body: {
+        action: "prep-explanations-prep-tests",
+        page: 2,
+        pageSize: 5,
+        sort: "oldest",
+      },
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
+
+  it("getPrepTestTree passes prepTestId", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        prepTest: {
+          id: "pt1",
+          prepTestNumber: "159",
+          rowSubtitle: "12 questions with explanations",
+          sections: [],
+        },
+      },
+      error: null,
+    })
+    const api = createExplanationsApi(mockSupabase(invoke))
+    const tree = await api.getPrepTestTree("pt1")
+    expect(tree.id).toBe("pt1")
+    expect(invoke).toHaveBeenCalledWith("prep-explanations", {
+      method: "POST",
+      body: { action: "prep-explanations-prep-test-tree", prepTestId: "pt1" },
       headers: { Authorization: "Bearer token-1" },
     })
   })
@@ -49,21 +78,30 @@ describe("createExplanationsApi", () => {
     const invoke = vi.fn().mockResolvedValue({
       data: {
         questionId: "q9",
+        prepTestId: "pt1",
         prepTestTitle: "PT 2",
+        prepTestNumber: "2",
+        sectionId: "sec1",
         sectionType: "RC",
+        sectionNumber: 1,
         questionNumber: 1,
         topicName: "Main point",
         explanationHtml: "<p>x</p>",
         videoUrl: null,
+        stimulusText: null,
+        stemText: "Stem",
+        choices: [{ id: "A", index: 1, text: "a" }],
+        correctChoiceId: "A",
+        passage: { id: "p1", displayNumber: 1, title: "Passage 1", body: "body" },
       },
       error: null,
     })
     const api = createExplanationsApi(mockSupabase(invoke))
     const d = await api.getExplanationDetail("q9")
     expect(d.questionId).toBe("q9")
-    expect(invoke).toHaveBeenCalledWith("prep-explanation-detail", {
+    expect(invoke).toHaveBeenCalledWith("prep-explanations", {
       method: "POST",
-      body: { questionId: "q9" },
+      body: { action: "prep-explanation-detail", questionId: "q9" },
       headers: { Authorization: "Bearer token-1" },
     })
   })
