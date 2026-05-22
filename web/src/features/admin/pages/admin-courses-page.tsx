@@ -1,22 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
-import { Eye, Image as ImageIcon, SquarePlay } from "lucide-react"
-import {
-  BtnBold,
-  BtnBulletList,
-  BtnItalic,
-  BtnNumberedList,
-  BtnUnderline,
-  Editor,
-  EditorProvider,
-  Separator,
-  Toolbar,
-  createButton,
-} from "react-simple-wysiwyg"
+import { Eye } from "lucide-react"
 
 import { AdminCurriculumTree } from "@/features/admin/components/course-builder/admin-curriculum-tree"
 import { AdminLessonQuickAdd } from "@/features/admin/components/course-builder/admin-lesson-quick-add"
 import { CurriculumMetaEditor } from "@/features/admin/components/course-builder/curriculum-meta-editor"
 import { AdminLessonStatusDropdown } from "@/features/admin/components/admin-lesson-status-dropdown"
+import { AdminTipTapEditor } from "@/features/admin/components/admin-tip-tap-editor"
 import { LessonQuestionPreviewModal } from "@/features/admin/components/lesson-question-preview-modal"
 import {
   flattenLessonsFromCurriculum,
@@ -129,86 +118,6 @@ const LESSON_TYPE_EDIT_LABEL: Record<PrepLessonStatus, string> = {
   rep_work: "REP WORK",
 }
 
-function escapeHtmlAttr(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-}
-
-function isSafeHttpMediaUrl(raw: string): boolean {
-  const t = raw.trim().toLowerCase()
-  if (!t) return false
-  if (t.startsWith("javascript:") || t.startsWith("data:") || t.startsWith("vbscript:")) return false
-  return t.startsWith("https://") || t.startsWith("http://") || t.startsWith("/")
-}
-
-function youtubeEmbedUrl(url: string): string | null {
-  try {
-    const u = new URL(url.trim())
-    if (u.hostname === "youtu.be") {
-      const id = u.pathname.replace(/^\//, "").split("/")[0]
-      return id ? `https://www.youtube.com/embed/${id}` : null
-    }
-    if (u.hostname === "www.youtube.com" || u.hostname === "youtube.com" || u.hostname === "m.youtube.com") {
-      if (u.pathname === "/watch") {
-        const id = u.searchParams.get("v")
-        return id ? `https://www.youtube.com/embed/${id}` : null
-      }
-      const embed = u.pathname.match(/^\/embed\/([^/]+)/)
-      if (embed?.[1]) return `https://www.youtube.com/embed/${embed[1]}`
-    }
-  } catch {
-    /* ignore */
-  }
-  return null
-}
-
-function vimeoEmbedUrl(url: string): string | null {
-  try {
-    const u = new URL(url.trim())
-    if (!u.hostname.includes("vimeo.com")) return null
-    const m = u.pathname.match(/\/(?:video\/)?(\d+)/)
-    return m?.[1] ? `https://player.vimeo.com/video/${m[1]}` : null
-  } catch {
-    return null
-  }
-}
-
-const BtnInsertImage = createButton("Insert image", <ImageIcon className="size-4" aria-hidden />, () => {
-  const raw = window.prompt("Image URL (https://…)", "https://")
-  if (raw == null) return
-  const url = raw.trim()
-  if (!url || !isSafeHttpMediaUrl(url)) return
-  document.execCommand(
-    "insertHTML",
-    false,
-    `<p><img src="${escapeHtmlAttr(url)}" alt="" style="max-width:100%;height:auto" /></p>`,
-  )
-})
-
-const BtnInsertVideo = createButton("Insert video", <SquarePlay className="size-4" aria-hidden />, () => {
-  const raw = window.prompt("Video URL (YouTube, Vimeo, or direct .mp4/.webm)", "https://")
-  if (raw == null) return
-  const url = raw.trim()
-  if (!url) return
-  const yt = youtubeEmbedUrl(url)
-  const vm = vimeoEmbedUrl(url)
-  let html: string
-  if (yt) {
-    html = `<p><iframe src="${escapeHtmlAttr(yt)}" title="Embedded video" width="560" height="315" style="max-width:100%;aspect-ratio:16/9;border:0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe></p>`
-  } else if (vm) {
-    html = `<p><iframe src="${escapeHtmlAttr(vm)}" title="Embedded video" width="560" height="315" style="max-width:100%;aspect-ratio:16/9;border:0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe></p>`
-  } else if (isSafeHttpMediaUrl(url)) {
-    html = `<p><video controls playsinline src="${escapeHtmlAttr(url)}" style="max-width:100%;height:auto"></video></p>`
-  } else {
-    window.alert("Use a full https URL (YouTube, Vimeo, or a direct video file link).")
-    return
-  }
-  document.execCommand("insertHTML", false, html)
-})
-
 function AdminRichBlock({
   label,
   labelClassName = "text-sm font-normal leading-6 tracking-[0.02em] text-[#1a1b25]",
@@ -225,29 +134,7 @@ function AdminRichBlock({
   return (
     <div className="flex flex-col gap-4 rounded-[10px] border border-[#dfe1e7] bg-white p-4">
       <p className={labelClassName}>{label}</p>
-      <div className="overflow-hidden rounded-[10px] border border-[#dfe1e7] bg-white">
-        <EditorProvider>
-          <div className="flex flex-wrap items-center gap-1 border-b border-[#dfe1e7] bg-[#f6f8fa] px-3 py-2">
-            <Toolbar>
-              <BtnBold />
-              <BtnItalic />
-              <BtnUnderline />
-              <BtnBulletList />
-              <BtnNumberedList />
-              <Separator />
-              <BtnInsertImage />
-              <BtnInsertVideo />
-            </Toolbar>
-          </div>
-          <Editor
-            value={value || "<p></p>"}
-            onChange={(e) => onChange(e.target.value)}
-            containerProps={{
-              style: { minHeight, background: "#fff", padding: "1rem" },
-            }}
-          />
-        </EditorProvider>
-      </div>
+      <AdminTipTapEditor value={value || "<p></p>"} onChange={onChange} minHeight={minHeight} />
     </div>
   )
 }
