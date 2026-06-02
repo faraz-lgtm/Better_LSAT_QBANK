@@ -1,13 +1,27 @@
 import { useEffect, useMemo, useState } from "react"
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom"
 
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
-import type { PrepTestPoolFilter, PrepTestPoolItem } from "@/features/student/preptests/preptest-types"
+import type {
+  PrepTestPoolFilter,
+  PrepTestPoolItem,
+  PrepTestPoolStatusCounts,
+} from "@/features/student/preptests/preptest-types"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-import { ChevronDown, MoreVertical, RefreshCw, Settings } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight, MoreVertical, RefreshCw, Settings } from "lucide-react"
+
+const PAGE_SIZE = 10
+
+const EMPTY_STATUS_COUNTS: PrepTestPoolStatusCounts = {
+  all: 0,
+  fresh: 0,
+  in_progress: 0,
+  completed: 0,
+}
 
 const FILTER_TABS: { id: PrepTestPoolFilter | "blind_review"; label: string }[] = [
   { id: "all", label: "All Test" },
@@ -149,7 +163,10 @@ function PracticePrepTestsListPage() {
 
   const [filter, setFilter] = useState<PrepTestPoolFilter>("all")
   const [sort, setSort] = useState<(typeof SORT_OPTIONS)[number]>("Newest")
+  const [page, setPage] = useState(1)
   const [prepTests, setPrepTests] = useState<PrepTestPoolItem[]>([])
+  const [total, setTotal] = useState(0)
+  const [statusCounts, setStatusCounts] = useState<PrepTestPoolStatusCounts>(EMPTY_STATUS_COUNTS)
   const [loading, setLoading] = useState(true)
   const [startingId, setStartingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -160,11 +177,22 @@ function PracticePrepTestsListPage() {
       setLoading(true)
       setError(null)
       try {
-        const out = await practiceApi.listPrepTestPool({})
-        if (!cancelled) setPrepTests(out.prepTests)
+        const out = await practiceApi.listPrepTestPool({
+          filter,
+          page,
+          pageSize: PAGE_SIZE,
+          sort: sort === "Newest" ? "newest" : "oldest",
+        })
+        if (!cancelled) {
+          setPrepTests(out.prepTests)
+          setTotal(out.total)
+          setStatusCounts(out.statusCounts)
+        }
       } catch (e) {
         if (!cancelled) {
           setPrepTests([])
+          setTotal(0)
+          setStatusCounts(EMPTY_STATUS_COUNTS)
           setError(e instanceof Error ? e.message : "Failed to load PrepTests")
         }
       } finally {
@@ -174,19 +202,16 @@ function PracticePrepTestsListPage() {
     return () => {
       cancelled = true
     }
-  }, [practiceApi])
+  }, [practiceApi, filter, sort, page])
 
-  const rows = useMemo(() => {
-    const filtered =
-      filter === "all" ? prepTests : prepTests.filter((p) => p.status === filter)
-    const mult = sort === "Newest" ? 1 : -1
-    return [...filtered].sort((a, b) => mult * (displayPrepTestNumber(a) - displayPrepTestNumber(b)))
-  }, [prepTests, filter, sort])
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const pageStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const pageEnd = Math.min(page * PAGE_SIZE, total)
 
   function filterCountLabel(tabId: PrepTestPoolFilter | "blind_review"): string {
-    if (tabId === "all") return "All Test"
+    if (tabId === "all") return `All Test (${statusCounts.all})`
     if (tabId === "blind_review") return "Blind Review"
-    const n = prepTests.filter((p) => p.status === tabId).length
+    const n = statusCounts[tabId]
     const base = FILTER_TABS.find((t) => t.id === tabId)?.label ?? tabId
     return `${base} (${n})`
   }
@@ -235,9 +260,15 @@ function PracticePrepTestsListPage() {
         <section className="mb-6">
           <PrepTestListFilters
             filter={filter}
-            setFilter={setFilter}
+            setFilter={(f) => {
+              setFilter(f)
+              setPage(1)
+            }}
             sort={sort}
-            setSort={setSort}
+            setSort={(s) => {
+              setSort(s)
+              setPage(1)
+            }}
             filterCountLabel={filterCountLabel}
           />
         </section>
@@ -250,10 +281,49 @@ function PracticePrepTestsListPage() {
 
         {loading ? (
           <p className="text-sm text-[#666d80]">Loading PrepTests…</p>
-        ) : rows.length === 0 ? (
+        ) : prepTests.length === 0 ? (
           <p className="text-sm text-[#666d80]">No PrepTests match this filter.</p>
         ) : (
-          <PrepTestListRows rows={rows} startingId={startingId} onPrimary={handlePrimary} />
+          <>
+            <PrepTestListRows rows={prepTests} startingId={startingId} onPrimary={handlePrimary} />
+            {!loading && total > PAGE_SIZE ? (
+              <nav
+                className="mt-6 flex flex-col gap-3 border-t border-[#dfe1e7] pt-4 sm:flex-row sm:items-center sm:justify-between"
+                aria-label="PrepTest pagination"
+              >
+                <p className="text-sm text-[#666d80]">
+                  Showing {pageStart}–{pageEnd} of {total} PrepTests
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-lg"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    <ChevronLeft className="size-4" aria-hidden />
+                    Previous
+                  </Button>
+                  <span className="min-w-[4.5rem] text-center text-sm font-medium tabular-nums text-[#062357]">
+                    {page} / {totalPages}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-lg"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    Next
+                    <ChevronRight className="size-4" aria-hidden />
+                  </Button>
+                </div>
+              </nav>
+            ) : null}
+          </>
         )}
       </StudentMain>
     </>
@@ -281,7 +351,7 @@ function PrepTestListFilters({
         <div className="flex flex-wrap gap-3">
           {FILTER_TABS.map((tab) => {
             const active = filter === tab.id
-            const label = tab.id === "all" ? "All Test" : filterCountLabel(tab.id)
+            const label = filterCountLabel(tab.id)
             return (
               <button
                 key={tab.id}

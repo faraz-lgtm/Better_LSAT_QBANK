@@ -13,6 +13,7 @@ import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
 import { PrepCourseContentPage } from "@/features/prep-course/pages/prep-course-content-page"
 import { PrepCourseLessonPage } from "@/features/prep-course/pages/prep-course-lesson-page"
 import { PrepCourseListPage } from "@/features/prep-course/pages/prep-course-list-page"
+import { AnalyticsDrillResultsPage } from "@/features/student/pages/analytics-drill-results-page"
 import { AnalyticsDrillsPage } from "@/features/student/pages/analytics-drills-page"
 import { AnalyticsPage } from "@/features/student/pages/analytics-page"
 import { AnalyticsPrepTestResultsPage } from "@/features/student/pages/analytics-prep-test-results-page"
@@ -226,6 +227,7 @@ const router = createBrowserRouter([
       { path: "practice/blind-review/:testId", element: <PracticeBlindReviewPrepTestPage /> },
       { path: "analytics", element: <AnalyticsPage /> },
       { path: "analytics/drills", element: <AnalyticsDrillsPage /> },
+      { path: "analytics/drills/results/:sessionId", element: <AnalyticsDrillResultsPage /> },
       { path: "analytics/sections", element: <AnalyticsSectionsPage /> },
       { path: "analytics/preptests", element: <AnalyticsPrepTestsPage /> },
       { path: "analytics/preptests/results/:testId", element: <AnalyticsPrepTestResultsPage /> },

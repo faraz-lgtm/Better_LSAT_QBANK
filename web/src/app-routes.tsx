@@ -12,6 +12,7 @@ import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
 import { PrepCourseContentPage } from "@/features/prep-course/pages/prep-course-content-page"
 import { PrepCourseLessonPage } from "@/features/prep-course/pages/prep-course-lesson-page"
 import { PrepCourseListPage } from "@/features/prep-course/pages/prep-course-list-page"
+import { AnalyticsDrillResultsPage } from "@/features/student/pages/analytics-drill-results-page"
 import { AnalyticsDrillsPage } from "@/features/student/pages/analytics-drills-page"
 import { AnalyticsPage } from "@/features/student/pages/analytics-page"
 import { AnalyticsPrepTestResultsPage } from "@/features/student/pages/analytics-prep-test-results-page"
@@ -63,6 +64,7 @@ function AppRoutes() {
         <Route path="practice/blind-review/:testId" element={<PracticeBlindReviewPrepTestPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="analytics/drills" element={<AnalyticsDrillsPage />} />
+        <Route path="analytics/drills/results/:sessionId" element={<AnalyticsDrillResultsPage />} />
         <Route path="analytics/sections" element={<AnalyticsSectionsPage />} />
         <Route path="analytics/preptests" element={<AnalyticsPrepTestsPage />} />
         <Route path="analytics/preptests/results/:testId" element={<AnalyticsPrepTestResultsPage />} />

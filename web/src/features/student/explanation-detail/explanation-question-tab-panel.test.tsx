@@ -10,7 +10,7 @@ describe("ExplanationQuestionTabPanel", () => {
         view={{
           passage: { displayNumber: 1, title: "Passage 1", body: "<p>Passage text</p>" },
           questionStem: "<p>Which one of the following?</p>",
-          choices: [{ id: "A", index: 1, text: "<p>Choice A</p>" }],
+          choices: [{ id: "A", index: 1, text: "<p>Choice A</p>", explanationHtml: null }],
           correctChoiceId: "A",
         }}
       />,

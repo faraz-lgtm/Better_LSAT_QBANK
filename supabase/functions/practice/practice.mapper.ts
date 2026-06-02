@@ -10,7 +10,14 @@ export function prepTestNumberFromModuleId(moduleId: string): string | null {
   return n != null ? String(n) : null
 }
 
-export type DrillChoice = { id: string; index: number; text: string }
+import { parseQuestionChoices } from '../_shared/parse-question-choices.ts'
+
+export type DrillChoice = {
+  id: string
+  index: number
+  text: string
+  explanationHtml: string | null
+}
 
 export type DrillPassage = {
   id: string
@@ -26,6 +33,8 @@ export type DrillQuestionPayload = {
   stemText: string | null
   choices: DrillChoice[]
   passage: DrillPassage | null
+  /** Set only when serving completed sessions for review (not during active practice). */
+  correctChoiceId?: string | null
 }
 
 type PassageRow = {
@@ -50,7 +59,21 @@ export type DrillQuestionRow = {
   stimulus_text: string | null
   stem_text: string | null
   choices: unknown
+  correct_answer?: string | null
   admin_sections: SectionRow | SectionRow[] | null
+}
+
+function correctChoiceIdFromAnswer(
+  correct: string | null | undefined,
+  choices: DrillChoice[],
+): string | null {
+  if (!correct?.trim()) return null
+  const letter = correct.trim().toUpperCase()
+  const byLetter = choices.find((c) => c.id.toUpperCase() === letter)
+  if (byLetter) return byLetter.id
+  const idx = letter.charCodeAt(0) - 64
+  if (idx >= 1 && idx <= choices.length) return choices[idx - 1]!.id
+  return null
 }
 
 function relOne<T>(value: T | T[] | null | undefined): T | null {
@@ -58,22 +81,11 @@ function relOne<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value
 }
 
-export function parseChoices(raw: unknown): DrillChoice[] {
-  if (!Array.isArray(raw)) return []
-  return raw.map((choice, idx) => {
-    const index = idx + 1
-    const letter = String.fromCharCode(64 + index)
-    if (typeof choice === 'string') {
-      return { id: letter, index, text: choice }
-    }
-    if (choice && typeof choice === 'object') {
-      const o = choice as Record<string, unknown>
-      const text = String(o.optionContent ?? o.text ?? '')
-      const choiceLetter = String(o.optionLetter ?? letter)
-      return { id: choiceLetter, index, text }
-    }
-    return { id: letter, index, text: '' }
-  })
+export function parseChoices(
+  raw: unknown,
+  options?: { includeOptionExplanations?: boolean },
+): DrillChoice[] {
+  return parseQuestionChoices(raw, options)
 }
 
 function resolvePassage(row: DrillQuestionRow, sec: SectionRow): DrillPassage | null {
@@ -109,9 +121,12 @@ function resolvePassage(row: DrillQuestionRow, sec: SectionRow): DrillPassage | 
   return null
 }
 
-export function mapDrillQuestionRow(row: DrillQuestionRow): DrillQuestionPayload {
+export function mapDrillQuestionRow(
+  row: DrillQuestionRow,
+  options?: { includeOptionExplanations?: boolean },
+): DrillQuestionPayload {
   const sec = relOne(row.admin_sections)
-  const choices = parseChoices(row.choices)
+  const choices = parseChoices(row.choices, options)
   const sectionType = sec?.section_type ?? 'LR'
 
   let stimulusText = row.stimulus_text?.trim() || null
@@ -124,6 +139,8 @@ export function mapDrillQuestionRow(row: DrillQuestionRow): DrillQuestionPayload
     }
   }
 
+  const includeReviewFields = options?.includeOptionExplanations === true
+
   return {
     id: row.id,
     questionNumber: row.question_number,
@@ -131,7 +148,17 @@ export function mapDrillQuestionRow(row: DrillQuestionRow): DrillQuestionPayload
     stemText: row.stem_text?.trim() || null,
     choices,
     passage,
+    correctChoiceId: includeReviewFields
+      ? correctChoiceIdFromAnswer(row.correct_answer, choices)
+      : undefined,
   }
+}
+
+export function mapDrillQuestionRows(
+  rows: DrillQuestionRow[],
+  includeOptionExplanations: boolean,
+): DrillQuestionPayload[] {
+  return rows.map((row) => mapDrillQuestionRow(row, { includeOptionExplanations }))
 }
 
 export function shuffleInPlace<T>(items: T[]): T[] {

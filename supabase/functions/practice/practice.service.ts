@@ -8,7 +8,7 @@ import type {
   QuestionDetailRow,
 } from './practice.repository.ts'
 import {
-  mapDrillQuestionRow,
+  mapDrillQuestionRows,
   pickDrillQuestionIds,
   prepTestNumberFromModuleId,
   type DrillQuestionPayload,
@@ -52,6 +52,34 @@ function drillQuestionIdsFromMetadata(metadata: Record<string, unknown>): string
   const raw = metadata.questionIds
   if (!Array.isArray(raw)) return []
   return raw.filter((id): id is string => typeof id === 'string' && id.length > 0)
+}
+
+function flaggedQuestionIdsFromMetadata(metadata: Record<string, unknown>): string[] {
+  const raw = metadata.flaggedQuestionIds
+  if (!Array.isArray(raw)) return []
+  return raw.filter((id): id is string => typeof id === 'string' && id.length > 0)
+}
+
+function parseFlaggedQuestionIdsInput(value: unknown): string[] | null {
+  if (value === undefined) return null
+  if (!Array.isArray(value)) throw new PracticeValidationError('flaggedQuestionIds must be an array')
+  const ids = value.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+  return [...new Set(ids)]
+}
+
+function assertFlaggedQuestionIdsAllowed(
+  session: PracticeSessionRow,
+  flaggedQuestionIds: string[],
+): void {
+  if (session.kind !== 'DRILL' && session.kind !== 'SECTION') {
+    throw new PracticeValidationError('flaggedQuestionIds is only supported for drill and section sessions')
+  }
+  const allowed = new Set(drillQuestionIdsFromMetadata(session.metadata))
+  for (const id of flaggedQuestionIds) {
+    if (!allowed.has(id)) {
+      throw new PracticeValidationError('flaggedQuestionIds contains a question not in this session')
+    }
+  }
 }
 
 function assertQuestionAllowedForSession(
@@ -110,6 +138,7 @@ export type DrillSessionMetadata = {
   title?: string | null
   lessonId?: string | null
   source?: string | null
+  flaggedQuestionIds?: string[]
 }
 
 export type DrillAnswerState = {
@@ -134,6 +163,7 @@ export type SectionSessionMetadata = {
   prepTestTitle?: string | null
   sectionTitle?: string | null
   answeredQuestionIds?: string[]
+  flaggedQuestionIds?: string[]
 }
 
 export type SectionPoolItem = {
@@ -147,6 +177,20 @@ export type SectionPoolItem = {
   prepTestTitle: string | null
   questionCount: number
   timeMinutes: number
+}
+
+export type SectionPoolTypeCounts = {
+  all: number
+  lr: number
+  rc: number
+}
+
+export type SectionPoolListResult = {
+  sections: SectionPoolItem[]
+  total: number
+  page: number
+  pageSize: number
+  sectionTypeCounts: SectionPoolTypeCounts
 }
 
 export type SectionSessionResponse = {
@@ -180,6 +224,21 @@ export type PrepTestPoolItem = {
   status: PrepTestPracticeStatus
   scaledScore: number | null
   openPrepTestSessionId: string | null
+}
+
+export type PrepTestPoolStatusCounts = {
+  all: number
+  fresh: number
+  in_progress: number
+  completed: number
+}
+
+export type PrepTestPoolListResult = {
+  prepTests: PrepTestPoolItem[]
+  total: number
+  page: number
+  pageSize: number
+  statusCounts: PrepTestPoolStatusCounts
 }
 
 export type PrepTestDetailSection = {
@@ -528,6 +587,59 @@ function buildBlindReviewDetail(
   }
 }
 
+function prepTestNumberSortValue(item: PrepTestPoolItem): number {
+  const n = item.prepTestNumber ? Number.parseInt(item.prepTestNumber, 10) : NaN
+  if (Number.isFinite(n)) return n
+  const fromModule = /^LSAC(\d+)$/i.exec(item.moduleId)?.[1]
+  return fromModule ? Number.parseInt(fromModule, 10) : 0
+}
+
+function sectionNumberSortValue(item: SectionPoolItem): number {
+  const fromModule = item.moduleId ? /^LSAC(\d+)$/i.exec(item.moduleId)?.[1] : undefined
+  const moduleNum = fromModule ? Number.parseInt(fromModule, 10) : 0
+  const sectionNum = item.sectionNumber ?? 0
+  return moduleNum * 1000 + sectionNum
+}
+
+function mapSectionPoolRow(row: {
+  id: string
+  sectionId: string | null
+  sectionNumber: number | null
+  sectionType: string
+  title: string | null
+  moduleId: string | null
+  prepTestId: string
+  prepTestTitle: string | null
+  questionCount: number
+}): SectionPoolItem | null {
+  const st = sectionTypeForPool(row.sectionType)
+  if (!st) return null
+  return {
+    id: row.id,
+    sectionId: row.sectionId,
+    sectionNumber: row.sectionNumber,
+    sectionType: st,
+    title: row.title,
+    moduleId: row.moduleId,
+    prepTestId: row.prepTestId,
+    prepTestTitle: row.prepTestTitle,
+    questionCount: row.questionCount,
+    timeMinutes: defaultTimeMinutes(st),
+  }
+}
+
+function groupSessionsByPrepTestId(sessions: PracticeSessionRow[]): Map<string, PracticeSessionRow[]> {
+  const map = new Map<string, PracticeSessionRow[]>()
+  for (const s of sessions) {
+    const prepTestId = s.prep_test_id
+    if (!prepTestId) continue
+    const list = map.get(prepTestId) ?? []
+    list.push(s)
+    map.set(prepTestId, list)
+  }
+  return map
+}
+
 function poolItemFromRow(row: PrepTestPoolRow, sessions: PracticeSessionRow[]): PrepTestPoolItem {
   const practiceable = practiceableSectionsFromRow(row.sections)
   const practiceableIds = practiceable.map((s) => s.id)
@@ -728,7 +840,12 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
     async updateSession(
       userId: string,
-      body: { sessionId?: unknown; bookmarked?: unknown; excluded?: unknown },
+      body: {
+        sessionId?: unknown
+        bookmarked?: unknown
+        excluded?: unknown
+        flaggedQuestionIds?: unknown
+      },
     ): Promise<{ session: PracticeSessionRow }> {
       const sessionId = typeof body.sessionId === 'string' ? body.sessionId : ''
       if (!sessionId) throw new PracticeValidationError('sessionId is required')
@@ -739,11 +856,22 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const patch: {
         bookmarked?: boolean
         excluded?: boolean
+        metadata?: Record<string, unknown>
       } = {}
       if (typeof body.bookmarked === 'boolean') patch.bookmarked = body.bookmarked
       if (typeof body.excluded === 'boolean') patch.excluded = body.excluded
+
+      const flaggedInput = parseFlaggedQuestionIdsInput(body.flaggedQuestionIds)
+      if (flaggedInput !== null) {
+        assertFlaggedQuestionIdsAllowed(session, flaggedInput)
+        patch.metadata = {
+          ...session.metadata,
+          flaggedQuestionIds: flaggedInput,
+        }
+      }
+
       if (Object.keys(patch).length === 0) {
-        throw new PracticeValidationError('bookmarked or excluded must be provided')
+        throw new PracticeValidationError('bookmarked, excluded, or flaggedQuestionIds must be provided')
       }
 
       const sessionRow = await deps.repository.updateSession(sessionId, userId, patch)
@@ -853,7 +981,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       })
 
       const rows = await deps.repository.getDrillQuestionRowsByIds(questionIds)
-      const questions = rows.map(mapDrillQuestionRow)
+      const questions = mapDrillQuestionRows(rows, false)
 
       return {
         session,
@@ -941,7 +1069,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       })
 
       const rows = await deps.repository.getDrillQuestionRowsByIds(questionIds)
-      const questions = rows.map(mapDrillQuestionRow)
+      const questions = mapDrillQuestionRows(rows, false)
 
       return {
         session,
@@ -983,10 +1111,12 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         status: typeof metaRaw.status === 'string' ? metaRaw.status : 'fresh',
         questionIds,
         title: typeof metaRaw.title === 'string' ? metaRaw.title : null,
+        flaggedQuestionIds: flaggedQuestionIdsFromMetadata(metaRaw),
       }
 
       const rows = await deps.repository.getDrillQuestionRowsByIds(questionIds)
-      const questions = rows.map(mapDrillQuestionRow)
+      const includeOptionExplanations = session.completed_at != null
+      const questions = mapDrillQuestionRows(rows, includeOptionExplanations)
 
       const events = await deps.repository.listAnswerEventsForSession(sessionId, userId)
       const latest = latestAnswerByQuestion(events)
@@ -1007,33 +1137,37 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
     async listSectionPool(
       _userId: string,
-      body: { sectionType?: unknown },
-    ): Promise<{ sections: SectionPoolItem[] }> {
+      body: { sectionType?: unknown; page?: unknown; pageSize?: unknown; sort?: unknown },
+    ): Promise<SectionPoolListResult> {
+      const page = Math.max(1, Math.floor(typeof body.page === 'number' ? body.page : 1))
+      const pageSize = Math.min(50, Math.max(1, Math.floor(typeof body.pageSize === 'number' ? body.pageSize : 12)))
+      const sort = body.sort === 'oldest' ? 'oldest' : 'newest'
       const filterType = sectionTypeForPool(
         typeof body.sectionType === 'string' ? body.sectionType : undefined,
       )
-      const rows = await deps.repository.listSectionPoolRows(
-        filterType ? { sectionType: filterType } : {},
-      )
-      const sections: SectionPoolItem[] = rows
-        .map((row) => {
-          const st = sectionTypeForPool(row.sectionType)
-          if (!st) return null
-          return {
-            id: row.id,
-            sectionId: row.sectionId,
-            sectionNumber: row.sectionNumber,
-            sectionType: st,
-            title: row.title,
-            moduleId: row.moduleId,
-            prepTestId: row.prepTestId,
-            prepTestTitle: row.prepTestTitle,
-            questionCount: row.questionCount,
-            timeMinutes: defaultTimeMinutes(st),
-          }
-        })
+
+      const rows = await deps.repository.listSectionPoolRows({})
+      const allItems = rows
+        .map(mapSectionPoolRow)
         .filter((s): s is SectionPoolItem => s != null && s.questionCount > 0)
-      return { sections }
+
+      const sectionTypeCounts: SectionPoolTypeCounts = {
+        all: allItems.length,
+        lr: allItems.filter((s) => s.sectionType === 'LR').length,
+        rc: allItems.filter((s) => s.sectionType === 'RC').length,
+      }
+
+      const filtered = filterType ? allItems.filter((s) => s.sectionType === filterType) : allItems
+      const sorted = [...filtered].sort((a, b) => {
+        const diff = sectionNumberSortValue(a) - sectionNumberSortValue(b)
+        return sort === 'newest' ? -diff : diff
+      })
+
+      const total = sorted.length
+      const start = (page - 1) * pageSize
+      const sections = sorted.slice(start, start + pageSize)
+
+      return { sections, total, page, pageSize, sectionTypeCounts }
     },
 
     async startSection(
@@ -1086,7 +1220,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       })
 
       const rows = await deps.repository.getDrillQuestionRowsByIds(questionIds)
-      const questions = rows.map(mapDrillQuestionRow)
+      const questions = mapDrillQuestionRows(rows, false)
 
       const poolItem: SectionPoolItem = {
         id: section.id,
@@ -1141,6 +1275,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         answeredQuestionIds: Array.isArray(metaRaw.answeredQuestionIds)
           ? (metaRaw.answeredQuestionIds as string[])
           : [],
+        flaggedQuestionIds: flaggedQuestionIdsFromMetadata(metaRaw),
       }
 
       const sectionDetail = await deps.repository.getSectionDetail(session.section_id)
@@ -1160,7 +1295,8 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       }
 
       const rows = await deps.repository.getDrillQuestionRowsByIds(questionIds)
-      const questions = rows.map(mapDrillQuestionRow)
+      const includeOptionExplanations = session.completed_at != null
+      const questions = mapDrillQuestionRows(rows, includeOptionExplanations)
 
       const events = await deps.repository.listAnswerEventsForSession(sessionId, userId)
       const latest = latestAnswerByQuestion(events)
@@ -1185,24 +1321,45 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
     async listPrepTestPool(
       userId: string,
-      body: { filter?: unknown },
-    ): Promise<{ prepTests: PrepTestPoolItem[] }> {
-      const rows = await deps.repository.listPrepTestPoolRows()
+      body: { filter?: unknown; page?: unknown; pageSize?: unknown; sort?: unknown },
+    ): Promise<PrepTestPoolListResult> {
+      const page = Math.max(1, Math.floor(typeof body.page === 'number' ? body.page : 1))
+      const pageSize = Math.min(50, Math.max(1, Math.floor(typeof body.pageSize === 'number' ? body.pageSize : 10)))
+      const sort = body.sort === 'oldest' ? 'oldest' : 'newest'
       const filter =
         body.filter === 'fresh' || body.filter === 'in_progress' || body.filter === 'completed'
           ? body.filter
           : null
 
+      const rows = await deps.repository.listPrepTestPoolRows()
+      const allSessions = await deps.repository.listUserSessionsForPrepTests(userId)
+      const sessionsByPrepTestId = groupSessionsByPrepTestId(allSessions)
+
       const items: PrepTestPoolItem[] = []
       for (const row of rows) {
         if (practiceableSectionsFromRow(row.sections).length === 0) continue
-        const sessions = await deps.repository.listUserSessionsForPrepTest(userId, row.id)
-        const item = poolItemFromRow(row, sessions)
-        if (filter && item.status !== filter) continue
-        items.push(item)
+        const sessions = sessionsByPrepTestId.get(row.id) ?? []
+        items.push(poolItemFromRow(row, sessions))
       }
 
-      return { prepTests: items }
+      const statusCounts: PrepTestPoolStatusCounts = {
+        all: items.length,
+        fresh: items.filter((i) => i.status === 'fresh').length,
+        in_progress: items.filter((i) => i.status === 'in_progress').length,
+        completed: items.filter((i) => i.status === 'completed').length,
+      }
+
+      const filtered = filter ? items.filter((i) => i.status === filter) : items
+      const sorted = [...filtered].sort((a, b) => {
+        const diff = prepTestNumberSortValue(a) - prepTestNumberSortValue(b)
+        return sort === 'newest' ? -diff : diff
+      })
+
+      const total = sorted.length
+      const start = (page - 1) * pageSize
+      const prepTests = sorted.slice(start, start + pageSize)
+
+      return { prepTests, total, page, pageSize, statusCounts }
     },
 
     async getPrepTestDetail(

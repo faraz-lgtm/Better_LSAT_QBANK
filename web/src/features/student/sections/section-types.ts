@@ -26,6 +26,7 @@ export type SectionSessionMetadata = {
   prepTestTitle?: string | null
   sectionTitle?: string | null
   answeredQuestionIds?: string[]
+  flaggedQuestionIds?: string[]
 }
 
 export type SectionSessionResponse = {
@@ -53,8 +54,27 @@ export type SectionSessionResponse = {
   sessionLabel: string | null
 }
 
+export type SectionPoolSort = "newest" | "oldest"
+
+export type SectionPoolTypeCounts = {
+  all: number
+  lr: number
+  rc: number
+}
+
+export type SectionPoolListResult = {
+  sections: SectionPoolItem[]
+  total: number
+  page: number
+  pageSize: number
+  sectionTypeCounts: SectionPoolTypeCounts
+}
+
 export type ListSectionPoolInput = {
   sectionType?: SectionType
+  page?: number
+  pageSize?: number
+  sort?: SectionPoolSort
 }
 
 export type StartSectionInput = {

@@ -166,6 +166,53 @@ Deno.test('updateSession missing flags throws', async () => {
   )
 })
 
+Deno.test('updateSession stores flaggedQuestionIds in metadata', async () => {
+  let captured: { metadata?: Record<string, unknown> } | null = null
+  const repo = {
+    ...mockRepo(),
+    getSessionById: async () =>
+      baseSession({
+        kind: 'DRILL',
+        prep_test_id: null,
+        metadata: { questionIds: ['q-1', 'q-2'] },
+      }),
+    updateSession: async (_id: string, _uid: string, patch: Record<string, unknown>) => {
+      captured = { metadata: patch.metadata as Record<string, unknown> | undefined }
+      return baseSession({
+        kind: 'DRILL',
+        metadata: (patch.metadata as Record<string, unknown>) ?? {},
+      })
+    },
+  }
+  const service = createPracticeService({ repository: repo as never })
+  await service.updateSession('user-1', {
+    sessionId: 'sess-1',
+    flaggedQuestionIds: ['q-2'],
+  })
+  assertEquals(captured!.metadata, { questionIds: ['q-1', 'q-2'], flaggedQuestionIds: ['q-2'] })
+})
+
+Deno.test('updateSession rejects flaggedQuestionIds not in session', async () => {
+  const repo = {
+    ...mockRepo(),
+    getSessionById: async () =>
+      baseSession({
+        kind: 'DRILL',
+        prep_test_id: null,
+        metadata: { questionIds: ['q-1'] },
+      }),
+  }
+  const service = createPracticeService({ repository: repo as never })
+  await assertRejects(
+    () =>
+      service.updateSession('user-1', {
+        sessionId: 'sess-1',
+        flaggedQuestionIds: ['q-other'],
+      }),
+    PracticeValidationError,
+  )
+})
+
 Deno.test('submitAnswer not found session is forbidden', async () => {
   const repo = {
     ...mockRepo(),
@@ -412,6 +459,17 @@ const sectionPoolRows: SectionPoolRow[] = [
     prepTestTitle: 'Local Seed — PrepTest Alpha',
     questionCount: 2,
   },
+  {
+    id: 'sec-db-3',
+    sectionId: 'SEED901-LR-1',
+    sectionNumber: 1,
+    sectionType: 'LR',
+    title: 'Logical Reasoning',
+    moduleId: 'LSAC901',
+    prepTestId: 'pt-901',
+    prepTestTitle: 'Local Seed — PrepTest Beta',
+    questionCount: 1,
+  },
 ]
 
 function sectionRepo(overrides: Record<string, unknown> = {}) {
@@ -450,10 +508,33 @@ function sectionRepo(overrides: Record<string, unknown> = {}) {
 Deno.test('listSectionPool returns LR and RC sections with counts', async () => {
   const service = createPracticeService({ repository: sectionRepo() as never })
   const out = await service.listSectionPool('user-1', {})
-  assertEquals(out.sections.length, 2)
+  assertEquals(out.sections.length, 3)
+  assertEquals(out.total, 3)
+  assertEquals(out.page, 1)
+  assertEquals(out.pageSize, 12)
+  assertEquals(out.sectionTypeCounts.all, 3)
+  assertEquals(out.sectionTypeCounts.lr, 2)
+  assertEquals(out.sectionTypeCounts.rc, 1)
   assertEquals(out.sections[0]!.sectionType, 'LR')
-  assertEquals(out.sections[0]!.questionCount, 3)
+  assertEquals(out.sections[0]!.moduleId, 'LSAC901')
+  assertEquals(out.sections[0]!.questionCount, 1)
   assertEquals(out.sections[0]!.timeMinutes, 35)
+})
+
+Deno.test('listSectionPool paginates and filters by section type', async () => {
+  const service = createPracticeService({ repository: sectionRepo() as never })
+  const page1 = await service.listSectionPool('user-1', { page: 1, pageSize: 1, sort: 'newest' })
+  assertEquals(page1.total, 3)
+  assertEquals(page1.sections.length, 1)
+  assertEquals(page1.sections[0]!.id, 'sec-db-3')
+
+  const page2 = await service.listSectionPool('user-1', { page: 2, pageSize: 1, sort: 'newest' })
+  assertEquals(page2.sections[0]!.id, 'sec-db-2')
+
+  const lrOnly = await service.listSectionPool('user-1', { sectionType: 'LR' })
+  assertEquals(lrOnly.total, 2)
+  assertEquals(lrOnly.sections.every((s) => s.sectionType === 'LR'), true)
+  assertEquals(lrOnly.sectionTypeCounts.lr, 2)
 })
 
 Deno.test('startSection creates session with all section questions', async () => {
@@ -501,6 +582,15 @@ const prepTestPoolRows: PrepTestPoolRow[] = [
       { id: 'sec-lg', sectionType: 'LG', questionCount: 1 },
     ],
   },
+  {
+    id: 'pt-901',
+    moduleId: 'LSAC901',
+    title: 'Local Seed — PrepTest Beta',
+    sections: [
+      { id: 'sec-lr-2', sectionType: 'LR', questionCount: 1 },
+      { id: 'sec-rc-2', sectionType: 'RC', questionCount: 1 },
+    ],
+  },
 ]
 
 const prepTestDetailRow: PrepTestDetailRow = {
@@ -541,6 +631,7 @@ function preptestRepo(overrides: Record<string, unknown> = {}) {
     listPrepTestPoolRows: async () => prepTestPoolRows,
     getPrepTestDetailRow: async (id: string) => (id === 'pt-900' ? prepTestDetailRow : null),
     listUserSessionsForPrepTest: async () => [] as PracticeSessionRow[],
+    listUserSessionsForPrepTests: async () => [] as PracticeSessionRow[],
     insertSession: async (input: { kind: string; prepTestId: string | null; metadata: Record<string, unknown> }) =>
       baseSession({
         kind: input.kind as 'PREPTEST',
@@ -554,10 +645,57 @@ function preptestRepo(overrides: Record<string, unknown> = {}) {
 Deno.test('listPrepTestPool returns practiceable prep tests with fresh status', async () => {
   const service = createPracticeService({ repository: preptestRepo() as never })
   const out = await service.listPrepTestPool('user-1', {})
-  assertEquals(out.prepTests.length, 1)
+  assertEquals(out.prepTests.length, 2)
+  assertEquals(out.total, 2)
+  assertEquals(out.page, 1)
+  assertEquals(out.pageSize, 10)
+  assertEquals(out.statusCounts.all, 2)
+  assertEquals(out.statusCounts.fresh, 2)
+  assertEquals(out.prepTests[0]!.id, 'pt-901')
   assertEquals(out.prepTests[0]!.status, 'fresh')
-  assertEquals(out.prepTests[0]!.practiceableSectionCount, 2)
-  assertEquals(out.prepTests[0]!.questionCount, 5)
+  assertEquals(out.prepTests[1]!.id, 'pt-900')
+  assertEquals(out.prepTests[1]!.practiceableSectionCount, 2)
+  assertEquals(out.prepTests[1]!.questionCount, 5)
+})
+
+Deno.test('listPrepTestPool paginates and uses batch sessions query', async () => {
+  let batchCalls = 0
+  let perTestCalls = 0
+  const completedPt = baseSession({
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-900',
+    completed_at: '2026-01-02T00:00:00Z',
+    scaled_score: 170,
+  })
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserSessionsForPrepTests: async () => {
+        batchCalls += 1
+        return [completedPt]
+      },
+      listUserSessionsForPrepTest: async () => {
+        perTestCalls += 1
+        return []
+      },
+    }) as never,
+  })
+  const page1 = await service.listPrepTestPool('user-1', { page: 1, pageSize: 1, sort: 'newest' })
+  assertEquals(batchCalls, 1)
+  assertEquals(perTestCalls, 0)
+  assertEquals(page1.total, 2)
+  assertEquals(page1.prepTests.length, 1)
+  assertEquals(page1.prepTests[0]!.id, 'pt-901')
+  assertEquals(page1.statusCounts.completed, 1)
+  assertEquals(page1.statusCounts.fresh, 1)
+
+  const page2 = await service.listPrepTestPool('user-1', { page: 2, pageSize: 1, sort: 'newest' })
+  assertEquals(page2.prepTests.length, 1)
+  assertEquals(page2.prepTests[0]!.id, 'pt-900')
+  assertEquals(page2.prepTests[0]!.status, 'completed')
+
+  const completedOnly = await service.listPrepTestPool('user-1', { filter: 'completed' })
+  assertEquals(completedOnly.total, 1)
+  assertEquals(completedOnly.prepTests[0]!.id, 'pt-900')
 })
 
 Deno.test('getPrepTestDetail returns LR/RC sections only as practiceable', async () => {
@@ -622,14 +760,18 @@ Deno.test('completePrepTest aggregates section scores', async () => {
 Deno.test('listBlindReviewPool returns completed prep tests eligible for blind review', async () => {
   const service = createPracticeService({
     repository: preptestRepo({
-      listUserSessionsForPrepTest: async () => [
-        baseSession({
-          kind: 'PREPTEST',
-          prep_test_id: 'pt-900',
-          completed_at: '2026-01-03T00:00:00Z',
-          scaled_score: 160,
-        }),
-      ],
+      listPrepTestPoolRows: async () => [prepTestPoolRows[0]!],
+      listUserSessionsForPrepTest: async (_uid: string, prepTestId: string) =>
+        prepTestId === 'pt-900'
+          ? [
+              baseSession({
+                kind: 'PREPTEST',
+                prep_test_id: 'pt-900',
+                completed_at: '2026-01-03T00:00:00Z',
+                scaled_score: 160,
+              }),
+            ]
+          : [],
     }) as never,
   })
   const out = await service.listBlindReviewPool('user-1', {})

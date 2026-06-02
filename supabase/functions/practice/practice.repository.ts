@@ -105,6 +105,17 @@ export type PrepTestDetailRow = {
   }>
 }
 
+function questionCountFromRelation(questions: unknown): number {
+  if (!Array.isArray(questions)) return 0
+  if (questions.length === 0) return 0
+  const first = questions[0]
+  if (first && typeof first === 'object' && first !== null && 'count' in first) {
+    const n = Number((first as { count: number }).count)
+    return Number.isFinite(n) ? n : 0
+  }
+  return questions.length
+}
+
 const drillQuestionSelect = `
   id,
   question_number,
@@ -112,6 +123,7 @@ const drillQuestionSelect = `
   stimulus_text,
   stem_text,
   choices,
+  correct_answer,
   admin_sections (
     id,
     section_type,
@@ -367,7 +379,7 @@ export function createPracticeRepository(client: SupabaseClient) {
           module_id,
           prep_test_id,
           admin_prep_tests ( id, title, module_id ),
-          admin_questions ( id )
+          admin_questions (count)
         `,
         )
         .in('section_type', ['LR', 'RC'])
@@ -383,7 +395,7 @@ export function createPracticeRepository(client: SupabaseClient) {
 
       return ((data ?? []) as Array<Record<string, unknown>>).map((row) => {
         const questions = row.admin_questions
-        const questionCount = Array.isArray(questions) ? questions.length : 0
+        const questionCount = questionCountFromRelation(questions)
         const ptRaw = row.admin_prep_tests
         const pt = Array.isArray(ptRaw) ? ptRaw[0] : ptRaw
         const ptObj = pt as { id: string; title: string | null; module_id: string } | null | undefined
@@ -455,7 +467,7 @@ export function createPracticeRepository(client: SupabaseClient) {
           admin_sections (
             id,
             section_type,
-            admin_questions ( id )
+            admin_questions (count)
           )
         `,
         )
@@ -468,7 +480,7 @@ export function createPracticeRepository(client: SupabaseClient) {
         const sections = sectionsArr.map((s) => {
           const sec = s as Record<string, unknown>
           const questions = sec.admin_questions
-          const questionCount = Array.isArray(questions) ? questions.length : 0
+          const questionCount = questionCountFromRelation(questions)
           return {
             id: String(sec.id),
             sectionType: sec.section_type as 'LR' | 'RC' | 'LG',
@@ -540,6 +552,18 @@ export function createPracticeRepository(client: SupabaseClient) {
         .select('*')
         .eq('user_id', userId)
         .eq('prep_test_id', prepTestId)
+        .in('kind', ['PREPTEST', 'SECTION'])
+        .order('started_at', { ascending: false })
+      if (error) throw error
+      return (data as PracticeSessionRow[]) ?? []
+    },
+
+    async listUserSessionsForPrepTests(userId: string): Promise<PracticeSessionRow[]> {
+      const { data, error } = await client
+        .from('practice_sessions')
+        .select('*')
+        .eq('user_id', userId)
+        .not('prep_test_id', 'is', null)
         .in('kind', ['PREPTEST', 'SECTION'])
         .order('started_at', { ascending: false })
       if (error) throw error

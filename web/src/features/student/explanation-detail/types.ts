@@ -7,6 +7,7 @@ export type ExplanationChoice = {
   /** Display index 1–5 in designs; maps to A–E via index. */
   index: number
   text: string
+  explanationHtml?: string | null
 }
 
 export type ExplanationVideoBlock = {

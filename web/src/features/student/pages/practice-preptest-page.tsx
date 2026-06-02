@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
 import type { PrepTestDetailResponse, PrepTestDetailSection } from "@/features/student/preptests/preptest-types"
+import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { ChevronDown, Timer, X } from "lucide-react"
@@ -115,6 +116,13 @@ function PracticePrepTestPage() {
   const [formatId, setFormatId] = useState("four")
   const [startingSectionId, setStartingSectionId] = useState<string | null>(null)
   const [finishing, setFinishing] = useState(false)
+  const [completeModal, setCompleteModal] = useState<{
+    rawScore: number
+    questionCount: number
+    scaledScore: number | null
+  } | null>(null)
+  const [scoreHidden, setScoreHidden] = useState(true)
+  const [startingBlindReview, setStartingBlindReview] = useState(false)
 
   const load = useCallback(async () => {
     if (!testIdParam) return
@@ -172,13 +180,42 @@ function PracticePrepTestPage() {
     setFinishing(true)
     setError(null)
     try {
-      await practiceApi.completePrepTest(testIdParam)
-      navigate("/app/practice/preptest", { replace: true })
+      const completed = await practiceApi.completePrepTest(testIdParam)
+      const questionCount = detail?.prepTest.questionCount ?? 1
+      setCompleteModal({
+        rawScore: completed.raw_score ?? 0,
+        questionCount: questionCount > 0 ? questionCount : 1,
+        scaledScore: completed.scaled_score,
+      })
+      setScoreHidden(true)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to complete PrepTest")
     } finally {
       setFinishing(false)
     }
+  }
+
+  async function handleBlindReviewFromModal() {
+    if (!testIdParam || startingBlindReview) return
+    setStartingBlindReview(true)
+    setError(null)
+    try {
+      await practiceApi.startBlindReview(testIdParam)
+      navigate(`/app/practice/blind-review/${encodeURIComponent(testIdParam)}`, { replace: true })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to start blind review")
+    } finally {
+      setStartingBlindReview(false)
+    }
+  }
+
+  function leaveToPrepTestList() {
+    navigate("/app/practice/preptest", { replace: true })
+  }
+
+  function viewPrepTestResults() {
+    if (!testIdParam) return
+    navigate(`/app/analytics/preptests/results/${encodeURIComponent(testIdParam)}`, { replace: true })
   }
 
   if (!testIdParam) {
@@ -303,6 +340,22 @@ function PracticePrepTestPage() {
           </ul>
         </section>
       </StudentMain>
+
+      <PracticeCompleteModal
+        open={completeModal != null}
+        titleId="preptest-complete-title"
+        subtitle={`You've completed ${prepTest.label}`}
+        rawScore={completeModal?.rawScore ?? 0}
+        questionCount={completeModal?.questionCount ?? 1}
+        scaledScore={completeModal?.scaledScore}
+        scoreHidden={scoreHidden}
+        onToggleScoreHidden={() => setScoreHidden((h) => !h)}
+        showBlindReview
+        onBlindReview={() => void handleBlindReviewFromModal()}
+        onSkipDetails={viewPrepTestResults}
+        doneLabel="Done with PrepTest"
+        onDone={leaveToPrepTestList}
+      />
     </>
   )
 }

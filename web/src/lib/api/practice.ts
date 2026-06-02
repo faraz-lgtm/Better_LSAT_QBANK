@@ -7,6 +7,8 @@ import type {
 import type {
   ListSectionPoolInput,
   SectionPoolItem,
+  SectionPoolListResult,
+  SectionPoolTypeCounts,
   SectionSessionResponse,
   StartSectionInput,
 } from "@/features/student/sections/section-types"
@@ -17,7 +19,8 @@ import type {
 import type {
   PrepTestDetailResponse,
   PrepTestPoolFilter,
-  PrepTestPoolItem,
+  PrepTestPoolListResult,
+  PrepTestPoolSort,
   StartPrepTestInput,
   StartPrepTestResponse,
 } from "@/features/student/preptests/preptest-types"
@@ -45,6 +48,64 @@ export type PracticeSession = {
   metadata: Record<string, unknown>
   created_at: string
   updated_at: string
+}
+
+function sectionTypeCountsFromSections(sections: SectionPoolItem[]): SectionPoolTypeCounts {
+  return {
+    all: sections.length,
+    lr: sections.filter((s) => s.sectionType === "LR").length,
+    rc: sections.filter((s) => s.sectionType === "RC").length,
+  }
+}
+
+function sectionNumberSortValue(item: SectionPoolItem): number {
+  const fromModule = item.moduleId ? /^LSAC(\d+)$/i.exec(item.moduleId)?.[1] : undefined
+  const moduleNum = fromModule ? Number.parseInt(fromModule, 10) : 0
+  const sectionNum = item.sectionNumber ?? 0
+  return moduleNum * 1000 + sectionNum
+}
+
+/**
+ * Normalize legacy `{ sections }` responses from undeployed edge functions.
+ * When `total` is missing, paginate/filter/sort in the client so the UI only renders one page.
+ */
+function normalizeSectionPoolListResult(
+  data: Partial<SectionPoolListResult> & { sections: SectionPoolItem[] },
+  input: ListSectionPoolInput,
+): SectionPoolListResult {
+  const page = Math.max(1, Math.floor(input.page ?? 1))
+  const pageSize = Math.min(50, Math.max(1, Math.floor(input.pageSize ?? 12)))
+  const sort = input.sort === "oldest" ? "oldest" : "newest"
+  const isLegacy = typeof data.total !== "number"
+
+  if (isLegacy) {
+    const sectionTypeCounts = sectionTypeCountsFromSections(data.sections)
+    let pool = data.sections
+    if (input.sectionType) {
+      pool = pool.filter((s) => s.sectionType === input.sectionType)
+    }
+    pool = [...pool].sort((a, b) => {
+      const diff = sectionNumberSortValue(a) - sectionNumberSortValue(b)
+      return sort === "newest" ? -diff : diff
+    })
+    const total = pool.length
+    const start = (page - 1) * pageSize
+    return {
+      sections: pool.slice(start, start + pageSize),
+      total,
+      page,
+      pageSize,
+      sectionTypeCounts,
+    }
+  }
+
+  return {
+    sections: data.sections,
+    total: data.total!,
+    page: typeof data.page === "number" ? data.page : page,
+    pageSize: typeof data.pageSize === "number" ? data.pageSize : pageSize,
+    sectionTypeCounts: data.sectionTypeCounts ?? sectionTypeCountsFromSections(data.sections),
+  }
 }
 
 export type AnswerEvent = {
@@ -139,14 +200,16 @@ export function createPracticeApi(supabase: SupabaseClient) {
       sessionId: string
       bookmarked?: boolean
       excluded?: boolean
+      flaggedQuestionIds?: string[]
     }): Promise<PracticeSession> {
+      const body: Record<string, unknown> = { sessionId: input.sessionId }
+      if (input.bookmarked !== undefined) body.bookmarked = input.bookmarked
+      if (input.excluded !== undefined) body.excluded = input.excluded
+      if (input.flaggedQuestionIds !== undefined) body.flaggedQuestionIds = input.flaggedQuestionIds
+
       const { data, error } = await invokePracticeFn<{ session: PracticeSession }>("practice-update-session", {
         method: "POST",
-        body: {
-          sessionId: input.sessionId,
-          bookmarked: input.bookmarked,
-          excluded: input.excluded,
-        },
+        body,
       })
       if (error) throw error
       if (!data?.session) throw new Error("No session returned from practice")
@@ -209,17 +272,22 @@ export function createPracticeApi(supabase: SupabaseClient) {
       return data
     },
 
-    async listSectionPool(input: ListSectionPoolInput = {}): Promise<{ sections: SectionPoolItem[] }> {
-      const { data, error } = await invokePracticeFn<{ sections: SectionPoolItem[] }>(
+    async listSectionPool(input: ListSectionPoolInput = {}): Promise<SectionPoolListResult> {
+      const { data, error } = await invokePracticeFn<SectionPoolListResult>(
         "practice-list-section-pool",
         {
           method: "POST",
-          body: { sectionType: input.sectionType },
+          body: {
+            sectionType: input.sectionType,
+            page: input.page,
+            pageSize: input.pageSize,
+            sort: input.sort,
+          },
         },
       )
       if (error) throw error
       if (!data?.sections) throw new Error("No sections returned from practice")
-      return data
+      return normalizeSectionPoolListResult(data, input)
     },
 
     async startSection(input: StartSectionInput): Promise<SectionSessionResponse> {
@@ -246,14 +314,24 @@ export function createPracticeApi(supabase: SupabaseClient) {
       return data
     },
 
-    async listPrepTestPool(input: { filter?: PrepTestPoolFilter } = {}): Promise<{ prepTests: PrepTestPoolItem[] }> {
-      const { data, error } = await invokePracticeFn<{ prepTests: PrepTestPoolItem[] }>(
-        "practice-list-prep-test-pool",
-        {
-          method: "POST",
-          body: { filter: input.filter === "all" ? undefined : input.filter },
-        },
-      )
+    async listPrepTestPool(
+      input: {
+        filter?: PrepTestPoolFilter
+        page?: number
+        pageSize?: number
+        sort?: PrepTestPoolSort
+      } = {},
+    ): Promise<PrepTestPoolListResult> {
+      const body: Record<string, unknown> = {}
+      if (input.filter && input.filter !== "all") body.filter = input.filter
+      if (input.page !== undefined) body.page = input.page
+      if (input.pageSize !== undefined) body.pageSize = input.pageSize
+      if (input.sort !== undefined) body.sort = input.sort
+
+      const { data, error } = await invokePracticeFn<PrepTestPoolListResult>("practice-list-prep-test-pool", {
+        method: "POST",
+        body,
+      })
       if (error) throw error
       if (!data?.prepTests) throw new Error("No prep tests returned from practice")
       return data

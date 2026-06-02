@@ -572,3 +572,28 @@ code {
 .lsat-html-content .ss-line-number {
   color: var(--muted-foreground);
 }
+
+.practice-session-content {
+  font-size: calc(0.875rem * var(--practice-font-scale, 1));
+  line-height: calc(1.625 * var(--practice-line-height-scale, 1));
+}
+
+.lsat-html-content mark.practice-find-mark {
+  background-color: #ffbd4c;
+  color: inherit;
+}
+
+.lsat-html-content mark[data-highlight="orange"] {
+  background-color: #ff6f00;
+  color: inherit;
+}
+
+.lsat-html-content mark[data-highlight="pink"] {
+  background-color: #ffb4de;
+  color: inherit;
+}
+
+.lsat-html-content mark[data-highlight="yellow"] {
+  background-color: #ffbd4c;
+  color: inherit;
+}

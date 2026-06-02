@@ -17,9 +17,10 @@ const ALLOWED_TAGS = [
   "ol",
   "li",
   "a",
+  "mark",
 ] as const
 
-const ALLOWED_ATTR = ["class", "style", "href", "target", "rel"] as const
+const ALLOWED_ATTR = ["class", "style", "href", "target", "rel", "data-highlight"] as const
 
 export function sanitizeHtml(input: unknown): string {
   if (typeof input !== "string") return ""

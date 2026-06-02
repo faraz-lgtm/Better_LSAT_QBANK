@@ -168,7 +168,10 @@ Deno.test('getExplanationDetail returns extended payload', async () => {
         source_group_id: null,
         stimulus_text: 'Stim',
         stem_text: 'Stem here',
-        choices: ['A text', 'B text'],
+        choices: [
+          { optionLetter: 'A', optionContent: 'A text', optionExplanation: '<p>Why not A</p>' },
+          { optionLetter: 'B', optionContent: 'B text' },
+        ],
         correct_answer: 'B',
         explanation: '<p>expl</p>',
         video_url: null,
@@ -192,4 +195,6 @@ Deno.test('getExplanationDetail returns extended payload', async () => {
   assertEquals(d.choices.length, 2)
   assertEquals(d.correctChoiceId, 'B')
   assertEquals(d.explanationHtml, '<p>expl</p>')
+  assertEquals(d.choices[0]!.explanationHtml, '<p>Why not A</p>')
+  assertEquals(d.choices[1]!.explanationHtml, null)
 })

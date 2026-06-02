@@ -1,26 +1,28 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
-import { ChevronDown, ChevronLeft, ChevronRight, Clock, Eraser, Flag, Highlighter } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight, Flag } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { LrDrillOptionRow } from "@/features/student/drills/lr-drill-option-row"
 import type { DrillQuestion } from "@/features/student/drills/drill-types"
 import type { SectionSessionResponse } from "@/features/student/sections/section-types"
+import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
+import { PracticeSessionHeader } from "@/features/student/practice-session/practice-session-header"
+import {
+  canChangePracticeAnswer,
+  type PracticeToolMode,
+} from "@/features/student/practice-session/practice-session-types"
+import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
+import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
+import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
+import { PracticeQuestionFlagButton } from "@/features/student/practice-session/practice-question-flag-button"
+import { usePracticeQuestionFlags } from "@/features/student/practice-session/use-practice-question-flags"
+import { usePracticeSessionTimer } from "@/features/student/practice-session/use-practice-session-timer"
 import { StudentMain } from "@/features/student/components/student-main"
 import { createPracticeApi } from "@/lib/api/practice"
-import { HtmlContent } from "@/lib/html/html-content"
-import { plainTextFromHtml } from "@/lib/html/plain-text-from-html"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-import { cn } from "@/lib/utils"
 
 const SECTION_TIMER_SECONDS = 35 * 60
-
-function formatElapsed(totalSeconds: number) {
-  const m = Math.floor(totalSeconds / 60)
-  const s = totalSeconds % 60
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
-}
 
 function choiceIndexFromAnswer(choices: DrillQuestion["choices"], selectedAnswer: string): number | null {
   const letter = selectedAnswer.trim().toUpperCase()
@@ -29,6 +31,10 @@ function choiceIndexFromAnswer(choices: DrillQuestion["choices"], selectedAnswer
   const idx = letter.charCodeAt(0) - 65
   if (idx >= 0 && idx < choices.length) return idx
   return null
+}
+
+function regionKey(questionId: string, part: string) {
+  return `${questionId}:${part}`
 }
 
 type QuestionPanelProps = {
@@ -40,7 +46,14 @@ type QuestionPanelProps = {
   isCorrect: boolean | null
   submitting: boolean
   allowReselect: boolean
+  getRegionHtml: (key: string, base: string) => string
+  toolMode: PracticeToolMode
+  onContentMouseUp: ReturnType<typeof usePracticeHighlights>["handleContentMouseUp"]
+  onContentClick: ReturnType<typeof usePracticeHighlights>["handleContentClick"]
   onSelect: (index: number) => void
+  flagged: boolean
+  onToggleFlag: () => void
+  flagsDisabled?: boolean
 }
 
 function SectionQuestionPanel({
@@ -52,38 +65,43 @@ function SectionQuestionPanel({
   isCorrect,
   submitting,
   allowReselect,
+  getRegionHtml,
+  toolMode,
+  onContentMouseUp,
+  onContentClick,
   onSelect,
+  flagged,
+  onToggleFlag,
+  flagsDisabled,
 }: QuestionPanelProps) {
   const [hiddenChoices, setHiddenChoices] = useState<Record<number, boolean>>({})
-
-  const matchesFind = useMemo(() => {
-    const q = findQuery.trim().toLowerCase()
-    if (!q) return () => true
-    return (html: string) => plainTextFromHtml(html).toLowerCase().includes(q)
-  }, [findQuery])
-
-  const stem = question.stemText ?? ""
-  const stemHit = matchesFind(stem)
+  const stemKey = regionKey(question.id, "stem")
+  const stemHtml = getRegionHtml(stemKey, question.stemText ?? "")
 
   return (
     <>
       <div className="flex gap-2">
-        <h2 className="min-w-0 flex-1 text-sm font-semibold leading-snug" style={{ color: "var(--foreground)" }}>
-          <span style={{ color: "var(--color-student-cta)" }}>{questionNumber}.</span>{" "}
-          <HtmlContent
-            html={stem}
-            as="span"
-            className={cn(
-              findQuery.trim() && !stemHit && "opacity-45",
-            )}
-            style={{
-              color: stemHit ? "var(--foreground)" : "var(--muted-foreground)",
-            }}
+        <div className="min-w-0 flex-1">
+          <span
+            className="text-sm font-semibold leading-snug"
+            style={{ color: "var(--color-student-cta)" }}
+          >
+            {questionNumber}.
+          </span>
+          <PracticeAnnotatedContent
+            regionKey={stemKey}
+            html={stemHtml}
+            findQuery={findQuery}
+            scrollAnchor
+            as="div"
+            className="text-sm font-semibold leading-snug"
+            style={{ color: "var(--foreground)" }}
+            toolMode={toolMode}
+            onMouseUp={onContentMouseUp}
+            onClickCapture={onContentClick}
           />
-        </h2>
-        <button type="button" className="shrink-0 text-muted-foreground hover:text-foreground" aria-label="Bookmark question">
-          <Flag className="size-4" strokeWidth={2} />
-        </button>
+        </div>
+        <PracticeQuestionFlagButton flagged={flagged} onToggle={onToggleFlag} disabled={flagsDisabled} />
       </div>
       {revealed && isCorrect != null ? (
         <p
@@ -98,18 +116,24 @@ function SectionQuestionPanel({
           <LrDrillOptionRow
             key={choice.id}
             index={index}
-            html={choice.text}
+            html={getRegionHtml(regionKey(question.id, `choice-${choice.id}`), choice.text)}
+            findQuery={findQuery}
+            regionKey={regionKey(question.id, `choice-${choice.id}`)}
             selected={selectedIndex === index}
             hidden={Boolean(hiddenChoices[index])}
-            onSelect={() => {
-              if (!submitting && (allowReselect || selectedIndex == null)) onSelect(index)
-            }}
+            disabled={submitting}
+            selectedIndex={selectedIndex}
+            allowReselect={allowReselect}
+            onSelect={() => onSelect(index)}
             onToggleHidden={() =>
               setHiddenChoices((prev) => ({
                 ...prev,
                 [index]: !prev[index],
               }))
             }
+            toolMode={toolMode}
+            onContentMouseUp={onContentMouseUp}
+            onContentClick={onContentClick}
           />
         ))}
       </div>
@@ -124,19 +148,26 @@ function SectionSessionPage() {
   const blindReviewPrepTestId = searchParams.get("prepTestId")
   const navigate = useNavigate()
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
+  const sessionBodyRef = useRef<HTMLDivElement>(null)
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [sectionSession, setSectionSession] = useState<SectionSessionResponse | null>(null)
   const [qIndex, setQIndex] = useState(1)
-  const [elapsed, setElapsed] = useState(0)
-  const [countdown, setCountdown] = useState<number | null>(null)
   const [findQuery, setFindQuery] = useState("")
   const [answersByQuestion, setAnswersByQuestion] = useState<
     Record<string, { selectedAnswer: string; isCorrect: boolean }>
   >({})
   const [submitting, setSubmitting] = useState(false)
   const [finishing, setFinishing] = useState(false)
+  const [completeModal, setCompleteModal] = useState<{
+    rawScore: number
+    questionCount: number
+  } | null>(null)
+  const [scoreHidden, setScoreHidden] = useState(true)
+
+  const { elapsed, countdown, paused, togglePause, setInitialCountdown } = usePracticeSessionTimer()
+  const highlights = usePracticeHighlights()
 
   const load = useCallback(async () => {
     if (!sessionId) return
@@ -145,11 +176,7 @@ function SectionSessionPage() {
     try {
       const data = await practiceApi.getSectionSession(sessionId)
       setSectionSession(data)
-      if (data.metadata.timing === "35") {
-        setCountdown(SECTION_TIMER_SECONDS)
-      } else {
-        setCountdown(null)
-      }
+      setInitialCountdown(data.metadata.timing === "35" ? SECTION_TIMER_SECONDS : null)
       const map: Record<string, { selectedAnswer: string; isCorrect: boolean }> = {}
       for (const a of data.answers) {
         map[a.questionId] = { selectedAnswer: a.selectedAnswer, isCorrect: a.isCorrect }
@@ -162,25 +189,32 @@ function SectionSessionPage() {
     } finally {
       setLoading(false)
     }
-  }, [practiceApi, sessionId])
+  }, [practiceApi, sessionId, setInitialCountdown])
 
   useEffect(() => {
     void load()
   }, [load])
-
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      setElapsed((t) => t + 1)
-      setCountdown((t) => (t != null && t > 0 ? t - 1 : t))
-    }, 1000)
-    return () => window.clearInterval(id)
-  }, [])
 
   const questions = sectionSession?.questions ?? []
   const metadata = sectionSession?.metadata
   const timedSection = metadata?.timing === "35"
   const showAnswersMode = metadata?.showAnswers ?? "end"
   const sectionType = metadata?.sectionType ?? "LR"
+  const questionIds = useMemo(() => questions.map((q) => q.id), [questions])
+  const initialFlaggedIds = useMemo(
+    () =>
+      sectionSession?.metadata?.flaggedQuestionIds ??
+      parseFlaggedQuestionIds(sectionSession?.session.metadata),
+    [sectionSession?.metadata?.flaggedQuestionIds, sectionSession?.session.metadata],
+  )
+  const sessionCompleted = Boolean(sectionSession?.session.completed_at)
+  const questionFlags = usePracticeQuestionFlags({
+    sessionId: sessionId ?? "",
+    questionIds,
+    initialFlaggedIds,
+    practiceApi,
+    enabled: Boolean(sessionId) && !sessionCompleted && !blindReviewMode,
+  })
 
   const safeIndex = Math.min(Math.max(qIndex, 1), Math.max(questions.length, 1))
   const current = questions[safeIndex - 1]
@@ -200,20 +234,30 @@ function SectionSessionPage() {
       ? current.passage.body
       : current?.stimulusText ?? ""
 
-  const matchesFind = useMemo(() => {
-    const q = findQuery.trim().toLowerCase()
-    if (!q) return () => true
-    return (html: string) => plainTextFromHtml(html).toLowerCase().includes(q)
-  }, [findQuery])
+  const passageKey = current ? regionKey(current.id, "passage") : ""
+  const passageHtml = current ? highlights.getRegionHtml(passageKey, passageBody) : ""
 
-  const stimulusHit = matchesFind(passageBody)
+  useEffect(() => {
+    if (!findQuery.trim()) return
+    const root = sessionBodyRef.current
+    if (!root) return
+    const mark = root.querySelector("mark.practice-find-mark")
+    mark?.scrollIntoView({ block: "center", behavior: "smooth" })
+  }, [findQuery, safeIndex, current?.id])
 
   async function handleSelectChoice(index: number) {
-    if (!sessionId || !current) return
-    if (!blindReviewMode && currentAnswer) return
+    if (!sessionId || !current || submitting) return
+    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), { blindReview: blindReviewMode })) {
+      return
+    }
+    if (selectedIndex === index) return
     const choice = current.choices[index]
     if (!choice) return
+
+    const optimistic = { selectedAnswer: choice.id, isCorrect: false }
+    setAnswersByQuestion((prev) => ({ ...prev, [current.id]: optimistic }))
     setSubmitting(true)
+
     try {
       const event = await practiceApi.submitAnswer({
         sessionId,
@@ -231,6 +275,13 @@ function SectionSessionPage() {
         }, 600)
       }
     } catch (e) {
+      if (!blindReviewMode) {
+        setAnswersByQuestion((prev) => {
+          const next = { ...prev }
+          delete next[current.id]
+          return next
+        })
+      }
       setError(e instanceof Error ? e.message : "Failed to submit answer")
     } finally {
       setSubmitting(false)
@@ -252,13 +303,25 @@ function SectionSessionPage() {
     }
     setFinishing(true)
     try {
-      await practiceApi.completeSession(sessionId)
-      navigate("/app/practice/sections", { replace: true })
+      const completed = await practiceApi.completeSession(sessionId)
+      const questionCount = questions.length > 0 ? questions.length : 1
+      const rawScore = completed.raw_score ?? 0
+      setCompleteModal({ rawScore, questionCount })
+      setScoreHidden(true)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to complete section")
     } finally {
       setFinishing(false)
     }
+  }
+
+  function leaveSectionSession() {
+    const prepTestId = sectionSession?.session.prep_test_id
+    if (prepTestId) {
+      navigate(`/app/practice/preptest/${encodeURIComponent(prepTestId)}`, { replace: true })
+      return
+    }
+    navigate("/app/practice/sections", { replace: true })
   }
 
   if (!sessionId) {
@@ -310,8 +373,37 @@ function SectionSessionPage() {
     (sectionType === "LR" ? "LR Section" : "RC Section")
 
   const timerLabel = timedSection && countdown != null ? "Remaining" : "Elapsed"
-  const timerDisplay =
-    timedSection && countdown != null ? formatElapsed(countdown) : formatElapsed(elapsed)
+  const timerDisplaySeconds =
+    timedSection && countdown != null ? countdown : elapsed
+  const timerProgress =
+    timedSection && countdown != null
+      ? countdown / SECTION_TIMER_SECONDS
+      : questions.length > 0
+        ? answeredCount / questions.length
+        : 0
+  const allowReselect = canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
+    blindReview: blindReviewMode,
+  })
+
+  const finishButton = (
+    <Button
+      type="button"
+      disabled={finishing}
+      variant="outline"
+      className="h-[52px] gap-1 rounded-2xl border bg-[#f6f8fa] px-3 font-medium text-[#062357] hover:bg-[#eceff3]"
+      style={{ borderColor: "#dfe1e7" }}
+      onClick={() => void handleFinish()}
+    >
+      {blindReviewMode
+        ? "Back to blind review"
+        : finishing
+          ? "Finishing…"
+          : allAnswered
+            ? "Finish"
+            : `Finish (${answeredCount}/${questions.length})`}
+      <ChevronDown className="size-5 opacity-90" strokeWidth={2} />
+    </Button>
+  )
 
   return (
     <StudentMain className="max-w-none bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))] py-4 md:py-6">
@@ -325,75 +417,35 @@ function SectionSessionPage() {
           className="overflow-hidden rounded-2xl border bg-background shadow-sm"
           style={{ borderColor: "var(--color-student-cta)" }}
         >
-          <header
-            className="flex flex-col gap-3 border-b px-4 py-3 md:flex-row md:flex-wrap md:items-center md:gap-4"
-            style={{ borderColor: "var(--greyscale-100)" }}
-          >
-            <p className="text-lg font-bold tracking-tight" style={{ color: "var(--color-student-cta)" }}>
-              {blindReviewMode ? `Blind review · ${headerLabel}` : headerLabel}
-            </p>
-            <div className="min-w-[160px] flex-1 md:max-w-xs">
-              <Input
-                placeholder="Find Text"
-                value={findQuery}
-                onChange={(e) => setFindQuery(e.target.value)}
-                className="h-10 rounded-xl border text-sm"
-                style={{ borderColor: "var(--greyscale-100)" }}
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-2 md:ml-auto">
-              <span className="text-xs font-medium text-muted-foreground">Tools:</span>
-              <div className="flex items-center gap-1">
-                {(["#fb923c", "#ec4899", "#facc15"] as const).map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    className="size-7 rounded-md border shadow-sm"
-                    style={{ backgroundColor: c, borderColor: "var(--greyscale-100)" }}
-                    aria-label="Highlighter color"
-                  />
-                ))}
-                <button type="button" className="rounded-md p-2 text-muted-foreground hover:bg-muted" aria-label="Eraser">
-                  <Eraser className="size-4" strokeWidth={2} />
-                </button>
-                <button type="button" className="rounded-md p-2 text-muted-foreground hover:bg-muted" aria-label="Highlighter">
-                  <Highlighter className="size-4" strokeWidth={2} />
-                </button>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 md:ml-0">
-              <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Clock className="size-4 shrink-0" strokeWidth={2} />
-                <span>
-                  {timerLabel}{" "}
-                  <span
-                    className="font-semibold tabular-nums text-foreground"
-                    style={timedSection && countdown === 0 ? { color: "#df1c41" } : undefined}
-                  >
-                    {timerDisplay}
-                  </span>
-                </span>
-              </span>
-              <Button
-                type="button"
-                disabled={finishing}
-                className="gap-1 rounded-xl font-semibold text-white"
-                style={{ backgroundColor: "var(--color-student-accent)" }}
-                onClick={() => void handleFinish()}
-              >
-                {blindReviewMode
-                  ? "Back to blind review"
-                  : finishing
-                    ? "Finishing…"
-                    : allAnswered
-                      ? "Finish"
-                      : `Finish (${answeredCount}/${questions.length})`}
-                <ChevronDown className="size-4 opacity-90" strokeWidth={2} />
-              </Button>
-            </div>
-          </header>
+          <PracticeSessionHeader
+            title={blindReviewMode ? `Blind review · ${headerLabel}` : headerLabel}
+            findQuery={findQuery}
+            onFindQueryChange={setFindQuery}
+            activeColor={highlights.activeColor}
+            toolMode={highlights.toolMode}
+            fontScale={highlights.fontScale}
+            lineSpacing={highlights.lineSpacing}
+            onSelectColor={highlights.selectColor}
+            onEraser={highlights.selectEraser}
+            onUnderline={highlights.selectUnderline}
+            onFontSize={highlights.cycleFontSize}
+            onLineSpacing={highlights.cycleLineSpacing}
+            timerLabel={timerLabel}
+            timerDisplaySeconds={timerDisplaySeconds}
+            timerPaused={paused}
+            onToggleTimerPause={togglePause}
+            timerProgress={timerProgress}
+            timerDisplayClassName={
+              timedSection && countdown === 0 ? "text-[#df1c41]" : undefined
+            }
+            finishButton={finishButton}
+          />
 
-          <div className="grid gap-0 lg:grid-cols-2 lg:divide-x" style={{ borderColor: "var(--greyscale-100)" }}>
+          <div
+            ref={sessionBodyRef}
+            className="grid gap-0 lg:grid-cols-2 lg:divide-x"
+            style={{ borderColor: "var(--greyscale-100)", ...highlights.contentStyle }}
+          >
             <div
               className="max-h-[min(52vh,480px)] overflow-y-auto border-b p-5 lg:max-h-[560px] lg:border-b-0"
               style={{ borderColor: "var(--greyscale-100)" }}
@@ -401,12 +453,13 @@ function SectionSessionPage() {
               {sectionType === "RC" && current.passage ? (
                 <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
               ) : null}
-              <HtmlContent
-                html={passageBody}
-                className={cn(findQuery.trim() && !stimulusHit && "opacity-45")}
-                style={{
-                  color: stimulusHit ? "var(--foreground)" : "var(--muted-foreground)",
-                }}
+              <PracticeAnnotatedContent
+                regionKey={passageKey}
+                html={passageHtml}
+                findQuery={findQuery}
+                toolMode={highlights.toolMode}
+                onMouseUp={highlights.handleContentMouseUp}
+                onClickCapture={highlights.handleContentClick}
               />
             </div>
             <div className="flex max-h-[min(52vh,480px)] flex-col gap-4 overflow-y-auto p-5 lg:max-h-[560px]">
@@ -419,8 +472,15 @@ function SectionSessionPage() {
                 revealed={revealed}
                 isCorrect={currentAnswer?.isCorrect ?? null}
                 submitting={submitting}
-                allowReselect={blindReviewMode}
+                allowReselect={allowReselect}
+                getRegionHtml={highlights.getRegionHtml}
+                toolMode={highlights.toolMode}
+                onContentMouseUp={highlights.handleContentMouseUp}
+                onContentClick={highlights.handleContentClick}
                 onSelect={(index) => void handleSelectChoice(index)}
+                flagged={current ? questionFlags.isFlagged(current.id) : false}
+                onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
+                flagsDisabled={sessionCompleted || blindReviewMode}
               />
             </div>
           </div>
@@ -434,6 +494,7 @@ function SectionSessionPage() {
                 const n = i + 1
                 const active = n === safeIndex
                 const answered = Boolean(answersByQuestion[q.id])
+                const flagged = questionFlags.isFlagged(q.id)
                 return (
                   <button
                     key={q.id}
@@ -450,9 +511,16 @@ function SectionSessionPage() {
                       border: `1px solid ${active ? "var(--color-student-cta)" : "var(--greyscale-100)"}`,
                     }}
                     aria-current={active ? "true" : undefined}
-                    aria-label={`Question ${n}`}
+                    aria-label={flagged ? `Question ${n}, flagged` : `Question ${n}`}
                   >
                     {n}
+                    {flagged ? (
+                      <Flag
+                        className="absolute -right-0.5 -top-0.5 size-2.5 fill-[var(--color-student-cta)] text-[var(--color-student-cta)]"
+                        strokeWidth={2}
+                        aria-hidden
+                      />
+                    ) : null}
                   </button>
                 )
               })}
@@ -489,6 +557,19 @@ function SectionSessionPage() {
           </footer>
         </div>
       </div>
+
+      <PracticeCompleteModal
+        open={completeModal != null}
+        titleId="section-complete-title"
+        subtitle="You've completed the section"
+        rawScore={completeModal?.rawScore ?? 0}
+        questionCount={completeModal?.questionCount ?? 1}
+        scoreHidden={scoreHidden}
+        onToggleScoreHidden={() => setScoreHidden((h) => !h)}
+        onSkipDetails={leaveSectionSession}
+        doneLabel="Done with Section"
+        onDone={leaveSectionSession}
+      />
     </StudentMain>
   )
 }

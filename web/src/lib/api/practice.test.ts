@@ -96,19 +96,102 @@ describe("createPracticeApi", () => {
             timeMinutes: 35,
           },
         ],
+        total: 5,
+        page: 2,
+        pageSize: 12,
+        sectionTypeCounts: { all: 5, lr: 3, rc: 2 },
       },
       error: null,
     })
     const api = createPracticeApi(mockSupabase(invoke))
 
-    const out = await api.listSectionPool({ sectionType: "LR" })
+    const out = await api.listSectionPool({ sectionType: "LR", page: 2, pageSize: 12, sort: "newest" })
 
     expect(out.sections).toHaveLength(1)
+    expect(out.total).toBe(5)
+    expect(out.sectionTypeCounts.lr).toBe(3)
     expect(invoke).toHaveBeenCalledWith("practice-list-section-pool", {
       method: "POST",
-      body: { sectionType: "LR" },
+      body: { sectionType: "LR", page: 2, pageSize: 12, sort: "newest" },
       headers: { Authorization: "Bearer token-1" },
     })
+  })
+
+  it("listSectionPool normalizes legacy responses without pagination fields", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        sections: [
+          {
+            id: "sec-1",
+            sectionId: null,
+            sectionNumber: 1,
+            sectionType: "LR",
+            title: "LR",
+            moduleId: "LSAC900",
+            prepTestId: "pt-900",
+            prepTestTitle: "PrepTest",
+            questionCount: 3,
+            timeMinutes: 35,
+          },
+          {
+            id: "sec-2",
+            sectionId: null,
+            sectionNumber: 2,
+            sectionType: "RC",
+            title: "RC",
+            moduleId: "LSAC900",
+            prepTestId: "pt-900",
+            prepTestTitle: "PrepTest",
+            questionCount: 2,
+            timeMinutes: 35,
+          },
+        ],
+      },
+      error: null,
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+
+    const out = await api.listSectionPool({ page: 1, pageSize: 12 })
+
+    expect(out.total).toBe(2)
+    expect(out.page).toBe(1)
+    expect(out.pageSize).toBe(12)
+    expect(out.sections).toHaveLength(2)
+    expect(out.sectionTypeCounts).toEqual({ all: 2, lr: 1, rc: 1 })
+  })
+
+  it("listSectionPool client-paginates legacy full-list responses", async () => {
+    const legacySections = Array.from({ length: 25 }, (_, i) => ({
+      id: `sec-${i}`,
+      sectionId: null,
+      sectionNumber: 1,
+      sectionType: i % 3 === 0 ? ("RC" as const) : ("LR" as const),
+      title: null,
+      moduleId: `LSAC${String(100 - i).padStart(3, "0")}`,
+      prepTestId: "pt-1",
+      prepTestTitle: "PrepTest",
+      questionCount: 10,
+      timeMinutes: 35,
+    }))
+    const invoke = vi.fn().mockResolvedValue({
+      data: { sections: legacySections },
+      error: null,
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+
+    const page1 = await api.listSectionPool({ page: 1, pageSize: 12, sort: "newest" })
+    expect(page1.sections).toHaveLength(12)
+    expect(page1.total).toBe(25)
+    expect(page1.sectionTypeCounts.all).toBe(25)
+    expect(page1.sections[0]!.id).toBe("sec-0")
+
+    const page2 = await api.listSectionPool({ page: 2, pageSize: 12, sort: "newest" })
+    expect(page2.sections).toHaveLength(12)
+    expect(page2.sections[0]!.id).toBe("sec-12")
+
+    const lrOnly = await api.listSectionPool({ sectionType: "LR", page: 1, pageSize: 12 })
+    expect(lrOnly.total).toBe(16)
+    expect(lrOnly.sections.every((s) => s.sectionType === "LR")).toBe(true)
   })
 
   it("startSection invokes practice-start-section", async () => {
@@ -153,17 +236,23 @@ describe("createPracticeApi", () => {
             openPrepTestSessionId: null,
           },
         ],
+        total: 1,
+        page: 2,
+        pageSize: 10,
+        statusCounts: { all: 5, fresh: 3, in_progress: 1, completed: 1 },
       },
       error: null,
     })
     const api = createPracticeApi(mockSupabase(invoke))
 
-    const out = await api.listPrepTestPool({ filter: "fresh" })
+    const out = await api.listPrepTestPool({ filter: "fresh", page: 2, pageSize: 10, sort: "newest" })
 
     expect(out.prepTests).toHaveLength(1)
+    expect(out.total).toBe(1)
+    expect(out.statusCounts.fresh).toBe(3)
     expect(invoke).toHaveBeenCalledWith("practice-list-prep-test-pool", {
       method: "POST",
-      body: { filter: "fresh" },
+      body: { filter: "fresh", page: 2, pageSize: 10, sort: "newest" },
       headers: { Authorization: "Bearer token-1" },
     })
   })

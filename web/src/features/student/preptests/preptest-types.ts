@@ -2,6 +2,23 @@ export type PrepTestPracticeStatus = "fresh" | "in_progress" | "completed"
 
 export type PrepTestPoolFilter = "all" | "fresh" | "in_progress" | "completed"
 
+export type PrepTestPoolSort = "newest" | "oldest"
+
+export type PrepTestPoolStatusCounts = {
+  all: number
+  fresh: number
+  in_progress: number
+  completed: number
+}
+
+export type PrepTestPoolListResult = {
+  prepTests: PrepTestPoolItem[]
+  total: number
+  page: number
+  pageSize: number
+  statusCounts: PrepTestPoolStatusCounts
+}
+
 export type PrepTestPoolItem = {
   id: string
   moduleId: string

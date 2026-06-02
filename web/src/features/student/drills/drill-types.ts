@@ -10,6 +10,7 @@ export type DrillChoice = {
   id: string
   index: number
   text: string
+  explanationHtml?: string | null
 }
 
 export type DrillPassage = {
@@ -26,6 +27,7 @@ export type DrillQuestion = {
   stemText: string | null
   choices: DrillChoice[]
   passage: DrillPassage | null
+  correctChoiceId?: string | null
 }
 
 export type DrillSessionMetadata = {
@@ -40,6 +42,7 @@ export type DrillSessionMetadata = {
   status?: string
   questionIds: string[]
   title?: string | null
+  flaggedQuestionIds?: string[]
 }
 
 export type DrillAnswerState = {

@@ -24,7 +24,7 @@ type PrepCourseLessonPanelProps = {
 }
 
 function PrepCourseLessonPanel({
-  course,
+  course: _course,
   lesson,
   linkedQuestionRefs = [],
   activeDrillAttempt = null,
@@ -35,12 +35,10 @@ function PrepCourseLessonPanel({
   startingDrill = false,
 }: PrepCourseLessonPanelProps) {
   const isPrepCourseDrill = lesson ? isPrepCourseDrillLessonType(lesson.lesson_type) : false
-  const breadcrumbTopic = isPrepCourseDrill
-    ? lesson?.title ?? "Lesson"
-    : lesson?.summary?.trim() || lesson?.title || "Lesson"
+  const breadcrumbTopic = lesson?.title ?? "Lesson"
   const headerMeta =
     lesson && !loading
-      ? lessonMetaLine(lesson, course.title, {
+      ? lessonMetaLine(lesson, {
           activeDrillAttempted: isPrepCourseDrill ? Boolean(activeDrillAttempt) : true,
         })
       : null

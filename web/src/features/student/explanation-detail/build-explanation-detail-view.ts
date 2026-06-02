@@ -65,6 +65,7 @@ export function buildExplanationQuestionDetailView(
       id: c.id,
       index: c.index,
       text: c.text,
+      explanationHtml: c.explanationHtml,
     })) ?? []
 
   const videos: ExplanationQuestionDetailView["videos"] = []

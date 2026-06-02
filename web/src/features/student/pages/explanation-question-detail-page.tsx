@@ -122,6 +122,14 @@ function ExplanationQuestionDetailPage() {
   }, [tab, detail, setSearchParams])
 
   const resolvedLoc = locateExplanationQuestion(questionId)
+  const view = resolvedLoc ? buildExplanationQuestionDetailView(resolvedLoc, detail) : null
+
+  const initialExpandedChoiceId = useMemo(() => {
+    const raw = searchParams.get("choice")?.trim().toUpperCase()
+    if (!raw || !view) return null
+    const match = view.choices.find((c) => c.id.toUpperCase() === raw)
+    return match?.id ?? null
+  }, [searchParams, view])
 
   if (!questionId) return <Navigate to="/app/learn/explanations" replace />
 
@@ -148,11 +156,9 @@ function ExplanationQuestionDetailPage() {
     )
   }
 
-  if (!resolvedLoc) {
+  if (!resolvedLoc || !view) {
     return <Navigate to="/app/learn/explanations" replace />
   }
-
-  const view = buildExplanationQuestionDetailView(resolvedLoc, detail)
 
   return (
     <StudentMain className="bg-[var(--greyscale-25)] py-4 pb-10 md:py-4">
@@ -211,7 +217,9 @@ function ExplanationQuestionDetailPage() {
             Loading question…
           </p>
         ) : null}
-        {tab === "question" && !detailLoading ? <ExplanationQuestionTabPanel view={view} /> : null}
+        {tab === "question" && !detailLoading ? (
+          <ExplanationQuestionTabPanel view={view} initialExpandedChoiceId={initialExpandedChoiceId} />
+        ) : null}
         {tab === "explanation" ? <ExplanationExplainTabPanel videos={view.videos} /> : null}
         {tab === "analytics" ? <ExplanationAnalyticsTabPanel analytics={view.analytics} /> : null}
       </div>

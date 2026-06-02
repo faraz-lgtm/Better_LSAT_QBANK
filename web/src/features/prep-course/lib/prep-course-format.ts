@@ -43,20 +43,17 @@ export function isPrepCourseDrillLessonType(lessonType: PrepLesson["lesson_type"
 /** Subtitle under lesson title; omit for prep-course drills before completion. */
 export function lessonMetaLine(
   lesson: PrepLesson,
-  courseTitle: string,
   options?: { activeDrillAttempted?: boolean },
 ): string | null {
   if (isPrepCourseDrillLessonType(lesson.lesson_type) && !options?.activeDrillAttempted) {
     return null
   }
-  const summary = lesson.summary?.trim()
-  const topic =
-    summary && !isPrepTestQuestionReferenceText(summary) ? summary : courseTitle
   const duration = formatDurationShort(lesson.duration_minutes)
   if (isPrepCourseDrillLessonType(lesson.lesson_type)) {
     return duration === "0 mins" ? null : duration
   }
-  return `${topic} • ${duration}`
+  // Summary often duplicates lesson body HTML; show duration only under the title.
+  return duration === "0 mins" ? null : duration
 }
 
 export function nextLessonSlug(lessons: PrepLesson[], currentSlug: string): string | null {

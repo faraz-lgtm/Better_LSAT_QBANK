@@ -59,7 +59,7 @@ export type ExplanationDetailPayload = {
   videoUrl: string | null
   stimulusText: string | null
   stemText: string | null
-  choices: { id: string; index: number; text: string }[]
+  choices: { id: string; index: number; text: string; explanationHtml: string | null }[]
   correctChoiceId: string | null
   passage: {
     id: string

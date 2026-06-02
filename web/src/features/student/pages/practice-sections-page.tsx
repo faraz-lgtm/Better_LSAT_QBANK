@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { BookOpen, LineChart, ListChecks, Timer } from "lucide-react"
+import { BookOpen, ChevronLeft, ChevronRight, LineChart, ListChecks, Timer } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
-import type { SectionPoolItem } from "@/features/student/sections/section-types"
+import type { SectionPoolItem, SectionPoolTypeCounts } from "@/features/student/sections/section-types"
 import { createAnalyticsApi, type PracticeSessionSummary } from "@/lib/api/analytics"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+
+const PAGE_SIZE = 12
+
+const EMPTY_SECTION_TYPE_COUNTS: SectionPoolTypeCounts = { all: 0, lr: 0, rc: 0 }
 
 type SectionFilter = "all" | "lr" | "rc"
 
@@ -195,7 +199,10 @@ function PracticeSectionsPage() {
   const analyticsApi = useMemo(() => createAnalyticsApi(getSupabaseBrowserClient()), [])
 
   const [sectionFilter, setSectionFilter] = useState<SectionFilter>("all")
+  const [page, setPage] = useState(1)
   const [sections, setSections] = useState<SectionPoolItem[]>([])
+  const [total, setTotal] = useState(0)
+  const [sectionTypeCounts, setSectionTypeCounts] = useState<SectionPoolTypeCounts>(EMPTY_SECTION_TYPE_COUNTS)
   const [continueSections, setContinueSections] = useState<ContinueSection[]>([])
   const [loading, setLoading] = useState(true)
   const [startingId, setStartingId] = useState<string | null>(null)
@@ -210,11 +217,18 @@ function PracticeSectionsPage() {
         const sectionType =
           sectionFilter === "lr" ? ("LR" as const) : sectionFilter === "rc" ? ("RC" as const) : undefined
         const [poolResult, sessionsResult] = await Promise.all([
-          practiceApi.listSectionPool(sectionType ? { sectionType } : {}),
+          practiceApi.listSectionPool({
+            sectionType,
+            page,
+            pageSize: PAGE_SIZE,
+            sort: "newest",
+          }),
           analyticsApi.getSessions({ kind: "SECTION", limit: 50 }),
         ])
         if (cancelled) return
         setSections(poolResult.sections)
+        setTotal(poolResult.total ?? poolResult.sections.length)
+        setSectionTypeCounts(poolResult.sectionTypeCounts ?? EMPTY_SECTION_TYPE_COUNTS)
         setContinueSections(
           sessionsResult.sessions
             .filter((s) => !s.completedAt)
@@ -224,6 +238,8 @@ function PracticeSectionsPage() {
       } catch (e) {
         if (!cancelled) {
           setSections([])
+          setTotal(0)
+          setSectionTypeCounts(EMPTY_SECTION_TYPE_COUNTS)
           setContinueSections([])
           setError(e instanceof Error ? e.message : "Failed to load sections")
         }
@@ -234,7 +250,11 @@ function PracticeSectionsPage() {
     return () => {
       cancelled = true
     }
-  }, [practiceApi, analyticsApi, sectionFilter])
+  }, [practiceApi, analyticsApi, sectionFilter, page])
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const pageStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const pageEnd = Math.min(page * PAGE_SIZE, total)
 
   async function handleStart(sectionId: string) {
     setStartingId(sectionId)
@@ -269,12 +289,19 @@ function PracticeSectionsPage() {
                 Practice pool
               </Button>
               <span className="rounded-lg border border-[#dfe1e7] px-2 py-1 text-xs font-semibold text-[#666d80]">
-                {sections.length}
+                {total}
               </span>
             </div>
           </div>
 
-          <SectionFilters sectionFilter={sectionFilter} setSectionFilter={setSectionFilter} />
+          <SectionFilters
+            sectionFilter={sectionFilter}
+            sectionTypeCounts={sectionTypeCounts}
+            onFilterChange={(f) => {
+              setSectionFilter(f)
+              setPage(1)
+            }}
+          />
 
           {error ? (
             <p className="mt-4 text-sm text-red-600" role="alert">
@@ -287,16 +314,55 @@ function PracticeSectionsPage() {
           ) : sections.length === 0 ? (
             <p className="mt-8 text-sm text-[#666d80]">No practice sections available yet.</p>
           ) : (
-            <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {sections.map((item) => (
-                <PoolSectionCard
-                  key={item.id}
-                  item={item}
-                  starting={startingId === item.id}
-                  onStart={() => void handleStart(item.id)}
-                />
-              ))}
-            </div>
+            <>
+              <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {sections.map((item) => (
+                  <PoolSectionCard
+                    key={item.id}
+                    item={item}
+                    starting={startingId === item.id}
+                    onStart={() => void handleStart(item.id)}
+                  />
+                ))}
+              </div>
+              {!loading && total > PAGE_SIZE ? (
+                <nav
+                  className="mt-6 flex flex-col gap-3 border-t border-[#dfe1e7] pt-4 sm:flex-row sm:items-center sm:justify-between"
+                  aria-label="Section pagination"
+                >
+                  <p className="text-sm text-[#666d80]">
+                    Showing {pageStart}–{pageEnd} of {total} sections
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg"
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    >
+                      <ChevronLeft className="size-4" aria-hidden />
+                      Previous
+                    </Button>
+                    <span className="min-w-[4.5rem] text-center text-sm font-medium tabular-nums text-[#062357]">
+                      {page} / {totalPages}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg"
+                      disabled={page >= totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    >
+                      Next
+                      <ChevronRight className="size-4" aria-hidden />
+                    </Button>
+                  </div>
+                </nav>
+              ) : null}
+            </>
           )}
 
           <div className="mt-10 border-t border-[#dfe1e7] pt-8">
@@ -330,34 +396,32 @@ function PracticeSectionsPage() {
 
 function SectionFilters({
   sectionFilter,
-  setSectionFilter,
+  sectionTypeCounts,
+  onFilterChange,
 }: {
   sectionFilter: SectionFilter
-  setSectionFilter: (f: SectionFilter) => void
+  sectionTypeCounts: SectionPoolTypeCounts
+  onFilterChange: (f: SectionFilter) => void
 }) {
+  const counts = sectionTypeCounts ?? EMPTY_SECTION_TYPE_COUNTS
+  const tabs: { id: SectionFilter; label: string; count: number }[] = [
+    { id: "all", label: "All", count: counts.all },
+    { id: "lr", label: "Logical Reasoning", count: counts.lr },
+    { id: "rc", label: "Reading Comprehension", count: counts.rc },
+  ]
+
   return (
     <div className="mt-6 flex flex-wrap items-center gap-2">
-      <button
-        type="button"
-        onClick={() => setSectionFilter("all")}
-        className={`h-10 rounded-2xl border px-4 text-sm font-semibold ${filterPill(sectionFilter === "all")}`}
-      >
-        All
-      </button>
-      <button
-        type="button"
-        onClick={() => setSectionFilter("lr")}
-        className={`h-10 rounded-xl border px-4 text-sm font-semibold ${filterPill(sectionFilter === "lr")}`}
-      >
-        Logical Reasoning
-      </button>
-      <button
-        type="button"
-        onClick={() => setSectionFilter("rc")}
-        className={`h-10 rounded-xl border px-4 text-sm font-semibold ${filterPill(sectionFilter === "rc")}`}
-      >
-        Reading Comprehension
-      </button>
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          onClick={() => onFilterChange(tab.id)}
+          className={`h-10 rounded-2xl border px-4 text-sm font-semibold ${filterPill(sectionFilter === tab.id)}`}
+        >
+          {tab.label} ({tab.count})
+        </button>
+      ))}
     </div>
   )
 }

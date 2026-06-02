@@ -1,3 +1,4 @@
+import { parseQuestionChoices } from '../_shared/parse-question-choices.ts'
 import type {
   ExplanationsRepository,
   PrepTestRow,
@@ -70,7 +71,7 @@ export type ExplanationDetailPayload = {
   videoUrl: string | null
   stimulusText: string | null
   stemText: string | null
-  choices: { id: string; index: number; text: string }[]
+  choices: { id: string; index: number; text: string; explanationHtml: string | null }[]
   correctChoiceId: string | null
   passage: {
     id: string
@@ -412,24 +413,6 @@ export function mapPrepTestTreeRows(
   }
 }
 
-function parseChoices(raw: unknown): { id: string; index: number; text: string }[] {
-  if (!Array.isArray(raw)) return []
-  return raw.map((choice, idx) => {
-    const index = idx + 1
-    const letter = String.fromCharCode(64 + index)
-    if (typeof choice === 'string') {
-      return { id: letter, index, text: choice }
-    }
-    if (choice && typeof choice === 'object') {
-      const o = choice as Record<string, unknown>
-      const text = String(o.optionContent ?? o.text ?? '')
-      const choiceLetter = String(o.optionLetter ?? letter)
-      return { id: choiceLetter, index, text }
-    }
-    return { id: letter, index, text: '' }
-  })
-}
-
 function correctChoiceIdFromAnswer(correct: string | null, choices: { id: string; index: number }[]): string | null {
   if (!correct?.trim()) return null
   const letter = correct.trim().toUpperCase()
@@ -581,7 +564,7 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
       const prepTestTitle = pt?.title?.trim() || 'PrepTest'
       const expl = row.explanation?.trim() ?? ''
       const vid = row.video_url?.trim() ?? ''
-      const choices = parseChoices(row.choices)
+      const choices = parseQuestionChoices(row.choices, { includeOptionExplanations: true })
 
       return {
         questionId: row.id,
