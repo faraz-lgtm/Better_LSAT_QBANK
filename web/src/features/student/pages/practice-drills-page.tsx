@@ -1,22 +1,18 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { ExternalLink, LineChart } from "lucide-react"
 
+import {
+  ContinueDrillCard,
+  continueDrillToCardDrill,
+} from "@/features/student/components/continue-drill-card"
 import { StudentMain } from "@/features/student/components/student-main"
+import {
+  mapSessionToContinueDrill,
+  type ContinueDrill,
+} from "@/features/student/drills/drill-dashboard-mappers"
 import { createAnalyticsApi, type PriorityRow } from "@/lib/api/analytics"
-import type { PracticeSessionSummary } from "@/lib/api/analytics"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-import { ExternalLink, LineChart, ListChecks, Timer } from "lucide-react"
-
-type ContinueDrill = {
-  id: string
-  section: "LR" | "RC"
-  title: string
-  progressPct: number
-  questions: string
-  timeLabel: string
-  lastAttempt: string
-  progressColor: string
-}
 
 type TagDrill = {
   id: string
@@ -30,25 +26,9 @@ type TagDrill = {
   configPath: string
 }
 
-function sectionBadgeTone(section: "LR" | "RC"): string {
-  return section === "LR" ? "bg-[#fffbeb] text-[#ae8b00]" : "bg-[#fff3ea] text-[#ff9d51]"
-}
-
 function filterPill(active: boolean): string {
-  if (active) return "border-[#0b4e6e] bg-[#0d47a1] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
-  return "border-[#dfe1e7] bg-white text-[#0d47a1] shadow-[0px_1px_2px_rgba(13,13,18,0.06)]"
-}
-
-function formatRelativeTime(iso: string): string {
-  const then = new Date(iso).getTime()
-  const now = Date.now()
-  const diffMs = Math.max(0, now - then)
-  const mins = Math.floor(diffMs / 60_000)
-  if (mins < 60) return mins <= 1 ? "Just now" : `${mins} min ago`
-  const hours = Math.floor(mins / 60)
-  if (hours < 48) return hours === 1 ? "1 hour ago" : `${hours} hours ago`
-  const days = Math.floor(hours / 24)
-  return days === 1 ? "1 day ago" : `${days} days ago`
+  if (active) return "rounded-xl border border-[#0d47a1] bg-[#0d47a1] px-4 py-2 text-sm font-semibold tracking-[0.28px] text-white"
+  return "rounded-xl border border-[#dfe1e7] bg-[#f5f9ff] px-4 py-2 text-sm font-semibold tracking-[0.28px] text-[#0d47a1]"
 }
 
 function priorityVisual(priority: PriorityRow["priorityLevel"]) {
@@ -59,40 +39,6 @@ function priorityVisual(priority: PriorityRow["priorityLevel"]) {
     return { label: "Medium", filledBars: 3, color: "#ff6f00" }
   }
   return { label: "Easy", filledBars: 2, color: "#ffbd4c" }
-}
-
-function sessionSectionType(session: PracticeSessionSummary): "LR" | "RC" | null {
-  const meta = session.metadata
-  if (meta.sectionType === "LR" || meta.sectionType === "RC") return meta.sectionType
-  if (session.sectionType === "LR" || session.sectionType === "RC") return session.sectionType
-  return null
-}
-
-function mapSessionToContinueDrill(session: PracticeSessionSummary): ContinueDrill | null {
-  const section = sessionSectionType(session)
-  if (!section) return null
-
-  const meta = session.metadata
-  const questionIds = Array.isArray(meta.questionIds) ? meta.questionIds.length : 0
-  const total = typeof meta.questionCount === "number" ? meta.questionCount : questionIds
-  const answeredIds = Array.isArray(meta.answeredQuestionIds) ? meta.answeredQuestionIds.length : 0
-  const progressPct = total > 0 ? Math.round((100 * answeredIds) / total) : 0
-
-  const title =
-    (typeof meta.title === "string" && meta.title) ||
-    (typeof meta.tagLabel === "string" && meta.tagLabel) ||
-    `${section} drill`
-
-  return {
-    id: session.id,
-    section,
-    title,
-    progressPct,
-    questions: `${answeredIds}/${total || "—"}`,
-    timeLabel: typeof meta.timing === "string" ? meta.timing : "—",
-    lastAttempt: formatRelativeTime(session.startedAt),
-    progressColor: section === "LR" ? "#9d1be8" : "#ff9d51",
-  }
 }
 
 function mapPriorityToTagDrill(row: PriorityRow): TagDrill | null {
@@ -114,79 +60,6 @@ function mapPriorityToTagDrill(row: PriorityRow): TagDrill | null {
     difficultyColor: visual.color,
     configPath,
   }
-}
-
-function ContinueDrillCard({ drill, onContinue }: { drill: ContinueDrill; onContinue: () => void }) {
-  const ringFill = useMemo(
-    () => `conic-gradient(from 270deg, ${drill.progressColor} ${drill.progressPct}%, #dfe1e7 ${drill.progressPct}% 100%)`,
-    [drill.progressColor, drill.progressPct],
-  )
-
-  return (
-    <article className="rounded-3xl bg-[#f6f8fa] p-6">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <div className="flex gap-4">
-          <div className="w-12 shrink-0">
-            <div className={`flex h-16 w-12 items-center justify-center rounded-2xl text-xl font-bold ${sectionBadgeTone(drill.section)}`}>
-              {drill.section}
-            </div>
-            <div className="relative mt-3 flex size-11 items-center justify-center rounded-full" style={{ background: ringFill }}>
-              <div className="absolute inset-[4px] rounded-full bg-[#f6f8fa]" />
-              <span className="relative text-xs font-semibold text-[#4b5565]">{drill.progressPct}%</span>
-            </div>
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-[28px] font-bold leading-[1.2] text-[#062357]">{drill.title}</h3>
-
-            <div className="mt-3 flex flex-wrap items-center gap-5">
-              <div className="flex min-w-[180px] items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-[10px] bg-[#eceff3] text-[#9ca3af]">
-                  <LineChart className="size-4" />
-                </span>
-                <div>
-                  <p className="text-xs text-[#666d80]">Progress</p>
-                  <p className="text-sm font-semibold tracking-[0.28px] text-[#1a1b25]">{drill.progressPct}%</p>
-                </div>
-              </div>
-              <div className="flex min-w-[180px] items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-[10px] bg-[#eceff3] text-[#9ca3af]">
-                  <ListChecks className="size-4" />
-                </span>
-                <div>
-                  <p className="text-xs text-[#666d80]">Questions</p>
-                  <p className="text-sm font-semibold tracking-[0.28px] text-[#1a1b25]">{drill.questions}</p>
-                </div>
-              </div>
-              <div className="flex min-w-[160px] items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-[10px] bg-[#eceff3] text-[#9ca3af]">
-                  <Timer className="size-4" />
-                </span>
-                <div>
-                  <p className="text-xs text-[#666d80]">Timing</p>
-                  <p className="text-sm font-semibold tracking-[0.28px] text-[#1a1b25]">{drill.timeLabel}</p>
-                </div>
-              </div>
-              <p className="ml-auto text-xs tracking-[0.24px] text-[#6a7282]">Started {drill.lastAttempt}</p>
-            </div>
-
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#eceff3]">
-              <div className="h-full rounded-full" style={{ width: `${drill.progressPct}%`, backgroundColor: drill.progressColor }} />
-            </div>
-          </div>
-        </div>
-        <div className="lg:ml-auto">
-          <button
-            type="button"
-            onClick={onContinue}
-            className="inline-flex h-12 items-center gap-2 rounded-2xl border border-[#0b4e6e] bg-[#0d47a1] px-4 text-base font-semibold tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] hover:bg-[#0d47a1]/90"
-          >
-            Continue
-            <span aria-hidden>›</span>
-          </button>
-        </div>
-      </div>
-    </article>
-  )
 }
 
 function PracticeDrillsPage() {
@@ -258,55 +131,67 @@ function PracticeDrillsPage() {
       </section>
 
       <StudentMain className="space-y-6">
-        <section className="rounded-3xl border border-[#dfe1e7] bg-white p-6">
-          <div className="flex items-center gap-2 text-base font-semibold tracking-[0.32px] text-[#0d47a1]">
+        <section className="rounded-2xl border border-[#d8dee8] bg-[#f4f6f9] p-6">
+          <div className="flex items-center gap-2 text-[14px] font-semibold leading-none tracking-[0.1px] text-[#0d47a1]">
             <button type="button" className="inline-flex items-center gap-1 hover:underline" onClick={() => navigate("/app/analytics/drills")}>
               Drills History
-              <ExternalLink className="size-4" />
+              <ExternalLink className="size-3.5" />
             </button>
             <span className="mx-1 h-3.5 w-px bg-[#dfe1e7]" />
             <span>In Process</span>
-            <span className="inline-flex size-5 items-center justify-center rounded-xl bg-[#eceff3] text-xs font-semibold text-[#0d47a1]">
+            <span className="inline-flex size-4.5 items-center justify-center rounded-full bg-[#e7ecf4] text-[10px] font-semibold text-[#0d47a1]">
               {continueDrills.length}
             </span>
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <article className="rounded-3xl border border-[#dfe1e7] bg-[#f6f8fa] px-6 py-9 shadow-[0px_5px_10px_rgba(13,13,18,0.06)]">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="flex size-10 items-center justify-center rounded-xl bg-[#fffbeb] text-xl font-black text-[#ae8b00]">LR</span>
-                  <div>
-                    <h2 className="text-[28px] font-bold leading-[1.2] text-[#062357]">Logical Reasoning</h2>
-                    <p className="text-xs tracking-[0.24px] text-[#062357]">Master argument analysis and critical thinking skills</p>
+            <article className="rounded-2xl border border-[#d8dee8] bg-[#eef2f6] px-4 py-6 shadow-[0px_4px_10px_rgba(13,13,18,0.08)]">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-[#fff5d8] text-sm font-black text-[#ae8b00]">
+                  LR
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="shrink-0 text-[20px] font-normal leading-tight whitespace-nowrap text-[#062357]">
+                      Logical Reasoning
+                    </h2>
+                    <button
+                      type="button"
+                      className="h-10 shrink-0 rounded-xl border border-[#ad52d9] bg-[#fff3cb] px-4 text-[16px] font-semibold leading-none tracking-[0.2px] text-[#ae8b00]"
+                      onClick={() => navigate("/app/practice/drills/lr/new")}
+                    >
+                      New Drill
+                    </button>
                   </div>
+                  <p className="mt-1 text-[12px] leading-tight tracking-[0.2px] text-[#3c527f]">
+                    Master argument analysis and critical thinking skills
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  className="h-[52px] rounded-2xl border border-[#7f0ac2] bg-[#fffbeb] px-4 text-base font-semibold tracking-[0.32px] text-[#ae8b00]"
-                  onClick={() => navigate("/app/practice/drills/lr/new")}
-                >
-                  New Drill
-                </button>
               </div>
             </article>
 
-            <article className="rounded-3xl border border-[#dfe1e7] bg-[#f6f8fa] px-6 py-9 shadow-[0px_5px_10px_rgba(13,13,18,0.06)]">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="flex size-10 items-center justify-center rounded-xl bg-[#ff9d51] text-xl font-black text-white">RC</span>
-                  <div>
-                    <h2 className="text-[28px] font-bold leading-[1.2] text-[#062357]">Reading Comprehension</h2>
-                    <p className="text-xs tracking-[0.24px] text-[#062357]">Improve passage analysis and comprehension strategies</p>
+            <article className="rounded-2xl border border-[#d8dee8] bg-[#eef2f6] px-4 py-6 shadow-[0px_4px_10px_rgba(13,13,18,0.08)]">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-[#ff7f1f] text-sm font-black text-white">
+                  RC
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="shrink-0 text-[20px] font-normal leading-tight whitespace-nowrap text-[#062357]">
+                      Reading Comprehension
+                    </h2>
+                    <button
+                      type="button"
+                      className="h-10 shrink-0 rounded-xl border border-[#5ecab4] bg-[#fff0df] px-4 text-[16px] font-semibold leading-none tracking-[0.2px] text-[#ff9d51]"
+                      onClick={() => navigate("/app/practice/drills/rc/new")}
+                    >
+                      Start Drill
+                    </button>
                   </div>
+                  <p className="mt-1 text-[12px] leading-tight tracking-[0.2px] text-[#3c527f]">
+                    Improve passage analysis and comprehension strategies
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  className="h-[52px] rounded-2xl border border-[#40c4aa] bg-[#fff3ea] px-4 text-base font-semibold tracking-[0.32px] text-[#ff9d51]"
-                  onClick={() => navigate("/app/practice/drills/rc/new")}
-                >
-                  Start Drill
-                </button>
               </div>
             </article>
           </div>
@@ -314,15 +199,17 @@ function PracticeDrillsPage() {
 
         <section className="rounded-3xl border border-[#dfe1e7] bg-white p-6">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-[34px] font-bold leading-[1.2] text-[#062357]">Continue Drills</h2>
+            <h2 className="text-[24px] font-bold leading-[1.2]" style={{ color: "#062357" }}>
+              Continue Drills
+            </h2>
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => setContinueFilter("all")} className={`h-10 rounded-2xl border px-4 text-sm font-semibold tracking-[0.28px] ${filterPill(continueFilter === "all")}`}>
+              <button type="button" onClick={() => setContinueFilter("all")} className={filterPill(continueFilter === "all")}>
                 All Drills
               </button>
-              <button type="button" onClick={() => setContinueFilter("lr")} className={`h-10 rounded-xl border px-4 text-sm font-semibold tracking-[0.28px] ${filterPill(continueFilter === "lr")}`}>
+              <button type="button" onClick={() => setContinueFilter("lr")} className={filterPill(continueFilter === "lr")}>
                 Logical Reasoning
               </button>
-              <button type="button" onClick={() => setContinueFilter("rc")} className={`h-10 rounded-xl border px-4 text-sm font-semibold tracking-[0.28px] ${filterPill(continueFilter === "rc")}`}>
+              <button type="button" onClick={() => setContinueFilter("rc")} className={filterPill(continueFilter === "rc")}>
                 Reading Comprehension
               </button>
             </div>
@@ -336,8 +223,8 @@ function PracticeDrillsPage() {
               {filteredContinue.map((drill) => (
                 <ContinueDrillCard
                   key={drill.id}
-                  drill={drill}
-                  onContinue={() => navigate(`/app/practice/drills/session/${drill.id}`)}
+                  drill={continueDrillToCardDrill(drill)}
+                  onContinue={() => navigate(drill.continuePath)}
                 />
               ))}
             </div>
@@ -346,15 +233,17 @@ function PracticeDrillsPage() {
 
         <section className="rounded-3xl border border-[#dfe1e7] bg-white p-6">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-[34px] font-bold leading-[1.2] text-[#062357]">Drills by Tags</h2>
+            <h2 className="text-[24px] font-bold leading-[1.2]" style={{ color: "#062357" }}>
+              Drills by Tags
+            </h2>
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => setSectionFilter("all")} className={`h-10 rounded-2xl border px-4 text-sm font-semibold tracking-[0.28px] ${filterPill(sectionFilter === "all")}`}>
+              <button type="button" onClick={() => setSectionFilter("all")} className={filterPill(sectionFilter === "all")}>
                 All Drills
               </button>
-              <button type="button" onClick={() => setSectionFilter("lr")} className={`h-10 rounded-xl border px-4 text-sm font-semibold tracking-[0.28px] ${filterPill(sectionFilter === "lr")}`}>
+              <button type="button" onClick={() => setSectionFilter("lr")} className={filterPill(sectionFilter === "lr")}>
                 Logical Reasoning
               </button>
-              <button type="button" onClick={() => setSectionFilter("rc")} className={`h-10 rounded-xl border px-4 text-sm font-semibold tracking-[0.28px] ${filterPill(sectionFilter === "rc")}`}>
+              <button type="button" onClick={() => setSectionFilter("rc")} className={filterPill(sectionFilter === "rc")}>
                 Reading Comprehension
               </button>
             </div>
@@ -384,7 +273,7 @@ function PracticeDrillsPage() {
               {filteredTags.map((drill) => (
                 <article key={drill.id} className="overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_5px_10px_rgba(13,13,18,0.06)]">
                   <div
-                    className={`flex h-12 items-center justify-center text-lg font-bold leading-[1.35] ${
+                    className={`flex h-12 items-center justify-center text-[18px] font-bold leading-[1.35] ${
                       drill.sectionTone === "lr" ? "bg-[#fffbeb] text-[#ae8b00]" : "bg-[#fff3ea] text-[#ff9d51]"
                     }`}
                   >
@@ -392,7 +281,7 @@ function PracticeDrillsPage() {
                   </div>
                   <div className="space-y-5 p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <h3 className="max-w-[150px] text-[28px] font-bold leading-[1.2] text-[#062357]">{drill.title}</h3>
+                      <h3 className="max-w-[150px] text-[18px] font-bold leading-[1.2] text-[#062357]">{drill.title}</h3>
                       <div className="rounded-[10px] bg-[#f3f7ff] px-2.5 py-2">
                         <p className="text-right text-[10px] font-semibold tracking-[0.24px]" style={{ color: drill.difficultyColor }}>
                           {drill.difficultyLabel}
@@ -410,7 +299,7 @@ function PracticeDrillsPage() {
                     </div>
                     <button
                       type="button"
-                      className="h-10 w-full rounded-2xl bg-[#0d47a1] text-sm font-semibold tracking-[0.28px] text-white shadow-[0px_5px_10px_rgba(13,13,18,0.06)] hover:bg-[#0d47a1]/90"
+                      className="ds-btn-sm w-full text-sm tracking-[0.28px]"
                       onClick={() => navigate(drill.configPath)}
                     >
                       Start Drill

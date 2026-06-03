@@ -28,8 +28,8 @@ type ContinueSection = {
 }
 
 function filterPill(active: boolean): string {
-  if (active) return "border-[#0b4e6e] bg-[#0d47a1] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
-  return "border-[#dfe1e7] bg-white text-[#0d47a1] shadow-[0px_1px_2px_rgba(13,13,18,0.06)]"
+  if (active) return "ds-btn-sm"
+  return "h-10 rounded-2xl border border-[#dfe1e7] bg-white text-[#0d47a1] shadow-[0px_1px_2px_rgba(13,13,18,0.06)]"
 }
 
 function formatRelativeTime(iso: string): string {
@@ -124,7 +124,7 @@ function PoolSectionCard({
       <Button
         type="button"
         disabled={starting}
-        className="mt-4 w-full rounded-2xl bg-[#0d47a1] text-white hover:bg-[#0d47a1]/90"
+        className="ds-btn mt-4 w-full"
         onClick={onStart}
       >
         {starting ? "Starting…" : "Start section"}
@@ -168,7 +168,7 @@ function ContinueSectionCard({ section, onContinue }: { section: ContinueSection
           <button
             type="button"
             onClick={onContinue}
-            className="inline-flex h-12 items-center gap-2 rounded-2xl border border-[#0b4e6e] bg-[#0d47a1] px-4 text-base font-semibold tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] hover:bg-[#0d47a1]/90"
+            className="ds-btn text-base tracking-[0.32px]"
           >
             Continue
             <span aria-hidden>›</span>

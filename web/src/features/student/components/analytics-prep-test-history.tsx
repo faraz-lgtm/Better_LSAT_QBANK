@@ -5,6 +5,8 @@ import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-drills"
 
+const SCORE_BOX_WIDTH_PX = 179
+
 function ScoreMetric({
   label,
   value,
@@ -18,15 +20,16 @@ function ScoreMetric({
 }) {
   const widthPct = Math.max(0, Math.min(100, (value / Math.max(1, max)) * 100))
   return (
-    <div className="flex h-[52px] items-center rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] px-3">
-      <div className="flex w-[179px] flex-col gap-1.5">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium leading-[1.5] tracking-[0.02em] text-[#666d80]">{label}</span>
-          <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">{value}</span>
-        </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-lg bg-[#dfe1e7]">
-          <div className="h-full rounded-lg" style={{ width: `${widthPct}%`, backgroundColor: barColor }} />
-        </div>
+    <div
+      className="flex h-[62px] shrink-0 flex-col justify-between rounded-[16px] border border-[#e5e7eb] bg-[#f6f8fa] px-3 py-2.5"
+      style={{ width: SCORE_BOX_WIDTH_PX }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium leading-normal tracking-[0.02em] text-[#666d80]">{label}</span>
+        <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#062357]">{value}</span>
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-lg bg-[#dfe1e7]">
+        <div className="h-full rounded-lg" style={{ width: `${widthPct}%`, backgroundColor: barColor }} />
       </div>
     </div>
   )
@@ -63,7 +66,7 @@ function RowMenu({
   }, [open])
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative shrink-0">
       <button
         type="button"
         onClick={() => setOpen((c) => !c)}
@@ -123,15 +126,11 @@ function RowMenu({
 
 function PrepTestHistoryRow({
   entry,
-  isFirst,
-  isLast,
   onToggleBookmark,
   onSelectEntry,
   onOpenPractice,
 }: {
   entry: PrepTestHistoryEntry
-  isFirst: boolean
-  isLast: boolean
   onToggleBookmark: (id: string) => void
   onSelectEntry?: (id: string) => void
   onOpenPractice?: (id: string) => void
@@ -140,17 +139,15 @@ function PrepTestHistoryRow({
   return (
     <div
       className={cn(
-        "flex h-[72px] items-center justify-between border border-[#dfe1e7] bg-white transition-colors",
-        isFirst ? "rounded-t-2xl" : "border-t-0",
-        isLast ? "rounded-b-2xl" : "",
-        labelClickable ? "hover:bg-[#f9fbff]" : "",
+        "flex flex-wrap items-center gap-3 rounded-[16px] border border-[#dfe1e7] bg-white px-3 py-3 lg:flex-nowrap",
+        labelClickable && "hover:bg-[#f9fbff]",
       )}
     >
-      <div className="flex h-full w-[361px] items-center gap-2.5 px-3">
+      <div className="flex w-full min-w-0 max-w-[361px] shrink-0 items-center gap-2.5">
         <button
           type="button"
           onClick={() => onToggleBookmark(entry.id)}
-          className="flex size-10 items-center justify-center rounded-xl border border-[#dfe1e6] bg-[#f9f9fb] text-[#0d47a1] transition-colors hover:bg-white"
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-[#dfe1e6] bg-[#f9f9fb] text-[#0d47a1] transition-colors hover:bg-white"
           aria-label={entry.bookmarked ? "Remove bookmark" : "Bookmark"}
           aria-pressed={entry.bookmarked}
         >
@@ -159,31 +156,33 @@ function PrepTestHistoryRow({
             aria-hidden
           />
         </button>
-        <div className="flex flex-col gap-0.5">
+        <div className="min-w-0 flex flex-col gap-0.5">
           {labelClickable ? (
             <button
               type="button"
               onClick={() => onSelectEntry?.(entry.id)}
-              className="text-left text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[#0d47a1] hover:underline focus-visible:underline focus-visible:outline-none"
+              className="truncate text-left text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[#0d47a1] hover:underline focus-visible:underline focus-visible:outline-none"
             >
               {entry.testLabel}
             </button>
           ) : (
-            <p className="text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[#0d47a1]">{entry.testLabel}</p>
+            <p className="truncate text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[#0d47a1]">
+              {entry.testLabel}
+            </p>
           )}
-          <div className="inline-flex items-center gap-2 text-xs leading-[1.5] tracking-[0.02em] text-[#666d80]">
-            <Calendar className="size-4" aria-hidden />
-            <span>{entry.dateLabel}</span>
+          <div className="inline-flex min-w-0 items-center gap-2 text-xs leading-normal tracking-[0.02em] text-[#666d80]">
+            <Calendar className="size-4 shrink-0" aria-hidden />
+            <span className="truncate">{entry.dateLabel}</span>
           </div>
         </div>
       </div>
-      <div className="flex h-full items-center px-3">
+
+      <div className="flex shrink-0 items-center gap-3">
         <ScoreMetric label="Score" value={entry.score} max={entry.scoreMax} barColor="#0d47a1" />
-      </div>
-      <div className="flex h-full items-center px-3">
         <ScoreMetric label="BR" value={entry.blindReviewScore} max={entry.blindReviewMax} barColor="#df1c41" />
       </div>
-      <div className="flex h-full w-[97px] items-center justify-center px-3">
+
+      <div className="ml-auto shrink-0">
         <RowMenu entry={entry} onToggleBookmark={onToggleBookmark} onOpenPractice={onOpenPractice} />
       </div>
     </div>
@@ -195,9 +194,7 @@ type AnalyticsPrepTestHistoryProps = {
   bookmarkedOnly: boolean
   onBookmarkedOnlyChange: (next: boolean) => void
   onToggleBookmark: (id: string) => void
-  /** Opens analytics results for the PrepTest (row title and primary navigation). */
   onSelectEntry?: (id: string) => void
-  /** Opens the timed practice flow for the PrepTest (overflow menu). */
   onOpenPractice?: (id: string) => void
 }
 
@@ -210,12 +207,12 @@ function AnalyticsPrepTestHistory({
   onOpenPractice,
 }: AnalyticsPrepTestHistoryProps) {
   return (
-    <section className="rounded-3xl border border-[#dfe1e7] bg-white p-6">
-      <div className="mb-6 flex items-center justify-between rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-6 py-4">
+    <section className="rounded-[16px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[16px] bg-[#f6f8fa] px-6 py-4">
         <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">PrepTest History</h2>
-        <label className="flex items-center gap-2.5">
+        <label className="flex cursor-pointer items-center gap-2.5">
           <Bookmark className="size-4 text-[#062357]" aria-hidden />
-          <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
+          <span className="text-base font-semibold leading-normal tracking-[0.02em] text-[#062357]">
             Bookmarked only
           </span>
           <Switch
@@ -226,20 +223,18 @@ function AnalyticsPrepTestHistory({
         </label>
       </div>
 
-      <div className="flex flex-col">
+      <div className="flex flex-col gap-3">
         {visibleEntries.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-6 py-8 text-center text-sm text-[#666d80]">
+          <p className="rounded-[16px] border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-6 py-8 text-center text-sm text-[#666d80]">
             {bookmarkedOnly
               ? "No bookmarked PrepTests in this range. Adjust the time range or bookmark a PrepTest."
               : "No PrepTests recorded in this range. Try widening the time range."}
           </p>
         ) : (
-          visibleEntries.map((entry, index) => (
+          visibleEntries.map((entry) => (
             <PrepTestHistoryRow
               key={entry.id}
               entry={entry}
-              isFirst={index === 0}
-              isLast={index === visibleEntries.length - 1}
               onToggleBookmark={onToggleBookmark}
               onSelectEntry={onSelectEntry}
               onOpenPractice={onOpenPractice}

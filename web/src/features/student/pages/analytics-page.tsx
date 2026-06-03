@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import { Loader2, Bookmark } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
 import {
@@ -266,7 +265,7 @@ function OverviewTab() {
             <StatTile key={stat.id} stat={stat} />
           ))}
         </div>
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {secondaryStats.map((stat) => (
             <StatTile key={stat.id} stat={stat} />
           ))}
@@ -276,13 +275,13 @@ function OverviewTab() {
       <section className="mb-6 rounded-3xl border border-[#dfe1e7] bg-white p-6">
         <div className="flex flex-col gap-[18px] rounded-2xl bg-[#f6f8fa] p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <h2 className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
-              PREPTESTS SCORE PROGRESS
+            <h2 className="text-[14px] font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
+              PREPTESTS SCORE PROGRES
             </h2>
             <div className="flex flex-wrap items-center gap-3">
               <Link
                 to="/app/analytics/preptests"
-                className="flex h-10 items-center justify-center rounded-2xl border border-[#0b4e6e] bg-[#0d47a1] px-4 text-sm font-semibold tracking-[0.02em] text-white shadow-[0px_1px_1px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0d47a1]/90"
+                className="ds-btn-sm text-sm tracking-[0.02em]"
               >
                 PrepTests
               </Link>
@@ -314,57 +313,22 @@ function OverviewTab() {
   )
 }
 
-function tabLinkClass(active: boolean): string {
-  if (active) return "border-[#0d47a1] bg-[#0d47a1] text-white"
-  return "border-[#dfe1e7] bg-white text-[#082c6b] hover:bg-[#f6f8fa]"
-}
-
 function AnalyticsPage() {
   const [params] = useSearchParams()
   const tab = tabFromSearch(params.get("tab"))
 
-  const tabLinks: { id: string; label: string }[] = [
-    { id: "overview", label: "Overview" },
-    { id: "priorities", label: "Priorities" },
-    { id: "history", label: "Practice history" },
-  ]
-
   return (
-    <>
-      <StudentSubnavStrip
-        crumbs={[{ label: "Analytics" }, { label: "Foundations" }, { label: "Overview" }]}
-      />
-      <StudentMain>
-        <div className="mb-6 flex flex-col justify-between gap-4 border-b border-[#dfe1e7] pb-6 md:flex-row md:items-end">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#666d80]">Analytics</p>
-            <h1 className="mt-1 text-3xl font-semibold text-[#082c6b]">Your performance</h1>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" className="rounded-xl border-[#0d47a1] text-[#0d47a1]" disabled>
-              Export
-            </Button>
-          </div>
-        </div>
+    <StudentMain>
+      {tab !== "overview" ? (
+        <StudentSubnavStrip
+          crumbs={[{ label: "Analytics" }, { label: "Foundations" }, { label: tab === "priorities" ? "Priorities" : "History" }]}
+        />
+      ) : null}
 
-        <nav className="mb-6 flex flex-wrap gap-2" aria-label="Analytics sections">
-          {tabLinks.map((t) => (
-            <Link
-              key={t.id}
-              to={t.id === "overview" ? "/app/analytics" : `/app/analytics?tab=${t.id}`}
-              className={`rounded-xl border px-3 py-1.5 text-sm font-medium shadow-sm ${tabLinkClass(tab === t.id)}`}
-              replace
-            >
-              {t.label}
-            </Link>
-          ))}
-        </nav>
-
-        {tab === "overview" ? <OverviewTab /> : null}
-        {tab === "priorities" ? <PrioritiesTab /> : null}
-        {tab === "history" ? <HistoryTab /> : null}
-      </StudentMain>
-    </>
+      {tab === "overview" ? <OverviewTab /> : null}
+      {tab === "priorities" ? <PrioritiesTab /> : null}
+      {tab === "history" ? <HistoryTab /> : null}
+    </StudentMain>
   )
 }
 

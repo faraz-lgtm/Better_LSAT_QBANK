@@ -11,18 +11,6 @@ import { createAuthApi, getAuthCallbackUrl } from "@/lib/api/auth"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
-function Divider() {
-  return (
-    <div className="figma-gap-12 flex items-center">
-      <div className="h-px flex-1 bg-[#dfe1e7]" />
-      <span className="figma-text-lg figma-track-md font-semibold text-[#666d80]">
-        OR
-      </span>
-      <div className="h-px flex-1 bg-[#dfe1e7]" />
-    </div>
-  )
-}
-
 type TermsCheckboxProps = {
   checked: boolean
   onChange: (checked: boolean) => void
@@ -103,7 +91,7 @@ function SignupPage() {
 
   return (
     <AuthLayout ctaLabel="Log In" ctaHref="/login">
-      <AuthCard className="mx-auto w-full">
+      <AuthCard>
         <div className="figma-gap-24 flex flex-col">
           <h1 className="figma-track-md text-center">Create an account</h1>
 
@@ -117,7 +105,6 @@ function SignupPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="Enter your email"
-              className="rounded-2xl bg-[#f5f9ff]"
             />
           </div>
 
@@ -127,20 +114,20 @@ function SignupPage() {
             type="button"
             disabled={isSubmitting || !email.trim()}
             onClick={() => void sendMagicLink()}
-            className="w-full rounded-2xl bg-[#0d47a1] text-white hover:bg-[#0d47a1]/90"
+            className="ds-btn w-full"
           >
             {isSubmitting ? "Sending..." : "Send magic link"}
           </Button>
 
           {error && <p className="figma-text-sm figma-track-sm text-center text-[#df1c41]">{error}</p>}
 
-          <Divider />
+          <div className="figma-gap-12 flex items-center">
+            <div className="h-px flex-1 bg-[#dfe1e7]" />
+            <span className="figma-text-lg figma-track-md font-semibold text-[#666d80]">OR</span>
+            <div className="h-px flex-1 bg-[#dfe1e7]" />
+          </div>
 
-          <SocialButton
-            className="w-full justify-center rounded-2xl bg-[#f5f9ff]"
-            onClick={() => void continueWithGoogle()}
-            disabled={isSubmitting}
-          >
+          <SocialButton onClick={() => void continueWithGoogle()} disabled={isSubmitting}>
             Sign up with Google
           </SocialButton>
 

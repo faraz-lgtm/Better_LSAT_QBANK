@@ -17,7 +17,7 @@ function AuthLayout({ children, ctaLabel, ctaHref, headerVariant = "auth" }: Aut
       <main className="auth-main-wrap relative flex-1 overflow-x-hidden overflow-y-auto bg-[#f5f9ff]">
         <div className="auth-desktop-canvas mx-auto">
           <div
-            className="auth-main relative flex min-h-[calc(100svh-60px)] w-full items-center justify-center py-8"
+            className="auth-main relative flex min-h-[calc(100svh-72px)] w-full items-center justify-center py-8"
             style={{ "--auth-bg-image": `url(${authBackgroundImage})` } as CSSProperties}
           >
             <div className="auth-content-shell relative z-10 w-full">

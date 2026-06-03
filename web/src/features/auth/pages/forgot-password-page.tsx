@@ -43,7 +43,7 @@ function ForgotPasswordPage() {
 
   return (
     <AuthLayout ctaLabel="Sign Up" ctaHref="/signup" headerVariant="auth">
-      <AuthCard className="bg-[#f2f7ff]">
+      <AuthCard>
         <div className="figma-gap-24 flex flex-col">
           <div className="figma-gap-8 flex flex-col">
             <h1 className="figma-track-md text-center">Forgot your password?</h1>
@@ -63,13 +63,12 @@ function ForgotPasswordPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="Enter your email"
-              className="rounded-2xl bg-[#f2f7ff]"
             />
             <Button
               type="button"
               disabled={isSubmitting || !email.trim()}
               onClick={() => void sendResetLink()}
-              className="mt-2 w-full rounded-2xl bg-[#0d47a1] text-white hover:bg-[#0d47a1]/90"
+              className="ds-btn mt-2 w-full"
             >
               {isSubmitting ? "Sending..." : "Send Reset Link"}
             </Button>

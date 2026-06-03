@@ -95,7 +95,7 @@ function PrepTestSectionRow({
           type="button"
           disabled={starting}
           onClick={onStart}
-          className="inline-flex h-12 min-w-[148px] shrink-0 items-center justify-center rounded-2xl border border-[#0b4e6e] bg-[#0d47a1] px-6 text-base font-semibold text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0b3d82] disabled:opacity-60"
+          className="ds-btn min-w-[148px] shrink-0 px-6 text-base"
         >
           {starting ? "Starting…" : row.activeSectionSessionId ? "Continue section" : "Start section"}
         </button>
@@ -314,7 +314,7 @@ function PracticePrepTestPage() {
               <Button
                 type="button"
                 disabled={finishing}
-                className="rounded-2xl bg-[#0d47a1] text-white hover:bg-[#0b3d82]"
+                className="ds-btn-sm"
                 onClick={() => void handleFinishTest()}
               >
                 {finishing ? "Finishing…" : "Finish test"}

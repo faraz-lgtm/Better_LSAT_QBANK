@@ -91,8 +91,8 @@ function PrepTestListCard({
   const primaryClass = isCompleted
     ? "inline-flex h-[52px] w-[148px] shrink-0 items-center justify-center gap-2 rounded-2xl border border-[#dfe1e7] bg-white text-base font-semibold text-[#666d80] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa]"
     : item.status === "in_progress"
-      ? "inline-flex h-[52px] w-[148px] shrink-0 items-center justify-center rounded-2xl border border-[#0b4e6e] bg-[#0d47a1] text-base font-semibold text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0b3d82]"
-      : "inline-flex h-[52px] w-[148px] shrink-0 items-center justify-center rounded-2xl border border-[#0b4e6e] bg-[#0d47a1] text-base font-semibold text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0b3d82]"
+      ? "ds-btn min-w-[148px] shrink-0 text-base"
+      : "ds-btn min-w-[148px] shrink-0 text-base"
 
   return (
     <article
@@ -208,12 +208,10 @@ function PracticePrepTestsListPage() {
   const pageStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
   const pageEnd = Math.min(page * PAGE_SIZE, total)
 
-  function filterCountLabel(tabId: PrepTestPoolFilter | "blind_review"): string {
-    if (tabId === "all") return `All Test (${statusCounts.all})`
-    if (tabId === "blind_review") return "Blind Review"
-    const n = statusCounts[tabId]
+  function filterTabLabel(tabId: PrepTestPoolFilter | "blind_review"): string {
     const base = FILTER_TABS.find((t) => t.id === tabId)?.label ?? tabId
-    return `${base} (${n})`
+    if (tabId === "all" || tabId === "blind_review") return base
+    return `${base} (${statusCounts[tabId]})`
   }
 
   async function handlePrimary(item: PrepTestPoolItem) {
@@ -269,7 +267,7 @@ function PracticePrepTestsListPage() {
               setSort(s)
               setPage(1)
             }}
-            filterCountLabel={filterCountLabel}
+            filterTabLabel={filterTabLabel}
           />
         </section>
 
@@ -335,23 +333,21 @@ function PrepTestListFilters({
   setFilter,
   sort,
   setSort,
-  filterCountLabel,
+  filterTabLabel,
 }: {
   filter: PrepTestPoolFilter
   setFilter: (f: PrepTestPoolFilter) => void
   sort: (typeof SORT_OPTIONS)[number]
   setSort: (s: (typeof SORT_OPTIONS)[number]) => void
-  filterCountLabel: (tabId: PrepTestPoolFilter | "blind_review") => string
+  filterTabLabel: (tabId: PrepTestPoolFilter | "blind_review") => string
 }) {
   const navigate = useNavigate()
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-      <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">Start your PrepTest</h2>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end lg:flex-1">
-        <div className="flex flex-wrap gap-3">
+    <div className="flex items-center justify-between gap-6">
+      <h2 className="shrink-0 text-2xl font-bold leading-[1.3] text-[#062357]">Start your PrepTest</h2>
+      <div className="flex shrink-0 items-center gap-3">
           {FILTER_TABS.map((tab) => {
             const active = filter === tab.id
-            const label = filterCountLabel(tab.id)
             return (
               <button
                 key={tab.id}
@@ -364,18 +360,17 @@ function PrepTestListFilters({
                   setFilter(tab.id)
                 }}
                 className={cn(
-                  "inline-flex h-[52px] items-center justify-center rounded-2xl border px-4 text-base shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors",
+                  "inline-flex shrink-0 items-center justify-center whitespace-nowrap px-4 text-base transition-colors",
                   active
-                    ? "border-[#0b4e6e] bg-[#0d47a1] font-semibold text-white"
-                    : "border-[#dfe1e7] bg-white font-medium text-[#666d80] hover:bg-[#f6f8fa]",
+                    ? "ds-btn font-semibold"
+                    : "h-[52px] rounded-2xl border border-[#dfe1e7] bg-white font-medium text-[#666d80] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] hover:bg-[#f6f8fa]",
                 )}
               >
-                {label}
+                {filterTabLabel(tab.id)}
               </button>
             )
           })}
-        </div>
-        <div className="relative w-full shrink-0 sm:w-[160px]">
+        <div className="relative w-[160px] shrink-0">
           <label htmlFor="preptest-sort" className="sr-only">
             Sort PrepTests
           </label>

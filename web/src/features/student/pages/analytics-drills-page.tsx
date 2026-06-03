@@ -11,7 +11,10 @@ import {
   TimeRangeFilter,
   type TimeRangeValue,
 } from "@/features/student/components/time-range-filter"
-import type { AnalyticsStat } from "@/features/student/lib/mock-analytics"
+import {
+  AnalyticsScoreProgressPanel,
+  AnalyticsStatsGrid,
+} from "@/features/student/analytics/components/analytics-overview-ui"
 import {
   buildDrillStatTiles,
   computeDrillStats,
@@ -49,25 +52,28 @@ const HISTORY_SORT_OPTIONS: Array<{ id: HistorySort; label: string }> = [
   { id: "score-asc", label: "Lowest score" },
 ]
 
-function DrillStatTile({ stat }: { stat: AnalyticsStat }) {
-  return (
-    <article className="flex h-[179px] flex-col gap-1.5 rounded-2xl bg-[#f6f8fa] p-6">
-      <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">{stat.label}</p>
-      <p
-        className="font-extrabold leading-[1.2] whitespace-nowrap"
-        style={{ color: stat.accent, fontSize: "clamp(2.25rem, 2.5vw, 3rem)" }}
-      >
-        {stat.value}
-      </p>
-    </article>
-  )
-}
-
 function DrillScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next: ScoreTab) => void }) {
   return (
-    <div className="flex h-10 items-center gap-2 rounded-[10px] bg-white p-1">
+    <div className="flex flex-wrap items-center gap-4">
       {SCORE_TABS.map((tab) => {
         const active = value === tab.id
+        if (tab.id === "percent") {
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onChange(tab.id)}
+              aria-pressed={active}
+              className="inline-flex items-center gap-2 text-sm font-semibold tracking-[0.02em] text-[#666d80] transition-colors hover:text-[#062357]"
+            >
+              <span
+                className={cn("size-2.5 rounded-full", active ? "bg-[#0d47a1]" : "bg-[#9ca3af]")}
+                aria-hidden
+              />
+              {tab.label}
+            </button>
+          )
+        }
         return (
           <button
             key={tab.id}
@@ -75,8 +81,8 @@ function DrillScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next:
             onClick={() => onChange(tab.id)}
             aria-pressed={active}
             className={cn(
-              "flex h-8 items-center justify-center rounded-lg px-3 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors",
-              active ? "bg-[#0d47a1] text-white" : "text-[#666d80] hover:bg-[#f3f7ff]",
+              "rounded-lg px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors",
+              active ? "bg-[#0d47a1] text-white" : "border border-[#dfe1e7] bg-white text-[#666d80] hover:bg-[#f3f7ff]",
             )}
           >
             {tab.label}
@@ -95,7 +101,7 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
 
   if (points.length === 0) {
     return (
-      <div className="flex h-[300px] items-center justify-center rounded-2xl border border-dashed border-[#dfe1e7] text-sm text-[#666d80]">
+      <div className="flex h-[260px] items-center justify-center rounded-2xl border border-dashed border-[#dfe1e7] text-sm text-[#666d80]">
         No drills in the selected range.
       </div>
     )
@@ -119,7 +125,7 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
 
   return (
     <div className="w-full">
-      <div className="flex h-[300px] w-full items-stretch gap-4">
+      <div className="flex h-[260px] w-full items-stretch gap-4">
         <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[#62748e]">
           {Y_AXIS_LABELS.map((label) => (
             <span key={label} className="leading-5">
@@ -561,34 +567,20 @@ function AnalyticsDrillsPage() {
           </div>
         </div>
 
-        <section className="mb-6 rounded-3xl border border-[#dfe1e7] bg-white p-6">
-          {statTiles ? (
-            <div className="grid gap-6 lg:grid-cols-[1fr_1fr_minmax(0,604px)]">
-              <div className="grid gap-6">
-                <DrillStatTile stat={statTiles[0]} />
-                <DrillStatTile stat={statTiles[2]} />
-              </div>
-              <div className="grid gap-6">
-                <DrillStatTile stat={statTiles[1]} />
-                <DrillStatTile stat={statTiles[3]} />
-              </div>
-
-              <div className="flex h-full min-h-[382px] flex-col gap-[18px] rounded-2xl bg-[#f6f8fa] p-6">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <h2 className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
-                    SCORE PROGRESS
-                  </h2>
-                  <DrillScoreTabs value={scoreTab} onChange={setScoreTab} />
-                </div>
-                <DrillScoreProgressChart points={progressPoints} tab={scoreTab} />
-              </div>
-            </div>
-          ) : (
-            <p className="rounded-2xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-6 py-8 text-center text-sm text-[#666d80]">
-              No drills match the current filters. Try widening the time range or clearing the drill type.
-            </p>
-          )}
-        </section>
+        {statTiles ? (
+          <section className="mb-6 grid gap-6 lg:grid-cols-[minmax(280px,380px)_1fr]">
+            <AnalyticsStatsGrid stats={statTiles} />
+            <AnalyticsScoreProgressPanel
+              title="Score progress"
+              legend={<DrillScoreTabs value={scoreTab} onChange={setScoreTab} />}
+              chart={<DrillScoreProgressChart points={progressPoints} tab={scoreTab} />}
+            />
+          </section>
+        ) : (
+          <p className="mb-6 rounded-2xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-6 py-8 text-center text-sm text-[#666d80]">
+            No drills match the current filters. Try widening the time range or clearing the drill type.
+          </p>
+        )}
 
         <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
           <HistorySortMenu value={historySort} onChange={setHistorySort} />

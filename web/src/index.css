@@ -47,8 +47,21 @@
   --popover: #ffffff;
   --popover-foreground: #121a26;
 
-  --primary: #121a26;
+  --primary: #0d47a1;
   --primary-foreground: #ffffff;
+  --primary-500: #0d47a1;
+  --primary-600: #0a357f;
+  --primary-border: #0b4e6e;
+  --shadow-xsmall: 0 1px 2px 0 rgba(13, 13, 18, 0.06);
+  --btn-focus-ring: 0 0 0 1px #0b4e6e inset, 0 0 1px 3px rgba(4, 166, 244, 0.15);
+  --btn-disabled-bg: #e4e8f2;
+  --btn-disabled-border: #dfe1e7;
+  --btn-disabled-fg: rgba(255, 255, 255, 0.55);
+
+  --greyscale-100: #dfe1e7;
+  --greyscale-400: #818898;
+  --secondary-0: #f5f9ff;
+  --field-focus: #082c6b;
 
   --secondary: #f9fbfc;
   --secondary-foreground: #121a26;
@@ -123,6 +136,14 @@
   --explanation-passage-panel-bg: #fafbfd;
   --explanation-prep-test-card-radius: 14px 14px 14px 14px;
   --explanation-badge-radius: 14px 14px 14px 14px;
+
+  --nav-surface: #edf3ff;
+  --nav-pill-height: 48px;
+  --nav-pill-radius: 16px;
+  --nav-shell-height: 72px;
+  --nav-item-width: 119px;
+  --nav-dropdown-padding: 24px 16px;
+  --nav-dropdown-gap: 10px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -181,6 +202,24 @@
 
 .auth-page .auth-card {
   box-sizing: border-box;
+  display: flex;
+  width: 500px;
+  max-width: 100%;
+  padding: 24px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  border-radius: 16px;
+  border: 1px solid #dfe1e7;
+  background: #f2f7ff;
+  box-shadow:
+    0 5px 10px -2px rgba(13, 13, 18, 0.04),
+    0 4px 8px -1px rgba(13, 13, 18, 0.02);
+}
+
+.auth-page .auth-card > * {
+  width: 100%;
 }
 
 /*
@@ -306,7 +345,7 @@
 
 .auth-page .auth-content-shell {
   width: 100%;
-  max-width: clamp(18rem, 26.0417vw, 31.25rem);
+  max-width: 500px;
 }
 
 @media (max-width: 1024px) {
@@ -324,6 +363,10 @@
   .figma-max-w-500 {
     width: 100%;
     max-width: 100%;
+  }
+
+  .auth-page .auth-card {
+    width: 100%;
   }
 }
 
@@ -354,7 +397,6 @@ h1,
 h2 {
   font-family: var(--heading);
   font-weight: 600;
-  color: var(--text-h);
 }
 
 h1 {
@@ -368,13 +410,7 @@ h1 {
   }
 }
 h2 {
-  font-size: 32px;
-  line-height: 1.4;
-  letter-spacing: 0;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
+  margin: 0;
 }
 p {
   margin: 0;
@@ -546,6 +582,535 @@ code {
 
 .ds-text-muted {
   color: #666d80;
+}
+
+/* Analytics stat tiles (BEST SCORE, AVERAGE SCORE, etc.) */
+.ds-analytics-stat {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  border-radius: 16px;
+  background: #f6f8fa;
+  padding: 24px;
+}
+
+.ds-analytics-stat--compact {
+  width: 114px;
+}
+
+.ds-analytics-stat__label {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: #062357;
+}
+
+.ds-analytics-stat__value {
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.ds-analytics-stat__caption {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: #062357;
+}
+
+/* Figma text field — use class `ds-input` or <Input size="lg" /> */
+.ds-input {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  height: 52px;
+  padding: 8px 16px;
+  align-items: center;
+  border-radius: 16px;
+  border: 1px solid var(--greyscale-100);
+  background: var(--secondary-0);
+  color: var(--field-focus);
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.5;
+  box-shadow: none;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.ds-input::placeholder {
+  color: var(--greyscale-400);
+  font-weight: 400;
+  opacity: 1;
+}
+
+.ds-input:hover:not(:disabled):not(:focus):not(:focus-visible) {
+  border-color: var(--greyscale-100);
+}
+
+.ds-input:focus,
+.ds-input:focus-visible {
+  outline: none;
+  border-color: var(--field-focus);
+  color: var(--field-focus);
+  box-shadow: none;
+}
+
+.ds-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.ds-input[aria-invalid="true"] {
+  border-color: var(--destructive);
+}
+
+select.ds-input {
+  appearance: none;
+  cursor: pointer;
+}
+
+/* Figma primary button — use class `ds-btn` or <Button variant="default" /> */
+.ds-btn {
+  display: inline-flex;
+  height: 52px;
+  padding: 8px 16px;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  border-radius: 16px;
+  border: 1px solid var(--primary-border);
+  background: var(--primary-500);
+  color: #fff;
+  box-shadow: var(--shadow-xsmall);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.ds-btn:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--primary-600);
+  box-shadow: var(--shadow-xsmall);
+}
+
+.ds-btn:focus-visible {
+  outline: none;
+  background: var(--primary-500);
+  box-shadow: var(--btn-focus-ring);
+}
+
+.ds-btn:disabled,
+.ds-btn[aria-disabled="true"] {
+  border-color: var(--btn-disabled-border);
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-fg);
+  box-shadow: none;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Compact primary button (40px) */
+.ds-btn-sm {
+  display: inline-flex;
+  height: 40px;
+  padding: 8px 16px;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  border-radius: 16px;
+  border: 1px solid var(--primary-border);
+  background: var(--primary-500);
+  color: #fff;
+  box-shadow: var(--shadow-xsmall);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.ds-btn-sm:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--primary-600);
+  box-shadow: var(--shadow-xsmall);
+}
+
+.ds-btn-sm:focus-visible {
+  outline: none;
+  background: var(--primary-500);
+  box-shadow: var(--btn-focus-ring);
+}
+
+.ds-btn-sm:disabled,
+.ds-btn-sm[aria-disabled="true"] {
+  border-color: var(--btn-disabled-border);
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-fg);
+  box-shadow: none;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Figma outline button — use `ds-btn-outline` or <Button variant="outline" /> */
+.ds-btn-outline {
+  display: inline-flex;
+  height: 52px;
+  padding: 8px 16px;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  border-radius: 16px;
+  border: 1px solid var(--greyscale-100);
+  background: #fff;
+  color: var(--field-focus);
+  box-shadow: var(--shadow-xsmall);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.ds-btn-outline:hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--field-focus);
+  background: var(--field-focus);
+  color: #fff;
+  box-shadow: var(--shadow-xsmall);
+}
+
+.ds-btn-outline:focus-visible {
+  outline: none;
+  border-color: var(--greyscale-100);
+  background: #fff;
+  color: var(--field-focus);
+  box-shadow: var(--btn-focus-ring);
+}
+
+.ds-btn-outline:disabled,
+.ds-btn-outline[aria-disabled="true"] {
+  border-color: var(--btn-disabled-border);
+  background: var(--btn-disabled-bg);
+  color: var(--greyscale-400);
+  box-shadow: none;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.ds-btn-outline-sm {
+  display: inline-flex;
+  height: 40px;
+  padding: 8px 16px;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  border-radius: 16px;
+  border: 1px solid var(--greyscale-100);
+  background: #fff;
+  color: var(--field-focus);
+  box-shadow: var(--shadow-xsmall);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.ds-btn-outline-sm:hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--field-focus);
+  background: var(--field-focus);
+  color: #fff;
+  box-shadow: var(--shadow-xsmall);
+}
+
+.ds-btn-outline-sm:focus-visible {
+  outline: none;
+  border-color: var(--greyscale-100);
+  background: #fff;
+  color: var(--field-focus);
+  box-shadow: var(--btn-focus-ring);
+}
+
+.ds-btn-outline-sm:disabled,
+.ds-btn-outline-sm[aria-disabled="true"] {
+  border-color: var(--btn-disabled-border);
+  background: var(--btn-disabled-bg);
+  color: var(--greyscale-400);
+  box-shadow: none;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Figma app navbar (auth + student) */
+.app-nav-header {
+  overflow: visible;
+  background-color: #f5f9ff;
+}
+
+.app-nav-start nav {
+  overflow: visible;
+}
+
+.app-nav-shell {
+  position: relative;
+  display: flex;
+  height: var(--nav-shell-height);
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-inline: 16px;
+}
+
+.app-nav-group {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  min-height: var(--nav-pill-height);
+  align-items: center;
+  border-radius: 20px;
+  background-color: var(--nav-surface);
+  box-shadow: var(--shadow-xsmall);
+  overflow: visible;
+}
+
+.app-nav-start {
+  gap: 24px;
+  padding-inline: 16px;
+}
+
+.app-nav-logo {
+  width: 144px;
+  height: 18px;
+  aspect-ratio: 8 / 1;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.app-nav-link {
+  box-sizing: border-box;
+  display: inline-flex;
+  width: auto;
+  max-width: 100%;
+  height: 32px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  padding-inline: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: #0d47a1;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.app-nav-menu:not(.app-nav-menu--open) .app-nav-link:not(.app-nav-link--active):hover {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.app-nav-menu:not(.app-nav-menu--open) .app-nav-link:not(.app-nav-link--active):hover,
+.app-nav-menu:not(.app-nav-menu--open) .app-nav-link:not(.app-nav-link--active):hover svg {
+  color: #0d47a1;
+}
+
+/* Active section (closed) — full blue pill */
+.app-nav-link--active,
+.app-nav-link--active:hover,
+.app-nav-link--active:focus,
+.app-nav-link--active:focus-visible,
+.app-nav-link--active:active {
+  border-radius: 16px;
+  border: 1px solid var(--primary-border);
+  background: var(--primary-500);
+  color: #fff;
+  box-shadow: var(--shadow-xsmall);
+}
+
+.app-nav-link--active svg,
+.app-nav-link--active:hover svg,
+.app-nav-link--active:focus svg,
+.app-nav-link--active:active svg {
+  color: #fff;
+}
+
+.app-nav-menu {
+  position: relative;
+}
+
+.app-nav-menu--open {
+  z-index: 50;
+  display: inline-flex;
+  width: max-content;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  filter: drop-shadow(0 1px 2px rgba(13, 13, 18, 0.06));
+}
+
+.app-nav-menu--open .app-nav-link {
+  width: 100%;
+  padding-inline: 16px;
+  border-radius: 16px 16px 0 0;
+  border-color: var(--primary-border);
+  background: var(--primary-500);
+  color: #fff;
+  box-shadow: none;
+}
+
+.app-nav-menu--open .app-nav-link:hover,
+.app-nav-menu--open .app-nav-link:focus,
+.app-nav-menu--open .app-nav-link:focus-visible,
+.app-nav-menu--open .app-nav-link:active {
+  border-color: var(--primary-border);
+  background: var(--primary-500);
+  color: #fff;
+  box-shadow: none;
+}
+
+.app-nav-menu--open .app-nav-link svg,
+.app-nav-menu--open .app-nav-link:hover svg,
+.app-nav-menu--open .app-nav-link:focus svg,
+.app-nav-menu--open .app-nav-link:active svg {
+  color: #fff;
+}
+
+.app-nav-dropdown-panel {
+  position: absolute;
+  top: calc(100% - 1px);
+  left: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  min-width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--nav-dropdown-gap);
+  padding: var(--nav-dropdown-padding);
+  border: 1px solid var(--primary-border);
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+  background-color: #edf3ff;
+  box-shadow: none;
+}
+
+.app-nav-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  text-align: left;
+  white-space: nowrap;
+  color: #0d47a1;
+  transition: color 0.15s ease;
+}
+
+.app-nav-dropdown-item:hover {
+  color: #082c6b;
+}
+
+.app-nav-dropdown-item--active,
+.app-nav-dropdown-item--active:hover,
+.app-nav-dropdown-item--active:focus,
+.app-nav-dropdown-item--active:focus-visible,
+.app-nav-dropdown-item--active:active {
+  color: #082c6b;
+}
+
+.app-nav-actions {
+  flex-shrink: 0;
+  gap: 8px;
+  padding-inline: 10px;
+}
+
+.app-nav-icon-btn {
+  display: flex;
+  height: 32px;
+  width: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: transparent;
+  color: #666d80;
+}
+
+.app-nav-profile-btn {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  gap: 8px;
+  border-radius: 10px;
+  background: transparent;
+  padding-inline: 4px;
+}
+
+.ds-btn-nav {
+  display: inline-flex;
+  height: var(--nav-pill-height);
+  padding: 6px 12px;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  border-radius: 16px;
+  border: 1px solid var(--primary-border);
+  background: var(--primary-500);
+  color: #fff;
+  box-shadow: var(--shadow-xsmall);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.ds-btn-nav:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--primary-600);
+}
+
+.ds-btn-nav:focus-visible {
+  outline: none;
+  background: var(--primary-500);
+  box-shadow: var(--btn-focus-ring);
 }
 
 .lsat-html-content {

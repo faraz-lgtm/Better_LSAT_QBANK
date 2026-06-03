@@ -38,7 +38,7 @@ function PrepCourseLessonFooter({
             type="button"
             onClick={primaryAction.onClick}
             disabled={primaryAction.disabled}
-            className="h-10 cursor-pointer rounded-2xl bg-[#0d47a1] px-5 text-sm font-semibold tracking-[0.02em] text-white hover:bg-[#0b3d8c] disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+            className="ds-btn-sm cursor-pointer px-5 text-sm tracking-[0.02em] disabled:pointer-events-auto disabled:cursor-not-allowed"
           >
             {primaryAction.label}
             <ArrowRight className="ml-2 size-4" />
@@ -48,7 +48,7 @@ function PrepCourseLessonFooter({
             type="button"
             onClick={onMarkComplete}
             disabled={markCompleteDisabled}
-            className="h-10 rounded-2xl bg-[#0d47a1] px-5 text-sm font-semibold tracking-[0.02em] text-white hover:bg-[#0b3d8c] disabled:opacity-50"
+            className="ds-btn-sm px-5 text-sm tracking-[0.02em]"
           >
             Mark Complete &amp; Continue
             <ArrowRight className="ml-2 size-4" />

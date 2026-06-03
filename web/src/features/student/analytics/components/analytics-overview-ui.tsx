@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { Link } from "react-router-dom"
 
 import { cn } from "@/lib/utils"
@@ -27,20 +28,67 @@ export const SCORE_PROGRESS_TABS = [
 
 export type ScoreProgressTab = (typeof SCORE_PROGRESS_TABS)[number]["id"]
 
-export function StatTile({ stat }: { stat: AnalyticsStat }) {
+export function StatTile({
+  stat,
+  compact = false,
+}: {
+  stat: AnalyticsStat
+  compact?: boolean
+}) {
   return (
-    <article className="flex flex-col gap-1.5 rounded-2xl bg-[#f6f8fa] p-6">
-      <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">{stat.label}</p>
-      <p
-        className="font-extrabold leading-[1.2] whitespace-nowrap"
-        style={{ color: stat.accent, fontSize: "clamp(2.25rem, 2.5vw, 3rem)" }}
-      >
+    <article className={cn("ds-analytics-stat", compact && "ds-analytics-stat--compact")}>
+      <p className="ds-analytics-stat__label">{stat.label}</p>
+      <p className="ds-analytics-stat__value" style={{ color: stat.accent }}>
         {stat.value}
       </p>
-      {stat.caption ? (
-        <p className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">{stat.caption}</p>
-      ) : null}
+      {stat.caption ? <p className="ds-analytics-stat__caption">{stat.caption}</p> : null}
     </article>
+  )
+}
+
+export function AnalyticsStatsGrid({ stats }: { stats: AnalyticsStat[] }) {
+  return (
+    <article className="flex h-full min-h-[280px] flex-col justify-center rounded-[16px] border border-[#dfe1e7] bg-white p-4 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)] sm:p-5">
+      <div className="grid h-full grid-cols-2 gap-3">
+        {stats.map((stat) => (
+          <div
+            key={stat.id}
+            className="flex min-w-0 flex-col justify-center gap-1 rounded-[16px] bg-[#f6f8fa] p-4 sm:p-5"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#666d80]">{stat.label}</p>
+            <p
+              className="text-[40px] font-extrabold leading-[1.1] tracking-tight sm:text-[44px]"
+              style={{ color: stat.accent }}
+            >
+              {stat.value}
+            </p>
+            {stat.caption ? (
+              <p className="text-xs font-semibold tracking-[0.02em] text-[#062357]">{stat.caption}</p>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </article>
+  )
+}
+
+export function AnalyticsScoreProgressPanel({
+  title,
+  legend,
+  chart,
+}: {
+  title: string
+  legend: ReactNode
+  chart: ReactNode
+}) {
+  return (
+    <section className="flex h-full min-h-[280px] flex-col rounded-[16px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#666d80]">{title}</h2>
+        {legend}
+      </div>
+      <div className="min-h-0 flex-1">{chart}</div>
+    </section>
   )
 }
 
@@ -107,7 +155,7 @@ function QuestionTypeRow({ row, accentBar }: { row: QuestionTypeRowData; accentB
       </button>
       <Link
         to={`/app/analytics/drills?type=${encodeURIComponent(row.id)}`}
-        className="flex h-10 items-center justify-center rounded-2xl border border-[#0b4e6e] bg-[#0d47a1] px-4 text-sm font-semibold tracking-[0.02em] text-white shadow-[0px_1px_1px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0d47a1]/90"
+        className="ds-btn-sm text-sm tracking-[0.02em]"
       >
         Drill
       </Link>

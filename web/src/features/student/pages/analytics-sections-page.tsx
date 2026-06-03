@@ -129,22 +129,16 @@ function SectionProgressChart({ points, tab }: { points: SectionProgressPoint[];
 
 function SectionStatPair({ summary }: { summary: SectionSummary }) {
   return (
-    <div className="grid gap-6 sm:grid-cols-2">
-      <article className="flex flex-col gap-1.5 rounded-2xl bg-[#f6f8fa] p-6">
-        <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">BEST SCORE</p>
-        <p
-          className="font-extrabold leading-[1.2] whitespace-nowrap"
-          style={{ color: summary.bestAccent, fontSize: "clamp(2.25rem, 2.5vw, 3rem)" }}
-        >
+    <div className="flex flex-wrap gap-6">
+      <article className="ds-analytics-stat ds-analytics-stat--compact">
+        <p className="ds-analytics-stat__label">BEST SCORE</p>
+        <p className="ds-analytics-stat__value" style={{ color: summary.bestAccent }}>
           {summary.bestScore}
         </p>
       </article>
-      <article className="flex flex-col gap-1.5 rounded-2xl bg-[#f6f8fa] p-6">
-        <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">AVERAGE SCORE</p>
-        <p
-          className="font-extrabold leading-[1.2] whitespace-nowrap"
-          style={{ color: summary.averageAccent, fontSize: "clamp(2.25rem, 2.5vw, 3rem)" }}
-        >
+      <article className="ds-analytics-stat ds-analytics-stat--compact">
+        <p className="ds-analytics-stat__label">AVERAGE SCORE</p>
+        <p className="ds-analytics-stat__value" style={{ color: summary.averageAccent }}>
           {summary.averageScore}
         </p>
       </article>
