@@ -61,7 +61,7 @@ export async function handlePrepExplanationsPrepTestsRequest(req: Request): Prom
       if (pageSizeParam) pageSize = Number.parseInt(pageSizeParam, 10)
       if (sortParam === 'newest' || sortParam === 'oldest') sort = sortParam
     }
-    const data = await explanationsService().listPrepTests({ page, pageSize, sort })
+    const data = await explanationsService().listPrepTests(auth.user.id, { page, pageSize, sort })
     return json(data, {}, cors)
   } catch (e) {
     console.error('prep-explanations-prep-tests', e)

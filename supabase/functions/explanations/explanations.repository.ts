@@ -235,6 +235,125 @@ export function createExplanationsRepository(client: SupabaseClient) {
       return (data as QuestionDetailRow | null) ?? null
     },
 
+    async listLsatCatalogQuestionIds(): Promise<string[]> {
+      const { data: prepRows, error: ptErr } = await client
+        .from('admin_prep_tests')
+        .select('id')
+        .ilike('module_id', 'LSAC%')
+      if (ptErr) throw ptErr
+      const prepTestIds = ((prepRows ?? []) as { id: string }[]).map((r) => r.id)
+      if (prepTestIds.length === 0) return []
+
+      const sectionIds: string[] = []
+      const chunkSize = 100
+      for (let i = 0; i < prepTestIds.length; i += chunkSize) {
+        const chunk = prepTestIds.slice(i, i + chunkSize)
+        const { data: sections, error: secErr } = await client
+          .from('admin_sections')
+          .select('id')
+          .in('prep_test_id', chunk)
+        if (secErr) throw secErr
+        sectionIds.push(...((sections ?? []) as { id: string }[]).map((s) => s.id))
+      }
+      if (sectionIds.length === 0) return []
+
+      const questionIds: string[] = []
+      for (let i = 0; i < sectionIds.length; i += chunkSize) {
+        const chunk = sectionIds.slice(i, i + chunkSize)
+        const { data: questions, error: qErr } = await client
+          .from('admin_questions')
+          .select('id')
+          .in('section_id', chunk)
+        if (qErr) throw qErr
+        questionIds.push(...((questions ?? []) as { id: string }[]).map((q) => q.id))
+      }
+      return questionIds
+    },
+
+    async listDistinctAnsweredQuestionIdsForUser(userId: string): Promise<string[]> {
+      const pageSize = 1000
+      const out = new Set<string>()
+      let from = 0
+      while (true) {
+        const { data, error } = await client
+          .from('answer_events')
+          .select('question_id')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .range(from, from + pageSize - 1)
+        if (error) throw error
+        const rows = (data ?? []) as { question_id: string }[]
+        for (const row of rows) out.add(row.question_id)
+        if (rows.length < pageSize) break
+        from += pageSize
+      }
+      return [...out]
+    },
+
+    async listPrepTestQuestionProgress(userId: string): Promise<{
+      seenQuestionIds: string[]
+      inProcessQuestionIds: string[]
+      answeredQuestionIds: string[]
+    }> {
+      const { data: sessions, error: sessionErr } = await client
+        .from('practice_sessions')
+        .select('metadata')
+        .eq('user_id', userId)
+        .not('prep_test_id', 'is', null)
+        .in('kind', ['SECTION', 'PREPTEST'])
+      if (sessionErr) throw sessionErr
+
+      const seenRaw = new Set<string>()
+      for (const row of (sessions ?? []) as { metadata: Record<string, unknown> | null }[]) {
+        const ids = row.metadata?.seenQuestionIds
+        if (!Array.isArray(ids)) continue
+        for (const id of ids) {
+          if (typeof id === 'string' && id.length > 0) seenRaw.add(id)
+        }
+      }
+
+      const { data: events, error: eventErr } = await client
+        .from('answer_events')
+        .select('question_id, created_at, practice_sessions!inner(prep_test_id, completed_at, kind)')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+      if (eventErr) throw eventErr
+
+      type EventRow = {
+        question_id: string
+        created_at: string
+        practice_sessions:
+          | { prep_test_id: string | null; completed_at: string | null; kind: string }
+          | { prep_test_id: string | null; completed_at: string | null; kind: string }[]
+      }
+
+      const latestAnswerByQuestion = new Map<string, boolean>()
+      for (const row of (events ?? []) as EventRow[]) {
+        const session = Array.isArray(row.practice_sessions)
+          ? row.practice_sessions[0]
+          : row.practice_sessions
+        if (!session?.prep_test_id) continue
+        if (session.kind !== 'SECTION' && session.kind !== 'PREPTEST') continue
+        if (latestAnswerByQuestion.has(row.question_id)) continue
+        latestAnswerByQuestion.set(row.question_id, session.completed_at != null)
+      }
+
+      const answeredQuestionIds: string[] = []
+      const inProcessQuestionIds: string[] = []
+      for (const [questionId, completed] of latestAnswerByQuestion) {
+        if (completed) answeredQuestionIds.push(questionId)
+        else inProcessQuestionIds.push(questionId)
+      }
+
+      const answeredSet = new Set(answeredQuestionIds)
+      const inProcessSet = new Set(inProcessQuestionIds)
+      const seenQuestionIds = [...seenRaw].filter(
+        (id) => !answeredSet.has(id) && !inProcessSet.has(id),
+      )
+
+      return { seenQuestionIds, inProcessQuestionIds, answeredQuestionIds }
+    },
+
     async listLatestAnswerStatusByQuestionIds(
       userId: string,
       questionIds: string[],

@@ -483,16 +483,77 @@ export type ListPrepTestsOptions = {
   sort?: 'newest' | 'oldest'
 }
 
+export type ExplanationStatusCounts = {
+  in_process: number
+  fresh: number
+  answered: number
+  seen: number
+}
+
+export type ExplanationQuestionProgress = {
+  seenQuestionIds: ReadonlySet<string>
+  inProcessQuestionIds: ReadonlySet<string>
+  answeredQuestionIds: ReadonlySet<string>
+}
+
+export function resolveExplanationQuestionStatus(
+  questionId: string,
+  progress: ExplanationQuestionProgress,
+): ExplanationQuestionStatus {
+  if (progress.answeredQuestionIds.has(questionId)) return 'answered'
+  if (progress.inProcessQuestionIds.has(questionId)) return 'in_process'
+  if (progress.seenQuestionIds.has(questionId)) return 'seen'
+  return 'fresh'
+}
+
+export function buildExplanationStatusCounts(
+  catalogQuestionIds: readonly string[],
+  progress: ExplanationQuestionProgress,
+): ExplanationStatusCounts {
+  const counts: ExplanationStatusCounts = {
+    in_process: 0,
+    fresh: 0,
+    answered: 0,
+    seen: 0,
+  }
+  for (const id of catalogQuestionIds) {
+    const status = resolveExplanationQuestionStatus(id, progress)
+    counts[status] += 1
+  }
+  return counts
+}
+
+function progressFromLists(input: {
+  seenQuestionIds: string[]
+  inProcessQuestionIds: string[]
+  answeredQuestionIds: string[]
+}): ExplanationQuestionProgress {
+  return {
+    seenQuestionIds: new Set(input.seenQuestionIds),
+    inProcessQuestionIds: new Set(input.inProcessQuestionIds),
+    answeredQuestionIds: new Set(input.answeredQuestionIds),
+  }
+}
+
 export type ListPrepTestsResult = {
   prepTests: ExplanationPrepTestListItem[]
   total: number
   page: number
   pageSize: number
+  statusCounts: ExplanationStatusCounts
 }
 
 export function createExplanationsService(deps: { repository: ExplanationsRepository }) {
   return {
-    async listPrepTests(options: ListPrepTestsOptions = {}): Promise<ListPrepTestsResult> {
+    async getExplanationStatusCounts(userId: string): Promise<ExplanationStatusCounts> {
+      const [catalogIds, progressLists] = await Promise.all([
+        deps.repository.listLsatCatalogQuestionIds(),
+        deps.repository.listPrepTestQuestionProgress(userId),
+      ])
+      return buildExplanationStatusCounts(catalogIds, progressFromLists(progressLists))
+    },
+
+    async listPrepTests(userId: string, options: ListPrepTestsOptions = {}): Promise<ListPrepTestsResult> {
       const page = Math.max(1, Math.floor(options.page ?? 1))
       const pageSize = Math.min(50, Math.max(1, Math.floor(options.pageSize ?? 5)))
       const sort = options.sort === 'oldest' ? 'oldest' : 'newest'
@@ -520,7 +581,8 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
         })
       }
 
-      return { prepTests, total, page, pageSize }
+      const statusCounts = await this.getExplanationStatusCounts(userId)
+      return { prepTests, total, page, pageSize, statusCounts }
     },
 
     async getPrepTestTree(userId: string, prepTestId: string): Promise<{ prepTest: ExplanationPrepTestNode }> {
@@ -530,10 +592,11 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
 
       const allQuestionIds = rows
         .flatMap((r) => (r.admin_sections ?? []).flatMap((s) => (s.admin_questions ?? []).map((q) => q.id)))
-      const answerStatus = await deps.repository.listLatestAnswerStatusByQuestionIds(userId, allQuestionIds)
+      const progressLists = await deps.repository.listPrepTestQuestionProgress(userId)
+      const progress = progressFromLists(progressLists)
       const statusByQ = new Map<string, ExplanationQuestionStatus>()
-      for (const [qid] of answerStatus) {
-        statusByQ.set(qid, 'answered')
+      for (const qid of allQuestionIds) {
+        statusByQ.set(qid, resolveExplanationQuestionStatus(qid, progress))
       }
 
       const title = normalizeTitle(grouped.baseModuleId, grouped.primary.title)

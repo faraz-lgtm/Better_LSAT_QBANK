@@ -27,6 +27,7 @@ export type SectionSessionMetadata = {
   sectionTitle?: string | null
   answeredQuestionIds?: string[]
   flaggedQuestionIds?: string[]
+  seenQuestionIds?: string[]
 }
 
 export type SectionSessionResponse = {

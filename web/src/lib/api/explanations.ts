@@ -4,6 +4,7 @@ import type {
   ExplanationDetailPayload,
   ExplanationPrepTestListItem,
   ExplanationPrepTestNode,
+  ExplanationStatusCounts,
 } from "@/features/student/explanation-detail/explanation-tree-types"
 
 export type {
@@ -13,6 +14,7 @@ export type {
   ExplanationQuestionNode,
   ExplanationSectionNode,
   ExplanationPassageNode,
+  ExplanationStatusCounts,
 } from "@/features/student/explanation-detail/explanation-tree-types"
 
 /** @deprecated Flat catalog row; kept for legacy list endpoint consumers. */
@@ -58,12 +60,14 @@ export function createExplanationsApi(supabase: SupabaseClient) {
       total: number
       page: number
       pageSize: number
+      statusCounts: ExplanationStatusCounts
     }> {
       const { data, error } = await invokeExplanationsFn<{
         prepTests: ExplanationPrepTestListItem[]
         total: number
         page: number
         pageSize: number
+        statusCounts: ExplanationStatusCounts
       }>("prep-explanations-prep-tests", {
         page: options?.page ?? 1,
         pageSize: options?.pageSize ?? 5,
@@ -75,6 +79,12 @@ export function createExplanationsApi(supabase: SupabaseClient) {
         total: data?.total ?? 0,
         page: data?.page ?? 1,
         pageSize: data?.pageSize ?? 5,
+        statusCounts: data?.statusCounts ?? {
+          in_process: 0,
+          fresh: 0,
+          answered: 0,
+          seen: 0,
+        },
       }
     },
 

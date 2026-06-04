@@ -41,6 +41,21 @@ function isSuggestedDrill(drill: DashboardDrill): drill is SuggestedDrill & { is
   return "isSuggested" in drill && drill.isSuggested === true
 }
 
+function parseOfficialScaledScoreDraft(raw: string): number | null {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  const n = Number.parseInt(trimmed, 10)
+  if (!Number.isInteger(n) || n < 120 || n > 180) return null
+  return n
+}
+
+function canSubmitOfficialScore(label: string, scoreRaw: string): boolean {
+  if (!label.trim()) return false
+  const trimmed = scoreRaw.trim()
+  if (!trimmed) return true
+  return parseOfficialScaledScoreDraft(scoreRaw) != null
+}
+
 function DashboardPage() {
   const navigate = useNavigate()
   const analyticsApi = useAnalyticsApi()
@@ -161,12 +176,10 @@ function DashboardPage() {
   }
 
   async function handleAddScore() {
-    if (!usersApi || !scoreLabelDraft.trim()) return
+    if (!usersApi || !canSubmitOfficialScore(scoreLabelDraft, scoreValueDraft)) return
     setSavingScore(true)
     try {
-      const parsed = scoreValueDraft.trim() ? Number.parseInt(scoreValueDraft, 10) : null
-      const scaledScore =
-        parsed != null && Number.isInteger(parsed) && parsed >= 120 && parsed <= 180 ? parsed : null
+      const scaledScore = parseOfficialScaledScoreDraft(scoreValueDraft)
       const score = await usersApi.upsertOfficialScore({
         testLabel: scoreLabelDraft.trim(),
         scaledScore,
@@ -340,7 +353,15 @@ function DashboardPage() {
                       onChange={(e) => setScoreValueDraft(e.target.value)}
                       placeholder="Score (120–180)"
                       className="h-9 rounded-xl text-xs"
+                      aria-invalid={
+                        scoreValueDraft.trim() !== "" &&
+                        parseOfficialScaledScoreDraft(scoreValueDraft) == null
+                      }
                     />
+                    {scoreValueDraft.trim() !== "" &&
+                    parseOfficialScaledScoreDraft(scoreValueDraft) == null ? (
+                      <p className="text-xs text-destructive">Score must be a whole number from 120 to 180.</p>
+                    ) : null}
                     <div className="flex gap-2">
                       <Button
                         type="button"
@@ -355,7 +376,9 @@ function DashboardPage() {
                         type="button"
                         size="sm"
                         className="ds-btn-sm"
-                        disabled={savingScore || !scoreLabelDraft.trim()}
+                        disabled={
+                          savingScore || !canSubmitOfficialScore(scoreLabelDraft, scoreValueDraft)
+                        }
                         onClick={() => void handleAddScore()}
                       >
                         {savingScore ? "Saving…" : "Save"}

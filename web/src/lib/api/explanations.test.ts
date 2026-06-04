@@ -32,6 +32,7 @@ describe("createExplanationsApi", () => {
         total: 12,
         page: 2,
         pageSize: 5,
+        statusCounts: { in_process: 1, fresh: 8, answered: 2, seen: 0 },
       },
       error: null,
     })
@@ -40,6 +41,7 @@ describe("createExplanationsApi", () => {
     expect(result.prepTests).toHaveLength(1)
     expect(result.prepTests[0]?.id).toBe("pt1")
     expect(result.total).toBe(12)
+    expect(result.statusCounts.answered).toBe(2)
     expect(invoke).toHaveBeenCalledWith("prep-explanations", {
       method: "POST",
       body: {

@@ -192,6 +192,36 @@ Deno.test('updateSession stores flaggedQuestionIds in metadata', async () => {
   assertEquals(captured!.metadata, { questionIds: ['q-1', 'q-2'], flaggedQuestionIds: ['q-2'] })
 })
 
+Deno.test('updateSession stores seenQuestionIds in section metadata', async () => {
+  let captured: { metadata?: Record<string, unknown> } | null = null
+  const repo = {
+    ...mockRepo(),
+    getSessionById: async () =>
+      baseSession({
+        kind: 'SECTION',
+        prep_test_id: 'pt-1',
+        section_id: 'sec-1',
+        metadata: { questionIds: ['q-1', 'q-2'], seenQuestionIds: ['q-1'] },
+      }),
+    updateSession: async (_id: string, _uid: string, patch: Record<string, unknown>) => {
+      captured = { metadata: patch.metadata as Record<string, unknown> | undefined }
+      return baseSession({
+        kind: 'SECTION',
+        metadata: (patch.metadata as Record<string, unknown>) ?? {},
+      })
+    },
+  }
+  const service = createPracticeService({ repository: repo as never })
+  await service.updateSession('user-1', {
+    sessionId: 'sess-1',
+    seenQuestionIds: ['q-1', 'q-2'],
+  })
+  assertEquals(captured!.metadata, {
+    questionIds: ['q-1', 'q-2'],
+    seenQuestionIds: ['q-1', 'q-2'],
+  })
+})
+
 Deno.test('updateSession rejects flaggedQuestionIds not in session', async () => {
   const repo = {
     ...mockRepo(),
