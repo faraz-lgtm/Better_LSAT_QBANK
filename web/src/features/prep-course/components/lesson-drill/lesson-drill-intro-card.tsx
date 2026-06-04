@@ -10,6 +10,7 @@ type LessonDrillIntroCardProps = {
   linked?: PrepLessonLinkedQuestionRef[]
   onStartDrill?: () => void
   startingDrill?: boolean
+  drillStartError?: string | null
 }
 
 function formatPtRef(linked: PrepLessonLinkedQuestionRef): string {
@@ -19,7 +20,13 @@ function formatPtRef(linked: PrepLessonLinkedQuestionRef): string {
   return `${pt} · ${section} · ${q}`
 }
 
-function LessonDrillIntroCard({ lesson, linked = [], onStartDrill, startingDrill = false }: LessonDrillIntroCardProps) {
+function LessonDrillIntroCard({
+  lesson,
+  linked = [],
+  onStartDrill,
+  startingDrill = false,
+  drillStartError = null,
+}: LessonDrillIntroCardProps) {
   const body = lessonDrillIntroCopy(lesson)
   const isAdaptive = lesson.lesson_type === "adaptive_drill"
   const questionCount = linked.length
@@ -40,6 +47,11 @@ function LessonDrillIntroCard({ lesson, linked = [], onStartDrill, startingDrill
         <p className="mt-2 text-sm font-medium tracking-[0.02em] text-[#666d80]">{metaLine}</p>
       ) : null}
       <p className="ds-body-sm mt-6 leading-7 text-[#36394a]">{body}</p>
+      {drillStartError ? (
+        <p className="mt-6 text-sm text-[#95122b]" role="alert">
+          {drillStartError}
+        </p>
+      ) : null}
       <div className="mt-8 flex justify-end">
         <Button
           type="button"

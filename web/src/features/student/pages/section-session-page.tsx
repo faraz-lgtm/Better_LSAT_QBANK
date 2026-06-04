@@ -339,6 +339,41 @@ function SectionSessionPage() {
     navigate("/app/practice/sections", { replace: true })
   }
 
+  function viewSectionResults() {
+    if (!sessionId) return
+    const prepTestId = sectionSession?.session.prep_test_id
+    const returnTo = prepTestId
+      ? `/app/practice/preptest/${encodeURIComponent(prepTestId)}`
+      : "/app/practice/sections"
+    navigate(
+      `/app/practice/results/${encodeURIComponent(sessionId)}?returnTo=${encodeURIComponent(returnTo)}`,
+      { replace: true },
+    )
+  }
+
+  async function enterSectionBlindReview() {
+    if (!sessionId) return
+    setCompleteModal(null)
+    setScoreHidden(true)
+    const prepTestId = sectionSession?.session.prep_test_id
+    if (prepTestId) {
+      try {
+        await practiceApi.startBlindReview(prepTestId)
+      } catch {
+        // PrepTest blind review may already be in progress.
+      }
+      const q = new URLSearchParams({ blindReview: "1", prepTestId })
+      navigate(`/app/practice/sections/session/${encodeURIComponent(sessionId)}?${q.toString()}`, {
+        replace: true,
+      })
+      return
+    }
+    const q = new URLSearchParams({ blindReview: "1" })
+    navigate(`/app/practice/sections/session/${encodeURIComponent(sessionId)}?${q.toString()}`, {
+      replace: true,
+    })
+  }
+
   if (!sessionId) {
     return (
       <StudentMain>
@@ -581,8 +616,9 @@ function SectionSessionPage() {
         questionCount={completeModal?.questionCount ?? 1}
         scoreHidden={scoreHidden}
         onToggleScoreHidden={() => setScoreHidden((h) => !h)}
-        onSkipDetails={leaveSectionSession}
-        doneLabel="Done with Section"
+        showBlindReview
+        onBlindReview={() => void enterSectionBlindReview()}
+        onSkipDetails={viewSectionResults}
         onDone={leaveSectionSession}
       />
     </StudentMain>

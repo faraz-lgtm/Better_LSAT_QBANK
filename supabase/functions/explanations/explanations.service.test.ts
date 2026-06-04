@@ -2,10 +2,12 @@ import { assertEquals } from 'jsr:@std/assert@1'
 
 import type { ExplanationsRepository, PrepTestRow, PrepTestTreePrepTestRow } from './explanations.repository.ts'
 import {
+  buildAnswerPopularity,
   buildExplanationStatusCounts,
   createExplanationsService,
   groupPrepTestRows,
   mapPrepTestTreeRows,
+  mapStoredAnswerToLetter,
   prepTestNumberFromModuleId,
   resolveExplanationQuestionStatus,
 } from './explanations.service.ts'
@@ -27,9 +29,33 @@ function mockRepo(overrides: Partial<ExplanationsRepository> = {}): Explanations
       inProcessQuestionIds: [],
       answeredQuestionIds: [],
     }),
+    listLatestAnswerSelectionsForQuestion: async () => [],
     ...overrides,
   }
 }
+
+Deno.test('buildAnswerPopularity counts latest selections per letter', () => {
+  const rows = buildAnswerPopularity(['B', 'B', 'A', 'C'], ['A', 'B', 'C', 'D', 'E'], 'B')
+  assertEquals(rows.find((r) => r.letter === 'B')?.count, 2)
+  assertEquals(rows.find((r) => r.letter === 'B')?.pct, 50)
+  assertEquals(rows.find((r) => r.letter === 'B')?.highlight, true)
+  assertEquals(rows.find((r) => r.letter === 'A')?.highlight, undefined)
+})
+
+Deno.test('mapStoredAnswerToLetter resolves choice id and numeric index', () => {
+  const choices = [
+    { id: 'A', index: 1 },
+    { id: 'B', index: 2 },
+    { id: 'C', index: 3 },
+  ]
+  const letters = ['A', 'B', 'C', 'D', 'E'] as const
+  assertEquals(mapStoredAnswerToLetter('B', choices, letters), 'B')
+  assertEquals(mapStoredAnswerToLetter('2', choices, letters), 'B')
+  const mapped = ['A', '2', 'C']
+    .map((raw) => mapStoredAnswerToLetter(raw, choices, letters))
+    .filter((l): l is string => l != null)
+  assertEquals(mapped, ['A', 'B', 'C'])
+})
 
 Deno.test('buildExplanationStatusCounts classifies fresh, seen, in_process, answered', () => {
   const counts = buildExplanationStatusCounts(['q1', 'q2', 'q3', 'q4'], {
@@ -216,6 +242,7 @@ Deno.test('listPrepTests returns global statusCounts for user', async () => {
 Deno.test('getExplanationDetail returns extended payload', async () => {
   const service = createExplanationsService({
     repository: mockRepo({
+      listLatestAnswerSelectionsForQuestion: async () => ['B', 'B', 'A'],
       getQuestionDetail: async () => ({
         id: 'q1',
         question_number: 5,
@@ -251,4 +278,7 @@ Deno.test('getExplanationDetail returns extended payload', async () => {
   assertEquals(d.explanationHtml, '<p>expl</p>')
   assertEquals(d.choices[0]!.explanationHtml, '<p>Why not A</p>')
   assertEquals(d.choices[1]!.explanationHtml, null)
+  assertEquals(d.answerPopularity.length, 2)
+  assertEquals(d.answerPopularity.find((r) => r.letter === 'B')?.count, 2)
+  assertEquals(d.answerPopularity.find((r) => r.letter === 'B')?.pct, 67)
 })

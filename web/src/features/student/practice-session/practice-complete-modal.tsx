@@ -87,7 +87,7 @@ function PracticeCompleteModal({
             </div>
           </div>
           {scoreHidden ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-3xl bg-[#edf3ff]/60 backdrop-blur-[6px]">
               <Eye className="size-12 text-[#666d80]" strokeWidth={1.5} aria-hidden />
               <p className="text-base font-semibold tracking-[0.32px] text-[#666d80]">
                 Your score is hidden
@@ -96,68 +96,59 @@ function PracticeCompleteModal({
           ) : null}
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          className="h-10 w-full max-w-[320px] rounded-xl border-[#6d78b6] bg-[#edf3ff] text-sm font-semibold text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] hover:bg-[#e4ebff]"
-          onClick={onToggleScoreHidden}
-        >
-          {scoreHidden ? "Peek at Score" : "Hide Score"}
-        </Button>
+        <div className="flex w-full max-w-[320px] flex-col items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={onToggleScoreHidden}
+          >
+            {scoreHidden ? "Peek at Score" : "Hide Score"}
+          </Button>
+
+          {showBlindReview ? (
+            <>
+              <Button
+                type="button"
+                variant="default"
+                className="w-full"
+                onClick={onBlindReview}
+                disabled={!onBlindReview}
+              >
+                Blind Review
+              </Button>
+              {onSkipDetails ? (
+                <button
+                  type="button"
+                  className="text-xs font-semibold tracking-[0.24px] text-[#0d47a1] hover:underline"
+                  onClick={onSkipDetails}
+                >
+                  Skip to view details result
+                </button>
+              ) : null}
+            </>
+          ) : (
+            <>
+              {onSkipDetails ? (
+                <button
+                  type="button"
+                  className="text-xs font-semibold tracking-[0.24px] text-[#0d47a1] hover:underline"
+                  onClick={onSkipDetails}
+                >
+                  Skip to view details result
+                </button>
+              ) : null}
+              <Button type="button" variant="outline" className="w-full" onClick={onDone}>
+                {doneLabel}
+              </Button>
+            </>
+          )}
+        </div>
 
         {showBlindReview ? (
-          <div className="flex w-full max-w-[320px] flex-col items-center gap-2">
-            <Button
-              type="button"
-              className="ds-btn w-full text-base"
-              onClick={onBlindReview}
-              disabled={!onBlindReview}
-            >
-              Blind Review
-            </Button>
-            {onSkipDetails ? (
-              <button
-                type="button"
-                className="text-xs font-semibold tracking-[0.24px] text-[#0d47a1] hover:underline"
-                onClick={onSkipDetails}
-              >
-                Skip to view details result
-              </button>
-            ) : null}
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 w-full rounded-2xl border-[#dfe1e7] font-semibold text-[#0d47a1] hover:bg-[#edf3ff]"
-              onClick={onDone}
-            >
-              {doneLabel}
-            </Button>
-          </div>
-        ) : (
-          <div className="flex w-full max-w-[320px] flex-col items-center gap-2">
-            {onSkipDetails ? (
-              <button
-                type="button"
-                className="text-xs font-semibold tracking-[0.24px] text-[#0d47a1] hover:underline"
-                onClick={onSkipDetails}
-              >
-                Skip to view details result
-              </button>
-            ) : null}
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 w-full rounded-2xl border-[#dfe1e7] font-semibold text-[#0d47a1] hover:bg-[#edf3ff]"
-              onClick={onDone}
-            >
-              {doneLabel}
-            </Button>
-          </div>
-        )}
-
-        {showBlindReview ? (
-          <div className="flex w-full max-w-[608px] gap-3 rounded-2xl border border-[#ffbd4c] bg-[#fff6e0] p-4">
-            <Info className="size-5 shrink-0 text-[#062357]" strokeWidth={2} aria-hidden />
+          <div className="flex w-full gap-3 rounded-lg border border-[#ffbd4c] bg-[#fff6e0] p-4">
+            <Info className="mt-0.5 size-5 shrink-0 text-[#062357]" strokeWidth={2} aria-hidden />
             <p className="text-left text-sm leading-[1.5] tracking-[0.28px] text-[#062357]">
               <span className="font-semibold">Blind Review</span> helps you identify reasoning errors
               before seeing your score. It&apos;s the most effective way to improve your performance.

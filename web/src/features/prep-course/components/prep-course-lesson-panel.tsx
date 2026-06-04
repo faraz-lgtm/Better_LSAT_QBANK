@@ -21,6 +21,7 @@ type PrepCourseLessonPanelProps = {
   onReviewDrill?: () => void
   onStartDrill?: () => void
   startingDrill?: boolean
+  drillStartError?: string | null
 }
 
 function PrepCourseLessonPanel({
@@ -33,6 +34,7 @@ function PrepCourseLessonPanel({
   onReviewDrill,
   onStartDrill,
   startingDrill = false,
+  drillStartError = null,
 }: PrepCourseLessonPanelProps) {
   const isPrepCourseDrill = lesson ? isPrepCourseDrillLessonType(lesson.lesson_type) : false
   const breadcrumbTopic = lesson?.title ?? "Lesson"
@@ -99,6 +101,7 @@ function PrepCourseLessonPanel({
             onReviewDrill={onReviewDrill}
             onStartDrill={onStartDrill}
             startingDrill={startingDrill}
+            drillStartError={drillStartError}
           />
         </>
       ) : (

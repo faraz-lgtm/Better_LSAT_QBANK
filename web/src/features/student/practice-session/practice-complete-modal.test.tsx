@@ -49,5 +49,8 @@ describe("PracticeCompleteModal", () => {
     expect(screen.getByText("Scaled score 165")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Blind Review/i })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Skip to view details result/i })).toBeInTheDocument()
+    expect(
+      screen.getByText(/helps you identify reasoning errors before seeing your score/i),
+    ).toBeInTheDocument()
   })
 })

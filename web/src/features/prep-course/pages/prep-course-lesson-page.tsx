@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 import { PrepCourseLessonFooter } from "@/features/prep-course/components/prep-course-lesson-footer"
 import { PrepCourseLessonPanel } from "@/features/prep-course/components/prep-course-lesson-panel"
 import { PrepCourseLessonSidebar } from "@/features/prep-course/components/prep-course-lesson-sidebar"
-import { isPrepCourseDrillLessonType, nextLessonSlug } from "@/features/prep-course/lib/prep-course-format"
+import { nextLessonSlug } from "@/features/prep-course/lib/prep-course-format"
 import { StudentMain } from "@/features/student/components/student-main"
 import { createPracticeApi } from "@/lib/api/practice"
 import {
@@ -15,6 +15,7 @@ import {
   type PrepLessonLinkedQuestionRef,
 } from "@/lib/api/prep-course"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
 function PrepCourseLessonPage() {
   const navigate = useNavigate()
@@ -35,6 +36,7 @@ function PrepCourseLessonPage() {
   const [loading, setLoading] = useState(true)
   const [savingComplete, setSavingComplete] = useState(false)
   const [startingDrill, setStartingDrill] = useState(false)
+  const [drillStartError, setDrillStartError] = useState<string | null>(null)
   const [showSidebar, setShowSidebar] = useState(true)
   const lessonContentRef = useRef<HTMLDivElement>(null)
 
@@ -106,6 +108,10 @@ function PrepCourseLessonPage() {
     }
   }, [paramsValid, courseSlug, lessonSlug, prepCourseApi])
 
+  useEffect(() => {
+    setDrillStartError(null)
+  }, [lessonSlug])
+
   const handleReviewDrill = useCallback(() => {
     lessonContentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
   }, [])
@@ -118,23 +124,43 @@ function PrepCourseLessonPage() {
     )
   }
 
-  const isPrepCourseDrill = lesson ? isPrepCourseDrillLessonType(lesson.lesson_type) : false
+  const isAdaptiveDrillLesson = lesson?.lesson_type === "adaptive_drill"
   const drillCompleted = Boolean(activeDrillAttempt)
 
-  async function handleStartDrill() {
-    if (!lesson || !course || !practiceApi || startingDrill) return
+  const handleStartDrill = useCallback(async () => {
+    if (!lesson || !course || startingDrill) return
+    if (!practiceApi) {
+      const msg = "Practice API is unavailable. Check Supabase env configuration."
+      setDrillStartError(msg)
+      setError(msg)
+      return
+    }
     setStartingDrill(true)
+    setDrillStartError(null)
     setError(null)
     try {
-      const { session } = await practiceApi.startLessonDrill({ lessonId: lesson.id })
+      const linkedQuestionId = linkedQuestionRefs[0]?.question_id ?? null
+      const { session } = await practiceApi.startLessonDrill({
+        lessonId: lesson.id,
+        questionId: linkedQuestionId,
+      })
       const returnTo = `/app/prep-course/${course.slug}/${lesson.slug}`
       navigate(`/app/practice/drills/session/${session.id}?returnTo=${encodeURIComponent(returnTo)}`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to start drill")
+      const msg = e instanceof Error ? formatSupabaseCallError(e) : "Failed to start drill"
+      setDrillStartError(msg)
+      setError(msg)
     } finally {
       setStartingDrill(false)
     }
-  }
+  }, [
+    course,
+    lesson,
+    linkedQuestionRefs,
+    navigate,
+    practiceApi,
+    startingDrill,
+  ])
 
   async function handleMarkComplete() {
     if (!lesson || !course || !prepCourseApi || savingComplete) return
@@ -202,6 +228,7 @@ function PrepCourseLessonPage() {
               onReviewDrill={handleReviewDrill}
               onStartDrill={() => void handleStartDrill()}
               startingDrill={startingDrill}
+              drillStartError={drillStartError}
             />
           </div>
         </section>
@@ -211,9 +238,9 @@ function PrepCourseLessonPage() {
         showSidebar={showSidebar}
         onToggleSidebar={() => setShowSidebar((v) => !v)}
         onMarkComplete={() => void handleMarkComplete()}
-        markCompleteDisabled={savingComplete || (isPrepCourseDrill && !drillCompleted)}
+        markCompleteDisabled={savingComplete || (isAdaptiveDrillLesson && !drillCompleted)}
         primaryAction={
-          isPrepCourseDrill && !drillCompleted
+          isAdaptiveDrillLesson && !drillCompleted
             ? {
                 label: startingDrill ? "Starting…" : "Start Drill",
                 onClick: () => void handleStartDrill(),

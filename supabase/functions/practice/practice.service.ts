@@ -33,6 +33,32 @@ function normalizeAnswer(value: string): string {
   return value.trim().toUpperCase().slice(0, 1)
 }
 
+function lessonTextBlob(lesson: {
+  summary: string | null
+  text_content: string | null
+  title: string
+}): string {
+  const strip = (raw: string) => raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  return [lesson.summary, lesson.text_content, lesson.title]
+    .filter((s): s is string => Boolean(s?.trim()))
+    .map(strip)
+    .join(' ')
+    .toLowerCase()
+}
+
+/** When lesson_questions / PT refs are missing, match known active-drill writeups to bank stimuli. */
+const ACTIVE_DRILL_STIMULUS_HINTS: ReadonlyArray<{ marker: string; phrase: string }> = [
+  { marker: 'musical performances', phrase: 'inspired musical performance' },
+  { marker: 'inspired musical performance', phrase: 'inspired musical performance' },
+  { marker: 'neurochemical imbalances', phrase: 'neurochemical imbalances can cause behavior' },
+  { marker: 'green carnations', phrase: 'green carnations on St. Patrick' },
+  { marker: 'evritech corporation', phrase: 'Evritech Corporation' },
+  { marker: 'quark-filled pulsar', phrase: 'quark-filled pulsar' },
+  { marker: 'stock options', phrase: 'paying senior staff with stock options' },
+  { marker: 'apatosaurus', phrase: 'Apatosaurus' },
+  { marker: 'gauge field theory', phrase: 'gauge field theory' },
+]
+
 function isValidKind(value: unknown): value is PracticeSessionKind {
   return value === 'PREPTEST' || value === 'SECTION' || value === 'DRILL'
 }
@@ -775,20 +801,25 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       }
 
       if (blindReview) {
-        if (session.kind !== 'SECTION' || !session.prep_test_id) {
-          throw new PracticeValidationError('Blind review answers require a section session tied to a PrepTest')
+        if (session.kind !== 'SECTION' && session.kind !== 'DRILL') {
+          throw new PracticeValidationError('Blind review is only supported for section and drill sessions')
         }
-        const ptSessions = await deps.repository.listUserSessionsForPrepTest(userId, session.prep_test_id)
-        const prepTestSession = ptSessions.find((s) => s.kind === 'PREPTEST' && s.completed_at)
-        if (!prepTestSession) {
-          throw new PracticeValidationError('Complete the PrepTest before blind review')
+        if (!session.completed_at) {
+          throw new PracticeValidationError('Complete the session before blind review')
         }
-        if (prepTestSession.blind_review_completed_at) {
-          throw new PracticeValidationError('Blind review is already completed for this PrepTest')
-        }
-        const meta = prepTestSession.metadata
-        if (meta.blindReviewActive !== true) {
-          throw new PracticeValidationError('Start blind review for this PrepTest first')
+        if (session.kind === 'SECTION' && session.prep_test_id) {
+          const ptSessions = await deps.repository.listUserSessionsForPrepTest(userId, session.prep_test_id)
+          const prepTestSession = ptSessions.find((s) => s.kind === 'PREPTEST' && s.completed_at)
+          if (!prepTestSession) {
+            throw new PracticeValidationError('Complete the PrepTest before blind review')
+          }
+          if (prepTestSession.blind_review_completed_at) {
+            throw new PracticeValidationError('Blind review is already completed for this PrepTest')
+          }
+          const meta = prepTestSession.metadata
+          if (meta.blindReviewActive !== true) {
+            throw new PracticeValidationError('Start blind review for this PrepTest first')
+          }
         }
       }
 
@@ -1061,23 +1092,42 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       }
 
       let questionIds = await deps.repository.listLessonQuestionIds(lessonId)
+      const explicitQuestionId =
+        typeof body.questionId === 'string' ? body.questionId.trim() : ''
 
       if (isActive) {
         if (questionIds.length > 1) {
           throw new PracticeValidationError('Active drill lessons must have exactly one linked question')
         }
         let questionId = questionIds[0] ?? null
+        if (!questionId && explicitQuestionId) {
+          questionId = explicitQuestionId
+        }
         if (!questionId) {
           const ref = extractPrepTestQuestionRef(lesson.summary, lesson.text_content, lesson.title)
-          if (!ref) {
-            throw new PracticeValidationError('No PrepTest question reference found for this lesson')
+          if (ref) {
+            const resolvedId = await deps.repository.resolveQuestionIdFromReference(ref)
+            if (!resolvedId) {
+              throw new PracticeValidationError(`PrepTest question not found: ${ref}`)
+            }
+            questionId = resolvedId
+          } else {
+            const blob = lessonTextBlob(lesson)
+            for (const hint of ACTIVE_DRILL_STIMULUS_HINTS) {
+              if (!blob.includes(hint.marker)) continue
+              const resolvedId = await deps.repository.findQuestionIdByStimulusPhrase(hint.phrase)
+              if (resolvedId) {
+                questionId = resolvedId
+                break
+              }
+            }
           }
-          const resolvedId = await deps.repository.resolveQuestionIdFromReference(ref)
-          if (!resolvedId) {
-            throw new PracticeValidationError(`PrepTest question not found: ${ref}`)
+          if (!questionId) {
+            throw new PracticeValidationError(
+              'No PrepTest question is linked to this active drill. Add a PT reference (e.g. PT102.S2.Q1) in the lesson summary or link a question in admin.',
+            )
           }
-          questionId = resolvedId
-          questionIds = [resolvedId]
+          questionIds = [questionId]
         }
       } else {
         if (questionIds.length === 0) {

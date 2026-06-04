@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 
 import { ActiveDrillIntroCard } from "@/features/prep-course/components/active-drill/active-drill-intro-card"
-import { ActiveDrillQuestionSummary } from "@/features/prep-course/components/active-drill/active-drill-question-summary"
+import { ActiveDrillQuestionResultDetail } from "@/features/prep-course/components/active-drill/active-drill-question-result-detail"
 import { ActiveDrillResultBar } from "@/features/prep-course/components/active-drill/active-drill-result-bar"
 import { AdaptiveDrillResultsPanel } from "@/features/prep-course/components/lesson-drill/adaptive-drill-results-panel"
 import { LessonDrillIntroCard } from "@/features/prep-course/components/lesson-drill/lesson-drill-intro-card"
@@ -21,6 +21,7 @@ type LessonContentRendererProps = {
   onReviewDrill?: () => void
   onStartDrill?: () => void
   startingDrill?: boolean
+  drillStartError?: string | null
 }
 
 function youtubeEmbedUrl(url: string): string | null {
@@ -144,6 +145,7 @@ function LessonContentRenderer({
   onReviewDrill,
   onStartDrill,
   startingDrill = false,
+  drillStartError = null,
 }: LessonContentRendererProps) {
   const type = lesson.lesson_type
   const legacyVideo = type === "video"
@@ -179,6 +181,7 @@ function LessonContentRenderer({
         linked={linkedQuestionRefs}
         onStartDrill={onStartDrill}
         startingDrill={startingDrill}
+        drillStartError={drillStartError}
       />
     )
   }
@@ -199,7 +202,7 @@ function LessonContentRenderer({
             </article>
           ) : null}
           {linked ? (
-            <ActiveDrillQuestionSummary linked={linked} attempt={activeDrillAttempt} />
+            <ActiveDrillQuestionResultDetail linked={linked} attempt={activeDrillAttempt} />
           ) : null}
         </div>
       )
@@ -210,6 +213,7 @@ function LessonContentRenderer({
         linked={linkedQuestionRefs[0] ?? null}
         onStartDrill={onStartDrill}
         startingDrill={startingDrill}
+        drillStartError={drillStartError}
       />
     )
   }

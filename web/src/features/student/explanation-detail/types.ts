@@ -23,9 +23,9 @@ export type ExplanationVideoBlock = {
 
 export type ExplanationAnswerPopularityRow = {
   letter: string
+  count: number
   pct: number
-  avgScore: string
-  /** Strongest bar (e.g. correct / most chosen). */
+  /** Correct answer (or most chosen when correct unknown). */
   highlight?: boolean
 }
 
@@ -69,6 +69,7 @@ export type ExplanationQuestionDetailView = {
       }
     scoreBand: { headline: string; range: string; caption: string }
     answerPopularity: ExplanationAnswerPopularityRow[]
+    answerPopularityTotal: number
     questionStemTags: string[]
     passageTags: string[]
     history: ExplanationHistoryRow[]

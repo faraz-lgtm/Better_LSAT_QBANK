@@ -79,6 +79,96 @@ export type ExplanationDetailPayload = {
     title: string
     body: string
   }
+  answerPopularity: ExplanationAnswerPopularityRow[]
+  difficulty: 1 | 2 | 3 | 4 | 5
+}
+
+export type ExplanationAnswerPopularityRow = {
+  letter: string
+  count: number
+  pct: number
+  /** Correct answer or most chosen when no correct letter. */
+  highlight?: boolean
+}
+
+function normalizeAnswerLetter(value: string): string {
+  return value.trim().toUpperCase().slice(0, 1)
+}
+
+function popularityLettersFromChoices(
+  choices: { id: string; index: number }[],
+): string[] {
+  if (choices.length === 0) return ['A', 'B', 'C', 'D', 'E']
+  return choices.map((c) => {
+    const fromId = normalizeAnswerLetter(c.id)
+    if (/^[A-E]$/.test(fromId)) return fromId
+    if (c.index >= 1 && c.index <= 5) return String.fromCharCode(64 + c.index)
+    return fromId || 'A'
+  })
+}
+
+/** Map stored `answer_events.selected_answer` to A–E using question choices when needed. */
+export function mapStoredAnswerToLetter(
+  raw: string,
+  choices: { id: string; index: number }[],
+  letters: readonly string[],
+): string | null {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+
+  const upper = trimmed.toUpperCase()
+  const byId = choices.find((c) => c.id === trimmed || c.id.toUpperCase() === upper)
+  if (byId) {
+    const letter = popularityLettersFromChoices([byId])[0]
+    return letters.includes(letter) ? letter : null
+  }
+
+  const idx = Number.parseInt(trimmed, 10)
+  if (Number.isFinite(idx) && idx >= 1 && idx <= choices.length) {
+    const letter = String.fromCharCode(64 + idx)
+    return letters.includes(letter) ? letter : null
+  }
+
+  if (/^[A-E]$/i.test(upper)) {
+    const letter = upper.slice(0, 1)
+    return letters.includes(letter) ? letter : null
+  }
+
+  const one = upper.slice(0, 1)
+  if (/^[A-E]$/.test(one) && trimmed.length === 1 && letters.includes(one)) return one
+  return null
+}
+
+export function buildAnswerPopularity(
+  selections: readonly string[],
+  letters: readonly string[],
+  correctLetter: string | null,
+): ExplanationAnswerPopularityRow[] {
+  const counts = new Map<string, number>()
+  for (const letter of letters) counts.set(letter, 0)
+
+  let total = 0
+  for (const raw of selections) {
+    const letter = normalizeAnswerLetter(raw)
+    if (!counts.has(letter)) continue
+    counts.set(letter, (counts.get(letter) ?? 0) + 1)
+    total += 1
+  }
+
+  const correct = correctLetter ? normalizeAnswerLetter(correctLetter) : null
+  let maxCount = 0
+  for (const letter of letters) {
+    maxCount = Math.max(maxCount, counts.get(letter) ?? 0)
+  }
+
+  return letters.map((letter) => {
+    const count = counts.get(letter) ?? 0
+    const pct = total > 0 ? Math.round((100 * count) / total) : 0
+    const highlight = correct != null
+      ? letter === correct
+      : count === maxCount && maxCount > 0
+    return { letter, count, pct, ...(highlight ? { highlight: true } : {}) }
+  })
 }
 
 function relOne<T>(v: T | T[] | null | undefined): T | null {
@@ -628,6 +718,15 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
       const expl = row.explanation?.trim() ?? ''
       const vid = row.video_url?.trim() ?? ''
       const choices = parseQuestionChoices(row.choices, { includeOptionExplanations: true })
+      const correctChoiceId = correctChoiceIdFromAnswer(row.correct_answer, choices)
+      const letters = popularityLettersFromChoices(choices)
+      const selections = await deps.repository.listLatestAnswerSelectionsForQuestion(questionId)
+      const mappedSelections: string[] = []
+      for (const raw of selections) {
+        const letter = mapStoredAnswerToLetter(raw, choices, letters)
+        if (letter) mappedSelections.push(letter)
+      }
+      const answerPopularity = buildAnswerPopularity(mappedSelections, letters, correctChoiceId)
 
       return {
         questionId: row.id,
@@ -644,8 +743,10 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
         stimulusText: row.stimulus_text,
         stemText: row.stem_text,
         choices,
-        correctChoiceId: correctChoiceIdFromAnswer(row.correct_answer, choices),
+        correctChoiceId,
         passage: resolvePassageForQuestion(row, sec),
+        answerPopularity,
+        difficulty: clampDifficulty(row.difficulty),
       }
     },
   }

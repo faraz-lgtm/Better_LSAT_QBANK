@@ -48,7 +48,16 @@ function DifficultyColumn({
   )
 }
 
+function popularityCaption(total: number): string {
+  if (total <= 0) {
+    return "Percent of students who chose each answer (latest pick per student). No responses on the platform yet."
+  }
+  const students = total === 1 ? "1 student" : `${total} students`
+  return `Percent of ${students} who chose each answer (latest pick per student).`
+}
+
 function ExplanationAnalyticsTabPanel({ analytics }: ExplanationAnalyticsTabPanelProps) {
+  const popularityTotal = analytics.answerPopularityTotal
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="space-y-6 lg:col-span-2">
@@ -94,8 +103,15 @@ function ExplanationAnalyticsTabPanel({ analytics }: ExplanationAnalyticsTabPane
         <Card className={cardSurface}>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-bold text-[color:var(--color-student-heading)]">Answer Popularity</CardTitle>
+            <p className="text-sm leading-relaxed text-[color:var(--text)]">{popularityCaption(popularityTotal)}</p>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
+            {popularityTotal === 0 ? (
+              <p className="rounded-xl border border-dashed border-[color:var(--greyscale-100)] bg-[color:var(--background)] px-4 py-6 text-center text-sm text-[color:var(--text)]">
+                No one has answered this question on the platform yet. Percentages will appear after students submit
+                answers in practice.
+              </p>
+            ) : null}
             {analytics.answerPopularity.map((row) => (
               <div
                 key={row.letter}
@@ -103,26 +119,34 @@ function ExplanationAnalyticsTabPanel({ analytics }: ExplanationAnalyticsTabPane
               >
                 <div className="flex gap-3">
                   <span
-                    className="flex size-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-500"
+                    className={cn(
+                      "flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold",
+                      row.highlight ? "bg-[#e8f5e9] text-[#00d492]" : "bg-slate-100 text-slate-500",
+                    )}
                     aria-hidden
                   >
                     {row.letter}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-3">
-                      <span className="text-xs font-medium tabular-nums text-[color:var(--text)]">{row.pct}%</span>
-                      <span className="text-xs text-[color:var(--text)]">
-                        Avg score:{" "}
-                        <span className="font-semibold tabular-nums text-[color:var(--color-student-heading)]">{row.avgScore}</span>
+                      <span className="text-sm font-semibold tabular-nums text-[color:var(--color-student-heading)]">
+                        {row.pct}%
+                        {popularityTotal > 0 ? (
+                          <span className="ml-1 text-xs font-normal text-[color:var(--text)]">of students</span>
+                        ) : null}
+                      </span>
+                      <span className="text-xs tabular-nums text-[color:var(--text)]">
+                        <span className="font-semibold text-[color:var(--color-student-heading)]">{row.count}</span>
+                        {row.count === 1 ? " student chose this" : " students chose this"}
                       </span>
                     </div>
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#eef1f6]">
                       <div
                         className={cn(
-                          "h-full rounded-full transition-[width]",
-                          row.highlight ? "bg-[color:var(--rc-progress)]" : "bg-[#94a3b8]",
+                          "h-full min-w-0 rounded-full transition-[width]",
+                          row.highlight ? "bg-[#00d492]" : "bg-[#94a3b8]",
                         )}
-                        style={{ width: `${Math.min(100, row.pct)}%` }}
+                        style={{ width: `${Math.min(100, Math.max(0, row.pct))}%` }}
                       />
                     </div>
                   </div>

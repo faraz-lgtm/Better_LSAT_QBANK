@@ -26,6 +26,8 @@ import type {
 } from "@/features/student/preptests/preptest-types"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
+import { throwIfEdgeInvokeFailed } from "@/lib/api/edge-invoke-error"
+
 export type PracticeSessionKind = "PREPTEST" | "SECTION" | "DRILL"
 
 export type PracticeSession = {
@@ -239,12 +241,18 @@ export function createPracticeApi(supabase: SupabaseClient) {
       return data
     },
 
-    async startLessonDrill(input: { lessonId: string }): Promise<DrillSessionResponse> {
+    async startLessonDrill(input: {
+      lessonId: string
+      questionId?: string | null
+    }): Promise<DrillSessionResponse> {
       const { data, error } = await invokePracticeFn<DrillSessionResponse>("practice-start-lesson-drill", {
         method: "POST",
-        body: { lessonId: input.lessonId },
+        body: {
+          lessonId: input.lessonId,
+          ...(input.questionId ? { questionId: input.questionId } : {}),
+        },
       })
-      if (error) throw error
+      if (error) await throwIfEdgeInvokeFailed(error)
       if (!data?.session) throw new Error("No drill session returned from practice")
       return data
     },
@@ -254,7 +262,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
         method: "POST",
         body: { sessionId },
       })
-      if (error) throw error
+      if (error) await throwIfEdgeInvokeFailed(error)
       if (!data?.session) throw new Error("No drill session returned from practice")
       return data
     },
@@ -311,7 +319,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
         method: "POST",
         body: { sessionId },
       })
-      if (error) throw error
+      if (error) await throwIfEdgeInvokeFailed(error)
       if (!data?.session) throw new Error("No section session returned from practice")
       return data
     },

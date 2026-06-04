@@ -9,6 +9,7 @@ type ActiveDrillIntroCardProps = {
   linked?: PrepLessonLinkedQuestionRef | null
   onStartDrill?: () => void
   startingDrill?: boolean
+  drillStartError?: string | null
 }
 
 function formatPtRef(linked: PrepLessonLinkedQuestionRef): string {
@@ -18,7 +19,13 @@ function formatPtRef(linked: PrepLessonLinkedQuestionRef): string {
   return `${pt} · ${section} · ${q}`
 }
 
-function ActiveDrillIntroCard({ lesson, linked, onStartDrill, startingDrill = false }: ActiveDrillIntroCardProps) {
+function ActiveDrillIntroCard({
+  lesson,
+  linked,
+  onStartDrill,
+  startingDrill = false,
+  drillStartError = null,
+}: ActiveDrillIntroCardProps) {
   const body = activeDrillIntroCopy(lesson)
 
   return (
@@ -28,10 +35,15 @@ function ActiveDrillIntroCard({ lesson, linked, onStartDrill, startingDrill = fa
         <p className="mt-2 text-sm font-medium tracking-[0.02em] text-[#666d80]">{formatPtRef(linked)}</p>
       ) : null}
       <p className="ds-body-sm mt-6 leading-7 text-[#36394a]">{body}</p>
+      {drillStartError ? (
+        <p className="mt-6 text-sm text-[#95122b]" role="alert">
+          {drillStartError}
+        </p>
+      ) : null}
       <div className="mt-8 flex justify-end">
         <Button
           type="button"
-          onClick={onStartDrill}
+          onClick={() => onStartDrill?.()}
           disabled={startingDrill || !onStartDrill}
           className="ds-btn-sm cursor-pointer gap-1 px-5 text-sm disabled:pointer-events-auto disabled:cursor-not-allowed"
         >

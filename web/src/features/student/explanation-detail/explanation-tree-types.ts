@@ -74,4 +74,13 @@ export type ExplanationDetailPayload = {
     title: string
     body: string
   }
+  answerPopularity: ExplanationAnswerPopularityRow[]
+  difficulty?: 1 | 2 | 3 | 4 | 5
+}
+
+export type ExplanationAnswerPopularityRow = {
+  letter: string
+  count: number
+  pct: number
+  highlight?: boolean
 }

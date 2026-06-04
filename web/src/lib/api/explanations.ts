@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
+import { throwIfEdgeInvokeFailed } from "@/lib/api/edge-invoke-error"
+
 import type {
   ExplanationDetailPayload,
   ExplanationPrepTestListItem,
@@ -102,7 +104,7 @@ export function createExplanationsApi(supabase: SupabaseClient) {
       const { data, error } = await invokeExplanationsFn<ExplanationDetailPayload>("prep-explanation-detail", {
         questionId,
       })
-      if (error) throw error
+      if (error) await throwIfEdgeInvokeFailed(error)
       if (!data) throw new Error("No explanation detail returned")
       return data
     },

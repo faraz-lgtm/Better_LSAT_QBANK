@@ -221,7 +221,18 @@ function ExplanationQuestionDetailPage() {
           <ExplanationQuestionTabPanel view={view} initialExpandedChoiceId={initialExpandedChoiceId} />
         ) : null}
         {tab === "explanation" ? <ExplanationExplainTabPanel videos={view.videos} /> : null}
-        {tab === "analytics" ? <ExplanationAnalyticsTabPanel analytics={view.analytics} /> : null}
+        {tab === "analytics" && detailError ? (
+          <p className="text-sm text-[#95122b]">{detailError}</p>
+        ) : null}
+        {tab === "analytics" && !detailError && (detailLoading || !detail) ? (
+          <p className="flex items-center gap-2 text-sm text-[#666d80]">
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+            Loading analytics…
+          </p>
+        ) : null}
+        {tab === "analytics" && !detailError && !detailLoading && detail ? (
+          <ExplanationAnalyticsTabPanel analytics={view.analytics} />
+        ) : null}
       </div>
     </StudentMain>
   )
