@@ -33,6 +33,8 @@ export function usePracticeHighlights() {
   const [toolMode, setToolMode] = useState<PracticeToolMode>("none")
   const [fontScale, setFontScale] = useState<number>(1)
   const [lineSpacing, setLineSpacing] = useState<number>(1)
+  const [boldEnabled, setBoldEnabled] = useState(false)
+  const [italicEnabled, setItalicEnabled] = useState(false)
   const [regionHtml, setRegionHtml] = useState<Record<RegionKey, string>>({})
 
   const getRegionHtml = useCallback(
@@ -65,6 +67,14 @@ export function usePracticeHighlights() {
 
   const cycleLineSpacing = useCallback(() => {
     setLineSpacing((s) => nextStep(LINE_SPACING_STEPS, s as (typeof LINE_SPACING_STEPS)[number]))
+  }, [])
+
+  const toggleBold = useCallback(() => {
+    setBoldEnabled((enabled) => !enabled)
+  }, [])
+
+  const toggleItalic = useCallback(() => {
+    setItalicEnabled((enabled) => !enabled)
   }, [])
 
   const removeAnnotationElement = useCallback(
@@ -155,6 +165,8 @@ export function usePracticeHighlights() {
   const contentStyle: CSSProperties = {
     ["--practice-font-scale" as string]: String(fontScale),
     ["--practice-line-height-scale" as string]: String(lineSpacing),
+    fontWeight: boldEnabled ? 700 : undefined,
+    fontStyle: italicEnabled ? "italic" : undefined,
   }
 
   return {
@@ -162,6 +174,8 @@ export function usePracticeHighlights() {
     toolMode,
     fontScale,
     lineSpacing,
+    boldEnabled,
+    italicEnabled,
     contentStyle,
     getRegionHtml,
     selectColor,
@@ -169,6 +183,8 @@ export function usePracticeHighlights() {
     selectUnderline,
     cycleFontSize,
     cycleLineSpacing,
+    toggleBold,
+    toggleItalic,
     handleContentMouseUp,
     handleContentClick,
   }

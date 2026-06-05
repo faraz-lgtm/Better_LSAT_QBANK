@@ -24,6 +24,7 @@ import type {
   StartPrepTestInput,
   StartPrepTestResponse,
 } from "@/features/student/preptests/preptest-types"
+import { normalizePrepTestDetail } from "@/features/student/preptests/preptest-section-break"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { throwIfEdgeInvokeFailed } from "@/lib/api/edge-invoke-error"
@@ -354,7 +355,11 @@ export function createPracticeApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       if (!data?.prepTest) throw new Error("No prep test detail returned from practice")
-      return data
+      return normalizePrepTestDetail({
+        ...data,
+        sectionBreak: data.sectionBreak ?? null,
+        sections: data.sections.map((s) => ({ ...s, onBreak: s.onBreak ?? false })),
+      })
     },
 
     async startPrepTest(input: StartPrepTestInput): Promise<StartPrepTestResponse> {
@@ -368,7 +373,14 @@ export function createPracticeApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       if (!data?.prepTestSession) throw new Error("No prep test session returned from practice")
-      return data
+      return {
+        ...data,
+        detail: normalizePrepTestDetail({
+          ...data.detail,
+          sectionBreak: data.detail.sectionBreak ?? null,
+          sections: data.detail.sections.map((s) => ({ ...s, onBreak: s.onBreak ?? false })),
+        }),
+      }
     },
 
     async completePrepTest(prepTestId: string): Promise<PracticeSession> {

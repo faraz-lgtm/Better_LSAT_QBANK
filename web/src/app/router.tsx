@@ -31,7 +31,9 @@ import { PracticeDrillsPage } from "@/features/student/pages/practice-drills-pag
 import { PracticePrepTestPage } from "@/features/student/pages/practice-preptest-page"
 import { PracticePrepTestsListPage } from "@/features/student/pages/practice-preptests-list-page"
 import { PracticePrepTestSectionPage } from "@/features/student/pages/practice-preptest-section-page"
+import { LrNewSectionPage } from "@/features/student/pages/lr-new-section-page"
 import { PracticeSectionsPage } from "@/features/student/pages/practice-sections-page"
+import { RcNewSectionPage } from "@/features/student/pages/rc-new-section-page"
 import { SectionSessionPage } from "@/features/student/pages/section-session-page"
 import { AdminShell } from "@/features/admin/layout/admin-shell"
 import { AdminDashboardPage } from "@/features/admin/pages/admin-dashboard-page"
@@ -219,9 +221,11 @@ const router = createBrowserRouter([
       { path: "practice/drills/session/:sessionId", element: <DrillSessionPage /> },
       { path: "practice/results/:sessionId", element: <PracticeSessionResultsPage /> },
       { path: "practice/sections", element: <PracticeSectionsPage /> },
+      { path: "practice/sections/lr/new", element: <LrNewSectionPage /> },
+      { path: "practice/sections/rc/new", element: <RcNewSectionPage /> },
       { path: "practice/sections/session/:sessionId", element: <SectionSessionPage /> },
-      { path: "practice/sections/rc", element: <Navigate to="/app/practice/sections" replace /> },
-      { path: "practice/sections/rc/session", element: <Navigate to="/app/practice/sections" replace /> },
+      { path: "practice/sections/rc", element: <Navigate to="/app/practice/sections/rc/new" replace /> },
+      { path: "practice/sections/rc/session", element: <Navigate to="/app/practice/sections/rc/new" replace /> },
       { path: "practice/preptest/:testId/section/:sectionId", element: <PracticePrepTestSectionPage /> },
       { path: "practice/preptest/:testId", element: <PracticePrepTestPage /> },
       { path: "practice/preptest", element: <PracticePrepTestsListPage /> },

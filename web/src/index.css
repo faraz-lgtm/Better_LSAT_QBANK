@@ -601,6 +601,12 @@ code {
   width: 114px;
 }
 
+.ds-analytics-stat--pair {
+  width: auto;
+  background: #f6f8fa;
+  padding: 20px 24px;
+}
+
 .ds-analytics-stat__label {
   font-size: 16px;
   font-weight: 600;
@@ -984,7 +990,7 @@ select.ds-input {
   width: 100%;
   padding-inline: 16px;
   border-radius: 16px 16px 0 0;
-  border-color: var(--primary-border);
+  border-color: transparent;
   background: var(--primary-500);
   color: #fff;
   box-shadow: none;
@@ -994,7 +1000,7 @@ select.ds-input {
 .app-nav-menu--open .app-nav-link:focus,
 .app-nav-menu--open .app-nav-link:focus-visible,
 .app-nav-menu--open .app-nav-link:active {
-  border-color: var(--primary-border);
+  border-color: transparent;
   background: var(--primary-500);
   color: #fff;
   box-shadow: none;
@@ -1009,7 +1015,7 @@ select.ds-input {
 
 .app-nav-dropdown-panel {
   position: absolute;
-  top: calc(100% - 1px);
+  top: 100%;
   left: 0;
   z-index: 1;
   box-sizing: border-box;
@@ -1020,8 +1026,7 @@ select.ds-input {
   align-items: flex-start;
   gap: var(--nav-dropdown-gap);
   padding: var(--nav-dropdown-padding);
-  border: 1px solid var(--primary-border);
-  border-top: none;
+  border: none;
   border-radius: 0 0 16px 16px;
   background-color: #edf3ff;
   box-shadow: none;
@@ -1141,6 +1146,60 @@ select.ds-input {
 .practice-session-content {
   font-size: calc(0.875rem * var(--practice-font-scale, 1));
   line-height: calc(1.625 * var(--practice-line-height-scale, 1));
+}
+
+/* Figma `17920:11448` — session panes: fixed height, scroll without visible scrollbar */
+.practice-session-pane {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.practice-session-pane::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.practice-session-card {
+  max-height: calc(100svh - var(--nav-shell-height) - 32px);
+  min-height: 0;
+}
+
+.practice-session-body {
+  min-height: 0;
+}
+
+.practice-session-footer {
+  isolation: isolate;
+}
+
+.practice-session-header {
+  overflow: hidden;
+}
+
+.practice-session-timer {
+  overflow: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.practice-session-timer::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.practice-session-scroll-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.practice-session-scroll-hidden::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .lsat-html-content mark.practice-find-mark {

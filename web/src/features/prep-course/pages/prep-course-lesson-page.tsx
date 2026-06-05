@@ -4,12 +4,23 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 import { PrepCourseLessonFooter } from "@/features/prep-course/components/prep-course-lesson-footer"
 import { PrepCourseLessonPanel } from "@/features/prep-course/components/prep-course-lesson-panel"
 import { PrepCourseLessonSidebar } from "@/features/prep-course/components/prep-course-lesson-sidebar"
-import { nextLessonSlug } from "@/features/prep-course/lib/prep-course-format"
+import {
+  countCompletedLessons,
+  findLessonSectionContext,
+  formatDurationShort,
+  formatRemainingHoursLabel,
+  incompleteDurationMinutes,
+  lessonProgressPercent,
+  nextLessonSlug,
+  normalizeCurriculum,
+  shouldFlattenModuleSections,
+} from "@/features/prep-course/lib/prep-course-format"
 import { StudentMain } from "@/features/student/components/student-main"
 import { createPracticeApi } from "@/lib/api/practice"
 import {
   createPrepCourseApi,
   type PrepCourse,
+  type PrepCourseCurriculum,
   type PrepLesson,
   type PrepLessonActiveDrillAttempt,
   type PrepLessonLinkedQuestionRef,
@@ -27,6 +38,7 @@ function PrepCourseLessonPage() {
   const lessonSlug = lessonSlugParam?.trim() ?? ""
   const paramsValid = courseSlug.length > 0 && lessonSlug.length > 0
   const [course, setCourse] = useState<PrepCourse | null>(null)
+  const [curriculum, setCurriculum] = useState<PrepCourseCurriculum>({ modules: [] })
   const [lesson, setLesson] = useState<PrepLesson | null>(null)
   const [linkedQuestionRefs, setLinkedQuestionRefs] = useState<PrepLessonLinkedQuestionRef[]>([])
   const [activeDrillAttempt, setActiveDrillAttempt] = useState<PrepLessonActiveDrillAttempt | null>(null)
@@ -56,10 +68,54 @@ function PrepCourseLessonPage() {
     }
   }, [])
 
-  const progressPercent = useMemo(() => {
-    if (lessons.length === 0) return 0
-    return Math.round((completedLessonSlugs.size / lessons.length) * 100)
-  }, [completedLessonSlugs.size, lessons.length])
+  const lessonContext = useMemo(
+    () => (lesson ? findLessonSectionContext(curriculum, lesson.slug) : null),
+    [curriculum, lesson],
+  )
+
+  const sidebarLessons = useMemo(
+    () => lessonContext?.section.lessons ?? lessons,
+    [lessonContext, lessons],
+  )
+
+  const sectionProgressPercent = useMemo(() => {
+    const total = sidebarLessons.length
+    const completed = countCompletedLessons(sidebarLessons, completedLessonSlugs)
+    return lessonProgressPercent(completed, total)
+  }, [completedLessonSlugs, sidebarLessons])
+
+  const sectionTitle = useMemo(() => {
+    if (lessonContext) {
+      const { module, section } = lessonContext
+      if (shouldFlattenModuleSections(module) && section.title === "General") {
+        return module.title
+      }
+      return section.title
+    }
+    return course?.title ?? "Lessons"
+  }, [course?.title, lessonContext])
+
+  const sectionRemainingLabel = useMemo(() => {
+    const remaining = incompleteDurationMinutes(sidebarLessons, completedLessonSlugs)
+    return formatRemainingHoursLabel(remaining).replace(" left", " left in section")
+  }, [completedLessonSlugs, sidebarLessons])
+
+  const breadcrumbTopic = useMemo(() => {
+    if (lessonContext) {
+      const { module, section } = lessonContext
+      if (shouldFlattenModuleSections(module) && section.title === "General") {
+        return module.title
+      }
+      return section.title
+    }
+    return lesson?.title ?? "Lesson"
+  }, [lesson?.title, lessonContext])
+
+  const sectionSubtitle = useMemo(() => {
+    if (!lesson) return null
+    const duration = formatDurationShort(lesson.duration_minutes)
+    return `${sectionTitle} • ${duration}`
+  }, [lesson, sectionTitle])
 
   useEffect(() => {
     let alive = true
@@ -91,6 +147,9 @@ function PrepCourseLessonPage() {
         if (!alive) return
         setCourse(courseData.course)
         setLessons(courseData.lessons)
+        setCurriculum(
+          normalizeCurriculum(courseData.curriculum, courseData.lessons, courseData.course.id),
+        )
         setCompletedLessonSlugs(new Set(courseData.completedLessonSlugs ?? []))
         setLesson(lessonData.lesson)
         setLinkedQuestionRefs(lessonData.linkedQuestionRefs ?? [])
@@ -153,14 +212,7 @@ function PrepCourseLessonPage() {
     } finally {
       setStartingDrill(false)
     }
-  }, [
-    course,
-    lesson,
-    linkedQuestionRefs,
-    navigate,
-    practiceApi,
-    startingDrill,
-  ])
+  }, [course, lesson, linkedQuestionRefs, navigate, practiceApi, startingDrill])
 
   async function handleMarkComplete() {
     if (!lesson || !course || !prepCourseApi || savingComplete) return
@@ -206,30 +258,58 @@ function PrepCourseLessonPage() {
       <StudentMain className="max-w-[1280px] pb-24 pt-0">
         {error ? <p className="mb-4 text-xs text-[#95122b]">{error}</p> : null}
 
-        <section className={`grid gap-6 ${showSidebar ? "lg:grid-cols-[300px_1fr]" : "grid-cols-1"}`}>
-          {showSidebar ? (
-            <PrepCourseLessonSidebar
-              course={course}
-              lessons={lessons}
-              activeLessonSlug={lesson.slug}
-              completedLessonSlugs={completedLessonSlugs}
-              progressPercent={progressPercent}
-              onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
-            />
-          ) : null}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-[#dfe1e7] pb-4">
+          <h1 className="text-xl font-bold tracking-[0.02em] text-[#062357]">{course.title}</h1>
+          <nav
+            className="flex flex-wrap items-center gap-1.5 text-sm font-medium tracking-[0.02em] text-[#666d80]"
+            aria-label="Breadcrumb"
+          >
+            <span>Learn</span>
+            <span className="text-[#c5cee0]">/</span>
+            <Link to="/app/prep-course" className="font-semibold text-[#0d47a1] hover:underline">
+              Prep Course
+            </Link>
+            <span className="text-[#c5cee0]">/</span>
+            <Link
+              to={courseContentHref}
+              state={{ activeLessonSlug: lesson.slug }}
+              className="font-semibold text-[#0d47a1] hover:underline"
+            >
+              Course Content
+            </Link>
+            <span className="text-[#c5cee0]">/</span>
+            <span className="font-semibold text-[#062357]">{breadcrumbTopic}</span>
+          </nav>
+        </div>
 
-          <div ref={lessonContentRef}>
-            <PrepCourseLessonPanel
-              course={course}
-              lesson={lesson}
-              linkedQuestionRefs={linkedQuestionRefs}
-              activeDrillAttempt={activeDrillAttempt}
-              courseContentHref={courseContentHref}
-              onReviewDrill={handleReviewDrill}
-              onStartDrill={() => void handleStartDrill()}
-              startingDrill={startingDrill}
-              drillStartError={drillStartError}
-            />
+        <section className="overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+          <div className={`flex flex-col ${showSidebar ? "lg:flex-row" : ""}`}>
+            {showSidebar ? (
+              <PrepCourseLessonSidebar
+                lessons={sidebarLessons}
+                activeLessonSlug={lesson.slug}
+                completedLessonSlugs={completedLessonSlugs}
+                progressPercent={sectionProgressPercent}
+                sectionTitle={sectionTitle}
+                sectionSubtitle={sectionRemainingLabel}
+                onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
+                onClose={() => setShowSidebar(false)}
+              />
+            ) : null}
+
+            <div ref={lessonContentRef} className="min-w-0 flex-1 border-[#dfe1e7] p-6 lg:border-l">
+              <PrepCourseLessonPanel
+                course={course}
+                lesson={lesson}
+                linkedQuestionRefs={linkedQuestionRefs}
+                activeDrillAttempt={activeDrillAttempt}
+                sectionSubtitle={sectionSubtitle}
+                onReviewDrill={handleReviewDrill}
+                onStartDrill={() => void handleStartDrill()}
+                startingDrill={startingDrill}
+                drillStartError={drillStartError}
+              />
+            </div>
           </div>
         </section>
       </StudentMain>

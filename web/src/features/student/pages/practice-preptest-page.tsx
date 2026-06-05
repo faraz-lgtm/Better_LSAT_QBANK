@@ -1,34 +1,129 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom"
+import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
-import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
-import type { PrepTestDetailResponse, PrepTestDetailSection } from "@/features/student/preptests/preptest-types"
+import type {
+  PrepTestDetailResponse,
+  PrepTestDetailSection,
+  PrepTestSectionBreak,
+} from "@/features/student/preptests/preptest-types"
 import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
 import { createPracticeApi } from "@/lib/api/practice"
+import {
+  clearStoredSectionBreak,
+  PREPTEST_SECTION_BREAK_SECONDS,
+  writeStoredSectionBreak,
+} from "@/features/student/preptests/preptest-section-break"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-import { ChevronDown, Timer, X } from "lucide-react"
+import { ChevronDown, ChevronRight, Timer, X } from "lucide-react"
 
-function ConfigSelect({
+const SECTION_BREAK_TOTAL_SECONDS = PREPTEST_SECTION_BREAK_SECONDS
+
+function formatBreakCountdown(totalSeconds: number): string {
+  const clamped = Math.max(0, totalSeconds)
+  const minutes = Math.floor(clamped / 60)
+  const seconds = clamped % 60
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+}
+
+function SectionBreakRow({
+  sectionBreak,
+  skipping,
+  onSkip,
+  onExpired,
+}: {
+  sectionBreak: PrepTestSectionBreak
+  skipping: boolean
+  onSkip: () => void
+  onExpired: () => void
+}) {
+  const [remainingSeconds, setRemainingSeconds] = useState(() => {
+    const endsAtMs = Date.parse(sectionBreak.endsAt)
+    if (!Number.isFinite(endsAtMs)) return sectionBreak.remainingSeconds
+    return Math.max(0, Math.ceil((endsAtMs - Date.now()) / 1000))
+  })
+
+  useEffect(() => {
+    const endsAtMs = Date.parse(sectionBreak.endsAt)
+    if (!Number.isFinite(endsAtMs)) {
+      setRemainingSeconds(sectionBreak.remainingSeconds)
+      return
+    }
+
+    const tick = () => {
+      const next = Math.max(0, Math.ceil((endsAtMs - Date.now()) / 1000))
+      setRemainingSeconds(next)
+      if (next <= 0) onExpired()
+    }
+
+    tick()
+    const id = window.setInterval(tick, 250)
+    return () => window.clearInterval(id)
+  }, [sectionBreak.endsAt, sectionBreak.remainingSeconds, onExpired])
+
+  const progress = remainingSeconds / SECTION_BREAK_TOTAL_SECONDS
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#f0e4b8] bg-[#fff8e6] px-5 py-4 md:px-6">
+      <p className="text-xl font-bold text-[#062357]">Section Break</p>
+      <div className="flex min-w-[220px] flex-1 flex-col items-end gap-2 sm:max-w-md">
+        <p className="text-sm font-semibold text-[#062357]">
+          Starting next section in {formatBreakCountdown(remainingSeconds)}
+        </p>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-[#dfe1e7]">
+          <div
+            className="h-full rounded-full bg-[#0d47a1] transition-[width] duration-300 ease-linear"
+            style={{ width: `${Math.max(0, Math.min(100, progress * 100))}%` }}
+          />
+        </div>
+      </div>
+      <button
+        type="button"
+        disabled={skipping}
+        onClick={onSkip}
+        className="inline-flex items-center gap-1 text-sm font-semibold text-[#0d47a1] hover:underline disabled:opacity-60"
+      >
+        {skipping ? "Skipping…" : "Skip Break"}
+        <ChevronRight className="size-4" aria-hidden />
+      </button>
+    </div>
+  )
+}
+
+function PrepTestHubStat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex min-w-[88px] flex-col gap-0.5">
+      <dt className="text-xs font-medium text-[#666d80]">{label}</dt>
+      <dd className="text-lg font-bold leading-tight text-[#062357]">{value}</dd>
+    </div>
+  )
+}
+
+function PrepTestConfigCard({
   id,
   label,
+  description,
   value,
   onChange,
   options,
 }: {
   id: string
   label: string
+  description: string
   value: string
   onChange: (next: string) => void
   options: { id: string; label: string }[]
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="text-sm font-semibold text-[#062357]">
-        {label}
-      </label>
+    <div className="flex flex-col gap-3 rounded-2xl border border-[#dfe1e7] bg-white px-4 py-4 md:px-5 md:py-5">
+      <div className="flex flex-col gap-0.5">
+        <label htmlFor={id} className="text-sm font-semibold text-[#062357]">
+          {label}
+        </label>
+        <p className="text-xs font-medium leading-snug text-[#666d80]">{description}</p>
+      </div>
       <div className="relative">
         <select
           id={id}
@@ -52,9 +147,17 @@ function ConfigSelect({
 }
 
 function sectionShortTitle(row: PrepTestDetailSection): string {
-  if (row.title) return row.title
   if (row.sectionNumber != null) return `Section ${row.sectionNumber}`
+  if (row.title) return row.title
   return row.sectionType
+}
+
+function sectionTimeDisplay(minutes: number): string {
+  return `${String(minutes).padStart(2, "0")}:00`
+}
+
+function sectionQuestionsLine(count: number): string {
+  return count === 1 ? "1 Question" : `${count} Questions`
 }
 
 function PrepTestSectionRow({
@@ -66,38 +169,52 @@ function PrepTestSectionRow({
   starting: boolean
   onStart: () => void
 }) {
-  const active = row.practiceable && row.unlocked
-  const progress =
-    row.questionCount > 0 ? `${row.answeredCount}/${row.questionCount} questions` : "—"
+  const active = row.practiceable && row.unlocked && !row.completed
+  const breakLocked = row.practiceable && row.onBreak
+  const showStartButton = active || breakLocked
+  const emphasized = active || row.completed
 
   return (
-    <div className="flex min-h-[100px] flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#dfe1e7] bg-white px-5 py-4 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)] md:px-6">
+    <div className="flex min-h-[88px] flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#dfe1e7] bg-white px-5 py-4 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)] md:px-6">
       <div className="flex min-w-0 flex-col gap-1.5">
-        <p className={cn("text-2xl font-bold leading-[1.3]", active ? "text-[#0d47a1]" : "text-[#a4acb9]")}>
+        <p
+          className={cn(
+            "text-2xl font-bold leading-[1.3]",
+            emphasized ? "text-[#0d47a1]" : "text-[#a4acb9]",
+          )}
+        >
           {sectionShortTitle(row)}
         </p>
         <div
           className={cn(
-            "flex flex-wrap items-center gap-3 text-sm font-semibold leading-[1.5] tracking-[0.02em]",
-            active ? "text-[#666d80]" : "text-[#a4acb9]",
+            "flex flex-wrap items-center gap-2 text-sm font-medium leading-[1.5] tracking-[0.02em]",
+            emphasized ? "text-[#666d80]" : "text-[#a4acb9]",
           )}
         >
           <Timer className="size-4 shrink-0" aria-hidden />
-          <span>{row.timeMinutes}:00</span>
-          <span className="hidden h-3.5 w-px bg-[#dfe1e7] sm:block" aria-hidden />
-          <span>{progress}</span>
+          <span>{sectionTimeDisplay(row.timeMinutes)}</span>
+          <span aria-hidden>|</span>
+          <span>{sectionQuestionsLine(row.questionCount)}</span>
           {row.completed ? <span className="text-[#287f6e]">Completed</span> : null}
           {!row.practiceable ? <span>Not available for practice</span> : null}
         </div>
       </div>
-      {active ? (
+      {showStartButton ? (
         <button
           type="button"
-          disabled={starting}
+          disabled={breakLocked || starting}
           onClick={onStart}
-          className="ds-btn min-w-[148px] shrink-0 px-6 text-base"
+          className={cn(
+            "ds-btn min-w-[148px] shrink-0 px-6 text-base",
+            breakLocked && "cursor-not-allowed opacity-50",
+          )}
         >
-          {starting ? "Starting…" : row.activeSectionSessionId ? "Continue section" : "Start section"}
+          {starting
+            ? "Starting…"
+            : row.activeSectionSessionId
+              ? "Continue Section"
+              : "Start Section"}
+          {!starting ? <ChevronRight className="size-4" aria-hidden /> : null}
         </button>
       ) : null}
     </div>
@@ -106,6 +223,7 @@ function PrepTestSectionRow({
 
 function PracticePrepTestPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { testId: testIdParam } = useParams<{ testId: string }>()
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
 
@@ -123,6 +241,7 @@ function PracticePrepTestPage() {
   } | null>(null)
   const [scoreHidden, setScoreHidden] = useState(true)
   const [startingBlindReview, setStartingBlindReview] = useState(false)
+  const [skippingBreak, setSkippingBreak] = useState(false)
 
   const load = useCallback(async () => {
     if (!testIdParam) return
@@ -142,16 +261,26 @@ function PracticePrepTestPage() {
   }, [practiceApi, testIdParam])
 
   useEffect(() => {
+    const justCompleted = (location.state as { sectionJustCompleted?: string } | null)?.sectionJustCompleted
+    if (typeof justCompleted === "string" && testIdParam) {
+      writeStoredSectionBreak(testIdParam, justCompleted)
+      navigate(location.pathname, { replace: true, state: null })
+    }
     void load()
-  }, [load])
+  }, [load, location.pathname, location.state, navigate, testIdParam])
 
-  async function persistConfig() {
+  const handleBreakExpired = useCallback(() => {
+    if (testIdParam) clearStoredSectionBreak(testIdParam)
+    void load()
+  }, [load, testIdParam])
+
+  async function persistConfig(nextTiming = timingId, nextFormat = formatId) {
     if (!testIdParam) return
     try {
       const out = await practiceApi.startPrepTest({
         prepTestId: testIdParam,
-        timing: timingId,
-        format: formatId,
+        timing: nextTiming,
+        format: nextFormat,
       })
       setDetail(out.detail)
     } catch (e) {
@@ -192,6 +321,25 @@ function PracticePrepTestPage() {
       setError(e instanceof Error ? e.message : "Failed to complete PrepTest")
     } finally {
       setFinishing(false)
+    }
+  }
+
+  async function handleSkipSectionBreak() {
+    if (!testIdParam || skippingBreak) return
+    setSkippingBreak(true)
+    setError(null)
+    clearStoredSectionBreak(testIdParam)
+    try {
+      try {
+        const nextDetail = await practiceApi.getPrepTestDetail(testIdParam)
+        setDetail(nextDetail)
+      } catch {
+        await load()
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to skip section break")
+    } finally {
+      setSkippingBreak(false)
     }
   }
 
@@ -245,13 +393,6 @@ function PracticePrepTestPage() {
 
   return (
     <>
-      <StudentSubnavStrip
-        crumbs={[
-          { label: "Practice", href: "/app/practice/drills" },
-          { label: "PrepTests", href: "/app/practice/preptest" },
-          { label: prepTest.label },
-        ]}
-      />
       <StudentMain>
         <PrepTestDetailHeader navigate={navigate} prepTestLabel={prepTest.label} />
 
@@ -261,55 +402,50 @@ function PracticePrepTestPage() {
           </p>
         ) : null}
 
-        <section className="overflow-hidden rounded-2xl border border-[#dfe1e7] bg-[#f5f9ff] shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)]">
-          <div className="border-b border-[#dfe1e7] bg-white/80 px-5 py-6 md:px-8 md:py-8">
-            <h1 className="text-2xl font-bold leading-[1.25] text-[#062357] md:text-[28px]">Ready to begin your test?</h1>
-            <p className="mt-6 text-3xl font-bold text-[#0d47a1] md:text-[32px]">{prepTest.label}</p>
-            <dl className="mt-8 flex flex-wrap items-stretch gap-0 divide-x divide-[#dfe1e7]">
-              <div className="flex min-w-[100px] flex-1 flex-col gap-1 px-4 py-1 first:pl-0">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-[#666d80]">Questions</dt>
-                <dd className="text-2xl font-bold text-[#062357]">{prepTest.questionCount}</dd>
-              </div>
-              <div className="flex min-w-[100px] flex-1 flex-col gap-1 px-4 py-1">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-[#666d80]">Total time</dt>
-                <dd className="text-2xl font-bold text-[#062357]">{prepTest.totalMinutes} min</dd>
-              </div>
-              <div className="flex min-w-[100px] flex-1 flex-col gap-1 px-4 py-1 last:pr-0">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-[#666d80]">Sections</dt>
-                <dd className="text-2xl font-bold text-[#062357]">{prepTest.practiceableSectionCount}</dd>
-              </div>
+        <section className="rounded-2xl border border-[#dfe1e7] bg-white px-5 py-6 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)] md:px-8 md:py-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold leading-tight text-[#062357] md:text-[28px]">
+                Ready to begin your test?
+              </h1>
+              <p className="mt-3 text-2xl font-bold text-[#0d47a1] md:text-[32px]">{prepTest.label}</p>
+            </div>
+            <dl className="flex shrink-0 flex-wrap items-start gap-6 md:gap-8 lg:justify-end">
+              <PrepTestHubStat label="Questions" value={prepTest.questionCount} />
+              <PrepTestHubStat label="Total Time" value={`${prepTest.totalMinutes} min`} />
+              <PrepTestHubStat label="Sections" value={prepTest.practiceableSectionCount} />
             </dl>
           </div>
-          <div className="grid gap-6 px-5 py-6 md:grid-cols-2 md:gap-8 md:px-8 md:py-8">
-            <ConfigSelect
+
+          <div className="mt-8 grid gap-4 md:grid-cols-2 md:gap-6">
+            <PrepTestConfigCard
               id="preptest-timing"
               label="Timing"
+              description="Control your practice pace"
               value={timingId}
               onChange={(v) => {
                 setTimingId(v)
+                void persistConfig(v, formatId)
               }}
               options={detail.timingOptions}
             />
-            <ConfigSelect
+            <PrepTestConfigCard
               id="preptest-format"
               label="Format"
+              description="Select format"
               value={formatId}
               onChange={(v) => {
                 setFormatId(v)
+                void persistConfig(timingId, v)
               }}
               options={detail.formatOptions}
             />
-          </div>
-          <div className="border-t border-[#dfe1e7] px-5 pb-6 md:px-8">
-            <Button type="button" variant="outline" className="rounded-2xl" onClick={() => void persistConfig()}>
-              Save settings
-            </Button>
           </div>
         </section>
 
         <section className="mt-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-bold text-[#062357]">Test sections</h2>
+            <h2 className="text-xl font-bold text-[#062357]">Test Section</h2>
             {detail.allPracticeableSectionsComplete ? (
               <Button
                 type="button"
@@ -323,7 +459,7 @@ function PracticePrepTestPage() {
           </div>
           <ul className="mt-4 flex flex-col gap-3">
             {detail.sections.map((row) => (
-              <li key={row.id}>
+              <li key={row.id} className="flex flex-col gap-3">
                 <PrepTestSectionRow
                   row={row}
                   starting={startingSectionId === row.id}
@@ -335,6 +471,14 @@ function PracticePrepTestPage() {
                     void handleStartSection(row.id)
                   }}
                 />
+                {detail.sectionBreak?.afterSectionId === row.id ? (
+                  <SectionBreakRow
+                    sectionBreak={detail.sectionBreak}
+                    skipping={skippingBreak}
+                    onSkip={() => void handleSkipSectionBreak()}
+                    onExpired={handleBreakExpired}
+                  />
+                ) : null}
               </li>
             ))}
           </ul>

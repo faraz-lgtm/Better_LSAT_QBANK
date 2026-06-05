@@ -6,6 +6,7 @@ import {
   findLessonLocation,
   lessonProgressPercent,
   normalizeCurriculum,
+  shouldFlattenModuleSections,
 } from "./prep-course-format"
 import type { PrepLesson } from "@/lib/api/prep-course"
 
@@ -46,6 +47,38 @@ describe("prep-course-format curriculum helpers", () => {
     const loc = findLessonLocation(curriculum, "intro")
     expect(loc?.moduleId).toBe("fallback-module")
     expect(loc?.sectionId).toBe("fallback-section")
+  })
+
+  it("shouldFlattenModuleSections hides default General wrapper", () => {
+    const curriculum = normalizeCurriculum(undefined, [baseLesson], "c1")
+    expect(shouldFlattenModuleSections(curriculum.modules[0]!)).toBe(true)
+    expect(
+      shouldFlattenModuleSections({
+        id: "m1",
+        course_id: "c1",
+        title: "Prep Course",
+        sort_order: 1,
+        duration_minutes: null,
+        sections: [
+          {
+            id: "s1",
+            module_id: "m1",
+            title: "Introduction",
+            sort_order: 1,
+            duration_minutes: null,
+            lessons: [baseLesson],
+          },
+          {
+            id: "s2",
+            module_id: "m1",
+            title: "Advanced",
+            sort_order: 2,
+            duration_minutes: null,
+            lessons: [],
+          },
+        ],
+      }),
+    ).toBe(false)
   })
 
   it("countCompletedLessons and lessonProgressPercent", () => {

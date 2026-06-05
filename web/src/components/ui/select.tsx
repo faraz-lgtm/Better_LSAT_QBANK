@@ -19,7 +19,7 @@ function Select({ className, options, placeholder = "Select option", ...props }:
       <select
         data-slot="select"
         className={cn(
-          "h-11 w-full appearance-none rounded-xl border border-input bg-background px-3 pr-10 text-sm text-foreground shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50",
+          "h-11 w-full appearance-none rounded-xl border border-input bg-[#F6F8FA] px-3 pr-10 text-sm text-foreground shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
         {...props}

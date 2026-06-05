@@ -46,11 +46,13 @@ const mockDetail = {
       timeMinutes: 35,
       practiceable: true,
       unlocked: true,
+      onBreak: false,
       answeredCount: 0,
       completed: false,
       activeSectionSessionId: null,
     },
   ],
+  sectionBreak: null,
   prepTestSession: null,
   status: "fresh" as const,
   allPracticeableSectionsComplete: false,
@@ -87,8 +89,14 @@ describe("PracticePrepTestPage + section navigation", () => {
 
     expect(await screen.findByRole("heading", { name: /Ready to begin your test/i })).toBeInTheDocument()
     expect(within(screen.getByRole("main")).getByText("PT 900")).toBeInTheDocument()
+    expect(screen.getByText("Control your practice pace")).toBeInTheDocument()
+    expect(screen.getByText("Select format")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Test Section" })).toBeInTheDocument()
+    expect(screen.getByText("Section 1")).toBeInTheDocument()
+    expect(screen.getByText("35:00")).toBeInTheDocument()
+    expect(screen.getByText("3 Questions")).toBeInTheDocument()
 
-    await user.click(screen.getByRole("button", { name: /Start section/i }))
+    await user.click(screen.getByRole("button", { name: /Start Section/i }))
 
     expect(mockStartSection).toHaveBeenCalledWith(
       expect.objectContaining({ sectionId: "sec-lr", timing: "35" }),

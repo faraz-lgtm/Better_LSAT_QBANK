@@ -6,109 +6,92 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { DrillConfigSelectField } from "@/features/student/drills/drill-config-field"
 import { drillSurfaceCard } from "@/features/student/drills/drill-surface-style"
-import {
-  drillConfigOptions,
-  type DrillDifficulty,
-  type DrillSectionType,
-  type DrillShowAnswers,
-  type DrillStatus,
-  type DrillTiming,
-} from "@/features/student/drills/drill-types"
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
+import {
+  formatSectionPoolLabel,
+  sectionConfigOptions,
+  type SectionPoolSort,
+  type SectionShowAnswers,
+  type SectionTiming,
+  type SectionType,
+} from "@/features/student/sections/section-types"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
-type DrillConfigFormProps = {
-  sectionType: DrillSectionType
-  initialQuestionTypeId?: string | null
-  initialTagLabel?: string | null
-  tagOptions?: { label: string; value: string }[]
+type SectionConfigFormProps = {
+  sectionType: SectionType
+  initialSectionId?: string | null
 }
 
-const sectionCopy: Record<
-  DrillSectionType,
-  { title: string; crumb: string; subtitle?: string }
-> = {
-  LR: { title: "Logical Reasoning", crumb: "LR Drills" },
-  RC: { title: "Reading Comprehension", crumb: "RC Drills" },
+const sectionCopy: Record<SectionType, { title: string; crumb: string }> = {
+  LR: { title: "Logical Reasoning", crumb: "LR Sections" },
+  RC: { title: "Reading Comprehension", crumb: "RC Sections" },
 }
 
-function DrillConfigForm({
-  sectionType,
-  initialQuestionTypeId = null,
-  initialTagLabel = null,
-  tagOptions = [],
-}: DrillConfigFormProps) {
+function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConfigFormProps) {
   const navigate = useNavigate()
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
 
   const [bannerOpen, setBannerOpen] = useState(true)
-  const [customize, setCustomize] = useState(Boolean(initialQuestionTypeId))
+  const [customize, setCustomize] = useState(false)
   const [starting, setStarting] = useState(false)
+  const [loadingPool, setLoadingPool] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [poolStats, setPoolStats] = useState({ selectedCount: 0, totalCount: 0 })
+  const [poolTotal, setPoolTotal] = useState(0)
 
-  const [questionCount, setQuestionCount] = useState("5")
-  const [timing, setTiming] = useState<DrillTiming>("unlimited")
-  const [showAnswers, setShowAnswers] = useState<DrillShowAnswers>("end")
-  const [selection, setSelection] = useState("auto")
-  const [tags, setTags] = useState(initialQuestionTypeId ?? "any")
-  const [difficulty, setDifficulty] = useState<DrillDifficulty>("adaptive")
-  const [status, setStatus] = useState<DrillStatus>("fresh")
+  const [sectionId, setSectionId] = useState(initialSectionId ?? "")
+  const [timing, setTiming] = useState<SectionTiming>("35")
+  const [showAnswers, setShowAnswers] = useState<SectionShowAnswers>("end")
+  const [sort, setSort] = useState<SectionPoolSort>("newest")
+  const [sectionOptions, setSectionOptions] = useState<{ label: string; value: string }[]>([])
 
   const copy = sectionCopy[sectionType]
 
-  const tagSelectOptions = useMemo(() => {
-    const base = [{ label: "Any", value: "any" }, ...tagOptions]
-    if (initialQuestionTypeId && !tagOptions.some((t) => t.value === initialQuestionTypeId)) {
-      return [{ label: initialTagLabel ?? "Selected tag", value: initialQuestionTypeId }, ...base]
-    }
-    return base
-  }, [tagOptions, initialQuestionTypeId, initialTagLabel])
-
-  const resolvedQuestionTypeId = tags === "any" ? null : tags
-
-  const loadPoolStats = useCallback(async () => {
+  const loadPool = useCallback(async () => {
+    setLoadingPool(true)
     try {
-      const stats = await practiceApi.getDrillPoolStats({
+      const pool = await practiceApi.listSectionPool({
         sectionType,
-        questionTypeId: resolvedQuestionTypeId,
-        difficulty,
-        status,
+        page: 1,
+        pageSize: 50,
+        sort,
       })
-      setPoolStats(stats)
+      const options = pool.sections.map((item) => ({
+        label: formatSectionPoolLabel(item),
+        value: item.id,
+      }))
+      setSectionOptions(options)
+      setPoolTotal(pool.total)
+      setSectionId((current) => {
+        if (current && options.some((o) => o.value === current)) return current
+        if (initialSectionId && options.some((o) => o.value === initialSectionId)) return initialSectionId
+        return options[0]?.value ?? ""
+      })
     } catch {
-      setPoolStats({ selectedCount: 0, totalCount: 0 })
+      setSectionOptions([])
+      setPoolTotal(0)
+      setSectionId("")
+    } finally {
+      setLoadingPool(false)
     }
-  }, [practiceApi, sectionType, resolvedQuestionTypeId, difficulty, status])
+  }, [practiceApi, sectionType, sort, initialSectionId])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      void loadPoolStats()
+      void loadPool()
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [loadPoolStats])
+  }, [loadPool])
 
   async function handleStart() {
+    if (!sectionId) return
     setStarting(true)
     setError(null)
     try {
-      const count = Number.parseInt(questionCount, 10)
-      const out = await practiceApi.startDrill({
-        sectionType,
-        questionCount: Number.isFinite(count) ? count : 5,
-        timing,
-        showAnswers,
-        selection: selection as "auto" | "manual",
-        questionTypeId: resolvedQuestionTypeId,
-        tagLabel: initialTagLabel,
-        difficulty,
-        status,
-        title: initialTagLabel ?? undefined,
-      })
-      navigate(`/app/practice/drills/session/${out.session.id}`)
+      const out = await practiceApi.startSection({ sectionId, timing, showAnswers })
+      navigate(`/app/practice/sections/session/${out.session.id}`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to start drill")
+      setError(e instanceof Error ? e.message : "Failed to start section")
     } finally {
       setStarting(false)
     }
@@ -117,12 +100,12 @@ function DrillConfigForm({
   return (
     <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5">
       <nav className="flex flex-wrap items-center gap-1 text-sm font-semibold">
-        <Link to="/app/practice/drills" className="hover:underline" style={{ color: "var(--color-student-cta)" }}>
+        <Link to="/app/practice/sections" className="hover:underline" style={{ color: "var(--color-student-cta)" }}>
           Practice
         </Link>
         <span className="text-muted-foreground">/</span>
-        <Link to="/app/practice/drills" className="hover:underline" style={{ color: "var(--color-student-cta)" }}>
-          Drills
+        <Link to="/app/practice/sections" className="hover:underline" style={{ color: "var(--color-student-cta)" }}>
+          Sections
         </Link>
         <span className="text-muted-foreground">/</span>
         <span style={{ color: "var(--color-student-heading)" }}>{copy.crumb}</span>
@@ -131,15 +114,12 @@ function DrillConfigForm({
       {bannerOpen ? (
         <div
           className="flex items-start gap-3 rounded-xl px-4 py-3 md:items-center md:px-5"
-          style={{
-         
-            color: "var(--color-student-cta)",
-          }}
+          style={{ color: "var(--color-student-cta)" }}
         >
           <p className="min-w-0 flex-1 text-sm leading-snug ds-text-muted">
-            We&apos;ll target your weaknesses with adaptive drills powered by our smart analytics.{" "}
+            Practice a full official section under test-like conditions.{" "}
             <strong className="font-normal" style={{ color: "var(--color-student-heading)" }}>
-              On/Off the settings to customize.
+              Turn on settings to change which section you take.
             </strong>
           </p>
           <button
@@ -164,6 +144,9 @@ function DrillConfigForm({
               <h1 className="text-xl font-bold tracking-tight md:text-2xl" style={{ color: "var(--color-student-heading)" }}>
                 {copy.title}
               </h1>
+              <p className="mt-1 text-sm ds-text-muted">
+                {sectionType === "LR" ? "16–20 Questions" : "4 Passages"}
+              </p>
             </div>
           </div>
           <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-4 md:flex-col md:items-end lg:flex-row lg:items-center">
@@ -172,72 +155,56 @@ function DrillConfigForm({
                 Customize
               </p>
               <p className="ds-text-muted">
-                Selecting from {poolStats.selectedCount} of {poolStats.totalCount} questions in your drill pool
+                {loadingPool
+                  ? "Loading your section pool…"
+                  : `Choosing from ${poolTotal} section${poolTotal === 1 ? "" : "s"} in your pool`}
               </p>
             </div>
             <Switch
               checked={customize}
               onChange={(e) => setCustomize(e.target.checked)}
               className={customize ? "!bg-[var(--color-student-cta)]" : undefined}
-              aria-label="Customize drill settings"
+              aria-label="Customize section settings"
             />
           </div>
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <DrillConfigSelectField
-            label="Number of Questions"
-            description="Select as many questions you can"
-            value={questionCount}
-            onChange={setQuestionCount}
-            options={[...drillConfigOptions.questionCount]}
-          />
+          {customize ? (
+            <DrillConfigSelectField
+              label="Select Section"
+              description="Pick a PrepTest section from your pool"
+              value={sectionId}
+              onChange={setSectionId}
+              options={sectionOptions}
+              placeholder={loadingPool ? "Loading…" : "Select section"}
+            />
+          ) : null}
           <DrillConfigSelectField
             label="Timing"
             description="Control your practice pace"
             value={timing}
-            onChange={(v) => setTiming(v as DrillTiming)}
-            options={[...drillConfigOptions.timing]}
+            onChange={(v) => setTiming(v as SectionTiming)}
+            options={[...sectionConfigOptions.timing]}
           />
           <DrillConfigSelectField
             label="Show Answers"
             description="When to reveal answers"
             value={showAnswers}
-            onChange={(v) => setShowAnswers(v as DrillShowAnswers)}
-            options={[...drillConfigOptions.showAnswers]}
-            className="sm:col-span-2 lg:col-span-1"
+            onChange={(v) => setShowAnswers(v as SectionShowAnswers)}
+            options={[...sectionConfigOptions.showAnswers]}
+            className={customize ? undefined : "sm:col-span-2 lg:col-span-1"}
           />
         </div>
 
         {customize ? (
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <DrillConfigSelectField
-              label="Selection"
-              description="How questions are chosen for this drill"
-              value={selection}
-              onChange={setSelection}
-              options={[...drillConfigOptions.selection]}
-            />
-            <DrillConfigSelectField
-              label="Tags"
-              description="Filter by reasoning tags"
-              value={tags}
-              onChange={setTags}
-              options={tagSelectOptions}
-            />
-            <DrillConfigSelectField
-              label="Difficulty"
-              description="Match difficulty to your goals"
-              value={difficulty}
-              onChange={(v) => setDifficulty(v as DrillDifficulty)}
-              options={[...drillConfigOptions.difficulty]}
-            />
-            <DrillConfigSelectField
-              label="Status"
-              description="Include questions you have seen before"
-              value={status}
-              onChange={(v) => setStatus(v as DrillStatus)}
-              options={[...drillConfigOptions.status]}
+              label="Sort"
+              description="Order sections in your pool"
+              value={sort}
+              onChange={(v) => setSort(v as SectionPoolSort)}
+              options={[...sectionConfigOptions.sort]}
             />
           </div>
         ) : null}
@@ -251,7 +218,7 @@ function DrillConfigForm({
         <div className="mt-8 flex justify-end border-t border-[#dfe1e7] pt-6">
           <div className="flex flex-wrap items-center justify-end gap-4">
             <Link
-              to="/app/practice/drills"
+              to="/app/practice/sections"
               className="text-sm font-semibold text-[#0d47a1] transition-colors hover:underline"
             >
               Back
@@ -302,7 +269,7 @@ function DrillConfigForm({
               type="button"
               variant="default"
               size="sm"
-              disabled={starting || poolStats.selectedCount === 0}
+              disabled={starting || loadingPool || !sectionId || poolTotal === 0}
               className="gap-2 text-white"
               onClick={() => void handleStart()}
             >
@@ -322,7 +289,7 @@ function DrillConfigForm({
                   strokeLinecap="round"
                 />
               </svg>
-              {starting ? "Starting…" : "Start a Drill"}
+              {starting ? "Starting…" : "Start Section"}
             </Button>
           </div>
         </div>
@@ -331,4 +298,4 @@ function DrillConfigForm({
   )
 }
 
-export { DrillConfigForm }
+export { SectionConfigForm }

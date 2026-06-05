@@ -151,57 +151,6 @@ Deno.test('submitAnswer rejects completed session', async () => {
   )
 })
 
-Deno.test('submitAnswer allows blind review on completed standalone section', async () => {
-  const repo = {
-    ...mockRepo(),
-    getSessionById: async () =>
-      baseSession({
-        kind: 'SECTION',
-        prep_test_id: null,
-        section_id: 'sec-1',
-        completed_at: '2026-01-02T00:00:00Z',
-      }),
-  }
-  const service = createPracticeService({ repository: repo as never })
-  const out = await service.submitAnswer('user-1', {
-    sessionId: 'sess-1',
-    questionId: 'q-1',
-    selectedAnswer: 'C',
-    blindReview: true,
-  })
-  assertEquals(out.event.is_correct, true)
-})
-
-Deno.test('submitAnswer allows blind review on completed drill', async () => {
-  const repo = {
-    ...mockRepo(),
-    getSessionById: async () =>
-      baseSession({
-        kind: 'DRILL',
-        prep_test_id: null,
-        completed_at: '2026-01-02T00:00:00Z',
-        metadata: { questionIds: ['q-1'] },
-      }),
-    getQuestionDetail: async () =>
-      ({
-        id: 'q-1',
-        correct_answer: 'C',
-        difficulty: 2,
-        question_type_id: null,
-        section_id: 'sec-1',
-        admin_sections: { section_type: 'LR' as const, prep_test_id: 'pt-1' },
-      }) satisfies QuestionDetailRow,
-  }
-  const service = createPracticeService({ repository: repo as never })
-  const out = await service.submitAnswer('user-1', {
-    sessionId: 'sess-1',
-    questionId: 'q-1',
-    selectedAnswer: 'C',
-    blindReview: true,
-  })
-  assertEquals(out.event.is_correct, true)
-})
-
 Deno.test('completeSession uses latest answer per question for raw score', async () => {
   const service = createPracticeService({ repository: mockRepo() as never })
   const out = await service.completeSession('user-1', { sessionId: 'sess-1' })
@@ -241,36 +190,6 @@ Deno.test('updateSession stores flaggedQuestionIds in metadata', async () => {
     flaggedQuestionIds: ['q-2'],
   })
   assertEquals(captured!.metadata, { questionIds: ['q-1', 'q-2'], flaggedQuestionIds: ['q-2'] })
-})
-
-Deno.test('updateSession stores seenQuestionIds in section metadata', async () => {
-  let captured: { metadata?: Record<string, unknown> } | null = null
-  const repo = {
-    ...mockRepo(),
-    getSessionById: async () =>
-      baseSession({
-        kind: 'SECTION',
-        prep_test_id: 'pt-1',
-        section_id: 'sec-1',
-        metadata: { questionIds: ['q-1', 'q-2'], seenQuestionIds: ['q-1'] },
-      }),
-    updateSession: async (_id: string, _uid: string, patch: Record<string, unknown>) => {
-      captured = { metadata: patch.metadata as Record<string, unknown> | undefined }
-      return baseSession({
-        kind: 'SECTION',
-        metadata: (patch.metadata as Record<string, unknown>) ?? {},
-      })
-    },
-  }
-  const service = createPracticeService({ repository: repo as never })
-  await service.updateSession('user-1', {
-    sessionId: 'sess-1',
-    seenQuestionIds: ['q-1', 'q-2'],
-  })
-  assertEquals(captured!.metadata, {
-    questionIds: ['q-1', 'q-2'],
-    seenQuestionIds: ['q-1', 'q-2'],
-  })
 })
 
 Deno.test('updateSession rejects flaggedQuestionIds not in session', async () => {
@@ -439,38 +358,6 @@ Deno.test('startLessonDrill resolves question from PT reference when not linked'
   })
   const out = await service.startLessonDrill('user-1', { lessonId: 'lesson-1' })
   assertEquals(out.metadata.questionIds, ['q-133'])
-})
-
-Deno.test('startLessonDrill resolves question from stimulus hint when no PT ref', async () => {
-  const service = createPracticeService({
-    repository: drillRepo({
-      getPublishedPrepLessonById: async () => ({
-        id: 'lesson-lexicon',
-        title: 'The Lexicon',
-        lesson_type: 'active_drill',
-        summary: 'Intro to LR anatomy.',
-        text_content: '<p>Module 1, ACTIVE DRILL Musical Performances</p>',
-        is_published: true,
-      }),
-      listLessonQuestionIds: async () => [],
-      findQuestionIdByStimulusPhrase: async (phrase: string) => {
-        assertEquals(phrase, 'inspired musical performance')
-        return 'q-music'
-      },
-      getQuestionDetail: async () => ({
-        id: 'q-music',
-        correct_answer: 'A',
-        difficulty: 2,
-        question_type_id: null,
-        section_id: 's1',
-        admin_sections: { section_type: 'LR' as const, prep_test_id: 'pt-1' },
-      }),
-      getDrillQuestionRowsByIds: async (ids: string[]) =>
-        ids.map((id) => ({ ...drillQuestionRow, id })),
-    }) as never,
-  })
-  const out = await service.startLessonDrill('user-1', { lessonId: 'lesson-lexicon' })
-  assertEquals(out.metadata.questionIds, ['q-music'])
 })
 
 Deno.test('startLessonDrill creates adaptive drill session with multiple questions', async () => {

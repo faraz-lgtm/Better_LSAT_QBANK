@@ -129,14 +129,14 @@ function SectionProgressChart({ points, tab }: { points: SectionProgressPoint[];
 
 function SectionStatPair({ summary }: { summary: SectionSummary }) {
   return (
-    <div className="flex flex-wrap gap-6">
-      <article className="ds-analytics-stat ds-analytics-stat--compact">
+    <div className="grid grid-cols-2 gap-4">
+      <article className="ds-analytics-stat ds-analytics-stat--pair min-w-0">
         <p className="ds-analytics-stat__label">BEST SCORE</p>
         <p className="ds-analytics-stat__value" style={{ color: summary.bestAccent }}>
           {summary.bestScore}
         </p>
       </article>
-      <article className="ds-analytics-stat ds-analytics-stat--compact">
+      <article className="ds-analytics-stat ds-analytics-stat--pair min-w-0">
         <p className="ds-analytics-stat__label">AVERAGE SCORE</p>
         <p className="ds-analytics-stat__value" style={{ color: summary.averageAccent }}>
           {summary.averageScore}

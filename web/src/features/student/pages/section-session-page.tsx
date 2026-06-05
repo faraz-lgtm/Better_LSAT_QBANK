@@ -7,6 +7,7 @@ import { LrDrillOptionRow } from "@/features/student/drills/lr-drill-option-row"
 import type { DrillQuestion } from "@/features/student/drills/drill-types"
 import type { SectionSessionResponse } from "@/features/student/sections/section-types"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
+import { PracticeQuestionStem } from "@/features/student/practice-session/practice-question-stem"
 import { PracticeSessionHeader } from "@/features/student/practice-session/practice-session-header"
 import {
   canChangePracticeAnswer,
@@ -15,12 +16,17 @@ import {
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
-import { PracticeQuestionFlagButton } from "@/features/student/practice-session/practice-question-flag-button"
 import { usePracticeQuestionFlags } from "@/features/student/practice-session/use-practice-question-flags"
 import { usePracticeQuestionSeen } from "@/features/student/practice-session/use-practice-question-seen"
-import { usePracticeSessionTimer } from "@/features/student/practice-session/use-practice-session-timer"
+import {
+  computeElapsedTimerProgress,
+  computeRemainingTimerProgress,
+  resolveTimerBudgetSeconds,
+  usePracticeSessionTimer,
+} from "@/features/student/practice-session/use-practice-session-timer"
 import { StudentMain } from "@/features/student/components/student-main"
 import { createPracticeApi } from "@/lib/api/practice"
+import { writeStoredSectionBreak } from "@/features/student/preptests/preptest-section-break"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const SECTION_TIMER_SECONDS = 35 * 60
@@ -81,29 +87,18 @@ function SectionQuestionPanel({
 
   return (
     <>
-      <div className="flex gap-2">
-        <div className="min-w-0 flex-1">
-          <span
-            className="text-sm font-semibold leading-snug"
-            style={{ color: "var(--color-student-cta)" }}
-          >
-            {questionNumber}.
-          </span>
-          <PracticeAnnotatedContent
-            regionKey={stemKey}
-            html={stemHtml}
-            findQuery={findQuery}
-            scrollAnchor
-            as="div"
-            className="text-sm font-semibold leading-snug"
-            style={{ color: "var(--foreground)" }}
-            toolMode={toolMode}
-            onMouseUp={onContentMouseUp}
-            onClickCapture={onContentClick}
-          />
-        </div>
-        <PracticeQuestionFlagButton flagged={flagged} onToggle={onToggleFlag} disabled={flagsDisabled} />
-      </div>
+      <PracticeQuestionStem
+        questionNumber={questionNumber}
+        regionKey={stemKey}
+        html={stemHtml}
+        findQuery={findQuery}
+        toolMode={toolMode}
+        onContentMouseUp={onContentMouseUp}
+        onContentClick={onContentClick}
+        flagged={flagged}
+        onToggleFlag={onToggleFlag}
+        flagsDisabled={flagsDisabled}
+      />
       {revealed && isCorrect != null ? (
         <p
           className="text-xs font-semibold"
@@ -167,7 +162,7 @@ function SectionSessionPage() {
   } | null>(null)
   const [scoreHidden, setScoreHidden] = useState(true)
 
-  const { elapsed, countdown, paused, togglePause, setInitialCountdown } = usePracticeSessionTimer()
+  const { elapsed, countdown, paused, togglePause, resetElapsed, setInitialCountdown } = usePracticeSessionTimer()
   const highlights = usePracticeHighlights()
 
   const load = useCallback(async () => {
@@ -319,6 +314,11 @@ function SectionSessionPage() {
     setFinishing(true)
     try {
       const completed = await practiceApi.completeSession(sessionId)
+      const prepTestId = sectionSession?.session.prep_test_id
+      const sectionId = sectionSession?.session.section_id
+      if (prepTestId && sectionId) {
+        writeStoredSectionBreak(prepTestId, sectionId)
+      }
       const questionCount = questions.length > 0 ? questions.length : 1
       const rawScore = completed.raw_score ?? 0
       setCompleteModal({ rawScore, questionCount })
@@ -332,8 +332,15 @@ function SectionSessionPage() {
 
   function leaveSectionSession() {
     const prepTestId = sectionSession?.session.prep_test_id
+    const sectionId = sectionSession?.session.section_id
     if (prepTestId) {
-      navigate(`/app/practice/preptest/${encodeURIComponent(prepTestId)}`, { replace: true })
+      navigate(`/app/practice/preptest/${encodeURIComponent(prepTestId)}`, {
+        replace: true,
+        state:
+          completeModal != null && sectionId
+            ? { sectionJustCompleted: sectionId }
+            : undefined,
+      })
       return
     }
     navigate("/app/practice/sections", { replace: true })
@@ -415,22 +422,23 @@ function SectionSessionPage() {
     )
   }
 
-  const answeredCount = Object.keys(answersByQuestion).length
-  const allAnswered = answeredCount >= questions.length
   const headerLabel =
     sectionSession?.sessionLabel ||
     [metadata?.prepTestTitle, metadata?.sectionTitle].filter(Boolean).join(" — ") ||
     (sectionType === "LR" ? "LR Section" : "RC Section")
 
+  const timerBudgetSeconds = resolveTimerBudgetSeconds({
+    timing: metadata?.timing,
+    questionCount: questions.length,
+    sectionTimerSeconds: timedSection ? SECTION_TIMER_SECONDS : undefined,
+  })
   const timerLabel = timedSection && countdown != null ? "Remaining" : "Elapsed"
   const timerDisplaySeconds =
     timedSection && countdown != null ? countdown : elapsed
   const timerProgress =
     timedSection && countdown != null
-      ? countdown / SECTION_TIMER_SECONDS
-      : questions.length > 0
-        ? answeredCount / questions.length
-        : 0
+      ? computeRemainingTimerProgress(countdown, timerBudgetSeconds)
+      : computeElapsedTimerProgress(elapsed, timerBudgetSeconds)
   const allowReselect = canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
     blindReview: blindReviewMode,
   })
@@ -440,33 +448,27 @@ function SectionSessionPage() {
       type="button"
       disabled={finishing}
       variant="outline"
-      className="h-[52px] gap-1 rounded-2xl border bg-[#f6f8fa] px-3 font-medium text-[#062357] hover:bg-[#eceff3]"
-      style={{ borderColor: "#dfe1e7" }}
+      size="default"
+      className="h-[52px] shrink-0 gap-1 px-4"
       onClick={() => void handleFinish()}
     >
-      {blindReviewMode
-        ? "Back to blind review"
-        : finishing
-          ? "Finishing…"
-          : allAnswered
-            ? "Finish"
-            : `Finish (${answeredCount}/${questions.length})`}
+      {blindReviewMode ? "Back to blind review" : finishing ? "Finishing…" : "Finish"}
       <ChevronDown className="size-5 opacity-90" strokeWidth={2} />
     </Button>
   )
 
   return (
-    <StudentMain className="max-w-none bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))] py-4 md:py-6">
-      <div className="mx-auto w-full max-w-[1200px] px-0">
+    <StudentMain className="flex min-h-0 max-w-none flex-1 flex-col overflow-hidden bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))] px-0 py-4 md:py-5">
+      <div
+        className="mx-auto flex min-h-0 w-full flex-1 flex-col px-4 md:px-6"
+        style={{ maxWidth: 1280 }}
+      >
         {error ? (
-          <p className="mb-3 text-sm text-red-600" role="alert">
+          <p className="mb-3 shrink-0 text-sm text-red-600" role="alert">
             {error}
           </p>
         ) : null}
-        <div
-          className="overflow-hidden rounded-2xl border bg-background shadow-sm"
-          style={{ borderColor: "var(--color-student-cta)" }}
-        >
+        <div className="practice-session-card flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-2xl border border-[#dfe1e7] bg-background shadow-[0px_1px_1.5px_rgba(13,13,18,0.05)]">
           <PracticeSessionHeader
             title={blindReviewMode ? `Blind review · ${headerLabel}` : headerLabel}
             findQuery={findQuery}
@@ -474,16 +476,19 @@ function SectionSessionPage() {
             activeColor={highlights.activeColor}
             toolMode={highlights.toolMode}
             fontScale={highlights.fontScale}
-            lineSpacing={highlights.lineSpacing}
+            boldEnabled={highlights.boldEnabled}
+            italicEnabled={highlights.italicEnabled}
             onSelectColor={highlights.selectColor}
             onEraser={highlights.selectEraser}
             onUnderline={highlights.selectUnderline}
             onFontSize={highlights.cycleFontSize}
-            onLineSpacing={highlights.cycleLineSpacing}
+            onToggleBold={highlights.toggleBold}
+            onToggleItalic={highlights.toggleItalic}
             timerLabel={timerLabel}
             timerDisplaySeconds={timerDisplaySeconds}
             timerPaused={paused}
             onToggleTimerPause={togglePause}
+            onResetTimer={timedSection ? undefined : resetElapsed}
             timerProgress={timerProgress}
             timerDisplayClassName={
               timedSection && countdown === 0 ? "text-[#df1c41]" : undefined
@@ -493,13 +498,10 @@ function SectionSessionPage() {
 
           <div
             ref={sessionBodyRef}
-            className="grid gap-0 lg:grid-cols-2 lg:divide-x"
-            style={{ borderColor: "var(--greyscale-100)", ...highlights.contentStyle }}
+            className="practice-session-body grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-2 lg:divide-x divide-[#dfe1e7]"
+            style={highlights.contentStyle}
           >
-            <div
-              className="max-h-[min(52vh,480px)] overflow-y-auto border-b p-5 lg:max-h-[560px] lg:border-b-0"
-              style={{ borderColor: "var(--greyscale-100)" }}
-            >
+            <div className="practice-session-pane min-h-0 h-full overflow-y-auto overflow-x-hidden border-[#dfe1e7] p-5 border-b lg:border-b-0">
               {sectionType === "RC" && current.passage ? (
                 <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
               ) : null}
@@ -512,7 +514,7 @@ function SectionSessionPage() {
                 onClickCapture={highlights.handleContentClick}
               />
             </div>
-            <div className="flex max-h-[min(52vh,480px)] flex-col gap-4 overflow-y-auto p-5 lg:max-h-[560px]">
+            <div className="practice-session-pane flex min-h-0 h-full flex-col gap-4 overflow-y-auto overflow-x-hidden border-[#dfe1e7] p-5">
               <SectionQuestionPanel
                 key={current.id}
                 question={current}
@@ -535,11 +537,8 @@ function SectionSessionPage() {
             </div>
           </div>
 
-          <footer
-            className="flex flex-col gap-4 border-t px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
-            style={{ borderColor: "var(--greyscale-100)" }}
-          >
-            <div className="flex flex-wrap items-center gap-2 pt-2">
+          <footer className="practice-session-footer relative z-10 flex shrink-0 items-center justify-between gap-3 border-t border-[#dfe1e7] bg-background px-4 py-3 md:gap-4 md:px-6">
+            <div className="practice-session-scroll-hidden flex min-h-0 min-w-0 flex-1 flex-nowrap items-center gap-1.5 overflow-x-auto overflow-y-hidden py-0.5 sm:gap-2">
               {questions.map((q, i) => {
                 const n = i + 1
                 const active = n === safeIndex
@@ -550,7 +549,7 @@ function SectionSessionPage() {
                     key={q.id}
                     type="button"
                     onClick={() => setQIndex(n)}
-                    className="relative flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors"
+                    className="relative flex size-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-colors sm:size-9 sm:text-xs"
                     style={{
                       backgroundColor: active
                         ? "var(--color-student-cta)"
@@ -575,14 +574,7 @@ function SectionSessionPage() {
                 )
               })}
             </div>
-            <div className="flex items-center justify-end gap-2">
-              <Link
-                to={blindReviewMode ? blindReviewExitPath() : "/app/practice/sections"}
-                className="mr-auto text-sm font-semibold hover:underline sm:mr-0"
-                style={{ color: "var(--color-student-cta)" }}
-              >
-                {blindReviewMode ? "Exit blind review" : "Exit section"}
-              </Link>
+            <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
                 className="inline-flex size-10 items-center justify-center rounded-full border bg-background transition hover:bg-muted disabled:opacity-40"
