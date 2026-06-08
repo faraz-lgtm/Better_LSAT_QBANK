@@ -13,6 +13,8 @@ import { PracticeCompleteModal } from "@/features/student/practice-session/pract
 import { createPracticeApi } from "@/lib/api/practice"
 import {
   clearStoredSectionBreak,
+  findNextSectionAfterBreak,
+  normalizePrepTestDetail,
   PREPTEST_SECTION_BREAK_SECONDS,
   writeStoredSectionBreak,
 } from "@/features/student/preptests/preptest-section-break"
@@ -195,7 +197,6 @@ function PrepTestSectionRow({
           <span>{sectionTimeDisplay(row.timeMinutes)}</span>
           <span aria-hidden>|</span>
           <span>{sectionQuestionsLine(row.questionCount)}</span>
-          {row.completed ? <span className="text-[#287f6e]">Completed</span> : null}
           {!row.practiceable ? <span>Not available for practice</span> : null}
         </div>
       </div>
@@ -238,6 +239,7 @@ function PracticePrepTestPage() {
     rawScore: number
     questionCount: number
     scaledScore: number | null
+    prepTestSessionId: string
   } | null>(null)
   const [scoreHidden, setScoreHidden] = useState(true)
   const [startingBlindReview, setStartingBlindReview] = useState(false)
@@ -249,9 +251,10 @@ function PracticePrepTestPage() {
     setError(null)
     try {
       const data = await practiceApi.getPrepTestDetail(testIdParam)
-      setDetail(data)
-      setTimingId(data.defaultTimingId)
-      setFormatId(data.defaultFormatId)
+      const normalized = normalizePrepTestDetail(data, { prepTestId: testIdParam })
+      setDetail(normalized)
+      setTimingId(normalized.defaultTimingId)
+      setFormatId(normalized.defaultFormatId)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load PrepTest")
       setDetail(null)
@@ -262,17 +265,15 @@ function PracticePrepTestPage() {
 
   useEffect(() => {
     const justCompleted = (location.state as { sectionJustCompleted?: string } | null)?.sectionJustCompleted
-    if (typeof justCompleted === "string" && testIdParam) {
-      writeStoredSectionBreak(testIdParam, justCompleted)
-      navigate(location.pathname, { replace: true, state: null })
-    }
-    void load()
-  }, [load, location.pathname, location.state, navigate, testIdParam])
+    if (typeof justCompleted !== "string" || !testIdParam) return
+    writeStoredSectionBreak(testIdParam, justCompleted)
+    setDetail((prev) => (prev ? normalizePrepTestDetail(prev, { prepTestId: testIdParam }) : prev))
+    navigate(location.pathname, { replace: true, state: null })
+  }, [location.pathname, location.state, navigate, testIdParam])
 
-  const handleBreakExpired = useCallback(() => {
-    if (testIdParam) clearStoredSectionBreak(testIdParam)
+  useEffect(() => {
     void load()
-  }, [load, testIdParam])
+  }, [load])
 
   async function persistConfig(nextTiming = timingId, nextFormat = formatId) {
     if (!testIdParam) return
@@ -282,7 +283,7 @@ function PracticePrepTestPage() {
         timing: nextTiming,
         format: nextFormat,
       })
-      setDetail(out.detail)
+      setDetail(normalizePrepTestDetail(out.detail, { prepTestId: testIdParam }))
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save settings")
     }
@@ -296,12 +297,61 @@ function PracticePrepTestPage() {
         await practiceApi.startPrepTest({ prepTestId: testIdParam, timing: timingId, format: formatId })
       }
       const out = await practiceApi.startSection({ sectionId, timing: "35", showAnswers: "end" })
+      if (testIdParam) {
+        navigate(
+          `/app/practice/preptest/${encodeURIComponent(testIdParam)}/section/${encodeURIComponent(sectionId)}?sessionId=${encodeURIComponent(out.session.id)}`,
+        )
+        return
+      }
       navigate(`/app/practice/sections/session/${out.session.id}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to start section")
     } finally {
       setStartingSectionId(null)
     }
+  }
+
+  function openPrepTestSection(row: PrepTestDetailSection) {
+    if (row.activeSectionSessionId && testIdParam) {
+      if (row.answeredCount > 0) {
+        navigate(
+          `/app/practice/sections/session/${row.activeSectionSessionId}?prepTestId=${encodeURIComponent(testIdParam)}&started=1`,
+        )
+        return
+      }
+      navigate(
+        `/app/practice/preptest/${encodeURIComponent(testIdParam)}/section/${encodeURIComponent(row.id)}?sessionId=${encodeURIComponent(row.activeSectionSessionId)}`,
+      )
+      return
+    }
+    if (row.activeSectionSessionId) {
+      navigate(`/app/practice/sections/session/${row.activeSectionSessionId}`)
+      return
+    }
+    void handleStartSection(row.id)
+  }
+
+  async function completeSectionBreakAndStartNext(afterSectionRowId: string) {
+    if (!testIdParam) return
+    clearStoredSectionBreak(testIdParam)
+    setError(null)
+    try {
+      const nextDetail = await practiceApi.getPrepTestDetail(testIdParam)
+      const normalized = normalizePrepTestDetail(nextDetail, { prepTestId: testIdParam })
+      setDetail(normalized)
+      const nextSection = findNextSectionAfterBreak(normalized, afterSectionRowId)
+      if (nextSection) {
+        openPrepTestSection(nextSection)
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to continue after section break")
+    }
+  }
+
+  function handleBreakExpired() {
+    if (!testIdParam) return
+    clearStoredSectionBreak(testIdParam)
+    void load()
   }
 
   async function handleFinishTest() {
@@ -315,6 +365,7 @@ function PracticePrepTestPage() {
         rawScore: completed.raw_score ?? 0,
         questionCount: questionCount > 0 ? questionCount : 1,
         scaledScore: completed.scaled_score,
+        prepTestSessionId: completed.id,
       })
       setScoreHidden(true)
     } catch (e) {
@@ -326,18 +377,11 @@ function PracticePrepTestPage() {
 
   async function handleSkipSectionBreak() {
     if (!testIdParam || skippingBreak) return
+    const afterSectionRowId = detail?.sectionBreak?.afterSectionId
+    if (!afterSectionRowId) return
     setSkippingBreak(true)
-    setError(null)
-    clearStoredSectionBreak(testIdParam)
     try {
-      try {
-        const nextDetail = await practiceApi.getPrepTestDetail(testIdParam)
-        setDetail(nextDetail)
-      } catch {
-        await load()
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to skip section break")
+      await completeSectionBreakAndStartNext(afterSectionRowId)
     } finally {
       setSkippingBreak(false)
     }
@@ -362,8 +406,9 @@ function PracticePrepTestPage() {
   }
 
   function viewPrepTestResults() {
-    if (!testIdParam) return
-    navigate(`/app/analytics/preptests/results/${encodeURIComponent(testIdParam)}`, { replace: true })
+    const resultsSessionId = completeModal?.prepTestSessionId
+    if (!resultsSessionId) return
+    navigate(`/app/analytics/preptests/results/${encodeURIComponent(resultsSessionId)}`, { replace: true })
   }
 
   if (!testIdParam) {
@@ -463,13 +508,7 @@ function PracticePrepTestPage() {
                 <PrepTestSectionRow
                   row={row}
                   starting={startingSectionId === row.id}
-                  onStart={() => {
-                    if (row.activeSectionSessionId) {
-                      navigate(`/app/practice/sections/session/${row.activeSectionSessionId}`)
-                      return
-                    }
-                    void handleStartSection(row.id)
-                  }}
+                  onStart={() => openPrepTestSection(row)}
                 />
                 {detail.sectionBreak?.afterSectionId === row.id ? (
                   <SectionBreakRow

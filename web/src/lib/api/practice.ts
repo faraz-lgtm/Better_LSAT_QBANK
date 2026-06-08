@@ -355,11 +355,14 @@ export function createPracticeApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       if (!data?.prepTest) throw new Error("No prep test detail returned from practice")
-      return normalizePrepTestDetail({
-        ...data,
-        sectionBreak: data.sectionBreak ?? null,
-        sections: data.sections.map((s) => ({ ...s, onBreak: s.onBreak ?? false })),
-      })
+      return normalizePrepTestDetail(
+        {
+          ...data,
+          sectionBreak: data.sectionBreak ?? null,
+          sections: data.sections.map((s) => ({ ...s, onBreak: s.onBreak ?? false })),
+        },
+        { prepTestId },
+      )
     },
 
     async startPrepTest(input: StartPrepTestInput): Promise<StartPrepTestResponse> {
@@ -375,11 +378,14 @@ export function createPracticeApi(supabase: SupabaseClient) {
       if (!data?.prepTestSession) throw new Error("No prep test session returned from practice")
       return {
         ...data,
-        detail: normalizePrepTestDetail({
-          ...data.detail,
-          sectionBreak: data.detail.sectionBreak ?? null,
-          sections: data.detail.sections.map((s) => ({ ...s, onBreak: s.onBreak ?? false })),
-        }),
+        detail: normalizePrepTestDetail(
+          {
+            ...data.detail,
+            sectionBreak: data.detail.sectionBreak ?? null,
+            sections: data.detail.sections.map((s) => ({ ...s, onBreak: s.onBreak ?? false })),
+          },
+          { prepTestId: input.prepTestId },
+        ),
       }
     },
 

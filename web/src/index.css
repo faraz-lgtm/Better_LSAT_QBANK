@@ -1175,8 +1175,20 @@ select.ds-input {
   isolation: isolate;
 }
 
+.practice-session-question-nav-btn {
+  display: flex;
+  height: 32px;
+  min-width: 32px;
+  justify-content: center;
+  align-items: center;
+  align-self: stretch;
+  border-radius: 12px;
+}
+
 .practice-session-header {
-  overflow: hidden;
+  position: relative;
+  z-index: 20;
+  overflow: visible;
 }
 
 .practice-session-timer {

@@ -66,6 +66,15 @@ export type PrepTestRcSectionBlock = {
   questions: PrepTestQuestionResultRow[]
 }
 
+/** LR section detail block with optional passage band + question rows. */
+export type PrepTestLrSectionBlock = {
+  sectionTitle: string
+  scoreDisplay: string
+  blindReviewDisplay: string
+  passages: PrepTestPassageSummary[]
+  questions: PrepTestQuestionResultRow[]
+}
+
 export type PrepTestResultsDetail = {
   totalQuestions: number
   scaledScore: number
@@ -76,6 +85,7 @@ export type PrepTestResultsDetail = {
   prediction: number
   blindReview: number
   sections: PrepTestSectionSummary[]
+  lrSections: PrepTestLrSectionBlock[]
   passages: PrepTestPassageSummary[]
   questions: PrepTestQuestionResultRow[]
   about: PrepTestAboutMeta
@@ -161,6 +171,73 @@ const PT145_LIKE: PrepTestResultsDetail = {
         ["correct", "incorrect", "correct", "incorrect"],
       ],
       accuracyPct: 93,
+    },
+  ],
+  lrSections: [
+    {
+      sectionTitle: "Section 1",
+      scoreDisplay: "-7",
+      blindReviewDisplay: "-7",
+      passages: [
+        {
+          id: "p1",
+          passageLabel: "P1",
+          title: "Passage 1",
+          tags: ["Art", "Sing", "Spot"],
+          difficulty: "Hard",
+          difficultyDots: 4,
+          targetTime: "01:45",
+          yourTime: "00:04",
+          yourTimeNote: "(01:41 under)",
+        },
+      ],
+      questions: [
+    {
+      id: "q1",
+      number: 1,
+      title: "PT 129  .  S1  .  Q19",
+      tags: ["Art", "Sing", "Spot"],
+      targetTime: "01:45",
+      yourTime: "00:04",
+      yourTimeNote: "(01:41 under)",
+      difficulty: "Hard",
+      difficultyDots: 4,
+      actualCorrect: true,
+      blindReviewCorrect: false,
+      answerPopularity: [42, 3, 3, 4, 2],
+      correctLetter: "A",
+    },
+    {
+      id: "q2",
+      number: 2,
+      title: "PT 129  .  S1  .  Q20",
+      tags: ["Art", "Sing", "Spot"],
+      targetTime: "01:45",
+      yourTime: "01:12",
+      yourTimeNote: "(00:33 under)",
+      difficulty: "Medium",
+      difficultyDots: 3,
+      actualCorrect: false,
+      blindReviewCorrect: true,
+      answerPopularity: [8, 35, 12, 30, 15],
+      correctLetter: "B",
+    },
+    {
+      id: "q3",
+      number: 3,
+      title: "PT 129  .  S1  .  Q21",
+      tags: ["Art", "Sing", "Spot"],
+      targetTime: "01:45",
+      yourTime: "01:50",
+      yourTimeNote: "(00:05 over)",
+      difficulty: "Easy",
+      difficultyDots: 2,
+      actualCorrect: true,
+      blindReviewCorrect: true,
+      answerPopularity: [22, 18, 40, 12, 8],
+      correctLetter: "C",
+    },
+      ],
     },
   ],
   passages: [

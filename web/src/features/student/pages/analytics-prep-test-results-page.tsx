@@ -26,7 +26,10 @@ import {
   type PrepTestSectionSummary,
   type QuestionResultStatus,
 } from "@/features/student/lib/mock-analytics-prep-test-results"
-import { mapPrepTestDetailToResults } from "@/features/student/analytics/map-prep-test-results"
+import {
+  formatPrepTestResultsTitle,
+  mapPrepTestDetailToResults,
+} from "@/features/student/analytics/map-prep-test-results"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
 
 const QUESTION_FILTER_OPTIONS = ["Question", "Passage", "Incorrect only"] as const
@@ -109,7 +112,7 @@ function ResultsSummaryPanel({ detail }: { detail: PrepTestResultsDetail }) {
               {detail.correctSummary}
             </p>
             <p className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#edf3ff]">
-              PERCENTILE: {detail.percentile}
+              PERCENTILE: {detail.percentile % 1 === 0 ? detail.percentile : detail.percentile.toFixed(1)}
             </p>
           </div>
           <div className="rounded-2xl bg-[#f6f8fa] p-6">
@@ -343,99 +346,104 @@ function QuestionResultRow({
         variant === "stacked" && className,
       )}
     >
-      <div className="flex flex-col gap-6 xl:flex-row">
-        <div className="flex gap-6">
-          <div className="flex size-14 shrink-0 items-center justify-center rounded-[14px] bg-[#00d492]">
+      <div className="flex flex-col gap-8 xl:flex-row xl:items-start xl:gap-10">
+        {/* Left — question info + timing (Figma `17925:12876`) */}
+        <div className="flex min-w-0 shrink-0 gap-6">
+          <div
+            className={cn(
+              "flex size-14 shrink-0 items-center justify-center rounded-[14px]",
+              row.actualCorrect ? "bg-[#00d492]" : "bg-[#df1c41]",
+            )}
+          >
             <span className="text-2xl font-bold leading-[1.3] text-white">{row.number}</span>
           </div>
-          <div className="flex min-w-0 flex-1 flex-col gap-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="flex min-w-0 flex-col gap-2">
-                <h3 className="text-xl font-bold leading-[1.35] text-[#062357]">{row.title}</h3>
-                <div className="flex flex-wrap gap-2.5">
-                  {row.tags.map((t) => (
-                    <span
-                      key={t}
-                      className="inline-flex h-5 items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px] font-normal leading-[1.5] tracking-[0.02em] text-[#0d0d12]"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="flex flex-col gap-3 lg:items-end">
-                <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Result</p>
-                <div className="flex flex-wrap items-center gap-5">
-                  <div className="flex items-center gap-2.5">
-                    {row.actualCorrect ? (
-                      <CheckCircle2 className="size-6 shrink-0 text-[#00d492]" aria-hidden />
-                    ) : (
-                      <XCircle className="size-6 shrink-0 text-[#df1c41]" aria-hidden />
-                    )}
-                    <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
-                      Actual
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    {row.blindReviewCorrect ? (
-                      <CheckCircle2 className="size-6 shrink-0 text-[#00d492]" aria-hidden />
-                    ) : (
-                      <XCircle className="size-6 shrink-0 text-[#df1c41]" aria-hidden />
-                    )}
-                    <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
-                      Blind Review
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-4 lg:ml-4">
-                <button
-                  type="button"
-                  className="flex size-9 items-center justify-center rounded-xl border border-[#dfe1e6] bg-[#f9f9fb] text-[#666d80] transition-colors hover:bg-white"
-                  aria-label="Edit question"
-                >
-                  <Pencil className="size-[18px]" aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  className="flex size-9 items-center justify-center rounded-xl border border-[#dfe1e6] bg-[#f9f9fb] text-[#666d80] transition-colors hover:bg-white"
-                  aria-label="Bookmark question"
-                >
-                  <Bookmark className="size-[18px]" aria-hidden />
-                </button>
+          <div className="flex min-w-0 flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <h3 className="whitespace-nowrap text-xl font-bold leading-[1.35] text-[#062357]">{row.title}</h3>
+              <div className="flex flex-wrap gap-2.5">
+                {row.tags.map((t) => (
+                  <span
+                    key={t}
+                    className="inline-flex h-5 items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px] font-normal leading-[1.5] tracking-[0.02em] text-[#0d0d12]"
+                  >
+                    {t}
+                  </span>
+                ))}
               </div>
             </div>
-
-            <div className="flex flex-col gap-6 border-t border-[#f6f8fa] pt-4 lg:flex-row lg:flex-wrap">
-              <div className="flex min-w-[200px] flex-col gap-3">
-                <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Timing</p>
-                <div className="flex gap-1">
-                  <span className="w-20 text-xs font-normal leading-[1.5] tracking-[0.02em] text-[#666d80]">
-                    Target time:
-                  </span>
-                  <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
-                    {row.targetTime}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  <span className="w-20 text-xs font-normal leading-[1.5] tracking-[0.02em] text-[#666d80]">
-                    Your time:
-                  </span>
-                  <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#0d47a1]">
-                    {row.yourTime}
-                  </span>
-                  <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
-                    {row.yourTimeNote}
-                  </span>
-                </div>
+            <div className="flex flex-col gap-3">
+              <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Timing</p>
+              <div className="flex gap-1">
+                <span className="w-20 text-xs font-normal leading-[1.5] tracking-[0.02em] text-[#666d80]">
+                  Target time:
+                </span>
+                <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
+                  {row.targetTime}
+                </span>
               </div>
-              <div className="flex min-w-[160px] flex-col gap-3">
-                <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Difficulty</p>
-                <DifficultyMeter difficulty={row.difficulty} />
+              <div className="flex flex-wrap gap-1">
+                <span className="w-20 text-xs font-normal leading-[1.5] tracking-[0.02em] text-[#666d80]">
+                  Your time:
+                </span>
+                <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#0d47a1]">
+                  {row.yourTime}
+                </span>
+                <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
+                  {row.yourTimeNote}
+                </span>
               </div>
-              <AnswerPopularityBars values={row.answerPopularity} correctLetter={row.correctLetter} />
             </div>
           </div>
+        </div>
+
+        {/* Middle — difficulty */}
+        <div className="flex shrink-0 flex-col gap-3">
+          <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Difficulty</p>
+          <DifficultyMeter difficulty={row.difficulty} />
+        </div>
+
+        {/* Right — result + answer popularity */}
+        <div className="flex min-w-0 flex-1 flex-col gap-4">
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Result</p>
+            <div className="flex shrink-0 gap-4">
+              <button
+                type="button"
+                className="flex size-9 items-center justify-center rounded-xl border border-[#dfe1e6] bg-[#f9f9fb] text-[#666d80] transition-colors hover:bg-white"
+                aria-label="Edit question"
+              >
+                <Pencil className="size-[18px]" aria-hidden />
+              </button>
+              <button
+                type="button"
+                className="flex size-9 items-center justify-center rounded-xl border border-[#dfe1e6] bg-[#f9f9fb] text-[#666d80] transition-colors hover:bg-white"
+                aria-label="Bookmark question"
+              >
+                <Bookmark className="size-[18px]" aria-hidden />
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-nowrap items-center gap-5">
+            <div className="flex shrink-0 items-center gap-2.5">
+              {row.actualCorrect ? (
+                <CheckCircle2 className="size-6 shrink-0 text-[#00d492]" aria-hidden />
+              ) : (
+                <XCircle className="size-6 shrink-0 text-[#df1c41]" aria-hidden />
+              )}
+              <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">Actual</span>
+            </div>
+            <div className="flex shrink-0 items-center gap-2.5">
+              {row.blindReviewCorrect ? (
+                <CheckCircle2 className="size-6 shrink-0 text-[#00d492]" aria-hidden />
+              ) : (
+                <XCircle className="size-6 shrink-0 text-[#df1c41]" aria-hidden />
+              )}
+              <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
+                Blind Review
+              </span>
+            </div>
+          </div>
+          <AnswerPopularityBars values={row.answerPopularity} correctLetter={row.correctLetter} />
         </div>
       </div>
     </div>
@@ -490,7 +498,13 @@ function SectionBlock({
 }
 
 /** Figma `17980:10398` — RC section + stacked question rows */
-function RcSectionPanel({ block }: { block: PrepTestRcSectionBlock }) {
+function RcSectionPanel({
+  block,
+  questionFilter,
+}: {
+  block: PrepTestRcSectionBlock
+  questionFilter: (typeof QUESTION_FILTER_OPTIONS)[number]
+}) {
   const badge = SECTION_BADGE.RC
   return (
     <section className="mb-6 flex flex-col gap-6 rounded-3xl border border-[#dfe1e7] bg-white p-6">
@@ -519,7 +533,10 @@ function RcSectionPanel({ block }: { block: PrepTestRcSectionBlock }) {
         </div>
       </div>
       <div className="overflow-hidden rounded-3xl border border-[#dfe1e7]">
-        {block.questions.map((q, i) => (
+        {(questionFilter === "Incorrect only"
+          ? block.questions.filter((q) => !q.actualCorrect)
+          : block.questions
+        ).map((q, i) => (
           <QuestionResultRow
             key={q.id}
             row={q}
@@ -609,6 +626,8 @@ function AnalyticsPrepTestResultsPage() {
   const [detail, setDetail] = useState<PrepTestResultsDetail | null>(null)
   const [completedAt, setCompletedAt] = useState<string>("")
   const [prepTestId, setPrepTestId] = useState<string>("")
+  const [prepTestTitle, setPrepTestTitle] = useState<string>("")
+  const [moduleId, setModuleId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!analyticsApi || !testId) {
@@ -623,6 +642,8 @@ function AnalyticsPrepTestResultsPage() {
         setDetail(mapPrepTestDetailToResults(api))
         setCompletedAt(api.completedAt)
         setPrepTestId(api.prepTestId)
+        setPrepTestTitle(api.prepTestTitle)
+        setModuleId(api.moduleId)
         setExcludeFromAnalytics(api.excluded)
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
@@ -630,11 +651,9 @@ function AnalyticsPrepTestResultsPage() {
   }, [analyticsApi, testId])
 
   const pageTitle = useMemo(() => {
-    if (!completedAt) return "PrepTest results"
-    const d = new Date(completedAt)
-    const formatted = d.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })
-    return `PrepTest — ${formatted}`
-  }, [completedAt])
+    if (!completedAt) return prepTestTitle || "PrepTest results"
+    return formatPrepTestResultsTitle(prepTestTitle, moduleId, completedAt)
+  }, [completedAt, moduleId, prepTestTitle])
 
   if (loading) {
     return (
@@ -690,18 +709,31 @@ function AnalyticsPrepTestResultsPage() {
 
         <TotalQuestionsBar total={detail.totalQuestions} filter={questionFilter} onFilterChange={setQuestionFilter} />
 
-        <SectionBlock sectionTitle="Section 1" badgeKind="LR" score="-7" blind="-7">
-          <>
-            {detail.passages.map((p) => (
-              <PassageSummaryRow key={p.id} passage={p} />
-            ))}
-            {detail.questions.map((q) => (
-              <QuestionResultRow key={q.id} row={q} variant="belowPassage" />
-            ))}
-          </>
-        </SectionBlock>
+        {detail.lrSections.map((lrSection) => (
+          <SectionBlock
+            key={lrSection.sectionTitle}
+            sectionTitle={lrSection.sectionTitle}
+            badgeKind="LR"
+            score={lrSection.scoreDisplay}
+            blind={lrSection.blindReviewDisplay}
+          >
+            <>
+              {lrSection.passages.map((p) => (
+                <PassageSummaryRow key={p.id} passage={p} />
+              ))}
+              {(questionFilter === "Incorrect only"
+                ? lrSection.questions.filter((q) => !q.actualCorrect)
+                : lrSection.questions
+              ).map((q) => (
+                <QuestionResultRow key={q.id} row={q} variant="belowPassage" />
+              ))}
+            </>
+          </SectionBlock>
+        ))}
 
-        <RcSectionPanel block={detail.rcSection} />
+        {detail.rcSection.questions.length > 0 ? (
+          <RcSectionPanel block={detail.rcSection} questionFilter={questionFilter} />
+        ) : null}
 
         <AboutPrepTestCard
           meta={detail.about}

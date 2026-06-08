@@ -2,10 +2,12 @@ import { describe, expect, it, beforeEach } from "vitest"
 
 import type { PrepTestDetailResponse } from "@/features/student/preptests/preptest-types"
 import {
+  clearStoredSectionBreak,
+  findNextSectionAfterBreak,
   normalizePrepTestDetail,
   readStoredSectionBreak,
+  resolvePrepTestBreakAfterSectionId,
   writeStoredSectionBreak,
-  clearStoredSectionBreak,
 } from "@/features/student/preptests/preptest-section-break"
 
 const baseDetail: PrepTestDetailResponse = {
@@ -105,6 +107,28 @@ describe("normalizePrepTestDetail", () => {
     expect(out.sections[3]?.unlocked).toBe(false)
   })
 
+  it("resolves hub section row ids from session or LSAC section ids", () => {
+    expect(
+      resolvePrepTestBreakAfterSectionId(baseDetail, "s1", null),
+    ).toBe("s1")
+    expect(
+      resolvePrepTestBreakAfterSectionId(baseDetail, "LR152A-1", null),
+    ).toBe("s1")
+    expect(
+      resolvePrepTestBreakAfterSectionId(baseDetail, null, "LR152A-1"),
+    ).toBe("s1")
+  })
+
+  it("reads stored breaks using an explicit prep test id override", () => {
+    writeStoredSectionBreak("pt-152", "s1")
+    const out = normalizePrepTestDetail(
+      { ...baseDetail, prepTest: { ...baseDetail.prepTest, id: "different-id" } },
+      { prepTestId: "pt-152" },
+    )
+    expect(out.sectionBreak?.afterSectionId).toBe("s1")
+    clearStoredSectionBreak("pt-152")
+  })
+
   it("marks the next section on break when stored break is active", () => {
     writeStoredSectionBreak("pt-152", "s1")
     const out = normalizePrepTestDetail(baseDetail)
@@ -116,5 +140,10 @@ describe("normalizePrepTestDetail", () => {
     const cleared = normalizePrepTestDetail(baseDetail)
     expect(cleared.sectionBreak).toBeNull()
     expect(cleared.sections[1]?.unlocked).toBe(true)
+  })
+
+  it("finds the next practiceable section after a completed section row", () => {
+    expect(findNextSectionAfterBreak(baseDetail, "s1")?.id).toBe("s2")
+    expect(findNextSectionAfterBreak(baseDetail, "s4")).toBeNull()
   })
 })

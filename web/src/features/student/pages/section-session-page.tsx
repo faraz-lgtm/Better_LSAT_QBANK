@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
-import { ChevronDown, ChevronLeft, ChevronRight, Flag } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { LrDrillOptionRow } from "@/features/student/drills/lr-drill-option-row"
@@ -15,6 +15,9 @@ import {
 } from "@/features/student/practice-session/practice-session-types"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
+import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
+import { PracticeSessionQuestionNavButton } from "@/features/student/practice-session/practice-session-question-nav-button"
+import { PracticeSubmitSectionModal } from "@/features/student/practice-session/practice-submit-section-modal"
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
 import { usePracticeQuestionFlags } from "@/features/student/practice-session/use-practice-question-flags"
 import { usePracticeQuestionSeen } from "@/features/student/practice-session/use-practice-question-seen"
@@ -26,7 +29,10 @@ import {
 } from "@/features/student/practice-session/use-practice-session-timer"
 import { StudentMain } from "@/features/student/components/student-main"
 import { createPracticeApi } from "@/lib/api/practice"
-import { writeStoredSectionBreak } from "@/features/student/preptests/preptest-section-break"
+import {
+  resolvePrepTestBreakAfterSectionId,
+  writeStoredSectionBreak,
+} from "@/features/student/preptests/preptest-section-break"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const SECTION_TIMER_SECONDS = 35 * 60
@@ -156,9 +162,14 @@ function SectionSessionPage() {
   >({})
   const [submitting, setSubmitting] = useState(false)
   const [finishing, setFinishing] = useState(false)
+  const [submitModalOpen, setSubmitModalOpen] = useState(false)
+  const [startingBlindReview, setStartingBlindReview] = useState(false)
   const [completeModal, setCompleteModal] = useState<{
     rawScore: number
     questionCount: number
+    scaledScore?: number | null
+    prepTestLabel: string
+    prepTestSessionId: string
   } | null>(null)
   const [scoreHidden, setScoreHidden] = useState(true)
 
@@ -190,6 +201,29 @@ function SectionSessionPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (loading || !sectionSession || !sessionId || blindReviewMode) return
+    if (searchParams.get("started") === "1") return
+    const ptId =
+      sectionSession.session.prep_test_id ??
+      sectionSession.section.prepTestId ??
+      blindReviewPrepTestId ??
+      null
+    if (!ptId || sectionSession.answers.length > 0) return
+    navigate(
+      `/app/practice/preptest/${encodeURIComponent(ptId)}/section/${encodeURIComponent(sectionSession.section.id)}?sessionId=${encodeURIComponent(sessionId)}`,
+      { replace: true },
+    )
+  }, [
+    blindReviewMode,
+    blindReviewPrepTestId,
+    loading,
+    navigate,
+    searchParams,
+    sectionSession,
+    sessionId,
+  ])
 
   const questions = sectionSession?.questions ?? []
   const metadata = sectionSession?.metadata
@@ -305,24 +339,72 @@ function SectionSessionPage() {
     return "/app/practice/blind-review"
   }
 
-  async function handleFinish() {
-    if (!sessionId) return
-    if (blindReviewMode) {
-      navigate(blindReviewExitPath())
+  const prepTestId = sectionSession?.session.prep_test_id ?? null
+  const unansweredCount = useMemo(
+    () => questions.filter((q) => !answersByQuestion[q.id]).length,
+    [questions, answersByQuestion],
+  )
+
+  const submitSectionMessage = useMemo(() => {
+    if (unansweredCount > 0) {
+      const noun = unansweredCount === 1 ? "question" : "questions"
+      return `Are you sure you want to submit this section? You have ${unansweredCount} unanswered ${noun}.`
+    }
+    if (timedSection && countdown != null && countdown > 0) {
+      return "Are you sure you want to submit this section? You still have time left on the timer."
+    }
+    return "Are you sure you want to submit this section?"
+  }, [unansweredCount, timedSection, countdown])
+
+  function handleExitSession() {
+    const exitPrepTestId =
+      prepTestId ?? sectionSession?.section.prepTestId ?? blindReviewPrepTestId ?? null
+    if (exitPrepTestId) {
+      navigate(`/app/practice/preptest/${encodeURIComponent(exitPrepTestId)}`, { replace: true })
       return
     }
+    navigate("/app/practice/sections", { replace: true })
+  }
+
+  async function handleConfirmSubmitSection() {
+    if (!sessionId) return
     setFinishing(true)
+    setError(null)
     try {
-      const completed = await practiceApi.completeSession(sessionId)
-      const prepTestId = sectionSession?.session.prep_test_id
-      const sectionId = sectionSession?.session.section_id
-      if (prepTestId && sectionId) {
-        writeStoredSectionBreak(prepTestId, sectionId)
+      await practiceApi.completeSession(sessionId)
+      setSubmitModalOpen(false)
+
+      if (prepTestId) {
+        const detail = await practiceApi.getPrepTestDetail(prepTestId)
+        if (detail.allPracticeableSectionsComplete) {
+          const ptCompleted = await practiceApi.completePrepTest(prepTestId)
+          const questionCount = detail.prepTest.questionCount > 0 ? detail.prepTest.questionCount : 1
+          setCompleteModal({
+            rawScore: ptCompleted.raw_score ?? 0,
+            questionCount,
+            scaledScore: ptCompleted.scaled_score,
+            prepTestLabel: detail.prepTest.label,
+            prepTestSessionId: ptCompleted.id,
+          })
+          setScoreHidden(true)
+          return
+        }
+        const afterSectionId = resolvePrepTestBreakAfterSectionId(
+          detail,
+          sectionSession?.session.section_id,
+          sectionSession?.section.id,
+        )
+        if (afterSectionId) {
+          writeStoredSectionBreak(prepTestId, afterSectionId)
+        }
+        navigate(`/app/practice/preptest/${encodeURIComponent(prepTestId)}`, {
+          replace: true,
+          state: afterSectionId ? { sectionJustCompleted: afterSectionId } : undefined,
+        })
+        return
       }
-      const questionCount = questions.length > 0 ? questions.length : 1
-      const rawScore = completed.raw_score ?? 0
-      setCompleteModal({ rawScore, questionCount })
-      setScoreHidden(true)
+
+      navigate("/app/practice/sections", { replace: true })
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to complete section")
     } finally {
@@ -330,55 +412,28 @@ function SectionSessionPage() {
     }
   }
 
-  function leaveSectionSession() {
-    const prepTestId = sectionSession?.session.prep_test_id
-    const sectionId = sectionSession?.session.section_id
-    if (prepTestId) {
-      navigate(`/app/practice/preptest/${encodeURIComponent(prepTestId)}`, {
-        replace: true,
-        state:
-          completeModal != null && sectionId
-            ? { sectionJustCompleted: sectionId }
-            : undefined,
-      })
-      return
-    }
-    navigate("/app/practice/sections", { replace: true })
+  function leavePrepTestComplete() {
+    navigate("/app/practice/preptest", { replace: true })
   }
 
-  function viewSectionResults() {
-    if (!sessionId) return
-    const prepTestId = sectionSession?.session.prep_test_id
-    const returnTo = prepTestId
-      ? `/app/practice/preptest/${encodeURIComponent(prepTestId)}`
-      : "/app/practice/sections"
-    navigate(
-      `/app/practice/results/${encodeURIComponent(sessionId)}?returnTo=${encodeURIComponent(returnTo)}`,
-      { replace: true },
-    )
+  async function enterPrepTestBlindReview() {
+    if (!prepTestId || startingBlindReview) return
+    setStartingBlindReview(true)
+    setError(null)
+    try {
+      await practiceApi.startBlindReview(prepTestId)
+      navigate(`/app/practice/blind-review/${encodeURIComponent(prepTestId)}`, { replace: true })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to start blind review")
+    } finally {
+      setStartingBlindReview(false)
+    }
   }
 
-  async function enterSectionBlindReview() {
-    if (!sessionId) return
-    setCompleteModal(null)
-    setScoreHidden(true)
-    const prepTestId = sectionSession?.session.prep_test_id
-    if (prepTestId) {
-      try {
-        await practiceApi.startBlindReview(prepTestId)
-      } catch {
-        // PrepTest blind review may already be in progress.
-      }
-      const q = new URLSearchParams({ blindReview: "1", prepTestId })
-      navigate(`/app/practice/sections/session/${encodeURIComponent(sessionId)}?${q.toString()}`, {
-        replace: true,
-      })
-      return
-    }
-    const q = new URLSearchParams({ blindReview: "1" })
-    navigate(`/app/practice/sections/session/${encodeURIComponent(sessionId)}?${q.toString()}`, {
-      replace: true,
-    })
+  function viewPrepTestResults() {
+    const resultsSessionId = completeModal?.prepTestSessionId
+    if (!resultsSessionId) return
+    navigate(`/app/analytics/preptests/results/${encodeURIComponent(resultsSessionId)}`, { replace: true })
   }
 
   if (!sessionId) {
@@ -443,18 +498,23 @@ function SectionSessionPage() {
     blindReview: blindReviewMode,
   })
 
-  const finishButton = (
+  const finishButton = blindReviewMode ? (
     <Button
       type="button"
-      disabled={finishing}
       variant="outline"
       size="default"
-      className="h-[52px] shrink-0 gap-1 px-4"
-      onClick={() => void handleFinish()}
+      className="h-[52px] shrink-0 px-4"
+      onClick={() => navigate(blindReviewExitPath())}
     >
-      {blindReviewMode ? "Back to blind review" : finishing ? "Finishing…" : "Finish"}
-      <ChevronDown className="size-5 opacity-90" strokeWidth={2} />
+      Back to blind review
     </Button>
+  ) : (
+    <PracticeSessionFinishMenu
+      disabled={sessionCompleted}
+      finishing={finishing}
+      onSubmitSection={() => setSubmitModalOpen(true)}
+      onExit={handleExitSession}
+    />
   )
 
   return (
@@ -538,39 +598,18 @@ function SectionSessionPage() {
           </div>
 
           <footer className="practice-session-footer relative z-10 flex shrink-0 items-center justify-between gap-3 border-t border-[#dfe1e7] bg-background px-4 py-3 md:gap-4 md:px-6">
-            <div className="practice-session-scroll-hidden flex min-h-0 min-w-0 flex-1 flex-nowrap items-center gap-1.5 overflow-x-auto overflow-y-hidden py-0.5 sm:gap-2">
+            <div className="practice-session-scroll-hidden flex min-h-0 min-w-0 flex-1 flex-nowrap items-stretch gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5 pt-2.5 sm:gap-2">
               {questions.map((q, i) => {
                 const n = i + 1
-                const active = n === safeIndex
-                const answered = Boolean(answersByQuestion[q.id])
-                const flagged = questionFlags.isFlagged(q.id)
                 return (
-                  <button
+                  <PracticeSessionQuestionNavButton
                     key={q.id}
-                    type="button"
+                    number={n}
+                    active={n === safeIndex}
+                    answered={Boolean(answersByQuestion[q.id])}
+                    flagged={questionFlags.isFlagged(q.id)}
                     onClick={() => setQIndex(n)}
-                    className="relative flex size-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-colors sm:size-9 sm:text-xs"
-                    style={{
-                      backgroundColor: active
-                        ? "var(--color-student-cta)"
-                        : answered
-                          ? "color-mix(in srgb, var(--color-student-cta) 25%, var(--greyscale-25))"
-                          : "var(--greyscale-25)",
-                      color: active ? "#fff" : "var(--color-student-heading)",
-                      border: `1px solid ${active ? "var(--color-student-cta)" : "var(--greyscale-100)"}`,
-                    }}
-                    aria-current={active ? "true" : undefined}
-                    aria-label={flagged ? `Question ${n}, flagged` : `Question ${n}`}
-                  >
-                    {n}
-                    {flagged ? (
-                      <Flag
-                        className="absolute -right-0.5 -top-0.5 size-2.5 fill-[var(--color-student-cta)] text-[var(--color-student-cta)]"
-                        strokeWidth={2}
-                        aria-hidden
-                      />
-                    ) : null}
-                  </button>
+                  />
                 )
               })}
             </div>
@@ -600,18 +639,28 @@ function SectionSessionPage() {
         </div>
       </div>
 
+      <PracticeSubmitSectionModal
+        open={submitModalOpen}
+        message={submitSectionMessage}
+        submitting={finishing}
+        onCancel={() => setSubmitModalOpen(false)}
+        onConfirm={() => void handleConfirmSubmitSection()}
+      />
+
       <PracticeCompleteModal
         open={completeModal != null}
-        titleId="section-complete-title"
-        subtitle="You've completed the section"
+        titleId="preptest-complete-title"
+        subtitle={`You've completed ${completeModal?.prepTestLabel ?? "the PrepTest"}`}
         rawScore={completeModal?.rawScore ?? 0}
         questionCount={completeModal?.questionCount ?? 1}
+        scaledScore={completeModal?.scaledScore}
         scoreHidden={scoreHidden}
         onToggleScoreHidden={() => setScoreHidden((h) => !h)}
         showBlindReview
-        onBlindReview={() => void enterSectionBlindReview()}
-        onSkipDetails={viewSectionResults}
-        onDone={leaveSectionSession}
+        onBlindReview={() => void enterPrepTestBlindReview()}
+        onSkipDetails={viewPrepTestResults}
+        doneLabel="Done with PrepTest"
+        onDone={leavePrepTestComplete}
       />
     </StudentMain>
   )

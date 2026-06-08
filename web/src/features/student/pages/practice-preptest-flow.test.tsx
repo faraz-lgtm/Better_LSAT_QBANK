@@ -4,7 +4,6 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
 
 import { PracticePrepTestPage } from "@/features/student/pages/practice-preptest-page"
-import { PracticePrepTestSectionPage } from "@/features/student/pages/practice-preptest-section-page"
 
 const mockGetPrepTestDetail = vi.fn()
 const mockStartPrepTest = vi.fn()
@@ -68,7 +67,7 @@ function renderPrepTestRoutes(initialPath: string) {
       { path: "/app/practice/preptest/:testId", element: <PracticePrepTestPage /> },
       {
         path: "/app/practice/preptest/:testId/section/:sectionId",
-        element: <PracticePrepTestSectionPage />,
+        element: <div>Section intro</div>,
       },
       { path: "/app/practice/sections/session/:sessionId", element: <div>Section session</div> },
     ],
@@ -101,6 +100,7 @@ describe("PracticePrepTestPage + section navigation", () => {
     expect(mockStartSection).toHaveBeenCalledWith(
       expect.objectContaining({ sectionId: "sec-lr", timing: "35" }),
     )
-    expect(router.state.location.pathname).toBe("/app/practice/sections/session/section-sess-1")
+    expect(router.state.location.pathname).toBe("/app/practice/preptest/pt-900/section/sec-lr")
+    expect(router.state.location.search).toBe("?sessionId=section-sess-1")
   })
 })

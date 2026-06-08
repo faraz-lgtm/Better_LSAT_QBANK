@@ -38,6 +38,18 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10
 }
 
+function formatQuestionResultTitle(
+  moduleId: string | null,
+  prepTestTitle: string,
+  sectionNumber: number | null,
+  questionNumber: number,
+): string {
+  const moduleMatch = moduleId?.match(/^LSAC(\d+)$/i)
+  const pt = moduleMatch ? `PT ${moduleMatch[1]}` : prepTestTitle.trim() || 'PrepTest'
+  const section = sectionNumber != null ? `S${sectionNumber}` : 'S?'
+  return `${pt}  .  ${section}  .  Q${questionNumber}`
+}
+
 function latestByQuestion(
   events: {
     practice_session_id: string
@@ -391,8 +403,8 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
     },
 
     async getPrepTestSessionDetail(userId: string, sessionId: string) {
-      const session = await deps.repository.getPracticeSession(sessionId, userId)
-      if (!session || session.kind !== 'PREPTEST' || !session.completed_at) {
+      const session = await deps.repository.resolveCompletedPrepTestSession(userId, sessionId)
+      if (!session) {
         throw new Error('PrepTest session not found or not completed')
       }
       const prepTestId = session.prep_test_id
@@ -439,14 +451,16 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
         const final = latest.get(qid)
         total += 1
         if (initial?.is_correct) correct += 1
-        const stem = typeof row.stem_text === 'string' ? row.stem_text.trim() : ''
-        const title =
-          qt?.name?.trim() ||
-          (stem.length > 60 ? `${stem.slice(0, 60)}…` : stem) ||
-          `Question ${row.question_number ?? total}`
+        const qNum = typeof row.question_number === 'number' ? row.question_number : total
+        const title = formatQuestionResultTitle(
+          apt?.module_id ?? null,
+          apt?.title ?? 'PrepTest',
+          sec?.section_number ?? null,
+          qNum,
+        )
         questionRows.push({
           id: qid,
-          number: typeof row.question_number === 'number' ? row.question_number : total,
+          number: qNum,
           title,
           tags: qt?.name ? [qt.name] : [],
           difficulty: difficultyLabel(diff),

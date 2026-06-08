@@ -1,4 +1,8 @@
-import type { PrepTestDetailResponse, PrepTestSectionBreak } from "@/features/student/preptests/preptest-types"
+import type {
+  PrepTestDetailResponse,
+  PrepTestDetailSection,
+  PrepTestSectionBreak,
+} from "@/features/student/preptests/preptest-types"
 
 export const PREPTEST_SECTION_BREAK_SECONDS = 60
 
@@ -58,6 +62,19 @@ function orderedPracticeableSections(detail: PrepTestDetailResponse) {
     .sort((a, b) => (a.sectionNumber ?? 0) - (b.sectionNumber ?? 0))
 }
 
+/** Next practiceable section after a completed section row (used after break skip/expiry). */
+export function findNextSectionAfterBreak(
+  detail: PrepTestDetailResponse,
+  completedSectionRowId: string,
+): PrepTestDetailSection | null {
+  const practiceable = orderedPracticeableSections(detail)
+  const idx = practiceable.findIndex((section) => section.id === completedSectionRowId)
+  if (idx < 0 || idx >= practiceable.length - 1) return null
+  const next = practiceable[idx + 1]!
+  if (!next.practiceable || next.completed) return null
+  return next
+}
+
 function deriveSectionAccess(
   practiceableIds: string[],
   completedSectionIds: Set<string>,
@@ -82,15 +99,37 @@ function deriveSectionAccess(
   return access
 }
 
+/** Map a section session id to the PrepTest hub section row id used for break UI. */
+export function resolvePrepTestBreakAfterSectionId(
+  detail: PrepTestDetailResponse,
+  sessionSectionId: string | null | undefined,
+  poolSectionId?: string | null,
+): string | null {
+  const candidates = [sessionSectionId, poolSectionId].filter(
+    (value): value is string => typeof value === "string" && value.length > 0,
+  )
+  for (const candidate of candidates) {
+    const byRowId = detail.sections.find((section) => section.id === candidate)
+    if (byRowId) return byRowId.id
+    const bySectionId = detail.sections.find((section) => section.sectionId === candidate)
+    if (bySectionId) return bySectionId.id
+  }
+  return candidates[0] ?? null
+}
+
 /** Normalize legacy API responses and merge local break state after section completion. */
-export function normalizePrepTestDetail(detail: PrepTestDetailResponse): PrepTestDetailResponse {
+export function normalizePrepTestDetail(
+  detail: PrepTestDetailResponse,
+  options?: { prepTestId?: string },
+): PrepTestDetailResponse {
   const practiceable = orderedPracticeableSections(detail)
   const practiceableIds = practiceable.map((s) => s.id)
   const completedSectionIds = new Set(
     practiceable.filter((s) => s.completed).map((s) => s.id),
   )
 
-  const storedBreak = readStoredSectionBreak(detail.prepTest.id)
+  const prepTestId = options?.prepTestId ?? detail.prepTest.id
+  const storedBreak = readStoredSectionBreak(prepTestId)
   const sectionBreak = detail.sectionBreak ?? storedBreak
   const access = deriveSectionAccess(practiceableIds, completedSectionIds, sectionBreak)
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
-import { ChevronDown, ChevronLeft, ChevronRight, Flag } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { LrDrillOptionRow } from "@/features/student/drills/lr-drill-option-row"
@@ -14,6 +14,7 @@ import {
 } from "@/features/student/practice-session/practice-session-types"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
+import { PracticeSessionQuestionNavButton } from "@/features/student/practice-session/practice-session-question-nav-button"
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
 import { usePracticeQuestionFlags } from "@/features/student/practice-session/use-practice-question-flags"
 import {
@@ -469,39 +470,18 @@ function DrillSessionPage() {
           </div>
 
           <footer className="practice-session-footer relative z-10 flex shrink-0 items-center justify-between gap-3 border-t border-[#dfe1e7] bg-background px-4 py-3 md:gap-4 md:px-6">
-            <div className="practice-session-scroll-hidden flex min-h-0 min-w-0 flex-1 flex-nowrap items-center gap-1.5 overflow-x-auto overflow-y-hidden py-0.5 sm:gap-2">
+            <div className="practice-session-scroll-hidden flex min-h-0 min-w-0 flex-1 flex-nowrap items-stretch gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5 pt-2.5 sm:gap-2">
               {questions.map((q, i) => {
                 const n = i + 1
-                const active = n === safeIndex
-                const answered = Boolean(answersByQuestion[q.id])
-                const flagged = questionFlags.isFlagged(q.id)
                 return (
-                  <button
+                  <PracticeSessionQuestionNavButton
                     key={q.id}
-                    type="button"
+                    number={n}
+                    active={n === safeIndex}
+                    answered={Boolean(answersByQuestion[q.id])}
+                    flagged={questionFlags.isFlagged(q.id)}
                     onClick={() => setQIndex(n)}
-                    className="relative flex size-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-colors sm:size-9 sm:text-xs"
-                    style={{
-                      backgroundColor: active
-                        ? "var(--color-student-cta)"
-                        : answered
-                          ? "color-mix(in srgb, var(--color-student-cta) 25%, var(--greyscale-25))"
-                          : "var(--greyscale-25)",
-                      color: active ? "#fff" : "var(--color-student-heading)",
-                      border: `1px solid ${active ? "var(--color-student-cta)" : "var(--greyscale-100)"}`,
-                    }}
-                    aria-current={active ? "true" : undefined}
-                    aria-label={flagged ? `Question ${n}, flagged` : `Question ${n}`}
-                  >
-                    {n}
-                    {flagged ? (
-                      <Flag
-                        className="absolute -right-0.5 -top-0.5 size-2.5 fill-[var(--color-student-cta)] text-[var(--color-student-cta)]"
-                        strokeWidth={2}
-                        aria-hidden
-                      />
-                    ) : null}
-                  </button>
+                  />
                 )
               })}
             </div>
