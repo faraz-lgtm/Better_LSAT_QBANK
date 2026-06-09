@@ -21,6 +21,7 @@ import { AnalyticsSectionsPage } from "@/features/student/pages/analytics-sectio
 import { ExplanationQuestionDetailPage } from "@/features/student/pages/explanation-question-detail-page"
 import { ExplanationsPage } from "@/features/student/pages/explanations-page"
 import { DrillSessionPage } from "@/features/student/pages/drill-session-page"
+import { PracticeSessionResultsPage } from "@/features/student/pages/practice-session-results-page"
 import { LrNewDrillPage } from "@/features/student/pages/lr-new-drill-page"
 import { RcNewDrillPage } from "@/features/student/pages/rc-new-drill-page"
 import { PracticeBlindReviewPage } from "@/features/student/pages/practice-blind-review-page"
@@ -53,6 +54,7 @@ function AppRoutes() {
         <Route path="practice/drills/lr/new" element={<LrNewDrillPage />} />
         <Route path="practice/drills/rc/new" element={<RcNewDrillPage />} />
         <Route path="practice/drills/session/:sessionId" element={<DrillSessionPage />} />
+        <Route path="practice/results/:sessionId" element={<PracticeSessionResultsPage />} />
         <Route path="practice/sections" element={<PracticeSectionsPage />} />
         <Route path="practice/sections/session/:sessionId" element={<SectionSessionPage />} />
         <Route path="practice/sections/rc" element={<Navigate to="/app/practice/sections" replace />} />

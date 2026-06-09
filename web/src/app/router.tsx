@@ -14,6 +14,7 @@ import { PrepCourseContentPage } from "@/features/prep-course/pages/prep-course-
 import { PrepCourseLessonPage } from "@/features/prep-course/pages/prep-course-lesson-page"
 import { PrepCourseListPage } from "@/features/prep-course/pages/prep-course-list-page"
 import { AnalyticsDrillResultsPage } from "@/features/student/pages/analytics-drill-results-page"
+import { PracticeSessionResultsPage } from "@/features/student/pages/practice-session-results-page"
 import { AnalyticsDrillsPage } from "@/features/student/pages/analytics-drills-page"
 import { AnalyticsPage } from "@/features/student/pages/analytics-page"
 import { AnalyticsPrepTestResultsPage } from "@/features/student/pages/analytics-prep-test-results-page"
@@ -216,6 +217,7 @@ const router = createBrowserRouter([
       { path: "practice/drills/lr/new", element: <LrNewDrillPage /> },
       { path: "practice/drills/rc/new", element: <RcNewDrillPage /> },
       { path: "practice/drills/session/:sessionId", element: <DrillSessionPage /> },
+      { path: "practice/results/:sessionId", element: <PracticeSessionResultsPage /> },
       { path: "practice/sections", element: <PracticeSectionsPage /> },
       { path: "practice/sections/session/:sessionId", element: <SectionSessionPage /> },
       { path: "practice/sections/rc", element: <Navigate to="/app/practice/sections" replace /> },

@@ -1,7 +1,12 @@
+import { resolveAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
 import type { ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
 import type { LocatedExplanationQuestion } from "@/features/student/explanation-detail/explanation-question-index"
 import { getExplanationQuestionNeighbors } from "@/features/student/explanation-detail/explanation-question-index"
+import {
+  difficultyLabelFromLevel,
+  tagsFromTopicName,
+} from "@/features/student/practice-session/practice-results-ui"
 
 function passageDisplayNumber(loc: LocatedExplanationQuestion): number {
   const m = /^P(\d+)$/i.exec(loc.pass.label)
@@ -21,30 +26,59 @@ function headingAndTrail(loc: LocatedExplanationQuestion): { headingCode: string
   return { headingCode, subtitleTrail }
 }
 
-function stubAnalytics(loc: LocatedExplanationQuestion): ExplanationQuestionDetailView["analytics"] {
-  const diff = loc.q.difficulty
+function difficultyDisplayLabel(level: number): string {
+  const label = difficultyLabelFromLevel(level)
+  if (label === "Hardest" || label === "Hard") return "Hard"
+  if (label === "Medium") return "Medium"
+  return "Easy"
+}
+
+function buildAnalytics(
+  loc: LocatedExplanationQuestion,
+  detail: ExplanationDetailPayload | null,
+  choices: ExplanationQuestionDetailView["choices"],
+): ExplanationQuestionDetailView["analytics"] {
+  const diffLevel = detail?.difficulty ?? loc.q.difficulty
+  const diffLabel = difficultyDisplayLabel(diffLevel)
+  const bankLabel = difficultyLabelFromLevel(diffLevel)
+  const tags = detail ? tagsFromTopicName(detail.topicName) : []
+
+  const answerPopularity = resolveAnswerPopularityRows(
+    detail?.answerPopularity,
+    choices.length > 0 ? choices : [{ id: "A", index: 1 }, { id: "B", index: 2 }, { id: "C", index: 3 }, { id: "D", index: 4 }, { id: "E", index: 5 }],
+    detail?.correctChoiceId ?? "",
+  )
+
+  const totalResponses = answerPopularity.reduce((sum, row) => sum + row.count, 0)
+
   return {
     questionDifficulty: {
-      filled: diff,
+      filled: diffLevel,
       max: 5,
-      label: diff >= 4 ? "Hard" : diff >= 3 ? "Medium" : "Easy",
-      caption: "Based on question difficulty in the question bank.",
-      tone: diff >= 4 ? "red" : "orange",
+      label: diffLabel,
+      caption: detail
+        ? `Question bank difficulty (${bankLabel}).`
+        : "Based on question difficulty in the question bank.",
+      tone: diffLevel >= 4 ? "red" : "orange",
     },
     passageDifficulty: {
-      filled: diff,
+      filled: diffLevel,
       max: 5,
-      label: diff >= 4 ? "Hard" : "Medium",
-      caption: "Passage-level analytics coming soon.",
+      label: diffLabel,
+      caption: "Passage-level difficulty uses the same scale until passage metrics ship.",
       tone: "orange",
     },
     scoreBand: {
-      headline: "—",
-      range: "—",
-      caption: "Score band analytics coming soon.",
+      headline: totalResponses > 0 ? String(totalResponses) : "—",
+      range: totalResponses > 0 ? "platform responses" : "—",
+      caption:
+        totalResponses > 0
+          ? "Students who answered this question on the platform (latest pick per user)."
+          : "Score band analytics coming soon.",
     },
-    answerPopularity: [],
-    questionStemTags: [],
+    answerPopularity,
+    answerPopularityTotal: totalResponses,
+    questionStemTags: tags,
     passageTags: [],
     history: [],
   }
@@ -105,7 +139,7 @@ export function buildExplanationQuestionDetailView(
     choices,
     correctChoiceId: detail?.correctChoiceId ?? "",
     videos,
-    analytics: stubAnalytics(loc),
+    analytics: buildAnalytics(loc, detail, choices),
     neighbors,
     hasExplanationTab: Boolean(detail?.videoUrl || detail?.explanationHtml),
   }

@@ -161,6 +161,7 @@ function DrillSessionPage() {
     questionCount: number
   } | null>(null)
   const [scoreHidden, setScoreHidden] = useState(true)
+  const [reviewAfterComplete, setReviewAfterComplete] = useState(false)
 
   const { elapsed, paused, togglePause } = usePracticeSessionTimer()
   const highlights = usePracticeHighlights()
@@ -217,8 +218,11 @@ function DrillSessionPage() {
     current && currentAnswer
       ? choiceIndexFromAnswer(current.choices, currentAnswer.selectedAnswer)
       : null
-  const revealed =
-    showAnswersMode === "each" ? Boolean(currentAnswer) : showAnswersMode === "never" ? false : false
+  const revealed = reviewAfterComplete
+    ? false
+    : showAnswersMode === "each"
+      ? Boolean(currentAnswer)
+      : false
 
   const passageBody =
     sectionType === "RC" && current?.passage
@@ -238,7 +242,9 @@ function DrillSessionPage() {
 
   async function handleSelectChoice(index: number) {
     if (!sessionId || !current || submitting) return
-    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer))) return
+    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), { blindReview: reviewAfterComplete })) {
+      return
+    }
     if (selectedIndex === index) return
     const choice = current.choices[index]
     if (!choice) return
@@ -252,12 +258,13 @@ function DrillSessionPage() {
         sessionId,
         questionId: current.id,
         selectedAnswer: choice.id,
+        blindReview: reviewAfterComplete || undefined,
       })
       setAnswersByQuestion((prev) => ({
         ...prev,
         [current.id]: { selectedAnswer: event.selected_answer, isCorrect: event.is_correct },
       }))
-      if (showAnswersMode === "each") {
+      if (showAnswersMode === "each" && !reviewAfterComplete) {
         window.setTimeout(() => {
           setQIndex((i) => Math.min(questions.length, i + 1))
         }, 600)
@@ -301,10 +308,13 @@ function DrillSessionPage() {
 
   function viewDrillResults() {
     if (!sessionId) return
+    const path = resolveReturnPath()
+    if (path.startsWith("/app/prep-course/")) {
+      navigate(path, { replace: true })
+      return
+    }
     const params = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""
-    navigate(`/app/analytics/drills/results/${encodeURIComponent(sessionId)}${params}`, {
-      replace: true,
-    })
+    navigate(`/app/practice/results/${encodeURIComponent(sessionId)}${params}`, { replace: true })
   }
 
   async function handleFinish() {
@@ -370,7 +380,9 @@ function DrillSessionPage() {
   const exitHref = resolveReturnPath() || "/app/practice/drills"
   const isPrepCourseDrill = Boolean(resolveReturnPath())
   const timerProgress = questions.length > 0 ? answeredCount / questions.length : 0
-  const allowReselect = canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer))
+  const allowReselect = canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
+    blindReview: reviewAfterComplete,
+  })
 
   const finishButton = (
     <Button
@@ -399,7 +411,7 @@ function DrillSessionPage() {
           style={{ borderColor: "var(--color-student-cta)" }}
         >
           <PracticeSessionHeader
-            title={headerLabel}
+            title={reviewAfterComplete ? `Blind review · ${headerLabel}` : headerLabel}
             findQuery={findQuery}
             onFindQueryChange={setFindQuery}
             activeColor={highlights.activeColor}
@@ -545,10 +557,14 @@ function DrillSessionPage() {
         questionCount={completeModal?.questionCount ?? 1}
         scoreHidden={scoreHidden}
         onToggleScoreHidden={() => setScoreHidden((h) => !h)}
-        showBlindReview={isPrepCourseDrill}
-        onBlindReview={isPrepCourseDrill ? leaveDrillSession : undefined}
+        showBlindReview
+        onBlindReview={() => {
+          setCompleteModal(null)
+          setReviewAfterComplete(true)
+          setScoreHidden(true)
+          setQIndex(1)
+        }}
         onSkipDetails={viewDrillResults}
-        doneLabel="Done with Drill"
         onDone={leaveDrillSession}
       />
     </StudentMain>

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { FunctionsHttpError } from "@supabase/functions-js"
 import { describe, expect, it, vi } from "vitest"
 import { createPracticeApi } from "./practice"
 
@@ -299,6 +300,18 @@ describe("createPracticeApi", () => {
       body: { sessionId: "section-sess-1" },
       headers: { Authorization: "Bearer token-1" },
     })
+  })
+
+  it("getDrillSession surfaces edge function error message on 400", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: null,
+      error: new FunctionsHttpError(
+        new Response(JSON.stringify({ error: "Session is not a drill" }), { status: 400 }),
+      ),
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+
+    await expect(api.getDrillSession("section-sess-1")).rejects.toThrow("Session is not a drill")
   })
 
   it("getDrillPoolStats invokes practice-drill-pool-stats", async () => {

@@ -377,6 +377,31 @@ export function createExplanationsRepository(client: SupabaseClient) {
       }
       return out
     },
+
+    /** Latest submitted answer per user for platform-wide popularity on one question. */
+    async listLatestAnswerSelectionsForQuestion(questionId: string): Promise<string[]> {
+      const pageSize = 1000
+      const latestByUser = new Map<string, string>()
+      let from = 0
+      while (true) {
+        const { data, error } = await client
+          .from('answer_events')
+          .select('user_id, selected_answer, created_at')
+          .eq('question_id', questionId)
+          .order('created_at', { ascending: false })
+          .range(from, from + pageSize - 1)
+        if (error) throw error
+        const rows = (data ?? []) as { user_id: string; selected_answer: string }[]
+        for (const row of rows) {
+          if (latestByUser.has(row.user_id)) continue
+          const answer = row.selected_answer?.trim()
+          if (answer) latestByUser.set(row.user_id, answer)
+        }
+        if (rows.length < pageSize) break
+        from += pageSize
+      }
+      return [...latestByUser.values()]
+    },
   }
 }
 

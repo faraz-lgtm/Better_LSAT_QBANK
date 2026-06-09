@@ -77,7 +77,8 @@ describe("LessonContentRenderer active_drill", () => {
     )
     expect(screen.getByText("Drill Result")).toBeInTheDocument()
     expect(screen.getByText("Hidden until complete.")).toBeInTheDocument()
-    expect(screen.getByText(/1\/1 Correct/)).toBeInTheDocument()
+    expect(screen.getByText(/PT LSAC133/)).toBeInTheDocument()
+    expect(screen.getByText("Answer Popularity")).toBeInTheDocument()
   })
 })
 
