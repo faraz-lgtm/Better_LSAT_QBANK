@@ -6,10 +6,15 @@ import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
 import type {
+  PrepTestPoolAttempt,
   PrepTestPoolFilter,
   PrepTestPoolItem,
   PrepTestPoolStatusCounts,
 } from "@/features/student/preptests/preptest-types"
+import {
+  blindReviewSectionSessionPath,
+  firstBlindReviewSectionSessionId,
+} from "@/features/student/blind-review/blind-review-navigation"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { ChevronDown, ChevronLeft, ChevronRight, MoreVertical, RefreshCw, Settings } from "lucide-react"
@@ -40,13 +45,46 @@ function displayPrepTestNumber(item: PrepTestPoolItem): number {
   return fromModule ? Number.parseInt(fromModule, 10) : 0
 }
 
-function statusTitle(status: PrepTestPoolItem["status"]): string {
-  if (status === "fresh") return "Ready to Take"
-  if (status === "in_progress") return "In Process"
+function formatCompletedDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })
+}
+
+function attemptScoreLabel(attempt: PrepTestPoolAttempt): string {
+  if (attempt.scaledScore == null) return "—"
+  if (attempt.blindReviewScaledScore != null) {
+    return `${attempt.scaledScore} · ${attempt.blindReviewScaledScore} BR`
+  }
+  return String(attempt.scaledScore)
+}
+
+function attemptDetailLabel(attempt: PrepTestPoolAttempt): string {
+  const ord =
+    attempt.attemptNumber === 1
+      ? "1st take"
+      : attempt.attemptNumber === 2
+        ? "2nd take"
+        : attempt.attemptNumber === 3
+          ? "3rd take"
+          : `${attempt.attemptNumber}th take`
+  return ord
+}
+
+function statusTitle(item: PrepTestPoolItem): string {
+  if (item.blindReviewStatus) return "Blind Review"
+  if (item.status === "fresh") return "Ready to Take"
+  if (item.status === "in_progress") return "In Process"
   return "Completed"
 }
 
 function statusSubtitle(item: PrepTestPoolItem): string {
+  if (item.blindReviewStatus) return "Blind Review"
+  if (item.status === "completed" && item.completedAt) {
+    return formatCompletedDate(item.completedAt)
+  }
   if (item.status === "completed" && item.scaledScore != null) {
     return `Scaled score ${item.scaledScore}`
   }
@@ -76,82 +114,136 @@ function PtBadge({ number, tone }: { number: number; tone: "default" | "muted" |
 function PrepTestListCard({
   item,
   starting,
+  startingBlindReview,
+  expanded,
+  onToggleExpanded,
   onPrimary,
+  onBlindReview,
+  onViewResult,
 }: {
   item: PrepTestPoolItem
   starting: boolean
+  startingBlindReview: boolean
+  expanded: boolean
+  onToggleExpanded: () => void
   onPrimary: () => void
+  onBlindReview: () => void
+  onViewResult: (sessionId: string) => void
 }) {
   const ptNum = displayPrepTestNumber(item)
   const isCompleted = item.status === "completed"
+  const blindReviewPending = item.blindReviewStatus != null
   const badgeTone: "default" | "muted" | "success" = isCompleted ? "success" : "default"
-  const titleClass = isCompleted ? "text-[#287f6e]" : "text-[#0d47a1]"
+  const titleClass = isCompleted
+    ? "text-[#287f6e]"
+    : blindReviewPending
+      ? "text-[#c45a00]"
+      : "text-[#0d47a1]"
+  const attempts = item.attempts ?? []
+  const hasHistory = isCompleted && attempts.length > 0
 
-  const primaryLabel = isCompleted ? "Retake" : item.status === "in_progress" ? "Continue" : "Start"
+  const primaryLabel = isCompleted ? "Retake" : item.status === "in_progress" && !blindReviewPending ? "Continue" : "Start"
   const primaryClass = isCompleted
     ? "inline-flex h-[52px] w-[148px] shrink-0 items-center justify-center gap-2 rounded-2xl border border-[#dfe1e7] bg-white text-base font-semibold text-[#666d80] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa]"
-    : item.status === "in_progress"
-      ? "ds-btn min-w-[148px] shrink-0 text-base"
-      : "ds-btn min-w-[148px] shrink-0 text-base"
+    : "ds-btn min-w-[148px] shrink-0 text-base"
 
   return (
     <article
-      className="flex min-h-[110px] w-full flex-wrap items-center gap-4 rounded-2xl border border-[#dfe1e7] bg-white px-6 py-3 shadow-[0px_1px_1px_rgba(13,13,18,0.06)] sm:flex-nowrap sm:py-0"
+      className="w-full overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
       data-testid={`preptest-list-row-${item.id}`}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-6">
-        <PtBadge number={ptNum} tone={badgeTone} />
-        <div className="flex min-w-0 flex-col gap-2">
-          <p className={cn("truncate text-2xl font-bold leading-[1.3]", titleClass)}>{statusTitle(item.status)}</p>
-          <p className="truncate text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
-            {item.title ?? item.moduleId} · {statusSubtitle(item)}
-          </p>
+      <div className="flex min-h-[110px] flex-wrap items-center gap-4 px-6 py-3 sm:flex-nowrap sm:py-0">
+        {hasHistory ? (
+          <button
+            type="button"
+            onClick={onToggleExpanded}
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-[#666d80] transition-colors hover:bg-[#f6f8fa]"
+            aria-expanded={expanded}
+            aria-label={expanded ? "Collapse attempt history" : "Expand attempt history"}
+          >
+            <ChevronDown className={cn("size-5 transition-transform", expanded && "rotate-180")} />
+          </button>
+        ) : (
+          <div className="size-9 shrink-0" aria-hidden />
+        )}
+
+        <div className="flex min-w-0 flex-1 items-center gap-6">
+          <PtBadge number={ptNum} tone={badgeTone} />
+          <div className="flex min-w-0 flex-col gap-2">
+            <p className={cn("truncate text-2xl font-bold leading-[1.3]", titleClass)}>{statusTitle(item)}</p>
+            <p className="truncate text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
+              {statusSubtitle(item)}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex w-full shrink-0 items-center justify-end gap-3 sm:w-auto">
+          {(isCompleted || blindReviewPending) && item.scaledScore != null ? (
+            <span className="inline-flex h-9 items-center rounded-full bg-[#e8f5f1] px-4 text-sm font-semibold text-[#287f6e]">
+              Score {item.scaledScore}
+            </span>
+          ) : null}
+
+          {blindReviewPending ? (
+            <button
+              type="button"
+              disabled={startingBlindReview}
+              onClick={onBlindReview}
+              className="inline-flex h-[52px] min-w-[148px] shrink-0 items-center justify-center rounded-2xl bg-[#ff9d51] px-6 text-base font-semibold text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f08a3a] disabled:opacity-60"
+            >
+              {startingBlindReview ? "…" : "Blind Review"}
+            </button>
+          ) : (
+            <button type="button" disabled={starting} onClick={onPrimary} className={primaryClass}>
+              {starting ? "…" : isCompleted ? (
+                <>
+                  <RefreshCw className="size-5 shrink-0" aria-hidden />
+                  {primaryLabel}
+                </>
+              ) : (
+                primaryLabel
+              )}
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-[#666d80] transition-colors hover:bg-[#f6f8fa] hover:text-[#062357]"
+            aria-label="More options"
+          >
+            <MoreVertical className="size-6" />
+          </button>
         </div>
       </div>
-      <PrepTestListCardActions
-        isCompleted={isCompleted}
-        primaryLabel={primaryLabel}
-        primaryClass={primaryClass}
-        starting={starting}
-        onPrimary={onPrimary}
-      />
-    </article>
-  )
-}
 
-function PrepTestListCardActions({
-  isCompleted,
-  primaryLabel,
-  primaryClass,
-  starting,
-  onPrimary,
-}: {
-  isCompleted: boolean
-  primaryLabel: string
-  primaryClass: string
-  starting: boolean
-  onPrimary: () => void
-}) {
-  return (
-    <div className="flex w-full shrink-0 items-center justify-end gap-3 sm:w-auto">
-      <button type="button" disabled={starting} onClick={onPrimary} className={primaryClass}>
-        {starting ? "…" : isCompleted ? (
-          <>
-            <RefreshCw className="size-5 shrink-0" aria-hidden />
-            {primaryLabel}
-          </>
-        ) : (
-          primaryLabel
-        )}
-      </button>
-      <button
-        type="button"
-        className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-[#666d80] transition-colors hover:bg-[#f6f8fa] hover:text-[#062357]"
-        aria-label="More options"
-      >
-        <MoreVertical className="size-6" />
-      </button>
-    </div>
+      {hasHistory && expanded ? (
+        <ul className="border-t border-[#dfe1e7] bg-[#f9fbfc] px-6 py-4">
+          {attempts.map((attempt) => (
+            <li
+              key={attempt.sessionId}
+              className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef1f4] py-3 last:border-b-0"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-[#062357]">{formatCompletedDate(attempt.completedAt)}</p>
+                <p className="text-xs font-medium tracking-[0.02em] text-[#666d80]">{attemptDetailLabel(attempt)}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold tabular-nums text-[#062357]">
+                  {attemptScoreLabel(attempt)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onViewResult(attempt.sessionId)}
+                  className="text-sm font-semibold text-[#0d47a1] hover:underline"
+                >
+                  Result &gt;
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </article>
   )
 }
 
@@ -169,6 +261,8 @@ function PracticePrepTestsListPage() {
   const [statusCounts, setStatusCounts] = useState<PrepTestPoolStatusCounts>(EMPTY_STATUS_COUNTS)
   const [loading, setLoading] = useState(true)
   const [startingId, setStartingId] = useState<string | null>(null)
+  const [startingBlindReviewId, setStartingBlindReviewId] = useState<string | null>(null)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set())
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -218,15 +312,51 @@ function PracticePrepTestsListPage() {
     setStartingId(item.id)
     setError(null)
     try {
-      if (item.status === "fresh") {
+      if (item.status === "fresh" || item.status === "completed") {
         await practiceApi.startPrepTest({ prepTestId: item.id })
       }
-      navigate(`/app/practice/preptest/${encodeURIComponent(item.id)}`)
+      navigate(`/app/practice/preptest/${encodeURIComponent(item.id)}`, {
+        state: item.status === "completed" ? { retake: true } : undefined,
+      })
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to start PrepTest")
     } finally {
       setStartingId(null)
     }
+  }
+
+  async function handleBlindReview(item: PrepTestPoolItem) {
+    setStartingBlindReviewId(item.id)
+    setError(null)
+    try {
+      if (item.blindReviewStatus === "eligible") {
+        await practiceApi.startBlindReview(item.id)
+      }
+      const detail = await practiceApi.getBlindReviewDetail(item.id)
+      const firstSessionId = firstBlindReviewSectionSessionId(detail)
+      if (firstSessionId) {
+        navigate(blindReviewSectionSessionPath(item.id, firstSessionId))
+        return
+      }
+      navigate(`/app/practice/blind-review/${encodeURIComponent(item.id)}`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to start blind review")
+    } finally {
+      setStartingBlindReviewId(null)
+    }
+  }
+
+  function toggleExpanded(id: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function viewResult(sessionId: string) {
+    navigate(`/app/analytics/preptests/results/${encodeURIComponent(sessionId)}`)
   }
 
   if (legacyTestId) {
@@ -283,7 +413,21 @@ function PracticePrepTestsListPage() {
           <p className="text-sm text-[#666d80]">No PrepTests match this filter.</p>
         ) : (
           <>
-            <PrepTestListRows rows={prepTests} startingId={startingId} onPrimary={handlePrimary} />
+            <div className="flex flex-col gap-6">
+              {prepTests.map((item) => (
+                <PrepTestListCard
+                  key={item.id}
+                  item={item}
+                  starting={startingId === item.id}
+                  startingBlindReview={startingBlindReviewId === item.id}
+                  expanded={expandedIds.has(item.id)}
+                  onToggleExpanded={() => toggleExpanded(item.id)}
+                  onPrimary={() => void handlePrimary(item)}
+                  onBlindReview={() => void handleBlindReview(item)}
+                  onViewResult={viewResult}
+                />
+              ))}
+            </div>
             {!loading && total > PAGE_SIZE ? (
               <nav
                 className="mt-6 flex flex-col gap-3 border-t border-[#dfe1e7] pt-4 sm:flex-row sm:items-center sm:justify-between"
@@ -346,30 +490,30 @@ function PrepTestListFilters({
     <div className="flex items-center justify-between gap-6">
       <h2 className="shrink-0 text-2xl font-bold leading-[1.3] text-[#062357]">Start your PrepTest</h2>
       <div className="flex shrink-0 items-center gap-3">
-          {FILTER_TABS.map((tab) => {
-            const active = filter === tab.id
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => {
-                  if (tab.id === "blind_review") {
-                    navigate("/app/practice/blind-review")
-                    return
-                  }
-                  setFilter(tab.id)
-                }}
-                className={cn(
-                  "inline-flex shrink-0 items-center justify-center whitespace-nowrap px-4 text-base transition-colors",
-                  active
-                    ? "ds-btn font-semibold"
-                    : "h-[52px] rounded-2xl border border-[#dfe1e7] bg-white font-medium text-[#666d80] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] hover:bg-[#f6f8fa]",
-                )}
-              >
-                {filterTabLabel(tab.id)}
-              </button>
-            )
-          })}
+        {FILTER_TABS.map((tab) => {
+          const active = filter === tab.id
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => {
+                if (tab.id === "blind_review") {
+                  navigate("/app/practice/blind-review")
+                  return
+                }
+                setFilter(tab.id)
+              }}
+              className={cn(
+                "inline-flex shrink-0 items-center justify-center whitespace-nowrap px-4 text-base transition-colors",
+                active
+                  ? "ds-btn font-semibold"
+                  : "h-[52px] rounded-2xl border border-[#dfe1e7] bg-white font-medium text-[#666d80] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] hover:bg-[#f6f8fa]",
+              )}
+            >
+              {filterTabLabel(tab.id)}
+            </button>
+          )
+        })}
         <div className="relative w-[160px] shrink-0">
           <label htmlFor="preptest-sort" className="sr-only">
             Sort PrepTests
@@ -389,29 +533,6 @@ function PrepTestListFilters({
           <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-5 -translate-y-1/2 text-[#666d80]" />
         </div>
       </div>
-    </div>
-  )
-}
-
-function PrepTestListRows({
-  rows,
-  startingId,
-  onPrimary,
-}: {
-  rows: PrepTestPoolItem[]
-  startingId: string | null
-  onPrimary: (item: PrepTestPoolItem) => void
-}) {
-  return (
-    <div className="flex flex-col gap-6">
-      {rows.map((item) => (
-        <PrepTestListCard
-          key={item.id}
-          item={item}
-          starting={startingId === item.id}
-          onPrimary={() => void onPrimary(item)}
-        />
-      ))}
     </div>
   )
 }

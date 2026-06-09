@@ -40,9 +40,11 @@ export function computeRemainingTimerProgress(remainingSeconds: number, budgetSe
 
 type UsePracticeSessionTimerOptions = {
   initialCountdown?: number | null
+  enabled?: boolean
 }
 
 export function usePracticeSessionTimer(options?: UsePracticeSessionTimerOptions) {
+  const enabled = options?.enabled !== false
   const [elapsed, setElapsed] = useState(0)
   const [paused, setPaused] = useState(false)
   const [countdown, setCountdown] = useState<number | null>(options?.initialCountdown ?? null)
@@ -52,13 +54,13 @@ export function usePracticeSessionTimer(options?: UsePracticeSessionTimerOptions
   }, [])
 
   useEffect(() => {
-    if (paused) return
+    if (!enabled || paused) return
     const id = window.setInterval(() => {
       setElapsed((t) => t + 1)
       setCountdown((t) => (t != null && t > 0 ? t - 1 : t))
     }, 1000)
     return () => window.clearInterval(id)
-  }, [paused])
+  }, [enabled, paused])
 
   const resetElapsed = useCallback(() => {
     setElapsed(0)

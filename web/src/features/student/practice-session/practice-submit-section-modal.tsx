@@ -7,6 +7,8 @@ type PracticeSubmitSectionModalProps = {
   onCancel: () => void
   onConfirm: () => void
   titleId?: string
+  title?: string
+  confirmLabel?: string
 }
 
 function PracticeSubmitSectionModal({
@@ -16,6 +18,8 @@ function PracticeSubmitSectionModal({
   onCancel,
   onConfirm,
   titleId = "submit-section-title",
+  title = "Submit Section",
+  confirmLabel = "Submit Section",
 }: PracticeSubmitSectionModalProps) {
   if (!open) return null
 
@@ -28,7 +32,7 @@ function PracticeSubmitSectionModal({
     >
       <div className="w-full max-w-[480px] rounded-2xl border border-[#dfe1e7] bg-white px-6 py-8 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
         <h2 id={titleId} className="text-center text-2xl font-bold text-[#062357]">
-          Submit Section
+          {title}
         </h2>
         <p className="mt-4 text-center text-base leading-[1.5] tracking-[0.32px] text-[#062357]">
           {message}
@@ -50,7 +54,7 @@ function PracticeSubmitSectionModal({
             disabled={submitting}
             onClick={onConfirm}
           >
-            {submitting ? "Submitting…" : "Submit Section"}
+            {submitting ? "Submitting…" : confirmLabel}
           </Button>
         </div>
       </div>

@@ -120,7 +120,7 @@ function StudentAppHeader() {
   const initials = useMemo(() => getInitials(displayName), [displayName])
 
   return (
-    <header className="app-nav-header sticky top-0 z-20">
+    <header className="app-nav-header sticky top-0 z-30">
       <div className="app-nav-shell">
         <div className="app-nav-group app-nav-start">
           <Link to="/app" className="flex shrink-0 items-center" aria-label="betterLSAT home">

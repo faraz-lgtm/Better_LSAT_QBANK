@@ -345,7 +345,16 @@ export function createPracticeApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       if (!data?.prepTests) throw new Error("No prep tests returned from practice")
-      return data
+      return {
+        ...data,
+        prepTests: data.prepTests.map((pt) => ({
+          ...pt,
+          attempts: pt.attempts ?? [],
+          blindReviewStatus: pt.blindReviewStatus ?? null,
+          blindReviewScaledScore: pt.blindReviewScaledScore ?? null,
+          completedAt: pt.completedAt ?? null,
+        })),
+      }
     },
 
     async getPrepTestDetail(prepTestId: string): Promise<PrepTestDetailResponse> {
@@ -421,6 +430,16 @@ export function createPracticeApi(supabase: SupabaseClient) {
 
     async startBlindReview(prepTestId: string): Promise<PracticeSession> {
       const { data, error } = await invokePracticeFn<{ session: PracticeSession }>("practice-start-blind-review", {
+        method: "POST",
+        body: { prepTestId },
+      })
+      if (error) throw error
+      if (!data?.session) throw new Error("No session returned from practice")
+      return data.session
+    },
+
+    async skipBlindReview(prepTestId: string): Promise<PracticeSession> {
+      const { data, error } = await invokePracticeFn<{ session: PracticeSession }>("practice-skip-blind-review", {
         method: "POST",
         body: { prepTestId },
       })
