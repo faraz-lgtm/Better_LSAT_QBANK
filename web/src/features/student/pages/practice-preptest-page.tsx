@@ -9,6 +9,12 @@ import type {
   PrepTestDetailSection,
   PrepTestSectionBreak,
 } from "@/features/student/preptests/preptest-types"
+import {
+  blindReviewSectionSessionPath,
+  firstBlindReviewSectionSessionId,
+  prepTestResultsPath,
+  skipBlindReviewBestEffort,
+} from "@/features/student/blind-review/blind-review-navigation"
 import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
 import { createPracticeApi } from "@/lib/api/practice"
 import {
@@ -165,16 +171,21 @@ function sectionQuestionsLine(count: number): string {
 function PrepTestSectionRow({
   row,
   starting,
+  isRetakeAttempt,
   onStart,
 }: {
   row: PrepTestDetailSection
   starting: boolean
+  isRetakeAttempt: boolean
   onStart: () => void
 }) {
-  const active = row.practiceable && row.unlocked && !row.completed
-  const breakLocked = row.practiceable && row.onBreak
-  const showStartButton = active || breakLocked
-  const emphasized = active || row.completed
+  const breakLocked = row.onBreak
+  const canContinueSection = !isRetakeAttempt && Boolean(row.activeSectionSessionId)
+  const showStartButton =
+    row.practiceable &&
+    !row.completed &&
+    (isRetakeAttempt || row.unlocked || breakLocked)
+  const emphasized = row.practiceable
 
   return (
     <div className="flex min-h-[88px] flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#dfe1e7] bg-white px-5 py-4 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)] md:px-6">
@@ -210,11 +221,7 @@ function PrepTestSectionRow({
             breakLocked && "cursor-not-allowed opacity-50",
           )}
         >
-          {starting
-            ? "Starting…"
-            : row.activeSectionSessionId
-              ? "Continue Section"
-              : "Start Section"}
+          {starting ? "Starting…" : canContinueSection ? "Continue Section" : "Start Section"}
           {!starting ? <ChevronRight className="size-4" aria-hidden /> : null}
         </button>
       ) : null}
@@ -312,7 +319,7 @@ function PracticePrepTestPage() {
   }
 
   function openPrepTestSection(row: PrepTestDetailSection) {
-    if (row.activeSectionSessionId && testIdParam) {
+    if (!isRetakeAttempt && row.activeSectionSessionId && testIdParam) {
       if (row.answeredCount > 0) {
         navigate(
           `/app/practice/sections/session/${row.activeSectionSessionId}?prepTestId=${encodeURIComponent(testIdParam)}&started=1`,
@@ -324,7 +331,7 @@ function PracticePrepTestPage() {
       )
       return
     }
-    if (row.activeSectionSessionId) {
+    if (!isRetakeAttempt && row.activeSectionSessionId) {
       navigate(`/app/practice/sections/session/${row.activeSectionSessionId}`)
       return
     }
@@ -393,7 +400,13 @@ function PracticePrepTestPage() {
     setError(null)
     try {
       await practiceApi.startBlindReview(testIdParam)
-      navigate(`/app/practice/blind-review/${encodeURIComponent(testIdParam)}`, { replace: true })
+      const detail = await practiceApi.getBlindReviewDetail(testIdParam)
+      const firstSessionId = firstBlindReviewSectionSessionId(detail)
+      if (!firstSessionId) {
+        throw new Error("No sections available for blind review")
+      }
+      setCompleteModal(null)
+      navigate(blindReviewSectionSessionPath(testIdParam, firstSessionId), { replace: true })
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to start blind review")
     } finally {
@@ -405,10 +418,13 @@ function PracticePrepTestPage() {
     navigate("/app/practice/preptest", { replace: true })
   }
 
-  function viewPrepTestResults() {
+  async function viewPrepTestResults() {
+    if (!testIdParam) return
     const resultsSessionId = completeModal?.prepTestSessionId
     if (!resultsSessionId) return
-    navigate(`/app/analytics/preptests/results/${encodeURIComponent(resultsSessionId)}`, { replace: true })
+    await skipBlindReviewBestEffort(practiceApi, testIdParam)
+    setCompleteModal(null)
+    navigate(prepTestResultsPath(resultsSessionId), { replace: true })
   }
 
   if (!testIdParam) {
@@ -435,6 +451,7 @@ function PracticePrepTestPage() {
   }
 
   const { prepTest } = detail
+  const isRetakeAttempt = (location.state as { retake?: boolean } | null)?.retake === true
 
   return (
     <>
@@ -508,6 +525,7 @@ function PracticePrepTestPage() {
                 <PrepTestSectionRow
                   row={row}
                   starting={startingSectionId === row.id}
+                  isRetakeAttempt={isRetakeAttempt}
                   onStart={() => openPrepTestSection(row)}
                 />
                 {detail.sectionBreak?.afterSectionId === row.id ? (
@@ -535,7 +553,7 @@ function PracticePrepTestPage() {
         onToggleScoreHidden={() => setScoreHidden((h) => !h)}
         showBlindReview
         onBlindReview={() => void handleBlindReviewFromModal()}
-        onSkipDetails={viewPrepTestResults}
+        onSkipDetails={() => void viewPrepTestResults()}
         doneLabel="Done with PrepTest"
         onDone={leaveToPrepTestList}
       />

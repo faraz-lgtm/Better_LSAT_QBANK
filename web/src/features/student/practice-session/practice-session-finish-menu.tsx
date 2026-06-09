@@ -11,16 +11,23 @@ type PracticeSessionFinishMenuProps = {
   finishing?: boolean
   /** Section intro screen only needs Exit (saved progress). */
   exitOnly?: boolean
+  /** Blind review section session: Exit Section menu with Submit Blind Review. */
+  blindReviewMode?: boolean
+  finishLabel?: string
   onSubmitSection: () => void
   onExit: () => void
+  onSubmitBlindReview?: () => void
 }
 
 function PracticeSessionFinishMenu({
   disabled = false,
   finishing = false,
   exitOnly = false,
+  blindReviewMode = false,
+  finishLabel,
   onSubmitSection,
   onExit,
+  onSubmitBlindReview,
 }: PracticeSessionFinishMenuProps) {
   const [open, setOpen] = useState(false)
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; width: number } | null>(
@@ -90,7 +97,21 @@ function PracticeSessionFinishMenu({
             }}
             className="overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
           >
-            {exitOnly ? null : (
+            {exitOnly ? null : blindReviewMode ? (
+              <li role="presentation">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex h-10 w-full items-center rounded-xl px-3 text-sm font-medium tracking-[0.02em] text-[#062357] transition-colors hover:bg-[#f6f8fa]"
+                  onClick={() => {
+                    setOpen(false)
+                    onSubmitBlindReview?.()
+                  }}
+                >
+                  Submit Blind Review
+                </button>
+              </li>
+            ) : (
               <li role="presentation">
                 <button
                   type="button"
@@ -135,7 +156,7 @@ function PracticeSessionFinishMenu({
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
-        {finishing ? "Finishing…" : "Finish"}
+        {finishing ? "Finishing…" : (finishLabel ?? "Finish")}
         <ChevronDown className="size-5 opacity-90" strokeWidth={2} aria-hidden />
       </Button>
       {menu}

@@ -19,6 +19,16 @@ export type PrepTestPoolListResult = {
   statusCounts: PrepTestPoolStatusCounts
 }
 
+export type PrepTestPoolBlindReviewStatus = "eligible" | "in_progress"
+
+export type PrepTestPoolAttempt = {
+  sessionId: string
+  completedAt: string
+  scaledScore: number | null
+  blindReviewScaledScore: number | null
+  attemptNumber: number
+}
+
 export type PrepTestPoolItem = {
   id: string
   moduleId: string
@@ -30,6 +40,10 @@ export type PrepTestPoolItem = {
   timeMinutes: number
   status: PrepTestPracticeStatus
   scaledScore: number | null
+  blindReviewScaledScore: number | null
+  blindReviewStatus: PrepTestPoolBlindReviewStatus | null
+  completedAt: string | null
+  attempts: PrepTestPoolAttempt[]
   openPrepTestSessionId: string | null
 }
 

@@ -658,6 +658,46 @@ Deno.test('listPrepTestPool returns practiceable prep tests with fresh status', 
   assertEquals(out.prepTests[1]!.questionCount, 5)
 })
 
+Deno.test('listPrepTestPool prefers awaiting blind review over a newer open prep test session', async () => {
+  const completedAwaitingBr = baseSession({
+    id: 'pt-sess-done',
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-900',
+    completed_at: '2026-01-03T00:00:00Z',
+    scaled_score: 162,
+    metadata: { blindReviewActive: true },
+  })
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserSessionsForPrepTests: async () => [
+        baseSession({
+          id: 'pt-sess-open',
+          kind: 'PREPTEST',
+          prep_test_id: 'pt-900',
+          started_at: '2026-01-04T00:00:00Z',
+          completed_at: null,
+        }),
+        completedAwaitingBr,
+      ],
+      listUserSessionsForPrepTest: async () => [
+        baseSession({
+          id: 'pt-sess-open',
+          kind: 'PREPTEST',
+          prep_test_id: 'pt-900',
+          started_at: '2026-01-04T00:00:00Z',
+          completed_at: null,
+        }),
+        completedAwaitingBr,
+      ],
+    }) as never,
+  })
+  const out = await service.listPrepTestPool('user-1', {})
+  const row = out.prepTests.find((p) => p.id === 'pt-900')
+  assertEquals(row?.status, 'in_progress')
+  assertEquals(row?.blindReviewStatus, 'in_progress')
+  assertEquals(row?.scaledScore, 162)
+})
+
 Deno.test('listPrepTestPool paginates and uses batch sessions query', async () => {
   let batchCalls = 0
   let perTestCalls = 0
@@ -685,17 +725,60 @@ Deno.test('listPrepTestPool paginates and uses batch sessions query', async () =
   assertEquals(page1.total, 2)
   assertEquals(page1.prepTests.length, 1)
   assertEquals(page1.prepTests[0]!.id, 'pt-901')
-  assertEquals(page1.statusCounts.completed, 1)
+  assertEquals(page1.statusCounts.in_progress, 1)
   assertEquals(page1.statusCounts.fresh, 1)
 
   const page2 = await service.listPrepTestPool('user-1', { page: 2, pageSize: 1, sort: 'newest' })
   assertEquals(page2.prepTests.length, 1)
   assertEquals(page2.prepTests[0]!.id, 'pt-900')
-  assertEquals(page2.prepTests[0]!.status, 'completed')
+  assertEquals(page2.prepTests[0]!.status, 'in_progress')
+  assertEquals(page2.prepTests[0]!.blindReviewStatus, 'eligible')
 
   const completedOnly = await service.listPrepTestPool('user-1', { filter: 'completed' })
-  assertEquals(completedOnly.total, 1)
-  assertEquals(completedOnly.prepTests[0]!.id, 'pt-900')
+  assertEquals(completedOnly.total, 0)
+})
+
+Deno.test('listPrepTestPool marks skipped blind review as completed with attempts', async () => {
+  const completedPt = baseSession({
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-900',
+    completed_at: '2026-01-02T00:00:00Z',
+    scaled_score: 170,
+    metadata: { blindReviewSkipped: true },
+  })
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserSessionsForPrepTests: async () => [completedPt],
+    }) as never,
+  })
+  const out = await service.listPrepTestPool('user-1', { filter: 'completed' })
+  assertEquals(out.total, 1)
+  assertEquals(out.prepTests[0]!.status, 'completed')
+  assertEquals(out.prepTests[0]!.scaledScore, 170)
+  assertEquals(out.prepTests[0]!.attempts.length, 1)
+  assertEquals(out.prepTests[0]!.attempts[0]!.attemptNumber, 1)
+})
+
+Deno.test('skipBlindReview marks prep test fully complete', async () => {
+  let skipped: unknown = null
+  const completedPt = baseSession({
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-900',
+    completed_at: '2026-01-02T00:00:00Z',
+    scaled_score: 165,
+  })
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserSessionsForPrepTest: async () => [completedPt],
+      updateSession: async (_id, _userId, patch) => {
+        skipped = patch.metadata?.blindReviewSkipped
+        return { ...completedPt, metadata: { ...completedPt.metadata, ...patch.metadata } }
+      },
+    }) as never,
+  })
+  const out = await service.skipBlindReview('user-1', { prepTestId: 'pt-900' })
+  assertEquals(skipped, true)
+  assertEquals(out.session.metadata.blindReviewSkipped, true)
 })
 
 Deno.test('getPrepTestDetail returns LR/RC sections only as practiceable', async () => {
@@ -704,6 +787,51 @@ Deno.test('getPrepTestDetail returns LR/RC sections only as practiceable', async
   assertEquals(out.sections.length, 3)
   assertEquals(out.sections.filter((s) => s.practiceable).length, 2)
   assertEquals(out.prepTest.label, 'PT 900')
+})
+
+Deno.test('getPrepTestDetail scopes section progress to open prep test attempt on retake', async () => {
+  const openPrepTest = baseSession({
+    id: 'pt-retake',
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-900',
+    started_at: '2026-01-10T00:00:00Z',
+    completed_at: null,
+  })
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserSessionsForPrepTest: async () => [
+        openPrepTest,
+        baseSession({
+          kind: 'SECTION',
+          prep_test_id: 'pt-900',
+          section_id: 'sec-lr',
+          started_at: '2026-01-02T00:00:00Z',
+          completed_at: '2026-01-02T01:00:00Z',
+          metadata: {
+            answeredQuestionIds: ['q1', 'q2'],
+            questionIds: ['q1', 'q2', 'q3'],
+          },
+        }),
+        baseSession({
+          kind: 'SECTION',
+          prep_test_id: 'pt-900',
+          section_id: 'sec-rc',
+          started_at: '2026-01-03T00:00:00Z',
+          completed_at: null,
+          metadata: { answeredQuestionIds: [], questionIds: ['q4', 'q5'] },
+        }),
+      ],
+    }) as never,
+  })
+  const out = await service.getPrepTestDetail('user-1', { prepTestId: 'pt-900' })
+  const lr = out.sections.find((s) => s.id === 'sec-lr')
+  const rc = out.sections.find((s) => s.id === 'sec-rc')
+  assertEquals(lr?.completed, false)
+  assertEquals(lr?.answeredCount, 0)
+  assertEquals(lr?.activeSectionSessionId, null)
+  assertEquals(rc?.completed, false)
+  assertEquals(rc?.answeredCount, 0)
+  assertEquals(rc?.activeSectionSessionId, null)
 })
 
 Deno.test('startPrepTest creates PREPTEST session when none open', async () => {

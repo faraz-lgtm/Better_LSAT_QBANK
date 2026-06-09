@@ -15,6 +15,7 @@ type PracticeQuestionStemProps = {
   flagged: boolean
   onToggleFlag: () => void
   flagsDisabled?: boolean
+  hideQuestionNumber?: boolean
 }
 
 function PracticeQuestionStem({
@@ -28,11 +29,14 @@ function PracticeQuestionStem({
   flagged,
   onToggleFlag,
   flagsDisabled,
+  hideQuestionNumber = false,
 }: PracticeQuestionStemProps) {
   return (
     <div className="flex items-start gap-2">
       <div className="flex min-w-0 flex-1 items-start gap-1.5">
-        <span className="shrink-0 text-sm font-semibold leading-snug text-[#0d47a1]">{questionNumber}.</span>
+        {hideQuestionNumber ? null : (
+          <span className="shrink-0 text-sm font-semibold leading-snug text-[#0d47a1]">{questionNumber}.</span>
+        )}
         <PracticeAnnotatedContent
           regionKey={regionKey}
           html={html}

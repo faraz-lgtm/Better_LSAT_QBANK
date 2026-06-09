@@ -544,6 +544,9 @@ verify_jwt = false
 [functions.practice-start-blind-review]
 verify_jwt = false
 
+[functions.practice-skip-blind-review]
+verify_jwt = false
+
 [functions.practice-complete-blind-review]
 verify_jwt = false
 

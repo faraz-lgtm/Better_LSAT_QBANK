@@ -61,7 +61,14 @@ const mockDetail = {
   defaultFormatId: "four",
 }
 
-function renderPrepTestRoutes(initialPath: string) {
+function renderPrepTestRoutes(
+  initialEntry:
+    | string
+    | {
+        pathname: string
+        state?: Record<string, unknown>
+      },
+) {
   const router = createMemoryRouter(
     [
       { path: "/app/practice/preptest/:testId", element: <PracticePrepTestPage /> },
@@ -71,7 +78,7 @@ function renderPrepTestRoutes(initialPath: string) {
       },
       { path: "/app/practice/sections/session/:sessionId", element: <div>Section session</div> },
     ],
-    { initialEntries: [initialPath] },
+    { initialEntries: [initialEntry] },
   )
   render(<RouterProvider router={router} />)
   return router
@@ -102,5 +109,137 @@ describe("PracticePrepTestPage + section navigation", () => {
     )
     expect(router.state.location.pathname).toBe("/app/practice/preptest/pt-900/section/sec-lr")
     expect(router.state.location.search).toBe("?sessionId=section-sess-1")
+  })
+
+  it("shows Start Section on every practiceable section during retake", async () => {
+    mockGetPrepTestDetail.mockResolvedValue({
+      ...mockDetail,
+      sections: [
+        { ...mockDetail.sections[0], unlocked: true, completed: false },
+        {
+          id: "sec-rc",
+          sectionId: "SEED900-RC-1",
+          sectionNumber: 2,
+          sectionType: "RC" as const,
+          title: "Reading Comprehension",
+          questionCount: 2,
+          timeMinutes: 35,
+          practiceable: true,
+          unlocked: false,
+          onBreak: false,
+          answeredCount: 0,
+          completed: false,
+          activeSectionSessionId: null,
+        },
+      ],
+    })
+
+    renderPrepTestRoutes({
+      pathname: "/app/practice/preptest/pt-900",
+      state: { retake: true },
+    })
+
+    await screen.findByRole("heading", { name: "Test Section" })
+    const startButtons = screen.getAllByRole("button", { name: /Start Section/i })
+    expect(startButtons).toHaveLength(2)
+    expect(screen.queryByRole("button", { name: /Continue Section/i })).not.toBeInTheDocument()
+  })
+
+  it("hides the action button on completed sections during an in-progress attempt", async () => {
+    mockGetPrepTestDetail.mockResolvedValue({
+      ...mockDetail,
+      sections: [
+        {
+          ...mockDetail.sections[0],
+          completed: true,
+          answeredCount: 3,
+          activeSectionSessionId: null,
+        },
+        {
+          id: "sec-rc",
+          sectionId: "SEED900-RC-1",
+          sectionNumber: 2,
+          sectionType: "RC" as const,
+          title: "Reading Comprehension",
+          questionCount: 2,
+          timeMinutes: 35,
+          practiceable: true,
+          unlocked: true,
+          onBreak: false,
+          answeredCount: 0,
+          completed: false,
+          activeSectionSessionId: null,
+        },
+      ],
+    })
+
+    renderPrepTestRoutes("/app/practice/preptest/pt-900")
+
+    await screen.findByRole("heading", { name: "Test Section" })
+    expect(screen.getAllByRole("button", { name: /Start Section/i })).toHaveLength(1)
+  })
+
+  it("does not show a button on locked sections during a normal attempt", async () => {
+    mockGetPrepTestDetail.mockResolvedValue({
+      ...mockDetail,
+      sections: [
+        { ...mockDetail.sections[0], unlocked: true, completed: false },
+        {
+          id: "sec-rc",
+          sectionId: "SEED900-RC-1",
+          sectionNumber: 2,
+          sectionType: "RC" as const,
+          title: "Reading Comprehension",
+          questionCount: 2,
+          timeMinutes: 35,
+          practiceable: true,
+          unlocked: false,
+          onBreak: false,
+          answeredCount: 0,
+          completed: false,
+          activeSectionSessionId: null,
+        },
+      ],
+    })
+
+    renderPrepTestRoutes("/app/practice/preptest/pt-900")
+
+    await screen.findByRole("heading", { name: "Test Section" })
+    expect(screen.getAllByRole("button", { name: /Start Section/i })).toHaveLength(1)
+  })
+
+  it("shows Continue Section when the open session has answers", async () => {
+    mockGetPrepTestDetail.mockResolvedValue({
+      ...mockDetail,
+      sections: [
+        {
+          ...mockDetail.sections[0],
+          activeSectionSessionId: "in-progress-sess",
+          answeredCount: 2,
+        },
+      ],
+    })
+
+    renderPrepTestRoutes("/app/practice/preptest/pt-900")
+
+    expect(await screen.findByRole("button", { name: /Continue Section/i })).toBeInTheDocument()
+  })
+
+  it("shows Continue Section after exit when a section session exists without answers", async () => {
+    mockGetPrepTestDetail.mockResolvedValue({
+      ...mockDetail,
+      sections: [
+        {
+          ...mockDetail.sections[0],
+          activeSectionSessionId: "exited-sess",
+          answeredCount: 0,
+        },
+      ],
+    })
+
+    renderPrepTestRoutes("/app/practice/preptest/pt-900")
+
+    expect(await screen.findByRole("button", { name: /Continue Section/i })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /Start Section/i })).not.toBeInTheDocument()
   })
 })
