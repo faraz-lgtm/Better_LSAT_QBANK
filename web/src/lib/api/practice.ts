@@ -201,11 +201,13 @@ export function createPracticeApi(supabase: SupabaseClient) {
       bookmarked?: boolean
       excluded?: boolean
       flaggedQuestionIds?: string[]
+      seenQuestionIds?: string[]
     }): Promise<PracticeSession> {
       const body: Record<string, unknown> = { sessionId: input.sessionId }
       if (input.bookmarked !== undefined) body.bookmarked = input.bookmarked
       if (input.excluded !== undefined) body.excluded = input.excluded
       if (input.flaggedQuestionIds !== undefined) body.flaggedQuestionIds = input.flaggedQuestionIds
+      if (input.seenQuestionIds !== undefined) body.seenQuestionIds = input.seenQuestionIds
 
       const { data, error } = await invokePracticeFn<{ session: PracticeSession }>("practice-update-session", {
         method: "POST",

@@ -2,10 +2,12 @@ import { assertEquals } from 'jsr:@std/assert@1'
 
 import type { ExplanationsRepository, PrepTestRow, PrepTestTreePrepTestRow } from './explanations.repository.ts'
 import {
+  buildExplanationStatusCounts,
   createExplanationsService,
   groupPrepTestRows,
   mapPrepTestTreeRows,
   prepTestNumberFromModuleId,
+  resolveExplanationQuestionStatus,
 } from './explanations.service.ts'
 
 function mockRepo(overrides: Partial<ExplanationsRepository> = {}): ExplanationsRepository {
@@ -18,9 +20,37 @@ function mockRepo(overrides: Partial<ExplanationsRepository> = {}): Explanations
     fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 0, explainedCount: 0 }),
     getQuestionDetail: async () => null,
     listLatestAnswerStatusByQuestionIds: async () => new Map(),
+    listLsatCatalogQuestionIds: async () => [],
+    listDistinctAnsweredQuestionIdsForUser: async () => [],
+    listPrepTestQuestionProgress: async () => ({
+      seenQuestionIds: [],
+      inProcessQuestionIds: [],
+      answeredQuestionIds: [],
+    }),
     ...overrides,
   }
 }
+
+Deno.test('buildExplanationStatusCounts classifies fresh, seen, in_process, answered', () => {
+  const counts = buildExplanationStatusCounts(['q1', 'q2', 'q3', 'q4'], {
+    seenQuestionIds: new Set(['q4']),
+    inProcessQuestionIds: new Set(['q2']),
+    answeredQuestionIds: new Set(['q1']),
+  })
+  assertEquals(counts.answered, 1)
+  assertEquals(counts.in_process, 1)
+  assertEquals(counts.seen, 1)
+  assertEquals(counts.fresh, 1)
+})
+
+Deno.test('resolveExplanationQuestionStatus prefers answered over seen', () => {
+  const progress = {
+    seenQuestionIds: new Set(['q1']),
+    inProcessQuestionIds: new Set(['q1']),
+    answeredQuestionIds: new Set(['q1']),
+  }
+  assertEquals(resolveExplanationQuestionStatus('q1', progress), 'answered')
+})
 
 Deno.test('prepTestNumberFromModuleId parses LSAC base module', () => {
   assertEquals(prepTestNumberFromModuleId('LSAC159'), '159')
@@ -146,17 +176,41 @@ Deno.test('listPrepTests paginates grouped prep tests', async () => {
     }),
   })
 
-  const page1 = await service.listPrepTests({ page: 1, pageSize: 5, sort: 'newest' })
+  const page1 = await service.listPrepTests('user-1', { page: 1, pageSize: 5, sort: 'newest' })
   assertEquals(page1.total, 12)
   assertEquals(page1.page, 1)
   assertEquals(page1.pageSize, 5)
   assertEquals(page1.prepTests.length, 5)
+  assertEquals(page1.statusCounts.fresh, 0)
 
-  const page3 = await service.listPrepTests({ page: 3, pageSize: 5, sort: 'newest' })
+  const page3 = await service.listPrepTests('user-1', { page: 3, pageSize: 5, sort: 'newest' })
   assertEquals(page3.prepTests.length, 2)
 
-  const oldest = await service.listPrepTests({ page: 1, pageSize: 5, sort: 'oldest' })
+  const oldest = await service.listPrepTests('user-1', { page: 1, pageSize: 5, sort: 'oldest' })
   assertEquals(oldest.prepTests[0]?.prepTestNumber, '100')
+})
+
+Deno.test('listPrepTests returns global statusCounts for user', async () => {
+  const service = createExplanationsService({
+    repository: mockRepo({
+      listAllPrepTestRows: async () => [
+        { id: 'pt-1', module_id: 'LSAC158', title: 'PT 158', imported_at: null },
+      ],
+      fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 103, explainedCount: 3 }),
+      listLsatCatalogQuestionIds: async () => ['q1', 'q2', 'q3'],
+      listPrepTestQuestionProgress: async () => ({
+        seenQuestionIds: ['q3'],
+        inProcessQuestionIds: ['q2'],
+        answeredQuestionIds: ['q1'],
+      }),
+    }),
+  })
+
+  const out = await service.listPrepTests('user-1', { page: 1, pageSize: 5 })
+  assertEquals(out.statusCounts.answered, 1)
+  assertEquals(out.statusCounts.in_process, 1)
+  assertEquals(out.statusCounts.seen, 1)
+  assertEquals(out.statusCounts.fresh, 0)
 })
 
 Deno.test('getExplanationDetail returns extended payload', async () => {

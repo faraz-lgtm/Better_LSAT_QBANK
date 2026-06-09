@@ -67,6 +67,21 @@ function parseFlaggedQuestionIdsInput(value: unknown): string[] | null {
   return [...new Set(ids)]
 }
 
+function parseSeenQuestionIdsInput(value: unknown): string[] | null {
+  if (value === undefined) return null
+  if (!Array.isArray(value)) throw new PracticeValidationError('seenQuestionIds must be an array')
+  const ids = value.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+  return [...new Set(ids)]
+}
+
+function mergeSeenQuestionId(metadata: Record<string, unknown>, questionId: string): Record<string, unknown> {
+  const existing = Array.isArray(metadata.seenQuestionIds)
+    ? (metadata.seenQuestionIds as string[])
+    : []
+  if (existing.includes(questionId)) return metadata
+  return { ...metadata, seenQuestionIds: [...existing, questionId] }
+}
+
 function assertFlaggedQuestionIdsAllowed(
   session: PracticeSessionRow,
   flaggedQuestionIds: string[],
@@ -78,6 +93,21 @@ function assertFlaggedQuestionIdsAllowed(
   for (const id of flaggedQuestionIds) {
     if (!allowed.has(id)) {
       throw new PracticeValidationError('flaggedQuestionIds contains a question not in this session')
+    }
+  }
+}
+
+function assertSeenQuestionIdsAllowed(
+  session: PracticeSessionRow,
+  seenQuestionIds: string[],
+): void {
+  if (session.kind !== 'SECTION') {
+    throw new PracticeValidationError('seenQuestionIds is only supported for section sessions')
+  }
+  const allowed = new Set(drillQuestionIdsFromMetadata(session.metadata))
+  for (const id of seenQuestionIds) {
+    if (!allowed.has(id)) {
+      throw new PracticeValidationError('seenQuestionIds contains a question not in this session')
     }
   }
 }
@@ -164,6 +194,7 @@ export type SectionSessionMetadata = {
   sectionTitle?: string | null
   answeredQuestionIds?: string[]
   flaggedQuestionIds?: string[]
+  seenQuestionIds?: string[]
 }
 
 export type SectionPoolItem = {
@@ -788,11 +819,21 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         const existing = Array.isArray(session.metadata.answeredQuestionIds)
           ? (session.metadata.answeredQuestionIds as string[])
           : []
-        if (!existing.includes(questionId)) {
-          const nextMeta = {
-            ...session.metadata,
-            answeredQuestionIds: [...existing, questionId],
-          }
+        let nextMeta: Record<string, unknown> = {
+          ...session.metadata,
+          ...(existing.includes(questionId)
+            ? {}
+            : { answeredQuestionIds: [...existing, questionId] }),
+        }
+        if (session.kind === 'SECTION') {
+          nextMeta = mergeSeenQuestionId(nextMeta, questionId)
+        }
+        if (
+          !existing.includes(questionId) ||
+          (session.kind === 'SECTION' &&
+            !(Array.isArray(session.metadata.seenQuestionIds) &&
+              (session.metadata.seenQuestionIds as string[]).includes(questionId)))
+        ) {
           await deps.repository.updateSession(sessionId, userId, { metadata: nextMeta })
         }
       }
@@ -845,6 +886,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         bookmarked?: unknown
         excluded?: unknown
         flaggedQuestionIds?: unknown
+        seenQuestionIds?: unknown
       },
     ): Promise<{ session: PracticeSessionRow }> {
       const sessionId = typeof body.sessionId === 'string' ? body.sessionId : ''
@@ -861,17 +903,26 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (typeof body.bookmarked === 'boolean') patch.bookmarked = body.bookmarked
       if (typeof body.excluded === 'boolean') patch.excluded = body.excluded
 
+      let nextMetadata: Record<string, unknown> | undefined
+
       const flaggedInput = parseFlaggedQuestionIdsInput(body.flaggedQuestionIds)
       if (flaggedInput !== null) {
         assertFlaggedQuestionIdsAllowed(session, flaggedInput)
-        patch.metadata = {
-          ...session.metadata,
-          flaggedQuestionIds: flaggedInput,
-        }
+        nextMetadata = { ...(nextMetadata ?? session.metadata), flaggedQuestionIds: flaggedInput }
       }
 
+      const seenInput = parseSeenQuestionIdsInput(body.seenQuestionIds)
+      if (seenInput !== null) {
+        assertSeenQuestionIdsAllowed(session, seenInput)
+        nextMetadata = { ...(nextMetadata ?? session.metadata), seenQuestionIds: seenInput }
+      }
+
+      if (nextMetadata) patch.metadata = nextMetadata
+
       if (Object.keys(patch).length === 0) {
-        throw new PracticeValidationError('bookmarked, excluded, or flaggedQuestionIds must be provided')
+        throw new PracticeValidationError(
+          'bookmarked, excluded, flaggedQuestionIds, or seenQuestionIds must be provided',
+        )
       }
 
       const sessionRow = await deps.repository.updateSession(sessionId, userId, patch)

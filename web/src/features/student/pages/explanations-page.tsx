@@ -25,6 +25,7 @@ import type {
   ExplanationPrepTestNode,
   ExplanationQuestionNode,
   ExplanationQuestionStatus,
+  ExplanationStatusCounts,
 } from "@/features/student/explanation-detail/explanation-tree-types"
 import { mockExplanationPrepTests } from "@/features/student/lib/mock-explanations-tree"
 import { createExplanationsApi } from "@/lib/api/explanations"
@@ -159,6 +160,13 @@ type PrepTestRow = ExplanationPrepTestListItem & {
 
 const PAGE_SIZE = 5
 
+const EMPTY_STATUS_COUNTS: ExplanationStatusCounts = {
+  in_process: 0,
+  fresh: 0,
+  answered: 0,
+  seen: 0,
+}
+
 function mapListItemToRow(r: ExplanationPrepTestListItem): PrepTestRow {
   return {
     ...r,
@@ -179,6 +187,7 @@ function ExplanationsPage() {
   const [listLoading, setListLoading] = useState(true)
   const [listError, setListError] = useState<string | null>(null)
   const [useMock, setUseMock] = useState(false)
+  const [statusCounts, setStatusCounts] = useState<ExplanationStatusCounts>(EMPTY_STATUS_COUNTS)
 
   const [openPt, setOpenPt] = useState(() => new Set<string>())
   const [openSection, setOpenSection] = useState(() => new Set<string>())
@@ -257,6 +266,7 @@ function ExplanationsPage() {
           cacheExplanationPrepTestTree(pt)
         }
         setTreeVersion((v) => v + 1)
+        setStatusCounts(countByStatus(mockExplanationPrepTests))
       } else {
         setListError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
       }
@@ -273,6 +283,7 @@ function ExplanationsPage() {
         if (!alive) return
         setPrepTestRows(result.prepTests.map(mapListItemToRow))
         setTotalPrepTests(result.total)
+        setStatusCounts(result.statusCounts)
       })
       .catch((e) => {
         if (!alive) return
@@ -297,13 +308,14 @@ function ExplanationsPage() {
     return sortPrepTests(filterPrepTests(trees, sectionFilter), sort)
   }, [prepTestRows, sort, sectionFilter, useMock, treeVersion])
 
-  const statusCounts = useMemo(() => countByStatus(loadedTrees), [loadedTrees])
+  const mockStatusCounts = useMemo(() => countByStatus(loadedTrees), [loadedTrees])
+  const displayStatusCounts = useMock ? mockStatusCounts : statusCounts
 
   const statusStats = [
-    { dot: "var(--drill-medium)", count: statusCounts.in_process, label: "In Process" },
-    { dot: "var(--color-student-heading)", count: statusCounts.fresh, label: "Fresh" },
-    { dot: GREEN, count: statusCounts.answered, label: "Answered" },
-    { dot: SEEN_GRAY, count: statusCounts.seen, label: "Seen" },
+    { dot: "var(--drill-medium)", count: displayStatusCounts.in_process, label: "In Process" },
+    { dot: "var(--color-student-heading)", count: displayStatusCounts.fresh, label: "Fresh" },
+    { dot: GREEN, count: displayStatusCounts.answered, label: "Answered" },
+    { dot: SEEN_GRAY, count: displayStatusCounts.seen, label: "Seen" },
   ] as const
 
   const displayRows = prepTestRows

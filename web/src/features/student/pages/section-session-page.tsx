@@ -17,6 +17,7 @@ import { PracticeCompleteModal } from "@/features/student/practice-session/pract
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
 import { PracticeQuestionFlagButton } from "@/features/student/practice-session/practice-question-flag-button"
 import { usePracticeQuestionFlags } from "@/features/student/practice-session/use-practice-question-flags"
+import { usePracticeQuestionSeen } from "@/features/student/practice-session/use-practice-question-seen"
 import { usePracticeSessionTimer } from "@/features/student/practice-session/use-practice-session-timer"
 import { StudentMain } from "@/features/student/components/student-main"
 import { createPracticeApi } from "@/lib/api/practice"
@@ -207,6 +208,10 @@ function SectionSessionPage() {
       parseFlaggedQuestionIds(sectionSession?.session.metadata),
     [sectionSession?.metadata?.flaggedQuestionIds, sectionSession?.session.metadata],
   )
+  const initialSeenIds = useMemo(
+    () => sectionSession?.metadata?.seenQuestionIds ?? [],
+    [sectionSession?.metadata?.seenQuestionIds],
+  )
   const sessionCompleted = Boolean(sectionSession?.session.completed_at)
   const questionFlags = usePracticeQuestionFlags({
     sessionId: sessionId ?? "",
@@ -218,6 +223,16 @@ function SectionSessionPage() {
 
   const safeIndex = Math.min(Math.max(qIndex, 1), Math.max(questions.length, 1))
   const current = questions[safeIndex - 1]
+
+  usePracticeQuestionSeen({
+    sessionId: sessionId ?? "",
+    questionIds,
+    initialSeenIds,
+    activeQuestionId: current?.id ?? null,
+    practiceApi,
+    enabled: Boolean(sessionId) && !sessionCompleted && !blindReviewMode,
+  })
+
   const currentAnswer = current ? answersByQuestion[current.id] : undefined
   const selectedIndex =
     current && currentAnswer

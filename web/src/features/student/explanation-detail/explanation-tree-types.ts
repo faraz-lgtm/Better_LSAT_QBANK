@@ -45,6 +45,13 @@ export type ExplanationPrepTestListItem = {
   explainedCount: number
 }
 
+export type ExplanationStatusCounts = {
+  in_process: number
+  fresh: number
+  answered: number
+  seen: number
+}
+
 export type ExplanationDetailPayload = {
   questionId: string
   prepTestId: string
