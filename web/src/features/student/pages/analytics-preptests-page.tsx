@@ -5,7 +5,12 @@ import { ArrowDownAZ, ArrowUpAZ } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
+import {
+  AnalyticsScoreProgressPanel,
+  AnalyticsStatsGrid,
+} from "@/features/student/analytics/components/analytics-overview-ui"
 import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
+import type { AnalyticsStat } from "@/features/student/lib/mock-analytics"
 import {
   TimeRangeFilter,
   type TimeRangeValue,
@@ -270,44 +275,6 @@ function HistorySortMenu({ value, onChange }: { value: HistorySort; onChange: (n
   )
 }
 
-function StatTile({
-  label,
-  value,
-  valueColor,
-  footer,
-  inlineFooter,
-}: {
-  label: string
-  value: string
-  valueColor: string
-  footer?: string
-  inlineFooter?: string
-}) {
-  return (
-    <article className="flex flex-col gap-1.5 rounded-2xl bg-[#f6f8fa] p-6">
-      <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">{label}</p>
-      {inlineFooter ? (
-        <div className="flex flex-wrap items-end gap-x-2 gap-y-1" style={{ color: valueColor }}>
-          <p className="font-extrabold leading-[1.2] whitespace-nowrap" style={{ fontSize: "clamp(2.25rem, 2.5vw, 3rem)" }}>
-            {value}
-          </p>
-          <p className="pb-1 text-base font-semibold leading-[1.35]">{inlineFooter}</p>
-        </div>
-      ) : (
-        <p
-          className="font-extrabold leading-[1.2] whitespace-nowrap"
-          style={{ color: valueColor, fontSize: "clamp(2.25rem, 2.5vw, 3rem)" }}
-        >
-          {value}
-        </p>
-      )}
-      {footer ? (
-        <p className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">{footer}</p>
-      ) : null}
-    </article>
-  )
-}
-
 function loadBookmarks(initial: Record<string, boolean>): Record<string, boolean> {
   if (typeof window === "undefined") return initial
   try {
@@ -369,7 +336,61 @@ function AnalyticsPrepTestsPage() {
   const rangedRecords = useMemo(() => filterPrepTestsByTimeRange(records, timeRange), [records, timeRange])
 
   const stats = useMemo(() => computePrepTestStats(rangedRecords), [rangedRecords])
+  const headlineStats = useMemo((): AnalyticsStat[] => {
+    if (!stats) return []
+    return [
+      {
+        id: "best-score",
+        label: "BEST SCORE",
+        value: String(stats.bestScore),
+        accent: "#0d47a1",
+        caption: `PERCENTILE: ${ordinal(stats.bestPercentile)}`,
+      },
+      {
+        id: "average-score",
+        label: "AVERAGE SCORE",
+        value: String(stats.averageScore),
+        accent: "#5463a9",
+        caption: `PERCENTILE: ${ordinal(stats.averagePercentile)}`,
+      },
+    ]
+  }, [stats])
+  const secondaryStats = useMemo((): AnalyticsStat[] => {
+    if (!stats) return []
+    return [
+      {
+        id: "avg-lr",
+        label: "AVERAGE LR",
+        value: formatSignedNumber(stats.averageLrMissed),
+        accent: "#ae8b00",
+      },
+      {
+        id: "avg-rc",
+        label: "AVERAGE RC",
+        value: formatSignedNumber(stats.averageRcMissed),
+        accent: "#ff9d51",
+      },
+      {
+        id: "best-br",
+        label: "BEST BLIND REVIEW",
+        value: String(stats.bestBlindReview),
+        accent: "#df1c41",
+        caption: `Average BR: ${stats.averageBlindReview}`,
+      },
+      {
+        id: "avg-br-diff",
+        label: "AVG. BR DIFFERENCE",
+        value: formatSignedNumber(stats.averageBlindReviewDifference),
+        accent: "#956321",
+        caption: `High: ${formatSignedNumber(stats.blindReviewDifferenceHigh)}  Low: ${formatSignedNumber(stats.blindReviewDifferenceLow)}`,
+      },
+    ]
+  }, [stats])
   const progressPoints = useMemo(() => getPrepTestProgressPoints(rangedRecords), [rangedRecords])
+  const allStatTiles = useMemo(
+    () => [...headlineStats, ...secondaryStats],
+    [headlineStats, secondaryStats],
+  )
 
   const sortedRecords = useMemo(() => {
     const out = [...rangedRecords]
@@ -428,78 +449,33 @@ function AnalyticsPrepTestsPage() {
         crumbs={[
           { label: "Analytics", href: "/app/analytics" },
           { label: "Foundations" },
-          { label: "PrepTests" },
+          { label: "Drills" },
         ]}
       />
       <StudentMain>
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold leading-[1.3] text-[#062357]">PrepTests</h1>
+          <h1 className="text-2xl font-bold leading-[1.3] text-[#062357]">Drills</h1>
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
         </div>
 
         {loading ? (
-          <p className="mb-6 text-sm text-[#666d80]">Loading PrepTest analytics…</p>
+          <p className="mb-6 text-sm text-[#666d80]">Loading drill analytics…</p>
         ) : null}
 
-        <section className="mb-6 rounded-3xl border border-[#dfe1e7] bg-white p-6">
-          {stats ? (
-            <div className="grid gap-6 lg:grid-cols-[1fr_1fr_minmax(0,604px)]">
-              <div className="flex flex-col gap-6">
-                <StatTile
-                  label="BEST SCORE"
-                  value={String(stats.bestScore)}
-                  valueColor="#0d47a1"
-                  footer={`PERCENTILE: ${ordinal(stats.bestPercentile)}`}
-                />
-                <StatTile
-                  label="AVERAGE LR"
-                  value={formatSignedNumber(stats.averageLrMissed)}
-                  valueColor="#ae8b00"
-                />
-                <StatTile
-                  label="BEST BLIND REVIEW"
-                  value={String(stats.bestBlindReview)}
-                  valueColor="#df1c41"
-                  inlineFooter={`Average BR: ${stats.averageBlindReview}`}
-                />
-              </div>
-
-              <div className="flex flex-col gap-6">
-                <StatTile
-                  label="AVERAGE SCORE"
-                  value={String(stats.averageScore)}
-                  valueColor="#5463a9"
-                  footer={`PERCENTILE: ${ordinal(stats.averagePercentile)}`}
-                />
-                <StatTile
-                  label="AVERAGE RC"
-                  value={formatSignedNumber(stats.averageRcMissed)}
-                  valueColor="#ff9d51"
-                />
-                <StatTile
-                  label="AVG.BR DIFFERENCE"
-                  value={formatSignedNumber(stats.averageBlindReviewDifference)}
-                  valueColor="#956321"
-                  inlineFooter={`High: ${formatSignedNumber(stats.blindReviewDifferenceHigh)}  Low: ${formatSignedNumber(stats.blindReviewDifferenceLow)}`}
-                />
-              </div>
-
-              <div className="flex min-h-[473px] flex-col gap-[18px] rounded-2xl bg-[#f6f8fa] p-6">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <h2 className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
-                    PREPTESTS SCORE PROGRESS
-                  </h2>
-                  <PrepTestScoreTabs value={scoreTab} onChange={setScoreTab} />
-                </div>
-                <PrepTestScoreProgressChart points={progressPoints} tab={scoreTab} />
-              </div>
-            </div>
-          ) : (
-            <p className="rounded-2xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-6 py-8 text-center text-sm text-[#666d80]">
-              No PrepTests recorded in this range. Try widening the time range.
-            </p>
-          )}
-        </section>
+        {stats ? (
+          <section className="mb-6 grid gap-6 lg:grid-cols-[minmax(280px,420px)_1fr]">
+            <AnalyticsStatsGrid stats={allStatTiles} />
+            <AnalyticsScoreProgressPanel
+              title="Score progress"
+              legend={<PrepTestScoreTabs value={scoreTab} onChange={setScoreTab} />}
+              chart={<PrepTestScoreProgressChart points={progressPoints} tab={scoreTab} />}
+            />
+          </section>
+        ) : (
+          <p className="mb-6 rounded-2xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-6 py-8 text-center text-sm text-[#666d80]">
+            No PrepTests recorded in this range. Try widening the time range.
+          </p>
+        )}
 
         <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
           <HistorySortMenu value={historySort} onChange={setHistorySort} />

@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/ui/password-input"
 import { SocialButton } from "@/components/ui/social-button"
 import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
@@ -94,7 +95,7 @@ function LoginPage() {
 
   return (
     <AuthLayout ctaLabel="Sign Up" ctaHref="/signup" headerVariant="auth">
-      <AuthCard className="bg-[#f2f7ff]">
+      <AuthCard>
         <div className="figma-gap-24 flex flex-col">
           <h1 className="figma-track-md text-center">Login with</h1>
 
@@ -108,13 +109,12 @@ function LoginPage() {
               value={magicEmail}
               onChange={(event) => setMagicEmail(event.target.value)}
               placeholder="Enter your email"
-              className="rounded-2xl bg-[#f2f7ff]"
             />
             <Button
               type="button"
               disabled={isMagicLoading || !magicEmail.trim()}
               onClick={() => void sendMagicLink()}
-              className="mt-2 w-full rounded-2xl bg-[#0d47a1] text-white hover:bg-[#0d47a1]/90"
+              className="ds-btn mt-2 w-full"
             >
               {isMagicLoading ? "Sending..." : "Send Magic Link"}
             </Button>
@@ -137,20 +137,18 @@ function LoginPage() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="Enter your email"
-                className="rounded-2xl bg-[#f2f7ff]"
               />
             </div>
             <div className="figma-gap-8 flex flex-col">
               <p className="figma-text-sm figma-track-sm font-medium text-[#062357]">
                 Password<span className="text-[#df1c41]">*</span>
               </p>
-              <Input
-                type="password"
+              <PasswordInput
                 size="lg"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="Enter your password"
-                className="rounded-2xl bg-[#f2f7ff]"
+                autoComplete="current-password"
               />
             </div>
             <div className="flex items-center justify-between">
@@ -166,7 +164,7 @@ function LoginPage() {
               type="button"
               disabled={isPasswordLoading || !email.trim() || !password}
               onClick={() => void signInWithPassword()}
-              className="w-full rounded-2xl bg-[#0d47a1] text-white hover:bg-[#0d47a1]/90"
+              className="ds-btn w-full"
             >
               {isPasswordLoading ? "Signing in..." : "Sign In"}
             </Button>
@@ -181,11 +179,7 @@ function LoginPage() {
           {message && <p className="figma-text-sm figma-track-sm text-center text-[#0d47a1]">{message}</p>}
           {error && <p className="figma-text-sm figma-track-sm text-center text-[#df1c41]">{error}</p>}
 
-          <SocialButton
-            className="w-full justify-center rounded-2xl bg-[#f2f7ff]"
-            disabled={isGoogleLoading}
-            onClick={() => void signInWithGoogle()}
-          >
+          <SocialButton disabled={isGoogleLoading} onClick={() => void signInWithGoogle()}>
             {isGoogleLoading ? "Redirecting..." : "Sign in with Google"}
           </SocialButton>
 

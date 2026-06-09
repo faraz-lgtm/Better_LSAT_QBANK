@@ -79,7 +79,7 @@ function BlindReviewListCard({
   const primaryLabel = isCompleted ? "View" : isInProgress ? "Continue" : "Start"
   const primaryClass = isCompleted
     ? "inline-flex h-[52px] w-[148px] shrink-0 items-center justify-center rounded-2xl border border-[#dfe1e7] bg-white text-base font-semibold text-[#666d80] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa]"
-    : "inline-flex h-[52px] w-[148px] shrink-0 items-center justify-center rounded-2xl border border-[#0b4e6e] bg-[#0d47a1] text-base font-semibold text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0b3d82]"
+    : "ds-btn min-w-[148px] shrink-0 text-base"
 
   return (
     <article className="flex min-h-[110px] w-full flex-wrap items-center gap-4 rounded-2xl border border-[#dfe1e7] bg-white px-6 py-3 shadow-[0px_1px_1px_rgba(13,13,18,0.06)] sm:flex-nowrap sm:py-0">
@@ -166,10 +166,10 @@ function PracticeBlindReviewPage() {
                     type="button"
                     onClick={() => setFilter(tab.id)}
                     className={cn(
-                      "inline-flex h-[52px] items-center justify-center rounded-2xl border px-4 text-base shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors",
+                      "inline-flex items-center justify-center px-4 text-base transition-colors",
                       active
-                        ? "border-[#0b4e6e] bg-[#0d47a1] font-semibold text-white"
-                        : "border-[#dfe1e7] bg-white font-medium text-[#666d80] hover:bg-[#f6f8fa]",
+                        ? "ds-btn font-semibold"
+                        : "h-[52px] rounded-2xl border border-[#dfe1e7] bg-white font-medium text-[#666d80] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] hover:bg-[#f6f8fa]",
                     )}
                   >
                     {filterCountLabel(tab.id)}

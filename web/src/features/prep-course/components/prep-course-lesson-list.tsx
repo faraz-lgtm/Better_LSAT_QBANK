@@ -22,7 +22,7 @@ function LessonLink({
     <Link
       to={`/app/prep-course/${course.slug}/${lesson.slug}`}
       className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm font-semibold tracking-[0.28px] ${
-        active ? "border-[#0d47a1] bg-[#0d47a1] text-white" : "border-[#dfe1e7] bg-[#f6f8fa] ds-text-heading"
+        active ? "ds-btn-sm border-[var(--primary-border)] text-white" : "border-[#dfe1e7] bg-[#f6f8fa] ds-text-heading"
       }`}
     >
       <span>{lesson.title}</span>

@@ -7,3 +7,5 @@ web/.agents/
 supabase/functions/.env
 node_modules/
 package-lock.json
+
+api_json/

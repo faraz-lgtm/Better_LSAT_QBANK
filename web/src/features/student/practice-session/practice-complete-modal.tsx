@@ -109,7 +109,7 @@ function PracticeCompleteModal({
           <div className="flex w-full max-w-[320px] flex-col items-center gap-2">
             <Button
               type="button"
-              className="h-12 w-full rounded-2xl border border-[#0b4e6e] bg-[#0d47a1] text-base font-semibold text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] hover:bg-[#0b3d82] disabled:opacity-60"
+              className="ds-btn w-full text-base"
               onClick={onBlindReview}
               disabled={!onBlindReview}
             >

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/ui/password-input"
 import { Select } from "@/components/ui/select"
 import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
@@ -172,8 +173,8 @@ function OnboardingPage() {
             <>
               {step === 1 && (
                 <>
-                  <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Full name" className="rounded-2xl bg-[#f5f9ff]" />
-                  <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" className="rounded-2xl bg-[#f5f9ff]" />
+                  <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Full name"  />
+                  <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username"  />
                   <Select
                     value={plannedLsatWindow}
                     onChange={(e) => setPlannedLsatWindow(e.target.value)}
@@ -185,25 +186,21 @@ function OnboardingPage() {
                       { label: "Not sure yet", value: "not_sure" },
                     ]}
                     placeholder="When do you plan to take LSAT?"
-                    className="h-[52px] rounded-2xl bg-[#f5f9ff]"
+                    className="ds-input"
                   />
                   {requiresPassword && (
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      <Input
-                        type="password"
+                      <PasswordInput
                         autoComplete="new-password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Create password"
-                        className="rounded-2xl bg-[#f5f9ff]"
                       />
-                      <Input
-                        type="password"
+                      <PasswordInput
                         autoComplete="new-password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="Confirm password"
-                        className="rounded-2xl bg-[#f5f9ff]"
                       />
                     </div>
                   )}
@@ -232,7 +229,7 @@ function OnboardingPage() {
                     { label: "1-2 hours/day", value: "1-2 hours/day" },
                     { label: "3-4 hours/day", value: "3-4 hours/day" },
                     { label: "5-6 hours/day", value: "5-6 hours/day" },
-                  ]} className="h-[52px] rounded-2xl bg-[#f5f9ff]" />
+                  ]} className="ds-input" />
                   <Button type="button" variant="ghost" className="text-[#0d47a1]" onClick={() => setStep(4)}>How much should I study</Button>
                 </>
               )}
@@ -247,12 +244,11 @@ function OnboardingPage() {
               )}
               {step === 6 && (
                 <>
-                  <Select value={goalScore} onChange={(e) => setGoalScore(e.target.value)} options={Array.from({ length: 61 }).map((_, i) => ({ label: String(120 + i), value: String(120 + i) }))} className="h-[52px] rounded-2xl bg-[#f5f9ff]" />
+                  <Select value={goalScore} onChange={(e) => setGoalScore(e.target.value)} options={Array.from({ length: 61 }).map((_, i) => ({ label: String(120 + i), value: String(120 + i) }))} className="ds-input" />
                   <Input
                     value={lawSchoolCycle}
                     onChange={(e) => setLawSchoolCycle(e.target.value)}
                     placeholder="Law school admission cycle (e.g. 2027)"
-                    className="rounded-2xl bg-[#f5f9ff]"
                   />
                 </>
               )}
@@ -260,12 +256,12 @@ function OnboardingPage() {
                 <Select value={startingScore} onChange={(e) => setStartingScore(e.target.value)} options={[
                   { label: "I haven't taken an LSAT yet", value: "I haven't taken an LSAT yet" },
                   ...Array.from({ length: 61 }).map((_, i) => ({ label: String(120 + i), value: String(120 + i) })),
-                ]} className="h-[52px] rounded-2xl bg-[#f5f9ff]" />
+                ]} className="ds-input" />
               )}
               {step === 8 && (
                 <>
                   <p className="text-sm text-[#082c6b]">Take a diagnostic LR section to personalize your study plan. About 35 minutes.</p>
-                  <Button type="button" className="w-full rounded-2xl bg-[#0d47a1] text-white" onClick={() => setStep(13)}>Start Diagnostic</Button>
+                  <Button type="button" className="ds-btn w-full" onClick={() => setStep(13)}>Start Diagnostic</Button>
                   <Button type="button" variant="ghost" className="w-full text-[#0d47a1]" onClick={() => setStep(9)}>Skip</Button>
                 </>
               )}
@@ -299,10 +295,10 @@ function OnboardingPage() {
                 {step === 9 ? (
                   <>
                     <Button type="button" variant="outline" className="flex-1 rounded-2xl" onClick={() => setStep(8)}>Cancel</Button>
-                    <Button type="button" className="flex-1 rounded-2xl bg-[#0d47a1] text-white" onClick={() => void completeOnboarding()} disabled={isSubmitting}>Skip</Button>
+                    <Button type="button" className="ds-btn flex-1" onClick={() => void completeOnboarding()} disabled={isSubmitting}>Skip</Button>
                   </>
                 ) : (
-                  <Button type="button" className="flex-1 rounded-2xl bg-[#0d47a1] text-white" onClick={next} disabled={isSubmitting}>
+                  <Button type="button" className="ds-btn flex-1" onClick={next} disabled={isSubmitting}>
                     {isSubmitting ? "Completing..." : "Continue"}
                   </Button>
                 )}

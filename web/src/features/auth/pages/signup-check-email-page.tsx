@@ -9,27 +9,41 @@ function SignupCheckEmailPage() {
   const email = (location.state as { email?: string } | null)?.email
 
   return (
-    <AuthLayout ctaLabel="Log In" ctaHref="/login" headerVariant="app">
-      <AuthCard className="mx-auto w-full max-w-[500px]">
+    <AuthLayout ctaLabel="Log In" ctaHref="/login">
+      <AuthCard>
         <div className="figma-gap-24 flex flex-col text-center">
           <h1 className="figma-track-md">Check your email</h1>
           <p className="figma-text-sm figma-track-sm text-[#666d80]">
             {email ? (
               <>
-                We sent a magic link to <span className="font-semibold text-[#082c6b]">{email}</span>. Click the link in that email to
-                finish creating your account.
+                We just sent you a magic login link to{" "}
+                <span className="font-semibold text-[#082c6b]">{email}</span>. If you don&apos;t see our email, check your
+                spam for a message from <span className="font-semibold text-[#082c6b]">email@betterlsat.com</span>.
               </>
             ) : (
-              <>We sent a magic link to your inbox. Click the link in that email to finish creating your account.</>
+              <>
+                We just sent you a magic login link! If you don&apos;t see our email, check your spam for a message from{" "}
+                <span className="font-semibold text-[#082c6b]">email@betterlsat.com</span>.
+              </>
             )}
           </p>
-          <p className="figma-text-sm figma-track-sm text-[#666d80]">Didn&apos;t get it? Check spam or request a new link from the signup page.</p>
-          <Button asChild variant="outline" className="w-full rounded-2xl border-[#0d47a1] text-[#0d47a1]">
-            <Link to="/signup">Back to signup</Link>
+          <Link to="/signup" className="figma-text-sm figma-track-sm font-semibold text-[#0d47a1] hover:underline">
+            Resend Email
+          </Link>
+          <div className="figma-gap-12 flex items-center">
+            <div className="h-px flex-1 bg-[#dfe1e7]" />
+            <span className="figma-text-lg figma-track-md font-semibold text-[#666d80]">OR</span>
+            <div className="h-px flex-1 bg-[#dfe1e7]" />
+          </div>
+          <Button asChild variant="outline" className="ds-btn-outline w-full">
+            <Link to="/login">Try another way</Link>
           </Button>
-          <Button asChild className="w-full rounded-2xl bg-[#0d47a1] text-white hover:bg-[#0d47a1]/90">
-            <Link to="/login">Go to log in</Link>
-          </Button>
+          <p className="figma-text-sm figma-track-sm text-[#666d80]">
+            Already have an account?{" "}
+            <Link to="/login" className="font-semibold text-[#0d47a1] hover:underline">
+              Log in
+            </Link>
+          </p>
         </div>
       </AuthCard>
     </AuthLayout>

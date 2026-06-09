@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/ui/password-input"
 import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { createAuthApi } from "@/lib/api/auth"
@@ -82,7 +82,7 @@ function ResetPasswordPage() {
   if (hasSession === false) {
     return (
       <AuthLayout ctaLabel="Sign Up" ctaHref="/signup" headerVariant="auth">
-        <AuthCard className="bg-[#f2f7ff]">
+        <AuthCard>
           <div className="figma-gap-24 flex flex-col">
             <h1 className="figma-track-md text-center">Reset link expired</h1>
             <p className="figma-text-sm figma-track-sm text-center text-[#666d80]">
@@ -102,7 +102,7 @@ function ResetPasswordPage() {
 
   return (
     <AuthLayout ctaLabel="Sign Up" ctaHref="/signup" headerVariant="auth">
-      <AuthCard className="bg-[#f2f7ff]">
+      <AuthCard>
         <div className="figma-gap-24 flex flex-col">
           <div className="figma-gap-8 flex flex-col">
             <h1 className="figma-track-md text-center">Set a new password</h1>
@@ -116,35 +116,31 @@ function ResetPasswordPage() {
               <p className="figma-text-sm figma-track-sm font-medium text-[#062357]">
                 New Password<span className="text-[#df1c41]">*</span>
               </p>
-              <Input
+              <PasswordInput
                 size="lg"
-                type="password"
                 autoComplete="new-password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="Enter a new password"
-                className="rounded-2xl bg-[#f2f7ff]"
               />
             </div>
             <div className="figma-gap-8 flex flex-col">
               <p className="figma-text-sm figma-track-sm font-medium text-[#062357]">
                 Confirm Password<span className="text-[#df1c41]">*</span>
               </p>
-              <Input
+              <PasswordInput
                 size="lg"
-                type="password"
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
                 placeholder="Re-enter your new password"
-                className="rounded-2xl bg-[#f2f7ff]"
               />
             </div>
             <Button
               type="button"
               disabled={isSubmitting || hasSession !== true || !password || !confirmPassword}
               onClick={() => void submitNewPassword()}
-              className="mt-2 w-full rounded-2xl bg-[#0d47a1] text-white hover:bg-[#0d47a1]/90"
+              className="ds-btn mt-2 w-full"
             >
               {isSubmitting ? "Updating..." : "Update Password"}
             </Button>

@@ -172,7 +172,7 @@ function mapListItemToRow(r: ExplanationPrepTestListItem): PrepTestRow {
 
 function ExplanationsPage() {
   const [sort, setSort] = useState<"newest" | "oldest">("newest")
-  const [sectionFilter, setSectionFilter] = useState<"all" | "lr" | "rc">("all")
+  const [sectionFilter] = useState<"all" | "lr" | "rc">("all")
   const [page, setPage] = useState(1)
   const [totalPrepTests, setTotalPrepTests] = useState(0)
   const [prepTestRows, setPrepTestRows] = useState<PrepTestRow[]>([])
@@ -337,10 +337,10 @@ function ExplanationsPage() {
   return (
     <StudentMain className="bg-[var(--greyscale-25)] py-4 pb-8 md:py-4 md:pb-10">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-lg font-bold tracking-tight md:text-xl" style={{ color: S.heading }}>
+        <h1 className="text-[20px] font-bold leading-tight tracking-tight" style={{ color: S.heading }}>
           Explanations
         </h1>
-        <nav className="flex flex-wrap items-center gap-1 text-sm" aria-label="Breadcrumb">
+        <nav className="flex flex-wrap items-center gap-1 text-[12px]" aria-label="Breadcrumb">
           <Link to="/app/prep-course" className="font-medium hover:underline" style={{ color: S.muted }}>
             Learn
           </Link>
@@ -356,7 +356,7 @@ function ExplanationsPage() {
       <div className="h-6 shrink-0" aria-hidden />
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-        <h2 className="text-2xl font-bold tracking-tight md:text-3xl md:leading-tight" style={{ color: S.heading }}>
+        <h2 className="text-[24px] font-bold leading-tight tracking-tight" style={{ color: S.heading }}>
           LSAT Question Explanations
         </h2>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
@@ -366,20 +366,6 @@ function ExplanationsPage() {
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex flex-wrap gap-1">
-              {(["all", "lr", "rc"] as const).map((f) => (
-                <Button
-                  key={f}
-                  type="button"
-                  size="sm"
-                  variant={sectionFilter === f ? "default" : "outline"}
-                  className="rounded-lg text-xs uppercase"
-                  onClick={() => setSectionFilter(f)}
-                >
-                  {f === "all" ? "All" : f}
-                </Button>
-              ))}
-            </div>
             <div className="w-full shrink-0 sm:w-[140px]">
               <Select
                 aria-label="Sort explanations"

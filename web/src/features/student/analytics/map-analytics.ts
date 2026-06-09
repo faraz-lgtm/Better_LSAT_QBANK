@@ -231,7 +231,7 @@ export function mapPrepTestSessionToHistoryEntry(s: PracticeSessionSummary): Pre
   if (s.kind !== "PREPTEST" || !s.completedAt) return null
   const score = s.scaledScore ?? s.rawScore ?? 0
   const d = new Date(s.completedAt)
-  const dateLabel = d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+  const dateLabel = d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })
   const br = s.blindReviewScaledScore ?? s.blindReviewRawScore ?? score
   return {
     id: s.id,

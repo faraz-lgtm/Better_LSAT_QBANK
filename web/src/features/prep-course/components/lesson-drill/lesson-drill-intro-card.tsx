@@ -45,7 +45,7 @@ function LessonDrillIntroCard({ lesson, linked = [], onStartDrill, startingDrill
           type="button"
           onClick={onStartDrill}
           disabled={startingDrill || !onStartDrill}
-          className="h-10 cursor-pointer gap-1 rounded-2xl bg-[#0d47a1] px-5 text-sm font-semibold text-white hover:bg-[#0b3d8c] disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+          className="ds-btn-sm cursor-pointer gap-1 px-5 text-sm disabled:pointer-events-auto disabled:cursor-not-allowed"
         >
           {startingDrill ? "Starting…" : "Start"}
           <ArrowRight className="size-4" />

@@ -31,22 +31,23 @@ function Checkbox({ className, size, indeterminate = false, ...props }: Checkbox
     if (ref.current) ref.current.indeterminate = indeterminate
   }, [indeterminate])
 
-  const checked = Boolean(props.checked)
-
   return (
-    <label className="inline-flex cursor-pointer items-center">
+    <span className="inline-flex shrink-0 items-center">
       <input ref={ref} type="checkbox" className="peer sr-only" {...props} />
       <span
         data-slot="checkbox"
+        aria-hidden
         className={cn(
           checkboxVariants({ size }),
           "peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground",
+          "[&>svg]:opacity-0 peer-checked:[&>svg]:opacity-100",
+          indeterminate && "border-primary bg-primary text-primary-foreground [&>svg]:opacity-100",
           className,
         )}
       >
-        {indeterminate ? <Minus className="size-3" /> : checked ? <Check className="size-3" /> : null}
+        {indeterminate ? <Minus className="size-3" /> : <Check className="size-3" />}
       </span>
-    </label>
+    </span>
   )
 }
 
