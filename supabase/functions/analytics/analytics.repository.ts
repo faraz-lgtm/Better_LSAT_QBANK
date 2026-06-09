@@ -34,6 +34,24 @@ export type QuestionTypeRow = {
   avg_per_test: number | null
 }
 
+export type PracticeSessionDetailRow = {
+  id: string
+  kind: string
+  prep_test_id: string | null
+  completed_at: string | null
+  started_at: string
+  raw_score: number | null
+  scaled_score: number | null
+  percentile: number | null
+  blind_review_raw_score: number | null
+  blind_review_scaled_score: number | null
+  blind_review_percentile: number | null
+  blind_review_completed_at: string | null
+  excluded: boolean
+  metadata: Record<string, unknown>
+  admin_prep_tests: { title: string; module_id: string } | { title: string; module_id: string }[] | null
+}
+
 export type PracticeSessionListRow = {
   id: string
   kind: PracticeSessionKind
@@ -192,23 +210,45 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         .eq('user_id', userId)
         .maybeSingle()
       if (error) throw error
-      return data as {
-        id: string
-        kind: string
-        prep_test_id: string | null
-        completed_at: string | null
-        started_at: string
-        raw_score: number | null
-        scaled_score: number | null
-        percentile: number | null
-        blind_review_raw_score: number | null
-        blind_review_scaled_score: number | null
-        blind_review_percentile: number | null
-        blind_review_completed_at: string | null
-        excluded: boolean
-        metadata: Record<string, unknown>
-        admin_prep_tests: { title: string; module_id: string } | { title: string; module_id: string }[] | null
-      } | null
+      return data as PracticeSessionDetailRow | null
+    },
+
+    async resolveCompletedPrepTestSession(userId: string, sessionIdOrPrepTestId: string) {
+      const direct = await this.getPracticeSession(sessionIdOrPrepTestId, userId)
+      if (direct?.kind === 'PREPTEST' && direct.completed_at) {
+        return direct
+      }
+
+      const { data, error } = await client
+        .from('practice_sessions')
+        .select(
+          `
+          id,
+          kind,
+          prep_test_id,
+          completed_at,
+          started_at,
+          raw_score,
+          scaled_score,
+          percentile,
+          blind_review_raw_score,
+          blind_review_scaled_score,
+          blind_review_percentile,
+          blind_review_completed_at,
+          excluded,
+          metadata,
+          admin_prep_tests ( title, module_id )
+        `,
+        )
+        .eq('user_id', userId)
+        .eq('prep_test_id', sessionIdOrPrepTestId)
+        .eq('kind', 'PREPTEST')
+        .not('completed_at', 'is', null)
+        .order('completed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (error) throw error
+      return (data as PracticeSessionDetailRow | null) ?? null
     },
 
     async listSectionSessionsForPrepTest(userId: string, prepTestId: string) {

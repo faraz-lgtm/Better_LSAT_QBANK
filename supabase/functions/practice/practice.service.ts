@@ -33,32 +33,6 @@ function normalizeAnswer(value: string): string {
   return value.trim().toUpperCase().slice(0, 1)
 }
 
-function lessonTextBlob(lesson: {
-  summary: string | null
-  text_content: string | null
-  title: string
-}): string {
-  const strip = (raw: string) => raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-  return [lesson.summary, lesson.text_content, lesson.title]
-    .filter((s): s is string => Boolean(s?.trim()))
-    .map(strip)
-    .join(' ')
-    .toLowerCase()
-}
-
-/** When lesson_questions / PT refs are missing, match known active-drill writeups to bank stimuli. */
-const ACTIVE_DRILL_STIMULUS_HINTS: ReadonlyArray<{ marker: string; phrase: string }> = [
-  { marker: 'musical performances', phrase: 'inspired musical performance' },
-  { marker: 'inspired musical performance', phrase: 'inspired musical performance' },
-  { marker: 'neurochemical imbalances', phrase: 'neurochemical imbalances can cause behavior' },
-  { marker: 'green carnations', phrase: 'green carnations on St. Patrick' },
-  { marker: 'evritech corporation', phrase: 'Evritech Corporation' },
-  { marker: 'quark-filled pulsar', phrase: 'quark-filled pulsar' },
-  { marker: 'stock options', phrase: 'paying senior staff with stock options' },
-  { marker: 'apatosaurus', phrase: 'Apatosaurus' },
-  { marker: 'gauge field theory', phrase: 'gauge field theory' },
-]
-
 function isValidKind(value: unknown): value is PracticeSessionKind {
   return value === 'PREPTEST' || value === 'SECTION' || value === 'DRILL'
 }
@@ -93,21 +67,6 @@ function parseFlaggedQuestionIdsInput(value: unknown): string[] | null {
   return [...new Set(ids)]
 }
 
-function parseSeenQuestionIdsInput(value: unknown): string[] | null {
-  if (value === undefined) return null
-  if (!Array.isArray(value)) throw new PracticeValidationError('seenQuestionIds must be an array')
-  const ids = value.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
-  return [...new Set(ids)]
-}
-
-function mergeSeenQuestionId(metadata: Record<string, unknown>, questionId: string): Record<string, unknown> {
-  const existing = Array.isArray(metadata.seenQuestionIds)
-    ? (metadata.seenQuestionIds as string[])
-    : []
-  if (existing.includes(questionId)) return metadata
-  return { ...metadata, seenQuestionIds: [...existing, questionId] }
-}
-
 function assertFlaggedQuestionIdsAllowed(
   session: PracticeSessionRow,
   flaggedQuestionIds: string[],
@@ -119,21 +78,6 @@ function assertFlaggedQuestionIdsAllowed(
   for (const id of flaggedQuestionIds) {
     if (!allowed.has(id)) {
       throw new PracticeValidationError('flaggedQuestionIds contains a question not in this session')
-    }
-  }
-}
-
-function assertSeenQuestionIdsAllowed(
-  session: PracticeSessionRow,
-  seenQuestionIds: string[],
-): void {
-  if (session.kind !== 'SECTION') {
-    throw new PracticeValidationError('seenQuestionIds is only supported for section sessions')
-  }
-  const allowed = new Set(drillQuestionIdsFromMetadata(session.metadata))
-  for (const id of seenQuestionIds) {
-    if (!allowed.has(id)) {
-      throw new PracticeValidationError('seenQuestionIds contains a question not in this session')
     }
   }
 }
@@ -220,7 +164,6 @@ export type SectionSessionMetadata = {
   sectionTitle?: string | null
   answeredQuestionIds?: string[]
   flaggedQuestionIds?: string[]
-  seenQuestionIds?: string[]
 }
 
 export type SectionPoolItem = {
@@ -801,25 +744,20 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       }
 
       if (blindReview) {
-        if (session.kind !== 'SECTION' && session.kind !== 'DRILL') {
-          throw new PracticeValidationError('Blind review is only supported for section and drill sessions')
+        if (session.kind !== 'SECTION' || !session.prep_test_id) {
+          throw new PracticeValidationError('Blind review answers require a section session tied to a PrepTest')
         }
-        if (!session.completed_at) {
-          throw new PracticeValidationError('Complete the session before blind review')
+        const ptSessions = await deps.repository.listUserSessionsForPrepTest(userId, session.prep_test_id)
+        const prepTestSession = ptSessions.find((s) => s.kind === 'PREPTEST' && s.completed_at)
+        if (!prepTestSession) {
+          throw new PracticeValidationError('Complete the PrepTest before blind review')
         }
-        if (session.kind === 'SECTION' && session.prep_test_id) {
-          const ptSessions = await deps.repository.listUserSessionsForPrepTest(userId, session.prep_test_id)
-          const prepTestSession = ptSessions.find((s) => s.kind === 'PREPTEST' && s.completed_at)
-          if (!prepTestSession) {
-            throw new PracticeValidationError('Complete the PrepTest before blind review')
-          }
-          if (prepTestSession.blind_review_completed_at) {
-            throw new PracticeValidationError('Blind review is already completed for this PrepTest')
-          }
-          const meta = prepTestSession.metadata
-          if (meta.blindReviewActive !== true) {
-            throw new PracticeValidationError('Start blind review for this PrepTest first')
-          }
+        if (prepTestSession.blind_review_completed_at) {
+          throw new PracticeValidationError('Blind review is already completed for this PrepTest')
+        }
+        const meta = prepTestSession.metadata
+        if (meta.blindReviewActive !== true) {
+          throw new PracticeValidationError('Start blind review for this PrepTest first')
         }
       }
 
@@ -850,21 +788,11 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         const existing = Array.isArray(session.metadata.answeredQuestionIds)
           ? (session.metadata.answeredQuestionIds as string[])
           : []
-        let nextMeta: Record<string, unknown> = {
-          ...session.metadata,
-          ...(existing.includes(questionId)
-            ? {}
-            : { answeredQuestionIds: [...existing, questionId] }),
-        }
-        if (session.kind === 'SECTION') {
-          nextMeta = mergeSeenQuestionId(nextMeta, questionId)
-        }
-        if (
-          !existing.includes(questionId) ||
-          (session.kind === 'SECTION' &&
-            !(Array.isArray(session.metadata.seenQuestionIds) &&
-              (session.metadata.seenQuestionIds as string[]).includes(questionId)))
-        ) {
+        if (!existing.includes(questionId)) {
+          const nextMeta = {
+            ...session.metadata,
+            answeredQuestionIds: [...existing, questionId],
+          }
           await deps.repository.updateSession(sessionId, userId, { metadata: nextMeta })
         }
       }
@@ -917,7 +845,6 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         bookmarked?: unknown
         excluded?: unknown
         flaggedQuestionIds?: unknown
-        seenQuestionIds?: unknown
       },
     ): Promise<{ session: PracticeSessionRow }> {
       const sessionId = typeof body.sessionId === 'string' ? body.sessionId : ''
@@ -934,26 +861,17 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (typeof body.bookmarked === 'boolean') patch.bookmarked = body.bookmarked
       if (typeof body.excluded === 'boolean') patch.excluded = body.excluded
 
-      let nextMetadata: Record<string, unknown> | undefined
-
       const flaggedInput = parseFlaggedQuestionIdsInput(body.flaggedQuestionIds)
       if (flaggedInput !== null) {
         assertFlaggedQuestionIdsAllowed(session, flaggedInput)
-        nextMetadata = { ...(nextMetadata ?? session.metadata), flaggedQuestionIds: flaggedInput }
+        patch.metadata = {
+          ...session.metadata,
+          flaggedQuestionIds: flaggedInput,
+        }
       }
-
-      const seenInput = parseSeenQuestionIdsInput(body.seenQuestionIds)
-      if (seenInput !== null) {
-        assertSeenQuestionIdsAllowed(session, seenInput)
-        nextMetadata = { ...(nextMetadata ?? session.metadata), seenQuestionIds: seenInput }
-      }
-
-      if (nextMetadata) patch.metadata = nextMetadata
 
       if (Object.keys(patch).length === 0) {
-        throw new PracticeValidationError(
-          'bookmarked, excluded, flaggedQuestionIds, or seenQuestionIds must be provided',
-        )
+        throw new PracticeValidationError('bookmarked, excluded, or flaggedQuestionIds must be provided')
       }
 
       const sessionRow = await deps.repository.updateSession(sessionId, userId, patch)
@@ -1076,7 +994,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
     async startLessonDrill(
       userId: string,
-      body: { lessonId?: unknown },
+      body: { lessonId?: unknown; questionId?: unknown },
     ): Promise<DrillSessionResponse> {
       const lessonId = typeof body.lessonId === 'string' ? body.lessonId.trim() : ''
       if (!lessonId) throw new PracticeValidationError('lessonId is required')
@@ -1092,17 +1010,13 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       }
 
       let questionIds = await deps.repository.listLessonQuestionIds(lessonId)
-      const explicitQuestionId =
-        typeof body.questionId === 'string' ? body.questionId.trim() : ''
 
       if (isActive) {
         if (questionIds.length > 1) {
           throw new PracticeValidationError('Active drill lessons must have exactly one linked question')
         }
-        let questionId = questionIds[0] ?? null
-        if (!questionId && explicitQuestionId) {
-          questionId = explicitQuestionId
-        }
+        const bodyQuestionId = typeof body.questionId === 'string' ? body.questionId.trim() : ''
+        let questionId = questionIds[0] ?? (bodyQuestionId || null)
         if (!questionId) {
           const ref = extractPrepTestQuestionRef(lesson.summary, lesson.text_content, lesson.title)
           if (ref) {
@@ -1112,20 +1026,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
             }
             questionId = resolvedId
           } else {
-            const blob = lessonTextBlob(lesson)
-            for (const hint of ACTIVE_DRILL_STIMULUS_HINTS) {
-              if (!blob.includes(hint.marker)) continue
-              const resolvedId = await deps.repository.findQuestionIdByStimulusPhrase(hint.phrase)
-              if (resolvedId) {
-                questionId = resolvedId
-                break
-              }
-            }
-          }
-          if (!questionId) {
-            throw new PracticeValidationError(
-              'No PrepTest question is linked to this active drill. Add a PT reference (e.g. PT102.S2.Q1) in the lesson summary or link a question in admin.',
-            )
+            throw new PracticeValidationError('No PrepTest question reference found for this lesson')
           }
           questionIds = [questionId]
         }

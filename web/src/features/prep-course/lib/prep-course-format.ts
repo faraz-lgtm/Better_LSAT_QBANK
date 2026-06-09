@@ -72,6 +72,14 @@ export function lessonProgressPercent(completedCount: number, totalCount: number
   return Math.round((completedCount / totalCount) * 100)
 }
 
+/** Figma course modules sidebar — right-side status chip */
+export function moduleStatusLabel(completedCount: number, lessonCount: number): string | null {
+  if (lessonCount <= 0) return "Not Started"
+  if (completedCount <= 0) return "Not Started"
+  if (completedCount >= lessonCount) return null
+  return "Applied"
+}
+
 export type PrepCourseCurriculumStats = {
   moduleCount: number
   sectionCount: number
@@ -85,6 +93,13 @@ export function sectionLessonCount(section: PrepCourseSection): number {
 
 export function moduleLessonCount(mod: PrepCourseModule): number {
   return mod.sections.reduce((sum, section) => sum + section.lessons.length, 0)
+}
+
+/** Hide the default "General" wrapper — show lessons directly under the module. */
+export function shouldFlattenModuleSections(mod: PrepCourseModule): boolean {
+  if (mod.sections.length !== 1) return false
+  const section = mod.sections[0]
+  return section.title === "General" || section.id === "fallback-section"
 }
 
 export function sectionDurationMinutes(section: PrepCourseSection): number {
@@ -127,6 +142,23 @@ export function formatSectionTimeLabel(totalMinutes: number): string {
   return formatDurationLabel(totalMinutes)
 }
 
+export function incompleteDurationMinutes(
+  lessons: PrepLesson[],
+  completedSlugs: Set<string> | string[],
+): number {
+  const completed = completedSlugs instanceof Set ? completedSlugs : new Set(completedSlugs)
+  return lessons
+    .filter((lesson) => !completed.has(lesson.slug))
+    .reduce((sum, lesson) => sum + (lesson.duration_minutes ?? 0), 0)
+}
+
+export function formatRemainingHoursLabel(remainingMinutes: number): string {
+  if (remainingMinutes <= 0) return "About 0 min left"
+  if (remainingMinutes < 60) return `About ${remainingMinutes} min left`
+  const hours = Math.ceil(remainingMinutes / 60)
+  return hours === 1 ? "About 1 hr left" : `About ${hours} hrs left`
+}
+
 export type LessonLocation = {
   moduleId: string
   sectionId: string
@@ -140,6 +172,20 @@ export function findLessonLocation(
     for (const section of mod.sections) {
       if (section.lessons.some((lesson) => lesson.slug === lessonSlug)) {
         return { moduleId: mod.id, sectionId: section.id }
+      }
+    }
+  }
+  return null
+}
+
+export function findLessonSectionContext(
+  curriculum: PrepCourseCurriculum,
+  lessonSlug: string,
+): { module: PrepCourseModule; section: PrepCourseSection } | null {
+  for (const mod of curriculum.modules) {
+    for (const section of mod.sections) {
+      if (section.lessons.some((lesson) => lesson.slug === lessonSlug)) {
+        return { module: mod, section }
       }
     }
   }

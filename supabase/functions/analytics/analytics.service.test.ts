@@ -103,6 +103,7 @@ function mockRepo(overrides: Partial<AnalyticsRepository> = {}): AnalyticsReposi
     ],
     listAnswerEventsWithTypeDifficulty: async () => [],
     getPracticeSession: async () => null,
+    resolveCompletedPrepTestSession: async () => null,
     listSectionSessionsForPrepTest: async () => [],
     listPrepTestQuestionsWithMeta: async () => [],
     listAnswerEventsWithTypes: async () => [
@@ -140,6 +141,13 @@ function mockRepo(overrides: Partial<AnalyticsRepository> = {}): AnalyticsReposi
     countAnswerEventsForQuestion: async () => 0,
     getQuestionExplanationPayload: async () => null,
     ...overrides,
+  }
+  if (overrides.resolveCompletedPrepTestSession === undefined) {
+    base.resolveCompletedPrepTestSession = async (userId, sessionIdOrPrepTestId) => {
+      const direct = await base.getPracticeSession(sessionIdOrPrepTestId, userId)
+      if (direct?.kind === 'PREPTEST' && direct.completed_at) return direct
+      return null
+    }
   }
   return base
 }
@@ -648,6 +656,19 @@ Deno.test('getPrepTestSessionDetail counts correct from at-completion only', asy
   assertEquals(d.blindReviewScore, 167)
 })
 
+Deno.test('getPrepTestSessionDetail resolves latest completed session by prep test id', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      getPracticeSession: async () => null,
+      resolveCompletedPrepTestSession: async () => prepTestSessionFixture({ id: 'pt-session-1', prep_test_id: 'pt-900' }),
+      listSectionSessionsForPrepTest: async () => [{ id: 'sec-s1', section_id: 's1', completed_at: PREP_TEST_COMPLETED_AT, raw_score: 20 }],
+      listPrepTestQuestionsWithMeta: async () => [],
+    }),
+  })
+  const d = await service.getPrepTestSessionDetail('user-1', 'pt-900')
+  assertEquals(d.prepTestId, 'pt-900')
+})
+
 Deno.test('getPrepTestSessionDetail rejects incomplete or non-preptest session', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({
@@ -686,8 +707,7 @@ Deno.test('getPrepTestSessionDetail rejects missing prep_test_id', async () => {
   )
 })
 
-Deno.test('getPrepTestSessionDetail uses stem and question number title fallbacks', async () => {
-  const longStem = 'A'.repeat(80)
+Deno.test('getPrepTestSessionDetail uses PT section question reference titles', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({
       getPracticeSession: async () => prepTestSessionFixture(),
@@ -697,7 +717,7 @@ Deno.test('getPrepTestSessionDetail uses stem and question number title fallback
         prepTestQuestion({
           id: 'q-long',
           question_types: null,
-          stem_text: longStem,
+          stem_text: 'A'.repeat(80),
         }),
         prepTestQuestion({
           id: 'q-num',
@@ -711,8 +731,8 @@ Deno.test('getPrepTestSessionDetail uses stem and question number title fallback
   const d = await service.getPrepTestSessionDetail('user-1', 'pt-session-1')
   const longQ = d.questions.find((row) => row.id === 'q-long')
   const numQ = d.questions.find((row) => row.id === 'q-num')
-  assertEquals(longQ?.title, `${longStem.slice(0, 60)}…`)
-  assertEquals(numQ?.title, 'Question 7')
+  assertEquals(longQ?.title, 'PT 101  .  S1  .  Q1')
+  assertEquals(numQ?.title, 'PT 101  .  S1  .  Q7')
 })
 
 Deno.test('getPrepTestSessionDetail maps difficulty labels', async () => {

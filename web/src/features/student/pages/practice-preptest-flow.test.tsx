@@ -4,7 +4,6 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
 
 import { PracticePrepTestPage } from "@/features/student/pages/practice-preptest-page"
-import { PracticePrepTestSectionPage } from "@/features/student/pages/practice-preptest-section-page"
 
 const mockGetPrepTestDetail = vi.fn()
 const mockStartPrepTest = vi.fn()
@@ -46,11 +45,13 @@ const mockDetail = {
       timeMinutes: 35,
       practiceable: true,
       unlocked: true,
+      onBreak: false,
       answeredCount: 0,
       completed: false,
       activeSectionSessionId: null,
     },
   ],
+  sectionBreak: null,
   prepTestSession: null,
   status: "fresh" as const,
   allPracticeableSectionsComplete: false,
@@ -66,7 +67,7 @@ function renderPrepTestRoutes(initialPath: string) {
       { path: "/app/practice/preptest/:testId", element: <PracticePrepTestPage /> },
       {
         path: "/app/practice/preptest/:testId/section/:sectionId",
-        element: <PracticePrepTestSectionPage />,
+        element: <div>Section intro</div>,
       },
       { path: "/app/practice/sections/session/:sessionId", element: <div>Section session</div> },
     ],
@@ -87,12 +88,19 @@ describe("PracticePrepTestPage + section navigation", () => {
 
     expect(await screen.findByRole("heading", { name: /Ready to begin your test/i })).toBeInTheDocument()
     expect(within(screen.getByRole("main")).getByText("PT 900")).toBeInTheDocument()
+    expect(screen.getByText("Control your practice pace")).toBeInTheDocument()
+    expect(screen.getByText("Select format")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Test Section" })).toBeInTheDocument()
+    expect(screen.getByText("Section 1")).toBeInTheDocument()
+    expect(screen.getByText("35:00")).toBeInTheDocument()
+    expect(screen.getByText("3 Questions")).toBeInTheDocument()
 
-    await user.click(screen.getByRole("button", { name: /Start section/i }))
+    await user.click(screen.getByRole("button", { name: /Start Section/i }))
 
     expect(mockStartSection).toHaveBeenCalledWith(
       expect.objectContaining({ sectionId: "sec-lr", timing: "35" }),
     )
-    expect(router.state.location.pathname).toBe("/app/practice/sections/session/section-sess-1")
+    expect(router.state.location.pathname).toBe("/app/practice/preptest/pt-900/section/sec-lr")
+    expect(router.state.location.search).toBe("?sessionId=section-sess-1")
   })
 })

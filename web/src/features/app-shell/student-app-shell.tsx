@@ -6,7 +6,9 @@ function StudentAppShell() {
   return (
     <div className="auth-page flex min-h-svh flex-col bg-[#f5f9ff]">
       <StudentAppHeader />
-      <Outlet />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <Outlet />
+      </div>
     </div>
   )
 }

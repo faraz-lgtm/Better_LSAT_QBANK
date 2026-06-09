@@ -7,6 +7,7 @@ import type { PrepLesson, PrepLessonLinkedQuestionRef } from "@/lib/api/prep-cou
 type ActiveDrillIntroCardProps = {
   lesson: PrepLesson
   linked?: PrepLessonLinkedQuestionRef | null
+  hideTitle?: boolean
   onStartDrill?: () => void
   startingDrill?: boolean
   drillStartError?: string | null
@@ -22,6 +23,7 @@ function formatPtRef(linked: PrepLessonLinkedQuestionRef): string {
 function ActiveDrillIntroCard({
   lesson,
   linked,
+  hideTitle = false,
   onStartDrill,
   startingDrill = false,
   drillStartError = null,
@@ -29,12 +31,16 @@ function ActiveDrillIntroCard({
   const body = activeDrillIntroCopy(lesson)
 
   return (
-    <article className="mx-auto max-w-2xl rounded-2xl border border-[#dfe1e7] bg-white p-8 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
-      <h2 className="font-serif text-2xl font-bold text-[#062357] md:text-[28px]">{lesson.title}</h2>
+    <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+      {hideTitle ? null : (
+        <h2 className="font-serif text-2xl font-bold text-[#062357] md:text-[28px]">{lesson.title}</h2>
+      )}
       {linked ? (
-        <p className="mt-2 text-sm font-medium tracking-[0.02em] text-[#666d80]">{formatPtRef(linked)}</p>
+        <p className={`text-sm font-medium tracking-[0.02em] text-[#666d80] ${hideTitle ? "" : "mt-2"}`}>
+          {formatPtRef(linked)}
+        </p>
       ) : null}
-      <p className="ds-body-sm mt-6 leading-7 text-[#36394a]">{body}</p>
+      <p className={`text-sm leading-7 text-[#36394a] ${hideTitle ? "mt-0" : "mt-6"}`}>{body}</p>
       {drillStartError ? (
         <p className="mt-6 text-sm text-[#95122b]" role="alert">
           {drillStartError}

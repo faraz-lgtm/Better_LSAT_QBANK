@@ -117,6 +117,8 @@ describe("PrepCourseContentPage", () => {
     })
 
     expect(await screen.findByRole("heading", { name: "Course Content" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Prep Course", level: 1 })).toBeInTheDocument()
+    expect(screen.getByText("Show All Bookmark")).toBeInTheDocument()
     expect(screen.getByText("2 Modules")).toBeInTheDocument()
     expect(screen.getByText("2 Sections")).toBeInTheDocument()
 
@@ -229,7 +231,7 @@ describe("PrepCourseContentPage", () => {
     const lessonALink = await screen.findByRole("link", { name: /Lesson A/i })
     expect(within(lessonALink).getByLabelText("Completed")).toBeInTheDocument()
     expect(within(screen.getByRole("link", { name: /Lesson B/i })).queryByLabelText("Completed")).toBeNull()
-    expect(screen.getByText(/1 of 2 lessons completed/)).toBeInTheDocument()
+    expect(screen.getByText(/1 of 2 Lessons completed/)).toBeInTheDocument()
     expect(within(screen.getByRole("complementary", { name: "Course modules" })).getByText("50%")).toBeInTheDocument()
   })
 })

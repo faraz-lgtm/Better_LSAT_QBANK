@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
-import { ChevronDown, ChevronLeft, ChevronRight, Flag } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { LrDrillOptionRow } from "@/features/student/drills/lr-drill-option-row"
 import type { DrillQuestion } from "@/features/student/drills/drill-types"
 import type { SectionSessionResponse } from "@/features/student/sections/section-types"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
+import { PracticeQuestionStem } from "@/features/student/practice-session/practice-question-stem"
 import { PracticeSessionHeader } from "@/features/student/practice-session/practice-session-header"
 import {
   canChangePracticeAnswer,
@@ -14,13 +15,24 @@ import {
 } from "@/features/student/practice-session/practice-session-types"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
+import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
+import { PracticeSessionQuestionNavButton } from "@/features/student/practice-session/practice-session-question-nav-button"
+import { PracticeSubmitSectionModal } from "@/features/student/practice-session/practice-submit-section-modal"
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
-import { PracticeQuestionFlagButton } from "@/features/student/practice-session/practice-question-flag-button"
 import { usePracticeQuestionFlags } from "@/features/student/practice-session/use-practice-question-flags"
 import { usePracticeQuestionSeen } from "@/features/student/practice-session/use-practice-question-seen"
-import { usePracticeSessionTimer } from "@/features/student/practice-session/use-practice-session-timer"
+import {
+  computeElapsedTimerProgress,
+  computeRemainingTimerProgress,
+  resolveTimerBudgetSeconds,
+  usePracticeSessionTimer,
+} from "@/features/student/practice-session/use-practice-session-timer"
 import { StudentMain } from "@/features/student/components/student-main"
 import { createPracticeApi } from "@/lib/api/practice"
+import {
+  resolvePrepTestBreakAfterSectionId,
+  writeStoredSectionBreak,
+} from "@/features/student/preptests/preptest-section-break"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const SECTION_TIMER_SECONDS = 35 * 60
@@ -81,29 +93,18 @@ function SectionQuestionPanel({
 
   return (
     <>
-      <div className="flex gap-2">
-        <div className="min-w-0 flex-1">
-          <span
-            className="text-sm font-semibold leading-snug"
-            style={{ color: "var(--color-student-cta)" }}
-          >
-            {questionNumber}.
-          </span>
-          <PracticeAnnotatedContent
-            regionKey={stemKey}
-            html={stemHtml}
-            findQuery={findQuery}
-            scrollAnchor
-            as="div"
-            className="text-sm font-semibold leading-snug"
-            style={{ color: "var(--foreground)" }}
-            toolMode={toolMode}
-            onMouseUp={onContentMouseUp}
-            onClickCapture={onContentClick}
-          />
-        </div>
-        <PracticeQuestionFlagButton flagged={flagged} onToggle={onToggleFlag} disabled={flagsDisabled} />
-      </div>
+      <PracticeQuestionStem
+        questionNumber={questionNumber}
+        regionKey={stemKey}
+        html={stemHtml}
+        findQuery={findQuery}
+        toolMode={toolMode}
+        onContentMouseUp={onContentMouseUp}
+        onContentClick={onContentClick}
+        flagged={flagged}
+        onToggleFlag={onToggleFlag}
+        flagsDisabled={flagsDisabled}
+      />
       {revealed && isCorrect != null ? (
         <p
           className="text-xs font-semibold"
@@ -161,13 +162,18 @@ function SectionSessionPage() {
   >({})
   const [submitting, setSubmitting] = useState(false)
   const [finishing, setFinishing] = useState(false)
+  const [submitModalOpen, setSubmitModalOpen] = useState(false)
+  const [startingBlindReview, setStartingBlindReview] = useState(false)
   const [completeModal, setCompleteModal] = useState<{
     rawScore: number
     questionCount: number
+    scaledScore?: number | null
+    prepTestLabel: string
+    prepTestSessionId: string
   } | null>(null)
   const [scoreHidden, setScoreHidden] = useState(true)
 
-  const { elapsed, countdown, paused, togglePause, setInitialCountdown } = usePracticeSessionTimer()
+  const { elapsed, countdown, paused, togglePause, resetElapsed, setInitialCountdown } = usePracticeSessionTimer()
   const highlights = usePracticeHighlights()
 
   const load = useCallback(async () => {
@@ -195,6 +201,29 @@ function SectionSessionPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (loading || !sectionSession || !sessionId || blindReviewMode) return
+    if (searchParams.get("started") === "1") return
+    const ptId =
+      sectionSession.session.prep_test_id ??
+      sectionSession.section.prepTestId ??
+      blindReviewPrepTestId ??
+      null
+    if (!ptId || sectionSession.answers.length > 0) return
+    navigate(
+      `/app/practice/preptest/${encodeURIComponent(ptId)}/section/${encodeURIComponent(sectionSession.section.id)}?sessionId=${encodeURIComponent(sessionId)}`,
+      { replace: true },
+    )
+  }, [
+    blindReviewMode,
+    blindReviewPrepTestId,
+    loading,
+    navigate,
+    searchParams,
+    sectionSession,
+    sessionId,
+  ])
 
   const questions = sectionSession?.questions ?? []
   const metadata = sectionSession?.metadata
@@ -310,19 +339,72 @@ function SectionSessionPage() {
     return "/app/practice/blind-review"
   }
 
-  async function handleFinish() {
-    if (!sessionId) return
-    if (blindReviewMode) {
-      navigate(blindReviewExitPath())
+  const prepTestId = sectionSession?.session.prep_test_id ?? null
+  const unansweredCount = useMemo(
+    () => questions.filter((q) => !answersByQuestion[q.id]).length,
+    [questions, answersByQuestion],
+  )
+
+  const submitSectionMessage = useMemo(() => {
+    if (unansweredCount > 0) {
+      const noun = unansweredCount === 1 ? "question" : "questions"
+      return `Are you sure you want to submit this section? You have ${unansweredCount} unanswered ${noun}.`
+    }
+    if (timedSection && countdown != null && countdown > 0) {
+      return "Are you sure you want to submit this section? You still have time left on the timer."
+    }
+    return "Are you sure you want to submit this section?"
+  }, [unansweredCount, timedSection, countdown])
+
+  function handleExitSession() {
+    const exitPrepTestId =
+      prepTestId ?? sectionSession?.section.prepTestId ?? blindReviewPrepTestId ?? null
+    if (exitPrepTestId) {
+      navigate(`/app/practice/preptest/${encodeURIComponent(exitPrepTestId)}`, { replace: true })
       return
     }
+    navigate("/app/practice/sections", { replace: true })
+  }
+
+  async function handleConfirmSubmitSection() {
+    if (!sessionId) return
     setFinishing(true)
+    setError(null)
     try {
-      const completed = await practiceApi.completeSession(sessionId)
-      const questionCount = questions.length > 0 ? questions.length : 1
-      const rawScore = completed.raw_score ?? 0
-      setCompleteModal({ rawScore, questionCount })
-      setScoreHidden(true)
+      await practiceApi.completeSession(sessionId)
+      setSubmitModalOpen(false)
+
+      if (prepTestId) {
+        const detail = await practiceApi.getPrepTestDetail(prepTestId)
+        if (detail.allPracticeableSectionsComplete) {
+          const ptCompleted = await practiceApi.completePrepTest(prepTestId)
+          const questionCount = detail.prepTest.questionCount > 0 ? detail.prepTest.questionCount : 1
+          setCompleteModal({
+            rawScore: ptCompleted.raw_score ?? 0,
+            questionCount,
+            scaledScore: ptCompleted.scaled_score,
+            prepTestLabel: detail.prepTest.label,
+            prepTestSessionId: ptCompleted.id,
+          })
+          setScoreHidden(true)
+          return
+        }
+        const afterSectionId = resolvePrepTestBreakAfterSectionId(
+          detail,
+          sectionSession?.session.section_id,
+          sectionSession?.section.id,
+        )
+        if (afterSectionId) {
+          writeStoredSectionBreak(prepTestId, afterSectionId)
+        }
+        navigate(`/app/practice/preptest/${encodeURIComponent(prepTestId)}`, {
+          replace: true,
+          state: afterSectionId ? { sectionJustCompleted: afterSectionId } : undefined,
+        })
+        return
+      }
+
+      navigate("/app/practice/sections", { replace: true })
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to complete section")
     } finally {
@@ -330,48 +412,28 @@ function SectionSessionPage() {
     }
   }
 
-  function leaveSectionSession() {
-    const prepTestId = sectionSession?.session.prep_test_id
-    if (prepTestId) {
-      navigate(`/app/practice/preptest/${encodeURIComponent(prepTestId)}`, { replace: true })
-      return
-    }
-    navigate("/app/practice/sections", { replace: true })
+  function leavePrepTestComplete() {
+    navigate("/app/practice/preptest", { replace: true })
   }
 
-  function viewSectionResults() {
-    if (!sessionId) return
-    const prepTestId = sectionSession?.session.prep_test_id
-    const returnTo = prepTestId
-      ? `/app/practice/preptest/${encodeURIComponent(prepTestId)}`
-      : "/app/practice/sections"
-    navigate(
-      `/app/practice/results/${encodeURIComponent(sessionId)}?returnTo=${encodeURIComponent(returnTo)}`,
-      { replace: true },
-    )
+  async function enterPrepTestBlindReview() {
+    if (!prepTestId || startingBlindReview) return
+    setStartingBlindReview(true)
+    setError(null)
+    try {
+      await practiceApi.startBlindReview(prepTestId)
+      navigate(`/app/practice/blind-review/${encodeURIComponent(prepTestId)}`, { replace: true })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to start blind review")
+    } finally {
+      setStartingBlindReview(false)
+    }
   }
 
-  async function enterSectionBlindReview() {
-    if (!sessionId) return
-    setCompleteModal(null)
-    setScoreHidden(true)
-    const prepTestId = sectionSession?.session.prep_test_id
-    if (prepTestId) {
-      try {
-        await practiceApi.startBlindReview(prepTestId)
-      } catch {
-        // PrepTest blind review may already be in progress.
-      }
-      const q = new URLSearchParams({ blindReview: "1", prepTestId })
-      navigate(`/app/practice/sections/session/${encodeURIComponent(sessionId)}?${q.toString()}`, {
-        replace: true,
-      })
-      return
-    }
-    const q = new URLSearchParams({ blindReview: "1" })
-    navigate(`/app/practice/sections/session/${encodeURIComponent(sessionId)}?${q.toString()}`, {
-      replace: true,
-    })
+  function viewPrepTestResults() {
+    const resultsSessionId = completeModal?.prepTestSessionId
+    if (!resultsSessionId) return
+    navigate(`/app/analytics/preptests/results/${encodeURIComponent(resultsSessionId)}`, { replace: true })
   }
 
   if (!sessionId) {
@@ -415,58 +477,58 @@ function SectionSessionPage() {
     )
   }
 
-  const answeredCount = Object.keys(answersByQuestion).length
-  const allAnswered = answeredCount >= questions.length
   const headerLabel =
     sectionSession?.sessionLabel ||
     [metadata?.prepTestTitle, metadata?.sectionTitle].filter(Boolean).join(" — ") ||
     (sectionType === "LR" ? "LR Section" : "RC Section")
 
+  const timerBudgetSeconds = resolveTimerBudgetSeconds({
+    timing: metadata?.timing,
+    questionCount: questions.length,
+    sectionTimerSeconds: timedSection ? SECTION_TIMER_SECONDS : undefined,
+  })
   const timerLabel = timedSection && countdown != null ? "Remaining" : "Elapsed"
   const timerDisplaySeconds =
     timedSection && countdown != null ? countdown : elapsed
   const timerProgress =
     timedSection && countdown != null
-      ? countdown / SECTION_TIMER_SECONDS
-      : questions.length > 0
-        ? answeredCount / questions.length
-        : 0
+      ? computeRemainingTimerProgress(countdown, timerBudgetSeconds)
+      : computeElapsedTimerProgress(elapsed, timerBudgetSeconds)
   const allowReselect = canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
     blindReview: blindReviewMode,
   })
 
-  const finishButton = (
+  const finishButton = blindReviewMode ? (
     <Button
       type="button"
-      disabled={finishing}
       variant="outline"
-      className="h-[52px] gap-1 rounded-2xl border bg-[#f6f8fa] px-3 font-medium text-[#062357] hover:bg-[#eceff3]"
-      style={{ borderColor: "#dfe1e7" }}
-      onClick={() => void handleFinish()}
+      size="default"
+      className="h-[52px] shrink-0 px-4"
+      onClick={() => navigate(blindReviewExitPath())}
     >
-      {blindReviewMode
-        ? "Back to blind review"
-        : finishing
-          ? "Finishing…"
-          : allAnswered
-            ? "Finish"
-            : `Finish (${answeredCount}/${questions.length})`}
-      <ChevronDown className="size-5 opacity-90" strokeWidth={2} />
+      Back to blind review
     </Button>
+  ) : (
+    <PracticeSessionFinishMenu
+      disabled={sessionCompleted}
+      finishing={finishing}
+      onSubmitSection={() => setSubmitModalOpen(true)}
+      onExit={handleExitSession}
+    />
   )
 
   return (
-    <StudentMain className="max-w-none bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))] py-4 md:py-6">
-      <div className="mx-auto w-full max-w-[1200px] px-0">
+    <StudentMain className="flex min-h-0 max-w-none flex-1 flex-col overflow-hidden bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))] px-0 py-4 md:py-5">
+      <div
+        className="mx-auto flex min-h-0 w-full flex-1 flex-col px-4 md:px-6"
+        style={{ maxWidth: 1280 }}
+      >
         {error ? (
-          <p className="mb-3 text-sm text-red-600" role="alert">
+          <p className="mb-3 shrink-0 text-sm text-red-600" role="alert">
             {error}
           </p>
         ) : null}
-        <div
-          className="overflow-hidden rounded-2xl border bg-background shadow-sm"
-          style={{ borderColor: "var(--color-student-cta)" }}
-        >
+        <div className="practice-session-card flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-2xl border border-[#dfe1e7] bg-background shadow-[0px_1px_1.5px_rgba(13,13,18,0.05)]">
           <PracticeSessionHeader
             title={blindReviewMode ? `Blind review · ${headerLabel}` : headerLabel}
             findQuery={findQuery}
@@ -474,16 +536,19 @@ function SectionSessionPage() {
             activeColor={highlights.activeColor}
             toolMode={highlights.toolMode}
             fontScale={highlights.fontScale}
-            lineSpacing={highlights.lineSpacing}
+            boldEnabled={highlights.boldEnabled}
+            italicEnabled={highlights.italicEnabled}
             onSelectColor={highlights.selectColor}
             onEraser={highlights.selectEraser}
             onUnderline={highlights.selectUnderline}
             onFontSize={highlights.cycleFontSize}
-            onLineSpacing={highlights.cycleLineSpacing}
+            onToggleBold={highlights.toggleBold}
+            onToggleItalic={highlights.toggleItalic}
             timerLabel={timerLabel}
             timerDisplaySeconds={timerDisplaySeconds}
             timerPaused={paused}
             onToggleTimerPause={togglePause}
+            onResetTimer={timedSection ? undefined : resetElapsed}
             timerProgress={timerProgress}
             timerDisplayClassName={
               timedSection && countdown === 0 ? "text-[#df1c41]" : undefined
@@ -493,13 +558,10 @@ function SectionSessionPage() {
 
           <div
             ref={sessionBodyRef}
-            className="grid gap-0 lg:grid-cols-2 lg:divide-x"
-            style={{ borderColor: "var(--greyscale-100)", ...highlights.contentStyle }}
+            className="practice-session-body grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-2 lg:divide-x divide-[#dfe1e7]"
+            style={highlights.contentStyle}
           >
-            <div
-              className="max-h-[min(52vh,480px)] overflow-y-auto border-b p-5 lg:max-h-[560px] lg:border-b-0"
-              style={{ borderColor: "var(--greyscale-100)" }}
-            >
+            <div className="practice-session-pane min-h-0 h-full overflow-y-auto overflow-x-hidden border-[#dfe1e7] p-5 border-b lg:border-b-0">
               {sectionType === "RC" && current.passage ? (
                 <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
               ) : null}
@@ -512,7 +574,7 @@ function SectionSessionPage() {
                 onClickCapture={highlights.handleContentClick}
               />
             </div>
-            <div className="flex max-h-[min(52vh,480px)] flex-col gap-4 overflow-y-auto p-5 lg:max-h-[560px]">
+            <div className="practice-session-pane flex min-h-0 h-full flex-col gap-4 overflow-y-auto overflow-x-hidden border-[#dfe1e7] p-5">
               <SectionQuestionPanel
                 key={current.id}
                 question={current}
@@ -535,54 +597,23 @@ function SectionSessionPage() {
             </div>
           </div>
 
-          <footer
-            className="flex flex-col gap-4 border-t px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
-            style={{ borderColor: "var(--greyscale-100)" }}
-          >
-            <div className="flex flex-wrap items-center gap-2 pt-2">
+          <footer className="practice-session-footer relative z-10 flex shrink-0 items-center justify-between gap-3 border-t border-[#dfe1e7] bg-background px-4 py-3 md:gap-4 md:px-6">
+            <div className="practice-session-scroll-hidden flex min-h-0 min-w-0 flex-1 flex-nowrap items-stretch gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5 pt-2.5 sm:gap-2">
               {questions.map((q, i) => {
                 const n = i + 1
-                const active = n === safeIndex
-                const answered = Boolean(answersByQuestion[q.id])
-                const flagged = questionFlags.isFlagged(q.id)
                 return (
-                  <button
+                  <PracticeSessionQuestionNavButton
                     key={q.id}
-                    type="button"
+                    number={n}
+                    active={n === safeIndex}
+                    answered={Boolean(answersByQuestion[q.id])}
+                    flagged={questionFlags.isFlagged(q.id)}
                     onClick={() => setQIndex(n)}
-                    className="relative flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors"
-                    style={{
-                      backgroundColor: active
-                        ? "var(--color-student-cta)"
-                        : answered
-                          ? "color-mix(in srgb, var(--color-student-cta) 25%, var(--greyscale-25))"
-                          : "var(--greyscale-25)",
-                      color: active ? "#fff" : "var(--color-student-heading)",
-                      border: `1px solid ${active ? "var(--color-student-cta)" : "var(--greyscale-100)"}`,
-                    }}
-                    aria-current={active ? "true" : undefined}
-                    aria-label={flagged ? `Question ${n}, flagged` : `Question ${n}`}
-                  >
-                    {n}
-                    {flagged ? (
-                      <Flag
-                        className="absolute -right-0.5 -top-0.5 size-2.5 fill-[var(--color-student-cta)] text-[var(--color-student-cta)]"
-                        strokeWidth={2}
-                        aria-hidden
-                      />
-                    ) : null}
-                  </button>
+                  />
                 )
               })}
             </div>
-            <div className="flex items-center justify-end gap-2">
-              <Link
-                to={blindReviewMode ? blindReviewExitPath() : "/app/practice/sections"}
-                className="mr-auto text-sm font-semibold hover:underline sm:mr-0"
-                style={{ color: "var(--color-student-cta)" }}
-              >
-                {blindReviewMode ? "Exit blind review" : "Exit section"}
-              </Link>
+            <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
                 className="inline-flex size-10 items-center justify-center rounded-full border bg-background transition hover:bg-muted disabled:opacity-40"
@@ -608,18 +639,28 @@ function SectionSessionPage() {
         </div>
       </div>
 
+      <PracticeSubmitSectionModal
+        open={submitModalOpen}
+        message={submitSectionMessage}
+        submitting={finishing}
+        onCancel={() => setSubmitModalOpen(false)}
+        onConfirm={() => void handleConfirmSubmitSection()}
+      />
+
       <PracticeCompleteModal
         open={completeModal != null}
-        titleId="section-complete-title"
-        subtitle="You've completed the section"
+        titleId="preptest-complete-title"
+        subtitle={`You've completed ${completeModal?.prepTestLabel ?? "the PrepTest"}`}
         rawScore={completeModal?.rawScore ?? 0}
         questionCount={completeModal?.questionCount ?? 1}
+        scaledScore={completeModal?.scaledScore}
         scoreHidden={scoreHidden}
         onToggleScoreHidden={() => setScoreHidden((h) => !h)}
         showBlindReview
-        onBlindReview={() => void enterSectionBlindReview()}
-        onSkipDetails={viewSectionResults}
-        onDone={leaveSectionSession}
+        onBlindReview={() => void enterPrepTestBlindReview()}
+        onSkipDetails={viewPrepTestResults}
+        doneLabel="Done with PrepTest"
+        onDone={leavePrepTestComplete}
       />
     </StudentMain>
   )

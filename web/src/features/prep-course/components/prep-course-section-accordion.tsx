@@ -4,7 +4,9 @@ import { PrepCourseLessonRow } from "@/features/prep-course/components/prep-cour
 import { ProgressRing } from "@/features/prep-course/components/prep-course-lesson-sidebar"
 import {
   countCompletedLessons,
+  formatRemainingHoursLabel,
   formatSectionTimeLabel,
+  incompleteDurationMinutes,
   lessonProgressPercent,
   sectionDurationMinutes,
 } from "@/features/prep-course/lib/prep-course-format"
@@ -31,22 +33,27 @@ function PrepCourseSectionAccordion({
   const lessonCount = section.lessons.length
   const completedCount = countCompletedLessons(section.lessons, completedLessonSlugs)
   const progressPercent = lessonProgressPercent(completedCount, lessonCount)
+  const remainingMinutes = incompleteDurationMinutes(section.lessons, completedLessonSlugs)
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+    <div className="bg-white">
       <button
         type="button"
-        className="flex w-full items-center gap-3 px-4 py-4 text-left"
+        className="flex w-full items-center gap-4 px-6 py-4 text-left"
         onClick={onToggle}
         aria-expanded={expanded}
       >
         <ProgressRing value={progressPercent} size="sm" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-[#062357]">{section.title}</p>
-          <p className="mt-0.5 text-xs text-[#666d80]">
-            Total Time: {formatSectionTimeLabel(totalMinutes)}
-            {totalMinutes > 0 ? ` · Time left in section: ${formatSectionTimeLabel(totalMinutes)}` : null}
+          <p className="truncate text-sm font-semibold tracking-[0.02em] text-[#062357]" title={section.title}>
+            {section.title}
           </p>
+        </div>
+        <div className="hidden shrink-0 text-right text-xs font-medium tracking-[0.02em] text-[#666d80] sm:block">
+          <p>Total Time: {formatSectionTimeLabel(totalMinutes)}</p>
+          {remainingMinutes > 0 ? (
+            <p className="mt-0.5">{formatRemainingHoursLabel(remainingMinutes)} in section</p>
+          ) : null}
         </div>
         {expanded ? (
           <ChevronUp className="size-5 shrink-0 text-[#666d80]" aria-hidden />
@@ -55,7 +62,7 @@ function PrepCourseSectionAccordion({
         )}
       </button>
       {expanded ? (
-        <div className="space-y-1 border-t border-[#dfe1e7] px-2 py-2">
+        <div className="space-y-0.5 px-4 pb-4">
           {section.lessons.map((lesson) => (
             <PrepCourseLessonRow
               key={lesson.id}

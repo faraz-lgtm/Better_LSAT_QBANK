@@ -83,3 +83,26 @@ export type StartSectionInput = {
   timing?: SectionTiming
   showAnswers?: SectionShowAnswers
 }
+
+export function formatSectionPoolLabel(item: SectionPoolItem): string {
+  const pt = item.prepTestTitle ?? item.moduleId ?? "PrepTest"
+  const section = item.title ?? (item.sectionId ? `Section ${item.sectionId}` : "Section")
+  return `${pt} — ${section}`
+}
+
+export const sectionConfigOptions = {
+  timing: [
+    { label: "Unlimited", value: "unlimited" },
+    { label: "35 minutes", value: "35" },
+    { label: "Standard", value: "standard" },
+  ],
+  showAnswers: [
+    { label: "At the end", value: "end" },
+    { label: "After each question", value: "each" },
+    { label: "Never (blind)", value: "never" },
+  ],
+  sort: [
+    { label: "Newest first", value: "newest" },
+    { label: "Oldest first", value: "oldest" },
+  ],
+} as const

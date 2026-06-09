@@ -30,7 +30,9 @@ import { PracticeDrillsPage } from "@/features/student/pages/practice-drills-pag
 import { PracticePrepTestPage } from "@/features/student/pages/practice-preptest-page"
 import { PracticePrepTestsListPage } from "@/features/student/pages/practice-preptests-list-page"
 import { PracticePrepTestSectionPage } from "@/features/student/pages/practice-preptest-section-page"
+import { LrNewSectionPage } from "@/features/student/pages/lr-new-section-page"
 import { PracticeSectionsPage } from "@/features/student/pages/practice-sections-page"
+import { RcNewSectionPage } from "@/features/student/pages/rc-new-section-page"
 import { SectionSessionPage } from "@/features/student/pages/section-session-page"
 
 function AppRoutes() {
@@ -56,9 +58,11 @@ function AppRoutes() {
         <Route path="practice/drills/session/:sessionId" element={<DrillSessionPage />} />
         <Route path="practice/results/:sessionId" element={<PracticeSessionResultsPage />} />
         <Route path="practice/sections" element={<PracticeSectionsPage />} />
+        <Route path="practice/sections/lr/new" element={<LrNewSectionPage />} />
+        <Route path="practice/sections/rc/new" element={<RcNewSectionPage />} />
         <Route path="practice/sections/session/:sessionId" element={<SectionSessionPage />} />
-        <Route path="practice/sections/rc" element={<Navigate to="/app/practice/sections" replace />} />
-        <Route path="practice/sections/rc/session" element={<Navigate to="/app/practice/sections" replace />} />
+        <Route path="practice/sections/rc" element={<Navigate to="/app/practice/sections/rc/new" replace />} />
+        <Route path="practice/sections/rc/session" element={<Navigate to="/app/practice/sections/rc/new" replace />} />
         <Route path="practice/preptest/:testId/section/:sectionId" element={<PracticePrepTestSectionPage />} />
         <Route path="practice/preptest/:testId" element={<PracticePrepTestPage />} />
         <Route path="practice/preptest" element={<PracticePrepTestsListPage />} />

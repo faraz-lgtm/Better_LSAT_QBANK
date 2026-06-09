@@ -12,16 +12,19 @@ type PracticeSessionHeaderProps = {
   activeColor: HighlightColor | null
   toolMode: PracticeToolMode
   fontScale: number
-  lineSpacing: number
+  boldEnabled: boolean
+  italicEnabled: boolean
   onSelectColor: (color: HighlightColor) => void
   onEraser: () => void
   onUnderline: () => void
   onFontSize: () => void
-  onLineSpacing: () => void
+  onToggleBold: () => void
+  onToggleItalic: () => void
   timerLabel?: string
   timerDisplaySeconds: number
   timerPaused: boolean
   onToggleTimerPause: () => void
+  onResetTimer?: () => void
   timerProgress: number
   timerDisplayClassName?: string
   finishButton: ReactNode
@@ -34,50 +37,60 @@ function PracticeSessionHeader({
   activeColor,
   toolMode,
   fontScale,
-  lineSpacing,
+  boldEnabled,
+  italicEnabled,
   onSelectColor,
   onEraser,
   onUnderline,
   onFontSize,
-  onLineSpacing,
+  onToggleBold,
+  onToggleItalic,
   timerLabel,
   timerDisplaySeconds,
   timerPaused,
   onToggleTimerPause,
+  onResetTimer,
   timerProgress,
   timerDisplayClassName,
   finishButton,
 }: PracticeSessionHeaderProps) {
   return (
-    <header
-      className="flex flex-col gap-3 border-b px-6 py-3 lg:flex-row lg:flex-wrap lg:items-center lg:gap-6"
-      style={{ borderColor: "#dfe1e7", backgroundColor: "#eceff3" }}
-    >
-      <p className="shrink-0 text-2xl font-bold leading-tight text-[#062357]">{title}</p>
-      <Input
-        placeholder="Find Text"
-        value={findQuery}
-        onChange={(e) => onFindQueryChange(e.target.value)}
-        className="h-[52px] w-full max-w-[200px] shrink-0 rounded-2xl border bg-[#f6f8fa] text-sm shadow-[0px_1px_1px_rgba(13,13,18,0.06)] placeholder:text-[#818898]"
-        style={{ borderColor: "#dfe1e7" }}
-      />
-      <div className="flex flex-1 flex-wrap items-center justify-end gap-4 lg:ml-auto">
+    <header className="practice-session-header flex shrink-0 items-center gap-3 border-b border-[#dfe1e7] bg-[#eceff3] px-4 py-3 md:gap-4 md:px-6">
+      <p
+        className="min-w-0 flex-1 truncate text-lg font-bold leading-tight text-[#062357] md:text-xl"
+        title={title}
+      >
+        {title}
+      </p>
+      <div className="relative shrink-0">
+       
+        <Input
+          placeholder="Find Text"
+          value={findQuery}
+          onChange={(e) => onFindQueryChange(e.target.value)}
+          className="h-[52px] w-[160px] rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] pl-10 pr-4 text-sm shadow-[0px_1px_1px_rgba(13,13,18,0.06)] placeholder:text-[#818898] xl:w-[200px]"
+        />
+      </div>
+      <div className="practice-session-header-actions flex shrink-0 items-center gap-2 md:gap-3">
         <PracticeSessionToolbar
           activeColor={activeColor}
           toolMode={toolMode}
           fontScale={fontScale}
-          lineSpacing={lineSpacing}
+          boldEnabled={boldEnabled}
+          italicEnabled={italicEnabled}
           onSelectColor={onSelectColor}
           onEraser={onEraser}
           onUnderline={onUnderline}
           onFontSize={onFontSize}
-          onLineSpacing={onLineSpacing}
+          onToggleBold={onToggleBold}
+          onToggleItalic={onToggleItalic}
         />
         <PracticeSessionTimer
           label={timerLabel}
           displaySeconds={timerDisplaySeconds}
           paused={timerPaused}
           onTogglePause={onToggleTimerPause}
+          onReset={onResetTimer}
           progress={timerProgress}
           displayClassName={timerDisplayClassName}
         />

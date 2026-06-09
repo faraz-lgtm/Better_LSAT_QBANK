@@ -1,8 +1,10 @@
 import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { describe, expect, it } from "vitest"
 
 import { LessonContentRenderer } from "@/features/prep-course/components/lesson-content-renderer"
 import type { PrepLesson, PrepLessonActiveDrillAttempt, PrepLessonLinkedQuestionRef } from "@/lib/api/prep-course"
+import { serializeRepWorkContent } from "@/lib/rep-work-content"
 
 const baseLesson: PrepLesson = {
   id: "l1",
@@ -107,5 +109,42 @@ describe("LessonContentRenderer adaptive_drill", () => {
     expect(screen.getByText(/1\/2 Correct/)).toBeInTheDocument()
     expect(screen.getByText("Lesson notes after drill.")).toBeInTheDocument()
     expect(screen.getAllByText(/PT LSAC133/).length).toBeGreaterThanOrEqual(1)
+  })
+})
+
+const repWorkLesson: PrepLesson = {
+  ...baseLesson,
+  slug: "rep-work-arguments",
+  title: "Rep Work - Arguments",
+  lesson_type: "rep_work",
+  text_content: serializeRepWorkContent("<p>Instructions here.</p>", [
+    {
+      question: "<p>All surgeons enjoy the sight of blood.</p>",
+      answer: "<p>surgeon → enjoy sight of blood</p>",
+    },
+  ]),
+}
+
+describe("LessonContentRenderer rep_work", () => {
+  it("hides answer until toggle is on", async () => {
+    const user = userEvent.setup()
+    render(<LessonContentRenderer lesson={repWorkLesson} />)
+
+    expect(screen.queryByText("surgeon → enjoy sight of blood")).not.toBeInTheDocument()
+    await user.click(screen.getByRole("switch", { name: "Show or hide answer" }))
+    expect(screen.getByText("surgeon → enjoy sight of blood")).toBeInTheDocument()
+  })
+
+  it("resets editable question text", async () => {
+    const user = userEvent.setup()
+    render(<LessonContentRenderer lesson={repWorkLesson} />)
+
+    const box = screen.getByRole("textbox", { name: "Question 1 text" })
+    await user.clear(box)
+    await user.type(box, "Edited text")
+    expect(box).toHaveTextContent("Edited text")
+
+    await user.click(screen.getByRole("button", { name: "Reset" }))
+    expect(box).toHaveTextContent("All surgeons enjoy the sight of blood.")
   })
 })

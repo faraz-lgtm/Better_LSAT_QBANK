@@ -43,9 +43,16 @@ export type PrepTestDetailSection = {
   timeMinutes: number
   practiceable: boolean
   unlocked: boolean
+  onBreak: boolean
   answeredCount: number
   completed: boolean
   activeSectionSessionId: string | null
+}
+
+export type PrepTestSectionBreak = {
+  afterSectionId: string
+  endsAt: string
+  remainingSeconds: number
 }
 
 export type PrepTestDetailResponse = {
@@ -61,6 +68,7 @@ export type PrepTestDetailResponse = {
     practiceableSectionCount: number
   }
   sections: PrepTestDetailSection[]
+  sectionBreak: PrepTestSectionBreak | null
   prepTestSession: {
     id: string
     metadata: Record<string, unknown>

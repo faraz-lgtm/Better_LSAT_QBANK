@@ -648,19 +648,6 @@ export function createPracticeRepository(client: SupabaseClient) {
       return question?.id ? String(question.id) : null
     },
 
-    async findQuestionIdByStimulusPhrase(phrase: string): Promise<string | null> {
-      const needle = phrase.trim()
-      if (needle.length < 12) return null
-      const { data, error } = await client
-        .from('admin_questions')
-        .select('id')
-        .ilike('stimulus_text', `%${needle}%`)
-        .limit(1)
-        .maybeSingle()
-      if (error) throw error
-      return data?.id ? String(data.id) : null
-    },
-
     async listLessonQuestionIds(lessonId: string): Promise<string[]> {
       const { data, error } = await client
         .from('lesson_questions')

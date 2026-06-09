@@ -32,6 +32,7 @@ function PrepCourseContentPage() {
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
   const [expandedSectionIds, setExpandedSectionIds] = useState<Set<string>>(() => new Set())
   const [expandAll, setExpandAll] = useState(false)
+  const [showBookmarksOnly, setShowBookmarksOnly] = useState(false)
   const [completedLessonSlugs, setCompletedLessonSlugs] = useState<Set<string>>(() => new Set())
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -163,22 +164,31 @@ function PrepCourseContentPage() {
 
   return (
     <StudentMain className="max-w-[1280px] pb-10 pt-0">
-      <nav
-        className="mb-4 flex flex-wrap items-center justify-end gap-1 border-b border-[#dfe1e7] bg-[#f3f7ff] px-0 py-3 text-xs font-medium tracking-[0.02em] text-[#666d80]"
-        aria-label="Breadcrumb"
-      >
-        <span>Learn</span>
-        <span className="text-[#dfe1e7]">/</span>
-        <Link to="/app/prep-course" className="hover:text-[#0d47a1]">
-          Prep Course
-        </Link>
-        <span className="text-[#dfe1e7]">/</span>
-        <span className="font-semibold text-[#0d47a1]">Course Content</span>
-      </nav>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-[#dfe1e7] pb-4">
+        <h1 className="text-xl font-bold tracking-[0.02em] text-[#062357]">{course.title}</h1>
+        <nav
+          className="flex flex-wrap items-center gap-1.5 text-sm font-medium tracking-[0.02em] text-[#666d80]"
+          aria-label="Breadcrumb"
+        >
+          <span>Learn</span>
+          <span className="text-[#c5cee0]">/</span>
+          <Link to="/app/prep-course" className="font-semibold text-[#0d47a1] hover:underline">
+            Prep Course
+          </Link>
+          <span className="text-[#c5cee0]">/</span>
+          <span className="font-semibold text-[#062357]">Course Content</span>
+        </nav>
+      </div>
 
       <section className="overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
-        <PrepCourseContentHeader stats={stats} expandAll={expandAll} onToggleExpandAll={handleToggleExpandAll} />
-        <div className="flex flex-col gap-6 border border-t border-[#dfe1e7] bg-white p-6 lg:flex-row">
+        <PrepCourseContentHeader
+          stats={stats}
+          expandAll={expandAll}
+          showBookmarksOnly={showBookmarksOnly}
+          onToggleExpandAll={handleToggleExpandAll}
+          onToggleShowBookmarksOnly={setShowBookmarksOnly}
+        />
+        <div className="flex flex-col lg:flex-row">
           <PrepCourseModuleSidebar
             modules={curriculum.modules}
             selectedModuleId={selectedModuleId}
@@ -201,7 +211,7 @@ function PrepCourseContentPage() {
               onToggleSection={handleToggleSection}
             />
           ) : (
-            <p className="ds-body-sm ds-text-muted">Select a module to view sections.</p>
+            <p className="ds-body-sm ds-text-muted p-6">Select a module to view sections.</p>
           )}
         </div>
       </section>

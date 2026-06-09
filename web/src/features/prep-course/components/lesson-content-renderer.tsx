@@ -1,11 +1,12 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 
+import { Switch } from "@/components/ui/switch"
 import { ActiveDrillIntroCard } from "@/features/prep-course/components/active-drill/active-drill-intro-card"
 import { ActiveDrillQuestionResultDetail } from "@/features/prep-course/components/active-drill/active-drill-question-result-detail"
 import { ActiveDrillResultBar } from "@/features/prep-course/components/active-drill/active-drill-result-bar"
 import { AdaptiveDrillResultsPanel } from "@/features/prep-course/components/lesson-drill/adaptive-drill-results-panel"
 import { LessonDrillIntroCard } from "@/features/prep-course/components/lesson-drill/lesson-drill-intro-card"
-import { parseRepWorkFromTextContent, isRepWorkJson } from "@/lib/rep-work-content"
+import { htmlToPlainText, parseRepWorkFromTextContent, isRepWorkJson, type RepWorkPair } from "@/lib/rep-work-content"
 import type {
   PrepLesson,
   PrepLessonActiveDrillAttempt,
@@ -18,6 +19,7 @@ type LessonContentRendererProps = {
   linkedQuestionRefs?: PrepLessonLinkedQuestionRef[]
   activeDrillAttempt?: PrepLessonActiveDrillAttempt | null
   hideTitle?: boolean
+  belowVideo?: ReactNode
   onReviewDrill?: () => void
   onStartDrill?: () => void
   startingDrill?: boolean
@@ -68,6 +70,86 @@ function formatLinkedSectionLabel(row: PrepLessonLinkedQuestionRef): string {
   const n = row.section_number ?? "—"
   const type = row.section_type?.trim() || row.section_title?.trim() || "Section"
   return `Section ${n} · ${type}`
+}
+
+function RepWorkPairCard({ pair, index }: { pair: RepWorkPair; index: number }) {
+  const originalQuestionText = useMemo(() => htmlToPlainText(pair.question), [pair.question])
+  const [showAnswer, setShowAnswer] = useState(false)
+  const editableRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (editableRef.current) {
+      editableRef.current.textContent = originalQuestionText
+    }
+  }, [originalQuestionText])
+
+  function handleReset() {
+    if (editableRef.current) {
+      editableRef.current.textContent = originalQuestionText
+    }
+  }
+
+  return (
+    <li className="rounded-xl border border-[#dfe1e7] bg-[#f6f8fa] p-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <p className="text-sm font-semibold text-[#1a1b25]">Question {index + 1}</p>
+        <div className="flex flex-col items-end gap-1">
+          <span className="text-sm font-semibold text-[#1a1b25]">Answer</span>
+          <Switch
+            checked={showAnswer}
+            onChange={(e) => setShowAnswer(e.target.checked)}
+            className={showAnswer ? "!bg-[#0d47a1]" : undefined}
+            aria-label="Show or hide answer"
+          />
+          <span className="text-xs text-[#666d80]">On/Off to see and hide the answer</span>
+        </div>
+      </div>
+
+      <div
+        ref={editableRef}
+        contentEditable
+        suppressContentEditableWarning
+        role="textbox"
+        aria-label={`Question ${index + 1} text`}
+        className="mt-4 min-h-[88px] rounded-xl border border-[#dfe1e7] bg-white px-4 py-3 text-sm leading-7 text-[#36394a] outline-none focus:border-[#0d47a1] focus:ring-2 focus:ring-[#0d47a1]/20"
+      />
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-[#666d80]">Click box to edit the text.</p>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[#ad52d9] bg-[#fff3cb] px-3 py-1.5 text-xs font-semibold text-[#ae8b00] transition hover:opacity-90"
+          onClick={handleReset}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            className="size-3.5"
+            aria-hidden
+          >
+            <path
+              d="M2.66699 8.00001C2.66699 5.05449 5.05448 2.66699 8.00001 2.66699C10.9455 2.66699 13.333 5.05449 13.333 8.00001C13.333 10.9455 10.9455 13.333 8.00001 13.333C5.05448 13.333 2.66699 10.9455 2.66699 8.00001ZM2.66699 8.00001V4.00001M2.66699 4.00001H6.66699"
+              stroke="currentColor"
+              strokeWidth="1.33333"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          Reset
+        </button>
+      </div>
+
+      {showAnswer ? (
+        <div className="mt-6 border-t border-[#dfe1e7] pt-6">
+          <p className="text-sm font-semibold text-[#1a1b25]">Answer</p>
+          <HtmlContent html={pair.answer} className="ds-body-sm mt-3 leading-7 text-[#36394a] [&_p]:mb-3" />
+        </div>
+      ) : null}
+    </li>
+  )
 }
 
 function LessonDrillLinkedQuestions({
@@ -142,6 +224,7 @@ function LessonContentRenderer({
   linkedQuestionRefs = [],
   activeDrillAttempt = null,
   hideTitle = false,
+  belowVideo,
   onReviewDrill,
   onStartDrill,
   startingDrill = false,
@@ -211,6 +294,7 @@ function LessonContentRenderer({
       <ActiveDrillIntroCard
         lesson={lesson}
         linked={linkedQuestionRefs[0] ?? null}
+        hideTitle={hideTitle}
         onStartDrill={onStartDrill}
         startingDrill={startingDrill}
         drillStartError={drillStartError}
@@ -231,12 +315,7 @@ function LessonContentRenderer({
         </div>
         <ol className="space-y-8">
           {pairs.map((pair, i) => (
-            <li key={i} className="rounded-xl border border-[#dfe1e7] bg-[#f6f8fa] p-5">
-              <p className="ds-body-sm font-semibold text-[#1a1b25]">Question {i + 1}</p>
-              <HtmlContent html={pair.question} className="ds-body-sm mt-3 leading-7 text-[#36394a] [&_p]:mb-3" />
-              <p className="ds-body-sm mt-6 font-semibold text-[#1a1b25]">Answer</p>
-              <HtmlContent html={pair.answer} className="ds-body-sm mt-3 leading-7 text-[#36394a] [&_p]:mb-3" />
-            </li>
+            <RepWorkPairCard key={i} pair={pair} index={i} />
           ))}
         </ol>
       </article>
@@ -246,8 +325,8 @@ function LessonContentRenderer({
   if (showVideo) {
     const src = lesson.video_url ? videoIframeSrc(lesson.video_url) : ""
     return (
-      <div className="space-y-6">
-        <div className="overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+      <div className="space-y-4">
+        <div className="overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
           <div className="aspect-video w-full bg-[#e5efff]">
             <iframe
               className="h-full w-full"
@@ -258,9 +337,10 @@ function LessonContentRenderer({
             />
           </div>
         </div>
+        {belowVideo}
         {lesson.text_content ? (
-          <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
-            <HtmlContent html={lesson.text_content} className="ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3" />
+          <article>
+            <HtmlContent html={lesson.text_content} className="text-sm leading-7 text-[#36394a] [&_p]:mb-3" />
           </article>
         ) : null}
         {isDrill ? (

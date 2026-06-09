@@ -17,10 +17,10 @@ function DrillConfigField({ label, description, className, children }: DrillConf
         "flex min-h-[120px] flex-col gap-2 rounded-xl border border-solid bg-background p-4",
         className,
       )}
-      style={{ borderColor: "var(--greyscale-100)" }}
+      style={{ borderColor: "var(--greyscale-100)",backgroundColor: "var(--greyscale-25)" }}
     >
       <div>
-        <p className="text-sm font-semibold" style={{ color: "var(--color-student-heading)" }}>
+        <p className="text-sm font-bold" style={{ color: "var(--color-student-heading)" }}>
           {label}
         </p>
         <p className="text-xs leading-snug" style={{ color: "var(--muted-foreground)" }}>

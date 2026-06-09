@@ -6,6 +6,7 @@ import {
   ContinueDrillCard,
   continueDrillToCardDrill,
 } from "@/features/student/components/continue-drill-card"
+import { PracticeLrRcStarterCards } from "@/features/student/components/practice-lr-rc-starter-cards"
 import { StudentMain } from "@/features/student/components/student-main"
 import {
   mapSessionToContinueDrill,
@@ -144,57 +145,14 @@ function PracticeDrillsPage() {
             </span>
           </div>
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <article className="rounded-2xl border border-[#d8dee8] bg-[#eef2f6] px-4 py-6 shadow-[0px_4px_10px_rgba(13,13,18,0.08)]">
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-[#fff5d8] text-sm font-black text-[#ae8b00]">
-                  LR
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-3">
-                    <h2 className="shrink-0 text-[20px] font-normal leading-tight whitespace-nowrap text-[#062357]">
-                      Logical Reasoning
-                    </h2>
-                    <button
-                      type="button"
-                      className="h-10 shrink-0 rounded-xl border border-[#ad52d9] bg-[#fff3cb] px-4 text-[16px] font-semibold leading-none tracking-[0.2px] text-[#ae8b00]"
-                      onClick={() => navigate("/app/practice/drills/lr/new")}
-                    >
-                      New Drill
-                    </button>
-                  </div>
-                  <p className="mt-1 text-[12px] leading-tight tracking-[0.2px] text-[#3c527f]">
-                    Master argument analysis and critical thinking skills
-                  </p>
-                </div>
-              </div>
-            </article>
-
-            <article className="rounded-2xl border border-[#d8dee8] bg-[#eef2f6] px-4 py-6 shadow-[0px_4px_10px_rgba(13,13,18,0.08)]">
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-[#ff7f1f] text-sm font-black text-white">
-                  RC
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-3">
-                    <h2 className="shrink-0 text-[20px] font-normal leading-tight whitespace-nowrap text-[#062357]">
-                      Reading Comprehension
-                    </h2>
-                    <button
-                      type="button"
-                      className="h-10 shrink-0 rounded-xl border border-[#5ecab4] bg-[#fff0df] px-4 text-[16px] font-semibold leading-none tracking-[0.2px] text-[#ff9d51]"
-                      onClick={() => navigate("/app/practice/drills/rc/new")}
-                    >
-                      Start Drill
-                    </button>
-                  </div>
-                  <p className="mt-1 text-[12px] leading-tight tracking-[0.2px] text-[#3c527f]">
-                    Improve passage analysis and comprehension strategies
-                  </p>
-                </div>
-              </div>
-            </article>
-          </div>
+          <PracticeLrRcStarterCards
+            lrButtonLabel="New Drill"
+            rcButtonLabel="Start Drill"
+            lrSubtitle="Master argument analysis and critical thinking skills"
+            rcSubtitle="Improve passage analysis and comprehension strategies"
+            onStartLr={() => navigate("/app/practice/drills/lr/new")}
+            onStartRc={() => navigate("/app/practice/drills/rc/new")}
+          />
         </section>
 
         <section className="rounded-3xl border border-[#dfe1e7] bg-white p-6">
