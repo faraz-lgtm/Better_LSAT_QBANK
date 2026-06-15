@@ -158,6 +158,17 @@ Deno.test('completeSession uses latest answer per question for raw score', async
   assertEquals(out.session.scaled_score, 170)
 })
 
+Deno.test('completeSession is idempotent when session already completed', async () => {
+  const repo = {
+    ...mockRepo(),
+    getSessionById: async () => baseSession({ completed_at: '2026-01-02T00:00:00Z', raw_score: 3 }),
+  }
+  const service = createPracticeService({ repository: repo as never })
+  const out = await service.completeSession('user-1', { sessionId: 'sess-1' })
+  assertEquals(out.session.raw_score, 3)
+  assertEquals(out.session.completed_at, '2026-01-02T00:00:00Z')
+})
+
 Deno.test('updateSession missing flags throws', async () => {
   const service = createPracticeService({ repository: mockRepo() as never })
   await assertRejects(

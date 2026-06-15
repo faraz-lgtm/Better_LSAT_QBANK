@@ -100,17 +100,6 @@ function PrepCourseLessonPage() {
     return formatRemainingHoursLabel(remaining).replace(" left", " left in section")
   }, [completedLessonSlugs, sidebarLessons])
 
-  const breadcrumbTopic = useMemo(() => {
-    if (lessonContext) {
-      const { module, section } = lessonContext
-      if (shouldFlattenModuleSections(module) && section.title === "General") {
-        return module.title
-      }
-      return section.title
-    }
-    return lesson?.title ?? "Lesson"
-  }, [lesson?.title, lessonContext])
-
   const sectionSubtitle = useMemo(() => {
     if (!lesson) return null
     const duration = formatDurationShort(lesson.duration_minutes)
@@ -172,7 +161,7 @@ function PrepCourseLessonPage() {
   }, [lessonSlug])
 
   const handleReviewDrill = useCallback(() => {
-    lessonContentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+    lessonContentRef.current?.scrollTo({ top: 0, behavior: "smooth" })
   }, [])
 
   if (!paramsValid) {
@@ -251,85 +240,58 @@ function PrepCourseLessonPage() {
     )
   }
 
-  const courseContentHref = `/app/prep-course/${course.slug}`
-
   return (
-    <>
-      <StudentMain className="max-w-[1280px] pb-24 pt-0">
-        {error ? <p className="mb-4 text-xs text-[#95122b]">{error}</p> : null}
+    <StudentMain className="flex min-h-0 flex-1 flex-col overflow-hidden pb-0 pt-6">
+      {error ? <p className="mb-4 shrink-0 text-xs text-[#95122b]">{error}</p> : null}
 
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-[#dfe1e7] pb-4">
-          <h1 className="text-xl font-bold tracking-[0.02em] text-[#062357]">{course.title}</h1>
-          <nav
-            className="flex flex-wrap items-center gap-1.5 text-sm font-medium tracking-[0.02em] text-[#666d80]"
-            aria-label="Breadcrumb"
-          >
-            <span>Learn</span>
-            <span className="text-[#c5cee0]">/</span>
-            <Link to="/app/prep-course" className="font-semibold text-[#0d47a1] hover:underline">
-              Prep Course
-            </Link>
-            <span className="text-[#c5cee0]">/</span>
-            <Link
-              to={courseContentHref}
-              state={{ activeLessonSlug: lesson.slug }}
-              className="font-semibold text-[#0d47a1] hover:underline"
-            >
-              Course Content
-            </Link>
-            <span className="text-[#c5cee0]">/</span>
-            <span className="font-semibold text-[#062357]">{breadcrumbTopic}</span>
-          </nav>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+        <div className={`flex min-h-0 flex-1 flex-col overflow-hidden ${showSidebar ? "lg:flex-row" : ""}`}>
+          {showSidebar ? (
+            <PrepCourseLessonSidebar
+              lessons={sidebarLessons}
+              activeLessonSlug={lesson.slug}
+              completedLessonSlugs={completedLessonSlugs}
+              progressPercent={sectionProgressPercent}
+              sectionTitle={sectionTitle}
+              sectionSubtitle={sectionRemainingLabel}
+              onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
+              onClose={() => setShowSidebar(false)}
+            />
+          ) : null}
+
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-[#dfe1e7] p-6 lg:border-l">
+            <PrepCourseLessonPanel
+              course={course}
+              lesson={lesson}
+              linkedQuestionRefs={linkedQuestionRefs}
+              activeDrillAttempt={activeDrillAttempt}
+              sectionSubtitle={sectionSubtitle}
+              contentScrollRef={lessonContentRef}
+              onReviewDrill={handleReviewDrill}
+              onStartDrill={() => void handleStartDrill()}
+              startingDrill={startingDrill}
+              drillStartError={drillStartError}
+            />
+          </div>
         </div>
 
-        <section className="overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
-          <div className={`flex flex-col ${showSidebar ? "lg:flex-row" : ""}`}>
-            {showSidebar ? (
-              <PrepCourseLessonSidebar
-                lessons={sidebarLessons}
-                activeLessonSlug={lesson.slug}
-                completedLessonSlugs={completedLessonSlugs}
-                progressPercent={sectionProgressPercent}
-                sectionTitle={sectionTitle}
-                sectionSubtitle={sectionRemainingLabel}
-                onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
-                onClose={() => setShowSidebar(false)}
-              />
-            ) : null}
-
-            <div ref={lessonContentRef} className="min-w-0 flex-1 border-[#dfe1e7] p-6 lg:border-l">
-              <PrepCourseLessonPanel
-                course={course}
-                lesson={lesson}
-                linkedQuestionRefs={linkedQuestionRefs}
-                activeDrillAttempt={activeDrillAttempt}
-                sectionSubtitle={sectionSubtitle}
-                onReviewDrill={handleReviewDrill}
-                onStartDrill={() => void handleStartDrill()}
-                startingDrill={startingDrill}
-                drillStartError={drillStartError}
-              />
-            </div>
-          </div>
-        </section>
-      </StudentMain>
-
-      <PrepCourseLessonFooter
-        showSidebar={showSidebar}
-        onToggleSidebar={() => setShowSidebar((v) => !v)}
-        onMarkComplete={() => void handleMarkComplete()}
-        markCompleteDisabled={savingComplete || (isAdaptiveDrillLesson && !drillCompleted)}
-        primaryAction={
-          isAdaptiveDrillLesson && !drillCompleted
-            ? {
-                label: startingDrill ? "Starting…" : "Start Drill",
-                onClick: () => void handleStartDrill(),
-                disabled: startingDrill,
-              }
-            : null
-        }
-      />
-    </>
+        <PrepCourseLessonFooter
+          showSidebar={showSidebar}
+          onToggleSidebar={() => setShowSidebar((v) => !v)}
+          onMarkComplete={() => void handleMarkComplete()}
+          markCompleteDisabled={savingComplete || (isAdaptiveDrillLesson && !drillCompleted)}
+          primaryAction={
+            isAdaptiveDrillLesson && !drillCompleted
+              ? {
+                  label: startingDrill ? "Starting…" : "Start Drill",
+                  onClick: () => void handleStartDrill(),
+                  disabled: startingDrill,
+                }
+              : null
+          }
+        />
+      </div>
+    </StudentMain>
   )
 }
 

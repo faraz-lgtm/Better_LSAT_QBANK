@@ -15,7 +15,6 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
-import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
 import {
   type PrepTestAboutMeta,
   type PrepTestPassageSummary,
@@ -674,18 +673,9 @@ function AnalyticsPrepTestResultsPage() {
   }
 
   return (
-    <>
-      <StudentSubnavStrip
-        crumbs={[
-          { label: "Analytics", href: "/app/analytics" },
-          { label: "Foundations" },
-          { label: "PrepTests", href: "/app/analytics/preptests" },
-          { label: "Results" },
-        ]}
-      />
-      <StudentMain>
+    <StudentMain>
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-bold leading-[1.3] text-[#062357]">{pageTitle}</h1>
+          <h2 className="text-lg font-semibold leading-[1.3] text-[#062357]">{pageTitle}</h2>
           <div className="flex flex-wrap items-center gap-6">
             <button
               type="button"
@@ -746,7 +736,6 @@ function AnalyticsPrepTestResultsPage() {
           }}
         />
       </StudentMain>
-    </>
   )
 }
 

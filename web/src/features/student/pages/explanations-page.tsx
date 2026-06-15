@@ -429,26 +429,7 @@ function ExplanationsPage() {
   }
 
   return (
-    <StudentMain className="bg-[var(--greyscale-25)] py-4 pb-8 md:py-4 md:pb-10">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-[20px] font-bold leading-tight tracking-tight" style={{ color: S.heading }}>
-          Explanations
-        </h1>
-        <nav className="flex flex-wrap items-center gap-1 text-[12px]" aria-label="Breadcrumb">
-          <Link to="/app/prep-course" className="font-medium hover:underline" style={{ color: S.muted }}>
-            Learn
-          </Link>
-          <span className="px-0.5 font-normal" style={{ color: "var(--border)" }}>
-            /
-          </span>
-          <span className="font-semibold" style={{ color: S.heading }}>
-            Explanations
-          </span>
-        </nav>
-      </header>
-
-      <div className="h-6 shrink-0" aria-hidden />
-
+    <StudentMain className="bg-[var(--greyscale-25)] pt-6 pb-8 md:pb-10">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <h2 className="text-[24px] font-bold leading-tight tracking-tight" style={{ color: S.heading }}>
           LSAT Question Explanations

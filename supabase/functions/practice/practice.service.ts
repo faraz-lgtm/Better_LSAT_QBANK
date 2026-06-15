@@ -1135,7 +1135,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const session = await deps.repository.getSessionById(sessionId, userId)
       if (!session) throw new PracticeForbiddenError('Session not found')
       if (session.completed_at) {
-        throw new PracticeValidationError('Session is already completed')
+        return { session }
       }
 
       const now = new Date().toISOString()

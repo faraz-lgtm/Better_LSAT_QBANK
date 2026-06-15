@@ -22,8 +22,8 @@ function PrepCourseLessonFooter({
   primaryAction = null,
 }: PrepCourseLessonFooterProps) {
   return (
-    <footer className="fixed inset-x-0 bottom-0 z-20 border-t border-[#dfe1e7] bg-[#f2f7ff]">
-      <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-4 px-4 py-3 md:px-6">
+    <footer className="shrink-0 rounded-b-2xl border-t border-[#dfe1e7] bg-[#f2f7ff]">
+      <div className="flex items-center justify-between gap-4 px-6 py-3">
         <Button
           type="button"
           variant="outline"

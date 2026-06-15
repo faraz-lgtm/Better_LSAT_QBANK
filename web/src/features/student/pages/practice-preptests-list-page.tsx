@@ -4,7 +4,6 @@ import { Navigate, useNavigate, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
-import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
 import type {
   PrepTestPoolAttempt,
   PrepTestPoolFilter,
@@ -361,13 +360,8 @@ function PracticePrepTestsListPage() {
   }
 
   return (
-    <>
-      <StudentSubnavStrip
-        title="PrepTests"
-        crumbs={[{ label: "Practice", href: "/app/practice/drills" }, { label: "PrepTests" }]}
-      />
-      <StudentMain>
-        <div className="mb-6 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+    <StudentMain>
+      <div className="mb-6 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <p className="max-w-[908px] text-sm font-medium leading-[1.5] tracking-[0.02em] text-[#666d80] md:text-base">
             Try a free PrepTest to gauge your starting point and see how to improve. When you&apos;re done, our
             analytics will tell you what to work on.
@@ -465,7 +459,6 @@ function PracticePrepTestsListPage() {
           </>
         )}
       </StudentMain>
-    </>
   )
 }
 

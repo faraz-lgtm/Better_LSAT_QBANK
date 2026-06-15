@@ -5,7 +5,6 @@ import { ArrowDownAZ, ArrowUpAZ, ChevronDown, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
-import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
 import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
 import {
   TimeRangeFilter,
@@ -526,16 +525,7 @@ function AnalyticsDrillsPage() {
   )
 
   return (
-    <>
-      <StudentSubnavStrip
-        crumbs={[
-          { label: "Analytics", href: "/app/analytics" },
-          { label: "Foundations" },
-          { label: "Drills" },
-          ...(activeType ? [{ label: activeType.label }] : []),
-        ]}
-      />
-      <StudentMain>
+    <StudentMain>
         {loading ? (
           <div className="mb-4 flex items-center gap-2 text-sm text-[#666d80]">
             <Loader2 className="size-4 animate-spin" aria-hidden />
@@ -543,9 +533,8 @@ function AnalyticsDrillsPage() {
           </div>
         ) : null}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold leading-[1.3] text-[#062357]">Drills</h1>
-            {activeType ? (
+          {activeType ? (
+            <div>
               <p className="mt-1 inline-flex items-center gap-2 rounded-full bg-[#f3f7ff] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#0d47a1]">
                 <span>{activeType.section}</span>
                 <span aria-hidden>·</span>
@@ -559,8 +548,10 @@ function AnalyticsDrillsPage() {
                   <X className="size-3" aria-hidden />
                 </button>
               </p>
-            ) : null}
-          </div>
+            </div>
+          ) : (
+            <span />
+          )}
           <div className="flex flex-wrap items-center gap-3">
             <DrillTypeMenu value={activeType?.id ?? null} onChange={handleSelectType} types={drillTypes} />
             <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
@@ -595,7 +586,6 @@ function AnalyticsDrillsPage() {
           onOpenPractice={handleOpenPractice}
         />
       </StudentMain>
-    </>
   )
 }
 

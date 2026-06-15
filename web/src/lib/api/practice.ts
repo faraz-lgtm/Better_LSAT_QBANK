@@ -337,7 +337,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
         method: "POST",
         body: { sessionId },
       })
-      if (error) throw error
+      if (error) await throwIfEdgeInvokeFailed(error)
       if (!data?.session) throw new Error("No session returned from practice")
       return data.session
     },

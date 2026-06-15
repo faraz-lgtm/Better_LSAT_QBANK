@@ -51,6 +51,7 @@
   --primary-foreground: #ffffff;
   --primary-500: #0d47a1;
   --primary-600: #0a357f;
+  --primary-900: #041a44;
   --primary-border: #0b4e6e;
   --shadow-xsmall: 0 1px 2px 0 rgba(13, 13, 18, 0.06);
   --btn-focus-ring: 0 0 0 1px #0b4e6e inset, 0 0 1px 3px rgba(4, 166, 244, 0.15);
@@ -1085,6 +1086,96 @@ select.ds-input {
   padding-inline: 4px;
 }
 
+/* Figma student sidebar shell (node 18624:68805) */
+.student-sidebar-dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-radius: 10px;
+}
+
+.student-sidebar-section-btn {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 10px;
+  padding: 9px 12px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.student-sidebar-section-btn--active {
+  border-radius: 10px 10px 0 0;
+  background-color: #0d47a1;
+}
+
+.student-sidebar-section-btn--dashboard-active {
+  background-color: #edf3ff;
+}
+
+.student-sidebar-item {
+  position: relative;
+  display: flex;
+  height: 42px;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 10px;
+  background-color: #edf3ff;
+  padding: 9px 12px 9px 32px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0.28px;
+  color: #062357;
+  transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.student-sidebar-item:hover {
+  color: #0d47a1;
+}
+
+.student-sidebar-item--active {
+  font-weight: 600;
+  color: #0d47a1;
+  box-shadow:
+    0 4px 4px rgba(13, 13, 18, 0.02),
+    0 5px 5px rgba(13, 13, 18, 0.04);
+}
+
+.student-sidebar-item--active::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 10px;
+  border-radius: 10px 0 0 10px;
+  background-color: #0d47a1;
+}
+
+.student-topbar-breadcrumbs {
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: 0.28px;
+}
+
+.student-page-heading {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 27px;
+  letter-spacing: 0;
+  color: #062357;
+}
+
+.student-page-title-row {
+  height: 48px;
+  flex-shrink: 0;
+  border-top: 1px solid #dfe1e7;
+}
+
 .ds-btn-nav {
   display: inline-flex;
   height: var(--nav-pill-height);
@@ -1208,10 +1299,15 @@ select.ds-input {
   -ms-overflow-style: none;
 }
 
-.practice-session-scroll-hidden::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
+.practice-session-card--active-drill mark[data-highlight="orange"] {
+  background-color: #0bbcc9;
+}
+
+.practice-session-card--active-drill .practice-session-question-nav-btn {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  border-radius: 12px;
 }
 
 .lsat-html-content mark.practice-find-mark {

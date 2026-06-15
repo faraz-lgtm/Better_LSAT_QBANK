@@ -30,19 +30,7 @@ function PracticeSectionsPage() {
   }, [analyticsApi])
 
   return (
-    <>
-      <section className="border-b border-[#dfe1e7] bg-[#f3f7ff]">
-        <div className="mx-auto flex h-12 w-full max-w-[1280px] items-center justify-between px-4 md:px-6">
-          <h1 className="text-[20px] font-bold leading-[1.35] text-[#062357]">Sections</h1>
-          <div className="flex items-center gap-1 text-xs tracking-[0.24px]">
-            <span className="text-[#666d80]">Practice</span>
-            <span className="text-[#666d80]">/</span>
-            <span className="font-semibold text-[#0d47a1]">Sections</span>
-          </div>
-        </div>
-      </section>
-
-      <StudentMain>
+    <StudentMain>
         <section className="rounded-2xl border border-[#d8dee8] bg-[#f4f6f9] p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="flex items-start gap-3">
@@ -80,7 +68,6 @@ function PracticeSectionsPage() {
           />
         </section>
       </StudentMain>
-    </>
   )
 }
 

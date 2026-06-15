@@ -4,7 +4,6 @@ import { ArrowDownAZ, ArrowUpAZ } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
-import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
 import {
   AnalyticsScoreProgressPanel,
   AnalyticsStatsGrid,
@@ -444,17 +443,8 @@ function AnalyticsPrepTestsPage() {
   )
 
   return (
-    <>
-      <StudentSubnavStrip
-        crumbs={[
-          { label: "Analytics", href: "/app/analytics" },
-          { label: "Foundations" },
-          { label: "Drills" },
-        ]}
-      />
-      <StudentMain>
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold leading-[1.3] text-[#062357]">Drills</h1>
+    <StudentMain>
+        <div className="mb-6 flex flex-wrap items-center justify-end gap-4">
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
         </div>
 
@@ -490,7 +480,6 @@ function AnalyticsPrepTestsPage() {
           onOpenPractice={handleOpenPractice}
         />
       </StudentMain>
-    </>
   )
 }
 

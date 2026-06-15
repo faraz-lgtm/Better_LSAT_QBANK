@@ -10,6 +10,7 @@ import { PracticeQuestionStem } from "@/features/student/practice-session/practi
 import { PracticeSessionHeader } from "@/features/student/practice-session/practice-session-header"
 import {
   canChangePracticeAnswer,
+  type PracticeSessionVariant,
   type PracticeToolMode,
 } from "@/features/student/practice-session/practice-session-types"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
@@ -24,6 +25,7 @@ import {
 } from "@/features/student/practice-session/use-practice-session-timer"
 import { StudentMain } from "@/features/student/components/student-main"
 import { createPracticeApi } from "@/lib/api/practice"
+import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 function choiceIndexFromAnswer(choices: DrillQuestion["choices"], selectedAnswer: string): number | null {
@@ -56,6 +58,7 @@ type QuestionPanelProps = {
   flagged: boolean
   onToggleFlag: () => void
   flagsDisabled?: boolean
+  variant?: PracticeSessionVariant
 }
 
 function DrillQuestionPanel({
@@ -75,6 +78,7 @@ function DrillQuestionPanel({
   flagged,
   onToggleFlag,
   flagsDisabled,
+  variant,
 }: QuestionPanelProps) {
   const [hiddenChoices, setHiddenChoices] = useState<Record<number, boolean>>({})
   const stemKey = regionKey(question.id, "stem")
@@ -93,6 +97,8 @@ function DrillQuestionPanel({
         flagged={flagged}
         onToggleFlag={onToggleFlag}
         flagsDisabled={flagsDisabled}
+        variant={variant}
+        hideQuestionNumber={variant === "active-drill"}
       />
       {revealed && isCorrect != null ? (
         <p
@@ -102,7 +108,7 @@ function DrillQuestionPanel({
           {isCorrect ? "Correct" : "Incorrect"}
         </p>
       ) : null}
-      <div className="flex flex-col gap-2">
+      <div className={variant === "active-drill" ? "flex flex-col gap-4 px-4 pb-4 pt-4" : "flex flex-col gap-2"}>
         {question.choices.map((choice, index) => (
           <LrDrillOptionRow
             key={choice.id}
@@ -125,6 +131,7 @@ function DrillQuestionPanel({
             toolMode={toolMode}
             onContentMouseUp={onContentMouseUp}
             onContentClick={onContentClick}
+            variant={variant}
           />
         ))}
       </div>
@@ -312,16 +319,31 @@ function DrillSessionPage() {
   }
 
   async function handleFinish() {
-    if (!sessionId) return
+    if (!sessionId || finishing) return
+
+    if (sessionCompleted) {
+      if (reviewAfterComplete) {
+        viewDrillResults()
+        return
+      }
+      setCompleteModal({
+        rawScore: drill?.session.raw_score ?? 0,
+        questionCount: questions.length > 0 ? questions.length : 1,
+      })
+      setScoreHidden(true)
+      return
+    }
+
     setFinishing(true)
     try {
       const completed = await practiceApi.completeSession(sessionId)
+      setDrill((prev) => (prev ? { ...prev, session: completed } : prev))
       const questionCount = questions.length > 0 ? questions.length : 1
       const rawScore = completed.raw_score ?? 0
       setCompleteModal({ rawScore, questionCount })
       setScoreHidden(true)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to complete drill")
+      setError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to complete drill")
     } finally {
       setFinishing(false)
     }
@@ -370,6 +392,12 @@ function DrillSessionPage() {
 
   const headerLabel = drill?.drillLabel ?? metadata?.title ?? (sectionType === "LR" ? "LR Drill" : "RC Drill")
   const isPrepCourseDrill = Boolean(resolveReturnPath())
+  const sessionMeta = drill?.session.metadata
+  const isActiveDrillLayout =
+    sessionMeta != null &&
+    typeof sessionMeta === "object" &&
+    sessionMeta.source === "prep_course_active_drill"
+  const sessionVariant: PracticeSessionVariant = isActiveDrillLayout ? "active-drill" : "default"
   const timerBudgetSeconds = resolveTimerBudgetSeconds({
     timing: metadata?.timing,
     questionCount: questions.length,
@@ -385,7 +413,11 @@ function DrillSessionPage() {
       disabled={finishing}
       variant="outline"
       size="default"
-      className="h-[52px] shrink-0 gap-1 px-4"
+      className={
+        isActiveDrillLayout
+          ? "h-[52px] w-[106px] shrink-0 gap-2 rounded-2xl border-[#dfe1e7] bg-white px-3 text-base font-medium tracking-[0.02em] text-[#062357] shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
+          : "h-[52px] shrink-0 gap-1 px-4"
+      }
       onClick={() => void handleFinish()}
     >
       {finishing ? "Finishing…" : "Finish"}
@@ -394,7 +426,7 @@ function DrillSessionPage() {
   )
 
   return (
-    <StudentMain className="flex min-h-0 max-w-none flex-1 flex-col overflow-hidden bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))] px-0 py-4 md:py-5">
+    <StudentMain className="flex min-h-0 max-w-none flex-1 flex-col overflow-hidden bg-[var(--primary-900,#041A44)] px-0 py-4 md:py-5">
       <div
         className="mx-auto flex min-h-0 w-full flex-1 flex-col px-4 md:px-6"
         style={{ maxWidth: 1280 }}
@@ -404,20 +436,25 @@ function DrillSessionPage() {
             {error}
           </p>
         ) : null}
-        <div className="practice-session-card flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-2xl border border-[#dfe1e7] bg-background shadow-[0px_1px_1.5px_rgba(13,13,18,0.05)]">
+        <div
+          className={`practice-session-card flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-2xl border border-[#dfe1e7] bg-background shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]${isActiveDrillLayout ? " practice-session-card--active-drill" : ""}`}
+        >
           <PracticeSessionHeader
+            variant={sessionVariant}
             title={reviewAfterComplete ? `Blind review · ${headerLabel}` : headerLabel}
             findQuery={findQuery}
             onFindQueryChange={setFindQuery}
             activeColor={highlights.activeColor}
             toolMode={highlights.toolMode}
             fontScale={highlights.fontScale}
+            lineSpacing={highlights.lineSpacing}
             boldEnabled={highlights.boldEnabled}
             italicEnabled={highlights.italicEnabled}
             onSelectColor={highlights.selectColor}
             onEraser={highlights.selectEraser}
             onUnderline={highlights.selectUnderline}
             onFontSize={highlights.cycleFontSize}
+            onLineSpacing={highlights.cycleLineSpacing}
             onToggleBold={highlights.toggleBold}
             onToggleItalic={highlights.toggleItalic}
             timerDisplaySeconds={elapsed}
@@ -425,15 +462,18 @@ function DrillSessionPage() {
             onToggleTimerPause={togglePause}
             onResetTimer={resetElapsed}
             timerProgress={timerProgress}
+            showTimer={!isActiveDrillLayout}
             finishButton={finishButton}
           />
 
           <div
             ref={sessionBodyRef}
-            className="practice-session-body grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-2 lg:divide-x divide-[#dfe1e7]"
+            className={`practice-session-body grid min-h-0 flex-1 overflow-hidden ${isActiveDrillLayout ? "grid-cols-1 lg:grid-cols-[minmax(0,524fr)_minmax(0,680fr)]" : "grid-cols-1 lg:grid-cols-2"} lg:divide-x divide-[#dfe1e7]`}
             style={highlights.contentStyle}
           >
-            <div className="practice-session-pane min-h-0 h-full overflow-y-auto overflow-x-hidden border-[#dfe1e7] p-5 border-b lg:border-b-0">
+            <div
+              className={`practice-session-pane min-h-0 h-full overflow-y-auto overflow-x-hidden border-[#dfe1e7] ${isActiveDrillLayout ? "p-6" : "p-5 border-b lg:border-b-0"}`}
+            >
               {sectionType === "RC" && current.passage ? (
                 <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
               ) : null}
@@ -444,33 +484,41 @@ function DrillSessionPage() {
                 toolMode={highlights.toolMode}
                 onMouseUp={highlights.handleContentMouseUp}
                 onClickCapture={highlights.handleContentClick}
+                className={isActiveDrillLayout ? "text-lg leading-normal text-[#0d0d12]" : undefined}
               />
             </div>
-            <div className="practice-session-pane flex min-h-0 h-full flex-col gap-4 overflow-y-auto overflow-x-hidden border-[#dfe1e7] p-5">
-              <DrillQuestionPanel
-                key={current.id}
-                question={current}
-                questionNumber={safeIndex}
-                findQuery={findQuery}
-                selectedIndex={selectedIndex}
-                revealed={revealed}
-                isCorrect={currentAnswer?.isCorrect ?? null}
-                submitting={submitting}
-                allowReselect={allowReselect}
-                getRegionHtml={highlights.getRegionHtml}
-                toolMode={highlights.toolMode}
-                onContentMouseUp={highlights.handleContentMouseUp}
-                onContentClick={highlights.handleContentClick}
-                onSelect={(index) => void handleSelectChoice(index)}
-                flagged={current ? questionFlags.isFlagged(current.id) : false}
-                onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
-                flagsDisabled={sessionCompleted}
-              />
+            <div
+              className={`practice-session-pane flex min-h-0 h-full flex-col overflow-hidden border-[#dfe1e7] ${isActiveDrillLayout ? "" : "gap-4 overflow-y-auto overflow-x-hidden p-5"}`}
+            >
+              <div className={isActiveDrillLayout ? "flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden" : "contents"}>
+                <DrillQuestionPanel
+                  key={current.id}
+                  question={current}
+                  questionNumber={safeIndex}
+                  findQuery={findQuery}
+                  selectedIndex={selectedIndex}
+                  revealed={revealed}
+                  isCorrect={currentAnswer?.isCorrect ?? null}
+                  submitting={submitting}
+                  allowReselect={allowReselect}
+                  getRegionHtml={highlights.getRegionHtml}
+                  toolMode={highlights.toolMode}
+                  onContentMouseUp={highlights.handleContentMouseUp}
+                  onContentClick={highlights.handleContentClick}
+                  onSelect={(index) => void handleSelectChoice(index)}
+                  flagged={current ? questionFlags.isFlagged(current.id) : false}
+                  onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
+                  flagsDisabled={sessionCompleted}
+                  variant={sessionVariant}
+                />
+              </div>
             </div>
           </div>
 
-          <footer className="practice-session-footer relative z-10 flex shrink-0 items-center justify-between gap-3 border-t border-[#dfe1e7] bg-background px-4 py-3 md:gap-4 md:px-6">
-            <div className="practice-session-scroll-hidden flex min-h-0 min-w-0 flex-1 flex-nowrap items-stretch gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5 pt-2.5 sm:gap-2">
+          <footer
+            className={`practice-session-footer relative z-10 flex shrink-0 items-center justify-between gap-3 border-t border-[#dfe1e7] px-6 py-3 ${isActiveDrillLayout ? "min-h-[80px] bg-[#f6f8fa]" : "bg-background md:gap-4 md:px-6"}`}
+          >
+            <div className={`practice-session-scroll-hidden flex min-h-0 min-w-0 flex-1 flex-nowrap items-stretch overflow-x-auto overflow-y-hidden ${isActiveDrillLayout ? "gap-4" : "gap-1.5 pb-0.5 pt-2.5 sm:gap-2"}`}>
               {questions.map((q, i) => {
                 const n = i + 1
                 return (
@@ -480,31 +528,40 @@ function DrillSessionPage() {
                     active={n === safeIndex}
                     answered={Boolean(answersByQuestion[q.id])}
                     flagged={questionFlags.isFlagged(q.id)}
+                    variant={sessionVariant}
                     onClick={() => setQIndex(n)}
                   />
                 )
               })}
             </div>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className={`flex shrink-0 items-center ${isActiveDrillLayout ? "gap-4" : "gap-2"}`}>
               <button
                 type="button"
-                className="inline-flex size-10 items-center justify-center rounded-full border bg-background transition hover:bg-muted disabled:opacity-40"
-                style={{ borderColor: "var(--greyscale-100)" }}
+                className={
+                  isActiveDrillLayout
+                    ? "inline-flex size-[52px] items-center justify-center rounded-2xl border-2 border-[#dfe1e7] bg-[#f6f8fa] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-white disabled:opacity-40"
+                    : "inline-flex size-10 items-center justify-center rounded-full border bg-background transition hover:bg-muted disabled:opacity-40"
+                }
+                style={isActiveDrillLayout ? undefined : { borderColor: "var(--greyscale-100)" }}
                 disabled={safeIndex <= 1}
                 aria-label="Previous question"
                 onClick={() => setQIndex((i) => Math.max(1, i - 1))}
               >
-                <ChevronLeft className="size-5 text-muted-foreground" strokeWidth={2} />
+                <ChevronLeft className="size-6 text-[#666d80]" strokeWidth={2} />
               </button>
               <button
                 type="button"
-                className="inline-flex size-10 items-center justify-center rounded-full border bg-background transition hover:bg-muted disabled:opacity-40"
-                style={{ borderColor: "var(--greyscale-100)" }}
+                className={
+                  isActiveDrillLayout
+                    ? "inline-flex size-[52px] items-center justify-center rounded-2xl border-2 border-[#dfe1e7] bg-[#f6f8fa] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-white disabled:opacity-40"
+                    : "inline-flex size-10 items-center justify-center rounded-full border bg-background transition hover:bg-muted disabled:opacity-40"
+                }
+                style={isActiveDrillLayout ? undefined : { borderColor: "var(--greyscale-100)" }}
                 disabled={safeIndex >= questions.length}
                 aria-label="Next question"
                 onClick={() => setQIndex((i) => Math.min(questions.length, i + 1))}
               >
-                <ChevronRight className="size-5 text-muted-foreground" strokeWidth={2} />
+                <ChevronRight className="size-6 text-[#666d80]" strokeWidth={2} />
               </button>
             </div>
           </footer>

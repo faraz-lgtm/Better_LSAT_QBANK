@@ -479,9 +479,9 @@ function PracticePrepTestPage() {
         <section className="rounded-2xl border border-[#dfe1e7] bg-white px-5 py-6 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)] md:px-8 md:py-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold leading-tight text-[#062357] md:text-[28px]">
+              <p className="text-[24px] font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
                 Ready to begin your test?
-              </h1>
+              </p>
               <p className="mt-3 text-2xl font-bold text-[#0d47a1] md:text-[32px]">{prepTest.label}</p>
             </div>
             <dl className="flex shrink-0 flex-wrap items-start gap-6 md:gap-8 lg:justify-end">
@@ -580,13 +580,7 @@ function PrepTestDetailHeader({
   prepTestLabel: string
 }) {
   return (
-    <div className="mb-6 flex items-center justify-between gap-4">
-      <Link
-        to="/app/practice/preptest"
-        className="text-[20px] font-bold leading-[1.3] text-[#0d47a1] transition-colors hover:underline"
-      >
-        PrepTests
-      </Link>
+    <div className="mb-6 flex justify-end">
       <button
         type="button"
         onClick={() => navigate("/app/practice/preptest")}

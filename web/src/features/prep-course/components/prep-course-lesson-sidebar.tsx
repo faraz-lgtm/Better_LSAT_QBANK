@@ -54,8 +54,8 @@ function PrepCourseLessonSidebar({
   onClose,
 }: PrepCourseLessonSidebarProps) {
   return (
-    <aside className="flex w-full shrink-0 flex-col bg-[#F3F7FF] lg:w-[300px]" aria-label="Course lessons">
-      <div className="flex items-center justify-between border-b border-[#dfe1e7]/80 px-4 py-4">
+    <aside className="flex min-h-0 w-full shrink-0 flex-col bg-[#F3F7FF] lg:w-[300px]" aria-label="Course lessons">
+      <div className="shrink-0 flex items-center justify-between border-b border-[#dfe1e7]/80 px-4 py-4">
         <h2 className="text-lg font-bold tracking-[0.02em] text-[#062357]">All Lessons</h2>
         <button
           type="button"
@@ -66,7 +66,7 @@ function PrepCourseLessonSidebar({
           <X className="size-4" strokeWidth={2} />
         </button>
       </div>
-      <div className="border-b border-[#dfe1e7]/80 px-4 py-4">
+      <div className="shrink-0 border-b border-[#dfe1e7]/80 px-4 py-4">
         <div className="flex items-start gap-3">
           <ProgressRing value={progressPercent} />
           <div className="min-w-0">
@@ -78,7 +78,7 @@ function PrepCourseLessonSidebar({
         </div>
       </div>
 
-      <div className="practice-session-scroll-hidden max-h-[min(70vh,640px)] flex-1 overflow-y-auto p-3">
+      <div className="practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto p-3">
         <ul className="space-y-1">
           {lessons.map((lesson) => {
             const isActive = lesson.slug === activeLessonSlug

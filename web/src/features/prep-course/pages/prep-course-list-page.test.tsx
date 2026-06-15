@@ -57,7 +57,6 @@ describe("PrepCourseListPage", () => {
       expect(listCoursesMock).toHaveBeenCalled()
     })
 
-    expect(screen.getByRole("heading", { level: 1, name: "Prep Course" })).toBeInTheDocument()
     expect(screen.getByRole("heading", { level: 2, name: "Prep Course" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: /Foundational LSAT course/i })).toHaveAttribute(
       "href",

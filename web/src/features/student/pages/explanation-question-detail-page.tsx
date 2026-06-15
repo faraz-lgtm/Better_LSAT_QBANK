@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Link, Navigate, useParams, useSearchParams } from "react-router-dom"
+import { Navigate, useParams, useSearchParams } from "react-router-dom"
 
 import { StudentMain } from "@/features/student/components/student-main"
 import { buildExplanationQuestionDetailView } from "@/features/student/explanation-detail/build-explanation-detail-view"
@@ -162,28 +162,6 @@ function ExplanationQuestionDetailPage() {
 
   return (
     <StudentMain className="bg-[var(--greyscale-25)] py-4 pb-10 md:py-4">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-lg font-bold tracking-tight text-[color:var(--color-student-heading)] md:text-xl">Explanations</h1>
-        <nav className="flex flex-wrap items-center gap-1 text-sm" aria-label="Breadcrumb">
-          <Link to="/app/prep-course" className="font-medium text-[color:var(--text)] hover:underline">
-            Learn
-          </Link>
-          <span className="px-0.5 font-normal text-[color:var(--border)]">/</span>
-          <Link to="/app/learn/explanations" className="font-medium text-[color:var(--text)] hover:underline">
-            Explanations
-          </Link>
-          <span className="px-0.5 font-normal text-[color:var(--border)]">/</span>
-          <span
-            className="max-w-[200px] truncate font-semibold text-[color:var(--color-student-heading)] md:max-w-none"
-            title={view.headingCode}
-          >
-            {view.headingCode}
-          </span>
-        </nav>
-      </header>
-
-      <div className="h-6 shrink-0" aria-hidden />
-
       <div
         className="p-5 md:p-6"
         style={{

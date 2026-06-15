@@ -1,8 +1,10 @@
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { Bookmark } from "lucide-react"
 
+import { PrepCourseExpandButton } from "@/features/prep-course/components/prep-course-content-header"
 import { PrepCourseLessonRow } from "@/features/prep-course/components/prep-course-lesson-row"
 import { PrepCourseSectionAccordion } from "@/features/prep-course/components/prep-course-section-accordion"
 import { ProgressRing } from "@/features/prep-course/components/prep-course-lesson-sidebar"
+import { Switch } from "@/components/ui/switch"
 import {
   countCompletedLessons,
   formatRemainingHoursLabel,
@@ -14,6 +16,7 @@ import {
   shouldFlattenModuleSections,
 } from "@/features/prep-course/lib/prep-course-format"
 import type { PrepCourse, PrepCourseModule, PrepLesson } from "@/lib/api/prep-course"
+import { cn } from "@/lib/utils"
 
 type PrepCourseModulePanelProps = {
   course: PrepCourse
@@ -21,7 +24,10 @@ type PrepCourseModulePanelProps = {
   expandedSectionIds: Set<string>
   activeLessonSlug?: string
   completedLessonSlugs: Set<string>
+  moduleBookmarked: boolean
   onToggleSection: (sectionId: string) => void
+  onExpandModuleSections: () => void
+  onToggleModuleBookmark: (next: boolean) => void
 }
 
 function moduleLessons(mod: PrepCourseModule): PrepLesson[] {
@@ -34,7 +40,10 @@ function PrepCourseModulePanel({
   expandedSectionIds,
   activeLessonSlug,
   completedLessonSlugs,
+  moduleBookmarked,
   onToggleSection,
+  onExpandModuleSections,
+  onToggleModuleBookmark,
 }: PrepCourseModulePanelProps) {
   const lessons = moduleLessons(module)
   const lessonCount = moduleLessonCount(module)
@@ -46,79 +55,100 @@ function PrepCourseModulePanel({
   const flatSection = flattenSections ? module.sections[0] : null
   const flatExpanded = flatSection ? expandedSectionIds.has(flatSection.id) : false
 
-  const headerContent = (
-    <>
-      <div className="flex min-w-0 items-start gap-4">
-        <ProgressRing value={progressPercent} />
-        <h2 className="min-w-0 truncate text-xl font-bold tracking-[0.02em] text-[#062357]" title={module.title}>
-          {module.title}
-        </h2>
+  const statsBlock = (
+    <div className="flex flex-col items-end justify-center gap-3.5">
+      <div className="text-right text-xs leading-[1.5] tracking-[0.24px]">
+        <p className="text-[#666d80]">
+          Total Time:{" "}
+          <span className="font-semibold text-[#666d80]">{formatTotalHoursLabel(totalMinutes)}</span>
+        </p>
+        <p className="mt-1.5 text-[#0d47a1]">
+          {completedCount} of {lessonCount} Lessons completed • {formatRemainingHoursLabel(remainingMinutes)}
+        </p>
       </div>
-      <div className="flex shrink-0 items-start gap-3">
-        <div className="text-right text-xs font-medium tracking-[0.02em] text-[#666d80]">
-          <p>Total Time: {formatTotalHoursLabel(totalMinutes)}</p>
-          <p className="mt-1">
-            {completedCount} of {lessonCount} Lessons completed
-          </p>
-          <p className="mt-1">{formatRemainingHoursLabel(remainingMinutes)}</p>
-        </div>
-        {flattenSections ? (
-          flatExpanded ? (
-            <ChevronUp className="size-5 shrink-0 text-[#666d80]" aria-hidden />
-          ) : (
-            <ChevronDown className="size-5 shrink-0 text-[#666d80]" aria-hidden />
-          )
-        ) : null}
-      </div>
-    </>
+      <PrepCourseExpandButton label="Expand this Sections" onClick={onExpandModuleSections} />
+    </div>
+  )
+
+  const titleRow = (
+    <div className="flex min-w-0 items-center gap-3">
+      <ProgressRing value={progressPercent} size="sm" ringBg="#f3f7ff" />
+      <h2 className="min-w-0 truncate text-2xl font-bold leading-[1.3] text-[#062357]" title={module.title}>
+        {module.title}
+      </h2>
+    </div>
+  )
+
+  const bookmarkRow = (
+    <div className="flex items-center gap-2">
+      <Bookmark
+        className={cn("size-4 shrink-0", moduleBookmarked ? "fill-[#0d47a1] text-[#0d47a1]" : "text-[#666d80]")}
+        strokeWidth={2}
+        aria-hidden
+      />
+      <span className="text-xs font-medium tracking-[0.24px] text-[#666d80]">Bookmark</span>
+      <Switch
+        size="sm"
+        checked={moduleBookmarked}
+        onChange={(event) => onToggleModuleBookmark(event.target.checked)}
+        className={moduleBookmarked ? "bg-[#0d47a1]!" : undefined}
+        aria-label="Bookmark module"
+      />
+    </div>
   )
 
   return (
-    <div className="min-w-0 flex-1 bg-white">
-      {flattenSections && flatSection ? (
-        <button
-          type="button"
-          className="flex w-full flex-wrap items-start justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-[#f6f8fa]"
-          onClick={() => onToggleSection(flatSection.id)}
-          aria-expanded={flatExpanded}
-        >
-          {headerContent}
-        </button>
-      ) : (
-        <div className="border-b border-[#dfe1e7] px-6 py-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">{headerContent}</div>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="shrink-0 overflow-hidden rounded-tl-2xl border border-b-0 border-[#dfe1e7] bg-[#f3f7ff]">
+        <div className="flex flex-wrap items-start justify-between gap-4 p-6">
+          <div className="min-w-0 flex-1">
+            {flattenSections && flatSection ? (
+              <button
+                type="button"
+                className="w-full text-left transition-colors hover:opacity-90"
+                onClick={() => onToggleSection(flatSection.id)}
+                aria-expanded={flatExpanded}
+              >
+                {titleRow}
+              </button>
+            ) : (
+              titleRow
+            )}
+            <div className="mt-2">{bookmarkRow}</div>
+          </div>
+          <div className="shrink-0">{statsBlock}</div>
         </div>
-      )}
+      </div>
 
-      {flattenSections && flatSection && flatExpanded ? (
-        <div className="space-y-0.5 border-t border-[#dfe1e7] px-4 pb-4 pt-2">
-          {flatSection.lessons.map((lesson) => (
-            <PrepCourseLessonRow
-              key={lesson.id}
-              course={course}
-              lesson={lesson}
-              active={lesson.slug === activeLessonSlug}
-              completed={completedLessonSlugs.has(lesson.slug)}
-            />
-          ))}
-        </div>
-      ) : null}
+      <div className="practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto border border-t-0 border-[#dfe1e7] bg-white">
+        {flattenSections && flatSection && flatExpanded ? (
+          <div className="space-y-0.5 px-4 pb-4 pt-2">
+            {flatSection.lessons.map((lesson) => (
+              <PrepCourseLessonRow
+                key={lesson.id}
+                course={course}
+                lesson={lesson}
+                active={lesson.slug === activeLessonSlug}
+                completed={completedLessonSlugs.has(lesson.slug)}
+              />
+            ))}
+          </div>
+        ) : null}
 
-      {!flattenSections ? (
-        <div className="divide-y divide-[#dfe1e7]">
-          {module.sections.map((section) => (
-            <PrepCourseSectionAccordion
-              key={section.id}
-              course={course}
-              section={section}
-              expanded={expandedSectionIds.has(section.id)}
-              activeLessonSlug={activeLessonSlug}
-              completedLessonSlugs={completedLessonSlugs}
-              onToggle={() => onToggleSection(section.id)}
-            />
-          ))}
-        </div>
-      ) : null}
+        {!flattenSections
+          ? module.sections.map((section) => (
+              <PrepCourseSectionAccordion
+                key={section.id}
+                course={course}
+                section={section}
+                expanded={expandedSectionIds.has(section.id)}
+                activeLessonSlug={activeLessonSlug}
+                completedLessonSlugs={completedLessonSlugs}
+                onToggle={() => onToggleSection(section.id)}
+              />
+            ))
+          : null}
+      </div>
     </div>
   )
 }

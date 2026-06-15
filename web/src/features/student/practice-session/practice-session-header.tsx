@@ -3,21 +3,25 @@ import type { ReactNode } from "react"
 import { Input } from "@/components/ui/input"
 import { PracticeSessionTimer } from "@/features/student/practice-session/practice-session-timer"
 import { PracticeSessionToolbar } from "@/features/student/practice-session/practice-session-toolbar"
-import type { HighlightColor, PracticeToolMode } from "@/features/student/practice-session/practice-session-types"
+import type { HighlightColor, PracticeSessionVariant, PracticeToolMode } from "@/features/student/practice-session/practice-session-types"
+import { cn } from "@/lib/utils"
 
 type PracticeSessionHeaderProps = {
+  variant?: PracticeSessionVariant
   title: string
   findQuery: string
   onFindQueryChange: (value: string) => void
   activeColor: HighlightColor | null
   toolMode: PracticeToolMode
   fontScale: number
+  lineSpacing?: number
   boldEnabled: boolean
   italicEnabled: boolean
   onSelectColor: (color: HighlightColor) => void
   onEraser: () => void
   onUnderline: () => void
   onFontSize: () => void
+  onLineSpacing?: () => void
   onToggleBold: () => void
   onToggleItalic: () => void
   timerLabel?: string
@@ -27,22 +31,26 @@ type PracticeSessionHeaderProps = {
   onResetTimer?: () => void
   timerProgress: number
   timerDisplayClassName?: string
+  showTimer?: boolean
   finishButton: ReactNode
 }
 
 function PracticeSessionHeader({
+  variant = "default",
   title,
   findQuery,
   onFindQueryChange,
   activeColor,
   toolMode,
   fontScale,
+  lineSpacing,
   boldEnabled,
   italicEnabled,
   onSelectColor,
   onEraser,
   onUnderline,
   onFontSize,
+  onLineSpacing,
   onToggleBold,
   onToggleItalic,
   timerLabel,
@@ -52,48 +60,66 @@ function PracticeSessionHeader({
   onResetTimer,
   timerProgress,
   timerDisplayClassName,
+  showTimer = true,
   finishButton,
 }: PracticeSessionHeaderProps) {
+  const isActiveDrill = variant === "active-drill"
+
   return (
-    <header className="practice-session-header flex shrink-0 items-center gap-3 border-b border-[#dfe1e7] bg-[#eceff3] px-4 py-3 md:gap-4 md:px-6">
+    <header
+      className={cn(
+        "practice-session-header flex shrink-0 items-center gap-3 border-b border-[#dfe1e7] px-6 py-3 md:gap-4",
+        isActiveDrill ? "min-h-[80px] bg-[#f6f8fa]" : "bg-[#eceff3]",
+      )}
+    >
       <p
-        className="min-w-0 flex-1 truncate text-lg font-bold leading-tight text-[#062357] md:text-xl"
+        className={cn(
+          "min-w-0 flex-1 truncate font-bold text-[#062357]",
+          isActiveDrill ? "text-2xl leading-[1.3]" : "text-lg leading-tight md:text-xl",
+        )}
         title={title}
       >
         {title}
       </p>
       <div className="relative shrink-0">
-       
         <Input
           placeholder="Find Text"
           value={findQuery}
           onChange={(e) => onFindQueryChange(e.target.value)}
-          className="h-[52px] w-[160px] rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] pl-10 pr-4 text-sm shadow-[0px_1px_1px_rgba(13,13,18,0.06)] placeholder:text-[#818898] xl:w-[200px]"
+          className={cn(
+            "h-[52px] rounded-2xl border border-[#dfe1e7] pl-4 pr-4 text-sm shadow-[0px_1px_1px_rgba(13,13,18,0.06)] placeholder:text-[#818898]",
+            isActiveDrill ? "w-[200px] bg-white" : "w-[160px] bg-[#f6f8fa] pl-10 xl:w-[200px]",
+          )}
         />
       </div>
       <div className="practice-session-header-actions flex shrink-0 items-center gap-2 md:gap-3">
         <PracticeSessionToolbar
+          variant={variant}
           activeColor={activeColor}
           toolMode={toolMode}
           fontScale={fontScale}
+          lineSpacing={lineSpacing}
           boldEnabled={boldEnabled}
           italicEnabled={italicEnabled}
           onSelectColor={onSelectColor}
           onEraser={onEraser}
           onUnderline={onUnderline}
           onFontSize={onFontSize}
+          onLineSpacing={onLineSpacing}
           onToggleBold={onToggleBold}
           onToggleItalic={onToggleItalic}
         />
-        <PracticeSessionTimer
-          label={timerLabel}
-          displaySeconds={timerDisplaySeconds}
-          paused={timerPaused}
-          onTogglePause={onToggleTimerPause}
-          onReset={onResetTimer}
-          progress={timerProgress}
-          displayClassName={timerDisplayClassName}
-        />
+        {showTimer ? (
+          <PracticeSessionTimer
+            label={timerLabel}
+            displaySeconds={timerDisplaySeconds}
+            paused={timerPaused}
+            onTogglePause={onToggleTimerPause}
+            onReset={onResetTimer}
+            progress={timerProgress}
+            displayClassName={timerDisplayClassName}
+          />
+        ) : null}
         {finishButton}
       </div>
     </header>

@@ -93,7 +93,7 @@ describe("PracticePrepTestPage + section navigation", () => {
     const user = userEvent.setup()
     const router = renderPrepTestRoutes("/app/practice/preptest/pt-900")
 
-    expect(await screen.findByRole("heading", { name: /Ready to begin your test/i })).toBeInTheDocument()
+    expect(await screen.findByText(/Ready to begin your test/i)).toBeInTheDocument()
     expect(within(screen.getByRole("main")).getByText("PT 900")).toBeInTheDocument()
     expect(screen.getByText("Control your practice pace")).toBeInTheDocument()
     expect(screen.getByText("Select format")).toBeInTheDocument()

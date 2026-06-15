@@ -15,9 +15,18 @@ export function sortAttemptsNewestFirst(attempts: PrepTestPoolAttempt[]): PrepTe
   )
 }
 
+export function getAttemptDisplayScores(attempt: PrepTestPoolAttempt): {
+  test: number | null
+  br: number | null
+} {
+  return {
+    test: coercePoolScore(attempt.scaledScore),
+    br: coercePoolScore(attempt.blindReviewScaledScore),
+  }
+}
+
 export function attemptScoreLabel(attempt: PrepTestPoolAttempt): string {
-  const test = coercePoolScore(attempt.scaledScore)
-  const br = coercePoolScore(attempt.blindReviewScaledScore)
+  const { test, br } = getAttemptDisplayScores(attempt)
   if (test != null && br != null) return `${test} · ${br} BR`
   if (test != null) return String(test)
   if (br != null) return `${br} BR`

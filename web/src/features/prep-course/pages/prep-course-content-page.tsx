@@ -33,6 +33,7 @@ function PrepCourseContentPage() {
   const [expandedSectionIds, setExpandedSectionIds] = useState<Set<string>>(() => new Set())
   const [expandAll, setExpandAll] = useState(false)
   const [showBookmarksOnly, setShowBookmarksOnly] = useState(false)
+  const [bookmarkedModuleIds, setBookmarkedModuleIds] = useState<Set<string>>(() => new Set())
   const [completedLessonSlugs, setCompletedLessonSlugs] = useState<Set<string>>(() => new Set())
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -96,10 +97,40 @@ function PrepCourseContentPage() {
 
   const stats = useMemo(() => curriculumStats(curriculum), [curriculum])
 
+  const allSectionIds = useMemo(
+    () => curriculum.modules.flatMap((module) => module.sections.map((section) => section.id)),
+    [curriculum.modules],
+  )
+
   const selectedModule = useMemo(
     () => curriculum.modules.find((mod) => mod.id === selectedModuleId) ?? null,
     [curriculum.modules, selectedModuleId],
   )
+
+  const visibleModules = useMemo(() => {
+    if (!showBookmarksOnly) return curriculum.modules
+    return curriculum.modules.filter((module) => bookmarkedModuleIds.has(module.id))
+  }, [bookmarkedModuleIds, curriculum.modules, showBookmarksOnly])
+
+  useEffect(() => {
+    if (!showBookmarksOnly) return
+    if (visibleModules.length === 0) {
+      setSelectedModuleId(null)
+      return
+    }
+    if (!selectedModuleId || !bookmarkedModuleIds.has(selectedModuleId)) {
+      setSelectedModuleId(visibleModules[0]!.id)
+    }
+  }, [bookmarkedModuleIds, selectedModuleId, showBookmarksOnly, visibleModules])
+
+  function handleToggleModuleBookmark(moduleId: string, next: boolean) {
+    setBookmarkedModuleIds((prev) => {
+      const updated = new Set(prev)
+      if (next) updated.add(moduleId)
+      else updated.delete(moduleId)
+      return updated
+    })
+  }
 
   function handleToggleSection(sectionId: string) {
     setExpandedSectionIds((prev) => {
@@ -111,21 +142,37 @@ function PrepCourseContentPage() {
   }
 
   function handleToggleExpandAll() {
-    if (!selectedModule) return
-    if (expandAll) {
+    const allExpanded =
+      allSectionIds.length > 0 && allSectionIds.every((id) => expandedSectionIds.has(id))
+    if (allExpanded) {
       setExpandedSectionIds(new Set())
       setExpandAll(false)
     } else {
-      setExpandedSectionIds(new Set(selectedModule.sections.map((s) => s.id)))
+      setExpandedSectionIds(new Set(allSectionIds))
       setExpandAll(true)
     }
   }
 
   useEffect(() => {
+    const allExpanded =
+      allSectionIds.length > 0 && allSectionIds.every((id) => expandedSectionIds.has(id))
+    setExpandAll(allExpanded)
+  }, [allSectionIds, expandedSectionIds])
+
+  function handleExpandModuleSections() {
     if (!selectedModule) return
-    const allExpanded = selectedModule.sections.every((s) => expandedSectionIds.has(s.id))
-    setExpandAll(allExpanded && selectedModule.sections.length > 0)
-  }, [expandedSectionIds, selectedModule])
+    const moduleSectionIds = selectedModule.sections.map((section) => section.id)
+    const allExpanded = moduleSectionIds.every((id) => expandedSectionIds.has(id))
+    setExpandedSectionIds((prev) => {
+      const next = new Set(prev)
+      if (allExpanded) {
+        for (const id of moduleSectionIds) next.delete(id)
+      } else {
+        for (const id of moduleSectionIds) next.add(id)
+      }
+      return next
+    })
+  }
 
   if (!courseSlug) {
     return (
@@ -163,56 +210,47 @@ function PrepCourseContentPage() {
   }
 
   return (
-    <StudentMain className="max-w-[1280px] pb-10 pt-0">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-[#dfe1e7] pb-4">
-        <h1 className="text-xl font-bold tracking-[0.02em] text-[#062357]">{course.title}</h1>
-        <nav
-          className="flex flex-wrap items-center gap-1.5 text-sm font-medium tracking-[0.02em] text-[#666d80]"
-          aria-label="Breadcrumb"
-        >
-          <span>Learn</span>
-          <span className="text-[#c5cee0]">/</span>
-          <Link to="/app/prep-course" className="font-semibold text-[#0d47a1] hover:underline">
-            Prep Course
-          </Link>
-          <span className="text-[#c5cee0]">/</span>
-          <span className="font-semibold text-[#062357]">Course Content</span>
-        </nav>
-      </div>
-
-      <section className="overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
-        <PrepCourseContentHeader
-          stats={stats}
-          expandAll={expandAll}
-          showBookmarksOnly={showBookmarksOnly}
-          onToggleExpandAll={handleToggleExpandAll}
-          onToggleShowBookmarksOnly={setShowBookmarksOnly}
-        />
-        <div className="flex flex-col lg:flex-row">
-          <PrepCourseModuleSidebar
-            modules={curriculum.modules}
-            selectedModuleId={selectedModuleId}
-            completedLessonSlugs={completedLessonSlugs}
-            onSelectModule={(id) => {
-              setSelectedModuleId(id)
-              const mod = curriculum.modules.find((m) => m.id === id)
-              if (mod?.sections[0]) {
-                setExpandedSectionIds(new Set([mod.sections[0].id]))
-              }
-            }}
+    <StudentMain className="flex min-h-0 flex-1 flex-col overflow-hidden pb-0 pt-6">
+      <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+        <div className="shrink-0">
+          <PrepCourseContentHeader
+            stats={stats}
+            expandAll={expandAll}
+            showBookmarksOnly={showBookmarksOnly}
+            onToggleExpandAll={handleToggleExpandAll}
+            onToggleShowBookmarksOnly={setShowBookmarksOnly}
           />
-          {selectedModule ? (
-            <PrepCourseModulePanel
-              course={course}
-              module={selectedModule}
-              expandedSectionIds={expandedSectionIds}
-              activeLessonSlug={activeLessonSlug}
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col p-6">
+          <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:items-stretch">
+            {selectedModule ? (
+              <PrepCourseModulePanel
+                course={course}
+                module={selectedModule}
+                expandedSectionIds={expandedSectionIds}
+                activeLessonSlug={activeLessonSlug}
+                completedLessonSlugs={completedLessonSlugs}
+                onToggleSection={handleToggleSection}
+                onExpandModuleSections={handleExpandModuleSections}
+                moduleBookmarked={bookmarkedModuleIds.has(selectedModule.id)}
+                onToggleModuleBookmark={(next) => handleToggleModuleBookmark(selectedModule.id, next)}
+              />
+            ) : (
+              <p className="ds-body-sm ds-text-muted flex-1 p-6">Select a module to view sections.</p>
+            )}
+            <PrepCourseModuleSidebar
+              modules={visibleModules}
+              selectedModuleId={selectedModuleId}
               completedLessonSlugs={completedLessonSlugs}
-              onToggleSection={handleToggleSection}
+              onSelectModule={(id) => {
+                setSelectedModuleId(id)
+                const mod = curriculum.modules.find((m) => m.id === id)
+                if (mod?.sections[0]) {
+                  setExpandedSectionIds(new Set([mod.sections[0].id]))
+                }
+              }}
             />
-          ) : (
-            <p className="ds-body-sm ds-text-muted p-6">Select a module to view sections.</p>
-          )}
+          </div>
         </div>
       </section>
     </StudentMain>
