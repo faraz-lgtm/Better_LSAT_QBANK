@@ -1,4 +1,5 @@
 import { Bookmark } from "lucide-react"
+import type { RefObject } from "react"
 
 import { LessonContentRenderer } from "@/features/prep-course/components/lesson-content-renderer"
 import { isPrepCourseDrillLessonType, lessonMetaLine } from "@/features/prep-course/lib/prep-course-format"
@@ -16,6 +17,7 @@ type PrepCourseLessonPanelProps = {
   activeDrillAttempt?: PrepLessonActiveDrillAttempt | null
   loading?: boolean
   sectionSubtitle?: string | null
+  contentScrollRef?: RefObject<HTMLDivElement | null>
   onReviewDrill?: () => void
   onStartDrill?: () => void
   startingDrill?: boolean
@@ -29,6 +31,7 @@ function PrepCourseLessonPanel({
   activeDrillAttempt = null,
   loading = false,
   sectionSubtitle = null,
+  contentScrollRef,
   onReviewDrill,
   onStartDrill,
   startingDrill = false,
@@ -54,7 +57,7 @@ function PrepCourseLessonPanel({
     lesson && !loading ? (
       <header className="flex items-start justify-between gap-4 border-b border-[#dfe1e7] pb-4">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold leading-tight tracking-[0.02em] text-[#062357] md:text-[28px]">
+          <h1 className="text-[24px] font-bold leading-tight tracking-[0.02em] text-[#062357] md:text-[28px]">
             {lesson.title}
           </h1>
           {subtitle ? (
@@ -72,24 +75,29 @@ function PrepCourseLessonPanel({
     ) : null
 
   return (
-    <div className="min-w-0">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       {loading && !lesson ? (
         <p className="ds-body-sm ds-text-muted">Loading lesson...</p>
       ) : lesson ? (
         <>
-          {!hasVideo ? titleBlock : null}
-          <div className={!hasVideo ? "mt-8" : undefined}>
-          <LessonContentRenderer
-            lesson={lesson}
-            linkedQuestionRefs={linkedQuestionRefs}
-            activeDrillAttempt={activeDrillAttempt}
-            hideTitle
-            belowVideo={hasVideo ? titleBlock : undefined}
-            onReviewDrill={onReviewDrill}
-            onStartDrill={onStartDrill}
-            startingDrill={startingDrill}
-            drillStartError={drillStartError}
-          />
+          {!hasVideo ? <div className="shrink-0">{titleBlock}</div> : null}
+          <div
+            ref={contentScrollRef}
+            className="practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto pb-6"
+          >
+            <div className={!hasVideo ? "mt-8" : undefined}>
+              <LessonContentRenderer
+                lesson={lesson}
+                linkedQuestionRefs={linkedQuestionRefs}
+                activeDrillAttempt={activeDrillAttempt}
+                hideTitle
+                belowVideo={hasVideo ? titleBlock : undefined}
+                onReviewDrill={onReviewDrill}
+                onStartDrill={onStartDrill}
+                startingDrill={startingDrill}
+                drillStartError={drillStartError}
+              />
+            </div>
           </div>
         </>
       ) : (

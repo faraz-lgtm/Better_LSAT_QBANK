@@ -3,7 +3,6 @@ import { Loader2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
-import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
 import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
 import {
   TimeRangeFilter,
@@ -307,23 +306,14 @@ function AnalyticsSectionsPage() {
   }
 
   return (
-    <>
-      <StudentSubnavStrip
-        crumbs={[
-          { label: "Analytics", href: "/app/analytics" },
-          { label: "Foundations" },
-          { label: "Sections" },
-        ]}
-      />
-      <StudentMain>
+    <StudentMain>
         {loading ? (
           <div className="mb-4 flex items-center gap-2 text-sm text-[#666d80]">
             <Loader2 className="size-4 animate-spin" aria-hidden />
             Loading section analytics…
           </div>
         ) : null}
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold leading-[1.3] text-[#062357]">Section</h1>
+        <div className="mb-6 flex flex-wrap items-center justify-end gap-4">
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
         </div>
 
@@ -362,7 +352,6 @@ function AnalyticsSectionsPage() {
           onToggleBookmark={handleToggleBookmark}
         />
       </StudentMain>
-    </>
   )
 }
 

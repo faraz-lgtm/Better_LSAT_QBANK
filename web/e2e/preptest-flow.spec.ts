@@ -12,7 +12,7 @@ test.describe("Practice PrepTest flow", () => {
 
     await page.getByTestId("preptest-list-row-pt145").getByRole("button", { name: "Start" }).click()
     await expect(page).toHaveURL(/\/app\/practice\/preptest\/pt145$/)
-    await expect(page.getByRole("heading", { name: /Ready to begin your test/i })).toBeVisible()
+    await expect(page.getByText(/Ready to begin your test/i)).toBeVisible()
     await page.screenshot({ path: `${artifacts}/preptest-01-hub.png`, fullPage: true })
 
     await page.getByRole("button", { name: /Start Section/i }).click()
@@ -54,7 +54,7 @@ test.describe("Practice PrepTest flow (optional signed-in check)", () => {
     }
 
     await page.goto("/app/practice/preptest/pt145")
-    await expect(page.getByRole("heading", { name: /Ready to begin your test/i })).toBeVisible({
+    await expect(page.getByText(/Ready to begin your test/i)).toBeVisible({
       timeout: 30_000,
     })
     await expect(page.getByText(/PrepTest UI preview/i)).toHaveCount(0)

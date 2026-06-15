@@ -1,10 +1,14 @@
 import { Flag } from "lucide-react"
 
+import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
+import { cn } from "@/lib/utils"
+
 type PracticeSessionQuestionNavButtonProps = {
   number: number
   active: boolean
   answered: boolean
   flagged?: boolean
+  variant?: PracticeSessionVariant
   onClick: () => void
 }
 
@@ -13,8 +17,39 @@ function PracticeSessionQuestionNavButton({
   active,
   answered,
   flagged = false,
+  variant = "default",
   onClick,
 }: PracticeSessionQuestionNavButtonProps) {
+  const isActiveDrill = variant === "active-drill"
+
+  if (isActiveDrill) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "practice-session-question-nav-btn relative shrink-0 text-base font-semibold tracking-[0.02em] transition-colors",
+          active
+            ? "border-2 border-[#dfe1e7] bg-white text-[#062357]"
+            : answered
+              ? "border border-[#0d47a1] bg-[#0d47a1] text-white"
+              : "border-2 border-[#dfe1e7] bg-white text-[#062357]",
+        )}
+        aria-current={active ? "true" : undefined}
+        aria-label={flagged ? `Question ${number}, flagged` : `Question ${number}`}
+      >
+        {number}
+        {flagged ? (
+          <Flag
+            className="absolute -right-0.5 -top-0.5 size-2.5 fill-[#0d47a1] text-[#0d47a1]"
+            strokeWidth={2}
+            aria-hidden
+          />
+        ) : null}
+      </button>
+    )
+  }
+
   return (
     <button
       type="button"

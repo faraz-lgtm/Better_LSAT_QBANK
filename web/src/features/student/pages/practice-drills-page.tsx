@@ -119,19 +119,7 @@ function PracticeDrillsPage() {
   })
 
   return (
-    <>
-      <section className="border-b border-[#dfe1e7] bg-[#f3f7ff]">
-        <div className="mx-auto flex h-12 w-full max-w-[1280px] items-center justify-between px-4 md:px-6">
-          <h1 className="text-[20px] font-bold leading-[1.35] text-[#062357]">Drills</h1>
-          <div className="flex items-center gap-1 text-xs tracking-[0.24px]">
-            <span className="text-[#666d80]">Practice</span>
-            <span className="text-[#666d80]">/</span>
-            <span className="font-semibold text-[#0d47a1]">Drills</span>
-          </div>
-        </div>
-      </section>
-
-      <StudentMain className="space-y-6">
+    <StudentMain className="space-y-6">
         <section className="rounded-2xl border border-[#d8dee8] bg-[#f4f6f9] p-6">
           <div className="flex items-center gap-2 text-[14px] font-semibold leading-none tracking-[0.1px] text-[#0d47a1]">
             <button type="button" className="inline-flex items-center gap-1 hover:underline" onClick={() => navigate("/app/analytics/drills")}>
@@ -269,7 +257,6 @@ function PracticeDrillsPage() {
           )}
         </section>
       </StudentMain>
-    </>
   )
 }
 

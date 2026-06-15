@@ -3,7 +3,6 @@ import { Link, useSearchParams } from "react-router-dom"
 import { Loader2, Bookmark } from "lucide-react"
 
 import { StudentMain } from "@/features/student/components/student-main"
-import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
 import {
   ScoreProgressChart,
   ScoreProgressTabs,
@@ -254,8 +253,7 @@ function OverviewTab() {
 
   return (
     <>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold leading-[1.3] text-[#062357]">Overview</h1>
+      <div className="mb-6 flex flex-wrap items-center justify-end gap-4">
         <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
       </div>
 
@@ -319,12 +317,6 @@ function AnalyticsPage() {
 
   return (
     <StudentMain>
-      {tab !== "overview" ? (
-        <StudentSubnavStrip
-          crumbs={[{ label: "Analytics" }, { label: "Foundations" }, { label: tab === "priorities" ? "Priorities" : "History" }]}
-        />
-      ) : null}
-
       {tab === "overview" ? <OverviewTab /> : null}
       {tab === "priorities" ? <PrioritiesTab /> : null}
       {tab === "history" ? <HistoryTab /> : null}

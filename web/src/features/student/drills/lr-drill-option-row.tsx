@@ -3,6 +3,7 @@ import { Eye } from "lucide-react"
 
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import type { PracticeToolMode, RegionKey } from "@/features/student/practice-session/practice-session-types"
+import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
 import { HtmlContent } from "@/lib/html/html-content"
 import { cn } from "@/lib/utils"
 
@@ -27,6 +28,7 @@ type LrDrillOptionRowProps = {
     event?: MouseEvent,
   ) => void
   onContentClick?: (regionKey: RegionKey, container: HTMLElement | null, event: MouseEvent) => void
+  variant?: PracticeSessionVariant
 }
 
 const LrDrillOptionRow = memo(function LrDrillOptionRow({
@@ -44,9 +46,11 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
   toolMode,
   onContentMouseUp,
   onContentClick,
+  variant = "default",
 }: LrDrillOptionRowProps) {
   const letter = letters[index] ?? String(index + 1)
   const stableHtml = useMemo(() => html, [html])
+  const isActiveDrill = variant === "active-drill"
 
   const choiceContent =
     onContentMouseUp != null ? (
@@ -57,7 +61,11 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
         toolMode={toolMode}
         onMouseUp={onContentMouseUp}
         onClickCapture={onContentClick}
-        className={cn("min-w-0 flex-1 pt-0.5", hidden && "line-through")}
+        className={cn(
+          "min-w-0 flex-1",
+          isActiveDrill ? "text-lg leading-normal text-[#0d0d12]" : "pt-0.5",
+          hidden && "line-through",
+        )}
       />
     ) : (
       <HtmlContent html={stableHtml} className={cn("min-w-0 flex-1 pt-0.5", hidden && "line-through")} />
@@ -83,41 +91,71 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
         }
       }}
       className={cn(
-        "flex items-stretch gap-2 rounded-xl border border-solid text-left text-sm leading-snug transition-colors",
-        hidden && "opacity-50",
+        "flex items-stretch text-left transition-colors",
+        isActiveDrill
+          ? "gap-4 rounded-2xl py-1 pl-4"
+          : "gap-2 rounded-xl border border-solid text-sm leading-snug",
+        !isActiveDrill && hidden && "opacity-50",
         disabled ? "cursor-default" : "cursor-pointer",
       )}
-      style={{
-        borderColor: selected ? "var(--color-student-cta)" : "var(--greyscale-100)",
-        borderWidth: selected ? 2 : 1,
-        backgroundColor: selected ? "var(--student-expanded-row)" : "var(--background)",
-        color: "var(--foreground)",
-      }}
+      style={
+        isActiveDrill
+          ? undefined
+          : {
+              borderColor: selected ? "var(--color-student-cta)" : "var(--greyscale-100)",
+              borderWidth: selected ? 2 : 1,
+              backgroundColor: selected ? "var(--student-expanded-row)" : "var(--background)",
+              color: "var(--foreground)",
+            }
+      }
     >
-      <div className="flex min-w-0 flex-1 items-start gap-3 px-3 py-3">
+      <div
+        className={cn(
+          "flex min-w-0 flex-1 items-start",
+          isActiveDrill ? "gap-4" : "gap-3 px-3 py-3",
+        )}
+      >
         <span
-          className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-          style={{
-            backgroundColor: "var(--greyscale-25)",
-            color: "var(--color-student-heading)",
-            border: "1px solid var(--greyscale-100)",
-          }}
+          className={cn(
+            "flex shrink-0 items-center justify-center font-semibold",
+            isActiveDrill
+              ? "size-8 rounded-xl border-2 border-[#dfe1e7] bg-white text-base text-[#0d0d12]"
+              : "mt-0.5 size-8 rounded-full text-xs font-bold",
+          )}
+          style={
+            isActiveDrill
+              ? undefined
+              : {
+                  backgroundColor: "var(--greyscale-25)",
+                  color: "var(--color-student-heading)",
+                  border: "1px solid var(--greyscale-100)",
+                }
+          }
         >
           {letter}
         </span>
         {choiceContent}
       </div>
-      <div className="flex shrink-0 items-center border-l pr-2 pl-1" style={{ borderColor: "var(--greyscale-100)" }}>
+      <div
+        className={cn(
+          "flex shrink-0 items-center",
+          isActiveDrill ? "pr-0" : "border-l pr-2 pl-1",
+        )}
+        style={isActiveDrill ? undefined : { borderColor: "var(--greyscale-100)" }}
+      >
         <button
           type="button"
-          className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          className={cn(
+            "rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground",
+            isActiveDrill ? "size-9 rounded-[10px] p-1.5" : "p-1.5",
+          )}
           aria-label={hidden ? "Show answer choice" : "Hide answer choice"}
           onClick={(e) => {
             e.stopPropagation()
             onToggleHidden()
           }}
         >
-          <Eye className="size-4" strokeWidth={2} />
+          <Eye className={isActiveDrill ? "size-6" : "size-4"} strokeWidth={2} />
         </button>
       </div>
     </div>

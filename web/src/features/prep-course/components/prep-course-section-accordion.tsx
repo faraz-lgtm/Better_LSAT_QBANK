@@ -36,33 +36,40 @@ function PrepCourseSectionAccordion({
   const remainingMinutes = incompleteDurationMinutes(section.lessons, completedLessonSlugs)
 
   return (
-    <div className="bg-white">
+    <div className="border-b border-l border-[#dfe1e7] bg-[#f6f8fa]">
       <button
         type="button"
-        className="flex w-full items-center gap-4 px-6 py-4 text-left"
+        className="flex h-[100px] w-full items-center justify-between gap-4 p-6 text-left transition-colors hover:bg-[#f0f2f5]"
         onClick={onToggle}
         aria-expanded={expanded}
       >
-        <ProgressRing value={progressPercent} size="sm" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold tracking-[0.02em] text-[#062357]" title={section.title}>
+        <div className="flex min-w-0 items-center gap-3">
+          <ProgressRing value={progressPercent} size="sm" ringBg="#f6f8fa" />
+          <p className="truncate text-lg font-bold leading-[1.35] text-[#062357]" title={section.title}>
             {section.title}
           </p>
         </div>
-        <div className="hidden shrink-0 text-right text-xs font-medium tracking-[0.02em] text-[#666d80] sm:block">
-          <p>Total Time: {formatSectionTimeLabel(totalMinutes)}</p>
-          {remainingMinutes > 0 ? (
-            <p className="mt-0.5">{formatRemainingHoursLabel(remainingMinutes)} in section</p>
-          ) : null}
+        <div className="flex shrink-0 items-center gap-3">
+          <div className="hidden text-right text-xs leading-[1.5] tracking-[0.24px] sm:block">
+            <p className="text-[#666d80]">
+              Total Time:{" "}
+              <span className="font-semibold text-[#666d80]">{formatSectionTimeLabel(totalMinutes)}</span>
+            </p>
+            {remainingMinutes > 0 ? (
+              <p className="mt-1.5 text-[#818898]">
+                {formatRemainingHoursLabel(remainingMinutes).replace(" left", " left in section")}
+              </p>
+            ) : null}
+          </div>
+          {expanded ? (
+            <ChevronUp className="size-6 shrink-0 text-[#666d80]" aria-hidden />
+          ) : (
+            <ChevronDown className="size-6 shrink-0 text-[#666d80]" aria-hidden />
+          )}
         </div>
-        {expanded ? (
-          <ChevronUp className="size-5 shrink-0 text-[#666d80]" aria-hidden />
-        ) : (
-          <ChevronDown className="size-5 shrink-0 text-[#666d80]" aria-hidden />
-        )}
       </button>
       {expanded ? (
-        <div className="space-y-0.5 px-4 pb-4">
+        <div className="space-y-0.5 border-t border-[#dfe1e7] bg-white px-4 pb-4 pt-2">
           {section.lessons.map((lesson) => (
             <PrepCourseLessonRow
               key={lesson.id}

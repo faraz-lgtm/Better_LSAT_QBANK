@@ -208,8 +208,7 @@ function DashboardPage() {
   return (
     <>
       <StudentMain>
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-3xl font-semibold text-[#082c6b]">Dashboard</h1>
+        <div className="mb-4 flex justify-end">
           <Button
             type="button"
             variant="outline"

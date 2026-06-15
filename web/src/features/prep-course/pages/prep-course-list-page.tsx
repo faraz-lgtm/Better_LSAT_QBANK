@@ -49,25 +49,14 @@ function PrepCourseListPage() {
 
   if (loading) {
     return (
-      <StudentMain>
+      <StudentMain className="pt-6">
         <p className="ds-body-sm ds-text-muted">Loading courses...</p>
       </StudentMain>
     )
   }
 
   return (
-    <StudentMain className="max-w-[1280px] pt-0">
-      <section className="mb-6 border-b border-[#dfe1e7] pb-4 pt-2">
-        <div className="flex items-center justify-between">
-          <h1 className="text-[28px] font-bold leading-[1.3] text-[#062357]">Prep Course</h1>
-          <div className="flex items-center gap-1 text-xs font-medium tracking-[0.02em] text-[#666d80]">
-            <span>Learn</span>
-            <span className="text-[#dfe1e7]">/</span>
-            <span className="font-semibold text-[#0d47a1]">Prep Course</span>
-          </div>
-        </div>
-      </section>
-
+    <StudentMain className="pt-6">
       {error ? <p className="mb-4 text-sm text-[#95122b]">{error}</p> : null}
 
       {courses.length === 0 ? (

@@ -10,7 +10,6 @@ import type {
   BlindReviewStatus,
 } from "@/features/student/blind-review/blind-review-types"
 import { StudentMain } from "@/features/student/components/student-main"
-import { StudentSubnavStrip } from "@/features/student/components/student-subnav-strip"
 import type { PrepTestPoolAttempt } from "@/features/student/preptests/preptest-types"
 import { buildPoolHistoryRows, poolCardDisplayScore } from "@/features/student/preptests/preptest-pool-display"
 import { AttemptScoreBox, ScoreBadge } from "@/features/student/preptests/preptest-score-badge"
@@ -280,13 +279,8 @@ function PracticeBlindReviewPage() {
   }
 
   return (
-    <>
-      <StudentSubnavStrip
-        title="Blind Review"
-        crumbs={[{ label: "Practice", href: "/app/practice/drills" }, { label: "Blind Review" }]}
-      />
-      <StudentMain>
-        <p className="mb-6 max-w-[908px] text-sm font-medium leading-[1.5] tracking-[0.02em] text-[#666d80] md:text-base">
+    <StudentMain>
+      <p className="mb-6 max-w-[908px] text-sm font-medium leading-[1.5] tracking-[0.02em] text-[#666d80] md:text-base">
           After you finish a PrepTest, blind review lets you revisit every question without seeing correct answers.
           Update your responses, then finish to record your blind review score.
         </p>
@@ -398,7 +392,6 @@ function PracticeBlindReviewPage() {
           </div>
         )}
       </StudentMain>
-    </>
   )
 }
 

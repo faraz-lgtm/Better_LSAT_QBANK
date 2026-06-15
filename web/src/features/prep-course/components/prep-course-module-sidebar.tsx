@@ -6,6 +6,7 @@ import {
   moduleStatusLabel,
 } from "@/features/prep-course/lib/prep-course-format"
 import type { PrepCourseModule, PrepLesson } from "@/lib/api/prep-course"
+import { cn } from "@/lib/utils"
 
 type PrepCourseModuleSidebarProps = {
   modules: PrepCourseModule[]
@@ -26,13 +27,13 @@ function PrepCourseModuleSidebar({
 }: PrepCourseModuleSidebarProps) {
   return (
     <aside
-      className="flex w-full shrink-0 flex-col bg-[#F3F7FF] lg:w-[300px]"
+      className="flex min-h-0 w-full shrink-0 flex-col rounded-br-2xl rounded-tr-2xl border border-[#dfe1e7] bg-[#f3f7ff] lg:w-[272px]"
       aria-label="Course modules"
     >
-      <div className="px-5 py-4">
-        <h2 className="text-lg font-bold tracking-[0.02em] text-[#062357]">Course Modules</h2>
+      <div className="shrink-0 px-4 pt-6">
+        <h2 className="text-xl font-bold leading-[1.35] text-[#082c6b]">Course Modules</h2>
       </div>
-      <ul className="practice-session-scroll-hidden flex-1 space-y-1 overflow-y-auto px-3 pb-4">
+      <ul className="practice-session-scroll-hidden flex-1 space-y-2 overflow-y-auto p-4 pt-3">
         {modules.map((mod) => {
           const isActive = mod.id === selectedModuleId
           const lessons = moduleLessons(mod)
@@ -46,25 +47,39 @@ function PrepCourseModuleSidebar({
               <button
                 type="button"
                 onClick={() => onSelectModule(mod.id)}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors ${
-                  isActive ? "bg-white shadow-[0px_1px_2px_rgba(13,13,18,0.06)]" : "hover:bg-white/70"
-                }`}
+                className={cn(
+                  "flex h-[62px] w-full items-center gap-3 rounded-2xl p-3 text-left transition-colors",
+                  isActive
+                    ? "bg-[#edf3ff] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
+                    : "hover:bg-white/60",
+                )}
               >
-                <ProgressRing value={progressPercent} size="sm" ringBg={isActive ? "#ffffff" : "#F3F7FF"} />
+                <ProgressRing value={progressPercent} size="sm" ringBg={isActive ? "#edf3ff" : "#f3f7ff"} />
                 <div className="min-w-0 flex-1">
                   <p
-                    className="truncate text-sm font-semibold leading-snug tracking-[0.02em] text-[#062357]"
+                    className={cn(
+                      "truncate text-xs font-semibold leading-[1.5] tracking-[0.24px]",
+                      isActive ? "text-[#062357]" : "text-[#082c6b]",
+                    )}
                     title={mod.title}
                   >
                     {mod.title}
                   </p>
-                  <p className="mt-0.5 text-xs font-medium tracking-[0.02em] text-[#666d80]">
+                  <p className="text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#6d78b6]">
                     {lessonCount} {lessonCount === 1 ? "Lesson" : "Lessons"}
                   </p>
                 </div>
                 {statusLabel && !isActive ? (
-                  <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#a4acb9]">
-                    {statusLabel}
+                  <span className="shrink-0 text-center text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#6d78b6]">
+                    {statusLabel === "Not Started" ? (
+                      <>
+                        Not
+                        <br />
+                        Started
+                      </>
+                    ) : (
+                      statusLabel
+                    )}
                   </span>
                 ) : null}
               </button>

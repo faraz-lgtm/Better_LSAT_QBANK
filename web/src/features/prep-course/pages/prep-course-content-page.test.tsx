@@ -117,10 +117,9 @@ describe("PrepCourseContentPage", () => {
     })
 
     expect(await screen.findByRole("heading", { name: "Course Content" })).toBeInTheDocument()
-    expect(screen.getByRole("heading", { name: "Prep Course", level: 1 })).toBeInTheDocument()
     expect(screen.getByText("Show All Bookmark")).toBeInTheDocument()
-    expect(screen.getByText("2 Modules")).toBeInTheDocument()
-    expect(screen.getByText("2 Sections")).toBeInTheDocument()
+    expect(screen.getByText("Modules")).toBeInTheDocument()
+    expect(screen.getByText("Sections")).toBeInTheDocument()
 
     const moduleSidebar = screen.getByRole("complementary", { name: "Course modules" })
     expect(within(moduleSidebar).getByText("Module One")).toBeInTheDocument()
@@ -233,5 +232,111 @@ describe("PrepCourseContentPage", () => {
     expect(within(screen.getByRole("link", { name: /Lesson B/i })).queryByLabelText("Completed")).toBeNull()
     expect(screen.getByText(/1 of 2 Lessons completed/)).toBeInTheDocument()
     expect(within(screen.getByRole("complementary", { name: "Course modules" })).getByText("50%")).toBeInTheDocument()
+  })
+
+  it("expands and collapses sections with Figma expand controls", async () => {
+    getCourseMock.mockResolvedValue({
+      course,
+      lessons: [lessonA, lessonB],
+      curriculum: {
+        modules: [
+          {
+            id: "m1",
+            course_id: "c1",
+            title: "Module One",
+            sort_order: 1,
+            duration_minutes: null,
+            sections: [
+              {
+                id: "s1",
+                module_id: "m1",
+                title: "Section Alpha",
+                sort_order: 1,
+                duration_minutes: null,
+                lessons: [lessonA],
+              },
+              {
+                id: "s1b",
+                module_id: "m1",
+                title: "Section Gamma",
+                sort_order: 2,
+                duration_minutes: null,
+                lessons: [],
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={["/app/prep-course/prep-course"]}>
+        <Routes>
+          <Route path="/app/prep-course/:courseSlug" element={<PrepCourseContentPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await screen.findByText("Section Alpha")
+    expect(screen.getByRole("link", { name: /Lesson A/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Expand this Sections" }))
+    expect(screen.getByRole("link", { name: /Lesson A/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Expand this Sections" }))
+    expect(screen.queryByRole("link", { name: /Lesson A/i })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Expand All" }))
+    expect(screen.getByRole("link", { name: /Lesson A/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Expand All" }))
+    expect(screen.queryByRole("link", { name: /Lesson A/i })).not.toBeInTheDocument()
+  })
+
+  it("toggles module bookmark switch", async () => {
+    getCourseMock.mockResolvedValue({
+      course,
+      lessons: [lessonA],
+      curriculum: {
+        modules: [
+          {
+            id: "m1",
+            course_id: "c1",
+            title: "Module One",
+            sort_order: 1,
+            duration_minutes: null,
+            sections: [
+              {
+                id: "s1",
+                module_id: "m1",
+                title: "Section Alpha",
+                sort_order: 1,
+                duration_minutes: null,
+                lessons: [lessonA],
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={["/app/prep-course/prep-course"]}>
+        <Routes>
+          <Route path="/app/prep-course/:courseSlug" element={<PrepCourseContentPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    const bookmarkSwitch = await screen.findByRole("switch", { name: "Bookmark module" })
+    expect(bookmarkSwitch).not.toBeChecked()
+
+    await user.click(bookmarkSwitch)
+    expect(bookmarkSwitch).toBeChecked()
+
+    await user.click(bookmarkSwitch)
+    expect(bookmarkSwitch).not.toBeChecked()
   })
 })
