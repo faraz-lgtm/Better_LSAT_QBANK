@@ -111,7 +111,7 @@ describe("PracticePrepTestPage + section navigation", () => {
     expect(router.state.location.search).toBe("?sessionId=section-sess-1")
   })
 
-  it("shows Start Section on every practiceable section during retake", async () => {
+  it("shows only the first unlocked section during retake, same as a fresh attempt", async () => {
     mockGetPrepTestDetail.mockResolvedValue({
       ...mockDetail,
       sections: [
@@ -134,15 +134,26 @@ describe("PracticePrepTestPage + section navigation", () => {
       ],
     })
 
-    renderPrepTestRoutes({
-      pathname: "/app/practice/preptest/pt-900",
-      state: { retake: true },
-    })
+    renderPrepTestRoutes("/app/practice/preptest/pt-900?retake=1")
 
     await screen.findByRole("heading", { name: "Test Section" })
-    const startButtons = screen.getAllByRole("button", { name: /Start Section/i })
-    expect(startButtons).toHaveLength(2)
+    expect(screen.getAllByRole("button", { name: /Start Section/i })).toHaveLength(1)
     expect(screen.queryByRole("button", { name: /Continue Section/i })).not.toBeInTheDocument()
+  })
+
+  it("navigates to the section intro during retake", async () => {
+    mockGetPrepTestDetail.mockResolvedValue(mockDetail)
+    mockStartPrepTest.mockResolvedValue({ prepTestSession: { id: "pt-sess" }, detail: mockDetail })
+    mockStartSection.mockResolvedValue({ session: { id: "section-sess-1" } })
+
+    const user = userEvent.setup()
+    const router = renderPrepTestRoutes("/app/practice/preptest/pt-900?retake=1")
+
+    await screen.findByRole("button", { name: /Start Section/i })
+    await user.click(screen.getByRole("button", { name: /Start Section/i }))
+
+    expect(router.state.location.pathname).toBe("/app/practice/preptest/pt-900/section/sec-lr")
+    expect(router.state.location.search).toBe("?sessionId=section-sess-1&retake=1")
   })
 
   it("hides the action button on completed sections during an in-progress attempt", async () => {

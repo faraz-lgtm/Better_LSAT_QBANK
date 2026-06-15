@@ -261,11 +261,13 @@ function clampDifficulty(n: number | null | undefined): 1 | 2 | 3 | 4 | 5 {
   return Math.min(5, Math.max(1, Math.round(n))) as 1 | 2 | 3 | 4 | 5
 }
 
+const QUESTION_SNIPPET_MAX = 64
+
 function snippetFromQuestion(q: PrepTestTreeQuestionRow): string {
   const stem = q.stem_text?.trim() ?? ''
-  if (stem) return stem.length > 120 ? `${stem.slice(0, 117)}…` : stem
+  if (stem) return stem.length > QUESTION_SNIPPET_MAX ? `${stem.slice(0, QUESTION_SNIPPET_MAX - 1)}…` : stem
   const stim = q.stimulus_text?.trim() ?? ''
-  if (stim) return stim.length > 120 ? `${stim.slice(0, 117)}…` : stim
+  if (stim) return stim.length > QUESTION_SNIPPET_MAX ? `${stim.slice(0, QUESTION_SNIPPET_MAX - 1)}…` : stim
   return 'Question'
 }
 
@@ -300,10 +302,18 @@ function sortQuestions(a: PrepTestTreeQuestionRow, b: PrepTestTreeQuestionRow): 
   return (a.question_number ?? 0) - (b.question_number ?? 0)
 }
 
-function passageSnippet(content: string | null | undefined, max = 80): string {
-  const t = (content ?? '').replace(/\s+/g, ' ').trim()
+function passageSnippet(content: string | null | undefined, max = 72): string {
+  const t = (content ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
   if (!t) return ''
-  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+  return t.length > max ? `${t.slice(0, max - 3)}...` : t
+}
+
+function passageSnippetFromQuestions(questions: PrepTestTreeQuestionRow[], max = 72): string {
+  for (const q of questions) {
+    const stim = q.stimulus_text?.trim() ?? ''
+    if (stim) return passageSnippet(stim, max)
+  }
+  return ''
 }
 
 function buildLrPassage(
@@ -354,12 +364,13 @@ function buildRcPassages(
     if (gid) byGroup.delete(gid)
     if (qs.length === 0 && !pass.content?.trim()) continue
     passageIndex += 1
+    const sortedQs = [...qs].sort(sortQuestions)
     out.push({
       id: pass.id,
       label: `P${passageIndex}`,
       title: pass.topic_tag?.trim() || `Passage ${passageIndex}`,
-      snippet: passageSnippet(pass.content),
-      questions: [...qs].sort(sortQuestions).map((q) =>
+      snippet: passageSnippet(pass.content) || passageSnippetFromQuestions(sortedQs),
+      questions: sortedQs.map((q) =>
         mapQuestionNode(q, { ...ctx, passageLabel: `P${passageIndex}` }, statusByQ.get(q.id) ?? 'fresh')
       ),
     })
@@ -367,12 +378,13 @@ function buildRcPassages(
 
   for (const [gid, qs] of byGroup) {
     passageIndex += 1
+    const sortedQs = [...qs].sort(sortQuestions)
     out.push({
       id: `orphan-${section.id}-${gid}`,
       label: `P${passageIndex}`,
       title: `Passage ${passageIndex}`,
-      snippet: '',
-      questions: [...qs].sort(sortQuestions).map((q) =>
+      snippet: passageSnippetFromQuestions(sortedQs),
+      questions: sortedQs.map((q) =>
         mapQuestionNode(q, { ...ctx, passageLabel: `P${passageIndex}` }, statusByQ.get(q.id) ?? 'fresh')
       ),
     })
@@ -380,12 +392,13 @@ function buildRcPassages(
 
   if (ungrouped.length > 0) {
     passageIndex += 1
+    const sortedQs = [...ungrouped].sort(sortQuestions)
     out.push({
       id: `ungrouped-${section.id}`,
       label: `P${passageIndex}`,
       title: `Passage ${passageIndex}`,
-      snippet: '',
-      questions: [...ungrouped].sort(sortQuestions).map((q) =>
+      snippet: passageSnippetFromQuestions(sortedQs),
+      questions: sortedQs.map((q) =>
         mapQuestionNode(q, { ...ctx, passageLabel: `P${passageIndex}` }, statusByQ.get(q.id) ?? 'fresh')
       ),
     })

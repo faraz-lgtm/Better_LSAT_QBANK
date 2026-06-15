@@ -50,6 +50,14 @@ function formatQuestionResultTitle(
   return `${pt}  .  ${section}  .  Q${questionNumber}`
 }
 
+type AnswerEventSlice = {
+  practice_session_id: string
+  question_id: string
+  is_correct: boolean
+  section_type: 'LR' | 'RC' | 'LG' | null
+  created_at: string
+}
+
 function latestByQuestion(
   events: {
     practice_session_id: string
@@ -71,6 +79,58 @@ function latestByQuestion(
     m.set(e.question_id, { is_correct: e.is_correct, section_type: e.section_type })
   }
   return bySession
+}
+
+function latestAnswersAcrossSessions(
+  events: AnswerEventSlice[],
+): Map<string, { is_correct: boolean; section_type: 'LR' | 'RC' | 'LG' | null }> {
+  const sorted = [...events].sort((a, b) => a.created_at.localeCompare(b.created_at))
+  const map = new Map<string, { is_correct: boolean; section_type: 'LR' | 'RC' | 'LG' | null }>()
+  for (const e of sorted) {
+    map.set(e.question_id, { is_correct: e.is_correct, section_type: e.section_type })
+  }
+  return map
+}
+
+function filterSectionSessionsForAttempt<
+  T extends { started_at: string; completed_at: string },
+>(
+  sessions: T[],
+  prepTestStartedAt: string | null,
+  prepTestCompletedAt: string | null,
+): T[] {
+  const startMs = prepTestStartedAt ? Date.parse(prepTestStartedAt) : Number.NaN
+  const endMs = prepTestCompletedAt ? Date.parse(prepTestCompletedAt) : Number.NaN
+  return sessions.filter((s) => {
+    const startedMs = Date.parse(s.started_at)
+    if (!Number.isFinite(startedMs)) return false
+    if (Number.isFinite(startMs) && startedMs < startMs) return false
+    if (Number.isFinite(endMs)) {
+      const completedMs = Date.parse(s.completed_at)
+      if (Number.isFinite(completedMs) && completedMs > endMs + 60_000) return false
+    }
+    return true
+  })
+}
+
+function lrRcMissesFromAnswers(
+  answers: Iterable<{ is_correct: boolean; section_type: 'LR' | 'RC' | 'LG' | null }>,
+): { lrMiss: number; rcMiss: number; hadLr: boolean; hadRc: boolean } {
+  let lrMiss = 0
+  let rcMiss = 0
+  let hadLr = false
+  let hadRc = false
+  for (const v of answers) {
+    if (v.section_type === 'LR') {
+      hadLr = true
+      if (!v.is_correct) lrMiss += 1
+    }
+    if (v.section_type === 'RC') {
+      hadRc = true
+      if (!v.is_correct) rcMiss += 1
+    }
+  }
+  return { lrMiss, rcMiss, hadLr, hadRc }
 }
 
 function priorityLevel(gap: number, attempts: number): 'high' | 'medium' | 'low' {
@@ -140,56 +200,87 @@ function headlineFromQuestionMeta(row: QuestionExplanationMetaRow): {
 export function createAnalyticsService(deps: { repository: AnalyticsRepository }) {
   return {
     async getOverview(userId: string) {
-      const [totalQuestionsAnswered, drillStats, completedPreptests] = await Promise.all([
-        deps.repository.countAnswerEvents(userId),
-        deps.repository.countDrillAnswerEvents(userId),
-        deps.repository.listCompletedPreptests(userId),
-      ])
+      const [totalQuestionsAnswered, drillStats, completedPreptests, allSectionSessions] =
+        await Promise.all([
+          deps.repository.countAnswerEvents(userId),
+          deps.repository.countDrillAnswerEvents(userId),
+          deps.repository.listCompletedPreptests(userId),
+          deps.repository.listCompletedSectionSessions(userId),
+        ])
 
-      const scaledScores = completedPreptests
-        .map((r) => r.scaled_score)
-        .filter((s): s is number => s !== null && s !== undefined)
+      const resolvedScores: { scaled: number; percentile: number | null }[] = []
+      for (const row of completedPreptests) {
+        let scaled = row.scaled_score
+        let percentile = row.percentile
+        if (scaled == null && row.raw_score != null && row.prep_test_id) {
+          const scoreRow = await deps.repository.getScoreRowForRaw(row.prep_test_id, row.raw_score)
+          if (scoreRow?.scaled_score != null) {
+            scaled = scoreRow.scaled_score
+            percentile = scoreRow.percentile
+          }
+        }
+        if (scaled != null) {
+          resolvedScores.push({ scaled, percentile })
+        }
+      }
+
+      if (resolvedScores.length === 0) {
+        const byPrepTest = new Map<string, typeof allSectionSessions>()
+        for (const session of allSectionSessions) {
+          if (!session.prep_test_id) continue
+          const list = byPrepTest.get(session.prep_test_id) ?? []
+          list.push(session)
+          byPrepTest.set(session.prep_test_id, list)
+        }
+        for (const [prepTestId, sessions] of byPrepTest) {
+          const rawTotal = sessions.reduce((sum, s) => sum + (s.raw_score ?? 0), 0)
+          if (rawTotal <= 0) continue
+          const scoreRow = await deps.repository.getScoreRowForRaw(prepTestId, rawTotal)
+          if (scoreRow?.scaled_score != null) {
+            resolvedScores.push({ scaled: scoreRow.scaled_score, percentile: scoreRow.percentile })
+          }
+        }
+      }
+
+      const scaledScores = resolvedScores.map((r) => r.scaled)
       const bestScaledScore = scaledScores.length ? Math.max(...scaledScores) : null
       const averageScaledScore = scaledScores.length
         ? round1(scaledScores.reduce((a, b) => a + b, 0) / scaledScores.length)
         : null
 
-      const percentiles = completedPreptests
+      const bestResolved = resolvedScores.length
+        ? resolvedScores.reduce((best, cur) => (cur.scaled > best.scaled ? cur : best))
+        : null
+      const bestPercentile = bestResolved?.percentile ?? null
+      const percentileValues = resolvedScores
         .map((r) => r.percentile)
         .filter((p): p is number => p !== null && p !== undefined)
-      const bestPercentile = percentiles.length ? Math.max(...percentiles) : null
-      const averagePercentile = percentiles.length
-        ? round1(percentiles.reduce((a, b) => a + b, 0) / percentiles.length)
+      const averagePercentile = percentileValues.length
+        ? round1(percentileValues.reduce((a, b) => a + b, 0) / percentileValues.length)
         : null
 
       const drillAccuracyPct =
         drillStats.total > 0 ? round1((100 * drillStats.correct) / drillStats.total) : null
 
-      const ptIds = completedPreptests.map((r) => r.id)
-      const ptEvents = ptIds.length ? await deps.repository.listAnswerEventsForSessions(ptIds, userId) : []
-      const bySession = latestByQuestion(ptEvents)
-
       let lrSum = 0
       let rcSum = 0
       let ptWithLr = 0
       let ptWithRc = 0
+
       for (const row of completedPreptests) {
-        const m = bySession.get(row.id)
-        if (!m) continue
-        let lrMiss = 0
-        let rcMiss = 0
-        let hadLr = false
-        let hadRc = false
-        for (const v of m.values()) {
-          if (v.section_type === 'LR') {
-            hadLr = true
-            if (!v.is_correct) lrMiss += 1
-          }
-          if (v.section_type === 'RC') {
-            hadRc = true
-            if (!v.is_correct) rcMiss += 1
-          }
-        }
+        if (!row.prep_test_id) continue
+        const sectionSessions = allSectionSessions.filter((s) => s.prep_test_id === row.prep_test_id)
+        const attemptSections = filterSectionSessionsForAttempt(
+          sectionSessions,
+          row.started_at,
+          row.completed_at,
+        )
+        const sessionIds = [row.id, ...attemptSections.map((s) => s.id)]
+        const events = sessionIds.length
+          ? await deps.repository.listAnswerEventsForSessions(sessionIds, userId)
+          : []
+        const answers = latestAnswersAcrossSessions(events)
+        const { lrMiss, rcMiss, hadLr, hadRc } = lrRcMissesFromAnswers(answers.values())
         if (hadLr) {
           lrSum += lrMiss
           ptWithLr += 1
@@ -197,6 +288,63 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
         if (hadRc) {
           rcSum += rcMiss
           ptWithRc += 1
+        }
+      }
+
+      if (ptWithLr === 0 && ptWithRc === 0 && allSectionSessions.length > 0) {
+        const sectionIds = allSectionSessions.map((s) => s.id)
+        const sectionEvents = sectionIds.length
+          ? await deps.repository.listAnswerEventsForSessions(sectionIds, userId)
+          : []
+        const eventsBySession = latestByQuestion(sectionEvents)
+        for (const session of allSectionSessions) {
+          const sectionType =
+            typeof session.metadata.sectionType === 'string' ? session.metadata.sectionType : null
+          const answers = eventsBySession.get(session.id)
+          if (answers && answers.size > 0) {
+            const { lrMiss, rcMiss, hadLr, hadRc } = lrRcMissesFromAnswers(answers.values())
+            if (hadLr) {
+              lrSum += lrMiss
+              ptWithLr += 1
+            } else if (sectionType === 'LR') {
+              const total = Array.isArray(session.metadata.questionIds)
+                ? session.metadata.questionIds.length
+                : 0
+              const correct = session.raw_score ?? 0
+              if (total > 0) {
+                lrSum += total - correct
+                ptWithLr += 1
+              }
+            }
+            if (hadRc) {
+              rcSum += rcMiss
+              ptWithRc += 1
+            } else if (sectionType === 'RC') {
+              const total = Array.isArray(session.metadata.questionIds)
+                ? session.metadata.questionIds.length
+                : 0
+              const correct = session.raw_score ?? 0
+              if (total > 0) {
+                rcSum += total - correct
+                ptWithRc += 1
+              }
+            }
+          } else {
+            const total = Array.isArray(session.metadata.questionIds)
+              ? session.metadata.questionIds.length
+              : 0
+            const correct = session.raw_score ?? 0
+            if (total > 0 && (sectionType === 'LR' || sectionType === 'RC')) {
+              const missed = total - correct
+              if (sectionType === 'LR') {
+                lrSum += missed
+                ptWithLr += 1
+              } else {
+                rcSum += missed
+                ptWithRc += 1
+              }
+            }
+          }
         }
       }
 
@@ -219,23 +367,47 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
 
     async getTrajectory(userId: string) {
       const rows = await deps.repository.listCompletedPreptests(userId)
-      return rows.map((r: CompletedPreptestRow) => {
+      const points = []
+      for (const r of rows) {
+        let scaledScore = r.scaled_score
+        let percentile = r.percentile
+        if (scaledScore == null && r.raw_score != null && r.prep_test_id) {
+          const scoreRow = await deps.repository.getScoreRowForRaw(r.prep_test_id, r.raw_score)
+          if (scoreRow?.scaled_score != null) {
+            scaledScore = scoreRow.scaled_score
+            percentile = scoreRow.percentile
+          }
+        }
+        let blindReviewScaledScore = r.blind_review_scaled_score
+        let blindReviewPercentile = r.blind_review_percentile
+        if (
+          blindReviewScaledScore == null &&
+          r.blind_review_raw_score != null &&
+          r.prep_test_id
+        ) {
+          const brRow = await deps.repository.getScoreRowForRaw(r.prep_test_id, r.blind_review_raw_score)
+          if (brRow?.scaled_score != null) {
+            blindReviewScaledScore = brRow.scaled_score
+            blindReviewPercentile = brRow.percentile
+          }
+        }
         const apt = relOne(r.admin_prep_tests)
-        return {
+        points.push({
           sessionId: r.id,
           prepTestTitle: apt?.title ?? 'PrepTest',
           moduleId: apt?.module_id ?? null,
           rawScore: r.raw_score,
-          scaledScore: r.scaled_score,
-          percentile: r.percentile,
+          scaledScore,
+          percentile,
           regularRawScore: r.raw_score,
-          regularScaledScore: r.scaled_score,
+          regularScaledScore: scaledScore,
           blindReviewRawScore: r.blind_review_raw_score,
-          blindReviewScaledScore: r.blind_review_scaled_score,
-          blindReviewPercentile: r.blind_review_percentile,
+          blindReviewScaledScore,
+          blindReviewPercentile,
           completedAt: r.completed_at,
-        }
-      })
+        })
+      }
+      return points
     },
 
     async getPriorities(userId: string) {

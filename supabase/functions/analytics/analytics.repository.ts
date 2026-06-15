@@ -13,6 +13,7 @@ export function createServiceRoleClient(): SupabaseClient {
 
 export type CompletedPreptestRow = {
   id: string
+  started_at: string
   completed_at: string
   raw_score: number | null
   scaled_score: number | null
@@ -123,6 +124,7 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         .select(
           `
           id,
+          started_at,
           completed_at,
           raw_score,
           scaled_score,
@@ -254,13 +256,62 @@ export function createAnalyticsRepository(client: SupabaseClient) {
     async listSectionSessionsForPrepTest(userId: string, prepTestId: string) {
       const { data, error } = await client
         .from('practice_sessions')
-        .select('id, section_id, completed_at, raw_score')
+        .select('id, section_id, started_at, completed_at, raw_score')
         .eq('user_id', userId)
         .eq('prep_test_id', prepTestId)
         .eq('kind', 'SECTION')
         .not('completed_at', 'is', null)
       if (error) throw error
-      return (data as { id: string; section_id: string | null; completed_at: string; raw_score: number | null }[]) ?? []
+      return (data as {
+        id: string
+        section_id: string | null
+        started_at: string
+        completed_at: string
+        raw_score: number | null
+      }[]) ?? []
+    },
+
+    async listCompletedSectionSessions(userId: string) {
+      const { data, error } = await client
+        .from('practice_sessions')
+        .select('id, prep_test_id, section_id, started_at, completed_at, raw_score, metadata')
+        .eq('user_id', userId)
+        .eq('kind', 'SECTION')
+        .not('completed_at', 'is', null)
+        .order('completed_at', { ascending: true })
+      if (error) throw error
+      return (data as {
+        id: string
+        prep_test_id: string | null
+        section_id: string | null
+        started_at: string
+        completed_at: string
+        raw_score: number | null
+        metadata: Record<string, unknown>
+      }[]) ?? []
+    },
+
+    async getScoreRowForRaw(prepTestId: string, rawScore: number): Promise<{
+      scaled_score: number | null
+      percentile: number | null
+    } | null> {
+      const { data: table, error: tErr } = await client
+        .from('admin_score_tables')
+        .select('id')
+        .eq('prep_test_id', prepTestId)
+        .maybeSingle()
+      if (tErr) throw tErr
+      const tableRow = table as { id: string } | null
+      if (!tableRow) return null
+
+      const { data: row, error } = await client
+        .from('admin_score_rows')
+        .select('scaled_score, percentile')
+        .eq('score_table_id', tableRow.id)
+        .eq('raw_score', rawScore)
+        .maybeSingle()
+      if (error) throw error
+      return (row as { scaled_score: number | null; percentile: number | null } | null) ?? null
     },
 
     async listPrepTestQuestionsWithMeta(prepTestId: string) {
