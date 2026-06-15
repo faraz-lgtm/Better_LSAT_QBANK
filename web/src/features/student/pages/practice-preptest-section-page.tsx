@@ -138,7 +138,6 @@ function PracticePrepTestSectionPage() {
 
   function handleGoToQuestions() {
     if (!sessionId) return
-    const sessionPath = `/app/practice/sections/session/${encodeURIComponent(sessionId)}`
     navigate(sectionSessionHref(sessionId, { prepTestId, retake: isRetakeAttempt, started: true }))
   }
 
