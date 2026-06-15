@@ -316,6 +316,23 @@ export type BlindReviewPoolItem = {
   blindReviewScaledScore: number | null
   completedAt: string | null
   blindReviewCompletedAt: string | null
+  prepTestSessionId: string | null
+  attempts: PrepTestPoolAttempt[]
+}
+
+export type BlindReviewPoolStatusCounts = {
+  all: number
+  eligible: number
+  in_progress: number
+  completed: number
+}
+
+export type BlindReviewPoolListResult = {
+  prepTests: BlindReviewPoolItem[]
+  total: number
+  page: number
+  pageSize: number
+  statusCounts: BlindReviewPoolStatusCounts
 }
 
 export type BlindReviewDetailSection = PrepTestDetailSection & {
@@ -361,6 +378,22 @@ function prepTestSessionsFrom(sessions: PracticeSessionRow[]): PracticeSessionRo
   return sessions.filter((s) => s.kind === 'PREPTEST')
 }
 
+function sortedPrepTestSessions(sessions: PracticeSessionRow[]): PracticeSessionRow[] {
+  return prepTestSessionsFrom(sessions).sort(
+    (a, b) => Date.parse(b.started_at) - Date.parse(a.started_at),
+  )
+}
+
+/** Newest completed PrepTest session still awaiting blind review, or null if the latest attempt is fully done. */
+function prepTestSessionAwaitingBlindReview(sessions: PracticeSessionRow[]): PracticeSessionRow | null {
+  const prepTests = sortedPrepTestSessions(sessions)
+  const newest = prepTests[0]
+  if (newest?.completed_at && isPrepTestFullyComplete(newest)) {
+    return null
+  }
+  return prepTests.find((s) => s.completed_at && !isPrepTestFullyComplete(s)) ?? null
+}
+
 function isPrepTestFullyComplete(session: PracticeSessionRow): boolean {
   if (!session.completed_at) return false
   if (session.blind_review_completed_at) return true
@@ -376,11 +409,11 @@ function prepTestBlindReviewStatus(
 }
 
 function poolAttemptsFromSessions(sessions: PracticeSessionRow[]): PrepTestPoolAttempt[] {
-  const fullyComplete = prepTestSessionsFrom(sessions).filter(
-    (s) => s.completed_at && isPrepTestFullyComplete(s),
-  )
-  const total = fullyComplete.length
-  return fullyComplete.map((s, idx) => ({
+  const completed = prepTestSessionsFrom(sessions)
+    .filter((s) => s.completed_at)
+    .sort((a, b) => Date.parse(b.completed_at!) - Date.parse(a.completed_at!))
+  const total = completed.length
+  return completed.map((s, idx) => ({
     sessionId: s.id,
     completedAt: s.completed_at!,
     scaledScore: s.scaled_score,
@@ -400,9 +433,44 @@ function derivePrepTestStatus(
   completedAt: string | null
   openPrepTestSessionId: string | null
 } {
-  const prepTests = prepTestSessionsFrom(sessions)
+  const prepTests = sortedPrepTestSessions(sessions)
+  const newest = prepTests[0] ?? null
 
-  const awaitingBlindReview = prepTests.find((s) => s.completed_at && !isPrepTestFullyComplete(s))
+  if (newest?.completed_at && isPrepTestFullyComplete(newest)) {
+    return {
+      status: 'completed',
+      scaledScore: newest.scaled_score,
+      blindReviewScaledScore: newest.blind_review_scaled_score,
+      blindReviewStatus: null,
+      completedAt: newest.completed_at,
+      openPrepTestSessionId: newest.id,
+    }
+  }
+
+  const newestOpen = prepTests.find((s) => !s.completed_at) ?? null
+  const awaitingBlindReview = prepTests.find((s) => s.completed_at && !isPrepTestFullyComplete(s)) ?? null
+
+  if (awaitingBlindReview && newestOpen) {
+    if (Date.parse(awaitingBlindReview.started_at) < Date.parse(newestOpen.started_at)) {
+      return {
+        status: 'in_progress',
+        scaledScore: awaitingBlindReview.scaled_score,
+        blindReviewScaledScore: awaitingBlindReview.blind_review_scaled_score,
+        blindReviewStatus: prepTestBlindReviewStatus(awaitingBlindReview),
+        completedAt: null,
+        openPrepTestSessionId: awaitingBlindReview.id,
+      }
+    }
+    return {
+      status: 'in_progress',
+      scaledScore: null,
+      blindReviewScaledScore: null,
+      blindReviewStatus: null,
+      completedAt: null,
+      openPrepTestSessionId: newestOpen.id,
+    }
+  }
+
   if (awaitingBlindReview) {
     return {
       status: 'in_progress',
@@ -414,27 +482,14 @@ function derivePrepTestStatus(
     }
   }
 
-  const openPrepTest = prepTests.find((s) => !s.completed_at)
-  if (openPrepTest) {
+  if (newestOpen) {
     return {
       status: 'in_progress',
       scaledScore: null,
       blindReviewScaledScore: null,
       blindReviewStatus: null,
       completedAt: null,
-      openPrepTestSessionId: openPrepTest.id,
-    }
-  }
-
-  const latestFullyComplete = prepTests.find((s) => s.completed_at && isPrepTestFullyComplete(s))
-  if (latestFullyComplete) {
-    return {
-      status: 'completed',
-      scaledScore: latestFullyComplete.scaled_score,
-      blindReviewScaledScore: latestFullyComplete.blind_review_scaled_score,
-      blindReviewStatus: null,
-      completedAt: latestFullyComplete.completed_at,
-      openPrepTestSessionId: null,
+      openPrepTestSessionId: newestOpen.id,
     }
   }
 
@@ -485,6 +540,7 @@ function derivePrepTestStatus(
 function sectionSessionsForPrepTestAttempt(
   sessions: PracticeSessionRow[],
   prepTestSession: PracticeSessionRow | null,
+  nextPrepTestSession: PracticeSessionRow | null = null,
 ): PracticeSessionRow[] {
   const sectionSessions = sessions.filter((s) => s.kind === 'SECTION' && s.section_id)
   if (!prepTestSession?.started_at) return sectionSessions
@@ -492,10 +548,146 @@ function sectionSessionsForPrepTestAttempt(
   const attemptStartedAtMs = Date.parse(prepTestSession.started_at)
   if (!Number.isFinite(attemptStartedAtMs)) return sectionSessions
 
+  const nextStartedAtMs = nextPrepTestSession?.started_at
+    ? Date.parse(nextPrepTestSession.started_at)
+    : null
+
   return sectionSessions.filter((s) => {
     const startedAtMs = Date.parse(s.started_at)
-    return Number.isFinite(startedAtMs) && startedAtMs >= attemptStartedAtMs
+    if (!Number.isFinite(startedAtMs) || startedAtMs < attemptStartedAtMs) return false
+    if (
+      nextStartedAtMs != null &&
+      Number.isFinite(nextStartedAtMs) &&
+      startedAtMs >= nextStartedAtMs
+    ) {
+      return false
+    }
+    return true
   })
+}
+
+function latestSectionSessionPerId(
+  sectionSessions: PracticeSessionRow[],
+): Map<string, PracticeSessionRow> {
+  const bySectionId = new Map<string, PracticeSessionRow>()
+  for (const s of sectionSessions) {
+    if (!s.section_id) continue
+    const existing = bySectionId.get(s.section_id)
+    if (!existing || Date.parse(s.started_at) > Date.parse(existing.started_at)) {
+      bySectionId.set(s.section_id, s)
+    }
+  }
+  return bySectionId
+}
+
+function rawScoreFromPrepTestAttempt(
+  sessions: PracticeSessionRow[],
+  prepTestSession: PracticeSessionRow,
+  nextPrepTestSession: PracticeSessionRow | null,
+  practiceableSectionIds: string[],
+): number | null {
+  const attemptSections = sectionSessionsForPrepTestAttempt(
+    sessions,
+    prepTestSession,
+    nextPrepTestSession,
+  ).filter(
+    (s) => s.completed_at && s.section_id && practiceableSectionIds.includes(s.section_id),
+  )
+  const bySectionId = latestSectionSessionPerId(attemptSections)
+  if (bySectionId.size === 0) return null
+
+  let raw = 0
+  for (const s of bySectionId.values()) {
+    if (typeof s.raw_score !== 'number') return null
+    raw += s.raw_score
+  }
+  return raw
+}
+
+async function enrichPoolItemAttemptScores(
+  repository: PracticeRepository,
+  prepTestId: string,
+  practiceableSectionIds: string[],
+  sessions: PracticeSessionRow[],
+  item: PrepTestPoolItem,
+): Promise<PrepTestPoolItem> {
+  const completedPrepTests = sortedPrepTestSessions(sessions).filter((s) => s.completed_at)
+  let attempts = item.attempts
+
+  if (attempts.length === 0 && item.status === 'completed' && item.completedAt) {
+    const prepSession = completedPrepTests[0]
+    if (prepSession) {
+      attempts = [
+        {
+          sessionId: prepSession.id,
+          completedAt: prepSession.completed_at!,
+          scaledScore: prepSession.scaled_score,
+          blindReviewScaledScore: prepSession.blind_review_scaled_score,
+          attemptNumber: 1,
+        },
+      ]
+    } else {
+      attempts = [
+        {
+          sessionId: item.openPrepTestSessionId ?? item.id,
+          completedAt: item.completedAt,
+          scaledScore: item.scaledScore,
+          blindReviewScaledScore: item.blindReviewScaledScore,
+          attemptNumber: 1,
+        },
+      ]
+    }
+  }
+
+  const enrichedAttempts = await Promise.all(
+    attempts.map(async (attempt) => {
+      const prepSession = sessions.find((s) => s.id === attempt.sessionId && s.kind === 'PREPTEST')
+      if (!prepSession?.completed_at) return attempt
+
+      let scaledScore = attempt.scaledScore
+      let blindReviewScaledScore = attempt.blindReviewScaledScore
+
+      const nextPrepTest =
+        completedPrepTests.find(
+          (p) => Date.parse(p.started_at) > Date.parse(prepSession.started_at),
+        ) ?? null
+
+      if (scaledScore == null) {
+        let raw = prepSession.raw_score
+        if (raw == null) {
+          raw = rawScoreFromPrepTestAttempt(
+            sessions,
+            prepSession,
+            nextPrepTest,
+            practiceableSectionIds,
+          )
+        }
+        if (raw != null) {
+          const scoreRow = await repository.getScoreRowForRaw(prepTestId, raw)
+          scaledScore = scoreRow?.scaled_score ?? null
+        }
+      }
+
+      if (blindReviewScaledScore == null && prepSession.blind_review_raw_score != null) {
+        const scoreRow = await repository.getScoreRowForRaw(
+          prepTestId,
+          prepSession.blind_review_raw_score,
+        )
+        blindReviewScaledScore = scoreRow?.scaled_score ?? null
+      } else if (blindReviewScaledScore == null && prepSession.blind_review_scaled_score != null) {
+        blindReviewScaledScore = prepSession.blind_review_scaled_score
+      }
+
+      return { ...attempt, scaledScore, blindReviewScaledScore }
+    }),
+  )
+
+  const newestAttempt = enrichedAttempts[0]
+  const scaledScore = item.scaledScore ?? newestAttempt?.scaledScore ?? null
+  const blindReviewScaledScore =
+    item.blindReviewScaledScore ?? newestAttempt?.blindReviewScaledScore ?? null
+
+  return { ...item, attempts: enrichedAttempts, scaledScore, blindReviewScaledScore }
 }
 
 function buildPrepTestDetail(
@@ -585,17 +777,23 @@ function blindReviewStateFromSessions(sessions: PracticeSessionRow[]): {
   status: BlindReviewStatus | null
   prepTestSession: PracticeSessionRow | null
 } {
-  const completedPrepTest = sessions.find((s) => s.kind === 'PREPTEST' && s.completed_at)
-  if (!completedPrepTest) {
+  const prepTests = sortedPrepTestSessions(sessions)
+  const newest = prepTests[0]
+  if (newest?.completed_at && isPrepTestFullyComplete(newest)) {
+    if (newest.blind_review_completed_at) {
+      return { status: 'completed', prepTestSession: newest }
+    }
     return { status: null, prepTestSession: null }
   }
-  if (completedPrepTest.blind_review_completed_at) {
-    return { status: 'completed', prepTestSession: completedPrepTest }
+
+  const awaitingBlindReview = prepTestSessionAwaitingBlindReview(sessions)
+  if (!awaitingBlindReview) {
+    return { status: null, prepTestSession: null }
   }
-  if (completedPrepTest.metadata.blindReviewActive === true) {
-    return { status: 'in_progress', prepTestSession: completedPrepTest }
+  if (awaitingBlindReview.metadata.blindReviewActive === true) {
+    return { status: 'in_progress', prepTestSession: awaitingBlindReview }
   }
-  return { status: 'eligible', prepTestSession: completedPrepTest }
+  return { status: 'eligible', prepTestSession: awaitingBlindReview }
 }
 
 function blindReviewPoolItemFromRow(
@@ -624,6 +822,8 @@ function blindReviewPoolItemFromRow(
     blindReviewScaledScore: prepTestSession.blind_review_scaled_score,
     completedAt: prepTestSession.completed_at,
     blindReviewCompletedAt: prepTestSession.blind_review_completed_at,
+    attempts: poolAttemptsFromSessions(sessions),
+    prepTestSessionId: prepTestSession.id,
   }
 }
 
@@ -697,6 +897,13 @@ function buildBlindReviewDetail(
 }
 
 function prepTestNumberSortValue(item: PrepTestPoolItem): number {
+  const n = item.prepTestNumber ? Number.parseInt(item.prepTestNumber, 10) : NaN
+  if (Number.isFinite(n)) return n
+  const fromModule = /^LSAC(\d+)$/i.exec(item.moduleId)?.[1]
+  return fromModule ? Number.parseInt(fromModule, 10) : 0
+}
+
+function blindReviewPoolSortValue(item: BlindReviewPoolItem): number {
   const n = item.prepTestNumber ? Number.parseInt(item.prepTestNumber, 10) : NaN
   if (Number.isFinite(n)) return n
   const fromModule = /^LSAC(\d+)$/i.exec(item.moduleId)?.[1]
@@ -868,12 +1075,13 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           throw new PracticeValidationError('Blind review answers require a section session tied to a PrepTest')
         }
         const ptSessions = await deps.repository.listUserSessionsForPrepTest(userId, session.prep_test_id)
-        const prepTestSession = ptSessions.find((s) => s.kind === 'PREPTEST' && s.completed_at)
+        const prepTestSession = prepTestSessionAwaitingBlindReview(ptSessions)
         if (!prepTestSession) {
+          const newest = sortedPrepTestSessions(ptSessions)[0]
+          if (newest?.blind_review_completed_at) {
+            throw new PracticeValidationError('Blind review is already completed for this PrepTest')
+          }
           throw new PracticeValidationError('Complete the PrepTest before blind review')
-        }
-        if (prepTestSession.blind_review_completed_at) {
-          throw new PracticeValidationError('Blind review is already completed for this PrepTest')
         }
         const meta = prepTestSession.metadata
         if (meta.blindReviewActive !== true) {
@@ -1454,6 +1662,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           : null
 
       const rows = await deps.repository.listPrepTestPoolRows()
+      const rowsById = new Map(rows.map((row) => [row.id, row]))
       const allSessions = await deps.repository.listUserSessionsForPrepTests(userId)
       const sessionsByPrepTestId = groupSessionsByPrepTestId(allSessions)
 
@@ -1479,7 +1688,23 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       const total = sorted.length
       const start = (page - 1) * pageSize
-      const prepTests = sorted.slice(start, start + pageSize)
+      const pageItems = sorted.slice(start, start + pageSize)
+      const prepTests = await Promise.all(
+        pageItems.map((item) => {
+          const row = rowsById.get(item.id)
+          const sessions = sessionsByPrepTestId.get(item.id) ?? []
+          const practiceableIds = row
+            ? practiceableSectionsFromRow(row.sections).map((s) => s.id)
+            : []
+          return enrichPoolItemAttemptScores(
+            deps.repository,
+            item.id,
+            practiceableIds,
+            sessions,
+            item,
+          )
+        }),
+      )
 
       return { prepTests, total, page, pageSize, statusCounts }
     },
@@ -1569,16 +1794,22 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const practiceableIds = practiceableSectionsFromRow(row.sections).map((s) => s.id)
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
 
-      const completedSectionSessions = sessions.filter(
-        (s) => s.kind === 'SECTION' && s.completed_at && s.section_id && practiceableIds.includes(s.section_id),
-      )
+      let prepTestSession =
+        sessions.find((s) => s.kind === 'PREPTEST' && !s.completed_at) ??
+        sortedPrepTestSessions(sessions)[0] ??
+        null
 
-      if (completedSectionSessions.length < practiceableIds.length) {
+      const completedSectionSessions = sectionSessionsForPrepTestAttempt(sessions, prepTestSession).filter(
+        (s) => s.completed_at && s.section_id && practiceableIds.includes(s.section_id),
+      )
+      const bySectionId = latestSectionSessionPerId(completedSectionSessions)
+
+      if (bySectionId.size < practiceableIds.length) {
         throw new PracticeValidationError('Complete all practiceable sections before finishing the PrepTest')
       }
 
       let rawScore = 0
-      for (const secSession of completedSectionSessions) {
+      for (const secSession of bySectionId.values()) {
         if (typeof secSession.raw_score === 'number') {
           rawScore += secSession.raw_score
         } else {
@@ -1589,11 +1820,6 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           }
         }
       }
-
-      let prepTestSession =
-        sessions.find((s) => s.kind === 'PREPTEST' && !s.completed_at) ??
-        sessions.find((s) => s.kind === 'PREPTEST') ??
-        null
 
       if (!prepTestSession) {
         const practiceable = practiceableSectionsFromRow(row.sections)
@@ -1637,16 +1863,45 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
     async listBlindReviewPool(
       userId: string,
-      _body: Record<string, unknown>,
-    ): Promise<{ prepTests: BlindReviewPoolItem[] }> {
+      body: { filter?: unknown; page?: unknown; pageSize?: unknown; sort?: unknown },
+    ): Promise<BlindReviewPoolListResult> {
+      const page = Math.max(1, Math.floor(typeof body.page === 'number' ? body.page : 1))
+      const pageSize = Math.min(50, Math.max(1, Math.floor(typeof body.pageSize === 'number' ? body.pageSize : 5)))
+      const sort = body.sort === 'oldest' ? 'oldest' : 'newest'
+      const filter =
+        body.filter === 'eligible' || body.filter === 'in_progress' || body.filter === 'completed'
+          ? body.filter
+          : null
+
       const rows = await deps.repository.listPrepTestPoolRows()
+      const allSessions = await deps.repository.listUserSessionsForPrepTests(userId)
+      const sessionsByPrepTestId = groupSessionsByPrepTestId(allSessions)
+
       const items: BlindReviewPoolItem[] = []
       for (const row of rows) {
-        const sessions = await deps.repository.listUserSessionsForPrepTest(userId, row.id)
+        const sessions = sessionsByPrepTestId.get(row.id) ?? []
         const item = blindReviewPoolItemFromRow(row, sessions)
         if (item) items.push(item)
       }
-      return { prepTests: items }
+
+      const statusCounts: BlindReviewPoolStatusCounts = {
+        all: items.length,
+        eligible: items.filter((i) => i.status === 'eligible').length,
+        in_progress: items.filter((i) => i.status === 'in_progress').length,
+        completed: items.filter((i) => i.status === 'completed').length,
+      }
+
+      const filtered = filter ? items.filter((i) => i.status === filter) : items
+      const sorted = [...filtered].sort((a, b) => {
+        const diff = blindReviewPoolSortValue(a) - blindReviewPoolSortValue(b)
+        return sort === 'newest' ? -diff : diff
+      })
+
+      const total = sorted.length
+      const start = (page - 1) * pageSize
+      const prepTests = sorted.slice(start, start + pageSize)
+
+      return { prepTests, total, page, pageSize, statusCounts }
     },
 
     async getBlindReviewDetail(
@@ -1676,9 +1931,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (!prepTestId) throw new PracticeValidationError('prepTestId is required')
 
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
-      const prepTestSession = prepTestSessionsFrom(sessions).find(
-        (s) => s.completed_at && !isPrepTestFullyComplete(s),
-      )
+      const prepTestSession = prepTestSessionAwaitingBlindReview(sessions)
       if (!prepTestSession) {
         throw new PracticeValidationError('No PrepTest awaiting blind review')
       }
@@ -1701,14 +1954,13 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (!prepTestId) throw new PracticeValidationError('prepTestId is required')
 
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
-      const prepTestSession =
-        sessions.find((s) => s.kind === 'PREPTEST' && s.completed_at) ??
-        sessions.find((s) => s.kind === 'PREPTEST')
-      if (!prepTestSession?.completed_at) {
+      const prepTestSession = prepTestSessionAwaitingBlindReview(sessions)
+      if (!prepTestSession) {
+        const newest = sortedPrepTestSessions(sessions)[0]
+        if (newest?.blind_review_completed_at) {
+          throw new PracticeValidationError('Blind review is already completed for this PrepTest')
+        }
         throw new PracticeValidationError('Complete the PrepTest before starting blind review')
-      }
-      if (prepTestSession.blind_review_completed_at) {
-        throw new PracticeValidationError('Blind review is already completed for this PrepTest')
       }
 
       const sessionRow = await deps.repository.updateSession(prepTestSession.id, userId, {
@@ -1735,12 +1987,13 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (!prepTestId) throw new PracticeValidationError('prepTestId or sessionId is required')
 
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
-      const prepTestSession = sessions.find((s) => s.kind === 'PREPTEST' && s.completed_at)
+      const prepTestSession = prepTestSessionAwaitingBlindReview(sessions)
       if (!prepTestSession) {
+        const newest = sortedPrepTestSessions(sessions)[0]
+        if (newest?.blind_review_completed_at) {
+          throw new PracticeValidationError('Blind review is already completed for this PrepTest')
+        }
         throw new PracticeValidationError('No completed PrepTest session found')
-      }
-      if (prepTestSession.blind_review_completed_at) {
-        throw new PracticeValidationError('Blind review is already completed for this PrepTest')
       }
 
       const sectionSessions = sessions.filter((s) => s.kind === 'SECTION' && s.completed_at && s.section_id)

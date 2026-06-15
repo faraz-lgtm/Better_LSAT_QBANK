@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom"
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -24,6 +24,12 @@ import {
   PREPTEST_SECTION_BREAK_SECONDS,
   writeStoredSectionBreak,
 } from "@/features/student/preptests/preptest-section-break"
+import {
+  isRetakePrepTestAttempt,
+  prepTestHubHref,
+  prepTestSectionIntroHref,
+  sectionSessionHref,
+} from "@/features/student/preptests/preptest-hub-navigation"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { ChevronDown, ChevronRight, Timer, X } from "lucide-react"
 
@@ -171,20 +177,15 @@ function sectionQuestionsLine(count: number): string {
 function PrepTestSectionRow({
   row,
   starting,
-  isRetakeAttempt,
   onStart,
 }: {
   row: PrepTestDetailSection
   starting: boolean
-  isRetakeAttempt: boolean
   onStart: () => void
 }) {
   const breakLocked = row.onBreak
-  const canContinueSection = !isRetakeAttempt && Boolean(row.activeSectionSessionId)
-  const showStartButton =
-    row.practiceable &&
-    !row.completed &&
-    (isRetakeAttempt || row.unlocked || breakLocked)
+  const canContinueSection = Boolean(row.activeSectionSessionId)
+  const showStartButton = row.practiceable && !row.completed && (row.unlocked || breakLocked)
   const emphasized = row.practiceable
 
   return (
@@ -232,7 +233,9 @@ function PrepTestSectionRow({
 function PracticePrepTestPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const { testId: testIdParam } = useParams<{ testId: string }>()
+  const isRetakeAttempt = isRetakePrepTestAttempt(searchParams)
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
 
   const [detail, setDetail] = useState<PrepTestDetailResponse | null>(null)
@@ -271,12 +274,20 @@ function PracticePrepTestPage() {
   }, [practiceApi, testIdParam])
 
   useEffect(() => {
+    const stateRetake = (location.state as { retake?: boolean } | null)?.retake === true
+    if (stateRetake && testIdParam && !isRetakeAttempt) {
+      clearStoredSectionBreak(testIdParam)
+      navigate(prepTestHubHref(testIdParam, { retake: true }), { replace: true, state: null })
+    }
+  }, [isRetakeAttempt, location.state, navigate, testIdParam])
+
+  useEffect(() => {
     const justCompleted = (location.state as { sectionJustCompleted?: string } | null)?.sectionJustCompleted
     if (typeof justCompleted !== "string" || !testIdParam) return
     writeStoredSectionBreak(testIdParam, justCompleted)
     setDetail((prev) => (prev ? normalizePrepTestDetail(prev, { prepTestId: testIdParam }) : prev))
-    navigate(location.pathname, { replace: true, state: null })
-  }, [location.pathname, location.state, navigate, testIdParam])
+    navigate(prepTestHubHref(testIdParam, { retake: isRetakeAttempt }), { replace: true, state: null })
+  }, [isRetakeAttempt, location.pathname, location.state, navigate, testIdParam])
 
   useEffect(() => {
     void load()
@@ -305,12 +316,10 @@ function PracticePrepTestPage() {
       }
       const out = await practiceApi.startSection({ sectionId, timing: "35", showAnswers: "end" })
       if (testIdParam) {
-        navigate(
-          `/app/practice/preptest/${encodeURIComponent(testIdParam)}/section/${encodeURIComponent(sectionId)}?sessionId=${encodeURIComponent(out.session.id)}`,
-        )
+        navigate(prepTestSectionIntroHref(testIdParam, sectionId, out.session.id, { retake: isRetakeAttempt }))
         return
       }
-      navigate(`/app/practice/sections/session/${out.session.id}`)
+      navigate(sectionSessionHref(out.session.id))
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to start section")
     } finally {
@@ -319,20 +328,24 @@ function PracticePrepTestPage() {
   }
 
   function openPrepTestSection(row: PrepTestDetailSection) {
-    if (!isRetakeAttempt && row.activeSectionSessionId && testIdParam) {
+    if (row.activeSectionSessionId && testIdParam) {
       if (row.answeredCount > 0) {
         navigate(
-          `/app/practice/sections/session/${row.activeSectionSessionId}?prepTestId=${encodeURIComponent(testIdParam)}&started=1`,
+          sectionSessionHref(row.activeSectionSessionId, {
+            prepTestId: testIdParam,
+            retake: isRetakeAttempt,
+            started: true,
+          }),
         )
         return
       }
       navigate(
-        `/app/practice/preptest/${encodeURIComponent(testIdParam)}/section/${encodeURIComponent(row.id)}?sessionId=${encodeURIComponent(row.activeSectionSessionId)}`,
+        prepTestSectionIntroHref(testIdParam, row.id, row.activeSectionSessionId, { retake: isRetakeAttempt }),
       )
       return
     }
-    if (!isRetakeAttempt && row.activeSectionSessionId) {
-      navigate(`/app/practice/sections/session/${row.activeSectionSessionId}`)
+    if (row.activeSectionSessionId) {
+      navigate(sectionSessionHref(row.activeSectionSessionId, { retake: isRetakeAttempt }))
       return
     }
     void handleStartSection(row.id)
@@ -451,7 +464,6 @@ function PracticePrepTestPage() {
   }
 
   const { prepTest } = detail
-  const isRetakeAttempt = (location.state as { retake?: boolean } | null)?.retake === true
 
   return (
     <>
@@ -525,7 +537,6 @@ function PracticePrepTestPage() {
                 <PrepTestSectionRow
                   row={row}
                   starting={startingSectionId === row.id}
-                  isRetakeAttempt={isRetakeAttempt}
                   onStart={() => openPrepTestSection(row)}
                 />
                 {detail.sectionBreak?.afterSectionId === row.id ? (

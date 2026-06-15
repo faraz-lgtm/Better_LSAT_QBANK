@@ -18,6 +18,11 @@ import {
   sectionIntroTitle,
 } from "@/features/student/sections/section-intro-directions"
 import type { SectionSessionResponse } from "@/features/student/sections/section-types"
+import {
+  isRetakePrepTestAttempt,
+  prepTestHubHref,
+  sectionSessionHref,
+} from "@/features/student/preptests/preptest-hub-navigation"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -62,6 +67,7 @@ function PracticePrepTestSectionPage() {
   const { testId, sectionId } = useParams<{ testId: string; sectionId: string }>()
   const [searchParams] = useSearchParams()
   const sessionId = searchParams.get("sessionId")
+  const isRetakeAttempt = isRetakePrepTestAttempt(searchParams)
   const navigate = useNavigate()
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
 
@@ -82,11 +88,8 @@ function PracticePrepTestSectionPage() {
       setInitialCountdown(data.metadata.timing === "35" ? SECTION_TIMER_SECONDS : null)
       if (data.answers.length > 0) {
         const prepTestId = testId ?? data.session.prep_test_id ?? data.section.prepTestId
-        const sessionPath = `/app/practice/sections/session/${encodeURIComponent(sessionId)}`
         navigate(
-          prepTestId
-            ? `${sessionPath}?prepTestId=${encodeURIComponent(prepTestId)}&started=1`
-            : `${sessionPath}?started=1`,
+          sectionSessionHref(sessionId, { prepTestId, retake: isRetakeAttempt, started: true }),
           { replace: true },
         )
       }
@@ -96,7 +99,7 @@ function PracticePrepTestSectionPage() {
     } finally {
       setLoading(false)
     }
-  }, [navigate, practiceApi, sessionId, setInitialCountdown, testId])
+  }, [isRetakeAttempt, navigate, practiceApi, sessionId, setInitialCountdown, testId])
 
   useEffect(() => {
     void load()
@@ -127,7 +130,7 @@ function PracticePrepTestSectionPage() {
 
   function handleExitSession() {
     if (prepTestId) {
-      navigate(`/app/practice/preptest/${encodeURIComponent(prepTestId)}`, { replace: true })
+      navigate(prepTestHubHref(prepTestId, { retake: isRetakeAttempt }), { replace: true })
       return
     }
     navigate("/app/practice/sections", { replace: true })
@@ -135,12 +138,7 @@ function PracticePrepTestSectionPage() {
 
   function handleGoToQuestions() {
     if (!sessionId) return
-    const sessionPath = `/app/practice/sections/session/${encodeURIComponent(sessionId)}`
-    navigate(
-      prepTestId
-        ? `${sessionPath}?prepTestId=${encodeURIComponent(prepTestId)}&started=1`
-        : `${sessionPath}?started=1`,
-    )
+    navigate(sectionSessionHref(sessionId, { prepTestId, retake: isRetakeAttempt, started: true }))
   }
 
   if (!testId || !sectionId) {

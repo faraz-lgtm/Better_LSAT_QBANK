@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import {
   BarChart3,
@@ -25,11 +25,16 @@ import type {
   ExplanationPrepTestNode,
   ExplanationQuestionNode,
   ExplanationQuestionStatus,
+  ExplanationSectionNode,
   ExplanationStatusCounts,
 } from "@/features/student/explanation-detail/explanation-tree-types"
 import { mockExplanationPrepTests } from "@/features/student/lib/mock-explanations-tree"
+import {
+  difficultyLabelFromLevel,
+  type PracticeDifficultyLabel,
+} from "@/features/student/practice-session/practice-results-ui"
 import { createExplanationsApi } from "@/lib/api/explanations"
-import { HtmlContent } from "@/lib/html/html-content"
+import { plainTextFromHtml } from "@/lib/html/plain-text-from-html"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
@@ -45,9 +50,17 @@ const S = {
   ptBadgeBorder: "var(--explanation-pt-badge-border)",
   ptBadgeText: "var(--explanation-pt-badge-text)",
   passagePanel: "var(--explanation-passage-panel-bg)",
-  badgeRadius: "var(--explanation-badge-radius)",
+  badgeRadius: "14px",
   prepTestCardRadius: "var(--explanation-prep-test-card-radius)",
 } as const
+
+const TREE_BADGE_STYLE = {
+  width: "40px",
+  height: "40px",
+  borderRadius: "14px",
+} as const
+
+const TREE_BADGE_CLASS = "flex shrink-0 items-center justify-center"
 
 const GREEN = "#2E8B57"
 const SEEN_GRAY = "#9CA3AF"
@@ -98,17 +111,86 @@ function statusBadgeClass(status: ExplanationQuestionStatus): string {
   }
 }
 
-function DifficultyMeter({ level }: { level: ExplanationQuestionNode["difficulty"] }) {
-  const colors = ["var(--student-red)", "var(--student-red)", "var(--drill-medium)", "var(--student-meter-light)", "var(--student-meter-light)"] as const
+function statusDotColor(status: ExplanationQuestionStatus): string {
+  switch (status) {
+    case "in_process":
+      return "#f59e0b"
+    case "not_started":
+      return "#9ca3af"
+    case "answered":
+      return GREEN
+    case "fresh":
+      return "#0d47a1"
+    case "seen":
+      return SEEN_GRAY
+    default:
+      return SEEN_GRAY
+  }
+}
+
+function sectionMetaLine(sec: ExplanationSectionNode): string {
+  return [sec.sectionTitle, sec.flags].filter(Boolean).join(" • ")
+}
+
+function previewLine(snippet: string, max: number): string {
+  const text = plainTextFromHtml(snippet).replace(/\s+/g, " ").trim()
+  if (!text) return ""
+  if (text.length <= max) return text
+  return `${text.slice(0, max).trimEnd()}...`
+}
+
+const PASSAGE_PREVIEW_MAX = 56
+const QUESTION_PREVIEW_MAX = 52
+
+function SectionKindBadge({ kind }: { kind: ExplanationSectionNode["kind"] }) {
+  const isRc = kind === "RC"
   return (
-    <div className="flex items-end gap-0.5" title={`Difficulty ${level} of 5`}>
-      {colors.map((c, i) => (
-        <span
-          key={i}
-          className="h-4 w-1.5 shrink-0 rounded-sm"
-          style={{ backgroundColor: i < level ? c : "var(--slate-bar-empty)" }}
-        />
-      ))}
+    <span
+      className={`${TREE_BADGE_CLASS} text-sm font-black leading-none text-white`}
+      style={{ ...TREE_BADGE_STYLE, backgroundColor: isRc ? "#f28c33" : "var(--lr-badge-text)" }}
+      aria-hidden
+    >
+      {kind}
+    </span>
+  )
+}
+
+function OutlinedTreeBadge({ children }: { children: ReactNode }) {
+  return (
+    <span
+      className={`${TREE_BADGE_CLASS} border-2 bg-white text-xs font-bold`}
+      style={{ ...TREE_BADGE_STYLE, borderColor: S.accent, color: S.accent }}
+    >
+      {children}
+    </span>
+  )
+}
+
+const DIFFICULTY_METER_COLORS: Record<PracticeDifficultyLabel, string> = {
+  Easiest: "#40c4aa",
+  Easy: "#ffbd4c",
+  Medium: "#ff6f00",
+  Hard: "#df1c41",
+  Hardest: "#df1c41",
+}
+
+function DifficultyMeter({ level }: { level: ExplanationQuestionNode["difficulty"] }) {
+  const label = difficultyLabelFromLevel(level)
+  const activeColor = DIFFICULTY_METER_COLORS[label]
+  return (
+    <div className="flex items-center gap-2" title={`Difficulty ${level} of 5`}>
+      <div className="flex items-end gap-0.5">
+        {Array.from({ length: 5 }, (_, i) => (
+          <span
+            key={i}
+            className="h-4 w-1.5 shrink-0 rounded-sm"
+            style={{ backgroundColor: i < level ? activeColor : "var(--slate-bar-empty)" }}
+          />
+        ))}
+      </div>
+      <span className="text-xs font-semibold whitespace-nowrap" style={{ color: activeColor }}>
+        {label}
+      </span>
     </div>
   )
 }
@@ -438,16 +520,16 @@ function ExplanationsPage() {
                 onClick={() => togglePrepTest(ptId)}
               >
                 <span
-                  className="flex size-[52px] shrink-0 flex-col items-center justify-center border px-1"
+                  className={`${TREE_BADGE_CLASS} flex-col border px-1`}
                   style={{
+                    ...TREE_BADGE_STYLE,
                     backgroundColor: S.ptBadgeBg,
                     borderColor: S.ptBadgeBorder,
                     color: S.ptBadgeText,
-                    borderRadius: S.badgeRadius,
                   }}
                 >
-                  <span className="text-[10px] font-bold uppercase leading-none tracking-wide">PT</span>
-                  <span className="mt-1 text-[17px] font-black leading-none tabular-nums">{ptNum}</span>
+                  <span className="text-[9px] font-bold uppercase leading-none tracking-wide">PT</span>
+                  <span className="mt-0.5 text-[15px] font-black leading-none tabular-nums">{ptNum}</span>
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="text-base font-bold" style={{ color: S.heading }}>
@@ -484,7 +566,6 @@ function ExplanationsPage() {
                   ) : null}
                   {filteredTree?.sections.map((sec, secIndex) => {
                     const sOpen = openSection.has(secKey(ptId, sec.id))
-                    const isRc = sec.kind === "RC"
                     const secHeaderBg = secIndex % 2 === 0 ? S.surface : S.listRowAlt
                     return (
                       <div key={sec.id} className="border-b last:border-b-0" style={{ borderColor: S.border }}>
@@ -502,34 +583,13 @@ function ExplanationsPage() {
                             })
                           }
                         >
-                          <span
-                            className="flex size-[52px] shrink-0 flex-col items-center justify-center border px-1"
-                            style={
-                              isRc
-                                ? {
-                                    backgroundColor: S.ptBadgeBg,
-                                    borderColor: S.ptBadgeBorder,
-                                    color: S.ptBadgeText,
-                                    borderRadius: S.badgeRadius,
-                                  }
-                                : {
-                                    backgroundColor: "var(--lr-row)",
-                                    borderColor: "var(--lr-badge-text)",
-                                    color: "var(--lr-badge-text)",
-                                    borderRadius: S.badgeRadius,
-                                  }
-                            }
-                          >
-                            <span className="text-[10px] font-bold uppercase leading-none tracking-wide">{sec.kind}</span>
-                            <span className="mt-1 text-[17px] font-black leading-none tabular-nums">{sec.sectionNumber}</span>
-                          </span>
+                          <SectionKindBadge kind={sec.kind} />
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-bold" style={{ color: S.heading }}>
                               Section {sec.sectionNumber}
                             </div>
                             <div className="text-xs font-medium md:text-sm" style={{ color: S.muted }}>
-                              {sec.sectionTitle}
-                              {sec.flags ? ` · ${sec.flags}` : ""}
+                              {sectionMetaLine(sec)}
                             </div>
                           </div>
                           {sOpen ? (
@@ -543,6 +603,8 @@ function ExplanationsPage() {
                           <div style={{ backgroundColor: S.passagePanel }}>
                             {sec.passages.map((pass) => {
                               const pOpen = openPassage.has(passKey(ptId, sec.id, pass.id))
+                              const passagePreviewSource =
+                                pass.snippet.trim() || pass.questions[0]?.snippet?.trim() || ""
                               return (
                                 <div key={pass.id} className="border-t" style={{ borderColor: S.border }}>
                                   <button
@@ -558,22 +620,19 @@ function ExplanationsPage() {
                                       })
                                     }
                                   >
-                                    <span
-                                      className="mt-0.5 flex size-9 shrink-0 items-center justify-center text-xs font-bold text-white"
-                                      style={{ backgroundColor: S.accent, borderRadius: S.badgeRadius }}
-                                    >
-                                      {pass.label}
-                                    </span>
+                                    <OutlinedTreeBadge>{pass.label}</OutlinedTreeBadge>
                                     <div className="min-w-0 flex-1">
-                                      <div className="text-sm font-bold" style={{ color: S.heading }}>
+                                      <div className="text-sm font-bold" style={{ color: S.accent }}>
                                         {pass.title}
                                       </div>
-                                      {pass.snippet ? (
-                                        <HtmlContent
-                                          html={pass.snippet}
-                                          className="mt-0.5 line-clamp-2 text-xs leading-relaxed md:text-sm [&_p]:mb-0"
+                                      {passagePreviewSource ? (
+                                        <p
+                                          className="mt-0.5 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs leading-relaxed md:text-sm"
                                           style={{ color: S.muted }}
-                                        />
+                                          title={plainTextFromHtml(passagePreviewSource)}
+                                        >
+                                          {previewLine(passagePreviewSource, PASSAGE_PREVIEW_MAX)}
+                                        </p>
                                       ) : null}
                                     </div>
                                     {pOpen ? (
@@ -590,66 +649,68 @@ function ExplanationsPage() {
                                         return (
                                           <li
                                             key={q.id}
-                                            className="flex flex-col gap-3 border-b px-4 py-4 last:border-b-0 md:flex-row md:items-center md:gap-4 md:pl-16 md:pr-4"
+                                            className="grid grid-cols-1 gap-3 border-b px-4 py-4 last:border-b-0 md:grid-cols-[auto_minmax(0,1fr)_auto_auto_auto_auto] md:items-center md:gap-4 md:pl-16 md:pr-4"
                                             style={{ borderColor: S.border }}
                                           >
-                                            <Link
-                                              to={detailHref}
-                                              className="flex min-w-0 flex-1 items-start gap-3 rounded-lg outline-offset-2 hover:bg-slate-50/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
+                                            <div className="flex items-start gap-3 md:contents">
+                                              <OutlinedTreeBadge>{q.number}</OutlinedTreeBadge>
+
+                                              <Link
+                                                to={detailHref}
+                                                className="min-w-0 flex-1 rounded-lg outline-offset-2 hover:bg-slate-50/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)] md:flex-none"
+                                              >
+                                              <div className="text-sm font-semibold" style={{ color: S.accent }}>
+                                                {q.code}
+                                              </div>
+                                              <p
+                                                className="mt-1 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm leading-snug"
+                                                style={{ color: S.muted }}
+                                                title={plainTextFromHtml(q.snippet)}
+                                              >
+                                                {previewLine(q.snippet, QUESTION_PREVIEW_MAX)}
+                                              </p>
+                                              <p className="mt-2 text-xs leading-relaxed md:hidden" style={{ color: S.muted }}>
+                                                {q.source}
+                                              </p>
+                                            </Link>
+                                            </div>
+
+                                            <span
+                                              className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusBadgeClass(q.status)}`}
                                             >
                                               <span
-                                                className="mt-0.5 flex size-8 shrink-0 items-center justify-center border-2 bg-white text-sm font-semibold"
-                                                style={{ borderColor: S.accent, color: S.accent, borderRadius: S.badgeRadius }}
-                                              >
-                                                {q.number}
-                                              </span>
-                                              <div className="min-w-0 flex-1">
-                                                <div className="text-sm font-semibold" style={{ color: S.accent }}>
-                                                  {q.code}
-                                                </div>
-                                                <HtmlContent
-                                                  html={q.snippet}
-                                                  className="mt-1 text-sm leading-snug [&_p]:mb-0"
-                                                  style={{ color: S.heading }}
-                                                />
-                                                <p className="mt-2 text-xs leading-relaxed" style={{ color: S.muted }}>
-                                                  {q.source}
-                                                </p>
-                                                <div className="mt-3 flex flex-wrap items-center gap-3 md:hidden">
-                                                  <span
-                                                    className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusBadgeClass(q.status)}`}
-                                                  >
-                                                    {statusLabel(q.status)}
-                                                  </span>
-                                                  <DifficultyMeter level={q.difficulty} />
-                                                </div>
-                                              </div>
-                                            </Link>
+                                                className="size-2 shrink-0 rounded-full"
+                                                style={{ backgroundColor: statusDotColor(q.status) }}
+                                                aria-hidden
+                                              />
+                                              {statusLabel(q.status)}
+                                            </span>
 
-                                            <div className="flex flex-wrap items-center gap-3 md:flex-col md:items-end md:gap-2">
-                                              <span
-                                                className={`hidden md:inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusBadgeClass(q.status)}`}
-                                              >
-                                                {statusLabel(q.status)}
-                                              </span>
-                                              <span className="hidden md:block">
-                                                <DifficultyMeter level={q.difficulty} />
-                                              </span>
-                                              <div className="flex items-center gap-1 md:ml-0">
-                                                <Button type="button" variant="ghost" size="icon" className="size-9 text-[#666d80] hover:text-[color:var(--color-student-heading)]" asChild>
-                                                  <Link to={`${detailHref}?tab=analytics`} aria-label="Open analytics tab">
-                                                    <BarChart3 className="size-4" />
-                                                  </Link>
-                                                </Button>
-                                                <Button type="button" variant="ghost" size="icon" className="size-9 text-[#666d80] hover:text-[color:var(--color-student-heading)]" asChild>
-                                                  <Link to={`${detailHref}?tab=explanation`} aria-label={q.hasVideo ? "Watch explanation" : "Open explanation tab"}>
-                                                    <Play className="size-4 fill-current" />
-                                                  </Link>
-                                                </Button>
-                                                <Button type="button" variant="ghost" size="icon" className="size-9 text-[#666d80] hover:text-[color:var(--color-student-heading)]" aria-label="Bookmark">
-                                                  <Bookmark className="size-4" />
-                                                </Button>
-                                              </div>
+                                            <p className="hidden max-w-[11rem] text-xs leading-relaxed md:block" style={{ color: S.muted }}>
+                                              {q.source}
+                                            </p>
+
+                                            <DifficultyMeter level={q.difficulty} />
+
+                                            <div className="flex items-center gap-1">
+                                              <Button type="button" variant="ghost" size="icon" className="size-9 text-[#666d80] hover:text-[color:var(--color-student-heading)]" asChild>
+                                                <Link to={`${detailHref}?tab=analytics`} aria-label="Open analytics tab">
+                                                  <BarChart3 className="size-4" />
+                                                </Link>
+                                              </Button>
+                                              <Button type="button" variant="ghost" size="icon" className="size-9 text-[#666d80] hover:text-[color:var(--color-student-heading)]" asChild>
+                                                <Link to={`${detailHref}?tab=explanation`} aria-label={q.hasVideo ? "Watch explanation" : "Open explanation tab"}>
+                                                  <PlayCircle className="size-4" />
+                                                </Link>
+                                              </Button>
+                                              <Button type="button" variant="ghost" size="icon" className="size-9 text-[#666d80] hover:text-[color:var(--color-student-heading)]" asChild>
+                                                <Link to={detailHref} aria-label="Open question">
+                                                  <Play className="size-4 fill-current" />
+                                                </Link>
+                                              </Button>
+                                              <Button type="button" variant="ghost" size="icon" className="size-9 text-[#666d80] hover:text-[color:var(--color-student-heading)]" aria-label="Bookmark">
+                                                <Bookmark className="size-4" />
+                                              </Button>
                                             </div>
                                           </li>
                                         )

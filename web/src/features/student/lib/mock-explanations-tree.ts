@@ -40,7 +40,7 @@ export const mockExplanationPrepTests: ExplanationPrepTestNode[] = [
   {
     id: "pt-159",
     prepTestNumber: "159",
-    rowSubtitle: "In Process · Blind Review",
+    rowSubtitle: "In Process • Blind Review",
     sections: [
       {
         id: "s1",
@@ -83,7 +83,7 @@ export const mockExplanationPrepTests: ExplanationPrepTestNode[] = [
   {
     id: "pt-160",
     prepTestNumber: "160",
-    rowSubtitle: "In Process · Blind Review",
+    rowSubtitle: "In Process • Blind Review",
     sections: [
       {
         id: "s1",
@@ -96,13 +96,14 @@ export const mockExplanationPrepTests: ExplanationPrepTestNode[] = [
             id: "p1",
             label: "P1",
             title: "Passage 1",
-            snippet: "Scholars have long debated whether the earliest…",
+            snippet:
+              "In France in the early 1790s, the French Revolution, which sought to remake society along rational lines, encountered fierce resistance from traditional institutions and rival factions across Europe.",
             questions: [
               {
                 id: "q1",
                 number: 1,
-                code: "PT160.S1.P1.Q1",
-                snippet: "Which one of the following most accurately expresses the main point…",
+                code: "PT159.S1.P1.Q1",
+                snippet: "Columnist: The dangers of drinking are greatly…",
                 status: "in_process",
                 source: "The Official LSAT PrepTest 157+ · 1 other practice",
                 difficulty: 5,

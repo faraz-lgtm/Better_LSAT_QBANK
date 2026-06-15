@@ -1,5 +1,26 @@
 export type BlindReviewStatus = "eligible" | "in_progress" | "completed"
 
+export type BlindReviewPoolFilter = "all" | BlindReviewStatus
+
+export type BlindReviewPoolSort = "newest" | "oldest"
+
+export type BlindReviewPoolStatusCounts = {
+  all: number
+  eligible: number
+  in_progress: number
+  completed: number
+}
+
+export type BlindReviewPoolListResult = {
+  prepTests: BlindReviewPoolItem[]
+  total: number
+  page: number
+  pageSize: number
+  statusCounts: BlindReviewPoolStatusCounts
+}
+
+import type { PrepTestPoolAttempt } from "@/features/student/preptests/preptest-types"
+
 export type BlindReviewPoolItem = {
   id: string
   moduleId: string
@@ -12,6 +33,8 @@ export type BlindReviewPoolItem = {
   blindReviewScaledScore: number | null
   completedAt: string | null
   blindReviewCompletedAt: string | null
+  prepTestSessionId: string | null
+  attempts: PrepTestPoolAttempt[]
 }
 
 export type BlindReviewDetailSection = {

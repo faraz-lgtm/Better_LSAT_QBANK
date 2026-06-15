@@ -14,16 +14,22 @@ import type {
 } from "@/features/student/sections/section-types"
 import type {
   BlindReviewDetailResponse,
+  BlindReviewPoolFilter,
   BlindReviewPoolItem,
+  BlindReviewPoolListResult,
+  BlindReviewPoolSort,
+  BlindReviewPoolStatusCounts,
 } from "@/features/student/blind-review/blind-review-types"
 import type {
   PrepTestDetailResponse,
   PrepTestPoolFilter,
+  PrepTestPoolItem,
   PrepTestPoolListResult,
   PrepTestPoolSort,
   StartPrepTestInput,
   StartPrepTestResponse,
 } from "@/features/student/preptests/preptest-types"
+import { coercePoolScore } from "@/features/student/preptests/preptest-pool-display"
 import { normalizePrepTestDetail } from "@/features/student/preptests/preptest-section-break"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
@@ -108,6 +114,143 @@ function normalizeSectionPoolListResult(
     page: typeof data.page === "number" ? data.page : page,
     pageSize: typeof data.pageSize === "number" ? data.pageSize : pageSize,
     sectionTypeCounts: data.sectionTypeCounts ?? sectionTypeCountsFromSections(data.sections),
+  }
+}
+
+function blindReviewPoolSortValue(item: BlindReviewPoolItem): number {
+  const n = item.prepTestNumber ? Number.parseInt(item.prepTestNumber, 10) : NaN
+  if (Number.isFinite(n)) return n
+  const fromModule = /^LSAC(\d+)$/i.exec(item.moduleId)?.[1]
+  return fromModule ? Number.parseInt(fromModule, 10) : 0
+}
+
+type PrepTestPoolItemRaw = Partial<PrepTestPoolItem> & Record<string, unknown>
+
+function normalizePrepTestPoolItem(pt: PrepTestPoolItemRaw): PrepTestPoolItem {
+  const scaledScore = coercePoolScore(pt.scaledScore ?? pt.scaled_score)
+  const blindReviewScaledScore = coercePoolScore(pt.blindReviewScaledScore ?? pt.blind_review_scaled_score)
+  const completedAt =
+    typeof pt.completedAt === "string"
+      ? pt.completedAt
+      : typeof pt.completed_at === "string"
+        ? pt.completed_at
+        : null
+  const rawAttempts = Array.isArray(pt.attempts) ? pt.attempts : []
+  const attempts = rawAttempts.map((attempt) => {
+    const row = attempt as Record<string, unknown>
+    return {
+      sessionId: String(row.sessionId ?? row.session_id ?? ""),
+      completedAt: String(row.completedAt ?? row.completed_at ?? ""),
+      scaledScore: coercePoolScore(row.scaledScore ?? row.scaled_score),
+      blindReviewScaledScore: coercePoolScore(row.blindReviewScaledScore ?? row.blind_review_scaled_score),
+      attemptNumber: typeof row.attemptNumber === "number" ? row.attemptNumber : Number(row.attempt_number ?? 1),
+    }
+  })
+
+  return {
+    ...(pt as PrepTestPoolItem),
+    scaledScore,
+    blindReviewScaledScore,
+    completedAt,
+    attempts,
+    blindReviewStatus: pt.blindReviewStatus ?? null,
+    openPrepTestSessionId:
+      typeof pt.openPrepTestSessionId === "string"
+        ? pt.openPrepTestSessionId
+        : typeof pt.open_prep_test_session_id === "string"
+          ? pt.open_prep_test_session_id
+          : null,
+  }
+}
+
+function normalizeBlindReviewPoolItem(pt: Partial<BlindReviewPoolItem> & Record<string, unknown>): BlindReviewPoolItem {
+  const rawAttempts = Array.isArray(pt.attempts) ? pt.attempts : []
+  const attempts = rawAttempts.map((attempt) => {
+    const row = attempt as Record<string, unknown>
+    return {
+      sessionId: String(row.sessionId ?? row.session_id ?? ""),
+      completedAt: String(row.completedAt ?? row.completed_at ?? ""),
+      scaledScore: coercePoolScore(row.scaledScore ?? row.scaled_score),
+      blindReviewScaledScore: coercePoolScore(row.blindReviewScaledScore ?? row.blind_review_scaled_score),
+      attemptNumber: typeof row.attemptNumber === "number" ? row.attemptNumber : Number(row.attempt_number ?? 1),
+    }
+  })
+
+  return {
+    ...(pt as BlindReviewPoolItem),
+    scaledScore: coercePoolScore(pt.scaledScore ?? pt.scaled_score),
+    blindReviewScaledScore: coercePoolScore(pt.blindReviewScaledScore ?? pt.blind_review_scaled_score),
+    completedAt:
+      typeof pt.completedAt === "string"
+        ? pt.completedAt
+        : typeof pt.completed_at === "string"
+          ? pt.completed_at
+          : null,
+    blindReviewCompletedAt:
+      typeof pt.blindReviewCompletedAt === "string"
+        ? pt.blindReviewCompletedAt
+        : typeof pt.blind_review_completed_at === "string"
+          ? pt.blind_review_completed_at
+          : null,
+    prepTestSessionId:
+      typeof pt.prepTestSessionId === "string"
+        ? pt.prepTestSessionId
+        : typeof pt.prep_test_session_id === "string"
+          ? pt.prep_test_session_id
+          : null,
+    attempts,
+  }
+}
+
+function blindReviewStatusCountsFromItems(items: BlindReviewPoolItem[]): BlindReviewPoolStatusCounts {
+  return {
+    all: items.length,
+    eligible: items.filter((i) => i.status === "eligible").length,
+    in_progress: items.filter((i) => i.status === "in_progress").length,
+    completed: items.filter((i) => i.status === "completed").length,
+  }
+}
+
+/**
+ * Normalize legacy `{ prepTests }` responses from undeployed edge functions.
+ * When `total` is missing, paginate/filter in the client so the UI only renders one page.
+ */
+function normalizeBlindReviewPoolResult(
+  data: Partial<BlindReviewPoolListResult> & { prepTests: BlindReviewPoolItem[] },
+  input: { filter?: BlindReviewPoolFilter; page: number; pageSize: number; sort?: BlindReviewPoolSort },
+): BlindReviewPoolListResult {
+  const page = Math.max(1, Math.floor(input.page))
+  const pageSize = Math.min(50, Math.max(1, Math.floor(input.pageSize)))
+  const sort = input.sort === "oldest" ? "oldest" : "newest"
+  const isLegacy = typeof data.total !== "number"
+
+  if (isLegacy) {
+    const statusCounts = blindReviewStatusCountsFromItems(data.prepTests)
+    let pool = data.prepTests
+    if (input.filter && input.filter !== "all") {
+      pool = pool.filter((p) => p.status === input.filter)
+    }
+    pool = [...pool].sort((a, b) => {
+      const diff = blindReviewPoolSortValue(a) - blindReviewPoolSortValue(b)
+      return sort === "newest" ? -diff : diff
+    })
+    const total = pool.length
+    const start = (page - 1) * pageSize
+    return {
+      prepTests: pool.slice(start, start + pageSize),
+      total,
+      page,
+      pageSize,
+      statusCounts,
+    }
+  }
+
+  return {
+    prepTests: data.prepTests,
+    total: data.total!,
+    page: typeof data.page === "number" ? data.page : page,
+    pageSize: typeof data.pageSize === "number" ? data.pageSize : pageSize,
+    statusCounts: data.statusCounts ?? blindReviewStatusCountsFromItems(data.prepTests),
   }
 }
 
@@ -347,13 +490,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
       if (!data?.prepTests) throw new Error("No prep tests returned from practice")
       return {
         ...data,
-        prepTests: data.prepTests.map((pt) => ({
-          ...pt,
-          attempts: pt.attempts ?? [],
-          blindReviewStatus: pt.blindReviewStatus ?? null,
-          blindReviewScaledScore: pt.blindReviewScaledScore ?? null,
-          completedAt: pt.completedAt ?? null,
-        })),
+        prepTests: data.prepTests.map((pt) => normalizePrepTestPoolItem(pt)),
       }
     },
 
@@ -408,14 +545,40 @@ export function createPracticeApi(supabase: SupabaseClient) {
       return data.session
     },
 
-    async listBlindReviewPool(): Promise<{ prepTests: BlindReviewPoolItem[] }> {
-      const { data, error } = await invokePracticeFn<{ prepTests: BlindReviewPoolItem[] }>(
+    async listBlindReviewPool(
+      input: {
+        filter?: BlindReviewPoolFilter
+        page?: number
+        pageSize?: number
+        sort?: BlindReviewPoolSort
+      } = {},
+    ): Promise<BlindReviewPoolListResult> {
+      const page = input.page ?? 1
+      const pageSize = input.pageSize ?? 5
+      const body: Record<string, unknown> = {}
+      if (input.filter && input.filter !== "all") body.filter = input.filter
+      if (input.page !== undefined) body.page = input.page
+      if (input.pageSize !== undefined) body.pageSize = input.pageSize
+      if (input.sort !== undefined) body.sort = input.sort
+
+      const { data, error } = await invokePracticeFn<Partial<BlindReviewPoolListResult>>(
         "practice-list-blind-review-pool",
-        { method: "POST", body: {} },
+        { method: "POST", body },
       )
       if (error) throw error
       if (!data?.prepTests) throw new Error("No blind review pool returned from practice")
-      return data
+      const normalized = {
+        ...data,
+        prepTests: data.prepTests.map((pt) =>
+          normalizeBlindReviewPoolItem(pt as Partial<BlindReviewPoolItem> & Record<string, unknown>),
+        ),
+      }
+      return normalizeBlindReviewPoolResult(normalized, {
+        filter: input.filter,
+        page,
+        pageSize,
+        sort: input.sort,
+      })
     },
 
     async getBlindReviewDetail(prepTestId: string): Promise<BlindReviewDetailResponse> {

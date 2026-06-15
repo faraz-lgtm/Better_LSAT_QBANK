@@ -32,8 +32,14 @@ describe("PracticeBlindReviewPage", () => {
           blindReviewScaledScore: null,
           completedAt: "2026-01-01T00:00:00Z",
           blindReviewCompletedAt: null,
+          prepTestSessionId: "sess-1",
+          attempts: [],
         },
       ],
+      total: 1,
+      page: 1,
+      pageSize: 5,
+      statusCounts: { all: 1, eligible: 1, in_progress: 0, completed: 0 },
     })
 
     render(
@@ -42,9 +48,13 @@ describe("PracticeBlindReviewPage", () => {
       </MemoryRouter>,
     )
 
-    expect(await screen.findByText(/Ready for Blind Review/i)).toBeInTheDocument()
+    expect(await screen.findByText(/^Ready$/i)).toBeInTheDocument()
     await waitFor(() => {
-      expect(listBlindReviewPool).toHaveBeenCalled()
+      expect(listBlindReviewPool).toHaveBeenCalledWith({
+        filter: "all",
+        page: 1,
+        pageSize: 5,
+      })
     })
   })
 })

@@ -14,6 +14,11 @@ import {
 import type { BlindReviewDetailSection } from "@/features/student/blind-review/blind-review-types"
 import type { BlindReviewSectionOption } from "@/features/student/practice-session/practice-blind-review-section-select"
 import type { SectionSessionResponse } from "@/features/student/sections/section-types"
+import {
+  isRetakePrepTestAttempt,
+  prepTestHubHref,
+  prepTestSectionIntroHref,
+} from "@/features/student/preptests/preptest-hub-navigation"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import { PracticeQuestionStem } from "@/features/student/practice-session/practice-question-stem"
 import {
@@ -186,6 +191,7 @@ function SectionQuestionPanel({
 function SectionSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const [searchParams] = useSearchParams()
+  const isRetakeAttempt = isRetakePrepTestAttempt(searchParams)
   const blindReviewMode = searchParams.get("blindReview") === "1"
   const blindReviewPrepTestId = searchParams.get("prepTestId")
   const navigate = useNavigate()
@@ -303,12 +309,13 @@ function SectionSessionPage() {
       null
     if (!ptId || sectionSession.answers.length > 0) return
     navigate(
-      `/app/practice/preptest/${encodeURIComponent(ptId)}/section/${encodeURIComponent(sectionSession.section.id)}?sessionId=${encodeURIComponent(sessionId)}`,
+      prepTestSectionIntroHref(ptId, sectionSession.section.id, sessionId, { retake: isRetakeAttempt }),
       { replace: true },
     )
   }, [
     blindReviewMode,
     blindReviewPrepTestId,
+    isRetakeAttempt,
     loading,
     navigate,
     searchParams,
@@ -505,7 +512,7 @@ function SectionSessionPage() {
     const exitPrepTestId =
       prepTestId ?? sectionSession?.section.prepTestId ?? blindReviewPrepTestId ?? null
     if (exitPrepTestId) {
-      navigate(`/app/practice/preptest/${encodeURIComponent(exitPrepTestId)}`, { replace: true })
+      navigate(prepTestHubHref(exitPrepTestId, { retake: isRetakeAttempt }), { replace: true })
       return
     }
     navigate("/app/practice/sections", { replace: true })
@@ -542,7 +549,7 @@ function SectionSessionPage() {
         if (afterSectionId) {
           writeStoredSectionBreak(prepTestId, afterSectionId)
         }
-        navigate(`/app/practice/preptest/${encodeURIComponent(prepTestId)}`, {
+        navigate(prepTestHubHref(prepTestId, { retake: isRetakeAttempt }), {
           replace: true,
           state: afterSectionId ? { sectionJustCompleted: afterSectionId } : undefined,
         })

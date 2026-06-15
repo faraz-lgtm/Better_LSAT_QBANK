@@ -698,6 +698,40 @@ Deno.test('listPrepTestPool prefers awaiting blind review over a newer open prep
   assertEquals(row?.scaledScore, 162)
 })
 
+Deno.test('listPrepTestPool shows completed when latest attempt finished blind review', async () => {
+  const olderAwaitingBr = baseSession({
+    id: 'pt-sess-old-br',
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-900',
+    started_at: '2026-01-01T00:00:00Z',
+    completed_at: '2026-01-02T00:00:00Z',
+    scaled_score: 150,
+    metadata: { blindReviewActive: true },
+  })
+  const newerBrComplete = baseSession({
+    id: 'pt-sess-new-done',
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-900',
+    started_at: '2026-01-10T00:00:00Z',
+    completed_at: '2026-01-10T00:00:00Z',
+    scaled_score: 158,
+    blind_review_scaled_score: 162,
+    blind_review_completed_at: '2026-01-11T00:00:00Z',
+  })
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserSessionsForPrepTests: async () => [newerBrComplete, olderAwaitingBr],
+      listUserSessionsForPrepTest: async () => [newerBrComplete, olderAwaitingBr],
+    }) as never,
+  })
+  const out = await service.listPrepTestPool('user-1', {})
+  const row = out.prepTests.find((p) => p.id === 'pt-900')
+  assertEquals(row?.status, 'completed')
+  assertEquals(row?.blindReviewStatus, null)
+  assertEquals(row?.scaledScore, 158)
+  assertEquals(row?.blindReviewScaledScore, 162)
+})
+
 Deno.test('listPrepTestPool paginates and uses batch sessions query', async () => {
   let batchCalls = 0
   let perTestCalls = 0
@@ -736,6 +770,72 @@ Deno.test('listPrepTestPool paginates and uses batch sessions query', async () =
 
   const completedOnly = await service.listPrepTestPool('user-1', { filter: 'completed' })
   assertEquals(completedOnly.total, 0)
+})
+
+Deno.test('listPrepTestPool resolves scaled scores from section raw scores when missing', async () => {
+  const completedPt = baseSession({
+    id: 'pt-sess-missing-scaled',
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-900',
+    started_at: '2026-01-05T00:00:00Z',
+    completed_at: '2026-01-05T00:00:00Z',
+    raw_score: 75,
+    scaled_score: null,
+    blind_review_completed_at: '2026-01-06T00:00:00Z',
+    blind_review_raw_score: 75,
+    blind_review_scaled_score: null,
+  })
+  const sectionSession = baseSession({
+    id: 'sec-sess-1',
+    kind: 'SECTION',
+    prep_test_id: 'pt-900',
+    section_id: 'sec-lr',
+    started_at: '2026-01-05T01:00:00Z',
+    completed_at: '2026-01-05T02:00:00Z',
+    raw_score: 75,
+  })
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserSessionsForPrepTests: async () => [completedPt, sectionSession],
+      getScoreRowForRaw: async () => ({ scaled_score: 158, percentile: 80 }),
+    }) as never,
+  })
+  const out = await service.listPrepTestPool('user-1', { filter: 'completed' })
+  assertEquals(out.prepTests[0]!.scaledScore, 158)
+  assertEquals(out.prepTests[0]!.attempts[0]!.scaledScore, 158)
+})
+
+Deno.test('listPrepTestPool returns attempts newest first with blind review scores', async () => {
+  const olderPt = baseSession({
+    id: 'pt-sess-old',
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-900',
+    completed_at: '2026-01-01T00:00:00Z',
+    scaled_score: 139,
+    blind_review_scaled_score: 139,
+    blind_review_completed_at: '2026-01-02T00:00:00Z',
+    started_at: '2026-01-01T00:00:00Z',
+  })
+  const newerPt = baseSession({
+    id: 'pt-sess-new',
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-900',
+    completed_at: '2026-01-10T00:00:00Z',
+    scaled_score: 160,
+    blind_review_completed_at: '2026-01-11T00:00:00Z',
+    started_at: '2026-01-10T00:00:00Z',
+  })
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserSessionsForPrepTests: async () => [newerPt, olderPt],
+    }) as never,
+  })
+  const out = await service.listPrepTestPool('user-1', { filter: 'completed' })
+  assertEquals(out.prepTests[0]!.scaledScore, 160)
+  assertEquals(out.prepTests[0]!.attempts.length, 2)
+  assertEquals(out.prepTests[0]!.attempts[0]!.sessionId, 'pt-sess-new')
+  assertEquals(out.prepTests[0]!.attempts[0]!.attemptNumber, 2)
+  assertEquals(out.prepTests[0]!.attempts[1]!.blindReviewScaledScore, 139)
 })
 
 Deno.test('listPrepTestPool marks skipped blind review as completed with attempts', async () => {
@@ -916,6 +1016,51 @@ Deno.test('listBlindReviewPool excludes prep tests without completed PREPTEST se
   })
   const out = await service.listBlindReviewPool('user-1', {})
   assertEquals(out.prepTests.length, 0)
+})
+
+Deno.test('listBlindReviewPool paginates and uses batch sessions query', async () => {
+  let batchCalls = 0
+  let perTestCalls = 0
+  const completedPt900 = baseSession({
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-900',
+    completed_at: '2026-01-02T00:00:00Z',
+    scaled_score: 170,
+  })
+  const completedPt901 = baseSession({
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-901',
+    completed_at: '2026-01-03T00:00:00Z',
+    scaled_score: 165,
+  })
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserSessionsForPrepTests: async () => {
+        batchCalls += 1
+        return [completedPt900, completedPt901]
+      },
+      listUserSessionsForPrepTest: async () => {
+        perTestCalls += 1
+        return []
+      },
+    }) as never,
+  })
+  const page1 = await service.listBlindReviewPool('user-1', { page: 1, pageSize: 1, sort: 'newest' })
+  assertEquals(batchCalls, 1)
+  assertEquals(perTestCalls, 0)
+  assertEquals(page1.total, 2)
+  assertEquals(page1.pageSize, 1)
+  assertEquals(page1.prepTests.length, 1)
+  assertEquals(page1.prepTests[0]!.id, 'pt-901')
+  assertEquals(page1.statusCounts.all, 2)
+  assertEquals(page1.statusCounts.eligible, 2)
+
+  const page2 = await service.listBlindReviewPool('user-1', { page: 2, pageSize: 1, sort: 'newest' })
+  assertEquals(page2.prepTests.length, 1)
+  assertEquals(page2.prepTests[0]!.id, 'pt-900')
+
+  const eligibleOnly = await service.listBlindReviewPool('user-1', { filter: 'eligible' })
+  assertEquals(eligibleOnly.total, 2)
 })
 
 Deno.test('startBlindReview sets blindReviewActive on completed prep test session', async () => {

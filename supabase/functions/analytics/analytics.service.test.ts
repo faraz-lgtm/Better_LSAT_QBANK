@@ -11,6 +11,7 @@ function completedPreptestRow(
 ): CompletedPreptestRow {
   return {
     id: 's1',
+    started_at: '2025-12-31T00:00:00Z',
     completed_at: '2026-01-01T00:00:00Z',
     raw_score: 85,
     scaled_score: 170,
@@ -105,6 +106,8 @@ function mockRepo(overrides: Partial<AnalyticsRepository> = {}): AnalyticsReposi
     getPracticeSession: async () => null,
     resolveCompletedPrepTestSession: async () => null,
     listSectionSessionsForPrepTest: async () => [],
+    listCompletedSectionSessions: async () => [],
+    getScoreRowForRaw: async () => null,
     listPrepTestQuestionsWithMeta: async () => [],
     listAnswerEventsWithTypes: async () => [
       { question_type_id: 't-low', is_correct: true },
@@ -191,28 +194,87 @@ Deno.test('getOverview returns null drill accuracy when zero drill events', asyn
   assertEquals(o.totalDrillQuestionsAnswered, 0)
 })
 
-Deno.test('getOverview uses latest answer per question for LR/RC misses', async () => {
+Deno.test('getOverview uses section session answers for LR/RC misses', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({
-      listCompletedPreptests: async () => [completedPreptestRow({ id: 's1' })],
-      listAnswerEventsForSessions: async () => [
-        answerEvent({
-          question_id: 'q1',
-          is_correct: true,
-          section_type: 'LR',
-          created_at: '2026-01-01T00:00:00Z',
-        }),
-        answerEvent({
-          question_id: 'q1',
-          is_correct: false,
-          section_type: 'LR',
-          created_at: '2026-01-01T00:05:00Z',
-        }),
+      listCompletedPreptests: async () => [completedPreptestRow({ id: 's1', prep_test_id: 'pt-1' })],
+      listCompletedSectionSessions: async () => [
+        {
+          id: 'sec-1',
+          prep_test_id: 'pt-1',
+          section_id: 'section-1',
+          started_at: '2026-01-01T00:00:00Z',
+          completed_at: '2026-01-01T00:30:00Z',
+          raw_score: 20,
+          metadata: { sectionType: 'LR', questionIds: ['q1', 'q2'] },
+        },
       ],
+      listAnswerEventsForSessions: async (sessionIds) => {
+        if (sessionIds.includes('sec-1')) {
+          return [
+            answerEvent({
+              practice_session_id: 'sec-1',
+              question_id: 'q1',
+              is_correct: true,
+              section_type: 'LR',
+              created_at: '2026-01-01T00:00:00Z',
+            }),
+            answerEvent({
+              practice_session_id: 'sec-1',
+              question_id: 'q1',
+              is_correct: false,
+              section_type: 'LR',
+              created_at: '2026-01-01T00:05:00Z',
+            }),
+          ]
+        }
+        return []
+      },
     }),
   })
   const o = await service.getOverview('user-1')
   assertEquals(o.averageLrMissedPerPrepTest, 1)
+})
+
+Deno.test('getOverview resolves scaled score from raw when scaled_score is null', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listCompletedPreptests: async () => [
+        completedPreptestRow({
+          scaled_score: null,
+          percentile: null,
+          raw_score: 82,
+          prep_test_id: 'pt-1',
+        }),
+      ],
+      getScoreRowForRaw: async () => ({ scaled_score: 168, percentile: 88 }),
+    }),
+  })
+  const o = await service.getOverview('user-1')
+  assertEquals(o.bestScaledScore, 168)
+  assertEquals(o.bestPercentile, 88)
+})
+
+Deno.test('getOverview falls back to section sessions for LR/RC when preptest events missing', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listCompletedPreptests: async () => [],
+      listCompletedSectionSessions: async () => [
+        {
+          id: 'sec-lr',
+          prep_test_id: null,
+          section_id: 'section-lr',
+          started_at: '2026-01-01T00:00:00Z',
+          completed_at: '2026-01-01T00:30:00Z',
+          raw_score: 18,
+          metadata: { sectionType: 'LR', questionIds: Array.from({ length: 26 }, (_, i) => `q${i}`) },
+        },
+      ],
+      listAnswerEventsForSessions: async () => [],
+    }),
+  })
+  const o = await service.getOverview('user-1')
+  assertEquals(o.averageLrMissedPerPrepTest, 8)
 })
 
 // --- getTrajectory ---

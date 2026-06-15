@@ -15,6 +15,9 @@ import {
   blindReviewSectionSessionPath,
   firstBlindReviewSectionSessionId,
 } from "@/features/student/blind-review/blind-review-navigation"
+import { prepTestHubHref } from "@/features/student/preptests/preptest-hub-navigation"
+import { buildPoolHistoryRows, poolCardDisplayScore } from "@/features/student/preptests/preptest-pool-display"
+import { AttemptScoreBox, ScoreBadge } from "@/features/student/preptests/preptest-score-badge"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { ChevronDown, ChevronLeft, ChevronRight, MoreVertical, RefreshCw, Settings } from "lucide-react"
@@ -53,14 +56,6 @@ function formatCompletedDate(iso: string): string {
   })
 }
 
-function attemptScoreLabel(attempt: PrepTestPoolAttempt): string {
-  if (attempt.scaledScore == null) return "—"
-  if (attempt.blindReviewScaledScore != null) {
-    return `${attempt.scaledScore} · ${attempt.blindReviewScaledScore} BR`
-  }
-  return String(attempt.scaledScore)
-}
-
 function attemptDetailLabel(attempt: PrepTestPoolAttempt): string {
   const ord =
     attempt.attemptNumber === 1
@@ -74,9 +69,8 @@ function attemptDetailLabel(attempt: PrepTestPoolAttempt): string {
 }
 
 function statusTitle(item: PrepTestPoolItem): string {
-  if (item.blindReviewStatus) return "Blind Review"
   if (item.status === "fresh") return "Ready to Take"
-  if (item.status === "in_progress") return "In Process"
+  if (item.status === "in_progress" || item.blindReviewStatus) return "In Process"
   return "Completed"
 }
 
@@ -134,13 +128,12 @@ function PrepTestListCard({
   const isCompleted = item.status === "completed"
   const blindReviewPending = item.blindReviewStatus != null
   const badgeTone: "default" | "muted" | "success" = isCompleted ? "success" : "default"
-  const titleClass = isCompleted
-    ? "text-[#287f6e]"
-    : blindReviewPending
-      ? "text-[#c45a00]"
-      : "text-[#0d47a1]"
-  const attempts = item.attempts ?? []
-  const hasHistory = isCompleted && attempts.length > 0
+  const titleClass = isCompleted ? "text-[#287f6e]" : "text-[#0d47a1]"
+  const historyRows = buildPoolHistoryRows(item, { includeFallback: isCompleted })
+  const latestAttempt = historyRows[0] ?? null
+  const displayScore = poolCardDisplayScore(item, latestAttempt, historyRows)
+  const canExpand = historyRows.length > 0
+  const showScoreBlock = isCompleted && (displayScore != null || canExpand)
 
   const primaryLabel = isCompleted ? "Retake" : item.status === "in_progress" && !blindReviewPending ? "Continue" : "Start"
   const primaryClass = isCompleted
@@ -152,22 +145,8 @@ function PrepTestListCard({
       className="w-full overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
       data-testid={`preptest-list-row-${item.id}`}
     >
-      <div className="flex min-h-[110px] flex-wrap items-center gap-4 px-6 py-3 sm:flex-nowrap sm:py-0">
-        {hasHistory ? (
-          <button
-            type="button"
-            onClick={onToggleExpanded}
-            className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-[#666d80] transition-colors hover:bg-[#f6f8fa]"
-            aria-expanded={expanded}
-            aria-label={expanded ? "Collapse attempt history" : "Expand attempt history"}
-          >
-            <ChevronDown className={cn("size-5 transition-transform", expanded && "rotate-180")} />
-          </button>
-        ) : (
-          <div className="size-9 shrink-0" aria-hidden />
-        )}
-
-        <div className="flex min-w-0 flex-1 items-center gap-6">
+      <div className="grid min-h-[110px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-6 py-3 sm:gap-4 sm:py-0">
+        <div className="flex min-w-0 items-center gap-6">
           <PtBadge number={ptNum} tone={badgeTone} />
           <div className="flex min-w-0 flex-col gap-2">
             <p className={cn("truncate text-2xl font-bold leading-[1.3]", titleClass)}>{statusTitle(item)}</p>
@@ -177,13 +156,26 @@ function PrepTestListCard({
           </div>
         </div>
 
-        <div className="flex w-full shrink-0 items-center justify-end gap-3 sm:w-auto">
-          {(isCompleted || blindReviewPending) && item.scaledScore != null ? (
-            <span className="inline-flex h-9 items-center rounded-full bg-[#e8f5f1] px-4 text-sm font-semibold text-[#287f6e]">
-              Score {item.scaledScore}
-            </span>
-          ) : null}
+        {showScoreBlock ? (
+          <div className="col-span-full flex items-center justify-center gap-1 sm:col-span-1 sm:justify-self-center">
+            {displayScore != null ? <ScoreBadge score={displayScore} /> : null}
+            {canExpand ? (
+              <button
+                type="button"
+                onClick={onToggleExpanded}
+                className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-[#666d80] transition-colors hover:bg-[#f6f8fa]"
+                aria-expanded={expanded}
+                aria-label={expanded ? "Collapse attempt history" : "Expand attempt history"}
+              >
+                <ChevronDown className={cn("size-5 transition-transform", expanded && "rotate-180")} />
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <div className="hidden sm:block" aria-hidden />
+        )}
 
+        <div className="col-span-full flex shrink-0 items-center justify-end gap-3 sm:col-span-1 sm:justify-self-end">
           {blindReviewPending ? (
             <button
               type="button"
@@ -216,9 +208,9 @@ function PrepTestListCard({
         </div>
       </div>
 
-      {hasHistory && expanded ? (
+      {canExpand && expanded ? (
         <ul className="border-t border-[#dfe1e7] bg-[#f9fbfc] px-6 py-4">
-          {attempts.map((attempt) => (
+          {historyRows.map((attempt) => (
             <li
               key={attempt.sessionId}
               className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef1f4] py-3 last:border-b-0"
@@ -228,15 +220,20 @@ function PrepTestListCard({
                 <p className="text-xs font-medium tracking-[0.02em] text-[#666d80]">{attemptDetailLabel(attempt)}</p>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold tabular-nums text-[#062357]">
-                  {attemptScoreLabel(attempt)}
-                </span>
+                <AttemptScoreBox attempt={attempt} />
                 <button
                   type="button"
                   onClick={() => onViewResult(attempt.sessionId)}
                   className="text-sm font-semibold text-[#0d47a1] hover:underline"
                 >
                   Result &gt;
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-[#666d80] transition-colors hover:bg-[#eef1f4] hover:text-[#062357]"
+                  aria-label="More options"
+                >
+                  <MoreVertical className="size-5" />
                 </button>
               </div>
             </li>
@@ -315,9 +312,9 @@ function PracticePrepTestsListPage() {
       if (item.status === "fresh" || item.status === "completed") {
         await practiceApi.startPrepTest({ prepTestId: item.id })
       }
-      navigate(`/app/practice/preptest/${encodeURIComponent(item.id)}`, {
-        state: item.status === "completed" ? { retake: true } : undefined,
-      })
+      navigate(
+        item.status === "completed" ? prepTestHubHref(item.id, { retake: true }) : prepTestHubHref(item.id),
+      )
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to start PrepTest")
     } finally {
