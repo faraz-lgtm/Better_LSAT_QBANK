@@ -31,12 +31,10 @@ function PracticeSectionsPage() {
 
   return (
     <StudentMain>
-        <section className="rounded-2xl border border-[#d8dee8] bg-[#f4f6f9] p-6">
+        <section className="rounded-2xl border border-[#d8dee8] bg-[#ffffff] p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-[#0d47a1] text-sm font-black text-white">
-                T
-              </span>
+            <div className="flex items-start gap-3 mb-3">
+            
               <p className="max-w-xl text-[14px] font-semibold leading-snug tracking-[0.1px] text-[#3c527f]">
                 Take a complete section from an official PrepTest.
               </p>

@@ -716,7 +716,10 @@ function SectionSessionPage() {
   }
 
   return (
-    <StudentMain className="flex min-h-0 max-w-none flex-1 flex-col overflow-hidden bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))] px-0 py-4 md:py-5">
+    <StudentMain
+      layout="locked"
+      className="flex min-h-0 max-w-none flex-1 flex-col overflow-hidden bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))] px-0 py-4 md:py-5"
+    >
       <div
         className="mx-auto flex min-h-0 w-full flex-1 flex-col px-4 md:px-6"
         style={{ maxWidth: showNotesPanel ? 1440 : 1280 }}
