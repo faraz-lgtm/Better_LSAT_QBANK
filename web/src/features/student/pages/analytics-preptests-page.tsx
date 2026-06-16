@@ -24,6 +24,7 @@ import {
 } from "@/features/student/lib/mock-analytics-preptests"
 import { mapSessionToPrepTestRecord } from "@/features/student/analytics/map-analytics"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
+import { cn } from "@/lib/utils"
 
 const Y_AXIS_LABELS = [100, 84, 68, 52, 36, 20] as const
 const BOOKMARKS_STORAGE_KEY = "analytics:preptests:bookmarks"
