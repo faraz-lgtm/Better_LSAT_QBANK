@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 
-import { STUDENT_PAGE_CONTAINER_CLASS } from "@/features/student/components/student-page-container"
+import { STUDENT_MAIN_PADDING_CLASS, STUDENT_PAGE_CONTAINER_CLASS, STUDENT_SHELL_GUTTER_CLASS } from "@/features/student/components/student-page-container"
 import { cn } from "@/lib/utils"
 
 type StudentMainProps = {
@@ -10,8 +10,17 @@ type StudentMainProps = {
 
 function StudentMain({ children, className = "" }: StudentMainProps) {
   return (
-    <main className={cn(STUDENT_PAGE_CONTAINER_CLASS, "min-h-0 flex-1 overflow-y-auto py-6", className)}>
-      {children}
+    <main className={cn("min-h-0 flex-1 overflow-y-auto", className)}>
+      <div
+        className={cn(
+          STUDENT_PAGE_CONTAINER_CLASS,
+          STUDENT_SHELL_GUTTER_CLASS,
+          STUDENT_MAIN_PADDING_CLASS,
+          className,
+        )}
+      >
+        {children}
+      </div>
     </main>
   )
 }

@@ -47,4 +47,14 @@ describe("StudentAppSidebar", () => {
     await user.click(academyButton)
     expect(academyButton).toHaveClass("student-sidebar-section-btn--active")
   })
+
+  it("shows active background on dashboard link when on dashboard route", () => {
+    render(
+      <MemoryRouter initialEntries={["/app"]}>
+        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole("link", { name: /dashboard/i })).toHaveClass("student-sidebar-section-btn--active")
+  })
 })

@@ -135,17 +135,18 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
         )}
         aria-label="Main navigation"
       >
-        <div className="border-b border-[#dfe1e7] p-2">
-          <div className={cn("flex h-14 items-center", collapsed ? "justify-center px-2" : "justify-between px-3")}>
+        <div className="student-shell-top-row flex items-center border-b border-[#dfe1e7] px-2">
+          <div
+            className={cn(
+              "flex w-full items-center",
+              collapsed ? "justify-center" : "justify-between px-3",
+            )}
+          >
             {!collapsed ? (
               <Link to={STUDENT_DASHBOARD_HREF} className="flex min-w-0 flex-1 items-center" aria-label="betterLSAT home">
                 <img src="/betterLSAT_LOGO.png" alt="betterLSAT" className="h-[18px] w-[144px] object-contain" />
               </Link>
-            ) : (
-              <Link to={STUDENT_DASHBOARD_HREF} className="flex items-center justify-center" aria-label="betterLSAT home">
-                <img src="/betterLSAT_LOGO.png" alt="" className="h-[18px] w-[18px] object-contain object-left" />
-              </Link>
-            )}
+            ) : null}
             <button
               type="button"
               className="hidden size-6 shrink-0 items-center justify-center rounded-lg border border-[#dfe1e7] bg-[#edf3ff] text-[#0d47a1] lg:inline-flex"
@@ -165,16 +166,27 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
           <div className="mt-1 flex flex-col gap-2">
             <Link
               to={STUDENT_DASHBOARD_HREF}
+              aria-label="Dashboard"
               className={cn(
                 "student-sidebar-section-btn",
-                dashboardActive && "student-sidebar-section-btn--dashboard-active",
+                dashboardActive && "student-sidebar-section-btn--active student-sidebar-section-btn--solo-active",
                 collapsed && "justify-center px-3",
               )}
             >
               <span className="flex items-center gap-1">
-                <LayoutGrid className="size-4 shrink-0 text-[#0d47a1]" aria-hidden />
+                <LayoutGrid
+                  className={cn("size-4 shrink-0", dashboardActive ? "text-[#f3f7ff]" : "text-[#0d47a1]")}
+                  aria-hidden
+                />
                 {!collapsed ? (
-                  <span className="text-sm font-semibold tracking-[0.28px] text-[#0d47a1]">Dashboard</span>
+                  <span
+                    className={cn(
+                      "text-sm font-semibold tracking-[0.28px]",
+                      dashboardActive ? "text-[#f3f7ff]" : "text-[#0d47a1]",
+                    )}
+                  >
+                    Dashboard
+                  </span>
                 ) : null}
               </span>
             </Link>
