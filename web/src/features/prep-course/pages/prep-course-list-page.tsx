@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import { ChevronRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
 import { createPrepCourseApi, type PrepCourse } from "@/lib/api/prep-course"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -50,7 +51,7 @@ function PrepCourseListPage() {
   if (loading) {
     return (
       <StudentMain className="pt-6">
-        <p className="ds-body-sm ds-text-muted">Loading courses...</p>
+        <StudentPageLoader centered label="Loading courses…" />
       </StudentMain>
     )
   }

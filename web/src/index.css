@@ -108,6 +108,7 @@
 
   --greyscale-100: #dfe1e7;
   --greyscale-25: #f6f8fa;
+  --primary-25: #edf3ff;
   --shadow-medium: 0 5px 10px -2px rgba(13, 13, 18, 0.04), 0 4px 8px -1px rgba(13, 13, 18, 0.02);
   --color-student-heading: #062357;
   --color-student-cta: #0047ab;
@@ -127,14 +128,20 @@
   --drill-easy: #fbbf24;
   --drill-medium: #f97316;
   --slate-bar-empty: #cbd5e1;
-  --student-expanded-row: #e8f2fc;
+  --student-expanded-row: #e5fdff;
   --student-red: #ff0000;
   --student-meter-light: #93c5fd;
   --explanation-pt-badge-bg: #fff5ec;
   --explanation-pt-badge-border: #f28c33;
   --explanation-pt-badge-text: #f28c33;
   --explanation-list-row-alt: #f4f7fb;
-  --explanation-passage-panel-bg: #fafbfd;
+  --explanation-passage-panel-bg: #f6f8fa;
+  --explanation-answered: #00bc54;
+  --explanation-answered-bg: #eafff4;
+  --explanation-teal: #0bbcc9;
+  --explanation-lr-badge-bg: #00bc54;
+  --explanation-rc-badge-bg: #0bbcc9;
+  --explanation-rc-badge-bg-light: #e5fdff;
   --explanation-prep-test-card-radius: 14px 14px 14px 14px;
   --explanation-badge-radius: 14px 14px 14px 14px;
 
@@ -176,6 +183,18 @@
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+}
+
+html.student-shell-active,
+html.student-shell-active body {
+  height: 100%;
+  overflow: hidden;
+}
+
+html.student-shell-active #root {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Auth routes: keep light surfaces and readable headings even when OS prefers dark */
@@ -1344,7 +1363,7 @@ select.ds-input {
 }
 
 .lsat-html-content {
-  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  font-family: var(--sans);
   font-size: 0.875rem;
   line-height: 1.625;
   color: var(--foreground);
@@ -1392,7 +1411,19 @@ select.ds-input {
   min-height: 0;
 }
 
+.prep-course-shell-card {
+  min-height: 0;
+}
+
+.prep-course-shell-card.practice-session-card {
+  flex: 1 1 0;
+  height: 0;
+  max-height: calc(100svh - var(--nav-shell-height) - 32px);
+}
+
 .practice-session-body {
+  flex: 1 1 0;
+  height: 0;
   min-height: 0;
 }
 

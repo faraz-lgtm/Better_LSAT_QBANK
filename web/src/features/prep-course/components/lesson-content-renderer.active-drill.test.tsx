@@ -125,14 +125,40 @@ const repWorkLesson: PrepLesson = {
   ]),
 }
 
+const legacyRepWorkLesson: PrepLesson = {
+  ...baseLesson,
+  slug: "rep-work-following-the-signs",
+  title: "Rep Work: Following the Signs",
+  lesson_type: "rep_work",
+  text_content:
+    "<p>Welcome to your first set of rep work.</p><p>Therefore</p><p>Answer: Conclusion Indicator.</p>",
+}
+
 describe("LessonContentRenderer rep_work", () => {
-  it("hides answer until toggle is on", async () => {
+  it("renders legacy HTML rep work without interactive cards", () => {
+    render(<LessonContentRenderer lesson={legacyRepWorkLesson} />)
+
+    expect(screen.getByText(/Welcome to your first set of rep work/)).toBeInTheDocument()
+    expect(screen.getByText(/Therefore/)).toBeInTheDocument()
+    expect(screen.getByText(/Answer: Conclusion Indicator/)).toBeInTheDocument()
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument()
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
+  })
+
+  it("toggles answer on and off without losing question text", async () => {
     const user = userEvent.setup()
     render(<LessonContentRenderer lesson={repWorkLesson} />)
 
+    const box = screen.getByRole("textbox", { name: "Question 1 text" })
+    expect(box).toHaveValue("All surgeons enjoy the sight of blood.")
+
+    await user.click(screen.getByRole("switch", { name: "Show or hide answer for question 1" }))
+    expect(screen.getByText("surgeon → enjoy sight of blood")).toBeVisible()
+    expect(box).toHaveValue("All surgeons enjoy the sight of blood.")
+
+    await user.click(screen.getByRole("switch", { name: "Show or hide answer for question 1" }))
     expect(screen.queryByText("surgeon → enjoy sight of blood")).not.toBeInTheDocument()
-    await user.click(screen.getByRole("switch", { name: "Show or hide answer" }))
-    expect(screen.getByText("surgeon → enjoy sight of blood")).toBeInTheDocument()
+    expect(box).toHaveValue("All surgeons enjoy the sight of blood.")
   })
 
   it("resets editable question text", async () => {
@@ -142,9 +168,9 @@ describe("LessonContentRenderer rep_work", () => {
     const box = screen.getByRole("textbox", { name: "Question 1 text" })
     await user.clear(box)
     await user.type(box, "Edited text")
-    expect(box).toHaveTextContent("Edited text")
+    expect(box).toHaveValue("Edited text")
 
     await user.click(screen.getByRole("button", { name: "Reset" }))
-    expect(box).toHaveTextContent("All surgeons enjoy the sight of blood.")
+    expect(box).toHaveValue("All surgeons enjoy the sight of blood.")
   })
 })

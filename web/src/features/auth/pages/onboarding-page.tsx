@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PasswordInput } from "@/components/ui/password-input"
 import { Select } from "@/components/ui/select"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { createAuthApi } from "@/lib/api/auth"
@@ -168,7 +169,7 @@ function OnboardingPage() {
         <div className="figma-gap-24 flex flex-col">
           <h1 className="figma-track-md text-center">{title()}</h1>
           {isLoading ? (
-            <p className="figma-text-sm figma-track-sm text-center text-[#666d80]">Loading...</p>
+            <StudentPageLoader centered label="Loading…" />
           ) : (
             <>
               {step === 1 && (

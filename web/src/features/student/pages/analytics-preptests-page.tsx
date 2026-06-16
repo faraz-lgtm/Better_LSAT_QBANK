@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowDownAZ, ArrowUpAZ } from "lucide-react"
 
-import { cn } from "@/lib/utils"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
 import {
   AnalyticsScoreProgressPanel,
@@ -449,7 +449,9 @@ function AnalyticsPrepTestsPage() {
         </div>
 
         {loading ? (
-          <p className="mb-6 text-sm text-[#666d80]">Loading drill analytics…</p>
+          <div className="mb-6">
+            <StudentPageLoader label="Loading PrepTest analytics…" />
+          </div>
         ) : null}
 
         {stats ? (

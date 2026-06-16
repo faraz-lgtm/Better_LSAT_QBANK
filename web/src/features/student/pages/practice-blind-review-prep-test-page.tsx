@@ -4,6 +4,7 @@ import { ChevronRight, ClipboardCheck, EyeOff, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import type { BlindReviewDetailResponse, BlindReviewDetailSection } from "@/features/student/blind-review/blind-review-types"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -129,7 +130,7 @@ function PracticeBlindReviewPrepTestPage() {
   if (loading) {
     return (
       <StudentMain>
-        <p className="text-sm text-[#666d80]">Loading blind review…</p>
+        <StudentPageLoader centered label="Loading blind review…" />
       </StudentMain>
     )
   }

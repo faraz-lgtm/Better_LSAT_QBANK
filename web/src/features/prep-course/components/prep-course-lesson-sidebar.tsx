@@ -54,7 +54,7 @@ function PrepCourseLessonSidebar({
   onClose,
 }: PrepCourseLessonSidebarProps) {
   return (
-    <aside className="flex min-h-0 w-full shrink-0 flex-col bg-[#F3F7FF] lg:w-[300px]" aria-label="Course lessons">
+    <aside className="flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden bg-[#F3F7FF] lg:w-[300px]" aria-label="Course lessons">
       <div className="shrink-0 flex items-center justify-between border-b border-[#dfe1e7]/80 px-4 py-4">
         <h2 className="text-lg font-bold tracking-[0.02em] text-[#062357]">All Lessons</h2>
         <button

@@ -4,6 +4,7 @@ import { Navigate, useNavigate, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import type {
   PrepTestPoolAttempt,
   PrepTestPoolFilter,
@@ -399,7 +400,7 @@ function PracticePrepTestsListPage() {
         ) : null}
 
         {loading ? (
-          <p className="text-sm text-[#666d80]">Loading PrepTests…</p>
+          <StudentPageLoader label="Loading PrepTests…" />
         ) : prepTests.length === 0 ? (
           <p className="text-sm text-[#666d80]">No PrepTests match this filter.</p>
         ) : (

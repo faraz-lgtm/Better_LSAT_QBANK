@@ -33,7 +33,7 @@ function ActiveDrillIntroCard({
   return (
     <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
       {hideTitle ? null : (
-        <h2 className="font-serif text-2xl font-bold text-[#062357] md:text-[28px]">{lesson.title}</h2>
+        <h2 className="text-2xl font-bold text-[#062357] md:text-[28px]">{lesson.title}</h2>
       )}
       {linked ? (
         <p className={`text-sm font-medium tracking-[0.02em] text-[#666d80] ${hideTitle ? "" : "mt-2"}`}>

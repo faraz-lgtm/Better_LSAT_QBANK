@@ -9,6 +9,7 @@ import type {
   BlindReviewPoolStatusCounts,
   BlindReviewStatus,
 } from "@/features/student/blind-review/blind-review-types"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
 import type { PrepTestPoolAttempt } from "@/features/student/preptests/preptest-types"
 import { buildPoolHistoryRows, poolCardDisplayScore } from "@/features/student/preptests/preptest-pool-display"
@@ -321,7 +322,7 @@ function PracticeBlindReviewPage() {
         ) : null}
 
         {loading ? (
-          <p className="text-sm text-[#666d80]">Loading blind review…</p>
+          <StudentPageLoader label="Loading blind review…" />
         ) : prepTests.length === 0 ? (
           <section className="rounded-2xl border border-[#dfe1e7] bg-white p-8 text-center shadow-sm">
             <p className="text-sm text-[#666d80]">

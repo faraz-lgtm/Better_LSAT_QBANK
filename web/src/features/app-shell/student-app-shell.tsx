@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Outlet } from "react-router-dom"
 
 import { StudentAppHeader } from "@/features/app-shell/student-app-header"
@@ -13,13 +13,20 @@ function StudentAppShell() {
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), [])
   const { headerActions, setHeaderActions } = useStudentPageHeaderSlotState()
 
+  useEffect(() => {
+    document.documentElement.classList.add("student-shell-active")
+    return () => {
+      document.documentElement.classList.remove("student-shell-active")
+    }
+  }, [])
+
   return (
     <StudentPageHeaderSlotProvider setHeaderActions={setHeaderActions}>
-      <div className="flex h-svh bg-[#f3f7ff]">
+      <div className="flex h-svh min-h-0 overflow-hidden bg-[#f3f7ff]">
         <StudentAppSidebar mobileOpen={mobileNavOpen} onMobileClose={closeMobileNav} />
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <StudentAppHeader onOpenMobileNav={() => setMobileNavOpen(true)} headerActions={headerActions} />
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex h-0 min-h-0 flex-1 flex-col overflow-hidden">
             <Outlet />
           </div>
         </div>

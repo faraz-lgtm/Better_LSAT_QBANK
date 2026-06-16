@@ -1,3 +1,5 @@
+import { sanitizeHtml } from "@/lib/html/sanitize-html"
+
 export type RepWorkPair = { question: string; answer: string }
 
 export type RepWorkPayload = {
@@ -50,7 +52,7 @@ export function htmlToPlainText(html: string): string {
   if (!html.trim()) return ""
   if (typeof document !== "undefined") {
     const el = document.createElement("div")
-    el.innerHTML = html
+    el.innerHTML = sanitizeHtml(html)
     return (el.textContent ?? "").replace(/\s+/g, " ").trim()
   }
   return html

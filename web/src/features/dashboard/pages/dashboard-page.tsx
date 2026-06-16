@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Brain, Clock, Loader2, Target } from "lucide-react"
+import { Brain, Clock, Target } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,6 +13,7 @@ import { mapOverviewToDashboardStats } from "@/features/dashboard/lib/map-dashbo
 import { useAnalyticsApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import { ContinueDrillCard, continueDrillToCardDrill } from "@/features/student/components/continue-drill-card"
 import { StudentMain } from "@/features/student/components/student-main"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import {
   type ContinueDrill,
   fetchAllSessionsForStudyHours,
@@ -223,16 +224,17 @@ function DashboardPage() {
     setEditingCycle(true)
   }
 
+  if (loading) {
+    return (
+      <StudentMain>
+        <StudentPageLoader centered label="Loading dashboard…" />
+      </StudentMain>
+    )
+  }
+
   return (
     <>
       <StudentMain>
-        {loading ? (
-          <div className="mb-6 flex items-center gap-2 text-sm text-[#666d80]">
-            <Loader2 className="size-4 animate-spin" aria-hidden />
-            Loading dashboard…
-          </div>
-        ) : null}
-
         {error ? <p className="mb-4 text-sm text-[#95122b]">{error}</p> : null}
 
         <div className="mb-[24px] grid gap-[24px] md:grid-cols-3">
@@ -285,7 +287,7 @@ function DashboardPage() {
               </button>
             </div>
 
-            {!loading && displayDrills.length === 0 ? (
+            {displayDrills.length === 0 ? (
               <p className="rounded-xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-6 text-sm text-[#666d80]">
                 No drills in progress. Start a new drill from{" "}
                 <button

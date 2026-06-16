@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
-import { Loader2, Bookmark } from "lucide-react"
+import { Bookmark } from "lucide-react"
+
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 
 import { StudentMain } from "@/features/student/components/student-main"
 import {
@@ -60,12 +62,7 @@ function PrioritiesTab() {
   }, [analyticsApi])
 
   if (loading) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-[#666d80]">
-        <Loader2 className="size-4 animate-spin" aria-hidden />
-        Loading priorities…
-      </div>
-    )
+    return <StudentPageLoader label="Loading priorities…" />
   }
   if (error) return <p className="text-sm text-red-600">{error}</p>
   if (rows.length === 0) {
@@ -150,12 +147,7 @@ function HistoryTab() {
 
   if (!analyticsApi) return <p className="text-sm text-red-600">Supabase env is missing.</p>
   if (loading) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-[#666d80]">
-        <Loader2 className="size-4 animate-spin" aria-hidden />
-        Loading practice history…
-      </div>
-    )
+    return <StudentPageLoader label="Loading practice history…" />
   }
   if (error) return <p className="text-sm text-red-600">{error}</p>
   if (sessions.length === 0) {
@@ -242,12 +234,7 @@ function OverviewTab() {
   )
 
   if (loading) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-[#666d80]">
-        <Loader2 className="size-4 animate-spin" aria-hidden />
-        Loading overview…
-      </div>
-    )
+    return <StudentPageLoader label="Loading overview…" />
   }
   if (error) return <p className="text-sm text-red-600">{error}</p>
 

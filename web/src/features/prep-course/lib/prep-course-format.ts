@@ -62,6 +62,12 @@ export function nextLessonSlug(lessons: PrepLesson[], currentSlug: string): stri
   return lessons[idx + 1]?.slug ?? null
 }
 
+export function prevLessonSlug(lessons: PrepLesson[], currentSlug: string): string | null {
+  const idx = lessons.findIndex((l) => l.slug === currentSlug)
+  if (idx <= 0) return null
+  return lessons[idx - 1]?.slug ?? null
+}
+
 export function countCompletedLessons(lessons: PrepLesson[], completedSlugs: Set<string> | string[]): number {
   const completed = completedSlugs instanceof Set ? completedSlugs : new Set(completedSlugs)
   return lessons.filter((l) => completed.has(l.slug)).length

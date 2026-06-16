@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react"
 import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
 import { PracticeSectionIntroHeader } from "@/features/student/practice-session/practice-section-intro-header"
 import {
@@ -152,7 +153,7 @@ function PracticePrepTestSectionPage() {
   if (loading) {
     return (
       <SectionIntroOverlay>
-        <p className="text-sm font-medium text-white/90">Loading section…</p>
+        <StudentPageLoader centered label="Loading section…" className="[&_p]:text-white/90" />
       </SectionIntroOverlay>
     )
   }
