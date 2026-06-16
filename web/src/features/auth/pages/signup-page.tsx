@@ -1,36 +1,15 @@
-import { Link, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { SocialButton } from "@/components/ui/social-button"
 import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
+import { AuthTermsCheckbox } from "@/features/auth/components/auth-terms-checkbox"
 import { createAuthApi, getAuthCallbackUrl } from "@/lib/api/auth"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
-
-type TermsCheckboxProps = {
-  checked: boolean
-  onChange: (checked: boolean) => void
-}
-
-function TermsCheckbox({ checked, onChange }: TermsCheckboxProps) {
-  return (
-    <label className="figma-gap-8 figma-text-sm figma-track-sm inline-flex items-center font-medium text-[#666d80]">
-      <Checkbox
-        size="sm"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-      />
-      <span>
-        I agree to <span className="font-semibold text-[#0d47a1]">BetterLSAT&apos;s Terms of Service</span>{" "}
-        <span className="text-[#df1c41]">*</span>
-      </span>
-    </label>
-  )
-}
 
 function SignupPage() {
   const navigate = useNavigate()
@@ -90,25 +69,27 @@ function SignupPage() {
   }
 
   return (
-    <AuthLayout ctaLabel="Log In" ctaHref="/login">
+    <AuthLayout ctaLabel="Sign In" ctaHref="/login">
       <AuthCard>
         <div className="figma-gap-24 flex flex-col">
           <h1 className="figma-track-md text-center">Create an account</h1>
 
-          <div className="figma-gap-8 flex flex-col">
-            <p className="figma-text-sm figma-track-sm font-medium text-[#062357]">
-              Email for Magic Link<span className="text-[#df1c41]">*</span>
-            </p>
-            <Input
-              size="lg"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="Enter your email"
-            />
-          </div>
+          <div className="figma-gap-16 flex flex-col">
+            <div className="figma-gap-8 flex flex-col">
+              <p className="figma-text-sm figma-track-sm font-medium text-[#062357]">
+                Email for Magic Link<span className="text-[#df1c41]">*</span>
+              </p>
+              <Input
+                size="lg"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="Enter your email"
+              />
+            </div>
 
-          <TermsCheckbox checked={acceptedTerms} onChange={setAcceptedTerms} />
+            <AuthTermsCheckbox checked={acceptedTerms} onChange={setAcceptedTerms} />
+          </div>
 
           <Button
             type="button"
@@ -116,7 +97,7 @@ function SignupPage() {
             onClick={() => void sendMagicLink()}
             className="ds-btn w-full"
           >
-            {isSubmitting ? "Sending..." : "Send magic link"}
+            {isSubmitting ? "Sending..." : "Send Confirmation Link"}
           </Button>
 
           {error && <p className="figma-text-sm figma-track-sm text-center text-[#df1c41]">{error}</p>}
@@ -127,16 +108,13 @@ function SignupPage() {
             <div className="h-px flex-1 bg-[#dfe1e7]" />
           </div>
 
-          <SocialButton onClick={() => void continueWithGoogle()} disabled={isSubmitting}>
-            Sign up with Google
-          </SocialButton>
+          <div className="figma-gap-16 flex flex-col">
+            <AuthTermsCheckbox checked={acceptedTerms} onChange={setAcceptedTerms} />
 
-          <p className="figma-text-sm figma-track-sm text-center text-[#666d80]">
-            Already have an account?{" "}
-            <Link to="/login" className="font-semibold text-[#0d47a1]">
-              Log in
-            </Link>
-          </p>
+            <SocialButton onClick={() => void continueWithGoogle()} disabled={isSubmitting}>
+              Sign in with Google
+            </SocialButton>
+          </div>
         </div>
       </AuthCard>
     </AuthLayout>

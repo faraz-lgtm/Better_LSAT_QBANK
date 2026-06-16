@@ -1,31 +1,48 @@
-import { type CSSProperties, type ReactNode } from "react"
+import type { ReactNode } from "react"
 
-import { AuthHeader } from "@/features/auth/components/auth-header"
-import authBackgroundImage from "@/assets/Group 1686550898.png"
+import { AuthSidebar } from "@/features/auth/components/auth-sidebar"
+import { AuthSplitFooter } from "@/features/auth/components/auth-split-footer"
+import { AuthSplitHeader } from "@/features/auth/components/auth-split-header"
 
 type AuthLayoutProps = {
   children: ReactNode
   ctaLabel: string
   ctaHref: "/login" | "/signup"
+  ctaPrompt?: string
   headerVariant?: "auth" | "app"
 }
 
-function AuthLayout({ children, ctaLabel, ctaHref, headerVariant = "auth" }: AuthLayoutProps) {
+function getDefaultCtaPrompt(ctaHref: "/login" | "/signup"): string {
+  return ctaHref === "/login" ? "Already have an account?" : "Don't have an account?"
+}
+
+function AuthLayout({
+  children,
+  ctaLabel,
+  ctaHref,
+  ctaPrompt,
+  headerVariant = "auth",
+}: AuthLayoutProps) {
+  const prompt = ctaPrompt ?? getDefaultCtaPrompt(ctaHref)
+
   return (
-    <div className="auth-page flex min-h-svh flex-col bg-[#f5f9ff]">
-      <AuthHeader ctaLabel={ctaLabel} ctaHref={ctaHref} variant={headerVariant} />
-      <main className="auth-main-wrap relative flex-1 overflow-x-hidden overflow-y-auto bg-[#f5f9ff]">
-        <div className="auth-desktop-canvas mx-auto">
-          <div
-            className="auth-main relative flex min-h-[calc(100svh-72px)] w-full items-center justify-center py-8"
-            style={{ "--auth-bg-image": `url(${authBackgroundImage})` } as CSSProperties}
-          >
-            <div className="auth-content-shell relative z-10 w-full">
-              {children}
-            </div>
-          </div>
+    <div className="auth-page auth-split-page">
+      <div className="auth-split-frame">
+        <AuthSidebar />
+        <div className="auth-split-content">
+          <div className="auth-split-pattern" aria-hidden />
+          <AuthSplitHeader
+            ctaLabel={ctaLabel}
+            ctaHref={ctaHref}
+            ctaPrompt={prompt}
+            variant={headerVariant}
+          />
+          <main className="auth-split-main">
+            <div className="auth-content-shell">{children}</div>
+          </main>
+          {headerVariant === "auth" ? <AuthSplitFooter /> : null}
         </div>
-      </main>
+      </div>
     </div>
   )
 }

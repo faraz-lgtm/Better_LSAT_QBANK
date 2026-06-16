@@ -94,12 +94,12 @@ function LoginPage() {
   }
 
   return (
-    <AuthLayout ctaLabel="Sign Up" ctaHref="/signup" headerVariant="auth">
-      <AuthCard>
-        <div className="figma-gap-24 flex flex-col">
-          <h1 className="figma-track-md text-center">Login with</h1>
+    <AuthLayout ctaLabel="Sign Up" ctaHref="/signup">
+      <AuthCard className="auth-card--compact">
+        <div className="auth-form-stack flex flex-col">
+          <h1 className="figma-track-md text-center">Sign in to your account</h1>
 
-          <div className="figma-gap-8 flex flex-col">
+          <div className="auth-form-section flex flex-col">
             <p className="figma-text-sm figma-track-sm font-medium text-[#062357]">
               Email for Magic Link<span className="text-[#df1c41]">*</span>
             </p>
@@ -114,20 +114,20 @@ function LoginPage() {
               type="button"
               disabled={isMagicLoading || !magicEmail.trim()}
               onClick={() => void sendMagicLink()}
-              className="ds-btn mt-2 w-full"
+              className="ds-btn w-full"
             >
-              {isMagicLoading ? "Sending..." : "Send Magic Link"}
+              {isMagicLoading ? "Sending..." : "Send Confirmation Link"}
             </Button>
           </div>
 
-          <div className="figma-gap-12 flex items-center">
+          <div className="auth-form-or flex items-center">
             <div className="h-px flex-1 bg-[#dfe1e7]" />
-            <span className="figma-text-lg figma-track-md font-semibold text-[#666d80]">OR</span>
+            <span className="figma-track-md font-semibold text-[#666d80]">OR</span>
             <div className="h-px flex-1 bg-[#dfe1e7]" />
           </div>
 
-          <div className="figma-gap-12 flex flex-col">
-            <div className="figma-gap-8 flex flex-col">
+          <div className="auth-form-section flex flex-col">
+            <div className="auth-form-section flex flex-col">
               <p className="figma-text-sm figma-track-sm font-medium text-[#062357]">
                 Email<span className="text-[#df1c41]">*</span>
               </p>
@@ -139,7 +139,7 @@ function LoginPage() {
                 placeholder="Enter your email"
               />
             </div>
-            <div className="figma-gap-8 flex flex-col">
+            <div className="auth-form-section flex flex-col">
               <p className="figma-text-sm figma-track-sm font-medium text-[#062357]">
                 Password<span className="text-[#df1c41]">*</span>
               </p>
@@ -170,25 +170,22 @@ function LoginPage() {
             </Button>
           </div>
 
-          <div className="figma-gap-12 flex items-center">
+          <div className="auth-form-or flex items-center">
             <div className="h-px flex-1 bg-[#dfe1e7]" />
-            <span className="figma-text-lg figma-track-md font-semibold text-[#666d80]">OR</span>
+            <span className="figma-track-md font-semibold text-[#666d80]">OR</span>
             <div className="h-px flex-1 bg-[#dfe1e7]" />
           </div>
 
           {message && <p className="figma-text-sm figma-track-sm text-center text-[#0d47a1]">{message}</p>}
           {error && <p className="figma-text-sm figma-track-sm text-center text-[#df1c41]">{error}</p>}
 
-          <SocialButton disabled={isGoogleLoading} onClick={() => void signInWithGoogle()}>
+          <SocialButton
+            disabled={isGoogleLoading}
+            onClick={() => void signInWithGoogle()}
+            className="auth-social-btn"
+          >
             {isGoogleLoading ? "Redirecting..." : "Sign in with Google"}
           </SocialButton>
-
-          <p className="figma-text-sm figma-track-sm text-center text-[#666d80]">
-            Don&apos;t have an account?{" "}
-            <a href="/signup" className="font-semibold text-[#0d47a1]">
-              Sign Up
-            </a>
-          </p>
         </div>
       </AuthCard>
     </AuthLayout>
