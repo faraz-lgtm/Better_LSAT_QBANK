@@ -27,9 +27,9 @@ describe("SignupPage", () => {
     )
 
     expect(screen.getByRole("heading", { name: /create an account/i })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /send magic link/i })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /sign up with google/i })).toBeInTheDocument()
-    expect(screen.getByText(/terms of service/i)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /send confirmation link/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /sign in with google/i })).toBeInTheDocument()
+    expect(screen.getAllByText(/terms of service/i).length).toBeGreaterThan(0)
     expect(screen.getByText(/already have an account/i)).toBeInTheDocument()
   })
 
@@ -47,8 +47,8 @@ describe("SignupPage", () => {
     )
 
     await user.type(screen.getByPlaceholderText(/enter your email/i), "new@example.com")
-    await user.click(screen.getByRole("checkbox"))
-    await user.click(screen.getByRole("button", { name: /send magic link/i }))
+    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(screen.getByRole("button", { name: /send confirmation link/i }))
 
     expect(authMock.signInWithOtp).toHaveBeenCalled()
     expect(await screen.findByRole("heading", { name: /check your email/i })).toBeInTheDocument()

@@ -33,9 +33,9 @@ describe("LoginPage", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole("heading", { name: /login with/i })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: /sign in to your account/i })).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/enter your password/i)).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /send magic link/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /send confirmation link/i })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /sign in with google/i })).toBeInTheDocument()
   })
 
@@ -51,7 +51,7 @@ describe("LoginPage", () => {
 
     const emailInputs = screen.getAllByPlaceholderText(/enter your email/i)
     await user.type(emailInputs[0], "login@example.com")
-    await user.click(screen.getByRole("button", { name: /send magic link/i }))
+    await user.click(screen.getByRole("button", { name: /send confirmation link/i }))
 
     expect(authMock.signInWithOtp).toHaveBeenCalled()
     expect(await screen.findByText(/magic link sent/i)).toBeInTheDocument()
