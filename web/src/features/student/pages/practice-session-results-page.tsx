@@ -251,7 +251,7 @@ function PracticeSessionResultsPage() {
   }
 
   return (
-    <StudentMain className="max-w-[1280px]">
+    <StudentMain className="w-full max-w-none" contentClassName="max-w-none">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-serif text-[32px] font-bold leading-[1.25] text-[#062357] md:text-[40px]">
           {results.title}

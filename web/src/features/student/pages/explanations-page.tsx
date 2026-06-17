@@ -196,9 +196,9 @@ function SectionKindBadge({ kind }: { kind: ExplanationSectionNode["kind"] }) {
       className={`${TREE_BADGE_CLASS} border text-sm font-black leading-none`}
       style={{
         ...TREE_BADGE_STYLE,
-        backgroundColor: "#ffffff",
+        backgroundColor: isRc ? accentColor : "#ffffff",
         borderColor: accentColor,
-        color: accentColor,
+        color: isRc ? "#ffffff" : accentColor,
       }}
       aria-hidden
     >
@@ -839,12 +839,7 @@ function ExplanationsPage() {
         </nav>
       ) : null}
 
-      <p className="mt-4 flex items-center gap-2 text-xs text-[#666d80]">
-        <PlayCircle className="size-4 shrink-0 text-[color:var(--color-student-accent)]" />
-        {useMock
-          ? "Showing sample data (Supabase not configured). Sign in and connect the API to load your PrepTests."
-          : "Expand a PrepTest to browse sections and open question explanations."}
-      </p>
+    
     </StudentMain>
   )
 }

@@ -384,14 +384,39 @@ function sortedPrepTestSessions(sessions: PracticeSessionRow[]): PracticeSession
   )
 }
 
-/** Newest completed PrepTest session still awaiting blind review, or null if the latest attempt is fully done. */
+/** Newest completed PrepTest session still awaiting blind review, or null if none. */
 function prepTestSessionAwaitingBlindReview(sessions: PracticeSessionRow[]): PracticeSessionRow | null {
   const prepTests = sortedPrepTestSessions(sessions)
-  const newest = prepTests[0]
-  if (newest?.completed_at && isPrepTestFullyComplete(newest)) {
-    return null
-  }
   return prepTests.find((s) => s.completed_at && !isPrepTestFullyComplete(s)) ?? null
+}
+
+function prepTestSessionEligibleForBlindReviewComplete(
+  session: PracticeSessionRow | null | undefined,
+  prepTestId: string,
+): session is PracticeSessionRow {
+  return Boolean(
+    session &&
+      session.kind === 'PREPTEST' &&
+      session.prep_test_id === prepTestId &&
+      session.completed_at &&
+      !isPrepTestFullyComplete(session),
+  )
+}
+
+function resolvePrepTestSessionForBlindReview(
+  sessions: PracticeSessionRow[],
+  prepTestId: string,
+  preferredSessionId: string,
+): PracticeSessionRow | null {
+  if (preferredSessionId) {
+    const direct = sessions.find(
+      (s) => s.id === preferredSessionId && s.kind === 'PREPTEST' && s.prep_test_id === prepTestId,
+    )
+    if (prepTestSessionEligibleForBlindReviewComplete(direct, prepTestId)) {
+      return direct
+    }
+  }
+  return prepTestSessionAwaitingBlindReview(sessions)
 }
 
 function isPrepTestFullyComplete(session: PracticeSessionRow): boolean {
@@ -1987,7 +2012,11 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (!prepTestId) throw new PracticeValidationError('prepTestId or sessionId is required')
 
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
-      const prepTestSession = prepTestSessionAwaitingBlindReview(sessions)
+      let prepTestSession = resolvePrepTestSessionForBlindReview(
+        sessions,
+        prepTestId,
+        sessionIdFromBody,
+      )
       if (!prepTestSession) {
         const newest = sortedPrepTestSessions(sessions)[0]
         if (newest?.blind_review_completed_at) {
@@ -1996,7 +2025,15 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         throw new PracticeValidationError('No completed PrepTest session found')
       }
 
-      const sectionSessions = sessions.filter((s) => s.kind === 'SECTION' && s.completed_at && s.section_id)
+      const sortedPrepTests = sortedPrepTestSessions(sessions)
+      const prepTestIndex = sortedPrepTests.findIndex((s) => s.id === prepTestSession.id)
+      const nextPrepTestSession =
+        prepTestIndex >= 0 ? (sortedPrepTests[prepTestIndex - 1] ?? null) : null
+      const sectionSessions = sectionSessionsForPrepTestAttempt(
+        sessions,
+        prepTestSession,
+        nextPrepTestSession,
+      ).filter((s) => s.completed_at && s.section_id)
       const sectionIds = sectionSessions.map((s) => s.id)
       const events = await deps.repository.listAnswerEventsForSessions(sectionIds, userId)
       const latest = latestAnswerByQuestion(events)

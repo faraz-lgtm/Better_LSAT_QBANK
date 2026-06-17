@@ -6,11 +6,12 @@ import { cn } from "@/lib/utils"
 type StudentMainProps = {
   children: ReactNode
   className?: string
+  contentClassName?: string
   /** Locked: page fills the shell; children own internal scroll regions. */
   layout?: "scroll" | "locked"
 }
 
-function StudentMain({ children, className = "", layout = "scroll" }: StudentMainProps) {
+function StudentMain({ children, className = "", contentClassName = "", layout = "scroll" }: StudentMainProps) {
   const locked = layout === "locked"
 
   return (
@@ -26,6 +27,7 @@ function StudentMain({ children, className = "", layout = "scroll" }: StudentMai
           STUDENT_PAGE_CONTAINER_CLASS,
           STUDENT_SHELL_GUTTER_CLASS,
           locked ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden pt-6 pb-0" : STUDENT_MAIN_PADDING_CLASS,
+          contentClassName,
         )}
       >
         {children}

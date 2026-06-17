@@ -104,11 +104,19 @@ function PracticeBlindReviewPrepTestPage() {
   }, [testIdParam, loading, detail?.blindReview.status, practiceApi, load])
 
   async function handleCompleteBlindReview() {
-    if (!testIdParam) return
+    if (!testIdParam || !detail) return
     setFinishing(true)
     setError(null)
     try {
-      const completed = await practiceApi.completeBlindReview({ prepTestId: testIdParam })
+      let prepTestSessionId = detail.blindReview.prepTestSessionId
+      if (detail.blindReview.status === "eligible") {
+        const started = await practiceApi.startBlindReview(testIdParam)
+        prepTestSessionId = started.id
+      }
+      const completed = await practiceApi.completeBlindReview({
+        prepTestId: testIdParam,
+        sessionId: prepTestSessionId,
+      })
       navigate(`/app/analytics/preptests/results/${encodeURIComponent(completed.id)}`, { replace: true })
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to complete blind review")
@@ -149,6 +157,7 @@ function PracticeBlindReviewPrepTestPage() {
   const { prepTest, blindReview } = detail
   const blindReviewActive = blindReview.status === "in_progress" || starting
   const blindReviewDone = blindReview.status === "completed"
+  const canSubmitBlindReview = blindReview.status === "in_progress" && !starting
   const practiceableSections = detail.sections.filter((s) => s.practiceable && s.sectionSessionId)
   const recommendedTotal = practiceableSections.reduce((sum, s) => sum + s.questionCount, 0)
   const actualScoreLabel =
@@ -267,7 +276,7 @@ function PracticeBlindReviewPrepTestPage() {
           ) : (
             <button
               type="button"
-              disabled={finishing || !blindReviewActive}
+              disabled={finishing || !canSubmitBlindReview}
               onClick={() => void handleCompleteBlindReview()}
               className="ds-btn min-w-[220px] gap-2 px-6 text-base disabled:opacity-50"
             >

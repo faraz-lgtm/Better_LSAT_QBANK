@@ -586,7 +586,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
         method: "POST",
         body: { prepTestId },
       })
-      if (error) throw error
+      if (error) await throwIfEdgeInvokeFailed(error)
       if (!data?.prepTest) throw new Error("No blind review detail returned from practice")
       return data
     },
@@ -596,7 +596,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
         method: "POST",
         body: { prepTestId },
       })
-      if (error) throw error
+      if (error) await throwIfEdgeInvokeFailed(error)
       if (!data?.session) throw new Error("No session returned from practice")
       return data.session
     },
@@ -606,7 +606,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
         method: "POST",
         body: { prepTestId },
       })
-      if (error) throw error
+      if (error) await throwIfEdgeInvokeFailed(error)
       if (!data?.session) throw new Error("No session returned from practice")
       return data.session
     },
@@ -616,7 +616,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
         method: "POST",
         body: input,
       })
-      if (error) throw error
+      if (error) await throwIfEdgeInvokeFailed(error)
       if (!data?.session) throw new Error("No session returned from practice")
       return data.session
     },
