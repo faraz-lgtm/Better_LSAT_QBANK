@@ -4,6 +4,7 @@ import { Brain, Clock, Loader2, Target } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useStudentPageHeaderActions } from "@/features/app-shell/student-page-header-slot"
 import {
   formatLawSchoolCycle,
   formatPlannedLsatHeadline,
@@ -155,6 +156,23 @@ function DashboardPage() {
     return filteredSuggested.map((d) => ({ ...d, isSuggested: true as const }))
   }, [filteredContinue, filteredSuggested])
 
+  const adaptiveDrillButton = useMemo(
+    () => (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="w-fit shrink-0"
+        onClick={() => navigate(adaptiveDrillPath(activeFilter))}
+      >
+        Adaptive Drill
+      </Button>
+    ),
+    [activeFilter, navigate],
+  )
+
+  useStudentPageHeaderActions(adaptiveDrillButton)
+
   const preferences = studyContext?.preferences ?? null
   const officialScores = studyContext?.officialScores ?? []
 
@@ -208,18 +226,6 @@ function DashboardPage() {
   return (
     <>
       <StudentMain>
-        <div className="mb-4 flex justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-fit shrink-0"
-            onClick={() => navigate(adaptiveDrillPath(activeFilter))}
-          >
-            Adaptive Drill
-          </Button>
-        </div>
-
         {loading ? (
           <div className="mb-6 flex items-center gap-2 text-sm text-[#666d80]">
             <Loader2 className="size-4 animate-spin" aria-hidden />
@@ -229,7 +235,7 @@ function DashboardPage() {
 
         {error ? <p className="mb-4 text-sm text-[#95122b]">{error}</p> : null}
 
-        <div className="mb-6 grid gap-4 md:grid-cols-3">
+        <div className="mb-[24px] grid gap-[24px] md:grid-cols-3">
           {statCards.map((card) => (
             <article
               key={card.id}
@@ -253,7 +259,7 @@ function DashboardPage() {
           ))}
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_400px]">
+        <div className="grid gap-[24px] lg:grid-cols-[1fr_400px]">
           <section className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-[0px_5px_10px_0px_rgba(13,13,18,0.04)]">
             <div className="mb-4 flex flex-wrap gap-2">
               <button

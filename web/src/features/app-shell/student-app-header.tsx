@@ -1,9 +1,9 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react"
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Bell, ChevronDown, Menu } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 
-import { getStudentBreadcrumbs, getStudentPageTitle } from "@/features/app-shell/student-nav-config"
-import { STUDENT_PAGE_CONTAINER_CLASS } from "@/features/student/components/student-page-container"
+import { getStudentBreadcrumbs } from "@/features/app-shell/student-nav-config"
+import { STUDENT_PAGE_CONTAINER_CLASS, STUDENT_SHELL_GUTTER_CLASS } from "@/features/student/components/student-page-container"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -29,16 +29,16 @@ function getInitials(name: string): string {
 
 type StudentAppHeaderProps = {
   onOpenMobileNav: () => void
+  headerActions?: ReactNode
 }
 
-function StudentAppHeader({ onOpenMobileNav }: StudentAppHeaderProps) {
+function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderProps) {
   const { pathname, search } = useLocation()
   const [email, setEmail] = useState<string | null>(null)
   const [openProfileMenu, setOpenProfileMenu] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement | null>(null)
 
   const crumbs = useMemo(() => getStudentBreadcrumbs(pathname, search), [pathname, search])
-  const pageTitle = useMemo(() => getStudentPageTitle(pathname, search), [pathname, search])
 
   useEffect(() => {
     let mounted = true
@@ -77,9 +77,9 @@ function StudentAppHeader({ onOpenMobileNav }: StudentAppHeaderProps) {
   const lastCrumbIndex = crumbs.length - 1
 
   return (
-    <header className="student-topbar sticky top-0 z-30 shrink-0 border-b border-[#dfe1e6] bg-[#f3f7ff]">
-      <div className="flex h-[72px] items-center py-5">
-        <div className={cn(STUDENT_PAGE_CONTAINER_CLASS, "flex w-full items-center justify-between gap-4")}>
+    <header className="student-topbar sticky top-0 z-30 shrink-0 border-b border-[#dfe1e7] bg-[#f3f7ff]">
+      <div className="student-shell-top-row flex items-center">
+        <div className={cn(STUDENT_PAGE_CONTAINER_CLASS, STUDENT_SHELL_GUTTER_CLASS, "flex w-full items-center justify-between gap-4")}>
           <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
@@ -125,6 +125,7 @@ function StudentAppHeader({ onOpenMobileNav }: StudentAppHeaderProps) {
         </div>
 
         <div className="flex shrink-0 items-center gap-3">
+          {headerActions ? <div className="flex shrink-0 items-center">{headerActions}</div> : null}
           <button
             type="button"
             className="inline-flex size-[46px] items-center justify-center rounded-[20px] bg-[#edf3ff] text-[#0d47a1]"
@@ -170,14 +171,6 @@ function StudentAppHeader({ onOpenMobileNav }: StudentAppHeaderProps) {
         </div>
         </div>
       </div>
-
-      {pageTitle ? (
-        <div className="student-page-title-row">
-          <div className={cn(STUDENT_PAGE_CONTAINER_CLASS, "flex h-full items-center")}>
-            <h1 className="student-page-heading">{pageTitle}</h1>
-          </div>
-        </div>
-      ) : null}
     </header>
   )
 }

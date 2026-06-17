@@ -1248,6 +1248,12 @@ select.ds-input {
 }
 
 /* Figma student sidebar shell (node 18624:68805) */
+.student-shell-top-row {
+  box-sizing: border-box;
+  height: 72px;
+  flex-shrink: 0;
+}
+
 .student-sidebar-dropdown {
   display: flex;
   flex-direction: column;
@@ -1272,8 +1278,8 @@ select.ds-input {
   background-color: #0d47a1;
 }
 
-.student-sidebar-section-btn--dashboard-active {
-  background-color: #edf3ff;
+.student-sidebar-section-btn--solo-active {
+  border-radius: 10px;
 }
 
 .student-sidebar-item {
