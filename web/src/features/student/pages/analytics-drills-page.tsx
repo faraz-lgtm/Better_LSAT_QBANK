@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { ArrowDownAZ, ArrowUpAZ, ChevronDown, X } from "lucide-react"
 
@@ -527,9 +527,8 @@ function AnalyticsDrillsPage() {
   return (
     <StudentMain>
         {loading ? (
-          <div className="mb-4 flex items-center gap-2 text-sm text-[#666d80]">
-            <Loader2 className="size-4 animate-spin" aria-hidden />
-            Loading drill analytics…
+          <div className="mb-4">
+            <StudentPageLoader label="Loading drill analytics…" />
           </div>
         ) : null}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">

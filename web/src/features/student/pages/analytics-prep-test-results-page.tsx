@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { Loader2 } from "lucide-react"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import {
   Bookmark,
   CheckCircle2,
@@ -657,10 +657,7 @@ function AnalyticsPrepTestResultsPage() {
   if (loading) {
     return (
       <StudentMain>
-        <div className="flex items-center gap-2 text-sm text-[#666d80]">
-          <Loader2 className="size-4 animate-spin" aria-hidden />
-          Loading results…
-        </div>
+        <StudentPageLoader centered label="Loading results…" />
       </StudentMain>
     )
   }

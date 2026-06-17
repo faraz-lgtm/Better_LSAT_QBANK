@@ -42,7 +42,7 @@ function LessonDrillIntroCard({
 
   return (
     <article className="mx-auto max-w-2xl rounded-2xl border border-[#dfe1e7] bg-white p-8 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
-      <h2 className="font-serif text-2xl font-bold text-[#062357] md:text-[28px]">{lesson.title}</h2>
+      <h2 className="text-2xl font-bold text-[#062357] md:text-[28px]">{lesson.title}</h2>
       {metaLine ? (
         <p className="mt-2 text-sm font-medium tracking-[0.02em] text-[#666d80]">{metaLine}</p>
       ) : null}

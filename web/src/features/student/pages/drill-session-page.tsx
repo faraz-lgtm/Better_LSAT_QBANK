@@ -24,6 +24,7 @@ import {
   usePracticeSessionTimer,
 } from "@/features/student/practice-session/use-practice-session-timer"
 import { StudentMain } from "@/features/student/components/student-main"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createPracticeApi } from "@/lib/api/practice"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -363,7 +364,7 @@ function DrillSessionPage() {
   if (loading) {
     return (
       <StudentMain>
-        <p className="text-sm text-muted-foreground">Loading drill…</p>
+        <StudentPageLoader centered label="Loading drill…" />
       </StudentMain>
     )
   }

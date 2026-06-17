@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { memo, useMemo, useRef, useState, type ReactNode } from "react"
 
-import { Switch } from "@/components/ui/switch"
 import { ActiveDrillIntroCard } from "@/features/prep-course/components/active-drill/active-drill-intro-card"
 import { ActiveDrillQuestionResultDetail } from "@/features/prep-course/components/active-drill/active-drill-question-result-detail"
 import { ActiveDrillResultBar } from "@/features/prep-course/components/active-drill/active-drill-result-bar"
@@ -72,46 +71,29 @@ function formatLinkedSectionLabel(row: PrepLessonLinkedQuestionRef): string {
   return `Section ${n} · ${type}`
 }
 
-function RepWorkPairCard({ pair, index }: { pair: RepWorkPair; index: number }) {
-  const originalQuestionText = useMemo(() => htmlToPlainText(pair.question), [pair.question])
-  const [showAnswer, setShowAnswer] = useState(false)
-  const editableRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (editableRef.current) {
-      editableRef.current.textContent = originalQuestionText
-    }
-  }, [originalQuestionText])
+const RepWorkEditableQuestion = memo(function RepWorkEditableQuestion({
+  plainText,
+  questionLabel,
+}: {
+  plainText: string
+  questionLabel: string
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   function handleReset() {
-    if (editableRef.current) {
-      editableRef.current.textContent = originalQuestionText
+    if (textareaRef.current) {
+      textareaRef.current.value = plainText
     }
   }
 
   return (
-    <li className="rounded-xl border border-[#dfe1e7] bg-[#f6f8fa] p-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <p className="text-sm font-semibold text-[#1a1b25]">Question {index + 1}</p>
-        <div className="flex flex-col items-end gap-1">
-          <span className="text-sm font-semibold text-[#1a1b25]">Answer</span>
-          <Switch
-            checked={showAnswer}
-            onChange={(e) => setShowAnswer(e.target.checked)}
-            className={showAnswer ? "!bg-[#0d47a1]" : undefined}
-            aria-label="Show or hide answer"
-          />
-          <span className="text-xs text-[#666d80]">On/Off to see and hide the answer</span>
-        </div>
-      </div>
-
-      <div
-        ref={editableRef}
-        contentEditable
-        suppressContentEditableWarning
-        role="textbox"
-        aria-label={`Question ${index + 1} text`}
-        className="mt-4 min-h-[88px] rounded-xl border border-[#dfe1e7] bg-white px-4 py-3 text-sm leading-7 text-[#36394a] outline-none focus:border-[#0d47a1] focus:ring-2 focus:ring-[#0d47a1]/20"
+    <>
+      <textarea
+        ref={textareaRef}
+        defaultValue={plainText}
+        rows={4}
+        aria-label={questionLabel}
+        className="mt-4 max-h-48 min-h-[88px] w-full shrink-0 resize-none rounded-xl border border-[#dfe1e7] bg-white px-4 py-3 text-sm leading-7 text-[#36394a] outline-none focus:border-[#0d47a1] focus:ring-2 focus:ring-[#0d47a1]/20"
       />
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -141,11 +123,52 @@ function RepWorkPairCard({ pair, index }: { pair: RepWorkPair; index: number }) 
           Reset
         </button>
       </div>
+    </>
+  )
+})
+
+function RepWorkPairCard({ pair, index }: { pair: RepWorkPair; index: number }) {
+  const plainQuestionText = useMemo(() => htmlToPlainText(pair.question), [pair.question])
+  const answerText = useMemo(() => htmlToPlainText(pair.answer), [pair.answer])
+  const [showAnswer, setShowAnswer] = useState(false)
+
+  return (
+    <li className="rounded-xl border border-[#dfe1e7] bg-[#f6f8fa] p-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <p className="text-sm font-semibold text-[#1a1b25]">Question {index + 1}</p>
+        <div className="flex flex-col items-end gap-1">
+          <span className="text-sm font-semibold text-[#1a1b25]">Answer</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showAnswer}
+            aria-label={`Show or hide answer for question ${index + 1}`}
+            onClick={() => setShowAnswer((value) => !value)}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d47a1]/30 ${
+              showAnswer ? "bg-[#0d47a1]" : "bg-[#dfe1e7]"
+            }`}
+          >
+            <span
+              className={`pointer-events-none block size-5 rounded-full bg-white shadow-sm transition-transform ${
+                showAnswer ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </button>
+          <span className="text-xs text-[#666d80]">On/Off to see and hide the answer</span>
+        </div>
+      </div>
+
+      <RepWorkEditableQuestion
+        plainText={plainQuestionText}
+        questionLabel={`Question ${index + 1} text`}
+      />
 
       {showAnswer ? (
-        <div className="mt-6 border-t border-[#dfe1e7] pt-6">
+        <div className="mt-6 shrink-0 border-t border-[#dfe1e7] pt-6">
           <p className="text-sm font-semibold text-[#1a1b25]">Answer</p>
-          <HtmlContent html={pair.answer} className="ds-body-sm mt-3 leading-7 text-[#36394a] [&_p]:mb-3" />
+          <p className="ds-body-sm mt-3 whitespace-pre-wrap leading-7 text-[#36394a]">
+            {answerText || "No answer provided."}
+          </p>
         </div>
       ) : null}
     </li>
@@ -302,10 +325,26 @@ function LessonContentRenderer({
     )
   }
 
-  if (type === "rep_work" || isRepWorkJson(lesson.text_content)) {
+  if (type === "rep_work" && !isRepWorkJson(lesson.text_content)) {
+    return (
+      <article>
+        {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
+        {lesson.text_content ? (
+          <HtmlContent
+            html={lesson.text_content}
+            className={`rep-instructions ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
+          />
+        ) : (
+          <p className={`ds-body-sm leading-7 text-[#36394a] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
+        )}
+      </article>
+    )
+  }
+
+  if (isRepWorkJson(lesson.text_content)) {
     const { instructions, pairs } = parseRepWorkFromTextContent(lesson.text_content)
     return (
-      <article className="space-y-6 rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+      <div className="space-y-6">
         <div>
           {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
           <HtmlContent
@@ -318,7 +357,7 @@ function LessonContentRenderer({
             <RepWorkPairCard key={i} pair={pair} index={i} />
           ))}
         </ol>
-      </article>
+      </div>
     )
   }
 

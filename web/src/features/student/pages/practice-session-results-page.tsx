@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
-import { CheckCircle2, ChevronRight, Loader2 } from "lucide-react"
+import { CheckCircle2, ChevronRight } from "lucide-react"
+
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 
 import { Button } from "@/components/ui/button"
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
@@ -228,10 +230,7 @@ function PracticeSessionResultsPage() {
   if (loading) {
     return (
       <StudentMain>
-        <div className="flex items-center gap-2 text-sm text-[#666d80]">
-          <Loader2 className="size-4 animate-spin" aria-hidden />
-          Loading results…
-        </div>
+        <StudentPageLoader centered label="Loading results…" />
       </StudentMain>
     )
   }

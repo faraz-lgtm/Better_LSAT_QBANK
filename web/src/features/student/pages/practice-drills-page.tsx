@@ -7,6 +7,7 @@ import {
   continueDrillToCardDrill,
 } from "@/features/student/components/continue-drill-card"
 import { PracticeLrRcStarterCards } from "@/features/student/components/practice-lr-rc-starter-cards"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
 import {
   mapSessionToContinueDrill,
@@ -161,7 +162,7 @@ function PracticeDrillsPage() {
             </div>
           </div>
           {loading ? (
-            <p className="text-sm text-[#666d80]">Loading drills…</p>
+            <StudentPageLoader label="Loading drills…" />
           ) : filteredContinue.length === 0 ? (
             <p className="text-sm text-[#666d80]">No drills in progress. Start a new LR or RC drill above.</p>
           ) : (
@@ -211,7 +212,7 @@ function PracticeDrillsPage() {
           </div>
 
           {loading ? (
-            <p className="text-sm text-[#666d80]">Loading tag drills…</p>
+            <StudentPageLoader label="Loading tag drills…" />
           ) : filteredTags.length === 0 ? (
             <p className="text-sm text-[#666d80]">Answer more questions to unlock priority tag drills.</p>
           ) : (

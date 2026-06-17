@@ -47,6 +47,7 @@ import {
   usePracticeSessionTimer,
 } from "@/features/student/practice-session/use-practice-session-timer"
 import { StudentMain } from "@/features/student/components/student-main"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createPracticeApi } from "@/lib/api/practice"
 import {
   resolvePrepTestBreakAfterSectionId,
@@ -621,7 +622,7 @@ function SectionSessionPage() {
   if (loading) {
     return (
       <StudentMain>
-        <p className="text-sm text-muted-foreground">Loading section…</p>
+        <StudentPageLoader centered label="Loading section…" />
       </StudentMain>
     )
   }

@@ -10,6 +10,7 @@ import {
   normalizeCurriculum,
 } from "@/features/prep-course/lib/prep-course-format"
 import { StudentMain } from "@/features/student/components/student-main"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import {
   createPrepCourseApi,
   type PrepCourse,
@@ -31,7 +32,6 @@ function PrepCourseContentPage() {
   const [curriculum, setCurriculum] = useState<PrepCourseCurriculum>({ modules: [] })
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
   const [expandedSectionIds, setExpandedSectionIds] = useState<Set<string>>(() => new Set())
-  const [expandAll, setExpandAll] = useState(false)
   const [showBookmarksOnly, setShowBookmarksOnly] = useState(false)
   const [bookmarkedModuleIds, setBookmarkedModuleIds] = useState<Set<string>>(() => new Set())
   const [completedLessonSlugs, setCompletedLessonSlugs] = useState<Set<string>>(() => new Set())
@@ -97,11 +97,6 @@ function PrepCourseContentPage() {
 
   const stats = useMemo(() => curriculumStats(curriculum), [curriculum])
 
-  const allSectionIds = useMemo(
-    () => curriculum.modules.flatMap((module) => module.sections.map((section) => section.id)),
-    [curriculum.modules],
-  )
-
   const selectedModule = useMemo(
     () => curriculum.modules.find((mod) => mod.id === selectedModuleId) ?? null,
     [curriculum.modules, selectedModuleId],
@@ -141,24 +136,6 @@ function PrepCourseContentPage() {
     })
   }
 
-  function handleToggleExpandAll() {
-    const allExpanded =
-      allSectionIds.length > 0 && allSectionIds.every((id) => expandedSectionIds.has(id))
-    if (allExpanded) {
-      setExpandedSectionIds(new Set())
-      setExpandAll(false)
-    } else {
-      setExpandedSectionIds(new Set(allSectionIds))
-      setExpandAll(true)
-    }
-  }
-
-  useEffect(() => {
-    const allExpanded =
-      allSectionIds.length > 0 && allSectionIds.every((id) => expandedSectionIds.has(id))
-    setExpandAll(allExpanded)
-  }, [allSectionIds, expandedSectionIds])
-
   function handleExpandModuleSections() {
     if (!selectedModule) return
     const moduleSectionIds = selectedModule.sections.map((section) => section.id)
@@ -185,7 +162,7 @@ function PrepCourseContentPage() {
   if (loading) {
     return (
       <StudentMain>
-        <p className="ds-body-sm ds-text-muted">Loading course content...</p>
+        <StudentPageLoader centered label="Loading course content…" />
       </StudentMain>
     )
   }
@@ -210,14 +187,12 @@ function PrepCourseContentPage() {
   }
 
   return (
-    <StudentMain className="flex min-h-0 flex-1 flex-col overflow-hidden pb-0 pt-6">
-      <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+    <StudentMain layout="locked">
+      <section className="prep-course-shell-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
         <div className="shrink-0">
           <PrepCourseContentHeader
             stats={stats}
-            expandAll={expandAll}
             showBookmarksOnly={showBookmarksOnly}
-            onToggleExpandAll={handleToggleExpandAll}
             onToggleShowBookmarksOnly={setShowBookmarksOnly}
           />
         </div>

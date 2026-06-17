@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
@@ -308,9 +308,8 @@ function AnalyticsSectionsPage() {
   return (
     <StudentMain>
         {loading ? (
-          <div className="mb-4 flex items-center gap-2 text-sm text-[#666d80]">
-            <Loader2 className="size-4 animate-spin" aria-hidden />
-            Loading section analytics…
+          <div className="mb-4">
+            <StudentPageLoader label="Loading section analytics…" />
           </div>
         ) : null}
         <div className="mb-6 flex flex-wrap items-center justify-end gap-4">

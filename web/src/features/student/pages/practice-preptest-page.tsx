@@ -4,6 +4,7 @@ import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import type {
   PrepTestDetailResponse,
   PrepTestDetailSection,
@@ -447,7 +448,7 @@ function PracticePrepTestPage() {
   if (loading) {
     return (
       <StudentMain>
-        <p className="text-sm text-[#666d80]">Loading PrepTest…</p>
+        <StudentPageLoader centered label="Loading PrepTest…" />
       </StudentMain>
     )
   }

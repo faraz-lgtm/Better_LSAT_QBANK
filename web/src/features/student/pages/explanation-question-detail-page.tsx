@@ -16,7 +16,7 @@ import type { ExplanationDetailTabId } from "@/features/student/explanation-deta
 import { createExplanationsApi, type ExplanationDetailPayload } from "@/lib/api/explanations"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
-import { Loader2 } from "lucide-react"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 
 function parseTab(raw: string | null): ExplanationDetailTabId {
   if (raw === "explanation" || raw === "analytics") return raw
@@ -148,10 +148,7 @@ function ExplanationQuestionDetailPage() {
   if (!resolvedLoc && (bootstrapLoading || detailLoading)) {
     return (
       <StudentMain className="py-10">
-        <p className="flex items-center gap-2 text-sm text-[#666d80]">
-          <Loader2 className="size-4 animate-spin" aria-hidden />
-          Loading question…
-        </p>
+        <StudentPageLoader centered label="Loading question…" />
       </StudentMain>
     )
   }
@@ -190,10 +187,7 @@ function ExplanationQuestionDetailPage() {
 
       <div className="mt-6">
         {detailLoading && tab === "question" ? (
-          <p className="flex items-center gap-2 text-sm text-[#666d80]">
-            <Loader2 className="size-4 animate-spin" aria-hidden />
-            Loading question…
-          </p>
+          <StudentPageLoader label="Loading question…" />
         ) : null}
         {tab === "question" && !detailLoading ? (
           <ExplanationQuestionTabPanel view={view} initialExpandedChoiceId={initialExpandedChoiceId} />
@@ -203,10 +197,7 @@ function ExplanationQuestionDetailPage() {
           <p className="text-sm text-[#95122b]">{detailError}</p>
         ) : null}
         {tab === "analytics" && !detailError && (detailLoading || !detail) ? (
-          <p className="flex items-center gap-2 text-sm text-[#666d80]">
-            <Loader2 className="size-4 animate-spin" aria-hidden />
-            Loading analytics…
-          </p>
+          <StudentPageLoader label="Loading analytics…" />
         ) : null}
         {tab === "analytics" && !detailError && !detailLoading && detail ? (
           <ExplanationAnalyticsTabPanel analytics={view.analytics} />

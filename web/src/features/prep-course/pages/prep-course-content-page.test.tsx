@@ -284,13 +284,7 @@ describe("PrepCourseContentPage", () => {
     await user.click(screen.getByRole("button", { name: "Expand this Sections" }))
     expect(screen.getByRole("link", { name: /Lesson A/i })).toBeInTheDocument()
 
-    await user.click(screen.getByRole("button", { name: "Expand this Sections" }))
-    expect(screen.queryByRole("link", { name: /Lesson A/i })).not.toBeInTheDocument()
-
-    await user.click(screen.getByRole("button", { name: "Expand All" }))
-    expect(screen.getByRole("link", { name: /Lesson A/i })).toBeInTheDocument()
-
-    await user.click(screen.getByRole("button", { name: "Expand All" }))
+    await user.click(screen.getByRole("button", { name: "Collapse this Sections" }))
     expect(screen.queryByRole("link", { name: /Lesson A/i })).not.toBeInTheDocument()
   })
 

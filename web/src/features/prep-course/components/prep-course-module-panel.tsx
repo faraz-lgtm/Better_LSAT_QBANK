@@ -54,6 +54,9 @@ function PrepCourseModulePanel({
   const flattenSections = shouldFlattenModuleSections(module)
   const flatSection = flattenSections ? module.sections[0] : null
   const flatExpanded = flatSection ? expandedSectionIds.has(flatSection.id) : false
+  const moduleSectionIds = module.sections.map((section) => section.id)
+  const moduleSectionsExpanded =
+    moduleSectionIds.length > 0 && moduleSectionIds.every((id) => expandedSectionIds.has(id))
 
   const statsBlock = (
     <div className="flex flex-col items-end justify-center gap-3.5">
@@ -66,7 +69,12 @@ function PrepCourseModulePanel({
           {completedCount} of {lessonCount} Lessons completed • {formatRemainingHoursLabel(remainingMinutes)}
         </p>
       </div>
-      <PrepCourseExpandButton label="Expand this Sections" onClick={onExpandModuleSections} />
+      <PrepCourseExpandButton
+        expandLabel="Expand this Sections"
+        collapseLabel="Collapse this Sections"
+        expanded={moduleSectionsExpanded}
+        onClick={onExpandModuleSections}
+      />
     </div>
   )
 
