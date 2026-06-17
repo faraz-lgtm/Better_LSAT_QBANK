@@ -48,6 +48,70 @@ function latestAnswerByQuestion(events: AnswerEventRow[]): Map<string, AnswerEve
   return byQuestion
 }
 
+type PracticeAnswerSnapshot = {
+  questionId: string
+  selectedAnswer: string
+  isCorrect: boolean
+}
+
+function parsePracticeAnswerSnapshots(value: unknown): PracticeAnswerSnapshot[] | null {
+  if (!Array.isArray(value)) return null
+  const parsed: PracticeAnswerSnapshot[] = []
+  for (const row of value) {
+    if (!row || typeof row !== 'object') continue
+    const record = row as Record<string, unknown>
+    const questionId = typeof record.questionId === 'string' ? record.questionId : ''
+    const selectedAnswer = typeof record.selectedAnswer === 'string' ? record.selectedAnswer : ''
+    const isCorrect = record.isCorrect === true
+    if (!questionId || !selectedAnswer) continue
+    parsed.push({ questionId, selectedAnswer, isCorrect })
+  }
+  return parsed.length > 0 ? parsed : null
+}
+
+function answerEventsAtCompletion(
+  events: AnswerEventRow[],
+  completedAt: string,
+): Map<string, AnswerEventRow> {
+  const cutoff = new Date(completedAt).getTime()
+  const before = events.filter((e) => new Date(e.created_at).getTime() <= cutoff)
+  return latestAnswerByQuestion(before)
+}
+
+function mapAnswerSnapshotsToStates(snapshots: PracticeAnswerSnapshot[]): DrillAnswerState[] {
+  return snapshots.map((answer) => ({
+    questionId: answer.questionId,
+    selectedAnswer: answer.selectedAnswer,
+    isCorrect: answer.isCorrect,
+  }))
+}
+
+function mapAnswerEventsToStates(events: Map<string, AnswerEventRow>): DrillAnswerState[] {
+  return [...events.values()].map((e) => ({
+    questionId: e.question_id,
+    selectedAnswer: e.selected_answer,
+    isCorrect: e.is_correct,
+  }))
+}
+
+function blindReviewRawScoreFromStates(answers: DrillAnswerState[]): number {
+  return answers.filter((answer) => answer.isCorrect).length
+}
+
+function hasBlindReviewAnswerChanges(
+  atCompletion: Map<string, AnswerEventRow>,
+  latest: Map<string, AnswerEventRow>,
+): boolean {
+  const questionIds = new Set([...atCompletion.keys(), ...latest.keys()])
+  for (const questionId of questionIds) {
+    const initial = atCompletion.get(questionId)
+    const final = latest.get(questionId)
+    if (!initial && final) return true
+    if (initial && final && initial.selected_answer !== final.selected_answer) return true
+  }
+  return false
+}
+
 function drillQuestionIdsFromMetadata(metadata: Record<string, unknown>): string[] {
   const raw = metadata.questionIds
   if (!Array.isArray(raw)) return []
@@ -60,9 +124,22 @@ function flaggedQuestionIdsFromMetadata(metadata: Record<string, unknown>): stri
   return raw.filter((id): id is string => typeof id === 'string' && id.length > 0)
 }
 
+function seenQuestionIdsFromMetadata(metadata: Record<string, unknown>): string[] {
+  const raw = metadata.seenQuestionIds
+  if (!Array.isArray(raw)) return []
+  return raw.filter((id): id is string => typeof id === 'string' && id.length > 0)
+}
+
 function parseFlaggedQuestionIdsInput(value: unknown): string[] | null {
   if (value === undefined) return null
   if (!Array.isArray(value)) throw new PracticeValidationError('flaggedQuestionIds must be an array')
+  const ids = value.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+  return [...new Set(ids)]
+}
+
+function parseSeenQuestionIdsInput(value: unknown): string[] | null {
+  if (value === undefined) return null
+  if (!Array.isArray(value)) throw new PracticeValidationError('seenQuestionIds must be an array')
   const ids = value.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
   return [...new Set(ids)]
 }
@@ -164,6 +241,7 @@ export type SectionSessionMetadata = {
   sectionTitle?: string | null
   answeredQuestionIds?: string[]
   flaggedQuestionIds?: string[]
+  seenQuestionIds?: string[]
 }
 
 export type SectionPoolItem = {
@@ -199,6 +277,8 @@ export type SectionSessionResponse = {
   section: SectionPoolItem
   questions: DrillQuestionPayload[]
   answers: DrillAnswerState[]
+  blindReviewAnswers: DrillAnswerState[]
+  blindReviewRawScore: number | null
   sessionLabel: string | null
 }
 
@@ -1091,7 +1171,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const session = await deps.repository.getSessionById(sessionId, userId)
       if (!session) throw new PracticeForbiddenError('Session not found')
 
-      if (session.completed_at && !blindReview) {
+      if (session.completed_at && !blindReview && session.kind !== 'DRILL') {
         throw new PracticeValidationError('Cannot submit answers to a completed session')
       }
 
@@ -1182,11 +1262,150 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         }
       }
 
+      const actualAnswerSnapshots = [...latest.values()].map((answer) => ({
+        questionId: answer.question_id,
+        selectedAnswer: answer.selected_answer,
+        isCorrect: answer.is_correct,
+      }))
+
       const sessionRow = await deps.repository.updateSession(sessionId, userId, {
         completed_at: now,
         raw_score: rawScore,
         scaled_score: scaledScore,
         percentile,
+        ...(session.kind === 'DRILL'
+          ? {
+              metadata: {
+                ...session.metadata,
+                drillActualAnswers: actualAnswerSnapshots,
+              },
+            }
+          : session.kind === 'SECTION'
+            ? {
+                metadata: {
+                  ...session.metadata,
+                  sectionActualAnswers: actualAnswerSnapshots,
+                },
+              }
+            : {}),
+      })
+      return { session: sessionRow }
+    },
+
+    async completeDrillBlindReview(
+      userId: string,
+      body: {
+        sessionId?: unknown
+        answers?: unknown
+      },
+    ): Promise<{ session: PracticeSessionRow }> {
+      const sessionId = typeof body.sessionId === 'string' ? body.sessionId : ''
+      if (!sessionId) throw new PracticeValidationError('sessionId is required')
+      if (!Array.isArray(body.answers) || body.answers.length === 0) {
+        throw new PracticeValidationError('answers is required')
+      }
+
+      const session = await deps.repository.getSessionById(sessionId, userId)
+      if (!session) throw new PracticeForbiddenError('Session not found')
+      if (session.kind !== 'DRILL') {
+        throw new PracticeValidationError('Blind review is only available for drill sessions')
+      }
+      if (!session.completed_at) {
+        throw new PracticeValidationError('Complete the drill before blind review')
+      }
+
+      const allowedQuestionIds = new Set(drillQuestionIdsFromMetadata(session.metadata))
+      const scored: Array<{ questionId: string; selectedAnswer: string; isCorrect: boolean }> = []
+
+      for (const row of body.answers) {
+        if (!row || typeof row !== 'object') {
+          throw new PracticeValidationError('answers must contain questionId and selectedAnswer')
+        }
+        const record = row as Record<string, unknown>
+        const questionId = typeof record.questionId === 'string' ? record.questionId : ''
+        const selectedRaw = typeof record.selectedAnswer === 'string' ? record.selectedAnswer : ''
+        if (!questionId) throw new PracticeValidationError('answers must contain questionId and selectedAnswer')
+        if (!selectedRaw.trim()) throw new PracticeValidationError('answers must contain questionId and selectedAnswer')
+        if (allowedQuestionIds.size > 0 && !allowedQuestionIds.has(questionId)) {
+          throw new PracticeValidationError('questionId not in this drill session')
+        }
+
+        const question = await deps.repository.getQuestionDetail(questionId)
+        if (!question) throw new PracticeValidationError('questionId not found')
+        const expected = question.correct_answer ? normalizeAnswer(question.correct_answer) : ''
+        const selected = normalizeAnswer(selectedRaw)
+        const isCorrect = Boolean(expected) && selected === expected
+        scored.push({ questionId, selectedAnswer: selected, isCorrect })
+      }
+
+      const rawScore = scored.filter((answer) => answer.isCorrect).length
+      const now = new Date().toISOString()
+      const sessionRow = await deps.repository.updateSession(sessionId, userId, {
+        metadata: {
+          ...session.metadata,
+          drillBlindReviewRawScore: rawScore,
+          drillBlindReviewAnswers: scored,
+          drillBlindReviewCompletedAt: now,
+        },
+      })
+      return { session: sessionRow }
+    },
+
+    async completeSectionBlindReview(
+      userId: string,
+      body: {
+        sessionId?: unknown
+        answers?: unknown
+      },
+    ): Promise<{ session: PracticeSessionRow }> {
+      const sessionId = typeof body.sessionId === 'string' ? body.sessionId : ''
+      if (!sessionId) throw new PracticeValidationError('sessionId is required')
+      if (!Array.isArray(body.answers) || body.answers.length === 0) {
+        throw new PracticeValidationError('answers is required')
+      }
+
+      const session = await deps.repository.getSessionById(sessionId, userId)
+      if (!session) throw new PracticeForbiddenError('Session not found')
+      if (session.kind !== 'SECTION') {
+        throw new PracticeValidationError('Blind review is only available for section sessions')
+      }
+      if (!session.completed_at) {
+        throw new PracticeValidationError('Complete the section before blind review')
+      }
+
+      const allowedQuestionIds = new Set(drillQuestionIdsFromMetadata(session.metadata))
+      const scored: Array<{ questionId: string; selectedAnswer: string; isCorrect: boolean }> = []
+
+      for (const row of body.answers) {
+        if (!row || typeof row !== 'object') {
+          throw new PracticeValidationError('answers must contain questionId and selectedAnswer')
+        }
+        const record = row as Record<string, unknown>
+        const questionId = typeof record.questionId === 'string' ? record.questionId : ''
+        const selectedRaw = typeof record.selectedAnswer === 'string' ? record.selectedAnswer : ''
+        if (!questionId) throw new PracticeValidationError('answers must contain questionId and selectedAnswer')
+        if (!selectedRaw.trim()) throw new PracticeValidationError('answers must contain questionId and selectedAnswer')
+        if (allowedQuestionIds.size > 0 && !allowedQuestionIds.has(questionId)) {
+          throw new PracticeValidationError('questionId not in this section session')
+        }
+
+        const question = await deps.repository.getQuestionDetail(questionId)
+        if (!question) throw new PracticeValidationError('questionId not found')
+        const expected = question.correct_answer ? normalizeAnswer(question.correct_answer) : ''
+        const selected = normalizeAnswer(selectedRaw)
+        const isCorrect = Boolean(expected) && selected === expected
+        scored.push({ questionId, selectedAnswer: selected, isCorrect })
+      }
+
+      const rawScore = scored.filter((answer) => answer.isCorrect).length
+      const now = new Date().toISOString()
+      const sessionRow = await deps.repository.updateSession(sessionId, userId, {
+        metadata: {
+          ...session.metadata,
+          sectionBlindReviewRawScore: rawScore,
+          sectionBlindReviewAnswers: scored,
+          sectionBlindReviewCompletedAt: now,
+        },
       })
       return { session: sessionRow }
     },
@@ -1198,6 +1417,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         bookmarked?: unknown
         excluded?: unknown
         flaggedQuestionIds?: unknown
+        seenQuestionIds?: unknown
       },
     ): Promise<{ session: PracticeSessionRow }> {
       const sessionId = typeof body.sessionId === 'string' ? body.sessionId : ''
@@ -1214,17 +1434,28 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (typeof body.bookmarked === 'boolean') patch.bookmarked = body.bookmarked
       if (typeof body.excluded === 'boolean') patch.excluded = body.excluded
 
+      const metadataUpdates: Record<string, unknown> = {}
+
       const flaggedInput = parseFlaggedQuestionIdsInput(body.flaggedQuestionIds)
       if (flaggedInput !== null) {
         assertFlaggedQuestionIdsAllowed(session, flaggedInput)
-        patch.metadata = {
-          ...session.metadata,
-          flaggedQuestionIds: flaggedInput,
-        }
+        metadataUpdates.flaggedQuestionIds = flaggedInput
+      }
+
+      const seenInput = parseSeenQuestionIdsInput(body.seenQuestionIds)
+      if (seenInput !== null) {
+        assertFlaggedQuestionIdsAllowed(session, seenInput)
+        metadataUpdates.seenQuestionIds = seenInput
+      }
+
+      if (Object.keys(metadataUpdates).length > 0) {
+        patch.metadata = { ...session.metadata, ...metadataUpdates }
       }
 
       if (Object.keys(patch).length === 0) {
-        throw new PracticeValidationError('bookmarked, excluded, or flaggedQuestionIds must be provided')
+        throw new PracticeValidationError(
+          'bookmarked, excluded, flaggedQuestionIds, or seenQuestionIds must be provided',
+        )
       }
 
       const sessionRow = await deps.repository.updateSession(sessionId, userId, patch)
@@ -1598,6 +1829,8 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         section: poolItem,
         questions,
         answers: [],
+        blindReviewAnswers: [],
+        blindReviewRawScore: null,
         sessionLabel,
       }
     },
@@ -1631,6 +1864,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           ? (metaRaw.answeredQuestionIds as string[])
           : [],
         flaggedQuestionIds: flaggedQuestionIdsFromMetadata(metaRaw),
+        seenQuestionIds: seenQuestionIdsFromMetadata(metaRaw),
       }
 
       const sectionDetail = await deps.repository.getSectionDetail(session.section_id)
@@ -1655,11 +1889,33 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       const events = await deps.repository.listAnswerEventsForSession(sessionId, userId)
       const latest = latestAnswerByQuestion(events)
-      const answers: DrillAnswerState[] = [...latest.values()].map((e) => ({
-        questionId: e.question_id,
-        selectedAnswer: e.selected_answer,
-        isCorrect: e.is_correct,
-      }))
+
+      const actualFromMeta = parsePracticeAnswerSnapshots(metaRaw.sectionActualAnswers)
+      const answers: DrillAnswerState[] = actualFromMeta
+        ? mapAnswerSnapshotsToStates(actualFromMeta)
+        : session.completed_at
+          ? mapAnswerEventsToStates(answerEventsAtCompletion(events, session.completed_at))
+          : mapAnswerEventsToStates(latest)
+
+      const blindReviewFromMeta = parsePracticeAnswerSnapshots(metaRaw.sectionBlindReviewAnswers)
+      let blindReviewAnswers: DrillAnswerState[] = blindReviewFromMeta
+        ? mapAnswerSnapshotsToStates(blindReviewFromMeta)
+        : []
+      let blindReviewRawScore =
+        typeof metaRaw.sectionBlindReviewRawScore === 'number' &&
+        Number.isFinite(metaRaw.sectionBlindReviewRawScore)
+          ? metaRaw.sectionBlindReviewRawScore
+          : null
+
+      if (!blindReviewFromMeta && session.completed_at) {
+        const atCompletion = answerEventsAtCompletion(events, session.completed_at)
+        if (hasBlindReviewAnswerChanges(atCompletion, latest)) {
+          blindReviewAnswers = mapAnswerEventsToStates(latest)
+          blindReviewRawScore = blindReviewRawScoreFromStates(blindReviewAnswers)
+        }
+      } else if (blindReviewFromMeta && blindReviewRawScore == null) {
+        blindReviewRawScore = blindReviewRawScoreFromStates(blindReviewAnswers)
+      }
 
       const sessionLabel =
         [metadata.prepTestTitle, metadata.sectionTitle].filter(Boolean).join(' — ') || null
@@ -1670,6 +1926,8 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         section: poolItem,
         questions,
         answers,
+        blindReviewAnswers,
+        blindReviewRawScore,
         sessionLabel,
       }
     },

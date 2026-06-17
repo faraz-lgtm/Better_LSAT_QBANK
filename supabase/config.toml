@@ -568,6 +568,12 @@ verify_jwt = false
 [functions.practice-complete-session]
 verify_jwt = false
 
+[functions.practice-complete-drill-blind-review]
+verify_jwt = false
+
+[functions.practice-complete-section-blind-review]
+verify_jwt = false
+
 [functions.practice-create-session]
 verify_jwt = false
 

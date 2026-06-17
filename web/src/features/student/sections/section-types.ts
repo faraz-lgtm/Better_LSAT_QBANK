@@ -52,6 +52,8 @@ export type SectionSessionResponse = {
   section: SectionPoolItem
   questions: DrillQuestion[]
   answers: DrillAnswerState[]
+  blindReviewAnswers?: DrillAnswerState[]
+  blindReviewRawScore?: number | null
   sessionLabel: string | null
 }
 

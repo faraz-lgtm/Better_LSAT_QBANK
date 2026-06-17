@@ -342,6 +342,38 @@ export function createPracticeApi(supabase: SupabaseClient) {
       return data.session
     },
 
+    async completeDrillBlindReview(input: {
+      sessionId: string
+      answers: Array<{ questionId: string; selectedAnswer: string }>
+    }): Promise<PracticeSession> {
+      const { data, error } = await invokePracticeFn<{ session: PracticeSession }>(
+        "practice-complete-drill-blind-review",
+        {
+          method: "POST",
+          body: input,
+        },
+      )
+      if (error) await throwIfEdgeInvokeFailed(error)
+      if (!data?.session) throw new Error("No session returned from practice")
+      return data.session
+    },
+
+    async completeSectionBlindReview(input: {
+      sessionId: string
+      answers: Array<{ questionId: string; selectedAnswer: string }>
+    }): Promise<PracticeSession> {
+      const { data, error } = await invokePracticeFn<{ session: PracticeSession }>(
+        "practice-complete-section-blind-review",
+        {
+          method: "POST",
+          body: input,
+        },
+      )
+      if (error) await throwIfEdgeInvokeFailed(error)
+      if (!data?.session) throw new Error("No session returned from practice")
+      return data.session
+    },
+
     async updateSession(input: {
       sessionId: string
       bookmarked?: boolean

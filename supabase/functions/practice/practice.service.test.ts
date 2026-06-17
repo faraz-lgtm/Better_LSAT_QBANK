@@ -137,7 +137,7 @@ Deno.test('submitAnswer marks incorrect when choice wrong', async () => {
 Deno.test('submitAnswer rejects completed session', async () => {
   const repo = {
     ...mockRepo(),
-    getSessionById: async () => baseSession({ completed_at: '2026-01-02T00:00:00Z' }),
+    getSessionById: async () => baseSession({ kind: 'SECTION', section_id: 'sec-1', completed_at: '2026-01-02T00:00:00Z' }),
   }
   const service = createPracticeService({ repository: repo as never })
   await assertRejects(
@@ -151,11 +151,142 @@ Deno.test('submitAnswer rejects completed session', async () => {
   )
 })
 
+Deno.test('submitAnswer allows completed drill session for review', async () => {
+  const repo = {
+    ...mockRepo(),
+    getSessionById: async () =>
+      baseSession({
+        kind: 'DRILL',
+        prep_test_id: null,
+        completed_at: '2026-01-02T00:00:00Z',
+        metadata: { questionIds: ['q-1'] },
+      }),
+    getQuestionDetail: async () =>
+      ({
+        id: 'q-1',
+        correct_answer: 'B',
+        difficulty: 2,
+        question_type_id: null,
+        section_id: 'sec-1',
+        admin_sections: { section_type: 'LR' as const, prep_test_id: 'pt-1' },
+      }) satisfies QuestionDetailRow,
+    insertAnswerEvent: async () =>
+      ({
+        id: 'evt-1',
+        user_id: 'user-1',
+        practice_session_id: 'sess-1',
+        question_id: 'q-1',
+        selected_answer: 'C',
+        is_correct: false,
+        question_type_id: null,
+        section_type: 'LR',
+        difficulty: 2,
+        session_kind: 'DRILL',
+        created_at: '2026-01-03T00:00:00Z',
+      }) satisfies AnswerEventRow,
+  }
+  const service = createPracticeService({ repository: repo as never })
+  const out = await service.submitAnswer('user-1', {
+    sessionId: 'sess-1',
+    questionId: 'q-1',
+    selectedAnswer: 'C',
+  })
+  assertEquals(out.event.selected_answer, 'C')
+})
+
+Deno.test('completeDrillBlindReview stores blind review answers on completed drill', async () => {
+  let capturedMetadata: Record<string, unknown> | null = null
+  const repo = {
+    ...mockRepo(),
+    getSessionById: async () =>
+      baseSession({
+        kind: 'DRILL',
+        completed_at: '2026-01-02T00:00:00Z',
+        raw_score: 0,
+        metadata: {
+          questionIds: ['q-1'],
+          drillActualAnswers: [{ questionId: 'q-1', selectedAnswer: 'A', isCorrect: false }],
+        },
+      }),
+    getQuestionDetail: async () =>
+      ({
+        id: 'q-1',
+        correct_answer: 'B',
+        difficulty: 2,
+        question_type_id: null,
+        section_id: 'sec-1',
+        admin_sections: { section_type: 'LR' as const, prep_test_id: 'pt-1' },
+      }) satisfies QuestionDetailRow,
+    updateSession: async (_id: string, _uid: string, patch: Record<string, unknown>) => {
+      capturedMetadata = patch.metadata as Record<string, unknown>
+      return baseSession({
+        kind: 'DRILL',
+        completed_at: '2026-01-02T00:00:00Z',
+        metadata: capturedMetadata ?? {},
+      })
+    },
+  }
+  const service = createPracticeService({ repository: repo as never })
+  const out = await service.completeDrillBlindReview('user-1', {
+    sessionId: 'sess-1',
+    answers: [{ questionId: 'q-1', selectedAnswer: 'B' }],
+  })
+  assertEquals(out.session.kind, 'DRILL')
+  assertEquals(capturedMetadata?.drillBlindReviewRawScore, 1)
+  const brAnswers = capturedMetadata?.drillBlindReviewAnswers as Array<{ isCorrect: boolean }>
+  assertEquals(brAnswers?.[0]?.isCorrect, true)
+})
+
 Deno.test('completeSession uses latest answer per question for raw score', async () => {
   const service = createPracticeService({ repository: mockRepo() as never })
   const out = await service.completeSession('user-1', { sessionId: 'sess-1' })
   assertEquals(out.session.raw_score, 1)
   assertEquals(out.session.scaled_score, 170)
+})
+
+Deno.test('completeSectionBlindReview stores blind review answers on completed section', async () => {
+  let capturedMetadata: Record<string, unknown> | null = null
+  const repo = {
+    ...mockRepo(),
+    getSessionById: async () =>
+      baseSession({
+        kind: 'SECTION',
+        section_id: 'sec-1',
+        completed_at: '2026-01-02T00:00:00Z',
+        raw_score: 0,
+        metadata: {
+          questionIds: ['q-1'],
+          sectionActualAnswers: [{ questionId: 'q-1', selectedAnswer: 'A', isCorrect: false }],
+        },
+      }),
+    getQuestionDetail: async () =>
+      ({
+        id: 'q-1',
+        correct_answer: 'B',
+        difficulty: 2,
+        question_type_id: null,
+        section_id: 'sec-1',
+        admin_sections: { section_type: 'LR' as const, prep_test_id: 'pt-1' },
+      }) satisfies QuestionDetailRow,
+    updateSession: async (_id: string, _uid: string, patch: Record<string, unknown>) => {
+      capturedMetadata = patch.metadata as Record<string, unknown>
+      return baseSession({
+        kind: 'SECTION',
+        section_id: 'sec-1',
+        completed_at: '2026-01-02T00:00:00Z',
+        metadata: capturedMetadata ?? {},
+      })
+    },
+  }
+  const service = createPracticeService({ repository: repo as never })
+  const out = await service.completeSectionBlindReview('user-1', {
+    sessionId: 'sess-1',
+    answers: [{ questionId: 'q-1', selectedAnswer: 'B' }],
+  })
+  assertEquals(out.session.kind, 'SECTION')
+  assertEquals(capturedMetadata?.sectionBlindReviewRawScore, 1)
+  const brAnswers = capturedMetadata?.sectionBlindReviewAnswers as Array<{ isCorrect: boolean }>
+  assertEquals(brAnswers?.[0]?.isCorrect, true)
 })
 
 Deno.test('completeSession is idempotent when session already completed', async () => {
@@ -201,6 +332,35 @@ Deno.test('updateSession stores flaggedQuestionIds in metadata', async () => {
     flaggedQuestionIds: ['q-2'],
   })
   assertEquals(captured!.metadata, { questionIds: ['q-1', 'q-2'], flaggedQuestionIds: ['q-2'] })
+})
+
+Deno.test('updateSession stores seenQuestionIds in metadata', async () => {
+  let captured: { metadata?: Record<string, unknown> } | null = null
+  const repo = {
+    ...mockRepo(),
+    getSessionById: async () =>
+      baseSession({
+        kind: 'SECTION',
+        prep_test_id: 'pt-1',
+        metadata: { questionIds: ['q-1', 'q-2', 'q-3'] },
+      }),
+    updateSession: async (_id: string, _uid: string, patch: Record<string, unknown>) => {
+      captured = { metadata: patch.metadata as Record<string, unknown> | undefined }
+      return baseSession({
+        kind: 'SECTION',
+        metadata: (patch.metadata as Record<string, unknown>) ?? {},
+      })
+    },
+  }
+  const service = createPracticeService({ repository: repo as never })
+  await service.updateSession('user-1', {
+    sessionId: 'sess-1',
+    seenQuestionIds: ['q-1', 'q-2'],
+  })
+  assertEquals(captured!.metadata, {
+    questionIds: ['q-1', 'q-2', 'q-3'],
+    seenQuestionIds: ['q-1', 'q-2'],
+  })
 })
 
 Deno.test('updateSession rejects flaggedQuestionIds not in session', async () => {
