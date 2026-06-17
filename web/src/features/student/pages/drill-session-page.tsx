@@ -5,6 +5,10 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { LrDrillOptionRow } from "@/features/student/drills/lr-drill-option-row"
 import type { DrillQuestion, DrillSessionResponse } from "@/features/student/drills/drill-types"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
+import {
+  PracticeBlindReviewAnswerToggle,
+  type BlindReviewAnswerView,
+} from "@/features/student/practice-session/practice-blind-review-answer-toggle"
 import { PracticeQuestionStem } from "@/features/student/practice-session/practice-question-stem"
 import { PracticeSessionHeader } from "@/features/student/practice-session/practice-session-header"
 import {
@@ -15,6 +19,7 @@ import {
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
+import { PracticeSubmitSectionModal } from "@/features/student/practice-session/practice-submit-section-modal"
 import { PracticeSessionQuestionNavButton } from "@/features/student/practice-session/practice-session-question-nav-button"
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
 import { usePracticeQuestionFlags } from "@/features/student/practice-session/use-practice-question-flags"
@@ -43,6 +48,8 @@ function regionKey(questionId: string, part: string) {
   return `${questionId}:${part}`
 }
 
+type QuestionAnswerState = { selectedAnswer: string; isCorrect: boolean }
+
 type QuestionPanelProps = {
   question: DrillQuestion
   questionNumber: number
@@ -61,6 +68,11 @@ type QuestionPanelProps = {
   onToggleFlag: () => void
   flagsDisabled?: boolean
   variant?: PracticeSessionVariant
+  blindReviewChrome?: boolean
+  answerView?: BlindReviewAnswerView
+  onAnswerViewChange?: (view: BlindReviewAnswerView) => void
+  recommendedForBr?: boolean
+  choicesDisabled?: boolean
 }
 
 function DrillQuestionPanel({
@@ -81,6 +93,11 @@ function DrillQuestionPanel({
   onToggleFlag,
   flagsDisabled,
   variant,
+  blindReviewChrome = false,
+  answerView = "blind_review",
+  onAnswerViewChange,
+  recommendedForBr = false,
+  choicesDisabled = false,
 }: QuestionPanelProps) {
   const [hiddenChoices, setHiddenChoices] = useState<Record<number, boolean>>({})
   const stemKey = regionKey(question.id, "stem")
@@ -88,6 +105,28 @@ function DrillQuestionPanel({
 
   return (
     <>
+      {blindReviewChrome ? (
+        <div
+          className={cn(
+            "flex flex-wrap items-center justify-between gap-3",
+            variant === "active-drill" ? "px-4 pt-4" : "",
+          )}
+        >
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="inline-flex size-8 items-center justify-center rounded-full border-2 border-[#ff9d51] bg-white text-sm font-bold text-[#ff9d51]">
+              {questionNumber}
+            </span>
+            {recommendedForBr ? (
+              <span className="inline-flex rounded-full border border-[#ff9d51] bg-[#fff3ea] px-3 py-1 text-xs font-semibold text-[#c45a00]">
+                Recommended for BR
+              </span>
+            ) : null}
+          </div>
+          {onAnswerViewChange ? (
+            <PracticeBlindReviewAnswerToggle value={answerView} onChange={onAnswerViewChange} />
+          ) : null}
+        </div>
+      ) : null}
       <PracticeQuestionStem
         questionNumber={questionNumber}
         regionKey={stemKey}
@@ -100,7 +139,7 @@ function DrillQuestionPanel({
         onToggleFlag={onToggleFlag}
         flagsDisabled={flagsDisabled}
         variant={variant}
-        hideQuestionNumber={variant === "active-drill"}
+        hideQuestionNumber={blindReviewChrome || variant === "active-drill"}
       />
       {revealed && isCorrect != null ? (
         <p
@@ -120,7 +159,7 @@ function DrillQuestionPanel({
             regionKey={regionKey(question.id, `choice-${choice.id}`)}
             selected={selectedIndex === index}
             hidden={Boolean(hiddenChoices[index])}
-            disabled={submitting}
+            disabled={submitting || choicesDisabled}
             selectedIndex={selectedIndex}
             allowReselect={allowReselect}
             onSelect={() => onSelect(index)}
@@ -159,12 +198,73 @@ function DrillSessionPage() {
   >({})
   const [submitting, setSubmitting] = useState(false)
   const [finishing, setFinishing] = useState(false)
+  const [submitModalOpen, setSubmitModalOpen] = useState(false)
   const [completeModal, setCompleteModal] = useState<{
     rawScore: number
     questionCount: number
   } | null>(null)
   const [scoreHidden, setScoreHidden] = useState(true)
   const [reviewAfterComplete, setReviewAfterComplete] = useState(false)
+  const [answerViewTab, setAnswerViewTab] = useState<BlindReviewAnswerView>("blind_review")
+  const [actualAnswersByQuestion, setActualAnswersByQuestion] = useState<Record<string, QuestionAnswerState>>({})
+
+  const drillBlindReviewActiveKey = sessionId ? `drill-br-active-${sessionId}` : null
+  const drillActualAnswersKey = sessionId ? `drill-actual-answers-${sessionId}` : null
+  const drillBlindReviewAnswersKey = sessionId ? `drill-br-answers-${sessionId}` : null
+
+  function clearDrillBlindReviewStorage() {
+    if (drillBlindReviewActiveKey) sessionStorage.removeItem(drillBlindReviewActiveKey)
+    if (drillActualAnswersKey) sessionStorage.removeItem(drillActualAnswersKey)
+    if (drillBlindReviewAnswersKey) sessionStorage.removeItem(drillBlindReviewAnswersKey)
+  }
+
+  function persistBlindReviewAnswers(next: Record<string, { selectedAnswer: string; isCorrect: boolean }>) {
+    if (drillBlindReviewAnswersKey) {
+      sessionStorage.setItem(drillBlindReviewAnswersKey, JSON.stringify(next))
+    }
+  }
+
+  function collectBlindReviewAnswersForSubmit(): Array<{ questionId: string; selectedAnswer: string }> {
+    let map = { ...answersByQuestion }
+    if (drillBlindReviewAnswersKey) {
+      const raw = sessionStorage.getItem(drillBlindReviewAnswersKey)
+      if (raw) {
+        try {
+          map = { ...JSON.parse(raw), ...map }
+        } catch {
+          /* ignore malformed storage */
+        }
+      }
+    }
+    return Object.entries(map)
+      .filter(([, answer]) => Boolean(answer?.selectedAnswer?.trim()))
+      .map(([questionId, answer]) => ({
+        questionId,
+        selectedAnswer: answer.selectedAnswer,
+      }))
+  }
+
+  function startDrillBlindReview() {
+    if (!sessionId) return
+    const actual = { ...answersByQuestion }
+    setActualAnswersByQuestion(actual)
+    if (drillActualAnswersKey) {
+      sessionStorage.setItem(drillActualAnswersKey, JSON.stringify(actual))
+    }
+    if (drillBlindReviewActiveKey) {
+      sessionStorage.setItem(drillBlindReviewActiveKey, "1")
+    }
+    if (drillBlindReviewAnswersKey) {
+      sessionStorage.removeItem(drillBlindReviewAnswersKey)
+    }
+    setAnswersByQuestion({})
+    setAnswerViewTab("blind_review")
+    setCompleteModal(null)
+    setReviewAfterComplete(true)
+    setScoreHidden(true)
+    setQIndex(1)
+    setError(null)
+  }
 
   const { elapsed, paused, togglePause, resetElapsed } = usePracticeSessionTimer()
   const highlights = usePracticeHighlights()
@@ -180,15 +280,37 @@ function DrillSessionPage() {
       for (const a of data.answers) {
         map[a.questionId] = { selectedAnswer: a.selectedAnswer, isCorrect: a.isCorrect }
       }
-      setAnswersByQuestion(map)
-      const firstUnanswered = data.questions.findIndex((q) => !map[q.id])
-      setQIndex(firstUnanswered >= 0 ? firstUnanswered + 1 : 1)
+
+      const blindReviewActive =
+        Boolean(data.session.completed_at) &&
+        drillBlindReviewActiveKey != null &&
+        sessionStorage.getItem(drillBlindReviewActiveKey) === "1"
+
+      if (blindReviewActive) {
+        const actualRaw = drillActualAnswersKey ? sessionStorage.getItem(drillActualAnswersKey) : null
+        const actualAnswers = actualRaw ? (JSON.parse(actualRaw) as typeof map) : map
+        setActualAnswersByQuestion(actualAnswers)
+        const brRaw = drillBlindReviewAnswersKey ? sessionStorage.getItem(drillBlindReviewAnswersKey) : null
+        const blindReviewAnswers = brRaw ? (JSON.parse(brRaw) as typeof map) : {}
+        setAnswersByQuestion(blindReviewAnswers)
+        setReviewAfterComplete(true)
+        setAnswerViewTab("blind_review")
+        const firstBlindUnanswered = data.questions.findIndex((q) => !blindReviewAnswers[q.id])
+        setQIndex(firstBlindUnanswered >= 0 ? firstBlindUnanswered + 1 : 1)
+      } else {
+        setAnswersByQuestion(map)
+        setActualAnswersByQuestion(map)
+        setReviewAfterComplete(false)
+        setAnswerViewTab("blind_review")
+        const firstUnanswered = data.questions.findIndex((q) => !map[q.id])
+        setQIndex(firstUnanswered >= 0 ? firstUnanswered + 1 : 1)
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load drill")
     } finally {
       setLoading(false)
     }
-  }, [practiceApi, sessionId])
+  }, [practiceApi, sessionId, drillBlindReviewActiveKey, drillActualAnswersKey, drillBlindReviewAnswersKey])
 
   useEffect(() => {
     void load()
@@ -216,11 +338,22 @@ function DrillSessionPage() {
 
   const safeIndex = Math.min(Math.max(qIndex, 1), Math.max(questions.length, 1))
   const current = questions[safeIndex - 1]
-  const currentAnswer = current ? answersByQuestion[current.id] : undefined
+  const editingBlindReviewAnswers = !reviewAfterComplete || answerViewTab === "blind_review"
+  const displayAnswer = current
+    ? reviewAfterComplete && answerViewTab === "actual"
+      ? actualAnswersByQuestion[current.id]
+      : answersByQuestion[current.id]
+    : undefined
+  const currentAnswer = displayAnswer
   const selectedIndex =
     current && currentAnswer
       ? choiceIndexFromAnswer(current.choices, currentAnswer.selectedAnswer)
       : null
+  const recommendedForBr = Boolean(
+    current &&
+      reviewAfterComplete &&
+      (!actualAnswersByQuestion[current.id] || actualAnswersByQuestion[current.id]?.isCorrect === false),
+  )
   const revealed = reviewAfterComplete
     ? false
     : showAnswersMode === "each"
@@ -245,6 +378,18 @@ function DrillSessionPage() {
 
   async function handleSelectChoice(index: number) {
     if (!sessionId || !current || submitting) return
+    if (reviewAfterComplete && !editingBlindReviewAnswers) return
+    if (reviewAfterComplete) {
+      const choice = current.choices[index]
+      if (!choice || selectedIndex === index) return
+      const optimistic = { selectedAnswer: choice.id, isCorrect: false }
+      setAnswersByQuestion((prev) => {
+        const next = { ...prev, [current.id]: optimistic }
+        persistBlindReviewAnswers(next)
+        return next
+      })
+      return
+    }
     if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), { blindReview: reviewAfterComplete })) {
       return
     }
@@ -261,13 +406,15 @@ function DrillSessionPage() {
         sessionId,
         questionId: current.id,
         selectedAnswer: choice.id,
-        blindReview: reviewAfterComplete || undefined,
       })
       setAnswersByQuestion((prev) => ({
         ...prev,
-        [current.id]: { selectedAnswer: event.selected_answer, isCorrect: event.is_correct },
+        [current.id]: {
+          selectedAnswer: event.selected_answer,
+          isCorrect: event.is_correct,
+        },
       }))
-      if (showAnswersMode === "each" && !reviewAfterComplete) {
+      if (showAnswersMode === "each") {
         window.setTimeout(() => {
           setQIndex((i) => Math.min(questions.length, i + 1))
         }, 600)
@@ -301,6 +448,7 @@ function DrillSessionPage() {
   }
 
   function leaveDrillSession() {
+    clearDrillBlindReviewStorage()
     const path = resolveReturnPath()
     if (path) {
       navigate(path, { replace: true })
@@ -309,8 +457,30 @@ function DrillSessionPage() {
     navigate("/app/practice/drills", { replace: true })
   }
 
-  function viewDrillResults() {
+  async function viewDrillResults() {
     if (!sessionId) return
+
+    if (reviewAfterComplete) {
+      const answers = collectBlindReviewAnswersForSubmit()
+      if (answers.length === 0) {
+        setError("Answer at least one question in blind review before viewing results.")
+        return
+      }
+      setFinishing(true)
+      setError(null)
+      try {
+        await practiceApi.completeDrillBlindReview({ sessionId, answers })
+      } catch (e) {
+        setError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to save blind review")
+        setFinishing(false)
+        return
+      } finally {
+        setFinishing(false)
+      }
+    }
+
+    clearDrillBlindReviewStorage()
+    setReviewAfterComplete(false)
     const path = resolveReturnPath()
     if (path.startsWith("/app/prep-course/")) {
       navigate(path, { replace: true })
@@ -320,14 +490,30 @@ function DrillSessionPage() {
     navigate(`/app/practice/results/${encodeURIComponent(sessionId)}${params}`, { replace: true })
   }
 
-  async function handleFinish() {
+  const unansweredCount = useMemo(
+    () => questions.filter((q) => !answersByQuestion[q.id]).length,
+    [questions, answersByQuestion],
+  )
+
+  const submitDrillMessage = useMemo(() => {
+    if (reviewAfterComplete) {
+      if (unansweredCount > 0) {
+        const noun = unansweredCount === 1 ? "question" : "questions"
+        return `Finish blind review and view your results? You have ${unansweredCount} unanswered ${noun} in blind review.`
+      }
+      return "Finish blind review and view your results?"
+    }
+    if (unansweredCount > 0) {
+      const noun = unansweredCount === 1 ? "question" : "questions"
+      return `Are you sure you want to submit this drill? You have ${unansweredCount} unanswered ${noun}.`
+    }
+    return "Are you sure you want to submit this drill?"
+  }, [reviewAfterComplete, unansweredCount])
+
+  function requestSubmitDrill() {
     if (!sessionId || finishing) return
 
-    if (sessionCompleted) {
-      if (reviewAfterComplete) {
-        viewDrillResults()
-        return
-      }
+    if (sessionCompleted && !reviewAfterComplete) {
       setCompleteModal({
         rawScore: drill?.session.raw_score ?? 0,
         questionCount: questions.length > 0 ? questions.length : 1,
@@ -336,12 +522,26 @@ function DrillSessionPage() {
       return
     }
 
+    setSubmitModalOpen(true)
+  }
+
+  async function handleConfirmSubmitDrill() {
+    if (!sessionId || finishing) return
+
+    if (reviewAfterComplete) {
+      setSubmitModalOpen(false)
+      await viewDrillResults()
+      return
+    }
+
     setFinishing(true)
+    setError(null)
     try {
       const completed = await practiceApi.completeSession(sessionId)
       setDrill((prev) => (prev ? { ...prev, session: completed } : prev))
       const questionCount = questions.length > 0 ? questions.length : 1
       const rawScore = completed.raw_score ?? 0
+      setSubmitModalOpen(false)
       setCompleteModal({ rawScore, questionCount })
       setScoreHidden(true)
     } catch (e) {
@@ -412,13 +612,13 @@ function DrillSessionPage() {
   const finishButton = (
     <PracticeSessionFinishMenu
       finishing={finishing}
-      submitLabel="Submit Drill"
+      submitLabel={reviewAfterComplete ? "Finish Blind Review" : "Submit Drill"}
       buttonClassName={
         isActiveDrillLayout
           ? "h-[52px] w-[106px] shrink-0 gap-2 rounded-2xl border-[#dfe1e7] bg-white px-3 text-base font-medium tracking-[0.02em] text-[#062357] shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
           : undefined
       }
-      onSubmitSection={() => void handleFinish()}
+      onSubmitSection={requestSubmitDrill}
       onExit={leaveDrillSession}
     />
   )
@@ -521,8 +721,13 @@ function DrillSessionPage() {
                     onSelect={(index) => void handleSelectChoice(index)}
                     flagged={current ? questionFlags.isFlagged(current.id) : false}
                     onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
-                    flagsDisabled={sessionCompleted}
+                    flagsDisabled={sessionCompleted || reviewAfterComplete}
                     variant={sessionVariant}
+                    blindReviewChrome={reviewAfterComplete}
+                    answerView={answerViewTab}
+                    onAnswerViewChange={setAnswerViewTab}
+                    recommendedForBr={recommendedForBr}
+                    choicesDisabled={reviewAfterComplete && !editingBlindReviewAnswers}
                   />
                 </div>
               </div>
@@ -582,6 +787,16 @@ function DrillSessionPage() {
         </div>
       </div>
 
+      <PracticeSubmitSectionModal
+        open={submitModalOpen}
+        title={reviewAfterComplete ? "Finish Blind Review" : "Submit Drill"}
+        confirmLabel={reviewAfterComplete ? "View Results" : "Submit Drill"}
+        message={submitDrillMessage}
+        submitting={finishing}
+        onCancel={() => setSubmitModalOpen(false)}
+        onConfirm={() => void handleConfirmSubmitDrill()}
+      />
+
       <PracticeCompleteModal
         open={completeModal != null}
         titleId="drill-complete-title"
@@ -593,12 +808,7 @@ function DrillSessionPage() {
         scoreHidden={scoreHidden}
         onToggleScoreHidden={() => setScoreHidden((h) => !h)}
         showBlindReview
-        onBlindReview={() => {
-          setCompleteModal(null)
-          setReviewAfterComplete(true)
-          setScoreHidden(true)
-          setQIndex(1)
-        }}
+        onBlindReview={startDrillBlindReview}
         onSkipDetails={viewDrillResults}
         onDone={leaveDrillSession}
       />

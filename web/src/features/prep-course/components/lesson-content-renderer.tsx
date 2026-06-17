@@ -2,6 +2,7 @@ import { memo, useMemo, useRef, useState, type ReactNode } from "react"
 
 import { ActiveDrillIntroCard } from "@/features/prep-course/components/active-drill/active-drill-intro-card"
 import { ActiveDrillQuestionResultDetail } from "@/features/prep-course/components/active-drill/active-drill-question-result-detail"
+import { resolveDrillResultLinkedRefs } from "@/features/prep-course/lib/resolve-drill-result-linked-refs"
 import { ActiveDrillResultBar } from "@/features/prep-course/components/active-drill/active-drill-result-bar"
 import { AdaptiveDrillResultsPanel } from "@/features/prep-course/components/lesson-drill/adaptive-drill-results-panel"
 import { LessonDrillIntroCard } from "@/features/prep-course/components/lesson-drill/lesson-drill-intro-card"
@@ -248,7 +249,6 @@ function LessonContentRenderer({
   activeDrillAttempt = null,
   hideTitle = false,
   belowVideo,
-  onReviewDrill,
   onStartDrill,
   startingDrill = false,
   drillStartError = null,
@@ -267,7 +267,8 @@ function LessonContentRenderer({
           <AdaptiveDrillResultsPanel
             attempt={activeDrillAttempt}
             linkedQuestionRefs={linkedQuestionRefs}
-            onReview={onReviewDrill}
+            onRetake={onStartDrill}
+            retaking={startingDrill}
           />
           {lesson.text_content ? (
             <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
@@ -294,10 +295,22 @@ function LessonContentRenderer({
 
   if (type === "active_drill") {
     if (activeDrillAttempt) {
-      const linked = linkedQuestionRefs[0] ?? null
+      const drillResultItems = resolveDrillResultLinkedRefs(linkedQuestionRefs, activeDrillAttempt)
       return (
         <div className="space-y-6">
-          <ActiveDrillResultBar attempt={activeDrillAttempt} onReview={onReviewDrill} />
+          <ActiveDrillResultBar
+            attempt={activeDrillAttempt}
+            onRetake={onStartDrill}
+            retaking={startingDrill}
+          />
+          {drillResultItems.map((linked, index) => (
+            <ActiveDrillQuestionResultDetail
+              key={linked.question_id}
+              linked={linked}
+              attempt={activeDrillAttempt}
+              sequenceNumber={index + 1}
+            />
+          ))}
           {lesson.text_content ? (
             <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
               {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
@@ -306,9 +319,6 @@ function LessonContentRenderer({
                 className={`ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
               />
             </article>
-          ) : null}
-          {linked ? (
-            <ActiveDrillQuestionResultDetail linked={linked} attempt={activeDrillAttempt} />
           ) : null}
         </div>
       )

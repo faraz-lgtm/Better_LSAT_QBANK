@@ -231,13 +231,83 @@ function SectionSessionPage() {
     questionCount: number
     scaledScore?: number | null
     prepTestLabel: string
-    prepTestSessionId: string
+    prepTestSessionId?: string
+    flow: "preptest" | "standalone"
   } | null>(null)
   const [scoreHidden, setScoreHidden] = useState(true)
+  const [postCompleteBlindReview, setPostCompleteBlindReview] = useState(false)
   const [answerViewTab, setAnswerViewTab] = useState<BlindReviewAnswerView>("blind_review")
   const [notesOpen, setNotesOpen] = useState(false)
   const [actualAnswersByQuestion, setActualAnswersByQuestion] = useState<Record<string, QuestionAnswerState>>({})
   const [blindReviewSections, setBlindReviewSections] = useState<BlindReviewDetailSection[]>([])
+
+  const sectionPostBrActiveKey = sessionId ? `section-post-br-active-${sessionId}` : null
+  const sectionPostBrActualKey = sessionId ? `section-post-br-actual-${sessionId}` : null
+  const sectionPostBrAnswersKey = sessionId ? `section-post-br-answers-${sessionId}` : null
+
+  function clearPostCompleteBlindReviewStorage() {
+    if (sectionPostBrActiveKey) sessionStorage.removeItem(sectionPostBrActiveKey)
+    if (sectionPostBrActualKey) sessionStorage.removeItem(sectionPostBrActualKey)
+    if (sectionPostBrAnswersKey) sessionStorage.removeItem(sectionPostBrAnswersKey)
+  }
+
+  function startPostCompleteBlindReview() {
+    if (!sessionId) return
+    const actual = { ...answersByQuestion }
+    setActualAnswersByQuestion(actual)
+    if (sectionPostBrActualKey) {
+      sessionStorage.setItem(sectionPostBrActualKey, JSON.stringify(actual))
+    }
+    if (sectionPostBrActiveKey) {
+      sessionStorage.setItem(sectionPostBrActiveKey, "1")
+    }
+    if (sectionPostBrAnswersKey) {
+      sessionStorage.removeItem(sectionPostBrAnswersKey)
+    }
+    setAnswersByQuestion({})
+    setAnswerViewTab("blind_review")
+    setCompleteModal(null)
+    setPostCompleteBlindReview(true)
+    setScoreHidden(true)
+    setQIndex(1)
+    setError(null)
+  }
+
+  async function viewSectionResults() {
+    if (!sessionId) return
+
+    if (postCompleteBlindReview) {
+      setFinishing(true)
+      setError(null)
+      try {
+        const answers = Object.entries(answersByQuestion).map(([questionId, answer]) => ({
+          questionId,
+          selectedAnswer: answer.selectedAnswer,
+        }))
+        if (answers.length > 0) {
+          await practiceApi.completeSectionBlindReview({ sessionId, answers })
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to save blind review")
+        setFinishing(false)
+        return
+      } finally {
+        setFinishing(false)
+      }
+    }
+
+    clearPostCompleteBlindReviewStorage()
+    setPostCompleteBlindReview(false)
+    setCompleteModal(null)
+    navigate(`/app/practice/results/${encodeURIComponent(sessionId)}`, { replace: true })
+  }
+
+  function leaveSectionComplete() {
+    clearPostCompleteBlindReviewStorage()
+    setPostCompleteBlindReview(false)
+    setCompleteModal(null)
+    navigate("/app/practice/sections", { replace: true })
+  }
 
   const { elapsed, countdown, paused, togglePause, resetElapsed, setInitialCountdown } = usePracticeSessionTimer({
     enabled: !blindReviewMode,
@@ -279,16 +349,36 @@ function SectionSessionPage() {
         setAnswersByQuestion(splitBlindReviewAnswersFromActual(map, actualMap))
         setQIndex(1)
       } else {
-        setAnswersByQuestion(map)
-        const firstUnanswered = data.questions.findIndex((q) => !map[q.id])
-        setQIndex(firstUnanswered >= 0 ? firstUnanswered + 1 : 1)
+        const postBrActive =
+          Boolean(data.session.completed_at) &&
+          sectionPostBrActiveKey != null &&
+          sessionStorage.getItem(sectionPostBrActiveKey) === "1"
+
+        if (postBrActive) {
+          const actualRaw = sectionPostBrActualKey ? sessionStorage.getItem(sectionPostBrActualKey) : null
+          const actualAnswers = actualRaw ? (JSON.parse(actualRaw) as typeof map) : map
+          setActualAnswersByQuestion(actualAnswers)
+          const brRaw = sectionPostBrAnswersKey ? sessionStorage.getItem(sectionPostBrAnswersKey) : null
+          const blindReviewAnswers = brRaw ? (JSON.parse(brRaw) as typeof map) : {}
+          setAnswersByQuestion(blindReviewAnswers)
+          setPostCompleteBlindReview(true)
+          setAnswerViewTab("blind_review")
+          const firstBlindUnanswered = data.questions.findIndex((q) => !blindReviewAnswers[q.id])
+          setQIndex(firstBlindUnanswered >= 0 ? firstBlindUnanswered + 1 : 1)
+        } else {
+          setAnswersByQuestion(map)
+          setActualAnswersByQuestion(map)
+          setPostCompleteBlindReview(false)
+          const firstUnanswered = data.questions.findIndex((q) => !map[q.id])
+          setQIndex(firstUnanswered >= 0 ? firstUnanswered + 1 : 1)
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load section")
     } finally {
       setLoading(false)
     }
-  }, [practiceApi, sessionId, setInitialCountdown, searchParams])
+  }, [practiceApi, sessionId, setInitialCountdown, searchParams, sectionPostBrActiveKey, sectionPostBrActualKey, sectionPostBrAnswersKey])
 
   useEffect(() => {
     void load()
@@ -396,7 +486,8 @@ function SectionSessionPage() {
     current &&
       (!actualAnswersByQuestion[current.id] || actualAnswersByQuestion[current.id]?.isCorrect === false),
   )
-  const editingBlindReviewAnswers = !blindReviewMode || answerViewTab === "blind_review"
+  const editingBlindReviewAnswers =
+    postCompleteBlindReview || !blindReviewMode || answerViewTab === "blind_review"
 
   const passageBody =
     sectionType === "RC" && current?.passage
@@ -417,6 +508,19 @@ function SectionSessionPage() {
   async function handleSelectChoice(index: number) {
     if (!sessionId || !current || submitting) return
     if (blindReviewMode && !editingBlindReviewAnswers) return
+    if (postCompleteBlindReview) {
+      const choice = current.choices[index]
+      if (!choice || selectedIndex === index) return
+      const optimistic = { selectedAnswer: choice.id, isCorrect: false }
+      setAnswersByQuestion((prev) => {
+        const next = { ...prev, [current.id]: optimistic }
+        if (sectionPostBrAnswersKey) {
+          sessionStorage.setItem(sectionPostBrAnswersKey, JSON.stringify(next))
+        }
+        return next
+      })
+      return
+    }
     if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), { blindReview: blindReviewMode })) {
       return
     }
@@ -493,13 +597,20 @@ function SectionSessionPage() {
     return "/app/practice/blind-review"
   }
 
-  const prepTestId = sectionSession?.session.prep_test_id ?? null
+  const prepTestFlowId = searchParams.get("prepTestId")
   const unansweredCount = useMemo(
     () => questions.filter((q) => !answersByQuestion[q.id]).length,
     [questions, answersByQuestion],
   )
 
   const submitSectionMessage = useMemo(() => {
+    if (postCompleteBlindReview) {
+      if (unansweredCount > 0) {
+        const noun = unansweredCount === 1 ? "question" : "questions"
+        return `Finish blind review and view your results? You have ${unansweredCount} unanswered ${noun} in blind review.`
+      }
+      return "Finish blind review and view your results?"
+    }
     if (blindReviewMode) {
       if (unansweredCount > 0) {
         const noun = unansweredCount === 1 ? "question" : "questions"
@@ -515,13 +626,11 @@ function SectionSessionPage() {
       return "Are you sure you want to submit this section? You still have time left on the timer."
     }
     return "Are you sure you want to submit this section?"
-  }, [blindReviewMode, unansweredCount, timedSection, countdown])
+  }, [postCompleteBlindReview, blindReviewMode, unansweredCount, timedSection, countdown])
 
   function handleExitSession() {
-    const exitPrepTestId =
-      prepTestId ?? sectionSession?.section.prepTestId ?? blindReviewPrepTestId ?? null
-    if (exitPrepTestId) {
-      navigate(prepTestHubHref(exitPrepTestId, { retake: isRetakeAttempt }), { replace: true })
+    if (prepTestFlowId) {
+      navigate(prepTestHubHref(prepTestFlowId, { retake: isRetakeAttempt }), { replace: true })
       return
     }
     navigate("/app/practice/sections", { replace: true })
@@ -529,6 +638,11 @@ function SectionSessionPage() {
 
   async function handleConfirmSubmitSection() {
     if (!sessionId) return
+    if (postCompleteBlindReview) {
+      setSubmitModalOpen(false)
+      await viewSectionResults()
+      return
+    }
     if (blindReviewMode) {
       setSubmitModalOpen(false)
       navigate(blindReviewExitPath(), { replace: true })
@@ -537,13 +651,14 @@ function SectionSessionPage() {
     setFinishing(true)
     setError(null)
     try {
-      await practiceApi.completeSession(sessionId)
+      const completed = await practiceApi.completeSession(sessionId)
+      setSectionSession((prev) => (prev ? { ...prev, session: completed } : prev))
       setSubmitModalOpen(false)
 
-      if (prepTestId) {
-        const detail = await practiceApi.getPrepTestDetail(prepTestId)
+      if (prepTestFlowId) {
+        const detail = await practiceApi.getPrepTestDetail(prepTestFlowId)
         if (detail.allPracticeableSectionsComplete) {
-          const ptCompleted = await practiceApi.completePrepTest(prepTestId)
+          const ptCompleted = await practiceApi.completePrepTest(prepTestFlowId)
           const questionCount = detail.prepTest.questionCount > 0 ? detail.prepTest.questionCount : 1
           setCompleteModal({
             rawScore: ptCompleted.raw_score ?? 0,
@@ -551,6 +666,7 @@ function SectionSessionPage() {
             scaledScore: ptCompleted.scaled_score,
             prepTestLabel: detail.prepTest.label,
             prepTestSessionId: ptCompleted.id,
+            flow: "preptest",
           })
           setScoreHidden(true)
           return
@@ -561,16 +677,27 @@ function SectionSessionPage() {
           sectionSession?.section.id,
         )
         if (afterSectionId) {
-          writeStoredSectionBreak(prepTestId, afterSectionId)
+          writeStoredSectionBreak(prepTestFlowId, afterSectionId)
         }
-        navigate(prepTestHubHref(prepTestId, { retake: isRetakeAttempt }), {
+        navigate(prepTestHubHref(prepTestFlowId, { retake: isRetakeAttempt }), {
           replace: true,
           state: afterSectionId ? { sectionJustCompleted: afterSectionId } : undefined,
         })
         return
       }
 
-      navigate("/app/practice/sections", { replace: true })
+      const questionCount = questions.length > 0 ? questions.length : 1
+      const sectionLabel =
+        sectionSession?.sessionLabel ??
+        sectionSession?.metadata?.sectionTitle ??
+        "the section"
+      setCompleteModal({
+        rawScore: completed.raw_score ?? 0,
+        questionCount,
+        prepTestLabel: sectionLabel,
+        flow: "standalone",
+      })
+      setScoreHidden(true)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to complete section")
     } finally {
@@ -583,7 +710,7 @@ function SectionSessionPage() {
   }
 
   function effectivePrepTestId(): string | null {
-    return prepTestId ?? blindReviewPrepTestId ?? null
+    return prepTestFlowId
   }
 
   async function enterPrepTestBlindReview() {
@@ -680,9 +807,9 @@ function SectionSessionPage() {
       ? computeRemainingTimerProgress(countdown, timerBudgetSeconds)
       : computeElapsedTimerProgress(elapsed, timerBudgetSeconds)
   const allowReselect =
-    editingBlindReviewAnswers &&
+    (postCompleteBlindReview || editingBlindReviewAnswers) &&
     canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
-      blindReview: blindReviewMode,
+      blindReview: blindReviewMode || postCompleteBlindReview,
     })
 
   const finishButton = blindReviewMode ? (
@@ -694,8 +821,9 @@ function SectionSessionPage() {
     />
   ) : (
     <PracticeSessionFinishMenu
-      disabled={sessionCompleted}
+      disabled={sessionCompleted && !postCompleteBlindReview}
       finishing={finishing}
+      submitLabel={postCompleteBlindReview ? "Finish Blind Review" : undefined}
       onSubmitSection={() => setSubmitModalOpen(true)}
       onExit={handleExitSession}
     />
@@ -787,7 +915,7 @@ function SectionSessionPage() {
               timerPaused={paused}
               onToggleTimerPause={togglePause}
               onResetTimer={
-                prepTestId || blindReviewMode || timedSection ? undefined : resetElapsed
+                prepTestFlowId || blindReviewMode || timedSection ? undefined : resetElapsed
               }
               timerProgress={timerProgress}
               timerDisplayClassName={
@@ -859,7 +987,7 @@ function SectionSessionPage() {
                   flagged={current ? questionFlags.isFlagged(current.id) : false}
                   onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
                   flagsDisabled={sessionCompleted || blindReviewMode}
-                  blindReviewChrome={blindReviewMode}
+                  blindReviewChrome={blindReviewMode || postCompleteBlindReview}
                   answerView={answerViewTab}
                   onAnswerViewChange={handleAnswerViewChange}
                   recommendedForBr={recommendedForBr}
@@ -921,6 +1049,8 @@ function SectionSessionPage() {
 
       <PracticeSubmitSectionModal
         open={submitModalOpen}
+        title={postCompleteBlindReview ? "Finish Blind Review" : "Submit Section"}
+        confirmLabel={postCompleteBlindReview ? "View Results" : "Submit Section"}
         message={submitSectionMessage}
         submitting={finishing}
         onCancel={() => setSubmitModalOpen(false)}
@@ -929,18 +1059,34 @@ function SectionSessionPage() {
 
       <PracticeCompleteModal
         open={completeModal != null}
-        titleId="preptest-complete-title"
-        subtitle={`You've completed ${completeModal?.prepTestLabel ?? "the PrepTest"}`}
+        titleId={completeModal?.flow === "standalone" ? "section-complete-title" : "preptest-complete-title"}
+        subtitle={
+          completeModal?.flow === "standalone"
+            ? "You've completed the section"
+            : `You've completed ${completeModal?.prepTestLabel ?? "the PrepTest"}`
+        }
         rawScore={completeModal?.rawScore ?? 0}
         questionCount={completeModal?.questionCount ?? 1}
         scaledScore={completeModal?.scaledScore}
         scoreHidden={scoreHidden}
         onToggleScoreHidden={() => setScoreHidden((h) => !h)}
         showBlindReview
-        onBlindReview={() => void enterPrepTestBlindReview()}
-        onSkipDetails={() => void viewPrepTestResults()}
-        doneLabel="Done with PrepTest"
-        onDone={leavePrepTestComplete}
+        onBlindReview={() => {
+          if (completeModal?.flow === "standalone") {
+            startPostCompleteBlindReview()
+            return
+          }
+          void enterPrepTestBlindReview()
+        }}
+        onSkipDetails={() => {
+          if (completeModal?.flow === "standalone") {
+            void viewSectionResults()
+            return
+          }
+          void viewPrepTestResults()
+        }}
+        doneLabel={completeModal?.flow === "standalone" ? "Done" : "Done with PrepTest"}
+        onDone={completeModal?.flow === "standalone" ? leaveSectionComplete : leavePrepTestComplete}
       />
     </StudentMain>
   )

@@ -16,9 +16,14 @@ function formatPtLabel(linked: PrepLessonLinkedQuestionRef): string {
 type ActiveDrillQuestionResultDetailProps = {
   linked: PrepLessonLinkedQuestionRef
   attempt: PrepLessonActiveDrillAttempt
+  sequenceNumber: number
 }
 
-function ActiveDrillQuestionResultDetail({ linked, attempt }: ActiveDrillQuestionResultDetailProps) {
+function ActiveDrillQuestionResultDetail({
+  linked,
+  attempt,
+  sequenceNumber,
+}: ActiveDrillQuestionResultDetailProps) {
   const [detail, setDetail] = useState<ExplanationDetailPayload | null>(null)
 
   useEffect(() => {
@@ -39,6 +44,10 @@ function ActiveDrillQuestionResultDetail({ linked, attempt }: ActiveDrillQuestio
 
   const answer = attempt.answers.find((a) => a.questionId === linked.question_id) ?? attempt.answers[0]
   const isCorrect = answer?.isCorrect ?? false
+  const blindReviewAnswer = attempt.blindReview?.answers.find((a) => a.questionId === linked.question_id)
+  const blindReviewCorrect = attempt.blindReview
+    ? (blindReviewAnswer?.isCorrect ?? false)
+    : undefined
   const perQuestionSeconds =
     attempt.questionCount > 0 ? Math.max(1, Math.round(attempt.elapsedSeconds / attempt.questionCount)) : attempt.elapsedSeconds
 
@@ -67,10 +76,11 @@ function ActiveDrillQuestionResultDetail({ linked, attempt }: ActiveDrillQuestio
 
   return (
     <PracticeQuestionResultCard
-      number={linked.question_number ?? 1}
+      number={sequenceNumber}
       detail={detail ?? fallbackDetail}
       titleOverride={detail ? undefined : formatPtLabel(linked)}
       isCorrect={isCorrect}
+      blindReviewCorrect={blindReviewCorrect}
       yourTimeSeconds={perQuestionSeconds}
     />
   )

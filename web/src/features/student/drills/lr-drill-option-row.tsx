@@ -93,7 +93,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
       className={cn(
         "flex items-stretch text-left transition-colors",
         isActiveDrill
-          ? "gap-4 rounded-2xl py-1 pl-4"
+          ? cn("gap-4 rounded-2xl py-1 pl-4", selected && "bg-[#f5f9ff]")
           : "gap-2 rounded-xl border border-solid text-sm leading-snug",
         !isActiveDrill && hidden && "opacity-50",
         disabled ? "cursor-default" : "cursor-pointer",
@@ -119,7 +119,12 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
           className={cn(
             "flex shrink-0 items-center justify-center font-semibold",
             isActiveDrill
-              ? "size-8 rounded-xl border-2 border-[#dfe1e7] bg-white text-base text-[#0d0d12]"
+              ? cn(
+                  "size-8 rounded-xl border-2 text-base transition-colors",
+                  selected
+                    ? "border-[#0d47a1] bg-[#0d47a1] text-white"
+                    : "border-[#dfe1e7] bg-white text-[#0d0d12]",
+                )
               : "mt-0.5 size-8 rounded-full text-xs font-bold",
           )}
           style={

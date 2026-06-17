@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 
 import { PrepCourseLessonFooter } from "@/features/prep-course/components/prep-course-lesson-footer"
 import { PrepCourseLessonPanel } from "@/features/prep-course/components/prep-course-lesson-panel"
@@ -32,6 +32,7 @@ import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
 function PrepCourseLessonPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { courseSlug: courseSlugParam, lessonSlug: lessonSlugParam } = useParams<{
     courseSlug: string
     lessonSlug: string
@@ -166,7 +167,7 @@ function PrepCourseLessonPage() {
     return () => {
       alive = false
     }
-  }, [paramsValid, courseSlug, lessonSlug, prepCourseApi])
+  }, [paramsValid, courseSlug, lessonSlug, prepCourseApi, location.key])
 
   useEffect(() => {
     setDrillStartError(null)

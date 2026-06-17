@@ -1,5 +1,5 @@
 import { isPrepLessonType, type PrepLessonType } from '../_shared/prep-lesson-type.ts'
-import type { PrepCourseRepository, PrepLessonActiveDrillAttempt } from './prep-course.repository.ts'
+import type { PrepCourseRepository, PrepLessonActiveDrillAttempt, PrepLessonDrillBlindReviewAttempt } from './prep-course.repository.ts'
 
 export class AuthorizationError extends Error {
   constructor(message: string) {
@@ -50,6 +50,39 @@ function latestAnswersByQuestion(
   return byQuestion
 }
 
+type DrillAnswerSnapshot = {
+  questionId: string
+  selectedAnswer: string
+  isCorrect: boolean
+}
+
+function parseDrillAnswerSnapshots(value: unknown): DrillAnswerSnapshot[] | null {
+  if (!Array.isArray(value)) return null
+  const parsed: DrillAnswerSnapshot[] = []
+  for (const row of value) {
+    if (!row || typeof row !== 'object') continue
+    const record = row as Record<string, unknown>
+    const questionId = typeof record.questionId === 'string' ? record.questionId : ''
+    const selectedAnswer = typeof record.selectedAnswer === 'string' ? record.selectedAnswer : ''
+    const isCorrect = record.isCorrect === true
+    if (!questionId || !selectedAnswer) continue
+    parsed.push({ questionId, selectedAnswer, isCorrect })
+  }
+  return parsed.length > 0 ? parsed : null
+}
+
+function parseDrillBlindReview(metadata: Record<string, unknown>): PrepLessonDrillBlindReviewAttempt | null {
+  const completedAt = metadata.drillBlindReviewCompletedAt
+  if (typeof completedAt !== 'string' || !completedAt) return null
+  const answers = parseDrillAnswerSnapshots(metadata.drillBlindReviewAnswers)
+  if (!answers) return null
+  const rawScore =
+    typeof metadata.drillBlindReviewRawScore === 'number' && Number.isFinite(metadata.drillBlindReviewRawScore)
+      ? metadata.drillBlindReviewRawScore
+      : answers.filter((answer) => answer.isCorrect).length
+  return { rawScore, completedAt, answers }
+}
+
 async function buildActiveDrillAttempt(
   repository: PrepCourseRepository,
   userId: string,
@@ -61,7 +94,9 @@ async function buildActiveDrillAttempt(
   const questionIds = drillQuestionIdsFromMetadata(session.metadata)
   const questionCount = questionIds.length > 0 ? questionIds.length : 1
   const events = await repository.listAnswerEventsForSession(session.id, userId)
-  const answers = [...latestAnswersByQuestion(events).values()]
+  const actualFromMeta = parseDrillAnswerSnapshots(session.metadata.drillActualAnswers)
+  const answers = actualFromMeta ?? [...latestAnswersByQuestion(events).values()]
+  const blindReview = parseDrillBlindReview(session.metadata)
 
   const started = new Date(session.started_at).getTime()
   const completed = new Date(session.completed_at).getTime()
@@ -76,6 +111,7 @@ async function buildActiveDrillAttempt(
     questionCount,
     elapsedSeconds,
     answers,
+    blindReview,
   }
 }
 

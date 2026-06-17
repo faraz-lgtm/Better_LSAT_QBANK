@@ -88,6 +88,16 @@ export type PrepLessonDrillSessionRow = {
   metadata: Record<string, unknown>
 }
 
+export type PrepLessonDrillBlindReviewAttempt = {
+  rawScore: number
+  completedAt: string
+  answers: Array<{
+    questionId: string
+    selectedAnswer: string
+    isCorrect: boolean
+  }>
+}
+
 export type PrepLessonActiveDrillAttempt = {
   sessionId: string
   completedAt: string
@@ -99,6 +109,7 @@ export type PrepLessonActiveDrillAttempt = {
     selectedAnswer: string
     isCorrect: boolean
   }>
+  blindReview: PrepLessonDrillBlindReviewAttempt | null
 }
 
 export function createServiceRoleClient(): SupabaseClient {

@@ -39,6 +39,7 @@ const attempt: PrepLessonActiveDrillAttempt = {
   questionCount: 1,
   elapsedSeconds: 90,
   answers: [{ questionId: "q1", selectedAnswer: "C", isCorrect: true }],
+  blindReview: null,
 }
 
 const adaptiveLesson: PrepLesson = {
@@ -60,6 +61,7 @@ const adaptiveAttempt: PrepLessonActiveDrillAttempt = {
     { questionId: "q1", selectedAnswer: "C", isCorrect: true },
     { questionId: "q2", selectedAnswer: "B", isCorrect: false },
   ],
+  blindReview: null,
 }
 
 describe("LessonContentRenderer active_drill", () => {
@@ -77,10 +79,45 @@ describe("LessonContentRenderer active_drill", () => {
         activeDrillAttempt={attempt}
       />,
     )
-    expect(screen.getByText("Drill Result")).toBeInTheDocument()
+    expect(screen.getByText("Your Score")).toBeInTheDocument()
     expect(screen.getByText("Hidden until complete.")).toBeInTheDocument()
     expect(screen.getByText(/PT LSAC133/)).toBeInTheDocument()
     expect(screen.getByText("Answer Popularity")).toBeInTheDocument()
+    expect(screen.getByText("Timing")).toBeInTheDocument()
+    expect(screen.getByText("Difficulty")).toBeInTheDocument()
+  })
+
+  it("shows blind review score and per-question result after blind review", () => {
+    const attemptWithBlindReview: PrepLessonActiveDrillAttempt = {
+      ...attempt,
+      rawScore: 0,
+      answers: [{ questionId: "q1", selectedAnswer: "A", isCorrect: false }],
+      blindReview: {
+        rawScore: 1,
+        completedAt: "2026-01-02T00:00:00Z",
+        answers: [{ questionId: "q1", selectedAnswer: "C", isCorrect: true }],
+      },
+    }
+    render(
+      <LessonContentRenderer
+        lesson={baseLesson}
+        linkedQuestionRefs={[linked]}
+        activeDrillAttempt={attemptWithBlindReview}
+      />,
+    )
+    expect(screen.getByText("BLIND REVIEW")).toBeInTheDocument()
+    expect(screen.getByText("Result")).toBeInTheDocument()
+    expect(screen.getByText("Actual")).toBeInTheDocument()
+    expect(screen.getByText("Blind Review")).toBeInTheDocument()
+  })
+
+  it("shows question result card from attempt when lesson has no linked refs", () => {
+    render(
+      <LessonContentRenderer lesson={baseLesson} linkedQuestionRefs={[]} activeDrillAttempt={attempt} />,
+    )
+    expect(screen.getByText("Your Score")).toBeInTheDocument()
+    expect(screen.getByText("Answer Popularity")).toBeInTheDocument()
+    expect(screen.getByText("Timing")).toBeInTheDocument()
   })
 })
 
@@ -105,10 +142,11 @@ describe("LessonContentRenderer adaptive_drill", () => {
         activeDrillAttempt={adaptiveAttempt}
       />,
     )
-    expect(screen.getByText("Drill Result")).toBeInTheDocument()
-    expect(screen.getByText(/1\/2 Correct/)).toBeInTheDocument()
+    expect(screen.getByText("Your Score")).toBeInTheDocument()
+    expect(screen.getByText(/1\/2/)).toBeInTheDocument()
     expect(screen.getByText("Lesson notes after drill.")).toBeInTheDocument()
     expect(screen.getAllByText(/PT LSAC133/).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText("Answer Popularity").length).toBeGreaterThanOrEqual(1)
   })
 })
 

@@ -369,6 +369,69 @@ Deno.test('prep-course getLesson returns linked questions and active drill attem
   assertEquals(out.activeDrillAttempt?.rawScore, 1)
   assertEquals(out.activeDrillAttempt?.questionCount, 1)
   assertEquals(out.activeDrillAttempt?.elapsedSeconds, 300)
+  assertEquals(out.activeDrillAttempt?.blindReview, null)
+})
+
+Deno.test('prep-course getLesson includes drill blind review attempt metadata', async () => {
+  const activeLesson = {
+    id: 'lesson-drill',
+    course_id: 'course-1',
+    slug: 'active-drill-1',
+    title: 'Active Drill',
+    lesson_type: 'active_drill' as const,
+    sort_order: 1,
+    summary: null,
+    duration_minutes: null,
+    video_url: null,
+    text_content: null,
+    is_published: true,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  }
+  const service = createPrepCourseService({
+    repository: mockRepo({
+      getPublishedLessonBySlug: async (_courseId, slug) =>
+        slug === activeLesson.slug ? activeLesson : null,
+      listLessonLinkedQuestions: async () => [
+        {
+          question_id: 'q-99',
+          question_number: 5,
+          prep_test_module_id: 'LSAC133',
+          prep_test_title: null,
+          section_number: 2,
+          section_type: 'LR',
+          section_title: null,
+        },
+      ],
+      getLatestLessonDrillAttempt: async () => ({
+        id: 'sess-drill',
+        started_at: '2026-01-01T00:00:00Z',
+        completed_at: '2026-01-01T00:05:00Z',
+        raw_score: 0,
+        metadata: {
+          questionIds: ['q-99'],
+          lessonId: 'lesson-drill',
+          drillActualAnswers: [{ questionId: 'q-99', selectedAnswer: 'A', isCorrect: false }],
+          drillBlindReviewCompletedAt: '2026-01-01T00:10:00Z',
+          drillBlindReviewRawScore: 1,
+          drillBlindReviewAnswers: [{ questionId: 'q-99', selectedAnswer: 'C', isCorrect: true }],
+        },
+      }),
+      listAnswerEventsForSession: async () => [
+        {
+          question_id: 'q-99',
+          selected_answer: 'C',
+          is_correct: true,
+          created_at: '2026-01-01T00:08:00Z',
+        },
+      ],
+    }),
+  })
+  const out = await service.getLesson('user-1', 'prep-course', 'active-drill-1')
+  assertEquals(out.activeDrillAttempt?.answers[0]?.selectedAnswer, 'A')
+  assertEquals(out.activeDrillAttempt?.answers[0]?.isCorrect, false)
+  assertEquals(out.activeDrillAttempt?.blindReview?.rawScore, 1)
+  assertEquals(out.activeDrillAttempt?.blindReview?.answers[0]?.isCorrect, true)
 })
 
 Deno.test('prep-course service blocks access when entitlement enforcement is enabled', async () => {
