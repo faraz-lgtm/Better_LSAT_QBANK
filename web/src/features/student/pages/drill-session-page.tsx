@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
-import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { LrDrillOptionRow } from "@/features/student/drills/lr-drill-option-row"
 import type { DrillQuestion, DrillSessionResponse } from "@/features/student/drills/drill-types"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
@@ -15,6 +14,7 @@ import {
 } from "@/features/student/practice-session/practice-session-types"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
+import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
 import { PracticeSessionQuestionNavButton } from "@/features/student/practice-session/practice-session-question-nav-button"
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
 import { usePracticeQuestionFlags } from "@/features/student/practice-session/use-practice-question-flags"
@@ -410,21 +410,17 @@ function DrillSessionPage() {
   })
 
   const finishButton = (
-    <Button
-      type="button"
-      disabled={finishing}
-      variant="outline"
-      size="default"
-      className={
+    <PracticeSessionFinishMenu
+      finishing={finishing}
+      submitLabel="Submit Drill"
+      buttonClassName={
         isActiveDrillLayout
           ? "h-[52px] w-[106px] shrink-0 gap-2 rounded-2xl border-[#dfe1e7] bg-white px-3 text-base font-medium tracking-[0.02em] text-[#062357] shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
-          : "h-[52px] shrink-0 gap-1 px-4"
+          : undefined
       }
-      onClick={() => void handleFinish()}
-    >
-      {finishing ? "Finishing…" : "Finish"}
-      <ChevronDown className="size-5 opacity-90" strokeWidth={2} />
-    </Button>
+      onSubmitSection={() => void handleFinish()}
+      onExit={leaveDrillSession}
+    />
   )
 
   return (

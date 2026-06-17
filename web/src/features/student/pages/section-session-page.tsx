@@ -70,6 +70,21 @@ function regionKey(questionId: string, part: string) {
   return `${questionId}:${part}`
 }
 
+type QuestionAnswerState = { selectedAnswer: string; isCorrect: boolean }
+
+function splitBlindReviewAnswersFromActual(
+  latestAnswers: Record<string, QuestionAnswerState>,
+  actualAnswers: Record<string, QuestionAnswerState>,
+): Record<string, QuestionAnswerState> {
+  const blindReviewAnswers: Record<string, QuestionAnswerState> = {}
+  for (const [questionId, answer] of Object.entries(latestAnswers)) {
+    const actual = actualAnswers[questionId]
+    if (actual && actual.selectedAnswer === answer.selectedAnswer) continue
+    blindReviewAnswers[questionId] = answer
+  }
+  return blindReviewAnswers
+}
+
 type QuestionPanelProps = {
   question: DrillQuestion
   questionNumber: number
@@ -219,12 +234,9 @@ function SectionSessionPage() {
     prepTestSessionId: string
   } | null>(null)
   const [scoreHidden, setScoreHidden] = useState(true)
-  const [answerViewTab, setAnswerViewTab] = useState<BlindReviewAnswerView>("actual")
+  const [answerViewTab, setAnswerViewTab] = useState<BlindReviewAnswerView>("blind_review")
   const [notesOpen, setNotesOpen] = useState(false)
-  const [actualAnswersByQuestion, setActualAnswersByQuestion] = useState<
-    Record<string, { selectedAnswer: string; isCorrect: boolean }>
-  >({})
-  const [submitBlindReviewModalOpen, setSubmitBlindReviewModalOpen] = useState(false)
+  const [actualAnswersByQuestion, setActualAnswersByQuestion] = useState<Record<string, QuestionAnswerState>>({})
   const [blindReviewSections, setBlindReviewSections] = useState<BlindReviewDetailSection[]>([])
 
   const { elapsed, countdown, paused, togglePause, resetElapsed, setInitialCountdown } = usePracticeSessionTimer({
@@ -244,28 +256,33 @@ function SectionSessionPage() {
       } else {
         setInitialCountdown(null)
       }
-      const map: Record<string, { selectedAnswer: string; isCorrect: boolean }> = {}
+      const map: Record<string, QuestionAnswerState> = {}
       for (const a of data.answers) {
         map[a.questionId] = { selectedAnswer: a.selectedAnswer, isCorrect: a.isCorrect }
       }
-      setAnswersByQuestion(map)
       if (searchParams.get("blindReview") === "1" && sessionId) {
         const storageKey = `br-actual-${sessionId}`
         const stored = sessionStorage.getItem(storageKey)
+        let actualMap: Record<string, QuestionAnswerState>
         if (stored) {
           try {
-            setActualAnswersByQuestion(JSON.parse(stored) as Record<string, { selectedAnswer: string; isCorrect: boolean }>)
+            actualMap = JSON.parse(stored) as Record<string, QuestionAnswerState>
           } catch {
-            setActualAnswersByQuestion(map)
+            actualMap = map
             sessionStorage.setItem(storageKey, JSON.stringify(map))
           }
         } else {
-          setActualAnswersByQuestion(map)
+          actualMap = map
           sessionStorage.setItem(storageKey, JSON.stringify(map))
         }
+        setActualAnswersByQuestion(actualMap)
+        setAnswersByQuestion(splitBlindReviewAnswersFromActual(map, actualMap))
+        setQIndex(1)
+      } else {
+        setAnswersByQuestion(map)
+        const firstUnanswered = data.questions.findIndex((q) => !map[q.id])
+        setQIndex(firstUnanswered >= 0 ? firstUnanswered + 1 : 1)
       }
-      const firstUnanswered = data.questions.findIndex((q) => !map[q.id])
-      setQIndex(firstUnanswered >= 0 ? firstUnanswered + 1 : 1)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load section")
     } finally {
@@ -303,14 +320,13 @@ function SectionSessionPage() {
   useEffect(() => {
     if (loading || !sectionSession || !sessionId || blindReviewMode) return
     if (searchParams.get("started") === "1") return
-    const ptId =
-      sectionSession.session.prep_test_id ??
-      sectionSession.section.prepTestId ??
-      blindReviewPrepTestId ??
-      null
-    if (!ptId || sectionSession.answers.length > 0) return
+    // Section intro is PrepTest-only; standalone Sections practice has no prepTestId query param.
+    const prepTestFlowId = searchParams.get("prepTestId")
+    if (!prepTestFlowId || sectionSession.answers.length > 0) return
     navigate(
-      prepTestSectionIntroHref(ptId, sectionSession.section.id, sessionId, { retake: isRetakeAttempt }),
+      prepTestSectionIntroHref(prepTestFlowId, sectionSession.section.id, sessionId, {
+        retake: isRetakeAttempt,
+      }),
       { replace: true },
     )
   }, [
@@ -442,21 +458,6 @@ function SectionSessionPage() {
     }
   }
 
-  async function handleConfirmSubmitBlindReview() {
-    if (!blindReviewPrepTestId) return
-    setFinishing(true)
-    setError(null)
-    try {
-      const completed = await practiceApi.completeBlindReview({ prepTestId: blindReviewPrepTestId })
-      setSubmitBlindReviewModalOpen(false)
-      navigate(`/app/analytics/preptests/results/${encodeURIComponent(completed.id)}`, { replace: true })
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to submit blind review")
-    } finally {
-      setFinishing(false)
-    }
-  }
-
   function blindReviewSectionLabel(section: BlindReviewDetailSection): string {
     if (section.sectionNumber != null) return `Section ${section.sectionNumber}`
     if (section.title) return section.title
@@ -499,6 +500,13 @@ function SectionSessionPage() {
   )
 
   const submitSectionMessage = useMemo(() => {
+    if (blindReviewMode) {
+      if (unansweredCount > 0) {
+        const noun = unansweredCount === 1 ? "question" : "questions"
+        return `Submit this section and return to blind review? You have ${unansweredCount} unanswered ${noun} in your blind review answers.`
+      }
+      return "Submit this section and return to blind review?"
+    }
     if (unansweredCount > 0) {
       const noun = unansweredCount === 1 ? "question" : "questions"
       return `Are you sure you want to submit this section? You have ${unansweredCount} unanswered ${noun}.`
@@ -507,7 +515,7 @@ function SectionSessionPage() {
       return "Are you sure you want to submit this section? You still have time left on the timer."
     }
     return "Are you sure you want to submit this section?"
-  }, [unansweredCount, timedSection, countdown])
+  }, [blindReviewMode, unansweredCount, timedSection, countdown])
 
   function handleExitSession() {
     const exitPrepTestId =
@@ -521,6 +529,11 @@ function SectionSessionPage() {
 
   async function handleConfirmSubmitSection() {
     if (!sessionId) return
+    if (blindReviewMode) {
+      setSubmitModalOpen(false)
+      navigate(blindReviewExitPath(), { replace: true })
+      return
+    }
     setFinishing(true)
     setError(null)
     try {
@@ -674,11 +687,9 @@ function SectionSessionPage() {
 
   const finishButton = blindReviewMode ? (
     <PracticeSessionFinishMenu
-      blindReviewMode
-      finishLabel="Exit Section"
+      finishLabel="Submit"
       finishing={finishing}
-      onSubmitSection={() => {}}
-      onSubmitBlindReview={() => setSubmitBlindReviewModalOpen(true)}
+      onSubmitSection={() => setSubmitModalOpen(true)}
       onExit={() => navigate(blindReviewExitPath())}
     />
   ) : (
@@ -914,17 +925,6 @@ function SectionSessionPage() {
         submitting={finishing}
         onCancel={() => setSubmitModalOpen(false)}
         onConfirm={() => void handleConfirmSubmitSection()}
-      />
-
-      <PracticeSubmitSectionModal
-        open={submitBlindReviewModalOpen}
-        titleId="submit-blind-review-title"
-        title="Submit Blind Review"
-        confirmLabel="Submit Blind Review"
-        message="Are you sure you want to submit blind review? Your updated answers will be scored and this PrepTest will be marked complete."
-        submitting={finishing}
-        onCancel={() => setSubmitBlindReviewModalOpen(false)}
-        onConfirm={() => void handleConfirmSubmitBlindReview()}
       />
 
       <PracticeCompleteModal

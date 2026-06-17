@@ -1202,6 +1202,43 @@ Deno.test('completeBlindReview scores latest answers across section sessions', a
   assertEquals(out.session.metadata.blindReviewActive, false)
 })
 
+Deno.test('completeBlindReview accepts prepTest sessionId when resolving attempt', async () => {
+  const completedPt = baseSession({
+    id: 'pt-sess-1',
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-900',
+    completed_at: '2026-01-03T00:00:00Z',
+    metadata: { blindReviewActive: true },
+  })
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserSessionsForPrepTest: async () => [
+        completedPt,
+        baseSession({
+          id: 'sec-sess-lr',
+          kind: 'SECTION',
+          prep_test_id: 'pt-900',
+          section_id: 'sec-lr',
+          completed_at: '2026-01-02T00:00:00Z',
+        }),
+      ],
+      listAnswerEventsForSessions: async () => [],
+      getScoreRowForRaw: async () => ({ scaled_score: 150, percentile: 60 }),
+      updateSession: async (_id: string, _uid: string, patch: Record<string, unknown>) => ({
+        ...completedPt,
+        ...patch,
+        metadata: (patch.metadata ?? completedPt.metadata) as Record<string, unknown>,
+      }),
+    }) as never,
+  })
+  const out = await service.completeBlindReview('user-1', {
+    prepTestId: 'pt-900',
+    sessionId: 'pt-sess-1',
+  })
+  assertEquals(out.session.blind_review_raw_score, 0)
+  assertEquals(out.session.blind_review_scaled_score, 150)
+})
+
 Deno.test('submitAnswer rejects question outside section session', async () => {
   const repo = {
     ...sectionRepo(),
