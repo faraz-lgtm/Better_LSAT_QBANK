@@ -30,22 +30,30 @@ type TagDrill = {
 
 function filterPill(active: boolean): string {
   if (active) return "rounded-xl border border-[#0d47a1] bg-[#0d47a1] px-4 py-2 text-sm font-semibold tracking-[0.28px] text-white"
-  return "rounded-xl border border-[#dfe1e7] bg-[#f5f9ff] px-4 py-2 text-sm font-semibold tracking-[0.28px] text-[#0d47a1]"
+  return "rounded-xl border border-[#dfe1e7] bg-white px-4 py-2 text-sm font-semibold tracking-[0.28px] text-[#0d47a1]"
 }
 
-function priorityVisual(priority: PriorityRow["priorityLevel"]) {
-  if (priority === "high") {
-    return { label: "Hardest", filledBars: 5, color: "#df1c41" }
+function difficultyVisual(difficulty: PriorityRow["difficulty"]) {
+  // Matches the Figma Drills tags difficulty dots.
+  // 1 => Easiest, 2 => Easy, 3 => Medium, 4 => Hard, 5 => Hardest (and anything above).
+  if (difficulty == null || difficulty <= 1) {
+    return { label: "Easiest", filledBars: 1, color: "#0bbcc9" }
   }
-  if (priority === "medium") {
-    return { label: "Medium", filledBars: 3, color: "#ff6f00" }
+  if (difficulty === 2) {
+    return { label: "Easy", filledBars: 2, color: "#ffbd4c" }
   }
-  return { label: "Easy", filledBars: 2, color: "#ffbd4c" }
+  if (difficulty === 3) {
+    return { label: "Medium", filledBars: 3, color: "#0bbcc9" }
+  }
+  if (difficulty === 4) {
+    return { label: "Hard", filledBars: 4, color: "#df1c41" }
+  }
+  return { label: "Hardest", filledBars: 5, color: "#df1c41" }
 }
 
 function mapPriorityToTagDrill(row: PriorityRow): TagDrill | null {
   const section = row.sectionType === "LR" || row.sectionType === "RC" ? row.sectionType : "LR"
-  const visual = priorityVisual(row.priorityLevel)
+  const visual = difficultyVisual(row.difficulty)
   const configPath =
     section === "LR"
       ? `/app/practice/drills/lr/new?questionTypeId=${encodeURIComponent(row.questionTypeId)}&tag=${encodeURIComponent(row.name)}`
@@ -120,8 +128,8 @@ function PracticeDrillsPage() {
   })
 
   return (
-    <StudentMain className="space-y-6">
-        <section className="rounded-2xl border border-[#d8dee8] bg-[#f4f6f9] p-6">
+    <StudentMain className="flex flex-col gap-6">
+        <section className="flex flex-col gap-4 rounded-3xl border border-[#dfe1e7] bg-white p-6">
           <div className="flex items-center gap-2 text-[14px] font-semibold leading-none tracking-[0.1px] text-[#0d47a1]">
             <button type="button" className="inline-flex items-center gap-1 hover:underline" onClick={() => navigate("/app/analytics/drills")}>
               Drills History
@@ -129,7 +137,7 @@ function PracticeDrillsPage() {
             </button>
             <span className="mx-1 h-3.5 w-px bg-[#dfe1e7]" />
             <span>In Process</span>
-            <span className="inline-flex size-4.5 items-center justify-center rounded-full bg-[#e7ecf4] text-[10px] font-semibold text-[#0d47a1]">
+            <span className="inline-flex size-4.5 items-center justify-center rounded-full bg-[#eceff3] text-[10px] font-semibold text-[#0d47a1]">
               {continueDrills.length}
             </span>
           </div>
@@ -144,7 +152,7 @@ function PracticeDrillsPage() {
           />
         </section>
 
-        <section className="rounded-3xl border border-[#dfe1e7] bg-white p-6">
+        <section className="rounded-3xl border border-[#dfe1e7] bg-white p-6 mt-2">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-[24px] font-bold leading-[1.2]" style={{ color: "#062357" }}>
               Continue Drills
@@ -216,13 +224,14 @@ function PracticeDrillsPage() {
           ) : filteredTags.length === 0 ? (
             <p className="text-sm text-[#666d80]">Answer more questions to unlock priority tag drills.</p>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="flex gap-4 overflow-x-auto pb-2">
               {filteredTags.map((drill) => (
-                <article key={drill.id} className="overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_5px_10px_rgba(13,13,18,0.06)]">
+                <article
+                  key={drill.id}
+                  className="w-[290px] shrink-0 overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_5px_10px_rgba(13,13,18,0.06)]"
+                >
                   <div
-                    className={`flex h-12 items-center justify-center text-[18px] font-bold leading-[1.35] ${
-                      drill.sectionTone === "lr" ? "bg-[#fffbeb] text-[#ae8b00]" : "bg-[#fff3ea] text-[#ff9d51]"
-                    }`}
+                    className="flex h-12 items-center justify-center bg-[#f6f8fa] text-[18px] font-bold leading-[1.35] text-[#062357]"
                   >
                     {drill.sectionLabel}
                   </div>
@@ -246,7 +255,7 @@ function PracticeDrillsPage() {
                     </div>
                     <button
                       type="button"
-                      className="ds-btn-sm w-full text-sm tracking-[0.28px]"
+                      className="ds-btn-sm w-full rounded-3xl text-sm tracking-[0.28px]"
                       onClick={() => navigate(drill.configPath)}
                     >
                       Start Drill

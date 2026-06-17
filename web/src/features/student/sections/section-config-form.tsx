@@ -23,9 +23,9 @@ type SectionConfigFormProps = {
   initialSectionId?: string | null
 }
 
-const sectionCopy: Record<SectionType, { title: string; crumb: string }> = {
-  LR: { title: "Logical Reasoning", crumb: "LR Sections" },
-  RC: { title: "Reading Comprehension", crumb: "RC Sections" },
+const sectionCopy: Record<SectionType, { title: string }> = {
+  LR: { title: "Logical Reasoning" },
+  RC: { title: "Reading Comprehension" },
 }
 
 function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConfigFormProps) {
@@ -98,33 +98,16 @@ function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConf
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5">
-      <nav className="flex flex-wrap items-center gap-1 text-sm font-semibold">
-        <Link to="/app/practice/sections" className="hover:underline" style={{ color: "var(--color-student-cta)" }}>
-          Practice
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        <Link to="/app/practice/sections" className="hover:underline" style={{ color: "var(--color-student-cta)" }}>
-          Sections
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        <span style={{ color: "var(--color-student-heading)" }}>{copy.crumb}</span>
-      </nav>
-
+    <div className="flex w-full flex-col gap-5">
       {bannerOpen ? (
-        <div
-          className="flex items-start gap-3 rounded-xl px-4 py-3 md:items-center md:px-5"
-          style={{ color: "var(--color-student-cta)" }}
-        >
-          <p className="min-w-0 flex-1 text-sm leading-snug ds-text-muted">
+        <div className="flex items-start gap-3  px-4 py-3 text-[#666D80] md:items-center md:px-5">
+          <p className="min-w-0 flex-1 text-sm leading-snug">
             Practice a full official section under test-like conditions.{" "}
-            <strong className="font-normal" style={{ color: "var(--color-student-heading)" }}>
-              Turn on settings to change which section you take.
-            </strong>
+            <strong className="font-semibold text-[#062357]">Turn on settings to change which section you take.</strong>
           </p>
           <button
             type="button"
-            className="shrink-0 rounded-md p-1 text-muted-foreground transition hover:bg-background/80 hover:text-foreground"
+            className="shrink-0 rounded-md p-1 text-[#666d80] transition hover:bg-white/80 hover:text-[#062357]"
             aria-label="Dismiss banner"
             onClick={() => setBannerOpen(false)}
           >
@@ -141,20 +124,16 @@ function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConf
           <div className="flex min-w-0 items-start gap-3">
             <SectionInitialBadge section={sectionType} />
             <div className="min-w-0">
-              <h1 className="text-xl font-bold tracking-tight md:text-2xl" style={{ color: "var(--color-student-heading)" }}>
-                {copy.title}
-              </h1>
-              <p className="mt-1 text-sm ds-text-muted">
+              <h1 className="!m-0 !text-[24px] !font-bold !leading-[1.3] text-[#062357]">{copy.title}</h1>
+              <p className="mt-1 text-sm text-[#666d80]">
                 {sectionType === "LR" ? "16–20 Questions" : "4 Passages"}
               </p>
             </div>
           </div>
           <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-4 md:flex-col md:items-end lg:flex-row lg:items-center">
-            <div className="text-right text-xs leading-snug sm:text-left md:text-left" style={{ color: "var(--muted-foreground)" }}>
-              <p className="font-semibold" style={{ color: "var(--color-student-heading)" }}>
-                Customize
-              </p>
-              <p className="ds-text-muted">
+            <div className="text-right text-xs leading-snug sm:text-left md:text-left">
+              <p className="text-[20px] font-bold leading-[1.35] text-[#062357]">Customize</p>
+              <p className="text-[#666d80]">
                 {loadingPool
                   ? "Loading your section pool…"
                   : `Choosing from ${poolTotal} section${poolTotal === 1 ? "" : "s"} in your pool`}
@@ -246,7 +225,7 @@ function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConf
               </svg>
               Share
             </button>
-            <Button type="button" variant="outline" size="sm" className="gap-2">
+            <Button type="button" variant="outline" size="default" className="gap-2 !rounded-3xl">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="19"
@@ -268,9 +247,9 @@ function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConf
             <Button
               type="button"
               variant="default"
-              size="sm"
+              size="default"
               disabled={starting || loadingPool || !sectionId || poolTotal === 0}
-              className="gap-2 text-white"
+              className="gap-2 !rounded-3xl text-white"
               onClick={() => void handleStart()}
             >
               <svg

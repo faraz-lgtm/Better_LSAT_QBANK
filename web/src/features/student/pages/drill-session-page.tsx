@@ -28,6 +28,7 @@ import { StudentPageLoader } from "@/features/student/components/student-page-lo
 import { createPracticeApi } from "@/lib/api/practice"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { cn } from "@/lib/utils"
 
 function choiceIndexFromAnswer(choices: DrillQuestion["choices"], selectedAnswer: string): number | null {
   const letter = selectedAnswer.trim().toUpperCase()
@@ -427,7 +428,10 @@ function DrillSessionPage() {
   )
 
   return (
-    <StudentMain className="flex min-h-0 max-w-none flex-1 flex-col overflow-hidden bg-[var(--primary-900,#041A44)] px-0 py-4 md:py-5">
+    <StudentMain
+      layout="locked"
+      className="flex min-h-0 max-w-none flex-1 flex-col overflow-hidden bg-[var(--primary-900,#041A44)] px-0 py-4 md:py-5"
+    >
       <div
         className="mx-auto flex min-h-0 w-full flex-1 flex-col px-4 md:px-6"
         style={{ maxWidth: 1280 }}
@@ -467,51 +471,64 @@ function DrillSessionPage() {
             finishButton={finishButton}
           />
 
-          <div
-            ref={sessionBodyRef}
-            className={`practice-session-body grid min-h-0 flex-1 overflow-hidden ${isActiveDrillLayout ? "grid-cols-1 lg:grid-cols-[minmax(0,524fr)_minmax(0,680fr)]" : "grid-cols-1 lg:grid-cols-2"} lg:divide-x divide-[#dfe1e7]`}
-            style={highlights.contentStyle}
-          >
+          <div className="practice-session-body flex min-h-0 flex-1 overflow-hidden">
             <div
-              className={`practice-session-pane min-h-0 h-full overflow-y-auto overflow-x-hidden border-[#dfe1e7] ${isActiveDrillLayout ? "p-6" : "p-5 border-b lg:border-b-0"}`}
+              ref={sessionBodyRef}
+              className={cn(
+                "grid min-h-0 min-w-0 flex-1 grid-cols-1 overflow-hidden lg:divide-x divide-[#dfe1e7]",
+                isActiveDrillLayout
+                  ? "lg:grid-cols-[minmax(0,524fr)_minmax(0,680fr)]"
+                  : "lg:grid-cols-2",
+              )}
+              style={highlights.contentStyle}
             >
-              {sectionType === "RC" && current.passage ? (
-                <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
-              ) : null}
-              <PracticeAnnotatedContent
-                regionKey={passageKey}
-                html={passageHtml}
-                findQuery={findQuery}
-                toolMode={highlights.toolMode}
-                onMouseUp={highlights.handleContentMouseUp}
-                onClickCapture={highlights.handleContentClick}
-                className={isActiveDrillLayout ? "text-lg leading-normal text-[#0d0d12]" : undefined}
-              />
-            </div>
-            <div
-              className={`practice-session-pane flex min-h-0 h-full flex-col overflow-hidden border-[#dfe1e7] ${isActiveDrillLayout ? "" : "gap-4 overflow-y-auto overflow-x-hidden p-5"}`}
-            >
-              <div className={isActiveDrillLayout ? "flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden" : "contents"}>
-                <DrillQuestionPanel
-                  key={current.id}
-                  question={current}
-                  questionNumber={safeIndex}
+              <div
+                className={cn(
+                  "practice-session-pane min-h-0 h-full overflow-y-auto overflow-x-hidden border-[#dfe1e7]",
+                  isActiveDrillLayout ? "p-6" : "border-b p-5 lg:border-b-0",
+                )}
+              >
+                {sectionType === "RC" && current.passage ? (
+                  <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
+                ) : null}
+                <PracticeAnnotatedContent
+                  regionKey={passageKey}
+                  html={passageHtml}
                   findQuery={findQuery}
-                  selectedIndex={selectedIndex}
-                  revealed={revealed}
-                  isCorrect={currentAnswer?.isCorrect ?? null}
-                  submitting={submitting}
-                  allowReselect={allowReselect}
-                  getRegionHtml={highlights.getRegionHtml}
                   toolMode={highlights.toolMode}
-                  onContentMouseUp={highlights.handleContentMouseUp}
-                  onContentClick={highlights.handleContentClick}
-                  onSelect={(index) => void handleSelectChoice(index)}
-                  flagged={current ? questionFlags.isFlagged(current.id) : false}
-                  onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
-                  flagsDisabled={sessionCompleted}
-                  variant={sessionVariant}
+                  onMouseUp={highlights.handleContentMouseUp}
+                  onClickCapture={highlights.handleContentClick}
+                  className={isActiveDrillLayout ? "text-lg leading-normal text-[#0d0d12]" : undefined}
                 />
+              </div>
+              <div
+                className={cn(
+                  "practice-session-pane flex min-h-0 h-full flex-col overflow-hidden border-[#dfe1e7]",
+                  isActiveDrillLayout ? "" : "gap-4 overflow-y-auto overflow-x-hidden p-5",
+                )}
+              >
+                <div className={isActiveDrillLayout ? "flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden" : "contents"}>
+                  <DrillQuestionPanel
+                    key={current.id}
+                    question={current}
+                    questionNumber={safeIndex}
+                    findQuery={findQuery}
+                    selectedIndex={selectedIndex}
+                    revealed={revealed}
+                    isCorrect={currentAnswer?.isCorrect ?? null}
+                    submitting={submitting}
+                    allowReselect={allowReselect}
+                    getRegionHtml={highlights.getRegionHtml}
+                    toolMode={highlights.toolMode}
+                    onContentMouseUp={highlights.handleContentMouseUp}
+                    onContentClick={highlights.handleContentClick}
+                    onSelect={(index) => void handleSelectChoice(index)}
+                    flagged={current ? questionFlags.isFlagged(current.id) : false}
+                    onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
+                    flagsDisabled={sessionCompleted}
+                    variant={sessionVariant}
+                  />
+                </div>
               </div>
             </div>
           </div>

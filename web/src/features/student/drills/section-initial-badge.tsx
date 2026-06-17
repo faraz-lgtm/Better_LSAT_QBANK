@@ -2,11 +2,13 @@ type DrillSection = "LR" | "RC"
 
 function SectionInitialBadge({ section }: { section: DrillSection }) {
   const isLr = section === "LR"
-  const accentColor = isLr ? "var(--explanation-lr-badge-bg)" : "var(--explanation-rc-badge-bg)"
   return (
     <span
-      className="flex size-12 shrink-0 items-center justify-center rounded-lg border bg-white text-lg font-black leading-none tracking-tight"
-      style={{ borderColor: accentColor, color: accentColor }}
+      className={`flex size-10 shrink-0 items-center justify-center rounded-[12px] border text-lg font-black leading-none ${
+        isLr
+          ? "border-[#00bc54] bg-[#eafff4] text-[#00bc54]"
+          : "border-[#0bbcc9] bg-[#e5fdff] text-[#0bbcc9]"
+      }`}
     >
       {section}
     </span>

@@ -25,12 +25,9 @@ type DrillConfigFormProps = {
   tagOptions?: { label: string; value: string }[]
 }
 
-const sectionCopy: Record<
-  DrillSectionType,
-  { title: string; crumb: string; subtitle?: string }
-> = {
-  LR: { title: "Logical Reasoning", crumb: "LR Drills" },
-  RC: { title: "Reading Comprehension", crumb: "RC Drills" },
+const sectionCopy: Record<DrillSectionType, { title: string }> = {
+  LR: { title: "Logical Reasoning" },
+  RC: { title: "Reading Comprehension" },
 }
 
 function DrillConfigForm({
@@ -115,36 +112,16 @@ function DrillConfigForm({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[960px] flex-col gap-5">
-      <nav className="flex flex-wrap items-center gap-1 text-sm font-semibold">
-        <Link to="/app/practice/drills" className="hover:underline" style={{ color: "var(--color-student-cta)" }}>
-          Practice
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        <Link to="/app/practice/drills" className="hover:underline" style={{ color: "var(--color-student-cta)" }}>
-          Drills
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        <span style={{ color: "var(--color-student-heading)" }}>{copy.crumb}</span>
-      </nav>
-
+    <div className="flex w-full flex-col gap-5">
       {bannerOpen ? (
-        <div
-          className="flex items-start gap-3 rounded-xl px-4 py-3 md:items-center md:px-5"
-          style={{
-         
-            color: "var(--color-student-cta)",
-          }}
-        >
-          <p className="min-w-0 flex-1 text-sm leading-snug ds-text-muted">
+        <div className="flex items-start gap-3  px-4 py-3 text-[#666D80] md:items-center md:px-5">
+          <p className="min-w-0 flex-1 text-sm leading-snug">
             We&apos;ll target your weaknesses with adaptive drills powered by our smart analytics.{" "}
-            <strong className="font-normal" style={{ color: "var(--color-student-heading)" }}>
-              On/Off the settings to customize.
-            </strong>
+            <strong className="font-semibold text-[#062357]">On/Off the settings to customize.</strong>
           </p>
           <button
             type="button"
-            className="shrink-0 rounded-md p-1 text-muted-foreground transition hover:bg-background/80 hover:text-foreground"
+            className="shrink-0 rounded-md p-1 text-[#666d80] transition hover:bg-white/80 hover:text-[#062357]"
             aria-label="Dismiss banner"
             onClick={() => setBannerOpen(false)}
           >
@@ -161,17 +138,13 @@ function DrillConfigForm({
           <div className="flex min-w-0 items-start gap-3">
             <SectionInitialBadge section={sectionType} />
             <div className="min-w-0">
-              <h1 className="text-xl font-bold tracking-tight md:text-2xl" style={{ color: "var(--color-student-heading)" }}>
-                {copy.title}
-              </h1>
+              <h1 className="!m-0 !text-[24px] !font-bold !leading-[1.3] text-[#062357]">{copy.title}</h1>
             </div>
           </div>
           <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-4 md:flex-col md:items-end lg:flex-row lg:items-center">
-            <div className="text-right text-xs leading-snug sm:text-left md:text-left" style={{ color: "var(--muted-foreground)" }}>
-              <p className="font-semibold" style={{ color: "var(--color-student-heading)" }}>
-                Customize
-              </p>
-              <p className="ds-text-muted">
+            <div className="text-right text-xs leading-snug sm:text-left md:text-left">
+              <p className="text-[20px] font-bold leading-[1.35] text-[#062357]">Customize</p>
+              <p className="text-[#666d80]">
                 Selecting from {poolStats.selectedCount} of {poolStats.totalCount} questions in your drill pool
               </p>
             </div>
@@ -279,7 +252,7 @@ function DrillConfigForm({
               </svg>
               Share
             </button>
-            <Button type="button" variant="outline" size="sm" className="gap-2">
+            <Button type="button" variant="outline" size="default" className="gap-2 !rounded-3xl">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="19"
@@ -301,9 +274,9 @@ function DrillConfigForm({
             <Button
               type="button"
               variant="default"
-              size="sm"
+              size="default"
               disabled={starting || poolStats.selectedCount === 0}
-              className="gap-2 text-white"
+              className="gap-2 !rounded-3xl text-white"
               onClick={() => void handleStart()}
             >
               <svg
