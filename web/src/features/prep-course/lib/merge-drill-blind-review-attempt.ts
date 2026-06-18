@@ -1,9 +1,13 @@
 import { parseDrillBlindReviewFromMetadata } from "@/features/student/drills/parse-drill-blind-review"
-import type { PracticeSession } from "@/lib/api/practice"
 import type {
   PrepLessonActiveDrillAttempt,
   PrepLessonDrillBlindReviewAttempt,
 } from "@/lib/api/prep-course"
+
+type DrillBlindReviewSessionSource = {
+  id: string
+  metadata?: Record<string, unknown>
+}
 
 type StashedDrillBlindReview = PrepLessonDrillBlindReviewAttempt & {
   sessionId: string
@@ -34,7 +38,7 @@ function sessionBlindReviewStorageKey(sessionId: string): string {
 }
 
 function stashDrillBlindReviewResult(
-  session: PracticeSession,
+  session: DrillBlindReviewSessionSource,
   lessonId?: string | null,
 ): PrepLessonDrillBlindReviewAttempt | null {
   const blindReview = blindReviewFromSessionMetadata(session.metadata ?? {})
@@ -84,7 +88,7 @@ async function mergeActiveDrillAttemptBlindReview(
   attempt: PrepLessonActiveDrillAttempt | null,
   options: {
     lessonId?: string | null
-    getDrillSession?: (sessionId: string) => Promise<{ session: PracticeSession }>
+    getDrillSession?: (sessionId: string) => Promise<{ session: DrillBlindReviewSessionSource }>
   },
 ): Promise<PrepLessonActiveDrillAttempt | null> {
   if (!attempt || attempt.blindReview) return attempt

@@ -36,24 +36,11 @@ describe("merge-drill-blind-review-attempt", () => {
       getDrillSession: async () => ({
         session: {
           id: "sess-1",
-          user_id: "user-1",
-          kind: "DRILL",
-          prep_test_id: null,
-          section_id: null,
-          started_at: "2026-01-01T00:00:00Z",
-          completed_at: "2026-01-01T00:05:00Z",
-          raw_score: 0,
-          scaled_score: null,
-          percentile: null,
-          bookmarked: false,
-          excluded: false,
           metadata: {
             drillBlindReviewCompletedAt: "2026-01-01T00:10:00Z",
             drillBlindReviewRawScore: 1,
             drillBlindReviewAnswers: [{ questionId: "q-1", selectedAnswer: "C", isCorrect: true }],
           },
-          created_at: "2026-01-01T00:00:00Z",
-          updated_at: "2026-01-01T00:10:00Z",
         },
       }),
     })
@@ -66,24 +53,11 @@ describe("merge-drill-blind-review-attempt", () => {
     stashDrillBlindReviewResult(
       {
         id: "sess-1",
-        user_id: "user-1",
-        kind: "DRILL",
-        prep_test_id: null,
-        section_id: null,
-        started_at: "2026-01-01T00:00:00Z",
-        completed_at: "2026-01-01T00:05:00Z",
-        raw_score: 0,
-        scaled_score: null,
-        percentile: null,
-        bookmarked: false,
-        excluded: false,
         metadata: {
           drillBlindReviewCompletedAt: "2026-01-01T00:10:00Z",
           drillBlindReviewRawScore: 1,
           drillBlindReviewAnswers: [{ questionId: "q-1", selectedAnswer: "C", isCorrect: true }],
         },
-        created_at: "2026-01-01T00:00:00Z",
-        updated_at: "2026-01-01T00:10:00Z",
       },
       "lesson-1",
     )

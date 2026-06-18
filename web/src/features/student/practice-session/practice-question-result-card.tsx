@@ -1,4 +1,3 @@
-import type { ReactNode } from "react"
 import { Bookmark, CheckCircle2, Pencil, XCircle } from "lucide-react"
 
 import { resolveAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
