@@ -10,7 +10,7 @@ function formatPtLabel(linked: PrepLessonLinkedQuestionRef): string {
   const pt = linked.prep_test_module_id ?? linked.prep_test_title ?? "PrepTest"
   const section = linked.section_number != null ? `S${linked.section_number}` : "S—"
   const q = linked.question_number != null ? `Q${linked.question_number}` : "Q—"
-  return `PT ${pt} · ${section} · ${q}`
+  return `PT ${pt} . ${section} . ${q}`
 }
 
 type ActiveDrillQuestionResultDetailProps = {

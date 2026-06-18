@@ -28,7 +28,7 @@ export function formatPtQuestionTitle(detail: ExplanationDetailPayload): string 
   const pt = detail.prepTestNumber?.trim() || detail.prepTestTitle || "—"
   const section = detail.sectionNumber != null ? `S${detail.sectionNumber}` : "S—"
   const q = detail.questionNumber != null ? `Q${detail.questionNumber}` : "Q—"
-  return `PT ${pt} · ${section} · ${q}`
+  return `PT ${pt} . ${section} . ${q}`
 }
 
 export function formatMmSs(totalSeconds: number): string {
@@ -93,7 +93,7 @@ export function PracticeAnswerPopularityBars({
   const max = Math.max(1, ...rows.map((r) => r.pct))
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-3">
-      <p className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]">Answer Popularity</p>
+      <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Answer Popularity</p>
       <div className="flex flex-wrap items-end justify-between gap-2">
         {rows.map((row) => {
           const h = Math.round((row.pct / max) * 100)

@@ -750,7 +750,7 @@ function SectionSessionPage() {
 
   if (!sessionId) {
     return (
-      <StudentMain>
+      <StudentMain layout="immersive">
         <p className="text-sm text-red-600">Missing section session.</p>
         <Link to="/app/practice/sections" className="mt-2 text-sm font-semibold text-[#0d47a1] hover:underline">
           Back to sections
@@ -761,7 +761,7 @@ function SectionSessionPage() {
 
   if (loading) {
     return (
-      <StudentMain>
+      <StudentMain layout="immersive">
         <StudentPageLoader centered label="Loading section…" />
       </StudentMain>
     )
@@ -769,7 +769,7 @@ function SectionSessionPage() {
 
   if (error && !sectionSession) {
     return (
-      <StudentMain>
+      <StudentMain layout="immersive">
         <p className="text-sm text-red-600">{error}</p>
         <Link to="/app/practice/sections" className="mt-2 text-sm font-semibold text-[#0d47a1] hover:underline">
           Back to sections
@@ -780,7 +780,7 @@ function SectionSessionPage() {
 
   if (!current || questions.length === 0) {
     return (
-      <StudentMain>
+      <StudentMain layout="immersive">
         <p className="text-sm text-muted-foreground">This section has no questions.</p>
         <Link to="/app/practice/sections" className="mt-2 text-sm font-semibold text-[#0d47a1] hover:underline">
           Back to sections
@@ -856,7 +856,7 @@ function SectionSessionPage() {
 
   return (
     <StudentMain
-      layout="locked"
+      layout="immersive"
       className="flex min-h-0 max-w-none flex-1 flex-col overflow-hidden bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))] px-0 py-4 md:py-5"
     >
       <div

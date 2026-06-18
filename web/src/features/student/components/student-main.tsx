@@ -8,25 +8,30 @@ type StudentMainProps = {
   className?: string
   contentClassName?: string
   /** Locked: page fills the shell; children own internal scroll regions. */
-  layout?: "scroll" | "locked"
+  layout?: "scroll" | "locked" | "immersive"
 }
 
 function StudentMain({ children, className = "", contentClassName = "", layout = "scroll" }: StudentMainProps) {
   const locked = layout === "locked"
+  const immersive = layout === "immersive"
 
   return (
     <main
       className={cn(
         "flex min-h-0 flex-1 flex-col",
-        locked ? "h-full overflow-hidden" : "overflow-y-auto",
+        immersive || locked ? "h-full overflow-hidden" : "overflow-y-auto",
         className,
       )}
     >
       <div
         className={cn(
-          STUDENT_PAGE_CONTAINER_CLASS,
-          STUDENT_SHELL_GUTTER_CLASS,
-          locked ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden pt-6 pb-0" : STUDENT_MAIN_PADDING_CLASS,
+          !immersive && STUDENT_PAGE_CONTAINER_CLASS,
+          !immersive && STUDENT_SHELL_GUTTER_CLASS,
+          immersive
+            ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden"
+            : locked
+              ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden pt-6 pb-0"
+              : STUDENT_MAIN_PADDING_CLASS,
           contentClassName,
         )}
       >

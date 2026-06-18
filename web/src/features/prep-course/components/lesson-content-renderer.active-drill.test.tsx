@@ -105,7 +105,8 @@ describe("LessonContentRenderer active_drill", () => {
         activeDrillAttempt={attemptWithBlindReview}
       />,
     )
-    expect(screen.getByText("BLIND REVIEW")).toBeInTheDocument()
+    expect(screen.getByText("Your prediction")).toBeInTheDocument()
+    expect(screen.getByText("Blind review")).toBeInTheDocument()
     expect(screen.getByText("Result")).toBeInTheDocument()
     expect(screen.getByText("Actual")).toBeInTheDocument()
     expect(screen.getByText("Blind Review")).toBeInTheDocument()
