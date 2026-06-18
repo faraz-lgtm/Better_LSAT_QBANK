@@ -18,8 +18,8 @@ function ActiveDrillResultBar({ attempt, onRetake, retaking = false }: ActiveDri
     blindReview.rawScore === attempt.questionCount
 
   return (
-    <div className="space-y-4">
-      <section className="flex flex-wrap items-center justify-between gap-6 rounded-2xl border border-[#dfe1e7] bg-white px-6 py-5 shadow-[0px_1px_1px_rgba(13,13,18,0.04)]">
+    <section className="overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.04)]">
+      <div className="flex flex-wrap items-center justify-between gap-6 px-6 py-5">
         <div className="flex flex-wrap items-center gap-6">
           <div>
             <p className="text-sm font-semibold tracking-[0.28px] text-[#6a7282]">Your Score</p>
@@ -50,21 +50,27 @@ function ActiveDrillResultBar({ attempt, onRetake, retaking = false }: ActiveDri
             <ChevronRight className="size-4" aria-hidden />
           </Button>
         ) : null}
-      </section>
+      </div>
 
       {blindReview ? (
-        <section className="rounded-2xl bg-[#f6f8fa] px-6 py-5">
-          <div className="flex flex-wrap items-center justify-between gap-6">
-            <div className="flex flex-wrap items-center gap-6">
+        <div className="border-t border-[#eceff3] bg-[#f6f8fa] px-6 py-5">
+          <div className="flex flex-wrap items-center gap-6 sm:gap-10">
+            <div className="min-w-[120px]">
+              <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#062357]">Your prediction</p>
+              <p className="mt-1 text-[28px] font-bold leading-[1.2] text-[#062357] sm:text-[32px]">
+                {attempt.rawScore}/{attempt.questionCount}
+              </p>
+            </div>
+            <div className="hidden h-12 w-px shrink-0 bg-[#dfe1e7] sm:block" aria-hidden />
+            <div className="flex min-w-[120px] flex-wrap items-center gap-4">
               <div>
-                <p className="text-xs font-bold leading-normal tracking-[0.02em] text-[#df1c41]">BLIND REVIEW</p>
-                <p className="text-[32px] font-bold leading-[1.25] text-[#df1c41]">
-                  {blindReview.rawScore}/{attempt.questionCount}{" "}
-                  <span className="text-lg font-semibold">Correct</span>
+                <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#df1c41]">Blind review</p>
+                <p className="mt-1 text-[28px] font-bold leading-[1.2] text-[#df1c41] sm:text-[32px]">
+                  {blindReview.rawScore}/{attempt.questionCount}
                 </p>
               </div>
               <div
-                className={`flex size-12 items-center justify-center rounded-full ${blindReviewAllCorrect ? "bg-[#e8f5e9]" : "bg-[#fde8ec]"}`}
+                className={`flex size-12 shrink-0 items-center justify-center rounded-full ${blindReviewAllCorrect ? "bg-[#e8f5e9]" : "bg-[#fde8ec]"}`}
               >
                 {blindReviewAllCorrect ? (
                   <CheckCircle2 className="size-7 text-[#00d492]" strokeWidth={2} aria-hidden />
@@ -74,9 +80,9 @@ function ActiveDrillResultBar({ attempt, onRetake, retaking = false }: ActiveDri
               </div>
             </div>
           </div>
-        </section>
+        </div>
       ) : null}
-    </div>
+    </section>
   )
 }
 

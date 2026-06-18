@@ -16,6 +16,7 @@ import {
   prevLessonSlug,
   shouldFlattenModuleSections,
 } from "@/features/prep-course/lib/prep-course-format"
+import { mergeActiveDrillAttemptBlindReview } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createPracticeApi } from "@/lib/api/practice"
@@ -155,7 +156,13 @@ function PrepCourseLessonPage() {
         setCompletedLessonSlugs(new Set(courseData.completedLessonSlugs ?? []))
         setLesson(lessonData.lesson)
         setLinkedQuestionRefs(lessonData.linkedQuestionRefs ?? [])
-        setActiveDrillAttempt(lessonData.activeDrillAttempt ?? null)
+        const mergedAttempt = await mergeActiveDrillAttemptBlindReview(lessonData.activeDrillAttempt ?? null, {
+          lessonId: lessonData.lesson.id,
+          getDrillSession: practiceApi
+            ? (id) => practiceApi.getDrillSession(id).then((data) => ({ session: data.session }))
+            : undefined,
+        })
+        setActiveDrillAttempt(mergedAttempt)
       } catch (e) {
         if (!alive) return
         setError(e instanceof Error ? e.message : "Failed to load lesson")
@@ -167,7 +174,7 @@ function PrepCourseLessonPage() {
     return () => {
       alive = false
     }
-  }, [paramsValid, courseSlug, lessonSlug, prepCourseApi, location.key])
+  }, [paramsValid, courseSlug, lessonSlug, prepCourseApi, practiceApi, location.key])
 
   useEffect(() => {
     setDrillStartError(null)

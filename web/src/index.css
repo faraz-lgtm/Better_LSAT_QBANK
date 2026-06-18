@@ -1411,6 +1411,18 @@ select.ds-input {
   min-height: 0;
 }
 
+html.student-shell-immersive .practice-session-card {
+  max-height: calc(100svh - 32px);
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+@media (min-width: 768px) {
+  html.student-shell-immersive .practice-session-card {
+    max-height: calc(100svh - 40px);
+  }
+}
+
 .prep-course-shell-card {
   min-height: 0;
 }
