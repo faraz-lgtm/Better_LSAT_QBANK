@@ -4,16 +4,19 @@ import { Link, useLocation, useParams } from "react-router-dom"
 import { PrepCourseContentHeader } from "@/features/prep-course/components/prep-course-content-header"
 import { PrepCourseModulePanel } from "@/features/prep-course/components/prep-course-module-panel"
 import { PrepCourseModuleSidebar } from "@/features/prep-course/components/prep-course-module-sidebar"
+import { moduleMatchesBookmarkFilter } from "@/features/prep-course/lib/prep-course-bookmarks"
 import {
   curriculumStats,
   findLessonLocation,
   normalizeCurriculum,
 } from "@/features/prep-course/lib/prep-course-format"
+import { usePrepCourseBookmarks } from "@/features/prep-course/lib/use-prep-course-bookmarks"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import {
   createPrepCourseApi,
   type PrepCourse,
+  type PrepCourseBookmarks,
   type PrepCourseCurriculum,
 } from "@/lib/api/prep-course"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -33,8 +36,8 @@ function PrepCourseContentPage() {
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
   const [expandedSectionIds, setExpandedSectionIds] = useState<Set<string>>(() => new Set())
   const [showBookmarksOnly, setShowBookmarksOnly] = useState(false)
-  const [bookmarkedModuleIds, setBookmarkedModuleIds] = useState<Set<string>>(() => new Set())
   const [completedLessonSlugs, setCompletedLessonSlugs] = useState<Set<string>>(() => new Set())
+  const [initialBookmarks, setInitialBookmarks] = useState<PrepCourseBookmarks | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -45,6 +48,14 @@ function PrepCourseContentPage() {
       return null
     }
   }, [])
+
+  const { bookmarks, isModuleBookmarked, setModuleBookmarked, setLessonBookmarked } = usePrepCourseBookmarks({
+    courseId: course?.id,
+    courseSlug,
+    prepCourseApi,
+    initialBookmarks,
+  })
+  const bookmarkedLessonSlugs = useMemo(() => new Set(bookmarks.lessonSlugs), [bookmarks.lessonSlugs])
 
   const activeLessonSlug = locationState.activeLessonSlug
 
@@ -72,6 +83,7 @@ function PrepCourseContentPage() {
         setCourse(data.course)
         setCurriculum(normalized)
         setCompletedLessonSlugs(new Set(data.completedLessonSlugs ?? []))
+        setInitialBookmarks(data.bookmarks ?? { moduleIds: [], lessonSlugs: [] })
 
         const lessonLoc = activeLessonSlug ? findLessonLocation(normalized, activeLessonSlug) : null
         const defaultModuleId = lessonLoc?.moduleId ?? normalized.modules[0]?.id ?? null
@@ -102,8 +114,8 @@ function PrepCourseContentPage() {
 
   const visibleModules = useMemo(() => {
     if (!showBookmarksOnly) return curriculum.modules
-    return curriculum.modules.filter((module) => bookmarkedModuleIds.has(module.id))
-  }, [bookmarkedModuleIds, curriculum.modules, showBookmarksOnly])
+    return curriculum.modules.filter((module) => moduleMatchesBookmarkFilter(module, bookmarks))
+  }, [bookmarks, curriculum.modules, showBookmarksOnly])
 
   useEffect(() => {
     if (!showBookmarksOnly) return
@@ -111,18 +123,30 @@ function PrepCourseContentPage() {
       setSelectedModuleId(null)
       return
     }
-    if (!selectedModuleId || !bookmarkedModuleIds.has(selectedModuleId)) {
+    const selectedVisible = visibleModules.some((module) => module.id === selectedModuleId)
+    if (!selectedModuleId || !selectedVisible) {
       setSelectedModuleId(visibleModules[0]!.id)
     }
-  }, [bookmarkedModuleIds, selectedModuleId, showBookmarksOnly, visibleModules])
+  }, [bookmarks, selectedModuleId, showBookmarksOnly, visibleModules])
+
+  useEffect(() => {
+    if (!selectedModule) return
+    const shouldExpandForBookmarks =
+      showBookmarksOnly || isModuleBookmarked(selectedModule.id)
+    if (!shouldExpandForBookmarks) return
+    const sectionIdsWithBookmarks = selectedModule.sections
+      .filter((section) => section.lessons.some((lesson) => bookmarkedLessonSlugs.has(lesson.slug)))
+      .map((section) => section.id)
+    if (sectionIdsWithBookmarks.length === 0) return
+    setExpandedSectionIds((prev) => {
+      const next = new Set(prev)
+      for (const id of sectionIdsWithBookmarks) next.add(id)
+      return next
+    })
+  }, [bookmarkedLessonSlugs, isModuleBookmarked, selectedModule, showBookmarksOnly])
 
   function handleToggleModuleBookmark(moduleId: string, next: boolean) {
-    setBookmarkedModuleIds((prev) => {
-      const updated = new Set(prev)
-      if (next) updated.add(moduleId)
-      else updated.delete(moduleId)
-      return updated
-    })
+    setModuleBookmarked(moduleId, next)
   }
 
   function handleToggleSection(sectionId: string) {
@@ -205,7 +229,10 @@ function PrepCourseContentPage() {
                 completedLessonSlugs={completedLessonSlugs}
                 onToggleSection={handleToggleSection}
                 onExpandModuleSections={handleExpandModuleSections}
-                moduleBookmarked={bookmarkedModuleIds.has(selectedModule.id)}
+                moduleBookmarked={isModuleBookmarked(selectedModule.id)}
+                showBookmarksOnly={showBookmarksOnly}
+                bookmarkedLessonSlugs={bookmarkedLessonSlugs}
+                onToggleLessonBookmark={setLessonBookmarked}
                 onToggleModuleBookmark={(next) => handleToggleModuleBookmark(selectedModule.id, next)}
               />
             ) : (

@@ -28,6 +28,19 @@ function mockRepo(
     }>
     getPublishedLessonBySlug: (courseId: string, lessonSlug: string) => Promise<PrepLessonRow | null>
     listCompletedLessonSlugsByCourse: (userId: string, courseId: string) => Promise<string[]>
+    listBookmarksByCourse: (userId: string, courseId: string) => Promise<{
+      moduleIds: string[]
+      lessonSlugs: string[]
+    }>
+    getPublishedModuleById: (courseId: string, moduleId: string) => Promise<{
+      id: string
+      course_id: string
+      title: string
+      sort_order: number
+      duration_minutes: number | null
+    } | null>
+    setModuleBookmark: (userId: string, moduleId: string, bookmarked: boolean) => Promise<void>
+    setLessonBookmark: (userId: string, lessonId: string, bookmarked: boolean) => Promise<void>
     upsertLessonCompletion: (userId: string, lessonId: string) => Promise<void>
     createCourse: (input: {
       slug: string
@@ -180,6 +193,27 @@ function mockRepo(
     listCompletedLessonSlugsByCourse:
       overrides.listCompletedLessonSlugsByCourse ??
       (async () => []),
+    listBookmarksByCourse:
+      overrides.listBookmarksByCourse ??
+      (async () => ({ moduleIds: [], lessonSlugs: [] })),
+    getPublishedModuleById:
+      overrides.getPublishedModuleById ??
+      (async (_courseId, moduleId) =>
+        moduleId === 'mod-1'
+          ? {
+              id: 'mod-1',
+              course_id: 'course-1',
+              title: 'Module 1',
+              sort_order: 1,
+              duration_minutes: null,
+            }
+          : null),
+    setModuleBookmark:
+      overrides.setModuleBookmark ??
+      (async () => {}),
+    setLessonBookmark:
+      overrides.setLessonBookmark ??
+      (async () => {}),
     upsertLessonCompletion:
       overrides.upsertLessonCompletion ??
       (async () => {}),
@@ -271,6 +305,53 @@ Deno.test('prep-course service returns course and lessons by slug', async () => 
   assertEquals(out.lessons.length, 1)
   assertEquals(out.curriculum.modules.length, 1)
   assertEquals(out.completedLessonSlugs, [])
+  assertEquals(out.bookmarks, { moduleIds: [], lessonSlugs: [] })
+})
+
+Deno.test('prep-course service returns bookmarks with course', async () => {
+  const service = createPrepCourseService({
+    repository: mockRepo({
+      listBookmarksByCourse: async () => ({ moduleIds: ['mod-1'], lessonSlugs: ['lesson-1'] }),
+    }),
+  })
+  const out = await service.getCourseWithLessons('user-1', 'prep-course')
+  assertEquals(out.bookmarks, { moduleIds: ['mod-1'], lessonSlugs: ['lesson-1'] })
+})
+
+Deno.test('prep-course service setModuleBookmark persists and returns bookmarks', async () => {
+  let saved = false
+  const service = createPrepCourseService({
+    repository: mockRepo({
+      setModuleBookmark: async (userId, moduleId, bookmarked) => {
+        saved = true
+        assertEquals(userId, 'user-1')
+        assertEquals(moduleId, 'mod-1')
+        assertEquals(bookmarked, true)
+      },
+      listBookmarksByCourse: async () => ({ moduleIds: ['mod-1'], lessonSlugs: [] }),
+    }),
+  })
+  const out = await service.setModuleBookmark('user-1', 'prep-course', 'mod-1', true)
+  assertEquals(saved, true)
+  assertEquals(out.bookmarks.moduleIds, ['mod-1'])
+})
+
+Deno.test('prep-course service setLessonBookmark persists and returns bookmarks', async () => {
+  let saved = false
+  const service = createPrepCourseService({
+    repository: mockRepo({
+      setLessonBookmark: async (userId, lessonId, bookmarked) => {
+        saved = true
+        assertEquals(userId, 'user-1')
+        assertEquals(lessonId, 'lesson-1')
+        assertEquals(bookmarked, true)
+      },
+      listBookmarksByCourse: async () => ({ moduleIds: [], lessonSlugs: ['lesson-1'] }),
+    }),
+  })
+  const out = await service.setLessonBookmark('user-1', 'prep-course', 'lesson-1', true)
+  assertEquals(saved, true)
+  assertEquals(out.bookmarks.lessonSlugs, ['lesson-1'])
 })
 
 Deno.test('prep-course service returns completed lesson slugs with course', async () => {

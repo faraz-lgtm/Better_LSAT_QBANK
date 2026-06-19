@@ -2,6 +2,7 @@ import { Bookmark } from "lucide-react"
 import type { RefObject } from "react"
 
 import { LessonContentRenderer } from "@/features/prep-course/components/lesson-content-renderer"
+import { cn } from "@/lib/utils"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { isPrepCourseDrillLessonType, lessonMetaLine } from "@/features/prep-course/lib/prep-course-format"
 import type {
@@ -23,6 +24,8 @@ type PrepCourseLessonPanelProps = {
   onStartDrill?: () => void
   startingDrill?: boolean
   drillStartError?: string | null
+  lessonBookmarked?: boolean
+  onToggleLessonBookmark?: (next: boolean) => void
 }
 
 function PrepCourseLessonPanel({
@@ -37,6 +40,8 @@ function PrepCourseLessonPanel({
   onStartDrill,
   startingDrill = false,
   drillStartError = null,
+  lessonBookmarked = false,
+  onToggleLessonBookmark,
 }: PrepCourseLessonPanelProps) {
   const isPrepCourseDrill = lesson ? isPrepCourseDrillLessonType(lesson.lesson_type) : false
   const headerMeta =
@@ -70,10 +75,15 @@ function PrepCourseLessonPanel({
         </div>
         <button
           type="button"
-          aria-label="Bookmark lesson"
-          className="flex size-9 shrink-0 items-center justify-center rounded-[10px] text-[#666d80] transition-colors hover:text-[#0d47a1]"
+          aria-label={lessonBookmarked ? "Remove lesson bookmark" : "Bookmark lesson"}
+          aria-pressed={lessonBookmarked}
+          className={cn(
+            "flex size-9 shrink-0 items-center justify-center rounded-[10px] transition-colors",
+            lessonBookmarked ? "text-[#0d47a1]" : "text-[#666d80] hover:text-[#0d47a1]",
+          )}
+          onClick={() => onToggleLessonBookmark?.(!lessonBookmarked)}
         >
-          <Bookmark className="size-6" strokeWidth={2} />
+          <Bookmark className={cn("size-6", lessonBookmarked && "fill-current")} strokeWidth={2} />
         </button>
       </header>
     ) : null

@@ -17,12 +17,14 @@ import {
   shouldFlattenModuleSections,
 } from "@/features/prep-course/lib/prep-course-format"
 import { mergeActiveDrillAttemptBlindReview } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
+import { usePrepCourseBookmarks } from "@/features/prep-course/lib/use-prep-course-bookmarks"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createPracticeApi } from "@/lib/api/practice"
 import {
   createPrepCourseApi,
   type PrepCourse,
+  type PrepCourseBookmarks,
   type PrepCourseCurriculum,
   type PrepLesson,
   type PrepLessonActiveDrillAttempt,
@@ -55,6 +57,7 @@ function PrepCourseLessonPage() {
   const [drillStartError, setDrillStartError] = useState<string | null>(null)
   const [showSidebar, setShowSidebar] = useState(true)
   const lessonContentRef = useRef<HTMLDivElement>(null)
+  const [initialBookmarks, setInitialBookmarks] = useState<PrepCourseBookmarks | null>(null)
 
   const prepCourseApi = useMemo(() => {
     try {
@@ -63,6 +66,13 @@ function PrepCourseLessonPage() {
       return null
     }
   }, [])
+
+  const { isLessonBookmarked, setLessonBookmarked } = usePrepCourseBookmarks({
+    courseId: course?.id,
+    courseSlug,
+    prepCourseApi,
+    initialBookmarks,
+  })
 
   const practiceApi = useMemo(() => {
     try {
@@ -154,6 +164,7 @@ function PrepCourseLessonPage() {
           normalizeCurriculum(courseData.curriculum, courseData.lessons, courseData.course.id),
         )
         setCompletedLessonSlugs(new Set(courseData.completedLessonSlugs ?? []))
+        setInitialBookmarks(lessonData.bookmarks ?? courseData.bookmarks ?? { moduleIds: [], lessonSlugs: [] })
         setLesson(lessonData.lesson)
         setLinkedQuestionRefs(lessonData.linkedQuestionRefs ?? [])
         const mergedAttempt = await mergeActiveDrillAttemptBlindReview(lessonData.activeDrillAttempt ?? null, {
@@ -285,6 +296,10 @@ function PrepCourseLessonPage() {
                 onStartDrill={() => void handleStartDrill()}
                 startingDrill={startingDrill}
                 drillStartError={drillStartError}
+                lessonBookmarked={lesson ? isLessonBookmarked(lesson.slug) : false}
+                onToggleLessonBookmark={(next) => {
+                  if (lesson) setLessonBookmarked(lesson.slug, next)
+                }}
               />
             </div>
 

@@ -83,6 +83,11 @@ export type PrepCourseCurriculum = {
   modules: PrepCourseModule[]
 }
 
+export type PrepCourseBookmarks = {
+  moduleIds: string[]
+  lessonSlugs: string[]
+}
+
 export function createPrepCourseApi(supabase: SupabaseClient) {
   async function invokePrepCourseFn<T>(
     functionName: string,
@@ -128,12 +133,14 @@ export function createPrepCourseApi(supabase: SupabaseClient) {
       lessons: PrepLesson[]
       curriculum?: PrepCourseCurriculum
       completedLessonSlugs?: string[]
+      bookmarks?: PrepCourseBookmarks
     }> {
       const { data, error } = await invokePrepCourseFn<{
         course: PrepCourse
         lessons: PrepLesson[]
         curriculum?: PrepCourseCurriculum
         completedLessonSlugs?: string[]
+        bookmarks?: PrepCourseBookmarks
       }>(prepCourseGetName({ courseSlug }), { method: "GET" })
       if (error) throw error
       if (!data?.course) throw new Error("No course returned from prep-course")
@@ -152,6 +159,32 @@ export function createPrepCourseApi(supabase: SupabaseClient) {
       return { completedLessonSlugs: data?.completedLessonSlugs ?? [] }
     },
 
+    async setModuleBookmark(
+      courseSlug: string,
+      moduleId: string,
+      bookmarked: boolean,
+    ): Promise<{ bookmarks: PrepCourseBookmarks }> {
+      const { data, error } = await invokePrepCourseFn<{ bookmarks: PrepCourseBookmarks }>("prep-course", {
+        method: "POST",
+        body: { courseSlug, bookmarkModuleId: moduleId, bookmarked },
+      })
+      if (error) throw error
+      return { bookmarks: data?.bookmarks ?? { moduleIds: [], lessonSlugs: [] } }
+    },
+
+    async setLessonBookmark(
+      courseSlug: string,
+      lessonSlug: string,
+      bookmarked: boolean,
+    ): Promise<{ bookmarks: PrepCourseBookmarks }> {
+      const { data, error } = await invokePrepCourseFn<{ bookmarks: PrepCourseBookmarks }>("prep-course", {
+        method: "POST",
+        body: { courseSlug, bookmarkLessonSlug: lessonSlug, bookmarked },
+      })
+      if (error) throw error
+      return { bookmarks: data?.bookmarks ?? { moduleIds: [], lessonSlugs: [] } }
+    },
+
     async getLesson(
       courseSlug: string,
       lessonSlug: string,
@@ -160,12 +193,14 @@ export function createPrepCourseApi(supabase: SupabaseClient) {
       lesson: PrepLesson
       linkedQuestionRefs: PrepLessonLinkedQuestionRef[]
       activeDrillAttempt: PrepLessonActiveDrillAttempt | null
+      bookmarks: PrepCourseBookmarks
     }> {
       const { data, error } = await invokePrepCourseFn<{
         course: PrepCourse
         lesson: PrepLesson
         linkedQuestionRefs?: PrepLessonLinkedQuestionRef[]
         activeDrillAttempt?: PrepLessonActiveDrillAttempt | null
+        bookmarks?: PrepCourseBookmarks
       }>(prepCourseGetName({ courseSlug, lessonSlug }), { method: "GET" })
       if (error) throw error
       if (!data?.course || !data.lesson) throw new Error("No lesson returned from prep-course")
@@ -174,6 +209,7 @@ export function createPrepCourseApi(supabase: SupabaseClient) {
         lesson: data.lesson,
         linkedQuestionRefs: data.linkedQuestionRefs ?? [],
         activeDrillAttempt: data.activeDrillAttempt ?? null,
+        bookmarks: data.bookmarks ?? { moduleIds: [], lessonSlugs: [] },
       }
     },
 

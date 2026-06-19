@@ -1,4 +1,5 @@
 import { Bookmark } from "lucide-react"
+import { useMemo } from "react"
 
 import { PrepCourseExpandButton } from "@/features/prep-course/components/prep-course-content-header"
 import { PrepCourseLessonRow } from "@/features/prep-course/components/prep-course-lesson-row"
@@ -25,6 +26,9 @@ type PrepCourseModulePanelProps = {
   activeLessonSlug?: string
   completedLessonSlugs: Set<string>
   moduleBookmarked: boolean
+  showBookmarksOnly?: boolean
+  bookmarkedLessonSlugs?: ReadonlySet<string>
+  onToggleLessonBookmark?: (lessonSlug: string, next: boolean) => void
   onToggleSection: (sectionId: string) => void
   onExpandModuleSections: () => void
   onToggleModuleBookmark: (next: boolean) => void
@@ -34,6 +38,15 @@ function moduleLessons(mod: PrepCourseModule): PrepLesson[] {
   return mod.sections.flatMap((section) => section.lessons)
 }
 
+function filterLessonsForBookmarks(
+  lessons: PrepLesson[],
+  filterToBookmarkedLessons: boolean,
+  bookmarkedLessonSlugs: ReadonlySet<string>,
+): PrepLesson[] {
+  if (!filterToBookmarkedLessons) return lessons
+  return lessons.filter((lesson) => bookmarkedLessonSlugs.has(lesson.slug))
+}
+
 function PrepCourseModulePanel({
   course,
   module,
@@ -41,6 +54,9 @@ function PrepCourseModulePanel({
   activeLessonSlug,
   completedLessonSlugs,
   moduleBookmarked,
+  showBookmarksOnly = false,
+  bookmarkedLessonSlugs = new Set<string>(),
+  onToggleLessonBookmark,
   onToggleSection,
   onExpandModuleSections,
   onToggleModuleBookmark,
@@ -57,6 +73,27 @@ function PrepCourseModulePanel({
   const moduleSectionIds = module.sections.map((section) => section.id)
   const moduleSectionsExpanded =
     moduleSectionIds.length > 0 && moduleSectionIds.every((id) => expandedSectionIds.has(id))
+
+  const filterToBookmarkedLessons = showBookmarksOnly || moduleBookmarked
+
+  const visibleSections = useMemo(() => {
+    if (!filterToBookmarkedLessons) return module.sections
+    return module.sections
+      .map((section) => ({
+        ...section,
+        lessons: filterLessonsForBookmarks(section.lessons, filterToBookmarkedLessons, bookmarkedLessonSlugs),
+      }))
+      .filter((section) => section.lessons.length > 0)
+  }, [bookmarkedLessonSlugs, filterToBookmarkedLessons, module.sections])
+
+  const visibleFlatLessons = useMemo(() => {
+    if (!flatSection) return []
+    return filterLessonsForBookmarks(flatSection.lessons, filterToBookmarkedLessons, bookmarkedLessonSlugs)
+  }, [bookmarkedLessonSlugs, filterToBookmarkedLessons, flatSection])
+
+  const hasVisibleBookmarkedLessons = filterToBookmarkedLessons
+    ? visibleSections.some((section) => section.lessons.length > 0) || visibleFlatLessons.length > 0
+    : true
 
   const statsBlock = (
     <div className="flex flex-col items-end justify-center gap-[14px]">
@@ -129,22 +166,32 @@ function PrepCourseModulePanel({
       </div>
 
       <div className="practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto border border-t-0 border-[color:var(--greyscale-100)] bg-white">
-        {flattenSections && flatSection && flatExpanded ? (
+        {!hasVisibleBookmarkedLessons ? (
+          <p className="ds-body-sm ds-text-muted p-6">No bookmarked lessons in this module.</p>
+        ) : null}
+
+        {flattenSections && flatSection && flatExpanded && hasVisibleBookmarkedLessons ? (
           <div className="bg-white">
-            {flatSection.lessons.map((lesson) => (
+            {visibleFlatLessons.map((lesson) => (
               <PrepCourseLessonRow
                 key={lesson.id}
                 course={course}
                 lesson={lesson}
                 active={lesson.slug === activeLessonSlug}
                 completed={completedLessonSlugs.has(lesson.slug)}
+                bookmarked={bookmarkedLessonSlugs.has(lesson.slug)}
+                onToggleBookmark={
+                  onToggleLessonBookmark
+                    ? (next) => onToggleLessonBookmark(lesson.slug, next)
+                    : undefined
+                }
               />
             ))}
           </div>
         ) : null}
 
-        {!flattenSections
-          ? module.sections.map((section) => (
+        {!flattenSections && hasVisibleBookmarkedLessons
+          ? visibleSections.map((section) => (
               <PrepCourseSectionAccordion
                 key={section.id}
                 course={course}
@@ -152,6 +199,8 @@ function PrepCourseModulePanel({
                 expanded={expandedSectionIds.has(section.id)}
                 activeLessonSlug={activeLessonSlug}
                 completedLessonSlugs={completedLessonSlugs}
+                bookmarkedLessonSlugs={bookmarkedLessonSlugs}
+                onToggleLessonBookmark={onToggleLessonBookmark}
                 onToggle={() => onToggleSection(section.id)}
               />
             ))
