@@ -34,9 +34,35 @@ export async function handlePrepCourseRequest(req: Request): Promise<Response> {
     if (req.method === 'POST') {
       const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
       const courseSlug = typeof body.courseSlug === 'string' ? body.courseSlug : ''
+      if (!courseSlug.trim()) {
+        return json({ error: 'courseSlug is required' }, { status: 400 }, corsHeaders)
+      }
+
+      if (typeof body.bookmarkModuleId === 'string' && body.bookmarkModuleId.trim()) {
+        const bookmarked = body.bookmarked === true
+        const data = await service.setModuleBookmark(
+          auth.user.id,
+          courseSlug,
+          body.bookmarkModuleId.trim(),
+          bookmarked,
+        )
+        return json(data, {}, corsHeaders)
+      }
+
+      if (typeof body.bookmarkLessonSlug === 'string' && body.bookmarkLessonSlug.trim()) {
+        const bookmarked = body.bookmarked === true
+        const data = await service.setLessonBookmark(
+          auth.user.id,
+          courseSlug,
+          body.bookmarkLessonSlug.trim(),
+          bookmarked,
+        )
+        return json(data, {}, corsHeaders)
+      }
+
       const lessonSlug = typeof body.lessonSlug === 'string' ? body.lessonSlug : ''
-      if (!courseSlug.trim() || !lessonSlug.trim()) {
-        return json({ error: 'courseSlug and lessonSlug are required' }, { status: 400 }, corsHeaders)
+      if (!lessonSlug.trim()) {
+        return json({ error: 'lessonSlug is required' }, { status: 400 }, corsHeaders)
       }
       const data = await service.completeLesson(auth.user.id, courseSlug, lessonSlug)
       return json(data, {}, corsHeaders)

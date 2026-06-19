@@ -1,5 +1,5 @@
 import { isPrepLessonType, type PrepLessonType } from '../_shared/prep-lesson-type.ts'
-import type { PrepCourseRepository, PrepLessonActiveDrillAttempt, PrepLessonDrillBlindReviewAttempt } from './prep-course.repository.ts'
+import type { PrepCourseRepository, PrepCourseBookmarks, PrepLessonActiveDrillAttempt, PrepLessonDrillBlindReviewAttempt } from './prep-course.repository.ts'
 
 export class AuthorizationError extends Error {
   constructor(message: string) {
@@ -180,7 +180,30 @@ export function createPrepCourseService(deps: {
       const curriculum = await deps.repository.listPublishedCurriculum(course.id)
       const lessons = await deps.repository.listPublishedLessonsByCourse(course.id)
       const completedLessonSlugs = await deps.repository.listCompletedLessonSlugsByCourse(userId, course.id)
-      return { course, lessons, curriculum, completedLessonSlugs }
+      const bookmarks = await deps.repository.listBookmarksByCourse(userId, course.id)
+      return { course, lessons, curriculum, completedLessonSlugs, bookmarks }
+    },
+
+    async setModuleBookmark(userId: string, courseSlug: string, moduleId: string, bookmarked: boolean) {
+      await requireLearnerAccess(userId)
+      const course = await deps.repository.getPublishedCourseBySlug(normalizeSlug(courseSlug))
+      if (!course) throw new Error('Course not found')
+      const mod = await deps.repository.getPublishedModuleById(course.id, moduleId)
+      if (!mod) throw new Error('Module not found')
+      await deps.repository.setModuleBookmark(userId, moduleId, bookmarked)
+      const bookmarks = await deps.repository.listBookmarksByCourse(userId, course.id)
+      return { bookmarks }
+    },
+
+    async setLessonBookmark(userId: string, courseSlug: string, lessonSlug: string, bookmarked: boolean) {
+      await requireLearnerAccess(userId)
+      const course = await deps.repository.getPublishedCourseBySlug(normalizeSlug(courseSlug))
+      if (!course) throw new Error('Course not found')
+      const lesson = await deps.repository.getPublishedLessonBySlug(course.id, normalizeSlug(lessonSlug))
+      if (!lesson) throw new Error('Lesson not found')
+      await deps.repository.setLessonBookmark(userId, lesson.id, bookmarked)
+      const bookmarks = await deps.repository.listBookmarksByCourse(userId, course.id)
+      return { bookmarks }
     },
 
     async completeLesson(userId: string, courseSlug: string, lessonSlug: string) {
@@ -206,8 +229,9 @@ export function createPrepCourseService(deps: {
         lesson.lesson_type === 'active_drill' || lesson.lesson_type === 'adaptive_drill'
           ? await buildActiveDrillAttempt(deps.repository, userId, lesson.id)
           : null
+      const bookmarks = await deps.repository.listBookmarksByCourse(userId, course.id)
 
-      return { course, lesson, linkedQuestionRefs, activeDrillAttempt }
+      return { course, lesson, linkedQuestionRefs, activeDrillAttempt, bookmarks }
     },
 
     async adminCreateCourse(

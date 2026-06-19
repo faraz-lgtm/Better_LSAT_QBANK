@@ -46,6 +46,40 @@ describe("createPrepCourseApi", () => {
     expect(out.completedLessonSlugs).toEqual(["intro"])
   })
 
+  it("setModuleBookmark POSTs bookmarkModuleId", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: { bookmarks: { moduleIds: ["m1"], lessonSlugs: [] } },
+      error: null,
+    })
+    const api = createPrepCourseApi(mockSupabase(invoke))
+
+    const out = await api.setModuleBookmark("prep-course", "m1", true)
+
+    expect(invoke).toHaveBeenCalledWith("prep-course", {
+      method: "POST",
+      body: { courseSlug: "prep-course", bookmarkModuleId: "m1", bookmarked: true },
+      headers: { Authorization: "Bearer token-1" },
+    })
+    expect(out.bookmarks.moduleIds).toEqual(["m1"])
+  })
+
+  it("setLessonBookmark POSTs bookmarkLessonSlug", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: { bookmarks: { moduleIds: [], lessonSlugs: ["intro"] } },
+      error: null,
+    })
+    const api = createPrepCourseApi(mockSupabase(invoke))
+
+    const out = await api.setLessonBookmark("prep-course", "intro", true)
+
+    expect(invoke).toHaveBeenCalledWith("prep-course", {
+      method: "POST",
+      body: { courseSlug: "prep-course", bookmarkLessonSlug: "intro", bookmarked: true },
+      headers: { Authorization: "Bearer token-1" },
+    })
+    expect(out.bookmarks.lessonSlugs).toEqual(["intro"])
+  })
+
   it("getLesson returns linked refs and drill attempt", async () => {
     const invoke = vi.fn().mockResolvedValue({
       data: {

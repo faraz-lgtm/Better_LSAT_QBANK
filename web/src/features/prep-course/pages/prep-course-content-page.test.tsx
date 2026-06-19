@@ -6,6 +6,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { PrepCourseContentPage } from "./prep-course-content-page"
 
 const getCourseMock = vi.fn()
+const setModuleBookmarkMock = vi.fn()
+const setLessonBookmarkMock = vi.fn()
+
+let bookmarkState = { moduleIds: [] as string[], lessonSlugs: [] as string[] }
 
 vi.mock("@/lib/api/prep-course", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api/prep-course")>("@/lib/api/prep-course")
@@ -13,6 +17,8 @@ vi.mock("@/lib/api/prep-course", async () => {
     ...actual,
     createPrepCourseApi: () => ({
       getCourse: getCourseMock,
+      setModuleBookmark: setModuleBookmarkMock,
+      setLessonBookmark: setLessonBookmarkMock,
     }),
   }
 })
@@ -58,6 +64,28 @@ const lessonB = {
 describe("PrepCourseContentPage", () => {
   beforeEach(() => {
     getCourseMock.mockReset()
+    setModuleBookmarkMock.mockReset()
+    setLessonBookmarkMock.mockReset()
+    bookmarkState = { moduleIds: [], lessonSlugs: [] }
+    setModuleBookmarkMock.mockImplementation(async (_courseSlug: string, moduleId: string, bookmarked: boolean) => {
+      bookmarkState = {
+        ...bookmarkState,
+        moduleIds: bookmarked
+          ? [...new Set([...bookmarkState.moduleIds, moduleId])]
+          : bookmarkState.moduleIds.filter((id) => id !== moduleId),
+      }
+      return { bookmarks: { ...bookmarkState } }
+    })
+    setLessonBookmarkMock.mockImplementation(async (_courseSlug: string, lessonSlug: string, bookmarked: boolean) => {
+      bookmarkState = {
+        ...bookmarkState,
+        lessonSlugs: bookmarked
+          ? [...new Set([...bookmarkState.lessonSlugs, lessonSlug])]
+          : bookmarkState.lessonSlugs.filter((slug) => slug !== lessonSlug),
+      }
+      return { bookmarks: { ...bookmarkState } }
+    })
+    window.localStorage.clear()
   })
 
   it("renders Course Content layout with modules and expandable sections", async () => {
@@ -342,5 +370,163 @@ describe("PrepCourseContentPage", () => {
 
     await user.click(bookmarkSwitch)
     expect(bookmarkSwitch).not.toBeChecked()
+  })
+
+  it("shows only bookmarked lessons when module Bookmark toggle is on", async () => {
+    getCourseMock.mockResolvedValue({
+      course,
+      lessons: [lessonA, lessonB],
+      curriculum: {
+        modules: [
+          {
+            id: "m1",
+            course_id: "c1",
+            title: "Module One",
+            sort_order: 1,
+            duration_minutes: null,
+            sections: [
+              {
+                id: "s1",
+                module_id: "m1",
+                title: "Section Alpha",
+                sort_order: 1,
+                duration_minutes: null,
+                lessons: [lessonA, lessonB],
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={["/app/prep-course/prep-course"]}>
+        <Routes>
+          <Route path="/app/prep-course/:courseSlug" element={<PrepCourseContentPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await screen.findByText("Section Alpha")
+    await user.click(screen.getByRole("button", { name: /Section Alpha/i }))
+    await user.click(screen.getByRole("button", { name: "Bookmark Lesson A" }))
+
+    expect(screen.getByRole("link", { name: /Lesson B/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole("switch", { name: "Bookmark module" }))
+
+    expect(screen.getByRole("link", { name: /Lesson A/i })).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: /Lesson B/i })).not.toBeInTheDocument()
+  })
+
+  it("filters sidebar to bookmarked modules when Show All Bookmark is on", async () => {
+    getCourseMock.mockResolvedValue({
+      course,
+      lessons: [lessonA, lessonB],
+      curriculum: {
+        modules: [
+          {
+            id: "m1",
+            course_id: "c1",
+            title: "Module One",
+            sort_order: 1,
+            duration_minutes: null,
+            sections: [
+              {
+                id: "s1",
+                module_id: "m1",
+                title: "Section Alpha",
+                sort_order: 1,
+                duration_minutes: null,
+                lessons: [lessonA],
+              },
+            ],
+          },
+          {
+            id: "m2",
+            course_id: "c1",
+            title: "Module Two",
+            sort_order: 2,
+            duration_minutes: null,
+            sections: [
+              {
+                id: "s2",
+                module_id: "m2",
+                title: "Section Beta",
+                sort_order: 1,
+                duration_minutes: null,
+                lessons: [lessonB],
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={["/app/prep-course/prep-course"]}>
+        <Routes>
+          <Route path="/app/prep-course/:courseSlug" element={<PrepCourseContentPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    const moduleSidebar = await screen.findByRole("complementary", { name: "Course modules" })
+    expect(within(moduleSidebar).getByText("Module One")).toBeInTheDocument()
+    expect(within(moduleSidebar).getByText("Module Two")).toBeInTheDocument()
+
+    await user.click(await screen.findByRole("switch", { name: "Bookmark module" }))
+    await user.click(screen.getByRole("switch", { name: "Show all bookmark" }))
+
+    expect(within(moduleSidebar).getByText("Module One")).toBeInTheDocument()
+    expect(within(moduleSidebar).queryByText("Module Two")).not.toBeInTheDocument()
+  })
+
+  it("shows only bookmarked lessons when Show All Bookmark is on", async () => {
+    getCourseMock.mockResolvedValue({
+      course,
+      lessons: [lessonA, lessonB],
+      curriculum: {
+        modules: [
+          {
+            id: "m1",
+            course_id: "c1",
+            title: "Module One",
+            sort_order: 1,
+            duration_minutes: null,
+            sections: [
+              {
+                id: "s1",
+                module_id: "m1",
+                title: "Section Alpha",
+                sort_order: 1,
+                duration_minutes: null,
+                lessons: [lessonA, lessonB],
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={["/app/prep-course/prep-course"]}>
+        <Routes>
+          <Route path="/app/prep-course/:courseSlug" element={<PrepCourseContentPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await screen.findByText("Section Alpha")
+    await user.click(screen.getByRole("button", { name: /Section Alpha/i }))
+
+    await user.click(screen.getByRole("button", { name: "Bookmark Lesson A" }))
+    await user.click(screen.getByRole("switch", { name: "Show all bookmark" }))
+
+    expect(screen.getByRole("link", { name: /Lesson A/i })).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: /Lesson B/i })).not.toBeInTheDocument()
   })
 })

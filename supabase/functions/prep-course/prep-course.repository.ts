@@ -112,6 +112,13 @@ export type PrepLessonActiveDrillAttempt = {
   blindReview: PrepLessonDrillBlindReviewAttempt | null
 }
 
+export type PrepCourseBookmarks = {
+  moduleIds: string[]
+  lessonSlugs: string[]
+}
+
+const EMPTY_BOOKMARKS: PrepCourseBookmarks = { moduleIds: [], lessonSlugs: [] }
+
 export function createServiceRoleClient(): SupabaseClient {
   const url = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -273,6 +280,93 @@ export function createPrepCourseRepository(client: SupabaseClient) {
           { user_id: userId, lesson_id: lessonId, completed_at: new Date().toISOString() },
           { onConflict: 'user_id,lesson_id' },
         )
+      if (error) throw error
+    },
+
+    async getPublishedModuleById(courseId: string, moduleId: string): Promise<PrepCourseModuleRow | null> {
+      const { data, error } = await client
+        .from('prep_course_modules')
+        .select('id,course_id,title,sort_order,duration_minutes')
+        .eq('course_id', courseId)
+        .eq('id', moduleId)
+        .maybeSingle()
+      if (error) throw error
+      return data as PrepCourseModuleRow | null
+    },
+
+    async listBookmarksByCourse(userId: string, courseId: string): Promise<PrepCourseBookmarks> {
+      const curriculum = await this.listPublishedCurriculum(courseId)
+      const lessons = curriculum.modules.flatMap((mod) =>
+        mod.sections.flatMap((section) => section.lessons),
+      )
+
+      try {
+        const { data: moduleRows, error: moduleError } = await client
+          .from('prep_course_module_bookmarks')
+          .select('module_id, prep_course_modules!inner(course_id)')
+          .eq('user_id', userId)
+          .eq('prep_course_modules.course_id', courseId)
+        if (moduleError) throw moduleError
+
+        const { data: lessonRows, error: lessonError } = await client
+          .from('prep_lesson_bookmarks')
+          .select('lesson_id, prep_lessons!inner(slug, course_id)')
+          .eq('user_id', userId)
+          .eq('prep_lessons.course_id', courseId)
+        if (lessonError) throw lessonError
+
+        const courseModuleIds = new Set(curriculum.modules.map((mod) => mod.id))
+        const bookmarkedModuleIds = ((moduleRows ?? []) as Array<{ module_id: string }>)
+          .map((row) => row.module_id)
+          .filter((id) => courseModuleIds.has(id))
+
+        const lessonSlugById = new Map(lessons.map((lesson) => [lesson.id, lesson.slug]))
+        const bookmarkedLessonSlugs = ((lessonRows ?? []) as Array<{ lesson_id: string }>)
+          .map((row) => lessonSlugById.get(row.lesson_id))
+          .filter((slug): slug is string => typeof slug === 'string')
+
+        return { moduleIds: bookmarkedModuleIds, lessonSlugs: bookmarkedLessonSlugs }
+      } catch (error) {
+        console.error('listBookmarksByCourse failed', error)
+        return EMPTY_BOOKMARKS
+      }
+    },
+
+    async setModuleBookmark(userId: string, moduleId: string, bookmarked: boolean): Promise<void> {
+      if (bookmarked) {
+        const { error } = await client
+          .from('prep_course_module_bookmarks')
+          .upsert(
+            { user_id: userId, module_id: moduleId },
+            { onConflict: 'user_id,module_id' },
+          )
+        if (error) throw error
+        return
+      }
+      const { error } = await client
+        .from('prep_course_module_bookmarks')
+        .delete()
+        .eq('user_id', userId)
+        .eq('module_id', moduleId)
+      if (error) throw error
+    },
+
+    async setLessonBookmark(userId: string, lessonId: string, bookmarked: boolean): Promise<void> {
+      if (bookmarked) {
+        const { error } = await client
+          .from('prep_lesson_bookmarks')
+          .upsert(
+            { user_id: userId, lesson_id: lessonId },
+            { onConflict: 'user_id,lesson_id' },
+          )
+        if (error) throw error
+        return
+      }
+      const { error } = await client
+        .from('prep_lesson_bookmarks')
+        .delete()
+        .eq('user_id', userId)
+        .eq('lesson_id', lessonId)
       if (error) throw error
     },
 
