@@ -15,7 +15,7 @@ export const ACTIVE_DRILL_HIGHLIGHT_COLORS: { id: HighlightColor; hex: string }[
   { id: "yellow", hex: "#FFBD4C" },
 ]
 
-export type PracticeSessionVariant = "default" | "active-drill"
+export type PracticeSessionVariant = "default" | "active-drill" | "blind-review"
 
 export const FONT_SCALE_STEPS = [0.9, 1, 1.1, 1.2] as const
 export const LINE_SPACING_STEPS = [1, 1.25, 1.5] as const

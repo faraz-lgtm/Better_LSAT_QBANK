@@ -105,8 +105,8 @@ describe("LessonContentRenderer active_drill", () => {
         activeDrillAttempt={attemptWithBlindReview}
       />,
     )
-    expect(screen.getByText("Your prediction")).toBeInTheDocument()
-    expect(screen.getByText("Blind review")).toBeInTheDocument()
+    expect(screen.queryByText("Your prediction")).not.toBeInTheDocument()
+    expect(screen.queryByText("Blind review")).not.toBeInTheDocument()
     expect(screen.getByText("Result")).toBeInTheDocument()
     expect(screen.getByText("Actual")).toBeInTheDocument()
     expect(screen.getByText("Blind Review")).toBeInTheDocument()
@@ -205,6 +205,7 @@ describe("LessonContentRenderer rep_work", () => {
     render(<LessonContentRenderer lesson={repWorkLesson} />)
 
     const box = screen.getByRole("textbox", { name: "Question 1 text" })
+    await user.click(screen.getByRole("switch", { name: "Show or hide answer for question 1" }))
     await user.clear(box)
     await user.type(box, "Edited text")
     expect(box).toHaveValue("Edited text")

@@ -56,11 +56,13 @@
   --shadow-xsmall: 0 1px 2px 0 rgba(13, 13, 18, 0.06);
   --btn-focus-ring: 0 0 0 1px #0b4e6e inset, 0 0 1px 3px rgba(4, 166, 244, 0.15);
   --btn-disabled-bg: #e4e8f2;
-  --btn-disabled-border: #dfe1e7;
+  --btn-disabled-border: #dfe1e6;
   --btn-disabled-fg: rgba(255, 255, 255, 0.55);
 
-  --greyscale-100: #dfe1e7;
+  --greyscale-100: #dfe1e6;
+  --greyscale-300: #a4acb9;
   --greyscale-400: #818898;
+  --greyscale-500: #666d80;
   --secondary-0: #f5f9ff;
   --field-focus: #082c6b;
 
@@ -106,9 +108,16 @@
 
   --sidebar-ring: oklch(0.708 0 0);
 
-  --greyscale-100: #dfe1e7;
+  --greyscale-100: #dfe1e6;
   --greyscale-25: #f6f8fa;
+  --greyscale-0: #ffffff;
+  --greyscale-300: #a4acb9;
+  --greyscale-400: #818898;
+  --greyscale-500: #666d80;
+  --primary-0: #f3f7ff;
   --primary-25: #edf3ff;
+  --primary-100: #6d78b6;
+  --secondary-100: #f2f7ff;
   --shadow-medium: 0 5px 10px -2px rgba(13, 13, 18, 0.04), 0 4px 8px -1px rgba(13, 13, 18, 0.02);
   --color-student-heading: #062357;
   --color-student-cta: #0047ab;
@@ -976,7 +985,7 @@ code {
 }
 
 .ds-text-muted {
-  color: #666d80;
+  color: var(--greyscale-500);
 }
 
 /* Analytics stat tiles (BEST SCORE, AVERAGE SCORE, etc.) */
@@ -1362,6 +1371,146 @@ select.ds-input {
   border-top: 1px solid #dfe1e7;
 }
 
+/* Dashboard page — fluid layout that reflows on zoom / narrow viewports (Figma 18644:32472) */
+.dashboard-page {
+  width: 100%;
+  min-width: 0;
+  container-type: inline-size;
+  container-name: dashboard;
+}
+
+.dashboard-page__stats {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+}
+
+@container dashboard (min-width: 40rem) {
+  .dashboard-page__stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.dashboard-page__body {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  width: 100%;
+}
+
+@container dashboard (min-width: 52rem) {
+  .dashboard-page__body {
+    grid-template-columns: minmax(0, 1fr) minmax(16rem, 26%);
+  }
+}
+
+/* Figma drills page — design tokens are px-based at 16px root (node 18624:81589) */
+.drills-page {
+  font-size: 16px;
+}
+
+/* Figma section intro — node 18617:26304 */
+.practice-section-intro {
+  font-size: 16px;
+}
+
+.dashboard-drill-card {
+  container-type: inline-size;
+  container-name: drill-card;
+}
+
+.continue-drill-card {
+  container-type: inline-size;
+  container-name: drill-card;
+}
+
+.continue-drill-card__inner {
+  display: flex;
+  min-height: 204px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 24px;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+@container drill-card (min-width: 40rem) {
+  .continue-drill-card__inner {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
+.continue-drill-card__stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+}
+
+@container drill-card (min-width: 48rem) {
+  .continue-drill-card__stats {
+    flex-wrap: nowrap;
+  }
+}
+
+.continue-drill-card__action {
+  width: 100%;
+}
+
+@container drill-card (min-width: 40rem) {
+  .continue-drill-card__action {
+    width: auto;
+  }
+}
+
+.dashboard-drill-card__layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+@container drill-card (min-width: 40rem) {
+  .dashboard-drill-card__layout {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
+.dashboard-drill-card__stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+}
+
+@container drill-card (min-width: 48rem) {
+  .dashboard-drill-card__stats {
+    flex-wrap: nowrap;
+  }
+}
+
+.dashboard-drill-card__continue {
+  width: 100%;
+}
+
+@container drill-card (min-width: 40rem) {
+  .dashboard-drill-card__continue {
+    width: auto;
+    align-self: flex-start;
+  }
+}
+
+.student-topbar-profile-btn {
+  box-sizing: border-box;
+  max-height: 3.5rem;
+}
+
 .lsat-html-content {
   font-family: var(--sans);
   font-size: 0.875rem;
@@ -1374,6 +1523,58 @@ select.ds-input {
 }
 
 .lsat-html-content p:last-child {
+  margin-bottom: 0;
+}
+
+.rep-work-instructions-body.lsat-html-content {
+  font-size: 18px;
+  line-height: 1.4;
+  letter-spacing: 0.36px;
+  color: #1a1b25;
+}
+
+.rep-work-instructions-body.lsat-html-content p {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.rep-work-instructions-body.lsat-html-content p + p {
+  margin-top: 0;
+}
+
+.rep-work-instructions-body.lsat-html-content p:empty {
+  display: none;
+}
+
+.rep-work-question-input {
+  font-size: 18px;
+  line-height: 1.4;
+  letter-spacing: 0.36px;
+  field-sizing: content;
+  overflow: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.rep-work-question-input::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.explanation-detail-body.lsat-html-content {
+  font-size: 18px;
+  line-height: 1.4;
+  letter-spacing: 0.36px;
+  color: #1a1b25;
+}
+
+.explanation-detail-body.lsat-html-content p {
+  margin: 0 0 0.75rem;
+}
+
+.explanation-detail-body.lsat-html-content p:last-child {
   margin-bottom: 0;
 }
 
@@ -1396,8 +1597,33 @@ select.ds-input {
 .practice-session-pane {
   overflow-y: auto;
   overflow-x: hidden;
+  min-height: 0;
+  max-height: 100%;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+
+.practice-session-card--active-drill .practice-session-body > div {
+  flex: 1 1 0;
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
+}
+
+/* Prep course lesson — clip horizontal bleed from toggles, shadows, or flex min-content */
+.prep-course-lesson-shell,
+.prep-course-lesson-shell .practice-session-card,
+.prep-course-lesson-shell .practice-session-body {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.prep-course-rep-work-pair {
+  contain: inline-size;
 }
 
 .practice-session-pane::-webkit-scrollbar {
@@ -1417,6 +1643,22 @@ html.student-shell-immersive .practice-session-card {
   min-height: 0;
 }
 
+html.student-shell-immersive .practice-session-card--active-drill {
+  width: 100%;
+  max-width: 1280px;
+  height: 100%;
+  max-height: 100%;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: visible;
+  font-size: 16px;
+}
+
+.practice-session-card--active-drill .practice-session-body,
+.practice-session-card--active-drill .practice-session-footer {
+  overflow: hidden;
+}
+
 @media (min-width: 768px) {
   html.student-shell-immersive .practice-session-card {
     max-height: calc(100svh - 40px);
@@ -1425,6 +1667,8 @@ html.student-shell-immersive .practice-session-card {
 
 .prep-course-shell-card {
   min-height: 0;
+  border-color: var(--greyscale-100);
+  background-color: var(--greyscale-25);
 }
 
 .prep-course-shell-card.practice-session-card {
@@ -1441,6 +1685,16 @@ html.student-shell-immersive .practice-session-card {
 
 .practice-session-footer {
   isolation: isolate;
+}
+
+/* Figma prep test footer — up to 25 question pills per row, then wrap */
+.practice-session-question-nav-grid {
+  display: grid;
+  grid-template-columns: repeat(25, minmax(0, 1fr));
+  column-gap: 6px;
+  row-gap: 6px;
+  align-content: start;
+  justify-items: center;
 }
 
 .practice-session-question-nav-btn {
@@ -1474,10 +1728,50 @@ html.student-shell-immersive .practice-session-card {
 .practice-session-scroll-hidden {
   scrollbar-width: none;
   -ms-overflow-style: none;
+  overscroll-behavior: contain;
 }
 
-.practice-session-card--active-drill mark[data-highlight="orange"] {
+.practice-session-scroll-hidden::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Blind review + notes: passage scrolls in top band; question/answers get the larger lower band */
+.practice-session-br-notes-stack {
+  display: grid;
+  min-height: 0;
+  min-width: 0;
+  flex: 1 1 0;
+  grid-template-rows: minmax(0, 0.38fr) minmax(0, 0.62fr);
+  gap: 1.5rem;
+  overflow: hidden;
+}
+
+.practice-session-br-notes-pane {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.practice-session-card--active-drill .practice-session-content mark[data-highlight] {
+  color: inherit;
+  border-radius: 2px;
+  padding-inline: 0.05em;
+}
+
+.practice-session-card--active-drill .practice-session-content mark[data-highlight="orange"] {
   background-color: #0bbcc9;
+}
+
+.practice-session-card--active-drill .practice-session-content mark[data-highlight="pink"] {
+  background-color: #ffb4de;
+}
+
+.practice-session-card--active-drill .practice-session-content mark[data-highlight="yellow"] {
+  background-color: #ffbd4c;
 }
 
 .practice-session-card--active-drill .practice-session-question-nav-btn {

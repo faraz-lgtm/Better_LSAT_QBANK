@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Brain, Clock, Target } from "lucide-react"
+import { Brain, Clock, PlusCircle, Target } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,6 +12,7 @@ import {
 import { mapOverviewToDashboardStats } from "@/features/dashboard/lib/map-dashboard-stats"
 import { useAnalyticsApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import { ContinueDrillCard, continueDrillToCardDrill } from "@/features/student/components/continue-drill-card"
+import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import {
@@ -23,13 +24,12 @@ import {
   type SuggestedDrill,
 } from "@/features/student/drills/drill-dashboard-mappers"
 import type { AnalyticsOverview } from "@/lib/api/analytics"
-import type { OfficialLsatScore, StudentStudyContext, UserProfile } from "@/lib/api/users"
+import type { OfficialLsatScore, StudentStudyContext } from "@/lib/api/users"
 import { createUsersApi } from "@/lib/api/users"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
-function chipStyles(active: boolean) {
-  if (active) return "bg-[#0d47a1] text-white border-[#0d47a1]"
-  return "bg-[#f5f9ff] text-[#0d47a1] border-[#dfe1e7]"
+function filterChipStyles(active: boolean): string {
+  return drillFilterPillClass(active)
 }
 
 function adaptiveDrillPath(filter: "all" | "lr" | "rc"): string {
@@ -69,7 +69,6 @@ function DashboardPage() {
     }
   }, [])
 
-  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null)
   const [studyHours, setStudyHours] = useState(0)
   const [continueDrills, setContinueDrills] = useState<ContinueDrill[]>([])
@@ -79,7 +78,7 @@ function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [activeFilter, setActiveFilter] = useState<"all" | "lr" | "rc">("all")
 
-  const [editingCycle, setEditingCycle] = useState(false)
+  const [editingLsat, setEditingLsat] = useState(false)
   const [cycleDraft, setCycleDraft] = useState("")
   const [plannedDateDraft, setPlannedDateDraft] = useState("")
   const [savingCycle, setSavingCycle] = useState(false)
@@ -99,8 +98,7 @@ function DashboardPage() {
     setLoading(true)
     setError(null)
     try {
-      const [profileData, overviewData, allSessions, drillSessions, priorities, context] = await Promise.all([
-        usersApi.getMyProfile(),
+      const [overviewData, allSessions, drillSessions, priorities, context] = await Promise.all([
         analyticsApi.getOverview(),
         fetchAllSessionsForStudyHours((input) => analyticsApi.getSessions(input)),
         analyticsApi.getSessions({ kind: "DRILL", limit: 50 }),
@@ -108,7 +106,6 @@ function DashboardPage() {
         usersApi.getStudyContext(),
       ])
 
-      setProfile(profileData)
       setOverview(overviewData)
       setStudyHours(sumSessionStudyHours(allSessions))
       setStudyContext(context)
@@ -186,7 +183,7 @@ function DashboardPage() {
         plannedLsatDate: plannedDateDraft.trim() || null,
       })
       setStudyContext((prev) => (prev ? { ...prev, preferences } : { preferences, officialScores: [] }))
-      setEditingCycle(false)
+      setEditingLsat(false)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update preferences")
     } finally {
@@ -218,10 +215,11 @@ function DashboardPage() {
     }
   }
 
-  function openCycleEditor() {
+  function openLsatEditor() {
     setCycleDraft(preferences?.lawSchoolCycle ?? "")
     setPlannedDateDraft(preferences?.plannedLsatDate ?? "")
-    setEditingCycle(true)
+    setEditingLsat(true)
+    setAddingScore(false)
   }
 
   if (loading) {
@@ -237,227 +235,237 @@ function DashboardPage() {
       <StudentMain>
         {error ? <p className="mb-4 text-sm text-[#95122b]">{error}</p> : null}
 
-        <div className="mb-[24px] grid gap-[24px] md:grid-cols-3">
-          {statCards.map((card) => (
-            <article
-              key={card.id}
-              className="rounded-2xl border border-[#dfe1e7] bg-white px-6 py-4 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
-            >
-              <div className="mb-[10px] flex h-10 items-start justify-between">
-                <span className="flex size-10 items-center justify-center rounded-[14px] bg-[#eceff3] text-[#62748e]">
-                  {card.id === "study-time" ? <Clock className="size-5" /> : null}
-                  {card.id === "drill-accuracy" ? <Target className="size-5" /> : null}
-                  {card.id === "questions-answered" ? <Brain className="size-5" /> : null}
-                </span>
-                {card.badge ? (
-                  <span className="rounded-full bg-[#f1f5f9] px-2 py-1 text-xs font-medium leading-4 text-[#62748e]">
-                    {card.badge}
+        <div className="dashboard-page flex flex-col gap-6">
+          <div className="dashboard-page__stats">
+            {statCards.map((card) => (
+              <article
+                key={card.id}
+                className="flex min-h-[142px] min-w-0 flex-col gap-2.5 rounded-2xl border border-[#dfe1e7] bg-white px-6 py-4 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
+              >
+                <div className="flex h-10 items-start justify-between">
+                  <span className="flex size-10 items-center justify-center rounded-[14px] bg-[#eceff3] text-[#62748e]">
+                    {card.id === "study-time" ? <Clock className="size-5" /> : null}
+                    {card.id === "drill-accuracy" ? <Target className="size-5" /> : null}
+                    {card.id === "questions-answered" ? <Brain className="size-5" /> : null}
                   </span>
-                ) : null}
-              </div>
-              <p className="text-2xl font-bold leading-8 text-[#0f172b]">{card.value}</p>
-              <p className="mt-[10px] text-[13px] font-normal leading-[18.571px] text-[#62748e]">{card.label}</p>
-            </article>
-          ))}
-        </div>
+                  {card.badge ? (
+                    <span className="rounded-full bg-[#f1f5f9] px-2 py-1 text-xs font-medium leading-4 text-[#62748e]">
+                      {card.badge}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-2xl font-bold leading-8 text-[#0f172b]">{card.value}</p>
+                <p className="text-[13px] font-normal leading-[18.571px] text-[#62748e]">{card.label}</p>
+              </article>
+            ))}
+          </div>
 
-        <div className="grid gap-[24px] lg:grid-cols-[1fr_400px]">
-          <section className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-[0px_5px_10px_0px_rgba(13,13,18,0.04)]">
-            <div className="mb-4 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className={`rounded-xl border px-3 py-1 text-xs font-semibold tracking-[0.24px] ${chipStyles(activeFilter === "all")}`}
-                onClick={() => setActiveFilter("all")}
-              >
-                All Drills
-              </button>
-              <button
-                type="button"
-                className={`rounded-xl border px-3 py-1 text-xs font-semibold tracking-[0.24px] ${chipStyles(activeFilter === "lr")}`}
-                onClick={() => setActiveFilter("lr")}
-              >
-                Logical Reasoning
-              </button>
-              <button
-                type="button"
-                className={`rounded-xl border px-3 py-1 text-xs font-semibold tracking-[0.24px] ${chipStyles(activeFilter === "rc")}`}
-                onClick={() => setActiveFilter("rc")}
-              >
-                Reading Comprehension
-              </button>
-            </div>
-
-            {displayDrills.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-6 text-sm text-[#666d80]">
-                No drills in progress. Start a new drill from{" "}
+          <div className="dashboard-page__body">
+            <section className="min-w-0 rounded-[24px] border border-[#dfe1e7] bg-white p-4 sm:p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+              <div className="mb-6 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className="font-semibold text-[#0d47a1] hover:underline"
-                  onClick={() => navigate("/app/practice/drills")}
+                  className={filterChipStyles(activeFilter === "all")}
+                  onClick={() => setActiveFilter("all")}
                 >
-                  Practice → Drills
+                  All Drills
                 </button>
-                .
-              </p>
-            ) : (
-              <div className="flex flex-col gap-4">
-                {displayDrills.map((drill) => {
-                  const suggested = isSuggestedDrill(drill)
-                  const cardDrill = continueDrillToCardDrill(
-                    suggested ? { ...drill, continuePath: drill.configPath } : drill,
-                  )
-
-                  return (
-                    <ContinueDrillCard
-                      key={drill.id}
-                      drill={cardDrill}
-                      continueLabel={suggested ? "Start" : "Continue"}
-                      lastAttemptPrefix={suggested ? "Suggested · " : "Last attempt: "}
-                      onContinue={() =>
-                        navigate(suggested ? drill.configPath : drill.continuePath)
-                      }
-                    />
-                  )
-                })}
+                <button
+                  type="button"
+                  className={filterChipStyles(activeFilter === "lr")}
+                  onClick={() => setActiveFilter("lr")}
+                >
+                  Logical Reasoning
+                </button>
+                <button
+                  type="button"
+                  className={filterChipStyles(activeFilter === "rc")}
+                  onClick={() => setActiveFilter("rc")}
+                >
+                  Reading Comprehension
+                </button>
               </div>
-            )}
-          </section>
 
-          <div className="flex flex-col gap-4">
-            <article className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-[0px_5px_10px_0px_rgba(13,13,18,0.04)]">
-              <p className="text-xs font-semibold text-[#666d80]">Next LSAT</p>
-              <h3 className="mt-2 text-3xl font-semibold leading-tight text-[#082c6b]">
-                {formatPlannedLsatHeadline(preferences)}
-              </h3>
-              {preferences?.goalScore != null ? (
-                <p className="mt-2 text-xs text-[#666d80]">
-                  Goal score: <span className="font-semibold text-[#082c6b]">{preferences.goalScore}</span>
-                </p>
-              ) : null}
-              <div className="mt-3 space-y-2 text-xs">
-                {officialScores.length === 0 ? (
-                  <p className="text-[#666d80]">No official scores recorded yet.</p>
-                ) : (
-                  officialScores.map((row: OfficialLsatScore) => (
-                    <div key={row.id} className="flex justify-between border-b border-[#dfe1e7] pb-1">
-                      <span>{row.testLabel}</span>
-                      <span className="font-semibold text-[#082c6b]">
-                        {row.scaledScore != null ? row.scaledScore : "—"}
-                      </span>
-                    </div>
-                  ))
-                )}
-                {addingScore ? (
-                  <div className="space-y-2 pt-2">
-                    <Input
-                      value={scoreLabelDraft}
-                      onChange={(e) => setScoreLabelDraft(e.target.value)}
-                      placeholder="Test label (e.g. June 2025)"
-                      className="h-9 rounded-xl text-xs"
-                    />
-                    <Input
-                      value={scoreValueDraft}
-                      onChange={(e) => setScoreValueDraft(e.target.value)}
-                      placeholder="Score (120–180)"
-                      className="h-9 rounded-xl text-xs"
-                      aria-invalid={
-                        scoreValueDraft.trim() !== "" &&
-                        parseOfficialScaledScoreDraft(scoreValueDraft) == null
-                      }
-                    />
-                    {scoreValueDraft.trim() !== "" &&
-                    parseOfficialScaledScoreDraft(scoreValueDraft) == null ? (
-                      <p className="text-xs text-destructive">Score must be a whole number from 120 to 180.</p>
-                    ) : null}
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="rounded-xl"
-                        onClick={() => setAddingScore(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="ds-btn-sm"
-                        disabled={
-                          savingScore || !canSubmitOfficialScore(scoreLabelDraft, scoreValueDraft)
-                        }
-                        onClick={() => void handleAddScore()}
-                      >
-                        {savingScore ? "Saving…" : "Save"}
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
+              {displayDrills.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-6 text-sm text-[#666d80]">
+                  No drills in progress. Start a new drill from{" "}
                   <button
                     type="button"
-                    className="font-semibold text-[#0d47a1]"
-                    onClick={() => setAddingScore(true)}
+                    className="font-semibold text-[#0d47a1] hover:underline"
+                    onClick={() => navigate("/app/practice/drills")}
                   >
-                    Add Score
+                    Practice → Drills
                   </button>
-                )}
-              </div>
-            </article>
-
-            <article className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-[0px_5px_10px_0px_rgba(13,13,18,0.04)]">
-              <p className="text-xs font-semibold text-[#666d80]">Law school cycle</p>
-              <p className="mt-3 text-2xl font-semibold text-[#0d47a1]">{formatLawSchoolCycle(preferences)}</p>
-              {profile ? (
-                <p className="mt-3 text-xs text-[#666d80]">
-                  Signed in as{" "}
-                  <span className="font-semibold text-[#082c6b]">
-                    {profile.full_name?.trim() || profile.email || "unknown"}
-                  </span>
+                  .
                 </p>
-              ) : null}
-              {editingCycle ? (
-                <div className="mt-4 space-y-2">
-                  <Input
-                    value={cycleDraft}
-                    onChange={(e) => setCycleDraft(e.target.value)}
-                    placeholder="Admission cycle (e.g. 2027)"
-                    className="h-9 rounded-xl text-xs"
-                  />
-                  <Input
-                    type="date"
-                    value={plannedDateDraft}
-                    onChange={(e) => setPlannedDateDraft(e.target.value)}
-                    className="h-9 rounded-xl text-xs"
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="rounded-xl"
-                      onClick={() => setEditingCycle(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="ds-btn-sm"
-                      disabled={savingCycle}
-                      onClick={() => void handleSaveCycle()}
-                    >
-                      {savingCycle ? "Saving…" : "Save"}
-                    </Button>
-                  </div>
-                </div>
               ) : (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button type="button" size="sm" variant="outline" className="rounded-xl" onClick={openCycleEditor}>
-                    Edit cycle
-                  </Button>
+                <div className="flex flex-col gap-6">
+                  {displayDrills.map((drill) => {
+                    const suggested = isSuggestedDrill(drill)
+                    const cardDrill = continueDrillToCardDrill(
+                      suggested ? { ...drill, continuePath: drill.configPath } : drill,
+                    )
+
+                    return (
+                      <ContinueDrillCard
+                        key={drill.id}
+                        drill={cardDrill}
+                        continueLabel={suggested ? "Start" : "Continue"}
+                        lastAttemptPrefix={suggested ? "Suggested · " : "Last attempt: "}
+                        onContinue={() =>
+                          navigate(suggested ? drill.configPath : drill.continuePath)
+                        }
+                      />
+                    )
+                  })}
                 </div>
               )}
-            </article>
+            </section>
+
+            <div className="flex min-w-0 flex-col gap-6">
+              <article className="min-w-0 rounded-[24px] border border-[#dfe1e7] bg-white p-4 sm:p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+                <div className="flex flex-col gap-4">
+                  <p className="text-xs font-semibold tracking-[0.24px] text-[#666d80]">Next LSAT</p>
+                  <h3 className="text-2xl font-bold leading-[1.3] text-[#062357]">
+                    {formatPlannedLsatHeadline(preferences)}
+                  </h3>
+
+                  <div className="space-y-0 text-xs">
+                    {officialScores.map((row: OfficialLsatScore) => (
+                      <div
+                        key={row.id}
+                        className="flex h-8 items-center justify-between border-b border-[#dfe1e7] pb-px"
+                      >
+                        <span className="font-semibold tracking-[0.24px] text-[#062357]">{row.testLabel}</span>
+                        <span className="font-semibold tracking-[0.24px] text-[#062357]">
+                          {row.scaledScore != null ? row.scaledScore : "—"}
+                        </span>
+                      </div>
+                    ))}
+                    {!addingScore ? (
+                      <div className="flex h-8 items-center justify-between border-b border-[#dfe1e7] pb-px">
+                        <span className="font-semibold tracking-[0.24px] text-[#062357]">
+                          {officialScores.length === 0 ? "Official score" : "Add score"}
+                        </span>
+                        <button
+                          type="button"
+                          className="font-bold tracking-[0.24px] text-[#0d47a1]"
+                          onClick={() => setAddingScore(true)}
+                        >
+                          Add Score
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {addingScore ? (
+                    <div className="space-y-2 pt-1">
+                      <Input
+                        value={scoreLabelDraft}
+                        onChange={(e) => setScoreLabelDraft(e.target.value)}
+                        placeholder="Test label (e.g. June 2025)"
+                        className="h-9 rounded-xl text-xs"
+                      />
+                      <Input
+                        value={scoreValueDraft}
+                        onChange={(e) => setScoreValueDraft(e.target.value)}
+                        placeholder="Score (120–180)"
+                        className="h-9 rounded-xl text-xs"
+                        aria-invalid={
+                          scoreValueDraft.trim() !== "" &&
+                          parseOfficialScaledScoreDraft(scoreValueDraft) == null
+                        }
+                      />
+                      {scoreValueDraft.trim() !== "" &&
+                      parseOfficialScaledScoreDraft(scoreValueDraft) == null ? (
+                        <p className="text-xs text-destructive">Score must be a whole number from 120 to 180.</p>
+                      ) : null}
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="rounded-xl"
+                          onClick={() => setAddingScore(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="ds-btn-sm"
+                          disabled={
+                            savingScore || !canSubmitOfficialScore(scoreLabelDraft, scoreValueDraft)
+                          }
+                          onClick={() => void handleAddScore()}
+                        >
+                          {savingScore ? "Saving…" : "Save"}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {!editingLsat ? (
+                    <button
+                      type="button"
+                      className="py-2 text-left text-xs font-bold tracking-[0.24px] text-[#0d47a1]"
+                      onClick={openLsatEditor}
+                    >
+                      Edit LSAT &amp; Scores
+                    </button>
+                  ) : (
+                    <div className="space-y-2 pt-1">
+                      <Input
+                        value={cycleDraft}
+                        onChange={(e) => setCycleDraft(e.target.value)}
+                        placeholder="Admission cycle (e.g. 2027)"
+                        className="h-9 rounded-xl text-xs"
+                      />
+                      <Input
+                        type="date"
+                        value={plannedDateDraft}
+                        onChange={(e) => setPlannedDateDraft(e.target.value)}
+                        className="h-9 rounded-xl text-xs"
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="rounded-xl"
+                          onClick={() => setEditingLsat(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="ds-btn-sm"
+                          disabled={savingCycle}
+                          onClick={() => void handleSaveCycle()}
+                        >
+                          {savingCycle ? "Saving…" : "Save"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </article>
+
+              <article className="min-w-0 rounded-[24px] border border-[#dfe1e7] bg-white p-4 sm:p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+                <div className="flex flex-col gap-4">
+                  <p className="text-xs font-semibold tracking-[0.24px] text-[#666d80]">Law school cycle</p>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 py-2 text-xl font-bold leading-[1.35] text-[#0d47a1]"
+                    onClick={openLsatEditor}
+                  >
+                    {formatLawSchoolCycle(preferences)}
+                    <PlusCircle className="size-5" aria-hidden />
+                  </button>
+                </div>
+              </article>
+            </div>
           </div>
         </div>
       </StudentMain>

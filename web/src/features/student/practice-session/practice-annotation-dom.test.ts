@@ -4,6 +4,7 @@ import {
   annotationContainingRange,
   rangeFullyInsideElement,
   underlineContainingRange,
+  wrapRangeWithElement,
 } from "./practice-annotation-dom"
 
 describe("practice-annotation-dom", () => {
@@ -48,6 +49,24 @@ describe("practice-annotation-dom", () => {
     range.setEnd(textNode, 4)
 
     expect(annotationContainingRange(range, container)).toBe(mark)
+
+    document.body.removeChild(container)
+  })
+
+  it("wraps range when surroundContents fails", () => {
+    const container = document.createElement("div")
+    container.innerHTML = "<p>Hello <strong>world</strong> today</p>"
+    document.body.appendChild(container)
+
+    const p = container.querySelector("p")!
+    const range = document.createRange()
+    range.setStart(p.firstChild!, 6)
+    range.setEnd(p.lastChild!, 5)
+
+    const mark = document.createElement("mark")
+    mark.setAttribute("data-highlight", "yellow")
+    expect(wrapRangeWithElement(range, mark)).toBe(true)
+    expect(container.querySelector("mark[data-highlight='yellow']")).not.toBeNull()
 
     document.body.removeChild(container)
   })

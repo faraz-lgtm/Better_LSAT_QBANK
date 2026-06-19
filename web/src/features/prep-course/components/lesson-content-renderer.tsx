@@ -1,4 +1,7 @@
-import { memo, useMemo, useRef, useState, type ReactNode } from "react"
+import { memo, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { RotateCcw } from "lucide-react"
+
+import { cn } from "@/lib/utils"
 
 import { ActiveDrillIntroCard } from "@/features/prep-course/components/active-drill/active-drill-intro-card"
 import { ActiveDrillQuestionResultDetail } from "@/features/prep-course/components/active-drill/active-drill-question-result-detail"
@@ -6,7 +9,7 @@ import { resolveDrillResultLinkedRefs } from "@/features/prep-course/lib/resolve
 import { ActiveDrillResultBar } from "@/features/prep-course/components/active-drill/active-drill-result-bar"
 import { AdaptiveDrillResultsPanel } from "@/features/prep-course/components/lesson-drill/adaptive-drill-results-panel"
 import { LessonDrillIntroCard } from "@/features/prep-course/components/lesson-drill/lesson-drill-intro-card"
-import { htmlToPlainText, parseRepWorkFromTextContent, isRepWorkJson, type RepWorkPair } from "@/lib/rep-work-content"
+import { htmlToPlainText, parseRepWorkFromTextContent, isRepWorkJson, stripInstructionsLabel, trimEmptyHtmlParagraphs, type RepWorkPair } from "@/lib/rep-work-content"
 import type {
   PrepLesson,
   PrepLessonActiveDrillAttempt,
@@ -72,106 +75,181 @@ function formatLinkedSectionLabel(row: PrepLessonLinkedQuestionRef): string {
   return `Section ${n} · ${type}`
 }
 
+const repWorkBodyClass = "rep-work-instructions-body"
+
+function RepWorkInstructions({ html }: { html: string }) {
+  const bodyHtml = useMemo(
+    () => trimEmptyHtmlParagraphs(stripInstructionsLabel(html)),
+    [html],
+  )
+
+  return (
+    <div className="flex w-full flex-col gap-1">
+      <p className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.36px] text-[#1a1b25]">Instructions:</p>
+      <HtmlContent html={bodyHtml} className={repWorkBodyClass} />
+    </div>
+  )
+}
+
+function resizeRepWorkTextarea(el: HTMLTextAreaElement) {
+  el.style.height = "auto"
+  el.style.overflow = "hidden"
+  el.style.height = `${Math.max(88, el.scrollHeight)}px`
+}
+
 const RepWorkEditableQuestion = memo(function RepWorkEditableQuestion({
   plainText,
   questionLabel,
+  showAnswer,
 }: {
   plainText: string
   questionLabel: string
+  showAnswer: boolean
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useLayoutEffect(() => {
+    if (textareaRef.current) {
+      resizeRepWorkTextarea(textareaRef.current)
+    }
+  }, [plainText])
 
   function handleReset() {
     if (textareaRef.current) {
       textareaRef.current.value = plainText
+      resizeRepWorkTextarea(textareaRef.current)
     }
   }
 
   return (
-    <>
+    <div className="flex min-w-0 max-w-full flex-col gap-2">
       <textarea
         ref={textareaRef}
         defaultValue={plainText}
-        rows={4}
         aria-label={questionLabel}
-        className="mt-4 max-h-48 min-h-[88px] w-full shrink-0 resize-none rounded-xl border border-[#dfe1e7] bg-white px-4 py-3 text-sm leading-7 text-[#36394a] outline-none focus:border-[#0d47a1] focus:ring-2 focus:ring-[#0d47a1]/20"
+        onInput={(event) => resizeRepWorkTextarea(event.currentTarget)}
+        className={`rep-work-question-input box-border max-w-full min-h-[88px] w-full resize-none overflow-hidden rounded-2xl border bg-white p-4 text-[#041a44] outline-none transition-colors focus-visible:border-[#0d47a1] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0d47a1]/15 ${
+          showAnswer ? "border-[#0d47a1]" : "border-[color:var(--greyscale-100)]"
+        }`}
       />
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-[#666d80]">Click box to edit the text.</p>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[#ad52d9] bg-[#fff3cb] px-3 py-1.5 text-xs font-semibold text-[#ae8b00] transition hover:opacity-90"
-          onClick={handleReset}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            className="size-3.5"
-            aria-hidden
+      <div className="flex min-w-0 max-w-full flex-wrap items-center justify-end gap-x-6 gap-y-1">
+        <p className="m-0 min-w-0 text-sm tracking-[0.02em] text-[#818898]">Click box to edit the text.</p>
+        {showAnswer ? (
+          <button
+            type="button"
+            className="inline-flex h-[22px] items-center justify-center gap-2 rounded-2xl text-base font-semibold tracking-[0.02em] text-[#0d47a1] transition-opacity hover:opacity-80"
+            onClick={handleReset}
           >
-            <path
-              d="M2.66699 8.00001C2.66699 5.05449 5.05448 2.66699 8.00001 2.66699C10.9455 2.66699 13.333 5.05449 13.333 8.00001C13.333 10.9455 10.9455 13.333 8.00001 13.333C5.05448 13.333 2.66699 10.9455 2.66699 8.00001ZM2.66699 8.00001V4.00001M2.66699 4.00001H6.66699"
-              stroke="currentColor"
-              strokeWidth="1.33333"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          Reset
-        </button>
+            <RotateCcw className="size-5 shrink-0" aria-hidden />
+            Reset
+          </button>
+        ) : null}
       </div>
-    </>
+    </div>
   )
 })
 
+function RepWorkAnswerToggle({
+  checked,
+  onCheckedChange,
+  label,
+}: {
+  checked: boolean
+  onCheckedChange: (checked: boolean) => void
+  label: string
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onCheckedChange(!checked)}
+      onMouseDown={(event) => event.preventDefault()}
+      className={cn(
+        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-transparent outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0d47a1]/30",
+        checked ? "bg-[#0d47a1]" : "bg-[color:var(--greyscale-100)]",
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none block size-5 rounded-full bg-white shadow-sm transition-transform",
+          checked ? "translate-x-5" : "translate-x-0.5",
+        )}
+      />
+    </button>
+  )
+}
+
+function clampHorizontalScroll(origin: HTMLElement | null) {
+  document.documentElement.scrollLeft = 0
+  document.body.scrollLeft = 0
+
+  let node: HTMLElement | null = origin
+  while (node) {
+    if (node.scrollLeft !== 0) {
+      node.scrollLeft = 0
+    }
+    node = node.parentElement
+  }
+}
+
 function RepWorkPairCard({ pair, index }: { pair: RepWorkPair; index: number }) {
+  const cardRef = useRef<HTMLLIElement>(null)
   const plainQuestionText = useMemo(() => htmlToPlainText(pair.question), [pair.question])
   const answerText = useMemo(() => htmlToPlainText(pair.answer), [pair.answer])
   const [showAnswer, setShowAnswer] = useState(false)
 
+  useLayoutEffect(() => {
+    clampHorizontalScroll(cardRef.current)
+  }, [showAnswer])
+
   return (
-    <li className="rounded-xl border border-[#dfe1e7] bg-[#f6f8fa] p-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <p className="text-sm font-semibold text-[#1a1b25]">Question {index + 1}</p>
-        <div className="flex flex-col items-end gap-1">
-          <span className="text-sm font-semibold text-[#1a1b25]">Answer</span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={showAnswer}
-            aria-label={`Show or hide answer for question ${index + 1}`}
-            onClick={() => setShowAnswer((value) => !value)}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d47a1]/30 ${
-              showAnswer ? "bg-[#0d47a1]" : "bg-[#dfe1e7]"
-            }`}
-          >
-            <span
-              className={`pointer-events-none block size-5 rounded-full bg-white shadow-sm transition-transform ${
-                showAnswer ? "translate-x-5" : "translate-x-0"
-              }`}
+    <li
+      ref={cardRef}
+      className="prep-course-rep-work-pair min-w-0 max-w-full overflow-x-clip rounded-3xl border border-[color:var(--greyscale-100)] bg-white p-6"
+    >
+      <div className="flex min-w-0 max-w-full flex-col gap-6">
+        <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
+          <h2 className="m-0 min-w-0 flex-1 text-2xl font-bold leading-[1.3] text-[#062357]">
+            Question {index + 1}
+          </h2>
+          <div className="min-w-0 sm:ml-auto">
+            <div className="grid w-full max-w-[197px] grid-cols-[1fr_auto] items-start gap-x-3 gap-y-0.5 sm:w-auto">
+              <span className="text-xl font-bold leading-[1.35] text-[#062357]">Answer</span>
+              <RepWorkAnswerToggle
+                checked={showAnswer}
+                onCheckedChange={setShowAnswer}
+                label={`Show or hide answer for question ${index + 1}`}
+              />
+              <span className="col-span-2 text-xs tracking-[0.02em] text-[#666d80]">
+                On/Off to see and hide the answer
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="min-w-0 max-w-full overflow-x-clip rounded-3xl border border-[color:var(--greyscale-100)] bg-[var(--secondary-0)] p-6">
+          <div className="flex min-w-0 flex-col gap-3">
+            <RepWorkEditableQuestion
+              plainText={plainQuestionText}
+              questionLabel={`Question ${index + 1} text`}
+              showAnswer={showAnswer}
             />
-          </button>
-          <span className="text-xs text-[#666d80]">On/Off to see and hide the answer</span>
+
+            {showAnswer ? (
+              <div className="flex min-w-0 flex-col gap-3">
+                <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Answer</h3>
+                <p className="m-0 max-w-full break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-lg leading-[1.4] tracking-[0.02em] text-[#1a1b25]">
+                  {answerText || "No answer provided."}
+                </p>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
-
-      <RepWorkEditableQuestion
-        plainText={plainQuestionText}
-        questionLabel={`Question ${index + 1} text`}
-      />
-
-      {showAnswer ? (
-        <div className="mt-6 shrink-0 border-t border-[#dfe1e7] pt-6">
-          <p className="text-sm font-semibold text-[#1a1b25]">Answer</p>
-          <p className="ds-body-sm mt-3 whitespace-pre-wrap leading-7 text-[#36394a]">
-            {answerText || "No answer provided."}
-          </p>
-        </div>
-      ) : null}
     </li>
   )
 }
@@ -298,19 +376,23 @@ function LessonContentRenderer({
       const drillResultItems = resolveDrillResultLinkedRefs(linkedQuestionRefs, activeDrillAttempt)
       return (
         <div className="space-y-6">
-          <ActiveDrillResultBar
-            attempt={activeDrillAttempt}
-            onRetake={onStartDrill}
-            retaking={startingDrill}
-          />
-          {drillResultItems.map((linked, index) => (
-            <ActiveDrillQuestionResultDetail
-              key={linked.question_id}
-              linked={linked}
+          <article className="overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.04)]">
+            <ActiveDrillResultBar
               attempt={activeDrillAttempt}
-              sequenceNumber={index + 1}
+              lessonTitle={lesson.title}
+              embedded
+              onRetake={onStartDrill}
+              retaking={startingDrill}
             />
-          ))}
+            {drillResultItems.map((linked, index) => (
+              <ActiveDrillQuestionResultDetail
+                key={linked.question_id}
+                linked={linked}
+                attempt={activeDrillAttempt}
+                sequenceNumber={index + 1}
+              />
+            ))}
+          </article>
           {lesson.text_content ? (
             <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
               {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
@@ -337,32 +419,22 @@ function LessonContentRenderer({
 
   if (type === "rep_work" && !isRepWorkJson(lesson.text_content)) {
     return (
-      <article>
-        {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
+      <div className="border-t border-[color:var(--greyscale-100)] pt-4">
         {lesson.text_content ? (
-          <HtmlContent
-            html={lesson.text_content}
-            className={`rep-instructions ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
-          />
+          <HtmlContent html={lesson.text_content} className={repWorkBodyClass} />
         ) : (
-          <p className={`ds-body-sm leading-7 text-[#36394a] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
+          <p className={`m-0 ${repWorkBodyClass}`}>No notes available.</p>
         )}
-      </article>
+      </div>
     )
   }
 
   if (isRepWorkJson(lesson.text_content)) {
     const { instructions, pairs } = parseRepWorkFromTextContent(lesson.text_content)
     return (
-      <div className="space-y-6">
-        <div>
-          {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
-          <HtmlContent
-            html={instructions}
-            className={`rep-instructions ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
-          />
-        </div>
-        <ol className="space-y-8">
+      <div className="flex min-w-0 max-w-full flex-col gap-2">
+        <RepWorkInstructions html={instructions} />
+        <ol className="m-0 flex min-w-0 max-w-full list-none flex-col gap-6 p-0">
           {pairs.map((pair, i) => (
             <RepWorkPairCard key={i} pair={pair} index={i} />
           ))}

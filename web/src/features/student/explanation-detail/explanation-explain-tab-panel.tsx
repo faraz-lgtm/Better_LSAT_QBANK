@@ -1,68 +1,78 @@
-import { useState } from "react"
-import { FolderOpen, Video } from "lucide-react"
+import { ChevronUp, Video } from "lucide-react"
 
-import { Select } from "@/components/ui/select"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
 import { HtmlContent } from "@/lib/html/html-content"
+import { cn } from "@/lib/utils"
 
 type ExplanationExplainTabPanelProps = {
   videos: ExplanationQuestionDetailView["videos"]
 }
 
+function hasVideoContent(v: ExplanationQuestionDetailView["videos"][number]): boolean {
+  return Boolean(v.videoUrl?.trim())
+}
+
+function hasWrittenContent(v: ExplanationQuestionDetailView["videos"][number]): boolean {
+  return Boolean(v.explanationHtml?.trim())
+}
+
+function placeholderMessage(v: ExplanationQuestionDetailView["videos"][number]): string {
+  if (hasVideoContent(v)) return "Video explanation available"
+  return "Explanation not given"
+}
+
 function VideoExplanationCard({ v }: { v: ExplanationQuestionDetailView["videos"][number] }) {
-  const [variant, setVariant] = useState(v.dropdownOptions[0]?.value ?? "")
+  const hasVideo = hasVideoContent(v)
+  const hasWritten = hasWrittenContent(v)
+
   return (
-    <article className="overflow-hidden rounded-2xl border border-[color:var(--greyscale-100)] bg-white shadow-[0px_5px_10px_0px_rgba(13,13,18,0.04)]">
+    <article className="overflow-hidden rounded-[14px] border border-[color:var(--greyscale-100)] bg-[var(--greyscale-25)] p-px shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
       <div
-        className={`flex flex-wrap items-center justify-between gap-3 border-b border-[#eef1f6] px-4 py-3 md:px-5 ${
-          v.headerVariant === "yellow" ? "bg-[var(--lr-row)]" : "bg-white"
-        }`}
+        className={cn(
+          "flex h-[53px] items-center justify-between border-b px-4 pt-4",
+          v.headerVariant === "yellow"
+            ? "border-[#fff6e0] bg-[#fff6e0]"
+            : "border-[var(--primary-0)] bg-[var(--primary-0)]",
+        )}
       >
         <div className="flex min-w-0 items-center gap-2">
-          <FolderOpen className="size-5 shrink-0 text-[color:var(--color-student-accent)]" aria-hidden />
-          <span className="font-semibold text-[color:var(--color-student-heading)]">{v.authorTitle}</span>
+          <Video className="size-5 shrink-0 text-[#0d47a1]" aria-hidden />
+          <span className="text-base font-medium tracking-[0.02em] text-[#1a1b25]">{v.authorTitle}</span>
         </div>
-        {v.dropdownOptions.length > 1 ? (
-          <div className="w-full min-w-[200px] max-w-xs sm:w-56">
-            <Select
-              aria-label={v.dropdownLabel}
-              value={variant}
-              onChange={(e) => setVariant(e.target.value)}
-              options={v.dropdownOptions}
-              className="h-10 rounded-xl border-[color:var(--greyscale-100)] text-sm font-medium text-[color:var(--color-student-heading)]"
-            />
-          </div>
-        ) : null}
+        <div className="flex items-center gap-2">
+          <span className="text-base font-medium tracking-[0.02em] text-[#0d47a1]">{v.dropdownLabel}</span>
+          <ChevronUp className="size-6 shrink-0 text-[#818898]" aria-hidden />
+        </div>
       </div>
-      <div className="p-4 md:p-5">
-        {v.videoUrl ? (
-          <video controls className="mb-3 max-h-[50vh] w-full rounded-xl bg-black" src={v.videoUrl} />
-        ) : v.explanationHtml ? (
+
+      {hasVideo ? (
+        <div className="bg-[#36394a] px-6 py-6">
+          <video controls className="max-h-[min(50vh,339px)] w-full rounded-xl bg-black" src={v.videoUrl!} />
+        </div>
+      ) : hasWritten ? (
+        <div className="bg-white px-4 py-5 md:px-6">
           <HtmlContent
-            html={v.explanationHtml}
-            className="mb-3 max-w-none space-y-2 text-sm leading-relaxed text-[color:var(--text)] [&_a]:text-[color:var(--color-student-accent)] [&_img]:max-w-full [&_p]:my-2"
+            html={v.explanationHtml ?? ""}
+            className="explanation-detail-body max-w-none text-[#062357]"
           />
-        ) : (
-          <div className="mb-3 flex min-h-[280px] flex-col items-center justify-center rounded-xl bg-[#3f4654] text-center text-white">
-            <Video className="mb-3 size-12 opacity-90" aria-hidden />
-            <p className="text-sm font-medium text-slate-200">No explanation content yet</p>
+        </div>
+      ) : (
+        <div className="flex min-h-[339px] flex-col items-center justify-center bg-[#36394a] px-6 py-16 text-center">
+          <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-white/20">
+            <Video className="size-8 text-white" aria-hidden />
           </div>
-        )}
-        <p className="mt-3 text-xs text-[color:var(--text)]">{v.postedLine}</p>
+          <p className="text-sm font-normal leading-5 text-[#f5f9ff]">{placeholderMessage(v)}</p>
+        </div>
+      )}
+
+      <div className="bg-[var(--greyscale-25)] px-4 pt-4 pb-4">
+        <p className="m-0 text-xs leading-4 text-[#666d80]">{v.postedLine || "—"}</p>
       </div>
     </article>
   )
 }
 
 function ExplanationExplainTabPanel({ videos }: ExplanationExplainTabPanelProps) {
-  if (videos.length === 0) {
-    return (
-      <p className="text-sm text-[color:var(--text)]">
-        No written or video explanation has been published for this question yet.
-      </p>
-    )
-  }
-
   return (
     <div className="flex flex-col gap-6">
       {videos.map((v) => (

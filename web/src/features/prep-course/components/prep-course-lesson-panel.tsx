@@ -53,52 +53,73 @@ function PrepCourseLessonPanel({
       lesson.lesson_type === "video_text" ||
       lesson.lesson_type === "active_drill" ||
       lesson.lesson_type === "adaptive_drill")
+  const isRepWorkLesson = lesson != null && lesson.lesson_type === "rep_work"
+  const hideHeaderForDrillResults =
+    Boolean(activeDrillAttempt) &&
+    lesson != null &&
+    (lesson.lesson_type === "active_drill" || lesson.lesson_type === "adaptive_drill")
 
   const titleBlock =
-    lesson && !loading ? (
-      <header className="flex items-start justify-between gap-4 border-b border-[#dfe1e7] pb-4">
-        <div className="min-w-0">
-          <h1 className="  ds-heading-4 m-0 font-bold leading-tight tracking-[0.02em] text-[#062357]">
-            {lesson.title}
-          </h1>
+    lesson && !loading && !hideHeaderForDrillResults ? (
+      <header className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-col gap-2">
+          <h1 className="student-page-heading">{lesson.title}</h1>
           {subtitle ? (
-            <p className="mt-1.5 text-sm font-medium tracking-[0.02em] text-[#666d80]">{subtitle}</p>
+            <p className="m-0 text-sm font-normal leading-normal tracking-[0.02em] text-[#666d80]">{subtitle}</p>
           ) : null}
         </div>
         <button
           type="button"
           aria-label="Bookmark lesson"
-          className="shrink-0 rounded-lg border border-[#dfe1e7] bg-white p-2 text-[#666d80] transition-colors hover:border-[#0d47a1] hover:text-[#0d47a1]"
+          className="flex size-9 shrink-0 items-center justify-center rounded-[10px] text-[#666d80] transition-colors hover:text-[#0d47a1]"
         >
-          <Bookmark className="size-5" strokeWidth={2} />
+          <Bookmark className="size-6" strokeWidth={2} />
         </button>
       </header>
     ) : null
+
+  const lessonBody = lesson ? (
+    <LessonContentRenderer
+      lesson={lesson}
+      linkedQuestionRefs={linkedQuestionRefs}
+      activeDrillAttempt={activeDrillAttempt}
+      hideTitle
+      belowVideo={hasVideo ? titleBlock : undefined}
+      onReviewDrill={onReviewDrill}
+      onStartDrill={onStartDrill}
+      startingDrill={startingDrill}
+      drillStartError={drillStartError}
+    />
+  ) : null
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       {loading && !lesson ? (
         <StudentPageLoader centered label="Loading lesson…" />
       ) : lesson ? (
-        <>
-          {!hasVideo ? <div className="shrink-0">{titleBlock}</div> : null}
+        isRepWorkLesson ? (
           <div
             ref={contentScrollRef}
-            className={`practice-session-pane practice-session-scroll-hidden h-0 min-h-0 flex-1 overflow-y-auto overscroll-contain [overflow-anchor:none] pb-6 ${!hasVideo ? "pt-8" : ""}`}
+            className="practice-session-pane practice-session-scroll-hidden h-0 min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain bg-[var(--greyscale-25)] p-6 [overflow-anchor:none]"
           >
-            <LessonContentRenderer
-              lesson={lesson}
-              linkedQuestionRefs={linkedQuestionRefs}
-              activeDrillAttempt={activeDrillAttempt}
-              hideTitle
-              belowVideo={hasVideo ? titleBlock : undefined}
-              onReviewDrill={onReviewDrill}
-              onStartDrill={onStartDrill}
-              startingDrill={startingDrill}
-              drillStartError={drillStartError}
-            />
+            <article className="box-border min-w-0 max-w-full overflow-x-clip rounded-[14px] border border-[#e2e8f0] bg-white shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+              <div className="box-border flex min-w-0 max-w-full flex-col gap-5 overflow-x-clip p-6">
+                {titleBlock}
+                {lessonBody}
+              </div>
+            </article>
           </div>
-        </>
+        ) : (
+          <>
+            {!hasVideo ? <div className="shrink-0">{titleBlock}</div> : null}
+            <div
+              ref={contentScrollRef}
+              className={`practice-session-pane practice-session-scroll-hidden h-0 min-h-0 flex-1 overflow-y-auto overscroll-contain [overflow-anchor:none] pb-6 ${!hasVideo ? "pt-8" : ""}`}
+            >
+              {lessonBody}
+            </div>
+          </>
+        )
       ) : (
         <p className="ds-body-sm ds-text-muted">Select a lesson to view its content.</p>
       )}

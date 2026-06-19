@@ -7,6 +7,7 @@ import {
   rangeSpansPartialAnnotation,
   underlineContainingRange,
   unwrapElement,
+  wrapRangeWithElement,
 } from "@/features/student/practice-session/practice-annotation-dom"
 import {
   FONT_SCALE_STEPS,
@@ -135,27 +136,23 @@ export function usePracticeHighlights() {
           return
         }
         if (rangeSpansPartialAnnotation(range, container)) return
-        try {
-          const u = document.createElement("u")
-          range.surroundContents(u)
+        const u = document.createElement("u")
+        if (wrapRangeWithElement(range, u)) {
           saveRegionHtml(regionKey, container.innerHTML)
           clearSelection()
-        } catch {
-          // surroundContents fails when range spans partial elements
+          event?.stopPropagation()
         }
         return
       }
 
       if (toolMode === "highlighter" && activeColor) {
         if (rangeSpansPartialAnnotation(range, container)) return
-        try {
-          const mark = document.createElement("mark")
-          mark.setAttribute("data-highlight", activeColor)
-          range.surroundContents(mark)
+        const mark = document.createElement("mark")
+        mark.setAttribute("data-highlight", activeColor)
+        if (wrapRangeWithElement(range, mark)) {
           saveRegionHtml(regionKey, container.innerHTML)
           clearSelection()
-        } catch {
-          // surroundContents fails when range spans partial elements
+          event?.stopPropagation()
         }
       }
     },

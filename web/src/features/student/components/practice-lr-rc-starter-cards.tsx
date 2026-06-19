@@ -16,21 +16,23 @@ function PracticeLrRcStarterCards({
   onStartRc,
 }: PracticeLrRcStarterCardsProps) {
   return (
-    <div className="grid gap-8 lg:grid-cols-2">
-      <article className="rounded-3xl border border-[#dfe1e7] bg-[#f6f8fa] px-6 py-9 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+    <div className="grid gap-[32px] lg:grid-cols-2">
+      <article className="rounded-[24px] border border-[#dfe1e7] bg-[#f6f8fa] px-[24px] py-[36px] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
         <div className="flex items-center gap-[22px]">
-          <div className="flex min-w-0 flex-1 items-center gap-2.5">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-[12px] border-[1.667px] border-[#00bc54] bg-[#eafff4] text-lg font-black leading-none text-[#00bc54]">
+          <div className="flex h-[52px] min-w-0 flex-1 items-center gap-[10px]">
+            <span className="inline-flex size-[40px] shrink-0 items-center justify-center rounded-[12px] border-[1.667px] border-[#00bc54] bg-[#eafff4] text-[16.67px] font-black leading-[1.5] tracking-[0.53px] text-[#00bc54]">
               LR
             </span>
             <div className="min-w-0">
-              <h2 className="text-xl font-bold leading-[1.35] text-[#062357]">Logical Reasoning</h2>
-              <p className="mt-0.5 text-xs leading-[1.5] tracking-[0.24px] text-[#062357]">{lrSubtitle}</p>
+              <h2 className="text-[20px] font-bold leading-[1.35] text-[#062357]">Logical Reasoning</h2>
+              <p className="mt-[3px] text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[#062357]">
+                {lrSubtitle}
+              </p>
             </div>
           </div>
           <button
             type="button"
-            className="h-[52px] shrink-0 rounded-3xl border border-[#00bc54] bg-[#eafff4] px-4 text-base font-semibold leading-none tracking-[0.32px] text-[#00bc54] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
+            className="h-[52px] shrink-0 rounded-[16px] border border-[#00bc54] bg-[#eafff4] px-[16px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#00bc54] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
             onClick={onStartLr}
           >
             {lrButtonLabel}
@@ -38,20 +40,22 @@ function PracticeLrRcStarterCards({
         </div>
       </article>
 
-      <article className="rounded-3xl border border-[#dfe1e7] bg-[#f6f8fa] px-6 py-9 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+      <article className="rounded-[24px] border border-[#dfe1e7] bg-[#f6f8fa] px-[24px] py-[36px] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
         <div className="flex items-center gap-[22px]">
-          <div className="flex min-w-0 flex-1 items-center gap-2.5">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-[12px] border border-[#0bbcc9] bg-[#e5fdff] text-lg font-black leading-none text-[#0bbcc9]">
+          <div className="flex h-[52px] min-w-0 flex-1 items-center gap-[10px]">
+            <span className="inline-flex size-[40px] shrink-0 items-center justify-center rounded-[12px] border border-[#0bbcc9] bg-[#e5fdff] text-[16.67px] font-black leading-[1.5] tracking-[0.53px] text-[#0bbcc9]">
               RC
             </span>
             <div className="min-w-0">
-              <h2 className="text-xl font-bold leading-[1.35] text-[#062357]">Reading Comprehension</h2>
-              <p className="mt-0.5 text-xs leading-[1.5] tracking-[0.24px] text-[#062357]">{rcSubtitle}</p>
+              <h2 className="text-[20px] font-bold leading-[1.35] text-[#062357]">Reading Comprehension</h2>
+              <p className="mt-[3px] text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[#062357]">
+                {rcSubtitle}
+              </p>
             </div>
           </div>
           <button
             type="button"
-            className="h-[52px] shrink-0 rounded-3xl border border-[#0bbcc9] bg-[#e5fdff] px-4 text-base font-semibold leading-none tracking-[0.32px] text-[#0bbcc9] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
+            className="h-[52px] shrink-0 rounded-[16px] border border-[#0bbcc9] bg-[#e5fdff] px-[16px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0bbcc9] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
             onClick={onStartRc}
           >
             {rcButtonLabel}

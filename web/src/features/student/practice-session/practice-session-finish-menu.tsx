@@ -5,11 +5,13 @@ import { ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 const MENU_MIN_WIDTH = 220
+/** Above section-intro overlay (`z-[100]`) and practice modals. */
+const MENU_Z_INDEX = 110
 
 type PracticeSessionFinishMenuProps = {
   disabled?: boolean
   finishing?: boolean
-  /** Section intro screen only needs Exit (saved progress). */
+  /** When true, only shows Exit (saved progress) — no submit action. */
   exitOnly?: boolean
   finishLabel?: string
   submitLabel?: string
@@ -92,7 +94,7 @@ function PracticeSessionFinishMenu({
               top: menuPosition.top,
               left: menuPosition.left,
               width: menuPosition.width,
-              zIndex: 60,
+              zIndex: MENU_Z_INDEX,
             }}
             className="overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
           >

@@ -1,6 +1,6 @@
 export type PrepTestPracticeStatus = "fresh" | "in_progress" | "completed"
 
-export type PrepTestPoolFilter = "all" | "fresh" | "in_progress" | "completed"
+export type PrepTestPoolFilter = "all" | "fresh" | "in_progress" | "completed" | "blind_review"
 
 export type PrepTestPoolSort = "newest" | "oldest"
 
@@ -9,6 +9,7 @@ export type PrepTestPoolStatusCounts = {
   fresh: number
   in_progress: number
   completed: number
+  blind_review: number
 }
 
 export type PrepTestPoolListResult = {

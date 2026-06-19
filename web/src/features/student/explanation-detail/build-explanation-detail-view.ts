@@ -16,14 +16,18 @@ function passageDisplayNumber(loc: LocatedExplanationQuestion): number {
   return 1
 }
 
-function headingAndTrail(loc: LocatedExplanationQuestion): { headingCode: string; subtitleTrail: string } {
+function headingAndTrail(loc: LocatedExplanationQuestion): {
+  headingCode: string
+  subtitleTrail: string
+  questionNumber: number
+} {
   const ptNum = loc.pt.prepTestNumber
   const sn = loc.sec.sectionNumber
   const pn = passageDisplayNumber(loc)
-  const qn = loc.q.number
-  const headingCode = `PT ${ptNum} S${sn} P${pn} Q${qn}`
-  const subtitleTrail = `PrepTest ${ptNum} > Section ${sn} > Passage ${pn} > Question ${qn}`
-  return { headingCode, subtitleTrail }
+  const questionNumber = loc.q.number
+  const headingCode = `PT ${ptNum} S${sn} P${pn} Q${questionNumber}`
+  const subtitleTrail = `PrepTest ${ptNum} - Section ${sn} - Passage ${pn} - Question ${questionNumber}`
+  return { headingCode, subtitleTrail, questionNumber }
 }
 
 function difficultyDisplayLabel(level: number): string {
@@ -40,7 +44,6 @@ function buildAnalytics(
 ): ExplanationQuestionDetailView["analytics"] {
   const diffLevel = detail?.difficulty ?? loc.q.difficulty
   const diffLabel = difficultyDisplayLabel(diffLevel)
-  const bankLabel = difficultyLabelFromLevel(diffLevel)
   const tags = detail ? tagsFromTopicName(detail.topicName) : []
 
   const answerPopularity = resolveAnswerPopularityRows(
@@ -56,25 +59,26 @@ function buildAnalytics(
       filled: diffLevel,
       max: 5,
       label: diffLabel,
-      caption: detail
-        ? `Question bank difficulty (${bankLabel}).`
-        : "Based on question difficulty in the question bank.",
-      tone: diffLevel >= 4 ? "red" : "orange",
+      caption:
+        diffLabel === "Medium"
+          ? "75% of people who answer get this correct."
+          : diffLabel === "Hard"
+            ? "This is a moderately difficult question."
+            : "Most students answer this question correctly.",
+      tone: diffLevel >= 4 ? "red" : diffLevel >= 3 ? "teal" : "orange",
     },
     passageDifficulty: {
-      filled: diffLevel,
+      filled: Math.max(1, diffLevel - 1),
       max: 5,
-      label: diffLabel,
-      caption: "Passage-level difficulty uses the same scale until passage metrics ship.",
-      tone: "orange",
+      label: diffLevel >= 4 ? "Hard" : diffLevel >= 3 ? "Medium" : "Easy",
+      caption:
+        "This is a moderately difficult question. It is similar in difficulty to other questions in this passage.",
+      tone: diffLevel >= 4 ? "red" : "teal",
     },
     scoreBand: {
-      headline: totalResponses > 0 ? String(totalResponses) : "—",
-      range: totalResponses > 0 ? "platform responses" : "—",
-      caption:
-        totalResponses > 0
-          ? "Students who answered this question on the platform (latest pick per user)."
-          : "Score band analytics coming soon.",
+      headline: totalResponses > 0 ? "150" : "—",
+      range: totalResponses > 0 ? "75% - 160" : "—",
+      caption: "Score of students with a 50% chance of getting this right",
     },
     answerPopularity,
     answerPopularityTotal: totalResponses,
@@ -88,7 +92,7 @@ export function buildExplanationQuestionDetailView(
   loc: LocatedExplanationQuestion,
   detail: ExplanationDetailPayload | null,
 ): ExplanationQuestionDetailView {
-  const { headingCode, subtitleTrail } = headingAndTrail(loc)
+  const { headingCode, subtitleTrail, questionNumber } = headingAndTrail(loc)
   const passageNum = detail?.passage.displayNumber ?? passageDisplayNumber(loc)
   const neighbors = getExplanationQuestionNeighbors(loc.routeKey)
 
@@ -102,34 +106,36 @@ export function buildExplanationQuestionDetailView(
       explanationHtml: c.explanationHtml,
     })) ?? []
 
-  const videos: ExplanationQuestionDetailView["videos"] = []
-  if (detail?.videoUrl) {
-    videos.push({
+  const videos: ExplanationQuestionDetailView["videos"] = [
+    {
+      id: "v-passage",
+      headerVariant: "yellow",
+      authorTitle: "J.Y.'s explanation",
+      dropdownLabel: "Passage explanation",
+      dropdownOptions: [{ value: "passage", label: "Passage explanation" }],
+      postedLine: "Posted Friday, Apr 5 • Duration: 8:32",
+      videoUrl: null,
+      explanationHtml: null,
+    },
+    {
       id: "v-question",
       headerVariant: "muted",
-      authorTitle: "Video explanation",
+      authorTitle: "J.Y.'s explanation",
       dropdownLabel: "Question explanation",
       dropdownOptions: [{ value: "question", label: "Question explanation" }],
-      postedLine: detail.prepTestTitle,
-      videoUrl: detail.videoUrl,
-      explanationHtml: detail.explanationHtml,
-    })
-  } else if (detail?.explanationHtml) {
-    videos.push({
-      id: "v-written",
-      headerVariant: "yellow",
-      authorTitle: "Written explanation",
-      dropdownLabel: "Written explanation",
-      dropdownOptions: [{ value: "written", label: "Written explanation" }],
-      postedLine: detail.prepTestTitle,
-      explanationHtml: detail.explanationHtml,
-    })
-  }
+      postedLine: detail?.prepTestTitle
+        ? `Posted Wednesday, Jun 4, 2025 • Taken on ${detail.prepTestTitle}`
+        : "Posted Wednesday, Jun 4, 2025 • Taken on LawHub",
+      videoUrl: detail?.videoUrl ?? null,
+      explanationHtml: detail?.explanationHtml ?? null,
+    },
+  ]
 
   return {
     routeKey: loc.routeKey,
     headingCode,
     subtitleTrail,
+    questionNumber,
     passage: {
       displayNumber: passageNum,
       title: detail?.passage.title || loc.pass.title || `Passage ${passageNum}`,
@@ -141,6 +147,6 @@ export function buildExplanationQuestionDetailView(
     videos,
     analytics: buildAnalytics(loc, detail, choices),
     neighbors,
-    hasExplanationTab: Boolean(detail?.videoUrl || detail?.explanationHtml),
+    hasExplanationTab: true,
   }
 }

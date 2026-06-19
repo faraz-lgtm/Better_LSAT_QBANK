@@ -262,15 +262,17 @@ function PrepCourseLessonPage() {
 
   return (
     <StudentMain layout="locked">
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="prep-course-lesson-shell flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-clip overflow-y-hidden">
         {error ? <p className="mb-4 shrink-0 text-xs text-[#95122b]">{error}</p> : null}
 
-        <section className="prep-course-shell-card practice-session-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+        <section className="prep-course-shell-card practice-session-card flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-clip overflow-y-hidden rounded-[16px] border border-[color:var(--greyscale-100)] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
           <div
-            className={`practice-session-body flex h-0 min-h-0 min-w-0 flex-1 overflow-hidden ${showSidebar ? "lg:flex-row" : "flex-col"}`}
+            className={`practice-session-body flex h-0 min-h-0 min-w-0 max-w-full flex-1 overflow-x-clip overflow-y-hidden ${showSidebar ? "lg:flex-row" : "flex-col"}`}
           >
             <div
-              className={`flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-6 ${showSidebar ? "lg:border-r lg:border-[#dfe1e7]" : ""}`}
+              className={`flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-hidden ${
+                lesson.lesson_type === "rep_work" ? "bg-[var(--greyscale-25)] p-0" : "p-6"
+              } ${showSidebar ? "lg:border-r lg:border-[color:var(--greyscale-100)]" : ""}`}
             >
               <PrepCourseLessonPanel
                 course={course}

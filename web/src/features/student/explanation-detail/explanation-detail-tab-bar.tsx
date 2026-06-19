@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import type { ExplanationDetailTabId } from "@/features/student/explanation-detail/types"
 import { cn } from "@/lib/utils"
 
@@ -10,99 +9,87 @@ type ExplanationDetailTabBarProps = {
   onTabChange: (t: ExplanationDetailTabId) => void
   prevHref: string | null
   nextHref: string | null
-  hasExplanationTab?: boolean
 }
 
 const TABS: { id: ExplanationDetailTabId; label: string }[] = [
   { id: "question", label: "Question" },
   { id: "explanation", label: "Explanation" },
-  { id: "analytics", label: "Analytics" },
+  { id: "analytics", label: "Insights" },
 ]
 
-function ExplanationDetailTabBar({ tab, onTabChange, prevHref, nextHref, hasExplanationTab = true }: ExplanationDetailTabBarProps) {
+function tabButtonClass(active: boolean, id: ExplanationDetailTabId): string {
+  const isExplanation = id === "explanation"
+  const size = active
+    ? isExplanation
+      ? "h-10 text-sm tracking-[0.02em]"
+      : "h-12 text-base tracking-[0.02em]"
+    : isExplanation
+      ? "h-12 text-sm tracking-[0.02em]"
+      : "h-12 text-base tracking-[0.02em]"
+
+  return cn(
+    "rounded-2xl px-4 font-semibold transition-colors",
+    size,
+    active
+      ? "border border-[#0b4e6e] bg-[#0d47a1] text-white shadow-[0_1px_1px_rgba(13,13,18,0.06)]"
+      : "bg-transparent text-[#0d47a1] hover:bg-white/50",
+  )
+}
+
+function navButtonClass(enabled: boolean): string {
+  return cn(
+    "flex size-[52px] shrink-0 items-center justify-center rounded-2xl border-2 border-[color:var(--greyscale-100)] bg-[var(--greyscale-25)] shadow-[0_1px_1px_rgba(13,13,18,0.06)] transition-colors",
+    enabled ? "text-[#062357] hover:opacity-80" : "opacity-40",
+  )
+}
+
+function ExplanationDetailTabBar({
+  tab,
+  onTabChange,
+  prevHref,
+  nextHref,
+}: ExplanationDetailTabBarProps) {
   return (
-    <div className="flex flex-wrap items-center justify-start gap-3 lg:justify-end">
+    <div className="flex flex-wrap items-center justify-start gap-6 lg:justify-end">
       <div
-        className="inline-flex flex-wrap items-center gap-0.5 rounded-xl p-1"
-        style={{ backgroundColor: "var(--student-expanded-row)" }}
+        className="inline-flex h-[52px] items-center gap-2 rounded-2xl bg-[var(--primary-25)] p-1"
         role="tablist"
         aria-label="Question detail"
       >
         {TABS.map(({ id, label }) => {
           const active = tab === id
-          const disabled = id === "explanation" && !hasExplanationTab
           return (
             <button
               key={id}
               type="button"
               role="tab"
               aria-selected={active}
-              disabled={disabled}
               onClick={() => onTabChange(id)}
-              className={cn(
-                "rounded-lg px-4 py-2 text-sm font-semibold transition-colors",
-                active ? "text-white shadow-sm" : "bg-transparent hover:opacity-90",
-                disabled && "cursor-not-allowed opacity-40",
-              )}
-              style={
-                active
-                  ? { backgroundColor: "var(--color-student-heading)" }
-                  : { color: "var(--color-student-cta)" }
-              }
+              className={tabButtonClass(active, id)}
             >
               {label}
             </button>
           )
         })}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex h-[52px] items-center gap-4">
         {prevHref ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="size-10 shrink-0 rounded-full border-[color:var(--greyscale-100)] bg-white"
-            asChild
-          >
-            <Link to={prevHref} aria-label="Previous question">
-              <ChevronLeft className="size-5 text-[color:var(--color-student-heading)]" />
-            </Link>
-          </Button>
+          <Link to={prevHref} aria-label="Previous question" className={navButtonClass(true)}>
+            <ChevronLeft className="size-6" aria-hidden />
+          </Link>
         ) : (
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="size-10 shrink-0 rounded-full border-[color:var(--greyscale-100)] opacity-40"
-            disabled
-            aria-label="Previous question"
-          >
-            <ChevronLeft className="size-5" />
-          </Button>
+          <span aria-label="Previous question" className={navButtonClass(false)}>
+            <ChevronLeft className="size-6" aria-hidden />
+          </span>
         )}
         {nextHref ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="size-10 shrink-0 rounded-full border-[color:var(--greyscale-100)] bg-white"
-            asChild
-          >
-            <Link to={nextHref} aria-label="Next question">
-              <ChevronRight className="size-5 text-[color:var(--color-student-heading)]" />
-            </Link>
-          </Button>
+          <Link to={nextHref} aria-label="Next question" className={navButtonClass(true)}>
+            <ChevronRight className="size-6" aria-hidden />
+          </Link>
         ) : (
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="size-10 shrink-0 rounded-full border-[color:var(--greyscale-100)] opacity-40"
-            disabled
-            aria-label="Next question"
-          >
-            <ChevronRight className="size-5" />
-          </Button>
+          <span aria-label="Next question" className={navButtonClass(false)}>
+            <ChevronRight className="size-6" aria-hidden />
+          </span>
         )}
       </div>
     </div>

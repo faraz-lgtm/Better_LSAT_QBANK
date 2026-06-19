@@ -1,6 +1,7 @@
-import { useMemo } from "react"
+import { useMemo, type ReactNode } from "react"
 import { BarChart2, ChevronRight, Clock, Target } from "lucide-react"
 
+import { DrillDifficultyStatus } from "@/features/student/components/drill-difficulty-status"
 import type { ContinueDrill } from "@/features/student/drills/drill-dashboard-mappers"
 import type { StudentDrill } from "@/features/student/lib/mock-drills"
 
@@ -80,6 +81,28 @@ type ContinueDrillCardProps = {
   lastAttemptPrefix?: string
 }
 
+function StatCell({
+  icon,
+  label,
+  value,
+}: {
+  icon: ReactNode
+  label: string
+  value: string
+}) {
+  return (
+    <div className="flex h-[36px] items-center gap-[8px]">
+      <span className="flex size-[32px] shrink-0 items-center justify-center rounded-[10px] bg-[#eceff3] text-[#666d80]">
+        {icon}
+      </span>
+      <div className="h-[36px]">
+        <p className="text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[#666d80]">{label}</p>
+        <p className="text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[#1a1b25]">{value}</p>
+      </div>
+    </div>
+  )
+}
+
 function ContinueDrillCard({
   drill,
   onContinue,
@@ -93,95 +116,64 @@ function ContinueDrillCard({
   const difficultyColor = drill.difficultyColor ?? "#df1c41"
 
   const ringFill = useMemo(
-    () => `conic-gradient(from 270deg, ${ringColor} ${drill.progressPct}%, #dfe1e7 ${drill.progressPct}% 100%)`,
+    () => `conic-gradient(from 270deg, ${ringColor} ${drill.progressPct}%, #eceff3 ${drill.progressPct}% 100%)`,
     [ringColor, drill.progressPct],
   )
 
   return (
-    <article className="rounded-3xl bg-[#f6f8fa] p-6">
-      <div className="flex flex-col gap-6 xl:flex-row xl:items-start">
-        <div className="flex min-w-0 flex-1 gap-6">
-          <div className="flex w-20 shrink-0 flex-col items-center">
-            <div
-              className={`flex size-16 items-center justify-center rounded-[12px] text-xl font-bold leading-[1.35] ${sectionBadgeTone(drill.section)}`}
-            >
-              {drill.section}
-            </div>
-            <div className="relative mt-3 flex size-20 items-center justify-center rounded-full" style={{ background: ringFill }}>
-              <div className="absolute inset-1 rounded-full bg-[#f6f8fa]" />
-              <span className="relative text-sm font-bold text-[#364153]">{drill.progressPct}%</span>
-            </div>
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <h3 className="text-xl font-bold leading-[1.35] text-[#062357]">{drill.title}</h3>
-              <div className="flex h-10 shrink-0 items-center gap-2.5 rounded-[10px] bg-white px-2.5">
-                <div className="flex items-center gap-1.5" aria-hidden>
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <span
-                      key={index}
-                      className="h-4 w-1.5 rounded-full"
-                      style={{ backgroundColor: index < difficultyFilledBars ? difficultyColor : "#ced0e7" }}
-                    />
-                  ))}
-                </div>
-                <span className="text-xs font-semibold tracking-[0.24px]" style={{ color: difficultyColor }}>
-                  {difficultyLabelText}
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="flex items-center gap-2">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-[#eceff3] text-[#9ca3af]">
-                  <Target className="size-4" />
-                </span>
-                <div>
-                  <p className="text-xs text-[#666d80]">Progress</p>
-                  <p className="text-sm font-semibold tracking-[0.28px] text-[#062357]">{drill.progressPct}%</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-[#eceff3] text-[#9ca3af]">
-                  <BarChart2 className="size-4" />
-                </span>
-                <div>
-                  <p className="text-xs text-[#666d80]">Questions</p>
-                  <p className="text-sm font-semibold tracking-[0.28px] text-[#062357]">{drill.questions}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-[#eceff3] text-[#9ca3af]">
-                  <Clock className="size-4" />
-                </span>
-                <div>
-                  <p className="text-xs text-[#666d80]">Time</p>
-                  <p className="text-sm font-semibold tracking-[0.28px] text-[#062357]">{drill.timeLabel}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#eceff3]">
-              <div className="h-full rounded-full" style={{ width: `${drill.progressPct}%`, backgroundColor: barColor }} />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2 xl:shrink-0 xl:items-end">
-          <button
-            type="button"
-            onClick={onContinue}
-            className="ds-btn h-12 w-full rounded-3xl text-base tracking-[0.32px] xl:w-auto"
+    <article className="continue-drill-card rounded-[24px] bg-[#f6f8fa]">
+      <div className="continue-drill-card__inner">
+        <div className="relative h-[156px] w-[80px] shrink-0">
+          <div
+            className={`absolute left-[8px] top-0 flex size-[64px] items-center justify-center rounded-[16px] text-[20px] font-bold leading-[1.35] ${sectionBadgeTone(drill.section)}`}
           >
-            {continueLabel}
-            <ChevronRight className="size-5" aria-hidden />
-          </button>
-          <p className="text-center text-xs tracking-[0.24px] text-[#6a7282] xl:text-right">
-            {lastAttemptPrefix}
-            {drill.lastAttempt}
-          </p>
+            {drill.section}
+          </div>
+          <div
+            className="absolute left-0 top-[76px] flex size-[80px] items-center justify-center rounded-full"
+            style={{ background: ringFill }}
+          >
+            <div className="absolute inset-[6px] rounded-full bg-[#f6f8fa]" />
+            <span className="relative text-[14px] font-bold leading-[20px] text-[#364153]">{drill.progressPct}%</span>
+          </div>
         </div>
+
+        <div className="min-h-[156px] min-w-0 flex-1">
+          <div className="flex min-h-[52px] flex-wrap items-center gap-[24px]">
+            <h3 className="min-w-0 text-[20px] font-bold leading-[1.35] text-[#062357]">{drill.title}</h3>
+            <DrillDifficultyStatus
+              label={difficultyLabelText}
+              filledBars={difficultyFilledBars}
+              color={difficultyColor}
+            />
+          </div>
+
+          <div className="continue-drill-card__stats mt-[16px]">
+            <StatCell icon={<Target className="size-[16px]" />} label="Progress" value={`${drill.progressPct}%`} />
+            <StatCell icon={<BarChart2 className="size-[16px]" />} label="Questions" value={drill.questions} />
+            <StatCell icon={<Clock className="size-[16px]" />} label="Time" value={drill.timeLabel} />
+            <p className="text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[#6a7282]">
+              {lastAttemptPrefix}
+              {drill.lastAttempt}
+            </p>
+          </div>
+
+          <div className="mt-[16px] h-[8px] overflow-hidden rounded-full bg-[#eceff3]">
+            <div
+              className="h-[8px] rounded-full"
+              style={{ width: `${drill.progressPct}%`, backgroundColor: barColor }}
+            />
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onContinue}
+          className="continue-drill-card__action inline-flex h-[48px] shrink-0 items-center justify-center gap-[8px] rounded-[16px] border border-[#0b4e6e] bg-[#0d47a1] px-[16px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
+        >
+          {continueLabel}
+          <ChevronRight className="size-[20px]" aria-hidden />
+        </button>
       </div>
     </article>
   )

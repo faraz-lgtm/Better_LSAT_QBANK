@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
+import { PrepTestPreviewNotice } from "@/features/student/components/prep-test-preview-notice"
 import {
   Bookmark,
   CheckCircle2,
@@ -30,6 +31,8 @@ import {
   mapPrepTestDetailToResults,
 } from "@/features/student/analytics/map-prep-test-results"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
+import { getPrepTestResultsDetail } from "@/features/student/lib/mock-analytics-prep-test-results"
+import { allowsPrepTestUnauthenticatedPreview } from "@/lib/dev/prep-test-ui-preview"
 
 const QUESTION_FILTER_OPTIONS = ["Question", "Passage", "Incorrect only"] as const
 
@@ -559,7 +562,7 @@ function AboutMetricRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-/** Figma `17984:7995` — About this PrepTest */
+/** Figma `18617:36795` — About this PrepTest */
 function AboutPrepTestCard({
   meta,
   excludeFromAnalytics,
@@ -569,37 +572,39 @@ function AboutPrepTestCard({
   excludeFromAnalytics: boolean
   onExcludeFromAnalyticsChange: (next: boolean) => void
 }) {
+  const rows: Array<[string, string, string, string]> = [
+    ["Questions", meta.questionCount, "Timing", meta.timing],
+    ["Time used", meta.timeUsed, "Take", meta.take],
+    ["Format", meta.format, "Source", meta.source],
+  ]
+
   return (
     <section className="mb-6 flex flex-col gap-6 rounded-2xl border border-[#dfe1e7] bg-white px-6 py-4 shadow-[0px_1px_2px_rgba(16,24,40,0.06),0px_1px_3px_rgba(16,24,40,0.1)]">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">About this PrepTest</h2>
-        <div className="flex flex-col items-end gap-1">
+        <p className="!m-0 !text-[24px] font-bold leading-[1.3] text-[#062357]">About this PrepTest</p>
+        <div className="flex shrink-0 flex-col items-end gap-1">
           <div className="flex items-center gap-3">
-            <span className="text-xl font-semibold leading-[1.35] text-[#062357]">Analytics</span>
+            <span className="!text-[20px] font-bold leading-[1.35] text-[#062357]">Insights</span>
             <Switch
               checked={excludeFromAnalytics}
               onChange={(event) => onExcludeFromAnalyticsChange(event.target.checked)}
-              aria-label="Exclude this PrepTest from analytics"
+              aria-label="Exclude this PrepTest from insights"
               size="sm"
             />
           </div>
           <p className="text-xs font-normal leading-[1.5] tracking-[0.02em] text-[#666d80]">
-            Exclude from analytics
+            Exclude from Insights
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
-        <div className="flex min-w-0 flex-col">
-          <AboutMetricRow label="Questions" value={meta.questionCount} />
-          <AboutMetricRow label="Time used" value={meta.timeUsed} />
-          <AboutMetricRow label="Format" value={meta.format} />
-        </div>
-        <div className="flex min-w-0 flex-col">
-          <AboutMetricRow label="Timing" value={meta.timing} />
-          <AboutMetricRow label="Take" value={meta.take} />
-          <AboutMetricRow label="Source" value={meta.source} />
-        </div>
+        {rows.map(([leftLabel, leftValue, rightLabel, rightValue]) => (
+          <Fragment key={leftLabel}>
+            <AboutMetricRow label={leftLabel} value={leftValue} />
+            <AboutMetricRow label={rightLabel} value={rightValue} />
+          </Fragment>
+        ))}
       </div>
 
       <button
@@ -618,10 +623,12 @@ function AnalyticsPrepTestResultsPage() {
   const navigate = useNavigate()
   const analyticsApi = useAnalyticsApi()
   const practiceApi = usePracticeApi()
+  const previewAllowed = allowsPrepTestUnauthenticatedPreview()
   const [questionFilter, setQuestionFilter] = useState<(typeof QUESTION_FILTER_OPTIONS)[number]>("Question")
   const [excludeFromAnalytics, setExcludeFromAnalytics] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [useMockPreview, setUseMockPreview] = useState(false)
   const [detail, setDetail] = useState<PrepTestResultsDetail | null>(null)
   const [completedAt, setCompletedAt] = useState<string>("")
   const [prepTestId, setPrepTestId] = useState<string>("")
@@ -629,11 +636,29 @@ function AnalyticsPrepTestResultsPage() {
   const [moduleId, setModuleId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!analyticsApi || !testId) {
+    if (!testId) {
       setLoading(false)
-      if (!testId) setError("Missing session id")
+      setError("Missing session id")
       return
     }
+
+    if (!analyticsApi) {
+      if (previewAllowed) {
+        setDetail(getPrepTestResultsDetail(testId))
+        setCompletedAt("2025-10-03T12:00:00.000Z")
+        setPrepTestId("pt145")
+        setPrepTestTitle("PrepTest 145")
+        setModuleId("LSAC145")
+        setUseMockPreview(true)
+        setError(null)
+        setLoading(false)
+        return
+      }
+      setLoading(false)
+      setError("Supabase env is missing.")
+      return
+    }
+
     setLoading(true)
     void analyticsApi
       .getPrepTestSessionDetail(testId)
@@ -644,15 +669,39 @@ function AnalyticsPrepTestResultsPage() {
         setPrepTestTitle(api.prepTestTitle)
         setModuleId(api.moduleId)
         setExcludeFromAnalytics(api.excluded)
+        setUseMockPreview(false)
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
+      .catch((e) => {
+        if (previewAllowed) {
+          setDetail(getPrepTestResultsDetail(testId))
+          setCompletedAt("2025-10-03T12:00:00.000Z")
+          setPrepTestId("pt145")
+          setPrepTestTitle("PrepTest 145")
+          setModuleId("LSAC145")
+          setUseMockPreview(true)
+          setError(null)
+          return
+        }
+        setError(e instanceof Error ? e.message : "Failed to load")
+      })
       .finally(() => setLoading(false))
-  }, [analyticsApi, testId])
+  }, [analyticsApi, previewAllowed, testId])
 
   const pageTitle = useMemo(() => {
     if (!completedAt) return prepTestTitle || "PrepTest results"
     return formatPrepTestResultsTitle(prepTestTitle, moduleId, completedAt)
   }, [completedAt, moduleId, prepTestTitle])
+
+  const handleExcludeFromInsightsChange = useCallback(
+    (next: boolean) => {
+      setExcludeFromAnalytics(next)
+      if (useMockPreview || !practiceApi || !testId) return
+      void practiceApi.updateSession({ sessionId: testId, excluded: next }).catch(() => {
+        setExcludeFromAnalytics((current) => (current === next ? !next : current))
+      })
+    },
+    [practiceApi, testId, useMockPreview],
+  )
 
   if (loading) {
     return (
@@ -670,27 +719,38 @@ function AnalyticsPrepTestResultsPage() {
   }
 
   return (
-    <StudentMain>
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-semibold leading-[1.3] text-[#062357]">{pageTitle}</h2>
-          <div className="flex flex-wrap items-center gap-6">
-            <button
-              type="button"
-              className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#dfe1e7] bg-white px-4 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f3f7ff]"
-            >
-              <Share2 className="size-4 shrink-0" aria-hidden />
-              Share
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate(`/app/practice/preptest/${encodeURIComponent(prepTestId || testId)}`)}
-              className="inline-flex h-10 items-center gap-2 rounded-2xl bg-[#df1c41] px-4 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#df1c41]/90"
-            >
-              <FolderOpen className="size-4 shrink-0" aria-hidden />
-              Review
-            </button>
-          </div>
+    <StudentMain
+      className="min-h-full w-full max-w-none bg-[var(--primary-0)]"
+      contentClassName="min-h-full max-w-none"
+    >
+      <PrepTestPreviewNotice />
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="!m-0 !text-[24px] font-bold leading-[1.3] text-[#062357]">{pageTitle}</h1>
+        <div className="flex flex-wrap items-center gap-6">
+          <button
+            type="button"
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#dfe1e7] bg-white px-4 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f3f7ff]"
+          >
+            <Share2 className="size-4 shrink-0" aria-hidden />
+            Share
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const targetId = prepTestId || testId
+              if (useMockPreview) {
+                navigate("/app/practice/blind-review")
+                return
+              }
+              navigate(`/app/practice/blind-review/${encodeURIComponent(targetId)}`)
+            }}
+            className="inline-flex h-10 items-center gap-2 rounded-2xl bg-[#df1c41] px-4 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#df1c41]/90"
+          >
+            <FolderOpen className="size-4 shrink-0" aria-hidden />
+            Review
+          </button>
         </div>
+      </div>
 
         <ResultsSummaryPanel detail={detail} />
 
@@ -725,14 +785,9 @@ function AnalyticsPrepTestResultsPage() {
         <AboutPrepTestCard
           meta={detail.about}
           excludeFromAnalytics={excludeFromAnalytics}
-          onExcludeFromAnalyticsChange={(next) => {
-            setExcludeFromAnalytics(next)
-            if (practiceApi && testId) {
-              void practiceApi.updateSession({ sessionId: testId, excluded: next })
-            }
-          }}
+          onExcludeFromAnalyticsChange={handleExcludeFromInsightsChange}
         />
-      </StudentMain>
+    </StudentMain>
   )
 }
 

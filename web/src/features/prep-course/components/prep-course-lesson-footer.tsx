@@ -1,6 +1,6 @@
-import { ArrowLeft, ArrowRight, PanelRightClose, PanelRightOpen } from "lucide-react"
+import { ArrowLeft, ArrowRight, CheckCircle2, PanelRightClose, PanelRightOpen } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 type PrepCourseLessonFooterProps = {
   showSidebar: boolean
@@ -18,8 +18,14 @@ type PrepCourseLessonFooterProps = {
   } | null
 }
 
-const outlineBtnClass =
-  "h-10 rounded-2xl border-[#dfe1e7] bg-white px-4 text-sm font-semibold tracking-[0.02em] text-[#0d47a1]"
+const navBtnClass =
+  "inline-flex h-12 min-w-0 shrink-0 items-center justify-center gap-1.5 rounded-2xl border border-[color:var(--greyscale-100)] bg-[var(--greyscale-25)] px-3 text-sm font-semibold tracking-[0.02em] text-[color:var(--greyscale-500)] shadow-[0_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#eef1f4] disabled:cursor-not-allowed disabled:border-[color:var(--btn-disabled-border)] disabled:bg-[var(--btn-disabled-bg)] disabled:text-[color:var(--greyscale-400)] disabled:shadow-none"
+
+const outlineActionBtnClass =
+  "inline-flex h-12 max-w-full shrink items-center justify-center gap-2 rounded-2xl border border-[color:var(--greyscale-100)] bg-white px-4 text-base font-semibold tracking-[0.02em] text-[#0d47a1] shadow-[var(--shadow-xsmall)] transition-colors hover:bg-[var(--primary-0)]"
+
+const primaryBtnClass =
+  "inline-flex h-12 max-w-full shrink items-center justify-center gap-2 rounded-2xl border border-[#0b4e6e] bg-[#0d47a1] px-4 text-base font-semibold tracking-[0.02em] text-white shadow-[0_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-600)] disabled:cursor-not-allowed disabled:border-[color:var(--btn-disabled-border)] disabled:bg-[var(--btn-disabled-bg)] disabled:text-[color:var(--btn-disabled-fg)] disabled:shadow-none"
 
 function PrepCourseLessonFooter({
   showSidebar,
@@ -33,60 +39,48 @@ function PrepCourseLessonFooter({
   primaryAction = null,
 }: PrepCourseLessonFooterProps) {
   return (
-    <footer className="shrink-0 rounded-b-2xl border-t border-[#dfe1e7] bg-[#f2f7ff]">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3">
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onPrev}
-            disabled={prevDisabled}
-            className={outlineBtnClass}
-          >
-            <ArrowLeft className="mr-2 size-4" />
+    <footer className="min-w-0 w-full max-w-full shrink-0 overflow-x-clip border-t border-[color:var(--greyscale-100)] bg-[var(--secondary-0)] px-6">
+      <div className="grid min-w-0 w-full grid-cols-1 gap-2 py-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center xl:gap-x-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-6">
+          <button type="button" onClick={onPrev} disabled={prevDisabled} className={navBtnClass}>
+            <ArrowLeft className="size-6 shrink-0" aria-hidden />
             Prev
-          </Button>
-          <Button type="button" variant="outline" onClick={onToggleSidebar} className={outlineBtnClass}>
+          </button>
+          <button type="button" onClick={onToggleSidebar} className={outlineActionBtnClass}>
             {showSidebar ? (
-              <PanelRightClose className="mr-2 size-4" />
+              <PanelRightClose className="size-5 shrink-0" aria-hidden />
             ) : (
-              <PanelRightOpen className="mr-2 size-4" />
+              <PanelRightOpen className="size-5 shrink-0" aria-hidden />
             )}
-            {showSidebar ? "Hide Lesson" : "Show All Lesson"}
-          </Button>
+            <span className="truncate">{showSidebar ? "Hide Lesson" : "Show All Lesson"}</span>
+          </button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-4">
           {primaryAction ? (
-            <Button
+            <button
               type="button"
               onClick={primaryAction.onClick}
               disabled={primaryAction.disabled}
-              className="ds-btn-sm cursor-pointer px-5 text-sm tracking-[0.02em] disabled:pointer-events-auto disabled:cursor-not-allowed"
+              className={cn(primaryBtnClass, "disabled:pointer-events-auto")}
             >
-              {primaryAction.label}
-              <ArrowRight className="ml-2 size-4" />
-            </Button>
+              <span className="truncate">{primaryAction.label}</span>
+              <ArrowRight className="size-5 shrink-0" aria-hidden />
+            </button>
           ) : (
-            <Button
+            <button
               type="button"
               onClick={onMarkComplete}
               disabled={markCompleteDisabled}
-              className="ds-btn-sm px-5 text-sm tracking-[0.02em]"
+              className={primaryBtnClass}
             >
-              Mark Complete &amp; Continue
-              <ArrowRight className="ml-2 size-4" />
-            </Button>
+              <CheckCircle2 className="size-5 shrink-0" aria-hidden />
+              <span className="truncate">Mark Complete &amp; Continue</span>
+            </button>
           )}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onNext}
-            disabled={nextDisabled}
-            className={outlineBtnClass}
-          >
+          <button type="button" onClick={onNext} disabled={nextDisabled} className={navBtnClass}>
             Next
-            <ArrowRight className="ml-2 size-4" />
-          </Button>
+            <ArrowRight className="size-6 shrink-0" aria-hidden />
+          </button>
         </div>
       </div>
     </footer>

@@ -17,6 +17,7 @@ import { createExplanationsApi, type ExplanationDetailPayload } from "@/lib/api/
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
+import { cn } from "@/lib/utils"
 
 function parseTab(raw: string | null): ExplanationDetailTabId {
   if (raw === "explanation" || raw === "analytics") return raw
@@ -115,12 +116,6 @@ function ExplanationQuestionDetailPage() {
     }
   }, [explanationsApi, questionId])
 
-  useEffect(() => {
-    if (tab === "explanation" && detail && !detail.explanationHtml && !detail.videoUrl) {
-      setSearchParams({}, { replace: true })
-    }
-  }, [tab, detail, setSearchParams])
-
   const resolvedLoc = locateExplanationQuestion(questionId)
   const view = resolvedLoc ? buildExplanationQuestionDetailView(resolvedLoc, detail) : null
 
@@ -157,51 +152,46 @@ function ExplanationQuestionDetailPage() {
     return <Navigate to="/app/learn/explanations" replace />
   }
 
+  const questionTabLocked = tab === "question"
+
   return (
-    <StudentMain className="bg-[var(--greyscale-25)] py-4 pb-10 md:py-4">
-      <div
-        className="p-5 md:p-6"
-        style={{
-          borderColor: "var(--greyscale-100)",
-          backgroundColor: "color-mix(in srgb, var(--student-expanded-row) 55%, var(--greyscale-25))",
-        }}
-      >
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+    <StudentMain
+      layout={questionTabLocked ? "locked" : "scroll"}
+      className="bg-[var(--greyscale-25)]"
+      contentClassName="bg-[var(--greyscale-25)]"
+    >
+      <div className={cn("flex flex-col gap-6", questionTabLocked && "min-h-0 min-w-0 flex-1")}>
+        <header className="shrink-0 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0 flex-1">
-            <h2 className="text-xl font-bold tracking-tight text-[color:var(--color-student-heading)] md:text-3xl">
-              {view.headingCode}
-            </h2>
-            <p className="mt-1 text-sm font-medium text-[#6A7282] md:text-[15px]">{view.subtitleTrail}</p>
+            <h1 className="student-page-heading">{view.headingCode}</h1>
+            <p className="m-0 mt-1 text-xs font-normal leading-normal tracking-[0.02em] text-[#6a7282]">
+              {view.subtitleTrail}
+            </p>
           </div>
           <ExplanationDetailTabBar
             tab={tab}
             onTabChange={setTab}
             prevHref={neighborHref(view.neighbors.prevRouteKey, tab)}
             nextHref={neighborHref(view.neighbors.nextRouteKey, tab)}
-            hasExplanationTab={view.hasExplanationTab}
           />
+        </header>
+
+        {detailError ? <p className="text-sm text-[#95122b]">{detailError}</p> : null}
+
+        <div className={cn(questionTabLocked && "min-h-0 min-w-0 flex-1")}>
+          {detailLoading && tab === "question" ? <StudentPageLoader label="Loading question…" /> : null}
+          {tab === "question" && !detailLoading ? (
+            <ExplanationQuestionTabPanel view={view} initialExpandedChoiceId={initialExpandedChoiceId} />
+          ) : null}
+          {tab === "explanation" ? <ExplanationExplainTabPanel videos={view.videos} /> : null}
+          {tab === "analytics" && detailError ? <p className="text-sm text-[#95122b]">{detailError}</p> : null}
+          {tab === "analytics" && !detailError && (detailLoading || !detail) ? (
+            <StudentPageLoader label="Loading insights…" />
+          ) : null}
+          {tab === "analytics" && !detailError && !detailLoading && detail ? (
+            <ExplanationAnalyticsTabPanel analytics={view.analytics} />
+          ) : null}
         </div>
-      </div>
-
-      {detailError ? <p className="mt-4 text-sm text-[#95122b]">{detailError}</p> : null}
-
-      <div className="mt-6">
-        {detailLoading && tab === "question" ? (
-          <StudentPageLoader label="Loading question…" />
-        ) : null}
-        {tab === "question" && !detailLoading ? (
-          <ExplanationQuestionTabPanel view={view} initialExpandedChoiceId={initialExpandedChoiceId} />
-        ) : null}
-        {tab === "explanation" ? <ExplanationExplainTabPanel videos={view.videos} /> : null}
-        {tab === "analytics" && detailError ? (
-          <p className="text-sm text-[#95122b]">{detailError}</p>
-        ) : null}
-        {tab === "analytics" && !detailError && (detailLoading || !detail) ? (
-          <StudentPageLoader label="Loading analytics…" />
-        ) : null}
-        {tab === "analytics" && !detailError && !detailLoading && detail ? (
-          <ExplanationAnalyticsTabPanel analytics={view.analytics} />
-        ) : null}
       </div>
     </StudentMain>
   )

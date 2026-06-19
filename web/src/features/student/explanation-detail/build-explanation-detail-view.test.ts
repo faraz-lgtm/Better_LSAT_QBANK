@@ -59,4 +59,12 @@ describe("buildExplanationQuestionDetailView", () => {
     expect(view.analytics.answerPopularityTotal).toBe(4)
     expect(view.analytics.questionStemTags).toEqual(["Art", "Sing"])
   })
+
+  it("always exposes explanation tab with passage and question cards", () => {
+    const view = buildExplanationQuestionDetailView(loc, null)
+    expect(view.hasExplanationTab).toBe(true)
+    expect(view.videos).toHaveLength(2)
+    expect(view.videos[0]?.dropdownLabel).toBe("Passage explanation")
+    expect(view.videos[1]?.dropdownLabel).toBe("Question explanation")
+  })
 })

@@ -14,12 +14,12 @@ type PrepCourseContentHeaderProps = {
 function StatChip({ icon, value, label }: { icon: ReactNode; value: number | string; label: string }) {
   return (
     <div className="flex h-[42px] items-center gap-2">
-      <span className="text-[#666d80]" aria-hidden>
+      <span className="text-[color:var(--greyscale-500)]" aria-hidden>
         {icon}
       </span>
       <div className="leading-[1.5]">
         <p className="text-base font-semibold tracking-[0.32px] text-[#062357]">{value}</p>
-        <p className="text-xs font-medium tracking-[0.24px] text-[#666d80]">{label}</p>
+        <p className="text-xs font-medium tracking-[0.24px] text-[color:var(--greyscale-500)]">{label}</p>
       </div>
     </div>
   )
@@ -41,7 +41,7 @@ function PrepCourseExpandButton({
   return (
     <button
       type="button"
-      className="inline-flex h-8 items-center gap-2 rounded-xl border border-[#dfe1e7] bg-white px-4 text-xs font-semibold tracking-[0.24px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa]"
+      className="inline-flex h-8 items-center gap-2 rounded-xl border border-[color:var(--greyscale-100)] bg-white px-4 py-2 text-xs font-semibold tracking-[0.24px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)]"
       aria-expanded={expanded}
       onClick={(event) => {
         event.stopPropagation()
@@ -76,17 +76,17 @@ function PrepCourseContentHeader({
   onToggleShowBookmarksOnly,
 }: PrepCourseContentHeaderProps) {
   return (
-    <div className="rounded-t-2xl border-b border-[#dfe1e7] bg-[#f6f8fa] p-6">
+    <div className="rounded-t-[16px] border-b border-[color:var(--greyscale-100)] bg-[var(--greyscale-25)] p-[24px]">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
+        <div className="flex min-w-0 flex-col gap-4">
           <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">Course Content</h2>
-          <div className="mt-4 flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <StatChip icon={<Layers className="size-4" />} value={stats.moduleCount} label="Modules" />
-            <span className="h-5 w-px bg-[#dfe1e7]" aria-hidden />
+            <span className="h-5 w-px bg-[var(--greyscale-100)]" aria-hidden />
             <StatChip icon={<FileText className="size-4" />} value={stats.sectionCount} label="Sections" />
-            <span className="h-5 w-px bg-[#dfe1e7]" aria-hidden />
+            <span className="h-5 w-px bg-[var(--greyscale-100)]" aria-hidden />
             <StatChip icon={<BookOpen className="size-4" />} value={stats.lessonCount} label="Lessons" />
-            <span className="h-5 w-px bg-[#dfe1e7]" aria-hidden />
+            <span className="h-5 w-px bg-[var(--greyscale-100)]" aria-hidden />
             <StatChip
               icon={<Clock className="size-4" />}
               value={stats.totalMinutes < 60 ? stats.totalMinutes : Math.floor(stats.totalMinutes / 60)}
@@ -96,8 +96,8 @@ function PrepCourseContentHeader({
         </div>
         <div className="flex shrink-0 flex-col items-end justify-center">
           <div className="flex items-center gap-2">
-            <Bookmark className="size-4 shrink-0 text-[#666d80]" strokeWidth={2} aria-hidden />
-            <span className="text-xs font-medium tracking-[0.24px] text-[#666d80]">Show All Bookmark</span>
+            <Bookmark className="size-4 shrink-0 text-[color:var(--greyscale-500)]" strokeWidth={2} aria-hidden />
+            <span className="text-xs font-medium tracking-[0.24px] text-[color:var(--greyscale-500)]">Show All Bookmark</span>
             <Switch
               size="sm"
               checked={showBookmarksOnly}

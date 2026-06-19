@@ -129,13 +129,13 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
 
       <aside
         className={cn(
-          "student-sidebar fixed inset-y-0 left-0 z-50 flex h-svh shrink-0 flex-col border-r border-[#dfe1e7] bg-[#f3f7ff] transition-[width,transform] duration-200 lg:static lg:translate-x-0",
+          "student-sidebar fixed inset-y-0 left-0 z-50 flex h-svh shrink-0 flex-col border-r border-[color:var(--greyscale-100)] bg-[var(--primary-0)] transition-[width,transform] duration-200 lg:static lg:translate-x-0",
           sidebarWidthClass,
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
         aria-label="Main navigation"
       >
-        <div className="student-shell-top-row flex items-center border-b border-[#dfe1e7] px-2">
+        <div className="student-shell-top-row flex items-center border-b border-[color:var(--greyscale-100)] p-2">
           <div
             className={cn(
               "flex w-full items-center",
@@ -149,7 +149,7 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
             ) : null}
             <button
               type="button"
-              className="hidden size-6 shrink-0 items-center justify-center rounded-lg border border-[#dfe1e7] bg-[#edf3ff] text-[#0d47a1] lg:inline-flex"
+              className="hidden size-6 shrink-0 items-center justify-center rounded-lg border border-[color:var(--greyscale-100)] bg-[var(--primary-25)] text-[#0d47a1] lg:inline-flex"
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               onClick={toggleCollapsed}
             >
@@ -275,7 +275,7 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
           </div>
         </nav>
 
-        <div className={cn("border-t border-transparent px-4 py-2", collapsed && "px-2")}>
+        <div className={cn("mt-auto shrink-0 border-t border-transparent px-4 py-2", collapsed && "px-2")}>
           <button
             type="button"
             className={cn(

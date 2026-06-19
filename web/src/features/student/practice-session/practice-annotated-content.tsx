@@ -39,7 +39,11 @@ function PracticeAnnotatedContent({
       html={html}
       findQuery={findQuery}
       scrollAnchor={scrollAnchor}
-      className={cn("practice-session-content", className)}
+      className={cn(
+        "practice-session-content",
+        toolMode && toolMode !== "none" && "select-text cursor-text",
+        className,
+      )}
       onMouseUp={(e) => onMouseUp(regionKey, ref.current, e)}
       onClickCapture={
         toolMode === "eraser" && onClickCapture

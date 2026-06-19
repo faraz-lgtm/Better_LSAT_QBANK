@@ -28,7 +28,6 @@ import {
 import {
   isRetakePrepTestAttempt,
   prepTestHubHref,
-  prepTestSectionIntroHref,
   sectionSessionHref,
 } from "@/features/student/preptests/preptest-hub-navigation"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -107,11 +106,19 @@ function SectionBreakRow({
   )
 }
 
+function prepTestHubPageTitle(prepTest: { label: string; prepTestNumber: string | null }): string {
+  const fromNumber = prepTest.prepTestNumber?.trim()
+  if (fromNumber) return `PrepTests ${fromNumber}`
+  const fromLabel = /^PT\s*(\d+)/i.exec(prepTest.label)?.[1]
+  if (fromLabel) return `PrepTests ${fromLabel}`
+  return prepTest.label
+}
+
 function PrepTestHubStat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="flex min-w-[88px] flex-col gap-0.5">
-      <dt className="text-xs font-medium text-[#666d80]">{label}</dt>
-      <dd className="text-lg font-bold leading-tight text-[#062357]">{value}</dd>
+    <div className="flex w-[78px] flex-col items-center">
+      <dt className="text-xs font-medium leading-normal tracking-[0.24px] text-[#062357]">{label}</dt>
+      <dd className="text-sm font-semibold leading-normal tracking-[0.28px] text-[#062357]">{value}</dd>
     </div>
   )
 }
@@ -132,19 +139,15 @@ function PrepTestConfigCard({
   options: { id: string; label: string }[]
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-[#dfe1e7] bg-white px-4 py-4 md:px-5 md:py-5">
-      <div className="flex flex-col gap-0.5">
-        <label htmlFor={id} className="text-sm font-semibold text-[#062357]">
-          {label}
-        </label>
-        <p className="text-xs font-medium leading-snug text-[#666d80]">{description}</p>
-      </div>
+    <div className="flex w-full max-w-[347px] flex-col gap-3 rounded-3xl border border-[#dfe1e7] bg-[#f6f8fa] p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+      <p className="text-xl font-bold leading-[1.35] text-[#062357]">{label}</p>
+      <p className="text-sm font-normal leading-normal tracking-[0.28px] text-[#666d80]">{description}</p>
       <div className="relative">
         <select
           id={id}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="h-[52px] w-full appearance-none rounded-2xl border border-[#dfe1e7] bg-[#f5f9ff] px-4 pr-11 text-base font-medium text-[#062357] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] focus:outline-none focus:ring-2 focus:ring-[#0d47a1]/25"
+          className="h-[52px] w-full appearance-none rounded-2xl border border-[#dfe1e7] bg-[#f5f9ff] px-3 pr-10 text-base font-normal tracking-[0.32px] text-[#062357] focus:outline-none focus:ring-2 focus:ring-[#0d47a1]/25"
         >
           {options.map((o) => (
             <option key={o.id} value={o.id}>
@@ -153,7 +156,7 @@ function PrepTestConfigCard({
           ))}
         </select>
         <ChevronDown
-          className="pointer-events-none absolute right-3.5 top-1/2 size-5 -translate-y-1/2 text-[#666d80]"
+          className="pointer-events-none absolute right-3 top-1/2 size-5 -translate-y-1/2 text-[#666d80]"
           aria-hidden
         />
       </div>
@@ -187,30 +190,31 @@ function PrepTestSectionRow({
   const breakLocked = row.onBreak
   const canContinueSection = Boolean(row.activeSectionSessionId)
   const showStartButton = row.practiceable && !row.completed && (row.unlocked || breakLocked)
-  const emphasized = row.practiceable
+  const activeSection = row.practiceable && row.unlocked && !row.completed
 
   return (
-    <div className="flex min-h-[88px] flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#dfe1e7] bg-white px-5 py-4 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)] md:px-6">
-      <div className="flex min-w-0 flex-col gap-1.5">
+    <div className="flex h-[100px] items-center gap-6 rounded-2xl border border-[#dfe1e7] bg-white px-6 py-3 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)]">
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
         <p
           className={cn(
             "text-2xl font-bold leading-[1.3]",
-            emphasized ? "text-[#0d47a1]" : "text-[#a4acb9]",
+            activeSection ? "text-[#0d47a1]" : "text-[#a4acb9]",
           )}
         >
           {sectionShortTitle(row)}
         </p>
         <div
           className={cn(
-            "flex flex-wrap items-center gap-2 text-sm font-medium leading-[1.5] tracking-[0.02em]",
-            emphasized ? "text-[#666d80]" : "text-[#a4acb9]",
+            "flex items-center gap-3 text-sm font-semibold leading-normal tracking-[0.28px]",
+            activeSection ? "text-[#666d80]" : "text-[#a4acb9]",
           )}
         >
-          <Timer className="size-4 shrink-0" aria-hidden />
-          <span>{sectionTimeDisplay(row.timeMinutes)}</span>
-          <span aria-hidden>|</span>
+          <div className="flex items-center gap-2">
+            <Timer className="size-4 shrink-0" aria-hidden />
+            <span>{sectionTimeDisplay(row.timeMinutes)}</span>
+          </div>
+          <span className="h-3.5 w-px shrink-0 bg-[#dfe1e7]" aria-hidden />
           <span>{sectionQuestionsLine(row.questionCount)}</span>
-          {!row.practiceable ? <span>Not available for practice</span> : null}
         </div>
       </div>
       {showStartButton ? (
@@ -219,12 +223,12 @@ function PrepTestSectionRow({
           disabled={breakLocked || starting}
           onClick={onStart}
           className={cn(
-            "ds-btn min-w-[148px] shrink-0 px-6 text-base",
+            "ds-btn h-[52px] min-w-[148px] shrink-0 gap-2 px-4 text-base tracking-[0.32px]",
             breakLocked && "cursor-not-allowed opacity-50",
           )}
         >
           {starting ? "Starting…" : canContinueSection ? "Continue Section" : "Start Section"}
-          {!starting ? <ChevronRight className="size-4" aria-hidden /> : null}
+          {!starting ? <ChevronRight className="size-5" aria-hidden /> : null}
         </button>
       ) : null}
     </div>
@@ -317,7 +321,9 @@ function PracticePrepTestPage() {
       }
       const out = await practiceApi.startSection({ sectionId, timing: "35", showAnswers: "end" })
       if (testIdParam) {
-        navigate(prepTestSectionIntroHref(testIdParam, sectionId, out.session.id, { retake: isRetakeAttempt }))
+        navigate(
+          sectionSessionHref(out.session.id, { prepTestId: testIdParam, retake: isRetakeAttempt }),
+        )
         return
       }
       navigate(sectionSessionHref(out.session.id))
@@ -341,7 +347,10 @@ function PracticePrepTestPage() {
         return
       }
       navigate(
-        prepTestSectionIntroHref(testIdParam, row.id, row.activeSectionSessionId, { retake: isRetakeAttempt }),
+        sectionSessionHref(row.activeSectionSessionId, {
+          prepTestId: testIdParam,
+          retake: isRetakeAttempt,
+        }),
       )
       return
     }
@@ -469,7 +478,10 @@ function PracticePrepTestPage() {
   return (
     <>
       <StudentMain>
-        <PrepTestDetailHeader navigate={navigate} prepTestLabel={prepTest.label} />
+        <PrepTestDetailHeader
+          navigate={navigate}
+          pageTitle={prepTestHubPageTitle(prepTest)}
+        />
 
         {error ? (
           <p className="mb-4 text-sm text-red-600" role="alert">
@@ -477,50 +489,49 @@ function PracticePrepTestPage() {
           </p>
         ) : null}
 
-        <section className="rounded-2xl border border-[#dfe1e7] bg-white px-5 py-6 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)] md:px-8 md:py-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
-              <p className="text-[24px] font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
-                Ready to begin your test?
-              </p>
-              <p className="mt-3 text-2xl font-bold text-[#0d47a1] md:text-[32px]">{prepTest.label}</p>
+        <section className="rounded-3xl border border-[#dfe1e7] bg-white p-6">
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+              <p className="text-2xl font-bold leading-[1.3] text-[#062357]">Ready to begin your test?</p>
+              <dl className="flex shrink-0 flex-wrap items-start gap-6 lg:justify-end">
+                <PrepTestHubStat label="Questions" value={prepTest.questionCount} />
+                <PrepTestHubStat label="Total Time" value={`${prepTest.totalMinutes} min`} />
+                <PrepTestHubStat label="Sections" value={prepTest.practiceableSectionCount} />
+              </dl>
             </div>
-            <dl className="flex shrink-0 flex-wrap items-start gap-6 md:gap-8 lg:justify-end">
-              <PrepTestHubStat label="Questions" value={prepTest.questionCount} />
-              <PrepTestHubStat label="Total Time" value={`${prepTest.totalMinutes} min`} />
-              <PrepTestHubStat label="Sections" value={prepTest.practiceableSectionCount} />
-            </dl>
-          </div>
 
-          <div className="mt-8 grid gap-4 md:grid-cols-2 md:gap-6">
-            <PrepTestConfigCard
-              id="preptest-timing"
-              label="Timing"
-              description="Control your practice pace"
-              value={timingId}
-              onChange={(v) => {
-                setTimingId(v)
-                void persistConfig(v, formatId)
-              }}
-              options={detail.timingOptions}
-            />
-            <PrepTestConfigCard
-              id="preptest-format"
-              label="Format"
-              description="Select format"
-              value={formatId}
-              onChange={(v) => {
-                setFormatId(v)
-                void persistConfig(timingId, v)
-              }}
-              options={detail.formatOptions}
-            />
+            <p className="text-2xl font-bold leading-[1.3] text-[#062357]">{prepTest.label}</p>
+
+            <div className="flex flex-wrap gap-6">
+              <PrepTestConfigCard
+                id="preptest-timing"
+                label="Timing"
+                description="Control your Prep pace"
+                value={timingId}
+                onChange={(v) => {
+                  setTimingId(v)
+                  void persistConfig(v, formatId)
+                }}
+                options={detail.timingOptions}
+              />
+              <PrepTestConfigCard
+                id="preptest-format"
+                label="Format"
+                description="Select Format"
+                value={formatId}
+                onChange={(v) => {
+                  setFormatId(v)
+                  void persistConfig(timingId, v)
+                }}
+                options={detail.formatOptions}
+              />
+            </div>
           </div>
         </section>
 
-        <section className="mt-8">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-bold text-[#062357]">Test Section</h2>
+        <section className="mt-6">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">Test Section</h2>
             {detail.allPracticeableSectionsComplete ? (
               <Button
                 type="button"
@@ -532,7 +543,7 @@ function PracticePrepTestPage() {
               </Button>
             ) : null}
           </div>
-          <ul className="mt-4 flex flex-col gap-3">
+          <ul className="flex flex-col gap-6">
             {detail.sections.map((row) => (
               <li key={row.id} className="flex flex-col gap-3">
                 <PrepTestSectionRow
@@ -575,18 +586,19 @@ function PracticePrepTestPage() {
 
 function PrepTestDetailHeader({
   navigate,
-  prepTestLabel,
+  pageTitle,
 }: {
   navigate: ReturnType<typeof useNavigate>
-  prepTestLabel: string
+  pageTitle: string
 }) {
   return (
-    <div className="mb-6 flex justify-end">
+    <div className="mb-6 flex items-center justify-between gap-4">
+      <h1 className="!m-0 !text-[20px] !font-bold !leading-[1.35] text-[#062357]">{pageTitle}</h1>
       <button
         type="button"
         onClick={() => navigate("/app/practice/preptest")}
-        className="inline-flex size-10 items-center justify-center rounded-xl text-[#666d80] transition-colors hover:bg-[#e8eef9] hover:text-[#062357]"
-        aria-label={`Close ${prepTestLabel}`}
+        className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[#666d80] transition-colors hover:bg-[#edf3ff] hover:text-[#062357]"
+        aria-label={`Close ${pageTitle}`}
       >
         <X className="size-6" />
       </button>

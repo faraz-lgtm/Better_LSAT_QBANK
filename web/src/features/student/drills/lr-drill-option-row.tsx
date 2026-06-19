@@ -1,5 +1,5 @@
-import { memo, useMemo, type MouseEvent } from "react"
-import { Eye } from "lucide-react"
+import { memo, type MouseEvent } from "react"
+import { Eye, EyeOff } from "lucide-react"
 
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import type { PracticeToolMode, RegionKey } from "@/features/student/practice-session/practice-session-types"
@@ -49,31 +49,139 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
   variant = "default",
 }: LrDrillOptionRowProps) {
   const letter = letters[index] ?? String(index + 1)
-  const stableHtml = useMemo(() => html, [html])
   const isActiveDrill = variant === "active-drill"
+  const isBlindReview = variant === "blind-review"
+  const annotateMode = toolMode != null && toolMode !== "none"
 
   const choiceContent =
     onContentMouseUp != null ? (
       <PracticeAnnotatedContent
         regionKey={regionKey}
-        html={stableHtml}
+        html={html}
         findQuery={findQuery}
         toolMode={toolMode}
         onMouseUp={onContentMouseUp}
         onClickCapture={onContentClick}
         className={cn(
           "min-w-0 flex-1",
-          isActiveDrill ? "text-lg leading-normal text-[#0d0d12]" : "pt-0.5",
-          hidden && "line-through",
+          isActiveDrill || isBlindReview
+            ? "text-base leading-normal tracking-[0.02em] text-[#0d0d12]"
+            : "pt-0.5",
+          hidden && (isBlindReview ? "line-through" : "line-through opacity-60"),
         )}
       />
     ) : (
-      <HtmlContent html={stableHtml} className={cn("min-w-0 flex-1 pt-0.5", hidden && "line-through")} />
+      <HtmlContent
+        html={html}
+        className={cn("min-w-0 flex-1 pt-0.5", hidden && "line-through opacity-60")}
+      />
     )
 
   function handleSelect() {
-    if (disabled) return
+    if (disabled || annotateMode) return
+    const selection = window.getSelection()
+    if (selection && !selection.isCollapsed) return
     if (allowReselect || selectedIndex == null || selectedIndex !== index) onSelect()
+  }
+
+  if (isBlindReview) {
+    return (
+      <div
+        role={annotateMode ? undefined : "button"}
+        tabIndex={annotateMode || disabled ? -1 : 0}
+        aria-pressed={annotateMode ? undefined : selected}
+        aria-disabled={disabled}
+        onClick={handleSelect}
+        onKeyDown={(e) => {
+          if (disabled || annotateMode) return
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault()
+            handleSelect()
+          }
+        }}
+        className={cn(
+          "flex items-center justify-between gap-4 rounded-[14px] border p-4 text-left transition-colors",
+          selected
+            ? "border-[#0d47a1] bg-[#f3f7ff] shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)]"
+            : hidden
+              ? "border-[#dfe1e7] bg-[#f6f8fa]"
+              : "border-[#dfe1e7] bg-white",
+          disabled ? "cursor-default" : annotateMode ? "cursor-text" : "cursor-pointer",
+        )}
+      >
+        <div className="flex min-w-0 flex-1 items-center gap-4">
+          <span
+            className={cn(
+              "flex size-12 shrink-0 items-center justify-center rounded-[14px] text-lg font-bold",
+              selected
+                ? "bg-[#f6f8fa] text-[#0d47a1] shadow-[0px_10px_7px_rgba(0,0,0,0.1),0px_4px_3px_rgba(0,0,0,0.1)]"
+                : "bg-[#f3f4f6] text-[#4a5565]",
+              hidden && "line-through",
+            )}
+          >
+            {letter}
+          </span>
+          {choiceContent}
+        </div>
+        <button
+          type="button"
+          className="inline-flex size-5 shrink-0 items-center justify-center text-[#666d80] transition hover:text-[#062357]"
+          aria-label={hidden ? "Show answer choice" : "Hide answer choice"}
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleHidden()
+          }}
+        >
+          {hidden ? (
+            <EyeOff className="size-5" strokeWidth={2} aria-hidden />
+          ) : (
+            <Eye className="size-5" strokeWidth={2} aria-hidden />
+          )}
+        </button>
+      </div>
+    )
+  }
+
+  if (isActiveDrill) {
+    return (
+      <div
+        role={annotateMode ? undefined : "button"}
+        tabIndex={annotateMode || disabled ? -1 : 0}
+        aria-pressed={annotateMode ? undefined : selected}
+        aria-disabled={disabled}
+        onClick={handleSelect}
+        onKeyDown={(e) => {
+          if (disabled || annotateMode) return
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault()
+            handleSelect()
+          }
+        }}
+        className={cn(
+          "flex items-start gap-4 rounded-2xl border-2 py-1 pl-4 pr-2 text-left transition-colors",
+          selected ? "border-[#0d47a1] bg-[#f5f9ff]" : "border-transparent",
+          disabled ? "cursor-default" : annotateMode ? "cursor-text" : "cursor-pointer",
+        )}
+      >
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-[12px] border-2 border-[#dfe1e7] bg-white text-base font-semibold text-[#0d0d12]">
+          {letter}
+        </span>
+        <div className="flex min-w-0 flex-1 items-start justify-between gap-4">
+          {choiceContent}
+          <button
+            type="button"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] text-[#666d80] transition hover:bg-[#f6f8fa] hover:text-[#062357]"
+            aria-label={hidden ? "Show answer choice" : "Hide answer choice"}
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggleHidden()
+            }}
+          >
+            <Eye className={cn("size-6", hidden && "opacity-40")} strokeWidth={2} aria-hidden />
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -91,76 +199,41 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
         }
       }}
       className={cn(
-        "flex items-stretch text-left transition-colors",
-        isActiveDrill
-          ? cn("gap-4 rounded-2xl py-1 pl-4", selected && "bg-[#f5f9ff]")
-          : "gap-2 rounded-xl border border-solid text-sm leading-snug",
-        !isActiveDrill && hidden && "opacity-50",
+        "flex items-stretch gap-2 rounded-xl border border-solid text-sm leading-snug text-left transition-colors",
+        hidden && "opacity-50",
         disabled ? "cursor-default" : "cursor-pointer",
       )}
-      style={
-        isActiveDrill
-          ? undefined
-          : {
-              borderColor: selected ? "var(--color-student-cta)" : "var(--greyscale-100)",
-              borderWidth: selected ? 2 : 1,
-              backgroundColor: selected ? "var(--student-expanded-row)" : "var(--background)",
-              color: "var(--foreground)",
-            }
-      }
+      style={{
+        borderColor: selected ? "var(--color-student-cta)" : "var(--greyscale-100)",
+        borderWidth: selected ? 2 : 1,
+        backgroundColor: selected ? "var(--student-expanded-row)" : "var(--background)",
+        color: "var(--foreground)",
+      }}
     >
-      <div
-        className={cn(
-          "flex min-w-0 flex-1 items-start",
-          isActiveDrill ? "gap-4" : "gap-3 px-3 py-3",
-        )}
-      >
+      <div className="flex min-w-0 flex-1 items-start gap-3 px-3 py-3">
         <span
-          className={cn(
-            "flex shrink-0 items-center justify-center font-semibold",
-            isActiveDrill
-              ? cn(
-                  "size-8 rounded-xl border-2 text-base transition-colors",
-                  selected
-                    ? "border-[#0d47a1] bg-[#0d47a1] text-white"
-                    : "border-[#dfe1e7] bg-white text-[#0d0d12]",
-                )
-              : "mt-0.5 size-8 rounded-full text-xs font-bold",
-          )}
-          style={
-            isActiveDrill
-              ? undefined
-              : {
-                  backgroundColor: "var(--greyscale-25)",
-                  color: "var(--color-student-heading)",
-                  border: "1px solid var(--greyscale-100)",
-                }
-          }
+          className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+          style={{
+            backgroundColor: "var(--greyscale-25)",
+            color: "var(--color-student-heading)",
+            border: "1px solid var(--greyscale-100)",
+          }}
         >
           {letter}
         </span>
         {choiceContent}
       </div>
-      <div
-        className={cn(
-          "flex shrink-0 items-center",
-          isActiveDrill ? "pr-0" : "border-l pr-2 pl-1",
-        )}
-        style={isActiveDrill ? undefined : { borderColor: "var(--greyscale-100)" }}
-      >
+      <div className="flex shrink-0 items-center border-l pr-2 pl-1" style={{ borderColor: "var(--greyscale-100)" }}>
         <button
           type="button"
-          className={cn(
-            "rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground",
-            isActiveDrill ? "size-9 rounded-[10px] p-1.5" : "p-1.5",
-          )}
+          className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
           aria-label={hidden ? "Show answer choice" : "Hide answer choice"}
           onClick={(e) => {
             e.stopPropagation()
             onToggleHidden()
           }}
         >
-          <Eye className={isActiveDrill ? "size-6" : "size-4"} strokeWidth={2} />
+          <Eye className="size-4" strokeWidth={2} aria-hidden />
         </button>
       </div>
     </div>

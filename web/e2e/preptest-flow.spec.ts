@@ -6,7 +6,6 @@ test.describe("Practice PrepTest flow", () => {
   test("list → hub → section without login (emulator dev server)", async ({ page }) => {
     await page.goto("/app/practice/preptest")
     await expect(page).toHaveURL(/\/app\/practice\/preptest$/)
-    await expect(page.getByRole("heading", { name: "PrepTests", level: 2 })).toBeVisible()
     await expect(page.getByRole("heading", { name: /Start your PrepTest/i })).toBeVisible()
     await page.screenshot({ path: `${artifacts}/preptest-00-list.png`, fullPage: true })
 
@@ -28,7 +27,7 @@ test.describe("Practice PrepTest flow", () => {
 
   test("preview does not unlock the rest of /app", async ({ page }) => {
     await page.goto("/app/practice/preptest")
-    await expect(page.getByRole("heading", { name: "PrepTests", level: 2 })).toBeVisible()
+    await expect(page.getByRole("heading", { name: /Start your PrepTest/i })).toBeVisible()
     await page.goto("/app")
     await expect(page).toHaveURL(/\/login/)
   })

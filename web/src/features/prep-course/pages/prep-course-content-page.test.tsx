@@ -126,6 +126,10 @@ describe("PrepCourseContentPage", () => {
     expect(within(moduleSidebar).getByText("Module Two")).toBeInTheDocument()
 
     expect(screen.getByText("Section Alpha")).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: /Lesson A/i })).not.toBeInTheDocument()
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole("button", { name: /Section Alpha/i }))
     expect(screen.getByRole("link", { name: /Lesson A/i })).toHaveAttribute(
       "href",
       "/app/prep-course/prep-course/lesson-a",
@@ -186,8 +190,10 @@ describe("PrepCourseContentPage", () => {
     )
 
     await screen.findByText("Section Alpha")
+    await user.click(screen.getByRole("button", { name: /Section Alpha/i }))
     await user.click(screen.getByRole("button", { name: /Module Two/i }))
     expect(await screen.findByText("Section Beta")).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: /Section Beta/i }))
     expect(screen.getByRole("link", { name: /Lesson B/i })).toBeInTheDocument()
   })
 
@@ -219,6 +225,7 @@ describe("PrepCourseContentPage", () => {
       },
     })
 
+    const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={["/app/prep-course/prep-course"]}>
         <Routes>
@@ -226,6 +233,9 @@ describe("PrepCourseContentPage", () => {
         </Routes>
       </MemoryRouter>,
     )
+
+    await screen.findByText("Section Alpha")
+    await user.click(screen.getByRole("button", { name: /Section Alpha/i }))
 
     const lessonALink = await screen.findByRole("link", { name: /Lesson A/i })
     expect(within(lessonALink).getByLabelText("Completed")).toBeInTheDocument()
@@ -279,7 +289,7 @@ describe("PrepCourseContentPage", () => {
     )
 
     await screen.findByText("Section Alpha")
-    expect(screen.getByRole("link", { name: /Lesson A/i })).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: /Lesson A/i })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Expand this Sections" }))
     expect(screen.getByRole("link", { name: /Lesson A/i })).toBeInTheDocument()

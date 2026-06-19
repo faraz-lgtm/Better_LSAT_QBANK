@@ -23,7 +23,7 @@ export function mapOverviewToDashboardStats(
     {
       id: "drill-accuracy",
       value: overview.drillAccuracyPct != null ? `${overview.drillAccuracyPct}%` : "—",
-      label: "Drill Accuracy",
+      label: "Overall Accuracy",
       badge: overview.drillAccuracyPct != null ? "Drills" : undefined,
     },
     {

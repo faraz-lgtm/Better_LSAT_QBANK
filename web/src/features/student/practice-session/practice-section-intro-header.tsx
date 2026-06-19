@@ -21,7 +21,7 @@ type PracticeSectionIntroHeaderProps = {
 }
 
 const toolGroupClass =
-  "flex h-[52px] items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-3"
+  "flex h-[52px] items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-[13px]"
 const toolTextBtnClass =
   "flex size-7 items-center justify-center rounded text-xs font-bold text-[#666d80] transition hover:bg-[#eceff3] hover:text-[#062357]"
 
@@ -40,49 +40,52 @@ function PracticeSectionIntroHeader({
   finishButton,
 }: PracticeSectionIntroHeaderProps) {
   return (
-    <header className="practice-session-header flex shrink-0 items-center gap-3 border-b border-[#dfe1e7] bg-white px-5 py-4 md:gap-4 md:px-8">
-      <p
-        className="min-w-0 shrink-0 text-lg font-bold leading-tight text-[#062357] md:text-xl"
-        title={title}
-      >
-        {title}
-      </p>
-      <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2 md:gap-3">
-        <div className={cn(toolGroupClass, "gap-1")}>
-          <button type="button" className={toolTextBtnClass} aria-label="Text size" onClick={onFontSize}>
-            Aa
-            <span className="sr-only"> ({fontScale}x)</span>
-          </button>
-          <button
-            type="button"
-            className={toolTextBtnClass}
-            aria-label="Line spacing"
-            onClick={onLineSpacing}
-          >
-            <List className="size-4" strokeWidth={2} aria-hidden />
-          </button>
-          <button
-            type="button"
-            className={cn(
-              toolTextBtnClass,
-              "underline",
-              toolMode === "underline" && "bg-[#eceff3] text-[#062357]",
-            )}
-            aria-label="Underline"
-            aria-pressed={toolMode === "underline"}
-            onClick={onUnderline}
-          >
-            U
-          </button>
+    <header className="practice-session-header flex h-[80px] w-full shrink-0 items-center border-b border-[#dfe1e7] bg-[#eceff3] px-6 py-3">
+      <div className="flex w-full min-w-0 items-center gap-6">
+        <p
+          className="flex h-[52px] min-w-0 flex-1 items-center truncate text-[20px] font-bold leading-[1.35] text-[#062357]"
+          title={title}
+        >
+          {title}
+        </p>
+        <div className="flex shrink-0 items-center gap-[24px]">
+          <div className={cn(toolGroupClass, "gap-1")}>
+            <button type="button" className={toolTextBtnClass} aria-label="Text size" onClick={onFontSize}>
+              Aa
+              <span className="sr-only"> ({fontScale}x)</span>
+            </button>
+            <button
+              type="button"
+              className={toolTextBtnClass}
+              aria-label="Line spacing"
+              onClick={onLineSpacing}
+            >
+              <List className="size-4" strokeWidth={2} aria-hidden />
+            </button>
+            <button
+              type="button"
+              className={cn(
+                toolTextBtnClass,
+                "underline",
+                toolMode === "underline" && "bg-[#eceff3] text-[#062357]",
+              )}
+              aria-label="Underline"
+              aria-pressed={toolMode === "underline"}
+              onClick={onUnderline}
+            >
+              U
+            </button>
+          </div>
+          <PracticeSessionTimer
+            label={timerLabel}
+            displaySeconds={timerDisplaySeconds}
+            paused={timerPaused}
+            onTogglePause={onToggleTimerPause}
+            progress={timerProgress}
+            showClockIcon={false}
+          />
+          {finishButton}
         </div>
-        <PracticeSessionTimer
-          label={timerLabel}
-          displaySeconds={timerDisplaySeconds}
-          paused={timerPaused}
-          onTogglePause={onToggleTimerPause}
-          progress={timerProgress}
-        />
-        {finishButton}
       </div>
     </header>
   )

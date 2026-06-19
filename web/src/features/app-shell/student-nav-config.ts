@@ -139,6 +139,16 @@ export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBre
     return crumbs
   }
 
+  if (pathname === "/app/practice/drills/lr/new") {
+    crumbs.push({ label: "LR Drills" })
+    return crumbs
+  }
+
+  if (pathname === "/app/practice/drills/rc/new") {
+    crumbs.push({ label: "RC Drills" })
+    return crumbs
+  }
+
   if (pathname.startsWith("/app/prep-course/") && pathname !== "/app/prep-course") {
     crumbs.push({ label: "Prep Course", href: "/app/prep-course" })
     crumbs.push({ label: "Course Content" })
@@ -163,9 +173,11 @@ export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBre
 export function getStudentPageTitle(pathname: string, search = ""): string | null {
   if (isDashboardActive(pathname)) return "Dashboard"
   if (isPracticePrepTestHub(pathname)) return null
+  if (pathname.startsWith("/app/prep-course/") && pathname !== "/app/prep-course") return null
   if (pathname.startsWith("/app/prep-course")) return "Prep Course"
   if (pathname.startsWith("/app/learn")) return "Explanations"
-  if (pathname.startsWith("/app/analytics/preptests/results/")) return "PrepTest"
+  if (pathname.startsWith("/app/analytics/preptests/results/")) return null
+  if (pathname === "/app/practice/drills/lr/new" || pathname === "/app/practice/drills/rc/new") return null
 
   const activeItem = findActiveNavItem(pathname, search)
   if (activeItem) return activeItem.label

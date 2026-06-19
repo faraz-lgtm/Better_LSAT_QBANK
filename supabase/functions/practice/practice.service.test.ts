@@ -869,6 +869,37 @@ Deno.test('listPrepTestPool prefers awaiting blind review over a newer open prep
   assertEquals(row?.scaledScore, 162)
 })
 
+Deno.test('listPrepTestPool blind_review filter returns only tests awaiting blind review', async () => {
+  const completedAwaitingBr = baseSession({
+    id: 'pt-sess-done',
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-900',
+    completed_at: '2026-01-03T00:00:00Z',
+    scaled_score: 162,
+    metadata: { blindReviewActive: true },
+  })
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserSessionsForPrepTests: async () => [
+        baseSession({
+          id: 'pt-sess-open',
+          kind: 'PREPTEST',
+          prep_test_id: 'pt-900',
+          started_at: '2026-01-04T00:00:00Z',
+          completed_at: null,
+        }),
+        completedAwaitingBr,
+      ],
+      listUserSessionsForPrepTest: async () => [completedAwaitingBr],
+    }) as never,
+  })
+  const out = await service.listPrepTestPool('user-1', { filter: 'blind_review' })
+  assertEquals(out.prepTests.length, 1)
+  assertEquals(out.prepTests[0]!.id, 'pt-900')
+  assertEquals(out.prepTests[0]!.blindReviewStatus, 'in_progress')
+  assertEquals(out.statusCounts.blind_review, 1)
+})
+
 Deno.test('listPrepTestPool shows completed when latest attempt finished blind review', async () => {
   const olderAwaitingBr = baseSession({
     id: 'pt-sess-old-br',

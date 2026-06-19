@@ -9,6 +9,7 @@ type PracticeSessionTimerProps = {
   onReset?: () => void
   progress: number
   displayClassName?: string
+  showClockIcon?: boolean
 }
 
 /** Figma `18034:12885` — elapsed timer pill */
@@ -20,10 +21,12 @@ function PracticeSessionTimer({
   onReset,
   progress,
   displayClassName,
+  showClockIcon = true,
 }: PracticeSessionTimerProps) {
   const pct = Math.min(100, Math.max(0, progress * 100))
-  const isRemaining = label === "Remaining"
-  const timerWidthClass = isRemaining ? "w-[200px]" : "w-[179px]"
+  const isCountdown =
+    label === "Remaining" || label === "Time Left" || label === "Time Left:"
+  const timerWidthClass = isCountdown ? "w-[213px]" : "w-[189px]"
 
   return (
     <div
@@ -33,23 +36,25 @@ function PracticeSessionTimer({
       )}
     >
       <div className="flex w-full flex-col gap-1.5 overflow-hidden">
-        <div className="flex items-center gap-1.5">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            className="size-4 shrink-0 text-[#666d80]"
-            aria-hidden
-          >
-            <path
-              d="M8 14C11.3137 14 14 11.3137 14 8C14 4.68629 11.3137 2 8 2C4.68629 2 2 4.68629 2 8C2 11.3137 4.68629 14 8 14Z"
-              stroke="currentColor"
-              strokeWidth="1.33333"
-            />
-            <path d="M8 5V8L10 9" stroke="currentColor" strokeWidth="1.33333" strokeLinecap="round" />
-          </svg>
+        <div className="flex items-center gap-2.5">
+          {showClockIcon ? (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              className="size-4 shrink-0 text-[#666d80]"
+              aria-hidden
+            >
+              <path
+                d="M8 14C11.3137 14 14 11.3137 14 8C14 4.68629 11.3137 2 8 2C4.68629 2 2 4.68629 2 8C2 11.3137 4.68629 14 8 14Z"
+                stroke="currentColor"
+                strokeWidth="1.33333"
+              />
+              <path d="M8 5V8L10 9" stroke="currentColor" strokeWidth="1.33333" strokeLinecap="round" />
+            </svg>
+          ) : null}
           <span className="shrink-0 text-[14px] font-medium leading-none tracking-[0.02em] text-[#666d80]">
             {label}
           </span>
@@ -90,7 +95,7 @@ function PracticeSessionTimer({
             ) : null}
             <button
               type="button"
-              className="inline-flex size-4 items-center justify-center text-[#062357] transition hover:opacity-80"
+              className="inline-flex size-6 shrink-0 items-center justify-center rounded-lg px-1 pt-1 text-[#666d80] transition hover:text-[#062357]"
               aria-label={paused ? "Resume timer" : "Pause timer"}
               onClick={onTogglePause}
             >
@@ -121,8 +126,20 @@ function PracticeSessionTimer({
                   className="size-4"
                   aria-hidden
                 >
-                  <path d="M5.5 3.5V12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  <path d="M10.5 3.5V12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <path
+                    d="M11.2495 4.00009H9.74951C9.3353 4.00009 8.99951 4.22395 8.99951 4.50009V11.5001C8.99951 11.7762 9.3353 12.0001 9.74951 12.0001H11.2495C11.6637 12.0001 11.9995 11.7762 11.9995 11.5001V4.50009C11.9995 4.22395 11.6637 4.00009 11.2495 4.00009Z"
+                    stroke="currentColor"
+                    strokeWidth="1.33333"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M6.24951 4.00009H4.74951C4.3353 4.00009 3.99951 4.22395 3.99951 4.50009V11.5001C3.99951 11.7762 4.3353 12.0001 4.74951 12.0001H6.24951C6.66373 12.0001 6.99951 11.7762 6.99951 11.5001V4.50009C6.99951 4.22395 6.66373 4.00009 6.24951 4.00009Z"
+                    stroke="currentColor"
+                    strokeWidth="1.33333"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               )}
             </button>

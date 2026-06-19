@@ -38,19 +38,24 @@ function PracticeQuestionStem({
   if (isActiveDrill) {
     return (
       <div className="shrink-0 border-b border-[#dfe1e7] bg-white px-3 py-3">
-        <div className="flex items-start gap-3">
+        <div className="flex items-start justify-between gap-3">
           <PracticeAnnotatedContent
             regionKey={regionKey}
             html={html}
             findQuery={findQuery}
             scrollAnchor
             as="div"
-            className="min-w-0 flex-1 text-lg leading-normal text-[#0d0d12] [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
+            className="min-w-0 flex-1 text-lg leading-[1.35] text-[#0d0d12] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-7 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
             toolMode={toolMode}
             onMouseUp={onContentMouseUp}
             onClickCapture={onContentClick}
           />
-          <PracticeQuestionFlagButton flagged={flagged} onToggle={onToggleFlag} disabled={flagsDisabled} />
+          <PracticeQuestionFlagButton
+            flagged={flagged}
+            onToggle={onToggleFlag}
+            disabled={flagsDisabled}
+            className="size-9 rounded-[10px]"
+          />
         </div>
       </div>
     )

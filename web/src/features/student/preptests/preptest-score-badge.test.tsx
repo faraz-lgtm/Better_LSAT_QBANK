@@ -32,6 +32,6 @@ describe("AttemptScoreBox", () => {
       />,
     )
     expect(screen.getByText("139", { selector: "span.font-bold" })).toBeInTheDocument()
-    expect(screen.getByText("139 BR")).toBeInTheDocument()
+    expect(screen.getByText(/139 BR/)).toBeInTheDocument()
   })
 })

@@ -1,163 +1,276 @@
-import type { ReactNode } from "react"
-import { FileText, FolderOpen, List } from "lucide-react"
+import { ClipboardList, EyeOff } from "lucide-react"
+
+
 
 import type { BlindReviewAnswerView } from "@/features/student/practice-session/practice-blind-review-answer-toggle"
+
 import {
+
   PracticeBlindReviewSectionSelect,
+
   type BlindReviewSectionOption,
+
 } from "@/features/student/practice-session/practice-blind-review-section-select"
+
 import { PracticeSessionToolbar } from "@/features/student/practice-session/practice-session-toolbar"
+
 import type { HighlightColor, PracticeToolMode } from "@/features/student/practice-session/practice-session-types"
+
 import { cn } from "@/lib/utils"
 
+
+
 type PracticeBlindReviewSessionHeaderProps = {
+
   prepTestLabel: string
+
   sectionOptions: BlindReviewSectionOption[]
+
   activeSectionSessionId: string | null
+
   onSelectSection: (sectionSessionId: string) => void
+
   questionRef: string
+
   actualScoreLabel: string
+
   answerView: BlindReviewAnswerView
+
   activeColor: HighlightColor | null
+
   toolMode: PracticeToolMode
+
   fontScale: number
+
+  lineSpacing?: number
+
   boldEnabled: boolean
+
   italicEnabled: boolean
+
   onSelectColor: (color: HighlightColor) => void
+
   onEraser: () => void
+
   onUnderline: () => void
+
   onFontSize: () => void
+
+  onLineSpacing?: () => void
+
   onToggleBold: () => void
+
   onToggleItalic: () => void
+
   notesOpen: boolean
+
   notesEnabled: boolean
+
   onToggleNotes: () => void
-  finishButton: ReactNode
+
+  onExitSection: () => void
+
+  exiting?: boolean
+
 }
 
-const toolTextBtnClass =
-  "flex size-7 items-center justify-center rounded text-xs font-bold text-[#666d80] transition hover:bg-[#eceff3] hover:text-[#062357]"
+
 
 function PracticeBlindReviewSessionHeader({
+
   prepTestLabel,
+
   sectionOptions,
+
   activeSectionSessionId,
+
   onSelectSection,
+
   questionRef,
+
   actualScoreLabel,
+
   answerView,
+
   activeColor,
+
   toolMode,
+
   fontScale,
+
+  lineSpacing,
+
   boldEnabled,
+
   italicEnabled,
+
   onSelectColor,
+
   onEraser,
+
   onUnderline,
+
   onFontSize,
+
+  onLineSpacing,
+
   onToggleBold,
+
   onToggleItalic,
+
   notesOpen,
+
   notesEnabled,
+
   onToggleNotes,
-  finishButton,
+
+  onExitSection,
+
+  exiting = false,
+
 }: PracticeBlindReviewSessionHeaderProps) {
+
   const blindReviewView = answerView === "blind_review"
-  const notesLayout = notesOpen && notesEnabled
+
+
 
   return (
-    <header
-      className={cn(
-        "practice-session-header flex shrink-0 border-b border-[#dfe1e7] bg-white px-4 py-3 md:px-6",
-        notesLayout ? "flex-col gap-2" : "items-center gap-3 md:gap-4",
-      )}
-    >
-      <div className="flex w-full flex-wrap items-center gap-3">
-        <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-2">
-          <p className="truncate text-lg font-bold leading-tight text-[#062357] md:text-xl">{prepTestLabel}</p>
+
+    <header className="practice-session-header shrink-0 border-b border-[#dfe1e7] bg-[#f5f9ff] px-4 py-3 md:px-6">
+
+      <div className="mx-auto flex w-full max-w-[1440px] items-center gap-3 md:gap-4">
+
+        <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-2.5">
+
+          <p className="shrink-0 text-xl font-bold leading-[1.35] text-[#062357]">{prepTestLabel}</p>
+
           <PracticeBlindReviewSectionSelect
+
             sections={sectionOptions}
+
             activeSectionSessionId={activeSectionSessionId}
+
             onSelect={onSelectSection}
+
           />
-          {notesLayout ? (
-            <span className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[#0d47a1]/25 bg-[#edf3ff] px-3 text-xs font-semibold text-[#0d47a1]">
-              <FolderOpen className="size-3.5 shrink-0" aria-hidden />
-              Container
-            </span>
-          ) : null}
+
+          <span className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-[#fff3ea] px-3 text-xs font-medium tracking-[0.02em] text-[#ff6f00] md:px-4">
+
+            <EyeOff className="size-3 shrink-0" aria-hidden />
+
+            Blind Review
+
+          </span>
+
+          <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-[#fff6e0] px-3 text-xs font-medium tracking-[0.02em] text-[#956321] md:px-4">
+
+            {actualScoreLabel}
+
+          </span>
+
+          <span className="min-w-0 truncate text-xs font-medium tracking-[0.02em] text-[#666d80]">{questionRef}</span>
+
         </div>
 
-        {notesLayout ? (
-          <p className="mx-auto hidden text-xs font-medium tracking-[0.02em] text-[#818898] lg:block">
-            <span className="text-[#666d80]">{actualScoreLabel}</span>{" "}
-            <span className="text-[#062357]">{questionRef}</span>
-          </p>
-        ) : null}
 
-        <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2 md:gap-3">
+
+        <div className="flex shrink-0 items-center gap-3 md:gap-4">
+
           {blindReviewView ? (
+
             <PracticeSessionToolbar
+
               activeColor={activeColor}
+
               toolMode={toolMode}
+
               fontScale={fontScale}
+
+              lineSpacing={lineSpacing}
+
               boldEnabled={boldEnabled}
+
               italicEnabled={italicEnabled}
+
               onSelectColor={onSelectColor}
+
               onEraser={onEraser}
+
               onUnderline={onUnderline}
+
               onFontSize={onFontSize}
+
+              onLineSpacing={onLineSpacing}
+
               onToggleBold={onToggleBold}
+
               onToggleItalic={onToggleItalic}
+
             />
-          ) : (
-            <div className="flex h-[52px] items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-3">
-              <button type="button" className={toolTextBtnClass} aria-label="Text size" onClick={onFontSize}>
-                Aa
-                <span className="sr-only"> ({fontScale}x)</span>
-              </button>
-              <button type="button" className={toolTextBtnClass} aria-label="Line spacing">
-                <List className="size-4" strokeWidth={2} aria-hidden />
-              </button>
-              <button
-                type="button"
-                className={cn(toolTextBtnClass, "underline", toolMode === "underline" && "bg-[#eceff3] text-[#062357]")}
-                aria-label="Underline"
-                aria-pressed={toolMode === "underline"}
-                onClick={onUnderline}
-              >
-                U
-              </button>
-            </div>
-          )}
+
+          ) : null}
+
+
 
           <button
+
             type="button"
+
             onClick={onToggleNotes}
+
             disabled={!notesEnabled}
+
             className={cn(
-              "inline-flex h-[52px] items-center gap-2 rounded-2xl border px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45",
+
+              "inline-flex h-[52px] shrink-0 items-center gap-2 rounded-2xl border px-3 text-base font-medium tracking-[0.02em] transition-colors disabled:cursor-not-allowed disabled:opacity-45",
+
               notesOpen && notesEnabled
-                ? "border-[#0d47a1] bg-[#0d47a1] text-white"
-                : "border-[#dfe1e7] bg-white text-[#062357] hover:bg-[#f6f8fa]",
+
+                ? "border-[#0d47a1] bg-[#edf3ff] text-[#0d47a1]"
+
+                : "border-[#dfe1e7] bg-white text-[#666d80] hover:bg-[#f6f8fa]",
+
             )}
+
             aria-pressed={notesOpen && notesEnabled}
+
           >
-            <FileText className="size-4 shrink-0" aria-hidden />
-            Notes
+
+            <ClipboardList className="size-5 shrink-0" aria-hidden />
+
+            <span className="hidden sm:inline">Notes</span>
+
           </button>
-          {finishButton}
+
+
+
+          <button
+
+            type="button"
+
+            className="inline-flex h-[52px] shrink-0 items-center justify-center rounded-2xl border border-[#0d47a1] bg-white px-3 text-base font-medium tracking-[0.02em] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#edf3ff] disabled:opacity-50"
+
+            onClick={onExitSection}
+
+            disabled={exiting}
+
+          >
+
+            {exiting ? "Exiting…" : "Exit Section"}
+
+          </button>
+
         </div>
+
       </div>
 
-      {notesLayout ? (
-        <p className="text-xs font-medium tracking-[0.02em] text-[#818898] lg:hidden">
-          <span className="text-[#666d80]">{actualScoreLabel}</span>{" "}
-          <span className="text-[#062357]">{questionRef}</span>
-        </p>
-      ) : null}
     </header>
+
   )
+
 }
 
+
+
 export { PracticeBlindReviewSessionHeader }
+

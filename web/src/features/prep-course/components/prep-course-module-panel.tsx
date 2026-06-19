@@ -59,11 +59,11 @@ function PrepCourseModulePanel({
     moduleSectionIds.length > 0 && moduleSectionIds.every((id) => expandedSectionIds.has(id))
 
   const statsBlock = (
-    <div className="flex flex-col items-end justify-center gap-3.5">
+    <div className="flex flex-col items-end justify-center gap-[14px]">
       <div className="text-right text-xs leading-[1.5] tracking-[0.24px]">
-        <p className="text-[#666d80]">
+        <p className="text-[color:var(--greyscale-500)]">
           Total Time:{" "}
-          <span className="font-semibold text-[#666d80]">{formatTotalHoursLabel(totalMinutes)}</span>
+          <span className="font-semibold text-[color:var(--greyscale-500)]">{formatTotalHoursLabel(totalMinutes)}</span>
         </p>
         <p className="mt-1.5 text-[#0d47a1]">
           {completedCount} of {lessonCount} Lessons completed • {formatRemainingHoursLabel(remainingMinutes)}
@@ -79,8 +79,8 @@ function PrepCourseModulePanel({
   )
 
   const titleRow = (
-    <div className="flex min-w-0 items-center gap-3">
-      <ProgressRing value={progressPercent} size="sm" ringBg="#f3f7ff" />
+    <div className="flex h-12 min-w-0 items-center gap-3">
+      <ProgressRing value={progressPercent} size="sm" ringBg="var(--primary-0)" />
       <h2 className="min-w-0 truncate text-2xl font-bold leading-[1.3] text-[#062357]" title={module.title}>
         {module.title}
       </h2>
@@ -88,13 +88,13 @@ function PrepCourseModulePanel({
   )
 
   const bookmarkRow = (
-    <div className="flex items-center gap-2">
+    <div className="flex h-8 items-center gap-2">
       <Bookmark
-        className={cn("size-4 shrink-0", moduleBookmarked ? "fill-[#0d47a1] text-[#0d47a1]" : "text-[#666d80]")}
+        className={cn("size-4 shrink-0", moduleBookmarked ? "fill-[#0d47a1] text-[#0d47a1]" : "text-[color:var(--greyscale-500)]")}
         strokeWidth={2}
         aria-hidden
       />
-      <span className="text-xs font-medium tracking-[0.24px] text-[#666d80]">Bookmark</span>
+      <span className="text-xs font-medium tracking-[0.24px] text-[color:var(--greyscale-500)]">Bookmark</span>
       <Switch
         size="sm"
         checked={moduleBookmarked}
@@ -107,9 +107,9 @@ function PrepCourseModulePanel({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="shrink-0 overflow-hidden rounded-tl-2xl border border-b-0 border-[#dfe1e7] bg-[#f3f7ff]">
-        <div className="flex flex-wrap items-start justify-between gap-4 p-6">
-          <div className="min-w-0 flex-1">
+      <div className="shrink-0 overflow-hidden rounded-tl-[16px] border border-b-0 border-[color:var(--greyscale-100)] bg-[var(--primary-0)]">
+        <div className="flex flex-wrap items-start justify-between gap-4 p-[24px]">
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
             {flattenSections && flatSection ? (
               <button
                 type="button"
@@ -122,15 +122,15 @@ function PrepCourseModulePanel({
             ) : (
               titleRow
             )}
-            <div className="mt-2">{bookmarkRow}</div>
+            {bookmarkRow}
           </div>
           <div className="shrink-0">{statsBlock}</div>
         </div>
       </div>
 
-      <div className="practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto border border-t-0 border-[#dfe1e7] bg-white">
+      <div className="practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto border border-t-0 border-[color:var(--greyscale-100)] bg-white">
         {flattenSections && flatSection && flatExpanded ? (
-          <div className="space-y-0.5 px-4 pb-4 pt-2">
+          <div className="bg-white">
             {flatSection.lessons.map((lesson) => (
               <PrepCourseLessonRow
                 key={lesson.id}
