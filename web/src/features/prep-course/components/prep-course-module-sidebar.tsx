@@ -27,13 +27,13 @@ function PrepCourseModuleSidebar({
 }: PrepCourseModuleSidebarProps) {
   return (
     <aside
-      className="flex min-h-0 w-full shrink-0 flex-col rounded-br-2xl rounded-tr-2xl border border-[#dfe1e7] bg-[#f3f7ff] lg:w-[272px]"
+      className="flex min-h-0 w-full shrink-0 flex-col rounded-br-[16px] rounded-tr-[16px] border border-[color:var(--greyscale-100)] border-l-0 bg-[var(--primary-0)] pl-4 lg:w-[288px]"
       aria-label="Course modules"
     >
-      <div className="shrink-0 px-4 pt-6">
+      <div className="shrink-0 pt-6 pr-3">
         <h2 className="text-xl font-bold leading-[1.35] text-[#082c6b]">Course Modules</h2>
       </div>
-      <ul className="practice-session-scroll-hidden flex-1 space-y-2 overflow-y-auto p-4 pt-3">
+      <ul className="practice-session-scroll-hidden flex-1 space-y-2 overflow-y-auto py-3 pr-3">
         {modules.map((mod) => {
           const isActive = mod.id === selectedModuleId
           const lessons = moduleLessons(mod)
@@ -48,13 +48,17 @@ function PrepCourseModuleSidebar({
                 type="button"
                 onClick={() => onSelectModule(mod.id)}
                 className={cn(
-                  "flex h-[62px] w-full items-center gap-3 rounded-2xl p-3 text-left transition-colors",
+                  "flex h-[62px] w-full items-center gap-3 rounded-[16px] p-3 text-left transition-colors",
                   isActive
-                    ? "bg-[#edf3ff] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
+                    ? "max-w-[256px] bg-[var(--primary-25)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
                     : "hover:bg-white/60",
                 )}
               >
-                <ProgressRing value={progressPercent} size="sm" ringBg={isActive ? "#edf3ff" : "#f3f7ff"} />
+                <ProgressRing
+                  value={progressPercent}
+                  size="sm"
+                  ringBg={isActive ? "var(--primary-25)" : "var(--primary-0)"}
+                />
                 <div className="min-w-0 flex-1">
                   <p
                     className={cn(
@@ -65,12 +69,12 @@ function PrepCourseModuleSidebar({
                   >
                     {mod.title}
                   </p>
-                  <p className="text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#6d78b6]">
+                  <p className="text-xs font-normal leading-[1.5] tracking-[0.24px] text-[color:var(--primary-100)]">
                     {lessonCount} {lessonCount === 1 ? "Lesson" : "Lessons"}
                   </p>
                 </div>
                 {statusLabel && !isActive ? (
-                  <span className="shrink-0 text-center text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#6d78b6]">
+                  <span className="w-[46px] shrink-0 text-center text-xs font-normal leading-[1.5] tracking-[0.24px] text-[color:var(--primary-100)]">
                     {statusLabel === "Not Started" ? (
                       <>
                         Not

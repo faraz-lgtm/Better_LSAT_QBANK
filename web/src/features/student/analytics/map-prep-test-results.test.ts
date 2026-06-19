@@ -96,6 +96,9 @@ describe("mapPrepTestDetailToResults", () => {
     expect(out.rcSection.questions).toHaveLength(2)
     expect(out.rcSection.questions[0]?.title).toBe("PT 145  .  S2  .  Q1")
     expect(out.correctSummary).toBe("3/4 CORRECT (-1)")
+    expect(out.scaledScore).toBe(170)
+    expect(out.prediction).toBe(167)
+    expect(out.blindReview).toBe(170)
   })
 
   it("formats question ref labels like Figma PT 129  .  S1  .  Q19", () => {

@@ -53,6 +53,23 @@ export function annotationContainingRange(range: Range, container: HTMLElement):
   return null
 }
 
+/** Wrap range contents in `element`, using extractContents when surroundContents fails. */
+export function wrapRangeWithElement(range: Range, element: HTMLElement): boolean {
+  try {
+    range.surroundContents(element)
+    return true
+  } catch {
+    try {
+      const contents = range.extractContents()
+      element.appendChild(contents)
+      range.insertNode(element)
+      return true
+    } catch {
+      return false
+    }
+  }
+}
+
 export function rangeSpansPartialAnnotation(range: Range, container: HTMLElement): boolean {
   const fragment = range.cloneContents()
   const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_ELEMENT)

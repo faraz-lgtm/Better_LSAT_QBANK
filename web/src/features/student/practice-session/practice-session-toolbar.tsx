@@ -51,14 +51,11 @@ function PracticeSessionToolbar({
 }: PracticeSessionToolbarProps) {
   const isActiveDrill = variant === "active-drill"
   const swatches = isActiveDrill ? ACTIVE_DRILL_HIGHLIGHT_COLORS : HIGHLIGHT_COLORS
-  const toolGroupClass = cn(
-    "flex h-[52px] items-center rounded-2xl border border-[#dfe1e7] px-3",
-    isActiveDrill ? "bg-white" : "bg-[#f6f8fa]",
-  )
+  const toolGroupClass = "flex h-[52px] items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-3"
 
   return (
-    <div className={cn("flex min-w-0 flex-nowrap items-center", isActiveDrill ? "gap-2.5" : "gap-2")}>
-      <span className={cn("text-sm font-medium text-[#666d80]", isActiveDrill ? "inline" : "hidden xl:inline")}>
+    <div className={cn("flex min-w-0 flex-nowrap items-center", isActiveDrill ? "gap-2" : "gap-2")}>
+      <span className={cn("shrink-0 text-sm font-medium text-[#666d80]", isActiveDrill ? "inline" : "hidden xl:inline")}>
         Tools:
       </span>
       <div className={cn(toolGroupClass, "gap-1.5")}>

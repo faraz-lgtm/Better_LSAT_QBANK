@@ -79,8 +79,6 @@ function PrepCourseContentPage() {
 
         if (lessonLoc) {
           setExpandedSectionIds(new Set([lessonLoc.sectionId]))
-        } else if (normalized.modules[0]?.sections[0]) {
-          setExpandedSectionIds(new Set([normalized.modules[0].sections[0].id]))
         }
       } catch (e) {
         if (!alive) return
@@ -187,8 +185,8 @@ function PrepCourseContentPage() {
   }
 
   return (
-    <StudentMain layout="locked">
-      <section className="prep-course-shell-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+    <StudentMain layout="locked" contentClassName="bg-[var(--greyscale-25)] pb-[24px]">
+      <section className="prep-course-shell-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-[16px] border border-[color:var(--greyscale-100)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
         <div className="shrink-0">
           <PrepCourseContentHeader
             stats={stats}
@@ -196,8 +194,8 @@ function PrepCourseContentPage() {
             onToggleShowBookmarksOnly={setShowBookmarksOnly}
           />
         </div>
-        <div className="flex min-h-0 flex-1 flex-col p-6">
-          <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:items-stretch">
+        <div className="flex min-h-0 flex-1 flex-col bg-[var(--greyscale-0)] p-[24px]">
+          <div className="flex min-h-0 flex-1 flex-col gap-0 lg:flex-row lg:items-stretch">
             {selectedModule ? (
               <PrepCourseModulePanel
                 course={course}
@@ -217,13 +215,7 @@ function PrepCourseContentPage() {
               modules={visibleModules}
               selectedModuleId={selectedModuleId}
               completedLessonSlugs={completedLessonSlugs}
-              onSelectModule={(id) => {
-                setSelectedModuleId(id)
-                const mod = curriculum.modules.find((m) => m.id === id)
-                if (mod?.sections[0]) {
-                  setExpandedSectionIds(new Set([mod.sections[0].id]))
-                }
-              }}
+              onSelectModule={setSelectedModuleId}
             />
           </div>
         </div>

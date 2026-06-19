@@ -30,3 +30,23 @@ export function sectionSessionHref(
 export function isRetakePrepTestAttempt(searchParams: URLSearchParams): boolean {
   return searchParams.get("retake") === "1"
 }
+
+export function prepTestHeaderLabel(moduleId: string | null, prepTestTitle: string | null): string {
+  const moduleMatch = moduleId?.match(/^LSAC(\d+)/i)
+  if (moduleMatch) return `PT${moduleMatch[1]}`
+
+  const trimmed = prepTestTitle?.trim()
+  if (trimmed) {
+    const ptMatch = trimmed.match(/^PT\s*(\d+)/i)
+    if (ptMatch) return `PT${ptMatch[1]}`
+    const prepMatch = trimmed.match(/PrepTest\s+(\d+)/i)
+    if (prepMatch) return `PT${prepMatch[1]}`
+    if (/^PrepTest\s*/i.test(trimmed)) return trimmed.replace(/^PrepTest\s*/i, "PT").replace(/\s+/g, "")
+  }
+
+  return "PrepTest"
+}
+
+export function isPrepTestSectionIntroActive(searchParams: URLSearchParams, blindReviewMode: boolean): boolean {
+  return Boolean(searchParams.get("prepTestId") && !blindReviewMode && searchParams.get("started") !== "1")
+}

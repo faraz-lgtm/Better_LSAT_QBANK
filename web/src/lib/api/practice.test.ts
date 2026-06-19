@@ -240,7 +240,7 @@ describe("createPracticeApi", () => {
         total: 1,
         page: 2,
         pageSize: 10,
-        statusCounts: { all: 5, fresh: 3, in_progress: 1, completed: 1 },
+        statusCounts: { all: 5, fresh: 3, in_progress: 1, completed: 1, blind_review: 1 },
       },
       error: null,
     })

@@ -35,7 +35,7 @@ function RcNewDrillPage() {
   }, [analyticsApi])
 
   return (
-    <StudentMain className="max-w-none bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))] py-6 md:py-8">
+    <StudentMain className="bg-[var(--primary-0)]" contentClassName="bg-[var(--primary-0)]">
       <DrillConfigForm
         sectionType="RC"
         initialQuestionTypeId={questionTypeId}

@@ -77,13 +77,13 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
   const lastCrumbIndex = crumbs.length - 1
 
   return (
-    <header className="student-topbar sticky top-0 z-30 shrink-0 border-b border-[#dfe1e7] bg-[#f3f7ff]">
-      <div className="student-shell-top-row flex items-center">
-        <div className={cn(STUDENT_PAGE_CONTAINER_CLASS, STUDENT_SHELL_GUTTER_CLASS, "flex w-full items-center justify-between gap-4")}>
+    <header className="student-topbar sticky top-0 z-30 w-full shrink-0 border-b border-[color:var(--greyscale-100)] bg-[var(--primary-0)]">
+      <div className={cn(STUDENT_SHELL_GUTTER_CLASS, STUDENT_PAGE_CONTAINER_CLASS, "student-shell-top-row flex w-full items-center")}>
+        <div className="flex w-full min-w-0 items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
-            className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-[#dfe1e7] bg-[#edf3ff] text-[#0d47a1] lg:hidden"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--greyscale-100)] bg-[var(--primary-25)] text-[#0d47a1] lg:hidden"
             aria-label="Open navigation menu"
             onClick={onOpenMobileNav}
           >
@@ -124,11 +124,11 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
           </nav>
         </div>
 
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           {headerActions ? <div className="flex shrink-0 items-center">{headerActions}</div> : null}
           <button
             type="button"
-            className="inline-flex size-[46px] items-center justify-center rounded-[20px] bg-[#edf3ff] text-[#0d47a1]"
+            className="inline-flex size-[46px] items-center justify-center rounded-[20px] bg-[#edf3ff] text-[#062357]"
             aria-label="Notifications"
           >
             <Bell className="size-6" strokeWidth={1.75} />
@@ -137,7 +137,7 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
           <div ref={profileMenuRef} className="relative">
             <button
               type="button"
-              className="flex h-[60px] items-center gap-3 rounded-[20px] px-3 hover:bg-[#edf3ff]/60"
+              className="student-topbar-profile-btn flex max-h-14 items-center gap-3 rounded-[20px] px-3 py-1.5 hover:bg-[#edf3ff]/60"
               aria-label="Open profile menu"
               aria-haspopup="menu"
               aria-expanded={openProfileMenu}
@@ -157,7 +157,7 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
               />
             </button>
             {openProfileMenu ? (
-              <div className="absolute right-0 top-[calc(100%+8px)] z-30 min-w-[180px] rounded-2xl border border-[#dfe1e7] bg-[#edf3ff] p-2 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]">
+              <div className="absolute right-0 top-[calc(100%+8px)] z-30 min-w-[180px] rounded-2xl border border-[color:var(--greyscale-100)] bg-[var(--primary-25)] p-2 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]">
                 <button
                   type="button"
                   onClick={() => void handleLogout()}

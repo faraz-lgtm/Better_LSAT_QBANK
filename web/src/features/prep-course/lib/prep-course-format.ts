@@ -139,7 +139,7 @@ export function formatTotalHoursLabel(totalMinutes: number): string {
   if (totalMinutes < 60) return `${totalMinutes} min`
   const hours = Math.floor(totalMinutes / 60)
   const mins = totalMinutes % 60
-  if (mins === 0) return hours === 1 ? "1 hour" : `${hours} hours`
+  if (mins === 0) return hours === 1 ? "1 hr" : `${hours} hrs`
   return `${hours} hrs ${mins} min`
 }
 

@@ -95,8 +95,8 @@ describe("PracticePrepTestPage + section navigation", () => {
 
     expect(await screen.findByText(/Ready to begin your test/i)).toBeInTheDocument()
     expect(within(screen.getByRole("main")).getByText("PT 900")).toBeInTheDocument()
-    expect(screen.getByText("Control your practice pace")).toBeInTheDocument()
-    expect(screen.getByText("Select format")).toBeInTheDocument()
+    expect(screen.getByText("Control your Prep pace")).toBeInTheDocument()
+    expect(screen.getByText("Select Format")).toBeInTheDocument()
     expect(screen.getByRole("heading", { name: "Test Section" })).toBeInTheDocument()
     expect(screen.getByText("Section 1")).toBeInTheDocument()
     expect(screen.getByText("35:00")).toBeInTheDocument()
@@ -107,8 +107,8 @@ describe("PracticePrepTestPage + section navigation", () => {
     expect(mockStartSection).toHaveBeenCalledWith(
       expect.objectContaining({ sectionId: "sec-lr", timing: "35" }),
     )
-    expect(router.state.location.pathname).toBe("/app/practice/preptest/pt-900/section/sec-lr")
-    expect(router.state.location.search).toBe("?sessionId=section-sess-1")
+    expect(router.state.location.pathname).toBe("/app/practice/sections/session/section-sess-1")
+    expect(router.state.location.search).toBe("?prepTestId=pt-900")
   })
 
   it("shows only the first unlocked section during retake, same as a fresh attempt", async () => {
@@ -152,8 +152,8 @@ describe("PracticePrepTestPage + section navigation", () => {
     await screen.findByRole("button", { name: /Start Section/i })
     await user.click(screen.getByRole("button", { name: /Start Section/i }))
 
-    expect(router.state.location.pathname).toBe("/app/practice/preptest/pt-900/section/sec-lr")
-    expect(router.state.location.search).toBe("?sessionId=section-sess-1&retake=1")
+    expect(router.state.location.pathname).toBe("/app/practice/sections/session/section-sess-1")
+    expect(router.state.location.search).toBe("?prepTestId=pt-900&retake=1")
   })
 
   it("hides the action button on completed sections during an in-progress attempt", async () => {

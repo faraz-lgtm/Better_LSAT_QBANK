@@ -36,7 +36,7 @@ function StudentAppShell() {
       <div
         className={cn(
           "flex h-svh min-h-0 overflow-hidden",
-          immersive ? "bg-[var(--primary-900,#041A44)]" : "bg-[#f3f7ff]",
+          "flex h-svh min-h-0 overflow-hidden bg-[var(--primary-0)]",
         )}
       >
         {immersive ? null : (
@@ -46,7 +46,7 @@ function StudentAppShell() {
           {immersive ? null : (
             <StudentAppHeader onOpenMobileNav={() => setMobileNavOpen(true)} headerActions={headerActions} />
           )}
-          <div className="flex h-0 min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex h-0 min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <Outlet />
           </div>
         </div>

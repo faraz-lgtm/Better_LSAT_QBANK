@@ -26,6 +26,23 @@ describe("ExplanationChoiceList", () => {
     expect(screen.getByText("Option explanation")).toBeInTheDocument()
   })
 
+  it("shows Figma-style check badge when correct answer is revealed", () => {
+    render(
+      <ExplanationChoiceList
+        choices={[{ id: "A", index: 1, text: "<p>Choice A</p>" }]}
+        correctChoiceId="A"
+        showCorrect
+      />,
+    )
+
+    const button = screen.getByRole("button")
+    const row = button.parentElement
+    expect(row).toHaveClass("border-[#0d47a1]")
+    const letterBox = button.querySelector("span.flex.size-7")
+    expect(letterBox).toHaveClass("bg-[var(--secondary-100)]")
+    expect(letterBox?.querySelector("svg")).toBeInTheDocument()
+  })
+
   it("auto-expands initial choice from deep link", () => {
     render(
       <ExplanationChoiceList

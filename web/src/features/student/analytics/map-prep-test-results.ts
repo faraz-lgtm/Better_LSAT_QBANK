@@ -173,7 +173,7 @@ export function mapPrepTestDetailToResults(api: PrepTestSessionDetail): PrepTest
 
   return {
     totalQuestions: api.totalQuestions,
-    scaledScore: api.scaledScore,
+    scaledScore: api.blindReviewScore,
     correct,
     incorrect,
     correctSummary: `${correct}/${api.totalQuestions} CORRECT (-${incorrect})`,

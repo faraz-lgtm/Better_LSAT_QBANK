@@ -40,8 +40,9 @@ export type ExplanationQuestionDetailView = {
   routeKey: string
   /** e.g. PT 160 S1 P1 Q1 */
   headingCode: string
-  /** e.g. PrepTest 160 > Section 1 > … */
+  /** e.g. PrepTest 160 - Section 1 - Passage 1 - Question 1 */
   subtitleTrail: string
+  questionNumber: number
   passage: {
     displayNumber: number
     title: string
@@ -58,14 +59,14 @@ export type ExplanationQuestionDetailView = {
         label: string
         caption: string
         /** Meter + pill accent (Figma analytics difficulty). */
-        tone: "orange" | "red"
+        tone: "orange" | "red" | "teal"
       }
       passageDifficulty: {
         filled: number
         max: number
         label: string
         caption: string
-        tone: "orange" | "red"
+        tone: "orange" | "red" | "teal"
       }
     scoreBand: { headline: string; range: string; caption: string }
     answerPopularity: ExplanationAnswerPopularityRow[]

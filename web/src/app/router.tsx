@@ -51,6 +51,7 @@ import { AdminUserDetailPage } from "@/features/admin/pages/admin-user-detail-pa
 import { createUsersApi, type UserProfile } from "@/lib/api/users"
 import { getPostAuthDestination } from "@/lib/auth/post-auth-redirect"
 import { allowsPrepTestUnauthenticatedPreview } from "@/lib/dev/prep-test-ui-preview"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 function PublicOnly({ children }: { children: ReactElement }) {
@@ -97,8 +98,8 @@ function PublicOnly({ children }: { children: ReactElement }) {
           setProfile(nextProfile)
         })
         .catch(() => {
-          if (!alive) return
-          setProfile(null)
+          // Keep the existing profile on transient refetch failures (e.g. token refresh
+          // after edge function calls). Clearing profile here unmounts the whole app shell.
         })
     })
     return () => {
@@ -117,6 +118,7 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
   const location = useLocation()
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [authChecked, setAuthChecked] = useState(false)
 
   const studentPrepTestUiPreview =
     requiredRole === "student" &&
@@ -144,6 +146,8 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
       } catch {
         if (!alive) return
         setProfile(null)
+      } finally {
+        if (alive) setAuthChecked(true)
       }
     }
 
@@ -163,8 +167,7 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
           setProfile(nextProfile)
         })
         .catch(() => {
-          if (!alive) return
-          setProfile(null)
+          // Preserve profile during background refetches triggered by Supabase auth events.
         })
     })
     return () => {
@@ -183,7 +186,12 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
   }
   if (!profile) {
     if (studentPrepTestUiPreview) return children
-    return null
+    if (!authChecked) return null
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
+        <StudentPageLoader centered label="Loading…" />
+      </div>
+    )
   }
   if (requiredRole === "admin" && profile.role !== "admin" && profile.role !== "super_admin") {
     return <Navigate to="/app" replace />

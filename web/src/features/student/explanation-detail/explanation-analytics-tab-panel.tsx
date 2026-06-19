@@ -1,7 +1,5 @@
 import { Users } from "lucide-react"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ExplanationFiveBarMeter } from "@/features/student/explanation-detail/explanation-five-bar-meter"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
 import { cn } from "@/lib/utils"
 
@@ -9,16 +7,45 @@ type ExplanationAnalyticsTabPanelProps = {
   analytics: ExplanationQuestionDetailView["analytics"]
 }
 
-const cardSurface = "rounded-2xl border border-solid border-[color:var(--greyscale-100)] bg-white shadow-[var(--shadow-medium)]"
+const cardSurface =
+  "flex flex-col gap-6 rounded-[14px] border border-[color:var(--greyscale-100)] bg-white p-6 shadow-[0px_1px_1.5px_0px_rgba(0,0,0,0.1),0px_1px_1px_0px_rgba(0,0,0,0.1)]"
 
-function difficultyMeterFill(tone: "orange" | "red"): string {
-  return tone === "orange" ? "bg-[color:var(--rc-progress)]" : "bg-[#ef4444]"
+function difficultyBarColors(tone: "orange" | "red" | "teal"): { fill: string; text: string } {
+  if (tone === "red") return { fill: "bg-[#ef4444]", text: "text-[#ef4444]" }
+  if (tone === "teal") return { fill: "bg-[#0bbcc9]", text: "text-[#0bbcc9]" }
+  return { fill: "bg-[#0bbcc9]", text: "text-[#0bbcc9]" }
 }
 
-function difficultyPillClass(tone: "orange" | "red"): string {
-  return tone === "orange"
-    ? "bg-[var(--rc-row)] text-[color:var(--rc-header-text)] ring-1 ring-[color:var(--greyscale-100)]"
-    : "bg-red-50 text-red-600 ring-1 ring-red-100"
+function DifficultyMeterBadge({
+  filled,
+  max,
+  label,
+  tone,
+}: {
+  filled: number
+  max: number
+  label: string
+  tone: "orange" | "red" | "teal"
+}) {
+  const safe = Math.max(0, Math.min(max, Math.round(filled)))
+  const colors = difficultyBarColors(tone)
+
+  return (
+    <div className="flex h-10 w-[132px] items-center gap-2.5 rounded-[10px] bg-[var(--primary-0)] px-2.5">
+      <div className="flex items-center gap-1.5" role="img" aria-label={`${safe} of ${max} bars`}>
+        {Array.from({ length: max }, (_, i) => (
+          <span
+            key={i}
+            className={cn(
+              "h-4 w-1.5 shrink-0 rounded-full",
+              i < safe ? colors.fill : "bg-[#ced0e7]",
+            )}
+          />
+        ))}
+      </div>
+      <span className={cn("text-xs font-semibold tracking-[0.02em]", colors.text)}>{label}</span>
+    </div>
+  )
 }
 
 function DifficultyColumn({
@@ -34,185 +61,171 @@ function DifficultyColumn({
   max: number
   difficultyLabel: string
   caption: string
-  tone: "orange" | "red"
+  tone: "orange" | "red" | "teal"
 }) {
   return (
-    <div>
-      <p className="text-sm font-medium text-[color:var(--text)]">{label}</p>
-      <div className="mt-2 flex flex-wrap items-center gap-2.5">
-        <ExplanationFiveBarMeter filled={filled} max={max} fillClassName={difficultyMeterFill(tone)} />
-        <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", difficultyPillClass(tone))}>{difficultyLabel}</span>
-      </div>
-      <p className="mt-3 text-sm leading-relaxed text-[color:var(--text)]">{caption}</p>
+    <div className="flex max-w-[366px] flex-col gap-3">
+      <p className="m-0 text-base font-normal tracking-[0.02em] text-[#666d80]">{label}</p>
+      <DifficultyMeterBadge filled={filled} max={max} label={difficultyLabel} tone={tone} />
+      <p className="m-0 text-sm leading-5 text-[#4a5565]">{caption}</p>
     </div>
   )
 }
 
-function popularityCaption(total: number): string {
-  if (total <= 0) {
-    return "Percent of students who chose each answer (latest pick per student). No responses on the platform yet."
-  }
-  const students = total === 1 ? "1 student" : `${total} students`
-  return `Percent of ${students} who chose each answer (latest pick per student).`
-}
-
 function ExplanationAnalyticsTabPanel({ analytics }: ExplanationAnalyticsTabPanelProps) {
   const popularityTotal = analytics.answerPopularityTotal
-  return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      <div className="space-y-6 lg:col-span-2">
-        <Card className={cardSurface}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold text-[color:var(--color-student-heading)]">Difficulty</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-8">
-            <div className="grid gap-8 md:grid-cols-2 md:gap-10">
-              <DifficultyColumn
-                label="Question"
-                filled={analytics.questionDifficulty.filled}
-                max={analytics.questionDifficulty.max}
-                difficultyLabel={analytics.questionDifficulty.label}
-                caption={analytics.questionDifficulty.caption}
-                tone={analytics.questionDifficulty.tone}
-              />
-              <DifficultyColumn
-                label="Passage"
-                filled={analytics.passageDifficulty.filled}
-                max={analytics.passageDifficulty.max}
-                difficultyLabel={analytics.passageDifficulty.label}
-                caption={analytics.passageDifficulty.caption}
-                tone={analytics.passageDifficulty.tone}
-              />
-            </div>
 
-            <div className="border-t border-[#eef1f6] pt-6">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <Users className="size-8 shrink-0 text-[#94a3b8] sm:size-9" strokeWidth={1.75} aria-hidden />
-                <div className="min-w-0 flex flex-col gap-1">
-                  <p className="text-xs font-normal leading-snug text-[#94a3b8] sm:text-[13px]">{analytics.scoreBand.caption}</p>
-                  <p className="text-3xl font-bold tabular-nums leading-none text-[color:var(--color-student-heading)] sm:text-[2.25rem]">
-                    {analytics.scoreBand.headline}
-                  </p>
-                  <p className="text-[11px] font-bold leading-tight tabular-nums text-[#94a3b8] sm:text-xs">{analytics.scoreBand.range}</p>
-                </div>
+  return (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_440px]">
+      <div className="flex flex-col gap-6">
+        <section className={cardSurface}>
+          <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Difficulty</h3>
+          <div className="flex flex-col justify-between gap-8 md:flex-row md:gap-6">
+            <DifficultyColumn
+              label="Question"
+              filled={analytics.questionDifficulty.filled}
+              max={analytics.questionDifficulty.max}
+              difficultyLabel={analytics.questionDifficulty.label}
+              caption={analytics.questionDifficulty.caption}
+              tone={analytics.questionDifficulty.tone}
+            />
+            <DifficultyColumn
+              label="Passage"
+              filled={analytics.passageDifficulty.filled}
+              max={analytics.passageDifficulty.max}
+              difficultyLabel={analytics.passageDifficulty.label}
+              caption={analytics.passageDifficulty.caption}
+              tone={analytics.passageDifficulty.tone}
+            />
+          </div>
+          <div className="border-t border-[#e5e7eb] pt-6">
+            <div className="flex items-center gap-3">
+              <Users className="size-5 shrink-0 text-[#818898]" strokeWidth={1.75} aria-hidden />
+              <div className="min-w-0">
+                <p className="m-0 text-sm leading-5 text-[#6a7282]">{analytics.scoreBand.caption}</p>
+                <p className="m-0 mt-0.5 text-2xl font-bold leading-[1.3] tabular-nums text-[#062357]">
+                  {analytics.scoreBand.headline}
+                </p>
+                <p className="m-0 text-xs font-bold leading-normal tracking-[0.02em] tabular-nums text-[#666d80]">
+                  {analytics.scoreBand.range}
+                </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        <Card className={cardSurface}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold text-[color:var(--color-student-heading)]">Answer Popularity</CardTitle>
-            <p className="text-sm leading-relaxed text-[color:var(--text)]">{popularityCaption(popularityTotal)}</p>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+        <section className={cardSurface}>
+          <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Answer Popularity</h3>
+          <div className="flex flex-col gap-4">
             {popularityTotal === 0 ? (
-              <p className="rounded-xl border border-dashed border-[color:var(--greyscale-100)] bg-[color:var(--background)] px-4 py-6 text-center text-sm text-[color:var(--text)]">
-                No one has answered this question on the platform yet. Percentages will appear after students submit
-                answers in practice.
+              <p className="m-0 rounded-[14px] border border-dashed border-[color:var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-6 text-center text-sm text-[#666d80]">
+                No one has answered this question on the platform yet.
               </p>
             ) : null}
             {analytics.answerPopularity.map((row) => (
               <div
                 key={row.letter}
-                className="rounded-xl border border-solid border-[color:var(--greyscale-100)] bg-[color:var(--background)] px-4 py-3.5"
+                className="flex items-start gap-3 rounded-[14px] border border-[color:var(--greyscale-100)] bg-white p-4"
               >
-                <div className="flex gap-3">
-                  <span
-                    className={cn(
-                      "flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold",
-                      row.highlight ? "bg-[#e8f5e9] text-[#00d492]" : "bg-slate-100 text-slate-500",
-                    )}
-                    aria-hidden
-                  >
-                    {row.letter}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <span className="text-sm font-semibold tabular-nums text-[color:var(--color-student-heading)]">
-                        {row.pct}%
-                        {popularityTotal > 0 ? (
-                          <span className="ml-1 text-xs font-normal text-[color:var(--text)]">of students</span>
-                        ) : null}
-                      </span>
-                      <span className="text-xs tabular-nums text-[color:var(--text)]">
-                        <span className="font-semibold text-[color:var(--color-student-heading)]">{row.count}</span>
-                        {row.count === 1 ? " student chose this" : " students chose this"}
-                      </span>
-                    </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#eef1f6]">
-                      <div
-                        className={cn(
-                          "h-full min-w-0 rounded-full transition-[width]",
-                          row.highlight ? "bg-[#00d492]" : "bg-[#94a3b8]",
-                        )}
-                        style={{ width: `${Math.min(100, Math.max(0, row.pct))}%` }}
-                      />
-                    </div>
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-[10px] border border-[color:var(--greyscale-100)] bg-white text-sm font-medium tracking-[0.02em] text-[#666d80]">
+                  {row.letter}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex items-center justify-between gap-3">
+                    <span className="text-sm font-normal tracking-[0.02em] tabular-nums text-[#666d80]">
+                      {row.pct}%
+                    </span>
+                    <span className="text-sm font-normal tracking-[0.02em] tabular-nums text-[#666d80]">
+                      Avg score: —
+                    </span>
+                  </div>
+                  <div className="h-3 overflow-hidden rounded-full bg-[#eceff3]">
+                    <div
+                      className={cn(
+                        "h-full min-w-0 rounded-full transition-[width]",
+                        row.highlight ? "bg-[#0bbcc9]" : "bg-[#a4acb9]",
+                      )}
+                      style={{ width: `${Math.min(100, Math.max(row.pct > 0 ? 3 : 0, row.pct))}%` }}
+                    />
                   </div>
                 </div>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       </div>
 
-      <div className="space-y-6">
-        <Card className={cardSurface}>
-          <CardHeader>
-            <CardTitle className="text-lg font-bold text-[color:var(--color-student-heading)]">Analysis</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[color:var(--text)]">Question stem tags</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {analytics.questionStemTags.map((t) => (
-                <span
-                  key={t}
-                  className="rounded-full border border-[color:var(--greyscale-100)] bg-[var(--greyscale-25)] px-3 py-1 text-xs font-medium text-[color:var(--text)]"
-                >
-                  {t}
-                </span>
-              ))}
+      <div className="flex flex-col gap-6">
+        <section className={cardSurface}>
+          <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Analysis</h3>
+          <div className="space-y-4">
+            <div>
+              <p className="m-0 text-base font-normal tracking-[0.02em] text-[#666d80]">Question Stem Tags</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {analytics.questionStemTags.length > 0 ? (
+                  analytics.questionStemTags.map((t) => (
+                    <span
+                      key={t}
+                      className="inline-flex h-6 items-center rounded-full bg-[var(--greyscale-25)] px-3 text-xs font-normal tracking-[0.02em] text-[#062357]"
+                    >
+                      {t}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-sm text-[#666d80]">—</span>
+                )}
+              </div>
             </div>
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[color:var(--text)]">Passage tags</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {analytics.passageTags.map((t) => (
-                <span
-                  key={t}
-                  className="rounded-full border border-[color:var(--color-student-accent)] bg-[var(--greyscale-25)] px-3 py-1 text-xs font-medium text-[color:var(--color-student-heading)]"
-                >
-                  {t}
-                </span>
-              ))}
+            <div>
+              <p className="m-0 text-base font-normal tracking-[0.02em] text-[#666d80]">Passage Tags</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {analytics.passageTags.length > 0 ? (
+                  analytics.passageTags.map((t) => (
+                    <span
+                      key={t}
+                      className="inline-flex h-6 items-center rounded-full bg-[var(--greyscale-25)] px-3 text-xs font-normal tracking-[0.02em] text-[#062357]"
+                    >
+                      {t}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-sm text-[#666d80]">—</span>
+                )}
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        <Card className={cardSurface}>
-          <CardHeader>
-            <CardTitle className="text-lg font-bold text-[color:var(--color-student-heading)]">Question History</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {analytics.history.map((h, i) => (
-              <div key={i} className="rounded-xl border border-[#eef1f6] bg-[#fafbfd] px-3 py-3">
-                <p className="text-sm font-semibold text-[color:var(--color-student-heading)]">{h.source}</p>
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-[color:var(--text)]">
-                  <span className="flex items-center gap-2">
+        <section className={cardSurface}>
+          <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Question History</h3>
+          <div className="flex flex-col gap-3">
+            {analytics.history.length === 0 ? (
+              <p className="m-0 py-2 text-sm text-[#666d80]">No attempts recorded yet.</p>
+            ) : (
+              analytics.history.map((h, i) => (
+                <div
+                  key={i}
+                  className="flex h-[60px] items-center justify-between rounded-[10px] bg-[#f9fafb] p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="m-0 truncate text-sm font-medium tracking-[0.02em] text-[#062357]">{h.source}</p>
+                    <p className="m-0 text-xs leading-4 text-[#6a7282]">{h.dateLabel}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
                     <span
                       className={cn(
-                        "size-2 rounded-full",
-                        h.status === "answered" ? "bg-emerald-500" : "bg-[color:var(--drill-medium)]",
+                        "size-3 rounded-full",
+                        h.status === "answered" ? "bg-[#40c4aa]" : "bg-[#f59e0b]",
                       )}
                       aria-hidden
                     />
-                    {h.dateLabel}
-                  </span>
-                  <span className="font-mono tabular-nums">{h.timeRange}</span>
+                    <span className="font-mono text-xs leading-4 tabular-nums text-[#6a7282]">{h.timeRange}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+              ))
+            )}
+          </div>
+        </section>
       </div>
     </div>
   )

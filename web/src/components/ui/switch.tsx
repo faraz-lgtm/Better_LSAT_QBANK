@@ -20,16 +20,32 @@ const switchVariants = cva(
 
 type SwitchProps = Omit<React.ComponentProps<"input">, "size" | "type"> & VariantProps<typeof switchVariants>
 
-function Switch({ className, size, ...props }: SwitchProps) {
+function Switch({ className, size, onChange, ...props }: SwitchProps) {
   const checked = Boolean(props.checked)
+
+  function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
+    event.target.blur()
+    onChange?.(event)
+  }
+
   return (
-    <label className="inline-flex cursor-pointer items-center">
-      <input type="checkbox" role="switch" className="peer sr-only" {...props} />
+    <label
+      className="inline-flex shrink-0 cursor-pointer items-center"
+      onMouseDown={(event) => event.preventDefault()}
+    >
+      <input
+        type="checkbox"
+        role="switch"
+        className="peer sr-only"
+        onChange={handleChange}
+        {...props}
+      />
       <span
         data-slot="switch"
         className={cn(
           switchVariants({ size }),
           checked ? "bg-primary" : "bg-input",
+          "focus-visible:ring-inset",
           className,
         )}
       >

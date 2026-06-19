@@ -36,7 +36,7 @@ describe("student-nav-config", () => {
       { label: "Prep Course", href: "/app/prep-course" },
       { label: "Course Content" },
     ])
-    expect(getStudentPageTitle("/app/prep-course/prep-course")).toBe("Prep Course")
+    expect(getStudentPageTitle("/app/prep-course/prep-course")).toBeNull()
   })
 
   it("maps analytics routes to insights section", () => {
@@ -60,6 +60,24 @@ describe("student-nav-config", () => {
     expect(isNavItemActive("/app/analytics", "/app/analytics", "")).toBe(true)
   })
 
+  it("builds LR drill config breadcrumbs", () => {
+    expect(getStudentBreadcrumbs("/app/practice/drills/lr/new")).toEqual([
+      { label: "Main", href: "/app" },
+      { label: "Prep" },
+      { label: "LR Drills" },
+    ])
+    expect(getStudentPageTitle("/app/practice/drills/lr/new")).toBeNull()
+  })
+
+  it("builds RC drill config breadcrumbs", () => {
+    expect(getStudentBreadcrumbs("/app/practice/drills/rc/new")).toEqual([
+      { label: "Main", href: "/app" },
+      { label: "Prep" },
+      { label: "RC Drills" },
+    ])
+    expect(getStudentPageTitle("/app/practice/drills/rc/new")).toBeNull()
+  })
+
   it("hides prep test hub title and extra breadcrumb", () => {
     expect(getStudentBreadcrumbs("/app/practice/preptest/pt-900")).toEqual([
       { label: "Main", href: "/app" },
@@ -81,7 +99,7 @@ describe("student-nav-config", () => {
       { label: "PrepTest", href: "/app/analytics/preptests" },
       { label: "Results" },
     ])
-    expect(getStudentPageTitle("/app/analytics/preptests/results/abc123")).toBe("PrepTest")
+    expect(getStudentPageTitle("/app/analytics/preptests/results/abc123")).toBe(null)
   })
 
   it("does not mark overview active on nested analytics routes", () => {

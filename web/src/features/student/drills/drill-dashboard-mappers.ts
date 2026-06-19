@@ -64,6 +64,49 @@ function priorityVisual(priority: PriorityRow["priorityLevel"]) {
   return { label: "easy" as const, bars: 2, color: "#ffbd4c" }
 }
 
+/** Figma continue-drill card Time stat — maps session metadata to a display label. */
+export function formatDrillTimeLabel(
+  session: Pick<PracticeSessionSummary, "startedAt" | "completedAt">,
+  meta: Record<string, unknown>,
+  nowMs = Date.now(),
+): string {
+  const timing = typeof meta.timing === "string" ? meta.timing : null
+  const questionCount =
+    typeof meta.questionCount === "number"
+      ? meta.questionCount
+      : Array.isArray(meta.questionIds)
+        ? meta.questionIds.length
+        : 0
+
+  if (timing === "35") return "35 min"
+  if (timing === "per-q") {
+    const totalMinutes = Math.max(1, Math.round((questionCount * 80) / 60))
+    return `${totalMinutes} min`
+  }
+  if (timing === "unlimited") {
+    return formatDrillElapsedLabel(session.startedAt, session.completedAt, nowMs)
+  }
+  if (timing) return timing
+  return "—"
+}
+
+function formatDrillElapsedLabel(
+  startedAt: string,
+  completedAt: string | null,
+  nowMs: number,
+): string {
+  const start = new Date(startedAt).getTime()
+  if (Number.isNaN(start)) return "—"
+  const end = completedAt ? new Date(completedAt).getTime() : nowMs
+  if (Number.isNaN(end)) return "—"
+  const mins = Math.max(0, Math.round((end - start) / 60_000))
+  if (mins < 1) return "<1 min"
+  if (mins < 60) return `${mins} min`
+  const hours = Math.floor(mins / 60)
+  const rem = mins % 60
+  return rem > 0 ? `${hours}h ${rem}m` : `${hours}h`
+}
+
 export function mapSessionToContinueDrill(session: PracticeSessionSummary): ContinueDrill | null {
   const section = sessionSectionType(session)
   if (!section) return null
@@ -85,7 +128,7 @@ export function mapSessionToContinueDrill(session: PracticeSessionSummary): Cont
     title,
     progressPct,
     answered: `${answeredIds}/${total || "—"}`,
-    timeLabel: typeof meta.timing === "string" ? meta.timing : "—",
+    timeLabel: formatDrillTimeLabel(session, meta),
     lastAttempt: formatRelativeTime(session.startedAt),
     accent: section === "LR" ? "orange" : "mint",
     difficulty: "hardest",

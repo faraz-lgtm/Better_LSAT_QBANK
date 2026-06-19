@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest"
 
 import type { PracticeSessionSummary } from "@/lib/api/analytics"
 
-import { sumSessionStudyHours } from "./drill-dashboard-mappers"
+import {
+  formatDrillTimeLabel,
+  sumSessionStudyHours,
+} from "./drill-dashboard-mappers"
 
 describe("sumSessionStudyHours", () => {
   it("sums completed session durations in hours", () => {
@@ -46,5 +49,30 @@ describe("sumSessionStudyHours", () => {
       },
     ]
     expect(sumSessionStudyHours(sessions, now)).toBe(1)
+  })
+})
+
+describe("formatDrillTimeLabel", () => {
+  const baseSession = {
+    startedAt: "2026-01-01T12:00:00Z",
+    completedAt: null as string | null,
+  }
+
+  it("shows configured 35 minute drills as 35 min", () => {
+    expect(formatDrillTimeLabel(baseSession, { timing: "35", questionCount: 10 })).toBe("35 min")
+  })
+
+  it("computes per-question drill budgets from question count", () => {
+    expect(formatDrillTimeLabel(baseSession, { timing: "per-q", questionCount: 5 })).toBe("7 min")
+  })
+
+  it("shows elapsed time instead of raw unlimited", () => {
+    const now = new Date("2026-01-01T12:15:00Z").getTime()
+    expect(formatDrillTimeLabel(baseSession, { timing: "unlimited" }, now)).toBe("15 min")
+  })
+
+  it("formats long unlimited sessions in hours", () => {
+    const now = new Date("2026-01-01T14:30:00Z").getTime()
+    expect(formatDrillTimeLabel(baseSession, { timing: "unlimited" }, now)).toBe("2h 30m")
   })
 })

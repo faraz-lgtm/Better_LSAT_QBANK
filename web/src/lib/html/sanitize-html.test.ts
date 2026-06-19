@@ -25,4 +25,10 @@ describe("sanitizeHtml", () => {
     expect(out).not.toContain("onclick")
     expect(out).toContain("x")
   })
+
+  it("preserves highlight marks with data-highlight", () => {
+    const out = sanitizeHtml('<p>test <mark data-highlight="yellow">hi</mark></p>')
+    expect(out).toContain('data-highlight="yellow"')
+    expect(out).toContain("<mark")
+  })
 })

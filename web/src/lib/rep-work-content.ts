@@ -63,6 +63,22 @@ export function htmlToPlainText(html: string): string {
     .trim()
 }
 
+/** Remove a leading "Instructions:" paragraph when rendering the Figma instructions block. */
+export function stripInstructionsLabel(html: string): string {
+  const trimmed = html.trim()
+  if (!trimmed) return "<p></p>"
+  const withoutLabel = trimmed.replace(/^<p>\s*Instructions:?\s*<\/p>\s*/i, "").trim()
+  return withoutLabel || "<p></p>"
+}
+
+const BLANK_PARAGRAPH_RE = /<p>(?:\s|&nbsp;|&#xA0;|&#160;|<br\s*\/?>)*<\/p>/gi
+
+/** Remove blank paragraphs from CMS HTML to avoid phantom vertical gaps. */
+export function trimEmptyHtmlParagraphs(html: string): string {
+  const result = html.trim().replace(BLANK_PARAGRAPH_RE, "").trim()
+  return result || "<p></p>"
+}
+
 export function serializeRepWorkContent(instructions: string, pairs: RepWorkPair[]): string {
   const cleanPairs = pairs.map((p) => ({
     question: (p.question || "<p></p>").trim() || "<p></p>",

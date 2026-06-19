@@ -82,6 +82,7 @@ function ActiveDrillQuestionResultDetail({
       isCorrect={isCorrect}
       blindReviewCorrect={blindReviewCorrect}
       yourTimeSeconds={perQuestionSeconds}
+      variant="active-drill"
     />
   )
 }

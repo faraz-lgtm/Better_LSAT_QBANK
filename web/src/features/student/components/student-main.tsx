@@ -18,8 +18,8 @@ function StudentMain({ children, className = "", contentClassName = "", layout =
   return (
     <main
       className={cn(
-        "flex min-h-0 flex-1 flex-col",
-        immersive || locked ? "h-full overflow-hidden" : "overflow-y-auto",
+        "flex min-h-0 min-w-0 flex-1 flex-col",
+        immersive || locked ? "h-full overflow-x-clip overflow-y-hidden" : "overflow-y-auto overflow-x-hidden",
         className,
       )}
     >
@@ -27,10 +27,11 @@ function StudentMain({ children, className = "", contentClassName = "", layout =
         className={cn(
           !immersive && STUDENT_PAGE_CONTAINER_CLASS,
           !immersive && STUDENT_SHELL_GUTTER_CLASS,
+          !immersive && "w-full",
           immersive
-            ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden"
+            ? "flex h-full min-h-0 flex-1 flex-col overflow-x-clip overflow-y-hidden"
             : locked
-              ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden pt-6 pb-0"
+              ? "flex h-full min-h-0 flex-1 flex-col overflow-x-clip overflow-y-hidden pt-[24px] pb-0"
               : STUDENT_MAIN_PADDING_CLASS,
           contentClassName,
         )}

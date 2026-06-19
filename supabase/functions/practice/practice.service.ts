@@ -325,6 +325,7 @@ export type PrepTestPoolStatusCounts = {
   fresh: number
   in_progress: number
   completed: number
+  blind_review: number
 }
 
 export type PrepTestPoolListResult = {
@@ -1940,7 +1941,10 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const pageSize = Math.min(50, Math.max(1, Math.floor(typeof body.pageSize === 'number' ? body.pageSize : 10)))
       const sort = body.sort === 'oldest' ? 'oldest' : 'newest'
       const filter =
-        body.filter === 'fresh' || body.filter === 'in_progress' || body.filter === 'completed'
+        body.filter === 'fresh' ||
+        body.filter === 'in_progress' ||
+        body.filter === 'completed' ||
+        body.filter === 'blind_review'
           ? body.filter
           : null
 
@@ -1961,9 +1965,15 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         fresh: items.filter((i) => i.status === 'fresh').length,
         in_progress: items.filter((i) => i.status === 'in_progress').length,
         completed: items.filter((i) => i.status === 'completed').length,
+        blind_review: items.filter((i) => i.blindReviewStatus != null).length,
       }
 
-      const filtered = filter ? items.filter((i) => i.status === filter) : items
+      const filtered =
+        filter === 'blind_review'
+          ? items.filter((i) => i.blindReviewStatus != null)
+          : filter
+            ? items.filter((i) => i.status === filter)
+            : items
       const sorted = [...filtered].sort((a, b) => {
         const diff = prepTestNumberSortValue(a) - prepTestNumberSortValue(b)
         return sort === 'newest' ? -diff : diff
