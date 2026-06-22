@@ -239,11 +239,11 @@ export const LESSON_TYPE_LABEL: Record<PrepLesson["lesson_type"], string> = {
   rep_work: "Rep Work",
 }
 
-export function isDrillLessonType(type: PrepLesson["lesson_type"]): boolean {
+type DrillLessonType = "active_drill" | "adaptive_drill" | "rep_work"
+
+export function isDrillLessonType(type: PrepLesson["lesson_type"]): type is DrillLessonType {
   return type === "active_drill" || type === "adaptive_drill" || type === "rep_work"
 }
-
-type DrillLessonType = "active_drill" | "adaptive_drill" | "rep_work"
 
 const LESSON_TITLE_PREFIXES: Array<{ pattern: RegExp; kind: DrillLessonType }> = [
   { pattern: /^Rep Work:\s*/i, kind: "rep_work" },

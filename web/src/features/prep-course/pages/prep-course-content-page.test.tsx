@@ -247,7 +247,6 @@ describe("PrepCourseContentPage", () => {
       },
     })
 
-    const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={["/app/prep-course/prep-course"]}>
         <Routes>
