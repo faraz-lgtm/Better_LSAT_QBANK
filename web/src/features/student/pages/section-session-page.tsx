@@ -1137,6 +1137,9 @@ function SectionSessionPage() {
       onToggleNotes={handleToggleNotes}
       onExitSection={handleBlindReviewExit}
       exiting={finishing}
+      showSectionSelect={blindReviewMode && blindReviewSectionOptions.length > 1}
+      exitButtonLabel={postCompleteBlindReview ? "Finish Section" : "Exit Section"}
+      exitingLabel={postCompleteBlindReview ? "Finishing…" : "Exiting…"}
     />
   ) : null
 
