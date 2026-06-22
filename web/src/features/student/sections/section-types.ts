@@ -87,6 +87,11 @@ export type StartSectionInput = {
 }
 
 export function formatSectionPoolLabel(item: SectionPoolItem): string {
+  const fromModule = item.moduleId ? /^LSAC(\d+)$/i.exec(item.moduleId)?.[1] : undefined
+  const sectionNum = item.sectionNumber
+  if (fromModule && sectionNum != null) {
+    return `PT${fromModule}.S${sectionNum}`
+  }
   const pt = item.prepTestTitle ?? item.moduleId ?? "PrepTest"
   const section = item.title ?? (item.sectionId ? `Section ${item.sectionId}` : "Section")
   return `${pt} — ${section}`

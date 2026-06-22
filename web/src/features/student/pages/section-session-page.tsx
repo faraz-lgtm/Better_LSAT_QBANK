@@ -329,12 +329,16 @@ function SectionSessionPage() {
   const [answerViewTab, setAnswerViewTab] = useState<BlindReviewAnswerView>("blind_review")
   const [notesOpen, setNotesOpen] = useState(false)
 
-  const blindReviewExitModalTitle = postCompleteBlindReview
+  const submitModalTitle = postCompleteBlindReview
     ? "Finish Blind Review"
     : blindReviewMode
       ? "Exit Section"
       : "Submit Section"
-  const blindReviewExitConfirmLabel = postCompleteBlindReview ? "View Results" : "Exit Section"
+  const submitModalConfirmLabel = postCompleteBlindReview
+    ? "View Results"
+    : blindReviewMode
+      ? "Exit Section"
+      : "Submit Section"
 
   const [actualAnswersByQuestion, setActualAnswersByQuestion] = useState<Record<string, QuestionAnswerState>>({})
   const [blindReviewSections, setBlindReviewSections] = useState<BlindReviewDetailSection[]>([])
@@ -969,8 +973,8 @@ function SectionSessionPage() {
 
         <PracticeSubmitSectionModal
           open={submitModalOpen}
-          title={blindReviewExitModalTitle}
-          confirmLabel={blindReviewExitConfirmLabel}
+          title={submitModalTitle}
+          confirmLabel={submitModalConfirmLabel}
           message={submitSectionMessage}
           submitting={finishing}
           onCancel={() => setSubmitModalOpen(false)}
@@ -1463,8 +1467,8 @@ function SectionSessionPage() {
 
       <PracticeSubmitSectionModal
         open={submitModalOpen}
-        title={blindReviewExitModalTitle}
-        confirmLabel={blindReviewExitConfirmLabel}
+        title={submitModalTitle}
+        confirmLabel={submitModalConfirmLabel}
         message={submitSectionMessage}
         submitting={finishing}
         onCancel={() => setSubmitModalOpen(false)}
