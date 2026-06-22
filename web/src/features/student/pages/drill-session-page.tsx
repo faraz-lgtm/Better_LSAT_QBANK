@@ -560,21 +560,19 @@ function DrillSessionPage() {
 
     if (reviewAfterComplete) {
       const answers = collectBlindReviewAnswersForSubmit()
-      if (answers.length === 0) {
-        setError("Answer at least one question in blind review before viewing results.")
-        return
-      }
       setFinishing(true)
       setError(null)
       try {
-        const session = await practiceApi.completeDrillBlindReview({ sessionId, answers })
-        const lessonId =
-          drill?.session.metadata != null &&
-          typeof drill.session.metadata === "object" &&
-          typeof drill.session.metadata.lessonId === "string"
-            ? drill.session.metadata.lessonId
-            : null
-        stashDrillBlindReviewResult(session, lessonId)
+        if (answers.length > 0) {
+          const session = await practiceApi.completeDrillBlindReview({ sessionId, answers })
+          const lessonId =
+            drill?.session.metadata != null &&
+            typeof drill.session.metadata === "object" &&
+            typeof drill.session.metadata.lessonId === "string"
+              ? drill.session.metadata.lessonId
+              : null
+          stashDrillBlindReviewResult(session, lessonId)
+        }
       } catch (e) {
         setError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to save blind review")
         setFinishing(false)
@@ -797,6 +795,9 @@ function DrillSessionPage() {
           onToggleNotes={handleToggleNotes}
           onExitSection={requestSubmitDrill}
           exiting={finishing}
+          showSectionSelect={false}
+          exitButtonLabel="Finish Section"
+          exitingLabel="Finishing…"
         />
       ) : (
         <PracticeSessionHeader
@@ -1060,8 +1061,8 @@ function DrillSessionPage() {
 
       <PracticeSubmitSectionModal
         open={submitModalOpen}
-        title={reviewAfterComplete ? "Exit Section" : "Submit Drill"}
-        confirmLabel={reviewAfterComplete ? "Exit Section" : "Submit Drill"}
+        title={reviewAfterComplete ? "Finish Section" : "Submit Drill"}
+        confirmLabel={reviewAfterComplete ? "Finish Section" : "Submit Drill"}
         message={submitDrillMessage}
         submitting={finishing}
         onCancel={() => setSubmitModalOpen(false)}

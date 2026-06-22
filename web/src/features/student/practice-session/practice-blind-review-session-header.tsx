@@ -72,6 +72,12 @@ type PracticeBlindReviewSessionHeaderProps = {
 
   exiting?: boolean
 
+  showSectionSelect?: boolean
+
+  exitButtonLabel?: string
+
+  exitingLabel?: string
+
 }
 
 
@@ -128,6 +134,12 @@ function PracticeBlindReviewSessionHeader({
 
   exiting = false,
 
+  showSectionSelect = true,
+
+  exitButtonLabel = "Exit Section",
+
+  exitingLabel = "Exiting…",
+
 }: PracticeBlindReviewSessionHeaderProps) {
 
   const blindReviewView = answerView === "blind_review"
@@ -144,15 +156,13 @@ function PracticeBlindReviewSessionHeader({
 
           <p className="shrink-0 text-xl font-bold leading-[1.35] text-[#062357]">{prepTestLabel}</p>
 
-          <PracticeBlindReviewSectionSelect
-
-            sections={sectionOptions}
-
-            activeSectionSessionId={activeSectionSessionId}
-
-            onSelect={onSelectSection}
-
-          />
+          {showSectionSelect ? (
+            <PracticeBlindReviewSectionSelect
+              sections={sectionOptions}
+              activeSectionSessionId={activeSectionSessionId}
+              onSelect={onSelectSection}
+            />
+          ) : null}
 
           <span className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-[#fff3ea] px-3 text-xs font-medium tracking-[0.02em] text-[#ff6f00] md:px-4">
 
@@ -256,7 +266,7 @@ function PracticeBlindReviewSessionHeader({
 
           >
 
-            {exiting ? "Exiting…" : "Exit Section"}
+            {exiting ? exitingLabel : exitButtonLabel}
 
           </button>
 
