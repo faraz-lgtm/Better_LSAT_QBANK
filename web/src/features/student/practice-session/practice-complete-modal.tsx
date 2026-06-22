@@ -58,7 +58,7 @@ function PracticeCompleteModal({
   showBlindReview = false,
   onBlindReview,
   onSkipDetails,
-  doneLabel = "Done",
+  doneLabel = "Return To Dashboard",
   onDone,
   titleId = "practice-complete-title",
 }: PracticeCompleteModalProps) {

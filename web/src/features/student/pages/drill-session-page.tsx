@@ -33,6 +33,7 @@ import {
   usePracticeSessionTimer,
 } from "@/features/student/practice-session/use-practice-session-timer"
 import { stashDrillBlindReviewResult } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
+import { drillSessionSupportsBlindReview } from "@/features/student/drills/drill-blind-review-policy"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createPracticeApi } from "@/lib/api/practice"
@@ -533,6 +534,14 @@ function DrillSessionPage() {
       navigate(path, { replace: true })
       return
     }
+    const meta =
+      drill?.session.metadata != null && typeof drill.session.metadata === "object"
+        ? (drill.session.metadata as Record<string, unknown>)
+        : null
+    if (!drillSessionSupportsBlindReview(meta)) {
+      navigate("/app", { replace: true })
+      return
+    }
     navigate("/app/practice/drills", { replace: true })
   }
 
@@ -682,6 +691,12 @@ function DrillSessionPage() {
 
   const headerLabel = drill?.drillLabel ?? metadata?.title ?? (sectionType === "LR" ? "LR Drill" : "RC Drill")
   const isPrepCourseDrill = Boolean(resolveReturnPath())
+  const sessionMetadata =
+    drill?.session.metadata != null && typeof drill.session.metadata === "object"
+      ? (drill.session.metadata as Record<string, unknown>)
+      : null
+  const showBlindReviewOnComplete = drillSessionSupportsBlindReview(sessionMetadata)
+  const isPrepCourseAdaptiveDrill = sessionMetadata?.source === "prep_course_adaptive_drill"
   const blindReviewMode = reviewAfterComplete
   const useBlindReviewLayout = blindReviewMode
   const useActiveDrillLayout = !useBlindReviewLayout
@@ -1040,13 +1055,17 @@ function DrillSessionPage() {
         open={completeModal != null}
         titleId="drill-complete-title"
         subtitle={
-          isPrepCourseDrill ? "You've completed the active drill" : "You've completed the drill"
+          isPrepCourseAdaptiveDrill
+            ? "You've completed the adaptive drill"
+            : isPrepCourseDrill
+              ? "You've completed the active drill"
+              : "You've completed the drill"
         }
         rawScore={completeModal?.rawScore ?? 0}
         questionCount={completeModal?.questionCount ?? 1}
         scoreHidden={scoreHidden}
         onToggleScoreHidden={() => setScoreHidden((h) => !h)}
-        showBlindReview
+        showBlindReview={showBlindReviewOnComplete}
         onBlindReview={startDrillBlindReview}
         onSkipDetails={viewDrillResults}
         onDone={leaveDrillSession}

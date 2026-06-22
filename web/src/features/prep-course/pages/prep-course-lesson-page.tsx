@@ -14,6 +14,7 @@ import {
   nextLessonSlug,
   normalizeCurriculum,
   prevLessonSlug,
+  resolveDrillLessonType,
   shouldFlattenModuleSections,
 } from "@/features/prep-course/lib/prep-course-format"
 import { mergeActiveDrillAttemptBlindReview } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
@@ -211,7 +212,9 @@ function PrepCourseLessonPage() {
       const linkedQuestionId = linkedQuestionRefs[0]?.question_id ?? null
       const { session } = await practiceApi.startLessonDrill({
         lessonId: lesson.id,
-        questionId: linkedQuestionId,
+        ...(resolveDrillLessonType(lesson) === "active_drill" && linkedQuestionId
+          ? { questionId: linkedQuestionId }
+          : {}),
       })
       const returnTo = `/app/prep-course/${course.slug}/${lesson.slug}`
       navigate(`/app/practice/drills/session/${session.id}?returnTo=${encodeURIComponent(returnTo)}`)
@@ -231,9 +234,6 @@ function PrepCourseLessonPage() {
       </StudentMain>
     )
   }
-
-  const isAdaptiveDrillLesson = lesson?.lesson_type === "adaptive_drill"
-  const drillCompleted = Boolean(activeDrillAttempt)
 
   async function handleMarkComplete() {
     if (!lesson || !course || !prepCourseApi || savingComplete) return
@@ -332,16 +332,7 @@ function PrepCourseLessonPage() {
             prevDisabled={!prevSlug}
             nextDisabled={!nextSlug}
             onMarkComplete={() => void handleMarkComplete()}
-            markCompleteDisabled={savingComplete || (isAdaptiveDrillLesson && !drillCompleted)}
-            primaryAction={
-              isAdaptiveDrillLesson && !drillCompleted
-                ? {
-                    label: startingDrill ? "Starting…" : "Start Drill",
-                    onClick: () => void handleStartDrill(),
-                    disabled: startingDrill,
-                  }
-                : null
-            }
+            markCompleteDisabled={savingComplete}
           />
         </section>
       </div>

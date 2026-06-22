@@ -1,4 +1,5 @@
 import { extractPrepTestQuestionRef } from '../_shared/prep-question-ref.ts'
+import { resolvePrepDrillLessonType } from '../_shared/prep-lesson-type.ts'
 import type {
   AnswerEventRow,
   DrillPoolQuestionRow,
@@ -1588,8 +1589,9 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (!lesson || !lesson.is_published) {
         throw new PracticeValidationError('Lesson not found')
       }
-      const isActive = lesson.lesson_type === 'active_drill'
-      const isAdaptive = lesson.lesson_type === 'adaptive_drill'
+      const drillKind = resolvePrepDrillLessonType(lesson)
+      const isActive = drillKind === 'active_drill'
+      const isAdaptive = drillKind === 'adaptive_drill'
       if (!isActive && !isAdaptive) {
         throw new PracticeValidationError('Lesson is not a prep-course drill')
       }

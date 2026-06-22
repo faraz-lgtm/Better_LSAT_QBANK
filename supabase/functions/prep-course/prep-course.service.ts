@@ -1,4 +1,4 @@
-import { isPrepLessonType, type PrepLessonType } from '../_shared/prep-lesson-type.ts'
+import { isPrepCourseDrillLesson, isPrepLessonType, type PrepLessonType } from '../_shared/prep-lesson-type.ts'
 import type { PrepCourseRepository, PrepCourseBookmarks, PrepLessonActiveDrillAttempt, PrepLessonDrillBlindReviewAttempt } from './prep-course.repository.ts'
 
 export class AuthorizationError extends Error {
@@ -225,10 +225,9 @@ export function createPrepCourseService(deps: {
       if (!lesson) throw new Error('Lesson not found')
 
       const linkedQuestionRefs = await deps.repository.listLessonLinkedQuestions(lesson.id)
-      const activeDrillAttempt =
-        lesson.lesson_type === 'active_drill' || lesson.lesson_type === 'adaptive_drill'
-          ? await buildActiveDrillAttempt(deps.repository, userId, lesson.id)
-          : null
+      const activeDrillAttempt = isPrepCourseDrillLesson(lesson)
+        ? await buildActiveDrillAttempt(deps.repository, userId, lesson.id)
+        : null
       const bookmarks = await deps.repository.listBookmarksByCourse(userId, course.id)
 
       return { course, lesson, linkedQuestionRefs, activeDrillAttempt, bookmarks }
