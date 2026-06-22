@@ -33,7 +33,11 @@ import {
   usePracticeSessionTimer,
 } from "@/features/student/practice-session/use-practice-session-timer"
 import { stashDrillBlindReviewResult } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
-import { drillSessionSupportsBlindReview } from "@/features/student/drills/drill-blind-review-policy"
+import {
+  DASHBOARD_ADAPTIVE_DRILL_QUERY,
+  drillSessionSupportsBlindReview,
+  isDashboardAdaptiveDrill,
+} from "@/features/student/drills/drill-blind-review-policy"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createPracticeApi } from "@/lib/api/practice"
@@ -264,6 +268,7 @@ function DrillSessionPage() {
   const navigate = useNavigate()
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
   const returnTo = searchParams.get("returnTo")?.trim() ?? ""
+  const dashboardAdaptiveEntry = searchParams.get(DASHBOARD_ADAPTIVE_DRILL_QUERY) === "1"
   const sessionBodyRef = useRef<HTMLDivElement>(null)
 
   const [loading, setLoading] = useState(true)
@@ -538,7 +543,12 @@ function DrillSessionPage() {
       drill?.session.metadata != null && typeof drill.session.metadata === "object"
         ? (drill.session.metadata as Record<string, unknown>)
         : null
-    if (!drillSessionSupportsBlindReview(meta)) {
+    if (
+      isDashboardAdaptiveDrill({
+        metadata: meta,
+        dashboardAdaptiveEntry,
+      })
+    ) {
       navigate("/app", { replace: true })
       return
     }
@@ -695,7 +705,14 @@ function DrillSessionPage() {
     drill?.session.metadata != null && typeof drill.session.metadata === "object"
       ? (drill.session.metadata as Record<string, unknown>)
       : null
-  const showBlindReviewOnComplete = drillSessionSupportsBlindReview(sessionMetadata)
+  const showBlindReviewOnComplete = drillSessionSupportsBlindReview({
+    metadata: sessionMetadata,
+    dashboardAdaptiveEntry,
+  })
+  const isDashboardAdaptiveDrillFlow = isDashboardAdaptiveDrill({
+    metadata: sessionMetadata,
+    dashboardAdaptiveEntry,
+  })
   const isPrepCourseAdaptiveDrill = sessionMetadata?.source === "prep_course_adaptive_drill"
   const blindReviewMode = reviewAfterComplete
   const useBlindReviewLayout = blindReviewMode
@@ -1068,6 +1085,7 @@ function DrillSessionPage() {
         showBlindReview={showBlindReviewOnComplete}
         onBlindReview={startDrillBlindReview}
         onSkipDetails={viewDrillResults}
+        doneLabel={isDashboardAdaptiveDrillFlow ? "Return To Dashboard" : "Done"}
         onDone={leaveDrillSession}
       />
     </StudentMain>

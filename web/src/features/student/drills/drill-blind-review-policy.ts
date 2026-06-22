@@ -3,6 +3,14 @@ type DrillSessionMetadataLike = {
   difficulty?: unknown
 }
 
+const DASHBOARD_ADAPTIVE_DRILL_SOURCE = "dashboard_adaptive_drill"
+const DASHBOARD_ADAPTIVE_DRILL_QUERY = "dashboardAdaptive"
+
+type DashboardAdaptiveDrillContext = {
+  metadata?: DrillSessionMetadataLike | null
+  dashboardAdaptiveEntry?: boolean
+}
+
 function isPrepCourseDrillSession(metadata: DrillSessionMetadataLike | null | undefined): boolean {
   if (!metadata) return false
   return (
@@ -12,13 +20,24 @@ function isPrepCourseDrillSession(metadata: DrillSessionMetadataLike | null | un
 
 function isDashboardAdaptiveDrillSession(metadata: DrillSessionMetadataLike | null | undefined): boolean {
   if (!metadata) return false
-  if (isPrepCourseDrillSession(metadata)) return false
-  return metadata.difficulty === "adaptive"
+  return metadata.source === DASHBOARD_ADAPTIVE_DRILL_SOURCE
 }
 
-function drillSessionSupportsBlindReview(metadata: DrillSessionMetadataLike | null | undefined): boolean {
-  if (isDashboardAdaptiveDrillSession(metadata)) return false
+function isDashboardAdaptiveDrill(context: DashboardAdaptiveDrillContext): boolean {
+  if (context.dashboardAdaptiveEntry) return true
+  return isDashboardAdaptiveDrillSession(context.metadata)
+}
+
+function drillSessionSupportsBlindReview(context: DashboardAdaptiveDrillContext): boolean {
+  if (isDashboardAdaptiveDrill(context)) return false
   return true
 }
 
-export { drillSessionSupportsBlindReview, isDashboardAdaptiveDrillSession, isPrepCourseDrillSession }
+export {
+  DASHBOARD_ADAPTIVE_DRILL_QUERY,
+  DASHBOARD_ADAPTIVE_DRILL_SOURCE,
+  drillSessionSupportsBlindReview,
+  isDashboardAdaptiveDrill,
+  isDashboardAdaptiveDrillSession,
+  isPrepCourseDrillSession,
+}

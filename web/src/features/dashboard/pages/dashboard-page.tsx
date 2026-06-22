@@ -12,6 +12,7 @@ import {
 import { mapOverviewToDashboardStats } from "@/features/dashboard/lib/map-dashboard-stats"
 import { useAnalyticsApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import { ContinueDrillCard, continueDrillToCardDrill } from "@/features/student/components/continue-drill-card"
+import { DASHBOARD_ADAPTIVE_DRILL_QUERY } from "@/features/student/drills/drill-blind-review-policy"
 import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
@@ -175,8 +176,9 @@ function DashboardPage() {
         selection: "auto",
         difficulty: "adaptive",
         status: "fresh",
+        source: "dashboard_adaptive_drill",
       })
-      navigate(`/app/practice/drills/session/${out.session.id}`)
+      navigate(`/app/practice/drills/session/${out.session.id}?${DASHBOARD_ADAPTIVE_DRILL_QUERY}=1`)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to start adaptive drill")
     } finally {

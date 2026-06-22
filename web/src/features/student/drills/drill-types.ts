@@ -86,6 +86,7 @@ export type StartDrillInput = {
   difficulty?: DrillDifficulty
   status?: DrillStatus
   title?: string | null
+  source?: "dashboard_adaptive_drill"
 }
 
 export type DrillPoolStatsInput = {
