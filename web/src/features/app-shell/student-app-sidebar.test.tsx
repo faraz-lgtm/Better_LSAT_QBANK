@@ -1,5 +1,4 @@
 import { render, screen } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
 import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
 
@@ -12,49 +11,49 @@ vi.mock("@/lib/supabase/client", () => ({
 }))
 
 describe("StudentAppSidebar", () => {
-  it("keeps only one section expanded at a time", async () => {
-    const user = userEvent.setup()
-
+  it("shows all navigation links at once", () => {
     render(
       <MemoryRouter initialEntries={["/app"]}>
         <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
       </MemoryRouter>,
     )
 
-    const academyButton = screen.getByRole("button", { name: /academy/i })
-    const prepButton = screen.getByRole("button", { name: /^prep$/i })
-
-    await user.click(academyButton)
+    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Prep Course" })).toBeInTheDocument()
-
-    await user.click(prepButton)
-    expect(screen.queryByRole("link", { name: "Prep Course" })).not.toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Drills" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Explanations" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Blind Review" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument()
   })
 
-  it("shows active background on expanded section header", async () => {
-    const user = userEvent.setup()
-
+  it("marks the dashboard link with the same active style as other items", () => {
     render(
       <MemoryRouter initialEntries={["/app"]}>
         <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
       </MemoryRouter>,
     )
 
-    const academyButton = screen.getByRole("button", { name: /academy/i })
-    expect(academyButton).not.toHaveClass("student-sidebar-section-btn--active")
-
-    await user.click(academyButton)
-    expect(academyButton).toHaveClass("student-sidebar-section-btn--active")
+    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveClass("student-sidebar-link--active")
   })
 
-  it("shows active background on dashboard link when on dashboard route", () => {
+  it("marks nested links with the sub-item active style", () => {
+    render(
+      <MemoryRouter initialEntries={["/app/prep-course"]}>
+        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole("link", { name: "Prep Course" })).toHaveClass("student-sidebar-link--active")
+    expect(screen.getByRole("link", { name: "Dashboard" })).not.toHaveClass("student-sidebar-link--active")
+  })
+
+  it("shows logout and version in the footer", () => {
     render(
       <MemoryRouter initialEntries={["/app"]}>
         <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole("link", { name: /dashboard/i })).toHaveClass("student-sidebar-section-btn--active")
+    expect(screen.getByRole("button", { name: /logout/i })).toBeInTheDocument()
+    expect(screen.getByText("Version 1.0.3")).toBeInTheDocument()
   })
 })

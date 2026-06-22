@@ -77,20 +77,18 @@ function PrepCourseLessonSidebar({
   onSelectLesson,
   onClose,
 }: PrepCourseLessonSidebarProps) {
-  const activeIndex = lessons.findIndex((lesson) => lesson.slug === activeLessonSlug)
-
   return (
     <aside
-      className="flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-tr-[16px] border-l border-[color:var(--greyscale-100)] bg-[var(--greyscale-0)] lg:w-[320px]"
+      className="flex min-h-0 w-full flex-1 shrink-0 flex-col self-stretch overflow-hidden rounded-[16px] border border-[color:var(--greyscale-100)] bg-[#f3f7ff] lg:w-[320px]"
       aria-label="Course lessons"
     >
-      <div className="shrink-0 rounded-tr-[16px] border-b border-[color:var(--greyscale-100)] bg-[var(--secondary-100)] p-6">
+      <div className="shrink-0 border-b border-[color:var(--greyscale-100)] bg-[#f3f7ff] p-6">
         <div className="flex items-start gap-4">
           <h2 className="min-w-0 flex-1 text-2xl font-bold leading-[1.3] text-[#062357]">All Lessons</h2>
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--primary-25)] text-[color:var(--greyscale-500)] transition hover:text-[#062357]"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-[color:var(--greyscale-100)] bg-white text-[color:var(--greyscale-500)] transition hover:text-[#062357]"
             aria-label="Close lesson sidebar"
           >
             <X className="size-6" strokeWidth={1.75} />
@@ -99,7 +97,7 @@ function PrepCourseLessonSidebar({
 
         <div className="mt-6 flex flex-col gap-2.5">
           <div className="flex items-center gap-3">
-            <ProgressRing value={progressPercent} ringBg="var(--secondary-100)" />
+            <ProgressRing value={progressPercent} ringBg="#f3f7ff" />
             <p
               className="min-w-0 text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[#062357]"
               title={sectionTitle}
@@ -113,18 +111,17 @@ function PrepCourseLessonSidebar({
         </div>
       </div>
 
-      <div className="practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto bg-[var(--greyscale-0)] p-6">
+      <div className="practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto bg-white p-6">
         <ul className="flex flex-col gap-3">
           {lessons.map((lesson, index) => {
             const isActive = lesson.slug === activeLessonSlug
             const isComplete = completedLessonSlugs.has(lesson.slug)
-            const isBeforeActive = activeIndex > 0 && index === activeIndex - 1 && isComplete
 
             const rowBg = isActive
               ? "bg-[#0d47a1]"
-              : isBeforeActive
-                ? "bg-[var(--primary-0)]"
-                : "bg-[var(--greyscale-25)]"
+              : index % 2 === 0
+                ? "bg-[#f3f7ff]"
+                : "bg-[#f6f8fa]"
 
             const markerVariant = isActive ? "active" : isComplete ? "complete" : "incomplete"
 

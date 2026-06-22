@@ -32,6 +32,7 @@ import {
 } from "@/lib/api/prep-course"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
+import { cn } from "@/lib/utils"
 
 function PrepCourseLessonPage() {
   const navigate = useNavigate()
@@ -272,19 +273,18 @@ function PrepCourseLessonPage() {
   }
 
   return (
-    <StudentMain layout="locked">
+    <StudentMain layout="locked" contentClassName="pt-0 pb-[24px]">
       <div className="prep-course-lesson-shell flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-clip overflow-y-hidden">
         {error ? <p className="mb-4 shrink-0 text-xs text-[#95122b]">{error}</p> : null}
 
-        <section className="prep-course-shell-card practice-session-card flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-clip overflow-y-hidden rounded-[16px] border border-[color:var(--greyscale-100)] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+        <section className="prep-course-shell-card practice-session-card flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden">
           <div
-            className={`practice-session-body flex h-0 min-h-0 min-w-0 max-w-full flex-1 overflow-x-clip overflow-y-hidden ${showSidebar ? "lg:flex-row" : "flex-col"}`}
+            className={cn(
+              "practice-session-body flex h-0 min-h-0 min-w-0 max-w-full flex-1 overflow-x-clip overflow-y-hidden",
+              showSidebar ? "flex-col lg:flex-row lg:gap-6" : "flex-col",
+            )}
           >
-            <div
-              className={`flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-hidden ${
-                lesson.lesson_type === "rep_work" ? "bg-[var(--greyscale-25)] p-0" : "p-6"
-              } ${showSidebar ? "lg:border-r lg:border-[color:var(--greyscale-100)]" : ""}`}
-            >
+            <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-hidden">
               <PrepCourseLessonPanel
                 course={course}
                 lesson={lesson}
@@ -292,6 +292,7 @@ function PrepCourseLessonPage() {
                 activeDrillAttempt={activeDrillAttempt}
                 sectionSubtitle={sectionSubtitle}
                 contentScrollRef={lessonContentRef}
+                sidebarAdjacent={showSidebar}
                 onReviewDrill={handleReviewDrill}
                 onStartDrill={() => void handleStartDrill()}
                 startingDrill={startingDrill}
@@ -304,16 +305,18 @@ function PrepCourseLessonPage() {
             </div>
 
             {showSidebar ? (
-              <PrepCourseLessonSidebar
-                lessons={sidebarLessons}
-                activeLessonSlug={lesson.slug}
-                completedLessonSlugs={completedLessonSlugs}
-                progressPercent={sectionProgressPercent}
-                sectionTitle={sectionTitle}
-                sectionSubtitle={sectionRemainingLabel}
-                onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
-                onClose={() => setShowSidebar(false)}
-              />
+              <div className="box-border flex h-full min-h-0 shrink-0 flex-col pt-6 pb-6 lg:w-[320px]">
+                <PrepCourseLessonSidebar
+                  lessons={sidebarLessons}
+                  activeLessonSlug={lesson.slug}
+                  completedLessonSlugs={completedLessonSlugs}
+                  progressPercent={sectionProgressPercent}
+                  sectionTitle={sectionTitle}
+                  sectionSubtitle={sectionRemainingLabel}
+                  onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
+                  onClose={() => setShowSidebar(false)}
+                />
+              </div>
             ) : null}
           </div>
 

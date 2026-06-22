@@ -95,21 +95,23 @@ function LoginPage() {
 
   return (
     <AuthLayout ctaLabel="Sign Up" ctaHref="/signup">
-      <AuthCard className="auth-card--compact">
-        <div className="auth-form-stack flex flex-col">
-          <h1 className="figma-track-md text-center">Sign in to your account</h1>
+      <AuthCard>
+        <div className="figma-gap-24 flex flex-col">
+          <h1 className="figma-track-md text-center">Login with</h1>
 
-          <div className="auth-form-section flex flex-col">
-            <p className="figma-text-sm figma-track-sm font-medium text-[#062357]">
-              Email for Magic Link<span className="text-[#df1c41]">*</span>
-            </p>
-            <Input
-              size="lg"
-              type="email"
-              value={magicEmail}
-              onChange={(event) => setMagicEmail(event.target.value)}
-              placeholder="Enter your email"
-            />
+          <div className="figma-gap-16 flex flex-col">
+            <div className="figma-gap-8 flex flex-col">
+              <p className="figma-text-sm figma-track-sm font-medium text-[#062357]">
+                Email for Magic Link<span className="text-[#df1c41]">*</span>
+              </p>
+              <Input
+                size="lg"
+                type="email"
+                value={magicEmail}
+                onChange={(event) => setMagicEmail(event.target.value)}
+                placeholder="Enter your email"
+              />
+            </div>
             <Button
               type="button"
               disabled={isMagicLoading || !magicEmail.trim()}
@@ -120,14 +122,14 @@ function LoginPage() {
             </Button>
           </div>
 
-          <div className="auth-form-or flex items-center">
+          <div className="figma-gap-12 flex items-center">
             <div className="h-px flex-1 bg-[#dfe1e7]" />
-            <span className="figma-track-md font-semibold text-[#666d80]">OR</span>
+            <span className="figma-text-lg figma-track-md font-semibold text-[#666d80]">OR</span>
             <div className="h-px flex-1 bg-[#dfe1e7]" />
           </div>
 
-          <div className="auth-form-section flex flex-col">
-            <div className="auth-form-section flex flex-col">
+          <div className="figma-gap-16 flex flex-col">
+            <div className="figma-gap-8 flex flex-col">
               <p className="figma-text-sm figma-track-sm font-medium text-[#062357]">
                 Email<span className="text-[#df1c41]">*</span>
               </p>
@@ -139,7 +141,7 @@ function LoginPage() {
                 placeholder="Enter your email"
               />
             </div>
-            <div className="auth-form-section flex flex-col">
+            <div className="figma-gap-8 flex flex-col">
               <p className="figma-text-sm figma-track-sm font-medium text-[#062357]">
                 Password<span className="text-[#df1c41]">*</span>
               </p>
@@ -153,7 +155,7 @@ function LoginPage() {
             </div>
             <div className="flex items-center justify-between">
               <label className="figma-gap-8 figma-text-sm figma-track-sm inline-flex items-center font-medium text-[#666d80]">
-                <Checkbox size="sm" />
+                <Checkbox size="md" />
                 Keep me login
               </label>
               <Link to="/forgot-password" className="figma-text-sm figma-track-sm font-semibold text-[#0d47a1]">
@@ -168,12 +170,6 @@ function LoginPage() {
             >
               {isPasswordLoading ? "Signing in..." : "Sign In"}
             </Button>
-          </div>
-
-          <div className="auth-form-or flex items-center">
-            <div className="h-px flex-1 bg-[#dfe1e7]" />
-            <span className="figma-track-md font-semibold text-[#666d80]">OR</span>
-            <div className="h-px flex-1 bg-[#dfe1e7]" />
           </div>
 
           {message && <p className="figma-text-sm figma-track-sm text-center text-[#0d47a1]">{message}</p>}

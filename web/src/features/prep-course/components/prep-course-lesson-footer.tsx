@@ -19,7 +19,7 @@ type PrepCourseLessonFooterProps = {
 }
 
 const navBtnClass =
-  "inline-flex h-12 min-w-0 shrink-0 items-center justify-center gap-1.5 rounded-2xl border border-[color:var(--greyscale-100)] bg-[var(--greyscale-25)] px-3 text-sm font-semibold tracking-[0.02em] text-[color:var(--greyscale-500)] shadow-[0_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#eef1f4] disabled:cursor-not-allowed disabled:border-[color:var(--btn-disabled-border)] disabled:bg-[var(--btn-disabled-bg)] disabled:text-[color:var(--greyscale-400)] disabled:shadow-none"
+  "inline-flex h-[48px] w-[90px] shrink-0 items-center justify-center gap-1 rounded-2xl border border-[color:var(--greyscale-100)] bg-[#f6f8fa] px-2 text-sm font-semibold tracking-[0.02em] text-[color:var(--greyscale-500)] shadow-[0_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#eef1f4] disabled:cursor-not-allowed disabled:border-[color:var(--btn-disabled-border)] disabled:bg-[var(--btn-disabled-bg)] disabled:text-[color:var(--greyscale-400)] disabled:shadow-none"
 
 const outlineActionBtnClass =
   "inline-flex h-12 max-w-full shrink items-center justify-center gap-2 rounded-2xl border border-[color:var(--greyscale-100)] bg-white px-4 text-base font-semibold tracking-[0.02em] text-[#0d47a1] shadow-[var(--shadow-xsmall)] transition-colors hover:bg-[var(--primary-0)]"
@@ -39,9 +39,9 @@ function PrepCourseLessonFooter({
   primaryAction = null,
 }: PrepCourseLessonFooterProps) {
   return (
-    <footer className="min-w-0 w-full max-w-full shrink-0 overflow-x-clip border-t border-[color:var(--greyscale-100)] bg-[var(--secondary-0)] px-6">
-      <div className="grid min-w-0 w-full grid-cols-1 gap-2 py-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center xl:gap-x-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-6">
+    <footer className="min-w-0 w-full max-w-full shrink-0 overflow-x-clip border-t border-[color:var(--greyscale-100)] bg-transparent px-6 py-4">
+      <div className="flex min-w-0 w-full flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex min-w-0 flex-wrap items-center gap-6">
           <button type="button" onClick={onPrev} disabled={prevDisabled} className={navBtnClass}>
             <ArrowLeft className="size-6 shrink-0" aria-hidden />
             Prev
@@ -55,7 +55,7 @@ function PrepCourseLessonFooter({
             <span className="truncate">{showSidebar ? "Hide Lesson" : "Show All Lesson"}</span>
           </button>
         </div>
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-4">
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-6">
           {primaryAction ? (
             <button
               type="button"

@@ -89,9 +89,10 @@ function PrepCourseContentPage() {
         const defaultModuleId = lessonLoc?.moduleId ?? normalized.modules[0]?.id ?? null
         setSelectedModuleId(defaultModuleId)
 
-        if (lessonLoc) {
-          setExpandedSectionIds(new Set([lessonLoc.sectionId]))
-        }
+        const defaultModule = normalized.modules.find((module) => module.id === defaultModuleId)
+        setExpandedSectionIds(
+          defaultModule ? new Set(defaultModule.sections.map((section) => section.id)) : new Set(),
+        )
       } catch (e) {
         if (!alive) return
         setError(e instanceof Error ? e.message : "Failed to load course")
@@ -144,6 +145,17 @@ function PrepCourseContentPage() {
       return next
     })
   }, [bookmarkedLessonSlugs, isModuleBookmarked, selectedModule, showBookmarksOnly])
+
+  function handleSelectModule(moduleId: string) {
+    setSelectedModuleId(moduleId)
+    const mod = curriculum.modules.find((module) => module.id === moduleId)
+    if (!mod) return
+    setExpandedSectionIds((prev) => {
+      const next = new Set(prev)
+      for (const section of mod.sections) next.add(section.id)
+      return next
+    })
+  }
 
   function handleToggleModuleBookmark(moduleId: string, next: boolean) {
     setModuleBookmarked(moduleId, next)
@@ -242,7 +254,7 @@ function PrepCourseContentPage() {
               modules={visibleModules}
               selectedModuleId={selectedModuleId}
               completedLessonSlugs={completedLessonSlugs}
-              onSelectModule={setSelectedModuleId}
+              onSelectModule={handleSelectModule}
             />
           </div>
         </div>

@@ -26,6 +26,7 @@ type PrepCourseLessonPanelProps = {
   drillStartError?: string | null
   lessonBookmarked?: boolean
   onToggleLessonBookmark?: (next: boolean) => void
+  sidebarAdjacent?: boolean
 }
 
 function PrepCourseLessonPanel({
@@ -42,6 +43,7 @@ function PrepCourseLessonPanel({
   drillStartError = null,
   lessonBookmarked = false,
   onToggleLessonBookmark,
+  sidebarAdjacent = false,
 }: PrepCourseLessonPanelProps) {
   const isPrepCourseDrill = lesson ? isPrepCourseDrillLessonType(lesson.lesson_type) : false
   const headerMeta =
@@ -63,6 +65,7 @@ function PrepCourseLessonPanel({
     Boolean(activeDrillAttempt) &&
     lesson != null &&
     (lesson.lesson_type === "active_drill" || lesson.lesson_type === "adaptive_drill")
+  const useLessonArticleShell = Boolean(lesson && !loading && !hasVideo && !isRepWorkLesson && !hideHeaderForDrillResults)
 
   const titleBlock =
     lesson && !loading && !hideHeaderForDrillResults ? (
@@ -99,8 +102,12 @@ function PrepCourseLessonPanel({
       onStartDrill={onStartDrill}
       startingDrill={startingDrill}
       drillStartError={drillStartError}
+      edgeToSidebar={false}
+      skipArticleShell={useLessonArticleShell}
     />
   ) : null
+
+  const contentPaddingClass = sidebarAdjacent ? "pt-6 pb-6 pr-0" : "p-6"
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -110,10 +117,38 @@ function PrepCourseLessonPanel({
         isRepWorkLesson ? (
           <div
             ref={contentScrollRef}
-            className="practice-session-pane practice-session-scroll-hidden h-0 min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain bg-[var(--greyscale-25)] p-6 [overflow-anchor:none]"
+            className={cn(
+              "practice-session-pane practice-session-scroll-hidden h-0 min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain bg-[var(--primary-0)] [overflow-anchor:none]",
+              contentPaddingClass,
+            )}
           >
-            <article className="box-border min-w-0 max-w-full overflow-x-clip rounded-[14px] border border-[#e2e8f0] bg-white shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+            <article
+              className={cn(
+                "box-border min-w-0 max-w-full overflow-x-clip rounded-[16px] border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]",
+                sidebarAdjacent && "min-h-full",
+              )}
+            >
               <div className="box-border flex min-w-0 max-w-full flex-col gap-5 overflow-x-clip p-6">
+                {titleBlock}
+                {lessonBody}
+              </div>
+            </article>
+          </div>
+        ) : useLessonArticleShell ? (
+          <div
+            ref={contentScrollRef}
+            className={cn(
+              "practice-session-pane practice-session-scroll-hidden h-0 min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-[var(--primary-0)] [overflow-anchor:none]",
+              contentPaddingClass,
+            )}
+          >
+            <article
+              className={cn(
+                "box-border min-w-0 max-w-full overflow-x-clip rounded-[16px] border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]",
+                sidebarAdjacent && "min-h-full",
+              )}
+            >
+              <div className="box-border flex min-w-0 max-w-full flex-col gap-6 overflow-x-clip p-6">
                 {titleBlock}
                 {lessonBody}
               </div>
@@ -121,10 +156,16 @@ function PrepCourseLessonPanel({
           </div>
         ) : (
           <>
-            {!hasVideo ? <div className="shrink-0">{titleBlock}</div> : null}
+            {!hasVideo ? (
+              <div className={cn("shrink-0 bg-transparent", contentPaddingClass, "pb-0")}>{titleBlock}</div>
+            ) : null}
             <div
               ref={contentScrollRef}
-              className={`practice-session-pane practice-session-scroll-hidden h-0 min-h-0 flex-1 overflow-y-auto overscroll-contain [overflow-anchor:none] pb-6 ${!hasVideo ? "pt-8" : ""}`}
+              className={cn(
+                "practice-session-pane practice-session-scroll-hidden h-0 min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[var(--primary-0)] [overflow-anchor:none]",
+                contentPaddingClass,
+                !hasVideo && "pt-0",
+              )}
             >
               {lessonBody}
             </div>

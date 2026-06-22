@@ -111,7 +111,7 @@ function SignupPage() {
           <div className="figma-gap-16 flex flex-col">
             <AuthTermsCheckbox checked={acceptedTerms} onChange={setAcceptedTerms} />
 
-            <SocialButton onClick={() => void continueWithGoogle()} disabled={isSubmitting}>
+            <SocialButton onClick={() => void continueWithGoogle()} disabled={isSubmitting} className="auth-social-btn">
               Sign in with Google
             </SocialButton>
           </div>
