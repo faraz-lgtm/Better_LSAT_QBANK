@@ -123,7 +123,7 @@ function PracticeDrillsPage() {
   })
 
   return (
-    <StudentMain className="drills-page flex flex-col gap-[24px]">
+    <StudentMain className="drills-page" contentClassName="flex flex-col gap-[24px]">
       <section className="flex flex-col gap-[16px] rounded-[24px] border border-[#dfe1e7] bg-white p-[24px]">
         <div className="flex items-center gap-[8px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1]">
           <button

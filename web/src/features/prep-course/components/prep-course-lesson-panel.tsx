@@ -4,7 +4,12 @@ import type { RefObject } from "react"
 import { LessonContentRenderer } from "@/features/prep-course/components/lesson-content-renderer"
 import { cn } from "@/lib/utils"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
-import { isPrepCourseDrillLessonType, lessonMetaLine } from "@/features/prep-course/lib/prep-course-format"
+import {
+  isResolvedAdaptiveDrillLesson,
+  isResolvedPrepCourseDrillLesson,
+  resolveDrillLessonType,
+  lessonMetaLine,
+} from "@/features/prep-course/lib/prep-course-format"
 import type {
   PrepCourse,
   PrepLesson,
@@ -45,7 +50,7 @@ function PrepCourseLessonPanel({
   onToggleLessonBookmark,
   sidebarAdjacent = false,
 }: PrepCourseLessonPanelProps) {
-  const isPrepCourseDrill = lesson ? isPrepCourseDrillLessonType(lesson.lesson_type) : false
+  const isPrepCourseDrill = lesson ? isResolvedPrepCourseDrillLesson(lesson) : false
   const headerMeta =
     lesson && !loading
       ? lessonMetaLine(lesson, {
@@ -58,17 +63,21 @@ function PrepCourseLessonPanel({
     lesson != null &&
     (lesson.lesson_type === "video" ||
       lesson.lesson_type === "video_text" ||
-      lesson.lesson_type === "active_drill" ||
-      lesson.lesson_type === "adaptive_drill")
-  const isRepWorkLesson = lesson != null && lesson.lesson_type === "rep_work"
+      isResolvedPrepCourseDrillLesson(lesson))
+  const isRepWorkLesson = lesson != null && resolveDrillLessonType(lesson) === "rep_work"
+  const isAdaptiveDrillIntro =
+    lesson != null && isResolvedAdaptiveDrillLesson(lesson) && !activeDrillAttempt
+  const hideHeaderForDrillIntro = isAdaptiveDrillIntro
   const hideHeaderForDrillResults =
     Boolean(activeDrillAttempt) &&
     lesson != null &&
-    (lesson.lesson_type === "active_drill" || lesson.lesson_type === "adaptive_drill")
-  const useLessonArticleShell = Boolean(lesson && !loading && !hasVideo && !isRepWorkLesson && !hideHeaderForDrillResults)
+    isResolvedPrepCourseDrillLesson(lesson)
+  const useLessonArticleShell = Boolean(
+    lesson && !loading && !hasVideo && !isRepWorkLesson && !hideHeaderForDrillResults && !hideHeaderForDrillIntro,
+  )
 
   const titleBlock =
-    lesson && !loading && !hideHeaderForDrillResults ? (
+    lesson && !loading && !hideHeaderForDrillResults && !hideHeaderForDrillIntro ? (
       <header className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-2">
           <h1 className="student-page-heading">{lesson.title}</h1>
@@ -104,6 +113,9 @@ function PrepCourseLessonPanel({
       drillStartError={drillStartError}
       edgeToSidebar={false}
       skipArticleShell={useLessonArticleShell}
+      sectionSubtitle={subtitle}
+      lessonBookmarked={lessonBookmarked}
+      onToggleLessonBookmark={onToggleLessonBookmark}
     />
   ) : null
 
@@ -133,6 +145,16 @@ function PrepCourseLessonPanel({
                 {lessonBody}
               </div>
             </article>
+          </div>
+        ) : isAdaptiveDrillIntro ? (
+          <div
+            ref={contentScrollRef}
+            className={cn(
+              "practice-session-pane practice-session-scroll-hidden flex h-0 min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-[var(--primary-0)] [overflow-anchor:none]",
+              contentPaddingClass,
+            )}
+          >
+            <div className="flex w-full flex-1 flex-col items-center justify-start pt-2">{lessonBody}</div>
           </div>
         ) : useLessonArticleShell ? (
           <div

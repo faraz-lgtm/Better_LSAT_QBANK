@@ -135,6 +135,25 @@ describe("LessonContentRenderer adaptive_drill", () => {
     expect(screen.queryByText("Lesson notes after drill.")).not.toBeInTheDocument()
   })
 
+  it("shows intro card with Start for Full Drill title stored as video_text", () => {
+    render(
+      <LessonContentRenderer
+        lesson={{
+          ...adaptiveLesson,
+          lesson_type: "video_text",
+          title: "Full Drill: Main Conclusion Questions",
+        }}
+        linkedQuestionRefs={[linked, { ...linked, question_id: "q2", question_number: 6 }]}
+        activeDrillAttempt={null}
+        sectionSubtitle="The Anatomy of an Argument • 30 mins"
+        onStartDrill={() => {}}
+      />,
+    )
+    expect(screen.getByRole("button", { name: /start/i })).toBeInTheDocument()
+    expect(screen.getByText("The Anatomy of an Argument • 30 mins")).toBeInTheDocument()
+    expect(screen.getByText(/Mixed practice keeps your thinking flexible/i)).toBeInTheDocument()
+  })
+
   it("shows results panel after drill", () => {
     render(
       <LessonContentRenderer

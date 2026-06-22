@@ -45,11 +45,11 @@ export function lessonMetaLine(
   lesson: PrepLesson,
   options?: { activeDrillAttempted?: boolean },
 ): string | null {
-  if (isPrepCourseDrillLessonType(lesson.lesson_type) && !options?.activeDrillAttempted) {
+  if (isResolvedPrepCourseDrillLesson(lesson) && !options?.activeDrillAttempted) {
     return null
   }
   const duration = formatDurationShort(lesson.duration_minutes)
-  if (isPrepCourseDrillLessonType(lesson.lesson_type)) {
+  if (isResolvedPrepCourseDrillLesson(lesson)) {
     return duration === "0 mins" ? null : duration
   }
   // Summary often duplicates lesson body HTML; show duration only under the title.
@@ -246,27 +246,78 @@ export function isDrillLessonType(type: PrepLesson["lesson_type"]): type is Dril
 }
 
 const LESSON_TITLE_PREFIXES: Array<{ pattern: RegExp; kind: DrillLessonType }> = [
-  { pattern: /^Rep Work:\s*/i, kind: "rep_work" },
-  { pattern: /^Active Drill:\s*/i, kind: "active_drill" },
-  { pattern: /^Adaptive Drill:\s*/i, kind: "adaptive_drill" },
-  { pattern: /^Full Drill:\s*/i, kind: "adaptive_drill" },
+  { pattern: /^Rep Work\b/i, kind: "rep_work" },
+  { pattern: /^Active Drill\b/i, kind: "active_drill" },
+  { pattern: /^Adaptive Drill\b/i, kind: "adaptive_drill" },
+  { pattern: /^Full Drill\b/i, kind: "adaptive_drill" },
 ]
 
 function parseLessonTitlePrefix(title: string): { cleanTitle: string; kind: DrillLessonType } | null {
   for (const entry of LESSON_TITLE_PREFIXES) {
     if (!entry.pattern.test(title)) continue
+    const cleanTitle = title.replace(entry.pattern, "").replace(/^[\s:–—-]+/, "").trim()
     return {
-      cleanTitle: title.replace(entry.pattern, "").trim(),
+      cleanTitle: cleanTitle || title.trim(),
       kind: entry.kind,
     }
   }
   return null
 }
 
+function parseDrillKindFromSlug(slug: string): DrillLessonType | null {
+  const normalized = slug.trim().toLowerCase()
+  if (normalized.startsWith("full-drill") || normalized.startsWith("adaptive-drill")) {
+    return "adaptive_drill"
+  }
+  if (normalized.startsWith("active-drill")) return "active_drill"
+  if (normalized.startsWith("rep-work")) return "rep_work"
+  return null
+}
+
+function stripHtmlForDrillInference(html: string): string {
+  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+}
+
+function inferDrillKindFromContent(lesson: PrepLesson): DrillLessonType | null {
+  const haystack = [
+    lesson.title,
+    lesson.summary ?? "",
+    stripHtmlForDrillInference(lesson.text_content ?? ""),
+  ]
+    .join("\n")
+    .toLowerCase()
+
+  if (/\bfull drill\b/.test(haystack) || /\badaptive drill\b/.test(haystack)) {
+    return "adaptive_drill"
+  }
+  if (/\bactive drill\b/.test(haystack) || /\byou try\b/.test(haystack)) {
+    return "active_drill"
+  }
+  if (/\brep work\b/.test(haystack) || /\breview work\b/.test(haystack)) {
+    return "rep_work"
+  }
+  return null
+}
+
 function resolveDrillLessonType(lesson: PrepLesson): DrillLessonType | null {
   if (isDrillLessonType(lesson.lesson_type)) return lesson.lesson_type
-  return parseLessonTitlePrefix(lesson.title)?.kind ?? null
+  const fromTitle = parseLessonTitlePrefix(lesson.title)?.kind
+  if (fromTitle) return fromTitle
+  const fromSlug = parseDrillKindFromSlug(lesson.slug)
+  if (fromSlug) return fromSlug
+  return inferDrillKindFromContent(lesson)
 }
+
+export function isResolvedPrepCourseDrillLesson(lesson: PrepLesson): boolean {
+  const kind = resolveDrillLessonType(lesson)
+  return kind === "active_drill" || kind === "adaptive_drill"
+}
+
+export function isResolvedAdaptiveDrillLesson(lesson: PrepLesson): boolean {
+  return resolveDrillLessonType(lesson) === "adaptive_drill"
+}
+
+export { resolveDrillLessonType }
 
 export type LessonRowSubtitle = {
   label: string

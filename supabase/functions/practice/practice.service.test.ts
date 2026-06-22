@@ -561,6 +561,64 @@ Deno.test('startLessonDrill creates adaptive drill session with multiple questio
   assertEquals(out.metadata.questionCount, 3)
 })
 
+Deno.test('startLessonDrill creates adaptive drill session from Full Drill title on video_text lesson', async () => {
+  const service = createPracticeService({
+    repository: drillRepo({
+      getPublishedPrepLessonById: async () => ({
+        id: 'lesson-full-drill',
+        slug: 'full-drill-main-conclusion-questions',
+        title: 'Full Drill: Main Conclusion Questions',
+        lesson_type: 'video_text',
+        summary: '5 Basic Main Conclusion Questions',
+        text_content: '<p>5 Basic Main Conclusion Questions</p>',
+        is_published: true,
+      }),
+      listLessonQuestionIds: async () => ['q-1', 'q-2'],
+    }) as never,
+  })
+  const out = await service.startLessonDrill('user-1', { lessonId: 'lesson-full-drill' })
+  assertEquals(out.metadata.source, 'prep_course_adaptive_drill')
+  assertEquals(out.metadata.questionIds, ['q-1', 'q-2'])
+})
+
+Deno.test('startLessonDrill creates adaptive drill from slug when title is generic', async () => {
+  const service = createPracticeService({
+    repository: drillRepo({
+      getPublishedPrepLessonById: async () => ({
+        id: 'lesson-full-drill',
+        slug: 'full-drill-main-conclusion-questions',
+        title: 'Main Conclusion Questions',
+        lesson_type: 'video_text',
+        summary: 'Practice set',
+        text_content: '<p>Practice set</p>',
+        is_published: true,
+      }),
+      listLessonQuestionIds: async () => ['q-1'],
+    }) as never,
+  })
+  const out = await service.startLessonDrill('user-1', { lessonId: 'lesson-full-drill' })
+  assertEquals(out.metadata.source, 'prep_course_adaptive_drill')
+})
+
+Deno.test('startLessonDrill creates adaptive drill from Adaptive Drill - title', async () => {
+  const service = createPracticeService({
+    repository: drillRepo({
+      getPublishedPrepLessonById: async () => ({
+        id: 'lesson-adaptive',
+        slug: 'adaptive-drill-mixed-prep',
+        title: 'Adaptive Drill - Mixed Prep (5 Qs)',
+        lesson_type: 'video_text',
+        summary: null,
+        text_content: null,
+        is_published: true,
+      }),
+      listLessonQuestionIds: async () => ['q-1', 'q-2', 'q-3'],
+    }) as never,
+  })
+  const out = await service.startLessonDrill('user-1', { lessonId: 'lesson-adaptive' })
+  assertEquals(out.metadata.source, 'prep_course_adaptive_drill')
+})
+
 Deno.test('startLessonDrill rejects non-active-drill lessons', async () => {
   const service = createPracticeService({
     repository: drillRepo({

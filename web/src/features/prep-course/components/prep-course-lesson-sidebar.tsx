@@ -1,6 +1,10 @@
 import { Check, X } from "lucide-react"
 
-import { formatDurationShort } from "@/features/prep-course/lib/prep-course-format"
+import {
+  formatDurationShort,
+  resolveDrillLessonType,
+  resolveLessonRowDisplay,
+} from "@/features/prep-course/lib/prep-course-format"
 import type { PrepLesson } from "@/lib/api/prep-course"
 import { cn } from "@/lib/utils"
 
@@ -116,6 +120,8 @@ function PrepCourseLessonSidebar({
           {lessons.map((lesson, index) => {
             const isActive = lesson.slug === activeLessonSlug
             const isComplete = completedLessonSlugs.has(lesson.slug)
+            const { title, subtitle } = resolveLessonRowDisplay(lesson)
+            const drillKind = resolveDrillLessonType(lesson)
 
             const rowBg = isActive
               ? "bg-[#0d47a1]"
@@ -131,26 +137,40 @@ function PrepCourseLessonSidebar({
                   type="button"
                   onClick={() => onSelectLesson(lesson.slug)}
                   className={cn(
-                    "flex h-16 w-full items-center gap-3 rounded-[14px] px-3 text-left transition-colors",
+                    "flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left transition-colors",
+                    subtitle ? "min-h-16" : "h-16",
                     rowBg,
                     !isActive && "hover:brightness-[0.98]",
                   )}
                 >
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
                     <LessonStatusMarker variant={markerVariant} />
-                    <span
-                      className={cn(
-                        "min-w-0 truncate text-xs font-medium leading-normal tracking-[0.24px]",
-                        isActive ? "text-white" : "text-[#062357]",
-                      )}
-                      title={lesson.title}
-                    >
-                      {lesson.title}
-                    </span>
+                    <div className="min-w-0 flex-1">
+                      <span
+                        className={cn(
+                          "block truncate text-xs font-medium leading-normal tracking-[0.24px]",
+                          isActive ? "text-white" : "text-[#062357]",
+                        )}
+                        title={title}
+                      >
+                        {title}
+                      </span>
+                      {subtitle ? (
+                        <span
+                          className={cn(
+                            "mt-0.5 block truncate text-xs font-bold leading-normal tracking-[0.24px]",
+                            isActive && drillKind === "rep_work" ? "text-white" : subtitle.accentClass,
+                          )}
+                          title={subtitle.label}
+                        >
+                          {subtitle.label}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                   <span
                     className={cn(
-                      "w-12 shrink-0 text-right text-xs font-medium leading-normal tracking-[0.24px]",
+                      "w-12 shrink-0 self-center text-right text-xs font-medium leading-normal tracking-[0.24px]",
                       isActive ? "text-white" : "text-[color:var(--greyscale-500)]",
                     )}
                   >

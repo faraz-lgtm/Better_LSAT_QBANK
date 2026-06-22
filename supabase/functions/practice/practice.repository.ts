@@ -572,6 +572,7 @@ export function createPracticeRepository(client: SupabaseClient) {
 
     async getPublishedPrepLessonById(lessonId: string): Promise<{
       id: string
+      slug: string
       title: string
       lesson_type: string
       summary: string | null
@@ -580,12 +581,13 @@ export function createPracticeRepository(client: SupabaseClient) {
     } | null> {
       const { data, error } = await client
         .from('prep_lessons')
-        .select('id,title,lesson_type,summary,text_content,is_published')
+        .select('id,slug,title,lesson_type,summary,text_content,is_published')
         .eq('id', lessonId)
         .maybeSingle()
       if (error) throw error
       const row = data as {
         id: string
+        slug: string
         title: string
         lesson_type: string
         summary: string | null

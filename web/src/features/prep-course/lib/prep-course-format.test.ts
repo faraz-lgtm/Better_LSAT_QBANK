@@ -4,6 +4,7 @@ import {
   countCompletedLessons,
   curriculumStats,
   findLessonLocation,
+  isResolvedAdaptiveDrillLesson,
   lessonProgressPercent,
   lessonRowSubtitle,
   resolveLessonRowDisplay,
@@ -161,6 +162,18 @@ describe("prep-course-format curriculum helpers", () => {
       duration: "0 mins",
       accentClass: "text-[#0bbcc9]",
     })
+    expect(isResolvedAdaptiveDrillLesson({
+      ...baseLesson,
+      lesson_type: "video_text",
+      slug: "full-drill-main-conclusion-questions",
+      title: "Main Conclusion Questions",
+    })).toBe(true)
+    expect(isResolvedAdaptiveDrillLesson({
+      ...baseLesson,
+      lesson_type: "video_text",
+      slug: "intro-to-lsat",
+      title: "Adaptive Drill - Mixed Prep (5 Qs)",
+    })).toBe(true)
   })
 
   it("countCompletedLessons and lessonProgressPercent", () => {

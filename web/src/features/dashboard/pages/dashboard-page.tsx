@@ -26,15 +26,15 @@ import {
 import type { AnalyticsOverview } from "@/lib/api/analytics"
 import type { OfficialLsatScore, StudentStudyContext } from "@/lib/api/users"
 import { createUsersApi } from "@/lib/api/users"
+import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 function filterChipStyles(active: boolean): string {
   return drillFilterPillClass(active)
 }
 
-function adaptiveDrillPath(filter: "all" | "lr" | "rc"): string {
-  if (filter === "rc") return "/app/practice/drills/rc/new"
-  return "/app/practice/drills/lr/new"
+function adaptiveDrillSectionType(filter: "all" | "lr" | "rc"): "LR" | "RC" {
+  return filter === "rc" ? "RC" : "LR"
 }
 
 type DashboardDrill = ContinueDrill | (SuggestedDrill & { isSuggested: true })
@@ -68,6 +68,13 @@ function DashboardPage() {
       return null
     }
   }, [])
+  const practiceApi = useMemo(() => {
+    try {
+      return createPracticeApi(getSupabaseBrowserClient())
+    } catch {
+      return null
+    }
+  }, [])
 
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null)
   const [studyHours, setStudyHours] = useState(0)
@@ -87,6 +94,7 @@ function DashboardPage() {
   const [scoreLabelDraft, setScoreLabelDraft] = useState("")
   const [scoreValueDraft, setScoreValueDraft] = useState("")
   const [savingScore, setSavingScore] = useState(false)
+  const [startingAdaptiveDrill, setStartingAdaptiveDrill] = useState(false)
 
   const loadDashboard = useCallback(async () => {
     if (!analyticsApi || !usersApi) {
@@ -154,6 +162,28 @@ function DashboardPage() {
     return filteredSuggested.map((d) => ({ ...d, isSuggested: true as const }))
   }, [filteredContinue, filteredSuggested])
 
+  const handleStartAdaptiveDrill = useCallback(async () => {
+    if (!practiceApi || startingAdaptiveDrill) return
+    setStartingAdaptiveDrill(true)
+    setError(null)
+    try {
+      const out = await practiceApi.startDrill({
+        sectionType: adaptiveDrillSectionType(activeFilter),
+        questionCount: 5,
+        timing: "unlimited",
+        showAnswers: "end",
+        selection: "auto",
+        difficulty: "adaptive",
+        status: "fresh",
+      })
+      navigate(`/app/practice/drills/session/${out.session.id}`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to start adaptive drill")
+    } finally {
+      setStartingAdaptiveDrill(false)
+    }
+  }, [activeFilter, navigate, practiceApi, startingAdaptiveDrill])
+
   const adaptiveDrillButton = useMemo(
     () => (
       <Button
@@ -161,12 +191,13 @@ function DashboardPage() {
         variant="outline"
         size="sm"
         className="w-fit shrink-0"
-        onClick={() => navigate(adaptiveDrillPath(activeFilter))}
+        disabled={startingAdaptiveDrill || !practiceApi}
+        onClick={() => void handleStartAdaptiveDrill()}
       >
-        Adaptive Drill
+        {startingAdaptiveDrill ? "Starting…" : "Adaptive Drill"}
       </Button>
     ),
-    [activeFilter, navigate],
+    [handleStartAdaptiveDrill, practiceApi, startingAdaptiveDrill],
   )
 
   useStudentPageHeaderActions(adaptiveDrillButton)

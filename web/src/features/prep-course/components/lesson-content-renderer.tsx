@@ -1,13 +1,13 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { RotateCcw } from "lucide-react"
 
+import { resolveDrillLessonType } from "@/features/prep-course/lib/prep-course-format"
 import { cn } from "@/lib/utils"
 
 import { ActiveDrillIntroCard } from "@/features/prep-course/components/active-drill/active-drill-intro-card"
 import { ActiveDrillQuestionResultDetail } from "@/features/prep-course/components/active-drill/active-drill-question-result-detail"
 import { resolveDrillResultLinkedRefs } from "@/features/prep-course/lib/resolve-drill-result-linked-refs"
 import { ActiveDrillResultBar } from "@/features/prep-course/components/active-drill/active-drill-result-bar"
-import { AdaptiveDrillResultsPanel } from "@/features/prep-course/components/lesson-drill/adaptive-drill-results-panel"
 import { LessonDrillIntroCard } from "@/features/prep-course/components/lesson-drill/lesson-drill-intro-card"
 import { htmlToPlainText, parseRepWorkFromTextContent, isRepWorkJson, stripInstructionsLabel, trimEmptyHtmlParagraphs, type RepWorkPair } from "@/lib/rep-work-content"
 import type {
@@ -29,6 +29,9 @@ type LessonContentRendererProps = {
   drillStartError?: string | null
   edgeToSidebar?: boolean
   skipArticleShell?: boolean
+  sectionSubtitle?: string | null
+  lessonBookmarked?: boolean
+  onToggleLessonBookmark?: (next: boolean) => void
 }
 
 function lessonArticleCardClass(edgeToSidebar: boolean, className: string) {
@@ -338,8 +341,12 @@ function LessonContentRenderer({
   drillStartError = null,
   edgeToSidebar = false,
   skipArticleShell = false,
+  sectionSubtitle = null,
+  lessonBookmarked = false,
+  onToggleLessonBookmark,
 }: LessonContentRendererProps) {
-  const type = lesson.lesson_type
+  const drillKind = resolveDrillLessonType(lesson)
+  const type = drillKind ?? lesson.lesson_type
   const legacyVideo = type === "video"
   const videoText = type === "video_text" || legacyVideo
   const isDrill = type === "active_drill" || type === "adaptive_drill"
@@ -348,14 +355,26 @@ function LessonContentRenderer({
 
   if (type === "adaptive_drill") {
     if (activeDrillAttempt) {
+      const drillResultItems = resolveDrillResultLinkedRefs(linkedQuestionRefs, activeDrillAttempt)
       return (
         <div className="space-y-6">
-          <AdaptiveDrillResultsPanel
-            attempt={activeDrillAttempt}
-            linkedQuestionRefs={linkedQuestionRefs}
-            onRetake={onStartDrill}
-            retaking={startingDrill}
-          />
+          <article className="overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.04)]">
+            <ActiveDrillResultBar
+              attempt={activeDrillAttempt}
+              lessonTitle={lesson.title}
+              embedded
+              onRetake={onStartDrill}
+              retaking={startingDrill}
+            />
+            {drillResultItems.map((linked, index) => (
+              <ActiveDrillQuestionResultDetail
+                key={linked.question_id}
+                linked={linked}
+                attempt={activeDrillAttempt}
+                sequenceNumber={index + 1}
+              />
+            ))}
+          </article>
           {lesson.text_content ? (
             <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
               {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
@@ -372,6 +391,9 @@ function LessonContentRenderer({
       <LessonDrillIntroCard
         lesson={lesson}
         linked={linkedQuestionRefs}
+        sectionSubtitle={sectionSubtitle}
+        lessonBookmarked={lessonBookmarked}
+        onToggleLessonBookmark={onToggleLessonBookmark}
         onStartDrill={onStartDrill}
         startingDrill={startingDrill}
         drillStartError={drillStartError}
