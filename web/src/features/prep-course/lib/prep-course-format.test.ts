@@ -5,6 +5,8 @@ import {
   curriculumStats,
   findLessonLocation,
   lessonProgressPercent,
+  lessonRowSubtitle,
+  resolveLessonRowDisplay,
   normalizeCurriculum,
   shouldFlattenModuleSections,
 } from "./prep-course-format"
@@ -79,6 +81,86 @@ describe("prep-course-format curriculum helpers", () => {
         ],
       }),
     ).toBe(false)
+  })
+
+  it("lessonRowSubtitle formats drill labels with duration", () => {
+    expect(
+      lessonRowSubtitle({
+        ...baseLesson,
+        lesson_type: "adaptive_drill",
+        duration_minutes: 30,
+      }),
+    ).toEqual({
+      label: "Adaptive Drill",
+      duration: "30 mins",
+      accentClass: "text-[#0bbcc9]",
+    })
+    expect(
+      lessonRowSubtitle({
+        ...baseLesson,
+        lesson_type: "active_drill",
+        duration_minutes: 11,
+      }),
+    ).toEqual({
+      label: "Active Drill",
+      duration: "11 mins",
+      accentClass: "text-[#00bc54]",
+    })
+    expect(
+      lessonRowSubtitle({
+        ...baseLesson,
+        lesson_type: "rep_work",
+        duration_minutes: 21,
+      }),
+    ).toEqual({
+      label: "Rep Work",
+      duration: "21 mins",
+      accentClass: "text-[#0d47a1]",
+    })
+    expect(lessonRowSubtitle(baseLesson)).toBeNull()
+  })
+
+  it("resolveLessonRowDisplay infers drill styling from title prefixes", () => {
+    expect(
+      resolveLessonRowDisplay({
+        ...baseLesson,
+        lesson_type: "video_text",
+        title: "Rep Work: Following the Signs",
+        duration_minutes: 0,
+      }),
+    ).toEqual({
+      title: "Following the Signs",
+      iconType: "rep_work",
+      subtitle: {
+        label: "Rep Work",
+        duration: "0 mins",
+        accentClass: "text-[#0d47a1]",
+      },
+    })
+    expect(
+      resolveLessonRowDisplay({
+        ...baseLesson,
+        lesson_type: "video_text",
+        title: "Active Drill: Identifying Premises and Conclusions (Easy)",
+        duration_minutes: 0,
+      }).subtitle,
+    ).toEqual({
+      label: "Active Drill",
+      duration: "0 mins",
+      accentClass: "text-[#00bc54]",
+    })
+    expect(
+      resolveLessonRowDisplay({
+        ...baseLesson,
+        lesson_type: "video_text",
+        title: "Full Drill: Main Conclusion Questions",
+        duration_minutes: 0,
+      }).subtitle,
+    ).toEqual({
+      label: "Adaptive Drill",
+      duration: "0 mins",
+      accentClass: "text-[#0bbcc9]",
+    })
   })
 
   it("countCompletedLessons and lessonProgressPercent", () => {

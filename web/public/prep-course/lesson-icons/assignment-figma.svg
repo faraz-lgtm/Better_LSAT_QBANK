@@ -1,0 +1,27 @@
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="20" height="20" fill="#DDDDDD"/>
+<g id="Blind Review">
+<rect width="24340" height="4147" transform="translate(-5511 -141)" fill="#DFE1E7"/>
+<g id="Blind Review Notes">
+<rect width="1920" height="1162" transform="translate(-1371 -41)" fill="#F5F9FF"/>
+<g id="Container">
+<mask id="path-1-inside-1_18617_12004" fill="white">
+<path d="M-1371 -41H549V61H-1371V-41Z"/>
+</mask>
+<path d="M-1371 -41H549V61H-1371V-41Z" fill="#F5F9FF"/>
+<path d="M549 61V60H-1371V61V62H549V61Z" fill="#DFE1E7" mask="url(#path-1-inside-1_18617_12004)"/>
+<g id="Frame 40932">
+<g id="Frame 40931">
+<g id="Input">
+<rect x="-11.5" y="-15.5" width="98" height="51" rx="15.5" fill="#EDF3FF"/>
+<rect x="-11.5" y="-15.5" width="98" height="51" rx="15.5" stroke="#0D47A1"/>
+<g id="huge-icon/education/outline/assignment">
+<path id="Vector" d="M11.667 17.5H10.0003C8.15938 17.5 6.66699 16.0076 6.66699 14.1667V5.83333C6.66699 3.99238 8.15938 2.5 10.0003 2.5H15.0003C16.8413 2.5 18.3337 3.99238 18.3337 5.83333V11.6667M1.66699 5.83333H4.16699M10.0003 5.83333H15.0003M10.0003 9.16667H15.0003M10.0003 12.5H12.5003M13.3337 15.8333L14.7943 17.0019C15.1426 17.2805 15.6484 17.2355 15.9421 16.8999L18.3337 14.1667M2.91699 17.5L3.50033 16.7222C3.93307 16.1452 4.16699 15.4435 4.16699 14.7222V3.75C4.16699 3.05964 3.60735 2.5 2.91699 2.5C2.22664 2.5 1.66699 3.05964 1.66699 3.75V14.7222C1.66699 15.4435 1.90092 16.1452 2.33366 16.7222L2.91699 17.5Z" stroke="#0D47A1" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</g>
+</g>
+</g>
+</g>
+</g>
+</g>
+</svg>

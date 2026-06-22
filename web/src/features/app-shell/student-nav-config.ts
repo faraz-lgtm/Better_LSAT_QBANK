@@ -37,8 +37,8 @@ export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
     label: "Insights",
     items: [
       { label: "Overview", href: "/app/analytics" },
-      { label: "Priorities", href: "/app/analytics?tab=priorities" },
-      { label: "Practice history", href: "/app/analytics?tab=history" },
+      // { label: "Priorities", href: "/app/analytics?tab=priorities" },
+      // { label: "Practice history", href: "/app/analytics?tab=history" },
       { label: "Drills", href: "/app/analytics/drills" },
       { label: "Sections", href: "/app/analytics/sections" },
       { label: "PrepTest", href: "/app/analytics/preptests" },

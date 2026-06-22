@@ -9,7 +9,7 @@ function AuthTermsCheckbox({ checked, onChange }: AuthTermsCheckboxProps) {
   return (
     <label className="figma-gap-8 figma-text-sm figma-track-sm inline-flex items-center font-medium text-[#666d80]">
       <Checkbox
-        size="sm"
+        size="md"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
       />

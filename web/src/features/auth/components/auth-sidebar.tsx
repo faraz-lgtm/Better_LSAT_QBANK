@@ -32,41 +32,41 @@ function AuthSidebar() {
 
   return (
     <aside className="auth-sidebar">
-      <img src="/auth/sidebar-shape.png" alt="" className="auth-sidebar-shape" aria-hidden />
-      <div className="auth-sidebar-inner">
-        <div className="auth-sidebar-copy">
-          <div className="auth-sidebar-text" aria-live="polite">
-            {textSlides.map((slide, index) => (
-              <div
-                key={slide.title}
-                className={cn(
-                  "auth-sidebar-text-slide",
-                  index === activeSlide && "auth-sidebar-text-slide--active",
-                )}
-              >
-                <h2 className="auth-sidebar-title">{slide.title}</h2>
-                <p className="auth-sidebar-body">{slide.body}</p>
-              </div>
-            ))}
-          </div>
-          <div className="auth-sidebar-dots">
-            {textSlides.map((_, index) => (
-              <button
-                key={index}
-                type="button"
-                className={index === activeSlide ? "auth-sidebar-dot auth-sidebar-dot--active" : "auth-sidebar-dot"}
-                aria-label={`Show slide ${index + 1}`}
-                onClick={() => setActiveSlide(index)}
-              />
-            ))}
-          </div>
+      <div className="auth-sidebar-ellipse" aria-hidden />
+      <img src="/auth/sidebar-shape.svg" alt="" className="auth-sidebar-shape" aria-hidden />
+      <div className="auth-sidebar-preview-wrap" aria-hidden>
+        <div className="auth-sidebar-preview-track">
+          <img src={sidebarPreviewImage} alt="" className="auth-sidebar-preview" />
         </div>
-        <div className="auth-sidebar-preview-wrap" aria-hidden>
-          <div className="auth-sidebar-preview-shadow" />
-          <div className="auth-sidebar-preview-track">
-            <img src={sidebarPreviewImage} alt="" className="auth-sidebar-preview" />
-          </div>
-          <div className="auth-sidebar-preview-fade" />
+        <div className="auth-sidebar-preview-fade" />
+      </div>
+      <div className="auth-sidebar-copy">
+        <div className="auth-sidebar-text" aria-live="polite">
+          {textSlides.map((slide, index) => (
+            <div
+              key={slide.title}
+              className={cn(
+                "auth-sidebar-text-slide",
+                index === activeSlide && "auth-sidebar-text-slide--active",
+              )}
+            >
+              <h2 className="auth-sidebar-title">{slide.title}</h2>
+              <p className="auth-sidebar-body">{slide.body}</p>
+            </div>
+          ))}
+        </div>
+        <div className="auth-sidebar-dots" role="tablist" aria-label="Feature highlights">
+          {textSlides.map((_, index) => (
+            <button
+              key={index}
+              type="button"
+              role="tab"
+              aria-selected={index === activeSlide}
+              className={index === activeSlide ? "auth-sidebar-dot auth-sidebar-dot--active" : "auth-sidebar-dot"}
+              aria-label={`Show slide ${index + 1}`}
+              onClick={() => setActiveSlide(index)}
+            />
+          ))}
         </div>
       </div>
     </aside>

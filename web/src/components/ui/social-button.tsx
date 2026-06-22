@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 const socialButtonVariants = cva(
-  "inline-flex h-12 w-full max-w-[436px] items-center justify-center gap-3 rounded-2xl border border-[#dfe1e7] bg-[#f5f9ff] px-4 py-3 text-base font-semibold text-[#062357] shadow-[0_1px_2px_rgba(13,13,18,0.06)] hover:bg-[#edf3ff]",
+  "inline-flex h-12 w-full items-center justify-center gap-3 rounded-2xl border border-[#dfe1e7] bg-[#f5f9ff] px-4 py-2 text-base font-semibold text-[#062357] shadow-[0_1px_2px_rgba(13,13,18,0.06)] hover:bg-[#edf3ff]",
   {
     variants: {
       theme: {

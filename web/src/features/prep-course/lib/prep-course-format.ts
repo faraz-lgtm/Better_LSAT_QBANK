@@ -243,6 +243,70 @@ export function isDrillLessonType(type: PrepLesson["lesson_type"]): boolean {
   return type === "active_drill" || type === "adaptive_drill" || type === "rep_work"
 }
 
+type DrillLessonType = "active_drill" | "adaptive_drill" | "rep_work"
+
+const LESSON_TITLE_PREFIXES: Array<{ pattern: RegExp; kind: DrillLessonType }> = [
+  { pattern: /^Rep Work:\s*/i, kind: "rep_work" },
+  { pattern: /^Active Drill:\s*/i, kind: "active_drill" },
+  { pattern: /^Adaptive Drill:\s*/i, kind: "adaptive_drill" },
+  { pattern: /^Full Drill:\s*/i, kind: "adaptive_drill" },
+]
+
+function parseLessonTitlePrefix(title: string): { cleanTitle: string; kind: DrillLessonType } | null {
+  for (const entry of LESSON_TITLE_PREFIXES) {
+    if (!entry.pattern.test(title)) continue
+    return {
+      cleanTitle: title.replace(entry.pattern, "").trim(),
+      kind: entry.kind,
+    }
+  }
+  return null
+}
+
+function resolveDrillLessonType(lesson: PrepLesson): DrillLessonType | null {
+  if (isDrillLessonType(lesson.lesson_type)) return lesson.lesson_type
+  return parseLessonTitlePrefix(lesson.title)?.kind ?? null
+}
+
+export type LessonRowSubtitle = {
+  label: string
+  duration: string
+  accentClass: string
+}
+
+export type LessonRowDisplay = {
+  title: string
+  iconType: PrepLesson["lesson_type"]
+  subtitle: LessonRowSubtitle | null
+}
+
+export function resolveLessonRowDisplay(lesson: PrepLesson): LessonRowDisplay {
+  const prefix = parseLessonTitlePrefix(lesson.title)
+  const drillKind = resolveDrillLessonType(lesson)
+  const title = drillKind && prefix ? prefix.cleanTitle : lesson.title
+  const iconType = drillKind ?? lesson.lesson_type
+  const subtitle = drillKind
+    ? {
+        label: LESSON_TYPE_LABEL[drillKind],
+        duration: formatDurationShort(lesson.duration_minutes),
+        accentClass: lessonTypeAccentClass(drillKind)!,
+      }
+    : null
+
+  return { title, iconType, subtitle }
+}
+
+export function lessonTypeAccentClass(type: PrepLesson["lesson_type"]): string | null {
+  if (type === "adaptive_drill") return "text-[#0bbcc9]"
+  if (type === "active_drill") return "text-[#00bc54]"
+  if (type === "rep_work") return "text-[#0d47a1]"
+  return null
+}
+
+export function lessonRowSubtitle(lesson: PrepLesson): LessonRowSubtitle | null {
+  return resolveLessonRowDisplay(lesson).subtitle
+}
+
 export function lessonTypeBadgeClass(
   type: PrepLesson["lesson_type"],
   variant: "default" | "onPrimary" = "default",
