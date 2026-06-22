@@ -410,6 +410,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
           difficulty: input.difficulty,
           status: input.status,
           title: input.title,
+          source: input.source,
         },
       })
       if (error) throw error

@@ -1511,6 +1511,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         difficulty?: unknown
         status?: unknown
         title?: unknown
+        source?: unknown
       },
     ): Promise<DrillSessionResponse> {
       const sectionType = parseSectionType(body.sectionType)
@@ -1529,6 +1530,10 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           ? body.difficulty
           : 'adaptive'
       const status = typeof body.status === 'string' ? body.status : 'fresh'
+      const source =
+        typeof body.source === 'string' && body.source.trim() === 'dashboard_adaptive_drill'
+          ? 'dashboard_adaptive_drill'
+          : null
 
       const pool = await deps.repository.listDrillPoolQuestions({
         sectionType,
@@ -1556,6 +1561,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         status,
         questionIds,
         title,
+        ...(source ? { source } : {}),
       }
 
       const session = await deps.repository.insertSession({
