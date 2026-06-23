@@ -545,7 +545,7 @@ function ExplanationsPage() {
   }
 
   return (
-    <StudentMain className="bg-[#f3f7ff]" contentClassName="pt-6 pb-6">
+    <StudentMain className="bg-[#f0f5ff]" contentClassName="pt-6 pb-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <h2 className="student-page-heading">LSAT Question Explanations</h2>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">

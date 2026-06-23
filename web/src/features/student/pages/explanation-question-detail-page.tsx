@@ -157,8 +157,8 @@ function ExplanationQuestionDetailPage() {
   return (
     <StudentMain
       layout={questionTabLocked ? "locked" : "scroll"}
-      className="bg-[#f3f7ff]"
-      contentClassName="bg-[#f3f7ff]"
+      className="bg-[#f0f5ff]"
+      contentClassName="bg-[#f0f5ff]"
     >
       <div className={cn("flex flex-col gap-6", questionTabLocked && "min-h-0 min-w-0 flex-1")}>
         <header className="shrink-0 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">

@@ -42,7 +42,7 @@ function ExplanationDetailTabBar({
   return (
     <div className="flex flex-wrap items-center gap-4 lg:gap-6">
       <div
-        className="inline-flex h-12 items-center gap-1 rounded-[10px] bg-[#f3f7ff] p-1"
+        className="inline-flex h-12 items-center gap-1 rounded-[10px] bg-[var(--primary-25)] p-1"
         role="tablist"
         aria-label="Question detail"
       >
