@@ -158,6 +158,16 @@ export function incompleteDurationMinutes(
     .reduce((sum, lesson) => sum + (lesson.duration_minutes ?? 0), 0)
 }
 
+export function completedDurationMinutes(
+  lessons: PrepLesson[],
+  completedSlugs: Set<string> | string[],
+): number {
+  const completed = completedSlugs instanceof Set ? completedSlugs : new Set(completedSlugs)
+  return lessons
+    .filter((lesson) => completed.has(lesson.slug))
+    .reduce((sum, lesson) => sum + (lesson.duration_minutes ?? 0), 0)
+}
+
 export function formatRemainingHoursLabel(remainingMinutes: number): string {
   if (remainingMinutes <= 0) return "About 0 min left"
   if (remainingMinutes < 60) return `About ${remainingMinutes} min left`

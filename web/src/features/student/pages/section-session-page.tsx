@@ -52,6 +52,7 @@ import {
   resolveTimerBudgetSeconds,
   usePracticeSessionTimer,
 } from "@/features/student/practice-session/use-practice-session-timer"
+import { Button } from "@/components/ui/button"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createPracticeApi } from "@/lib/api/practice"
@@ -297,6 +298,7 @@ function SectionSessionPage() {
   const location = useLocation()
   const isRetakeAttempt = isRetakePrepTestAttempt(searchParams)
   const blindReviewMode = searchParams.get("blindReview") === "1"
+  const sectionIntroActive = isPrepTestSectionIntroActive(searchParams, blindReviewMode)
   const blindReviewPrepTestId = searchParams.get("prepTestId")
   const navigate = useNavigate()
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
@@ -412,7 +414,7 @@ function SectionSessionPage() {
   }
 
   const { elapsed, countdown, paused, togglePause, resetElapsed, setInitialCountdown } = usePracticeSessionTimer({
-    enabled: !blindReviewMode,
+    enabled: !blindReviewMode && !sectionIntroActive,
   })
   const highlights = usePracticeHighlights()
 
@@ -512,7 +514,6 @@ function SectionSessionPage() {
   }, [blindReviewMode, postCompleteBlindReview, blindReviewPrepTestId, searchParams, practiceApi])
 
   const prepTestFlowId = searchParams.get("prepTestId")
-  const sectionIntroActive = isPrepTestSectionIntroActive(searchParams, blindReviewMode)
 
   function handleGoToSectionQuestions() {
     const params = new URLSearchParams(searchParams)
@@ -917,19 +918,21 @@ function SectionSessionPage() {
       questionCount: questions.length,
       sectionTimerSeconds: timedSection ? SECTION_TIMER_SECONDS : undefined,
     })
-    const introTimerLabel = timedSection && countdown != null ? "Time Left:" : "Elapsed"
-    const introTimerDisplaySeconds = timedSection && countdown != null ? countdown : elapsed
-    const introTimerProgress =
-      timedSection && countdown != null
-        ? computeRemainingTimerProgress(countdown, introTimerBudgetSeconds)
-        : computeElapsedTimerProgress(elapsed, introTimerBudgetSeconds)
-    const introFinishButton = (
-      <PracticeSessionFinishMenu
-        finishing={finishing}
-        buttonClassName="h-[52px] w-[106px] gap-2 px-3"
-        onSubmitSection={() => setSubmitModalOpen(true)}
-        onExit={handleExitSession}
-      />
+    const introTimerLabel = timedSection ? "Time Left:" : "Elapsed"
+    const introTimerDisplaySeconds = timedSection ? introTimerBudgetSeconds : elapsed
+    const introTimerProgress = timedSection
+      ? computeRemainingTimerProgress(introTimerBudgetSeconds, introTimerBudgetSeconds)
+      : computeElapsedTimerProgress(elapsed, introTimerBudgetSeconds)
+    const introBackButton = (
+      <Button
+        type="button"
+        variant="outline"
+        className="h-[52px] w-[106px] gap-2 px-3"
+        onClick={handleExitSession}
+      >
+        <ChevronLeft className="size-5" strokeWidth={2} aria-hidden />
+        Back
+      </Button>
     )
 
     return (
@@ -954,10 +957,10 @@ function SectionSessionPage() {
                 onUnderline={highlights.selectUnderline}
                 timerLabel={introTimerLabel}
                 timerDisplaySeconds={introTimerDisplaySeconds}
-                timerPaused={paused}
-                onToggleTimerPause={togglePause}
+                timerPaused
+                onToggleTimerPause={() => {}}
                 timerProgress={introTimerProgress}
-                finishButton={introFinishButton}
+                finishButton={introBackButton}
               />
             }
           >
@@ -971,47 +974,6 @@ function SectionSessionPage() {
           </PracticePrepTestSectionIntroFrame>
         </div>
 
-        <PracticeSubmitSectionModal
-          open={submitModalOpen}
-          title={submitModalTitle}
-          confirmLabel={submitModalConfirmLabel}
-          message={submitSectionMessage}
-          submitting={finishing}
-          onCancel={() => setSubmitModalOpen(false)}
-          onConfirm={() => void handleConfirmSubmitSection()}
-        />
-
-        <PracticeCompleteModal
-          open={completeModal != null}
-          titleId={completeModal?.flow === "standalone" ? "section-complete-title" : "preptest-complete-title"}
-          subtitle={
-            completeModal?.flow === "standalone"
-              ? "You've completed the section"
-              : `You've completed ${completeModal?.prepTestLabel ?? "the PrepTest"}`
-          }
-          rawScore={completeModal?.rawScore ?? 0}
-          questionCount={completeModal?.questionCount ?? 1}
-          scaledScore={completeModal?.scaledScore}
-          scoreHidden={scoreHidden}
-          onToggleScoreHidden={() => setScoreHidden((h) => !h)}
-          showBlindReview
-          onBlindReview={() => {
-            if (completeModal?.flow === "standalone") {
-              startPostCompleteBlindReview()
-              return
-            }
-            void enterPrepTestBlindReview()
-          }}
-          onSkipDetails={() => {
-            if (completeModal?.flow === "standalone") {
-              void viewSectionResults()
-              return
-            }
-            void viewPrepTestResults()
-          }}
-          doneLabel={completeModal?.flow === "standalone" ? "Done" : "Done with PrepTest"}
-          onDone={completeModal?.flow === "standalone" ? leaveSectionComplete : leavePrepTestComplete}
-        />
       </StudentMain>
     )
   }
