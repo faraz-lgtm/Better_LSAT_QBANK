@@ -1881,12 +1881,13 @@ html.student-shell-immersive .practice-session-card--active-drill {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 16px;
+  gap: 8px;
 }
 
 .practice-session-card--active-drill .practice-session-footer .practice-session-question-nav-grid {
   flex-wrap: nowrap;
   align-items: center;
+  gap: 8px;
   height: 48px;
 }
 

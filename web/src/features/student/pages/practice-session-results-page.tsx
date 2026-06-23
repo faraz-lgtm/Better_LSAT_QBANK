@@ -315,19 +315,6 @@ function PracticeSessionResultsPage() {
 
   return (
     <StudentMain className="w-full max-w-none" contentClassName="max-w-none">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <p className="font-serif text-[24px] font-bold leading-[1.25] text-[#062357] md:text-[40px]">
-          {results.title}
-        </p>
-        <button
-          type="button"
-          className="text-sm font-semibold text-[#0d47a1] hover:underline"
-          onClick={handleBack}
-        >
-          Back
-        </button>
-      </div>
-
       <PracticeResultsSummaryPanel
         rawScore={results.rawScore}
         questionCount={results.questionCount}
@@ -354,7 +341,7 @@ function PracticeSessionResultsPage() {
         </div>
       ) : null}
 
-      <section className="mb-6 flex flex-col rounded-2xl border border-[#dfe1e7] bg-white px-6 py-4">
+      <section className="mb-6 flex flex-col rounded-[20px] border border-[#dfe1e7] bg-white px-6 py-4">
         <p className="text-2xl font-bold leading-[1.3] text-[#062357]">
           Total Questions: {results.questionCount}
         </p>

@@ -15,6 +15,7 @@ type StudentOptionMenuProps<T extends string> = {
   ariaLabel: string
   className?: string
   menuAlign?: "left" | "right"
+  size?: "default" | "lg"
 }
 
 function StudentOptionMenu<T extends string>({
@@ -24,6 +25,7 @@ function StudentOptionMenu<T extends string>({
   ariaLabel,
   className,
   menuAlign = "left",
+  size = "default",
 }: StudentOptionMenuProps<T>) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -70,15 +72,22 @@ function StudentOptionMenu<T extends string>({
         aria-controls={listboxId}
         aria-label={ariaLabel}
         className={cn(
-          "flex h-10 w-full min-w-[140px] items-center gap-2 rounded-[10px] border px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d47a1]/30",
+          "flex w-full min-w-[140px] items-center gap-2 border px-3 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d47a1]/30",
+          size === "lg"
+            ? "h-[52px] rounded-lg text-base tracking-[0.02em]"
+            : "h-10 rounded-[10px] text-sm",
           open
-            ? "border-[#0d47a1] bg-[#f3f7ff] text-[#0d47a1]"
-            : "border-[#dfe1e7] bg-white text-[#062357] hover:bg-[#f3f7ff]",
+            ? "border-[#0d47a1] bg-[#f0f5ff] text-[#062357]"
+            : "border-[#dfe1e7] bg-[#f0f5ff] text-[#062357] hover:border-[#c5d4ef]",
         )}
       >
         <span className="flex-1 truncate text-left">{activeLabel}</span>
         <ChevronDown
-          className={cn("size-4 shrink-0 transition-transform", open ? "rotate-180 text-[#0d47a1]" : "text-[#0d47a1]")}
+          className={cn(
+            "shrink-0 text-[#666d80] transition-transform",
+            size === "lg" ? "size-5" : "size-4",
+            open && "rotate-180",
+          )}
           aria-hidden
         />
       </button>
@@ -89,7 +98,8 @@ function StudentOptionMenu<T extends string>({
           role="listbox"
           aria-label={ariaLabel}
           className={cn(
-            "absolute z-30 mt-2 min-w-full overflow-hidden rounded-[10px] border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]",
+            "absolute z-30 mt-2 min-w-full overflow-hidden border border-[#dfe1e7] bg-white p-1 shadow-[0px_12px_24px_rgba(13,13,18,0.12)]",
+            size === "lg" ? "rounded-lg" : "rounded-[10px]",
             menuAlign === "right" ? "right-0" : "left-0",
           )}
         >
@@ -103,8 +113,9 @@ function StudentOptionMenu<T extends string>({
                   aria-selected={active}
                   onClick={() => handleSelect(option.value)}
                   className={cn(
-                    "flex h-10 w-full items-center justify-between gap-3 rounded-[10px] px-3 text-sm font-medium tracking-[0.02em] transition-colors",
-                    active ? "bg-[#f3f7ff] text-[#0d47a1]" : "text-[#062357] hover:bg-[#f6f8fa]",
+                    "flex w-full items-center justify-between gap-3 px-3 font-medium tracking-[0.02em] transition-colors",
+                    size === "lg" ? "h-[52px] rounded-lg text-base" : "h-10 rounded-[10px] text-sm",
+                    active ? "bg-[#f3f7ff] text-[#062357]" : "text-[#062357] hover:bg-[#f3f7ff]",
                   )}
                 >
                   <span className="truncate">{option.label}</span>

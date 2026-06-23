@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
+import { DrillConfigSelectField } from "@/features/student/drills/drill-config-field"
 import {
   mapPrepTestTimingToSectionTiming,
   type PrepTestDetailResponse,
@@ -32,7 +33,7 @@ import {
   sectionSessionHref,
 } from "@/features/student/preptests/preptest-hub-navigation"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-import { ChevronDown, ChevronRight, Timer, X } from "lucide-react"
+import { ChevronRight, Timer, X } from "lucide-react"
 
 const SECTION_BREAK_TOTAL_SECONDS = PREPTEST_SECTION_BREAK_SECONDS
 
@@ -120,47 +121,6 @@ function PrepTestHubStat({ label, value }: { label: string; value: string | numb
     <div className="flex w-[78px] flex-col items-center">
       <dt className="text-xs font-medium leading-normal tracking-[0.24px] text-[#062357]">{label}</dt>
       <dd className="text-sm font-semibold leading-normal tracking-[0.28px] text-[#062357]">{value}</dd>
-    </div>
-  )
-}
-
-function PrepTestConfigCard({
-  id,
-  label,
-  description,
-  value,
-  onChange,
-  options,
-}: {
-  id: string
-  label: string
-  description: string
-  value: string
-  onChange: (next: string) => void
-  options: { id: string; label: string }[]
-}) {
-  return (
-    <div className="flex w-full max-w-[347px] flex-col gap-3 rounded-3xl border border-[#dfe1e7] bg-[#f6f8fa] p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
-      <p className="text-xl font-bold leading-[1.35] text-[#062357]">{label}</p>
-      <p className="text-sm font-normal leading-normal tracking-[0.28px] text-[#666d80]">{description}</p>
-      <div className="relative">
-        <select
-          id={id}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-[52px] w-full appearance-none rounded-2xl border border-[#dfe1e7] bg-[#f5f9ff] px-3 pr-10 text-base font-normal tracking-[0.32px] text-[#062357] focus:outline-none focus:ring-2 focus:ring-[#0d47a1]/25"
-        >
-          {options.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <ChevronDown
-          className="pointer-events-none absolute right-3 top-1/2 size-5 -translate-y-1/2 text-[#666d80]"
-          aria-hidden
-        />
-      </div>
     </div>
   )
 }
@@ -508,8 +468,8 @@ function PracticePrepTestPage() {
             <p className="text-2xl font-bold leading-[1.3] text-[#062357]">{prepTest.label}</p>
 
             <div className="flex flex-wrap gap-6">
-              <PrepTestConfigCard
-                id="preptest-timing"
+              <DrillConfigSelectField
+                className="w-full max-w-[347px]"
                 label="Timing"
                 description="Control your Prep pace"
                 value={timingId}
@@ -517,10 +477,10 @@ function PracticePrepTestPage() {
                   setTimingId(v)
                   void persistConfig(v, formatId)
                 }}
-                options={detail.timingOptions}
+                options={detail.timingOptions.map((o) => ({ value: o.id, label: o.label }))}
               />
-              <PrepTestConfigCard
-                id="preptest-format"
+              <DrillConfigSelectField
+                className="w-full max-w-[347px]"
                 label="Format"
                 description="Select Format"
                 value={formatId}
@@ -528,7 +488,7 @@ function PracticePrepTestPage() {
                   setFormatId(v)
                   void persistConfig(timingId, v)
                 }}
-                options={detail.formatOptions}
+                options={detail.formatOptions.map((o) => ({ value: o.id, label: o.label }))}
               />
             </div>
           </div>

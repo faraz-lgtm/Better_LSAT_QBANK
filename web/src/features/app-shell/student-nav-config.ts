@@ -111,6 +111,13 @@ function isPracticePrepTestHub(pathname: string): boolean {
   return /^\/app\/practice\/preptest\/[^/]+$/.test(pathname)
 }
 
+function getSectionLandingHref(key: StudentNavSectionKey): string | undefined {
+  if (key === "prep") return "/app/practice/drills"
+  if (key === "academy") return "/app/prep-course"
+  if (key === "insights") return "/app/analytics"
+  return undefined
+}
+
 export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBreadcrumb[] {
   if (isDashboardActive(pathname)) {
     return [{ label: "Dashboard" }]
@@ -119,7 +126,9 @@ export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBre
   const section = getActiveSection(pathname)
   if (!section) return []
 
-  const crumbs: StudentBreadcrumb[] = [{ label: section.label }]
+  const crumbs: StudentBreadcrumb[] = [
+    { label: section.label, href: getSectionLandingHref(section.key) },
+  ]
 
   if (isPracticePrepTestHub(pathname)) {
     return crumbs
@@ -139,12 +148,20 @@ export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBre
   }
 
   if (pathname === "/app/practice/drills/lr/new") {
+    crumbs.push({ label: "Drills", href: "/app/practice/drills" })
     crumbs.push({ label: "LR Drills" })
     return crumbs
   }
 
   if (pathname === "/app/practice/drills/rc/new") {
+    crumbs.push({ label: "Drills", href: "/app/practice/drills" })
     crumbs.push({ label: "RC Drills" })
+    return crumbs
+  }
+
+  if (pathname.startsWith("/app/practice/results/")) {
+    crumbs.push({ label: "Drills", href: "/app/practice/drills" })
+    crumbs.push({ label: "Drill results" })
     return crumbs
   }
 
@@ -177,6 +194,7 @@ export function getStudentPageTitle(pathname: string, search = ""): string | nul
   if (pathname.startsWith("/app/learn")) return "Explanations"
   if (pathname.startsWith("/app/analytics/preptests/results/")) return null
   if (pathname === "/app/practice/drills/lr/new" || pathname === "/app/practice/drills/rc/new") return null
+  if (pathname.startsWith("/app/practice/results/")) return null
 
   const activeItem = findActiveNavItem(pathname, search)
   if (activeItem) return activeItem.label

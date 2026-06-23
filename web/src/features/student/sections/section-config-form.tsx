@@ -3,8 +3,8 @@ import { Link, useNavigate } from "react-router-dom"
 import { FileText } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Select } from "@/components/ui/select"
 import { FigmaIcon } from "@/components/icons/figma-icons"
+import { DrillConfigSelectField } from "@/features/student/drills/drill-config-field"
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
 import {
   formatSectionPoolLabel,
@@ -39,29 +39,18 @@ type SectionConfigSelectCardProps = {
   value: string
   onChange: (value: string) => void
   options: { label: string; value: string }[]
-  placeholder?: string
 }
 
-function SectionConfigSelectCard({
-  label,
-  description,
-  value,
-  onChange,
-  options,
-  placeholder,
-}: SectionConfigSelectCardProps) {
+function SectionConfigSelectCard({ label, description, value, onChange, options }: SectionConfigSelectCardProps) {
   return (
-    <div className="flex w-full max-w-[502px] shrink-0 flex-col gap-3 rounded-[24px] border border-[#dfe1e7] bg-[#f6f8fa] p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
-      <p className="m-0 text-[20px] font-bold leading-[1.35] text-[#062357]">{label}</p>
-      <p className="m-0 text-sm font-normal leading-normal tracking-[0.28px] text-[#666d80]">{description}</p>
-      <Select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        options={options}
-        placeholder={placeholder}
-        className="h-[52px] rounded-[16px] border-[#dfe1e7] bg-[#f6f8fa] px-3 text-base tracking-[0.32px] text-[#062357] shadow-none"
-      />
-    </div>
+    <DrillConfigSelectField
+      className="w-full max-w-[502px] shrink-0"
+      label={label}
+      description={description}
+      value={value}
+      onChange={onChange}
+      options={options}
+    />
   )
 }
 
@@ -169,7 +158,6 @@ function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConf
           value={sectionId}
           onChange={setSectionId}
           options={sectionOptions}
-          placeholder={loadingPool ? "Loading…" : "Select section"}
         />
         <SectionConfigSelectCard
           label="Timing"

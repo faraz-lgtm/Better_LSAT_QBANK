@@ -74,7 +74,7 @@ function PracticeCompleteModal({
       aria-modal="true"
       aria-labelledby={titleId}
     >
-      <div className="flex w-full max-w-[672px] flex-col items-center gap-6 rounded-2xl border border-[#dfe1e7] bg-[#f2f7ff] px-6 pb-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+      <div className="flex w-full max-w-[672px] flex-col items-center gap-6 rounded-2xl border border-[#dfe1e7] bg-[#edf3ff] px-6 pb-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
         <div className="-mx-6 w-[calc(100%+3rem)] rounded-t-2xl bg-[#edf3ff] px-6 py-8 text-center">
           <h2 id={titleId} className="text-[48px] font-bold leading-[1.2] text-[#062357]">
             Well Done!
@@ -82,7 +82,7 @@ function PracticeCompleteModal({
           <p className="mt-2.5 text-lg leading-[1.4] tracking-[0.36px] text-[#062357]">{subtitle}</p>
         </div>
 
-        <div className="relative w-full max-w-[540px] rounded-3xl border border-[#0d47a1] bg-[#edf3ff] px-8 py-[30px]">
+        <div className="relative w-full max-w-[540px] rounded-[20px] border border-[#0d47a1] bg-white px-8 py-[30px]">
           <div
             className={cn(
               "relative flex min-h-[130px] items-center",
@@ -106,7 +106,7 @@ function PracticeCompleteModal({
           </div>
 
           {scoreHidden ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-3xl">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-[20px]">
               <PracticeCompleteHiddenEyeIcon className="text-[#666d80]" />
               <p className="text-base font-semibold tracking-[0.32px] text-[#666d80]">
                 Your score is hidden
@@ -118,7 +118,7 @@ function PracticeCompleteModal({
         <div className="flex w-full max-w-[320px] flex-col items-center gap-2">
           <button
             type="button"
-            className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-[#6d78b6] bg-[#edf3ff] px-4 text-sm font-semibold tracking-[0.28px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#e5edff]"
+            className="inline-flex h-10 w-full items-center justify-center rounded-[10px] border border-[#6d78b6] bg-white px-4 text-sm font-semibold tracking-[0.28px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#f0f5ff]"
             onClick={onToggleScoreHidden}
           >
             {scoreHidden ? "Peek at Score" : "Hide Score"}
@@ -128,7 +128,7 @@ function PracticeCompleteModal({
             <>
               <button
                 type="button"
-                className="inline-flex h-12 w-full items-center justify-center rounded-2xl border border-[#0b4e6e] bg-[#0d47a1] px-4 text-base font-semibold tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#0a3d8a] disabled:opacity-50"
+                className="inline-flex h-12 w-full items-center justify-center rounded-[10px] border border-[#0b4e6e] bg-[#0d47a1] px-4 text-base font-semibold tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#0a3d8a] disabled:opacity-50"
                 onClick={onBlindReview}
                 disabled={!onBlindReview}
               >
@@ -157,7 +157,7 @@ function PracticeCompleteModal({
               ) : null}
               <button
                 type="button"
-                className="inline-flex h-12 w-full items-center justify-center rounded-2xl border border-[#6d78b6] bg-[#edf3ff] px-4 text-base font-semibold tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#e5edff]"
+                className="inline-flex h-12 w-full items-center justify-center rounded-[10px] border border-[#6d78b6] bg-white px-4 text-base font-semibold tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#f0f5ff]"
                 onClick={onDone}
               >
                 {doneLabel}
@@ -167,7 +167,7 @@ function PracticeCompleteModal({
         </div>
 
         {showBlindReview ? (
-          <div className="flex w-full max-w-[608px] gap-3 rounded-2xl border border-[#ffbd4c] bg-[#fff6e0] p-4">
+          <div className="flex w-full max-w-[608px] gap-3 rounded-[20px] border border-[#ffbd4c] bg-[#fff6e0] p-4">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="20"
