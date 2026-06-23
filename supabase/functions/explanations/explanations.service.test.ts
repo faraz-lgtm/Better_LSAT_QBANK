@@ -281,4 +281,5 @@ Deno.test('getExplanationDetail returns extended payload', async () => {
   assertEquals(d.answerPopularity.length, 2)
   assertEquals(d.answerPopularity.find((r) => r.letter === 'B')?.count, 2)
   assertEquals(d.answerPopularity.find((r) => r.letter === 'B')?.pct, 67)
+  assertEquals(d.tags, ['Flaw'])
 })

@@ -16,6 +16,7 @@ import {
   prevLessonSlug,
   resolveDrillLessonType,
   shouldFlattenModuleSections,
+  isResolvedPrepCourseDrillLesson,
 } from "@/features/prep-course/lib/prep-course-format"
 import { mergeActiveDrillAttemptBlindReview } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
 import { usePrepCourseBookmarks } from "@/features/prep-course/lib/use-prep-course-bookmarks"
@@ -272,6 +273,24 @@ function PrepCourseLessonPage() {
     )
   }
 
+  const useSplitDrillLayout = Boolean(
+    activeDrillAttempt && showSidebar && isResolvedPrepCourseDrillLesson(lesson),
+  )
+
+  const lessonPanelProps = {
+    course,
+    lesson,
+    linkedQuestionRefs,
+    activeDrillAttempt,
+    sectionSubtitle,
+    onReviewDrill: handleReviewDrill,
+    onStartDrill: () => void handleStartDrill(),
+    startingDrill,
+    drillStartError,
+    lessonBookmarked: isLessonBookmarked(lesson.slug),
+    onToggleLessonBookmark: (next: boolean) => setLessonBookmarked(lesson.slug, next),
+  }
+
   return (
     <StudentMain layout="locked" contentClassName="pt-0 pb-[24px]">
       <div className="prep-course-lesson-shell flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-clip overflow-y-hidden">
@@ -280,44 +299,72 @@ function PrepCourseLessonPage() {
         <section className="prep-course-shell-card practice-session-card flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden">
           <div
             className={cn(
-              "practice-session-body flex h-0 min-h-0 min-w-0 max-w-full flex-1 overflow-x-clip overflow-y-hidden",
-              showSidebar ? "flex-col lg:flex-row lg:gap-6" : "flex-col",
+              "practice-session-body flex h-0 min-h-0 min-w-0 max-w-full flex-1 overflow-hidden",
+              useSplitDrillLayout
+                ? "flex-col"
+                : showSidebar
+                  ? "practice-session-body--with-sidebar flex-row items-stretch gap-6"
+                  : "flex-col",
             )}
           >
-            <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-hidden">
-              <PrepCourseLessonPanel
-                course={course}
-                lesson={lesson}
-                linkedQuestionRefs={linkedQuestionRefs}
-                activeDrillAttempt={activeDrillAttempt}
-                sectionSubtitle={sectionSubtitle}
-                contentScrollRef={lessonContentRef}
-                sidebarAdjacent={showSidebar}
-                onReviewDrill={handleReviewDrill}
-                onStartDrill={() => void handleStartDrill()}
-                startingDrill={startingDrill}
-                drillStartError={drillStartError}
-                lessonBookmarked={lesson ? isLessonBookmarked(lesson.slug) : false}
-                onToggleLessonBookmark={(next) => {
-                  if (lesson) setLessonBookmarked(lesson.slug, next)
-                }}
-              />
-            </div>
-
-            {showSidebar ? (
-              <div className="box-border flex h-full min-h-0 shrink-0 flex-col pt-6 pb-6 lg:w-[320px]">
-                <PrepCourseLessonSidebar
-                  lessons={sidebarLessons}
-                  activeLessonSlug={lesson.slug}
-                  completedLessonSlugs={completedLessonSlugs}
-                  progressPercent={sectionProgressPercent}
-                  sectionTitle={sectionTitle}
-                  sectionSubtitle={sectionRemainingLabel}
-                  onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
-                  onClose={() => setShowSidebar(false)}
-                />
+            {useSplitDrillLayout ? (
+              <div
+                ref={lessonContentRef}
+                className="practice-session-pane practice-session-scroll-hidden flex min-h-0 flex-1 flex-col gap-6 overflow-x-clip overflow-y-auto overscroll-contain bg-[var(--primary-0)] [overflow-anchor:none]"
+              >
+                <PrepCourseLessonPanel {...lessonPanelProps} drillResultsPart="cards" sidebarAdjacent={false} />
+                <div className="flex min-w-0 gap-6 px-6 pb-6">
+                  <div className="min-w-0 flex-1">
+                    <PrepCourseLessonPanel
+                      {...lessonPanelProps}
+                      drillResultsPart="below"
+                      sidebarAdjacent
+                    />
+                  </div>
+                  <div className="sticky top-6 flex w-[320px] shrink-0 self-start flex-col overflow-hidden">
+                    <div className="flex max-h-[calc(100svh-var(--nav-shell-height)-180px)] min-h-0 flex-col overflow-hidden">
+                      <PrepCourseLessonSidebar
+                        lessons={sidebarLessons}
+                        activeLessonSlug={lesson.slug}
+                        completedLessonSlugs={completedLessonSlugs}
+                        progressPercent={sectionProgressPercent}
+                        sectionTitle={sectionTitle}
+                        sectionSubtitle={sectionRemainingLabel}
+                        onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
+                        onClose={() => setShowSidebar(false)}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
-            ) : null}
+            ) : (
+              <>
+                <div className="flex h-full min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden">
+                  <PrepCourseLessonPanel
+                    {...lessonPanelProps}
+                    contentScrollRef={lessonContentRef}
+                    sidebarAdjacent={showSidebar}
+                  />
+                </div>
+
+                {showSidebar ? (
+                  <div className="flex h-full min-h-0 w-[320px] shrink-0 flex-col self-stretch overflow-hidden">
+                    <div className="practice-session-pane practice-session-scroll-hidden flex h-full min-h-0 flex-1 flex-col overflow-hidden pt-6 pb-6 pr-6 pl-0">
+                      <PrepCourseLessonSidebar
+                        lessons={sidebarLessons}
+                        activeLessonSlug={lesson.slug}
+                        completedLessonSlugs={completedLessonSlugs}
+                        progressPercent={sectionProgressPercent}
+                        sectionTitle={sectionTitle}
+                        sectionSubtitle={sectionRemainingLabel}
+                        onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
+                        onClose={() => setShowSidebar(false)}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+              </>
+            )}
           </div>
 
           <PrepCourseLessonFooter

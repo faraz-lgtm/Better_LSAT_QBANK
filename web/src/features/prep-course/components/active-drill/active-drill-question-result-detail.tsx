@@ -42,7 +42,7 @@ function ActiveDrillQuestionResultDetail({
     }
   }, [linked.question_id])
 
-  const answer = attempt.answers.find((a) => a.questionId === linked.question_id) ?? attempt.answers[0]
+  const answer = attempt.answers.find((a) => a.questionId === linked.question_id)
   const isCorrect = answer?.isCorrect ?? false
   const blindReviewAnswer = attempt.blindReview?.answers.find((a) => a.questionId === linked.question_id)
   const blindReviewCorrect = attempt.blindReview
@@ -63,6 +63,7 @@ function ActiveDrillQuestionResultDetail({
         sectionNumber: linked.section_number,
         questionNumber: linked.question_number,
         topicName: "—",
+        tags: linked.section_type ? [linked.section_type] : [],
         explanationHtml: null,
         videoUrl: null,
         stimulusText: null,

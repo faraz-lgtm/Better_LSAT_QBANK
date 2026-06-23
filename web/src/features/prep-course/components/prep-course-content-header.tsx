@@ -76,7 +76,7 @@ function PrepCourseContentHeader({
   onToggleShowBookmarksOnly,
 }: PrepCourseContentHeaderProps) {
   return (
-    <div className="rounded-t-[16px] border-b border-[color:var(--greyscale-100)] bg-[var(--greyscale-25)] p-[24px]">
+    <div className="rounded-t-[16px] border-b border-[color:var(--greyscale-100)] bg-[var(--primary-0)] p-[24px]">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-4">
           <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">Course Content</h2>

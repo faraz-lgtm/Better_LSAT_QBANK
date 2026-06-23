@@ -5,7 +5,9 @@ import {
   isAdaptiveDrillSession,
   isDashboardAdaptiveDrill,
   isDashboardAdaptiveDrillSession,
+  isPrepCourseActiveDrillSession,
   isPrepCourseAdaptiveDrillSession,
+  showDrillSessionTimer,
 } from "@/features/student/drills/drill-blind-review-policy"
 
 describe("drillSessionSupportsBlindReview", () => {
@@ -67,5 +69,25 @@ describe("drillSessionSupportsBlindReview", () => {
         metadata: { difficulty: "adaptive" },
       }),
     ).toBe(false)
+  })
+
+  it("hides session timer for adaptive and prep-course active drills", () => {
+    expect(
+      showDrillSessionTimer({
+        metadata: { source: "dashboard_adaptive_drill" },
+      }),
+    ).toBe(false)
+    expect(
+      showDrillSessionTimer({
+        metadata: { source: "prep_course_adaptive_drill" },
+      }),
+    ).toBe(false)
+    expect(
+      showDrillSessionTimer({
+        metadata: { source: "prep_course_active_drill" },
+      }),
+    ).toBe(false)
+    expect(isPrepCourseActiveDrillSession({ source: "prep_course_active_drill" })).toBe(true)
+    expect(showDrillSessionTimer({ metadata: { difficulty: "easy" } })).toBe(true)
   })
 })
