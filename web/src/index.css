@@ -831,8 +831,8 @@ code {
 }
 
 @theme inline {
-  --font-heading: var(--font-sans);
-  --font-sans: 'Geist Variable', sans-serif;
+  --font-heading: var(--sans);
+  --font-sans: var(--sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -1271,6 +1271,13 @@ select.ds-input {
 }
 
 /* Figma student sidebar shell (node 18624:68805) */
+.student-sidebar {
+  font-family: var(--sans);
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 .student-shell-top-row {
   box-sizing: border-box;
   height: 72px;
@@ -1321,7 +1328,7 @@ select.ds-input {
 
 .student-sidebar-link--active {
   padding: 0 16px;
-  font-weight: 700;
+  font-weight: 600;
   color: #0d47a1;
   background-color: #edf3ff;
   box-shadow:
@@ -1384,6 +1391,7 @@ select.ds-input {
 }
 
 .student-topbar-breadcrumbs {
+  font-family: var(--sans);
   font-size: 14px;
   line-height: 1.5;
   letter-spacing: 0.28px;
@@ -1704,6 +1712,16 @@ select.ds-input {
   overflow-x: clip;
 }
 
+.prep-course-lesson-shell .practice-session-body--with-sidebar > :first-child {
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.prep-course-lesson-shell .practice-session-body--with-sidebar > :last-child {
+  min-height: 0;
+  align-self: stretch;
+}
+
 .prep-course-rep-work-pair {
   contain: inline-size;
 }
@@ -1794,6 +1812,10 @@ html.student-shell-immersive .practice-session-card--active-drill {
   overflow: visible;
 }
 
+.practice-session-header--active-drill {
+  overflow: hidden;
+}
+
 .practice-session-timer {
   overflow: hidden;
   scrollbar-width: none;
@@ -1860,6 +1882,12 @@ html.student-shell-immersive .practice-session-card--active-drill {
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 16px;
+}
+
+.practice-session-card--active-drill .practice-session-footer .practice-session-question-nav-grid {
+  flex-wrap: nowrap;
+  align-items: center;
+  height: 48px;
 }
 
 .practice-session-card--active-drill .practice-session-question-nav-btn {

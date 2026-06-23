@@ -48,7 +48,13 @@ function ProgressRing({
   )
 }
 
-function LessonStatusMarker({ variant }: { variant: "complete" | "active" | "incomplete" }) {
+function LessonStatusMarker({
+  variant,
+  surface = "list",
+}: {
+  variant: "complete" | "active" | "incomplete"
+  surface?: "sidebar" | "list"
+}) {
   if (variant === "complete") {
     return (
       <span
@@ -64,7 +70,11 @@ function LessonStatusMarker({ variant }: { variant: "complete" | "active" | "inc
     <span
       className={cn(
         "size-6 shrink-0 rounded-full border bg-white",
-        variant === "active" ? "border-white" : "border-[color:var(--greyscale-100)]",
+        variant === "active" && surface === "sidebar" && "border-white",
+        variant === "active" &&
+          surface === "list" &&
+          "border-[color:var(--greyscale-100)] shadow-[0px_0px_1px_3px_rgba(129,136,152,0.15)] ring-1 ring-inset ring-[#c1c7d0]",
+        variant === "incomplete" && "border-[color:var(--greyscale-100)]",
       )}
       aria-hidden
     />
@@ -83,7 +93,7 @@ function PrepCourseLessonSidebar({
 }: PrepCourseLessonSidebarProps) {
   return (
     <aside
-      className="flex min-h-0 w-full flex-1 shrink-0 flex-col self-stretch overflow-hidden rounded-[16px] border border-[color:var(--greyscale-100)] bg-[#f3f7ff] lg:w-[320px]"
+      className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[16px] border border-[color:var(--greyscale-100)] bg-[#f3f7ff]"
       aria-label="Course lessons"
     >
       <div className="shrink-0 border-b border-[color:var(--greyscale-100)] bg-[#f3f7ff] p-6">
@@ -115,7 +125,7 @@ function PrepCourseLessonSidebar({
         </div>
       </div>
 
-      <div className="practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto bg-white p-6">
+      <div className="practice-session-pane practice-session-scroll-hidden h-0 min-h-0 flex-1 overflow-y-auto bg-white p-6">
         <ul className="flex flex-col gap-3">
           {lessons.map((lesson, index) => {
             const isActive = lesson.slug === activeLessonSlug
@@ -144,7 +154,7 @@ function PrepCourseLessonSidebar({
                   )}
                 >
                   <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <LessonStatusMarker variant={markerVariant} />
+                    <LessonStatusMarker variant={markerVariant} surface="sidebar" />
                     <div className="min-w-0 flex-1">
                       <span
                         className={cn(
@@ -186,4 +196,4 @@ function PrepCourseLessonSidebar({
   )
 }
 
-export { PrepCourseLessonSidebar, ProgressRing }
+export { PrepCourseLessonSidebar, ProgressRing, LessonStatusMarker }

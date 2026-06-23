@@ -1,11 +1,37 @@
+import { Check, X } from "lucide-react"
+
 import { cn } from "@/lib/utils"
 
 type PracticeResultOutcomeIconProps = {
   correct: boolean
   className?: string
+  variant?: "stroke" | "filled"
 }
 
-function PracticeResultOutcomeIcon({ correct, className }: PracticeResultOutcomeIconProps) {
+function PracticeResultOutcomeIcon({
+  correct,
+  className,
+  variant = "stroke",
+}: PracticeResultOutcomeIconProps) {
+  if (variant === "filled") {
+    return (
+      <span
+        className={cn(
+          "flex size-6 shrink-0 items-center justify-center rounded-full",
+          correct ? "bg-[#10b981]" : "bg-[#df1c41]",
+          className,
+        )}
+        aria-hidden
+      >
+        {correct ? (
+          <Check className="size-3.5 text-white" strokeWidth={2.5} />
+        ) : (
+          <X className="size-3.5 text-white" strokeWidth={2.5} />
+        )}
+      </span>
+    )
+  }
+
   if (correct) {
     return (
       <svg

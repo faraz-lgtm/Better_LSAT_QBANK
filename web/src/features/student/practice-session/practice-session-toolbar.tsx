@@ -58,7 +58,7 @@ function PracticeSessionToolbar({
     : "flex h-[52px] items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-3"
 
   return (
-    <div className={cn("flex min-w-0 flex-nowrap items-center", isActiveDrill ? "gap-2.5" : "gap-2")}>
+    <div className={cn("flex shrink-0 flex-nowrap items-center", isActiveDrill ? "gap-2.5" : "gap-2")}>
       <span
         className={cn(
           "shrink-0 text-sm font-medium tracking-[0.28px] text-[#666d80]",

@@ -113,7 +113,7 @@ function isPracticePrepTestHub(pathname: string): boolean {
 
 export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBreadcrumb[] {
   if (isDashboardActive(pathname)) {
-    return [{ label: "Main" }]
+    return [{ label: "Dashboard" }]
   }
 
   const section = getActiveSection(pathname)

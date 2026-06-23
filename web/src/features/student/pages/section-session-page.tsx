@@ -20,7 +20,13 @@ import {
   prepTestHeaderLabel,
   prepTestHubHref,
 } from "@/features/student/preptests/preptest-hub-navigation"
-import { ACTIVE_DRILL_FINISH_BUTTON_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import {
+  ACTIVE_DRILL_FINISH_BUTTON_CLASS,
+  ACTIVE_DRILL_FOOTER_CLASS,
+  ACTIVE_DRILL_FOOTER_ROW_CLASS,
+  ACTIVE_DRILL_OPTIONS_LIST_CLASS,
+  SESSION_FINISH_BUTTON_CLASS,
+} from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import { PracticeQuestionStem } from "@/features/student/practice-session/practice-question-stem"
 import {
@@ -268,7 +274,7 @@ function SectionQuestionPanel({
           {isCorrect ? "Correct" : "Incorrect"}
         </p>
       ) : null}
-      <div className={variant === "active-drill" ? "flex flex-col gap-4 py-4" : "flex flex-col gap-2"}>
+      <div className={variant === "active-drill" ? ACTIVE_DRILL_OPTIONS_LIST_CLASS : "flex flex-col gap-2"}>
         {question.choices.map((choice, index) => (
           <LrDrillOptionRow
             key={choice.id}
@@ -1053,7 +1059,9 @@ function SectionSessionPage() {
       disabled={sessionCompleted && !postCompleteBlindReview}
       finishing={finishing}
       submitLabel={postCompleteBlindReview ? "Finish Blind Review" : undefined}
-      buttonClassName={useActiveDrillLayout ? ACTIVE_DRILL_FINISH_BUTTON_CLASS : undefined}
+      buttonClassName={
+        useActiveDrillLayout ? ACTIVE_DRILL_FINISH_BUTTON_CLASS : SESSION_FINISH_BUTTON_CLASS
+      }
       onSubmitSection={() => setSubmitModalOpen(true)}
       onExit={handleExitSession}
     />
@@ -1225,7 +1233,7 @@ function SectionSessionPage() {
                 useBlindReviewLayout
                   ? "flex flex-col overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)]"
                   : useActiveDrillLayout
-                    ? "rounded-2xl bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
+                    ? "rounded-2xl bg-white"
                     : "gap-4 border-[#dfe1e7] p-5",
               )}
             >
@@ -1260,18 +1268,51 @@ function SectionSessionPage() {
 
       <footer
         className={cn(
-          "practice-session-footer relative z-10 flex shrink-0 items-center justify-between border-t border-[#dfe1e7] py-3",
+          "practice-session-footer relative z-10",
           useBlindReviewLayout
-            ? "min-h-[80px] gap-2 rounded-b-2xl bg-[#f6f8fa] px-6"
+            ? "flex min-h-[80px] shrink-0 items-center justify-between gap-2 rounded-b-2xl border-t border-[#dfe1e7] bg-[#f6f8fa] px-6"
             : useActiveDrillLayout
-              ? "min-h-20 gap-4 rounded-b-[16px] bg-[#f6f8fa] px-6 py-3"
-              : "gap-3 bg-background px-6 md:gap-4 md:px-6",
+              ? ACTIVE_DRILL_FOOTER_CLASS
+              : "flex shrink-0 items-center justify-between gap-3 border-t border-[#dfe1e7] bg-background px-6 py-3 md:gap-4 md:px-6",
         )}
       >
+        {useActiveDrillLayout ? (
+          <div className={ACTIVE_DRILL_FOOTER_ROW_CLASS}>
+            <div className="practice-session-scroll-hidden practice-session-question-nav-grid min-h-0 min-w-0 flex-1">
+              {questions.map((q, i) => {
+                const n = i + 1
+                return (
+                  <PracticeSessionQuestionNavButton
+                    key={q.id}
+                    number={n}
+                    active={n === safeIndex}
+                    answered={Boolean(answersByQuestion[q.id])}
+                    flagged={questionFlags.isFlagged(q.id)}
+                    variant={sessionVariant}
+                    onClick={() => setQIndex(n)}
+                  />
+                )
+              })}
+            </div>
+            <div className={ACTIVE_DRILL_NAV_ARROW_GROUP_CLASS}>
+              <PracticeSessionNavArrowButton
+                direction="prev"
+                disabled={safeIndex <= 1}
+                onClick={() => setQIndex((i) => Math.max(1, i - 1))}
+              />
+              <PracticeSessionNavArrowButton
+                direction="next"
+                disabled={safeIndex >= questions.length}
+                onClick={() => setQIndex((i) => Math.min(questions.length, i + 1))}
+              />
+            </div>
+          </div>
+        ) : (
+          <>
         <div
           className={cn(
             "practice-session-scroll-hidden min-h-0 min-w-0 flex-1",
-            useActiveDrillLayout || useBlindReviewLayout
+            useBlindReviewLayout
               ? "practice-session-question-nav-grid"
               : "flex flex-nowrap items-stretch gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5 pt-2.5 sm:gap-2",
           )}
@@ -1294,10 +1335,10 @@ function SectionSessionPage() {
         <div
           className={cn(
             "flex shrink-0 self-center items-center",
-            useActiveDrillLayout || useBlindReviewLayout ? ACTIVE_DRILL_NAV_ARROW_GROUP_CLASS : "gap-2",
+            useBlindReviewLayout ? ACTIVE_DRILL_NAV_ARROW_GROUP_CLASS : "gap-2",
           )}
         >
-          {useActiveDrillLayout || useBlindReviewLayout ? (
+          {useBlindReviewLayout ? (
             <>
               <PracticeSessionNavArrowButton
                 direction="prev"
@@ -1335,6 +1376,8 @@ function SectionSessionPage() {
             </>
           )}
         </div>
+          </>
+        )}
       </footer>
     </>
   )

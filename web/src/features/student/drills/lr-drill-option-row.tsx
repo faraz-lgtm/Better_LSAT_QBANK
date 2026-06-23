@@ -1,6 +1,14 @@
 import { memo, type MouseEvent } from "react"
 import { Eye, EyeOff } from "lucide-react"
 
+import {
+  ACTIVE_DRILL_CHOICE_ROW_GRID_CLASS,
+  ACTIVE_DRILL_OPTION_EYE_BUTTON_CLASS,
+  ACTIVE_DRILL_OPTION_LETTER_SELECTED_CLASS,
+  ACTIVE_DRILL_OPTION_LETTER_UNSELECTED_CLASS,
+  ACTIVE_DRILL_OPTION_ROW_SELECTED_CLASS,
+  ACTIVE_DRILL_OPTION_ROW_UNSELECTED_CLASS,
+} from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import type { PracticeToolMode, RegionKey } from "@/features/student/practice-session/practice-session-types"
 import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
@@ -158,28 +166,37 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
           }
         }}
         className={cn(
-          "flex items-start gap-4 rounded-2xl py-1 pl-4 pr-0 text-left transition-colors",
-          selected ? "border-2 border-[#0d47a1] bg-[#f5f9ff]" : "border-2 border-transparent",
+          ACTIVE_DRILL_CHOICE_ROW_GRID_CLASS,
+          "text-left transition-[background-color,box-shadow,border-color]",
+          selected ? ACTIVE_DRILL_OPTION_ROW_SELECTED_CLASS : ACTIVE_DRILL_OPTION_ROW_UNSELECTED_CLASS,
           disabled ? "cursor-default" : annotateMode ? "cursor-text" : "cursor-pointer",
         )}
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-xl border-2 border-[#dfe1e7] bg-white text-base font-semibold leading-6 text-[#0d0d12]">
+        <span
+          className={cn(
+            "col-start-1 flex size-8 items-center justify-center self-start rounded-[12px]",
+            selected ? ACTIVE_DRILL_OPTION_LETTER_SELECTED_CLASS : ACTIVE_DRILL_OPTION_LETTER_UNSELECTED_CLASS,
+            hidden && "line-through",
+          )}
+        >
           {letter}
         </span>
-        <div className="flex min-w-0 flex-1 items-start justify-between gap-4">
-          {choiceContent}
-          <button
-            type="button"
-            className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] text-[#666d80] transition hover:bg-[#f6f8fa] hover:text-[#062357]"
+        <div className="col-start-3 min-w-0 self-start">{choiceContent}</div>
+        <button
+          type="button"
+          className={cn(ACTIVE_DRILL_OPTION_EYE_BUTTON_CLASS, "col-start-4 self-start")}
             aria-label={hidden ? "Show answer choice" : "Hide answer choice"}
             onClick={(e) => {
               e.stopPropagation()
               onToggleHidden()
             }}
           >
-            <Eye className={cn("size-6", hidden && "opacity-40")} strokeWidth={2} aria-hidden />
-          </button>
-        </div>
+            {hidden ? (
+              <EyeOff className="size-6" strokeWidth={2} aria-hidden />
+            ) : (
+            <Eye className="size-6" strokeWidth={2} aria-hidden />
+          )}
+        </button>
       </div>
     )
   }

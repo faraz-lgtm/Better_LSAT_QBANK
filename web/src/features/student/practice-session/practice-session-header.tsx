@@ -70,53 +70,58 @@ function PracticeSessionHeader({
 
   if (isActiveDrill) {
     return (
-      <header className="practice-session-header flex h-20 shrink-0 items-center overflow-visible rounded-t-[16px] border-b border-[#dfe1e7] bg-[#f6f8fa] px-6 py-3">
-        <div className="flex w-full min-w-0 items-center gap-6">
-          <p
-            className={cn(
-              "min-w-0 flex-1 truncate font-bold leading-[1.3] text-[#062357]",
-              titleClassName ?? "text-2xl",
-            )}
-            title={title}
-          >
-            {title}
-          </p>
-          <div className="relative hidden shrink-0 md:block">
-            <Input
-              placeholder="Find Text"
-              value={findQuery}
-              onChange={(e) => onFindQueryChange(e.target.value)}
-              className={ACTIVE_DRILL_FIND_TEXT_INPUT_CLASS}
-            />
+      <header className="practice-session-header practice-session-header--active-drill flex h-20 shrink-0 items-center overflow-hidden rounded-t-[16px] border-b border-[#dfe1e7] bg-[#f6f8fa] px-6 py-3">
+        <div className="flex w-full min-w-0 items-center gap-6 overflow-hidden">
+          <div className="min-w-0 flex-1 basis-0 overflow-hidden pr-1">
+            <p
+              className={cn(
+                "m-0 truncate font-bold leading-[1.3] text-[#062357]",
+                titleClassName ?? "text-2xl",
+              )}
+              title={title}
+            >
+              {title}
+            </p>
           </div>
-          <PracticeSessionToolbar
-            variant={variant}
-            activeColor={activeColor}
-            toolMode={toolMode}
-            fontScale={fontScale}
-            lineSpacing={lineSpacing}
-            boldEnabled={boldEnabled}
-            italicEnabled={italicEnabled}
-            onSelectColor={onSelectColor}
-            onEraser={onEraser}
-            onUnderline={onUnderline}
-            onFontSize={onFontSize}
-            onLineSpacing={onLineSpacing}
-            onToggleBold={onToggleBold}
-            onToggleItalic={onToggleItalic}
-          />
-          {showTimer ? (
-            <PracticeSessionTimer
-              label={timerLabel}
-              displaySeconds={timerDisplaySeconds}
-              paused={timerPaused}
-              onTogglePause={onToggleTimerPause}
-              onReset={onResetTimer}
-              progress={timerProgress}
-              displayClassName={timerDisplayClassName}
+          <div className="flex shrink-0 items-center gap-6">
+            <div className="relative hidden shrink-0 md:block">
+              <input
+                type="search"
+                placeholder="Find Text"
+                value={findQuery}
+                onChange={(e) => onFindQueryChange(e.target.value)}
+                className={ACTIVE_DRILL_FIND_TEXT_INPUT_CLASS}
+              />
+            </div>
+            <PracticeSessionToolbar
+              variant={variant}
+              activeColor={activeColor}
+              toolMode={toolMode}
+              fontScale={fontScale}
+              lineSpacing={lineSpacing}
+              boldEnabled={boldEnabled}
+              italicEnabled={italicEnabled}
+              onSelectColor={onSelectColor}
+              onEraser={onEraser}
+              onUnderline={onUnderline}
+              onFontSize={onFontSize}
+              onLineSpacing={onLineSpacing}
+              onToggleBold={onToggleBold}
+              onToggleItalic={onToggleItalic}
             />
-          ) : null}
-          {finishButton}
+            {showTimer ? (
+              <PracticeSessionTimer
+                label={timerLabel}
+                displaySeconds={timerDisplaySeconds}
+                paused={timerPaused}
+                onTogglePause={onToggleTimerPause}
+                onReset={onResetTimer}
+                progress={timerProgress}
+                displayClassName={timerDisplayClassName}
+              />
+            ) : null}
+            {finishButton}
+          </div>
         </div>
       </header>
     )
@@ -125,31 +130,33 @@ function PracticeSessionHeader({
   return (
     <header
       className={cn(
-        "practice-session-header flex shrink-0 items-center gap-3 border-b border-[#dfe1e7] px-6 py-3 md:gap-4",
+        "practice-session-header flex shrink-0 items-center gap-3 overflow-hidden border-b border-[#dfe1e7] px-6 py-3 md:gap-4",
         "min-h-[80px] bg-[#eceff3]",
       )}
     >
-      <p
-        className={cn(
-          "min-w-0 flex-1 truncate font-bold text-[#062357]",
-          isActiveDrill ? "text-[24px] leading-[1.3]" : "text-lg leading-tight md:text-xl",
-        )}
-        title={title}
-      >
-        {title}
-      </p>
-      <div className="relative shrink-0">
-        <Input
-          placeholder="Find Text"
-          value={findQuery}
-          onChange={(e) => onFindQueryChange(e.target.value)}
+      <div className="min-w-0 flex-1 basis-0 overflow-hidden pr-1">
+        <p
           className={cn(
-            "h-[52px] rounded-2xl border border-[#dfe1e7] pl-4 pr-4 text-sm shadow-[0px_1px_1px_rgba(13,13,18,0.06)] placeholder:text-[#818898]",
-            isActiveDrill ? "w-[200px] bg-[#f6f8fa]" : "w-[160px] bg-[#f6f8fa] pl-10 xl:w-[200px]",
+            "m-0 truncate font-bold text-[#062357]",
+            isActiveDrill ? "text-[24px] leading-[1.3]" : "text-lg leading-tight md:text-xl",
           )}
-        />
+          title={title}
+        >
+          {title}
+        </p>
       </div>
       <div className="practice-session-header-actions flex shrink-0 items-center gap-2 md:gap-3">
+        <div className="relative shrink-0">
+          <Input
+            placeholder="Find Text"
+            value={findQuery}
+            onChange={(e) => onFindQueryChange(e.target.value)}
+            className={cn(
+              "h-[52px] rounded-2xl border border-[#dfe1e7] pl-4 pr-4 text-sm shadow-[0px_1px_1px_rgba(13,13,18,0.06)] placeholder:text-[#818898]",
+              isActiveDrill ? "w-[200px] bg-[#f6f8fa]" : "w-[160px] bg-[#f6f8fa] pl-10 xl:w-[200px]",
+            )}
+          />
+        </div>
         <PracticeSessionToolbar
           variant={variant}
           activeColor={activeColor}

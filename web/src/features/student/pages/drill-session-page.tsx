@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 
 import { LrDrillOptionRow } from "@/features/student/drills/lr-drill-option-row"
 import type { DrillQuestion, DrillSessionResponse } from "@/features/student/drills/drill-types"
-import { ACTIVE_DRILL_FINISH_BUTTON_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import { ACTIVE_DRILL_FINISH_BUTTON_CLASS, ACTIVE_DRILL_FOOTER_CLASS, ACTIVE_DRILL_FOOTER_ROW_CLASS, ACTIVE_DRILL_OPTIONS_LIST_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import {
   PracticeBlindReviewAnswerToggle,
@@ -43,8 +43,8 @@ import { stashDrillBlindReviewResult } from "@/features/prep-course/lib/merge-dr
 import {
   DASHBOARD_ADAPTIVE_DRILL_QUERY,
   drillSessionSupportsBlindReview,
-  isAdaptiveDrillSession,
   isDashboardAdaptiveDrill,
+  showDrillSessionTimer,
 } from "@/features/student/drills/drill-blind-review-policy"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
@@ -239,7 +239,7 @@ function DrillQuestionPanel({
           {isCorrect ? "Correct" : "Incorrect"}
         </p>
       ) : null}
-      <div className={variant === "active-drill" ? "flex flex-col gap-4 py-4" : "flex flex-col gap-2"}>
+      <div className={variant === "active-drill" ? ACTIVE_DRILL_OPTIONS_LIST_CLASS : "flex flex-col gap-2"}>
         {question.choices.map((choice, index) => (
           <LrDrillOptionRow
             key={choice.id}
@@ -731,10 +731,6 @@ function DrillSessionPage() {
     metadata: sessionMetadata,
     dashboardAdaptiveEntry,
   })
-  const isAdaptiveDrillSessionFlow = isAdaptiveDrillSession({
-    metadata: sessionMetadata,
-    dashboardAdaptiveEntry,
-  })
   const isPrepCourseAdaptiveDrill = sessionMetadata?.source === "prep_course_adaptive_drill"
   const blindReviewMode = reviewAfterComplete
   const useBlindReviewLayout = blindReviewMode
@@ -849,7 +845,10 @@ function DrillSessionPage() {
           onToggleTimerPause={togglePause}
           onResetTimer={useActiveDrillLayout ? undefined : resetElapsed}
           timerProgress={timerProgress}
-          showTimer={!isAdaptiveDrillSessionFlow}
+          showTimer={showDrillSessionTimer({
+            metadata: sessionMetadata,
+            dashboardAdaptiveEntry,
+          })}
           finishButton={finishButton}
         />
       )}
@@ -945,7 +944,7 @@ function DrillSessionPage() {
               className={cn(
                 "practice-session-pane min-h-0",
                 useActiveDrillLayout
-                  ? "overflow-hidden rounded-2xl bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
+                  ? "rounded-2xl bg-white"
                   : "gap-4 border-[#dfe1e7] p-5",
               )}
             >
@@ -981,16 +980,54 @@ function DrillSessionPage() {
 
       <footer
         className={cn(
-          "practice-session-footer relative z-10 flex shrink-0 items-center justify-between border-t border-[#dfe1e7] py-3",
+          "practice-session-footer relative z-10",
           useActiveDrillLayout
-            ? "min-h-20 gap-4 rounded-b-[16px] bg-[#f6f8fa] px-6 py-3"
-            : "gap-3 bg-background px-6 md:gap-4 md:px-6",
+            ? ACTIVE_DRILL_FOOTER_CLASS
+            : "flex shrink-0 items-center justify-between gap-3 border-t border-[#dfe1e7] bg-background px-6 py-3 md:gap-4 md:px-6",
         )}
       >
+        {useActiveDrillLayout ? (
+          <div className={ACTIVE_DRILL_FOOTER_ROW_CLASS}>
+            <div
+              className={cn(
+                "practice-session-scroll-hidden min-h-0 min-w-0 flex-1",
+                "practice-session-question-nav-grid",
+              )}
+            >
+              {questions.map((q, i) => {
+                const n = i + 1
+                return (
+                  <PracticeSessionQuestionNavButton
+                    key={q.id}
+                    number={n}
+                    active={n === safeIndex}
+                    answered={Boolean(answersByQuestion[q.id])}
+                    flagged={questionFlags.isFlagged(q.id)}
+                    variant={sessionVariant}
+                    onClick={() => setQIndex(n)}
+                  />
+                )
+              })}
+            </div>
+            <div className={ACTIVE_DRILL_NAV_ARROW_GROUP_CLASS}>
+              <PracticeSessionNavArrowButton
+                direction="prev"
+                disabled={safeIndex <= 1}
+                onClick={() => setQIndex((i) => Math.max(1, i - 1))}
+              />
+              <PracticeSessionNavArrowButton
+                direction="next"
+                disabled={safeIndex >= questions.length}
+                onClick={() => setQIndex((i) => Math.min(questions.length, i + 1))}
+              />
+            </div>
+          </div>
+        ) : (
+          <>
         <div
           className={cn(
             "practice-session-scroll-hidden min-h-0 min-w-0 flex-1",
-            useActiveDrillLayout || useBlindReviewLayout
+            useBlindReviewLayout
               ? "practice-session-question-nav-grid"
               : "flex flex-nowrap items-stretch gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5 pt-2.5 sm:gap-2",
           )}
@@ -1013,10 +1050,10 @@ function DrillSessionPage() {
         <div
           className={cn(
             "flex shrink-0 self-center items-center",
-            useActiveDrillLayout ? ACTIVE_DRILL_NAV_ARROW_GROUP_CLASS : "gap-2",
+            useBlindReviewLayout ? ACTIVE_DRILL_NAV_ARROW_GROUP_CLASS : "gap-2",
           )}
         >
-          {useActiveDrillLayout ? (
+          {useBlindReviewLayout ? (
             <>
               <PracticeSessionNavArrowButton
                 direction="prev"
@@ -1054,6 +1091,8 @@ function DrillSessionPage() {
             </>
           )}
         </div>
+          </>
+        )}
       </footer>
     </>
   )

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useLayoutEffect, useState } from "react"
 import { Outlet, useLocation } from "react-router-dom"
 
 import { StudentAppHeader } from "@/features/app-shell/student-app-header"
@@ -17,14 +17,14 @@ function StudentAppShell() {
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), [])
   const { headerActions, setHeaderActions } = useStudentPageHeaderSlotState()
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.classList.add("student-shell-active")
     return () => {
       document.documentElement.classList.remove("student-shell-active")
     }
   }, [])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.classList.toggle("student-shell-immersive", immersive)
     return () => {
       document.documentElement.classList.remove("student-shell-immersive")
