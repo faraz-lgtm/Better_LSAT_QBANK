@@ -1,7 +1,6 @@
-import { CheckCircle2, XCircle } from "lucide-react"
-
 import type { ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
 import { formatMmSs } from "@/features/student/practice-session/practice-results-ui"
+import { PracticeResultOutcomeIcon } from "@/features/student/practice-session/practice-result-outcome-icon"
 
 export type PracticeSectionKind = "LR" | "RC"
 export type PracticeQuestionOutcome = "correct" | "incorrect"
@@ -22,10 +21,7 @@ const SECTION_BADGE: Record<PracticeSectionKind, { bg: string; text: string; sho
 }
 
 function QuestionOutcomeIcon({ status }: { status: PracticeQuestionOutcome }) {
-  if (status === "correct") {
-    return <CheckCircle2 className="size-4 shrink-0 text-[#00d492]" aria-hidden />
-  }
-  return <XCircle className="size-4 shrink-0 text-[#df1c41]" aria-hidden />
+  return <PracticeResultOutcomeIcon correct={status === "correct"} className="size-4" />
 }
 
 function SectionResultCard({ section }: { section: PracticeSectionResultSummary }) {

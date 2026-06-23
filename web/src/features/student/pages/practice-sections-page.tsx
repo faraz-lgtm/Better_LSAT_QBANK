@@ -59,7 +59,7 @@ function PracticeSectionsPage() {
           <PracticeLrRcStarterCards
             lrButtonLabel="Start Section"
             rcButtonLabel="Start Section"
-            lrSubtitle="16–20 Questions"
+            lrSubtitle="24–26 Questions"
             rcSubtitle="4 Passages"
             onStartLr={() => navigate("/app/practice/sections/lr/new")}
             onStartRc={() => navigate("/app/practice/sections/rc/new")}

@@ -1019,12 +1019,11 @@ function SectionSessionPage() {
     : useActiveDrillLayout
       ? "active-drill"
       : "default"
-  const sessionHeaderTitle = useActiveDrillLayout
-    ? prepTestHeaderLabel(
-        sectionSession?.section.moduleId ?? null,
-        metadata?.prepTestTitle ?? sectionSession?.section.prepTestTitle ?? null,
-      )
-    : headerLabel
+  const prepTestLabel = prepTestHeaderLabel(
+    sectionSession?.section.moduleId ?? null,
+    metadata?.prepTestTitle ?? sectionSession?.section.prepTestTitle ?? null,
+  )
+  const sessionHeaderTitle = prepTestLabel !== "PrepTest" ? prepTestLabel : headerLabel
 
   function handleBlindReviewExit() {
     if (blindReviewMode) {
@@ -1051,10 +1050,6 @@ function SectionSessionPage() {
     />
   )
 
-  const prepTestLabel = prepTestHeaderLabel(
-    sectionSession?.section.moduleId ?? null,
-    metadata?.prepTestTitle ?? sectionSession?.section.prepTestTitle ?? null,
-  )
   const questionRefLabel = (() => {
     const ptNum =
       sectionSession?.section.moduleId?.replace(/^LSAC/i, "") ??

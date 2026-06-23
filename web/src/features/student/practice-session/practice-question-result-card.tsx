@@ -1,7 +1,8 @@
-import { Bookmark, CheckCircle2, Pencil, XCircle } from "lucide-react"
+import { Bookmark, Pencil } from "lucide-react"
 
 import { resolveAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
 import type { ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
+import { PracticeResultOutcomeIcon } from "@/features/student/practice-session/practice-result-outcome-icon"
 import {
   PracticeAnswerPopularityBars,
   PracticeDifficultyMeter,
@@ -111,20 +112,12 @@ function PracticeQuestionResultCard({
   const resultRow = (
     <div className="flex flex-nowrap items-center gap-5">
       <div className="flex shrink-0 items-center gap-2.5">
-        {isCorrect ? (
-          <CheckCircle2 className="size-6 shrink-0 text-[#00d492]" aria-hidden />
-        ) : (
-          <XCircle className="size-6 shrink-0 text-[#df1c41]" aria-hidden />
-        )}
+        <PracticeResultOutcomeIcon correct={isCorrect} />
         <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">Actual</span>
       </div>
       {showBlindReviewResult ? (
         <div className="flex shrink-0 items-center gap-2.5">
-          {blindReviewCorrect ? (
-            <CheckCircle2 className="size-6 shrink-0 text-[#00d492]" aria-hidden />
-          ) : (
-            <XCircle className="size-6 shrink-0 text-[#df1c41]" aria-hidden />
-          )}
+          <PracticeResultOutcomeIcon correct={Boolean(blindReviewCorrect)} />
           <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
             Blind Review
           </span>

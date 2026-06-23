@@ -20,9 +20,17 @@ type SectionConfigFormProps = {
   initialSectionId?: string | null
 }
 
-const sectionCopy: Record<SectionType, { title: string; sectionDescription: string }> = {
-  LR: { title: "Logical Reasoning", sectionDescription: "Select question section" },
-  RC: { title: "Reading Comprehension", sectionDescription: "Select passage section" },
+const sectionCopy: Record<SectionType, { title: string; subtitle: string; sectionDescription: string }> = {
+  LR: {
+    title: "Logical Reasoning",
+    subtitle: "24–26 Questions",
+    sectionDescription: "Select question section",
+  },
+  RC: {
+    title: "Reading Comprehension",
+    subtitle: "4 Passages",
+    sectionDescription: "Select passage section",
+  },
 }
 
 type SectionConfigSelectCardProps = {
@@ -127,7 +135,12 @@ function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConf
       <div className="flex h-12 w-full items-center justify-between gap-4">
         <div className="flex shrink-0 items-center gap-4">
           <SectionInitialBadge section={sectionType} variant="section" />
-          <h1 className="student-page-heading">{copy.title}</h1>
+          <div>
+            <h1 className="student-page-heading">{copy.title}</h1>
+            <p className="mt-[3px] text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[#062357]">
+              {copy.subtitle}
+            </p>
+          </div>
         </div>
 
         <div className="flex min-w-0 flex-1 items-center justify-end gap-4">
