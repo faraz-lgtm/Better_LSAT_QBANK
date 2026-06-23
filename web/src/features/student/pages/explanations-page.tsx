@@ -11,7 +11,7 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Select } from "@/components/ui/select"
+import { StudentOptionMenu } from "@/features/student/components/student-option-menu"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
 import {
@@ -46,7 +46,6 @@ const S = {
   surface: "var(--background)",
   listRowAlt: "var(--explanation-list-row-alt)",
   passagePanel: "var(--explanation-passage-panel-bg)",
-  passageRowBg: "#f6f8fa",
   badgeRadius: "14px",
   prepTestCardRadius: "var(--explanation-prep-test-card-radius)",
 } as const
@@ -120,10 +119,10 @@ function StatusBadge({ status }: { status: ExplanationQuestionStatus }) {
   const style = statusBadgeStyle(status)
   return (
     <span
-      className="inline-flex h-7 shrink-0 items-center gap-2 rounded-[10px] px-4 text-xs font-semibold tracking-[0.24px] whitespace-nowrap"
+      className="inline-flex h-6 shrink-0 items-center gap-1.5 rounded-[10px] px-3 text-[11px] font-semibold leading-none tracking-[0.02em] whitespace-nowrap"
       style={{ backgroundColor: style.backgroundColor, color: style.color }}
     >
-      <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: style.dotColor }} aria-hidden />
+      <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: style.dotColor }} aria-hidden />
       {statusLabel(status)}
     </span>
   )
@@ -140,7 +139,29 @@ function previewLine(snippet: string, max: number): string {
   return `${text.slice(0, max).trimEnd()}...`
 }
 
-const TREE_ROW_CLASS = "flex w-full flex-nowrap items-center gap-3 px-4 py-3 text-left"
+function formatQuestionSource(source: string): { primary: string; secondary?: string } {
+  const parts = source.split(" · ").map((part) => part.trim()).filter(Boolean)
+  if (parts.length <= 1) return { primary: source }
+  return { primary: parts[0]!, secondary: parts.slice(1).join(" · ") }
+}
+
+function QuestionSourceText({ source }: { source: string }) {
+  const { primary, secondary } = formatQuestionSource(source)
+  return (
+    <div className="flex min-w-[8.5rem] max-w-[10.5rem] flex-col gap-0.5">
+      <span className="text-[11px] font-normal leading-[1.35] tracking-[0.02em]" style={{ color: S.muted }}>
+        {primary}
+      </span>
+      {secondary ? (
+        <span className="text-[11px] font-normal leading-[1.35] tracking-[0.02em]" style={{ color: S.muted }}>
+          {secondary}
+        </span>
+      ) : null}
+    </div>
+  )
+}
+
+const TREE_ROW_CLASS = "flex w-full flex-nowrap items-center gap-4 border-b px-5 py-4 text-left last:border-b-0"
 
 function derivePrepTestStatus(tree: ExplanationPrepTestNode | null | undefined): ExplanationQuestionStatus {
   if (!tree) return "fresh"
@@ -189,16 +210,16 @@ const PASSAGE_PREVIEW_MAX = 56
 const QUESTION_PREVIEW_MAX = 52
 
 function SectionKindBadge({ kind }: { kind: ExplanationSectionNode["kind"] }) {
-  const isRc = kind === "RC"
-  const accentColor = isRc ? "var(--explanation-rc-badge-bg)" : "var(--explanation-lr-badge-bg)"
+  const accentColor =
+    kind === "RC" ? "var(--explanation-rc-badge-bg)" : "var(--explanation-lr-badge-bg)"
   return (
     <span
       className={`${TREE_BADGE_CLASS} border text-sm font-black leading-none`}
       style={{
         ...TREE_BADGE_STYLE,
-        backgroundColor: isRc ? accentColor : "#ffffff",
+        backgroundColor: accentColor,
         borderColor: accentColor,
-        color: isRc ? "#ffffff" : accentColor,
+        color: "#ffffff",
       }}
       aria-hidden
     >
@@ -207,14 +228,28 @@ function SectionKindBadge({ kind }: { kind: ExplanationSectionNode["kind"] }) {
   )
 }
 
-function TreeIndexBadge({ children }: { children: ReactNode }) {
+function PassageIndexBadge({ children }: { children: ReactNode }) {
   return (
     <span
-      className={`${TREE_BADGE_CLASS} shrink-0 border text-lg font-semibold leading-[1.4] tracking-[0.36px]`}
+      className="flex size-10 shrink-0 items-center justify-center rounded-full border text-sm font-semibold leading-none"
       style={{
-        ...TREE_BADGE_STYLE,
         borderColor: "var(--color-student-accent)",
-        backgroundColor: "var(--primary-25)",
+        backgroundColor: "#ffffff",
+        color: "var(--color-student-accent)",
+      }}
+    >
+      {children}
+    </span>
+  )
+}
+
+function QuestionIndexBadge({ children }: { children: ReactNode }) {
+  return (
+    <span
+      className="flex size-10 shrink-0 items-center justify-center rounded-full border text-[17px] font-semibold leading-none"
+      style={{
+        borderColor: "var(--color-student-accent)",
+        backgroundColor: "#ffffff",
         color: "var(--color-student-accent)",
       }}
     >
@@ -236,19 +271,19 @@ function DifficultyMeter({ level }: { level: ExplanationQuestionNode["difficulty
   const activeColor = DIFFICULTY_METER_COLORS[label]
   return (
     <div
-      className="flex h-10 w-[8.25rem] shrink-0 items-center gap-2.5 rounded-[10px] bg-[#f3f7ff] px-2.5"
+      className="flex h-8 shrink-0 items-center gap-2 rounded-[10px] bg-[#f3f7ff] px-2.5"
       title={`Difficulty ${level} of 5`}
     >
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1">
         {Array.from({ length: 5 }, (_, i) => (
           <span
             key={i}
-            className="h-4 w-1.5 shrink-0 rounded-full"
+            className="h-3.5 w-1 shrink-0 rounded-full"
             style={{ backgroundColor: i < level ? activeColor : "var(--slate-bar-empty)" }}
           />
         ))}
       </div>
-      <span className="text-xs font-semibold tracking-[0.24px] whitespace-nowrap" style={{ color: activeColor }}>
+      <span className="text-[12px] font-semibold leading-none tracking-[0.02em] whitespace-nowrap" style={{ color: activeColor }}>
         {label}
       </span>
     </div>
@@ -510,14 +545,9 @@ function ExplanationsPage() {
   }
 
   return (
-    <StudentMain
-      className="w-full max-w-none bg-[var(--greyscale-25)] pt-6 pb-8 md:pb-10"
-      contentClassName="w-full max-w-none"
-    >
+    <StudentMain className="bg-[#f0f5ff]" contentClassName="pt-6 pb-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-        <h2 className="text-[24px] font-bold leading-tight tracking-tight" style={{ color: S.heading }}>
-          LSAT Question Explanations
-        </h2>
+        <h2 className="student-page-heading">LSAT Question Explanations</h2>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 md:gap-x-6">
             {statusStats.map((s) => (
@@ -525,19 +555,15 @@ function ExplanationsPage() {
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="w-full shrink-0 sm:w-[140px]">
-              <Select
-                aria-label="Sort explanations"
-                value={sort}
-                onChange={(e) => handleSortChange(e.target.value as "newest" | "oldest")}
-                options={[
-                  { value: "newest", label: "Newest" },
-                  { value: "oldest", label: "Oldest" },
-                ]}
-                className="h-9 rounded-lg border bg-white text-sm font-medium shadow-none"
-                style={{ borderColor: "var(--border)", color: S.heading }}
-              />
-            </div>
+            <StudentOptionMenu
+              ariaLabel="Sort explanations"
+              value={sort}
+              onChange={handleSortChange}
+              options={[
+                { value: "newest", label: "Newest" },
+                { value: "oldest", label: "Oldest" },
+              ]}
+            />
           </div>
         </div>
       </div>
@@ -555,14 +581,13 @@ function ExplanationsPage() {
         </p>
       ) : (
         <div className="mt-6 flex flex-col gap-3">
-          {displayRows.map((row, ptIndex) => {
+          {displayRows.map((row) => {
           const ptId = row.id
           const ptIsOpen = openPt.has(ptId)
           const ptTree = getCachedExplanationPrepTestTree(ptId)
           const filteredTree = ptTree ? filterPrepTests([ptTree], sectionFilter)[0] : null
           const isLoadingTree = treeLoading.has(ptId)
           const treeError = treeErrors[ptId]
-          const ptHeaderBg = ptIsOpen ? S.rowOpen : ptIndex % 2 === 0 ? S.surface : S.listRowAlt
           const ptNum = row.prepTestNumber
           const ptStatus = derivePrepTestStatus(ptTree)
           const ptBadgeColors = prepTestBadgeColors(ptStatus)
@@ -575,9 +600,8 @@ function ExplanationsPage() {
             >
               <button
                 type="button"
-                className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors"
+                className="flex w-full items-center gap-4 bg-white px-5 py-4 text-left transition-colors hover:bg-[#f3f7ff]"
                 style={{
-                  backgroundColor: ptHeaderBg,
                   borderBottom: ptIsOpen ? "1px solid var(--greyscale-100)" : undefined,
                 }}
                 onClick={() => togglePrepTest(ptId)}
@@ -594,23 +618,25 @@ function ExplanationsPage() {
                   <span className="text-[9px] font-bold uppercase leading-none tracking-wide">PT</span>
                   <span className="mt-0.5 text-[15px] font-black leading-none tabular-nums">{ptNum}</span>
                 </span>
-                <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                <div className="flex min-w-0 items-center gap-2 overflow-hidden">
                   <span className="shrink-0 text-base font-bold" style={{ color: S.heading }}>
                     PT - {ptNum}
                   </span>
                   <span className="truncate text-sm font-medium" style={{ color: S.muted }}>
                     {row.rowSubtitle}
                   </span>
-                </div>
-                <span className="flex shrink-0 items-center gap-1 text-[#666d80]">
                   {isLoadingTree ? <StudentPageLoader size="sm" /> : null}
-                  {ptIsOpen ? <ChevronDown className="size-5" aria-hidden /> : <ChevronRight className="size-5" aria-hidden />}
-                </span>
+                  {ptIsOpen ? (
+                    <ChevronDown className="size-5 shrink-0" style={{ color: S.heading }} aria-hidden />
+                  ) : (
+                    <ChevronRight className="size-5 shrink-0" style={{ color: S.heading }} aria-hidden />
+                  )}
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="size-9 shrink-0 text-[#666d80] hover:text-[color:var(--color-student-heading)]"
+                  className="ml-auto size-9 shrink-0 text-[#666d80] hover:text-[color:var(--color-student-heading)]"
                   aria-label="PrepTest options"
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -626,23 +652,23 @@ function ExplanationsPage() {
                       <StudentPageLoader label="Loading sections…" />
                     </div>
                   ) : null}
-                  {filteredTree?.sections.map((sec, secIndex) => {
+                  {filteredTree?.sections.map((sec) => {
                     const sOpen = openSection.has(secKey(ptId, sec.id))
-                    const secHeaderBg = secIndex % 2 === 0 ? S.surface : S.listRowAlt
+                    const secHeaderBg = sOpen ? S.listRowAlt : S.surface
                     return (
-                      <div key={sec.id} className="border-b last:border-b-0" style={{ borderColor: S.border }}>
+                      <div key={sec.id} style={{ borderColor: S.border }}>
                         <button
                           type="button"
                           className={`${TREE_ROW_CLASS} pl-6`}
-                          style={{ backgroundColor: secHeaderBg }}
+                          style={{ backgroundColor: secHeaderBg, borderColor: S.border }}
                           onClick={() => toggleSection(ptId, sec)}
                         >
                           <SectionKindBadge kind={sec.kind} />
                           <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-                            <span className="shrink-0 text-sm font-bold" style={{ color: S.heading }}>
+                            <span className="shrink-0 text-base font-bold leading-tight" style={{ color: S.heading }}>
                               Section {sec.sectionNumber}
                             </span>
-                            <span className="truncate text-xs font-medium md:text-sm" style={{ color: S.muted }}>
+                            <span className="truncate text-sm font-normal leading-snug" style={{ color: S.muted }}>
                               {sectionMetaLine(sec)}
                             </span>
                           </div>
@@ -654,18 +680,18 @@ function ExplanationsPage() {
                         </button>
 
                         {sOpen ? (
-                          <div className="bg-white">
+                          <div>
                             {sec.passages.map((pass) => {
                               const pOpen = openPassage.has(passKey(ptId, sec.id, pass.id))
                               const passagePreviewSource =
                                 pass.snippet.trim() || pass.questions[0]?.snippet?.trim() || ""
                               const questionCountLabel = `${pass.questions.length} Question${pass.questions.length === 1 ? "" : "s"}`
                               return (
-                                <div key={pass.id} className="border-t" style={{ borderColor: S.border }}>
+                                <div key={pass.id}>
                                   <button
                                     type="button"
-                                    className="flex w-full items-center justify-between gap-6 border-b p-6 text-left"
-                                    style={{ borderColor: S.border, backgroundColor: S.passageRowBg }}
+                                    className={`${TREE_ROW_CLASS} pl-12`}
+                                    style={{ backgroundColor: S.listRowAlt, borderColor: S.border }}
                                     onClick={() =>
                                       setOpenPassage((prev) => {
                                         const k = passKey(ptId, sec.id, pass.id)
@@ -676,33 +702,29 @@ function ExplanationsPage() {
                                       })
                                     }
                                   >
-                                    <div className="flex min-w-0 flex-1 items-center gap-6">
-                                      <TreeIndexBadge>{pass.label}</TreeIndexBadge>
-                                      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                                        <span className="text-lg font-semibold leading-[1.4] tracking-[0.36px]" style={{ color: S.heading }}>
-                                          {pass.title}
-                                        </span>
-                                        {passagePreviewSource ? (
-                                          <span
-                                            className="line-clamp-2 text-xs font-medium tracking-[0.24px]"
-                                            style={{ color: S.muted }}
-                                            title={plainTextFromHtml(passagePreviewSource)}
-                                          >
-                                            {previewLine(passagePreviewSource, PASSAGE_PREVIEW_MAX)}
-                                          </span>
-                                        ) : null}
-                                      </div>
-                                    </div>
-                                    <div className="flex shrink-0 items-center gap-6">
-                                      <span className="inline-flex h-8 items-center rounded-full bg-white px-4 text-sm font-medium tracking-[0.28px] text-[#4a5565]">
-                                        {questionCountLabel}
+                                    <PassageIndexBadge>{pass.label}</PassageIndexBadge>
+                                    <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                                      <span className="shrink-0 text-base font-bold leading-tight" style={{ color: S.heading }}>
+                                        {pass.title}
                                       </span>
-                                      {pOpen ? (
-                                        <ChevronDown className="size-6 shrink-0 text-[#666d80]" />
-                                      ) : (
-                                        <ChevronRight className="size-6 shrink-0 text-[#666d80]" />
-                                      )}
+                                      {passagePreviewSource ? (
+                                        <span
+                                          className="truncate text-sm font-normal leading-snug"
+                                          style={{ color: S.muted }}
+                                          title={plainTextFromHtml(passagePreviewSource)}
+                                        >
+                                          {previewLine(passagePreviewSource, PASSAGE_PREVIEW_MAX)}
+                                        </span>
+                                      ) : null}
                                     </div>
+                                    <span className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-[#f6f8fa] px-3 text-[13px] font-medium leading-none text-[#666d80]">
+                                      {questionCountLabel}
+                                      {pOpen ? (
+                                        <ChevronDown className="size-4 shrink-0" aria-hidden />
+                                      ) : (
+                                        <ChevronRight className="size-4 shrink-0" aria-hidden />
+                                      )}
+                                    </span>
                                   </button>
 
                                   {pOpen ? (
@@ -712,20 +734,20 @@ function ExplanationsPage() {
                                         return (
                                           <li
                                             key={q.id}
-                                            className="grid grid-cols-1 items-center gap-4 border-b bg-white p-6 last:border-b-0 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-6"
+                                            className="flex flex-col gap-4 border-b bg-white px-5 py-4 pl-12 last:border-b-0 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center lg:gap-6"
                                             style={{ borderColor: S.border }}
                                           >
-                                            <div className="flex min-w-0 items-center gap-6">
-                                              <TreeIndexBadge>{q.number}</TreeIndexBadge>
+                                            <div className="flex min-w-0 items-center gap-5 lg:justify-self-start">
+                                              <QuestionIndexBadge>{q.number}</QuestionIndexBadge>
                                               <Link
                                                 to={detailHref}
-                                                className="flex min-w-0 flex-1 flex-col gap-1.5 rounded-lg outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
+                                                className="flex min-w-0 flex-1 flex-col gap-0.5 rounded-lg outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
                                               >
-                                                <span className="text-sm font-semibold tracking-[0.28px]" style={{ color: S.accent }}>
+                                                <span className="text-sm font-bold leading-tight tracking-[0.02em]" style={{ color: S.accent }}>
                                                   {q.code}
                                                 </span>
                                                 <span
-                                                  className="line-clamp-2 text-xs font-medium tracking-[0.24px]"
+                                                  className="line-clamp-1 text-xs font-normal leading-snug tracking-[0.02em]"
                                                   style={{ color: S.muted }}
                                                   title={plainTextFromHtml(q.snippet)}
                                                 >
@@ -734,52 +756,47 @@ function ExplanationsPage() {
                                               </Link>
                                             </div>
 
-                                            <div className="flex flex-col items-center justify-center gap-1 lg:flex-row lg:gap-4">
+                                            <div className="flex w-full items-center justify-center gap-6 lg:w-auto lg:justify-self-center">
                                               <StatusBadge status={q.status} />
-                                              <p
-                                                className="max-w-[9.5rem] text-center text-xs leading-normal tracking-[0.24px]"
-                                                style={{ color: S.muted }}
-                                              >
-                                                {q.source}
-                                              </p>
+                                              <QuestionSourceText source={q.source} />
                                             </div>
 
-                                            <div className="flex items-center justify-start gap-6 lg:justify-end">
+                                            <div className="flex shrink-0 items-center justify-end gap-5 lg:justify-self-end">
                                               <DifficultyMeter level={q.difficulty} />
-                                              <div className="flex items-center gap-6">
+                                              <div className="flex items-center gap-5">
                                                 <Button
                                                   type="button"
                                                   variant="ghost"
                                                   size="icon"
-                                                  className="size-9 rounded-xl text-[#666d80] hover:text-[color:var(--color-student-heading)]"
+                                                  className="size-8 rounded-lg text-[#666d80] hover:text-[color:var(--color-student-heading)]"
                                                   asChild
                                                 >
                                                   <Link to={`${detailHref}?tab=analytics`} aria-label="Open analytics tab">
-                                                    <BarChart3 className="size-6" />
+                                                    <BarChart3 className="size-5" />
                                                   </Link>
                                                 </Button>
                                                 <Button
                                                   type="button"
                                                   variant="ghost"
                                                   size="icon"
-                                                  className="size-9 rounded-xl text-[#666d80] hover:text-[color:var(--color-student-heading)]"
+                                                  className="size-8 rounded-lg text-[#666d80] hover:text-[color:var(--color-student-heading)]"
                                                   asChild
                                                 >
                                                   <Link
                                                     to={`${detailHref}?tab=explanation`}
                                                     aria-label={q.hasVideo ? "Watch explanation" : "Open explanation tab"}
                                                   >
-                                                    <PlayCircle className="size-6" />
+                                                    <PlayCircle className="size-5" />
                                                   </Link>
                                                 </Button>
                                                 <Button
                                                   type="button"
                                                   variant="ghost"
                                                   size="icon"
-                                                  className="size-9 rounded-xl text-[#666d80] hover:text-[color:var(--color-student-heading)]"
+                                                  className="size-8 rounded-lg text-[#666d80] hover:text-[color:var(--color-student-heading)]"
                                                   aria-label="Bookmark"
                                                 >
-                                                  <Bookmark className="size-6" />
+                                                  <Bookmark className="size-5" />
                                                 </Button>
                                               </div>
                                             </div>

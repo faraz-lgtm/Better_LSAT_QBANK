@@ -47,14 +47,14 @@ function RepWorkAnswerToggle({
 }
 
 const paneScrollClass =
-  "min-h-0 flex-1 overflow-y-auto overflow-x-hidden max-h-[min(52vh,480px)] lg:max-h-none"
+  "student-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden max-h-[min(52vh,480px)] lg:max-h-none"
 
 function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: ExplanationQuestionTabPanelProps) {
   const [showCorrect, setShowCorrect] = useState(false)
 
   return (
     <div className="grid h-full min-h-0 gap-6 lg:grid-cols-2">
-      <article className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl bg-white lg:h-full">
+      <article className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[20px] bg-white lg:h-full">
         <div className="flex shrink-0 items-center gap-3 px-6 pt-6">
           <span className="inline-flex h-8 items-center rounded-full bg-[var(--greyscale-25)] px-4 text-xs font-medium tracking-[0.02em] text-[#666d80]">
             PASSAGE {view.passage.displayNumber}
@@ -71,7 +71,7 @@ function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: Explanat
         </div>
       </article>
 
-      <article className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-[color:var(--greyscale-100)] bg-white lg:h-full">
+      <article className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[20px] border border-[color:var(--greyscale-100)] bg-white lg:h-full">
         <div className="flex shrink-0 items-center justify-between gap-3 px-6 pt-6">
           <span className="inline-flex h-8 items-center rounded-xl bg-[var(--primary-0)] px-3 text-sm font-medium tracking-[0.02em] text-[#062357]">
             Question {view.questionNumber}

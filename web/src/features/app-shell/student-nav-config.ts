@@ -116,11 +116,10 @@ export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBre
     return [{ label: "Dashboard" }]
   }
 
-  const crumbs: StudentBreadcrumb[] = []
   const section = getActiveSection(pathname)
-  if (!section) return crumbs
+  if (!section) return []
 
-  crumbs.push({ label: section.label })
+  const crumbs: StudentBreadcrumb[] = [{ label: section.label }]
 
   if (isPracticePrepTestHub(pathname)) {
     return crumbs

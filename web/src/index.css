@@ -151,7 +151,7 @@
   --explanation-lr-badge-bg: #00bc54;
   --explanation-rc-badge-bg: #0bbcc9;
   --explanation-rc-badge-bg-light: #e5fdff;
-  --explanation-prep-test-card-radius: 14px 14px 14px 14px;
+  --explanation-prep-test-card-radius: 20px;
   --explanation-badge-radius: 14px 14px 14px 14px;
 
   --nav-surface: #edf3ff;
@@ -1617,6 +1617,37 @@ select.ds-input {
 
 .explanation-detail-body.lsat-html-content p:last-child {
   margin-bottom: 0;
+}
+
+/* Student panes — thin rounded scrollbar (no arrow buttons) */
+.student-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--greyscale-300) transparent;
+}
+
+.student-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.student-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.student-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--greyscale-300);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+.student-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--greyscale-400);
+}
+
+.student-scrollbar::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .lsat-html-content blockquote {

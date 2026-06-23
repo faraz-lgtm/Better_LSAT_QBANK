@@ -29,7 +29,7 @@ function VideoExplanationCard({ v }: { v: ExplanationQuestionDetailView["videos"
     <article className="overflow-hidden rounded-[14px] border border-[color:var(--greyscale-100)] bg-[var(--greyscale-25)] p-px shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
       <div
         className={cn(
-          "flex h-[53px] items-center justify-between border-b px-4 pt-4",
+          "flex items-center justify-between gap-4 border-b px-5 py-4",
           v.headerVariant === "yellow"
             ? "border-[#fff6e0] bg-[#fff6e0]"
             : "border-[var(--primary-0)] bg-[var(--primary-0)]",
