@@ -178,7 +178,11 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
 
   if (isAuthenticated === null) {
     if (studentPrepTestUiPreview) return children
-    return null
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
+        <StudentPageLoader centered label="Loading…" />
+      </div>
+    )
   }
   if (!isAuthenticated) {
     if (studentPrepTestUiPreview) return children
@@ -186,7 +190,13 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
   }
   if (!profile) {
     if (studentPrepTestUiPreview) return children
-    if (!authChecked) return null
+    if (!authChecked) {
+      return (
+        <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
+          <StudentPageLoader centered label="Loading…" />
+        </div>
+      )
+    }
     return (
       <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
         <StudentPageLoader centered label="Loading…" />

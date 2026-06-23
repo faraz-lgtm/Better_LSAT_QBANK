@@ -28,6 +28,11 @@ function isDashboardAdaptiveDrill(context: DashboardAdaptiveDrillContext): boole
   return isDashboardAdaptiveDrillSession(context.metadata)
 }
 
+function isPrepCourseActiveDrillSession(metadata: DrillSessionMetadataLike | null | undefined): boolean {
+  if (!metadata) return false
+  return metadata.source === "prep_course_active_drill"
+}
+
 function isPrepCourseAdaptiveDrillSession(metadata: DrillSessionMetadataLike | null | undefined): boolean {
   if (!metadata) return false
   return metadata.source === "prep_course_adaptive_drill"
@@ -36,6 +41,12 @@ function isPrepCourseAdaptiveDrillSession(metadata: DrillSessionMetadataLike | n
 function isAdaptiveDrillSession(context: DashboardAdaptiveDrillContext): boolean {
   if (isDashboardAdaptiveDrill(context)) return true
   return isPrepCourseAdaptiveDrillSession(context.metadata)
+}
+
+function showDrillSessionTimer(context: DashboardAdaptiveDrillContext): boolean {
+  if (isAdaptiveDrillSession(context)) return false
+  if (isPrepCourseActiveDrillSession(context.metadata)) return false
+  return true
 }
 
 function drillSessionSupportsBlindReview(context: DashboardAdaptiveDrillContext): boolean {
@@ -50,6 +61,8 @@ export {
   isAdaptiveDrillSession,
   isDashboardAdaptiveDrill,
   isDashboardAdaptiveDrillSession,
+  isPrepCourseActiveDrillSession,
   isPrepCourseAdaptiveDrillSession,
   isPrepCourseDrillSession,
+  showDrillSessionTimer,
 }

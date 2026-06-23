@@ -47,7 +47,32 @@ export function tagsFromTopicName(topicName: string): string[] {
   const t = topicName.trim()
   if (!t || t === "—") return []
   if (t.includes(",")) return t.split(",").map((s) => s.trim()).filter(Boolean)
+  if (t.includes("·")) return t.split("·").map((s) => s.trim()).filter(Boolean)
+  if (t.includes("|")) return t.split("|").map((s) => s.trim()).filter(Boolean)
   return [t]
+}
+
+export function resolveQuestionResultTags(
+  detail: Pick<ExplanationDetailPayload, "topicName" | "tags" | "sectionType" | "passage">,
+): string[] {
+  if (detail.tags && detail.tags.length > 0) return detail.tags
+
+  const fromTopic = tagsFromTopicName(detail.topicName)
+  if (fromTopic.length > 0) return fromTopic
+
+  const passageTitle = detail.passage?.title?.trim() ?? ""
+  if (
+    passageTitle &&
+    !/^Passage \d+$/i.test(passageTitle) &&
+    !/^Game \d+$/i.test(passageTitle)
+  ) {
+    const fromPassage = tagsFromTopicName(passageTitle)
+    if (fromPassage.length > 0) return fromPassage
+  }
+
+  if (detail.sectionType) return [detail.sectionType]
+
+  return []
 }
 
 export function correctChoiceLetter(

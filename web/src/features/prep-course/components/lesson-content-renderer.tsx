@@ -17,6 +17,8 @@ import type {
 } from "@/lib/api/prep-course"
 import { HtmlContent } from "@/lib/html/html-content"
 
+type DrillResultsPart = "cards" | "below" | "full"
+
 type LessonContentRendererProps = {
   lesson: PrepLesson
   linkedQuestionRefs?: PrepLessonLinkedQuestionRef[]
@@ -32,6 +34,7 @@ type LessonContentRendererProps = {
   sectionSubtitle?: string | null
   lessonBookmarked?: boolean
   onToggleLessonBookmark?: (next: boolean) => void
+  drillResultsPart?: DrillResultsPart
 }
 
 function lessonArticleCardClass(edgeToSidebar: boolean, className: string) {
@@ -76,6 +79,120 @@ function videoIframeSrc(raw: string): string {
   const vm = vimeoEmbedUrl(raw)
   if (vm) return vm
   return raw.trim()
+}
+
+function LessonVideoBlock({
+  lesson,
+  belowVideo,
+  hideTitle = false,
+}: {
+  lesson: PrepLesson
+  belowVideo?: ReactNode
+  hideTitle?: boolean
+}) {
+  const src = lesson.video_url ? videoIframeSrc(lesson.video_url) : ""
+  const textClass = "ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3"
+
+  return (
+    <div className="space-y-4">
+      <div className="overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+        <div className="aspect-video w-full bg-[#e5efff]">
+          <iframe
+            className="h-full w-full"
+            src={src}
+            title={lesson.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      </div>
+      {belowVideo}
+      {lesson.text_content ? (
+        hideTitle ? (
+          <HtmlContent html={lesson.text_content} className={textClass} />
+        ) : (
+          <article>
+            <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>
+            <HtmlContent html={lesson.text_content} className={`${textClass} mt-4`} />
+          </article>
+        )
+      ) : null}
+    </div>
+  )
+}
+
+function CompletedDrillResultsSection({
+  lesson,
+  linkedQuestionRefs,
+  activeDrillAttempt,
+  drillTitlePrefix,
+  onStartDrill,
+  startingDrill,
+  hideTitle,
+  belowVideo,
+  showVideo,
+  part = "full",
+}: {
+  lesson: PrepLesson
+  linkedQuestionRefs: PrepLessonLinkedQuestionRef[]
+  activeDrillAttempt: PrepLessonActiveDrillAttempt
+  drillTitlePrefix: string
+  onStartDrill?: () => void
+  startingDrill?: boolean
+  hideTitle?: boolean
+  belowVideo?: ReactNode
+  showVideo: boolean
+  part?: DrillResultsPart
+}) {
+  const drillResultItems = resolveDrillResultLinkedRefs(linkedQuestionRefs, activeDrillAttempt)
+  const textClass = "ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3"
+
+  const resultCards = (
+    <>
+      <ActiveDrillResultBar
+        attempt={activeDrillAttempt}
+        lessonTitle={`${drillTitlePrefix} - ${lesson.title}`}
+        onRetake={onStartDrill}
+        retaking={startingDrill}
+      />
+      {drillResultItems.map((linked, index) => (
+        <ActiveDrillQuestionResultDetail
+          key={linked.question_id}
+          linked={linked}
+          attempt={activeDrillAttempt}
+          sequenceNumber={index + 1}
+        />
+      ))}
+    </>
+  )
+
+  const lessonBelow =
+    showVideo ? (
+      <LessonVideoBlock lesson={lesson} belowVideo={belowVideo} hideTitle={hideTitle} />
+    ) : lesson.text_content ? (
+      <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+        {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
+        <HtmlContent
+          html={lesson.text_content}
+          className={`${textClass} ${hideTitle ? "" : "mt-4"}`}
+        />
+      </article>
+    ) : null
+
+  if (part === "cards") {
+    return <div className="flex min-w-0 max-w-full flex-col gap-6">{resultCards}</div>
+  }
+
+  if (part === "below") {
+    return lessonBelow
+  }
+
+  return (
+    <div className="flex min-w-0 max-w-full flex-col gap-6">
+      {resultCards}
+      {lessonBelow}
+    </div>
+  )
 }
 
 function formatLinkedSectionLabel(row: PrepLessonLinkedQuestionRef): string {
@@ -344,6 +461,7 @@ function LessonContentRenderer({
   sectionSubtitle = null,
   lessonBookmarked = false,
   onToggleLessonBookmark,
+  drillResultsPart = "full",
 }: LessonContentRendererProps) {
   const drillKind = resolveDrillLessonType(lesson)
   const type = drillKind ?? lesson.lesson_type
@@ -355,36 +473,19 @@ function LessonContentRenderer({
 
   if (type === "adaptive_drill") {
     if (activeDrillAttempt) {
-      const drillResultItems = resolveDrillResultLinkedRefs(linkedQuestionRefs, activeDrillAttempt)
       return (
-        <div className="space-y-6">
-          <article className="overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.04)]">
-            <ActiveDrillResultBar
-              attempt={activeDrillAttempt}
-              lessonTitle={lesson.title}
-              embedded
-              onRetake={onStartDrill}
-              retaking={startingDrill}
-            />
-            {drillResultItems.map((linked, index) => (
-              <ActiveDrillQuestionResultDetail
-                key={linked.question_id}
-                linked={linked}
-                attempt={activeDrillAttempt}
-                sequenceNumber={index + 1}
-              />
-            ))}
-          </article>
-          {lesson.text_content ? (
-            <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
-              {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
-              <HtmlContent
-                html={lesson.text_content}
-                className={`ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
-              />
-            </article>
-          ) : null}
-        </div>
+        <CompletedDrillResultsSection
+          lesson={lesson}
+          linkedQuestionRefs={linkedQuestionRefs}
+          activeDrillAttempt={activeDrillAttempt}
+          drillTitlePrefix="Adaptive Drill"
+          onStartDrill={onStartDrill}
+          startingDrill={startingDrill}
+          hideTitle={hideTitle}
+          belowVideo={belowVideo}
+          showVideo={showVideo}
+          part={drillResultsPart}
+        />
       )
     }
     return (
@@ -403,36 +504,19 @@ function LessonContentRenderer({
 
   if (type === "active_drill") {
     if (activeDrillAttempt) {
-      const drillResultItems = resolveDrillResultLinkedRefs(linkedQuestionRefs, activeDrillAttempt)
       return (
-        <div className="space-y-6">
-          <article className="overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.04)]">
-            <ActiveDrillResultBar
-              attempt={activeDrillAttempt}
-              lessonTitle={lesson.title}
-              embedded
-              onRetake={onStartDrill}
-              retaking={startingDrill}
-            />
-            {drillResultItems.map((linked, index) => (
-              <ActiveDrillQuestionResultDetail
-                key={linked.question_id}
-                linked={linked}
-                attempt={activeDrillAttempt}
-                sequenceNumber={index + 1}
-              />
-            ))}
-          </article>
-          {lesson.text_content ? (
-            <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
-              {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
-              <HtmlContent
-                html={lesson.text_content}
-                className={`ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
-              />
-            </article>
-          ) : null}
-        </div>
+        <CompletedDrillResultsSection
+          lesson={lesson}
+          linkedQuestionRefs={linkedQuestionRefs}
+          activeDrillAttempt={activeDrillAttempt}
+          drillTitlePrefix="Active Drill"
+          onStartDrill={onStartDrill}
+          startingDrill={startingDrill}
+          hideTitle={hideTitle}
+          belowVideo={belowVideo}
+          showVideo={showVideo}
+          part={drillResultsPart}
+        />
       )
     }
     return (
@@ -474,26 +558,9 @@ function LessonContentRenderer({
   }
 
   if (showVideo) {
-    const src = lesson.video_url ? videoIframeSrc(lesson.video_url) : ""
     return (
       <div className="space-y-4">
-        <div className="overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
-          <div className="aspect-video w-full bg-[#e5efff]">
-            <iframe
-              className="h-full w-full"
-              src={src}
-              title={lesson.title}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-        </div>
-        {belowVideo}
-        {lesson.text_content ? (
-          <article>
-            <HtmlContent html={lesson.text_content} className="text-sm leading-7 text-[#36394a] [&_p]:mb-3" />
-          </article>
-        ) : null}
+        <LessonVideoBlock lesson={lesson} belowVideo={belowVideo} hideTitle={hideTitle} />
         {isDrill ? (
           <LessonDrillLinkedQuestions
             key={linkedQuestionRefs.map((r) => r.question_id).join("|") || "none"}

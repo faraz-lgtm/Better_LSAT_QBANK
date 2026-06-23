@@ -10,7 +10,7 @@ import {
   difficultyLabelFromLevel,
   formatMmSs,
   formatPtQuestionTitle,
-  tagsFromTopicName,
+  resolveQuestionResultTags,
   targetTimeForDifficulty,
 } from "@/features/student/practice-session/practice-results-ui"
 import { cn } from "@/lib/utils"
@@ -40,7 +40,7 @@ function PracticeQuestionResultCard({
 }: PracticeQuestionResultCardProps) {
   const showBlindReviewResult = blindReviewCorrect !== undefined
   const title = titleOverride ?? (detail ? formatPtQuestionTitle(detail) : `Question ${number}`)
-  const tags = detail ? tagsFromTopicName(detail.topicName) : []
+  const tags = detail ? resolveQuestionResultTags(detail) : []
   const difficulty = difficultyLabelFromLevel(detail?.difficulty ?? 3)
   const targetTime = targetTimeForDifficulty(difficulty)
   const yourTime =
@@ -111,13 +111,17 @@ function PracticeQuestionResultCard({
 
   const resultRow = (
     <div className="flex flex-nowrap items-center gap-5">
-      <div className="flex shrink-0 items-center gap-2.5">
-        <PracticeResultOutcomeIcon correct={isCorrect} />
+      <div className="flex h-7 shrink-0 items-center gap-2.5">
+        <PracticeResultOutcomeIcon correct={isCorrect} variant="stroke" className="size-6" />
         <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">Actual</span>
       </div>
       {showBlindReviewResult ? (
         <div className="flex shrink-0 items-center gap-2.5">
-          <PracticeResultOutcomeIcon correct={Boolean(blindReviewCorrect)} />
+          <PracticeResultOutcomeIcon
+            correct={Boolean(blindReviewCorrect)}
+            variant="stroke"
+            className="size-6"
+          />
           <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
             Blind Review
           </span>
@@ -167,11 +171,16 @@ function PracticeQuestionResultCard({
 
   if (variant === "active-drill") {
     return (
-      <article className={cn("border-t border-[#dfe1e7] bg-white p-6", className)}>
-        <div className="flex min-w-0 gap-6">
+      <article
+        className={cn(
+          "min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
+          className,
+        )}
+      >
+        <div className="flex min-w-0 items-start gap-6">
           <div
             className={cn(
-              "flex size-14 shrink-0 items-center justify-center rounded-[14px]",
+              "flex size-[56px] shrink-0 items-center justify-center self-start rounded-[14px]",
               isCorrect ? "bg-[#00d492]" : "bg-[#df1c41]",
             )}
           >
@@ -179,35 +188,59 @@ function PracticeQuestionResultCard({
           </div>
 
           <div className="flex min-w-0 flex-1 flex-col gap-4">
-            <div className="flex min-h-[60px] flex-wrap items-start gap-6 lg:flex-nowrap lg:items-center">
-              <div className="min-w-0 max-w-[562px] flex-1">
+            <div className="flex h-[60px] w-full items-center">
+              <div className="flex h-[60px] w-full max-w-[562px] shrink-0 flex-col justify-center gap-2">
                 <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">{title}</h3>
-                {tags.length > 0 ? (
-                  <div className="mt-2 flex flex-wrap gap-2.5">
-                    {tags.map((t) => (
-                      <span
-                        key={t}
-                        className="inline-flex h-5 items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px] font-normal leading-[1.5] tracking-[0.02em] text-[#0d0d12]"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
+                <div className="flex h-6 flex-wrap items-center gap-2.5">
+                  {tags.map((t) => (
+                    <span
+                      key={t}
+                      className="inline-flex h-5 items-center rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px] font-normal leading-[1.5] tracking-[0.02em] text-[#0d0d12]"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
               </div>
 
-              <div className="flex shrink-0 flex-col gap-3">
+              <div className="flex min-w-0 flex-1 flex-col justify-center gap-3">
                 <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Result</p>
                 {resultRow}
               </div>
 
-              <div className="ml-auto shrink-0">{actionButtons}</div>
+              <div className="flex shrink-0 items-center gap-4">{actionButtons}</div>
             </div>
 
-            <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:gap-10">
-              {timingBlock}
-              {difficultyBlock}
-              <div className="min-w-0 flex-1">{popularityBlock}</div>
+            <div className="flex w-full items-start">
+              <div className="flex w-[305px] shrink-0 flex-col gap-3">
+                <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Timing</p>
+                <div className="flex gap-1">
+                  <span className="w-20 text-xs font-normal leading-[1.5] tracking-[0.02em] text-[#666d80]">
+                    Target time:
+                  </span>
+                  <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
+                    {targetTime}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  <span className="w-20 text-xs font-normal leading-[1.5] tracking-[0.02em] text-[#666d80]">
+                    Your time:
+                  </span>
+                  <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#0d47a1]">{yourTime}</span>
+                  {yourTimeNote ? (
+                    <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
+                      {yourTimeNote}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="flex w-[257px] shrink-0 flex-col gap-3">
+                <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Difficulty</p>
+                <PracticeDifficultyMeter difficulty={difficulty} />
+              </div>
+
+              <div className="flex min-w-0 flex-1 flex-col gap-3">{popularityBlock}</div>
             </div>
           </div>
         </div>

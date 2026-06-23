@@ -67,6 +67,7 @@ export type ExplanationDetailPayload = {
   sectionNumber: number | null
   questionNumber: number | null
   topicName: string
+  tags: string[]
   explanationHtml: string | null
   videoUrl: string | null
   stimulusText: string | null
@@ -535,6 +536,35 @@ type QuestionDetailSection = {
   admin_logic_games?: PrepTestTreeLogicGameRow[] | null
 }
 
+function parseTopicTags(topicName: string): string[] {
+  const t = topicName.trim()
+  if (!t || t === '—') return []
+  if (t.includes(',')) return t.split(',').map((s) => s.trim()).filter(Boolean)
+  if (t.includes('·')) return t.split('·').map((s) => s.trim()).filter(Boolean)
+  if (t.includes('|')) return t.split('|').map((s) => s.trim()).filter(Boolean)
+  return [t]
+}
+
+function buildQuestionResultTags(
+  topicName: string,
+  passageTitle: string,
+  sectionType: 'LR' | 'RC' | 'LG' | null,
+): string[] {
+  const tags = [...parseTopicTags(topicName)]
+  const passage = passageTitle.trim()
+  if (
+    passage &&
+    !/^Passage \d+$/i.test(passage) &&
+    !/^Game \d+$/i.test(passage)
+  ) {
+    for (const tag of parseTopicTags(passage)) {
+      if (!tags.includes(tag)) tags.push(tag)
+    }
+  }
+  if (tags.length === 0 && sectionType) tags.push(sectionType)
+  return tags
+}
+
 function resolvePassageForQuestion(
   row: QuestionDetailRow,
   sec: QuestionDetailSection,
@@ -740,6 +770,8 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
         if (letter) mappedSelections.push(letter)
       }
       const answerPopularity = buildAnswerPopularity(mappedSelections, letters, correctChoiceId)
+      const passage = resolvePassageForQuestion(row, sec)
+      const topicName = qt?.name?.trim() || '—'
 
       return {
         questionId: row.id,
@@ -750,14 +782,15 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
         sectionType: sec.section_type,
         sectionNumber: sec.section_number,
         questionNumber: row.question_number,
-        topicName: qt?.name?.trim() || '—',
+        topicName,
+        tags: buildQuestionResultTags(topicName, passage.title, sec.section_type),
         explanationHtml: expl.length > 0 ? row.explanation : null,
         videoUrl: vid.length > 0 ? row.video_url : null,
         stimulusText: row.stimulus_text,
         stemText: row.stem_text,
         choices,
         correctChoiceId,
-        passage: resolvePassageForQuestion(row, sec),
+        passage,
         answerPopularity,
         difficulty: clampDifficulty(row.difficulty),
       }

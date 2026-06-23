@@ -80,6 +80,7 @@ describe("LessonContentRenderer active_drill", () => {
       />,
     )
     expect(screen.getByText("Your Score")).toBeInTheDocument()
+    expect(screen.getByText(/Active Drill - Active Drill: Sample/)).toBeInTheDocument()
     expect(screen.getByText("Hidden until complete.")).toBeInTheDocument()
     expect(screen.getByText(/PT LSAC133/)).toBeInTheDocument()
     expect(screen.getByText("Answer Popularity")).toBeInTheDocument()

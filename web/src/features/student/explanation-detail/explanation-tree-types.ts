@@ -62,6 +62,7 @@ export type ExplanationDetailPayload = {
   sectionNumber: number | null
   questionNumber: number | null
   topicName: string
+  tags?: string[]
   explanationHtml: string | null
   videoUrl: string | null
   stimulusText: string | null

@@ -6,7 +6,6 @@ import type { PrepLessonActiveDrillAttempt } from "@/lib/api/prep-course"
 type ActiveDrillResultBarProps = {
   attempt: PrepLessonActiveDrillAttempt
   lessonTitle?: string
-  embedded?: boolean
   onRetake?: () => void
   retaking?: boolean
 }
@@ -14,21 +13,14 @@ type ActiveDrillResultBarProps = {
 function ActiveDrillResultBar({
   attempt,
   lessonTitle,
-  embedded = false,
   onRetake,
   retaking = false,
 }: ActiveDrillResultBarProps) {
   const allCorrect = attempt.questionCount > 0 && attempt.rawScore === attempt.questionCount
 
   return (
-    <section
-      className={cn(
-        embedded
-          ? "bg-transparent"
-          : "overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
-      )}
-    >
-      <div className={cn("flex flex-col items-center gap-4", embedded ? "p-6" : "p-6")}>
+    <section className="min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.04)]">
+      <div className="flex flex-col items-center gap-4 p-6">
         {lessonTitle ? (
           <h2 className="m-0 text-center text-xl font-bold leading-[1.35] text-[#062357]">{lessonTitle}</h2>
         ) : null}
@@ -44,7 +36,12 @@ function ActiveDrillResultBar({
             </p>
           </div>
 
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#10b981]">
+          <div
+            className={cn(
+              "flex size-12 shrink-0 items-center justify-center rounded-full",
+              allCorrect ? "bg-[#10b981]" : "bg-[#df1c41]",
+            )}
+          >
             {allCorrect ? (
               <CheckCircle2 className="size-7 text-white" strokeWidth={2.5} aria-hidden />
             ) : (
@@ -57,7 +54,7 @@ function ActiveDrillResultBar({
               type="button"
               disabled={retaking}
               onClick={onRetake}
-              className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-2xl border border-[#0b4e6e] bg-[#0d47a1] px-4 text-base font-semibold tracking-[0.02em] text-white shadow-[0_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-600)] disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[#0b4e6e] bg-[#0d47a1] px-4 text-base font-semibold tracking-[0.02em] text-white shadow-[0_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-600)] disabled:cursor-not-allowed disabled:opacity-70"
             >
               {retaking ? "Starting…" : "Retake"}
               <ChevronRight className="size-5 shrink-0" aria-hidden />

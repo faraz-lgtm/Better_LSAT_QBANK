@@ -221,7 +221,7 @@ function PrepCourseContentPage() {
   }
 
   return (
-    <StudentMain layout="locked" contentClassName="bg-[var(--greyscale-25)] pb-[24px]">
+    <StudentMain layout="locked" contentClassName="bg-[var(--primary-0)] pb-[24px]">
       <section className="prep-course-shell-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-[16px] border border-[color:var(--greyscale-100)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
         <div className="shrink-0">
           <PrepCourseContentHeader

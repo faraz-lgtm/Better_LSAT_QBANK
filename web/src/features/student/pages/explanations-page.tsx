@@ -510,7 +510,10 @@ function ExplanationsPage() {
   }
 
   return (
-    <StudentMain className="bg-[var(--greyscale-25)] pt-6 pb-8 md:pb-10">
+    <StudentMain
+      className="w-full max-w-none bg-[var(--greyscale-25)] pt-6 pb-8 md:pb-10"
+      contentClassName="w-full max-w-none"
+    >
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <h2 className="text-[24px] font-bold leading-tight tracking-tight" style={{ color: S.heading }}>
           LSAT Question Explanations

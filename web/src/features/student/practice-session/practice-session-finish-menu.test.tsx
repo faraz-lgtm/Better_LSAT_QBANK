@@ -19,6 +19,6 @@ describe("PracticeSessionFinishMenu", () => {
     await user.click(screen.getByRole("button", { name: /finish/i }))
 
     expect(screen.getByRole("menuitem", { name: "Submit Section" })).toBeInTheDocument()
-    expect(screen.getByRole("menuitem", { name: "Exit (Saved Progress)" })).toBeInTheDocument()
+    expect(screen.getByRole("menuitem", { name: /Exit\s*\(Saved Progress\)/i })).toBeInTheDocument()
   })
 })
