@@ -15,7 +15,7 @@ type PracticePrepTestSectionIntroPanelProps = {
   sectionNumber: number | null
   sectionType: SectionType
   questionCount: number
-  timeMinutes: number
+  timeMinutes: number | null
   onGoToQuestions: () => void
 }
 
@@ -39,7 +39,10 @@ function PracticePrepTestSectionIntroPanel({
           <span>
             {questionCount} question{questionCount === 1 ? "" : "s"}
           </span>
-          <span>Time: {formatSectionTimeMinutes(timeMinutes)}</span>
+          <span>
+            Time:{" "}
+            {timeMinutes == null ? "Unlimited" : formatSectionTimeMinutes(timeMinutes)}
+          </span>
         </div>
       </div>
 

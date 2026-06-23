@@ -38,10 +38,10 @@ const QUESTION_FILTER_OPTIONS = ["Question", "Passage", "Incorrect only"] as con
 
 const SECTION_BADGE: Record<
   PrepTestSectionKind,
-  { bg: string; text: string; short: string }
+  { bg: string; text: string; border: string; short: string }
 > = {
-  LR: { bg: "#fffbeb", text: "#ae8b00", short: "LR" },
-  RC: { bg: "#fff3ea", text: "#ff9d51", short: "RC" },
+  LR: { bg: "#eafff4", text: "#00bc54", border: "#00bc54", short: "LR" },
+  RC: { bg: "#e5fdff", text: "#0bbcc9", border: "#0bbcc9", short: "RC" },
 }
 
 const DIFFICULTY: Record<
@@ -67,8 +67,8 @@ function SectionResultCard({ section }: { section: PrepTestSectionSummary }) {
     >
       <div className="flex h-8 items-center gap-1.5">
         <div
-          className="flex size-6 items-center justify-center rounded-lg text-xs font-extrabold leading-[1.3]"
-          style={{ backgroundColor: badge.bg, color: badge.text }}
+          className="flex size-6 items-center justify-center rounded-[16px] border text-xs font-extrabold leading-[1.3]"
+          style={{ backgroundColor: badge.bg, color: badge.text, borderColor: badge.border }}
         >
           {badge.short}
         </div>
@@ -463,8 +463,8 @@ function SectionBlock({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
             <div
-              className="flex size-10 items-center justify-center rounded-xl text-xl font-black leading-[1.5] tracking-[0.02em]"
-              style={{ backgroundColor: badge.bg, color: badge.text }}
+              className="flex size-10 items-center justify-center rounded-[16px] border text-xl font-black leading-[1.5] tracking-[0.02em]"
+              style={{ backgroundColor: badge.bg, color: badge.text, borderColor: badge.border }}
             >
               {badge.short}
             </div>
@@ -503,8 +503,8 @@ function RcSectionPanel({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
             <div
-              className="flex size-10 items-center justify-center rounded-xl text-xl font-black leading-[1.5] tracking-[0.02em]"
-              style={{ backgroundColor: badge.bg, color: badge.text }}
+              className="flex size-10 items-center justify-center rounded-[16px] border text-xl font-black leading-[1.5] tracking-[0.02em]"
+              style={{ backgroundColor: badge.bg, color: badge.text, borderColor: badge.border }}
             >
               {badge.short}
             </div>

@@ -1626,6 +1626,24 @@ select.ds-input {
   line-height: calc(1.625 * var(--practice-line-height-scale, 1));
 }
 
+/* LR stimulus HTML often wraps the argument in <blockquote> after a speaker label paragraph.
+   Global blockquote chrome would indent only the body and leave a visible left gap. */
+.lsat-html-content.practice-session-content blockquote,
+.practice-session-content blockquote {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-left: 0 !important;
+}
+
+.practice-session-content blockquote p {
+  margin-bottom: 0.75rem;
+}
+
+.practice-session-content blockquote p:last-child {
+  margin-bottom: 0;
+}
+
 /* Figma `17920:11448` — session panes: fixed height, scroll without visible scrollbar */
 .practice-session-pane {
   overflow-y: auto;
@@ -1804,6 +1822,13 @@ html.student-shell-immersive .practice-session-card--active-drill {
 
 .practice-session-card--active-drill .practice-session-content mark[data-highlight="yellow"] {
   background-color: #ffbd4c;
+}
+
+.practice-session-card--active-drill .practice-session-question-nav-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
 }
 
 .practice-session-card--active-drill .practice-session-question-nav-btn {

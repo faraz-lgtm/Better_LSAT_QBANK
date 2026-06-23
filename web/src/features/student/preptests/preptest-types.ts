@@ -1,3 +1,5 @@
+import type { SectionTiming } from "@/features/student/sections/section-types"
+
 export type PrepTestPracticeStatus = "fresh" | "in_progress" | "completed"
 
 export type PrepTestPoolFilter = "all" | "fresh" | "in_progress" | "completed" | "blind_review"
@@ -105,4 +107,11 @@ export type StartPrepTestInput = {
 export type StartPrepTestResponse = {
   prepTestSession: { id: string; kind: string; metadata: Record<string, unknown> }
   detail: PrepTestDetailResponse
+}
+
+/** Maps PrepTest hub timing ids to section session timing values. */
+export function mapPrepTestTimingToSectionTiming(timingId: string): SectionTiming {
+  if (timingId === "unlimited" || timingId === "35" || timingId === "standard") return timingId
+  if (timingId === "strict") return "35"
+  return "standard"
 }

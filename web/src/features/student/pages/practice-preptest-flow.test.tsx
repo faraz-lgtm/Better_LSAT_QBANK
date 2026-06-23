@@ -105,7 +105,7 @@ describe("PracticePrepTestPage + section navigation", () => {
     await user.click(screen.getByRole("button", { name: /Start Section/i }))
 
     expect(mockStartSection).toHaveBeenCalledWith(
-      expect.objectContaining({ sectionId: "sec-lr", timing: "35" }),
+      expect.objectContaining({ sectionId: "sec-lr", timing: "standard" }),
     )
     expect(router.state.location.pathname).toBe("/app/practice/sections/session/section-sess-1")
     expect(router.state.location.search).toBe("?prepTestId=pt-900")

@@ -20,6 +20,7 @@ import {
   prepTestHeaderLabel,
   prepTestHubHref,
 } from "@/features/student/preptests/preptest-hub-navigation"
+import { ACTIVE_DRILL_FINISH_BUTTON_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import { PracticeQuestionStem } from "@/features/student/practice-session/practice-question-stem"
 import {
@@ -40,6 +41,10 @@ import {
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
 import { PracticeSessionImmersiveFrame } from "@/features/student/practice-session/practice-session-immersive-frame"
+import {
+  ACTIVE_DRILL_NAV_ARROW_GROUP_CLASS,
+  PracticeSessionNavArrowButton,
+} from "@/features/student/practice-session/practice-session-nav-arrow-button"
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
 import { PracticeSessionQuestionNavButton } from "@/features/student/practice-session/practice-session-question-nav-button"
 import { PracticeSubmitSectionModal } from "@/features/student/practice-session/practice-submit-section-modal"
@@ -49,6 +54,8 @@ import { usePracticeQuestionSeen } from "@/features/student/practice-session/use
 import {
   computeElapsedTimerProgress,
   computeRemainingTimerProgress,
+  isSectionCountdownTiming,
+  isUnlimitedPracticeTiming,
   resolveTimerBudgetSeconds,
   usePracticeSessionTimer,
 } from "@/features/student/practice-session/use-practice-session-timer"
@@ -261,7 +268,7 @@ function SectionQuestionPanel({
           {isCorrect ? "Correct" : "Incorrect"}
         </p>
       ) : null}
-      <div className={variant === "active-drill" ? "flex flex-col gap-4 px-4 pb-4 pt-4" : "flex flex-col gap-2"}>
+      <div className={variant === "active-drill" ? "flex flex-col gap-4 py-4" : "flex flex-col gap-2"}>
         {question.choices.map((choice, index) => (
           <LrDrillOptionRow
             key={choice.id}
@@ -426,7 +433,9 @@ function SectionSessionPage() {
       const data = await practiceApi.getSectionSession(sessionId)
       setSectionSession(data)
       if (searchParams.get("blindReview") !== "1") {
-        setInitialCountdown(data.metadata.timing === "35" ? SECTION_TIMER_SECONDS : null)
+        setInitialCountdown(
+          isSectionCountdownTiming(data.metadata.timing) ? SECTION_TIMER_SECONDS : null,
+        )
       } else {
         setInitialCountdown(null)
       }
@@ -523,7 +532,7 @@ function SectionSessionPage() {
 
   const questions = sectionSession?.questions ?? []
   const metadata = sectionSession?.metadata
-  const timedSection = !blindReviewMode && metadata?.timing === "35"
+  const timedSection = !blindReviewMode && isSectionCountdownTiming(metadata?.timing)
   const showAnswersMode = metadata?.showAnswers ?? "end"
   const sectionType = metadata?.sectionType ?? "LR"
   const questionIds = useMemo(() => questions.map((q) => q.id), [questions])
@@ -968,7 +977,11 @@ function SectionSessionPage() {
               sectionNumber={sectionSession.section.sectionNumber ?? null}
               sectionType={sectionType}
               questionCount={questions.length}
-              timeMinutes={sectionSession.section.timeMinutes ?? 35}
+              timeMinutes={
+                isUnlimitedPracticeTiming(metadata?.timing)
+                  ? null
+                  : (sectionSession.section.timeMinutes ?? 35)
+              }
               onGoToQuestions={handleGoToSectionQuestions}
             />
           </PracticePrepTestSectionIntroFrame>
@@ -1040,11 +1053,7 @@ function SectionSessionPage() {
       disabled={sessionCompleted && !postCompleteBlindReview}
       finishing={finishing}
       submitLabel={postCompleteBlindReview ? "Finish Blind Review" : undefined}
-      buttonClassName={
-        useActiveDrillLayout
-          ? "h-[52px] w-[106px] shrink-0 gap-2 rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-3 text-base font-medium tracking-[0.02em] text-[#062357] shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
-          : undefined
-      }
+      buttonClassName={useActiveDrillLayout ? ACTIVE_DRILL_FINISH_BUTTON_CLASS : undefined}
       onSubmitSection={() => setSubmitModalOpen(true)}
       onExit={handleExitSession}
     />
@@ -1255,7 +1264,7 @@ function SectionSessionPage() {
           useBlindReviewLayout
             ? "min-h-[80px] gap-2 rounded-b-2xl bg-[#f6f8fa] px-6"
             : useActiveDrillLayout
-              ? "min-h-[80px] gap-2 rounded-b-2xl bg-[#eceff3] px-4"
+              ? "min-h-20 gap-4 rounded-b-[16px] bg-[#f6f8fa] px-6 py-3"
               : "gap-3 bg-background px-6 md:gap-4 md:px-6",
         )}
       >
@@ -1282,45 +1291,49 @@ function SectionSessionPage() {
             )
           })}
         </div>
-        <div className={cn("flex shrink-0 self-center items-center gap-2")}>
-          <button
-            type="button"
-            className={
-              useActiveDrillLayout || useBlindReviewLayout
-                ? "inline-flex size-[52px] items-center justify-center rounded-2xl border-2 border-[#dfe1e7] bg-[#f6f8fa] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-white disabled:opacity-40"
-                : "inline-flex size-10 items-center justify-center rounded-full border bg-background transition hover:bg-muted disabled:opacity-40"
-            }
-            style={useActiveDrillLayout || useBlindReviewLayout ? undefined : { borderColor: "var(--greyscale-100)" }}
-            disabled={safeIndex <= 1}
-            aria-label="Previous question"
-            onClick={() => setQIndex((i) => Math.max(1, i - 1))}
-          >
-            <ChevronLeft
-              className={cn(
-                useActiveDrillLayout || useBlindReviewLayout ? "size-6 text-[#666d80]" : "size-5 text-muted-foreground",
-              )}
-              strokeWidth={2}
-            />
-          </button>
-          <button
-            type="button"
-            className={
-              useActiveDrillLayout || useBlindReviewLayout
-                ? "inline-flex size-[52px] items-center justify-center rounded-2xl border-2 border-[#dfe1e7] bg-[#f6f8fa] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-white disabled:opacity-40"
-                : "inline-flex size-10 items-center justify-center rounded-full border bg-background transition hover:bg-muted disabled:opacity-40"
-            }
-            style={useActiveDrillLayout || useBlindReviewLayout ? undefined : { borderColor: "var(--greyscale-100)" }}
-            disabled={safeIndex >= questions.length}
-            aria-label="Next question"
-            onClick={() => setQIndex((i) => Math.min(questions.length, i + 1))}
-          >
-            <ChevronRight
-              className={cn(
-                useActiveDrillLayout || useBlindReviewLayout ? "size-6 text-[#666d80]" : "size-5 text-muted-foreground",
-              )}
-              strokeWidth={2}
-            />
-          </button>
+        <div
+          className={cn(
+            "flex shrink-0 self-center items-center",
+            useActiveDrillLayout || useBlindReviewLayout ? ACTIVE_DRILL_NAV_ARROW_GROUP_CLASS : "gap-2",
+          )}
+        >
+          {useActiveDrillLayout || useBlindReviewLayout ? (
+            <>
+              <PracticeSessionNavArrowButton
+                direction="prev"
+                disabled={safeIndex <= 1}
+                onClick={() => setQIndex((i) => Math.max(1, i - 1))}
+              />
+              <PracticeSessionNavArrowButton
+                direction="next"
+                disabled={safeIndex >= questions.length}
+                onClick={() => setQIndex((i) => Math.min(questions.length, i + 1))}
+              />
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="inline-flex size-10 items-center justify-center rounded-full border bg-background transition hover:bg-muted disabled:opacity-40"
+                style={{ borderColor: "var(--greyscale-100)" }}
+                disabled={safeIndex <= 1}
+                aria-label="Previous question"
+                onClick={() => setQIndex((i) => Math.max(1, i - 1))}
+              >
+                <ChevronLeft className="size-5 text-muted-foreground" strokeWidth={2} />
+              </button>
+              <button
+                type="button"
+                className="inline-flex size-10 items-center justify-center rounded-full border bg-background transition hover:bg-muted disabled:opacity-40"
+                style={{ borderColor: "var(--greyscale-100)" }}
+                disabled={safeIndex >= questions.length}
+                aria-label="Next question"
+                onClick={() => setQIndex((i) => Math.min(questions.length, i + 1))}
+              >
+                <ChevronRight className="size-5 text-muted-foreground" strokeWidth={2} />
+              </button>
+            </>
+          )}
         </div>
       </footer>
     </>
@@ -1402,7 +1415,7 @@ function SectionSessionPage() {
               {error}
             </p>
           ) : null}
-          <div className="practice-session-card practice-session-card--active-drill flex h-full min-h-0 w-full flex-col rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+          <div className="practice-session-card practice-session-card--active-drill flex h-full min-h-0 w-full flex-col rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
             {sessionCardContent}
           </div>
         </PracticeSessionImmersiveFrame>
