@@ -10,12 +10,12 @@ import {
   Pencil,
   Share2,
   Trash2,
-  XCircle,
 } from "lucide-react"
 
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
+import { PracticeResultOutcomeIcon } from "@/features/student/practice-session/practice-result-outcome-icon"
 import {
   type PrepTestAboutMeta,
   type PrepTestPassageSummary,
@@ -56,10 +56,7 @@ const DIFFICULTY: Record<
 }
 
 function QuestionOutcomeIcon({ status }: { status: QuestionResultStatus }) {
-  if (status === "correct") {
-    return <CheckCircle2 className="size-4 shrink-0 text-[#00d492]" aria-hidden />
-  }
-  return <XCircle className="size-4 shrink-0 text-[#df1c41]" aria-hidden />
+  return <PracticeResultOutcomeIcon correct={status === "correct"} className="size-4" />
 }
 
 function SectionResultCard({ section }: { section: PrepTestSectionSummary }) {
@@ -427,19 +424,11 @@ function QuestionResultRow({
           </div>
           <div className="flex flex-nowrap items-center gap-5">
             <div className="flex shrink-0 items-center gap-2.5">
-              {row.actualCorrect ? (
-                <CheckCircle2 className="size-6 shrink-0 text-[#00d492]" aria-hidden />
-              ) : (
-                <XCircle className="size-6 shrink-0 text-[#df1c41]" aria-hidden />
-              )}
+              <PracticeResultOutcomeIcon correct={row.actualCorrect} />
               <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">Actual</span>
             </div>
             <div className="flex shrink-0 items-center gap-2.5">
-              {row.blindReviewCorrect ? (
-                <CheckCircle2 className="size-6 shrink-0 text-[#00d492]" aria-hidden />
-              ) : (
-                <XCircle className="size-6 shrink-0 text-[#df1c41]" aria-hidden />
-              )}
+              <PracticeResultOutcomeIcon correct={row.blindReviewCorrect} />
               <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
                 Blind Review
               </span>
