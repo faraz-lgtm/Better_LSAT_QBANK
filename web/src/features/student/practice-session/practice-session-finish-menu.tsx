@@ -144,7 +144,7 @@ function PracticeSessionFinishMenu({
         onClick={() => setOpen((current) => !current)}
       >
         {finishing ? "Finishing…" : (finishLabel ?? "Finish")}
-        <ChevronDown className="size-5 opacity-90" strokeWidth={2} aria-hidden />
+        <ChevronDown className="size-5 shrink-0 opacity-90" strokeWidth={2} aria-hidden />
       </Button>
       {menu}
     </div>

@@ -15,9 +15,9 @@ export type PracticeSectionResultSummary = {
   accuracyPct: number
 }
 
-const SECTION_BADGE: Record<PracticeSectionKind, { bg: string; text: string; short: string }> = {
-  LR: { bg: "#fffbeb", text: "#ae8b00", short: "LR" },
-  RC: { bg: "#fff3ea", text: "#ff9d51", short: "RC" },
+const SECTION_BADGE: Record<PracticeSectionKind, { bg: string; text: string; border: string; short: string }> = {
+  LR: { bg: "#eafff4", text: "#00bc54", border: "#00bc54", short: "LR" },
+  RC: { bg: "#e5fdff", text: "#0bbcc9", border: "#0bbcc9", short: "RC" },
 }
 
 function QuestionOutcomeIcon({ status }: { status: PracticeQuestionOutcome }) {
@@ -30,8 +30,8 @@ function SectionResultCard({ section }: { section: PracticeSectionResultSummary 
     <article className="flex w-[212px] shrink-0 flex-col gap-3 rounded-2xl border border-[#f6f8fa] bg-white p-4 shadow-[0px_1px_1px_rgba(13,13,18,0.04)]">
       <div className="flex h-8 items-center gap-1.5">
         <div
-          className="flex size-6 items-center justify-center rounded-lg text-xs font-extrabold leading-[1.3]"
-          style={{ backgroundColor: badge.bg, color: badge.text }}
+          className="flex size-6 items-center justify-center rounded-[16px] border text-xs font-extrabold leading-[1.3]"
+          style={{ backgroundColor: badge.bg, color: badge.text, borderColor: badge.border }}
         >
           {badge.short}
         </div>

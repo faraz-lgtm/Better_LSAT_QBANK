@@ -65,7 +65,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
         className={cn(
           "min-w-0 flex-1",
           isActiveDrill || isBlindReview
-            ? "text-base leading-normal tracking-[0.02em] text-[#0d0d12]"
+            ? "text-lg leading-[1.5] tracking-[0.36px] text-[#0d0d12]"
             : "pt-0.5",
           hidden && (isBlindReview ? "line-through" : "line-through opacity-60"),
         )}
@@ -158,12 +158,12 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
           }
         }}
         className={cn(
-          "flex items-start gap-4 rounded-2xl border-2 py-1 pl-4 pr-2 text-left transition-colors",
-          selected ? "border-[#0d47a1] bg-[#f5f9ff]" : "border-transparent",
+          "flex items-start gap-4 rounded-2xl py-1 pl-4 pr-0 text-left transition-colors",
+          selected ? "border-2 border-[#0d47a1] bg-[#f5f9ff]" : "border-2 border-transparent",
           disabled ? "cursor-default" : annotateMode ? "cursor-text" : "cursor-pointer",
         )}
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-[12px] border-2 border-[#dfe1e7] bg-white text-base font-semibold text-[#0d0d12]">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-xl border-2 border-[#dfe1e7] bg-white text-base font-semibold leading-6 text-[#0d0d12]">
           {letter}
         </span>
         <div className="flex min-w-0 flex-1 items-start justify-between gap-4">

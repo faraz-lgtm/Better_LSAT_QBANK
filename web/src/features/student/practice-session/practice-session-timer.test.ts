@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest"
 import {
   computeElapsedTimerProgress,
   computeRemainingTimerProgress,
+  isDrillCountdownTiming,
+  isSectionCountdownTiming,
+  isUnlimitedPracticeTiming,
   PRACTICE_PER_QUESTION_SECONDS,
   PRACTICE_SESSION_35_MIN_SECONDS,
   resolveTimerBudgetSeconds,
@@ -11,8 +14,19 @@ import {
 describe("practice session timer progress", () => {
   it("resolves drill timing budgets", () => {
     expect(resolveTimerBudgetSeconds({ timing: "35" })).toBe(PRACTICE_SESSION_35_MIN_SECONDS)
+    expect(resolveTimerBudgetSeconds({ timing: "standard" })).toBe(PRACTICE_SESSION_35_MIN_SECONDS)
     expect(resolveTimerBudgetSeconds({ timing: "per-q", questionCount: 5 })).toBe(5 * PRACTICE_PER_QUESTION_SECONDS)
-    expect(resolveTimerBudgetSeconds({ timing: "unlimited" })).toBe(PRACTICE_SESSION_35_MIN_SECONDS)
+    expect(resolveTimerBudgetSeconds({ timing: "unlimited" })).toBe(0)
+    expect(resolveTimerBudgetSeconds({})).toBe(0)
+  })
+
+  it("classifies timing modes", () => {
+    expect(isUnlimitedPracticeTiming("unlimited")).toBe(true)
+    expect(isUnlimitedPracticeTiming(undefined)).toBe(true)
+    expect(isUnlimitedPracticeTiming("35")).toBe(false)
+    expect(isSectionCountdownTiming("standard")).toBe(true)
+    expect(isDrillCountdownTiming("per-q")).toBe(true)
+    expect(isDrillCountdownTiming("unlimited")).toBe(false)
   })
 
   it("computes elapsed progress from time", () => {

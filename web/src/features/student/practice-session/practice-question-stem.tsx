@@ -37,7 +37,7 @@ function PracticeQuestionStem({
 
   if (isActiveDrill) {
     return (
-      <div className="shrink-0 border-b border-[#dfe1e7] bg-white px-3 py-3">
+      <div className="shrink-0 border-b border-[#dfe1e7] bg-white p-3">
         <div className="flex items-start justify-between gap-3">
           <PracticeAnnotatedContent
             regionKey={regionKey}
@@ -54,7 +54,7 @@ function PracticeQuestionStem({
             flagged={flagged}
             onToggle={onToggleFlag}
             disabled={flagsDisabled}
-            className="size-9 rounded-[10px]"
+            className="size-9 rounded-[10px] pt-2"
           />
         </div>
       </div>

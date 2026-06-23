@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
-import type {
-  PrepTestDetailResponse,
-  PrepTestDetailSection,
-  PrepTestSectionBreak,
+import {
+  mapPrepTestTimingToSectionTiming,
+  type PrepTestDetailResponse,
+  type PrepTestDetailSection,
+  type PrepTestSectionBreak,
 } from "@/features/student/preptests/preptest-types"
 import {
   blindReviewSectionSessionPath,
@@ -319,7 +320,11 @@ function PracticePrepTestPage() {
       if (testIdParam) {
         await practiceApi.startPrepTest({ prepTestId: testIdParam, timing: timingId, format: formatId })
       }
-      const out = await practiceApi.startSection({ sectionId, timing: "35", showAnswers: "end" })
+      const out = await practiceApi.startSection({
+        sectionId,
+        timing: mapPrepTestTimingToSectionTiming(timingId),
+        showAnswers: "end",
+      })
       if (testIdParam) {
         navigate(
           sectionSessionHref(out.session.id, { prepTestId: testIdParam, retake: isRetakeAttempt }),

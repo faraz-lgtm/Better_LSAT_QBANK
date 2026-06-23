@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest"
 
 import {
   drillSessionSupportsBlindReview,
+  isAdaptiveDrillSession,
   isDashboardAdaptiveDrill,
   isDashboardAdaptiveDrillSession,
+  isPrepCourseAdaptiveDrillSession,
 } from "@/features/student/drills/drill-blind-review-policy"
 
 describe("drillSessionSupportsBlindReview", () => {
@@ -41,5 +43,29 @@ describe("drillSessionSupportsBlindReview", () => {
     ).toBe(true)
     expect(isDashboardAdaptiveDrillSession({ source: "dashboard_adaptive_drill" })).toBe(true)
     expect(isDashboardAdaptiveDrillSession({ difficulty: "adaptive" })).toBe(false)
+  })
+
+  it("identifies adaptive drill sessions for dashboard and prep course sources", () => {
+    expect(
+      isAdaptiveDrillSession({
+        metadata: { source: "dashboard_adaptive_drill" },
+      }),
+    ).toBe(true)
+    expect(
+      isAdaptiveDrillSession({
+        metadata: { source: "prep_course_adaptive_drill" },
+      }),
+    ).toBe(true)
+    expect(isPrepCourseAdaptiveDrillSession({ source: "prep_course_adaptive_drill" })).toBe(true)
+    expect(
+      isAdaptiveDrillSession({
+        metadata: { source: "prep_course_active_drill" },
+      }),
+    ).toBe(false)
+    expect(
+      isAdaptiveDrillSession({
+        metadata: { difficulty: "adaptive" },
+      }),
+    ).toBe(false)
   })
 })

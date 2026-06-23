@@ -95,4 +95,4 @@ function PrepCourseLessonTypeIcon({ lessonType, className }: PrepCourseLessonTyp
   )
 }
 
-export { PrepCourseLessonTypeIcon }
+export { LessonAdaptiveDrillIcon, PrepCourseLessonTypeIcon }

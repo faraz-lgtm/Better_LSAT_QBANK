@@ -11,6 +11,7 @@ import {
 } from "@/features/dashboard/lib/map-dashboard-preferences"
 import { mapOverviewToDashboardStats } from "@/features/dashboard/lib/map-dashboard-stats"
 import { useAnalyticsApi } from "@/features/student/analytics/hooks/use-analytics-api"
+import { DashboardAdaptiveDrillButton } from "@/features/dashboard/components/dashboard-adaptive-drill-button"
 import { ContinueDrillCard, continueDrillToCardDrill } from "@/features/student/components/continue-drill-card"
 import { DASHBOARD_ADAPTIVE_DRILL_QUERY } from "@/features/student/drills/drill-blind-review-policy"
 import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
@@ -216,16 +217,11 @@ function DashboardPage() {
 
   const adaptiveDrillButton = useMemo(
     () => (
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="w-fit shrink-0"
-        disabled={startingAdaptiveDrill || !practiceApi}
+      <DashboardAdaptiveDrillButton
+        loading={startingAdaptiveDrill}
+        disabled={!practiceApi}
         onClick={() => void handleStartAdaptiveDrill()}
-      >
-        {startingAdaptiveDrill ? "Starting…" : "Adaptive Drill"}
-      </Button>
+      />
     ),
     [handleStartAdaptiveDrill, practiceApi, startingAdaptiveDrill],
   )

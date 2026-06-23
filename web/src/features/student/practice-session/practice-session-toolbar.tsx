@@ -32,6 +32,8 @@ const toolBtnClass =
   "flex size-7 items-center justify-center rounded text-[#666d80] transition hover:bg-[#eceff3] hover:text-[#062357]"
 const toolTextBtnClass =
   "flex size-7 items-center justify-center rounded text-xs font-bold text-[#666d80] transition hover:bg-[#eceff3] hover:text-[#062357]"
+const activeDrillToolGroupClass =
+  "flex h-[52px] items-center rounded-[16px] border border-[#dfe1e7] bg-white"
 
 function PracticeSessionToolbar({
   variant = "default",
@@ -51,20 +53,28 @@ function PracticeSessionToolbar({
 }: PracticeSessionToolbarProps) {
   const isActiveDrill = variant === "active-drill"
   const swatches = isActiveDrill ? ACTIVE_DRILL_HIGHLIGHT_COLORS : HIGHLIGHT_COLORS
-  const toolGroupClass = "flex h-[52px] items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-3"
+  const toolGroupClass = isActiveDrill
+    ? activeDrillToolGroupClass
+    : "flex h-[52px] items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-3"
 
   return (
-    <div className={cn("flex min-w-0 flex-nowrap items-center", isActiveDrill ? "gap-2" : "gap-2")}>
-      <span className={cn("shrink-0 text-sm font-medium text-[#666d80]", isActiveDrill ? "inline" : "hidden xl:inline")}>
+    <div className={cn("flex min-w-0 flex-nowrap items-center", isActiveDrill ? "gap-2.5" : "gap-2")}>
+      <span
+        className={cn(
+          "shrink-0 text-sm font-medium tracking-[0.28px] text-[#666d80]",
+          isActiveDrill ? "inline" : "hidden xl:inline",
+        )}
+      >
         Tools:
       </span>
-      <div className={cn(toolGroupClass, "gap-1.5")}>
+      <div className={cn(toolGroupClass, isActiveDrill ? "gap-1.5 px-3" : "gap-1.5")}>
         {swatches.map((c) => (
           <button
             key={c.id}
             type="button"
             className={cn(
-              "size-7 shrink-0 rounded border-2 border-transparent",
+              "shrink-0 rounded-[4px] border-2 border-transparent",
+              isActiveDrill ? "size-7" : "size-7 rounded border-2",
               activeColor === c.id && toolMode === "highlighter" && "border-[#062357]",
             )}
             style={{ backgroundColor: c.hex }}
@@ -76,27 +86,31 @@ function PracticeSessionToolbar({
         <div className="mx-0.5 h-6 w-px shrink-0 bg-[#dfe1e7]" aria-hidden />
         <button
           type="button"
-          className={cn(toolBtnClass, toolMode === "eraser" && "bg-[#eceff3] text-[#062357]")}
+          className={cn(
+            toolBtnClass,
+            isActiveDrill && "size-7",
+            toolMode === "eraser" && "bg-[#eceff3] text-[#062357]",
+          )}
           aria-label="Eraser"
           aria-pressed={toolMode === "eraser"}
           onClick={onEraser}
         >
-          <Eraser className="size-4" strokeWidth={2} />
+          <Eraser className={cn(isActiveDrill ? "size-6" : "size-4")} strokeWidth={2} />
         </button>
       </div>
-      <div className={cn(toolGroupClass, "gap-1")}>
-        <button type="button" className={toolTextBtnClass} aria-label="Text size" onClick={onFontSize}>
+      <div className={cn(toolGroupClass, isActiveDrill ? "gap-1 px-[13px]" : "gap-1")}>
+        <button type="button" className={cn(toolTextBtnClass, isActiveDrill && "size-7")} aria-label="Text size" onClick={onFontSize}>
           Aa
           <span className="sr-only"> ({fontScale}x)</span>
         </button>
         {isActiveDrill ? (
           <button
             type="button"
-            className={cn(toolBtnClass, lineSpacing !== 1 && "bg-[#eceff3] text-[#062357]")}
+            className={cn(toolBtnClass, "size-7", lineSpacing !== 1 && "bg-[#eceff3] text-[#062357]")}
             aria-label="Line spacing"
             onClick={onLineSpacing}
           >
-            <AlignVerticalSpaceAround className="size-4" strokeWidth={2} />
+            <AlignVerticalSpaceAround className="size-6" strokeWidth={2} />
             <span className="sr-only"> ({lineSpacing})</span>
           </button>
         ) : (
@@ -123,7 +137,12 @@ function PracticeSessionToolbar({
         )}
         <button
           type="button"
-          className={cn(toolTextBtnClass, "underline", toolMode === "underline" && "bg-[#eceff3] text-[#062357]")}
+          className={cn(
+            toolTextBtnClass,
+            "underline",
+            isActiveDrill && "size-7",
+            toolMode === "underline" && "bg-[#eceff3] text-[#062357]",
+          )}
           aria-label="Underline"
           aria-pressed={toolMode === "underline"}
           onClick={onUnderline}

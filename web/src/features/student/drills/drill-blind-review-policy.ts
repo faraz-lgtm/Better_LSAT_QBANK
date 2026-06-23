@@ -28,6 +28,16 @@ function isDashboardAdaptiveDrill(context: DashboardAdaptiveDrillContext): boole
   return isDashboardAdaptiveDrillSession(context.metadata)
 }
 
+function isPrepCourseAdaptiveDrillSession(metadata: DrillSessionMetadataLike | null | undefined): boolean {
+  if (!metadata) return false
+  return metadata.source === "prep_course_adaptive_drill"
+}
+
+function isAdaptiveDrillSession(context: DashboardAdaptiveDrillContext): boolean {
+  if (isDashboardAdaptiveDrill(context)) return true
+  return isPrepCourseAdaptiveDrillSession(context.metadata)
+}
+
 function drillSessionSupportsBlindReview(context: DashboardAdaptiveDrillContext): boolean {
   if (isDashboardAdaptiveDrill(context)) return false
   return true
@@ -37,7 +47,9 @@ export {
   DASHBOARD_ADAPTIVE_DRILL_QUERY,
   DASHBOARD_ADAPTIVE_DRILL_SOURCE,
   drillSessionSupportsBlindReview,
+  isAdaptiveDrillSession,
   isDashboardAdaptiveDrill,
   isDashboardAdaptiveDrillSession,
+  isPrepCourseAdaptiveDrillSession,
   isPrepCourseDrillSession,
 }

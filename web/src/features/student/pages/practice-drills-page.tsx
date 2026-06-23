@@ -96,8 +96,7 @@ function PracticeDrillsPage() {
           priorities
             .filter((p) => p.sectionType === "LR" || p.sectionType === "RC" || p.sectionType === null)
             .map(mapPriorityToTagDrill)
-            .filter((d): d is TagDrill => d != null)
-            .slice(0, 12),
+            .filter((d): d is TagDrill => d != null),
         )
       } catch {
         if (!cancelled) {
@@ -243,18 +242,18 @@ function PracticeDrillsPage() {
         ) : filteredTags.length === 0 ? (
           <p className="text-[14px] text-[#666d80]">Answer more questions to unlock priority tag drills.</p>
         ) : (
-          <div className="flex gap-[24px] overflow-x-auto pb-[8px]">
+          <div className="grid grid-cols-1 gap-[24px] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {filteredTags.map((drill) => (
               <article
                 key={drill.id}
-                className="w-[290px] shrink-0 overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
+                className="flex min-w-0 flex-col overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
               >
                 <div className="flex h-[48px] items-center justify-center bg-[#f6f8fa] text-[18px] font-bold leading-[1.35] text-[#062357]">
                   {drill.sectionLabel}
                 </div>
-                <div className="flex flex-col gap-[24px] p-[24px]">
+                <div className="flex flex-1 flex-col gap-[24px] p-[24px]">
                   <div className="flex items-start justify-between gap-[12px]">
-                    <h3 className="max-w-[151px] text-[18px] font-bold leading-[1.35] text-[#062357]">{drill.title}</h3>
+                    <h3 className="min-w-0 flex-1 text-[18px] font-bold leading-[1.35] text-[#062357]">{drill.title}</h3>
                     <DrillDifficultyStatus
                       label={drill.difficultyLabel}
                       filledBars={drill.filledBars}
@@ -264,7 +263,7 @@ function PracticeDrillsPage() {
                   </div>
                   <button
                     type="button"
-                    className="inline-flex h-[40px] w-[242px] items-center justify-center rounded-[16px] border border-[#0b4e6e] bg-[#0d47a1] text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
+                    className="mt-auto inline-flex h-[40px] w-full items-center justify-center rounded-[16px] border border-[#0b4e6e] bg-[#0d47a1] text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
                     onClick={() => navigate(drill.configPath)}
                   >
                     Start Drill
