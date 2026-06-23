@@ -588,7 +588,6 @@ function ExplanationsPage() {
           const filteredTree = ptTree ? filterPrepTests([ptTree], sectionFilter)[0] : null
           const isLoadingTree = treeLoading.has(ptId)
           const treeError = treeErrors[ptId]
-          const ptHeaderBg = S.surface
           const ptNum = row.prepTestNumber
           const ptStatus = derivePrepTestStatus(ptTree)
           const ptBadgeColors = prepTestBadgeColors(ptStatus)
@@ -601,9 +600,8 @@ function ExplanationsPage() {
             >
               <button
                 type="button"
-                className="flex w-full items-center gap-4 px-5 py-4 text-left transition-colors"
+                className="flex w-full items-center gap-4 bg-white px-5 py-4 text-left transition-colors hover:bg-[#f3f7ff]"
                 style={{
-                  backgroundColor: ptHeaderBg,
                   borderBottom: ptIsOpen ? "1px solid var(--greyscale-100)" : undefined,
                 }}
                 onClick={() => togglePrepTest(ptId)}
