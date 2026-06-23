@@ -11,7 +11,6 @@ describe("student-nav-config", () => {
   it("maps practice routes to prep section", () => {
     expect(getActiveSectionKey("/app/practice/drills")).toBe("prep")
     expect(getStudentBreadcrumbs("/app/practice/drills")).toEqual([
-      { label: "Main", href: "/app" },
       { label: "Prep" },
       { label: "Drills" },
     ])
@@ -21,7 +20,6 @@ describe("student-nav-config", () => {
   it("maps academy explanations with foundation trail", () => {
     expect(getActiveSectionKey("/app/prep-course/foo")).toBe("academy")
     expect(getStudentBreadcrumbs("/app/learn/explanations")).toEqual([
-      { label: "Main", href: "/app" },
       { label: "Academy" },
       { label: "Foundation" },
       { label: "Explanations" },
@@ -31,7 +29,6 @@ describe("student-nav-config", () => {
 
   it("builds prep course content breadcrumbs", () => {
     expect(getStudentBreadcrumbs("/app/prep-course/prep-course")).toEqual([
-      { label: "Main", href: "/app" },
       { label: "Academy" },
       { label: "Prep Course", href: "/app/prep-course" },
       { label: "Course Content" },
@@ -42,12 +39,10 @@ describe("student-nav-config", () => {
   it("maps analytics routes to insights section", () => {
     expect(getActiveSectionKey("/app/analytics/drills")).toBe("insights")
     expect(getStudentBreadcrumbs("/app/analytics")).toEqual([
-      { label: "Main", href: "/app" },
       { label: "Insights" },
       { label: "Overview" },
     ])
     expect(getStudentBreadcrumbs("/app/analytics/drills")).toEqual([
-      { label: "Main", href: "/app" },
       { label: "Insights" },
       { label: "Foundations" },
       { label: "Drills" },
@@ -62,7 +57,6 @@ describe("student-nav-config", () => {
 
   it("builds LR drill config breadcrumbs", () => {
     expect(getStudentBreadcrumbs("/app/practice/drills/lr/new")).toEqual([
-      { label: "Main", href: "/app" },
       { label: "Prep" },
       { label: "LR Drills" },
     ])
@@ -71,7 +65,6 @@ describe("student-nav-config", () => {
 
   it("builds RC drill config breadcrumbs", () => {
     expect(getStudentBreadcrumbs("/app/practice/drills/rc/new")).toEqual([
-      { label: "Main", href: "/app" },
       { label: "Prep" },
       { label: "RC Drills" },
     ])
@@ -80,12 +73,10 @@ describe("student-nav-config", () => {
 
   it("hides prep test hub title and extra breadcrumb", () => {
     expect(getStudentBreadcrumbs("/app/practice/preptest/pt-900")).toEqual([
-      { label: "Main", href: "/app" },
       { label: "Prep" },
     ])
     expect(getStudentPageTitle("/app/practice/preptest/pt-900")).toBeNull()
     expect(getStudentBreadcrumbs("/app/practice/preptest")).toEqual([
-      { label: "Main", href: "/app" },
       { label: "Prep" },
       { label: "PrepTest" },
     ])
@@ -93,7 +84,6 @@ describe("student-nav-config", () => {
 
   it("builds prep test results breadcrumbs", () => {
     expect(getStudentBreadcrumbs("/app/analytics/preptests/results/abc123")).toEqual([
-      { label: "Main", href: "/app" },
       { label: "Insights" },
       { label: "Foundations" },
       { label: "PrepTest", href: "/app/analytics/preptests" },

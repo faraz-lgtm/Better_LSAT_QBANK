@@ -56,7 +56,7 @@ function ExplanationChoiceList({
               <button
                 type="button"
                 className={cn(
-                  "flex w-full items-start gap-2.5 p-4 text-left",
+                  "flex w-full items-center gap-2.5 p-4 text-left",
                   expandable ? "cursor-pointer hover:opacity-90" : "cursor-default",
                 )}
                 onClick={() => {

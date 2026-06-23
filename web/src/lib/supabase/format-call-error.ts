@@ -1,9 +1,19 @@
 type ErrorWithCode = Error & { code?: string }
 
+function supabaseUrlHint(): string {
+  const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim() ?? ""
+  const isLocal =
+    url.includes("127.0.0.1") || url.includes("localhost") || url.startsWith("http://kong")
+  if (isLocal) {
+    return "Local Supabase is not reachable. Start Docker Desktop, then run `supabase start` from the repo root and use `pnpm run dev`. Or point `web/.env.production.local` at your hosted project (`https://<ref>.supabase.co` + anon key) for `pnpm run dev:prod`."
+  }
+  return "Cannot reach Supabase from this browser. Confirm VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in web/.env.production.local, add your dev URL (e.g. http://localhost:5175/auth/callback) to Supabase Auth → URL configuration, and try incognito if extensions block *.supabase.co."
+}
+
 /** Maps low-level network failures from `fetch` into actionable UI copy. */
 export function formatSupabaseCallError(err: Error): string {
   if (err.message === "Failed to fetch") {
-    return "Cannot reach Supabase from this browser (network error). Use pnpm run dev:prod with hosted VITE_SUPABASE_* in web/.env, or run supabase start for pnpm run dev. Add your dev URL (e.g. http://localhost:5175/auth/callback) to Supabase Auth redirect allow-list. Try another browser, incognito, or disable extensions blocking *.supabase.co."
+    return supabaseUrlHint()
   }
 
   const message = err.message.toLowerCase()
