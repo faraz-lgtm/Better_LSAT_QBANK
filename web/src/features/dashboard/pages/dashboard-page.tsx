@@ -16,15 +16,17 @@ import { DASHBOARD_ADAPTIVE_DRILL_QUERY } from "@/features/student/drills/drill-
 import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
+import { completedDurationMinutes } from "@/features/prep-course/lib/prep-course-format"
 import {
   type ContinueDrill,
   fetchAllSessionsForStudyHours,
   mapPriorityToSuggestedDrill,
   mapSessionToContinueDrill,
-  sumSessionStudyHours,
+  sumCompletedSessionStudyMinutes,
   type SuggestedDrill,
 } from "@/features/student/drills/drill-dashboard-mappers"
 import type { AnalyticsOverview } from "@/lib/api/analytics"
+import { createPrepCourseApi } from "@/lib/api/prep-course"
 import type { OfficialLsatScore, StudentStudyContext } from "@/lib/api/users"
 import { createUsersApi } from "@/lib/api/users"
 import { createPracticeApi } from "@/lib/api/practice"
@@ -76,9 +78,16 @@ function DashboardPage() {
       return null
     }
   }, [])
+  const prepCourseApi = useMemo(() => {
+    try {
+      return createPrepCourseApi(getSupabaseBrowserClient())
+    } catch {
+      return null
+    }
+  }, [])
 
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null)
-  const [studyHours, setStudyHours] = useState(0)
+  const [studyMinutes, setStudyMinutes] = useState(0)
   const [continueDrills, setContinueDrills] = useState<ContinueDrill[]>([])
   const [suggestedDrills, setSuggestedDrills] = useState<SuggestedDrill[]>([])
   const [studyContext, setStudyContext] = useState<StudentStudyContext | null>(null)
@@ -107,16 +116,35 @@ function DashboardPage() {
     setLoading(true)
     setError(null)
     try {
-      const [overviewData, allSessions, drillSessions, priorities, context] = await Promise.all([
+      const [overviewData, allSessions, drillSessions, priorities, context, courseList] = await Promise.all([
         analyticsApi.getOverview(),
         fetchAllSessionsForStudyHours((input) => analyticsApi.getSessions(input)),
         analyticsApi.getSessions({ kind: "DRILL", limit: 50 }),
         analyticsApi.getPriorities(),
         usersApi.getStudyContext(),
+        prepCourseApi?.listCourses().catch(() => []) ?? Promise.resolve([]),
       ])
 
+      let lessonStudyMinutes = 0
+      if (prepCourseApi && courseList.length > 0) {
+        const courseDetails = await Promise.all(
+          courseList.map((course) =>
+            prepCourseApi.getCourse(course.slug).catch(() => null),
+          ),
+        )
+        for (const detail of courseDetails) {
+          if (!detail) continue
+          lessonStudyMinutes += completedDurationMinutes(
+            detail.lessons,
+            detail.completedLessonSlugs ?? [],
+          )
+        }
+      }
+
       setOverview(overviewData)
-      setStudyHours(sumSessionStudyHours(allSessions))
+      setStudyMinutes(
+        lessonStudyMinutes + sumCompletedSessionStudyMinutes(allSessions),
+      )
       setStudyContext(context)
 
       const inProgress = drillSessions.sessions
@@ -137,15 +165,15 @@ function DashboardPage() {
     } finally {
       setLoading(false)
     }
-  }, [analyticsApi, usersApi])
+  }, [analyticsApi, usersApi, prepCourseApi])
 
   useEffect(() => {
     void loadDashboard()
   }, [loadDashboard])
 
   const statCards = useMemo(
-    () => (overview ? mapOverviewToDashboardStats(overview, studyHours) : []),
-    [overview, studyHours],
+    () => (overview ? mapOverviewToDashboardStats(overview, studyMinutes) : []),
+    [overview, studyMinutes],
   )
 
   const filteredContinue = useMemo(() => {

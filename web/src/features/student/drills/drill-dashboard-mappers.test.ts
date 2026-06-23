@@ -4,51 +4,99 @@ import type { PracticeSessionSummary } from "@/lib/api/analytics"
 
 import {
   formatDrillTimeLabel,
-  sumSessionStudyHours,
+  formatStudyTime,
+  sessionStudyMinutes,
+  sumCompletedSessionStudyMinutes,
 } from "./drill-dashboard-mappers"
 
-describe("sumSessionStudyHours", () => {
-  it("sums completed session durations in hours", () => {
+const baseSessionFields = {
+  rawScore: null,
+  scaledScore: null,
+  percentile: null,
+  bookmarked: false,
+  excluded: false,
+  prepTestTitle: null,
+  sectionTitle: null,
+  sectionType: null,
+} satisfies Partial<PracticeSessionSummary>
+
+describe("sessionStudyMinutes", () => {
+  it("returns 0 for in-progress sessions", () => {
+    expect(
+      sessionStudyMinutes({
+        startedAt: "2026-01-01T10:00:00Z",
+        completedAt: null,
+        metadata: { timing: "35" },
+      }),
+    ).toBe(0)
+  })
+
+  it("uses configured 35 minute budget for completed timed drills", () => {
+    expect(
+      sessionStudyMinutes({
+        startedAt: "2026-01-01T10:00:00Z",
+        completedAt: "2026-01-01T10:05:00Z",
+        metadata: { timing: "35", questionCount: 10 },
+      }),
+    ).toBe(35)
+  })
+
+  it("computes per-question drill budgets from question count", () => {
+    expect(
+      sessionStudyMinutes({
+        startedAt: "2026-01-01T10:00:00Z",
+        completedAt: "2026-01-01T10:20:00Z",
+        metadata: { timing: "per-q", questionCount: 5 },
+      }),
+    ).toBe(7)
+  })
+
+  it("uses elapsed minutes for unlimited completed sessions", () => {
+    expect(
+      sessionStudyMinutes({
+        startedAt: "2026-01-01T10:00:00Z",
+        completedAt: "2026-01-01T12:00:00Z",
+        metadata: { timing: "unlimited" },
+      }),
+    ).toBe(120)
+  })
+})
+
+describe("sumCompletedSessionStudyMinutes", () => {
+  it("sums only completed session budgets", () => {
     const sessions: PracticeSessionSummary[] = [
       {
         id: "1",
         kind: "DRILL",
         startedAt: "2026-01-01T10:00:00Z",
-        completedAt: "2026-01-01T12:00:00Z",
-        rawScore: null,
-        scaledScore: null,
-        percentile: null,
-        bookmarked: false,
-        excluded: false,
-        metadata: {},
-        prepTestTitle: null,
-        sectionTitle: null,
-        sectionType: null,
+        completedAt: "2026-01-01T10:30:00Z",
+        metadata: { timing: "35" },
+        ...baseSessionFields,
+      },
+      {
+        id: "2",
+        kind: "DRILL",
+        startedAt: "2026-01-01T11:00:00Z",
+        completedAt: null,
+        metadata: { timing: "35" },
+        ...baseSessionFields,
       },
     ]
-    expect(sumSessionStudyHours(sessions)).toBe(2)
+    expect(sumCompletedSessionStudyMinutes(sessions)).toBe(35)
+  })
+})
+
+describe("formatStudyTime", () => {
+  it("shows minutes below one hour", () => {
+    expect(formatStudyTime(35)).toBe("35 min")
   })
 
-  it("uses now for in-progress sessions", () => {
-    const now = new Date("2026-01-01T13:00:00Z").getTime()
-    const sessions: PracticeSessionSummary[] = [
-      {
-        id: "1",
-        kind: "DRILL",
-        startedAt: "2026-01-01T12:00:00Z",
-        completedAt: null,
-        rawScore: null,
-        scaledScore: null,
-        percentile: null,
-        bookmarked: false,
-        excluded: false,
-        metadata: {},
-        prepTestTitle: null,
-        sectionTitle: null,
-        sectionType: null,
-      },
-    ]
-    expect(sumSessionStudyHours(sessions, now)).toBe(1)
+  it("shows whole hours without remainder", () => {
+    expect(formatStudyTime(120)).toBe("2 hrs")
+  })
+
+  it("shows hours and minutes when mixed", () => {
+    expect(formatStudyTime(95)).toBe("1h 35m")
   })
 })
 

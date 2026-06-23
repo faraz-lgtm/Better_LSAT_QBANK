@@ -1,6 +1,6 @@
 import type { AnalyticsOverview } from "@/lib/api/analytics"
 
-import { formatStudyHours } from "@/features/student/drills/drill-dashboard-mappers"
+import { formatStudyTime } from "@/features/student/drills/drill-dashboard-mappers"
 
 export type DashboardStatCard = {
   id: string
@@ -11,12 +11,12 @@ export type DashboardStatCard = {
 
 export function mapOverviewToDashboardStats(
   overview: AnalyticsOverview,
-  studyHours: number,
+  studyMinutes: number,
 ): DashboardStatCard[] {
   return [
     {
       id: "study-time",
-      value: formatStudyHours(studyHours),
+      value: formatStudyTime(studyMinutes),
       label: "Total Study Time",
       badge: "All time",
     },
