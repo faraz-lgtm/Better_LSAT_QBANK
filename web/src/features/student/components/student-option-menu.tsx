@@ -62,7 +62,7 @@ function StudentOptionMenu<T extends string>({
   }
 
   return (
-    <div ref={containerRef} className={cn("relative", className)}>
+    <div ref={containerRef} className={cn("relative w-full min-w-0", className)}>
       <button
         ref={triggerRef}
         type="button"
@@ -98,7 +98,7 @@ function StudentOptionMenu<T extends string>({
           role="listbox"
           aria-label={ariaLabel}
           className={cn(
-            "absolute z-30 mt-2 min-w-full overflow-hidden border border-[#dfe1e7] bg-white p-1 shadow-[0px_12px_24px_rgba(13,13,18,0.12)]",
+            "absolute z-30 mt-2 max-h-[min(24rem,calc(100vh-8rem))] w-full max-w-full overflow-y-auto border border-[#dfe1e7] bg-white p-1 shadow-[0px_12px_24px_rgba(13,13,18,0.12)]",
             size === "lg" ? "rounded-lg" : "rounded-[10px]",
             menuAlign === "right" ? "right-0" : "left-0",
           )}
@@ -113,13 +113,19 @@ function StudentOptionMenu<T extends string>({
                   aria-selected={active}
                   onClick={() => handleSelect(option.value)}
                   className={cn(
-                    "flex w-full items-center justify-between gap-3 px-3 font-medium tracking-[0.02em] transition-colors",
-                    size === "lg" ? "h-[52px] rounded-lg text-base" : "h-10 rounded-[10px] text-sm",
+                    "flex w-full min-w-0 items-start justify-between gap-3 px-3 py-3 font-medium tracking-[0.02em] transition-colors",
+                    size === "lg" ? "min-h-[52px] rounded-lg text-base" : "min-h-10 rounded-[10px] text-sm",
                     active ? "bg-[#f3f7ff] text-[#062357]" : "text-[#062357] hover:bg-[#f3f7ff]",
                   )}
                 >
-                  <span className="truncate">{option.label}</span>
-                  {active ? <Check className="size-4 shrink-0" aria-hidden /> : null}
+                  <span className="min-w-0 flex-1 whitespace-normal text-left leading-snug">
+                    {option.label}
+                  </span>
+                  {active ? (
+                    <Check className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  ) : (
+                    <span className="size-4 shrink-0" aria-hidden />
+                  )}
                 </button>
               </li>
             )
