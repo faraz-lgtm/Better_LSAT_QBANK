@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { List } from "lucide-react"
 
-import { PracticeSessionTimer } from "@/features/student/practice-session/practice-session-timer"
+import { PracticeSectionIntroStaticTimer } from "@/features/student/practice-session/practice-section-intro-static-timer"
 import type { PracticeToolMode } from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
 
@@ -14,14 +14,12 @@ type PracticeSectionIntroHeaderProps = {
   onUnderline: () => void
   timerLabel?: string
   timerDisplaySeconds: number
-  timerPaused: boolean
-  onToggleTimerPause: () => void
-  timerProgress: number
-  finishButton: ReactNode
+  timerProgress?: number
+  closeButton: ReactNode
 }
 
 const toolGroupClass =
-  "flex h-[52px] items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-[13px]"
+  "flex h-[52px] items-center rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] px-[13px]"
 const toolTextBtnClass =
   "flex size-7 items-center justify-center rounded text-xs font-bold text-[#666d80] transition hover:bg-[#eceff3] hover:text-[#062357]"
 
@@ -34,13 +32,11 @@ function PracticeSectionIntroHeader({
   onUnderline,
   timerLabel,
   timerDisplaySeconds,
-  timerPaused,
-  onToggleTimerPause,
-  timerProgress,
-  finishButton,
+  timerProgress = 1,
+  closeButton,
 }: PracticeSectionIntroHeaderProps) {
   return (
-    <header className="practice-session-header flex h-[80px] w-full shrink-0 items-center border-b border-[#dfe1e7] bg-[#eceff3] px-6 py-3">
+    <header className="practice-session-header flex h-[80px] w-full shrink-0 items-center rounded-t-[16px] border-b border-[#dfe1e7] bg-[#eceff3] px-6 py-3">
       <div className="flex w-full min-w-0 items-center gap-6">
         <p
           className="flex h-[52px] min-w-0 flex-1 items-center truncate text-[20px] font-bold leading-[1.35] text-[#062357]"
@@ -76,15 +72,12 @@ function PracticeSectionIntroHeader({
               U
             </button>
           </div>
-          <PracticeSessionTimer
+          <PracticeSectionIntroStaticTimer
             label={timerLabel}
             displaySeconds={timerDisplaySeconds}
-            paused={timerPaused}
-            onTogglePause={onToggleTimerPause}
             progress={timerProgress}
-            showClockIcon={false}
           />
-          {finishButton}
+          {closeButton}
         </div>
       </div>
     </header>

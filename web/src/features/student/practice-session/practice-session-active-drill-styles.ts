@@ -63,23 +63,19 @@ const ACTIVE_DRILL_STEM_GRID_CLASS = "grid w-full grid-cols-[minmax(0,1fr)_36px]
 /** Figma `18617:31674` / `18617:31682` — hide-choice control */
 const ACTIVE_DRILL_OPTION_EYE_BUTTON_CLASS = ACTIVE_DRILL_ACTION_BUTTON_CLASS
 
-/** Figma `18624:77042` / `18781:28397` / `18781:28180` — 90×48 footer prev/next */
+/** Figma `18617:26234` / `18617:26236` — 52×52 icon-only prev/next */
 const ACTIVE_DRILL_NAV_ARROW_BUTTON_CLASS =
-  "box-border inline-flex h-[48px] w-[90px] shrink-0 items-center justify-center gap-1.5 rounded-[16px] border border-solid border-[#dfe1e7] bg-[#f6f8fa] px-3 py-1 shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-white disabled:opacity-40"
+  "box-border inline-flex size-[52px] shrink-0 items-center justify-center rounded-[16px] border-2 border-solid border-[#dfe1e7] bg-[#f6f8fa] p-1 shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-white disabled:opacity-40"
 
-/** Figma `18624:77042` — prev/next label */
-const ACTIVE_DRILL_NAV_ARROW_LABEL_CLASS =
-  "whitespace-nowrap text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[#666d80]"
+/** Figma `18617:26233` — 16px gap between prev/next */
+const ACTIVE_DRILL_NAV_ARROW_GROUP_CLASS = "flex h-[52px] shrink-0 items-center gap-4"
 
-/** Figma `18624:76723` — 16px gap between prev/next */
-const ACTIVE_DRILL_NAV_ARROW_GROUP_CLASS = "flex h-[48px] shrink-0 items-center gap-4"
-
-/** Figma `18624:76723` — 72px footer shell, 56px content row */
+/** Figma `18624:76723` — footer grows when question pills wrap */
 const ACTIVE_DRILL_FOOTER_CLASS =
-  "box-border flex h-[72px] shrink-0 flex-col items-center justify-center rounded-b-[16px] border-t border-[#dfe1e7] bg-[#f5f9ff] px-6"
+  "box-border flex min-h-[72px] shrink-0 flex-col items-center justify-center rounded-b-[16px] border-t border-[#dfe1e7] bg-[#f5f9ff] px-6 py-2"
 
 const ACTIVE_DRILL_FOOTER_ROW_CLASS =
-  "flex h-[56px] w-full min-w-0 items-center justify-between gap-4"
+  "flex min-h-[56px] w-full min-w-0 items-center justify-between gap-4"
 
 export {
   ACTIVE_DRILL_ACTION_BUTTON_CLASS,
@@ -90,7 +86,6 @@ export {
   ACTIVE_DRILL_FOOTER_ROW_CLASS,
   ACTIVE_DRILL_NAV_ARROW_BUTTON_CLASS,
   ACTIVE_DRILL_NAV_ARROW_GROUP_CLASS,
-  ACTIVE_DRILL_NAV_ARROW_LABEL_CLASS,
   ACTIVE_DRILL_OPTION_EYE_BUTTON_CLASS,
   ACTIVE_DRILL_OPTIONS_LIST_CLASS,
   ACTIVE_DRILL_STEM_GRID_CLASS,

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, X } from "lucide-react"
 
 import { LrDrillOptionRow } from "@/features/student/drills/lr-drill-option-row"
 import { cn } from "@/lib/utils"
@@ -19,6 +19,7 @@ import {
   isPrepTestSectionIntroActive,
   prepTestHeaderLabel,
   prepTestHubHref,
+  PREPTEST_LIST_HREF,
 } from "@/features/student/preptests/preptest-hub-navigation"
 import {
   ACTIVE_DRILL_FINISH_BUTTON_CLASS,
@@ -65,7 +66,6 @@ import {
   resolveTimerBudgetSeconds,
   usePracticeSessionTimer,
 } from "@/features/student/practice-session/use-practice-session-timer"
-import { Button } from "@/components/ui/button"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createPracticeApi } from "@/lib/api/practice"
@@ -844,7 +844,7 @@ function SectionSessionPage() {
   }
 
   function leavePrepTestComplete() {
-    navigate("/app/practice/preptest", { replace: true })
+    navigate(PREPTEST_LIST_HREF, { replace: true })
   }
 
   function effectivePrepTestId(): string | null {
@@ -903,7 +903,7 @@ function SectionSessionPage() {
       <StudentMain layout="immersive" className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {showImmersiveLoader ? (
           <PracticeSessionImmersiveFrame>
-            <StudentPageLoader centered label="Loading section…" />
+            <StudentPageLoader centered className="min-h-full flex-1" label="Loading section…" />
           </PracticeSessionImmersiveFrame>
         ) : (
           <StudentPageLoader centered label="Loading section…" />
@@ -935,19 +935,16 @@ function SectionSessionPage() {
     })
     const introTimerLabel = timedSection ? "Time Left:" : "Elapsed"
     const introTimerDisplaySeconds = timedSection ? introTimerBudgetSeconds : elapsed
-    const introTimerProgress = timedSection
-      ? computeRemainingTimerProgress(introTimerBudgetSeconds, introTimerBudgetSeconds)
-      : computeElapsedTimerProgress(elapsed, introTimerBudgetSeconds)
-    const introBackButton = (
-      <Button
+    const introTimerProgress = timedSection ? 1 : computeElapsedTimerProgress(elapsed, introTimerBudgetSeconds)
+    const introCloseButton = (
+      <button
         type="button"
-        variant="outline"
-        className="h-[52px] w-[106px] gap-2 px-3"
+        className="inline-flex size-[52px] shrink-0 items-center justify-center rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] text-[#666d80] transition-colors hover:bg-[#eceff3] hover:text-[#062357]"
+        aria-label="Close section introduction"
         onClick={handleExitSession}
       >
-        <ChevronLeft className="size-5" strokeWidth={2} aria-hidden />
-        Back
-      </Button>
+        <X className="size-5" strokeWidth={2} aria-hidden />
+      </button>
     )
 
     return (
@@ -972,10 +969,8 @@ function SectionSessionPage() {
                 onUnderline={highlights.selectUnderline}
                 timerLabel={introTimerLabel}
                 timerDisplaySeconds={introTimerDisplaySeconds}
-                timerPaused
-                onToggleTimerPause={() => {}}
                 timerProgress={introTimerProgress}
-                finishButton={introBackButton}
+                closeButton={introCloseButton}
               />
             }
           >

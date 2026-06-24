@@ -23,6 +23,7 @@ import {
   type PrepTestRecord,
 } from "@/features/student/lib/mock-analytics-preptests"
 import { mapSessionToPrepTestRecord } from "@/features/student/analytics/map-analytics"
+import { prepTestHubHref } from "@/features/student/preptests/preptest-hub-navigation"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import { cn } from "@/lib/utils"
 
@@ -438,7 +439,7 @@ function AnalyticsPrepTestsPage() {
 
   const handleOpenPractice = useCallback(
     (id: string) => {
-      navigate(`/app/practice/preptest/${encodeURIComponent(id)}`)
+      navigate(prepTestHubHref(id))
     },
     [navigate],
   )

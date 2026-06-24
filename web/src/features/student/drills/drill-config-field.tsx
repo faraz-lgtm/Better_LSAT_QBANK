@@ -1,6 +1,8 @@
 import type { ReactNode } from "react"
 
-import { Select } from "@/components/ui/select"
+import { useState } from "react"
+
+import { FigmaDropdown, FIGMA_DROPDOWN_CARD_OPEN_CLASS } from "@/components/ui/figma-dropdown"
 import { cn } from "@/lib/utils"
 
 type DrillConfigFieldProps = {
@@ -43,14 +45,20 @@ function DrillConfigSelectField({
   options,
   placeholder,
 }: DrillConfigSelectFieldProps) {
+  const [menuOpen, setMenuOpen] = useState(false)
+
   return (
-    <DrillConfigField label={label} description={description} className={className}>
-      <Select
+    <DrillConfigField
+      label={label}
+      description={description}
+      className={cn(className, menuOpen && FIGMA_DROPDOWN_CARD_OPEN_CLASS)}
+    >
+      <FigmaDropdown
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onChange}
         options={options}
         placeholder={placeholder}
-        className="h-[52px] rounded-[16px] border-[#dfe1e7] bg-[#f5f9ff] px-3 text-base tracking-[0.02em] text-[#062357] shadow-none"
+        onOpenChange={setMenuOpen}
       />
     </DrillConfigField>
   )

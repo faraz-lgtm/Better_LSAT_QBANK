@@ -1,3 +1,5 @@
+import { PREPTEST_LIST_HREF, isPrepTestHubDetailPath, isPrepTestStudentPath } from "@/features/student/preptests/preptest-routes"
+
 export type StudentNavSectionKey = "academy" | "prep" | "insights"
 
 export type StudentNavItem = {
@@ -28,7 +30,7 @@ export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
     items: [
       { label: "Drills", href: "/app/practice/drills" },
       { label: "Sections", href: "/app/practice/sections" },
-      { label: "PrepTest", href: "/app/practice/preptest" },
+      { label: "PrepTest", href: PREPTEST_LIST_HREF },
       { label: "Blind Review", href: "/app/practice/blind-review" },
     ],
   },
@@ -54,7 +56,7 @@ export function isDashboardActive(pathname: string): boolean {
 
 export function getActiveSectionKey(pathname: string): StudentNavSectionKey | null {
   if (pathname.startsWith("/app/prep-course") || pathname.startsWith("/app/learn")) return "academy"
-  if (pathname.startsWith("/app/practice")) return "prep"
+  if (pathname.startsWith("/app/practice") || isPrepTestStudentPath(pathname)) return "prep"
   if (pathname.startsWith("/app/analytics")) return "insights"
   return null
 }
@@ -94,6 +96,7 @@ export function isNavItemActive(
     return true
   }
   if (pathname === path) return true
+  if (path === PREPTEST_LIST_HREF && isPrepTestStudentPath(pathname)) return true
   const hasChildNavItem = siblingHrefs.some((sibling) => {
     const [siblingPath] = sibling.split("?")
     return siblingPath !== path && siblingPath.startsWith(`${path}/`)
@@ -107,23 +110,23 @@ export type StudentBreadcrumb = {
   href?: string
 }
 
-function isPracticePrepTestHub(pathname: string): boolean {
-  return /^\/app\/practice\/preptest\/[^/]+$/.test(pathname)
-}
-
 export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBreadcrumb[] {
   if (isDashboardActive(pathname)) {
     return [{ label: "Dashboard" }]
+  }
+
+  if (pathname === PREPTEST_LIST_HREF) {
+    return [{ label: "PrepTest" }]
+  }
+
+  if (isPrepTestHubDetailPath(pathname)) {
+    return [{ label: "PrepTest", href: PREPTEST_LIST_HREF }]
   }
 
   const section = getActiveSection(pathname)
   if (!section) return []
 
   const crumbs: StudentBreadcrumb[] = [{ label: section.label }]
-
-  if (isPracticePrepTestHub(pathname)) {
-    return crumbs
-  }
 
   if (pathname.startsWith("/app/analytics/preptests/results/")) {
     crumbs.push({ label: "Foundations" })
@@ -171,7 +174,7 @@ export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBre
 
 export function getStudentPageTitle(pathname: string, search = ""): string | null {
   if (isDashboardActive(pathname)) return "Dashboard"
-  if (isPracticePrepTestHub(pathname)) return null
+  if (isPrepTestHubDetailPath(pathname)) return null
   if (pathname.startsWith("/app/prep-course/") && pathname !== "/app/prep-course") return null
   if (pathname.startsWith("/app/prep-course")) return "Prep Course"
   if (pathname.startsWith("/app/learn")) return "Explanations"

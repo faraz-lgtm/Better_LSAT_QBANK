@@ -14,6 +14,7 @@ import { StudentMain } from "@/features/student/components/student-main"
 import type { PrepTestPoolAttempt } from "@/features/student/preptests/preptest-types"
 import { buildPoolHistoryRows, poolCardDisplayScore } from "@/features/student/preptests/preptest-pool-display"
 import { AttemptScoreBox, ScoreBadge } from "@/features/student/preptests/preptest-score-badge"
+import { PREPTEST_LIST_HREF } from "@/features/student/preptests/preptest-routes"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -334,7 +335,7 @@ function PracticeBlindReviewPage() {
               <button
                 type="button"
                 className="mt-4 text-sm font-semibold text-[#0d47a1] hover:underline"
-                onClick={() => navigate("/app/practice/preptest")}
+                onClick={() => navigate(PREPTEST_LIST_HREF)}
               >
                 Go to PrepTests
               </button>

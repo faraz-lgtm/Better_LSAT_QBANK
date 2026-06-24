@@ -7,6 +7,7 @@ import type {
 export const PREPTEST_SECTION_BREAK_SECONDS = 60
 
 const STORAGE_PREFIX = "preptest-section-break:"
+const CONFIG_LOCK_PREFIX = "preptest-config-locked:"
 
 type StoredSectionBreak = {
   afterSectionId: string
@@ -54,6 +55,25 @@ export function writeStoredSectionBreak(prepTestId: string, afterSectionId: stri
 export function clearStoredSectionBreak(prepTestId: string): void {
   if (typeof window === "undefined") return
   sessionStorage.removeItem(storageKey(prepTestId))
+}
+
+function configLockStorageKey(prepTestId: string): string {
+  return `${CONFIG_LOCK_PREFIX}${prepTestId}`
+}
+
+export function readStoredPrepTestConfigLock(prepTestId: string): boolean {
+  if (typeof window === "undefined") return false
+  return sessionStorage.getItem(configLockStorageKey(prepTestId)) === "1"
+}
+
+export function writeStoredPrepTestConfigLock(prepTestId: string): void {
+  if (typeof window === "undefined") return
+  sessionStorage.setItem(configLockStorageKey(prepTestId), "1")
+}
+
+export function clearStoredPrepTestConfigLock(prepTestId: string): void {
+  if (typeof window === "undefined") return
+  sessionStorage.removeItem(configLockStorageKey(prepTestId))
 }
 
 function orderedPracticeableSections(detail: PrepTestDetailResponse) {
@@ -150,4 +170,36 @@ export function normalizePrepTestDetail(
     sections,
     sectionBreak,
   }
+}
+
+/** Timing/format are chosen once before the first section starts; hide selectors afterward. */
+export function isPrepTestConfigLocked(detail: PrepTestDetailResponse): boolean {
+  const practiceable = orderedPracticeableSections(detail)
+
+  if (
+    practiceable.some(
+      (section) =>
+        Boolean(section.activeSectionSessionId) || section.answeredCount > 0 || section.completed,
+    )
+  ) {
+    return true
+  }
+
+  // A later section is available only after the first was finished.
+  if (practiceable.length > 1 && practiceable.slice(1).some((section) => section.unlocked && !section.onBreak)) {
+    return true
+  }
+
+  return false
+}
+
+export function resolvePrepTestConfigLocked(
+  detail: PrepTestDetailResponse,
+  prepTestId: string,
+): boolean {
+  const locked = isPrepTestConfigLocked(detail) || readStoredPrepTestConfigLock(prepTestId)
+  if (locked) {
+    writeStoredPrepTestConfigLock(prepTestId)
+  }
+  return locked
 }

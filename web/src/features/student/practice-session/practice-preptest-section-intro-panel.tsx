@@ -29,13 +29,13 @@ function PracticePrepTestSectionIntroPanel({
 }: PracticePrepTestSectionIntroPanelProps) {
   return (
     <div
-      className={`flex w-full flex-col gap-[24px] rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] p-6 ${CARD_SHADOW}`}
+      className={`flex w-full flex-col gap-6 rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] p-6 ${CARD_SHADOW}`}
     >
       <div className="flex w-full flex-col gap-4">
         <h2 className="text-[20px] font-bold leading-[1.35] text-[#062357]">
           {sectionIntroTitle(sectionNumber, sectionType)}
         </h2>
-        <div className="flex items-center justify-between text-[14px] font-medium leading-normal tracking-[0.02em] text-[#0d47a1]">
+        <div className="flex items-center justify-between text-[14px] font-medium leading-[1.5] tracking-[0.28px] text-[#0d47a1]">
           <span>
             {questionCount} question{questionCount === 1 ? "" : "s"}
           </span>
@@ -47,12 +47,12 @@ function PracticePrepTestSectionIntroPanel({
       </div>
 
       <div className="flex w-full flex-col items-end gap-4">
-        <p className="w-full text-[14px] font-normal leading-normal tracking-[0.02em] text-[#0d0d12]">
+        <p className="w-full text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[#0d0d12]">
           Directions: {sectionIntroDirections(sectionType)}
         </p>
         <Button
           type="button"
-          className="ds-btn h-12 gap-2 px-4 text-base font-semibold tracking-[0.02em]"
+          className="ds-btn h-12 gap-2 rounded-[16px] px-4 text-[16px] font-semibold leading-[1.5] tracking-[0.32px]"
           onClick={onGoToQuestions}
         >
           Go to Question

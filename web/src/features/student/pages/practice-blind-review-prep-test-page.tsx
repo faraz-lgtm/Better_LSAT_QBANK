@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import type { BlindReviewDetailResponse, BlindReviewDetailSection } from "@/features/student/blind-review/blind-review-types"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
+import { PREPTEST_LIST_HREF } from "@/features/student/preptests/preptest-routes"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -268,7 +269,7 @@ function PracticeBlindReviewPrepTestPage() {
           {blindReviewDone ? (
             <button
               type="button"
-              onClick={() => navigate("/app/practice/preptest")}
+              onClick={() => navigate(PREPTEST_LIST_HREF)}
               className="ds-btn min-w-[200px] gap-2 px-6 text-base"
             >
               Done
