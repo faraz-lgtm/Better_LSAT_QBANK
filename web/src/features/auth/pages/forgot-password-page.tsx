@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { Link } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,7 @@ function ForgotPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const submitLockRef = useRef(false)
 
   const authApi = useMemo(() => {
     try {
@@ -23,21 +24,34 @@ function ForgotPasswordPage() {
     }
   }, [])
 
+  async function withSubmitLock(task: () => Promise<void>): Promise<boolean> {
+    if (submitLockRef.current) return false
+    submitLockRef.current = true
+    setIsSubmitting(true)
+    try {
+      await task()
+      return true
+    } finally {
+      submitLockRef.current = false
+      setIsSubmitting(false)
+    }
+  }
+
   async function sendResetLink() {
     if (!authApi) {
       setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
       return
     }
-    setIsSubmitting(true)
     setError(null)
     setMessage(null)
     try {
-      await authApi.sendPasswordResetEmail(email.trim(), getPasswordResetCallbackUrl())
-      setMessage("Reset link sent. Check your inbox to continue.")
+      const sent = await withSubmitLock(async () => {
+        await authApi.sendPasswordResetEmail(email.trim(), getPasswordResetCallbackUrl())
+        setMessage("Reset link sent. Check your inbox to continue.")
+      })
+      if (!sent) return
     } catch (resetError) {
       setError(resetError instanceof Error ? formatSupabaseCallError(resetError) : "Unable to send reset link.")
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
@@ -63,14 +77,26 @@ function ForgotPasswordPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="Enter your email"
+              disabled={isSubmitting}
             />
             <Button
               type="button"
               disabled={isSubmitting || !email.trim()}
+              aria-busy={isSubmitting}
               onClick={() => void sendResetLink()}
-              className="ds-btn mt-2 w-full"
+              className="ds-btn mt-2 w-full gap-2"
             >
-              {isSubmitting ? "Sending..." : "Send Reset Link"}
+              {isSubmitting ? (
+                <>
+                  <span
+                    className="size-4 shrink-0 animate-spin rounded-full border-2 border-white/30 border-t-white"
+                    aria-hidden
+                  />
+                  Sending...
+                </>
+              ) : (
+                "Send Reset Link"
+              )}
             </Button>
           </div>
 

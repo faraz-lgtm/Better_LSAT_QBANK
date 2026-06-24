@@ -3,14 +3,16 @@ import { Checkbox } from "@/components/ui/checkbox"
 type AuthTermsCheckboxProps = {
   checked: boolean
   onChange: (checked: boolean) => void
+  disabled?: boolean
 }
 
-function AuthTermsCheckbox({ checked, onChange }: AuthTermsCheckboxProps) {
+function AuthTermsCheckbox({ checked, onChange, disabled = false }: AuthTermsCheckboxProps) {
   return (
     <label className="figma-gap-8 figma-text-sm figma-track-sm inline-flex items-center font-medium text-[#666d80]">
       <Checkbox
         size="md"
         checked={checked}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
       />
       <span>
