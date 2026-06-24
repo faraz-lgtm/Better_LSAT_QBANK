@@ -7,6 +7,7 @@ import { FigmaDropdown, FIGMA_DROPDOWN_CARD_OPEN_CLASS } from "@/components/ui/f
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
+import { DrillConfigSelectField } from "@/features/student/drills/drill-config-field"
 import {
   mapPrepTestTimingToSectionTiming,
   type PrepTestDetailResponse,
@@ -139,43 +140,6 @@ function PrepTestHubStat({ label, value }: { label: string; value: string | numb
     <div className="flex w-[78px] flex-col items-center">
       <dt className="text-xs font-medium leading-normal tracking-[0.24px] text-[#062357]">{label}</dt>
       <dd className="text-sm font-semibold leading-normal tracking-[0.28px] text-[#062357]">{value}</dd>
-    </div>
-  )
-}
-
-function PrepTestConfigCard({
-  id,
-  label,
-  description,
-  value,
-  onChange,
-  options,
-}: {
-  id: string
-  label: string
-  description: string
-  value: string
-  onChange: (next: string) => void
-  options: { id: string; label: string }[]
-}) {
-  const [menuOpen, setMenuOpen] = useState(false)
-
-  return (
-    <div
-      className={cn(
-        "flex w-full max-w-[347px] flex-col gap-3 rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
-        menuOpen && FIGMA_DROPDOWN_CARD_OPEN_CLASS,
-      )}
-    >
-      <p className="text-xl font-bold leading-[1.35] text-[#062357]">{label}</p>
-      <p className="text-sm font-normal leading-normal tracking-[0.28px] text-[#666d80]">{description}</p>
-      <FigmaDropdown
-        id={id}
-        value={value}
-        onChange={onChange}
-        options={options.map((option) => ({ value: option.id, label: option.label }))}
-        onOpenChange={setMenuOpen}
-      />
     </div>
   )
 }
@@ -534,36 +498,32 @@ function PracticePrepTestPage() {
               </dl>
             </div>
 
-            {!configLocked ? (
-              <p className="text-2xl font-bold leading-[1.3] text-[#062357]">{prepTest.label}</p>
-            ) : null}
+            <p className="text-2xl font-bold leading-[1.3] text-[#062357]">{prepTest.label}</p>
 
-            {!configLocked ? (
-              <div className="flex flex-wrap gap-6 overflow-visible">
-                <PrepTestConfigCard
-                  id="preptest-timing"
-                  label="Timing"
-                  description="Control your Prep pace"
-                  value={timingId}
-                  onChange={(v) => {
-                    setTimingId(v)
-                    void persistConfig(v, formatId)
-                  }}
-                  options={detail.timingOptions}
-                />
-                <PrepTestConfigCard
-                  id="preptest-format"
-                  label="Format"
-                  description="Select Format"
-                  value={formatId}
-                  onChange={(v) => {
-                    setFormatId(v)
-                    void persistConfig(timingId, v)
-                  }}
-                  options={detail.formatOptions}
-                />
-              </div>
-            ) : null}
+            <div className="flex flex-wrap gap-6">
+              <DrillConfigSelectField
+                className="w-full max-w-[347px]"
+                label="Timing"
+                description="Control your Prep pace"
+                value={timingId}
+                onChange={(v) => {
+                  setTimingId(v)
+                  void persistConfig(v, formatId)
+                }}
+                options={detail.timingOptions.map((o) => ({ value: o.id, label: o.label }))}
+              />
+              <DrillConfigSelectField
+                className="w-full max-w-[347px]"
+                label="Format"
+                description="Select Format"
+                value={formatId}
+                onChange={(v) => {
+                  setFormatId(v)
+                  void persistConfig(timingId, v)
+                }}
+                options={detail.formatOptions.map((o) => ({ value: o.id, label: o.label }))}
+              />
+            </div>
           </div>
         </section>
 

@@ -21,40 +21,50 @@ const SECTION_BADGE: Record<PracticeSectionKind, { bg: string; text: string; bor
 }
 
 function QuestionOutcomeIcon({ status }: { status: PracticeQuestionOutcome }) {
-  return <PracticeResultOutcomeIcon correct={status === "correct"} className="size-4" />
+  return (
+    <PracticeResultOutcomeIcon
+      correct={status === "correct"}
+      variant="filled"
+      className="size-6 shrink-0"
+    />
+  )
 }
 
 function SectionResultCard({ section }: { section: PracticeSectionResultSummary }) {
   const badge = SECTION_BADGE[section.kind]
+
   return (
-    <article className="flex w-[212px] shrink-0 flex-col gap-3 rounded-2xl border border-[#f6f8fa] bg-white p-4 shadow-[0px_1px_1px_rgba(13,13,18,0.04)]">
-      <div className="flex h-8 items-center gap-1.5">
+    <article className="flex w-[220px] shrink-0 flex-col overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white p-5 shadow-[0px_1px_1px_rgba(13,13,18,0.04)]">
+      <div className="flex items-center gap-2">
         <div
-          className="flex size-6 items-center justify-center rounded-[16px] border text-xs font-extrabold leading-[1.3]"
+          className="flex size-7 shrink-0 items-center justify-center rounded-lg border text-[11px] font-extrabold leading-none"
           style={{ backgroundColor: badge.bg, color: badge.text, borderColor: badge.border }}
         >
           {badge.short}
         </div>
-        <p className="text-[10px] font-bold leading-[1.5] tracking-[0.02em] text-[#062357]">{section.longName}</p>
+        <p className="min-w-0 truncate text-sm font-bold leading-[1.35] text-[#062357]">{section.longName}</p>
       </div>
-      <div className="flex h-8 items-center justify-between gap-2">
-        <p className="text-xs font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">{section.sectionLabel}</p>
-        <p className="text-2xl font-bold leading-[1.3] text-[#041a44]">{section.scoreDelta}</p>
+
+      <div className="mt-4 flex items-end justify-between gap-3">
+        <p className="text-sm font-semibold leading-none text-[#062357]">{section.sectionLabel}</p>
+        <p className="text-2xl font-bold leading-none text-[#041a44]">{section.scoreDelta}</p>
       </div>
-      <div className="flex flex-col gap-1">
+
+      <div className="mt-4 flex min-h-[72px] flex-col justify-center gap-2">
         {section.questionRows.map((row, ri) => (
-          <div key={ri} className="flex flex-wrap gap-1">
+          <div key={ri} className="flex flex-wrap gap-2">
             {row.map((cell, ci) => (
               <QuestionOutcomeIcon key={`${ri}-${ci}`} status={cell} />
             ))}
           </div>
         ))}
       </div>
-      <div className="flex h-5 items-center gap-2">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-lg bg-[#f6f8fa]">
-          <div className="h-full rounded-lg bg-[#0d47a1]" style={{ width: `${section.accuracyPct}%` }} />
+
+      <div className="mt-4 flex items-center gap-3">
+        <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-[#edf3ff]">
+          <div className="h-full rounded-full bg-[#0d47a1]" style={{ width: `${section.accuracyPct}%` }} />
         </div>
-        <p className="w-10 text-right text-sm font-medium leading-[1.5] tracking-[0.02em] text-[#0d47a1]">
+        <p className="w-11 shrink-0 text-right text-sm font-semibold leading-none text-[#0d47a1]">
           {section.accuracyPct}%
         </p>
       </div>
@@ -136,50 +146,52 @@ function PracticeResultsSummaryPanel({
   const showBlindReview = prediction != null || blindReviewScore != null
 
   return (
-    <section className="mb-6 flex w-full flex-col gap-6 rounded-3xl border border-[#dfe1e7] bg-white p-6">
-      <div className="flex flex-col gap-6 lg:flex-row">
-        <div className="flex w-full shrink-0 flex-col gap-6 lg:w-[290px]">
-          <div className="flex flex-col gap-1.5 rounded-2xl bg-[#0d47a1] p-6">
-            <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#edf3ff]">YOUR SCORE</p>
-            <p className="text-5xl font-extrabold leading-[1.2] text-white">
+    <section className="mb-6 w-full rounded-[20px] border border-[#dfe1e7] bg-white p-6">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch">
+        <div className="flex w-full shrink-0 flex-col gap-4 lg:w-[290px]">
+          <div className="flex flex-col gap-3 rounded-[20px] bg-[#0d47a1] p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.24px] text-[#edf3ff]">YOUR SCORE</p>
+            <p className="text-[48px] font-bold leading-[1.15] text-white">
               {scaledScore != null ? scaledScore : `${rawScore}/${questionCount}`}
             </p>
-            <p className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#edf3ff]">
+            <p className="text-sm font-semibold uppercase tracking-[0.02em] text-[#edf3ff]">
               {rawScore} CORRECT ({incorrect > 0 ? `-${incorrect}` : "0"})
             </p>
             {percentile != null ? (
-              <p className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#edf3ff]">
+              <p className="text-sm font-semibold uppercase tracking-[0.02em] text-[#edf3ff]">
                 PERCENTILE: {percentile % 1 === 0 ? percentile : percentile.toFixed(1)}
               </p>
             ) : (
-              <p className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#edf3ff]">
+              <p className="text-sm font-semibold uppercase tracking-[0.02em] text-[#edf3ff]">
                 TIME: {formatMmSs(elapsedSeconds)}
               </p>
             )}
           </div>
           {showBlindReview ? (
-            <div className="rounded-2xl bg-[#f6f8fa] p-6">
+            <div className="rounded-[20px] bg-[#f6f8fa] p-6">
               <div className="flex items-center justify-between gap-4">
-                <div className="flex flex-col gap-1.5 font-bold text-[#062357]">
-                  <p className="text-xs font-bold leading-[1.5] tracking-[0.02em]">YOUR PREDICTION</p>
-                  <p className="text-2xl font-bold leading-[1.3]">{prediction ?? "—"}</p>
+                <div className="flex min-w-0 flex-1 flex-col gap-2 font-bold text-[#062357]">
+                  <p className="text-xs font-bold uppercase tracking-[0.24px]">YOUR PREDICTION</p>
+                  <p className="text-[28px] font-bold leading-none">{prediction ?? "—"}</p>
                 </div>
-                <div className="h-8 w-0.5 shrink-0 bg-[#dfe1e7]" aria-hidden />
-                <div className="flex flex-col gap-1.5 font-bold text-[#df1c41]">
-                  <p className="text-xs font-bold leading-[1.5] tracking-[0.02em]">BLIND REVIEW</p>
-                  <p className="text-2xl font-bold leading-[1.3]">{blindReviewScore ?? "—"}</p>
+                <div className="h-10 w-px shrink-0 bg-[#dfe1e7]" aria-hidden />
+                <div className="flex min-w-0 flex-1 flex-col gap-2 font-bold text-[#df1c41]">
+                  <p className="text-xs font-bold uppercase tracking-[0.24px]">BLIND REVIEW</p>
+                  <p className="text-[28px] font-bold leading-none">{blindReviewScore ?? "—"}</p>
                 </div>
               </div>
             </div>
           ) : null}
         </div>
 
-        <div className="flex min-h-[200px] min-w-0 flex-1 flex-col gap-[18px] rounded-2xl bg-[#f6f8fa] p-6 lg:min-h-[316px]">
-          <h2 className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">RESULTS BY SECTION</h2>
-          <div className="flex min-w-0 gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {sections.map((section) => (
-              <SectionResultCard key={section.id} section={section} />
-            ))}
+        <div className="flex min-h-[280px] min-w-0 flex-1 flex-col gap-5 overflow-hidden rounded-[20px] bg-[#f6f8fa] p-6 lg:min-h-[316px]">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.24px] text-[#062357]">RESULTS BY SECTION</h2>
+          <div className="-mx-1 min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex w-max min-w-full gap-4 pe-2">
+              {sections.map((section) => (
+                <SectionResultCard key={section.id} section={section} />
+              ))}
+            </div>
           </div>
         </div>
       </div>

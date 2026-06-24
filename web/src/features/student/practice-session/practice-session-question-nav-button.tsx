@@ -55,20 +55,20 @@ function PracticeSessionQuestionNavButton({
     const filled = active || answered
 
     return (
-      <div className="flex w-8 flex-col items-center gap-1.5">
+      <div className="flex w-8 flex-col items-center gap-1">
         {active ? (
-          <span className="h-[10px] w-1 shrink-0 rounded-sm bg-[#062357]" aria-hidden />
+          <span className="h-2 w-1 shrink-0 rounded-sm bg-[#062357]" aria-hidden />
         ) : (
-          <span className="h-[10px] w-1 shrink-0" aria-hidden />
+          <span className="h-2 w-1 shrink-0" aria-hidden />
         )}
         <button
           type="button"
           onClick={onClick}
           className={cn(
-            "practice-session-question-nav-btn relative h-8 w-8 shrink-0 text-base font-semibold tracking-[0.32px] transition-colors",
+            "practice-session-question-nav-btn relative shrink-0 text-sm font-semibold tracking-[0.28px] transition-colors",
             filled
-              ? "border-2 border-[#0b4e6e] bg-[#0d47a1] text-white"
-              : "border-2 border-[#dfe1e7] bg-white text-[#062357]",
+              ? "border border-[#0d47a1] bg-[#0d47a1] text-white"
+              : "border border-[#dfe1e7] bg-white text-[#062357]",
           )}
           aria-current={active ? "true" : undefined}
           aria-label={flagged ? `Question ${number}, flagged` : `Question ${number}`}
