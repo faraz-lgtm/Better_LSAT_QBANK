@@ -165,7 +165,7 @@ function PracticeCompleteModal({
         <div className="flex w-full max-w-[436px] justify-center">
           <button
             type="button"
-            className="inline-flex h-10 w-full items-center justify-center rounded-[10px] border border-[#6d78b6] bg-white px-4 text-sm font-semibold tracking-[0.28px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#f0f5ff]"
+            className={PEEK_SCORE_BTN_CLASS}
             onClick={onToggleScoreHidden}
           >
             {scoreHidden ? "Peek at Score" : "Hide Score"}
@@ -177,7 +177,7 @@ function PracticeCompleteModal({
             <div className="flex flex-col items-center gap-2">
               <button
                 type="button"
-                className="inline-flex h-12 w-full items-center justify-center rounded-[10px] border border-[#0b4e6e] bg-[#0d47a1] px-4 text-base font-semibold tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#0a3d8a] disabled:opacity-50"
+                className={BLIND_REVIEW_BTN_CLASS}
                 onClick={onBlindReview}
                 disabled={!onBlindReview}
               >
@@ -188,67 +188,45 @@ function PracticeCompleteModal({
                   Skip to view details result
                 </button>
               ) : null}
-            </>
-          ) : (
-            <>
-              {onSkipDetails ? (
-                <button
-                  type="button"
-                  className="inline-flex h-8 items-center justify-center px-4 text-xs font-semibold tracking-[0.24px] text-[#0d47a1] transition hover:underline"
-                  onClick={onSkipDetails}
-                >
-                  Skip to view details result
-                </button>
-              ) : null}
-              <button
-                type="button"
-                className="inline-flex h-12 w-full items-center justify-center rounded-[10px] border border-[#6d78b6] bg-white px-4 text-base font-semibold tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#f0f5ff]"
-                onClick={onDone}
-              >
-                {doneLabel}
-              </button>
-            </>
-          )}
-        </div>
+            </div>
 
-        {showBlindReview ? (
-          <div className="flex w-full max-w-[608px] gap-3 rounded-[20px] border border-[#ffbd4c] bg-[#fff6e0] p-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="none"
-              className="mt-0.5 size-5 shrink-0 text-[#062357]"
-              aria-hidden
-            >
-              <path
-                d="M10 18.3333C14.6024 18.3333 18.3333 14.6024 18.3333 10C18.3333 5.39763 14.6024 1.66667 10 1.66667C5.39763 1.66667 1.66667 5.39763 1.66667 10C1.66667 14.6024 5.39763 18.3333 10 18.3333Z"
-                stroke="currentColor"
-                strokeWidth="1.66667"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M10 13.3333V10"
-                stroke="currentColor"
-                strokeWidth="1.66667"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M10 6.66667H10.0083"
-                stroke="currentColor"
-                strokeWidth="1.66667"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <p className="text-left text-sm leading-normal tracking-[0.28px] text-[#062357]">
-              <span className="font-semibold">Blind Review</span> helps you identify reasoning errors
-              before seeing your score. It&apos;s the most effective way to improve your performance.
-            </p>
-          </div>
+            <div className="flex w-full max-w-[608px] gap-3 rounded-[20px] border border-[#ffbd4c] bg-[#fff6e0] p-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="none"
+                className="mt-0.5 size-5 shrink-0 text-[#062357]"
+                aria-hidden
+              >
+                <path
+                  d="M10 18.3333C14.6024 18.3333 18.3333 14.6024 18.3333 10C18.3333 5.39763 14.6024 1.66667 10 1.66667C5.39763 1.66667 1.66667 5.39763 1.66667 10C1.66667 14.6024 5.39763 18.3333 10 18.3333Z"
+                  stroke="currentColor"
+                  strokeWidth="1.66667"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M10 13.3333V10"
+                  stroke="currentColor"
+                  strokeWidth="1.66667"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M10 6.66667H10.0083"
+                  stroke="currentColor"
+                  strokeWidth="1.66667"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <p className="text-left text-sm leading-normal tracking-[0.28px] text-[#062357]">
+                <span className="font-semibold">Blind Review</span> helps you identify reasoning errors
+                before seeing your score. It&apos;s the most effective way to improve your performance.
+              </p>
+            </div>
           </>
         ) : (
           <div className="flex flex-col items-center gap-2">

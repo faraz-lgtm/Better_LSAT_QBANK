@@ -3,7 +3,6 @@ import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } 
 
 import { useStudentPageBreadcrumbTail } from "@/features/app-shell/student-page-header-slot"
 import { Button } from "@/components/ui/button"
-import { FigmaDropdown, FIGMA_DROPDOWN_CARD_OPEN_CLASS } from "@/components/ui/figma-dropdown"
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"

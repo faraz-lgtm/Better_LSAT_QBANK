@@ -41,8 +41,6 @@ function DrillConfigSelectField({
   onChange,
   options,
 }: DrillConfigSelectFieldProps) {
-  const [menuOpen, setMenuOpen] = useState(false)
-
   return (
     <DrillConfigField label={label} description={description} className={className}>
       <StudentOptionMenu

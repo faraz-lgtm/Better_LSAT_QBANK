@@ -110,10 +110,6 @@ export type StudentBreadcrumb = {
   href?: string
 }
 
-function isPracticePrepTestHub(pathname: string): boolean {
-  return /^\/app\/practice\/preptest\/[^/]+$/.test(pathname)
-}
-
 function getSectionLandingHref(key: StudentNavSectionKey): string | undefined {
   if (key === "prep") return "/app/practice/drills"
   if (key === "academy") return "/app/prep-course"
