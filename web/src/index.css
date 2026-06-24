@@ -1754,9 +1754,12 @@ html.student-shell-immersive .practice-session-card--active-drill {
   font-size: 16px;
 }
 
-.practice-session-card--active-drill .practice-session-body,
-.practice-session-card--active-drill .practice-session-footer {
+.practice-session-card--active-drill .practice-session-body {
   overflow: hidden;
+}
+
+.practice-session-card--active-drill .practice-session-footer {
+  overflow: visible;
 }
 
 @media (min-width: 768px) {
@@ -1885,7 +1888,7 @@ html.student-shell-immersive .practice-session-card--active-drill {
 }
 
 .practice-session-card--active-drill .practice-session-footer .practice-session-question-nav-grid {
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   height: 48px;

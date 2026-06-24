@@ -1,5 +1,9 @@
+import { PREPTEST_LIST_HREF } from "@/features/student/preptests/preptest-routes"
+
+export { PREPTEST_LIST_HREF, isPrepTestHubDetailPath, isPrepTestStudentPath } from "@/features/student/preptests/preptest-routes"
+
 export function prepTestHubHref(prepTestId: string, options?: { retake?: boolean }): string {
-  const base = `/app/practice/preptest/${encodeURIComponent(prepTestId)}`
+  const base = `${PREPTEST_LIST_HREF}/${encodeURIComponent(prepTestId)}`
   return options?.retake ? `${base}?retake=1` : base
 }
 
@@ -11,7 +15,7 @@ export function prepTestSectionIntroHref(
 ): string {
   const params = new URLSearchParams({ sessionId })
   if (options?.retake) params.set("retake", "1")
-  return `/app/practice/preptest/${encodeURIComponent(prepTestId)}/section/${encodeURIComponent(sectionRowId)}?${params}`
+  return `${PREPTEST_LIST_HREF}/${encodeURIComponent(prepTestId)}/section/${encodeURIComponent(sectionRowId)}?${params}`
 }
 
 export function sectionSessionHref(

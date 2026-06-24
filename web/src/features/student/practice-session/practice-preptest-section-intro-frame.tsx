@@ -18,7 +18,7 @@ function PracticePrepTestSectionIntroFrame({
   return (
     <div
       className={cn(
-        "practice-section-intro relative mx-auto h-[min(760px,calc(100svh-2rem))] w-full max-w-[1280px] overflow-hidden rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] text-base",
+        "practice-section-intro relative mx-auto h-[min(760px,calc(100svh-2rem))] w-full max-w-[1280px] overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] text-base",
         CARD_SHADOW,
         className,
       )}

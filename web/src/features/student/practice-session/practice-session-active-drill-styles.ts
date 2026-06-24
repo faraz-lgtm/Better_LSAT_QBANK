@@ -78,7 +78,7 @@ const ACTIVE_DRILL_FOOTER_CLASS =
   "box-border flex h-[72px] shrink-0 flex-col items-center justify-center rounded-b-[16px] border-t border-[#dfe1e7] bg-[#edf3ff] px-6"
 
 const ACTIVE_DRILL_FOOTER_ROW_CLASS =
-  "flex h-[56px] w-full min-w-0 items-center justify-between gap-4"
+  "flex min-h-[56px] w-full min-w-0 items-center justify-between gap-4"
 
 export {
   ACTIVE_DRILL_ACTION_BUTTON_CLASS,

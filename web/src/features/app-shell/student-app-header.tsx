@@ -1,8 +1,9 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Bell, ChevronDown, Menu } from "lucide-react"
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 
-import { getStudentBreadcrumbs } from "@/features/app-shell/student-nav-config"
+import { getStudentBreadcrumbs, type StudentBreadcrumb } from "@/features/app-shell/student-nav-config"
+import { shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
 import { STUDENT_PAGE_CONTAINER_CLASS, STUDENT_SHELL_GUTTER_CLASS } from "@/features/student/components/student-page-container"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -28,17 +29,22 @@ function getInitials(name: string): string {
 }
 
 type StudentAppHeaderProps = {
+  breadcrumbTail?: StudentBreadcrumb[]
   onOpenMobileNav: () => void
   headerActions?: ReactNode
 }
 
-function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderProps) {
+function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions }: StudentAppHeaderProps) {
   const { pathname, search } = useLocation()
+  const navigate = useNavigate()
   const [email, setEmail] = useState<string | null>(null)
   const [openProfileMenu, setOpenProfileMenu] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement | null>(null)
 
-  const crumbs = useMemo(() => getStudentBreadcrumbs(pathname, search), [pathname, search])
+  const crumbs = useMemo(
+    () => [...getStudentBreadcrumbs(pathname, search), ...breadcrumbTail],
+    [breadcrumbTail, pathname, search],
+  )
 
   useEffect(() => {
     let mounted = true
@@ -94,6 +100,7 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
             <ol className="flex flex-wrap items-center gap-1">
               {crumbs.map((crumb, index) => {
                 const isLast = index === lastCrumbIndex
+                const href = crumb.href
                 return (
                   <Fragment key={`${crumb.label}-${index}`}>
                     {index > 0 ? (
@@ -102,7 +109,7 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
                       </li>
                     ) : null}
                     <li>
-                      {isLast || !crumb.href ? (
+                      {isLast || !href ? (
                         <span
                           aria-current={isLast ? "page" : undefined}
                           className={cn(
@@ -112,7 +119,15 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
                           {crumb.label}
                         </span>
                       ) : (
-                        <Link to={crumb.href} className="font-normal text-[#666d80] hover:text-[#0d47a1]">
+                        <Link
+                          to={href}
+                          className="font-normal text-[#666d80] hover:text-[#0d47a1]"
+                          onClick={(event) => {
+                            if (!shouldForceParentNav(pathname, href)) return
+                            event.preventDefault()
+                            navigate(href)
+                          }}
+                        >
                           {crumb.label}
                         </Link>
                       )}

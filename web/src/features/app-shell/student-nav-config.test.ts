@@ -7,6 +7,8 @@ import {
   isNavItemActive,
 } from "@/features/app-shell/student-nav-config"
 
+import { PREPTEST_LIST_HREF } from "@/features/student/preptests/preptest-routes"
+
 describe("student-nav-config", () => {
   it("maps practice routes to prep section", () => {
     expect(getActiveSectionKey("/app/practice/drills")).toBe("prep")
@@ -91,6 +93,8 @@ describe("student-nav-config", () => {
       { label: "Prep", href: "/app/practice/drills" },
       { label: "PrepTest" },
     ])
+    expect(getStudentPageTitle("/app/preptest/pt-900")).toBeNull()
+    expect(getStudentBreadcrumbs("/app/preptest")).toEqual([{ label: "PrepTest" }])
   })
 
   it("builds prep test results breadcrumbs", () => {

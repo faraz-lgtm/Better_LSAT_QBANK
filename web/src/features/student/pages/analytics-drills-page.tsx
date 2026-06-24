@@ -29,6 +29,7 @@ import {
   mapPrepTestSessionToHistoryEntry,
   mapSessionToDrillRecord,
 } from "@/features/student/analytics/map-analytics"
+import { PREPTEST_LIST_HREF } from "@/features/student/preptests/preptest-routes"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 
@@ -519,7 +520,7 @@ function AnalyticsDrillsPage() {
         navigate(`/app/analytics/preptests/results/${encodeURIComponent(sessionId)}`)
         return
       }
-      navigate("/app/practice/preptest")
+      navigate(PREPTEST_LIST_HREF)
     },
     [navigate, prepHistory],
   )

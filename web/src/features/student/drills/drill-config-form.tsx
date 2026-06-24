@@ -151,7 +151,7 @@ function DrillConfigForm({
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-6 overflow-visible lg:grid-cols-3">
           <DrillConfigSelectField
             label="Number of Questions"
             description="Select as many questions you can"

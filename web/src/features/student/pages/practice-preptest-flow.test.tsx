@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { createMemoryRouter, RouterProvider } from "react-router-dom"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { PracticePrepTestPage } from "@/features/student/pages/practice-preptest-page"
 
@@ -71,9 +71,9 @@ function renderPrepTestRoutes(
 ) {
   const router = createMemoryRouter(
     [
-      { path: "/app/practice/preptest/:testId", element: <PracticePrepTestPage /> },
+      { path: "/app/preptest/:testId", element: <PracticePrepTestPage /> },
       {
-        path: "/app/practice/preptest/:testId/section/:sectionId",
+        path: "/app/preptest/:testId/section/:sectionId",
         element: <div>Section intro</div>,
       },
       { path: "/app/practice/sections/session/:sessionId", element: <div>Section session</div> },
@@ -85,13 +85,17 @@ function renderPrepTestRoutes(
 }
 
 describe("PracticePrepTestPage + section navigation", () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+  })
+
   it("shows hub content and navigates to section session on Start section", async () => {
     mockGetPrepTestDetail.mockResolvedValue(mockDetail)
     mockStartPrepTest.mockResolvedValue({ prepTestSession: { id: "pt-sess" }, detail: mockDetail })
     mockStartSection.mockResolvedValue({ session: { id: "section-sess-1" } })
 
     const user = userEvent.setup()
-    const router = renderPrepTestRoutes("/app/practice/preptest/pt-900")
+    const router = renderPrepTestRoutes("/app/preptest/pt-900")
 
     expect(await screen.findByText(/Ready to begin your test/i)).toBeInTheDocument()
     expect(within(screen.getByRole("main")).getByText("PT 900")).toBeInTheDocument()
@@ -134,7 +138,7 @@ describe("PracticePrepTestPage + section navigation", () => {
       ],
     })
 
-    renderPrepTestRoutes("/app/practice/preptest/pt-900?retake=1")
+    renderPrepTestRoutes("/app/preptest/pt-900?retake=1")
 
     await screen.findByRole("heading", { name: "Test Section" })
     expect(screen.getAllByRole("button", { name: /Start Section/i })).toHaveLength(1)
@@ -147,7 +151,7 @@ describe("PracticePrepTestPage + section navigation", () => {
     mockStartSection.mockResolvedValue({ session: { id: "section-sess-1" } })
 
     const user = userEvent.setup()
-    const router = renderPrepTestRoutes("/app/practice/preptest/pt-900?retake=1")
+    const router = renderPrepTestRoutes("/app/preptest/pt-900?retake=1")
 
     await screen.findByRole("button", { name: /Start Section/i })
     await user.click(screen.getByRole("button", { name: /Start Section/i }))
@@ -184,7 +188,7 @@ describe("PracticePrepTestPage + section navigation", () => {
       ],
     })
 
-    renderPrepTestRoutes("/app/practice/preptest/pt-900")
+    renderPrepTestRoutes("/app/preptest/pt-900")
 
     await screen.findByRole("heading", { name: "Test Section" })
     expect(screen.getAllByRole("button", { name: /Start Section/i })).toHaveLength(1)
@@ -213,7 +217,7 @@ describe("PracticePrepTestPage + section navigation", () => {
       ],
     })
 
-    renderPrepTestRoutes("/app/practice/preptest/pt-900")
+    renderPrepTestRoutes("/app/preptest/pt-900")
 
     await screen.findByRole("heading", { name: "Test Section" })
     expect(screen.getAllByRole("button", { name: /Start Section/i })).toHaveLength(1)
@@ -231,7 +235,7 @@ describe("PracticePrepTestPage + section navigation", () => {
       ],
     })
 
-    renderPrepTestRoutes("/app/practice/preptest/pt-900")
+    renderPrepTestRoutes("/app/preptest/pt-900")
 
     expect(await screen.findByRole("button", { name: /Continue Section/i })).toBeInTheDocument()
   })
@@ -248,9 +252,107 @@ describe("PracticePrepTestPage + section navigation", () => {
       ],
     })
 
-    renderPrepTestRoutes("/app/practice/preptest/pt-900")
+    renderPrepTestRoutes("/app/preptest/pt-900")
 
     expect(await screen.findByRole("button", { name: /Continue Section/i })).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: /Start Section/i })).not.toBeInTheDocument()
+  })
+
+  it("hides timing and format selectors after the first section has started", async () => {
+    mockGetPrepTestDetail.mockResolvedValue({
+      ...mockDetail,
+      prepTestSession: { id: "pt-sess", metadata: { timing: "standard", format: "four" } },
+      sections: [
+        {
+          ...mockDetail.sections[0],
+          activeSectionSessionId: "in-progress-sess",
+          answeredCount: 1,
+        },
+      ],
+    })
+
+    renderPrepTestRoutes("/app/preptest/pt-900")
+
+    await screen.findByRole("heading", { name: "Test Section" })
+    expect(screen.getByText("Continue your PT 900 test")).toBeInTheDocument()
+    expect(screen.queryByText(/Ready to begin your test/i)).not.toBeInTheDocument()
+    expect(within(screen.getByRole("main")).queryByText("PT 900")).not.toBeInTheDocument()
+    expect(screen.queryByText("Control your Prep pace")).not.toBeInTheDocument()
+    expect(screen.queryByText("Select Format")).not.toBeInTheDocument()
+  })
+
+  it("hides timing and format selectors when returning after completing the first section", async () => {
+    mockGetPrepTestDetail.mockResolvedValue({
+      ...mockDetail,
+      prepTestSession: { id: "pt-sess", metadata: { timing: "unlimited", format: "four" } },
+      sections: [
+        {
+          ...mockDetail.sections[0],
+          completed: true,
+          answeredCount: 3,
+          activeSectionSessionId: null,
+        },
+        {
+          id: "sec-rc",
+          sectionId: "SEED900-RC-1",
+          sectionNumber: 2,
+          sectionType: "RC" as const,
+          title: "Reading Comprehension",
+          questionCount: 2,
+          timeMinutes: 35,
+          practiceable: true,
+          unlocked: true,
+          onBreak: false,
+          answeredCount: 0,
+          completed: false,
+          activeSectionSessionId: null,
+        },
+      ],
+    })
+
+    renderPrepTestRoutes("/app/preptest/pt-900")
+
+    await screen.findByRole("heading", { name: "Test Section" })
+    expect(screen.getByText("Continue your PT 900 test")).toBeInTheDocument()
+    expect(screen.queryByText(/Ready to begin your test/i)).not.toBeInTheDocument()
+    expect(within(screen.getByRole("main")).queryByText("PT 900")).not.toBeInTheDocument()
+    expect(screen.queryByText("Control your Prep pace")).not.toBeInTheDocument()
+    expect(screen.queryByText("Select Format")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Start Section/i })).toBeInTheDocument()
+  })
+
+  it("hides timing and format selectors when only a later section is unlocked", async () => {
+    mockGetPrepTestDetail.mockResolvedValue({
+      ...mockDetail,
+      sections: [
+        {
+          ...mockDetail.sections[0],
+          completed: true,
+          answeredCount: 3,
+          activeSectionSessionId: null,
+        },
+        {
+          id: "sec-rc",
+          sectionId: "SEED900-RC-1",
+          sectionNumber: 2,
+          sectionType: "RC" as const,
+          title: "Reading Comprehension",
+          questionCount: 2,
+          timeMinutes: 35,
+          practiceable: true,
+          unlocked: true,
+          onBreak: false,
+          answeredCount: 0,
+          completed: false,
+          activeSectionSessionId: "section-sess-2",
+        },
+      ],
+    })
+
+    renderPrepTestRoutes("/app/preptest/pt-900")
+
+    await screen.findByRole("button", { name: /Continue Section/i })
+    expect(screen.queryByText("Control your Prep pace")).not.toBeInTheDocument()
+    expect(screen.queryByText("Select Format")).not.toBeInTheDocument()
   })
 })

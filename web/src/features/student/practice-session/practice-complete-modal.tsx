@@ -18,6 +18,58 @@ type PracticeCompleteModalProps = {
   titleId?: string
 }
 
+/** Figma `18617:26597` */
+const PEEK_SCORE_BTN_CLASS =
+  "inline-flex h-[40px] w-[320px] max-w-full shrink-0 items-center justify-center rounded-[12px] border border-[#6d78b6] bg-[#edf3ff] px-4 py-2 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#e5edff]"
+
+const BLIND_REVIEW_BTN_CLASS =
+  "inline-flex h-[48px] w-[320px] max-w-full shrink-0 items-center justify-center rounded-[16px] border border-[#0b4e6e] bg-[#0d47a1] px-4 py-2 text-base font-semibold leading-[1.5] tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0a3d8a] disabled:opacity-50"
+
+const SKIP_DETAILS_BTN_CLASS =
+  "inline-flex h-8 items-center justify-center rounded-[16px] px-4 py-2 text-xs font-semibold leading-[1.5] tracking-[0.24px] text-[#0d47a1] transition-colors hover:underline"
+
+const DONE_BTN_CLASS =
+  "inline-flex h-[48px] w-[320px] max-w-full shrink-0 items-center justify-center rounded-[16px] border border-[#6d78b6] bg-[#edf3ff] px-4 py-2 text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#e5edff]"
+
+/** Figma `18617:26705` — visible score ring */
+function PracticeCompleteScoreRing({ percent }: { percent: number }) {
+  const pct = Math.max(0, Math.min(100, percent))
+  const size = 120
+  const strokeWidth = 10
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const dashOffset = circumference - (pct / 100) * circumference
+
+  return (
+    <div className="relative size-[120px] shrink-0" aria-label={`${pct} percent`}>
+      <svg className="size-full -rotate-90" viewBox={`0 0 ${size} ${size}`} aria-hidden>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="#dfe1e7"
+          strokeWidth={strokeWidth}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="#0d47a1"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-[33px] font-bold leading-[1.5] text-[#666d80]">
+        {pct}%
+      </span>
+    </div>
+  )
+}
+
 function PracticeCompleteHiddenEyeIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -85,24 +137,19 @@ function PracticeCompleteModal({
         <div className="relative w-full max-w-[540px] rounded-[20px] border border-[#0d47a1] bg-white px-8 py-[30px]">
           <div
             className={cn(
-              "relative flex min-h-[130px] items-center",
+              "relative mx-auto flex min-h-[130px] w-full max-w-[540px] items-center justify-between",
               scoreHidden && "blur-[18px]",
             )}
             aria-hidden={scoreHidden}
           >
             <div className="flex flex-col gap-1 pl-6">
-              <p className="text-sm font-semibold tracking-[0.28px] text-[#6a7282]">Your Score</p>
+              <p className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#6a7282]">Your Score</p>
               <p className="text-[48px] font-bold leading-[1.2] text-[#062357]">{scoreLabel}</p>
               {scaledScore != null ? (
-                <p className="text-sm font-semibold text-[#0d47a1]">Scaled score {scaledScore}</p>
+                <p className="text-sm font-semibold leading-[1.5] text-[#0d47a1]">Scaled score {scaledScore}</p>
               ) : null}
             </div>
-            <div
-              className="absolute right-6 top-1/2 flex size-[120px] -translate-y-1/2 items-center justify-center rounded-full bg-[#0a357f]"
-              aria-label={`${pct} percent`}
-            >
-              <span className="text-[36px] font-bold leading-10 text-white">{pct}%</span>
-            </div>
+            <PracticeCompleteScoreRing percent={pct} />
           </div>
 
           {scoreHidden ? (
@@ -115,7 +162,7 @@ function PracticeCompleteModal({
           ) : null}
         </div>
 
-        <div className="flex w-full max-w-[320px] flex-col items-center gap-2">
+        <div className="flex w-full max-w-[436px] justify-center">
           <button
             type="button"
             className="inline-flex h-10 w-full items-center justify-center rounded-[10px] border border-[#6d78b6] bg-white px-4 text-sm font-semibold tracking-[0.28px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#f0f5ff]"
@@ -123,9 +170,11 @@ function PracticeCompleteModal({
           >
             {scoreHidden ? "Peek at Score" : "Hide Score"}
           </button>
+        </div>
 
-          {showBlindReview ? (
-            <>
+        {showBlindReview ? (
+          <>
+            <div className="flex flex-col items-center gap-2">
               <button
                 type="button"
                 className="inline-flex h-12 w-full items-center justify-center rounded-[10px] border border-[#0b4e6e] bg-[#0d47a1] px-4 text-base font-semibold tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#0a3d8a] disabled:opacity-50"
@@ -135,11 +184,7 @@ function PracticeCompleteModal({
                 Blind Review
               </button>
               {onSkipDetails ? (
-                <button
-                  type="button"
-                  className="inline-flex h-8 items-center justify-center px-4 text-xs font-semibold tracking-[0.24px] text-[#0d47a1] transition hover:underline"
-                  onClick={onSkipDetails}
-                >
+                <button type="button" className={SKIP_DETAILS_BTN_CLASS} onClick={onSkipDetails}>
                   Skip to view details result
                 </button>
               ) : null}
@@ -204,7 +249,19 @@ function PracticeCompleteModal({
               before seeing your score. It&apos;s the most effective way to improve your performance.
             </p>
           </div>
-        ) : null}
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            {onSkipDetails ? (
+              <button type="button" className={SKIP_DETAILS_BTN_CLASS} onClick={onSkipDetails}>
+                Skip to view details result
+              </button>
+            ) : null}
+            <button type="button" className={DONE_BTN_CLASS} onClick={onDone}>
+              {doneLabel}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

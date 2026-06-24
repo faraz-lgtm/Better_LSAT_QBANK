@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom"
 
+import { useStudentPageBreadcrumbTail } from "@/features/app-shell/student-page-header-slot"
 import { Button } from "@/components/ui/button"
+import { FigmaDropdown, FIGMA_DROPDOWN_CARD_OPEN_CLASS } from "@/components/ui/figma-dropdown"
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
@@ -22,14 +24,19 @@ import { PracticeCompleteModal } from "@/features/student/practice-session/pract
 import { createPracticeApi } from "@/lib/api/practice"
 import {
   clearStoredSectionBreak,
+  clearStoredPrepTestConfigLock,
   findNextSectionAfterBreak,
+  isPrepTestConfigLocked,
   normalizePrepTestDetail,
   PREPTEST_SECTION_BREAK_SECONDS,
+  resolvePrepTestConfigLocked,
+  writeStoredPrepTestConfigLock,
   writeStoredSectionBreak,
 } from "@/features/student/preptests/preptest-section-break"
 import {
   isRetakePrepTestAttempt,
   prepTestHubHref,
+  PREPTEST_LIST_HREF,
   sectionSessionHref,
 } from "@/features/student/preptests/preptest-hub-navigation"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -82,30 +89,42 @@ function SectionBreakRow({
   const progress = remainingSeconds / SECTION_BREAK_TOTAL_SECONDS
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#f0e4b8] bg-[#fff8e6] px-5 py-4 md:px-6">
-      <p className="text-xl font-bold text-[#062357]">Section Break</p>
-      <div className="flex min-w-[220px] flex-1 flex-col items-end gap-2 sm:max-w-md">
-        <p className="text-sm font-semibold text-[#062357]">
-          Starting next section in {formatBreakCountdown(remainingSeconds)}
-        </p>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-[#dfe1e7]">
+    <div className="flex h-[100px] items-center gap-6 rounded-[16px] border border-[#ffe5b7] bg-[#fff6e0] px-6 py-3 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)]">
+      <div className="flex min-w-0 flex-1 items-center">
+        <p className="text-2xl font-bold leading-[1.3] text-[#062357]">Section Break</p>
+      </div>
+      <div className="flex w-full max-w-[398px] shrink-0 flex-col gap-3">
+        <div className="flex items-center gap-2.5">
+          <p className="min-w-0 flex-1 text-sm font-medium leading-normal tracking-[0.28px] text-[#062357]">
+            Starting next section in {formatBreakCountdown(remainingSeconds)}
+          </p>
+          <button
+            type="button"
+            disabled={skipping}
+            onClick={onSkip}
+            className="inline-flex shrink-0 items-center gap-0 text-sm font-semibold tracking-[0.28px] text-[#0d47a1] hover:underline disabled:opacity-60"
+          >
+            {skipping ? "Skipping…" : "Skip Break"}
+            <ChevronRight className="size-6" aria-hidden />
+          </button>
+        </div>
+        <div className="h-1.5 w-full overflow-hidden rounded-lg bg-[#dfe1e7]">
           <div
-            className="h-full rounded-full bg-[#0d47a1] transition-[width] duration-300 ease-linear"
+            className="h-full rounded-l-lg bg-[#0d47a1] transition-[width] duration-300 ease-linear"
             style={{ width: `${Math.max(0, Math.min(100, progress * 100))}%` }}
           />
         </div>
       </div>
-      <button
-        type="button"
-        disabled={skipping}
-        onClick={onSkip}
-        className="inline-flex items-center gap-1 text-sm font-semibold text-[#0d47a1] hover:underline disabled:opacity-60"
-      >
-        {skipping ? "Skipping…" : "Skip Break"}
-        <ChevronRight className="size-4" aria-hidden />
-      </button>
     </div>
   )
+}
+
+function prepTestContinueHeadline(prepTest: { label: string; prepTestNumber: string | null }): string {
+  const fromLabel = prepTest.label.trim()
+  if (/^PT\s*\d+/i.test(fromLabel)) return `Continue your ${fromLabel} test`
+  const fromNumber = prepTest.prepTestNumber?.trim()
+  if (fromNumber) return `Continue your PT ${fromNumber} test`
+  return `Continue your ${fromLabel} test`
 }
 
 function prepTestHubPageTitle(prepTest: { label: string; prepTestNumber: string | null }): string {
@@ -154,7 +173,7 @@ function PrepTestSectionRow({
   const activeSection = row.practiceable && row.unlocked && !row.completed
 
   return (
-    <div className="flex h-[100px] items-center gap-6 rounded-2xl border border-[#dfe1e7] bg-white px-6 py-3 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)]">
+    <div className="flex h-[100px] items-center gap-6 rounded-[16px] border border-[#dfe1e7] bg-white px-6 py-3 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)]">
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
         <p
           className={cn(
@@ -221,6 +240,9 @@ function PracticePrepTestPage() {
   const [startingBlindReview, setStartingBlindReview] = useState(false)
   const [skippingBreak, setSkippingBreak] = useState(false)
 
+  const breadcrumbTitle = detail ? prepTestHubPageTitle(detail.prepTest) : null
+  useStudentPageBreadcrumbTail(breadcrumbTitle)
+
   const load = useCallback(async () => {
     if (!testIdParam) return
     setLoading(true)
@@ -231,18 +253,24 @@ function PracticePrepTestPage() {
       setDetail(normalized)
       setTimingId(normalized.defaultTimingId)
       setFormatId(normalized.defaultFormatId)
+      if (isRetakeAttempt && !isPrepTestConfigLocked(normalized)) {
+        clearStoredPrepTestConfigLock(testIdParam)
+      } else {
+        resolvePrepTestConfigLocked(normalized, testIdParam)
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load PrepTest")
       setDetail(null)
     } finally {
       setLoading(false)
     }
-  }, [practiceApi, testIdParam])
+  }, [isRetakeAttempt, practiceApi, testIdParam])
 
   useEffect(() => {
     const stateRetake = (location.state as { retake?: boolean } | null)?.retake === true
     if (stateRetake && testIdParam && !isRetakeAttempt) {
       clearStoredSectionBreak(testIdParam)
+      clearStoredPrepTestConfigLock(testIdParam)
       navigate(prepTestHubHref(testIdParam, { retake: true }), { replace: true, state: null })
     }
   }, [isRetakeAttempt, location.state, navigate, testIdParam])
@@ -251,13 +279,14 @@ function PracticePrepTestPage() {
     const justCompleted = (location.state as { sectionJustCompleted?: string } | null)?.sectionJustCompleted
     if (typeof justCompleted !== "string" || !testIdParam) return
     writeStoredSectionBreak(testIdParam, justCompleted)
-    setDetail((prev) => (prev ? normalizePrepTestDetail(prev, { prepTestId: testIdParam }) : prev))
+    writeStoredPrepTestConfigLock(testIdParam)
+    void load()
     navigate(prepTestHubHref(testIdParam, { retake: isRetakeAttempt }), { replace: true, state: null })
-  }, [isRetakeAttempt, location.pathname, location.state, navigate, testIdParam])
+  }, [isRetakeAttempt, load, location.pathname, location.state, navigate, testIdParam])
 
   useEffect(() => {
     void load()
-  }, [load])
+  }, [load, location.key])
 
   async function persistConfig(nextTiming = timingId, nextFormat = formatId) {
     if (!testIdParam) return
@@ -286,6 +315,7 @@ function PracticePrepTestPage() {
         showAnswers: "end",
       })
       if (testIdParam) {
+        writeStoredPrepTestConfigLock(testIdParam)
         navigate(
           sectionSessionHref(out.session.id, { prepTestId: testIdParam, retake: isRetakeAttempt }),
         )
@@ -403,7 +433,7 @@ function PracticePrepTestPage() {
   }
 
   function leaveToPrepTestList() {
-    navigate("/app/practice/preptest", { replace: true })
+    navigate(PREPTEST_LIST_HREF, { replace: true })
   }
 
   async function viewPrepTestResults() {
@@ -416,13 +446,13 @@ function PracticePrepTestPage() {
   }
 
   if (!testIdParam) {
-    return <Navigate to="/app/practice/preptest" replace />
+    return <Navigate to={PREPTEST_LIST_HREF} replace />
   }
 
   if (loading) {
     return (
       <StudentMain>
-        <StudentPageLoader centered label="Loading PrepTest…" />
+        <StudentPageLoader centered className="min-h-[min(480px,70vh)]" label="Loading PrepTest…" />
       </StudentMain>
     )
   }
@@ -431,7 +461,7 @@ function PracticePrepTestPage() {
     return (
       <StudentMain>
         <p className="text-sm text-red-600">{error ?? "PrepTest not found."}</p>
-        <Link to="/app/practice/preptest" className="mt-2 text-sm font-semibold text-[#0d47a1] hover:underline">
+        <Link to={PREPTEST_LIST_HREF} className="mt-2 text-sm font-semibold text-[#0d47a1] hover:underline">
           Back to PrepTests
         </Link>
       </StudentMain>
@@ -439,6 +469,7 @@ function PracticePrepTestPage() {
   }
 
   const { prepTest } = detail
+  const configLocked = resolvePrepTestConfigLocked(detail, testIdParam)
 
   return (
     <>
@@ -454,10 +485,12 @@ function PracticePrepTestPage() {
           </p>
         ) : null}
 
-        <section className="rounded-3xl border border-[#dfe1e7] bg-white p-6">
+        <section className="rounded-[16px] border border-[#dfe1e7] bg-white p-6">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-              <p className="text-2xl font-bold leading-[1.3] text-[#062357]">Ready to begin your test?</p>
+              <p className="text-2xl font-bold leading-[1.3] text-[#062357]">
+                {configLocked ? prepTestContinueHeadline(prepTest) : "Ready to begin your test?"}
+              </p>
               <dl className="flex shrink-0 flex-wrap items-start gap-6 lg:justify-end">
                 <PrepTestHubStat label="Questions" value={prepTest.questionCount} />
                 <PrepTestHubStat label="Total Time" value={`${prepTest.totalMinutes} min`} />
@@ -509,23 +542,32 @@ function PracticePrepTestPage() {
             ) : null}
           </div>
           <ul className="flex flex-col gap-6">
-            {detail.sections.map((row) => (
-              <li key={row.id} className="flex flex-col gap-3">
-                <PrepTestSectionRow
-                  row={row}
-                  starting={startingSectionId === row.id}
-                  onStart={() => openPrepTestSection(row)}
-                />
-                {detail.sectionBreak?.afterSectionId === row.id ? (
-                  <SectionBreakRow
-                    sectionBreak={detail.sectionBreak}
-                    skipping={skippingBreak}
-                    onSkip={() => void handleSkipSectionBreak()}
-                    onExpired={handleBreakExpired}
+            {detail.sections.flatMap((row) => {
+              const items = [
+                <li key={row.id}>
+                  <PrepTestSectionRow
+                    row={row}
+                    starting={startingSectionId === row.id}
+                    onStart={() => openPrepTestSection(row)}
                   />
-                ) : null}
-              </li>
-            ))}
+                </li>,
+              ]
+
+              if (detail.sectionBreak?.afterSectionId === row.id) {
+                items.push(
+                  <li key={`${row.id}-break`}>
+                    <SectionBreakRow
+                      sectionBreak={detail.sectionBreak}
+                      skipping={skippingBreak}
+                      onSkip={() => void handleSkipSectionBreak()}
+                      onExpired={handleBreakExpired}
+                    />
+                  </li>,
+                )
+              }
+
+              return items
+            })}
           </ul>
         </section>
       </StudentMain>
@@ -561,7 +603,7 @@ function PrepTestDetailHeader({
       <h1 className="!m-0 !text-[20px] !font-bold !leading-[1.35] text-[#062357]">{pageTitle}</h1>
       <button
         type="button"
-        onClick={() => navigate("/app/practice/preptest")}
+        onClick={() => navigate(PREPTEST_LIST_HREF)}
         className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[#666d80] transition-colors hover:bg-[#edf3ff] hover:text-[#062357]"
         aria-label={`Close ${pageTitle}`}
       >

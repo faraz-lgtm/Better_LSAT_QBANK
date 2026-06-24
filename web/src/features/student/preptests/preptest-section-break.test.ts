@@ -3,10 +3,14 @@ import { describe, expect, it, beforeEach } from "vitest"
 import type { PrepTestDetailResponse } from "@/features/student/preptests/preptest-types"
 import {
   clearStoredSectionBreak,
+  clearStoredPrepTestConfigLock,
   findNextSectionAfterBreak,
+  isPrepTestConfigLocked,
   normalizePrepTestDetail,
   readStoredSectionBreak,
   resolvePrepTestBreakAfterSectionId,
+  resolvePrepTestConfigLocked,
+  writeStoredPrepTestConfigLock,
   writeStoredSectionBreak,
 } from "@/features/student/preptests/preptest-section-break"
 
@@ -145,5 +149,78 @@ describe("normalizePrepTestDetail", () => {
   it("finds the next practiceable section after a completed section row", () => {
     expect(findNextSectionAfterBreak(baseDetail, "s1")?.id).toBe("s2")
     expect(findNextSectionAfterBreak(baseDetail, "s4")).toBeNull()
+  })
+
+  it("locks prep test config after any practiceable section has started", () => {
+    const freshDetail: PrepTestDetailResponse = {
+      ...baseDetail,
+      sections: baseDetail.sections.map((section, index) => ({
+        ...section,
+        answeredCount: 0,
+        completed: false,
+        activeSectionSessionId: null,
+        unlocked: index === 0,
+        onBreak: false,
+      })),
+    }
+    expect(isPrepTestConfigLocked(freshDetail)).toBe(false)
+    expect(
+      isPrepTestConfigLocked({
+        ...freshDetail,
+        sections: freshDetail.sections.map((section, index) =>
+          index === 0 ? { ...section, activeSectionSessionId: "sess-1" } : section,
+        ),
+      }),
+    ).toBe(true)
+    expect(
+      isPrepTestConfigLocked({
+        ...freshDetail,
+        sections: freshDetail.sections.map((section, index) =>
+          index === 0 ? { ...section, completed: true, answeredCount: 25 } : section,
+        ),
+      }),
+    ).toBe(true)
+  })
+
+  it("locks prep test config when a later section is unlocked", () => {
+    const freshDetail: PrepTestDetailResponse = {
+      ...baseDetail,
+      sections: baseDetail.sections.map((section) => ({
+        ...section,
+        answeredCount: 0,
+        completed: false,
+        activeSectionSessionId: null,
+        unlocked: false,
+      })),
+    }
+    expect(
+      isPrepTestConfigLocked(
+        normalizePrepTestDetail({
+          ...freshDetail,
+          sections: freshDetail.sections.map((section, index) =>
+            index === 0 ? { ...section, completed: true, unlocked: true } : section,
+          ),
+        }),
+      ),
+    ).toBe(true)
+  })
+
+  it("persists config lock in session storage for the prep test id", () => {
+    sessionStorage.clear()
+    const freshDetail: PrepTestDetailResponse = {
+      ...baseDetail,
+      sections: baseDetail.sections.map((section, index) => ({
+        ...section,
+        answeredCount: 0,
+        completed: false,
+        activeSectionSessionId: null,
+        unlocked: index === 0,
+        onBreak: false,
+      })),
+    }
+    expect(resolvePrepTestConfigLocked(freshDetail, "pt-152")).toBe(false)
+    writeStoredPrepTestConfigLock("pt-152")
+    expect(resolvePrepTestConfigLocked(freshDetail, "pt-152")).toBe(true)
+    clearStoredPrepTestConfigLock("pt-152")
   })
 })

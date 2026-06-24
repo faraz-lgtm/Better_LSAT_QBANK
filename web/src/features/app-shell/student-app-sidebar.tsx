@@ -9,6 +9,7 @@ import {
   STUDENT_DASHBOARD_HREF,
   STUDENT_NAV_SECTIONS,
 } from "@/features/app-shell/student-nav-config"
+import { shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -80,6 +81,11 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
                     key={item.href}
                     to={item.href}
                     className={cn("student-sidebar-link", active && "student-sidebar-link--active")}
+                    onClick={(event) => {
+                      if (!shouldForceParentNav(pathname, item.href)) return
+                      event.preventDefault()
+                      navigate(item.href)
+                    }}
                   >
                     {item.label}
                   </Link>

@@ -27,6 +27,7 @@ import { RcNewDrillPage } from "@/features/student/pages/rc-new-drill-page"
 import { PracticeBlindReviewPage } from "@/features/student/pages/practice-blind-review-page"
 import { PracticeBlindReviewPrepTestPage } from "@/features/student/pages/practice-blind-review-prep-test-page"
 import { PracticeDrillsPage } from "@/features/student/pages/practice-drills-page"
+import { LegacyPrepTestPathRedirect } from "@/features/student/preptests/legacy-preptest-path-redirect"
 import { PracticePrepTestPage } from "@/features/student/pages/practice-preptest-page"
 import { PracticePrepTestsListPage } from "@/features/student/pages/practice-preptests-list-page"
 import { PracticePrepTestSectionPage } from "@/features/student/pages/practice-preptest-section-page"
@@ -63,9 +64,12 @@ function AppRoutes() {
         <Route path="practice/sections/session/:sessionId" element={<SectionSessionPage />} />
         <Route path="practice/sections/rc" element={<Navigate to="/app/practice/sections/rc/new" replace />} />
         <Route path="practice/sections/rc/session" element={<Navigate to="/app/practice/sections/rc/new" replace />} />
-        <Route path="practice/preptest/:testId/section/:sectionId" element={<PracticePrepTestSectionPage />} />
-        <Route path="practice/preptest/:testId" element={<PracticePrepTestPage />} />
-        <Route path="practice/preptest" element={<PracticePrepTestsListPage />} />
+        <Route path="preptest/:testId/section/:sectionId" element={<PracticePrepTestSectionPage />} />
+        <Route path="preptest/:testId" element={<PracticePrepTestPage />} />
+        <Route path="preptest" element={<PracticePrepTestsListPage />} />
+        <Route path="practice/preptest/:testId/section/:sectionId" element={<LegacyPrepTestPathRedirect />} />
+        <Route path="practice/preptest/:testId" element={<LegacyPrepTestPathRedirect />} />
+        <Route path="practice/preptest" element={<LegacyPrepTestPathRedirect />} />
         <Route path="practice/blind-review" element={<PracticeBlindReviewPage />} />
         <Route path="practice/blind-review/:testId" element={<PracticeBlindReviewPrepTestPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
