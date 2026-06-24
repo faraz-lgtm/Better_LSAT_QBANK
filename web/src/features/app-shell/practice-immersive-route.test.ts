@@ -12,6 +12,6 @@ describe("isPracticeImmersiveRoute", () => {
     expect(isPracticeImmersiveRoute("/app/practice/drills")).toBe(false)
     expect(isPracticeImmersiveRoute("/app/practice/results/s1")).toBe(false)
     expect(isPracticeImmersiveRoute("/app/learn/explanations/q/q1")).toBe(false)
-    expect(isPracticeImmersiveRoute("/app/practice/preptest/pt1/section/s1")).toBe(false)
+    expect(isPracticeImmersiveRoute("/app/preptest/pt1/section/s1")).toBe(false)
   })
 })

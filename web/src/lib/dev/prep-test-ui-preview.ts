@@ -1,5 +1,5 @@
 /**
- * When true, `/app/practice/preptest` routes render without a Supabase session so
+ * When true, `/app/preptest` routes render without a Supabase session so
  * designers and automated checks can exercise the PrepTest hub and section UI.
  *
  * Enabled when:

@@ -2,6 +2,8 @@ import { Navigate, useParams, useSearchParams } from "react-router-dom"
 
 import {
   isRetakePrepTestAttempt,
+  prepTestHubHref,
+  PREPTEST_LIST_HREF,
   sectionSessionHref,
 } from "@/features/student/preptests/preptest-hub-navigation"
 
@@ -12,11 +14,11 @@ function PracticePrepTestSectionPage() {
   const isRetakeAttempt = isRetakePrepTestAttempt(searchParams)
 
   if (!testId) {
-    return <Navigate to="/app/practice/preptest" replace />
+    return <Navigate to={PREPTEST_LIST_HREF} replace />
   }
 
   if (!sessionId) {
-    return <Navigate to={`/app/practice/preptest/${encodeURIComponent(testId)}`} replace />
+    return <Navigate to={prepTestHubHref(testId)} replace />
   }
 
   return (

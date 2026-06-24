@@ -15,7 +15,7 @@ function StudentAppShell() {
   const immersive = isPracticeImmersiveRoute(location.pathname)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), [])
-  const { headerActions, setHeaderActions } = useStudentPageHeaderSlotState()
+  const { headerActions, breadcrumbTail, setHeaderActions, setBreadcrumbTail } = useStudentPageHeaderSlotState()
 
   useLayoutEffect(() => {
     document.documentElement.classList.add("student-shell-active")
@@ -32,7 +32,7 @@ function StudentAppShell() {
   }, [immersive])
 
   return (
-    <StudentPageHeaderSlotProvider setHeaderActions={setHeaderActions}>
+    <StudentPageHeaderSlotProvider setHeaderActions={setHeaderActions} setBreadcrumbTail={setBreadcrumbTail}>
       <div
         className={cn(
           "flex h-svh min-h-0 overflow-hidden",
@@ -44,7 +44,11 @@ function StudentAppShell() {
         )}
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {immersive ? null : (
-            <StudentAppHeader onOpenMobileNav={() => setMobileNavOpen(true)} headerActions={headerActions} />
+            <StudentAppHeader
+              breadcrumbTail={breadcrumbTail}
+              onOpenMobileNav={() => setMobileNavOpen(true)}
+              headerActions={headerActions}
+            />
           )}
           <div className="flex h-0 min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <Outlet />
