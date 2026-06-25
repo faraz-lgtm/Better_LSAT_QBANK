@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState, type MutableRefObject } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
@@ -21,9 +21,11 @@ function LoginPage() {
   const [password, setPassword] = useState("")
   const [isMagicLoading, setIsMagicLoading] = useState(false)
   const [isPasswordLoading, setIsPasswordLoading] = useState(false)
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const magicLockRef = useRef(false)
+  const passwordLockRef = useRef(false)
 
   const authApi = useMemo(() => {
     try {
@@ -40,21 +42,40 @@ function LoginPage() {
     }
   }, [])
 
+  const isBusy = isMagicLoading || isPasswordLoading || googleLoading
+
+  async function withSubmitLock(
+    lockRef: MutableRefObject<boolean>,
+    setLoading: (loading: boolean) => void,
+    task: () => Promise<void>,
+  ): Promise<boolean> {
+    if (lockRef.current) return false
+    lockRef.current = true
+    setLoading(true)
+    try {
+      await task()
+      return true
+    } finally {
+      lockRef.current = false
+      setLoading(false)
+    }
+  }
+
   async function sendMagicLink() {
     if (!authApi || !usersApi) {
       setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
       return
     }
-    setIsMagicLoading(true)
     setError(null)
     setMessage(null)
     try {
-      await authApi.sendMagicLink(magicEmail.trim(), getAuthCallbackUrl())
-      setMessage("Magic link sent. Check your inbox to continue.")
+      const sent = await withSubmitLock(magicLockRef, setIsMagicLoading, async () => {
+        await authApi.sendMagicLink(magicEmail.trim(), getAuthCallbackUrl())
+        setMessage("Magic link sent. Check your inbox to continue.")
+      })
+      if (!sent) return
     } catch (authError) {
       setError(authError instanceof Error ? formatSupabaseCallError(authError) : "Unable to send magic link.")
-    } finally {
-      setIsMagicLoading(false)
     }
   }
 
@@ -63,17 +84,17 @@ function LoginPage() {
       setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
       return
     }
-    setIsPasswordLoading(true)
     setError(null)
     setMessage(null)
     try {
-      await authApi.signInWithPassword(email.trim(), password)
-      const profile = await usersApi.getMyProfile()
-      navigate(getPostAuthDestination(profile), { replace: true })
+      const sent = await withSubmitLock(passwordLockRef, setIsPasswordLoading, async () => {
+        await authApi.signInWithPassword(email.trim(), password)
+        const profile = await usersApi.getMyProfile()
+        navigate(getPostAuthDestination(profile), { replace: true })
+      })
+      if (!sent) return
     } catch (authError) {
       setError(authError instanceof Error ? formatSupabaseCallError(authError) : "Unable to sign in with email and password.")
-    } finally {
-      setIsPasswordLoading(false)
     }
   }
 
@@ -82,14 +103,16 @@ function LoginPage() {
       setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
       return
     }
-    setIsGoogleLoading(true)
+    if (isBusy) return
+
+    setGoogleLoading(true)
     setError(null)
     setMessage(null)
     try {
       await authApi.signInWithGoogle(getAuthCallbackUrl())
     } catch (authError) {
       setError(authError instanceof Error ? formatSupabaseCallError(authError) : "Unable to continue with Google.")
-      setIsGoogleLoading(false)
+      setGoogleLoading(false)
     }
   }
 
@@ -110,15 +133,27 @@ function LoginPage() {
                 value={magicEmail}
                 onChange={(event) => setMagicEmail(event.target.value)}
                 placeholder="Enter your email"
+                disabled={isBusy}
               />
             </div>
             <Button
               type="button"
-              disabled={isMagicLoading || !magicEmail.trim()}
+              disabled={isBusy || !magicEmail.trim()}
+              aria-busy={isMagicLoading}
               onClick={() => void sendMagicLink()}
-              className="ds-btn w-full"
+              className="ds-btn w-full gap-2"
             >
-              {isMagicLoading ? "Sending..." : "Send Confirmation Link"}
+              {isMagicLoading ? (
+                <>
+                  <span
+                    className="size-4 shrink-0 animate-spin rounded-full border-2 border-white/30 border-t-white"
+                    aria-hidden
+                  />
+                  Sending...
+                </>
+              ) : (
+                "Send Confirmation Link"
+              )}
             </Button>
           </div>
 
@@ -139,6 +174,7 @@ function LoginPage() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="Enter your email"
+                disabled={isBusy}
               />
             </div>
             <div className="figma-gap-8 flex flex-col">
@@ -151,11 +187,12 @@ function LoginPage() {
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="Enter your password"
                 autoComplete="current-password"
+                disabled={isBusy}
               />
             </div>
             <div className="flex items-center justify-between">
               <label className="figma-gap-8 figma-text-sm figma-track-sm inline-flex items-center font-medium text-[#666d80]">
-                <Checkbox size="md" />
+                <Checkbox size="md" disabled={isBusy} />
                 Keep me login
               </label>
               <Link to="/forgot-password" className="figma-text-sm figma-track-sm font-semibold text-[#0d47a1]">
@@ -164,11 +201,22 @@ function LoginPage() {
             </div>
             <Button
               type="button"
-              disabled={isPasswordLoading || !email.trim() || !password}
+              disabled={isBusy || !email.trim() || !password}
+              aria-busy={isPasswordLoading}
               onClick={() => void signInWithPassword()}
-              className="ds-btn w-full"
+              className="ds-btn w-full gap-2"
             >
-              {isPasswordLoading ? "Signing in..." : "Sign In"}
+              {isPasswordLoading ? (
+                <>
+                  <span
+                    className="size-4 shrink-0 animate-spin rounded-full border-2 border-white/30 border-t-white"
+                    aria-hidden
+                  />
+                  Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
             </Button>
           </div>
 
@@ -176,11 +224,22 @@ function LoginPage() {
           {error && <p className="figma-text-sm figma-track-sm text-center text-[#df1c41]">{error}</p>}
 
           <SocialButton
-            disabled={isGoogleLoading}
+            disabled={isBusy}
+            aria-busy={googleLoading}
             onClick={() => void signInWithGoogle()}
-            className="auth-social-btn"
+            className="auth-social-btn gap-2"
           >
-            {isGoogleLoading ? "Redirecting..." : "Sign in with Google"}
+            {googleLoading ? (
+              <>
+                <span
+                  className="size-4 shrink-0 animate-spin rounded-full border-2 border-[#dfe1e7] border-t-[#0d47a1]"
+                  aria-hidden
+                />
+                Redirecting...
+              </>
+            ) : (
+              "Sign in with Google"
+            )}
           </SocialButton>
         </div>
       </AuthCard>
