@@ -73,6 +73,15 @@ export const UsersGroupIcon = makeStrokeIcon("M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6
 export const FlagGoalIcon = makeStrokeIcon("M6 20V4m0 1h10l-2 3 2 3H6")
 export const BoltChargeIcon = makeStrokeIcon("m13 2-7 11h5l-1 9 8-12h-5z")
 
+/** Figma `notification-text-square` — document with text lines and status dot */
+function NotificationTextSquareIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" {...props}>
+      <path d="M10 2H4C2.34315 2 1 3.34315 1 5V16C1 17.6569 2.34315 19 4 19H15C16.6569 19 18 17.6569 18 16V10M5 15H10M5 11H13M19 3.5C19 4.88071 17.8807 6 16.5 6C15.1193 6 14 4.88071 14 3.5C14 2.11929 15.1193 1 16.5 1C17.8807 1 19 2.11929 19 3.5Z" />
+    </svg>
+  )
+}
+
 const fallbackIcon = makeStrokeIcon("M4 12h16M12 4v16")
 
 export const figmaIconNames = [
@@ -228,6 +237,7 @@ const normalizedIconMap: Partial<Record<FigmaIconName, IconRenderer>> = {
   "arrow-narrow-right": ChevronRight,
   "announcement-01": Bell,
   "announcement-02": Bell,
+  "notification-text-square": NotificationTextSquareIcon,
   "currnecy-dollar-circle": Wallet,
   "bank-02": Wallet,
   "bank-note-03": Wallet,
@@ -264,7 +274,8 @@ function resolveByPattern(name: FigmaIconName): IconRenderer {
   if (name.includes("upload")) return Upload
   if (name.includes("search")) return Search
   if (name.includes("bookmark")) return BookmarkRibbonIcon
-  if (name.includes("bell") || name.includes("notification") || name.includes("announcement")) return Bell
+  if (name.includes("bell") || name.includes("announcement")) return Bell
+  if (name.includes("notification")) return NotificationTextSquareIcon
   if (name.includes("alert") || name.includes("information") || name.includes("question")) return AlertCircle
   if (name.includes("mail") || name.includes("message")) return Mail
   if (name.includes("phone")) return Phone

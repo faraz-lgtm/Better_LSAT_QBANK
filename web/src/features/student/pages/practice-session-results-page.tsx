@@ -6,7 +6,14 @@ import { StudentPageLoader } from "@/features/student/components/student-page-lo
 
 import { Button } from "@/components/ui/button"
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
+import { buildPracticeResultsSectionGroups } from "@/features/student/practice-session/build-practice-results-section-groups"
 import { PracticeQuestionResultCard } from "@/features/student/practice-session/practice-question-result-card"
+import {
+  PRACTICE_RESULTS_STACK_CLASS,
+  PracticeResultsPassageRow,
+  PracticeResultsSectionCard,
+  PracticeResultsTotalQuestionsBar,
+} from "@/features/student/practice-session/practice-results-list-layout"
 import {
   buildPracticeSectionSummaries,
   PracticeResultsSummaryPanel,
@@ -236,6 +243,19 @@ function PracticeSessionResultsPage() {
     return Math.max(1, Math.round(results.elapsedSeconds / results.questions.length))
   }, [results])
 
+  const sectionGroups = useMemo(() => {
+    if (!results) return []
+    return buildPracticeResultsSectionGroups({
+      questions: results.questions,
+      answersByQuestion: results.answersByQuestion,
+      blindReviewAnswersByQuestion: results.blindReviewAnswersByQuestion,
+      detailsByQuestion,
+      defaultKind: results.defaultSectionKind,
+      fallbackSectionNumber: results.fallbackSectionNumber,
+      perQuestionSeconds,
+    })
+  }, [detailsByQuestion, perQuestionSeconds, results])
+
   const sectionSummaries = useMemo(() => {
     if (!results) return []
     return buildPracticeSectionSummaries({
@@ -314,30 +334,33 @@ function PracticeSessionResultsPage() {
   }
 
   return (
-    <StudentMain className="w-full max-w-none" contentClassName="max-w-none">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <p className="font-serif text-[24px] font-bold leading-[1.25] text-[#062357] md:text-[40px]">
-          {results.title}
-        </p>
-        <button
-          type="button"
-          className="text-sm font-semibold text-[#0d47a1] hover:underline"
-          onClick={handleBack}
-        >
-          Back
-        </button>
-      </div>
+    <StudentMain
+      className="min-h-full w-full max-w-none bg-[var(--primary-0)]"
+      contentClassName="min-h-full max-w-none"
+    >
+      <div className="mb-6 flex flex-col gap-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h1 className="m-0 text-[24px] font-bold leading-[1.3] text-[#062357] md:text-[40px]">{results.title}</h1>
+          <button
+            type="button"
+            className="text-sm font-semibold text-[#0d47a1] hover:underline"
+            onClick={handleBack}
+          >
+            Back
+          </button>
+        </div>
 
-      <PracticeResultsSummaryPanel
-        rawScore={results.rawScore}
-        questionCount={results.questionCount}
-        elapsedSeconds={results.elapsedSeconds}
-        sections={sectionSummaries}
-        scaledScore={results.scaledScore}
-        percentile={results.percentile}
-        prediction={results.blindReviewRawScore != null ? results.rawScore : null}
-        blindReviewScore={results.blindReviewRawScore}
-      />
+        <PracticeResultsSummaryPanel
+          rawScore={results.rawScore}
+          questionCount={results.questionCount}
+          elapsedSeconds={results.elapsedSeconds}
+          sections={sectionSummaries}
+          scaledScore={results.scaledScore}
+          percentile={results.percentile}
+          prediction={results.blindReviewRawScore != null ? results.rawScore : null}
+          blindReviewScore={results.blindReviewRawScore}
+        />
+      </div>
 
       {isPrepCourseDrill ? (
         <div className="mb-6 flex justify-end">
@@ -354,34 +377,50 @@ function PracticeSessionResultsPage() {
         </div>
       ) : null}
 
-      <section className="mb-6 flex flex-col rounded-2xl border border-[#dfe1e7] bg-white px-6 py-4">
-        <p className="text-2xl font-bold leading-[1.3] text-[#062357]">
-          Total Questions: {results.questionCount}
-        </p>
-      </section>
+      <div className={PRACTICE_RESULTS_STACK_CLASS}>
+        <PracticeResultsTotalQuestionsBar total={results.questionCount} />
 
-      <ul className="flex flex-col gap-4">
-        {results.questions.map((q, i) => {
-          const ans = results.answersByQuestion.get(q.id)
-          const blindReviewAns = results.blindReviewAnswersByQuestion?.get(q.id)
-          return (
-            <li key={q.id}>
+        {sectionGroups.map((section) => (
+          <PracticeResultsSectionCard
+            key={section.id}
+            sectionTitle={section.sectionTitle}
+            badgeKind={section.kind}
+            scoreDisplay={section.scoreDisplay}
+            blindReviewDisplay={section.blindReviewDisplay}
+            showBlindReview={results.blindReviewAnswersByQuestion != null}
+          >
+            {section.passages.map(({ passage, questions }) => (
+              <div key={passage.id}>
+                <PracticeResultsPassageRow passage={passage} />
+                {questions.map((q) => (
+                  <PracticeQuestionResultCard
+                    key={q.question.id}
+                    number={q.number}
+                    detail={q.detail}
+                    isCorrect={q.isCorrect}
+                    blindReviewCorrect={q.blindReviewCorrect}
+                    yourTimeSeconds={q.yourTimeSeconds}
+                    flagged={results.flaggedIds.has(q.question.id)}
+                    variant="in-section"
+                  />
+                ))}
+              </div>
+            ))}
+            {section.questions.map((q) => (
               <PracticeQuestionResultCard
-                number={i + 1}
-                detail={detailsByQuestion[q.id] ?? null}
-                isCorrect={ans?.isCorrect ?? false}
-                blindReviewCorrect={
-                  results.blindReviewAnswersByQuestion != null
-                    ? (blindReviewAns?.isCorrect ?? false)
-                    : undefined
-                }
-                yourTimeSeconds={perQuestionSeconds}
-                flagged={results.flaggedIds.has(q.id)}
+                key={q.question.id}
+                number={q.number}
+                detail={q.detail}
+                isCorrect={q.isCorrect}
+                blindReviewCorrect={q.blindReviewCorrect}
+                yourTimeSeconds={q.yourTimeSeconds}
+                flagged={results.flaggedIds.has(q.question.id)}
+                variant="in-section"
               />
-            </li>
-          )
-        })}
-      </ul>
+            ))}
+          </PracticeResultsSectionCard>
+        ))}
+      </div>
 
       {returnTo.startsWith("/app/prep-course/") ? (
         <p className="mt-6 text-center text-sm text-[#666d80]">

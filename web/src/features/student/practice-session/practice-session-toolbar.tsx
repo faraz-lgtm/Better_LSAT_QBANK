@@ -52,29 +52,31 @@ function PracticeSessionToolbar({
   onToggleItalic,
 }: PracticeSessionToolbarProps) {
   const isActiveDrill = variant === "active-drill"
+  const isBlindReview = variant === "blind-review"
+  const useDrillToolbar = isActiveDrill || isBlindReview
   const swatches = isActiveDrill ? ACTIVE_DRILL_HIGHLIGHT_COLORS : HIGHLIGHT_COLORS
-  const toolGroupClass = isActiveDrill
+  const toolGroupClass = useDrillToolbar
     ? activeDrillToolGroupClass
     : "flex h-[52px] items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-3"
 
   return (
-    <div className={cn("flex shrink-0 flex-nowrap items-center", isActiveDrill ? "gap-2.5" : "gap-2")}>
+    <div className={cn("flex shrink-0 flex-nowrap items-center", useDrillToolbar ? "gap-2.5" : "gap-2")}>
       <span
         className={cn(
           "shrink-0 text-sm font-medium tracking-[0.28px] text-[#666d80]",
-          isActiveDrill ? "inline" : "hidden xl:inline",
+          useDrillToolbar ? "inline" : "hidden xl:inline",
         )}
       >
         Tools:
       </span>
-      <div className={cn(toolGroupClass, isActiveDrill ? "gap-1.5 px-3" : "gap-1.5")}>
+      <div className={cn(toolGroupClass, useDrillToolbar ? "gap-1.5 px-3" : "gap-1.5")}>
         {swatches.map((c) => (
           <button
             key={c.id}
             type="button"
             className={cn(
               "shrink-0 rounded-[4px] border-2 border-transparent",
-              isActiveDrill ? "size-7" : "size-7 rounded border-2",
+              useDrillToolbar ? "size-7" : "size-7 rounded border-2",
               activeColor === c.id && toolMode === "highlighter" && "border-[#062357]",
             )}
             style={{ backgroundColor: c.hex }}
@@ -88,22 +90,22 @@ function PracticeSessionToolbar({
           type="button"
           className={cn(
             toolBtnClass,
-            isActiveDrill && "size-7",
+            useDrillToolbar && "size-7",
             toolMode === "eraser" && "bg-[#eceff3] text-[#062357]",
           )}
           aria-label="Eraser"
           aria-pressed={toolMode === "eraser"}
           onClick={onEraser}
         >
-          <Eraser className={cn(isActiveDrill ? "size-6" : "size-4")} strokeWidth={2} />
+          <Eraser className={cn(useDrillToolbar ? "size-6" : "size-4")} strokeWidth={2} />
         </button>
       </div>
-      <div className={cn(toolGroupClass, isActiveDrill ? "gap-1 px-[13px]" : "gap-1")}>
-        <button type="button" className={cn(toolTextBtnClass, isActiveDrill && "size-7")} aria-label="Text size" onClick={onFontSize}>
+      <div className={cn(toolGroupClass, useDrillToolbar ? "gap-1 px-[13px]" : "gap-1")}>
+        <button type="button" className={cn(toolTextBtnClass, useDrillToolbar && "size-7")} aria-label="Text size" onClick={onFontSize}>
           Aa
           <span className="sr-only"> ({fontScale}x)</span>
         </button>
-        {isActiveDrill ? (
+        {useDrillToolbar ? (
           <button
             type="button"
             className={cn(toolBtnClass, "size-7", lineSpacing !== 1 && "bg-[#eceff3] text-[#062357]")}
@@ -140,7 +142,7 @@ function PracticeSessionToolbar({
           className={cn(
             toolTextBtnClass,
             "underline",
-            isActiveDrill && "size-7",
+            useDrillToolbar && "size-7",
             toolMode === "underline" && "bg-[#eceff3] text-[#062357]",
           )}
           aria-label="Underline"

@@ -22,10 +22,6 @@ vi.mock("@/features/student/analytics/hooks/use-analytics-api", () => ({
   usePracticeApi: () => practiceApi,
 }))
 
-vi.mock("@/lib/dev/prep-test-ui-preview", () => ({
-  allowsPrepTestUnauthenticatedPreview: () => false,
-}))
-
 const sessionDetail: PrepTestSessionDetail = {
   sessionId: "d5f5db19-b84a-4ac4-be8b-640bc022cc20",
   prepTestId: "pt-156",

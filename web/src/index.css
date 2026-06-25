@@ -1850,8 +1850,12 @@ html.student-shell-immersive .practice-session-card--active-drill {
   min-width: 0;
   flex: 1 1 0;
   grid-template-rows: minmax(0, 0.38fr) minmax(0, 0.62fr);
-  gap: 1.5rem;
-  overflow: hidden;
+  gap: 24px;
+  overflow: visible;
+}
+
+.practice-session-card--blind-review .practice-session-br-notes-stack {
+  overflow: visible;
 }
 
 .practice-session-br-notes-pane {
@@ -1901,6 +1905,77 @@ html.student-shell-immersive .practice-session-card--active-drill {
   min-width: 32px;
   height: 32px;
   border-radius: 12px;
+}
+
+html.student-shell-immersive .practice-session-card--blind-review {
+  width: 100%;
+  flex: none;
+  min-height: 0;
+  max-height: none;
+  height: auto;
+}
+
+@media (min-width: 768px) {
+  html.student-shell-immersive .practice-session-card--blind-review {
+    max-height: none;
+  }
+}
+
+.practice-session-card--blind-review .practice-session-body {
+  overflow: visible;
+}
+
+.practice-session-card--blind-review .practice-session-body > div {
+  flex: 1 1 0;
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+  align-content: stretch;
+  overflow: visible;
+}
+
+.practice-session-card--blind-review .practice-session-pane--br-column {
+  border-radius: 16px;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+
+.practice-session-card--blind-review .practice-session-footer {
+  overflow: visible;
+}
+
+.practice-session-card--blind-review .practice-session-question-nav-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  align-content: flex-start;
+  min-height: 48px;
+  height: auto;
+  gap: 16px;
+  overflow: visible;
+}
+
+.practice-session-card--blind-review .practice-session-question-nav-btn {
+  box-sizing: border-box;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  align-self: center;
+  flex-shrink: 0;
+  border-radius: 12px;
+}
+
+.practice-session-card--blind-review .practice-session-content mark[data-highlight="orange"] {
+  background-color: #ff6f00;
+}
+
+.practice-session-card--blind-review .practice-session-content mark[data-highlight="pink"] {
+  background-color: #ffb4de;
+}
+
+.practice-session-card--blind-review .practice-session-content mark[data-highlight="yellow"] {
+  background-color: #ffbd4c;
 }
 
 .lsat-html-content mark.practice-find-mark {

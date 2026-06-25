@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 type PracticeResultOutcomeIconProps = {
   correct: boolean
   className?: string
-  variant?: "stroke" | "filled"
+  variant?: "stroke" | "filled" | "grid"
 }
 
 function PracticeResultOutcomeIcon({
@@ -13,12 +13,31 @@ function PracticeResultOutcomeIcon({
   className,
   variant = "stroke",
 }: PracticeResultOutcomeIconProps) {
+  if (variant === "grid") {
+    return (
+      <span
+        className={cn(
+          "flex size-4 shrink-0 items-center justify-center rounded-full",
+          correct ? "bg-[#00bc54]" : "bg-[#df1c41]",
+          className,
+        )}
+        aria-hidden
+      >
+        {correct ? (
+          <Check className="size-2.5 text-white" strokeWidth={3} />
+        ) : (
+          <X className="size-2.5 text-white" strokeWidth={3} />
+        )}
+      </span>
+    )
+  }
+
   if (variant === "filled") {
     return (
       <span
         className={cn(
           "flex size-6 shrink-0 items-center justify-center rounded-full",
-          correct ? "bg-[#10b981]" : "bg-[#df1c41]",
+          correct ? "bg-[#00bc54]" : "bg-[#df1c41]",
           className,
         )}
         aria-hidden

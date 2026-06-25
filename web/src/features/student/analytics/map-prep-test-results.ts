@@ -6,7 +6,7 @@ import type {
   PrepTestSectionKind,
   PrepTestSectionSummary,
   QuestionResultStatus,
-} from "@/features/student/lib/mock-analytics-prep-test-results"
+} from "@/features/student/lib/prep-test-results-types"
 
 const QUESTIONS_PER_ROW = 7
 

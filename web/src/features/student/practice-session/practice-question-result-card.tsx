@@ -23,7 +23,7 @@ type PracticeQuestionResultCardProps = {
   blindReviewCorrect?: boolean
   yourTimeSeconds?: number | null
   flagged?: boolean
-  variant?: "default" | "active-drill"
+  variant?: "default" | "active-drill" | "in-section"
   className?: string
 }
 
@@ -109,18 +109,22 @@ function PracticeQuestionResultCard({
     </div>
   )
 
-  const resultRow = (
+  const resultRow = (iconVariant: "stroke" | "filled") => (
     <div className="flex flex-nowrap items-center gap-5">
       <div className="flex h-7 shrink-0 items-center gap-2.5">
-        <PracticeResultOutcomeIcon correct={isCorrect} variant="stroke" className="size-6" />
+        <PracticeResultOutcomeIcon
+          correct={isCorrect}
+          variant={iconVariant}
+          className={iconVariant === "stroke" ? "size-6" : undefined}
+        />
         <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">Actual</span>
       </div>
       {showBlindReviewResult ? (
         <div className="flex shrink-0 items-center gap-2.5">
           <PracticeResultOutcomeIcon
             correct={Boolean(blindReviewCorrect)}
-            variant="stroke"
-            className="size-6"
+            variant={iconVariant}
+            className={iconVariant === "stroke" ? "size-6" : undefined}
           />
           <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
             Blind Review
@@ -169,6 +173,87 @@ function PracticeQuestionResultCard({
     />
   )
 
+  if (variant === "in-section") {
+    return (
+      <article
+        className={cn(
+          "border-t border-[#dfe1e7] bg-white p-6",
+          className,
+        )}
+      >
+        <div className="flex items-start gap-5">
+          <div
+            className={cn(
+              "flex size-14 shrink-0 items-center justify-center rounded-full",
+              isCorrect ? "bg-[#00bc54]" : "bg-[#df1c41]",
+            )}
+          >
+            <span className="text-2xl font-bold leading-[1.3] text-white">{number}</span>
+          </div>
+
+          <div className="flex min-w-0 flex-1 flex-col gap-4">
+            <div className="flex w-full items-start">
+              <div className="flex w-[562px] shrink-0 flex-col justify-center gap-2">
+                <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">{title}</h3>
+                <div className="flex flex-wrap gap-2.5">
+                  {tags.map((t) => (
+                    <span
+                      key={t}
+                      className="inline-flex h-5 items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px] font-normal leading-[1.5] tracking-[0.02em] text-[#0d0d12]"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex min-w-0 flex-1 flex-col items-start gap-3">
+                <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Result</p>
+                {resultRow("filled")}
+              </div>
+
+              <div className="ml-4 shrink-0">{actionButtons}</div>
+            </div>
+
+            <div className="flex w-full items-start">
+              <div className="flex w-[305px] shrink-0 flex-col items-start gap-3">
+                <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Timing</p>
+                <div className="flex gap-1">
+                  <span className="w-20 text-xs font-normal leading-[1.5] tracking-[0.02em] text-[#666d80]">
+                    Target time:
+                  </span>
+                  <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
+                    {targetTime}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  <span className="w-20 text-xs font-normal leading-[1.5] tracking-[0.02em] text-[#666d80]">
+                    Your time:
+                  </span>
+                  <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#0d47a1]">
+                    {yourTime}
+                  </span>
+                  {yourTimeNote ? (
+                    <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
+                      {yourTimeNote}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="flex w-[257px] shrink-0 flex-col items-start gap-3">
+                <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Difficulty</p>
+                <PracticeDifficultyMeter difficulty={difficulty} />
+              </div>
+
+              <div className="flex min-w-0 flex-1 flex-col items-start gap-3">{popularityBlock}</div>
+            </div>
+          </div>
+        </div>
+      </article>
+    )
+  }
+
   if (variant === "active-drill") {
     return (
       <article
@@ -189,7 +274,7 @@ function PracticeQuestionResultCard({
 
           <div className="flex min-w-0 flex-1 flex-col gap-4">
             <div className="flex h-[60px] w-full items-center">
-              <div className="flex h-[60px] w-full max-w-[562px] shrink-0 flex-col justify-center gap-2">
+              <div className="flex w-[562px] shrink-0 flex-col justify-center gap-2">
                 <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">{title}</h3>
                 <div className="flex h-6 flex-wrap items-center gap-2.5">
                   {tags.map((t) => (
@@ -205,7 +290,7 @@ function PracticeQuestionResultCard({
 
               <div className="flex min-w-0 flex-1 flex-col justify-center gap-3">
                 <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Result</p>
-                {resultRow}
+                {resultRow("stroke")}
               </div>
 
               <div className="flex shrink-0 items-center gap-4">{actionButtons}</div>
@@ -293,7 +378,7 @@ function PracticeQuestionResultCard({
               <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Result</p>
               {actionButtons}
             </div>
-            {resultRow}
+            {resultRow("stroke")}
             {popularityBlock}
           </div>
         </div>
