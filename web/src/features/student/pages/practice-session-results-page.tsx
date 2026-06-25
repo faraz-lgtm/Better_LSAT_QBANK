@@ -335,8 +335,8 @@ function PracticeSessionResultsPage() {
 
   return (
     <StudentMain
-      className="min-h-full w-full max-w-none bg-[var(--primary-0)]"
-      contentClassName="min-h-full max-w-none"
+      className="min-h-full w-full max-w-none bg-[#f6f8fa]"
+      contentClassName="min-h-full max-w-none bg-[#f6f8fa]"
     >
       <div className="mb-6 flex flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-4">

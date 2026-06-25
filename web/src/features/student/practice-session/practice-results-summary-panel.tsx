@@ -15,7 +15,6 @@ export type PracticeSectionResultSummary = {
   accuracyPct: number
 }
 
-
 function buildPracticeSectionSummaries(input: {
   questionIds: string[]
   answersByQuestion: Map<string, { isCorrect: boolean }>
@@ -90,59 +89,63 @@ function PracticeResultsSummaryPanel({
   const showBlindReview = prediction != null || blindReviewScore != null
 
   return (
-    <section className="flex w-full flex-col gap-6 lg:flex-row lg:gap-6">
-      <div className="flex w-full shrink-0 flex-col gap-6 lg:w-[290px]">
-          <div className="flex flex-col gap-1.5 rounded-2xl bg-[#0d47a1] p-6">
-            <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#edf3ff]">YOUR SCORE</p>
-            <p className="text-5xl font-extrabold leading-[1.2] text-white">
+    <section className="mb-6 w-full rounded-[20px] border border-[#dfe1e7] bg-white p-6">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch">
+        <div className="flex w-full shrink-0 flex-col gap-4 lg:w-[290px]">
+          <div className="flex flex-col gap-3 rounded-[20px] bg-[#0d47a1] p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.24px] text-[#edf3ff]">YOUR SCORE</p>
+            <p className="text-[48px] font-bold leading-[1.15] text-white">
               {scaledScore != null ? scaledScore : `${rawScore}/${questionCount}`}
             </p>
-            <p className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#edf3ff]">
+            <p className="text-sm font-semibold uppercase tracking-[0.02em] text-[#edf3ff]">
               {rawScore} CORRECT ({incorrect > 0 ? `-${incorrect}` : "0"})
             </p>
             {percentile != null ? (
-              <p className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#edf3ff]">
+              <p className="text-sm font-semibold uppercase tracking-[0.02em] text-[#edf3ff]">
                 PERCENTILE: {percentile % 1 === 0 ? percentile : percentile.toFixed(1)}
               </p>
             ) : (
-              <p className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#edf3ff]">
+              <p className="text-sm font-semibold uppercase tracking-[0.02em] text-[#edf3ff]">
                 TIME: {formatMmSs(elapsedSeconds)}
               </p>
             )}
           </div>
           {showBlindReview ? (
-            <div className="rounded-2xl bg-[#f6f8fa] p-6">
+            <div className="rounded-[20px] bg-[#f6f8fa] p-6">
               <div className="flex items-center justify-between gap-4">
-                <div className="flex flex-col gap-1.5 font-bold text-[#062357]">
-                  <p className="text-xs font-bold leading-[1.5] tracking-[0.02em]">YOUR PREDICTION</p>
-                  <p className="text-2xl font-bold leading-[1.3]">{prediction ?? "—"}</p>
+                <div className="flex min-w-0 flex-1 flex-col gap-2 font-bold text-[#062357]">
+                  <p className="text-xs font-bold uppercase tracking-[0.24px]">YOUR PREDICTION</p>
+                  <p className="text-[28px] font-bold leading-none">{prediction ?? "—"}</p>
                 </div>
-                <div className="h-8 w-0.5 shrink-0 bg-[#dfe1e7]" aria-hidden />
-                <div className="flex flex-col gap-1.5 font-bold text-[#df1c41]">
-                  <p className="text-xs font-bold leading-[1.5] tracking-[0.02em]">BLIND REVIEW</p>
-                  <p className="text-2xl font-bold leading-[1.3]">{blindReviewScore ?? "—"}</p>
+                <div className="h-10 w-px shrink-0 bg-[#dfe1e7]" aria-hidden />
+                <div className="flex min-w-0 flex-1 flex-col gap-2 font-bold text-[#df1c41]">
+                  <p className="text-xs font-bold uppercase tracking-[0.24px]">BLIND REVIEW</p>
+                  <p className="text-[28px] font-bold leading-none">{blindReviewScore ?? "—"}</p>
                 </div>
               </div>
             </div>
           ) : null}
         </div>
 
-        <div className="flex min-h-[200px] min-w-0 flex-1 flex-col gap-[18px] rounded-2xl bg-[#f6f8fa] p-6 lg:min-h-[316px]">
-          <h2 className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">RESULTS BY SECTION</h2>
-          <div className="flex min-w-0 gap-[7px] overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {sections.map((section) => (
-              <PrepTestSectionResultCard
-                key={section.id}
-                kind={section.kind}
-                longName={section.longName}
-                sectionLabel={section.sectionLabel}
-                scoreDelta={section.scoreDelta}
-                questionRows={section.questionRows}
-                accuracyPct={section.accuracyPct}
-              />
-            ))}
+        <div className="flex min-h-[280px] min-w-0 flex-1 flex-col gap-5 overflow-hidden rounded-[20px] bg-[#f6f8fa] p-6 lg:min-h-[316px]">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.24px] text-[#062357]">RESULTS BY SECTION</h2>
+          <div className="-mx-1 min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex w-max min-w-full gap-4 pe-2">
+              {sections.map((section) => (
+                <PrepTestSectionResultCard
+                  key={section.id}
+                  kind={section.kind}
+                  longName={section.longName}
+                  sectionLabel={section.sectionLabel}
+                  scoreDelta={section.scoreDelta}
+                  questionRows={section.questionRows}
+                  accuracyPct={section.accuracyPct}
+                />
+              ))}
+            </div>
           </div>
         </div>
+      </div>
     </section>
   )
 }

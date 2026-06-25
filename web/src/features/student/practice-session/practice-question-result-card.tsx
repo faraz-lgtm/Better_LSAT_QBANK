@@ -76,11 +76,11 @@ function PracticeQuestionResultCard({
     : null
 
   const actionButtons = (
-    <div className="flex shrink-0 gap-4">
+    <div className="flex shrink-0 gap-3">
       {explanationHref ? (
         <a
           href={explanationHref}
-          className="flex size-9 items-center justify-center rounded-xl border border-[#dfe1e6] bg-[#f9f9fb] text-[#666d80] transition-colors hover:bg-white"
+          className="flex size-9 items-center justify-center rounded-full border border-[#dfe1e6] bg-white text-[#666d80] transition-colors hover:bg-[#f9f9fb]"
           aria-label="View explanation"
         >
           <Pencil className="size-[18px]" aria-hidden />
@@ -88,7 +88,7 @@ function PracticeQuestionResultCard({
       ) : (
         <button
           type="button"
-          className="flex size-9 items-center justify-center rounded-xl border border-[#dfe1e6] bg-[#f9f9fb] text-[#666d80]"
+          className="flex size-9 items-center justify-center rounded-full border border-[#dfe1e6] bg-white text-[#666d80]"
           aria-label="Edit question"
           disabled
         >
@@ -97,7 +97,7 @@ function PracticeQuestionResultCard({
       )}
       <button
         type="button"
-        className="flex size-9 items-center justify-center rounded-xl border border-[#dfe1e6] bg-[#f9f9fb] text-[#666d80]"
+        className="flex size-9 items-center justify-center rounded-full border border-[#dfe1e6] bg-white text-[#666d80]"
         aria-label={flagged ? "Flagged" : "Bookmark question"}
         disabled
       >
@@ -258,11 +258,12 @@ function PracticeQuestionResultCard({
     return (
       <article
         className={cn(
-          "min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
+          "relative min-w-0 max-w-full overflow-hidden rounded-[20px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
           className,
         )}
       >
-        <div className="flex min-w-0 items-start gap-6">
+        <div className="absolute right-6 top-6 z-10">{actionButtons}</div>
+        <div className="flex min-w-0 items-start gap-6 pr-24">
           <div
             className={cn(
               "flex size-[56px] shrink-0 items-center justify-center self-start rounded-[14px]",
@@ -288,12 +289,10 @@ function PracticeQuestionResultCard({
                 </div>
               </div>
 
-              <div className="flex min-w-0 flex-1 flex-col justify-center gap-3">
+              <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
                 <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Result</p>
                 {resultRow("stroke")}
               </div>
-
-              <div className="flex shrink-0 items-center gap-4">{actionButtons}</div>
             </div>
 
             <div className="flex w-full items-start">
@@ -325,7 +324,7 @@ function PracticeQuestionResultCard({
                 <PracticeDifficultyMeter difficulty={difficulty} />
               </div>
 
-              <div className="flex min-w-0 flex-1 flex-col gap-3">{popularityBlock}</div>
+              <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">{popularityBlock}</div>
             </div>
           </div>
         </div>
@@ -336,11 +335,12 @@ function PracticeQuestionResultCard({
   return (
     <article
       className={cn(
-        "overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
+        "relative overflow-hidden rounded-[20px] border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
         className,
       )}
     >
-      <div className="p-6">
+      <div className="absolute right-6 top-6 z-10">{actionButtons}</div>
+      <div className="p-6 pr-24">
         <div className="flex flex-col gap-8 xl:flex-row xl:items-start xl:gap-10">
           <div className="flex min-w-0 shrink-0 gap-6">
             <div
