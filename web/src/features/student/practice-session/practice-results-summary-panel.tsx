@@ -145,7 +145,6 @@ function PracticeResultsSummaryPanel({
             />
           ))}
         </div>
-      </div>
     </section>
   )
 }

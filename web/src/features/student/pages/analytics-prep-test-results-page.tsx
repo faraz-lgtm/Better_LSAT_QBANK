@@ -53,6 +53,10 @@ import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/ho
 
 const QUESTION_FILTER_OPTIONS = ["Question", "Passage", "Incorrect only"] as const
 
+/** Figma results list — 24px gaps between white cards */
+const RESULTS_STACK_CLASS = "flex flex-col gap-6"
+const RESULTS_CARD_CLASS = "overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white"
+
 const SECTION_BADGE: Record<
   PrepTestSectionKind,
   { bg: string; text: string; border: string; short: string }
@@ -615,6 +619,7 @@ function AnalyticsPrepTestResultsPage() {
           <ResultsSummaryPanel detail={detail} />
         </section>
 
+      <div className={RESULTS_STACK_CLASS}>
         <TotalQuestionsBar total={detail.totalQuestions} filter={questionFilter} onFilterChange={setQuestionFilter} />
 
         {detail.lrSections.map((lrSection) => {
