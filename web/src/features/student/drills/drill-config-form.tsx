@@ -135,7 +135,7 @@ function DrillConfigForm({
             <SectionInitialBadge section={sectionType} />
             <p className="m-0 text-[24px] font-bold leading-[1.3] text-[#062357]">{copy.title}</p>
           </div>
-          <div className="flex w-full max-w-[313px] flex-col gap-0.5 lg:items-end">
+          <div className="flex w-full flex-col gap-0.5 lg:w-auto lg:shrink-0 lg:items-end">
             <div className="flex w-full items-start justify-between gap-4">
               <p className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Customize</p>
               <Switch
@@ -145,7 +145,7 @@ function DrillConfigForm({
                 aria-label="Customize drill settings"
               />
             </div>
-            <p className="m-0 text-xs font-normal leading-normal tracking-[0.02em] text-[#666d80] lg:text-right">
+            <p className="m-0 whitespace-nowrap text-xs font-normal leading-normal tracking-[0.02em] text-[#666d80] lg:text-right">
               Selecting from {poolStats.selectedCount} of {poolStats.totalCount} questions in your drill pool.
             </p>
           </div>
@@ -176,7 +176,7 @@ function DrillConfigForm({
         </div>
 
         {customize ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:[grid-template-columns:repeat(4,minmax(0,1fr))]">
             <DrillConfigSelectField
               label="Selection"
               description="How questions are chosen for this drill"

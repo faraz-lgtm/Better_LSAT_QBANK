@@ -1888,16 +1888,14 @@ html.student-shell-immersive .practice-session-card--active-drill {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 16px;
+  gap: 8px;
 }
 
 .practice-session-card--active-drill .practice-session-footer .practice-session-question-nav-grid {
   flex-wrap: wrap;
   align-items: center;
-  align-content: flex-start;
-  min-height: 48px;
-  height: auto;
-  gap: 6px;
+  gap: 8px;
+  height: 48px;
 }
 
 .practice-session-card--active-drill .practice-session-question-nav-btn {

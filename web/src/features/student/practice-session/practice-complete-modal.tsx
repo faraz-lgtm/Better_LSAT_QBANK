@@ -126,15 +126,15 @@ function PracticeCompleteModal({
       aria-modal="true"
       aria-labelledby={titleId}
     >
-      <div className="flex w-full max-w-[672px] flex-col items-center gap-[24px] rounded-[16px] border border-[#dfe1e7] bg-[#f2f7ff] px-6 pb-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
-        <div className="-mx-6 w-[calc(100%+3rem)] rounded-t-[16px] bg-[#edf3ff] px-6 py-8 text-center">
+      <div className="flex w-full max-w-[672px] flex-col items-center gap-6 rounded-2xl border border-[#dfe1e7] bg-[#edf3ff] px-6 pb-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+        <div className="-mx-6 w-[calc(100%+3rem)] rounded-t-2xl bg-[#edf3ff] px-6 py-8 text-center">
           <h2 id={titleId} className="text-[48px] font-bold leading-[1.2] text-[#062357]">
             Well Done!
           </h2>
           <p className="mt-2.5 text-lg leading-[1.4] tracking-[0.36px] text-[#062357]">{subtitle}</p>
         </div>
 
-        <div className="relative w-full max-w-[604px] rounded-[24px] border border-[#0d47a1] bg-[#edf3ff] px-8 py-[30px]">
+        <div className="relative w-full max-w-[540px] rounded-[20px] border border-[#0d47a1] bg-white px-8 py-[30px]">
           <div
             className={cn(
               "relative mx-auto flex min-h-[130px] w-full max-w-[540px] items-center justify-between",
@@ -153,7 +153,7 @@ function PracticeCompleteModal({
           </div>
 
           {scoreHidden ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-[24px]">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-[20px]">
               <PracticeCompleteHiddenEyeIcon className="text-[#666d80]" />
               <p className="text-base font-semibold tracking-[0.32px] text-[#666d80]">
                 Your score is hidden
@@ -190,43 +190,43 @@ function PracticeCompleteModal({
               ) : null}
             </div>
 
-            <div className="flex w-full max-w-[608px] gap-3 rounded-[16px] border border-[#ffbd4c] bg-[#fff6e0] p-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="none"
-              className="mt-0.5 size-5 shrink-0 text-[#062357]"
-              aria-hidden
-            >
-              <path
-                d="M10 18.3333C14.6024 18.3333 18.3333 14.6024 18.3333 10C18.3333 5.39763 14.6024 1.66667 10 1.66667C5.39763 1.66667 1.66667 5.39763 1.66667 10C1.66667 14.6024 5.39763 18.3333 10 18.3333Z"
-                stroke="currentColor"
-                strokeWidth="1.66667"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M10 13.3333V10"
-                stroke="currentColor"
-                strokeWidth="1.66667"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M10 6.66667H10.0083"
-                stroke="currentColor"
-                strokeWidth="1.66667"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <p className="text-left text-sm leading-normal tracking-[0.28px] text-[#062357]">
-              <span className="font-semibold">Blind Review</span> helps you identify reasoning errors
-              before seeing your score. It&apos;s the most effective way to improve your performance.
-            </p>
-          </div>
+            <div className="flex w-full max-w-[608px] gap-3 rounded-[20px] border border-[#ffbd4c] bg-[#fff6e0] p-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="none"
+                className="mt-0.5 size-5 shrink-0 text-[#062357]"
+                aria-hidden
+              >
+                <path
+                  d="M10 18.3333C14.6024 18.3333 18.3333 14.6024 18.3333 10C18.3333 5.39763 14.6024 1.66667 10 1.66667C5.39763 1.66667 1.66667 5.39763 1.66667 10C1.66667 14.6024 5.39763 18.3333 10 18.3333Z"
+                  stroke="currentColor"
+                  strokeWidth="1.66667"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M10 13.3333V10"
+                  stroke="currentColor"
+                  strokeWidth="1.66667"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M10 6.66667H10.0083"
+                  stroke="currentColor"
+                  strokeWidth="1.66667"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <p className="text-left text-sm leading-normal tracking-[0.28px] text-[#062357]">
+                <span className="font-semibold">Blind Review</span> helps you identify reasoning errors
+                before seeing your score. It&apos;s the most effective way to improve your performance.
+              </p>
+            </div>
           </>
         ) : (
           <div className="flex flex-col items-center gap-2">

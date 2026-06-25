@@ -1,4 +1,4 @@
-import { CheckCircle2 } from "lucide-react"
+import { Check } from "lucide-react"
 
 import type { ExplanationAnswerPopularityRow, ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
 import { cn } from "@/lib/utils"
@@ -91,8 +91,8 @@ export function correctChoiceLetter(
 export function PracticeDifficultyMeter({ difficulty }: { difficulty: PracticeDifficultyLabel }) {
   const { dots, color, inactive } = DIFFICULTY_STYLE[difficulty]
   return (
-    <div className="flex h-10 w-[132px] items-center gap-2.5 rounded-[10px] bg-[#f3f7ff] px-2.5">
-      <div className="flex items-center gap-1.5">
+    <div className="flex h-10 w-fit items-center gap-2.5 rounded-[10px] bg-[#f3f7ff] px-3">
+      <div className="flex shrink-0 items-center gap-1.5">
         {Array.from({ length: 5 }).map((_, i) => (
           <span
             key={i}
@@ -101,10 +101,24 @@ export function PracticeDifficultyMeter({ difficulty }: { difficulty: PracticeDi
           />
         ))}
       </div>
-      <span className="text-xs font-semibold leading-normal tracking-[0.02em]" style={{ color }}>
+      <span
+        className="shrink-0 whitespace-nowrap text-xs font-semibold leading-normal tracking-[0.02em]"
+        style={{ color }}
+      >
         {difficulty}
       </span>
     </div>
+  )
+}
+
+function CorrectAnswerPopularityBadge() {
+  return (
+    <span
+      className="flex size-3 shrink-0 items-center justify-center rounded-full bg-[#00d492]"
+      aria-hidden
+    >
+      <Check className="size-2 text-white" strokeWidth={3} />
+    </span>
   )
 }
 
@@ -123,12 +137,22 @@ export function PracticeAnswerPopularityBars({
         {rows.map((row) => {
           const h = Math.round((row.pct / max) * 100)
           const isCorrect = row.letter === correctLetter
+          const fillHeight = isCorrect
+            ? row.pct > 0
+              ? `${Math.max(8, h)}%`
+              : "10%"
+            : row.pct > 0
+              ? `${Math.max(8, h)}%`
+              : "0%"
           return (
-            <div key={row.letter} className="flex w-[72px] flex-col items-center gap-1 sm:w-[84px]">
-              <div className="flex h-20 w-full flex-col justify-end overflow-hidden rounded-t-[10px] bg-[#f3f4f6]">
+            <div key={row.letter} className="flex w-10 shrink-0 flex-col items-center gap-1">
+              <div className="flex h-[72px] w-10 shrink-0 flex-col justify-end overflow-hidden rounded-t-[10px] bg-[#f3f4f6]">
                 <div
-                  className={cn("w-full rounded-t-[10px]", isCorrect ? "bg-[#00d492]" : "bg-[#dfe1e7]")}
-                  style={{ height: `${Math.max(8, h)}%` }}
+                  className={cn(
+                    "w-full shrink-0",
+                    isCorrect ? "rounded-t-[10px] bg-[#00d492]" : "rounded-t-[10px] bg-[#dfe1e7]",
+                  )}
+                  style={{ height: fillHeight }}
                 />
               </div>
               <div className="flex flex-col items-center gap-0.5">
@@ -140,7 +164,11 @@ export function PracticeAnswerPopularityBars({
                 >
                   {row.letter}
                 </span>
-                {isCorrect ? <CheckCircle2 className="size-3 text-[#00d492]" aria-hidden /> : null}
+                {isCorrect ? (
+                  <CorrectAnswerPopularityBadge />
+                ) : (
+                  <span className="size-3 shrink-0" aria-hidden />
+                )}
               </div>
             </div>
           )

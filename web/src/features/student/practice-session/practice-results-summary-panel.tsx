@@ -97,30 +97,30 @@ function PracticeResultsSummaryPanel({
             <p className="text-5xl font-extrabold leading-[1.2] text-white">
               {scaledScore != null ? scaledScore : `${rawScore}/${questionCount}`}
             </p>
-            <p className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#edf3ff]">
+            <p className="text-sm font-semibold uppercase tracking-[0.02em] text-[#edf3ff]">
               {rawScore} CORRECT ({incorrect > 0 ? `-${incorrect}` : "0"})
             </p>
             {percentile != null ? (
-              <p className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#edf3ff]">
+              <p className="text-sm font-semibold uppercase tracking-[0.02em] text-[#edf3ff]">
                 PERCENTILE: {percentile % 1 === 0 ? percentile : percentile.toFixed(1)}
               </p>
             ) : (
-              <p className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#edf3ff]">
+              <p className="text-sm font-semibold uppercase tracking-[0.02em] text-[#edf3ff]">
                 TIME: {formatMmSs(elapsedSeconds)}
               </p>
             )}
           </div>
           {showBlindReview ? (
-            <div className="rounded-2xl bg-[#f6f8fa] p-6">
+            <div className="rounded-[20px] bg-[#f6f8fa] p-6">
               <div className="flex items-center justify-between gap-4">
-                <div className="flex flex-col gap-1.5 font-bold text-[#062357]">
-                  <p className="text-xs font-bold leading-[1.5] tracking-[0.02em]">YOUR PREDICTION</p>
-                  <p className="text-2xl font-bold leading-[1.3]">{prediction ?? "—"}</p>
+                <div className="flex min-w-0 flex-1 flex-col gap-2 font-bold text-[#062357]">
+                  <p className="text-xs font-bold uppercase tracking-[0.24px]">YOUR PREDICTION</p>
+                  <p className="text-[28px] font-bold leading-none">{prediction ?? "—"}</p>
                 </div>
-                <div className="h-8 w-0.5 shrink-0 bg-[#dfe1e7]" aria-hidden />
-                <div className="flex flex-col gap-1.5 font-bold text-[#df1c41]">
-                  <p className="text-xs font-bold leading-[1.5] tracking-[0.02em]">BLIND REVIEW</p>
-                  <p className="text-2xl font-bold leading-[1.3]">{blindReviewScore ?? "—"}</p>
+                <div className="h-10 w-px shrink-0 bg-[#dfe1e7]" aria-hidden />
+                <div className="flex min-w-0 flex-1 flex-col gap-2 font-bold text-[#df1c41]">
+                  <p className="text-xs font-bold uppercase tracking-[0.24px]">BLIND REVIEW</p>
+                  <p className="text-[28px] font-bold leading-none">{blindReviewScore ?? "—"}</p>
                 </div>
               </div>
             </div>
