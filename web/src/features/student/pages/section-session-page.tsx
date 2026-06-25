@@ -35,6 +35,25 @@ import {
   type BlindReviewAnswerView,
 } from "@/features/student/practice-session/practice-blind-review-answer-toggle"
 import { PracticeBlindReviewSessionHeader } from "@/features/student/practice-session/practice-blind-review-session-header"
+import { PracticeBlindReviewQuestionPanel } from "@/features/student/practice-session/practice-blind-review-question-panel"
+import {
+  BLIND_REVIEW_BODY_CLASS,
+  BLIND_REVIEW_BODY_GRID_CLASS,
+  BLIND_REVIEW_CARD_CLASS,
+  BLIND_REVIEW_FOOTER_CLASS,
+  BLIND_REVIEW_FOOTER_NAV_CLASS,
+  BLIND_REVIEW_FOOTER_ROW_CLASS,
+  BLIND_REVIEW_NAV_ARROW_BUTTON_CLASS,
+  BLIND_REVIEW_NAV_ARROW_GROUP_CLASS,
+  BLIND_REVIEW_NOTES_LAYOUT_CLASS,
+  BLIND_REVIEW_NOTES_PASSAGE_PANEL_CLASS,
+  BLIND_REVIEW_NOTES_QUESTION_PANEL_CLASS,
+  BLIND_REVIEW_NOTES_STACK_CLASS,
+  BLIND_REVIEW_PASSAGE_PANEL_CLASS,
+  BLIND_REVIEW_PASSAGE_TEXT_CLASS,
+  BLIND_REVIEW_QUESTION_PANEL_CLASS,
+  BLIND_REVIEW_SHELL_CLASS,
+} from "@/features/student/practice-session/practice-session-blind-review-styles"
 import { PracticeSectionIntroHeader } from "@/features/student/practice-session/practice-section-intro-header"
 import { PracticePrepTestSectionIntroPanel } from "@/features/student/practice-session/practice-preptest-section-intro-panel"
 import { PracticePrepTestSectionIntroFrame } from "@/features/student/practice-session/practice-preptest-section-intro-frame"
@@ -159,72 +178,24 @@ function SectionQuestionPanel({
 
   if (isBlindReviewLayout) {
     return (
-      <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <div className="shrink-0 border-b border-[#e5e7eb] bg-[#f6f8fa] p-6">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-1 items-start gap-3">
-              <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-[14px] border-2 border-[#ff6f00] bg-white text-lg font-bold text-[#ff6f00] shadow-[0px_0px_5px_#fc7753]">
-                {questionNumber}
-              </span>
-              <div className="flex min-w-0 flex-1 flex-col gap-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  {recommendedForBr ? (
-                    <span className="inline-flex h-8 items-center rounded-2xl px-4 text-xs font-medium tracking-[0.02em] text-[#ff6f00]">
-                      Recommended for BR
-                    </span>
-                  ) : (
-                    <span />
-                  )}
-                  {onAnswerViewChange ? (
-                    <PracticeBlindReviewAnswerToggle value={answerView} onChange={onAnswerViewChange} />
-                  ) : null}
-                </div>
-                <PracticeAnnotatedContent
-                  regionKey={stemKey}
-                  html={stemHtml}
-                  findQuery={findQuery}
-                  toolMode={toolMode}
-                  onMouseUp={onContentMouseUp}
-                  onClickCapture={onContentClick}
-                  className="text-lg font-medium leading-[1.4] tracking-[0.02em] text-[#0d0d12]"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-        {revealed && isCorrect != null ? (
-          <p className="shrink-0 px-6 pt-4 text-xs font-semibold text-[#df1c41]">{isCorrect ? "Correct" : "Incorrect"}</p>
-        ) : null}
-        <div className="practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto">
-          <div className="flex flex-col gap-3 p-6">
-            {question.choices.map((choice, index) => (
-              <LrDrillOptionRow
-                key={choice.id}
-                index={index}
-                html={getRegionHtml(regionKey(question.id, `choice-${choice.id}`), choice.text)}
-                findQuery={findQuery}
-                regionKey={regionKey(question.id, `choice-${choice.id}`)}
-                selected={selectedIndex === index}
-                hidden={Boolean(hiddenChoices[index])}
-                disabled={submitting}
-                selectedIndex={selectedIndex}
-                allowReselect={allowReselect}
-                onSelect={() => onSelect(index)}
-                onToggleHidden={() =>
-                  setHiddenChoices((prev) => ({
-                    ...prev,
-                    [index]: !prev[index],
-                  }))
-                }
-                toolMode={toolMode}
-                onContentMouseUp={onContentMouseUp}
-                onContentClick={onContentClick}
-                variant="blind-review"
-              />
-            ))}
-          </div>
-        </div>
-      </div>
+      <PracticeBlindReviewQuestionPanel
+        question={question}
+        questionNumber={questionNumber}
+        findQuery={findQuery}
+        selectedIndex={selectedIndex}
+        revealed={revealed}
+        isCorrect={isCorrect}
+        submitting={submitting}
+        allowReselect={allowReselect}
+        getRegionHtml={getRegionHtml}
+        toolMode={toolMode}
+        onContentMouseUp={onContentMouseUp}
+        onContentClick={onContentClick}
+        onSelect={onSelect}
+        answerView={answerView}
+        onAnswerViewChange={onAnswerViewChange}
+        recommendedForBr={recommendedForBr}
+      />
     )
   }
 
@@ -1118,14 +1089,17 @@ function SectionSessionPage() {
 
   const sessionInnerContent = (
     <>
-      <div className="practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div
+        className={
+          useBlindReviewLayout
+            ? BLIND_REVIEW_BODY_CLASS
+            : "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden"
+        }
+      >
         {showNotesPanel && useBlindReviewLayout ? (
-          <div className="flex min-h-0 flex-1 gap-5 overflow-hidden p-6">
-            <div className="practice-session-br-notes-stack">
-              <div
-                ref={passagePaneRef}
-                className="practice-session-br-notes-pane practice-session-scroll-hidden rounded-2xl border border-[#e5e7eb] bg-white px-8 pb-8 pt-8 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)]"
-              >
+          <div className={BLIND_REVIEW_NOTES_LAYOUT_CLASS}>
+            <div className={BLIND_REVIEW_NOTES_STACK_CLASS}>
+              <div ref={passagePaneRef} className={BLIND_REVIEW_NOTES_PASSAGE_PANEL_CLASS}>
                 {sectionType === "RC" && current.passage ? (
                   <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
                 ) : null}
@@ -1136,13 +1110,10 @@ function SectionSessionPage() {
                   toolMode={highlights.toolMode}
                   onMouseUp={highlights.handleContentMouseUp}
                   onClickCapture={highlights.handleContentClick}
-                  className="text-base leading-[1.625] text-[#364153]"
+                  className={BLIND_REVIEW_PASSAGE_TEXT_CLASS}
                 />
               </div>
-              <div
-                ref={questionPaneRef}
-                className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)]"
-              >
+              <div ref={questionPaneRef} className={BLIND_REVIEW_NOTES_QUESTION_PANEL_CLASS}>
                 <SectionQuestionPanel
                   key={current.id}
                   question={current}
@@ -1185,7 +1156,7 @@ function SectionSessionPage() {
               "grid min-h-0 min-w-0 flex-1 grid-cols-1 overflow-hidden",
               cn(
                 useBlindReviewLayout
-                  ? "gap-6 p-6 lg:grid-cols-[minmax(0,584px)_minmax(0,1fr)]"
+                  ? BLIND_REVIEW_BODY_GRID_CLASS
                   : useActiveDrillLayout
                     ? "px-[23px] pt-[23px] lg:grid-cols-[524px_minmax(0,680px)] lg:gap-7"
                     : "lg:grid-cols-2 lg:divide-x divide-[#dfe1e7]",
@@ -1198,7 +1169,7 @@ function SectionSessionPage() {
               className={cn(
                 "practice-session-pane min-h-0",
                 useBlindReviewLayout
-                  ? "rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)]"
+                  ? BLIND_REVIEW_PASSAGE_PANEL_CLASS
                   : useActiveDrillLayout
                     ? "pr-1"
                     : "border-[#dfe1e7] border-b p-5 lg:border-b-0",
@@ -1215,9 +1186,11 @@ function SectionSessionPage() {
                 onMouseUp={highlights.handleContentMouseUp}
                 onClickCapture={highlights.handleContentClick}
                 className={
-                  useActiveDrillLayout || useBlindReviewLayout
-                    ? "text-base leading-[1.5] tracking-[0.02em] text-[#0d0d12]"
-                    : undefined
+                  useBlindReviewLayout
+                    ? BLIND_REVIEW_PASSAGE_TEXT_CLASS
+                    : useActiveDrillLayout
+                      ? "text-base leading-[1.5] tracking-[0.02em] text-[#0d0d12]"
+                      : undefined
                 }
               />
             </div>
@@ -1226,7 +1199,7 @@ function SectionSessionPage() {
               className={cn(
                 "practice-session-pane min-h-0",
                 useBlindReviewLayout
-                  ? "flex flex-col overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)]"
+                  ? BLIND_REVIEW_QUESTION_PANEL_CLASS
                   : useActiveDrillLayout
                     ? "rounded-2xl bg-white"
                     : "gap-4 border-[#dfe1e7] p-5",
@@ -1265,7 +1238,7 @@ function SectionSessionPage() {
         className={cn(
           "practice-session-footer relative z-10",
           useBlindReviewLayout
-            ? "flex min-h-[80px] shrink-0 items-center justify-between gap-2 rounded-b-2xl border-t border-[#dfe1e7] bg-[#f6f8fa] px-6"
+            ? BLIND_REVIEW_FOOTER_CLASS
             : useActiveDrillLayout
               ? ACTIVE_DRILL_FOOTER_CLASS
               : "flex shrink-0 items-center justify-between gap-3 border-t border-[#dfe1e7] bg-background px-6 py-3 md:gap-4 md:px-6",
@@ -1302,16 +1275,42 @@ function SectionSessionPage() {
               />
             </div>
           </div>
+        ) : useBlindReviewLayout ? (
+          <div className={BLIND_REVIEW_FOOTER_ROW_CLASS}>
+            <div className={BLIND_REVIEW_FOOTER_NAV_CLASS}>
+              {questions.map((q, i) => {
+                const n = i + 1
+                return (
+                  <PracticeSessionQuestionNavButton
+                    key={q.id}
+                    number={n}
+                    active={n === safeIndex}
+                    answered={Boolean(answersByQuestion[q.id])}
+                    flagged={questionFlags.isFlagged(q.id)}
+                    variant={sessionVariant}
+                    onClick={() => setQIndex(n)}
+                  />
+                )
+              })}
+            </div>
+            <div className={BLIND_REVIEW_NAV_ARROW_GROUP_CLASS}>
+              <PracticeSessionNavArrowButton
+                direction="prev"
+                disabled={safeIndex <= 1}
+                className={BLIND_REVIEW_NAV_ARROW_BUTTON_CLASS}
+                onClick={() => setQIndex((i) => Math.max(1, i - 1))}
+              />
+              <PracticeSessionNavArrowButton
+                direction="next"
+                disabled={safeIndex >= questions.length}
+                className={BLIND_REVIEW_NAV_ARROW_BUTTON_CLASS}
+                onClick={() => setQIndex((i) => Math.min(questions.length, i + 1))}
+              />
+            </div>
+          </div>
         ) : (
           <>
-        <div
-          className={cn(
-            "practice-session-scroll-hidden min-h-0 min-w-0 flex-1",
-            useBlindReviewLayout
-              ? "practice-session-question-nav-grid"
-              : "flex flex-nowrap items-stretch gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5 pt-2.5 sm:gap-2",
-          )}
-        >
+        <div className="practice-session-scroll-hidden flex min-h-0 min-w-0 flex-1 flex-nowrap items-stretch gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5 pt-2.5 sm:gap-2">
           {questions.map((q, i) => {
             const n = i + 1
             return (
@@ -1327,27 +1326,7 @@ function SectionSessionPage() {
             )
           })}
         </div>
-        <div
-          className={cn(
-            "flex shrink-0 self-center items-center",
-            useBlindReviewLayout ? ACTIVE_DRILL_NAV_ARROW_GROUP_CLASS : "gap-2",
-          )}
-        >
-          {useBlindReviewLayout ? (
-            <>
-              <PracticeSessionNavArrowButton
-                direction="prev"
-                disabled={safeIndex <= 1}
-                onClick={() => setQIndex((i) => Math.max(1, i - 1))}
-              />
-              <PracticeSessionNavArrowButton
-                direction="next"
-                disabled={safeIndex >= questions.length}
-                onClick={() => setQIndex((i) => Math.min(questions.length, i + 1))}
-              />
-            </>
-          ) : (
-            <>
+        <div className="flex shrink-0 items-center gap-2 self-center">
               <button
                 type="button"
                 className="inline-flex size-10 items-center justify-center rounded-full border bg-background transition hover:bg-muted disabled:opacity-40"
@@ -1368,8 +1347,6 @@ function SectionSessionPage() {
               >
                 <ChevronRight className="size-5 text-muted-foreground" strokeWidth={2} />
               </button>
-            </>
-          )}
         </div>
           </>
         )}
@@ -1424,28 +1401,26 @@ function SectionSessionPage() {
       className={cn(
         "flex min-h-0 max-w-none flex-1 flex-col overflow-hidden",
         useBlindReviewLayout
-          ? "bg-[#f5f9ff]"
+          ? "h-full bg-[#f5f9ff]"
           : !useActiveDrillLayout &&
               "bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))] px-0 py-4 md:py-5",
       )}
     >
       {useBlindReviewLayout ? (
-        <>
+        <div className={BLIND_REVIEW_SHELL_CLASS}>
           {error ? (
-            <p className="mx-auto mb-3 w-full max-w-[1280px] shrink-0 px-4 text-sm text-red-600 md:px-6" role="alert">
+            <p className="absolute left-4 right-4 top-0 z-20 text-sm text-red-600 md:left-6 md:right-6" role="alert">
               {error}
             </p>
           ) : null}
           {blindReviewHeader}
           <div
-            className="mx-auto flex min-h-0 w-full flex-1 flex-col px-4 md:px-6"
+            className={BLIND_REVIEW_CARD_CLASS}
             style={{ maxWidth: showNotesPanel ? 1440 : 1280 }}
           >
-            <div className="practice-session-card practice-session-card--blind-review flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-2xl bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
-              {sessionInnerContent}
-            </div>
+            {sessionInnerContent}
           </div>
-        </>
+        </div>
       ) : useActiveDrillLayout ? (
         <PracticeSessionImmersiveFrame>
           {error ? (

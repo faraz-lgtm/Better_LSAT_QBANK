@@ -131,11 +131,9 @@ export function PracticeAnswerPopularityBars({
 }) {
   const max = Math.max(1, ...rows.map((r) => r.pct))
   return (
-    <div className="flex w-[224px] shrink-0 flex-col gap-2">
-      <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
-        Answer Popularity
-      </p>
-      <div className="flex items-end gap-1.5">
+    <div className="flex min-w-0 flex-1 flex-col items-start gap-3">
+      <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Answer Popularity</p>
+      <div className="flex w-full flex-wrap items-end justify-start gap-2">
         {rows.map((row) => {
           const h = Math.round((row.pct / max) * 100)
           const isCorrect = row.letter === correctLetter

@@ -73,7 +73,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
         className={cn(
           "min-w-0 flex-1",
           isActiveDrill || isBlindReview
-            ? "text-lg leading-[1.5] tracking-[0.36px] text-[#0d0d12]"
+            ? "text-base leading-[1.5] tracking-[0.32px] text-[#0d0d12]"
             : "pt-0.5",
           hidden && (isBlindReview ? "line-through" : "line-through opacity-60"),
         )}
