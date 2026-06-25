@@ -497,32 +497,36 @@ function PracticePrepTestPage() {
               </dl>
             </div>
 
-            <p className="text-2xl font-bold leading-[1.3] text-[#062357]">{prepTest.label}</p>
+            {!configLocked ? (
+              <>
+                <p className="text-2xl font-bold leading-[1.3] text-[#062357]">{prepTest.label}</p>
 
-            <div className="flex flex-wrap gap-6">
-              <DrillConfigSelectField
-                className="w-full max-w-[347px]"
-                label="Timing"
-                description="Control your Prep pace"
-                value={timingId}
-                onChange={(v) => {
-                  setTimingId(v)
-                  void persistConfig(v, formatId)
-                }}
-                options={detail.timingOptions.map((o) => ({ value: o.id, label: o.label }))}
-              />
-              <DrillConfigSelectField
-                className="w-full max-w-[347px]"
-                label="Format"
-                description="Select Format"
-                value={formatId}
-                onChange={(v) => {
-                  setFormatId(v)
-                  void persistConfig(timingId, v)
-                }}
-                options={detail.formatOptions.map((o) => ({ value: o.id, label: o.label }))}
-              />
-            </div>
+                <div className="flex flex-wrap gap-6">
+                  <DrillConfigSelectField
+                    className="w-full max-w-[347px]"
+                    label="Timing"
+                    description="Control your Prep pace"
+                    value={timingId}
+                    onChange={(v) => {
+                      setTimingId(v)
+                      void persistConfig(v, formatId)
+                    }}
+                    options={detail.timingOptions.map((o) => ({ value: o.id, label: o.label }))}
+                  />
+                  <DrillConfigSelectField
+                    className="w-full max-w-[347px]"
+                    label="Format"
+                    description="Select Format"
+                    value={formatId}
+                    onChange={(v) => {
+                      setFormatId(v)
+                      void persistConfig(timingId, v)
+                    }}
+                    options={detail.formatOptions.map((o) => ({ value: o.id, label: o.label }))}
+                  />
+                </div>
+              </>
+            ) : null}
           </div>
         </section>
 

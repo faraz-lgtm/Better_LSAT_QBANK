@@ -2,6 +2,12 @@ import type { ReactNode } from "react"
 import { Pencil } from "lucide-react"
 
 import {
+  PT_RESULTS_PAGE_GAP_CLASS,
+  PT_RESULTS_SECTION_BLOCK_CLASS,
+  PT_RESULTS_SECTION_HEADER_CLASS,
+  PT_RESULTS_SURFACE_CARD_CLASS,
+} from "@/features/student/analytics/prep-test-results-section-styles"
+import {
   PracticeDifficultyMeter,
   type PracticeDifficultyLabel,
 } from "@/features/student/practice-session/practice-results-ui"
@@ -9,8 +15,8 @@ import type { PracticeSectionKind } from "@/features/student/practice-session/pr
 import { cn } from "@/lib/utils"
 
 /** Figma results list — 24px gaps between white cards */
-export const PRACTICE_RESULTS_STACK_CLASS = "flex flex-col gap-6"
-export const PRACTICE_RESULTS_CARD_CLASS = "overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white"
+export const PRACTICE_RESULTS_STACK_CLASS = PT_RESULTS_PAGE_GAP_CLASS
+export const PRACTICE_RESULTS_CARD_CLASS = PT_RESULTS_SURFACE_CARD_CLASS
 export const PRACTICE_RESULTS_CARD_PAD_CLASS = "p-6"
 
 const SECTION_BADGE: Record<
@@ -39,7 +45,7 @@ function formatScoreDelta(incorrectCount: number): string {
 
 function PracticeResultsTotalQuestionsBar({ total }: { total: number }) {
   return (
-    <section className={cn(PRACTICE_RESULTS_CARD_CLASS, "px-6 py-4")}>
+    <section className={cn(PT_RESULTS_SURFACE_CARD_CLASS, "px-[24px] py-4")}>
       <p className="text-2xl font-bold leading-[1.3] text-[#062357]">Total Questions: {total}</p>
     </section>
   )
@@ -64,28 +70,28 @@ function PracticeResultsSectionCard({
 }) {
   const badge = SECTION_BADGE[badgeKind]
   return (
-    <section className={cn(PRACTICE_RESULTS_CARD_CLASS, className)}>
-      <div className={cn("border-b border-[#dfe1e7] bg-[#f6f8fa]", PRACTICE_RESULTS_CARD_PAD_CLASS)}>
+    <section className={cn(PT_RESULTS_SECTION_BLOCK_CLASS, className)}>
+      <div className={PT_RESULTS_SECTION_HEADER_CLASS}>
         <div className="flex flex-nowrap items-center justify-between gap-4">
           <div className="flex min-w-0 shrink-0 items-center gap-2.5">
             <div
-              className="flex size-10 shrink-0 items-center justify-center rounded-[16px] border text-xl font-black leading-[1.5] tracking-[0.02em]"
+              className="flex size-10 shrink-0 items-center justify-center rounded-[12px] border text-xl font-black leading-[1.5] tracking-[0.02em]"
               style={{ backgroundColor: badge.bg, color: badge.text, borderColor: badge.border }}
             >
               {badge.short}
             </div>
             <h2 className="whitespace-nowrap text-2xl font-bold leading-[1.3] text-[#062357]">{sectionTitle}</h2>
           </div>
-          <div className="flex shrink-0 items-center gap-6 sm:gap-16">
-            <div className="flex flex-col gap-1 font-bold text-[#062357]">
-              <p className="text-xs font-bold leading-[1.5] tracking-[0.02em]">SCORE</p>
+          <div className="flex w-[258px] shrink-0 items-center justify-between">
+            <div className="flex flex-col gap-[5px] font-bold text-[#062357]">
+              <p className="text-xs font-bold leading-[1.5] tracking-[0.24px]">SCORE</p>
               <p className="text-2xl font-bold leading-[1.3]">{scoreDisplay}</p>
             </div>
             {showBlindReview ? (
               <>
-                <div className="h-8 w-0.5 shrink-0 bg-[#dfe1e7]" aria-hidden />
-                <div className="flex flex-col gap-1 font-bold text-[#062357]">
-                  <p className="text-xs font-bold leading-[1.5] tracking-[0.02em]">BLIND REVIEW</p>
+                <div className="h-[32px] w-[2px] shrink-0 bg-[#dfe1e7]" aria-hidden />
+                <div className="flex flex-col gap-[5px] font-bold text-[#062357]">
+                  <p className="text-xs font-bold leading-[1.5] tracking-[0.24px]">BLIND REVIEW</p>
                   <p className="text-2xl font-bold leading-[1.3]">{blindReviewDisplay ?? "—"}</p>
                 </div>
               </>
@@ -93,7 +99,7 @@ function PracticeResultsSectionCard({
           </div>
         </div>
       </div>
-      {children}
+      <div className="flex flex-col gap-[24px]">{children}</div>
     </section>
   )
 }

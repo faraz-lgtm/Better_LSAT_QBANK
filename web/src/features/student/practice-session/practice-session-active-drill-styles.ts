@@ -2,7 +2,10 @@
 const FINISH_MENU_WIDTH_PX = 126
 
 /** Shared corner radius for timer + finish controls in the practice session header */
-const PRACTICE_SESSION_HEADER_CONTROL_RADIUS_CLASS = "rounded-[20px]"
+const PRACTICE_SESSION_HEADER_CONTROL_RADIUS_CLASS = "rounded-[16px]"
+
+/** Figma timer progress track + fill — 6px height, 6px corner radius */
+const PRACTICE_SESSION_TIMER_PROGRESS_RADIUS_CLASS = "rounded-[6px]"
 
 /** Figma `18617:31643` finish dropdown trigger (active drill, closed) */
 const ACTIVE_DRILL_FINISH_BUTTON_CLASS =
@@ -18,7 +21,7 @@ const FINISH_MENU_OPEN_PANEL_CLASS =
 
 /** Figma `18704:14488` finish row when open — matches closed trigger typography */
 const FINISH_MENU_OPEN_TRIGGER_CLASS =
-  "flex h-[52px] w-full items-center justify-between gap-2 rounded-t-[20px] border border-[#dfe1e7] bg-[#edf3ff] px-3 py-2 text-[14px] font-medium leading-[1.5] tracking-[0.28px] text-[#062357]"
+  "flex h-[52px] w-full items-center justify-between gap-2 rounded-t-[16px] border border-[#dfe1e7] bg-[#edf3ff] px-3 py-2 text-[14px] font-medium leading-[1.5] tracking-[0.28px] text-[#062357]"
 
 /** Figma `18704:14494` submit row */
 const FINISH_MENU_SUBMIT_ITEM_CLASS =
@@ -26,7 +29,7 @@ const FINISH_MENU_SUBMIT_ITEM_CLASS =
 
 /** Figma `18704:14499` exit row */
 const FINISH_MENU_EXIT_ITEM_CLASS =
-  "flex min-h-[52px] w-full flex-col justify-center rounded-b-[20px] border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-2 text-left text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-[#062357] transition-colors hover:bg-[#eceff3]"
+  "flex min-h-[52px] w-full flex-col justify-center rounded-b-[16px] border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-2 text-left text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-[#062357] transition-colors hover:bg-[#eceff3]"
 
 /** Figma `18617:31644` find-text field */
 const ACTIVE_DRILL_FIND_TEXT_INPUT_CLASS =
@@ -71,11 +74,11 @@ const ACTIVE_DRILL_NAV_ARROW_ICON_BUTTON_CLASS =
   "box-border inline-flex size-12 shrink-0 items-center justify-center rounded-[20px] border border-[#dfe1e7] bg-[#f7f8fa] transition hover:bg-white disabled:pointer-events-none"
 
 /** Figma drill footer — 8px gap between prev/next */
-const ACTIVE_DRILL_NAV_ARROW_GROUP_CLASS = "flex h-12 shrink-0 items-center gap-2"
+const ACTIVE_DRILL_NAV_ARROW_GROUP_CLASS = "flex h-12 shrink-0 items-center gap-2 self-center"
 
 /** Figma drill footer — #edf3ff shell, rounded bottom */
 const ACTIVE_DRILL_FOOTER_CLASS =
-  "box-border flex h-[72px] shrink-0 flex-col items-center justify-center rounded-b-[16px] border-t border-[#dfe1e7] bg-[#edf3ff] px-6"
+  "box-border flex min-h-[72px] shrink-0 flex-col items-center justify-center rounded-b-[16px] border-t border-[#dfe1e7] bg-[#edf3ff] px-6 py-3"
 
 const ACTIVE_DRILL_FOOTER_ROW_CLASS =
   "flex min-h-[56px] w-full min-w-0 items-center justify-between gap-4"
@@ -103,5 +106,6 @@ export {
   FINISH_MENU_SUBMIT_ITEM_CLASS,
   FINISH_MENU_WIDTH_PX,
   PRACTICE_SESSION_HEADER_CONTROL_RADIUS_CLASS,
+  PRACTICE_SESSION_TIMER_PROGRESS_RADIUS_CLASS,
   SESSION_FINISH_BUTTON_CLASS,
 }

@@ -956,12 +956,7 @@ function DrillSessionPage() {
       >
         {useActiveDrillLayout ? (
           <div className={ACTIVE_DRILL_FOOTER_ROW_CLASS}>
-            <div
-              className={cn(
-                "practice-session-scroll-hidden min-h-0 min-w-0 flex-1",
-                "practice-session-question-nav-grid",
-              )}
-            >
+            <div className={cn("practice-session-question-nav-grid min-h-[48px] min-w-0 flex-1")}>
               {questions.map((q, i) => {
                 const n = i + 1
                 return (

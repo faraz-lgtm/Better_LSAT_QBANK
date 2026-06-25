@@ -74,6 +74,11 @@ import {
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
 import { PracticeSessionQuestionNavButton } from "@/features/student/practice-session/practice-session-question-nav-button"
 import { PracticeSubmitSectionModal } from "@/features/student/practice-session/practice-submit-section-modal"
+import {
+  buildPrepTestSectionTimeUpSummary,
+  PracticePrepTestSectionTimeUpModal,
+  type PracticePrepTestSectionTimeUpStep,
+} from "@/features/student/practice-session/practice-preptest-section-time-up-modal"
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
 import { usePracticeQuestionFlags } from "@/features/student/practice-session/use-practice-question-flags"
 import { usePracticeQuestionSeen } from "@/features/student/practice-session/use-practice-question-seen"
@@ -95,6 +100,21 @@ import {
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const SECTION_TIMER_SECONDS = 35 * 60
+
+function countSectionIncorrect(
+  questions: DrillQuestion[],
+  answersByQuestion: Record<string, { selectedAnswer: string; isCorrect: boolean }>,
+): number {
+  return questions.reduce((count, question) => {
+    const answer = answersByQuestion[question.id]
+    if (!answer || !answer.isCorrect) return count + 1
+    return count
+  }, 0)
+}
+
+function storePrepTestSectionScorePrediction(sessionId: string, score: number): void {
+  sessionStorage.setItem(`preptest-section-prediction-${sessionId}`, String(score))
+}
 
 function choiceIndexFromAnswer(choices: DrillQuestion["choices"], selectedAnswer: string): number | null {
   const letter = selectedAnswer.trim().toUpperCase()
@@ -308,12 +328,18 @@ function SectionSessionPage() {
     scaledScore?: number | null
     prepTestLabel: string
     prepTestSessionId?: string
-    flow: "preptest" | "standalone"
+    afterSectionId?: string | null
+    flow: "preptest" | "preptest-section" | "standalone"
   } | null>(null)
   const [scoreHidden, setScoreHidden] = useState(true)
   const [postCompleteBlindReview, setPostCompleteBlindReview] = useState(false)
   const [answerViewTab, setAnswerViewTab] = useState<BlindReviewAnswerView>("blind_review")
   const [notesOpen, setNotesOpen] = useState(false)
+  const [timeUpFlow, setTimeUpFlow] = useState<{
+    step: PracticePrepTestSectionTimeUpStep
+    predictedScore: number | null
+  } | null>(null)
+  const timeUpTriggeredRef = useRef(false)
 
   const submitModalTitle = postCompleteBlindReview
     ? "Finish Blind Review"
@@ -524,6 +550,40 @@ function SectionSessionPage() {
     [sectionSession?.metadata?.seenQuestionIds],
   )
   const sessionCompleted = Boolean(sectionSession?.session.completed_at)
+
+  useEffect(() => {
+    if (
+      timeUpTriggeredRef.current ||
+      !prepTestFlowId ||
+      !timedSection ||
+      countdown !== 0 ||
+      sessionCompleted ||
+      blindReviewMode ||
+      sectionIntroActive ||
+      loading
+    ) {
+      return
+    }
+    timeUpTriggeredRef.current = true
+    setTimeUpFlow({ step: "predict", predictedScore: null })
+  }, [
+    blindReviewMode,
+    countdown,
+    loading,
+    prepTestFlowId,
+    sectionIntroActive,
+    sessionCompleted,
+    timedSection,
+  ])
+
+  const sectionTimeUpSummary = useMemo(
+    () =>
+      buildPrepTestSectionTimeUpSummary({
+        incorrectCount: countSectionIncorrect(questions, answersByQuestion),
+      }),
+    [answersByQuestion, questions],
+  )
+
   const questionFlags = usePracticeQuestionFlags({
     sessionId: sessionId ?? "",
     questionIds,
@@ -745,7 +805,7 @@ function SectionSessionPage() {
     navigate("/app/practice/sections", { replace: true })
   }
 
-  async function handleConfirmSubmitSection() {
+  async function handleConfirmSubmitSection(options?: { showWellDoneAfterTimeUp?: boolean }) {
     if (!sessionId) return
     if (postCompleteBlindReview) {
       setSubmitModalOpen(false)
@@ -785,6 +845,25 @@ function SectionSessionPage() {
           sectionSession?.session.section_id,
           sectionSession?.section.id,
         )
+        if (options?.showWellDoneAfterTimeUp) {
+          if (afterSectionId) {
+            writeStoredSectionBreak(prepTestFlowId, afterSectionId)
+          }
+          const questionCount = questions.length > 0 ? questions.length : 1
+          const sectionLabel =
+            sectionSession?.sessionLabel ??
+            sectionSession?.metadata?.sectionTitle ??
+            "the section"
+          setCompleteModal({
+            rawScore: completed.raw_score ?? 0,
+            questionCount,
+            prepTestLabel: sectionLabel,
+            afterSectionId: afterSectionId ?? null,
+            flow: "preptest-section",
+          })
+          setScoreHidden(true)
+          return
+        }
         if (afterSectionId) {
           writeStoredSectionBreak(prepTestFlowId, afterSectionId)
         }
@@ -812,6 +891,34 @@ function SectionSessionPage() {
     } finally {
       setFinishing(false)
     }
+  }
+
+  function handleTimeUpPredictedScoreChange(score: number | null) {
+    setTimeUpFlow((prev) => (prev ? { ...prev, predictedScore: score } : null))
+  }
+
+  function handleTimeUpSkip() {
+    setTimeUpFlow((prev) => (prev ? { ...prev, step: "done" } : null))
+  }
+
+  async function handleTimeUpContinue() {
+    if (!sessionId) return
+    if (timeUpFlow?.predictedScore != null) {
+      storePrepTestSectionScorePrediction(sessionId, timeUpFlow.predictedScore)
+    }
+    setTimeUpFlow(null)
+    await handleConfirmSubmitSection({ showWellDoneAfterTimeUp: true })
+  }
+
+  function continuePrepTestSectionComplete() {
+    const afterSectionId = completeModal?.afterSectionId
+    const testId = prepTestFlowId
+    setCompleteModal(null)
+    if (!testId) return
+    navigate(prepTestHubHref(testId, { retake: isRetakeAttempt }), {
+      replace: true,
+      state: afterSectionId ? { sectionJustCompleted: afterSectionId } : undefined,
+    })
   }
 
   function leavePrepTestComplete() {
@@ -1090,11 +1197,12 @@ function SectionSessionPage() {
   const sessionInnerContent = (
     <>
       <div
-        className={
+        className={cn(
           useBlindReviewLayout
             ? BLIND_REVIEW_BODY_CLASS
-            : "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden"
-        }
+            : "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden",
+          timeUpFlow != null && "practice-session-body--scroll-locked",
+        )}
       >
         {showNotesPanel && useBlindReviewLayout ? (
           <div className={BLIND_REVIEW_NOTES_LAYOUT_CLASS}>
@@ -1246,7 +1354,7 @@ function SectionSessionPage() {
       >
         {useActiveDrillLayout ? (
           <div className={ACTIVE_DRILL_FOOTER_ROW_CLASS}>
-            <div className="practice-session-scroll-hidden practice-session-question-nav-grid min-h-0 min-w-0 flex-1">
+            <div className="practice-session-question-nav-grid min-h-[48px] min-w-0 flex-1">
               {questions.map((q, i) => {
                 const n = i + 1
                 return (
@@ -1428,7 +1536,12 @@ function SectionSessionPage() {
               {error}
             </p>
           ) : null}
-          <div className="practice-session-card practice-session-card--active-drill flex h-full min-h-0 w-full flex-col rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+          <div
+            className={cn(
+              "practice-session-card practice-session-card--active-drill flex h-full min-h-0 w-full flex-col rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+              timeUpFlow != null && "overflow-hidden",
+            )}
+          >
             {sessionCardContent}
           </div>
         </PracticeSessionImmersiveFrame>
@@ -1458,11 +1571,26 @@ function SectionSessionPage() {
         onConfirm={() => void handleConfirmSubmitSection()}
       />
 
+      <PracticePrepTestSectionTimeUpModal
+        open={timeUpFlow != null}
+        step={timeUpFlow?.step ?? "predict"}
+        summary={sectionTimeUpSummary}
+        predictedScore={timeUpFlow?.predictedScore ?? null}
+        continuing={finishing}
+        onPredictedScoreChange={handleTimeUpPredictedScoreChange}
+        onSkip={handleTimeUpSkip}
+        onContinue={() => void handleTimeUpContinue()}
+      />
+
       <PracticeCompleteModal
         open={completeModal != null}
-        titleId={completeModal?.flow === "standalone" ? "section-complete-title" : "preptest-complete-title"}
+        titleId={
+          completeModal?.flow === "standalone" || completeModal?.flow === "preptest-section"
+            ? "section-complete-title"
+            : "preptest-complete-title"
+        }
         subtitle={
-          completeModal?.flow === "standalone"
+          completeModal?.flow === "standalone" || completeModal?.flow === "preptest-section"
             ? "You've completed the section"
             : `You've completed ${completeModal?.prepTestLabel ?? "the PrepTest"}`
         }
@@ -1473,21 +1601,33 @@ function SectionSessionPage() {
         onToggleScoreHidden={() => setScoreHidden((h) => !h)}
         showBlindReview
         onBlindReview={() => {
-          if (completeModal?.flow === "standalone") {
+          if (completeModal?.flow === "standalone" || completeModal?.flow === "preptest-section") {
             startPostCompleteBlindReview()
             return
           }
           void enterPrepTestBlindReview()
         }}
         onSkipDetails={() => {
-          if (completeModal?.flow === "standalone") {
+          if (completeModal?.flow === "standalone" || completeModal?.flow === "preptest-section") {
             void viewSectionResults()
             return
           }
           void viewPrepTestResults()
         }}
-        doneLabel={completeModal?.flow === "standalone" ? "Done" : "Done with PrepTest"}
-        onDone={completeModal?.flow === "standalone" ? leaveSectionComplete : leavePrepTestComplete}
+        doneLabel={
+          completeModal?.flow === "preptest-section"
+            ? "Return to PrepTest"
+            : completeModal?.flow === "standalone"
+              ? "Done"
+              : "Done with PrepTest"
+        }
+        onDone={
+          completeModal?.flow === "preptest-section"
+            ? continuePrepTestSectionComplete
+            : completeModal?.flow === "standalone"
+              ? leaveSectionComplete
+              : leavePrepTestComplete
+        }
       />
     </StudentMain>
   )

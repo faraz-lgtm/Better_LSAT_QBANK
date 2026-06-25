@@ -292,11 +292,11 @@ function PrepCourseLessonPage() {
   }
 
   return (
-    <StudentMain layout="locked" contentClassName="pt-0 pb-[24px]">
+    <StudentMain layout="locked" contentClassName="pt-0 pb-0">
       <div className="prep-course-lesson-shell flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-clip overflow-y-hidden">
         {error ? <p className="mb-4 shrink-0 text-xs text-[#95122b]">{error}</p> : null}
 
-        <section className="prep-course-shell-card practice-session-card flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden">
+        <section className="prep-course-shell-card practice-session-card flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden rounded-[16px] border border-[color:var(--greyscale-100)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
           <div
             className={cn(
               "practice-session-body flex h-0 min-h-0 min-w-0 max-w-full flex-1 overflow-hidden",
