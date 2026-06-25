@@ -1,5 +1,8 @@
 import { formatPracticeElapsed } from "@/features/student/practice-session/use-practice-session-timer"
-import { PRACTICE_SESSION_HEADER_CONTROL_RADIUS_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import {
+  PRACTICE_SESSION_HEADER_CONTROL_RADIUS_CLASS,
+  PRACTICE_SESSION_TIMER_PROGRESS_RADIUS_CLASS,
+} from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { cn } from "@/lib/utils"
 
 type PracticeSessionTimerProps = {
@@ -146,9 +149,17 @@ function PracticeSessionTimer({
           </button>
         </div>
       </div>
-      <div className="h-1 w-full overflow-hidden rounded-full bg-[#e9ecef]">
+      <div
+        className={cn(
+          "h-[6px] w-full overflow-hidden bg-[#dfe1e7]",
+          PRACTICE_SESSION_TIMER_PROGRESS_RADIUS_CLASS,
+        )}
+      >
         <div
-          className="h-full rounded-full bg-[#0d47a1] transition-[width] duration-300 ease-linear"
+          className={cn(
+            "h-full bg-[#0d47a1] transition-[width] duration-300 ease-linear",
+            PRACTICE_SESSION_TIMER_PROGRESS_RADIUS_CLASS,
+          )}
           style={{ width: `${pct}%` }}
         />
       </div>

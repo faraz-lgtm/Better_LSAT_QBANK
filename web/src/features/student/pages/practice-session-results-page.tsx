@@ -4,6 +4,11 @@ import { ChevronRight } from "lucide-react"
 
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 
+import {
+  PT_RESULTS_HERO_CARD_CLASS,
+  PT_RESULTS_PAGE_BG_CLASS,
+  PT_RESULTS_PAGE_GAP_CLASS,
+} from "@/features/student/analytics/prep-test-results-section-styles"
 import { Button } from "@/components/ui/button"
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
 import { buildPracticeResultsSectionGroups } from "@/features/student/practice-session/build-practice-results-section-groups"
@@ -28,6 +33,7 @@ import { createExplanationsApi } from "@/lib/api/explanations"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
+import { cn } from "@/lib/utils"
 
 type LoadedResults = {
   kind: "DRILL" | "SECTION"
@@ -335,100 +341,102 @@ function PracticeSessionResultsPage() {
 
   return (
     <StudentMain
-      className="min-h-full w-full max-w-none bg-[var(--primary-0)]"
-      contentClassName="min-h-full max-w-none"
+      className={cn("min-h-full w-full max-w-none", PT_RESULTS_PAGE_BG_CLASS)}
+      contentClassName={cn("min-h-full max-w-none", PT_RESULTS_PAGE_BG_CLASS)}
     >
-      <div className="mb-6 flex flex-col gap-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="m-0 text-[24px] font-bold leading-[1.3] text-[#062357] md:text-[40px]">{results.title}</h1>
-          <button
-            type="button"
-            className="text-sm font-semibold text-[#0d47a1] hover:underline"
-            onClick={handleBack}
-          >
-            Back
-          </button>
+      <div className={PT_RESULTS_PAGE_GAP_CLASS}>
+        <section className={PT_RESULTS_HERO_CARD_CLASS}>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <h1 className="!m-0 !text-[24px] font-bold leading-[1.3] text-[#062357]">{results.title}</h1>
+            <button
+              type="button"
+              className="text-sm font-semibold text-[#0d47a1] hover:underline"
+              onClick={handleBack}
+            >
+              Back
+            </button>
+          </div>
+
+          <PracticeResultsSummaryPanel
+            rawScore={results.rawScore}
+            questionCount={results.questionCount}
+            elapsedSeconds={results.elapsedSeconds}
+            sections={sectionSummaries}
+            scaledScore={results.scaledScore}
+            percentile={results.percentile}
+            prediction={results.blindReviewRawScore != null ? results.rawScore : null}
+            blindReviewScore={results.blindReviewRawScore}
+          />
+        </section>
+
+        {isPrepCourseDrill ? (
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="default"
+              className="gap-1"
+              disabled={startingAnother}
+              onClick={() => void handleStartAnotherDrill()}
+            >
+              {startingAnother ? "Starting…" : "Start another Drill"}
+              <ChevronRight className="size-4" aria-hidden />
+            </Button>
+          </div>
+        ) : null}
+
+        <div className={PRACTICE_RESULTS_STACK_CLASS}>
+          <PracticeResultsTotalQuestionsBar total={results.questionCount} />
+
+          {sectionGroups.map((section) => (
+            <PracticeResultsSectionCard
+              key={section.id}
+              sectionTitle={section.sectionTitle}
+              badgeKind={section.kind}
+              scoreDisplay={section.scoreDisplay}
+              blindReviewDisplay={section.blindReviewDisplay}
+              showBlindReview={results.blindReviewAnswersByQuestion != null}
+            >
+              {section.passages.map(({ passage, questions }) => (
+                <div key={passage.id}>
+                  <PracticeResultsPassageRow passage={passage} />
+                  {questions.map((q) => (
+                    <PracticeQuestionResultCard
+                      key={q.question.id}
+                      number={q.number}
+                      detail={q.detail}
+                      isCorrect={q.isCorrect}
+                      blindReviewCorrect={q.blindReviewCorrect}
+                      yourTimeSeconds={q.yourTimeSeconds}
+                      flagged={results.flaggedIds.has(q.question.id)}
+                      variant="in-section"
+                    />
+                  ))}
+                </div>
+              ))}
+              {section.questions.map((q) => (
+                <PracticeQuestionResultCard
+                  key={q.question.id}
+                  number={q.number}
+                  detail={q.detail}
+                  isCorrect={q.isCorrect}
+                  blindReviewCorrect={q.blindReviewCorrect}
+                  yourTimeSeconds={q.yourTimeSeconds}
+                  flagged={results.flaggedIds.has(q.question.id)}
+                  variant="in-section"
+                />
+              ))}
+            </PracticeResultsSectionCard>
+          ))}
         </div>
 
-        <PracticeResultsSummaryPanel
-          rawScore={results.rawScore}
-          questionCount={results.questionCount}
-          elapsedSeconds={results.elapsedSeconds}
-          sections={sectionSummaries}
-          scaledScore={results.scaledScore}
-          percentile={results.percentile}
-          prediction={results.blindReviewRawScore != null ? results.rawScore : null}
-          blindReviewScore={results.blindReviewRawScore}
-        />
+        {returnTo.startsWith("/app/prep-course/") ? (
+          <p className="text-center text-sm text-[#666d80]">
+            <Link to={returnTo} className="font-semibold text-[#0d47a1] hover:underline">
+              Return to lesson
+            </Link>
+          </p>
+        ) : null}
       </div>
-
-      {isPrepCourseDrill ? (
-        <div className="mb-6 flex justify-end">
-          <Button
-            type="button"
-            variant="default"
-            className="gap-1"
-            disabled={startingAnother}
-            onClick={() => void handleStartAnotherDrill()}
-          >
-            {startingAnother ? "Starting…" : "Start another Drill"}
-            <ChevronRight className="size-4" aria-hidden />
-          </Button>
-        </div>
-      ) : null}
-
-      <div className={PRACTICE_RESULTS_STACK_CLASS}>
-        <PracticeResultsTotalQuestionsBar total={results.questionCount} />
-
-        {sectionGroups.map((section) => (
-          <PracticeResultsSectionCard
-            key={section.id}
-            sectionTitle={section.sectionTitle}
-            badgeKind={section.kind}
-            scoreDisplay={section.scoreDisplay}
-            blindReviewDisplay={section.blindReviewDisplay}
-            showBlindReview={results.blindReviewAnswersByQuestion != null}
-          >
-            {section.passages.map(({ passage, questions }) => (
-              <div key={passage.id}>
-                <PracticeResultsPassageRow passage={passage} />
-                {questions.map((q) => (
-                  <PracticeQuestionResultCard
-                    key={q.question.id}
-                    number={q.number}
-                    detail={q.detail}
-                    isCorrect={q.isCorrect}
-                    blindReviewCorrect={q.blindReviewCorrect}
-                    yourTimeSeconds={q.yourTimeSeconds}
-                    flagged={results.flaggedIds.has(q.question.id)}
-                    variant="in-section"
-                  />
-                ))}
-              </div>
-            ))}
-            {section.questions.map((q) => (
-              <PracticeQuestionResultCard
-                key={q.question.id}
-                number={q.number}
-                detail={q.detail}
-                isCorrect={q.isCorrect}
-                blindReviewCorrect={q.blindReviewCorrect}
-                yourTimeSeconds={q.yourTimeSeconds}
-                flagged={results.flaggedIds.has(q.question.id)}
-                variant="in-section"
-              />
-            ))}
-          </PracticeResultsSectionCard>
-        ))}
-      </div>
-
-      {returnTo.startsWith("/app/prep-course/") ? (
-        <p className="mt-6 text-center text-sm text-[#666d80]">
-          <Link to={returnTo} className="font-semibold text-[#0d47a1] hover:underline">
-            Return to lesson
-          </Link>
-        </p>
-      ) : null}
     </StudentMain>
   )
 }

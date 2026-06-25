@@ -1732,6 +1732,11 @@ select.ds-input {
   height: 0;
 }
 
+.practice-session-body--scroll-locked,
+.practice-session-body--scroll-locked .practice-session-pane {
+  overflow: hidden !important;
+}
+
 .practice-session-card {
   max-height: calc(100svh - var(--nav-shell-height) - 32px);
   min-height: 0;
@@ -1777,6 +1782,14 @@ html.student-shell-immersive .practice-session-card--active-drill {
   flex: 1 1 0;
   height: 0;
   max-height: calc(100svh - var(--nav-shell-height) - 32px);
+}
+
+.prep-course-lesson-shell .prep-course-shell-card.practice-session-card {
+  max-height: calc(100svh - var(--nav-shell-height));
+}
+
+.prep-course-lesson-footer {
+  isolation: isolate;
 }
 
 .practice-session-body {
@@ -1893,9 +1906,12 @@ html.student-shell-immersive .practice-session-card--active-drill {
 
 .practice-session-card--active-drill .practice-session-footer .practice-session-question-nav-grid {
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
+  align-content: flex-start;
   gap: 8px;
-  height: 48px;
+  min-height: 48px;
+  height: auto;
+  overflow: visible;
 }
 
 .practice-session-card--active-drill .practice-session-question-nav-btn {

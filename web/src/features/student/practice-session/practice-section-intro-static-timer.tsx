@@ -1,3 +1,4 @@
+import { PRACTICE_SESSION_TIMER_PROGRESS_RADIUS_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { formatPracticeElapsed } from "@/features/student/practice-session/use-practice-session-timer"
 import { cn } from "@/lib/utils"
 
@@ -60,8 +61,16 @@ function PracticeSectionIntroStaticTimer({
             </svg>
           </div>
         </div>
-        <div className="h-1.5 w-[179px] max-w-full overflow-hidden rounded-lg bg-[#dfe1e7]">
-          <div className="h-full rounded-lg bg-[#0d47a1]" style={{ width: `${pct}%` }} />
+        <div
+          className={cn(
+            "h-[6px] w-[179px] max-w-full overflow-hidden bg-[#dfe1e7]",
+            PRACTICE_SESSION_TIMER_PROGRESS_RADIUS_CLASS,
+          )}
+        >
+          <div
+            className={cn("h-full bg-[#0d47a1]", PRACTICE_SESSION_TIMER_PROGRESS_RADIUS_CLASS)}
+            style={{ width: `${pct}%` }}
+          />
         </div>
       </div>
     </div>
