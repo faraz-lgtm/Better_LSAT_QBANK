@@ -1,4 +1,4 @@
-export type QuestionResultStatus = "correct" | "incorrect"
+export type QuestionResultStatus = "correct" | "incorrect" | "unanswered"
 
 export type PrepTestSectionKind = "LR" | "RC"
 
@@ -37,6 +37,8 @@ export type PrepTestQuestionResultRow = {
   difficultyDots: number
   actualCorrect: boolean
   blindReviewCorrect: boolean
+  blindReviewUnanswered: boolean
+  isUnanswered: boolean
   /** Heights 0–100 for A–E popularity bars */
   answerPopularity: [number, number, number, number, number]
   correctLetter: "A" | "B" | "C" | "D" | "E"
@@ -75,6 +77,7 @@ export type PrepTestResultsDetail = {
   percentile: number
   prediction: number
   blindReview: number
+  blindReviewCompleted: boolean
   sections: PrepTestSectionSummary[]
   lrSections: PrepTestLrSectionBlock[]
   passages: PrepTestPassageSummary[]

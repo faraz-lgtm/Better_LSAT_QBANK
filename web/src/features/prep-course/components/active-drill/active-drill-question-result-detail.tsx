@@ -43,11 +43,18 @@ function ActiveDrillQuestionResultDetail({
   }, [linked.question_id])
 
   const answer = attempt.answers.find((a) => a.questionId === linked.question_id)
-  const isCorrect = answer?.isCorrect ?? false
+  const isUnanswered = !answer || !answer.selectedAnswer.trim()
+  const isCorrect = isUnanswered ? false : (answer?.isCorrect ?? false)
   const blindReviewAnswer = attempt.blindReview?.answers.find((a) => a.questionId === linked.question_id)
+  const blindReviewUnanswered = attempt.blindReview
+    ? !blindReviewAnswer || !blindReviewAnswer.selectedAnswer.trim()
+    : false
   const blindReviewCorrect = attempt.blindReview
-    ? (blindReviewAnswer?.isCorrect ?? false)
+    ? blindReviewUnanswered
+      ? false
+      : (blindReviewAnswer?.isCorrect ?? false)
     : undefined
+  const showBlindReview = attempt.blindReview != null
   const perQuestionSeconds =
     attempt.questionCount > 0 ? Math.max(1, Math.round(attempt.elapsedSeconds / attempt.questionCount)) : attempt.elapsedSeconds
 
@@ -81,7 +88,11 @@ function ActiveDrillQuestionResultDetail({
       detail={detail ?? fallbackDetail}
       titleOverride={detail ? undefined : formatPtLabel(linked)}
       isCorrect={isCorrect}
+      isUnanswered={isUnanswered}
+      selectedAnswer={answer?.selectedAnswer ?? null}
       blindReviewCorrect={blindReviewCorrect}
+      blindReviewUnanswered={blindReviewUnanswered}
+      showBlindReview={showBlindReview}
       yourTimeSeconds={perQuestionSeconds}
       variant="active-drill"
     />

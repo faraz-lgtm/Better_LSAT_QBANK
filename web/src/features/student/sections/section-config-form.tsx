@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { FileText } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { FigmaIcon } from "@/components/icons/figma-icons"
@@ -41,15 +40,19 @@ type SectionConfigSelectCardProps = {
   options: { label: string; value: string }[]
 }
 
+const sectionConfigCardClassName =
+  "w-full max-w-[502px] shrink-0 gap-3 rounded-[24px] bg-[#f6f8fa] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
+
 function SectionConfigSelectCard({ label, description, value, onChange, options }: SectionConfigSelectCardProps) {
   return (
     <DrillConfigSelectField
-      className="w-full max-w-[502px] shrink-0"
+      className={sectionConfigCardClassName}
       label={label}
       description={description}
       value={value}
       onChange={onChange}
       options={options}
+      menuVariant="surface"
     />
   )
 }
@@ -187,7 +190,7 @@ function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConf
       <div className="flex flex-wrap items-center justify-end gap-6">
         <Link
           to="/app/practice/sections"
-          className="inline-flex h-[52px] items-center justify-center rounded-2xl px-4 text-base font-semibold tracking-[0.32px] text-[#0d47a1] transition-colors hover:underline"
+          className="inline-flex h-[52px] items-center px-4 text-base font-semibold tracking-[0.02em] text-[#0d47a1] transition-colors hover:underline"
         >
           Back
         </Link>
@@ -195,10 +198,10 @@ function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConf
           type="button"
           variant="default"
           disabled={starting || loadingPool || !sectionId || poolTotal === 0}
-          className="h-[52px] gap-2 rounded-2xl border border-[#0b4e6e] bg-[#0d47a1] px-4 text-base font-semibold tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] hover:bg-[#0d47a1]/90"
+          className="ds-btn gap-2 text-base"
           onClick={() => void handleStart()}
         >
-          <FileText className="size-5 shrink-0 text-white" aria-hidden />
+          <FigmaIcon name="notification-text-square" className="size-5 shrink-0 text-white" aria-hidden />
           {starting ? "Starting…" : "Start Section"}
         </Button>
       </div>

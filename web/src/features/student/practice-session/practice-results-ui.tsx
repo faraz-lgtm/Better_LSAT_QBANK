@@ -1,4 +1,5 @@
-import { Check } from "lucide-react"
+import { Check, Minus, X } from "lucide-react"
+import type { ReactNode } from "react"
 
 import type { ExplanationAnswerPopularityRow, ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
 import { cn } from "@/lib/utils"
@@ -122,53 +123,190 @@ function CorrectAnswerPopularityBadge() {
   )
 }
 
+const PRACTICE_RESULT_STATS_LABEL_CLASS =
+  "m-0 text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]"
+
+const PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS =
+  "w-20 shrink-0 text-xs font-normal leading-normal tracking-[0.02em] text-[#666d80]"
+
+function WrongAnswerPopularityBadge() {
+  return (
+    <span
+      className="flex size-3 shrink-0 items-center justify-center rounded-full bg-[#ef4444]"
+      aria-hidden
+    >
+      <X className="size-2 text-white" strokeWidth={3} />
+    </span>
+  )
+}
+
+function UnansweredAnswerPopularityBadge() {
+  return (
+    <span
+      className="flex size-3 shrink-0 items-center justify-center rounded-full bg-[#ff6683]"
+      aria-hidden
+    >
+      <Minus className="size-2 text-white" strokeWidth={3} />
+    </span>
+  )
+}
+
+type PracticeQuestionResultStatsRowProps = {
+  targetTime: string
+  yourTime: string
+  yourTimeNote: string
+  difficulty: PracticeDifficultyLabel
+  popularityRows: ExplanationAnswerPopularityRow[]
+  correctLetter: string
+  selectedLetter?: string | null
+  isUnanswered?: boolean
+  resultContent?: ReactNode
+  className?: string
+}
+
+function PracticeQuestionResultStatsRow({
+  targetTime,
+  yourTime,
+  yourTimeNote,
+  difficulty,
+  popularityRows,
+  correctLetter,
+  selectedLetter = null,
+  isUnanswered = false,
+  resultContent,
+  className,
+}: PracticeQuestionResultStatsRowProps) {
+  return (
+    <div className={cn("w-full overflow-x-auto", className)}>
+      <div className="flex min-w-[1100px] items-center gap-12">
+        <div className="flex h-[113px] w-[257px] shrink-0 flex-col gap-3">
+        <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Timing</p>
+        <div className="flex gap-1">
+          <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>Target time:</span>
+          <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]">
+            {targetTime}
+          </span>
+        </div>
+        <div className="flex gap-1">
+          <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>Your time:</span>
+          <span className="whitespace-nowrap text-sm font-semibold leading-normal tracking-[0.02em] text-[#0d47a1]">
+            {yourTime}
+          </span>
+          {yourTimeNote ? (
+            <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]">
+              {yourTimeNote}
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="flex h-[113px] w-[257px] shrink-0 flex-col gap-3">
+        <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Difficulty</p>
+        <PracticeDifficultyMeter difficulty={difficulty} />
+      </div>
+
+      <div className="min-w-0 w-[538px] shrink-0">
+        <div className="flex flex-col gap-3">
+          {resultContent ? (
+            <div className="flex flex-col gap-3">
+              <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Result</p>
+              {resultContent}
+            </div>
+          ) : null}
+          <PracticeAnswerPopularityBars
+            rows={popularityRows}
+            correctLetter={correctLetter}
+            selectedLetter={selectedLetter}
+            isUnanswered={isUnanswered}
+          />
+        </div>
+      </div>
+      </div>
+    </div>
+  )
+}
+
 export function PracticeAnswerPopularityBars({
   rows,
   correctLetter,
+  selectedLetter = null,
+  isUnanswered = false,
+  className,
 }: {
   rows: ExplanationAnswerPopularityRow[]
   correctLetter: string
+  selectedLetter?: string | null
+  isUnanswered?: boolean
+  className?: string
 }) {
   const max = Math.max(1, ...rows.map((r) => r.pct))
+  const normalizedSelected = selectedLetter?.trim().toUpperCase() ?? null
   return (
-    <div className="flex min-w-0 flex-1 flex-col items-start gap-3">
-      <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Answer Popularity</p>
-      <div className="flex w-full flex-wrap items-end justify-start gap-1.5">
+    <div className={cn("flex min-w-0 flex-col gap-3", className)}>
+      <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Answer Popularity</p>
+      <div className="flex w-full items-end gap-2">
         {rows.map((row) => {
           const h = Math.round((row.pct / max) * 100)
           const isCorrect = row.letter === correctLetter
+          const isUserWrong =
+            !isUnanswered &&
+            normalizedSelected === row.letter &&
+            !isCorrect
+          const isUserMiss = isUnanswered && normalizedSelected === row.letter
+          const hasOutcomeBadge = isCorrect || isUserWrong || isUserMiss
           const fillHeight = isCorrect
             ? row.pct > 0
               ? `${Math.max(8, h)}%`
               : "10%"
-            : row.pct > 0
-              ? `${Math.max(8, h)}%`
-              : "0%"
+            : isUserWrong
+              ? `${Math.max(8, h > 0 ? h : 8)}%`
+              : row.pct > 0
+                ? `${Math.max(4, h)}%`
+                : "0%"
           return (
-            <div key={row.letter} className="flex w-10 shrink-0 flex-col items-center gap-1">
-              <div className="flex h-[72px] w-10 shrink-0 flex-col justify-end overflow-hidden rounded-t-[10px] bg-[#f3f4f6]">
-                <div
-                  className={cn(
-                    "w-full shrink-0",
-                    isCorrect ? "rounded-t-[10px] bg-[#00d492]" : "rounded-t-[10px] bg-[#dfe1e7]",
-                  )}
-                  style={{ height: fillHeight }}
-                />
+            <div
+              key={row.letter}
+              className={cn(
+                "flex min-w-0 flex-1 flex-col items-center gap-1",
+                hasOutcomeBadge ? "h-20" : "h-[68px]",
+              )}
+            >
+              <div className="flex min-h-0 w-full flex-1 flex-col justify-end overflow-hidden rounded-t-[10px] bg-[#f3f4f6]">
+                {isUserWrong ? (
+                  <div
+                    className="w-full shrink-0 rounded-t-[10px] bg-[#ef4444]"
+                    style={{ height: fillHeight }}
+                  />
+                ) : (
+                  <div
+                    className={cn(
+                      "w-full shrink-0 rounded-t-[10px]",
+                      isCorrect ? "bg-[#00d492]" : "bg-[#dfe1e7]",
+                    )}
+                    style={{ height: fillHeight }}
+                  />
+                )}
               </div>
-              <div className="flex flex-col items-center gap-0.5">
+              <div className={cn("flex flex-col items-center", hasOutcomeBadge ? "h-7" : "h-4")}>
                 <span
                   className={cn(
                     "text-xs leading-4",
-                    isCorrect ? "font-bold text-[#00d492]" : "font-normal text-[#666d80]",
+                    isCorrect
+                      ? "font-bold text-[#00d492]"
+                      : isUserWrong
+                        ? "font-normal text-[#6a7282]"
+                        : "font-normal text-[#666d80]",
                   )}
                 >
                   {row.letter}
                 </span>
                 {isCorrect ? (
                   <CorrectAnswerPopularityBadge />
-                ) : (
-                  <span className="size-3 shrink-0" aria-hidden />
-                )}
+                ) : isUserWrong ? (
+                  <WrongAnswerPopularityBadge />
+                ) : isUserMiss ? (
+                  <UnansweredAnswerPopularityBadge />
+                ) : null}
               </div>
             </div>
           )
@@ -177,3 +315,5 @@ export function PracticeAnswerPopularityBars({
     </div>
   )
 }
+
+export { PracticeQuestionResultStatsRow }

@@ -1104,8 +1104,8 @@ function SectionSessionPage() {
       blindReview: blindReviewMode || postCompleteBlindReview,
     })
 
-  const useActiveDrillLayout = Boolean(prepTestFlowId) && !blindReviewMode && !postCompleteBlindReview
   const useBlindReviewLayout = blindReviewMode || postCompleteBlindReview
+  const useActiveDrillLayout = !useBlindReviewLayout
   const sessionVariant: PracticeSessionVariant = useBlindReviewLayout
     ? "blind-review"
     : useActiveDrillLayout
@@ -1297,7 +1297,7 @@ function SectionSessionPage() {
                   useBlindReviewLayout
                     ? BLIND_REVIEW_PASSAGE_TEXT_CLASS
                     : useActiveDrillLayout
-                      ? "text-base leading-[1.5] tracking-[0.02em] text-[#0d0d12]"
+                      ? "text-lg leading-[1.5] text-[#0d0d12]"
                       : undefined
                 }
               />

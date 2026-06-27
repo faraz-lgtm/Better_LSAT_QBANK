@@ -21,6 +21,7 @@ import {
   PT_RESULTS_PASSAGE_HEADER_CLASS,
   PT_RESULTS_QUESTION_BADGE_CORRECT_CLASS,
   PT_RESULTS_QUESTION_BADGE_INCORRECT_CLASS,
+  PT_RESULTS_QUESTION_BADGE_UNANSWERED_CLASS,
   PT_RESULTS_QUESTION_ROW_BORDER_CLASS,
   PT_RESULTS_QUESTION_ROW_PAD_CLASS,
   PT_RESULTS_SUMMARY_ROW_CLASS,
@@ -34,8 +35,8 @@ import { StudentMain } from "@/features/student/components/student-main"
 import { PracticeResultOutcomeIcon } from "@/features/student/practice-session/practice-result-outcome-icon"
 import { PrepTestSectionResultCard } from "@/features/student/practice-session/prep-test-section-result-card"
 import {
-  PracticeAnswerPopularityBars,
   PracticeDifficultyMeter,
+  PracticeQuestionResultStatsRow,
 } from "@/features/student/practice-session/practice-results-ui"
 import {
   type PrepTestAboutMeta,
@@ -55,7 +56,6 @@ const QUESTION_FILTER_OPTIONS = ["Question", "Passage", "Incorrect only"] as con
 
 /** Figma results list — 24px gaps between white cards */
 const RESULTS_STACK_CLASS = "flex flex-col gap-6"
-const RESULTS_CARD_CLASS = "overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white"
 
 const SECTION_BADGE: Record<
   PrepTestSectionKind,
@@ -85,11 +85,15 @@ function ResultsSummaryPanel({ detail }: { detail: PrepTestResultsDetail }) {
               <p className="text-xs font-bold leading-[1.5] tracking-[0.24px]">YOUR PREDICTION</p>
               <p className="text-2xl font-bold leading-[1.3]">{detail.prediction}</p>
             </div>
-            <div className="h-[32px] w-[2px] shrink-0 bg-[#dfe1e7]" aria-hidden />
-            <div className="flex flex-col gap-[5px] font-bold text-[#df1c41]">
-              <p className="text-xs font-bold leading-[1.5] tracking-[0.24px]">BLIND REVIEW</p>
-              <p className="text-2xl font-bold leading-[1.3]">{detail.blindReview}</p>
-            </div>
+            {detail.blindReviewCompleted ? (
+              <>
+                <div className="h-[32px] w-[2px] shrink-0 bg-[#dfe1e7]" aria-hidden />
+                <div className="flex flex-col gap-[5px] font-bold text-[#df1c41]">
+                  <p className="text-xs font-bold leading-[1.5] tracking-[0.24px]">BLIND REVIEW</p>
+                  <p className="text-2xl font-bold leading-[1.3]">{detail.blindReview}</p>
+                </div>
+              </>
+            ) : null}
           </div>
         </div>
       </div>
@@ -239,10 +243,12 @@ function QuestionResultActionButtons() {
 
 function QuestionResultRow({
   row,
+  showBlindReview = false,
   className,
   bordered = true,
 }: {
   row: PrepTestQuestionResultRow
+  showBlindReview?: boolean
   className?: string
   bordered?: boolean
 }) {
@@ -251,15 +257,16 @@ function QuestionResultRow({
     count: row.answerPopularity[i],
     pct: row.answerPopularity[i],
   }))
+  const badgeClass = row.isUnanswered
+    ? PT_RESULTS_QUESTION_BADGE_UNANSWERED_CLASS
+    : row.actualCorrect
+      ? PT_RESULTS_QUESTION_BADGE_CORRECT_CLASS
+      : PT_RESULTS_QUESTION_BADGE_INCORRECT_CLASS
 
   return (
     <div className={cn(PT_RESULTS_QUESTION_ROW_PAD_CLASS, bordered && PT_RESULTS_QUESTION_ROW_BORDER_CLASS, className)}>
       <div className="flex items-start gap-5">
-        <div
-          className={
-            row.actualCorrect ? PT_RESULTS_QUESTION_BADGE_CORRECT_CLASS : PT_RESULTS_QUESTION_BADGE_INCORRECT_CLASS
-          }
-        >
+        <div className={badgeClass}>
           <span className="text-2xl font-bold leading-[1.3] text-white">{row.number}</span>
         </div>
 
@@ -280,17 +287,29 @@ function QuestionResultRow({
               <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Result</p>
               <div className="flex flex-nowrap items-center gap-5">
                 <div className="flex shrink-0 items-center gap-2.5">
-                  <PracticeResultOutcomeIcon correct={row.actualCorrect} variant="stroke" className="size-6" />
+                  <PracticeResultOutcomeIcon
+                    correct={row.actualCorrect}
+                    unanswered={row.isUnanswered}
+                    variant="stroke"
+                    className="size-6"
+                  />
                   <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
                     Actual
                   </span>
                 </div>
-                <div className="flex shrink-0 items-center gap-2.5">
-                  <PracticeResultOutcomeIcon correct={row.blindReviewCorrect} variant="stroke" className="size-6" />
-                  <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
-                    Blind Review
-                  </span>
-                </div>
+                {showBlindReview ? (
+                  <div className="flex shrink-0 items-center gap-2.5">
+                    <PracticeResultOutcomeIcon
+                      correct={row.blindReviewCorrect}
+                      unanswered={row.blindReviewUnanswered}
+                      variant="stroke"
+                      className="size-6"
+                    />
+                    <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
+                      Blind Review
+                    </span>
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -299,39 +318,15 @@ function QuestionResultRow({
             </div>
           </div>
 
-          <div className="flex w-full items-start">
-            <div className="flex w-[305px] shrink-0 flex-col items-start gap-3">
-              <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Timing</p>
-              <div className="flex gap-1">
-                <span className="w-20 text-xs font-normal leading-[1.5] tracking-[0.02em] text-[#666d80]">
-                  Target time:
-                </span>
-                <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
-                  {row.targetTime}
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                <span className="w-20 text-xs font-normal leading-[1.5] tracking-[0.02em] text-[#666d80]">
-                  Your time:
-                </span>
-                <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#0d47a1]">
-                  {row.yourTime}
-                </span>
-                <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
-                  {row.yourTimeNote}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex w-[257px] shrink-0 flex-col items-start gap-3">
-              <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Difficulty</p>
-              <PracticeDifficultyMeter difficulty={row.difficulty} />
-            </div>
-
-            <div className="flex min-w-0 flex-1 flex-col items-start gap-3">
-              <PracticeAnswerPopularityBars rows={popularityRows} correctLetter={row.correctLetter} />
-            </div>
-          </div>
+          <PracticeQuestionResultStatsRow
+            targetTime={row.targetTime}
+            yourTime={row.yourTime}
+            yourTimeNote={row.yourTimeNote}
+            difficulty={row.difficulty}
+            popularityRows={popularityRows}
+            correctLetter={row.correctLetter}
+            isUnanswered={row.isUnanswered}
+          />
         </div>
       </div>
     </div>
@@ -341,9 +336,11 @@ function QuestionResultRow({
 function PassageQuestionGroupCard({
   passage,
   questions,
+  showBlindReview = false,
 }: {
   passage: PrepTestPassageSummary | null
   questions: PrepTestQuestionResultRow[]
+  showBlindReview?: boolean
 }) {
   if (questions.length === 0) return null
 
@@ -351,7 +348,12 @@ function PassageQuestionGroupCard({
     <article className={PT_RESULTS_CARD_CLASS}>
       {passage ? <PassageSummaryHeader passage={passage} /> : null}
       {questions.map((q, index) => (
-        <QuestionResultRow key={q.id} row={q} bordered={passage != null || index > 0} />
+        <QuestionResultRow
+          key={q.id}
+          row={q}
+          showBlindReview={showBlindReview}
+          bordered={passage != null || index > 0}
+        />
       ))}
     </article>
   )
@@ -362,6 +364,7 @@ function SectionBlock({
   badgeKind,
   score,
   blind,
+  showBlindReview = false,
   children,
   className,
 }: {
@@ -369,6 +372,7 @@ function SectionBlock({
   badgeKind: PrepTestSectionKind
   score: string
   blind: string
+  showBlindReview?: boolean
   children: ReactNode
   className?: string
 }) {
@@ -391,11 +395,15 @@ function SectionBlock({
               <p className="text-xs font-bold leading-[1.5] tracking-[0.24px]">SCORE</p>
               <p className="text-2xl font-bold leading-[1.3]">{score}</p>
             </div>
-            <div className="h-[32px] w-[2px] shrink-0 bg-[#dfe1e7]" aria-hidden />
-            <div className="flex flex-col gap-[5px] font-bold text-[#062357]">
-              <p className="text-xs font-bold leading-[1.5] tracking-[0.24px]">BLIND REVIEW</p>
-              <p className="text-2xl font-bold leading-[1.3]">{blind}</p>
-            </div>
+            {showBlindReview ? (
+              <>
+                <div className="h-[32px] w-[2px] shrink-0 bg-[#dfe1e7]" aria-hidden />
+                <div className="flex flex-col gap-[5px] font-bold text-[#062357]">
+                  <p className="text-xs font-bold leading-[1.5] tracking-[0.24px]">BLIND REVIEW</p>
+                  <p className="text-2xl font-bold leading-[1.3]">{blind}</p>
+                </div>
+              </>
+            ) : null}
           </div>
         </div>
       </div>
@@ -409,10 +417,12 @@ function RcSectionPanel({
   block,
   passages,
   questionFilter,
+  showBlindReview = false,
 }: {
   block: PrepTestRcSectionBlock
   passages: PrepTestPassageSummary[]
   questionFilter: (typeof QUESTION_FILTER_OPTIONS)[number]
+  showBlindReview?: boolean
 }) {
   const questions =
     questionFilter === "Incorrect only" ? block.questions.filter((q) => !q.actualCorrect) : block.questions
@@ -425,12 +435,14 @@ function RcSectionPanel({
       badgeKind="RC"
       score={block.scoreDisplay}
       blind={block.blindReviewDisplay}
+      showBlindReview={showBlindReview}
     >
       {groups.map((group) => (
         <PassageQuestionGroupCard
           key={group.passage?.id ?? "rc-questions"}
           passage={group.passage}
           questions={group.questions}
+          showBlindReview={showBlindReview}
         />
       ))}
     </SectionBlock>
@@ -636,12 +648,14 @@ function AnalyticsPrepTestResultsPage() {
               badgeKind="LR"
               score={lrSection.scoreDisplay}
               blind={lrSection.blindReviewDisplay}
+              showBlindReview={detail.blindReviewCompleted}
             >
               {groups.map((group) => (
                 <PassageQuestionGroupCard
                   key={group.passage?.id ?? `${lrSection.sectionTitle}-questions`}
                   passage={group.passage}
                   questions={group.questions}
+                  showBlindReview={detail.blindReviewCompleted}
                 />
               ))}
             </SectionBlock>
@@ -653,6 +667,7 @@ function AnalyticsPrepTestResultsPage() {
             block={detail.rcSection}
             passages={detail.passages}
             questionFilter={questionFilter}
+            showBlindReview={detail.blindReviewCompleted}
           />
         ) : null}
 
@@ -661,6 +676,7 @@ function AnalyticsPrepTestResultsPage() {
           excludeFromAnalytics={excludeFromAnalytics}
           onExcludeFromAnalyticsChange={handleExcludeFromInsightsChange}
         />
+      </div>
       </div>
     </StudentMain>
   )

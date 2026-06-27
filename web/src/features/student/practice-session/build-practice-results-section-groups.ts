@@ -9,13 +9,17 @@ import {
   resolveQuestionResultTags,
   type PracticeDifficultyLabel,
 } from "@/features/student/practice-session/practice-results-ui"
+import { isPracticeAnswerUnanswered } from "@/features/student/practice-session/practice-result-outcome-icon"
 
 export type PracticeQuestionResultMeta = {
   question: DrillQuestion
   number: number
   detail: ExplanationDetailPayload | null
   isCorrect: boolean
+  isUnanswered: boolean
+  selectedAnswer: string | null
   blindReviewCorrect?: boolean
+  blindReviewUnanswered?: boolean
   yourTimeSeconds: number
 }
 
@@ -85,8 +89,8 @@ function buildPassageSummary(
 
 export function buildPracticeResultsSectionGroups(input: {
   questions: DrillQuestion[]
-  answersByQuestion: Map<string, { isCorrect: boolean }>
-  blindReviewAnswersByQuestion: Map<string, { isCorrect: boolean }> | null
+  answersByQuestion: Map<string, { selectedAnswer: string; isCorrect: boolean }>
+  blindReviewAnswersByQuestion: Map<string, { selectedAnswer: string; isCorrect: boolean }> | null
   detailsByQuestion: Record<string, ExplanationDetailPayload>
   defaultKind: PracticeSectionKind
   fallbackSectionNumber: number | null
@@ -108,13 +112,26 @@ export function buildPracticeResultsSectionGroups(input: {
       detail?.sectionType === "RC" ? "RC" : detail?.sectionType === "LR" ? "LR" : input.defaultKind
     const sectionNumber = detail?.sectionNumber ?? input.fallbackSectionNumber ?? null
     const key = `${kind}-${sectionNumber ?? "drill"}`
+    const answer = input.answersByQuestion.get(question.id)
+    const isUnanswered = isPracticeAnswerUnanswered(answer)
+    const blindReviewAnswer = hasBlindReview
+      ? input.blindReviewAnswersByQuestion?.get(question.id)
+      : undefined
+    const blindReviewUnanswered = hasBlindReview
+      ? isPracticeAnswerUnanswered(blindReviewAnswer)
+      : false
     const meta: PracticeQuestionResultMeta = {
       question,
       number: 0,
       detail,
-      isCorrect: input.answersByQuestion.get(question.id)?.isCorrect ?? false,
+      isUnanswered,
+      isCorrect: isUnanswered ? false : (answer?.isCorrect ?? false),
+      selectedAnswer: answer?.selectedAnswer?.trim() ? answer.selectedAnswer : null,
+      blindReviewUnanswered: hasBlindReview ? blindReviewUnanswered : undefined,
       blindReviewCorrect: hasBlindReview
-        ? (input.blindReviewAnswersByQuestion?.get(question.id)?.isCorrect ?? false)
+        ? blindReviewUnanswered
+          ? false
+          : (blindReviewAnswer?.isCorrect ?? false)
         : undefined,
       yourTimeSeconds: input.perQuestionSeconds,
     }
@@ -128,10 +145,12 @@ export function buildPracticeResultsSectionGroups(input: {
 
   return [...grouped.entries()].map(([key, group]) => {
     const numberedMetas = group.metas.map((meta, index) => ({ ...meta, number: index + 1 }))
-    const incorrect = numberedMetas.filter((q) => !q.isCorrect).length
+    const incorrect = numberedMetas.filter((q) => !q.isCorrect && !q.isUnanswered).length
+    const unanswered = numberedMetas.filter((q) => q.isUnanswered).length
     const blindIncorrect = hasBlindReview
-      ? numberedMetas.filter((q) => !q.blindReviewCorrect).length
+      ? numberedMetas.filter((q) => q.blindReviewUnanswered || !q.blindReviewCorrect).length
       : 0
+    const scoreDelta = formatScoreDelta(incorrect + unanswered)
     const sectionTitle =
       group.sectionNumber != null ? `Section ${group.sectionNumber}` : group.kind === "LR" ? "Logical Reasoning" : "Reading Comprehension"
 
@@ -153,7 +172,7 @@ export function buildPracticeResultsSectionGroups(input: {
         id: key,
         kind: group.kind,
         sectionTitle,
-        scoreDisplay: formatScoreDelta(incorrect),
+        scoreDisplay: scoreDelta,
         blindReviewDisplay: formatScoreDelta(blindIncorrect),
         passages,
         questions: [],
@@ -164,7 +183,7 @@ export function buildPracticeResultsSectionGroups(input: {
       id: key,
       kind: group.kind,
       sectionTitle,
-      scoreDisplay: formatScoreDelta(incorrect),
+      scoreDisplay: scoreDelta,
       blindReviewDisplay: formatScoreDelta(blindIncorrect),
       passages: [],
       questions: numberedMetas,
