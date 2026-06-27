@@ -199,29 +199,11 @@ export function sumCompletedSessionStudyMinutes(sessions: PracticeSessionSummary
 }
 
 export function formatStudyTime(totalMinutes: number): string {
-  if (totalMinutes <= 0) return "0 min"
-  if (totalMinutes < 60) return `${totalMinutes} min`
-  const hours = Math.floor(totalMinutes / 60)
-  const mins = totalMinutes % 60
+  const minutes = Number.isFinite(totalMinutes) ? Math.max(0, Math.floor(totalMinutes)) : 0
+  if (minutes <= 0) return "0 min"
+  if (minutes < 60) return `${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
   if (mins === 0) return hours === 1 ? "1 hr" : `${hours} hrs`
   return `${hours}h ${mins}m`
-}
-
-export async function fetchAllSessionsForStudyHours(
-  getSessions: (input: { limit: number; offset: number }) => Promise<{
-    sessions: PracticeSessionSummary[]
-    total: number
-  }>,
-  pageSize = 100,
-  maxSessions = 500,
-): Promise<PracticeSessionSummary[]> {
-  const all: PracticeSessionSummary[] = []
-  let offset = 0
-  while (all.length < maxSessions) {
-    const page = await getSessions({ limit: pageSize, offset })
-    all.push(...page.sessions)
-    if (page.sessions.length < pageSize || all.length >= page.total) break
-    offset += pageSize
-  }
-  return all.slice(0, maxSessions)
 }

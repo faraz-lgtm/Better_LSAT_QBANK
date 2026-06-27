@@ -525,13 +525,16 @@ function AnalyticsDrillsPage() {
     [navigate, prepHistory],
   )
 
+  if (loading) {
+    return (
+      <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
+        <StudentPageLoader centered className="min-h-0 flex-1" label="Loading drill analytics…" />
+      </StudentMain>
+    )
+  }
+
   return (
     <StudentMain>
-        {loading ? (
-          <div className="mb-4">
-            <StudentPageLoader label="Loading drill analytics…" />
-          </div>
-        ) : null}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           {activeType ? (
             <div>

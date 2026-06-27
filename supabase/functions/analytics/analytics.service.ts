@@ -215,13 +215,21 @@ function headlineFromQuestionMeta(row: QuestionExplanationMetaRow): {
 export function createAnalyticsService(deps: { repository: AnalyticsRepository }) {
   return {
     async getOverview(userId: string) {
-      const [totalQuestionsAnswered, drillStats, completedPreptests, allSectionSessions] =
-        await Promise.all([
-          deps.repository.countAnswerEvents(userId),
-          deps.repository.countDrillAnswerEvents(userId),
-          deps.repository.listCompletedPreptests(userId),
-          deps.repository.listCompletedSectionSessions(userId),
-        ])
+      const [
+        totalQuestionsAnswered,
+        drillStats,
+        completedPreptests,
+        allSectionSessions,
+        practiceStudyMinutes,
+        lessonStudyMinutes,
+      ] = await Promise.all([
+        deps.repository.countAnswerEvents(userId),
+        deps.repository.countDrillAnswerEvents(userId),
+        deps.repository.listCompletedPreptests(userId),
+        deps.repository.listCompletedSectionSessions(userId),
+        deps.repository.sumCompletedSessionStudyMinutes(userId),
+        deps.repository.sumCompletedLessonStudyMinutes(userId),
+      ])
 
       const resolvedScores: { scaled: number; percentile: number | null }[] = []
       for (const row of completedPreptests) {
@@ -377,6 +385,7 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
         totalDrillQuestionsAnswered: drillStats.total,
         averageLrMissedPerPrepTest,
         averageRcMissedPerPrepTest,
+        totalStudyMinutes: (practiceStudyMinutes ?? 0) + (lessonStudyMinutes ?? 0),
       }
     },
 

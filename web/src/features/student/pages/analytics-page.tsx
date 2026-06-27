@@ -62,7 +62,7 @@ function PrioritiesTab() {
   }, [analyticsApi])
 
   if (loading) {
-    return <StudentPageLoader label="Loading priorities…" />
+    return <StudentPageLoader centered className="min-h-0 flex-1" label="Loading priorities…" />
   }
   if (error) return <p className="text-sm text-red-600">{error}</p>
   if (rows.length === 0) {
@@ -147,7 +147,7 @@ function HistoryTab() {
 
   if (!analyticsApi) return <p className="text-sm text-red-600">Supabase env is missing.</p>
   if (loading) {
-    return <StudentPageLoader label="Loading practice history…" />
+    return <StudentPageLoader centered className="min-h-0 flex-1" label="Loading practice history…" />
   }
   if (error) return <p className="text-sm text-red-600">{error}</p>
   if (sessions.length === 0) {
@@ -234,7 +234,7 @@ function OverviewTab() {
   )
 
   if (loading) {
-    return <StudentPageLoader label="Loading overview…" />
+    return <StudentPageLoader centered className="min-h-0 flex-1" label="Loading overview…" />
   }
   if (error) return <p className="text-sm text-red-600">{error}</p>
 
@@ -303,7 +303,7 @@ function AnalyticsPage() {
   const tab = tabFromSearch(params.get("tab"))
 
   return (
-    <StudentMain>
+    <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
       {tab === "overview" ? <OverviewTab /> : null}
       {tab === "priorities" ? <PrioritiesTab /> : null}
       {tab === "history" ? <HistoryTab /> : null}

@@ -13,6 +13,7 @@ export type AnalyticsOverview = {
   totalDrillQuestionsAnswered: number
   averageLrMissedPerPrepTest: number | null
   averageRcMissedPerPrepTest: number | null
+  totalStudyMinutes: number
 }
 
 export type TrajectoryPoint = {
@@ -129,10 +130,19 @@ export function createAnalyticsApi(supabase: SupabaseClient) {
 
   return {
     async getOverview(): Promise<AnalyticsOverview> {
-      const { data, error } = await invokeAnalyticsFn<AnalyticsOverview>("analytics-overview", {})
+      const { data, error } = await invokeAnalyticsFn<
+        Omit<AnalyticsOverview, "totalStudyMinutes"> & { totalStudyMinutes?: unknown }
+      >("analytics-overview", {})
       if (error) throw error
       if (!data) throw new Error("No overview returned from analytics")
-      return data
+      const raw = data.totalStudyMinutes
+      const totalStudyMinutes =
+        typeof raw === "number" && Number.isFinite(raw)
+          ? Math.max(0, Math.floor(raw))
+          : typeof raw === "string" && raw.trim() !== ""
+            ? Math.max(0, Number.parseInt(raw, 10) || 0)
+            : 0
+      return { ...data, totalStudyMinutes }
     },
 
     async getTrajectory(): Promise<TrajectoryPoint[]> {

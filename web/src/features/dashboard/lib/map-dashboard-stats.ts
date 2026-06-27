@@ -9,14 +9,11 @@ export type DashboardStatCard = {
   badge?: string
 }
 
-export function mapOverviewToDashboardStats(
-  overview: AnalyticsOverview,
-  studyMinutes: number,
-): DashboardStatCard[] {
+export function mapOverviewToDashboardStats(overview: AnalyticsOverview): DashboardStatCard[] {
   return [
     {
       id: "study-time",
-      value: formatStudyTime(studyMinutes),
+      value: formatStudyTime(overview.totalStudyMinutes),
       label: "Total Study Time",
       badge: "All time",
     },
