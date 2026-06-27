@@ -8,14 +8,23 @@ export type StudentOptionMenuOption<T extends string> = {
   label: string
 }
 
+type StudentOptionMenuVariant = "default" | "surface"
+
+const closedTriggerClass: Record<StudentOptionMenuVariant, string> = {
+  default: "border-[#dfe1e7] bg-[#f0f5ff] text-[#062357] hover:border-[#c5d4ef]",
+  surface: "border-[#dfe1e7] bg-[#f6f8fa] text-[#062357] hover:border-[#c5d4ef]",
+}
+
 type StudentOptionMenuProps<T extends string> = {
   value: T
   onChange: (next: T) => void
   options: readonly StudentOptionMenuOption<T>[]
   ariaLabel: string
   className?: string
+  triggerClassName?: string
   menuAlign?: "left" | "right"
   size?: "default" | "lg"
+  variant?: StudentOptionMenuVariant
 }
 
 function StudentOptionMenu<T extends string>({
@@ -24,8 +33,10 @@ function StudentOptionMenu<T extends string>({
   options,
   ariaLabel,
   className,
+  triggerClassName,
   menuAlign = "left",
   size = "default",
+  variant = "default",
 }: StudentOptionMenuProps<T>) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -72,13 +83,14 @@ function StudentOptionMenu<T extends string>({
         aria-controls={listboxId}
         aria-label={ariaLabel}
         className={cn(
-          "flex w-full min-w-[140px] items-center gap-2 border px-3 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d47a1]/30",
+          "flex w-full min-w-[140px] items-center gap-2 border px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d47a1]/30",
           size === "lg"
-            ? "h-[52px] rounded-lg text-base tracking-[0.02em]"
-            : "h-10 rounded-[10px] text-sm",
+            ? "h-[52px] rounded-[16px] text-base font-normal tracking-[0.32px]"
+            : "h-10 rounded-[10px] text-sm font-medium",
           open
-            ? "border-[#0d47a1] bg-[#f0f5ff] text-[#062357]"
-            : "border-[#dfe1e7] bg-[#f0f5ff] text-[#062357] hover:border-[#c5d4ef]",
+            ? "border-[#0d47a1] bg-[#f0f5ff] font-medium text-[#062357]"
+            : closedTriggerClass[variant],
+          triggerClassName,
         )}
       >
         <span className="flex-1 truncate text-left">{activeLabel}</span>
@@ -99,7 +111,7 @@ function StudentOptionMenu<T extends string>({
           aria-label={ariaLabel}
           className={cn(
             "absolute z-30 mt-2 max-h-[min(24rem,calc(100vh-8rem))] w-full max-w-full overflow-y-auto border border-[#dfe1e7] bg-white p-1 shadow-[0px_12px_24px_rgba(13,13,18,0.12)]",
-            size === "lg" ? "rounded-lg" : "rounded-[10px]",
+            size === "lg" ? "rounded-[12px]" : "rounded-[10px]",
             menuAlign === "right" ? "right-0" : "left-0",
           )}
         >
@@ -114,7 +126,7 @@ function StudentOptionMenu<T extends string>({
                   onClick={() => handleSelect(option.value)}
                   className={cn(
                     "flex w-full min-w-0 items-start justify-between gap-3 px-3 py-3 font-medium tracking-[0.02em] transition-colors",
-                    size === "lg" ? "min-h-[52px] rounded-lg text-base" : "min-h-10 rounded-[10px] text-sm",
+                    size === "lg" ? "min-h-[52px] rounded-[12px] text-base font-normal tracking-[0.32px]" : "min-h-10 rounded-[10px] text-sm",
                     active ? "bg-[#f3f7ff] text-[#062357]" : "text-[#062357] hover:bg-[#f3f7ff]",
                   )}
                 >

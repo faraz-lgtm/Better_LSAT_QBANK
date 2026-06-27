@@ -60,6 +60,7 @@ export type PrepTestSessionDetail = {
   incorrect: number
   percentile: number | null
   blindReviewPercentile: number | null
+  blindReviewCompletedAt: string | null
   questions: Array<{
     id: string
     number: number
@@ -69,6 +70,8 @@ export type PrepTestSessionDetail = {
     difficultyDots: number
     actualCorrect: boolean
     blindReviewCorrect: boolean
+    blindReviewUnanswered: boolean
+    isUnanswered: boolean
     correctLetter: string
     selectedLetter: string | null
     sectionType: "LR" | "RC" | "LG" | null

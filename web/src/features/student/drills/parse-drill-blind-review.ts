@@ -61,8 +61,54 @@ function parseSectionBlindReviewFromMetadata(metadata: Record<string, unknown>):
   return parseBlindReviewFromMetadata(metadata, "section")
 }
 
+type BlindReviewAnswerSnapshot = {
+  questionId: string
+  isCorrect: boolean
+  selectedAnswer?: string
+}
+
+function resolveSectionBlindReviewForResults(input: {
+  sessionMetadata: Record<string, unknown>
+  blindReviewAnswers?: BlindReviewAnswerSnapshot[]
+  blindReviewRawScore?: number | null
+}): {
+  rawScore: number | null
+  answersByQuestion: Map<string, { selectedAnswer: string; isCorrect: boolean }> | null
+} {
+  const fromMeta = parseSectionBlindReviewFromMetadata(input.sessionMetadata)
+  if (fromMeta) {
+    const answersByQuestion = new Map<string, { selectedAnswer: string; isCorrect: boolean }>()
+    for (const [questionId, answer] of fromMeta.answersByQuestion.entries()) {
+      answersByQuestion.set(questionId, {
+        selectedAnswer: answer.selectedAnswer,
+        isCorrect: answer.isCorrect,
+      })
+    }
+    return { rawScore: fromMeta.rawScore, answersByQuestion }
+  }
+
+  const apiAnswers = input.blindReviewAnswers
+  if (!apiAnswers || apiAnswers.length === 0) {
+    return { rawScore: null, answersByQuestion: null }
+  }
+
+  const answersByQuestion = new Map<string, { selectedAnswer: string; isCorrect: boolean }>()
+  for (const answer of apiAnswers) {
+    answersByQuestion.set(answer.questionId, {
+      selectedAnswer: answer.selectedAnswer ?? "",
+      isCorrect: answer.isCorrect,
+    })
+  }
+  const rawScore =
+    input.blindReviewRawScore != null
+      ? input.blindReviewRawScore
+      : apiAnswers.filter((answer) => answer.isCorrect).length
+  return { rawScore, answersByQuestion }
+}
+
 export {
   parseBlindReviewFromMetadata,
   parseDrillBlindReviewFromMetadata,
   parseSectionBlindReviewFromMetadata,
+  resolveSectionBlindReviewForResults,
 }

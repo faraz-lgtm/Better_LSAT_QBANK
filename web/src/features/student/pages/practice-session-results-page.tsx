@@ -24,7 +24,10 @@ import {
   PracticeResultsSummaryPanel,
 } from "@/features/student/practice-session/practice-results-summary-panel"
 import type { DrillQuestion, DrillSectionType } from "@/features/student/drills/drill-types"
-import { parseDrillBlindReviewFromMetadata, parseSectionBlindReviewFromMetadata } from "@/features/student/drills/parse-drill-blind-review"
+import {
+  parseDrillBlindReviewFromMetadata,
+  resolveSectionBlindReviewForResults,
+} from "@/features/student/drills/parse-drill-blind-review"
 import type { SectionSessionResponse } from "@/features/student/sections/section-types"
 import type { DrillSessionResponse } from "@/features/student/drills/drill-types"
 import type { ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
@@ -51,7 +54,7 @@ type LoadedResults = {
   scaledScore: number | null
   percentile: number | null
   blindReviewRawScore: number | null
-  blindReviewAnswersByQuestion: Map<string, { isCorrect: boolean }> | null
+  blindReviewAnswersByQuestion: Map<string, { selectedAnswer: string; isCorrect: boolean }> | null
 }
 
 function sessionElapsedSeconds(startedAt: string, completedAt: string): number {
@@ -91,27 +94,6 @@ function mapDrillResponse(data: DrillSessionResponse, returnTo: string): LoadedR
   }
 }
 
-function mapBlindReviewFromAnswers(
-  answers: Array<{ questionId: string; isCorrect: boolean }> | undefined,
-  rawScore: number | null | undefined,
-): {
-  blindReviewRawScore: number | null
-  blindReviewAnswersByQuestion: Map<string, { isCorrect: boolean }> | null
-} {
-  if (!answers || answers.length === 0) {
-    return { blindReviewRawScore: null, blindReviewAnswersByQuestion: null }
-  }
-  const answersByQuestion = new Map<string, { isCorrect: boolean }>()
-  for (const answer of answers) {
-    answersByQuestion.set(answer.questionId, { isCorrect: answer.isCorrect })
-  }
-  const computedRawScore =
-    rawScore != null
-      ? rawScore
-      : answers.filter((answer) => answer.isCorrect).length
-  return { blindReviewRawScore: computedRawScore, blindReviewAnswersByQuestion: answersByQuestion }
-}
-
 function mapSectionResponse(data: SectionSessionResponse, returnTo: string): LoadedResults {
   const answersByQuestion = new Map<string, { selectedAnswer: string; isCorrect: boolean }>()
   for (const a of data.answers) {
@@ -126,12 +108,12 @@ function mapSectionResponse(data: SectionSessionResponse, returnTo: string): Loa
     [data.metadata.prepTestTitle, data.metadata.sectionTitle].filter(Boolean).join(" — ") ??
     "Section results"
 
-  const blindReviewFromApi = mapBlindReviewFromAnswers(data.blindReviewAnswers, data.blindReviewRawScore)
-  const blindReviewFromMeta = parseSectionBlindReviewFromMetadata(data.session.metadata)
-  const blindReviewRawScore =
-    blindReviewFromApi.blindReviewRawScore ?? blindReviewFromMeta?.rawScore ?? null
-  const blindReviewAnswersByQuestion =
-    blindReviewFromApi.blindReviewAnswersByQuestion ?? blindReviewFromMeta?.answersByQuestion ?? null
+  const { rawScore: blindReviewRawScore, answersByQuestion: blindReviewAnswersByQuestion } =
+    resolveSectionBlindReviewForResults({
+      sessionMetadata: data.session.metadata,
+      blindReviewAnswers: data.blindReviewAnswers,
+      blindReviewRawScore: data.blindReviewRawScore,
+    })
 
   return {
     kind: "SECTION",
@@ -339,6 +321,8 @@ function PracticeSessionResultsPage() {
     )
   }
 
+  const showBlindReview = results.blindReviewAnswersByQuestion != null
+
   return (
     <StudentMain
       className={cn("min-h-full w-full max-w-none", PT_RESULTS_PAGE_BG_CLASS)}
@@ -394,7 +378,7 @@ function PracticeSessionResultsPage() {
               badgeKind={section.kind}
               scoreDisplay={section.scoreDisplay}
               blindReviewDisplay={section.blindReviewDisplay}
-              showBlindReview={results.blindReviewAnswersByQuestion != null}
+              showBlindReview={showBlindReview}
             >
               {section.passages.map(({ passage, questions }) => (
                 <div key={passage.id}>
@@ -405,7 +389,11 @@ function PracticeSessionResultsPage() {
                       number={q.number}
                       detail={q.detail}
                       isCorrect={q.isCorrect}
+                      isUnanswered={q.isUnanswered}
+                      selectedAnswer={q.selectedAnswer}
                       blindReviewCorrect={q.blindReviewCorrect}
+                      blindReviewUnanswered={q.blindReviewUnanswered}
+                      showBlindReview={showBlindReview}
                       yourTimeSeconds={q.yourTimeSeconds}
                       flagged={results.flaggedIds.has(q.question.id)}
                       variant="in-section"
@@ -419,7 +407,11 @@ function PracticeSessionResultsPage() {
                   number={q.number}
                   detail={q.detail}
                   isCorrect={q.isCorrect}
+                  isUnanswered={q.isUnanswered}
+                  selectedAnswer={q.selectedAnswer}
                   blindReviewCorrect={q.blindReviewCorrect}
+                  blindReviewUnanswered={q.blindReviewUnanswered}
+                  showBlindReview={showBlindReview}
                   yourTimeSeconds={q.yourTimeSeconds}
                   flagged={results.flaggedIds.has(q.question.id)}
                   variant="in-section"

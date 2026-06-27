@@ -1,5 +1,8 @@
-import { CheckCircle2, ChevronRight, XCircle } from "lucide-react"
+import { Check, ChevronRight, Minus, X } from "lucide-react"
 
+import {
+  isPracticeAnswerUnanswered,
+} from "@/features/student/practice-session/practice-result-outcome-icon"
 import { cn } from "@/lib/utils"
 import type { PrepLessonActiveDrillAttempt } from "@/lib/api/prep-course"
 
@@ -10,6 +13,12 @@ type ActiveDrillResultBarProps = {
   retaking?: boolean
 }
 
+function activeDrillHasUnanswered(attempt: PrepLessonActiveDrillAttempt): boolean {
+  if (attempt.answers.some((answer) => isPracticeAnswerUnanswered(answer))) return true
+  const answeredCount = attempt.answers.filter((answer) => answer.selectedAnswer.trim()).length
+  return answeredCount < attempt.questionCount
+}
+
 function ActiveDrillResultBar({
   attempt,
   lessonTitle,
@@ -17,6 +26,7 @@ function ActiveDrillResultBar({
   retaking = false,
 }: ActiveDrillResultBarProps) {
   const allCorrect = attempt.questionCount > 0 && attempt.rawScore === attempt.questionCount
+  const hasUnanswered = !allCorrect && activeDrillHasUnanswered(attempt)
 
   return (
     <section className="min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.04)]">
@@ -39,13 +49,15 @@ function ActiveDrillResultBar({
           <div
             className={cn(
               "flex size-12 shrink-0 items-center justify-center rounded-full",
-              allCorrect ? "bg-[#10b981]" : "bg-[#df1c41]",
+              allCorrect ? "bg-[#00d492]" : hasUnanswered ? "bg-[#ff6683]" : "bg-[#ef4444]",
             )}
           >
             {allCorrect ? (
-              <CheckCircle2 className="size-7 text-white" strokeWidth={2.5} aria-hidden />
+              <Check className="size-7 text-white" strokeWidth={2.5} aria-hidden />
+            ) : hasUnanswered ? (
+              <Minus className="size-7 text-white" strokeWidth={2.5} aria-hidden />
             ) : (
-              <XCircle className="size-7 text-white" strokeWidth={2.5} aria-hidden />
+              <X className="size-7 text-white" strokeWidth={2.5} aria-hidden />
             )}
           </div>
 

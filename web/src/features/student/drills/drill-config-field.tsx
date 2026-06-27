@@ -14,7 +14,7 @@ function DrillConfigField({ label, description, className, children }: DrillConf
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col gap-4 rounded-xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+        "flex min-w-0 flex-col gap-4 rounded-xl border border-[#dfe1e7] bg-[#f6f8fa] p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
         className,
       )}
     >
@@ -31,6 +31,8 @@ type DrillConfigSelectFieldProps = Omit<DrillConfigFieldProps, "children"> & {
   value: string
   onChange: (value: string) => void
   options: { label: string; value: string }[]
+  menuTriggerClassName?: string
+  menuVariant?: "default" | "surface"
 }
 
 function DrillConfigSelectField({
@@ -40,6 +42,8 @@ function DrillConfigSelectField({
   value,
   onChange,
   options,
+  menuTriggerClassName,
+  menuVariant = "default",
 }: DrillConfigSelectFieldProps) {
   return (
     <DrillConfigField label={label} description={description} className={className}>
@@ -49,6 +53,8 @@ function DrillConfigSelectField({
         options={options}
         ariaLabel={label}
         size="lg"
+        variant={menuVariant}
+        triggerClassName={menuTriggerClassName}
       />
     </DrillConfigField>
   )

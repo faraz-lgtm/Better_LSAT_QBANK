@@ -4,10 +4,11 @@ import {
   PT_RESULTS_SUMMARY_ROW_CLASS,
 } from "@/features/student/analytics/prep-test-results-section-styles"
 import { formatMmSs } from "@/features/student/practice-session/practice-results-ui"
+import { isPracticeAnswerUnanswered } from "@/features/student/practice-session/practice-result-outcome-icon"
 import { PrepTestSectionResultCard } from "@/features/student/practice-session/prep-test-section-result-card"
 
 export type PracticeSectionKind = "LR" | "RC"
-export type PracticeQuestionOutcome = "correct" | "incorrect"
+export type PracticeQuestionOutcome = "correct" | "incorrect" | "unanswered"
 
 export type PracticeSectionResultSummary = {
   id: string
@@ -21,7 +22,7 @@ export type PracticeSectionResultSummary = {
 
 function buildPracticeSectionSummaries(input: {
   questionIds: string[]
-  answersByQuestion: Map<string, { isCorrect: boolean }>
+  answersByQuestion: Map<string, { selectedAnswer: string; isCorrect: boolean }>
   detailsByQuestion: Record<string, ExplanationDetailPayload>
   defaultKind: PracticeSectionKind
   fallbackSectionNumber?: number | null
@@ -46,9 +47,11 @@ function buildPracticeSectionSummaries(input: {
   }
 
   return [...grouped.entries()].map(([key, group]) => {
-    const statuses: PracticeQuestionOutcome[] = group.ids.map((id) =>
-      input.answersByQuestion.get(id)?.isCorrect ? "correct" : "incorrect",
-    )
+    const statuses: PracticeQuestionOutcome[] = group.ids.map((id) => {
+      const answer = input.answersByQuestion.get(id)
+      if (isPracticeAnswerUnanswered(answer)) return "unanswered"
+      return answer?.isCorrect ? "correct" : "incorrect"
+    })
     const correct = statuses.filter((s) => s === "correct").length
     const total = statuses.length
     const incorrect = total - correct
@@ -145,6 +148,7 @@ function PracticeResultsSummaryPanel({
             />
           ))}
         </div>
+      </div>
     </section>
   )
 }

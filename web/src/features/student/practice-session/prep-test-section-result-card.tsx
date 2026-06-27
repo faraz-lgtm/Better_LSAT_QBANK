@@ -20,7 +20,7 @@ type PrepTestSectionResultCardProps = {
   longName: string
   sectionLabel: string
   scoreDelta: string | number
-  questionRows: Array<Array<"correct" | "incorrect">>
+  questionRows: Array<Array<"correct" | "incorrect" | "unanswered">>
   accuracyPct: number
 }
 
@@ -60,6 +60,7 @@ function PrepTestSectionResultCard({
               <PracticeResultOutcomeIcon
                 key={`${rowIndex}-${cellIndex}`}
                 correct={cell === "correct"}
+                unanswered={cell === "unanswered"}
                 variant="grid"
               />
             ))}
