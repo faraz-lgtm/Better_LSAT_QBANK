@@ -305,13 +305,16 @@ function AnalyticsSectionsPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
+        <StudentPageLoader centered className="min-h-0 flex-1" label="Loading section analytics…" />
+      </StudentMain>
+    )
+  }
+
   return (
     <StudentMain>
-        {loading ? (
-          <div className="mb-4">
-            <StudentPageLoader label="Loading section analytics…" />
-          </div>
-        ) : null}
         <div className="mb-6 flex flex-wrap items-center justify-end gap-4">
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
         </div>

@@ -20,6 +20,7 @@ describe("map-analytics", () => {
       totalDrillQuestionsAnswered: 50,
       averageLrMissedPerPrepTest: 5,
       averageRcMissedPerPrepTest: 6,
+      totalStudyMinutes: 0,
     }
     const stats = mapOverviewToHeadlineStats(overview)
     expect(stats[0]?.value).toBe("170")

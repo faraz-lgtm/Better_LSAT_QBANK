@@ -95,6 +95,17 @@ export type QuestionExplanationMetaRow = {
 }
 
 export function createAnalyticsRepository(client: SupabaseClient) {
+  function parseStudyMinutesRpcValue(data: unknown): number {
+    if (typeof data === 'number' && Number.isFinite(data)) {
+      return Math.max(0, Math.floor(data))
+    }
+    if (typeof data === 'string' && data.trim() !== '') {
+      const parsed = Number.parseInt(data, 10)
+      if (Number.isFinite(parsed)) return Math.max(0, parsed)
+    }
+    return 0
+  }
+
   return {
     async countAnswerEvents(userId: string): Promise<number> {
       const { count, error } = await client
@@ -103,6 +114,22 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         .eq('user_id', userId)
       if (error) throw error
       return count ?? 0
+    },
+
+    async sumCompletedSessionStudyMinutes(userId: string): Promise<number> {
+      const { data, error } = await client.rpc('sum_user_practice_study_minutes', {
+        p_user_id: userId,
+      })
+      if (error) throw error
+      return parseStudyMinutesRpcValue(data)
+    },
+
+    async sumCompletedLessonStudyMinutes(userId: string): Promise<number> {
+      const { data, error } = await client.rpc('sum_user_lesson_study_minutes', {
+        p_user_id: userId,
+      })
+      if (error) throw error
+      return parseStudyMinutesRpcValue(data)
     },
 
     async countDrillAnswerEvents(userId: string): Promise<{ correct: number; total: number }> {

@@ -18,8 +18,8 @@ describe("map-dashboard-stats", () => {
         totalDrillQuestionsAnswered: 200,
         averageLrMissedPerPrepTest: 5,
         averageRcMissedPerPrepTest: 3,
+        totalStudyMinutes: 95,
       },
-      95,
     )
     expect(cards).toHaveLength(3)
     expect(cards[0]?.value).toBe("1h 35m")
@@ -40,8 +40,8 @@ describe("map-dashboard-stats", () => {
         totalDrillQuestionsAnswered: 0,
         averageLrMissedPerPrepTest: null,
         averageRcMissedPerPrepTest: null,
+        totalStudyMinutes: 0,
       },
-      0,
     )
     expect(cards[1]?.value).toBe("—")
   })
@@ -50,6 +50,11 @@ describe("map-dashboard-stats", () => {
 describe("formatStudyTime", () => {
   it("formats minutes below one hour", () => {
     expect(formatStudyTime(35)).toBe("35 min")
+  })
+
+  it("formats invalid values as zero minutes", () => {
+    expect(formatStudyTime(Number.NaN)).toBe("0 min")
+    expect(formatStudyTime(undefined as unknown as number)).toBe("0 min")
   })
 
   it("formats whole hours", () => {

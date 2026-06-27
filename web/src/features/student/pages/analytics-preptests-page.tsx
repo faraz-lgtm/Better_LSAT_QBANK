@@ -444,17 +444,19 @@ function AnalyticsPrepTestsPage() {
     [navigate],
   )
 
+  if (loading) {
+    return (
+      <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
+        <StudentPageLoader centered className="min-h-0 flex-1" label="Loading PrepTest analytics…" />
+      </StudentMain>
+    )
+  }
+
   return (
     <StudentMain>
         <div className="mb-6 flex flex-wrap items-center justify-end gap-4">
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
         </div>
-
-        {loading ? (
-          <div className="mb-6">
-            <StudentPageLoader label="Loading PrepTest analytics…" />
-          </div>
-        ) : null}
 
         {stats ? (
           <section className="mb-6 grid gap-6 lg:grid-cols-[minmax(280px,420px)_1fr]">
