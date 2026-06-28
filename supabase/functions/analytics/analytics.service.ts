@@ -5,6 +5,7 @@ import type {
   QuestionExplanationMetaRow,
 } from './analytics.repository.ts'
 import type { PracticeSessionKind } from '../practice/practice.repository.ts'
+import { isStudentVisiblePrepTest } from '../_shared/prep-test-visibility.ts'
 
 const PREPTEST_EXPLANATION_CATALOG_LIMIT = 8000
 
@@ -603,10 +604,13 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
       if (!session) {
         throw new Error('PrepTest session not found or not completed')
       }
+      const apt = relOne(session.admin_prep_tests)
+      if (!isStudentVisiblePrepTest(apt?.module_id ?? null)) {
+        throw new Error('PrepTest session not found or not completed')
+      }
       const prepTestId = session.prep_test_id
       if (!prepTestId) throw new Error('PrepTest session missing prep_test_id')
 
-      const apt = relOne(session.admin_prep_tests)
       const sectionSessions = await deps.repository.listSectionSessionsForPrepTest(userId, prepTestId)
       const sectionIds = sectionSessions.map((s) => s.id)
       const events = await deps.repository.listAnswerEventsForSessions(sectionIds, userId)

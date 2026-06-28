@@ -1,4 +1,9 @@
 import { parseQuestionChoices } from '../_shared/parse-question-choices.ts'
+import {
+  isStudentVisiblePrepTest,
+  lsacPrepTestOrdinal,
+  prepTestNumberFromModuleId,
+} from '../_shared/prep-test-visibility.ts'
 import type {
   ExplanationsRepository,
   PrepTestRow,
@@ -177,17 +182,7 @@ function relOne<T>(v: T | T[] | null | undefined): T | null {
   return Array.isArray(v) ? v[0] ?? null : v
 }
 
-export function lsacPrepTestOrdinal(moduleId: string): number | null {
-  const m = /^LSAC(\d+)$/i.exec(moduleId.trim())
-  if (!m) return null
-  const n = Number(m[1])
-  return Number.isFinite(n) ? n : null
-}
-
-export function prepTestNumberFromModuleId(moduleId: string): string | null {
-  const n = lsacPrepTestOrdinal(moduleId.split(':')[0] ?? moduleId)
-  return n != null ? String(n) : null
-}
+export { lsacPrepTestOrdinal, prepTestNumberFromModuleId } from '../_shared/prep-test-visibility.ts'
 
 function normalizeTitle(moduleId: string, title: string | null): string {
   const normalized = String(title ?? '')
@@ -692,7 +687,7 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
       const sort = options.sort === 'oldest' ? 'oldest' : 'newest'
 
       const rows = await deps.repository.listAllPrepTestRows()
-      let grouped = groupPrepTestRows(rows)
+      let grouped = groupPrepTestRows(rows).filter((g) => isStudentVisiblePrepTest(g.moduleId))
       if (sort === 'oldest') {
         grouped = [...grouped].reverse()
       }
@@ -720,6 +715,9 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
 
     async getPrepTestTree(userId: string, prepTestId: string): Promise<{ prepTest: ExplanationPrepTestNode }> {
       const grouped = await deps.repository.resolvePrepTestGroup(prepTestId)
+      if (!isStudentVisiblePrepTest(grouped.baseModuleId)) {
+        throw new Error('PrepTest not available')
+      }
       const rows = await deps.repository.fetchPrepTestTreeRows(grouped.prepTestIds)
       if (rows.length === 0) throw new Error('PrepTest not found')
 
@@ -755,9 +753,12 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
       }
 
       const pt = relOne(sec.admin_prep_tests)
-      const qt = relOne(row.question_types)
       const moduleId = pt?.module_id ?? ''
+      if (!isStudentVisiblePrepTest(moduleId)) {
+        throw new Error('Question not found')
+      }
       const prepTestTitle = pt?.title?.trim() || 'PrepTest'
+      const qt = relOne(row.question_types)
       const expl = row.explanation?.trim() ?? ''
       const vid = row.video_url?.trim() ?? ''
       const choices = parseQuestionChoices(row.choices, { includeOptionExplanations: true })

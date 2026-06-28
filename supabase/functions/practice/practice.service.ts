@@ -1,5 +1,6 @@
 import { extractPrepTestQuestionRef } from '../_shared/prep-question-ref.ts'
 import { resolvePrepDrillLessonType } from '../_shared/prep-lesson-type.ts'
+import { isStudentVisiblePrepTest } from '../_shared/prep-test-visibility.ts'
 import type {
   AnswerEventRow,
   DrillPoolQuestionRow,
@@ -439,6 +440,19 @@ function practiceableSectionsFromRow(
   return sections
     .filter((s) => (s.sectionType === 'LR' || s.sectionType === 'RC') && s.questionCount > 0)
     .map((s) => ({ id: s.id, sectionType: s.sectionType as 'LR' | 'RC', questionCount: s.questionCount }))
+}
+
+function assertStudentVisiblePrepTest(moduleId: string | null | undefined): void {
+  if (!isStudentVisiblePrepTest(moduleId)) {
+    throw new PracticeValidationError('This PrepTest is not available')
+  }
+}
+
+function prepTestModuleIdFromSection(section: {
+  module_id: string | null
+  admin_prep_tests: { module_id: string } | null
+}): string | null {
+  return section.admin_prep_tests?.module_id ?? section.module_id
 }
 
 function prepTestLabel(moduleId: string, title: string | null, prepTestNumber: string | null): string {
@@ -1120,8 +1134,9 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       if (kind === 'PREPTEST') {
         if (!prepTestId) throw new PracticeValidationError('prepTestId is required for PREPTEST')
-        const ok = await deps.repository.getPrepTestExists(prepTestId)
-        if (!ok) throw new PracticeValidationError('prepTestId not found')
+        const row = await deps.repository.getPrepTestDetailRow(prepTestId)
+        if (!row) throw new PracticeValidationError('prepTestId not found')
+        assertStudentVisiblePrepTest(row.moduleId)
         const session = await deps.repository.insertSession({
           userId,
           kind,
@@ -1134,9 +1149,10 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       if (kind === 'SECTION') {
         if (!sectionId) throw new PracticeValidationError('sectionId is required for SECTION')
-        const secOk = await deps.repository.getSectionExists(sectionId)
-        if (!secOk) throw new PracticeValidationError('sectionId not found')
-        const derivedPrepTestId = await deps.repository.getSectionPrepTestId(sectionId)
+        const section = await deps.repository.getSectionDetail(sectionId)
+        if (!section) throw new PracticeValidationError('sectionId not found')
+        assertStudentVisiblePrepTest(prepTestModuleIdFromSection(section))
+        const derivedPrepTestId = section.prep_test_id
         const session = await deps.repository.insertSession({
           userId,
           kind,
@@ -1745,6 +1761,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const allItems = rows
         .map(mapSectionPoolRow)
         .filter((s): s is SectionPoolItem => s != null && s.questionCount > 0)
+        .filter((s) => isStudentVisiblePrepTest(s.moduleId))
 
       const sectionTypeCounts: SectionPoolTypeCounts = {
         all: allItems.length,
@@ -1778,6 +1795,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       const section = await deps.repository.getSectionDetail(sectionId)
       if (!section) throw new PracticeValidationError('sectionId not found')
+      assertStudentVisiblePrepTest(prepTestModuleIdFromSection(section))
 
       const sectionType = sectionTypeForPool(section.section_type)
       if (!sectionType) {
@@ -1963,6 +1981,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       const items: PrepTestPoolItem[] = []
       for (const row of rows) {
+        if (!isStudentVisiblePrepTest(row.moduleId)) continue
         if (practiceableSectionsFromRow(row.sections).length === 0) continue
         const sessions = sessionsByPrepTestId.get(row.id) ?? []
         items.push(poolItemFromRow(row, sessions))
@@ -2019,6 +2038,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       const row = await deps.repository.getPrepTestDetailRow(prepTestId)
       if (!row) throw new PracticeValidationError('prepTestId not found')
+      assertStudentVisiblePrepTest(row.moduleId)
 
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
       const prepTestSession =
@@ -2036,6 +2056,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       const row = await deps.repository.getPrepTestDetailRow(prepTestId)
       if (!row) throw new PracticeValidationError('prepTestId not found')
+      assertStudentVisiblePrepTest(row.moduleId)
 
       const practiceable = practiceableSectionsFromRow(row.sections)
       if (practiceable.length === 0) {
@@ -2180,6 +2201,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       const items: BlindReviewPoolItem[] = []
       for (const row of rows) {
+        if (!isStudentVisiblePrepTest(row.moduleId)) continue
         const sessions = sessionsByPrepTestId.get(row.id) ?? []
         const item = blindReviewPoolItemFromRow(row, sessions)
         if (item) items.push(item)
@@ -2214,6 +2236,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       const row = await deps.repository.getPrepTestDetailRow(prepTestId)
       if (!row) throw new PracticeValidationError('prepTestId not found')
+      assertStudentVisiblePrepTest(row.moduleId)
 
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
       const { prepTestSession } = blindReviewStateFromSessions(sessions)
@@ -2230,6 +2253,10 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
     ): Promise<{ session: PracticeSessionRow }> {
       const prepTestId = typeof body.prepTestId === 'string' ? body.prepTestId : ''
       if (!prepTestId) throw new PracticeValidationError('prepTestId is required')
+
+      const row = await deps.repository.getPrepTestDetailRow(prepTestId)
+      if (!row) throw new PracticeValidationError('prepTestId not found')
+      assertStudentVisiblePrepTest(row.moduleId)
 
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
       const prepTestSession = prepTestSessionAwaitingBlindReview(sessions)
@@ -2253,6 +2280,10 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
     ): Promise<{ session: PracticeSessionRow }> {
       const prepTestId = typeof body.prepTestId === 'string' ? body.prepTestId : ''
       if (!prepTestId) throw new PracticeValidationError('prepTestId is required')
+
+      const row = await deps.repository.getPrepTestDetailRow(prepTestId)
+      if (!row) throw new PracticeValidationError('prepTestId not found')
+      assertStudentVisiblePrepTest(row.moduleId)
 
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
       const prepTestSession = prepTestSessionAwaitingBlindReview(sessions)

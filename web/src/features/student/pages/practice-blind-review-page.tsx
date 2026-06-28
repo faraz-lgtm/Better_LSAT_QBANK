@@ -281,7 +281,7 @@ function PracticeBlindReviewPage() {
   }
 
   return (
-    <StudentMain>
+    <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
       <p className="mb-6 max-w-[908px] text-sm font-medium leading-[1.5] tracking-[0.02em] text-[#666d80] md:text-base">
           After you finish a PrepTest, blind review lets you revisit every question without seeing correct answers.
           Update your responses, then finish to record your blind review score.
@@ -323,7 +323,7 @@ function PracticeBlindReviewPage() {
         ) : null}
 
         {loading ? (
-          <StudentPageLoader label="Loading blind review…" />
+          <StudentPageLoader centered className="min-h-0 flex-1" label="Loading blind review…" />
         ) : prepTests.length === 0 ? (
           <section className="rounded-2xl border border-[#dfe1e7] bg-white p-8 text-center shadow-sm">
             <p className="text-sm text-[#666d80]">
