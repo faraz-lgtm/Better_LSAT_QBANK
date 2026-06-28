@@ -216,6 +216,43 @@ Deno.test('listPrepTests paginates grouped prep tests', async () => {
   assertEquals(oldest.prepTests[0]?.prepTestNumber, '100')
 })
 
+Deno.test('listPrepTests hides pre-PT100 tests', async () => {
+  const rows: PrepTestRow[] = [
+    { id: 'pt-99', module_id: 'LSAC099', title: 'PrepTest 99', imported_at: null },
+    { id: 'pt-100', module_id: 'LSAC100', title: 'PrepTest 100', imported_at: null },
+    { id: 'pt-101', module_id: 'LSAC101', title: 'PrepTest 101', imported_at: null },
+  ]
+  const service = createExplanationsService({
+    repository: mockRepo({
+      listAllPrepTestRows: async () => rows,
+      fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 10, explainedCount: 2 }),
+    }),
+  })
+
+  const out = await service.listPrepTests('user-1', { page: 1, pageSize: 10, sort: 'oldest' })
+  assertEquals(out.total, 2)
+  assertEquals(out.prepTests.map((pt) => pt.prepTestNumber), ['100', '101'])
+})
+
+Deno.test('getExplanationStatusCounts uses student-visible catalog only', async () => {
+  const service = createExplanationsService({
+    repository: mockRepo({
+      listLsatCatalogQuestionIds: async () => ['q100', 'q101'],
+      listPrepTestQuestionProgress: async () => ({
+        seenQuestionIds: ['q99-hidden'],
+        inProcessQuestionIds: ['q100'],
+        answeredQuestionIds: ['q101'],
+      }),
+    }),
+  })
+
+  const counts = await service.getExplanationStatusCounts('user-1')
+  assertEquals(counts.answered, 1)
+  assertEquals(counts.in_process, 1)
+  assertEquals(counts.seen, 0)
+  assertEquals(counts.fresh, 0)
+})
+
 Deno.test('listPrepTests returns global statusCounts for user', async () => {
   const service = createExplanationsService({
     repository: mockRepo({

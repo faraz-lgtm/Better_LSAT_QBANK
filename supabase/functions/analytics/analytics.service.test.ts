@@ -145,6 +145,12 @@ function mockRepo(overrides: Partial<AnalyticsRepository> = {}): AnalyticsReposi
     listQuestionsExplanationMetaByIds: async () => [],
     countAnswerEventsForQuestion: async () => 0,
     getQuestionExplanationPayload: async () => null,
+    listStudentVisiblePrepTestIds: async () => ['pt-1', 'pt-900', 'pt-901'],
+    resolveQuestionVisibility: async (questionIds: string[]) => {
+      const out = new Map<string, boolean>()
+      for (const id of questionIds) out.set(id, true)
+      return out
+    },
     ...overrides,
   }
   if (overrides.resolveCompletedPrepTestSession === undefined) {

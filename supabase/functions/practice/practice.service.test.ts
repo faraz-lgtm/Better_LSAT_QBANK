@@ -887,6 +887,41 @@ Deno.test('listPrepTestPool returns practiceable prep tests with fresh status', 
   assertEquals(out.prepTests[1]!.questionCount, 5)
 })
 
+Deno.test('listPrepTestPool hides pre-PT100 tests', async () => {
+  const rows: PrepTestPoolRow[] = [
+    ...prepTestPoolRows,
+    {
+      id: 'pt-99',
+      moduleId: 'LSAC099',
+      title: 'PrepTest 99',
+      sections: [{ id: 'sec-lr-99', sectionType: 'LR', questionCount: 2 }],
+    },
+  ]
+  const service = createPracticeService({
+    repository: preptestRepo({ listPrepTestPoolRows: async () => rows }) as never,
+  })
+  const out = await service.listPrepTestPool('user-1', {})
+  assertEquals(out.total, 2)
+  assertEquals(out.prepTests.every((pt) => pt.prepTestNumber !== '99'), true)
+})
+
+Deno.test('startPrepTest rejects pre-PT100 tests', async () => {
+  const service = createPracticeService({
+    repository: preptestRepo({
+      getPrepTestDetailRow: async () => ({
+        ...prepTestDetailRow,
+        id: 'pt-99',
+        moduleId: 'LSAC099',
+      }),
+    }) as never,
+  })
+  await assertRejects(
+    () => service.startPrepTest('user-1', { prepTestId: 'pt-99' }),
+    PracticeValidationError,
+    'This PrepTest is not available',
+  )
+})
+
 Deno.test('listPrepTestPool prefers awaiting blind review over a newer open prep test session', async () => {
   const completedAwaitingBr = baseSession({
     id: 'pt-sess-done',
