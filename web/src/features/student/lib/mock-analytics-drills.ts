@@ -165,7 +165,7 @@ export function buildDrillStatTiles(stats: DrillStats): AnalyticsStat[] {
     { id: "drills-taken", label: "DRILLS TAKEN", value: String(stats.drillsTaken), accent: "#0d47a1" },
     { id: "accuracy", label: "ACCURACY", value: `${stats.accuracyPct}%`, accent: "#5463a9" },
     { id: "questions-drilled", label: "QUESTIONS DRILLED", value: String(stats.questionsDrilled), accent: "#116b97" },
-    { id: "answered-correctly", label: "ANSWERED CORRECTLY", value: String(stats.questionsCorrect), accent: "#ff9d51" },
+    { id: "answered-correctly", label: "ANSWERED CORRECTLY", value: String(stats.questionsCorrect), accent: "#0bbcc9" },
   ]
 }
 
