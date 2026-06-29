@@ -61,15 +61,16 @@ const BLIND_REVIEW_QUESTION_STEM_CLASS =
   "text-lg font-medium leading-[1.4] tracking-[0.36px] text-[#0d0d12]"
 
 const BLIND_REVIEW_QUESTION_NUMBER_CLASS =
-  "inline-flex size-10 shrink-0 items-center justify-center rounded-[14px] border-2 border-[#ff6f00] bg-white text-lg font-bold text-[#ff6f00] shadow-[0px_0px_5px_#fc7753]"
+  "inline-flex size-10 shrink-0 items-center justify-center rounded-[14px] border-2 border-[#ff6f00] bg-white text-lg font-bold text-[#ff6f00] shadow-[0px_0px_5px_#ff6f00]"
 
 const BLIND_REVIEW_RECOMMENDED_BADGE_CLASS =
-  "inline-flex h-8 items-center rounded-2xl px-4 text-xs font-medium tracking-[0.24px] text-[#ff6f00]"
+  "inline-flex h-8 items-center rounded-[16px] px-4 text-xs font-medium tracking-[0.24px] text-[#ff6f00]"
 
 const BLIND_REVIEW_OPTIONS_LIST_CLASS = "flex flex-col gap-3 p-6"
 
+/** Figma `18617:33677` — footer band */
 const BLIND_REVIEW_FOOTER_CLASS =
-  "practice-session-footer box-border flex min-h-[80px] shrink-0 flex-col justify-center border-t border-[#dfe1e7] bg-[#f6f8fa] px-6 py-[16px]"
+  "practice-session-footer box-border flex min-h-[76px] shrink-0 flex-col justify-center border-t border-[#dfe1e7] bg-[#f6f8fa] px-6 py-3"
 
 /** Nav pills wrap to the next line; arrows stay on the right */
 const BLIND_REVIEW_FOOTER_ROW_CLASS =
@@ -78,9 +79,12 @@ const BLIND_REVIEW_FOOTER_ROW_CLASS =
 const BLIND_REVIEW_FOOTER_NAV_CLASS =
   "practice-session-question-nav-grid min-h-[48px] min-w-0 flex-1"
 
-/** Figma `18617:35844` — prev/next controls (48px fits the 52px footer row) */
+/** Figma `18617:33695` — prev/next controls */
 const BLIND_REVIEW_NAV_ARROW_BUTTON_CLASS =
-  "box-border inline-flex size-[48px] shrink-0 items-center justify-center rounded-[16px] border-2 border-solid border-[#dfe1e7] bg-[#f6f8fa] p-1 shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-white disabled:opacity-40"
+  "box-border inline-flex size-[52px] shrink-0 items-center justify-center rounded-[16px] border-2 border-solid border-[#dfe1e7] bg-[#f6f8fa] p-1 shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-white disabled:opacity-40"
+
+/** Figma `18617:33677` — recommended-for-BR nav pill glow */
+const BLIND_REVIEW_QUESTION_NAV_RECOMMENDED_CLASS = "drop-shadow-[0px_0px_5px_#ff6f00]"
 
 const BLIND_REVIEW_NAV_ARROW_GROUP_CLASS = "flex shrink-0 items-center gap-4 self-center"
 
@@ -100,10 +104,10 @@ const BLIND_REVIEW_HEADER_EXIT_BUTTON_CLASS =
 const BLIND_REVIEW_SECTION_SELECT_MIN_WIDTH_PX = 123
 
 const BLIND_REVIEW_SECTION_SELECT_TRIGGER_CLASS =
-  "inline-flex h-9 min-w-[123px] items-center gap-2 rounded-2xl border border-[#dfe1e7] bg-white py-1.5 pl-3 pr-3 text-base font-medium leading-6 tracking-[0.32px] text-[#062357] transition-colors hover:bg-[#f6f8fa]"
+  "inline-flex h-9 min-w-[123px] items-center gap-2 rounded-[16px] border border-[#dfe1e7] bg-white py-1.5 pl-3 pr-3 text-base font-medium leading-6 tracking-[0.32px] text-[#062357] transition-colors hover:bg-[#f6f8fa]"
 
 const BLIND_REVIEW_SECTION_SELECT_MENU_CLASS =
-  "absolute left-0 top-full z-[110] mt-2 min-w-full overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
+  "absolute left-0 top-full z-[110] mt-2 min-w-full overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
 
 /** Figma `18617:33893` — blind review notes / prep-test landing */
 const BLIND_REVIEW_NOTES_PAGE_CLASS = "bg-[#f5f9ff]"
@@ -181,6 +185,7 @@ export {
   BLIND_REVIEW_PASSAGE_PANEL_CLASS,
   BLIND_REVIEW_PASSAGE_TEXT_CLASS,
   BLIND_REVIEW_QUESTION_PANEL_CLASS,
+  BLIND_REVIEW_QUESTION_NAV_RECOMMENDED_CLASS,
   BLIND_REVIEW_QUESTION_NUMBER_CLASS,
   BLIND_REVIEW_QUESTION_STEM_CLASS,
   BLIND_REVIEW_RECOMMENDED_BADGE_CLASS,

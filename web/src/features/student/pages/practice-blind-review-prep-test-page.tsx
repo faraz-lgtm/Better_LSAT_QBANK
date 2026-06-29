@@ -261,7 +261,9 @@ function PracticeBlindReviewPrepTestPage() {
               what the answers are or whether you got them wrong. This is the best way to build your LSAT intuition and
               prevent similar mistakes in the future.
             </p>
+            <br/>
             <p className="mb-0 mt-6">Trust us, you&apos;ll thank us later.</p>
+            <br/>
             <p className="mb-0 mt-6">
               {recommendedTotal} question{recommendedTotal === 1 ? "" : "s"} are recommended for BR
             </p>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
+import { isQuestionRecommendedForBlindReview } from "@/features/student/blind-review/blind-review-navigation"
 import { LrDrillOptionRow } from "@/features/student/drills/lr-drill-option-row"
 import type { DrillQuestion, DrillSessionResponse } from "@/features/student/drills/drill-types"
 import { ACTIVE_DRILL_FINISH_BUTTON_CLASS, ACTIVE_DRILL_FOOTER_CLASS, ACTIVE_DRILL_FOOTER_ROW_CLASS, ACTIVE_DRILL_OPTIONS_LIST_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
@@ -431,7 +432,7 @@ function DrillSessionPage() {
   const recommendedForBr = Boolean(
     current &&
       reviewAfterComplete &&
-      (!actualAnswersByQuestion[current.id] || actualAnswersByQuestion[current.id]?.isCorrect === false),
+      isQuestionRecommendedForBlindReview(actualAnswersByQuestion[current.id]),
   )
   const revealed = reviewAfterComplete
     ? false
@@ -997,6 +998,7 @@ function DrillSessionPage() {
                     active={n === safeIndex}
                     answered={Boolean(answersByQuestion[q.id])}
                     flagged={questionFlags.isFlagged(q.id)}
+                    recommendedForBr={isQuestionRecommendedForBlindReview(actualAnswersByQuestion[q.id])}
                     variant={sessionVariant}
                     onClick={() => setQIndex(n)}
                   />
