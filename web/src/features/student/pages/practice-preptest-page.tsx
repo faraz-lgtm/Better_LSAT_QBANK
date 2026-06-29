@@ -202,7 +202,7 @@ function PrepTestSectionRow({
           disabled={breakLocked || starting}
           onClick={onStart}
           className={cn(
-            "ds-btn h-[52px] min-w-[148px] shrink-0 gap-2 px-4 text-base tracking-[0.32px]",
+            "ds-btn h-[52px] min-w-[148px] shrink-0 gap-2 rounded-[16px] px-4 text-base tracking-[0.32px]",
             breakLocked && "cursor-not-allowed opacity-50",
           )}
         >
@@ -537,7 +537,7 @@ function PracticePrepTestPage() {
               <Button
                 type="button"
                 disabled={finishing}
-                className="ds-btn-sm"
+                className="ds-btn-sm rounded-[16px]"
                 onClick={() => void handleFinishTest()}
               >
                 {finishing ? "Finishing…" : "Finish test"}

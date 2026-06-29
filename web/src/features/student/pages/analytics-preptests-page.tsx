@@ -69,7 +69,7 @@ function ordinal(n: number): string {
 
 function PrepTestScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next: ScoreTab) => void }) {
   return (
-    <div className="flex h-10 flex-wrap items-center gap-2 rounded-[10px] bg-white p-1">
+    <div className="flex h-10 flex-wrap items-center gap-2 rounded-[16px] bg-white p-1">
       {SCORE_TABS.map((tab) => {
         const active = value === tab.id
         return (
@@ -79,7 +79,7 @@ function PrepTestScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (ne
             onClick={() => onChange(tab.id)}
             aria-pressed={active}
             className={cn(
-              "flex min-h-8 items-center justify-center rounded-lg px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors",
+              "flex min-h-8 items-center justify-center rounded-[16px] px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors",
               active ? "bg-[#0d47a1] text-white" : "text-[#666d80] hover:bg-[#f3f7ff]",
             )}
           >
@@ -127,21 +127,21 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
   return (
     <div className="w-full">
       <div className="flex h-[300px] w-full items-stretch gap-4">
-        <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[#62748e]">
+        <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[#062357]">
           {Y_AXIS_LABELS.map((label) => (
             <span key={label} className="leading-5">
               {label}
             </span>
           ))}
         </div>
-        <div className="relative flex-1 pb-8">
-          <div className="absolute inset-0 bottom-8 flex flex-col justify-between" aria-hidden>
+        <div className="relative flex-1">
+          <div className="absolute inset-0 flex flex-col justify-between" aria-hidden>
             {Y_AXIS_LABELS.map((label) => (
               <div key={label} className="h-px w-full bg-[#e5e7eb]" />
             ))}
           </div>
           <svg
-            className="absolute inset-0 bottom-8 h-[calc(100%-2rem)] w-full"
+            className="absolute inset-0 h-full w-full"
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
             aria-hidden
@@ -157,7 +157,7 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
               vectorEffect="non-scaling-stroke"
             />
           </svg>
-          <div className="absolute inset-0 bottom-8 flex">
+          <div className="absolute inset-0 flex">
             {points.map((point, i) => {
               const value = tab === "raw" ? `${point.rawScore}/${point.rawMax}` : `${point.scaledScore}`
               const isActive = hoverIndex === i
@@ -191,13 +191,6 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
                 </button>
               )
             })}
-          </div>
-          <div className="absolute bottom-0 left-0 right-0 flex justify-between gap-0.5 text-[11px] leading-4 text-[#6a7282] sm:text-xs">
-            {points.map((p) => (
-              <span key={p.id} className="min-w-0 flex-1 truncate text-center">
-                {p.test}
-              </span>
-            ))}
           </div>
         </div>
       </div>
@@ -235,7 +228,7 @@ function HistorySortMenu({ value, onChange }: { value: HistorySort; onChange: (n
       <button
         type="button"
         onClick={() => setOpen((c) => !c)}
-        className="flex h-10 items-center gap-2 rounded-xl border border-[#dfe1e7] bg-white px-3 text-sm font-semibold text-[#062357] hover:bg-[#f3f7ff]"
+        className="flex h-10 items-center gap-2 rounded-[16px] border border-[#dfe1e7] bg-white px-3 text-sm font-semibold text-[#062357] hover:bg-[#f3f7ff]"
         aria-haspopup="listbox"
         aria-expanded={open}
       >
@@ -246,7 +239,7 @@ function HistorySortMenu({ value, onChange }: { value: HistorySort; onChange: (n
         <ul
           role="listbox"
           aria-label="Sort PrepTest history"
-          className="absolute right-0 z-30 mt-2 min-w-[200px] overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
+          className="absolute right-0 z-30 mt-2 min-w-[200px] overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
         >
           {HISTORY_SORT_OPTIONS.map((option) => {
             const active = option.id === value
@@ -261,7 +254,7 @@ function HistorySortMenu({ value, onChange }: { value: HistorySort; onChange: (n
                     setOpen(false)
                   }}
                   className={cn(
-                    "flex h-10 w-full items-center rounded-xl px-3 text-sm font-medium tracking-[0.02em] transition-colors",
+                    "flex h-10 w-full items-center rounded-[16px] px-3 text-sm font-medium tracking-[0.02em] transition-colors",
                     active ? "bg-[#f3f7ff] text-[#0d47a1]" : "text-[#062357] hover:bg-[#f6f8fa]",
                   )}
                 >
@@ -363,13 +356,13 @@ function AnalyticsPrepTestsPage() {
         id: "avg-lr",
         label: "AVERAGE LR",
         value: formatSignedNumber(stats.averageLrMissed),
-        accent: "#ae8b00",
+        accent: "#00bc54",
       },
       {
         id: "avg-rc",
         label: "AVERAGE RC",
         value: formatSignedNumber(stats.averageRcMissed),
-        accent: "#ff9d51",
+        accent: "#0bbcc9",
       },
       {
         id: "best-br",

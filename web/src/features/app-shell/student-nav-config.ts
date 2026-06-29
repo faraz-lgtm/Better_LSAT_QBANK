@@ -138,7 +138,6 @@ export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBre
   ]
 
   if (pathname.startsWith("/app/analytics/preptests/results/")) {
-    crumbs.push({ label: "Foundations" })
     crumbs.push({ label: "PrepTest", href: "/app/analytics/preptests" })
     crumbs.push({ label: "Results" })
     return crumbs
@@ -175,12 +174,6 @@ export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBre
   }
 
   const activeItem = findActiveNavItem(pathname, search)
-  const isInsightsSubPage =
-    section.key === "insights" && pathname !== "/app/analytics" && !pathname.match(/^\/app\/analytics\/?$/)
-
-  if (isInsightsSubPage) {
-    crumbs.push({ label: "Foundations" })
-  }
 
   if (activeItem && !crumbs.some((crumb) => crumb.label === activeItem.label)) {
     crumbs.push({ label: activeItem.label })

@@ -261,7 +261,7 @@ function OverviewTab() {
         <div className="flex flex-col gap-[18px] rounded-2xl bg-[#f6f8fa] p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <h2 className="text-[14px] font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
-              PREPTESTS SCORE PROGRES
+              PREPTESTS SCORE PROGRESS
             </h2>
             <div className="flex flex-wrap items-center gap-3">
               <Link
@@ -280,7 +280,7 @@ function OverviewTab() {
               Regular Score
             </span>
             <span className="flex items-center gap-2 text-sm leading-[1.5] tracking-[0.02em] text-[#666d80]">
-              <span className="size-4 rounded-full bg-[#ae8b00]" aria-hidden />
+              <span className="size-4 rounded-full bg-[#ff6f00]" aria-hidden />
               Blind Review
             </span>
           </div>

@@ -21,12 +21,14 @@ function ScoreMetric({
   const widthPct = Math.max(0, Math.min(100, (value / Math.max(1, max)) * 100))
   return (
     <div
-      className="flex h-[62px] shrink-0 flex-col justify-between rounded-[16px] border border-[#e5e7eb] bg-[#f6f8fa] px-3 py-2.5"
+      className="flex h-[52px] shrink-0 flex-col justify-center gap-1.5 rounded-[16px] border border-[#e5e7eb] bg-[#f9fafb] px-3"
       style={{ width: SCORE_BOX_WIDTH_PX }}
     >
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex w-full items-center justify-between gap-2">
         <span className="text-sm font-medium leading-normal tracking-[0.02em] text-[#666d80]">{label}</span>
-        <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#062357]">{value}</span>
+        <span className="w-[46px] text-right text-sm font-semibold leading-normal tracking-[0.02em] text-[#062357]">
+          {value}
+        </span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-lg bg-[#dfe1e7]">
         <div className="h-full rounded-lg" style={{ width: `${widthPct}%`, backgroundColor: barColor }} />
@@ -70,7 +72,7 @@ function RowMenu({
       <button
         type="button"
         onClick={() => setOpen((c) => !c)}
-        className="flex size-10 items-center justify-center rounded-xl border border-[#dfe1e6] bg-[#f9f9fb] text-[#666d80] transition-colors hover:bg-white"
+        className="flex size-10 items-center justify-center rounded-[16px] border border-[#dfe1e6] bg-[#f9f9fb] text-[#666d80] transition-colors hover:bg-white"
         aria-label="More options"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -80,7 +82,7 @@ function RowMenu({
       {open ? (
         <ul
           role="menu"
-          className="absolute right-0 z-30 mt-2 min-w-[200px] overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
+          className="absolute right-0 z-30 mt-2 min-w-[200px] overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
         >
           {onOpenPractice ? (
             <li role="presentation">
@@ -91,7 +93,7 @@ function RowMenu({
                   onOpenPractice(entry.id)
                   setOpen(false)
                 }}
-                className="flex h-10 w-full items-center gap-2 rounded-xl px-3 text-sm font-medium tracking-[0.02em] text-[#062357] transition-colors hover:bg-[#f6f8fa]"
+                className="flex h-10 w-full items-center gap-2 rounded-[16px] px-3 text-sm font-medium tracking-[0.02em] text-[#062357] transition-colors hover:bg-[#f6f8fa]"
               >
                 <ExternalLink className="size-4 text-[#666d80]" aria-hidden />
                 Practice this PrepTest
@@ -106,7 +108,7 @@ function RowMenu({
                 onToggleBookmark(entry.id)
                 setOpen(false)
               }}
-              className="flex h-10 w-full items-center gap-2 rounded-xl px-3 text-sm font-medium tracking-[0.02em] text-[#062357] transition-colors hover:bg-[#f6f8fa]"
+              className="flex h-10 w-full items-center gap-2 rounded-[16px] px-3 text-sm font-medium tracking-[0.02em] text-[#062357] transition-colors hover:bg-[#f6f8fa]"
             >
               <Bookmark
                 className={cn(
@@ -129,25 +131,27 @@ function PrepTestHistoryRow({
   onToggleBookmark,
   onSelectEntry,
   onOpenPractice,
+  brBarColor,
 }: {
   entry: PrepTestHistoryEntry
   onToggleBookmark: (id: string) => void
   onSelectEntry?: (id: string) => void
   onOpenPractice?: (id: string) => void
+  brBarColor: string
 }) {
   const labelClickable = Boolean(onSelectEntry)
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-3 rounded-[16px] border border-[#dfe1e7] bg-white px-3 py-3 lg:flex-nowrap",
+        "grid grid-cols-1 gap-3 rounded-[16px] border border-[#dfe1e7] bg-white p-3 lg:h-[72px] lg:grid-cols-[361px_minmax(0,1fr)_minmax(0,1fr)_97px] lg:items-center lg:gap-0 lg:p-0",
         labelClickable && "hover:bg-[#f9fbff]",
       )}
     >
-      <div className="flex w-full min-w-0 max-w-[361px] shrink-0 items-center gap-2.5">
+      <div className="flex min-w-0 items-center gap-2.5 lg:h-[72px] lg:px-3">
         <button
           type="button"
           onClick={() => onToggleBookmark(entry.id)}
-          className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-[#dfe1e6] bg-[#f9f9fb] text-[#0d47a1] transition-colors hover:bg-white"
+          className="flex size-10 shrink-0 items-center justify-center rounded-[16px] border border-[#dfe1e6] bg-[#f9f9fb] text-[#0d47a1] transition-colors hover:bg-white"
           aria-label={entry.bookmarked ? "Remove bookmark" : "Bookmark"}
           aria-pressed={entry.bookmarked}
         >
@@ -177,12 +181,16 @@ function PrepTestHistoryRow({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-3">
-        <ScoreMetric label="Score" value={entry.score} max={entry.scoreMax} barColor="#0d47a1" />
-        <ScoreMetric label="BR" value={entry.blindReviewScore} max={entry.blindReviewMax} barColor="#df1c41" />
+      <div className="flex gap-3 lg:contents">
+        <div className="flex flex-1 items-center justify-center lg:h-[72px] lg:flex-none lg:px-3">
+          <ScoreMetric label="Score" value={entry.score} max={entry.scoreMax} barColor="#0d47a1" />
+        </div>
+        <div className="flex flex-1 items-center justify-center lg:h-[72px] lg:flex-none lg:px-3">
+          <ScoreMetric label="BR" value={entry.blindReviewScore} max={entry.blindReviewMax} barColor={brBarColor} />
+        </div>
       </div>
 
-      <div className="ml-auto shrink-0">
+      <div className="flex items-center justify-end lg:h-[72px] lg:justify-center lg:px-3">
         <RowMenu entry={entry} onToggleBookmark={onToggleBookmark} onOpenPractice={onOpenPractice} />
       </div>
     </div>
@@ -196,6 +204,8 @@ type AnalyticsPrepTestHistoryProps = {
   onToggleBookmark: (id: string) => void
   onSelectEntry?: (id: string) => void
   onOpenPractice?: (id: string) => void
+  /** BR progress bar fill — Sections uses red; Drills uses orange. */
+  brBarColor?: string
 }
 
 function AnalyticsPrepTestHistory({
@@ -205,6 +215,7 @@ function AnalyticsPrepTestHistory({
   onToggleBookmark,
   onSelectEntry,
   onOpenPractice,
+  brBarColor = "#ff6f00",
 }: AnalyticsPrepTestHistoryProps) {
   return (
     <section className="rounded-[16px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
@@ -223,7 +234,7 @@ function AnalyticsPrepTestHistory({
         </label>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex max-h-[432px] flex-col gap-3 overflow-y-auto pr-1">
         {visibleEntries.length === 0 ? (
           <p className="rounded-[16px] border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-6 py-8 text-center text-sm text-[#666d80]">
             {bookmarkedOnly
@@ -238,6 +249,7 @@ function AnalyticsPrepTestHistory({
               onToggleBookmark={onToggleBookmark}
               onSelectEntry={onSelectEntry}
               onOpenPractice={onOpenPractice}
+              brBarColor={brBarColor}
             />
           ))
         )}
