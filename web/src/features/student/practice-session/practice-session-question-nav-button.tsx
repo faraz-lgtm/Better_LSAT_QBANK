@@ -1,5 +1,6 @@
 import { Flag } from "lucide-react"
 
+import { BLIND_REVIEW_QUESTION_NAV_RECOMMENDED_CLASS } from "@/features/student/practice-session/practice-session-blind-review-styles"
 import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
 
@@ -8,6 +9,7 @@ type PracticeSessionQuestionNavButtonProps = {
   active: boolean
   answered: boolean
   flagged?: boolean
+  recommendedForBr?: boolean
   variant?: PracticeSessionVariant
   onClick: () => void
 }
@@ -17,6 +19,7 @@ function PracticeSessionQuestionNavButton({
   active,
   answered,
   flagged = false,
+  recommendedForBr = false,
   variant = "default",
   onClick,
 }: PracticeSessionQuestionNavButtonProps) {
@@ -41,9 +44,16 @@ function PracticeSessionQuestionNavButton({
             filled
               ? "border-2 border-[#0b4e6e] bg-[#0d47a1] text-white"
               : "border-2 border-[#dfe1e7] bg-white text-[#062357]",
+            recommendedForBr && BLIND_REVIEW_QUESTION_NAV_RECOMMENDED_CLASS,
           )}
           aria-current={active ? "true" : undefined}
-          aria-label={flagged ? `Question ${number}, flagged` : `Question ${number}`}
+          aria-label={
+            flagged
+              ? `Question ${number}, flagged`
+              : recommendedForBr
+                ? `Question ${number}, recommended for blind review`
+                : `Question ${number}`
+          }
         >
           {number}
         </button>

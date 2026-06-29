@@ -71,7 +71,7 @@ function PracticeBlindReviewQuestionPanel({
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <div className="flex items-center justify-between gap-3">
               {recommendedForBr ? (
-                <div className="inline-flex h-10 items-center rounded-2xl bg-white p-1">
+                <div className="inline-flex h-10 items-center rounded-[16px] bg-white p-1">
                   <span className={BLIND_REVIEW_RECOMMENDED_BADGE_CLASS}>Recommended for BR</span>
                 </div>
               ) : (

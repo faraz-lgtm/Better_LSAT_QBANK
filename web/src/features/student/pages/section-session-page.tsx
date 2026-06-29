@@ -8,6 +8,7 @@ import type { DrillQuestion } from "@/features/student/drills/drill-types"
 import {
   blindReviewSectionSessionPath,
   firstBlindReviewSectionSessionId,
+  isQuestionRecommendedForBlindReview,
   prepTestResultsPath,
   skipBlindReviewBestEffort,
 } from "@/features/student/blind-review/blind-review-navigation"
@@ -620,8 +621,7 @@ function SectionSessionPage() {
       ? Boolean(currentAnswer)
       : false
   const recommendedForBr = Boolean(
-    current &&
-      (!actualAnswersByQuestion[current.id] || actualAnswersByQuestion[current.id]?.isCorrect === false),
+    current && isQuestionRecommendedForBlindReview(actualAnswersByQuestion[current.id]),
   )
   const editingBlindReviewAnswers =
     postCompleteBlindReview || !blindReviewMode || answerViewTab === "blind_review"
@@ -1395,6 +1395,7 @@ function SectionSessionPage() {
                     active={n === safeIndex}
                     answered={Boolean(answersByQuestion[q.id])}
                     flagged={questionFlags.isFlagged(q.id)}
+                    recommendedForBr={isQuestionRecommendedForBlindReview(actualAnswersByQuestion[q.id])}
                     variant={sessionVariant}
                     onClick={() => setQIndex(n)}
                   />

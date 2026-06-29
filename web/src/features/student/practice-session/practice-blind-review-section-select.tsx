@@ -85,7 +85,7 @@ function PracticeBlindReviewSectionSelect({
                   role="option"
                   aria-selected={isActive}
                   className={cn(
-                    "flex h-9 w-full items-center whitespace-nowrap rounded-xl px-3 text-left text-base leading-6 tracking-[0.32px] transition-colors",
+                    "flex h-9 w-full items-center whitespace-nowrap rounded-[16px] px-3 text-left text-base leading-6 tracking-[0.32px] transition-colors",
                     isActive
                       ? "bg-[#edf3ff] font-semibold text-[#062357]"
                       : "font-medium text-[#062357] hover:bg-[#f6f8fa]",
