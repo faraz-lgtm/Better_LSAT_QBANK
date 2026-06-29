@@ -9,8 +9,10 @@ import {
   useStudentPageHeaderSlotState,
 } from "@/features/app-shell/student-page-header-slot"
 import { cn } from "@/lib/utils"
+import { useLawHubSessionLoginLog } from "@/lib/auth/use-lawhub-session-login-log"
 
 function StudentAppShell() {
+  useLawHubSessionLoginLog()
   const location = useLocation()
   const immersive = isPracticeImmersiveRoute(location.pathname)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)

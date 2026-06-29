@@ -183,6 +183,7 @@ function AdminCoursesPage() {
   const [bulkBusy, setBulkBusy] = useState(false)
   const [bulkCommitting, setBulkCommitting] = useState(false)
   const [bulkError, setBulkError] = useState<string | null>(null)
+  const [bulkInsertOnly, setBulkInsertOnly] = useState(true)
   const [courseForm, setCourseForm] = useState({
     title: "",
     slug: "",
@@ -664,6 +665,7 @@ function AdminCoursesPage() {
       const result = await adminApi.bulkImportDryRun({
         fileName: bulkFile.name,
         fileBytesBase64,
+        insertOnly: bulkInsertOnly,
       })
       setBulkPreview(result)
     } catch (e) {
@@ -677,6 +679,10 @@ function AdminCoursesPage() {
     if (!adminApi || !bulkPreview) return
     if (bulkPreview.counts.invalidCount > 0) {
       setBulkError("Resolve invalid rows in dry-run before committing.")
+      return
+    }
+    if (bulkInsertOnly && bulkPreview.counts.updateCount > 0) {
+      setBulkError("Insert-only import cannot commit rows that would update existing lessons.")
       return
     }
     setBulkCommitting(true)
@@ -774,6 +780,18 @@ function AdminCoursesPage() {
                 />
                 <p className="mt-1 text-xs text-[var(--text3)]">{bulkFile ? `Selected: ${bulkFile.name}` : "No file selected"}</p>
               </div>
+              <label className="flex items-center gap-2 text-sm text-[var(--text2)]">
+                <input
+                  type="checkbox"
+                  checked={bulkInsertOnly}
+                  onChange={(e) => {
+                    setBulkInsertOnly(e.target.checked)
+                    setBulkPreview(null)
+                    setBulkError(null)
+                  }}
+                />
+                Insert new lessons only (skip existing slugs, append sort order)
+              </label>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" className="admin-btn admin-btn-primary" disabled={bulkBusy} onClick={() => void runBulkDryRun()}>
@@ -786,11 +804,12 @@ function AdminCoursesPage() {
 
             {bulkPreview ? (
               <div className="space-y-3 rounded-lg border border-[var(--border)] bg-[var(--surface2)] p-3">
-                <div className="grid gap-2 text-xs sm:grid-cols-5">
+                <div className="grid gap-2 text-xs sm:grid-cols-6">
                   <div><span className="font-semibold">Rows:</span> {bulkPreview.counts.totalRows}</div>
                   <div><span className="font-semibold">Valid:</span> {bulkPreview.counts.validCount}</div>
                   <div><span className="font-semibold">Insert:</span> {bulkPreview.counts.insertCount}</div>
                   <div><span className="font-semibold">Update:</span> {bulkPreview.counts.updateCount}</div>
+                  <div><span className="font-semibold">Skipped:</span> {bulkPreview.counts.skippedCount ?? 0}</div>
                   <div><span className="font-semibold">Invalid:</span> {bulkPreview.counts.invalidCount}</div>
                 </div>
                 <div className="max-h-[50vh] overflow-auto rounded border border-[var(--border)] bg-white">
@@ -812,7 +831,7 @@ function AdminCoursesPage() {
                       {bulkPreview.rows.map((row, idx) => (
                         <tr key={`${row.lesson_slug}-${idx}`} className="border-b border-[var(--border)]">
                           <td className="px-2 py-2">
-                            <span className={row.status === "invalid" ? "text-[var(--red)]" : row.status === "insert" ? "text-[#206d5b]" : "text-[#1f4c9a]"}>
+                            <span className={row.status === "invalid" ? "text-[var(--red)]" : row.status === "skipped" ? "text-[var(--text3)]" : row.status === "insert" ? "text-[#206d5b]" : "text-[#1f4c9a]"}>
                               {row.status}
                             </span>
                           </td>

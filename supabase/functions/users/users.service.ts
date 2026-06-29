@@ -3,6 +3,7 @@ import {
   type LawHubClient,
 } from '../_shared/lawhub-client.ts'
 import { parseLawHubEnv } from '../_shared/lawhub-env.ts'
+import { parseStripeEnv } from '../_shared/stripe-env.ts'
 import type { LsacStudentPayload } from './users.mapper.ts'
 import {
   mapLawHubStudentRecordToProfileUpsert,
@@ -29,7 +30,7 @@ export type UsersServiceDeps = {
   lawHub?: LawHubClient | null
 }
 
-export type AccessState = 'AUTH_REQUIRED' | 'LSAC_REQUIRED' | 'FULL_ACCESS'
+export type AccessState = 'AUTH_REQUIRED' | 'PAYMENT_REQUIRED' | 'LSAC_REQUIRED' | 'FULL_ACCESS'
 
 export type UserEntitlementState = {
   isAuthenticated: boolean
@@ -58,10 +59,27 @@ export function createUsersService(deps: UsersServiceDeps) {
   function requireLawHub(): LawHubClient {
     if (!lawHub) {
       throw new Error(
-        'LawHub is not configured: set LSAC_BASE_URL, LSAC_VENDOR_ID, LSAC_TENANT_ID, LSAC_CLIENT_ID, LSAC_CLIENT_SECRET, LSAC_SCOPE',
+        'LawHub is not configured: set LAWHUB_SANDBOX (or LSAC_BASE_URL), LSAC_VENDOR_ID, LSAC_CLIENT_ID, LSAC_CLIENT_SECRET',
       )
     }
     return lawHub
+  }
+
+  function assertLawHubEmailAllowed(email: string): void {
+    const local = email.trim().toLowerCase().split('@')[0] ?? ''
+    if (local.includes('+')) {
+      throw new Error('LSAC policy does not allow "+" in student email addresses')
+    }
+  }
+
+  async function syncRecordFromLawHub(
+    userId: string,
+    record: Record<string, unknown>,
+  ) {
+    const row = mapLawHubStudentRecordToProfileUpsert(userId, record)
+    const profile = await deps.repository.upsertProfile(row)
+    await persistSnapshot(userId, record)
+    return profile
   }
 
   async function persistSnapshot(
@@ -80,23 +98,76 @@ export function createUsersService(deps: UsersServiceDeps) {
     })
   }
 
+  async function resolveHasActiveCore(userId: string, _profile: ProfileRow | null): Promise<boolean> {
+    const stripeConfigured = parseStripeEnv(Deno.env.toObject()) !== null
+    if (!stripeConfigured) return true
+    return await deps.repository.hasActiveSubscription(userId)
+  }
+
+  async function requireActiveSubscription(userId: string): Promise<void> {
+    const stripeConfigured = parseStripeEnv(Deno.env.toObject()) !== null
+    if (!stripeConfigured) return
+    const hasSubscription = await deps.repository.hasActiveSubscription(userId)
+    if (!hasSubscription) {
+      throw new Error('Active subscription required before linking LawHub')
+    }
+  }
+
+  /** @deprecated Use requireActiveSubscription */
+  async function requireVendorSubscription(userId: string): Promise<void> {
+    await requireActiveSubscription(userId)
+  }
+
+  async function linkLawHubWithFlags(
+    userId: string,
+    sessionEmail: string,
+    input: { firstName: string; lastName: string },
+    flags: { isPrepPlusRequired: boolean; isPrepPlusIncludedFromVendor: boolean },
+  ) {
+    assertLawHubEmailAllowed(sessionEmail)
+    if (skipLawHubCalls) {
+      return await deps.repository.upsertProfile({
+        id: userId,
+        email: sessionEmail.trim().toLowerCase(),
+        full_name: `${input.firstName} ${input.lastName}`.trim(),
+        student_coaching_id: placeholderCoachingId(userId),
+      })
+    }
+
+    const rows = await requireLawHub().findStudentsByEmail(sessionEmail)
+    if (rows.length > 0) {
+      const first = rows[0] as Record<string, unknown>
+      return await syncRecordFromLawHub(userId, first)
+    }
+
+    const invited = await requireLawHub().addOrInviteStudent({
+      emailAddress: sessionEmail,
+      firstName: input.firstName,
+      lastName: input.lastName,
+      isPrepPlusRequired: flags.isPrepPlusRequired,
+      isPrepPlusIncludedFromVendor: flags.isPrepPlusIncludedFromVendor,
+    })
+    return await syncRecordFromLawHub(userId, invited as Record<string, unknown>)
+  }
+
   return {
     async getEntitlementState(userId: string): Promise<UserEntitlementState> {
       const profile = await deps.repository.getProfileById(userId)
-      const isLsacLinked = Boolean(profile?.student_coaching_id)
+      const isLsacLinked = Boolean(profile?.student_coaching_id?.trim())
       const snapshot = await deps.repository.getLatestStudentSnapshotByUserId(userId)
 
       const linkedInSnapshot = snapshot?.linked === true
-      const subscriptionType = snapshot?.subscription_type?.trim().toLowerCase() ?? null
-      const hasKnownEligibleSubscription = subscriptionType
-        ? subscriptionType.includes('advantage') || subscriptionType.includes('prep')
-        : false
-      const isLsacEligible = isLsacLinked && (linkedInSnapshot || hasKnownEligibleSubscription)
-      // Pricing/billing integration is deferred; all students are Core-active in v1.
-      const hasActiveCore = true
-      const accessState: AccessState = isLsacEligible && hasActiveCore
-        ? 'FULL_ACCESS'
-        : 'LSAC_REQUIRED'
+      const isLsacEligible = isLsacLinked && linkedInSnapshot
+      const hasActiveCore = await resolveHasActiveCore(userId, profile)
+
+      let accessState: AccessState
+      if (!hasActiveCore) {
+        accessState = 'PAYMENT_REQUIRED'
+      } else if (!isLsacEligible) {
+        accessState = 'LSAC_REQUIRED'
+      } else {
+        accessState = 'FULL_ACCESS'
+      }
 
       return {
         isAuthenticated: true,
@@ -140,6 +211,7 @@ export function createUsersService(deps: UsersServiceDeps) {
 
     /** GET studentEmails/{email} for the signed-in email only; upserts profile. */
     async syncProfileFromLawHubEmail(userId: string, email: string) {
+      assertLawHubEmailAllowed(email)
       if (skipLawHubCalls) {
         return await deps.repository.upsertProfile({
           id: userId,
@@ -148,16 +220,12 @@ export function createUsersService(deps: UsersServiceDeps) {
           student_coaching_id: placeholderCoachingId(userId),
         })
       }
-      const data = await requireLawHub().getStudentsByEmail(email)
-      const rows = Array.isArray(data) ? data : []
+      const rows = await requireLawHub().findStudentsByEmail(email)
       if (rows.length === 0) {
         throw new Error('No LawHub student records found for this email')
       }
       const first = rows[0] as Record<string, unknown>
-      const row = mapLawHubStudentRecordToProfileUpsert(userId, first)
-      const profile = await deps.repository.upsertProfile(row)
-      await persistSnapshot(userId, first)
-      return profile
+      return await syncRecordFromLawHub(userId, first)
     },
 
     /** GET students/{coachingId} using coaching id stored on the profile. */
@@ -179,10 +247,63 @@ export function createUsersService(deps: UsersServiceDeps) {
       }
       const data = await requireLawHub().getStudentByCoachingId(coachingId)
       const record = data as Record<string, unknown>
-      const row = mapLawHubStudentRecordToProfileUpsert(userId, record)
-      const updated = await deps.repository.upsertProfile(row)
-      await persistSnapshot(userId, record)
-      return updated
+      return await syncRecordFromLawHub(userId, record)
+    },
+
+    /** Invite with PrepPlus included (doc §5 scenario 1). */
+    async inviteStudentWithPrepPlusIncluded(
+      userId: string,
+      sessionEmail: string,
+      input: { firstName: string; lastName: string },
+    ) {
+      return await this.inviteSelfViaLawHub(userId, sessionEmail, {
+        firstName: input.firstName,
+        lastName: input.lastName,
+        isPrepPlusRequired: true,
+        isPrepPlusIncludedFromVendor: true,
+      })
+    },
+
+    /**
+     * Vendor-included PrepPlus (doc §5 scenario 1). Requires active Stripe subscription.
+     */
+    async linkLawHubWithVendorPrepPlus(
+      userId: string,
+      sessionEmail: string,
+      input: { firstName: string; lastName: string },
+    ) {
+      await requireVendorSubscription(userId)
+      await linkLawHubWithFlags(userId, sessionEmail, input, {
+        isPrepPlusRequired: true,
+        isPrepPlusIncludedFromVendor: true,
+      })
+      return await this.refreshProfileFromLawHubCoachingId(userId)
+    },
+
+    /**
+     * Existing LawHub PrepPlus (doc §5 scenario 2). Requires active Better LSAT subscription.
+     */
+    async linkLawHubWithExistingPrepPlus(
+      userId: string,
+      sessionEmail: string,
+      input: { firstName: string; lastName: string },
+    ) {
+      await requireActiveSubscription(userId)
+      await deps.repository.setPrepPlusSource(userId, 'existing_lsac')
+      await linkLawHubWithFlags(userId, sessionEmail, input, {
+        isPrepPlusRequired: true,
+        isPrepPlusIncludedFromVendor: false,
+      })
+      return await this.refreshProfileFromLawHubCoachingId(userId)
+    },
+
+    /** @deprecated Use linkLawHubWithVendorPrepPlus or linkLawHubWithExistingPrepPlus */
+    async linkLawHubAccount(
+      userId: string,
+      sessionEmail: string,
+      input: { firstName: string; lastName: string },
+    ) {
+      return await this.linkLawHubWithVendorPrepPlus(userId, sessionEmail, input)
     },
 
     /** POST students — email must match the authenticated user (enforced in controller). */
@@ -196,6 +317,7 @@ export function createUsersService(deps: UsersServiceDeps) {
         isPrepPlusIncludedFromVendor: boolean
       },
     ) {
+      assertLawHubEmailAllowed(sessionEmail)
       if (skipLawHubCalls) {
         return await deps.repository.upsertProfile({
           id: userId,
@@ -212,10 +334,7 @@ export function createUsersService(deps: UsersServiceDeps) {
         isPrepPlusIncludedFromVendor: input.isPrepPlusIncludedFromVendor,
       })
       const record = data as Record<string, unknown>
-      const row = mapLawHubStudentRecordToProfileUpsert(userId, record)
-      const updated = await deps.repository.upsertProfile(row)
-      await persistSnapshot(userId, record)
-      return updated
+      return await syncRecordFromLawHub(userId, record)
     },
 
     /** POST upgradeStudent/{coachingId} for the current user's linked coaching id only. */
@@ -232,7 +351,9 @@ export function createUsersService(deps: UsersServiceDeps) {
       if (!coachingId) {
         throw new Error('No student_coaching_id on profile')
       }
-      return await requireLawHub().upgradeStudent(coachingId)
+      await requireLawHub().upgradeStudent(coachingId)
+      const refreshed = await this.refreshProfileFromLawHubCoachingId(userId)
+      return { upgraded: true, profile: refreshed }
     },
 
     async getLawHubTestInstancesForUser(userId: string) {
@@ -255,7 +376,11 @@ export function createUsersService(deps: UsersServiceDeps) {
     },
 
     /** Required when exposing Official LSAC content after login. */
-    async logLawHubLogin(userId: string) {
+    async logLawHubContentAccess(
+      userId: string,
+      eventType: string,
+      input?: { emailAddress?: string; metadata?: Record<string, unknown> },
+    ) {
       if (skipLawHubCalls) {
         return
       }
@@ -264,20 +389,37 @@ export function createUsersService(deps: UsersServiceDeps) {
       if (!coachingId) {
         throw new Error('No student_coaching_id on profile')
       }
-      const requestPayload = {
+      const emailAddress =
+        input?.emailAddress?.trim().toLowerCase() ??
+        profile?.email?.trim().toLowerCase() ??
+        null
+      if (!emailAddress) {
+        throw new Error('Email address is required for LawHub content access logging')
+      }
+      const eventDate = new Date().toISOString()
+      const metadata = input?.metadata
+      const requestPayload: Record<string, unknown> = {
         studentCoachingId: coachingId,
-        eventType: 'Login',
-        eventDate: new Date().toISOString(),
+        emailAddress,
+        eventType,
+        eventDate,
+      }
+      if (metadata && Object.keys(metadata).length > 0) {
+        requestPayload.metadata = metadata
       }
       try {
         const response =
-          (await requireLawHub().logContentAccess(requestPayload)) as
-            | Record<string, unknown>
-            | null
+          (await requireLawHub().logContentAccess({
+            studentCoachingId: coachingId,
+            emailAddress,
+            eventType,
+            eventDate,
+            metadata,
+          })) as Record<string, unknown> | null
         await deps.repository.insertLogEvent({
           userId,
           studentCoachingId: coachingId,
-          eventType: 'Login',
+          eventType,
           statusCode: 200,
           success: true,
           requestPayload,
@@ -287,7 +429,7 @@ export function createUsersService(deps: UsersServiceDeps) {
         await deps.repository.insertLogEvent({
           userId,
           studentCoachingId: coachingId,
-          eventType: 'Login',
+          eventType,
           statusCode: null,
           success: false,
           errorMessage: error instanceof Error ? error.message : String(error),
@@ -296,6 +438,17 @@ export function createUsersService(deps: UsersServiceDeps) {
         })
         throw error
       }
+    },
+
+    async logLawHubLogin(
+      userId: string,
+      sessionEmail: string,
+      metadata?: Record<string, unknown>,
+    ) {
+      return await this.logLawHubContentAccess(userId, 'Login', {
+        emailAddress: sessionEmail,
+        metadata,
+      })
     },
 
     async saveOnboarding(

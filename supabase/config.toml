@@ -186,7 +186,7 @@ password_requirements = ""
 
 [auth.rate_limit]
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-email_sent = 2
+email_sent = 10
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
@@ -634,6 +634,9 @@ verify_jwt = false
 [functions.users-admin-list-lsac-log-events]
 verify_jwt = false
 
+[functions.users-admin-lsac-sync]
+verify_jwt = false
+
 [functions.users-admin-list-lsac-snapshots]
 verify_jwt = false
 
@@ -650,6 +653,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.users-lawhub-invite]
+verify_jwt = false
+
+[functions.users-lawhub-link]
 verify_jwt = false
 
 [functions.users-lawhub-log-login]
@@ -686,6 +692,21 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.users-sync-lsac]
+verify_jwt = false
+
+[functions.billing-create-checkout-session]
+verify_jwt = false
+
+[functions.billing-get-status]
+verify_jwt = false
+
+[functions.billing-get-public-config]
+verify_jwt = false
+
+[functions.billing-get-plans]
+verify_jwt = false
+
+[functions.stripe-webhook]
 verify_jwt = false
 
 [functions.users]
