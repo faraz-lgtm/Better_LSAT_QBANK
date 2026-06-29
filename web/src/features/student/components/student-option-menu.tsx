@@ -110,7 +110,7 @@ function StudentOptionMenu<T extends string>({
           role="listbox"
           aria-label={ariaLabel}
           className={cn(
-            "absolute z-30 mt-2 max-h-[min(24rem,calc(100vh-8rem))] w-full max-w-full overflow-y-auto border border-[#dfe1e7] bg-white p-1 shadow-[0px_12px_24px_rgba(13,13,18,0.12)]",
+            "absolute z-30 mt-2 flex max-h-[min(24rem,calc(100vh-8rem))] w-full max-w-full flex-col gap-1 overflow-y-auto border border-[#dfe1e7] bg-white p-2 shadow-[0px_12px_24px_rgba(13,13,18,0.12)]",
             size === "lg" ? "rounded-[12px]" : "rounded-[10px]",
             menuAlign === "right" ? "right-0" : "left-0",
           )}
@@ -126,8 +126,10 @@ function StudentOptionMenu<T extends string>({
                   onClick={() => handleSelect(option.value)}
                   className={cn(
                     "flex w-full min-w-0 items-start justify-between gap-3 px-3 py-3 font-medium tracking-[0.02em] transition-colors",
-                    size === "lg" ? "min-h-[52px] rounded-[12px] text-base font-normal tracking-[0.32px]" : "min-h-10 rounded-[10px] text-sm",
-                    active ? "bg-[#f3f7ff] text-[#062357]" : "text-[#062357] hover:bg-[#f3f7ff]",
+                    size === "lg"
+                      ? "min-h-[44px] rounded-[8px] text-base font-normal tracking-[0.32px]"
+                      : "min-h-10 rounded-[8px] text-sm",
+                    active ? "bg-[#edf3ff] text-[#082c6b]" : "text-[#062357] hover:bg-[#edf3ff]/60",
                   )}
                 >
                   <span className="min-w-0 flex-1 whitespace-normal text-left leading-snug">

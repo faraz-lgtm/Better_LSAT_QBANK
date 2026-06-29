@@ -330,16 +330,7 @@ function PracticeSessionResultsPage() {
     >
       <div className={PT_RESULTS_PAGE_GAP_CLASS}>
         <section className={PT_RESULTS_HERO_CARD_CLASS}>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <h1 className="!m-0 !text-[24px] font-bold leading-[1.3] text-[#062357]">{results.title}</h1>
-            <button
-              type="button"
-              className="text-sm font-semibold text-[#0d47a1] hover:underline"
-              onClick={handleBack}
-            >
-              Back
-            </button>
-          </div>
+          <h1 className="!m-0 !text-[24px] font-bold leading-[1.3] text-[#062357]">{results.title}</h1>
 
           <PracticeResultsSummaryPanel
             rawScore={results.rawScore}
