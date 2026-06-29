@@ -6,7 +6,7 @@ import type {
   PrepTestSectionKind,
   PrepTestSectionSummary,
   QuestionResultStatus,
-} from "@/features/student/lib/mock-analytics-prep-test-results"
+} from "@/features/student/lib/prep-test-results-types"
 
 const QUESTIONS_PER_ROW = 7
 
@@ -21,6 +21,13 @@ function chunk<T>(items: T[], size: number): T[][] {
 function formatScoreDelta(incorrectCount: number): string {
   if (incorrectCount <= 0) return "0"
   return `-${incorrectCount}`
+}
+
+export function prepTestBlindReviewWasCompleted(
+  api: Pick<PrepTestSessionDetail, "blindReviewCompletedAt" | "questions">,
+): boolean {
+  if (api.blindReviewCompletedAt) return true
+  return api.questions.some((q) => q.blindReviewCorrect !== q.actualCorrect)
 }
 
 export function formatQuestionRefLabel(
@@ -56,6 +63,8 @@ function mapQuestionRow(
     difficultyDots: q.difficultyDots,
     actualCorrect: q.actualCorrect,
     blindReviewCorrect: q.blindReviewCorrect,
+    blindReviewUnanswered: q.blindReviewUnanswered,
+    isUnanswered: q.isUnanswered,
     answerPopularity: [20, 20, 20, 20, 20],
     correctLetter,
   }
@@ -67,7 +76,7 @@ function buildSectionSummary(
   questions: PrepTestSessionDetail["questions"],
 ): PrepTestSectionSummary {
   const outcomes: QuestionResultStatus[] = questions.map((q) =>
-    q.actualCorrect ? "correct" : "incorrect",
+    q.isUnanswered ? "unanswered" : q.actualCorrect ? "correct" : "incorrect",
   )
   const correct = outcomes.filter((o) => o === "correct").length
   const total = questions.length
@@ -89,7 +98,7 @@ function buildLrSectionBlock(
   api: Pick<PrepTestSessionDetail, "moduleId" | "prepTestTitle">,
 ): PrepTestLrSectionBlock {
   const incorrect = questions.filter((q) => !q.actualCorrect).length
-  const blindIncorrect = questions.filter((q) => !q.blindReviewCorrect).length
+  const blindIncorrect = questions.filter((q) => q.blindReviewUnanswered || !q.blindReviewCorrect).length
   return {
     sectionTitle: `Section ${sectionNumber}`,
     scoreDisplay: formatScoreDelta(incorrect),
@@ -105,7 +114,7 @@ function buildRcSectionBlock(
   api: Pick<PrepTestSessionDetail, "moduleId" | "prepTestTitle">,
 ): PrepTestResultsDetail["rcSection"] {
   const incorrect = questions.filter((q) => !q.actualCorrect).length
-  const blindIncorrect = questions.filter((q) => !q.blindReviewCorrect).length
+  const blindIncorrect = questions.filter((q) => q.blindReviewUnanswered || !q.blindReviewCorrect).length
   return {
     sectionTitle: `Section ${sectionNumber}`,
     scoreDisplay: formatScoreDelta(incorrect),
@@ -147,6 +156,7 @@ export function formatPrepTestResultsTitle(prepTestTitle: string, moduleId: stri
 export function mapPrepTestDetailToResults(api: PrepTestSessionDetail): PrepTestResultsDetail {
   const incorrect = api.incorrect
   const correct = api.correct
+  const blindReviewCompleted = prepTestBlindReviewWasCompleted(api)
   const grouped = groupQuestionsBySection(api.questions)
 
   const sections: PrepTestSectionSummary[] = grouped.map(({ sectionNumber, sectionType, questions }) =>
@@ -180,6 +190,7 @@ export function mapPrepTestDetailToResults(api: PrepTestSessionDetail): PrepTest
     percentile: api.percentile ?? 0,
     prediction: api.scaledScore,
     blindReview: api.blindReviewScore,
+    blindReviewCompleted,
     sections,
     lrSections,
     passages: firstLr?.passages ?? [],

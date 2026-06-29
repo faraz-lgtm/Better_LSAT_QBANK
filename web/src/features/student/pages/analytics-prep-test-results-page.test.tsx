@@ -22,10 +22,6 @@ vi.mock("@/features/student/analytics/hooks/use-analytics-api", () => ({
   usePracticeApi: () => practiceApi,
 }))
 
-vi.mock("@/lib/dev/prep-test-ui-preview", () => ({
-  allowsPrepTestUnauthenticatedPreview: () => false,
-}))
-
 const sessionDetail: PrepTestSessionDetail = {
   sessionId: "d5f5db19-b84a-4ac4-be8b-640bc022cc20",
   prepTestId: "pt-156",
@@ -41,6 +37,7 @@ const sessionDetail: PrepTestSessionDetail = {
   incorrect: 1,
   percentile: 0,
   blindReviewPercentile: 0,
+  blindReviewCompletedAt: "2026-06-20T12:00:00.000Z",
   questions: [
     {
       id: "q1",
@@ -51,6 +48,8 @@ const sessionDetail: PrepTestSessionDetail = {
       difficultyDots: 4,
       actualCorrect: true,
       blindReviewCorrect: true,
+      blindReviewUnanswered: false,
+      isUnanswered: false,
       correctLetter: "A",
       selectedLetter: "A",
       sectionType: "LR",
@@ -65,6 +64,8 @@ const sessionDetail: PrepTestSessionDetail = {
       difficultyDots: 3,
       actualCorrect: false,
       blindReviewCorrect: false,
+      blindReviewUnanswered: false,
+      isUnanswered: false,
       correctLetter: "B",
       selectedLetter: "A",
       sectionType: "LR",
@@ -79,6 +80,8 @@ const sessionDetail: PrepTestSessionDetail = {
       difficultyDots: 2,
       actualCorrect: true,
       blindReviewCorrect: true,
+      blindReviewUnanswered: false,
+      isUnanswered: false,
       correctLetter: "C",
       selectedLetter: "C",
       sectionType: "RC",
@@ -93,6 +96,8 @@ const sessionDetail: PrepTestSessionDetail = {
       difficultyDots: 2,
       actualCorrect: true,
       blindReviewCorrect: true,
+      blindReviewUnanswered: false,
+      isUnanswered: false,
       correctLetter: "D",
       selectedLetter: "D",
       sectionType: "RC",

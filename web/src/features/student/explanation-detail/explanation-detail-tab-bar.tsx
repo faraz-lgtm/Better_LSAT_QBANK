@@ -17,29 +17,19 @@ const TABS: { id: ExplanationDetailTabId; label: string }[] = [
   { id: "analytics", label: "Insights" },
 ]
 
-function tabButtonClass(active: boolean, id: ExplanationDetailTabId): string {
-  const isExplanation = id === "explanation"
-  const size = active
-    ? isExplanation
-      ? "h-10 text-sm tracking-[0.02em]"
-      : "h-12 text-base tracking-[0.02em]"
-    : isExplanation
-      ? "h-12 text-sm tracking-[0.02em]"
-      : "h-12 text-base tracking-[0.02em]"
-
+function tabButtonClass(active: boolean): string {
   return cn(
-    "rounded-2xl px-4 font-semibold transition-colors",
-    size,
+    "inline-flex h-10 items-center justify-center rounded-[10px] px-4 text-sm font-semibold tracking-[0.02em] transition-colors",
     active
       ? "border border-[#0b4e6e] bg-[#0d47a1] text-white shadow-[0_1px_1px_rgba(13,13,18,0.06)]"
-      : "bg-transparent text-[#0d47a1] hover:bg-white/50",
+      : "border border-transparent bg-transparent text-[#0d47a1] hover:bg-white/60",
   )
 }
 
-function navButtonClass(enabled: boolean): string {
+function navButtonClass(enabled: boolean, direction: "prev" | "next"): string {
   return cn(
-    "flex size-[52px] shrink-0 items-center justify-center rounded-2xl border-2 border-[color:var(--greyscale-100)] bg-[var(--greyscale-25)] shadow-[0_1px_1px_rgba(13,13,18,0.06)] transition-colors",
-    enabled ? "text-[#062357] hover:opacity-80" : "opacity-40",
+    "flex size-12 shrink-0 items-center justify-center rounded-[10px] border border-[#dfe1e7] bg-white shadow-[0_1px_1px_rgba(13,13,18,0.06)] transition-colors",
+    enabled ? (direction === "next" ? "text-[#0d47a1] hover:bg-[#f3f7ff]" : "text-[#666d80] hover:bg-[#f3f7ff]") : "text-[#666d80] opacity-40",
   )
 }
 
@@ -50,9 +40,9 @@ function ExplanationDetailTabBar({
   nextHref,
 }: ExplanationDetailTabBarProps) {
   return (
-    <div className="flex flex-wrap items-center justify-start gap-6 lg:justify-end">
+    <div className="flex flex-wrap items-center gap-4 lg:gap-6">
       <div
-        className="inline-flex h-[52px] items-center gap-2 rounded-2xl bg-[var(--primary-25)] p-1"
+        className="inline-flex h-12 items-center gap-1 rounded-[10px] bg-[var(--primary-25)] p-1"
         role="tablist"
         aria-label="Question detail"
       >
@@ -65,30 +55,30 @@ function ExplanationDetailTabBar({
               role="tab"
               aria-selected={active}
               onClick={() => onTabChange(id)}
-              className={tabButtonClass(active, id)}
+              className={tabButtonClass(active)}
             >
               {label}
             </button>
           )
         })}
       </div>
-      <div className="flex h-[52px] items-center gap-4">
+      <div className="flex items-center gap-3">
         {prevHref ? (
-          <Link to={prevHref} aria-label="Previous question" className={navButtonClass(true)}>
-            <ChevronLeft className="size-6" aria-hidden />
+          <Link to={prevHref} aria-label="Previous question" className={navButtonClass(true, "prev")}>
+            <ChevronLeft className="size-5" aria-hidden />
           </Link>
         ) : (
-          <span aria-label="Previous question" className={navButtonClass(false)}>
-            <ChevronLeft className="size-6" aria-hidden />
+          <span aria-label="Previous question" className={navButtonClass(false, "prev")}>
+            <ChevronLeft className="size-5" aria-hidden />
           </span>
         )}
         {nextHref ? (
-          <Link to={nextHref} aria-label="Next question" className={navButtonClass(true)}>
-            <ChevronRight className="size-6" aria-hidden />
+          <Link to={nextHref} aria-label="Next question" className={navButtonClass(true, "next")}>
+            <ChevronRight className="size-5" aria-hidden />
           </Link>
         ) : (
-          <span aria-label="Next question" className={navButtonClass(false)}>
-            <ChevronRight className="size-6" aria-hidden />
+          <span aria-label="Next question" className={navButtonClass(false, "next")}>
+            <ChevronRight className="size-5" aria-hidden />
           </span>
         )}
       </div>

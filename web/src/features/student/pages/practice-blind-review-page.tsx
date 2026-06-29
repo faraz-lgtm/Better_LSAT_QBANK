@@ -14,6 +14,7 @@ import { StudentMain } from "@/features/student/components/student-main"
 import type { PrepTestPoolAttempt } from "@/features/student/preptests/preptest-types"
 import { buildPoolHistoryRows, poolCardDisplayScore } from "@/features/student/preptests/preptest-pool-display"
 import { AttemptScoreBox, ScoreBadge } from "@/features/student/preptests/preptest-score-badge"
+import { PREPTEST_LIST_HREF } from "@/features/student/preptests/preptest-routes"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -31,6 +32,26 @@ const EMPTY_STATUS_COUNTS: BlindReviewPoolStatusCounts = {
   eligible: 0,
   in_progress: 0,
   completed: 0,
+}
+
+/** Figma pool row hover — matches practice-preptests-list-page */
+const BLIND_REVIEW_CARD_SHELL_BASE_CLASS =
+  "w-full overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white transition-[border-color]"
+
+type BlindReviewCardHoverTone = "default" | "success"
+
+const BLIND_REVIEW_CARD_HOVER_CLASS: Record<
+  BlindReviewCardHoverTone,
+  { shell: string; row: string }
+> = {
+  default: {
+    shell: "hover:border-[#0d47a1]",
+    row: "transition-[background-color] hover:bg-[var(--primary-25)]",
+  },
+  success: {
+    shell: "hover:border-[#287f6e]",
+    row: "transition-[background-color] hover:bg-[#effefa]",
+  },
 }
 
 function displayPrepTestNumber(item: BlindReviewPoolItem): number {
@@ -81,7 +102,7 @@ function attemptDetailLabel(attempt: PrepTestPoolAttempt): string {
 function PtBadge({ number, tone }: { number: number; tone: "default" | "muted" | "success" }) {
   const palette =
     tone === "success"
-      ? "border-[#287f6e] bg-[#fff3ea] text-[#287f6e]"
+      ? "border-[#287f6e] bg-[#effefa] text-[#287f6e]"
       : tone === "muted"
         ? "border-[#666d80] bg-[#f6f8fa] text-[#666d80]"
         : "border-[#0d47a1] bg-[#f3f7ff] text-[#0d47a1]"
@@ -135,14 +156,23 @@ function BlindReviewListCard({
 
   const primaryLabel = isCompleted ? "View" : isInProgress ? "Continue" : "Start"
   const primaryClass = isCompleted
-    ? "inline-flex h-[52px] w-[148px] shrink-0 items-center justify-center rounded-2xl border border-[#dfe1e7] bg-white text-base font-semibold text-[#666d80] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa]"
+    ? "inline-flex h-[52px] w-[148px] shrink-0 items-center justify-center rounded-[16px] border border-[#dfe1e7] bg-white text-base font-semibold text-[#666d80] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa]"
     : isInProgress
-      ? "inline-flex h-[52px] min-w-[148px] shrink-0 items-center justify-center rounded-2xl bg-[#ff9d51] px-6 text-base font-semibold text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f08a3a]"
-      : "ds-btn min-w-[148px] shrink-0 text-base"
+      ? "inline-flex h-[52px] min-w-[148px] shrink-0 items-center justify-center rounded-[16px] bg-[#ff9d51] px-6 text-base font-semibold text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f08a3a]"
+      : "ds-btn min-w-[148px] shrink-0 rounded-[16px] text-base"
+
+  const hoverTone: BlindReviewCardHoverTone = isCompleted ? "success" : "default"
+  const hoverClass = BLIND_REVIEW_CARD_HOVER_CLASS[hoverTone]
 
   return (
-    <article className="w-full overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]">
-      <div className="grid min-h-[110px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-6 py-3 sm:gap-4 sm:py-0">
+    <article className={cn(BLIND_REVIEW_CARD_SHELL_BASE_CLASS, hoverClass.shell)}>
+      <div
+        className={cn(
+          "grid min-h-[110px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-6 py-3 sm:gap-4 sm:py-0",
+          hoverClass.row,
+          expanded ? "rounded-t-[16px] border-b border-[#dfe1e7]" : undefined,
+        )}
+      >
         <div className="flex min-w-0 items-center gap-6">
           <PtBadge number={ptNum} tone={badgeTone} />
           <div className="flex min-w-0 flex-col gap-2">
@@ -280,13 +310,13 @@ function PracticeBlindReviewPage() {
   }
 
   return (
-    <StudentMain>
-      <p className="mb-6 max-w-[908px] text-sm font-medium leading-[1.5] tracking-[0.02em] text-[#666d80] md:text-base">
+    <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
+      <p className="mb-6 max-w-[908px] text-[14px] font-medium leading-[1.5] tracking-[0.02em] text-[#666d80] md:text-base">
           After you finish a PrepTest, blind review lets you revisit every question without seeing correct answers.
-          Update your responses, then finish to record your blind review score.
+          
         </p>
 
-        <section className="mb-6">
+        <section className="mb-6 mt-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">Your PrepTests</h2>
             <div className="flex flex-wrap gap-3">
@@ -303,8 +333,8 @@ function PracticeBlindReviewPage() {
                     className={cn(
                       "inline-flex items-center justify-center px-4 text-base transition-colors",
                       active
-                        ? "ds-btn font-semibold"
-                        : "h-[52px] rounded-2xl border border-[#dfe1e7] bg-white font-medium text-[#666d80] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] hover:bg-[#f6f8fa]",
+                        ? "ds-btn rounded-[16px] font-semibold"
+                        : "h-[52px] rounded-[16px] border border-[#dfe1e7] bg-white font-medium text-[#666d80] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] hover:bg-[#f6f8fa]",
                     )}
                   >
                     {filterTabLabel(tab.id)}
@@ -322,7 +352,7 @@ function PracticeBlindReviewPage() {
         ) : null}
 
         {loading ? (
-          <StudentPageLoader label="Loading blind review…" />
+          <StudentPageLoader centered className="min-h-0 flex-1" label="Loading blind review…" />
         ) : prepTests.length === 0 ? (
           <section className="rounded-2xl border border-[#dfe1e7] bg-white p-8 text-center shadow-sm">
             <p className="text-sm text-[#666d80]">
@@ -334,7 +364,7 @@ function PracticeBlindReviewPage() {
               <button
                 type="button"
                 className="mt-4 text-sm font-semibold text-[#0d47a1] hover:underline"
-                onClick={() => navigate("/app/practice/preptest")}
+                onClick={() => navigate(PREPTEST_LIST_HREF)}
               >
                 Go to PrepTests
               </button>

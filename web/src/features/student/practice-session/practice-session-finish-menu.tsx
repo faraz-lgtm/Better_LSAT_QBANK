@@ -1,10 +1,17 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, ChevronUp } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
+import {
+  FINISH_MENU_EXIT_ITEM_CLASS,
+  FINISH_MENU_OPEN_PANEL_CLASS,
+  FINISH_MENU_OPEN_TRIGGER_CLASS,
+  FINISH_MENU_SUBMIT_ITEM_CLASS,
+  FINISH_MENU_WIDTH_PX,
+  SESSION_FINISH_BUTTON_CLASS,
+} from "@/features/student/practice-session/practice-session-active-drill-styles"
+import { cn } from "@/lib/utils"
 
-const MENU_MIN_WIDTH = 220
 /** Above section-intro overlay (`z-[100]`) and practice modals. */
 const MENU_Z_INDEX = 110
 
@@ -31,13 +38,14 @@ function PracticeSessionFinishMenu({
   onExit,
 }: PracticeSessionFinishMenuProps) {
   const [open, setOpen] = useState(false)
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; width: number } | null>(
-    null,
-  )
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const menuRef = useRef<HTMLUListElement | null>(null)
+  const menuRef = useRef<HTMLDivElement | null>(null)
 
-  useLayoutEffect(() => {
+  const closedTriggerClassName = buttonClassName ?? SESSION_FINISH_BUTTON_CLASS
+  const label = finishing ? "Finishing…" : (finishLabel ?? "Finish")
+
+  useEffect(() => {
     if (!open || !containerRef.current) {
       setMenuPosition(null)
       return
@@ -47,11 +55,9 @@ function PracticeSessionFinishMenu({
       const trigger = containerRef.current
       if (!trigger) return
       const rect = trigger.getBoundingClientRect()
-      const width = Math.max(MENU_MIN_WIDTH, rect.width)
       setMenuPosition({
-        top: rect.bottom + 8,
-        left: rect.right - width,
-        width,
+        top: rect.top,
+        left: rect.left,
       })
     }
 
@@ -83,71 +89,95 @@ function PracticeSessionFinishMenu({
     }
   }, [open])
 
-  const menu =
+  const triggerContent = (isOpen: boolean) => (
+    <>
+      <span className="shrink-0 whitespace-nowrap">{label}</span>
+      {isOpen ? (
+        <ChevronUp className="ml-auto size-5 shrink-0 text-[#818898]" strokeWidth={2} aria-hidden />
+      ) : (
+        <ChevronDown className="ml-auto size-5 shrink-0 text-[#818898]" strokeWidth={2} aria-hidden />
+      )}
+    </>
+  )
+
+  const openMenu =
     open && menuPosition
       ? createPortal(
-          <ul
+          <div
             ref={menuRef}
             role="menu"
+            aria-label="Finish options"
             style={{
               position: "fixed",
               top: menuPosition.top,
               left: menuPosition.left,
-              width: menuPosition.width,
+              width: FINISH_MENU_WIDTH_PX,
               zIndex: MENU_Z_INDEX,
             }}
-            className="overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
+            className={FINISH_MENU_OPEN_PANEL_CLASS}
           >
+            <button
+              type="button"
+              disabled={disabled || finishing}
+              className={FINISH_MENU_OPEN_TRIGGER_CLASS}
+              aria-haspopup="menu"
+              aria-expanded
+              onClick={() => setOpen(false)}
+            >
+              {triggerContent(true)}
+            </button>
             {exitOnly ? null : (
-              <li role="presentation">
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="flex h-10 w-full items-center rounded-xl px-3 text-sm font-medium tracking-[0.02em] text-[#062357] transition-colors hover:bg-[#f6f8fa]"
-                  onClick={() => {
-                    setOpen(false)
-                    onSubmitSection()
-                  }}
-                >
-                  {submitLabel}
-                </button>
-              </li>
-            )}
-            <li role="presentation">
               <button
                 type="button"
                 role="menuitem"
-                className="flex h-10 w-full items-center rounded-xl px-3 text-sm font-medium tracking-[0.02em] text-[#062357] transition-colors hover:bg-[#f6f8fa]"
+                className={FINISH_MENU_SUBMIT_ITEM_CLASS}
                 onClick={() => {
                   setOpen(false)
-                  onExit()
+                  onSubmitSection()
                 }}
               >
-                Exit (Saved Progress)
+                {submitLabel}
               </button>
-            </li>
-          </ul>,
+            )}
+            <button
+              type="button"
+              role="menuitem"
+              className={cn(FINISH_MENU_EXIT_ITEM_CLASS, exitOnly && "border-t border-[#dfe1e7]")}
+              onClick={() => {
+                setOpen(false)
+                onExit()
+              }}
+            >
+              <div className="whitespace-nowrap">
+                <p className="mb-0 leading-[1.5]">Exit</p>
+                <p className="leading-[1.5]">(Saved Progress)</p>
+              </div>
+            </button>
+          </div>,
           document.body,
         )
       : null
 
   return (
-    <div ref={containerRef} className="relative shrink-0">
-      <Button
-        type="button"
-        disabled={disabled || finishing}
-        variant="outline"
-        size="default"
-        className={buttonClassName ?? "h-[52px] gap-1 px-4"}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
-      >
-        {finishing ? "Finishing…" : (finishLabel ?? "Finish")}
-        <ChevronDown className="size-5 opacity-90" strokeWidth={2} aria-hidden />
-      </Button>
-      {menu}
-    </div>
+    <>
+      <div ref={containerRef} className="relative h-[52px] shrink-0" style={{ width: FINISH_MENU_WIDTH_PX }}>
+        {!open ? (
+          <button
+            type="button"
+            disabled={disabled || finishing}
+            className={cn("inline-flex w-full items-center justify-between gap-2", closedTriggerClassName)}
+            aria-haspopup="menu"
+            aria-expanded={false}
+            onClick={() => setOpen(true)}
+          >
+            {triggerContent(false)}
+          </button>
+        ) : (
+          <div className="h-[52px]" style={{ width: FINISH_MENU_WIDTH_PX }} aria-hidden />
+        )}
+      </div>
+      {openMenu}
+    </>
   )
 }
 

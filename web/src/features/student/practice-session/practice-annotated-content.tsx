@@ -1,7 +1,8 @@
-import { useRef, type ElementType, type HTMLAttributes, type MouseEvent } from "react"
+import { useMemo, useRef, type ElementType, type HTMLAttributes, type MouseEvent } from "react"
 
 import type { PracticeToolMode, RegionKey } from "@/features/student/practice-session/practice-session-types"
 import { FindableHtmlContent } from "@/lib/html/findable-html-content"
+import { normalizePracticeSessionHtml } from "@/lib/html/normalize-practice-session-html"
 import { cn } from "@/lib/utils"
 
 type PracticeAnnotatedContentProps = Omit<
@@ -31,12 +32,13 @@ function PracticeAnnotatedContent({
   ...rest
 }: PracticeAnnotatedContentProps) {
   const ref = useRef<HTMLElement>(null)
+  const normalizedHtml = useMemo(() => normalizePracticeSessionHtml(html), [html])
 
   return (
     <FindableHtmlContent
       ref={ref}
       as={as}
-      html={html}
+      html={normalizedHtml}
       findQuery={findQuery}
       scrollAnchor={scrollAnchor}
       className={cn(

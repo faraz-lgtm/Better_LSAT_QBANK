@@ -85,4 +85,21 @@ describe("buildPracticeSectionSummaries", () => {
     expect(sections[0]?.accuracyPct).toBe(33)
     expect(sections[0]?.questionRows).toEqual([["correct", "incorrect", "incorrect"]])
   })
+
+  it("marks missing answers as unanswered in the section grid", () => {
+    const answersByQuestion = new Map([
+      ["q1", { selectedAnswer: "A", isCorrect: true }],
+      ["q2", { selectedAnswer: "", isCorrect: false }],
+    ])
+
+    const sections = buildPracticeSectionSummaries({
+      questionIds: ["q1", "q2"],
+      answersByQuestion,
+      detailsByQuestion: {},
+      defaultKind: "LR",
+      fallbackSectionNumber: 1,
+    })
+
+    expect(sections[0]?.questionRows).toEqual([["correct", "unanswered"]])
+  })
 })

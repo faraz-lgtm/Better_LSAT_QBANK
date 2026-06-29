@@ -1,7 +1,25 @@
 type DrillSection = "LR" | "RC"
 
-function SectionInitialBadge({ section }: { section: DrillSection }) {
+type SectionInitialBadgeProps = {
+  section: DrillSection
+  variant?: "default" | "section"
+}
+
+function SectionInitialBadge({ section, variant = "default" }: SectionInitialBadgeProps) {
   const isLr = section === "LR"
+
+  if (variant === "section") {
+    return (
+      <span
+        className={`flex size-10 shrink-0 items-center justify-center rounded-[8px] p-[5px] text-xl font-black leading-normal tracking-[0.4px] ${
+          isLr ? "bg-[#eafff4] text-[#00bc54]" : "bg-[#e5fdff] text-[#0bbcc9]"
+        }`}
+      >
+        {section}
+      </span>
+    )
+  }
+
   return (
     <span
       className={`flex size-10 shrink-0 items-center justify-center rounded-[14px] border p-[5px] text-xl font-black leading-none ${

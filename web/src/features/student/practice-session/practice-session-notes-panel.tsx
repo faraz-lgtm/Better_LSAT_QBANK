@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react"
 import { Bookmark, ChevronRight, Eraser, Search, X } from "lucide-react"
 
+import {
+  BLIND_REVIEW_NOTES_SIDEBAR_CLASS,
+} from "@/features/student/practice-session/practice-session-blind-review-styles"
 import { cn } from "@/lib/utils"
 
 export type PracticeSessionNote = {
@@ -85,7 +88,7 @@ function PracticeSessionNotesPanel({
 
   if (isBlindReview) {
     return (
-      <aside className="flex h-full min-h-0 w-[451px] shrink-0 flex-col overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)]">
+      <aside className={BLIND_REVIEW_NOTES_SIDEBAR_CLASS}>
         <div className="flex h-[60px] shrink-0 items-center justify-between border-b border-[#e5e7eb] bg-[#f6f8fa] px-4 pt-4">
           <h2 className="text-lg font-bold leading-[1.35] text-[#062357]">Notes</h2>
           <button

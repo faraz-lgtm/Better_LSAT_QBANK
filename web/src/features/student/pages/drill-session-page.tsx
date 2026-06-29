@@ -2,14 +2,35 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
+import { isQuestionRecommendedForBlindReview } from "@/features/student/blind-review/blind-review-navigation"
 import { LrDrillOptionRow } from "@/features/student/drills/lr-drill-option-row"
 import type { DrillQuestion, DrillSessionResponse } from "@/features/student/drills/drill-types"
+import { ACTIVE_DRILL_FINISH_BUTTON_CLASS, ACTIVE_DRILL_FOOTER_CLASS, ACTIVE_DRILL_FOOTER_ROW_CLASS, ACTIVE_DRILL_OPTIONS_LIST_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import {
   PracticeBlindReviewAnswerToggle,
   type BlindReviewAnswerView,
 } from "@/features/student/practice-session/practice-blind-review-answer-toggle"
 import { PracticeBlindReviewSessionHeader } from "@/features/student/practice-session/practice-blind-review-session-header"
+import { PracticeBlindReviewQuestionPanel } from "@/features/student/practice-session/practice-blind-review-question-panel"
+import {
+  BLIND_REVIEW_BODY_CLASS,
+  BLIND_REVIEW_BODY_GRID_CLASS,
+  BLIND_REVIEW_CARD_CLASS,
+  BLIND_REVIEW_FOOTER_CLASS,
+  BLIND_REVIEW_FOOTER_NAV_CLASS,
+  BLIND_REVIEW_FOOTER_ROW_CLASS,
+  BLIND_REVIEW_NAV_ARROW_BUTTON_CLASS,
+  BLIND_REVIEW_NAV_ARROW_GROUP_CLASS,
+  BLIND_REVIEW_NOTES_LAYOUT_CLASS,
+  BLIND_REVIEW_NOTES_PASSAGE_PANEL_CLASS,
+  BLIND_REVIEW_NOTES_QUESTION_PANEL_CLASS,
+  BLIND_REVIEW_NOTES_STACK_CLASS,
+  BLIND_REVIEW_PASSAGE_PANEL_CLASS,
+  BLIND_REVIEW_PASSAGE_TEXT_CLASS,
+  BLIND_REVIEW_QUESTION_PANEL_CLASS,
+  BLIND_REVIEW_SHELL_CLASS,
+} from "@/features/student/practice-session/practice-session-blind-review-styles"
 import type { BlindReviewSectionOption } from "@/features/student/practice-session/practice-blind-review-section-select"
 import { PracticeQuestionStem } from "@/features/student/practice-session/practice-question-stem"
 import { PracticeSessionHeader } from "@/features/student/practice-session/practice-session-header"
@@ -24,15 +45,27 @@ import { PracticeCompleteModal } from "@/features/student/practice-session/pract
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
 import { PracticeSubmitSectionModal } from "@/features/student/practice-session/practice-submit-section-modal"
 import { PracticeSessionImmersiveFrame } from "@/features/student/practice-session/practice-session-immersive-frame"
+import {
+  ACTIVE_DRILL_NAV_ARROW_GROUP_CLASS,
+  PracticeSessionNavArrowButton,
+} from "@/features/student/practice-session/practice-session-nav-arrow-button"
 import { PracticeSessionQuestionNavButton } from "@/features/student/practice-session/practice-session-question-nav-button"
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
 import { usePracticeQuestionFlags } from "@/features/student/practice-session/use-practice-question-flags"
 import {
   computeElapsedTimerProgress,
+  computeRemainingTimerProgress,
+  isDrillCountdownTiming,
   resolveTimerBudgetSeconds,
   usePracticeSessionTimer,
 } from "@/features/student/practice-session/use-practice-session-timer"
 import { stashDrillBlindReviewResult } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
+import {
+  DASHBOARD_ADAPTIVE_DRILL_QUERY,
+  drillSessionSupportsBlindReview,
+  isDashboardAdaptiveDrill,
+  showDrillSessionTimer,
+} from "@/features/student/drills/drill-blind-review-policy"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createPracticeApi } from "@/lib/api/practice"
@@ -111,72 +144,25 @@ function DrillQuestionPanel({
 
   if (isBlindReviewLayout) {
     return (
-      <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <div className="shrink-0 border-b border-[#e5e7eb] bg-[#f6f8fa] p-6">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-1 items-start gap-3">
-              <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-[14px] border-2 border-[#ff6f00] bg-white text-lg font-bold text-[#ff6f00] shadow-[0px_0px_5px_#fc7753]">
-                {questionNumber}
-              </span>
-              <div className="flex min-w-0 flex-1 flex-col gap-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  {recommendedForBr ? (
-                    <span className="inline-flex h-8 items-center rounded-2xl px-4 text-xs font-medium tracking-[0.02em] text-[#ff6f00]">
-                      Recommended for BR
-                    </span>
-                  ) : (
-                    <span />
-                  )}
-                  {onAnswerViewChange ? (
-                    <PracticeBlindReviewAnswerToggle value={answerView} onChange={onAnswerViewChange} />
-                  ) : null}
-                </div>
-                <PracticeAnnotatedContent
-                  regionKey={stemKey}
-                  html={stemHtml}
-                  findQuery={findQuery}
-                  toolMode={toolMode}
-                  onMouseUp={onContentMouseUp}
-                  onClickCapture={onContentClick}
-                  className="text-lg font-medium leading-[1.4] tracking-[0.02em] text-[#0d0d12]"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-        {revealed && isCorrect != null ? (
-          <p className="shrink-0 px-6 pt-4 text-xs font-semibold text-[#df1c41]">{isCorrect ? "Correct" : "Incorrect"}</p>
-        ) : null}
-        <div className="practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto">
-          <div className="flex flex-col gap-3 p-6">
-            {question.choices.map((choice, index) => (
-              <LrDrillOptionRow
-                key={choice.id}
-                index={index}
-                html={getRegionHtml(regionKey(question.id, `choice-${choice.id}`), choice.text)}
-                findQuery={findQuery}
-                regionKey={regionKey(question.id, `choice-${choice.id}`)}
-                selected={selectedIndex === index}
-                hidden={Boolean(hiddenChoices[index])}
-                disabled={submitting || choicesDisabled}
-                selectedIndex={selectedIndex}
-                allowReselect={allowReselect}
-                onSelect={() => onSelect(index)}
-                onToggleHidden={() =>
-                  setHiddenChoices((prev) => ({
-                    ...prev,
-                    [index]: !prev[index],
-                  }))
-                }
-                toolMode={toolMode}
-                onContentMouseUp={onContentMouseUp}
-                onContentClick={onContentClick}
-                variant="blind-review"
-              />
-            ))}
-          </div>
-        </div>
-      </div>
+      <PracticeBlindReviewQuestionPanel
+        question={question}
+        questionNumber={questionNumber}
+        findQuery={findQuery}
+        selectedIndex={selectedIndex}
+        revealed={revealed}
+        isCorrect={isCorrect}
+        submitting={submitting}
+        allowReselect={allowReselect}
+        getRegionHtml={getRegionHtml}
+        toolMode={toolMode}
+        onContentMouseUp={onContentMouseUp}
+        onContentClick={onContentClick}
+        onSelect={onSelect}
+        answerView={answerView}
+        onAnswerViewChange={onAnswerViewChange}
+        recommendedForBr={recommendedForBr}
+        choicesDisabled={choicesDisabled}
+      />
     )
   }
 
@@ -226,7 +212,7 @@ function DrillQuestionPanel({
           {isCorrect ? "Correct" : "Incorrect"}
         </p>
       ) : null}
-      <div className={variant === "active-drill" ? "flex flex-col gap-4 px-4 pb-4 pt-4" : "flex flex-col gap-2"}>
+      <div className={variant === "active-drill" ? ACTIVE_DRILL_OPTIONS_LIST_CLASS : "flex flex-col gap-2"}>
         {question.choices.map((choice, index) => (
           <LrDrillOptionRow
             key={choice.id}
@@ -263,7 +249,10 @@ function DrillSessionPage() {
   const navigate = useNavigate()
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
   const returnTo = searchParams.get("returnTo")?.trim() ?? ""
+  const dashboardAdaptiveEntry = searchParams.get(DASHBOARD_ADAPTIVE_DRILL_QUERY) === "1"
   const sessionBodyRef = useRef<HTMLDivElement>(null)
+  const passagePaneRef = useRef<HTMLDivElement>(null)
+  const questionPaneRef = useRef<HTMLDivElement>(null)
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -345,7 +334,8 @@ function DrillSessionPage() {
     setError(null)
   }
 
-  const { elapsed, paused, togglePause, resetElapsed } = usePracticeSessionTimer()
+  const { elapsed, countdown, paused, togglePause, resetElapsed, setInitialCountdown } =
+    usePracticeSessionTimer()
   const highlights = usePracticeHighlights()
 
   const load = useCallback(async () => {
@@ -355,6 +345,17 @@ function DrillSessionPage() {
     try {
       const data = await practiceApi.getDrillSession(sessionId)
       setDrill(data)
+      const drillTiming = data.metadata.timing
+      if (isDrillCountdownTiming(drillTiming)) {
+        setInitialCountdown(
+          resolveTimerBudgetSeconds({
+            timing: drillTiming,
+            questionCount: data.questions.length,
+          }),
+        )
+      } else {
+        setInitialCountdown(null)
+      }
       const map: Record<string, { selectedAnswer: string; isCorrect: boolean }> = {}
       for (const a of data.answers) {
         map[a.questionId] = { selectedAnswer: a.selectedAnswer, isCorrect: a.isCorrect }
@@ -389,7 +390,7 @@ function DrillSessionPage() {
     } finally {
       setLoading(false)
     }
-  }, [practiceApi, sessionId, drillBlindReviewActiveKey, drillActualAnswersKey, drillBlindReviewAnswersKey])
+  }, [practiceApi, sessionId, drillBlindReviewActiveKey, drillActualAnswersKey, drillBlindReviewAnswersKey, setInitialCountdown])
 
   useEffect(() => {
     void load()
@@ -431,7 +432,7 @@ function DrillSessionPage() {
   const recommendedForBr = Boolean(
     current &&
       reviewAfterComplete &&
-      (!actualAnswersByQuestion[current.id] || actualAnswersByQuestion[current.id]?.isCorrect === false),
+      isQuestionRecommendedForBlindReview(actualAnswersByQuestion[current.id]),
   )
   const revealed = reviewAfterComplete
     ? false
@@ -446,6 +447,11 @@ function DrillSessionPage() {
 
   const passageKey = current ? regionKey(current.id, "passage") : ""
   const passageHtml = current ? highlights.getRegionHtml(passageKey, passageBody) : ""
+
+  useEffect(() => {
+    passagePaneRef.current?.scrollTo({ top: 0 })
+    questionPaneRef.current?.scrollTo({ top: 0 })
+  }, [safeIndex, current?.id])
 
   useEffect(() => {
     if (!findQuery.trim()) return
@@ -533,6 +539,19 @@ function DrillSessionPage() {
       navigate(path, { replace: true })
       return
     }
+    const meta =
+      drill?.session.metadata != null && typeof drill.session.metadata === "object"
+        ? (drill.session.metadata as Record<string, unknown>)
+        : null
+    if (
+      isDashboardAdaptiveDrill({
+        metadata: meta,
+        dashboardAdaptiveEntry,
+      })
+    ) {
+      navigate("/app", { replace: true })
+      return
+    }
     navigate("/app/practice/drills", { replace: true })
   }
 
@@ -541,21 +560,19 @@ function DrillSessionPage() {
 
     if (reviewAfterComplete) {
       const answers = collectBlindReviewAnswersForSubmit()
-      if (answers.length === 0) {
-        setError("Answer at least one question in blind review before viewing results.")
-        return
-      }
       setFinishing(true)
       setError(null)
       try {
-        const session = await practiceApi.completeDrillBlindReview({ sessionId, answers })
-        const lessonId =
-          drill?.session.metadata != null &&
-          typeof drill.session.metadata === "object" &&
-          typeof drill.session.metadata.lessonId === "string"
-            ? drill.session.metadata.lessonId
-            : null
-        stashDrillBlindReviewResult(session, lessonId)
+        if (answers.length > 0) {
+          const session = await practiceApi.completeDrillBlindReview({ sessionId, answers })
+          const lessonId =
+            drill?.session.metadata != null &&
+            typeof drill.session.metadata === "object" &&
+            typeof drill.session.metadata.lessonId === "string"
+              ? drill.session.metadata.lessonId
+              : null
+          stashDrillBlindReviewResult(session, lessonId)
+        }
       } catch (e) {
         setError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to save blind review")
         setFinishing(false)
@@ -682,6 +699,19 @@ function DrillSessionPage() {
 
   const headerLabel = drill?.drillLabel ?? metadata?.title ?? (sectionType === "LR" ? "LR Drill" : "RC Drill")
   const isPrepCourseDrill = Boolean(resolveReturnPath())
+  const sessionMetadata =
+    drill?.session.metadata != null && typeof drill.session.metadata === "object"
+      ? (drill.session.metadata as Record<string, unknown>)
+      : null
+  const showBlindReviewOnComplete = drillSessionSupportsBlindReview({
+    metadata: sessionMetadata,
+    dashboardAdaptiveEntry,
+  })
+  const isDashboardAdaptiveDrillFlow = isDashboardAdaptiveDrill({
+    metadata: sessionMetadata,
+    dashboardAdaptiveEntry,
+  })
+  const isPrepCourseAdaptiveDrill = sessionMetadata?.source === "prep_course_adaptive_drill"
   const blindReviewMode = reviewAfterComplete
   const useBlindReviewLayout = blindReviewMode
   const useActiveDrillLayout = !useBlindReviewLayout
@@ -694,7 +724,12 @@ function DrillSessionPage() {
     timing: metadata?.timing,
     questionCount: questions.length,
   })
-  const timerProgress = computeElapsedTimerProgress(elapsed, timerBudgetSeconds)
+  const timedDrill = isDrillCountdownTiming(metadata?.timing) && countdown != null
+  const timerLabel = timedDrill ? "Remaining" : "Elapsed"
+  const timerDisplaySeconds = timedDrill ? countdown : elapsed
+  const timerProgress = timedDrill
+    ? computeRemainingTimerProgress(countdown, timerBudgetSeconds)
+    : computeElapsedTimerProgress(elapsed, timerBudgetSeconds)
   const allowReselect = canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
     blindReview: reviewAfterComplete,
   })
@@ -726,80 +761,58 @@ function DrillSessionPage() {
     <PracticeSessionFinishMenu
       finishing={finishing}
       submitLabel="Submit Drill"
-      buttonClassName={
-        useActiveDrillLayout
-          ? "h-[52px] w-[106px] shrink-0 gap-2 rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-3 text-base font-medium tracking-[0.02em] text-[#062357] shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
-          : undefined
-      }
+      buttonClassName={useActiveDrillLayout ? ACTIVE_DRILL_FINISH_BUTTON_CLASS : undefined}
       onSubmitSection={requestSubmitDrill}
       onExit={leaveDrillSession}
     />
   )
 
-  const sessionCardContent = (
-    <>
-      {blindReviewMode ? (
-        <PracticeBlindReviewSessionHeader
-          prepTestLabel={prepTestLabel}
-          sectionOptions={drillSectionOptions}
-          activeSectionSessionId={sessionId ?? null}
-          onSelectSection={() => {}}
-          questionRef={questionRefLabel}
-          actualScoreLabel="Actual: BR"
-          answerView={answerViewTab}
-          activeColor={highlights.activeColor}
-          toolMode={highlights.toolMode}
-          fontScale={highlights.fontScale}
-          lineSpacing={highlights.lineSpacing}
-          boldEnabled={highlights.boldEnabled}
-          italicEnabled={highlights.italicEnabled}
-          onSelectColor={highlights.selectColor}
-          onEraser={highlights.selectEraser}
-          onUnderline={highlights.selectUnderline}
-          onFontSize={highlights.cycleFontSize}
-          onLineSpacing={highlights.cycleLineSpacing}
-          onToggleBold={highlights.toggleBold}
-          onToggleItalic={highlights.toggleItalic}
-          notesOpen={notesOpen}
-          notesEnabled={answerViewTab === "blind_review"}
-          onToggleNotes={handleToggleNotes}
-          onExitSection={requestSubmitDrill}
-          exiting={finishing}
-        />
-      ) : (
-        <PracticeSessionHeader
-          variant={sessionVariant}
-          title={headerLabel}
-          findQuery={findQuery}
-          onFindQueryChange={setFindQuery}
-          activeColor={highlights.activeColor}
-          toolMode={highlights.toolMode}
-          fontScale={highlights.fontScale}
-          lineSpacing={highlights.lineSpacing}
-          boldEnabled={highlights.boldEnabled}
-          italicEnabled={highlights.italicEnabled}
-          onSelectColor={highlights.selectColor}
-          onEraser={highlights.selectEraser}
-          onUnderline={highlights.selectUnderline}
-          onFontSize={highlights.cycleFontSize}
-          onLineSpacing={highlights.cycleLineSpacing}
-          onToggleBold={highlights.toggleBold}
-          onToggleItalic={highlights.toggleItalic}
-          timerDisplaySeconds={elapsed}
-          timerPaused={paused}
-          onToggleTimerPause={togglePause}
-          onResetTimer={useActiveDrillLayout ? undefined : resetElapsed}
-          timerProgress={timerProgress}
-          showTimer
-          finishButton={finishButton}
-        />
-      )}
+  const blindReviewHeader = useBlindReviewLayout ? (
+    <PracticeBlindReviewSessionHeader
+      prepTestLabel={prepTestLabel}
+      sectionOptions={drillSectionOptions}
+      activeSectionSessionId={sessionId ?? null}
+      onSelectSection={() => {}}
+      questionRef={questionRefLabel}
+      actualScoreLabel="Actual: BR"
+      answerView={answerViewTab}
+      activeColor={highlights.activeColor}
+      toolMode={highlights.toolMode}
+      fontScale={highlights.fontScale}
+      lineSpacing={highlights.lineSpacing}
+      boldEnabled={highlights.boldEnabled}
+      italicEnabled={highlights.italicEnabled}
+      onSelectColor={highlights.selectColor}
+      onEraser={highlights.selectEraser}
+      onUnderline={highlights.selectUnderline}
+      onFontSize={highlights.cycleFontSize}
+      onLineSpacing={highlights.cycleLineSpacing}
+      onToggleBold={highlights.toggleBold}
+      onToggleItalic={highlights.toggleItalic}
+      notesOpen={notesOpen}
+      notesEnabled={answerViewTab === "blind_review"}
+      onToggleNotes={handleToggleNotes}
+      onExitSection={requestSubmitDrill}
+      exiting={finishing}
+      showSectionSelect={false}
+      exitButtonLabel="Finish Section"
+      exitingLabel="Finishing…"
+    />
+  ) : null
 
-      <div className="practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden">
+  const sessionInnerContent = (
+    <>
+      <div
+        className={
+          useBlindReviewLayout
+            ? BLIND_REVIEW_BODY_CLASS
+            : "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden"
+        }
+      >
         {showNotesPanel && useBlindReviewLayout ? (
-          <div className="flex min-h-0 flex-1 gap-5 overflow-hidden p-6">
-            <div className="practice-session-br-notes-stack">
-              <div className="practice-session-br-notes-pane practice-session-scroll-hidden rounded-2xl border border-[#e5e7eb] bg-white px-8 pb-8 pt-8 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)]">
+          <div className={BLIND_REVIEW_NOTES_LAYOUT_CLASS}>
+            <div className={BLIND_REVIEW_NOTES_STACK_CLASS}>
+              <div ref={passagePaneRef} className={BLIND_REVIEW_NOTES_PASSAGE_PANEL_CLASS}>
                 {sectionType === "RC" && current.passage ? (
                   <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
                 ) : null}
@@ -810,10 +823,10 @@ function DrillSessionPage() {
                   toolMode={highlights.toolMode}
                   onMouseUp={highlights.handleContentMouseUp}
                   onClickCapture={highlights.handleContentClick}
-                  className="text-base leading-[1.625] text-[#364153]"
+                  className={BLIND_REVIEW_PASSAGE_TEXT_CLASS}
                 />
               </div>
-              <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)]">
+              <div ref={questionPaneRef} className={BLIND_REVIEW_NOTES_QUESTION_PANEL_CLASS}>
                 <DrillQuestionPanel
                   key={current.id}
                   question={current}
@@ -855,18 +868,22 @@ function DrillSessionPage() {
             ref={sessionBodyRef}
             className={cn(
               "grid min-h-0 min-w-0 flex-1 grid-cols-1 overflow-hidden",
-              useActiveDrillLayout
-                ? "px-[23px] pt-[23px] lg:grid-cols-[524px_minmax(0,680px)] lg:gap-7"
-                : "lg:grid-cols-2 lg:divide-x divide-[#dfe1e7]",
+                useBlindReviewLayout
+                  ? BLIND_REVIEW_BODY_GRID_CLASS
+                  : useActiveDrillLayout
+                  ? "px-[23px] pt-[23px] lg:grid-cols-[524px_minmax(0,680px)] lg:gap-7"
+                  : "lg:grid-cols-2 lg:divide-x divide-[#dfe1e7]",
             )}
             style={highlights.contentStyle}
           >
             <div
               className={cn(
                 "practice-session-pane min-h-0",
-                useActiveDrillLayout
-                  ? "pr-1"
-                  : "border-[#dfe1e7] border-b p-5 lg:border-b-0",
+                useBlindReviewLayout
+                  ? BLIND_REVIEW_PASSAGE_PANEL_CLASS
+                  : useActiveDrillLayout
+                    ? "pr-1"
+                    : "border-[#dfe1e7] border-b p-5 lg:border-b-0",
               )}
             >
               {sectionType === "RC" && current.passage ? (
@@ -879,15 +896,23 @@ function DrillSessionPage() {
                 toolMode={highlights.toolMode}
                 onMouseUp={highlights.handleContentMouseUp}
                 onClickCapture={highlights.handleContentClick}
-                className={useActiveDrillLayout ? "text-lg leading-[1.5] tracking-[0.02em] text-[#0d0d12]" : undefined}
+                className={
+                  useBlindReviewLayout
+                    ? BLIND_REVIEW_PASSAGE_TEXT_CLASS
+                    : useActiveDrillLayout
+                      ? "text-lg leading-[1.5] text-[#0d0d12]"
+                      : undefined
+                }
               />
             </div>
             <div
               className={cn(
                 "practice-session-pane min-h-0",
-                useActiveDrillLayout
-                  ? "rounded-2xl bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
-                  : "gap-4 border-[#dfe1e7] p-5",
+                useBlindReviewLayout
+                  ? BLIND_REVIEW_QUESTION_PANEL_CLASS
+                  : useActiveDrillLayout
+                    ? "rounded-2xl bg-white"
+                    : "gap-4 border-[#dfe1e7] p-5",
               )}
             >
               <DrillQuestionPanel
@@ -922,20 +947,82 @@ function DrillSessionPage() {
 
       <footer
         className={cn(
-          "practice-session-footer relative z-10 flex shrink-0 items-center justify-between border-t border-[#dfe1e7] py-3",
-          useActiveDrillLayout
-            ? "min-h-[80px] gap-2 rounded-b-2xl bg-[#eceff3] px-4"
-            : "gap-3 bg-background px-6 md:gap-4 md:px-6",
+          "practice-session-footer relative z-10",
+          useBlindReviewLayout
+            ? BLIND_REVIEW_FOOTER_CLASS
+            : useActiveDrillLayout
+              ? ACTIVE_DRILL_FOOTER_CLASS
+              : "flex shrink-0 items-center justify-between gap-3 border-t border-[#dfe1e7] bg-background px-6 py-3 md:gap-4 md:px-6",
         )}
       >
-        <div
-          className={cn(
-            "practice-session-scroll-hidden min-h-0 min-w-0 flex-1",
-            useActiveDrillLayout || useBlindReviewLayout
-              ? "practice-session-question-nav-grid"
-              : "flex flex-nowrap items-stretch gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5 pt-2.5 sm:gap-2",
-          )}
-        >
+        {useActiveDrillLayout ? (
+          <div className={ACTIVE_DRILL_FOOTER_ROW_CLASS}>
+            <div className={cn("practice-session-question-nav-grid min-h-[48px] min-w-0 flex-1")}>
+              {questions.map((q, i) => {
+                const n = i + 1
+                return (
+                  <PracticeSessionQuestionNavButton
+                    key={q.id}
+                    number={n}
+                    active={n === safeIndex}
+                    answered={Boolean(answersByQuestion[q.id])}
+                    flagged={questionFlags.isFlagged(q.id)}
+                    variant={sessionVariant}
+                    onClick={() => setQIndex(n)}
+                  />
+                )
+              })}
+            </div>
+            <div className={ACTIVE_DRILL_NAV_ARROW_GROUP_CLASS}>
+              <PracticeSessionNavArrowButton
+                direction="prev"
+                disabled={safeIndex <= 1}
+                onClick={() => setQIndex((i) => Math.max(1, i - 1))}
+              />
+              <PracticeSessionNavArrowButton
+                direction="next"
+                disabled={safeIndex >= questions.length}
+                onClick={() => setQIndex((i) => Math.min(questions.length, i + 1))}
+              />
+            </div>
+          </div>
+        ) : useBlindReviewLayout ? (
+          <div className={BLIND_REVIEW_FOOTER_ROW_CLASS}>
+            <div className={BLIND_REVIEW_FOOTER_NAV_CLASS}>
+              {questions.map((q, i) => {
+                const n = i + 1
+                return (
+                  <PracticeSessionQuestionNavButton
+                    key={q.id}
+                    number={n}
+                    active={n === safeIndex}
+                    answered={Boolean(answersByQuestion[q.id])}
+                    flagged={questionFlags.isFlagged(q.id)}
+                    recommendedForBr={isQuestionRecommendedForBlindReview(actualAnswersByQuestion[q.id])}
+                    variant={sessionVariant}
+                    onClick={() => setQIndex(n)}
+                  />
+                )
+              })}
+            </div>
+            <div className={BLIND_REVIEW_NAV_ARROW_GROUP_CLASS}>
+              <PracticeSessionNavArrowButton
+                direction="prev"
+                disabled={safeIndex <= 1}
+                className={BLIND_REVIEW_NAV_ARROW_BUTTON_CLASS}
+                onClick={() => setQIndex((i) => Math.max(1, i - 1))}
+              />
+              <PracticeSessionNavArrowButton
+                direction="next"
+                disabled={safeIndex >= questions.length}
+                className={BLIND_REVIEW_NAV_ARROW_BUTTON_CLASS}
+                onClick={() => setQIndex((i) => Math.min(questions.length, i + 1))}
+              />
+            </div>
+          </div>
+        ) : (
+          <>
+        <div className="practice-session-scroll-hidden flex min-h-0 min-w-0 flex-1 flex-nowrap items-stretch gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5 pt-2.5 sm:gap-2">
           {questions.map((q, i) => {
             const n = i + 1
             return (
@@ -951,37 +1038,69 @@ function DrillSessionPage() {
             )
           })}
         </div>
-        <div className={cn("flex shrink-0 self-center items-center", useActiveDrillLayout ? "gap-2" : "gap-2")}>
-          <button
-            type="button"
-            className={
-              useActiveDrillLayout
-                ? "inline-flex size-[52px] items-center justify-center rounded-2xl border-2 border-[#dfe1e7] bg-[#f6f8fa] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-white disabled:opacity-40"
-                : "inline-flex size-10 items-center justify-center rounded-full border bg-background transition hover:bg-muted disabled:opacity-40"
-            }
-            style={useActiveDrillLayout ? undefined : { borderColor: "var(--greyscale-100)" }}
-            disabled={safeIndex <= 1}
-            aria-label="Previous question"
-            onClick={() => setQIndex((i) => Math.max(1, i - 1))}
-          >
-            <ChevronLeft className="size-6 text-[#666d80]" strokeWidth={2} />
-          </button>
-          <button
-            type="button"
-            className={
-              useActiveDrillLayout
-                ? "inline-flex size-[52px] items-center justify-center rounded-2xl border-2 border-[#dfe1e7] bg-[#f6f8fa] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-white disabled:opacity-40"
-                : "inline-flex size-10 items-center justify-center rounded-full border bg-background transition hover:bg-muted disabled:opacity-40"
-            }
-            style={useActiveDrillLayout ? undefined : { borderColor: "var(--greyscale-100)" }}
-            disabled={safeIndex >= questions.length}
-            aria-label="Next question"
-            onClick={() => setQIndex((i) => Math.min(questions.length, i + 1))}
-          >
-            <ChevronRight className="size-6 text-[#666d80]" strokeWidth={2} />
-          </button>
+        <div className="flex shrink-0 items-center gap-2 self-center">
+              <button
+                type="button"
+                className="inline-flex size-10 items-center justify-center rounded-full border bg-background transition hover:bg-muted disabled:opacity-40"
+                style={{ borderColor: "var(--greyscale-100)" }}
+                disabled={safeIndex <= 1}
+                aria-label="Previous question"
+                onClick={() => setQIndex((i) => Math.max(1, i - 1))}
+              >
+                <ChevronLeft className="size-5 text-muted-foreground" strokeWidth={2} />
+              </button>
+              <button
+                type="button"
+                className="inline-flex size-10 items-center justify-center rounded-full border bg-background transition hover:bg-muted disabled:opacity-40"
+                style={{ borderColor: "var(--greyscale-100)" }}
+                disabled={safeIndex >= questions.length}
+                aria-label="Next question"
+                onClick={() => setQIndex((i) => Math.min(questions.length, i + 1))}
+              >
+                <ChevronRight className="size-5 text-muted-foreground" strokeWidth={2} />
+              </button>
         </div>
+          </>
+        )}
       </footer>
+    </>
+  )
+
+  const sessionCardContent = (
+    <>
+      {!useBlindReviewLayout ? (
+        <PracticeSessionHeader
+          variant={sessionVariant}
+          title={headerLabel}
+          findQuery={findQuery}
+          onFindQueryChange={setFindQuery}
+          activeColor={highlights.activeColor}
+          toolMode={highlights.toolMode}
+          fontScale={highlights.fontScale}
+          lineSpacing={highlights.lineSpacing}
+          boldEnabled={highlights.boldEnabled}
+          italicEnabled={highlights.italicEnabled}
+          onSelectColor={highlights.selectColor}
+          onEraser={highlights.selectEraser}
+          onUnderline={highlights.selectUnderline}
+          onFontSize={highlights.cycleFontSize}
+          onLineSpacing={highlights.cycleLineSpacing}
+          onToggleBold={highlights.toggleBold}
+          onToggleItalic={highlights.toggleItalic}
+          timerLabel={timerLabel}
+          timerDisplaySeconds={timerDisplaySeconds}
+          timerPaused={paused}
+          onToggleTimerPause={togglePause}
+          onResetTimer={useActiveDrillLayout ? undefined : resetElapsed}
+          timerProgress={timerProgress}
+          showTimer={showDrillSessionTimer({
+            metadata: sessionMetadata,
+            dashboardAdaptiveEntry,
+          })}
+          finishButton={finishButton}
+        />
+      ) : null}
+      {sessionInnerContent}
     </>
   )
 
@@ -990,12 +1109,28 @@ function DrillSessionPage() {
       layout="immersive"
       className={cn(
         "flex min-h-0 max-w-none flex-1 flex-col overflow-hidden",
-        !useActiveDrillLayout && "px-0 py-4 md:py-5",
-        blindReviewMode && "bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))]",
+        useBlindReviewLayout
+          ? "h-full bg-[#f5f9ff]"
+          : !useActiveDrillLayout && "px-0 py-4 md:py-5",
         !useActiveDrillLayout && !blindReviewMode && "bg-[var(--primary-900,#041A44)]",
       )}
     >
-      {useActiveDrillLayout ? (
+      {useBlindReviewLayout ? (
+        <div className={BLIND_REVIEW_SHELL_CLASS}>
+          {error ? (
+            <p className="absolute left-4 right-4 top-0 z-20 text-sm text-red-600 md:left-6 md:right-6" role="alert">
+              {error}
+            </p>
+          ) : null}
+          {blindReviewHeader}
+          <div
+            className={BLIND_REVIEW_CARD_CLASS}
+            style={{ maxWidth: showNotesPanel ? 1440 : 1280 }}
+          >
+            {sessionInnerContent}
+          </div>
+        </div>
+      ) : useActiveDrillLayout ? (
         <PracticeSessionImmersiveFrame>
           {error ? (
             <p className="mb-3 shrink-0 text-sm text-red-600" role="alert">
@@ -1004,7 +1139,7 @@ function DrillSessionPage() {
           ) : null}
           <div
             className={cn(
-              "practice-session-card practice-session-card--active-drill flex h-full min-h-0 w-full flex-col rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+              "practice-session-card practice-session-card--active-drill flex h-full min-h-0 w-full flex-col rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
             )}
           >
             {sessionCardContent}
@@ -1028,8 +1163,8 @@ function DrillSessionPage() {
 
       <PracticeSubmitSectionModal
         open={submitModalOpen}
-        title={reviewAfterComplete ? "Exit Section" : "Submit Drill"}
-        confirmLabel={reviewAfterComplete ? "Exit Section" : "Submit Drill"}
+        title={reviewAfterComplete ? "Finish Section" : "Submit Drill"}
+        confirmLabel={reviewAfterComplete ? "Finish Section" : "Submit Drill"}
         message={submitDrillMessage}
         submitting={finishing}
         onCancel={() => setSubmitModalOpen(false)}
@@ -1040,15 +1175,20 @@ function DrillSessionPage() {
         open={completeModal != null}
         titleId="drill-complete-title"
         subtitle={
-          isPrepCourseDrill ? "You've completed the active drill" : "You've completed the drill"
+          isPrepCourseAdaptiveDrill
+            ? "You've completed the adaptive drill"
+            : isPrepCourseDrill
+              ? "You've completed the active drill"
+              : "You've completed the drill"
         }
         rawScore={completeModal?.rawScore ?? 0}
         questionCount={completeModal?.questionCount ?? 1}
         scoreHidden={scoreHidden}
         onToggleScoreHidden={() => setScoreHidden((h) => !h)}
-        showBlindReview
+        showBlindReview={showBlindReviewOnComplete}
         onBlindReview={startDrillBlindReview}
         onSkipDetails={viewDrillResults}
+        doneLabel={isDashboardAdaptiveDrillFlow ? "Return To Dashboard" : "Done"}
         onDone={leaveDrillSession}
       />
     </StudentMain>

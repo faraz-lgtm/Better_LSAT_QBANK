@@ -13,7 +13,7 @@ import type {
 const DIFFICULTY_META: Record<Difficulty, { dots: number; color: string }> = {
   Easiest: { dots: 1, color: "#ffbd4c" },
   Easy: { dots: 2, color: "#ffbd4c" },
-  Medium: { dots: 3, color: "#ff6f00" },
+  Medium: { dots: 3, color: "#0bbcc9" },
   Hard: { dots: 4, color: "#df1c41" },
   Hardest: { dots: 5, color: "#df1c41" },
 }
@@ -55,7 +55,7 @@ export function AnalyticsStatsGrid({ stats }: { stats: AnalyticsStat[] }) {
             key={stat.id}
             className="flex min-w-0 flex-col justify-center gap-1 rounded-[16px] bg-[#f6f8fa] p-4 sm:p-5"
           >
-            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#666d80]">{stat.label}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#062357]">{stat.label}</p>
             <p
               className="text-[40px] font-extrabold leading-[1.1] tracking-tight sm:text-[44px]"
               style={{ color: stat.accent }}
@@ -84,7 +84,7 @@ export function AnalyticsScoreProgressPanel({
   return (
     <section className="flex h-full min-h-[280px] flex-col rounded-[16px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#666d80]">{title}</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#062357]">{title}</h2>
         {legend}
       </div>
       <div className="min-h-0 flex-1">{chart}</div>
@@ -95,12 +95,12 @@ export function AnalyticsScoreProgressPanel({
 function DifficultyPill({ difficulty }: { difficulty: Difficulty }) {
   const { dots, color } = DIFFICULTY_META[difficulty]
   return (
-    <div className="flex h-10 w-[132px] items-center gap-2.5 rounded-[10px] bg-[#f3f7ff] px-2.5">
+    <div className="flex h-10 w-[132px] shrink-0 items-center gap-2.5 rounded-[10px] bg-[#f3f7ff] px-2.5">
       <div className="flex items-center gap-1.5">
         {Array.from({ length: 5 }).map((_, i) => (
           <span
             key={i}
-            className="block h-4 w-1.5 rounded-full"
+            className="block h-4 w-[6px] rounded-full"
             style={{ backgroundColor: i < dots ? color : "#ced0e7" }}
           />
         ))}
@@ -116,7 +116,7 @@ function AccuracyProgress({ accuracy, goal }: { accuracy: number; goal: number }
   const safeAccuracy = Math.max(0, Math.min(100, accuracy))
   const safeGoal = Math.max(0, Math.min(100, goal))
   return (
-    <div className="flex w-[232px] flex-col gap-2">
+    <div className="flex w-[232px] shrink-0 flex-col gap-2">
       <div className="flex h-5 items-center justify-between">
         <span className="text-xs font-semibold leading-[1.5] tracking-[0.02em] text-[#0d47a1]">
           Your accuracy: {safeAccuracy}%
@@ -133,10 +133,14 @@ function AccuracyProgress({ accuracy, goal }: { accuracy: number; goal: number }
 
 function QuestionTypeRow({ row, accentBar }: { row: QuestionTypeRowData; accentBar: string }) {
   return (
-    <div className="flex flex-wrap items-center gap-6 border-b border-[#dfe1e7] px-6 py-4 last:border-b-0 md:flex-nowrap md:gap-x-12 md:gap-y-4">
-      <div className="flex min-w-[280px] flex-1 items-center gap-6">
-        <div className="h-14 w-1 shrink-0 rounded-r-[10px]" style={{ backgroundColor: accentBar }} aria-hidden />
-        <div className="flex flex-col gap-2">
+    <div className="flex h-[88px] min-w-[880px] items-center justify-between border-b border-[#dfe1e7] px-6 last:border-b-0">
+      <div className="flex w-[392px] shrink-0 items-center gap-6">
+        <div
+          className="h-14 w-1 shrink-0 rounded-br-[10px] rounded-tr-[10px]"
+          style={{ backgroundColor: accentBar }}
+          aria-hidden
+        />
+        <div className="flex min-w-0 flex-col gap-2">
           <p className="text-base font-semibold leading-[1.35] text-[#062357]">{row.title}</p>
           <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
             {row.averagePerTest.toFixed(1)} questions avg. per test
@@ -149,13 +153,13 @@ function QuestionTypeRow({ row, accentBar }: { row: QuestionTypeRowData; accentB
 
       <button
         type="button"
-        className="flex h-10 items-center justify-center rounded-xl border border-[#dfe1e7] bg-white px-4 text-sm font-semibold tracking-[0.02em] text-[#0d47a1] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f3f7ff]"
+        className="flex h-10 shrink-0 items-center justify-center rounded-[16px] border border-[#dfe1e7] bg-white px-4 text-sm font-semibold tracking-[0.02em] text-[#0d47a1] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f3f7ff]"
       >
         Review ({row.reviewCount})
       </button>
       <Link
         to={`/app/analytics/drills?type=${encodeURIComponent(row.id)}`}
-        className="ds-btn-sm text-sm tracking-[0.02em]"
+        className="ds-btn-sm shrink-0 rounded-[16px] text-sm tracking-[0.02em]"
       >
         Drill
       </Link>
@@ -166,11 +170,11 @@ function QuestionTypeRow({ row, accentBar }: { row: QuestionTypeRowData; accentB
 export function SectionCard({ section }: { section: AnalyticsSection }) {
   return (
     <section className="mb-6 flex w-full flex-col gap-6 rounded-3xl border border-[#dfe1e7] bg-white p-6">
-      <div className="flex items-center rounded-2xl bg-[#f6f8fa] px-6 py-4">
+      <div className="flex items-center rounded-[16px] bg-[#f6f8fa] px-6 py-4">
         <div className="flex items-center gap-2.5">
           <div
-            className="flex size-10 items-center justify-center rounded-xl"
-            style={{ backgroundColor: section.badgeBg }}
+            className="flex size-10 items-center justify-center rounded-[12px] border"
+            style={{ backgroundColor: section.badgeBg, borderColor: section.badgeColor }}
           >
             <span
               className="text-xl font-black leading-[1.5] tracking-[0.02em]"
@@ -182,10 +186,12 @@ export function SectionCard({ section }: { section: AnalyticsSection }) {
           <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">{section.title}</h2>
         </div>
       </div>
-      <div className="flex flex-col">
-        {section.rows.map((row) => (
-          <QuestionTypeRow key={row.id} row={row} accentBar={section.accentBar} />
-        ))}
+      <div className="overflow-x-auto">
+        <div className="flex flex-col">
+          {section.rows.map((row) => (
+            <QuestionTypeRow key={row.id} row={row} accentBar={section.accentBar} />
+          ))}
+        </div>
       </div>
     </section>
   )
@@ -221,7 +227,7 @@ export function ScoreProgressChart({ points, tab }: { points: ScoreProgressPoint
 
   return (
     <div className="flex h-[300px] w-full items-stretch gap-4">
-      <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[#62748e]">
+      <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[#062357]">
         {Y_AXIS_LABELS.map((label) => (
           <span key={label} className="leading-5">
             {label}
@@ -257,7 +263,7 @@ export function ScoreProgressChart({ points, tab }: { points: ScoreProgressPoint
             <polyline
               points={blindPolyline}
               fill="none"
-              stroke="#ae8b00"
+              stroke="#ff6f00"
               strokeWidth="0.6"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -265,21 +271,29 @@ export function ScoreProgressChart({ points, tab }: { points: ScoreProgressPoint
             />
           ) : null}
         </svg>
-        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
+        <div className="pointer-events-none absolute inset-0" aria-hidden>
           {showRegular
             ? regularPoints.map((p, i) => (
-                <circle key={`r-${i}`} cx={p.x} cy={p.y} r="0.9" fill="#0d47a1" vectorEffect="non-scaling-stroke" />
+                <span
+                  key={`r-${i}`}
+                  className="absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0d47a1]"
+                  style={{ left: `${p.x}%`, top: `${p.y}%` }}
+                />
               ))
             : null}
           {showBlind
             ? blindPoints.map((p, i) => (
-                <circle key={`b-${i}`} cx={p.x} cy={p.y} r="0.9" fill="#ae8b00" vectorEffect="non-scaling-stroke" />
+                <span
+                  key={`b-${i}`}
+                  className="absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#ff6f00]"
+                  style={{ left: `${p.x}%`, top: `${p.y}%` }}
+                />
               ))
             : null}
-        </svg>
-        <div className="absolute -bottom-7 left-0 right-0 flex justify-between text-xs text-[#6a7282]">
+        </div>
+        <div className="absolute -bottom-7 left-0 right-0 flex justify-between gap-1 text-[11px] leading-4 text-[#062357] sm:text-xs">
           {points.map((p) => (
-            <span key={p.test} className="flex-1 text-center">
+            <span key={p.test} className="min-w-0 flex-1 truncate text-center whitespace-nowrap">
               {p.test}
             </span>
           ))}
@@ -297,7 +311,7 @@ export function ScoreProgressTabs({
   onChange: (next: ScoreProgressTab) => void
 }) {
   return (
-    <div className="flex h-10 items-center gap-2 rounded-[10px] bg-white p-1">
+    <div className="flex h-10 items-center gap-2 rounded-[16px] bg-white p-1">
       {SCORE_PROGRESS_TABS.map((tab) => {
         const active = value === tab.id
         return (
@@ -306,7 +320,7 @@ export function ScoreProgressTabs({
             type="button"
             onClick={() => onChange(tab.id)}
             className={cn(
-              "flex h-8 items-center justify-center rounded-lg px-3 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors",
+              "flex h-8 items-center justify-center rounded-[16px] px-3 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors",
               active ? "bg-[#0d47a1] text-white" : "text-[#666d80] hover:bg-[#f3f7ff]",
             )}
             aria-pressed={active}

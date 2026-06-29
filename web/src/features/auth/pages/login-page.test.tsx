@@ -33,7 +33,7 @@ describe("LoginPage", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole("heading", { name: /sign in to your account/i })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: /login with/i })).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/enter your password/i)).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /send confirmation link/i })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /sign in with google/i })).toBeInTheDocument()

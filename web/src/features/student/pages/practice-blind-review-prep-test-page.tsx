@@ -1,17 +1,73 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom"
-import { ChevronRight, ClipboardCheck, EyeOff, X } from "lucide-react"
+import { ChevronRight, EyeOff } from "lucide-react"
 
+import { FigmaIcon } from "@/components/icons/figma-icons"
 import { cn } from "@/lib/utils"
 import type { BlindReviewDetailResponse, BlindReviewDetailSection } from "@/features/student/blind-review/blind-review-types"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
+import { PREPTEST_LIST_HREF } from "@/features/student/preptests/preptest-routes"
+import {
+  BLIND_REVIEW_NOTES_BACK_BUTTON_CLASS,
+  BLIND_REVIEW_NOTES_BADGE_ACTUAL_CLASS,
+  BLIND_REVIEW_NOTES_BADGE_BLIND_CLASS,
+  BLIND_REVIEW_NOTES_CARD_CLASS,
+  BLIND_REVIEW_NOTES_CONTENT_CLASS,
+  BLIND_REVIEW_NOTES_HEADER_CLASS,
+  BLIND_REVIEW_NOTES_PAGE_CLASS,
+  BLIND_REVIEW_NOTES_PT_LABEL_CLASS,
+  BLIND_REVIEW_NOTES_SECTION_CARD_CLASS,
+  BLIND_REVIEW_NOTES_SECTION_SUBTITLE_ACTIVE_CLASS,
+  BLIND_REVIEW_NOTES_SECTION_SUBTITLE_MUTED_CLASS,
+  BLIND_REVIEW_NOTES_SECTION_TITLE_ACTIVE_CLASS,
+  BLIND_REVIEW_NOTES_SECTION_TITLE_MUTED_CLASS,
+  BLIND_REVIEW_NOTES_SHELL_GUTTER_CLASS,
+  BLIND_REVIEW_NOTES_START_BUTTON_CLASS,
+} from "@/features/student/practice-session/practice-session-blind-review-styles"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+
+const PREP_POOL_SETTINGS_HREF = "/app/practice/drills"
 
 function sectionDisplayTitle(row: BlindReviewDetailSection, index: number): string {
   if (row.sectionNumber != null) return `Section ${row.sectionNumber}`
   return `Section ${index + 1}`
+}
+
+function BlindReviewNotesHeader({
+  prepTestLabel,
+  actualScoreLabel,
+  onClose,
+}: {
+  prepTestLabel: string
+  actualScoreLabel: string
+  onClose: () => void
+}) {
+  return (
+    <header className={cn(BLIND_REVIEW_NOTES_HEADER_CLASS, BLIND_REVIEW_NOTES_SHELL_GUTTER_CLASS)}>
+      <div className={cn(BLIND_REVIEW_NOTES_CONTENT_CLASS, "flex items-center justify-between")}>
+        <div className="flex min-w-0 flex-col gap-2.5">
+          <p className={BLIND_REVIEW_NOTES_PT_LABEL_CLASS}>{prepTestLabel}</p>
+          <div className="flex h-6 flex-wrap items-center gap-2">
+            <span className={BLIND_REVIEW_NOTES_BADGE_BLIND_CLASS}>
+              <EyeOff className="size-3 shrink-0" aria-hidden />
+              Blind Review
+            </span>
+            <span className={BLIND_REVIEW_NOTES_BADGE_ACTUAL_CLASS}>{actualScoreLabel}</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[#666d80] transition-colors hover:bg-[#edf3ff] hover:text-[#062357]"
+          aria-label={`Close ${prepTestLabel}`}
+        >
+          <FigmaIcon name="block-circle" className="size-6" aria-hidden />
+        </button>
+      </div>
+    </header>
+  )
 }
 
 function BlindReviewSectionCard({
@@ -27,24 +83,31 @@ function BlindReviewSectionCard({
 }) {
   const canStart = blindReviewActive && row.practiceable && row.sectionSessionId
   const recommendedCount = row.questionCount
+  const recommendedLabel = `${recommendedCount} Question${recommendedCount === 1 ? "" : "s"} recommended for BR`
 
   return (
-    <div className="flex min-h-[88px] flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#dfe1e7] bg-white px-5 py-4 shadow-[0px_1px_1px_rgba(13,13,18,0.04)] md:px-6">
-      <div className="flex min-w-0 flex-col gap-1">
-        <p className={cn("text-xl font-bold leading-[1.3]", canStart ? "text-[#062357]" : "text-[#a4acb9]")}>
-          {sectionDisplayTitle(row, index)}
-        </p>
-        <p className={cn("text-sm font-medium tracking-[0.02em]", canStart ? "text-[#666d80]" : "text-[#a4acb9]")}>
-          {recommendedCount} Question{recommendedCount === 1 ? "" : "s"} recommended for BR
-        </p>
+    <div className={BLIND_REVIEW_NOTES_SECTION_CARD_CLASS}>
+      <div className="flex min-w-0 flex-1 items-center">
+        <div className="flex flex-col gap-1.5">
+          <p className={canStart ? BLIND_REVIEW_NOTES_SECTION_TITLE_ACTIVE_CLASS : BLIND_REVIEW_NOTES_SECTION_TITLE_MUTED_CLASS}>
+            {sectionDisplayTitle(row, index)}
+          </p>
+          <p
+            className={
+              canStart ? BLIND_REVIEW_NOTES_SECTION_SUBTITLE_ACTIVE_CLASS : BLIND_REVIEW_NOTES_SECTION_SUBTITLE_MUTED_CLASS
+            }
+          >
+            {recommendedLabel}
+          </p>
+        </div>
       </div>
       {canStart ? (
-        <button type="button" onClick={onStart} className="ds-btn min-w-[120px] shrink-0 gap-1 px-5 text-base">
+        <button type="button" onClick={onStart} className={BLIND_REVIEW_NOTES_START_BUTTON_CLASS}>
           Start
-          <ChevronRight className="size-4" aria-hidden />
+          <ChevronRight className="size-5 shrink-0" aria-hidden />
         </button>
       ) : !row.sectionSessionId ? (
-        <span className="text-xs font-semibold text-[#a4acb9]">Complete in PrepTest first</span>
+        <span className="shrink-0 text-xs font-semibold text-[#a4acb9]">Complete in PrepTest first</span>
       ) : null}
     </div>
   )
@@ -131,26 +194,38 @@ function PracticeBlindReviewPrepTestPage() {
     navigate(`/app/practice/sections/session/${encodeURIComponent(sessionId)}?${q.toString()}`)
   }
 
+  function closeNotes() {
+    navigate("/app/practice/blind-review")
+  }
+
+  const pageShell = (children: ReactNode) => (
+    <StudentMain
+      layout="immersive"
+      className={BLIND_REVIEW_NOTES_PAGE_CLASS}
+      contentClassName="flex min-h-0 flex-1 flex-col overflow-y-auto"
+    >
+      <div className={cn(BLIND_REVIEW_NOTES_SHELL_GUTTER_CLASS, "flex min-h-0 flex-1 flex-col gap-5 pb-6 pt-5")}>
+        <div className={cn(BLIND_REVIEW_NOTES_CONTENT_CLASS, "flex min-h-0 flex-1 flex-col gap-5")}>{children}</div>
+      </div>
+    </StudentMain>
+  )
+
   if (!testIdParam) {
     return <Navigate to="/app/practice/blind-review" replace />
   }
 
   if (loading) {
-    return (
-      <StudentMain>
-        <StudentPageLoader centered label="Loading blind review…" />
-      </StudentMain>
-    )
+    return pageShell(<StudentPageLoader centered className="py-16" label="Loading blind review…" />)
   }
 
   if (!detail) {
-    return (
-      <StudentMain>
-        <p className="text-sm text-red-600">{error ?? "PrepTest not found."}</p>
-        <Link to="/app/practice/blind-review" className="mt-2 text-sm font-semibold text-[#0d47a1] hover:underline">
+    return pageShell(
+      <>
+        <p className="pt-6 text-sm text-red-600">{error ?? "PrepTest not found."}</p>
+        <Link to="/app/practice/blind-review" className="text-sm font-semibold text-[#0d47a1] hover:underline">
           Back to Blind Review
         </Link>
-      </StudentMain>
+      </>,
     )
   }
 
@@ -164,82 +239,68 @@ function PracticeBlindReviewPrepTestPage() {
     blindReview.scaledScore != null ? `Actual: ${blindReview.scaledScore}` : "Actual: BR"
 
   return (
-    <StudentMain className="py-4 md:py-6">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#818898]">Blind Review Notes</p>
+    <StudentMain
+      layout="immersive"
+      className={BLIND_REVIEW_NOTES_PAGE_CLASS}
+      contentClassName="flex min-h-0 flex-1 flex-col overflow-y-auto"
+    >
+      <BlindReviewNotesHeader
+        prepTestLabel={prepTest.label}
+        actualScoreLabel={actualScoreLabel}
+        onClose={closeNotes}
+      />
 
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-2.5">
-          <h1 className="text-2xl font-bold leading-[1.2] text-[#062357] md:text-[28px]">{prepTest.label}</h1>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ff9d51] bg-[#fff3ea] px-3 py-1 text-xs font-semibold text-[#c45a00]">
-            <EyeOff className="size-3.5 shrink-0" aria-hidden />
-            Blind Review
-          </span>
-          <span className="inline-flex items-center rounded-full border border-[#f0d4b8] bg-[#fff8f0] px-3 py-1 text-xs font-semibold text-[#8a5a2b]">
-            {actualScoreLabel}
-          </span>
+      <div className={cn(BLIND_REVIEW_NOTES_SHELL_GUTTER_CLASS, "flex min-h-0 flex-1 flex-col pb-6 pt-5")}>
+        <div className={cn(BLIND_REVIEW_NOTES_CONTENT_CLASS, "flex flex-col gap-5")}>
+          {error ? (
+            <p className="text-sm text-red-600" role="alert">
+              {error}
+            </p>
+          ) : null}
+
+          <section className={BLIND_REVIEW_NOTES_CARD_CLASS}>
+        <div className="flex h-12 w-full items-center justify-between gap-2.5">
+          <h2 className="shrink-0 text-2xl font-bold leading-[1.3] text-[#062357]">Blind Review</h2>
+          <p className="min-w-0 text-right text-sm font-normal leading-normal tracking-[0.28px] text-[#666d80]">
+            Go to your{" "}
+            <Link to={PREP_POOL_SETTINGS_HREF} className="font-semibold text-[#0d47a1] hover:underline">
+              Prep pool settings
+            </Link>{" "}
+            to change what sections are available.
+          </p>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate("/app/practice/blind-review")}
-          className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-[#dfe1e7] bg-white text-[#666d80] transition-colors hover:bg-[#f6f8fa] hover:text-[#062357]"
-          aria-label={`Close ${prepTest.label}`}
-        >
-          <X className="size-5" />
-        </button>
-      </div>
 
-      {error ? (
-        <p className="mb-4 text-sm text-red-600" role="alert">
-          {error}
-        </p>
-      ) : null}
-
-      <section className="overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
-        <div className="grid gap-8 border-b border-[#dfe1e7] p-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:p-8 lg:gap-10">
-          <div className="flex min-w-0 flex-col gap-4">
-            <h2 className="text-[28px] font-bold leading-[1.25] text-[#062357] md:text-[32px]">Blind Review</h2>
-            <div className="space-y-4 text-sm leading-[1.65] tracking-[0.02em] text-[#36394a]">
-              <p>
-                Blind review is your chance to revisit every question from this PrepTest without seeing whether your
-                original answers were correct. Work through each section at your own pace and change responses where your
-                reasoning improved.
-              </p>
-              <p>
-                When you are finished reviewing all sections, submit blind review to record your updated score. Your
-                original test score stays on file — blind review adds a separate BR score for comparison.
-              </p>
-            </div>
-            <p className="text-sm font-semibold tracking-[0.02em] text-[#666d80]">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="w-full max-w-[513px] text-base font-normal leading-normal tracking-[0.32px] text-[#0d0d12]">
+            <p className="mb-0">
+              Review and redo your answers without time pressure. We&apos;ll tell you which questions to look at, but not
+              what the answers are or whether you got them wrong. This is the best way to build your LSAT intuition and
+              prevent similar mistakes in the future.
+            </p>
+            <br/>
+            <p className="mb-0 mt-6">Trust us, you&apos;ll thank us later.</p>
+            <br/>
+            <p className="mb-0 mt-6">
               {recommendedTotal} question{recommendedTotal === 1 ? "" : "s"} are recommended for BR
             </p>
-            <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#ff6f00]">
-              The questions with orange color are the ones we think you should review.
+            <p className="mb-0 mt-6 font-normal text-[#ff6f00]">
+              The questions with orange color the ones we think you should review.
             </p>
           </div>
 
-          <div className="flex min-w-0 flex-col gap-4">
-            <p className="text-right text-xs font-medium leading-[1.5] tracking-[0.02em] text-[#666d80]">
-              Go to your{" "}
-              <Link to="/app/practice/drills" className="font-semibold text-[#0d47a1] hover:underline">
-                practice pool settings
-              </Link>{" "}
-              to change what sections are available.
-            </p>
-
+          <div className="flex w-full max-w-[513px] flex-col gap-6">
             {blindReviewDone ? (
-              <p className="rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-5 py-6 text-sm font-semibold text-[#287f6e]">
+              <p className="rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] px-6 py-8 text-sm font-semibold text-[#287f6e]">
                 Blind review completed
-                {blindReview.blindReviewScaledScore != null
-                  ? ` · BR score ${blindReview.blindReviewScaledScore}`
-                  : ""}
+                {blindReview.blindReviewScaledScore != null ? ` · BR score ${blindReview.blindReviewScaledScore}` : ""}
                 .
               </p>
             ) : !blindReviewActive ? (
-              <p className="rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-5 py-6 text-sm text-[#666d80]">
+              <p className="rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] px-6 py-8 text-sm text-[#666d80]">
                 {starting ? "Starting blind review…" : "Preparing sections…"}
               </p>
             ) : (
-              <ul className="flex flex-col gap-3">
+              <ul className="flex flex-col gap-6">
                 {practiceableSections.map((row, index) => (
                   <li key={row.id}>
                     <BlindReviewSectionCard
@@ -257,19 +318,15 @@ function PracticeBlindReviewPrepTestPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-[#f5f9ff] px-6 py-5 md:px-8">
-          <button
-            type="button"
-            onClick={() => navigate("/app/practice/blind-review")}
-            className="text-sm font-semibold tracking-[0.02em] text-[#0d47a1] hover:underline"
-          >
+        <div className="flex flex-wrap items-center justify-end gap-6">
+          <button type="button" onClick={closeNotes} className={BLIND_REVIEW_NOTES_BACK_BUTTON_CLASS}>
             Back
           </button>
           {blindReviewDone ? (
             <button
               type="button"
-              onClick={() => navigate("/app/practice/preptest")}
-              className="ds-btn min-w-[200px] gap-2 px-6 text-base"
+              onClick={() => navigate(PREPTEST_LIST_HREF)}
+              className={cn(BLIND_REVIEW_NOTES_START_BUTTON_CLASS, "min-w-[200px]")}
             >
               Done
             </button>
@@ -278,14 +335,16 @@ function PracticeBlindReviewPrepTestPage() {
               type="button"
               disabled={finishing || !canSubmitBlindReview}
               onClick={() => void handleCompleteBlindReview()}
-              className="ds-btn min-w-[220px] gap-2 px-6 text-base disabled:opacity-50"
+              className={cn(BLIND_REVIEW_NOTES_START_BUTTON_CLASS, "min-w-[220px] disabled:opacity-50")}
             >
-              <ClipboardCheck className="size-5 shrink-0" aria-hidden />
+              <FigmaIcon name="notification-text-square" className="size-5 shrink-0" aria-hidden />
               {finishing ? "Submitting…" : "Submit Blind Review"}
             </button>
           )}
         </div>
-      </section>
+          </section>
+        </div>
+      </div>
     </StudentMain>
   )
 }

@@ -1,5 +1,12 @@
 import type { BlindReviewDetailResponse } from "@/features/student/blind-review/blind-review-types"
 
+/** Unanswered or originally incorrect — highlight in blind review UI (Figma `18617:33677`). */
+export function isQuestionRecommendedForBlindReview(
+  actualAnswer: { isCorrect: boolean } | undefined,
+): boolean {
+  return actualAnswer == null || actualAnswer.isCorrect === false
+}
+
 export function firstBlindReviewSectionSessionId(
   detail: BlindReviewDetailResponse,
 ): string | null {

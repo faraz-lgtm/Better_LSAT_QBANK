@@ -35,7 +35,7 @@ function PracticeSectionsPage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="flex items-start gap-3 mb-3">
             
-              <p className="max-w-xl text-[14px] font-semibold leading-snug tracking-[0.1px] text-[#3c527f]">
+              <p className="max-w-xl text-[14px] font-semibold leading-snug tracking-[0.1px] text-[#0D47A1]">
                 Take a complete section from an official PrepTest.
               </p>
             </div>
@@ -59,7 +59,7 @@ function PracticeSectionsPage() {
           <PracticeLrRcStarterCards
             lrButtonLabel="Start Section"
             rcButtonLabel="Start Section"
-            lrSubtitle="16–20 Questions"
+            lrSubtitle="24–26 Questions"
             rcSubtitle="4 Passages"
             onStartLr={() => navigate("/app/practice/sections/lr/new")}
             onStartRc={() => navigate("/app/practice/sections/rc/new")}

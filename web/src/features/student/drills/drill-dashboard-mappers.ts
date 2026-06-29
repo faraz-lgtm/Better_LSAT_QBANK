@@ -162,38 +162,48 @@ export function mapPriorityToSuggestedDrill(row: PriorityRow): SuggestedDrill | 
   }
 }
 
-export function sumSessionStudyHours(sessions: PracticeSessionSummary[], nowMs = Date.now()): number {
-  let totalMs = 0
-  for (const session of sessions) {
+function sessionQuestionCount(meta: Record<string, unknown>): number {
+  if (typeof meta.questionCount === "number") return meta.questionCount
+  if (Array.isArray(meta.questionIds)) return meta.questionIds.length
+  return 0
+}
+
+/** Minutes credited for a completed practice session (configured budget or elapsed for unlimited). */
+export function sessionStudyMinutes(
+  session: Pick<PracticeSessionSummary, "startedAt" | "completedAt" | "metadata">,
+): number {
+  if (!session.completedAt) return 0
+
+  const meta = session.metadata
+  const timing = typeof meta.timing === "string" ? meta.timing : null
+  const questionCount = sessionQuestionCount(meta)
+
+  if (timing === "35") return 35
+  if (timing === "per-q") return Math.max(1, Math.round((questionCount * 80) / 60))
+
+  if (timing === "unlimited" || !timing) {
     const start = new Date(session.startedAt).getTime()
-    if (Number.isNaN(start)) continue
-    const end = session.completedAt ? new Date(session.completedAt).getTime() : nowMs
-    if (Number.isNaN(end)) continue
-    totalMs += Math.max(0, end - start)
+    const end = new Date(session.completedAt).getTime()
+    if (Number.isNaN(start) || Number.isNaN(end)) return 0
+    return Math.max(0, Math.round((end - start) / 60_000))
   }
-  return totalMs / 3_600_000
+
+  const parsed = Number.parseInt(timing, 10)
+  if (Number.isFinite(parsed) && parsed > 0) return parsed
+
+  return 0
 }
 
-export function formatStudyHours(hours: number): string {
-  if (hours < 1) return `${Math.round(hours * 10) / 10}h`
-  return `${Math.round(hours)}h`
+export function sumCompletedSessionStudyMinutes(sessions: PracticeSessionSummary[]): number {
+  return sessions.reduce((sum, session) => sum + sessionStudyMinutes(session), 0)
 }
 
-export async function fetchAllSessionsForStudyHours(
-  getSessions: (input: { limit: number; offset: number }) => Promise<{
-    sessions: PracticeSessionSummary[]
-    total: number
-  }>,
-  pageSize = 100,
-  maxSessions = 500,
-): Promise<PracticeSessionSummary[]> {
-  const all: PracticeSessionSummary[] = []
-  let offset = 0
-  while (all.length < maxSessions) {
-    const page = await getSessions({ limit: pageSize, offset })
-    all.push(...page.sessions)
-    if (page.sessions.length < pageSize || all.length >= page.total) break
-    offset += pageSize
-  }
-  return all.slice(0, maxSessions)
+export function formatStudyTime(totalMinutes: number): string {
+  const minutes = Number.isFinite(totalMinutes) ? Math.max(0, Math.floor(totalMinutes)) : 0
+  if (minutes <= 0) return "0 min"
+  if (minutes < 60) return `${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  if (mins === 0) return hours === 1 ? "1 hr" : `${hours} hrs`
+  return `${hours}h ${mins}m`
 }

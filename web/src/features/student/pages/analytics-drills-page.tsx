@@ -29,6 +29,7 @@ import {
   mapPrepTestSessionToHistoryEntry,
   mapSessionToDrillRecord,
 } from "@/features/student/analytics/map-analytics"
+import { PREPTEST_LIST_HREF } from "@/features/student/preptests/preptest-routes"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 
@@ -53,7 +54,7 @@ const HISTORY_SORT_OPTIONS: Array<{ id: HistorySort; label: string }> = [
 
 function DrillScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next: ScoreTab) => void }) {
   return (
-    <div className="flex flex-wrap items-center gap-4">
+    <div className="flex h-10 flex-wrap items-center gap-2 rounded-[16px] bg-white p-1">
       {SCORE_TABS.map((tab) => {
         const active = value === tab.id
         if (tab.id === "percent") {
@@ -63,10 +64,13 @@ function DrillScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next:
               type="button"
               onClick={() => onChange(tab.id)}
               aria-pressed={active}
-              className="inline-flex items-center gap-2 text-sm font-semibold tracking-[0.02em] text-[#666d80] transition-colors hover:text-[#062357]"
+              className={cn(
+                "flex min-h-8 items-center justify-center gap-2 rounded-[16px] px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors",
+                active ? "bg-[#0d47a1] text-white" : "text-[#666d80] hover:bg-[#f3f7ff]",
+              )}
             >
               <span
-                className={cn("size-2.5 rounded-full", active ? "bg-[#0d47a1]" : "bg-[#9ca3af]")}
+                className={cn("size-2.5 rounded-full", active ? "bg-white" : "bg-[#9ca3af]")}
                 aria-hidden
               />
               {tab.label}
@@ -80,8 +84,8 @@ function DrillScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next:
             onClick={() => onChange(tab.id)}
             aria-pressed={active}
             className={cn(
-              "rounded-lg px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors",
-              active ? "bg-[#0d47a1] text-white" : "border border-[#dfe1e7] bg-white text-[#666d80] hover:bg-[#f3f7ff]",
+              "flex min-h-8 items-center justify-center rounded-[16px] px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors",
+              active ? "bg-[#0d47a1] text-white" : "text-[#666d80] hover:bg-[#f3f7ff]",
             )}
           >
             {tab.label}
@@ -125,21 +129,21 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
   return (
     <div className="w-full">
       <div className="flex h-[260px] w-full items-stretch gap-4">
-        <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[#62748e]">
+        <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[#062357]">
           {Y_AXIS_LABELS.map((label) => (
             <span key={label} className="leading-5">
               {label}
             </span>
           ))}
         </div>
-        <div className="relative flex-1 pb-8">
-          <div className="absolute inset-0 bottom-8 flex flex-col justify-between" aria-hidden>
+        <div className="relative flex-1">
+          <div className="absolute inset-0 flex flex-col justify-between" aria-hidden>
             {Y_AXIS_LABELS.map((label) => (
               <div key={label} className="h-px w-full bg-[#e5e7eb]" />
             ))}
           </div>
           <svg
-            className="absolute inset-0 bottom-8 h-[calc(100%-2rem)] w-full"
+            className="absolute inset-0 h-full w-full"
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
             aria-hidden
@@ -155,7 +159,7 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
               vectorEffect="non-scaling-stroke"
             />
           </svg>
-          <div className="absolute inset-0 bottom-8 flex">
+          <div className="absolute inset-0 flex">
             {points.map((point, i) => {
               const value = tab === "percent" ? `${point.scorePct}%` : `${point.ptEquivalent}`
               const isActive = hoverIndex === i
@@ -189,13 +193,6 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
                 </button>
               )
             })}
-          </div>
-          <div className="absolute bottom-0 left-0 right-0 flex justify-between gap-0.5 text-[11px] leading-4 text-[#6a7282] sm:text-xs">
-            {points.map((p) => (
-              <span key={p.id} className="min-w-0 flex-1 truncate text-center">
-                {p.label}
-              </span>
-            ))}
           </div>
         </div>
       </div>
@@ -243,7 +240,7 @@ function DrillTypeMenu({
         onClick={() => setOpen((c) => !c)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex h-[52px] items-center gap-2 rounded-2xl border border-[#dfe1e7] bg-white px-3 text-base font-medium text-[#062357] hover:bg-[#f3f7ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d47a1]/30"
+        className="flex h-[52px] items-center gap-2 rounded-[16px] border border-[#dfe1e7] bg-white px-3 text-base font-medium text-[#062357] hover:bg-[#f3f7ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d47a1]/30"
       >
         <span className="max-w-[240px] truncate text-left">{label}</span>
         <ChevronDown className={cn("size-5 text-[#666d80] transition-transform", open ? "rotate-180" : "")} aria-hidden />
@@ -252,7 +249,7 @@ function DrillTypeMenu({
         <ul
           role="listbox"
           aria-label="Filter by drill type"
-          className="absolute right-0 z-30 mt-2 min-w-[260px] overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
+          className="absolute right-0 z-30 mt-2 min-w-[260px] overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
         >
           <li role="presentation">
             <button
@@ -264,7 +261,7 @@ function DrillTypeMenu({
                 setOpen(false)
               }}
               className={cn(
-                "flex h-10 w-full items-center rounded-xl px-3 text-sm font-medium tracking-[0.02em] transition-colors",
+                "flex h-10 w-full items-center rounded-[16px] px-3 text-sm font-medium tracking-[0.02em] transition-colors",
                 value === null ? "bg-[#f3f7ff] text-[#0d47a1]" : "text-[#062357] hover:bg-[#f6f8fa]",
               )}
             >
@@ -284,7 +281,7 @@ function DrillTypeMenu({
                     setOpen(false)
                   }}
                   className={cn(
-                    "flex h-10 w-full items-center justify-between gap-3 rounded-xl px-3 text-sm font-medium tracking-[0.02em] transition-colors",
+                    "flex h-10 w-full items-center justify-between gap-3 rounded-[16px] px-3 text-sm font-medium tracking-[0.02em] transition-colors",
                     active ? "bg-[#f3f7ff] text-[#0d47a1]" : "text-[#062357] hover:bg-[#f6f8fa]",
                   )}
                 >
@@ -332,7 +329,7 @@ function HistorySortMenu({ value, onChange }: { value: HistorySort; onChange: (n
       <button
         type="button"
         onClick={() => setOpen((c) => !c)}
-        className="flex h-10 items-center gap-2 rounded-xl border border-[#dfe1e7] bg-white px-3 text-sm font-semibold text-[#062357] hover:bg-[#f3f7ff]"
+        className="flex h-10 items-center gap-2 rounded-[16px] border border-[#dfe1e7] bg-white px-3 text-sm font-semibold text-[#062357] hover:bg-[#f3f7ff]"
         aria-haspopup="listbox"
         aria-expanded={open}
       >
@@ -343,7 +340,7 @@ function HistorySortMenu({ value, onChange }: { value: HistorySort; onChange: (n
         <ul
           role="listbox"
           aria-label="Sort PrepTest history"
-          className="absolute right-0 z-30 mt-2 min-w-[200px] overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
+          className="absolute right-0 z-30 mt-2 min-w-[200px] overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
         >
           {HISTORY_SORT_OPTIONS.map((option) => {
             const active = option.id === value
@@ -358,7 +355,7 @@ function HistorySortMenu({ value, onChange }: { value: HistorySort; onChange: (n
                     setOpen(false)
                   }}
                   className={cn(
-                    "flex h-10 w-full items-center rounded-xl px-3 text-sm font-medium tracking-[0.02em] transition-colors",
+                    "flex h-10 w-full items-center rounded-[16px] px-3 text-sm font-medium tracking-[0.02em] transition-colors",
                     active ? "bg-[#f3f7ff] text-[#0d47a1]" : "text-[#062357] hover:bg-[#f6f8fa]",
                   )}
                 >
@@ -519,22 +516,27 @@ function AnalyticsDrillsPage() {
         navigate(`/app/analytics/preptests/results/${encodeURIComponent(sessionId)}`)
         return
       }
-      navigate("/app/practice/preptest")
+      navigate(PREPTEST_LIST_HREF)
     },
     [navigate, prepHistory],
   )
 
+  if (loading) {
+    return (
+      <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
+        <StudentPageLoader centered className="min-h-0 flex-1" label="Loading drill analytics…" />
+      </StudentMain>
+    )
+  }
+
   return (
     <StudentMain>
-        {loading ? (
-          <div className="mb-4">
-            <StudentPageLoader label="Loading drill analytics…" />
-          </div>
-        ) : null}
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          {activeType ? (
-            <div>
-              <p className="mt-1 inline-flex items-center gap-2 rounded-full bg-[#f3f7ff] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#0d47a1]">
+      <section className="mb-6 flex flex-col gap-6 rounded-[24px] border border-[#dfe1e7] bg-white p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex min-w-0 flex-col gap-2">
+            <h1 className="!m-0 !text-[24px] !font-bold !leading-[1.3] text-[#062357]">Drills</h1>
+            {activeType ? (
+              <p className="inline-flex w-fit items-center gap-2 rounded-full bg-[#f3f7ff] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#0d47a1]">
                 <span>{activeType.section}</span>
                 <span aria-hidden>·</span>
                 <span className="normal-case tracking-normal">{activeType.label}</span>
@@ -547,44 +549,43 @@ function AnalyticsDrillsPage() {
                   <X className="size-3" aria-hidden />
                 </button>
               </p>
-            </div>
-          ) : (
-            <span />
-          )}
-          <div className="flex flex-wrap items-center gap-3">
+            ) : null}
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
             <DrillTypeMenu value={activeType?.id ?? null} onChange={handleSelectType} types={drillTypes} />
             <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
           </div>
         </div>
 
         {statTiles ? (
-          <section className="mb-6 grid gap-6 lg:grid-cols-[minmax(280px,380px)_1fr]">
+          <div className="grid gap-6 lg:grid-cols-[minmax(280px,380px)_1fr]">
             <AnalyticsStatsGrid stats={statTiles} />
             <AnalyticsScoreProgressPanel
               title="Score progress"
               legend={<DrillScoreTabs value={scoreTab} onChange={setScoreTab} />}
               chart={<DrillScoreProgressChart points={progressPoints} tab={scoreTab} />}
             />
-          </section>
+          </div>
         ) : (
-          <p className="mb-6 rounded-2xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-6 py-8 text-center text-sm text-[#666d80]">
+          <p className="rounded-2xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-6 py-8 text-center text-sm text-[#666d80]">
             No drills match the current filters. Try widening the time range or clearing the drill type.
           </p>
         )}
+      </section>
 
-        <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
-          <HistorySortMenu value={historySort} onChange={setHistorySort} />
-        </div>
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
+        <HistorySortMenu value={historySort} onChange={setHistorySort} />
+      </div>
 
-        <AnalyticsPrepTestHistory
-          visibleEntries={visibleEntries}
-          bookmarkedOnly={bookmarkedOnly}
-          onBookmarkedOnlyChange={setBookmarkedOnly}
-          onToggleBookmark={handleToggleBookmark}
-          onSelectEntry={handleSelectEntry}
-          onOpenPractice={handleOpenPractice}
-        />
-      </StudentMain>
+      <AnalyticsPrepTestHistory
+        visibleEntries={visibleEntries}
+        bookmarkedOnly={bookmarkedOnly}
+        onBookmarkedOnlyChange={setBookmarkedOnly}
+        onToggleBookmark={handleToggleBookmark}
+        onSelectEntry={handleSelectEntry}
+        onOpenPractice={handleOpenPractice}
+      />
+    </StudentMain>
   )
 }
 

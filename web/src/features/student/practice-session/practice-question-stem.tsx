@@ -1,7 +1,13 @@
 import type { MouseEvent } from "react"
 
+import {
+  ACTIVE_DRILL_ACTION_BUTTON_CLASS,
+  ACTIVE_DRILL_STEM_GRID_CLASS,
+  ACTIVE_DRILL_STEM_SECTION_CLASS,
+} from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import { PracticeQuestionFlagButton } from "@/features/student/practice-session/practice-question-flag-button"
+import { cn } from "@/lib/utils"
 import type { PracticeSessionVariant, PracticeToolMode, RegionKey } from "@/features/student/practice-session/practice-session-types"
 
 type PracticeQuestionStemProps = {
@@ -37,15 +43,15 @@ function PracticeQuestionStem({
 
   if (isActiveDrill) {
     return (
-      <div className="shrink-0 border-b border-[#dfe1e7] bg-white px-3 py-3">
-        <div className="flex items-start justify-between gap-3">
+      <div className={ACTIVE_DRILL_STEM_SECTION_CLASS}>
+        <div className={ACTIVE_DRILL_STEM_GRID_CLASS}>
           <PracticeAnnotatedContent
             regionKey={regionKey}
             html={html}
             findQuery={findQuery}
             scrollAnchor
             as="div"
-            className="min-w-0 flex-1 text-lg leading-[1.35] text-[#0d0d12] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-7 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
+            className="col-start-1 min-w-0 text-lg leading-[1.35] text-[#0d0d12] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-7 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
             toolMode={toolMode}
             onMouseUp={onContentMouseUp}
             onClickCapture={onContentClick}
@@ -54,7 +60,7 @@ function PracticeQuestionStem({
             flagged={flagged}
             onToggle={onToggleFlag}
             disabled={flagsDisabled}
-            className="size-9 rounded-[10px]"
+            className={cn(ACTIVE_DRILL_ACTION_BUTTON_CLASS, "col-start-2", flagged && "text-[#0d47a1]")}
           />
         </div>
       </div>

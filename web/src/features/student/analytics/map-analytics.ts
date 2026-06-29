@@ -21,6 +21,46 @@ function formatSigned(n: number): string {
   return String(n)
 }
 
+function ordinal(n: number): string {
+  const rounded = Math.round(n)
+  const v = rounded % 100
+  if (v >= 11 && v <= 13) return `${rounded}th`
+  switch (rounded % 10) {
+    case 1:
+      return `${rounded}st`
+    case 2:
+      return `${rounded}nd`
+    case 3:
+      return `${rounded}rd`
+    default:
+      return `${rounded}th`
+  }
+}
+
+export function formatPrepTestChartLabel(prepTestTitle: string, moduleId: string | null): string {
+  const moduleMatch = moduleId?.match(/^LSAC(\d+)$/i)
+  if (moduleMatch) return `PT ${moduleMatch[1]}`
+
+  const trimmed = prepTestTitle.trim()
+  const ptMatch = trimmed.match(/^PT\s*(\d+)/i)
+  if (ptMatch) return `PT ${ptMatch[1]}`
+  const prepMatch = trimmed.match(/PrepTest\s+(\d+)/i)
+  if (prepMatch) return `PT ${prepMatch[1]}`
+  const numMatch = trimmed.match(/\b(\d{2,3})\b/)
+  if (numMatch) return `PT ${numMatch[1]}`
+
+  return trimmed.length > 10 ? trimmed.slice(0, 10) : trimmed || "PT"
+}
+
+/** Compact `PT158` label for PrepTest history rows (Figma). */
+export function formatPrepTestHistoryLabel(
+  prepTestTitle: string | null | undefined,
+  prepTestId?: string | null,
+): string {
+  const moduleId = prepTestId?.match(/^LSAC\d+$/i) ? prepTestId : null
+  return formatPrepTestChartLabel(prepTestTitle ?? "", moduleId).replace(/^PT\s+/i, "PT")
+}
+
 function numericToDifficulty(n: number | null): Difficulty {
   if (n == null || n <= 1) return "Easiest"
   if (n === 2) return "Easy"
@@ -38,7 +78,7 @@ export function mapOverviewToHeadlineStats(overview: AnalyticsOverview): Analyti
       value: String(overview.bestScaledScore),
       accent: "#0d47a1",
       caption:
-        overview.bestPercentile != null ? `PERCENTILE: ${Math.round(overview.bestPercentile)}th` : undefined,
+        overview.bestPercentile != null ? `PERCENTILE: ${ordinal(overview.bestPercentile)}` : undefined,
     })
   }
   if (overview.averageScaledScore != null) {
@@ -49,7 +89,7 @@ export function mapOverviewToHeadlineStats(overview: AnalyticsOverview): Analyti
       accent: "#5463a9",
       caption:
         overview.averagePercentile != null
-          ? `PERCENTILE: ${Math.round(overview.averagePercentile)}th`
+          ? `PERCENTILE: ${ordinal(overview.averagePercentile)}`
           : undefined,
     })
   }
@@ -79,7 +119,7 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
         overview.averageLrMissedPerPrepTest != null
           ? formatSigned(-Math.round(overview.averageLrMissedPerPrepTest))
           : "—",
-      accent: "#ff6f00",
+      accent: "#00bc54",
     },
     {
       id: "avg-rc",
@@ -88,7 +128,7 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
         overview.averageRcMissedPerPrepTest != null
           ? formatSigned(-Math.round(overview.averageRcMissedPerPrepTest))
           : "—",
-      accent: "#ff9d51",
+      accent: "#0bbcc9",
     },
     {
       id: "drilled",
@@ -113,7 +153,7 @@ function scaledToChartValue(scaled: number | null, raw: number | null): number {
 
 export function mapTrajectoryToScoreProgress(points: TrajectoryPoint[]): ScoreProgressPoint[] {
   return points.map((p) => {
-    const label = p.prepTestTitle.length > 12 ? p.prepTestTitle.slice(0, 12) : p.prepTestTitle
+    const label = formatPrepTestChartLabel(p.prepTestTitle, p.moduleId)
     const regular = scaledToChartValue(
       p.regularScaledScore ?? p.scaledScore,
       p.regularRawScore ?? p.rawScore,
@@ -132,15 +172,15 @@ const SECTION_STYLE: Record<
   { badgeBg: string; badgeColor: string; accentBar: string; title: string }
 > = {
   LR: {
-    badgeBg: "#fffbeb",
-    badgeColor: "#ae8b00",
-    accentBar: "#ae8b00",
+    badgeBg: "#eafff4",
+    badgeColor: "#00bc54",
+    accentBar: "#00bc54",
     title: "Logical Reasoning",
   },
   RC: {
-    badgeBg: "#fff3ea",
-    badgeColor: "#ff9d51",
-    accentBar: "#ff9d51",
+    badgeBg: "#e5fdff",
+    badgeColor: "#0bbcc9",
+    accentBar: "#0bbcc9",
     title: "Reading Comprehension",
   },
 }
@@ -235,7 +275,7 @@ export function mapPrepTestSessionToHistoryEntry(s: PracticeSessionSummary): Pre
   const br = s.blindReviewScaledScore ?? s.blindReviewRawScore ?? score
   return {
     id: s.id,
-    testLabel: s.prepTestTitle ?? "PrepTest",
+    testLabel: formatPrepTestHistoryLabel(s.prepTestTitle, s.prepTestId),
     dateLabel,
     bookmarked: s.bookmarked,
     score,

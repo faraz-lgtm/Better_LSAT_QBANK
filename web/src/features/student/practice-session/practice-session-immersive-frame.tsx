@@ -4,7 +4,7 @@ import { createPortal } from "react-dom"
 import { cn } from "@/lib/utils"
 
 const IMMERSIVE_SCRIM_BACKDROP_STYLE = {
-  background: "rgba(0, 0, 0, 0.60)",
+  background: "#041a44",
   backdropFilter: "blur(3px)",
   WebkitBackdropFilter: "blur(3px)",
 } as const

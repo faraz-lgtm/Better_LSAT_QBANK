@@ -1,5 +1,6 @@
 import { Flag } from "lucide-react"
 
+import { BLIND_REVIEW_QUESTION_NAV_RECOMMENDED_CLASS } from "@/features/student/practice-session/practice-session-blind-review-styles"
 import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
 
@@ -8,6 +9,7 @@ type PracticeSessionQuestionNavButtonProps = {
   active: boolean
   answered: boolean
   flagged?: boolean
+  recommendedForBr?: boolean
   variant?: PracticeSessionVariant
   onClick: () => void
 }
@@ -17,6 +19,7 @@ function PracticeSessionQuestionNavButton({
   active,
   answered,
   flagged = false,
+  recommendedForBr = false,
   variant = "default",
   onClick,
 }: PracticeSessionQuestionNavButtonProps) {
@@ -27,23 +30,30 @@ function PracticeSessionQuestionNavButton({
     const filled = active || answered
 
     return (
-      <div className="flex w-8 flex-col items-center gap-1.5">
+      <div className="flex w-8 shrink-0 flex-col items-center gap-[6px]">
         {active ? (
-          <span className="h-2.5 w-1 shrink-0 rounded-sm bg-[#062357]" aria-hidden />
+          <span className="h-[10px] w-1 shrink-0 rounded-sm bg-[#062357]" aria-hidden />
         ) : (
-          <span className="h-2.5 w-1 shrink-0" aria-hidden />
+          <span className="h-[10px] w-1 shrink-0" aria-hidden />
         )}
         <button
           type="button"
           onClick={onClick}
           className={cn(
-            "practice-session-question-nav-btn relative shrink-0 text-base font-semibold tracking-[0.02em] shadow-[0px_0px_5px_#ff6f00] transition-colors",
+            "practice-session-question-nav-btn box-border relative shrink-0 text-base font-semibold tracking-[0.32px] transition-colors",
             filled
               ? "border-2 border-[#0b4e6e] bg-[#0d47a1] text-white"
               : "border-2 border-[#dfe1e7] bg-white text-[#062357]",
+            recommendedForBr && BLIND_REVIEW_QUESTION_NAV_RECOMMENDED_CLASS,
           )}
           aria-current={active ? "true" : undefined}
-          aria-label={flagged ? `Question ${number}, flagged` : `Question ${number}`}
+          aria-label={
+            flagged
+              ? `Question ${number}, flagged`
+              : recommendedForBr
+                ? `Question ${number}, recommended for blind review`
+                : `Question ${number}`
+          }
         >
           {number}
         </button>
@@ -55,20 +65,20 @@ function PracticeSessionQuestionNavButton({
     const filled = active || answered
 
     return (
-      <div className="flex w-8 flex-col items-center gap-1.5">
+      <div className="flex w-8 shrink-0 flex-col items-center gap-1.5">
         {active ? (
-          <span className="h-2.5 w-1 shrink-0 rounded-sm bg-[#062357]" aria-hidden />
+          <span className="h-2 w-1 shrink-0 rounded-sm bg-[#062357]" aria-hidden />
         ) : (
-          <span className="h-2.5 w-1 shrink-0" aria-hidden />
+          <span className="h-2 w-1 shrink-0" aria-hidden />
         )}
         <button
           type="button"
           onClick={onClick}
           className={cn(
-            "practice-session-question-nav-btn relative shrink-0 text-base font-semibold tracking-[0.02em] transition-colors",
+            "practice-session-question-nav-btn relative shrink-0 text-sm font-semibold tracking-[0.28px] transition-colors",
             filled
-              ? "border-2 border-[#0b4e6e] bg-[#0d47a1] text-white"
-              : "border-2 border-[#dfe1e7] bg-white text-[#062357]",
+              ? "border border-[#0d47a1] bg-[#0d47a1] text-white"
+              : "border border-[#dfe1e7] bg-white text-[#062357]",
           )}
           aria-current={active ? "true" : undefined}
           aria-label={flagged ? `Question ${number}, flagged` : `Question ${number}`}

@@ -30,6 +30,8 @@ import { DrillSessionPage } from "@/features/student/pages/drill-session-page"
 import { LrNewDrillPage } from "@/features/student/pages/lr-new-drill-page"
 import { RcNewDrillPage } from "@/features/student/pages/rc-new-drill-page"
 import { PracticeDrillsPage } from "@/features/student/pages/practice-drills-page"
+import { LegacyPrepTestPathRedirect } from "@/features/student/preptests/legacy-preptest-path-redirect"
+import { isPrepTestStudentPath } from "@/features/student/preptests/preptest-routes"
 import { PracticePrepTestPage } from "@/features/student/pages/practice-preptest-page"
 import { PracticePrepTestsListPage } from "@/features/student/pages/practice-preptests-list-page"
 import { PracticePrepTestSectionPage } from "@/features/student/pages/practice-preptest-section-page"
@@ -147,7 +149,7 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
   const studentPrepTestUiPreview =
     requiredRole === "student" &&
     allowsPrepTestUnauthenticatedPreview() &&
-    location.pathname.startsWith("/app/practice/preptest")
+    location.pathname.startsWith("/app/practice/preptest") || isPrepTestStudentPath(location.pathname)
 
   useEffect(() => {
     let alive = true
@@ -202,7 +204,11 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
 
   if (isAuthenticated === null) {
     if (studentPrepTestUiPreview) return children
-    return null
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
+        <StudentPageLoader centered label="Loading…" />
+      </div>
+    )
   }
   if (!isAuthenticated) {
     if (studentPrepTestUiPreview) return children
@@ -210,7 +216,13 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
   }
   if (!profile) {
     if (studentPrepTestUiPreview) return children
-    if (!authChecked) return null
+    if (!authChecked) {
+      return (
+        <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
+          <StudentPageLoader centered label="Loading…" />
+        </div>
+      )
+    }
     return (
       <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
         <StudentPageLoader centered label="Loading…" />
@@ -338,9 +350,12 @@ const router = createBrowserRouter([
       { path: "practice/sections/session/:sessionId", element: <SectionSessionPage /> },
       { path: "practice/sections/rc", element: <Navigate to="/app/practice/sections/rc/new" replace /> },
       { path: "practice/sections/rc/session", element: <Navigate to="/app/practice/sections/rc/new" replace /> },
-      { path: "practice/preptest/:testId/section/:sectionId", element: <PracticePrepTestSectionPage /> },
-      { path: "practice/preptest/:testId", element: <PracticePrepTestPage /> },
-      { path: "practice/preptest", element: <PracticePrepTestsListPage /> },
+      { path: "preptest/:testId/section/:sectionId", element: <PracticePrepTestSectionPage /> },
+      { path: "preptest/:testId", element: <PracticePrepTestPage /> },
+      { path: "preptest", element: <PracticePrepTestsListPage /> },
+      { path: "practice/preptest/:testId/section/:sectionId", element: <LegacyPrepTestPathRedirect /> },
+      { path: "practice/preptest/:testId", element: <LegacyPrepTestPathRedirect /> },
+      { path: "practice/preptest", element: <LegacyPrepTestPathRedirect /> },
       { path: "practice/blind-review", element: <PracticeBlindReviewPage /> },
       { path: "practice/blind-review/:testId", element: <PracticeBlindReviewPrepTestPage /> },
       { path: "analytics", element: <AnalyticsPage /> },

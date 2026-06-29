@@ -1,5 +1,7 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 
+import { isStudentVisiblePrepTest } from '../_shared/prep-test-visibility.ts'
+
 export function createServiceRoleClient(): SupabaseClient {
   const url = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -238,10 +240,12 @@ export function createExplanationsRepository(client: SupabaseClient) {
     async listLsatCatalogQuestionIds(): Promise<string[]> {
       const { data: prepRows, error: ptErr } = await client
         .from('admin_prep_tests')
-        .select('id')
+        .select('id,module_id')
         .ilike('module_id', 'LSAC%')
       if (ptErr) throw ptErr
-      const prepTestIds = ((prepRows ?? []) as { id: string }[]).map((r) => r.id)
+      const prepTestIds = ((prepRows ?? []) as { id: string; module_id: string }[])
+        .filter((r) => isStudentVisiblePrepTest(r.module_id))
+        .map((r) => r.id)
       if (prepTestIds.length === 0) return []
 
       const sectionIds: string[] = []

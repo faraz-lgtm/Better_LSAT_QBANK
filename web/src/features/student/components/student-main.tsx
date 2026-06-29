@@ -17,9 +17,9 @@ function StudentMain({ children, className = "", contentClassName = "", layout =
 
   return (
     <main
-      className={cn(
+        className={cn(
         "flex min-h-0 min-w-0 flex-1 flex-col",
-        immersive || locked ? "h-full overflow-x-clip overflow-y-hidden" : "overflow-y-auto overflow-x-hidden",
+        immersive || locked ? "h-full overflow-x-clip overflow-y-hidden" : "w-full max-w-none overflow-y-auto overflow-x-hidden",
         className,
       )}
     >

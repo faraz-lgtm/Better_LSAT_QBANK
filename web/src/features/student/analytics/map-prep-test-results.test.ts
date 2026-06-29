@@ -4,6 +4,7 @@ import {
   formatPrepTestResultsTitle,
   formatQuestionRefLabel,
   mapPrepTestDetailToResults,
+  prepTestBlindReviewWasCompleted,
 } from "@/features/student/analytics/map-prep-test-results"
 import type { PrepTestSessionDetail } from "@/lib/api/analytics"
 
@@ -22,6 +23,7 @@ const baseApi: PrepTestSessionDetail = {
   incorrect: 1,
   percentile: 90.6,
   blindReviewPercentile: 92,
+  blindReviewCompletedAt: "2025-10-04T12:00:00.000Z",
   questions: [
     {
       id: "q1",
@@ -32,6 +34,8 @@ const baseApi: PrepTestSessionDetail = {
       difficultyDots: 4,
       actualCorrect: true,
       blindReviewCorrect: true,
+      blindReviewUnanswered: false,
+      isUnanswered: false,
       correctLetter: "A",
       selectedLetter: "A",
       sectionType: "LR",
@@ -46,6 +50,8 @@ const baseApi: PrepTestSessionDetail = {
       difficultyDots: 3,
       actualCorrect: false,
       blindReviewCorrect: true,
+      blindReviewUnanswered: false,
+      isUnanswered: false,
       correctLetter: "B",
       selectedLetter: "A",
       sectionType: "LR",
@@ -60,6 +66,8 @@ const baseApi: PrepTestSessionDetail = {
       difficultyDots: 2,
       actualCorrect: true,
       blindReviewCorrect: false,
+      blindReviewUnanswered: false,
+      isUnanswered: false,
       correctLetter: "C",
       selectedLetter: "C",
       sectionType: "RC",
@@ -74,6 +82,8 @@ const baseApi: PrepTestSessionDetail = {
       difficultyDots: 2,
       actualCorrect: true,
       blindReviewCorrect: true,
+      blindReviewUnanswered: false,
+      isUnanswered: false,
       correctLetter: "D",
       selectedLetter: "D",
       sectionType: "RC",
@@ -99,6 +109,7 @@ describe("mapPrepTestDetailToResults", () => {
     expect(out.scaledScore).toBe(170)
     expect(out.prediction).toBe(167)
     expect(out.blindReview).toBe(170)
+    expect(out.blindReviewCompleted).toBe(true)
   })
 
   it("formats question ref labels like Figma PT 129  .  S1  .  Q19", () => {
@@ -109,5 +120,31 @@ describe("mapPrepTestDetailToResults", () => {
     expect(formatPrepTestResultsTitle("PrepTest 145", "LSAC145", "2025-10-03T12:00:00.000Z")).toBe(
       "PT145 - October 3, 2025",
     )
+  })
+
+  it("detects blind review from answer changes when completion timestamp is missing", () => {
+    expect(
+      prepTestBlindReviewWasCompleted({
+        blindReviewCompletedAt: null,
+        questions: [
+          {
+            id: "q1",
+            number: 1,
+            title: "Q1",
+            tags: [],
+            difficulty: "Easy",
+            difficultyDots: 2,
+      actualCorrect: false,
+      blindReviewCorrect: true,
+      blindReviewUnanswered: false,
+      isUnanswered: false,
+            correctLetter: "A",
+            selectedLetter: "B",
+            sectionType: "LR",
+            sectionNumber: 1,
+          },
+        ],
+      }),
+    ).toBe(true)
   })
 })

@@ -62,7 +62,7 @@ function PrioritiesTab() {
   }, [analyticsApi])
 
   if (loading) {
-    return <StudentPageLoader label="Loading priorities…" />
+    return <StudentPageLoader centered className="min-h-0 flex-1" label="Loading priorities…" />
   }
   if (error) return <p className="text-sm text-red-600">{error}</p>
   if (rows.length === 0) {
@@ -147,7 +147,7 @@ function HistoryTab() {
 
   if (!analyticsApi) return <p className="text-sm text-red-600">Supabase env is missing.</p>
   if (loading) {
-    return <StudentPageLoader label="Loading practice history…" />
+    return <StudentPageLoader centered className="min-h-0 flex-1" label="Loading practice history…" />
   }
   if (error) return <p className="text-sm text-red-600">{error}</p>
   if (sessions.length === 0) {
@@ -234,7 +234,7 @@ function OverviewTab() {
   )
 
   if (loading) {
-    return <StudentPageLoader label="Loading overview…" />
+    return <StudentPageLoader centered className="min-h-0 flex-1" label="Loading overview…" />
   }
   if (error) return <p className="text-sm text-red-600">{error}</p>
 
@@ -261,7 +261,7 @@ function OverviewTab() {
         <div className="flex flex-col gap-[18px] rounded-2xl bg-[#f6f8fa] p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <h2 className="text-[14px] font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
-              PREPTESTS SCORE PROGRES
+              PREPTESTS SCORE PROGRESS
             </h2>
             <div className="flex flex-wrap items-center gap-3">
               <Link
@@ -280,7 +280,7 @@ function OverviewTab() {
               Regular Score
             </span>
             <span className="flex items-center gap-2 text-sm leading-[1.5] tracking-[0.02em] text-[#666d80]">
-              <span className="size-4 rounded-full bg-[#ae8b00]" aria-hidden />
+              <span className="size-4 rounded-full bg-[#ff6f00]" aria-hidden />
               Blind Review
             </span>
           </div>
@@ -303,7 +303,7 @@ function AnalyticsPage() {
   const tab = tabFromSearch(params.get("tab"))
 
   return (
-    <StudentMain>
+    <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
       {tab === "overview" ? <OverviewTab /> : null}
       {tab === "priorities" ? <PrioritiesTab /> : null}
       {tab === "history" ? <HistoryTab /> : null}

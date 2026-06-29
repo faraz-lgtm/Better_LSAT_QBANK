@@ -50,14 +50,14 @@ function PrepCourseListPage() {
 
   if (loading) {
     return (
-      <StudentMain className="pt-6">
+      <StudentMain>
         <StudentPageLoader centered label="Loading courses…" />
       </StudentMain>
     )
   }
 
   return (
-    <StudentMain className="pt-6">
+    <StudentMain>
       {error ? <p className="mb-4 text-sm text-[#95122b]">{error}</p> : null}
 
       {courses.length === 0 ? (

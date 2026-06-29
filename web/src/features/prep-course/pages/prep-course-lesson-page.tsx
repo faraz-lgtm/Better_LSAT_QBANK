@@ -14,7 +14,9 @@ import {
   nextLessonSlug,
   normalizeCurriculum,
   prevLessonSlug,
+  resolveDrillLessonType,
   shouldFlattenModuleSections,
+  isResolvedPrepCourseDrillLesson,
 } from "@/features/prep-course/lib/prep-course-format"
 import { mergeActiveDrillAttemptBlindReview } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
 import { usePrepCourseBookmarks } from "@/features/prep-course/lib/use-prep-course-bookmarks"
@@ -32,6 +34,7 @@ import {
 } from "@/lib/api/prep-course"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
+import { cn } from "@/lib/utils"
 
 function PrepCourseLessonPage() {
   const navigate = useNavigate()
@@ -210,7 +213,9 @@ function PrepCourseLessonPage() {
       const linkedQuestionId = linkedQuestionRefs[0]?.question_id ?? null
       const { session } = await practiceApi.startLessonDrill({
         lessonId: lesson.id,
-        questionId: linkedQuestionId,
+        ...(resolveDrillLessonType(lesson) === "active_drill" && linkedQuestionId
+          ? { questionId: linkedQuestionId }
+          : {}),
       })
       const returnTo = `/app/prep-course/${course.slug}/${lesson.slug}`
       navigate(`/app/practice/drills/session/${session.id}?returnTo=${encodeURIComponent(returnTo)}`)
@@ -230,9 +235,6 @@ function PrepCourseLessonPage() {
       </StudentMain>
     )
   }
-
-  const isAdaptiveDrillLesson = lesson?.lesson_type === "adaptive_drill"
-  const drillCompleted = Boolean(activeDrillAttempt)
 
   async function handleMarkComplete() {
     if (!lesson || !course || !prepCourseApi || savingComplete) return
@@ -271,50 +273,98 @@ function PrepCourseLessonPage() {
     )
   }
 
+  const useSplitDrillLayout = Boolean(
+    activeDrillAttempt && showSidebar && isResolvedPrepCourseDrillLesson(lesson),
+  )
+
+  const lessonPanelProps = {
+    course,
+    lesson,
+    linkedQuestionRefs,
+    activeDrillAttempt,
+    sectionSubtitle,
+    onReviewDrill: handleReviewDrill,
+    onStartDrill: () => void handleStartDrill(),
+    startingDrill,
+    drillStartError,
+    lessonBookmarked: isLessonBookmarked(lesson.slug),
+    onToggleLessonBookmark: (next: boolean) => setLessonBookmarked(lesson.slug, next),
+  }
+
   return (
-    <StudentMain layout="locked">
+    <StudentMain layout="locked" contentClassName="pt-0 pb-0">
       <div className="prep-course-lesson-shell flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-clip overflow-y-hidden">
         {error ? <p className="mb-4 shrink-0 text-xs text-[#95122b]">{error}</p> : null}
 
-        <section className="prep-course-shell-card practice-session-card flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-clip overflow-y-hidden rounded-[16px] border border-[color:var(--greyscale-100)] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+        <section className="prep-course-shell-card practice-session-card flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden rounded-[16px] border border-[color:var(--greyscale-100)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
           <div
-            className={`practice-session-body flex h-0 min-h-0 min-w-0 max-w-full flex-1 overflow-x-clip overflow-y-hidden ${showSidebar ? "lg:flex-row" : "flex-col"}`}
+            className={cn(
+              "practice-session-body flex h-0 min-h-0 min-w-0 max-w-full flex-1 overflow-hidden",
+              useSplitDrillLayout
+                ? "flex-col"
+                : showSidebar
+                  ? "practice-session-body--with-sidebar flex-row items-stretch gap-6"
+                  : "flex-col",
+            )}
           >
-            <div
-              className={`flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-hidden ${
-                lesson.lesson_type === "rep_work" ? "bg-[var(--greyscale-25)] p-0" : "p-6"
-              } ${showSidebar ? "lg:border-r lg:border-[color:var(--greyscale-100)]" : ""}`}
-            >
-              <PrepCourseLessonPanel
-                course={course}
-                lesson={lesson}
-                linkedQuestionRefs={linkedQuestionRefs}
-                activeDrillAttempt={activeDrillAttempt}
-                sectionSubtitle={sectionSubtitle}
-                contentScrollRef={lessonContentRef}
-                onReviewDrill={handleReviewDrill}
-                onStartDrill={() => void handleStartDrill()}
-                startingDrill={startingDrill}
-                drillStartError={drillStartError}
-                lessonBookmarked={lesson ? isLessonBookmarked(lesson.slug) : false}
-                onToggleLessonBookmark={(next) => {
-                  if (lesson) setLessonBookmarked(lesson.slug, next)
-                }}
-              />
-            </div>
+            {useSplitDrillLayout ? (
+              <div
+                ref={lessonContentRef}
+                className="practice-session-pane practice-session-scroll-hidden flex min-h-0 flex-1 flex-col gap-6 overflow-x-clip overflow-y-auto overscroll-contain bg-[var(--primary-0)] [overflow-anchor:none]"
+              >
+                <PrepCourseLessonPanel {...lessonPanelProps} drillResultsPart="cards" sidebarAdjacent={false} />
+                <div className="flex min-w-0 gap-6 px-6 pb-6">
+                  <div className="min-w-0 flex-1">
+                    <PrepCourseLessonPanel
+                      {...lessonPanelProps}
+                      drillResultsPart="below"
+                      sidebarAdjacent
+                    />
+                  </div>
+                  <div className="sticky top-6 flex w-[320px] shrink-0 self-start flex-col overflow-hidden">
+                    <div className="flex max-h-[calc(100svh-var(--nav-shell-height)-180px)] min-h-0 flex-col overflow-hidden">
+                      <PrepCourseLessonSidebar
+                        lessons={sidebarLessons}
+                        activeLessonSlug={lesson.slug}
+                        completedLessonSlugs={completedLessonSlugs}
+                        progressPercent={sectionProgressPercent}
+                        sectionTitle={sectionTitle}
+                        sectionSubtitle={sectionRemainingLabel}
+                        onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
+                        onClose={() => setShowSidebar(false)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex h-full min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden">
+                  <PrepCourseLessonPanel
+                    {...lessonPanelProps}
+                    contentScrollRef={lessonContentRef}
+                    sidebarAdjacent={showSidebar}
+                  />
+                </div>
 
-            {showSidebar ? (
-              <PrepCourseLessonSidebar
-                lessons={sidebarLessons}
-                activeLessonSlug={lesson.slug}
-                completedLessonSlugs={completedLessonSlugs}
-                progressPercent={sectionProgressPercent}
-                sectionTitle={sectionTitle}
-                sectionSubtitle={sectionRemainingLabel}
-                onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
-                onClose={() => setShowSidebar(false)}
-              />
-            ) : null}
+                {showSidebar ? (
+                  <div className="flex h-full min-h-0 w-[320px] shrink-0 flex-col self-stretch overflow-hidden">
+                    <div className="practice-session-pane practice-session-scroll-hidden flex h-full min-h-0 flex-1 flex-col overflow-hidden pt-6 pb-6 pr-6 pl-0">
+                      <PrepCourseLessonSidebar
+                        lessons={sidebarLessons}
+                        activeLessonSlug={lesson.slug}
+                        completedLessonSlugs={completedLessonSlugs}
+                        progressPercent={sectionProgressPercent}
+                        sectionTitle={sectionTitle}
+                        sectionSubtitle={sectionRemainingLabel}
+                        onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
+                        onClose={() => setShowSidebar(false)}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+              </>
+            )}
           </div>
 
           <PrepCourseLessonFooter
@@ -329,16 +379,7 @@ function PrepCourseLessonPage() {
             prevDisabled={!prevSlug}
             nextDisabled={!nextSlug}
             onMarkComplete={() => void handleMarkComplete()}
-            markCompleteDisabled={savingComplete || (isAdaptiveDrillLesson && !drillCompleted)}
-            primaryAction={
-              isAdaptiveDrillLesson && !drillCompleted
-                ? {
-                    label: startingDrill ? "Starting…" : "Start Drill",
-                    onClick: () => void handleStartDrill(),
-                    disabled: startingDrill,
-                  }
-                : null
-            }
+            markCompleteDisabled={savingComplete}
           />
         </section>
       </div>

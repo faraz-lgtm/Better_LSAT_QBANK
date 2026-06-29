@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useLayoutEffect, useState } from "react"
 import { Outlet, useLocation } from "react-router-dom"
 
 import { StudentAppHeader } from "@/features/app-shell/student-app-header"
@@ -17,16 +17,16 @@ function StudentAppShell() {
   const immersive = isPracticeImmersiveRoute(location.pathname)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), [])
-  const { headerActions, setHeaderActions } = useStudentPageHeaderSlotState()
+  const { headerActions, breadcrumbTail, setHeaderActions, setBreadcrumbTail } = useStudentPageHeaderSlotState()
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.classList.add("student-shell-active")
     return () => {
       document.documentElement.classList.remove("student-shell-active")
     }
   }, [])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.classList.toggle("student-shell-immersive", immersive)
     return () => {
       document.documentElement.classList.remove("student-shell-immersive")
@@ -34,7 +34,7 @@ function StudentAppShell() {
   }, [immersive])
 
   return (
-    <StudentPageHeaderSlotProvider setHeaderActions={setHeaderActions}>
+    <StudentPageHeaderSlotProvider setHeaderActions={setHeaderActions} setBreadcrumbTail={setBreadcrumbTail}>
       <div
         className={cn(
           "flex h-svh min-h-0 overflow-hidden",
@@ -46,7 +46,11 @@ function StudentAppShell() {
         )}
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {immersive ? null : (
-            <StudentAppHeader onOpenMobileNav={() => setMobileNavOpen(true)} headerActions={headerActions} />
+            <StudentAppHeader
+              breadcrumbTail={breadcrumbTail}
+              onOpenMobileNav={() => setMobileNavOpen(true)}
+              headerActions={headerActions}
+            />
           )}
           <div className="flex h-0 min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <Outlet />

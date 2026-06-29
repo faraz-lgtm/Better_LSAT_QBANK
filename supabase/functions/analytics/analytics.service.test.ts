@@ -75,6 +75,8 @@ function sessionListRow(
 function mockRepo(overrides: Partial<AnalyticsRepository> = {}): AnalyticsRepository {
   const base: AnalyticsRepository = {
     countAnswerEvents: async () => 10,
+    sumCompletedSessionStudyMinutes: async () => 60,
+    sumCompletedLessonStudyMinutes: async () => 35,
     countDrillAnswerEvents: async () => ({ correct: 7, total: 10 }),
     listCompletedPreptests: async () => [
       completedPreptestRow({ id: 's1' }),
@@ -143,6 +145,12 @@ function mockRepo(overrides: Partial<AnalyticsRepository> = {}): AnalyticsReposi
     listQuestionsExplanationMetaByIds: async () => [],
     countAnswerEventsForQuestion: async () => 0,
     getQuestionExplanationPayload: async () => null,
+    listStudentVisiblePrepTestIds: async () => ['pt-1', 'pt-900', 'pt-901'],
+    resolveQuestionVisibility: async (questionIds: string[]) => {
+      const out = new Map<string, boolean>()
+      for (const id of questionIds) out.set(id, true)
+      return out
+    },
     ...overrides,
   }
   if (overrides.resolveCompletedPrepTestSession === undefined) {
@@ -167,6 +175,18 @@ Deno.test('getOverview aggregates scaled scores and drill accuracy', async () =>
   assertEquals(o.drillAccuracyPct, 70)
   assertEquals(o.averageLrMissedPerPrepTest, 0)
   assertEquals(o.averageRcMissedPerPrepTest, 1)
+  assertEquals(o.totalStudyMinutes, 95)
+})
+
+Deno.test('getOverview sums practice and lesson study minutes', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      sumCompletedSessionStudyMinutes: async () => 120,
+      sumCompletedLessonStudyMinutes: async () => 45,
+    }),
+  })
+  const o = await service.getOverview('user-1')
+  assertEquals(o.totalStudyMinutes, 165)
 })
 
 Deno.test('getOverview returns null scores when no completed preptests', async () => {

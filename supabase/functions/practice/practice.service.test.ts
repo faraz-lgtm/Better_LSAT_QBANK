@@ -561,6 +561,64 @@ Deno.test('startLessonDrill creates adaptive drill session with multiple questio
   assertEquals(out.metadata.questionCount, 3)
 })
 
+Deno.test('startLessonDrill creates adaptive drill session from Full Drill title on video_text lesson', async () => {
+  const service = createPracticeService({
+    repository: drillRepo({
+      getPublishedPrepLessonById: async () => ({
+        id: 'lesson-full-drill',
+        slug: 'full-drill-main-conclusion-questions',
+        title: 'Full Drill: Main Conclusion Questions',
+        lesson_type: 'video_text',
+        summary: '5 Basic Main Conclusion Questions',
+        text_content: '<p>5 Basic Main Conclusion Questions</p>',
+        is_published: true,
+      }),
+      listLessonQuestionIds: async () => ['q-1', 'q-2'],
+    }) as never,
+  })
+  const out = await service.startLessonDrill('user-1', { lessonId: 'lesson-full-drill' })
+  assertEquals(out.metadata.source, 'prep_course_adaptive_drill')
+  assertEquals(out.metadata.questionIds, ['q-1', 'q-2'])
+})
+
+Deno.test('startLessonDrill creates adaptive drill from slug when title is generic', async () => {
+  const service = createPracticeService({
+    repository: drillRepo({
+      getPublishedPrepLessonById: async () => ({
+        id: 'lesson-full-drill',
+        slug: 'full-drill-main-conclusion-questions',
+        title: 'Main Conclusion Questions',
+        lesson_type: 'video_text',
+        summary: 'Practice set',
+        text_content: '<p>Practice set</p>',
+        is_published: true,
+      }),
+      listLessonQuestionIds: async () => ['q-1'],
+    }) as never,
+  })
+  const out = await service.startLessonDrill('user-1', { lessonId: 'lesson-full-drill' })
+  assertEquals(out.metadata.source, 'prep_course_adaptive_drill')
+})
+
+Deno.test('startLessonDrill creates adaptive drill from Adaptive Drill - title', async () => {
+  const service = createPracticeService({
+    repository: drillRepo({
+      getPublishedPrepLessonById: async () => ({
+        id: 'lesson-adaptive',
+        slug: 'adaptive-drill-mixed-prep',
+        title: 'Adaptive Drill - Mixed Prep (5 Qs)',
+        lesson_type: 'video_text',
+        summary: null,
+        text_content: null,
+        is_published: true,
+      }),
+      listLessonQuestionIds: async () => ['q-1', 'q-2', 'q-3'],
+    }) as never,
+  })
+  const out = await service.startLessonDrill('user-1', { lessonId: 'lesson-adaptive' })
+  assertEquals(out.metadata.source, 'prep_course_adaptive_drill')
+})
+
 Deno.test('startLessonDrill rejects non-active-drill lessons', async () => {
   const service = createPracticeService({
     repository: drillRepo({
@@ -827,6 +885,41 @@ Deno.test('listPrepTestPool returns practiceable prep tests with fresh status', 
   assertEquals(out.prepTests[1]!.id, 'pt-900')
   assertEquals(out.prepTests[1]!.practiceableSectionCount, 2)
   assertEquals(out.prepTests[1]!.questionCount, 5)
+})
+
+Deno.test('listPrepTestPool hides pre-PT100 tests', async () => {
+  const rows: PrepTestPoolRow[] = [
+    ...prepTestPoolRows,
+    {
+      id: 'pt-99',
+      moduleId: 'LSAC099',
+      title: 'PrepTest 99',
+      sections: [{ id: 'sec-lr-99', sectionType: 'LR', questionCount: 2 }],
+    },
+  ]
+  const service = createPracticeService({
+    repository: preptestRepo({ listPrepTestPoolRows: async () => rows }) as never,
+  })
+  const out = await service.listPrepTestPool('user-1', {})
+  assertEquals(out.total, 2)
+  assertEquals(out.prepTests.every((pt) => pt.prepTestNumber !== '99'), true)
+})
+
+Deno.test('startPrepTest rejects pre-PT100 tests', async () => {
+  const service = createPracticeService({
+    repository: preptestRepo({
+      getPrepTestDetailRow: async () => ({
+        ...prepTestDetailRow,
+        id: 'pt-99',
+        moduleId: 'LSAC099',
+      }),
+    }) as never,
+  })
+  await assertRejects(
+    () => service.startPrepTest('user-1', { prepTestId: 'pt-99' }),
+    PracticeValidationError,
+    'This PrepTest is not available',
+  )
 })
 
 Deno.test('listPrepTestPool prefers awaiting blind review over a newer open prep test session', async () => {

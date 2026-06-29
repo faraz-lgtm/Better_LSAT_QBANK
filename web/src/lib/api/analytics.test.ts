@@ -27,6 +27,7 @@ describe("createAnalyticsApi", () => {
         totalDrillQuestionsAnswered: 10,
         averageLrMissedPerPrepTest: 2,
         averageRcMissedPerPrepTest: 3,
+        totalStudyMinutes: 0,
       },
       error: null,
     })

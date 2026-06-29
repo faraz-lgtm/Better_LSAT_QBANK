@@ -1,5 +1,7 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 
+import { isStudentVisiblePrepTest } from '../_shared/prep-test-visibility.ts'
+
 import type { DrillQuestionRow } from './practice.mapper.ts'
 
 export type PracticeSessionKind = 'PREPTEST' | 'SECTION' | 'DRILL'
@@ -326,7 +328,7 @@ export function createPracticeRepository(client: SupabaseClient) {
           source_group_id,
           difficulty,
           question_type_id,
-          admin_sections!inner ( section_type )
+          admin_sections!inner ( section_type, module_id, admin_prep_tests ( module_id ) )
         `,
         )
         .eq('admin_sections.section_type', input.sectionType)
@@ -344,7 +346,23 @@ export function createPracticeRepository(client: SupabaseClient) {
       const { data, error } = await q
       if (error) throw error
 
-      return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+      return ((data ?? []) as Array<Record<string, unknown>>)
+        .filter((row) => {
+          const secRaw = row.admin_sections
+          const sec = Array.isArray(secRaw) ? secRaw[0] : secRaw
+          const secObj = sec as
+            | {
+                module_id?: string | null
+                admin_prep_tests?: { module_id?: string } | { module_id?: string }[] | null
+              }
+            | null
+            | undefined
+          const ptRaw = secObj?.admin_prep_tests
+          const pt = Array.isArray(ptRaw) ? ptRaw[0] : ptRaw
+          const moduleId = pt?.module_id ?? secObj?.module_id ?? null
+          return isStudentVisiblePrepTest(moduleId)
+        })
+        .map((row) => ({
         id: String(row.id),
         section_id: row.section_id != null ? String(row.section_id) : null,
         source_group_id: row.source_group_id != null ? String(row.source_group_id) : null,
@@ -572,6 +590,7 @@ export function createPracticeRepository(client: SupabaseClient) {
 
     async getPublishedPrepLessonById(lessonId: string): Promise<{
       id: string
+      slug: string
       title: string
       lesson_type: string
       summary: string | null
@@ -580,12 +599,13 @@ export function createPracticeRepository(client: SupabaseClient) {
     } | null> {
       const { data, error } = await client
         .from('prep_lessons')
-        .select('id,title,lesson_type,summary,text_content,is_published')
+        .select('id,slug,title,lesson_type,summary,text_content,is_published')
         .eq('id', lessonId)
         .maybeSingle()
       if (error) throw error
       const row = data as {
         id: string
+        slug: string
         title: string
         lesson_type: string
         summary: string | null

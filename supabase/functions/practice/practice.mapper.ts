@@ -1,14 +1,7 @@
-export function lsacPrepTestOrdinal(moduleId: string): number | null {
-  const m = /^LSAC(\d+)$/i.exec(moduleId.trim())
-  if (!m) return null
-  const n = Number(m[1])
-  return Number.isFinite(n) ? n : null
-}
-
-export function prepTestNumberFromModuleId(moduleId: string): string | null {
-  const n = lsacPrepTestOrdinal(moduleId.split(':')[0] ?? moduleId)
-  return n != null ? String(n) : null
-}
+export {
+  lsacPrepTestOrdinal,
+  prepTestNumberFromModuleId,
+} from '../_shared/prep-test-visibility.ts'
 
 import { parseQuestionChoices } from '../_shared/parse-question-choices.ts'
 

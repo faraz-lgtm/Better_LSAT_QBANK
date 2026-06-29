@@ -1,4 +1,9 @@
 import { parseQuestionChoices } from '../_shared/parse-question-choices.ts'
+import {
+  isStudentVisiblePrepTest,
+  lsacPrepTestOrdinal,
+  prepTestNumberFromModuleId,
+} from '../_shared/prep-test-visibility.ts'
 import type {
   ExplanationsRepository,
   PrepTestRow,
@@ -67,6 +72,7 @@ export type ExplanationDetailPayload = {
   sectionNumber: number | null
   questionNumber: number | null
   topicName: string
+  tags: string[]
   explanationHtml: string | null
   videoUrl: string | null
   stimulusText: string | null
@@ -176,17 +182,7 @@ function relOne<T>(v: T | T[] | null | undefined): T | null {
   return Array.isArray(v) ? v[0] ?? null : v
 }
 
-export function lsacPrepTestOrdinal(moduleId: string): number | null {
-  const m = /^LSAC(\d+)$/i.exec(moduleId.trim())
-  if (!m) return null
-  const n = Number(m[1])
-  return Number.isFinite(n) ? n : null
-}
-
-export function prepTestNumberFromModuleId(moduleId: string): string | null {
-  const n = lsacPrepTestOrdinal(moduleId.split(':')[0] ?? moduleId)
-  return n != null ? String(n) : null
-}
+export { lsacPrepTestOrdinal, prepTestNumberFromModuleId } from '../_shared/prep-test-visibility.ts'
 
 function normalizeTitle(moduleId: string, title: string | null): string {
   const normalized = String(title ?? '')
@@ -535,6 +531,35 @@ type QuestionDetailSection = {
   admin_logic_games?: PrepTestTreeLogicGameRow[] | null
 }
 
+function parseTopicTags(topicName: string): string[] {
+  const t = topicName.trim()
+  if (!t || t === '—') return []
+  if (t.includes(',')) return t.split(',').map((s) => s.trim()).filter(Boolean)
+  if (t.includes('·')) return t.split('·').map((s) => s.trim()).filter(Boolean)
+  if (t.includes('|')) return t.split('|').map((s) => s.trim()).filter(Boolean)
+  return [t]
+}
+
+function buildQuestionResultTags(
+  topicName: string,
+  passageTitle: string,
+  sectionType: 'LR' | 'RC' | 'LG' | null,
+): string[] {
+  const tags = [...parseTopicTags(topicName)]
+  const passage = passageTitle.trim()
+  if (
+    passage &&
+    !/^Passage \d+$/i.test(passage) &&
+    !/^Game \d+$/i.test(passage)
+  ) {
+    for (const tag of parseTopicTags(passage)) {
+      if (!tags.includes(tag)) tags.push(tag)
+    }
+  }
+  if (tags.length === 0 && sectionType) tags.push(sectionType)
+  return tags
+}
+
 function resolvePassageForQuestion(
   row: QuestionDetailRow,
   sec: QuestionDetailSection,
@@ -662,7 +687,7 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
       const sort = options.sort === 'oldest' ? 'oldest' : 'newest'
 
       const rows = await deps.repository.listAllPrepTestRows()
-      let grouped = groupPrepTestRows(rows)
+      let grouped = groupPrepTestRows(rows).filter((g) => isStudentVisiblePrepTest(g.moduleId))
       if (sort === 'oldest') {
         grouped = [...grouped].reverse()
       }
@@ -690,6 +715,9 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
 
     async getPrepTestTree(userId: string, prepTestId: string): Promise<{ prepTest: ExplanationPrepTestNode }> {
       const grouped = await deps.repository.resolvePrepTestGroup(prepTestId)
+      if (!isStudentVisiblePrepTest(grouped.baseModuleId)) {
+        throw new Error('PrepTest not available')
+      }
       const rows = await deps.repository.fetchPrepTestTreeRows(grouped.prepTestIds)
       if (rows.length === 0) throw new Error('PrepTest not found')
 
@@ -725,9 +753,12 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
       }
 
       const pt = relOne(sec.admin_prep_tests)
-      const qt = relOne(row.question_types)
       const moduleId = pt?.module_id ?? ''
+      if (!isStudentVisiblePrepTest(moduleId)) {
+        throw new Error('Question not found')
+      }
       const prepTestTitle = pt?.title?.trim() || 'PrepTest'
+      const qt = relOne(row.question_types)
       const expl = row.explanation?.trim() ?? ''
       const vid = row.video_url?.trim() ?? ''
       const choices = parseQuestionChoices(row.choices, { includeOptionExplanations: true })
@@ -740,6 +771,8 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
         if (letter) mappedSelections.push(letter)
       }
       const answerPopularity = buildAnswerPopularity(mappedSelections, letters, correctChoiceId)
+      const passage = resolvePassageForQuestion(row, sec)
+      const topicName = qt?.name?.trim() || '—'
 
       return {
         questionId: row.id,
@@ -750,14 +783,15 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
         sectionType: sec.section_type,
         sectionNumber: sec.section_number,
         questionNumber: row.question_number,
-        topicName: qt?.name?.trim() || '—',
+        topicName,
+        tags: buildQuestionResultTags(topicName, passage.title, sec.section_type),
         explanationHtml: expl.length > 0 ? row.explanation : null,
         videoUrl: vid.length > 0 ? row.video_url : null,
         stimulusText: row.stimulus_text,
         stemText: row.stem_text,
         choices,
         correctChoiceId,
-        passage: resolvePassageForQuestion(row, sec),
+        passage,
         answerPopularity,
         difficulty: clampDifficulty(row.difficulty),
       }

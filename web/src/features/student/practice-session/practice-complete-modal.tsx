@@ -18,6 +18,58 @@ type PracticeCompleteModalProps = {
   titleId?: string
 }
 
+/** Figma `18617:26597` */
+const PEEK_SCORE_BTN_CLASS =
+  "inline-flex h-[40px] w-[320px] max-w-full shrink-0 items-center justify-center rounded-[12px] border border-[#6d78b6] bg-[#edf3ff] px-4 py-2 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#e5edff]"
+
+const BLIND_REVIEW_BTN_CLASS =
+  "inline-flex h-[48px] w-[320px] max-w-full shrink-0 items-center justify-center rounded-[16px] border border-[#0b4e6e] bg-[#0d47a1] px-4 py-2 text-base font-semibold leading-[1.5] tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0a3d8a] disabled:opacity-50"
+
+const SKIP_DETAILS_BTN_CLASS =
+  "inline-flex h-8 items-center justify-center rounded-[16px] px-4 py-2 text-xs font-semibold leading-[1.5] tracking-[0.24px] text-[#0d47a1] transition-colors hover:underline"
+
+const DONE_BTN_CLASS =
+  "inline-flex h-[48px] w-[320px] max-w-full shrink-0 items-center justify-center rounded-[16px] border border-[#6d78b6] bg-[#edf3ff] px-4 py-2 text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#e5edff]"
+
+/** Figma `18617:26705` — visible score ring */
+function PracticeCompleteScoreRing({ percent }: { percent: number }) {
+  const pct = Math.max(0, Math.min(100, percent))
+  const size = 120
+  const strokeWidth = 10
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const dashOffset = circumference - (pct / 100) * circumference
+
+  return (
+    <div className="relative size-[120px] shrink-0" aria-label={`${pct} percent`}>
+      <svg className="size-full -rotate-90" viewBox={`0 0 ${size} ${size}`} aria-hidden>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="#dfe1e7"
+          strokeWidth={strokeWidth}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="#0d47a1"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-[33px] font-bold leading-[1.5] text-[#666d80]">
+        {pct}%
+      </span>
+    </div>
+  )
+}
+
 function PracticeCompleteHiddenEyeIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -58,7 +110,7 @@ function PracticeCompleteModal({
   showBlindReview = false,
   onBlindReview,
   onSkipDetails,
-  doneLabel = "Done",
+  doneLabel = "Return To Dashboard",
   onDone,
   titleId = "practice-complete-title",
 }: PracticeCompleteModalProps) {
@@ -74,7 +126,7 @@ function PracticeCompleteModal({
       aria-modal="true"
       aria-labelledby={titleId}
     >
-      <div className="flex w-full max-w-[672px] flex-col items-center gap-6 rounded-2xl border border-[#dfe1e7] bg-[#f2f7ff] px-6 pb-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+      <div className="flex w-full max-w-[672px] flex-col items-center gap-6 rounded-2xl border border-[#dfe1e7] bg-[#edf3ff] px-6 pb-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
         <div className="-mx-6 w-[calc(100%+3rem)] rounded-t-2xl bg-[#edf3ff] px-6 py-8 text-center">
           <h2 id={titleId} className="text-[48px] font-bold leading-[1.2] text-[#062357]">
             Well Done!
@@ -82,31 +134,26 @@ function PracticeCompleteModal({
           <p className="mt-2.5 text-lg leading-[1.4] tracking-[0.36px] text-[#062357]">{subtitle}</p>
         </div>
 
-        <div className="relative w-full max-w-[540px] rounded-3xl border border-[#0d47a1] bg-[#edf3ff] px-8 py-[30px]">
+        <div className="relative w-full max-w-[540px] rounded-[20px] border border-[#0d47a1] bg-white px-8 py-[30px]">
           <div
             className={cn(
-              "relative flex min-h-[130px] items-center",
+              "relative mx-auto flex min-h-[130px] w-full max-w-[540px] items-center justify-between",
               scoreHidden && "blur-[18px]",
             )}
             aria-hidden={scoreHidden}
           >
             <div className="flex flex-col gap-1 pl-6">
-              <p className="text-sm font-semibold tracking-[0.28px] text-[#6a7282]">Your Score</p>
+              <p className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#6a7282]">Your Score</p>
               <p className="text-[48px] font-bold leading-[1.2] text-[#062357]">{scoreLabel}</p>
               {scaledScore != null ? (
-                <p className="text-sm font-semibold text-[#0d47a1]">Scaled score {scaledScore}</p>
+                <p className="text-sm font-semibold leading-[1.5] text-[#0d47a1]">Scaled score {scaledScore}</p>
               ) : null}
             </div>
-            <div
-              className="absolute right-6 top-1/2 flex size-[120px] -translate-y-1/2 items-center justify-center rounded-full bg-[#0a357f]"
-              aria-label={`${pct} percent`}
-            >
-              <span className="text-[36px] font-bold leading-10 text-white">{pct}%</span>
-            </div>
+            <PracticeCompleteScoreRing percent={pct} />
           </div>
 
           {scoreHidden ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-3xl">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-[20px]">
               <PracticeCompleteHiddenEyeIcon className="text-[#666d80]" />
               <p className="text-base font-semibold tracking-[0.32px] text-[#666d80]">
                 Your score is hidden
@@ -115,96 +162,84 @@ function PracticeCompleteModal({
           ) : null}
         </div>
 
-        <div className="flex w-full max-w-[320px] flex-col items-center gap-2">
+        <div className="flex w-full max-w-[436px] justify-center">
           <button
             type="button"
-            className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-[#6d78b6] bg-[#edf3ff] px-4 text-sm font-semibold tracking-[0.28px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#e5edff]"
+            className={PEEK_SCORE_BTN_CLASS}
             onClick={onToggleScoreHidden}
           >
             {scoreHidden ? "Peek at Score" : "Hide Score"}
           </button>
+        </div>
 
-          {showBlindReview ? (
-            <>
+        {showBlindReview ? (
+          <>
+            <div className="flex flex-col items-center gap-2">
               <button
                 type="button"
-                className="inline-flex h-12 w-full items-center justify-center rounded-2xl border border-[#0b4e6e] bg-[#0d47a1] px-4 text-base font-semibold tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#0a3d8a] disabled:opacity-50"
+                className={BLIND_REVIEW_BTN_CLASS}
                 onClick={onBlindReview}
                 disabled={!onBlindReview}
               >
                 Blind Review
               </button>
               {onSkipDetails ? (
-                <button
-                  type="button"
-                  className="inline-flex h-8 items-center justify-center px-4 text-xs font-semibold tracking-[0.24px] text-[#0d47a1] transition hover:underline"
-                  onClick={onSkipDetails}
-                >
+                <button type="button" className={SKIP_DETAILS_BTN_CLASS} onClick={onSkipDetails}>
                   Skip to view details result
                 </button>
               ) : null}
-            </>
-          ) : (
-            <>
-              {onSkipDetails ? (
-                <button
-                  type="button"
-                  className="inline-flex h-8 items-center justify-center px-4 text-xs font-semibold tracking-[0.24px] text-[#0d47a1] transition hover:underline"
-                  onClick={onSkipDetails}
-                >
-                  Skip to view details result
-                </button>
-              ) : null}
-              <button
-                type="button"
-                className="inline-flex h-12 w-full items-center justify-center rounded-2xl border border-[#6d78b6] bg-[#edf3ff] px-4 text-base font-semibold tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#e5edff]"
-                onClick={onDone}
-              >
-                {doneLabel}
-              </button>
-            </>
-          )}
-        </div>
+            </div>
 
-        {showBlindReview ? (
-          <div className="flex w-full max-w-[608px] gap-3 rounded-2xl border border-[#ffbd4c] bg-[#fff6e0] p-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="none"
-              className="mt-0.5 size-5 shrink-0 text-[#062357]"
-              aria-hidden
-            >
-              <path
-                d="M10 18.3333C14.6024 18.3333 18.3333 14.6024 18.3333 10C18.3333 5.39763 14.6024 1.66667 10 1.66667C5.39763 1.66667 1.66667 5.39763 1.66667 10C1.66667 14.6024 5.39763 18.3333 10 18.3333Z"
-                stroke="currentColor"
-                strokeWidth="1.66667"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M10 13.3333V10"
-                stroke="currentColor"
-                strokeWidth="1.66667"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M10 6.66667H10.0083"
-                stroke="currentColor"
-                strokeWidth="1.66667"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <p className="text-left text-sm leading-normal tracking-[0.28px] text-[#062357]">
-              <span className="font-semibold">Blind Review</span> helps you identify reasoning errors
-              before seeing your score. It&apos;s the most effective way to improve your performance.
-            </p>
+            <div className="flex w-full max-w-[608px] gap-3 rounded-[20px] border border-[#ffbd4c] bg-[#fff6e0] p-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="none"
+                className="mt-0.5 size-5 shrink-0 text-[#062357]"
+                aria-hidden
+              >
+                <path
+                  d="M10 18.3333C14.6024 18.3333 18.3333 14.6024 18.3333 10C18.3333 5.39763 14.6024 1.66667 10 1.66667C5.39763 1.66667 1.66667 5.39763 1.66667 10C1.66667 14.6024 5.39763 18.3333 10 18.3333Z"
+                  stroke="currentColor"
+                  strokeWidth="1.66667"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M10 13.3333V10"
+                  stroke="currentColor"
+                  strokeWidth="1.66667"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M10 6.66667H10.0083"
+                  stroke="currentColor"
+                  strokeWidth="1.66667"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <p className="text-left text-sm leading-normal tracking-[0.28px] text-[#062357]">
+                <span className="font-semibold">Blind Review</span> helps you identify reasoning errors
+                before seeing your score. It&apos;s the most effective way to improve your performance.
+              </p>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            {onSkipDetails ? (
+              <button type="button" className={SKIP_DETAILS_BTN_CLASS} onClick={onSkipDetails}>
+                Skip to view details result
+              </button>
+            ) : null}
+            <button type="button" className={DONE_BTN_CLASS} onClick={onDone}>
+              {doneLabel}
+            </button>
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   )

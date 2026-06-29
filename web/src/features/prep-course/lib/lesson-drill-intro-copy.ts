@@ -1,4 +1,5 @@
 import { isPrepTestQuestionReferenceText } from "@/features/prep-course/lib/prep-course-format"
+import { resolveDrillLessonType } from "@/features/prep-course/lib/prep-course-format"
 import type { PrepLesson } from "@/lib/api/prep-course"
 
 function stripHtml(html: string): string {
@@ -25,5 +26,5 @@ export function lessonDrillIntroCopy(lesson: PrepLesson): string {
     }
   }
 
-  return lesson.lesson_type === "adaptive_drill" ? ADAPTIVE_DEFAULT : ACTIVE_DEFAULT
+  return resolveDrillLessonType(lesson) === "adaptive_drill" ? ADAPTIVE_DEFAULT : ACTIVE_DEFAULT
 }

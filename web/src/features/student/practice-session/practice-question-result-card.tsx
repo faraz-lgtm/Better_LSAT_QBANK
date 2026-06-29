@@ -1,15 +1,15 @@
-import { Bookmark, CheckCircle2, Pencil, XCircle } from "lucide-react"
+import { Bookmark, Pencil } from "lucide-react"
 
 import { resolveAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
 import type { ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
+import { PracticeResultOutcomeIcon } from "@/features/student/practice-session/practice-result-outcome-icon"
 import {
-  PracticeAnswerPopularityBars,
-  PracticeDifficultyMeter,
+  PracticeQuestionResultStatsRow,
   correctChoiceLetter,
   difficultyLabelFromLevel,
   formatMmSs,
   formatPtQuestionTitle,
-  tagsFromTopicName,
+  resolveQuestionResultTags,
   targetTimeForDifficulty,
 } from "@/features/student/practice-session/practice-results-ui"
 import { cn } from "@/lib/utils"
@@ -19,11 +19,21 @@ type PracticeQuestionResultCardProps = {
   detail: ExplanationDetailPayload | null
   titleOverride?: string
   isCorrect: boolean
+  isUnanswered?: boolean
+  selectedAnswer?: string | null
   blindReviewCorrect?: boolean
+  blindReviewUnanswered?: boolean
+  showBlindReview?: boolean
   yourTimeSeconds?: number | null
   flagged?: boolean
-  variant?: "default" | "active-drill"
+  variant?: "default" | "active-drill" | "in-section"
   className?: string
+}
+
+function questionResultBadgeClass(isUnanswered: boolean, isCorrect: boolean) {
+  if (isUnanswered) return "bg-[#ff6683]"
+  if (isCorrect) return "bg-[#00d492]"
+  return "bg-[#ef4444]"
 }
 
 function PracticeQuestionResultCard({
@@ -31,15 +41,19 @@ function PracticeQuestionResultCard({
   detail,
   titleOverride,
   isCorrect,
+  isUnanswered = false,
+  selectedAnswer = null,
   blindReviewCorrect,
+  blindReviewUnanswered = false,
+  showBlindReview = false,
   yourTimeSeconds,
   flagged,
   variant = "default",
   className,
 }: PracticeQuestionResultCardProps) {
-  const showBlindReviewResult = blindReviewCorrect !== undefined
+  const showBlindReviewResult = showBlindReview
   const title = titleOverride ?? (detail ? formatPtQuestionTitle(detail) : `Question ${number}`)
-  const tags = detail ? tagsFromTopicName(detail.topicName) : []
+  const tags = detail ? resolveQuestionResultTags(detail) : []
   const difficulty = difficultyLabelFromLevel(detail?.difficulty ?? 3)
   const targetTime = targetTimeForDifficulty(difficulty)
   const yourTime =
@@ -62,6 +76,10 @@ function PracticeQuestionResultCard({
   const correctLetter = detail
     ? correctChoiceLetter(detail.choices, detail.correctChoiceId)
     : "A"
+  const selectedLetter =
+    detail && selectedAnswer?.trim()
+      ? correctChoiceLetter(detail.choices, selectedAnswer)
+      : null
   const popularityRows = detail
     ? resolveAnswerPopularityRows(
         detail.answerPopularity,
@@ -108,23 +126,25 @@ function PracticeQuestionResultCard({
     </div>
   )
 
-  const resultRow = (
+  const resultRow = (iconVariant: "stroke" | "filled") => (
     <div className="flex flex-nowrap items-center gap-5">
-      <div className="flex shrink-0 items-center gap-2.5">
-        {isCorrect ? (
-          <CheckCircle2 className="size-6 shrink-0 text-[#00d492]" aria-hidden />
-        ) : (
-          <XCircle className="size-6 shrink-0 text-[#df1c41]" aria-hidden />
-        )}
+      <div className="flex h-7 shrink-0 items-center gap-2.5">
+        <PracticeResultOutcomeIcon
+          correct={isCorrect}
+          unanswered={isUnanswered}
+          variant={iconVariant}
+          className={iconVariant === "stroke" ? "size-6" : undefined}
+        />
         <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">Actual</span>
       </div>
       {showBlindReviewResult ? (
         <div className="flex shrink-0 items-center gap-2.5">
-          {blindReviewCorrect ? (
-            <CheckCircle2 className="size-6 shrink-0 text-[#00d492]" aria-hidden />
-          ) : (
-            <XCircle className="size-6 shrink-0 text-[#df1c41]" aria-hidden />
-          )}
+          <PracticeResultOutcomeIcon
+            correct={Boolean(blindReviewCorrect)}
+            unanswered={blindReviewUnanswered}
+            variant={iconVariant}
+            className={iconVariant === "stroke" ? "size-6" : undefined}
+          />
           <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
             Blind Review
           </span>
@@ -133,89 +153,109 @@ function PracticeQuestionResultCard({
     </div>
   )
 
-  const timingBlock = (
-    <div className="flex min-w-[200px] flex-col gap-3 sm:min-w-[240px] lg:w-[305px] lg:shrink-0">
-      <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Timing</p>
-      <div className="flex gap-1">
-        <span className="w-20 text-xs font-normal leading-[1.5] tracking-[0.02em] text-[#666d80]">Target time:</span>
-        <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">{targetTime}</span>
-      </div>
-      <div className="flex flex-wrap gap-1">
-        <span className="w-20 text-xs font-normal leading-[1.5] tracking-[0.02em] text-[#666d80]">Your time:</span>
-        <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#0d47a1]">{yourTime}</span>
-        {yourTimeNote ? (
-          <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">{yourTimeNote}</span>
-        ) : null}
-      </div>
-    </div>
-  )
+  const resolvedPopularityRows =
+    popularityRows.length > 0
+      ? popularityRows
+      : ["A", "B", "C", "D", "E"].map((letter) => ({
+          letter,
+          count: 0,
+          pct: 0,
+        }))
 
-  const difficultyBlock = (
-    <div className="flex min-w-[180px] flex-col gap-3 lg:w-[257px] lg:shrink-0">
-      <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Difficulty</p>
-      <PracticeDifficultyMeter difficulty={difficulty} />
-    </div>
-  )
-
-  const popularityBlock = (
-    <PracticeAnswerPopularityBars
-      rows={
-        popularityRows.length > 0
-          ? popularityRows
-          : ["A", "B", "C", "D", "E"].map((letter) => ({
-              letter,
-              count: 0,
-              pct: 0,
-            }))
-      }
+  const statsRow = (
+    <PracticeQuestionResultStatsRow
+      targetTime={targetTime}
+      yourTime={yourTime}
+      yourTimeNote={yourTimeNote}
+      difficulty={difficulty}
+      popularityRows={resolvedPopularityRows}
       correctLetter={correctLetter}
+      selectedLetter={selectedLetter}
+      isUnanswered={isUnanswered}
+      resultContent={resultRow("stroke")}
     />
   )
 
-  if (variant === "active-drill") {
+  if (variant === "in-section") {
     return (
-      <article className={cn("border-t border-[#dfe1e7] bg-white p-6", className)}>
-        <div className="flex min-w-0 gap-6">
+      <article
+        className={cn(
+          "border-t border-[#dfe1e7] bg-white p-6",
+          className,
+        )}
+      >
+        <div className="flex items-start gap-6">
           <div
             className={cn(
               "flex size-14 shrink-0 items-center justify-center rounded-[14px]",
-              isCorrect ? "bg-[#00d492]" : "bg-[#df1c41]",
+              questionResultBadgeClass(isUnanswered, isCorrect),
             )}
           >
             <span className="text-2xl font-bold leading-[1.3] text-white">{number}</span>
           </div>
 
           <div className="flex min-w-0 flex-1 flex-col gap-4">
-            <div className="flex min-h-[60px] flex-wrap items-start gap-6 lg:flex-nowrap lg:items-center">
-              <div className="min-w-0 max-w-[562px] flex-1">
+            <div className="flex h-[60px] items-start justify-between gap-4">
+              <div className="flex min-w-0 flex-col gap-2">
                 <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">{title}</h3>
-                {tags.length > 0 ? (
-                  <div className="mt-2 flex flex-wrap gap-2.5">
-                    {tags.map((t) => (
-                      <span
-                        key={t}
-                        className="inline-flex h-5 items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px] font-normal leading-[1.5] tracking-[0.02em] text-[#0d0d12]"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
+                <div className="flex flex-wrap gap-2.5">
+                  {tags.map((t) => (
+                    <span
+                      key={t}
+                      className="inline-flex h-5 items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px] font-normal leading-[1.5] tracking-[0.02em] text-[#0d0d12]"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
               </div>
-
-              <div className="flex shrink-0 flex-col gap-3">
-                <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Result</p>
-                {resultRow}
-              </div>
-
-              <div className="ml-auto shrink-0">{actionButtons}</div>
+              {actionButtons}
             </div>
 
-            <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:gap-10">
-              {timingBlock}
-              {difficultyBlock}
-              <div className="min-w-0 flex-1">{popularityBlock}</div>
+            {statsRow}
+          </div>
+        </div>
+      </article>
+    )
+  }
+
+  if (variant === "active-drill") {
+    return (
+      <article
+        className={cn(
+          "relative min-w-0 max-w-full overflow-hidden rounded-[20px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
+          className,
+        )}
+      >
+        <div className="flex min-w-0 items-start gap-6">
+          <div
+            className={cn(
+              "flex size-14 shrink-0 items-center justify-center rounded-[14px]",
+              questionResultBadgeClass(isUnanswered, isCorrect),
+            )}
+          >
+            <span className="text-2xl font-bold leading-[1.3] text-white">{number}</span>
+          </div>
+
+          <div className="flex min-w-0 flex-1 flex-col gap-4">
+            <div className="flex h-[60px] items-start justify-between gap-4">
+              <div className="flex min-w-0 flex-col gap-2">
+                <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">{title}</h3>
+                <div className="flex flex-wrap gap-2.5">
+                  {tags.map((t) => (
+                    <span
+                      key={t}
+                      className="inline-flex h-5 items-center rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px] font-normal leading-[1.5] tracking-[0.02em] text-[#0d0d12]"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              {actionButtons}
             </div>
+
+            {statsRow}
           </div>
         </div>
       </article>
@@ -225,51 +265,39 @@ function PracticeQuestionResultCard({
   return (
     <article
       className={cn(
-        "overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
+        "overflow-hidden rounded-[20px] border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
         className,
       )}
     >
       <div className="p-6">
-        <div className="flex flex-col gap-8 xl:flex-row xl:items-start xl:gap-10">
-          <div className="flex min-w-0 shrink-0 gap-6">
+        <div className="flex flex-col gap-4">
+          <div className="flex min-w-0 gap-6">
             <div
               className={cn(
                 "flex size-14 shrink-0 items-center justify-center rounded-[14px]",
-                isCorrect ? "bg-[#00d492]" : "bg-[#df1c41]",
+                questionResultBadgeClass(isUnanswered, isCorrect),
               )}
             >
               <span className="text-2xl font-bold leading-[1.3] text-white">{number}</span>
             </div>
-            <div className="flex min-w-0 flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <h3 className="text-xl font-bold leading-[1.35] text-[#062357]">{title}</h3>
-                {tags.length > 0 ? (
-                  <div className="flex flex-wrap gap-2.5">
-                    {tags.map((t) => (
-                      <span
-                        key={t}
-                        className="inline-flex h-5 items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px] font-normal leading-[1.5] tracking-[0.02em] text-[#0d0d12]"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-              {timingBlock}
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">{title}</h3>
+              {tags.length > 0 ? (
+                <div className="flex flex-wrap gap-2.5">
+                  {tags.map((t) => (
+                    <span
+                      key={t}
+                      className="inline-flex h-5 items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px] font-normal leading-normal tracking-[0.02em] text-[#0d0d12]"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
             </div>
+            <div className="shrink-0">{actionButtons}</div>
           </div>
-
-          <div className="flex shrink-0 flex-col gap-3">{difficultyBlock}</div>
-
-          <div className="flex min-w-0 flex-1 flex-col gap-4">
-            <div className="flex items-center justify-between gap-4">
-              <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Result</p>
-              {actionButtons}
-            </div>
-            {resultRow}
-            {popularityBlock}
-          </div>
+          {statsRow}
         </div>
       </div>
     </article>

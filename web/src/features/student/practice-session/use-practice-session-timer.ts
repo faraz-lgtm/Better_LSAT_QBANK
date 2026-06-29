@@ -9,6 +9,18 @@ export function formatPracticeElapsed(totalSeconds: number) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
 }
 
+export function isUnlimitedPracticeTiming(timing?: string | null): boolean {
+  return !timing || timing === "unlimited"
+}
+
+export function isSectionCountdownTiming(timing?: string | null): boolean {
+  return timing === "35" || timing === "standard" || timing === "strict"
+}
+
+export function isDrillCountdownTiming(timing?: string | null): boolean {
+  return timing === "35" || timing === "per-q"
+}
+
 export function resolveTimerBudgetSeconds(options: {
   timing?: string | null
   questionCount?: number
@@ -19,13 +31,15 @@ export function resolveTimerBudgetSeconds(options: {
   }
 
   const timing = options.timing ?? "unlimited"
-  if (timing === "35") return PRACTICE_SESSION_35_MIN_SECONDS
+  if (timing === "35" || timing === "standard" || timing === "strict") {
+    return PRACTICE_SESSION_35_MIN_SECONDS
+  }
   if (timing === "per-q") {
     const count = Math.max(1, options.questionCount ?? 1)
     return count * PRACTICE_PER_QUESTION_SECONDS
   }
 
-  return PRACTICE_SESSION_35_MIN_SECONDS
+  return 0
 }
 
 export function computeElapsedTimerProgress(elapsedSeconds: number, budgetSeconds: number): number {

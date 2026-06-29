@@ -5,6 +5,7 @@ import type {
   QuestionExplanationMetaRow,
 } from './analytics.repository.ts'
 import type { PracticeSessionKind } from '../practice/practice.repository.ts'
+import { isStudentVisiblePrepTest } from '../_shared/prep-test-visibility.ts'
 
 const PREPTEST_EXPLANATION_CATALOG_LIMIT = 8000
 
@@ -180,6 +181,21 @@ function eventsAtCompletion(
   return latestEventsByQuestion(before)
 }
 
+function eventsAfterCompletion(
+  events: {
+    question_id: string
+    is_correct: boolean
+    selected_answer: string
+    practice_session_id: string
+    created_at: string
+  }[],
+  completedAt: string,
+): Map<string, { is_correct: boolean; selected_answer: string }> {
+  const cutoff = new Date(completedAt).getTime()
+  const after = events.filter((e) => new Date(e.created_at).getTime() > cutoff)
+  return latestEventsByQuestion(after)
+}
+
 function headlineFromQuestionMeta(row: QuestionExplanationMetaRow): {
   prepTestTitle: string
   sectionType: 'LR' | 'RC' | 'LG' | null
@@ -200,13 +216,21 @@ function headlineFromQuestionMeta(row: QuestionExplanationMetaRow): {
 export function createAnalyticsService(deps: { repository: AnalyticsRepository }) {
   return {
     async getOverview(userId: string) {
-      const [totalQuestionsAnswered, drillStats, completedPreptests, allSectionSessions] =
-        await Promise.all([
-          deps.repository.countAnswerEvents(userId),
-          deps.repository.countDrillAnswerEvents(userId),
-          deps.repository.listCompletedPreptests(userId),
-          deps.repository.listCompletedSectionSessions(userId),
-        ])
+      const [
+        totalQuestionsAnswered,
+        drillStats,
+        completedPreptests,
+        allSectionSessions,
+        practiceStudyMinutes,
+        lessonStudyMinutes,
+      ] = await Promise.all([
+        deps.repository.countAnswerEvents(userId),
+        deps.repository.countDrillAnswerEvents(userId),
+        deps.repository.listCompletedPreptests(userId),
+        deps.repository.listCompletedSectionSessions(userId),
+        deps.repository.sumCompletedSessionStudyMinutes(userId),
+        deps.repository.sumCompletedLessonStudyMinutes(userId),
+      ])
 
       const resolvedScores: { scaled: number; percentile: number | null }[] = []
       for (const row of completedPreptests) {
@@ -362,6 +386,7 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
         totalDrillQuestionsAnswered: drillStats.total,
         averageLrMissedPerPrepTest,
         averageRcMissedPerPrepTest,
+        totalStudyMinutes: (practiceStudyMinutes ?? 0) + (lessonStudyMinutes ?? 0),
       }
     },
 
@@ -579,10 +604,13 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
       if (!session) {
         throw new Error('PrepTest session not found or not completed')
       }
+      const apt = relOne(session.admin_prep_tests)
+      if (!isStudentVisiblePrepTest(apt?.module_id ?? null)) {
+        throw new Error('PrepTest session not found or not completed')
+      }
       const prepTestId = session.prep_test_id
       if (!prepTestId) throw new Error('PrepTest session missing prep_test_id')
 
-      const apt = relOne(session.admin_prep_tests)
       const sectionSessions = await deps.repository.listSectionSessionsForPrepTest(userId, prepTestId)
       const sectionIds = sectionSessions.map((s) => s.id)
       const events = await deps.repository.listAnswerEventsForSessions(sectionIds, userId)
@@ -590,6 +618,7 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
 
       const completedAt = session.completed_at
       const atCompletion = eventsAtCompletion(events, completedAt)
+      const afterCompletion = eventsAfterCompletion(events, completedAt)
 
       const questionsRaw = await deps.repository.listPrepTestQuestionsWithMeta(prepTestId)
       let correct = 0
@@ -603,6 +632,8 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
         difficultyDots: number
         actualCorrect: boolean
         blindReviewCorrect: boolean
+        blindReviewUnanswered: boolean
+        isUnanswered: boolean
         correctLetter: string
         selectedLetter: string | null
         sectionType: 'LR' | 'RC' | 'LG' | null
@@ -621,6 +652,7 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
         const diff = typeof row.difficulty === 'number' ? row.difficulty : null
         const initial = atCompletion.get(qid)
         const final = latest.get(qid)
+        const blindReviewEvent = afterCompletion.get(qid)
         total += 1
         if (initial?.is_correct) correct += 1
         const qNum = typeof row.question_number === 'number' ? row.question_number : total
@@ -630,6 +662,17 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
           sec?.section_number ?? null,
           qNum,
         )
+        const isUnanswered = !initial || !String(initial.selected_answer ?? '').trim()
+        let blindReviewUnanswered = false
+        let blindReviewCorrect = false
+        if (blindReviewEvent) {
+          blindReviewUnanswered = !String(blindReviewEvent.selected_answer ?? '').trim()
+          blindReviewCorrect = blindReviewUnanswered ? false : blindReviewEvent.is_correct
+        } else if (isUnanswered) {
+          blindReviewUnanswered = true
+        } else {
+          blindReviewCorrect = initial?.is_correct ?? false
+        }
         questionRows.push({
           id: qid,
           number: qNum,
@@ -637,10 +680,12 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
           tags: qt?.name ? [qt.name] : [],
           difficulty: difficultyLabel(diff),
           difficultyDots: diff ?? 3,
-          actualCorrect: initial?.is_correct ?? false,
-          blindReviewCorrect: final?.is_correct ?? false,
-          correctLetter: typeof row.correct_answer === 'string' ? row.correct_answer.trim().toUpperCase().slice(0, 1) : 'A',
-          selectedLetter: final?.selected_answer ?? initial?.selected_answer ?? null,
+        actualCorrect: initial?.is_correct ?? false,
+        blindReviewCorrect,
+        blindReviewUnanswered,
+        isUnanswered,
+        correctLetter: typeof row.correct_answer === 'string' ? row.correct_answer.trim().toUpperCase().slice(0, 1) : 'A',
+        selectedLetter: final?.selected_answer ?? initial?.selected_answer ?? null,
           sectionType: sec?.section_type ?? null,
           sectionNumber: sec?.section_number ?? null,
         })
@@ -665,6 +710,7 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
         incorrect,
         percentile: session.percentile,
         blindReviewPercentile: session.blind_review_percentile,
+        blindReviewCompletedAt: session.blind_review_completed_at,
         questions: questionRows,
       }
     },
