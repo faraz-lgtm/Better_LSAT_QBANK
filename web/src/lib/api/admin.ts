@@ -21,7 +21,7 @@ export type AdminBulkImportPreviewRow = {
   video_url: string | null
   text_content: string
   lesson_is_published: boolean
-  status: "insert" | "update" | "invalid"
+  status: "insert" | "update" | "invalid" | "skipped"
   errors: string[]
 }
 
@@ -82,11 +82,13 @@ export type AdminBulkImportDryRunResult = {
   }
   importToken: string
   expiresAt: string
+  insertOnly?: boolean
   counts: {
     totalRows: number
     insertCount: number
     updateCount: number
     invalidCount: number
+    skippedCount?: number
     validCount: number
   }
   rows: AdminBulkImportPreviewRow[]
@@ -274,7 +276,12 @@ export function createAdminApi(supabase: SupabaseClient) {
       return data?.rows ?? []
     },
 
-    async bulkImportDryRun(payload: { courseId?: string; fileName: string; fileBytesBase64: string }) {
+    async bulkImportDryRun(payload: {
+      courseId?: string
+      fileName: string
+      fileBytesBase64: string
+      insertOnly?: boolean
+    }) {
       const { data, error } = await invokeAdminFn<AdminBulkImportDryRunResult>("admin-bulk-import-dry-run", {
         method: "POST",
         body: { ...payload },

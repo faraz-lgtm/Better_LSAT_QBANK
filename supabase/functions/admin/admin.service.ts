@@ -62,7 +62,7 @@ type BulkImportNormalizedLesson = {
 }
 
 type BulkImportPreviewLesson = BulkImportNormalizedLesson & {
-  status: "insert" | "update" | "invalid"
+  status: "insert" | "update" | "invalid" | "skipped"
   errors: string[]
 }
 
@@ -291,6 +291,29 @@ async function convertDocxToRawRows(input: {
   return rows
 }
 
+function applySequentialSortOrders(rows: Array<Record<string, unknown>>, startSortOrder: number): void {
+  rows.forEach((row, index) => {
+    row.sort_order = startSortOrder + index + 1
+  })
+}
+
+function previewSkippedRow(rawRow: Record<string, unknown>): BulkImportPreviewLesson {
+  const lessonTypeRaw = typeof rawRow.lesson_type === "string" ? rawRow.lesson_type.trim() : ""
+  return {
+    lesson_slug: typeof rawRow.lesson_slug === "string" ? rawRow.lesson_slug.trim() : "",
+    lesson_title: typeof rawRow.lesson_title === "string" ? rawRow.lesson_title.trim() : "",
+    lesson_type: isPrepLessonType(lessonTypeRaw) ? lessonTypeRaw : "video_text",
+    sort_order: parseNullableNumber(rawRow.sort_order) ?? 0,
+    summary: parseNullableString(rawRow.summary),
+    duration_minutes: parseNullableNumber(rawRow.duration_minutes),
+    video_url: parseNullableString(rawRow.video_url),
+    text_content: typeof rawRow.text_content === "string" ? rawRow.text_content.trim() : "",
+    lesson_is_published: parseBooleanLike(rawRow.lesson_is_published),
+    status: "skipped",
+    errors: [],
+  }
+}
+
 function normalizeDryRunRows(
   rawRows: Array<Record<string, unknown>>,
   existingBySlug: Map<string, { id: string }>,
@@ -507,7 +530,7 @@ export function createAdminService(deps: { repository: AdminRepository }) {
 
     async bulkImportDryRun(
       userId: string,
-      input: { courseId?: string; fileName: string; fileBytesBase64: string },
+      input: { courseId?: string; fileName: string; fileBytesBase64: string; insertOnly?: boolean },
     ) {
       await requireAdmin(userId)
       await deps.repository.deleteExpiredBulkImportTokens(new Date().toISOString())
@@ -544,9 +567,35 @@ export function createAdminService(deps: { repository: AdminRepository }) {
         existingLessons.map((lesson) => [String((lesson as { slug?: unknown }).slug ?? ""), { id: String((lesson as { id?: unknown }).id ?? "") }]),
       )
 
-      const { previewRows, validRows, invalidCount } = normalizeDryRunRows(rawRows, existingBySlug)
+      const insertOnly = input.insertOnly === true
+      const skippedPreviewRows: BulkImportPreviewLesson[] = []
+      let importRawRows = rawRows
+      if (insertOnly) {
+        importRawRows = []
+        for (const rawRow of rawRows) {
+          const lessonSlug = typeof rawRow.lesson_slug === "string" ? rawRow.lesson_slug.trim() : ""
+          if (lessonSlug && existingBySlug.has(lessonSlug)) {
+            skippedPreviewRows.push(previewSkippedRow(rawRow))
+            continue
+          }
+          importRawRows.push(rawRow)
+        }
+        if (course?.id) {
+          const sectionId = await deps.repository.ensureDefaultModuleSection(String(course.id))
+          const sectionLessons = await deps.repository.listLessonsBySection(sectionId)
+          const maxSort = sectionLessons.reduce((max, lesson) => {
+            const sort = Number((lesson as { sort_order?: unknown }).sort_order ?? 0)
+            return Number.isFinite(sort) ? Math.max(max, sort) : max
+          }, 0)
+          applySequentialSortOrders(importRawRows, maxSort)
+        }
+      }
+
+      const { previewRows, validRows, invalidCount } = normalizeDryRunRows(importRawRows, existingBySlug)
+      const allPreviewRows = insertOnly ? [...skippedPreviewRows, ...previewRows] : previewRows
       const insertCount = previewRows.filter((row) => row.status === "insert").length
       const updateCount = previewRows.filter((row) => row.status === "update").length
+      const skippedCount = skippedPreviewRows.length
 
       const importToken = crypto.randomUUID()
       const resolvedCourse = {
@@ -569,14 +618,16 @@ export function createAdminService(deps: { repository: AdminRepository }) {
         course: resolvedCourse,
         importToken,
         expiresAt: new Date(expiresAt).toISOString(),
+        insertOnly,
         counts: {
-          totalRows: previewRows.length,
+          totalRows: allPreviewRows.length,
           insertCount,
           updateCount,
           invalidCount,
+          skippedCount,
           validCount: validRows.length,
         },
-        rows: previewRows,
+        rows: allPreviewRows,
       }
     },
 

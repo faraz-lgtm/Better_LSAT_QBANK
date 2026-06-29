@@ -1,6 +1,8 @@
 import { FunctionsHttpError } from '@supabase/functions-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+import { throwIfEdgeInvokeFailed } from '@/lib/api/edge-invoke-error'
+
 const LOGIN_PATH = '/login'
 
 let handlingSessionExpiry = false
@@ -44,5 +46,5 @@ export async function handleUsersInvokeError(
   if (await isUnauthorizedEdgeError(error)) {
     await logoutAndRedirectToLogin(supabase)
   }
-  throw error instanceof Error ? error : new Error(String(error))
+  return throwIfEdgeInvokeFailed(error)
 }

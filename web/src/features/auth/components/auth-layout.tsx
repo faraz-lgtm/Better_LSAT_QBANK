@@ -10,6 +10,8 @@ type AuthLayoutProps = {
   ctaHref: "/login" | "/signup"
   ctaPrompt?: string
   headerVariant?: "auth" | "app"
+  /** Wide scrollable main area for multi-column flows (e.g. pricing). */
+  contentLayout?: "default" | "wide" | "lsac-link"
 }
 
 function getDefaultCtaPrompt(ctaHref: "/login" | "/signup"): string {
@@ -22,8 +24,23 @@ function AuthLayout({
   ctaHref,
   ctaPrompt,
   headerVariant = "auth",
+  contentLayout = "default",
 }: AuthLayoutProps) {
   const prompt = ctaPrompt ?? getDefaultCtaPrompt(ctaHref)
+
+  const mainClass =
+    contentLayout === "wide"
+      ? "auth-split-main auth-split-main--wide"
+      : contentLayout === "lsac-link"
+        ? "auth-split-main auth-split-main--lsac-link"
+        : "auth-split-main"
+
+  const shellClass =
+    contentLayout === "wide"
+      ? "auth-content-shell auth-content-shell--wide"
+      : contentLayout === "lsac-link"
+        ? "auth-content-shell auth-content-shell--lsac-link"
+        : "auth-content-shell"
 
   return (
     <div className="auth-page auth-split-page">
@@ -37,8 +54,8 @@ function AuthLayout({
             ctaPrompt={prompt}
             variant={headerVariant}
           />
-          <main className="auth-split-main">
-            <div className="auth-content-shell">{children}</div>
+          <main className={mainClass}>
+            <div className={shellClass}>{children}</div>
           </main>
           {headerVariant === "auth" ? <AuthSplitFooter /> : null}
         </div>

@@ -11,6 +11,7 @@ export type LawHubInviteStudentRequest = {
 
 export type LawHubLogRequest = {
   studentCoachingId: string
+  emailAddress: string
   eventType: string
   eventDate: string
   vendorSystem?: string
@@ -48,6 +49,20 @@ export class LawHubApiError extends Error {
     this.method = input.method
     this.path = input.path
   }
+}
+
+/** LawHub returns 404 when no student exists for the email — not a transport failure. */
+export function isLawHubStudentEmailNotFoundError(error: unknown): boolean {
+  if (!(error instanceof LawHubApiError)) return false
+  if (error.status !== 404) return false
+  const body = error.body.toLowerCase()
+  return body.includes('not found') && (body.includes('student') || body.includes('email'))
+}
+
+function normalizeStudentEmailLookupResult(data: unknown): unknown[] {
+  if (Array.isArray(data)) return data
+  if (data != null && typeof data === 'object') return [data]
+  return []
 }
 
 async function getBearerToken(
@@ -161,6 +176,17 @@ export function createLawHubClient(deps: LawHubClientDeps) {
       return apiFetch('GET', `/api/vendor/${v()}/studentEmails/${encoded}`)
     },
 
+    /** Email lookup; returns [] when LawHub has no student for that address (HTTP 404). */
+    async findStudentsByEmail(email: string): Promise<unknown[]> {
+      try {
+        const data = await this.getStudentsByEmail(email)
+        return normalizeStudentEmailLookupResult(data)
+      } catch (error) {
+        if (isLawHubStudentEmailNotFoundError(error)) return []
+        throw error
+      }
+    },
+
     upgradeStudent(coachingId: string): Promise<unknown> {
       return apiFetch(
         'POST',
@@ -178,8 +204,14 @@ export function createLawHubClient(deps: LawHubClientDeps) {
     logContentAccess(payload: LawHubLogRequest): Promise<unknown> {
       const env = deps.getEnv()
       const body = {
-        ...payload,
+        vendorId: env.LSAC_VENDOR_ID,
+        type: payload.eventType,
+        emailAddress: payload.emailAddress,
+        studentCoachingId: payload.studentCoachingId,
+        eventType: payload.eventType,
+        eventDate: payload.eventDate,
         vendorSystem: payload.vendorSystem ?? env.LSAC_VENDOR_SYSTEM ?? 'BetterLSAT',
+        ...(payload.metadata ? { metadata: payload.metadata } : {}),
       }
       return apiFetch('POST', `/api/vendor/${v()}/log`, body)
     },

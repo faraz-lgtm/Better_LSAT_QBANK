@@ -10,7 +10,7 @@ import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { createAuthApi, getAuthCallbackUrl } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
-import { getPostAuthDestination } from "@/lib/auth/post-auth-redirect"
+import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
@@ -68,8 +68,7 @@ function LoginPage() {
     setMessage(null)
     try {
       await authApi.signInWithPassword(email.trim(), password)
-      const profile = await usersApi.getMyProfile()
-      navigate(getPostAuthDestination(profile), { replace: true })
+      navigate(await fetchPostAuthDestination(usersApi), { replace: true })
     } catch (authError) {
       setError(authError instanceof Error ? formatSupabaseCallError(authError) : "Unable to sign in with email and password.")
     } finally {

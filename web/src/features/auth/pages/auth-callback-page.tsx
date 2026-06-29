@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
 import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
-import { getPostAuthDestination } from "@/lib/auth/post-auth-redirect"
+import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
 const PKCE_EXCHANGE_PREFIX = "betterlsat:pkce-exchanged:"
+const inflightPkceExchanges = new Map<string, Promise<void>>()
 
 function stripAuthParamsFromUrl() {
   const url = new URL(window.location.href)
@@ -19,10 +20,32 @@ function stripAuthParamsFromUrl() {
   window.history.replaceState({}, "", next)
 }
 
+/** Deduplicates PKCE exchange across React StrictMode double-mounts and remounts. */
+async function exchangePkceCodeOnce(
+  exchange: (code: string) => Promise<void>,
+  code: string,
+): Promise<void> {
+  const exchangeKey = `${PKCE_EXCHANGE_PREFIX}${code}`
+  if (sessionStorage.getItem(exchangeKey) === "1") return
+
+  let inflight = inflightPkceExchanges.get(code)
+  if (!inflight) {
+    inflight = exchange(code)
+      .then(() => {
+        sessionStorage.setItem(exchangeKey, "1")
+      })
+      .finally(() => {
+        inflightPkceExchanges.delete(code)
+      })
+    inflightPkceExchanges.set(code, inflight)
+  }
+
+  await inflight
+}
+
 function AuthCallbackPage() {
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
-  const exchangeStartedRef = useRef(false)
 
   const authApi = useMemo(() => {
     try {
@@ -57,21 +80,11 @@ function AuthCallbackPage() {
         if (authError) throw new Error(authError)
 
         if (code) {
-          const exchangeKey = `${PKCE_EXCHANGE_PREFIX}${code}`
-          const alreadyExchanged = sessionStorage.getItem(exchangeKey) === "1"
-
-          if (!alreadyExchanged) {
-            if (exchangeStartedRef.current) return
-            exchangeStartedRef.current = true
-            await authApi.exchangeCodeForSession(code)
-            sessionStorage.setItem(exchangeKey, "1")
-          }
-
+          await exchangePkceCodeOnce((authCode) => authApi.exchangeCodeForSession(authCode), code)
           stripAuthParamsFromUrl()
         }
 
         const hasSession = await authApi.hasSession()
-        if (!isActive) return
         if (!hasSession) {
           throw new Error("Auth session not found. Please request a new login link from the same browser.")
         }
@@ -81,8 +94,7 @@ function AuthCallbackPage() {
           return
         }
 
-        const profile = await usersApi.getMyProfile()
-        navigate(getPostAuthDestination(profile), { replace: true })
+        navigate(await fetchPostAuthDestination(usersApi), { replace: true })
       } catch (callbackError) {
         if (!isActive) return
         setError(
@@ -116,4 +128,4 @@ function AuthCallbackPage() {
   )
 }
 
-export { AuthCallbackPage }
+export { AuthCallbackPage, exchangePkceCodeOnce }

@@ -18,3 +18,18 @@ export function formatSupabaseCallError(err: Error): string {
 
   return err.message
 }
+
+/** Prefer LSAC / edge-function JSON error bodies over raw HTTP wrapper text. */
+export function formatEdgeFunctionError(err: unknown): string {
+  const base = err instanceof Error ? formatSupabaseCallError(err) : 'Something went wrong.'
+  const jsonTail = base.match(/HTTP \d+\s+(\{.*\})\s*$/s)
+  if (jsonTail?.[1]) {
+    try {
+      const body = JSON.parse(jsonTail[1]) as { error?: string }
+      if (body.error?.trim()) return body.error.trim()
+    } catch {
+      // ignore malformed JSON tail
+    }
+  }
+  return base
+}
