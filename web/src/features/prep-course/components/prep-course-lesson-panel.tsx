@@ -221,7 +221,7 @@ function PrepCourseLessonPanel({
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       {loading && !lesson ? (
-        <StudentPageLoader centered label="Loading lesson…" />
+        <StudentPageLoader centered className="min-h-0 flex-1" label="Loading lesson…" />
       ) : lesson ? (
         isRepWorkLesson ? (
           <div

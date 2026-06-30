@@ -1,6 +1,7 @@
 import { extractPrepTestQuestionRef } from '../_shared/prep-question-ref.ts'
 import { resolvePrepDrillLessonType } from '../_shared/prep-lesson-type.ts'
 import { isStudentVisiblePrepTest } from '../_shared/prep-test-visibility.ts'
+import { PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT } from './adaptive-drill-config.ts'
 import type {
   AnswerEventRow,
   DrillPoolQuestionRow,
@@ -1643,8 +1644,8 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         if (questionIds.length === 0) {
           throw new PracticeValidationError('No questions are linked to this adaptive drill lesson')
         }
-        if (questionIds.length > 5) {
-          throw new PracticeValidationError('Adaptive drill lessons can include at most five linked questions')
+        if (questionIds.length > PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT) {
+          questionIds = questionIds.slice(0, PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT)
         }
       }
 
@@ -1657,6 +1658,23 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const sectionType = parseSectionType(questionDetail.admin_sections?.section_type)
       if (!sectionType) {
         throw new PracticeValidationError('Linked question must be LR or RC')
+      }
+
+      if (isAdaptive && questionIds.length < PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT) {
+        const needed = PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT - questionIds.length
+        const answeredIds = new Set(await deps.repository.listUserAnsweredQuestionIds(userId))
+        const pool = await deps.repository.listDrillPoolQuestions({
+          sectionType,
+          questionTypeId: null,
+          difficulty: null,
+        })
+        const linked = new Set(questionIds)
+        const filtered = filterPoolByStatus(pool, 'fresh', answeredIds).filter((q) => !linked.has(q.id))
+        const extraIds = pickDrillQuestionIds(filtered, sectionType, needed)
+        questionIds = [...questionIds, ...extraIds]
+        if (questionIds.length < PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT) {
+          throw new PracticeValidationError('Not enough questions available for this adaptive drill')
+        }
       }
 
       const metadata: DrillSessionMetadata = {

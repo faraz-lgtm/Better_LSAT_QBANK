@@ -435,6 +435,10 @@ Deno.test('submitAnswer rejects question not in drill session', async () => {
 const drillPool: DrillPoolQuestionRow[] = [
   { id: 'q-1', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
   { id: 'q-2', section_id: 's1', source_group_id: null, difficulty: 3, question_type_id: null },
+  { id: 'q-3', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
+  { id: 'q-4', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
+  { id: 'q-5', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
+  { id: 'q-6', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
 ]
 
 const drillQuestionRow: DrillQuestionRow = {
@@ -532,8 +536,17 @@ Deno.test('startLessonDrill resolves question from PT reference when not linked'
 })
 
 Deno.test('startLessonDrill creates adaptive drill session with multiple questions', async () => {
+  const adaptivePool: DrillPoolQuestionRow[] = [
+    { id: 'q-1', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
+    { id: 'q-2', section_id: 's1', source_group_id: null, difficulty: 3, question_type_id: null },
+    { id: 'q-3', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
+    { id: 'q-4', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
+    { id: 'q-5', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
+    { id: 'q-6', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
+  ]
   const service = createPracticeService({
     repository: drillRepo({
+      listDrillPoolQuestions: async () => adaptivePool,
       getPublishedPrepLessonById: async () => ({
         id: 'lesson-adaptive',
         title: 'Adaptive Drill - Mixed Practice (5 Qs)',
@@ -557,8 +570,9 @@ Deno.test('startLessonDrill creates adaptive drill session with multiple questio
   })
   const out = await service.startLessonDrill('user-1', { lessonId: 'lesson-adaptive' })
   assertEquals(out.metadata.source, 'prep_course_adaptive_drill')
-  assertEquals(out.metadata.questionIds, ['q-1', 'q-2', 'q-3'])
-  assertEquals(out.metadata.questionCount, 3)
+  assertEquals(out.metadata.questionIds.slice(0, 3), ['q-1', 'q-2', 'q-3'])
+  assertEquals(out.metadata.questionCount, 5)
+  assertEquals(out.metadata.questionIds.length, 5)
 })
 
 Deno.test('startLessonDrill creates adaptive drill session from Full Drill title on video_text lesson', async () => {
@@ -578,7 +592,8 @@ Deno.test('startLessonDrill creates adaptive drill session from Full Drill title
   })
   const out = await service.startLessonDrill('user-1', { lessonId: 'lesson-full-drill' })
   assertEquals(out.metadata.source, 'prep_course_adaptive_drill')
-  assertEquals(out.metadata.questionIds, ['q-1', 'q-2'])
+  assertEquals(out.metadata.questionIds.slice(0, 2), ['q-1', 'q-2'])
+  assertEquals(out.metadata.questionCount, 5)
 })
 
 Deno.test('startLessonDrill creates adaptive drill from slug when title is generic', async () => {
@@ -598,6 +613,8 @@ Deno.test('startLessonDrill creates adaptive drill from slug when title is gener
   })
   const out = await service.startLessonDrill('user-1', { lessonId: 'lesson-full-drill' })
   assertEquals(out.metadata.source, 'prep_course_adaptive_drill')
+  assertEquals(out.metadata.questionIds[0], 'q-1')
+  assertEquals(out.metadata.questionCount, 5)
 })
 
 Deno.test('startLessonDrill creates adaptive drill from Adaptive Drill - title', async () => {
@@ -617,6 +634,7 @@ Deno.test('startLessonDrill creates adaptive drill from Adaptive Drill - title',
   })
   const out = await service.startLessonDrill('user-1', { lessonId: 'lesson-adaptive' })
   assertEquals(out.metadata.source, 'prep_course_adaptive_drill')
+  assertEquals(out.metadata.questionCount, 5)
 })
 
 Deno.test('startLessonDrill rejects non-active-drill lessons', async () => {
