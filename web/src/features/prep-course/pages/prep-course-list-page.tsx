@@ -50,8 +50,8 @@ function PrepCourseListPage() {
 
   if (loading) {
     return (
-      <StudentMain>
-        <StudentPageLoader centered label="Loading courses…" />
+      <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
+        <StudentPageLoader centered className="min-h-0 flex-1" label="Loading courses…" />
       </StudentMain>
     )
   }

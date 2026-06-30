@@ -1,0 +1,3 @@
+export const DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT = 1 as const
+
+export const PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT = 5 as const

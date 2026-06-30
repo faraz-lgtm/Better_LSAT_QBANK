@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 
 import { ActiveDrillIntroCard } from "@/features/prep-course/components/active-drill/active-drill-intro-card"
 import { ActiveDrillQuestionResultDetail } from "@/features/prep-course/components/active-drill/active-drill-question-result-detail"
+import { resolveDrillQuestionOutcomes } from "@/features/prep-course/lib/resolve-drill-question-outcomes"
 import { resolveDrillResultLinkedRefs } from "@/features/prep-course/lib/resolve-drill-result-linked-refs"
 import { ActiveDrillResultBar } from "@/features/prep-course/components/active-drill/active-drill-result-bar"
 import { LessonDrillIntroCard } from "@/features/prep-course/components/lesson-drill/lesson-drill-intro-card"
@@ -152,8 +153,10 @@ function CompletedDrillResultsSection({
       <ActiveDrillResultBar
         attempt={activeDrillAttempt}
         lessonTitle={`${drillTitlePrefix} - ${lesson.title}`}
+        questionOutcomes={resolveDrillQuestionOutcomes(linkedQuestionRefs, activeDrillAttempt)}
         onRetake={onStartDrill}
         retaking={startingDrill}
+        retakeLabel={activeDrillAttempt.questionCount > 1 ? "Start another Drill" : "Retake"}
       />
       {drillResultItems.map((linked, index) => (
         <ActiveDrillQuestionResultDetail

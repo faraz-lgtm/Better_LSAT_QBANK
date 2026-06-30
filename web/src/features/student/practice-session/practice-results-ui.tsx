@@ -151,6 +151,108 @@ function UnansweredAnswerPopularityBadge() {
   )
 }
 
+const PRACTICE_QUESTION_RESULT_GRID_CLASS =
+  "grid w-full min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.35fr)_auto] items-start gap-x-6 gap-y-4 xl:gap-x-12"
+
+type PracticeQuestionResultCardLayoutProps = {
+  title: string
+  tags: string[]
+  resultContent: ReactNode
+  actions?: ReactNode
+  targetTime: string
+  yourTime: string
+  yourTimeNote: string
+  difficulty: PracticeDifficultyLabel
+  popularityRows: ExplanationAnswerPopularityRow[]
+  correctLetter: string
+  selectedLetter?: string | null
+  isUnanswered?: boolean
+  className?: string
+}
+
+function PracticeQuestionResultCardLayout({
+  title,
+  tags,
+  resultContent,
+  actions,
+  targetTime,
+  yourTime,
+  yourTimeNote,
+  difficulty,
+  popularityRows,
+  correctLetter,
+  selectedLetter = null,
+  isUnanswered = false,
+  className,
+}: PracticeQuestionResultCardLayoutProps) {
+  return (
+    <div className={cn(PRACTICE_QUESTION_RESULT_GRID_CLASS, className)}>
+      <div className="col-span-2 flex min-w-0 flex-col gap-2">
+        <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">{title}</h3>
+        {tags.length > 0 ? (
+          <div className="flex flex-wrap gap-2.5">
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex h-5 items-center rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px] font-normal leading-normal tracking-[0.02em] text-[#0d0d12]"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="flex min-w-0 flex-col gap-3">
+        <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Result</p>
+        {resultContent}
+      </div>
+
+      {actions ? <div className="flex shrink-0 justify-end self-start">{actions}</div> : <div aria-hidden />}
+
+      <div className="flex min-w-0 flex-col gap-3">
+        <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Timing</p>
+        <div className="flex flex-col gap-1">
+          <div className="flex flex-wrap gap-1">
+            <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>Target time:</span>
+            <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]">
+              {targetTime}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>Your time:</span>
+            <span className="whitespace-nowrap text-sm font-semibold leading-normal tracking-[0.02em] text-[#0d47a1]">
+              {yourTime}
+            </span>
+            {yourTimeNote ? (
+              <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]">
+                {yourTimeNote}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex min-w-0 flex-col gap-3">
+        <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Difficulty</p>
+        <PracticeDifficultyMeter difficulty={difficulty} />
+      </div>
+
+      <div className="flex min-w-0 flex-col gap-3">
+        <PracticeAnswerPopularityBars
+          rows={popularityRows}
+          correctLetter={correctLetter}
+          selectedLetter={selectedLetter}
+          isUnanswered={isUnanswered}
+          showLabel
+        />
+      </div>
+
+      <div aria-hidden />
+    </div>
+  )
+}
+
 type PracticeQuestionResultStatsRowProps = {
   targetTime: string
   yourTime: string
@@ -160,7 +262,6 @@ type PracticeQuestionResultStatsRowProps = {
   correctLetter: string
   selectedLetter?: string | null
   isUnanswered?: boolean
-  resultContent?: ReactNode
   className?: string
 }
 
@@ -173,54 +274,48 @@ function PracticeQuestionResultStatsRow({
   correctLetter,
   selectedLetter = null,
   isUnanswered = false,
-  resultContent,
   className,
 }: PracticeQuestionResultStatsRowProps) {
   return (
-    <div className={cn("w-full overflow-x-auto", className)}>
-      <div className="flex min-w-[1100px] items-center gap-12">
-        <div className="flex h-[113px] w-[257px] shrink-0 flex-col gap-3">
-        <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Timing</p>
-        <div className="flex gap-1">
-          <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>Target time:</span>
-          <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]">
-            {targetTime}
-          </span>
-        </div>
-        <div className="flex gap-1">
-          <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>Your time:</span>
-          <span className="whitespace-nowrap text-sm font-semibold leading-normal tracking-[0.02em] text-[#0d47a1]">
-            {yourTime}
-          </span>
-          {yourTimeNote ? (
-            <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]">
-              {yourTimeNote}
-            </span>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="flex h-[113px] w-[257px] shrink-0 flex-col gap-3">
-        <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Difficulty</p>
-        <PracticeDifficultyMeter difficulty={difficulty} />
-      </div>
-
-      <div className="min-w-0 w-[538px] shrink-0">
-        <div className="flex flex-col gap-3">
-          {resultContent ? (
-            <div className="flex flex-col gap-3">
-              <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Result</p>
-              {resultContent}
+    <div className={cn("w-full min-w-0", className)}>
+      <div className="flex w-full min-w-0 items-start gap-6 xl:gap-12">
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Timing</p>
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap gap-1">
+              <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>Target time:</span>
+              <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]">
+                {targetTime}
+              </span>
             </div>
-          ) : null}
+            <div className="flex flex-wrap gap-1">
+              <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>Your time:</span>
+              <span className="whitespace-nowrap text-sm font-semibold leading-normal tracking-[0.02em] text-[#0d47a1]">
+                {yourTime}
+              </span>
+              {yourTimeNote ? (
+                <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]">
+                  {yourTimeNote}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Difficulty</p>
+          <PracticeDifficultyMeter difficulty={difficulty} />
+        </div>
+
+        <div className="flex min-w-0 flex-[1.35] flex-col gap-3">
           <PracticeAnswerPopularityBars
             rows={popularityRows}
             correctLetter={correctLetter}
             selectedLetter={selectedLetter}
             isUnanswered={isUnanswered}
+            showLabel
           />
         </div>
-      </div>
       </div>
     </div>
   )
@@ -231,19 +326,21 @@ export function PracticeAnswerPopularityBars({
   correctLetter,
   selectedLetter = null,
   isUnanswered = false,
+  showLabel = true,
   className,
 }: {
   rows: ExplanationAnswerPopularityRow[]
   correctLetter: string
   selectedLetter?: string | null
   isUnanswered?: boolean
+  showLabel?: boolean
   className?: string
 }) {
   const max = Math.max(1, ...rows.map((r) => r.pct))
   const normalizedSelected = selectedLetter?.trim().toUpperCase() ?? null
   return (
     <div className={cn("flex min-w-0 flex-col gap-3", className)}>
-      <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Answer Popularity</p>
+      {showLabel ? <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Answer Popularity</p> : null}
       <div className="flex w-full items-end gap-2">
         {rows.map((row) => {
           const h = Math.round((row.pct / max) * 100)
@@ -316,4 +413,4 @@ export function PracticeAnswerPopularityBars({
   )
 }
 
-export { PracticeQuestionResultStatsRow }
+export { PracticeQuestionResultCardLayout, PracticeQuestionResultStatsRow }

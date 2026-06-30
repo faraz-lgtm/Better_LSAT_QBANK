@@ -142,8 +142,8 @@ function ExplanationQuestionDetailPage() {
 
   if (!resolvedLoc && (bootstrapLoading || detailLoading)) {
     return (
-      <StudentMain className="py-10">
-        <StudentPageLoader centered label="Loading question…" />
+      <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
+        <StudentPageLoader centered className="min-h-0 flex-1" label="Loading question…" />
       </StudentMain>
     )
   }
