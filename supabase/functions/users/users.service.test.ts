@@ -209,6 +209,9 @@ Deno.test('createUsersService.getEntitlementState returns full access when linke
 })
 
 Deno.test('createUsersService.getEntitlementState blocks when LSAC snapshot is missing', async () => {
+  const previous = Deno.env.get('LSAC_REQUIRE_LINK_WALL')
+  Deno.env.set('LSAC_REQUIRE_LINK_WALL', 'true')
+  try {
   const repository = mockRepo({
     getProfileById: async (id) => ({
       id,
@@ -227,6 +230,10 @@ Deno.test('createUsersService.getEntitlementState blocks when LSAC snapshot is m
   assertEquals(entitlement.isLsacLinked, true)
   assertEquals(entitlement.isLsacEligible, false)
   assertEquals(entitlement.accessState, 'LSAC_REQUIRED')
+  } finally {
+    if (previous === undefined) Deno.env.delete('LSAC_REQUIRE_LINK_WALL')
+    else Deno.env.set('LSAC_REQUIRE_LINK_WALL', previous)
+  }
 })
 
 Deno.test('createUsersService.syncProfileFromLsacPayload upserts mapped row', async () => {
@@ -825,7 +832,42 @@ Deno.test('createUsersService.getEntitlementState returns PAYMENT_REQUIRED for e
   })
 })
 
+Deno.test('createUsersService.getEntitlementState grants FULL_ACCESS when link wall is disabled', async () => {
+  const previous = Deno.env.get('LSAC_REQUIRE_LINK_WALL')
+  Deno.env.delete('LSAC_REQUIRE_LINK_WALL')
+  try {
+    const repository = mockRepo({
+      getProfileById: async (id) => ({
+        id,
+        email: 'student@example.com',
+        full_name: 'Student',
+        role: 'student',
+        student_coaching_id: 'coach-1',
+        is_first_time_login: false,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      }),
+      getLatestStudentSnapshotByUserId: async () => ({
+        student_coaching_id: 'coach-1',
+        linked: false,
+        subscription_type: 'LawHub Advantage',
+        fetched_at: '2026-01-02T00:00:00Z',
+      }),
+    })
+    const service = createUsersService({ repository })
+    const entitlement = await service.getEntitlementState('user-1')
+    assertEquals(entitlement.isLsacEligible, false)
+    assertEquals(entitlement.accessState, 'FULL_ACCESS')
+  } finally {
+    if (previous === undefined) Deno.env.delete('LSAC_REQUIRE_LINK_WALL')
+    else Deno.env.set('LSAC_REQUIRE_LINK_WALL', previous)
+  }
+})
+
 Deno.test('createUsersService.getEntitlementState returns LSAC_REQUIRED when coach link pending', async () => {
+  const previous = Deno.env.get('LSAC_REQUIRE_LINK_WALL')
+  Deno.env.set('LSAC_REQUIRE_LINK_WALL', 'true')
+  try {
   const repository = mockRepo({
     getProfileById: async (id) => ({
       id,
@@ -849,6 +891,10 @@ Deno.test('createUsersService.getEntitlementState returns LSAC_REQUIRED when coa
   assertEquals(entitlement.isLsacLinked, true)
   assertEquals(entitlement.isLsacEligible, false)
   assertEquals(entitlement.accessState, 'LSAC_REQUIRED')
+  } finally {
+    if (previous === undefined) Deno.env.delete('LSAC_REQUIRE_LINK_WALL')
+    else Deno.env.set('LSAC_REQUIRE_LINK_WALL', previous)
+  }
 })
 
 Deno.test('createUsersService.getEntitlementState returns FULL_ACCESS with active sub and linked coach', async () => {

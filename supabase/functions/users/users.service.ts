@@ -2,6 +2,7 @@ import {
   createLawHubClient,
   type LawHubClient,
 } from '../_shared/lawhub-client.ts'
+import { shouldRequireLsacLinkWall } from '../_shared/lsac-link-wall.ts'
 import { parseLawHubEnv } from '../_shared/lawhub-env.ts'
 import { parseStripeEnv } from '../_shared/stripe-env.ts'
 import type { LsacStudentPayload } from './users.mapper.ts'
@@ -163,7 +164,7 @@ export function createUsersService(deps: UsersServiceDeps) {
       let accessState: AccessState
       if (!hasActiveCore) {
         accessState = 'PAYMENT_REQUIRED'
-      } else if (!isLsacEligible) {
+      } else if (!isLsacEligible && shouldRequireLsacLinkWall()) {
         accessState = 'LSAC_REQUIRED'
       } else {
         accessState = 'FULL_ACCESS'
