@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 import { createAdminApi } from "@/lib/api/admin"
+import { filterStudentVisiblePrepTestRows } from "@/lib/prep-test-visibility"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 function pct(v: number) {
@@ -53,7 +54,7 @@ function AdminDashboardPage() {
           adminApi.listUsers(500),
         ])
         if (alive) {
-          setRows(data as Array<Record<string, unknown>>)
+          setRows(filterStudentVisiblePrepTestRows(data as Array<Record<string, unknown>>))
           setCourses((courseRows as Array<Record<string, unknown>>) ?? [])
           setUsersCount(Array.isArray(userRows) ? userRows.length : 0)
           setIsLoading(false)
