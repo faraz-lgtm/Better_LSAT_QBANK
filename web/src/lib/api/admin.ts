@@ -197,6 +197,21 @@ export function createAdminApi(supabase: SupabaseClient) {
       }
     },
 
+    async listAllPrepTests(contentFilter?: string) {
+      const pageSize = 100
+      const rows: unknown[] = []
+      let offset = 0
+      let total = Number.POSITIVE_INFINITY
+      while (offset < total) {
+        const page = await this.listPrepTests(pageSize, offset, contentFilter)
+        total = page.total
+        if (page.rows.length === 0) break
+        rows.push(...page.rows)
+        offset += page.rows.length
+      }
+      return rows
+    },
+
     async getPrepTestDetail(prepTestId: string) {
       const { data, error } = await invokeAdminFn<{ prepTest: unknown; stats: unknown }>("admin-get-preptest-detail", {
         method: "POST",

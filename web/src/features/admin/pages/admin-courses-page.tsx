@@ -21,6 +21,10 @@ import type {
   PrepCourseCurriculum,
 } from "@/lib/api/admin"
 import {
+  filterStudentVisiblePrepTestRows,
+  sortPrepTestsByNumberAsc,
+} from "@/lib/prep-test-visibility"
+import {
   isRepWorkJson,
   parseRepWorkFromTextContent,
   serializeRepWorkContent,
@@ -206,9 +210,11 @@ function AdminCoursesPage() {
     async function loadPrepTests() {
       if (!adminApi) return
       try {
-        const out = await adminApi.listPrepTests(200, 0)
+        const fetched = await adminApi.listAllPrepTests()
         if (!alive) return
-        const rows = (out.rows ?? []) as Array<Record<string, unknown>>
+        const rows = sortPrepTestsByNumberAsc(
+          filterStudentVisiblePrepTestRows(fetched as Array<Record<string, unknown>>),
+        )
         setPrepTestOptions(
           rows.map((row) => ({
             id: String(row.id),

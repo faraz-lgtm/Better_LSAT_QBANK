@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2"
 
 import type { PrepLessonType } from "../_shared/prep-lesson-type.ts"
+import { isStudentVisiblePrepTest } from "../_shared/prep-test-visibility.ts"
 
 type Json = Record<string, unknown>
 
@@ -344,8 +345,9 @@ export function createAdminRepository(client: SupabaseClient) {
       const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" })
       const lsacRows = data.filter((row) => {
         const moduleId = String(row.module_id ?? "")
-        // Accept both full test modules (LSAC022) and section splits (LSAC022:LA:3:7S:S).
-        return /^LSAC\d+(:.*)?$/i.test(moduleId)
+        if (!/^LSAC\d+(:.*)?$/i.test(moduleId)) return false
+        const baseModuleId = moduleId.split(":")[0] ?? moduleId
+        return isStudentVisiblePrepTest(baseModuleId)
       })
 
       type GroupedPrepTest = {
