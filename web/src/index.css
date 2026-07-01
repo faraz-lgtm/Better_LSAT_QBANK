@@ -1642,7 +1642,7 @@ select.ds-input {
   pointer-events: none;
 }
 
-/* Figma student sidebar shell (node 18624:68805) */
+/* Figma student sidebar menu (node 19484:36055) */
 .student-sidebar {
   font-family: var(--sans);
   font-synthesis: none;
@@ -1657,7 +1657,14 @@ select.ds-input {
 }
 
 .student-sidebar-nav {
+  padding: 8px 16px 16px;
+}
+
+.student-sidebar-menu {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
+  width: 100%;
 }
 
 .student-sidebar-section {
@@ -1666,29 +1673,44 @@ select.ds-input {
   gap: 8px;
 }
 
+.student-sidebar-heading-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+}
+
+.student-sidebar-section-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
 .student-sidebar-heading {
   margin: 0;
-  padding: 2px 0;
+  flex: 1;
+  min-width: 0;
   font-size: 12px;
   font-weight: 500;
   line-height: 1.5;
   letter-spacing: 0.24px;
-  color: #666d80;
+  color: #0d47a1;
+  text-transform: uppercase;
 }
 
 .student-sidebar-link {
   position: relative;
   display: flex;
   width: 100%;
-  height: 32px;
+  height: 40px;
   align-items: center;
   overflow: hidden;
   border-radius: 10px;
-  padding: 0 0 0 16px;
-  font-size: 12px;
+  padding: 0 0 0 24px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.5;
-  letter-spacing: 0.24px;
+  letter-spacing: 0.28px;
   color: #062357;
   transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -1699,10 +1721,11 @@ select.ds-input {
 }
 
 .student-sidebar-link--active {
-  padding: 0 16px;
+  padding: 0 24px;
   font-weight: 600;
   color: #0d47a1;
   background-color: #edf3ff;
+  border: 0.6px solid #edf3ff;
   box-shadow:
     0 4px 4px rgba(13, 13, 18, 0.02),
     0 5px 5px rgba(13, 13, 18, 0.04);
@@ -1720,7 +1743,7 @@ select.ds-input {
   bottom: 0;
   left: 0;
   width: 10px;
-  border-radius: 10px 0 0 10px;
+  border-radius: 8px 0 0 8px;
   background-color: #0d47a1;
 }
 

@@ -7,7 +7,10 @@ import {
   isNavItemActive,
   STUDENT_APP_VERSION,
   STUDENT_DASHBOARD_HREF,
+  STUDENT_MAIN_NAV_SECTION,
+  STUDENT_NAV_ICON_SRC,
   STUDENT_NAV_SECTIONS,
+  type StudentNavIconKey,
 } from "@/features/app-shell/student-nav-config"
 import { shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
 import { cn } from "@/lib/utils"
@@ -16,6 +19,15 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 type StudentAppSidebarProps = {
   mobileOpen: boolean
   onMobileClose: () => void
+}
+
+function SidebarSectionHeading({ icon, label }: { icon: StudentNavIconKey; label: string }) {
+  return (
+    <div className="student-sidebar-heading-row">
+      <img src={STUDENT_NAV_ICON_SRC[icon]} alt="" className="student-sidebar-section-icon" aria-hidden />
+      <p className="student-sidebar-heading">{label}</p>
+    </div>
+  )
 }
 
 function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps) {
@@ -61,38 +73,40 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
           </Link>
         </div>
 
-        <nav className="student-sidebar-nav flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-4 pt-2">
-          <p className="student-sidebar-heading">Main</p>
-          <Link
-            to={STUDENT_DASHBOARD_HREF}
-            className={cn("student-sidebar-link", dashboardActive && "student-sidebar-link--active")}
-          >
-            Dashboard
-          </Link>
+        <nav className="student-sidebar-nav flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <div className="student-sidebar-menu">
+            <SidebarSectionHeading icon={STUDENT_MAIN_NAV_SECTION.icon} label={STUDENT_MAIN_NAV_SECTION.label} />
+            <Link
+              to={STUDENT_DASHBOARD_HREF}
+              className={cn("student-sidebar-link", dashboardActive && "student-sidebar-link--active")}
+            >
+              Dashboard
+            </Link>
 
-          {STUDENT_NAV_SECTIONS.map((section) => (
-            <div key={section.key} className="student-sidebar-section">
-              <p className="student-sidebar-heading">{section.label}</p>
-              {section.items.map((item) => {
-                const siblingHrefs = section.items.map((entry) => entry.href)
-                const active = isNavItemActive(pathname, item.href, search, siblingHrefs)
-                return (
-                  <Link
-                    key={item.href}
-                    to={item.href}
-                    className={cn("student-sidebar-link", active && "student-sidebar-link--active")}
-                    onClick={(event) => {
-                      if (!shouldForceParentNav(pathname, item.href)) return
-                      event.preventDefault()
-                      navigate(item.href)
-                    }}
-                  >
-                    {item.label}
-                  </Link>
-                )
-              })}
-            </div>
-          ))}
+            {STUDENT_NAV_SECTIONS.map((section) => (
+              <div key={section.key} className="student-sidebar-section">
+                <SidebarSectionHeading icon={section.icon} label={section.label} />
+                {section.items.map((item) => {
+                  const siblingHrefs = section.items.map((entry) => entry.href)
+                  const active = isNavItemActive(pathname, item.href, search, siblingHrefs)
+                  return (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      className={cn("student-sidebar-link", active && "student-sidebar-link--active")}
+                      onClick={(event) => {
+                        if (!shouldForceParentNav(pathname, item.href)) return
+                        event.preventDefault()
+                        navigate(item.href)
+                      }}
+                    >
+                      {item.label}
+                    </Link>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
         </nav>
 
         <div className="student-sidebar-footer flex shrink-0 px-4 pb-6">
