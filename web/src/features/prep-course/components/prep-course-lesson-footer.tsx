@@ -58,7 +58,7 @@ const navBtnClass =
 
 /** Figma `18624:73705` / `17802:2872` */
 const outlineActionBtnClass =
-  "box-border inline-flex h-[48px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[#dfe1e7] bg-[#F3F7FF] px-4 py-2 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa]"
+  "box-border inline-flex h-[48px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[#DFE1E7] bg-[#F3F7FF] px-4 py-2 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa]"
 
 /** Figma `18624:73705` / `17802:2911` */
 const primaryBtnClass =
