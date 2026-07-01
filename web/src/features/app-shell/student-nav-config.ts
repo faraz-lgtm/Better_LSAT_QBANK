@@ -2,6 +2,15 @@ import { PREPTEST_LIST_HREF, isPrepTestHubDetailPath, isPrepTestStudentPath } fr
 
 export type StudentNavSectionKey = "academy" | "prep" | "insights"
 
+export type StudentNavIconKey = "resources" | "learn" | "test" | "chart"
+
+export const STUDENT_NAV_ICON_SRC: Record<StudentNavIconKey, string> = {
+  resources: "/nav/resources.svg",
+  learn: "/nav/learn.svg",
+  test: "/nav/test.svg",
+  chart: "/nav/chart.svg",
+}
+
 export type StudentNavItem = {
   label: string
   href: string
@@ -10,7 +19,13 @@ export type StudentNavItem = {
 export type StudentNavSection = {
   key: StudentNavSectionKey
   label: string
+  icon: StudentNavIconKey
   items: StudentNavItem[]
+}
+
+export const STUDENT_MAIN_NAV_SECTION = {
+  label: "Main",
+  icon: "resources" as StudentNavIconKey,
 }
 
 export const STUDENT_DASHBOARD_HREF = "/app"
@@ -19,6 +34,7 @@ export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
   {
     key: "academy",
     label: "Academy",
+    icon: "learn",
     items: [
       { label: "Prep Course", href: "/app/prep-course" },
       { label: "Explanations", href: "/app/learn/explanations" },
@@ -27,6 +43,7 @@ export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
   {
     key: "prep",
     label: "Prep",
+    icon: "test",
     items: [
       { label: "Drills", href: "/app/practice/drills" },
       { label: "Sections", href: "/app/practice/sections" },
@@ -37,6 +54,7 @@ export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
   {
     key: "insights",
     label: "Insights",
+    icon: "chart",
     items: [
       { label: "Overview", href: "/app/analytics" },
       // { label: "Priorities", href: "/app/analytics?tab=priorities" },
