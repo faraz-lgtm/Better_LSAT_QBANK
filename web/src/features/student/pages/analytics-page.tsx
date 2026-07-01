@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Link, useSearchParams } from "react-router-dom"
+import { useSearchParams } from "react-router-dom"
 import { Bookmark } from "lucide-react"
 
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
@@ -240,11 +240,12 @@ function OverviewTab() {
 
   return (
     <>
-      <div className="mb-6 flex flex-wrap items-center justify-end gap-4">
-        <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
-      </div>
+      <section className="mb-6 flex w-full flex-col gap-6 rounded-[20px] border border-[#dfe1e7] bg-white p-6">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Overview</h2>
+          <TimeRangeFilter value={timeRange} onChange={setTimeRange} className="shrink-0" />
+        </div>
 
-      <section className="mb-6 flex w-full flex-col gap-6 rounded-3xl border border-[#dfe1e7] bg-white p-6">
         <div className="grid gap-6 md:grid-cols-2">
           {headlineStats.map((stat) => (
             <StatTile key={stat.id} stat={stat} />
@@ -257,21 +258,13 @@ function OverviewTab() {
         </div>
       </section>
 
-      <section className="mb-6 rounded-3xl border border-[#dfe1e7] bg-white p-6">
-        <div className="flex flex-col gap-[18px] rounded-2xl bg-[#f6f8fa] p-6">
+      <section className="mb-6 rounded-[20px] border border-[#dfe1e7] bg-white p-6">
+        <div className="flex flex-col gap-[18px] rounded-[20px] bg-[#f6f8fa] p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <h2 className="text-[14px] font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
               PREPTESTS SCORE PROGRES
             </h2>
-            <div className="flex flex-wrap items-center gap-3">
-              <Link
-                to="/app/analytics/preptests"
-                className="ds-btn-sm text-sm tracking-[0.02em]"
-              >
-                PrepTests
-              </Link>
-              <ScoreProgressTabs value={scoreTab} onChange={setScoreTab} />
-            </div>
+            <ScoreProgressTabs value={scoreTab} onChange={setScoreTab} />
           </div>
           <ScoreProgressChart points={trajectory} tab={scoreTab} />
           <div className="mt-4 flex flex-wrap items-center justify-center gap-6 border-t border-[#e5e7eb] pt-5">

@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useState } from "react"
 import { Outlet, useLocation } from "react-router-dom"
 
 import { StudentAppHeader } from "@/features/app-shell/student-app-header"
+import { PortalChatWidget } from "@/features/app-shell/portal-chat-widget"
 import { isPracticeImmersiveRoute } from "@/features/app-shell/practice-immersive-route"
 import { StudentAppSidebar } from "@/features/app-shell/student-app-sidebar"
 import {
@@ -55,6 +56,7 @@ function StudentAppShell() {
           </div>
         </div>
       </div>
+      <PortalChatWidget />
     </StudentPageHeaderSlotProvider>
   )
 }

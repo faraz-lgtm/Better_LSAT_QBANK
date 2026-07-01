@@ -79,7 +79,7 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
         overview.averageLrMissedPerPrepTest != null
           ? formatSigned(-Math.round(overview.averageLrMissedPerPrepTest))
           : "—",
-      accent: "#ff6f00",
+      accent: "#00BC54",
     },
     {
       id: "avg-rc",
@@ -88,7 +88,7 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
         overview.averageRcMissedPerPrepTest != null
           ? formatSigned(-Math.round(overview.averageRcMissedPerPrepTest))
           : "—",
-      accent: "#ff9d51",
+      accent: "#0BBCC9",
     },
     {
       id: "drilled",

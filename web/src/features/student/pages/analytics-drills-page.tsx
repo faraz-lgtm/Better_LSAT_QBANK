@@ -81,7 +81,7 @@ function DrillScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next:
             onClick={() => onChange(tab.id)}
             aria-pressed={active}
             className={cn(
-              "rounded-lg px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors",
+              "rounded-[10px] px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors hover:rounded-[10px] active:rounded-[10px] focus-visible:rounded-[10px]",
               active ? "bg-[#0d47a1] text-white" : "border border-[#dfe1e7] bg-white text-[#666d80] hover:bg-[#f3f7ff]",
             )}
           >

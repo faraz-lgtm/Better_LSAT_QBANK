@@ -36,7 +36,7 @@ function SectionScoreTabs({ value, onChange }: { value: SectionScoreTab; onChang
             onClick={() => onChange(tab.id)}
             aria-pressed={active}
             className={cn(
-              "flex min-h-8 items-center justify-center rounded-lg px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors",
+              "flex min-h-8 items-center justify-center rounded-[10px] px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors hover:rounded-[10px] active:rounded-[10px] focus-visible:rounded-[10px]",
               active ? "bg-[#0d47a1] text-white" : "text-[#666d80] hover:bg-[#f3f7ff]",
             )}
           >
@@ -170,7 +170,7 @@ function SectionColumn({
 }: SectionColumnProps) {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-6">
-      <div className="rounded-2xl bg-[#f6f8fa] px-6 py-4">
+      <div className="rounded-[20px] bg-[#f6f8fa] px-6 py-4">
         <div className="flex items-center gap-2.5">
           <div
             className="flex size-10 shrink-0 items-center justify-center rounded-xl"
@@ -186,7 +186,7 @@ function SectionColumn({
 
       <SectionStatPair summary={summary} />
 
-      <div className="flex min-h-[382px] flex-1 flex-col gap-[18px] rounded-2xl bg-[#f6f8fa] p-6">
+      <div className="flex min-h-[382px] flex-1 flex-col gap-[18px] rounded-[20px] bg-[#f6f8fa] p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">{progressTitle}</p>
           <SectionScoreTabs value={scoreTab} onChange={onScoreTabChange} />
@@ -319,7 +319,7 @@ function AnalyticsSectionsPage() {
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
         </div>
 
-        <section className="mb-6 rounded-3xl border border-[#dfe1e7] bg-white p-6">
+        <section className="mb-6 rounded-[20px] border border-[#dfe1e7] bg-white p-6">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-start">
             <SectionColumn
               badge="LR"

@@ -36,8 +36,8 @@ export const mockAnalyticsHeadlineStats: AnalyticsStat[] = [
 ]
 
 export const mockAnalyticsSecondaryStats: AnalyticsStat[] = [
-  { id: "avg-lr", label: "AVERAGE LR", value: "-11", accent: "#ff6f00" },
-  { id: "avg-rc", label: "AVERAGE RC", value: "-12", accent: "#ff9d51" },
+  { id: "avg-lr", label: "AVERAGE LR", value: "-11", accent: "#00BC54" },
+  { id: "avg-rc", label: "AVERAGE RC", value: "-12", accent: "#0BBCC9" },
   { id: "drilled", label: "QUESTIONS DRILLED", value: "740", accent: "#116b97" },
   { id: "accuracy", label: "DRILLING ACCURACY", value: "64%", accent: "#956321" },
 ]

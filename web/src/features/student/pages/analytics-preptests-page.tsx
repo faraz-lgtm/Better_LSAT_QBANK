@@ -79,7 +79,7 @@ function PrepTestScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (ne
             onClick={() => onChange(tab.id)}
             aria-pressed={active}
             className={cn(
-              "flex min-h-8 items-center justify-center rounded-lg px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors",
+              "flex min-h-8 items-center justify-center rounded-[10px] px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors hover:rounded-[10px] active:rounded-[10px] focus-visible:rounded-[10px]",
               active ? "bg-[#0d47a1] text-white" : "text-[#666d80] hover:bg-[#f3f7ff]",
             )}
           >

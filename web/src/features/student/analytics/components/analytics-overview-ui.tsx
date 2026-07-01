@@ -28,6 +28,9 @@ export const SCORE_PROGRESS_TABS = [
 
 export type ScoreProgressTab = (typeof SCORE_PROGRESS_TABS)[number]["id"]
 
+const ANALYTICS_SEGMENTED_TAB_BUTTON_CLASS =
+  "flex h-8 items-center justify-center rounded-[10px] px-3 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors hover:rounded-[10px] active:rounded-[10px] focus-visible:rounded-[10px]"
+
 export function StatTile({
   stat,
   compact = false,
@@ -48,12 +51,12 @@ export function StatTile({
 
 export function AnalyticsStatsGrid({ stats }: { stats: AnalyticsStat[] }) {
   return (
-    <article className="flex h-full min-h-[280px] flex-col justify-center rounded-[16px] border border-[#dfe1e7] bg-white p-4 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)] sm:p-5">
+    <article className="flex h-full min-h-[280px] flex-col justify-center rounded-[20px] border border-[#dfe1e7] bg-white p-4 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)] sm:p-5">
       <div className="grid h-full grid-cols-2 gap-3">
         {stats.map((stat) => (
           <div
             key={stat.id}
-            className="flex min-w-0 flex-col justify-center gap-1 rounded-[16px] bg-[#f6f8fa] p-4 sm:p-5"
+            className="flex min-w-0 flex-col justify-center gap-1 rounded-[20px] bg-[#f6f8fa] p-4 sm:p-5"
           >
             <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#666d80]">{stat.label}</p>
             <p
@@ -82,7 +85,7 @@ export function AnalyticsScoreProgressPanel({
   chart: ReactNode
 }) {
   return (
-    <section className="flex h-full min-h-[280px] flex-col rounded-[16px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+    <section className="flex h-full min-h-[280px] flex-col rounded-[20px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#666d80]">{title}</h2>
         {legend}
@@ -165,8 +168,8 @@ function QuestionTypeRow({ row, accentBar }: { row: QuestionTypeRowData; accentB
 
 export function SectionCard({ section }: { section: AnalyticsSection }) {
   return (
-    <section className="mb-6 flex w-full flex-col gap-6 rounded-3xl border border-[#dfe1e7] bg-white p-6">
-      <div className="flex items-center rounded-2xl bg-[#f6f8fa] px-6 py-4">
+    <section className="mb-6 flex w-full flex-col gap-6 rounded-[20px] border border-[#dfe1e7] bg-white p-6">
+      <div className="flex items-center rounded-[20px] bg-[#f6f8fa] px-6 py-4">
         <div className="flex items-center gap-2.5">
           <div
             className="flex size-10 items-center justify-center rounded-xl"
@@ -306,7 +309,7 @@ export function ScoreProgressTabs({
             type="button"
             onClick={() => onChange(tab.id)}
             className={cn(
-              "flex h-8 items-center justify-center rounded-lg px-3 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors",
+              ANALYTICS_SEGMENTED_TAB_BUTTON_CLASS,
               active ? "bg-[#0d47a1] text-white" : "text-[#666d80] hover:bg-[#f3f7ff]",
             )}
             aria-pressed={active}
