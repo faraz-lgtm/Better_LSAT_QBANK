@@ -1940,7 +1940,10 @@ select.ds-input {
 }
 
 .rep-work-instructions-body.lsat-html-content {
+  font-family: var(--sans);
   font-size: 18px;
+  font-style: normal;
+ 
   line-height: 1.4;
   letter-spacing: 0.36px;
   color: #1a1b25;
@@ -1948,7 +1951,10 @@ select.ds-input {
 
 .rep-work-instructions-body.lsat-html-content p {
   margin: 0;
+  font-family: inherit;
   font-size: 18px;
+  font-style: normal;
+
   line-height: 1.4;
 }
 
@@ -2156,8 +2162,15 @@ html.student-shell-immersive .practice-session-card--active-drill {
   max-height: calc(100svh - var(--nav-shell-height) - 32px);
 }
 
-.prep-course-lesson-shell .prep-course-shell-card.practice-session-card {
-  max-height: calc(100svh - var(--nav-shell-height));
+.prep-course-lesson-shell .prep-course-lesson-frame.practice-session-card {
+  flex: 1 1 0;
+  height: 0;
+  min-height: 0;
+  max-height: none;
+}
+
+.prep-course-lesson-frame {
+  background: transparent;
 }
 
 .prep-course-lesson-footer {
