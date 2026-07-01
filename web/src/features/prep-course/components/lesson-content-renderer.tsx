@@ -1,5 +1,4 @@
-import { memo, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { RotateCcw } from "lucide-react"
+import { memo, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type SVGProps } from "react"
 
 import { resolveDrillLessonType } from "@/features/prep-course/lib/prep-course-format"
 import { cn } from "@/lib/utils"
@@ -32,6 +31,7 @@ type LessonContentRendererProps = {
   drillStartError?: string | null
   edgeToSidebar?: boolean
   skipArticleShell?: boolean
+  inLessonCard?: boolean
   sectionSubtitle?: string | null
   lessonBookmarked?: boolean
   onToggleLessonBookmark?: (next: boolean) => void
@@ -86,13 +86,46 @@ function LessonVideoBlock({
   lesson,
   belowVideo,
   hideTitle = false,
+  inLessonCard = false,
 }: {
   lesson: PrepLesson
   belowVideo?: ReactNode
   hideTitle?: boolean
+  inLessonCard?: boolean
 }) {
   const src = lesson.video_url ? videoIframeSrc(lesson.video_url) : ""
   const textClass = "ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3"
+
+  if (inLessonCard) {
+    return (
+      <>
+        <div className="aspect-video w-full bg-[#e5efff]">
+          <iframe
+            className="h-full w-full"
+            src={src}
+            title={lesson.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+        {belowVideo || lesson.text_content ? (
+          <div className="flex flex-col gap-5 border-t border-[#dfe1e7] p-6">
+            {belowVideo}
+            {lesson.text_content ? (
+              hideTitle ? (
+                <HtmlContent html={lesson.text_content} className={textClass} />
+              ) : (
+                <article>
+                  <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>
+                  <HtmlContent html={lesson.text_content} className={`${textClass} mt-4`} />
+                </article>
+              )
+            ) : null}
+          </div>
+        ) : null}
+      </>
+    )
+  }
 
   return (
     <div className="space-y-4">
@@ -220,6 +253,41 @@ function RepWorkInstructions({ html }: { html: string }) {
   )
 }
 
+function RepWorkResetIcon({ className, ...props }: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden className={className} {...props}>
+      <path
+        d="M2.5 10C2.5 8.01088 3.29018 6.10322 4.6967 4.6967C6.10322 3.29018 8.01088 2.5 10 2.5C12.0967 2.50789 14.1092 3.32602 15.6167 4.78333L17.5 6.66667"
+        stroke="currentColor"
+        strokeWidth="1.38889"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M17.5 2.5V6.66667H13.3333"
+        stroke="currentColor"
+        strokeWidth="1.38889"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M17.5 10C17.5 11.9891 16.7098 13.8968 15.3033 15.3033C13.8968 16.7098 11.9891 17.5 10 17.5C7.90329 17.4921 5.89081 16.674 4.38333 15.2167L2.5 13.3333"
+        stroke="currentColor"
+        strokeWidth="1.38889"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6.66667 13.3333H2.5V17.5"
+        stroke="currentColor"
+        strokeWidth="1.38889"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 function resizeRepWorkTextarea(el: HTMLTextAreaElement) {
   el.style.height = "auto"
   el.style.overflow = "hidden"
@@ -257,21 +325,23 @@ const RepWorkEditableQuestion = memo(function RepWorkEditableQuestion({
         defaultValue={plainText}
         aria-label={questionLabel}
         onInput={(event) => resizeRepWorkTextarea(event.currentTarget)}
-        className={`rep-work-question-input box-border max-w-full min-h-[88px] w-full resize-none overflow-hidden rounded-2xl border bg-white p-4 text-[#041a44] outline-none transition-colors focus-visible:border-[#0d47a1] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0d47a1]/15 ${
+        className={`rep-work-question-input box-border max-w-full min-h-[88px] w-full resize-none overflow-hidden rounded-[16px] border bg-white p-4 text-[#041a44] outline-none transition-colors focus-visible:border-[#0d47a1] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0d47a1]/15 ${
           showAnswer ? "border-[#0d47a1]" : "border-[color:var(--greyscale-100)]"
         }`}
       />
 
-      <div className="flex min-w-0 max-w-full flex-wrap items-center justify-end gap-x-6 gap-y-1">
-        <p className="m-0 min-w-0 text-sm tracking-[0.02em] text-[#818898]">Click box to edit the text.</p>
+      <div className="flex h-6 min-w-0 max-w-full items-center justify-end gap-6">
+        <p className="m-0 min-w-0 text-right text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[#818898]">
+          Click box to edit the text.
+        </p>
         {showAnswer ? (
           <button
             type="button"
-            className="inline-flex h-[22px] items-center justify-center gap-2 rounded-2xl text-base font-semibold tracking-[0.02em] text-[#0d47a1] transition-opacity hover:opacity-80"
+            className="inline-flex h-[22px] shrink-0 items-center justify-center gap-2 rounded-[16px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] transition-opacity hover:opacity-80"
             onClick={handleReset}
           >
-            <RotateCcw className="size-5 shrink-0" aria-hidden />
-            Reset
+            <RepWorkResetIcon className="size-5 shrink-0" />
+            <span className="whitespace-nowrap">Reset</span>
           </button>
         ) : null}
       </div>
@@ -338,29 +408,31 @@ function RepWorkPairCard({ pair, index }: { pair: RepWorkPair; index: number }) 
   return (
     <li
       ref={cardRef}
-      className="prep-course-rep-work-pair min-w-0 max-w-full overflow-x-clip rounded-3xl border border-[color:var(--greyscale-100)] bg-white p-6"
+      className="prep-course-rep-work-pair min-w-0 max-w-full overflow-x-clip rounded-[16px] border border-[color:var(--greyscale-100)] bg-white p-6"
     >
-      <div className="flex min-w-0 max-w-full flex-col gap-6">
+      <div className="flex min-w-0 max-w-full flex-col gap-4">
         <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
           <h2 className="m-0 min-w-0 flex-1 text-2xl font-bold leading-[1.3] text-[#062357]">
             Question {index + 1}
           </h2>
-          <div className="min-w-0 sm:ml-auto">
-            <div className="grid w-full max-w-[197px] grid-cols-[1fr_auto] items-start gap-x-3 gap-y-0.5 sm:w-auto">
-              <span className="text-xl font-bold leading-[1.35] text-[#062357]">Answer</span>
-              <RepWorkAnswerToggle
-                checked={showAnswer}
-                onCheckedChange={setShowAnswer}
-                label={`Show or hide answer for question ${index + 1}`}
-              />
-              <span className="col-span-2 text-xs tracking-[0.02em] text-[#666d80]">
+          <div className="shrink-0 sm:ml-auto">
+            <div className="flex flex-col items-end gap-0.5">
+              <div className="flex items-center gap-3">
+                <span className="text-xl font-bold leading-[1.35] text-[#062357]">Answer</span>
+                <RepWorkAnswerToggle
+                  checked={showAnswer}
+                  onCheckedChange={setShowAnswer}
+                  label={`Show or hide answer for question ${index + 1}`}
+                />
+              </div>
+              <span className="whitespace-nowrap text-[12px] tracking-[0.02em] text-[#666d80]">
                 On/Off to see and hide the answer
               </span>
             </div>
           </div>
         </div>
 
-        <div className="min-w-0 max-w-full overflow-x-clip rounded-3xl border border-[color:var(--greyscale-100)] bg-[var(--secondary-0)] p-6">
+        <div className="min-w-0 max-w-full overflow-x-clip rounded-[16px] border border-[color:var(--greyscale-100)] bg-[var(--secondary-0)] p-6">
           <div className="flex min-w-0 flex-col gap-3">
             <RepWorkEditableQuestion
               plainText={plainQuestionText}
@@ -370,8 +442,8 @@ function RepWorkPairCard({ pair, index }: { pair: RepWorkPair; index: number }) 
 
             {showAnswer ? (
               <div className="flex min-w-0 flex-col gap-3">
-                <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Answer</h3>
-                <p className="m-0 max-w-full break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-lg leading-[1.4] tracking-[0.02em] text-[#1a1b25]">
+                <h3 className="m-0 text-[20px] font-bold leading-[1.35] text-[#062357]">Answer</h3>
+                <p className="m-0 max-w-full break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-[18px] leading-[1.4] tracking-[0.36px] text-[#1a1b25]">
                   {answerText || "No answer provided."}
                 </p>
               </div>
@@ -461,6 +533,7 @@ function LessonContentRenderer({
   drillStartError = null,
   edgeToSidebar = false,
   skipArticleShell = false,
+  inLessonCard = false,
   sectionSubtitle = null,
   lessonBookmarked = false,
   onToggleLessonBookmark,
@@ -562,14 +635,21 @@ function LessonContentRenderer({
 
   if (showVideo) {
     return (
-      <div className="space-y-4">
-        <LessonVideoBlock lesson={lesson} belowVideo={belowVideo} hideTitle={hideTitle} />
+      <div className={inLessonCard ? "flex min-w-0 flex-col" : "space-y-4"}>
+        <LessonVideoBlock
+          lesson={lesson}
+          belowVideo={belowVideo}
+          hideTitle={hideTitle}
+          inLessonCard={inLessonCard}
+        />
         {isDrill ? (
-          <LessonDrillLinkedQuestions
-            key={linkedQuestionRefs.map((r) => r.question_id).join("|") || "none"}
-            lesson={lesson}
-            linked={linkedQuestionRefs}
-          />
+          <div className={inLessonCard ? "px-6 pb-6" : undefined}>
+            <LessonDrillLinkedQuestions
+              key={linkedQuestionRefs.map((r) => r.question_id).join("|") || "none"}
+              lesson={lesson}
+              linked={linkedQuestionRefs}
+            />
+          </div>
         ) : null}
       </div>
     )
@@ -578,17 +658,31 @@ function LessonContentRenderer({
   if (isDrill) {
     return (
       <div className="space-y-6">
-        <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
-          {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
-          {lesson.text_content ? (
-            <HtmlContent
-              html={lesson.text_content}
-              className={`ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
-            />
-          ) : (
-            <p className={`ds-body-sm leading-7 text-[#36394a] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
-          )}
-        </article>
+        {inLessonCard ? (
+          <div className="p-6">
+            {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
+            {lesson.text_content ? (
+              <HtmlContent
+                html={lesson.text_content}
+                className={`ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
+              />
+            ) : (
+              <p className={`ds-body-sm leading-7 text-[#36394a] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
+            )}
+          </div>
+        ) : (
+          <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+            {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
+            {lesson.text_content ? (
+              <HtmlContent
+                html={lesson.text_content}
+                className={`ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
+              />
+            ) : (
+              <p className={`ds-body-sm leading-7 text-[#36394a] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
+            )}
+          </article>
+        )}
         <LessonDrillLinkedQuestions
           key={linkedQuestionRefs.map((r) => r.question_id).join("|") || "none"}
           lesson={lesson}

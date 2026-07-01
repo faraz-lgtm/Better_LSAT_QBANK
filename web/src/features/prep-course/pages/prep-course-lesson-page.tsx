@@ -36,6 +36,9 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 import { cn } from "@/lib/utils"
 
+const PREP_COURSE_LESSON_CONTENT_CARD_CLASS =
+  "flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden rounded-[14px] border border-[#e2e8f0] bg-white shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]"
+
 function PrepCourseLessonPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -292,14 +295,14 @@ function PrepCourseLessonPage() {
   }
 
   return (
-    <StudentMain layout="locked" contentClassName="pt-0 pb-0">
-      <div className="prep-course-lesson-shell flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-clip overflow-y-hidden">
+    <StudentMain layout="locked" contentClassName="px-0 pb-0">
+      <div className="prep-course-lesson-shell flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-y-hidden">
         {error ? <p className="mb-4 shrink-0 text-xs text-[#95122b]">{error}</p> : null}
 
-        <section className="prep-course-shell-card practice-session-card flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden rounded-[16px] border border-[color:var(--greyscale-100)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+        <section className="prep-course-lesson-frame practice-session-card flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden">
           <div
             className={cn(
-              "practice-session-body flex h-0 min-h-0 min-w-0 max-w-full flex-1 overflow-hidden",
+              "practice-session-body flex h-0 min-h-0 min-w-0 max-w-full flex-1 overflow-hidden px-[24px] pb-6",
               useSplitDrillLayout
                 ? "flex-col"
                 : showSidebar
@@ -313,7 +316,7 @@ function PrepCourseLessonPage() {
                 className="practice-session-pane practice-session-scroll-hidden flex min-h-0 flex-1 flex-col gap-6 overflow-x-clip overflow-y-auto overscroll-contain bg-[var(--primary-0)] [overflow-anchor:none]"
               >
                 <PrepCourseLessonPanel {...lessonPanelProps} drillResultsPart="cards" sidebarAdjacent={false} />
-                <div className="flex min-w-0 gap-6 px-6 pb-6">
+                <div className="flex min-w-0 gap-6">
                   <div className="min-w-0 flex-1">
                     <PrepCourseLessonPanel
                       {...lessonPanelProps}
@@ -321,7 +324,7 @@ function PrepCourseLessonPage() {
                       sidebarAdjacent
                     />
                   </div>
-                  <div className="sticky top-6 flex w-[320px] shrink-0 self-start flex-col overflow-hidden">
+                  <div className="sticky top-0 flex w-[320px] shrink-0 self-start flex-col overflow-hidden">
                     <div className="flex max-h-[calc(100svh-var(--nav-shell-height)-180px)] min-h-0 flex-col overflow-hidden">
                       <PrepCourseLessonSidebar
                         lessons={sidebarLessons}
@@ -339,49 +342,50 @@ function PrepCourseLessonPage() {
               </div>
             ) : (
               <>
-                <div className="flex h-full min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden">
+                <div className={PREP_COURSE_LESSON_CONTENT_CARD_CLASS}>
                   <PrepCourseLessonPanel
                     {...lessonPanelProps}
                     contentScrollRef={lessonContentRef}
-                    sidebarAdjacent={showSidebar}
+                    inLessonCard
                   />
                 </div>
 
                 {showSidebar ? (
                   <div className="flex h-full min-h-0 w-[320px] shrink-0 flex-col self-stretch overflow-hidden">
-                    <div className="practice-session-pane practice-session-scroll-hidden flex h-full min-h-0 flex-1 flex-col overflow-hidden pt-6 pb-6 pr-6 pl-0">
-                      <PrepCourseLessonSidebar
-                        lessons={sidebarLessons}
-                        activeLessonSlug={lesson.slug}
-                        completedLessonSlugs={completedLessonSlugs}
-                        progressPercent={sectionProgressPercent}
-                        sectionTitle={sectionTitle}
-                        sectionSubtitle={sectionRemainingLabel}
-                        onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
-                        onClose={() => setShowSidebar(false)}
-                      />
-                    </div>
+                    <PrepCourseLessonSidebar
+                      lessons={sidebarLessons}
+                      activeLessonSlug={lesson.slug}
+                      completedLessonSlugs={completedLessonSlugs}
+                      progressPercent={sectionProgressPercent}
+                      sectionTitle={sectionTitle}
+                      sectionSubtitle={sectionRemainingLabel}
+                      onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
+                      onClose={() => setShowSidebar(false)}
+                    />
                   </div>
                 ) : null}
               </>
             )}
           </div>
-
-          <PrepCourseLessonFooter
-            showSidebar={showSidebar}
-            onToggleSidebar={() => setShowSidebar((v) => !v)}
-            onPrev={() => {
-              if (prevSlug) navigate(`/app/prep-course/${course.slug}/${prevSlug}`)
-            }}
-            onNext={() => {
-              if (nextSlug) navigate(`/app/prep-course/${course.slug}/${nextSlug}`)
-            }}
-            prevDisabled={!prevSlug}
-            nextDisabled={!nextSlug}
-            onMarkComplete={() => void handleMarkComplete()}
-            markCompleteDisabled={savingComplete}
-          />
         </section>
+
+        <PrepCourseLessonFooter
+          showSidebar={showSidebar}
+          onToggleSidebar={() => setShowSidebar((v) => !v)}
+          onBackToCourseModule={() =>
+            navigate(`/app/prep-course/${course.slug}`, { state: { activeLessonSlug: lesson.slug } })
+          }
+          onPrev={() => {
+            if (prevSlug) navigate(`/app/prep-course/${course.slug}/${prevSlug}`)
+          }}
+          onNext={() => {
+            if (nextSlug) navigate(`/app/prep-course/${course.slug}/${nextSlug}`)
+          }}
+          prevDisabled={!prevSlug}
+          nextDisabled={!nextSlug}
+          onMarkComplete={() => void handleMarkComplete()}
+          markCompleteDisabled={savingComplete}
+        />
       </div>
     </StudentMain>
   )

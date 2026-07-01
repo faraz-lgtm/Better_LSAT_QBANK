@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 type PrepCourseLessonFooterProps = {
   showSidebar: boolean
   onToggleSidebar: () => void
+  onBackToCourseModule: () => void
   onMarkComplete: () => void
   markCompleteDisabled?: boolean
   onPrev: () => void
@@ -57,15 +58,20 @@ const navBtnClass =
 
 /** Figma `18624:73705` / `17802:2872` */
 const outlineActionBtnClass =
-  "box-border inline-flex h-[48px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[#dfe1e7] bg-white px-4 py-2 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa]"
+  "box-border inline-flex h-[48px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[#DFE1E7] bg-[#F3F7FF] px-4 py-2 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa]"
 
 /** Figma `18624:73705` / `17802:2911` */
 const primaryBtnClass =
   "box-border inline-flex h-[48px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[#0b4e6e] bg-[#0d47a1] px-4 py-2 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0b3d8a] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
 
+/** Figma `18624:73566` / `19466:19273` — text action, no border */
+const backToModuleBtnClass =
+  "box-border inline-flex h-[48px] shrink-0 items-center justify-center rounded-[16px] px-4 py-2 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] transition-colors hover:bg-[#edf3ff]"
+
 function PrepCourseLessonFooter({
   showSidebar,
   onToggleSidebar,
+  onBackToCourseModule,
   onMarkComplete,
   markCompleteDisabled = false,
   onPrev,
@@ -75,9 +81,9 @@ function PrepCourseLessonFooter({
   primaryAction = null,
 }: PrepCourseLessonFooterProps) {
   return (
-    <footer className="practice-session-footer prep-course-lesson-footer box-border flex w-full min-w-0 max-w-full shrink-0 flex-col items-center justify-center rounded-b-[16px] border-t border-[#dfe1e7] bg-[#f5f9ff] px-6">
-      <div className="flex h-[56px] w-full min-w-0 items-center justify-between">
-        <div className="flex h-[48px] min-w-0 items-center gap-6">
+    <footer className="practice-session-footer prep-course-lesson-footer box-border flex w-full min-w-0 shrink-0 flex-col items-center justify-center border-t border-[#dfe1e7] bg-[#f5f9ff] px-[24px] py-3">
+      <div className="flex min-h-[48px] w-full min-w-0 items-center justify-between gap-4">
+        <div className="flex min-w-0 flex-wrap items-center gap-6">
           <button type="button" onClick={onPrev} disabled={prevDisabled} className={navBtnClass}>
             <ChevronLeft className="size-6 shrink-0" strokeWidth={2} aria-hidden />
             Prev
@@ -88,10 +94,13 @@ function PrepCourseLessonFooter({
             ) : (
               <BookPlusOutlineIcon className="size-5 shrink-0" />
             )}
-            <span className="whitespace-nowrap">{showSidebar ? "Hide Lesson" : "Show All Lesson"}</span>
+            <span className="whitespace-nowrap ">{showSidebar ? "Hide Lesson" : "Show All Lesson"}</span>
+          </button>
+          <button type="button" onClick={onBackToCourseModule} className={backToModuleBtnClass}>
+            <span className="whitespace-nowrap">Back to Course Module</span>
           </button>
         </div>
-        <div className="flex h-[48px] min-w-0 items-center gap-4">
+        <div className="flex min-w-0 shrink-0 items-center gap-4">
           {primaryAction ? (
             <button
               type="button"

@@ -360,7 +360,7 @@ export function resolveLessonRowDisplay(lesson: PrepLesson): LessonRowDisplay {
 export function lessonTypeAccentClass(type: PrepLesson["lesson_type"]): string | null {
   if (type === "adaptive_drill") return "text-[#0bbcc9]"
   if (type === "active_drill") return "text-[#00bc54]"
-  if (type === "rep_work") return "text-[#0d47a1]"
+  if (type === "rep_work") return "text-[#3374ff]"
   return null
 }
 

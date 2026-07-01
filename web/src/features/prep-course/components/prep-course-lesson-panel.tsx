@@ -34,6 +34,7 @@ type PrepCourseLessonPanelProps = {
   lessonBookmarked?: boolean
   onToggleLessonBookmark?: (next: boolean) => void
   sidebarAdjacent?: boolean
+  inLessonCard?: boolean
   drillResultsPart?: DrillResultsPart
 }
 
@@ -52,6 +53,7 @@ function PrepCourseLessonPanel({
   lessonBookmarked = false,
   onToggleLessonBookmark,
   sidebarAdjacent = false,
+  inLessonCard = false,
   drillResultsPart = "full",
 }: PrepCourseLessonPanelProps) {
   const isPrepCourseDrill = lesson ? isResolvedPrepCourseDrillLesson(lesson) : false
@@ -141,6 +143,7 @@ function PrepCourseLessonPanel({
       drillStartError={drillStartError}
       edgeToSidebar={false}
       skipArticleShell={useLessonArticleShell}
+      inLessonCard={inLessonCard}
       sectionSubtitle={subtitle}
       lessonBookmarked={lessonBookmarked}
       onToggleLessonBookmark={onToggleLessonBookmark}
@@ -148,11 +151,12 @@ function PrepCourseLessonPanel({
     />
   ) : null
 
-  const contentPaddingClass = sidebarAdjacent ? "pt-6 pb-6 pl-6 pr-0" : "p-6"
+  const contentPaddingClass = inLessonCard ? "p-6" : sidebarAdjacent ? "pt-6 pb-6 pl-6 pr-0" : "p-6"
+  const paneBgClass = inLessonCard ? "bg-white" : "bg-[var(--primary-0)]"
 
   if (lesson && hideHeaderForDrillResults && drillResultsPart === "cards") {
     return (
-      <div className="box-border w-full shrink-0 bg-[var(--primary-0)] px-6 pt-6">
+      <div className="box-border w-full shrink-0 bg-[var(--primary-0)]">
         <LessonContentRenderer
           lesson={lesson}
           linkedQuestionRefs={linkedQuestionRefs}
@@ -227,27 +231,37 @@ function PrepCourseLessonPanel({
           <div
             ref={contentScrollRef}
             className={cn(
-              "practice-session-pane practice-session-scroll-hidden h-0 min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain bg-[var(--primary-0)] [overflow-anchor:none]",
+              "practice-session-pane practice-session-scroll-hidden h-0 min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain [overflow-anchor:none]",
+              paneBgClass,
               contentPaddingClass,
+              sidebarAdjacent && !inLessonCard && "min-h-full",
             )}
           >
-            <article
-              className={cn(
-                "box-border min-w-0 max-w-full overflow-x-clip rounded-[16px] border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]",
-                sidebarAdjacent && "min-h-full",
-              )}
-            >
-              <div className="box-border flex min-w-0 max-w-full flex-col gap-5 overflow-x-clip p-6">
+            {inLessonCard ? (
+              <div className="box-border flex min-w-0 max-w-full flex-col gap-5 overflow-x-clip">
                 {titleBlock}
                 {lessonBody}
               </div>
-            </article>
+            ) : (
+              <article
+                className={cn(
+                  "box-border min-w-0 max-w-full overflow-x-clip rounded-[16px] border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]",
+                  sidebarAdjacent && "min-h-full",
+                )}
+              >
+                <div className="box-border flex min-w-0 max-w-full flex-col gap-5 overflow-x-clip p-6">
+                  {titleBlock}
+                  {lessonBody}
+                </div>
+              </article>
+            )}
           </div>
         ) : isAdaptiveDrillIntro ? (
           <div
             ref={contentScrollRef}
             className={cn(
-              "practice-session-pane practice-session-scroll-hidden flex h-0 min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-[var(--primary-0)] [overflow-anchor:none]",
+              "practice-session-pane practice-session-scroll-hidden flex h-0 min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain [overflow-anchor:none]",
+              paneBgClass,
               contentPaddingClass,
             )}
           >
@@ -257,21 +271,16 @@ function PrepCourseLessonPanel({
           <div
             ref={contentScrollRef}
             className={cn(
-              "practice-session-pane practice-session-scroll-hidden h-0 min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-[var(--primary-0)] [overflow-anchor:none]",
+              "practice-session-pane practice-session-scroll-hidden h-0 min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain [overflow-anchor:none]",
+              paneBgClass,
               contentPaddingClass,
+              (sidebarAdjacent || inLessonCard) && "min-h-full",
             )}
           >
-            <article
-              className={cn(
-                "box-border min-w-0 max-w-full overflow-x-clip rounded-[16px] border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]",
-                sidebarAdjacent && "min-h-full",
-              )}
-            >
-              <div className="box-border flex min-w-0 max-w-full flex-col gap-6 overflow-x-clip p-6">
-                {titleBlock}
-                {lessonBody}
-              </div>
-            </article>
+            <div className="box-border flex min-w-0 max-w-full flex-col gap-6 overflow-x-clip">
+              {titleBlock}
+              {lessonBody}
+            </div>
           </div>
         ) : (
           <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -281,8 +290,9 @@ function PrepCourseLessonPanel({
             <div
               ref={contentScrollRef}
               className={cn(
-                "practice-session-pane practice-session-scroll-hidden h-0 min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain bg-[var(--primary-0)] [overflow-anchor:none]",
-                contentPaddingClass,
+                "practice-session-pane practice-session-scroll-hidden h-0 min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain [overflow-anchor:none]",
+                inLessonCard ? "bg-white" : paneBgClass,
+                inLessonCard && hasVideo ? "p-0" : contentPaddingClass,
                 !hasVideo && "pt-0",
               )}
             >
