@@ -1,8 +1,8 @@
 const PRACTICE_SESSION_ACCESSIBILITY_PANEL_OVERLAY_CLASS =
-  "fixed inset-0 z-[110] flex items-center justify-center bg-[rgba(13,13,18,0.24)] p-6"
+  "fixed inset-0 z-[110] flex items-center justify-center overflow-y-auto bg-[rgba(13,13,18,0.24)] p-4 sm:p-6"
 
 const PRACTICE_SESSION_ACCESSIBILITY_PANEL_CLASS =
-  "flex max-h-[min(720px,calc(100vh-3rem))] w-full max-w-[640px] flex-col overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
+  "my-auto flex w-full max-w-[640px] flex-col overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white shadow-[0px_24px_24px_rgba(13,13,18,0.12)] max-h-[min(720px,calc(100vh-2rem))]"
 
 const PRACTICE_SESSION_ACCESSIBILITY_PANEL_HEADER_CLASS =
   "flex shrink-0 items-center justify-between border-b border-[#dfe1e7] px-6 py-4"
@@ -17,7 +17,7 @@ const PRACTICE_SESSION_ACCESSIBILITY_PANEL_TIMER_CLASS =
   "flex shrink-0 items-center gap-2 border-b border-[#f8d5d9] bg-[#fff1f2] px-6 py-3 text-sm font-semibold tracking-[0.28px] text-[#df1c41]"
 
 const PRACTICE_SESSION_ACCESSIBILITY_PANEL_TABS_CLASS =
-  "flex shrink-0 items-center gap-6 border-b border-[#dfe1e7] px-6"
+  "flex shrink-0 items-center gap-6 overflow-x-auto border-b border-[#dfe1e7] px-6"
 
 const PRACTICE_SESSION_ACCESSIBILITY_PANEL_TAB_CLASS =
   "relative -mb-px border-b-2 border-transparent py-4 text-sm font-medium tracking-[0.28px] text-[#666d80] transition-colors"
@@ -50,7 +50,7 @@ const PRACTICE_SESSION_ACCESSIBILITY_PANEL_RADIO_DOT_CLASS =
   "size-2.5 rounded-full bg-[#0d47a1]"
 
 const PRACTICE_SESSION_ACCESSIBILITY_PANEL_SWATCH_CLASS =
-  "flex min-h-[44px] flex-1 items-center rounded-[8px] px-4 text-sm font-medium tracking-[0.28px]"
+  "flex min-h-[44px] flex-1 items-center rounded-[8px] border border-[#dfe1e7] px-4 text-sm font-medium tracking-[0.28px]"
 
 const PRACTICE_SESSION_ACCESSIBILITY_PANEL_FOOTER_CLASS =
   "flex shrink-0 items-center justify-end gap-3 border-t border-[#dfe1e7] px-6 py-4"

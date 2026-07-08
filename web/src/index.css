@@ -1960,17 +1960,13 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
 
 .practice-session-card--active-drill .practice-session-footer .practice-session-question-nav-grid {
   flex-wrap: nowrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   gap: 8px;
-  min-height: 32px;
+  min-height: 48px;
   height: auto;
   overflow-x: auto;
-  overflow-y: visible;
-}
-
-.practice-session-card--active-drill .practice-session-footer {
-  overflow: visible;
+  overflow-y: hidden;
 }
 
 .practice-session-card--active-drill .practice-session-question-nav-btn {

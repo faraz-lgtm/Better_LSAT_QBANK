@@ -141,31 +141,38 @@ const ACTIVE_DRILL_NAV_ARROW_BUTTON_CLASS =
 const ACTIVE_DRILL_FOOTER_NAV_ARROW_BUTTON_CLASS =
   "box-border inline-flex h-8 min-w-[72px] shrink-0 items-center justify-center gap-1 rounded-[8px] border border-[#dfe1e7] bg-[#f6f8fa] px-2 text-sm font-medium leading-none tracking-[0.28px] text-[#4a5568] transition hover:bg-white disabled:pointer-events-none disabled:text-[#a4acb9] [&_svg]:size-3.5"
 
+/** Figma `19641:45187` — flag spacer + control column (prev/next) */
+const ACTIVE_DRILL_FOOTER_NAV_ARROW_COLUMN_CLASS = "flex shrink-0 flex-col items-center gap-1"
+
 /** Figma `19641:45187` — compact arrow-only control (blind review overrides) */
 const ACTIVE_DRILL_NAV_ARROW_ICON_BUTTON_CLASS =
   "box-border inline-flex size-12 shrink-0 items-center justify-center rounded-[20px] border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#f0f5ff] disabled:pointer-events-none"
 
 /** Figma `19641:45187` — centered question number row */
 const ACTIVE_DRILL_FOOTER_NAV_GRID_CLASS =
-  "practice-session-question-nav-grid practice-session-scroll-hidden flex min-h-8 min-w-0 max-w-full flex-nowrap items-center justify-center gap-2 overflow-x-auto overflow-y-visible"
+  "practice-session-question-nav-grid practice-session-scroll-hidden flex min-h-12 min-w-0 max-w-full flex-nowrap items-start justify-center gap-2 overflow-x-auto overflow-y-hidden"
 
 /** Figma `19641:45187` — prev, numbers, and next as one centered group */
 const ACTIVE_DRILL_FOOTER_NAV_CLUSTER_CLASS =
-  "flex min-w-0 max-w-full items-center justify-center gap-2"
+  "flex min-w-0 max-w-full items-start justify-center gap-2"
 
 /** Figma drill footer — white shell */
 const ACTIVE_DRILL_FOOTER_CLASS =
-  "box-border flex min-h-[72px] shrink-0 flex-col items-center justify-center overflow-visible rounded-none border-t border-[#dfe1e7] bg-white px-6 py-3"
+  "box-border flex min-h-[72px] shrink-0 flex-col items-center justify-center rounded-none border-t border-[#dfe1e7] bg-white px-6 py-3"
 
 const ACTIVE_DRILL_FOOTER_ROW_CLASS =
-  "flex min-h-8 w-full min-w-0 items-center justify-center overflow-visible pt-4"
+  "flex min-h-[56px] w-full min-w-0 items-center justify-center"
 
 /** Figma `19641:45187` — flagged question indicator above pill */
 const ACTIVE_DRILL_QUESTION_NAV_FLAG_CLASS =
-  "pointer-events-none absolute -top-4 left-1/2 size-3 -translate-x-1/2 fill-[#0d47a1] text-[#0d47a1]"
+  "size-3 shrink-0 fill-[#0d47a1] text-[#0d47a1]"
 
-/** Figma `19641:45187` — question pill with optional absolute flag */
-const ACTIVE_DRILL_QUESTION_NAV_ITEM_CLASS = "relative w-8 shrink-0"
+const ACTIVE_DRILL_QUESTION_NAV_FLAG_SLOT_CLASS =
+  "flex h-3 w-8 shrink-0 items-center justify-center"
+
+/** Figma `19641:45187` — question pill + optional flag stack */
+const ACTIVE_DRILL_QUESTION_NAV_ITEM_CLASS =
+  "flex w-8 shrink-0 flex-col items-center gap-1"
 
 /** Figma `19641:45187` — square question number pill */
 const ACTIVE_DRILL_QUESTION_NAV_BUTTON_CLASS =
@@ -196,6 +203,7 @@ export {
   ACTIVE_DRILL_FINISH_BUTTON_CLASS,
   ACTIVE_DRILL_FOOTER_CLASS,
   ACTIVE_DRILL_FOOTER_NAV_ARROW_BUTTON_CLASS,
+  ACTIVE_DRILL_FOOTER_NAV_ARROW_COLUMN_CLASS,
   ACTIVE_DRILL_FOOTER_NAV_CLUSTER_CLASS,
   ACTIVE_DRILL_FOOTER_NAV_GRID_CLASS,
   ACTIVE_DRILL_FOOTER_ROW_CLASS,
@@ -206,6 +214,7 @@ export {
   ACTIVE_DRILL_QUESTION_NAV_BUTTON_CLASS,
   ACTIVE_DRILL_QUESTION_NAV_BUTTON_DEFAULT_CLASS,
   ACTIVE_DRILL_QUESTION_NAV_FLAG_CLASS,
+  ACTIVE_DRILL_QUESTION_NAV_FLAG_SLOT_CLASS,
   ACTIVE_DRILL_QUESTION_NAV_ITEM_CLASS,
   ACTIVE_DRILL_OPTION_EYE_BUTTON_CLASS,
   ACTIVE_DRILL_OPTIONS_LIST_CLASS,

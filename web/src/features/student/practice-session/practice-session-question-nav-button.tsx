@@ -6,6 +6,7 @@ import {
   ACTIVE_DRILL_QUESTION_NAV_BUTTON_CLASS,
   ACTIVE_DRILL_QUESTION_NAV_BUTTON_DEFAULT_CLASS,
   ACTIVE_DRILL_QUESTION_NAV_FLAG_CLASS,
+  ACTIVE_DRILL_QUESTION_NAV_FLAG_SLOT_CLASS,
   ACTIVE_DRILL_QUESTION_NAV_ITEM_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { BLIND_REVIEW_QUESTION_NAV_RECOMMENDED_CLASS } from "@/features/student/practice-session/practice-session-blind-review-styles"
@@ -72,6 +73,11 @@ function PracticeSessionQuestionNavButton({
   if (isActiveDrill) {
     return (
       <div className={ACTIVE_DRILL_QUESTION_NAV_ITEM_CLASS}>
+        <span className={ACTIVE_DRILL_QUESTION_NAV_FLAG_SLOT_CLASS} aria-hidden>
+          {flagged ? (
+            <Flag className={ACTIVE_DRILL_QUESTION_NAV_FLAG_CLASS} strokeWidth={2} aria-hidden />
+          ) : null}
+        </span>
         <button
           type="button"
           onClick={onClick}
@@ -88,9 +94,6 @@ function PracticeSessionQuestionNavButton({
         >
           {number}
         </button>
-        {flagged ? (
-          <Flag className={ACTIVE_DRILL_QUESTION_NAV_FLAG_CLASS} strokeWidth={2} aria-hidden />
-        ) : null}
       </div>
     )
   }

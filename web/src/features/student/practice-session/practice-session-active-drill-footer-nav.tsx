@@ -1,8 +1,10 @@
 import {
   ACTIVE_DRILL_FOOTER_NAV_ARROW_BUTTON_CLASS,
+  ACTIVE_DRILL_FOOTER_NAV_ARROW_COLUMN_CLASS,
   ACTIVE_DRILL_FOOTER_NAV_CLUSTER_CLASS,
   ACTIVE_DRILL_FOOTER_NAV_GRID_CLASS,
   ACTIVE_DRILL_FOOTER_ROW_CLASS,
+  ACTIVE_DRILL_QUESTION_NAV_FLAG_SLOT_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeSessionNavArrowButton } from "@/features/student/practice-session/practice-session-nav-arrow-button"
 import { PracticeSessionQuestionNavButton } from "@/features/student/practice-session/practice-session-question-nav-button"
@@ -35,12 +37,15 @@ function PracticeSessionActiveDrillFooterNav({
   return (
     <div className={cn(ACTIVE_DRILL_FOOTER_ROW_CLASS, className)}>
       <div className={ACTIVE_DRILL_FOOTER_NAV_CLUSTER_CLASS}>
-        <PracticeSessionNavArrowButton
-          direction="prev"
-          disabled={safeIndex <= 1}
-          className={ACTIVE_DRILL_FOOTER_NAV_ARROW_BUTTON_CLASS}
-          onClick={onPrev}
-        />
+        <div className={ACTIVE_DRILL_FOOTER_NAV_ARROW_COLUMN_CLASS}>
+          <span className={ACTIVE_DRILL_QUESTION_NAV_FLAG_SLOT_CLASS} aria-hidden />
+          <PracticeSessionNavArrowButton
+            direction="prev"
+            disabled={safeIndex <= 1}
+            className={ACTIVE_DRILL_FOOTER_NAV_ARROW_BUTTON_CLASS}
+            onClick={onPrev}
+          />
+        </div>
         <div className={ACTIVE_DRILL_FOOTER_NAV_GRID_CLASS}>
           {questions.map((q, i) => {
             const n = i + 1
@@ -57,12 +62,15 @@ function PracticeSessionActiveDrillFooterNav({
             )
           })}
         </div>
-        <PracticeSessionNavArrowButton
-          direction="next"
-          disabled={safeIndex >= questions.length}
-          className={ACTIVE_DRILL_FOOTER_NAV_ARROW_BUTTON_CLASS}
-          onClick={onNext}
-        />
+        <div className={ACTIVE_DRILL_FOOTER_NAV_ARROW_COLUMN_CLASS}>
+          <span className={ACTIVE_DRILL_QUESTION_NAV_FLAG_SLOT_CLASS} aria-hidden />
+          <PracticeSessionNavArrowButton
+            direction="next"
+            disabled={safeIndex >= questions.length}
+            className={ACTIVE_DRILL_FOOTER_NAV_ARROW_BUTTON_CLASS}
+            onClick={onNext}
+          />
+        </div>
       </div>
     </div>
   )
