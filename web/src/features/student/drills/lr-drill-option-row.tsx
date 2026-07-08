@@ -3,9 +3,11 @@ import { Eye, EyeOff } from "lucide-react"
 
 import {
   ACTIVE_DRILL_CHOICE_ROW_GRID_CLASS,
+  ACTIVE_DRILL_CHOICE_ROW_GRID_WITH_ACTION_CLASS,
   ACTIVE_DRILL_OPTION_EYE_BUTTON_CLASS,
   ACTIVE_DRILL_OPTION_LETTER_SELECTED_CLASS,
   ACTIVE_DRILL_OPTION_LETTER_UNSELECTED_CLASS,
+  ACTIVE_DRILL_OPTION_ROW_MASKED_CLASS,
   ACTIVE_DRILL_OPTION_ROW_SELECTED_CLASS,
   ACTIVE_DRILL_OPTION_ROW_UNSELECTED_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
@@ -23,12 +25,15 @@ type LrDrillOptionRowProps = {
   findQuery?: string
   regionKey?: RegionKey
   selected: boolean
-  hidden: boolean
+  hidden?: boolean
+  masked?: boolean
+  maskingMode?: boolean
   disabled?: boolean
   selectedIndex?: number | null
   allowReselect?: boolean
   onSelect: () => void
-  onToggleHidden: () => void
+  onToggleHidden?: () => void
+  onToggleMasked?: () => void
   toolMode?: PracticeToolMode
   onContentMouseUp?: (
     regionKey: RegionKey,
@@ -37,6 +42,8 @@ type LrDrillOptionRowProps = {
   ) => void
   onContentClick?: (regionKey: RegionKey, container: HTMLElement | null, event: MouseEvent) => void
   variant?: PracticeSessionVariant
+  /** When false, hide control is rendered by the side action rail instead */
+  showSideAction?: boolean
 }
 
 const LrDrillOptionRow = memo(function LrDrillOptionRow({
@@ -45,16 +52,20 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
   findQuery,
   regionKey = "mock-choice",
   selected,
-  hidden,
+  hidden = false,
+  masked = false,
+  maskingMode = false,
   disabled,
   selectedIndex = null,
   allowReselect = false,
   onSelect,
   onToggleHidden,
+  onToggleMasked,
   toolMode,
   onContentMouseUp,
   onContentClick,
   variant = "default",
+  showSideAction = true,
 }: LrDrillOptionRowProps) {
   const letter = letters[index] ?? String(index + 1)
   const isActiveDrill = variant === "active-drill"
@@ -73,9 +84,10 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
         className={cn(
           "min-w-0 flex-1",
           isActiveDrill || isBlindReview
-            ? "text-base leading-[1.5] tracking-[0.32px] text-[#0d0d12]"
+            ? "text-[1em] leading-[1.5] tracking-[0.32px] text-[color:inherit]"
             : "pt-0.5",
-          hidden && (isBlindReview ? "line-through" : "line-through opacity-60"),
+          hidden && isBlindReview && "line-through",
+          hidden && !isBlindReview && !isActiveDrill && "line-through opacity-60",
         )}
       />
     ) : (
@@ -87,6 +99,10 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
 
   function handleSelect() {
     if (disabled || annotateMode) return
+    if (maskingMode) {
+      onToggleMasked?.()
+      return
+    }
     const selection = window.getSelection()
     if (selection && !selection.isCollapsed) return
     if (allowReselect || selectedIndex == null || selectedIndex !== index) onSelect()
@@ -137,7 +153,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
           aria-label={hidden ? "Show answer choice" : "Hide answer choice"}
           onClick={(e) => {
             e.stopPropagation()
-            onToggleHidden()
+            onToggleHidden?.()
           }}
         >
           {hidden ? (
@@ -166,37 +182,46 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
           }
         }}
         className={cn(
-          ACTIVE_DRILL_CHOICE_ROW_GRID_CLASS,
+          showSideAction ? ACTIVE_DRILL_CHOICE_ROW_GRID_WITH_ACTION_CLASS : ACTIVE_DRILL_CHOICE_ROW_GRID_CLASS,
           "text-left transition-[background-color,box-shadow,border-color]",
+          masked && ACTIVE_DRILL_OPTION_ROW_MASKED_CLASS,
           selected ? ACTIVE_DRILL_OPTION_ROW_SELECTED_CLASS : ACTIVE_DRILL_OPTION_ROW_UNSELECTED_CLASS,
-          disabled ? "cursor-default" : annotateMode ? "cursor-text" : "cursor-pointer",
+          disabled ? "cursor-default" : annotateMode ? "cursor-text" : maskingMode ? "cursor-pointer" : "cursor-pointer",
         )}
+        aria-label={
+          masked
+            ? `Answer choice ${letter}, masked`
+            : maskingMode
+              ? `Answer choice ${letter}, click to mask`
+              : undefined
+        }
       >
         <span
           className={cn(
             "col-start-1 flex size-8 items-center justify-center self-start rounded-[12px]",
             selected ? ACTIVE_DRILL_OPTION_LETTER_SELECTED_CLASS : ACTIVE_DRILL_OPTION_LETTER_UNSELECTED_CLASS,
-            hidden && "line-through",
           )}
         >
           {letter}
         </span>
         <div className="col-start-3 min-w-0 self-start">{choiceContent}</div>
-        <button
-          type="button"
-          className={cn(ACTIVE_DRILL_OPTION_EYE_BUTTON_CLASS, "col-start-4 self-start")}
+        {showSideAction ? (
+          <button
+            type="button"
+            className={cn(ACTIVE_DRILL_OPTION_EYE_BUTTON_CLASS, "col-start-4 self-start")}
             aria-label={hidden ? "Show answer choice" : "Hide answer choice"}
             onClick={(e) => {
               e.stopPropagation()
-              onToggleHidden()
+              onToggleHidden?.()
             }}
           >
             {hidden ? (
-              <EyeOff className="size-6" strokeWidth={2} aria-hidden />
+              <Eye className="size-5" strokeWidth={2} aria-hidden />
             ) : (
-            <Eye className="size-6" strokeWidth={2} aria-hidden />
-          )}
-        </button>
+              <EyeOff className="size-5" strokeWidth={2} aria-hidden />
+            )}
+          </button>
+        ) : null}
       </div>
     )
   }
@@ -247,7 +272,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
           aria-label={hidden ? "Show answer choice" : "Hide answer choice"}
           onClick={(e) => {
             e.stopPropagation()
-            onToggleHidden()
+            onToggleHidden?.()
           }}
         >
           <Eye className="size-4" strokeWidth={2} aria-hidden />

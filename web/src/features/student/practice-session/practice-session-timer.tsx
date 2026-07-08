@@ -9,7 +9,7 @@ type PracticeSessionTimerProps = {
   label?: string
   displaySeconds: number
   paused: boolean
-  onTogglePause: () => void
+  onPauseRequest: () => void
   onReset?: () => void
   progress: number
   displayClassName?: string
@@ -21,7 +21,7 @@ function PracticeSessionTimer({
   label = "Elapsed",
   displaySeconds,
   paused,
-  onTogglePause,
+  onPauseRequest,
   onReset,
   progress,
   displayClassName,
@@ -62,14 +62,17 @@ function PracticeSessionTimer({
         <span className="shrink-0 text-sm font-medium leading-none tracking-[0.02em] text-[#666d80]">
           {label}
         </span>
-        <span
+        <button
+          type="button"
           className={cn(
-            "shrink-0 text-sm font-bold leading-none tabular-nums tracking-[0.02em] text-[#062357]",
+            "shrink-0 rounded-[6px] text-sm font-bold leading-none tabular-nums tracking-[0.02em] text-[#062357] transition hover:bg-[#f6f8fa]",
             displayClassName,
           )}
+          aria-label={paused ? "Section paused" : "Pause section timer"}
+          onClick={onPauseRequest}
         >
           {formatPracticeElapsed(displaySeconds)}
-        </span>
+        </button>
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {onReset ? (
             <button
@@ -100,8 +103,8 @@ function PracticeSessionTimer({
           <button
             type="button"
             className="inline-flex size-4 shrink-0 items-center justify-center text-[#666d80] transition hover:text-[#062357]"
-            aria-label={paused ? "Resume timer" : "Pause timer"}
-            onClick={onTogglePause}
+            aria-label={paused ? "Section paused" : "Pause section timer"}
+            onClick={onPauseRequest}
           >
             {paused ? (
               <svg
@@ -114,9 +117,17 @@ function PracticeSessionTimer({
                 aria-hidden
               >
                 <path
-                  d="M6 4.5L11.5 8L6 11.5V4.5Z"
+                  d="M11.2495 4.00009H9.74951C9.3353 4.00009 8.99951 4.22395 8.99951 4.50009V11.5001C8.99951 11.7762 9.3353 12.0001 9.74951 12.0001H11.2495C11.6637 12.0001 11.9995 11.7762 11.9995 11.5001V4.50009C11.9995 4.22395 11.6637 4.00009 11.2495 4.00009Z"
                   stroke="currentColor"
-                  strokeWidth="1.5"
+                  strokeWidth="1.33333"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M6.24951 4.00009H4.74951C4.3353 4.00009 3.99951 4.22395 3.99951 4.50009V11.5001C3.99951 11.7762 4.3353 12.0001 4.74951 12.0001H6.24951C6.66373 12.0001 6.99951 11.7762 6.99951 11.5001V4.50009C6.99951 4.22395 6.66373 4.00009 6.24951 4.00009Z"
+                  stroke="currentColor"
+                  strokeWidth="1.33333"
+                  strokeLinecap="round"
                   strokeLinejoin="round"
                 />
               </svg>

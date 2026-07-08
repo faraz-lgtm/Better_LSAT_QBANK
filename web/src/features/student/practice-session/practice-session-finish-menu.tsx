@@ -1,15 +1,22 @@
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react"
 
 import {
-  FINISH_MENU_EXIT_ITEM_CLASS,
+  ACTIVE_DRILL_HEADER_MORE_BUTTON_CLASS,
+  FINISH_MENU_ACTION_ITEM_CLASS,
+  FINISH_MENU_ACTION_ITEM_ICON_CLASS,
+  FINISH_MENU_ACTIONS_PANEL_CLASS,
   FINISH_MENU_OPEN_PANEL_CLASS,
   FINISH_MENU_OPEN_TRIGGER_CLASS,
-  FINISH_MENU_SUBMIT_ITEM_CLASS,
+  FINISH_MENU_PANEL_WIDTH_PX,
   FINISH_MENU_WIDTH_PX,
   SESSION_FINISH_BUTTON_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import {
+  FinishMenuSaveExitIcon,
+  FinishMenuSubmitIcon,
+} from "@/features/student/practice-session/practice-session-finish-menu-icons"
 import { cn } from "@/lib/utils"
 
 /** Above section-intro overlay (`z-[100]`) and practice modals. */
@@ -18,11 +25,14 @@ const MENU_Z_INDEX = 110
 type PracticeSessionFinishMenuProps = {
   disabled?: boolean
   finishing?: boolean
-  /** When true, only shows Exit (saved progress) — no submit action. */
+  /** When true, only shows Save & Exit — no submit action. */
   exitOnly?: boolean
   finishLabel?: string
   submitLabel?: string
+  exitLabel?: string
   buttonClassName?: string
+  /** Icon-only more menu trigger for exam header */
+  iconTrigger?: boolean
   onSubmitSection: () => void
   onExit: () => void
 }
@@ -33,7 +43,9 @@ function PracticeSessionFinishMenu({
   exitOnly = false,
   finishLabel,
   submitLabel = "Submit Section",
+  exitLabel = "Save & Exit",
   buttonClassName,
+  iconTrigger = false,
   onSubmitSection,
   onExit,
 }: PracticeSessionFinishMenuProps) {
@@ -57,7 +69,7 @@ function PracticeSessionFinishMenu({
       const rect = trigger.getBoundingClientRect()
       setMenuPosition({
         top: rect.top,
-        left: rect.left,
+        left: rect.right - FINISH_MENU_PANEL_WIDTH_PX,
       })
     }
 
@@ -111,7 +123,7 @@ function PracticeSessionFinishMenu({
               position: "fixed",
               top: menuPosition.top,
               left: menuPosition.left,
-              width: FINISH_MENU_WIDTH_PX,
+              width: FINISH_MENU_PANEL_WIDTH_PX,
               zIndex: MENU_Z_INDEX,
             }}
             className={FINISH_MENU_OPEN_PANEL_CLASS}
@@ -126,33 +138,34 @@ function PracticeSessionFinishMenu({
             >
               {triggerContent(true)}
             </button>
-            {exitOnly ? null : (
+            <div className={FINISH_MENU_ACTIONS_PANEL_CLASS}>
+              {exitOnly ? null : (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={FINISH_MENU_ACTION_ITEM_CLASS}
+                  onClick={() => {
+                    setOpen(false)
+                    onSubmitSection()
+                  }}
+                >
+                  <FinishMenuSubmitIcon className={FINISH_MENU_ACTION_ITEM_ICON_CLASS} />
+                  <span>{submitLabel}</span>
+                </button>
+              )}
               <button
                 type="button"
                 role="menuitem"
-                className={FINISH_MENU_SUBMIT_ITEM_CLASS}
+                className={FINISH_MENU_ACTION_ITEM_CLASS}
                 onClick={() => {
                   setOpen(false)
-                  onSubmitSection()
+                  onExit()
                 }}
               >
-                {submitLabel}
+                <FinishMenuSaveExitIcon className={FINISH_MENU_ACTION_ITEM_ICON_CLASS} />
+                <span>{exitLabel}</span>
               </button>
-            )}
-            <button
-              type="button"
-              role="menuitem"
-              className={cn(FINISH_MENU_EXIT_ITEM_CLASS, exitOnly && "border-t border-[#dfe1e7]")}
-              onClick={() => {
-                setOpen(false)
-                onExit()
-              }}
-            >
-              <div className="whitespace-nowrap">
-                <p className="mb-0 leading-[1.5]">Exit</p>
-                <p className="leading-[1.5]">(Saved Progress)</p>
-              </div>
-            </button>
+            </div>
           </div>,
           document.body,
         )
@@ -160,20 +173,33 @@ function PracticeSessionFinishMenu({
 
   return (
     <>
-      <div ref={containerRef} className="relative h-[52px] shrink-0" style={{ width: FINISH_MENU_WIDTH_PX }}>
+      <div
+        ref={containerRef}
+        className={cn("relative shrink-0", iconTrigger ? "h-[52px] w-[52px]" : "h-[52px]")}
+        style={iconTrigger ? undefined : { width: FINISH_MENU_WIDTH_PX }}
+      >
         {!open ? (
           <button
             type="button"
             disabled={disabled || finishing}
-            className={cn("inline-flex w-full items-center justify-between gap-2", closedTriggerClassName)}
+            className={cn(
+              iconTrigger
+                ? ACTIVE_DRILL_HEADER_MORE_BUTTON_CLASS
+                : cn("inline-flex w-full items-center justify-between gap-2", closedTriggerClassName),
+            )}
             aria-haspopup="menu"
             aria-expanded={false}
+            aria-label={iconTrigger ? "More options" : undefined}
             onClick={() => setOpen(true)}
           >
-            {triggerContent(false)}
+            {iconTrigger ? (
+              <MoreHorizontal className="size-5" strokeWidth={2} aria-hidden />
+            ) : (
+              triggerContent(false)
+            )}
           </button>
         ) : (
-          <div className="h-[52px]" style={{ width: FINISH_MENU_WIDTH_PX }} aria-hidden />
+          <div className={iconTrigger ? "size-[52px]" : "h-[52px]"} style={iconTrigger ? undefined : { width: FINISH_MENU_WIDTH_PX }} aria-hidden />
         )}
       </div>
       {openMenu}

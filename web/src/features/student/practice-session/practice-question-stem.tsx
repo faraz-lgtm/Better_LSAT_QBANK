@@ -23,6 +23,8 @@ type PracticeQuestionStemProps = {
   flagsDisabled?: boolean
   hideQuestionNumber?: boolean
   variant?: PracticeSessionVariant
+  /** When false, flag is rendered by the side action rail instead */
+  showSideFlag?: boolean
 }
 
 function PracticeQuestionStem({
@@ -38,6 +40,7 @@ function PracticeQuestionStem({
   flagsDisabled,
   hideQuestionNumber = false,
   variant = "default",
+  showSideFlag = true,
 }: PracticeQuestionStemProps) {
   const isActiveDrill = variant === "active-drill"
 
@@ -51,17 +54,19 @@ function PracticeQuestionStem({
             findQuery={findQuery}
             scrollAnchor
             as="div"
-            className="col-start-1 min-w-0 text-lg leading-[1.35] text-[#0d0d12] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-7 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
+            className="min-w-0 text-lg leading-[1.35] text-[#0d0d12] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-7 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
             toolMode={toolMode}
             onMouseUp={onContentMouseUp}
             onClickCapture={onContentClick}
           />
-          <PracticeQuestionFlagButton
-            flagged={flagged}
-            onToggle={onToggleFlag}
-            disabled={flagsDisabled}
-            className={cn(ACTIVE_DRILL_ACTION_BUTTON_CLASS, "col-start-2", flagged && "text-[#0d47a1]")}
-          />
+          {showSideFlag ? (
+            <PracticeQuestionFlagButton
+              flagged={flagged}
+              onToggle={onToggleFlag}
+              disabled={flagsDisabled}
+              className={cn(ACTIVE_DRILL_ACTION_BUTTON_CLASS, flagged && "text-[#0d47a1]")}
+            />
+          ) : null}
         </div>
       </div>
     )

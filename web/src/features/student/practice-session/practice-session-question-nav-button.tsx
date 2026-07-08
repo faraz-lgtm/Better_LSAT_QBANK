@@ -1,5 +1,13 @@
 import { Flag } from "lucide-react"
 
+import {
+  ACTIVE_DRILL_QUESTION_NAV_BUTTON_ACTIVE_CLASS,
+  ACTIVE_DRILL_QUESTION_NAV_BUTTON_ANSWERED_CLASS,
+  ACTIVE_DRILL_QUESTION_NAV_BUTTON_CLASS,
+  ACTIVE_DRILL_QUESTION_NAV_BUTTON_DEFAULT_CLASS,
+  ACTIVE_DRILL_QUESTION_NAV_FLAG_CLASS,
+  ACTIVE_DRILL_QUESTION_NAV_ITEM_CLASS,
+} from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { BLIND_REVIEW_QUESTION_NAV_RECOMMENDED_CLASS } from "@/features/student/practice-session/practice-session-blind-review-styles"
 import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
@@ -62,39 +70,27 @@ function PracticeSessionQuestionNavButton({
   }
 
   if (isActiveDrill) {
-    const filled = active || answered
-
     return (
-      <div className="flex w-8 shrink-0 flex-col items-center gap-1.5">
-        {active ? (
-          <span className="h-2 w-1 shrink-0 rounded-sm bg-[#062357]" aria-hidden />
-        ) : (
-          <span className="h-2 w-1 shrink-0" aria-hidden />
-        )}
+      <div className={ACTIVE_DRILL_QUESTION_NAV_ITEM_CLASS}>
         <button
           type="button"
           onClick={onClick}
           className={cn(
-            "practice-session-question-nav-btn relative shrink-0 text-sm font-semibold tracking-[0.28px] transition-colors",
-            filled
-              ? "border border-[#0d47a1] bg-[#0d47a1] text-white"
-              : "border border-[#dfe1e7] bg-white text-[#062357]",
+            ACTIVE_DRILL_QUESTION_NAV_BUTTON_CLASS,
+            active
+              ? ACTIVE_DRILL_QUESTION_NAV_BUTTON_ACTIVE_CLASS
+              : answered
+                ? ACTIVE_DRILL_QUESTION_NAV_BUTTON_ANSWERED_CLASS
+                : ACTIVE_DRILL_QUESTION_NAV_BUTTON_DEFAULT_CLASS,
           )}
           aria-current={active ? "true" : undefined}
           aria-label={flagged ? `Question ${number}, flagged` : `Question ${number}`}
         >
           {number}
-          {flagged ? (
-            <Flag
-              className={cn(
-                "absolute -right-0.5 -top-0.5 size-2.5",
-                filled ? "fill-white text-white" : "fill-[#0d47a1] text-[#0d47a1]",
-              )}
-              strokeWidth={2}
-              aria-hidden
-            />
-          ) : null}
         </button>
+        {flagged ? (
+          <Flag className={ACTIVE_DRILL_QUESTION_NAV_FLAG_CLASS} strokeWidth={2} aria-hidden />
+        ) : null}
       </div>
     )
   }

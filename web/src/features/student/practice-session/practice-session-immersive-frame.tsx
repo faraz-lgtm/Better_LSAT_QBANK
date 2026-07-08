@@ -4,7 +4,7 @@ import { createPortal } from "react-dom"
 import { cn } from "@/lib/utils"
 
 const IMMERSIVE_SCRIM_BACKDROP_STYLE = {
-  background: "#041a44",
+  background: "#F2F4F7",
   backdropFilter: "blur(3px)",
   WebkitBackdropFilter: "blur(3px)",
 } as const
@@ -35,7 +35,7 @@ function PracticeSessionImmersiveFrame({ children, className }: PracticeSessionI
         style={IMMERSIVE_SCRIM_BACKDROP_STYLE}
         aria-hidden
       />
-      <div className="relative flex h-full max-h-full w-full max-w-[1280px] min-h-0 min-w-0 flex-col">
+      <div className="relative flex h-auto max-h-full w-full max-w-[1440px] min-w-0 flex-col items-stretch">
         {children}
       </div>
     </div>,

@@ -1,7 +1,10 @@
 import type { ReactNode } from "react"
 
 import { Input } from "@/components/ui/input"
-import { ACTIVE_DRILL_FIND_TEXT_INPUT_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import {
+  ACTIVE_DRILL_FIND_TEXT_INPUT_CLASS,
+  ACTIVE_DRILL_HEADER_PROGRESS_CLASS,
+} from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeSessionTimer } from "@/features/student/practice-session/practice-session-timer"
 import { PracticeSessionToolbar } from "@/features/student/practice-session/practice-session-toolbar"
 import type { HighlightColor, PracticeSessionVariant, PracticeToolMode } from "@/features/student/practice-session/practice-session-types"
@@ -28,12 +31,13 @@ type PracticeSessionHeaderProps = {
   timerLabel?: string
   timerDisplaySeconds: number
   timerPaused: boolean
-  onToggleTimerPause: () => void
+  onTimerPauseRequest: () => void
   onResetTimer?: () => void
   timerProgress: number
   timerDisplayClassName?: string
   showTimer?: boolean
   titleClassName?: string
+  questionProgressLabel?: string | null
   finishButton: ReactNode
 }
 
@@ -58,41 +62,38 @@ function PracticeSessionHeader({
   timerLabel,
   timerDisplaySeconds,
   timerPaused,
-  onToggleTimerPause,
+  onTimerPauseRequest,
   onResetTimer,
   timerProgress,
   timerDisplayClassName,
   showTimer = true,
   titleClassName,
+  questionProgressLabel,
   finishButton,
 }: PracticeSessionHeaderProps) {
   const isActiveDrill = variant === "active-drill"
 
   if (isActiveDrill) {
     return (
-      <header className="practice-session-header practice-session-header--active-drill flex h-20 shrink-0 items-center overflow-hidden rounded-t-[16px] border-b border-[#dfe1e7] bg-[#f6f8fa] px-6 py-3">
-        <div className="flex w-full min-w-0 items-center gap-6 overflow-hidden">
-          <div className="min-w-0 flex-1 basis-0 overflow-hidden pr-1">
+      <header className="practice-session-header practice-session-header--active-drill flex h-20 shrink-0 items-center overflow-hidden rounded-none border-b border-[#dfe1e7] bg-white px-6 py-3">
+        <div className="flex w-full min-w-0 items-center justify-between gap-4 overflow-hidden lg:gap-6">
+          <div className="practice-session-scroll-hidden flex min-w-0 flex-1 items-center gap-4 overflow-x-auto lg:gap-6">
             <p
               className={cn(
-                "m-0 truncate font-bold leading-[1.3] text-[#062357]",
-                titleClassName ?? "text-2xl",
+                "m-0 max-w-[220px] shrink-0 truncate font-bold leading-[1.3] text-[#062357] lg:max-w-[280px]",
+                titleClassName ?? "text-[20px]",
               )}
               title={title}
             >
               {title}
             </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-6">
-            <div className="relative hidden shrink-0 md:block">
-              <input
-                type="search"
-                placeholder="Find Text"
-                value={findQuery}
-                onChange={(e) => onFindQueryChange(e.target.value)}
-                className={ACTIVE_DRILL_FIND_TEXT_INPUT_CLASS}
-              />
-            </div>
+            <input
+              type="search"
+              placeholder="Find Text, Type Here"
+              value={findQuery}
+              onChange={(e) => onFindQueryChange(e.target.value)}
+              className={ACTIVE_DRILL_FIND_TEXT_INPUT_CLASS}
+            />
             <PracticeSessionToolbar
               variant={variant}
               activeColor={activeColor}
@@ -109,12 +110,17 @@ function PracticeSessionHeader({
               onToggleBold={onToggleBold}
               onToggleItalic={onToggleItalic}
             />
+          </div>
+          <div className="flex shrink-0 items-center gap-4 lg:gap-6">
+            {questionProgressLabel ? (
+              <span className={ACTIVE_DRILL_HEADER_PROGRESS_CLASS}>{questionProgressLabel}</span>
+            ) : null}
             {showTimer ? (
               <PracticeSessionTimer
                 label={timerLabel}
                 displaySeconds={timerDisplaySeconds}
                 paused={timerPaused}
-                onTogglePause={onToggleTimerPause}
+                onPauseRequest={onTimerPauseRequest}
                 onReset={onResetTimer}
                 progress={timerProgress}
                 displayClassName={timerDisplayClassName}
@@ -178,7 +184,7 @@ function PracticeSessionHeader({
             label={timerLabel}
             displaySeconds={timerDisplaySeconds}
             paused={timerPaused}
-            onTogglePause={onToggleTimerPause}
+            onPauseRequest={onTimerPauseRequest}
             onReset={onResetTimer}
             progress={timerProgress}
             displayClassName={timerDisplayClassName}
