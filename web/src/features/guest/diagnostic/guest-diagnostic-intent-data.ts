@@ -1,4 +1,5 @@
 import type { GuestDiagnosticIntentOption } from "@/features/guest/diagnostic/guest-diagnostic-intent-types"
+import { DIAGNOSTIC_INTENT_STORAGE_KEY } from "@/lib/auth/diagnostic-intent"
 
 /** Figma `19510:19017` — guest diagnostic intent options */
 const GUEST_DIAGNOSTIC_INTENT_OPTIONS: ReadonlyArray<GuestDiagnosticIntentOption> = [
@@ -29,6 +30,7 @@ const GUEST_DIAGNOSTIC_INTENT_OPTIONS: ReadonlyArray<GuestDiagnosticIntentOption
   },
 ] as const
 
-const GUEST_DIAGNOSTIC_INTENT_STORAGE_KEY = "guestDiagnosticIntent"
+/** @deprecated Use DIAGNOSTIC_INTENT_STORAGE_KEY from @/lib/auth/diagnostic-intent */
+const GUEST_DIAGNOSTIC_INTENT_STORAGE_KEY = DIAGNOSTIC_INTENT_STORAGE_KEY
 
 export { GUEST_DIAGNOSTIC_INTENT_OPTIONS, GUEST_DIAGNOSTIC_INTENT_STORAGE_KEY }

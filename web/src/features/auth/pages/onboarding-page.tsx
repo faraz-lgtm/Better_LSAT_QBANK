@@ -9,11 +9,11 @@ import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { ONBOARDING_RECOMMENDED_LSAT_DATE } from "@/features/auth/onboarding/onboarding-lsat-date-options"
 import { OnboardingWelcomeStep } from "@/features/auth/onboarding/onboarding-welcome-step"
-import { GUEST_DIAGNOSTIC_INTENT_STORAGE_KEY } from "@/features/guest/diagnostic/guest-diagnostic-intent-data"
 import { isGuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
 import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
 import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
+import { hasPendingDiagnosticIntent, isInDiagnosticAcquisitionFunnel, readDiagnosticIntent } from "@/lib/auth/diagnostic-intent"
 import { userNeedsPasswordSetup } from "@/lib/auth/password-setup"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
@@ -75,6 +75,10 @@ function OnboardingPage() {
         ])
         if (!alive) return
         if (!user) return navigate("/login", { replace: true })
+        if (profile && (isInDiagnosticAcquisitionFunnel() || (profile.is_first_time_login && hasPendingDiagnosticIntent()))) {
+          navigate("/diagnostic/start", { replace: true })
+          return
+        }
         if (profile && !profile.is_first_time_login) {
           navigate(await fetchPostAuthDestination(usersApi), { replace: true })
           return
@@ -138,7 +142,7 @@ function OnboardingPage() {
   async function handleWelcomeContinue() {
     if (!validateStep1()) return
 
-    const storedIntent = sessionStorage.getItem(GUEST_DIAGNOSTIC_INTENT_STORAGE_KEY)
+    const storedIntent = readDiagnosticIntent()
     if (!isGuestDiagnosticIntentId(storedIntent)) {
       next()
       return

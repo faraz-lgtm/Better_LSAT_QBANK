@@ -1,4 +1,12 @@
+import type { DrillQuestion } from "@/features/student/drills/drill-types"
+
 import type { GuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-intent-types"
+import {
+  estimateGuestDiagnosticPercentile,
+  estimateGuestDiagnosticScaledScore,
+  type GuestDiagnosticAnswerState,
+  isGuestDiagnosticMockCorrectChoice,
+} from "@/features/guest/diagnostic/guest-diagnostic-exam-utils"
 import { getGuestDiagnosticTestConfig } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
 
 const GUEST_DIAGNOSTIC_RESULT_STORAGE_KEY = "guestDiagnosticResult"
@@ -53,6 +61,39 @@ function buildDefaultGuestDiagnosticResult(intentId: GuestDiagnosticIntentId): G
   }
 }
 
+function buildGuestDiagnosticResultFromAnswers(
+  intentId: GuestDiagnosticIntentId,
+  questions: DrillQuestion[],
+  answersByQuestion: Record<string, GuestDiagnosticAnswerState>,
+): GuestDiagnosticResult {
+  const outcomes: GuestDiagnosticQuestionOutcome[] = questions.map((question) => {
+    const answer = answersByQuestion[question.id]
+    const isCorrect = answer ? answer.isCorrect : false
+    return { questionId: question.id, isCorrect }
+  })
+
+  const correctCount = outcomes.filter((outcome) => outcome.isCorrect).length
+  const questionCount = questions.length
+
+  return {
+    intentId,
+    completedAt: new Date().toISOString(),
+    diagnosticNumber: 1,
+    scaledScore: estimateGuestDiagnosticScaledScore(correctCount, questionCount),
+    percentile: estimateGuestDiagnosticPercentile(correctCount, questionCount),
+    correctCount,
+    questionCount,
+    outcomes,
+  }
+}
+
+function buildGuestDiagnosticAnswerState(choiceId: string): GuestDiagnosticAnswerState {
+  return {
+    selectedAnswer: choiceId,
+    isCorrect: isGuestDiagnosticMockCorrectChoice(choiceId),
+  }
+}
+
 function writeGuestDiagnosticResult(result: GuestDiagnosticResult): void {
   sessionStorage.setItem(GUEST_DIAGNOSTIC_RESULT_STORAGE_KEY, JSON.stringify(result))
 }
@@ -84,6 +125,8 @@ function getDiagnosticIntentTitle(intentId: GuestDiagnosticIntentId): string {
 
 export {
   buildDefaultGuestDiagnosticResult,
+  buildGuestDiagnosticAnswerState,
+  buildGuestDiagnosticResultFromAnswers,
   formatDiagnosticDateLabel,
   getDiagnosticIntentTitle,
   GUEST_DIAGNOSTIC_RESULT_STORAGE_KEY,

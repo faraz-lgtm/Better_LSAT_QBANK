@@ -3,9 +3,12 @@ import { Headphones, Lock, LogOut, Moon } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
 import {
+  GUEST_FREE_PLAN_DASHBOARD_HREF,
   GUEST_FREE_PLAN_NAV_SECTIONS,
+  GUEST_FREE_PLAN_PRICING_HREF,
   GUEST_FREE_PLAN_RESULTS_HREF,
   isGuestFreePlanAnalyticsActive,
+  isGuestFreePlanDashboardActive,
 } from "@/features/guest/diagnostic/guest-free-plan-nav-config"
 import { GuestUpgradeCta } from "@/features/guest/diagnostic/guest-upgrade-cta"
 import { STUDENT_APP_VERSION } from "@/features/app-shell/student-nav-config"
@@ -21,11 +24,12 @@ type GuestFreePlanSidebarProps = {
 function GuestFreePlanSidebar({
   mobileOpen,
   onMobileClose,
-  dashboardHref = GUEST_FREE_PLAN_RESULTS_HREF,
+  dashboardHref = GUEST_FREE_PLAN_DASHBOARD_HREF,
 }: GuestFreePlanSidebarProps) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const analyticsActive = isGuestFreePlanAnalyticsActive(pathname)
+  const dashboardActive = isGuestFreePlanDashboardActive(pathname)
 
   useEffect(() => {
     onMobileClose()
@@ -71,17 +75,20 @@ function GuestFreePlanSidebar({
               <p className="student-sidebar-heading">{section.label}</p>
               {section.items.map((item) => {
                 const isAnalytics = item.label === "Analytics"
-                const active = isAnalytics && analyticsActive
-                const href = item.href === GUEST_FREE_PLAN_RESULTS_HREF ? dashboardHref : item.href
+                const isDashboard = item.label === "Dashboard"
+                const active =
+                  (isAnalytics && analyticsActive) ||
+                  (isDashboard && dashboardActive) ||
+                  (item.label === "Diagnostic Results" && pathname.startsWith(GUEST_FREE_PLAN_RESULTS_HREF))
+                const href = item.href ?? dashboardHref
 
                 if (item.locked) {
                   return (
                     <button
                       key={item.label}
                       type="button"
-                      disabled
-                      aria-disabled="true"
-                      className="student-sidebar-link w-full cursor-not-allowed justify-between pr-4 opacity-60"
+                      onClick={() => navigate(GUEST_FREE_PLAN_PRICING_HREF)}
+                      className="student-sidebar-link w-full justify-between pr-4 opacity-80 hover:opacity-100"
                     >
                       <span className="flex min-w-0 flex-1 items-center gap-2">
                         <span className="truncate">{item.label}</span>
@@ -94,7 +101,7 @@ function GuestFreePlanSidebar({
                 return (
                   <Link
                     key={item.label}
-                    to={href ?? dashboardHref}
+                    to={href}
                     className={cn("student-sidebar-link", active && "student-sidebar-link--active")}
                   >
                     {item.label}

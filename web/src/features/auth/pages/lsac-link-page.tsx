@@ -8,14 +8,19 @@ import { StudentPageLoader } from "@/features/student/components/student-page-lo
 import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { createBillingApi } from "@/lib/api/billing"
-import { createUsersApi, type AccessState } from "@/lib/api/users"
+import { createUsersApi, type AccessState, type UserProfile } from "@/lib/api/users"
 import { logRouteRedirect } from "@/lib/auth/log-route-redirect"
+import { isInDiagnosticAcquisitionFunnel } from "@/lib/auth/diagnostic-intent"
 import { useAppToast } from "@/hooks/use-app-toast"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatEdgeFunctionError } from "@/lib/supabase/format-call-error"
 
-const PENDING_POLL_MS = 15_000
-const PENDING_POLL_MAX_MS = 120_000
+const CHECKOUT_POLL_MS = 4_000
+const CHECKOUT_POLL_MAX_MS = 30_000
+const AWAITING_EMAIL_POLL_MS = 15_000
+const AWAITING_EMAIL_POLL_MAX_MS = 120_000
+
+type SetupPhase = "processing" | "awaitingEmail" | "fallbackInvite" | "fallbackName"
 
 function splitFullName(fullName: string | null | undefined): { firstName: string; lastName: string } {
   const trimmed = fullName?.trim() ?? ""
@@ -30,17 +35,21 @@ function LsacLinkPage() {
   const [searchParams] = useSearchParams()
   const checkoutSuccess = searchParams.get("checkout") === "success"
 
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [accessState, setAccessState] = useState<AccessState | null>(null)
-  const [isPendingCoachLink, setIsPendingCoachLink] = useState(false)
+  const [isLsacEligible, setIsLsacEligible] = useState(false)
+  const [processingTimedOut, setProcessingTimedOut] = useState(false)
+  const [lawHubPath, setLawHubPath] = useState<"vendor" | "existing">("vendor")
+  const [showExistingPath, setShowExistingPath] = useState(false)
   const [billingAvailable, setBillingAvailable] = useState(false)
-  const pendingPollStartedAt = useRef<number | null>(null)
+  const checkoutPollStartedAt = useRef<number | null>(null)
+  const awaitingPollStartedAt = useRef<number | null>(null)
   const { toast, showError, dismiss } = useAppToast()
 
   const usersApi = useMemo(() => {
@@ -59,6 +68,28 @@ function LsacLinkPage() {
     }
   }, [])
 
+  const hasCoachingId = Boolean(profile?.student_coaching_id?.trim())
+  const profileHasName = Boolean(profile?.full_name?.trim())
+
+  const phase: SetupPhase | "done" = useMemo(() => {
+    if (accessState === "FULL_ACCESS") return "done"
+    if (checkoutSuccess && !hasCoachingId && !processingTimedOut) return "processing"
+    if (hasCoachingId && !isLsacEligible) return "awaitingEmail"
+    if (!hasCoachingId) {
+      if (!profileHasName && !firstName.trim()) return "fallbackName"
+      return "fallbackInvite"
+    }
+    return "awaitingEmail"
+  }, [
+    accessState,
+    checkoutSuccess,
+    firstName,
+    hasCoachingId,
+    isLsacEligible,
+    processingTimedOut,
+    profileHasName,
+  ])
+
   const refreshEntitlement = useCallback(async (): Promise<AccessState | null> => {
     if (!usersApi) return null
     try {
@@ -68,17 +99,11 @@ function LsacLinkPage() {
     }
     const entitlement = await usersApi.getEntitlementState()
     setAccessState(entitlement.accessState)
+    setIsLsacEligible(entitlement.isLsacEligible)
     if (entitlement.accessState === "FULL_ACCESS") {
       logRouteRedirect("/app/lsac-link", "/app", "FULL_ACCESS after refresh")
       navigate("/app", { replace: true })
       return entitlement.accessState
-    }
-    if (entitlement.accessState === "PAYMENT_REQUIRED") {
-      setIsPendingCoachLink(false)
-      return entitlement.accessState
-    }
-    if (entitlement.isLsacLinked && !entitlement.isLsacEligible) {
-      setIsPendingCoachLink(true)
     }
     return entitlement.accessState
   }, [navigate, usersApi])
@@ -87,6 +112,11 @@ function LsacLinkPage() {
     let alive = true
     logRouteRedirect(window.location.pathname, window.location.pathname, "lsac-link page mounted")
     async function loadProfile() {
+      if (isInDiagnosticAcquisitionFunnel()) {
+        logRouteRedirect("/app/lsac-link", "/diagnostic/start", "diagnostic acquisition funnel")
+        navigate("/diagnostic/start", { replace: true })
+        return
+      }
       if (!usersApi) {
         if (alive) {
           setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
@@ -95,9 +125,9 @@ function LsacLinkPage() {
         return
       }
       try {
-        const profile = await usersApi.getMyProfile()
+        const nextProfile = await usersApi.getMyProfile()
         if (!alive) return
-        if (!profile) {
+        if (!nextProfile) {
           logRouteRedirect("/app/lsac-link", "/login", "no profile on load")
           navigate("/login", { replace: true })
           return
@@ -111,24 +141,23 @@ function LsacLinkPage() {
           navigate("/app", { replace: true })
           return
         }
-        if (entitlement.accessState === "PAYMENT_REQUIRED") {
-          logRouteRedirect("/app/lsac-link", "/app/lsac-link", "PAYMENT_REQUIRED on load")
-        }
 
+        setProfile(nextProfile)
         setAccessState(entitlement.accessState)
-        if (entitlement.isLsacLinked && !entitlement.isLsacEligible) {
-          setIsPendingCoachLink(true)
-        }
+        setIsLsacEligible(entitlement.isLsacEligible)
 
-        const names = splitFullName(profile.full_name)
+        const names = splitFullName(nextProfile.full_name)
         setFirstName(names.firstName)
         setLastName(names.lastName)
 
         if (billingApi) {
           try {
-            await billingApi.getStatus()
+            const billing = await billingApi.getStatus()
             if (!alive) return
             setBillingAvailable(true)
+            setLawHubPath(
+              billing.prepPlusSource === "existing_lsac" ? "existing" : "vendor",
+            )
           } catch (billingError) {
             if (!alive) return
             logRouteRedirect("/app/lsac-link", "/app/lsac-link", "billing status failed", {
@@ -151,24 +180,63 @@ function LsacLinkPage() {
   }, [billingApi, navigate, usersApi])
 
   useEffect(() => {
-    if (!isPendingCoachLink || !usersApi) return
+    if (phase !== "processing" || !usersApi) return
 
-    pendingPollStartedAt.current = Date.now()
+    checkoutPollStartedAt.current = Date.now()
+
+    async function pollForCoachingId() {
+      if (!usersApi) return
+      try {
+        const nextProfile = await usersApi.getMyProfile()
+        if (nextProfile) {
+          setProfile(nextProfile)
+          if (nextProfile.student_coaching_id?.trim()) {
+            await refreshEntitlement()
+          }
+        }
+      } catch {
+        // Keep polling until timeout.
+      }
+    }
+
+    void pollForCoachingId()
+
     const interval = window.setInterval(() => {
-      const startedAt = pendingPollStartedAt.current ?? Date.now()
-      if (Date.now() - startedAt >= PENDING_POLL_MAX_MS) {
+      const startedAt = checkoutPollStartedAt.current ?? Date.now()
+      if (Date.now() - startedAt >= CHECKOUT_POLL_MAX_MS) {
+        setProcessingTimedOut(true)
+        window.clearInterval(interval)
+        return
+      }
+      void pollForCoachingId()
+    }, CHECKOUT_POLL_MS)
+
+    return () => window.clearInterval(interval)
+  }, [phase, refreshEntitlement, usersApi])
+
+  useEffect(() => {
+    if (phase !== "awaitingEmail" || !usersApi) return
+
+    awaitingPollStartedAt.current = Date.now()
+    const interval = window.setInterval(() => {
+      const startedAt = awaitingPollStartedAt.current ?? Date.now()
+      if (Date.now() - startedAt >= AWAITING_EMAIL_POLL_MAX_MS) {
         window.clearInterval(interval)
         return
       }
       void refreshEntitlement()
-    }, PENDING_POLL_MS)
+    }, AWAITING_EMAIL_POLL_MS)
 
     return () => window.clearInterval(interval)
-  }, [isPendingCoachLink, refreshEntitlement, usersApi])
+  }, [phase, refreshEntitlement, usersApi])
 
-  function validateNames(): boolean {
-    if (!firstName.trim() || !lastName.trim()) {
-      setError("First and last name are required for LawHub registration.")
+  function validateNames(requireLastName = true): boolean {
+    if (!firstName.trim()) {
+      setError("First name is required for LawHub registration.")
+      return false
+    }
+    if (requireLastName && !lastName.trim()) {
+      setError("Last name is required for LawHub registration.")
       return false
     }
     return true
@@ -182,72 +250,33 @@ function LsacLinkPage() {
     return message
   }
 
-  async function afterLinkAttempt() {
-    if (!usersApi) return
-    setStatusMessage("Checking LawHub link status…")
-    const nextState = await refreshEntitlement()
-    if (nextState === "FULL_ACCESS") return
-    setIsPendingCoachLink(true)
-    setStatusMessage(null)
-  }
-
-  async function completeVendorLawHubLink() {
+  async function sendLawHubInvite(path: "vendor" | "existing") {
     if (!usersApi || !validateNames()) return
     setIsSubmitting(true)
     setError(null)
-    setStatusMessage(null)
     try {
-      setStatusMessage("Connecting your LawHub account…")
       await usersApi.lawHubLink({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        path: "vendor",
+        path,
       })
-      setStatusMessage("Logging access with LSAC…")
-      await usersApi.lawHubLogLogin()
-      await afterLinkAttempt()
+      try {
+        await usersApi.lawHubLogLogin()
+      } catch {
+        // Optional logging step.
+      }
+      const nextProfile = await usersApi.getMyProfile()
+      if (nextProfile) setProfile(nextProfile)
+      await refreshEntitlement()
     } catch (linkError) {
-      const message = presentLinkError(linkError, "Unable to link LawHub account.")
+      const message = presentLinkError(linkError, "Unable to send LawHub invite.")
       if (message.includes("subscription required")) {
         setError("Choose a Core or Live plan before linking LawHub.")
         showError(message)
-        logRouteRedirect("/app/lsac-link", "/app/pricing", "vendor link rejected: subscription required", {
-          error: message,
-        })
         navigate("/app/pricing", { replace: true })
       } else {
         setError(message)
         showError(message)
-      }
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  async function linkExistingPrepPlus() {
-    if (!usersApi || !validateNames()) return
-    setIsSubmitting(true)
-    setError(null)
-    setStatusMessage(null)
-    try {
-      setStatusMessage("Linking your existing LawHub PrepPlus account…")
-      await usersApi.lawHubLink({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        path: "existing",
-      })
-      setStatusMessage("Logging access with LSAC…")
-      await usersApi.lawHubLogLogin()
-      await afterLinkAttempt()
-    } catch (linkError) {
-      const message = presentLinkError(linkError, "Unable to link LawHub account.")
-      if (message.includes("subscription required")) {
-        setError("Choose a Core or Live plan before linking your existing PrepPlus.")
-        showError(message)
-        navigate("/app/pricing", { replace: true })
-      } else {
-        setError(message.includes("not configured") ? "LawHub is not configured on the server." : message)
-        showError(message.includes("not configured") ? "LawHub is not configured on the server." : message)
       }
     } finally {
       setIsSubmitting(false)
@@ -279,7 +308,6 @@ function LsacLinkPage() {
   }
 
   const paymentRequired = accessState === "PAYMENT_REQUIRED" && billingAvailable && !checkoutSuccess
-  const canLink = !paymentRequired
 
   return (
     <AuthLayout ctaLabel="Log In" ctaHref="/login" headerVariant="app" contentLayout="lsac-link">
@@ -287,15 +315,9 @@ function LsacLinkPage() {
       <div className="lsac-link-page">
         <AuthCard className="lsac-link-card">
           <div className="lsac-link-page__header">
-            <h1>Link your LawHub account</h1>
-            <p>Connect Official LSAT PrepPlus through LawHub to access Better LSAT.</p>
+            <h1>Complete LawHub setup</h1>
+            <p>Link your Official LSAT PrepPlus through LawHub to access Better LSAT.</p>
           </div>
-
-          {checkoutSuccess && (
-            <p className="lsac-link-page__alert lsac-link-page__alert--status">
-              Payment received. Complete LawHub setup below to access the app.
-            </p>
-          )}
 
           {paymentRequired && (
             <p className="lsac-link-page__alert lsac-link-page__alert--error">
@@ -303,15 +325,33 @@ function LsacLinkPage() {
             </p>
           )}
 
-          {isPendingCoachLink && !paymentRequired && (
+          {phase === "processing" && (
             <div className="lsac-link-page__alert lsac-link-page__alert--status">
               <p>
-                Check your email from LSAC — click <strong>Link to Coach</strong>, sign in to LawHub, then return
-                here.
+                <strong>Payment received</strong> — your Better LSAT subscription is active. We&apos;re setting up
+                your LawHub account…
+              </p>
+              <StudentPageLoader centered label="Setting up LawHub…" />
+            </div>
+          )}
+
+          {phase === "awaitingEmail" && !paymentRequired && (
+            <div className="lsac-link-page__instructions">
+              <p className="lsac-link-page__alert lsac-link-page__alert--status">
+                <strong>Payment successful.</strong> Your Better LSAT subscription is active.
+              </p>
+              <ol className="lsac-link-page__steps">
+                <li>Check your email from LSAC (same address you used to sign up).</li>
+                <li>
+                  Click <strong>Activate</strong> or <strong>Link to Coach</strong> and sign in to LawHub.
+                </li>
+                <li>Return here and click the button below.</li>
+              </ol>
+              <p className="lsac-link-page__note">
+                The LawHub fee goes to LSAC. One PrepPlus subscription works across prep platforms.
               </p>
               <Button
-                className="mt-3 w-full"
-                variant="outline"
+                className="w-full"
                 disabled={isRefreshing || isSubmitting}
                 onClick={() => void handlePendingRefresh()}
               >
@@ -320,13 +360,13 @@ function LsacLinkPage() {
             </div>
           )}
 
-          {error && <p className="lsac-link-page__alert lsac-link-page__alert--error">{error}</p>}
-          {statusMessage && !error && (
-            <p className="lsac-link-page__alert lsac-link-page__alert--status">{statusMessage}</p>
-          )}
-
-          {!isPendingCoachLink && (
-            <>
+          {phase === "fallbackInvite" && !paymentRequired && (
+            <div className="lsac-link-page__fallback">
+              <p className="lsac-link-page__alert lsac-link-page__alert--status">
+                {checkoutSuccess
+                  ? "We're still finishing your LawHub setup. You can send the invite manually below."
+                  : "Send a LawHub invite to finish linking your coach."}
+              </p>
               <div className="lsac-link-page__names">
                 <div className="lsac-link-page__field">
                   <label htmlFor="lsac-first-name">First name</label>
@@ -335,7 +375,7 @@ function LsacLinkPage() {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     autoComplete="given-name"
-                    disabled={!canLink || isSubmitting}
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div className="lsac-link-page__field">
@@ -345,39 +385,74 @@ function LsacLinkPage() {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     autoComplete="family-name"
-                    disabled={!canLink || isSubmitting}
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
+              <Button
+                className="w-full"
+                disabled={isSubmitting}
+                onClick={() => void sendLawHubInvite(lawHubPath)}
+              >
+                {isSubmitting ? "Sending…" : "Send LawHub invite"}
+              </Button>
+              {!showExistingPath ? (
+                <p className="lsac-link-page__footer">
+                  <button type="button" onClick={() => setShowExistingPath(true)}>
+                    I already have LawHub PrepPlus
+                  </button>
+                </p>
+              ) : (
+                <Button
+                  className="mt-2 w-full"
+                  variant="outline"
+                  disabled={isSubmitting}
+                  onClick={() => void sendLawHubInvite("existing")}
+                >
+                  {isSubmitting ? "Sending…" : "Link existing PrepPlus instead"}
+                </Button>
+              )}
+            </div>
+          )}
 
-              <div className="lsac-link-page__options">
-                <div className="lsac-link-page__option">
-                  <h2>PrepPlus included with your plan</h2>
-                  <p>Register or link LawHub using the name above and your signup email.</p>
-                  <Button
-                    className="w-full"
-                    disabled={isSubmitting || !canLink}
-                    onClick={() => void completeVendorLawHubLink()}
-                  >
-                    {isSubmitting ? "Linking…" : "Complete LawHub setup"}
-                  </Button>
+          {phase === "fallbackName" && !paymentRequired && (
+            <div className="lsac-link-page__fallback">
+              <p className="lsac-link-page__alert lsac-link-page__alert--status">
+                LSAC requires your legal name to register LawHub. Enter it below, then send your invite.
+              </p>
+              <div className="lsac-link-page__names">
+                <div className="lsac-link-page__field">
+                  <label htmlFor="lsac-first-name">First name</label>
+                  <Input
+                    id="lsac-first-name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    autoComplete="given-name"
+                    disabled={isSubmitting}
+                  />
                 </div>
-
-                <div className="lsac-link-page__option">
-                  <h2>I already have LawHub PrepPlus</h2>
-                  <p>Link your existing LawHub account after subscribing to Core or Live.</p>
-                  <Button
-                    className="w-full"
-                    variant="outline"
-                    disabled={isSubmitting || !canLink}
-                    onClick={() => void linkExistingPrepPlus()}
-                  >
-                    {isSubmitting ? "Linking…" : "Link existing PrepPlus"}
-                  </Button>
+                <div className="lsac-link-page__field">
+                  <label htmlFor="lsac-last-name">Last name</label>
+                  <Input
+                    id="lsac-last-name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    autoComplete="family-name"
+                    disabled={isSubmitting}
+                  />
                 </div>
               </div>
-            </>
+              <Button
+                className="w-full"
+                disabled={isSubmitting}
+                onClick={() => void sendLawHubInvite(lawHubPath)}
+              >
+                {isSubmitting ? "Sending…" : "Send LawHub invite"}
+              </Button>
+            </div>
           )}
+
+          {error && <p className="lsac-link-page__alert lsac-link-page__alert--error">{error}</p>}
 
           {paymentRequired && (
             <p className="lsac-link-page__footer">

@@ -1,8 +1,7 @@
 import type { DrillQuestion } from "@/features/student/drills/drill-types"
 
-const GUEST_DIAGNOSTIC_PREVIEW_PASSAGE = `Professor x submitted a book draft consisting of six chapters to a publisher. For the purposes of the contract, the chapters are numbered 1, 2, 3, 4, 5, and 6, though their actual order in the book may be changed by the publisher. Professor X has made several notes to the publisher about how to order the chapters, as follows:
-
-Taking these constraints into account, we can note a number of statements that must be true or must be false. Also, we can note what orderings are possible, as well as what is not possible given the constraints; therefore, answers can reference orderings that may or may not be possible. For instance, one ordering that is possible is 3, 5, 4, 6, 1, 2. If desired, spend a minute verifying that this ordering is possible. Others are as well, though it's not necessary to enumerate them at this stage.`
+const GUEST_DIAGNOSTIC_PREVIEW_PASSAGE = `<p>Professor x submitted a book draft consisting of six chapters to a publisher. For the purposes of the contract, the chapters are numbered 1, 2, 3, 4, 5, and 6, though their actual order in the book may be changed by the publisher. Professor X has made several notes to the publisher about how to order the chapters, as follows:</p>
+<p>Taking these constraints into account, we can note a number of statements that must be true or must be false. Also, we can note what orderings are possible, as well as what is not possible given the constraints; therefore, answers can reference orderings that may or may not be possible. For instance, one ordering that is possible is 3, 5, 4, 6, 1, 2. If desired, spend a minute verifying that this ordering is possible. Others are as well, though it's not necessary to enumerate them at this stage.</p>`
 
 const GUEST_DIAGNOSTIC_PREVIEW_QUESTION: DrillQuestion = {
   id: "guest-diagnostic-preview-q1",

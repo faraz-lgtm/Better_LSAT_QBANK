@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type MutableRefObject } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -11,11 +11,20 @@ import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { createAuthApi, getAuthCallbackUrl } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
 import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
+import { saveDiagnosticIntent, markDiagnosticFunnelActive, type DiagnosticIntentTier } from "@/lib/auth/diagnostic-intent"
+import { isGuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
+type LoginLocationState = {
+  from?: "intent"
+  intent?: DiagnosticIntentTier
+}
+
 function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const locationState = (location.state ?? null) as LoginLocationState | null
   const [magicEmail, setMagicEmail] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -44,6 +53,14 @@ function LoginPage() {
 
   const isBusy = isMagicLoading || isPasswordLoading || googleLoading
 
+  function persistDiagnosticIntent() {
+    if (locationState?.from !== "intent") return
+    markDiagnosticFunnelActive()
+    if (locationState.intent && isGuestDiagnosticIntentId(locationState.intent)) {
+      saveDiagnosticIntent(locationState.intent)
+    }
+  }
+
   async function withSubmitLock(
     lockRef: MutableRefObject<boolean>,
     setLoading: (loading: boolean) => void,
@@ -70,6 +87,7 @@ function LoginPage() {
     setMessage(null)
     try {
       const sent = await withSubmitLock(magicLockRef, setIsMagicLoading, async () => {
+        persistDiagnosticIntent()
         await authApi.sendMagicLink(magicEmail.trim(), getAuthCallbackUrl())
         setMessage("Magic link sent. Check your inbox to continue.")
       })
@@ -88,6 +106,7 @@ function LoginPage() {
     setMessage(null)
 try {
   const sent = await withSubmitLock(passwordLockRef, setIsPasswordLoading, async () => {
+    persistDiagnosticIntent()
     await authApi.signInWithPassword(email.trim(), password)
     navigate(await fetchPostAuthDestination(usersApi), { replace: true })
   })
@@ -108,6 +127,7 @@ try {
     setError(null)
     setMessage(null)
     try {
+      persistDiagnosticIntent()
       await authApi.signInWithGoogle(getAuthCallbackUrl())
     } catch (authError) {
       setError(authError instanceof Error ? formatSupabaseCallError(authError) : "Unable to continue with Google.")

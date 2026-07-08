@@ -7,7 +7,10 @@ import {
   formatDiagnosticDateLabel,
   getDiagnosticIntentTitle,
 } from "@/features/guest/diagnostic/guest-diagnostic-result-storage"
-import { GuestFreePlanUpgradeBanner } from "@/features/guest/diagnostic/guest-upgrade-cta"
+import {
+  GuestDiagnosticResultsActions,
+  GuestFreePlanUpgradeBanner,
+} from "@/features/guest/diagnostic/guest-upgrade-cta"
 import { useGuestPremiumAccount } from "@/features/guest/premium/guest-premium-account"
 import {
   PT_RESULTS_PAGE_BG_CLASS,
@@ -24,6 +27,7 @@ type GuestDiagnosticResultsViewProps = {
   result: GuestDiagnosticResult
   variant?: GuestDiagnosticResultsVariant
   startDiagnosticHref?: string
+  usePreviewModal?: boolean
 }
 
 function OutcomePill({
@@ -217,13 +221,14 @@ function GuestDiagnosticResultsView({
   result,
   variant = "free",
   startDiagnosticHref = "/diagnostic/start",
+  usePreviewModal = false,
 }: GuestDiagnosticResultsViewProps) {
   const premiumAccount = useGuestPremiumAccount()
   const isPremium = variant === "premium" || premiumAccount != null
 
   return (
     <StudentMain className={PT_RESULTS_PAGE_BG_CLASS} contentClassName={cn(PT_RESULTS_PAGE_GAP_CLASS, "pb-8")}>
-      {!isPremium ? <GuestFreePlanUpgradeBanner /> : null}
+      {!isPremium ? <GuestFreePlanUpgradeBanner usePreviewModal={usePreviewModal} /> : null}
 
       {isPremium ? (
         <GuestDiagnosticPremiumScoreCards result={result} startDiagnosticHref={startDiagnosticHref} />
@@ -273,6 +278,10 @@ function GuestDiagnosticResultsView({
               />
             ))}
       </section>
+
+      {!isPremium ? (
+        <GuestDiagnosticResultsActions usePreviewModal={usePreviewModal} />
+      ) : null}
     </StudentMain>
   )
 }

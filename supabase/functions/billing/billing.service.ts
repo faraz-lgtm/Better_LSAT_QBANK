@@ -1,4 +1,3 @@
-import { shouldRequireLsacLinkWall } from '../_shared/lsac-link-wall.ts'
 import type Stripe from 'npm:stripe@17.7.0'
 import {
   BILLING_PLAN_CATALOG,
@@ -9,11 +8,19 @@ import {
 import type { BillingRepository } from './billing.repository.ts'
 import { isActiveSubscriptionStatus } from './billing.repository.ts'
 
+export type CheckoutCompletedContext = {
+  userId: string
+  email: string | null
+  includeLawHub: boolean
+  customerName: string | null
+}
+
 export type BillingServiceDeps = {
   getEnv: () => StripeRuntimeEnv
   stripe: Stripe
   repository: BillingRepository
   getAppBaseUrl: () => string
+  onCheckoutCompleted?: (ctx: CheckoutCompletedContext) => Promise<void>
 }
 
 function unixToIso(seconds: number | null | undefined): string | null {
@@ -212,15 +219,19 @@ export function createBillingService(deps: BillingServiceDeps) {
       const includeLawHub = options.includeLawHub !== false
       const env = deps.getEnv()
       const profile = await deps.repository.getProfileBillingFields(userId)
+      const profileName = profile?.full_name?.trim()
       let customerId = profile?.stripe_customer_id?.trim() ?? ''
 
       if (!customerId) {
         const customer = await deps.stripe.customers.create({
           email: email ?? undefined,
+          name: profileName || undefined,
           metadata: { user_id: userId },
         })
         customerId = customer.id
         await deps.repository.setStripeCustomerId(userId, customerId)
+      } else if (profileName) {
+        await deps.stripe.customers.update(customerId, { name: profileName })
       }
 
       const recurringPriceId =
@@ -246,15 +257,12 @@ export function createBillingService(deps: BillingServiceDeps) {
       }
 
       const baseUrl = deps.getAppBaseUrl().replace(/\/$/, '')
-      const checkoutSuccessPath = shouldRequireLsacLinkWall()
-        ? '/app/lsac-link?checkout=success'
-        : '/app?checkout=success'
       const session = await deps.stripe.checkout.sessions.create({
         mode: 'subscription',
         customer: customerId,
         client_reference_id: userId,
         line_items: lineItems,
-        success_url: `${baseUrl}${checkoutSuccessPath}`,
+        success_url: `${baseUrl}/app/lsac-link?checkout=success`,
         cancel_url: `${baseUrl}/app/pricing?checkout=cancel`,
         metadata: { user_id: userId, plan, include_lawhub: includeLawHub ? 'true' : 'false' },
         subscription_data: {
@@ -315,6 +323,30 @@ export function createBillingService(deps: BillingServiceDeps) {
           if (subscriptionId) {
             const subscription = await deps.stripe.subscriptions.retrieve(subscriptionId)
             await syncSubscription(userId, subscription, planHint)
+          }
+          if (deps.onCheckoutCompleted) {
+            let customerName = session.customer_details?.name ?? null
+            if (!customerName?.trim() && customerId) {
+              try {
+                const customer = await deps.stripe.customers.retrieve(customerId)
+                if (!customer.deleted) {
+                  customerName = customer.name ?? null
+                }
+              } catch (error) {
+                console.warn('Failed to retrieve Stripe customer for LawHub name lookup:', error)
+              }
+            }
+            const includeLawHub = session.metadata?.include_lawhub !== 'false'
+            const email =
+              session.customer_email ??
+              session.customer_details?.email ??
+              null
+            await deps.onCheckoutCompleted({
+              userId,
+              email,
+              includeLawHub,
+              customerName,
+            })
           }
           break
         }

@@ -1,3 +1,5 @@
+import { useLocation, useNavigate } from "react-router-dom"
+
 import { Button } from "@/components/ui/button"
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { cn } from "@/lib/utils"
@@ -5,16 +7,33 @@ import { cn } from "@/lib/utils"
 type GuestUpgradeCtaProps = {
   variant?: "header" | "banner" | "sidebar-primary" | "sidebar-secondary"
   className?: string
+  /** When true, opens the dev preview pricing modal instead of navigating to /app/pricing */
+  usePreviewModal?: boolean
 }
 
-function GuestUpgradeCta({ variant = "header", className }: GuestUpgradeCtaProps) {
+function useUpgradeAction(usePreviewModal = false) {
+  const navigate = useNavigate()
+  const location = useLocation()
   const { openPricingModal } = useGuestPricingModal()
+  const isPreviewRoute = location.pathname.includes("/preview")
+
+  return () => {
+    if (usePreviewModal || isPreviewRoute) {
+      openPricingModal()
+      return
+    }
+    navigate("/app/pricing")
+  }
+}
+
+function GuestUpgradeCta({ variant = "header", className, usePreviewModal = false }: GuestUpgradeCtaProps) {
+  const handleUpgrade = useUpgradeAction(usePreviewModal)
 
   if (variant === "banner") {
     return (
       <Button
         type="button"
-        onClick={openPricingModal}
+        onClick={handleUpgrade}
         className={cn(
           "h-10 shrink-0 rounded-[10px] bg-[#0d47a1] px-5 text-xs font-bold uppercase tracking-[0.48px] text-white hover:bg-[#0b3d8a]",
           className,
@@ -29,7 +48,7 @@ function GuestUpgradeCta({ variant = "header", className }: GuestUpgradeCtaProps
     return (
       <Button
         type="button"
-        onClick={openPricingModal}
+        onClick={handleUpgrade}
         className={cn(
           "h-10 w-full rounded-[10px] bg-[#0d47a1] text-sm font-semibold tracking-[0.28px] text-white hover:bg-[#0b3d8a]",
           className,
@@ -45,7 +64,7 @@ function GuestUpgradeCta({ variant = "header", className }: GuestUpgradeCtaProps
       <Button
         type="button"
         variant="outline"
-        onClick={openPricingModal}
+        onClick={handleUpgrade}
         className={cn(
           "h-10 w-full rounded-[10px] border-[#0d47a1] bg-white text-sm font-semibold tracking-[0.28px] text-[#0d47a1] hover:bg-[#edf3ff]",
           className,
@@ -59,7 +78,7 @@ function GuestUpgradeCta({ variant = "header", className }: GuestUpgradeCtaProps
   return (
     <Button
       type="button"
-      onClick={openPricingModal}
+      onClick={handleUpgrade}
       className={cn(
         "hidden h-11 rounded-[12px] bg-[#0d47a1] px-5 text-sm font-semibold tracking-[0.28px] text-white hover:bg-[#0b3d8a] sm:inline-flex",
         className,
@@ -70,7 +89,7 @@ function GuestUpgradeCta({ variant = "header", className }: GuestUpgradeCtaProps
   )
 }
 
-function GuestFreePlanUpgradeBanner({ className }: { className?: string }) {
+function GuestFreePlanUpgradeBanner({ className, usePreviewModal = false }: { className?: string; usePreviewModal?: boolean }) {
   return (
     <div
       className={cn(
@@ -82,9 +101,40 @@ function GuestFreePlanUpgradeBanner({ className }: { className?: string }) {
         Official Performance, Reports, and Score Tracker are now available –{" "}
         <span className="font-semibold text-[#0d47a1]">95.8%</span> for plan transition
       </p>
-      <GuestUpgradeCta variant="banner" />
+      <GuestUpgradeCta variant="banner" usePreviewModal={usePreviewModal} />
     </div>
   )
 }
 
-export { GuestFreePlanUpgradeBanner, GuestUpgradeCta }
+function GuestDiagnosticResultsActions({
+  usePreviewModal = false,
+}: {
+  usePreviewModal?: boolean
+}) {
+  const navigate = useNavigate()
+  const handleUpgrade = useUpgradeAction(usePreviewModal)
+
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+      <Button
+        type="button"
+        className="h-11 rounded-[12px] bg-[#0d47a1] px-6 text-sm font-semibold tracking-[0.28px] text-white hover:bg-[#0b3d8a]"
+        onClick={handleUpgrade}
+      >
+        Upgrade to unlock full access
+      </Button>
+      {!usePreviewModal ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11 rounded-[12px] border-[#0d47a1] px-6 text-sm font-semibold tracking-[0.28px] text-[#0d47a1] hover:bg-[#edf3ff]"
+          onClick={() => navigate("/app")}
+        >
+          Continue to app
+        </Button>
+      ) : null}
+    </div>
+  )
+}
+
+export { GuestDiagnosticResultsActions, GuestFreePlanUpgradeBanner, GuestUpgradeCta }

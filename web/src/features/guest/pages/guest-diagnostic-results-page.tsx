@@ -1,13 +1,13 @@
 import { useMemo } from "react"
 import { Navigate, useSearchParams } from "react-router-dom"
 
-import { GUEST_DIAGNOSTIC_INTENT_STORAGE_KEY } from "@/features/guest/diagnostic/guest-diagnostic-intent-data"
 import {
   buildDefaultGuestDiagnosticResult,
   readGuestDiagnosticResult,
 } from "@/features/guest/diagnostic/guest-diagnostic-result-storage"
 import { GuestDiagnosticResultsView } from "@/features/guest/diagnostic/guest-diagnostic-results-view"
 import { isGuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
+import { readDiagnosticIntent } from "@/lib/auth/diagnostic-intent"
 import { useGuestPremiumAccount } from "@/features/guest/premium/guest-premium-account"
 
 type GuestDiagnosticResultsPageProps = {
@@ -24,7 +24,7 @@ function GuestDiagnosticResultsPage({ preview = false }: GuestDiagnosticResultsP
     if (stored) return stored
 
     if (preview) {
-      const intentRaw = sessionStorage.getItem(GUEST_DIAGNOSTIC_INTENT_STORAGE_KEY)
+      const intentRaw = readDiagnosticIntent()
       const intentId = isGuestDiagnosticIntentId(intentRaw) ? intentRaw : "mini"
       return buildDefaultGuestDiagnosticResult(intentId)
     }
@@ -44,6 +44,7 @@ function GuestDiagnosticResultsPage({ preview = false }: GuestDiagnosticResultsP
       result={result}
       variant={variant}
       startDiagnosticHref={preview ? "/diagnostic/start/preview?intent=mini" : "/diagnostic/start"}
+      usePreviewModal={preview}
     />
   )
 }

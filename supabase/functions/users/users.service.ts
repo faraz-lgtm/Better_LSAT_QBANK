@@ -12,6 +12,7 @@ import {
   mapOfficialScoreRow,
   mapStudyPreferencesRow,
   parseLsatScoreValue,
+  splitFullName,
   type OfficialLsatScoreDto,
   type StudentStudyPreferencesDto,
 } from './users.mapper.ts'
@@ -39,6 +40,18 @@ export type UserEntitlementState = {
   isLsacEligible: boolean
   hasActiveCore: boolean
   accessState: AccessState
+}
+
+export type LawHubCheckoutInviteContext = {
+  userId: string
+  email: string | null
+  includeLawHub: boolean
+  customerName?: string | null
+}
+
+export type LawHubCheckoutInviteResult = {
+  invited: boolean
+  reason?: 'already_linked' | 'no_email' | 'no_name' | 'lawhub_not_configured' | 'invite_failed'
 }
 
 function resolveLawHub(
@@ -119,6 +132,10 @@ export function createUsersService(deps: UsersServiceDeps) {
     await requireActiveSubscription(userId)
   }
 
+  function isLawHubRecordLinked(record: Record<string, unknown>): boolean {
+    return record.linked === true
+  }
+
   async function linkLawHubWithFlags(
     userId: string,
     sessionEmail: string,
@@ -138,7 +155,10 @@ export function createUsersService(deps: UsersServiceDeps) {
     const rows = await requireLawHub().findStudentsByEmail(sessionEmail)
     if (rows.length > 0) {
       const first = rows[0] as Record<string, unknown>
-      return await syncRecordFromLawHub(userId, first)
+      if (isLawHubRecordLinked(first)) {
+        return await syncRecordFromLawHub(userId, first)
+      }
+      // Unlinked existing student: POST /students renews coaching and re-sends invite email.
     }
 
     const invited = await requireLawHub().addOrInviteStudent({
@@ -305,6 +325,70 @@ export function createUsersService(deps: UsersServiceDeps) {
       input: { firstName: string; lastName: string },
     ) {
       return await this.linkLawHubWithVendorPrepPlus(userId, sessionEmail, input)
+    },
+
+    /**
+     * After Stripe checkout: invite student via LawHub POST /students (idempotent).
+     * Never throws — webhook must return 200 even when invite is skipped or fails.
+     */
+    async autoInviteLawHubAfterCheckout(
+      ctx: LawHubCheckoutInviteContext,
+    ): Promise<LawHubCheckoutInviteResult> {
+      if (!skipLawHubCalls && !lawHub) {
+        console.warn('LawHub not configured; skipping auto-invite after checkout')
+        return { invited: false, reason: 'lawhub_not_configured' }
+      }
+
+      const profile = await deps.repository.getProfileById(ctx.userId)
+      if (profile?.student_coaching_id?.trim()) {
+        const snapshot = await deps.repository.getLatestStudentSnapshotByUserId(ctx.userId)
+        if (snapshot?.linked === true) {
+          return { invited: false, reason: 'already_linked' }
+        }
+      }
+
+      const email =
+        ctx.email?.trim().toLowerCase() ??
+        profile?.email?.trim().toLowerCase() ??
+        null
+      if (!email) {
+        console.warn(`LawHub auto-invite skipped: no email for user ${ctx.userId}`)
+        return { invited: false, reason: 'no_email' }
+      }
+
+      let { firstName, lastName } = splitFullName(profile?.full_name)
+      if (!firstName.trim()) {
+        const fromCustomer = splitFullName(ctx.customerName)
+        firstName = fromCustomer.firstName
+        lastName = fromCustomer.lastName
+      }
+      if (!firstName.trim()) {
+        console.warn(`LawHub auto-invite skipped: no name for user ${ctx.userId}`)
+        return { invited: false, reason: 'no_name' }
+      }
+
+      const nameInput = { firstName: firstName.trim(), lastName: lastName.trim() }
+
+      try {
+        await requireActiveSubscription(ctx.userId)
+        if (ctx.includeLawHub) {
+          await linkLawHubWithFlags(ctx.userId, email, nameInput, {
+            isPrepPlusRequired: true,
+            isPrepPlusIncludedFromVendor: true,
+          })
+        } else {
+          await deps.repository.setPrepPlusSource(ctx.userId, 'existing_lsac')
+          await linkLawHubWithFlags(ctx.userId, email, nameInput, {
+            isPrepPlusRequired: true,
+            isPrepPlusIncludedFromVendor: false,
+          })
+        }
+        console.info(`LawHub auto-invite succeeded for user ${ctx.userId} (${email})`)
+        return { invited: true }
+      } catch (error) {
+        console.error(`LawHub auto-invite failed for user ${ctx.userId}:`, error)
+        return { invited: false, reason: 'invite_failed' }
+      }
     },
 
     /** POST students — email must match the authenticated user (enforced in controller). */

@@ -6,10 +6,9 @@ import { Input } from "@/components/ui/input"
 import { SocialButton } from "@/components/ui/social-button"
 import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthTermsCheckbox } from "@/features/auth/components/auth-terms-checkbox"
-import { GUEST_DIAGNOSTIC_INTENT_STORAGE_KEY } from "@/features/guest/diagnostic/guest-diagnostic-intent-data"
-import type { GuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-intent-types"
 import { GuestMarketingPanelLayout } from "@/features/guest/marketing/guest-marketing-panel-layout"
 import { createAuthApi, getAuthCallbackUrl } from "@/lib/api/auth"
+import { saveDiagnosticIntent, markDiagnosticFunnelActive } from "@/lib/auth/diagnostic-intent"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
@@ -39,8 +38,9 @@ function SignupPage() {
 
   function persistDiagnosticIntent() {
     if (locationState?.from !== "intent") return
+    markDiagnosticFunnelActive()
     if (locationState.intent) {
-      sessionStorage.setItem(GUEST_DIAGNOSTIC_INTENT_STORAGE_KEY, locationState.intent)
+      saveDiagnosticIntent(locationState.intent)
     }
   }
 

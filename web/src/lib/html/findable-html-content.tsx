@@ -1,4 +1,13 @@
-import { forwardRef, useEffect, useMemo, useImperativeHandle, useRef, type ElementType, type HTMLAttributes } from "react"
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  type ElementType,
+  type HTMLAttributes,
+} from "react"
 
 import { highlightFindInHtml } from "@/lib/html/highlight-find-in-html"
 import { LSAT_HTML_CONTENT_CLASS } from "@/lib/html/html-content"
@@ -17,10 +26,21 @@ const FindableHtmlContent = forwardRef<HTMLElement, FindableHtmlContentProps>(fu
   forwardedRef,
 ) {
   const innerRef = useRef<HTMLElement>(null)
+  const lastRenderedRef = useRef<string | null>(null)
   useImperativeHandle(forwardedRef, () => innerRef.current as HTMLElement)
 
   const safe = sanitizeHtml(html)
   const rendered = useMemo(() => highlightFindInHtml(safe, findQuery), [safe, findQuery])
+
+  // Only replace innerHTML when content actually changes. Parent re-renders (e.g. timer
+  // ticks) must not reset the DOM while the user is selecting or annotating text.
+  useLayoutEffect(() => {
+    const el = innerRef.current
+    if (!el || rendered == null) return
+    if (lastRenderedRef.current === rendered) return
+    el.innerHTML = rendered
+    lastRenderedRef.current = rendered
+  }, [rendered])
 
   useEffect(() => {
     if (!scrollAnchor || !findQuery.trim() || !innerRef.current) return
@@ -34,7 +54,6 @@ const FindableHtmlContent = forwardRef<HTMLElement, FindableHtmlContentProps>(fu
     <Tag
       ref={innerRef}
       className={cn(LSAT_HTML_CONTENT_CLASS, className)}
-      dangerouslySetInnerHTML={{ __html: rendered }}
       {...rest}
     />
   )

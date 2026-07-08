@@ -19,6 +19,7 @@ export type BillingSubscriptionRow = {
 export type BillingProfileBillingFields = {
   id: string
   email: string | null
+  full_name: string | null
   stripe_customer_id: string | null
   prep_plus_source: PrepPlusSource | null
 }
@@ -34,7 +35,7 @@ export function createBillingRepository(client: SupabaseClient) {
     async getProfileBillingFields(userId: string): Promise<BillingProfileBillingFields | null> {
       const { data, error } = await client
         .from('profiles')
-        .select('id,email,stripe_customer_id,prep_plus_source')
+        .select('id,email,full_name,stripe_customer_id,prep_plus_source')
         .eq('id', userId)
         .maybeSingle()
       if (error) throw error

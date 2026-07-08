@@ -20,6 +20,9 @@ type PracticeSessionActiveDrillFooterNavProps = {
   onSelectQuestion: (questionNumber: number) => void
   onPrev: () => void
   onNext: () => void
+  /** When on the last question, replaces the disabled Next control. */
+  onSubmit?: () => void
+  submitLabel?: string
   className?: string
 }
 
@@ -32,8 +35,12 @@ function PracticeSessionActiveDrillFooterNav({
   onSelectQuestion,
   onPrev,
   onNext,
+  onSubmit,
+  submitLabel = "Submit",
   className,
 }: PracticeSessionActiveDrillFooterNavProps) {
+  const isLastQuestion = safeIndex >= questions.length
+
   return (
     <div className={cn(ACTIVE_DRILL_FOOTER_ROW_CLASS, className)}>
       <div className={ACTIVE_DRILL_FOOTER_NAV_CLUSTER_CLASS}>
@@ -64,12 +71,25 @@ function PracticeSessionActiveDrillFooterNav({
         </div>
         <div className={ACTIVE_DRILL_FOOTER_NAV_ARROW_COLUMN_CLASS}>
           <span className={ACTIVE_DRILL_QUESTION_NAV_FLAG_SLOT_CLASS} aria-hidden />
-          <PracticeSessionNavArrowButton
-            direction="next"
-            disabled={safeIndex >= questions.length}
-            className={ACTIVE_DRILL_FOOTER_NAV_ARROW_BUTTON_CLASS}
-            onClick={onNext}
-          />
+          {isLastQuestion && onSubmit ? (
+            <button
+              type="button"
+              className={cn(
+                ACTIVE_DRILL_FOOTER_NAV_ARROW_BUTTON_CLASS,
+                "min-w-[88px] border-[#0d47a1] bg-[#0d47a1] text-white hover:bg-[#0a3d8a]",
+              )}
+              onClick={onSubmit}
+            >
+              {submitLabel}
+            </button>
+          ) : (
+            <PracticeSessionNavArrowButton
+              direction="next"
+              disabled={isLastQuestion}
+              className={ACTIVE_DRILL_FOOTER_NAV_ARROW_BUTTON_CLASS}
+              onClick={onNext}
+            />
+          )}
         </div>
       </div>
     </div>

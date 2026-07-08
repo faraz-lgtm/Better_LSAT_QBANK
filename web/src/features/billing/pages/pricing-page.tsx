@@ -8,6 +8,7 @@ import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { createBillingApi, type BillingCatalog, type BillingPlanId } from "@/lib/api/billing"
 import { createUsersApi } from "@/lib/api/users"
 import { logRouteRedirect } from "@/lib/auth/log-route-redirect"
+import { isInDiagnosticAcquisitionFunnel } from "@/lib/auth/diagnostic-intent"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 import { cn } from "@/lib/utils"
@@ -95,6 +96,11 @@ function PricingPage() {
   useEffect(() => {
     let alive = true
     async function load() {
+      if (isInDiagnosticAcquisitionFunnel()) {
+        logRouteRedirect("/app/pricing", "/diagnostic/start", "diagnostic acquisition funnel")
+        navigate("/diagnostic/start", { replace: true })
+        return
+      }
       if (!usersApi) {
         if (alive) {
           setError("Supabase env is missing.")
@@ -117,11 +123,6 @@ function PricingPage() {
         if (entitlement.accessState === "FULL_ACCESS") {
           logRouteRedirect("/app/pricing", "/app", "FULL_ACCESS")
           navigate("/app", { replace: true })
-          return
-        }
-        if (entitlement.accessState === "LSAC_REQUIRED") {
-          logRouteRedirect("/app/pricing", "/app/lsac-link", "LSAC_REQUIRED")
-          navigate("/app/lsac-link", { replace: true })
           return
         }
 
@@ -154,6 +155,14 @@ function PricingPage() {
     if (!billingApi) {
       setError("Billing is not available.")
       return
+    }
+    if (usersApi) {
+      const profile = await usersApi.getMyProfile()
+      if (!profile?.full_name?.trim()) {
+        logRouteRedirect("/app/pricing", "/onboarding", "missing full_name before checkout")
+        navigate("/onboarding", { replace: true })
+        return
+      }
     }
     setCheckoutPlan(plan)
     setError(null)

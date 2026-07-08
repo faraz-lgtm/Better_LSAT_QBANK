@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { resolvePostAuthDestination } from "./post-auth-redirect"
+import type { DiagnosticFunnelState } from "@/lib/auth/diagnostic-intent"
 import type { UserEntitlement, UserProfile } from "@/lib/api/users"
 
 const baseStudent: UserProfile = {
@@ -22,45 +23,87 @@ const fullAccessEntitlement: UserEntitlement = {
   accessState: "FULL_ACCESS",
 }
 
+const lsacRequiredEntitlement: UserEntitlement = {
+  ...fullAccessEntitlement,
+  isLsacEligible: false,
+  accessState: "LSAC_REQUIRED",
+}
+
+const emptyFunnel: DiagnosticFunnelState = {
+  pendingIntent: null,
+  completedDiagnostic: false,
+  funnelActive: false,
+  inAcquisitionFunnel: false,
+}
+
+const acquisitionFunnel: DiagnosticFunnelState = {
+  pendingIntent: "quick",
+  completedDiagnostic: false,
+  funnelActive: true,
+  inAcquisitionFunnel: true,
+}
+
+const completedFunnel: DiagnosticFunnelState = {
+  pendingIntent: null,
+  completedDiagnostic: true,
+  funnelActive: true,
+  inAcquisitionFunnel: false,
+}
+
 describe("resolvePostAuthDestination", () => {
   it("returns onboarding when profile is missing", () => {
-    expect(resolvePostAuthDestination(null, null)).toBe("/onboarding")
+    expect(resolvePostAuthDestination(null, null, emptyFunnel)).toBe("/onboarding")
   })
 
-  it("returns onboarding when student is first-time login", () => {
+  it("returns admin for admin role", () => {
+    expect(
+      resolvePostAuthDestination(
+        { ...baseStudent, role: "admin" },
+        fullAccessEntitlement,
+        emptyFunnel,
+      ),
+    ).toBe("/admin")
+  })
+
+  it("returns diagnostic start during acquisition funnel even when LSAC is required", () => {
+    expect(
+      resolvePostAuthDestination(baseStudent, lsacRequiredEntitlement, acquisitionFunnel),
+    ).toBe("/diagnostic/start")
+  })
+
+  it("returns diagnostic start during acquisition funnel for first-time login", () => {
+    expect(
+      resolvePostAuthDestination(
+        { ...baseStudent, is_first_time_login: true },
+        lsacRequiredEntitlement,
+        acquisitionFunnel,
+      ),
+    ).toBe("/diagnostic/start")
+  })
+
+  it("returns diagnostic results when funnel is complete", () => {
+    expect(
+      resolvePostAuthDestination(baseStudent, lsacRequiredEntitlement, completedFunnel),
+    ).toBe("/app/diagnostic/results")
+  })
+
+  it("returns onboarding when student is first-time login outside funnel", () => {
     expect(
       resolvePostAuthDestination(
         { ...baseStudent, is_first_time_login: true },
         fullAccessEntitlement,
+        emptyFunnel,
       ),
     ).toBe("/onboarding")
   })
 
-  it("returns pricing when entitlement is PAYMENT_REQUIRED", () => {
+  it("returns lsac-link when entitlement is LSAC_REQUIRED outside funnel", () => {
     expect(
-      resolvePostAuthDestination(baseStudent, {
-        ...fullAccessEntitlement,
-        hasActiveCore: false,
-        accessState: "PAYMENT_REQUIRED",
-      }),
-    ).toBe("/app/pricing")
-  })
-
-  it("returns lsac-link when entitlement is LSAC_REQUIRED", () => {
-    expect(
-      resolvePostAuthDestination(baseStudent, {
-        ...fullAccessEntitlement,
-        isLsacEligible: false,
-        accessState: "LSAC_REQUIRED",
-      }),
+      resolvePostAuthDestination(baseStudent, lsacRequiredEntitlement, emptyFunnel),
     ).toBe("/app/lsac-link")
   })
 
   it("returns app when entitlement is FULL_ACCESS", () => {
-    expect(resolvePostAuthDestination(baseStudent, fullAccessEntitlement)).toBe("/app")
-  })
-
-  it("defaults to pricing when entitlement payload is missing", () => {
-    expect(resolvePostAuthDestination(baseStudent, null)).toBe("/app/pricing")
+    expect(resolvePostAuthDestination(baseStudent, fullAccessEntitlement, emptyFunnel)).toBe("/app")
   })
 })

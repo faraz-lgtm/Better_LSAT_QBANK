@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useState } from "react"
 import { Outlet, useLocation } from "react-router-dom"
 
 import { StudentAppHeader } from "@/features/app-shell/student-app-header"
@@ -14,18 +14,44 @@ import {
   StudentPageHeaderSlotProvider,
   useStudentPageHeaderSlotState,
 } from "@/features/app-shell/student-page-header-slot"
+import { createUsersApi, type AccessState } from "@/lib/api/users"
 import { cn } from "@/lib/utils"
 import { useLawHubSessionLoginLog } from "@/lib/auth/use-lawhub-session-login-log"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 function StudentAppShell() {
   useLawHubSessionLoginLog()
   const location = useLocation()
   const immersive = isPracticeImmersiveRoute(location.pathname)
   const premiumAccount = useGuestPremiumAccount()
-  const freePlanShell = isGuestFreePlanRoute(location.pathname) && !premiumAccount
+  const [accessState, setAccessState] = useState<AccessState | null>(null)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), [])
   const { headerActions, breadcrumbTail, setHeaderActions, setBreadcrumbTail } = useStudentPageHeaderSlotState()
+
+  useEffect(() => {
+    let alive = true
+    const usersApi = createUsersApi(getSupabaseBrowserClient())
+
+    void usersApi
+      .getEntitlementState()
+      .then((entitlement) => {
+        if (!alive) return
+        setAccessState(entitlement.accessState)
+      })
+      .catch(() => {
+        if (!alive) return
+        setAccessState("PAYMENT_REQUIRED")
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const isUnpaidStudent = accessState === "PAYMENT_REQUIRED"
+  const freePlanShell =
+    !premiumAccount && (isUnpaidStudent || isGuestFreePlanRoute(location.pathname))
 
   useLayoutEffect(() => {
     document.documentElement.classList.add("student-shell-active")
