@@ -12,9 +12,10 @@ const IMMERSIVE_SCRIM_BACKDROP_STYLE = {
 type PracticeSessionImmersiveFrameProps = {
   children: ReactNode
   className?: string
+  hideScrim?: boolean
 }
 
-function PracticeSessionImmersiveFrame({ children, className }: PracticeSessionImmersiveFrameProps) {
+function PracticeSessionImmersiveFrame({ children, className, hideScrim = false }: PracticeSessionImmersiveFrameProps) {
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
@@ -30,11 +31,13 @@ function PracticeSessionImmersiveFrame({ children, className }: PracticeSessionI
         className,
       )}
     >
-      <div
-        className="pointer-events-none fixed inset-0"
-        style={IMMERSIVE_SCRIM_BACKDROP_STYLE}
-        aria-hidden
-      />
+      {!hideScrim ? (
+        <div
+          className="pointer-events-none fixed inset-0"
+          style={IMMERSIVE_SCRIM_BACKDROP_STYLE}
+          aria-hidden
+        />
+      ) : null}
       <div className="relative flex h-auto max-h-full w-full max-w-[1440px] min-w-0 flex-col items-stretch">
         {children}
       </div>
