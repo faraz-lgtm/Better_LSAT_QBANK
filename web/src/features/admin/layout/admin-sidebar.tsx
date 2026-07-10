@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
 
 import { useAdminApi } from "@/features/admin/use-admin-api"
+import { filterStudentVisiblePrepTestRows } from "@/lib/prep-test-visibility"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const links: Array<{ to: string; label: string; section: "Content" | "Settings"; badge?: string }> = [
@@ -24,12 +25,15 @@ function AdminSidebar() {
     async function loadCounts() {
       if (!adminApi) return
       try {
-        const [prepTests, courses] = await Promise.all([
-          adminApi.listPrepTests(1, 0),
+        const [prepTestRows, courses] = await Promise.all([
+          adminApi.listAllPrepTests(),
           adminApi.listCourses(),
         ])
         if (!alive) return
-        setPrepTestsCount(Number(prepTests.total ?? 0))
+        const visiblePrepTestCount = filterStudentVisiblePrepTestRows(
+          prepTestRows as Array<{ module_id?: unknown }>,
+        ).length
+        setPrepTestsCount(visiblePrepTestCount)
         setCoursesCount(Array.isArray(courses) ? courses.length : 0)
       } catch {
         if (!alive) return

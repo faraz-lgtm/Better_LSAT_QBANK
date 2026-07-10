@@ -10,6 +10,7 @@ import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
+import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
 import { userNeedsPasswordSetup } from "@/lib/auth/password-setup"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
@@ -72,7 +73,10 @@ function OnboardingPage() {
         ])
         if (!alive) return
         if (!user) return navigate("/login", { replace: true })
-        if (profile && !profile.is_first_time_login) return navigate("/app", { replace: true })
+        if (profile && !profile.is_first_time_login) {
+          navigate(await fetchPostAuthDestination(usersApi), { replace: true })
+          return
+        }
         setRequiresPassword(userNeedsPasswordSetup(user, session))
         if (profile?.full_name) setFullName(profile.full_name)
       } catch (e) {
@@ -122,7 +126,7 @@ function OnboardingPage() {
         wantsLessons: wantsLessons === "yes",
       })
       await usersApi.completeFirstLogin()
-      navigate("/app", { replace: true })
+      navigate(await fetchPostAuthDestination(usersApi), { replace: true })
     } catch (e) {
       setError(e instanceof Error ? formatSupabaseCallError(e) : "Unable to complete onboarding.")
     } finally {

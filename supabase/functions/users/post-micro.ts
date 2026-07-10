@@ -1,5 +1,9 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { CORS_EDGE_NARROW, json } from '../_shared/edge-http.ts'
+import { createLawHubClient } from '../_shared/lawhub-client.ts'
+import { parseLawHubEnv } from '../_shared/lawhub-env.ts'
+import { createLsacSyncRepository } from '../lsac-sync/lsac-sync.repository.ts'
+import { createLsacSyncService } from '../lsac-sync/lsac-sync.service.ts'
 import { createUsersRepository, createServiceRoleClient } from './users.repository.ts'
 import { AuthorizationError, createUsersService } from './users.service.ts'
 import { parseLsatScoreValue, type LsacStudentPayload } from './users.mapper.ts'
@@ -15,6 +19,18 @@ function lawhubDisabled(): Response {
     { status: 503 },
     corsHeaders,
   )
+}
+
+function lawHubLogMetadata(req: Request): Record<string, unknown> | undefined {
+  const userAgent = req.headers.get('user-agent')
+  const ipAddress =
+    req.headers.get('cf-connecting-ip') ??
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    null
+  const metadata: Record<string, unknown> = {}
+  if (userAgent) metadata.userAgent = userAgent
+  if (ipAddress) metadata.ipAddress = ipAddress
+  return Object.keys(metadata).length > 0 ? metadata : undefined
 }
 
 export async function handleUsersPostMicro(req: Request, slug: string): Promise<Response> {
@@ -128,8 +144,36 @@ export async function handleUsersPostMicro(req: Request, slug: string): Promise<
 
     if (action === 'users-lawhub-upgrade-self') {
       if (!service.isLawHubConfigured()) return lawhubDisabled()
-      const upgrade = await service.upgradeSelfInLawHub(user.id)
-      return json({ upgrade }, {}, corsHeaders)
+      const result = await service.upgradeSelfInLawHub(user.id)
+      return json({ upgrade: result }, {}, corsHeaders)
+    }
+
+    if (action === 'users-lawhub-link') {
+      if (!service.isLawHubConfigured()) return lawhubDisabled()
+      const sessionEmail = user.email
+      if (!sessionEmail) {
+        return json({ error: 'Authenticated user has no email' }, { status: 400 }, corsHeaders)
+      }
+      const firstName = body.firstName
+      const lastName = body.lastName
+      if (typeof firstName !== 'string' || typeof lastName !== 'string') {
+        return json(
+          { error: 'firstName and lastName are required strings' },
+          { status: 400 },
+          corsHeaders,
+        )
+      }
+      const path = body.path
+      const linkInput = { firstName, lastName }
+      let profile
+      if (path === 'existing') {
+        profile = await service.linkLawHubWithExistingPrepPlus(user.id, sessionEmail, linkInput)
+      } else if (path === 'vendor' || path == null) {
+        profile = await service.linkLawHubWithVendorPrepPlus(user.id, sessionEmail, linkInput)
+      } else {
+        return json({ error: 'path must be vendor or existing' }, { status: 400 }, corsHeaders)
+      }
+      return json({ profile }, {}, corsHeaders)
     }
 
     if (action === 'users-lawhub-test-instances') {
@@ -140,7 +184,11 @@ export async function handleUsersPostMicro(req: Request, slug: string): Promise<
 
     if (action === 'users-lawhub-log-login') {
       if (!service.isLawHubConfigured()) return lawhubDisabled()
-      await service.logLawHubLogin(user.id)
+      const sessionEmail = user.email
+      if (!sessionEmail) {
+        return json({ error: 'Authenticated user has no email' }, { status: 400 }, corsHeaders)
+      }
+      await service.logLawHubLogin(user.id, sessionEmail, lawHubLogMetadata(req))
       return json({ ok: true }, {}, corsHeaders)
     }
 
@@ -258,6 +306,21 @@ export async function handleUsersPostMicro(req: Request, slug: string): Promise<
     if (action === 'users-admin-list-lsac-log-events') {
       const rows = await service.adminListLsacLogEvents(user.id, limit)
       return json({ rows }, {}, corsHeaders)
+    }
+
+    if (action === 'users-admin-lsac-sync') {
+      await service.requireAdmin(user.id)
+      if (!service.isLawHubConfigured()) return lawhubDisabled()
+      const env = parseLawHubEnv(Deno.env.toObject())
+      if (!env) return lawhubDisabled()
+      const lawHub = createLawHubClient({ getEnv: () => env })
+      const syncService = createLsacSyncService({
+        lawHub,
+        repository: createLsacSyncRepository(createServiceRoleClient()),
+      })
+      const includeInstances = body.includeInstances === true
+      const result = await syncService.run({ includeInstances })
+      return json({ result }, {}, corsHeaders)
     }
 
     return json({ error: 'Unknown users slug' }, { status: 400 }, corsHeaders)

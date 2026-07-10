@@ -102,7 +102,7 @@ function attemptDetailLabel(attempt: PrepTestPoolAttempt): string {
 function PtBadge({ number, tone }: { number: number; tone: "default" | "muted" | "success" }) {
   const palette =
     tone === "success"
-      ? "border-[#287f6e] bg-[#fff3ea] text-[#287f6e]"
+      ? "border-[#287f6e] bg-[#effefa] text-[#287f6e]"
       : tone === "muted"
         ? "border-[#666d80] bg-[#f6f8fa] text-[#666d80]"
         : "border-[#0d47a1] bg-[#f3f7ff] text-[#0d47a1]"

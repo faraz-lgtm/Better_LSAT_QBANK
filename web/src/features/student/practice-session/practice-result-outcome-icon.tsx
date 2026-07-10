@@ -6,13 +6,18 @@ type PracticeResultOutcomeIconProps = {
   correct: boolean
   unanswered?: boolean
   className?: string
-  variant?: "stroke" | "filled" | "grid"
+  variant?: "stroke" | "filled" | "grid" | "summary"
 }
 
 function isPracticeAnswerUnanswered(
   answer: { selectedAnswer: string } | undefined | null,
 ): boolean {
   return answer == null || !answer.selectedAnswer.trim()
+}
+
+function practiceResultOutcomeLabel(correct: boolean, unanswered: boolean): string {
+  if (unanswered) return "Unanswered"
+  return correct ? "Correct" : "Incorrect"
 }
 
 const OUTCOME_CIRCLE_PATH =
@@ -24,6 +29,30 @@ function PracticeResultOutcomeIcon({
   className,
   variant = "stroke",
 }: PracticeResultOutcomeIconProps) {
+  const label = practiceResultOutcomeLabel(correct, unanswered)
+
+  if (variant === "summary") {
+    return (
+      <span
+        className={cn(
+          "flex size-12 shrink-0 items-center justify-center rounded-full",
+          unanswered ? "bg-[#ff6683]" : correct ? "bg-[#10b981]" : "bg-[#ef4444]",
+          className,
+        )}
+        role="img"
+        aria-label={label}
+      >
+        {unanswered ? (
+          <Minus className="size-7 text-white" strokeWidth={2.5} aria-hidden />
+        ) : correct ? (
+          <Check className="size-7 text-white" strokeWidth={2.5} aria-hidden />
+        ) : (
+          <X className="size-7 text-white" strokeWidth={2.5} aria-hidden />
+        )}
+      </span>
+    )
+  }
+
   if (variant === "grid") {
     return (
       <span
@@ -32,6 +61,8 @@ function PracticeResultOutcomeIcon({
           unanswered ? "bg-[#ff6683]" : correct ? "bg-[#00bc54]" : "bg-[#df1c41]",
           className,
         )}
+        role="img"
+        aria-label={label}
         aria-hidden
       >
         {unanswered ? (
@@ -53,7 +84,8 @@ function PracticeResultOutcomeIcon({
           unanswered ? "bg-[#ff6683]" : correct ? "bg-[#00bc54]" : "bg-[#df1c41]",
           className,
         )}
-        aria-hidden
+        role="img"
+        aria-label={label}
       >
         {unanswered ? (
           <Minus className="size-3.5 text-white" strokeWidth={2.5} />
@@ -75,7 +107,8 @@ function PracticeResultOutcomeIcon({
         viewBox="0 0 24 24"
         fill="none"
         className={cn("size-6 shrink-0", className)}
-        aria-hidden
+        role="img"
+        aria-label={label}
       >
         <g clipPath="url(#practice-result-outcome-unanswered)">
           <path
@@ -105,7 +138,8 @@ function PracticeResultOutcomeIcon({
         viewBox="0 0 24 24"
         fill="none"
         className={cn("size-6 shrink-0", className)}
-        aria-hidden
+        role="img"
+        aria-label={label}
       >
         <g clipPath="url(#practice-result-outcome-correct)">
           <path
@@ -140,7 +174,8 @@ function PracticeResultOutcomeIcon({
       viewBox="0 0 24 24"
       fill="none"
       className={cn("size-6 shrink-0", className)}
-      aria-hidden
+      role="img"
+      aria-label={label}
     >
       <g clipPath="url(#practice-result-outcome-incorrect)">
         <path

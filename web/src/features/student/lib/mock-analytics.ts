@@ -86,9 +86,9 @@ export const mockAnalyticsSections: AnalyticsSection[] = [
   {
     id: "LR",
     title: "Logical Reasoning",
-    badgeBg: "#fffbeb",
-    badgeColor: "#ae8b00",
-    accentBar: "#ae8b00",
+    badgeBg: "#eafff4",
+    badgeColor: "#00bc54",
+    accentBar: "#00bc54",
     rows: [
       {
         id: "lr-conditional",
@@ -131,9 +131,9 @@ export const mockAnalyticsSections: AnalyticsSection[] = [
   {
     id: "RC",
     title: "Reading Comprehension",
-    badgeBg: "#fff3ea",
-    badgeColor: "#ff9d51",
-    accentBar: "#ff9d51",
+    badgeBg: "#e5fdff",
+    badgeColor: "#0bbcc9",
+    accentBar: "#0bbcc9",
     rows: [
       {
         id: "rc-critique",

@@ -13,6 +13,7 @@ import {
   BLIND_REVIEW_NOTES_BADGE_ACTUAL_CLASS,
   BLIND_REVIEW_NOTES_BADGE_BLIND_CLASS,
   BLIND_REVIEW_NOTES_CARD_CLASS,
+  BLIND_REVIEW_NOTES_CONTENT_CLASS,
   BLIND_REVIEW_NOTES_HEADER_CLASS,
   BLIND_REVIEW_NOTES_PAGE_CLASS,
   BLIND_REVIEW_NOTES_PT_LABEL_CLASS,
@@ -21,6 +22,7 @@ import {
   BLIND_REVIEW_NOTES_SECTION_SUBTITLE_MUTED_CLASS,
   BLIND_REVIEW_NOTES_SECTION_TITLE_ACTIVE_CLASS,
   BLIND_REVIEW_NOTES_SECTION_TITLE_MUTED_CLASS,
+  BLIND_REVIEW_NOTES_SHELL_GUTTER_CLASS,
   BLIND_REVIEW_NOTES_START_BUTTON_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
 import { createPracticeApi } from "@/lib/api/practice"
@@ -43,25 +45,27 @@ function BlindReviewNotesHeader({
   onClose: () => void
 }) {
   return (
-    <header className={BLIND_REVIEW_NOTES_HEADER_CLASS}>
-      <div className="flex min-w-0 flex-col gap-2.5">
-        <p className={BLIND_REVIEW_NOTES_PT_LABEL_CLASS}>{prepTestLabel}</p>
-        <div className="flex h-6 flex-wrap items-center gap-2">
-          <span className={BLIND_REVIEW_NOTES_BADGE_BLIND_CLASS}>
-            <EyeOff className="size-3 shrink-0" aria-hidden />
-            Blind Review
-          </span>
-          <span className={BLIND_REVIEW_NOTES_BADGE_ACTUAL_CLASS}>{actualScoreLabel}</span>
+    <header className={cn(BLIND_REVIEW_NOTES_HEADER_CLASS, BLIND_REVIEW_NOTES_SHELL_GUTTER_CLASS)}>
+      <div className={cn(BLIND_REVIEW_NOTES_CONTENT_CLASS, "flex items-center justify-between")}>
+        <div className="flex min-w-0 flex-col gap-2.5">
+          <p className={BLIND_REVIEW_NOTES_PT_LABEL_CLASS}>{prepTestLabel}</p>
+          <div className="flex h-6 flex-wrap items-center gap-2">
+            <span className={BLIND_REVIEW_NOTES_BADGE_BLIND_CLASS}>
+              <EyeOff className="size-3 shrink-0" aria-hidden />
+              Blind Review
+            </span>
+            <span className={BLIND_REVIEW_NOTES_BADGE_ACTUAL_CLASS}>{actualScoreLabel}</span>
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[#666d80] transition-colors hover:bg-[#edf3ff] hover:text-[#062357]"
+          aria-label={`Close ${prepTestLabel}`}
+        >
+          <FigmaIcon name="block-circle" className="size-6" aria-hidden />
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={onClose}
-        className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[#666d80] transition-colors hover:bg-[#edf3ff] hover:text-[#062357]"
-        aria-label={`Close ${prepTestLabel}`}
-      >
-        <FigmaIcon name="block-circle" className="size-6" aria-hidden />
-      </button>
     </header>
   )
 }
@@ -195,8 +199,14 @@ function PracticeBlindReviewPrepTestPage() {
   }
 
   const pageShell = (children: ReactNode) => (
-    <StudentMain className={BLIND_REVIEW_NOTES_PAGE_CLASS} contentClassName="!px-6 !pt-0 !pb-6">
-      <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-5">{children}</div>
+    <StudentMain
+      layout="immersive"
+      className={BLIND_REVIEW_NOTES_PAGE_CLASS}
+      contentClassName="flex min-h-0 flex-1 flex-col overflow-y-auto"
+    >
+      <div className={cn(BLIND_REVIEW_NOTES_SHELL_GUTTER_CLASS, "flex min-h-0 flex-1 flex-col gap-5 pb-6 pt-5")}>
+        <div className={cn(BLIND_REVIEW_NOTES_CONTENT_CLASS, "flex min-h-0 flex-1 flex-col gap-5")}>{children}</div>
+      </div>
     </StudentMain>
   )
 
@@ -228,21 +238,27 @@ function PracticeBlindReviewPrepTestPage() {
   const actualScoreLabel =
     blindReview.scaledScore != null ? `Actual: ${blindReview.scaledScore}` : "Actual: BR"
 
-  return pageShell(
-    <>
+  return (
+    <StudentMain
+      layout="immersive"
+      className={BLIND_REVIEW_NOTES_PAGE_CLASS}
+      contentClassName="flex min-h-0 flex-1 flex-col overflow-y-auto"
+    >
       <BlindReviewNotesHeader
         prepTestLabel={prepTest.label}
         actualScoreLabel={actualScoreLabel}
         onClose={closeNotes}
       />
 
-      {error ? (
-        <p className="text-sm text-red-600" role="alert">
-          {error}
-        </p>
-      ) : null}
+      <div className={cn(BLIND_REVIEW_NOTES_SHELL_GUTTER_CLASS, "flex min-h-0 flex-1 flex-col pb-6 pt-5")}>
+        <div className={cn(BLIND_REVIEW_NOTES_CONTENT_CLASS, "flex flex-col gap-5")}>
+          {error ? (
+            <p className="text-sm text-red-600" role="alert">
+              {error}
+            </p>
+          ) : null}
 
-      <section className={BLIND_REVIEW_NOTES_CARD_CLASS}>
+          <section className={BLIND_REVIEW_NOTES_CARD_CLASS}>
         <div className="flex h-12 w-full items-center justify-between gap-2.5">
           <h2 className="shrink-0 text-2xl font-bold leading-[1.3] text-[#062357]">Blind Review</h2>
           <p className="min-w-0 text-right text-sm font-normal leading-normal tracking-[0.28px] text-[#666d80]">
@@ -326,8 +342,10 @@ function PracticeBlindReviewPrepTestPage() {
             </button>
           )}
         </div>
-      </section>
-    </>,
+          </section>
+        </div>
+      </div>
+    </StudentMain>
   )
 }
 

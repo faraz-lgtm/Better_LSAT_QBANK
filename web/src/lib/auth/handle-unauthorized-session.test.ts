@@ -80,4 +80,18 @@ describe('handleUsersInvokeError', () => {
     expect(signOut).toHaveBeenCalledOnce()
     expect(replace).toHaveBeenCalledWith('/login')
   })
+
+  it('surfaces edge function error bodies from 500 responses', async () => {
+    const supabase = { auth: { signOut: vi.fn() } } as unknown as SupabaseClient
+    const err = new FunctionsHttpError(
+      new Response(JSON.stringify({ error: 'LawHub Stripe price must be one-time' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    await expect(handleUsersInvokeError(supabase, err)).rejects.toThrow(
+      'LawHub Stripe price must be one-time',
+    )
+  })
 })

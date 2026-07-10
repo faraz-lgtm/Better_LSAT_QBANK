@@ -116,7 +116,7 @@ describe("prep-course-format curriculum helpers", () => {
     ).toEqual({
       label: "Rep Work",
       duration: "21 mins",
-      accentClass: "text-[#0d47a1]",
+      accentClass: "text-[#3374ff]",
     })
     expect(lessonRowSubtitle(baseLesson)).toBeNull()
   })
@@ -135,7 +135,7 @@ describe("prep-course-format curriculum helpers", () => {
       subtitle: {
         label: "Rep Work",
         duration: "0 mins",
-        accentClass: "text-[#0d47a1]",
+        accentClass: "text-[#3374ff]",
       },
     })
     expect(

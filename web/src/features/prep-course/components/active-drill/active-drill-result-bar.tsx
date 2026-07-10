@@ -1,33 +1,26 @@
-import { Check, ChevronRight, Minus, X } from "lucide-react"
+import { ChevronRight } from "lucide-react"
 
-import {
-  isPracticeAnswerUnanswered,
-} from "@/features/student/practice-session/practice-result-outcome-icon"
-import { cn } from "@/lib/utils"
+import type { DrillQuestionOutcome } from "@/features/prep-course/lib/resolve-drill-question-outcomes"
+import { PracticeResultOutcomeIcon } from "@/features/student/practice-session/practice-result-outcome-icon"
 import type { PrepLessonActiveDrillAttempt } from "@/lib/api/prep-course"
 
 type ActiveDrillResultBarProps = {
   attempt: PrepLessonActiveDrillAttempt
   lessonTitle?: string
+  questionOutcomes?: DrillQuestionOutcome[]
   onRetake?: () => void
   retaking?: boolean
-}
-
-function activeDrillHasUnanswered(attempt: PrepLessonActiveDrillAttempt): boolean {
-  if (attempt.answers.some((answer) => isPracticeAnswerUnanswered(answer))) return true
-  const answeredCount = attempt.answers.filter((answer) => answer.selectedAnswer.trim()).length
-  return answeredCount < attempt.questionCount
+  retakeLabel?: string
 }
 
 function ActiveDrillResultBar({
   attempt,
   lessonTitle,
+  questionOutcomes = [],
   onRetake,
   retaking = false,
+  retakeLabel = "Retake",
 }: ActiveDrillResultBarProps) {
-  const allCorrect = attempt.questionCount > 0 && attempt.rawScore === attempt.questionCount
-  const hasUnanswered = !allCorrect && activeDrillHasUnanswered(attempt)
-
   return (
     <section className="min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.04)]">
       <div className="flex flex-col items-center gap-4 p-6">
@@ -36,7 +29,7 @@ function ActiveDrillResultBar({
         ) : null}
 
         <div className="flex h-[76px] w-full min-w-0 items-center justify-between gap-4">
-          <div className="flex min-w-0 flex-col gap-2">
+          <div className="flex min-w-0 shrink-0 flex-col gap-2">
             <p className="m-0 text-base font-medium leading-[1.5] tracking-[0.02em] text-[#666d80]">Your Score</p>
             <p className="m-0 whitespace-nowrap text-[#062357]">
               <span className="text-[32px] font-bold leading-[1.25]">
@@ -46,20 +39,20 @@ function ActiveDrillResultBar({
             </p>
           </div>
 
-          <div
-            className={cn(
-              "flex size-12 shrink-0 items-center justify-center rounded-full",
-              allCorrect ? "bg-[#00d492]" : hasUnanswered ? "bg-[#ff6683]" : "bg-[#ef4444]",
-            )}
-          >
-            {allCorrect ? (
-              <Check className="size-7 text-white" strokeWidth={2.5} aria-hidden />
-            ) : hasUnanswered ? (
-              <Minus className="size-7 text-white" strokeWidth={2.5} aria-hidden />
-            ) : (
-              <X className="size-7 text-white" strokeWidth={2.5} aria-hidden />
-            )}
-          </div>
+          {questionOutcomes.length > 0 ? (
+            <div className="flex min-w-0 flex-1 items-center justify-center gap-3 px-2">
+              {questionOutcomes.map((outcome, index) => (
+                <PracticeResultOutcomeIcon
+                  key={index}
+                  correct={outcome.correct}
+                  unanswered={outcome.unanswered}
+                  variant="summary"
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="min-w-0 flex-1" aria-hidden />
+          )}
 
           {onRetake ? (
             <button
@@ -68,7 +61,7 @@ function ActiveDrillResultBar({
               onClick={onRetake}
               className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[#0b4e6e] bg-[#0d47a1] px-4 text-base font-semibold tracking-[0.02em] text-white shadow-[0_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-600)] disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {retaking ? "Starting…" : "Retake"}
+              {retaking ? "Starting…" : retakeLabel}
               <ChevronRight className="size-5 shrink-0" aria-hidden />
             </button>
           ) : (

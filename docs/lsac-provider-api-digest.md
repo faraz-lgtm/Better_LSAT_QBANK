@@ -99,6 +99,17 @@ Practical implication:
 6. Pull results via `GET /students/{studentCoachingId}/instances`.
 7. Refresh/upgrade linkage state as needed.
 
+## Product paths (Better LSAT)
+
+| Student choice | Stripe | LawHub `POST /students` flags |
+|----------------|--------|-------------------------------|
+| Subscribe with Better LSAT (LawHub included) | Active Core/Live subscription required | `isPrepPlusRequired=true`, `isPrepPlusIncludedFromVendor=true` |
+| Already have LawHub PrepPlus | Active Core/Live subscription required (no $99 LawHub line item at checkout) | `isPrepPlusRequired=true`, `isPrepPlusIncludedFromVendor=false` |
+
+Dashboard access requires **both** an active Better LSAT subscription and `linked === true` on the latest LSAC snapshot (coach link accepted in LawHub).
+
+Local profile field `prep_plus_source`: `vendor_subscription` or `existing_lsac` (records how PrepPlus is sourced; does not bypass billing).
+
 ## Data fields to persist locally
 
 Recommended fields to store in local profile/snapshot tables:

@@ -155,7 +155,16 @@ export async function handleAdminMicro(req: Request, slug: string): Promise<Resp
       if (!fileName || !fileBytesBase64) {
         return json({ error: "fileName and fileBytesBase64 are required" }, { status: 400 }, corsHeaders)
       }
-      return json(await service.bulkImportDryRun(user.id, { courseId, fileName, fileBytesBase64 }), {}, corsHeaders)
+      return json(
+        await service.bulkImportDryRun(user.id, {
+          courseId,
+          fileName,
+          fileBytesBase64,
+          insertOnly: readBoolean(body, "insertOnly"),
+        }),
+        {},
+        corsHeaders,
+      )
     }
     if (action === "admin-bulk-import-commit") {
       const courseId = readString(body, "courseId")

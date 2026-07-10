@@ -2,7 +2,8 @@
 function isPracticeImmersiveRoute(pathname: string): boolean {
   return (
     /^\/app\/practice\/drills\/session\/[^/]+$/.test(pathname) ||
-    /^\/app\/practice\/sections\/session\/[^/]+$/.test(pathname)
+    /^\/app\/practice\/sections\/session\/[^/]+$/.test(pathname) ||
+    /^\/app\/practice\/blind-review\/[^/]+$/.test(pathname)
   )
 }
 

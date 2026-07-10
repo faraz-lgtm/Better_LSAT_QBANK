@@ -18,12 +18,12 @@ function SignupCheckEmailPage() {
               <>
                 We just sent you a magic login link to{" "}
                 <span className="font-semibold text-[#082c6b]">{email}</span>. If you don&apos;t see our email, check your
-                spam for a message from <span className="font-semibold text-[#082c6b]">email@betterlsat.com</span>.
+                spam for a message from <span className="font-semibold text-[#082c6b]">support@betterlsat.com</span>.
               </>
             ) : (
               <>
                 We just sent you a magic login link! If you don&apos;t see our email, check your spam for a message from{" "}
-                <span className="font-semibold text-[#082c6b]">email@betterlsat.com</span>.
+                <span className="font-semibold text-[#082c6b]">support@betterlsat.com</span>.
               </>
             )}
           </p>

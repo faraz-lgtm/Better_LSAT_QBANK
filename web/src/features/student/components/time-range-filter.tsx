@@ -106,7 +106,7 @@ function TimeRangeFilter({
         aria-label={ariaLabel}
         className="flex h-[52px] w-[160px] items-center gap-2 rounded-[10px] border border-[#dfe1e7] bg-white px-3 text-base font-medium text-[#666d80] transition-colors hover:bg-[#f3f7ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d47a1]/30"
       >
-        <span className="flex-1 text-left">{getTimeRangeLabel(value)}</span>
+        <span className="whitespace-nowrap">{getTimeRangeLabel(value)}</span>
         <ChevronDown
           className={cn("size-5 transition-transform", open ? "rotate-180" : "")}
           aria-hidden
@@ -130,7 +130,7 @@ function TimeRangeFilter({
                   aria-selected={active}
                   onClick={() => handleSelect(option.value)}
                   className={cn(
-                    "flex h-10 w-full items-center justify-between gap-3 rounded-xl px-3 text-sm font-medium tracking-[0.02em] transition-colors",
+                    "flex h-10 w-full items-center justify-between gap-3 rounded-[16px] px-3 text-[16px] font-medium leading-normal tracking-[0.02em] transition-colors",
                     active ? "bg-[#f3f7ff] text-[#0d47a1]" : "text-[#062357] hover:bg-[#f6f8fa]",
                   )}
                 >

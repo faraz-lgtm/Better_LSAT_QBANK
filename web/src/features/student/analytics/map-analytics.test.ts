@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  formatPrepTestChartLabel,
+  formatPrepTestHistoryLabel,
   mapOverviewToHeadlineStats,
+  mapPrepTestSessionToHistoryEntry,
   mapTrajectoryToScoreProgress,
   mapPrioritiesToSections,
 } from "@/features/student/analytics/map-analytics"
-import type { AnalyticsOverview, PriorityRow, TrajectoryPoint } from "@/lib/api/analytics"
+import type { AnalyticsOverview, PracticeSessionSummary, PriorityRow, TrajectoryPoint } from "@/lib/api/analytics"
 
 describe("map-analytics", () => {
   it("maps overview to headline stats with percentiles", () => {
@@ -24,15 +27,42 @@ describe("map-analytics", () => {
     }
     const stats = mapOverviewToHeadlineStats(overview)
     expect(stats[0]?.value).toBe("170")
-    expect(stats[0]?.caption).toContain("92")
+    expect(stats[0]?.caption).toContain("92nd")
   })
 
-  it("maps trajectory to score progress with blind review", () => {
+  it("formats prep test chart labels as PT numbers", () => {
+    expect(formatPrepTestChartLabel("Local Seed — PrepTest Alpha", "LSAC150")).toBe("PT 150")
+    expect(formatPrepTestChartLabel("PrepTest 129", null)).toBe("PT 129")
+    expect(formatPrepTestChartLabel("PT 101", null)).toBe("PT 101")
+  })
+
+  it("formats prep test history labels as compact PT numbers", () => {
+    expect(formatPrepTestHistoryLabel("The Official LSAT PrepTest 118", null)).toBe("PT118")
+    expect(formatPrepTestHistoryLabel("Local Seed — PrepTest Alpha", "LSAC150")).toBe("PT150")
+    expect(mapPrepTestSessionToHistoryEntry({
+      id: "s1",
+      kind: "PREPTEST",
+      prepTestId: "LSAC158",
+      startedAt: "2026-01-01T00:00:00Z",
+      completedAt: "2026-01-02T00:00:00Z",
+      rawScore: 80,
+      scaledScore: 160,
+      percentile: 50,
+      bookmarked: false,
+      excluded: false,
+      metadata: {},
+      prepTestTitle: "The Official LSAT PrepTest 158",
+      sectionTitle: null,
+      sectionType: null,
+    } satisfies PracticeSessionSummary)?.testLabel).toBe("PT158")
+  })
+
+  it("maps trajectory labels to PT numbers from module id", () => {
     const points: TrajectoryPoint[] = [
       {
         sessionId: "s1",
-        prepTestTitle: "PT 150",
-        moduleId: null,
+        prepTestTitle: "Local Seed — PrepTest Alpha",
+        moduleId: "LSAC150",
         rawScore: 80,
         scaledScore: 160,
         percentile: 50,
@@ -45,6 +75,7 @@ describe("map-analytics", () => {
       },
     ]
     const mapped = mapTrajectoryToScoreProgress(points)
+    expect(mapped[0]?.test).toBe("PT 150")
     expect(mapped[0]?.regular).toBe(89)
     expect(mapped[0]?.blindReview).toBe(92)
   })

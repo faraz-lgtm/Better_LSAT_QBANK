@@ -84,6 +84,20 @@ describe('createUsersApi', () => {
     })
   })
 
+  it('lawHubLink calls users-lawhub-link with path', async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: { profile: { id: '1', student_coaching_id: 'coach-1' } },
+      error: null,
+    })
+    const api = createUsersApi(mockSupabase(invoke))
+    await api.lawHubLink({ firstName: 'A', lastName: 'B', path: 'existing' })
+    expect(invoke).toHaveBeenCalledWith('users-lawhub-link', {
+      method: 'POST',
+      body: { firstName: 'A', lastName: 'B', path: 'existing' },
+      headers: {},
+    })
+  })
+
   it('getEntitlementState requests users-get-entitlement-state', async () => {
     const invoke = vi.fn().mockResolvedValue({
       data: {

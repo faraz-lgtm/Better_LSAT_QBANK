@@ -2,17 +2,19 @@ import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 import { useAdminApi } from "@/features/admin/use-admin-api"
+import {
+  filterStudentVisiblePrepTestRows,
+  sortPrepTestsByNumberAsc,
+} from "@/lib/prep-test-visibility"
 
 function AdminPrepTestsPage() {
   const adminApi = useAdminApi()
   const navigate = useNavigate()
-  const [rows, setRows] = useState<Array<Record<string, unknown>>>([])
+  const [allRows, setAllRows] = useState<Array<Record<string, unknown>>>([])
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
-  const [requestedPage, setRequestedPage] = useState(0)
   const [loading, setLoading] = useState(false)
   const [openingPrepTestId, setOpeningPrepTestId] = useState<string | null>(null)
-  const [total, setTotal] = useState(0)
   const [search, setSearch] = useState("")
   const [activeFilter, setActiveFilter] = useState<"all" | "lr" | "rc" | "lg" | "missing-tags">("all")
   const pageSize = 10
@@ -24,11 +26,13 @@ function AdminPrepTestsPage() {
       try {
         if (alive) setLoading(true)
         const contentFilter = activeFilter === "all" ? undefined : activeFilter
-        const data = await adminApi.listPrepTests(pageSize, requestedPage * pageSize, contentFilter)
+        const rows = await adminApi.listAllPrepTests(contentFilter)
         if (alive) {
-          setRows((data.rows ?? []) as Array<Record<string, unknown>>)
-          setTotal(data.total ?? 0)
-          setPage(requestedPage)
+          const visibleRows = sortPrepTestsByNumberAsc(
+            filterStudentVisiblePrepTestRows(rows as Array<Record<string, unknown>>),
+          )
+          setAllRows(visibleRows)
+          setPage(0)
         }
       } catch (e) {
         if (alive) setError(e instanceof Error ? e.message : "Failed to load prep tests")
@@ -40,20 +44,22 @@ function AdminPrepTestsPage() {
     return () => {
       alive = false
     }
-  }, [adminApi, requestedPage, activeFilter])
+  }, [adminApi, activeFilter])
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return rows
-    return rows.filter((row) => {
+    if (!q) return allRows
+    return allRows.filter((row) => {
       const title = String(row.title ?? "").toLowerCase()
       const moduleId = String(row.module_id ?? "").toLowerCase()
       return title.includes(q) || moduleId.includes(q)
     })
-  }, [rows, search])
+  }, [allRows, search])
 
+  const total = filteredRows.length
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const pageItems = Array.from({ length: totalPages }, (_, i) => i)
+  const pagedRows = filteredRows.slice(page * pageSize, page * pageSize + pageSize)
 
   function formatImportedDate(value: unknown) {
     if (typeof value !== "string") return "-"
@@ -111,14 +117,17 @@ function AdminPrepTestsPage() {
             className="search-box"
             placeholder="Search module or title..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(0)
+            }}
           />
           <div className="flex items-center gap-1">
             <button
               type="button"
               className={`filter-pill ${activeFilter === "all" ? "active" : ""}`}
               onClick={() => {
-                setRequestedPage(0)
+                setPage(0)
                 setActiveFilter("all")
               }}
             >
@@ -128,7 +137,7 @@ function AdminPrepTestsPage() {
               type="button"
               className={`filter-pill ${activeFilter === "lr" ? "active" : ""}`}
               onClick={() => {
-                setRequestedPage(0)
+                setPage(0)
                 setActiveFilter("lr")
               }}
             >
@@ -138,7 +147,7 @@ function AdminPrepTestsPage() {
               type="button"
               className={`filter-pill ${activeFilter === "rc" ? "active" : ""}`}
               onClick={() => {
-                setRequestedPage(0)
+                setPage(0)
                 setActiveFilter("rc")
               }}
             >
@@ -148,7 +157,7 @@ function AdminPrepTestsPage() {
               type="button"
               className={`filter-pill ${activeFilter === "lg" ? "active" : ""}`}
               onClick={() => {
-                setRequestedPage(0)
+                setPage(0)
                 setActiveFilter("lg")
               }}
             >
@@ -158,7 +167,7 @@ function AdminPrepTestsPage() {
               type="button"
               className={`filter-pill ${activeFilter === "missing-tags" ? "active" : ""}`}
               onClick={() => {
-                setRequestedPage(0)
+                setPage(0)
                 setActiveFilter("missing-tags")
               }}
             >
@@ -179,7 +188,7 @@ function AdminPrepTestsPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredRows.map((row) => {
+            {pagedRows.map((row) => {
               const sectionCount = getSectionCount(row)
               const questionCount = getQuestionCount(row, sectionCount)
               const explainedCount = Number(row.explained_count ?? 0)
@@ -226,7 +235,7 @@ function AdminPrepTestsPage() {
                 </tr>
               )
             })}
-            {!loading && filteredRows.length === 0 && (
+            {!loading && pagedRows.length === 0 && (
               <tr>
                 <td className="px-3 py-3 text-[var(--text3)]" colSpan={7}>
                   No tests on this page.
@@ -241,7 +250,7 @@ function AdminPrepTestsPage() {
           type="button"
           className="admin-btn admin-btn-ghost"
           disabled={page === 0 || loading}
-          onClick={() => setRequestedPage((p) => Math.max(0, p - 1))}
+          onClick={() => setPage((p) => Math.max(0, p - 1))}
         >
           Previous
         </button>
@@ -251,7 +260,7 @@ function AdminPrepTestsPage() {
             type="button"
             className={`admin-btn ${pageIdx === page ? "admin-btn-primary" : "admin-btn-ghost"}`}
             disabled={loading}
-            onClick={() => setRequestedPage(pageIdx)}
+            onClick={() => setPage(pageIdx)}
           >
             {pageIdx + 1}
           </button>
@@ -260,7 +269,7 @@ function AdminPrepTestsPage() {
           type="button"
           className="admin-btn admin-btn-ghost"
           disabled={loading || page + 1 >= totalPages}
-          onClick={() => setRequestedPage((p) => p + 1)}
+          onClick={() => setPage((p) => p + 1)}
         >
           Next
         </button>
