@@ -20,7 +20,7 @@ const DIAGNOSTIC_TIERS: DiagnosticIntentTierConfig[] = [
     name: "Mini",
     tagline: "Quick overview of your weakest areas",
     questions: "10q",
-    duration: "~20 min",
+    duration: "~13 min",
     features: ["5 questions per section", "Basic score estimate", "Quick topic flags"],
     accent: "mini",
   },

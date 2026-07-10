@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom"
 import { createGuestDiagnosticPreviewQuestions } from "@/features/guest/diagnostic/guest-diagnostic-exam-mock-data"
 import {
   buildGuestDiagnosticAnswerState,
-  type GuestDiagnosticAnswerState,
-} from "@/features/guest/diagnostic/guest-diagnostic-result-storage"
+} from "@/features/guest/diagnostic/guest-diagnostic-answer-state"
+import type { GuestDiagnosticAnswerState } from "@/features/guest/diagnostic/guest-diagnostic-exam-utils"
 import {
   choiceIndexFromAnswer,
   resolveGuestDiagnosticPassageHtml,
@@ -154,7 +154,7 @@ function GuestDiagnosticExamLayout({
       if (!current || !interactive) return
       const choice = current.choices[index]
       if (!choice) return
-      const nextAnswer = buildGuestDiagnosticAnswerState(choice.id)
+      const nextAnswer = buildGuestDiagnosticAnswerState(current, choice.id)
       setAnswersByQuestion((prev) => ({ ...prev, [current.id]: nextAnswer }))
     },
     [current, interactive],

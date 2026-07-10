@@ -1,6 +1,3 @@
-import type { DrillQuestion } from "@/features/student/drills/drill-types"
-
-/** Mock preview questions treat choice B as correct. */
 export const GUEST_DIAGNOSTIC_MOCK_CORRECT_CHOICE_ID = "B"
 
 export type GuestDiagnosticAnswerState = {
@@ -9,7 +6,7 @@ export type GuestDiagnosticAnswerState = {
 }
 
 export function choiceIndexFromAnswer(
-  choices: DrillQuestion["choices"],
+  choices: { id: string }[],
   selectedAnswer: string,
 ): number | null {
   const letter = selectedAnswer.trim().toUpperCase()
@@ -29,18 +26,7 @@ export function resolveGuestDiagnosticPassageHtml(
   return getRegionHtml(passageKey, passageBody)
 }
 
+/** Fallback when a question has no embedded correct key (legacy preview clones). */
 export function isGuestDiagnosticMockCorrectChoice(choiceId: string): boolean {
   return choiceId.toUpperCase() === GUEST_DIAGNOSTIC_MOCK_CORRECT_CHOICE_ID
-}
-
-export function estimateGuestDiagnosticScaledScore(correctCount: number, questionCount: number): number {
-  if (questionCount <= 0) return 120
-  const ratio = correctCount / questionCount
-  return Math.round(120 + ratio * 60)
-}
-
-export function estimateGuestDiagnosticPercentile(correctCount: number, questionCount: number): number {
-  if (questionCount <= 0) return 0
-  const ratio = correctCount / questionCount
-  return Math.round(ratio * 99 * 10) / 10
 }

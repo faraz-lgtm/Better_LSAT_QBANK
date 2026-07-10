@@ -2,17 +2,19 @@ import { describe, expect, it } from "vitest"
 
 import {
   choiceIndexFromAnswer,
-  estimateGuestDiagnosticPercentile,
-  estimateGuestDiagnosticScaledScore,
-  isGuestDiagnosticMockCorrectChoice,
   resolveGuestDiagnosticPassageHtml,
 } from "@/features/guest/diagnostic/guest-diagnostic-exam-utils"
+import {
+  createMiniDiagnosticQuestions,
+  formatMiniDiagnosticScoreRange,
+  resolveMiniDiagnosticScoreRange,
+} from "@/features/guest/diagnostic/mini-diagnostic-content"
 
 describe("guest diagnostic exam utils", () => {
   const choices = [
-    { id: "A", index: 0, text: "A" },
-    { id: "B", index: 1, text: "B" },
-    { id: "C", index: 2, text: "C" },
+    { id: "A" },
+    { id: "B" },
+    { id: "C" },
   ]
 
   it("maps selected answer letters to choice indices", () => {
@@ -32,14 +34,16 @@ describe("guest diagnostic exam utils", () => {
     expect(resolveGuestDiagnosticPassageHtml(() => "", "", "ignored")).toBe("")
   })
 
-  it("scores mock correct choice B only", () => {
-    expect(isGuestDiagnosticMockCorrectChoice("B")).toBe(true)
-    expect(isGuestDiagnosticMockCorrectChoice("A")).toBe(false)
+  it("loads ten unique mini diagnostic questions", () => {
+    const questions = createMiniDiagnosticQuestions()
+    expect(questions).toHaveLength(10)
+    expect(new Set(questions.map((q) => q.id)).size).toBe(10)
+    expect(questions[0]?.correctChoiceId).toBe("C")
+    expect(questions[9]?.correctChoiceId).toBe("D")
   })
 
-  it("estimates scaled score and percentile from ratio", () => {
-    expect(estimateGuestDiagnosticScaledScore(0, 10)).toBe(120)
-    expect(estimateGuestDiagnosticScaledScore(10, 10)).toBe(180)
-    expect(estimateGuestDiagnosticPercentile(5, 10)).toBe(49.5)
+  it("resolves projected score ranges by correct count", () => {
+    expect(formatMiniDiagnosticScoreRange(resolveMiniDiagnosticScoreRange(10))).toBe("180")
+    expect(formatMiniDiagnosticScoreRange(resolveMiniDiagnosticScoreRange(5))).toBe("155–161")
   })
 })

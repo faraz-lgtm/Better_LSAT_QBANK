@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 
 import { buildGuestDiagnosticPremiumQuestionDetail } from "@/features/guest/diagnostic/guest-diagnostic-premium-question-mock"
 import type { GuestDiagnosticResult } from "@/features/guest/diagnostic/guest-diagnostic-result-storage"
+import { getMiniDiagnosticQuestionMeta } from "@/features/guest/diagnostic/mini-diagnostic-content"
 import {
   formatDiagnosticDateLabel,
   getDiagnosticIntentTitle,
@@ -78,12 +79,15 @@ function GuestDiagnosticFreeScoreCards({
       <div className="flex w-full flex-col justify-between gap-4 rounded-[16px] bg-[#0d47a1] p-6 lg:w-[290px] lg:shrink-0">
         <div className="flex flex-col gap-1">
           <p className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#edf3ff]">YOUR SCORE</p>
-          <p className="text-[48px] font-extrabold leading-[1.2] text-white">{result.scaledScore}</p>
+          <p className="text-[48px] font-extrabold leading-[1.2] text-white">{result.scaledScoreLabel}</p>
+          <p className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#edf3ff]/90">
+            Projected LSAT score range
+          </p>
           <p className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#edf3ff]">
             {result.correctCount}/{result.questionCount} CORRECT ({deltaLabel})
           </p>
           <p className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#edf3ff]">
-            PERCENTILE: {result.percentile % 1 === 0 ? result.percentile : result.percentile.toFixed(1)}
+            PERCENTILE: {result.percentileLabel}
           </p>
         </div>
         <p className="text-xs font-semibold uppercase tracking-[0.48px] text-[#edf3ff]/90">
@@ -139,12 +143,12 @@ function GuestDiagnosticPremiumScoreCards({
     <section className="flex w-full flex-col gap-6 lg:flex-row lg:items-stretch">
       <div className="flex w-full flex-col gap-4 rounded-[16px] bg-[#0d47a1] p-6 lg:w-[290px] lg:shrink-0">
         <p className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#edf3ff]">YOUR SCORE</p>
-        <p className="text-[48px] font-extrabold leading-[1.2] text-white">{result.scaledScore}</p>
+        <p className="text-[48px] font-extrabold leading-[1.2] text-white">{result.scaledScoreLabel}</p>
         <p className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#edf3ff]">
           {result.correctCount}/{result.questionCount} CORRECT ({deltaLabel})
         </p>
         <p className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#edf3ff]">
-          PERCENTILE: {result.percentile % 1 === 0 ? result.percentile : result.percentile.toFixed(1)}
+          PERCENTILE: {result.percentileLabel}
         </p>
       </div>
 
@@ -182,11 +186,15 @@ function GuestDiagnosticPremiumScoreCards({
 
 function GuestDiagnosticLockedQuestionRow({
   number,
+  questionId,
   isCorrect,
 }: {
   number: number
+  questionId: string
   isCorrect: boolean
 }) {
+  const meta = getMiniDiagnosticQuestionMeta(questionId)
+
   return (
     <div className="relative overflow-hidden border-t border-[#dfe1e7] first:border-t-0">
       <div className="flex gap-4 p-6">
@@ -199,11 +207,22 @@ function GuestDiagnosticLockedQuestionRow({
           {number}
         </div>
         <div className="min-w-0 flex-1 select-none blur-[6px]">
-          <p className="text-lg font-semibold text-[#062357]">PT 129 · S1 · Q{10 + number}</p>
+          <p className="text-lg font-semibold text-[#062357]">
+            Mini Diagnostic · Q{number}
+            {meta?.questionType ? ` · ${meta.questionType}` : ""}
+          </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <span className="rounded-full border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px]">LR</span>
-            <span className="rounded-full border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px]">Medium</span>
-            <span className="rounded-full border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px]">Flaw</span>
+            {meta?.questionType ? (
+              <span className="rounded-full border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px]">
+                {meta.questionType}
+              </span>
+            ) : null}
+            {meta?.difficulty ? (
+              <span className="rounded-full border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px]">
+                Level {meta.difficulty}
+              </span>
+            ) : null}
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <div className="h-12 rounded-lg bg-[#f6f8fa]" />
@@ -257,15 +276,16 @@ function GuestDiagnosticResultsView({
 
         {isPremium
           ? result.outcomes.map((outcome, index) => {
-              const detail = buildGuestDiagnosticPremiumQuestionDetail(index + 1)
+              const detail = buildGuestDiagnosticPremiumQuestionDetail(outcome.questionId)
+              if (!detail) return null
               return (
                 <PracticeQuestionResultCard
                   key={outcome.questionId}
                   number={index + 1}
                   detail={detail}
                   isCorrect={outcome.isCorrect}
-                  selectedAnswer={outcome.isCorrect ? "c" : "b"}
-                  yourTimeSeconds={4 + index}
+                  selectedAnswer={outcome.isCorrect ? detail.correctChoiceId ?? undefined : undefined}
+                  yourTimeSeconds={null}
                   variant="in-section"
                 />
               )
@@ -274,6 +294,7 @@ function GuestDiagnosticResultsView({
               <GuestDiagnosticLockedQuestionRow
                 key={outcome.questionId}
                 number={index + 1}
+                questionId={outcome.questionId}
                 isCorrect={outcome.isCorrect}
               />
             ))}

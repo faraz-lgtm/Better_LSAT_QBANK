@@ -2,11 +2,11 @@ import type { DrillQuestion } from "@/features/student/drills/drill-types"
 
 import type { GuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-intent-types"
 import {
-  estimateGuestDiagnosticPercentile,
-  estimateGuestDiagnosticScaledScore,
-  type GuestDiagnosticAnswerState,
-  isGuestDiagnosticMockCorrectChoice,
-} from "@/features/guest/diagnostic/guest-diagnostic-exam-utils"
+  formatMiniDiagnosticPercentileRange,
+  formatMiniDiagnosticScoreRange,
+  resolveMiniDiagnosticScoreRange,
+} from "@/features/guest/diagnostic/mini-diagnostic-content"
+import type { GuestDiagnosticAnswerState } from "@/features/guest/diagnostic/guest-diagnostic-exam-utils"
 import { getGuestDiagnosticTestConfig } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
 
 const GUEST_DIAGNOSTIC_RESULT_STORAGE_KEY = "guestDiagnosticResult"
@@ -21,13 +21,55 @@ type GuestDiagnosticResult = {
   completedAt: string
   diagnosticNumber: number
   scaledScore: number
+  scaledScoreLow: number
+  scaledScoreHigh: number
+  scaledScoreLabel: string
   percentile: number
+  percentileLow: number
+  percentileHigh: number
+  percentileLabel: string
   correctCount: number
   questionCount: number
   outcomes: GuestDiagnosticQuestionOutcome[]
 }
 
-/** Demo outcomes aligned with Figma `19512:24718` (mini: 3/10 correct, score 167). */
+function buildResultScoreFields(
+  intentId: GuestDiagnosticIntentId,
+  correctCount: number,
+  questionCount: number,
+) {
+  if (intentId === "mini") {
+    const scoreRange = resolveMiniDiagnosticScoreRange(correctCount)
+    const scaledMid = Math.round((scoreRange.scaledLow + scoreRange.scaledHigh) / 2)
+    const percentileMid = (scoreRange.percentileLow + scoreRange.percentileHigh) / 2
+    return {
+      scaledScore: scaledMid,
+      scaledScoreLow: scoreRange.scaledLow,
+      scaledScoreHigh: scoreRange.scaledHigh,
+      scaledScoreLabel: formatMiniDiagnosticScoreRange(scoreRange),
+      percentile: percentileMid,
+      percentileLow: scoreRange.percentileLow,
+      percentileHigh: scoreRange.percentileHigh,
+      percentileLabel: formatMiniDiagnosticPercentileRange(scoreRange),
+    }
+  }
+
+  const ratio = questionCount > 0 ? correctCount / questionCount : 0
+  const scaledScore = Math.round(120 + ratio * 60)
+  const percentile = Math.round(ratio * 99 * 10) / 10
+  return {
+    scaledScore,
+    scaledScoreLow: scaledScore,
+    scaledScoreHigh: scaledScore,
+    scaledScoreLabel: String(scaledScore),
+    percentile,
+    percentileLow: percentile,
+    percentileHigh: percentile,
+    percentileLabel: String(percentile),
+  }
+}
+
+/** Demo outcomes for preview routes when no submission exists yet. */
 function buildDefaultGuestDiagnosticResult(intentId: GuestDiagnosticIntentId): GuestDiagnosticResult {
   const config = getGuestDiagnosticTestConfig(intentId)
   const questionCount = config.questionCount
@@ -42,7 +84,7 @@ function buildDefaultGuestDiagnosticResult(intentId: GuestDiagnosticIntentId): G
   }
 
   const outcomes: GuestDiagnosticQuestionOutcome[] = Array.from({ length: questionCount }, (_, index) => {
-    const questionId = `guest-diagnostic-preview-q${index + 1}`
+    const questionId = intentId === "mini" ? `mini-diag-q${index + 1}` : `guest-diagnostic-preview-q${index + 1}`
     return {
       questionId,
       isCorrect: index < correctCount,
@@ -53,11 +95,10 @@ function buildDefaultGuestDiagnosticResult(intentId: GuestDiagnosticIntentId): G
     intentId,
     completedAt: new Date().toISOString(),
     diagnosticNumber: 1,
-    scaledScore: 167,
-    percentile: 90.6,
     correctCount,
     questionCount,
     outcomes,
+    ...buildResultScoreFields(intentId, correctCount, questionCount),
   }
 }
 
@@ -79,18 +120,10 @@ function buildGuestDiagnosticResultFromAnswers(
     intentId,
     completedAt: new Date().toISOString(),
     diagnosticNumber: 1,
-    scaledScore: estimateGuestDiagnosticScaledScore(correctCount, questionCount),
-    percentile: estimateGuestDiagnosticPercentile(correctCount, questionCount),
     correctCount,
     questionCount,
     outcomes,
-  }
-}
-
-function buildGuestDiagnosticAnswerState(choiceId: string): GuestDiagnosticAnswerState {
-  return {
-    selectedAnswer: choiceId,
-    isCorrect: isGuestDiagnosticMockCorrectChoice(choiceId),
+    ...buildResultScoreFields(intentId, correctCount, questionCount),
   }
 }
 
@@ -125,7 +158,6 @@ function getDiagnosticIntentTitle(intentId: GuestDiagnosticIntentId): string {
 
 export {
   buildDefaultGuestDiagnosticResult,
-  buildGuestDiagnosticAnswerState,
   buildGuestDiagnosticResultFromAnswers,
   formatDiagnosticDateLabel,
   getDiagnosticIntentTitle,

@@ -9,6 +9,7 @@ import { AuthTermsCheckbox } from "@/features/auth/components/auth-terms-checkbo
 import { GuestMarketingPanelLayout } from "@/features/guest/marketing/guest-marketing-panel-layout"
 import { createAuthApi, getAuthCallbackUrl } from "@/lib/api/auth"
 import { saveDiagnosticIntent, markDiagnosticFunnelActive } from "@/lib/auth/diagnostic-intent"
+import type { GuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-intent-types"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
