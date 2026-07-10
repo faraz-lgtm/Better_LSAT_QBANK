@@ -136,6 +136,10 @@ function getSectionLandingHref(key: StudentNavSectionKey): string | undefined {
 }
 
 export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBreadcrumb[] {
+  if (pathname.startsWith("/app/diagnostic/results")) {
+    return [{ label: "Home", href: "/app/diagnostic/results" }, { label: "Analytics" }]
+  }
+
   if (isDashboardActive(pathname)) {
     return [{ label: "Dashboard" }]
   }

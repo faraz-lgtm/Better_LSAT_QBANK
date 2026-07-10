@@ -5,6 +5,11 @@ import { StudentAppHeader } from "@/features/app-shell/student-app-header"
 import { PortalChatWidget } from "@/features/app-shell/portal-chat-widget"
 import { isPracticeImmersiveRoute } from "@/features/app-shell/practice-immersive-route"
 import { StudentAppSidebar } from "@/features/app-shell/student-app-sidebar"
+import { isGuestFreePlanRoute } from "@/features/guest/diagnostic/guest-free-plan-nav-config"
+import { GuestFreePlanSidebar } from "@/features/guest/diagnostic/guest-free-plan-sidebar"
+import { GuestUpgradeCta } from "@/features/guest/diagnostic/guest-upgrade-cta"
+import { useGuestPremiumAccount } from "@/features/guest/premium/guest-premium-account"
+import { GuestPricingModalProvider } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import {
   StudentPageHeaderSlotProvider,
   useStudentPageHeaderSlotState,
@@ -16,6 +21,8 @@ function StudentAppShell() {
   useLawHubSessionLoginLog()
   const location = useLocation()
   const immersive = isPracticeImmersiveRoute(location.pathname)
+  const premiumAccount = useGuestPremiumAccount()
+  const freePlanShell = isGuestFreePlanRoute(location.pathname) && !premiumAccount
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), [])
   const { headerActions, breadcrumbTail, setHeaderActions, setBreadcrumbTail } = useStudentPageHeaderSlotState()
@@ -36,13 +43,16 @@ function StudentAppShell() {
 
   return (
     <StudentPageHeaderSlotProvider setHeaderActions={setHeaderActions} setBreadcrumbTail={setBreadcrumbTail}>
+      <GuestPricingModalProvider>
       <div
         className={cn(
           "flex h-svh min-h-0 overflow-hidden",
           "flex h-svh min-h-0 overflow-hidden bg-[var(--primary-0)]",
         )}
       >
-        {immersive ? null : (
+        {immersive ? null : freePlanShell ? (
+          <GuestFreePlanSidebar mobileOpen={mobileNavOpen} onMobileClose={closeMobileNav} />
+        ) : (
           <StudentAppSidebar mobileOpen={mobileNavOpen} onMobileClose={closeMobileNav} />
         )}
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -50,7 +60,7 @@ function StudentAppShell() {
             <StudentAppHeader
               breadcrumbTail={breadcrumbTail}
               onOpenMobileNav={() => setMobileNavOpen(true)}
-              headerActions={headerActions}
+              headerActions={freePlanShell ? <GuestUpgradeCta /> : headerActions}
             />
           )}
           <div className="flex h-0 min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -59,6 +69,7 @@ function StudentAppShell() {
         </div>
       </div>
       <PortalChatWidget />
+      </GuestPricingModalProvider>
     </StudentPageHeaderSlotProvider>
   )
 }

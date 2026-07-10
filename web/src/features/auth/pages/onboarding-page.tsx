@@ -3,11 +3,14 @@ import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { PasswordInput } from "@/components/ui/password-input"
 import { Select } from "@/components/ui/select"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
+import { ONBOARDING_RECOMMENDED_LSAT_DATE } from "@/features/auth/onboarding/onboarding-lsat-date-options"
+import { OnboardingWelcomeStep } from "@/features/auth/onboarding/onboarding-welcome-step"
+import { GUEST_DIAGNOSTIC_INTENT_STORAGE_KEY } from "@/features/guest/diagnostic/guest-diagnostic-intent-data"
+import { isGuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
 import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
 import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
@@ -23,8 +26,7 @@ function OnboardingPage() {
   const navigate = useNavigate()
   const [step, setStep] = useState<Step>(1)
   const [fullName, setFullName] = useState("")
-  const [username, setUsername] = useState("")
-  const [plannedLsatWindow, setPlannedLsatWindow] = useState("")
+  const [plannedLsatDate, setPlannedLsatDate] = useState(ONBOARDING_RECOMMENDED_LSAT_DATE)
   const [studyDays, setStudyDays] = useState<string[]>(days.slice(0, 5))
   const [studyHours, setStudyHours] = useState("1-2 hours/day")
   const [wantsLessons, setWantsLessons] = useState<"no" | "yes">("no")
@@ -94,8 +96,7 @@ function OnboardingPage() {
 
   function validateStep1(): boolean {
     if (!fullName.trim()) return setError("Full name is required."), false
-    if (!username.trim()) return setError("Username is required."), false
-    if (!plannedLsatWindow) return setError("Please select when you plan to take LSAT."), false
+    if (!plannedLsatDate) return setError("Please select when you plan to take the LSAT."), false
     if (requiresPassword) {
       if (password.length < 8) return setError("Password must be at least 8 characters."), false
       if (password !== confirmPassword) return setError("Password and confirm password do not match."), false
@@ -116,8 +117,8 @@ function OnboardingPage() {
       if (requiresPassword) await authApi.updatePassword(password)
       await usersApi.saveOnboarding({
         fullName,
-        username,
-        plannedLsatWindow,
+        plannedLsatDate: plannedLsatDate === "not_sure" ? null : plannedLsatDate,
+        plannedLsatWindow: plannedLsatDate === "not_sure" ? "not_sure" : null,
         lawSchoolCycle: lawSchoolCycle.trim() || null,
         goalScore,
         startingScore,
@@ -129,6 +130,37 @@ function OnboardingPage() {
       navigate(await fetchPostAuthDestination(usersApi), { replace: true })
     } catch (e) {
       setError(e instanceof Error ? formatSupabaseCallError(e) : "Unable to complete onboarding.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function handleWelcomeContinue() {
+    if (!validateStep1()) return
+
+    const storedIntent = sessionStorage.getItem(GUEST_DIAGNOSTIC_INTENT_STORAGE_KEY)
+    if (!isGuestDiagnosticIntentId(storedIntent)) {
+      next()
+      return
+    }
+
+    if (!authApi || !usersApi) {
+      setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
+      return
+    }
+
+    setIsSubmitting(true)
+    setError(null)
+    try {
+      if (requiresPassword) await authApi.updatePassword(password)
+      await usersApi.saveOnboarding({
+        fullName,
+        plannedLsatDate: plannedLsatDate === "not_sure" ? null : plannedLsatDate,
+        plannedLsatWindow: plannedLsatDate === "not_sure" ? "not_sure" : null,
+      })
+      navigate("/diagnostic/start", { replace: true })
+    } catch (e) {
+      setError(e instanceof Error ? formatSupabaseCallError(e) : "Unable to continue to diagnostic.")
     } finally {
       setIsSubmitting(false)
     }
@@ -154,7 +186,6 @@ function OnboardingPage() {
   }
 
   function title() {
-    if (step === 1) return "Finish onboarding"
     if (step === 2) return "What days do you want to study?"
     if (step === 3 || step === 4) return "How many hours per day will you study?"
     if (step === 5) return "Do you want lessons in your plan?"
@@ -167,6 +198,26 @@ function OnboardingPage() {
     return "Test"
   }
 
+  if (step === 1) {
+    return (
+      <OnboardingWelcomeStep
+        fullName={fullName}
+        onFullNameChange={setFullName}
+        password={password}
+        onPasswordChange={setPassword}
+        confirmPassword={confirmPassword}
+        onConfirmPasswordChange={setConfirmPassword}
+        plannedLsatDate={plannedLsatDate}
+        onPlannedLsatDateChange={setPlannedLsatDate}
+        requiresPassword={requiresPassword}
+        isLoading={isLoading}
+        isSubmitting={isSubmitting}
+        error={error}
+        onContinue={() => void handleWelcomeContinue()}
+      />
+    )
+  }
+
   return (
     <AuthLayout ctaLabel="Log In" ctaHref="/login" headerVariant="app">
       <AuthCard className="mx-auto w-full max-w-[600px]">
@@ -176,41 +227,6 @@ function OnboardingPage() {
             <StudentPageLoader centered label="Loading…" />
           ) : (
             <>
-              {step === 1 && (
-                <>
-                  <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Full name"  />
-                  <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username"  />
-                  <Select
-                    value={plannedLsatWindow}
-                    onChange={(e) => setPlannedLsatWindow(e.target.value)}
-                    options={[
-                      { label: "Within 1 month", value: "within_1_month" },
-                      { label: "1-3 months", value: "1_3_months" },
-                      { label: "3-6 months", value: "3_6_months" },
-                      { label: "6+ months", value: "6_plus_months" },
-                      { label: "Not sure yet", value: "not_sure" },
-                    ]}
-                    placeholder="When do you plan to take LSAT?"
-                    className="ds-input"
-                  />
-                  {requiresPassword && (
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      <PasswordInput
-                        autoComplete="new-password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Create password"
-                      />
-                      <PasswordInput
-                        autoComplete="new-password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Confirm password"
-                      />
-                    </div>
-                  )}
-                </>
-              )}
               {step === 2 && (
                 <div className="flex flex-col gap-2 rounded-2xl border border-[#dfe1e7] bg-[#f2f7ff] p-4">
                   {days.map((d) => (
@@ -266,7 +282,7 @@ function OnboardingPage() {
               {step === 8 && (
                 <>
                   <p className="text-sm text-[#082c6b]">Take a diagnostic LR section to personalize your study plan. About 35 minutes.</p>
-                  <Button type="button" className="ds-btn w-full" onClick={() => setStep(13)}>Start Diagnostic</Button>
+                  <Button type="button" className="ds-btn w-full" onClick={() => navigate("/diagnostic/start")}>Start Diagnostic</Button>
                   <Button type="button" variant="ghost" className="w-full text-[#0d47a1]" onClick={() => setStep(9)}>Skip</Button>
                 </>
               )}

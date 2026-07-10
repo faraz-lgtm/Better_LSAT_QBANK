@@ -521,6 +521,176 @@ html.student-shell-active #root {
   display: none;
 }
 
+/* Figma `19510:19180` — guest diagnostic intent right panel */
+.guest-intent-panel {
+  position: relative;
+  display: flex;
+  flex: 1 1 50%;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #edf3ff;
+}
+
+.guest-intent-pattern {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  width: min(100%, 720px);
+  height: min(56vh, 520px);
+  overflow: hidden;
+  pointer-events: none;
+  background: rgb(255 255 255 / 30%);
+}
+
+.guest-intent-pattern__grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(72px, 97px));
+  opacity: 0.4;
+  transform: translateX(-28px);
+}
+
+.guest-intent-pattern__cell {
+  aspect-ratio: 1;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.guest-intent-pattern__cell--accent {
+  border: 2px solid rgb(136 94 242 / 50%);
+  background: linear-gradient(180deg, rgb(136 94 242 / 25%) 0%, rgb(255 255 255 / 0%) 100%);
+}
+
+.guest-intent-pattern__fade {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 72% 72% at 50% 29%, rgb(255 255 255 / 0%) 0%, #fff 46%, #fff 100%);
+}
+
+.guest-intent-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  height: 100px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 20px 24px;
+  background: #f3f7ff;
+}
+
+.guest-intent-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  overflow-x: auto;
+  overflow-y: auto;
+  padding: clamp(2rem, 8vh, 6rem) clamp(1rem, 3vw, 2rem);
+  background: #f3f7ff;
+}
+
+.guest-intent-content {
+  display: flex;
+  width: 100%;
+  max-width: 680px;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 24px;
+}
+
+.guest-intent-card-grid {
+  display: grid;
+  width: 100%;
+  max-width: 632px;
+  grid-template-columns: repeat(3, minmax(0, 200px));
+  justify-content: center;
+  gap: 16px;
+  padding-top: 32px;
+}
+
+@media (max-width: 719px) {
+  .guest-intent-card-grid {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 200px;
+  }
+}
+
+.guest-intent-panel .auth-split-footer {
+  position: relative;
+  z-index: 1;
+  background: #f3f7ff;
+}
+
+/* Figma `19510:18988` — signup form card on marketing panel */
+.guest-marketing-page .guest-marketing-signup-card.auth-card {
+  border-radius: 32px;
+  box-shadow:
+    0 12px 8px rgba(13, 13, 18, 0.08),
+    0 4px 3px rgba(13, 13, 18, 0.03);
+}
+
+.guest-marketing-page .auth-social-btn.ds-btn-outline,
+.guest-marketing-page .auth-social-btn {
+  background: #f5f9ff;
+}
+
+.guest-marketing-check-email-resend {
+  display: inline-flex;
+  height: 48px;
+  width: 100%;
+  max-width: 436px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.32px;
+  color: #0d47a1;
+  transition: opacity 0.15s ease;
+}
+
+.guest-marketing-check-email-resend:hover {
+  opacity: 0.85;
+}
+
+.guest-marketing-check-email-resend:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.guest-marketing-check-email-alt {
+  display: inline-flex;
+  height: 48px;
+  width: 100%;
+  max-width: 436px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  border: 1px solid #dfe1e7;
+  background: #fff;
+  box-shadow: 0 1px 1px rgba(13, 13, 18, 0.06);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.32px;
+  color: #0d47a1;
+  transition: background-color 0.15s ease;
+}
+
+.guest-marketing-check-email-alt:hover {
+  background: #f6f8fa;
+}
+
 .auth-split-header {
   position: relative;
   z-index: 1;

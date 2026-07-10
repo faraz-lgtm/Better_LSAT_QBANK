@@ -11,6 +11,11 @@ import { AuthCallbackPage } from "@/features/auth/pages/auth-callback-page"
 import { LsacLinkPage } from "@/features/auth/pages/lsac-link-page"
 import { PricingPage } from "@/features/billing/pages/pricing-page"
 import { OnboardingPage } from "@/features/auth/pages/onboarding-page"
+import { OnboardingWelcomePreviewPage } from "@/features/auth/pages/onboarding-welcome-preview-page"
+import { GuestDiagnosticIntentPage } from "@/features/guest/pages/guest-diagnostic-intent-page"
+import { GuestDiagnosticStartPage } from "@/features/guest/pages/guest-diagnostic-start-page"
+import { GuestDiagnosticResultsPage } from "@/features/guest/pages/guest-diagnostic-results-page"
+import { GuestDiagnosticResultsPreviewPage } from "@/features/guest/pages/guest-diagnostic-results-preview-page"
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
 import { PrepCourseContentPage } from "@/features/prep-course/pages/prep-course-content-page"
 import { PrepCourseLessonPage } from "@/features/prep-course/pages/prep-course-lesson-page"
@@ -316,6 +321,11 @@ const router = createBrowserRouter([
   { path: "/reset-password", element: <ResetPasswordPage /> },
   { path: "/auth/callback", element: <AuthCallbackPage /> },
   { path: "/onboarding", element: <OnboardingPage /> },
+  { path: "/onboarding/preview", element: <OnboardingWelcomePreviewPage /> },
+  { path: "/intent", element: <GuestDiagnosticIntentPage /> },
+  { path: "/diagnostic/start", element: <GuestDiagnosticStartPage /> },
+  { path: "/diagnostic/start/preview", element: <GuestDiagnosticStartPage preview /> },
+  { path: "/diagnostic/results/preview", element: <GuestDiagnosticResultsPreviewPage /> },
   {
     path: "/app",
     element: (
@@ -364,8 +374,7 @@ const router = createBrowserRouter([
       { path: "analytics/sections", element: <AnalyticsSectionsPage /> },
       { path: "analytics/preptests", element: <AnalyticsPrepTestsPage /> },
       { path: "analytics/preptests/results/:testId", element: <AnalyticsPrepTestResultsPage /> },
-        ],
-      },
+      { path: "diagnostic/results", element: <GuestDiagnosticResultsPage /> },
     ],
   },
   {

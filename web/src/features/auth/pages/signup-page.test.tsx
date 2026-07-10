@@ -57,7 +57,7 @@ describe("SignupPage", () => {
 
     expect(authMock.signInWithOtp).toHaveBeenCalled()
     expect(await screen.findByRole("heading", { name: /check your email/i })).toBeInTheDocument()
-    expect(screen.getByText(/new@example\.com/)).toBeInTheDocument()
+    expect(screen.getByText(/we just sent you a login link/i)).toBeInTheDocument()
   })
 
   it("sends magic link only once on rapid double-click", async () => {
