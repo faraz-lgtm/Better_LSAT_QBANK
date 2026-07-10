@@ -165,6 +165,8 @@ describe("LessonContentRenderer adaptive_drill", () => {
     )
     expect(screen.getByText("Your Score")).toBeInTheDocument()
     expect(screen.getByText(/1\/2/)).toBeInTheDocument()
+    expect(screen.getAllByRole("img", { name: "Correct" }).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByRole("img", { name: "Incorrect" }).length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText("Lesson notes after drill.")).toBeInTheDocument()
     expect(screen.getAllByText(/PT LSAC133/).length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText("Answer Popularity").length).toBeGreaterThanOrEqual(1)

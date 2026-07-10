@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { handleUsersInvokeError } from '@/lib/auth/handle-unauthorized-session'
 
-export type AccessState = 'AUTH_REQUIRED' | 'LSAC_REQUIRED' | 'FULL_ACCESS'
+export type AccessState = 'AUTH_REQUIRED' | 'PAYMENT_REQUIRED' | 'LSAC_REQUIRED' | 'FULL_ACCESS'
 
 export type UserEntitlement = {
   isAuthenticated: boolean
@@ -215,6 +215,19 @@ export function createUsersApi(supabase: SupabaseClient) {
       return data.profile
     },
 
+    async lawHubLink(input: {
+      firstName: string
+      lastName: string
+      path: 'vendor' | 'existing'
+    }): Promise<UserProfile> {
+      const { data, error } = await invokeUsersPost<{ profile: UserProfile }>('users-lawhub-link', {
+        ...input,
+      })
+      if (error) throw error
+      if (!data?.profile) throw new Error('No profile in response')
+      return data.profile
+    },
+
     async lawHubUpgradeSelf(): Promise<unknown> {
       const { data, error } = await invokeUsersPost<{ upgrade: unknown }>('users-lawhub-upgrade-self')
       if (error) throw error
@@ -321,6 +334,27 @@ export function createUsersApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       return data?.rows ?? []
+    },
+
+    async adminLsacSync(includeInstances = false): Promise<{
+      rosterCount: number
+      matchedProfiles: number
+      snapshotsWritten: number
+      testInstancesUpserted: number
+      errors: string[]
+    }> {
+      const { data, error } = await invokeUsersPost<{
+        result: {
+          rosterCount: number
+          matchedProfiles: number
+          snapshotsWritten: number
+          testInstancesUpserted: number
+          errors: string[]
+        }
+      }>('users-admin-lsac-sync', { includeInstances })
+      if (error) throw error
+      if (!data?.result) throw new Error('No LSAC sync result returned')
+      return data.result
     },
   }
 }

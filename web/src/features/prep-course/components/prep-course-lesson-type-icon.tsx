@@ -57,20 +57,17 @@ function LessonAdaptiveDrillIcon(props: IconProps) {
   )
 }
 
+/** Figma `18624:72625` — `huge-icon/education/outline/pencil-book` */
 function LessonRepWorkIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden {...props}>
-      <g transform="translate(2 1.25)">
-        <g transform="translate(10 10) scale(1.38) translate(-10 -10)">
-          <path
-            d="M11.6667 17.5H10C8.15905 17.5 6.66667 16.0076 6.66667 14.1667V5.83333C6.66667 3.99238 8.15905 2.5 10 2.5H15C16.8409 2.5 18.3333 3.99238 18.3333 5.83333V11.6667M1.66667 5.83333H4.16667M10 5.83333H15M10 9.16667H15M10 12.5H12.5M13.3333 15.8333L14.794 17.0019C15.1422 17.2805 15.6481 17.2355 15.9417 16.8999L18.3333 14.1667M2.91667 17.5L3.5 16.7222C3.93274 16.1452 4.16667 15.4435 4.16667 14.7222V3.75C4.16667 3.05964 3.60702 2.5 2.91667 2.5C2.22631 2.5 1.66667 3.05964 1.66667 3.75V14.7222C1.66667 15.4435 1.90059 16.1452 2.33333 16.7222L2.91667 17.5Z"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </g>
-      </g>
+      <path
+        d="M22 15V6C22 4.34315 20.6569 3 19 3H11C9.34315 3 8 4.34315 8 6V18M22 15H11C9.34315 15 8 16.3431 8 18M22 15V18C22 19.6569 20.6569 21 19 21H11C9.34315 21 8 19.6569 8 18M12 7H18M12 11H15M2 7H5M3.5 21L4.2 20.0667C4.71929 19.3743 5 18.5321 5 17.6667V4.5C5 3.67157 4.32843 3 3.5 3C2.67157 3 2 3.67157 2 4.5V17.6667C2 18.5321 2.28071 19.3743 2.8 20.0667L3.5 21Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   )
 }
@@ -83,7 +80,7 @@ const LESSON_TYPE_ICON: Partial<
   video_text: { icon: LessonTextIcon, className: "text-[#0d47a1]" },
   adaptive_drill: { icon: LessonAdaptiveDrillIcon, className: "text-[#0bbcc9]" },
   active_drill: { icon: LessonActiveDrillIcon, className: "text-[#00bc54]" },
-  rep_work: { icon: LessonRepWorkIcon, className: "text-[#0d47a1]" },
+  rep_work: { icon: LessonRepWorkIcon, className: "text-[#3374ff]" },
 }
 
 type PrepCourseLessonTypeIconProps = {

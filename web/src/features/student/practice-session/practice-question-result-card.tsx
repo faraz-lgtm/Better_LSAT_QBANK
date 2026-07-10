@@ -4,7 +4,7 @@ import { resolveAnswerPopularityRows } from "@/features/student/explanation-deta
 import type { ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
 import { PracticeResultOutcomeIcon } from "@/features/student/practice-session/practice-result-outcome-icon"
 import {
-  PracticeQuestionResultStatsRow,
+  PracticeQuestionResultCardLayout,
   correctChoiceLetter,
   difficultyLabelFromLevel,
   formatMmSs,
@@ -162,8 +162,12 @@ function PracticeQuestionResultCard({
           pct: 0,
         }))
 
-  const statsRow = (
-    <PracticeQuestionResultStatsRow
+  const questionCardBody = (
+    <PracticeQuestionResultCardLayout
+      title={title}
+      tags={tags}
+      resultContent={resultRow("stroke")}
+      actions={actionButtons}
       targetTime={targetTime}
       yourTime={yourTime}
       yourTimeNote={yourTimeNote}
@@ -172,7 +176,6 @@ function PracticeQuestionResultCard({
       correctLetter={correctLetter}
       selectedLetter={selectedLetter}
       isUnanswered={isUnanswered}
-      resultContent={resultRow("stroke")}
     />
   )
 
@@ -195,24 +198,7 @@ function PracticeQuestionResultCard({
           </div>
 
           <div className="flex min-w-0 flex-1 flex-col gap-4">
-            <div className="flex h-[60px] items-start justify-between gap-4">
-              <div className="flex min-w-0 flex-col gap-2">
-                <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">{title}</h3>
-                <div className="flex flex-wrap gap-2.5">
-                  {tags.map((t) => (
-                    <span
-                      key={t}
-                      className="inline-flex h-5 items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px] font-normal leading-[1.5] tracking-[0.02em] text-[#0d0d12]"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              {actionButtons}
-            </div>
-
-            {statsRow}
+            {questionCardBody}
           </div>
         </div>
       </article>
@@ -223,7 +209,7 @@ function PracticeQuestionResultCard({
     return (
       <article
         className={cn(
-          "relative min-w-0 max-w-full overflow-hidden rounded-[20px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
+          "relative min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
           className,
         )}
       >
@@ -238,24 +224,7 @@ function PracticeQuestionResultCard({
           </div>
 
           <div className="flex min-w-0 flex-1 flex-col gap-4">
-            <div className="flex h-[60px] items-start justify-between gap-4">
-              <div className="flex min-w-0 flex-col gap-2">
-                <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">{title}</h3>
-                <div className="flex flex-wrap gap-2.5">
-                  {tags.map((t) => (
-                    <span
-                      key={t}
-                      className="inline-flex h-5 items-center rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px] font-normal leading-[1.5] tracking-[0.02em] text-[#0d0d12]"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              {actionButtons}
-            </div>
-
-            {statsRow}
+            {questionCardBody}
           </div>
         </div>
       </article>
@@ -270,8 +239,8 @@ function PracticeQuestionResultCard({
       )}
     >
       <div className="p-6">
-        <div className="flex flex-col gap-4">
-          <div className="flex min-w-0 gap-6">
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className="flex min-w-0 items-start gap-6">
             <div
               className={cn(
                 "flex size-14 shrink-0 items-center justify-center rounded-[14px]",
@@ -280,24 +249,8 @@ function PracticeQuestionResultCard({
             >
               <span className="text-2xl font-bold leading-[1.3] text-white">{number}</span>
             </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-2">
-              <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">{title}</h3>
-              {tags.length > 0 ? (
-                <div className="flex flex-wrap gap-2.5">
-                  {tags.map((t) => (
-                    <span
-                      key={t}
-                      className="inline-flex h-5 items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px] font-normal leading-normal tracking-[0.02em] text-[#0d0d12]"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-            <div className="shrink-0">{actionButtons}</div>
+            <div className="flex min-w-0 flex-1 flex-col gap-4">{questionCardBody}</div>
           </div>
-          {statsRow}
         </div>
       </div>
     </article>

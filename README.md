@@ -66,16 +66,18 @@ Quick reference:
 
 | Variable | Purpose |
 |----------|---------|
-| `LSAC_BASE_URL` | Sandbox: `https://providers-api-sandbox.lawhub.org` — production: `https://providers-api.lawhub.org` |
+| `LAWHUB_SANDBOX` | `true` = Integration sandbox (auto `LSAC_BASE_URL` + `LSAC_SCOPE`); `false`/unset = production defaults. Alias: `LawHubSandbox` |
+| `LSAC_BASE_URL` | Optional override; otherwise derived from `LAWHUB_SANDBOX` |
 | `LSAC_VENDOR_ID` | Your vendor UUID from LSAC |
-| `LSAC_TENANT_ID` | Azure tenant (see LSAC doc; same value listed for integration and production in the draft doc) |
+| `LSAC_TENANT_ID` | Azure tenant (defaults to LSAC doc value if unset) |
 | `LSAC_CLIENT_ID` / `LSAC_CLIENT_SECRET` | App registration secrets from LSAC |
-| `LSAC_SCOPE` | Environment-specific `.default` scope URI from LSAC documentation |
+| `LSAC_SCOPE` | Optional override; otherwise derived from `LAWHUB_SANDBOX` |
 | `LSAC_VENDOR_SYSTEM` | Optional label for the required **logging** API |
 | `LSAC_DEEPLINK_BASE_URL` | Optional override for deep link host (default: `https://lawhub.org`) |
 | `LSAC_SYNC_KEY` | Required shared secret header (`x-lsac-sync-key`) for `lsac-sync` |
+| `PREP_COURSE_ENFORCE_ENTITLEMENT` | When `true`, prep-course requires linked + eligible LSAC subscription |
 
-**Hosted:** `supabase secrets set LSAC_BASE_URL=...` (repeat for each key). **Local:** `supabase/functions/.env` (gitignored).
+**Hosted sandbox:** `supabase secrets set LAWHUB_SANDBOX=true` plus `LSAC_VENDOR_ID`, `LSAC_CLIENT_ID`, `LSAC_CLIENT_SECRET`. **Production:** `LAWHUB_SANDBOX=false`. **Local:** `supabase/functions/.env` (gitignored).
 
 The `users` Edge Function exposes actions such as `lawhub-token-check`, `lawhub-lookup-email` (session email only), `lawhub-invite` (session email only), `lawhub-refresh`, `lawhub-upgrade-self`, `lawhub-test-instances`, and `lawhub-log-login`. See `web/src/lib/api/users.ts` for the typed client.
 
@@ -116,6 +118,28 @@ Emulator verification checklist:
 - `lsac-sync` returns roster/match counters and persists snapshots.
 
 **Secrets hygiene:** Never commit client secrets, never put them in `VITE_*`. If a client secret was shared in chat or committed, **rotate it with LSAC** and treat the old value as compromised.
+
+## Stripe billing (Core / Live + LawHub Advantage)
+
+After signup and onboarding, students land on **`/app/pricing`** to choose **Core ($70/mo)** or **Live ($129/mo)**. Stripe Checkout adds **LawHub Advantage (~$99/year)** as a one-time line item on the first invoice (7Sage-style). After payment, they complete LawHub linking on `/app/lsac-link`. Students with existing PrepPlus can skip billing via the link on the pricing page.
+
+| Variable | Purpose |
+|----------|---------|
+| `STRIPE_LIVE_MODE` | Hosted only: `true` = live keys; `false`/unset = test keys. **Localhost always uses test keys.** |
+| `STRIPE_SECRET_KEY_TEST` / `STRIPE_SECRET_KEY_LIVE` | Server-only (Edge Function secrets) |
+| `STRIPE_WEBHOOK_SECRET_TEST` / `STRIPE_WEBHOOK_SECRET_LIVE` | Webhook signature verification |
+| `STRIPE_PRICE_ID_CORE_TEST` / `STRIPE_PRICE_ID_CORE_LIVE` | Core monthly recurring price ($70) |
+| `STRIPE_PRICE_ID_LIVE_MONTHLY_TEST` / `STRIPE_PRICE_ID_LIVE_MONTHLY_LIVE` | Live monthly recurring price ($129) |
+| `STRIPE_PRICE_ID_LSAC_YEARLY_TEST` / `STRIPE_PRICE_ID_LSAC_YEARLY_LIVE` | LawHub Advantage (~$99/year). If stored as yearly recurring in Stripe, checkout bills year one as a **one-time** line item (Stripe cannot mix monthly + yearly on one Checkout session). |
+| `STRIPE_PRICE_ID_TEST` / `STRIPE_PRICE_ID_LIVE` | Legacy fallback for Core price only |
+| `STRIPE_PUBLISHABLE_KEY_TEST` / `STRIPE_PUBLISHABLE_KEY_LIVE` | Returned by `billing-get-public-config`; optional `VITE_STRIPE_PUBLISHABLE_KEY` for local web |
+| `APP_BASE_URL` | Stripe Checkout success/cancel redirect base. Set to `https://better-lsat-qbank.vercel.app` on hosted Supabase. If unset/invalid, checkout uses the browser `Origin` from the pricing page (localhost or Vercel). Do **not** use `SUPABASE_PUBLIC_URL` — that is the API host, not the web app. |
+
+Edge functions: `billing-create-checkout-session`, `billing-get-plans`, `billing-get-status`, `billing-get-public-config`, `stripe-webhook` (no JWT — Stripe signature only).
+
+**Local webhook:** `stripe listen --forward-to http://127.0.0.1:54321/functions/v1/stripe-webhook` and set `STRIPE_WEBHOOK_SECRET_TEST` from CLI output.
+
+**Hosted:** `supabase secrets set STRIPE_LIVE_MODE=false` (staging) or `true` (live) plus all `STRIPE_*` keys. Rotate any secret that was pasted into chat.
 
 ## Security / RLS (dev vs prod)
 

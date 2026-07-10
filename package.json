@@ -7,6 +7,9 @@
     "dev:prod": "pnpm --filter web dev:prod",
     "test:edge": "deno test supabase/functions --allow-env",
     "import:api-json": "deno run --allow-read --allow-env --allow-net scripts/import_api_json.ts",
+    "import:explanations": "deno run --allow-read --allow-env --allow-net scripts/import_preptest_explanations.ts",
+    "import:scaled-scores": "deno run --allow-read --allow-env --allow-net scripts/import_scaled_scores.ts",
+    "test:scripts": "deno test scripts/_shared --allow-read",
     "postinstall": "simple-git-hooks"
   },
   "devDependencies": {

@@ -14,6 +14,7 @@ import { useAnalyticsApi } from "@/features/student/analytics/hooks/use-analytic
 import { DashboardAdaptiveDrillButton } from "@/features/dashboard/components/dashboard-adaptive-drill-button"
 import { ContinueDrillCard, continueDrillToCardDrill } from "@/features/student/components/continue-drill-card"
 import { DASHBOARD_ADAPTIVE_DRILL_QUERY } from "@/features/student/drills/drill-blind-review-policy"
+import { DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT } from "@/features/student/drills/adaptive-drill-config"
 import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
@@ -166,7 +167,7 @@ function DashboardPage() {
     try {
       const out = await practiceApi.startDrill({
         sectionType: adaptiveDrillSectionType(activeFilter),
-        questionCount: 5,
+        questionCount: DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT,
         timing: "unlimited",
         showAnswers: "end",
         selection: "auto",
@@ -248,8 +249,8 @@ function DashboardPage() {
 
   if (loading) {
     return (
-      <StudentMain>
-        <StudentPageLoader centered label="Loading dashboard…" />
+      <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
+        <StudentPageLoader centered className="min-h-0 flex-1" label="Loading dashboard…" />
       </StudentMain>
     )
   }

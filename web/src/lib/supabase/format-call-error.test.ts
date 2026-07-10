@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { formatSupabaseCallError } from "./format-call-error"
+import { formatEdgeFunctionError, formatSupabaseCallError } from "./format-call-error"
 
 describe("formatSupabaseCallError", () => {
   it("maps PKCE verifier errors to actionable copy", () => {
@@ -15,5 +15,14 @@ describe("formatSupabaseCallError", () => {
     err.code = "same_password"
 
     expect(formatSupabaseCallError(err)).toContain("same as your current account password")
+  })
+})
+
+describe("formatEdgeFunctionError", () => {
+  it("extracts LSAC JSON error from HTTP wrapper text", () => {
+    const err = new Error(
+      'POST /api/vendor/BET2026/log: HTTP 400 {"statusCode":400,"error":"VendorId, type, and email address required!"}',
+    )
+    expect(formatEdgeFunctionError(err)).toBe("VendorId, type, and email address required!")
   })
 })

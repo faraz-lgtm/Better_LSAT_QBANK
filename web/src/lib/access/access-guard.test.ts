@@ -6,6 +6,10 @@ describe('getAccessGateView', () => {
     expect(getAccessGateView('AUTH_REQUIRED')).toBe('auth-wall')
   })
 
+  it('maps PAYMENT_REQUIRED to payment wall', () => {
+    expect(getAccessGateView('PAYMENT_REQUIRED')).toBe('payment-wall')
+  })
+
   it('maps LSAC_REQUIRED to lsac wall', () => {
     expect(getAccessGateView('LSAC_REQUIRED')).toBe('lsac-wall')
   })

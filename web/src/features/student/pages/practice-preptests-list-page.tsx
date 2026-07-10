@@ -312,7 +312,7 @@ function PrepTestListCard({
           <li
             key={attempt.sessionId}
             className={cn(
-              "flex flex-wrap items-center justify-between gap-4 bg-[#f6f8fa] py-7 pl-[112px] pr-6",
+              "flex flex-wrap items-center justify-between gap-4 bg-[#f6f8fa] py-7 pl-6 pr-6",
               index < historyRows.length - 1 ? "border-b border-[#dfe1e7]" : "rounded-b-[16px]",
             )}
           >

@@ -44,7 +44,6 @@ describe("student-nav-config", () => {
     ])
     expect(getStudentBreadcrumbs("/app/analytics/drills")).toEqual([
       { label: "Insights", href: "/app/analytics" },
-      { label: "Foundations" },
       { label: "Drills" },
     ])
   })
@@ -98,7 +97,6 @@ describe("student-nav-config", () => {
   it("builds prep test results breadcrumbs", () => {
     expect(getStudentBreadcrumbs("/app/analytics/preptests/results/abc123")).toEqual([
       { label: "Insights", href: "/app/analytics" },
-      { label: "Foundations" },
       { label: "PrepTest", href: "/app/analytics/preptests" },
       { label: "Results" },
     ])

@@ -1,4 +1,6 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
+import type { PrepPlusSource } from '../_shared/stripe-env.ts'
+import { isActiveSubscriptionStatus } from '../billing/billing.repository.ts'
 import type { ProfileUpsertInput } from './users.mapper.ts'
 
 export type ProfileRow = {
@@ -7,6 +9,8 @@ export type ProfileRow = {
   full_name: string | null
   role: 'student' | 'admin'
   student_coaching_id: string | null
+  stripe_customer_id: string | null
+  prep_plus_source: PrepPlusSource | null
   is_first_time_login: boolean
   created_at: string
   updated_at: string
@@ -400,6 +404,30 @@ export function createUsersRepository(client: SupabaseClient) {
         .single()
       if (error) throw error
       return data as OfficialLsatScoreRow
+    },
+
+    async setPrepPlusSource(userId: string, source: PrepPlusSource): Promise<void> {
+      const { error } = await client
+        .from('profiles')
+        .update({
+          prep_plus_source: source,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+      if (error) throw error
+    },
+
+    async hasActiveSubscription(userId: string): Promise<boolean> {
+      const { data, error } = await client
+        .from('billing_subscriptions')
+        .select('status')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (error) throw error
+      if (!data?.status || typeof data.status !== 'string') return false
+      return isActiveSubscriptionStatus(data.status)
     },
   }
 }
