@@ -80,11 +80,21 @@ export function usePracticeSessionTimer(options?: UsePracticeSessionTimerOptions
     setElapsed(0)
   }, [])
 
+  const pauseTimer = useCallback(() => {
+    setPaused(true)
+  }, [])
+
+  const resumeTimer = useCallback(() => {
+    setPaused(false)
+  }, [])
+
   return {
     elapsed,
     countdown,
     paused,
     togglePause: () => setPaused((p) => !p),
+    pauseTimer,
+    resumeTimer,
     resetElapsed,
     setPaused,
     setInitialCountdown,

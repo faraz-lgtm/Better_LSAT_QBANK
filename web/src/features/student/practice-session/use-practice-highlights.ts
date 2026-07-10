@@ -10,6 +10,11 @@ import {
   wrapRangeWithElement,
 } from "@/features/student/practice-session/practice-annotation-dom"
 import {
+  buildAccessibilityContentStyle,
+  DEFAULT_ACCESSIBILITY_SETTINGS,
+  type PracticeSessionAccessibilitySettings,
+} from "@/features/student/practice-session/practice-session-accessibility"
+import {
   FONT_SCALE_STEPS,
   LINE_SPACING_STEPS,
   type HighlightColor,
@@ -32,11 +37,14 @@ function clearSelection() {
 export function usePracticeHighlights() {
   const [activeColor, setActiveColor] = useState<HighlightColor | null>(null)
   const [toolMode, setToolMode] = useState<PracticeToolMode>("none")
-  const [fontScale, setFontScale] = useState<number>(1)
-  const [lineSpacing, setLineSpacing] = useState<number>(1)
+  const [accessibilitySettings, setAccessibilitySettings] = useState<PracticeSessionAccessibilitySettings>(
+    DEFAULT_ACCESSIBILITY_SETTINGS,
+  )
   const [boldEnabled, setBoldEnabled] = useState(false)
   const [italicEnabled, setItalicEnabled] = useState(false)
   const [regionHtml, setRegionHtml] = useState<Record<RegionKey, string>>({})
+
+  const { fontScale, lineSpacing } = accessibilitySettings
 
   const getRegionHtml = useCallback(
     (key: RegionKey, baseHtml: string) => regionHtml[key] ?? baseHtml,
@@ -63,11 +71,21 @@ export function usePracticeHighlights() {
   }, [])
 
   const cycleFontSize = useCallback(() => {
-    setFontScale((s) => nextStep(FONT_SCALE_STEPS, s as (typeof FONT_SCALE_STEPS)[number]))
+    setAccessibilitySettings((current) => ({
+      ...current,
+      fontScale: nextStep(FONT_SCALE_STEPS, current.fontScale as (typeof FONT_SCALE_STEPS)[number]),
+    }))
   }, [])
 
   const cycleLineSpacing = useCallback(() => {
-    setLineSpacing((s) => nextStep(LINE_SPACING_STEPS, s as (typeof LINE_SPACING_STEPS)[number]))
+    setAccessibilitySettings((current) => ({
+      ...current,
+      lineSpacing: nextStep(LINE_SPACING_STEPS, current.lineSpacing as (typeof LINE_SPACING_STEPS)[number]),
+    }))
+  }, [])
+
+  const applyAccessibilitySettings = useCallback((settings: PracticeSessionAccessibilitySettings) => {
+    setAccessibilitySettings(settings)
   }, [])
 
   const toggleBold = useCallback(() => {
@@ -159,16 +177,15 @@ export function usePracticeHighlights() {
     [activeColor, removeAnnotationElement, saveRegionHtml, toolMode],
   )
 
-  const contentStyle: CSSProperties = {
-    ["--practice-font-scale" as string]: String(fontScale),
-    ["--practice-line-height-scale" as string]: String(lineSpacing),
-    fontWeight: boldEnabled ? 700 : undefined,
-    fontStyle: italicEnabled ? "italic" : undefined,
-  }
+  const contentStyle: CSSProperties = buildAccessibilityContentStyle(accessibilitySettings, {
+    boldEnabled,
+    italicEnabled,
+  })
 
   return {
     activeColor,
     toolMode,
+    accessibilitySettings,
     fontScale,
     lineSpacing,
     boldEnabled,
@@ -180,6 +197,7 @@ export function usePracticeHighlights() {
     selectUnderline,
     cycleFontSize,
     cycleLineSpacing,
+    applyAccessibilitySettings,
     toggleBold,
     toggleItalic,
     handleContentMouseUp,

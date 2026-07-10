@@ -2062,8 +2062,8 @@ select.ds-input {
 }
 
 .practice-session-content {
-  font-size: calc(0.875rem * var(--practice-font-scale, 1));
-  line-height: calc(1.625 * var(--practice-line-height-scale, 1));
+  font-size: 0.875em;
+  line-height: inherit;
 }
 
 /* LR stimulus HTML often wraps the argument in <blockquote> after a speaker label paragraph.
@@ -2084,6 +2084,26 @@ select.ds-input {
   margin-bottom: 0;
 }
 
+.practice-session-choice-masked {
+  position: relative;
+  overflow: hidden;
+}
+
+.practice-session-choice-masked::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgb(102 109 128 / 0.12) 0,
+    rgb(102 109 128 / 0.12) 1px,
+    transparent 1px,
+    transparent 7px
+  );
+}
+
 /* Figma `17920:11448` — session panes: fixed height, scroll without visible scrollbar */
 .practice-session-pane {
   overflow-y: auto;
@@ -2097,8 +2117,7 @@ select.ds-input {
 }
 
 .practice-session-card--active-drill .practice-session-body > div {
-  flex: 1 1 0;
-  height: 100%;
+  flex: 1 1 auto;
   min-height: 0;
   grid-template-rows: minmax(0, 1fr);
   overflow: hidden;
@@ -2151,13 +2170,20 @@ html.student-shell-immersive .practice-session-card {
 
 html.student-shell-immersive .practice-session-card--active-drill {
   width: 100%;
-  max-width: 1280px;
-  height: 100%;
-  max-height: 100%;
-  flex: 1 1 0;
+  max-width: 1440px;
+  height: auto;
+  max-height: calc(100svh - 32px);
+  flex: none;
   min-height: 0;
-  overflow: visible;
+  overflow: hidden;
+  border-radius: 0;
   font-size: 16px;
+}
+
+html.student-shell-immersive .practice-session-card--active-drill .practice-session-body {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
 }
 
 .practice-session-card--active-drill .practice-session-body {
@@ -2168,9 +2194,30 @@ html.student-shell-immersive .practice-session-card--active-drill {
   overflow: visible;
 }
 
+.practice-session-review-panel__grid .practice-session-question-nav-grid,
+.practice-session-card--active-drill .practice-session-review-panel__grid .practice-session-question-nav-grid {
+  display: grid;
+  grid-template-columns: repeat(25, minmax(0, 1fr));
+  column-gap: 6px;
+  row-gap: 6px;
+  align-content: start;
+  justify-items: stretch;
+  flex-wrap: unset;
+  overflow: visible;
+}
+
+.practice-session-review-panel__question-btn {
+  width: 100%;
+  min-width: 0;
+}
+
 @media (min-width: 768px) {
   html.student-shell-immersive .practice-session-card {
     max-height: calc(100svh - 40px);
+  }
+
+  html.student-shell-immersive .practice-session-card--active-drill {
+    max-height: calc(100svh - 64px);
   }
 }
 
@@ -2204,6 +2251,11 @@ html.student-shell-immersive .practice-session-card--active-drill {
   flex: 1 1 0;
   height: 0;
   min-height: 0;
+  font-size: calc(16px * var(--practice-font-scale, 1));
+  line-height: calc(1.5 * var(--practice-line-height-scale, 1));
+  background-color: var(--practice-accessibility-bg, transparent);
+  color: var(--practice-accessibility-fg, inherit);
+  zoom: var(--practice-zoom-scale, 1);
 }
 
 .practice-session-footer {
@@ -2238,6 +2290,7 @@ html.student-shell-immersive .practice-session-card--active-drill {
 
 .practice-session-header--active-drill {
   overflow: hidden;
+  border-radius: 0;
 }
 
 .practice-session-timer {
@@ -2307,26 +2360,28 @@ html.student-shell-immersive .practice-session-card--active-drill {
 
 .practice-session-card--active-drill .practice-session-question-nav-grid {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
 }
 
 .practice-session-card--active-drill .practice-session-footer .practice-session-question-nav-grid {
-  flex-wrap: wrap;
-  align-items: flex-end;
-  align-content: flex-start;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: center;
   gap: 8px;
   min-height: 48px;
   height: auto;
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .practice-session-card--active-drill .practice-session-question-nav-btn {
   width: 32px;
   min-width: 32px;
   height: 32px;
-  border-radius: 12px;
+  border-radius: 8px;
 }
 
 html.student-shell-immersive .practice-session-card--blind-review {
