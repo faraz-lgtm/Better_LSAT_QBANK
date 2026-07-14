@@ -15,6 +15,7 @@ import { OnboardingWelcomePreviewPage } from "@/features/auth/pages/onboarding-w
 import { GuestDiagnosticStartPage } from "@/features/guest/pages/guest-diagnostic-start-page"
 import { GuestDiagnosticResultsPage } from "@/features/guest/pages/guest-diagnostic-results-page"
 import { GuestDiagnosticResultsPreviewPage } from "@/features/guest/pages/guest-diagnostic-results-preview-page"
+import { MarketingHomePage } from "@/features/marketing/pages/marketing-home-page"
 import { IntentPage } from "@/features/auth/pages/intent-page"
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
 import { PrepCourseContentPage } from "@/features/prep-course/pages/prep-course-content-page"
@@ -431,7 +432,7 @@ function RequirePaidSubscription({ children }: { children: ReactElement }) {
 }
 
 const router = createBrowserRouter([
-  { path: "/", element: <Navigate to="/login" replace /> },
+  { path: "/", element: <MarketingHomePage /> },
   { path: "/login", element: <PublicOnly><LoginPage /></PublicOnly> },
   { path: "/intent", element: <IntentRouteGuard><IntentPage /></IntentRouteGuard> },
   { path: "/signup", element: <SignupPage /> },
@@ -509,9 +510,8 @@ const router = createBrowserRouter([
       { path: "analytics/drills/results/:sessionId", element: <AnalyticsDrillResultsPage /> },
       { path: "analytics/sections", element: <AnalyticsSectionsPage /> },
       { path: "analytics/preptests", element: <AnalyticsPrepTestsPage /> },
-      { path: "analytics/preptests/results/:testId", element: <AnalyticsPrepTestResultsPage /> },
-            ],
-          },
+          { path: "analytics/preptests/results/:testId", element: <AnalyticsPrepTestResultsPage /> },
+          { path: "diagnostic/results", element: <GuestDiagnosticResultsPage /> },
         ],
       },
     ],
