@@ -2,6 +2,7 @@ import { assertEquals } from 'jsr:@std/assert@1'
 import {
   mapLawHubStudentRecordToProfileUpsert,
   mapLsacStudentToProfileUpsert,
+  splitFullName,
 } from './users.mapper.ts'
 
 Deno.test('mapLsacStudentToProfileUpsert lowercases email and trims coaching id', () => {
@@ -35,4 +36,10 @@ Deno.test('mapLawHubStudentRecordToProfileUpsert reads LawHub JSON fields', () =
   assertEquals(row.student_coaching_id, 'coach-1')
   assertEquals(row.email, 'a@b.co')
   assertEquals(row.full_name, 'Pat Lee')
+})
+
+Deno.test('splitFullName splits on whitespace', () => {
+  assertEquals(splitFullName('Ada Lovelace'), { firstName: 'Ada', lastName: 'Lovelace' })
+  assertEquals(splitFullName('Prince'), { firstName: 'Prince', lastName: '' })
+  assertEquals(splitFullName(null), { firstName: '', lastName: '' })
 })

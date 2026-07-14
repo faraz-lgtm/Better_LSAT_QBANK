@@ -2,10 +2,10 @@ import { useMemo, useState } from "react"
 import { Link, useLocation } from "react-router-dom"
 
 import { AuthCard } from "@/features/auth/components/auth-card"
-import { GUEST_DIAGNOSTIC_INTENT_STORAGE_KEY } from "@/features/guest/diagnostic/guest-diagnostic-intent-data"
 import type { GuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-intent-types"
 import { GuestMarketingPanelLayout } from "@/features/guest/marketing/guest-marketing-panel-layout"
 import { createAuthApi, getAuthCallbackUrl } from "@/lib/api/auth"
+import { saveDiagnosticIntent, markDiagnosticFunnelActive } from "@/lib/auth/diagnostic-intent"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
@@ -41,7 +41,8 @@ function SignupCheckEmailPage() {
     }
 
     if (locationState?.from === "intent" && locationState.intent) {
-      sessionStorage.setItem(GUEST_DIAGNOSTIC_INTENT_STORAGE_KEY, locationState.intent)
+      markDiagnosticFunnelActive()
+      saveDiagnosticIntent(locationState.intent)
     }
 
     setIsResending(true)

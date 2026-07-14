@@ -12,11 +12,11 @@ import { LsacLinkPage } from "@/features/auth/pages/lsac-link-page"
 import { PricingPage } from "@/features/billing/pages/pricing-page"
 import { OnboardingPage } from "@/features/auth/pages/onboarding-page"
 import { OnboardingWelcomePreviewPage } from "@/features/auth/pages/onboarding-welcome-preview-page"
-import { GuestDiagnosticIntentPage } from "@/features/guest/pages/guest-diagnostic-intent-page"
 import { GuestDiagnosticStartPage } from "@/features/guest/pages/guest-diagnostic-start-page"
 import { GuestDiagnosticResultsPage } from "@/features/guest/pages/guest-diagnostic-results-page"
 import { GuestDiagnosticResultsPreviewPage } from "@/features/guest/pages/guest-diagnostic-results-preview-page"
 import { MarketingHomePage } from "@/features/marketing/pages/marketing-home-page"
+import { IntentPage } from "@/features/auth/pages/intent-page"
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
 import { PrepCourseContentPage } from "@/features/prep-course/pages/prep-course-content-page"
 import { PrepCourseLessonPage } from "@/features/prep-course/pages/prep-course-lesson-page"
@@ -58,7 +58,9 @@ import { AdminConfigPage } from "@/features/admin/pages/admin-config-page"
 import { AdminScoreTablesPage } from "@/features/admin/pages/admin-score-tables-page"
 import { AdminUsersPage } from "@/features/admin/pages/admin-users-page"
 import { AdminUserDetailPage } from "@/features/admin/pages/admin-user-detail-page"
-import { createUsersApi, type UserProfile } from "@/lib/api/users"
+import { createUsersApi, type UserEntitlement, type UserProfile } from "@/lib/api/users"
+import { readDiagnosticFunnelState } from "@/lib/auth/diagnostic-intent"
+import { shouldAllowAuthenticatedIntentPage } from "@/lib/auth/diagnostic-funnel-redirect"
 import { resolvePostAuthDestination, type PostAuthDestination } from "@/lib/auth/post-auth-redirect"
 import { logRouteRedirect } from "@/lib/auth/log-route-redirect"
 import { allowsPrepTestUnauthenticatedPreview } from "@/lib/dev/prep-test-ui-preview"
@@ -81,12 +83,12 @@ function PublicOnly({ children }: { children: ReactElement }) {
         return
       }
       try {
-        const entitlement = await usersApi.getEntitlementState()
+        const nextEntitlement = await usersApi.getEntitlementState()
         if (!alive) return
-        setDestination(resolvePostAuthDestination(nextProfile, entitlement))
+        setDestination(resolvePostAuthDestination(nextProfile, nextEntitlement, readDiagnosticFunnelState()))
       } catch {
         if (!alive) return
-        setDestination(resolvePostAuthDestination(nextProfile, null))
+        setDestination(resolvePostAuthDestination(nextProfile, null, readDiagnosticFunnelState()))
       }
     }
 
@@ -144,6 +146,82 @@ function PublicOnly({ children }: { children: ReactElement }) {
   if (!isAuthenticated) return children
   if (!profile || !destination) return null
   return <Navigate to={destination} replace />
+}
+
+function IntentRouteGuard({ children }: { children: ReactElement }) {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [entitlement, setEntitlement] = useState<UserEntitlement | null>(null)
+  const [destination, setDestination] = useState<PostAuthDestination | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    const supabase = getSupabaseBrowserClient()
+    const usersApi = createUsersApi(supabase)
+    const funnel = readDiagnosticFunnelState()
+
+    const syncDestination = async (nextProfile: UserProfile | null) => {
+      if (!nextProfile) {
+        setEntitlement(null)
+        setDestination(null)
+        return
+      }
+      try {
+        const nextEntitlement = await usersApi.getEntitlementState()
+        if (!alive) return
+        setEntitlement(nextEntitlement)
+        if (shouldAllowAuthenticatedIntentPage(nextEntitlement, funnel)) {
+          setDestination(null)
+          return
+        }
+        setDestination(resolvePostAuthDestination(nextProfile, nextEntitlement, funnel))
+      } catch {
+        if (!alive) return
+        setEntitlement(null)
+        if (shouldAllowAuthenticatedIntentPage(null, funnel)) {
+          setDestination(null)
+          return
+        }
+        setDestination(resolvePostAuthDestination(nextProfile, null, funnel))
+      }
+    }
+
+    const syncState = async () => {
+      const { data } = await supabase.auth.getSession()
+      if (!alive) return
+      const hasSession = Boolean(data.session)
+      setIsAuthenticated(hasSession)
+      if (!hasSession) {
+        setProfile(null)
+        setEntitlement(null)
+        setDestination(null)
+        return
+      }
+      try {
+        const nextProfile = await usersApi.getMyProfile()
+        if (!alive) return
+        setProfile(nextProfile)
+        await syncDestination(nextProfile)
+      } catch {
+        if (!alive) return
+        setProfile(null)
+        setEntitlement(null)
+        setDestination(null)
+      }
+    }
+
+    void syncState()
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  if (isAuthenticated === null) return null
+  if (!isAuthenticated) return children
+  if (!profile) return null
+  if (destination) return <Navigate to={destination} replace />
+  if (shouldAllowAuthenticatedIntentPage(entitlement, readDiagnosticFunnelState())) return children
+  return null
 }
 
 function RequireRole({ children, requiredRole }: { children: ReactElement; requiredRole: "admin" | "student" }) {
@@ -242,7 +320,7 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
   return children
 }
 
-function RequireLsacEntitlement({ children }: { children: ReactElement }) {
+function RequireFullEntitlement({ children }: { children: ReactElement }) {
   const [entitlementChecked, setEntitlementChecked] = useState(false)
   const [accessState, setAccessState] = useState<"FULL_ACCESS" | "PAYMENT_REQUIRED" | "LSAC_REQUIRED" | null>(null)
   const [entitlementDetails, setEntitlementDetails] = useState<Record<string, unknown> | null>(null)
@@ -313,9 +391,50 @@ function RequireLsacEntitlement({ children }: { children: ReactElement }) {
   return children
 }
 
+function RequirePaidSubscription({ children }: { children: ReactElement }) {
+  const [checked, setChecked] = useState(false)
+  const [hasActiveCore, setHasActiveCore] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    const usersApi = createUsersApi(getSupabaseBrowserClient())
+
+    void usersApi
+      .getEntitlementState()
+      .then((entitlement) => {
+        if (!alive) return
+        setHasActiveCore(entitlement.hasActiveCore)
+      })
+      .catch(() => {
+        if (!alive) return
+        setHasActiveCore(false)
+      })
+      .finally(() => {
+        if (alive) setChecked(true)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  if (!checked) {
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
+        <StudentPageLoader centered label="Loading…" />
+      </div>
+    )
+  }
+  if (!hasActiveCore) {
+    return <Navigate to="/app/pricing" replace />
+  }
+  return children
+}
+
 const router = createBrowserRouter([
   { path: "/", element: <MarketingHomePage /> },
   { path: "/login", element: <PublicOnly><LoginPage /></PublicOnly> },
+  { path: "/intent", element: <IntentRouteGuard><IntentPage /></IntentRouteGuard> },
   { path: "/signup", element: <SignupPage /> },
   { path: "/signup/check-email", element: <SignupCheckEmailPage /> },
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
@@ -323,8 +442,14 @@ const router = createBrowserRouter([
   { path: "/auth/callback", element: <AuthCallbackPage /> },
   { path: "/onboarding", element: <OnboardingPage /> },
   { path: "/onboarding/preview", element: <OnboardingWelcomePreviewPage /> },
-  { path: "/intent", element: <GuestDiagnosticIntentPage /> },
-  { path: "/diagnostic/start", element: <GuestDiagnosticStartPage /> },
+  {
+    path: "/diagnostic/start",
+    element: (
+      <RequireRole requiredRole="student">
+        <GuestDiagnosticStartPage />
+      </RequireRole>
+    ),
+  },
   { path: "/diagnostic/start/preview", element: <GuestDiagnosticStartPage preview /> },
   { path: "/diagnostic/results/preview", element: <GuestDiagnosticResultsPreviewPage /> },
   {
@@ -336,15 +461,26 @@ const router = createBrowserRouter([
     ),
     children: [
       { path: "pricing", element: <PricingPage /> },
-      { path: "lsac-link", element: <LsacLinkPage /> },
       {
+        path: "lsac-link",
         element: (
-          <RequireLsacEntitlement>
-            <StudentAppShell />
-          </RequireLsacEntitlement>
+          <RequirePaidSubscription>
+            <LsacLinkPage />
+          </RequirePaidSubscription>
         ),
+      },
+      {
+        element: <StudentAppShell />,
         children: [
-      { index: true, element: <DashboardPage /> },
+          { index: true, element: <DashboardPage /> },
+          { path: "diagnostic/results", element: <GuestDiagnosticResultsPage /> },
+          {
+            element: (
+              <RequireFullEntitlement>
+                <Outlet />
+              </RequireFullEntitlement>
+            ),
+            children: [
       { path: "learn/explanations", element: <ExplanationsPage /> },
       { path: "learn/explanations/q/:questionId", element: <ExplanationQuestionDetailPage /> },
       { path: "prep-course", element: <PrepCourseListPage /> },

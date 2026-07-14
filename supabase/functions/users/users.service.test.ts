@@ -1061,3 +1061,385 @@ Deno.test('upsertOfficialScore requires non-empty label', async () => {
     'testLabel is required',
   )
 })
+
+Deno.test('autoInviteLawHubAfterCheckout invites vendor path when includeLawHub is true', async () => {
+  let vendorFlag: boolean | null = null
+  const lawHub = {
+    async ensureToken() {},
+    async getStudentsByEmail() {
+      return []
+    },
+    async getStudentByCoachingId(coachingId: string) {
+      return {
+        studentCoachingId: coachingId,
+        emailAddress: 'buyer@example.com',
+        firstName: 'Buyer',
+        lastName: 'Name',
+        linked: false,
+        subscriptionType: 'PrepPlus',
+      }
+    },
+    async addOrInviteStudent(input: {
+      isPrepPlusIncludedFromVendor: boolean
+    }) {
+      vendorFlag = input.isPrepPlusIncludedFromVendor
+      return {
+        studentCoachingId: 'coach-new',
+        emailAddress: 'buyer@example.com',
+        firstName: 'Buyer',
+        lastName: 'Name',
+        linked: false,
+      }
+    },
+    async listVendorStudents() {
+      throw new Error('not used')
+    },
+    async upgradeStudent() {
+      throw new Error('not used')
+    },
+    async getTestInstances() {
+      throw new Error('not used')
+    },
+    async logContentAccess() {
+      throw new Error('not used')
+    },
+  } as unknown as LawHubClient
+
+  await withStripeTestEnv(async () => {
+    const repository = mockRepo({
+      hasActiveSubscription: async () => true,
+      getProfileById: async (id) => ({
+        id,
+        email: 'buyer@example.com',
+        full_name: 'Buyer Name',
+        role: 'student',
+        student_coaching_id: null,
+        stripe_customer_id: null,
+        prep_plus_source: null,
+        is_first_time_login: false,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      }),
+    })
+    const service = createUsersService({ repository, lawHub: withEmailLookup(lawHub) })
+    const result = await service.autoInviteLawHubAfterCheckout({
+      userId: 'u-1',
+      email: 'buyer@example.com',
+      includeLawHub: true,
+    })
+    assertEquals(result.invited, true)
+    assertEquals(vendorFlag, true)
+  })
+})
+
+Deno.test('autoInviteLawHubAfterCheckout uses existing LSAC path when includeLawHub is false', async () => {
+  let vendorFlag: boolean | null = null
+  let sourceSet = false
+  const lawHub = {
+    async ensureToken() {},
+    async getStudentsByEmail() {
+      return []
+    },
+    async getStudentByCoachingId(coachingId: string) {
+      return {
+        studentCoachingId: coachingId,
+        emailAddress: 'buyer@example.com',
+        firstName: 'Buyer',
+        lastName: 'Name',
+        linked: false,
+        subscriptionType: 'PrepPlus',
+      }
+    },
+    async addOrInviteStudent(input: {
+      isPrepPlusIncludedFromVendor: boolean
+    }) {
+      vendorFlag = input.isPrepPlusIncludedFromVendor
+      return {
+        studentCoachingId: 'coach-new',
+        emailAddress: 'buyer@example.com',
+        firstName: 'Buyer',
+        lastName: 'Name',
+        linked: false,
+      }
+    },
+    async listVendorStudents() {
+      throw new Error('not used')
+    },
+    async upgradeStudent() {
+      throw new Error('not used')
+    },
+    async getTestInstances() {
+      throw new Error('not used')
+    },
+    async logContentAccess() {
+      throw new Error('not used')
+    },
+  } as unknown as LawHubClient
+
+  await withStripeTestEnv(async () => {
+    const repository = mockRepo({
+      hasActiveSubscription: async () => true,
+      setPrepPlusSource: async (_userId, source) => {
+        sourceSet = true
+        assertEquals(source, 'existing_lsac')
+      },
+      getProfileById: async (id) => ({
+        id,
+        email: 'buyer@example.com',
+        full_name: 'Buyer Name',
+        role: 'student',
+        student_coaching_id: null,
+        stripe_customer_id: null,
+        prep_plus_source: null,
+        is_first_time_login: false,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      }),
+    })
+    const service = createUsersService({ repository, lawHub: withEmailLookup(lawHub) })
+    const result = await service.autoInviteLawHubAfterCheckout({
+      userId: 'u-1',
+      email: 'buyer@example.com',
+      includeLawHub: false,
+    })
+    assertEquals(result.invited, true)
+    assertEquals(vendorFlag, false)
+    assertEquals(sourceSet, true)
+  })
+})
+
+Deno.test('autoInviteLawHubAfterCheckout skips when coach already linked', async () => {
+  let invited = false
+  const lawHub = {
+    async ensureToken() {},
+    async addOrInviteStudent() {
+      invited = true
+      return {}
+    },
+  } as unknown as LawHubClient
+
+  const repository = mockRepo({
+    getProfileById: async (id) => ({
+      id,
+      email: 'buyer@example.com',
+      full_name: 'Buyer Name',
+      role: 'student',
+      student_coaching_id: 'coach-existing',
+      stripe_customer_id: null,
+      prep_plus_source: null,
+      is_first_time_login: false,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }),
+    getLatestStudentSnapshotByUserId: async () => ({
+      student_coaching_id: 'coach-existing',
+      linked: true,
+      subscription_type: 'PrepPlus',
+      fetched_at: '2026-01-02T00:00:00Z',
+    }),
+  })
+  const service = createUsersService({ repository, lawHub: withEmailLookup(lawHub) })
+  const result = await service.autoInviteLawHubAfterCheckout({
+    userId: 'u-1',
+    email: 'buyer@example.com',
+    includeLawHub: true,
+  })
+  assertEquals(result.invited, false)
+  assertEquals(result.reason, 'already_linked')
+  assertEquals(invited, false)
+})
+
+Deno.test('autoInviteLawHubAfterCheckout re-invites when coaching id exists but not linked', async () => {
+  let invited = false
+  const lawHub = {
+    async ensureToken() {},
+    async getStudentsByEmail() {
+      return [{
+        studentCoachingId: 'coach-existing',
+        emailAddress: 'buyer@example.com',
+        firstName: 'Buyer',
+        lastName: 'Name',
+        linked: false,
+      }]
+    },
+    async getStudentByCoachingId(coachingId: string) {
+      return {
+        studentCoachingId: coachingId,
+        emailAddress: 'buyer@example.com',
+        firstName: 'Buyer',
+        lastName: 'Name',
+        linked: false,
+      }
+    },
+    async addOrInviteStudent() {
+      invited = true
+      return {
+        studentCoachingId: 'coach-existing',
+        emailAddress: 'buyer@example.com',
+        firstName: 'Buyer',
+        lastName: 'Name',
+        linked: false,
+      }
+    },
+    async listVendorStudents() {
+      throw new Error('not used')
+    },
+    async upgradeStudent() {
+      throw new Error('not used')
+    },
+    async getTestInstances() {
+      throw new Error('not used')
+    },
+    async logContentAccess() {
+      throw new Error('not used')
+    },
+  } as unknown as LawHubClient
+
+  await withStripeTestEnv(async () => {
+    const repository = mockRepo({
+      hasActiveSubscription: async () => true,
+      getProfileById: async (id) => ({
+        id,
+        email: 'buyer@example.com',
+        full_name: 'Buyer Name',
+        role: 'student',
+        student_coaching_id: 'coach-existing',
+        stripe_customer_id: null,
+        prep_plus_source: null,
+        is_first_time_login: false,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      }),
+      getLatestStudentSnapshotByUserId: async () => ({
+        student_coaching_id: 'coach-existing',
+        linked: false,
+        subscription_type: 'PrepPlus',
+        fetched_at: '2026-01-02T00:00:00Z',
+      }),
+    })
+    const service = createUsersService({ repository, lawHub: withEmailLookup(lawHub) })
+    const result = await service.autoInviteLawHubAfterCheckout({
+      userId: 'u-1',
+      email: 'buyer@example.com',
+      includeLawHub: true,
+    })
+    assertEquals(result.invited, true)
+    assertEquals(invited, true)
+  })
+})
+
+Deno.test('linkLawHubWithVendorPrepPlus POSTs when existing LawHub student is unlinked', async () => {
+  let invited = false
+  const lawHub = {
+    async ensureToken() {},
+    async getStudentsByEmail() {
+      return [{
+        studentCoachingId: 'coach-1',
+        emailAddress: 'student@example.com',
+        firstName: 'Student',
+        lastName: 'One',
+        linked: false,
+      }]
+    },
+    async addOrInviteStudent() {
+      invited = true
+      return {
+        studentCoachingId: 'coach-1',
+        emailAddress: 'student@example.com',
+        linked: false,
+      }
+    },
+    async getStudentByCoachingId(coachingId: string) {
+      return { studentCoachingId: coachingId, linked: false }
+    },
+    async listVendorStudents() {
+      throw new Error('not used')
+    },
+    async upgradeStudent() {
+      throw new Error('not used')
+    },
+    async getTestInstances() {
+      throw new Error('not used')
+    },
+    async logContentAccess() {
+      throw new Error('not used')
+    },
+  } as unknown as LawHubClient
+
+  await withStripeTestEnv(async () => {
+    const service = createUsersService({
+      repository: mockRepo({
+        hasActiveSubscription: async () => true,
+        getProfileById: async (id) => ({
+          id,
+          email: 'student@example.com',
+          full_name: 'Student One',
+          role: 'student',
+          student_coaching_id: 'coach-1',
+          stripe_customer_id: null,
+          prep_plus_source: null,
+          is_first_time_login: false,
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        }),
+        upsertProfile: async (row) => ({
+          id: row.id,
+          email: row.email,
+          full_name: row.full_name,
+          role: 'student',
+          student_coaching_id: row.student_coaching_id,
+          stripe_customer_id: null,
+          prep_plus_source: null,
+          is_first_time_login: false,
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        }),
+      }),
+      lawHub: withEmailLookup(lawHub),
+    })
+    await service.linkLawHubWithVendorPrepPlus('u-1', 'student@example.com', {
+      firstName: 'Student',
+      lastName: 'One',
+    })
+    assertEquals(invited, true)
+  })
+})
+
+Deno.test('autoInviteLawHubAfterCheckout skips without throwing when name is missing', async () => {
+  let invited = false
+  const lawHub = {
+    async ensureToken() {},
+    async addOrInviteStudent() {
+      invited = true
+      return {}
+    },
+  } as unknown as LawHubClient
+
+  await withStripeTestEnv(async () => {
+    const repository = mockRepo({
+      hasActiveSubscription: async () => true,
+      getProfileById: async (id) => ({
+        id,
+        email: 'buyer@example.com',
+        full_name: null,
+        role: 'student',
+        student_coaching_id: null,
+        stripe_customer_id: null,
+        prep_plus_source: null,
+        is_first_time_login: false,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      }),
+    })
+    const service = createUsersService({ repository, lawHub: withEmailLookup(lawHub) })
+    const result = await service.autoInviteLawHubAfterCheckout({
+      userId: 'u-1',
+      email: 'buyer@example.com',
+      includeLawHub: true,
+      customerName: null,
+    })
+    assertEquals(result.invited, false)
+    assertEquals(result.reason, 'no_name')
+    assertEquals(invited, false)
+  })
+})

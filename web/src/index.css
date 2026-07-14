@@ -877,6 +877,67 @@ html.student-shell-active #root {
   max-width: min(52rem, 100%);
 }
 
+.auth-split-page--intent-only {
+  padding: 0;
+  background: #edf3ff;
+}
+
+.auth-split-frame--no-sidebar {
+  gap: 0;
+}
+
+.auth-split-content--full {
+  flex: 1 1 100%;
+  width: 100%;
+  max-width: 100%;
+  border-radius: 0;
+  background: #edf3ff;
+}
+
+.auth-split-main--intent {
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: clamp(0.5rem, 1vh, 0.875rem) clamp(1rem, 2.5vw, 2rem);
+}
+
+.auth-content-shell--intent {
+  width: 100%;
+  max-width: min(72rem, 100%);
+}
+
+.auth-split-page--intent-only .auth-content-shell--intent {
+  max-width: min(68rem, calc(100% - 3rem));
+}
+
+.auth-split-header--intent {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.auth-split-header-intent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.auth-split-header-intent-upgrade {
+  height: 2.5rem;
+  border-radius: 16px;
+  padding: 0 0.8125rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #0d47a1;
+  color: #fff;
+}
+
+.auth-split-header-intent-upgrade:hover {
+  background: color-mix(in srgb, #0d47a1 90%, #000);
+}
+
 .lsac-link-page {
   width: 100%;
 }
@@ -992,6 +1053,36 @@ html.student-shell-active #root {
 
 .lsac-link-page__footer button:hover {
   text-decoration: underline;
+}
+
+.lsac-link-page__instructions {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.75rem, 1.5vh, 1rem);
+}
+
+.lsac-link-page__steps {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--primary-80);
+}
+
+.lsac-link-page__note {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--primary-60);
+}
+
+.lsac-link-page__fallback {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.75rem, 1.5vh, 1rem);
 }
 
 @media (max-width: 640px) {
@@ -1199,6 +1290,274 @@ html.student-shell-active #root {
 
 .pricing-page__alt-link button:hover {
   opacity: 0.85;
+}
+
+.auth-split-page--intent-only .auth-card.intent-page__card {
+  width: 100%;
+  max-width: 100%;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.intent-page {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+}
+
+.intent-page__card {
+  width: 100%;
+  max-width: 100%;
+  align-items: stretch;
+  padding: clamp(2rem, 3vh, 3rem) clamp(1.25rem, 3vw, 2.5rem);
+  border-radius: 0;
+  gap: 0;
+}
+
+.intent-page__header {
+  text-align: center;
+}
+
+.intent-page__title {
+  margin: 0;
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-weight: 700;
+  line-height: 1.3;
+  color: #062357;
+}
+
+.intent-page__subtitle {
+  margin: 0.75rem auto 0;
+  max-width: 36rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: #666d80;
+}
+
+.intent-page__section-label {
+  margin: 1rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  color: #062357;
+}
+
+.intent-page__grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: 1fr;
+  margin-top: 2.5rem;
+}
+
+@media (min-width: 768px) {
+  .intent-page__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 1.5rem;
+  }
+}
+
+.intent-card {
+  position: relative;
+  display: flex;
+  min-height: 20rem;
+  flex-direction: column;
+  align-items: flex-start;
+  border-radius: 16px;
+  border: 0.5px solid #dfe1e7;
+  background: #fff;
+  padding: 1.5rem 1.5rem 0;
+  text-align: left;
+  box-shadow:
+    0 1px 1.5px rgb(13 71 161 / 5%),
+    0 1px 1px rgb(13 71 161 / 4%);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.intent-card--selected {
+  border-color: #0d47a1;
+  box-shadow:
+    0 12px 8px rgb(13 71 161 / 8%),
+    0 4px 3px rgb(13 71 161 / 3%);
+}
+
+.intent-card__badge {
+  margin-bottom: 0.25rem;
+  border-radius: 6px;
+  background: #f3f7ff;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  color: #0d47a1;
+}
+
+.intent-card__name {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+}
+
+.intent-card--mini .intent-card__name,
+.intent-card--mini .intent-card__price {
+  color: #16a34a;
+}
+
+.intent-card--quick .intent-card__name,
+.intent-card--quick .intent-card__price {
+  color: #0d47a1;
+}
+
+.intent-card--full .intent-card__name,
+.intent-card--full .intent-card__price {
+  color: #f5880b;
+}
+
+.intent-card__tagline {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #666d80;
+}
+
+.intent-card__stats {
+  display: flex;
+  gap: 0.875rem;
+  margin-top: 1rem;
+}
+
+.intent-card__stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #666d80;
+}
+
+.intent-card__stat-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+.intent-card__features {
+  margin: 1rem 0 0;
+  flex: 1;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.intent-card__features li {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: #062357;
+}
+
+.intent-card__check {
+  margin-top: 0.125rem;
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+.intent-card--mini .intent-card__check {
+  color: #16a34a;
+}
+
+.intent-card--quick .intent-card__check {
+  color: #0d47a1;
+}
+
+.intent-card--full .intent-card__check {
+  color: #0d47a1;
+}
+
+.intent-card__footer {
+  width: 100%;
+  margin-top: auto;
+  border-top: 1px solid #dfe1e7;
+  padding: 1rem 0 1.25rem;
+}
+
+.intent-card__price {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.intent-page__cta-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: center;
+  padding-top: 2rem;
+}
+
+.intent-page__sign-in-prompt {
+  margin: 0;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #666d80;
+}
+
+.intent-page__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.75rem;
+  border-radius: 16px;
+  padding: 0 1.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: #0d47a1;
+  color: #fff;
+  box-shadow:
+    0 1px 1.5px rgb(0 0 0 / 10%),
+    0 1px 1px rgb(0 0 0 / 10%);
+}
+
+.intent-page__cta:hover {
+  background: color-mix(in srgb, #0d47a1 90%, #000);
+}
+
+.intent-page__cta-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+@media (max-height: 820px) {
+  .intent-page__card {
+    padding: 1rem;
+  }
+
+  .intent-page__grid {
+    margin-top: 1.25rem;
+  }
+
+  .intent-card {
+    min-height: 0;
+  }
+
+  .intent-page__cta-wrap {
+    padding-top: 1.25rem;
+  }
 }
 
 @media (max-height: 820px) {

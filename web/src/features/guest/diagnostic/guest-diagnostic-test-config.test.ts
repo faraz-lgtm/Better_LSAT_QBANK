@@ -11,7 +11,7 @@ describe("guest diagnostic test config", () => {
     expect(getGuestDiagnosticTestConfig("mini")).toMatchObject({
       title: "Mini Diagnostic - Test Instructions",
       questionCount: 10,
-      timeMinutes: 20,
+      timeMinutes: 13,
     })
     expect(getGuestDiagnosticTestConfig("quick")).toMatchObject({
       title: "Quick Diagnostic - Test Instructions",
@@ -26,7 +26,7 @@ describe("guest diagnostic test config", () => {
   })
 
   it("formats diagnostic time labels", () => {
-    expect(formatDiagnosticTimeMinutes(20)).toBe("20 minutes")
+    expect(formatDiagnosticTimeMinutes(13)).toBe("13 minutes")
     expect(formatDiagnosticTimeMinutes(1)).toBe("1 minute")
   })
 

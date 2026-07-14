@@ -1,5 +1,5 @@
 import { assertEquals } from 'jsr:@std/assert@1'
-import { createBillingService } from './billing.service.ts'
+import { createBillingService, type CheckoutCompletedContext } from './billing.service.ts'
 import type { BillingRepository } from './billing.repository.ts'
 import type { StripeRuntimeEnv } from '../_shared/stripe-env.ts'
 
@@ -21,6 +21,7 @@ function makeRepo(overrides: Partial<BillingRepository> = {}): BillingRepository
       return {
         id: 'u-1',
         email: 'a@b.com',
+        full_name: null,
         stripe_customer_id: null,
         prep_plus_source: null,
       }
@@ -81,6 +82,10 @@ Deno.test('billing service createCheckoutSession creates customer and returns ur
         sessions: {
           create: async (params: Record<string, unknown>) => {
             assertEquals(params.mode, 'subscription')
+            assertEquals(
+              params.success_url,
+              'http://localhost:5173/app/lsac-link?checkout=success',
+            )
             const lineItems = params.line_items as Array<Record<string, unknown>>
             assertEquals(lineItems[0], { price: 'price_core_test', quantity: 1 })
             assertEquals((lineItems[1]?.price_data as Record<string, unknown>)?.unit_amount, 9900)
@@ -156,6 +161,7 @@ Deno.test('billing service createCheckoutSession skips LawHub when includeLawHub
 })
 
 Deno.test('billing service createCheckoutSession uses live plan price', async () => {
+  let customerNameUpdated: string | null = null
   const service = createBillingService({
     getEnv: () => env,
     getAppBaseUrl: () => 'http://localhost:5173',
@@ -164,12 +170,20 @@ Deno.test('billing service createCheckoutSession uses live plan price', async ()
         return {
           id: 'u-1',
           email: 'a@b.com',
+          full_name: 'Ada Lovelace',
           stripe_customer_id: 'cus_existing',
           prep_plus_source: null,
         }
       },
     }),
     stripe: {
+      customers: {
+        update: async (customerId: string, params: Record<string, unknown>) => {
+          assertEquals(customerId, 'cus_existing')
+          customerNameUpdated = params.name as string
+          return { id: customerId }
+        },
+      },
       prices: {
         retrieve: async (id: string) => {
           if (id === 'price_lsac_test') {
@@ -190,6 +204,7 @@ Deno.test('billing service createCheckoutSession uses live plan price', async ()
           create: async (params: Record<string, unknown>) => {
             const lineItems = params.line_items as Array<{ price: string; quantity: number }>
             assertEquals(lineItems[0], { price: 'price_live_test', quantity: 1 })
+            assertEquals('customer_details' in params, false)
             return { url: 'https://checkout.stripe.test/live' }
           },
         },
@@ -198,6 +213,7 @@ Deno.test('billing service createCheckoutSession uses live plan price', async ()
   })
 
   const out = await service.createCheckoutSession('u-1', 'a@b.com', 'live')
+  assertEquals(customerNameUpdated, 'Ada Lovelace')
   assertEquals(out.url, 'https://checkout.stripe.test/live')
 })
 
@@ -304,4 +320,56 @@ Deno.test('billing service skips duplicate webhook events', async () => {
   } as unknown as import('npm:stripe@17.7.0').default.Event)
 
   assertEquals(upsertCalls, 0)
+})
+
+Deno.test('billing service checkout.session.completed invokes onCheckoutCompleted', async () => {
+  let callbackCtx: CheckoutCompletedContext | null = null
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async upsertSubscription() {},
+      async setPrepPlusSource() {},
+    }),
+    onCheckoutCompleted: async (ctx) => {
+      callbackCtx = { ...ctx }
+    },
+    stripe: {
+      subscriptions: {
+        retrieve: async () => ({
+          id: 'sub_1',
+          status: 'active',
+          livemode: false,
+          cancel_at_period_end: false,
+          current_period_start: 1_700_000_000,
+          current_period_end: 1_700_086_400,
+          customer: 'cus_1',
+          items: { data: [{ price: { id: 'price_core_test' } }] },
+        }),
+      },
+      customers: {
+        retrieve: async () => ({ id: 'cus_1', name: 'Stripe Customer', deleted: false }),
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  await service.handleWebhookEvent({
+    id: 'evt_checkout',
+    type: 'checkout.session.completed',
+    data: {
+      object: {
+        client_reference_id: 'u-1',
+        customer: 'cus_1',
+        subscription: 'sub_1',
+        customer_email: 'buyer@example.com',
+        customer_details: { name: 'Buyer Name' },
+        metadata: { plan: 'core', include_lawhub: 'true' },
+      },
+    },
+  } as unknown as import('npm:stripe@17.7.0').default.Event)
+
+  assertEquals(callbackCtx?.userId, 'u-1')
+  assertEquals(callbackCtx?.email, 'buyer@example.com')
+  assertEquals(callbackCtx?.includeLawHub, true)
+  assertEquals(callbackCtx?.customerName, 'Buyer Name')
 })

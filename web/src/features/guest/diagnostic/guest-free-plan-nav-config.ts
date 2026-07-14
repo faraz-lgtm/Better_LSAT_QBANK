@@ -13,12 +13,17 @@ export type GuestFreePlanNavSection = {
 }
 
 const GUEST_FREE_PLAN_RESULTS_HREF = "/app/diagnostic/results"
+const GUEST_FREE_PLAN_DASHBOARD_HREF = "/app"
+const GUEST_FREE_PLAN_PRICING_HREF = "/app/pricing"
 
 const GUEST_FREE_PLAN_NAV_SECTIONS: GuestFreePlanNavSection[] = [
   {
     key: "main",
     label: "Main",
-    items: [{ label: "Dashboard", href: GUEST_FREE_PLAN_RESULTS_HREF }],
+    items: [
+      { label: "Dashboard", href: GUEST_FREE_PLAN_DASHBOARD_HREF },
+      { label: "Diagnostic Results", href: GUEST_FREE_PLAN_RESULTS_HREF },
+    ],
   },
   {
     key: "practice",
@@ -51,11 +56,16 @@ const GUEST_FREE_PLAN_NAV_SECTIONS: GuestFreePlanNavSection[] = [
 ]
 
 function isGuestFreePlanRoute(pathname: string): boolean {
-  return pathname.startsWith("/app/diagnostic/results") || pathname.startsWith("/diagnostic/results")
+  return (
+    pathname.startsWith("/app/diagnostic/results") ||
+    pathname.startsWith("/diagnostic/results") ||
+    pathname === "/app" ||
+    pathname === "/app/"
+  )
 }
 
 function isGuestFreePlanAnalyticsActive(pathname: string): boolean {
-  return isGuestFreePlanRoute(pathname)
+  return pathname.startsWith("/app/diagnostic/results") || pathname.startsWith("/diagnostic/results")
 }
 
 function isGuestFreePlanDashboardActive(pathname: string): boolean {
@@ -63,7 +73,9 @@ function isGuestFreePlanDashboardActive(pathname: string): boolean {
 }
 
 export {
+  GUEST_FREE_PLAN_DASHBOARD_HREF,
   GUEST_FREE_PLAN_NAV_SECTIONS,
+  GUEST_FREE_PLAN_PRICING_HREF,
   GUEST_FREE_PLAN_RESULTS_HREF,
   isGuestFreePlanAnalyticsActive,
   isGuestFreePlanDashboardActive,

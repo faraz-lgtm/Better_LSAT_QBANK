@@ -278,7 +278,7 @@ export function parseScaledScoreCsvRows(
 }
 
 export function parseExplanationCsvRecord(record: Record<string, string>): ExplanationCsvRow | null {
-  const prepRaw = String(record["Prep test"] ?? record.prep_test ?? "").trim()
+  const prepRaw = String(record["Prep test"] ?? record["Prep Test"] ?? record.prep_test ?? "").trim()
   const sectionRaw = String(record.Section ?? record.section ?? "").trim()
   const questionRaw = String(record.Question ?? record.question ?? "").trim()
 
@@ -293,11 +293,13 @@ export function parseExplanationCsvRecord(record: Record<string, string>): Expla
     prepTest,
     section,
     question,
-    explanation: explanationHtmlForSave(record.Explanation ?? record.explanation),
-    explanationA: explanationHtmlForSave(record.explanation_A),
-    explanationB: explanationHtmlForSave(record.explanation_B),
-    explanationC: explanationHtmlForSave(record.explanation_C),
-    explanationD: explanationHtmlForSave(record.explanation_D),
-    explanationE: explanationHtmlForSave(record.explanation_E),
+    explanation: explanationHtmlForSave(
+      record.Explanation ?? record.explanation ?? record["Main Explanation"],
+    ),
+    explanationA: explanationHtmlForSave(record.explanation_A ?? record["Choice A"]),
+    explanationB: explanationHtmlForSave(record.explanation_B ?? record["Choice B"]),
+    explanationC: explanationHtmlForSave(record.explanation_C ?? record["Choice C"]),
+    explanationD: explanationHtmlForSave(record.explanation_D ?? record["Choice D"]),
+    explanationE: explanationHtmlForSave(record.explanation_E ?? record["Choice E"]),
   }
 }

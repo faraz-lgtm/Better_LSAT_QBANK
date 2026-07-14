@@ -2,16 +2,15 @@ import { useEffect, useMemo, useState } from "react"
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom"
 
 import { GuestDiagnosticExamLayout } from "@/features/guest/diagnostic/guest-diagnostic-exam-layout"
-import {
-  GUEST_DIAGNOSTIC_INTENT_STORAGE_KEY,
-} from "@/features/guest/diagnostic/guest-diagnostic-intent-data"
+import { clearDiagnosticFunnel, readDiagnosticIntent } from "@/lib/auth/diagnostic-intent"
 import { GuestDiagnosticTestInstructionsPanel } from "@/features/guest/diagnostic/guest-diagnostic-test-instructions-panel"
 import {
   getGuestDiagnosticTestConfig,
   isGuestDiagnosticIntentId,
 } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
+import { createGuestDiagnosticPreviewQuestions } from "@/features/guest/diagnostic/guest-diagnostic-exam-mock-data"
 import {
-  buildDefaultGuestDiagnosticResult,
+  buildGuestDiagnosticResultFromAnswers,
   writeGuestDiagnosticResult,
 } from "@/features/guest/diagnostic/guest-diagnostic-result-storage"
 import { GUEST_FREE_PLAN_RESULTS_HREF } from "@/features/guest/diagnostic/guest-free-plan-nav-config"
@@ -31,7 +30,7 @@ function resolveDiagnosticIntent(
 
   if (preview) return "mini"
 
-  const storedIntent = sessionStorage.getItem(GUEST_DIAGNOSTIC_INTENT_STORAGE_KEY)
+  const storedIntent = readDiagnosticIntent()
   if (isGuestDiagnosticIntentId(storedIntent)) return storedIntent
 
   return null
@@ -65,9 +64,11 @@ function GuestDiagnosticStartPage({ preview = false }: GuestDiagnosticStartPageP
     setShowInstructions(false)
   }
 
-  function handleSubmitted() {
-    const result = buildDefaultGuestDiagnosticResult(resolvedIntentId)
+  function handleSubmitted(answersByQuestion: Record<string, { selectedAnswer: string; isCorrect: boolean }>) {
+    const questions = createGuestDiagnosticPreviewQuestions(config.questionCount)
+    const result = buildGuestDiagnosticResultFromAnswers(resolvedIntentId, questions, answersByQuestion)
     writeGuestDiagnosticResult(result)
+    clearDiagnosticFunnel()
     navigate(preview ? "/diagnostic/results/preview" : GUEST_FREE_PLAN_RESULTS_HREF, { replace: true })
   }
 

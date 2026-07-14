@@ -135,6 +135,30 @@ Deno.test("parseExplanationCsvRecord reads bulk_import_final columns", () => {
   assertEquals(row?.explanationA, "<p>A</p>")
 })
 
+Deno.test("parseExplanationCsvRecord reads gaps upload columns", () => {
+  const row = parseExplanationCsvRecord({
+    Filename: "borodulya/lsat101.s2.question-02.jy.mp4",
+    "Prep Test": "101",
+    Section: "2",
+    Question: "2",
+    "Main Explanation": "<p>Main</p>",
+    "Choice A": "<p>A</p>",
+    "Choice B": "<p>B</p>",
+    "Choice C": "",
+    "Choice D": "<p>D</p>",
+    "Choice E": "",
+  })
+  assertEquals(row?.prepTest, 101)
+  assertEquals(row?.section, 2)
+  assertEquals(row?.question, 2)
+  assertEquals(row?.explanation, "<p>Main</p>")
+  assertEquals(row?.explanationA, "<p>A</p>")
+  assertEquals(row?.explanationB, "<p>B</p>")
+  assertEquals(row?.explanationC, null)
+  assertEquals(row?.explanationD, "<p>D</p>")
+  assertEquals(row?.explanationE, null)
+})
+
 Deno.test("parseScaledScoreCsvRows maps Raw Score and LSAT Score columns", () => {
   const rows = parseScaledScoreCsvRows([
     { "Raw Score": "77", "LSAT Score": "180" },

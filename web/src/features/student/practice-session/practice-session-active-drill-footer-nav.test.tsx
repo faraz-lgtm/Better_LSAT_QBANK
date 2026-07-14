@@ -1,0 +1,54 @@
+import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { describe, expect, it, vi } from "vitest"
+
+import { PracticeSessionActiveDrillFooterNav } from "@/features/student/practice-session/practice-session-active-drill-footer-nav"
+
+describe("PracticeSessionActiveDrillFooterNav", () => {
+  const questions = [{ id: "q1" }, { id: "q2" }]
+
+  it("shows submit control on the last question when onSubmit is provided", async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+
+    render(
+      <PracticeSessionActiveDrillFooterNav
+        questions={questions}
+        safeIndex={2}
+        answersByQuestion={{}}
+        isFlagged={() => false}
+        variant="active-drill"
+        onSelectQuestion={() => undefined}
+        onPrev={() => undefined}
+        onNext={() => undefined}
+        onSubmit={onSubmit}
+        submitLabel="Submit Test"
+      />,
+    )
+
+    expect(screen.queryByRole("button", { name: "Next question" })).not.toBeInTheDocument()
+    const submitButton = screen.getByRole("button", { name: "Submit Test" })
+    await user.click(submitButton)
+    expect(onSubmit).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps next control before the last question", () => {
+    render(
+      <PracticeSessionActiveDrillFooterNav
+        questions={questions}
+        safeIndex={1}
+        answersByQuestion={{}}
+        isFlagged={() => false}
+        variant="active-drill"
+        onSelectQuestion={() => undefined}
+        onPrev={() => undefined}
+        onNext={() => undefined}
+        onSubmit={() => undefined}
+        submitLabel="Submit Test"
+      />,
+    )
+
+    expect(screen.getByRole("button", { name: "Next question" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Submit Test" })).not.toBeInTheDocument()
+  })
+})

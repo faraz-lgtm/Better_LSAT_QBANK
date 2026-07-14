@@ -4,7 +4,8 @@ import { CORS_EDGE_NARROW, json, optionsOk, requireAuthUser } from '../_shared/e
 import { formatUnknownError } from '../_shared/format-error.ts'
 import { createStripeClient } from '../_shared/stripe-client.ts'
 import { parseStripeEnv } from '../_shared/stripe-env.ts'
-import { createServiceRoleClient } from '../users/users.repository.ts'
+import { createServiceRoleClient, createUsersRepository } from '../users/users.repository.ts'
+import { createUsersService } from '../users/users.service.ts'
 import { createBillingRepository } from './billing.repository.ts'
 import { createBillingService, parseCheckoutPlan } from './billing.service.ts'
 
@@ -18,17 +19,46 @@ function stripeDisabled(): Response {
   )
 }
 
-function buildBillingService(getAppBaseUrl: () => string) {
+function buildBillingService(
+  getAppBaseUrl: () => string,
+  options: { wireLawHubAutoInvite?: boolean } = {},
+) {
   const raw = Deno.env.toObject()
   const env = parseStripeEnv(raw)
   if (!env) return null
   const stripe = createStripeClient({ getEnv: () => env })
   const repository = createBillingRepository(createServiceRoleClient())
+  const onCheckoutCompleted = options.wireLawHubAutoInvite
+    ? (() => {
+      const usersRepository = createUsersRepository(createServiceRoleClient())
+      const usersService = createUsersService({ repository: usersRepository })
+      return async (ctx: {
+        userId: string
+        email: string | null
+        includeLawHub: boolean
+        customerName: string | null
+      }) => {
+        const result = await usersService.autoInviteLawHubAfterCheckout({
+          userId: ctx.userId,
+          email: ctx.email,
+          includeLawHub: ctx.includeLawHub,
+          customerName: ctx.customerName,
+        })
+        console.info('LawHub auto-invite after checkout', {
+          userId: ctx.userId,
+          email: ctx.email,
+          includeLawHub: ctx.includeLawHub,
+          ...result,
+        })
+      }
+    })()
+    : undefined
   return createBillingService({
     getEnv: () => env,
     stripe,
     repository,
     getAppBaseUrl,
+    onCheckoutCompleted,
   })
 }
 
@@ -144,7 +174,9 @@ export async function handleStripeWebhook(req: Request): Promise<Response> {
     return json({ error: `Webhook signature verification failed: ${message}` }, { status: 400 })
   }
 
-  const service = buildBillingService(() => resolveAppBaseUrlFromEnv() ?? 'http://localhost:5173')
+  const service = buildBillingService(() => resolveAppBaseUrlFromEnv() ?? 'http://localhost:5173', {
+    wireLawHubAutoInvite: true,
+  })
   if (!service) {
     return json({ error: 'Stripe not configured' }, { status: 503 })
   }

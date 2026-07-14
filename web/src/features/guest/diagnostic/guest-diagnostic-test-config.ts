@@ -16,7 +16,7 @@ const GUEST_DIAGNOSTIC_TEST_CONFIG: Record<GuestDiagnosticIntentId, GuestDiagnos
     intentId: "mini",
     title: "Mini Diagnostic - Test Instructions",
     questionCount: 10,
-    timeMinutes: 20,
+    timeMinutes: 13,
     instructions: DIAGNOSTIC_TEST_INSTRUCTIONS,
   },
   quick: {
