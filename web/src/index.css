@@ -2644,3 +2644,44 @@ html.student-shell-immersive .practice-session-card--blind-review {
   background-color: #ffbd4c;
   color: inherit;
 }
+
+/* Marketing homepage (ported landing) */
+.marketing-home {
+  /* Reset :root's computed line-height length so headings/body scale normally */
+  line-height: 1.5;
+  scroll-behavior: smooth;
+  width: 100%;
+  text-align: left;
+}
+
+.marketing-home h1,
+.marketing-home h2,
+.marketing-home h3 {
+  line-height: 1.2;
+}
+
+.marketing-home p {
+  line-height: 1.6;
+}
+
+.marketing-home #pricing > div {
+  width: 100%;
+}
+
+@keyframes marketing-pulse-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 4px 32px rgba(255, 111, 0, 0.4),
+      0 0 0 0 rgba(255, 111, 0, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 4px 40px rgba(255, 111, 0, 0.6),
+      0 0 0 8px rgba(255, 111, 0, 0);
+  }
+}
+
+.marketing-diagnostic-pulse {
+  animation: marketing-pulse-glow 2.4s ease-in-out infinite;
+}

@@ -16,6 +16,7 @@ import { GuestDiagnosticIntentPage } from "@/features/guest/pages/guest-diagnost
 import { GuestDiagnosticStartPage } from "@/features/guest/pages/guest-diagnostic-start-page"
 import { GuestDiagnosticResultsPage } from "@/features/guest/pages/guest-diagnostic-results-page"
 import { GuestDiagnosticResultsPreviewPage } from "@/features/guest/pages/guest-diagnostic-results-preview-page"
+import { MarketingHomePage } from "@/features/marketing/pages/marketing-home-page"
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
 import { PrepCourseContentPage } from "@/features/prep-course/pages/prep-course-content-page"
 import { PrepCourseLessonPage } from "@/features/prep-course/pages/prep-course-lesson-page"
@@ -313,7 +314,7 @@ function RequireLsacEntitlement({ children }: { children: ReactElement }) {
 }
 
 const router = createBrowserRouter([
-  { path: "/", element: <Navigate to="/login" replace /> },
+  { path: "/", element: <MarketingHomePage /> },
   { path: "/login", element: <PublicOnly><LoginPage /></PublicOnly> },
   { path: "/signup", element: <SignupPage /> },
   { path: "/signup/check-email", element: <SignupCheckEmailPage /> },
@@ -373,8 +374,10 @@ const router = createBrowserRouter([
       { path: "analytics/drills/results/:sessionId", element: <AnalyticsDrillResultsPage /> },
       { path: "analytics/sections", element: <AnalyticsSectionsPage /> },
       { path: "analytics/preptests", element: <AnalyticsPrepTestsPage /> },
-      { path: "analytics/preptests/results/:testId", element: <AnalyticsPrepTestResultsPage /> },
-      { path: "diagnostic/results", element: <GuestDiagnosticResultsPage /> },
+          { path: "analytics/preptests/results/:testId", element: <AnalyticsPrepTestResultsPage /> },
+          { path: "diagnostic/results", element: <GuestDiagnosticResultsPage /> },
+        ],
+      },
     ],
   },
   {
