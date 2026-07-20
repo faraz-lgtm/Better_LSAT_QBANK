@@ -1,4 +1,3 @@
-import { shouldRequireLsacLinkWall } from '../_shared/lsac-link-wall.ts'
 import type Stripe from 'npm:stripe@17.7.0'
 import {
   BILLING_PLAN_CATALOG,
@@ -246,9 +245,7 @@ export function createBillingService(deps: BillingServiceDeps) {
       }
 
       const baseUrl = deps.getAppBaseUrl().replace(/\/$/, '')
-      const checkoutSuccessPath = shouldRequireLsacLinkWall()
-        ? '/app/lsac-link?checkout=success'
-        : '/app?checkout=success'
+      const checkoutSuccessPath = '/app?checkout=success'
       const session = await deps.stripe.checkout.sessions.create({
         mode: 'subscription',
         customer: customerId,

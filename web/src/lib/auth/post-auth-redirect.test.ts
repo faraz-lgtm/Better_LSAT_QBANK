@@ -36,31 +36,40 @@ describe("resolvePostAuthDestination", () => {
     ).toBe("/onboarding")
   })
 
-  it("returns pricing when entitlement is PAYMENT_REQUIRED", () => {
+  it("returns app when entitlement is PAYMENT_REQUIRED (soft-gate in dashboard)", () => {
     expect(
       resolvePostAuthDestination(baseStudent, {
         ...fullAccessEntitlement,
         hasActiveCore: false,
         accessState: "PAYMENT_REQUIRED",
       }),
-    ).toBe("/app/pricing")
+    ).toBe("/app")
   })
 
-  it("returns lsac-link when entitlement is LSAC_REQUIRED", () => {
+  it("returns app when entitlement is LSAC_REQUIRED (soft-gate in dashboard)", () => {
     expect(
       resolvePostAuthDestination(baseStudent, {
         ...fullAccessEntitlement,
         isLsacEligible: false,
         accessState: "LSAC_REQUIRED",
       }),
-    ).toBe("/app/lsac-link")
+    ).toBe("/app")
   })
 
   it("returns app when entitlement is FULL_ACCESS", () => {
     expect(resolvePostAuthDestination(baseStudent, fullAccessEntitlement)).toBe("/app")
   })
 
-  it("defaults to pricing when entitlement payload is missing", () => {
-    expect(resolvePostAuthDestination(baseStudent, null)).toBe("/app/pricing")
+  it("defaults to app when entitlement payload is missing", () => {
+    expect(resolvePostAuthDestination(baseStudent, null)).toBe("/app")
+  })
+
+  it("returns admin for admin roles", () => {
+    expect(
+      resolvePostAuthDestination(
+        { ...baseStudent, role: "admin" },
+        fullAccessEntitlement,
+      ),
+    ).toBe("/admin")
   })
 })

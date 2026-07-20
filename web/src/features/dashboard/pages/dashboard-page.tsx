@@ -12,6 +12,7 @@ import {
 import { mapOverviewToDashboardStats } from "@/features/dashboard/lib/map-dashboard-stats"
 import { useAnalyticsApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import { DashboardAdaptiveDrillButton } from "@/features/dashboard/components/dashboard-adaptive-drill-button"
+import { DashboardAccessSetupCard } from "@/features/dashboard/components/dashboard-access-setup-card"
 import { ContinueDrillCard, continueDrillToCardDrill } from "@/features/student/components/continue-drill-card"
 import { DASHBOARD_ADAPTIVE_DRILL_QUERY } from "@/features/student/drills/drill-blind-review-policy"
 import { DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT } from "@/features/student/drills/adaptive-drill-config"
@@ -261,6 +262,8 @@ function DashboardPage() {
         {error ? <p className="mb-4 text-sm text-[#95122b]">{error}</p> : null}
 
         <div className="dashboard-page flex flex-col gap-6">
+          <DashboardAccessSetupCard />
+
           <div className="dashboard-page__stats">
             {statCards.map((card) => (
               <article

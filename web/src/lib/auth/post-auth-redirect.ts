@@ -4,7 +4,8 @@ import { logRouteRedirect } from "@/lib/auth/log-route-redirect"
 export type PostAuthDestination = "/app" | "/admin" | "/onboarding" | "/app/pricing" | "/app/lsac-link"
 
 /**
- * Route students using authoritative entitlement state from the backend.
+ * Route students to the app after auth. Payment and LawHub setup are soft-gated
+ * inside the dashboard — not hard walls after login.
  */
 export function resolvePostAuthDestination(
   profile: UserProfile | null,
@@ -26,20 +27,14 @@ export function resolvePostAuthDestination(
   }
 
   if (entitlement) {
-    if (entitlement.accessState === "PAYMENT_REQUIRED") {
-      logRouteRedirect(from, "/app/pricing", "PAYMENT_REQUIRED")
-      return "/app/pricing"
-    }
-    if (entitlement.accessState === "LSAC_REQUIRED") {
-      logRouteRedirect(from, "/app/lsac-link", "LSAC_REQUIRED")
-      return "/app/lsac-link"
-    }
-    logRouteRedirect(from, "/app", "FULL_ACCESS")
-    return "/app"
+    logRouteRedirect(from, "/app", entitlement.accessState, {
+      hasActiveCore: entitlement.hasActiveCore,
+      isLsacEligible: entitlement.isLsacEligible,
+    })
+  } else {
+    logRouteRedirect(from, "/app", "no entitlement payload; soft-gate in dashboard")
   }
-
-  logRouteRedirect(from, "/app/pricing", "no entitlement payload; default to pricing")
-  return "/app/pricing"
+  return "/app"
 }
 
 /** @deprecated Prefer resolvePostAuthDestination with getEntitlementState. */

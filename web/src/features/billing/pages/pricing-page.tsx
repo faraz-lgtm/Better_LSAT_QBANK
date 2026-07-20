@@ -120,8 +120,8 @@ function PricingPage() {
           return
         }
         if (entitlement.accessState === "LSAC_REQUIRED") {
-          logRouteRedirect("/app/pricing", "/app/lsac-link", "LSAC_REQUIRED")
-          navigate("/app/lsac-link", { replace: true })
+          logRouteRedirect("/app/pricing", "/app", "LSAC_REQUIRED; soft-gate on dashboard")
+          navigate("/app", { replace: true })
           return
         }
 
