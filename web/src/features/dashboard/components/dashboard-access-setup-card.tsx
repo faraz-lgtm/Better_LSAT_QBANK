@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 
+import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { createUsersApi, type AccessState, type UserEntitlement } from "@/lib/api/users"
+import { createUsersApi } from "@/lib/api/users"
 import { formatEdgeFunctionError } from "@/lib/supabase/format-call-error"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -21,6 +22,13 @@ function splitFullName(fullName: string | null | undefined): { firstName: string
 function DashboardAccessSetupCard() {
   const [searchParams, setSearchParams] = useSearchParams()
   const checkoutSuccess = searchParams.get("checkout") === "success"
+  const {
+    entitlement,
+    loading: entitlementLoading,
+    canAccessLsacContent,
+    isPaymentRequired,
+    refresh,
+  } = useStudentEntitlement()
 
   const usersApi = useMemo(() => {
     try {
@@ -30,59 +38,35 @@ function DashboardAccessSetupCard() {
     }
   }, [])
 
-  const [loading, setLoading] = useState(true)
-  const [entitlement, setEntitlement] = useState<UserEntitlement | null>(null)
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
-  const [dismissed, setDismissed] = useState(false)
+  const [namesLoaded, setNamesLoaded] = useState(false)
   const pendingPollStartedAt = useRef<number | null>(null)
-
-  const refreshEntitlement = useCallback(async (): Promise<AccessState | null> => {
-    if (!usersApi) return null
-    try {
-      await usersApi.lawHubRefresh()
-    } catch {
-      // Refresh may fail before first link; entitlement check still applies.
-    }
-    const next = await usersApi.getEntitlementState()
-    setEntitlement(next)
-    if (next.accessState === "FULL_ACCESS" && checkoutSuccess) {
-      const nextParams = new URLSearchParams(searchParams)
-      nextParams.delete("checkout")
-      setSearchParams(nextParams, { replace: true })
-    }
-    return next.accessState
-  }, [checkoutSuccess, searchParams, setSearchParams, usersApi])
 
   useEffect(() => {
     let alive = true
-    async function load() {
+    async function loadNames() {
       if (!usersApi) {
-        if (alive) setLoading(false)
+        if (alive) setNamesLoaded(true)
         return
       }
       try {
-        const [profile, nextEntitlement] = await Promise.all([
-          usersApi.getMyProfile(),
-          usersApi.getEntitlementState(),
-        ])
+        const profile = await usersApi.getMyProfile()
         if (!alive) return
-        setEntitlement(nextEntitlement)
         const names = splitFullName(profile?.full_name)
         setFirstName(names.firstName)
         setLastName(names.lastName)
-      } catch (loadError) {
-        if (!alive) return
-        setError(loadError instanceof Error ? formatEdgeFunctionError(loadError) : "Unable to load account status.")
+      } catch {
+        // Names stay empty; user can type them.
       } finally {
-        if (alive) setLoading(false)
+        if (alive) setNamesLoaded(true)
       }
     }
-    void load()
+    void loadNames()
     return () => {
       alive = false
     }
@@ -91,12 +75,26 @@ function DashboardAccessSetupCard() {
   const isPendingCoachLink = Boolean(
     entitlement && entitlement.isLsacLinked && !entitlement.isLsacEligible,
   )
-  const paymentRequired = entitlement?.accessState === "PAYMENT_REQUIRED"
-  const lsacRequired = entitlement?.accessState === "LSAC_REQUIRED"
-  const showCard = !dismissed && !loading && (paymentRequired || lsacRequired)
+  const showCard = !entitlementLoading && !canAccessLsacContent
+
+  const refreshEntitlement = useCallback(async () => {
+    if (!usersApi) return null
+    try {
+      await usersApi.lawHubRefresh()
+    } catch {
+      // Refresh may fail before first link; entitlement check still applies.
+    }
+    const next = await refresh()
+    if (next?.isLsacEligible && checkoutSuccess) {
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.delete("checkout")
+      setSearchParams(nextParams, { replace: true })
+    }
+    return next
+  }, [checkoutSuccess, refresh, searchParams, setSearchParams, usersApi])
 
   useEffect(() => {
-    if (!isPendingCoachLink || !usersApi || paymentRequired) return
+    if (!isPendingCoachLink || !usersApi || isPaymentRequired) return
 
     pendingPollStartedAt.current = Date.now()
     const interval = window.setInterval(() => {
@@ -109,7 +107,7 @@ function DashboardAccessSetupCard() {
     }, PENDING_POLL_MS)
 
     return () => window.clearInterval(interval)
-  }, [isPendingCoachLink, paymentRequired, refreshEntitlement, usersApi])
+  }, [isPendingCoachLink, isPaymentRequired, refreshEntitlement, usersApi])
 
   function validateNames(): boolean {
     if (!firstName.trim() || !lastName.trim()) {
@@ -186,30 +184,19 @@ function DashboardAccessSetupCard() {
     }
   }
 
-  if (!showCard) return null
+  if (!showCard || !namesLoaded) return null
 
   return (
     <section className="dashboard-access-setup rounded-2xl border border-[#dfe1e7] bg-white p-5 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)] sm:p-6">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-[#0f172b]">
-            {paymentRequired ? "Choose a plan to continue" : "Complete LawHub setup"}
-          </h2>
-          <p className="mt-1 text-sm leading-relaxed text-[#62748e]">
-            {paymentRequired
-              ? "Subscribe to Core or Live to unlock practice, analytics, and LawHub PrepPlus linking."
-              : "Link your Official LSAT PrepPlus through LawHub to access Better LSAT."}
-          </p>
-        </div>
-        {!paymentRequired ? (
-          <button
-            type="button"
-            className="shrink-0 text-sm font-medium text-[#62748e] hover:text-[#0f172b]"
-            onClick={() => setDismissed(true)}
-          >
-            Dismiss
-          </button>
-        ) : null}
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold text-[#0f172b]">
+          {isPaymentRequired ? "Choose a plan to continue" : "Complete LawHub setup"}
+        </h2>
+        <p className="mt-1 text-sm leading-relaxed text-[#62748e]">
+          {isPaymentRequired
+            ? "Subscribe to Core or Live to unlock practice, analytics, and LawHub PrepPlus linking."
+            : "Link your Official LSAT PrepPlus through LawHub to unlock PrepTests, drills, and other LSAC content."}
+        </p>
       </div>
 
       {checkoutSuccess ? (
@@ -218,7 +205,7 @@ function DashboardAccessSetupCard() {
         </p>
       ) : null}
 
-      {paymentRequired ? (
+      {isPaymentRequired ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Button asChild className="w-full sm:w-auto">
             <Link to="/app/pricing">View plans</Link>
@@ -229,7 +216,7 @@ function DashboardAccessSetupCard() {
         </div>
       ) : null}
 
-      {!paymentRequired && isPendingCoachLink ? (
+      {!isPaymentRequired && isPendingCoachLink ? (
         <div className="space-y-4">
           <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-[#334155]">
             <li>Check your email from LSAC (same address you used to sign up).</li>
@@ -251,7 +238,7 @@ function DashboardAccessSetupCard() {
         </div>
       ) : null}
 
-      {!paymentRequired && !isPendingCoachLink && lsacRequired ? (
+      {!isPaymentRequired && !isPendingCoachLink ? (
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>

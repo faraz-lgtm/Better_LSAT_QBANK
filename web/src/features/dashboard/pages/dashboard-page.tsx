@@ -5,6 +5,7 @@ import { Brain, Clock, PlusCircle, Target } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useStudentPageHeaderActions } from "@/features/app-shell/student-page-header-slot"
+import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-context"
 import {
   formatLawSchoolCycle,
   formatPlannedLsatHeadline,
@@ -62,6 +63,7 @@ function canSubmitOfficialScore(label: string, scoreRaw: string): boolean {
 
 function DashboardPage() {
   const navigate = useNavigate()
+  const { canAccessLsacContent, loading: entitlementLoading } = useStudentEntitlement()
   const analyticsApi = useAnalyticsApi()
   const usersApi = useMemo(() => {
     try {
@@ -98,6 +100,14 @@ function DashboardPage() {
   const [startingAdaptiveDrill, setStartingAdaptiveDrill] = useState(false)
 
   const loadDashboard = useCallback(async () => {
+    if (!canAccessLsacContent) {
+      setOverview(null)
+      setContinueDrills([])
+      setSuggestedDrills([])
+      setLoading(false)
+      return
+    }
+
     if (!analyticsApi || !usersApi) {
       setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
       setLoading(false)
@@ -135,7 +145,7 @@ function DashboardPage() {
     } finally {
       setLoading(false)
     }
-  }, [analyticsApi, usersApi])
+  }, [analyticsApi, canAccessLsacContent, usersApi])
 
   useEffect(() => {
     void loadDashboard()
@@ -185,14 +195,15 @@ function DashboardPage() {
   }, [activeFilter, navigate, practiceApi, startingAdaptiveDrill])
 
   const adaptiveDrillButton = useMemo(
-    () => (
-      <DashboardAdaptiveDrillButton
-        loading={startingAdaptiveDrill}
-        disabled={!practiceApi}
-        onClick={() => void handleStartAdaptiveDrill()}
-      />
-    ),
-    [handleStartAdaptiveDrill, practiceApi, startingAdaptiveDrill],
+    () =>
+      canAccessLsacContent ? (
+        <DashboardAdaptiveDrillButton
+          loading={startingAdaptiveDrill}
+          disabled={!practiceApi}
+          onClick={() => void handleStartAdaptiveDrill()}
+        />
+      ) : null,
+    [canAccessLsacContent, handleStartAdaptiveDrill, practiceApi, startingAdaptiveDrill],
   )
 
   useStudentPageHeaderActions(adaptiveDrillButton)
@@ -248,10 +259,20 @@ function DashboardPage() {
     setAddingScore(false)
   }
 
-  if (loading) {
+  if (entitlementLoading || loading) {
     return (
       <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
         <StudentPageLoader centered className="min-h-0 flex-1" label="Loading dashboard…" />
+      </StudentMain>
+    )
+  }
+
+  if (!canAccessLsacContent) {
+    return (
+      <StudentMain>
+        <div className="dashboard-page flex flex-col gap-6">
+          <DashboardAccessSetupCard />
+        </div>
       </StudentMain>
     )
   }
@@ -262,8 +283,6 @@ function DashboardPage() {
         {error ? <p className="mb-4 text-sm text-[#95122b]">{error}</p> : null}
 
         <div className="dashboard-page flex flex-col gap-6">
-          <DashboardAccessSetupCard />
-
           <div className="dashboard-page__stats">
             {statCards.map((card) => (
               <article
