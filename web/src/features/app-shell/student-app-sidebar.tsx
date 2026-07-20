@@ -12,7 +12,7 @@ import {
   STUDENT_NAV_SECTIONS,
   type StudentNavIconKey,
 } from "@/features/app-shell/student-nav-config"
-import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
+import { useStudentEntitlementOptional, isLsacLockedNavItem } from "@/features/app-shell/student-entitlement-context"
 import { shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -93,7 +93,7 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
                   const siblingHrefs = section.items.map((entry) => entry.href)
                   const active = isNavItemActive(pathname, item.href, search, siblingHrefs)
 
-                  if (lockLsacNav) {
+                  if (lockLsacNav && isLsacLockedNavItem(item.href)) {
                     return (
                       <button
                         key={item.href}

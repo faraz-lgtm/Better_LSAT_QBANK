@@ -101,14 +101,21 @@ function isLsacContentPath(pathname: string): boolean {
   if (pathname.startsWith("/app/diagnostic")) return false
   if (pathname.startsWith("/app/pricing")) return false
   if (pathname.startsWith("/app/lsac-link")) return false
+  // Academy Prep Course is BetterLSAT curriculum — available before LawHub coach link.
+  if (pathname.startsWith("/app/prep-course")) return false
 
   return (
     pathname.startsWith("/app/practice") ||
     pathname.startsWith("/app/preptest") ||
     pathname.startsWith("/app/learn") ||
-    pathname.startsWith("/app/prep-course") ||
     pathname.startsWith("/app/analytics")
   )
+}
+
+function isLsacLockedNavItem(href: string): boolean {
+  // Prep Course stays clickable while LSAC pool content remains locked.
+  if (href === "/app/prep-course" || href.startsWith("/app/prep-course/")) return false
+  return true
 }
 
 export {
@@ -116,4 +123,5 @@ export {
   useStudentEntitlement,
   useStudentEntitlementOptional,
   isLsacContentPath,
+  isLsacLockedNavItem,
 }
