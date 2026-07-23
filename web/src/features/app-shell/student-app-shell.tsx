@@ -4,7 +4,9 @@ import { Outlet, useLocation } from "react-router-dom"
 import { StudentAppHeader } from "@/features/app-shell/student-app-header"
 import { PortalChatWidget } from "@/features/app-shell/portal-chat-widget"
 import { isPracticeImmersiveRoute } from "@/features/app-shell/practice-immersive-route"
+import { RequireLsacContentAccess } from "@/features/app-shell/require-lsac-content-access"
 import { StudentAppSidebar } from "@/features/app-shell/student-app-sidebar"
+import { StudentEntitlementProvider } from "@/features/app-shell/student-entitlement-context"
 import { isGuestFreePlanRoute } from "@/features/guest/diagnostic/guest-free-plan-nav-config"
 import { GuestFreePlanSidebar } from "@/features/guest/diagnostic/guest-free-plan-sidebar"
 import { GuestUpgradeCta } from "@/features/guest/diagnostic/guest-upgrade-cta"
@@ -68,35 +70,39 @@ function StudentAppShell() {
   }, [immersive])
 
   return (
-    <StudentPageHeaderSlotProvider setHeaderActions={setHeaderActions} setBreadcrumbTail={setBreadcrumbTail}>
-      <GuestPricingModalProvider>
-      <div
-        className={cn(
-          "flex h-svh min-h-0 overflow-hidden",
-          "flex h-svh min-h-0 overflow-hidden bg-[var(--primary-0)]",
-        )}
-      >
-        {immersive ? null : freePlanShell ? (
-          <GuestFreePlanSidebar mobileOpen={mobileNavOpen} onMobileClose={closeMobileNav} />
-        ) : (
-          <StudentAppSidebar mobileOpen={mobileNavOpen} onMobileClose={closeMobileNav} />
-        )}
-        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          {immersive ? null : (
-            <StudentAppHeader
-              breadcrumbTail={breadcrumbTail}
-              onOpenMobileNav={() => setMobileNavOpen(true)}
-              headerActions={freePlanShell ? <GuestUpgradeCta /> : headerActions}
-            />
-          )}
-          <div className="flex h-0 min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-            <Outlet />
+    <StudentEntitlementProvider>
+      <StudentPageHeaderSlotProvider setHeaderActions={setHeaderActions} setBreadcrumbTail={setBreadcrumbTail}>
+        <GuestPricingModalProvider>
+          <div
+            className={cn(
+              "flex h-svh min-h-0 overflow-hidden",
+              "flex h-svh min-h-0 overflow-hidden bg-[var(--primary-0)]",
+            )}
+          >
+            {immersive ? null : freePlanShell ? (
+              <GuestFreePlanSidebar mobileOpen={mobileNavOpen} onMobileClose={closeMobileNav} />
+            ) : (
+              <StudentAppSidebar mobileOpen={mobileNavOpen} onMobileClose={closeMobileNav} />
+            )}
+            <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+              {immersive ? null : (
+                <StudentAppHeader
+                  breadcrumbTail={breadcrumbTail}
+                  onOpenMobileNav={() => setMobileNavOpen(true)}
+                  headerActions={freePlanShell ? <GuestUpgradeCta /> : headerActions}
+                />
+              )}
+              <div className="flex h-0 min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                <RequireLsacContentAccess>
+                  <Outlet />
+                </RequireLsacContentAccess>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      <PortalChatWidget />
-      </GuestPricingModalProvider>
-    </StudentPageHeaderSlotProvider>
+          <PortalChatWidget />
+        </GuestPricingModalProvider>
+      </StudentPageHeaderSlotProvider>
+    </StudentEntitlementProvider>
   )
 }
 

@@ -97,13 +97,27 @@ describe("resolvePostAuthDestination", () => {
     ).toBe("/onboarding")
   })
 
-  it("returns lsac-link when entitlement is LSAC_REQUIRED outside funnel", () => {
+  it("returns app when entitlement is PAYMENT_REQUIRED (soft-gate in dashboard)", () => {
+    expect(
+      resolvePostAuthDestination(baseStudent, {
+        ...fullAccessEntitlement,
+        hasActiveCore: false,
+        accessState: "PAYMENT_REQUIRED",
+      }, emptyFunnel),
+    ).toBe("/app")
+  })
+
+  it("returns app when entitlement is LSAC_REQUIRED outside funnel (soft-gate in dashboard)", () => {
     expect(
       resolvePostAuthDestination(baseStudent, lsacRequiredEntitlement, emptyFunnel),
-    ).toBe("/app/lsac-link")
+    ).toBe("/app")
   })
 
   it("returns app when entitlement is FULL_ACCESS", () => {
     expect(resolvePostAuthDestination(baseStudent, fullAccessEntitlement, emptyFunnel)).toBe("/app")
+  })
+
+  it("defaults to app when entitlement payload is missing", () => {
+    expect(resolvePostAuthDestination(baseStudent, null, emptyFunnel)).toBe("/app")
   })
 })

@@ -257,12 +257,13 @@ export function createBillingService(deps: BillingServiceDeps) {
       }
 
       const baseUrl = deps.getAppBaseUrl().replace(/\/$/, '')
+      const checkoutSuccessPath = '/app?checkout=success'
       const session = await deps.stripe.checkout.sessions.create({
         mode: 'subscription',
         customer: customerId,
         client_reference_id: userId,
         line_items: lineItems,
-        success_url: `${baseUrl}/app/lsac-link?checkout=success`,
+        success_url: `${baseUrl}${checkoutSuccessPath}`,
         cancel_url: `${baseUrl}/app/pricing?checkout=cancel`,
         metadata: { user_id: userId, plan, include_lawhub: includeLawHub ? 'true' : 'false' },
         subscription_data: {

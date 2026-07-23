@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { LogOut } from "lucide-react"
+import { Lock, LogOut } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
 import {
@@ -12,6 +12,7 @@ import {
   STUDENT_NAV_SECTIONS,
   type StudentNavIconKey,
 } from "@/features/app-shell/student-nav-config"
+import { useStudentEntitlementOptional, isLsacLockedNavItem } from "@/features/app-shell/student-entitlement-context"
 import { shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -33,6 +34,8 @@ function SidebarSectionHeading({ icon, label }: { icon: StudentNavIconKey; label
 function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps) {
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
+  const entitlement = useStudentEntitlementOptional()
+  const lockLsacNav = entitlement ? !entitlement.canAccessLsacContent : false
   const dashboardActive = isDashboardActive(pathname)
 
   useEffect(() => {
@@ -89,6 +92,23 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
                 {section.items.map((item) => {
                   const siblingHrefs = section.items.map((entry) => entry.href)
                   const active = isNavItemActive(pathname, item.href, search, siblingHrefs)
+
+                  if (lockLsacNav && isLsacLockedNavItem(item.href)) {
+                    return (
+                      <button
+                        key={item.href}
+                        type="button"
+                        disabled
+                        aria-disabled="true"
+                        title="Link your LawHub coach to unlock"
+                        className="student-sidebar-link w-full cursor-not-allowed justify-between pr-4 opacity-60"
+                      >
+                        <span className="truncate">{item.label}</span>
+                        <Lock className="size-4 shrink-0 text-[#666d80]" aria-hidden />
+                      </button>
+                    )
+                  }
+
                   return (
                     <Link
                       key={item.href}

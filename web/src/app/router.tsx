@@ -62,7 +62,6 @@ import { createUsersApi, type UserEntitlement, type UserProfile } from "@/lib/ap
 import { readDiagnosticFunnelState } from "@/lib/auth/diagnostic-intent"
 import { shouldAllowAuthenticatedIntentPage } from "@/lib/auth/diagnostic-funnel-redirect"
 import { resolvePostAuthDestination, type PostAuthDestination } from "@/lib/auth/post-auth-redirect"
-import { logRouteRedirect } from "@/lib/auth/log-route-redirect"
 import { allowsPrepTestUnauthenticatedPreview } from "@/lib/dev/prep-test-ui-preview"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -320,114 +319,8 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
   return children
 }
 
-function RequireFullEntitlement({ children }: { children: ReactElement }) {
-  const [entitlementChecked, setEntitlementChecked] = useState(false)
-  const [accessState, setAccessState] = useState<"FULL_ACCESS" | "PAYMENT_REQUIRED" | "LSAC_REQUIRED" | null>(null)
-  const [entitlementDetails, setEntitlementDetails] = useState<Record<string, unknown> | null>(null)
-
-  useEffect(() => {
-    let alive = true
-    const usersApi = createUsersApi(getSupabaseBrowserClient())
-
-    void usersApi
-      .getEntitlementState()
-      .then((entitlement) => {
-        if (!alive) return
-        setEntitlementDetails({
-          accessState: entitlement.accessState,
-          hasActiveCore: entitlement.hasActiveCore,
-          isLsacLinked: entitlement.isLsacLinked,
-          isLsacEligible: entitlement.isLsacEligible,
-        })
-        if (
-          entitlement.accessState === "PAYMENT_REQUIRED" ||
-          entitlement.accessState === "LSAC_REQUIRED"
-        ) {
-          setAccessState(entitlement.accessState)
-        } else {
-          setAccessState("FULL_ACCESS")
-        }
-      })
-      .catch((error) => {
-        if (!alive) return
-        setEntitlementDetails({
-          accessState: "PAYMENT_REQUIRED",
-          error: error instanceof Error ? error.message : String(error),
-        })
-        setAccessState("PAYMENT_REQUIRED")
-      })
-      .finally(() => {
-        if (alive) setEntitlementChecked(true)
-      })
-
-    return () => {
-      alive = false
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!entitlementChecked || accessState === "FULL_ACCESS" || accessState === null) return
-    const from = window.location.pathname
-    if (accessState === "PAYMENT_REQUIRED") {
-      logRouteRedirect(from, "/app/pricing", "entitlement guard: PAYMENT_REQUIRED", entitlementDetails ?? undefined)
-    } else if (accessState === "LSAC_REQUIRED") {
-      logRouteRedirect(from, "/app/lsac-link", "entitlement guard: LSAC_REQUIRED", entitlementDetails ?? undefined)
-    }
-  }, [accessState, entitlementChecked, entitlementDetails])
-
-  if (!entitlementChecked) {
-    return (
-      <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
-        <StudentPageLoader centered label="Loading…" />
-      </div>
-    )
-  }
-  if (accessState === "PAYMENT_REQUIRED") {
-    return <Navigate to="/app/pricing" replace />
-  }
-  if (accessState === "LSAC_REQUIRED") {
-    return <Navigate to="/app/lsac-link" replace />
-  }
-  return children
-}
-
-function RequirePaidSubscription({ children }: { children: ReactElement }) {
-  const [checked, setChecked] = useState(false)
-  const [hasActiveCore, setHasActiveCore] = useState<boolean | null>(null)
-
-  useEffect(() => {
-    let alive = true
-    const usersApi = createUsersApi(getSupabaseBrowserClient())
-
-    void usersApi
-      .getEntitlementState()
-      .then((entitlement) => {
-        if (!alive) return
-        setHasActiveCore(entitlement.hasActiveCore)
-      })
-      .catch(() => {
-        if (!alive) return
-        setHasActiveCore(false)
-      })
-      .finally(() => {
-        if (alive) setChecked(true)
-      })
-
-    return () => {
-      alive = false
-    }
-  }, [])
-
-  if (!checked) {
-    return (
-      <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
-        <StudentPageLoader centered label="Loading…" />
-      </div>
-    )
-  }
-  if (!hasActiveCore) {
-    return <Navigate to="/app/pricing" replace />
-  }
+function RequireLsacEntitlement({ children }: { children: ReactElement }) {
+  // Payment and LawHub linking are soft-gated in the dashboard — do not hard-block the app shell.
   return children
 }
 
@@ -461,57 +354,46 @@ const router = createBrowserRouter([
     ),
     children: [
       { path: "pricing", element: <PricingPage /> },
+      { path: "lsac-link", element: <LsacLinkPage /> },
       {
-        path: "lsac-link",
         element: (
-          <RequirePaidSubscription>
-            <LsacLinkPage />
-          </RequirePaidSubscription>
+          <RequireLsacEntitlement>
+            <StudentAppShell />
+          </RequireLsacEntitlement>
         ),
-      },
-      {
-        element: <StudentAppShell />,
         children: [
           { index: true, element: <DashboardPage /> },
           { path: "diagnostic/results", element: <GuestDiagnosticResultsPage /> },
-          {
-            element: (
-              <RequireFullEntitlement>
-                <Outlet />
-              </RequireFullEntitlement>
-            ),
-            children: [
-      { path: "learn/explanations", element: <ExplanationsPage /> },
-      { path: "learn/explanations/q/:questionId", element: <ExplanationQuestionDetailPage /> },
-      { path: "prep-course", element: <PrepCourseListPage /> },
-      { path: "prep-course/:courseSlug", element: <PrepCourseContentPage /> },
-      { path: "prep-course/:courseSlug/:lessonSlug", element: <PrepCourseLessonPage /> },
-      { path: "practice/drills", element: <PracticeDrillsPage /> },
-      { path: "practice/drills/lr/new", element: <LrNewDrillPage /> },
-      { path: "practice/drills/rc/new", element: <RcNewDrillPage /> },
-      { path: "practice/drills/session/:sessionId", element: <DrillSessionPage /> },
-      { path: "practice/results/:sessionId", element: <PracticeSessionResultsPage /> },
-      { path: "practice/sections", element: <PracticeSectionsPage /> },
-      { path: "practice/sections/lr/new", element: <LrNewSectionPage /> },
-      { path: "practice/sections/rc/new", element: <RcNewSectionPage /> },
-      { path: "practice/sections/session/:sessionId", element: <SectionSessionPage /> },
-      { path: "practice/sections/rc", element: <Navigate to="/app/practice/sections/rc/new" replace /> },
-      { path: "practice/sections/rc/session", element: <Navigate to="/app/practice/sections/rc/new" replace /> },
-      { path: "preptest/:testId/section/:sectionId", element: <PracticePrepTestSectionPage /> },
-      { path: "preptest/:testId", element: <PracticePrepTestPage /> },
-      { path: "preptest", element: <PracticePrepTestsListPage /> },
-      { path: "practice/preptest/:testId/section/:sectionId", element: <LegacyPrepTestPathRedirect /> },
-      { path: "practice/preptest/:testId", element: <LegacyPrepTestPathRedirect /> },
-      { path: "practice/preptest", element: <LegacyPrepTestPathRedirect /> },
-      { path: "practice/blind-review", element: <PracticeBlindReviewPage /> },
-      { path: "practice/blind-review/:testId", element: <PracticeBlindReviewPrepTestPage /> },
-      { path: "analytics", element: <AnalyticsPage /> },
-      { path: "analytics/drills", element: <AnalyticsDrillsPage /> },
-      { path: "analytics/drills/results/:sessionId", element: <AnalyticsDrillResultsPage /> },
-      { path: "analytics/sections", element: <AnalyticsSectionsPage /> },
-      { path: "analytics/preptests", element: <AnalyticsPrepTestsPage /> },
+          { path: "learn/explanations", element: <ExplanationsPage /> },
+          { path: "learn/explanations/q/:questionId", element: <ExplanationQuestionDetailPage /> },
+          { path: "prep-course", element: <PrepCourseListPage /> },
+          { path: "prep-course/:courseSlug", element: <PrepCourseContentPage /> },
+          { path: "prep-course/:courseSlug/:lessonSlug", element: <PrepCourseLessonPage /> },
+          { path: "practice/drills", element: <PracticeDrillsPage /> },
+          { path: "practice/drills/lr/new", element: <LrNewDrillPage /> },
+          { path: "practice/drills/rc/new", element: <RcNewDrillPage /> },
+          { path: "practice/drills/session/:sessionId", element: <DrillSessionPage /> },
+          { path: "practice/results/:sessionId", element: <PracticeSessionResultsPage /> },
+          { path: "practice/sections", element: <PracticeSectionsPage /> },
+          { path: "practice/sections/lr/new", element: <LrNewSectionPage /> },
+          { path: "practice/sections/rc/new", element: <RcNewSectionPage /> },
+          { path: "practice/sections/session/:sessionId", element: <SectionSessionPage /> },
+          { path: "practice/sections/rc", element: <Navigate to="/app/practice/sections/rc/new" replace /> },
+          { path: "practice/sections/rc/session", element: <Navigate to="/app/practice/sections/rc/new" replace /> },
+          { path: "preptest/:testId/section/:sectionId", element: <PracticePrepTestSectionPage /> },
+          { path: "preptest/:testId", element: <PracticePrepTestPage /> },
+          { path: "preptest", element: <PracticePrepTestsListPage /> },
+          { path: "practice/preptest/:testId/section/:sectionId", element: <LegacyPrepTestPathRedirect /> },
+          { path: "practice/preptest/:testId", element: <LegacyPrepTestPathRedirect /> },
+          { path: "practice/preptest", element: <LegacyPrepTestPathRedirect /> },
+          { path: "practice/blind-review", element: <PracticeBlindReviewPage /> },
+          { path: "practice/blind-review/:testId", element: <PracticeBlindReviewPrepTestPage /> },
+          { path: "analytics", element: <AnalyticsPage /> },
+          { path: "analytics/drills", element: <AnalyticsDrillsPage /> },
+          { path: "analytics/drills/results/:sessionId", element: <AnalyticsDrillResultsPage /> },
+          { path: "analytics/sections", element: <AnalyticsSectionsPage /> },
+          { path: "analytics/preptests", element: <AnalyticsPrepTestsPage /> },
           { path: "analytics/preptests/results/:testId", element: <AnalyticsPrepTestResultsPage /> },
-          { path: "diagnostic/results", element: <GuestDiagnosticResultsPage /> },
         ],
       },
     ],

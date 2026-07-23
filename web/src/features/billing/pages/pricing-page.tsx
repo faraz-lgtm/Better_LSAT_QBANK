@@ -125,6 +125,11 @@ function PricingPage() {
           navigate("/app", { replace: true })
           return
         }
+        if (entitlement.accessState === "LSAC_REQUIRED") {
+          logRouteRedirect("/app/pricing", "/app", "LSAC_REQUIRED; soft-gate on dashboard")
+          navigate("/app", { replace: true })
+          return
+        }
 
         if (billingApi) {
           try {

@@ -84,7 +84,7 @@ Deno.test('billing service createCheckoutSession creates customer and returns ur
             assertEquals(params.mode, 'subscription')
             assertEquals(
               params.success_url,
-              'http://localhost:5173/app/lsac-link?checkout=success',
+              'http://localhost:5173/app?checkout=success',
             )
             const lineItems = params.line_items as Array<Record<string, unknown>>
             assertEquals(lineItems[0], { price: 'price_core_test', quantity: 1 })

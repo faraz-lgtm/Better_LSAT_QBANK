@@ -17,8 +17,9 @@ export type PostAuthDestination =
   | "/app/diagnostic/results"
 
 /**
- * Route students using entitlement state and diagnostic funnel progress.
- * During the intent acquisition funnel, pricing and lsac-link are never used.
+ * Route students using diagnostic funnel progress when active.
+ * Outside the funnel, payment and LawHub setup are soft-gated on the dashboard
+ * — not hard walls after login.
  */
 export function resolvePostAuthDestination(
   profile: UserProfile | null,
@@ -64,20 +65,14 @@ export function resolvePostAuthDestination(
   }
 
   if (entitlement) {
-    if (entitlement.accessState === "PAYMENT_REQUIRED") {
-      logRouteRedirect(from, "/intent", "PAYMENT_REQUIRED; no diagnostic yet")
-      return "/intent"
-    }
-    if (entitlement.accessState === "LSAC_REQUIRED") {
-      logRouteRedirect(from, "/app/lsac-link", "LSAC_REQUIRED")
-      return "/app/lsac-link"
-    }
-    logRouteRedirect(from, "/app", "FULL_ACCESS")
-    return "/app"
+    logRouteRedirect(from, "/app", entitlement.accessState, {
+      hasActiveCore: entitlement.hasActiveCore,
+      isLsacEligible: entitlement.isLsacEligible,
+    })
+  } else {
+    logRouteRedirect(from, "/app", "no entitlement payload; soft-gate in dashboard")
   }
-
-  logRouteRedirect(from, "/intent", "no entitlement payload; default to intent")
-  return "/intent"
+  return "/app"
 }
 
 /** @deprecated Prefer resolvePostAuthDestination with getEntitlementState. */
