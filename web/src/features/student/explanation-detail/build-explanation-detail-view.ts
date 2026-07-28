@@ -110,7 +110,7 @@ export function buildExplanationQuestionDetailView(
     {
       id: "v-passage",
       headerVariant: "yellow",
-      authorTitle: "J.Y.'s explanation",
+      authorTitle: "Video Explanation",
       dropdownLabel: "Passage explanation",
       dropdownOptions: [{ value: "passage", label: "Passage explanation" }],
       postedLine: "Posted Friday, Apr 5 • Duration: 8:32",
@@ -120,7 +120,7 @@ export function buildExplanationQuestionDetailView(
     {
       id: "v-question",
       headerVariant: "muted",
-      authorTitle: "J.Y.'s explanation",
+      authorTitle: "Video Explanation",
       dropdownLabel: "Question explanation",
       dropdownOptions: [{ value: "question", label: "Question explanation" }],
       postedLine: detail?.prepTestTitle

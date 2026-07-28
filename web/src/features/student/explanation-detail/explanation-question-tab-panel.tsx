@@ -54,43 +54,46 @@ function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: Explanat
 
   return (
     <div className="grid h-full min-h-0 gap-6 lg:grid-cols-2">
-      <article className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[20px] bg-white lg:h-full">
-        <div className="flex shrink-0 items-center gap-3 px-6 pt-6">
-          <span className="inline-flex h-8 items-center rounded-full bg-[var(--greyscale-25)] px-4 text-xs font-medium tracking-[0.02em] text-[#666d80]">
-            PASSAGE {view.passage.displayNumber}
-          </span>
-          <button type="button" className="text-sm font-medium text-[#0d47a1] transition-opacity hover:opacity-80">
-            Show analysis
-          </button>
-        </div>
-        <div className={cn(paneScrollClass, "px-6 pb-6 pt-4")}>
-          <HtmlContent
-            html={view.passage.body}
-            className="explanation-detail-body text-sm leading-[1.8] text-[#0d0d12]"
-          />
+      <article className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl bg-white lg:h-full">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 p-6">
+          <div className="flex shrink-0 items-center gap-3">
+            <span className="inline-flex h-8 items-center rounded-full bg-[#f6f8fa] px-4 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[#666d80]">
+              PASSAGE {view.passage.displayNumber}
+            </span>
+            <button
+              type="button"
+              className="h-8 text-sm font-medium leading-5 text-[#0d47a1] transition-opacity hover:opacity-80"
+            >
+              Show analysis
+            </button>
+          </div>
+          <div className={cn(paneScrollClass, "min-h-0")}>
+            <HtmlContent html={view.passage.body} className="explanation-passage-body" />
+          </div>
         </div>
       </article>
 
-      <article className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[20px] border border-[color:var(--greyscale-100)] bg-white lg:h-full">
-        <div className="flex shrink-0 items-center justify-between gap-3 px-6 pt-6">
-          <span className="inline-flex h-8 items-center rounded-xl bg-[var(--primary-0)] px-3 text-sm font-medium tracking-[0.02em] text-[#062357]">
-            Question {view.questionNumber}
-          </span>
-          <div className="flex items-center gap-4">
-            <span className="text-xs font-normal tracking-[0.02em] text-[#666d80]">Show Correct Answer</span>
-            <RepWorkAnswerToggle
-              checked={showCorrect}
-              onCheckedChange={setShowCorrect}
-              label="Show correct answer"
-            />
+      <article className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white lg:h-full">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 p-6">
+          <div className="flex shrink-0 flex-col gap-3">
+            <div className="flex h-8 items-center justify-between gap-3">
+              <span className="inline-flex h-8 items-center rounded-xl bg-[#f3f7ff] px-3 text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#062357]">
+                Question {view.questionNumber}
+              </span>
+              <div className="flex items-center gap-4 px-2">
+                <span className="text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#666d80]">
+                  Show Correct Answer
+                </span>
+                <RepWorkAnswerToggle
+                  checked={showCorrect}
+                  onCheckedChange={setShowCorrect}
+                  label="Show correct answer"
+                />
+              </div>
+            </div>
+            <HtmlContent html={view.questionStem} className="explanation-question-stem" />
           </div>
-        </div>
-        <div className={cn(paneScrollClass, "px-6 pb-6 pt-4")}>
-          <div className="flex flex-col gap-4">
-            <HtmlContent
-              html={view.questionStem}
-              className="explanation-detail-body text-base font-medium leading-normal tracking-[0.02em] text-[#062357]"
-            />
+          <div className={cn(paneScrollClass, "min-h-0")}>
             <ExplanationChoiceList
               choices={view.choices}
               correctChoiceId={view.correctChoiceId}

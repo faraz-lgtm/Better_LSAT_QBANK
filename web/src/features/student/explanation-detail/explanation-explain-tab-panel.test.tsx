@@ -11,7 +11,7 @@ describe("ExplanationExplainTabPanel", () => {
           {
             id: "v-passage",
             headerVariant: "yellow",
-            authorTitle: "J.Y.'s explanation",
+            authorTitle: "Video Explanation",
             dropdownLabel: "Passage explanation",
             dropdownOptions: [{ value: "passage", label: "Passage explanation" }],
             postedLine: "",
@@ -21,7 +21,7 @@ describe("ExplanationExplainTabPanel", () => {
           {
             id: "v-question",
             headerVariant: "muted",
-            authorTitle: "J.Y.'s explanation",
+            authorTitle: "Video Explanation",
             dropdownLabel: "Question explanation",
             dropdownOptions: [{ value: "question", label: "Question explanation" }],
             postedLine: "",
@@ -44,7 +44,7 @@ describe("ExplanationExplainTabPanel", () => {
           {
             id: "v-question",
             headerVariant: "muted",
-            authorTitle: "J.Y.'s explanation",
+            authorTitle: "Video Explanation",
             dropdownLabel: "Question explanation",
             dropdownOptions: [{ value: "question", label: "Question explanation" }],
             postedLine: "Posted Wednesday, Jun 4, 2025 • Taken on LawHub",
