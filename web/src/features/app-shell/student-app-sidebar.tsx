@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { Lock, LogOut } from "lucide-react"
+import { Lock } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
 import {
@@ -7,10 +7,12 @@ import {
   isNavItemActive,
   STUDENT_APP_VERSION,
   STUDENT_DASHBOARD_HREF,
+  STUDENT_DASHBOARD_ICON,
   STUDENT_MAIN_NAV_SECTION,
-  STUDENT_NAV_ICON_SRC,
+  STUDENT_NAV_ITEM_ICON_SRC,
+  STUDENT_NAV_LOGOUT_ICON_SRC,
   STUDENT_NAV_SECTIONS,
-  type StudentNavIconKey,
+  type StudentNavItemIconKey,
 } from "@/features/app-shell/student-nav-config"
 import { useStudentEntitlementOptional, isLsacLockedNavItem } from "@/features/app-shell/student-entitlement-context"
 import { shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
@@ -22,12 +24,11 @@ type StudentAppSidebarProps = {
   onMobileClose: () => void
 }
 
-function SidebarSectionHeading({ icon, label }: { icon: StudentNavIconKey; label: string }) {
+function SidebarNavIcon({ icon }: { icon: StudentNavItemIconKey }) {
   return (
-    <div className="student-sidebar-heading-row">
-      <img src={STUDENT_NAV_ICON_SRC[icon]} alt="" className="student-sidebar-section-icon" aria-hidden />
-      <p className="student-sidebar-heading">{label}</p>
-    </div>
+    <span className="student-sidebar-link-icon" aria-hidden>
+      <img src={STUDENT_NAV_ITEM_ICON_SRC[icon]} alt="" width={16} height={16} />
+    </span>
   )
 }
 
@@ -78,17 +79,18 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
 
         <nav className="student-sidebar-nav flex min-h-0 flex-1 flex-col overflow-y-auto">
           <div className="student-sidebar-menu">
-            <SidebarSectionHeading icon={STUDENT_MAIN_NAV_SECTION.icon} label={STUDENT_MAIN_NAV_SECTION.label} />
+            <p className="student-sidebar-heading">{STUDENT_MAIN_NAV_SECTION.label}</p>
             <Link
               to={STUDENT_DASHBOARD_HREF}
               className={cn("student-sidebar-link", dashboardActive && "student-sidebar-link--active")}
             >
-              Dashboard
+              <SidebarNavIcon icon={STUDENT_DASHBOARD_ICON} />
+              <span>Dashboard</span>
             </Link>
 
             {STUDENT_NAV_SECTIONS.map((section) => (
               <div key={section.key} className="student-sidebar-section">
-                <SidebarSectionHeading icon={section.icon} label={section.label} />
+                <p className="student-sidebar-heading">{section.label}</p>
                 {section.items.map((item) => {
                   const siblingHrefs = section.items.map((entry) => entry.href)
                   const active = isNavItemActive(pathname, item.href, search, siblingHrefs)
@@ -103,7 +105,10 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
                         title="Link your LawHub coach to unlock"
                         className="student-sidebar-link w-full cursor-not-allowed justify-between pr-4 opacity-60"
                       >
-                        <span className="truncate">{item.label}</span>
+                        <span className="flex min-w-0 items-center gap-2.5">
+                          <SidebarNavIcon icon={item.icon} />
+                          <span className="truncate">{item.label}</span>
+                        </span>
                         <Lock className="size-4 shrink-0 text-[#666d80]" aria-hidden />
                       </button>
                     )
@@ -120,7 +125,8 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
                         navigate(item.href)
                       }}
                     >
-                      {item.label}
+                      <SidebarNavIcon icon={item.icon} />
+                      <span>{item.label}</span>
                     </Link>
                   )
                 })}
@@ -136,7 +142,9 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
               className="student-sidebar-logout"
               onClick={() => void handleLogout()}
             >
-              <LogOut className="size-4 shrink-0" aria-hidden />
+              <span className="student-sidebar-logout-icon" aria-hidden>
+                <img src={STUDENT_NAV_LOGOUT_ICON_SRC} alt="" width={16} height={16} />
+              </span>
               <span>Logout</span>
             </button>
             <span className="student-sidebar-version">Version {STUDENT_APP_VERSION}</span>
