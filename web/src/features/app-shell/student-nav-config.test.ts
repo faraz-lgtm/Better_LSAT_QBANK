@@ -82,16 +82,12 @@ describe("student-nav-config", () => {
   })
 
   it("hides prep test hub title and extra breadcrumb", () => {
-    expect(getStudentBreadcrumbs("/app/practice/preptest/pt-900")).toEqual([
-      { label: "Prep", href: "/app/practice/drills" },
-    ])
-    expect(getStudentPageTitle("/app/practice/preptest/pt-900")).toBeNull()
-    expect(getStudentBreadcrumbs("/app/practice/preptest")).toEqual([
-      { label: "Prep", href: "/app/practice/drills" },
-      { label: "PrepTest" },
+    expect(getStudentBreadcrumbs("/app/preptest/pt-900")).toEqual([
+      { label: "PrepTest", href: "/app/preptest" },
     ])
     expect(getStudentPageTitle("/app/preptest/pt-900")).toBeNull()
     expect(getStudentBreadcrumbs("/app/preptest")).toEqual([{ label: "PrepTest" }])
+    expect(getStudentPageTitle("/app/preptest")).toBe("PrepTest")
   })
 
   it("builds prep test results breadcrumbs", () => {

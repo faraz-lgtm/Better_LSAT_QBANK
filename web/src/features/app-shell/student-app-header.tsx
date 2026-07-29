@@ -3,6 +3,7 @@ import { Bell, ChevronDown, Menu } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
 import { getStudentBreadcrumbs, type StudentBreadcrumb } from "@/features/app-shell/student-nav-config"
+import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
 import { shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
 import { STUDENT_PAGE_CONTAINER_CLASS, STUDENT_SHELL_GUTTER_CLASS } from "@/features/student/components/student-page-container"
 import { cn } from "@/lib/utils"
@@ -37,6 +38,8 @@ type StudentAppHeaderProps = {
 function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions }: StudentAppHeaderProps) {
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
+  const entitlement = useStudentEntitlementOptional()?.entitlement ?? null
+  const showPremiumBadge = Boolean(entitlement?.hasActiveCore || entitlement?.accessState === "FULL_ACCESS")
   const [email, setEmail] = useState<string | null>(null)
   const [openProfileMenu, setOpenProfileMenu] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement | null>(null)
@@ -141,6 +144,11 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
 
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           {headerActions ? <div className="flex shrink-0 items-center">{headerActions}</div> : null}
+          {showPremiumBadge ? (
+            <span className="inline-flex h-10 items-center rounded-2xl px-3 text-xs font-semibold tracking-[0.24px] text-[#0d47a1]">
+              Premium
+            </span>
+          ) : null}
           <button
             type="button"
             className="inline-flex size-[46px] items-center justify-center rounded-[20px] bg-[#edf3ff] text-[#062357]"

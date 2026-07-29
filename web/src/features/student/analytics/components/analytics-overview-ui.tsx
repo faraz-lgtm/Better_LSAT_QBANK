@@ -200,7 +200,15 @@ export function SectionCard({ section }: { section: AnalyticsSection }) {
   )
 }
 
-export function ScoreProgressChart({ points, tab }: { points: ScoreProgressPoint[]; tab: ScoreProgressTab }) {
+export function ScoreProgressChart({
+  points,
+  tab,
+  variant = "default",
+}: {
+  points: ScoreProgressPoint[]
+  tab: ScoreProgressTab
+  variant?: "default" | "dashboard"
+}) {
   if (points.length === 0) {
     return (
       <p className="py-12 text-center text-sm text-[#666d80]">Complete a PrepTest to see your score progress.</p>
@@ -211,6 +219,7 @@ export function ScoreProgressChart({ points, tab }: { points: ScoreProgressPoint
   const maxVal = Y_AXIS_LABELS[0]
   const range = maxVal - minVal
   const stepX = 100 / points.length
+  const dashboard = variant === "dashboard"
 
   const yFor = (value: number) => {
     const clamped = Math.max(minVal, Math.min(maxVal, value))
@@ -229,12 +238,15 @@ export function ScoreProgressChart({ points, tab }: { points: ScoreProgressPoint
   const blindPolyline = blindPoints.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ")
 
   return (
-    <div className="flex h-[300px] w-full items-stretch gap-4">
-      <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[#062357]">
+    <div className={cn("flex w-full items-stretch gap-4", dashboard ? "h-[268px]" : "h-[300px]")}>
+      <div
+        className={cn(
+          "flex h-full flex-col justify-between py-1 pr-4 text-sm font-medium leading-5",
+          dashboard ? "text-[#62748e]" : "text-[#062357]",
+        )}
+      >
         {Y_AXIS_LABELS.map((label) => (
-          <span key={label} className="leading-5">
-            {label}
-          </span>
+          <span key={label}>{label}</span>
         ))}
       </div>
       <div className="relative flex-1">
@@ -262,7 +274,7 @@ export function ScoreProgressChart({ points, tab }: { points: ScoreProgressPoint
               />
             </>
           ) : null}
-          {showBlind ? (
+          {showBlind && !dashboard ? (
             <polyline
               points={blindPolyline}
               fill="none"
@@ -279,7 +291,10 @@ export function ScoreProgressChart({ points, tab }: { points: ScoreProgressPoint
             ? regularPoints.map((p, i) => (
                 <span
                   key={`r-${i}`}
-                  className="absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0d47a1]"
+                  className={cn(
+                    "absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0d47a1]",
+                    dashboard ? "size-[14px]" : "size-4",
+                  )}
                   style={{ left: `${p.x}%`, top: `${p.y}%` }}
                 />
               ))
@@ -288,15 +303,25 @@ export function ScoreProgressChart({ points, tab }: { points: ScoreProgressPoint
             ? blindPoints.map((p, i) => (
                 <span
                   key={`b-${i}`}
-                  className="absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#ff6f00]"
+                  className={cn(
+                    "absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#ff6f00]",
+                    dashboard ? "size-[14px]" : "size-4",
+                  )}
                   style={{ left: `${p.x}%`, top: `${p.y}%` }}
                 />
               ))
             : null}
         </div>
-        <div className="absolute -bottom-7 left-0 right-0 flex justify-between gap-1 text-[11px] leading-4 text-[#062357] sm:text-xs">
+        <div
+          className={cn(
+            "absolute left-0 right-0 flex justify-between gap-1 whitespace-nowrap",
+            dashboard
+              ? "-bottom-8 text-xs leading-4 text-[#6a7282]"
+              : "-bottom-7 text-[11px] leading-4 text-[#062357] sm:text-xs",
+          )}
+        >
           {points.map((p) => (
-            <span key={p.test} className="min-w-0 flex-1 truncate text-center whitespace-nowrap">
+            <span key={p.test} className="min-w-0 flex-1 truncate text-center">
               {p.test}
             </span>
           ))}
@@ -309,12 +334,21 @@ export function ScoreProgressChart({ points, tab }: { points: ScoreProgressPoint
 export function ScoreProgressTabs({
   value,
   onChange,
+  variant = "default",
 }: {
   value: ScoreProgressTab
   onChange: (next: ScoreProgressTab) => void
+  variant?: "default" | "dashboard"
 }) {
+  const dashboard = variant === "dashboard"
+
   return (
-    <div className="flex h-10 items-center gap-2 rounded-[16px] bg-white p-1">
+    <div
+      className={cn(
+        "flex h-10 items-center gap-2 p-1",
+        dashboard ? "rounded-[10px] bg-white" : "rounded-[16px] bg-white",
+      )}
+    >
       {SCORE_PROGRESS_TABS.map((tab) => {
         const active = value === tab.id
         return (
@@ -323,8 +357,14 @@ export function ScoreProgressTabs({
             type="button"
             onClick={() => onChange(tab.id)}
             className={cn(
-              ANALYTICS_SEGMENTED_TAB_BUTTON_CLASS,
-              active ? "bg-[#0d47a1] text-white" : "text-[#666d80] hover:bg-[#f3f7ff]",
+              dashboard
+                ? "flex h-8 items-center justify-center rounded-lg px-3 text-sm font-semibold leading-[1.5] tracking-[0.28px] transition-colors"
+                : ANALYTICS_SEGMENTED_TAB_BUTTON_CLASS,
+              active
+                ? "bg-[#0d47a1] text-white"
+                : dashboard
+                  ? "text-[#666d80] hover:bg-[#f3f7ff]"
+                  : "text-[#666d80] hover:bg-[#f3f7ff]",
             )}
             aria-pressed={active}
           >

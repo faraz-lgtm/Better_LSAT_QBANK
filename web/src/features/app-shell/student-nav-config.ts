@@ -2,66 +2,83 @@ import { PREPTEST_LIST_HREF, isPrepTestHubDetailPath, isPrepTestStudentPath } fr
 
 export type StudentNavSectionKey = "academy" | "prep" | "insights"
 
-export type StudentNavIconKey = "resources" | "learn" | "test" | "chart"
+/** Per-item icons from Figma sidebar node `19640:23125`. */
+export type StudentNavItemIconKey =
+  | "dashboard"
+  | "prep-course"
+  | "explanations"
+  | "drills"
+  | "sections"
+  | "preptest"
+  | "blind-review"
+  | "overview"
+  | "insights-drills"
+  | "insights-sections"
+  | "insights-preptest"
 
-export const STUDENT_NAV_ICON_SRC: Record<StudentNavIconKey, string> = {
-  resources: "/nav/resources.svg",
-  learn: "/nav/learn.svg",
-  test: "/nav/test.svg",
-  chart: "/nav/chart.svg",
+export const STUDENT_NAV_ITEM_ICON_SRC: Record<StudentNavItemIconKey, string> = {
+  dashboard: "/nav/dashboard.svg",
+  "prep-course": "/nav/prep-course.svg",
+  explanations: "/nav/explanations.svg",
+  drills: "/nav/drills.svg",
+  sections: "/nav/sections.svg",
+  preptest: "/nav/preptest.svg",
+  "blind-review": "/nav/blind-review.svg",
+  overview: "/nav/overview.svg",
+  "insights-drills": "/nav/insights-drills.svg",
+  "insights-sections": "/nav/insights-sections.svg",
+  "insights-preptest": "/nav/insights-preptest.svg",
 }
+
+export const STUDENT_NAV_LOGOUT_ICON_SRC = "/nav/logout.svg"
 
 export type StudentNavItem = {
   label: string
   href: string
+  icon: StudentNavItemIconKey
 }
 
 export type StudentNavSection = {
   key: StudentNavSectionKey
   label: string
-  icon: StudentNavIconKey
   items: StudentNavItem[]
 }
 
 export const STUDENT_MAIN_NAV_SECTION = {
-  label: "Main",
-  icon: "resources" as StudentNavIconKey,
+  label: "MAIN",
 }
 
 export const STUDENT_DASHBOARD_HREF = "/app"
 
+export const STUDENT_DASHBOARD_ICON: StudentNavItemIconKey = "dashboard"
+
 export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
   {
     key: "academy",
-    label: "Academy",
-    icon: "learn",
+    label: "ACADEMY",
     items: [
-      { label: "Prep Course", href: "/app/prep-course" },
-      { label: "Explanations", href: "/app/learn/explanations" },
+      { label: "Prep Course", href: "/app/prep-course", icon: "prep-course" },
+      { label: "Explanations", href: "/app/learn/explanations", icon: "explanations" },
     ],
   },
   {
     key: "prep",
-    label: "Prep",
-    icon: "test",
+    label: "PREP",
     items: [
-      { label: "Drills", href: "/app/practice/drills" },
-      { label: "Sections", href: "/app/practice/sections" },
-      { label: "PrepTest", href: PREPTEST_LIST_HREF },
-      { label: "Blind Review", href: "/app/practice/blind-review" },
+      { label: "Drills", href: "/app/practice/drills", icon: "drills" },
+      { label: "Sections", href: "/app/practice/sections", icon: "sections" },
+      { label: "PrepTest", href: PREPTEST_LIST_HREF, icon: "preptest" },
+      { label: "Blind Review", href: "/app/practice/blind-review", icon: "blind-review" },
     ],
   },
   {
     key: "insights",
-    label: "Insights",
-    icon: "chart",
+    label: "INSIGHTS",
     items: [
-      { label: "Overview", href: "/app/analytics" },
-      // { label: "Priorities", href: "/app/analytics?tab=priorities" },
-      // { label: "Practice history", href: "/app/analytics?tab=history" },
-      { label: "Drills", href: "/app/analytics/drills" },
-      { label: "Sections", href: "/app/analytics/sections" },
-      { label: "PrepTest", href: "/app/analytics/preptests" },
+      { label: "Overview", href: "/app/analytics", icon: "overview" },
+      { label: "Drills", href: "/app/analytics/drills", icon: "insights-drills" },
+      { label: "Sections", href: "/app/analytics/sections", icon: "insights-sections" },
+      { label: "PrepTest", href: "/app/analytics/preptests", icon: "insights-preptest" },
     ],
   },
 ]
@@ -135,6 +152,10 @@ function getSectionLandingHref(key: StudentNavSectionKey): string | undefined {
   return undefined
 }
 
+function sectionBreadcrumbLabel(label: string): string {
+  return label.charAt(0) + label.slice(1).toLowerCase()
+}
+
 export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBreadcrumb[] {
   if (pathname.startsWith("/app/diagnostic/results")) {
     return [{ label: "Home", href: "/app/diagnostic/results" }, { label: "Analytics" }]
@@ -156,7 +177,7 @@ export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBre
   if (!section) return []
 
   const crumbs: StudentBreadcrumb[] = [
-    { label: section.label, href: getSectionLandingHref(section.key) },
+    { label: sectionBreadcrumbLabel(section.label), href: getSectionLandingHref(section.key) },
   ]
 
   if (pathname.startsWith("/app/analytics/preptests/results/")) {
@@ -218,5 +239,5 @@ export function getStudentPageTitle(pathname: string, search = ""): string | nul
   if (activeItem) return activeItem.label
 
   const section = getActiveSection(pathname)
-  return section?.label ?? null
+  return section ? sectionBreadcrumbLabel(section.label) : null
 }

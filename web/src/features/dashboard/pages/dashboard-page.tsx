@@ -1,39 +1,50 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Brain, Clock, PlusCircle, Target } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useStudentPageHeaderActions } from "@/features/app-shell/student-page-header-slot"
 import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-context"
+import { DashboardAccessSetupCard } from "@/features/dashboard/components/dashboard-access-setup-card"
+import { DashboardQuickStats } from "@/features/dashboard/components/dashboard-quick-stats"
+import { PerformanceOverviewCard } from "@/features/dashboard/components/performance-overview-card"
+import { PrepTestsScoreProgressCard } from "@/features/dashboard/components/preptests-score-progress-card"
+import { TestDayCountdownCard } from "@/features/dashboard/components/test-day-countdown-card"
 import {
   formatLawSchoolCycle,
   formatPlannedLsatHeadline,
 } from "@/features/dashboard/lib/map-dashboard-preferences"
-import { mapOverviewToDashboardStats } from "@/features/dashboard/lib/map-dashboard-stats"
+import {
+  daysUntilDate,
+  formatLsacTestMeta,
+  formatTestDateInputValue,
+  mapOverviewToDashboardStats,
+  mapOverviewToPerformance,
+} from "@/features/dashboard/lib/map-dashboard-stats"
+import { mapTrajectoryToScoreProgress } from "@/features/student/analytics/map-analytics"
 import { useAnalyticsApi } from "@/features/student/analytics/hooks/use-analytics-api"
-import { DashboardAdaptiveDrillButton } from "@/features/dashboard/components/dashboard-adaptive-drill-button"
-import { DashboardAccessSetupCard } from "@/features/dashboard/components/dashboard-access-setup-card"
 import { ContinueDrillCard, continueDrillToCardDrill } from "@/features/student/components/continue-drill-card"
-import { DASHBOARD_ADAPTIVE_DRILL_QUERY } from "@/features/student/drills/drill-blind-review-policy"
-import { DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT } from "@/features/student/drills/adaptive-drill-config"
-import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
+import { takeLastByTimeRange } from "@/features/student/components/time-range-filter"
+import { DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT } from "@/features/student/drills/adaptive-drill-config"
+import { DASHBOARD_ADAPTIVE_DRILL_QUERY } from "@/features/student/drills/drill-blind-review-policy"
 import {
   type ContinueDrill,
   mapPriorityToSuggestedDrill,
   mapSessionToContinueDrill,
   type SuggestedDrill,
 } from "@/features/student/drills/drill-dashboard-mappers"
-import type { AnalyticsOverview } from "@/lib/api/analytics"
+import type { AnalyticsOverview, TrajectoryPoint } from "@/lib/api/analytics"
 import type { OfficialLsatScore, StudentStudyContext } from "@/lib/api/users"
 import { createUsersApi } from "@/lib/api/users"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 function filterChipStyles(active: boolean): string {
-  return drillFilterPillClass(active)
+  if (active) {
+    return "inline-flex h-8 items-center rounded-xl border border-[#0b4e6e] bg-[#0d47a1] px-4 text-xs font-semibold tracking-[0.24px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
+  }
+  return "inline-flex h-8 items-center rounded-xl border border-[#dfe1e7] bg-white px-4 text-xs font-semibold tracking-[0.24px] text-[#0d47a1] shadow-[0px_1px_2px_rgba(13,13,18,0.06)]"
 }
 
 function adaptiveDrillSectionType(filter: "all" | "lr" | "rc"): "LR" | "RC" {
@@ -61,6 +72,12 @@ function canSubmitOfficialScore(label: string, scoreRaw: string): boolean {
   return parseOfficialScaledScoreDraft(scoreRaw) != null
 }
 
+function firstNameFromFullName(fullName: string | null | undefined): string {
+  const trimmed = fullName?.trim() ?? ""
+  if (!trimmed) return ""
+  return trimmed.split(/\s+/)[0] ?? ""
+}
+
 function DashboardPage() {
   const navigate = useNavigate()
   const { canAccessLsacContent, loading: entitlementLoading } = useStudentEntitlement()
@@ -81,9 +98,11 @@ function DashboardPage() {
   }, [])
 
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null)
+  const [trajectory, setTrajectory] = useState<TrajectoryPoint[]>([])
   const [continueDrills, setContinueDrills] = useState<ContinueDrill[]>([])
   const [suggestedDrills, setSuggestedDrills] = useState<SuggestedDrill[]>([])
   const [studyContext, setStudyContext] = useState<StudentStudyContext | null>(null)
+  const [firstName, setFirstName] = useState("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeFilter, setActiveFilter] = useState<"all" | "lr" | "rc">("all")
@@ -102,6 +121,7 @@ function DashboardPage() {
   const loadDashboard = useCallback(async () => {
     if (!canAccessLsacContent) {
       setOverview(null)
+      setTrajectory([])
       setContinueDrills([])
       setSuggestedDrills([])
       setLoading(false)
@@ -117,15 +137,20 @@ function DashboardPage() {
     setLoading(true)
     setError(null)
     try {
-      const [overviewData, drillSessions, priorities, context] = await Promise.all([
-        analyticsApi.getOverview(),
-        analyticsApi.getSessions({ kind: "DRILL", limit: 50 }),
-        analyticsApi.getPriorities(),
-        usersApi.getStudyContext(),
-      ])
+      const [overviewData, drillSessions, priorities, context, trajectoryPoints, profile] =
+        await Promise.all([
+          analyticsApi.getOverview(),
+          analyticsApi.getSessions({ kind: "DRILL", limit: 50 }),
+          analyticsApi.getPriorities(),
+          usersApi.getStudyContext(),
+          analyticsApi.getTrajectory(),
+          usersApi.getMyProfile(),
+        ])
 
       setOverview(overviewData)
       setStudyContext(context)
+      setTrajectory(trajectoryPoints)
+      setFirstName(firstNameFromFullName(profile?.full_name))
 
       const inProgress = drillSessions.sessions
         .filter((s) => !s.completedAt)
@@ -155,6 +180,16 @@ function DashboardPage() {
     () => (overview ? mapOverviewToDashboardStats(overview) : []),
     [overview],
   )
+
+  const performance = useMemo(
+    () => (overview ? mapOverviewToPerformance(overview) : null),
+    [overview],
+  )
+
+  const scoreProgressPoints = useMemo(() => {
+    const recent = takeLastByTimeRange(trajectory, "all")
+    return mapTrajectoryToScoreProgress(recent)
+  }, [trajectory])
 
   const filteredContinue = useMemo(() => {
     if (activeFilter === "all") return continueDrills
@@ -194,32 +229,21 @@ function DashboardPage() {
     }
   }, [activeFilter, navigate, practiceApi, startingAdaptiveDrill])
 
-  const adaptiveDrillButton = useMemo(
-    () =>
-      canAccessLsacContent ? (
-        <DashboardAdaptiveDrillButton
-          loading={startingAdaptiveDrill}
-          disabled={!practiceApi}
-          onClick={() => void handleStartAdaptiveDrill()}
-        />
-      ) : null,
-    [canAccessLsacContent, handleStartAdaptiveDrill, practiceApi, startingAdaptiveDrill],
-  )
-
-  useStudentPageHeaderActions(adaptiveDrillButton)
-
   const preferences = studyContext?.preferences ?? null
   const officialScores = studyContext?.officialScores ?? []
+  const daysRemaining = daysUntilDate(preferences?.plannedLsatDate)
 
   async function handleSaveCycle() {
     if (!usersApi) return
     setSavingCycle(true)
     try {
-      const preferences = await usersApi.updateStudyPreferences({
+      const nextPreferences = await usersApi.updateStudyPreferences({
         lawSchoolCycle: cycleDraft.trim() || null,
         plannedLsatDate: plannedDateDraft.trim() || null,
       })
-      setStudyContext((prev) => (prev ? { ...prev, preferences } : { preferences, officialScores: [] }))
+      setStudyContext((prev) =>
+        prev ? { ...prev, preferences: nextPreferences } : { preferences: nextPreferences, officialScores: [] },
+      )
       setEditingLsat(false)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update preferences")
@@ -278,38 +302,179 @@ function DashboardPage() {
   }
 
   return (
-    <>
-      <StudentMain>
-        {error ? <p className="mb-4 text-sm text-[#95122b]">{error}</p> : null}
+    <StudentMain>
+      {error ? <p className="mb-4 text-sm text-[#95122b]">{error}</p> : null}
 
-        <div className="dashboard-page flex flex-col gap-6">
-          <div className="dashboard-page__stats">
-            {statCards.map((card) => (
-              <article
-                key={card.id}
-                className="flex min-h-[142px] min-w-0 flex-col gap-2.5 rounded-2xl border border-[#dfe1e7] bg-white px-6 py-4 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
-              >
-                <div className="flex h-10 items-start justify-between">
-                  <span className="flex size-10 items-center justify-center rounded-[14px] bg-[#eceff3] text-[#62748e]">
-                    {card.id === "study-time" ? <Clock className="size-5" /> : null}
-                    {card.id === "drill-accuracy" ? <Target className="size-5" /> : null}
-                    {card.id === "questions-answered" ? <Brain className="size-5" /> : null}
-                  </span>
-                  {card.badge ? (
-                    <span className="rounded-full bg-[#f1f5f9] px-2 py-1 text-xs font-medium leading-4 text-[#62748e]">
-                      {card.badge}
+      <div className="dashboard-page flex flex-col gap-6">
+        <div className="dashboard-page__top">
+          <TestDayCountdownCard
+            daysRemaining={daysRemaining}
+            firstName={firstName}
+            testMeta={formatLsacTestMeta(preferences?.plannedLsatDate)}
+            testDateLabel={formatTestDateInputValue(preferences?.plannedLsatDate)}
+            adaptiveLoading={startingAdaptiveDrill}
+            adaptiveDisabled={!practiceApi}
+            onEditTestDate={openLsatEditor}
+            onStartAdaptiveDrill={() => void handleStartAdaptiveDrill()}
+          />
+
+          <DashboardQuickStats cards={statCards} />
+
+          <article className="min-w-0 rounded-[24px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+            <div className="flex flex-col gap-4">
+              <p className="text-xs font-semibold tracking-[0.24px] text-[#666d80]">Next LSAT</p>
+              <h3 className="text-2xl font-bold leading-[1.3] text-[#062357]">
+                {formatPlannedLsatHeadline(preferences)}
+              </h3>
+
+              <div className="space-y-0 text-xs">
+                {officialScores.map((row: OfficialLsatScore) => (
+                  <div
+                    key={row.id}
+                    className="flex h-8 items-center justify-between border-b border-[#dfe1e7] pb-px"
+                  >
+                    <span className="font-semibold tracking-[0.24px] text-[#062357]">{row.testLabel}</span>
+                    <span className="font-semibold tracking-[0.24px] text-[#062357]">
+                      {row.scaledScore != null ? row.scaledScore : "—"}
                     </span>
-                  ) : null}
-                </div>
-                <p className="text-2xl font-bold leading-8 text-[#0f172b]">{card.value}</p>
-                <p className="text-[13px] font-normal leading-[18.571px] text-[#62748e]">{card.label}</p>
-              </article>
-            ))}
-          </div>
+                  </div>
+                ))}
+                {!addingScore ? (
+                  <div className="flex h-8 items-center justify-between border-b border-[#dfe1e7] pb-px">
+                    <span className="font-semibold tracking-[0.24px] text-[#062357]">
+                      {officialScores.length === 0 ? "Official score" : "Add score"}
+                    </span>
+                    <button
+                      type="button"
+                      className="font-bold tracking-[0.24px] text-[#0d47a1]"
+                      onClick={() => setAddingScore(true)}
+                    >
+                      Add Score
+                    </button>
+                  </div>
+                ) : null}
+              </div>
 
-          <div className="dashboard-page__body">
-            <section className="min-w-0 rounded-[24px] border border-[#dfe1e7] bg-white p-4 sm:p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
-              <div className="mb-6 flex flex-wrap gap-2">
+              {addingScore ? (
+                <div className="space-y-2 pt-1">
+                  <Input
+                    value={scoreLabelDraft}
+                    onChange={(e) => setScoreLabelDraft(e.target.value)}
+                    placeholder="Test label (e.g. June 2025)"
+                    className="h-9 rounded-xl text-xs"
+                  />
+                  <Input
+                    value={scoreValueDraft}
+                    onChange={(e) => setScoreValueDraft(e.target.value)}
+                    placeholder="Score (120–180)"
+                    className="h-9 rounded-xl text-xs"
+                    aria-invalid={
+                      scoreValueDraft.trim() !== "" && parseOfficialScaledScoreDraft(scoreValueDraft) == null
+                    }
+                  />
+                  {scoreValueDraft.trim() !== "" &&
+                  parseOfficialScaledScoreDraft(scoreValueDraft) == null ? (
+                    <p className="text-xs text-destructive">Score must be a whole number from 120 to 180.</p>
+                  ) : null}
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="rounded-xl"
+                      onClick={() => setAddingScore(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="ds-btn-sm"
+                      disabled={savingScore || !canSubmitOfficialScore(scoreLabelDraft, scoreValueDraft)}
+                      onClick={() => void handleAddScore()}
+                    >
+                      {savingScore ? "Saving…" : "Save"}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {!editingLsat ? (
+                <button
+                  type="button"
+                  className="py-2 text-left text-xs font-bold tracking-[0.24px] text-[#0d47a1]"
+                  onClick={openLsatEditor}
+                >
+                  Edit LSAT &amp; Scores
+                </button>
+              ) : (
+                <div className="space-y-2 pt-1">
+                  <Input
+                    value={cycleDraft}
+                    onChange={(e) => setCycleDraft(e.target.value)}
+                    placeholder="Admission cycle (e.g. 2027)"
+                    className="h-9 rounded-xl text-xs"
+                  />
+                  <Input
+                    type="date"
+                    value={plannedDateDraft}
+                    onChange={(e) => setPlannedDateDraft(e.target.value)}
+                    className="h-9 rounded-xl text-xs"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="rounded-xl"
+                      onClick={() => setEditingLsat(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="ds-btn-sm"
+                      disabled={savingCycle}
+                      onClick={() => void handleSaveCycle()}
+                    >
+                      {savingCycle ? "Saving…" : "Save"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </article>
+        </div>
+
+        <div className="dashboard-page__mid">
+          {performance ? <PerformanceOverviewCard overview={performance} /> : null}
+
+          <article className="min-w-0 rounded-[24px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+            <div className="flex flex-col gap-4">
+              <p className="text-xs font-semibold tracking-[0.24px] text-[#666d80]">Law school cycle</p>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 py-2 text-xl font-bold leading-[1.35] text-[#0d47a1]"
+                onClick={openLsatEditor}
+              >
+                {formatLawSchoolCycle(preferences)}
+                <span className="size-5 shrink-0 overflow-hidden">
+                  <img src="/dashboard/cycle-edit.svg" alt="" className="size-full" width={20} height={20} />
+                </span>
+              </button>
+            </div>
+          </article>
+        </div>
+
+        <div className="dashboard-page__bottom">
+          <section className="min-w-0 rounded-[24px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+            <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold tracking-[0.36px] text-[#062357]">Active Drills</h2>
+                <p className="text-xs tracking-[0.24px] text-[#666d80]">Pick up where you left off</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   className={filterChipStyles(activeFilter === "all")}
@@ -332,191 +497,46 @@ function DashboardPage() {
                   Reading Comprehension
                 </button>
               </div>
-
-              {displayDrills.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-6 text-sm text-[#666d80]">
-                  No drills in progress. Start a new drill from{" "}
-                  <button
-                    type="button"
-                    className="font-semibold text-[#0d47a1] hover:underline"
-                    onClick={() => navigate("/app/practice/drills")}
-                  >
-                    Practice → Drills
-                  </button>
-                  .
-                </p>
-              ) : (
-                <div className="flex flex-col gap-6">
-                  {displayDrills.map((drill) => {
-                    const suggested = isSuggestedDrill(drill)
-                    const cardDrill = continueDrillToCardDrill(
-                      suggested ? { ...drill, continuePath: drill.configPath } : drill,
-                    )
-
-                    return (
-                      <ContinueDrillCard
-                        key={drill.id}
-                        drill={cardDrill}
-                        continueLabel={suggested ? "Start" : "Continue"}
-                        lastAttemptPrefix={suggested ? "Suggested · " : "Last attempt: "}
-                        onContinue={() =>
-                          navigate(suggested ? drill.configPath : drill.continuePath)
-                        }
-                      />
-                    )
-                  })}
-                </div>
-              )}
-            </section>
-
-            <div className="flex min-w-0 flex-col gap-6">
-              <article className="min-w-0 rounded-[24px] border border-[#dfe1e7] bg-white p-4 sm:p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
-                <div className="flex flex-col gap-4">
-                  <p className="text-xs font-semibold tracking-[0.24px] text-[#666d80]">Next LSAT</p>
-                  <h3 className="text-2xl font-bold leading-[1.3] text-[#062357]">
-                    {formatPlannedLsatHeadline(preferences)}
-                  </h3>
-
-                  <div className="space-y-0 text-xs">
-                    {officialScores.map((row: OfficialLsatScore) => (
-                      <div
-                        key={row.id}
-                        className="flex h-8 items-center justify-between border-b border-[#dfe1e7] pb-px"
-                      >
-                        <span className="font-semibold tracking-[0.24px] text-[#062357]">{row.testLabel}</span>
-                        <span className="font-semibold tracking-[0.24px] text-[#062357]">
-                          {row.scaledScore != null ? row.scaledScore : "—"}
-                        </span>
-                      </div>
-                    ))}
-                    {!addingScore ? (
-                      <div className="flex h-8 items-center justify-between border-b border-[#dfe1e7] pb-px">
-                        <span className="font-semibold tracking-[0.24px] text-[#062357]">
-                          {officialScores.length === 0 ? "Official score" : "Add score"}
-                        </span>
-                        <button
-                          type="button"
-                          className="font-bold tracking-[0.24px] text-[#0d47a1]"
-                          onClick={() => setAddingScore(true)}
-                        >
-                          Add Score
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  {addingScore ? (
-                    <div className="space-y-2 pt-1">
-                      <Input
-                        value={scoreLabelDraft}
-                        onChange={(e) => setScoreLabelDraft(e.target.value)}
-                        placeholder="Test label (e.g. June 2025)"
-                        className="h-9 rounded-xl text-xs"
-                      />
-                      <Input
-                        value={scoreValueDraft}
-                        onChange={(e) => setScoreValueDraft(e.target.value)}
-                        placeholder="Score (120–180)"
-                        className="h-9 rounded-xl text-xs"
-                        aria-invalid={
-                          scoreValueDraft.trim() !== "" &&
-                          parseOfficialScaledScoreDraft(scoreValueDraft) == null
-                        }
-                      />
-                      {scoreValueDraft.trim() !== "" &&
-                      parseOfficialScaledScoreDraft(scoreValueDraft) == null ? (
-                        <p className="text-xs text-destructive">Score must be a whole number from 120 to 180.</p>
-                      ) : null}
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="rounded-xl"
-                          onClick={() => setAddingScore(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="ds-btn-sm"
-                          disabled={
-                            savingScore || !canSubmitOfficialScore(scoreLabelDraft, scoreValueDraft)
-                          }
-                          onClick={() => void handleAddScore()}
-                        >
-                          {savingScore ? "Saving…" : "Save"}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {!editingLsat ? (
-                    <button
-                      type="button"
-                      className="py-2 text-left text-xs font-bold tracking-[0.24px] text-[#0d47a1]"
-                      onClick={openLsatEditor}
-                    >
-                      Edit LSAT &amp; Scores
-                    </button>
-                  ) : (
-                    <div className="space-y-2 pt-1">
-                      <Input
-                        value={cycleDraft}
-                        onChange={(e) => setCycleDraft(e.target.value)}
-                        placeholder="Admission cycle (e.g. 2027)"
-                        className="h-9 rounded-xl text-xs"
-                      />
-                      <Input
-                        type="date"
-                        value={plannedDateDraft}
-                        onChange={(e) => setPlannedDateDraft(e.target.value)}
-                        className="h-9 rounded-xl text-xs"
-                      />
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="rounded-xl"
-                          onClick={() => setEditingLsat(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="ds-btn-sm"
-                          disabled={savingCycle}
-                          onClick={() => void handleSaveCycle()}
-                        >
-                          {savingCycle ? "Saving…" : "Save"}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </article>
-
-              <article className="min-w-0 rounded-[24px] border border-[#dfe1e7] bg-white p-4 sm:p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
-                <div className="flex flex-col gap-4">
-                  <p className="text-xs font-semibold tracking-[0.24px] text-[#666d80]">Law school cycle</p>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 py-2 text-xl font-bold leading-[1.35] text-[#0d47a1]"
-                    onClick={openLsatEditor}
-                  >
-                    {formatLawSchoolCycle(preferences)}
-                    <PlusCircle className="size-5" aria-hidden />
-                  </button>
-                </div>
-              </article>
             </div>
-          </div>
+
+            {displayDrills.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-6 text-sm text-[#666d80]">
+                No drills in progress. Start a new drill from{" "}
+                <button
+                  type="button"
+                  className="font-semibold text-[#0d47a1] hover:underline"
+                  onClick={() => navigate("/app/practice/drills")}
+                >
+                  Practice → Drills
+                </button>
+                .
+              </p>
+            ) : (
+              <div className="flex flex-col gap-6">
+                {displayDrills.map((drill) => {
+                  const suggested = isSuggestedDrill(drill)
+                  const cardDrill = continueDrillToCardDrill(
+                    suggested ? { ...drill, continuePath: drill.configPath } : drill,
+                  )
+
+                  return (
+                    <ContinueDrillCard
+                      key={drill.id}
+                      drill={cardDrill}
+                      continueLabel={suggested ? "Start" : "Continue"}
+                      lastAttemptPrefix={suggested ? "Suggested · " : "Last attempt: "}
+                      onContinue={() => navigate(suggested ? drill.configPath : drill.continuePath)}
+                    />
+                  )
+                })}
+              </div>
+            )}
+          </section>
+
+          <PrepTestsScoreProgressCard points={scoreProgressPoints} />
         </div>
-      </StudentMain>
-    </>
+      </div>
+    </StudentMain>
   )
 }
 
