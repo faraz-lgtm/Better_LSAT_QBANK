@@ -39,7 +39,7 @@ describe("ExplanationChoiceList", () => {
     const row = button.parentElement
     expect(row).toHaveClass("border-[#0d47a1]")
     const letterBox = button.querySelector("span.flex.size-7")
-    expect(letterBox).toHaveClass("bg-[var(--secondary-100)]")
+    expect(letterBox).toHaveClass("bg-[#f2f7ff]")
     expect(letterBox?.querySelector("svg")).toBeInTheDocument()
   })
 

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Check, ChevronRight } from "lucide-react"
+import { Check, ChevronDown, ChevronUp } from "lucide-react"
 
 import type { ExplanationChoice } from "@/features/student/explanation-detail/types"
 import { HtmlContent } from "@/lib/html/html-content"
@@ -24,6 +24,7 @@ function choiceLetter(c: ExplanationChoice): string {
   return fromId || "A"
 }
 
+/** Figma `18624:81193` — explanation question answer choices */
 function ExplanationChoiceList({
   choices,
   correctChoiceId,
@@ -42,22 +43,24 @@ function ExplanationChoiceList({
         const highlighted = highlightChoiceId != null && c.id === highlightChoiceId
         const expandable = hasExplanation(c.explanationHtml)
         const expanded = expandedId === c.id
+        const accented = reveal || highlighted
 
         return (
           <li key={c.id}>
             <div
               className={cn(
                 "overflow-hidden rounded-[14px] border transition-colors",
-                reveal || highlighted
-                  ? "border-[#0d47a1] bg-[var(--primary-0)]"
-                  : "border-[color:var(--greyscale-100)] bg-[var(--greyscale-25)]",
+                accented
+                  ? "border-[#0d47a1] bg-[#f3f7ff]"
+                  : "border-[#dfe1e7] bg-[#f6f8fa]",
               )}
             >
               <button
                 type="button"
                 className={cn(
-                  "flex w-full items-center gap-2.5 p-4 text-left",
+                  "flex w-full items-center gap-3 p-4 text-left",
                   expandable ? "cursor-pointer hover:opacity-90" : "cursor-default",
+                  expanded && "border-b border-[#dfe1e7]",
                 )}
                 onClick={() => {
                   if (!expandable) return
@@ -69,31 +72,31 @@ function ExplanationChoiceList({
                   className={cn(
                     "flex size-7 shrink-0 items-center justify-center rounded-[10px] border",
                     reveal
-                      ? "border-[#0d47a1] bg-[var(--secondary-100)]"
-                      : "border-[color:var(--greyscale-100)] bg-white",
+                      ? "border-[#0d47a1] bg-[#f2f7ff]"
+                      : "border-[#dfe1e7] bg-white",
                   )}
                 >
                   {reveal ? (
-                    <Check className="size-6 text-[#0d47a1]" strokeWidth={2.5} aria-hidden />
+                    <Check className="size-5 text-[#0d47a1]" strokeWidth={2.5} aria-hidden />
                   ) : (
-                    <span className="text-sm font-medium tracking-[0.02em] text-[#666d80]">{letter}</span>
+                    <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#666d80]">
+                      {letter}
+                    </span>
                   )}
                 </span>
-                <HtmlContent
-                  html={c.text}
-                  className="explanation-detail-body min-w-0 flex-1 text-sm font-medium leading-normal tracking-[0.02em] text-[#272835]"
-                />
-                <ChevronRight className="size-6 shrink-0 text-[#818898]" aria-hidden />
+                <HtmlContent html={c.text} className="explanation-choice-text min-w-0 flex-1" />
+                {expanded ? (
+                  <ChevronUp className="size-6 shrink-0 text-[#818898]" aria-hidden />
+                ) : (
+                  <ChevronDown className="size-6 shrink-0 text-[#818898]" aria-hidden />
+                )}
               </button>
               {expandable && expanded ? (
-                <div className="border-t border-[color:var(--greyscale-100)] bg-white px-4 py-3 text-left">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-[#666d80]">
+                <div className="bg-white p-4 text-left">
+                  <p className="mb-0 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[#666d80]">
                     Option explanation
                   </p>
-                  <HtmlContent
-                    html={c.explanationHtml ?? ""}
-                    className="explanation-detail-body text-[#062357]"
-                  />
+                  <HtmlContent html={c.explanationHtml ?? ""} className="explanation-option-body" />
                 </div>
               ) : null}
             </div>

@@ -2821,6 +2821,61 @@ select.ds-input {
   margin-bottom: 0;
 }
 
+/* Figma 18624:80015 — passage panel body */
+.explanation-passage-body.lsat-html-content {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.8;
+  letter-spacing: 0.28px;
+  color: #0d0d12;
+}
+
+.explanation-passage-body.lsat-html-content p {
+  margin: 0 0 1em;
+}
+
+.explanation-passage-body.lsat-html-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* Figma 18624:81193 — question stem + choice text */
+.explanation-question-stem.lsat-html-content {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0.32px;
+  color: #062357;
+}
+
+.explanation-question-stem.lsat-html-content p {
+  margin: 0;
+}
+
+.explanation-choice-text.lsat-html-content {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0.28px;
+  color: #272835;
+}
+
+.explanation-choice-text.lsat-html-content p {
+  margin: 0;
+}
+
+/* Figma 19432:17972 — option explanation under choice */
+.explanation-option-body.lsat-html-content {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.24px;
+  color: #272835;
+}
+
+.explanation-option-body.lsat-html-content p {
+  margin: 0;
+}
+
 /* Student panes — thin rounded scrollbar (no arrow buttons) */
 .student-scrollbar {
   scrollbar-width: thin;
