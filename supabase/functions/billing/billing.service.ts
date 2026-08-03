@@ -1,5 +1,10 @@
 import type Stripe from 'npm:stripe@17.7.0'
 import {
+  assertLawHubEmailAllowed,
+  joinLawHubFullName,
+  requireLawHubNameParts,
+} from '../_shared/lawhub-student-identity.ts'
+import {
   BILLING_PLAN_CATALOG,
   type BillingPlanId,
   resolvePlanFromPriceId,
@@ -36,6 +41,21 @@ function subscriptionPriceId(subscription: Stripe.Subscription): string {
 function parseCheckoutPlan(value: unknown): BillingPlanId {
   if (value === 'core' || value === 'live') return value
   throw new Error('plan must be core or live')
+}
+
+const DEFAULT_CHECKOUT_SUCCESS_PATH = '/app?checkout=success'
+
+function parseCheckoutSuccessPath(value: unknown): string {
+  if (value == null || value === '') return DEFAULT_CHECKOUT_SUCCESS_PATH
+  if (typeof value !== 'string') throw new Error('successPath must be a string')
+  const trimmed = value.trim()
+  if (trimmed.includes('..')) {
+    throw new Error('successPath must be an in-app path starting with /app')
+  }
+  if (!(trimmed === '/app' || trimmed.startsWith('/app/') || trimmed.startsWith('/app?'))) {
+    throw new Error('successPath must be an in-app path starting with /app')
+  }
+  return trimmed
 }
 
 async function validatePlanPrice(stripe: Stripe, recurringPriceId: string): Promise<void> {
@@ -214,24 +234,36 @@ export function createBillingService(deps: BillingServiceDeps) {
       userId: string,
       email: string | null,
       plan: BillingPlanId,
-      options: { includeLawHub?: boolean } = {},
+      options: { includeLawHub?: boolean; successPath?: string } = {},
     ): Promise<{ url: string }> {
       const includeLawHub = options.includeLawHub !== false
+      const successPath = options.successPath ?? DEFAULT_CHECKOUT_SUCCESS_PATH
       const env = deps.getEnv()
       const profile = await deps.repository.getProfileBillingFields(userId)
-      const profileName = profile?.full_name?.trim()
+
+      // Gate before Stripe: LawHub invite after payment needs a valid email + first/last name.
+      const checkoutEmail = assertLawHubEmailAllowed(email ?? profile?.email)
+      const nameParts = requireLawHubNameParts({
+        firstName: profile?.first_name,
+        lastName: profile?.last_name,
+        fullName: profile?.full_name,
+      })
+      const profileName = joinLawHubFullName(nameParts.firstName, nameParts.lastName)
       let customerId = profile?.stripe_customer_id?.trim() ?? ''
 
       if (!customerId) {
         const customer = await deps.stripe.customers.create({
-          email: email ?? undefined,
-          name: profileName || undefined,
+          email: checkoutEmail,
+          name: profileName,
           metadata: { user_id: userId },
         })
         customerId = customer.id
         await deps.repository.setStripeCustomerId(userId, customerId)
-      } else if (profileName) {
-        await deps.stripe.customers.update(customerId, { name: profileName })
+      } else {
+        await deps.stripe.customers.update(customerId, {
+          email: checkoutEmail,
+          name: profileName,
+        })
       }
 
       const recurringPriceId =
@@ -257,13 +289,12 @@ export function createBillingService(deps: BillingServiceDeps) {
       }
 
       const baseUrl = deps.getAppBaseUrl().replace(/\/$/, '')
-      const checkoutSuccessPath = '/app?checkout=success'
       const session = await deps.stripe.checkout.sessions.create({
         mode: 'subscription',
         customer: customerId,
         client_reference_id: userId,
         line_items: lineItems,
-        success_url: `${baseUrl}${checkoutSuccessPath}`,
+        success_url: `${baseUrl}${successPath.startsWith('/') ? successPath : `/${successPath}`}`,
         cancel_url: `${baseUrl}/app/pricing?checkout=cancel`,
         metadata: { user_id: userId, plan, include_lawhub: includeLawHub ? 'true' : 'false' },
         subscription_data: {
@@ -397,4 +428,4 @@ export function createBillingService(deps: BillingServiceDeps) {
 }
 
 export type BillingService = ReturnType<typeof createBillingService>
-export { parseCheckoutPlan }
+export { parseCheckoutPlan, parseCheckoutSuccessPath }

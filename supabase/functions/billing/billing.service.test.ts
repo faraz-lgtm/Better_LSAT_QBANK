@@ -1,5 +1,5 @@
-import { assertEquals } from 'jsr:@std/assert@1'
-import { createBillingService, type CheckoutCompletedContext } from './billing.service.ts'
+import { assertEquals, assertRejects, assertThrows } from 'jsr:@std/assert@1'
+import { createBillingService, parseCheckoutSuccessPath, type CheckoutCompletedContext } from './billing.service.ts'
 import type { BillingRepository } from './billing.repository.ts'
 import type { StripeRuntimeEnv } from '../_shared/stripe-env.ts'
 
@@ -21,7 +21,9 @@ function makeRepo(overrides: Partial<BillingRepository> = {}): BillingRepository
       return {
         id: 'u-1',
         email: 'a@b.com',
-        full_name: null,
+        full_name: 'Ada Lovelace',
+        first_name: 'Ada',
+        last_name: 'Lovelace',
         stripe_customer_id: null,
         prep_plus_source: null,
       }
@@ -102,6 +104,58 @@ Deno.test('billing service createCheckoutSession creates customer and returns ur
   assertEquals(out.url, 'https://checkout.stripe.test/session')
 })
 
+Deno.test('billing service createCheckoutSession accepts custom successPath', async () => {
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo(),
+    stripe: {
+      customers: {
+        create: async () => ({ id: 'cus_1' }),
+      },
+      prices: {
+        retrieve: async (id: string) => {
+          if (id === 'price_lsac_test') {
+            return {
+              id,
+              type: 'recurring',
+              recurring: { interval: 'year' },
+              unit_amount: 9900,
+              currency: 'usd',
+              product: { name: 'LawHub Advantage' },
+            }
+          }
+          return { id, type: 'recurring', recurring: { interval: 'month' } }
+        },
+      },
+      checkout: {
+        sessions: {
+          create: async (params: Record<string, unknown>) => {
+            assertEquals(
+              params.success_url,
+              'http://localhost:5173/app/diagnostic/results?checkout=success',
+            )
+            return { url: 'https://checkout.stripe.test/diagnostic' }
+          },
+        },
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  const out = await service.createCheckoutSession('u-1', 'a@b.com', 'core', {
+    successPath: '/app/diagnostic/results?checkout=success',
+  })
+  assertEquals(out.url, 'https://checkout.stripe.test/diagnostic')
+})
+
+Deno.test('parseCheckoutSuccessPath rejects unsafe paths', () => {
+  assertEquals(parseCheckoutSuccessPath(undefined), '/app?checkout=success')
+  assertThrows(() => parseCheckoutSuccessPath('https://evil.test/nope'))
+  assertThrows(() => parseCheckoutSuccessPath('/app/../admin'))
+  assertEquals(parseCheckoutSuccessPath('/app/diagnostic/results?checkout=success'), '/app/diagnostic/results?checkout=success')
+  assertEquals(parseCheckoutSuccessPath('/app?checkout=success'), '/app?checkout=success')
+})
+
 Deno.test('billing service createCheckoutSession skips LawHub when includeLawHub is false', async () => {
   let sourceSet = false
   const service = createBillingService({
@@ -171,6 +225,8 @@ Deno.test('billing service createCheckoutSession uses live plan price', async ()
           id: 'u-1',
           email: 'a@b.com',
           full_name: 'Ada Lovelace',
+          first_name: 'Ada',
+          last_name: 'Lovelace',
           stripe_customer_id: 'cus_existing',
           prep_plus_source: null,
         }
@@ -215,6 +271,56 @@ Deno.test('billing service createCheckoutSession uses live plan price', async ()
   const out = await service.createCheckoutSession('u-1', 'a@b.com', 'live')
   assertEquals(customerNameUpdated, 'Ada Lovelace')
   assertEquals(out.url, 'https://checkout.stripe.test/live')
+})
+
+Deno.test('billing service createCheckoutSession rejects missing LawHub name', async () => {
+  const { LawHubIdentityError } = await import('../_shared/lawhub-student-identity.ts')
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getProfileBillingFields() {
+        return {
+          id: 'u-1',
+          email: 'a@b.com',
+          full_name: 'Prince',
+          first_name: 'Prince',
+          last_name: null,
+          stripe_customer_id: null,
+          prep_plus_source: null,
+        }
+      },
+    }),
+    stripe: {
+      customers: { create: async () => ({ id: 'cus_1' }) },
+      prices: { retrieve: async () => ({ id: 'x', type: 'recurring', recurring: { interval: 'month' } }) },
+      checkout: { sessions: { create: async () => ({ url: 'https://should-not-run' }) } },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  await assertRejects(
+    () => service.createCheckoutSession('u-1', 'a@b.com', 'core'),
+    LawHubIdentityError,
+  )
+})
+
+Deno.test('billing service createCheckoutSession rejects plus email', async () => {
+  const { LawHubIdentityError } = await import('../_shared/lawhub-student-identity.ts')
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo(),
+    stripe: {
+      customers: { create: async () => ({ id: 'cus_1' }) },
+      prices: { retrieve: async () => ({ id: 'x', type: 'recurring', recurring: { interval: 'month' } }) },
+      checkout: { sessions: { create: async () => ({ url: 'https://should-not-run' }) } },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  await assertRejects(
+    () => service.createCheckoutSession('u-1', 'a+tag@b.com', 'core'),
+    LawHubIdentityError,
+  )
 })
 
 Deno.test('billing service accepts one-time LawHub price', async () => {
@@ -331,7 +437,7 @@ Deno.test('billing service checkout.session.completed invokes onCheckoutComplete
       async upsertSubscription() {},
       async setPrepPlusSource() {},
     }),
-    onCheckoutCompleted: async (ctx) => {
+    onCheckoutCompleted: async (ctx: CheckoutCompletedContext) => {
       callbackCtx = { ...ctx }
     },
     stripe: {

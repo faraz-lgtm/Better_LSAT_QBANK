@@ -10,8 +10,10 @@ import { GuestMarketingPanelLayout } from "@/features/guest/marketing/guest-mark
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 
 type OnboardingWelcomeStepProps = {
-  fullName: string
-  onFullNameChange: (value: string) => void
+  firstName: string
+  onFirstNameChange: (value: string) => void
+  lastName: string
+  onLastNameChange: (value: string) => void
   password: string
   onPasswordChange: (value: string) => void
   confirmPassword: string
@@ -26,8 +28,10 @@ type OnboardingWelcomeStepProps = {
 }
 
 function OnboardingWelcomeStep({
-  fullName,
-  onFullNameChange,
+  firstName,
+  onFirstNameChange,
+  lastName,
+  onLastNameChange,
   password,
   onPasswordChange,
   confirmPassword,
@@ -56,16 +60,31 @@ function OnboardingWelcomeStep({
           ) : (
             <>
               <div className="figma-gap-16 flex flex-col">
-                <div className="figma-gap-8 flex flex-col">
-                  <p className="figma-text-sm figma-track-sm font-medium text-[#062357]">
-                    Full Name<span className="text-[#df1c41]">*</span>
-                  </p>
-                  <Input
-                    value={fullName}
-                    onChange={(event) => onFullNameChange(event.target.value)}
-                    placeholder="Enter your name"
-                    disabled={isSubmitting}
-                  />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="figma-gap-8 flex flex-col">
+                    <p className="figma-text-sm figma-track-sm font-medium text-[#062357]">
+                      First name<span className="text-[#df1c41]">*</span>
+                    </p>
+                    <Input
+                      value={firstName}
+                      onChange={(event) => onFirstNameChange(event.target.value)}
+                      placeholder="First name"
+                      autoComplete="given-name"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="figma-gap-8 flex flex-col">
+                    <p className="figma-text-sm figma-track-sm font-medium text-[#062357]">
+                      Last name<span className="text-[#df1c41]">*</span>
+                    </p>
+                    <Input
+                      value={lastName}
+                      onChange={(event) => onLastNameChange(event.target.value)}
+                      placeholder="Last name"
+                      autoComplete="family-name"
+                      disabled={isSubmitting}
+                    />
+                  </div>
                 </div>
 
                 {requiresPassword ? (

@@ -82,7 +82,7 @@ export function createBillingApi(supabase: SupabaseClient) {
 
     async createCheckoutSession(
       plan: BillingPlanId,
-      options?: { includeLawHub?: boolean; appBaseUrl?: string },
+      options?: { includeLawHub?: boolean; appBaseUrl?: string; successPath?: string },
     ): Promise<string> {
       const { data, error } = await invokeBillingPost<{ url: string }>(
         'billing-create-checkout-session',
@@ -90,6 +90,7 @@ export function createBillingApi(supabase: SupabaseClient) {
           plan,
           includeLawHub: options?.includeLawHub,
           appBaseUrl: options?.appBaseUrl ?? window.location.origin,
+          successPath: options?.successPath,
         },
       )
       if (error) throw error

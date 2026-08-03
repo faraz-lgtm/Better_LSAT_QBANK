@@ -694,6 +694,9 @@ verify_jwt = false
 [functions.users-sync-lsac]
 verify_jwt = false
 
+[functions.diagnostic-get-mini-explanations]
+verify_jwt = false
+
 [functions.billing-create-checkout-session]
 verify_jwt = false
 

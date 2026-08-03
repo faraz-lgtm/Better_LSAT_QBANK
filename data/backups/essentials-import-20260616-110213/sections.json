@@ -1,0 +1,29 @@
+[
+  {
+    "created_at": "2026-05-18 13:27:03.514524+00",
+    "duration_minutes": 60,
+    "id": "8eeb8d31-418e-4b2a-ad0b-07869d86a512",
+    "module_id": "f22a7500-dcd1-48c5-ba01-cb08df119222",
+    "sort_order": 1,
+    "title": "General",
+    "updated_at": "2026-05-22 12:45:07.945+00"
+  },
+  {
+    "created_at": "2026-05-22 12:35:23.245377+00",
+    "duration_minutes": 420,
+    "id": "22a67bb7-c182-4649-a557-5e9d524572ea",
+    "module_id": "15b0d221-3623-46e7-9c76-b66fd4dad43f",
+    "sort_order": 1,
+    "title": "General",
+    "updated_at": "2026-05-22 12:46:23.411+00"
+  },
+  {
+    "created_at": "2026-05-22 12:36:52.641925+00",
+    "duration_minutes": null,
+    "id": "fffa69ff-9f74-4023-88ed-b29e85806d7c",
+    "module_id": "517be474-fa3f-4322-b0eb-cb1c07505a71",
+    "sort_order": 1,
+    "title": "General",
+    "updated_at": "2026-05-22 12:37:21.591+00"
+  }
+]

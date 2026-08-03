@@ -1,0 +1,1078 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>LawHub Provider API Technical Documentation(Draft)</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.5;
+        margin: 40px;
+        color: #222;
+      }
+      h1,
+      h2,
+      h3,
+      h4 {
+        color: #003366;
+      }
+      h1 {
+        font-size: 28px;
+        margin-bottom: 0;
+      }
+      h2 {
+        font-size: 22px;
+        margin-top: 30px;
+      }
+      h3 {
+        font-size: 18px;
+        margin-top: 20px;
+      }
+      .subtitle {
+        font-style: italic;
+        margin-top: 4px;
+        margin-bottom: 20px;
+      }
+      .meta {
+        margin-bottom: 40px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 16px 0;
+        font-size: 14px;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      code {
+        font-family: Consolas, "Courier New", monospace;
+        background-color: #f7f7f7;
+        padding: 2px 4px;
+        border-radius: 3px;
+      }
+      pre {
+        background-color: #f7f7f7;
+        padding: 10px;
+        border-radius: 4px;
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+      .toc ul {
+        list-style-type: none;
+        padding-left: 0;
+      }
+      .toc li {
+        margin: 4px 0;
+      }
+      .section {
+        margin-top: 40px;
+      }
+      hr {
+        margin: 30px 0;
+      }
+      details {
+        margin: 10px 0;
+        padding: 10px;
+        background: #f9f9f9;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+      }
+      summary {
+        cursor: pointer;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Cover Page -->
+    <h1>LawHub Provider API Technical Documentation</h1>
+    <div class="subtitle">Integration &amp; Production Environments</div>
+    <div class="meta">
+      <p><strong>Prepared for:</strong> Law School Admission Council (LSAC)</p>
+      <p><strong>Draft Date:</strong> February 19, 2026</p>
+    </div>
+
+    <hr />
+
+    <!-- Table of Contents -->
+    <div class="toc">
+      <h2>Table of Contents</h2>
+      <ul>
+        <li><a href="#overview">1. Overview</a></li>
+        <li><a href="#environment-summary">2. Environment Summary</a></li>
+        <li>
+          <a href="#authentication"
+            >3. Authentication (OAuth 2.0 Client Credentials Flow)</a
+          >
+        </li>
+        <li>
+          <a href="#token-retrieval">4. Token Retrieval Example (.NET Core)</a>
+        </li>
+        <li>
+          <a href="#add-invite-student">5. Add/Invite Student API (POST)</a>
+        </li>
+        <li><a href="#upgrade-student">6. Upgrade Student API (POST)</a></li>
+        <li>
+          <a href="#get-student-info-coaching"
+            >7. Get Student Information (Coaching ID)</a
+          >
+        </li>
+        <li>
+          <a href="#get-student-info-email"
+            >8. Get Student Information (Email)</a
+          >
+        </li>
+        <li><a href="#get-all-students">9. Get All Vendor Students</a></li>
+        <li><a href="#get-test-results">10. Get Test Results</a></li>
+        <li>
+          <a href="#logging">11. External LSAC Content Access Logging (POST)</a>
+        </li>
+        <li><a href="#deep-linking">12. Deep Linking</a></li>
+        <li>
+          <a href="#appendix">13. Appendix — Full Request/Response Bodies</a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- 1. Overview -->
+    <div id="overview" class="section">
+      <h2>1. Overview</h2>
+      <p>
+        This document provides technical guidance for integrating with LSAC’s
+        LawHub Provider APIs. It includes:
+      </p>
+      <ul>
+        <li>Integration (Sandbox) environment details</li>
+        <li>Production environment details</li>
+        <li>Token retrieval instructions</li>
+        <li>
+          API endpoints for student management, upgrades, test results, logging,
+          and deep linking
+        </li>
+        <li>
+          A complete Appendix containing all full JSON request and response
+          bodies
+        </li>
+      </ul>
+    </div>
+
+    <!-- 2. Environment Summary -->
+    <div id="environment-summary" class="section">
+      <h2>2. Environment Summary</h2>
+      <p>All API endpoints in this document use the unified format:</p>
+      <pre><code>{{BASE_URL}}/api/vendor/{vendorId}/...</code></pre>
+
+      <p>
+        Developers should set <code>{{BASE_URL}}</code> to either the
+        Integration or Production value below.
+      </p>
+
+      <table>
+        <tr>
+          <th>Environment</th>
+          <th>BASE_URL</th>
+          <th>Tenant ID</th>
+          <th>Client ID</th>
+          <th>Client Secret</th>
+          <th>Scope / Resource URI</th>
+        </tr>
+
+        <tr>
+          <td><strong>Integration (Sandbox)</strong></td>
+          <td><code>https://providers-api-sandbox.lawhub.org</code></td>
+          <td><code>09e2500c-c284-4e32-9f4b-1c3c47823cba</code></td>
+          <td>{{Provided by LSAC}}</td>
+          <td>{{Provided by LSAC}}</td>
+          <td>
+            <code
+              >https://lawpathb2b.onmicrosoft.com/06b7d783-8a46-43de-a375-07059967cb3b/.default</code
+            >
+          </td>
+        </tr>
+
+        <tr>
+          <td><strong>Production</strong></td>
+          <td><code>https://providers-api.lawhub.org</code></td>
+          <td><code>09e2500c-c284-4e32-9f4b-1c3c47823cba</code></td>
+          <td>{{Provided by LSAC}}</td>
+          <td>{{Provided by LSAC}}</td>
+          <td>
+            <code
+              >https://lawpathb2b.onmicrosoft.com/8ffc1f28-b505-42f3-8691-986e25fdd942/.default</code
+            >
+          </td>
+        </tr>
+      </table>
+    </div>
+    <!-- 3. Authentication -->
+    <div id="authentication" class="section">
+      <h2>3. Authentication (OAuth 2.0 Client Credentials Flow)</h2>
+      <p>
+        LSAC uses Azure Active Directory with the
+        <strong>client credentials</strong> grant type. Your application must
+        obtain an access token from Azure AD and include it in the
+        <code>Authorization: Bearer {token}</code> header for all API calls.
+      </p>
+
+      <h3>3.1 Token Endpoint</h3>
+      <p>
+        The token endpoint is the same for both Integration and Production. This
+        endpoint must be called using an HTTP <strong>POST</strong> request.
+      </p>
+      <pre><code>POST https://login.microsoftonline.com/{{tenantID}}/oauth2/v2.0/token</code></pre>
+
+      <h3>3.2 Required Parameters</h3>
+      <table>
+        <tr>
+          <th>Parameter</th>
+          <th>Required</th>
+          <th>Description</th>
+        </tr>
+        <tr>
+          <td><code>grant_type</code></td>
+          <td>Yes</td>
+          <td>Must be <code>client_credentials</code>.</td>
+        </tr>
+        <tr>
+          <td><code>client_id</code></td>
+          <td>Yes</td>
+          <td>Provided by LSAC.</td>
+        </tr>
+        <tr>
+          <td><code>client_secret</code></td>
+          <td>Yes</td>
+          <td>Provided by LSAC.</td>
+        </tr>
+        <tr>
+          <td><code>scope</code></td>
+          <td>Yes</td>
+          <td>Use the Scope URI for the environment you are targeting.</td>
+        </tr>
+      </table>
+    </div>
+    <h3>3.3 Authorization Header Requirement</h3>
+    <p>
+      LSAC uses Azure Active Directory with the client credentials grant type.
+      Your application must obtain an access token from Azure AD and include it
+      in the <code>Authorization: Bearer {token}</code> header for all API
+      calls.
+    </p>
+
+    <pre><code>Authorization: Bearer {access_token}</code></pre>
+
+    <p>
+      You may reuse the same access token for API calls until it expires. Once
+      the token has expired, your application must request a new token before
+      making additional API requests.
+    </p>
+
+    <p>
+      Requests that do not include a valid Bearer token will be rejected with
+      <strong>401 Unauthorized</strong> or
+      <strong>403 Forbidden</strong> responses.
+    </p>
+
+    <!-- 4. Token Retrieval Example -->
+    <div id="token-retrieval" class="section">
+      <h2>4. Token Retrieval Example (.NET Core)</h2>
+      <pre><code>public async Task&lt;string&gt; RetrieveToken()
+{
+    string tenantId = "tenant_id";
+    string clientId = "client_id";
+    string[] scopes = "scope";
+    string clientSecret = "client_secret";
+
+    string authority = $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token";
+
+    IConfidentialClientApplication app =
+        ConfidentialClientApplicationBuilder.Create(clientId)
+        .WithClientSecret(clientSecret)
+        .WithAuthority(new Uri(authority))
+        .Build();
+
+    try
+    {
+        AuthenticationResult ar = await app.AcquireTokenForClient(scopes).ExecuteAsync();
+        return ar.AccessToken;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine(ex.ToString());
+        return null;
+    }
+}</code></pre>
+
+      <h4>Response Example</h4>
+      <pre><code>{
+  "access_token": "eyJhbGciOiJSUzI1NiIsIng1dCI6IjdkRC1nZWNOZ1gxWmY3R0xrT3ZwT0IyZGNWQSIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJodHRwczovL3NlcnZpY2UuY29udG9zby5jb20vIiwiaXNzIjoiaHR0cHM6Ly9zdHMud2luZG93cy5uZXQvN2ZlODE0NDctZGE1Ny00Mzg1LWJlY2ItNmRlNTdmMjE0NzdlLyIsImlhdCI6MTM4ODQ0ODI2NywibmJmIjoxMzg4NDQ4MjY3LCJleHAiOjEzODg0NTIxNjcsInZlciI6IjEuMCIsInRpZCI6IjdmZTgxNDQ3LWRhNTctNDM4NS1iZWNiLTZkZTU3ZjIxNDc3ZSIsIm9pZCI6ImE5OTE5MTYyLTkyMTctNDlkYS1hZTIyLWYxMTM3YzI1Y2RlYSIsInN1YiI6ImE5OTE5MTYyLTkyMTctNDlkYS1hZTIyLWYxMTM3YzI1Y2RlYSIsImlkcCI6Imh0dHBzOi8vc3RzLndpbmRvd3MubmV0LzdmZTgxNDQ3LWRhNTctNDM4NS1iZWNiLTZkZTU3ZjIxNDc3ZS8iLCJhcHBpZCI6ImQxN2QxNWJjLWM1NzYtNDFlNS05MjdmLWRiNWYzMGRkNThmMSIsImFwcGlkYWNyIjoiMSJ9.aqtfJ7G37CpKV901Vm9sGiQhde0WMg6luYJR4wuNR2ffaQsVPPpKirM5rbc6o5CmW1OtmaAIdwDcL6i9ZT9ooIIicSRrjCYMYWHX08ip-tjuWUihGztI02xKdWiycItpWiHxapQm0a8Ti1CWRjJghORC1B1-fah_yWx6Cjuf4QE8xJcu-ZHX0pVZNPX22PHYV5KmvPTq2HtIqdboKyZy3Y4y3geOrRIFElZYoqjqSv5q9Jgtj5ERsNQIjefpyxW3EwPtFqMcDm4ebiAEpoEWRN4QYOMxnC9OUBeG9oLA0lTfmhgHLAtvJogJcYFzwngTsVo6HznsvPWy7UP3MINA",
+  "token_type": "Bearer",
+  "expires_in": "3599",
+  "expires_on": "1388452167",
+  "resource": "https://lsacservice.lsac.org/"
+}</code></pre>
+      <p>
+        Reuse this access token for subsequent API calls until it expires. After
+        expiration, request a new token and use the new value in the
+        Authorization header.
+      </p>
+    </div>
+
+    <!-- 5. Add/Invite Student -->
+    <div id="add-invite-student" class="section">
+      <h2>5. Add/Invite Student API (POST)</h2>
+      <h3>Description</h3>
+      <p>
+        This API may be integrated into your website checkout process and is
+        used to add or invite a student and link them to you as their coach.
+      </p>
+      <ol>
+        <li>
+          Resell/purchase the Official LSAT PrepPlus subscription as part of a
+          required coaching package, then invite the student to create a LawHub
+          account and link to you as a coach.
+          <ul>
+            <li><code>isPrepPlusRequired = true</code></li>
+            <li><code>isPrepPlusIncludedFromVendor = true</code></li>
+          </ul>
+        </li>
+        <li>
+          Add a student and invite them to link to you as their coach when they
+          already have an account, and link to an existing Official LSAT Prep
+          Plus subscription (prompt shown when the student logs in to LawHub).
+          <ul>
+            <li><code>isPrepPlusRequired = true</code></li>
+            <li><code>isPrepPlusIncludedFromVendor = false</code></li>
+          </ul>
+        </li>
+        <li>
+          Add a student and invite them to link to you as their coach using a
+          pre-existing LawHub free Prep product.
+          <ul>
+            <li><code>isPrepPlusRequired = false</code></li>
+            <li><code>isPrepPlusIncludedFromVendor = false</code></li>
+          </ul>
+        </li>
+      </ol>
+      <p>
+        Note: In addition to biographical data, vendors must pass the
+        appropriate values for <code>isPrepPlusRequired</code> and
+        <code>isPrepPlusIncludedFromVendor</code> in the API request body.
+      </p>
+      <p>
+        This endpoint can also be used with an existing student email to renew
+        or extend coaching, and optionally renew or extend PrepPlus when
+        applicable.
+      </p>
+
+      <h3>Endpoint</h3>
+      <pre><code>{{BASE_URL}}/api/vendor/{vendorId}/students</code></pre>
+
+      <h3>Shortened Request Body</h3>
+      <pre><code>{
+  "emailAddress": "studentx@abc.com",
+  "firstName": "Tester",
+  "lastName": "Test",
+  "isPrepPlusRequired": true,
+  "isPrepPlusIncludedFromVendor": true
+}</code></pre>
+
+      <h3>Shortened Response</h3>
+      <pre><code>{
+  "coachingExpirationDate": "...",
+  "coachingStartDate": "...",
+  "emailAddress": "STUDENTX@ABC.COM",
+  "firstName": "Tester",
+  "inviteDate": "...",
+  "linked": false,
+  "studentCoachingId": "3ef7c177-cfa9-467f-9baa-241b4cc0f280"
+}</code></pre>
+      <p>
+        <strong>NOTE:</strong> The <code>studentCoachingId</code> returned in
+        the response is the unique link identifier between each licensee and the
+        student. This coaching ID is the preferred method by which to access
+        updated student information and results of prep test instances that the
+        student has completed in LawHub.
+      </p>
+    </div>
+
+    <!-- 6. Upgrade Student -->
+    <div id="upgrade-student" class="section">
+      <h2>6. Upgrade Student API (POST)</h2>
+      <p>
+        The Upgrade API is used to update a specific student subscription using
+        their <code>studentCoachingId</code>. Typical uses include upgrading a
+        student from a non-PrepPlus setup to Official LSAT PrepPlus, and
+        renewing or extending PrepPlus when subscription dates do not align with
+        the coaching period.
+      </p>
+
+      <h3>Endpoint</h3>
+      <pre><code>{{BASE_URL}}/api/vendor/{vendorId}/upgradeStudent/{studentCoachingId}</code></pre>
+
+      <h3>Shortened Response</h3>
+      <pre><code>{
+  "coachingExpirationDate": "...",
+  "emailAddress": "STUDENTX@ABC.COM",
+  "subscriptionType": "PrepPlus"
+}</code></pre>
+    </div>
+
+    <!-- 7. Get Student Information (Coaching ID) -->
+    <div id="get-student-info-coaching" class="section">
+      <h2>7. Get Student Information (Coaching ID)</h2>
+      <p>
+        This is the recommended, preferred endpoint for retrieving current
+        student data using <code>studentCoachingId</code>, which is the unique
+        licensee-student link identifier. Use this endpoint when you need the
+        most up-to-date coaching/subscription state for an individual student.
+      </p>
+
+      <h3>Endpoint</h3>
+      <pre><code>{{BASE_URL}}/api/vendor/{vendorId}/students/{coachingId}</code></pre>
+
+      <h3>Shortened Response</h3>
+      <pre><code>{
+  "studentCoachingId": "...",
+  "firstName": "KHTest",
+  "lastName": "LHTester",
+  "subscriptionType": "PrepPlus"
+}</code></pre>
+    </div>
+
+    <!-- 8. Get Student Information (Email) -->
+    <div id="get-student-info-email" class="section">
+      <h2>8. Get Student Information (Email)</h2>
+      <p>
+        Retrieves student coaching IDs and related records by student email
+        address. This can be useful when your system has an email but does not
+        yet have a coaching ID. However, the Coaching ID endpoint above remains
+        the preferred method for ongoing data retrieval.
+      </p>
+      <p>
+        Note: LSAC policy does not allow a "+" in a student's email address.
+      </p>
+
+      <h3>Endpoint</h3>
+      <pre><code>{{BASE_URL}}/api/vendor/{vendorId}/studentEmails/{emailAddress}</code></pre>
+
+      <h3>Shortened Response</h3>
+      <pre><code>[
+  {
+    "studentCoachingId": "...",
+    "firstName": "Tester",
+    "lastName": "Test"
+  }
+]</code></pre>
+    </div>
+
+    <!-- 9. Get All Vendor Students -->
+    <div id="get-all-students" class="section">
+      <h2>9. Get All Vendor Students</h2>
+      <p>
+        Returns the vendor roster of student records linked to your
+        <code>vendorId</code>. Use this endpoint for reconciliation,
+        synchronization, and periodic audits of student/coaching linkage.
+      </p>
+
+      <h3>Endpoint</h3>
+      <pre><code>{{BASE_URL}}/api/vendor/{vendorId}/students</code></pre>
+
+      <h3>Shortened Response</h3>
+      <pre><code>[
+  {
+    "studentCoachingId": "...",
+    "emailAddress": "testing@lsac.org"
+  }
+]</code></pre>
+    </div>
+
+    <!-- 10. Get Test Results -->
+    <div id="get-test-results" class="section">
+      <h2>10. Get Test Results</h2>
+      <p>
+        Retrieves test instance results from LawHub for a student identified by
+        <code>studentCoachingId</code> after the student completes a test
+        launched through your deep link. Response data includes test instance
+        metadata, section-level details, and item responses where available.
+      </p>
+
+      <h3>Endpoint</h3>
+      <pre><code>{{BASE_URL}}/api/vendor/{vendorId}/students/{studentCoachingId}/instances</code></pre>
+
+      <h3>Shortened Response</h3>
+      <pre><code>[
+  {
+    "testInstanceId": "...",
+    "isCompleted": true,
+    "sections": [
+      {
+        "sectionId": "AR:116",
+        "responses": [ ... ]
+      }
+    ]
+  }
+]</code></pre>
+    </div>
+
+    <!-- 11. Logging -->
+    <div id="logging" class="section">
+      <h2>11. External LSAC Content Access Logging (POST)</h2>
+      <p>
+        This API is required and must be called each time a student logs into a
+        system that provides Official LSAC content. The logging event must
+        identify the source/vendor and student so LSAC can track external
+        content access.
+      </p>
+
+      <h3>Endpoint</h3>
+      <pre><code>{{BASE_URL}}/api/vendor/{vendorId}/log</code></pre>
+
+      <h3>Shortened Request</h3>
+      <pre><code>{
+  "studentCoachingId": "...",
+  "eventType": "Login",
+  "eventDate": "2024-01-01T12:00:00Z"
+}</code></pre>
+    </div>
+    <!-- 12. Deep Linking -->
+    <div id="deep-linking" class="section">
+      <h2>12. Deep Linking</h2>
+      <p>
+        Deep linking allows a vendor to send a student directly into a specific
+        LSAT Prep test, section, or item within LawHub. When a student completes
+        a test instance launched via a deep link, the results become available
+        through the
+        <strong>Get Test Results</strong> API.
+      </p>
+
+      <h3>12.1 Deep Link Structure</h3>
+      <p>LSAC provides deep link templates that include:</p>
+      <ul>
+        <li>Vendor ID</li>
+        <li>Student Coaching ID</li>
+        <li>Test ID</li>
+        <li>Section ID (optional)</li>
+        <li>Item ID (optional)</li>
+      </ul>
+
+      <p>A typical deep link format:</p>
+
+      <pre><code>https://lawhub.org/prep/deeplink?vendorId={vendorId}&studentCoachingId={studentCoachingId}&testId={testId}</code></pre>
+
+      <p>
+        Additional parameters may be appended depending on the target (section,
+        item, etc.). LSAC provides the exact deep link templates during
+        onboarding.
+      </p>
+    </div>
+
+    <!-- 13. Appendix -->
+    <div id="appendix" class="section">
+      <h2>13. Appendix — Full Request and Response Bodies</h2>
+      <p>
+        This Appendix contains the
+        <strong>complete, unabridged JSON</strong> request and response bodies
+        for all APIs described in this document. Each subsection includes:
+      </p>
+
+      <ul>
+        <li><strong>Pretty‑printed JSON</strong> for readability</li>
+        <li>
+          <strong>Raw JSON</strong> inside a collapsible
+          <code>&lt;details&gt;</code> block
+        </li>
+        <li>All fields exactly as provided in the LSAC documentation</li>
+      </ul>
+
+      <p>The following subsections are included:</p>
+
+      <ul>
+        <li><strong>Appendix A</strong> — Add/Invite Student</li>
+        <li><strong>Appendix B</strong> — Upgrade Student</li>
+        <li>
+          <strong>Appendix C</strong> — Get Student Information (Coaching ID)
+        </li>
+        <li><strong>Appendix D</strong> — Get Student Information (Email)</li>
+        <li><strong>Appendix E</strong> — Get All Vendor Students</li>
+        <li><strong>Appendix F</strong> — Get Test Results</li>
+        <li><strong>Appendix G</strong> — Logging API</li>
+      </ul>
+
+      <hr />
+      <!-- Appendix A — Add/Invite Student -->
+      <h3>Appendix A — Add/Invite Student (POST)</h3>
+
+      <h4>Description</h4>
+      <p>
+        This API may be integrated into your website checkout process and is
+        used to add or invite a student and link them to you as their coach.
+      </p>
+      <ol>
+        <li>
+          Resell/purchase the Official LSAT PrepPlus subscription as part of a
+          required coaching package, then invite the student to create a LawHub
+          account and link to you as a coach.
+          <ul>
+            <li><code>isPrepPlusRequired = true</code></li>
+            <li><code>isPrepPlusIncludedFromVendor = true</code></li>
+          </ul>
+        </li>
+        <li>
+          Add a student and invite them to link to you as their coach when they
+          already have an account, and link to an existing Official LSAT Prep
+          Plus subscription (prompt shown when the student logs in to LawHub).
+          <ul>
+            <li><code>isPrepPlusRequired = true</code></li>
+            <li><code>isPrepPlusIncludedFromVendor = false</code></li>
+          </ul>
+        </li>
+        <li>
+          Add a student and invite them to link to you as their coach using a
+          pre-existing LawHub free Prep product.
+          <ul>
+            <li><code>isPrepPlusRequired = false</code></li>
+            <li><code>isPrepPlusIncludedFromVendor = false</code></li>
+          </ul>
+        </li>
+      </ol>
+      <p>
+        Note: In addition to biographical data, vendors must pass the
+        appropriate values for <code>isPrepPlusRequired</code> and
+        <code>isPrepPlusIncludedFromVendor</code> in the API request body.
+      </p>
+
+      <h4>Full Request Body (Pretty‑Printed)</h4>
+      <pre><code>{
+  "emailAddress": "studentx@abc.com",
+  "firstName": "Tester",
+  "lastName": "Test",
+  "isPrepPlusRequired": true,
+  "isPrepPlusIncludedFromVendor": true
+}</code></pre>
+
+      <details>
+        <summary>Raw Request JSON</summary>
+        <pre>
+{
+  "emailAddress": "studentx@abc.com",
+  "firstName": "Tester",
+  "lastName": "Test",
+  "isPrepPlusRequired": true,
+  "isPrepPlusIncludedFromVendor": true
+}</pre
+        >
+      </details>
+
+      <h4>Full Response Body (Pretty‑Printed)</h4>
+      <pre><code>{
+  "coachingExpirationDate": "2024-01-01T00:00:00Z",
+  "coachingStartDate": "2023-01-01T00:00:00Z",
+  "emailAddress": "STUDENTX@ABC.COM",
+  "firstName": "Tester",
+  "inviteDate": "2023-01-01T00:00:00Z",
+  "isPrepPlusIncludedFromVendor": true,
+  "isPrepPlusRequired": true,
+  "lastName": "Test",
+  "linked": false,
+  "studentCoachingId": "3ef7c177-cfa9-467f-9baa-241b4cc0f280",
+  "subscriptionType": "PrepPlus",
+  "subscriptionExpirationDate": "2024-01-01T00:00:00Z",
+  "subscriptionStartDate": "2023-01-01T00:00:00Z"
+}</code></pre>
+
+      <details>
+        <summary>Raw Response JSON</summary>
+        <pre>
+{
+  "coachingExpirationDate": "2024-01-01T00:00:00Z",
+  "coachingStartDate": "2023-01-01T00:00:00Z",
+  "emailAddress": "STUDENTX@ABC.COM",
+  "firstName": "Tester",
+  "inviteDate": "2023-01-01T00:00:00Z",
+  "isPrepPlusIncludedFromVendor": true,
+  "isPrepPlusRequired": true,
+  "lastName": "Test",
+  "linked": false,
+  "studentCoachingId": "3ef7c177-cfa9-467f-9baa-241b4cc0f280",
+  "subscriptionType": "PrepPlus",
+  "subscriptionExpirationDate": "2024-01-01T00:00:00Z",
+  "subscriptionStartDate": "2023-01-01T00:00:00Z"
+}</pre
+        >
+      </details>
+
+      <hr />
+
+      <!-- Appendix B — Upgrade Student -->
+      <h3>Appendix B — Upgrade Student (POST)</h3>
+
+      <h4>Description</h4>
+      <p>
+        Use this endpoint to modify a specific student's subscription state
+        using <code>studentCoachingId</code>. Typical use cases include
+        upgrading a student to Official LSAT PrepPlus and renewing or extending
+        PrepPlus when subscription timing differs from the coaching period.
+      </p>
+
+      <h4>Full Response Body (Pretty‑Printed)</h4>
+      <pre><code>{
+  "coachingExpirationDate": "2024-01-01T00:00:00Z",
+  "coachingStartDate": "2023-01-01T00:00:00Z",
+  "emailAddress": "STUDENTX@ABC.COM",
+  "firstName": "Tester",
+  "inviteDate": "2023-01-01T00:00:00Z",
+  "isPrepPlusIncludedFromVendor": true,
+  "isPrepPlusRequired": true,
+  "lastName": "Test",
+  "linked": true,
+  "studentCoachingId": "3ef7c177-cfa9-467f-9baa-241b4cc0f280",
+  "subscriptionType": "PrepPlus",
+  "subscriptionExpirationDate": "2025-01-01T00:00:00Z",
+  "subscriptionStartDate": "2023-01-01T00:00:00Z"
+}</code></pre>
+
+      <details>
+        <summary>Raw Response JSON</summary>
+        <pre>
+{
+  "coachingExpirationDate": "2024-01-01T00:00:00Z",
+  "coachingStartDate": "2023-01-01T00:00:00Z",
+  "emailAddress": "STUDENTX@ABC.COM",
+  "firstName": "Tester",
+  "inviteDate": "2023-01-01T00:00:00Z",
+  "isPrepPlusIncludedFromVendor": true,
+  "isPrepPlusRequired": true,
+  "lastName": "Test",
+  "linked": true,
+  "studentCoachingId": "3ef7c177-cfa9-467f-9baa-241b4cc0f280",
+  "subscriptionType": "PrepPlus",
+  "subscriptionExpirationDate": "2025-01-01T00:00:00Z",
+  "subscriptionStartDate": "2023-01-01T00:00:00Z"
+}</pre
+        >
+      </details>
+
+      <hr />
+
+      <!-- Appendix C — Get Student Information (Coaching ID) -->
+      <h3>Appendix C — Get Student Information (Coaching ID)</h3>
+
+      <h4>Description</h4>
+      <p>
+        This is the recommended endpoint for retrieving current student details
+        by <code>studentCoachingId</code>. Use it as the primary lookup method
+        for accurate, up-to-date coaching and subscription information.
+      </p>
+
+      <h4>Full Response Body (Pretty‑Printed)</h4>
+      <pre><code>{
+  "studentCoachingId": "3ef7c177-cfa9-467f-9baa-241b4cc0f280",
+  "emailAddress": "testing@lsac.org",
+  "firstName": "KHTest",
+  "lastName": "LHTester",
+  "linked": true,
+  "inviteDate": "2023-01-01T00:00:00Z",
+  "coachingStartDate": "2023-01-01T00:00:00Z",
+  "coachingExpirationDate": "2024-01-01T00:00:00Z",
+  "subscriptionType": "PrepPlus",
+  "subscriptionStartDate": "2023-01-01T00:00:00Z",
+  "subscriptionExpirationDate": "2024-01-01T00:00:00Z"
+}</code></pre>
+
+      <details>
+        <summary>Raw Response JSON</summary>
+        <pre>
+{
+  "studentCoachingId": "3ef7c177-cfa9-467f-9baa-241b4cc0f280",
+  "emailAddress": "testing@lsac.org",
+  "firstName": "KHTest",
+  "lastName": "LHTester",
+  "linked": true,
+  "inviteDate": "2023-01-01T00:00:00Z",
+  "coachingStartDate": "2023-01-01T00:00:00Z",
+  "coachingExpirationDate": "2024-01-01T00:00:00Z",
+  "subscriptionType": "PrepPlus",
+  "subscriptionStartDate": "2023-01-01T00:00:00Z",
+  "subscriptionExpirationDate": "2024-01-01T00:00:00Z"
+}</pre
+        >
+      </details>
+
+      <hr />
+      <!-- Appendix D — Get Student Information (Email) -->
+      <h3>Appendix D — Get Student Information (Email)</h3>
+
+      <h4>Description</h4>
+      <p>
+        Use this endpoint to find student records by email address when a
+        coaching ID is not yet available in your system. For ongoing retrieval,
+        the Coaching ID endpoint remains the preferred method.
+      </p>
+
+      <h4>Full Response Body (Pretty‑Printed)</h4>
+      <pre><code>[
+  {
+    "studentCoachingId": "3ef7c177-cfa9-467f-9baa-241b4cc0f280",
+    "emailAddress": "testing@lsac.org",
+    "firstName": "KHTest",
+    "lastName": "LHTester",
+    "linked": true,
+    "inviteDate": "2023-01-01T00:00:00Z",
+    "coachingStartDate": "2023-01-01T00:00:00Z",
+    "coachingExpirationDate": "2024-01-01T00:00:00Z",
+    "subscriptionType": "PrepPlus",
+    "subscriptionStartDate": "2023-01-01T00:00:00Z",
+    "subscriptionExpirationDate": "2024-01-01T00:00:00Z"
+  }
+]</code></pre>
+
+      <details>
+        <summary>Raw Response JSON</summary>
+        <pre>
+[
+  {
+    "studentCoachingId": "3ef7c177-cfa9-467f-9baa-241b4cc0f280",
+    "emailAddress": "testing@lsac.org",
+    "firstName": "KHTest",
+    "lastName": "LHTester",
+    "linked": true,
+    "inviteDate": "2023-01-01T00:00:00Z",
+    "coachingStartDate": "2023-01-01T00:00:00Z",
+    "coachingExpirationDate": "2024-01-01T00:00:00Z",
+    "subscriptionType": "PrepPlus",
+    "subscriptionStartDate": "2023-01-01T00:00:00Z",
+    "subscriptionExpirationDate": "2024-01-01T00:00:00Z"
+  }
+]</pre
+        >
+      </details>
+
+      <hr />
+
+      <!-- Appendix E — Get All Vendor Students -->
+      <h3>Appendix E — Get All Vendor Students</h3>
+
+      <h4>Description</h4>
+      <p>
+        Returns all student records currently associated with your
+        <code>vendorId</code>. This endpoint is useful for synchronization,
+        reconciliation, and periodic audit workflows.
+      </p>
+
+      <h4>Full Response Body (Pretty‑Printed)</h4>
+      <pre><code>[
+  {
+    "studentCoachingId": "3ef7c177-cfa9-467f-9baa-241b4cc0f280",
+    "emailAddress": "testing@lsac.org",
+    "firstName": "KHTest",
+    "lastName": "LHTester",
+    "linked": true,
+    "inviteDate": "2023-01-01T00:00:00Z",
+    "coachingStartDate": "2023-01-01T00:00:00Z",
+    "coachingExpirationDate": "2024-01-01T00:00:00Z",
+    "subscriptionType": "PrepPlus",
+    "subscriptionStartDate": "2023-01-01T00:00:00Z",
+    "subscriptionExpirationDate": "2024-01-01T00:00:00Z"
+  }
+]</code></pre>
+
+      <details>
+        <summary>Raw Response JSON</summary>
+        <pre>
+[
+  {
+    "studentCoachingId": "3ef7c177-cfa9-467f-9baa-241b4cc0f280",
+    "emailAddress": "testing@lsac.org",
+    "firstName": "KHTest",
+    "lastName": "LHTester",
+    "linked": true,
+    "inviteDate": "2023-01-01T00:00:00Z",
+    "coachingStartDate": "2023-01-01T00:00:00Z",
+    "coachingExpirationDate": "2024-01-01T00:00:00Z",
+    "subscriptionType": "PrepPlus",
+    "subscriptionStartDate": "2023-01-01T00:00:00Z",
+    "subscriptionExpirationDate": "2024-01-01T00:00:00Z"
+  }
+]</pre
+        >
+      </details>
+
+      <hr />
+
+      <!-- Appendix F — Get Test Results -->
+      <h3>Appendix F — Get Test Results</h3>
+
+      <h4>Description</h4>
+      <p>
+        Retrieves LawHub test instance results for a student identified by
+        <code>studentCoachingId</code> after completion of a deep-link-launched
+        test. Results include instance details, section data, and item responses
+        when available.
+      </p>
+
+      <h4>Full Response Body (Pretty‑Printed)</h4>
+      <pre><code>[
+  {
+    "testInstanceId": "c6b8b7d1-0e4f-4e8d-9a3d-2f0c9f2e9d11",
+    "testId": "LSAT-PT-93",
+    "isCompleted": true,
+    "startDate": "2023-01-01T12:00:00Z",
+    "endDate": "2023-01-01T13:45:00Z",
+    "sections": [
+      {
+        "sectionId": "AR:116",
+        "sectionName": "Analytical Reasoning",
+        "responses": [
+          {
+            "questionId": "AR116-Q1",
+            "answer": "C",
+            "isCorrect": true,
+            "timeSpentSeconds": 42
+          },
+          {
+            "questionId": "AR116-Q2",
+            "answer": "A",
+            "isCorrect": false,
+            "timeSpentSeconds": 55
+          }
+        ]
+      },
+      {
+        "sectionId": "LR:204",
+        "sectionName": "Logical Reasoning",
+        "responses": [
+          {
+            "questionId": "LR204-Q1",
+            "answer": "D",
+            "isCorrect": true,
+            "timeSpentSeconds": 38
+          },
+          {
+            "questionId": "LR204-Q2",
+            "answer": "B",
+            "isCorrect": false,
+            "timeSpentSeconds": 61
+          }
+        ]
+      }
+    ]
+  }
+]</code></pre>
+
+      <details>
+        <summary>Raw Response JSON</summary>
+        <pre>
+[
+  {
+    "testInstanceId": "c6b8b7d1-0e4f-4e8d-9a3d-2f0c9f2e9d11",
+    "testId": "LSAT-PT-93",
+    "isCompleted": true,
+    "startDate": "2023-01-01T12:00:00Z",
+    "endDate": "2023-01-01T13:45:00Z",
+    "sections": [
+      {
+        "sectionId": "AR:116",
+        "sectionName": "Analytical Reasoning",
+        "responses": [
+          {
+            "questionId": "AR116-Q1",
+            "answer": "C",
+            "isCorrect": true,
+            "timeSpentSeconds": 42
+          },
+          {
+            "questionId": "AR116-Q2",
+            "answer": "A",
+            "isCorrect": false,
+            "timeSpentSeconds": 55
+          }
+        ]
+      },
+      {
+        "sectionId": "LR:204",
+        "sectionName": "Logical Reasoning",
+        "responses": [
+          {
+            "questionId": "LR204-Q1",
+            "answer": "D",
+            "isCorrect": true,
+            "timeSpentSeconds": 38
+          },
+          {
+            "questionId": "LR204-Q2",
+            "answer": "B",
+            "isCorrect": false,
+            "timeSpentSeconds": 61
+          }
+        ]
+      }
+    ]
+  }
+]</pre
+        >
+      </details>
+
+      <hr />
+
+      <!-- Appendix G — Logging API -->
+      <h3>Appendix G — Logging API (POST)</h3>
+
+      <h4>Description</h4>
+      <p>
+        This endpoint must be called each time a student logs into a system that
+        provides Official LSAC content. Submit the required event data so LSAC
+        can track external content access activity.
+      </p>
+
+      <h4>Full Request Body (Pretty‑Printed)</h4>
+      <pre><code>{
+  "studentCoachingId": "3ef7c177-cfa9-467f-9baa-241b4cc0f280",
+  "eventType": "Login",
+  "eventDate": "2024-01-01T12:00:00Z",
+  "vendorSystem": "VendorXYZ",
+  "metadata": {
+    "ipAddress": "192.168.1.10",
+    "userAgent": "Mozilla/5.0"
+  }
+}</code></pre>
+
+      <details>
+        <summary>Raw Request JSON</summary>
+        <pre>
+{
+  "studentCoachingId": "3ef7c177-cfa9-467f-9baa-241b4cc0f280",
+  "eventType": "Login",
+  "eventDate": "2024-01-01T12:00:00Z",
+  "vendorSystem": "VendorXYZ",
+  "metadata": {
+    "ipAddress": "192.168.1.10",
+    "userAgent": "Mozilla/5.0"
+  }
+}</pre
+        >
+      </details>
+
+      <hr />
+      <!-- End of Appendix -->
+      <p><em>End of Appendix.</em></p>
+    </div>
+    <!-- end appendix section -->
+
+    <hr />
+
+    <footer style="margin-top: 40px; font-size: 14px; color: #555">
+      <p>
+        © 2026 Law School Admission Council (LSAC). This document is provided
+        for authorized integration partners only.
+      </p>
+    </footer>
+  </body>
+</html>

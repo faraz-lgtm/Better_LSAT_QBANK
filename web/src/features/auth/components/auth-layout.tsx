@@ -15,6 +15,8 @@ type AuthLayoutProps = {
   contentLayout?: "default" | "wide" | "lsac-link" | "intent"
   /** Hide marketing sidebar so main content uses full width (e.g. intent picker). */
   hideSidebar?: boolean
+  /** Hide intent header sign-in prompt when user is already authenticated. */
+  hideIntentSignIn?: boolean
 }
 
 function getDefaultCtaPrompt(ctaHref: "/login" | "/signup"): string {
@@ -29,6 +31,7 @@ function AuthLayout({
   headerVariant = "auth",
   contentLayout = "default",
   hideSidebar = false,
+  hideIntentSignIn = false,
 }: AuthLayoutProps) {
   const prompt = ctaPrompt ?? (ctaHref ? getDefaultCtaPrompt(ctaHref) : undefined)
   const showFooter = headerVariant === "auth" || headerVariant === "intent"
@@ -65,6 +68,7 @@ function AuthLayout({
             ctaHref={ctaHref}
             ctaPrompt={prompt}
             variant={headerVariant}
+            hideIntentSignIn={hideIntentSignIn}
           />
           <main className={mainClass}>
             <div className={shellClass}>{children}</div>

@@ -106,6 +106,8 @@ Practical implication:
 | Subscribe with Better LSAT (LawHub included) | Active Core/Live subscription required | `isPrepPlusRequired=true`, `isPrepPlusIncludedFromVendor=true` |
 | Already have LawHub PrepPlus | Active Core/Live subscription required (no $99 LawHub line item at checkout) | `isPrepPlusRequired=true`, `isPrepPlusIncludedFromVendor=false` |
 
+**Checkout gate:** `createCheckoutSession` requires a LawHub-valid email (no `+` in the local part) and both first + last name on the profile before opening Stripe. Onboarding collects first/last name; invite outcomes are stored on `profiles.lawhub_invite_*`.
+
 Dashboard access requires **both** an active Better LSAT subscription and `linked === true` on the latest LSAC snapshot (coach link accepted in LawHub).
 
 Local profile field `prep_plus_source`: `vendor_subscription` or `existing_lsac` (records how PrepPlus is sourced; does not bypass billing).

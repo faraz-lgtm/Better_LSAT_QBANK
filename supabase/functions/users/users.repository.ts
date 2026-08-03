@@ -3,14 +3,21 @@ import type { PrepPlusSource } from '../_shared/stripe-env.ts'
 import { isActiveSubscriptionStatus } from '../billing/billing.repository.ts'
 import type { ProfileUpsertInput } from './users.mapper.ts'
 
+export type LawHubInviteStatus = 'skipped' | 'invited' | 'failed'
+
 export type ProfileRow = {
   id: string
   email: string | null
   full_name: string | null
+  first_name: string | null
+  last_name: string | null
   role: 'student' | 'admin'
   student_coaching_id: string | null
   stripe_customer_id: string | null
   prep_plus_source: PrepPlusSource | null
+  lawhub_invite_status: LawHubInviteStatus | null
+  lawhub_invite_last_error: string | null
+  lawhub_invited_at: string | null
   is_first_time_login: boolean
   created_at: string
   updated_at: string
@@ -411,6 +418,25 @@ export function createUsersRepository(client: SupabaseClient) {
         .from('profiles')
         .update({
           prep_plus_source: source,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+      if (error) throw error
+    },
+
+    async setLawHubInviteOutcome(
+      userId: string,
+      outcome: {
+        status: LawHubInviteStatus
+        error?: string | null
+      },
+    ): Promise<void> {
+      const { error } = await client
+        .from('profiles')
+        .update({
+          lawhub_invite_status: outcome.status,
+          lawhub_invite_last_error: outcome.error?.trim() || null,
+          lawhub_invited_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
         .eq('id', userId)

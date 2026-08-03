@@ -147,7 +147,11 @@ function PublicOnly({ children }: { children: ReactElement }) {
   return <Navigate to={destination} replace />
 }
 
-function IntentRouteGuard({ children }: { children: ReactElement }) {
+function IntentRouteGuard({
+  render,
+}: {
+  render: (isAuthenticated: boolean) => ReactElement
+}) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [entitlement, setEntitlement] = useState<UserEntitlement | null>(null)
@@ -216,10 +220,10 @@ function IntentRouteGuard({ children }: { children: ReactElement }) {
   }, [])
 
   if (isAuthenticated === null) return null
-  if (!isAuthenticated) return children
+  if (!isAuthenticated) return render(false)
   if (!profile) return null
   if (destination) return <Navigate to={destination} replace />
-  if (shouldAllowAuthenticatedIntentPage(entitlement, readDiagnosticFunnelState())) return children
+  if (shouldAllowAuthenticatedIntentPage(entitlement, readDiagnosticFunnelState())) return render(true)
   return null
 }
 
@@ -327,8 +331,11 @@ function RequireLsacEntitlement({ children }: { children: ReactElement }) {
 const router = createBrowserRouter([
   { path: "/", element: <MarketingHomePage /> },
   { path: "/login", element: <PublicOnly><LoginPage /></PublicOnly> },
-  { path: "/intent", element: <IntentRouteGuard><IntentPage /></IntentRouteGuard> },
-  { path: "/signup", element: <SignupPage /> },
+  {
+    path: "/intent",
+    element: <IntentRouteGuard render={(isAuthenticated) => <IntentPage isAuthenticated={isAuthenticated} />} />,
+  },
+  { path: "/signup", element: <PublicOnly><SignupPage /></PublicOnly> },
   { path: "/signup/check-email", element: <SignupCheckEmailPage /> },
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
   { path: "/reset-password", element: <ResetPasswordPage /> },

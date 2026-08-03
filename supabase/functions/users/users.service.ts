@@ -4,6 +4,12 @@ import {
 } from '../_shared/lawhub-client.ts'
 import { shouldRequireLsacLinkWall } from '../_shared/lsac-link-wall.ts'
 import { parseLawHubEnv } from '../_shared/lawhub-env.ts'
+import {
+  assertLawHubEmailAllowed,
+  isLawHubIdentityError,
+  joinLawHubFullName,
+  requireLawHubNameParts,
+} from '../_shared/lawhub-student-identity.ts'
 import { parseStripeEnv } from '../_shared/stripe-env.ts'
 import type { LsacStudentPayload } from './users.mapper.ts'
 import {
@@ -12,11 +18,10 @@ import {
   mapOfficialScoreRow,
   mapStudyPreferencesRow,
   parseLsatScoreValue,
-  splitFullName,
   type OfficialLsatScoreDto,
   type StudentStudyPreferencesDto,
 } from './users.mapper.ts'
-import type { ProfileRow, UsersRepository } from './users.repository.ts'
+import type { LawHubInviteStatus, ProfileRow, UsersRepository } from './users.repository.ts'
 
 export class AuthorizationError extends Error {
   constructor(message: string) {
@@ -79,11 +84,12 @@ export function createUsersService(deps: UsersServiceDeps) {
     return lawHub
   }
 
-  function assertLawHubEmailAllowed(email: string): void {
-    const local = email.trim().toLowerCase().split('@')[0] ?? ''
-    if (local.includes('+')) {
-      throw new Error('LSAC policy does not allow "+" in student email addresses')
-    }
+  async function recordLawHubInviteOutcome(
+    userId: string,
+    status: LawHubInviteStatus,
+    error?: string | null,
+  ): Promise<void> {
+    await deps.repository.setLawHubInviteOutcome(userId, { status, error })
   }
 
   async function syncRecordFromLawHub(
@@ -142,17 +148,20 @@ export function createUsersService(deps: UsersServiceDeps) {
     input: { firstName: string; lastName: string },
     flags: { isPrepPlusRequired: boolean; isPrepPlusIncludedFromVendor: boolean },
   ) {
-    assertLawHubEmailAllowed(sessionEmail)
+    const email = assertLawHubEmailAllowed(sessionEmail)
+    const nameParts = requireLawHubNameParts(input)
     if (skipLawHubCalls) {
       return await deps.repository.upsertProfile({
         id: userId,
-        email: sessionEmail.trim().toLowerCase(),
-        full_name: `${input.firstName} ${input.lastName}`.trim(),
+        email,
+        full_name: joinLawHubFullName(nameParts.firstName, nameParts.lastName),
+        first_name: nameParts.firstName,
+        last_name: nameParts.lastName,
         student_coaching_id: placeholderCoachingId(userId),
       })
     }
 
-    const rows = await requireLawHub().findStudentsByEmail(sessionEmail)
+    const rows = await requireLawHub().findStudentsByEmail(email)
     if (rows.length > 0) {
       const first = rows[0] as Record<string, unknown>
       if (isLawHubRecordLinked(first)) {
@@ -162,9 +171,9 @@ export function createUsersService(deps: UsersServiceDeps) {
     }
 
     const invited = await requireLawHub().addOrInviteStudent({
-      emailAddress: sessionEmail,
-      firstName: input.firstName,
-      lastName: input.lastName,
+      emailAddress: email,
+      firstName: nameParts.firstName,
+      lastName: nameParts.lastName,
       isPrepPlusRequired: flags.isPrepPlusRequired,
       isPrepPlusIncludedFromVendor: flags.isPrepPlusIncludedFromVendor,
     })
@@ -232,16 +241,16 @@ export function createUsersService(deps: UsersServiceDeps) {
 
     /** GET studentEmails/{email} for the signed-in email only; upserts profile. */
     async syncProfileFromLawHubEmail(userId: string, email: string) {
-      assertLawHubEmailAllowed(email)
+      const normalizedEmail = assertLawHubEmailAllowed(email)
       if (skipLawHubCalls) {
         return await deps.repository.upsertProfile({
           id: userId,
-          email: email.trim().toLowerCase(),
+          email: normalizedEmail,
           full_name: null,
           student_coaching_id: placeholderCoachingId(userId),
         })
       }
-      const rows = await requireLawHub().findStudentsByEmail(email)
+      const rows = await requireLawHub().findStudentsByEmail(normalizedEmail)
       if (rows.length === 0) {
         throw new Error('No LawHub student records found for this email')
       }
@@ -336,6 +345,7 @@ export function createUsersService(deps: UsersServiceDeps) {
     ): Promise<LawHubCheckoutInviteResult> {
       if (!skipLawHubCalls && !lawHub) {
         console.warn('LawHub not configured; skipping auto-invite after checkout')
+        await recordLawHubInviteOutcome(ctx.userId, 'skipped', 'lawhub_not_configured')
         return { invited: false, reason: 'lawhub_not_configured' }
       }
 
@@ -343,31 +353,49 @@ export function createUsersService(deps: UsersServiceDeps) {
       if (profile?.student_coaching_id?.trim()) {
         const snapshot = await deps.repository.getLatestStudentSnapshotByUserId(ctx.userId)
         if (snapshot?.linked === true) {
+          await recordLawHubInviteOutcome(ctx.userId, 'skipped', 'already_linked')
           return { invited: false, reason: 'already_linked' }
         }
       }
 
-      const email =
-        ctx.email?.trim().toLowerCase() ??
-        profile?.email?.trim().toLowerCase() ??
-        null
-      if (!email) {
-        console.warn(`LawHub auto-invite skipped: no email for user ${ctx.userId}`)
-        return { invited: false, reason: 'no_email' }
+      let email: string
+      try {
+        email = assertLawHubEmailAllowed(
+          ctx.email?.trim().toLowerCase() ?? profile?.email?.trim().toLowerCase() ?? null,
+        )
+      } catch (error) {
+        const reason = isLawHubIdentityError(error) && error.code === 'LAWHUB_EMAIL_PLUS_NOT_ALLOWED'
+          ? 'invite_failed'
+          : 'no_email'
+        console.warn(`LawHub auto-invite skipped: ${reason} for user ${ctx.userId}`)
+        await recordLawHubInviteOutcome(
+          ctx.userId,
+          'failed',
+          isLawHubIdentityError(error) ? error.message : 'no_email',
+        )
+        return { invited: false, reason }
       }
 
-      let { firstName, lastName } = splitFullName(profile?.full_name)
-      if (!firstName.trim()) {
-        const fromCustomer = splitFullName(ctx.customerName)
-        firstName = fromCustomer.firstName
-        lastName = fromCustomer.lastName
+      let nameInput: { firstName: string; lastName: string }
+      try {
+        nameInput = requireLawHubNameParts({
+          firstName: profile?.first_name,
+          lastName: profile?.last_name,
+          fullName: profile?.full_name,
+        })
+      } catch {
+        try {
+          nameInput = requireLawHubNameParts({ fullName: ctx.customerName })
+        } catch (error) {
+          console.warn(`LawHub auto-invite skipped: no name for user ${ctx.userId}`)
+          await recordLawHubInviteOutcome(
+            ctx.userId,
+            'failed',
+            isLawHubIdentityError(error) ? error.message : 'no_name',
+          )
+          return { invited: false, reason: 'no_name' }
+        }
       }
-      if (!firstName.trim()) {
-        console.warn(`LawHub auto-invite skipped: no name for user ${ctx.userId}`)
-        return { invited: false, reason: 'no_name' }
-      }
-
-      const nameInput = { firstName: firstName.trim(), lastName: lastName.trim() }
 
       try {
         await requireActiveSubscription(ctx.userId)
@@ -384,9 +412,15 @@ export function createUsersService(deps: UsersServiceDeps) {
           })
         }
         console.info(`LawHub auto-invite succeeded for user ${ctx.userId} (${email})`)
+        await recordLawHubInviteOutcome(ctx.userId, 'invited')
         return { invited: true }
       } catch (error) {
         console.error(`LawHub auto-invite failed for user ${ctx.userId}:`, error)
+        await recordLawHubInviteOutcome(
+          ctx.userId,
+          'failed',
+          error instanceof Error ? error.message : 'invite_failed',
+        )
         return { invited: false, reason: 'invite_failed' }
       }
     },
@@ -402,19 +436,22 @@ export function createUsersService(deps: UsersServiceDeps) {
         isPrepPlusIncludedFromVendor: boolean
       },
     ) {
-      assertLawHubEmailAllowed(sessionEmail)
+      const email = assertLawHubEmailAllowed(sessionEmail)
+      const nameParts = requireLawHubNameParts(input)
       if (skipLawHubCalls) {
         return await deps.repository.upsertProfile({
           id: userId,
-          email: sessionEmail.trim().toLowerCase(),
-          full_name: `${input.firstName} ${input.lastName}`.trim(),
+          email,
+          full_name: joinLawHubFullName(nameParts.firstName, nameParts.lastName),
+          first_name: nameParts.firstName,
+          last_name: nameParts.lastName,
           student_coaching_id: placeholderCoachingId(userId),
         })
       }
       const data = await requireLawHub().addOrInviteStudent({
-        emailAddress: sessionEmail,
-        firstName: input.firstName,
-        lastName: input.lastName,
+        emailAddress: email,
+        firstName: nameParts.firstName,
+        lastName: nameParts.lastName,
         isPrepPlusRequired: input.isPrepPlusRequired,
         isPrepPlusIncludedFromVendor: input.isPrepPlusIncludedFromVendor,
       })
@@ -539,7 +576,10 @@ export function createUsersService(deps: UsersServiceDeps) {
     async saveOnboarding(
       userId: string,
       input: {
-        fullName: string
+        firstName?: string
+        lastName?: string
+        /** @deprecated Prefer firstName + lastName */
+        fullName?: string
         username?: string | null
         plannedLsatWindow?: string | null
         plannedLsatDate?: string | null
@@ -553,12 +593,19 @@ export function createUsersService(deps: UsersServiceDeps) {
     ): Promise<{ profile: ProfileRow; preferences: StudentStudyPreferencesDto }> {
       const goalScore = parseLsatScoreValue(input.goalScore)
       const startingScore = parseLsatScoreValue(input.startingScore)
+      const nameParts = requireLawHubNameParts({
+        firstName: input.firstName,
+        lastName: input.lastName,
+        fullName: input.fullName,
+      })
 
       const existing = await deps.repository.getProfileById(userId)
       const profile = await deps.repository.upsertProfile({
         id: userId,
         email: existing?.email ?? null,
-        full_name: input.fullName.trim() || null,
+        full_name: joinLawHubFullName(nameParts.firstName, nameParts.lastName),
+        first_name: nameParts.firstName,
+        last_name: nameParts.lastName,
         student_coaching_id: existing?.student_coaching_id ?? null,
       })
 

@@ -8,9 +8,17 @@ type AuthSplitHeaderProps = {
   ctaHref?: "/login" | "/signup"
   ctaPrompt?: string
   variant?: "auth" | "app" | "intent"
+  /** Hide intent header sign-in prompt (e.g. user already authenticated). */
+  hideIntentSignIn?: boolean
 }
 
-function AuthSplitHeader({ ctaLabel, ctaHref, ctaPrompt, variant = "auth" }: AuthSplitHeaderProps) {
+function AuthSplitHeader({
+  ctaLabel,
+  ctaHref,
+  ctaPrompt,
+  variant = "auth",
+  hideIntentSignIn = false,
+}: AuthSplitHeaderProps) {
   if (variant === "intent") {
     return (
       <header className="auth-split-header auth-split-header--intent">
@@ -21,12 +29,14 @@ function AuthSplitHeader({ ctaLabel, ctaHref, ctaPrompt, variant = "auth" }: Aut
           <Button asChild className="auth-split-header-intent-upgrade">
             <Link to="/signup">Upgrade · $99/mo</Link>
           </Button>
-          <p className="auth-split-cta">
-            Already have an account?{" "}
-            <Link to="/login" className="font-semibold text-[#0d47a1]">
-              Sign In
-            </Link>
-          </p>
+          {!hideIntentSignIn ? (
+            <p className="auth-split-cta">
+              Already have an account?{" "}
+              <Link to="/login" className="font-semibold text-[#0d47a1]">
+                Sign In
+              </Link>
+            </p>
+          ) : null}
         </div>
       </header>
     )

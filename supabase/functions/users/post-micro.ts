@@ -2,6 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import { CORS_EDGE_NARROW, json } from '../_shared/edge-http.ts'
 import { createLawHubClient } from '../_shared/lawhub-client.ts'
 import { parseLawHubEnv } from '../_shared/lawhub-env.ts'
+import { isLawHubIdentityError } from '../_shared/lawhub-student-identity.ts'
 import { createLsacSyncRepository } from '../lsac-sync/lsac-sync.repository.ts'
 import { createLsacSyncService } from '../lsac-sync/lsac-sync.service.ts'
 import { createUsersRepository, createServiceRoleClient } from './users.repository.ts'
@@ -198,27 +199,42 @@ export async function handleUsersPostMicro(req: Request, slug: string): Promise<
     }
 
     if (action === 'users-save-onboarding') {
+      const firstName = typeof body.firstName === 'string' ? body.firstName : ''
+      const lastName = typeof body.lastName === 'string' ? body.lastName : ''
       const fullName = typeof body.fullName === 'string' ? body.fullName : ''
-      if (!fullName.trim()) {
-        return json({ error: 'fullName is required' }, { status: 400 }, corsHeaders)
+      if (!firstName.trim() && !lastName.trim() && !fullName.trim()) {
+        return json(
+          { error: 'firstName and lastName are required', code: 'LAWHUB_NAME_REQUIRED' },
+          { status: 400 },
+          corsHeaders,
+        )
       }
-      const result = await service.saveOnboarding(user.id, {
-        fullName,
-        username: typeof body.username === 'string' ? body.username : null,
-        plannedLsatWindow:
-          typeof body.plannedLsatWindow === 'string' ? body.plannedLsatWindow : null,
-        plannedLsatDate: typeof body.plannedLsatDate === 'string' ? body.plannedLsatDate : null,
-        lawSchoolCycle: typeof body.lawSchoolCycle === 'string' ? body.lawSchoolCycle : null,
-        goalScore: body.goalScore,
-        startingScore: body.startingScore,
-        studyDays: Array.isArray(body.studyDays)
-          ? body.studyDays.filter((d): d is string => typeof d === 'string')
-          : undefined,
-        studyHoursLabel:
-          typeof body.studyHoursLabel === 'string' ? body.studyHoursLabel : null,
-        wantsLessons: typeof body.wantsLessons === 'boolean' ? body.wantsLessons : undefined,
-      })
-      return json(result, {}, corsHeaders)
+      try {
+        const result = await service.saveOnboarding(user.id, {
+          firstName: firstName.trim() || undefined,
+          lastName: lastName.trim() || undefined,
+          fullName: fullName.trim() || undefined,
+          username: typeof body.username === 'string' ? body.username : null,
+          plannedLsatWindow:
+            typeof body.plannedLsatWindow === 'string' ? body.plannedLsatWindow : null,
+          plannedLsatDate: typeof body.plannedLsatDate === 'string' ? body.plannedLsatDate : null,
+          lawSchoolCycle: typeof body.lawSchoolCycle === 'string' ? body.lawSchoolCycle : null,
+          goalScore: body.goalScore,
+          startingScore: body.startingScore,
+          studyDays: Array.isArray(body.studyDays)
+            ? body.studyDays.filter((d): d is string => typeof d === 'string')
+            : undefined,
+          studyHoursLabel:
+            typeof body.studyHoursLabel === 'string' ? body.studyHoursLabel : null,
+          wantsLessons: typeof body.wantsLessons === 'boolean' ? body.wantsLessons : undefined,
+        })
+        return json(result, {}, corsHeaders)
+      } catch (error) {
+        if (isLawHubIdentityError(error)) {
+          return json({ error: error.message, code: error.code }, { status: 400 }, corsHeaders)
+        }
+        throw error
+      }
     }
 
     if (action === 'users-get-study-context') {

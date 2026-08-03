@@ -16,6 +16,8 @@ export type UserProfile = {
   id: string
   email: string | null
   full_name: string | null
+  first_name: string | null
+  last_name: string | null
   role: 'student' | 'admin' | 'super_admin'
   student_coaching_id: string | null
   is_first_time_login: boolean
@@ -85,7 +87,10 @@ export type StudentStudyContext = {
 }
 
 export type SaveOnboardingInput = {
-  fullName: string
+  firstName: string
+  lastName: string
+  /** @deprecated Prefer firstName + lastName */
+  fullName?: string
   username?: string | null
   plannedLsatWindow?: string | null
   plannedLsatDate?: string | null

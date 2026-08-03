@@ -2,12 +2,13 @@ import Stripe from 'npm:stripe@17.7.0'
 import { resolveAppBaseUrlForCheckout, resolveAppBaseUrlFromEnv } from '../_shared/app-base-url.ts'
 import { CORS_EDGE_NARROW, json, optionsOk, requireAuthUser } from '../_shared/edge-http.ts'
 import { formatUnknownError } from '../_shared/format-error.ts'
+import { isLawHubIdentityError } from '../_shared/lawhub-student-identity.ts'
 import { createStripeClient } from '../_shared/stripe-client.ts'
 import { parseStripeEnv } from '../_shared/stripe-env.ts'
 import { createServiceRoleClient, createUsersRepository } from '../users/users.repository.ts'
 import { createUsersService } from '../users/users.service.ts'
 import { createBillingRepository } from './billing.repository.ts'
-import { createBillingService, parseCheckoutPlan } from './billing.service.ts'
+import { createBillingService, parseCheckoutPlan, parseCheckoutSuccessPath } from './billing.service.ts'
 
 const cors = CORS_EDGE_NARROW
 
@@ -87,16 +88,22 @@ export async function handleBillingCreateCheckoutSession(req: Request): Promise<
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
     const plan = parseCheckoutPlan(body.plan)
     const includeLawHub = body.includeLawHub !== false
+    const successPath = parseCheckoutSuccessPath(body.successPath)
     const result = await service.createCheckoutSession(
       auth.user.id,
       auth.user.email ?? null,
       plan,
-      { includeLawHub },
+      { includeLawHub, successPath },
     )
     return json(result, {}, cors)
   } catch (error) {
+    if (isLawHubIdentityError(error)) {
+      return json({ error: error.message, code: error.code }, { status: 400 }, cors)
+    }
     const message = formatUnknownError(error)
-    return json({ error: message }, { status: 500 }, cors)
+    const status =
+      message.includes('plan must be') || message.includes('successPath must be') ? 400 : 500
+    return json({ error: message }, { status }, cors)
   }
 }
 

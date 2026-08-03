@@ -1,5 +1,12 @@
 /** Normalizes LawHub vendor API student payloads into our profile shape. */
 
+import {
+  joinLawHubFullName,
+  splitFullName,
+} from '../_shared/lawhub-student-identity.ts'
+
+export { splitFullName }
+
 export type LsacStudentPayload = {
   studentCoachingId?: string
   emailAddress?: string
@@ -11,18 +18,10 @@ export type ProfileUpsertInput = {
   id: string
   email: string | null
   full_name: string | null
+  first_name?: string | null
+  last_name?: string | null
   role?: 'student' | 'admin'
   student_coaching_id: string | null
-}
-
-export function splitFullName(
-  fullName: string | null | undefined,
-): { firstName: string; lastName: string } {
-  const trimmed = fullName?.trim() ?? ''
-  if (!trimmed) return { firstName: '', lastName: '' }
-  const parts = trimmed.split(/\s+/)
-  if (parts.length === 1) return { firstName: parts[0]!, lastName: '' }
-  return { firstName: parts[0]!, lastName: parts.slice(1).join(' ') }
 }
 
 export function mapLsacStudentToProfileUpsert(
@@ -30,12 +29,18 @@ export function mapLsacStudentToProfileUpsert(
   lsac: LsacStudentPayload,
 ): ProfileUpsertInput {
   const email = lsac.emailAddress?.trim().toLowerCase() ?? null
+  const firstName = lsac.firstName?.trim() || null
+  const lastName = lsac.lastName?.trim() || null
   const fullName =
-    [lsac.firstName, lsac.lastName].filter(Boolean).join(' ').trim() || null
+    firstName || lastName
+      ? joinLawHubFullName(firstName ?? '', lastName ?? '') || null
+      : null
   return {
     id: userId,
     email,
     full_name: fullName,
+    first_name: firstName,
+    last_name: lastName,
     student_coaching_id: lsac.studentCoachingId?.trim() ?? null,
   }
 }

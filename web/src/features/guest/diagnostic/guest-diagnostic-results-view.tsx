@@ -1,58 +1,57 @@
-import { Check, ChevronRight, X } from "lucide-react"
-import { Link } from "react-router-dom"
+import { useEffect, useMemo, useState } from 'react'
+import { Check, ChevronRight, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
-import { buildGuestDiagnosticPremiumQuestionDetail } from "@/features/guest/diagnostic/guest-diagnostic-premium-question-mock"
-import type { GuestDiagnosticResult } from "@/features/guest/diagnostic/guest-diagnostic-result-storage"
-import { getMiniDiagnosticQuestionMeta } from "@/features/guest/diagnostic/mini-diagnostic-content"
+import { GuestDiagnosticExplanationCard } from '@/features/guest/diagnostic/guest-diagnostic-explanation-card'
+import type { GuestDiagnosticResult } from '@/features/guest/diagnostic/guest-diagnostic-result-storage'
+import { getMiniDiagnosticQuestionMeta } from '@/features/guest/diagnostic/mini-diagnostic-content'
 import {
   formatDiagnosticDateLabel,
   getDiagnosticIntentTitle,
-} from "@/features/guest/diagnostic/guest-diagnostic-result-storage"
+} from '@/features/guest/diagnostic/guest-diagnostic-result-storage'
 import {
   GuestDiagnosticResultsActions,
   GuestFreePlanUpgradeBanner,
-} from "@/features/guest/diagnostic/guest-upgrade-cta"
-import { useGuestPremiumAccount } from "@/features/guest/premium/guest-premium-account"
+} from '@/features/guest/diagnostic/guest-upgrade-cta'
+import { useDiagnosticSubscription } from '@/features/guest/diagnostic/use-diagnostic-subscription'
 import {
   PT_RESULTS_PAGE_BG_CLASS,
   PT_RESULTS_PAGE_GAP_CLASS,
   PT_RESULTS_SURFACE_CARD_CLASS,
-} from "@/features/student/analytics/prep-test-results-section-styles"
-import { StudentMain } from "@/features/student/components/student-main"
-import { PracticeQuestionResultCard } from "@/features/student/practice-session/practice-question-result-card"
-import { cn } from "@/lib/utils"
-
-type GuestDiagnosticResultsVariant = "free" | "premium"
+} from '@/features/student/analytics/prep-test-results-section-styles'
+import { StudentMain } from '@/features/student/components/student-main'
+import { createDiagnosticApi, type MiniDiagnosticExplanation } from '@/lib/api/diagnostic'
+import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { cn } from '@/lib/utils'
 
 type GuestDiagnosticResultsViewProps = {
   result: GuestDiagnosticResult
-  variant?: GuestDiagnosticResultsVariant
   startDiagnosticHref?: string
-  usePreviewModal?: boolean
+  refreshSubscription?: () => void
 }
 
 function OutcomePill({
   index,
   isCorrect,
-  size = "md",
+  size = 'md',
 }: {
   index: number
   isCorrect: boolean
-  size?: "md" | "lg"
+  size?: 'md' | 'lg'
 }) {
-  const sizeClass = size === "lg" ? "size-12" : "size-9"
-  const iconSize = size === "lg" ? "size-5" : "size-4"
+  const sizeClass = size === 'lg' ? 'size-12' : 'size-9'
+  const iconSize = size === 'lg' ? 'size-5' : 'size-4'
 
   return (
     <span
       className={cn(
-        "inline-flex items-center justify-center rounded-full border text-sm font-semibold",
+        'inline-flex items-center justify-center rounded-full border text-sm font-semibold',
         sizeClass,
         isCorrect
-          ? "border-[#00bc54] bg-[#e8fff1] text-[#00bc54]"
-          : "border-[#df1c41] bg-[#fff0f3] text-[#df1c41]",
+          ? 'border-[#00bc54] bg-[#e8fff1] text-[#00bc54]'
+          : 'border-[#df1c41] bg-[#fff0f3] text-[#df1c41]',
       )}
-      aria-label={`Question ${index + 1}: ${isCorrect ? "correct" : "incorrect"}`}
+      aria-label={`Question ${index + 1}: ${isCorrect ? 'correct' : 'incorrect'}`}
     >
       {isCorrect ? (
         <Check className={iconSize} strokeWidth={2.5} />
@@ -128,8 +127,7 @@ function GuestDiagnosticFreeScoreCards({
   )
 }
 
-/** Figma `19657:47945` — premium diagnostic summary row */
-function GuestDiagnosticPremiumScoreCards({
+function GuestDiagnosticPaidScoreCards({
   result,
   startDiagnosticHref,
 }: {
@@ -200,8 +198,8 @@ function GuestDiagnosticLockedQuestionRow({
       <div className="flex gap-4 p-6">
         <div
           className={cn(
-            "flex size-14 shrink-0 items-center justify-center rounded-[14px] text-lg font-bold text-white",
-            isCorrect ? "bg-[#00bc54]" : "bg-[#df1c41]",
+            'flex size-14 shrink-0 items-center justify-center rounded-[14px] text-lg font-bold text-white',
+            isCorrect ? 'bg-[#00bc54]' : 'bg-[#df1c41]',
           )}
         >
           {number}
@@ -209,7 +207,7 @@ function GuestDiagnosticLockedQuestionRow({
         <div className="min-w-0 flex-1 select-none blur-[6px]">
           <p className="text-lg font-semibold text-[#062357]">
             Mini Diagnostic · Q{number}
-            {meta?.questionType ? ` · ${meta.questionType}` : ""}
+            {meta?.questionType ? ` · ${meta.questionType}` : ''}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <span className="rounded-full border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px]">LR</span>
@@ -238,24 +236,76 @@ function GuestDiagnosticLockedQuestionRow({
 
 function GuestDiagnosticResultsView({
   result,
-  variant = "free",
-  startDiagnosticHref = "/diagnostic/start",
-  usePreviewModal = false,
+  startDiagnosticHref = '/diagnostic/start',
+  refreshSubscription,
 }: GuestDiagnosticResultsViewProps) {
-  const premiumAccount = useGuestPremiumAccount()
-  const isPremium = variant === "premium" || premiumAccount != null
+  const { hasActiveCore, loading: subscriptionLoading, refresh } = useDiagnosticSubscription()
+  const [explanations, setExplanations] = useState<MiniDiagnosticExplanation[]>([])
+  const [explanationsLoading, setExplanationsLoading] = useState(false)
+  const [explanationsError, setExplanationsError] = useState<string | null>(null)
+
+  useEffect(() => {
+    refreshSubscription?.()
+  }, [refreshSubscription])
+
+  useEffect(() => {
+    if (!hasActiveCore) {
+      setExplanations([])
+      setExplanationsError(null)
+      return
+    }
+
+    let alive = true
+    setExplanationsLoading(true)
+    setExplanationsError(null)
+
+    const diagnosticApi = createDiagnosticApi(getSupabaseBrowserClient())
+    void diagnosticApi
+      .getMiniDiagnosticExplanations()
+      .then((payload) => {
+        if (!alive) return
+        if (payload.explanationsLocked) {
+          setExplanations([])
+          refresh()
+          return
+        }
+        setExplanations(payload.explanations)
+      })
+      .catch((err) => {
+        if (!alive) return
+        setExplanations([])
+        setExplanationsError(err instanceof Error ? err.message : String(err))
+      })
+      .finally(() => {
+        if (alive) setExplanationsLoading(false)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [hasActiveCore, refresh])
+
+  const explanationsById = useMemo(() => {
+    const map = new Map<string, MiniDiagnosticExplanation>()
+    for (const explanation of explanations) {
+      map.set(explanation.sourceItemId, explanation)
+    }
+    return map
+  }, [explanations])
+
+  const showPaidContent = hasActiveCore && !subscriptionLoading
 
   return (
-    <StudentMain className={PT_RESULTS_PAGE_BG_CLASS} contentClassName={cn(PT_RESULTS_PAGE_GAP_CLASS, "pb-8")}>
-      {!isPremium ? <GuestFreePlanUpgradeBanner usePreviewModal={usePreviewModal} /> : null}
+    <StudentMain className={PT_RESULTS_PAGE_BG_CLASS} contentClassName={cn(PT_RESULTS_PAGE_GAP_CLASS, 'pb-8')}>
+      {!showPaidContent ? <GuestFreePlanUpgradeBanner /> : null}
 
-      {isPremium ? (
-        <GuestDiagnosticPremiumScoreCards result={result} startDiagnosticHref={startDiagnosticHref} />
+      {showPaidContent ? (
+        <GuestDiagnosticPaidScoreCards result={result} startDiagnosticHref={startDiagnosticHref} />
       ) : (
         <GuestDiagnosticFreeScoreCards result={result} startDiagnosticHref={startDiagnosticHref} />
       )}
 
-      <section className={cn(PT_RESULTS_SURFACE_CARD_CLASS, "overflow-hidden")}>
+      <section className={cn(PT_RESULTS_SURFACE_CARD_CLASS, 'overflow-hidden')}>
         <div className="flex flex-col gap-3 border-b border-[#dfe1e7] px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-2xl font-bold leading-[1.3] text-[#062357]">
             Total Questions: {result.questionCount}
@@ -274,19 +324,24 @@ function GuestDiagnosticResultsView({
           </label>
         </div>
 
-        {isPremium
+        {showPaidContent && explanationsLoading ? (
+          <p className="px-6 py-8 text-sm text-[#666d80]">Loading explanations…</p>
+        ) : null}
+
+        {showPaidContent && explanationsError ? (
+          <p className="px-6 py-8 text-sm text-[#df1c41]">{explanationsError}</p>
+        ) : null}
+
+        {showPaidContent
           ? result.outcomes.map((outcome, index) => {
-              const detail = buildGuestDiagnosticPremiumQuestionDetail(outcome.questionId)
-              if (!detail) return null
+              const explanation = explanationsById.get(outcome.questionId)
+              if (!explanation) return null
               return (
-                <PracticeQuestionResultCard
+                <GuestDiagnosticExplanationCard
                   key={outcome.questionId}
                   number={index + 1}
-                  detail={detail}
+                  explanation={explanation}
                   isCorrect={outcome.isCorrect}
-                  selectedAnswer={outcome.isCorrect ? detail.correctChoiceId ?? undefined : undefined}
-                  yourTimeSeconds={null}
-                  variant="in-section"
                 />
               )
             })
@@ -300,11 +355,9 @@ function GuestDiagnosticResultsView({
             ))}
       </section>
 
-      {!isPremium ? (
-        <GuestDiagnosticResultsActions usePreviewModal={usePreviewModal} />
-      ) : null}
+      {!showPaidContent ? <GuestDiagnosticResultsActions /> : null}
     </StudentMain>
   )
 }
 
-export { GuestDiagnosticResultsView, type GuestDiagnosticResultsVariant }
+export { GuestDiagnosticResultsView }

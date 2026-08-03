@@ -3,7 +3,6 @@ import { useCallback, useLayoutEffect, useState, type ReactNode } from "react"
 import { StudentAppHeader } from "@/features/app-shell/student-app-header"
 import { GuestFreePlanSidebar } from "@/features/guest/diagnostic/guest-free-plan-sidebar"
 import { GuestUpgradeCta } from "@/features/guest/diagnostic/guest-upgrade-cta"
-import { GuestPricingModalProvider } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { cn } from "@/lib/utils"
 
 type GuestFreeDashboardShellProps = {
@@ -24,7 +23,6 @@ function GuestFreeDashboardShell({ children, dashboardHref }: GuestFreeDashboard
   }, [])
 
   return (
-    <GuestPricingModalProvider>
     <div className={cn("flex h-svh min-h-0 overflow-hidden bg-[var(--primary-0)]")}>
       <GuestFreePlanSidebar
         mobileOpen={mobileNavOpen}
@@ -40,7 +38,6 @@ function GuestFreeDashboardShell({ children, dashboardHref }: GuestFreeDashboard
         <div className="flex h-0 min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
       </div>
     </div>
-    </GuestPricingModalProvider>
   )
 }
 

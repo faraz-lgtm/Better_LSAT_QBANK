@@ -4,15 +4,18 @@ import { ONBOARDING_RECOMMENDED_LSAT_DATE } from "@/features/auth/onboarding/onb
 import { OnboardingWelcomeStep } from "@/features/auth/onboarding/onboarding-welcome-step"
 
 function OnboardingWelcomePreviewPage() {
-  const [fullName, setFullName] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [plannedLsatDate, setPlannedLsatDate] = useState(ONBOARDING_RECOMMENDED_LSAT_DATE)
 
   return (
     <OnboardingWelcomeStep
-      fullName={fullName}
-      onFullNameChange={setFullName}
+      firstName={firstName}
+      onFirstNameChange={setFirstName}
+      lastName={lastName}
+      onLastNameChange={setLastName}
       password={password}
       onPasswordChange={setPassword}
       confirmPassword={confirmPassword}

@@ -16,6 +16,8 @@ Deno.test('mapLsacStudentToProfileUpsert lowercases email and trims coaching id'
   assertEquals(row.id, 'user-uuid')
   assertEquals(row.email, 'student@example.com')
   assertEquals(row.full_name, 'Ada Lovelace')
+  assertEquals(row.first_name, 'Ada')
+  assertEquals(row.last_name, 'Lovelace')
   assertEquals(row.student_coaching_id, 'coach-id')
 })
 
@@ -23,6 +25,8 @@ Deno.test('mapLsacStudentToProfileUpsert handles missing optional fields', () =>
   const row = mapLsacStudentToProfileUpsert('u2', {})
   assertEquals(row.email, null)
   assertEquals(row.full_name, null)
+  assertEquals(row.first_name, null)
+  assertEquals(row.last_name, null)
   assertEquals(row.student_coaching_id, null)
 })
 

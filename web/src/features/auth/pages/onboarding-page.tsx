@@ -15,6 +15,7 @@ import { createUsersApi } from "@/lib/api/users"
 import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
 import { hasPendingDiagnosticIntent, isInDiagnosticAcquisitionFunnel, readDiagnosticIntent } from "@/lib/auth/diagnostic-intent"
 import { userNeedsPasswordSetup } from "@/lib/auth/password-setup"
+import { splitFullName } from "@/lib/lawhub-identity"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
@@ -25,7 +26,8 @@ const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"
 function OnboardingPage() {
   const navigate = useNavigate()
   const [step, setStep] = useState<Step>(1)
-  const [fullName, setFullName] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
   const [plannedLsatDate, setPlannedLsatDate] = useState(ONBOARDING_RECOMMENDED_LSAT_DATE)
   const [studyDays, setStudyDays] = useState<string[]>(days.slice(0, 5))
   const [studyHours, setStudyHours] = useState("1-2 hours/day")
@@ -84,7 +86,14 @@ function OnboardingPage() {
           return
         }
         setRequiresPassword(userNeedsPasswordSetup(user, session))
-        if (profile?.full_name) setFullName(profile.full_name)
+        if (profile?.first_name || profile?.last_name) {
+          setFirstName(profile.first_name?.trim() ?? "")
+          setLastName(profile.last_name?.trim() ?? "")
+        } else if (profile?.full_name) {
+          const names = splitFullName(profile.full_name)
+          setFirstName(names.firstName)
+          setLastName(names.lastName)
+        }
       } catch (e) {
         if (!alive) return
         setError(e instanceof Error ? formatSupabaseCallError(e) : "Unable to load onboarding details.")
@@ -99,7 +108,9 @@ function OnboardingPage() {
   }, [authApi, navigate, usersApi])
 
   function validateStep1(): boolean {
-    if (!fullName.trim()) return setError("Full name is required."), false
+    if (!firstName.trim() || !lastName.trim()) {
+      return setError("First and last name are required for LawHub registration."), false
+    }
     if (!plannedLsatDate) return setError("Please select when you plan to take the LSAT."), false
     if (requiresPassword) {
       if (password.length < 8) return setError("Password must be at least 8 characters."), false
@@ -120,7 +131,8 @@ function OnboardingPage() {
     try {
       if (requiresPassword) await authApi.updatePassword(password)
       await usersApi.saveOnboarding({
-        fullName,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         plannedLsatDate: plannedLsatDate === "not_sure" ? null : plannedLsatDate,
         plannedLsatWindow: plannedLsatDate === "not_sure" ? "not_sure" : null,
         lawSchoolCycle: lawSchoolCycle.trim() || null,
@@ -158,7 +170,8 @@ function OnboardingPage() {
     try {
       if (requiresPassword) await authApi.updatePassword(password)
       await usersApi.saveOnboarding({
-        fullName,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         plannedLsatDate: plannedLsatDate === "not_sure" ? null : plannedLsatDate,
         plannedLsatWindow: plannedLsatDate === "not_sure" ? "not_sure" : null,
       })
@@ -205,8 +218,10 @@ function OnboardingPage() {
   if (step === 1) {
     return (
       <OnboardingWelcomeStep
-        fullName={fullName}
-        onFullNameChange={setFullName}
+        firstName={firstName}
+        onFirstNameChange={setFirstName}
+        lastName={lastName}
+        onLastNameChange={setLastName}
         password={password}
         onPasswordChange={setPassword}
         confirmPassword={confirmPassword}

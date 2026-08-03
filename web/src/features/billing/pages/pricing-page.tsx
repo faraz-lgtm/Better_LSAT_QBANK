@@ -8,9 +8,10 @@ import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { createBillingApi, type BillingCatalog, type BillingPlanId } from "@/lib/api/billing"
 import { createUsersApi } from "@/lib/api/users"
 import { logRouteRedirect } from "@/lib/auth/log-route-redirect"
-import { isInDiagnosticAcquisitionFunnel } from "@/lib/auth/diagnostic-intent"
+import { isInDiagnosticAcquisitionFunnel, readDiagnosticFunnelState } from "@/lib/auth/diagnostic-intent"
+import { emailAllowsLawHub, profileHasLawHubName } from "@/lib/lawhub-identity"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
+import { formatEdgeFunctionError, formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 import { cn } from "@/lib/utils"
 
 const CORE_FEATURES = [
@@ -163,8 +164,14 @@ function PricingPage() {
     }
     if (usersApi) {
       const profile = await usersApi.getMyProfile()
-      if (!profile?.full_name?.trim()) {
-        logRouteRedirect("/app/pricing", "/onboarding", "missing full_name before checkout")
+      if (!emailAllowsLawHub(profile?.email)) {
+        setError(
+          'Your email uses a "+" tag, which LSAC does not allow. Update your account email before checkout.',
+        )
+        return
+      }
+      if (!profileHasLawHubName(profile)) {
+        logRouteRedirect("/app/pricing", "/onboarding", "missing LawHub first/last name before checkout")
         navigate("/onboarding", { replace: true })
         return
       }
@@ -172,13 +179,25 @@ function PricingPage() {
     setCheckoutPlan(plan)
     setError(null)
     try {
+      const funnel = readDiagnosticFunnelState()
+      const successPath = funnel.completedDiagnostic
+        ? '/app/diagnostic/results?checkout=success'
+        : undefined
       const url = await billingApi.createCheckoutSession(plan, {
         includeLawHub: !existingLsacMode,
+        successPath,
       })
       window.location.assign(url)
     } catch (checkoutError) {
       const message =
-        checkoutError instanceof Error ? formatSupabaseCallError(checkoutError) : "Unable to start checkout."
+        checkoutError instanceof Error
+          ? formatEdgeFunctionError(checkoutError)
+          : "Unable to start checkout."
+      if (message.includes("First and last name") || message.includes("LAWHUB_NAME")) {
+        logRouteRedirect("/app/pricing", "/onboarding", "server rejected checkout: name required")
+        navigate("/onboarding", { replace: true })
+        return
+      }
       setError(message.includes("not configured") ? "Billing is not configured on the server." : message)
       setCheckoutPlan(null)
     }

@@ -7,7 +7,9 @@ import type { UserEntitlement, UserProfile } from "@/lib/api/users"
 const baseStudent: UserProfile = {
   id: "u-1",
   email: "x@example.com",
-  full_name: "X",
+  full_name: "X Y",
+  first_name: "X",
+  last_name: "Y",
   role: "student",
   is_first_time_login: false,
   student_coaching_id: null,

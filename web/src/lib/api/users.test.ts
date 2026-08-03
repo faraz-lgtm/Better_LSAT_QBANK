@@ -174,21 +174,23 @@ describe('createUsersApi', () => {
   it('saveOnboarding invokes users-save-onboarding', async () => {
     const invoke = vi.fn().mockResolvedValue({
       data: {
-        profile: { id: 'u1', full_name: 'Ada' },
+        profile: { id: 'u1', full_name: 'Ada Lovelace', first_name: 'Ada', last_name: 'Lovelace' },
         preferences: { userId: 'u1', goalScore: 170 },
       },
       error: null,
     })
     const api = createUsersApi(mockSupabase(invoke))
     await api.saveOnboarding({
-      fullName: 'Ada',
+      firstName: 'Ada',
+      lastName: 'Lovelace',
       goalScore: '170',
       startingScore: "I haven't taken an LSAT yet",
     })
     expect(invoke).toHaveBeenCalledWith('users-save-onboarding', {
       method: 'POST',
       body: {
-        fullName: 'Ada',
+        firstName: 'Ada',
+        lastName: 'Lovelace',
         goalScore: '170',
         startingScore: "I haven't taken an LSAT yet",
       },

@@ -55,17 +55,25 @@ function intentNavigationState(tier: DiagnosticIntentTier) {
   return { from: "intent" as const, intent: tier }
 }
 
-function IntentPage() {
+type IntentPageProps = {
+  isAuthenticated?: boolean
+}
+
+function IntentPage({ isAuthenticated = false }: IntentPageProps) {
   const navigate = useNavigate()
   const [selectedTier, setSelectedTier] = useState<DiagnosticIntentTier>("quick")
 
   function handleStart() {
     saveDiagnosticIntent(selectedTier)
+    if (isAuthenticated) {
+      navigate(`/diagnostic/start?intent=${selectedTier}`, { replace: true })
+      return
+    }
     navigate("/signup", { state: intentNavigationState(selectedTier) })
   }
 
   return (
-    <AuthLayout headerVariant="intent" contentLayout="intent" hideSidebar>
+    <AuthLayout headerVariant="intent" contentLayout="intent" hideSidebar hideIntentSignIn={isAuthenticated}>
       <div className="intent-page">
         <AuthCard className="intent-page__card">
           <div className="intent-page__header">
@@ -91,17 +99,19 @@ function IntentPage() {
               Start {TIER_LABELS[selectedTier]} Diagnostic
               <ArrowRight className="intent-page__cta-icon" aria-hidden />
             </Button>
-            <p className="intent-page__sign-in-prompt">
-              Already have an account?{" "}
-              <Link
-                to="/login"
-                state={intentNavigationState(selectedTier)}
-                className="font-semibold text-[#0d47a1]"
-                onClick={() => saveDiagnosticIntent(selectedTier)}
-              >
-                Sign in
-              </Link>
-            </p>
+            {!isAuthenticated ? (
+              <p className="intent-page__sign-in-prompt">
+                Already have an account?{" "}
+                <Link
+                  to="/login"
+                  state={intentNavigationState(selectedTier)}
+                  className="font-semibold text-[#0d47a1]"
+                  onClick={() => saveDiagnosticIntent(selectedTier)}
+                >
+                  Sign in
+                </Link>
+              </p>
+            ) : null}
           </div>
         </AuthCard>
       </div>

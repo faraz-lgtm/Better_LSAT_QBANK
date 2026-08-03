@@ -1,41 +1,24 @@
-import { useLocation, useNavigate } from "react-router-dom"
+import { useNavigate } from 'react-router-dom'
 
-import { Button } from "@/components/ui/button"
-import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
-import { cn } from "@/lib/utils"
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 type GuestUpgradeCtaProps = {
-  variant?: "header" | "banner" | "sidebar-primary" | "sidebar-secondary"
+  variant?: 'header' | 'banner' | 'sidebar-primary' | 'sidebar-secondary'
   className?: string
-  /** When true, opens the dev preview pricing modal instead of navigating to /app/pricing */
-  usePreviewModal?: boolean
 }
 
-function useUpgradeAction(usePreviewModal = false) {
+function GuestUpgradeCta({ variant = 'header', className }: GuestUpgradeCtaProps) {
   const navigate = useNavigate()
-  const location = useLocation()
-  const { openPricingModal } = useGuestPricingModal()
-  const isPreviewRoute = location.pathname.includes("/preview")
+  const handleUpgrade = () => navigate('/app/pricing')
 
-  return () => {
-    if (usePreviewModal || isPreviewRoute) {
-      openPricingModal()
-      return
-    }
-    navigate("/app/pricing")
-  }
-}
-
-function GuestUpgradeCta({ variant = "header", className, usePreviewModal = false }: GuestUpgradeCtaProps) {
-  const handleUpgrade = useUpgradeAction(usePreviewModal)
-
-  if (variant === "banner") {
+  if (variant === 'banner') {
     return (
       <Button
         type="button"
         onClick={handleUpgrade}
         className={cn(
-          "h-10 shrink-0 rounded-[10px] bg-[#0d47a1] px-5 text-xs font-bold uppercase tracking-[0.48px] text-white hover:bg-[#0b3d8a]",
+          'h-10 shrink-0 rounded-[10px] bg-[#0d47a1] px-5 text-xs font-bold uppercase tracking-[0.48px] text-white hover:bg-[#0b3d8a]',
           className,
         )}
       >
@@ -44,13 +27,13 @@ function GuestUpgradeCta({ variant = "header", className, usePreviewModal = fals
     )
   }
 
-  if (variant === "sidebar-primary") {
+  if (variant === 'sidebar-primary') {
     return (
       <Button
         type="button"
         onClick={handleUpgrade}
         className={cn(
-          "h-10 w-full rounded-[10px] bg-[#0d47a1] text-sm font-semibold tracking-[0.28px] text-white hover:bg-[#0b3d8a]",
+          'h-10 w-full rounded-[10px] bg-[#0d47a1] text-sm font-semibold tracking-[0.28px] text-white hover:bg-[#0b3d8a]',
           className,
         )}
       >
@@ -59,14 +42,14 @@ function GuestUpgradeCta({ variant = "header", className, usePreviewModal = fals
     )
   }
 
-  if (variant === "sidebar-secondary") {
+  if (variant === 'sidebar-secondary') {
     return (
       <Button
         type="button"
         variant="outline"
         onClick={handleUpgrade}
         className={cn(
-          "h-10 w-full rounded-[10px] border-[#0d47a1] bg-white text-sm font-semibold tracking-[0.28px] text-[#0d47a1] hover:bg-[#edf3ff]",
+          'h-10 w-full rounded-[10px] border-[#0d47a1] bg-white text-sm font-semibold tracking-[0.28px] text-[#0d47a1] hover:bg-[#edf3ff]',
           className,
         )}
       >
@@ -80,7 +63,7 @@ function GuestUpgradeCta({ variant = "header", className, usePreviewModal = fals
       type="button"
       onClick={handleUpgrade}
       className={cn(
-        "hidden h-11 rounded-[12px] bg-[#0d47a1] px-5 text-sm font-semibold tracking-[0.28px] text-white hover:bg-[#0b3d8a] sm:inline-flex",
+        'hidden h-11 rounded-[12px] bg-[#0d47a1] px-5 text-sm font-semibold tracking-[0.28px] text-white hover:bg-[#0b3d8a] sm:inline-flex',
         className,
       )}
     >
@@ -89,50 +72,43 @@ function GuestUpgradeCta({ variant = "header", className, usePreviewModal = fals
   )
 }
 
-function GuestFreePlanUpgradeBanner({ className, usePreviewModal = false }: { className?: string; usePreviewModal?: boolean }) {
+function GuestFreePlanUpgradeBanner({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-[16px] border border-[#b8d4ff] bg-[#edf3ff] px-5 py-4 sm:flex-row sm:items-center sm:justify-between",
+        'flex flex-col gap-3 rounded-[16px] border border-[#b8d4ff] bg-[#edf3ff] px-5 py-4 sm:flex-row sm:items-center sm:justify-between',
         className,
       )}
     >
       <p className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#062357]">
-        Official Performance, Reports, and Score Tracker are now available –{" "}
+        Official Performance, Reports, and Score Tracker are now available –{' '}
         <span className="font-semibold text-[#0d47a1]">95.8%</span> for plan transition
       </p>
-      <GuestUpgradeCta variant="banner" usePreviewModal={usePreviewModal} />
+      <GuestUpgradeCta variant="banner" />
     </div>
   )
 }
 
-function GuestDiagnosticResultsActions({
-  usePreviewModal = false,
-}: {
-  usePreviewModal?: boolean
-}) {
+function GuestDiagnosticResultsActions() {
   const navigate = useNavigate()
-  const handleUpgrade = useUpgradeAction(usePreviewModal)
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
       <Button
         type="button"
         className="h-11 rounded-[12px] bg-[#0d47a1] px-6 text-sm font-semibold tracking-[0.28px] text-white hover:bg-[#0b3d8a]"
-        onClick={handleUpgrade}
+        onClick={() => navigate('/app/pricing')}
       >
         Upgrade to unlock full access
       </Button>
-      {!usePreviewModal ? (
-        <Button
-          type="button"
-          variant="outline"
-          className="h-11 rounded-[12px] border-[#0d47a1] px-6 text-sm font-semibold tracking-[0.28px] text-[#0d47a1] hover:bg-[#edf3ff]"
-          onClick={() => navigate("/app")}
-        >
-          Continue to app
-        </Button>
-      ) : null}
+      <Button
+        type="button"
+        variant="outline"
+        className="h-11 rounded-[12px] border-[#0d47a1] px-6 text-sm font-semibold tracking-[0.28px] text-[#0d47a1] hover:bg-[#edf3ff]"
+        onClick={() => navigate('/app')}
+      >
+        Continue to app
+      </Button>
     </div>
   )
 }
