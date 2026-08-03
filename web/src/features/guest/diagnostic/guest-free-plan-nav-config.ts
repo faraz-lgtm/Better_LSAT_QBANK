@@ -56,12 +56,7 @@ const GUEST_FREE_PLAN_NAV_SECTIONS: GuestFreePlanNavSection[] = [
 ]
 
 function isGuestFreePlanRoute(pathname: string): boolean {
-  return (
-    pathname.startsWith("/app/diagnostic/results") ||
-    pathname.startsWith("/diagnostic/results") ||
-    pathname === "/app" ||
-    pathname === "/app/"
-  )
+  return pathname.startsWith("/app/diagnostic/results") || pathname.startsWith("/diagnostic/results")
 }
 
 function isGuestFreePlanAnalyticsActive(pathname: string): boolean {

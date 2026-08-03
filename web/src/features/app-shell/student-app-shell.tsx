@@ -1,54 +1,64 @@
-import { useCallback, useLayoutEffect, useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { useCallback, useLayoutEffect, useState } from "react"
+import { Outlet, useLocation } from "react-router-dom"
 
-import { StudentAppHeader } from '@/features/app-shell/student-app-header'
-import { PortalChatWidget } from '@/features/app-shell/portal-chat-widget'
-import { isPracticeImmersiveRoute } from '@/features/app-shell/practice-immersive-route'
-import { RequireLsacContentAccess } from '@/features/app-shell/require-lsac-content-access'
-import { StudentAppSidebar } from '@/features/app-shell/student-app-sidebar'
-import { StudentEntitlementProvider } from '@/features/app-shell/student-entitlement-context'
-import { GuestFreePlanSidebar } from '@/features/guest/diagnostic/guest-free-plan-sidebar'
-import { GuestUpgradeCta } from '@/features/guest/diagnostic/guest-upgrade-cta'
-import { useDiagnosticSubscription } from '@/features/guest/diagnostic/use-diagnostic-subscription'
+import { StudentAppHeader } from "@/features/app-shell/student-app-header"
+import { PortalChatWidget } from "@/features/app-shell/portal-chat-widget"
+import { isPracticeImmersiveRoute } from "@/features/app-shell/practice-immersive-route"
+import { RequireLsacContentAccess } from "@/features/app-shell/require-lsac-content-access"
+import { StudentAppSidebar } from "@/features/app-shell/student-app-sidebar"
+import {
+  StudentEntitlementProvider,
+  useStudentEntitlement,
+} from "@/features/app-shell/student-entitlement-context"
+import { resolveStudentShellVariant } from "@/features/app-shell/student-shell-plan-variant"
+import { GuestFreePlanSidebar } from "@/features/guest/diagnostic/guest-free-plan-sidebar"
+import { GuestUpgradeCta } from "@/features/guest/diagnostic/guest-upgrade-cta"
+import { useGuestPremiumAccount } from "@/features/guest/premium/guest-premium-account"
+import { GuestPricingModalProvider } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import {
   StudentPageHeaderSlotProvider,
   useStudentPageHeaderSlotState,
-} from '@/features/app-shell/student-page-header-slot'
-import { cn } from '@/lib/utils'
-import { useLawHubSessionLoginLog } from '@/lib/auth/use-lawhub-session-login-log'
+} from "@/features/app-shell/student-page-header-slot"
+import { cn } from "@/lib/utils"
+import { useLawHubSessionLoginLog } from "@/lib/auth/use-lawhub-session-login-log"
 
-function StudentAppShell() {
+function StudentAppShellLayout() {
   useLawHubSessionLoginLog()
   const location = useLocation()
   const immersive = isPracticeImmersiveRoute(location.pathname)
-  const { hasActiveCore, loading: subscriptionLoading } = useDiagnosticSubscription()
+  const premiumAccount = useGuestPremiumAccount()
+  const { entitlement } = useStudentEntitlement()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), [])
   const { headerActions, breadcrumbTail, setHeaderActions, setBreadcrumbTail } = useStudentPageHeaderSlotState()
 
-  const freePlanShell = !subscriptionLoading && !hasActiveCore
+  const freePlanShell =
+    resolveStudentShellVariant({
+      accessState: entitlement?.accessState ?? null,
+      hasGuestPremiumAccount: Boolean(premiumAccount),
+    }) === "free-plan"
 
   useLayoutEffect(() => {
-    document.documentElement.classList.add('student-shell-active')
+    document.documentElement.classList.add("student-shell-active")
     return () => {
-      document.documentElement.classList.remove('student-shell-active')
+      document.documentElement.classList.remove("student-shell-active")
     }
   }, [])
 
   useLayoutEffect(() => {
-    document.documentElement.classList.toggle('student-shell-immersive', immersive)
+    document.documentElement.classList.toggle("student-shell-immersive", immersive)
     return () => {
-      document.documentElement.classList.remove('student-shell-immersive')
+      document.documentElement.classList.remove("student-shell-immersive")
     }
   }, [immersive])
 
   return (
-    <StudentEntitlementProvider>
-      <StudentPageHeaderSlotProvider setHeaderActions={setHeaderActions} setBreadcrumbTail={setBreadcrumbTail}>
+    <StudentPageHeaderSlotProvider setHeaderActions={setHeaderActions} setBreadcrumbTail={setBreadcrumbTail}>
+      <GuestPricingModalProvider>
         <div
           className={cn(
-            'flex h-svh min-h-0 overflow-hidden',
-            'flex h-svh min-h-0 overflow-hidden bg-[var(--primary-0)]',
+            "flex h-svh min-h-0 overflow-hidden",
+            "flex h-svh min-h-0 overflow-hidden bg-[var(--primary-0)]",
           )}
         >
           {immersive ? null : freePlanShell ? (
@@ -72,7 +82,15 @@ function StudentAppShell() {
           </div>
         </div>
         <PortalChatWidget />
-      </StudentPageHeaderSlotProvider>
+      </GuestPricingModalProvider>
+    </StudentPageHeaderSlotProvider>
+  )
+}
+
+function StudentAppShell() {
+  return (
+    <StudentEntitlementProvider>
+      <StudentAppShellLayout />
     </StudentEntitlementProvider>
   )
 }
