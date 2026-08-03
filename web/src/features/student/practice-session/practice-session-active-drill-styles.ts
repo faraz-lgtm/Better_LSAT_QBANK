@@ -117,7 +117,7 @@ const ACTIVE_DRILL_RESET_RESPONSE_BUTTON_CLASS =
 const ACTIVE_DRILL_OPTION_ROW_UNSELECTED_CLASS = "rounded-[16px] py-1 pl-4 pr-4"
 
 /** Figma `18617:31659` — question stem section (top flush with passage column) */
-const ACTIVE_DRILL_STEM_SECTION_CLASS = "shrink-0 bg-white pb-3 pt-0"
+const ACTIVE_DRILL_STEM_SECTION_CLASS = "shrink-0 pb-3 pt-0"
 
 /** Figma `18617:31676` / `18617:31668` — choice row grid (letter | gap | text) */
 const ACTIVE_DRILL_CHOICE_ROW_GRID_CLASS =

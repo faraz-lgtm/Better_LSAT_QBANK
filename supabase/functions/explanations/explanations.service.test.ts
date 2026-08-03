@@ -30,6 +30,7 @@ function mockRepo(overrides: Partial<ExplanationsRepository> = {}): Explanations
       answeredQuestionIds: [],
     }),
     listLatestAnswerSelectionsForQuestion: async () => [],
+    getLatestUserAnswerSelection: async () => null,
     ...overrides,
   }
 }
@@ -280,6 +281,7 @@ Deno.test('getExplanationDetail returns extended payload', async () => {
   const service = createExplanationsService({
     repository: mockRepo({
       listLatestAnswerSelectionsForQuestion: async () => ['B', 'B', 'A'],
+      getLatestUserAnswerSelection: async () => 'A',
       getQuestionDetail: async () => ({
         id: 'q1',
         question_number: 5,
@@ -318,5 +320,39 @@ Deno.test('getExplanationDetail returns extended payload', async () => {
   assertEquals(d.answerPopularity.length, 2)
   assertEquals(d.answerPopularity.find((r) => r.letter === 'B')?.count, 2)
   assertEquals(d.answerPopularity.find((r) => r.letter === 'B')?.pct, 67)
-  assertEquals(d.tags, ['Flaw'])
+  assertEquals(d.userSelectedLetter, 'A')
+  assertEquals(d.tags, ['Flaw', 'LR'])
+})
+
+Deno.test('getExplanationDetail returns null userSelectedLetter when never answered', async () => {
+  const service = createExplanationsService({
+    repository: mockRepo({
+      getQuestionDetail: async () => ({
+        id: 'q1',
+        question_number: 5,
+        source_group_id: null,
+        stimulus_text: 'Stim',
+        stem_text: 'Stem here',
+        choices: [
+          { optionLetter: 'A', optionContent: 'A text' },
+          { optionLetter: 'B', optionContent: 'B text' },
+        ],
+        correct_answer: 'B',
+        explanation: null,
+        video_url: null,
+        difficulty: 2,
+        question_types: { name: 'Flaw' },
+        admin_sections: {
+          id: 'sec1',
+          section_type: 'LR',
+          section_number: 1,
+          title: 'LR',
+          admin_prep_tests: { id: 'pt1', title: 'PT 100', module_id: 'LSAC100' },
+        },
+      }),
+    }),
+  })
+
+  const d = await service.getExplanationDetail('user-1', 'q1')
+  assertEquals(d.userSelectedLetter, null)
 })

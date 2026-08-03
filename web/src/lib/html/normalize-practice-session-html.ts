@@ -12,6 +12,10 @@ const LAYOUT_STYLE_PROPS = new Set([
   "padding-top",
   "padding-bottom",
   "text-indent",
+  // Drop authoring colors so practice accessibility schemes can inherit
+  "color",
+  "background",
+  "background-color",
 ])
 
 function stripLayoutStyles(style: string): string {

@@ -1354,7 +1354,9 @@ html.student-shell-active #root {
 
 @media (min-width: 768px) {
   .intent-page__grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 40rem;
+    margin-inline: auto;
     align-items: stretch;
     gap: 1.5rem;
   }
@@ -2280,6 +2282,35 @@ select.ds-input {
   background-color: #0d47a1;
 }
 
+.student-sidebar-expandable {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.student-sidebar-subnav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 12px;
+}
+
+.student-sidebar-sublink {
+  padding-left: 28px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  color: #666d80;
+}
+
+.student-sidebar-sublink:hover {
+  color: #062357;
+}
+
+.student-sidebar-sublink.student-sidebar-link--active {
+  color: #0d47a1;
+}
+
 .student-sidebar-footer {
   padding-top: 0;
 }
@@ -3114,6 +3145,12 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
   zoom: var(--practice-zoom-scale, 1);
 }
 
+/* Override .lsat-html-content { color: var(--foreground) } so schemes apply */
+.practice-session-body .lsat-html-content,
+.practice-session-body .practice-session-content {
+  color: inherit;
+}
+
 .practice-session-footer {
   isolation: isolate;
 }
@@ -3203,7 +3240,7 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
 }
 
 .practice-session-card--active-drill .practice-session-content mark[data-highlight="orange"] {
-  background-color: #0bbcc9;
+  background-color: #ff6f00;
 }
 
 .practice-session-card--active-drill .practice-session-content mark[data-highlight="pink"] {

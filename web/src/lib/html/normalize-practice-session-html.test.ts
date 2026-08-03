@@ -19,4 +19,13 @@ describe("normalizePracticeSessionHtml", () => {
     expect(out).not.toContain("margin-left")
     expect(out).toContain("Indented body text.")
   })
+
+  it("strips inline color so accessibility schemes can inherit", () => {
+    const out = normalizePracticeSessionHtml(
+      '<p style="color: #000000; font-weight: bold">Dark text.</p>',
+    )
+    expect(out).not.toContain("color:")
+    expect(out).toContain("font-weight: bold")
+    expect(out).toContain("Dark text.")
+  })
 })

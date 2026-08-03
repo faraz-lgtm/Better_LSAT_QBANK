@@ -80,6 +80,30 @@ export type PrepTestSessionDetail = {
   }>
 }
 
+export type QuestionTypeReviewAttempt = {
+  answerEventId: string
+  questionId: string
+  practiceSessionId: string
+  sessionKind: PracticeSessionKind
+  isCorrect: boolean
+  selectedAnswer: string
+  difficulty: number | null
+  sectionType: "LR" | "RC" | "LG" | null
+  createdAt: string
+  title: string
+  questionNumber: number | null
+  prepTestTitle: string | null
+}
+
+export type QuestionTypeReviewPayload = {
+  questionTypeId: string
+  name: string
+  sectionType: "LR" | "RC" | "LG" | null
+  attemptCount: number
+  correctCount: number
+  attempts: QuestionTypeReviewAttempt[]
+}
+
 export type PracticeSessionSummary = {
   id: string
   kind: PracticeSessionKind
@@ -202,6 +226,16 @@ export function createAnalyticsApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       if (!data) throw new Error("No PrepTest detail returned from analytics")
+      return data
+    },
+
+    async getQuestionTypeReview(questionTypeId: string): Promise<QuestionTypeReviewPayload> {
+      const { data, error } = await invokeAnalyticsFn<QuestionTypeReviewPayload>(
+        "analytics-question-type-review",
+        { questionTypeId, limit: 100 },
+      )
+      if (error) throw error
+      if (!data) throw new Error("No question type review returned from analytics")
       return data
     },
   }

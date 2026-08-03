@@ -438,12 +438,17 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
     async getPriorities(userId: string) {
       const events = await deps.repository.listAnswerEventsWithTypes(userId)
       const diffEvents = await deps.repository.listAnswerEventsWithTypeDifficulty(userId)
-      const byType = new Map<string, { correct: number; total: number }>()
+      const byType = new Map<string, { correct: number; total: number; questionIds: Set<string> }>()
       const difficultyByType = new Map<string, number[]>()
       for (const e of events) {
-        const cur = byType.get(e.question_type_id) ?? { correct: 0, total: 0 }
+        const cur = byType.get(e.question_type_id) ?? {
+          correct: 0,
+          total: 0,
+          questionIds: new Set<string>(),
+        }
         cur.total += 1
         if (e.is_correct) cur.correct += 1
+        if (e.question_id) cur.questionIds.add(e.question_id)
         byType.set(e.question_type_id, cur)
       }
       for (const e of diffEvents) {
@@ -456,7 +461,7 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
       const types = await deps.repository.listQuestionTypesByIds(ids)
       const typeById = new Map(types.map((t) => [t.id, t]))
 
-      const items = [...byType.entries()].map(([questionTypeId, { correct, total }]) => {
+      const items = [...byType.entries()].map(([questionTypeId, { correct, total, questionIds }]) => {
         const meta = typeById.get(questionTypeId)
         const accuracyPct = total > 0 ? round1((100 * correct) / total) : 0
         const goal = meta?.goal_accuracy != null ? Number(meta.goal_accuracy) : null
@@ -467,6 +472,7 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
           diffs.length > 0 ? Math.round(diffs.reduce((a, b) => a + b, 0) / diffs.length) : null
         const avgPerTest =
           meta?.avg_per_test != null ? Number(meta.avg_per_test) : null
+        const uniqueCount = questionIds.size > 0 ? questionIds.size : total
         return {
           questionTypeId,
           name: meta?.name ?? 'Unknown type',
@@ -479,7 +485,7 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
           priorityLevel: pl,
           difficulty,
           averagePerTest: avgPerTest,
-          reviewCount: total,
+          reviewCount: uniqueCount,
         }
       })
 
@@ -730,6 +736,78 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
         topicName: head.topicName,
         explanationHtml: expl.length > 0 ? (row.explanation ?? null) : null,
         videoUrl: vid.length > 0 ? (row.video_url ?? null) : null,
+      }
+    },
+
+    async getQuestionTypeReview(
+      userId: string,
+      questionTypeId: string,
+      options?: { limit?: number },
+    ) {
+      const limit = Math.min(100, Math.max(1, options?.limit ?? 100))
+      const types = await deps.repository.listQuestionTypesByIds([questionTypeId])
+      const meta = types[0] ?? null
+
+      const events = await deps.repository.listAnswerEventsForQuestionType(userId, questionTypeId)
+      // Events are ordered created_at desc — keep first (latest) per question.
+      const latestByQuestion = new Map<string, (typeof events)[number]>()
+      for (const event of events) {
+        if (!latestByQuestion.has(event.question_id)) {
+          latestByQuestion.set(event.question_id, event)
+        }
+      }
+      const latestEvents = [...latestByQuestion.values()].sort((a, b) =>
+        b.created_at.localeCompare(a.created_at),
+      )
+      const page = latestEvents.slice(0, limit)
+
+      const questionMetaRows = await deps.repository.listQuestionsExplanationMetaByIds(
+        page.map((e) => e.question_id),
+      )
+      const questionMetaById = new Map(questionMetaRows.map((row) => [row.id, row]))
+      const correctCount = latestEvents.filter((event) => event.is_correct).length
+
+      const attempts = page.map((event) => {
+        const qMeta = questionMetaById.get(event.question_id)
+        const head = qMeta ? headlineFromQuestionMeta(qMeta) : null
+        const sec = qMeta ? relOne(qMeta.admin_sections) : null
+        const pt = sec ? relOne(sec.admin_prep_tests) : null
+        const questionNumber = head?.questionNumber ?? null
+        const prepTestTitle = head?.prepTestTitle ?? null
+        const moduleId = pt?.module_id ?? null
+        const title =
+          questionNumber != null
+            ? formatQuestionResultTitle(
+              moduleId,
+              prepTestTitle ?? 'PrepTest',
+              sec?.section_number ?? null,
+              questionNumber,
+            )
+            : 'Question'
+
+        return {
+          answerEventId: event.id,
+          questionId: event.question_id,
+          practiceSessionId: event.practice_session_id,
+          sessionKind: event.session_kind,
+          isCorrect: event.is_correct,
+          selectedAnswer: event.selected_answer,
+          difficulty: event.difficulty,
+          sectionType: event.section_type ?? head?.sectionType ?? null,
+          createdAt: event.created_at,
+          title,
+          questionNumber,
+          prepTestTitle,
+        }
+      })
+
+      return {
+        questionTypeId,
+        name: meta?.name ?? 'Unknown type',
+        sectionType: meta?.section_type ?? null,
+        attemptCount: latestEvents.length,
+        correctCount,
+        attempts,
       }
     },
   }

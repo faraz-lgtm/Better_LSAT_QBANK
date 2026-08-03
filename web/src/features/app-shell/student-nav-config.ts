@@ -5,6 +5,7 @@ export type StudentNavSectionKey = "academy" | "prep" | "insights"
 /** Per-item icons from Figma sidebar node `19640:23125`. */
 export type StudentNavItemIconKey =
   | "dashboard"
+  | "diagnostic"
   | "prep-course"
   | "explanations"
   | "drills"
@@ -18,6 +19,7 @@ export type StudentNavItemIconKey =
 
 export const STUDENT_NAV_ITEM_ICON_SRC: Record<StudentNavItemIconKey, string> = {
   dashboard: "/nav/dashboard.svg",
+  diagnostic: "/nav/test.svg",
   "prep-course": "/nav/prep-course.svg",
   explanations: "/nav/explanations.svg",
   drills: "/nav/drills.svg",
@@ -51,6 +53,10 @@ export const STUDENT_MAIN_NAV_SECTION = {
 export const STUDENT_DASHBOARD_HREF = "/app"
 
 export const STUDENT_DASHBOARD_ICON: StudentNavItemIconKey = "dashboard"
+
+export const STUDENT_DIAGNOSTIC_HREF = "/intent"
+
+export const STUDENT_DIAGNOSTIC_ICON: StudentNavItemIconKey = "diagnostic"
 
 export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
   {

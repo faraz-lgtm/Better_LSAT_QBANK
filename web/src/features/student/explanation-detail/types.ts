@@ -71,6 +71,8 @@ export type ExplanationQuestionDetailView = {
     scoreBand: { headline: string; range: string; caption: string }
     answerPopularity: ExplanationAnswerPopularityRow[]
     answerPopularityTotal: number
+    /** Current user's latest submitted answer letter (A–E), or null if never answered. */
+    userSelectedLetter: string | null
     questionStemTags: string[]
     passageTags: string[]
     history: ExplanationHistoryRow[]

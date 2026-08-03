@@ -19,4 +19,18 @@ describe("buildAccessibilityContentStyle", () => {
       "--practice-zoom-scale": "1.25",
     })
   })
+
+  it("maps purple-on-light-green foreground and background", () => {
+    expect(
+      buildAccessibilityContentStyle({
+        colorScheme: "purple-on-light-green",
+        fontScale: 1,
+        zoomScale: 1,
+        lineSpacing: 1,
+      }),
+    ).toMatchObject({
+      "--practice-accessibility-bg": "#e8f8ef",
+      "--practice-accessibility-fg": "#7b3fe4",
+    })
+  })
 })

@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
-import { Link } from "react-router-dom"
-import { ChevronRight } from "lucide-react"
+import { Navigate } from "react-router-dom"
 
-import { Button } from "@/components/ui/button"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
 import { createPrepCourseApi, type PrepCourse } from "@/lib/api/prep-course"
@@ -56,48 +54,23 @@ function PrepCourseListPage() {
     )
   }
 
-  return (
-    <StudentMain>
-      {error ? <p className="mb-4 text-sm text-[#95122b]">{error}</p> : null}
+  if (error) {
+    return (
+      <StudentMain>
+        <p className="mb-4 text-sm text-[#95122b]">{error}</p>
+      </StudentMain>
+    )
+  }
 
-      {courses.length === 0 ? (
+  if (courses.length === 0) {
+    return (
+      <StudentMain>
         <p className="text-sm text-[#666d80]">No courses available yet.</p>
-      ) : (
-        <ul className="grid gap-4 sm:grid-cols-2">
-          {courses.map((course) => (
-            <li key={course.id}>
-              <Link
-                to={`/app/prep-course/${course.slug}`}
-                className="group flex h-full flex-col rounded-2xl border border-[#dfe1e7] bg-white p-6 transition-colors hover:border-[#0d47a1] hover:bg-[#f3f7ff]"
-              >
-                <h2 className="text-xl font-bold leading-[1.3] text-[#062357] group-hover:text-[#0d47a1]">
-                  {course.title}
-                </h2>
-                {course.description ? (
-                  <p className="mt-2 flex-1 text-sm leading-relaxed text-[#666d80]">{course.description}</p>
-                ) : (
-                  <p className="mt-2 flex-1 text-sm text-[#818898]">Open course content</p>
-                )}
-                <div className="mt-4 flex items-center justify-between">
-                  <span className="text-xs font-medium tracking-[0.02em] text-[#6d78b6]">{course.slug}</span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="pointer-events-none h-8 rounded-xl border-[#dfe1e7] bg-white px-3 text-xs font-semibold text-[#0d47a1]"
-                    tabIndex={-1}
-                  >
-                    Open
-                    <ChevronRight className="ml-1 size-4" />
-                  </Button>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </StudentMain>
-  )
+      </StudentMain>
+    )
+  }
+
+  return <Navigate to={`/app/prep-course/${courses[0].slug}`} replace />
 }
 
 export { PrepCourseListPage }

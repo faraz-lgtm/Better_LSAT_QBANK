@@ -594,33 +594,35 @@ function PrepTestListFilters({
   filterTabLabel: (tabId: PrepTestPoolFilter) => string
 }) {
   return (
-    <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-center lg:gap-6">
       <h2 className="shrink-0 text-[24px] font-bold leading-[1.3] text-[#062357]">Start your PrepTest</h2>
-      <div className="flex min-w-0 flex-1 items-center justify-end gap-6 overflow-x-auto pb-1 lg:gap-6">
-        {FILTER_TABS.map((tab) => {
-          const active = filter === tab.id
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setFilter(tab.id)}
-              className={active ? FILTER_PILL_ACTIVE_CLASS : FILTER_PILL_INACTIVE_CLASS}
-            >
-              {filterTabLabel(tab.id)}
-            </button>
-          )
-        })}
-        <div className="w-[160px] shrink-0">
-          <label htmlFor="preptest-sort" className="sr-only">
-            Sort PrepTests
-          </label>
-          <FigmaDropdown
-            id="preptest-sort"
-            variant="pill"
-            value={sort}
-            onChange={(next) => setSort(next as (typeof SORT_OPTIONS)[number])}
-            options={SORT_OPTIONS.map((option) => ({ value: option, label: option }))}
-          />
+      <div className="min-w-0 flex-1 overflow-x-auto pb-1">
+        <div className="flex w-max items-center gap-6 lg:ml-auto">
+          {FILTER_TABS.map((tab) => {
+            const active = filter === tab.id
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setFilter(tab.id)}
+                className={active ? FILTER_PILL_ACTIVE_CLASS : FILTER_PILL_INACTIVE_CLASS}
+              >
+                {filterTabLabel(tab.id)}
+              </button>
+            )
+          })}
+          <div className="w-[160px] shrink-0">
+            <label htmlFor="preptest-sort" className="sr-only">
+              Sort PrepTests
+            </label>
+            <FigmaDropdown
+              id="preptest-sort"
+              variant="pill"
+              value={sort}
+              onChange={(next) => setSort(next as (typeof SORT_OPTIONS)[number])}
+              options={SORT_OPTIONS.map((option) => ({ value: option, label: option }))}
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react"
-import { MemoryRouter } from "react-router-dom"
+import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { PrepCourseListPage } from "./prep-course-list-page"
@@ -25,7 +25,7 @@ describe("PrepCourseListPage", () => {
     listCoursesMock.mockReset()
   })
 
-  it("loads courses and links to course detail", async () => {
+  it("redirects to the first course when courses exist", async () => {
     listCoursesMock.mockResolvedValue([
       {
         id: "c1",
@@ -48,23 +48,30 @@ describe("PrepCourseListPage", () => {
     ])
 
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={["/app/prep-course"]}>
+        <Routes>
+          <Route path="/app/prep-course" element={<PrepCourseListPage />} />
+          <Route path="/app/prep-course/:courseSlug" element={<p>Course content</p>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("Course content")).toBeInTheDocument()
+    })
+  })
+
+  it("shows empty state when no courses are available", async () => {
+    listCoursesMock.mockResolvedValue([])
+
+    render(
+      <MemoryRouter initialEntries={["/app/prep-course"]}>
         <PrepCourseListPage />
       </MemoryRouter>,
     )
 
     await waitFor(() => {
-      expect(listCoursesMock).toHaveBeenCalled()
+      expect(screen.getByText("No courses available yet.")).toBeInTheDocument()
     })
-
-    expect(screen.getByRole("heading", { level: 2, name: "Prep Course" })).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /Foundational LSAT course/i })).toHaveAttribute(
-      "href",
-      "/app/prep-course/prep-course",
-    )
-    expect(screen.getByRole("link", { name: /BetterLSAT Core/i })).toHaveAttribute(
-      "href",
-      "/app/prep-course/betterlsat-core-syllabus",
-    )
   })
 })

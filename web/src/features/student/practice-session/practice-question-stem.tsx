@@ -54,7 +54,7 @@ function PracticeQuestionStem({
             findQuery={findQuery}
             scrollAnchor
             as="div"
-            className="min-w-0 text-lg leading-[1.35] text-[#0d0d12] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-7 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
+            className="min-w-0 text-lg leading-[1.35] text-[color:inherit] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-7 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
             toolMode={toolMode}
             onMouseUp={onContentMouseUp}
             onClickCapture={onContentClick}
@@ -84,7 +84,7 @@ function PracticeQuestionStem({
           findQuery={findQuery}
           scrollAnchor
           as="div"
-          className="min-w-0 flex-1 text-sm font-semibold leading-snug text-[#062357] [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
+          className="min-w-0 flex-1 text-sm font-semibold leading-snug text-[color:inherit] [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
           toolMode={toolMode}
           onMouseUp={onContentMouseUp}
           onClickCapture={onContentClick}

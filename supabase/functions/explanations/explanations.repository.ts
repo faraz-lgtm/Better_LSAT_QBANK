@@ -406,6 +406,21 @@ export function createExplanationsRepository(client: SupabaseClient) {
       }
       return [...latestByUser.values()]
     },
+
+    /** Latest submitted answer for one user on one question. */
+    async getLatestUserAnswerSelection(userId: string, questionId: string): Promise<string | null> {
+      const { data, error } = await client
+        .from('answer_events')
+        .select('selected_answer')
+        .eq('user_id', userId)
+        .eq('question_id', questionId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (error) throw error
+      const answer = (data as { selected_answer: string } | null)?.selected_answer?.trim()
+      return answer || null
+    },
   }
 }
 

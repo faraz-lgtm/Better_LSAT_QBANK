@@ -86,6 +86,8 @@ export type ExplanationDetailPayload = {
     body: string
   }
   answerPopularity: ExplanationAnswerPopularityRow[]
+  /** Current user's latest submitted answer letter (A–E), or null if never answered. */
+  userSelectedLetter: string | null
   difficulty: 1 | 2 | 3 | 4 | 5
 }
 
@@ -764,13 +766,19 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
       const choices = parseQuestionChoices(row.choices, { includeOptionExplanations: true })
       const correctChoiceId = correctChoiceIdFromAnswer(row.correct_answer, choices)
       const letters = popularityLettersFromChoices(choices)
-      const selections = await deps.repository.listLatestAnswerSelectionsForQuestion(questionId)
+      const [selections, rawUserSelection] = await Promise.all([
+        deps.repository.listLatestAnswerSelectionsForQuestion(questionId),
+        deps.repository.getLatestUserAnswerSelection(userId, questionId),
+      ])
       const mappedSelections: string[] = []
       for (const raw of selections) {
         const letter = mapStoredAnswerToLetter(raw, choices, letters)
         if (letter) mappedSelections.push(letter)
       }
       const answerPopularity = buildAnswerPopularity(mappedSelections, letters, correctChoiceId)
+      const userSelectedLetter = rawUserSelection
+        ? mapStoredAnswerToLetter(rawUserSelection, choices, letters)
+        : null
       const passage = resolvePassageForQuestion(row, sec)
       const topicName = qt?.name?.trim() || '—'
 
@@ -793,6 +801,7 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
         correctChoiceId,
         passage,
         answerPopularity,
+        userSelectedLetter,
         difficulty: clampDifficulty(row.difficulty),
       }
     },

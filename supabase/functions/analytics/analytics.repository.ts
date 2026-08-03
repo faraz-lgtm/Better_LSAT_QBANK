@@ -266,7 +266,47 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       const visibility = await this.resolveQuestionVisibility(rows.map((row) => row.question_id))
       return rows
         .filter((row) => visibility.get(row.question_id) === true)
-        .map(({ question_type_id, is_correct }) => ({ question_type_id, is_correct }))
+        .map(({ question_type_id, is_correct, question_id }) => ({
+          question_type_id,
+          is_correct,
+          question_id,
+        }))
+    },
+
+    async listAnswerEventsForQuestionType(userId: string, questionTypeId: string) {
+      const { data, error } = await client
+        .from('answer_events')
+        .select(
+          `
+          id,
+          question_id,
+          practice_session_id,
+          is_correct,
+          selected_answer,
+          difficulty,
+          section_type,
+          session_kind,
+          created_at
+        `,
+        )
+        .eq('user_id', userId)
+        .eq('question_type_id', questionTypeId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      const rows = (data as {
+        id: string
+        question_id: string
+        practice_session_id: string
+        is_correct: boolean
+        selected_answer: string
+        difficulty: number | null
+        section_type: 'LR' | 'RC' | 'LG' | null
+        session_kind: PracticeSessionKind
+        created_at: string
+      }[]) ?? []
+      if (rows.length === 0) return []
+      const visibility = await this.resolveQuestionVisibility(rows.map((row) => row.question_id))
+      return rows.filter((row) => visibility.get(row.question_id) === true)
     },
 
     async listAnswerEventsWithTypeDifficulty(userId: string) {
@@ -660,7 +700,7 @@ export function createAnalyticsRepository(client: SupabaseClient) {
           admin_sections (
             section_type,
             section_number,
-            admin_prep_tests ( title )
+            admin_prep_tests ( title, module_id )
           )
         `,
         )

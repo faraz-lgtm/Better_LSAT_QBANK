@@ -1,5 +1,6 @@
-import { useState, type ComponentType, type SVGProps } from "react"
+import { Fragment, useState, type ComponentType, type SVGProps } from "react"
 
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   ACTIVE_DRILL_SIDE_WIDGET_COLLAPSED_CLASS,
   ACTIVE_DRILL_SIDE_WIDGET_EXPANDED_CLASS,
@@ -122,39 +123,53 @@ function PracticeSessionSideWidget({
   ]
 
   return (
-    <aside
-      className={cn(
-        "absolute right-0 top-6 z-10 flex flex-col",
-        expanded ? ACTIVE_DRILL_SIDE_WIDGET_EXPANDED_CLASS : ACTIVE_DRILL_SIDE_WIDGET_COLLAPSED_CLASS,
-      )}
-      aria-label="Exam tools"
-    >
-      {items.map((item) => {
-        const Icon = item.icon
-        const isFlag = item.id === "flag"
-        return (
-          <button
-            key={item.id}
-            type="button"
-            disabled={item.disabled}
-            className={cn(
-              expanded ? ACTIVE_DRILL_SIDE_WIDGET_ITEM_EXPANDED_CLASS : ACTIVE_DRILL_SIDE_WIDGET_ITEM_CLASS,
-              item.active && "text-[#0d47a1]",
-              item.disabled && "cursor-default opacity-50",
-            )}
-            aria-label={item.label}
-            aria-pressed={item.active || undefined}
-            onClick={item.onClick}
-          >
-            <Icon
-              className={cn("size-5 shrink-0", isFlag && item.active && "fill-current")}
-              aria-hidden
-            />
-            {expanded ? <span className="whitespace-nowrap text-sm font-medium text-[#062357]">{item.label}</span> : null}
-          </button>
-        )
-      })}
-    </aside>
+    <TooltipProvider delayDuration={300}>
+      <aside
+        className={cn(
+          "absolute right-0 top-6 z-10 flex flex-col",
+          expanded ? ACTIVE_DRILL_SIDE_WIDGET_EXPANDED_CLASS : ACTIVE_DRILL_SIDE_WIDGET_COLLAPSED_CLASS,
+        )}
+        aria-label="Exam tools"
+      >
+        {items.map((item) => {
+          const Icon = item.icon
+          const isFlag = item.id === "flag"
+          const button = (
+            <button
+              type="button"
+              disabled={item.disabled}
+              className={cn(
+                expanded ? ACTIVE_DRILL_SIDE_WIDGET_ITEM_EXPANDED_CLASS : ACTIVE_DRILL_SIDE_WIDGET_ITEM_CLASS,
+                item.active && "text-[#0d47a1]",
+                item.disabled && "cursor-default opacity-50",
+              )}
+              aria-label={item.label}
+              aria-pressed={item.active || undefined}
+              onClick={item.onClick}
+            >
+              <Icon
+                className={cn("size-5 shrink-0", isFlag && item.active && "fill-current")}
+                aria-hidden
+              />
+              {expanded ? (
+                <span className="whitespace-nowrap text-sm font-medium text-[#062357]">{item.label}</span>
+              ) : null}
+            </button>
+          )
+
+          if (expanded) {
+            return <Fragment key={item.id}>{button}</Fragment>
+          }
+
+          return (
+            <Tooltip key={item.id}>
+              <TooltipTrigger asChild>{button}</TooltipTrigger>
+              <TooltipContent side="left">{item.label}</TooltipContent>
+            </Tooltip>
+          )
+        })}
+      </aside>
+    </TooltipProvider>
   )
 }
 

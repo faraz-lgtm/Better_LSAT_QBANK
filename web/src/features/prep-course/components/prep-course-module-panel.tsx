@@ -108,7 +108,7 @@ function PrepCourseModulePanel({
       </div>
       <PrepCourseExpandButton
         expandLabel="Expand this Sections"
-        collapseLabel="Collapse this Sections"
+        collapseLabel="Collapse this Section"
         expanded={moduleSectionsExpanded}
         onClick={onExpandModuleSections}
       />

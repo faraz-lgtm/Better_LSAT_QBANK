@@ -47,6 +47,7 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
   let offset = 0
   let sessionKind: PracticeSessionKind | undefined
   let sessionId: string | undefined
+  let questionTypeId: string | undefined
 
   if (req.method === 'GET') {
     const kindParam = url.searchParams.get('kind')
@@ -58,6 +59,8 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
     sessionKind = sk && isSessionKind(sk) ? sk : undefined
     const sid = url.searchParams.get('sessionId')
     sessionId = typeof sid === 'string' && sid.length > 0 ? sid : undefined
+    const qtid = url.searchParams.get('questionTypeId')
+    questionTypeId = typeof qtid === 'string' && qtid.length > 0 ? qtid : undefined
   } else {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
     const readNum = (v: unknown, fallback: number) => {
@@ -72,6 +75,10 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
     offset = Math.max(0, readNum(body.offset, 0))
     sessionKind = skRaw && isSessionKind(skRaw) ? skRaw : undefined
     sessionId = typeof body.sessionId === 'string' && body.sessionId.length > 0 ? body.sessionId : undefined
+    questionTypeId =
+      typeof body.questionTypeId === 'string' && body.questionTypeId.length > 0
+        ? body.questionTypeId
+        : undefined
   }
 
   const service = createAnalyticsService({
@@ -118,6 +125,13 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
         const msg = e instanceof Error ? e.message : 'Not found'
         return json({ error: msg }, { status: 404 }, corsHeaders)
       }
+    }
+    if (resource === 'question-type-review') {
+      if (!questionTypeId) {
+        return json({ error: 'questionTypeId is required' }, { status: 400 }, corsHeaders)
+      }
+      const data = await service.getQuestionTypeReview(user.id, questionTypeId, { limit })
+      return json(data, {}, corsHeaders)
     }
 
     return json({ error: 'Unknown analytics slug' }, { status: 400 }, corsHeaders)

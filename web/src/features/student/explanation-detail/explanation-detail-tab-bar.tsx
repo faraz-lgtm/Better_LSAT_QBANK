@@ -9,6 +9,7 @@ type ExplanationDetailTabBarProps = {
   onTabChange: (t: ExplanationDetailTabId) => void
   prevHref: string | null
   nextHref: string | null
+  showExplanationTab?: boolean
 }
 
 const TABS: { id: ExplanationDetailTabId; label: string }[] = [
@@ -38,7 +39,10 @@ function ExplanationDetailTabBar({
   onTabChange,
   prevHref,
   nextHref,
+  showExplanationTab = false,
 }: ExplanationDetailTabBarProps) {
+  const visibleTabs = TABS.filter((t) => t.id !== "explanation" || showExplanationTab)
+
   return (
     <div className="flex flex-wrap items-center gap-4 lg:gap-6">
       <div
@@ -46,7 +50,7 @@ function ExplanationDetailTabBar({
         role="tablist"
         aria-label="Question detail"
       >
-        {TABS.map(({ id, label }) => {
+        {visibleTabs.map(({ id, label }) => {
           const active = tab === id
           return (
             <button

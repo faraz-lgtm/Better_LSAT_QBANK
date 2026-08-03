@@ -60,12 +60,6 @@ function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: Explanat
             <span className="inline-flex h-8 items-center rounded-full bg-[#f6f8fa] px-4 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[#666d80]">
               PASSAGE {view.passage.displayNumber}
             </span>
-            <button
-              type="button"
-              className="h-8 text-sm font-medium leading-5 text-[#0d47a1] transition-opacity hover:opacity-80"
-            >
-              Show analysis
-            </button>
           </div>
           <div className={cn(paneScrollClass, "min-h-0")}>
             <HtmlContent html={view.passage.body} className="explanation-passage-body" />

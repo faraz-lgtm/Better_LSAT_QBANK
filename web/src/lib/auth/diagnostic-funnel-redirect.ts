@@ -1,12 +1,10 @@
 import type { UserEntitlement } from "@/lib/api/users"
 import type { DiagnosticFunnelState } from "@/lib/auth/diagnostic-intent"
 
+/** Authenticated students may open /intent (e.g. retake from the app sidebar). */
 export function shouldAllowAuthenticatedIntentPage(
-  entitlement: UserEntitlement | null,
-  funnel: DiagnosticFunnelState,
+  _entitlement: UserEntitlement | null,
+  _funnel: DiagnosticFunnelState,
 ): boolean {
-  if (funnel.inAcquisitionFunnel) return true
-  if (funnel.pendingIntent || !funnel.completedDiagnostic) return true
-  if (entitlement?.accessState === "PAYMENT_REQUIRED") return true
-  return false
+  return true
 }

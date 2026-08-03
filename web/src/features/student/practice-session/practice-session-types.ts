@@ -8,9 +8,9 @@ export const HIGHLIGHT_COLORS: { id: HighlightColor; hex: string }[] = [
   { id: "yellow", hex: "#FFBD4C" },
 ]
 
-/** Figma active drill header swatches (`18617:31527`) — same ids, cyan-first display. */
+/** Same swatches as HIGHLIGHT_COLORS (kept for call sites that prefer an explicit active-drill export). */
 export const ACTIVE_DRILL_HIGHLIGHT_COLORS: { id: HighlightColor; hex: string }[] = [
-  { id: "orange", hex: "#0BBCC9" },
+  { id: "orange", hex: "#FF6F00" },
   { id: "pink", hex: "#FFB4DE" },
   { id: "yellow", hex: "#FFBD4C" },
 ]

@@ -48,6 +48,7 @@ describe("buildExplanationQuestionDetailView", () => {
         { letter: "A", count: 3, pct: 75, highlight: true },
         { letter: "B", count: 1, pct: 25 },
       ],
+      userSelectedLetter: "B",
       difficulty: 5,
     }
 
@@ -57,12 +58,18 @@ describe("buildExplanationQuestionDetailView", () => {
     expect(a?.pct).toBe(75)
     expect(a?.highlight).toBe(true)
     expect(view.analytics.answerPopularityTotal).toBe(4)
+    expect(view.analytics.userSelectedLetter).toBe("B")
     expect(view.analytics.questionStemTags).toEqual(["Art", "Sing"])
   })
 
-  it("always exposes explanation tab with passage and question cards", () => {
+  it("maps null userSelectedLetter when never answered", () => {
     const view = buildExplanationQuestionDetailView(loc, null)
-    expect(view.hasExplanationTab).toBe(true)
+    expect(view.analytics.userSelectedLetter).toBeNull()
+  })
+
+  it("keeps explanation tab hidden until content is ready", () => {
+    const view = buildExplanationQuestionDetailView(loc, null)
+    expect(view.hasExplanationTab).toBe(false)
     expect(view.videos).toHaveLength(2)
     expect(view.videos[0]?.dropdownLabel).toBe("Passage explanation")
     expect(view.videos[1]?.dropdownLabel).toBe("Question explanation")

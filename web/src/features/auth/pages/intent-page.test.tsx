@@ -75,4 +75,16 @@ describe("IntentPage", () => {
 
     expect(screen.queryByRole("link", { name: /sign in/i })).not.toBeInTheDocument()
   })
+
+  it("does not offer the full diagnostic tier", () => {
+    render(
+      <MemoryRouter>
+        <IntentPage isAuthenticated={false} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText("Mini", { selector: ".intent-card__name" })).toBeInTheDocument()
+    expect(screen.getByText("Quick", { selector: ".intent-card__name" })).toBeInTheDocument()
+    expect(screen.queryByText("Full", { selector: ".intent-card__name" })).not.toBeInTheDocument()
+  })
 })

@@ -76,6 +76,8 @@ export type ExplanationDetailPayload = {
     body: string
   }
   answerPopularity: ExplanationAnswerPopularityRow[]
+  /** Current user's latest submitted answer letter (A–E), or null if never answered. */
+  userSelectedLetter?: string | null
   difficulty?: 1 | 2 | 3 | 4 | 5
 }
 

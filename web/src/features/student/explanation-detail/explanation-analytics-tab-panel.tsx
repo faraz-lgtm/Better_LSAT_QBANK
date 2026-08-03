@@ -122,35 +122,70 @@ function ExplanationAnalyticsTabPanel({ analytics }: ExplanationAnalyticsTabPane
                 No one has answered this question on the platform yet.
               </p>
             ) : null}
-            {analytics.answerPopularity.map((row) => (
-              <div
-                key={row.letter}
-                className="flex items-start gap-3 rounded-[14px] border border-[color:var(--greyscale-100)] bg-white p-4"
-              >
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-[10px] border border-[color:var(--greyscale-100)] bg-white text-sm font-medium tracking-[0.02em] text-[#666d80]">
-                  {row.letter}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="mb-1 flex items-center justify-between gap-3">
-                    <span className="text-sm font-normal tracking-[0.02em] tabular-nums text-[#666d80]">
-                      {row.pct}%
-                    </span>
-                    <span className="text-sm font-normal tracking-[0.02em] tabular-nums text-[#666d80]">
-                      Avg score: —
-                    </span>
-                  </div>
-                  <div className="h-3 overflow-hidden rounded-full bg-[#eceff3]">
-                    <div
-                      className={cn(
-                        "h-full min-w-0 rounded-full transition-[width]",
-                        row.highlight ? "bg-[#0bbcc9]" : "bg-[#a4acb9]",
-                      )}
-                      style={{ width: `${Math.min(100, Math.max(row.pct > 0 ? 3 : 0, row.pct))}%` }}
-                    />
+            {analytics.answerPopularity.map((row) => {
+              const isYourAnswer =
+                analytics.userSelectedLetter != null && row.letter === analytics.userSelectedLetter
+              const isYourWrong = isYourAnswer && !row.highlight
+              return (
+                <div
+                  key={row.letter}
+                  className={cn(
+                    "flex items-start gap-3 rounded-[14px] border bg-white p-4",
+                    isYourWrong
+                      ? "border-[#fecaca]"
+                      : isYourAnswer
+                        ? "border-[#0bbcc9]/40"
+                        : "border-[color:var(--greyscale-100)]",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex size-7 shrink-0 items-center justify-center rounded-[10px] border text-sm font-medium tracking-[0.02em]",
+                      isYourWrong
+                        ? "border-[#fecaca] bg-[#fef2f2] text-[#ef4444]"
+                        : "border-[color:var(--greyscale-100)] bg-white text-[#666d80]",
+                    )}
+                  >
+                    {row.letter}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="text-sm font-normal tracking-[0.02em] tabular-nums text-[#666d80]">
+                          {row.pct}%
+                        </span>
+                        {isYourAnswer ? (
+                          <span
+                            className={cn(
+                              "text-xs font-semibold tracking-[0.02em]",
+                              isYourWrong ? "text-[#ef4444]" : "text-[#0bbcc9]",
+                            )}
+                          >
+                            Your answer
+                          </span>
+                        ) : null}
+                      </div>
+                      <span className="text-sm font-normal tracking-[0.02em] tabular-nums text-[#666d80]">
+                        Avg score: —
+                      </span>
+                    </div>
+                    <div className="h-3 overflow-hidden rounded-full bg-[#eceff3]">
+                      <div
+                        className={cn(
+                          "h-full min-w-0 rounded-full transition-[width]",
+                          isYourWrong
+                            ? "bg-[#ef4444]"
+                            : row.highlight
+                              ? "bg-[#0bbcc9]"
+                              : "bg-[#a4acb9]",
+                        )}
+                        style={{ width: `${Math.min(100, Math.max(row.pct > 0 ? 3 : 0, row.pct))}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </section>
       </div>

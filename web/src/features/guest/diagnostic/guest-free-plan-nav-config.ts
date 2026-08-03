@@ -22,6 +22,7 @@ const GUEST_FREE_PLAN_NAV_SECTIONS: GuestFreePlanNavSection[] = [
     label: "Main",
     items: [
       { label: "Dashboard", href: GUEST_FREE_PLAN_DASHBOARD_HREF },
+      { label: "Diagnostic", href: "/intent" },
       { label: "Diagnostic Results", href: GUEST_FREE_PLAN_RESULTS_HREF },
     ],
   },

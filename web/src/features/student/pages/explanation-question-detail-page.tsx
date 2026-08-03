@@ -20,7 +20,8 @@ import { StudentPageLoader } from "@/features/student/components/student-page-lo
 import { cn } from "@/lib/utils"
 
 function parseTab(raw: string | null): ExplanationDetailTabId {
-  if (raw === "explanation" || raw === "analytics") return raw
+  // Explanation tab is hidden until content is ready; treat deep links as Question.
+  if (raw === "analytics") return "analytics"
   return "question"
 }
 
@@ -173,6 +174,7 @@ function ExplanationQuestionDetailPage() {
             onTabChange={setTab}
             prevHref={neighborHref(view.neighbors.prevRouteKey, tab)}
             nextHref={neighborHref(view.neighbors.nextRouteKey, tab)}
+            showExplanationTab={view.hasExplanationTab}
           />
         </header>
 
@@ -183,7 +185,9 @@ function ExplanationQuestionDetailPage() {
           {tab === "question" && !detailLoading ? (
             <ExplanationQuestionTabPanel view={view} initialExpandedChoiceId={initialExpandedChoiceId} />
           ) : null}
-          {tab === "explanation" ? <ExplanationExplainTabPanel videos={view.videos} /> : null}
+          {tab === "explanation" && view.hasExplanationTab ? (
+            <ExplanationExplainTabPanel videos={view.videos} />
+          ) : null}
           {tab === "analytics" && detailError ? <p className="text-sm text-[#95122b]">{detailError}</p> : null}
           {tab === "analytics" && !detailError && (detailLoading || !detail) ? (
             <StudentPageLoader label="Loading insights…" />

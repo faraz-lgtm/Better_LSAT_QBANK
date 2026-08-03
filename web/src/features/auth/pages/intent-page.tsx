@@ -34,15 +34,6 @@ const DIAGNOSTIC_TIERS: DiagnosticIntentTierConfig[] = [
     accent: "quick",
     recommended: true,
   },
-  {
-    id: "full",
-    name: "Full",
-    tagline: "Comprehensive picture, no blind spots",
-    questions: "115q",
-    duration: "~90 min",
-    features: ["AAMC-style full exam", "Subsection deep dive", "Peer benchmarking"],
-    accent: "full",
-  },
 ]
 
 const TIER_LABELS: Record<DiagnosticIntentTier, string> = {

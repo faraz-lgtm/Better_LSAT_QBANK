@@ -279,13 +279,17 @@ function PracticeBlindReviewPrepTestPage() {
             </p>
             <br/>
             <p className="mb-0 mt-6">Trust us, you&apos;ll thank us later.</p>
-            <br/>
-            <p className="mb-0 mt-6">
-              {recommendedTotal} question{recommendedTotal === 1 ? "" : "s"} are recommended for BR
-            </p>
-            <p className="mb-0 mt-6 font-normal text-[#ff6f00]">
-              The questions with orange color the ones we think you should review.
-            </p>
+            {!blindReviewDone ? (
+              <>
+                <br/>
+                <p className="mb-0 mt-6">
+                  {recommendedTotal} question{recommendedTotal === 1 ? "" : "s"} are recommended for BR
+                </p>
+                <p className="mb-0 mt-6 font-normal text-[#ff6f00]">
+                  The questions with orange color are the ones we think you should review.
+                </p>
+              </>
+            ) : null}
           </div>
 
           <div className="flex w-full max-w-[513px] flex-col gap-6">
@@ -295,18 +299,19 @@ function PracticeBlindReviewPrepTestPage() {
                 {blindReview.blindReviewScaledScore != null ? ` · BR score ${blindReview.blindReviewScaledScore}` : ""}
                 .
               </p>
-            ) : !blindReviewActive ? (
+            ) : null}
+            {!blindReviewDone && !blindReviewActive ? (
               <p className="rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] px-6 py-8 text-sm text-[#666d80]">
                 {starting ? "Starting blind review…" : "Preparing sections…"}
               </p>
-            ) : (
+            ) : practiceableSections.length > 0 ? (
               <ul className="flex flex-col gap-6">
                 {practiceableSections.map((row, index) => (
                   <li key={row.id}>
                     <BlindReviewSectionCard
                       row={row}
                       index={index}
-                      blindReviewActive={blindReviewActive}
+                      blindReviewActive={blindReviewActive && !blindReviewDone}
                       onStart={() => {
                         if (row.sectionSessionId) openSection(row.sectionSessionId)
                       }}
@@ -314,7 +319,7 @@ function PracticeBlindReviewPrepTestPage() {
                   </li>
                 ))}
               </ul>
-            )}
+            ) : null}
           </div>
         </div>
 

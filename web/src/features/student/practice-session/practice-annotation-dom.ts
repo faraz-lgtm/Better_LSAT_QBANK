@@ -53,20 +53,71 @@ export function annotationContainingRange(range: Range, container: HTMLElement):
   return null
 }
 
-/** Wrap range contents in `element`, using extractContents when surroundContents fails. */
+function cloneWrapper(template: HTMLElement): HTMLElement {
+  return template.cloneNode(false) as HTMLElement
+}
+
+/** Collect text nodes under `root` that intersect `range` (snapshot before mutation). */
+function textNodesIntersectingRange(range: Range, root: Node): Text[] {
+  const nodes: Text[] = []
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  let node = walker.nextNode()
+  while (node) {
+    if (node.nodeType === Node.TEXT_NODE && range.intersectsNode(node)) {
+      nodes.push(node as Text)
+    }
+    node = walker.nextNode()
+  }
+  return nodes
+}
+
+/**
+ * Wrap each text segment intersecting the range in a clone of `template`.
+ * Safe across block boundaries (never nests block elements inside mark/u).
+ */
+function wrapRangeTextSegments(range: Range, template: HTMLElement): boolean {
+  let root: Node | null = range.commonAncestorContainer
+  if (root.nodeType === Node.TEXT_NODE) root = root.parentNode
+  if (!root) return false
+
+  const textNodes = textNodesIntersectingRange(range, root)
+  if (textNodes.length === 0) return false
+
+  let wrapped = false
+  for (const textNode of textNodes) {
+    const fullLen = textNode.data.length
+    if (fullLen === 0) continue
+
+    const startOffset = textNode === range.startContainer ? range.startOffset : 0
+    const endOffset = textNode === range.endContainer ? range.endOffset : fullLen
+    if (startOffset >= endOffset) continue
+
+    let target: Text = textNode
+    if (endOffset < target.data.length) {
+      target.splitText(endOffset)
+    }
+    if (startOffset > 0) {
+      target = target.splitText(startOffset)
+    }
+
+    const wrapper = cloneWrapper(template)
+    const parent = target.parentNode
+    if (!parent) continue
+    parent.insertBefore(wrapper, target)
+    wrapper.appendChild(target)
+    wrapped = true
+  }
+
+  return wrapped
+}
+
+/** Wrap range contents in `element`, splitting across blocks when surroundContents fails. */
 export function wrapRangeWithElement(range: Range, element: HTMLElement): boolean {
   try {
     range.surroundContents(element)
     return true
   } catch {
-    try {
-      const contents = range.extractContents()
-      element.appendChild(contents)
-      range.insertNode(element)
-      return true
-    } catch {
-      return false
-    }
+    return wrapRangeTextSegments(range, element)
   }
 }
 

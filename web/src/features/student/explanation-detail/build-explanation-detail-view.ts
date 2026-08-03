@@ -82,6 +82,10 @@ function buildAnalytics(
     },
     answerPopularity,
     answerPopularityTotal: totalResponses,
+    userSelectedLetter: (() => {
+      const letter = detail?.userSelectedLetter?.trim().toUpperCase().slice(0, 1) ?? ""
+      return /^[A-E]$/.test(letter) ? letter : null
+    })(),
     questionStemTags: tags,
     passageTags: [],
     history: [],
@@ -147,6 +151,6 @@ export function buildExplanationQuestionDetailView(
     videos,
     analytics: buildAnalytics(loc, detail, choices),
     neighbors,
-    hasExplanationTab: true,
+    hasExplanationTab: false,
   }
 }

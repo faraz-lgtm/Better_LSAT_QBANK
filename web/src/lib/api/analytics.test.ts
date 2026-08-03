@@ -42,4 +42,28 @@ describe("createAnalyticsApi", () => {
       headers: { Authorization: "Bearer token-1" },
     })
   })
+
+  it("getQuestionTypeReview invokes analytics-question-type-review", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        questionTypeId: "qt-1",
+        name: "Flaw",
+        sectionType: "LR",
+        attemptCount: 1,
+        correctCount: 0,
+        attempts: [],
+      },
+      error: null,
+    })
+    const api = createAnalyticsApi(mockSupabase(invoke))
+
+    const out = await api.getQuestionTypeReview("qt-1")
+
+    expect(out.questionTypeId).toBe("qt-1")
+    expect(invoke).toHaveBeenCalledWith("analytics-question-type-review", {
+      method: "POST",
+      body: { questionTypeId: "qt-1", limit: 100 },
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
 })

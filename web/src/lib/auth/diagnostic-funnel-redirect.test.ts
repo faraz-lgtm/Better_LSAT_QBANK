@@ -41,13 +41,13 @@ describe("shouldAllowAuthenticatedIntentPage", () => {
     expect(shouldAllowAuthenticatedIntentPage(lsacRequired, funnel)).toBe(true)
   })
 
-  it("blocks intent for fully entitled users who completed diagnostic", () => {
+  it("allows intent for fully entitled users who completed diagnostic (sidebar retake)", () => {
     const funnel: DiagnosticFunnelState = {
       pendingIntent: null,
       completedDiagnostic: true,
       funnelActive: false,
       inAcquisitionFunnel: false,
     }
-    expect(shouldAllowAuthenticatedIntentPage(fullAccess, funnel)).toBe(false)
+    expect(shouldAllowAuthenticatedIntentPage(fullAccess, funnel)).toBe(true)
   })
 })

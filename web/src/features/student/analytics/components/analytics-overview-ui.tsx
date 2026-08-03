@@ -154,12 +154,12 @@ function QuestionTypeRow({ row, accentBar }: { row: QuestionTypeRowData; accentB
       <DifficultyPill difficulty={row.difficulty} />
       <AccuracyProgress accuracy={row.accuracyPct} goal={row.goalPct} />
 
-      <button
-        type="button"
+      <Link
+        to={`/app/analytics/review/${encodeURIComponent(row.id)}`}
         className="flex h-10 shrink-0 items-center justify-center rounded-[16px] border border-[#dfe1e7] bg-white px-4 text-sm font-semibold tracking-[0.02em] text-[#0d47a1] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f3f7ff]"
       >
         Review ({row.reviewCount})
-      </button>
+      </Link>
       <Link
         to={`/app/analytics/drills?type=${encodeURIComponent(row.id)}`}
         className="ds-btn-sm shrink-0 rounded-[16px] text-sm tracking-[0.02em]"

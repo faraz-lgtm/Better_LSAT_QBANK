@@ -112,12 +112,13 @@ function mockRepo(overrides: Partial<AnalyticsRepository> = {}): AnalyticsReposi
     getScoreRowForRaw: async () => null,
     listPrepTestQuestionsWithMeta: async () => [],
     listAnswerEventsWithTypes: async () => [
-      { question_type_id: 't-low', is_correct: true },
-      { question_type_id: 't-low', is_correct: false },
-      { question_type_id: 't-high', is_correct: false },
-      { question_type_id: 't-high', is_correct: false },
-      { question_type_id: 't-high', is_correct: false },
+      { question_type_id: 't-low', is_correct: true, question_id: 'q-low-1' },
+      { question_type_id: 't-low', is_correct: false, question_id: 'q-low-2' },
+      { question_type_id: 't-high', is_correct: false, question_id: 'q-high-1' },
+      { question_type_id: 't-high', is_correct: false, question_id: 'q-high-2' },
+      { question_type_id: 't-high', is_correct: false, question_id: 'q-high-3' },
     ],
+    listAnswerEventsForQuestionType: async () => [],
     listQuestionTypesByIds: async (ids) =>
       ids.map((id) =>
         id === 't-high'
@@ -352,8 +353,8 @@ Deno.test('getPriorities assigns low priority when attempts < 3', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({
       listAnswerEventsWithTypes: async () => [
-        { question_type_id: 't-few', is_correct: false },
-        { question_type_id: 't-few', is_correct: false },
+        { question_type_id: 't-few', is_correct: false, question_id: 'q1' },
+        { question_type_id: 't-few', is_correct: false, question_id: 'q2' },
       ],
       listQuestionTypesByIds: async () => [
         {
@@ -374,10 +375,10 @@ Deno.test('getPriorities assigns high priority when gap >= 15 and attempts >= 3'
   const service = createAnalyticsService({
     repository: mockRepo({
       listAnswerEventsWithTypes: async () => [
-        { question_type_id: 't-gap', is_correct: true },
-        { question_type_id: 't-gap', is_correct: true },
-        { question_type_id: 't-gap', is_correct: true },
-        { question_type_id: 't-gap', is_correct: false },
+        { question_type_id: 't-gap', is_correct: true, question_id: 'q1' },
+        { question_type_id: 't-gap', is_correct: true, question_id: 'q2' },
+        { question_type_id: 't-gap', is_correct: true, question_id: 'q3' },
+        { question_type_id: 't-gap', is_correct: false, question_id: 'q4' },
       ],
       listQuestionTypesByIds: async () => [
         {
@@ -399,11 +400,11 @@ Deno.test('getPriorities assigns medium priority when gap is 8-14', async () => 
   const service = createAnalyticsService({
     repository: mockRepo({
       listAnswerEventsWithTypes: async () => [
-        { question_type_id: 't-med', is_correct: true },
-        { question_type_id: 't-med', is_correct: true },
-        { question_type_id: 't-med', is_correct: true },
-        { question_type_id: 't-med', is_correct: true },
-        { question_type_id: 't-med', is_correct: false },
+        { question_type_id: 't-med', is_correct: true, question_id: 'q1' },
+        { question_type_id: 't-med', is_correct: true, question_id: 'q2' },
+        { question_type_id: 't-med', is_correct: true, question_id: 'q3' },
+        { question_type_id: 't-med', is_correct: true, question_id: 'q4' },
+        { question_type_id: 't-med', is_correct: false, question_id: 'q5' },
       ],
       listQuestionTypesByIds: async () => [
         {
@@ -425,9 +426,9 @@ Deno.test('getPriorities averages difficulty events per type', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({
       listAnswerEventsWithTypes: async () => [
-        { question_type_id: 't-diff', is_correct: true },
-        { question_type_id: 't-diff', is_correct: true },
-        { question_type_id: 't-diff', is_correct: true },
+        { question_type_id: 't-diff', is_correct: true, question_id: 'q1' },
+        { question_type_id: 't-diff', is_correct: true, question_id: 'q2' },
+        { question_type_id: 't-diff', is_correct: true, question_id: 'q3' },
       ],
       listAnswerEventsWithTypeDifficulty: async () => [
         { question_type_id: 't-diff', difficulty: 2 },
@@ -452,11 +453,11 @@ Deno.test('getPriorities tie-breaks equal gap by attempt count', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({
       listAnswerEventsWithTypes: async () => [
-        { question_type_id: 't-a', is_correct: false },
-        { question_type_id: 't-a', is_correct: false },
-        { question_type_id: 't-a', is_correct: false },
-        { question_type_id: 't-b', is_correct: false },
-        { question_type_id: 't-b', is_correct: false },
+        { question_type_id: 't-a', is_correct: false, question_id: 'qa1' },
+        { question_type_id: 't-a', is_correct: false, question_id: 'qa2' },
+        { question_type_id: 't-a', is_correct: false, question_id: 'qa3' },
+        { question_type_id: 't-b', is_correct: false, question_id: 'qb1' },
+        { question_type_id: 't-b', is_correct: false, question_id: 'qb2' },
       ],
       listQuestionTypesByIds: async () => [
         {
@@ -486,9 +487,9 @@ Deno.test('getPriorities uses Unknown type when metadata missing', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({
       listAnswerEventsWithTypes: async () => [
-        { question_type_id: 'orphan', is_correct: false },
-        { question_type_id: 'orphan', is_correct: false },
-        { question_type_id: 'orphan', is_correct: false },
+        { question_type_id: 'orphan', is_correct: false, question_id: 'q1' },
+        { question_type_id: 'orphan', is_correct: false, question_id: 'q2' },
+        { question_type_id: 'orphan', is_correct: false, question_id: 'q3' },
       ],
       listQuestionTypesByIds: async () => [],
     }),
@@ -496,6 +497,129 @@ Deno.test('getPriorities uses Unknown type when metadata missing', async () => {
   const { priorities } = await service.getPriorities('user-1')
   assertEquals(priorities[0]?.name, 'Unknown type')
   assertEquals(priorities[0]?.goalAccuracy, null)
+})
+
+Deno.test('getPriorities reviewCount counts unique questions', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listAnswerEventsWithTypes: async () => [
+        { question_type_id: 't-dup', is_correct: false, question_id: 'q1' },
+        { question_type_id: 't-dup', is_correct: true, question_id: 'q1' },
+        { question_type_id: 't-dup', is_correct: false, question_id: 'q2' },
+      ],
+      listQuestionTypesByIds: async () => [
+        {
+          id: 't-dup',
+          name: 'Dup type',
+          section_type: 'LR',
+          goal_accuracy: 90,
+          avg_per_test: 5,
+        },
+      ],
+    }),
+  })
+  const { priorities } = await service.getPriorities('user-1')
+  assertEquals(priorities[0]?.attemptCount, 3)
+  assertEquals(priorities[0]?.reviewCount, 2)
+})
+
+// --- getQuestionTypeReview ---
+
+Deno.test('getQuestionTypeReview returns empty attempts for unknown type', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listAnswerEventsForQuestionType: async () => [],
+      listQuestionTypesByIds: async () => [
+        {
+          id: 't-empty',
+          name: 'Empty type',
+          section_type: 'LR',
+          goal_accuracy: 85,
+          avg_per_test: 4,
+        },
+      ],
+    }),
+  })
+  const out = await service.getQuestionTypeReview('user-1', 't-empty')
+  assertEquals(out.questionTypeId, 't-empty')
+  assertEquals(out.name, 'Empty type')
+  assertEquals(out.attemptCount, 0)
+  assertEquals(out.correctCount, 0)
+  assertEquals(out.attempts.length, 0)
+})
+
+Deno.test('getQuestionTypeReview keeps latest attempt per question', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listAnswerEventsForQuestionType: async () => [
+        {
+          id: 'ae-2',
+          question_id: 'q1',
+          practice_session_id: 'sess-2',
+          is_correct: true,
+          selected_answer: 'B',
+          difficulty: 3,
+          section_type: 'LR' as const,
+          session_kind: 'DRILL' as const,
+          created_at: '2026-02-01T00:00:00Z',
+        },
+        {
+          id: 'ae-1',
+          question_id: 'q1',
+          practice_session_id: 'sess-1',
+          is_correct: false,
+          selected_answer: 'A',
+          difficulty: 3,
+          section_type: 'LR' as const,
+          session_kind: 'DRILL' as const,
+          created_at: '2026-01-01T00:00:00Z',
+        },
+        {
+          id: 'ae-3',
+          question_id: 'q2',
+          practice_session_id: 'sess-3',
+          is_correct: false,
+          selected_answer: 'C',
+          difficulty: 2,
+          section_type: 'LR' as const,
+          session_kind: 'SECTION' as const,
+          created_at: '2026-01-15T00:00:00Z',
+        },
+      ],
+      listQuestionsExplanationMetaByIds: async (ids) =>
+        ids.map((id) => ({
+          id,
+          question_number: id === 'q1' ? 4 : 7,
+          explanation: null,
+          video_url: null,
+          question_types: { name: 'Flaw' },
+          admin_sections: {
+            section_type: 'LR' as const,
+            section_number: 2,
+            admin_prep_tests: { title: 'PrepTest 101', module_id: 'LSAC101' },
+          },
+        })),
+      listQuestionTypesByIds: async () => [
+        {
+          id: 't-flaw',
+          name: 'Flaw',
+          section_type: 'LR',
+          goal_accuracy: 85,
+          avg_per_test: 6,
+        },
+      ],
+    }),
+  })
+  const out = await service.getQuestionTypeReview('user-1', 't-flaw')
+  assertEquals(out.attemptCount, 2)
+  assertEquals(out.correctCount, 1)
+  assertEquals(out.attempts.length, 2)
+  assertEquals(out.attempts[0]?.questionId, 'q1')
+  assertEquals(out.attempts[0]?.isCorrect, true)
+  assertEquals(out.attempts[0]?.selectedAnswer, 'B')
+  assertEquals(out.attempts[0]?.title, 'PT 101  .  S2  .  Q4')
+  assertEquals(out.attempts[1]?.questionId, 'q2')
+  assertEquals(out.attempts[1]?.isCorrect, false)
 })
 
 // --- getSessions ---
