@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { ExternalLink, LineChart } from "lucide-react"
+import { ChevronDown, ChevronUp, ExternalLink, LineChart } from "lucide-react"
 
 import {
   ContinueDrillCard,
@@ -15,6 +15,10 @@ import {
   mapSessionToContinueDrill,
   type ContinueDrill,
 } from "@/features/student/drills/drill-dashboard-mappers"
+import {
+  orderPriorityRowsByWeakness,
+  visibleTagDrillCount,
+} from "@/features/student/drills/tag-drills-priority"
 import { createAnalyticsApi, type PriorityRow } from "@/lib/api/analytics"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -30,25 +34,19 @@ type TagDrill = {
   configPath: string
 }
 
-function difficultyVisual(difficulty: PriorityRow["difficulty"]) {
-  if (difficulty == null || difficulty <= 1) {
-    return { label: "Easiest", filledBars: 1, color: "#0bbcc9" }
+function priorityVisual(priority: PriorityRow["priorityLevel"]) {
+  if (priority === "high") {
+    return { label: "Hardest", filledBars: 5, color: "#df1c41" }
   }
-  if (difficulty === 2) {
-    return { label: "Easy", filledBars: 2, color: "#ffbd4c" }
+  if (priority === "medium") {
+    return { label: "Medium", filledBars: 3, color: "#ff6f00" }
   }
-  if (difficulty === 3) {
-    return { label: "Medium", filledBars: 3, color: "#0bbcc9" }
-  }
-  if (difficulty === 4) {
-    return { label: "Hard", filledBars: 4, color: "#df1c41" }
-  }
-  return { label: "Hardest", filledBars: 5, color: "#df1c41" }
+  return { label: "Easy", filledBars: 2, color: "#ffbd4c" }
 }
 
 function mapPriorityToTagDrill(row: PriorityRow): TagDrill | null {
   const section = row.sectionType === "LR" || row.sectionType === "RC" ? row.sectionType : "LR"
-  const visual = difficultyVisual(row.difficulty)
+  const visual = priorityVisual(row.priorityLevel)
   const configPath =
     section === "LR"
       ? `/app/practice/drills/lr/new?questionTypeId=${encodeURIComponent(row.questionTypeId)}&tag=${encodeURIComponent(row.name)}`
@@ -75,6 +73,7 @@ function PracticeDrillsPage() {
   const [sectionFilter, setSectionFilter] = useState<"all" | "lr" | "rc">("all")
   const [continueDrills, setContinueDrills] = useState<ContinueDrill[]>([])
   const [tagDrills, setTagDrills] = useState<TagDrill[]>([])
+  const [tagsExpanded, setTagsExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -93,11 +92,15 @@ function PracticeDrillsPage() {
           .filter((d): d is ContinueDrill => d != null)
         setContinueDrills(inProgress)
         setTagDrills(
-          priorities
-            .filter((p) => p.sectionType === "LR" || p.sectionType === "RC" || p.sectionType === null)
+          orderPriorityRowsByWeakness(
+            priorities.filter(
+              (p) => p.sectionType === "LR" || p.sectionType === "RC" || p.sectionType === null,
+            ),
+          )
             .map(mapPriorityToTagDrill)
             .filter((d): d is TagDrill => d != null),
         )
+        setTagsExpanded(false)
       } catch {
         if (!cancelled) {
           setContinueDrills([])
@@ -116,10 +119,20 @@ function PracticeDrillsPage() {
     if (continueFilter === "all") return true
     return continueFilter === "lr" ? drill.section === "LR" : drill.section === "RC"
   })
-  const filteredTags = tagDrills.filter((drill) => {
-    if (sectionFilter === "all") return true
-    return sectionFilter === "lr" ? drill.sectionTone === "lr" : drill.sectionTone === "rc"
-  })
+  const filteredTags = useMemo(() => {
+    return tagDrills.filter((drill) => {
+      if (sectionFilter === "all") return true
+      return sectionFilter === "lr" ? drill.sectionTone === "lr" : drill.sectionTone === "rc"
+    })
+  }, [sectionFilter, tagDrills])
+
+  const visibleTagCount = visibleTagDrillCount(filteredTags.length, tagsExpanded)
+  const visibleTags = filteredTags.slice(0, visibleTagCount)
+  const canToggleTags = filteredTags.length > visibleTagDrillCount(filteredTags.length, false)
+
+  useEffect(() => {
+    setTagsExpanded(false)
+  }, [sectionFilter])
 
   return (
     <StudentMain className="drills-page" contentClassName="flex flex-col gap-[24px]">
@@ -242,35 +255,58 @@ function PracticeDrillsPage() {
         ) : filteredTags.length === 0 ? (
           <p className="text-[14px] text-[#666d80]">Answer more questions to unlock priority tag drills.</p>
         ) : (
-          <div className="grid grid-cols-1 gap-[24px] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-            {filteredTags.map((drill) => (
-              <article
-                key={drill.id}
-                className="flex min-w-0 flex-col overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
-              >
-                <div className="flex h-[48px] items-center justify-center bg-[#f6f8fa] text-[18px] font-bold leading-[1.35] text-[#062357]">
-                  {drill.sectionLabel}
-                </div>
-                <div className="flex flex-1 flex-col gap-[24px] p-[24px]">
-                  <div className="flex items-start justify-between gap-[12px]">
-                    <h3 className="min-w-0 flex-1 text-[18px] font-bold leading-[1.35] text-[#062357]">{drill.title}</h3>
-                    <DrillDifficultyStatus
-                      label={drill.difficultyLabel}
-                      filledBars={drill.filledBars}
-                      color={drill.difficultyColor}
-                      layout="stacked"
-                    />
+          <div className="flex flex-col gap-[24px]">
+            <div className="grid grid-cols-1 gap-[24px] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+              {visibleTags.map((drill) => (
+                <article
+                  key={drill.id}
+                  className="flex min-w-0 flex-col overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
+                >
+                  <div className="flex h-[48px] items-center justify-center bg-[#f6f8fa] text-[18px] font-bold leading-[1.35] text-[#062357]">
+                    {drill.sectionLabel}
                   </div>
-                  <button
-                    type="button"
-                    className="mt-auto inline-flex h-[40px] w-full items-center justify-center rounded-[16px] border border-[#0b4e6e] bg-[#0d47a1] text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
-                    onClick={() => navigate(drill.configPath)}
-                  >
-                    Start Drill
-                  </button>
-                </div>
-              </article>
-            ))}
+                  <div className="flex flex-1 flex-col gap-[24px] p-[24px]">
+                    <div className="flex items-start justify-between gap-[12px]">
+                      <h3 className="min-w-0 flex-1 text-[18px] font-bold leading-[1.35] text-[#062357]">{drill.title}</h3>
+                      <DrillDifficultyStatus
+                        label={drill.difficultyLabel}
+                        filledBars={drill.filledBars}
+                        color={drill.difficultyColor}
+                        layout="stacked"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="mt-auto inline-flex h-[40px] w-full items-center justify-center rounded-[16px] border border-[#0b4e6e] bg-[#0d47a1] text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
+                      onClick={() => navigate(drill.configPath)}
+                    >
+                      Start Drill
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+            {canToggleTags ? (
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  className="inline-flex h-[40px] items-center gap-[8px] rounded-[16px] border border-[#dfe1e7] bg-white px-[16px] text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1] hover:bg-[#f6f8fa]"
+                  onClick={() => setTagsExpanded((current) => !current)}
+                >
+                  {tagsExpanded ? (
+                    <>
+                      Show less
+                      <ChevronUp className="size-[16px]" />
+                    </>
+                  ) : (
+                    <>
+                      Show more ({filteredTags.length - visibleTagCount} more)
+                      <ChevronDown className="size-[16px]" />
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : null}
           </div>
         )}
       </section>

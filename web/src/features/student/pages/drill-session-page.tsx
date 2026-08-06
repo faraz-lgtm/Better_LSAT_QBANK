@@ -656,7 +656,7 @@ function DrillSessionPage() {
       onExitSection={requestSubmitDrill}
       exiting={finishing}
       showSectionSelect={false}
-      exitButtonLabel="Finish Section"
+      exitButtonLabel="Finish Drill"
       exitingLabel="Finishing…"
     />
   ) : null
@@ -700,9 +700,6 @@ function DrillSessionPage() {
                   submitting={submitting}
                   allowReselect={allowReselect}
                   getRegionHtml={highlights.getRegionHtml}
-                  toolMode={highlights.toolMode}
-                  onContentMouseUp={highlights.handleContentMouseUp}
-                  onContentClick={highlights.handleContentClick}
                   onSelect={(index) => void handleSelectChoice(index)}
                   flagged={current ? questionFlags.isFlagged(current.id) : false}
                   onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
@@ -787,9 +784,6 @@ function DrillSessionPage() {
                 submitting={submitting}
                 allowReselect={allowReselect}
                 getRegionHtml={highlights.getRegionHtml}
-                toolMode={highlights.toolMode}
-                onContentMouseUp={highlights.handleContentMouseUp}
-                onContentClick={highlights.handleContentClick}
                 onSelect={(index) => void handleSelectChoice(index)}
                 flagged={current ? questionFlags.isFlagged(current.id) : false}
                 onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
@@ -1042,8 +1036,8 @@ function DrillSessionPage() {
 
       <PracticeSubmitSectionModal
         open={submitModalOpen}
-        title={reviewAfterComplete ? "Finish Section" : "Submit Drill"}
-        confirmLabel={reviewAfterComplete ? "Finish Section" : "Submit Drill"}
+        title={reviewAfterComplete ? "Finish Drill" : "Submit Drill"}
+        confirmLabel={reviewAfterComplete ? "Finish Drill" : "Submit Drill"}
         message={submitDrillMessage}
         submitting={finishing}
         onCancel={() => setSubmitModalOpen(false)}

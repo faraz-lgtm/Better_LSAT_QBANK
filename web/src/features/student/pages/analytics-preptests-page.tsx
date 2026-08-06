@@ -25,9 +25,13 @@ import {
 import { mapSessionToPrepTestRecord } from "@/features/student/analytics/map-analytics"
 import { prepTestHubHref } from "@/features/student/preptests/preptest-hub-navigation"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
+import {
+  LSAT_SCALED_Y_AXIS_LABELS,
+  buildChartYAxisLabels,
+  resolveRawScoreAxisMax,
+} from "@/features/student/analytics/chart-y-axis"
 import { cn } from "@/lib/utils"
 
-const Y_AXIS_LABELS = [100, 84, 68, 52, 36, 20] as const
 const BOOKMARKS_STORAGE_KEY = "analytics:preptests:bookmarks"
 
 const SCORE_TABS = [
@@ -92,9 +96,13 @@ function PrepTestScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (ne
 }
 
 function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressPoint[]; tab: ScoreTab }) {
-  const minVal = Y_AXIS_LABELS[Y_AXIS_LABELS.length - 1]
-  const maxVal = Y_AXIS_LABELS[0]
-  const range = maxVal - minVal
+  const yAxisLabels =
+    tab === "raw"
+      ? buildChartYAxisLabels(resolveRawScoreAxisMax(points.map((p) => p.rawMax)))
+      : LSAT_SCALED_Y_AXIS_LABELS
+  const minVal = yAxisLabels[yAxisLabels.length - 1] ?? 0
+  const maxVal = yAxisLabels[0] ?? 1
+  const range = Math.max(1, maxVal - minVal)
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
 
   if (points.length === 0) {
@@ -113,12 +121,7 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
   }
   const xFor = (index: number) => stepX * index + stepX / 2
 
-  const pickValue = (p: PrepTestProgressPoint) => {
-    if (tab === "raw") {
-      return Math.round((p.rawScore / p.rawMax) * range + minVal)
-    }
-    return Math.round(((p.scaledScore - 120) / 60) * range + minVal)
-  }
+  const pickValue = (p: PrepTestProgressPoint) => (tab === "raw" ? p.rawScore : p.scaledScore)
 
   const linePoints = points.map((p, i) => ({ x: xFor(i), y: yFor(pickValue(p)) }))
   const polyline = linePoints.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ")
@@ -128,16 +131,16 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
     <div className="w-full">
       <div className="flex h-[300px] w-full items-stretch gap-4">
         <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[#062357]">
-          {Y_AXIS_LABELS.map((label) => (
-            <span key={label} className="leading-5">
+          {yAxisLabels.map((label, index) => (
+            <span key={`${label}-${index}`} className="leading-5">
               {label}
             </span>
           ))}
         </div>
         <div className="relative flex-1">
           <div className="absolute inset-0 flex flex-col justify-between" aria-hidden>
-            {Y_AXIS_LABELS.map((label) => (
-              <div key={label} className="h-px w-full bg-[#e5e7eb]" />
+            {yAxisLabels.map((label, index) => (
+              <div key={`${label}-${index}`} className="h-px w-full bg-[#e5e7eb]" />
             ))}
           </div>
           <svg
@@ -471,6 +474,8 @@ function AnalyticsPrepTestsPage() {
         </div>
 
         <AnalyticsPrepTestHistory
+          title="PrepTest History"
+          emptyNoun="PrepTests"
           visibleEntries={visibleEntries}
           bookmarkedOnly={bookmarkedOnly}
           onBookmarkedOnlyChange={setBookmarkedOnly}

@@ -81,7 +81,7 @@ function StudentAppShellLayout() {
             </div>
           </div>
         </div>
-        <PortalChatWidget />
+        <PortalChatWidget enabled={!immersive} />
       </GuestPricingModalProvider>
     </StudentPageHeaderSlotProvider>
   )

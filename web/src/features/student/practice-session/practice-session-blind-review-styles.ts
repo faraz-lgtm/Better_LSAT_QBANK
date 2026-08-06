@@ -68,6 +68,20 @@ const BLIND_REVIEW_RECOMMENDED_BADGE_CLASS =
 
 const BLIND_REVIEW_OPTIONS_LIST_CLASS = "flex flex-col gap-3 p-6"
 
+/** Selected answer while viewing timed/actual responses — exam blue */
+const BLIND_REVIEW_OPTION_ROW_SELECTED_ACTUAL_CLASS =
+  "border-[#0d47a1] bg-[#f3f7ff] shadow-[0px_10px_15px_-3px_rgba(13,71,161,0.12),0px_4px_6px_-4px_rgba(13,71,161,0.08)]"
+
+const BLIND_REVIEW_OPTION_LETTER_SELECTED_ACTUAL_CLASS =
+  "bg-[#0d47a1] text-white shadow-[0px_10px_7px_rgba(13,71,161,0.12),0px_4px_3px_rgba(13,71,161,0.08)]"
+
+/** Selected answer while in Blind Review — orange to match BR chrome */
+const BLIND_REVIEW_OPTION_ROW_SELECTED_BR_CLASS =
+  "border-[#ff6f00] bg-[#fff3ea] shadow-[0px_10px_15px_-3px_rgba(255,111,0,0.12),0px_4px_6px_-4px_rgba(255,111,0,0.08)]"
+
+const BLIND_REVIEW_OPTION_LETTER_SELECTED_BR_CLASS =
+  "bg-[#ff6f00] text-white shadow-[0px_10px_7px_rgba(255,111,0,0.14),0px_4px_3px_rgba(255,111,0,0.1)]"
+
 /** Figma `18617:33677` — footer band */
 const BLIND_REVIEW_FOOTER_CLASS =
   "practice-session-footer box-border flex min-h-[76px] shrink-0 flex-col justify-center border-t border-[#dfe1e7] bg-[#f6f8fa] px-6 py-3"
@@ -188,6 +202,10 @@ export {
   BLIND_REVIEW_NOTES_STACK_CLASS,
   BLIND_REVIEW_NOTES_START_BUTTON_CLASS,
   BLIND_REVIEW_OPTIONS_LIST_CLASS,
+  BLIND_REVIEW_OPTION_LETTER_SELECTED_ACTUAL_CLASS,
+  BLIND_REVIEW_OPTION_LETTER_SELECTED_BR_CLASS,
+  BLIND_REVIEW_OPTION_ROW_SELECTED_ACTUAL_CLASS,
+  BLIND_REVIEW_OPTION_ROW_SELECTED_BR_CLASS,
   BLIND_REVIEW_PASSAGE_PANEL_CLASS,
   BLIND_REVIEW_PASSAGE_TEXT_CLASS,
   BLIND_REVIEW_QUESTION_PANEL_CLASS,

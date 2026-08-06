@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest"
 
 import {
   annotationContainingRange,
+  applyHighlightColorInMark,
+  eraseAnnotationInRange,
+  eraseAnnotationsIntersectingRange,
+  highlightContainingRange,
   rangeFullyInsideElement,
+  rangeSpansPartialAnnotation,
   underlineContainingRange,
   wrapRangeWithElement,
 } from "./practice-annotation-dom"
@@ -112,6 +117,107 @@ describe("practice-annotation-dom", () => {
     expect(wrapRangeWithElement(range, mark)).toBe(true)
     expect(container.textContent).toBe("Hello world today")
     expect(container.querySelectorAll("mark[data-highlight='pink']").length).toBeGreaterThanOrEqual(1)
+
+    document.body.removeChild(container)
+  })
+
+  it("does not treat a fully-inside highlight as a partial annotation", () => {
+    const container = document.createElement("div")
+    container.innerHTML = '<p>See <mark data-highlight="yellow">here</mark> now</p>'
+    document.body.appendChild(container)
+
+    const mark = container.querySelector("mark")!
+    const textNode = mark.firstChild as Text
+    const range = document.createRange()
+    range.setStart(textNode, 0)
+    range.setEnd(textNode, 4)
+
+    expect(highlightContainingRange(range, container)).toBe(mark)
+    expect(rangeSpansPartialAnnotation(range, container)).toBe(false)
+
+    document.body.removeChild(container)
+  })
+
+  it("flags a selection that starts inside a highlight and ends outside", () => {
+    const container = document.createElement("div")
+    container.innerHTML = '<p>See <mark data-highlight="yellow">here</mark> now</p>'
+    document.body.appendChild(container)
+
+    const mark = container.querySelector("mark")!
+    const markText = mark.firstChild as Text
+    const afterText = mark.nextSibling as Text
+    const range = document.createRange()
+    range.setStart(markText, 1)
+    range.setEnd(afterText, 3)
+
+    expect(rangeSpansPartialAnnotation(range, container)).toBe(true)
+
+    document.body.removeChild(container)
+  })
+
+  it("recolors only the selected slice inside an existing highlight", () => {
+    const container = document.createElement("div")
+    container.innerHTML = '<p><mark data-highlight="yellow">ABCDEF</mark></p>'
+    document.body.appendChild(container)
+
+    const mark = container.querySelector("mark")!
+    const textNode = mark.firstChild as Text
+    const range = document.createRange()
+    range.setStart(textNode, 2)
+    range.setEnd(textNode, 4)
+
+    expect(applyHighlightColorInMark(range, mark, "pink")).toBe(true)
+    expect(container.textContent).toBe("ABCDEF")
+    const marks = [...container.querySelectorAll("mark[data-highlight]")]
+    expect(marks.map((m) => [m.getAttribute("data-highlight"), m.textContent])).toEqual([
+      ["yellow", "AB"],
+      ["pink", "CD"],
+      ["yellow", "EF"],
+    ])
+
+    document.body.removeChild(container)
+  })
+
+  it("erases only the selected slice of a highlight", () => {
+    const container = document.createElement("div")
+    container.innerHTML = '<p><mark data-highlight="yellow">ABCDEF</mark></p>'
+    document.body.appendChild(container)
+
+    const mark = container.querySelector("mark")!
+    const textNode = mark.firstChild as Text
+    const range = document.createRange()
+    range.setStart(textNode, 2)
+    range.setEnd(textNode, 4)
+
+    expect(eraseAnnotationInRange(range, mark)).toBe(true)
+    expect(container.textContent).toBe("ABCDEF")
+    const marks = [...container.querySelectorAll("mark[data-highlight]")]
+    expect(marks.map((m) => m.textContent)).toEqual(["AB", "EF"])
+    expect(container.querySelector("p")!.innerHTML).toBe(
+      '<mark data-highlight="yellow">AB</mark>CD<mark data-highlight="yellow">EF</mark>',
+    )
+
+    document.body.removeChild(container)
+  })
+
+  it("erases only intersecting slices across a selection", () => {
+    const container = document.createElement("div")
+    container.innerHTML =
+      '<p><mark data-highlight="yellow">AAAA</mark>mid<mark data-highlight="pink">BBBB</mark></p>'
+    document.body.appendChild(container)
+
+    const yellow = container.querySelector('mark[data-highlight="yellow"]')!
+    const pink = container.querySelector('mark[data-highlight="pink"]')!
+    const range = document.createRange()
+    range.setStart(yellow.firstChild as Text, 2)
+    range.setEnd(pink.firstChild as Text, 2)
+
+    expect(eraseAnnotationsIntersectingRange(range, container)).toBe(true)
+    expect(container.textContent).toBe("AAAAmidBBBB")
+    expect([...container.querySelectorAll("mark")].map((m) => [m.getAttribute("data-highlight"), m.textContent])).toEqual([
+      ["yellow", "AA"],
+      ["pink", "BB"],
+    ])
 
     document.body.removeChild(container)
   })

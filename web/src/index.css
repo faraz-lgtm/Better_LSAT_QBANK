@@ -206,6 +206,66 @@ html.student-shell-active #root {
   overflow: hidden;
 }
 
+/* Hand pointer on interactive controls across the student / LSAT portal */
+html.student-shell-active :is(
+  a[href],
+  button:not(:disabled),
+  summary,
+  label,
+  select:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]),
+  [role="menuitem"],
+  [role="option"],
+  [role="switch"]:not([aria-disabled="true"]),
+  [role="checkbox"]:not([aria-disabled="true"]),
+  [role="radio"]:not([aria-disabled="true"]),
+  [role="link"],
+  [role="combobox"]:not([aria-disabled="true"]),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="button"]:not(:disabled),
+  input[type="submit"]:not(:disabled),
+  input[type="reset"]:not(:disabled),
+  input[type="file"]:not(:disabled),
+  input[type="image"]:not(:disabled),
+  [tabindex]:not([tabindex="-1"]):not(:disabled):not([aria-disabled="true"])
+) {
+  cursor: pointer;
+}
+
+html.student-shell-active :is(
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  textarea:disabled,
+  [aria-disabled="true"],
+  [disabled]
+) {
+  cursor: not-allowed;
+}
+
+/* Keep the I-beam for typing / passage annotation areas */
+html.student-shell-active :is(
+  input:not([type]),
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="url"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  textarea,
+  [contenteditable="true"],
+  .cursor-text,
+  .select-text
+) {
+  cursor: text;
+}
+
 /* Auth routes: keep light surfaces and readable headings even when OS prefers dark */
 .auth-page {
   color-scheme: light;
@@ -2183,7 +2243,7 @@ select.ds-input {
 
 .student-shell-top-row {
   box-sizing: border-box;
-  height: 72px;
+  height: 50px;
   flex-shrink: 0;
 }
 
@@ -3053,6 +3113,23 @@ html.student-shell-immersive .practice-session-card {
   max-height: calc(100svh - 32px);
   flex: 1 1 0;
   min-height: 0;
+}
+
+/* Hide LeadConnector / portal chat bubble during exam & immersive practice */
+html.student-shell-immersive iframe[src*="leadconnectorhq.com"],
+html.student-shell-immersive iframe[src*="msgsndr.com"],
+html.student-shell-immersive iframe[src*="chat-widget"],
+html.portal-chat-hidden iframe[src*="leadconnectorhq.com"],
+html.portal-chat-hidden iframe[src*="msgsndr.com"],
+html.portal-chat-hidden iframe[src*="chat-widget"],
+html.student-shell-immersive [id*="leadconnector"],
+html.portal-chat-hidden [id*="leadconnector"],
+html.student-shell-immersive [class*="lc_text-widget"],
+html.portal-chat-hidden [class*="lc_text-widget"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
 }
 
 html.student-shell-immersive .practice-session-card--active-drill {

@@ -13,8 +13,6 @@ import {
   BLIND_REVIEW_QUESTION_STEM_CLASS,
   BLIND_REVIEW_RECOMMENDED_BADGE_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
-import type { PracticeToolMode } from "@/features/student/practice-session/practice-session-types"
-import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 
 type PracticeBlindReviewQuestionPanelProps = {
   question: DrillQuestion
@@ -26,9 +24,6 @@ type PracticeBlindReviewQuestionPanelProps = {
   submitting: boolean
   allowReselect: boolean
   getRegionHtml: (key: string, base: string) => string
-  toolMode: PracticeToolMode
-  onContentMouseUp: ReturnType<typeof usePracticeHighlights>["handleContentMouseUp"]
-  onContentClick: ReturnType<typeof usePracticeHighlights>["handleContentClick"]
   onSelect: (index: number) => void
   answerView?: BlindReviewAnswerView
   onAnswerViewChange?: (view: BlindReviewAnswerView) => void
@@ -50,9 +45,6 @@ function PracticeBlindReviewQuestionPanel({
   submitting,
   allowReselect,
   getRegionHtml,
-  toolMode,
-  onContentMouseUp,
-  onContentClick,
   onSelect,
   answerView = "blind_review",
   onAnswerViewChange,
@@ -85,9 +77,7 @@ function PracticeBlindReviewQuestionPanel({
               regionKey={stemKey}
               html={stemHtml}
               findQuery={findQuery}
-              toolMode={toolMode}
-              onMouseUp={onContentMouseUp}
-              onClickCapture={onContentClick}
+              toolMode="none"
               className={BLIND_REVIEW_QUESTION_STEM_CLASS}
             />
           </div>
@@ -119,10 +109,8 @@ function PracticeBlindReviewQuestionPanel({
                   [index]: !prev[index],
                 }))
               }
-              toolMode={toolMode}
-              onContentMouseUp={onContentMouseUp}
-              onContentClick={onContentClick}
               variant="blind-review"
+              answerView={answerView}
             />
           ))}
         </div>

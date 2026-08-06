@@ -151,10 +151,10 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
           ) : null}
           <button
             type="button"
-            className="inline-flex size-[46px] items-center justify-center rounded-[20px] bg-[#edf3ff] text-[#062357]"
+            className="inline-flex size-[25px] items-center justify-center rounded-full bg-[#edf3ff] text-[#062357]"
             aria-label="Notifications"
           >
-            <Bell className="size-6" strokeWidth={1.75} />
+            <Bell className="size-3.5" strokeWidth={1.75} />
           </button>
 
           <div ref={profileMenuRef} className="relative">
@@ -166,12 +166,12 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
               aria-expanded={openProfileMenu}
               onClick={() => setOpenProfileMenu((current) => !current)}
             >
-              <span className="flex size-[42px] items-center justify-center rounded-full bg-[#0d47a1] text-sm font-semibold text-white">
+              <span className="flex size-[25px] items-center justify-center rounded-full bg-[#0d47a1] text-[11px] font-semibold text-white">
                 {initials}
               </span>
-              <span className="hidden flex-col items-start text-left leading-[1.5] sm:flex">
-                <span className="text-base font-semibold tracking-[0.32px] text-[#062357]">{displayName}</span>
-                <span className="max-w-[180px] truncate text-xs tracking-[0.24px] text-black/80">
+              <span className="hidden flex-col items-start text-left leading-[1.4] sm:flex">
+                <span className="text-[14px] font-semibold tracking-[0.32px] text-[#062357]">{displayName}</span>
+                <span className="max-w-[180px] truncate text-[10px] tracking-[0.24px] text-black/80">
                   {email ?? "student@example.com"}
                 </span>
               </span>

@@ -283,7 +283,7 @@ function DifficultyMeter({ level }: { level: ExplanationQuestionNode["difficulty
   const activeColor = DIFFICULTY_METER_COLORS[label]
   return (
     <div
-      className="flex h-10 w-[8.25rem] shrink-0 items-center gap-2.5 rounded-[10px] bg-[#f3f7ff] px-2.5"
+      className="flex h-10 w-fit shrink-0 items-center gap-2.5 rounded-[10px] bg-[#f3f7ff] px-3"
       title={`Difficulty ${level} of 5`}
     >
       <div className="flex items-center gap-1.5">

@@ -1,8 +1,10 @@
 import { useCallback, useState, type CSSProperties, type MouseEvent } from "react"
 
 import {
-  annotationContainingRange,
   annotationElementFromNode,
+  applyHighlightColorInMark,
+  eraseAnnotationsIntersectingRange,
+  highlightContainingRange,
   isRangeInSingleContainer,
   rangeSpansPartialAnnotation,
   underlineContainingRange,
@@ -30,8 +32,11 @@ function nextStep<T>(steps: readonly T[], current: T): T {
 }
 
 function clearSelection() {
-  const selection = window.getSelection()
-  selection?.removeAllRanges()
+  window.getSelection()?.removeAllRanges()
+  // Wrapping/splitting marks can leave a stale range until the next frame in some browsers.
+  requestAnimationFrame(() => {
+    window.getSelection()?.removeAllRanges()
+  })
 }
 
 export function usePracticeHighlights() {
@@ -55,10 +60,18 @@ export function usePracticeHighlights() {
     setRegionHtml((prev) => ({ ...prev, [key]: stripFindMarksFromHtml(html) }))
   }, [])
 
-  const selectColor = useCallback((color: HighlightColor) => {
-    setActiveColor(color)
-    setToolMode("highlighter")
-  }, [])
+  const selectColor = useCallback(
+    (color: HighlightColor) => {
+      if (toolMode === "highlighter" && activeColor === color) {
+        setActiveColor(null)
+        setToolMode("none")
+        return
+      }
+      setActiveColor(color)
+      setToolMode("highlighter")
+    },
+    [activeColor, toolMode],
+  )
 
   const selectEraser = useCallback(() => {
     setToolMode((m) => (m === "eraser" ? "none" : "eraser"))
@@ -108,6 +121,9 @@ export function usePracticeHighlights() {
   const handleContentClick = useCallback(
     (regionKey: RegionKey, container: HTMLElement | null, event: MouseEvent) => {
       if (!container || toolMode !== "eraser") return
+      const selection = window.getSelection()
+      // Selection erase is handled on mouseup; click only clears a whole mark when collapsed.
+      if (selection && !selection.isCollapsed) return
       const el = annotationElementFromNode(event.target as Node, container)
       if (!el) return
       event.preventDefault()
@@ -122,22 +138,22 @@ export function usePracticeHighlights() {
       if (!container || toolMode === "none") return
 
       if (toolMode === "eraser") {
-        const clickTarget = event?.target
-        const clicked = clickTarget instanceof Node ? annotationElementFromNode(clickTarget, container) : null
-        if (clicked) {
-          removeAnnotationElement(regionKey, container, clicked)
-          return
-        }
         const selection = window.getSelection()
         if (selection && !selection.isCollapsed && selection.rangeCount > 0) {
           const range = selection.getRangeAt(0)
           if (isRangeInSingleContainer(range, container)) {
-            const ann = annotationContainingRange(range, container)
-            if (ann) {
-              removeAnnotationElement(regionKey, container, ann)
-              return
+            if (eraseAnnotationsIntersectingRange(range, container)) {
+              saveRegionHtml(regionKey, container.innerHTML)
+              clearSelection()
+              event?.stopPropagation()
             }
           }
+          return
+        }
+        const clickTarget = event?.target
+        const clicked = clickTarget instanceof Node ? annotationElementFromNode(clickTarget, container) : null
+        if (clicked) {
+          removeAnnotationElement(regionKey, container, clicked)
         }
         return
       }
@@ -164,6 +180,15 @@ export function usePracticeHighlights() {
       }
 
       if (toolMode === "highlighter" && activeColor) {
+        const existingMark = highlightContainingRange(range, container)
+        if (existingMark) {
+          if (applyHighlightColorInMark(range, existingMark, activeColor)) {
+            saveRegionHtml(regionKey, container.innerHTML)
+            clearSelection()
+            event?.stopPropagation()
+          }
+          return
+        }
         if (rangeSpansPartialAnnotation(range, container)) return
         const mark = document.createElement("mark")
         mark.setAttribute("data-highlight", activeColor)

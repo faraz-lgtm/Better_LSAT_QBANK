@@ -15,8 +15,7 @@ import { PracticeQuestionStem } from "@/features/student/practice-session/practi
 import { PracticeSessionResetResponseButton } from "@/features/student/practice-session/practice-session-reset-response-button"
 import { PracticeSessionSideWidget } from "@/features/student/practice-session/practice-session-side-action-rail"
 import { useResponseMasking } from "@/features/student/practice-session/use-response-masking"
-import type { PracticeSessionVariant, PracticeToolMode } from "@/features/student/practice-session/practice-session-types"
-import type { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
+import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
 
 function regionKey(questionId: string, part: string) {
@@ -33,9 +32,6 @@ type PracticeDrillQuestionPanelProps = {
   submitting: boolean
   allowReselect: boolean
   getRegionHtml: (key: string, base: string) => string
-  toolMode: PracticeToolMode
-  onContentMouseUp: ReturnType<typeof usePracticeHighlights>["handleContentMouseUp"]
-  onContentClick: ReturnType<typeof usePracticeHighlights>["handleContentClick"]
   onSelect: (index: number) => void
   flagged: boolean
   onToggleFlag: () => void
@@ -60,9 +56,6 @@ function PracticeDrillQuestionPanel({
   submitting,
   allowReselect,
   getRegionHtml,
-  toolMode,
-  onContentMouseUp,
-  onContentClick,
   onSelect,
   flagged,
   onToggleFlag,
@@ -102,9 +95,6 @@ function PracticeDrillQuestionPanel({
         submitting={submitting}
         allowReselect={allowReselect}
         getRegionHtml={getRegionHtml}
-        toolMode={toolMode}
-        onContentMouseUp={onContentMouseUp}
-        onContentClick={onContentClick}
         onSelect={onSelect}
         answerView={answerView}
         onAnswerViewChange={onAnswerViewChange}
@@ -144,9 +134,6 @@ function PracticeDrillQuestionPanel({
           regionKey={stemKey}
           html={stemHtml}
           findQuery={findQuery}
-          toolMode={toolMode}
-          onContentMouseUp={onContentMouseUp}
-          onContentClick={onContentClick}
           flagged={flagged}
           onToggleFlag={onToggleFlag}
           flagsDisabled={flagsDisabled}
@@ -185,9 +172,6 @@ function PracticeDrillQuestionPanel({
                 }))
               }
               onToggleMasked={() => toggleChoiceMask(index)}
-              toolMode={toolMode}
-              onContentMouseUp={onContentMouseUp}
-              onContentClick={onContentClick}
               variant={variant}
               showSideAction={!isActiveDrillLayout}
             />

@@ -11,11 +11,16 @@ import {
 } from "@/features/student/components/time-range-filter"
 import type { SectionProgressPoint, SectionSummary } from "@/features/student/lib/mock-analytics-sections"
 import { mapPrepTestSessionToHistoryEntry } from "@/features/student/analytics/map-analytics"
+import {
+  buildSectionYAxisLabels,
+  resolveSectionChartMax,
+  sessionSectionQuestionCount,
+} from "@/features/student/analytics/section-progress-axis"
+import { averageSectionMissedDisplay } from "@/features/student/analytics/section-average-score"
+import { LSAT_SCALED_Y_AXIS_LABELS } from "@/features/student/analytics/chart-y-axis"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
-import type { KindBreakdownSection, PracticeSessionSummary } from "@/lib/api/analytics"
+import type { PracticeSessionSummary } from "@/lib/api/analytics"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
-
-const Y_AXIS_LABELS = [100, 84, 68, 52, 36, 20] as const
 
 const SECTION_SCORE_TABS = [
   { id: "raw", label: "Raw Score" },
@@ -23,6 +28,10 @@ const SECTION_SCORE_TABS = [
 ] as const
 
 type SectionScoreTab = (typeof SECTION_SCORE_TABS)[number]["id"]
+
+type SectionProgressPointWithCount = SectionProgressPoint & {
+  questionCount: number
+}
 
 function SectionScoreTabs({ value, onChange }: { value: SectionScoreTab; onChange: (next: SectionScoreTab) => void }) {
   return (
@@ -48,11 +57,29 @@ function SectionScoreTabs({ value, onChange }: { value: SectionScoreTab; onChang
   )
 }
 
-function SectionProgressChart({ points, tab }: { points: SectionProgressPoint[]; tab: SectionScoreTab }) {
-  const minVal = Y_AXIS_LABELS[Y_AXIS_LABELS.length - 1]
-  const maxVal = Y_AXIS_LABELS[0]
-  const range = maxVal - minVal
+function SectionProgressChart({
+  points,
+  tab,
+  rawYAxisLabels,
+}: {
+  points: SectionProgressPointWithCount[]
+  tab: SectionScoreTab
+  rawYAxisLabels: number[]
+}) {
+  const yAxisLabels = tab === "raw" ? rawYAxisLabels : LSAT_SCALED_Y_AXIS_LABELS
+  const minVal = yAxisLabels[yAxisLabels.length - 1] ?? 0
+  const maxVal = yAxisLabels[0] ?? 1
+  const range = Math.max(1, maxVal - minVal)
   const stepX = 100 / Math.max(1, points.length)
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null)
+
+  if (points.length === 0) {
+    return (
+      <div className="flex h-[300px] items-center justify-center rounded-2xl border border-dashed border-[#dfe1e7] text-sm text-[#666d80]">
+        No sections in the selected range.
+      </div>
+    )
+  }
 
   const yFor = (value: number) => {
     const clamped = Math.max(minVal, Math.min(maxVal, value))
@@ -60,7 +87,17 @@ function SectionProgressChart({ points, tab }: { points: SectionProgressPoint[];
   }
   const xFor = (index: number) => stepX * index + stepX / 2
 
-  const pickValue = (point: SectionProgressPoint) => (tab === "raw" ? point.rawScore : point.ptEquivalent)
+  const pickValue = (point: SectionProgressPointWithCount) => {
+    if (tab === "raw") return point.rawScore
+    // Prefer real LSAT scaled scores; fall back to raw when scaled is missing.
+    if (point.ptEquivalent >= 120) return point.ptEquivalent
+    return Math.min(maxVal, Math.max(minVal, Math.round(120 + (point.ptEquivalent / Math.max(1, point.questionCount)) * 60)))
+  }
+
+  const formatValue = (point: SectionProgressPointWithCount) => {
+    if (tab === "raw") return `${point.rawScore}/${point.questionCount}`
+    return String(pickValue(point))
+  }
 
   const linePoints = points.map((p, i) => ({ x: xFor(i), y: yFor(pickValue(p)) }))
   const linePortion = linePoints.slice(0, Math.min(5, linePoints.length))
@@ -70,16 +107,16 @@ function SectionProgressChart({ points, tab }: { points: SectionProgressPoint[];
     <div className="w-full">
       <div className="flex h-[300px] w-full items-stretch gap-4">
         <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[#062357]">
-          {Y_AXIS_LABELS.map((label) => (
-            <span key={label} className="leading-5">
+          {yAxisLabels.map((label, index) => (
+            <span key={`${label}-${index}`} className="leading-5">
               {label}
             </span>
           ))}
         </div>
         <div className="relative flex-1">
           <div className="absolute inset-0 flex flex-col justify-between" aria-hidden>
-            {Y_AXIS_LABELS.map((label) => (
-              <div key={label} className="h-px w-full bg-[#e5e7eb]" />
+            {yAxisLabels.map((label, index) => (
+              <div key={`${label}-${index}`} className="h-px w-full bg-[#e5e7eb]" />
             ))}
           </div>
           <svg
@@ -103,16 +140,41 @@ function SectionProgressChart({ points, tab }: { points: SectionProgressPoint[];
               vectorEffect="non-scaling-stroke"
             />
           </svg>
-          <svg
-            className="absolute inset-0 h-full w-full"
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            aria-hidden
-          >
-            {linePoints.map((p, i) => (
-              <circle key={`dot-${i}`} cx={p.x} cy={p.y} r="1" fill="#df1c41" />
-            ))}
-          </svg>
+          <div className="absolute inset-0 flex">
+            {points.map((point, i) => {
+              const value = formatValue(point)
+              const isActive = hoverIndex === i
+              return (
+                <button
+                  key={`${point.label}-${i}`}
+                  type="button"
+                  onMouseEnter={() => setHoverIndex(i)}
+                  onMouseLeave={() => setHoverIndex(null)}
+                  onFocus={() => setHoverIndex(i)}
+                  onBlur={() => setHoverIndex(null)}
+                  className="group relative flex-1 cursor-default focus:outline-none"
+                  aria-label={`${point.label}: ${value}`}
+                >
+                  <span
+                    className={cn(
+                      "absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#df1c41] transition-transform",
+                      isActive ? "scale-150 ring-2 ring-[#df1c41]/30" : "",
+                    )}
+                    style={{ left: "50%", top: `${linePoints[i]!.y}%` }}
+                    aria-hidden
+                  />
+                  {isActive ? (
+                    <span
+                      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-[#062357] px-2 py-1 text-xs font-semibold text-white shadow-lg"
+                      style={{ left: "50%", top: `calc(${linePoints[i]!.y}% - 8px)` }}
+                    >
+                      {point.label}: {value}
+                    </span>
+                  ) : null}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -145,7 +207,8 @@ type SectionColumnProps = {
   badgeColor: string
   progressTitle: string
   summary: SectionSummary
-  points: SectionProgressPoint[]
+  points: SectionProgressPointWithCount[]
+  yAxisLabels: number[]
   scoreTab: SectionScoreTab
   onScoreTabChange: (next: SectionScoreTab) => void
 }
@@ -158,6 +221,7 @@ function SectionColumn({
   progressTitle,
   summary,
   points,
+  yAxisLabels,
   scoreTab,
   onScoreTabChange,
 }: SectionColumnProps) {
@@ -184,7 +248,7 @@ function SectionColumn({
           <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">{progressTitle}</p>
           <SectionScoreTabs value={scoreTab} onChange={onScoreTabChange} />
         </div>
-        <SectionProgressChart points={points} tab={scoreTab} />
+        <SectionProgressChart points={points} tab={scoreTab} rawYAxisLabels={yAxisLabels} />
       </div>
     </div>
   )
@@ -193,16 +257,15 @@ function SectionColumn({
 function sectionSummaryFromSessions(
   sessions: PracticeSessionSummary[],
   sectionType: "LR" | "RC",
-  breakdown?: KindBreakdownSection,
 ): SectionSummary {
   const filtered = sessions.filter((s) => s.sectionType === sectionType && s.completedAt)
   const scores = filtered.map((s) => s.rawScore ?? 0)
   const best = scores.length ? Math.max(...scores) : 0
-  const avgAcc = breakdown?.accuracyPct ?? 0
+
   return {
     bestScore: String(best),
     bestAccent: "#0d47a1",
-    averageScore: `${avgAcc}%`,
+    averageScore: averageSectionMissedDisplay(sessions, sectionType),
     averageAccent: sectionType === "LR" ? "#00bc54" : "#0bbcc9",
   }
 }
@@ -210,7 +273,7 @@ function sectionSummaryFromSessions(
 function sectionProgressFromSessions(
   sessions: PracticeSessionSummary[],
   sectionType: "LR" | "RC",
-): SectionProgressPoint[] {
+): SectionProgressPointWithCount[] {
   return sessions
     .filter((s) => s.sectionType === sectionType && s.completedAt)
     .sort((a, b) => new Date(a.completedAt!).getTime() - new Date(b.completedAt!).getTime())
@@ -218,6 +281,7 @@ function sectionProgressFromSessions(
       label: s.sectionTitle?.slice(0, 8) ?? `Sec ${i + 1}`,
       rawScore: s.rawScore ?? 0,
       ptEquivalent: s.scaledScore ?? s.rawScore ?? 0,
+      questionCount: sessionSectionQuestionCount(s, sectionType),
     }))
 }
 
@@ -227,7 +291,6 @@ function AnalyticsSectionsPage() {
   const [loading, setLoading] = useState(true)
   const [sectionSessions, setSectionSessions] = useState<PracticeSessionSummary[]>([])
   const [prepHistory, setPrepHistory] = useState<PrepTestHistoryEntry[]>([])
-  const [breakdownSections, setBreakdownSections] = useState<KindBreakdownSection[]>([])
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
   const [lrScoreTab, setLrScoreTab] = useState<SectionScoreTab>("ptEquivalent")
   const [rcScoreTab, setRcScoreTab] = useState<SectionScoreTab>("ptEquivalent")
@@ -243,14 +306,12 @@ function AnalyticsSectionsPage() {
     void Promise.all([
       analyticsApi.getSessions({ kind: "SECTION", limit: 100 }),
       analyticsApi.getSessions({ kind: "PREPTEST", limit: 50 }),
-      analyticsApi.getKindBreakdown("SECTION"),
     ])
-      .then(([sections, preptests, breakdown]) => {
+      .then(([sections, preptests]) => {
         setSectionSessions(sections.sessions)
         setPrepHistory(
           preptests.sessions.map(mapPrepTestSessionToHistoryEntry).filter((e): e is PrepTestHistoryEntry => e != null),
         )
-        setBreakdownSections(breakdown.sections)
         setBookmarks(
           Object.fromEntries(
             preptests.sessions.map((s) => [s.id, s.bookmarked]),
@@ -260,15 +321,13 @@ function AnalyticsSectionsPage() {
       .finally(() => setLoading(false))
   }, [analyticsApi])
 
-  const lrBreakdown = breakdownSections.find((s) => s.sectionType === "LR")
-  const rcBreakdown = breakdownSections.find((s) => s.sectionType === "RC")
   const lrSummary = useMemo(
-    () => sectionSummaryFromSessions(sectionSessions, "LR", lrBreakdown),
-    [sectionSessions, lrBreakdown],
+    () => sectionSummaryFromSessions(sectionSessions, "LR"),
+    [sectionSessions],
   )
   const rcSummary = useMemo(
-    () => sectionSummaryFromSessions(sectionSessions, "RC", rcBreakdown),
-    [sectionSessions, rcBreakdown],
+    () => sectionSummaryFromSessions(sectionSessions, "RC"),
+    [sectionSessions],
   )
 
   const lrPoints = useMemo(
@@ -278,6 +337,28 @@ function AnalyticsSectionsPage() {
   const rcPoints = useMemo(
     () => takeLastByTimeRange(sectionProgressFromSessions(sectionSessions, "RC"), timeRange),
     [sectionSessions, timeRange],
+  )
+  const lrYAxisLabels = useMemo(
+    () =>
+      buildSectionYAxisLabels(
+        resolveSectionChartMax(
+          lrPoints.map((p) => p.questionCount),
+          lrPoints.map((p) => p.rawScore),
+          "LR",
+        ),
+      ),
+    [lrPoints],
+  )
+  const rcYAxisLabels = useMemo(
+    () =>
+      buildSectionYAxisLabels(
+        resolveSectionChartMax(
+          rcPoints.map((p) => p.questionCount),
+          rcPoints.map((p) => p.rawScore),
+          "RC",
+        ),
+      ),
+    [rcPoints],
   )
 
   const entries = useMemo(
@@ -322,6 +403,7 @@ function AnalyticsSectionsPage() {
               progressTitle="LR PROGRESS"
               summary={lrSummary}
               points={lrPoints}
+              yAxisLabels={lrYAxisLabels}
               scoreTab={lrScoreTab}
               onScoreTabChange={setLrScoreTab}
             />
@@ -334,6 +416,7 @@ function AnalyticsSectionsPage() {
               progressTitle="RC PROGRESS"
               summary={rcSummary}
               points={rcPoints}
+              yAxisLabels={rcYAxisLabels}
               scoreTab={rcScoreTab}
               onScoreTabChange={setRcScoreTab}
             />
@@ -341,6 +424,8 @@ function AnalyticsSectionsPage() {
         </section>
 
         <AnalyticsPrepTestHistory
+          title="Section History"
+          emptyNoun="sections"
           visibleEntries={visibleEntries}
           bookmarkedOnly={bookmarkedOnly}
           onBookmarkedOnlyChange={setBookmarkedOnly}

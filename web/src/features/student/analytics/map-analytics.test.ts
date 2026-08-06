@@ -76,14 +76,28 @@ describe("map-analytics", () => {
     ]
     const mapped = mapTrajectoryToScoreProgress(points)
     expect(mapped[0]?.test).toBe("PT 150")
-    expect(mapped[0]?.regular).toBe(89)
-    expect(mapped[0]?.blindReview).toBe(92)
+    expect(mapped[0]?.regular).toBe(160)
+    expect(mapped[0]?.blindReview).toBe(165)
   })
 
-  it("groups priorities into LR and RC sections", () => {
+  it("groups priorities into LR and RC sections ordered by weakness", () => {
     const priorities: PriorityRow[] = [
       {
-        questionTypeId: "qt-1",
+        questionTypeId: "qt-low",
+        name: "Easy type",
+        sectionType: "LR",
+        attemptCount: 10,
+        correctCount: 9,
+        accuracyPct: 90,
+        goalAccuracy: 86,
+        gap: -4,
+        priorityLevel: "low",
+        difficulty: 2,
+        averagePerTest: 4,
+        reviewCount: 4,
+      },
+      {
+        questionTypeId: "qt-high",
         name: "Flaw",
         sectionType: "LR",
         attemptCount: 10,
@@ -100,6 +114,6 @@ describe("map-analytics", () => {
     const sections = mapPrioritiesToSections(priorities)
     expect(sections).toHaveLength(1)
     expect(sections[0]?.id).toBe("LR")
-    expect(sections[0]?.rows[0]?.id).toBe("qt-1")
+    expect(sections[0]?.rows.map((r) => r.id)).toEqual(["qt-high", "qt-low"])
   })
 })

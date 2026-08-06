@@ -15,6 +15,7 @@ import type {
 import type { DrillRecord } from "@/features/student/lib/mock-analytics-drills"
 import type { PrepTestHistoryEntry, PrepTestRecord } from "@/features/student/lib/mock-analytics-preptests"
 import type { DrillType } from "@/features/student/lib/mock-analytics-drills"
+import { orderPriorityRowsByWeakness } from "@/features/student/drills/tag-drills-priority"
 
 function formatSigned(n: number): string {
   if (n > 0) return `+${n}`
@@ -145,24 +146,25 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
   ]
 }
 
-function scaledToChartValue(scaled: number | null, raw: number | null): number {
-  if (scaled != null) return Math.round((scaled / 180) * 100)
-  if (raw != null) return Math.min(100, Math.max(0, raw))
-  return 0
+function toScaledProgressValue(scaled: number | null, raw: number | null): number {
+  if (scaled != null) return scaled
+  // Rare fallback when only raw is present — keep it off the LSAT scale floor.
+  if (raw != null && raw >= 120) return raw
+  return 120
 }
 
 export function mapTrajectoryToScoreProgress(points: TrajectoryPoint[]): ScoreProgressPoint[] {
   return points.map((p) => {
     const label = formatPrepTestChartLabel(p.prepTestTitle, p.moduleId)
-    const regular = scaledToChartValue(
+    const regular = toScaledProgressValue(
       p.regularScaledScore ?? p.scaledScore,
       p.regularRawScore ?? p.rawScore,
     )
-    const blind = scaledToChartValue(p.blindReviewScaledScore, p.blindReviewRawScore)
+    const blind = toScaledProgressValue(p.blindReviewScaledScore, p.blindReviewRawScore)
     return {
       test: label,
       regular,
-      blindReview: blind > 0 ? blind : regular,
+      blindReview: blind > 120 ? blind : regular,
     }
   })
 }
@@ -187,7 +189,7 @@ const SECTION_STYLE: Record<
 
 export function mapPrioritiesToSections(priorities: PriorityRow[]): AnalyticsSection[] {
   const bySection = new Map<"LR" | "RC", QuestionTypeRow[]>()
-  for (const p of priorities) {
+  for (const p of orderPriorityRowsByWeakness(priorities)) {
     if (p.sectionType !== "LR" && p.sectionType !== "RC") continue
     const rows = bySection.get(p.sectionType) ?? []
     rows.push({

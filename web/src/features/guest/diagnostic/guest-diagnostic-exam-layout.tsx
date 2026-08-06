@@ -259,9 +259,6 @@ function GuestDiagnosticExamLayout({
               submitting={false}
               allowReselect
               getRegionHtml={highlights.getRegionHtml}
-              toolMode={highlights.toolMode}
-              onContentMouseUp={interactive ? highlights.handleContentMouseUp : () => undefined}
-              onContentClick={interactive ? highlights.handleContentClick : () => undefined}
               onSelect={interactive ? handleSelectChoice : () => undefined}
               flagged={isFlagged(current.id)}
               onToggleFlag={() => toggleFlag(current.id)}
