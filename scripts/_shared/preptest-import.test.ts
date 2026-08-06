@@ -8,6 +8,8 @@ import {
   parseExplanationCsvRecord,
   parseScaledScoreCsvRows,
   parseScaledScoreFilename,
+  parseScaledScorePercentileCsvRows,
+  percentileByScaledScore,
   prepTestNumberFromModuleId,
   questionLookupKey,
   selectScaledScoreFiles,
@@ -165,6 +167,24 @@ Deno.test("parseScaledScoreCsvRows maps Raw Score and LSAT Score columns", () =>
     { "Raw Score": "bad", "LSAT Score": "180" },
   ])
   assertEquals(rows, [{ rawScore: 77, scaledScore: 180 }])
+})
+
+Deno.test("parseScaledScorePercentileCsvRows maps scaled_score and percentile", () => {
+  const rows = parseScaledScorePercentileCsvRows([
+    { scaled_score: "154", percentile: "52.33" },
+    { scaled_score: "bad", percentile: "10" },
+    { scaled_score: "181", percentile: "99" },
+  ])
+  assertEquals(rows, [{ scaledScore: 154, percentile: 52.33 }])
+})
+
+Deno.test("percentileByScaledScore builds lookup map", () => {
+  const map = percentileByScaledScore([
+    { scaledScore: 120, percentile: 0 },
+    { scaledScore: 154, percentile: 52.33 },
+  ])
+  assertEquals(map.get(154), 52.33)
+  assertEquals(map.get(120), 0)
 })
 
 Deno.test("questionLookupKey format", () => {
