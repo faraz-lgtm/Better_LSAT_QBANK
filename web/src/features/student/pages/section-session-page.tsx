@@ -372,6 +372,7 @@ function SectionSessionPage() {
     rawScore: number
     questionCount: number
     scaledScore?: number | null
+    percentile?: number | null
     prepTestLabel: string
     prepTestSessionId?: string
     afterSectionId?: string | null
@@ -899,6 +900,7 @@ function SectionSessionPage() {
             rawScore: ptCompleted.raw_score ?? 0,
             questionCount,
             scaledScore: ptCompleted.scaled_score,
+            percentile: ptCompleted.percentile,
             prepTestLabel: detail.prepTest.label,
             prepTestSessionId: ptCompleted.id,
             flow: "preptest",
@@ -1685,6 +1687,7 @@ function SectionSessionPage() {
         rawScore={completeModal?.rawScore ?? 0}
         questionCount={completeModal?.questionCount ?? 1}
         scaledScore={completeModal?.scaledScore}
+        percentile={completeModal?.percentile}
         scoreHidden={scoreHidden}
         onToggleScoreHidden={() => setScoreHidden((h) => !h)}
         showBlindReview

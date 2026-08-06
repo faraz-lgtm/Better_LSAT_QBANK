@@ -93,6 +93,7 @@ function AdminScoreTablesPage() {
                     <input
                       className="admin-input w-20 px-1 py-0.5 text-center font-mono"
                       type="number"
+                      step="0.01"
                       defaultValue={Number(row.percentile ?? 0)}
                       onBlur={(e) =>
                         void adminApi?.updateScoreRow(String(row.id), { percentile: Number(e.target.value) }).catch((err) => {

@@ -3,9 +3,13 @@ import { parse } from "npm:csv-parse@5.6.0/sync"
 import { createServiceRoleClient } from "../supabase/functions/users/users.repository.ts"
 import {
   parseScaledScoreCsvRows,
+  parseScaledScorePercentileCsvRows,
+  percentileByScaledScore,
   resolvePrimaryPrepTestId,
   selectScaledScoreFiles,
 } from "./_shared/preptest-import.ts"
+
+const PERCENTILE_CSV = "lsat_scaled_score_percentile.csv"
 
 type CliOptions = {
   dryRun: boolean
@@ -51,6 +55,22 @@ function readScaledScoreRows(filePath: string) {
   return parseScaledScoreCsvRows(records)
 }
 
+function readPercentileByScaled(dirPath: string): Map<number, number> {
+  const filePath = `${dirPath.replace(/\/$/, "")}/${PERCENTILE_CSV}`
+  try {
+    const text = Deno.readTextFileSync(filePath)
+    const records = parse(text, {
+      columns: true,
+      skip_empty_lines: true,
+      relax_quotes: true,
+    }) as Record<string, string>[]
+    return percentileByScaledScore(parseScaledScorePercentileCsvRows(records))
+  } catch {
+    console.warn(`Warning: missing ${PERCENTILE_CSV} — score rows will import with null percentile`)
+    return new Map()
+  }
+}
+
 async function upsertScoreTable(
   client: ReturnType<typeof createServiceRoleClient>,
   prepTestId: string,
@@ -75,6 +95,7 @@ async function upsertScoreRows(
   client: ReturnType<typeof createServiceRoleClient>,
   scoreTableId: string,
   rows: ReturnType<typeof parseScaledScoreCsvRows>,
+  percentiles: Map<number, number>,
 ) {
   const now = new Date().toISOString()
   const chunkSize = 100
@@ -84,7 +105,7 @@ async function upsertScoreRows(
       score_table_id: scoreTableId,
       raw_score: row.rawScore,
       scaled_score: row.scaledScore,
-      percentile: null,
+      percentile: percentiles.get(row.scaledScore) ?? null,
       updated_at: now,
     }))
 
@@ -99,6 +120,7 @@ async function main() {
   const opts = parseArgs(Deno.args)
   const filenames = await listCsvFilenames(opts.dirPath)
   let files = selectScaledScoreFiles(filenames)
+  const percentiles = readPercentileByScaled(opts.dirPath)
 
   if (opts.prepTest != null) {
     files = files.filter((f) => f.prepTestNumber === opts.prepTest)
@@ -106,6 +128,7 @@ async function main() {
 
   console.log(`Directory: ${opts.dirPath}`)
   console.log(`Selected ${files.length} score table file(s)`)
+  console.log(`Percentile map entries: ${percentiles.size}`)
   if (opts.dryRun) console.log("Dry run — no database writes.")
 
   const client = createServiceRoleClient()
@@ -137,7 +160,7 @@ async function main() {
     }
 
     const scoreTableId = await upsertScoreTable(client, prepTestId)
-    await upsertScoreRows(client, scoreTableId, rows)
+    await upsertScoreRows(client, scoreTableId, rows, percentiles)
     console.log(`PT ${file.prepTestNumber}: imported ${rows.length} rows from ${file.path}`)
     importedPts += 1
     importedRows += rows.length
