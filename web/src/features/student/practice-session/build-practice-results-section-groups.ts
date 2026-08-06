@@ -114,25 +114,31 @@ export function buildPracticeResultsSectionGroups(input: {
     const key = `${kind}-${sectionNumber ?? "drill"}`
     const answer = input.answersByQuestion.get(question.id)
     const isUnanswered = isPracticeAnswerUnanswered(answer)
+    const isCorrect = isUnanswered ? false : (answer?.isCorrect ?? false)
     const blindReviewAnswer = hasBlindReview
       ? input.blindReviewAnswersByQuestion?.get(question.id)
       : undefined
+    const blindReviewSkipped = hasBlindReview && isPracticeAnswerUnanswered(blindReviewAnswer)
+    // BR skip → inherit Actual icon/correctness; BR answer always wins (even if Actual skipped).
     const blindReviewUnanswered = hasBlindReview
-      ? isPracticeAnswerUnanswered(blindReviewAnswer)
+      ? blindReviewSkipped
+        ? isUnanswered
+        : false
       : false
+    const blindReviewCorrect = hasBlindReview
+      ? blindReviewSkipped
+        ? isCorrect
+        : (blindReviewAnswer?.isCorrect ?? false)
+      : undefined
     const meta: PracticeQuestionResultMeta = {
       question,
       number: 0,
       detail,
       isUnanswered,
-      isCorrect: isUnanswered ? false : (answer?.isCorrect ?? false),
+      isCorrect,
       selectedAnswer: answer?.selectedAnswer?.trim() ? answer.selectedAnswer : null,
       blindReviewUnanswered: hasBlindReview ? blindReviewUnanswered : undefined,
-      blindReviewCorrect: hasBlindReview
-        ? blindReviewUnanswered
-          ? false
-          : (blindReviewAnswer?.isCorrect ?? false)
-        : undefined,
+      blindReviewCorrect,
       yourTimeSeconds: input.perQuestionSeconds,
     }
     const existing = grouped.get(key)

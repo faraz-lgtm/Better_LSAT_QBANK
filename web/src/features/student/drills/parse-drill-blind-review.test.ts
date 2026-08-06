@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  applyActualFallbackToBlindReview,
   parseDrillBlindReviewFromMetadata,
   parseSectionBlindReviewFromMetadata,
   resolveSectionBlindReviewForResults,
@@ -79,6 +80,50 @@ describe("resolveSectionBlindReviewForResults", () => {
       resolveSectionBlindReviewForResults({
         sessionMetadata: {},
         blindReviewAnswers: [],
+      }),
+    ).toEqual({ rawScore: null, answersByQuestion: null })
+  })
+})
+
+describe("applyActualFallbackToBlindReview", () => {
+  it("fills skipped Blind Review answers from Actual and recomputes raw score", () => {
+    const actualByQuestion = new Map([
+      ["q-1", { selectedAnswer: "A", isCorrect: false }],
+      ["q-2", { selectedAnswer: "B", isCorrect: true }],
+    ])
+    const blindReviewAnswersByQuestion = new Map([
+      ["q-1", { selectedAnswer: "C", isCorrect: false }],
+    ])
+
+    const result = applyActualFallbackToBlindReview({
+      questionIds: ["q-1", "q-2"],
+      actualByQuestion,
+      blindReviewAnswersByQuestion,
+    })
+
+    expect(result.rawScore).toBe(1)
+    expect(result.answersByQuestion?.get("q-1")?.selectedAnswer).toBe("C")
+    expect(result.answersByQuestion?.get("q-2")?.selectedAnswer).toBe("B")
+    expect(result.answersByQuestion?.get("q-2")?.isCorrect).toBe(true)
+  })
+
+  it("keeps Blind Review answer when Actual was skipped", () => {
+    const result = applyActualFallbackToBlindReview({
+      questionIds: ["q-1"],
+      actualByQuestion: new Map(),
+      blindReviewAnswersByQuestion: new Map([["q-1", { selectedAnswer: "B", isCorrect: true }]]),
+    })
+
+    expect(result.rawScore).toBe(1)
+    expect(result.answersByQuestion?.get("q-1")?.isCorrect).toBe(true)
+  })
+
+  it("returns null when Blind Review was not completed", () => {
+    expect(
+      applyActualFallbackToBlindReview({
+        questionIds: ["q-1"],
+        actualByQuestion: new Map([["q-1", { selectedAnswer: "A", isCorrect: true }]]),
+        blindReviewAnswersByQuestion: null,
       }),
     ).toEqual({ rawScore: null, answersByQuestion: null })
   })

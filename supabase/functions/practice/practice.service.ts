@@ -101,6 +101,31 @@ function blindReviewRawScoreFromStates(answers: DrillAnswerState[]): number {
   return answers.filter((answer) => answer.isCorrect).length
 }
 
+/** Fill BR gaps from Actual so skipped BR questions inherit the timed-test answer. */
+function fillBlindReviewGapsFromActual(
+  questionIds: string[],
+  scored: PracticeAnswerSnapshot[],
+  actualSnapshots: PracticeAnswerSnapshot[] | null,
+): PracticeAnswerSnapshot[] {
+  if (questionIds.length === 0 || !actualSnapshots || actualSnapshots.length === 0) {
+    return scored
+  }
+  const scoredIds = new Set(scored.map((row) => row.questionId))
+  const actualById = new Map(actualSnapshots.map((row) => [row.questionId, row]))
+  const filled = [...scored]
+  for (const questionId of questionIds) {
+    if (scoredIds.has(questionId)) continue
+    const actual = actualById.get(questionId)
+    if (!actual || !actual.selectedAnswer.trim()) continue
+    filled.push({
+      questionId: actual.questionId,
+      selectedAnswer: actual.selectedAnswer,
+      isCorrect: actual.isCorrect,
+    })
+  }
+  return filled
+}
+
 function hasBlindReviewAnswerChanges(
   atCompletion: Map<string, AnswerEventRow>,
   latest: Map<string, AnswerEventRow>,
@@ -1357,13 +1382,16 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         scored.push({ questionId, selectedAnswer: selected, isCorrect })
       }
 
-      const rawScore = scored.filter((answer) => answer.isCorrect).length
+      const questionIds = drillQuestionIdsFromMetadata(session.metadata)
+      const actualSnapshots = parsePracticeAnswerSnapshots(session.metadata.drillActualAnswers)
+      const scoredWithFallback = fillBlindReviewGapsFromActual(questionIds, scored, actualSnapshots)
+      const rawScore = scoredWithFallback.filter((answer) => answer.isCorrect).length
       const now = new Date().toISOString()
       const sessionRow = await deps.repository.updateSession(sessionId, userId, {
         metadata: {
           ...session.metadata,
           drillBlindReviewRawScore: rawScore,
-          drillBlindReviewAnswers: scored,
+          drillBlindReviewAnswers: scoredWithFallback,
           drillBlindReviewCompletedAt: now,
         },
       })
@@ -1416,13 +1444,16 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         scored.push({ questionId, selectedAnswer: selected, isCorrect })
       }
 
-      const rawScore = scored.filter((answer) => answer.isCorrect).length
+      const questionIds = drillQuestionIdsFromMetadata(session.metadata)
+      const actualSnapshots = parsePracticeAnswerSnapshots(session.metadata.sectionActualAnswers)
+      const scoredWithFallback = fillBlindReviewGapsFromActual(questionIds, scored, actualSnapshots)
+      const rawScore = scoredWithFallback.filter((answer) => answer.isCorrect).length
       const now = new Date().toISOString()
       const sessionRow = await deps.repository.updateSession(sessionId, userId, {
         metadata: {
           ...session.metadata,
           sectionBlindReviewRawScore: rawScore,
-          sectionBlindReviewAnswers: scored,
+          sectionBlindReviewAnswers: scoredWithFallback,
           sectionBlindReviewCompletedAt: now,
         },
       })
