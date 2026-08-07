@@ -26,6 +26,8 @@ export type DrillQuestionPayload = {
   stemText: string | null
   choices: DrillChoice[]
   passage: DrillPassage | null
+  /** LSAC/RC passage group id — used for nav dividers when passage rows lack source_group_id. */
+  sourceGroupId?: string | null
   /** Set only when serving completed sessions for review (not during active practice). */
   correctChoiceId?: string | null
 }
@@ -81,22 +83,99 @@ export function parseChoices(
   return parseQuestionChoices(raw, options)
 }
 
-function resolvePassage(row: DrillQuestionRow, sec: SectionRow): DrillPassage | null {
+function normalizePassages(sec: SectionRow): PassageRow[] {
+  const raw = sec.admin_passages
+  return Array.isArray(raw) ? raw : raw ? [raw] : []
+}
+
+function passageFromRow(pass: PassageRow, displayNumber: number): DrillPassage {
+  return {
+    id: pass.id,
+    displayNumber,
+    title: pass.topic_tag?.trim() || `Passage ${displayNumber}`,
+    body: pass.content?.trim() ?? '',
+  }
+}
+
+/**
+ * Assign each RC source_group_id a distinct passage.
+ * Avoids collapsing every question onto passages[0] when passage.source_group_id is missing.
+ */
+function buildRcPassageByGroupId(rows: DrillQuestionRow[]): Map<string, DrillPassage> {
+  const byGroup = new Map<string, DrillPassage>()
+  const groupOrder: string[] = []
+  let passages: PassageRow[] = []
+
+  for (const row of rows) {
+    const sec = relOne(row.admin_sections)
+    if (!sec || sec.section_type !== 'RC') continue
+    if (passages.length === 0) passages = normalizePassages(sec)
+    const gid = row.source_group_id?.trim() ?? ''
+    if (gid && !groupOrder.includes(gid)) groupOrder.push(gid)
+  }
+
+  for (const gid of groupOrder) {
+    const matched = passages.find((p) => p.source_group_id?.trim() === gid)
+    if (matched) {
+      byGroup.set(gid, passageFromRow(matched, passages.indexOf(matched) + 1))
+    }
+  }
+
+  const usedPassageIds = new Set([...byGroup.values()].map((p) => p.id))
+  const unmatchedPassages = passages.filter((p) => !usedPassageIds.has(p.id))
+  let unmatchedIdx = 0
+  for (let i = 0; i < groupOrder.length; i += 1) {
+    const gid = groupOrder[i]!
+    if (byGroup.has(gid)) continue
+    const pass = unmatchedPassages[unmatchedIdx]
+    if (pass) {
+      unmatchedIdx += 1
+      byGroup.set(gid, passageFromRow(pass, passages.indexOf(pass) + 1))
+    } else {
+      byGroup.set(gid, {
+        id: `rc-group:${gid}`,
+        displayNumber: i + 1,
+        title: `Passage ${i + 1}`,
+        body: '',
+      })
+    }
+  }
+
+  return byGroup
+}
+
+function resolvePassage(
+  row: DrillQuestionRow,
+  sec: SectionRow,
+  rcPassageByGroup?: Map<string, DrillPassage>,
+): DrillPassage | null {
   const sectionType = sec.section_type ?? 'LR'
   const sourceGroupId = row.source_group_id?.trim() ?? ''
 
   if (sectionType === 'RC') {
-    const passagesRaw = sec.admin_passages
-    const passages = Array.isArray(passagesRaw) ? passagesRaw : passagesRaw ? [passagesRaw] : []
-    const pass = passages.find((p) => p.source_group_id?.trim() === sourceGroupId) ?? passages[0]
-    if (pass) {
-      const idx = passages.indexOf(pass) + 1
+    if (sourceGroupId && rcPassageByGroup?.has(sourceGroupId)) {
+      const mapped = rcPassageByGroup.get(sourceGroupId)!
+      if (mapped.body) return mapped
+      const stim = row.stimulus_text?.trim() ?? ''
+      return stim ? { ...mapped, body: stim } : mapped
+    }
+
+    const passages = normalizePassages(sec)
+    if (sourceGroupId) {
+      const matched = passages.find((p) => p.source_group_id?.trim() === sourceGroupId)
+      if (matched) return passageFromRow(matched, passages.indexOf(matched) + 1)
+      const stim = row.stimulus_text?.trim() ?? ''
       return {
-        id: pass.id,
-        displayNumber: idx || 1,
-        title: pass.topic_tag?.trim() || `Passage ${idx || 1}`,
-        body: pass.content?.trim() ?? '',
+        id: `rc-group:${sourceGroupId}`,
+        displayNumber: 1,
+        title: 'Passage',
+        body: stim || (passages[0]?.content?.trim() ?? ''),
       }
+    }
+
+    // Legacy questions with no source_group_id — single shared passage fallback.
+    if (passages[0]) {
+      return passageFromRow(passages[0], 1)
     }
   }
 
@@ -116,17 +195,21 @@ function resolvePassage(row: DrillQuestionRow, sec: SectionRow): DrillPassage | 
 
 export function mapDrillQuestionRow(
   row: DrillQuestionRow,
-  options?: { includeOptionExplanations?: boolean },
+  options?: {
+    includeOptionExplanations?: boolean
+    rcPassageByGroup?: Map<string, DrillPassage>
+  },
 ): DrillQuestionPayload {
   const sec = relOne(row.admin_sections)
   const choices = parseChoices(row.choices, options)
   const sectionType = sec?.section_type ?? 'LR'
+  const sourceGroupId = row.source_group_id?.trim() || null
 
   let stimulusText = row.stimulus_text?.trim() || null
   let passage: DrillPassage | null = null
 
   if (sec) {
-    passage = resolvePassage(row, sec)
+    passage = resolvePassage(row, sec, options?.rcPassageByGroup)
     if (sectionType === 'RC' && passage) {
       stimulusText = null
     }
@@ -141,6 +224,7 @@ export function mapDrillQuestionRow(
     stemText: row.stem_text?.trim() || null,
     choices,
     passage,
+    sourceGroupId,
     correctChoiceId: includeReviewFields
       ? correctChoiceIdFromAnswer(row.correct_answer, choices)
       : undefined,
@@ -151,7 +235,13 @@ export function mapDrillQuestionRows(
   rows: DrillQuestionRow[],
   includeOptionExplanations: boolean,
 ): DrillQuestionPayload[] {
-  return rows.map((row) => mapDrillQuestionRow(row, { includeOptionExplanations }))
+  const rcPassageByGroup = buildRcPassageByGroupId(rows)
+  return rows.map((row) =>
+    mapDrillQuestionRow(row, {
+      includeOptionExplanations,
+      rcPassageByGroup,
+    }),
+  )
 }
 
 export function shuffleInPlace<T>(items: T[]): T[] {

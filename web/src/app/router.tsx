@@ -45,6 +45,7 @@ import { PracticePrepTestSectionPage } from "@/features/student/pages/practice-p
 import { LrNewSectionPage } from "@/features/student/pages/lr-new-section-page"
 import { PracticeSectionsPage } from "@/features/student/pages/practice-sections-page"
 import { RcNewSectionPage } from "@/features/student/pages/rc-new-section-page"
+import { RcQuestionNavPreviewPage } from "@/features/student/pages/rc-question-nav-preview-page"
 import { SectionSessionPage } from "@/features/student/pages/section-session-page"
 import { AdminShell } from "@/features/admin/layout/admin-shell"
 import { AdminDashboardPage } from "@/features/admin/pages/admin-dashboard-page"
@@ -353,6 +354,7 @@ const router = createBrowserRouter([
   },
   { path: "/diagnostic/start/preview", element: <GuestDiagnosticStartPage preview /> },
   { path: "/diagnostic/results/preview", element: <GuestDiagnosticResultsPreviewPage /> },
+  { path: "/practice/rc-nav/preview", element: <RcQuestionNavPreviewPage /> },
   {
     path: "/app",
     element: (
@@ -385,6 +387,7 @@ const router = createBrowserRouter([
           { path: "practice/sections", element: <PracticeSectionsPage /> },
           { path: "practice/sections/lr/new", element: <LrNewSectionPage /> },
           { path: "practice/sections/rc/new", element: <RcNewSectionPage /> },
+          { path: "practice/sections/rc/nav-preview", element: <RcQuestionNavPreviewPage /> },
           { path: "practice/sections/session/:sessionId", element: <SectionSessionPage /> },
           { path: "practice/sections/rc", element: <Navigate to="/app/practice/sections/rc/new" replace /> },
           { path: "practice/sections/rc/session", element: <Navigate to="/app/practice/sections/rc/new" replace /> },

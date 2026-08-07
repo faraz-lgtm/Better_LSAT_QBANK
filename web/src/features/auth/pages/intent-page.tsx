@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ArrowRight } from "lucide-react"
+import { ArrowLeft, ArrowRight } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,7 @@ import {
   DiagnosticIntentCard,
   type DiagnosticIntentTierConfig,
 } from "@/features/auth/components/diagnostic-intent-card"
+import { STUDENT_DASHBOARD_HREF } from "@/features/app-shell/student-nav-config"
 import {
   saveDiagnosticIntent,
   type DiagnosticIntentTier,
@@ -67,6 +68,13 @@ function IntentPage({ isAuthenticated = false }: IntentPageProps) {
     <AuthLayout headerVariant="intent" contentLayout="intent" hideSidebar hideIntentSignIn={isAuthenticated}>
       <div className="intent-page">
         <AuthCard className="intent-page__card">
+          <Link
+            to={isAuthenticated ? STUDENT_DASHBOARD_HREF : "/"}
+            className="intent-page__back"
+          >
+            <ArrowLeft className="intent-page__back-icon" aria-hidden />
+            Back
+          </Link>
           <div className="intent-page__header">
             <h1 className="intent-page__title">Take diagnostic</h1>
             <p className="intent-page__subtitle">

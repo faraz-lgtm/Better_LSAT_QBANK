@@ -20,5 +20,20 @@ describe("PracticeSessionFinishMenu", () => {
 
     expect(screen.getByRole("menuitem", { name: "Submit Section" })).toBeInTheDocument()
     expect(screen.getByRole("menuitem", { name: "Save & Exit" })).toBeInTheDocument()
+    expect(document.documentElement.classList.contains("practice-finish-menu-open")).toBe(true)
+  })
+
+  it("clears the finish-menu-open class when the menu closes", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <PracticeSessionFinishMenu onSubmitSection={vi.fn()} onExit={vi.fn()} />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /finish/i }))
+    expect(document.documentElement.classList.contains("practice-finish-menu-open")).toBe(true)
+
+    await user.keyboard("{Escape}")
+    expect(document.documentElement.classList.contains("practice-finish-menu-open")).toBe(false)
   })
 })

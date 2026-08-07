@@ -70,6 +70,8 @@ export type PrepTestSectionBreak = {
   afterSectionId: string
   endsAt: string
   remainingSeconds: number
+  /** Total break length in seconds (1 min or 10 min mid-test). */
+  durationSeconds: number
 }
 
 export type PrepTestDetailResponse = {

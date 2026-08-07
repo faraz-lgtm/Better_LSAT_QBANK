@@ -487,6 +487,35 @@ function prepTestSessionAwaitingBlindReview(sessions: PracticeSessionRow[]): Pra
   return prepTests.find((s) => s.completed_at && !isPrepTestFullyComplete(s)) ?? null
 }
 
+/**
+ * Session that can start/continue blind review.
+ * Includes skipped attempts — viewing results marks BR skipped, but Review must still work.
+ */
+function prepTestSessionEligibleToStartBlindReview(
+  sessions: PracticeSessionRow[],
+): PracticeSessionRow | null {
+  const awaiting = prepTestSessionAwaitingBlindReview(sessions)
+  if (awaiting) return awaiting
+  return (
+    sortedPrepTestSessions(sessions).find(
+      (s) =>
+        Boolean(s.completed_at) &&
+        !s.blind_review_completed_at &&
+        s.metadata.blindReviewSkipped === true,
+    ) ?? null
+  )
+}
+
+function prepTestSessionWithCompletedBlindReview(
+  sessions: PracticeSessionRow[],
+): PracticeSessionRow | null {
+  return (
+    sortedPrepTestSessions(sessions).find(
+      (s) => Boolean(s.completed_at) && Boolean(s.blind_review_completed_at),
+    ) ?? null
+  )
+}
+
 function prepTestSessionEligibleForBlindReviewComplete(
   session: PracticeSessionRow | null | undefined,
   prepTestId: string,
@@ -899,23 +928,20 @@ function blindReviewStateFromSessions(sessions: PracticeSessionRow[]): {
   status: BlindReviewStatus | null
   prepTestSession: PracticeSessionRow | null
 } {
-  const prepTests = sortedPrepTestSessions(sessions)
-  const newest = prepTests[0]
-  if (newest?.completed_at && isPrepTestFullyComplete(newest)) {
-    if (newest.blind_review_completed_at) {
-      return { status: 'completed', prepTestSession: newest }
+  const startable = prepTestSessionEligibleToStartBlindReview(sessions)
+  if (startable) {
+    if (startable.metadata.blindReviewActive === true && startable.metadata.blindReviewSkipped !== true) {
+      return { status: 'in_progress', prepTestSession: startable }
     }
-    return { status: null, prepTestSession: null }
+    return { status: 'eligible', prepTestSession: startable }
   }
 
-  const awaitingBlindReview = prepTestSessionAwaitingBlindReview(sessions)
-  if (!awaitingBlindReview) {
-    return { status: null, prepTestSession: null }
+  const completedBr = prepTestSessionWithCompletedBlindReview(sessions)
+  if (completedBr) {
+    return { status: 'completed', prepTestSession: completedBr }
   }
-  if (awaitingBlindReview.metadata.blindReviewActive === true) {
-    return { status: 'in_progress', prepTestSession: awaitingBlindReview }
-  }
-  return { status: 'eligible', prepTestSession: awaitingBlindReview }
+
+  return { status: null, prepTestSession: null }
 }
 
 function blindReviewPoolItemFromRow(
@@ -1199,7 +1225,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           throw new PracticeValidationError('Blind review answers require a section session tied to a PrepTest')
         }
         const ptSessions = await deps.repository.listUserSessionsForPrepTest(userId, session.prep_test_id)
-        const prepTestSession = prepTestSessionAwaitingBlindReview(ptSessions)
+        const prepTestSession = prepTestSessionEligibleToStartBlindReview(ptSessions)
         if (!prepTestSession) {
           const newest = sortedPrepTestSessions(ptSessions)[0]
           if (newest?.blind_review_completed_at) {
@@ -2304,7 +2330,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       assertStudentVisiblePrepTest(row.moduleId)
 
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
-      const prepTestSession = prepTestSessionAwaitingBlindReview(sessions)
+      const prepTestSession = prepTestSessionEligibleToStartBlindReview(sessions)
       if (!prepTestSession) {
         const newest = sortedPrepTestSessions(sessions)[0]
         if (newest?.blind_review_completed_at) {
@@ -2314,7 +2340,11 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       }
 
       const sessionRow = await deps.repository.updateSession(prepTestSession.id, userId, {
-        metadata: { ...prepTestSession.metadata, blindReviewActive: true },
+        metadata: {
+          ...prepTestSession.metadata,
+          blindReviewActive: true,
+          blindReviewSkipped: false,
+        },
       })
       return { session: sessionRow }
     },

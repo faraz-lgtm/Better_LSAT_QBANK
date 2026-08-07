@@ -47,7 +47,7 @@ import { PracticeSessionFinishMenu } from "@/features/student/practice-session/p
 import { PracticeSubmitSectionModal } from "@/features/student/practice-session/practice-submit-section-modal"
 import { PracticeSessionImmersiveFrame } from "@/features/student/practice-session/practice-session-immersive-frame"
 import { PracticeSessionNavArrowButton } from "@/features/student/practice-session/practice-session-nav-arrow-button"
-import { PracticeSessionQuestionNavButton } from "@/features/student/practice-session/practice-session-question-nav-button"
+import { PracticeSessionQuestionNavStrip } from "@/features/student/practice-session/practice-session-question-nav-strip"
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
 import { usePracticeQuestionFlags } from "@/features/student/practice-session/use-practice-question-flags"
 import {
@@ -825,23 +825,18 @@ function DrillSessionPage() {
           />
         ) : useBlindReviewLayout ? (
           <div className={BLIND_REVIEW_FOOTER_ROW_CLASS}>
-            <div className={BLIND_REVIEW_FOOTER_NAV_CLASS}>
-              {questions.map((q, i) => {
-                const n = i + 1
-                return (
-                  <PracticeSessionQuestionNavButton
-                    key={q.id}
-                    number={n}
-                    active={n === safeIndex}
-                    answered={Boolean(answersByQuestion[q.id])}
-                    flagged={questionFlags.isFlagged(q.id)}
-                    recommendedForBr={isQuestionRecommendedForBlindReview(actualAnswersByQuestion[q.id])}
-                    variant={sessionVariant}
-                    onClick={() => setQIndex(n)}
-                  />
-                )
-              })}
-            </div>
+            <PracticeSessionQuestionNavStrip
+              questions={questions}
+              safeIndex={safeIndex}
+              answersByQuestion={answersByQuestion}
+              isFlagged={questionFlags.isFlagged}
+              recommendedForBr={(questionId) =>
+                isQuestionRecommendedForBlindReview(actualAnswersByQuestion[questionId])
+              }
+              variant={sessionVariant}
+              onSelectQuestion={setQIndex}
+              className={BLIND_REVIEW_FOOTER_NAV_CLASS}
+            />
             <div className={BLIND_REVIEW_NAV_ARROW_GROUP_CLASS}>
               <PracticeSessionNavArrowButton
                 direction="prev"
@@ -861,22 +856,15 @@ function DrillSessionPage() {
           </div>
         ) : (
           <>
-        <div className="practice-session-scroll-hidden flex min-h-0 min-w-0 flex-1 flex-nowrap items-stretch gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5 pt-2.5 sm:gap-2">
-          {questions.map((q, i) => {
-            const n = i + 1
-            return (
-              <PracticeSessionQuestionNavButton
-                key={q.id}
-                number={n}
-                active={n === safeIndex}
-                answered={Boolean(answersByQuestion[q.id])}
-                flagged={questionFlags.isFlagged(q.id)}
-                variant={sessionVariant}
-                onClick={() => setQIndex(n)}
-              />
-            )
-          })}
-        </div>
+        <PracticeSessionQuestionNavStrip
+          questions={questions}
+          safeIndex={safeIndex}
+          answersByQuestion={answersByQuestion}
+          isFlagged={questionFlags.isFlagged}
+          variant={sessionVariant}
+          onSelectQuestion={setQIndex}
+          className="practice-session-scroll-hidden flex min-h-0 min-w-0 flex-1 flex-nowrap items-stretch gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5 pt-2.5 sm:gap-2"
+        />
         <div className="flex shrink-0 items-center gap-2 self-center">
               <button
                 type="button"

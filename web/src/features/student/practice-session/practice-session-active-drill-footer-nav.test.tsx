@@ -51,4 +51,26 @@ describe("PracticeSessionActiveDrillFooterNav", () => {
     expect(screen.getByRole("button", { name: "Next question" })).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Submit Test" })).not.toBeInTheDocument()
   })
+
+  it("renders passage separators between RC passage groups", () => {
+    render(
+      <PracticeSessionActiveDrillFooterNav
+        questions={[
+          { id: "q1", passage: { id: "p1" } },
+          { id: "q2", passage: { id: "p1" } },
+          { id: "q3", passage: { id: "p2" } },
+          { id: "q4", passage: { id: "p2" } },
+        ]}
+        safeIndex={1}
+        answersByQuestion={{}}
+        isFlagged={() => false}
+        variant="active-drill"
+        onSelectQuestion={() => undefined}
+        onPrev={() => undefined}
+        onNext={() => undefined}
+      />,
+    )
+
+    expect(document.querySelectorAll(".practice-session-question-nav-passage-break")).toHaveLength(1)
+  })
 })

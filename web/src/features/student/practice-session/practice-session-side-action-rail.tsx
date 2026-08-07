@@ -126,7 +126,7 @@ function PracticeSessionSideWidget({
     <TooltipProvider delayDuration={300}>
       <aside
         className={cn(
-          "absolute right-0 top-6 z-10 flex flex-col",
+          "practice-session-side-widget absolute right-0 top-6 z-10 flex flex-col",
           expanded ? ACTIVE_DRILL_SIDE_WIDGET_EXPANDED_CLASS : ACTIVE_DRILL_SIDE_WIDGET_COLLAPSED_CLASS,
         )}
         aria-label="Exam tools"

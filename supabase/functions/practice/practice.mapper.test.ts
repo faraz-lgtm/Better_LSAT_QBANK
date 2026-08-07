@@ -1,5 +1,10 @@
 import { assertEquals } from 'jsr:@std/assert@1'
-import { mapDrillQuestionRow, pickDrillQuestionIds, type DrillQuestionRow } from './practice.mapper.ts'
+import {
+  mapDrillQuestionRow,
+  mapDrillQuestionRows,
+  pickDrillQuestionIds,
+  type DrillQuestionRow,
+} from './practice.mapper.ts'
 
 const baseRow: DrillQuestionRow = {
   id: 'q-1',
@@ -57,4 +62,65 @@ Deno.test('pickDrillQuestionIds RC prefers passage groups', () => {
   const group1 = ids.every((id) => id === 'a1' || id === 'a2')
   const group2 = ids.every((id) => id === 'b1' || id === 'b2')
   assertEquals(group1 || group2, true)
+})
+
+Deno.test('mapDrillQuestionRows assigns distinct RC passages per source_group_id', () => {
+  const rows: DrillQuestionRow[] = [
+    {
+      ...baseRow,
+      id: 'q1',
+      source_group_id: 'g1',
+      question_number: 1,
+      admin_sections: {
+        id: 's1',
+        section_type: 'RC',
+        section_number: 2,
+        title: 'RC',
+        admin_passages: [
+          { id: 'pass-a', source_group_id: null, content: 'Passage A body', topic_tag: 'A' },
+          { id: 'pass-b', source_group_id: null, content: 'Passage B body', topic_tag: 'B' },
+        ],
+      },
+    },
+    {
+      ...baseRow,
+      id: 'q2',
+      source_group_id: 'g1',
+      question_number: 2,
+      admin_sections: {
+        id: 's1',
+        section_type: 'RC',
+        section_number: 2,
+        title: 'RC',
+        admin_passages: [
+          { id: 'pass-a', source_group_id: null, content: 'Passage A body', topic_tag: 'A' },
+          { id: 'pass-b', source_group_id: null, content: 'Passage B body', topic_tag: 'B' },
+        ],
+      },
+    },
+    {
+      ...baseRow,
+      id: 'q3',
+      source_group_id: 'g2',
+      question_number: 3,
+      admin_sections: {
+        id: 's1',
+        section_type: 'RC',
+        section_number: 2,
+        title: 'RC',
+        admin_passages: [
+          { id: 'pass-a', source_group_id: null, content: 'Passage A body', topic_tag: 'A' },
+          { id: 'pass-b', source_group_id: null, content: 'Passage B body', topic_tag: 'B' },
+        ],
+      },
+    },
+  ]
+
+  const out = mapDrillQuestionRows(rows, false)
+  assertEquals(out[0]!.passage?.id, 'pass-a')
+  assertEquals(out[1]!.passage?.id, 'pass-a')
+  assertEquals(out[2]!.passage?.id, 'pass-b')
+  assertEquals(out[0]!.sourceGroupId, 'g1')
+  assertEquals(out[2]!.sourceGroupId, 'g2')
+  assertEquals(out[0]!.passage?.id !== out[2]!.passage?.id, true)
 })

@@ -76,6 +76,26 @@ describe("IntentPage", () => {
     expect(screen.queryByRole("link", { name: /sign in/i })).not.toBeInTheDocument()
   })
 
+  it("links back to the app home when authenticated", () => {
+    render(
+      <MemoryRouter>
+        <IntentPage isAuthenticated={true} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole("link", { name: /back/i })).toHaveAttribute("href", "/app")
+  })
+
+  it("links back to the marketing home when unauthenticated", () => {
+    render(
+      <MemoryRouter>
+        <IntentPage isAuthenticated={false} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole("link", { name: /back/i })).toHaveAttribute("href", "/")
+  })
+
   it("does not offer the full diagnostic tier", () => {
     render(
       <MemoryRouter>

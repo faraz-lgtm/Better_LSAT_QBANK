@@ -37,6 +37,7 @@ import { PracticePrepTestSectionPage } from "@/features/student/pages/practice-p
 import { LrNewSectionPage } from "@/features/student/pages/lr-new-section-page"
 import { PracticeSectionsPage } from "@/features/student/pages/practice-sections-page"
 import { RcNewSectionPage } from "@/features/student/pages/rc-new-section-page"
+import { RcQuestionNavPreviewPage } from "@/features/student/pages/rc-question-nav-preview-page"
 import { SectionSessionPage } from "@/features/student/pages/section-session-page"
 
 function AppRoutes() {
@@ -52,6 +53,7 @@ function AppRoutes() {
       <Route path="/onboarding/preview" element={<OnboardingWelcomePreviewPage />} />
       <Route path="/diagnostic/start" element={<GuestDiagnosticStartPage />} />
       <Route path="/diagnostic/start/preview" element={<GuestDiagnosticStartPage preview />} />
+      <Route path="/practice/rc-nav/preview" element={<RcQuestionNavPreviewPage />} />
       <Route path="/app" element={<StudentAppShell />}>
         <Route index element={<DashboardPage />} />
         <Route path="learn/explanations" element={<ExplanationsPage />} />
@@ -67,6 +69,7 @@ function AppRoutes() {
         <Route path="practice/sections" element={<PracticeSectionsPage />} />
         <Route path="practice/sections/lr/new" element={<LrNewSectionPage />} />
         <Route path="practice/sections/rc/new" element={<RcNewSectionPage />} />
+        <Route path="practice/sections/rc/nav-preview" element={<RcQuestionNavPreviewPage />} />
         <Route path="practice/sections/session/:sessionId" element={<SectionSessionPage />} />
         <Route path="practice/sections/rc" element={<Navigate to="/app/practice/sections/rc/new" replace />} />
         <Route path="practice/sections/rc/session" element={<Navigate to="/app/practice/sections/rc/new" replace />} />

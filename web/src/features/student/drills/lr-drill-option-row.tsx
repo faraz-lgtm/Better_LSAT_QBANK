@@ -97,8 +97,9 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
         isActiveDrill || isBlindReview
           ? "text-[1em] leading-[1.5] tracking-[0.32px] text-[color:inherit]"
           : "pt-0.5",
-        hidden && isBlindReview && "line-through",
-        hidden && !isBlindReview && !isActiveDrill && "line-through opacity-60",
+        hidden && isBlindReview && "line-through opacity-50",
+        hidden && !isBlindReview && !isActiveDrill && "line-through opacity-50 blur-[2px]",
+        masked && "select-none",
       )}
     />
   )

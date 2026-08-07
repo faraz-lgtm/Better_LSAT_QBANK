@@ -58,6 +58,14 @@ function PracticeSessionFinishMenu({
   const label = finishing ? "Finishing…" : (finishLabel ?? "Finish")
 
   useEffect(() => {
+    if (!open) return
+    document.documentElement.classList.add("practice-finish-menu-open")
+    return () => {
+      document.documentElement.classList.remove("practice-finish-menu-open")
+    }
+  }, [open])
+
+  useEffect(() => {
     if (!open || !containerRef.current) {
       setMenuPosition(null)
       return

@@ -23,7 +23,7 @@ describe("ExplanationChoiceList", () => {
     expect(row).not.toBeNull()
     await user.click(row!)
     expect(screen.getByText("Because A is wrong")).toBeInTheDocument()
-    expect(screen.getByText("Option explanation")).toBeInTheDocument()
+    expect(screen.queryByText("Option explanation")).not.toBeInTheDocument()
   })
 
   it("shows Figma-style check badge when correct answer is revealed", () => {
