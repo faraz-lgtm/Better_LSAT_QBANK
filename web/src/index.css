@@ -3315,14 +3315,21 @@ html.student-shell-immersive .practice-session-card--blind-review {
   overflow: visible;
 }
 
+/* Figma `18617:35585` — question pills + outcome icons */
 .practice-session-card--blind-review .practice-session-question-nav-grid {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   align-content: flex-start;
-  min-height: 48px;
+  min-height: 51px;
   height: auto;
   gap: 16px;
+  overflow: visible;
+}
+
+/* Review mode outcomes: wrap to next row (no horizontal scrollbar) */
+.practice-session-card--blind-review .practice-session-question-nav-grid:has([data-review-nav-outcome]) {
+  flex-wrap: wrap;
   overflow: visible;
 }
 
@@ -3334,6 +3341,10 @@ html.student-shell-immersive .practice-session-card--blind-review {
   align-self: center;
   flex-shrink: 0;
   border-radius: 12px;
+}
+
+.practice-session-card--blind-review .practice-session-question-nav-btn--review {
+  border-width: 1px;
 }
 
 .practice-session-card--blind-review .practice-session-content mark[data-highlight="orange"] {

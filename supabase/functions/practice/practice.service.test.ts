@@ -1553,6 +1553,35 @@ Deno.test('getBlindReviewDetail includes section session ids for completed secti
   assertEquals(lr?.sectionSessionId, 'sec-sess-lr')
 })
 
+Deno.test('getBlindReviewDetail works after blind review was skipped (post-results Review)', async () => {
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserSessionsForPrepTest: async () => [
+        baseSession({
+          id: 'pt-sess-skipped',
+          kind: 'PREPTEST',
+          prep_test_id: 'pt-900',
+          completed_at: '2026-01-03T00:00:00Z',
+          scaled_score: 155,
+          metadata: { blindReviewSkipped: true },
+        }),
+        baseSession({
+          id: 'sec-sess-lr',
+          kind: 'SECTION',
+          prep_test_id: 'pt-900',
+          section_id: 'sec-lr',
+          completed_at: '2026-01-02T00:00:00Z',
+        }),
+      ],
+    }) as never,
+  })
+  const out = await service.getBlindReviewDetail('user-1', { prepTestId: 'pt-900' })
+  assertEquals(out.blindReview.status, 'completed')
+  assertEquals(out.blindReview.prepTestSessionId, 'pt-sess-skipped')
+  const lr = out.sections.find((s) => s.id === 'sec-lr')
+  assertEquals(lr?.sectionSessionId, 'sec-sess-lr')
+})
+
 Deno.test('completeBlindReview scores latest answers across section sessions', async () => {
   const completedPt = baseSession({
     id: 'pt-sess-1',
