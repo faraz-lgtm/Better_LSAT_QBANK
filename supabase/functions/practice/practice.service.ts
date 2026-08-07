@@ -980,10 +980,16 @@ function buildBlindReviewDetail(
   prepTestSession: PracticeSessionRow,
 ): BlindReviewDetailResponse {
   const practiceable = practiceableSectionsFromRow(row.sections)
-  const { status } = blindReviewStateFromSessions(sessions)
-  if (!status) {
-    throw new PracticeValidationError('PrepTest is not eligible for blind review')
-  }
+  const derived = blindReviewStateFromSessions(sessions)
+  const status: BlindReviewStatus =
+    derived.status ??
+    (prepTestSession.blind_review_completed_at
+      ? 'completed'
+      : prepTestSession.metadata.blindReviewActive === true
+        ? 'in_progress'
+        : isPrepTestFullyComplete(prepTestSession)
+          ? 'completed'
+          : 'eligible')
 
   const sectionSessionsBySectionId = new Map<string, PracticeSessionRow[]>()
   for (const s of sessions.filter((x) => x.kind === 'SECTION' && x.section_id)) {
@@ -2288,7 +2294,12 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       assertStudentVisiblePrepTest(row.moduleId)
 
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
-      const { prepTestSession } = blindReviewStateFromSessions(sessions)
+      let { prepTestSession } = blindReviewStateFromSessions(sessions)
+      // Skipped BR (or otherwise fully-complete without BR score) still needs section
+      // sessions so post-results Review can open — keep the BR pool filter unchanged.
+      if (!prepTestSession) {
+        prepTestSession = sortedPrepTestSessions(sessions).find((s) => Boolean(s.completed_at)) ?? null
+      }
       if (!prepTestSession) {
         throw new PracticeValidationError('Complete the PrepTest before blind review')
       }

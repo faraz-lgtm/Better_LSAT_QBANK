@@ -51,6 +51,10 @@ import {
   mapPrepTestDetailToResults,
 } from "@/features/student/analytics/map-prep-test-results"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
+import {
+  firstBlindReviewSectionSessionId,
+  resultsReviewSectionSessionPath,
+} from "@/features/student/blind-review/blind-review-navigation"
 
 const QUESTION_FILTER_OPTIONS = ["Question", "Passage", "Incorrect only"] as const
 
@@ -617,8 +621,21 @@ function AnalyticsPrepTestResultsPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const targetId = prepTestId || testId
-                  navigate(`/app/practice/blind-review/${encodeURIComponent(targetId)}`)
+                  if (!practiceApi || !prepTestId) return
+                  void practiceApi
+                    .getBlindReviewDetail(prepTestId)
+                    .then((brDetail) => {
+                      const sectionSessionId = firstBlindReviewSectionSessionId(brDetail)
+                      if (!sectionSessionId) return
+                      navigate(
+                        resultsReviewSectionSessionPath(prepTestId, sectionSessionId, testId, {
+                          hasBlindReview: detail.blindReviewCompleted,
+                        }),
+                      )
+                    })
+                    .catch(() => {
+                      /* stay on results — Review needs a completed PrepTest section session */
+                    })
                 }}
                 className="inline-flex h-10 items-center gap-2 rounded-[16px] bg-[#df1c41] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#df1c41]/90"
               >

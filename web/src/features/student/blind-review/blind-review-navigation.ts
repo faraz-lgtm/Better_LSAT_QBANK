@@ -22,6 +22,19 @@ export function blindReviewSectionSessionPath(
   return `/app/practice/sections/session/${encodeURIComponent(sectionSessionId)}?${q.toString()}`
 }
 
+/** Post-results Review mode — Figma `18617:33941` / `18617:34737` / `18617:35029`. */
+export function resultsReviewSectionSessionPath(
+  prepTestId: string,
+  sectionSessionId: string,
+  prepTestSessionId?: string,
+  options?: { hasBlindReview?: boolean },
+): string {
+  const q = new URLSearchParams({ review: "1", prepTestId })
+  if (prepTestSessionId) q.set("prepTestSessionId", prepTestSessionId)
+  if (options?.hasBlindReview) q.set("hasBr", "1")
+  return `/app/practice/sections/session/${encodeURIComponent(sectionSessionId)}?${q.toString()}`
+}
+
 export function prepTestResultsPath(prepTestSessionId: string): string {
   return `/app/analytics/preptests/results/${encodeURIComponent(prepTestSessionId)}`
 }

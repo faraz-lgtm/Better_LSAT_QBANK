@@ -68,18 +68,18 @@ const BLIND_REVIEW_RECOMMENDED_BADGE_CLASS =
 
 const BLIND_REVIEW_OPTIONS_LIST_CLASS = "flex flex-col gap-3 p-6"
 
-/** Figma `18617:33677` — footer band */
+/** Figma `18617:35585` — Review / BR footer band */
 const BLIND_REVIEW_FOOTER_CLASS =
-  "practice-session-footer box-border flex min-h-[76px] shrink-0 flex-col justify-center border-t border-[#dfe1e7] bg-[#f6f8fa] px-6 py-3"
+  "practice-session-footer box-border flex min-h-[76px] shrink-0 flex-col justify-center rounded-bl-[16px] rounded-br-[16px] border border-[#dfe1e7] bg-[#f6f8fa] px-6 py-3"
 
-/** Nav pills wrap to the next line; arrows stay on the right */
+/** Figma `18617:35585` — nav row + arrow group */
 const BLIND_REVIEW_FOOTER_ROW_CLASS =
-  "flex w-full min-w-0 items-center justify-between gap-4"
+  "flex w-full min-w-0 items-center gap-[10px]"
 
 const BLIND_REVIEW_FOOTER_NAV_CLASS =
-  "practice-session-question-nav-grid min-h-[48px] min-w-0 flex-1"
+  "practice-session-question-nav-grid min-h-[51px] min-w-0 flex-1"
 
-/** Figma `18617:33695` — prev/next controls */
+/** Figma `18617:35724` / `18617:35726` — prev/next controls */
 const BLIND_REVIEW_NAV_ARROW_BUTTON_CLASS =
   "box-border inline-flex size-[52px] shrink-0 items-center justify-center rounded-[16px] border-2 border-solid border-[#dfe1e7] bg-[#f6f8fa] p-1 shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-white disabled:opacity-40"
 

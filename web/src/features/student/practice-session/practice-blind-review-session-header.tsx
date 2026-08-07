@@ -5,6 +5,7 @@ import {
   PracticeBlindReviewSectionSelect,
   type BlindReviewSectionOption,
 } from "@/features/student/practice-session/practice-blind-review-section-select"
+import { ReviewIdeaIcon } from "@/features/student/practice-session/review-idea-icon"
 import {
   BLIND_REVIEW_HEADER_CLASS,
   BLIND_REVIEW_HEADER_EXIT_BUTTON_CLASS,
@@ -14,6 +15,8 @@ import {
 import { PracticeSessionToolbar } from "@/features/student/practice-session/practice-session-toolbar"
 import type { HighlightColor, PracticeToolMode } from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
+
+export type PracticeReviewSidePanel = "explanation" | "insights" | "notes" | null
 
 type PracticeBlindReviewSessionHeaderProps = {
   prepTestLabel: string
@@ -44,6 +47,17 @@ type PracticeBlindReviewSessionHeaderProps = {
   showSectionSelect?: boolean
   exitButtonLabel?: string
   exitingLabel?: string
+  /** Figma `18617:33941` — post-results Review chrome */
+  chrome?: "blind-review" | "review"
+  sidePanel?: PracticeReviewSidePanel
+  onSidePanelChange?: (panel: PracticeReviewSidePanel) => void
+}
+
+function headerActionButtonClass(active: boolean) {
+  return cn(
+    BLIND_REVIEW_HEADER_NOTES_BUTTON_CLASS,
+    active && BLIND_REVIEW_HEADER_NOTES_BUTTON_ACTIVE_CLASS,
+  )
 }
 
 function PracticeBlindReviewSessionHeader({
@@ -75,8 +89,17 @@ function PracticeBlindReviewSessionHeader({
   showSectionSelect = true,
   exitButtonLabel = "Exit Section",
   exitingLabel = "Exiting…",
+  chrome = "blind-review",
+  sidePanel = null,
+  onSidePanelChange,
 }: PracticeBlindReviewSessionHeaderProps) {
+  const isReviewChrome = chrome === "review"
   const blindReviewView = answerView === "blind_review"
+
+  function toggleSidePanel(panel: Exclude<PracticeReviewSidePanel, null>) {
+    if (!onSidePanelChange) return
+    onSidePanelChange(sidePanel === panel ? null : panel)
+  }
 
   return (
     <header className={BLIND_REVIEW_HEADER_CLASS}>
@@ -93,13 +116,22 @@ function PracticeBlindReviewSessionHeader({
             ) : null}
           </div>
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-[#fff3ea] px-4 text-xs font-medium tracking-[0.24px] text-[#ff6f00]">
-              <EyeOff className="size-3 shrink-0" aria-hidden />
-              Blind Review
-            </span>
-            <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-[#fff6e0] px-4 text-xs font-medium tracking-[0.24px] text-[#956321]">
-              {actualScoreLabel}
-            </span>
+            {isReviewChrome ? (
+              <span className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-[#fff3ea] px-4 text-xs font-medium tracking-[0.24px] text-[#ff6f00]">
+                <ReviewBadgeIcon className="size-3 shrink-0" />
+                Review
+              </span>
+            ) : (
+              <>
+                <span className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-[#fff3ea] px-4 text-xs font-medium tracking-[0.24px] text-[#ff6f00]">
+                  <EyeOff className="size-3 shrink-0" aria-hidden />
+                  Blind Review
+                </span>
+                <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-[#fff6e0] px-4 text-xs font-medium tracking-[0.24px] text-[#956321]">
+                  {actualScoreLabel}
+                </span>
+              </>
+            )}
             <span className="min-w-0 truncate text-xs font-medium tracking-[0.24px] text-[#666d80]">
               {questionRef}
             </span>
@@ -107,50 +139,134 @@ function PracticeBlindReviewSessionHeader({
         </div>
 
         <div className="flex shrink-0 items-center gap-4 md:gap-6">
-          {blindReviewView ? (
-            <PracticeSessionToolbar
-              variant="blind-review"
-              activeColor={activeColor}
-              toolMode={toolMode}
-              fontScale={fontScale}
-              lineSpacing={lineSpacing}
-              boldEnabled={boldEnabled}
-              italicEnabled={italicEnabled}
-              onSelectColor={onSelectColor}
-              onEraser={onEraser}
-              onUnderline={onUnderline}
-              onFontSize={onFontSize}
-              onLineSpacing={onLineSpacing}
-              onToggleBold={onToggleBold}
-              onToggleItalic={onToggleItalic}
-            />
-          ) : null}
+          {isReviewChrome ? (
+            <>
+              <button
+                type="button"
+                className={headerActionButtonClass(sidePanel === "explanation")}
+                aria-pressed={sidePanel === "explanation"}
+                onClick={() => toggleSidePanel("explanation")}
+              >
+                <ReviewIdeaIcon className="size-5 shrink-0" />
+                <span className="hidden sm:inline">Explanation</span>
+              </button>
+              <button
+                type="button"
+                className={headerActionButtonClass(sidePanel === "insights")}
+                aria-pressed={sidePanel === "insights"}
+                onClick={() => toggleSidePanel("insights")}
+              >
+                <ReviewInsightsIcon className="size-5 shrink-0" />
+                <span className="hidden sm:inline">Insights</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleSidePanel("notes")}
+                className={headerActionButtonClass(sidePanel === "notes")}
+                aria-pressed={sidePanel === "notes"}
+              >
+                <BlindReviewNotesIcon className="size-5 shrink-0" />
+                <span className="hidden sm:inline">Notes</span>
+              </button>
+              <button
+                type="button"
+                className={BLIND_REVIEW_HEADER_EXIT_BUTTON_CLASS}
+                onClick={onExitSection}
+                disabled={exiting}
+              >
+                {exiting ? exitingLabel : "Exit"}
+              </button>
+            </>
+          ) : (
+            <>
+              {blindReviewView ? (
+                <PracticeSessionToolbar
+                  variant="blind-review"
+                  activeColor={activeColor}
+                  toolMode={toolMode}
+                  fontScale={fontScale}
+                  lineSpacing={lineSpacing}
+                  boldEnabled={boldEnabled}
+                  italicEnabled={italicEnabled}
+                  onSelectColor={onSelectColor}
+                  onEraser={onEraser}
+                  onUnderline={onUnderline}
+                  onFontSize={onFontSize}
+                  onLineSpacing={onLineSpacing}
+                  onToggleBold={onToggleBold}
+                  onToggleItalic={onToggleItalic}
+                />
+              ) : null}
 
-          <button
-            type="button"
-            onClick={onToggleNotes}
-            disabled={!notesEnabled}
-            className={cn(
-              BLIND_REVIEW_HEADER_NOTES_BUTTON_CLASS,
-              notesOpen && notesEnabled && BLIND_REVIEW_HEADER_NOTES_BUTTON_ACTIVE_CLASS,
-            )}
-            aria-pressed={notesOpen && notesEnabled}
-          >
-            <BlindReviewNotesIcon className="size-5 shrink-0" />
-            <span className="hidden sm:inline">Notes</span>
-          </button>
+              <button
+                type="button"
+                onClick={onToggleNotes}
+                disabled={!notesEnabled}
+                className={cn(
+                  BLIND_REVIEW_HEADER_NOTES_BUTTON_CLASS,
+                  notesOpen && notesEnabled && BLIND_REVIEW_HEADER_NOTES_BUTTON_ACTIVE_CLASS,
+                )}
+                aria-pressed={notesOpen && notesEnabled}
+              >
+                <BlindReviewNotesIcon className="size-5 shrink-0" />
+                <span className="hidden sm:inline">Notes</span>
+              </button>
 
-          <button
-            type="button"
-            className={BLIND_REVIEW_HEADER_EXIT_BUTTON_CLASS}
-            onClick={onExitSection}
-            disabled={exiting}
-          >
-            {exiting ? exitingLabel : exitButtonLabel}
-          </button>
+              <button
+                type="button"
+                className={BLIND_REVIEW_HEADER_EXIT_BUTTON_CLASS}
+                onClick={onExitSection}
+                disabled={exiting}
+              >
+                {exiting ? exitingLabel : exitButtonLabel}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </header>
+  )
+}
+
+/** Figma `18617:33953` — Review badge glyph */
+function ReviewBadgeIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 12 12" fill="none" aria-hidden>
+      <path
+        d="M5.36719 2.53775C6.53188 2.39895 7.70999 2.64516 8.72162 3.23878C9.73325 3.83239 10.5228 4.74079 10.9697 5.82525C11.0114 5.93751 11.0114 6.06099 10.9697 6.17325C10.7859 6.61875 10.5431 7.0375 10.2477 7.41825"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M7.04207 7.07803C6.75916 7.35127 6.38026 7.50246 5.98697 7.49904C5.59367 7.49562 5.21745 7.33787 4.93934 7.05976C4.66123 6.78165 4.50347 6.40543 4.50006 6.01213C4.49664 5.61884 4.64783 5.23993 4.92107 4.95703"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8.73975 8.74891C8.07649 9.14179 7.33648 9.38741 6.56993 9.4691C5.80338 9.55079 5.02823 9.46664 4.29707 9.22235C3.56591 8.97806 2.89585 8.57935 2.33236 8.05328C1.76887 7.52721 1.32513 6.88608 1.03125 6.17341C0.989582 6.06115 0.989582 5.93766 1.03125 5.82541C1.47457 4.75033 2.25459 3.84803 3.25425 3.25391"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M1 1L11 11" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+/** Figma `line-chart-up-01` */
+function ReviewInsightsIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 17 17" fill="none" aria-hidden>
+      <path
+        d="M0.833333 0.833333V12.5C0.833333 14.3409 2.32572 15.8333 4.16667 15.8333H15.8333M5 10.8333L6.37484 7.39622C6.53871 6.98655 6.99351 6.77561 7.4121 6.91514L10.9212 8.08486C11.3398 8.22438 11.7946 8.01345 11.9585 7.60378L13.3333 4.16667"
+        stroke="currentColor"
+        strokeWidth="1.67"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 
