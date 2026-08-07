@@ -104,6 +104,7 @@ function viewFromDetail(detail: ExplanationDetailPayload): ExplanationQuestionDe
       history: [],
     },
     neighbors: { prevRouteKey: null, nextRouteKey: null },
+    hasExplanationTab: false,
   }
 }
 
