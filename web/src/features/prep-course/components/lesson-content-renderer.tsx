@@ -554,7 +554,7 @@ function LessonContentRenderer({
           lesson={lesson}
           linkedQuestionRefs={linkedQuestionRefs}
           activeDrillAttempt={activeDrillAttempt}
-          drillTitlePrefix="Adaptive Drill"
+          drillTitlePrefix="Smart Drill"
           onStartDrill={onStartDrill}
           startingDrill={startingDrill}
           hideTitle={hideTitle}

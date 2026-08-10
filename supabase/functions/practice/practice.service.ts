@@ -1614,7 +1614,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         questionIds.length < DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT
       ) {
         throw new PracticeValidationError(
-          `Adaptive drills need at least ${DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT} questions in the ${sectionType} pool`,
+          `Smart Drills need at least ${DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT} questions in the ${sectionType} pool`,
         )
       }
 
@@ -1694,7 +1694,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         }
       } else {
         if (questionIds.length === 0) {
-          throw new PracticeValidationError('No questions are linked to this adaptive drill lesson')
+          throw new PracticeValidationError('No questions are linked to this Smart Drill lesson')
         }
         if (questionIds.length > PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT) {
           questionIds = questionIds.slice(0, PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT)
@@ -1725,7 +1725,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         const extraIds = pickDrillQuestionIds(filtered, sectionType, needed)
         questionIds = [...questionIds, ...extraIds]
         if (questionIds.length < PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT) {
-          throw new PracticeValidationError('Not enough questions available for this adaptive drill')
+          throw new PracticeValidationError('Not enough questions available for this Smart Drill')
         }
       }
 

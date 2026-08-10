@@ -1,6 +1,6 @@
 import type { SVGProps } from "react"
 
-/** Figma `18066:10327` filter icon — adaptive drill card with sliders */
+/** Figma `18066:10327` filter icon — Smart Drill card with sliders */
 function DashboardAdaptiveDrillIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden {...props}>

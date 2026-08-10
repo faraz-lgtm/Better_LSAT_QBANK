@@ -1037,7 +1037,7 @@ function DrillSessionPage() {
         titleId="drill-complete-title"
         subtitle={
           isPrepCourseAdaptiveDrill
-            ? "You've completed the adaptive drill"
+            ? "You've completed the Smart Drill"
             : isPrepCourseDrill
               ? "You've completed the active drill"
               : "You've completed the drill"

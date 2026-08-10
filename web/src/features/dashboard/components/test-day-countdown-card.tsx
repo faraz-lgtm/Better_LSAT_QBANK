@@ -66,7 +66,7 @@ function TestDayCountdownCard({
             onClick={onStartAdaptiveDrill}
             className="test-day-countdown__cta"
           >
-            {adaptiveLoading ? "Starting…" : "Start Adaptive Drill"}
+            {adaptiveLoading ? "Starting…" : "Start Smart Drill"}
           </button>
         </div>
       </div>

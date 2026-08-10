@@ -92,7 +92,7 @@ describe("prep-course-format curriculum helpers", () => {
         duration_minutes: 30,
       }),
     ).toEqual({
-      label: "Adaptive Drill",
+      label: "Smart Drill",
       duration: "30 mins",
       accentClass: "text-[#0bbcc9]",
     })
@@ -158,7 +158,7 @@ describe("prep-course-format curriculum helpers", () => {
         duration_minutes: 0,
       }).subtitle,
     ).toEqual({
-      label: "Adaptive Drill",
+      label: "Smart Drill",
       duration: "0 mins",
       accentClass: "text-[#0bbcc9]",
     })

@@ -245,7 +245,7 @@ export const LESSON_TYPE_LABEL: Record<PrepLesson["lesson_type"], string> = {
   text: "Text",
   video_text: "Video + Text",
   active_drill: "Active Drill",
-  adaptive_drill: "Adaptive Drill",
+  adaptive_drill: "Smart Drill",
   rep_work: "Rep Work",
 }
 
@@ -258,6 +258,7 @@ export function isDrillLessonType(type: PrepLesson["lesson_type"]): type is Dril
 const LESSON_TITLE_PREFIXES: Array<{ pattern: RegExp; kind: DrillLessonType }> = [
   { pattern: /^Rep Work\b/i, kind: "rep_work" },
   { pattern: /^Active Drill\b/i, kind: "active_drill" },
+  { pattern: /^Smart Drill\b/i, kind: "adaptive_drill" },
   { pattern: /^Adaptive Drill\b/i, kind: "adaptive_drill" },
   { pattern: /^Full Drill\b/i, kind: "adaptive_drill" },
 ]
@@ -276,7 +277,11 @@ function parseLessonTitlePrefix(title: string): { cleanTitle: string; kind: Dril
 
 function parseDrillKindFromSlug(slug: string): DrillLessonType | null {
   const normalized = slug.trim().toLowerCase()
-  if (normalized.startsWith("full-drill") || normalized.startsWith("adaptive-drill")) {
+  if (
+    normalized.startsWith("full-drill") ||
+    normalized.startsWith("adaptive-drill") ||
+    normalized.startsWith("smart-drill")
+  ) {
     return "adaptive_drill"
   }
   if (normalized.startsWith("active-drill")) return "active_drill"
@@ -297,7 +302,11 @@ function inferDrillKindFromContent(lesson: PrepLesson): DrillLessonType | null {
     .join("\n")
     .toLowerCase()
 
-  if (/\bfull drill\b/.test(haystack) || /\badaptive drill\b/.test(haystack)) {
+  if (
+    /\bfull drill\b/.test(haystack) ||
+    /\bsmart drill\b/.test(haystack) ||
+    /\badaptive drill\b/.test(haystack)
+  ) {
     return "adaptive_drill"
   }
   if (/\bactive drill\b/.test(haystack) || /\byou try\b/.test(haystack)) {

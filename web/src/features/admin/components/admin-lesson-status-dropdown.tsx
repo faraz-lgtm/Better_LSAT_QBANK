@@ -25,7 +25,7 @@ const OPTIONS: Array<{
   },
   {
     value: "adaptive_drill",
-    label: "Adaptive Drill",
+    label: "Smart Drill",
     description: "Link up to five PrepTest questions",
     Icon: Sparkles,
   },
