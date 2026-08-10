@@ -106,7 +106,51 @@ function resolveSectionBlindReviewForResults(input: {
   return { rawScore, answersByQuestion }
 }
 
+/**
+ * When Blind Review is completed but a question has no BR choice, inherit Actual
+ * for that question's BR icon/score. BR answers always win when present.
+ */
+function applyActualFallbackToBlindReview(input: {
+  questionIds: string[]
+  actualByQuestion: Map<string, { selectedAnswer: string; isCorrect: boolean }>
+  blindReviewAnswersByQuestion: Map<string, { selectedAnswer: string; isCorrect: boolean }> | null
+}): {
+  rawScore: number | null
+  answersByQuestion: Map<string, { selectedAnswer: string; isCorrect: boolean }> | null
+} {
+  if (input.blindReviewAnswersByQuestion == null) {
+    return { rawScore: null, answersByQuestion: null }
+  }
+
+  const answersByQuestion = new Map<string, { selectedAnswer: string; isCorrect: boolean }>()
+  let rawScore = 0
+
+  for (const questionId of input.questionIds) {
+    const br = input.blindReviewAnswersByQuestion.get(questionId)
+    if (br && br.selectedAnswer.trim()) {
+      answersByQuestion.set(questionId, {
+        selectedAnswer: br.selectedAnswer,
+        isCorrect: br.isCorrect,
+      })
+      if (br.isCorrect) rawScore += 1
+      continue
+    }
+
+    const actual = input.actualByQuestion.get(questionId)
+    if (actual && actual.selectedAnswer.trim()) {
+      answersByQuestion.set(questionId, {
+        selectedAnswer: actual.selectedAnswer,
+        isCorrect: actual.isCorrect,
+      })
+      if (actual.isCorrect) rawScore += 1
+    }
+  }
+
+  return { rawScore, answersByQuestion }
+}
+
 export {
+  applyActualFallbackToBlindReview,
   parseBlindReviewFromMetadata,
   parseDrillBlindReviewFromMetadata,
   parseSectionBlindReviewFromMetadata,

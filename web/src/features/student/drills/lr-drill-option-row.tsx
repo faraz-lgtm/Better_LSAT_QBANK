@@ -45,6 +45,14 @@ type LrDrillOptionRowProps = {
   answerView?: BlindReviewAnswerView
   /** When false, hide control is rendered by the side action rail instead */
   showSideAction?: boolean
+  /**
+   * Figma `18617:35536` — Review mode: idea icon opens choice explanation
+   * instead of the eye hide control.
+   */
+  explanationAction?: boolean
+  explanationExpanded?: boolean
+  explanationHtml?: string | null
+  onToggleExplanation?: () => void
 }
 
 function selectionFullyInside(node: Node): boolean {
@@ -72,6 +80,10 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
   variant = "default",
   answerView = "blind_review",
   showSideAction = true,
+  explanationAction = false,
+  explanationExpanded = false,
+  explanationHtml = null,
+  onToggleExplanation,
 }: LrDrillOptionRowProps) {
   const letter = letters[index] ?? String(index + 1)
   const isActiveDrill = variant === "active-drill"
@@ -144,7 +156,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
         onClick={handleSelect}
         onKeyDown={handleKeyDown}
         className={cn(
-          "flex items-center justify-between gap-4 rounded-[14px] border p-4 text-left transition-colors",
+          "overflow-hidden rounded-[14px] border transition-colors",
           selected
             ? brSelectedRowClass
             : hidden
@@ -173,13 +185,76 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
             e.stopPropagation()
             onToggleHidden?.()
           }}
-        >
-          {hidden ? (
-            <EyeOff className="size-5" strokeWidth={2} aria-hidden />
-          ) : (
-            <Eye className="size-5" strokeWidth={2} aria-hidden />
+          className={cn(
+            "flex items-center justify-between gap-4 p-4 text-left",
+            !explanationAction &&
+              (disabled ? "cursor-default" : annotateMode ? "cursor-text" : "cursor-pointer"),
           )}
-        </button>
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-4">
+            <span
+              className={cn(
+                "flex size-12 shrink-0 items-center justify-center rounded-[14px] text-lg font-bold",
+                selected
+                  ? "bg-[#f6f8fa] text-[#0d47a1] shadow-[0px_10px_7px_rgba(0,0,0,0.1),0px_4px_3px_rgba(0,0,0,0.1)]"
+                  : "bg-[#f3f4f6] text-[#4a5565]",
+                hidden && "line-through",
+              )}
+            >
+              {letter}
+            </span>
+            {choiceContent}
+          </div>
+          {explanationAction ? (
+            <button
+              type="button"
+              className={cn(
+                "inline-flex size-5 shrink-0 items-center justify-center transition",
+                explanationExpanded ? "text-[#0d47a1]" : "text-[#666d80] hover:text-[#062357]",
+                !hasExplanation && "opacity-40",
+              )}
+              aria-label={
+                hasExplanation
+                  ? explanationExpanded
+                    ? `Hide explanation for choice ${letter}`
+                    : `Show explanation for choice ${letter}`
+                  : `No explanation for choice ${letter}`
+              }
+              aria-expanded={hasExplanation ? explanationExpanded : undefined}
+              disabled={!hasExplanation}
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggleExplanation?.()
+              }}
+            >
+              <ReviewIdeaIcon />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="inline-flex size-5 shrink-0 items-center justify-center text-[#666d80] transition hover:text-[#062357]"
+              aria-label={hidden ? "Show answer choice" : "Hide answer choice"}
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggleHidden?.()
+              }}
+            >
+              {hidden ? (
+                <EyeOff className="size-5" strokeWidth={2} aria-hidden />
+              ) : (
+                <Eye className="size-5" strokeWidth={2} aria-hidden />
+              )}
+            </button>
+          )}
+        </div>
+        {explanationAction && explanationExpanded && hasExplanation ? (
+          <div className="border-t border-[#dfe1e7] bg-white p-4 text-left">
+            <p className="mb-1 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[#666d80]">
+              Option explanation
+            </p>
+            <HtmlContent html={explanationHtml ?? ""} className="explanation-option-body text-[#0d0d12]" />
+          </div>
+        ) : null}
       </div>
     )
   }

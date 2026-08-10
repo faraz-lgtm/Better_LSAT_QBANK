@@ -10,6 +10,7 @@ import {
   firstBlindReviewSectionSessionId,
   isQuestionRecommendedForBlindReview,
   prepTestResultsPath,
+  resultsReviewSectionSessionPath,
   skipBlindReviewBestEffort,
 } from "@/features/student/blind-review/blind-review-navigation"
 import type { BlindReviewDetailSection } from "@/features/student/blind-review/blind-review-types"
@@ -46,10 +47,15 @@ import { PracticeSessionSideWidget } from "@/features/student/practice-session/p
 import { useResponseMasking } from "@/features/student/practice-session/use-response-masking"
 import {
   PracticeBlindReviewAnswerToggle,
+  type BlindReviewAnswerOutcome,
   type BlindReviewAnswerView,
 } from "@/features/student/practice-session/practice-blind-review-answer-toggle"
-import { PracticeBlindReviewSessionHeader } from "@/features/student/practice-session/practice-blind-review-session-header"
+import {
+  PracticeBlindReviewSessionHeader,
+  type PracticeReviewSidePanel,
+} from "@/features/student/practice-session/practice-blind-review-session-header"
 import { PracticeBlindReviewQuestionPanel } from "@/features/student/practice-session/practice-blind-review-question-panel"
+import { PracticeSessionReviewSidePanel } from "@/features/student/practice-session/practice-session-review-side-panel"
 import {
   BLIND_REVIEW_BODY_CLASS,
   BLIND_REVIEW_BODY_GRID_CLASS,
@@ -177,6 +183,12 @@ type QuestionPanelProps = {
   onAnswerViewChange?: (view: BlindReviewAnswerView) => void
   recommendedForBr?: boolean
   variant?: PracticeSessionVariant
+  reviewChrome?: boolean
+  actualOutcome?: BlindReviewAnswerOutcome
+  blindReviewOutcome?: BlindReviewAnswerOutcome
+  showCorrectAnswer?: boolean
+  onShowCorrectAnswerChange?: (next: boolean) => void
+  blindReviewTabEnabled?: boolean
 }
 
 function SectionQuestionPanel({
@@ -200,6 +212,12 @@ function SectionQuestionPanel({
   onAnswerViewChange,
   recommendedForBr = false,
   variant = "default",
+  reviewChrome = false,
+  actualOutcome = null,
+  blindReviewOutcome = null,
+  showCorrectAnswer = false,
+  onShowCorrectAnswerChange,
+  blindReviewTabEnabled = true,
 }: QuestionPanelProps) {
   const [hiddenChoices, setHiddenChoices] = useState<Record<number, boolean>>({})
   const {
@@ -231,6 +249,13 @@ function SectionQuestionPanel({
         answerView={answerView}
         onAnswerViewChange={onAnswerViewChange}
         recommendedForBr={recommendedForBr}
+        choicesDisabled={reviewChrome}
+        reviewChrome={reviewChrome}
+        actualOutcome={actualOutcome}
+        blindReviewOutcome={blindReviewOutcome}
+        showCorrectAnswer={showCorrectAnswer}
+        onShowCorrectAnswerChange={onShowCorrectAnswerChange}
+        blindReviewTabEnabled={blindReviewTabEnabled}
       />
     )
   }
@@ -333,7 +358,12 @@ function SectionSessionPage() {
   const location = useLocation()
   const isRetakeAttempt = isRetakePrepTestAttempt(searchParams)
   const blindReviewMode = searchParams.get("blindReview") === "1"
-  const sectionIntroActive = isPrepTestSectionIntroActive(searchParams, blindReviewMode)
+  const resultsReviewMode = searchParams.get("review") === "1"
+  const resultsReviewHasBr = searchParams.get("hasBr") === "1"
+  const sectionIntroActive = isPrepTestSectionIntroActive(
+    searchParams,
+    blindReviewMode || resultsReviewMode,
+  )
   const blindReviewPrepTestId = searchParams.get("prepTestId")
   const navigate = useNavigate()
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
@@ -357,6 +387,7 @@ function SectionSessionPage() {
     rawScore: number
     questionCount: number
     scaledScore?: number | null
+    percentile?: number | null
     prepTestLabel: string
     prepTestSessionId?: string
     afterSectionId?: string | null
@@ -364,8 +395,12 @@ function SectionSessionPage() {
   } | null>(null)
   const [scoreHidden, setScoreHidden] = useState(true)
   const [postCompleteBlindReview, setPostCompleteBlindReview] = useState(false)
-  const [answerViewTab, setAnswerViewTab] = useState<BlindReviewAnswerView>("blind_review")
+  const [answerViewTab, setAnswerViewTab] = useState<BlindReviewAnswerView>(
+    resultsReviewMode ? "clean" : "blind_review",
+  )
   const [notesOpen, setNotesOpen] = useState(false)
+  const [reviewSidePanel, setReviewSidePanel] = useState<PracticeReviewSidePanel>(null)
+  const [showCorrectAnswer, setShowCorrectAnswer] = useState(false)
   const [reviewPanelOpen, setReviewPanelOpen] = useState(false)
   const [timeUpFlow, setTimeUpFlow] = useState<{
     step: PracticePrepTestSectionTimeUpStep
@@ -456,7 +491,7 @@ function SectionSessionPage() {
   }
 
   const { elapsed, countdown, paused, pauseTimer, resumeTimer, resetElapsed, setInitialCountdown } = usePracticeSessionTimer({
-    enabled: !blindReviewMode && !sectionIntroActive,
+    enabled: !blindReviewMode && !resultsReviewMode && !sectionIntroActive,
   })
   const pauseModal = usePracticeSessionPauseModal(pauseTimer, resumeTimer)
   const highlights = usePracticeHighlights()
@@ -464,7 +499,8 @@ function SectionSessionPage() {
     highlights.accessibilitySettings,
     highlights.applyAccessibilitySettings,
   )
-  const useActiveDrillLayoutForZoom = !blindReviewMode && !postCompleteBlindReview
+  const useActiveDrillLayoutForZoom =
+    !blindReviewMode && !postCompleteBlindReview && !resultsReviewMode
   const handleZoomScaleChange = useCallback(
     (zoomScale: number) => {
       highlights.applyAccessibilitySettings({
@@ -487,7 +523,7 @@ function SectionSessionPage() {
     try {
       const data = await practiceApi.getSectionSession(sessionId)
       setSectionSession(data)
-      if (searchParams.get("blindReview") !== "1") {
+      if (searchParams.get("blindReview") !== "1" && searchParams.get("review") !== "1") {
         setInitialCountdown(
           isSectionCountdownTiming(data.metadata.timing) ? SECTION_TIMER_SECONDS : null,
         )
@@ -498,7 +534,34 @@ function SectionSessionPage() {
       for (const a of data.answers) {
         map[a.questionId] = { selectedAnswer: a.selectedAnswer, isCorrect: a.isCorrect }
       }
-      if (searchParams.get("blindReview") === "1" && sessionId) {
+      if (searchParams.get("review") === "1" && sessionId) {
+        const storageKey = `br-actual-${sessionId}`
+        const storedActual = sessionStorage.getItem(storageKey)
+        let actualMap: Record<string, QuestionAnswerState> = map
+        if (storedActual) {
+          try {
+            actualMap = JSON.parse(storedActual) as Record<string, QuestionAnswerState>
+          } catch {
+            actualMap = map
+          }
+        } else {
+          sessionStorage.setItem(storageKey, JSON.stringify(map))
+        }
+        setActualAnswersByQuestion(actualMap)
+        const brFromSplit = splitBlindReviewAnswersFromActual(map, actualMap)
+        const brStored = sessionStorage.getItem(`br-answers-${sessionId}`)
+        let brMap = brFromSplit
+        if (brStored) {
+          try {
+            brMap = JSON.parse(brStored) as Record<string, QuestionAnswerState>
+          } catch {
+            brMap = brFromSplit
+          }
+        }
+        setAnswersByQuestion(brMap)
+        setAnswerViewTab("clean")
+        setQIndex(1)
+      } else if (searchParams.get("blindReview") === "1" && sessionId) {
         const storageKey = `br-actual-${sessionId}`
         const stored = sessionStorage.getItem(storageKey)
         let actualMap: Record<string, QuestionAnswerState>
@@ -554,8 +617,9 @@ function SectionSessionPage() {
 
   useEffect(() => {
     const prepTestIdForSections =
-      blindReviewPrepTestId ?? (postCompleteBlindReview ? searchParams.get("prepTestId") : null)
-    if (!(blindReviewMode || postCompleteBlindReview) || !prepTestIdForSections) {
+      blindReviewPrepTestId ??
+      ((postCompleteBlindReview || resultsReviewMode) ? searchParams.get("prepTestId") : null)
+    if (!(blindReviewMode || postCompleteBlindReview || resultsReviewMode) || !prepTestIdForSections) {
       setBlindReviewSections([])
       return
     }
@@ -575,7 +639,7 @@ function SectionSessionPage() {
     return () => {
       cancelled = true
     }
-  }, [blindReviewMode, postCompleteBlindReview, blindReviewPrepTestId, searchParams, practiceApi])
+  }, [blindReviewMode, postCompleteBlindReview, resultsReviewMode, blindReviewPrepTestId, searchParams, practiceApi])
 
   const prepTestFlowId = searchParams.get("prepTestId")
 
@@ -587,7 +651,7 @@ function SectionSessionPage() {
 
   const questions = sectionSession?.questions ?? []
   const metadata = sectionSession?.metadata
-  const timedSection = !blindReviewMode && isSectionCountdownTiming(metadata?.timing)
+  const timedSection = !blindReviewMode && !resultsReviewMode && isSectionCountdownTiming(metadata?.timing)
   const showAnswersMode = metadata?.showAnswers ?? "end"
   const sectionType = metadata?.sectionType ?? "LR"
   const questionIds = useMemo(() => questions.map((q) => q.id), [questions])
@@ -641,7 +705,7 @@ function SectionSessionPage() {
     questionIds,
     initialFlaggedIds,
     practiceApi,
-    enabled: Boolean(sessionId) && !sessionCompleted && !blindReviewMode,
+    enabled: Boolean(sessionId) && !sessionCompleted && !blindReviewMode && !resultsReviewMode,
   })
 
   const safeIndex = Math.min(Math.max(qIndex, 1), Math.max(questions.length, 1))
@@ -653,20 +717,33 @@ function SectionSessionPage() {
     initialSeenIds,
     activeQuestionId: current?.id ?? null,
     practiceApi,
-    enabled: Boolean(sessionId) && !sessionCompleted && !blindReviewMode,
+    enabled: Boolean(sessionId) && !sessionCompleted && !blindReviewMode && !resultsReviewMode,
   })
 
+  function answerOutcome(
+    answer: { selectedAnswer: string; isCorrect: boolean } | undefined,
+  ): BlindReviewAnswerOutcome {
+    if (answer == null || !answer.selectedAnswer.trim()) return "unanswered"
+    return answer.isCorrect ? "correct" : "incorrect"
+  }
+
   const displayAnswer = current
-    ? blindReviewMode && answerViewTab === "actual"
-      ? actualAnswersByQuestion[current.id]
-      : answersByQuestion[current.id]
+    ? resultsReviewMode
+      ? answerViewTab === "clean"
+        ? undefined
+        : answerViewTab === "actual"
+          ? actualAnswersByQuestion[current.id]
+          : answersByQuestion[current.id]
+      : blindReviewMode && answerViewTab === "actual"
+        ? actualAnswersByQuestion[current.id]
+        : answersByQuestion[current.id]
     : undefined
   const currentAnswer = displayAnswer
   const selectedIndex =
     current && currentAnswer
       ? choiceIndexFromAnswer(current.choices, currentAnswer.selectedAnswer)
       : null
-  const revealed = blindReviewMode
+  const revealed = blindReviewMode || resultsReviewMode
     ? false
     : showAnswersMode === "each"
       ? Boolean(currentAnswer)
@@ -675,7 +752,10 @@ function SectionSessionPage() {
     current && isQuestionRecommendedForBlindReview(actualAnswersByQuestion[current.id]),
   )
   const editingBlindReviewAnswers =
-    postCompleteBlindReview || !blindReviewMode || answerViewTab === "blind_review"
+    !resultsReviewMode &&
+    (postCompleteBlindReview || !blindReviewMode || answerViewTab === "blind_review")
+  const actualOutcome = current ? answerOutcome(actualAnswersByQuestion[current.id]) : null
+  const blindReviewOutcome = current ? answerOutcome(answersByQuestion[current.id]) : null
 
   const passageBody =
     sectionType === "RC" && current?.passage
@@ -700,6 +780,7 @@ function SectionSessionPage() {
 
   async function handleSelectChoice(index: number) {
     if (!sessionId || !current || submitting) return
+    if (resultsReviewMode) return
     if (blindReviewMode && !editingBlindReviewAnswers) return
     if (postCompleteBlindReview) {
       const choice = current.choices[index]
@@ -786,6 +867,18 @@ function SectionSessionPage() {
   function navigateToBlindReviewSection(targetSessionId: string) {
     const prepTestId = blindReviewPrepTestId ?? prepTestFlowId
     if (!prepTestId || targetSessionId === sessionId) return
+    if (resultsReviewMode) {
+      navigate(
+        resultsReviewSectionSessionPath(
+          prepTestId,
+          targetSessionId,
+          searchParams.get("prepTestSessionId") ?? undefined,
+          { hasBlindReview: resultsReviewHasBr },
+        ),
+        { replace: true },
+      )
+      return
+    }
     if (blindReviewMode) {
       const q = new URLSearchParams({ blindReview: "1", prepTestId })
       navigate(`/app/practice/sections/session/${encodeURIComponent(targetSessionId)}?${q.toString()}`, {
@@ -816,6 +909,14 @@ function SectionSessionPage() {
       return `/app/practice/blind-review/${encodeURIComponent(prepTestId)}`
     }
     return "/app/practice/blind-review"
+  }
+
+  function resultsReviewExitPath(): string {
+    const prepTestSessionId = searchParams.get("prepTestSessionId")
+    if (prepTestSessionId) return prepTestResultsPath(prepTestSessionId)
+    const prepTestId = resolveBlindReviewPrepTestId()
+    if (prepTestId) return `/app/practice/blind-review/${encodeURIComponent(prepTestId)}`
+    return "/app/analytics/preptests"
   }
 
   const unansweredCount = useMemo(
@@ -884,6 +985,7 @@ function SectionSessionPage() {
             rawScore: ptCompleted.raw_score ?? 0,
             questionCount,
             scaledScore: ptCompleted.scaled_score,
+            percentile: ptCompleted.percentile,
             prepTestLabel: detail.prepTest.label,
             prepTestSessionId: ptCompleted.id,
             flow: "preptest",
@@ -1035,7 +1137,10 @@ function SectionSessionPage() {
   }
 
   if (loading) {
-    const showImmersiveLoader = Boolean(searchParams.get("prepTestId")) && searchParams.get("blindReview") !== "1"
+    const showImmersiveLoader =
+      Boolean(searchParams.get("prepTestId")) &&
+      searchParams.get("blindReview") !== "1" &&
+      searchParams.get("review") !== "1"
     return (
       <StudentMain layout="immersive" className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {showImmersiveLoader ? (
@@ -1158,12 +1263,13 @@ function SectionSessionPage() {
       ? computeRemainingTimerProgress(countdown, timerBudgetSeconds)
       : computeElapsedTimerProgress(elapsed, timerBudgetSeconds)
   const allowReselect =
+    !resultsReviewMode &&
     (postCompleteBlindReview || editingBlindReviewAnswers) &&
     canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
       blindReview: blindReviewMode || postCompleteBlindReview,
     })
 
-  const useBlindReviewLayout = blindReviewMode || postCompleteBlindReview
+  const useBlindReviewLayout = blindReviewMode || postCompleteBlindReview || resultsReviewMode
   const useActiveDrillLayout = !useBlindReviewLayout
   const sessionVariant: PracticeSessionVariant = useBlindReviewLayout
     ? "blind-review"
@@ -1177,6 +1283,10 @@ function SectionSessionPage() {
   const sessionHeaderTitle = prepTestLabel !== "PrepTest" ? prepTestLabel : headerLabel
 
   function handleBlindReviewExit() {
+    if (resultsReviewMode) {
+      navigate(resultsReviewExitPath(), { replace: true })
+      return
+    }
     if (blindReviewMode) {
       navigate(blindReviewExitPath(), { replace: true })
       return
@@ -1209,14 +1319,24 @@ function SectionSessionPage() {
     return `PT${ptNum}.S${secNum}.Q${safeIndex}`
   })()
   const notesStorageKey = sessionId ? `br-notes-${sessionId}` : "br-notes"
-  const showNotesPanel = useBlindReviewLayout && answerViewTab === "blind_review" && notesOpen
+  const showNotesPanel =
+    useBlindReviewLayout &&
+    (resultsReviewMode
+      ? reviewSidePanel === "notes"
+      : answerViewTab === "blind_review" && notesOpen)
+  const showReviewContentPanel =
+    resultsReviewMode && (reviewSidePanel === "explanation" || reviewSidePanel === "insights")
 
   function handleAnswerViewChange(view: BlindReviewAnswerView) {
     setAnswerViewTab(view)
-    if (view === "actual") setNotesOpen(false)
+    if (view === "actual" || view === "clean") setNotesOpen(false)
   }
 
   function handleToggleNotes() {
+    if (resultsReviewMode) {
+      setReviewSidePanel((prev) => (prev === "notes" ? null : "notes"))
+      return
+    }
     if (answerViewTab !== "blind_review") return
     setNotesOpen((open) => !open)
   }
@@ -1243,14 +1363,19 @@ function SectionSessionPage() {
       onLineSpacing={highlights.cycleLineSpacing}
       onToggleBold={highlights.toggleBold}
       onToggleItalic={highlights.toggleItalic}
-      notesOpen={notesOpen}
-      notesEnabled={answerViewTab === "blind_review"}
+      notesOpen={resultsReviewMode ? reviewSidePanel === "notes" : notesOpen}
+      notesEnabled={resultsReviewMode || answerViewTab === "blind_review"}
       onToggleNotes={handleToggleNotes}
       onExitSection={handleBlindReviewExit}
       exiting={finishing}
-      showSectionSelect={blindReviewMode && blindReviewSectionOptions.length > 1}
+      showSectionSelect={
+        (blindReviewMode || resultsReviewMode) && blindReviewSectionOptions.length > 1
+      }
       exitButtonLabel={postCompleteBlindReview ? "Finish Section" : "Exit Section"}
       exitingLabel={postCompleteBlindReview ? "Finishing…" : "Exiting…"}
+      chrome={resultsReviewMode ? "review" : "blind-review"}
+      sidePanel={resultsReviewMode ? reviewSidePanel : null}
+      onSidePanelChange={resultsReviewMode ? setReviewSidePanel : undefined}
     />
   ) : null
 
@@ -1297,7 +1422,7 @@ function SectionSessionPage() {
                 onSelect={(index) => void handleSelectChoice(index)}
                 flagged={current ? questionFlags.isFlagged(current.id) : false}
                 onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
-                flagsDisabled={sessionCompleted || blindReviewMode}
+                flagsDisabled={sessionCompleted || blindReviewMode || resultsReviewMode}
                 onOpenReview={useActiveDrillLayout ? () => setReviewPanelOpen(true) : undefined}
                 onOpenAccessibility={useActiveDrillLayout ? accessibilityPanel.openPanel : undefined}
                 blindReviewChrome={useBlindReviewLayout}
@@ -1305,6 +1430,12 @@ function SectionSessionPage() {
                 onAnswerViewChange={handleAnswerViewChange}
                 recommendedForBr={recommendedForBr}
                 variant={sessionVariant}
+                reviewChrome={resultsReviewMode}
+                actualOutcome={actualOutcome}
+                blindReviewOutcome={blindReviewOutcome}
+                showCorrectAnswer={showCorrectAnswer}
+                onShowCorrectAnswerChange={setShowCorrectAnswer}
+                blindReviewTabEnabled={!resultsReviewMode || resultsReviewHasBr}
               />
               </div>
             </div>
@@ -1314,7 +1445,66 @@ function SectionSessionPage() {
               storageKey={notesStorageKey}
               questionTag={questionRefLabel}
               activeQuestionId={current?.id ?? null}
-              onClose={() => setNotesOpen(false)}
+              onClose={() => {
+                if (resultsReviewMode) setReviewSidePanel(null)
+                else setNotesOpen(false)
+              }}
+            />
+          </div>
+        ) : showReviewContentPanel && useBlindReviewLayout ? (
+          <div className={BLIND_REVIEW_NOTES_LAYOUT_CLASS}>
+            <div className={BLIND_REVIEW_NOTES_STACK_CLASS}>
+              <div ref={passagePaneRef} className={BLIND_REVIEW_NOTES_PASSAGE_PANEL_CLASS}>
+                {sectionType === "RC" && current.passage ? (
+                  <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
+                ) : null}
+                <PracticeAnnotatedContent
+                  regionKey={passageKey}
+                  html={passageHtml}
+                  findQuery={findQuery}
+                  toolMode={highlights.toolMode}
+                  onMouseUp={highlights.handleContentMouseUp}
+                  onClickCapture={highlights.handleContentClick}
+                  className={BLIND_REVIEW_PASSAGE_TEXT_CLASS}
+                />
+              </div>
+              <div ref={questionPaneRef} className={BLIND_REVIEW_NOTES_QUESTION_PANEL_CLASS}>
+                <SectionQuestionPanel
+                  key={current.id}
+                  question={current}
+                  questionNumber={safeIndex}
+                  findQuery={findQuery}
+                  selectedIndex={selectedIndex}
+                  revealed={revealed}
+                  isCorrect={currentAnswer?.isCorrect ?? null}
+                  submitting={submitting}
+                  allowReselect={allowReselect}
+                  getRegionHtml={highlights.getRegionHtml}
+                  toolMode={highlights.toolMode}
+                  onContentMouseUp={highlights.handleContentMouseUp}
+                  onContentClick={highlights.handleContentClick}
+                  onSelect={(index) => void handleSelectChoice(index)}
+                  flagged={current ? questionFlags.isFlagged(current.id) : false}
+                  onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
+                  flagsDisabled
+                  blindReviewChrome={useBlindReviewLayout}
+                  answerView={answerViewTab}
+                  onAnswerViewChange={handleAnswerViewChange}
+                  recommendedForBr={recommendedForBr}
+                  variant={sessionVariant}
+                  reviewChrome
+                  actualOutcome={actualOutcome}
+                  blindReviewOutcome={blindReviewOutcome}
+                  showCorrectAnswer={showCorrectAnswer}
+                  onShowCorrectAnswerChange={setShowCorrectAnswer}
+                  blindReviewTabEnabled={resultsReviewHasBr}
+                />
+              </div>
+            </div>
+            <PracticeSessionReviewSidePanel
+              mode={reviewSidePanel === "insights" ? "insights" : "explanation"}
+              questionId={current?.id ?? null}
+              onClose={() => setReviewSidePanel(null)}
             />
           </div>
         ) : (
@@ -1386,7 +1576,7 @@ function SectionSessionPage() {
                 onSelect={(index) => void handleSelectChoice(index)}
                 flagged={current ? questionFlags.isFlagged(current.id) : false}
                 onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
-                flagsDisabled={sessionCompleted || blindReviewMode}
+                flagsDisabled={sessionCompleted || blindReviewMode || resultsReviewMode}
                 onOpenReview={useActiveDrillLayout ? () => setReviewPanelOpen(true) : undefined}
                 onOpenAccessibility={useActiveDrillLayout ? accessibilityPanel.openPanel : undefined}
                 blindReviewChrome={useBlindReviewLayout}
@@ -1394,6 +1584,12 @@ function SectionSessionPage() {
                 onAnswerViewChange={handleAnswerViewChange}
                 recommendedForBr={recommendedForBr}
                 variant={sessionVariant}
+                reviewChrome={resultsReviewMode}
+                actualOutcome={actualOutcome}
+                blindReviewOutcome={blindReviewOutcome}
+                showCorrectAnswer={showCorrectAnswer}
+                onShowCorrectAnswerChange={setShowCorrectAnswer}
+                blindReviewTabEnabled={!resultsReviewMode || resultsReviewHasBr}
               />
             </div>
           </div>
@@ -1440,6 +1636,7 @@ function SectionSessionPage() {
                 direction="prev"
                 disabled={safeIndex <= 1}
                 iconOnly
+                figmaNarrowArrow
                 className={BLIND_REVIEW_NAV_ARROW_BUTTON_CLASS}
                 onClick={() => setQIndex((i) => Math.max(1, i - 1))}
               />
@@ -1447,6 +1644,7 @@ function SectionSessionPage() {
                 direction="next"
                 disabled={safeIndex >= questions.length}
                 iconOnly
+                figmaNarrowArrow
                 className={BLIND_REVIEW_NAV_ARROW_BUTTON_CLASS}
                 onClick={() => setQIndex((i) => Math.min(questions.length, i + 1))}
               />
@@ -1660,6 +1858,7 @@ function SectionSessionPage() {
         rawScore={completeModal?.rawScore ?? 0}
         questionCount={completeModal?.questionCount ?? 1}
         scaledScore={completeModal?.scaledScore}
+        percentile={completeModal?.percentile}
         scoreHidden={scoreHidden}
         onToggleScoreHidden={() => setScoreHidden((h) => !h)}
         showBlindReview

@@ -237,6 +237,69 @@ Deno.test('completeDrillBlindReview stores blind review answers on completed dri
   assertEquals(brAnswers?.[0]?.isCorrect, true)
 })
 
+Deno.test('completeDrillBlindReview fills skipped questions from Actual answers', async () => {
+  let capturedMetadata: Record<string, unknown> | null = null
+  const details: Record<string, QuestionDetailRow> = {
+    'q-1': {
+      id: 'q-1',
+      correct_answer: 'B',
+      difficulty: 2,
+      question_type_id: null,
+      section_id: 'sec-1',
+      admin_sections: { section_type: 'LR' as const, prep_test_id: 'pt-1' },
+    },
+    'q-2': {
+      id: 'q-2',
+      correct_answer: 'C',
+      difficulty: 2,
+      question_type_id: null,
+      section_id: 'sec-1',
+      admin_sections: { section_type: 'LR' as const, prep_test_id: 'pt-1' },
+    },
+  }
+  const repo = {
+    ...mockRepo(),
+    getSessionById: async () =>
+      baseSession({
+        kind: 'DRILL',
+        completed_at: '2026-01-02T00:00:00Z',
+        raw_score: 1,
+        metadata: {
+          questionIds: ['q-1', 'q-2'],
+          drillActualAnswers: [
+            { questionId: 'q-1', selectedAnswer: 'A', isCorrect: false },
+            { questionId: 'q-2', selectedAnswer: 'C', isCorrect: true },
+          ],
+        },
+      }),
+    getQuestionDetail: async (id: string) => details[id] ?? null,
+    updateSession: async (_id: string, _uid: string, patch: Record<string, unknown>) => {
+      capturedMetadata = patch.metadata as Record<string, unknown>
+      return baseSession({
+        kind: 'DRILL',
+        completed_at: '2026-01-02T00:00:00Z',
+        metadata: capturedMetadata ?? {},
+      })
+    },
+  }
+  const service = createPracticeService({ repository: repo as never })
+  await service.completeDrillBlindReview('user-1', {
+    sessionId: 'sess-1',
+    // Only q-1 reviewed; q-2 skipped → inherit Actual (correct)
+    answers: [{ questionId: 'q-1', selectedAnswer: 'A' }],
+  })
+  assertEquals(capturedMetadata?.drillBlindReviewRawScore, 1)
+  const brAnswers = capturedMetadata?.drillBlindReviewAnswers as Array<{
+    questionId: string
+    selectedAnswer: string
+    isCorrect: boolean
+  }>
+  assertEquals(brAnswers?.length, 2)
+  assertEquals(brAnswers?.find((a) => a.questionId === 'q-1')?.isCorrect, false)
+  assertEquals(brAnswers?.find((a) => a.questionId === 'q-2')?.selectedAnswer, 'C')
+  assertEquals(brAnswers?.find((a) => a.questionId === 'q-2')?.isCorrect, true)
+})
+
 Deno.test('completeSession uses latest answer per question for raw score', async () => {
   const service = createPracticeService({ repository: mockRepo() as never })
   const out = await service.completeSession('user-1', { sessionId: 'sess-1' })
@@ -287,6 +350,68 @@ Deno.test('completeSectionBlindReview stores blind review answers on completed s
   assertEquals(capturedMetadata?.sectionBlindReviewRawScore, 1)
   const brAnswers = capturedMetadata?.sectionBlindReviewAnswers as Array<{ isCorrect: boolean }>
   assertEquals(brAnswers?.[0]?.isCorrect, true)
+})
+
+Deno.test('completeSectionBlindReview fills skipped questions from Actual answers', async () => {
+  let capturedMetadata: Record<string, unknown> | null = null
+  const details: Record<string, QuestionDetailRow> = {
+    'q-1': {
+      id: 'q-1',
+      correct_answer: 'B',
+      difficulty: 2,
+      question_type_id: null,
+      section_id: 'sec-1',
+      admin_sections: { section_type: 'LR' as const, prep_test_id: 'pt-1' },
+    },
+    'q-2': {
+      id: 'q-2',
+      correct_answer: 'D',
+      difficulty: 2,
+      question_type_id: null,
+      section_id: 'sec-1',
+      admin_sections: { section_type: 'LR' as const, prep_test_id: 'pt-1' },
+    },
+  }
+  const repo = {
+    ...mockRepo(),
+    getSessionById: async () =>
+      baseSession({
+        kind: 'SECTION',
+        section_id: 'sec-1',
+        completed_at: '2026-01-02T00:00:00Z',
+        raw_score: 0,
+        metadata: {
+          questionIds: ['q-1', 'q-2'],
+          sectionActualAnswers: [
+            { questionId: 'q-1', selectedAnswer: 'A', isCorrect: false },
+            { questionId: 'q-2', selectedAnswer: 'A', isCorrect: false },
+          ],
+        },
+      }),
+    getQuestionDetail: async (id: string) => details[id] ?? null,
+    updateSession: async (_id: string, _uid: string, patch: Record<string, unknown>) => {
+      capturedMetadata = patch.metadata as Record<string, unknown>
+      return baseSession({
+        kind: 'SECTION',
+        section_id: 'sec-1',
+        completed_at: '2026-01-02T00:00:00Z',
+        metadata: capturedMetadata ?? {},
+      })
+    },
+  }
+  const service = createPracticeService({ repository: repo as never })
+  await service.completeSectionBlindReview('user-1', {
+    sessionId: 'sess-1',
+    answers: [{ questionId: 'q-1', selectedAnswer: 'B' }],
+  })
+  assertEquals(capturedMetadata?.sectionBlindReviewRawScore, 1)
+  const brAnswers = capturedMetadata?.sectionBlindReviewAnswers as Array<{
+    questionId: string
+    isCorrect: boolean
+  }>
+  assertEquals(brAnswers?.length, 2)
+  assertEquals(brAnswers?.find((a) => a.questionId === 'q-1')?.isCorrect, true)
+  assertEquals(brAnswers?.find((a) => a.questionId === 'q-2')?.isCorrect, false)
 })
 
 Deno.test('completeSession is idempotent when session already completed', async () => {
@@ -1589,6 +1714,35 @@ Deno.test('getBlindReviewDetail includes section session ids for completed secti
   })
   const out = await service.getBlindReviewDetail('user-1', { prepTestId: 'pt-900' })
   assertEquals(out.blindReview.status, 'eligible')
+  const lr = out.sections.find((s) => s.id === 'sec-lr')
+  assertEquals(lr?.sectionSessionId, 'sec-sess-lr')
+})
+
+Deno.test('getBlindReviewDetail works after blind review was skipped (post-results Review)', async () => {
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserSessionsForPrepTest: async () => [
+        baseSession({
+          id: 'pt-sess-skipped',
+          kind: 'PREPTEST',
+          prep_test_id: 'pt-900',
+          completed_at: '2026-01-03T00:00:00Z',
+          scaled_score: 155,
+          metadata: { blindReviewSkipped: true },
+        }),
+        baseSession({
+          id: 'sec-sess-lr',
+          kind: 'SECTION',
+          prep_test_id: 'pt-900',
+          section_id: 'sec-lr',
+          completed_at: '2026-01-02T00:00:00Z',
+        }),
+      ],
+    }) as never,
+  })
+  const out = await service.getBlindReviewDetail('user-1', { prepTestId: 'pt-900' })
+  assertEquals(out.blindReview.status, 'completed')
+  assertEquals(out.blindReview.prepTestSessionId, 'pt-sess-skipped')
   const lr = out.sections.find((s) => s.id === 'sec-lr')
   assertEquals(lr?.sectionSessionId, 'sec-sess-lr')
 })
