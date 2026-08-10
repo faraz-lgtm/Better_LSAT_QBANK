@@ -19,8 +19,10 @@ import {
   BLIND_REVIEW_OPTION_ROW_SELECTED_BR_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
+import { ReviewIdeaIcon } from "@/features/student/practice-session/review-idea-icon"
 import type { RegionKey } from "@/features/student/practice-session/practice-session-types"
 import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
+import { HtmlContent } from "@/lib/html/html-content"
 import { cn } from "@/lib/utils"
 
 const letters = ["A", "B", "C", "D", "E"] as const
@@ -89,6 +91,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
   const isActiveDrill = variant === "active-drill"
   const isBlindReview = variant === "blind-review"
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null)
+  const hasExplanation = Boolean(explanationHtml?.trim())
   const isActualAnswerView = answerView === "actual"
   const brSelectedRowClass = isActualAnswerView
     ? BLIND_REVIEW_OPTION_ROW_SELECTED_ACTUAL_CLASS
@@ -148,13 +151,6 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
   if (isBlindReview) {
     return (
       <div
-        role="button"
-        tabIndex={disabled ? -1 : 0}
-        aria-pressed={selected}
-        aria-disabled={disabled}
-        onPointerDown={handlePointerDown}
-        onClick={handleSelect}
-        onKeyDown={handleKeyDown}
         className={cn(
           "overflow-hidden rounded-[14px] border transition-colors",
           selected
@@ -162,42 +158,26 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
             : hidden
               ? "border-[#dfe1e7] bg-[#f6f8fa]"
               : "border-[#dfe1e7] bg-white",
-          disabled ? "cursor-default" : "cursor-pointer",
         )}
       >
-        <div className="flex min-w-0 flex-1 items-center gap-4">
-          <span
-            className={cn(
-              "flex size-12 shrink-0 items-center justify-center rounded-[14px] text-lg font-bold",
-              selected ? brSelectedLetterClass : "bg-[#f3f4f6] text-[#4a5565]",
-              hidden && "line-through",
-            )}
-          >
-            {letter}
-          </span>
-          {choiceContent}
-        </div>
-        <button
-          type="button"
-          className="inline-flex size-5 shrink-0 items-center justify-center text-[#666d80] transition hover:text-[#062357]"
-          aria-label={hidden ? "Show answer choice" : "Hide answer choice"}
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggleHidden?.()
-          }}
+        <div
+          role={explanationAction ? undefined : "button"}
+          tabIndex={disabled || explanationAction ? -1 : 0}
+          aria-pressed={explanationAction ? undefined : selected}
+          aria-disabled={disabled}
+          onPointerDown={explanationAction ? undefined : handlePointerDown}
+          onClick={explanationAction ? undefined : handleSelect}
+          onKeyDown={explanationAction ? undefined : handleKeyDown}
           className={cn(
             "flex items-center justify-between gap-4 p-4 text-left",
-            !explanationAction &&
-              (disabled ? "cursor-default" : annotateMode ? "cursor-text" : "cursor-pointer"),
+            !explanationAction && (disabled ? "cursor-default" : "cursor-pointer"),
           )}
         >
           <div className="flex min-w-0 flex-1 items-center gap-4">
             <span
               className={cn(
                 "flex size-12 shrink-0 items-center justify-center rounded-[14px] text-lg font-bold",
-                selected
-                  ? "bg-[#f6f8fa] text-[#0d47a1] shadow-[0px_10px_7px_rgba(0,0,0,0.1),0px_4px_3px_rgba(0,0,0,0.1)]"
-                  : "bg-[#f3f4f6] text-[#4a5565]",
+                selected ? brSelectedLetterClass : "bg-[#f3f4f6] text-[#4a5565]",
                 hidden && "line-through",
               )}
             >
