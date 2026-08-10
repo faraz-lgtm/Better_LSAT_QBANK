@@ -14,6 +14,9 @@ const GUEST_DIAGNOSTIC_RESULT_STORAGE_KEY = "guestDiagnosticResult"
 type GuestDiagnosticQuestionOutcome = {
   questionId: string
   isCorrect: boolean
+  selectedAnswer?: string | null
+  /** Seconds spent on this question during the attempt (when tracked). */
+  timeSpentSeconds?: number | null
 }
 
 type GuestDiagnosticResult = {
@@ -85,9 +88,12 @@ function buildDefaultGuestDiagnosticResult(intentId: GuestDiagnosticIntentId): G
 
   const outcomes: GuestDiagnosticQuestionOutcome[] = Array.from({ length: questionCount }, (_, index) => {
     const questionId = intentId === "mini" ? `mini-diag-q${index + 1}` : `guest-diagnostic-preview-q${index + 1}`
+    const isCorrect = index < correctCount
     return {
       questionId,
-      isCorrect: index < correctCount,
+      isCorrect,
+      selectedAnswer: isCorrect ? "C" : "A",
+      timeSpentSeconds: 40 + ((index * 17) % 80),
     }
   })
 
@@ -106,11 +112,18 @@ function buildGuestDiagnosticResultFromAnswers(
   intentId: GuestDiagnosticIntentId,
   questions: DrillQuestion[],
   answersByQuestion: Record<string, GuestDiagnosticAnswerState>,
+  timeSpentByQuestion?: Readonly<Record<string, number>>,
 ): GuestDiagnosticResult {
   const outcomes: GuestDiagnosticQuestionOutcome[] = questions.map((question) => {
     const answer = answersByQuestion[question.id]
     const isCorrect = answer ? answer.isCorrect : false
-    return { questionId: question.id, isCorrect }
+    const spent = timeSpentByQuestion?.[question.id]
+    return {
+      questionId: question.id,
+      isCorrect,
+      selectedAnswer: answer?.selectedAnswer ?? null,
+      timeSpentSeconds: typeof spent === "number" && Number.isFinite(spent) ? Math.max(0, Math.round(spent)) : null,
+    }
   })
 
   const correctCount = outcomes.filter((outcome) => outcome.isCorrect).length

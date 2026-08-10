@@ -59,6 +59,8 @@ export type PrepTestDetailSection = {
   questionCount: number
   timeMinutes: number
   practiceable: boolean
+  /** Unscored experimental section; shown in UI/results but excluded from PrepTest score. */
+  isExperimental?: boolean
   unlocked: boolean
   onBreak: boolean
   answeredCount: number

@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  formatOverviewPercentileCaption,
   formatPrepTestChartLabel,
   formatPrepTestHistoryLabel,
+  mapDrillSessionToHistoryEntry,
   mapOverviewToHeadlineStats,
   mapPrepTestSessionToHistoryEntry,
+  mapSectionSessionToHistoryEntry,
   mapTrajectoryToScoreProgress,
   mapPrioritiesToSections,
 } from "@/features/student/analytics/map-analytics"
@@ -28,6 +31,12 @@ describe("map-analytics", () => {
     const stats = mapOverviewToHeadlineStats(overview)
     expect(stats[0]?.value).toBe("170")
     expect(stats[0]?.caption).toContain("92nd")
+  })
+
+  it("formats overview percentile captions with ordinals", () => {
+    expect(formatOverviewPercentileCaption(99)).toBe("PERCENTILE: 99th")
+    expect(formatOverviewPercentileCaption(11)).toBe("PERCENTILE: 11th")
+    expect(formatOverviewPercentileCaption(90.6)).toBe("PERCENTILE: 90.6th")
   })
 
   it("formats prep test chart labels as PT numbers", () => {
@@ -115,5 +124,52 @@ describe("map-analytics", () => {
     expect(sections).toHaveLength(1)
     expect(sections[0]?.id).toBe("LR")
     expect(sections[0]?.rows.map((r) => r.id)).toEqual(["qt-high", "qt-low"])
+  })
+
+  it("maps drill and section sessions into history entries", () => {
+    const drill = mapDrillSessionToHistoryEntry({
+      id: "d1",
+      kind: "DRILL",
+      startedAt: "2026-01-01T00:00:00Z",
+      completedAt: "2026-01-02T00:00:00Z",
+      rawScore: 3,
+      scaledScore: null,
+      percentile: null,
+      bookmarked: true,
+      excluded: false,
+      metadata: { questionTypeName: "Flaw", questionIds: ["a", "b", "c", "d", "e"] },
+      prepTestTitle: null,
+      sectionTitle: null,
+      sectionType: "LR",
+    })
+    expect(drill).toMatchObject({
+      id: "d1",
+      testLabel: "Flaw",
+      score: 3,
+      scoreMax: 5,
+      bookmarked: true,
+    })
+
+    const section = mapSectionSessionToHistoryEntry({
+      id: "sec1",
+      kind: "SECTION",
+      startedAt: "2026-01-01T00:00:00Z",
+      completedAt: "2026-01-03T00:00:00Z",
+      rawScore: 18,
+      scaledScore: null,
+      percentile: null,
+      bookmarked: false,
+      excluded: false,
+      metadata: { questionCount: 25 },
+      prepTestTitle: null,
+      sectionTitle: "LR Section 2",
+      sectionType: "LR",
+    })
+    expect(section).toMatchObject({
+      id: "sec1",
+      testLabel: "LR Section 2",
+      score: 18,
+      scoreMax: 25,
+    })
   })
 })

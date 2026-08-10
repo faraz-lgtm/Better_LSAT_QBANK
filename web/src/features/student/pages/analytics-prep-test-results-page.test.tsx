@@ -54,6 +54,7 @@ const sessionDetail: PrepTestSessionDetail = {
       selectedLetter: "A",
       sectionType: "LR",
       sectionNumber: 1,
+      isExperimental: false,
     },
     {
       id: "q2",
@@ -70,6 +71,7 @@ const sessionDetail: PrepTestSessionDetail = {
       selectedLetter: "A",
       sectionType: "LR",
       sectionNumber: 1,
+      isExperimental: false,
     },
     {
       id: "q3",
@@ -86,6 +88,7 @@ const sessionDetail: PrepTestSessionDetail = {
       selectedLetter: "C",
       sectionType: "RC",
       sectionNumber: 2,
+      isExperimental: false,
     },
     {
       id: "q4",
@@ -102,6 +105,7 @@ const sessionDetail: PrepTestSessionDetail = {
       selectedLetter: "D",
       sectionType: "RC",
       sectionNumber: 2,
+      isExperimental: false,
     },
   ],
 }
@@ -158,5 +162,14 @@ describe("AnalyticsPrepTestResultsPage insights toggle", () => {
     await waitFor(() => expect(mockUpdateSession).toHaveBeenCalled())
     await waitFor(() => expect(toggle).not.toBeChecked())
     await screen.findByText("About this PrepTest")
+  })
+
+  it("links the edit pencil to the explanation detail page for that question", async () => {
+    renderResultsPage()
+    await screen.findByRole("heading", { name: /PT156 - June 19, 2026/i })
+
+    const editLinks = screen.getAllByRole("link", { name: /view explanation/i })
+    expect(editLinks.length).toBeGreaterThan(0)
+    expect(editLinks[0]).toHaveAttribute("href", "/app/learn/explanations/q/q1")
   })
 })

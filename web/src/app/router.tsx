@@ -15,6 +15,7 @@ import { OnboardingWelcomePreviewPage } from "@/features/auth/pages/onboarding-w
 import { GuestDiagnosticStartPage } from "@/features/guest/pages/guest-diagnostic-start-page"
 import { GuestDiagnosticResultsPage } from "@/features/guest/pages/guest-diagnostic-results-page"
 import { GuestDiagnosticResultsPreviewPage } from "@/features/guest/pages/guest-diagnostic-results-preview-page"
+import { GuestDiagnosticReviewPage } from "@/features/guest/pages/guest-diagnostic-review-page"
 import { MarketingHomePage } from "@/features/marketing/pages/marketing-home-page"
 import { IntentPage } from "@/features/auth/pages/intent-page"
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
@@ -354,6 +355,24 @@ const router = createBrowserRouter([
   },
   { path: "/diagnostic/start/preview", element: <GuestDiagnosticStartPage preview /> },
   { path: "/diagnostic/results/preview", element: <GuestDiagnosticResultsPreviewPage /> },
+  {
+    path: "/diagnostic/review",
+    element: (
+      <RequireRole requiredRole="student">
+        <GuestDiagnosticReviewPage mode="review" />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/diagnostic/tester",
+    element: (
+      <RequireRole requiredRole="student">
+        <GuestDiagnosticReviewPage mode="tester" />
+      </RequireRole>
+    ),
+  },
+  { path: "/diagnostic/review/preview", element: <GuestDiagnosticReviewPage mode="review" preview /> },
+  { path: "/diagnostic/tester/preview", element: <GuestDiagnosticReviewPage mode="tester" preview /> },
   { path: "/practice/rc-nav/preview", element: <RcQuestionNavPreviewPage /> },
   {
     path: "/app",
@@ -374,6 +393,8 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <DashboardPage /> },
           { path: "diagnostic/results", element: <GuestDiagnosticResultsPage /> },
+          { path: "diagnostic/review", element: <Navigate to="/diagnostic/review" replace /> },
+          { path: "diagnostic/tester", element: <Navigate to="/diagnostic/tester" replace /> },
           { path: "learn/explanations", element: <ExplanationsPage /> },
           { path: "learn/explanations/q/:questionId", element: <ExplanationQuestionDetailPage /> },
           { path: "prep-course", element: <PrepCourseListPage /> },

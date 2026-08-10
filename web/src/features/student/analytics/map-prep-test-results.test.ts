@@ -40,6 +40,7 @@ const baseApi: PrepTestSessionDetail = {
       selectedLetter: "A",
       sectionType: "LR",
       sectionNumber: 1,
+      isExperimental: false,
     },
     {
       id: "q2",
@@ -56,6 +57,7 @@ const baseApi: PrepTestSessionDetail = {
       selectedLetter: "A",
       sectionType: "LR",
       sectionNumber: 1,
+      isExperimental: false,
     },
     {
       id: "q3",
@@ -72,6 +74,7 @@ const baseApi: PrepTestSessionDetail = {
       selectedLetter: "C",
       sectionType: "RC",
       sectionNumber: 2,
+      isExperimental: false,
     },
     {
       id: "q4",
@@ -88,6 +91,7 @@ const baseApi: PrepTestSessionDetail = {
       selectedLetter: "D",
       sectionType: "RC",
       sectionNumber: 2,
+      isExperimental: false,
     },
   ],
 }
@@ -142,9 +146,134 @@ describe("mapPrepTestDetailToResults", () => {
             selectedLetter: "B",
             sectionType: "LR",
             sectionNumber: 1,
+            isExperimental: false,
           },
         ],
       }),
     ).toBe(true)
+  })
+
+  it("labels experimental sections with (EXP) and keeps them out of scored totals", () => {
+    const out = mapPrepTestDetailToResults({
+      ...baseApi,
+      totalQuestions: 4,
+      correct: 3,
+      incorrect: 1,
+      questions: [
+        ...baseApi.questions.slice(0, 2),
+        {
+          id: "q-exp-1",
+          number: 1,
+          title: "EXP Q1",
+          tags: ["Flaw"],
+          difficulty: "Medium",
+          difficultyDots: 3,
+          actualCorrect: true,
+          blindReviewCorrect: true,
+          blindReviewUnanswered: false,
+          isUnanswered: false,
+          correctLetter: "A",
+          selectedLetter: "A",
+          sectionType: "LR",
+          sectionNumber: 3,
+          isExperimental: true,
+        },
+      ],
+    })
+    expect(out.correctSummary).toBe("1/2 CORRECT (-1)")
+    expect(out.totalQuestions).toBe(2)
+    expect(out.listedQuestionCount).toBe(3)
+    expect(out.sections.some((s) => s.sectionLabel === "Section 3 (EXP)")).toBe(true)
+    expect(out.lrSections.some((s) => s.sectionTitle === "Section 3 (EXP)")).toBe(true)
+  })
+
+  it("infers Section 4 (EXP) when API omits isExperimental on a 1 RC + 3 LR test", () => {
+    const out = mapPrepTestDetailToResults({
+      ...baseApi,
+      totalQuestions: 4,
+      correct: 4,
+      incorrect: 0,
+      questions: [
+        {
+          id: "rc1",
+          number: 1,
+          title: "RC",
+          tags: [],
+          difficulty: "Easy",
+          difficultyDots: 2,
+          actualCorrect: true,
+          blindReviewCorrect: true,
+          blindReviewUnanswered: false,
+          isUnanswered: false,
+          correctLetter: "A",
+          selectedLetter: "A",
+          sectionType: "RC",
+          sectionNumber: 1,
+        },
+        {
+          id: "lr2",
+          number: 1,
+          title: "LR2",
+          tags: [],
+          difficulty: "Easy",
+          difficultyDots: 2,
+          actualCorrect: true,
+          blindReviewCorrect: true,
+          blindReviewUnanswered: false,
+          isUnanswered: false,
+          correctLetter: "A",
+          selectedLetter: "A",
+          sectionType: "LR",
+          sectionNumber: 2,
+        },
+        {
+          id: "lr3",
+          number: 1,
+          title: "LR3",
+          tags: [],
+          difficulty: "Easy",
+          difficultyDots: 2,
+          actualCorrect: false,
+          blindReviewCorrect: false,
+          blindReviewUnanswered: false,
+          isUnanswered: false,
+          correctLetter: "A",
+          selectedLetter: "B",
+          sectionType: "LR",
+          sectionNumber: 3,
+        },
+        {
+          id: "lr4",
+          number: 1,
+          title: "LR4",
+          tags: [],
+          difficulty: "Easy",
+          difficultyDots: 2,
+          actualCorrect: true,
+          blindReviewCorrect: true,
+          blindReviewUnanswered: false,
+          isUnanswered: false,
+          correctLetter: "A",
+          selectedLetter: "A",
+          sectionType: "LR",
+          sectionNumber: 4,
+        },
+      ],
+    })
+    expect(out.sections.map((s) => s.sectionLabel)).toEqual([
+      "Section 1",
+      "Section 2",
+      "Section 3",
+      "Section 4 (EXP)",
+    ])
+    expect(out.sectionBlocks.map((s) => ({ title: s.sectionTitle, exp: s.isExperimental }))).toEqual([
+      { title: "Section 1", exp: false },
+      { title: "Section 2", exp: false },
+      { title: "Section 3", exp: false },
+      { title: "Section 4 (EXP)", exp: true },
+    ])
+    expect(out.correctSummary).toBe("2/3 CORRECT (-1)")
+    expect(out.totalQuestions).toBe(3)
+    expect(out.listedQuestionCount).toBe(4)
   })
 })

@@ -1,7 +1,14 @@
 import type { PrepTestSessionDetail } from "@/lib/api/analytics"
+import {
+  scorePrepTestQuestions,
+  withExperimentalSectionFlags,
+  type PrepTestResultQuestion,
+} from "@/features/student/analytics/prep-test-experimental-sections"
 import type {
   PrepTestLrSectionBlock,
+  PrepTestPassageSummary,
   PrepTestQuestionResultRow,
+  PrepTestRcSectionBlock,
   PrepTestResultsDetail,
   PrepTestSectionKind,
   PrepTestSectionSummary,
@@ -21,6 +28,10 @@ function chunk<T>(items: T[], size: number): T[][] {
 function formatScoreDelta(incorrectCount: number): string {
   if (incorrectCount <= 0) return "0"
   return `-${incorrectCount}`
+}
+
+function sectionHeading(sectionNumber: number, isExperimental: boolean): string {
+  return isExperimental ? `Section ${sectionNumber} (EXP)` : `Section ${sectionNumber}`
 }
 
 export function prepTestBlindReviewWasCompleted(
@@ -45,7 +56,7 @@ export function formatQuestionRefLabel(
 }
 
 function mapQuestionRow(
-  q: PrepTestSessionDetail["questions"][number],
+  q: PrepTestResultQuestion,
   api: Pick<PrepTestSessionDetail, "moduleId" | "prepTestTitle">,
 ): PrepTestQuestionResultRow {
   const letter = q.correctLetter.trim().toUpperCase().slice(0, 1)
@@ -73,7 +84,8 @@ function mapQuestionRow(
 function buildSectionSummary(
   sectionNumber: number,
   kind: PrepTestSectionKind,
-  questions: PrepTestSessionDetail["questions"],
+  questions: PrepTestResultQuestion[],
+  isExperimental: boolean,
 ): PrepTestSectionSummary {
   const outcomes: QuestionResultStatus[] = questions.map((q) =>
     q.isUnanswered ? "unanswered" : q.actualCorrect ? "correct" : "incorrect",
@@ -82,10 +94,11 @@ function buildSectionSummary(
   const total = questions.length
   const incorrect = total - correct
   return {
-    id: `section-${sectionNumber}-${kind}`,
+    id: `section-${sectionNumber}-${kind}${isExperimental ? "-exp" : ""}`,
     kind,
     longName: kind === "LR" ? "Logical Reasoning" : "Reading Comprehension",
-    sectionLabel: `Section ${sectionNumber}`,
+    sectionLabel: sectionHeading(sectionNumber, isExperimental),
+    isExperimental,
     scoreDelta: -incorrect,
     questionRows: chunk(outcomes, QUESTIONS_PER_ROW),
     accuracyPct: total > 0 ? Math.round((correct / total) * 100) : 0,
@@ -94,13 +107,15 @@ function buildSectionSummary(
 
 function buildLrSectionBlock(
   sectionNumber: number,
-  questions: PrepTestSessionDetail["questions"],
+  questions: PrepTestResultQuestion[],
   api: Pick<PrepTestSessionDetail, "moduleId" | "prepTestTitle">,
+  isExperimental: boolean,
 ): PrepTestLrSectionBlock {
   const incorrect = questions.filter((q) => !q.actualCorrect).length
   const blindIncorrect = questions.filter((q) => q.blindReviewUnanswered || !q.blindReviewCorrect).length
   return {
-    sectionTitle: `Section ${sectionNumber}`,
+    sectionTitle: sectionHeading(sectionNumber, isExperimental),
+    isExperimental,
     scoreDisplay: formatScoreDelta(incorrect),
     blindReviewDisplay: formatScoreDelta(blindIncorrect),
     passages: [],
@@ -110,35 +125,39 @@ function buildLrSectionBlock(
 
 function buildRcSectionBlock(
   sectionNumber: number,
-  questions: PrepTestSessionDetail["questions"],
+  questions: PrepTestResultQuestion[],
   api: Pick<PrepTestSessionDetail, "moduleId" | "prepTestTitle">,
-): PrepTestResultsDetail["rcSection"] {
+  isExperimental: boolean,
+): PrepTestRcSectionBlock {
   const incorrect = questions.filter((q) => !q.actualCorrect).length
   const blindIncorrect = questions.filter((q) => q.blindReviewUnanswered || !q.blindReviewCorrect).length
   return {
-    sectionTitle: `Section ${sectionNumber}`,
+    sectionTitle: sectionHeading(sectionNumber, isExperimental),
+    isExperimental,
     scoreDisplay: formatScoreDelta(incorrect),
     blindReviewDisplay: formatScoreDelta(blindIncorrect),
     questions: questions.map((q) => mapQuestionRow(q, api)),
   }
 }
 
-function groupQuestionsBySection(questions: PrepTestSessionDetail["questions"]) {
-  const groups = new Map<string, PrepTestSessionDetail["questions"]>()
+function groupQuestionsBySection(questions: PrepTestResultQuestion[]) {
+  const groups = new Map<string, PrepTestResultQuestion[]>()
   for (const q of questions) {
     const sectionType = q.sectionType === "RC" ? "RC" : "LR"
     const sectionNumber = q.sectionNumber ?? 1
-    const key = `${sectionNumber}:${sectionType}`
+    const isExperimental = q.isExperimental === true
+    const key = `${sectionNumber}:${sectionType}:${isExperimental ? "exp" : "scored"}`
     const list = groups.get(key) ?? []
     list.push(q)
     groups.set(key, list)
   }
   return [...groups.entries()]
     .map(([key, qs]) => {
-      const [num, type] = key.split(":")
+      const [num, type, exp] = key.split(":")
       return {
         sectionNumber: Number(num),
         sectionType: type as PrepTestSectionKind,
+        isExperimental: exp === "exp",
         questions: qs.sort((a, b) => a.number - b.number),
       }
     })
@@ -154,49 +173,86 @@ export function formatPrepTestResultsTitle(prepTestTitle: string, moduleId: stri
 }
 
 export function mapPrepTestDetailToResults(api: PrepTestSessionDetail): PrepTestResultsDetail {
-  const incorrect = api.incorrect
-  const correct = api.correct
+  const questions = withExperimentalSectionFlags(api.questions)
+  const { correct, incorrect, totalQuestions } = scorePrepTestQuestions(questions)
   const blindReviewCompleted = prepTestBlindReviewWasCompleted(api)
-  const grouped = groupQuestionsBySection(api.questions)
+  const grouped = groupQuestionsBySection(questions)
 
-  const sections: PrepTestSectionSummary[] = grouped.map(({ sectionNumber, sectionType, questions }) =>
-    buildSectionSummary(sectionNumber, sectionType, questions),
+  const sections: PrepTestSectionSummary[] = grouped.map(
+    ({ sectionNumber, sectionType, questions: sectionQuestions, isExperimental }) =>
+      buildSectionSummary(sectionNumber, sectionType, sectionQuestions, isExperimental),
   )
 
   const apiMeta = { moduleId: api.moduleId, prepTestTitle: api.prepTestTitle }
 
   const lrSections: PrepTestLrSectionBlock[] = grouped
     .filter((g) => g.sectionType === "LR")
-    .map(({ sectionNumber, questions }) => buildLrSectionBlock(sectionNumber, questions, apiMeta))
+    .map(({ sectionNumber, questions: sectionQuestions, isExperimental }) =>
+      buildLrSectionBlock(sectionNumber, sectionQuestions, apiMeta, isExperimental),
+    )
 
-  const rcGroup = grouped.filter((g) => g.sectionType === "RC").at(-1)
-  const rcSection = rcGroup
-    ? buildRcSectionBlock(rcGroup.sectionNumber, rcGroup.questions, apiMeta)
-    : {
-        sectionTitle: "Reading Comprehension",
-        scoreDisplay: "0",
-        blindReviewDisplay: "0",
-        questions: [] as PrepTestQuestionResultRow[],
+  const rcSections: PrepTestRcSectionBlock[] = grouped
+    .filter((g) => g.sectionType === "RC")
+    .map(({ sectionNumber, questions: sectionQuestions, isExperimental }) =>
+      buildRcSectionBlock(sectionNumber, sectionQuestions, apiMeta, isExperimental),
+    )
+
+  const sectionBlocks = grouped.map(
+    ({ sectionNumber, sectionType, questions: sectionQuestions, isExperimental }) => {
+      if (sectionType === "RC") {
+        const block = buildRcSectionBlock(sectionNumber, sectionQuestions, apiMeta, isExperimental)
+        return {
+          kind: "RC" as const,
+          sectionTitle: block.sectionTitle,
+          isExperimental: block.isExperimental,
+          scoreDisplay: block.scoreDisplay,
+          blindReviewDisplay: block.blindReviewDisplay,
+          passages: [] as PrepTestPassageSummary[],
+          questions: block.questions,
+        }
       }
+      const block = buildLrSectionBlock(sectionNumber, sectionQuestions, apiMeta, isExperimental)
+      return {
+        kind: "LR" as const,
+        sectionTitle: block.sectionTitle,
+        isExperimental: block.isExperimental,
+        scoreDisplay: block.scoreDisplay,
+        blindReviewDisplay: block.blindReviewDisplay,
+        passages: block.passages,
+        questions: block.questions,
+      }
+    },
+  )
+
+  const rcSection = rcSections[0] ?? {
+    sectionTitle: "Reading Comprehension",
+    isExperimental: false,
+    scoreDisplay: "0",
+    blindReviewDisplay: "0",
+    questions: [] as PrepTestQuestionResultRow[],
+  }
 
   const firstLr = lrSections[0]
+  const listedQuestionCount = questions.length
 
   return {
-    totalQuestions: api.totalQuestions,
+    totalQuestions,
+    listedQuestionCount,
     scaledScore: api.blindReviewScore,
     correct,
     incorrect,
-    correctSummary: `${correct}/${api.totalQuestions} CORRECT (-${incorrect})`,
+    correctSummary: `${correct}/${totalQuestions} CORRECT (-${incorrect})`,
     percentile: api.percentile ?? 0,
     prediction: api.scaledScore,
     blindReview: api.blindReviewScore,
     blindReviewCompleted,
     sections,
     lrSections,
+    sectionBlocks,
     passages: firstLr?.passages ?? [],
     questions: firstLr?.questions ?? [],
     about: {
-      questionCount: String(api.totalQuestions),
+      questionCount: String(totalQuestions),
       timing: "—",
       timeUsed: "—",
       take: "1",
@@ -204,5 +260,6 @@ export function mapPrepTestDetailToResults(api: PrepTestSessionDetail): PrepTest
       source: api.prepTestTitle,
     },
     rcSection,
+    rcSections,
   }
 }

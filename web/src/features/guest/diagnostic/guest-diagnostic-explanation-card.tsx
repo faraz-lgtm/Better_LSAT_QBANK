@@ -1,5 +1,10 @@
 import type { MiniDiagnosticExplanation } from '@/lib/api/diagnostic'
-import { HtmlContent } from '@/lib/html/html-content'
+import { buildDiagnosticAnswerPopularity } from '@/features/guest/diagnostic/diagnostic-answer-popularity'
+import {
+  PracticeQuestionResultStatsRow,
+  difficultyLabelFromLevel,
+  formatMmSs,
+} from '@/features/student/practice-session/practice-results-ui'
 import { cn } from '@/lib/utils'
 
 type GuestDiagnosticExplanationCardProps = {
@@ -7,15 +12,38 @@ type GuestDiagnosticExplanationCardProps = {
   explanation: MiniDiagnosticExplanation
   isCorrect: boolean
   selectedAnswer?: string | null
+  targetTimeSeconds?: number | null
+  yourTimeSeconds?: number | null
 }
 
+/** Results-list row only — full stem/choices/explanations live on Review in Tester. */
 function GuestDiagnosticExplanationCard({
   number,
   explanation,
   isCorrect,
   selectedAnswer,
+  targetTimeSeconds,
+  yourTimeSeconds,
 }: GuestDiagnosticExplanationCardProps) {
   const normalizedSelected = selectedAnswer?.trim().toUpperCase() ?? null
+  const correctLetter = explanation.correctAnswer?.trim().toUpperCase() ?? 'A'
+  const difficulty = difficultyLabelFromLevel(explanation.difficulty ?? 3)
+  const targetSec = targetTimeSeconds ?? (difficulty === 'Hardest' || difficulty === 'Hard' ? 105 : difficulty === 'Medium' ? 90 : 75)
+  const targetTime = formatMmSs(targetSec)
+  const yourTime =
+    yourTimeSeconds != null && yourTimeSeconds >= 0 ? formatMmSs(yourTimeSeconds) : '—'
+  const deltaSec = targetSec - (yourTimeSeconds ?? 0)
+  const yourTimeNote =
+    yourTimeSeconds != null && deltaSec > 0
+      ? `(${formatMmSs(deltaSec)} under)`
+      : yourTimeSeconds != null && deltaSec < 0
+        ? `(${formatMmSs(-deltaSec)} over)`
+        : ''
+  const popularityRows = buildDiagnosticAnswerPopularity(
+    explanation.sourceItemId,
+    correctLetter,
+    explanation.choices.map((choice) => choice.letter),
+  )
 
   return (
     <article className="border-t border-[#dfe1e7] bg-white p-6">
@@ -50,50 +78,16 @@ function GuestDiagnosticExplanationCard({
             </div>
           </div>
 
-          {explanation.stimulusText ? (
-            <div className="rounded-[12px] border border-[#dfe1e7] bg-[#f9f9fb] p-4 text-sm leading-[1.6] text-[#062357]">
-              {explanation.stimulusText}
-            </div>
-          ) : null}
-
-          <p className="text-base font-medium leading-[1.6] text-[#062357]">{explanation.stemText}</p>
-
-          <div className="space-y-2">
-            {explanation.choices.map((choice) => {
-              const letter = choice.letter.toUpperCase()
-              const isCorrectChoice = explanation.correctAnswer === letter
-              const isSelected = normalizedSelected === letter
-              return (
-                <div
-                  key={letter}
-                  className={cn(
-                    'rounded-[12px] border px-4 py-3',
-                    isCorrectChoice
-                      ? 'border-[#00bc54] bg-[#e8fff1]'
-                      : isSelected
-                        ? 'border-[#df1c41] bg-[#fff0f3]'
-                        : 'border-[#dfe1e7] bg-white',
-                  )}
-                >
-                  <p className="text-sm font-semibold text-[#062357]">
-                    {letter}) {choice.text}
-                  </p>
-                  {choice.explanation ? (
-                    <p className="mt-1 text-sm leading-[1.5] text-[#666d80]">{choice.explanation}</p>
-                  ) : null}
-                </div>
-              )
-            })}
-          </div>
-
-          {explanation.explanationHtml ? (
-            <div className="rounded-[12px] border border-[#dfe1e7] bg-[#f9f9fb] p-4">
-              <HtmlContent
-                html={explanation.explanationHtml}
-                className="explanation-detail-body max-w-none text-[#062357]"
-              />
-            </div>
-          ) : null}
+          <PracticeQuestionResultStatsRow
+            targetTime={targetTime}
+            yourTime={yourTime}
+            yourTimeNote={yourTimeNote}
+            difficulty={difficulty}
+            popularityRows={popularityRows}
+            correctLetter={correctLetter}
+            selectedLetter={normalizedSelected}
+            isUnanswered={!normalizedSelected}
+          />
         </div>
       </div>
     </article>

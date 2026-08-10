@@ -36,13 +36,31 @@ import {
   computeRemainingTimerProgress,
   usePracticeSessionTimer,
 } from "@/features/student/practice-session/use-practice-session-timer"
+import { getMiniDiagnosticExplanationHtml } from "@/features/guest/diagnostic/mini-diagnostic-content"
+import {
+  canShowDiagnosticExplanation,
+  freeDiagnosticExplanationLimit,
+} from "@/features/guest/diagnostic/diagnostic-explanation-access"
+import { GuestUpgradeCta } from "@/features/guest/diagnostic/guest-upgrade-cta"
+import { HtmlContent } from "@/lib/html/html-content"
 import { cn } from "@/lib/utils"
+
+type GuestDiagnosticExamMode = "exam" | "review" | "tester"
 
 type GuestDiagnosticExamLayoutProps = {
   config: GuestDiagnosticTestConfig
   interactive?: boolean
   className?: string
-  onSubmitted?: (answersByQuestion: Record<string, GuestDiagnosticAnswerState>) => void
+  /** exam = timed attempt; review = locked answers + explanations; tester = re-answer with reveal */
+  mode?: GuestDiagnosticExamMode
+  initialAnswers?: Record<string, GuestDiagnosticAnswerState>
+  /** Premium unlocks all explanations on review/tester; free uses teaser limits. */
+  hasActiveCore?: boolean
+  onSubmitted?: (
+    answersByQuestion: Record<string, GuestDiagnosticAnswerState>,
+    timeSpentByQuestion: Record<string, number>,
+  ) => void
+  onExitReview?: () => void
 }
 
 const GUEST_DIAGNOSTIC_ANSWERS_STORAGE_PREFIX = "guestDiagnosticAnswers:"
@@ -63,32 +81,43 @@ function persistAnswers(intentId: string, answers: Record<string, GuestDiagnosti
   sessionStorage.setItem(`${GUEST_DIAGNOSTIC_ANSWERS_STORAGE_PREFIX}${intentId}`, JSON.stringify(answers))
 }
 
-function clearPersistedAnswers(intentId: string): void {
-  if (typeof window === "undefined") return
-  sessionStorage.removeItem(`${GUEST_DIAGNOSTIC_ANSWERS_STORAGE_PREFIX}${intentId}`)
-}
-
 /** Figma `19510:22557` — diagnostic start uses the same active-drill exam shell as practice sessions. */
 function GuestDiagnosticExamLayout({
   config,
   interactive = false,
   className,
+  mode = "exam",
+  initialAnswers,
+  hasActiveCore = false,
   onSubmitted,
+  onExitReview,
 }: GuestDiagnosticExamLayoutProps) {
   const navigate = useNavigate()
   const sessionBodyRef = useRef<HTMLDivElement>(null)
   const passagePaneRef = useRef<HTMLDivElement>(null)
   const questionPaneRef = useRef<HTMLDivElement>(null)
   const timerInitializedRef = useRef(false)
+  const questionStartedAtRef = useRef<number>(Date.now())
+  const timeSpentByQuestionRef = useRef<Record<string, number>>({})
+  const lastQuestionIdRef = useRef<string | null>(null)
+
+  const isReviewMode = mode === "review"
+  const isTesterMode = mode === "tester"
+  const isPostResultsMode = isReviewMode || isTesterMode
+  const canNavigate = interactive || isPostResultsMode
+  const canSelectAnswers = (interactive && mode === "exam") || isTesterMode
 
   const [qIndex, setQIndex] = useState(1)
   const [findQuery, setFindQuery] = useState("")
   const [reviewPanelOpen, setReviewPanelOpen] = useState(false)
   const [submitModalOpen, setSubmitModalOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [answersByQuestion, setAnswersByQuestion] = useState<Record<string, GuestDiagnosticAnswerState>>(() =>
-    readPersistedAnswers(config.intentId),
-  )
+  const [revealedByQuestion, setRevealedByQuestion] = useState<Record<string, boolean>>({})
+  const [answersByQuestion, setAnswersByQuestion] = useState<Record<string, GuestDiagnosticAnswerState>>(() => {
+    if (initialAnswers && Object.keys(initialAnswers).length > 0) return initialAnswers
+    if (isPostResultsMode) return {}
+    return readPersistedAnswers(config.intentId)
+  })
 
   const questions = useMemo(
     () => createGuestDiagnosticPreviewQuestions(config.questionCount),
@@ -99,7 +128,7 @@ function GuestDiagnosticExamLayout({
   const timerBudgetSeconds = config.timeMinutes * 60
 
   const { countdown, paused, pauseTimer, resumeTimer, setInitialCountdown } = usePracticeSessionTimer({
-    enabled: interactive,
+    enabled: interactive && mode === "exam",
   })
   const pauseModal = usePracticeSessionPauseModal(pauseTimer, resumeTimer)
   const timerDisplaySeconds = countdown ?? timerBudgetSeconds
@@ -121,20 +150,48 @@ function GuestDiagnosticExamLayout({
   const currentAnswer = current ? answersByQuestion[current.id] : undefined
   const selectedIndex =
     current && currentAnswer ? choiceIndexFromAnswer(current.choices, currentAnswer.selectedAnswer) : null
+  const questionRevealed =
+    isReviewMode || (isTesterMode && Boolean(current && revealedByQuestion[current.id]))
+  const explanationUnlocked = canShowDiagnosticExplanation({
+    intentId: config.intentId,
+    questionNumber: safeIndex,
+    hasActiveCore,
+  })
+  const explanationHtml =
+    current && explanationUnlocked ? getMiniDiagnosticExplanationHtml(current.id) : null
+  const freeExplanationLimit = freeDiagnosticExplanationLimit(config.intentId)
 
   const passageKey = current ? regionKey(current.id, "passage") : ""
   const passageBody = current?.stimulusText ?? ""
   const passageHtml = resolveGuestDiagnosticPassageHtml(highlights.getRegionHtml, passageKey, passageBody)
 
-  useEffect(() => {
-    if (!interactive || timerInitializedRef.current) return
-    setInitialCountdown(timerBudgetSeconds)
-    timerInitializedRef.current = true
-  }, [interactive, setInitialCountdown, timerBudgetSeconds])
+  const accrueTimeForQuestion = useCallback((questionId: string | null) => {
+    if (!questionId || mode !== "exam") return
+    const elapsedSec = Math.max(0, (Date.now() - questionStartedAtRef.current) / 1000)
+    timeSpentByQuestionRef.current[questionId] =
+      (timeSpentByQuestionRef.current[questionId] ?? 0) + elapsedSec
+    questionStartedAtRef.current = Date.now()
+  }, [mode])
 
   useEffect(() => {
+    if (!interactive || mode !== "exam" || timerInitializedRef.current) return
+    setInitialCountdown(timerBudgetSeconds)
+    timerInitializedRef.current = true
+  }, [interactive, mode, setInitialCountdown, timerBudgetSeconds])
+
+  useEffect(() => {
+    if (isPostResultsMode) return
     persistAnswers(config.intentId, answersByQuestion)
-  }, [answersByQuestion, config.intentId])
+  }, [answersByQuestion, config.intentId, isPostResultsMode])
+
+  useEffect(() => {
+    const nextId = current?.id ?? null
+    if (lastQuestionIdRef.current && lastQuestionIdRef.current !== nextId) {
+      accrueTimeForQuestion(lastQuestionIdRef.current)
+    }
+    lastQuestionIdRef.current = nextId
+    questionStartedAtRef.current = Date.now()
+  }, [accrueTimeForQuestion, current?.id])
 
   useEffect(() => {
     passagePaneRef.current?.scrollTo({ top: 0 })
@@ -151,16 +208,30 @@ function GuestDiagnosticExamLayout({
 
   const handleSelectChoice = useCallback(
     (index: number) => {
-      if (!current || !interactive) return
+      if (!current || !canSelectAnswers) return
       const choice = current.choices[index]
       if (!choice) return
+      if (isTesterMode && revealedByQuestion[current.id]) return
       const nextAnswer = buildGuestDiagnosticAnswerState(current, choice.id)
       setAnswersByQuestion((prev) => ({ ...prev, [current.id]: nextAnswer }))
+      if (isTesterMode) {
+        setRevealedByQuestion((prev) => ({ ...prev, [current.id]: true }))
+      }
     },
-    [current, interactive],
+    [canSelectAnswers, current, isTesterMode, revealedByQuestion],
   )
 
-  const finishButton = (
+  const headerTitle = "LSAT Praxis Assessment"
+
+  const finishButton = isPostResultsMode ? (
+    <PracticeSessionFinishMenu
+      iconTrigger
+      submitLabel="Back to Results"
+      buttonClassName={ACTIVE_DRILL_FINISH_BUTTON_CLASS}
+      onSubmitSection={() => (onExitReview ? onExitReview() : navigate(-1))}
+      onExit={() => (onExitReview ? onExitReview() : navigate(-1))}
+    />
+  ) : (
     <PracticeSessionFinishMenu
       disabled={!interactive}
       iconTrigger
@@ -175,8 +246,13 @@ function GuestDiagnosticExamLayout({
     setSubmitting(true)
     try {
       setSubmitModalOpen(false)
-      clearPersistedAnswers(config.intentId)
-      onSubmitted?.(answersByQuestion)
+      accrueTimeForQuestion(current?.id ?? null)
+      const timeSpent = Object.fromEntries(
+        Object.entries(timeSpentByQuestionRef.current).map(([id, seconds]) => [id, Math.round(seconds)]),
+      )
+      // Keep answers available for Review / Tester after submit.
+      persistAnswers(config.intentId, answersByQuestion)
+      onSubmitted?.(answersByQuestion, timeSpent)
     } finally {
       setSubmitting(false)
     }
@@ -191,33 +267,34 @@ function GuestDiagnosticExamLayout({
     <div
       className={cn(
         "practice-session-card practice-session-card--active-drill relative flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
-        !interactive && "pointer-events-none select-none",
+        !canNavigate && "pointer-events-none select-none",
         className,
       )}
     >
       <PracticeSessionHeader
         variant="active-drill"
-        title="LSAT Praxis Assessment"
+        title={headerTitle}
         findQuery={findQuery}
-        onFindQueryChange={interactive ? setFindQuery : () => undefined}
+        onFindQueryChange={canNavigate ? setFindQuery : () => undefined}
         activeColor={highlights.activeColor}
         toolMode={highlights.toolMode}
         fontScale={highlights.fontScale}
         lineSpacing={highlights.lineSpacing}
         boldEnabled={highlights.boldEnabled}
         italicEnabled={highlights.italicEnabled}
-        onSelectColor={interactive ? highlights.selectColor : () => undefined}
-        onEraser={interactive ? highlights.selectEraser : () => undefined}
-        onUnderline={interactive ? highlights.selectUnderline : () => undefined}
-        onFontSize={interactive ? highlights.cycleFontSize : () => undefined}
-        onLineSpacing={interactive ? highlights.cycleLineSpacing : () => undefined}
-        onToggleBold={interactive ? highlights.toggleBold : () => undefined}
-        onToggleItalic={interactive ? highlights.toggleItalic : () => undefined}
+        onSelectColor={canNavigate ? highlights.selectColor : () => undefined}
+        onEraser={canNavigate ? highlights.selectEraser : () => undefined}
+        onUnderline={canNavigate ? highlights.selectUnderline : () => undefined}
+        onFontSize={canNavigate ? highlights.cycleFontSize : () => undefined}
+        onLineSpacing={canNavigate ? highlights.cycleLineSpacing : () => undefined}
+        onToggleBold={canNavigate ? highlights.toggleBold : () => undefined}
+        onToggleItalic={canNavigate ? highlights.toggleItalic : () => undefined}
         timerLabel="Time Left"
         timerDisplaySeconds={timerDisplaySeconds}
         timerPaused={paused}
-        onTimerPauseRequest={interactive ? pauseModal.requestPause : () => undefined}
+        onTimerPauseRequest={interactive && mode === "exam" ? pauseModal.requestPause : () => undefined}
         timerProgress={timerProgress}
+        showTimer={!isPostResultsMode}
         questionProgressLabel={`${safeIndex} of ${questions.length}`}
         finishButton={finishButton}
       />
@@ -239,8 +316,8 @@ function GuestDiagnosticExamLayout({
               html={passageHtml}
               findQuery={findQuery}
               toolMode={highlights.toolMode}
-              onMouseUp={interactive ? highlights.handleContentMouseUp : () => undefined}
-              onClickCapture={interactive ? highlights.handleContentClick : () => undefined}
+              onMouseUp={canNavigate ? highlights.handleContentMouseUp : () => undefined}
+              onClickCapture={canNavigate ? highlights.handleContentClick : () => undefined}
               className={ACTIVE_DRILL_PASSAGE_TEXT_CLASS}
             />
           </div>
@@ -254,20 +331,47 @@ function GuestDiagnosticExamLayout({
               questionNumber={safeIndex}
               findQuery={findQuery}
               selectedIndex={selectedIndex}
-              revealed={false}
-              isCorrect={null}
+              revealed={questionRevealed}
+              isCorrect={questionRevealed ? (currentAnswer?.isCorrect ?? null) : null}
               submitting={false}
-              allowReselect
+              allowReselect={canSelectAnswers && !questionRevealed}
               getRegionHtml={highlights.getRegionHtml}
-              onSelect={interactive ? handleSelectChoice : () => undefined}
+              onSelect={canSelectAnswers ? handleSelectChoice : () => undefined}
               flagged={isFlagged(current.id)}
               onToggleFlag={() => toggleFlag(current.id)}
-              flagsDisabled={!interactive}
-              onOpenReview={interactive ? () => setReviewPanelOpen(true) : undefined}
-              onOpenAccessibility={interactive ? accessibilityPanel.openPanel : undefined}
+              flagsDisabled={!canNavigate}
+              onOpenReview={canNavigate ? () => setReviewPanelOpen(true) : undefined}
+              onOpenAccessibility={canNavigate ? accessibilityPanel.openPanel : undefined}
               variant="active-drill"
-              choicesDisabled={!interactive}
+              choicesDisabled={!canSelectAnswers || questionRevealed}
             />
+            {questionRevealed && explanationUnlocked && explanationHtml ? (
+              <div className="mt-6 border-t border-[#dfe1e7] pt-6">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#666d80]">
+                  Explanation
+                </p>
+                <div className="rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] p-5">
+                  <HtmlContent
+                    html={explanationHtml}
+                    className="explanation-detail-body max-w-none text-[1.05rem] leading-[1.55] text-[#0d0d12]"
+                  />
+                </div>
+              </div>
+            ) : null}
+            {questionRevealed && isPostResultsMode && !explanationUnlocked ? (
+              <div className="mt-6 border-t border-[#dfe1e7] pt-6">
+                <div className="rounded-[16px] border border-[#b8d4ff] bg-[#edf3ff] p-5">
+                  <p className="text-sm font-semibold text-[#062357]">Explanation locked</p>
+                  <p className="mt-1 text-sm leading-relaxed text-[#666d80]">
+                    Free students can review explanations for the first {freeExplanationLimit} questions
+                    on this diagnostic. Upgrade to unlock every explanation.
+                  </p>
+                  <div className="mt-4">
+                    <GuestUpgradeCta variant="banner" />
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
@@ -279,10 +383,12 @@ function GuestDiagnosticExamLayout({
           answersByQuestion={answersByQuestion}
           isFlagged={isFlagged}
           variant="active-drill"
-          onSelectQuestion={interactive ? setQIndex : () => undefined}
-          onPrev={interactive ? () => setQIndex((index) => Math.max(1, index - 1)) : () => undefined}
-          onNext={interactive ? () => setQIndex((index) => Math.min(questions.length, index + 1)) : () => undefined}
-          onSubmit={interactive ? () => setSubmitModalOpen(true) : undefined}
+          onSelectQuestion={canNavigate ? setQIndex : () => undefined}
+          onPrev={canNavigate ? () => setQIndex((index) => Math.max(1, index - 1)) : () => undefined}
+          onNext={
+            canNavigate ? () => setQIndex((index) => Math.min(questions.length, index + 1)) : () => undefined
+          }
+          onSubmit={interactive && mode === "exam" ? () => setSubmitModalOpen(true) : undefined}
           submitLabel="Submit Test"
         />
       </footer>
@@ -312,14 +418,17 @@ function GuestDiagnosticExamLayout({
         onResume={pauseModal.resume}
         onSaveAndExit={handleSaveAndExit}
       />
-      <GuestDiagnosticSubmitModal
-        open={submitModalOpen}
-        submitting={submitting}
-        onCancel={() => setSubmitModalOpen(false)}
-        onConfirm={() => void handleConfirmSubmit()}
-      />
+      {mode === "exam" ? (
+        <GuestDiagnosticSubmitModal
+          open={submitModalOpen}
+          submitting={submitting}
+          onCancel={() => setSubmitModalOpen(false)}
+          onConfirm={() => void handleConfirmSubmit()}
+        />
+      ) : null}
     </div>
   )
 }
 
 export { GuestDiagnosticExamLayout }
+export type { GuestDiagnosticExamMode }

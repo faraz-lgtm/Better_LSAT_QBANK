@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react"
-import { useSearchParams } from "react-router-dom"
+import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { Bookmark } from "lucide-react"
 
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
-
 import { StudentMain } from "@/features/student/components/student-main"
+import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
 import {
   ScoreProgressChart,
   ScoreProgressTabs,
@@ -13,9 +13,12 @@ import {
   type ScoreProgressTab,
 } from "@/features/student/analytics/components/analytics-overview-ui"
 import {
+  mapDrillSessionToHistoryEntry,
   mapOverviewToHeadlineStats,
   mapOverviewToSecondaryStats,
+  mapPrepTestSessionToHistoryEntry,
   mapPrioritiesToSections,
+  mapSectionSessionToHistoryEntry,
   mapTrajectoryToScoreProgress,
 } from "@/features/student/analytics/map-analytics"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
@@ -25,8 +28,10 @@ import {
   type TimeRangeValue,
 } from "@/features/student/components/time-range-filter"
 import type { AnalyticsOverview, PracticeSessionSummary, PriorityRow } from "@/lib/api/analytics"
+import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 
 const VALID_TABS = new Set(["overview", "priorities", "history"])
+const HISTORY_FETCH_LIMIT = 30
 
 function tabFromSearch(raw: string | null): string {
   if (raw && VALID_TABS.has(raw)) return raw
@@ -39,6 +44,14 @@ function formatShortDate(iso: string): string {
   } catch {
     return iso
   }
+}
+
+function filterHistoryByBookmark(
+  entries: PrepTestHistoryEntry[],
+  bookmarkedOnly: boolean,
+): PrepTestHistoryEntry[] {
+  if (!bookmarkedOnly) return entries
+  return entries.filter((e) => e.bookmarked)
 }
 
 function PrioritiesTab() {
@@ -194,6 +207,8 @@ function HistoryTab() {
 
 function OverviewTab() {
   const analyticsApi = useAnalyticsApi()
+  const practiceApi = usePracticeApi()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null)
@@ -201,6 +216,12 @@ function OverviewTab() {
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
   const [trajectory, setTrajectory] = useState<ReturnType<typeof mapTrajectoryToScoreProgress>>([])
   const [sections, setSections] = useState<ReturnType<typeof mapPrioritiesToSections>>([])
+  const [drillHistory, setDrillHistory] = useState<PrepTestHistoryEntry[]>([])
+  const [sectionHistory, setSectionHistory] = useState<PrepTestHistoryEntry[]>([])
+  const [prepTestHistory, setPrepTestHistory] = useState<PrepTestHistoryEntry[]>([])
+  const [drillBookmarkedOnly, setDrillBookmarkedOnly] = useState(false)
+  const [sectionBookmarkedOnly, setSectionBookmarkedOnly] = useState(false)
+  const [prepTestBookmarkedOnly, setPrepTestBookmarkedOnly] = useState(false)
 
   useEffect(() => {
     if (!analyticsApi) {
@@ -213,12 +234,30 @@ function OverviewTab() {
       analyticsApi.getOverview(),
       analyticsApi.getTrajectory(),
       analyticsApi.getPriorities(),
+      analyticsApi.getSessions({ kind: "DRILL", limit: HISTORY_FETCH_LIMIT, offset: 0 }),
+      analyticsApi.getSessions({ kind: "SECTION", limit: HISTORY_FETCH_LIMIT, offset: 0 }),
+      analyticsApi.getSessions({ kind: "PREPTEST", limit: HISTORY_FETCH_LIMIT, offset: 0 }),
     ])
-      .then(([o, t, p]) => {
+      .then(([o, t, p, drills, sectionSessions, prepTests]) => {
         setOverview(o)
         const filtered = takeLastByTimeRange(t, timeRange)
         setTrajectory(mapTrajectoryToScoreProgress(filtered))
         setSections(mapPrioritiesToSections(p))
+        setDrillHistory(
+          drills.sessions
+            .map(mapDrillSessionToHistoryEntry)
+            .filter((e): e is PrepTestHistoryEntry => e != null),
+        )
+        setSectionHistory(
+          sectionSessions.sessions
+            .map(mapSectionSessionToHistoryEntry)
+            .filter((e): e is PrepTestHistoryEntry => e != null),
+        )
+        setPrepTestHistory(
+          prepTests.sessions
+            .map(mapPrepTestSessionToHistoryEntry)
+            .filter((e): e is PrepTestHistoryEntry => e != null),
+        )
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
       .finally(() => setLoading(false))
@@ -233,14 +272,52 @@ function OverviewTab() {
     [overview],
   )
 
+  const visibleDrillHistory = useMemo(
+    () => filterHistoryByBookmark(drillHistory, drillBookmarkedOnly),
+    [drillBookmarkedOnly, drillHistory],
+  )
+  const visibleSectionHistory = useMemo(
+    () => filterHistoryByBookmark(sectionHistory, sectionBookmarkedOnly),
+    [sectionBookmarkedOnly, sectionHistory],
+  )
+  const visiblePrepTestHistory = useMemo(
+    () => filterHistoryByBookmark(prepTestHistory, prepTestBookmarkedOnly),
+    [prepTestBookmarkedOnly, prepTestHistory],
+  )
+
+  const toggleHistoryBookmark = useCallback(
+    async (
+      id: string,
+      setEntries: Dispatch<SetStateAction<PrepTestHistoryEntry[]>>,
+    ) => {
+      if (!practiceApi) return
+      let previous = false
+      setEntries((prev) =>
+        prev.map((entry) => {
+          if (entry.id !== id) return entry
+          previous = entry.bookmarked
+          return { ...entry, bookmarked: !entry.bookmarked }
+        }),
+      )
+      try {
+        await practiceApi.updateSession({ sessionId: id, bookmarked: !previous })
+      } catch {
+        setEntries((prev) =>
+          prev.map((entry) => (entry.id === id ? { ...entry, bookmarked: previous } : entry)),
+        )
+      }
+    },
+    [practiceApi],
+  )
+
   if (loading) {
     return <StudentPageLoader centered className="min-h-0 flex-1" label="Loading overview…" />
   }
   if (error) return <p className="text-sm text-red-600">{error}</p>
 
   return (
-    <>
-      <section className="mb-6 flex w-full flex-col gap-6 rounded-[20px] border border-[#dfe1e7] bg-white p-6">
+    <div className="flex flex-col gap-6">
+      <section className="flex w-full flex-col gap-6 rounded-[20px] border border-[#dfe1e7] bg-white p-6">
         <div className="flex items-center justify-between gap-4">
           <h2 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Overview</h2>
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} className="shrink-0" />
@@ -258,7 +335,7 @@ function OverviewTab() {
         </div>
       </section>
 
-      <section className="mb-6 rounded-[20px] border border-[#dfe1e7] bg-white p-6">
+      <section className="rounded-[20px] border border-[#dfe1e7] bg-white p-6">
         <div className="flex flex-col gap-[18px] rounded-[20px] bg-[#f6f8fa] p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <h2 className="text-[14px] font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
@@ -280,14 +357,56 @@ function OverviewTab() {
         </div>
       </section>
 
-      {sections.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-6 text-sm text-[#666d80]">
-          Question-type breakdown appears once you answer questions linked to LR/RC types.
-        </p>
-      ) : (
-        sections.map((section) => <SectionCard key={section.id} section={section} />)
-      )}
-    </>
+      <AnalyticsPrepTestHistory
+        title="Drill History"
+        emptyNoun="drills"
+        visibleEntries={visibleDrillHistory}
+        bookmarkedOnly={drillBookmarkedOnly}
+        onBookmarkedOnlyChange={setDrillBookmarkedOnly}
+        onToggleBookmark={(id) => void toggleHistoryBookmark(id, setDrillHistory)}
+        onSelectEntry={(id) => navigate(`/app/practice/results/${encodeURIComponent(id)}`)}
+      />
+
+      <AnalyticsPrepTestHistory
+        title="Section History"
+        emptyNoun="sections"
+        brBarColor="#df1c41"
+        visibleEntries={visibleSectionHistory}
+        bookmarkedOnly={sectionBookmarkedOnly}
+        onBookmarkedOnlyChange={setSectionBookmarkedOnly}
+        onToggleBookmark={(id) => void toggleHistoryBookmark(id, setSectionHistory)}
+        onSelectEntry={(id) => navigate(`/app/practice/results/${encodeURIComponent(id)}`)}
+      />
+
+      <AnalyticsPrepTestHistory
+        title="PrepTest History"
+        emptyNoun="PrepTests"
+        visibleEntries={visiblePrepTestHistory}
+        bookmarkedOnly={prepTestBookmarkedOnly}
+        onBookmarkedOnlyChange={setPrepTestBookmarkedOnly}
+        onToggleBookmark={(id) => void toggleHistoryBookmark(id, setPrepTestHistory)}
+        onSelectEntry={(id) => navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)}
+        onOpenPractice={(id) => navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)}
+      />
+
+      <section className="flex flex-col gap-4">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <h2 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Reports overview</h2>
+            <p className="mt-1 text-sm text-[#666d80]">
+              Question-type accuracy by section — open Review or Drill from a row to practice weak areas.
+            </p>
+          </div>
+        </div>
+        {sections.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-6 text-sm text-[#666d80]">
+            Question-type reports appear once you answer questions linked to LR/RC types.
+          </p>
+        ) : (
+          sections.map((section) => <SectionCard key={section.id} section={section} />)
+        )}
+      </section>
+    </div>
   )
 }
 

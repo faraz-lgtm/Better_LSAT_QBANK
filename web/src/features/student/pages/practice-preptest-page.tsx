@@ -144,9 +144,9 @@ function PrepTestHubStat({ label, value }: { label: string; value: string | numb
 }
 
 function sectionShortTitle(row: PrepTestDetailSection): string {
-  if (row.sectionNumber != null) return `Section ${row.sectionNumber}`
-  if (row.title) return row.title
-  return row.sectionType
+  const base =
+    row.sectionNumber != null ? `Section ${row.sectionNumber}` : row.title ? row.title : row.sectionType
+  return row.isExperimental ? `${base} (EXP)` : base
 }
 
 function sectionTimeDisplay(minutes: number): string {

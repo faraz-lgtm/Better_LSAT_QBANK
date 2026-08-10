@@ -26,7 +26,8 @@
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
-  color-scheme: light dark;
+  /* Portal is light UI — avoid OS-dark native scrollbars (black track + arrows). */
+  color-scheme: light;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
@@ -198,6 +199,7 @@ html.student-shell-active,
 html.student-shell-active body {
   height: 100%;
   overflow: hidden;
+  color-scheme: light;
 }
 
 html.student-shell-active #root {
@@ -2990,7 +2992,48 @@ select.ds-input {
   margin: 0;
 }
 
-/* Student panes — thin rounded scrollbar (no arrow buttons) */
+/* Portal scrollbars — soft grey thumb on a light/transparent track (no arrow buttons) */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--greyscale-300) var(--greyscale-25);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--greyscale-300) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--greyscale-300);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--greyscale-400);
+}
+
+*::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Student panes — same soft scrollbar tokens (kept for explicit opt-in classes) */
 .student-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: var(--greyscale-300) transparent;
@@ -2998,6 +3041,7 @@ select.ds-input {
 
 .student-scrollbar::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 .student-scrollbar::-webkit-scrollbar-track {

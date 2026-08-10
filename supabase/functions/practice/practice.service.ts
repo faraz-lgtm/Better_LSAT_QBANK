@@ -1,7 +1,7 @@
 import { extractPrepTestQuestionRef } from '../_shared/prep-question-ref.ts'
 import { resolvePrepDrillLessonType } from '../_shared/prep-lesson-type.ts'
 import { isStudentVisiblePrepTest } from '../_shared/prep-test-visibility.ts'
-import { PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT } from './adaptive-drill-config.ts'
+import { DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT, PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT } from './adaptive-drill-config.ts'
 import type {
   AnswerEventRow,
   DrillPoolQuestionRow,
@@ -348,6 +348,7 @@ export type PrepTestDetailSection = {
   questionCount: number
   timeMinutes: number
   practiceable: boolean
+  isExperimental: boolean
   unlocked: boolean
   answeredCount: number
   completed: boolean
@@ -875,6 +876,7 @@ function buildPrepTestDetail(
       questionCount: sec.questionCount,
       timeMinutes: 35,
       practiceable: isPracticeable && sec.questionCount > 0,
+      isExperimental: sec.isExperimental === true,
       unlocked: isPracticeable && sec.questionCount > 0,
       answeredCount,
       completed,
@@ -1560,7 +1562,14 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const sectionType = parseSectionType(body.sectionType)
       if (!sectionType) throw new PracticeValidationError('sectionType must be LR or RC')
 
-      const questionCount = parseQuestionCount(body.questionCount)
+      const source =
+        typeof body.source === 'string' && body.source.trim() === 'dashboard_adaptive_drill'
+          ? 'dashboard_adaptive_drill'
+          : null
+      let questionCount = parseQuestionCount(body.questionCount)
+      if (source === 'dashboard_adaptive_drill') {
+        questionCount = Math.max(questionCount, DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT)
+      }
       const timing = typeof body.timing === 'string' ? body.timing : 'unlimited'
       const showAnswers = typeof body.showAnswers === 'string' ? body.showAnswers : 'end'
       const selection = typeof body.selection === 'string' ? body.selection : 'auto'
@@ -1573,11 +1582,6 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           ? body.difficulty
           : 'adaptive'
       const status = typeof body.status === 'string' ? body.status : 'fresh'
-      const source =
-        typeof body.source === 'string' && body.source.trim() === 'dashboard_adaptive_drill'
-          ? 'dashboard_adaptive_drill'
-          : null
-
       const pool = await deps.repository.listDrillPoolQuestions({
         sectionType,
         questionTypeId,
@@ -1587,9 +1591,31 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const answeredIds = new Set(await deps.repository.listUserAnsweredQuestionIds(userId))
       const filtered = filterPoolByStatus(pool, status, answeredIds)
 
-      const questionIds = pickDrillQuestionIds(filtered, sectionType, questionCount)
+      let questionIds = pickDrillQuestionIds(filtered, sectionType, questionCount)
+      if (
+        source === 'dashboard_adaptive_drill' &&
+        questionIds.length < DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT
+      ) {
+        // Prefer unanswered, then top up from the full section pool so the drill still opens.
+        const picked = new Set(questionIds)
+        const needed = DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT - questionIds.length
+        const extras = pickDrillQuestionIds(
+          pool.filter((q) => !picked.has(q.id)),
+          sectionType,
+          needed,
+        )
+        questionIds = [...questionIds, ...extras]
+      }
       if (questionIds.length === 0) {
         throw new PracticeValidationError('No questions available for this drill configuration')
+      }
+      if (
+        source === 'dashboard_adaptive_drill' &&
+        questionIds.length < DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT
+      ) {
+        throw new PracticeValidationError(
+          `Adaptive drills need at least ${DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT} questions in the ${sectionType} pool`,
+        )
       }
 
       const metadata: DrillSessionMetadata = {
@@ -2158,6 +2184,9 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (!row) throw new PracticeValidationError('prepTestId not found')
 
       const practiceableIds = practiceableSectionsFromRow(row.sections).map((s) => s.id)
+      const experimentalSectionIds = new Set(
+        row.sections.filter((s) => s.isExperimental === true).map((s) => s.id),
+      )
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
 
       let prepTestSession =
@@ -2176,6 +2205,9 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       let rawScore = 0
       for (const secSession of bySectionId.values()) {
+        if (secSession.section_id && experimentalSectionIds.has(secSession.section_id)) {
+          continue
+        }
         if (typeof secSession.raw_score === 'number') {
           rawScore += secSession.raw_score
         } else {
@@ -2366,6 +2398,12 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       }
       if (!prepTestId) throw new PracticeValidationError('prepTestId or sessionId is required')
 
+      const detailRow = await deps.repository.getPrepTestDetailRow(prepTestId)
+      if (!detailRow) throw new PracticeValidationError('prepTestId not found')
+      const experimentalSectionIds = new Set(
+        detailRow.sections.filter((s) => s.isExperimental === true).map((s) => s.id),
+      )
+
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
       let prepTestSession = resolvePrepTestSessionForBlindReview(
         sessions,
@@ -2388,7 +2426,12 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         sessions,
         prepTestSession,
         nextPrepTestSession,
-      ).filter((s) => s.completed_at && s.section_id)
+      ).filter(
+        (s) =>
+          s.completed_at &&
+          s.section_id &&
+          !experimentalSectionIds.has(s.section_id),
+      )
       const sectionIds = sectionSessions.map((s) => s.id)
       const events = await deps.repository.listAnswerEventsForSessions(sectionIds, userId)
       const latest = latestAnswerByQuestion(events)

@@ -669,6 +669,36 @@ Deno.test('startDrill creates session with question ids', async () => {
   assertEquals(out.questions[0]!.stemText, 'Stem?')
 })
 
+Deno.test('startDrill dashboard adaptive enforces minimum of 5 questions', async () => {
+  const service = createPracticeService({ repository: drillRepo() as never })
+  const out = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 1,
+    difficulty: 'adaptive',
+    source: 'dashboard_adaptive_drill',
+  })
+  assertEquals(out.metadata.source, 'dashboard_adaptive_drill')
+  assertEquals(out.metadata.questionCount, 5)
+  assertEquals(out.metadata.questionIds.length, 5)
+  assertEquals(out.questions.length, 5)
+})
+
+Deno.test('startDrill dashboard adaptive tops up from full pool when fresh is short', async () => {
+  const service = createPracticeService({
+    repository: drillRepo({
+      listUserAnsweredQuestionIds: async () => ['q-1', 'q-2', 'q-3', 'q-4', 'q-5'],
+    }) as never,
+  })
+  const out = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 5,
+    difficulty: 'adaptive',
+    status: 'fresh',
+    source: 'dashboard_adaptive_drill',
+  })
+  assertEquals(out.metadata.questionIds.length, 5)
+})
+
 Deno.test('getDrillPoolStats fresh filter reduces selected count', async () => {
   const service = createPracticeService({
     repository: drillRepo({
@@ -1376,6 +1406,56 @@ Deno.test('completePrepTest aggregates section scores', async () => {
         }),
       ],
       getScoreRowForRaw: async () => ({ scaled_score: 165, percentile: 80 }),
+    }) as never,
+  })
+  const out = await service.completePrepTest('user-1', { prepTestId: 'pt-900' })
+  assertEquals(out.session.raw_score, 3)
+  assertEquals(out.session.scaled_score, 165)
+})
+
+Deno.test('completePrepTest excludes experimental section scores', async () => {
+  const service = createPracticeService({
+    repository: preptestRepo({
+      getPrepTestDetailRow: async () => ({
+        ...prepTestDetailRow,
+        sections: [
+          ...prepTestDetailRow.sections,
+          {
+            id: 'sec-lr-exp',
+            sectionId: 'SEED900-LR-EXP',
+            sectionNumber: 4,
+            sectionType: 'LR' as const,
+            title: 'Experimental LR',
+            questionCount: 25,
+            isExperimental: true,
+          },
+        ],
+      }),
+      listUserSessionsForPrepTest: async () => [
+        baseSession({
+          kind: 'SECTION',
+          prep_test_id: 'pt-900',
+          section_id: 'sec-lr',
+          completed_at: '2026-01-02T00:00:00Z',
+          raw_score: 2,
+        }),
+        baseSession({
+          kind: 'SECTION',
+          prep_test_id: 'pt-900',
+          section_id: 'sec-rc',
+          completed_at: '2026-01-02T01:00:00Z',
+          raw_score: 1,
+        }),
+        baseSession({
+          kind: 'SECTION',
+          prep_test_id: 'pt-900',
+          section_id: 'sec-lr-exp',
+          completed_at: '2026-01-02T02:00:00Z',
+          raw_score: 20,
+        }),
+      ],
+      getScoreRowForRaw: async (_pt: string, raw: number) =>
+        raw === 3 ? { scaled_score: 165, percentile: 80 } : { scaled_score: 180, percentile: 99 },
     }) as never,
   })
   const out = await service.completePrepTest('user-1', { prepTestId: 'pt-900' })

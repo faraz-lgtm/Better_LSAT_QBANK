@@ -7,6 +7,7 @@ export type PrepTestSectionSummary = {
   kind: PrepTestSectionKind
   longName: string
   sectionLabel: string
+  isExperimental: boolean
   scoreDelta: number
   /** Row-major groups of question outcomes for the icon grid (Figma uses 7 per row). */
   questionRows: QuestionResultStatus[][]
@@ -55,6 +56,7 @@ export type PrepTestAboutMeta = {
 
 export type PrepTestRcSectionBlock = {
   sectionTitle: string
+  isExperimental: boolean
   scoreDisplay: string
   blindReviewDisplay: string
   questions: PrepTestQuestionResultRow[]
@@ -62,6 +64,18 @@ export type PrepTestRcSectionBlock = {
 
 export type PrepTestLrSectionBlock = {
   sectionTitle: string
+  isExperimental: boolean
+  scoreDisplay: string
+  blindReviewDisplay: string
+  passages: PrepTestPassageSummary[]
+  questions: PrepTestQuestionResultRow[]
+}
+
+/** Ordered LR/RC detail blocks for the results list (includes experimental). */
+export type PrepTestSectionDetailBlock = {
+  kind: PrepTestSectionKind
+  sectionTitle: string
+  isExperimental: boolean
   scoreDisplay: string
   blindReviewDisplay: string
   passages: PrepTestPassageSummary[]
@@ -69,7 +83,10 @@ export type PrepTestLrSectionBlock = {
 }
 
 export type PrepTestResultsDetail = {
+  /** Scored (non-experimental) question count — used for hero correct/total. */
   totalQuestions: number
+  /** All listed questions including experimental — used for Total Questions bar. */
+  listedQuestionCount: number
   scaledScore: number
   correct: number
   incorrect: number
@@ -80,8 +97,11 @@ export type PrepTestResultsDetail = {
   blindReviewCompleted: boolean
   sections: PrepTestSectionSummary[]
   lrSections: PrepTestLrSectionBlock[]
+  /** All section detail blocks in section-number order (scored + experimental). */
+  sectionBlocks: PrepTestSectionDetailBlock[]
   passages: PrepTestPassageSummary[]
   questions: PrepTestQuestionResultRow[]
   about: PrepTestAboutMeta
   rcSection: PrepTestRcSectionBlock
+  rcSections: PrepTestRcSectionBlock[]
 }

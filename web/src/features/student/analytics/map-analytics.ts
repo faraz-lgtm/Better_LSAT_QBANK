@@ -38,6 +38,13 @@ function ordinal(n: number): string {
   }
 }
 
+/** Overview captions — keep one decimal when the API returns a fractional percentile. */
+export function formatOverviewPercentileCaption(n: number): string {
+  const rounded1 = Math.round(n * 10) / 10
+  if (Number.isInteger(rounded1)) return `PERCENTILE: ${ordinal(rounded1)}`
+  return `PERCENTILE: ${rounded1.toFixed(1)}th`
+}
+
 export function formatPrepTestChartLabel(prepTestTitle: string, moduleId: string | null): string {
   const moduleMatch = moduleId?.match(/^LSAC(\d+)$/i)
   if (moduleMatch) return `PT ${moduleMatch[1]}`
@@ -79,7 +86,9 @@ export function mapOverviewToHeadlineStats(overview: AnalyticsOverview): Analyti
       value: String(overview.bestScaledScore),
       accent: "#0d47a1",
       caption:
-        overview.bestPercentile != null ? `PERCENTILE: ${ordinal(overview.bestPercentile)}` : undefined,
+        overview.bestPercentile != null
+          ? formatOverviewPercentileCaption(overview.bestPercentile)
+          : undefined,
     })
   }
   if (overview.averageScaledScore != null) {
@@ -90,7 +99,7 @@ export function mapOverviewToHeadlineStats(overview: AnalyticsOverview): Analyti
       accent: "#5463a9",
       caption:
         overview.averagePercentile != null
-          ? `PERCENTILE: ${ordinal(overview.averagePercentile)}`
+          ? formatOverviewPercentileCaption(overview.averagePercentile)
           : undefined,
     })
   }
@@ -284,6 +293,65 @@ export function mapPrepTestSessionToHistoryEntry(s: PracticeSessionSummary): Pre
     scoreMax: 180,
     blindReviewScore: br,
     blindReviewMax: 180,
+  }
+}
+
+function formatSessionHistoryDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })
+}
+
+function questionCountFromSession(s: PracticeSessionSummary, correct: number): number {
+  const meta = s.metadata
+  const questionIds = Array.isArray(meta.questionIds) ? meta.questionIds : []
+  if (questionIds.length > 0) return questionIds.length
+  const questionCount = typeof meta.questionCount === "number" ? meta.questionCount : 0
+  if (questionCount > 0) return questionCount
+  return Math.max(correct, 1)
+}
+
+/** Completed drill → shared history-row shape (raw correct / total). */
+export function mapDrillSessionToHistoryEntry(s: PracticeSessionSummary): PrepTestHistoryEntry | null {
+  if (s.kind !== "DRILL" || !s.completedAt) return null
+  const correct = s.rawScore ?? 0
+  const total = questionCountFromSession(s, correct)
+  const typeName =
+    typeof s.metadata.questionTypeName === "string" ? s.metadata.questionTypeName.trim() : ""
+  const testLabel =
+    typeName ||
+    (s.sectionType ? `${s.sectionType} Drill` : null) ||
+    s.sectionTitle?.trim() ||
+    "Drill"
+  return {
+    id: s.id,
+    testLabel,
+    dateLabel: formatSessionHistoryDate(s.completedAt),
+    bookmarked: s.bookmarked,
+    score: correct,
+    scoreMax: total,
+    blindReviewScore: correct,
+    blindReviewMax: total,
+  }
+}
+
+/** Completed section → shared history-row shape (raw correct / total). */
+export function mapSectionSessionToHistoryEntry(s: PracticeSessionSummary): PrepTestHistoryEntry | null {
+  if (s.kind !== "SECTION" || !s.completedAt) return null
+  const correct = s.rawScore ?? 0
+  const total = questionCountFromSession(s, correct)
+  const testLabel =
+    s.sectionTitle?.trim() ||
+    (s.sectionType ? `${s.sectionType} Section` : null) ||
+    "Section"
+  const br = s.blindReviewRawScore ?? correct
+  return {
+    id: s.id,
+    testLabel,
+    dateLabel: formatSessionHistoryDate(s.completedAt),
+    bookmarked: s.bookmarked,
+    score: correct,
+    scoreMax: total,
+    blindReviewScore: br,
+    blindReviewMax: total,
   }
 }
 

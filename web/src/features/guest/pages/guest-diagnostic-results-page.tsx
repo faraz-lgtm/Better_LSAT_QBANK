@@ -40,6 +40,7 @@ function GuestDiagnosticResultsPage({ preview = false }: GuestDiagnosticResultsP
     <GuestDiagnosticResultsView
       result={result}
       startDiagnosticHref={preview ? '/diagnostic/start/preview?intent=mini' : '/diagnostic/start'}
+      reviewInTesterHref={preview ? '/diagnostic/review/preview' : '/diagnostic/review'}
       refreshSubscription={checkoutSuccess ? refresh : undefined}
     />
   )

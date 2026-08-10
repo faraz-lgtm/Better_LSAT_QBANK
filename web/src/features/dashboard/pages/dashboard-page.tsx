@@ -218,7 +218,8 @@ function DashboardPage() {
         showAnswers: "end",
         selection: "auto",
         difficulty: "adaptive",
-        status: "fresh",
+        // Backend prefers unanswered first, then tops up from the full pool to reach 5.
+        status: "all",
         source: "dashboard_adaptive_drill",
       })
       navigate(`/app/practice/drills/session/${out.session.id}?${DASHBOARD_ADAPTIVE_DRILL_QUERY}=1`)

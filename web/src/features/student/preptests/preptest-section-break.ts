@@ -205,12 +205,16 @@ export function normalizePrepTestDetail(
   const access = deriveSectionAccess(practiceableIds, completedSectionIds, sectionBreak)
 
   const sections = detail.sections.map((sec) => {
+    const withExperimental = {
+      ...sec,
+      isExperimental: sec.isExperimental === true,
+    }
     const nextAccess = access.get(sec.id)
     if (!sec.practiceable || !nextAccess) {
-      return { ...sec, unlocked: false, onBreak: false }
+      return { ...withExperimental, unlocked: false, onBreak: false }
     }
     return {
-      ...sec,
+      ...withExperimental,
       unlocked: nextAccess.unlocked,
       onBreak: nextAccess.onBreak,
     }
