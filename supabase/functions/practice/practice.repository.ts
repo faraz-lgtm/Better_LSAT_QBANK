@@ -104,6 +104,7 @@ export type PrepTestDetailRow = {
     sectionType: 'LR' | 'RC' | 'LG'
     title: string | null
     questionCount: number
+    isExperimental?: boolean
   }>
 }
 
@@ -528,6 +529,7 @@ export function createPracticeRepository(client: SupabaseClient) {
             section_number,
             section_type,
             title,
+            is_experimental,
             admin_questions ( id )
           )
         `,
@@ -552,6 +554,7 @@ export function createPracticeRepository(client: SupabaseClient) {
             sectionType: sec.section_type as 'LR' | 'RC' | 'LG',
             title: sec.title != null ? String(sec.title) : null,
             questionCount,
+            isExperimental: sec.is_experimental === true,
           }
         })
         .sort((a, b) => (a.sectionNumber ?? 0) - (b.sectionNumber ?? 0))

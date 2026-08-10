@@ -31,9 +31,12 @@ import {
 } from "@/features/student/analytics/map-analytics"
 import { PREPTEST_LIST_HREF } from "@/features/student/preptests/preptest-routes"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
+import {
+  LSAT_SCALED_Y_AXIS_LABELS,
+  PERCENT_Y_AXIS_LABELS,
+} from "@/features/student/analytics/chart-y-axis"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 
-const Y_AXIS_LABELS = [100, 84, 68, 52, 36, 20] as const
 const BOOKMARKS_STORAGE_KEY = "analytics:drills:bookmarks"
 
 const SCORE_TABS = [
@@ -97,10 +100,12 @@ function DrillScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next:
 }
 
 function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]; tab: ScoreTab }) {
-  const minVal = Y_AXIS_LABELS[Y_AXIS_LABELS.length - 1]
-  const maxVal = Y_AXIS_LABELS[0]
-  const range = maxVal - minVal
+  const yAxisLabels = tab === "percent" ? PERCENT_Y_AXIS_LABELS : LSAT_SCALED_Y_AXIS_LABELS
+  const minVal = yAxisLabels[yAxisLabels.length - 1] ?? 0
+  const maxVal = yAxisLabels[0] ?? 1
+  const range = Math.max(1, maxVal - minVal)
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
+  const tickCount = Math.max(2, yAxisLabels.length)
 
   if (points.length === 0) {
     return (
@@ -116,11 +121,9 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
     return ((maxVal - clamped) / range) * 100
   }
   const xFor = (index: number) => stepX * index + stepX / 2
+  const tickTopPct = (index: number) => (index / (tickCount - 1)) * 100
 
-  const pickValue = (p: DrillProgressPoint) => {
-    if (tab === "percent") return p.scorePct
-    return Math.round(((p.ptEquivalent - 120) / 60) * range + minVal)
-  }
+  const pickValue = (p: DrillProgressPoint) => (tab === "percent" ? p.scorePct : p.ptEquivalent)
 
   const linePoints = points.map((p, i) => ({ x: xFor(i), y: yFor(pickValue(p)) }))
   const polyline = linePoints.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ")
@@ -129,18 +132,40 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
   return (
     <div className="w-full">
       <div className="flex h-[260px] w-full items-stretch gap-4">
-        <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[#062357]">
-          {Y_AXIS_LABELS.map((label) => (
-            <span key={label} className="leading-5">
-              {label}
-            </span>
-          ))}
+        <div className="relative w-10 shrink-0 pr-2 text-sm font-medium text-[#062357]">
+          {yAxisLabels.map((label, index) => {
+            const isFirst = index === 0
+            const isLast = index === yAxisLabels.length - 1
+            return (
+              <span
+                key={`${label}-${index}`}
+                className={cn(
+                  "absolute right-2 leading-none",
+                  isFirst ? "translate-y-0" : isLast ? "-translate-y-full" : "-translate-y-1/2",
+                )}
+                style={{ top: `${tickTopPct(index)}%` }}
+              >
+                {tab === "percent" ? `${label}%` : label}
+              </span>
+            )
+          })}
         </div>
-        <div className="relative flex-1">
-          <div className="absolute inset-0 flex flex-col justify-between" aria-hidden>
-            {Y_AXIS_LABELS.map((label) => (
-              <div key={label} className="h-px w-full bg-[#e5e7eb]" />
-            ))}
+        <div className="relative min-w-0 flex-1 overflow-visible">
+          <div className="absolute inset-0" aria-hidden>
+            {yAxisLabels.map((label, index) => {
+              const isFirst = index === 0
+              const isLast = index === yAxisLabels.length - 1
+              return (
+                <div
+                  key={`${label}-${index}`}
+                  className={cn(
+                    "absolute left-0 right-0 h-px bg-[#e5e7eb]",
+                    isFirst ? "" : isLast ? "-translate-y-full" : "-translate-y-1/2",
+                  )}
+                  style={{ top: `${tickTopPct(index)}%` }}
+                />
+              )
+            })}
           </div>
           <svg
             className="absolute inset-0 h-full w-full"
@@ -578,6 +603,8 @@ function AnalyticsDrillsPage() {
       </div>
 
       <AnalyticsPrepTestHistory
+        title="Drill History"
+        emptyNoun="drills"
         visibleEntries={visibleEntries}
         bookmarkedOnly={bookmarkedOnly}
         onBookmarkedOnlyChange={setBookmarkedOnly}

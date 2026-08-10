@@ -110,6 +110,7 @@ function mockRepo(overrides: Partial<AnalyticsRepository> = {}): AnalyticsReposi
     listSectionSessionsForPrepTest: async () => [],
     listCompletedSectionSessions: async () => [],
     getScoreRowForRaw: async () => null,
+    getScoreRowForScaled: async () => null,
     listPrepTestQuestionsWithMeta: async () => [],
     listAnswerEventsWithTypes: async () => [
       { question_type_id: 't-low', is_correct: true, question_id: 'q-low-1' },
@@ -274,6 +275,83 @@ Deno.test('getOverview resolves scaled score from raw when scaled_score is null'
   const o = await service.getOverview('user-1')
   assertEquals(o.bestScaledScore, 168)
   assertEquals(o.bestPercentile, 88)
+})
+
+Deno.test('getOverview excludes experimental sections from score and percentile', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listCompletedPreptests: async () => [
+        completedPreptestRow({
+          scaled_score: 120,
+          percentile: 0,
+          raw_score: 40,
+          prep_test_id: 'pt-1',
+        }),
+      ],
+      listCompletedSectionSessions: async () => [
+        {
+          id: 'sec-scored',
+          prep_test_id: 'pt-1',
+          section_id: 's1',
+          started_at: '2025-12-31T01:00:00Z',
+          completed_at: '2025-12-31T01:30:00Z',
+          raw_score: 20,
+          metadata: { sectionType: 'LR' },
+          admin_sections: { is_experimental: false },
+        },
+        {
+          id: 'sec-exp',
+          prep_test_id: 'pt-1',
+          section_id: 's-exp',
+          started_at: '2025-12-31T02:00:00Z',
+          completed_at: '2025-12-31T02:30:00Z',
+          raw_score: 20,
+          metadata: { sectionType: 'LR' },
+          admin_sections: { is_experimental: true },
+        },
+      ],
+      getScoreRowForRaw: async (_pt, raw) => {
+        if (raw === 20) return { scaled_score: 150, percentile: 44 }
+        if (raw === 40) return { scaled_score: 120, percentile: 0 }
+        return null
+      },
+    }),
+  })
+  const o = await service.getOverview('user-1')
+  assertEquals(o.bestScaledScore, 150)
+  assertEquals(o.bestPercentile, 44)
+  assertEquals(o.averageScaledScore, 150)
+  assertEquals(o.averagePercentile, 44)
+})
+
+Deno.test('getOverview average percentile uses conversion for average scaled score', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listCompletedPreptests: async () => [
+        completedPreptestRow({
+          id: 'a',
+          scaled_score: 160,
+          percentile: 80,
+          prep_test_id: 'pt-1',
+        }),
+        completedPreptestRow({
+          id: 'b',
+          scaled_score: 140,
+          percentile: 20,
+          prep_test_id: 'pt-1',
+          completed_at: '2026-02-01T00:00:00Z',
+        }),
+      ],
+      getScoreRowForScaled: async (_pt, scaled) => {
+        if (scaled === 150) return { scaled_score: 150, percentile: 48 }
+        return null
+      },
+    }),
+  })
+  const o = await service.getOverview('user-1')
+  assertEquals(o.averageScaledScore, 150)
+  // Not mean of 80 and 20 (=50) — lookup for average scaled 150.
+  assertEquals(o.averagePercentile, 48)
 })
 
 Deno.test('getOverview falls back to section sessions for LR/RC when preptest events missing', async () => {
@@ -860,6 +938,51 @@ Deno.test('getPrepTestSessionDetail counts correct from at-completion only', asy
   assertEquals(d.totalQuestions, 2)
   assertEquals(d.scaledScore, 165)
   assertEquals(d.blindReviewScore, 167)
+  assertEquals(d.questions.every((q) => q.isExperimental === false), true)
+})
+
+Deno.test('getPrepTestSessionDetail excludes experimental sections from score totals', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      getPracticeSession: async () => prepTestSessionFixture(),
+      listSectionSessionsForPrepTest: async () => [
+        { id: 'sec-s1', section_id: 's1', completed_at: PREP_TEST_COMPLETED_AT, raw_score: 1 },
+        { id: 'sec-s-exp', section_id: 's-exp', completed_at: PREP_TEST_COMPLETED_AT, raw_score: 1 },
+      ],
+      listAnswerEventsForSessions: async () => [
+        {
+          practice_session_id: 'sec-s1',
+          question_id: 'q-lr-1',
+          is_correct: true,
+          selected_answer: 'C',
+          section_type: 'LR',
+          created_at: '2026-01-01T11:00:00Z',
+        },
+        {
+          practice_session_id: 'sec-s-exp',
+          question_id: 'q-exp-1',
+          is_correct: true,
+          selected_answer: 'A',
+          section_type: 'LR',
+          created_at: '2026-01-01T11:30:00Z',
+        },
+      ],
+      listPrepTestQuestionsWithMeta: async () => [
+        prepTestQuestion({ id: 'q-lr-1' }),
+        prepTestQuestion({
+          id: 'q-exp-1',
+          question_number: 1,
+          admin_sections: { section_type: 'LR', section_number: 4, is_experimental: true },
+        }),
+      ],
+    }),
+  })
+  const d = await service.getPrepTestSessionDetail('user-1', 'pt-session-1')
+  assertEquals(d.correct, 1)
+  assertEquals(d.incorrect, 0)
+  assertEquals(d.totalQuestions, 1)
+  assertEquals(d.questions.length, 2)
+  assertEquals(d.questions.find((q) => q.id === 'q-exp-1')?.isExperimental, true)
 })
 
 Deno.test('getPrepTestSessionDetail resolves latest completed session by prep test id', async () => {

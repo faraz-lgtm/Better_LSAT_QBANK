@@ -59,6 +59,8 @@ export type PrepTestDetailSection = {
   questionCount: number
   timeMinutes: number
   practiceable: boolean
+  /** Unscored experimental section; shown in UI/results but excluded from PrepTest score. */
+  isExperimental?: boolean
   unlocked: boolean
   onBreak: boolean
   answeredCount: number
@@ -70,6 +72,8 @@ export type PrepTestSectionBreak = {
   afterSectionId: string
   endsAt: string
   remainingSeconds: number
+  /** Total break length in seconds (1 min or 10 min mid-test). */
+  durationSeconds: number
 }
 
 export type PrepTestDetailResponse = {

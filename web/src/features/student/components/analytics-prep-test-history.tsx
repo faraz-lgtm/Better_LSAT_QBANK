@@ -206,6 +206,10 @@ type AnalyticsPrepTestHistoryProps = {
   onOpenPractice?: (id: string) => void
   /** BR progress bar fill — Sections uses red; Drills uses orange. */
   brBarColor?: string
+  /** Insights tab heading — Drill / Section / PrepTest History. */
+  title?: string
+  /** Noun used in empty-state copy (e.g. "drills", "sections", "PrepTests"). */
+  emptyNoun?: string
 }
 
 function AnalyticsPrepTestHistory({
@@ -216,11 +220,13 @@ function AnalyticsPrepTestHistory({
   onSelectEntry,
   onOpenPractice,
   brBarColor = "#ff6f00",
+  title = "PrepTest History",
+  emptyNoun = "PrepTests",
 }: AnalyticsPrepTestHistoryProps) {
   return (
     <section className="rounded-[16px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[16px] bg-[#f6f8fa] px-6 py-4">
-        <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">PrepTest History</h2>
+        <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">{title}</h2>
         <label className="flex cursor-pointer items-center gap-2.5">
           <Bookmark className="size-4 text-[#062357]" aria-hidden />
           <span className="text-base font-semibold leading-normal tracking-[0.02em] text-[#062357]">
@@ -238,8 +244,8 @@ function AnalyticsPrepTestHistory({
         {visibleEntries.length === 0 ? (
           <p className="rounded-[16px] border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-6 py-8 text-center text-sm text-[#666d80]">
             {bookmarkedOnly
-              ? "No bookmarked PrepTests in this range. Adjust the time range or bookmark a PrepTest."
-              : "No PrepTests recorded in this range. Try widening the time range."}
+              ? `No bookmarked ${emptyNoun} in this range. Adjust the time range or bookmark a ${emptyNoun.replace(/s$/, "")}.`
+              : `No ${emptyNoun} recorded in this range. Try widening the time range.`}
           </p>
         ) : (
           visibleEntries.map((entry) => (

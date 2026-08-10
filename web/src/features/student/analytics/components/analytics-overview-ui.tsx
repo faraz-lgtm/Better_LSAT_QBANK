@@ -1,7 +1,11 @@
 import type { ReactNode } from "react"
+import { useState } from "react"
 import { Link } from "react-router-dom"
+import { ChevronDown, ChevronUp } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { LSAT_SCALED_Y_AXIS_LABELS } from "@/features/student/analytics/chart-y-axis"
+import { visibleOverviewSectionDrillCount } from "@/features/student/analytics/overview-section-drills"
 import type {
   AnalyticsSection,
   AnalyticsStat,
@@ -17,8 +21,6 @@ const DIFFICULTY_META: Record<Difficulty, { dots: number; color: string }> = {
   Hard: { dots: 4, color: "#df1c41" },
   Hardest: { dots: 5, color: "#df1c41" },
 }
-
-const Y_AXIS_LABELS = [100, 84, 68, 52, 36, 20] as const
 
 export const SCORE_PROGRESS_TABS = [
   { id: "regular", label: "Regular Score" },
@@ -98,7 +100,7 @@ export function AnalyticsScoreProgressPanel({
 function DifficultyPill({ difficulty }: { difficulty: Difficulty }) {
   const { dots, color } = DIFFICULTY_META[difficulty]
   return (
-    <div className="flex h-10 w-[132px] shrink-0 items-center gap-2.5 rounded-[10px] bg-[#f3f7ff] px-2.5">
+    <div className="flex h-10 w-fit shrink-0 items-center gap-2.5 rounded-[10px] bg-[#f3f7ff] px-3">
       <div className="flex items-center gap-1.5">
         {Array.from({ length: 5 }).map((_, i) => (
           <span
@@ -171,6 +173,11 @@ function QuestionTypeRow({ row, accentBar }: { row: QuestionTypeRowData; accentB
 }
 
 export function SectionCard({ section }: { section: AnalyticsSection }) {
+  const [expanded, setExpanded] = useState(false)
+  const visibleCount = visibleOverviewSectionDrillCount(section.rows.length, expanded)
+  const visibleRows = section.rows.slice(0, visibleCount)
+  const canToggle = section.rows.length > visibleOverviewSectionDrillCount(section.rows.length, false)
+
   return (
     <section className="mb-6 flex w-full flex-col gap-6 rounded-[20px] border border-[#dfe1e7] bg-white p-6">
       <div className="flex items-center rounded-[20px] bg-[#f6f8fa] px-6 py-4">
@@ -191,11 +198,32 @@ export function SectionCard({ section }: { section: AnalyticsSection }) {
       </div>
       <div className="overflow-x-auto">
         <div className="flex flex-col">
-          {section.rows.map((row) => (
+          {visibleRows.map((row) => (
             <QuestionTypeRow key={row.id} row={row} accentBar={section.accentBar} />
           ))}
         </div>
       </div>
+      {canToggle ? (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            className="inline-flex h-10 items-center gap-2 rounded-[16px] border border-[#dfe1e7] bg-white px-4 text-sm font-semibold tracking-[0.02em] text-[#0d47a1] hover:bg-[#f6f8fa]"
+            onClick={() => setExpanded((current) => !current)}
+          >
+            {expanded ? (
+              <>
+                Show less
+                <ChevronUp className="size-4" />
+              </>
+            ) : (
+              <>
+                Show more ({section.rows.length - visibleCount} more)
+                <ChevronDown className="size-4" />
+              </>
+            )}
+          </button>
+        </div>
+      ) : null}
     </section>
   )
 }
@@ -215,9 +243,10 @@ export function ScoreProgressChart({
     )
   }
 
-  const minVal = Y_AXIS_LABELS[Y_AXIS_LABELS.length - 1]
-  const maxVal = Y_AXIS_LABELS[0]
-  const range = maxVal - minVal
+  const yAxisLabels = LSAT_SCALED_Y_AXIS_LABELS
+  const minVal = yAxisLabels[yAxisLabels.length - 1] ?? 120
+  const maxVal = yAxisLabels[0] ?? 180
+  const range = Math.max(1, maxVal - minVal)
   const stepX = 100 / points.length
   const dashboard = variant === "dashboard"
 
@@ -245,14 +274,14 @@ export function ScoreProgressChart({
           dashboard ? "text-[#62748e]" : "text-[#062357]",
         )}
       >
-        {Y_AXIS_LABELS.map((label) => (
-          <span key={label}>{label}</span>
+        {yAxisLabels.map((label, index) => (
+          <span key={`${label}-${index}`}>{label}</span>
         ))}
       </div>
       <div className="relative flex-1">
         <div className="absolute inset-0 flex flex-col justify-between" aria-hidden>
-          {Y_AXIS_LABELS.map((label) => (
-            <div key={label} className="h-px w-full bg-[#e5e7eb]" />
+          {yAxisLabels.map((label, index) => (
+            <div key={`${label}-${index}`} className="h-px w-full bg-[#e5e7eb]" />
           ))}
         </div>
         <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>

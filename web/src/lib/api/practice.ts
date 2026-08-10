@@ -34,6 +34,7 @@ import { normalizePrepTestDetail } from "@/features/student/preptests/preptest-s
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { throwIfEdgeInvokeFailed } from "@/lib/api/edge-invoke-error"
+import { enrichRcPassageGroups } from "@/lib/api/enrich-rc-passage-groups"
 
 export type PracticeSessionKind = "PREPTEST" | "SECTION" | "DRILL"
 
@@ -415,7 +416,11 @@ export function createPracticeApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       if (!data?.session) throw new Error("No drill session returned from practice")
-      return data
+      if (data.metadata.sectionType !== "RC") return data
+      return {
+        ...data,
+        questions: await enrichRcPassageGroups(supabase, data.questions, data.session.section_id),
+      }
     },
 
     async startLessonDrill(input: {
@@ -441,7 +446,11 @@ export function createPracticeApi(supabase: SupabaseClient) {
       })
       if (error) await throwIfEdgeInvokeFailed(error)
       if (!data?.session) throw new Error("No drill session returned from practice")
-      return data
+      if (data.metadata.sectionType !== "RC") return data
+      return {
+        ...data,
+        questions: await enrichRcPassageGroups(supabase, data.questions, data.session.section_id),
+      }
     },
 
     async getDrillPoolStats(input: DrillPoolStatsInput): Promise<DrillPoolStats> {
@@ -488,7 +497,11 @@ export function createPracticeApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       if (!data?.session) throw new Error("No section session returned from practice")
-      return data
+      if (data.metadata.sectionType !== "RC") return data
+      return {
+        ...data,
+        questions: await enrichRcPassageGroups(supabase, data.questions, data.session.section_id),
+      }
     },
 
     async getSectionSession(sessionId: string): Promise<SectionSessionResponse> {
@@ -498,7 +511,11 @@ export function createPracticeApi(supabase: SupabaseClient) {
       })
       if (error) await throwIfEdgeInvokeFailed(error)
       if (!data?.session) throw new Error("No section session returned from practice")
-      return data
+      if (data.metadata.sectionType !== "RC") return data
+      return {
+        ...data,
+        questions: await enrichRcPassageGroups(supabase, data.questions, data.session.section_id),
+      }
     },
 
     async listPrepTestPool(

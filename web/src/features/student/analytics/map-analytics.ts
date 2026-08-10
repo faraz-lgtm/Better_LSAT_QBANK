@@ -15,6 +15,7 @@ import type {
 import type { DrillRecord } from "@/features/student/lib/mock-analytics-drills"
 import type { PrepTestHistoryEntry, PrepTestRecord } from "@/features/student/lib/mock-analytics-preptests"
 import type { DrillType } from "@/features/student/lib/mock-analytics-drills"
+import { orderPriorityRowsByWeakness } from "@/features/student/drills/tag-drills-priority"
 
 function formatSigned(n: number): string {
   if (n > 0) return `+${n}`
@@ -35,6 +36,13 @@ function ordinal(n: number): string {
     default:
       return `${rounded}th`
   }
+}
+
+/** Overview captions — keep one decimal when the API returns a fractional percentile. */
+export function formatOverviewPercentileCaption(n: number): string {
+  const rounded1 = Math.round(n * 10) / 10
+  if (Number.isInteger(rounded1)) return `PERCENTILE: ${ordinal(rounded1)}`
+  return `PERCENTILE: ${rounded1.toFixed(1)}th`
 }
 
 export function formatPrepTestChartLabel(prepTestTitle: string, moduleId: string | null): string {
@@ -78,7 +86,9 @@ export function mapOverviewToHeadlineStats(overview: AnalyticsOverview): Analyti
       value: String(overview.bestScaledScore),
       accent: "#0d47a1",
       caption:
-        overview.bestPercentile != null ? `PERCENTILE: ${ordinal(overview.bestPercentile)}` : undefined,
+        overview.bestPercentile != null
+          ? formatOverviewPercentileCaption(overview.bestPercentile)
+          : undefined,
     })
   }
   if (overview.averageScaledScore != null) {
@@ -89,7 +99,7 @@ export function mapOverviewToHeadlineStats(overview: AnalyticsOverview): Analyti
       accent: "#5463a9",
       caption:
         overview.averagePercentile != null
-          ? `PERCENTILE: ${ordinal(overview.averagePercentile)}`
+          ? formatOverviewPercentileCaption(overview.averagePercentile)
           : undefined,
     })
   }
@@ -145,24 +155,25 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
   ]
 }
 
-function scaledToChartValue(scaled: number | null, raw: number | null): number {
-  if (scaled != null) return Math.round((scaled / 180) * 100)
-  if (raw != null) return Math.min(100, Math.max(0, raw))
-  return 0
+function toScaledProgressValue(scaled: number | null, raw: number | null): number {
+  if (scaled != null) return scaled
+  // Rare fallback when only raw is present — keep it off the LSAT scale floor.
+  if (raw != null && raw >= 120) return raw
+  return 120
 }
 
 export function mapTrajectoryToScoreProgress(points: TrajectoryPoint[]): ScoreProgressPoint[] {
   return points.map((p) => {
     const label = formatPrepTestChartLabel(p.prepTestTitle, p.moduleId)
-    const regular = scaledToChartValue(
+    const regular = toScaledProgressValue(
       p.regularScaledScore ?? p.scaledScore,
       p.regularRawScore ?? p.rawScore,
     )
-    const blind = scaledToChartValue(p.blindReviewScaledScore, p.blindReviewRawScore)
+    const blind = toScaledProgressValue(p.blindReviewScaledScore, p.blindReviewRawScore)
     return {
       test: label,
       regular,
-      blindReview: blind > 0 ? blind : regular,
+      blindReview: blind > 120 ? blind : regular,
     }
   })
 }
@@ -187,7 +198,7 @@ const SECTION_STYLE: Record<
 
 export function mapPrioritiesToSections(priorities: PriorityRow[]): AnalyticsSection[] {
   const bySection = new Map<"LR" | "RC", QuestionTypeRow[]>()
-  for (const p of priorities) {
+  for (const p of orderPriorityRowsByWeakness(priorities)) {
     if (p.sectionType !== "LR" && p.sectionType !== "RC") continue
     const rows = bySection.get(p.sectionType) ?? []
     rows.push({
@@ -282,6 +293,65 @@ export function mapPrepTestSessionToHistoryEntry(s: PracticeSessionSummary): Pre
     scoreMax: 180,
     blindReviewScore: br,
     blindReviewMax: 180,
+  }
+}
+
+function formatSessionHistoryDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })
+}
+
+function questionCountFromSession(s: PracticeSessionSummary, correct: number): number {
+  const meta = s.metadata
+  const questionIds = Array.isArray(meta.questionIds) ? meta.questionIds : []
+  if (questionIds.length > 0) return questionIds.length
+  const questionCount = typeof meta.questionCount === "number" ? meta.questionCount : 0
+  if (questionCount > 0) return questionCount
+  return Math.max(correct, 1)
+}
+
+/** Completed drill → shared history-row shape (raw correct / total). */
+export function mapDrillSessionToHistoryEntry(s: PracticeSessionSummary): PrepTestHistoryEntry | null {
+  if (s.kind !== "DRILL" || !s.completedAt) return null
+  const correct = s.rawScore ?? 0
+  const total = questionCountFromSession(s, correct)
+  const typeName =
+    typeof s.metadata.questionTypeName === "string" ? s.metadata.questionTypeName.trim() : ""
+  const testLabel =
+    typeName ||
+    (s.sectionType ? `${s.sectionType} Drill` : null) ||
+    s.sectionTitle?.trim() ||
+    "Drill"
+  return {
+    id: s.id,
+    testLabel,
+    dateLabel: formatSessionHistoryDate(s.completedAt),
+    bookmarked: s.bookmarked,
+    score: correct,
+    scoreMax: total,
+    blindReviewScore: correct,
+    blindReviewMax: total,
+  }
+}
+
+/** Completed section → shared history-row shape (raw correct / total). */
+export function mapSectionSessionToHistoryEntry(s: PracticeSessionSummary): PrepTestHistoryEntry | null {
+  if (s.kind !== "SECTION" || !s.completedAt) return null
+  const correct = s.rawScore ?? 0
+  const total = questionCountFromSession(s, correct)
+  const testLabel =
+    s.sectionTitle?.trim() ||
+    (s.sectionType ? `${s.sectionType} Section` : null) ||
+    "Section"
+  const br = s.blindReviewRawScore ?? correct
+  return {
+    id: s.id,
+    testLabel,
+    dateLabel: formatSessionHistoryDate(s.completedAt),
+    bookmarked: s.bookmarked,
+    score: correct,
+    scoreMax: total,
+    blindReviewScore: br,
+    blindReviewMax: total,
   }
 }
 

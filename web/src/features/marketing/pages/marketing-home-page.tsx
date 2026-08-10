@@ -177,17 +177,17 @@ function MarketingHomePage() {
         }}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between lg:h-20">
+          <div className="flex h-14 items-center justify-between lg:h-16">
             <Link to="/" className="group flex items-center gap-2">
-              <img src="/marketing-logo.png" alt="betterLSAT" className="h-9 w-auto" />
+              <img src="/marketing-logo.png" alt="betterLSAT" className="h-auto w-[180px]" />
             </Link>
 
-            <nav className="hidden items-center gap-8 md:flex">
+            <nav className="hidden items-center gap-7 md:flex">
               {NAV_LINKS.map((l) => (
                 <a
                   key={l.label}
                   href={l.href}
-                  className="text-sm font-medium transition-colors duration-200 hover:opacity-70"
+                  className="text-base font-medium transition-colors duration-200 hover:opacity-70"
                   style={{ color: "#0D47A1" }}
                 >
                   {l.label}
@@ -198,17 +198,17 @@ function MarketingHomePage() {
             <div className="flex items-center gap-3">
               <Link
                 to="/login"
-                className="hidden text-sm font-medium transition-opacity hover:opacity-70 md:inline-flex"
+                className="hidden text-base font-medium transition-opacity hover:opacity-70 md:inline-flex"
                 style={{ color: "#0D47A1" }}
               >
                 Log In
               </Link>
               <Link
                 to="/intent"
-                className="hidden items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:scale-105 hover:opacity-90 active:scale-95 md:inline-flex"
+                className="hidden items-center gap-1.5 rounded-md px-3.5 py-1.5 text-sm font-semibold text-white transition-all duration-200 hover:scale-105 hover:opacity-90 active:scale-95 md:inline-flex"
                 style={{ background: "#FF6F00" }}
               >
-                Start Free Diagnostic <ArrowRight className="h-4 w-4" />
+                Start Free Diagnostic <ArrowRight className="h-3.5 w-3.5" />
               </Link>
               <button
                 type="button"
@@ -234,7 +234,7 @@ function MarketingHomePage() {
                   <a
                     key={l.label}
                     href={l.href}
-                    className="px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                    className="px-3 py-2.5 rounded-lg text-base font-medium hover:bg-gray-50 transition-colors"
                     style={{ color: '#0D47A1' }}
                   >
                     {l.label}
@@ -242,15 +242,15 @@ function MarketingHomePage() {
                 ))}
                 <Link
                   to="/intent"
-                  className="mt-2 flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold text-white"
+                  className="mt-2 flex items-center justify-center gap-1.5 rounded-md px-3.5 py-2 text-sm font-semibold text-white"
                   style={{ background: "#FF6F00" }}
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Start Free Diagnostic <ArrowRight className="h-4 w-4" />
+                  Start Free Diagnostic <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
                 <Link
                   to="/login"
-                  className="mt-1 px-3 py-2.5 text-center text-sm font-medium"
+                  className="mt-1 px-3 py-2.5 text-center text-base font-medium"
                   style={{ color: "#0D47A1" }}
                   onClick={() => setMobileMenuOpen(false)}
                 >

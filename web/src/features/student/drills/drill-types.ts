@@ -27,6 +27,8 @@ export type DrillQuestion = {
   stemText: string | null
   choices: DrillChoice[]
   passage: DrillPassage | null
+  /** LSAC/RC passage group — preferred for nav passage dividers. */
+  sourceGroupId?: string | null
   correctChoiceId?: string | null
 }
 

@@ -49,14 +49,14 @@ export type ScoreProgressPoint = {
 }
 
 export const mockScoreProgress: ScoreProgressPoint[] = [
-  { test: "PT 150", regular: 76, blindReview: 84 },
-  { test: "PT 151", regular: 72, blindReview: 84 },
-  { test: "PT 152", regular: 72, blindReview: 80 },
-  { test: "PT 153", regular: 72, blindReview: 82 },
-  { test: "PT 154", regular: 72, blindReview: 83 },
-  { test: "PT 155", regular: 34, blindReview: 50 },
-  { test: "PT 156", regular: 34, blindReview: 50 },
-  { test: "PT 157", regular: 32, blindReview: 48 },
+  { test: "PT 150", regular: 168, blindReview: 172 },
+  { test: "PT 151", regular: 165, blindReview: 170 },
+  { test: "PT 152", regular: 162, blindReview: 168 },
+  { test: "PT 153", regular: 160, blindReview: 166 },
+  { test: "PT 154", regular: 158, blindReview: 164 },
+  { test: "PT 155", regular: 150, blindReview: 155 },
+  { test: "PT 156", regular: 148, blindReview: 154 },
+  { test: "PT 157", regular: 145, blindReview: 152 },
 ]
 
 export type Difficulty = "Easiest" | "Easy" | "Medium" | "Hard" | "Hardest"

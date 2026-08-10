@@ -114,6 +114,39 @@ function filterSectionSessionsForAttempt<
   })
 }
 
+function sectionSessionIsExperimental(session: {
+  admin_sections?:
+    | { is_experimental?: boolean | null }
+    | { is_experimental?: boolean | null }[]
+    | null
+}): boolean {
+  const sec = relOne(session.admin_sections ?? null)
+  return sec?.is_experimental === true
+}
+
+/** Latest completed section session per section_id within an attempt window. */
+function latestScoredSectionSessionsBySectionId<
+  T extends {
+    section_id: string | null
+    completed_at: string
+    raw_score: number | null
+    admin_sections?:
+      | { is_experimental?: boolean | null }
+      | { is_experimental?: boolean | null }[]
+      | null
+  },
+>(sessions: T[]): T[] {
+  const bySection = new Map<string, T>()
+  for (const session of sessions) {
+    if (!session.section_id || sectionSessionIsExperimental(session)) continue
+    const existing = bySection.get(session.section_id)
+    if (!existing || Date.parse(session.completed_at) >= Date.parse(existing.completed_at)) {
+      bySection.set(session.section_id, session)
+    }
+  }
+  return [...bySection.values()]
+}
+
 function lrRcMissesFromAnswers(
   answers: Iterable<{ is_correct: boolean; section_type: 'LR' | 'RC' | 'LG' | null }>,
 ): { lrMiss: number; rcMiss: number; hadLr: boolean; hadRc: boolean } {
@@ -232,36 +265,72 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
         deps.repository.sumCompletedLessonStudyMinutes(userId),
       ])
 
-      const resolvedScores: { scaled: number; percentile: number | null }[] = []
+      const resolvedScores: { scaled: number; percentile: number | null; prepTestId: string | null }[] =
+        []
       for (const row of completedPreptests) {
         let scaled = row.scaled_score
         let percentile = row.percentile
-        if (scaled == null && row.raw_score != null && row.prep_test_id) {
-          const scoreRow = await deps.repository.getScoreRowForRaw(row.prep_test_id, row.raw_score)
-          if (scoreRow?.scaled_score != null) {
-            scaled = scoreRow.scaled_score
-            percentile = scoreRow.percentile
+        const prepTestId = row.prep_test_id
+
+        if (prepTestId) {
+          const attemptSections = latestScoredSectionSessionsBySectionId(
+            filterSectionSessionsForAttempt(
+              allSectionSessions.filter((s) => s.prep_test_id === prepTestId),
+              row.started_at,
+              row.completed_at,
+            ),
+          )
+          if (attemptSections.length > 0) {
+            const rawTotal = attemptSections.reduce((sum, s) => sum + (s.raw_score ?? 0), 0)
+            const scoreRow = await deps.repository.getScoreRowForRaw(prepTestId, rawTotal)
+            if (scoreRow?.scaled_score != null) {
+              scaled = scoreRow.scaled_score
+              percentile = scoreRow.percentile
+            } else if (scaled == null && row.raw_score != null) {
+              const fallback = await deps.repository.getScoreRowForRaw(prepTestId, row.raw_score)
+              if (fallback?.scaled_score != null) {
+                scaled = fallback.scaled_score
+                percentile = fallback.percentile
+              }
+            }
+          } else if (scaled == null && row.raw_score != null) {
+            const scoreRow = await deps.repository.getScoreRowForRaw(prepTestId, row.raw_score)
+            if (scoreRow?.scaled_score != null) {
+              scaled = scoreRow.scaled_score
+              percentile = scoreRow.percentile
+            }
+          }
+
+          if (scaled != null && percentile == null) {
+            const byScaled = await deps.repository.getScoreRowForScaled(prepTestId, Math.round(scaled))
+            if (byScaled?.percentile != null) percentile = byScaled.percentile
           }
         }
+
         if (scaled != null) {
-          resolvedScores.push({ scaled, percentile })
+          resolvedScores.push({ scaled, percentile, prepTestId })
         }
       }
 
       if (resolvedScores.length === 0) {
         const byPrepTest = new Map<string, typeof allSectionSessions>()
         for (const session of allSectionSessions) {
-          if (!session.prep_test_id) continue
+          if (!session.prep_test_id || sectionSessionIsExperimental(session)) continue
           const list = byPrepTest.get(session.prep_test_id) ?? []
           list.push(session)
           byPrepTest.set(session.prep_test_id, list)
         }
         for (const [prepTestId, sessions] of byPrepTest) {
-          const rawTotal = sessions.reduce((sum, s) => sum + (s.raw_score ?? 0), 0)
+          const scored = latestScoredSectionSessionsBySectionId(sessions)
+          const rawTotal = scored.reduce((sum, s) => sum + (s.raw_score ?? 0), 0)
           if (rawTotal <= 0) continue
           const scoreRow = await deps.repository.getScoreRowForRaw(prepTestId, rawTotal)
           if (scoreRow?.scaled_score != null) {
-            resolvedScores.push({ scaled: scoreRow.scaled_score, percentile: scoreRow.percentile })
+            resolvedScores.push({
+              scaled: scoreRow.scaled_score,
+              percentile: scoreRow.percentile,
+              prepTestId,
+            })
           }
         }
       }
@@ -275,14 +344,44 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
       const bestResolved = resolvedScores.length
         ? resolvedScores.reduce((best, cur) => (cur.scaled > best.scaled ? cur : best))
         : null
-      const bestPercentile = bestResolved?.percentile ?? null
-      const percentileValues = resolvedScores
-        .map((r) => r.percentile)
-        .filter((p): p is number => p !== null && p !== undefined)
-      const averagePercentile = percentileValues.length
-        ? round1(percentileValues.reduce((a, b) => a + b, 0) / percentileValues.length)
-        : null
+      let bestPercentile = bestResolved?.percentile ?? null
+      if (bestPercentile == null && bestResolved?.prepTestId != null && bestScaledScore != null) {
+        const byScaled = await deps.repository.getScoreRowForScaled(
+          bestResolved.prepTestId,
+          Math.round(bestScaledScore),
+        )
+        bestPercentile = byScaled?.percentile ?? null
+      }
 
+      // Average of percentiles is not LSAT-meaningful — use conversion for the average scaled score.
+      let averagePercentile: number | null = null
+      if (averageScaledScore != null) {
+        const avgScaledRounded = Math.round(averageScaledScore)
+        const prepTestIds = [
+          ...new Set(
+            resolvedScores
+              .map((r) => r.prepTestId)
+              .filter((id): id is string => typeof id === 'string' && id.length > 0),
+          ),
+        ]
+        for (const prepTestId of prepTestIds) {
+          const byScaled = await deps.repository.getScoreRowForScaled(prepTestId, avgScaledRounded)
+          if (byScaled?.percentile != null) {
+            averagePercentile = byScaled.percentile
+            break
+          }
+        }
+        if (averagePercentile == null) {
+          const percentileValues = resolvedScores
+            .map((r) => r.percentile)
+            .filter((p): p is number => p !== null && p !== undefined)
+          if (percentileValues.length) {
+            averagePercentile = round1(
+              percentileValues.reduce((a, b) => a + b, 0) / percentileValues.length,
+            )
+          }
+        }
+      }
       const drillAccuracyPct =
         drillStats.total > 0 ? round1((100 * drillStats.correct) / drillStats.total) : null
 
@@ -293,7 +392,9 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
 
       for (const row of completedPreptests) {
         if (!row.prep_test_id) continue
-        const sectionSessions = allSectionSessions.filter((s) => s.prep_test_id === row.prep_test_id)
+        const sectionSessions = allSectionSessions.filter(
+          (s) => s.prep_test_id === row.prep_test_id && !sectionSessionIsExperimental(s),
+        )
         const attemptSections = filterSectionSessionsForAttempt(
           sectionSessions,
           row.started_at,
@@ -644,14 +745,23 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
         selectedLetter: string | null
         sectionType: 'LR' | 'RC' | 'LG' | null
         sectionNumber: number | null
+        isExperimental: boolean
       }> = []
 
       for (const row of questionsRaw) {
         const qid = String(row.id)
         const sec = relOne(
           row.admin_sections as
-            | { section_type: 'LR' | 'RC' | 'LG' | null; section_number: number | null }
-            | { section_type: 'LR' | 'RC' | 'LG' | null; section_number: number | null }[]
+            | {
+                section_type: 'LR' | 'RC' | 'LG' | null
+                section_number: number | null
+                is_experimental?: boolean | null
+              }
+            | {
+                section_type: 'LR' | 'RC' | 'LG' | null
+                section_number: number | null
+                is_experimental?: boolean | null
+              }[]
             | null,
         )
         const qt = relOne(row.question_types as { name: string } | { name: string }[] | null)
@@ -659,9 +769,15 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
         const initial = atCompletion.get(qid)
         const final = latest.get(qid)
         const blindReviewEvent = afterCompletion.get(qid)
-        total += 1
-        if (initial?.is_correct) correct += 1
-        const qNum = typeof row.question_number === 'number' ? row.question_number : total
+        const isExperimental = sec?.is_experimental === true
+        if (!isExperimental) {
+          total += 1
+          if (initial?.is_correct) correct += 1
+        }
+        const qNum =
+          typeof row.question_number === 'number'
+            ? row.question_number
+            : questionRows.length + 1
         const title = formatQuestionResultTitle(
           apt?.module_id ?? null,
           apt?.title ?? 'PrepTest',
@@ -686,14 +802,18 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
           tags: qt?.name ? [qt.name] : [],
           difficulty: difficultyLabel(diff),
           difficultyDots: diff ?? 3,
-        actualCorrect: initial?.is_correct ?? false,
-        blindReviewCorrect,
-        blindReviewUnanswered,
-        isUnanswered,
-        correctLetter: typeof row.correct_answer === 'string' ? row.correct_answer.trim().toUpperCase().slice(0, 1) : 'A',
-        selectedLetter: final?.selected_answer ?? initial?.selected_answer ?? null,
+          actualCorrect: initial?.is_correct ?? false,
+          blindReviewCorrect,
+          blindReviewUnanswered,
+          isUnanswered,
+          correctLetter:
+            typeof row.correct_answer === 'string'
+              ? row.correct_answer.trim().toUpperCase().slice(0, 1)
+              : 'A',
+          selectedLetter: final?.selected_answer ?? initial?.selected_answer ?? null,
           sectionType: sec?.section_type ?? null,
           sectionNumber: sec?.section_number ?? null,
+          isExperimental,
         })
       }
 

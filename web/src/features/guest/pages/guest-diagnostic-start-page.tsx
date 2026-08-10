@@ -64,9 +64,17 @@ function GuestDiagnosticStartPage({ preview = false }: GuestDiagnosticStartPageP
     setShowInstructions(false)
   }
 
-  function handleSubmitted(answersByQuestion: Record<string, { selectedAnswer: string; isCorrect: boolean }>) {
+  function handleSubmitted(
+    answersByQuestion: Record<string, { selectedAnswer: string; isCorrect: boolean }>,
+    timeSpentByQuestion: Record<string, number>,
+  ) {
     const questions = createGuestDiagnosticPreviewQuestions(config.questionCount)
-    const result = buildGuestDiagnosticResultFromAnswers(resolvedIntentId, questions, answersByQuestion)
+    const result = buildGuestDiagnosticResultFromAnswers(
+      resolvedIntentId,
+      questions,
+      answersByQuestion,
+      timeSpentByQuestion,
+    )
     writeGuestDiagnosticResult(result)
     clearDiagnosticFunnel()
     navigate(preview ? "/diagnostic/results/preview" : GUEST_FREE_PLAN_RESULTS_HREF, { replace: true })

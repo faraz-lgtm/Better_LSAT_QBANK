@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
-import { useNavigate, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams } from "react-router-dom"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import {
   Bookmark,
@@ -10,6 +10,7 @@ import {
 import { FigmaIcon } from "@/components/icons/figma-icons"
 import { FIGMA_DROPDOWN_CARD_OPEN_CLASS, FigmaDropdown } from "@/components/ui/figma-dropdown"
 import { Switch } from "@/components/ui/switch"
+import { explanationQuestionDetailHref } from "@/features/student/explanation-detail/explanation-question-index"
 import {
   PT_RESULTS_ACTION_BUTTON_CLASS,
   PT_RESULTS_BY_SECTION_PANEL_CLASS,
@@ -42,7 +43,6 @@ import {
   type PrepTestAboutMeta,
   type PrepTestPassageSummary,
   type PrepTestQuestionResultRow,
-  type PrepTestRcSectionBlock,
   type PrepTestResultsDetail,
   type PrepTestSectionKind,
 } from "@/features/student/lib/prep-test-results-types"
@@ -111,6 +111,7 @@ function ResultsSummaryPanel({ detail }: { detail: PrepTestResultsDetail }) {
               kind={section.kind}
               longName={section.longName}
               sectionLabel={section.sectionLabel}
+              isExperimental={section.isExperimental}
               scoreDelta={section.scoreDelta}
               questionRows={section.questionRows}
               accuracyPct={section.accuracyPct}
@@ -232,12 +233,16 @@ function PassageSummaryHeader({ passage }: { passage: PrepTestPassageSummary }) 
   )
 }
 
-function QuestionResultActionButtons() {
+function QuestionResultActionButtons({ questionId }: { questionId: string }) {
   return (
     <div className="flex shrink-0 gap-4">
-      <button type="button" className={PT_RESULTS_ACTION_BUTTON_CLASS} aria-label="Edit question">
+      <Link
+        to={explanationQuestionDetailHref(questionId)}
+        className={PT_RESULTS_ACTION_BUTTON_CLASS}
+        aria-label="View explanation"
+      >
         <Pencil className="size-[18px]" aria-hidden />
-      </button>
+      </Link>
       <button type="button" className={PT_RESULTS_ACTION_BUTTON_CLASS} aria-label="Bookmark question">
         <Bookmark className="size-[18px]" aria-hidden />
       </button>
@@ -318,7 +323,7 @@ function QuestionResultRow({
             </div>
 
             <div className="ml-4 shrink-0">
-              <QuestionResultActionButtons />
+              <QuestionResultActionButtons questionId={row.id} />
             </div>
           </div>
 
@@ -366,6 +371,7 @@ function PassageQuestionGroupCard({
 function SectionBlock({
   sectionTitle,
   badgeKind,
+  isExperimental = false,
   score,
   blind,
   showBlindReview = false,
@@ -374,6 +380,7 @@ function SectionBlock({
 }: {
   sectionTitle: string
   badgeKind: PrepTestSectionKind
+  isExperimental?: boolean
   score: string
   blind: string
   showBlindReview?: boolean
@@ -393,6 +400,11 @@ function SectionBlock({
               {badge.short}
             </div>
             <h2 className="whitespace-nowrap text-2xl font-bold leading-[1.3] text-[#062357]">{sectionTitle}</h2>
+            {isExperimental ? (
+              <span className="rounded-[8px] border border-[#c2410c] bg-[#fff7ed] px-2 py-1 text-xs font-extrabold leading-none tracking-[0.24px] text-[#c2410c]">
+                EXP
+              </span>
+            ) : null}
           </div>
           <div className="flex w-[258px] shrink-0 items-center justify-between">
             <div className="flex flex-col gap-[5px] font-bold text-[#062357]">
@@ -413,43 +425,6 @@ function SectionBlock({
       </div>
       <div className="flex flex-col gap-[24px]">{children}</div>
     </section>
-  )
-}
-
-/** Figma `18942:44492` — RC section uses same grouped card layout as LR */
-function RcSectionPanel({
-  block,
-  passages,
-  questionFilter,
-  showBlindReview = false,
-}: {
-  block: PrepTestRcSectionBlock
-  passages: PrepTestPassageSummary[]
-  questionFilter: (typeof QUESTION_FILTER_OPTIONS)[number]
-  showBlindReview?: boolean
-}) {
-  const questions =
-    questionFilter === "Incorrect only" ? block.questions.filter((q) => !q.actualCorrect) : block.questions
-
-  const groups = buildPassageQuestionGroups(passages, questions)
-
-  return (
-    <SectionBlock
-      sectionTitle={block.sectionTitle}
-      badgeKind="RC"
-      score={block.scoreDisplay}
-      blind={block.blindReviewDisplay}
-      showBlindReview={showBlindReview}
-    >
-      {groups.map((group) => (
-        <PassageQuestionGroupCard
-          key={group.passage?.id ?? "rc-questions"}
-          passage={group.passage}
-          questions={group.questions}
-          showBlindReview={showBlindReview}
-        />
-      ))}
-    </SectionBlock>
   )
 }
 
@@ -651,25 +626,26 @@ function AnalyticsPrepTestResultsPage() {
       <div className={RESULTS_STACK_CLASS}>
         <TotalQuestionsBar total={detail.totalQuestions} filter={questionFilter} onFilterChange={setQuestionFilter} />
 
-        {detail.lrSections.map((lrSection) => {
+        {detail.sectionBlocks.map((block) => {
           const questions =
             questionFilter === "Incorrect only"
-              ? lrSection.questions.filter((q) => !q.actualCorrect)
-              : lrSection.questions
-          const groups = buildPassageQuestionGroups(lrSection.passages, questions)
+              ? block.questions.filter((q) => !q.actualCorrect)
+              : block.questions
+          const groups = buildPassageQuestionGroups(block.passages, questions)
 
           return (
             <SectionBlock
-              key={lrSection.sectionTitle}
-              sectionTitle={lrSection.sectionTitle}
-              badgeKind="LR"
-              score={lrSection.scoreDisplay}
-              blind={lrSection.blindReviewDisplay}
+              key={block.sectionTitle}
+              sectionTitle={block.sectionTitle}
+              badgeKind={block.kind}
+              isExperimental={block.isExperimental}
+              score={block.scoreDisplay}
+              blind={block.blindReviewDisplay}
               showBlindReview={detail.blindReviewCompleted}
             >
               {groups.map((group) => (
                 <PassageQuestionGroupCard
-                  key={group.passage?.id ?? `${lrSection.sectionTitle}-questions`}
+                  key={group.passage?.id ?? `${block.sectionTitle}-questions`}
                   passage={group.passage}
                   questions={group.questions}
                   showBlindReview={detail.blindReviewCompleted}
@@ -678,15 +654,6 @@ function AnalyticsPrepTestResultsPage() {
             </SectionBlock>
           )
         })}
-
-        {detail.rcSection.questions.length > 0 ? (
-          <RcSectionPanel
-            block={detail.rcSection}
-            passages={detail.passages}
-            questionFilter={questionFilter}
-            showBlindReview={detail.blindReviewCompleted}
-          />
-        ) : null}
 
         <AboutPrepTestCard
           meta={detail.about}

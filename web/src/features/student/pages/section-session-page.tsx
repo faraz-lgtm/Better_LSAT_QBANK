@@ -82,14 +82,13 @@ import { PracticeSessionNotesPanel } from "@/features/student/practice-session/p
 import {
   canChangePracticeAnswer,
   type PracticeSessionVariant,
-  type PracticeToolMode,
 } from "@/features/student/practice-session/practice-session-types"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
 import { PracticeSessionImmersiveFrame } from "@/features/student/practice-session/practice-session-immersive-frame"
 import { PracticeSessionNavArrowButton } from "@/features/student/practice-session/practice-session-nav-arrow-button"
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
-import { PracticeSessionQuestionNavButton } from "@/features/student/practice-session/practice-session-question-nav-button"
+import { PracticeSessionQuestionNavStrip } from "@/features/student/practice-session/practice-session-question-nav-strip"
 import { PracticeSessionPauseModal } from "@/features/student/practice-session/practice-session-pause-modal"
 import { PracticeSubmitSectionModal } from "@/features/student/practice-session/practice-submit-section-modal"
 import {
@@ -113,6 +112,7 @@ import { StudentPageLoader } from "@/features/student/components/student-page-lo
 import { createPracticeApi } from "@/lib/api/practice"
 import {
   resolvePrepTestBreakAfterSectionId,
+  resolvePrepTestSectionBreakSeconds,
   writeStoredSectionBreak,
 } from "@/features/student/preptests/preptest-section-break"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -172,9 +172,6 @@ type QuestionPanelProps = {
   submitting: boolean
   allowReselect: boolean
   getRegionHtml: (key: string, base: string) => string
-  toolMode: PracticeToolMode
-  onContentMouseUp: ReturnType<typeof usePracticeHighlights>["handleContentMouseUp"]
-  onContentClick: ReturnType<typeof usePracticeHighlights>["handleContentClick"]
   onSelect: (index: number) => void
   flagged: boolean
   onToggleFlag: () => void
@@ -204,9 +201,6 @@ function SectionQuestionPanel({
   submitting,
   allowReselect,
   getRegionHtml,
-  toolMode,
-  onContentMouseUp,
-  onContentClick,
   onSelect,
   flagged,
   onToggleFlag,
@@ -251,9 +245,6 @@ function SectionQuestionPanel({
         submitting={submitting}
         allowReselect={allowReselect}
         getRegionHtml={getRegionHtml}
-        toolMode={toolMode}
-        onContentMouseUp={onContentMouseUp}
-        onContentClick={onContentClick}
         onSelect={onSelect}
         answerView={answerView}
         onAnswerViewChange={onAnswerViewChange}
@@ -299,9 +290,6 @@ function SectionQuestionPanel({
           regionKey={stemKey}
           html={stemHtml}
           findQuery={findQuery}
-          toolMode={toolMode}
-          onContentMouseUp={onContentMouseUp}
-          onContentClick={onContentClick}
           flagged={flagged}
           onToggleFlag={onToggleFlag}
           flagsDisabled={flagsDisabled}
@@ -340,9 +328,6 @@ function SectionQuestionPanel({
                 }))
               }
               onToggleMasked={() => toggleChoiceMask(index)}
-              toolMode={toolMode}
-              onContentMouseUp={onContentMouseUp}
-              onContentClick={onContentClick}
               variant={variant}
               showSideAction={!isActiveDrillLayout}
             />
@@ -1015,7 +1000,11 @@ function SectionSessionPage() {
         )
         if (options?.showWellDoneAfterTimeUp) {
           if (afterSectionId) {
-            writeStoredSectionBreak(prepTestFlowId, afterSectionId)
+            writeStoredSectionBreak(
+              prepTestFlowId,
+              afterSectionId,
+              resolvePrepTestSectionBreakSeconds(detail, afterSectionId),
+            )
           }
           const questionCount = questions.length > 0 ? questions.length : 1
           const sectionLabel =
@@ -1033,7 +1022,11 @@ function SectionSessionPage() {
           return
         }
         if (afterSectionId) {
-          writeStoredSectionBreak(prepTestFlowId, afterSectionId)
+          writeStoredSectionBreak(
+            prepTestFlowId,
+            afterSectionId,
+            resolvePrepTestSectionBreakSeconds(detail, afterSectionId),
+          )
         }
         navigate(prepTestHubHref(prepTestFlowId, { retake: isRetakeAttempt }), {
           replace: true,
@@ -1426,9 +1419,6 @@ function SectionSessionPage() {
                 submitting={submitting}
                 allowReselect={allowReselect}
                 getRegionHtml={highlights.getRegionHtml}
-                toolMode={highlights.toolMode}
-                onContentMouseUp={highlights.handleContentMouseUp}
-                onContentClick={highlights.handleContentClick}
                 onSelect={(index) => void handleSelectChoice(index)}
                 flagged={current ? questionFlags.isFlagged(current.id) : false}
                 onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
@@ -1583,9 +1573,6 @@ function SectionSessionPage() {
                 submitting={submitting}
                 allowReselect={allowReselect}
                 getRegionHtml={highlights.getRegionHtml}
-                toolMode={highlights.toolMode}
-                onContentMouseUp={highlights.handleContentMouseUp}
-                onContentClick={highlights.handleContentClick}
                 onSelect={(index) => void handleSelectChoice(index)}
                 flagged={current ? questionFlags.isFlagged(current.id) : false}
                 onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
@@ -1632,35 +1619,18 @@ function SectionSessionPage() {
           />
         ) : useBlindReviewLayout ? (
           <div className={BLIND_REVIEW_FOOTER_ROW_CLASS}>
-            <div className={BLIND_REVIEW_FOOTER_NAV_CLASS}>
-              {questions.map((q, i) => {
-                const n = i + 1
-                const actual = actualAnswersByQuestion[q.id]
-                const reviewOutcome = resultsReviewMode
-                  ? !actual || !actual.selectedAnswer.trim()
-                    ? ("unanswered" as const)
-                    : actual.isCorrect
-                      ? ("correct" as const)
-                      : ("incorrect" as const)
-                  : null
-                return (
-                  <PracticeSessionQuestionNavButton
-                    key={q.id}
-                    number={n}
-                    active={n === safeIndex}
-                    answered={Boolean(answersByQuestion[q.id])}
-                    flagged={questionFlags.isFlagged(q.id)}
-                    recommendedForBr={
-                      !resultsReviewMode &&
-                      isQuestionRecommendedForBlindReview(actualAnswersByQuestion[q.id])
-                    }
-                    outcome={reviewOutcome}
-                    variant={sessionVariant}
-                    onClick={() => setQIndex(n)}
-                  />
-                )
-              })}
-            </div>
+            <PracticeSessionQuestionNavStrip
+              questions={questions}
+              safeIndex={safeIndex}
+              answersByQuestion={answersByQuestion}
+              isFlagged={questionFlags.isFlagged}
+              recommendedForBr={(questionId) =>
+                isQuestionRecommendedForBlindReview(actualAnswersByQuestion[questionId])
+              }
+              variant={sessionVariant}
+              onSelectQuestion={setQIndex}
+              className={BLIND_REVIEW_FOOTER_NAV_CLASS}
+            />
             <div className={BLIND_REVIEW_NAV_ARROW_GROUP_CLASS}>
               <PracticeSessionNavArrowButton
                 direction="prev"
@@ -1682,22 +1652,15 @@ function SectionSessionPage() {
           </div>
         ) : (
           <>
-        <div className="practice-session-scroll-hidden flex min-h-0 min-w-0 flex-1 flex-nowrap items-stretch gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5 pt-2.5 sm:gap-2">
-          {questions.map((q, i) => {
-            const n = i + 1
-            return (
-              <PracticeSessionQuestionNavButton
-                key={q.id}
-                number={n}
-                active={n === safeIndex}
-                answered={Boolean(answersByQuestion[q.id])}
-                flagged={questionFlags.isFlagged(q.id)}
-                variant={sessionVariant}
-                onClick={() => setQIndex(n)}
-              />
-            )
-          })}
-        </div>
+        <PracticeSessionQuestionNavStrip
+          questions={questions}
+          safeIndex={safeIndex}
+          answersByQuestion={answersByQuestion}
+          isFlagged={questionFlags.isFlagged}
+          variant={sessionVariant}
+          onSelectQuestion={setQIndex}
+          className="practice-session-scroll-hidden flex min-h-0 min-w-0 flex-1 flex-nowrap items-stretch gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5 pt-2.5 sm:gap-2"
+        />
         <div className="flex shrink-0 items-center gap-2 self-center">
               <button
                 type="button"

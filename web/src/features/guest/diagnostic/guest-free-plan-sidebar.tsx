@@ -59,13 +59,13 @@ function GuestFreePlanSidebar({
         )}
         aria-label="Main navigation"
       >
-        <div className="student-shell-top-row flex shrink-0 border-b border-[color:var(--greyscale-100)] p-2">
+        <div className="student-shell-top-row flex shrink-0 items-center border-b border-[color:var(--greyscale-100)] px-5">
           <Link
             to={dashboardHref}
-            className="flex h-14 w-full items-center p-3"
+            className="flex w-full items-center"
             aria-label="betterLSAT home"
           >
-            <img src="/betterLSAT_LOGO.png" alt="betterLSAT" className="h-[18px] w-[144px] object-contain" />
+            <img src="/betterLSAT_LOGO.png" alt="betterLSAT" className="h-auto w-[140px] object-contain" />
           </Link>
         </div>
 

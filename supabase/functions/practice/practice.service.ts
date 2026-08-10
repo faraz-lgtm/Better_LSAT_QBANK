@@ -1,7 +1,7 @@
 import { extractPrepTestQuestionRef } from '../_shared/prep-question-ref.ts'
 import { resolvePrepDrillLessonType } from '../_shared/prep-lesson-type.ts'
 import { isStudentVisiblePrepTest } from '../_shared/prep-test-visibility.ts'
-import { PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT } from './adaptive-drill-config.ts'
+import { DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT, PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT } from './adaptive-drill-config.ts'
 import type {
   AnswerEventRow,
   DrillPoolQuestionRow,
@@ -373,6 +373,7 @@ export type PrepTestDetailSection = {
   questionCount: number
   timeMinutes: number
   practiceable: boolean
+  isExperimental: boolean
   unlocked: boolean
   answeredCount: number
   completed: boolean
@@ -510,6 +511,35 @@ function sortedPrepTestSessions(sessions: PracticeSessionRow[]): PracticeSession
 function prepTestSessionAwaitingBlindReview(sessions: PracticeSessionRow[]): PracticeSessionRow | null {
   const prepTests = sortedPrepTestSessions(sessions)
   return prepTests.find((s) => s.completed_at && !isPrepTestFullyComplete(s)) ?? null
+}
+
+/**
+ * Session that can start/continue blind review.
+ * Includes skipped attempts — viewing results marks BR skipped, but Review must still work.
+ */
+function prepTestSessionEligibleToStartBlindReview(
+  sessions: PracticeSessionRow[],
+): PracticeSessionRow | null {
+  const awaiting = prepTestSessionAwaitingBlindReview(sessions)
+  if (awaiting) return awaiting
+  return (
+    sortedPrepTestSessions(sessions).find(
+      (s) =>
+        Boolean(s.completed_at) &&
+        !s.blind_review_completed_at &&
+        s.metadata.blindReviewSkipped === true,
+    ) ?? null
+  )
+}
+
+function prepTestSessionWithCompletedBlindReview(
+  sessions: PracticeSessionRow[],
+): PracticeSessionRow | null {
+  return (
+    sortedPrepTestSessions(sessions).find(
+      (s) => Boolean(s.completed_at) && Boolean(s.blind_review_completed_at),
+    ) ?? null
+  )
 }
 
 function prepTestSessionEligibleForBlindReviewComplete(
@@ -871,6 +901,7 @@ function buildPrepTestDetail(
       questionCount: sec.questionCount,
       timeMinutes: 35,
       practiceable: isPracticeable && sec.questionCount > 0,
+      isExperimental: sec.isExperimental === true,
       unlocked: isPracticeable && sec.questionCount > 0,
       answeredCount,
       completed,
@@ -924,23 +955,20 @@ function blindReviewStateFromSessions(sessions: PracticeSessionRow[]): {
   status: BlindReviewStatus | null
   prepTestSession: PracticeSessionRow | null
 } {
-  const prepTests = sortedPrepTestSessions(sessions)
-  const newest = prepTests[0]
-  if (newest?.completed_at && isPrepTestFullyComplete(newest)) {
-    if (newest.blind_review_completed_at) {
-      return { status: 'completed', prepTestSession: newest }
+  const startable = prepTestSessionEligibleToStartBlindReview(sessions)
+  if (startable) {
+    if (startable.metadata.blindReviewActive === true && startable.metadata.blindReviewSkipped !== true) {
+      return { status: 'in_progress', prepTestSession: startable }
     }
-    return { status: null, prepTestSession: null }
+    return { status: 'eligible', prepTestSession: startable }
   }
 
-  const awaitingBlindReview = prepTestSessionAwaitingBlindReview(sessions)
-  if (!awaitingBlindReview) {
-    return { status: null, prepTestSession: null }
+  const completedBr = prepTestSessionWithCompletedBlindReview(sessions)
+  if (completedBr) {
+    return { status: 'completed', prepTestSession: completedBr }
   }
-  if (awaitingBlindReview.metadata.blindReviewActive === true) {
-    return { status: 'in_progress', prepTestSession: awaitingBlindReview }
-  }
-  return { status: 'eligible', prepTestSession: awaitingBlindReview }
+
+  return { status: null, prepTestSession: null }
 }
 
 function blindReviewPoolItemFromRow(
@@ -1230,7 +1258,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           throw new PracticeValidationError('Blind review answers require a section session tied to a PrepTest')
         }
         const ptSessions = await deps.repository.listUserSessionsForPrepTest(userId, session.prep_test_id)
-        const prepTestSession = prepTestSessionAwaitingBlindReview(ptSessions)
+        const prepTestSession = prepTestSessionEligibleToStartBlindReview(ptSessions)
         if (!prepTestSession) {
           const newest = sortedPrepTestSessions(ptSessions)[0]
           if (newest?.blind_review_completed_at) {
@@ -1571,7 +1599,14 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const sectionType = parseSectionType(body.sectionType)
       if (!sectionType) throw new PracticeValidationError('sectionType must be LR or RC')
 
-      const questionCount = parseQuestionCount(body.questionCount)
+      const source =
+        typeof body.source === 'string' && body.source.trim() === 'dashboard_adaptive_drill'
+          ? 'dashboard_adaptive_drill'
+          : null
+      let questionCount = parseQuestionCount(body.questionCount)
+      if (source === 'dashboard_adaptive_drill') {
+        questionCount = Math.max(questionCount, DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT)
+      }
       const timing = typeof body.timing === 'string' ? body.timing : 'unlimited'
       const showAnswers = typeof body.showAnswers === 'string' ? body.showAnswers : 'end'
       const selection = typeof body.selection === 'string' ? body.selection : 'auto'
@@ -1584,11 +1619,6 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           ? body.difficulty
           : 'adaptive'
       const status = typeof body.status === 'string' ? body.status : 'fresh'
-      const source =
-        typeof body.source === 'string' && body.source.trim() === 'dashboard_adaptive_drill'
-          ? 'dashboard_adaptive_drill'
-          : null
-
       const pool = await deps.repository.listDrillPoolQuestions({
         sectionType,
         questionTypeId,
@@ -1598,9 +1628,31 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const answeredIds = new Set(await deps.repository.listUserAnsweredQuestionIds(userId))
       const filtered = filterPoolByStatus(pool, status, answeredIds)
 
-      const questionIds = pickDrillQuestionIds(filtered, sectionType, questionCount)
+      let questionIds = pickDrillQuestionIds(filtered, sectionType, questionCount)
+      if (
+        source === 'dashboard_adaptive_drill' &&
+        questionIds.length < DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT
+      ) {
+        // Prefer unanswered, then top up from the full section pool so the drill still opens.
+        const picked = new Set(questionIds)
+        const needed = DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT - questionIds.length
+        const extras = pickDrillQuestionIds(
+          pool.filter((q) => !picked.has(q.id)),
+          sectionType,
+          needed,
+        )
+        questionIds = [...questionIds, ...extras]
+      }
       if (questionIds.length === 0) {
         throw new PracticeValidationError('No questions available for this drill configuration')
+      }
+      if (
+        source === 'dashboard_adaptive_drill' &&
+        questionIds.length < DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT
+      ) {
+        throw new PracticeValidationError(
+          `Adaptive drills need at least ${DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT} questions in the ${sectionType} pool`,
+        )
       }
 
       const metadata: DrillSessionMetadata = {
@@ -2169,6 +2221,9 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (!row) throw new PracticeValidationError('prepTestId not found')
 
       const practiceableIds = practiceableSectionsFromRow(row.sections).map((s) => s.id)
+      const experimentalSectionIds = new Set(
+        row.sections.filter((s) => s.isExperimental === true).map((s) => s.id),
+      )
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
 
       let prepTestSession =
@@ -2187,6 +2242,9 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       let rawScore = 0
       for (const secSession of bySectionId.values()) {
+        if (secSession.section_id && experimentalSectionIds.has(secSession.section_id)) {
+          continue
+        }
         if (typeof secSession.raw_score === 'number') {
           rawScore += secSession.raw_score
         } else {
@@ -2346,7 +2404,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       assertStudentVisiblePrepTest(row.moduleId)
 
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
-      const prepTestSession = prepTestSessionAwaitingBlindReview(sessions)
+      const prepTestSession = prepTestSessionEligibleToStartBlindReview(sessions)
       if (!prepTestSession) {
         const newest = sortedPrepTestSessions(sessions)[0]
         if (newest?.blind_review_completed_at) {
@@ -2356,7 +2414,11 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       }
 
       const sessionRow = await deps.repository.updateSession(prepTestSession.id, userId, {
-        metadata: { ...prepTestSession.metadata, blindReviewActive: true },
+        metadata: {
+          ...prepTestSession.metadata,
+          blindReviewActive: true,
+          blindReviewSkipped: false,
+        },
       })
       return { session: sessionRow }
     },
@@ -2377,6 +2439,12 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         prepTestId = row.prep_test_id ?? ''
       }
       if (!prepTestId) throw new PracticeValidationError('prepTestId or sessionId is required')
+
+      const detailRow = await deps.repository.getPrepTestDetailRow(prepTestId)
+      if (!detailRow) throw new PracticeValidationError('prepTestId not found')
+      const experimentalSectionIds = new Set(
+        detailRow.sections.filter((s) => s.isExperimental === true).map((s) => s.id),
+      )
 
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
       let prepTestSession = resolvePrepTestSessionForBlindReview(
@@ -2400,7 +2468,12 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         sessions,
         prepTestSession,
         nextPrepTestSession,
-      ).filter((s) => s.completed_at && s.section_id)
+      ).filter(
+        (s) =>
+          s.completed_at &&
+          s.section_id &&
+          !experimentalSectionIds.has(s.section_id),
+      )
       const sectionIds = sectionSessions.map((s) => s.id)
       const events = await deps.repository.listAnswerEventsForSessions(sectionIds, userId)
       const latest = latestAnswerByQuestion(events)

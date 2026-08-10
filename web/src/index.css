@@ -26,7 +26,8 @@
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
-  color-scheme: light dark;
+  /* Portal is light UI — avoid OS-dark native scrollbars (black track + arrows). */
+  color-scheme: light;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
@@ -198,12 +199,73 @@ html.student-shell-active,
 html.student-shell-active body {
   height: 100%;
   overflow: hidden;
+  color-scheme: light;
 }
 
 html.student-shell-active #root {
   height: 100%;
   min-height: 0;
   overflow: hidden;
+}
+
+/* Hand pointer on interactive controls across the student / LSAT portal */
+html.student-shell-active :is(
+  a[href],
+  button:not(:disabled),
+  summary,
+  label,
+  select:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]),
+  [role="menuitem"],
+  [role="option"],
+  [role="switch"]:not([aria-disabled="true"]),
+  [role="checkbox"]:not([aria-disabled="true"]),
+  [role="radio"]:not([aria-disabled="true"]),
+  [role="link"],
+  [role="combobox"]:not([aria-disabled="true"]),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="button"]:not(:disabled),
+  input[type="submit"]:not(:disabled),
+  input[type="reset"]:not(:disabled),
+  input[type="file"]:not(:disabled),
+  input[type="image"]:not(:disabled),
+  [tabindex]:not([tabindex="-1"]):not(:disabled):not([aria-disabled="true"])
+) {
+  cursor: pointer;
+}
+
+html.student-shell-active :is(
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  textarea:disabled,
+  [aria-disabled="true"],
+  [disabled]
+) {
+  cursor: not-allowed;
+}
+
+/* Keep the I-beam for typing / passage annotation areas */
+html.student-shell-active :is(
+  input:not([type]),
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="url"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  textarea,
+  [contenteditable="true"],
+  .cursor-text,
+  .select-text
+) {
+  cursor: text;
 }
 
 /* Auth routes: keep light surfaces and readable headings even when OS prefers dark */
@@ -1315,6 +1377,29 @@ html.student-shell-active #root {
   gap: 0;
 }
 
+.intent-page__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-bottom: 1.25rem;
+  align-self: flex-start;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #0d47a1;
+  text-decoration: none;
+}
+
+.intent-page__back:hover {
+  text-decoration: underline;
+}
+
+.intent-page__back-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
 .intent-page__header {
   text-align: center;
 }
@@ -2183,7 +2268,7 @@ select.ds-input {
 
 .student-shell-top-row {
   box-sizing: border-box;
-  height: 72px;
+  height: 50px;
   flex-shrink: 0;
 }
 
@@ -2907,7 +2992,48 @@ select.ds-input {
   margin: 0;
 }
 
-/* Student panes — thin rounded scrollbar (no arrow buttons) */
+/* Portal scrollbars — soft grey thumb on a light/transparent track (no arrow buttons) */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--greyscale-300) var(--greyscale-25);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--greyscale-300) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--greyscale-300);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--greyscale-400);
+}
+
+*::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Student panes — same soft scrollbar tokens (kept for explicit opt-in classes) */
 .student-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: var(--greyscale-300) transparent;
@@ -2915,6 +3041,7 @@ select.ds-input {
 
 .student-scrollbar::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 .student-scrollbar::-webkit-scrollbar-track {
@@ -2976,19 +3103,40 @@ select.ds-input {
   overflow: hidden;
 }
 
+/* Obscure letter + choice text (hatch alone left the copy fully readable). */
+.practice-session-choice-masked > * {
+  filter: blur(3.5px);
+  opacity: 0.38;
+  user-select: none;
+  transition:
+    filter 150ms ease,
+    opacity 150ms ease;
+}
+
 .practice-session-choice-masked::after {
   content: "";
   position: absolute;
   inset: 0;
+  z-index: 1;
   border-radius: inherit;
   pointer-events: none;
+  background-color: rgb(246 248 250 / 0.45);
   background-image: repeating-linear-gradient(
     -45deg,
-    rgb(102 109 128 / 0.12) 0,
-    rgb(102 109 128 / 0.12) 1px,
-    transparent 1px,
-    transparent 7px
+    rgb(102 109 128 / 0.28) 0,
+    rgb(102 109 128 / 0.28) 1.5px,
+    transparent 1.5px,
+    transparent 6px
   );
+}
+
+/* Hide floating exam tools while the header Finish / more menu is open */
+html.practice-finish-menu-open .practice-session-side-widget {
+  display: none;
+}
+
+html.practice-finish-menu-open .practice-session-question-panel-with-widget {
+  padding-right: 0;
 }
 
 /* Figma `17920:11448` — session panes: fixed height, scroll without visible scrollbar */
@@ -3053,6 +3201,23 @@ html.student-shell-immersive .practice-session-card {
   max-height: calc(100svh - 32px);
   flex: 1 1 0;
   min-height: 0;
+}
+
+/* Hide LeadConnector / portal chat bubble during exam & immersive practice */
+html.student-shell-immersive iframe[src*="leadconnectorhq.com"],
+html.student-shell-immersive iframe[src*="msgsndr.com"],
+html.student-shell-immersive iframe[src*="chat-widget"],
+html.portal-chat-hidden iframe[src*="leadconnectorhq.com"],
+html.portal-chat-hidden iframe[src*="msgsndr.com"],
+html.portal-chat-hidden iframe[src*="chat-widget"],
+html.student-shell-immersive [id*="leadconnector"],
+html.portal-chat-hidden [id*="leadconnector"],
+html.student-shell-immersive [class*="lc_text-widget"],
+html.portal-chat-hidden [class*="lc_text-widget"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
 }
 
 html.student-shell-immersive .practice-session-card--active-drill {
@@ -3268,6 +3433,14 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
   height: auto;
   overflow-x: auto;
   overflow-y: hidden;
+}
+
+.practice-session-question-nav-passage-break {
+  flex: 0 0 2px;
+  width: 2px;
+  min-width: 2px;
+  max-width: 2px;
+  background-color: #9aa3b5;
 }
 
 .practice-session-card--active-drill .practice-session-question-nav-btn {

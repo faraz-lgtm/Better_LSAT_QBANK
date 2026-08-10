@@ -4,7 +4,10 @@ import type {
   PrepTestSectionBreak,
 } from "@/features/student/preptests/preptest-types"
 
+/** Default short break after sections 1 and 3 (1 minute). */
 export const PREPTEST_SECTION_BREAK_SECONDS = 60
+/** Mid-test break after section 2 (10 minutes). */
+export const PREPTEST_MID_SECTION_BREAK_SECONDS = 10 * 60
 
 const STORAGE_PREFIX = "preptest-section-break:"
 const CONFIG_LOCK_PREFIX = "preptest-config-locked:"
@@ -12,10 +15,31 @@ const CONFIG_LOCK_PREFIX = "preptest-config-locked:"
 type StoredSectionBreak = {
   afterSectionId: string
   endsAt: string
+  durationSeconds: number
 }
 
 function storageKey(prepTestId: string): string {
   return `${STORAGE_PREFIX}${prepTestId}`
+}
+
+/**
+ * Break length after completing a practiceable section at `completedPracticeableIndex`
+ * (0 = after section 1 → 1 min, 1 = after section 2 → 10 min, 2 = after section 3 → 1 min).
+ */
+export function prepTestSectionBreakSecondsAfterPracticeableIndex(
+  completedPracticeableIndex: number,
+): number {
+  if (completedPracticeableIndex === 1) return PREPTEST_MID_SECTION_BREAK_SECONDS
+  return PREPTEST_SECTION_BREAK_SECONDS
+}
+
+export function resolvePrepTestSectionBreakSeconds(
+  detail: PrepTestDetailResponse,
+  afterSectionId: string,
+): number {
+  const practiceable = orderedPracticeableSections(detail)
+  const index = practiceable.findIndex((section) => section.id === afterSectionId)
+  return prepTestSectionBreakSecondsAfterPracticeableIndex(index >= 0 ? index : 0)
 }
 
 export function readStoredSectionBreak(prepTestId: string): PrepTestSectionBreak | null {
@@ -32,10 +56,15 @@ export function readStoredSectionBreak(prepTestId: string): PrepTestSectionBreak
       sessionStorage.removeItem(storageKey(prepTestId))
       return null
     }
+    const durationSeconds =
+      typeof parsed.durationSeconds === "number" && parsed.durationSeconds > 0
+        ? parsed.durationSeconds
+        : PREPTEST_SECTION_BREAK_SECONDS
     return {
       afterSectionId: parsed.afterSectionId,
       endsAt: parsed.endsAt,
       remainingSeconds: Math.ceil(remainingMs / 1000),
+      durationSeconds,
     }
   } catch {
     sessionStorage.removeItem(storageKey(prepTestId))
@@ -43,12 +72,24 @@ export function readStoredSectionBreak(prepTestId: string): PrepTestSectionBreak
   }
 }
 
-export function writeStoredSectionBreak(prepTestId: string, afterSectionId: string): void {
+export function writeStoredSectionBreak(
+  prepTestId: string,
+  afterSectionId: string,
+  durationSeconds: number = PREPTEST_SECTION_BREAK_SECONDS,
+): void {
   if (typeof window === "undefined") return
-  const endsAt = new Date(Date.now() + PREPTEST_SECTION_BREAK_SECONDS * 1000).toISOString()
+  const safeDuration =
+    Number.isFinite(durationSeconds) && durationSeconds > 0
+      ? Math.floor(durationSeconds)
+      : PREPTEST_SECTION_BREAK_SECONDS
+  const endsAt = new Date(Date.now() + safeDuration * 1000).toISOString()
   sessionStorage.setItem(
     storageKey(prepTestId),
-    JSON.stringify({ afterSectionId, endsAt } satisfies StoredSectionBreak),
+    JSON.stringify({
+      afterSectionId,
+      endsAt,
+      durationSeconds: safeDuration,
+    } satisfies StoredSectionBreak),
   )
 }
 
@@ -150,16 +191,30 @@ export function normalizePrepTestDetail(
 
   const prepTestId = options?.prepTestId ?? detail.prepTest.id
   const storedBreak = readStoredSectionBreak(prepTestId)
-  const sectionBreak = detail.sectionBreak ?? storedBreak
+  const rawBreak = detail.sectionBreak ?? storedBreak
+  const sectionBreak =
+    rawBreak == null
+      ? null
+      : {
+          ...rawBreak,
+          durationSeconds:
+            typeof rawBreak.durationSeconds === "number" && rawBreak.durationSeconds > 0
+              ? rawBreak.durationSeconds
+              : resolvePrepTestSectionBreakSeconds(detail, rawBreak.afterSectionId),
+        }
   const access = deriveSectionAccess(practiceableIds, completedSectionIds, sectionBreak)
 
   const sections = detail.sections.map((sec) => {
+    const withExperimental = {
+      ...sec,
+      isExperimental: sec.isExperimental === true,
+    }
     const nextAccess = access.get(sec.id)
     if (!sec.practiceable || !nextAccess) {
-      return { ...sec, unlocked: false, onBreak: false }
+      return { ...withExperimental, unlocked: false, onBreak: false }
     }
     return {
-      ...sec,
+      ...withExperimental,
       unlocked: nextAccess.unlocked,
       onBreak: nextAccess.onBreak,
     }

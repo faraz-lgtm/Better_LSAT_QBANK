@@ -7,12 +7,12 @@ import {
   ACTIVE_DRILL_QUESTION_NAV_FLAG_SLOT_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeSessionNavArrowButton } from "@/features/student/practice-session/practice-session-nav-arrow-button"
-import { PracticeSessionQuestionNavButton } from "@/features/student/practice-session/practice-session-question-nav-button"
+import { PracticeSessionQuestionNavStrip } from "@/features/student/practice-session/practice-session-question-nav-strip"
 import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
 
 type PracticeSessionActiveDrillFooterNavProps = {
-  questions: ReadonlyArray<{ id: string }>
+  questions: ReadonlyArray<{ id: string; passage?: { id: string } | null; sourceGroupId?: string | null }>
   safeIndex: number
   answersByQuestion: Readonly<Record<string, unknown>>
   isFlagged: (questionId: string) => boolean
@@ -53,22 +53,15 @@ function PracticeSessionActiveDrillFooterNav({
             onClick={onPrev}
           />
         </div>
-        <div className={ACTIVE_DRILL_FOOTER_NAV_GRID_CLASS}>
-          {questions.map((q, i) => {
-            const n = i + 1
-            return (
-              <PracticeSessionQuestionNavButton
-                key={q.id}
-                number={n}
-                active={n === safeIndex}
-                answered={Boolean(answersByQuestion[q.id])}
-                flagged={isFlagged(q.id)}
-                variant={variant}
-                onClick={() => onSelectQuestion(n)}
-              />
-            )
-          })}
-        </div>
+        <PracticeSessionQuestionNavStrip
+          questions={questions}
+          safeIndex={safeIndex}
+          answersByQuestion={answersByQuestion}
+          isFlagged={isFlagged}
+          variant={variant}
+          onSelectQuestion={onSelectQuestion}
+          className={ACTIVE_DRILL_FOOTER_NAV_GRID_CLASS}
+        />
         <div className={ACTIVE_DRILL_FOOTER_NAV_ARROW_COLUMN_CLASS}>
           <span className={ACTIVE_DRILL_QUESTION_NAV_FLAG_SLOT_CLASS} aria-hidden />
           {isLastQuestion && onSubmit ? (

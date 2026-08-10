@@ -50,7 +50,8 @@ function DrillConfigForm({
   const [selection, setSelection] = useState("auto")
   const [tags, setTags] = useState(initialQuestionTypeId ?? "any")
   const [difficulty, setDifficulty] = useState<DrillDifficulty>("adaptive")
-  const [status, setStatus] = useState<DrillStatus>("fresh")
+  // Default to full pool so Start works even after prior practice; "Fresh" is opt-in via Customize.
+  const [status, setStatus] = useState<DrillStatus>("all")
 
   const copy = sectionCopy[sectionType]
 
@@ -62,21 +63,24 @@ function DrillConfigForm({
     return base
   }, [tagOptions, initialQuestionTypeId, initialTagLabel])
 
-  const resolvedQuestionTypeId = tags === "any" ? null : tags
+  // Customize off = adaptive defaults over the full section pool (ignore tag/status filters).
+  const resolvedQuestionTypeId = customize && tags !== "any" ? tags : null
+  const resolvedDifficulty = customize ? difficulty : "adaptive"
+  const resolvedStatus = customize ? status : "all"
 
   const loadPoolStats = useCallback(async () => {
     try {
       const stats = await practiceApi.getDrillPoolStats({
         sectionType,
         questionTypeId: resolvedQuestionTypeId,
-        difficulty,
-        status,
+        difficulty: resolvedDifficulty,
+        status: resolvedStatus,
       })
       setPoolStats(stats)
     } catch {
       setPoolStats({ selectedCount: 0, totalCount: 0 })
     }
-  }, [practiceApi, sectionType, resolvedQuestionTypeId, difficulty, status])
+  }, [practiceApi, sectionType, resolvedQuestionTypeId, resolvedDifficulty, resolvedStatus])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -86,6 +90,14 @@ function DrillConfigForm({
   }, [loadPoolStats])
 
   async function handleStart() {
+    if (poolStats.selectedCount === 0) {
+      setError(
+        poolStats.totalCount > 0
+          ? "No questions match these filters. Turn on Customize and set Status to “Include reviewed”, or clear tag/difficulty filters."
+          : "No questions are available in this drill pool yet.",
+      )
+      return
+    }
     setStarting(true)
     setError(null)
     try {
@@ -97,9 +109,9 @@ function DrillConfigForm({
         showAnswers,
         selection: selection as "auto" | "manual",
         questionTypeId: resolvedQuestionTypeId,
-        tagLabel: initialTagLabel,
-        difficulty,
-        status,
+        tagLabel: customize ? initialTagLabel : null,
+        difficulty: resolvedDifficulty,
+        status: resolvedStatus,
         title: initialTagLabel ?? undefined,
       })
       navigate(`/app/practice/drills/session/${out.session.id}`)
@@ -148,6 +160,11 @@ function DrillConfigForm({
             <p className="m-0 whitespace-nowrap text-xs font-normal leading-normal tracking-[0.02em] text-[#666d80] lg:text-right">
               Selecting from {poolStats.selectedCount} of {poolStats.totalCount} questions in your drill pool.
             </p>
+            {poolStats.selectedCount === 0 && poolStats.totalCount > 0 ? (
+              <p className="m-0 max-w-sm text-xs font-medium leading-normal tracking-[0.02em] text-[#df1c41] lg:text-right">
+                No unused questions match. Turn on Customize and set Status to “Include reviewed”.
+              </p>
+            ) : null}
           </div>
         </div>
 

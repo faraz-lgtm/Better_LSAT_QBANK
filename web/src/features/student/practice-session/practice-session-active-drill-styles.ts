@@ -101,7 +101,8 @@ const ACTIVE_DRILL_SIDE_WIDGET_ITEM_EXPANDED_CLASS =
   "flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-[#666d80] transition hover:bg-[#f6f8fa] hover:text-[#062357]"
 
 /** Figma `18781:29066` — room for floating side widget */
-const ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS = "relative min-w-0 pr-14"
+const ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS =
+  "practice-session-question-panel-with-widget relative min-w-0 pr-14"
 
 /** Figma `18617:31667` — options list spacing */
 const ACTIVE_DRILL_OPTIONS_LIST_CLASS = "flex flex-col gap-4 pb-4 pt-4"

@@ -27,8 +27,9 @@ import {
   findNextSectionAfterBreak,
   isPrepTestConfigLocked,
   normalizePrepTestDetail,
-  PREPTEST_SECTION_BREAK_SECONDS,
+  readStoredSectionBreak,
   resolvePrepTestConfigLocked,
+  resolvePrepTestSectionBreakSeconds,
   writeStoredPrepTestConfigLock,
   writeStoredSectionBreak,
 } from "@/features/student/preptests/preptest-section-break"
@@ -40,8 +41,6 @@ import {
 } from "@/features/student/preptests/preptest-hub-navigation"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { ChevronRight, Timer, X } from "lucide-react"
-
-const SECTION_BREAK_TOTAL_SECONDS = PREPTEST_SECTION_BREAK_SECONDS
 
 function formatBreakCountdown(totalSeconds: number): string {
   const clamped = Math.max(0, totalSeconds)
@@ -85,7 +84,8 @@ function SectionBreakRow({
     return () => window.clearInterval(id)
   }, [sectionBreak.endsAt, sectionBreak.remainingSeconds, onExpired])
 
-  const progress = remainingSeconds / SECTION_BREAK_TOTAL_SECONDS
+  const totalSeconds = Math.max(1, sectionBreak.durationSeconds)
+  const progress = remainingSeconds / totalSeconds
 
   return (
     <div className="flex h-[100px] items-center gap-6 rounded-[16px] border border-[#ffe5b7] bg-[#fff6e0] px-6 py-3 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)]">
@@ -144,9 +144,9 @@ function PrepTestHubStat({ label, value }: { label: string; value: string | numb
 }
 
 function sectionShortTitle(row: PrepTestDetailSection): string {
-  if (row.sectionNumber != null) return `Section ${row.sectionNumber}`
-  if (row.title) return row.title
-  return row.sectionType
+  const base =
+    row.sectionNumber != null ? `Section ${row.sectionNumber}` : row.title ? row.title : row.sectionType
+  return row.isExperimental ? `${base} (EXP)` : base
 }
 
 function sectionTimeDisplay(minutes: number): string {
@@ -277,11 +277,18 @@ function PracticePrepTestPage() {
   useEffect(() => {
     const justCompleted = (location.state as { sectionJustCompleted?: string } | null)?.sectionJustCompleted
     if (typeof justCompleted !== "string" || !testIdParam) return
-    writeStoredSectionBreak(testIdParam, justCompleted)
+    // Section session usually writes the break first with the correct duration — don't reset it.
+    const existing = readStoredSectionBreak(testIdParam)
+    if (!existing || existing.afterSectionId !== justCompleted) {
+      const durationSeconds = detail
+        ? resolvePrepTestSectionBreakSeconds(detail, justCompleted)
+        : undefined
+      writeStoredSectionBreak(testIdParam, justCompleted, durationSeconds)
+    }
     writeStoredPrepTestConfigLock(testIdParam)
     void load()
     navigate(prepTestHubHref(testIdParam, { retake: isRetakeAttempt }), { replace: true, state: null })
-  }, [isRetakeAttempt, load, location.pathname, location.state, navigate, testIdParam])
+  }, [detail, isRetakeAttempt, load, location.pathname, location.state, navigate, testIdParam])
 
   useEffect(() => {
     void load()

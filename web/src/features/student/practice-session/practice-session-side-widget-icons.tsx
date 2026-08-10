@@ -45,23 +45,19 @@ function SideWidgetAccessibilityIcon({ className, ...props }: SideWidgetIconProp
   )
 }
 
-/** Figma `18781:29066` — flag item */
+/** Figma-style filled flag (matches active blue flag treatment) */
 function SideWidgetFlagIcon({ className, ...props }: SideWidgetIconProps) {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden className={className} {...props}>
       <path
-        d="M6 4.5V16.5"
+        d="M5.25 3.25V16.75"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.75"
         strokeLinecap="round"
-        strokeLinejoin="round"
       />
       <path
-        d="M6 4.5H12.2C13.4 4.5 14.2 5.6 13.8 6.7L13.1 8.8C12.7 9.9 13.5 11 14.7 11H16.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        d="M5.25 3.5C5.25 3.5 6.35 2.85 8.75 2.85C11.15 2.85 12.1 4.15 14.5 4.15C15.55 4.15 16.35 3.9 16.75 3.7V10.85C16.35 11.05 15.55 11.3 14.5 11.3C12.1 11.3 11.15 10 8.75 10C6.35 10 5.25 10.65 5.25 10.65V3.5Z"
+        fill="currentColor"
       />
     </svg>
   )

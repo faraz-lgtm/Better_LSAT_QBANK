@@ -7,9 +7,13 @@ import {
   findNextSectionAfterBreak,
   isPrepTestConfigLocked,
   normalizePrepTestDetail,
+  PREPTEST_MID_SECTION_BREAK_SECONDS,
+  PREPTEST_SECTION_BREAK_SECONDS,
+  prepTestSectionBreakSecondsAfterPracticeableIndex,
   readStoredSectionBreak,
   resolvePrepTestBreakAfterSectionId,
   resolvePrepTestConfigLocked,
+  resolvePrepTestSectionBreakSeconds,
   writeStoredPrepTestConfigLock,
   writeStoredSectionBreak,
 } from "@/features/student/preptests/preptest-section-break"
@@ -36,6 +40,7 @@ const baseDetail: PrepTestDetailResponse = {
       questionCount: 25,
       timeMinutes: 35,
       practiceable: true,
+      isExperimental: false,
       unlocked: true,
       onBreak: false,
       answeredCount: 25,
@@ -51,6 +56,7 @@ const baseDetail: PrepTestDetailResponse = {
       questionCount: 25,
       timeMinutes: 35,
       practiceable: true,
+      isExperimental: false,
       unlocked: true,
       onBreak: false,
       answeredCount: 0,
@@ -66,6 +72,7 @@ const baseDetail: PrepTestDetailResponse = {
       questionCount: 26,
       timeMinutes: 35,
       practiceable: true,
+      isExperimental: false,
       unlocked: true,
       onBreak: false,
       answeredCount: 0,
@@ -81,6 +88,7 @@ const baseDetail: PrepTestDetailResponse = {
       questionCount: 25,
       timeMinutes: 35,
       practiceable: true,
+      isExperimental: true,
       unlocked: true,
       onBreak: false,
       answeredCount: 0,
@@ -137,6 +145,7 @@ describe("normalizePrepTestDetail", () => {
     writeStoredSectionBreak("pt-152", "s1")
     const out = normalizePrepTestDetail(baseDetail)
     expect(out.sectionBreak?.afterSectionId).toBe("s1")
+    expect(out.sectionBreak?.durationSeconds).toBe(PREPTEST_SECTION_BREAK_SECONDS)
     expect(out.sections[1]?.onBreak).toBe(true)
     expect(out.sections[1]?.unlocked).toBe(false)
     expect(readStoredSectionBreak("pt-152")).not.toBeNull()
@@ -144,6 +153,21 @@ describe("normalizePrepTestDetail", () => {
     const cleared = normalizePrepTestDetail(baseDetail)
     expect(cleared.sectionBreak).toBeNull()
     expect(cleared.sections[1]?.unlocked).toBe(true)
+  })
+
+  it("uses 1 / 10 / 1 minute breaks after sections 1, 2, and 3", () => {
+    expect(prepTestSectionBreakSecondsAfterPracticeableIndex(0)).toBe(PREPTEST_SECTION_BREAK_SECONDS)
+    expect(prepTestSectionBreakSecondsAfterPracticeableIndex(1)).toBe(PREPTEST_MID_SECTION_BREAK_SECONDS)
+    expect(prepTestSectionBreakSecondsAfterPracticeableIndex(2)).toBe(PREPTEST_SECTION_BREAK_SECONDS)
+    expect(resolvePrepTestSectionBreakSeconds(baseDetail, "s1")).toBe(PREPTEST_SECTION_BREAK_SECONDS)
+    expect(resolvePrepTestSectionBreakSeconds(baseDetail, "s2")).toBe(PREPTEST_MID_SECTION_BREAK_SECONDS)
+    expect(resolvePrepTestSectionBreakSeconds(baseDetail, "s3")).toBe(PREPTEST_SECTION_BREAK_SECONDS)
+
+    writeStoredSectionBreak("pt-152", "s2", resolvePrepTestSectionBreakSeconds(baseDetail, "s2"))
+    const stored = readStoredSectionBreak("pt-152")
+    expect(stored?.durationSeconds).toBe(PREPTEST_MID_SECTION_BREAK_SECONDS)
+    expect(stored?.remainingSeconds).toBeGreaterThan(9 * 60)
+    clearStoredSectionBreak("pt-152")
   })
 
   it("finds the next practiceable section after a completed section row", () => {

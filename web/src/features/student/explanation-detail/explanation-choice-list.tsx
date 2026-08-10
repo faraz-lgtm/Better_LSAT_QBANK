@@ -93,9 +93,6 @@ function ExplanationChoiceList({
               </button>
               {expandable && expanded ? (
                 <div className="bg-white p-4 text-left">
-                  <p className="mb-0 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[#666d80]">
-                    Option explanation
-                  </p>
                   <HtmlContent html={c.explanationHtml ?? ""} className="explanation-option-body" />
                 </div>
               ) : null}

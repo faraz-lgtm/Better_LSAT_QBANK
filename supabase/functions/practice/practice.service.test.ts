@@ -794,6 +794,36 @@ Deno.test('startDrill creates session with question ids', async () => {
   assertEquals(out.questions[0]!.stemText, 'Stem?')
 })
 
+Deno.test('startDrill dashboard adaptive enforces minimum of 5 questions', async () => {
+  const service = createPracticeService({ repository: drillRepo() as never })
+  const out = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 1,
+    difficulty: 'adaptive',
+    source: 'dashboard_adaptive_drill',
+  })
+  assertEquals(out.metadata.source, 'dashboard_adaptive_drill')
+  assertEquals(out.metadata.questionCount, 5)
+  assertEquals(out.metadata.questionIds.length, 5)
+  assertEquals(out.questions.length, 5)
+})
+
+Deno.test('startDrill dashboard adaptive tops up from full pool when fresh is short', async () => {
+  const service = createPracticeService({
+    repository: drillRepo({
+      listUserAnsweredQuestionIds: async () => ['q-1', 'q-2', 'q-3', 'q-4', 'q-5'],
+    }) as never,
+  })
+  const out = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 5,
+    difficulty: 'adaptive',
+    status: 'fresh',
+    source: 'dashboard_adaptive_drill',
+  })
+  assertEquals(out.metadata.questionIds.length, 5)
+})
+
 Deno.test('getDrillPoolStats fresh filter reduces selected count', async () => {
   const service = createPracticeService({
     repository: drillRepo({
@@ -1319,6 +1349,91 @@ Deno.test('skipBlindReview marks prep test fully complete', async () => {
   assertEquals(out.session.metadata.blindReviewSkipped, true)
 })
 
+Deno.test('getBlindReviewDetail allows re-entry after skipped blind review', async () => {
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserSessionsForPrepTest: async () => [
+        baseSession({
+          kind: 'PREPTEST',
+          prep_test_id: 'pt-900',
+          completed_at: '2026-01-03T00:00:00Z',
+          scaled_score: 160,
+          metadata: { blindReviewSkipped: true },
+        }),
+        baseSession({
+          id: 'sec-sess-lr',
+          kind: 'SECTION',
+          prep_test_id: 'pt-900',
+          section_id: 'sec-lr',
+          completed_at: '2026-01-02T00:00:00Z',
+          metadata: { questionIds: ['q-1', 'q-2', 'q-3'], answeredQuestionIds: ['q-1'] },
+        }),
+      ],
+    }) as never,
+  })
+  const out = await service.getBlindReviewDetail('user-1', { prepTestId: 'pt-900' })
+  assertEquals(out.blindReview.status, 'eligible')
+  assertEquals(out.blindReview.scaledScore, 160)
+})
+
+Deno.test('startBlindReview clears skipped flag for results Review re-entry', async () => {
+  const completedPt = baseSession({
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-900',
+    completed_at: '2026-01-02T00:00:00Z',
+    scaled_score: 165,
+    metadata: { blindReviewSkipped: true },
+  })
+  let patchMeta: Record<string, unknown> | null = null
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserSessionsForPrepTest: async () => [completedPt],
+      updateSession: async (_id, _userId, patch) => {
+        patchMeta = patch.metadata ?? null
+        return {
+          ...completedPt,
+          metadata: { ...completedPt.metadata, ...(patch.metadata ?? {}) },
+        }
+      },
+    }) as never,
+  })
+  const out = await service.startBlindReview('user-1', { prepTestId: 'pt-900' })
+  assertEquals(patchMeta?.blindReviewActive, true)
+  assertEquals(patchMeta?.blindReviewSkipped, false)
+  assertEquals(out.session.metadata.blindReviewActive, true)
+  assertEquals(out.session.metadata.blindReviewSkipped, false)
+})
+
+Deno.test('getBlindReviewDetail returns completed BR while a retake is in progress', async () => {
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserSessionsForPrepTest: async () => [
+        baseSession({
+          id: 'pt-retake',
+          kind: 'PREPTEST',
+          prep_test_id: 'pt-900',
+          started_at: '2026-01-10T00:00:00Z',
+          completed_at: null,
+        }),
+        baseSession({
+          id: 'pt-done',
+          kind: 'PREPTEST',
+          prep_test_id: 'pt-900',
+          started_at: '2026-01-01T00:00:00Z',
+          completed_at: '2026-01-02T00:00:00Z',
+          scaled_score: 160,
+          blind_review_completed_at: '2026-01-03T00:00:00Z',
+          blind_review_scaled_score: 165,
+        }),
+      ],
+    }) as never,
+  })
+  const out = await service.getBlindReviewDetail('user-1', { prepTestId: 'pt-900' })
+  assertEquals(out.blindReview.status, 'completed')
+  assertEquals(out.blindReview.prepTestSessionId, 'pt-done')
+  assertEquals(out.blindReview.blindReviewScaledScore, 165)
+})
+
 Deno.test('getPrepTestDetail returns LR/RC sections only as practiceable', async () => {
   const service = createPracticeService({ repository: preptestRepo() as never })
   const out = await service.getPrepTestDetail('user-1', { prepTestId: 'pt-900' })
@@ -1416,6 +1531,56 @@ Deno.test('completePrepTest aggregates section scores', async () => {
         }),
       ],
       getScoreRowForRaw: async () => ({ scaled_score: 165, percentile: 80 }),
+    }) as never,
+  })
+  const out = await service.completePrepTest('user-1', { prepTestId: 'pt-900' })
+  assertEquals(out.session.raw_score, 3)
+  assertEquals(out.session.scaled_score, 165)
+})
+
+Deno.test('completePrepTest excludes experimental section scores', async () => {
+  const service = createPracticeService({
+    repository: preptestRepo({
+      getPrepTestDetailRow: async () => ({
+        ...prepTestDetailRow,
+        sections: [
+          ...prepTestDetailRow.sections,
+          {
+            id: 'sec-lr-exp',
+            sectionId: 'SEED900-LR-EXP',
+            sectionNumber: 4,
+            sectionType: 'LR' as const,
+            title: 'Experimental LR',
+            questionCount: 25,
+            isExperimental: true,
+          },
+        ],
+      }),
+      listUserSessionsForPrepTest: async () => [
+        baseSession({
+          kind: 'SECTION',
+          prep_test_id: 'pt-900',
+          section_id: 'sec-lr',
+          completed_at: '2026-01-02T00:00:00Z',
+          raw_score: 2,
+        }),
+        baseSession({
+          kind: 'SECTION',
+          prep_test_id: 'pt-900',
+          section_id: 'sec-rc',
+          completed_at: '2026-01-02T01:00:00Z',
+          raw_score: 1,
+        }),
+        baseSession({
+          kind: 'SECTION',
+          prep_test_id: 'pt-900',
+          section_id: 'sec-lr-exp',
+          completed_at: '2026-01-02T02:00:00Z',
+          raw_score: 20,
+        }),
+      ],
+      getScoreRowForRaw: async (_pt: string, raw: number) =>
+        raw === 3 ? { scaled_score: 165, percentile: 80 } : { scaled_score: 180, percentile: 99 },
     }) as never,
   })
   const out = await service.completePrepTest('user-1', { prepTestId: 'pt-900' })

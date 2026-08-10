@@ -19,6 +19,7 @@ type PrepTestSectionResultCardProps = {
   kind: "LR" | "RC"
   longName: string
   sectionLabel: string
+  isExperimental?: boolean
   scoreDelta: string | number
   questionRows: Array<Array<"correct" | "incorrect" | "unanswered">>
   accuracyPct: number
@@ -28,6 +29,7 @@ function PrepTestSectionResultCard({
   kind,
   longName,
   sectionLabel,
+  isExperimental = false,
   scoreDelta,
   questionRows,
   accuracyPct,
@@ -44,6 +46,11 @@ function PrepTestSectionResultCard({
           {badge.short}
         </div>
         <p className="text-[10px] font-bold leading-normal tracking-[0.2px] text-[#062357]">{longName}</p>
+        {isExperimental ? (
+          <span className="rounded-[6px] border border-[#c2410c] bg-[#fff7ed] px-1.5 py-0.5 text-[10px] font-extrabold leading-none tracking-[0.2px] text-[#c2410c]">
+            EXP
+          </span>
+        ) : null}
       </div>
 
       <div className="flex h-8 w-full items-center justify-between gap-1.5">

@@ -1,4 +1,4 @@
-import { memo, type MouseEvent } from "react"
+import { memo, useRef, type KeyboardEvent, type PointerEvent } from "react"
 import { Eye, EyeOff } from "lucide-react"
 
 import {
@@ -11,11 +11,16 @@ import {
   ACTIVE_DRILL_OPTION_ROW_SELECTED_CLASS,
   ACTIVE_DRILL_OPTION_ROW_UNSELECTED_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import type { BlindReviewAnswerView } from "@/features/student/practice-session/practice-blind-review-answer-toggle"
+import {
+  BLIND_REVIEW_OPTION_LETTER_SELECTED_ACTUAL_CLASS,
+  BLIND_REVIEW_OPTION_LETTER_SELECTED_BR_CLASS,
+  BLIND_REVIEW_OPTION_ROW_SELECTED_ACTUAL_CLASS,
+  BLIND_REVIEW_OPTION_ROW_SELECTED_BR_CLASS,
+} from "@/features/student/practice-session/practice-session-blind-review-styles"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
-import { ReviewIdeaIcon } from "@/features/student/practice-session/review-idea-icon"
-import type { PracticeToolMode, RegionKey } from "@/features/student/practice-session/practice-session-types"
+import type { RegionKey } from "@/features/student/practice-session/practice-session-types"
 import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
-import { HtmlContent } from "@/lib/html/html-content"
 import { cn } from "@/lib/utils"
 
 const letters = ["A", "B", "C", "D", "E"] as const
@@ -35,14 +40,9 @@ type LrDrillOptionRowProps = {
   onSelect: () => void
   onToggleHidden?: () => void
   onToggleMasked?: () => void
-  toolMode?: PracticeToolMode
-  onContentMouseUp?: (
-    regionKey: RegionKey,
-    container: HTMLElement | null,
-    event?: MouseEvent,
-  ) => void
-  onContentClick?: (regionKey: RegionKey, container: HTMLElement | null, event: MouseEvent) => void
   variant?: PracticeSessionVariant
+  /** Actual vs Blind Review — changes selected option colors in BR layout */
+  answerView?: BlindReviewAnswerView
   /** When false, hide control is rendered by the side action rail instead */
   showSideAction?: boolean
   /**
@@ -53,6 +53,13 @@ type LrDrillOptionRowProps = {
   explanationExpanded?: boolean
   explanationHtml?: string | null
   onToggleExplanation?: () => void
+}
+
+function selectionFullyInside(node: Node): boolean {
+  const selection = window.getSelection()
+  if (!selection || selection.isCollapsed || selection.rangeCount === 0) return false
+  const range = selection.getRangeAt(0)
+  return node.contains(range.startContainer) && node.contains(range.endContainer)
 }
 
 const LrDrillOptionRow = memo(function LrDrillOptionRow({
@@ -70,10 +77,8 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
   onSelect,
   onToggleHidden,
   onToggleMasked,
-  toolMode,
-  onContentMouseUp,
-  onContentClick,
   variant = "default",
+  answerView = "blind_review",
   showSideAction = true,
   explanationAction = false,
   explanationExpanded = false,
@@ -83,69 +88,102 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
   const letter = letters[index] ?? String(index + 1)
   const isActiveDrill = variant === "active-drill"
   const isBlindReview = variant === "blind-review"
-  const annotateMode = toolMode != null && toolMode !== "none"
-  const hasExplanation = Boolean(explanationHtml?.trim())
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null)
+  const isActualAnswerView = answerView === "actual"
+  const brSelectedRowClass = isActualAnswerView
+    ? BLIND_REVIEW_OPTION_ROW_SELECTED_ACTUAL_CLASS
+    : BLIND_REVIEW_OPTION_ROW_SELECTED_BR_CLASS
+  const brSelectedLetterClass = isActualAnswerView
+    ? BLIND_REVIEW_OPTION_LETTER_SELECTED_ACTUAL_CLASS
+    : BLIND_REVIEW_OPTION_LETTER_SELECTED_BR_CLASS
 
-  const choiceContent =
-    onContentMouseUp != null ? (
-      <PracticeAnnotatedContent
-        regionKey={regionKey}
-        html={html}
-        findQuery={findQuery}
-        toolMode={toolMode}
-        onMouseUp={onContentMouseUp}
-        onClickCapture={onContentClick}
-        className={cn(
-          "min-w-0 flex-1",
-          isActiveDrill || isBlindReview
-            ? "text-[1em] leading-[1.5] tracking-[0.32px] text-[color:inherit]"
-            : "pt-0.5",
-          hidden && isBlindReview && "line-through",
-          hidden && !isBlindReview && !isActiveDrill && "line-through opacity-60",
-        )}
-      />
-    ) : (
-      <HtmlContent
-        html={html}
-        className={cn("min-w-0 flex-1 pt-0.5", hidden && "line-through opacity-60")}
-      />
-    )
+  // Display-only: annotation tools apply to the passage pane, not answer choices.
+  const choiceContent = (
+    <PracticeAnnotatedContent
+      regionKey={regionKey}
+      html={html}
+      findQuery={findQuery}
+      toolMode="none"
+      className={cn(
+        "min-w-0 flex-1",
+        isActiveDrill || isBlindReview
+          ? "text-[1em] leading-[1.5] tracking-[0.32px] text-[color:inherit]"
+          : "pt-0.5",
+        hidden && isBlindReview && "line-through opacity-50",
+        hidden && !isBlindReview && !isActiveDrill && "line-through opacity-50 blur-[2px]",
+        masked && "select-none",
+      )}
+    />
+  )
+
+  function handlePointerDown(e: PointerEvent<HTMLDivElement>) {
+    pointerStartRef.current = { x: e.clientX, y: e.clientY }
+    // Passage selections must not block answer clicks.
+    if (!selectionFullyInside(e.currentTarget)) {
+      window.getSelection()?.removeAllRanges()
+    }
+  }
 
   function handleSelect() {
-    if (disabled || annotateMode) return
+    if (disabled) return
     if (maskingMode) {
       onToggleMasked?.()
       return
     }
-    const selection = window.getSelection()
-    if (selection && !selection.isCollapsed) return
+
+    pointerStartRef.current = null
+    window.getSelection()?.removeAllRanges()
+
     if (allowReselect || selectedIndex == null || selectedIndex !== index) onSelect()
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (disabled) return
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault()
+      handleSelect()
+    }
   }
 
   if (isBlindReview) {
     return (
       <div
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-pressed={selected}
+        aria-disabled={disabled}
+        onPointerDown={handlePointerDown}
+        onClick={handleSelect}
+        onKeyDown={handleKeyDown}
         className={cn(
           "overflow-hidden rounded-[14px] border transition-colors",
           selected
-            ? "border-[#0d47a1] bg-[#f3f7ff] shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)]"
+            ? brSelectedRowClass
             : hidden
               ? "border-[#dfe1e7] bg-[#f6f8fa]"
               : "border-[#dfe1e7] bg-white",
+          disabled ? "cursor-default" : "cursor-pointer",
         )}
       >
-        <div
-          role={annotateMode || explanationAction ? undefined : "button"}
-          tabIndex={annotateMode || disabled || explanationAction ? -1 : 0}
-          aria-pressed={annotateMode || explanationAction ? undefined : selected}
-          aria-disabled={disabled}
-          onClick={explanationAction ? undefined : handleSelect}
-          onKeyDown={(e) => {
-            if (explanationAction || disabled || annotateMode) return
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault()
-              handleSelect()
-            }
+        <div className="flex min-w-0 flex-1 items-center gap-4">
+          <span
+            className={cn(
+              "flex size-12 shrink-0 items-center justify-center rounded-[14px] text-lg font-bold",
+              selected ? brSelectedLetterClass : "bg-[#f3f4f6] text-[#4a5565]",
+              hidden && "line-through",
+            )}
+          >
+            {letter}
+          </span>
+          {choiceContent}
+        </div>
+        <button
+          type="button"
+          className="inline-flex size-5 shrink-0 items-center justify-center text-[#666d80] transition hover:text-[#062357]"
+          aria-label={hidden ? "Show answer choice" : "Hide answer choice"}
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleHidden?.()
           }}
           className={cn(
             "flex items-center justify-between gap-4 p-4 text-left",
@@ -224,24 +262,19 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
   if (isActiveDrill) {
     return (
       <div
-        role={annotateMode ? undefined : "button"}
-        tabIndex={annotateMode || disabled ? -1 : 0}
-        aria-pressed={annotateMode ? undefined : selected}
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-pressed={selected}
         aria-disabled={disabled}
+        onPointerDown={handlePointerDown}
         onClick={handleSelect}
-        onKeyDown={(e) => {
-          if (disabled || annotateMode) return
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault()
-            handleSelect()
-          }
-        }}
+        onKeyDown={handleKeyDown}
         className={cn(
           showSideAction ? ACTIVE_DRILL_CHOICE_ROW_GRID_WITH_ACTION_CLASS : ACTIVE_DRILL_CHOICE_ROW_GRID_CLASS,
           "text-left transition-[background-color,box-shadow,border-color]",
           masked && ACTIVE_DRILL_OPTION_ROW_MASKED_CLASS,
           selected ? ACTIVE_DRILL_OPTION_ROW_SELECTED_CLASS : ACTIVE_DRILL_OPTION_ROW_UNSELECTED_CLASS,
-          disabled ? "cursor-default" : annotateMode ? "cursor-text" : maskingMode ? "cursor-pointer" : "cursor-pointer",
+          disabled ? "cursor-default" : "cursor-pointer",
         )}
         aria-label={
           masked
@@ -287,14 +320,9 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
       tabIndex={disabled ? -1 : 0}
       aria-pressed={selected}
       aria-disabled={disabled}
+      onPointerDown={handlePointerDown}
       onClick={handleSelect}
-      onKeyDown={(e) => {
-        if (disabled) return
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault()
-          handleSelect()
-        }
-      }}
+      onKeyDown={handleKeyDown}
       className={cn(
         "flex items-stretch gap-2 rounded-xl border border-solid text-sm leading-snug text-left transition-colors",
         hidden && "opacity-50",

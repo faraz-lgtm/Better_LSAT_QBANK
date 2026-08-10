@@ -414,7 +414,18 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       if (visiblePrepTestIds.length === 0) return []
       const { data, error } = await client
         .from('practice_sessions')
-        .select('id, prep_test_id, section_id, started_at, completed_at, raw_score, metadata')
+        .select(
+          `
+          id,
+          prep_test_id,
+          section_id,
+          started_at,
+          completed_at,
+          raw_score,
+          metadata,
+          admin_sections ( is_experimental )
+        `,
+        )
         .eq('user_id', userId)
         .eq('kind', 'SECTION')
         .not('completed_at', 'is', null)
@@ -429,6 +440,10 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         completed_at: string
         raw_score: number | null
         metadata: Record<string, unknown>
+        admin_sections:
+          | { is_experimental: boolean | null }
+          | { is_experimental: boolean | null }[]
+          | null
       }[]) ?? []
     },
 
@@ -455,6 +470,31 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       return (row as { scaled_score: number | null; percentile: number | null } | null) ?? null
     },
 
+    async getScoreRowForScaled(prepTestId: string, scaledScore: number): Promise<{
+      scaled_score: number | null
+      percentile: number | null
+    } | null> {
+      const { data: table, error: tErr } = await client
+        .from('admin_score_tables')
+        .select('id')
+        .eq('prep_test_id', prepTestId)
+        .maybeSingle()
+      if (tErr) throw tErr
+      const tableRow = table as { id: string } | null
+      if (!tableRow) return null
+
+      const { data: row, error } = await client
+        .from('admin_score_rows')
+        .select('scaled_score, percentile')
+        .eq('score_table_id', tableRow.id)
+        .eq('scaled_score', Math.round(scaledScore))
+        .order('raw_score', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+      if (error) throw error
+      return (row as { scaled_score: number | null; percentile: number | null } | null) ?? null
+    },
+
     async listPrepTestQuestionsWithMeta(prepTestId: string) {
       const { data, error } = await client
         .from('admin_questions')
@@ -472,7 +512,8 @@ export function createAnalyticsRepository(client: SupabaseClient) {
             section_type,
             section_number,
             title,
-            prep_test_id
+            prep_test_id,
+            is_experimental
           )
         `,
         )

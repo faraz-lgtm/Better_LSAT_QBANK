@@ -15,6 +15,7 @@ import { OnboardingWelcomePreviewPage } from "@/features/auth/pages/onboarding-w
 import { GuestDiagnosticStartPage } from "@/features/guest/pages/guest-diagnostic-start-page"
 import { GuestDiagnosticResultsPage } from "@/features/guest/pages/guest-diagnostic-results-page"
 import { GuestDiagnosticResultsPreviewPage } from "@/features/guest/pages/guest-diagnostic-results-preview-page"
+import { GuestDiagnosticReviewPage } from "@/features/guest/pages/guest-diagnostic-review-page"
 import { MarketingHomePage } from "@/features/marketing/pages/marketing-home-page"
 import { IntentPage } from "@/features/auth/pages/intent-page"
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
@@ -45,6 +46,7 @@ import { PracticePrepTestSectionPage } from "@/features/student/pages/practice-p
 import { LrNewSectionPage } from "@/features/student/pages/lr-new-section-page"
 import { PracticeSectionsPage } from "@/features/student/pages/practice-sections-page"
 import { RcNewSectionPage } from "@/features/student/pages/rc-new-section-page"
+import { RcQuestionNavPreviewPage } from "@/features/student/pages/rc-question-nav-preview-page"
 import { SectionSessionPage } from "@/features/student/pages/section-session-page"
 import { AdminShell } from "@/features/admin/layout/admin-shell"
 import { AdminDashboardPage } from "@/features/admin/pages/admin-dashboard-page"
@@ -354,6 +356,25 @@ const router = createBrowserRouter([
   { path: "/diagnostic/start/preview", element: <GuestDiagnosticStartPage preview /> },
   { path: "/diagnostic/results/preview", element: <GuestDiagnosticResultsPreviewPage /> },
   {
+    path: "/diagnostic/review",
+    element: (
+      <RequireRole requiredRole="student">
+        <GuestDiagnosticReviewPage mode="review" />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/diagnostic/tester",
+    element: (
+      <RequireRole requiredRole="student">
+        <GuestDiagnosticReviewPage mode="tester" />
+      </RequireRole>
+    ),
+  },
+  { path: "/diagnostic/review/preview", element: <GuestDiagnosticReviewPage mode="review" preview /> },
+  { path: "/diagnostic/tester/preview", element: <GuestDiagnosticReviewPage mode="tester" preview /> },
+  { path: "/practice/rc-nav/preview", element: <RcQuestionNavPreviewPage /> },
+  {
     path: "/app",
     element: (
       <RequireRole requiredRole="student">
@@ -372,6 +393,8 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <DashboardPage /> },
           { path: "diagnostic/results", element: <GuestDiagnosticResultsPage /> },
+          { path: "diagnostic/review", element: <Navigate to="/diagnostic/review" replace /> },
+          { path: "diagnostic/tester", element: <Navigate to="/diagnostic/tester" replace /> },
           { path: "learn/explanations", element: <ExplanationsPage /> },
           { path: "learn/explanations/q/:questionId", element: <ExplanationQuestionDetailPage /> },
           { path: "prep-course", element: <PrepCourseListPage /> },
@@ -385,6 +408,7 @@ const router = createBrowserRouter([
           { path: "practice/sections", element: <PracticeSectionsPage /> },
           { path: "practice/sections/lr/new", element: <LrNewSectionPage /> },
           { path: "practice/sections/rc/new", element: <RcNewSectionPage /> },
+          { path: "practice/sections/rc/nav-preview", element: <RcQuestionNavPreviewPage /> },
           { path: "practice/sections/session/:sessionId", element: <SectionSessionPage /> },
           { path: "practice/sections/rc", element: <Navigate to="/app/practice/sections/rc/new" replace /> },
           { path: "practice/sections/rc/session", element: <Navigate to="/app/practice/sections/rc/new" replace /> },

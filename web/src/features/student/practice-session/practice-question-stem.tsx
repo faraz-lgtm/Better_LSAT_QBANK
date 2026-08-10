@@ -1,5 +1,3 @@
-import type { MouseEvent } from "react"
-
 import {
   ACTIVE_DRILL_ACTION_BUTTON_CLASS,
   ACTIVE_DRILL_STEM_GRID_CLASS,
@@ -8,16 +6,13 @@ import {
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import { PracticeQuestionFlagButton } from "@/features/student/practice-session/practice-question-flag-button"
 import { cn } from "@/lib/utils"
-import type { PracticeSessionVariant, PracticeToolMode, RegionKey } from "@/features/student/practice-session/practice-session-types"
+import type { PracticeSessionVariant, RegionKey } from "@/features/student/practice-session/practice-session-types"
 
 type PracticeQuestionStemProps = {
   questionNumber: number
   regionKey: RegionKey
   html: string
   findQuery: string
-  toolMode: PracticeToolMode
-  onContentMouseUp: (regionKey: RegionKey, container: HTMLElement | null, event?: MouseEvent) => void
-  onContentClick: (regionKey: RegionKey, container: HTMLElement | null, event: MouseEvent) => void
   flagged: boolean
   onToggleFlag: () => void
   flagsDisabled?: boolean
@@ -32,9 +27,6 @@ function PracticeQuestionStem({
   regionKey,
   html,
   findQuery,
-  toolMode,
-  onContentMouseUp,
-  onContentClick,
   flagged,
   onToggleFlag,
   flagsDisabled,
@@ -54,10 +46,8 @@ function PracticeQuestionStem({
             findQuery={findQuery}
             scrollAnchor
             as="div"
+            toolMode="none"
             className="min-w-0 text-lg leading-[1.35] text-[color:inherit] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-7 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
-            toolMode={toolMode}
-            onMouseUp={onContentMouseUp}
-            onClickCapture={onContentClick}
           />
           {showSideFlag ? (
             <PracticeQuestionFlagButton
@@ -84,10 +74,8 @@ function PracticeQuestionStem({
           findQuery={findQuery}
           scrollAnchor
           as="div"
+          toolMode="none"
           className="min-w-0 flex-1 text-sm font-semibold leading-snug text-[color:inherit] [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
-          toolMode={toolMode}
-          onMouseUp={onContentMouseUp}
-          onClickCapture={onContentClick}
         />
       </div>
       <PracticeQuestionFlagButton flagged={flagged} onToggle={onToggleFlag} disabled={flagsDisabled} />

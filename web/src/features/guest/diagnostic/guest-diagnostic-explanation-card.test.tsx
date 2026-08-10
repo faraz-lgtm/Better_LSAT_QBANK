@@ -20,20 +20,25 @@ const explanation: MiniDiagnosticExplanation = {
 }
 
 describe('GuestDiagnosticExplanationCard', () => {
-  it('renders question metadata, choices, and explanation html', () => {
+  it('renders result stats only (explanations live on Review in Tester)', () => {
     render(
       <GuestDiagnosticExplanationCard
         number={1}
         explanation={explanation}
         isCorrect
+        selectedAnswer="C"
+        targetTimeSeconds={45}
+        yourTimeSeconds={50}
       />,
     )
 
     expect(screen.getByText(/Mini Diagnostic · Q1 · Main Conclusion/)).toBeInTheDocument()
-    expect(screen.getByText('Stimulus text')).toBeInTheDocument()
-    expect(screen.getByText('Which conclusion?')).toBeInTheDocument()
-    expect(screen.getByText(/Choice C/)).toBeInTheDocument()
-    expect(screen.getByText('Matches the conclusion')).toBeInTheDocument()
-    expect(screen.getByText('Full write-up')).toBeInTheDocument()
+    expect(screen.getByText(/Target time:/)).toBeInTheDocument()
+    expect(screen.getByText(/Your time:/)).toBeInTheDocument()
+    expect(screen.getByText(/Answer popularity/i)).toBeInTheDocument()
+    expect(screen.queryByText('Stimulus text')).not.toBeInTheDocument()
+    expect(screen.queryByText('Which conclusion?')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Choice C/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Full write-up')).not.toBeInTheDocument()
   })
 })

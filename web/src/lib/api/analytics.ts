@@ -77,6 +77,8 @@ export type PrepTestSessionDetail = {
     selectedLetter: string | null
     sectionType: "LR" | "RC" | "LG" | null
     sectionNumber: number | null
+    /** Unscored experimental section question; still listed in results. */
+    isExperimental?: boolean
   }>
 }
 

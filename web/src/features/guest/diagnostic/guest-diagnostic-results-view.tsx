@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Check, ChevronRight, X } from 'lucide-react'
+import { Check, ChevronRight, FolderOpen, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { GuestDiagnosticExplanationCard } from '@/features/guest/diagnostic/guest-diagnostic-explanation-card'
@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils'
 type GuestDiagnosticResultsViewProps = {
   result: GuestDiagnosticResult
   startDiagnosticHref?: string
+  reviewInTesterHref?: string
   refreshSubscription?: () => void
 }
 
@@ -62,12 +63,26 @@ function OutcomePill({
   )
 }
 
+function GuestDiagnosticResultsActionButtons({ href }: { href: string }) {
+  return (
+    <Link
+      to={href}
+      className="inline-flex h-10 items-center gap-2 rounded-[16px] bg-[#df1c41] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#df1c41]/90"
+    >
+      <FolderOpen className="size-4 shrink-0" aria-hidden />
+      Review in Tester
+    </Link>
+  )
+}
+
 function GuestDiagnosticFreeScoreCards({
   result,
   startDiagnosticHref,
+  reviewInTesterHref,
 }: {
   result: GuestDiagnosticResult
   startDiagnosticHref: string
+  reviewInTesterHref: string
 }) {
   const incorrect = Math.max(0, result.questionCount - result.correctCount)
   const deltaLabel = incorrect > 0 ? `-${incorrect}` : `+${result.correctCount}`
@@ -108,13 +123,16 @@ function GuestDiagnosticFreeScoreCards({
               </span>
             </p>
           </div>
-          <Link
-            to={startDiagnosticHref}
-            className="inline-flex h-11 shrink-0 items-center justify-center gap-1 rounded-[12px] bg-[#0d47a1] px-5 text-sm font-semibold tracking-[0.28px] text-white hover:bg-[#0b3d8a]"
-          >
-            Start Diagnostic
-            <ChevronRight className="size-4" aria-hidden />
-          </Link>
+          <div className="flex flex-col items-stretch gap-3 sm:items-end">
+            <GuestDiagnosticResultsActionButtons href={reviewInTesterHref} />
+            <Link
+              to={startDiagnosticHref}
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-1 rounded-[12px] bg-[#0d47a1] px-5 text-sm font-semibold tracking-[0.28px] text-white hover:bg-[#0b3d8a]"
+            >
+              Start Diagnostic
+              <ChevronRight className="size-4" aria-hidden />
+            </Link>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -130,9 +148,11 @@ function GuestDiagnosticFreeScoreCards({
 function GuestDiagnosticPaidScoreCards({
   result,
   startDiagnosticHref,
+  reviewInTesterHref,
 }: {
   result: GuestDiagnosticResult
   startDiagnosticHref: string
+  reviewInTesterHref: string
 }) {
   const incorrect = Math.max(0, result.questionCount - result.correctCount)
   const deltaLabel = incorrect > 0 ? `-${incorrect}` : `+${result.correctCount}`
@@ -151,9 +171,12 @@ function GuestDiagnosticPaidScoreCards({
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col rounded-[16px] border border-[#dfe1e7] bg-white p-6">
-        <p className="text-center text-2xl font-bold leading-[1.3] text-[#062357]">
-          {getDiagnosticIntentTitle(result.intentId)}
-        </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <p className="text-2xl font-bold leading-[1.3] text-[#062357]">
+            {getDiagnosticIntentTitle(result.intentId)}
+          </p>
+          <GuestDiagnosticResultsActionButtons href={reviewInTesterHref} />
+        </div>
 
         <div className="mt-6 flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
           <div className="shrink-0">
@@ -237,6 +260,7 @@ function GuestDiagnosticLockedQuestionRow({
 function GuestDiagnosticResultsView({
   result,
   startDiagnosticHref = '/diagnostic/start',
+  reviewInTesterHref = '/diagnostic/review',
   refreshSubscription,
 }: GuestDiagnosticResultsViewProps) {
   const { hasActiveCore, loading: subscriptionLoading, refresh } = useDiagnosticSubscription()
@@ -300,9 +324,17 @@ function GuestDiagnosticResultsView({
       {!showPaidContent ? <GuestFreePlanUpgradeBanner /> : null}
 
       {showPaidContent ? (
-        <GuestDiagnosticPaidScoreCards result={result} startDiagnosticHref={startDiagnosticHref} />
+        <GuestDiagnosticPaidScoreCards
+          result={result}
+          startDiagnosticHref={startDiagnosticHref}
+          reviewInTesterHref={reviewInTesterHref}
+        />
       ) : (
-        <GuestDiagnosticFreeScoreCards result={result} startDiagnosticHref={startDiagnosticHref} />
+        <GuestDiagnosticFreeScoreCards
+          result={result}
+          startDiagnosticHref={startDiagnosticHref}
+          reviewInTesterHref={reviewInTesterHref}
+        />
       )}
 
       <section className={cn(PT_RESULTS_SURFACE_CARD_CLASS, 'overflow-hidden')}>
@@ -336,12 +368,16 @@ function GuestDiagnosticResultsView({
           ? result.outcomes.map((outcome, index) => {
               const explanation = explanationsById.get(outcome.questionId)
               if (!explanation) return null
+              const meta = getMiniDiagnosticQuestionMeta(outcome.questionId)
               return (
                 <GuestDiagnosticExplanationCard
                   key={outcome.questionId}
                   number={index + 1}
                   explanation={explanation}
                   isCorrect={outcome.isCorrect}
+                  selectedAnswer={outcome.selectedAnswer}
+                  targetTimeSeconds={meta?.targetTimeSeconds}
+                  yourTimeSeconds={outcome.timeSpentSeconds}
                 />
               )
             })
