@@ -356,6 +356,7 @@ function PracticeSessionResultsPage() {
 
   const showBlindReview = results.blindReviewAnswersByQuestion != null
   const isLrDrill = results.kind === "DRILL" && results.defaultSectionKind === "LR"
+  const isLrSection = results.kind === "SECTION" && results.defaultSectionKind === "LR"
   const isRcDrill = results.kind === "DRILL" && results.defaultSectionKind === "RC"
   const isRcSection = results.kind === "SECTION" && results.defaultSectionKind === "RC"
   const lrDrillQuestions = sectionGroups.flatMap((section) => [
@@ -384,7 +385,7 @@ function PracticeSessionResultsPage() {
         : [],
   )
   const firstQuestionDetail = detailsByQuestion[results.questions[0]?.id ?? ""]
-  const rcSectionTitle = formatSectionResultsTitle({
+  const sectionResultsTitle = formatSectionResultsTitle({
     prepTestNumber: firstQuestionDetail?.prepTestNumber,
     prepTestTitle: firstQuestionDetail?.prepTestTitle ?? results.prepTestTitle,
     sectionNumber: firstQuestionDetail?.sectionNumber ?? results.fallbackSectionNumber,
@@ -419,8 +420,10 @@ function PracticeSessionResultsPage() {
       className={cn("min-h-full w-full max-w-none", PT_RESULTS_PAGE_BG_CLASS)}
       contentClassName={cn("min-h-full max-w-none", PT_RESULTS_PAGE_BG_CLASS)}
     >
-      {isLrDrill ? (
+      {isLrDrill || isLrSection ? (
         <LrDrillResultsView
+          variant={isLrSection ? "section" : "drill"}
+          heroTitle={isLrSection ? sectionResultsTitle : undefined}
           questionCount={results.questionCount}
           rawScore={results.rawScore}
           scaledScore={results.scaledScore}
@@ -437,7 +440,7 @@ function PracticeSessionResultsPage() {
       ) : isRcDrill || isRcSection ? (
         <RcDrillResultsView
           variant={isRcSection ? "section" : "drill"}
-          heroTitle={isRcSection ? rcSectionTitle : undefined}
+          heroTitle={isRcSection ? sectionResultsTitle : undefined}
           compactLabel={isRcSection ? rcSectionLabel : "Score"}
           questionCount={results.questionCount}
           rawScore={results.rawScore}

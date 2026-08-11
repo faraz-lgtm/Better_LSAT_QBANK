@@ -52,6 +52,9 @@ type LrDrillResultsViewProps = {
   flaggedIds: Set<string>
   onReviewInTester: () => void
   onExcludedChange: (next: boolean) => void
+  variant?: "drill" | "section"
+  heroTitle?: string
+  compactLabel?: string
 }
 
 function chunkOutcomes<T>(items: T[], size: number): T[][] {
@@ -297,11 +300,20 @@ function LrDrillResultsView({
   flaggedIds,
   onReviewInTester,
   onExcludedChange,
+  variant = "drill",
+  heroTitle: heroTitleOverride,
+  compactLabel,
 }: LrDrillResultsViewProps) {
   const [filter, setFilter] = useState<QuestionFilter>("Question")
   const [dropdownOpen, setDropdownOpen] = useState(false)
-
-  const heroTitle = formatLrDrillResultsTitle({ questionCount, timing, take })
+  const isSection = variant === "section"
+  const heroTitle =
+    heroTitleOverride ?? formatLrDrillResultsTitle({ questionCount, timing, take })
+  const scoreHeadline = isSection
+    ? scaledScore != null
+      ? String(scaledScore)
+      : `${rawScore}/${questionCount}`
+    : formatAccuracyPct(rawScore, questionCount)
   const visibleQuestions = useMemo(
     () => (filter === "Incorrect only" ? questions.filter((q) => !q.isCorrect) : questions),
     [filter, questions],
@@ -325,20 +337,23 @@ function LrDrillResultsView({
           <div className="flex h-[199px] w-full shrink-0 flex-col justify-between rounded-[16px] bg-[#0d47a1] p-6 lg:w-[290px]">
             <p className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#edf3ff]">YOUR SCORE</p>
             <p className="text-[48px] font-extrabold leading-[1.2] text-white">
-              {formatAccuracyPct(rawScore, questionCount)}
+              {scoreHeadline}
             </p>
             <p className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#edf3ff]">
               {formatCorrectSummaryLine(rawScore, questionCount)}
             </p>
             <p className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#edf3ff]">
-              Actual PT equivalent = {scaledScore ?? "—"}
+              {isSection ? "ACTUAL PT EQUIVALENT" : "Actual PT equivalent"} = {scaledScore ?? "—"}
             </p>
           </div>
 
           <div className="flex min-h-[199px] min-w-0 w-full flex-col gap-[18px] rounded-[16px] bg-[#f6f8fa] p-6">
             <p className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#062357]">RESULTS</p>
             <div className="flex min-w-0 gap-[7px] overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <LrDrillCompactResultsCard questions={questions} />
+              <LrDrillCompactResultsCard
+                questions={questions}
+                label={compactLabel ?? "Score"}
+              />
             </div>
           </div>
         </div>
