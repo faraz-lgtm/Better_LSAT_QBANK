@@ -73,4 +73,28 @@ describe("PracticeSessionActiveDrillFooterNav", () => {
 
     expect(document.querySelectorAll(".practice-session-question-nav-passage-break")).toHaveLength(1)
   })
+
+  it("does not render passage separators when showPassageBreaks is false", () => {
+    render(
+      <PracticeSessionActiveDrillFooterNav
+        questions={[
+          { id: "q1", passage: { id: "lr-sec1" }, sourceGroupId: "g1" },
+          { id: "q2", passage: { id: "lr-sec1" }, sourceGroupId: "g2" },
+          { id: "q3", passage: { id: "lr-sec2" }, sourceGroupId: "g3" },
+          { id: "q4", passage: { id: "lr-sec2" }, sourceGroupId: "g4" },
+          { id: "q5", passage: { id: "lr-sec3" }, sourceGroupId: "g5" },
+        ]}
+        safeIndex={1}
+        answersByQuestion={{}}
+        isFlagged={() => false}
+        variant="active-drill"
+        showPassageBreaks={false}
+        onSelectQuestion={() => undefined}
+        onPrev={() => undefined}
+        onNext={() => undefined}
+      />,
+    )
+
+    expect(document.querySelectorAll(".practice-session-question-nav-passage-break")).toHaveLength(0)
+  })
 })

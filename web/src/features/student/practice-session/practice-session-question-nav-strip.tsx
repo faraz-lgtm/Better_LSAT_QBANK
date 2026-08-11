@@ -19,6 +19,8 @@ type PracticeSessionQuestionNavStripProps = {
   variant: PracticeSessionVariant
   onSelectQuestion: (questionNumber: number) => void
   recommendedForBr?: (questionId: string) => boolean
+  /** RC passage-group dividers. Off for LR — stimuli are one question each. */
+  showPassageBreaks?: boolean
   className?: string
 }
 
@@ -38,9 +40,13 @@ function PracticeSessionQuestionNavStrip({
   variant,
   onSelectQuestion,
   recommendedForBr,
+  showPassageBreaks = true,
   className,
 }: PracticeSessionQuestionNavStripProps) {
-  const breakAfter = useMemo(() => passageBreakAfterIndices(questions), [questions])
+  const breakAfter = useMemo(
+    () => (showPassageBreaks ? passageBreakAfterIndices(questions) : new Set<number>()),
+    [questions, showPassageBreaks],
+  )
 
   return (
     <div className={cn("practice-session-question-nav-grid", className)}>

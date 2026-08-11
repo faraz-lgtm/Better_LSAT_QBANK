@@ -162,6 +162,13 @@ function sectionBreadcrumbLabel(label: string): string {
   return label.charAt(0) + label.slice(1).toLowerCase()
 }
 
+function isPracticeSectionResultsSearch(search: string): boolean {
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search)
+  if (params.get("source") === "section") return true
+  const returnTo = params.get("returnTo") ?? ""
+  return returnTo.includes("/practice/sections")
+}
+
 export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBreadcrumb[] {
   if (pathname.startsWith("/app/diagnostic/results")) {
     return [{ label: "Home", href: "/app/diagnostic/results" }, { label: "Analytics" }]
@@ -211,6 +218,11 @@ export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBre
   }
 
   if (pathname.startsWith("/app/practice/results/")) {
+    if (isPracticeSectionResultsSearch(search)) {
+      crumbs.push({ label: "Sections", href: "/app/practice/sections" })
+      crumbs.push({ label: "Section result" })
+      return crumbs
+    }
     crumbs.push({ label: "Drills", href: "/app/practice/drills" })
     crumbs.push({ label: "Drill results" })
     return crumbs

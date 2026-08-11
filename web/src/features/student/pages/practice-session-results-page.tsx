@@ -19,6 +19,9 @@ import {
   PracticeResultsSectionCard,
   PracticeResultsTotalQuestionsBar,
 } from "@/features/student/practice-session/practice-results-list-layout"
+import { formatSectionResultsTitle } from "@/features/student/practice-session/lr-drill-results-format"
+import { LrDrillResultsView } from "@/features/student/practice-session/lr-drill-results-view"
+import { RcDrillResultsView } from "@/features/student/practice-session/rc-drill-results-view"
 import {
   buildPracticeSectionSummaries,
   PracticeResultsSummaryPanel,
@@ -55,6 +58,20 @@ type LoadedResults = {
   percentile: number | null
   blindReviewRawScore: number | null
   blindReviewAnswersByQuestion: Map<string, { selectedAnswer: string; isCorrect: boolean }> | null
+  excluded: boolean
+  timing: string
+  take: number
+  prepTestTitle: string | null
+}
+
+function parseTakeNumber(metadata: Record<string, unknown>): number {
+  const raw = metadata.take ?? metadata.attempt ?? metadata.attemptNumber
+  const n = typeof raw === "number" ? raw : typeof raw === "string" ? Number.parseInt(raw, 10) : NaN
+  return Number.isFinite(n) && n > 0 ? n : 1
+}
+
+function parseTiming(metadata: Record<string, unknown>, fallback = "unlimited"): string {
+  return typeof metadata.timing === "string" && metadata.timing.trim() ? metadata.timing : fallback
 }
 
 function sessionElapsedSeconds(startedAt: string, completedAt: string): number {
@@ -91,6 +108,10 @@ function mapDrillResponse(data: DrillSessionResponse, returnTo: string): LoadedR
     percentile: data.session.percentile,
     blindReviewRawScore: blindReview?.rawScore ?? null,
     blindReviewAnswersByQuestion: blindReview?.answersByQuestion ?? null,
+    excluded: data.session.excluded,
+    timing: parseTiming(data.session.metadata, data.metadata.timing),
+    take: parseTakeNumber(data.session.metadata),
+    prepTestTitle: null,
   }
 }
 
@@ -134,6 +155,10 @@ function mapSectionResponse(data: SectionSessionResponse, returnTo: string): Loa
     percentile: data.session.percentile,
     blindReviewRawScore,
     blindReviewAnswersByQuestion,
+    excluded: data.session.excluded,
+    timing: parseTiming(data.session.metadata, data.metadata.timing ?? "35"),
+    take: parseTakeNumber(data.session.metadata),
+    prepTestTitle: data.metadata.prepTestTitle ?? data.section.prepTestTitle ?? null,
   }
 }
 
@@ -150,6 +175,14 @@ function PracticeSessionResultsPage() {
   const [results, setResults] = useState<LoadedResults | null>(null)
   const [detailsByQuestion, setDetailsByQuestion] = useState<Record<string, ExplanationDetailPayload>>({})
   const [startingAnother, setStartingAnother] = useState(false)
+
+  useEffect(() => {
+    if (results?.kind !== "SECTION") return
+    if (searchParams.get("source") === "section") return
+    const next = new URLSearchParams(searchParams)
+    next.set("source", "section")
+    navigate({ search: `?${next.toString()}` }, { replace: true })
+  }, [navigate, results?.kind, searchParams])
 
   useEffect(() => {
     if (!sessionId) {
@@ -322,12 +355,105 @@ function PracticeSessionResultsPage() {
   }
 
   const showBlindReview = results.blindReviewAnswersByQuestion != null
+  const isLrDrill = results.kind === "DRILL" && results.defaultSectionKind === "LR"
+  const isRcDrill = results.kind === "DRILL" && results.defaultSectionKind === "RC"
+  const isRcSection = results.kind === "SECTION" && results.defaultSectionKind === "RC"
+  const lrDrillQuestions = sectionGroups.flatMap((section) => [
+    ...section.passages.flatMap((group) => group.questions),
+    ...section.questions,
+  ])
+  const rcDrillPassages = sectionGroups.flatMap((section) =>
+    section.passages.length > 0
+      ? section.passages
+      : section.questions.length > 0
+        ? [
+            {
+              passage: {
+                id: `${section.id}-passage`,
+                passageLabel: "P1",
+                title: "Passage 1",
+                tags: [],
+                difficulty: "Medium" as const,
+                targetTime: "01:30",
+                yourTime: "00:00",
+                yourTimeNote: "",
+              },
+              questions: section.questions,
+            },
+          ]
+        : [],
+  )
+  const firstQuestionDetail = detailsByQuestion[results.questions[0]?.id ?? ""]
+  const rcSectionTitle = formatSectionResultsTitle({
+    prepTestNumber: firstQuestionDetail?.prepTestNumber,
+    prepTestTitle: firstQuestionDetail?.prepTestTitle ?? results.prepTestTitle,
+    sectionNumber: firstQuestionDetail?.sectionNumber ?? results.fallbackSectionNumber,
+  })
+  const rcSectionLabel =
+    results.fallbackSectionNumber != null || firstQuestionDetail?.sectionNumber != null
+      ? `Section ${firstQuestionDetail?.sectionNumber ?? results.fallbackSectionNumber}`
+      : "Section 1"
+  const reviewInTesterHref = () => {
+    const backParams = new URLSearchParams(searchParams)
+    if (results.kind === "SECTION") backParams.set("source", "section")
+    const backQuery = backParams.toString()
+    const back = `/app/practice/results/${encodeURIComponent(sessionId)}${
+      backQuery ? `?${backQuery}` : ""
+    }`
+    const testerPath =
+      results.kind === "SECTION"
+        ? `/app/practice/sections/session/${encodeURIComponent(sessionId)}`
+        : `/app/practice/drills/session/${encodeURIComponent(sessionId)}`
+    navigate(`${testerPath}?returnTo=${encodeURIComponent(back)}`)
+  }
+
+  function handleExcludedChange(next: boolean) {
+    setResults((current) => (current ? { ...current, excluded: next } : current))
+    void practiceApi.updateSession({ sessionId, excluded: next }).catch(() => {
+      setResults((current) => (current ? { ...current, excluded: !next } : current))
+    })
+  }
 
   return (
     <StudentMain
       className={cn("min-h-full w-full max-w-none", PT_RESULTS_PAGE_BG_CLASS)}
       contentClassName={cn("min-h-full max-w-none", PT_RESULTS_PAGE_BG_CLASS)}
     >
+      {isLrDrill ? (
+        <LrDrillResultsView
+          questionCount={results.questionCount}
+          rawScore={results.rawScore}
+          scaledScore={results.scaledScore}
+          elapsedSeconds={results.elapsedSeconds}
+          timing={results.timing}
+          take={results.take}
+          excluded={results.excluded}
+          questions={lrDrillQuestions}
+          showBlindReview={showBlindReview}
+          flaggedIds={results.flaggedIds}
+          onReviewInTester={reviewInTesterHref}
+          onExcludedChange={handleExcludedChange}
+        />
+      ) : isRcDrill || isRcSection ? (
+        <RcDrillResultsView
+          variant={isRcSection ? "section" : "drill"}
+          heroTitle={isRcSection ? rcSectionTitle : undefined}
+          compactLabel={isRcSection ? rcSectionLabel : "Score"}
+          questionCount={results.questionCount}
+          rawScore={results.rawScore}
+          scaledScore={results.scaledScore}
+          elapsedSeconds={results.elapsedSeconds}
+          timing={results.timing}
+          take={results.take}
+          excluded={results.excluded}
+          passages={rcDrillPassages}
+          questions={lrDrillQuestions}
+          showBlindReview={showBlindReview}
+          flaggedIds={results.flaggedIds}
+          onReviewInTester={reviewInTesterHref}
+          onExcludedChange={handleExcludedChange}
+        />
+      ) : (
       <div className={PT_RESULTS_PAGE_GAP_CLASS}>
         <section className={PT_RESULTS_HERO_CARD_CLASS}>
           <h1 className="!m-0 !text-[24px] font-bold leading-[1.3] text-[#062357]">{results.title}</h1>
@@ -420,6 +546,7 @@ function PracticeSessionResultsPage() {
           </p>
         ) : null}
       </div>
+      )}
     </StudentMain>
   )
 }

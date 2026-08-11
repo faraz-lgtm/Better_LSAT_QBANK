@@ -10,6 +10,7 @@ import {
   type PracticeDifficultyLabel,
 } from "@/features/student/practice-session/practice-results-ui"
 import { isPracticeAnswerUnanswered } from "@/features/student/practice-session/practice-result-outcome-icon"
+import { passageNavGroupKey } from "@/features/student/practice-session/question-nav-passage-breaks"
 
 export type PracticeQuestionResultMeta = {
   question: DrillQuestion
@@ -67,18 +68,43 @@ function passageTiming(questions: PracticeQuestionResultMeta[]) {
   }
 }
 
+function rcPassageGroupKey(meta: PracticeQuestionResultMeta): string {
+  const fromQuestion = passageNavGroupKey({
+    passage: meta.question.passage,
+    sourceGroupId: meta.question.sourceGroupId,
+  })
+  if (fromQuestion) return fromQuestion
+  const fromDetail = passageNavGroupKey({
+    passage: meta.detail?.passage ?? null,
+  })
+  if (fromDetail) return fromDetail
+  const displayNumber = meta.question.passage?.displayNumber ?? meta.detail?.passage.displayNumber
+  if (displayNumber != null && displayNumber > 0) return `dn:${displayNumber}`
+  return "passage-fallback"
+}
+
+function rcPassageTitle(passageNumber: number, questions: PracticeQuestionResultMeta[]): string {
+  const raw =
+    questions[0]?.detail?.passage.title?.trim() ||
+    questions[0]?.question.passage?.title?.trim() ||
+    ""
+  if (!raw || /^passage\s*\d+$/i.test(raw)) return `Passage ${passageNumber}`
+  return raw
+}
+
 function buildPassageSummary(
   passageNumber: number,
   questions: PracticeQuestionResultMeta[],
+  groupKey: string,
 ): PracticePassageSummary {
   const first = questions[0]
   const detail = first?.detail
   const timing = passageTiming(questions)
   const tags = detail != null ? resolveQuestionResultTags(detail) : []
   return {
-    id: detail?.passage.id ?? `passage-${passageNumber}`,
+    id: `${groupKey}-${passageNumber}`,
     passageLabel: `P${passageNumber}`,
-    title: detail?.passage.title?.trim() || `Passage ${passageNumber}`,
+    title: rcPassageTitle(passageNumber, questions),
     tags,
     difficulty: timing.difficulty,
     targetTime: timing.targetTime,
@@ -155,19 +181,26 @@ export function buildPracticeResultsSectionGroups(input: {
       group.sectionNumber != null ? `Section ${group.sectionNumber}` : group.kind === "LR" ? "Logical Reasoning" : "Reading Comprehension"
 
     if (group.kind === "RC") {
-      const byPassage = new Map<number, PracticeQuestionResultMeta[]>()
+      const byPassage = new Map<string, PracticeQuestionResultMeta[]>()
+      const passageOrder: string[] = []
       for (const meta of numberedMetas) {
-        const passageNumber = meta.detail?.passage.displayNumber ?? 1
-        const list = byPassage.get(passageNumber) ?? []
-        list.push(meta)
-        byPassage.set(passageNumber, list)
+        const key = rcPassageGroupKey(meta)
+        const list = byPassage.get(key)
+        if (list) {
+          list.push(meta)
+        } else {
+          passageOrder.push(key)
+          byPassage.set(key, [meta])
+        }
       }
-      const passages = [...byPassage.entries()]
-        .sort(([a], [b]) => a - b)
-        .map(([passageNumber, questions]) => ({
-          passage: buildPassageSummary(passageNumber, questions),
+      const passages = passageOrder.map((key, index) => {
+        const questions = byPassage.get(key) ?? []
+        const passageNumber = index + 1
+        return {
+          passage: buildPassageSummary(passageNumber, questions, key),
           questions,
-        }))
+        }
+      })
       return {
         id: key,
         kind: group.kind,

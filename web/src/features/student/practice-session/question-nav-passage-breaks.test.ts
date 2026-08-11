@@ -37,6 +37,28 @@ describe("passageBreakAfterIndices", () => {
     expect(passageNavGroupKey(questions[2]!)).toBe("sg:g2")
   })
 
+  it("groups LR questions by mapped passage id and ignores sourceGroupId", () => {
+    const questions = [
+      { passage: { id: "lr-sec1" }, sourceGroupId: "g1" },
+      { passage: { id: "lr-sec1" }, sourceGroupId: "g2" },
+      { passage: { id: "lr-sec2" }, sourceGroupId: "g3" },
+      { passage: { id: "lr-sec2" }, sourceGroupId: "g4" },
+    ]
+    expect(passageNavGroupKey(questions[0]!)).toBe("p:lr-sec1")
+    expect(passageBreakAfterIndices(questions)).toEqual(new Set([1]))
+  })
+
+  it("does not insert breaks between singleton LR stimuli", () => {
+    const questions = [
+      { passage: { id: "lr1" } },
+      { passage: { id: "lr2" } },
+      { passage: { id: "lr3" } },
+      { passage: { id: "lr4" } },
+      { passage: { id: "lr5" } },
+    ]
+    expect(passageBreakAfterIndices(questions)).toEqual(new Set())
+  })
+
   it("ignores transitions involving a missing group key", () => {
     expect(
       passageBreakAfterIndices([
