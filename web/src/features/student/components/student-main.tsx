@@ -9,11 +9,20 @@ type StudentMainProps = {
   contentClassName?: string
   /** Locked: page fills the shell; children own internal scroll regions. */
   layout?: "scroll" | "locked" | "immersive"
+  /** Skip the 1168px page container so a 3-col shell can cap only the center pane. */
+  fullBleed?: boolean
 }
 
-function StudentMain({ children, className = "", contentClassName = "", layout = "scroll" }: StudentMainProps) {
+function StudentMain({
+  children,
+  className = "",
+  contentClassName = "",
+  layout = "scroll",
+  fullBleed = false,
+}: StudentMainProps) {
   const locked = layout === "locked"
   const immersive = layout === "immersive"
+  const contained = !immersive && !fullBleed
 
   return (
     <main
@@ -25,8 +34,8 @@ function StudentMain({ children, className = "", contentClassName = "", layout =
     >
       <div
         className={cn(
-          !immersive && STUDENT_PAGE_CONTAINER_CLASS,
-          !immersive && STUDENT_SHELL_GUTTER_CLASS,
+          contained && STUDENT_PAGE_CONTAINER_CLASS,
+          contained && STUDENT_SHELL_GUTTER_CLASS,
           !immersive && "w-full",
           immersive
             ? "flex h-full min-h-0 flex-1 flex-col overflow-x-clip overflow-y-hidden"

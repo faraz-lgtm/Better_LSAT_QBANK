@@ -19,9 +19,9 @@ import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { cn } from "@/lib/utils"
 
-function parseTab(raw: string | null): ExplanationDetailTabId {
-  // Explanation tab is hidden until content is ready; treat deep links as Question.
+function parseTab(raw: string | null, showExplanationTab: boolean): ExplanationDetailTabId {
   if (raw === "analytics") return "analytics"
+  if (raw === "explanation" && showExplanationTab) return "explanation"
   return "question"
 }
 
@@ -41,8 +41,6 @@ function ExplanationQuestionDetailPage() {
   const [detailLoading, setDetailLoading] = useState(true)
   const [detailError, setDetailError] = useState<string | null>(null)
   const [bootstrapLoading, setBootstrapLoading] = useState(false)
-
-  const tab = useMemo(() => parseTab(searchParams.get("tab")), [searchParams])
 
   const explanationsApi = useMemo(() => {
     try {
@@ -119,6 +117,11 @@ function ExplanationQuestionDetailPage() {
 
   const resolvedLoc = locateExplanationQuestion(questionId)
   const view = resolvedLoc ? buildExplanationQuestionDetailView(resolvedLoc, detail) : null
+
+  const tab = useMemo(
+    () => parseTab(searchParams.get("tab"), view?.hasExplanationTab ?? false),
+    [searchParams, view?.hasExplanationTab],
+  )
 
   const initialExpandedChoiceId = useMemo(() => {
     const raw = searchParams.get("choice")?.trim().toUpperCase()

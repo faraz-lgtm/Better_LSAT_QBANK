@@ -14,7 +14,7 @@ type ExplanationDetailTabBarProps = {
 
 const TABS: { id: ExplanationDetailTabId; label: string }[] = [
   { id: "question", label: "Question" },
-  { id: "explanation", label: "Explanation" },
+  { id: "explanation", label: "Show Analysis" },
   { id: "analytics", label: "Insights" },
 ]
 

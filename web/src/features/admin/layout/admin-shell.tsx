@@ -10,8 +10,10 @@ function AdminShell() {
       <AdminSidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <AdminTopbar />
-        <main className="min-h-0 flex-1 overflow-auto p-6">
-          <Outlet />
+        <main className="min-h-0 flex-1 overflow-auto">
+          <div className="mx-auto w-full max-w-[1168px] p-6">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

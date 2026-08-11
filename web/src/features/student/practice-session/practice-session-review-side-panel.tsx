@@ -63,7 +63,7 @@ function viewFromDetail(detail: ExplanationDetailPayload): ExplanationQuestionDe
         dropdownOptions: [{ value: "passage", label: "Passage explanation" }],
         postedLine: "",
         videoUrl: null,
-        explanationHtml: null,
+        explanationHtml: detail.explanationHtml,
       },
       {
         id: "v-question",
@@ -73,7 +73,7 @@ function viewFromDetail(detail: ExplanationDetailPayload): ExplanationQuestionDe
         dropdownOptions: [{ value: "question", label: "Question explanation" }],
         postedLine: detail.prepTestTitle ? `Taken on ${detail.prepTestTitle}` : "",
         videoUrl: detail.videoUrl,
-        explanationHtml: detail.explanationHtml,
+        explanationHtml: null,
       },
     ],
     analytics: {
@@ -104,7 +104,8 @@ function viewFromDetail(detail: ExplanationDetailPayload): ExplanationQuestionDe
       history: [],
     },
     neighbors: { prevRouteKey: null, nextRouteKey: null },
-    hasExplanationTab: false,
+    hasExplanationTab:
+      Boolean(detail.explanationHtml?.trim()) || Boolean(detail.videoUrl?.trim()),
   }
 }
 
