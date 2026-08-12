@@ -46,12 +46,17 @@ function ActiveDrillQuestionResultDetail({
   const isUnanswered = !answer || !answer.selectedAnswer.trim()
   const isCorrect = isUnanswered ? false : (answer?.isCorrect ?? false)
   const blindReviewAnswer = attempt.blindReview?.answers.find((a) => a.questionId === linked.question_id)
+  const blindReviewSkipped =
+    attempt.blindReview != null && (!blindReviewAnswer || !blindReviewAnswer.selectedAnswer.trim())
+  // BR skip → inherit Actual; BR answer wins even when Actual was skipped.
   const blindReviewUnanswered = attempt.blindReview
-    ? !blindReviewAnswer || !blindReviewAnswer.selectedAnswer.trim()
+    ? blindReviewSkipped
+      ? isUnanswered
+      : false
     : false
   const blindReviewCorrect = attempt.blindReview
-    ? blindReviewUnanswered
-      ? false
+    ? blindReviewSkipped
+      ? isCorrect
       : (blindReviewAnswer?.isCorrect ?? false)
     : undefined
   const showBlindReview = attempt.blindReview != null
