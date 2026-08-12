@@ -1,4 +1,4 @@
-import { Fragment, useState, type ComponentType, type SVGProps } from "react"
+import { Fragment, useEffect, useState, type ComponentType, type SVGProps } from "react"
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
@@ -12,6 +12,8 @@ import {
   SideWidgetCollapseMenuIcon,
   SideWidgetFlagIcon,
   SideWidgetFullScreenIcon,
+  SideWidgetMedSizeIcon,
+  SideWidgetOpenMenuIcon,
   SideWidgetResponseMaskingIcon,
   SideWidgetReviewIcon,
 } from "@/features/student/practice-session/practice-session-side-widget-icons"
@@ -51,6 +53,16 @@ function PracticeSessionSideWidget({
   onAccessibility,
 }: PracticeSessionSideWidgetProps) {
   const [expanded, setExpanded] = useState(false)
+  const [isFullScreen, setIsFullScreen] = useState(false)
+
+  useEffect(() => {
+    function syncFullScreen() {
+      setIsFullScreen(Boolean(document.fullscreenElement))
+    }
+    syncFullScreen()
+    document.addEventListener("fullscreenchange", syncFullScreen)
+    return () => document.removeEventListener("fullscreenchange", syncFullScreen)
+  }, [])
 
   function handleFullScreen() {
     if (onFullScreen) {
@@ -83,9 +95,10 @@ function PracticeSessionSideWidget({
   const items: SideWidgetItem[] = [
     {
       id: "fullscreen",
-      label: "Full Screen",
-      icon: SideWidgetFullScreenIcon,
+      label: isFullScreen ? "Exit Full Screen" : "Full Screen",
+      icon: isFullScreen ? SideWidgetMedSizeIcon : SideWidgetFullScreenIcon,
       onClick: handleFullScreen,
+      active: isFullScreen,
     },
     {
       id: "review",
@@ -116,8 +129,8 @@ function PracticeSessionSideWidget({
     },
     {
       id: "collapse",
-      label: "Collapse Menu",
-      icon: SideWidgetCollapseMenuIcon,
+      label: expanded ? "Collapse Menu" : "Open Menu",
+      icon: expanded ? SideWidgetCollapseMenuIcon : SideWidgetOpenMenuIcon,
       onClick: () => setExpanded((open) => !open),
     },
   ]
