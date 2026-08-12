@@ -28,6 +28,7 @@ import {
 } from "@/features/student/practice-session/practice-results-summary-panel"
 import type { DrillQuestion, DrillSectionType } from "@/features/student/drills/drill-types"
 import {
+  applyActualFallbackToBlindReview,
   parseDrillBlindReviewFromMetadata,
   resolveSectionBlindReviewForResults,
 } from "@/features/student/drills/parse-drill-blind-review"
@@ -91,6 +92,11 @@ function mapDrillResponse(data: DrillSessionResponse, returnTo: string): LoadedR
   }
   const completedAt = data.session.completed_at ?? new Date().toISOString()
   const blindReview = parseDrillBlindReviewFromMetadata(data.session.metadata)
+  const blindReviewWithFallback = applyActualFallbackToBlindReview({
+    questionIds: data.questions.map((q) => q.id),
+    actualByQuestion: answersByQuestion,
+    blindReviewAnswersByQuestion: blindReview?.answersByQuestion ?? null,
+  })
   return {
     kind: "DRILL",
     title: data.drillLabel ?? data.metadata.title ?? "Drill results",
@@ -129,12 +135,16 @@ function mapSectionResponse(data: SectionSessionResponse, returnTo: string): Loa
     [data.metadata.prepTestTitle, data.metadata.sectionTitle].filter(Boolean).join(" — ") ??
     "Section results"
 
-  const { rawScore: blindReviewRawScore, answersByQuestion: blindReviewAnswersByQuestion } =
-    resolveSectionBlindReviewForResults({
-      sessionMetadata: data.session.metadata,
-      blindReviewAnswers: data.blindReviewAnswers,
-      blindReviewRawScore: data.blindReviewRawScore,
-    })
+  const resolvedBlindReview = resolveSectionBlindReviewForResults({
+    sessionMetadata: data.session.metadata,
+    blindReviewAnswers: data.blindReviewAnswers,
+    blindReviewRawScore: data.blindReviewRawScore,
+  })
+  const blindReviewWithFallback = applyActualFallbackToBlindReview({
+    questionIds: data.questions.map((q) => q.id),
+    actualByQuestion: answersByQuestion,
+    blindReviewAnswersByQuestion: resolvedBlindReview.answersByQuestion,
+  })
 
   return {
     kind: "SECTION",

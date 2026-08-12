@@ -844,6 +844,7 @@ function DrillSessionPage() {
                 direction="prev"
                 disabled={safeIndex <= 1}
                 iconOnly
+                figmaNarrowArrow
                 className={BLIND_REVIEW_NAV_ARROW_BUTTON_CLASS}
                 onClick={() => setQIndex((i) => Math.max(1, i - 1))}
               />
@@ -851,6 +852,7 @@ function DrillSessionPage() {
                 direction="next"
                 disabled={safeIndex >= questions.length}
                 iconOnly
+                figmaNarrowArrow
                 className={BLIND_REVIEW_NAV_ARROW_BUTTON_CLASS}
                 onClick={() => setQIndex((i) => Math.min(questions.length, i + 1))}
               />

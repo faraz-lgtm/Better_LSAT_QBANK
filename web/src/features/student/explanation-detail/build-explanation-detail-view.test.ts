@@ -73,5 +73,65 @@ describe("buildExplanationQuestionDetailView", () => {
     expect(view.videos).toHaveLength(2)
     expect(view.videos[0]?.dropdownLabel).toBe("Passage explanation")
     expect(view.videos[1]?.dropdownLabel).toBe("Question explanation")
+    expect(view.videos[0]?.explanationHtml).toBeNull()
+  })
+
+  it("maps written explanation to passage card and shows analysis tab", () => {
+    const detail: ExplanationDetailPayload = {
+      questionId: "q1",
+      prepTestId: "pt1",
+      prepTestTitle: "PT 129",
+      prepTestNumber: "129",
+      sectionId: "sec1",
+      sectionType: "LR",
+      sectionNumber: 1,
+      questionNumber: 19,
+      topicName: "Art",
+      explanationHtml: "<p>Passage analysis body</p>",
+      videoUrl: null,
+      stimulusText: null,
+      stemText: "Stem",
+      choices: [{ id: "A", index: 1, text: "a", explanationHtml: null }],
+      correctChoiceId: "A",
+      passage: { id: "p1", displayNumber: 1, title: "P1", body: "" },
+      answerPopularity: [],
+      userSelectedLetter: null,
+      difficulty: 3,
+    }
+
+    const view = buildExplanationQuestionDetailView(loc, detail)
+    expect(view.hasExplanationTab).toBe(true)
+    expect(view.videos[0]?.explanationHtml).toBe("<p>Passage analysis body</p>")
+    expect(view.videos[1]?.explanationHtml).toBeNull()
+    expect(view.videos[1]?.videoUrl).toBeNull()
+  })
+
+  it("shows analysis tab when only video explanation exists", () => {
+    const detail: ExplanationDetailPayload = {
+      questionId: "q1",
+      prepTestId: "pt1",
+      prepTestTitle: "PT 129",
+      prepTestNumber: "129",
+      sectionId: "sec1",
+      sectionType: "LR",
+      sectionNumber: 1,
+      questionNumber: 19,
+      topicName: "Art",
+      explanationHtml: null,
+      videoUrl: "https://example.com/v.mp4",
+      stimulusText: null,
+      stemText: "Stem",
+      choices: [{ id: "A", index: 1, text: "a", explanationHtml: null }],
+      correctChoiceId: "A",
+      passage: { id: "p1", displayNumber: 1, title: "P1", body: "" },
+      answerPopularity: [],
+      userSelectedLetter: null,
+      difficulty: 3,
+    }
+
+    const view = buildExplanationQuestionDetailView(loc, detail)
+    expect(view.hasExplanationTab).toBe(true)
+    expect(view.videos[0]?.explanationHtml).toBeNull()
+    expect(view.videos[1]?.videoUrl).toBe("https://example.com/v.mp4")
   })
 })

@@ -24,6 +24,11 @@ export type ScaledScoreCsvRow = {
   scaledScore: number
 }
 
+export type ScaledScorePercentileCsvRow = {
+  scaledScore: number
+  percentile: number
+}
+
 export type ScaledScoreFileInfo = {
   path: string
   prepTestNumber: number
@@ -275,6 +280,37 @@ export function parseScaledScoreCsvRows(
   }
 
   return rows
+}
+
+/** Parse shared scaled→percentile CSV (e.g. lsat_scaled_score_percentile.csv). */
+export function parseScaledScorePercentileCsvRows(
+  records: Record<string, string>[],
+): ScaledScorePercentileCsvRow[] {
+  const rows: ScaledScorePercentileCsvRow[] = []
+
+  for (const record of records) {
+    const scaledKey = Object.keys(record).find((k) => k.toLowerCase().includes("scaled"))
+    const percentileKey = Object.keys(record).find((k) => k.toLowerCase().includes("percentile"))
+    if (!scaledKey || !percentileKey) continue
+
+    const scaledScore = Number(String(record[scaledKey] ?? "").trim())
+    const percentile = Number(String(record[percentileKey] ?? "").trim())
+    if (!Number.isInteger(scaledScore) || !Number.isFinite(percentile)) continue
+    if (scaledScore < 120 || scaledScore > 180) continue
+    if (percentile < 0 || percentile > 100) continue
+
+    rows.push({ scaledScore, percentile })
+  }
+
+  return rows
+}
+
+export function percentileByScaledScore(
+  rows: ScaledScorePercentileCsvRow[],
+): Map<number, number> {
+  const map = new Map<number, number>()
+  for (const row of rows) map.set(row.scaledScore, row.percentile)
+  return map
 }
 
 export function parseExplanationCsvRecord(record: Record<string, string>): ExplanationCsvRow | null {

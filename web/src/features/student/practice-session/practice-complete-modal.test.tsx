@@ -37,6 +37,7 @@ describe("PracticeCompleteModal", () => {
         rawScore={10}
         questionCount={20}
         scaledScore={165}
+        percentile={86.5}
         scoreHidden={false}
         onToggleScoreHidden={vi.fn()}
         showBlindReview
@@ -46,11 +47,30 @@ describe("PracticeCompleteModal", () => {
       />,
     )
 
-    expect(screen.getByText("Scaled score 165")).toBeInTheDocument()
+    expect(screen.getByText("165")).toBeInTheDocument()
+    expect(screen.getByText("10/20")).toBeInTheDocument()
+    expect(screen.getByLabelText("86.5 percentile")).toBeInTheDocument()
+    expect(screen.getByText("percentile")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Blind Review/i })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Skip to view details result/i })).toBeInTheDocument()
     expect(
       screen.getByText(/helps you identify reasoning errors before seeing your score/i),
     ).toBeInTheDocument()
+  })
+
+  it("falls back to accuracy percent when percentile is missing", () => {
+    render(
+      <PracticeCompleteModal
+        open
+        subtitle="You've completed the drill"
+        rawScore={3}
+        questionCount={5}
+        scoreHidden={false}
+        onToggleScoreHidden={vi.fn()}
+        onDone={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByLabelText("60% percent")).toBeInTheDocument()
   })
 })

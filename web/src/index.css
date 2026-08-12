@@ -184,12 +184,18 @@
   }
 }
 
+html {
+  --app-zoom: 0.75;
+  --app-svh: calc(100svh / var(--app-zoom));
+  zoom: var(--app-zoom);
+}
+
 #root {
   width: 100%;
   max-width: 100%;
   margin: 0;
   text-align: left;
-  min-height: 100svh;
+  min-height: var(--app-svh);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -197,15 +203,52 @@
 
 html.student-shell-active,
 html.student-shell-active body {
-  height: 100%;
+  height: var(--app-svh);
   overflow: hidden;
   color-scheme: light;
 }
 
 html.student-shell-active #root {
-  height: 100%;
+  height: var(--app-svh);
   min-height: 0;
   overflow: hidden;
+}
+
+@supports not (zoom: 1) {
+  html {
+    zoom: unset;
+  }
+
+  #root {
+    transform: scale(var(--app-zoom));
+    transform-origin: 0 0;
+    width: calc(100% / var(--app-zoom));
+    height: calc(100% / var(--app-zoom));
+    min-height: var(--app-svh);
+  }
+
+  html.student-shell-active #root {
+    height: var(--app-svh);
+    min-height: 0;
+  }
+}
+
+@layer utilities {
+  .h-svh {
+    height: var(--app-svh);
+  }
+
+  .min-h-svh {
+    min-height: var(--app-svh);
+  }
+
+  .max-h-svh {
+    max-height: var(--app-svh);
+  }
+
+  .min-h-screen {
+    min-height: var(--app-svh);
+  }
 }
 
 /* Hand pointer on interactive controls across the student / LSAT portal */
@@ -376,8 +419,8 @@ html.student-shell-active :is(
 
 .auth-split-page {
   box-sizing: border-box;
-  height: 100svh;
-  max-height: 100svh;
+  height: var(--app-svh);
+  max-height: var(--app-svh);
   padding: 12px;
   overflow: hidden;
   background: #0d47a1;
@@ -1708,13 +1751,13 @@ html.student-shell-active :is(
     gap: 0;
     height: auto;
     max-height: none;
-    min-height: 100svh;
+    min-height: var(--app-svh);
   }
 
   .auth-split-page {
     height: auto;
     max-height: none;
-    min-height: 100svh;
+    min-height: var(--app-svh);
     overflow: auto;
   }
 
@@ -1734,7 +1777,7 @@ html.student-shell-active :is(
   }
 
   .auth-split-frame {
-    min-height: 100svh;
+    min-height: var(--app-svh);
   }
 
   .auth-split-header {
@@ -3193,12 +3236,12 @@ html.practice-finish-menu-open .practice-session-question-panel-with-widget {
 }
 
 .practice-session-card {
-  max-height: calc(100svh - var(--nav-shell-height) - 32px);
+  max-height: calc(var(--app-svh) - var(--nav-shell-height) - 32px);
   min-height: 0;
 }
 
 html.student-shell-immersive .practice-session-card {
-  max-height: calc(100svh - 32px);
+  max-height: calc(var(--app-svh) - 32px);
   flex: 1 1 0;
   min-height: 0;
 }
@@ -3224,7 +3267,7 @@ html.student-shell-immersive .practice-session-card--active-drill {
   width: 100%;
   max-width: 1440px;
   height: auto;
-  max-height: calc(100svh - 32px);
+  max-height: calc(var(--app-svh) - 32px);
   flex: none;
   min-height: 0;
   overflow: hidden;
@@ -3265,11 +3308,11 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
 
 @media (min-width: 768px) {
   html.student-shell-immersive .practice-session-card {
-    max-height: calc(100svh - 40px);
+    max-height: calc(var(--app-svh) - 40px);
   }
 
   html.student-shell-immersive .practice-session-card--active-drill {
-    max-height: calc(100svh - 64px);
+    max-height: calc(var(--app-svh) - 64px);
   }
 }
 
@@ -3281,7 +3324,7 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
 .prep-course-shell-card.practice-session-card {
   flex: 1 1 0;
   height: 0;
-  max-height: calc(100svh - var(--nav-shell-height) - 32px);
+  max-height: calc(var(--app-svh) - var(--nav-shell-height) - 32px);
 }
 
 .prep-course-lesson-shell .prep-course-lesson-frame.practice-session-card {
@@ -3488,14 +3531,21 @@ html.student-shell-immersive .practice-session-card--blind-review {
   overflow: visible;
 }
 
+/* Figma `18617:35585` — question pills + outcome icons */
 .practice-session-card--blind-review .practice-session-question-nav-grid {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   align-content: flex-start;
-  min-height: 48px;
+  min-height: 51px;
   height: auto;
   gap: 16px;
+  overflow: visible;
+}
+
+/* Review mode outcomes: wrap to next row (no horizontal scrollbar) */
+.practice-session-card--blind-review .practice-session-question-nav-grid:has([data-review-nav-outcome]) {
+  flex-wrap: wrap;
   overflow: visible;
 }
 
@@ -3507,6 +3557,10 @@ html.student-shell-immersive .practice-session-card--blind-review {
   align-self: center;
   flex-shrink: 0;
   border-radius: 12px;
+}
+
+.practice-session-card--blind-review .practice-session-question-nav-btn--review {
+  border-width: 1px;
 }
 
 .practice-session-card--blind-review .practice-session-content mark[data-highlight="orange"] {

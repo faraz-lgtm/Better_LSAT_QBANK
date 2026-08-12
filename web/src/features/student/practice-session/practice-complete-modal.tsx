@@ -8,6 +8,7 @@ type PracticeCompleteModalProps = {
   rawScore: number
   questionCount: number
   scaledScore?: number | null
+  percentile?: number | null
   scoreHidden: boolean
   onToggleScoreHidden: () => void
   showBlindReview?: boolean
@@ -31,17 +32,31 @@ const SKIP_DETAILS_BTN_CLASS =
 const DONE_BTN_CLASS =
   "inline-flex h-[48px] w-[320px] max-w-full shrink-0 items-center justify-center rounded-[16px] border border-[#6d78b6] bg-[#edf3ff] px-4 py-2 text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#e5edff]"
 
-/** Figma `18617:26705` — visible score ring */
-function PracticeCompleteScoreRing({ percent }: { percent: number }) {
+/** Figma `18617:26705` — visible score ring (percentile when available, else accuracy %). */
+function PracticeCompleteScoreRing({
+  percent,
+  labelKind,
+}: {
+  percent: number
+  labelKind: "percentile" | "accuracy"
+}) {
   const pct = Math.max(0, Math.min(100, percent))
+  const valueLabel =
+    labelKind === "percentile"
+      ? pct % 1 === 0
+        ? String(Math.round(pct))
+        : pct.toFixed(1)
+      : `${Math.round(pct)}%`
   const size = 120
   const strokeWidth = 10
   const radius = (size - strokeWidth) / 2
   const circumference = 2 * Math.PI * radius
   const dashOffset = circumference - (pct / 100) * circumference
+  const ariaLabel =
+    labelKind === "percentile" ? `${valueLabel} percentile` : `${valueLabel} percent`
 
   return (
-    <div className="relative size-[120px] shrink-0" aria-label={`${pct} percent`}>
+    <div className="relative size-[120px] shrink-0" aria-label={ariaLabel}>
       <svg className="size-full -rotate-90" viewBox={`0 0 ${size} ${size}`} aria-hidden>
         <circle
           cx={size / 2}
@@ -63,8 +78,20 @@ function PracticeCompleteScoreRing({ percent }: { percent: number }) {
           strokeDashoffset={dashOffset}
         />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-[33px] font-bold leading-[1.5] text-[#666d80]">
-        {pct}%
+      <span className="absolute inset-0 flex flex-col items-center justify-center text-[#666d80]">
+        <span
+          className={cn(
+            "font-bold leading-none",
+            labelKind === "percentile" ? "text-[28px]" : "text-[33px] leading-[1.5]",
+          )}
+        >
+          {valueLabel}
+        </span>
+        {labelKind === "percentile" ? (
+          <span className="mt-1 text-[11px] font-semibold leading-none tracking-[0.22px]">
+            percentile
+          </span>
+        ) : null}
       </span>
     </div>
   )
@@ -105,6 +132,7 @@ function PracticeCompleteModal({
   rawScore,
   questionCount,
   scaledScore,
+  percentile = null,
   scoreHidden,
   onToggleScoreHidden,
   showBlindReview = false,
@@ -114,7 +142,9 @@ function PracticeCompleteModal({
   onDone,
   titleId = "practice-complete-title",
 }: PracticeCompleteModalProps) {
-  const pct = questionCount > 0 ? Math.round((rawScore / questionCount) * 100) : 0
+  const accuracyPct = questionCount > 0 ? Math.round((rawScore / questionCount) * 100) : 0
+  const usePercentile = percentile != null
+  const ringPct = usePercentile ? percentile : accuracyPct
   const scoreLabel = useMemo(() => `${rawScore}/${questionCount}`, [rawScore, questionCount])
 
   if (!open) return null
@@ -144,12 +174,19 @@ function PracticeCompleteModal({
           >
             <div className="flex flex-col gap-1 pl-6">
               <p className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#6a7282]">Your Score</p>
-              <p className="text-[48px] font-bold leading-[1.2] text-[#062357]">{scoreLabel}</p>
               {scaledScore != null ? (
-                <p className="text-sm font-semibold leading-[1.5] text-[#0d47a1]">Scaled score {scaledScore}</p>
-              ) : null}
+                <>
+                  <p className="text-[48px] font-bold leading-[1.2] text-[#062357]">{scaledScore}</p>
+                  <p className="text-sm font-semibold leading-[1.5] text-[#0d47a1]">{scoreLabel}</p>
+                </>
+              ) : (
+                <p className="text-[48px] font-bold leading-[1.2] text-[#062357]">{scoreLabel}</p>
+              )}
             </div>
-            <PracticeCompleteScoreRing percent={pct} />
+            <PracticeCompleteScoreRing
+              percent={ringPct}
+              labelKind={usePercentile ? "percentile" : "accuracy"}
+            />
           </div>
 
           {scoreHidden ? (

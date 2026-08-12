@@ -21,6 +21,7 @@ import {
 import { mergeActiveDrillAttemptBlindReview } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
 import { usePrepCourseBookmarks } from "@/features/prep-course/lib/use-prep-course-bookmarks"
 import { StudentMain } from "@/features/student/components/student-main"
+import { STUDENT_PAGE_CONTAINER_CLASS } from "@/features/student/components/student-page-container"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createPracticeApi } from "@/lib/api/practice"
 import {
@@ -295,7 +296,7 @@ function PrepCourseLessonPage() {
   }
 
   return (
-    <StudentMain layout="locked" contentClassName="px-0 pb-0">
+    <StudentMain layout="locked" fullBleed contentClassName="px-0 pb-0">
       <div className="prep-course-lesson-shell flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-y-hidden">
         {error ? <p className="mb-4 shrink-0 text-xs text-[#95122b]">{error}</p> : null}
 
@@ -315,9 +316,11 @@ function PrepCourseLessonPage() {
                 ref={lessonContentRef}
                 className="practice-session-pane practice-session-scroll-hidden flex min-h-0 flex-1 flex-col gap-6 overflow-x-clip overflow-y-auto overscroll-contain bg-[var(--primary-0)] [overflow-anchor:none]"
               >
-                <PrepCourseLessonPanel {...lessonPanelProps} drillResultsPart="cards" sidebarAdjacent={false} />
+                <div className={cn(STUDENT_PAGE_CONTAINER_CLASS, "w-full")}>
+                  <PrepCourseLessonPanel {...lessonPanelProps} drillResultsPart="cards" sidebarAdjacent={false} />
+                </div>
                 <div className="flex min-w-0 gap-6">
-                  <div className="min-w-0 flex-1">
+                  <div className={cn(STUDENT_PAGE_CONTAINER_CLASS, "min-w-0 flex-1")}>
                     <PrepCourseLessonPanel
                       {...lessonPanelProps}
                       drillResultsPart="below"
@@ -342,7 +345,7 @@ function PrepCourseLessonPage() {
               </div>
             ) : (
               <>
-                <div className={PREP_COURSE_LESSON_CONTENT_CARD_CLASS}>
+                <div className={cn(PREP_COURSE_LESSON_CONTENT_CARD_CLASS, STUDENT_PAGE_CONTAINER_CLASS)}>
                   <PrepCourseLessonPanel
                     {...lessonPanelProps}
                     contentScrollRef={lessonContentRef}

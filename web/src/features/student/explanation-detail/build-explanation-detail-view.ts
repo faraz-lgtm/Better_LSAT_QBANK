@@ -110,16 +110,19 @@ export function buildExplanationQuestionDetailView(
       explanationHtml: c.explanationHtml,
     })) ?? []
 
+  const hasWritten = Boolean(detail?.explanationHtml?.trim())
+  const hasVideo = Boolean(detail?.videoUrl?.trim())
+
   const videos: ExplanationQuestionDetailView["videos"] = [
     {
       id: "v-passage",
       headerVariant: "yellow",
-      authorTitle: "Video Explanation",
+      authorTitle: "Passage Explanation",
       dropdownLabel: "Passage explanation",
       dropdownOptions: [{ value: "passage", label: "Passage explanation" }],
       postedLine: "Posted Friday, Apr 5 • Duration: 8:32",
       videoUrl: null,
-      explanationHtml: null,
+      explanationHtml: detail?.explanationHtml ?? null,
     },
     {
       id: "v-question",
@@ -131,7 +134,7 @@ export function buildExplanationQuestionDetailView(
         ? `Posted Wednesday, Jun 4, 2025 • Taken on ${detail.prepTestTitle}`
         : "Posted Wednesday, Jun 4, 2025 • Taken on LawHub",
       videoUrl: detail?.videoUrl ?? null,
-      explanationHtml: detail?.explanationHtml ?? null,
+      explanationHtml: null,
     },
   ]
 
@@ -151,6 +154,6 @@ export function buildExplanationQuestionDetailView(
     videos,
     analytics: buildAnalytics(loc, detail, choices),
     neighbors,
-    hasExplanationTab: false,
+    hasExplanationTab: hasWritten || hasVideo,
   }
 }

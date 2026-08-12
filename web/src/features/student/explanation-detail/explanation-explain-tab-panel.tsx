@@ -73,9 +73,10 @@ function VideoExplanationCard({ v }: { v: ExplanationQuestionDetailView["videos"
 }
 
 function ExplanationExplainTabPanel({ videos }: ExplanationExplainTabPanelProps) {
+  const visible = videos.filter((v) => hasVideoContent(v) || hasWrittenContent(v))
   return (
     <div className="flex flex-col gap-6">
-      {videos.map((v) => (
+      {visible.map((v) => (
         <VideoExplanationCard key={v.id} v={v} />
       ))}
     </div>
