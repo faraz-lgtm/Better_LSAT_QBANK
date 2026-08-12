@@ -375,7 +375,9 @@ function OverviewTab() {
         bookmarkedOnly={sectionBookmarkedOnly}
         onBookmarkedOnlyChange={setSectionBookmarkedOnly}
         onToggleBookmark={(id) => void toggleHistoryBookmark(id, setSectionHistory)}
-        onSelectEntry={(id) => navigate(`/app/practice/results/${encodeURIComponent(id)}`)}
+        onSelectEntry={(id) =>
+          navigate(`/app/practice/results/${encodeURIComponent(id)}?source=section`)
+        }
       />
 
       <AnalyticsPrepTestHistory

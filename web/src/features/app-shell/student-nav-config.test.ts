@@ -81,6 +81,21 @@ describe("student-nav-config", () => {
     expect(getStudentPageTitle("/app/practice/results/session-1")).toBeNull()
   })
 
+  it("builds section results breadcrumbs", () => {
+    expect(getStudentBreadcrumbs("/app/practice/results/session-1", "?source=section")).toEqual([
+      { label: "Prep", href: "/app/practice/drills" },
+      { label: "Sections", href: "/app/practice/sections" },
+      { label: "Section result" },
+    ])
+    expect(
+      getStudentBreadcrumbs("/app/practice/results/session-1", "?returnTo=/app/practice/sections"),
+    ).toEqual([
+      { label: "Prep", href: "/app/practice/drills" },
+      { label: "Sections", href: "/app/practice/sections" },
+      { label: "Section result" },
+    ])
+  })
+
   it("hides prep test hub title and extra breadcrumb", () => {
     expect(getStudentBreadcrumbs("/app/preptest/pt-900")).toEqual([
       { label: "PrepTest", href: "/app/preptest" },

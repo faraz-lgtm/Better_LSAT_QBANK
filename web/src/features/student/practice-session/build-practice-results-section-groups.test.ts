@@ -1,85 +1,76 @@
 import { describe, expect, it } from "vitest"
 
 import type { DrillQuestion } from "@/features/student/drills/drill-types"
+import type { ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
 import { buildPracticeResultsSectionGroups } from "@/features/student/practice-session/build-practice-results-section-groups"
 
-function question(id: string): DrillQuestion {
+function question(id: string, extras: Partial<DrillQuestion> = {}): DrillQuestion {
   return {
     id,
-    questionNumber: 1,
+    questionNumber: null,
     stimulusText: null,
     stemText: null,
     choices: [],
-    passage: null,
+    passage: extras.passage ?? { id: "collapsed", displayNumber: 1, title: "Passage 1", body: "" },
+    sourceGroupId: extras.sourceGroupId ?? null,
+    correctChoiceId: null,
   }
 }
 
-describe("buildPracticeResultsSectionGroups blind review fallback", () => {
-  it("inherits Actual when Blind Review is skipped", () => {
-    const answersByQuestion = new Map([
-      ["q-1", { selectedAnswer: "A", isCorrect: false }],
-      ["q-2", { selectedAnswer: "B", isCorrect: true }],
-    ])
-    const blindReviewAnswersByQuestion = new Map([
-      ["q-1", { selectedAnswer: "C", isCorrect: false }],
-      // q-2 skipped
-    ])
+function detail(id: string): ExplanationDetailPayload {
+  return {
+    questionId: id,
+    prepTestId: "pt",
+    prepTestTitle: "PT 128",
+    prepTestNumber: "128",
+    sectionId: "s4",
+    sectionType: "RC",
+    sectionNumber: 4,
+    questionNumber: 1,
+    topicName: "RC",
+    explanationHtml: null,
+    videoUrl: null,
+    stimulusText: null,
+    stemText: null,
+    choices: [],
+    correctChoiceId: null,
+    passage: { id: "collapsed", displayNumber: 1, title: "Passage 1", body: "" },
+    answerPopularity: [],
+    difficulty: 3,
+  }
+}
+
+describe("buildPracticeResultsSectionGroups RC passages", () => {
+  it("splits RC questions by sourceGroupId when passage ids are collapsed", () => {
+    const questions = [
+      question("q1", { sourceGroupId: "g1" }),
+      question("q2", { sourceGroupId: "g1" }),
+      question("q3", { sourceGroupId: "g2" }),
+      question("q4", { sourceGroupId: "g2" }),
+      question("q5", { sourceGroupId: "g3" }),
+    ]
+    const detailsByQuestion = Object.fromEntries(questions.map((q) => [q.id, detail(q.id)]))
 
     const groups = buildPracticeResultsSectionGroups({
-      questions: [question("q-1"), question("q-2")],
-      answersByQuestion,
-      blindReviewAnswersByQuestion,
-      detailsByQuestion: {},
-      defaultKind: "LR",
-      fallbackSectionNumber: 2,
-      perQuestionSeconds: 60,
-    })
-
-    const questions = groups[0]?.questions ?? []
-    expect(questions[0]?.blindReviewUnanswered).toBe(false)
-    expect(questions[0]?.blindReviewCorrect).toBe(false)
-    expect(questions[1]?.blindReviewUnanswered).toBe(false)
-    expect(questions[1]?.blindReviewCorrect).toBe(true)
-    expect(groups[0]?.blindReviewDisplay).toBe("-1")
-  })
-
-  it("keeps Blind Review answer when Actual was skipped", () => {
-    const answersByQuestion = new Map<string, { selectedAnswer: string; isCorrect: boolean }>()
-    const blindReviewAnswersByQuestion = new Map([
-      ["q-1", { selectedAnswer: "B", isCorrect: true }],
-    ])
-
-    const groups = buildPracticeResultsSectionGroups({
-      questions: [question("q-1")],
-      answersByQuestion,
-      blindReviewAnswersByQuestion,
-      detailsByQuestion: {},
-      defaultKind: "LR",
-      fallbackSectionNumber: 1,
-      perQuestionSeconds: 60,
-    })
-
-    const q = groups[0]?.questions[0]
-    expect(q?.isUnanswered).toBe(true)
-    expect(q?.blindReviewUnanswered).toBe(false)
-    expect(q?.blindReviewCorrect).toBe(true)
-    expect(groups[0]?.blindReviewDisplay).toBe("0")
-  })
-
-  it("keeps both unanswered when Actual and Blind Review are skipped", () => {
-    const groups = buildPracticeResultsSectionGroups({
-      questions: [question("q-1")],
+      questions,
       answersByQuestion: new Map(),
-      blindReviewAnswersByQuestion: new Map(),
-      detailsByQuestion: {},
-      defaultKind: "LR",
-      fallbackSectionNumber: 1,
-      perQuestionSeconds: 60,
+      blindReviewAnswersByQuestion: null,
+      detailsByQuestion,
+      defaultKind: "RC",
+      fallbackSectionNumber: 4,
+      perQuestionSeconds: 30,
     })
 
-    const q = groups[0]?.questions[0]
-    expect(q?.isUnanswered).toBe(true)
-    expect(q?.blindReviewUnanswered).toBe(true)
-    expect(q?.blindReviewCorrect).toBe(false)
+    expect(groups).toHaveLength(1)
+    expect(groups[0]?.passages.map((p) => p.passage.passageLabel)).toEqual(["P1", "P2", "P3"])
+    expect(groups[0]?.passages.map((p) => p.passage.title)).toEqual([
+      "Passage 1",
+      "Passage 2",
+      "Passage 3",
+    ])
+    expect(groups[0]?.passages[0]?.questions.map((q) => q.question.id)).toEqual(["q1", "q2"])
+    expect(groups[0]?.passages[1]?.questions.map((q) => q.question.id)).toEqual(["q3", "q4"])
+    expect(groups[0]?.passages[2]?.questions.map((q) => q.question.id)).toEqual(["q5"])
+    expect(groups[0]?.passages[1]?.questions[0]?.number).toBe(3)
   })
 })

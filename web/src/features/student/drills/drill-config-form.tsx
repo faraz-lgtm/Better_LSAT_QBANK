@@ -127,7 +127,7 @@ function DrillConfigForm({
       {bannerOpen ? (
         <div className="flex items-center justify-between gap-4">
           <p className="m-0 min-w-0 flex-1 text-sm font-normal leading-normal tracking-[0.02em] text-[#666d80]">
-            We&apos;ll target your weaknesses with adaptive drills powered by our smart Insights.{" "}
+            We&apos;ll target your weaknesses with Smart Drills powered by our smart Insights.{" "}
             <span className="font-semibold">On/Off the settings to customize.</span>
           </p>
           <button

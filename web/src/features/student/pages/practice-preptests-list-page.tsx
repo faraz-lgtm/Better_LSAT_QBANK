@@ -2,7 +2,6 @@ import type { ReactNode } from "react"
 import { useEffect, useMemo, useState } from "react"
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom"
 
-import { Button } from "@/components/ui/button"
 import { FigmaDropdown } from "@/components/ui/figma-dropdown"
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
@@ -24,14 +23,13 @@ import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import {
   ChevronDown,
-  ChevronLeft,
   ChevronRight,
   MoreVertical,
   RefreshCw,
   Settings,
 } from "lucide-react"
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 5
 
 const EMPTY_STATUS_COUNTS: PrepTestPoolStatusCounts = {
   all: 0,
@@ -368,6 +366,7 @@ function PracticePrepTestsListPage() {
   const [total, setTotal] = useState(0)
   const [statusCounts, setStatusCounts] = useState<PrepTestPoolStatusCounts>(EMPTY_STATUS_COUNTS)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [startingId, setStartingId] = useState<string | null>(null)
   const [startingBlindReviewId, setStartingBlindReviewId] = useState<string | null>(null)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set())
@@ -375,8 +374,10 @@ function PracticePrepTestsListPage() {
 
   useEffect(() => {
     let cancelled = false
+    const isLoadMore = page > 1
     void (async () => {
-      setLoading(true)
+      if (isLoadMore) setLoadingMore(true)
+      else setLoading(true)
       setError(null)
       try {
         const out = await practiceApi.listPrepTestPool({
@@ -386,19 +387,24 @@ function PracticePrepTestsListPage() {
           sort: sort === "Newest" ? "newest" : "oldest",
         })
         if (!cancelled) {
-          setPrepTests(out.prepTests)
+          setPrepTests((prev) => (isLoadMore ? [...prev, ...out.prepTests] : out.prepTests))
           setTotal(out.total)
           setStatusCounts(out.statusCounts)
         }
       } catch (e) {
         if (!cancelled) {
-          setPrepTests([])
-          setTotal(0)
-          setStatusCounts(EMPTY_STATUS_COUNTS)
+          if (!isLoadMore) {
+            setPrepTests([])
+            setTotal(0)
+            setStatusCounts(EMPTY_STATUS_COUNTS)
+          }
           setError(e instanceof Error ? e.message : "Failed to load PrepTests")
         }
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          if (isLoadMore) setLoadingMore(false)
+          else setLoading(false)
+        }
       }
     })()
     return () => {
@@ -406,9 +412,7 @@ function PracticePrepTestsListPage() {
     }
   }, [practiceApi, filter, sort, page])
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-  const pageStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
-  const pageEnd = Math.min(page * PAGE_SIZE, total)
+  const hasMore = prepTests.length < total
 
   function filterTabLabel(tabId: PrepTestPoolFilter): string {
     const base = FILTER_TABS.find((t) => t.id === tabId)?.label ?? tabId
@@ -500,13 +504,17 @@ function PracticePrepTestsListPage() {
         <PrepTestListFilters
           filter={filter}
           setFilter={(f) => {
-            setFilter(f)
+            setLoading(true)
+            setPrepTests([])
             setPage(1)
+            setFilter(f)
           }}
           sort={sort}
           setSort={(s) => {
-            setSort(s)
+            setLoading(true)
+            setPrepTests([])
             setPage(1)
+            setSort(s)
           }}
           filterTabLabel={filterTabLabel}
         />
@@ -537,42 +545,17 @@ function PracticePrepTestsListPage() {
               />
             ))}
           </div>
-          {!loading && total > PAGE_SIZE ? (
-            <nav
-              className="mt-6 flex flex-col gap-3 border-t border-[#dfe1e7] pt-4 sm:flex-row sm:items-center sm:justify-between"
-              aria-label="PrepTest pagination"
-            >
-              <p className="text-sm text-[#666d80]">
-                Showing {pageStart}–{pageEnd} of {total} PrepTests
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-lg"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  <ChevronLeft className="size-4" aria-hidden />
-                  Previous
-                </Button>
-                <span className="min-w-18 text-center text-sm font-medium tabular-nums text-[#062357]">
-                  {page} / {totalPages}
-                </span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-lg"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                >
-                  Next
-                  <ChevronRight className="size-4" aria-hidden />
-                </Button>
-              </div>
-            </nav>
+          {hasMore ? (
+            <div className="mt-6 flex justify-center">
+              <button
+                type="button"
+                disabled={loadingMore}
+                onClick={() => setPage((p) => p + 1)}
+                className="inline-flex h-[52px] min-w-[160px] items-center justify-center rounded-[16px] border border-[#dfe1e7] bg-white px-6 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa] disabled:opacity-60"
+              >
+                {loadingMore ? "Loading…" : "See more"}
+              </button>
+            </div>
           ) : null}
         </>
       )}

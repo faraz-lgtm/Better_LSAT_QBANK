@@ -1296,7 +1296,7 @@ function AdminCoursesPage() {
                         <p className="mt-1 text-xs text-[#666d80]">
                           {lessonForm.lessonType === "active_drill"
                             ? "Link exactly one question for this drill."
-                            : "Link up to five questions for this adaptive drill."}{" "}
+                            : "Link up to five questions for this Smart Drill."}{" "}
                           ({linkedQuestions.length}/{linkedQuestionCap} linked)
                         </p>
                       </div>

@@ -125,7 +125,7 @@ function uniqueSlug(base: string, used: Set<string>): string {
 
 function inferLessonTypeFromText(title: string, bodyLines: string[]): PrepLessonType {
   const text = `${title}\n${bodyLines.slice(0, 25).join("\n")}`.toLowerCase()
-  if (text.includes("adaptive drill")) return "adaptive_drill"
+  if (text.includes("smart drill") || text.includes("adaptive drill")) return "adaptive_drill"
   if (text.includes("active drill") || text.includes("you try")) return "active_drill"
   if (text.includes("rep work") || text.includes("review work")) return "rep_work"
   return "video_text"
@@ -914,7 +914,7 @@ export function createAdminService(deps: { repository: AdminRepository }) {
           throw new Error("Active drill lessons can only include one linked question.")
         }
         if (normalizedLessonType === "adaptive_drill" && linkedCount >= 5) {
-          throw new Error("Adaptive drill lessons can include at most five linked questions.")
+          throw new Error("Smart Drill lessons can include at most five linked questions.")
         }
       }
       return deps.repository.linkQuestionToLesson({ lessonId, questionId, sortOrder })

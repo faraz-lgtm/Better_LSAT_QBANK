@@ -8,7 +8,7 @@ type DashboardAdaptiveDrillButtonProps = {
   className?: string
 }
 
-/** Figma `19274:32299` — dashboard header Adaptive Drill button */
+/** Figma `19274:32299` — dashboard header Smart Drill button */
 function DashboardAdaptiveDrillButton({
   loading = false,
   disabled = false,
@@ -26,7 +26,7 @@ function DashboardAdaptiveDrillButton({
       )}
     >
       <DashboardAdaptiveDrillIcon className="size-4 shrink-0" />
-      {loading ? "Starting…" : "Adaptive Drill"}
+      {loading ? "Starting…" : "Smart Drill"}
     </button>
   )
 }

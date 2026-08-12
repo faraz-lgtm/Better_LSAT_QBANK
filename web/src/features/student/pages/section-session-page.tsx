@@ -463,7 +463,10 @@ function SectionSessionPage() {
     clearPostCompleteBlindReviewStorage()
     setPostCompleteBlindReview(false)
     setCompleteModal(null)
-    navigate(`/app/practice/results/${encodeURIComponent(sessionId)}`, { replace: true })
+    navigate(
+      `/app/practice/results/${encodeURIComponent(sessionId)}?source=section`,
+      { replace: true },
+    )
   }
 
   function leaveSectionComplete() {
@@ -1565,6 +1568,7 @@ function SectionSessionPage() {
             answersByQuestion={answersByQuestion}
             isFlagged={questionFlags.isFlagged}
             variant={sessionVariant}
+            showPassageBreaks={sectionType === "RC"}
             onSelectQuestion={setQIndex}
             onPrev={() => setQIndex((i) => Math.max(1, i - 1))}
             onNext={() => setQIndex((i) => Math.min(questions.length, i + 1))}
@@ -1580,6 +1584,7 @@ function SectionSessionPage() {
                 isQuestionRecommendedForBlindReview(actualAnswersByQuestion[questionId])
               }
               variant={sessionVariant}
+              showPassageBreaks={sectionType === "RC"}
               onSelectQuestion={setQIndex}
               className={BLIND_REVIEW_FOOTER_NAV_CLASS}
             />
@@ -1610,6 +1615,7 @@ function SectionSessionPage() {
           answersByQuestion={answersByQuestion}
           isFlagged={questionFlags.isFlagged}
           variant={sessionVariant}
+          showPassageBreaks={sectionType === "RC"}
           onSelectQuestion={setQIndex}
           className="practice-session-scroll-hidden flex min-h-0 min-w-0 flex-1 flex-nowrap items-stretch gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5 pt-2.5 sm:gap-2"
         />

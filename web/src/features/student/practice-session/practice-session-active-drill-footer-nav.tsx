@@ -23,6 +23,7 @@ type PracticeSessionActiveDrillFooterNavProps = {
   /** When on the last question, replaces the disabled Next control. */
   onSubmit?: () => void
   submitLabel?: string
+  showPassageBreaks?: boolean
   className?: string
 }
 
@@ -37,6 +38,7 @@ function PracticeSessionActiveDrillFooterNav({
   onNext,
   onSubmit,
   submitLabel = "Submit",
+  showPassageBreaks = true,
   className,
 }: PracticeSessionActiveDrillFooterNavProps) {
   const isLastQuestion = safeIndex >= questions.length
@@ -60,6 +62,7 @@ function PracticeSessionActiveDrillFooterNav({
           isFlagged={isFlagged}
           variant={variant}
           onSelectQuestion={onSelectQuestion}
+          showPassageBreaks={showPassageBreaks}
           className={ACTIVE_DRILL_FOOTER_NAV_GRID_CLASS}
         />
         <div className={ACTIVE_DRILL_FOOTER_NAV_ARROW_COLUMN_CLASS}>

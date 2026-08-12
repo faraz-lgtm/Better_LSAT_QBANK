@@ -224,7 +224,7 @@ function DashboardPage() {
       })
       navigate(`/app/practice/drills/session/${out.session.id}?${DASHBOARD_ADAPTIVE_DRILL_QUERY}=1`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to start adaptive drill")
+      setError(e instanceof Error ? e.message : "Failed to start Smart Drill")
     } finally {
       setStartingAdaptiveDrill(false)
     }
