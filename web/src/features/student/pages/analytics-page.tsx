@@ -12,6 +12,7 @@ import {
   StatTile,
   type ScoreProgressTab,
 } from "@/features/student/analytics/components/analytics-overview-ui"
+import { practiceSessionResultsPath } from "@/features/student/analytics/analytics-results-paths"
 import {
   mapDrillSessionToHistoryEntry,
   mapOverviewToHeadlineStats,
@@ -364,7 +365,7 @@ function OverviewTab() {
         bookmarkedOnly={drillBookmarkedOnly}
         onBookmarkedOnlyChange={setDrillBookmarkedOnly}
         onToggleBookmark={(id) => void toggleHistoryBookmark(id, setDrillHistory)}
-        onSelectEntry={(id) => navigate(`/app/practice/results/${encodeURIComponent(id)}`)}
+        onSelectEntry={(id) => navigate(practiceSessionResultsPath(id))}
       />
 
       <AnalyticsPrepTestHistory
@@ -375,9 +376,7 @@ function OverviewTab() {
         bookmarkedOnly={sectionBookmarkedOnly}
         onBookmarkedOnlyChange={setSectionBookmarkedOnly}
         onToggleBookmark={(id) => void toggleHistoryBookmark(id, setSectionHistory)}
-        onSelectEntry={(id) =>
-          navigate(`/app/practice/results/${encodeURIComponent(id)}?source=section`)
-        }
+        onSelectEntry={(id) => navigate(practiceSessionResultsPath(id, { source: "section" }))}
       />
 
       <AnalyticsPrepTestHistory

@@ -475,6 +475,33 @@ function assertStudentVisiblePrepTest(moduleId: string | null | undefined): void
   }
 }
 
+async function resolveVisiblePrepTest(
+  repository: {
+    getPrepTestDetailRow: (id: string) => Promise<PrepTestDetailRow | null>
+    getSessionById: (sessionId: string, userId: string) => Promise<PracticeSessionRow | null>
+    findPrepTestIdByModuleId: (moduleId: string) => Promise<string | null>
+  },
+  userId: string,
+  rawId: string,
+): Promise<{ prepTestId: string; row: PrepTestDetailRow }> {
+  if (!rawId) throw new PracticeValidationError('prepTestId is required')
+
+  let row = await repository.getPrepTestDetailRow(rawId)
+  if (!row) {
+    const session = await repository.getSessionById(rawId, userId)
+    if (session?.prep_test_id) {
+      row = await repository.getPrepTestDetailRow(session.prep_test_id)
+    }
+  }
+  if (!row) {
+    const moduleId = await repository.findPrepTestIdByModuleId(rawId)
+    if (moduleId) row = await repository.getPrepTestDetailRow(moduleId)
+  }
+  if (!row) throw new PracticeValidationError('prepTestId not found')
+  assertStudentVisiblePrepTest(row.moduleId)
+  return { prepTestId: row.id, row }
+}
+
 function prepTestModuleIdFromSection(section: {
   module_id: string | null
   admin_prep_tests: { module_id: string } | null
@@ -2140,12 +2167,8 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       userId: string,
       body: { prepTestId?: unknown },
     ): Promise<PrepTestDetailResponse> {
-      const prepTestId = typeof body.prepTestId === 'string' ? body.prepTestId : ''
-      if (!prepTestId) throw new PracticeValidationError('prepTestId is required')
-
-      const row = await deps.repository.getPrepTestDetailRow(prepTestId)
-      if (!row) throw new PracticeValidationError('prepTestId not found')
-      assertStudentVisiblePrepTest(row.moduleId)
+      const requestedId = typeof body.prepTestId === 'string' ? body.prepTestId : ''
+      const { prepTestId, row } = await resolveVisiblePrepTest(deps.repository, userId, requestedId)
 
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
       const prepTestSession =

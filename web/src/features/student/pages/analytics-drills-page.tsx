@@ -24,12 +24,12 @@ import {
   type DrillRecord,
   type DrillType,
 } from "@/features/student/lib/mock-analytics-drills"
+import { practiceSessionResultsPath } from "@/features/student/analytics/analytics-results-paths"
 import {
   buildDrillTypesFromPriorities,
-  mapPrepTestSessionToHistoryEntry,
+  mapDrillSessionToHistoryEntry,
   mapSessionToDrillRecord,
 } from "@/features/student/analytics/map-analytics"
-import { PREPTEST_LIST_HREF } from "@/features/student/preptests/preptest-routes"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import {
   LSAT_SCALED_Y_AXIS_LABELS,
@@ -417,15 +417,15 @@ function AnalyticsDrillsPage() {
   const [loading, setLoading] = useState(true)
   const [drillRecords, setDrillRecords] = useState<DrillRecord[]>([])
   const [drillTypes, setDrillTypes] = useState<DrillType[]>([])
-  const [prepHistory, setPrepHistory] = useState<PrepTestHistoryEntry[]>([])
+  const [drillHistory, setDrillHistory] = useState<PrepTestHistoryEntry[]>([])
 
   const [scoreTab, setScoreTab] = useState<ScoreTab>("ptEquivalent")
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
   const [historySort, setHistorySort] = useState<HistorySort>("date-desc")
   const initialBookmarks = useMemo(
-    () => Object.fromEntries(prepHistory.map((entry) => [entry.id, entry.bookmarked])),
-    [prepHistory],
+    () => Object.fromEntries(drillHistory.map((entry) => [entry.id, entry.bookmarked])),
+    [drillHistory],
   )
   const [bookmarks, setBookmarks] = useState<Record<string, boolean>>(() => loadBookmarks(initialBookmarks))
 
@@ -437,15 +437,16 @@ function AnalyticsDrillsPage() {
     setLoading(true)
     void Promise.all([
       analyticsApi.getSessions({ kind: "DRILL", limit: 100 }),
-      analyticsApi.getSessions({ kind: "PREPTEST", limit: 50 }),
       analyticsApi.getPriorities(),
     ])
-      .then(([drills, preptests, priorities]) => {
+      .then(([drills, priorities]) => {
         setDrillRecords(
           drills.sessions.map(mapSessionToDrillRecord).filter((r): r is DrillRecord => r != null),
         )
-        setPrepHistory(
-          preptests.sessions.map(mapPrepTestSessionToHistoryEntry).filter((e): e is PrepTestHistoryEntry => e != null),
+        setDrillHistory(
+          drills.sessions
+            .map(mapDrillSessionToHistoryEntry)
+            .filter((e): e is PrepTestHistoryEntry => e != null),
         )
         setDrillTypes(buildDrillTypesFromPriorities(priorities))
       })
@@ -488,9 +489,17 @@ function AnalyticsDrillsPage() {
   const statTiles = useMemo(() => (stats ? buildDrillStatTiles(stats) : null), [stats])
   const progressPoints = useMemo(() => getDrillProgressPoints(filteredRecords), [filteredRecords])
 
+  const filteredIds = useMemo(
+    () => new Set(filteredRecords.map((record) => record.id)),
+    [filteredRecords],
+  )
+
   const entries = useMemo(
-    () => prepHistory.map((entry) => ({ ...entry, bookmarked: bookmarks[entry.id] ?? entry.bookmarked })),
-    [bookmarks, prepHistory],
+    () =>
+      drillHistory
+        .filter((entry) => filteredIds.has(entry.id))
+        .map((entry) => ({ ...entry, bookmarked: bookmarks[entry.id] ?? entry.bookmarked })),
+    [bookmarks, drillHistory, filteredIds],
   )
 
   const sortedEntries = useMemo(() => {
@@ -529,21 +538,9 @@ function AnalyticsDrillsPage() {
 
   const handleSelectEntry = useCallback(
     (id: string) => {
-      navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)
+      navigate(practiceSessionResultsPath(id))
     },
     [navigate],
-  )
-
-  const handleOpenPractice = useCallback(
-    (sessionId: string) => {
-      const entry = prepHistory.find((e) => e.id === sessionId)
-      if (entry) {
-        navigate(`/app/analytics/preptests/results/${encodeURIComponent(sessionId)}`)
-        return
-      }
-      navigate(PREPTEST_LIST_HREF)
-    },
-    [navigate, prepHistory],
   )
 
   if (loading) {
@@ -610,7 +607,6 @@ function AnalyticsDrillsPage() {
         onBookmarkedOnlyChange={setBookmarkedOnly}
         onToggleBookmark={handleToggleBookmark}
         onSelectEntry={handleSelectEntry}
-        onOpenPractice={handleOpenPractice}
       />
     </StudentMain>
   )

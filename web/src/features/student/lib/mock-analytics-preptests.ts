@@ -23,6 +23,8 @@ export type PrepTestHistoryEntry = {
  */
 export type PrepTestRecord = {
   id: string
+  /** admin_prep_tests.id when known; Insights history `id` is the practice session. */
+  prepTestId?: string | null
   prepTestNumber: number
   /** ISO date string when the test was taken. */
   takenAt: string

@@ -92,11 +92,11 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
   const isBlindReview = variant === "blind-review"
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null)
   const hasExplanation = Boolean(explanationHtml?.trim())
-  const isActualAnswerView = answerView === "actual"
-  const brSelectedRowClass = isActualAnswerView
+  const useActualSelectedStyles = answerView === "actual" || answerView === "clean"
+  const brSelectedRowClass = useActualSelectedStyles
     ? BLIND_REVIEW_OPTION_ROW_SELECTED_ACTUAL_CLASS
     : BLIND_REVIEW_OPTION_ROW_SELECTED_BR_CLASS
-  const brSelectedLetterClass = isActualAnswerView
+  const brSelectedLetterClass = useActualSelectedStyles
     ? BLIND_REVIEW_OPTION_LETTER_SELECTED_ACTUAL_CLASS
     : BLIND_REVIEW_OPTION_LETTER_SELECTED_BR_CLASS
 

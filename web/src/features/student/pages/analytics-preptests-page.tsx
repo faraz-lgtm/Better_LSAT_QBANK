@@ -434,10 +434,12 @@ function AnalyticsPrepTestsPage() {
   )
 
   const handleOpenPractice = useCallback(
-    (id: string) => {
-      navigate(prepTestHubHref(id))
+    (sessionId: string) => {
+      const record = sortedRecords.find((row) => row.id === sessionId)
+      const prepTestId = record?.prepTestId?.trim() || sessionId
+      navigate(prepTestHubHref(prepTestId))
     },
-    [navigate],
+    [navigate, sortedRecords],
   )
 
   if (loading) {

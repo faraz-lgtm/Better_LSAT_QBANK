@@ -42,6 +42,7 @@ function mockRepo() {
     getSessionById: async (_sessionId: string, _userId: string) => baseSession({ completed_at: null }),
     getSectionPrepTestId: async () => 'pt-1',
     getPrepTestExists: async () => true,
+    findPrepTestIdByModuleId: async () => null,
     getSectionExists: async () => true,
     getQuestionDetail: async () =>
       ({
@@ -1440,6 +1441,31 @@ Deno.test('getPrepTestDetail returns LR/RC sections only as practiceable', async
   assertEquals(out.sections.length, 3)
   assertEquals(out.sections.filter((s) => s.practiceable).length, 2)
   assertEquals(out.prepTest.label, 'PT 900')
+})
+
+Deno.test('getPrepTestDetail resolves a PrepTest practice session id', async () => {
+  const service = createPracticeService({
+    repository: preptestRepo({
+      getSessionById: async (sessionId: string) =>
+        sessionId === 'pt-sess-1'
+          ? baseSession({ id: 'pt-sess-1', kind: 'PREPTEST', prep_test_id: 'pt-900' })
+          : null,
+    }) as never,
+  })
+  const out = await service.getPrepTestDetail('user-1', { prepTestId: 'pt-sess-1' })
+  assertEquals(out.prepTest.id, 'pt-900')
+  assertEquals(out.prepTest.label, 'PT 900')
+})
+
+Deno.test('getPrepTestDetail resolves an LSAC module id', async () => {
+  const service = createPracticeService({
+    repository: preptestRepo({
+      findPrepTestIdByModuleId: async (moduleId: string) =>
+        moduleId.toUpperCase() === 'LSAC900' ? 'pt-900' : null,
+    }) as never,
+  })
+  const out = await service.getPrepTestDetail('user-1', { prepTestId: 'LSAC900' })
+  assertEquals(out.prepTest.id, 'pt-900')
 })
 
 Deno.test('getPrepTestDetail scopes section progress to open prep test attempt on retake', async () => {

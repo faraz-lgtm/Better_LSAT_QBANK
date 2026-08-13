@@ -248,6 +248,10 @@ function PracticePrepTestPage() {
     setError(null)
     try {
       const data = await practiceApi.getPrepTestDetail(testIdParam)
+      if (data.prepTest.id && data.prepTest.id !== testIdParam) {
+        navigate(prepTestHubHref(data.prepTest.id, { retake: isRetakeAttempt }), { replace: true })
+        return
+      }
       const normalized = normalizePrepTestDetail(data, { prepTestId: testIdParam })
       setDetail(normalized)
       setTimingId(normalized.defaultTimingId)
@@ -263,7 +267,7 @@ function PracticePrepTestPage() {
     } finally {
       setLoading(false)
     }
-  }, [isRetakeAttempt, practiceApi, testIdParam])
+  }, [isRetakeAttempt, navigate, practiceApi, testIdParam])
 
   useEffect(() => {
     const stateRetake = (location.state as { retake?: boolean } | null)?.retake === true

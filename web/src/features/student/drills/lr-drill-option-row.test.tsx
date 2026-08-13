@@ -35,6 +35,36 @@ describe("LrDrillOptionRow", () => {
     document.body.removeChild(passage)
   })
 
+  it("uses blue selected styles for clean answer view, not orange BR", () => {
+    const { container } = render(
+      <LrDrillOptionRow
+        index={0}
+        html="<p>Choice A</p>"
+        selected
+        onSelect={() => undefined}
+        variant="blind-review"
+        answerView="clean"
+        explanationAction
+      />,
+    )
+    expect(container.firstChild).toHaveClass("border-[#0d47a1]")
+    expect(container.firstChild).not.toHaveClass("border-[#ff6f00]")
+  })
+
+  it("uses orange selected styles for Blind Review answer view", () => {
+    const { container } = render(
+      <LrDrillOptionRow
+        index={0}
+        html="<p>Choice A</p>"
+        selected
+        onSelect={() => undefined}
+        variant="blind-review"
+        answerView="blind_review"
+      />,
+    )
+    expect(container.firstChild).toHaveClass("border-[#ff6f00]")
+  })
+
   it("selects an answer on a simple click", async () => {
     const user = userEvent.setup()
     const onSelect = vi.fn()

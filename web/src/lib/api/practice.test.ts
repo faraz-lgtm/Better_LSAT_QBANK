@@ -258,6 +258,21 @@ describe("createPracticeApi", () => {
     })
   })
 
+  it("getPrepTestDetail surfaces edge function error messages", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: null,
+      error: new FunctionsHttpError(new Response(JSON.stringify({ error: "prepTestId not found" }), { status: 400 })),
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+
+    await expect(api.getPrepTestDetail("sess-1")).rejects.toThrow("prepTestId not found")
+    expect(invoke).toHaveBeenCalledWith("practice-get-prep-test-detail", {
+      method: "POST",
+      body: { prepTestId: "sess-1" },
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
+
   it("startPrepTest invokes practice-start-prep-test", async () => {
     const invoke = vi.fn().mockResolvedValue({
       data: {

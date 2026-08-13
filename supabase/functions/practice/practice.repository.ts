@@ -202,6 +202,20 @@ export function createPracticeRepository(client: SupabaseClient) {
       return Boolean(data)
     },
 
+    async findPrepTestIdByModuleId(moduleId: string): Promise<string | null> {
+      const base = (moduleId.split(':')[0] ?? moduleId).trim()
+      if (!/^LSAC\d+$/i.test(base)) return null
+      const { data, error } = await client
+        .from('admin_prep_tests')
+        .select('id,module_id')
+        .or(`module_id.eq.${base},module_id.ilike.${base}:%`)
+      if (error) throw error
+      const rows = (data ?? []) as Array<{ id: string; module_id: string }>
+      if (rows.length === 0) return null
+      const exact = rows.find((row) => row.module_id.toUpperCase() === base.toUpperCase())
+      return exact?.id ?? rows[0]?.id ?? null
+    },
+
     async getSectionExists(sectionId: string): Promise<boolean> {
       const { data, error } = await client
         .from('admin_sections')

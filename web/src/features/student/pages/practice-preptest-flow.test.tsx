@@ -89,6 +89,15 @@ describe("PracticePrepTestPage + section navigation", () => {
     sessionStorage.clear()
   })
 
+  it("replaces a practice session id in the URL with the canonical PrepTest id", async () => {
+    mockGetPrepTestDetail.mockResolvedValue(mockDetail)
+
+    const router = renderPrepTestRoutes("/app/preptest/pt-sess-1")
+
+    await screen.findByText(/Ready to begin your test/i)
+    expect(router.state.location.pathname).toBe("/app/preptest/pt-900")
+  })
+
   it("shows hub content and navigates to section session on Start section", async () => {
     mockGetPrepTestDetail.mockResolvedValue(mockDetail)
     mockStartPrepTest.mockResolvedValue({ prepTestSession: { id: "pt-sess" }, detail: mockDetail })

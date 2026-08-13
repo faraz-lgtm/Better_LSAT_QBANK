@@ -549,7 +549,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
         method: "POST",
         body: { prepTestId },
       })
-      if (error) throw error
+      if (error) await throwIfEdgeInvokeFailed(error)
       if (!data?.prepTest) throw new Error("No prep test detail returned from practice")
       return normalizePrepTestDetail(
         {

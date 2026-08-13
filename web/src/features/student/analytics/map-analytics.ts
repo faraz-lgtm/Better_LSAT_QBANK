@@ -264,6 +264,7 @@ export function mapSessionToPrepTestRecord(s: PracticeSessionSummary): PrepTestR
   const br = s.blindReviewScaledScore ?? s.blindReviewRawScore ?? scaled
   return {
     id: s.id,
+    prepTestId: s.prepTestId ?? null,
     prepTestNumber: numMatch ? Number.parseInt(numMatch[0]!, 10) : 0,
     takenAt: s.completedAt,
     bookmarked: s.bookmarked,

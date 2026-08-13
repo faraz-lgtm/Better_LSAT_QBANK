@@ -8,6 +8,7 @@ import {
   mapOverviewToHeadlineStats,
   mapPrepTestSessionToHistoryEntry,
   mapSectionSessionToHistoryEntry,
+  mapSessionToPrepTestRecord,
   mapTrajectoryToScoreProgress,
   mapPrioritiesToSections,
 } from "@/features/student/analytics/map-analytics"
@@ -64,6 +65,27 @@ describe("map-analytics", () => {
       sectionTitle: null,
       sectionType: null,
     } satisfies PracticeSessionSummary)?.testLabel).toBe("PT158")
+  })
+
+  it("keeps the practice session id and PrepTest id separate on Insights records", () => {
+    const record = mapSessionToPrepTestRecord({
+      id: "sess-1",
+      kind: "PREPTEST",
+      prepTestId: "pt-157",
+      startedAt: "2026-01-01T00:00:00Z",
+      completedAt: "2026-01-02T00:00:00Z",
+      rawScore: 80,
+      scaledScore: 160,
+      percentile: 50,
+      bookmarked: false,
+      excluded: false,
+      metadata: {},
+      prepTestTitle: "The Official LSAT PrepTest 157",
+      sectionTitle: null,
+      sectionType: null,
+    })
+    expect(record?.id).toBe("sess-1")
+    expect(record?.prepTestId).toBe("pt-157")
   })
 
   it("maps trajectory labels to PT numbers from module id", () => {
