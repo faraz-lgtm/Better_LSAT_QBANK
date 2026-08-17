@@ -35,6 +35,7 @@ export type DrillQuestion = {
 export type DrillSessionMetadata = {
   sectionType: DrillSectionType
   questionCount: number
+  passageCount?: number | "unlimited"
   timing: string
   showAnswers: string
   selection?: string
@@ -80,6 +81,7 @@ export type DrillSessionResponse = {
 export type StartDrillInput = {
   sectionType: DrillSectionType
   questionCount: number
+  passageCount?: number | "unlimited"
   timing?: DrillTiming
   showAnswers?: DrillShowAnswers
   selection?: DrillSelection
@@ -109,6 +111,17 @@ export const drillConfigOptions = {
     { label: "5", value: "5" },
     { label: "10", value: "10" },
     { label: "25", value: "25" },
+  ],
+  passageCount: [
+    { label: "Unlimited", value: "unlimited" },
+    { label: "1", value: "1" },
+    { label: "2", value: "2" },
+    { label: "3", value: "3" },
+    { label: "4", value: "4" },
+    { label: "5", value: "5" },
+    { label: "6", value: "6" },
+    { label: "7", value: "7" },
+    { label: "8", value: "8" },
   ],
   timing: [
     { label: "Unlimited", value: "unlimited" },

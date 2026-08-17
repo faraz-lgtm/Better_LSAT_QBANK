@@ -45,6 +45,7 @@ function DrillConfigForm({
   const [poolStats, setPoolStats] = useState({ selectedCount: 0, totalCount: 0 })
 
   const [questionCount, setQuestionCount] = useState("5")
+  const [passageCount, setPassageCount] = useState("1")
   const [timing, setTiming] = useState<DrillTiming>("unlimited")
   const [showAnswers, setShowAnswers] = useState<DrillShowAnswers>("end")
   const [selection, setSelection] = useState("auto")
@@ -102,9 +103,20 @@ function DrillConfigForm({
     setError(null)
     try {
       const count = Number.parseInt(questionCount, 10)
+      const parsedPassageCount =
+        passageCount === "unlimited" ? "unlimited" : Number.parseInt(passageCount, 10)
       const out = await practiceApi.startDrill({
         sectionType,
-        questionCount: Number.isFinite(count) ? count : 5,
+        questionCount:
+          sectionType === "RC" ? 1 : Number.isFinite(count) ? count : 5,
+        ...(sectionType === "RC"
+          ? {
+              passageCount:
+                parsedPassageCount === "unlimited" || Number.isFinite(parsedPassageCount)
+                  ? parsedPassageCount
+                  : 1,
+            }
+          : {}),
         timing,
         showAnswers,
         selection: selection as "auto" | "manual",
@@ -169,13 +181,23 @@ function DrillConfigForm({
         </div>
 
         <div className="grid gap-6 overflow-visible lg:grid-cols-3">
-          <DrillConfigSelectField
-            label="Number of Questions"
-            description="Select as many questions you can"
-            value={questionCount}
-            onChange={setQuestionCount}
-            options={[...drillConfigOptions.questionCount]}
-          />
+          {sectionType === "RC" ? (
+            <DrillConfigSelectField
+              label="Number of Passages"
+              description="Select as many questions you can"
+              value={passageCount}
+              onChange={setPassageCount}
+              options={[...drillConfigOptions.passageCount]}
+            />
+          ) : (
+            <DrillConfigSelectField
+              label="Number of Questions"
+              description="Select as many questions you can"
+              value={questionCount}
+              onChange={setQuestionCount}
+              options={[...drillConfigOptions.questionCount]}
+            />
+          )}
           <DrillConfigSelectField
             label="Timing"
             description="Control your Prep pace"

@@ -403,6 +403,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
         body: {
           sectionType: input.sectionType,
           questionCount: input.questionCount,
+          ...(input.passageCount !== undefined ? { passageCount: input.passageCount } : {}),
           timing: input.timing,
           showAnswers: input.showAnswers,
           selection: input.selection,

@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from "react"
-import { createPortal } from "react-dom"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react"
 
 import {
@@ -50,43 +49,17 @@ function PracticeSessionFinishMenu({
   onExit,
 }: PracticeSessionFinishMenuProps) {
   const [open, setOpen] = useState(false)
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
 
   const closedTriggerClassName = buttonClassName ?? SESSION_FINISH_BUTTON_CLASS
   const label = finishing ? "Finishing…" : (finishLabel ?? "Finish")
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return
     document.documentElement.classList.add("practice-finish-menu-open")
     return () => {
       document.documentElement.classList.remove("practice-finish-menu-open")
-    }
-  }, [open])
-
-  useEffect(() => {
-    if (!open || !containerRef.current) {
-      setMenuPosition(null)
-      return
-    }
-
-    function updatePosition() {
-      const trigger = containerRef.current
-      if (!trigger) return
-      const rect = trigger.getBoundingClientRect()
-      setMenuPosition({
-        top: rect.top,
-        left: rect.right - FINISH_MENU_PANEL_WIDTH_PX,
-      })
-    }
-
-    updatePosition()
-    window.addEventListener("resize", updatePosition)
-    window.addEventListener("scroll", updatePosition, true)
-    return () => {
-      window.removeEventListener("resize", updatePosition)
-      window.removeEventListener("scroll", updatePosition, true)
     }
   }, [open])
 
@@ -120,98 +93,87 @@ function PracticeSessionFinishMenu({
     </>
   )
 
-  const openMenu =
-    open && menuPosition
-      ? createPortal(
-          <div
-            ref={menuRef}
-            role="menu"
-            aria-label="Finish options"
-            style={{
-              position: "fixed",
-              top: menuPosition.top,
-              left: menuPosition.left,
-              width: FINISH_MENU_PANEL_WIDTH_PX,
-              zIndex: MENU_Z_INDEX,
-            }}
-            className={FINISH_MENU_OPEN_PANEL_CLASS}
+  return (
+    <div
+      ref={containerRef}
+      className={cn("relative shrink-0", iconTrigger ? "h-[52px] w-[52px]" : "h-[52px]")}
+      style={iconTrigger ? undefined : { width: FINISH_MENU_WIDTH_PX }}
+    >
+      {!open ? (
+        <button
+          type="button"
+          disabled={disabled || finishing}
+          className={cn(
+            iconTrigger
+              ? ACTIVE_DRILL_HEADER_MORE_BUTTON_CLASS
+              : cn("inline-flex w-full items-center justify-between gap-2", closedTriggerClassName),
+          )}
+          aria-haspopup="menu"
+          aria-expanded={false}
+          aria-label={iconTrigger ? "More options" : undefined}
+          onClick={() => setOpen(true)}
+        >
+          {iconTrigger ? (
+            <MoreHorizontal className="size-5" strokeWidth={2} aria-hidden />
+          ) : (
+            triggerContent(false)
+          )}
+        </button>
+      ) : (
+        <div
+          ref={menuRef}
+          role="menu"
+          aria-label="Finish options"
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            width: FINISH_MENU_PANEL_WIDTH_PX,
+            zIndex: MENU_Z_INDEX,
+          }}
+          className={FINISH_MENU_OPEN_PANEL_CLASS}
+        >
+          <button
+            type="button"
+            disabled={disabled || finishing}
+            className={FINISH_MENU_OPEN_TRIGGER_CLASS}
+            aria-haspopup="menu"
+            aria-expanded
+            onClick={() => setOpen(false)}
           >
-            <button
-              type="button"
-              disabled={disabled || finishing}
-              className={FINISH_MENU_OPEN_TRIGGER_CLASS}
-              aria-haspopup="menu"
-              aria-expanded
-              onClick={() => setOpen(false)}
-            >
-              {triggerContent(true)}
-            </button>
-            <div className={FINISH_MENU_ACTIONS_PANEL_CLASS}>
-              {exitOnly ? null : (
-                <button
-                  type="button"
-                  role="menuitem"
-                  className={FINISH_MENU_ACTION_ITEM_CLASS}
-                  onClick={() => {
-                    setOpen(false)
-                    onSubmitSection()
-                  }}
-                >
-                  <FinishMenuSubmitIcon className={FINISH_MENU_ACTION_ITEM_ICON_CLASS} />
-                  <span>{submitLabel}</span>
-                </button>
-              )}
+            {triggerContent(true)}
+          </button>
+          <div className={FINISH_MENU_ACTIONS_PANEL_CLASS}>
+            {exitOnly ? null : (
               <button
                 type="button"
                 role="menuitem"
                 className={FINISH_MENU_ACTION_ITEM_CLASS}
                 onClick={() => {
                   setOpen(false)
-                  onExit()
+                  onSubmitSection()
                 }}
               >
-                <FinishMenuSaveExitIcon className={FINISH_MENU_ACTION_ITEM_ICON_CLASS} />
-                <span>{exitLabel}</span>
+                <FinishMenuSubmitIcon className={FINISH_MENU_ACTION_ITEM_ICON_CLASS} />
+                <span>{submitLabel}</span>
               </button>
-            </div>
-          </div>,
-          document.body,
-        )
-      : null
-
-  return (
-    <>
-      <div
-        ref={containerRef}
-        className={cn("relative shrink-0", iconTrigger ? "h-[52px] w-[52px]" : "h-[52px]")}
-        style={iconTrigger ? undefined : { width: FINISH_MENU_WIDTH_PX }}
-      >
-        {!open ? (
-          <button
-            type="button"
-            disabled={disabled || finishing}
-            className={cn(
-              iconTrigger
-                ? ACTIVE_DRILL_HEADER_MORE_BUTTON_CLASS
-                : cn("inline-flex w-full items-center justify-between gap-2", closedTriggerClassName),
             )}
-            aria-haspopup="menu"
-            aria-expanded={false}
-            aria-label={iconTrigger ? "More options" : undefined}
-            onClick={() => setOpen(true)}
-          >
-            {iconTrigger ? (
-              <MoreHorizontal className="size-5" strokeWidth={2} aria-hidden />
-            ) : (
-              triggerContent(false)
-            )}
-          </button>
-        ) : (
-          <div className={iconTrigger ? "size-[52px]" : "h-[52px]"} style={iconTrigger ? undefined : { width: FINISH_MENU_WIDTH_PX }} aria-hidden />
-        )}
-      </div>
-      {openMenu}
-    </>
+            <button
+              type="button"
+              role="menuitem"
+              className={FINISH_MENU_ACTION_ITEM_CLASS}
+              onClick={() => {
+                setOpen(false)
+                onExit()
+              }}
+            >
+              <FinishMenuSaveExitIcon className={FINISH_MENU_ACTION_ITEM_ICON_CLASS} />
+              <span>{exitLabel}</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 

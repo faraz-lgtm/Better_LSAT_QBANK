@@ -795,6 +795,94 @@ Deno.test('startDrill creates session with question ids', async () => {
   assertEquals(out.questions[0]!.stemText, 'Stem?')
 })
 
+Deno.test('startDrill RC picks complete passages by passageCount', async () => {
+  const rcPool: DrillPoolQuestionRow[] = [
+    { id: 'a1', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null },
+    { id: 'a2', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null },
+    { id: 'b1', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null },
+    { id: 'b2', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null },
+  ]
+  const service = createPracticeService({
+    repository: drillRepo({
+      listDrillPoolQuestions: async () => rcPool,
+    }) as never,
+  })
+  const out = await service.startDrill('user-1', {
+    sectionType: 'RC',
+    questionCount: 1,
+    passageCount: 1,
+  })
+  assertEquals(out.metadata.passageCount, 1)
+  assertEquals(out.metadata.questionIds.length, 2)
+  const fromA = out.metadata.questionIds.every((id) => id === 'a1' || id === 'a2')
+  const fromB = out.metadata.questionIds.every((id) => id === 'b1' || id === 'b2')
+  assertEquals(fromA || fromB, true)
+})
+
+Deno.test('startDrill RC unlimited includes every passage in the pool', async () => {
+  const rcPool: DrillPoolQuestionRow[] = [
+    { id: 'a1', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null },
+    { id: 'a2', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null },
+    { id: 'b1', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null },
+  ]
+  const service = createPracticeService({
+    repository: drillRepo({
+      listDrillPoolQuestions: async () => rcPool,
+    }) as never,
+  })
+  const out = await service.startDrill('user-1', {
+    sectionType: 'RC',
+    passageCount: 'unlimited',
+  })
+  assertEquals(out.metadata.passageCount, 'unlimited')
+  assertEquals(out.metadata.questionIds.length, 3)
+})
+
+Deno.test('startDrill RC fresh excludes answered passages', async () => {
+  const rcPool: DrillPoolQuestionRow[] = [
+    { id: 'a1', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null },
+    { id: 'a2', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null },
+    { id: 'b1', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null },
+    { id: 'b2', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null },
+  ]
+  const service = createPracticeService({
+    repository: drillRepo({
+      listDrillPoolQuestions: async () => rcPool,
+      listUserAnsweredQuestionIds: async () => ['b1', 'b2'],
+    }) as never,
+  })
+  const out = await service.startDrill('user-1', {
+    sectionType: 'RC',
+    passageCount: 'unlimited',
+    status: 'fresh',
+  })
+  assertEquals(out.metadata.questionIds.every((id) => id === 'a1' || id === 'a2'), true)
+  assertEquals(out.metadata.questionIds.length, 2)
+})
+
+Deno.test('startDrill RC include-reviewed orders fresh passages before answered', async () => {
+  const rcPool: DrillPoolQuestionRow[] = [
+    { id: 'a1', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null },
+    { id: 'a2', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null },
+    { id: 'b1', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null },
+    { id: 'b2', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null },
+  ]
+  const service = createPracticeService({
+    repository: drillRepo({
+      listDrillPoolQuestions: async () => rcPool,
+      listUserAnsweredQuestionIds: async () => ['b1', 'b2'],
+    }) as never,
+  })
+  const out = await service.startDrill('user-1', {
+    sectionType: 'RC',
+    passageCount: 'unlimited',
+    status: 'all',
+  })
+  assertEquals(out.metadata.questionIds.length, 4)
+  assertEquals(out.metadata.questionIds.slice(0, 2).every((id) => id === 'a1' || id === 'a2'), true)
+  assertEquals(out.metadata.questionIds.slice(2).every((id) => id === 'b1' || id === 'b2'), true)
+})
+
 Deno.test('startDrill dashboard adaptive enforces minimum of 5 questions', async () => {
   const service = createPracticeService({ repository: drillRepo() as never })
   const out = await service.startDrill('user-1', {

@@ -13,6 +13,7 @@ import type {
 import {
   mapDrillQuestionRows,
   pickDrillQuestionIds,
+  pickRcDrillQuestionIdsByPassageCount,
   prepTestNumberFromModuleId,
   type DrillQuestionPayload,
 } from './practice.mapper.ts'
@@ -220,6 +221,15 @@ function parseQuestionCount(value: unknown): number {
   return Math.min(25, Math.floor(n))
 }
 
+const RC_DRILL_MAX_PASSAGES = 8
+
+function parsePassageCount(value: unknown): number | 'unlimited' {
+  if (value === 'unlimited' || value === 'Unlimited') return 'unlimited'
+  const n = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10)
+  if (!Number.isFinite(n) || n < 1) return 1
+  return Math.min(RC_DRILL_MAX_PASSAGES, Math.floor(n))
+}
+
 function filterPoolByStatus(
   pool: DrillPoolQuestionRow[],
   status: unknown,
@@ -232,6 +242,7 @@ function filterPoolByStatus(
 export type DrillSessionMetadata = {
   sectionType: 'LR' | 'RC'
   questionCount: number
+  passageCount?: number | 'unlimited'
   timing: string
   showAnswers: string
   selection?: string
@@ -1612,6 +1623,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       body: {
         sectionType?: unknown
         questionCount?: unknown
+        passageCount?: unknown
         timing?: unknown
         showAnswers?: unknown
         selection?: unknown
@@ -1655,7 +1667,14 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const answeredIds = new Set(await deps.repository.listUserAnsweredQuestionIds(userId))
       const filtered = filterPoolByStatus(pool, status, answeredIds)
 
-      let questionIds = pickDrillQuestionIds(filtered, sectionType, questionCount)
+      const useRcPassageCount = sectionType === 'RC' && source !== 'dashboard_adaptive_drill'
+      const passageCount = useRcPassageCount
+        ? parsePassageCount(body.passageCount ?? body.questionCount)
+        : null
+
+      let questionIds = useRcPassageCount
+        ? pickRcDrillQuestionIdsByPassageCount(filtered, passageCount ?? 1, answeredIds)
+        : pickDrillQuestionIds(filtered, sectionType, questionCount)
       if (
         source === 'dashboard_adaptive_drill' &&
         questionIds.length < DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT
@@ -1685,6 +1704,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const metadata: DrillSessionMetadata = {
         sectionType,
         questionCount: questionIds.length,
+        ...(passageCount != null ? { passageCount } : {}),
         timing,
         showAnswers,
         selection,

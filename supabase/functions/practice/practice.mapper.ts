@@ -260,6 +260,45 @@ export type DrillPoolCandidate = {
   source_group_id: string | null
 }
 
+function groupRcPassageCandidates(pool: DrillPoolCandidate[]): DrillPoolCandidate[][] {
+  const groups = new Map<string, DrillPoolCandidate[]>()
+  for (const q of pool) {
+    const key = `${q.section_id ?? ''}::${q.source_group_id ?? ''}`
+    const arr = groups.get(key) ?? []
+    arr.push(q)
+    groups.set(key, arr)
+  }
+  return [...groups.values()]
+}
+
+function isFreshRcPassageGroup(
+  group: DrillPoolCandidate[],
+  answeredIds: ReadonlySet<string>,
+): boolean {
+  return group.every((q) => !answeredIds.has(q.id))
+}
+
+/**
+ * RC drills pick complete passages (all questions in each group).
+ * Fresh passages are shuffled first, then already-answered passages.
+ */
+export function pickRcDrillQuestionIdsByPassageCount(
+  pool: DrillPoolCandidate[],
+  passageCount: number | 'unlimited',
+  answeredIds: ReadonlySet<string> = new Set(),
+): string[] {
+  if (pool.length === 0) return []
+  const groups = groupRcPassageCandidates(pool)
+  const fresh = shuffleInPlace(groups.filter((group) => isFreshRcPassageGroup(group, answeredIds)))
+  const reviewed = shuffleInPlace(
+    groups.filter((group) => !isFreshRcPassageGroup(group, answeredIds)),
+  )
+  const ordered = [...fresh, ...reviewed]
+  const selected =
+    passageCount === 'unlimited' ? ordered : ordered.slice(0, Math.max(1, passageCount))
+  return selected.flatMap((group) => group.map((q) => q.id))
+}
+
 export function pickDrillQuestionIds(
   pool: DrillPoolCandidate[],
   sectionType: 'LR' | 'RC',
@@ -273,14 +312,7 @@ export function pickDrillQuestionIds(
   if (pool.length === 0) return []
 
   if (sectionType === 'RC') {
-    const groups = new Map<string, DrillPoolCandidate[]>()
-    for (const q of pool) {
-      const key = `${q.section_id ?? ''}::${q.source_group_id ?? ''}`
-      const arr = groups.get(key) ?? []
-      arr.push(q)
-      groups.set(key, arr)
-    }
-    const groupList = shuffleInPlace([...groups.values()])
+    const groupList = shuffleInPlace(groupRcPassageCandidates(pool))
     const picked: string[] = []
     for (const group of groupList) {
       if (picked.length >= count) break
