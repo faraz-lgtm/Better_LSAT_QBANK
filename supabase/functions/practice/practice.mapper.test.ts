@@ -3,6 +3,7 @@ import {
   mapDrillQuestionRow,
   mapDrillQuestionRows,
   pickDrillQuestionIds,
+  pickRcDrillQuestionIdsByPassageCount,
   type DrillQuestionRow,
 } from './practice.mapper.ts'
 
@@ -62,6 +63,63 @@ Deno.test('pickDrillQuestionIds RC prefers passage groups', () => {
   const group1 = ids.every((id) => id === 'a1' || id === 'a2')
   const group2 = ids.every((id) => id === 'b1' || id === 'b2')
   assertEquals(group1 || group2, true)
+})
+
+Deno.test('pickRcDrillQuestionIdsByPassageCount returns every question in N passages', () => {
+  const pool = [
+    { id: 'a1', section_id: 's1', source_group_id: 'g1' },
+    { id: 'a2', section_id: 's1', source_group_id: 'g1' },
+    { id: 'b1', section_id: 's1', source_group_id: 'g2' },
+    { id: 'b2', section_id: 's1', source_group_id: 'g2' },
+    { id: 'c1', section_id: 's1', source_group_id: 'g3' },
+  ]
+  const ids = pickRcDrillQuestionIdsByPassageCount(pool, 1)
+  assertEquals(ids.length === 1 || ids.length === 2, true)
+  const fromA = ids.every((id) => id === 'a1' || id === 'a2')
+  const fromB = ids.every((id) => id === 'b1' || id === 'b2')
+  const fromC = ids.every((id) => id === 'c1')
+  assertEquals(fromA || fromB || fromC, true)
+})
+
+Deno.test('pickRcDrillQuestionIdsByPassageCount unlimited returns all questions', () => {
+  const pool = [
+    { id: 'a1', section_id: 's1', source_group_id: 'g1' },
+    { id: 'a2', section_id: 's1', source_group_id: 'g1' },
+    { id: 'b1', section_id: 's1', source_group_id: 'g2' },
+  ]
+  const ids = pickRcDrillQuestionIdsByPassageCount(pool, 'unlimited')
+  assertEquals(ids.length, 3)
+  assertEquals(new Set(ids).size, 3)
+})
+
+Deno.test('pickRcDrillQuestionIdsByPassageCount caps at available passages', () => {
+  const pool = [
+    { id: 'a1', section_id: 's1', source_group_id: 'g1' },
+    { id: 'b1', section_id: 's1', source_group_id: 'g2' },
+  ]
+  const ids = pickRcDrillQuestionIdsByPassageCount(pool, 8)
+  assertEquals(ids.length, 2)
+})
+
+Deno.test('pickRcDrillQuestionIdsByPassageCount puts fresh passages before reviewed', () => {
+  const pool = [
+    { id: 'a1', section_id: 's1', source_group_id: 'g1' },
+    { id: 'a2', section_id: 's1', source_group_id: 'g1' },
+    { id: 'b1', section_id: 's1', source_group_id: 'g2' },
+    { id: 'b2', section_id: 's1', source_group_id: 'g2' },
+  ]
+  const ids = pickRcDrillQuestionIdsByPassageCount(pool, 'unlimited', new Set(['b1']))
+  assertEquals(ids.slice(0, 2).every((id) => id === 'a1' || id === 'a2'), true)
+  assertEquals(ids.slice(2).every((id) => id === 'b1' || id === 'b2'), true)
+})
+
+Deno.test('pickRcDrillQuestionIdsByPassageCount prefers a fresh passage when count is 1', () => {
+  const pool = [
+    { id: 'a1', section_id: 's1', source_group_id: 'g1' },
+    { id: 'b1', section_id: 's1', source_group_id: 'g2' },
+  ]
+  const ids = pickRcDrillQuestionIdsByPassageCount(pool, 1, new Set(['b1']))
+  assertEquals(ids, ['a1'])
 })
 
 Deno.test('mapDrillQuestionRows assigns distinct RC passages per source_group_id', () => {

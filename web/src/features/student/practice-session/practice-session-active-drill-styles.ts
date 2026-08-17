@@ -20,7 +20,7 @@ const SESSION_FINISH_BUTTON_CLASS =
 
 /** Figma `18704:14485` finish dropdown open panel */
 const FINISH_MENU_OPEN_PANEL_CLASS =
-  "flex w-[126px] flex-col drop-shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
+  "flex flex-col drop-shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
 
 /** Figma `18704:14488` finish row when open — matches closed trigger typography */
 const FINISH_MENU_OPEN_TRIGGER_CLASS =

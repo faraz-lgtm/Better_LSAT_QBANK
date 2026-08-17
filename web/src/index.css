@@ -3311,6 +3311,14 @@ html.practice-finish-menu-open .practice-session-question-panel-with-widget {
   padding-right: 0;
 }
 
+/* Let the Finish dropdown hang below the header button instead of clipping */
+html.practice-finish-menu-open .practice-session-header,
+html.practice-finish-menu-open .practice-session-header--active-drill,
+html.practice-finish-menu-open .practice-session-header--active-drill > div {
+  overflow: visible;
+  z-index: 120;
+}
+
 /* Figma `17920:11448` — session panes: fixed height, scroll without visible scrollbar */
 .practice-session-pane {
   overflow-y: auto;

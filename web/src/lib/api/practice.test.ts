@@ -80,6 +80,28 @@ describe("createPracticeApi", () => {
     })
   })
 
+  it("startDrill forwards RC passageCount", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        session: { id: "drill-rc", kind: "DRILL" },
+        metadata: { sectionType: "RC", questionIds: ["q1"], questionCount: 2, passageCount: 1 },
+        questions: [],
+        answers: [],
+        drillLabel: null,
+      },
+      error: null,
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+
+    await api.startDrill({ sectionType: "RC", questionCount: 1, passageCount: 1 })
+
+    expect(invoke).toHaveBeenCalledWith("practice-start-drill", {
+      method: "POST",
+      body: expect.objectContaining({ sectionType: "RC", questionCount: 1, passageCount: 1 }),
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
+
   it("listSectionPool invokes practice-list-section-pool", async () => {
     const invoke = vi.fn().mockResolvedValue({
       data: {
