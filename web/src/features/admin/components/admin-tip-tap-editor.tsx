@@ -9,8 +9,8 @@ import TextAlign from "@tiptap/extension-text-align"
 import { TextStyle } from "@tiptap/extension-text-style"
 import Underline from "@tiptap/extension-underline"
 import Youtube from "@tiptap/extension-youtube"
-import type { Editor } from "@tiptap/core"
-import { EditorContent, useEditor } from "@tiptap/react"
+import { mergeAttributes, Node, type Editor } from "@tiptap/core"
+import { EditorContent, NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, useEditor, type NodeViewProps } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 
 function isSafeHttpUrl(raw: string): boolean {
@@ -30,6 +30,125 @@ function isYoutubeUrl(url: string): boolean {
   }
   return false
 }
+
+function isSafeHexColor(raw: string): boolean {
+  return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(raw.trim())
+}
+
+function LessonSectionView({ node, updateAttributes }: NodeViewProps) {
+  const label = String(node.attrs.label ?? "")
+  const variant = node.attrs.variant === "empty" ? "empty" : "heading"
+  const backgroundColor = isSafeHexColor(String(node.attrs.backgroundColor ?? ""))
+    ? String(node.attrs.backgroundColor)
+    : "#ffffff"
+
+  return (
+    <NodeViewWrapper
+      as="section"
+      className={`lesson-section-editor my-4 rounded-[18px] border border-[#dfe1e7] ${variant === "empty" ? "lesson-section-empty" : "p-6"}`}
+      data-lesson-section="true"
+      data-variant={variant}
+      data-label={label}
+      data-bg={backgroundColor}
+      style={{ backgroundColor }}
+    >
+      <div className="mb-4 flex items-center gap-3" contentEditable={false}>
+        {variant === "heading" ? (
+          <>
+            <span className="lesson-section-editor__num flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-[#edf3ff] bg-[#f3f7ff] text-xs font-bold leading-[1.3] text-[#0d47a1]" />
+            <input
+              aria-label="Section label"
+              className="min-w-0 flex-1 border-0 bg-transparent text-xs font-bold uppercase leading-[1.5] tracking-[0.24px] text-[#0d47a1] outline-none placeholder:text-[#9aa4b2]"
+              placeholder="THE BIG PICTURE"
+              value={label}
+              onMouseDown={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              onChange={(e) => updateAttributes({ label: e.target.value })}
+            />
+          </>
+        ) : (
+          <p className="m-0 min-w-0 flex-1 text-xs font-medium text-[#666d80]">Empty section</p>
+        )}
+        <label
+          className="flex shrink-0 cursor-pointer items-center gap-1 rounded px-1 py-0.5 text-[10px] font-medium text-[#666d80] hover:bg-[#eef3fb]"
+          title="Section background"
+        >
+          BG
+          <input
+            type="color"
+            className="h-6 w-8 cursor-pointer border-0 bg-transparent p-0"
+            value={backgroundColor}
+            onMouseDown={(e) => e.stopPropagation()}
+            onChange={(e) => {
+              if (isSafeHexColor(e.target.value)) updateAttributes({ backgroundColor: e.target.value })
+            }}
+          />
+        </label>
+      </div>
+      <NodeViewContent className="lesson-section-editor__content min-h-[48px] outline-none" />
+    </NodeViewWrapper>
+  )
+}
+
+const LessonSection = Node.create({
+  name: "lessonSection",
+  group: "block",
+  content: "block+",
+  defining: true,
+  isolating: true,
+
+  addAttributes() {
+    return {
+      label: {
+        default: "Section",
+        parseHTML: (element) => element.getAttribute("data-label") ?? "Section",
+        renderHTML: (attributes) => ({ "data-label": attributes.label || "" }),
+      },
+      variant: {
+        default: "heading",
+        parseHTML: (element) => (element.getAttribute("data-variant") === "empty" ? "empty" : "heading"),
+        renderHTML: (attributes) => ({ "data-variant": attributes.variant === "empty" ? "empty" : "heading" }),
+      },
+      backgroundColor: {
+        default: "#ffffff",
+        parseHTML: (element) => {
+          const fromData = element.getAttribute("data-bg") ?? ""
+          if (isSafeHexColor(fromData)) return fromData.trim()
+          const fromStyle = element.style?.backgroundColor ?? ""
+          if (isSafeHexColor(fromStyle)) return fromStyle.trim()
+          return "#ffffff"
+        },
+        renderHTML: (attributes) => {
+          const color = isSafeHexColor(String(attributes.backgroundColor ?? ""))
+            ? String(attributes.backgroundColor)
+            : "#ffffff"
+          const padding = attributes.variant === "empty" ? "padding: 14px 16px;" : ""
+          return { "data-bg": color, style: `background-color: ${color}; ${padding}`.trim() }
+        },
+      },
+    }
+  },
+
+  parseHTML() {
+    return [{ tag: "section[data-lesson-section]" }]
+  },
+
+  renderHTML({ node, HTMLAttributes }) {
+    const isEmpty = node.attrs.variant === "empty"
+    return [
+      "section",
+      mergeAttributes(HTMLAttributes, {
+        "data-lesson-section": "true",
+        class: isEmpty ? "lesson-section lesson-section-empty" : "lesson-section",
+      }),
+      0,
+    ]
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(LessonSectionView)
+  },
+})
 
 type AdminTipTapEditorProps = {
   value: string
@@ -71,10 +190,11 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        heading: { levels: [2, 3, 4] },
+        heading: { levels: [1, 2, 3, 4] },
         bulletList: { keepMarks: true, keepAttributes: false },
         orderedList: { keepMarks: true, keepAttributes: false },
       }),
+      LessonSection,
       Underline,
       Link.configure({
         openOnClick: false,
@@ -112,7 +232,7 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
     editorProps: {
       attributes: {
         class:
-          "max-w-none focus:outline-none px-4 py-3 text-[15px] leading-relaxed text-[#1a1b25] [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:text-base [&_h4]:font-semibold [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_blockquote]:border-l-4 [&_blockquote]:border-[#dfe1e7] [&_blockquote]:pl-4 [&_blockquote]:italic [&_pre]:rounded-md [&_pre]:bg-[#f6f8fa] [&_pre]:p-3 [&_code]:text-sm",
+          "lesson-tiptap-editor max-w-none focus:outline-none px-4 py-3 text-[15px] leading-relaxed text-[#1a1b25] [&_h1]:m-0 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-[1.3] [&_h1]:text-[#272835] [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:text-base [&_h4]:font-semibold [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_blockquote]:border-l-4 [&_blockquote]:border-[#dfe1e7] [&_blockquote]:pl-4 [&_blockquote]:italic [&_pre]:rounded-md [&_pre]:bg-[#f6f8fa] [&_pre]:p-3 [&_code]:text-sm",
         style: `min-height:${minHeight}px`,
       },
     },
@@ -168,6 +288,42 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
     editor.chain().focus().setYoutubeVideo({ src }).run()
   }, [editor])
 
+  const insertLessonSection = useCallback((variant: "heading" | "empty") => {
+    if (!editor) return
+    if (variant === "empty") {
+      editor
+        .chain()
+        .focus()
+        .insertContent({
+          type: "lessonSection",
+          attrs: { variant: "empty", label: "", backgroundColor: "#ffffff" },
+          content: [{ type: "paragraph" }],
+        })
+        .run()
+      return
+    }
+    editor
+      .chain()
+      .focus()
+      .insertContent({
+        type: "lessonSection",
+        attrs: { variant: "heading", label: "Section", backgroundColor: "#ffffff" },
+        content: [
+          { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Heading" }] },
+          { type: "paragraph" },
+        ],
+      })
+      .run()
+  }, [editor])
+
+  const setSectionBackground = useCallback(
+    (color: string) => {
+      if (!editor || !isSafeHexColor(color)) return
+      editor.chain().focus().updateAttributes("lessonSection", { backgroundColor: color }).run()
+    },
+    [editor],
+  )
+
   const insertVideoLink = useCallback(() => {
     if (!editor) return
     const raw = window.prompt("Video page URL (Vimeo, direct file, etc.) — inserted as a link", "https://")
@@ -204,6 +360,42 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
           Redo
         </ToolbarButton>
         <span className="mx-1 text-[#dfe1e7]">|</span>
+        <ToolbarButton
+          title="Section with heading"
+          active={editor.isActive("lessonSection", { variant: "heading" })}
+          onClick={() => insertLessonSection("heading")}
+        >
+          Sec+H
+        </ToolbarButton>
+        <ToolbarButton
+          title="Empty section"
+          active={editor.isActive("lessonSection", { variant: "empty" })}
+          onClick={() => insertLessonSection("empty")}
+        >
+          Empty Sec
+        </ToolbarButton>
+        <label
+          className={`flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-xs font-medium ${
+            editor.isActive("lessonSection") ? "bg-white text-[#1a1b25] hover:bg-[#eef3fb]" : "cursor-not-allowed opacity-40"
+          }`}
+          title="Section background color"
+        >
+          Sec BG
+          <input
+            type="color"
+            className="h-6 w-8 cursor-pointer border-0 bg-transparent p-0"
+            disabled={!editor.isActive("lessonSection")}
+            value={
+              isSafeHexColor(String(editor.getAttributes("lessonSection").backgroundColor ?? ""))
+                ? String(editor.getAttributes("lessonSection").backgroundColor)
+                : "#ffffff"
+            }
+            onChange={(e) => setSectionBackground(e.target.value)}
+          />
+        </label>
+        <ToolbarButton title="Heading 1" active={editor.isActive("heading", { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>
+          H1
+        </ToolbarButton>
         <ToolbarButton title="Heading 2" active={editor.isActive("heading", { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
           H2
         </ToolbarButton>
