@@ -15,7 +15,7 @@ import type {
   PrepLessonActiveDrillAttempt,
   PrepLessonLinkedQuestionRef,
 } from "@/lib/api/prep-course"
-import { HtmlContent } from "@/lib/html/html-content"
+import { HtmlContent, LessonHtmlContent } from "@/lib/html/html-content"
 
 type DrillResultsPart = "cards" | "below" | "full"
 
@@ -113,11 +113,11 @@ function LessonVideoBlock({
             {belowVideo}
             {lesson.text_content ? (
               hideTitle ? (
-                <HtmlContent html={lesson.text_content} className={textClass} />
+                <LessonHtmlContent html={lesson.text_content} className={textClass} />
               ) : (
                 <article>
                   <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>
-                  <HtmlContent html={lesson.text_content} className={`${textClass} mt-4`} />
+                  <LessonHtmlContent html={lesson.text_content} className={`${textClass} mt-4`} />
                 </article>
               )
             ) : null}
@@ -143,11 +143,11 @@ function LessonVideoBlock({
       {belowVideo}
       {lesson.text_content ? (
         hideTitle ? (
-          <HtmlContent html={lesson.text_content} className={textClass} />
+          <LessonHtmlContent html={lesson.text_content} className={textClass} />
         ) : (
           <article>
             <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>
-            <HtmlContent html={lesson.text_content} className={`${textClass} mt-4`} />
+            <LessonHtmlContent html={lesson.text_content} className={`${textClass} mt-4`} />
           </article>
         )
       ) : null}
@@ -662,7 +662,7 @@ function LessonContentRenderer({
           <div className="p-6">
             {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
             {lesson.text_content ? (
-              <HtmlContent
+              <LessonHtmlContent
                 html={lesson.text_content}
                 className={`ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
               />
@@ -674,7 +674,7 @@ function LessonContentRenderer({
           <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
             {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
             {lesson.text_content ? (
-              <HtmlContent
+              <LessonHtmlContent
                 html={lesson.text_content}
                 className={`ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
               />
@@ -694,7 +694,7 @@ function LessonContentRenderer({
 
   if (skipArticleShell) {
     return lesson.text_content ? (
-      <HtmlContent html={lesson.text_content} className="ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3" />
+      <LessonHtmlContent html={lesson.text_content} className="ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3" />
     ) : (
       <p className="ds-body-sm leading-7 text-[#36394a]">No notes available.</p>
     )
@@ -709,7 +709,7 @@ function LessonContentRenderer({
     >
       {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
       {lesson.text_content ? (
-        <HtmlContent
+        <LessonHtmlContent
           html={lesson.text_content}
           className={`ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
         />
