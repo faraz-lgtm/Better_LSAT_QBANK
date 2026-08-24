@@ -3,6 +3,7 @@ import { useCallback, useLayoutEffect, useState, type ReactNode } from "react"
 import { StudentAppHeader } from "@/features/app-shell/student-app-header"
 import { GuestFreePlanSidebar } from "@/features/guest/diagnostic/guest-free-plan-sidebar"
 import { GuestUpgradeCta } from "@/features/guest/diagnostic/guest-upgrade-cta"
+import { GuestPricingModalProvider } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { cn } from "@/lib/utils"
 
 type GuestFreeDashboardShellProps = {
@@ -23,21 +24,23 @@ function GuestFreeDashboardShell({ children, dashboardHref }: GuestFreeDashboard
   }, [])
 
   return (
-    <div className={cn("flex h-svh min-h-0 overflow-hidden bg-[var(--primary-0)]")}>
-      <GuestFreePlanSidebar
-        mobileOpen={mobileNavOpen}
-        onMobileClose={closeMobileNav}
-        dashboardHref={dashboardHref}
-      />
-      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <StudentAppHeader
-          breadcrumbTail={[{ label: "Home", href: dashboardHref ?? "/diagnostic/results/preview" }, { label: "Analytics" }]}
-          onOpenMobileNav={() => setMobileNavOpen(true)}
-          headerActions={<GuestUpgradeCta />}
+    <GuestPricingModalProvider>
+      <div className={cn("flex h-svh min-h-0 overflow-hidden bg-[var(--primary-0)]")}>
+        <GuestFreePlanSidebar
+          mobileOpen={mobileNavOpen}
+          onMobileClose={closeMobileNav}
+          dashboardHref={dashboardHref}
         />
-        <div className="flex h-0 min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
+        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <StudentAppHeader
+            breadcrumbTail={[{ label: "Home", href: dashboardHref ?? "/diagnostic/results/preview" }, { label: "Analytics" }]}
+            onOpenMobileNav={() => setMobileNavOpen(true)}
+            headerActions={<GuestUpgradeCta />}
+          />
+          <div className="flex h-0 min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
+        </div>
       </div>
-    </div>
+    </GuestPricingModalProvider>
   )
 }
 

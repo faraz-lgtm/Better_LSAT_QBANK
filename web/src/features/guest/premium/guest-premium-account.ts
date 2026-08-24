@@ -10,16 +10,26 @@ type GuestPremiumAccount = {
 }
 
 const PREMIUM_CHANGE_EVENT = "guest-premium-account-change"
+let cachedPremiumAccountRaw: string | null | undefined
+let cachedPremiumAccountSnapshot: GuestPremiumAccount | null = null
 
 function readGuestPremiumAccount(): GuestPremiumAccount | null {
   const raw = sessionStorage.getItem(GUEST_PREMIUM_ACCOUNT_STORAGE_KEY)
-  if (!raw) return null
+  if (raw === cachedPremiumAccountRaw) return cachedPremiumAccountSnapshot
+
+  cachedPremiumAccountRaw = raw
+  if (!raw) {
+    cachedPremiumAccountSnapshot = null
+    return cachedPremiumAccountSnapshot
+  }
+
   try {
     const parsed = JSON.parse(raw) as GuestPremiumAccount
-    if (!parsed?.planId) return null
-    return parsed
+    cachedPremiumAccountSnapshot = parsed?.planId ? parsed : null
+    return cachedPremiumAccountSnapshot
   } catch {
-    return null
+    cachedPremiumAccountSnapshot = null
+    return cachedPremiumAccountSnapshot
   }
 }
 

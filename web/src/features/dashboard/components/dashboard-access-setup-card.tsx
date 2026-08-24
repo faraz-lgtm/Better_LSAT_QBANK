@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Link, useSearchParams } from "react-router-dom"
+import { useSearchParams } from "react-router-dom"
 
 import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { createUsersApi } from "@/lib/api/users"
 import { formatEdgeFunctionError } from "@/lib/supabase/format-call-error"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -21,6 +22,7 @@ function splitFullName(fullName: string | null | undefined): { firstName: string
 
 function DashboardAccessSetupCard() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const { openPricingModal } = useGuestPricingModal()
   const checkoutSuccess = searchParams.get("checkout") === "success"
   const {
     entitlement,
@@ -207,8 +209,8 @@ function DashboardAccessSetupCard() {
 
       {isPaymentRequired ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Button asChild className="w-full sm:w-auto">
-            <Link to="/app/pricing">View plans</Link>
+          <Button type="button" className="w-full sm:w-auto" onClick={openPricingModal}>
+            View plans
           </Button>
           <p className="text-xs leading-relaxed text-[#62748e]">
             The LawHub fee goes to LSAC. One PrepPlus subscription works across prep platforms.
