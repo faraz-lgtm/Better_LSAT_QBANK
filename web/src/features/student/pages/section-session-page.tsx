@@ -89,6 +89,7 @@ import { PracticeSessionImmersiveFrame } from "@/features/student/practice-sessi
 import { PracticeSessionNavArrowButton } from "@/features/student/practice-session/practice-session-nav-arrow-button"
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
 import { PracticeSessionQuestionNavStrip } from "@/features/student/practice-session/practice-session-question-nav-strip"
+import { resolvePracticeSessionQuestionNavOutcome } from "@/features/student/practice-session/practice-session-question-nav-outcome"
 import { PracticeSessionPauseModal } from "@/features/student/practice-session/practice-session-pause-modal"
 import { PracticeSubmitSectionModal } from "@/features/student/practice-session/practice-submit-section-modal"
 import {
@@ -173,6 +174,7 @@ type QuestionPanelProps = {
   allowReselect: boolean
   getRegionHtml: (key: string, base: string) => string
   onSelect: (index: number) => void
+  onResetResponse?: () => void
   flagged: boolean
   onToggleFlag: () => void
   onOpenReview?: () => void
@@ -203,6 +205,7 @@ function SectionQuestionPanel({
   allowReselect,
   getRegionHtml,
   onSelect,
+  onResetResponse,
   flagged,
   onToggleFlag,
   onOpenReview,
@@ -233,6 +236,13 @@ function SectionQuestionPanel({
   const stemHtml = getRegionHtml(stemKey, question.stemText ?? "")
   const isBlindReviewLayout = blindReviewChrome && variant === "blind-review"
   const isActiveDrillLayout = variant === "active-drill"
+  const canResetResponse =
+    !reviewChrome && (selectedIndex != null || responseMasking || hasMaskedChoices)
+
+  function handleResetResponse() {
+    resetMaskedChoices()
+    if (selectedIndex != null) onResetResponse?.()
+  }
 
   if (isBlindReviewLayout) {
     return (
@@ -333,8 +343,8 @@ function SectionQuestionPanel({
               showSideAction={!isActiveDrillLayout}
             />
           ))}
-          {isActiveDrillLayout && (responseMasking || hasMaskedChoices) ? (
-            <PracticeSessionResetResponseButton onClick={resetMaskedChoices} />
+          {isActiveDrillLayout && canResetResponse ? (
+            <PracticeSessionResetResponseButton onClick={handleResetResponse} />
           ) : null}
         </div>
         {isActiveDrillLayout ? (
@@ -761,6 +771,15 @@ function SectionSessionPage() {
   const actualOutcome = current ? answerOutcome(actualAnswersByQuestion[current.id]) : null
   const blindReviewOutcome = current ? answerOutcome(answersByQuestion[current.id]) : null
 
+  const resultsReviewNavOutcome = resultsReviewMode
+    ? (questionId: string) =>
+        resolvePracticeSessionQuestionNavOutcome(
+          answerViewTab === "blind_review"
+            ? answersByQuestion[questionId]
+            : actualAnswersByQuestion[questionId],
+        )
+    : undefined
+
   const passageBody =
     sectionType === "RC" && current?.passage
       ? current.passage.body
@@ -835,6 +854,36 @@ function SectionSessionPage() {
         })
       }
       setError(e instanceof Error ? e.message : "Failed to submit answer")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleResetResponse() {
+    if (!sessionId || !current || submitting || resultsReviewMode) return
+    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
+      blindReview: blindReviewMode || postCompleteBlindReview,
+    })) {
+      return
+    }
+
+    setAnswersByQuestion((prev) => {
+      const next = { ...prev }
+      delete next[current.id]
+      return next
+    })
+
+    if (blindReviewMode || postCompleteBlindReview) return
+
+    setSubmitting(true)
+    try {
+      await practiceApi.submitAnswer({
+        sessionId,
+        questionId: current.id,
+        selectedAnswer: "",
+      })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to reset response")
     } finally {
       setSubmitting(false)
     }
@@ -1424,6 +1473,7 @@ function SectionSessionPage() {
                 allowReselect={allowReselect}
                 getRegionHtml={highlights.getRegionHtml}
                 onSelect={(index) => void handleSelectChoice(index)}
+                onResetResponse={() => void handleResetResponse()}
                 flagged={current ? questionFlags.isFlagged(current.id) : false}
                 onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
                 flagsDisabled={sessionCompleted || blindReviewMode || resultsReviewMode}
@@ -1485,6 +1535,7 @@ function SectionSessionPage() {
                   allowReselect={allowReselect}
                   getRegionHtml={highlights.getRegionHtml}
                   onSelect={(index) => void handleSelectChoice(index)}
+                  onResetResponse={() => void handleResetResponse()}
                   flagged={current ? questionFlags.isFlagged(current.id) : false}
                   onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
                   flagsDisabled
@@ -1575,6 +1626,7 @@ function SectionSessionPage() {
                 allowReselect={allowReselect}
                 getRegionHtml={highlights.getRegionHtml}
                 onSelect={(index) => void handleSelectChoice(index)}
+                onResetResponse={() => void handleResetResponse()}
                 flagged={current ? questionFlags.isFlagged(current.id) : false}
                 onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
                 flagsDisabled={sessionCompleted || blindReviewMode || resultsReviewMode}
@@ -1629,6 +1681,7 @@ function SectionSessionPage() {
               recommendedForBr={(questionId) =>
                 isQuestionRecommendedForBlindReview(actualAnswersByQuestion[questionId])
               }
+              outcomeForQuestion={resultsReviewNavOutcome}
               variant={sessionVariant}
               showPassageBreaks={sectionType === "RC"}
               onSelectQuestion={setQIndex}

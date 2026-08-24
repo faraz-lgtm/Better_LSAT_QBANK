@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom"
-import { Bookmark, ChevronRight } from "lucide-react"
 
+import {
+  PREP_COURSE_FIGMA,
+  PrepCourseFigmaIcon,
+} from "@/features/prep-course/components/prep-course-figma-icons"
 import { PrepCourseLessonTypeIcon } from "@/features/prep-course/components/prep-course-lesson-type-icon"
 import { LessonStatusMarker } from "@/features/prep-course/components/prep-course-lesson-sidebar"
 import { lessonMetaLine, resolveLessonRowDisplay } from "@/features/prep-course/lib/prep-course-format"
@@ -32,7 +35,7 @@ function PrepCourseLessonRow({
   return (
     <div
       className={cn(
-        "flex items-center justify-between gap-3 border-b border-[color:var(--greyscale-100)] px-6 py-3 transition-colors last:border-b-0",
+        "flex min-h-[68px] items-center justify-between gap-3 border-b border-[#dfe1e7] px-6 py-3 transition-colors last:border-b-0",
         active ? "bg-[var(--primary-0)]" : "bg-white hover:bg-[var(--greyscale-25)]",
       )}
     >
@@ -42,7 +45,7 @@ function PrepCourseLessonRow({
         <span className="min-w-0 flex-1">
           <span
             className={cn(
-              "block truncate text-sm font-semibold leading-[1.5] tracking-[0.02em]",
+              "block truncate text-sm font-medium leading-[1.5] tracking-[0.28px]",
               completed && !active ? "text-[color:var(--greyscale-500)]" : "text-[#062357]",
             )}
             title={title}
@@ -63,27 +66,35 @@ function PrepCourseLessonRow({
             </span>
           ) : null}
         </span>
-        {active ? (
-          <span className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-[0.24px] text-[#0d47a1]">
-            Continue
-            <ChevronRight className="size-4" strokeWidth={2} aria-hidden />
-          </span>
-        ) : null}
       </Link>
-      {onToggleBookmark ? (
-        <button
-          type="button"
-          aria-label={bookmarked ? `Remove bookmark for ${title}` : `Bookmark ${title}`}
-          aria-pressed={bookmarked}
-          className={cn(
-            "flex size-[34px] shrink-0 items-center justify-center rounded-[12px] border border-[#dfe1e6] bg-[#f9f9fb] transition-colors",
-            bookmarked ? "text-[#0d47a1]" : "text-[color:var(--greyscale-500)] hover:text-[#0d47a1]",
-          )}
-          onClick={() => onToggleBookmark(!bookmarked)}
-        >
-          <Bookmark className={cn("size-[18px]", bookmarked && "fill-current")} strokeWidth={2} />
-        </button>
-      ) : null}
+      <div className="flex shrink-0 items-center gap-3">
+        {active ? (
+          <Link
+            to={href}
+            className="inline-flex h-8 items-center justify-end gap-2 text-xs font-semibold tracking-[0.24px] text-[#0d47a1]"
+          >
+            Continue
+            <PrepCourseFigmaIcon src={`${PREP_COURSE_FIGMA}/icon-continue.svg`} className="size-4" />
+          </Link>
+        ) : null}
+        {onToggleBookmark ? (
+          <button
+            type="button"
+            aria-label={bookmarked ? `Remove bookmark for ${title}` : `Bookmark ${title}`}
+            aria-pressed={bookmarked}
+            className={cn(
+              "flex size-[34px] shrink-0 items-center justify-center rounded-[12px] border border-[#dfe1e6] bg-[#f9f9fb] transition-colors",
+              bookmarked ? "text-[#0d47a1]" : "text-[color:var(--greyscale-500)] hover:text-[#0d47a1]",
+            )}
+            onClick={() => onToggleBookmark(!bookmarked)}
+          >
+            <PrepCourseFigmaIcon
+              src={`${PREP_COURSE_FIGMA}/icon-bookmark-sm.svg`}
+              className={cn("size-[18px]", bookmarked && "opacity-100")}
+            />
+          </button>
+        ) : null}
+      </div>
     </div>
   )
 }

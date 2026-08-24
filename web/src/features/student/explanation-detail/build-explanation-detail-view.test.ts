@@ -14,6 +14,7 @@ const loc = {
     number: 19,
     code: "Q19",
     snippet: "Stem",
+    topicName: "Flaw",
     status: "answered" as const,
     source: "",
     difficulty: 5 as const,

@@ -159,8 +159,8 @@ function AnalyticsQuestionTypeReviewPage() {
 
   return (
     <StudentMain
-      className={cn("min-h-full w-full max-w-none", PT_RESULTS_PAGE_BG_CLASS)}
-      contentClassName={cn("min-h-full max-w-none", PT_RESULTS_PAGE_BG_CLASS)}
+      className={cn("min-h-full", PT_RESULTS_PAGE_BG_CLASS)}
+      contentClassName={cn("min-h-full", PT_RESULTS_PAGE_BG_CLASS)}
     >
       <div className={PT_RESULTS_PAGE_GAP_CLASS}>
         <section className={PT_RESULTS_HERO_CARD_CLASS}>

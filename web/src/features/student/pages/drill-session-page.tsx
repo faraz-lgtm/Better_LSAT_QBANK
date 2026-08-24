@@ -48,6 +48,7 @@ import { PracticeSubmitSectionModal } from "@/features/student/practice-session/
 import { PracticeSessionImmersiveFrame } from "@/features/student/practice-session/practice-session-immersive-frame"
 import { PracticeSessionNavArrowButton } from "@/features/student/practice-session/practice-session-nav-arrow-button"
 import { PracticeSessionQuestionNavStrip } from "@/features/student/practice-session/practice-session-question-nav-strip"
+import { resolvePracticeSessionQuestionNavOutcome } from "@/features/student/practice-session/practice-session-question-nav-outcome"
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
 import { usePracticeQuestionFlags } from "@/features/student/practice-session/use-practice-question-flags"
 import {
@@ -294,6 +295,14 @@ function DrillSessionPage() {
       reviewAfterComplete &&
       isQuestionRecommendedForBlindReview(actualAnswersByQuestion[current.id]),
   )
+  const reviewNavOutcome = reviewAfterComplete
+    ? (questionId: string) =>
+        resolvePracticeSessionQuestionNavOutcome(
+          answerViewTab === "actual"
+            ? actualAnswersByQuestion[questionId]
+            : answersByQuestion[questionId],
+        )
+    : undefined
   const revealed = reviewAfterComplete
     ? false
     : showAnswersMode === "each"
@@ -371,6 +380,36 @@ function DrillSessionPage() {
         return next
       })
       setError(e instanceof Error ? e.message : "Failed to submit answer")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleResetResponse() {
+    if (!sessionId || !current || submitting) return
+    if (reviewAfterComplete && !editingBlindReviewAnswers) return
+    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), { blindReview: reviewAfterComplete })) {
+      return
+    }
+
+    setAnswersByQuestion((prev) => {
+      const next = { ...prev }
+      delete next[current.id]
+      if (reviewAfterComplete) persistBlindReviewAnswers(next)
+      return next
+    })
+
+    if (reviewAfterComplete) return
+
+    setSubmitting(true)
+    try {
+      await practiceApi.submitAnswer({
+        sessionId,
+        questionId: current.id,
+        selectedAnswer: "",
+      })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to reset response")
     } finally {
       setSubmitting(false)
     }
@@ -701,6 +740,7 @@ function DrillSessionPage() {
                   allowReselect={allowReselect}
                   getRegionHtml={highlights.getRegionHtml}
                   onSelect={(index) => void handleSelectChoice(index)}
+                  onResetResponse={() => void handleResetResponse()}
                   flagged={current ? questionFlags.isFlagged(current.id) : false}
                   onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
                   flagsDisabled={sessionCompleted || blindReviewMode}
@@ -785,6 +825,7 @@ function DrillSessionPage() {
                 allowReselect={allowReselect}
                 getRegionHtml={highlights.getRegionHtml}
                 onSelect={(index) => void handleSelectChoice(index)}
+                onResetResponse={() => void handleResetResponse()}
                 flagged={current ? questionFlags.isFlagged(current.id) : false}
                 onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
                 flagsDisabled={sessionCompleted || blindReviewMode}
@@ -834,6 +875,7 @@ function DrillSessionPage() {
               recommendedForBr={(questionId) =>
                 isQuestionRecommendedForBlindReview(actualAnswersByQuestion[questionId])
               }
+              outcomeForQuestion={reviewNavOutcome}
               variant={sessionVariant}
               showPassageBreaks={sectionType === "RC"}
               onSelectQuestion={setQIndex}

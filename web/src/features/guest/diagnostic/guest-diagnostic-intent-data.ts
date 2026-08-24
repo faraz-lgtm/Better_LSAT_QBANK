@@ -13,7 +13,7 @@ const GUEST_DIAGNOSTIC_INTENT_OPTIONS: ReadonlyArray<GuestDiagnosticIntentOption
   },
   {
     id: "quick",
-    title: "Quick",
+    title: "Full",
     description: "Find your biggest point leaks fast",
     questionCount: "30q",
     duration: "~40 min",

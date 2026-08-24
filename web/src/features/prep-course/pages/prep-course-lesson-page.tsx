@@ -13,13 +13,16 @@ import {
   lessonProgressPercent,
   nextLessonSlug,
   normalizeCurriculum,
+  prepCourseDisplayTitle,
   prevLessonSlug,
   resolveDrillLessonType,
   shouldFlattenModuleSections,
   isResolvedPrepCourseDrillLesson,
 } from "@/features/prep-course/lib/prep-course-format"
 import { mergeActiveDrillAttemptBlindReview } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
+import { isPrepCourseComingSoonSlug } from "@/features/prep-course/lib/prep-course-nav"
 import { usePrepCourseBookmarks } from "@/features/prep-course/lib/use-prep-course-bookmarks"
+import { PrepCourseComingSoonPage } from "@/features/prep-course/pages/prep-course-coming-soon-page"
 import { StudentMain } from "@/features/student/components/student-main"
 import { STUDENT_PAGE_CONTAINER_CLASS } from "@/features/student/components/student-page-container"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
@@ -50,6 +53,7 @@ function PrepCourseLessonPage() {
   const courseSlug = courseSlugParam?.trim() ?? ""
   const lessonSlug = lessonSlugParam?.trim() ?? ""
   const paramsValid = courseSlug.length > 0 && lessonSlug.length > 0
+  const comingSoon = isPrepCourseComingSoonSlug(courseSlug)
   const [course, setCourse] = useState<PrepCourse | null>(null)
   const [curriculum, setCurriculum] = useState<PrepCourseCurriculum>({ modules: [] })
   const [lesson, setLesson] = useState<PrepLesson | null>(null)
@@ -113,8 +117,8 @@ function PrepCourseLessonPage() {
       }
       return section.title
     }
-    return course?.title ?? "Lessons"
-  }, [course?.title, lessonContext])
+    return course ? prepCourseDisplayTitle(course) : "Lessons"
+  }, [course, lessonContext])
 
   const sectionRemainingLabel = useMemo(() => {
     const remaining = incompleteDurationMinutes(sidebarLessons, completedLessonSlugs)
@@ -140,6 +144,10 @@ function PrepCourseLessonPage() {
   useEffect(() => {
     let alive = true
     async function load() {
+      if (comingSoon) {
+        if (alive) setLoading(false)
+        return
+      }
       if (!paramsValid) return
       if (!prepCourseApi) {
         if (alive) {
@@ -192,7 +200,7 @@ function PrepCourseLessonPage() {
     return () => {
       alive = false
     }
-  }, [paramsValid, courseSlug, lessonSlug, prepCourseApi, practiceApi, location.key])
+  }, [comingSoon, paramsValid, courseSlug, lessonSlug, prepCourseApi, practiceApi, location.key])
 
   useEffect(() => {
     setDrillStartError(null)
@@ -231,6 +239,10 @@ function PrepCourseLessonPage() {
       setStartingDrill(false)
     }
   }, [course, lesson, linkedQuestionRefs, navigate, practiceApi, startingDrill])
+
+  if (comingSoon) {
+    return <PrepCourseComingSoonPage />
+  }
 
   if (!paramsValid) {
     return (

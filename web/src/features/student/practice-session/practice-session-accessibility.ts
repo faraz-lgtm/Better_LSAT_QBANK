@@ -22,6 +22,25 @@ type PracticeSessionAccessibilitySettings = {
   lineSpacing: number
 }
 
+type PracticeSessionColorScheme = {
+  id: PracticeSessionColorSchemeId
+  label: string
+  backgroundColor: string
+  color: string
+  /** Selected answer row + letter badge — keep contrast with scheme text. */
+  choiceSelectedBg: string
+  choiceSelectedBorder: string
+  choiceSelectedLetterBg: string
+  choiceSelectedLetterFg: string
+  choiceUnselectedLetterBg: string
+  choiceUnselectedLetterFg: string
+  choiceUnselectedLetterBorder: string
+  /** Nested panels (explanations, callouts) — elevated surface vs page bg. */
+  panelBg: string
+  panelBorder: string
+  panelMutedFg: string
+}
+
 const ZOOM_SCALE_STEPS = [1, 1.1, 1.25, 1.5] as const
 
 const DEFAULT_ACCESSIBILITY_SETTINGS: PracticeSessionAccessibilitySettings = {
@@ -31,18 +50,103 @@ const DEFAULT_ACCESSIBILITY_SETTINGS: PracticeSessionAccessibilitySettings = {
   lineSpacing: 1,
 }
 
-const PRACTICE_SESSION_COLOR_SCHEMES: ReadonlyArray<{
-  id: PracticeSessionColorSchemeId
-  label: string
-  backgroundColor: string
-  color: string
-}> = [
-  { id: "black-on-white", label: "Black on white (default)", backgroundColor: "#ffffff", color: "#0d0d12" },
-  { id: "grey-on-light-grey", label: "Grey on light grey", backgroundColor: "#f6f8fa", color: "#666d80" },
-  { id: "purple-on-light-green", label: "Purple on light green", backgroundColor: "#e8f8ef", color: "#7b3fe4" },
-  { id: "black-on-violet", label: "Black on violet", backgroundColor: "#f3f0ff", color: "#0d0d12" },
-  { id: "yellow-on-navy", label: "Yellow on navy", backgroundColor: "#0d47a1", color: "#ffbd4c" },
-  { id: "white-on-black", label: "White on black", backgroundColor: "#0d0d12", color: "#ffffff" },
+const PRACTICE_SESSION_COLOR_SCHEMES: ReadonlyArray<PracticeSessionColorScheme> = [
+  {
+    id: "black-on-white",
+    label: "Black on white (default)",
+    backgroundColor: "#ffffff",
+    color: "#0d0d12",
+    choiceSelectedBg: "#f3f7ff",
+    choiceSelectedBorder: "#0d47a1",
+    choiceSelectedLetterBg: "#0d47a1",
+    choiceSelectedLetterFg: "#ffffff",
+    choiceUnselectedLetterBg: "#ffffff",
+    choiceUnselectedLetterFg: "#0d0d12",
+    choiceUnselectedLetterBorder: "#dfe1e7",
+    panelBg: "#f6f8fa",
+    panelBorder: "#dfe1e7",
+    panelMutedFg: "#666d80",
+  },
+  {
+    id: "grey-on-light-grey",
+    label: "Grey on light grey",
+    backgroundColor: "#f6f8fa",
+    color: "#666d80",
+    choiceSelectedBg: "#e8edf5",
+    choiceSelectedBorder: "#666d80",
+    choiceSelectedLetterBg: "#666d80",
+    choiceSelectedLetterFg: "#ffffff",
+    choiceUnselectedLetterBg: "#ffffff",
+    choiceUnselectedLetterFg: "#666d80",
+    choiceUnselectedLetterBorder: "#dfe1e7",
+    panelBg: "#ffffff",
+    panelBorder: "#dfe1e7",
+    panelMutedFg: "#666d80",
+  },
+  {
+    id: "purple-on-light-green",
+    label: "Purple on light green",
+    backgroundColor: "#e8f8ef",
+    color: "#7b3fe4",
+    choiceSelectedBg: "#f3eaff",
+    choiceSelectedBorder: "#7b3fe4",
+    choiceSelectedLetterBg: "#7b3fe4",
+    choiceSelectedLetterFg: "#ffffff",
+    choiceUnselectedLetterBg: "#ffffff",
+    choiceUnselectedLetterFg: "#7b3fe4",
+    choiceUnselectedLetterBorder: "#cbb8f5",
+    panelBg: "#dff5e9",
+    panelBorder: "#b7e4c7",
+    panelMutedFg: "#5a36a8",
+  },
+  {
+    id: "black-on-violet",
+    label: "Black on violet",
+    backgroundColor: "#f3f0ff",
+    color: "#0d0d12",
+    choiceSelectedBg: "#e7e0ff",
+    choiceSelectedBorder: "#0d0d12",
+    choiceSelectedLetterBg: "#0d0d12",
+    choiceSelectedLetterFg: "#ffffff",
+    choiceUnselectedLetterBg: "#ffffff",
+    choiceUnselectedLetterFg: "#0d0d12",
+    choiceUnselectedLetterBorder: "#d4cbf5",
+    panelBg: "#ebe6ff",
+    panelBorder: "#d4cbf5",
+    panelMutedFg: "#666d80",
+  },
+  {
+    id: "yellow-on-navy",
+    label: "Yellow on navy",
+    backgroundColor: "#0d47a1",
+    color: "#ffbd4c",
+    choiceSelectedBg: "#0a3a82",
+    choiceSelectedBorder: "#ffbd4c",
+    choiceSelectedLetterBg: "#ffbd4c",
+    choiceSelectedLetterFg: "#0d47a1",
+    choiceUnselectedLetterBg: "#0a3a82",
+    choiceUnselectedLetterFg: "#ffbd4c",
+    choiceUnselectedLetterBorder: "#ffbd4c",
+    panelBg: "#0a3a82",
+    panelBorder: "#ffbd4c",
+    panelMutedFg: "#ffd78a",
+  },
+  {
+    id: "white-on-black",
+    label: "White on black",
+    backgroundColor: "#0d0d12",
+    color: "#ffffff",
+    choiceSelectedBg: "#1c2433",
+    choiceSelectedBorder: "#93c5fd",
+    choiceSelectedLetterBg: "#ffffff",
+    choiceSelectedLetterFg: "#0d0d12",
+    choiceUnselectedLetterBg: "#ffffff",
+    choiceUnselectedLetterFg: "#0d0d12",
+    choiceUnselectedLetterBorder: "#ffffff",
+    panelBg: "#1c2433",
+    panelBorder: "#3a4252",
+    panelMutedFg: "#a4acb9",
+  },
 ]
 
 const FONT_SIZE_LABELS: Record<(typeof FONT_SCALE_STEPS)[number], string> = {
@@ -79,6 +183,16 @@ function getAccessibilityCssVariables(
   return {
     ["--practice-accessibility-bg" as string]: scheme.backgroundColor,
     ["--practice-accessibility-fg" as string]: scheme.color,
+    ["--practice-choice-selected-bg" as string]: scheme.choiceSelectedBg,
+    ["--practice-choice-selected-border" as string]: scheme.choiceSelectedBorder,
+    ["--practice-choice-selected-letter-bg" as string]: scheme.choiceSelectedLetterBg,
+    ["--practice-choice-selected-letter-fg" as string]: scheme.choiceSelectedLetterFg,
+    ["--practice-choice-unselected-letter-bg" as string]: scheme.choiceUnselectedLetterBg,
+    ["--practice-choice-unselected-letter-fg" as string]: scheme.choiceUnselectedLetterFg,
+    ["--practice-choice-unselected-letter-border" as string]: scheme.choiceUnselectedLetterBorder,
+    ["--practice-panel-bg" as string]: scheme.panelBg,
+    ["--practice-panel-border" as string]: scheme.panelBorder,
+    ["--practice-panel-muted-fg" as string]: scheme.panelMutedFg,
   }
 }
 

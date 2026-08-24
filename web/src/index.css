@@ -2535,13 +2535,13 @@ select.ds-input {
 
 @container dashboard (min-width: 64rem) {
   .dashboard-page__top {
-    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1.45fr) minmax(16rem, 0.9fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 1rem;
     align-items: stretch;
   }
 
   .dashboard-page__mid {
-    grid-template-columns: minmax(0, 1fr) minmax(14rem, 22%);
+    grid-template-columns: minmax(0, 1fr);
     gap: 1rem;
     align-items: stretch;
   }
@@ -3302,9 +3302,14 @@ section[data-lesson-section][data-variant="empty"] {
   );
 }
 
-/* Hide floating exam tools while the header Finish / more menu is open */
-html.practice-finish-menu-open .practice-session-side-widget {
-  display: none;
+.practice-session-card--active-drill .practice-session-question-panel-with-widget {
+  overflow: visible;
+}
+
+/* Keep vertical scroll working; clip only the x-axis so side-widget labels can still paint. */
+.practice-session-card--active-drill .practice-session-pane:has(.practice-session-side-widget) {
+  overflow-x: clip;
+  overflow-y: auto;
 }
 
 html.practice-finish-menu-open .practice-session-question-panel-with-widget {
@@ -3367,6 +3372,32 @@ html.practice-finish-menu-open .practice-session-header--active-drill > div {
   height: 0;
 }
 
+/* Review / explanation panes — show a thin scrollbar so long write-ups aren’t silently clipped */
+.practice-session-pane--scroll-visible {
+  scrollbar-width: thin;
+  scrollbar-color: var(--greyscale-300) transparent;
+  -ms-overflow-style: auto;
+}
+
+.practice-session-pane--scroll-visible::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+  height: 8px;
+}
+
+.practice-session-pane--scroll-visible::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.practice-session-pane--scroll-visible::-webkit-scrollbar-thumb {
+  background-color: var(--greyscale-300);
+  border-radius: 999px;
+}
+
+.practice-session-pane--scroll-visible::-webkit-scrollbar-thumb:hover {
+  background-color: var(--greyscale-400);
+}
+
 .practice-session-body--scroll-locked,
 .practice-session-body--scroll-locked .practice-session-pane {
   overflow: hidden !important;
@@ -3403,9 +3434,9 @@ html.portal-chat-hidden [class*="lc_text-widget"] {
 html.student-shell-immersive .practice-session-card--active-drill {
   width: 100%;
   max-width: 1440px;
-  height: auto;
+  height: 100%;
   max-height: calc(var(--app-svh) - 32px);
-  flex: none;
+  flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
   border-radius: 0;
@@ -3413,9 +3444,9 @@ html.student-shell-immersive .practice-session-card--active-drill {
 }
 
 html.student-shell-immersive .practice-session-card--active-drill .practice-session-body {
-  flex: 1 1 auto;
-  height: auto;
+  flex: 1 1 0%;
   min-height: 0;
+  overflow: hidden;
 }
 
 .practice-session-card--active-drill .practice-session-body {
@@ -3455,12 +3486,12 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
 
 .prep-course-shell-card {
   min-height: 0;
-  background-color: var(--primary-0);
+  flex: 1 1 0;
+  height: 0;
+  background-color: var(--greyscale-0);
 }
 
 .prep-course-shell-card.practice-session-card {
-  flex: 1 1 0;
-  height: 0;
   max-height: calc(var(--app-svh) - var(--nav-shell-height) - 32px);
 }
 
@@ -3493,6 +3524,44 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
 /* Override .lsat-html-content { color: var(--foreground) } so schemes apply */
 .practice-session-body .lsat-html-content,
 .practice-session-body .practice-session-content {
+  color: inherit;
+}
+
+/* Selected / unselected choice chrome follows Accessibility color scheme tokens */
+.practice-session-choice--selected {
+  border-color: var(--practice-choice-selected-border, #0d47a1);
+  background-color: var(--practice-choice-selected-bg, #f3f7ff);
+  color: var(--practice-accessibility-fg, inherit);
+}
+
+.practice-session-choice-letter--selected {
+  border-color: var(--practice-choice-selected-letter-bg, #0d47a1);
+  background-color: var(--practice-choice-selected-letter-bg, #0d47a1);
+  color: var(--practice-choice-selected-letter-fg, #ffffff);
+}
+
+.practice-session-choice-letter--unselected {
+  border-color: var(--practice-choice-unselected-letter-border, #dfe1e7);
+  background-color: var(--practice-choice-unselected-letter-bg, #ffffff);
+  color: var(--practice-choice-unselected-letter-fg, #0d0d12);
+}
+
+.practice-session-panel {
+  border-color: var(--practice-panel-border, #dfe1e7);
+  background-color: var(--practice-panel-bg, #f6f8fa);
+  color: var(--practice-accessibility-fg, #0d0d12);
+}
+
+.practice-session-panel-label {
+  color: var(--practice-panel-muted-fg, #666d80);
+}
+
+.practice-session-inline-divider {
+  border-color: var(--practice-panel-border, #dfe1e7);
+}
+
+.practice-session-body .practice-session-panel .explanation-detail-body.lsat-html-content,
+.practice-session-body .practice-session-panel .lsat-html-content {
   color: inherit;
 }
 
@@ -3681,9 +3750,13 @@ html.student-shell-immersive .practice-session-card--blind-review {
 }
 
 /* Review mode outcomes: wrap to next row (no horizontal scrollbar) */
-.practice-session-card--blind-review .practice-session-question-nav-grid:has([data-review-nav-outcome]) {
+.practice-session-card--blind-review .practice-session-question-nav-grid:has([data-review-nav-outcome]),
+.practice-session-card--active-drill .practice-session-question-nav-grid:has([data-review-nav-outcome]) {
   flex-wrap: wrap;
+  align-items: flex-end;
   overflow: visible;
+  height: auto;
+  min-height: 51px;
 }
 
 .practice-session-card--blind-review .practice-session-question-nav-btn {

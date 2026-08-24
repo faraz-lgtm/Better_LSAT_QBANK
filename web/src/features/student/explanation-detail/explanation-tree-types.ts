@@ -5,11 +5,13 @@ export type ExplanationQuestionNode = {
   number: number
   code: string
   snippet: string
+  topicName: string
   status: ExplanationQuestionStatus
   source: string
   difficulty: 1 | 2 | 3 | 4 | 5
   hasVideo?: boolean
   hasWrittenExplanation?: boolean
+  bookmarked?: boolean
 }
 
 export type ExplanationPassageNode = {

@@ -114,6 +114,20 @@ describe("student-nav-config", () => {
     expect(getStudentPageTitle("/app/analytics/preptests/results/abc123")).toBe(null)
   })
 
+  it("builds diagnostic results history breadcrumbs", () => {
+    expect(getStudentBreadcrumbs("/app/diagnostic/results/mini")).toEqual([
+      { label: "Diagnostic Results", href: "/app/diagnostic/results/mini" },
+      { label: "Mini" },
+    ])
+    expect(getStudentPageTitle("/app/diagnostic/results/mini")).toBe("Mini Diagnostic History")
+    expect(getStudentBreadcrumbs("/app/diagnostic/results/full/attempt-1")).toEqual([
+      { label: "Diagnostic Results", href: "/app/diagnostic/results/mini" },
+      { label: "Full", href: "/app/diagnostic/results/full" },
+      { label: "Results" },
+    ])
+    expect(getStudentPageTitle("/app/diagnostic/results/full/attempt-1")).toBe("Diagnostic Results")
+  })
+
   it("does not mark overview active on nested analytics routes", () => {
     const siblings = [
       "/app/analytics",

@@ -5,6 +5,17 @@ import type {
   PrepLesson,
 } from "@/lib/api/prep-course"
 
+/** Sidebar / UI display title; maps legacy DB title until migration is applied everywhere. */
+export function prepCourseDisplayTitle(course: { slug: string; title: string }): string {
+  if (
+    course.slug === "betterlsat-core-syllabus-structure-content" ||
+    course.title === "BetterLSAT Core Syllabus Structure + Content"
+  ) {
+    return "LSAT Essential Course"
+  }
+  return course.title
+}
+
 export function totalDurationMinutes(lessons: PrepLesson[]): number {
   return lessons.reduce((sum, lesson) => sum + (lesson.duration_minutes ?? 0), 0)
 }

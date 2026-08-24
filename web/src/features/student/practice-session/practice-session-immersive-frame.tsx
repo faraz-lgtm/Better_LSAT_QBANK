@@ -38,7 +38,7 @@ function PracticeSessionImmersiveFrame({ children, className, hideScrim = false 
           aria-hidden
         />
       ) : null}
-      <div className="relative flex h-auto max-h-full w-full max-w-[1440px] min-w-0 flex-col items-stretch">
+      <div className="relative flex h-full max-h-full min-h-0 w-full max-w-[1440px] min-w-0 flex-col items-stretch">
         {children}
       </div>
     </div>,

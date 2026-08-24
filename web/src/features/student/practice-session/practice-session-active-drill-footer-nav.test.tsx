@@ -97,4 +97,34 @@ describe("PracticeSessionActiveDrillFooterNav", () => {
 
     expect(document.querySelectorAll(".practice-session-question-nav-passage-break")).toHaveLength(0)
   })
+
+  it("colour-codes review outcomes on the question list", () => {
+    render(
+      <PracticeSessionActiveDrillFooterNav
+        questions={[{ id: "q1" }, { id: "q2" }, { id: "q3" }]}
+        safeIndex={1}
+        answersByQuestion={{
+          q1: { selectedAnswer: "A", isCorrect: true },
+          q2: { selectedAnswer: "B", isCorrect: false },
+        }}
+        isFlagged={() => false}
+        variant="active-drill"
+        outcomeForQuestion={(id) => {
+          if (id === "q1") return "correct"
+          if (id === "q2") return "incorrect"
+          return "unanswered"
+        }}
+        onSelectQuestion={() => undefined}
+        onPrev={() => undefined}
+        onNext={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole("button", { name: "Question 1, correct" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Question 2, incorrect" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Question 3, unanswered" })).toBeInTheDocument()
+    expect(document.querySelectorAll("[data-review-nav-outcome='correct']")).toHaveLength(1)
+    expect(document.querySelectorAll("[data-review-nav-outcome='incorrect']")).toHaveLength(1)
+    expect(document.querySelectorAll("[data-review-nav-outcome='unanswered']")).toHaveLength(1)
+  })
 })

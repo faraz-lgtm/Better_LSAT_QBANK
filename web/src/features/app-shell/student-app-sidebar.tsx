@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { ChevronDown, Lock } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
@@ -19,7 +19,8 @@ import {
 } from "@/features/app-shell/student-nav-config"
 import { useStudentEntitlementOptional, isLsacLockedNavItem } from "@/features/app-shell/student-entitlement-context"
 import { shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
-import { createPrepCourseApi, type PrepCourse } from "@/lib/api/prep-course"
+import { PREP_COURSE_NAV_ITEMS } from "@/features/prep-course/lib/prep-course-nav"
+import { DiagnosticResultsNavItem } from "@/features/student/diagnostic/diagnostic-results-nav-item"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -60,37 +61,9 @@ function PrepCourseNavItem({
 }) {
   const onPrepCourseRoute = isPrepCourseRoute(pathname)
   const [manualExpanded, setManualExpanded] = useState<boolean | null>(null)
-  const [courses, setCourses] = useState<PrepCourse[]>([])
 
   const expanded = manualExpanded ?? onPrepCourseRoute
   const parentActive = onPrepCourseRoute
-
-  const prepCourseApi = useMemo(() => {
-    try {
-      return createPrepCourseApi(getSupabaseBrowserClient())
-    } catch {
-      return null
-    }
-  }, [])
-
-  useEffect(() => {
-    let alive = true
-    async function load() {
-      if (!prepCourseApi) return
-      try {
-        const rows = await prepCourseApi.listCourses()
-        if (!alive) return
-        setCourses(rows)
-      } catch {
-        if (!alive) return
-        setCourses([])
-      }
-    }
-    void load()
-    return () => {
-      alive = false
-    }
-  }, [prepCourseApi])
 
   useEffect(() => {
     if (onPrepCourseRoute) setManualExpanded(null)
@@ -122,12 +95,12 @@ function PrepCourseNavItem({
 
       {expanded ? (
         <div className="student-sidebar-subnav" role="group" aria-label="Prep courses">
-          {courses.map((course) => {
+          {PREP_COURSE_NAV_ITEMS.map((course) => {
             const href = `${PREP_COURSE_HREF}/${course.slug}`
             const active = isCourseNavActive(pathname, course.slug)
             return (
               <Link
-                key={course.id}
+                key={course.slug}
                 to={href}
                 className={cn(
                   "student-sidebar-link student-sidebar-sublink",
@@ -204,6 +177,7 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
               <SidebarNavIcon icon={STUDENT_DIAGNOSTIC_ICON} />
               <span>Diagnostic</span>
             </Link>
+            <DiagnosticResultsNavItem showIcon />
 
             {STUDENT_NAV_SECTIONS.map((section) => (
               <div key={section.key} className="student-sidebar-section">

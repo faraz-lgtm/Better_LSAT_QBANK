@@ -46,22 +46,29 @@ export async function handlePrepExplanationsPrepTestsRequest(req: Request): Prom
   try {
     let page: number | undefined
     let pageSize: number | undefined
+    let offset: number | undefined
     let sort: 'newest' | 'oldest' | undefined
+    let bookmarkedOnly = false
     if (req.method === 'POST') {
       const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
       if (typeof body.page === 'number' && Number.isFinite(body.page)) page = body.page
       if (typeof body.pageSize === 'number' && Number.isFinite(body.pageSize)) pageSize = body.pageSize
+      if (typeof body.offset === 'number' && Number.isFinite(body.offset)) offset = body.offset
       if (body.sort === 'newest' || body.sort === 'oldest') sort = body.sort
+      bookmarkedOnly = body.bookmarkedOnly === true
     } else {
       const url = new URL(req.url)
       const pageParam = url.searchParams.get('page')
       const pageSizeParam = url.searchParams.get('pageSize')
+      const offsetParam = url.searchParams.get('offset')
       const sortParam = url.searchParams.get('sort')
       if (pageParam) page = Number.parseInt(pageParam, 10)
       if (pageSizeParam) pageSize = Number.parseInt(pageSizeParam, 10)
+      if (offsetParam) offset = Number.parseInt(offsetParam, 10)
       if (sortParam === 'newest' || sortParam === 'oldest') sort = sortParam
+      bookmarkedOnly = url.searchParams.get('bookmarkedOnly') === 'true'
     }
-    const data = await explanationsService().listPrepTests(auth.user.id, { page, pageSize, sort })
+    const data = await explanationsService().listPrepTests(auth.user.id, { page, pageSize, offset, sort, bookmarkedOnly })
     return json(data, {}, cors)
   } catch (e) {
     console.error('prep-explanations-prep-tests', e)
@@ -135,6 +142,38 @@ export async function handlePrepExplanationDetailRequest(req: Request): Promise<
       return json({ error: msg }, { status: 404 }, cors)
     }
     console.error('prep-explanation-detail', e)
+    return json({ error: 'Internal server error' }, { status: 500 }, cors)
+  }
+}
+
+export async function handlePrepExplanationsBookmarksRequest(req: Request): Promise<Response> {
+  if (req.method === 'OPTIONS') return optionsNoContent(cors)
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    return json({ error: 'Method not allowed' }, { status: 405 }, cors)
+  }
+
+  const auth = await requireAuthUser(req, cors)
+  if (!auth.ok) return auth.response
+
+  try {
+    if (req.method === 'GET') {
+      const data = await explanationsService().listQuestionBookmarks(auth.user.id)
+      return json(data, {}, cors)
+    }
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
+    const questionId = typeof body.questionId === 'string' ? body.questionId.trim() : ''
+    if (!questionId || typeof body.bookmarked !== 'boolean') {
+      const data = await explanationsService().listQuestionBookmarks(auth.user.id)
+      return json(data, {}, cors)
+    }
+    const data = await explanationsService().setQuestionBookmark(auth.user.id, questionId, body.bookmarked)
+    return json(data, {}, cors)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Internal server error'
+    if (msg === 'questionId is required') {
+      return json({ error: msg }, { status: 400 }, cors)
+    }
+    console.error('prep-explanations-bookmarks', e)
     return json({ error: 'Internal server error' }, { status: 500 }, cors)
   }
 }

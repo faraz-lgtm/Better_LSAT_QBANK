@@ -27,7 +27,7 @@ const DIAGNOSTIC_TIERS: DiagnosticIntentTierConfig[] = [
   },
   {
     id: "quick",
-    name: "Quick",
+    name: "Full",
     tagline: "Find your biggest point leaks fast",
     questions: "30q",
     duration: "~40 min",
@@ -39,7 +39,7 @@ const DIAGNOSTIC_TIERS: DiagnosticIntentTierConfig[] = [
 
 const TIER_LABELS: Record<DiagnosticIntentTier, string> = {
   mini: "Mini",
-  quick: "Quick",
+  quick: "Full",
   full: "Full",
 }
 

@@ -11,7 +11,7 @@ import { ResetPasswordPage } from "@/features/auth/pages/reset-password-page"
 import { SignupPage } from "@/features/auth/pages/signup-page"
 import { SignupCheckEmailPage } from "@/features/auth/pages/signup-check-email-page"
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
-import { PrepCourseContentPage } from "@/features/prep-course/pages/prep-course-content-page"
+import { PrepCourseCoursePage } from "@/features/prep-course/pages/prep-course-course-page"
 import { PrepCourseLessonPage } from "@/features/prep-course/pages/prep-course-lesson-page"
 import { PrepCourseListPage } from "@/features/prep-course/pages/prep-course-list-page"
 import { AnalyticsDrillResultsPage } from "@/features/student/pages/analytics-drill-results-page"
@@ -59,7 +59,7 @@ function AppRoutes() {
         <Route path="learn/explanations" element={<ExplanationsPage />} />
         <Route path="learn/explanations/q/:questionId" element={<ExplanationQuestionDetailPage />} />
         <Route path="prep-course" element={<PrepCourseListPage />} />
-        <Route path="prep-course/:courseSlug" element={<PrepCourseContentPage />} />
+        <Route path="prep-course/:courseSlug" element={<PrepCourseCoursePage />} />
         <Route path="prep-course/:courseSlug/:lessonSlug" element={<PrepCourseLessonPage />} />
         <Route path="practice/drills" element={<PracticeDrillsPage />} />
         <Route path="practice/drills/lr/new" element={<LrNewDrillPage />} />

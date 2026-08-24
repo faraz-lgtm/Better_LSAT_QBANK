@@ -1,6 +1,9 @@
 import { Fragment, useMemo } from "react"
 
-import { PracticeSessionQuestionNavButton } from "@/features/student/practice-session/practice-session-question-nav-button"
+import {
+  PracticeSessionQuestionNavButton,
+  type PracticeSessionQuestionNavOutcome,
+} from "@/features/student/practice-session/practice-session-question-nav-button"
 import { passageBreakAfterIndices } from "@/features/student/practice-session/question-nav-passage-breaks"
 import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
@@ -19,6 +22,8 @@ type PracticeSessionQuestionNavStripProps = {
   variant: PracticeSessionVariant
   onSelectQuestion: (questionNumber: number) => void
   recommendedForBr?: (questionId: string) => boolean
+  /** When set, footer pills use Review outcome chrome (green / red / unanswered). */
+  outcomeForQuestion?: (questionId: string) => PracticeSessionQuestionNavOutcome | null | undefined
   /** RC passage-group dividers. Off for LR — stimuli are one question each. */
   showPassageBreaks?: boolean
   className?: string
@@ -40,6 +45,7 @@ function PracticeSessionQuestionNavStrip({
   variant,
   onSelectQuestion,
   recommendedForBr,
+  outcomeForQuestion,
   showPassageBreaks = true,
   className,
 }: PracticeSessionQuestionNavStripProps) {
@@ -60,6 +66,7 @@ function PracticeSessionQuestionNavStrip({
               answered={Boolean(answersByQuestion[q.id])}
               flagged={isFlagged(q.id)}
               recommendedForBr={recommendedForBr?.(q.id)}
+              outcome={outcomeForQuestion?.(q.id) ?? null}
               variant={variant}
               onClick={() => onSelectQuestion(n)}
             />

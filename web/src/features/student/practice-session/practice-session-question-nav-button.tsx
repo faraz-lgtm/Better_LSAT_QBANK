@@ -67,7 +67,13 @@ function PracticeSessionQuestionNavButton({
   const isBlindReview = variant === "blind-review"
 
   if (outcome != null) {
-    const isCorrect = outcome === "correct"
+    const outcomeChrome =
+      outcome === "correct"
+        ? "border-[#00bc54] bg-[#00bc54] text-white"
+        : outcome === "unanswered"
+          ? "border-[#9aa3b5] bg-[#9aa3b5] text-white"
+          : "border-[#df1c41] bg-[#df1c41] text-white"
+
     return (
       <div
         className="flex w-8 shrink-0 flex-col items-center gap-1"
@@ -78,10 +84,8 @@ function PracticeSessionQuestionNavButton({
           type="button"
           onClick={onClick}
           className={cn(
-            "practice-session-question-nav-btn practice-session-question-nav-btn--review box-border relative inline-flex size-8 shrink-0 items-center justify-center rounded-[12px] border border-solid p-px text-base font-semibold leading-[1.5] tracking-[0.32px] text-black",
-            isCorrect
-              ? "border-[#40c4aa] bg-[#effefa]"
-              : "border-[#df1c41] bg-[#feeff2]",
+            "practice-session-question-nav-btn practice-session-question-nav-btn--review box-border relative inline-flex size-8 shrink-0 items-center justify-center rounded-[12px] border border-solid p-px text-base font-semibold leading-[1.5] tracking-[0.32px]",
+            outcomeChrome,
           )}
           aria-current={active ? "true" : undefined}
           aria-label={`Question ${number}, ${

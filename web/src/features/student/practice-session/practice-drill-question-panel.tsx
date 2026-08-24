@@ -33,6 +33,8 @@ type PracticeDrillQuestionPanelProps = {
   allowReselect: boolean
   getRegionHtml: (key: string, base: string) => string
   onSelect: (index: number) => void
+  /** Clears the selected answer (and response masks) for this question. */
+  onResetResponse?: () => void
   flagged: boolean
   onToggleFlag: () => void
   onOpenReview?: () => void
@@ -57,6 +59,7 @@ function PracticeDrillQuestionPanel({
   allowReselect,
   getRegionHtml,
   onSelect,
+  onResetResponse,
   flagged,
   onToggleFlag,
   onOpenReview,
@@ -82,6 +85,14 @@ function PracticeDrillQuestionPanel({
   const stemHtml = getRegionHtml(stemKey, question.stemText ?? "")
   const isBlindReviewLayout = blindReviewChrome && variant === "blind-review"
   const isActiveDrillLayout = variant === "active-drill"
+  const canResetResponse =
+    !choicesDisabled &&
+    (selectedIndex != null || responseMasking || hasMaskedChoices)
+
+  function handleResetResponse() {
+    resetMaskedChoices()
+    if (selectedIndex != null) onResetResponse?.()
+  }
 
   if (isBlindReviewLayout) {
     return (
@@ -176,8 +187,8 @@ function PracticeDrillQuestionPanel({
               showSideAction={!isActiveDrillLayout}
             />
           ))}
-          {isActiveDrillLayout && (responseMasking || hasMaskedChoices) ? (
-            <PracticeSessionResetResponseButton onClick={resetMaskedChoices} />
+          {isActiveDrillLayout && canResetResponse ? (
+            <PracticeSessionResetResponseButton onClick={handleResetResponse} />
           ) : null}
         </div>
         {isActiveDrillLayout ? (

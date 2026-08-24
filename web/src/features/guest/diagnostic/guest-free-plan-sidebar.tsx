@@ -6,11 +6,11 @@ import {
   GUEST_FREE_PLAN_DASHBOARD_HREF,
   GUEST_FREE_PLAN_NAV_SECTIONS,
   GUEST_FREE_PLAN_PRICING_HREF,
-  GUEST_FREE_PLAN_RESULTS_HREF,
   isGuestFreePlanAnalyticsActive,
   isGuestFreePlanDashboardActive,
 } from "@/features/guest/diagnostic/guest-free-plan-nav-config"
 import { GuestUpgradeCta } from "@/features/guest/diagnostic/guest-upgrade-cta"
+import { DiagnosticResultsNavItem } from "@/features/student/diagnostic/diagnostic-results-nav-item"
 import { STUDENT_APP_VERSION } from "@/features/app-shell/student-nav-config"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -74,12 +74,14 @@ function GuestFreePlanSidebar({
             <div key={section.key} className="student-sidebar-section">
               <p className="student-sidebar-heading">{section.label}</p>
               {section.items.map((item) => {
+                if (item.label === "Diagnostic Results") {
+                  return <DiagnosticResultsNavItem key={item.label} />
+                }
                 const isAnalytics = item.label === "Analytics"
                 const isDashboard = item.label === "Dashboard"
                 const active =
                   (isAnalytics && analyticsActive) ||
-                  (isDashboard && dashboardActive) ||
-                  (item.label === "Diagnostic Results" && pathname.startsWith(GUEST_FREE_PLAN_RESULTS_HREF))
+                  (isDashboard && dashboardActive)
                 const href = item.href ?? dashboardHref
 
                 if (item.locked) {

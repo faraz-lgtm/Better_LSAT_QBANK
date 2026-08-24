@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 
 type GuestDiagnosticExplanationCardProps = {
   number: number
+  heading?: string
   explanation: MiniDiagnosticExplanation
   isCorrect: boolean
   selectedAnswer?: string | null
@@ -19,6 +20,7 @@ type GuestDiagnosticExplanationCardProps = {
 /** Results-list row only — full stem/choices/explanations live on Review in Tester. */
 function GuestDiagnosticExplanationCard({
   number,
+  heading = "Mini Diagnostic",
   explanation,
   isCorrect,
   selectedAnswer,
@@ -60,7 +62,7 @@ function GuestDiagnosticExplanationCard({
         <div className="min-w-0 flex-1 space-y-4">
           <div>
             <p className="text-lg font-semibold text-[#062357]">
-              Mini Diagnostic · Q{number}
+              {heading} · Q{number}
               {explanation.questionType ? ` · ${explanation.questionType}` : ''}
             </p>
             <div className="mt-2 flex flex-wrap gap-2">

@@ -1,6 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
-import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import {
   Bookmark,
   Pencil,
@@ -11,6 +10,11 @@ import { FigmaIcon } from "@/components/icons/figma-icons"
 import { FIGMA_DROPDOWN_CARD_OPEN_CLASS, FigmaDropdown } from "@/components/ui/figma-dropdown"
 import { Switch } from "@/components/ui/switch"
 import { explanationQuestionDetailHref } from "@/features/student/explanation-detail/explanation-question-index"
+import {
+  CalculatingScoreLoader,
+  useCalculatingScoreReveal,
+} from "@/features/student/components/calculating-score-loader"
+import { StudentMain } from "@/features/student/components/student-main"
 import {
   PT_RESULTS_ACTION_BUTTON_CLASS,
   PT_RESULTS_BY_SECTION_PANEL_CLASS,
@@ -32,7 +36,6 @@ import {
   PT_RESULTS_TAG_CLASS,
 } from "@/features/student/analytics/prep-test-results-section-styles"
 import { cn } from "@/lib/utils"
-import { StudentMain } from "@/features/student/components/student-main"
 import { PracticeResultOutcomeIcon } from "@/features/student/practice-session/practice-result-outcome-icon"
 import { PrepTestSectionResultCard } from "@/features/student/practice-session/prep-test-section-result-card"
 import {
@@ -561,14 +564,13 @@ function AnalyticsPrepTestResultsPage() {
     [practiceApi, testId],
   )
 
-  if (loading) {
-    return (
-      <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
-        <StudentPageLoader centered className="min-h-0 flex-1" label="Loading results…" />
-      </StudentMain>
-    )
-  }
-  if (error || !detail) {
+  const dataReady = !loading && detail != null && error == null
+  const revealResults = useCalculatingScoreReveal({
+    dataReady,
+    resetKey: testId,
+  })
+
+  if (error && !loading) {
     return (
       <StudentMain>
         <p className="text-sm text-red-600">{error ?? "Results not found"}</p>
@@ -576,10 +578,21 @@ function AnalyticsPrepTestResultsPage() {
     )
   }
 
+  if (!revealResults || !detail) {
+    return (
+      <StudentMain
+        className={cn("min-h-full", PT_RESULTS_PAGE_BG_CLASS)}
+        contentClassName={cn("flex min-h-0 flex-1 flex-col", PT_RESULTS_PAGE_BG_CLASS)}
+      >
+        <CalculatingScoreLoader className="min-h-0 flex-1" />
+      </StudentMain>
+    )
+  }
+
   return (
     <StudentMain
-      className={cn("min-h-full w-full max-w-none", PT_RESULTS_PAGE_BG_CLASS)}
-      contentClassName={cn("min-h-full max-w-none", PT_RESULTS_PAGE_BG_CLASS)}
+      className={cn("min-h-full", PT_RESULTS_PAGE_BG_CLASS)}
+      contentClassName={cn("min-h-full", PT_RESULTS_PAGE_BG_CLASS)}
     >
       <div className={PT_RESULTS_PAGE_GAP_CLASS}>
         <section className={PT_RESULTS_HERO_CARD_CLASS}>

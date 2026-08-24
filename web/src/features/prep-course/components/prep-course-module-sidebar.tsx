@@ -27,13 +27,13 @@ function PrepCourseModuleSidebar({
 }: PrepCourseModuleSidebarProps) {
   return (
     <aside
-      className="flex min-h-0 w-full shrink-0 flex-col rounded-br-[16px] rounded-tr-[16px] border border-[color:var(--greyscale-100)] border-l-0 bg-[var(--primary-0)] pl-4 lg:w-[288px]"
+      className="flex min-h-0 w-full shrink-0 flex-col border-t border-[#dfe1e7] bg-[var(--primary-0)] pl-4 lg:w-[288px] lg:border-t-0 lg:border-l"
       aria-label="Course modules"
     >
       <div className="shrink-0 pt-6 pr-3">
         <h2 className="text-xl font-bold leading-[1.35] text-[#082c6b]">Course Modules</h2>
       </div>
-      <ul className="practice-session-scroll-hidden flex-1 space-y-2 overflow-y-auto py-3 pr-3">
+      <ul className="practice-session-pane--scroll-visible min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden py-3 pr-3">
         {modules.map((mod) => {
           const isActive = mod.id === selectedModuleId
           const lessons = moduleLessons(mod)

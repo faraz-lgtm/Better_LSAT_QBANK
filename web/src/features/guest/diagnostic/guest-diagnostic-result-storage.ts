@@ -8,8 +8,13 @@ import {
 } from "@/features/guest/diagnostic/mini-diagnostic-content"
 import type { GuestDiagnosticAnswerState } from "@/features/guest/diagnostic/guest-diagnostic-exam-utils"
 import { getGuestDiagnosticTestConfig } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
+import {
+  diagnosticResultsSectionFromIntent,
+  type DiagnosticResultsSection,
+} from "@/features/student/diagnostic/diagnostic-results-routes"
 
 const GUEST_DIAGNOSTIC_RESULT_STORAGE_KEY = "guestDiagnosticResult"
+const DIAGNOSTIC_ATTEMPT_HISTORY_STORAGE_KEY = "lsat.diagnostic-attempt-history"
 
 type GuestDiagnosticQuestionOutcome = {
   questionId: string
@@ -20,6 +25,7 @@ type GuestDiagnosticQuestionOutcome = {
 }
 
 type GuestDiagnosticResult = {
+  id: string
   intentId: GuestDiagnosticIntentId
   completedAt: string
   diagnosticNumber: number
@@ -72,6 +78,111 @@ function buildResultScoreFields(
   }
 }
 
+function newDiagnosticAttemptId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID()
+  }
+  return `diag-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function parseGuestDiagnosticResult(value: unknown): GuestDiagnosticResult | null {
+  if (!value || typeof value !== "object") return null
+  const parsed = value as Partial<GuestDiagnosticResult>
+  if (!parsed.intentId || !Array.isArray(parsed.outcomes)) return null
+  const completedAt =
+    typeof parsed.completedAt === "string" && parsed.completedAt.trim()
+      ? parsed.completedAt
+      : new Date().toISOString()
+  return {
+    ...(parsed as GuestDiagnosticResult),
+    id: typeof parsed.id === "string" && parsed.id.trim() ? parsed.id : newDiagnosticAttemptId(),
+    completedAt,
+    diagnosticNumber: Number.isFinite(parsed.diagnosticNumber) ? Number(parsed.diagnosticNumber) : 1,
+  }
+}
+
+function readDiagnosticHistoryRaw(): GuestDiagnosticResult[] {
+  if (typeof window === "undefined") return []
+  try {
+    const raw = window.localStorage.getItem(DIAGNOSTIC_ATTEMPT_HISTORY_STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return []
+    return parsed.map(parseGuestDiagnosticResult).filter((row): row is GuestDiagnosticResult => row != null)
+  } catch {
+    return []
+  }
+}
+
+function stampDisplayNumbers(attempts: GuestDiagnosticResult[]): GuestDiagnosticResult[] {
+  const bySection: Record<DiagnosticResultsSection, GuestDiagnosticResult[]> = { mini: [], full: [] }
+  const chronological = [...attempts].sort(
+    (a, b) => new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime(),
+  )
+  for (const attempt of chronological) {
+    bySection[diagnosticResultsSectionFromIntent(attempt.intentId)].push(attempt)
+  }
+  const numbers = new Map<string, number>()
+  for (const section of ["mini", "full"] as const) {
+    bySection[section].forEach((attempt, index) => {
+      numbers.set(attempt.id, index + 1)
+    })
+  }
+  return attempts.map((attempt) => ({
+    ...attempt,
+    diagnosticNumber: numbers.get(attempt.id) ?? attempt.diagnosticNumber,
+  }))
+}
+
+function writeDiagnosticHistoryRaw(attempts: GuestDiagnosticResult[]): void {
+  if (typeof window === "undefined") return
+  window.localStorage.setItem(DIAGNOSTIC_ATTEMPT_HISTORY_STORAGE_KEY, JSON.stringify(attempts))
+}
+
+function readSessionDiagnosticResult(): GuestDiagnosticResult | null {
+  if (typeof window === "undefined") return null
+  const raw = window.sessionStorage.getItem(GUEST_DIAGNOSTIC_RESULT_STORAGE_KEY)
+  if (!raw) return null
+  try {
+    return parseGuestDiagnosticResult(JSON.parse(raw) as unknown)
+  } catch {
+    return null
+  }
+}
+
+function listDiagnosticHistory(): GuestDiagnosticResult[] {
+  const stored = readDiagnosticHistoryRaw()
+  const session = readSessionDiagnosticResult()
+  let attempts = stored
+  if (
+    session &&
+    !stored.some(
+      (row) =>
+        row.id === session.id ||
+        (row.intentId === session.intentId && row.completedAt === session.completedAt),
+    )
+  ) {
+    attempts = [session, ...stored]
+    writeDiagnosticHistoryRaw(attempts)
+  }
+  const stamped = stampDisplayNumbers(attempts)
+  return [...stamped].sort(
+    (a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime(),
+  )
+}
+
+function listDiagnosticHistoryBySection(section: DiagnosticResultsSection): GuestDiagnosticResult[] {
+  return listDiagnosticHistory().filter(
+    (attempt) => diagnosticResultsSectionFromIntent(attempt.intentId) === section,
+  )
+}
+
+function getDiagnosticAttempt(attemptId: string): GuestDiagnosticResult | null {
+  const id = attemptId.trim()
+  if (!id) return null
+  return listDiagnosticHistory().find((attempt) => attempt.id === id) ?? null
+}
+
 /** Demo outcomes for preview routes when no submission exists yet. */
 function buildDefaultGuestDiagnosticResult(intentId: GuestDiagnosticIntentId): GuestDiagnosticResult {
   const config = getGuestDiagnosticTestConfig(intentId)
@@ -98,6 +209,7 @@ function buildDefaultGuestDiagnosticResult(intentId: GuestDiagnosticIntentId): G
   })
 
   return {
+    id: newDiagnosticAttemptId(),
     intentId,
     completedAt: new Date().toISOString(),
     diagnosticNumber: 1,
@@ -130,6 +242,7 @@ function buildGuestDiagnosticResultFromAnswers(
   const questionCount = questions.length
 
   return {
+    id: newDiagnosticAttemptId(),
     intentId,
     completedAt: new Date().toISOString(),
     diagnosticNumber: 1,
@@ -140,21 +253,19 @@ function buildGuestDiagnosticResultFromAnswers(
   }
 }
 
-function writeGuestDiagnosticResult(result: GuestDiagnosticResult): void {
-  sessionStorage.setItem(GUEST_DIAGNOSTIC_RESULT_STORAGE_KEY, JSON.stringify(result))
+function writeGuestDiagnosticResult(result: GuestDiagnosticResult): GuestDiagnosticResult {
+  const parsed = parseGuestDiagnosticResult(result)
+  if (!parsed) throw new Error("Invalid diagnostic result")
+  const previous = readDiagnosticHistoryRaw().filter((row) => row.id !== parsed.id)
+  const next = stampDisplayNumbers([parsed, ...previous])
+  const saved = next.find((row) => row.id === parsed.id) ?? parsed
+  writeDiagnosticHistoryRaw(next)
+  sessionStorage.setItem(GUEST_DIAGNOSTIC_RESULT_STORAGE_KEY, JSON.stringify(saved))
+  return saved
 }
 
 function readGuestDiagnosticResult(): GuestDiagnosticResult | null {
-  const raw = sessionStorage.getItem(GUEST_DIAGNOSTIC_RESULT_STORAGE_KEY)
-  if (!raw) return null
-  try {
-    const parsed = JSON.parse(raw) as GuestDiagnosticResult
-    if (!parsed || typeof parsed !== "object") return null
-    if (!parsed.intentId || !Array.isArray(parsed.outcomes)) return null
-    return parsed
-  } catch {
-    return null
-  }
+  return readSessionDiagnosticResult() ?? listDiagnosticHistory()[0] ?? null
 }
 
 function formatDiagnosticDateLabel(isoDate: string): string {
@@ -165,16 +276,20 @@ function formatDiagnosticDateLabel(isoDate: string): string {
 
 function getDiagnosticIntentTitle(intentId: GuestDiagnosticIntentId): string {
   if (intentId === "mini") return "Mini Diagnostic"
-  if (intentId === "quick") return "Quick Diagnostic"
+  if (intentId === "quick") return "Full Diagnostic"
   return "Full Diagnostic"
 }
 
 export {
   buildDefaultGuestDiagnosticResult,
   buildGuestDiagnosticResultFromAnswers,
+  DIAGNOSTIC_ATTEMPT_HISTORY_STORAGE_KEY,
   formatDiagnosticDateLabel,
+  getDiagnosticAttempt,
   getDiagnosticIntentTitle,
   GUEST_DIAGNOSTIC_RESULT_STORAGE_KEY,
+  listDiagnosticHistory,
+  listDiagnosticHistoryBySection,
   readGuestDiagnosticResult,
   writeGuestDiagnosticResult,
   type GuestDiagnosticQuestionOutcome,

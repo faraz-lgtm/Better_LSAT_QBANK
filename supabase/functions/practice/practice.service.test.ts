@@ -195,6 +195,56 @@ Deno.test('submitAnswer allows completed drill session for review', async () => 
   assertEquals(out.event.selected_answer, 'C')
 })
 
+Deno.test('submitAnswer clears response when selectedAnswer is blank', async () => {
+  let updatedMetadata: Record<string, unknown> | null = null
+  const repo = {
+    ...mockRepo(),
+    getSessionById: async () =>
+      baseSession({
+        kind: 'DRILL',
+        prep_test_id: null,
+        completed_at: null,
+        metadata: { questionIds: ['q-1'], answeredQuestionIds: ['q-1'] },
+      }),
+    getQuestionDetail: async () =>
+      ({
+        id: 'q-1',
+        correct_answer: 'B',
+        difficulty: 2,
+        question_type_id: null,
+        section_id: 'sec-1',
+        admin_sections: { section_type: 'LR' as const, prep_test_id: 'pt-1' },
+      }) satisfies QuestionDetailRow,
+    insertAnswerEvent: async (input: { selectedAnswer: string; isCorrect: boolean }) =>
+      ({
+        id: 'evt-clear',
+        user_id: 'user-1',
+        practice_session_id: 'sess-1',
+        question_id: 'q-1',
+        selected_answer: input.selectedAnswer,
+        is_correct: input.isCorrect,
+        question_type_id: null,
+        section_type: 'LR',
+        difficulty: 2,
+        session_kind: 'DRILL',
+        created_at: '2026-01-03T00:00:00Z',
+      }) satisfies AnswerEventRow,
+    updateSession: async (_sessionId: string, _userId: string, patch: { metadata?: Record<string, unknown> }) => {
+      updatedMetadata = patch.metadata ?? null
+      return baseSession({ metadata: patch.metadata ?? {} })
+    },
+  }
+  const service = createPracticeService({ repository: repo as never })
+  const out = await service.submitAnswer('user-1', {
+    sessionId: 'sess-1',
+    questionId: 'q-1',
+    selectedAnswer: '',
+  })
+  assertEquals(out.event.selected_answer, '')
+  assertEquals(out.event.is_correct, false)
+  assertEquals(updatedMetadata?.answeredQuestionIds, [])
+})
+
 Deno.test('completeDrillBlindReview stores blind review answers on completed drill', async () => {
   let capturedMetadata: Record<string, unknown> | null = null
   const repo = {

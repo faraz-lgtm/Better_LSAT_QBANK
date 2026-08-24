@@ -37,7 +37,7 @@ describe("IntentPage", () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole("button", { name: /start quick diagnostic/i }))
+    await user.click(screen.getByRole("button", { name: /start full diagnostic/i }))
 
     expect(saveDiagnosticIntentMock).toHaveBeenCalledWith("quick")
     expect(screen.getByTestId("signup-page")).toBeInTheDocument()
@@ -58,7 +58,7 @@ describe("IntentPage", () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole("button", { name: /start quick diagnostic/i }))
+    await user.click(screen.getByRole("button", { name: /start full diagnostic/i }))
 
     expect(saveDiagnosticIntentMock).toHaveBeenCalledWith("quick")
     expect(screen.getByTestId("diag-start")).toBeInTheDocument()
@@ -96,7 +96,7 @@ describe("IntentPage", () => {
     expect(screen.getByRole("link", { name: /back/i })).toHaveAttribute("href", "/")
   })
 
-  it("does not offer the full diagnostic tier", () => {
+  it("offers Mini and Full cards without the 115-question exam", () => {
     render(
       <MemoryRouter>
         <IntentPage isAuthenticated={false} />
@@ -104,7 +104,7 @@ describe("IntentPage", () => {
     )
 
     expect(screen.getByText("Mini", { selector: ".intent-card__name" })).toBeInTheDocument()
-    expect(screen.getByText("Quick", { selector: ".intent-card__name" })).toBeInTheDocument()
-    expect(screen.queryByText("Full", { selector: ".intent-card__name" })).not.toBeInTheDocument()
+    expect(screen.getByText("Full", { selector: ".intent-card__name" })).toBeInTheDocument()
+    expect(screen.queryByText("115q")).not.toBeInTheDocument()
   })
 })

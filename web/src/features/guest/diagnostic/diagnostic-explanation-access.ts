@@ -22,4 +22,18 @@ function canShowDiagnosticExplanation(input: {
   return input.questionNumber <= freeDiagnosticExplanationLimit(input.intentId)
 }
 
-export { canShowDiagnosticExplanation, freeDiagnosticExplanationLimit }
+/**
+ * Results-list access. Free Mini stays fully gated. Free Full (quick) unlocks
+ * the first 10 rows; question 11+ stay blurred until upgrade.
+ */
+function canShowDiagnosticResultDetails(input: {
+  intentId: GuestDiagnosticIntentId
+  questionNumber: number
+  hasActiveCore: boolean
+}): boolean {
+  if (input.hasActiveCore) return true
+  if (input.intentId === "mini") return false
+  return canShowDiagnosticExplanation(input)
+}
+
+export { canShowDiagnosticExplanation, canShowDiagnosticResultDetails, freeDiagnosticExplanationLimit }

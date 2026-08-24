@@ -107,4 +107,50 @@ describe("createExplanationsApi", () => {
       headers: { Authorization: "Bearer token-1" },
     })
   })
+
+  it("listPrepTests passes bookmarkedOnly", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        prepTests: [],
+        total: 0,
+        page: 1,
+        pageSize: 5,
+        statusCounts: { in_process: 0, fresh: 0, answered: 0, seen: 0 },
+      },
+      error: null,
+    })
+    const api = createExplanationsApi(mockSupabase(invoke))
+    await api.listPrepTests({ page: 1, pageSize: 5, bookmarkedOnly: true })
+    expect(invoke).toHaveBeenCalledWith("prep-explanations", {
+      method: "POST",
+      body: {
+        action: "prep-explanations-prep-tests",
+        page: 1,
+        pageSize: 5,
+        sort: "newest",
+        bookmarkedOnly: true,
+      },
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
+
+  it("listQuestionBookmarks and setQuestionBookmark use prep-explanations-bookmarks", async () => {
+    const invoke = vi
+      .fn()
+      .mockResolvedValueOnce({ data: { questionIds: ["q1"] }, error: null })
+      .mockResolvedValueOnce({ data: { questionIds: ["q1", "q2"] }, error: null })
+    const api = createExplanationsApi(mockSupabase(invoke))
+    expect(await api.listQuestionBookmarks()).toEqual({ questionIds: ["q1"] })
+    expect(await api.setQuestionBookmark("q2", true)).toEqual({ questionIds: ["q1", "q2"] })
+    expect(invoke).toHaveBeenNthCalledWith(1, "prep-explanations", {
+      method: "POST",
+      body: { action: "prep-explanations-bookmarks" },
+      headers: { Authorization: "Bearer token-1" },
+    })
+    expect(invoke).toHaveBeenNthCalledWith(2, "prep-explanations", {
+      method: "POST",
+      body: { action: "prep-explanations-bookmarks", questionId: "q2", bookmarked: true },
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
 })

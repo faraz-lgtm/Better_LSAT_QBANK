@@ -5,6 +5,7 @@ export type ExplanationQuestionNode = {
   number: number
   code: string
   snippet: string
+  topicName: string
   status: ExplanationQuestionStatus
   source: string
   /** 1 = easiest … 5 = hardest (filled segments in the meter). */
@@ -60,6 +61,7 @@ export const mockExplanationPrepTests: ExplanationPrepTestNode[] = [
                 number: 1,
                 code: "PT159.S1.Q1",
                 snippet: "The argument is vulnerable to criticism on the grounds that it…",
+                topicName: "Flaw",
                 status: "seen",
                 source: "The Official LSAT PrepTest 157+ · 1 other practice",
                 difficulty: 3,
@@ -69,6 +71,7 @@ export const mockExplanationPrepTests: ExplanationPrepTestNode[] = [
                 number: 2,
                 code: "PT159.S1.Q2",
                 snippet: "Which one of the following, if true, would most strengthen…",
+                topicName: "Strengthen",
                 status: "fresh",
                 source: "The Official LSAT PrepTest 157+",
                 difficulty: 4,
@@ -104,6 +107,7 @@ export const mockExplanationPrepTests: ExplanationPrepTestNode[] = [
                 number: 1,
                 code: "PT159.S1.P1.Q1",
                 snippet: "Columnist: The dangers of drinking are greatly…",
+                topicName: "Main Point",
                 status: "in_process",
                 source: "The Official LSAT PrepTest 157+ · 1 other practice",
                 difficulty: 5,
@@ -113,6 +117,7 @@ export const mockExplanationPrepTests: ExplanationPrepTestNode[] = [
                 number: 2,
                 code: "PT160.S1.P1.Q2",
                 snippet: "It can be inferred from the passage that the author would be most likely to agree…",
+                topicName: "Inference",
                 status: "not_started",
                 source: "The Official LSAT PrepTest 157+ · 1 other practice",
                 difficulty: 3,
@@ -122,6 +127,7 @@ export const mockExplanationPrepTests: ExplanationPrepTestNode[] = [
                 number: 3,
                 code: "PT160.S1.P1.Q3",
                 snippet: "Which one of the following, if true, would most weaken the argument…",
+                topicName: "Weaken",
                 status: "answered",
                 source: "The Official LSAT PrepTest 157+",
                 difficulty: 2,
@@ -140,6 +146,7 @@ export const mockExplanationPrepTests: ExplanationPrepTestNode[] = [
                 number: 1,
                 code: "PT160.S1.P2.Q1",
                 snippet: "The primary purpose of the third paragraph is to…",
+                topicName: "Purpose",
                 status: "fresh",
                 source: "The Official LSAT PrepTest 157+",
                 difficulty: 4,
@@ -166,6 +173,7 @@ export const mockExplanationPrepTests: ExplanationPrepTestNode[] = [
                 number: 10,
                 code: "PT160.S2.Q10",
                 snippet: "The reasoning in the argument is flawed in that…",
+                topicName: "Flaw",
                 status: "in_process",
                 source: "The Official LSAT PrepTest 157+",
                 difficulty: 5,

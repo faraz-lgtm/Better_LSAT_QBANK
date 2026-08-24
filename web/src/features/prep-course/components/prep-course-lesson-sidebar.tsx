@@ -55,7 +55,7 @@ function LessonStatusMarker({
   variant: "complete" | "active" | "incomplete"
   surface?: "sidebar" | "list"
 }) {
-  const markerSizeClass = "box-border size-5 shrink-0 rounded-full border"
+  const markerSizeClass = "box-border size-6 shrink-0 rounded-full border"
 
   if (variant === "complete") {
     return (
@@ -67,7 +67,7 @@ function LessonStatusMarker({
         )}
         aria-label="Completed"
       >
-        <Check className="size-3 text-white" strokeWidth={2.5} aria-hidden />
+        <Check className="size-3.5 text-white" strokeWidth={2.5} aria-hidden />
       </span>
     )
   }

@@ -1,11 +1,14 @@
-import { Bookmark } from "lucide-react"
 import { useMemo } from "react"
 
-import { PrepCourseExpandButton } from "@/features/prep-course/components/prep-course-content-header"
-import { PrepCourseLessonRow } from "@/features/prep-course/components/prep-course-lesson-row"
-import { PrepCourseSectionAccordion } from "@/features/prep-course/components/prep-course-section-accordion"
-import { ProgressRing } from "@/features/prep-course/components/prep-course-lesson-sidebar"
 import { Switch } from "@/components/ui/switch"
+import { PrepCourseExpandButton } from "@/features/prep-course/components/prep-course-content-header"
+import {
+  PREP_COURSE_FIGMA,
+  PrepCourseFigmaIcon,
+} from "@/features/prep-course/components/prep-course-figma-icons"
+import { PrepCourseLessonRow } from "@/features/prep-course/components/prep-course-lesson-row"
+import { ProgressRing } from "@/features/prep-course/components/prep-course-lesson-sidebar"
+import { PrepCourseSectionAccordion } from "@/features/prep-course/components/prep-course-section-accordion"
 import {
   countCompletedLessons,
   formatRemainingHoursLabel,
@@ -96,13 +99,13 @@ function PrepCourseModulePanel({
     : true
 
   const statsBlock = (
-    <div className="flex flex-col items-end justify-center gap-[14px]">
-      <div className="text-right text-xs leading-[1.5] tracking-[0.24px]">
+    <div className="flex h-[88px] flex-col items-end justify-center gap-[14px]">
+      <div className="flex flex-col items-end justify-center gap-1.5 text-right text-xs leading-[1.5] tracking-[0.24px]">
         <p className="text-[color:var(--greyscale-500)]">
           Total Time:{" "}
           <span className="font-semibold text-[color:var(--greyscale-500)]">{formatTotalHoursLabel(totalMinutes)}</span>
         </p>
-        <p className="mt-1.5 text-[#0d47a1]">
+        <p className="text-[#0d47a1]">
           {completedCount} of {lessonCount} Lessons completed • {formatRemainingHoursLabel(remainingMinutes)}
         </p>
       </div>
@@ -126,26 +129,28 @@ function PrepCourseModulePanel({
 
   const bookmarkRow = (
     <div className="flex h-8 items-center gap-2">
-      <Bookmark
-        className={cn("size-4 shrink-0", moduleBookmarked ? "fill-[#0d47a1] text-[#0d47a1]" : "text-[color:var(--greyscale-500)]")}
-        strokeWidth={2}
-        aria-hidden
+      <PrepCourseFigmaIcon
+        src={`${PREP_COURSE_FIGMA}/icon-bookmark.svg`}
+        className={cn("size-4", moduleBookmarked && "opacity-100")}
       />
       <span className="text-xs font-medium tracking-[0.24px] text-[color:var(--greyscale-500)]">Bookmark</span>
       <Switch
         size="sm"
         checked={moduleBookmarked}
         onChange={(event) => onToggleModuleBookmark(event.target.checked)}
-        className={moduleBookmarked ? "bg-[#0d47a1]!" : undefined}
+        className={cn(
+          "h-5 w-9 border border-[#dfe1e7] bg-white p-0.5",
+          moduleBookmarked ? "bg-[#0d47a1]! border-[#0d47a1]!" : undefined,
+        )}
         aria-label="Bookmark module"
       />
     </div>
   )
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="shrink-0 overflow-hidden rounded-tl-[16px] border border-b-0 border-[color:var(--greyscale-100)] bg-[var(--primary-0)]">
-        <div className="flex flex-wrap items-start justify-between gap-4 p-[24px]">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="shrink-0 border-b border-[#dfe1e7] bg-[var(--primary-0)] p-[24px]">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             {flattenSections && flatSection ? (
               <button
@@ -165,7 +170,7 @@ function PrepCourseModulePanel({
         </div>
       </div>
 
-      <div className="practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto border border-t-0 border-[color:var(--greyscale-100)] bg-white">
+      <div className="practice-session-pane--scroll-visible min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-white">
         {!hasVisibleBookmarkedLessons ? (
           <p className="ds-body-sm ds-text-muted p-6">No bookmarked lessons in this module.</p>
         ) : null}
