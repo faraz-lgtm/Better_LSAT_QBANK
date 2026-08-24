@@ -31,6 +31,24 @@ function isSafeHexColor(raw: string): boolean {
   return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(raw.trim())
 }
 
+const DEFAULT_RECAP_BG = "#0d47a1"
+const RECAP_GRADIENT = "linear-gradient(90deg, #0d47a1 0%, #419df8 100%)"
+
+function isRecapDefaultColor(raw: string): boolean {
+  return raw.trim().toLowerCase() === DEFAULT_RECAP_BG
+}
+
+function isDarkHexColor(raw: string): boolean {
+  if (!isSafeHexColor(raw)) return false
+  const hex = raw.trim().slice(1)
+  const full = hex.length === 3 ? hex.split("").map((c) => `${c}${c}`).join("") : hex
+  const r = Number.parseInt(full.slice(0, 2), 16)
+  const g = Number.parseInt(full.slice(2, 4), 16)
+  const b = Number.parseInt(full.slice(4, 6), 16)
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+  return luminance < 160
+}
+
 function serializeChild(node: ChildNode): string {
   if (node.nodeType === Node.ELEMENT_NODE) return (node as Element).outerHTML
   if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? ""
@@ -65,7 +83,7 @@ function parseLessonBlocks(html: string): LessonBlock[] {
         ? fromData.trim()
         : isSafeHexColor(fromStyle)
           ? fromStyle.trim()
-          : "#ffffff"
+          : DEFAULT_RECAP_BG
       blocks.push({
         kind: "section",
         label: (el.getAttribute("data-label") ?? "").trim(),
@@ -87,46 +105,60 @@ function LessonHtmlContent({ html, className }: { html: unknown; className?: str
 
   const blocks = parseLessonBlocks(safe)
   if (!blocks.some((block) => block.kind === "section")) {
-    return <div className={cn(LSAT_HTML_CONTENT_CLASS, className)} dangerouslySetInnerHTML={{ __html: safe }} />
+    return (
+      <div className={cn("lesson-html-content", className)}>
+        <div className={cn(LSAT_HTML_CONTENT_CLASS, "lesson-html-body")} dangerouslySetInnerHTML={{ __html: safe }} />
+      </div>
+    )
   }
 
-  let sectionIndex = 0
-
   return (
-    <div className="flex w-full min-w-0 flex-col gap-4">
+    <div className={cn("lesson-html-content flex w-full min-w-0 flex-col gap-12", className)}>
       {blocks.map((block, i) => {
         if (block.kind === "html") {
           return (
             <div
               key={i}
-              className={cn(LSAT_HTML_CONTENT_CLASS, className)}
+              className={cn(LSAT_HTML_CONTENT_CLASS, "lesson-html-body")}
               dangerouslySetInnerHTML={{ __html: block.html }}
             />
           )
         }
-        const isHeading = block.variant === "heading"
-        if (isHeading) sectionIndex += 1
+        const isCallout = block.variant === "heading"
+        if (isCallout) {
+          return (
+            <aside
+              key={i}
+              className="lesson-callout flex w-full min-w-0 flex-col gap-2.5 border-l-4 border-solid border-[#0d47a1] pl-[26px]"
+            >
+              {block.label ? (
+                <p className="m-0 text-xs font-bold leading-[1.5] tracking-[0.24px] text-[#0d47a1]">{block.label}</p>
+              ) : null}
+              {block.innerHtml.trim() ? (
+                <div
+                  className={cn(LSAT_HTML_CONTENT_CLASS, "lesson-callout-body")}
+                  dangerouslySetInnerHTML={{ __html: block.innerHtml }}
+                />
+              ) : (
+                <div className="min-h-[24px]" />
+              )}
+            </aside>
+          )
+        }
         return (
           <section
             key={i}
-            className={`flex w-full min-w-0 flex-col overflow-clip rounded-[18px] border border-[#dfe1e7] ${isHeading ? "gap-4 p-6" : "lesson-section-empty gap-0"}`}
-            style={{ backgroundColor: block.backgroundColor }}
+            className="lesson-section-empty flex w-full min-w-0 flex-col gap-2 overflow-clip rounded-[20px] border-0"
+            style={isRecapDefaultColor(block.backgroundColor) ? { background: RECAP_GRADIENT } : { backgroundColor: block.backgroundColor }}
           >
-            {isHeading ? (
-              <div className="flex items-center gap-4">
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-[#edf3ff] bg-[#f3f7ff] text-center text-xs font-bold leading-[1.3] text-[#0d47a1]">
-                  {sectionIndex}
-                </div>
-                {block.label ? (
-                  <p className="m-0 text-xs font-bold uppercase leading-[1.5] tracking-[0.24px] text-[#0d47a1]">
-                    {block.label}
-                  </p>
-                ) : null}
-              </div>
+            {block.label ? (
+              <p className={`m-0 text-xs font-bold uppercase leading-[1.5] tracking-[0.24px] ${isDarkHexColor(block.backgroundColor) ? "text-white" : "text-[#0d47a1]"}`}>
+                {block.label}
+              </p>
             ) : null}
             {block.innerHtml.trim() ? (
               <div
-                className={cn(LSAT_HTML_CONTENT_CLASS, "lesson-section-body")}
+                className={cn(LSAT_HTML_CONTENT_CLASS, "lesson-section-body", isDarkHexColor(block.backgroundColor) && "lesson-section-body--inverse")}
                 dangerouslySetInnerHTML={{ __html: block.innerHtml }}
               />
             ) : (

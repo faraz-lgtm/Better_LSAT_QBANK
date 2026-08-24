@@ -54,19 +54,19 @@ function BookPlusOutlineIcon({ className, ...props }: SVGProps<SVGSVGElement>) {
 
 /** Figma `18624:73705` / `18781:28397` / `18781:28180` */
 const navBtnClass =
-  "box-border inline-flex h-[48px] w-[90px] shrink-0 items-center justify-center gap-[6px] rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] px-3 py-1 text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[#666d80] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#eef1f4] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+  "box-border inline-flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[12px] border border-[#dfe1e7] bg-white px-3 py-1 text-[#666d80] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
 
 /** Figma `18624:73705` / `17802:2872` */
 const outlineActionBtnClass =
-  "box-border inline-flex h-[48px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[#DFE1E7] bg-[#F3F7FF] px-4 py-2 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa]"
+  "box-border inline-flex h-[40px] shrink-0 items-center justify-center gap-2 rounded-[14px] border border-[#dfe1e7] bg-white px-4 py-2 text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa]"
 
 /** Figma `18624:73705` / `17802:2911` */
 const primaryBtnClass =
-  "box-border inline-flex h-[48px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[#0b4e6e] bg-[#0d47a1] px-4 py-2 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0b3d8a] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+  "box-border inline-flex h-[40px] shrink-0 items-center justify-center gap-2 rounded-[14px] border border-[#0b4e6e] bg-[#0d47a1] px-4 py-2 text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0b3d8a] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
 
 /** Figma `18624:73566` / `19466:19273` — text action, no border */
 const backToModuleBtnClass =
-  "box-border inline-flex h-[48px] shrink-0 items-center justify-center rounded-[16px] px-4 py-2 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] transition-colors hover:bg-[#edf3ff]"
+  "box-border inline-flex h-[40px] shrink-0 items-center justify-center rounded-[14px] px-4 py-2 text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1] transition-colors hover:bg-[#edf3ff]"
 
 function PrepCourseLessonFooter({
   showSidebar,
@@ -81,20 +81,19 @@ function PrepCourseLessonFooter({
   primaryAction = null,
 }: PrepCourseLessonFooterProps) {
   return (
-    <footer className="practice-session-footer prep-course-lesson-footer box-border flex w-full min-w-0 shrink-0 flex-col items-center justify-center border-t border-[#dfe1e7] bg-[#f5f9ff] px-[24px] py-3">
+    <footer className="practice-session-footer prep-course-lesson-footer box-border flex w-full min-w-0 shrink-0 flex-col items-center justify-center border-t border-[#dfe1e7] bg-[#f5f9ff] px-[24px] py-2">
       <div className="flex min-h-[48px] w-full min-w-0 items-center justify-between gap-4">
         <div className="flex min-w-0 flex-wrap items-center gap-6">
-          <button type="button" onClick={onPrev} disabled={prevDisabled} className={navBtnClass}>
-            <ChevronLeft className="size-6 shrink-0" strokeWidth={2} aria-hidden />
-            Prev
+          <button type="button" onClick={onPrev} disabled={prevDisabled} className={navBtnClass} aria-label="Previous lesson">
+            <ChevronLeft className="size-4 shrink-0" strokeWidth={2} aria-hidden />
           </button>
           <button type="button" onClick={onToggleSidebar} className={outlineActionBtnClass}>
             {showSidebar ? (
-              <BookMinusOutlineIcon className="size-5 shrink-0" />
+              <BookMinusOutlineIcon className="size-4 shrink-0" />
             ) : (
-              <BookPlusOutlineIcon className="size-5 shrink-0" />
+              <BookPlusOutlineIcon className="size-4 shrink-0" />
             )}
-            <span className="whitespace-nowrap ">{showSidebar ? "Hide Lesson" : "Show All Lesson"}</span>
+            <span className="whitespace-nowrap">{showSidebar ? "Hide Lesson" : "Show Lesson"}</span>
           </button>
           <button type="button" onClick={onBackToCourseModule} className={backToModuleBtnClass}>
             <span className="whitespace-nowrap">Back to Course Module</span>
@@ -109,7 +108,7 @@ function PrepCourseLessonFooter({
               className={cn(primaryBtnClass, "disabled:pointer-events-auto")}
             >
               <span className="truncate">{primaryAction.label}</span>
-              <ChevronRight className="size-5 shrink-0" strokeWidth={2} aria-hidden />
+              <ChevronRight className="size-4 shrink-0" strokeWidth={2} aria-hidden />
             </button>
           ) : (
             <button
@@ -118,13 +117,12 @@ function PrepCourseLessonFooter({
               disabled={markCompleteDisabled}
               className={primaryBtnClass}
             >
-              <CheckCircle2 className="size-5 shrink-0" strokeWidth={2} aria-hidden />
+              <CheckCircle2 className="size-4 shrink-0" strokeWidth={2} aria-hidden />
               <span className="whitespace-nowrap">Mark Complete &amp; Continue</span>
             </button>
           )}
-          <button type="button" onClick={onNext} disabled={nextDisabled} className={navBtnClass}>
-            Next
-            <ChevronRight className="size-6 shrink-0" strokeWidth={2} aria-hidden />
+          <button type="button" onClick={onNext} disabled={nextDisabled} className={navBtnClass} aria-label="Next lesson">
+            <ChevronRight className="size-4 shrink-0" strokeWidth={2} aria-hidden />
           </button>
         </div>
       </div>
