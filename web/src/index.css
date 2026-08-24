@@ -2309,9 +2309,32 @@ select.ds-input {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.student-sidebar-brand-row {
+  gap: 10px;
+}
+
+.student-sidebar-brand-mark {
+  display: none;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #0d47a1;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.student-sidebar-collapse-toggle {
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
 .student-shell-top-row {
   box-sizing: border-box;
-  height: 50px;
+  height: 64px;
   flex-shrink: 0;
 }
 
@@ -2491,6 +2514,110 @@ select.ds-input {
   letter-spacing: 0.16px;
   color: #0d47a1;
   white-space: nowrap;
+}
+
+@media (min-width: 1024px) {
+  .student-sidebar--collapsed .student-sidebar-brand-row {
+    justify-content: center;
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .student-sidebar--collapsed .student-sidebar-brand-link {
+    flex: 0 0 auto;
+    justify-content: center;
+  }
+
+  .student-sidebar--collapsed .student-sidebar-brand-link img {
+    display: none;
+  }
+
+  .student-sidebar--collapsed .student-sidebar-brand-mark {
+    display: inline-flex;
+  }
+
+  .student-sidebar--collapsed .student-sidebar-collapse-toggle {
+    position: absolute;
+    top: 8px;
+    right: -24px;
+    z-index: 1;
+    box-shadow: 0 8px 16px rgba(13, 13, 18, 0.08);
+  }
+
+  .student-sidebar--collapsed .student-sidebar-nav {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .student-sidebar--collapsed .student-sidebar-menu {
+    align-items: center;
+  }
+
+  .student-sidebar--collapsed .student-sidebar-section {
+    width: 100%;
+    align-items: center;
+  }
+
+  .student-sidebar--collapsed .student-sidebar-heading,
+  .student-sidebar--collapsed .student-sidebar-label,
+  .student-sidebar--collapsed .student-sidebar-chevron,
+  .student-sidebar--collapsed .student-sidebar-lock,
+  .student-sidebar--collapsed .student-sidebar-version {
+    display: none;
+  }
+
+  .student-sidebar--collapsed .student-sidebar-link,
+  .student-sidebar--collapsed .student-sidebar-link--active {
+    width: 40px;
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+  }
+
+  .student-sidebar--collapsed .student-sidebar-link-content {
+    flex: 0 0 auto;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .student-sidebar--collapsed .student-sidebar-link--active::before {
+    width: 4px;
+    border-radius: 8px 0 0 8px;
+  }
+
+  .student-sidebar--collapsed .student-sidebar-footer {
+    justify-content: center;
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .student-sidebar--collapsed .guest-free-plan-sidebar-bottom {
+    align-items: center;
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .student-sidebar--collapsed .guest-free-plan-upgrade-card {
+    display: none;
+  }
+
+  .student-sidebar--collapsed .student-sidebar-logout-row {
+    justify-content: center;
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .student-sidebar--collapsed .student-sidebar-logout {
+    width: 40px;
+    height: 40px;
+    justify-content: center;
+    gap: 0;
+    border-radius: 10px;
+  }
+
+  .student-sidebar--collapsed .student-sidebar-logout:hover {
+    background-color: #edf3ff;
+  }
 }
 
 .student-topbar-breadcrumbs {
