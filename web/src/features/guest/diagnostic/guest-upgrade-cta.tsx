@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
+import { useGuestPricingModal } from '@/features/guest/pricing/guest-pricing-modal-provider'
 import { cn } from '@/lib/utils'
 
 type GuestUpgradeCtaProps = {
@@ -9,8 +10,8 @@ type GuestUpgradeCtaProps = {
 }
 
 function GuestUpgradeCta({ variant = 'header', className }: GuestUpgradeCtaProps) {
-  const navigate = useNavigate()
-  const handleUpgrade = () => navigate('/app/pricing')
+  const { openPricingModal } = useGuestPricingModal()
+  const handleUpgrade = () => openPricingModal()
 
   if (variant === 'banner') {
     return (
@@ -90,6 +91,7 @@ function GuestFreePlanUpgradeBanner({ className }: { className?: string }) {
 }
 
 function GuestDiagnosticResultsActions() {
+  const { openPricingModal } = useGuestPricingModal()
   const navigate = useNavigate()
 
   return (
@@ -97,7 +99,7 @@ function GuestDiagnosticResultsActions() {
       <Button
         type="button"
         className="h-11 rounded-[12px] bg-[#0d47a1] px-6 text-sm font-semibold tracking-[0.28px] text-white hover:bg-[#0b3d8a]"
-        onClick={() => navigate('/app/pricing')}
+        onClick={openPricingModal}
       >
         Upgrade to unlock full access
       </Button>

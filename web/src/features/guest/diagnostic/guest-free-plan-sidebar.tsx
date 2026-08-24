@@ -25,12 +25,12 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 import {
   GUEST_FREE_PLAN_DASHBOARD_HREF,
   GUEST_FREE_PLAN_NAV_SECTIONS,
-  GUEST_FREE_PLAN_PRICING_HREF,
   GUEST_FREE_PLAN_RESULTS_HREF,
   isGuestFreePlanAnalyticsActive,
   isGuestFreePlanDashboardActive,
 } from "@/features/guest/diagnostic/guest-free-plan-nav-config"
 import { GuestUpgradeCta } from "@/features/guest/diagnostic/guest-upgrade-cta"
+import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { STUDENT_APP_VERSION } from "@/features/app-shell/student-nav-config"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -75,6 +75,7 @@ function GuestFreePlanSidebar({
   const navigate = useNavigate()
   const analyticsActive = isGuestFreePlanAnalyticsActive(pathname)
   const dashboardActive = isGuestFreePlanDashboardActive(pathname)
+  const { openLockedContentModal } = useGuestPricingModal()
   const [collapsed, setCollapsed] = useState(false)
 
   useEffect(() => {
@@ -85,6 +86,11 @@ function GuestFreePlanSidebar({
     const supabase = getSupabaseBrowserClient()
     await supabase.auth.signOut()
     navigate("/login", { replace: true })
+  }
+
+  function handleLockedNavClick() {
+    onMobileClose()
+    openLockedContentModal()
   }
 
   return (
@@ -148,7 +154,7 @@ function GuestFreePlanSidebar({
                     <button
                       key={item.label}
                       type="button"
-                      onClick={() => navigate(GUEST_FREE_PLAN_PRICING_HREF)}
+                      onClick={handleLockedNavClick}
                       aria-label={item.label}
                       title={item.label}
                       className="student-sidebar-link w-full justify-between pr-4 opacity-80 hover:opacity-100"

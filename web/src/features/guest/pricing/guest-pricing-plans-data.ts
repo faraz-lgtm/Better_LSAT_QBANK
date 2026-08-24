@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react"
-import { BookOpen, Star, Video } from "lucide-react"
+import { BookOpen, Video } from "lucide-react"
 
-export type GuestPricingPlanId = "core" | "live" | "elite"
+export type GuestPricingPlanId = "core" | "live"
 
 export type GuestPricingPlan = {
   id: GuestPricingPlanId
@@ -20,17 +20,16 @@ const GUEST_PRICING_PLANS: GuestPricingPlan[] = [
     id: "core",
     name: "Core",
     description: "Everything you need to improve your score.",
-    monthlyPrice: 79,
+    monthlyPrice: 70,
     icon: BookOpen,
     features: [
       "Full question bank — 6,000+ explanations",
       "Official LSAC questions & full-length tests",
       "Section drills & timed practice",
       "Score analytics & performance tracking",
-      "Structured 3-month course curriculum",
-      "Written & video explanations",
+      "Structured course curriculum",
+      "Written & video explanations (videos coming soon)",
       "Personalized study plan from diagnostic",
-      "Unlimited practice tests",
     ],
     ctaLabel: "Get Core",
   },
@@ -38,44 +37,25 @@ const GUEST_PRICING_PLANS: GuestPricingPlan[] = [
     id: "live",
     name: "Live",
     description: "For students who want live instruction.",
-    monthlyPrice: 139,
+    monthlyPrice: 129,
     icon: Video,
-    badge: "Most Popular",
+    badge: "Most Comprehensive",
     featured: true,
     features: [
       "Everything in Core, plus:",
       "Live weekly classes with LSAT instructors",
       "Live Q&A and group sessions",
-      "Priority support (24h response)",
-      "1-on-1 tutoring session (2h/month)",
+      "Priority support",
       "Live classes launching soon — lock in pricing now",
     ],
     ctaLabel: "Get Live",
-  },
-  {
-    id: "elite",
-    name: "Elite",
-    description: "Maximum support for your best score.",
-    monthlyPrice: 299,
-    icon: Star,
-    badge: "Best Results",
-    featured: true,
-    features: [
-      "Everything in Live, plus:",
-      "Unlimited 1-on-1 tutoring",
-      "Dedicated study coach",
-      "Score guarantee or money back",
-      "Early access to new content",
-      "Direct instructor feedback on essays",
-    ],
-    ctaLabel: "Get Elite",
   },
 ]
 
 const GUEST_PRICING_TRUST_ITEMS = [
   {
-    title: "Score Guarantee",
-    description: "Elite plan or full refund",
+    title: "Official LSAC Access",
+    description: "LawHub Advantage included",
   },
   {
     title: "12,000+ Students",
