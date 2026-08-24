@@ -165,7 +165,7 @@ function formatDiagnosticDateLabel(isoDate: string): string {
 
 function getDiagnosticIntentTitle(intentId: GuestDiagnosticIntentId): string {
   if (intentId === "mini") return "Mini Diagnostic"
-  if (intentId === "quick") return "Quick Diagnostic"
+  if (intentId === "quick") return "Full Section Diagnostic"
   return "Full Diagnostic"
 }
 
