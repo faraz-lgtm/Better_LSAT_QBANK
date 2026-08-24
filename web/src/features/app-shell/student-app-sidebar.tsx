@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { ChevronDown, Lock } from "lucide-react"
+import { ChevronDown, ChevronsLeft, ChevronsRight, Lock } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
 import {
@@ -54,9 +54,13 @@ function isCourseNavActive(pathname: string, courseSlug: string): boolean {
 function PrepCourseNavItem({
   item,
   pathname,
+  collapsed,
+  onExpandSidebar,
 }: {
   item: StudentNavItem
   pathname: string
+  collapsed: boolean
+  onExpandSidebar: () => void
 }) {
   const onPrepCourseRoute = isPrepCourseRoute(pathname)
   const [manualExpanded, setManualExpanded] = useState<boolean | null>(null)
@@ -104,23 +108,32 @@ function PrepCourseNavItem({
           "student-sidebar-link w-full justify-between pr-3",
           parentActive && "student-sidebar-link--active",
         )}
-        aria-expanded={expanded}
-        onClick={() => setManualExpanded(!expanded)}
+        aria-expanded={collapsed ? false : expanded}
+        aria-label={item.label}
+        title={item.label}
+        onClick={() => {
+          if (collapsed) {
+            onExpandSidebar()
+            setManualExpanded(true)
+            return
+          }
+          setManualExpanded(!expanded)
+        }}
       >
-        <span className="flex min-w-0 items-center gap-2.5">
+        <span className="student-sidebar-link-content flex min-w-0 items-center gap-2.5">
           <SidebarNavIcon icon={item.icon} />
-          <span className="truncate">{item.label}</span>
+          <span className="student-sidebar-label truncate">{item.label}</span>
         </span>
         <ChevronDown
           className={cn(
-            "size-4 shrink-0 text-[#666d80] transition-transform duration-150",
+            "student-sidebar-chevron size-4 shrink-0 text-[#666d80] transition-transform duration-150",
             expanded && "rotate-180",
           )}
           aria-hidden
         />
       </button>
 
-      {expanded ? (
+      {!collapsed && expanded ? (
         <div className="student-sidebar-subnav" role="group" aria-label="Prep courses">
           {courses.map((course) => {
             const href = `${PREP_COURSE_HREF}/${course.slug}`
@@ -151,6 +164,7 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
   const entitlement = useStudentEntitlementOptional()
   const lockLsacNav = entitlement ? !entitlement.canAccessLsacContent : false
   const dashboardActive = isDashboardActive(pathname)
+  const [collapsed, setCollapsed] = useState(false)
 
   useEffect(() => {
     onMobileClose()
@@ -175,19 +189,34 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
 
       <aside
         className={cn(
-          "student-sidebar fixed inset-y-0 left-0 z-50 flex h-svh w-[272px] shrink-0 flex-col border-r border-[color:var(--greyscale-100)] bg-[var(--primary-0)] transition-transform duration-200 lg:static lg:translate-x-0",
+          "student-sidebar fixed inset-y-0 left-0 z-50 flex h-svh w-[272px] shrink-0 flex-col border-r border-[color:var(--greyscale-100)] bg-[var(--primary-0)] transition-[width,transform] duration-200 lg:static lg:translate-x-0",
+          collapsed && "student-sidebar--collapsed lg:w-[76px]",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
         aria-label="Main navigation"
       >
-        <div className="student-shell-top-row flex shrink-0 items-center border-b border-[color:var(--greyscale-100)] px-5">
+        <div className="student-shell-top-row student-sidebar-brand-row flex shrink-0 items-center border-b border-[color:var(--greyscale-100)] px-5">
           <Link
             to={STUDENT_DASHBOARD_HREF}
-            className="flex w-full items-center"
+            className="student-sidebar-brand-link flex min-w-0 flex-1 items-center"
             aria-label="betterLSAT home"
+            title="betterLSAT home"
           >
             <img src="/betterLSAT_LOGO.png" alt="betterLSAT" className="h-auto w-[140px] object-contain" />
+            <span className="student-sidebar-brand-mark" aria-hidden>
+              B
+            </span>
           </Link>
+          <button
+            type="button"
+            className="student-sidebar-collapse-toggle hidden size-9 shrink-0 items-center justify-center rounded-xl border border-[color:var(--greyscale-100)] bg-[var(--primary-25)] text-[#0d47a1] hover:bg-[#edf3ff] lg:inline-flex"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-pressed={collapsed}
+            onClick={() => setCollapsed((current) => !current)}
+          >
+            {collapsed ? <ChevronsRight className="size-4" /> : <ChevronsLeft className="size-4" />}
+          </button>
         </div>
 
         <nav className="student-sidebar-nav flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -196,13 +225,20 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
             <Link
               to={STUDENT_DASHBOARD_HREF}
               className={cn("student-sidebar-link", dashboardActive && "student-sidebar-link--active")}
+              aria-label="Dashboard"
+              title="Dashboard"
             >
               <SidebarNavIcon icon={STUDENT_DASHBOARD_ICON} />
-              <span>Dashboard</span>
+              <span className="student-sidebar-label">Dashboard</span>
             </Link>
-            <Link to={STUDENT_DIAGNOSTIC_HREF} className="student-sidebar-link">
+            <Link
+              to={STUDENT_DIAGNOSTIC_HREF}
+              className="student-sidebar-link"
+              aria-label="Diagnostic"
+              title="Diagnostic"
+            >
               <SidebarNavIcon icon={STUDENT_DIAGNOSTIC_ICON} />
-              <span>Diagnostic</span>
+              <span className="student-sidebar-label">Diagnostic</span>
             </Link>
 
             {STUDENT_NAV_SECTIONS.map((section) => (
@@ -210,7 +246,15 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
                 <p className="student-sidebar-heading">{section.label}</p>
                 {section.items.map((item) => {
                   if (isPrepCourseNavItem(item)) {
-                    return <PrepCourseNavItem key={item.href} item={item} pathname={pathname} />
+                    return (
+                      <PrepCourseNavItem
+                        key={item.href}
+                        item={item}
+                        pathname={pathname}
+                        collapsed={collapsed}
+                        onExpandSidebar={() => setCollapsed(false)}
+                      />
+                    )
                   }
 
                   const siblingHrefs = section.items.map((entry) => entry.href)
@@ -223,14 +267,15 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
                         type="button"
                         disabled
                         aria-disabled="true"
+                        aria-label={item.label}
                         title="Link your LawHub coach to unlock"
                         className="student-sidebar-link w-full cursor-not-allowed justify-between pr-4 opacity-60"
                       >
-                        <span className="flex min-w-0 items-center gap-2.5">
+                        <span className="student-sidebar-link-content flex min-w-0 items-center gap-2.5">
                           <SidebarNavIcon icon={item.icon} />
-                          <span className="truncate">{item.label}</span>
+                          <span className="student-sidebar-label truncate">{item.label}</span>
                         </span>
-                        <Lock className="size-4 shrink-0 text-[#666d80]" aria-hidden />
+                        <Lock className="student-sidebar-lock size-4 shrink-0 text-[#666d80]" aria-hidden />
                       </button>
                     )
                   }
@@ -240,6 +285,8 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
                       key={item.href}
                       to={item.href}
                       className={cn("student-sidebar-link", active && "student-sidebar-link--active")}
+                      aria-label={item.label}
+                      title={item.label}
                       onClick={(event) => {
                         if (!shouldForceParentNav(pathname, item.href)) return
                         event.preventDefault()
@@ -247,7 +294,7 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
                       }}
                     >
                       <SidebarNavIcon icon={item.icon} />
-                      <span>{item.label}</span>
+                      <span className="student-sidebar-label">{item.label}</span>
                     </Link>
                   )
                 })}
@@ -261,12 +308,14 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
             <button
               type="button"
               className="student-sidebar-logout"
+              aria-label="Logout"
+              title="Logout"
               onClick={() => void handleLogout()}
             >
               <span className="student-sidebar-logout-icon" aria-hidden>
                 <img src={STUDENT_NAV_LOGOUT_ICON_SRC} alt="" width={16} height={16} />
               </span>
-              <span>Logout</span>
+              <span className="student-sidebar-label">Logout</span>
             </button>
             <span className="student-sidebar-version">Version {STUDENT_APP_VERSION}</span>
           </div>

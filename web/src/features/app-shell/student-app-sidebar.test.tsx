@@ -129,4 +129,43 @@ describe("StudentAppSidebar", () => {
     expect(screen.getByRole("button", { name: /logout/i })).toBeInTheDocument()
     expect(screen.getByText("Version 1.0.3")).toBeInTheDocument()
   })
+
+  it("collapses to icon-only navigation and expands again from the toggle", async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={["/app"]}>
+        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
+      </MemoryRouter>,
+    )
+
+    const sidebar = screen.getByLabelText("Main navigation")
+
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }))
+
+    expect(sidebar).toHaveClass("student-sidebar--collapsed")
+    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Expand sidebar" }))
+
+    expect(sidebar).not.toHaveClass("student-sidebar--collapsed")
+  })
+
+  it("opens the sidebar when clicking the Prep Course icon while collapsed", async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={["/app"]}>
+        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
+      </MemoryRouter>,
+    )
+
+    const sidebar = screen.getByLabelText("Main navigation")
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }))
+    await user.click(screen.getByRole("button", { name: "Prep Course" }))
+
+    expect(sidebar).not.toHaveClass("student-sidebar--collapsed")
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: "Essentials Course" })).toBeInTheDocument()
+    })
+  })
 })

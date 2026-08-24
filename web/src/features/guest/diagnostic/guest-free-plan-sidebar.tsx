@@ -1,5 +1,25 @@
-import { useEffect } from "react"
-import { Headphones, Lock, LogOut, Moon } from "lucide-react"
+import { useEffect, useState } from "react"
+import {
+  BarChart3,
+  BookOpenCheck,
+  Brain,
+  CalendarDays,
+  ChevronsLeft,
+  ChevronsRight,
+  ClipboardCheck,
+  Dumbbell,
+  FileQuestion,
+  FileText,
+  Headphones,
+  LayoutDashboard,
+  LineChart,
+  Lock,
+  LogOut,
+  Moon,
+  RotateCcw,
+  Search,
+  type LucideIcon,
+} from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
 import {
@@ -21,6 +41,31 @@ type GuestFreePlanSidebarProps = {
   dashboardHref?: string
 }
 
+const GUEST_FREE_PLAN_NAV_ICONS: Record<string, LucideIcon> = {
+  Dashboard: LayoutDashboard,
+  Diagnostic: ClipboardCheck,
+  "Diagnostic Results": BarChart3,
+  "Practice Exams": BookOpenCheck,
+  "Question Bank": Search,
+  Drills: Dumbbell,
+  Schedule: CalendarDays,
+  "Wrong Review": RotateCcw,
+  Analytics: LineChart,
+  "Trend Line": LineChart,
+  Skills: Brain,
+  Sections: FileText,
+  Question: FileQuestion,
+}
+
+function GuestFreePlanNavIcon({ label }: { label: string }) {
+  const Icon = GUEST_FREE_PLAN_NAV_ICONS[label] ?? FileText
+  return (
+    <span className="student-sidebar-link-icon" aria-hidden>
+      <Icon className="size-4" strokeWidth={1.9} />
+    </span>
+  )
+}
+
 function GuestFreePlanSidebar({
   mobileOpen,
   onMobileClose,
@@ -30,6 +75,7 @@ function GuestFreePlanSidebar({
   const navigate = useNavigate()
   const analyticsActive = isGuestFreePlanAnalyticsActive(pathname)
   const dashboardActive = isGuestFreePlanDashboardActive(pathname)
+  const [collapsed, setCollapsed] = useState(false)
 
   useEffect(() => {
     onMobileClose()
@@ -54,19 +100,34 @@ function GuestFreePlanSidebar({
 
       <aside
         className={cn(
-          "student-sidebar fixed inset-y-0 left-0 z-50 flex h-svh w-[272px] shrink-0 flex-col border-r border-[color:var(--greyscale-100)] bg-[var(--primary-0)] transition-transform duration-200 lg:static lg:translate-x-0",
+          "student-sidebar fixed inset-y-0 left-0 z-50 flex h-svh w-[272px] shrink-0 flex-col border-r border-[color:var(--greyscale-100)] bg-[var(--primary-0)] transition-[width,transform] duration-200 lg:static lg:translate-x-0",
+          collapsed && "student-sidebar--collapsed lg:w-[76px]",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
         aria-label="Main navigation"
       >
-        <div className="student-shell-top-row flex shrink-0 items-center border-b border-[color:var(--greyscale-100)] px-5">
+        <div className="student-shell-top-row student-sidebar-brand-row flex shrink-0 items-center border-b border-[color:var(--greyscale-100)] px-5">
           <Link
             to={dashboardHref}
-            className="flex w-full items-center"
+            className="student-sidebar-brand-link flex min-w-0 flex-1 items-center"
             aria-label="betterLSAT home"
+            title="betterLSAT home"
           >
             <img src="/betterLSAT_LOGO.png" alt="betterLSAT" className="h-auto w-[140px] object-contain" />
+            <span className="student-sidebar-brand-mark" aria-hidden>
+              B
+            </span>
           </Link>
+          <button
+            type="button"
+            className="student-sidebar-collapse-toggle hidden size-9 shrink-0 items-center justify-center rounded-xl border border-[color:var(--greyscale-100)] bg-[var(--primary-25)] text-[#0d47a1] hover:bg-[#edf3ff] lg:inline-flex"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-pressed={collapsed}
+            onClick={() => setCollapsed((current) => !current)}
+          >
+            {collapsed ? <ChevronsRight className="size-4" /> : <ChevronsLeft className="size-4" />}
+          </button>
         </div>
 
         <nav className="student-sidebar-nav flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-4 pt-2">
@@ -88,12 +149,15 @@ function GuestFreePlanSidebar({
                       key={item.label}
                       type="button"
                       onClick={() => navigate(GUEST_FREE_PLAN_PRICING_HREF)}
+                      aria-label={item.label}
+                      title={item.label}
                       className="student-sidebar-link w-full justify-between pr-4 opacity-80 hover:opacity-100"
                     >
-                      <span className="flex min-w-0 flex-1 items-center gap-2">
-                        <span className="truncate">{item.label}</span>
+                      <span className="student-sidebar-link-content flex min-w-0 flex-1 items-center gap-2">
+                        <GuestFreePlanNavIcon label={item.label} />
+                        <span className="student-sidebar-label truncate">{item.label}</span>
                       </span>
-                      <Lock className="size-4 shrink-0 text-[#666d80]" aria-hidden />
+                      <Lock className="student-sidebar-lock size-4 shrink-0 text-[#666d80]" aria-hidden />
                     </button>
                   )
                 }
@@ -103,8 +167,11 @@ function GuestFreePlanSidebar({
                     key={item.label}
                     to={href}
                     className={cn("student-sidebar-link", active && "student-sidebar-link--active")}
+                    aria-label={item.label}
+                    title={item.label}
                   >
-                    {item.label}
+                    <GuestFreePlanNavIcon label={item.label} />
+                    <span className="student-sidebar-label">{item.label}</span>
                   </Link>
                 )
               })}
@@ -112,8 +179,8 @@ function GuestFreePlanSidebar({
           ))}
         </nav>
 
-        <div className="flex shrink-0 flex-col gap-4 px-4 pb-4">
-          <div className="rounded-[16px] border border-[#b8d4ff] bg-[#edf3ff] p-4">
+        <div className="guest-free-plan-sidebar-bottom flex shrink-0 flex-col gap-4 px-4 pb-4">
+          <div className="guest-free-plan-upgrade-card rounded-[16px] border border-[#b8d4ff] bg-[#edf3ff] p-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#0d47a1]">Free plan</p>
             <p className="mt-2 text-sm font-semibold leading-[1.4] tracking-[0.28px] text-[#062357]">
               Unlock Performance, Reports, and Score Tracker
@@ -140,28 +207,34 @@ function GuestFreePlanSidebar({
                 type="button"
                 className="student-sidebar-logout justify-start"
                 aria-disabled="true"
+                aria-label="Support"
+                title="Support"
                 disabled
               >
                 <Headphones className="size-4 shrink-0" aria-hidden />
-                <span>Support</span>
+                <span className="student-sidebar-label">Support</span>
               </button>
               <button
                 type="button"
                 className="student-sidebar-logout justify-start"
                 aria-disabled="true"
+                aria-label="Theme"
+                title="Theme"
                 disabled
               >
                 <Moon className="size-4 shrink-0" aria-hidden />
-                <span>Theme</span>
+                <span className="student-sidebar-label">Theme</span>
               </button>
               <div className="student-sidebar-logout-row">
                 <button
                   type="button"
                   className="student-sidebar-logout"
+                  aria-label="Logout"
+                  title="Logout"
                   onClick={() => void handleLogout()}
                 >
                   <LogOut className="size-4 shrink-0" aria-hidden />
-                  <span>Logout</span>
+                  <span className="student-sidebar-label">Logout</span>
                 </button>
                 <span className="student-sidebar-version">Version {STUDENT_APP_VERSION}</span>
               </div>

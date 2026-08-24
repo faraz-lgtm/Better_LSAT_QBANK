@@ -63,7 +63,7 @@ function GuestUpgradeCta({ variant = 'header', className }: GuestUpgradeCtaProps
       type="button"
       onClick={handleUpgrade}
       className={cn(
-        'hidden h-11 rounded-[12px] bg-[#0d47a1] px-5 text-sm font-semibold tracking-[0.28px] text-white hover:bg-[#0b3d8a] sm:inline-flex',
+        'hidden h-10 shrink-0 rounded-[12px] bg-[#0d47a1] px-5 text-sm font-semibold tracking-[0.28px] text-white hover:bg-[#0b3d8a] sm:inline-flex',
         className,
       )}
     >
