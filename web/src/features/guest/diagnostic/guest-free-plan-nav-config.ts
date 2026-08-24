@@ -41,7 +41,7 @@ const GUEST_FREE_PLAN_NAV_SECTIONS: GuestFreePlanNavSection[] = [
       { label: "Drills", locked: true },
       { label: "Schedule", locked: true },
       { label: "Wrong Review", locked: true },
-      { label: "Analytics", href: GUEST_FREE_PLAN_RESULTS_HREF },
+      { label: "Analytics", locked: true },
     ],
   },
   {
