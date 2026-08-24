@@ -48,7 +48,7 @@ describe("guest diagnostic result storage", () => {
 
   it("maps intent titles", () => {
     expect(getDiagnosticIntentTitle("mini")).toBe("Mini Diagnostic")
-    expect(getDiagnosticIntentTitle("quick")).toBe("Quick Diagnostic")
+    expect(getDiagnosticIntentTitle("quick")).toBe("Full Section Diagnostic")
     expect(getDiagnosticIntentTitle("full")).toBe("Full Diagnostic")
   })
 })

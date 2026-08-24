@@ -37,7 +37,7 @@ describe("IntentPage", () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole("button", { name: /start quick diagnostic/i }))
+    await user.click(screen.getByRole("button", { name: /start full section diagnostic/i }))
 
     expect(saveDiagnosticIntentMock).toHaveBeenCalledWith("quick")
     expect(screen.getByTestId("signup-page")).toBeInTheDocument()
@@ -58,7 +58,7 @@ describe("IntentPage", () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole("button", { name: /start quick diagnostic/i }))
+    await user.click(screen.getByRole("button", { name: /start full section diagnostic/i }))
 
     expect(saveDiagnosticIntentMock).toHaveBeenCalledWith("quick")
     expect(screen.getByTestId("diag-start")).toBeInTheDocument()
@@ -104,7 +104,7 @@ describe("IntentPage", () => {
     )
 
     expect(screen.getByText("Mini", { selector: ".intent-card__name" })).toBeInTheDocument()
-    expect(screen.getByText("Quick", { selector: ".intent-card__name" })).toBeInTheDocument()
+    expect(screen.getByText("Full Section Diagnostic", { selector: ".intent-card__name" })).toBeInTheDocument()
     expect(screen.queryByText("Full", { selector: ".intent-card__name" })).not.toBeInTheDocument()
   })
 })

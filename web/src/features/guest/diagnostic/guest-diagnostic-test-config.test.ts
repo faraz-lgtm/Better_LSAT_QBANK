@@ -14,7 +14,7 @@ describe("guest diagnostic test config", () => {
       timeMinutes: 13,
     })
     expect(getGuestDiagnosticTestConfig("quick")).toMatchObject({
-      title: "Quick Diagnostic - Test Instructions",
+      title: "Full Section Diagnostic - Test Instructions",
       questionCount: 30,
       timeMinutes: 40,
     })
