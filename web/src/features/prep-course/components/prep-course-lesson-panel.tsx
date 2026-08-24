@@ -36,6 +36,8 @@ type PrepCourseLessonPanelProps = {
   sidebarAdjacent?: boolean
   inLessonCard?: boolean
   drillResultsPart?: DrillResultsPart
+  moduleLessonLine?: string | null
+  lessonSequence?: { current: number; total: number } | null
 }
 
 function PrepCourseLessonPanel({
@@ -55,6 +57,8 @@ function PrepCourseLessonPanel({
   sidebarAdjacent = false,
   inLessonCard = false,
   drillResultsPart = "full",
+  moduleLessonLine = null,
+  lessonSequence = null,
 }: PrepCourseLessonPanelProps) {
   const isPrepCourseDrill = lesson ? isResolvedPrepCourseDrillLesson(lesson) : false
   const headerMeta =
@@ -82,52 +86,68 @@ function PrepCourseLessonPanel({
     lesson && !loading && !hasVideo && !isRepWorkLesson && !hideHeaderForDrillResults && !hideHeaderForDrillIntro,
   )
 
+  const durationReadLabel =
+    lesson && (lesson.duration_minutes ?? 0) > 0 ? `${lesson.duration_minutes} min read` : null
+  const videoMetaLabel = hasVideo ? "video" : "no video"
+  const rightMeta = [durationReadLabel, videoMetaLabel].filter(Boolean).join(" · ")
+
+  const renderLessonHeader = () => (
+    <header className="flex min-w-0 flex-col items-center px-16 pb-8 pt-12">
+      <div className="flex w-full max-w-[640px] min-w-0 flex-col gap-5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 flex-col gap-3">
+            {moduleLessonLine ? (
+              <p className="m-0 text-xs font-bold leading-[1.5] tracking-[0.24px] text-[#0d47a1]">{moduleLessonLine}</p>
+            ) : null}
+            <h2 className="m-0 text-[24px] font-bold leading-[1.3] text-[#36394a]">{lesson?.title}</h2>
+            {subtitle ? (
+              <p className="m-0 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#666d80]">{subtitle}</p>
+            ) : null}
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-3">
+            <button
+              type="button"
+              aria-label={lessonBookmarked ? "Remove lesson bookmark" : "Save lesson"}
+              aria-pressed={lessonBookmarked}
+              className={cn(
+                "inline-flex h-9 items-center gap-2 rounded-full px-[14px] text-xs font-medium leading-[1.5] tracking-[0.24px] transition-colors",
+                lessonBookmarked ? "text-[#0d47a1]" : "text-[#666d80] hover:text-[#0d47a1]",
+              )}
+              onClick={() => onToggleLessonBookmark?.(!lessonBookmarked)}
+            >
+              <Bookmark className={cn("size-4", lessonBookmarked && "fill-current")} strokeWidth={2} />
+              <span>Save lesson</span>
+            </button>
+            <p className="m-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#666d80]">{rightMeta}</p>
+          </div>
+        </div>
+        {lessonSequence ? (
+          <div className="flex items-center gap-[14px]">
+            <div className="flex min-w-0 flex-1 items-start gap-[3px]">
+              {Array.from({ length: lessonSequence.total }).map((_, idx) => (
+                <span
+                  key={idx}
+                  className={`h-[5px] min-w-0 flex-1 rounded-full ${idx < lessonSequence.current ? "bg-[#0d47a1]" : "bg-[#dfe1e7]"}`}
+                />
+              ))}
+            </div>
+            <p className="m-0 text-xs font-bold leading-[1.5] tracking-[0.24px] text-[#062357]">
+              {lessonSequence.current} / {lessonSequence.total}
+            </p>
+          </div>
+        ) : null}
+      </div>
+    </header>
+  )
+
   const titleBlock =
     lesson && !loading && !hideHeaderForDrillResults && !hideHeaderForDrillIntro ? (
-      <header className="flex items-start justify-between gap-4">
-        <div className="flex min-w-0 flex-col gap-2">
-          <h1 className="student-page-heading">{lesson.title}</h1>
-          {subtitle ? (
-            <p className="m-0 text-sm font-normal leading-normal tracking-[0.02em] text-[#666d80]">{subtitle}</p>
-          ) : null}
-        </div>
-        <button
-          type="button"
-          aria-label={lessonBookmarked ? "Remove lesson bookmark" : "Bookmark lesson"}
-          aria-pressed={lessonBookmarked}
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-[10px] transition-colors",
-            lessonBookmarked ? "text-[#0d47a1]" : "text-[#666d80] hover:text-[#0d47a1]",
-          )}
-          onClick={() => onToggleLessonBookmark?.(!lessonBookmarked)}
-        >
-          <Bookmark className={cn("size-6", lessonBookmarked && "fill-current")} strokeWidth={2} />
-        </button>
-      </header>
+      renderLessonHeader()
     ) : null
 
   const belowVideoTitleBlock =
     lesson && !loading && hasVideo && !hideHeaderForDrillIntro ? (
-      <header className="flex items-start justify-between gap-4">
-        <div className="flex min-w-0 flex-col gap-2">
-          <h1 className="student-page-heading">{lesson.title}</h1>
-          {subtitle ? (
-            <p className="m-0 text-sm font-normal leading-normal tracking-[0.02em] text-[#666d80]">{subtitle}</p>
-          ) : null}
-        </div>
-        <button
-          type="button"
-          aria-label={lessonBookmarked ? "Remove lesson bookmark" : "Bookmark lesson"}
-          aria-pressed={lessonBookmarked}
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-[10px] transition-colors",
-            lessonBookmarked ? "text-[#0d47a1]" : "text-[#666d80] hover:text-[#0d47a1]",
-          )}
-          onClick={() => onToggleLessonBookmark?.(!lessonBookmarked)}
-        >
-          <Bookmark className={cn("size-6", lessonBookmarked && "fill-current")} strokeWidth={2} />
-        </button>
-      </header>
+      renderLessonHeader()
     ) : null
 
   const lessonBody = lesson ? (
@@ -151,7 +171,7 @@ function PrepCourseLessonPanel({
     />
   ) : null
 
-  const contentPaddingClass = inLessonCard ? "p-6" : sidebarAdjacent ? "pt-6 pb-6 pl-6 pr-0" : "p-6"
+  const contentPaddingClass = inLessonCard ? "p-0" : sidebarAdjacent ? "pt-6 pb-6 pl-6 pr-0" : "p-6"
   const paneBgClass = inLessonCard ? "bg-white" : "bg-[var(--primary-0)]"
 
   if (lesson && hideHeaderForDrillResults && drillResultsPart === "cards") {
@@ -277,9 +297,11 @@ function PrepCourseLessonPanel({
               (sidebarAdjacent || inLessonCard) && "min-h-full",
             )}
           >
-            <div className="box-border flex min-w-0 max-w-full flex-col gap-6 overflow-x-clip">
+            <div className="box-border flex min-w-0 max-w-full flex-col gap-0 overflow-x-clip">
               {titleBlock}
-              {lessonBody}
+              <div className="mx-auto box-border w-full max-w-[640px] px-6 pb-8 pt-8 md:px-0">
+                {lessonBody}
+              </div>
             </div>
           </div>
         ) : (

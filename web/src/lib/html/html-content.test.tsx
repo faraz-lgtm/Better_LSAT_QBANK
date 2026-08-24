@@ -23,38 +23,38 @@ describe("HtmlContent", () => {
 })
 
 describe("LessonHtmlContent", () => {
-  it("renders numbered section cards with label and h1", () => {
+  it("renders callout blocks with label and body", () => {
     render(
       <LessonHtmlContent
         html={[
-          '<section data-lesson-section="true" data-label="THE BIG PICTURE"><h1>LSAC and the move to in-person testing</h1><p>Body one</p></section>',
-          '<section data-lesson-section="true" data-label="THE PLAYERS"><h1>Logical Reasoning vs. Reading Comp</h1><p>Body two</p></section>',
+          '<section data-lesson-section="true" data-label="Key term · stimulus"><p>Body one</p></section>',
+          '<section data-lesson-section="true" data-label="Common trap"><p>Body two</p></section>',
         ].join("")}
       />,
     )
 
-    expect(screen.getByText("1")).toBeInTheDocument()
-    expect(screen.getByText("2")).toBeInTheDocument()
-    expect(screen.getByText("THE BIG PICTURE")).toBeInTheDocument()
-    expect(screen.getByText("THE PLAYERS")).toBeInTheDocument()
-    expect(screen.getByRole("heading", { level: 1, name: "LSAC and the move to in-person testing" })).toBeInTheDocument()
-    expect(screen.getByRole("heading", { level: 1, name: "Logical Reasoning vs. Reading Comp" })).toBeInTheDocument()
+    expect(screen.getByText("Key term · stimulus")).toBeInTheDocument()
+    expect(screen.getByText("Common trap")).toBeInTheDocument()
     expect(screen.getByText("Body one")).toBeInTheDocument()
+    expect(screen.getByText("Body two")).toBeInTheDocument()
+    expect(document.querySelectorAll(".lesson-callout")).toHaveLength(2)
+    expect(screen.queryByText("1")).not.toBeInTheDocument()
   })
 
-  it("renders empty sections without a numbered heading row", () => {
+  it("renders empty sections with optional recap-style tag and background color", () => {
     render(
       <LessonHtmlContent
-        html='<section data-lesson-section="true" data-variant="empty" data-bg="#f3f7ff"><p></p></section>'
+        html='<section data-lesson-section="true" data-variant="empty" data-label="RECAP" data-bg="#478fea"><p>Summary text</p></section>'
       />,
     )
-    expect(screen.queryByText("1")).not.toBeInTheDocument()
+    expect(screen.getByText("RECAP")).toBeInTheDocument()
+    expect(screen.getByText("Summary text")).toBeInTheDocument()
     expect(document.querySelector("section")?.getAttribute("style")).toContain("background-color")
   })
 
-  it("renders plain html without section cards", () => {
+  it("renders plain html without callout blocks", () => {
     render(<LessonHtmlContent html="<p>Legacy paragraph</p>" />)
     expect(screen.getByText("Legacy paragraph")).toBeInTheDocument()
-    expect(screen.queryByText("1")).not.toBeInTheDocument()
+    expect(document.querySelector(".lesson-callout")).toBeNull()
   })
 })
