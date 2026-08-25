@@ -1,8 +1,10 @@
 import { formatPracticeElapsed } from "@/features/student/practice-session/use-practice-session-timer"
 import {
+  ACTIVE_DRILL_HEADER_TIMER_CLASS,
   PRACTICE_SESSION_HEADER_CONTROL_RADIUS_CLASS,
   PRACTICE_SESSION_TIMER_PROGRESS_RADIUS_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import { ExamHeaderTimerIcon } from "@/features/student/practice-session/practice-session-header-icons"
 import { cn } from "@/lib/utils"
 
 type PracticeSessionTimerProps = {
@@ -14,6 +16,8 @@ type PracticeSessionTimerProps = {
   progress: number
   displayClassName?: string
   showClockIcon?: boolean
+  /** `inline` is the LSAT default header (clock + label + time, no nested pause). */
+  layout?: "card" | "inline"
 }
 
 /** Drill timer stamp — elapsed / remaining pill with progress bar */
@@ -26,11 +30,40 @@ function PracticeSessionTimer({
   progress,
   displayClassName,
   showClockIcon = true,
+  layout = "card",
 }: PracticeSessionTimerProps) {
   const pct = Math.min(100, Math.max(0, progress * 100))
   const isCountdown =
     label === "Remaining" || label === "Time Left" || label === "Time Left:"
   const timerMinWidthClass = isCountdown ? "min-w-[213px]" : "min-w-[189px]"
+  const timeLabel = formatPracticeElapsed(displaySeconds)
+
+  if (layout === "inline") {
+    return (
+      <div className={ACTIVE_DRILL_HEADER_TIMER_CLASS}>
+        <div className="flex items-center gap-2.5">
+          {showClockIcon ? (
+            <span className="inline-flex size-6 shrink-0 flex-col items-start rounded-lg px-1 pt-1">
+              <ExamHeaderTimerIcon />
+            </span>
+          ) : null}
+          {label ? (
+            <span className="flex h-6 shrink-0 items-center text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#666d80]">
+              {label}
+            </span>
+          ) : null}
+          <span
+            className={cn(
+              "flex h-6 w-[46px] shrink-0 items-center justify-end text-right text-sm font-semibold leading-[1.5] tabular-nums tracking-[0.28px] text-[#062357]",
+              displayClassName,
+            )}
+          >
+            {timeLabel}
+          </span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div

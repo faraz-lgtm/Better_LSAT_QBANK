@@ -177,7 +177,7 @@ function PracticeDrillQuestionPanel({
           onToggleFlag={onToggleFlag}
           flagsDisabled={flagsDisabled}
           variant={variant}
-          hideQuestionNumber={blindReviewChrome || isActiveDrillLayout}
+          hideQuestionNumber={blindReviewChrome}
           showSideFlag={!isActiveDrillLayout}
         />
         {revealed && isCorrect != null ? (

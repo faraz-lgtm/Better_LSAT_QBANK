@@ -14,7 +14,7 @@ type PracticeAnnotatedContentProps = Omit<
   findQuery?: string
   as?: ElementType
   scrollAnchor?: boolean
-  /** When set (and not "none"), enables passage annotation gestures on this node. */
+  /** When set with onMouseUp, enables passage annotation gestures on this node. */
   toolMode?: PracticeToolMode
   onMouseUp?: (regionKey: RegionKey, container: HTMLElement | null, event?: MouseEvent) => void
   onClickCapture?: (regionKey: RegionKey, container: HTMLElement | null, event: MouseEvent) => void
@@ -33,7 +33,7 @@ function PracticeAnnotatedContent({
   ...rest
 }: PracticeAnnotatedContentProps) {
   const normalizedHtml = useMemo(() => normalizePracticeSessionHtml(html), [html])
-  const annotate = toolMode !== "none" && onMouseUp != null
+  const annotate = onMouseUp != null
 
   return (
     <FindableHtmlContent

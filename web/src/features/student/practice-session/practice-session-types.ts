@@ -1,4 +1,6 @@
-export type HighlightColor = "orange" | "pink" | "yellow"
+export type HighlightColor = "orange" | "pink" | "yellow" | "green" | "blue"
+
+export type PassageHighlightColor = Exclude<HighlightColor, "orange">
 
 export type PracticeToolMode = "none" | "highlighter" | "eraser" | "underline"
 
@@ -15,6 +17,19 @@ export const ACTIVE_DRILL_HIGHLIGHT_COLORS: { id: HighlightColor; hex: string }[
   { id: "yellow", hex: "#FFBD4C" },
 ]
 
+/** Passage selection popover — yellow / pink / green / blue (Figma `20280:108155` highlight UI). */
+export const PASSAGE_HIGHLIGHT_COLORS: { id: PassageHighlightColor; hex: string; border: string }[] = [
+  { id: "yellow", hex: "#FEF095", border: "#C4A63A" },
+  { id: "pink", hex: "#FFE2E2", border: "#E07070" },
+  { id: "green", hex: "#AFE9C7", border: "#4D9A6E" },
+  { id: "blue", hex: "#A6E1FD", border: "#4AA3D4" },
+]
+
+export function isPassageHighlightColor(value: string | null | undefined): value is PassageHighlightColor {
+  return value === "yellow" || value === "pink" || value === "green" || value === "blue"
+}
+
+/** LSAT default exam chrome (`active-drill`, Figma header `20268:105580`, footer `20268:107659`). Official LawHub view is a future variant. */
 export type PracticeSessionVariant = "default" | "active-drill" | "blind-review"
 
 export const FONT_SCALE_STEPS = [0.75, 1, 1.25, 1.5, 1.75] as const

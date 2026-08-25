@@ -23,14 +23,7 @@ import {
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeSessionActiveDrillFooterNav } from "@/features/student/practice-session/practice-session-active-drill-footer-nav"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
-import {
-  PracticeBlindReviewSessionHeader,
-  type PracticeReviewSidePanel,
-} from "@/features/student/practice-session/practice-blind-review-session-header"
-import type {
-  BlindReviewAnswerOutcome,
-  BlindReviewAnswerView,
-} from "@/features/student/practice-session/practice-blind-review-answer-toggle"
+import { PracticeSessionHighlightPopover } from "@/features/student/practice-session/practice-session-highlight-popover"
 import { PracticeDrillQuestionPanel, regionKey } from "@/features/student/practice-session/practice-drill-question-panel"
 import { PracticeSessionAccessibilityPanel } from "@/features/student/practice-session/practice-session-accessibility-panel"
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
@@ -113,96 +106,7 @@ function persistAnswers(intentId: string, answers: Record<string, GuestDiagnosti
   sessionStorage.setItem(`${GUEST_DIAGNOSTIC_ANSWERS_STORAGE_PREFIX}${intentId}`, JSON.stringify(answers))
 }
 
-function ReviewStaticSwitch({ checked = false }: { checked?: boolean }) {
-  return (
-    <span
-      role="switch"
-      aria-checked={checked}
-      aria-disabled="true"
-      className={cn(
-        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent",
-        checked ? "bg-[#0d47a1]" : "bg-[#c5cad3]",
-      )}
-    >
-      <span
-        className={cn(
-          "block size-4 rounded-full bg-white shadow-sm",
-          checked ? "translate-x-4" : "translate-x-0",
-        )}
-      />
-    </span>
-  )
-}
-
-function ReviewPassageCardHeader() {
-  return (
-    <div className="mb-8 flex h-8 shrink-0 items-center justify-between gap-4">
-      <span className="inline-flex h-8 items-center rounded-[8px] bg-[#f6f8fa] px-4 py-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1]">
-        Passage Only View
-      </span>
-      <span className="inline-flex h-8 items-center gap-4" aria-label="Analysis View is display only">
-        <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#062357]">
-          Analysis View
-        </span>
-        <ReviewStaticSwitch />
-      </span>
-    </div>
-  )
-}
-
-function answerOutcome(answer: GuestDiagnosticAnswerState | undefined): BlindReviewAnswerOutcome {
-  if (!answer) return "unanswered"
-  return answer.isCorrect ? "correct" : "incorrect"
-}
-
-function difficultyTone(level: number): "orange" | "red" | "teal" {
-  if (level >= 4) return "red"
-  if (level >= 3) return "orange"
-  return "teal"
-}
-
-function buildDiagnosticAnalyticsSeed(
-  question: DrillQuestion,
-  meta: { difficulty: number; questionType: string } | null,
-  selectedAnswer: string | null | undefined,
-): ExplanationQuestionDetailView["analytics"] {
-  const diffLevel = meta?.difficulty ?? 3
-  const label = difficultyLabelFromLevel(diffLevel)
-  const correctChoiceId = question.correctChoiceId ?? ""
-  const answerPopularity = resolveAnswerPopularityRows([], question.choices, correctChoiceId)
-  const letter = selectedAnswer?.trim().toUpperCase().slice(0, 1) ?? ""
-  const questionLabel = label === "Hardest" ? "Hard" : label
-
-  return {
-    questionDifficulty: {
-      filled: diffLevel,
-      max: 5,
-      label: questionLabel,
-      caption: "Question difficulty based on diagnostic design.",
-      tone: difficultyTone(diffLevel),
-    },
-    passageDifficulty: {
-      filled: Math.max(1, diffLevel - 1),
-      max: 5,
-      label: diffLevel >= 4 ? "Hard" : diffLevel >= 3 ? "Medium" : "Easy",
-      caption: "Relative difficulty for this stimulus.",
-      tone: difficultyTone(Math.max(1, diffLevel - 1)),
-    },
-    scoreBand: {
-      headline: "—",
-      range: "—",
-      caption: "Score of students with a 50% chance of getting this right",
-    },
-    answerPopularity,
-    answerPopularityTotal: 0,
-    userSelectedLetter: /^[A-E]$/.test(letter) ? letter : null,
-    questionStemTags: meta?.questionType ? [meta.questionType] : [],
-    passageTags: [],
-    history: [],
-  }
-}
-
-/** Figma `19510:22557` — diagnostic start uses the same active-drill exam shell as practice sessions. */
+/** Figma header `20268:105580` / footer `20268:107659` — LSAT default exam chrome (fixed header + footer; content swaps). */
 function GuestDiagnosticExamLayout({
   config,
   interactive = false,
@@ -394,7 +298,7 @@ function GuestDiagnosticExamLayout({
       submitLabel="Submit Test"
       buttonClassName={ACTIVE_DRILL_FINISH_BUTTON_CLASS}
       onSubmitSection={() => setSubmitModalOpen(true)}
-      onExit={() => undefined}
+      onExit={handleSaveAndExit}
     />
   )
 
@@ -656,7 +560,10 @@ function GuestDiagnosticExamLayout({
         timerProgress={timerProgress}
         showTimer
         questionProgressLabel={`${safeIndex} of ${questions.length}`}
+        questionNumber={safeIndex}
+        questionCount={questions.length}
         finishButton={finishButton}
+        onClose={isPostResultsMode ? (onExitReview ?? (() => navigate(-1))) : handleSaveAndExit}
       />
 
       <div
@@ -739,8 +646,6 @@ function GuestDiagnosticExamLayout({
           onNext={
             canNavigate ? () => setQIndex((index) => Math.min(questions.length, index + 1)) : () => undefined
           }
-          onSubmit={interactive && mode === "exam" ? () => setSubmitModalOpen(true) : undefined}
-          submitLabel="Submit Test"
         />
       </footer>
 
@@ -761,6 +666,14 @@ function GuestDiagnosticExamLayout({
         onCancel={accessibilityPanel.cancelPanel}
         onPreview={accessibilityPanel.previewSettings}
         onSave={accessibilityPanel.saveSettings}
+      />
+      <PracticeSessionHighlightPopover
+        menu={highlights.selectionMenu}
+        onApplyColor={highlights.applySelectionColor}
+        onRemove={highlights.removeSelectionHighlight}
+        onToggleExpanded={highlights.toggleSelectionExpanded}
+        onDismiss={highlights.dismissSelectionMenu}
+        isAnchorConnected={highlights.isSelectionMenuAnchorConnected}
       />
       <PracticeSessionPauseModal
         open={pauseModal.open}

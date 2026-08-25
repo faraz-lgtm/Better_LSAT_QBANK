@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentType, type SVGProps } from "react"
+import { useState, type ComponentType, type SVGProps } from "react"
 
 import {
   ACTIVE_DRILL_SIDE_WIDGET_COLLAPSED_CLASS,
@@ -8,17 +8,14 @@ import {
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import {
   SideWidgetAccessibilityIcon,
-  SideWidgetCollapseMenuIcon,
+  SideWidgetCollapseDockIcon,
   SideWidgetFlagIcon,
-  SideWidgetFullScreenIcon,
-  SideWidgetMedSizeIcon,
-  SideWidgetOpenMenuIcon,
   SideWidgetResponseMaskingIcon,
   SideWidgetReviewIcon,
 } from "@/features/student/practice-session/practice-session-side-widget-icons"
 import { cn } from "@/lib/utils"
 
-type SideWidgetIconComponent = ComponentType<SVGProps<SVGSVGElement>>
+type SideWidgetIconComponent = ComponentType<SVGProps<SVGSVGElement> & { expanded?: boolean }>
 
 type PracticeSessionSideWidgetProps = {
   flagged: boolean
@@ -26,7 +23,6 @@ type PracticeSessionSideWidgetProps = {
   flagsDisabled?: boolean
   responseMasking: boolean
   onToggleResponseMasking: () => void
-  onFullScreen?: () => void
   onReview?: () => void
   onAccessibility?: () => void
 }
@@ -44,76 +40,30 @@ type SideWidgetItem = {
 const SIDE_WIDGET_HOVER_LABEL_CLASS =
   "pointer-events-none absolute right-[calc(100%+8px)] top-1/2 z-20 -translate-y-1/2 whitespace-nowrap rounded-md bg-[#062357] px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
 
-/** Figma `18781:29066` — exam side widget (collapsed icons / expanded labels) */
+/** Figma `20268:102762` — exam side widget with expand/collapse */
 function PracticeSessionSideWidget({
   flagged,
   onToggleFlag,
   flagsDisabled,
   responseMasking,
   onToggleResponseMasking,
-  onFullScreen,
   onReview,
   onAccessibility,
 }: PracticeSessionSideWidgetProps) {
   const [expanded, setExpanded] = useState(false)
-  const [isFullScreen, setIsFullScreen] = useState(false)
-
-  useEffect(() => {
-    function syncFullScreen() {
-      setIsFullScreen(Boolean(document.fullscreenElement))
-    }
-    syncFullScreen()
-    document.addEventListener("fullscreenchange", syncFullScreen)
-    return () => document.removeEventListener("fullscreenchange", syncFullScreen)
-  }, [])
-
-  function handleFullScreen() {
-    if (onFullScreen) {
-      onFullScreen()
-      return
-    }
-    const card = document.querySelector(".practice-session-card")
-    const target = card instanceof HTMLElement ? card : document.documentElement
-    if (document.fullscreenElement) {
-      void document.exitFullscreen()
-      return
-    }
-    void target.requestFullscreen?.()
-  }
-
-  function handleReview() {
-    if (onReview) {
-      onReview()
-      return
-    }
-    setExpanded(true)
-  }
-
-  function handleAccessibility() {
-    if (onAccessibility) {
-      onAccessibility()
-    }
-  }
 
   const items: SideWidgetItem[] = [
-    {
-      id: "fullscreen",
-      label: isFullScreen ? "Exit Full Screen" : "Full Screen",
-      icon: isFullScreen ? SideWidgetMedSizeIcon : SideWidgetFullScreenIcon,
-      onClick: handleFullScreen,
-      active: isFullScreen,
-    },
     {
       id: "review",
       label: "Review",
       icon: SideWidgetReviewIcon,
-      onClick: handleReview,
+      onClick: () => onReview?.(),
     },
     {
       id: "accessibility",
       label: "Accessibility",
       icon: SideWidgetAccessibilityIcon,
-      onClick: handleAccessibility,
+      onClick: () => onAccessibility?.(),
     },
     {
       id: "flag",
@@ -133,7 +83,7 @@ function PracticeSessionSideWidget({
     {
       id: "collapse",
       label: expanded ? "Collapse Menu" : "Open Menu",
-      icon: expanded ? SideWidgetCollapseMenuIcon : SideWidgetOpenMenuIcon,
+      icon: SideWidgetCollapseDockIcon,
       onClick: () => setExpanded((open) => !open),
     },
   ]
@@ -148,7 +98,7 @@ function PracticeSessionSideWidget({
     >
       {items.map((item) => {
         const Icon = item.icon
-        const isFlag = item.id === "flag"
+        const isCollapse = item.id === "collapse"
         return (
           <button
             key={item.id}
@@ -161,13 +111,11 @@ function PracticeSessionSideWidget({
               item.disabled && "cursor-default opacity-50",
             )}
             aria-label={item.label}
-            aria-pressed={item.active || undefined}
+            aria-pressed={isCollapse ? expanded : item.active || undefined}
+            aria-expanded={isCollapse ? expanded : undefined}
             onClick={item.onClick}
           >
-            <Icon
-              className={cn("size-5 shrink-0", isFlag && item.active && "fill-current")}
-              aria-hidden
-            />
+            <Icon className="shrink-0" expanded={isCollapse ? expanded : undefined} aria-hidden />
             {expanded ? (
               <span className="whitespace-nowrap text-sm font-medium text-[#062357]">{item.label}</span>
             ) : (

@@ -31,7 +31,10 @@ type PracticeSessionQuestionNavStripProps = {
 
 /** Vertical divider between RC passage question groups (LawHub-style). */
 function passageBreakClass(variant: PracticeSessionVariant): string {
-  if (variant === "active-drill" || variant === "blind-review") {
+  if (variant === "active-drill") {
+    return "practice-session-question-nav-passage-break h-7 w-[2px] min-w-[2px] shrink-0 self-end bg-[#9aa3b5]"
+  }
+  if (variant === "blind-review") {
     return "practice-session-question-nav-passage-break mt-4 h-8 w-[2px] min-w-[2px] shrink-0 self-start bg-[#9aa3b5]"
   }
   return "practice-session-question-nav-passage-break h-8 w-[2px] min-w-[2px] shrink-0 self-center bg-[#9aa3b5]"

@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest"
+import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { describe, expect, it, vi } from "vitest"
 
-import { matchesReviewFilters } from "@/features/student/practice-session/practice-session-review-panel"
+import {
+  matchesReviewFilters,
+  PracticeSessionReviewPanel,
+} from "@/features/student/practice-session/practice-session-review-panel"
 
 describe("matchesReviewFilters", () => {
   const base = {
@@ -42,5 +47,59 @@ describe("matchesReviewFilters", () => {
         filters: { flagged: false, unattempted: false, partiallyAttempted: true },
       }),
     ).toBe(true)
+  })
+})
+
+describe("PracticeSessionReviewPanel Figma drawer", () => {
+  const questions = [{ id: "q-1" }, { id: "q-2" }, { id: "q-3" }]
+
+  it("renders the Review sheet with Figma filters, tiles, and collapse icon", () => {
+    render(
+      <PracticeSessionReviewPanel
+        open
+        questions={questions}
+        currentIndex={2}
+        answersByQuestion={{ "q-1": { choiceIndex: 0 } }}
+        isFlagged={(id) => id === "q-2"}
+        onSelectQuestion={() => undefined}
+        onClose={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole("heading", { name: "Review" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Flagged" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Unattempted" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Partially Attempted" })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Close review" }).querySelector("img")).toHaveAttribute(
+      "src",
+      "/figma/exam-review/remove-rectangle.svg",
+    )
+    expect(screen.getByRole("button", { name: "Question 2, flagged" }).querySelector("img")).toHaveAttribute(
+      "src",
+      "/figma/exam-review/flag.svg",
+    )
+    expect(screen.getByRole("button", { name: "Question 2, flagged" })).toHaveAttribute("aria-current", "true")
+  })
+
+  it("selects a question and closes the drawer", async () => {
+    const user = userEvent.setup()
+    const onSelectQuestion = vi.fn()
+    const onClose = vi.fn()
+
+    render(
+      <PracticeSessionReviewPanel
+        open
+        questions={questions}
+        currentIndex={1}
+        answersByQuestion={{}}
+        isFlagged={() => false}
+        onSelectQuestion={onSelectQuestion}
+        onClose={onClose}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Question 3" }))
+    expect(onSelectQuestion).toHaveBeenCalledWith(3)
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 })

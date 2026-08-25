@@ -36,4 +36,49 @@ describe("PracticeSessionFinishMenu", () => {
     await user.keyboard("{Escape}")
     expect(document.documentElement.classList.contains("practice-finish-menu-open")).toBe(false)
   })
+
+  it("renders the Figma dots-circle icon for the exam more trigger", () => {
+    render(
+      <PracticeSessionFinishMenu iconTrigger onSubmitSection={vi.fn()} onExit={vi.fn()} />,
+    )
+
+    expect(screen.getByRole("button", { name: "More options" }).querySelector("img")).toHaveAttribute(
+      "src",
+      "/figma/exam-header/dots-circle.svg",
+    )
+  })
+
+  it("opens the Figma exam more panel and hides the side widget class", async () => {
+    const user = userEvent.setup()
+    const onSubmitSection = vi.fn()
+    const onExit = vi.fn()
+    const onExitWithoutSaving = vi.fn()
+
+    render(
+      <PracticeSessionFinishMenu
+        iconTrigger
+        onSubmitSection={onSubmitSection}
+        onExit={onExit}
+        onExitWithoutSaving={onExitWithoutSaving}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "More options" }))
+
+    expect(screen.getByRole("dialog", { name: "More options" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Submit" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Save and exit" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Exit without saving" })).toBeInTheDocument()
+    expect(screen.getByText("Dark mode")).toBeInTheDocument()
+    expect(screen.getByText("Official Interface")).toBeInTheDocument()
+    expect(document.documentElement.classList.contains("practice-exam-more-open")).toBe(true)
+    expect(screen.getByRole("button", { name: "Submit" }).querySelector("img")).toHaveAttribute(
+      "src",
+      "/figma/exam-finish/sent-fast.svg",
+    )
+
+    await user.click(screen.getByRole("button", { name: "Save and exit" }))
+    expect(onExit).toHaveBeenCalledTimes(1)
+    expect(document.documentElement.classList.contains("practice-exam-more-open")).toBe(false)
+  })
 })

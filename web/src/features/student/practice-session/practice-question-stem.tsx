@@ -1,7 +1,9 @@
 import {
   ACTIVE_DRILL_ACTION_BUTTON_CLASS,
   ACTIVE_DRILL_STEM_GRID_CLASS,
+  ACTIVE_DRILL_STEM_NUMBER_CLASS,
   ACTIVE_DRILL_STEM_SECTION_CLASS,
+  ACTIVE_DRILL_STEM_TEXT_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import { PracticeQuestionFlagButton } from "@/features/student/practice-session/practice-question-flag-button"
@@ -39,7 +41,10 @@ function PracticeQuestionStem({
   if (isActiveDrill) {
     return (
       <div className={ACTIVE_DRILL_STEM_SECTION_CLASS}>
-        <div className={ACTIVE_DRILL_STEM_GRID_CLASS}>
+        <div className={cn(ACTIVE_DRILL_STEM_GRID_CLASS, "flex min-w-0 items-start gap-1.5")}>
+          {hideQuestionNumber ? null : (
+            <span className={ACTIVE_DRILL_STEM_NUMBER_CLASS}>{questionNumber}.</span>
+          )}
           <PracticeAnnotatedContent
             regionKey={regionKey}
             html={html}
@@ -47,7 +52,7 @@ function PracticeQuestionStem({
             scrollAnchor
             as="div"
             toolMode="none"
-            className="min-w-0 text-lg leading-[1.35] text-[color:inherit] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-7 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
+            className={ACTIVE_DRILL_STEM_TEXT_CLASS}
           />
           {showSideFlag ? (
             <PracticeQuestionFlagButton

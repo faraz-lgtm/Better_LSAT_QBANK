@@ -54,10 +54,11 @@ describe("buildAccessibilityContentStyle", () => {
     ).toMatchObject({
       "--practice-accessibility-bg": "#ffffff",
       "--practice-accessibility-fg": "#0d0d12",
-      "--practice-choice-selected-bg": "#f3f7ff",
+      "--practice-choice-selected-bg": "#edf3ff",
       "--practice-choice-selected-border": "#0d47a1",
       "--practice-choice-selected-letter-bg": "#0d47a1",
-      "--practice-choice-selected-letter-fg": "#ffffff",
+      "--practice-choice-selected-letter-fg": "#f3f7ff",
+      "--practice-choice-selected-letter-border": "#0b4e6e",
     })
   })
 })

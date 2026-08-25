@@ -3590,19 +3590,15 @@ section[data-lesson-section][data-variant="empty"] {
   margin-bottom: 0;
 }
 
+/* Figma `20280:108037` — frost + charcoal `/` hatch; letter and text stay visible underneath */
 .practice-session-choice-masked {
   position: relative;
   overflow: hidden;
+  box-shadow: none;
 }
 
-/* Obscure letter + choice text (hatch alone left the copy fully readable). */
 .practice-session-choice-masked > * {
-  filter: blur(3.5px);
-  opacity: 0.38;
   user-select: none;
-  transition:
-    filter 150ms ease,
-    opacity 150ms ease;
 }
 
 .practice-session-choice-masked::after {
@@ -3612,13 +3608,13 @@ section[data-lesson-section][data-variant="empty"] {
   z-index: 1;
   border-radius: inherit;
   pointer-events: none;
-  background-color: rgb(246 248 250 / 0.45);
+  background-color: rgb(255 255 255 / 0.8);
   background-image: repeating-linear-gradient(
-    -45deg,
-    rgb(102 109 128 / 0.28) 0,
-    rgb(102 109 128 / 0.28) 1.5px,
-    transparent 1.5px,
-    transparent 6px
+    135deg,
+    #6b6b6b 0,
+    #6b6b6b 2.1px,
+    transparent 2.1px,
+    transparent 12.7px
   );
 }
 
@@ -3632,6 +3628,11 @@ section[data-lesson-section][data-variant="empty"] {
   overflow-y: auto;
 }
 
+/* Figma `20268:102762` — tint baked-gray assets when a tool is active */
+.practice-session-side-widget button[aria-pressed="true"] img {
+  filter: invert(18%) sepia(86%) saturate(2476%) hue-rotate(201deg) brightness(91%) contrast(101%);
+}
+
 html.practice-finish-menu-open .practice-session-question-panel-with-widget {
   padding-right: 0;
 }
@@ -3642,6 +3643,15 @@ html.practice-finish-menu-open .practice-session-header--active-drill,
 html.practice-finish-menu-open .practice-session-header--active-drill > div {
   overflow: visible;
   z-index: 120;
+}
+
+/* Figma `20268:107290` — hide the exam side widget while the more panel is open */
+html.practice-exam-more-open .practice-session-side-widget {
+  display: none;
+}
+
+html.practice-exam-more-open .practice-session-question-panel-with-widget {
+  padding-right: 0;
 }
 
 /* Figma `17920:11448` — session panes: fixed height, scroll without visible scrollbar */
@@ -3777,21 +3787,25 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
   overflow: visible;
 }
 
-.practice-session-review-panel__grid .practice-session-question-nav-grid,
-.practice-session-card--active-drill .practice-session-review-panel__grid .practice-session-question-nav-grid {
-  display: grid;
-  grid-template-columns: repeat(25, minmax(0, 1fr));
-  column-gap: 6px;
-  row-gap: 6px;
+.practice-session-review-panel__grid {
+  display: flex;
+  flex-wrap: wrap;
   align-content: start;
-  justify-items: stretch;
-  flex-wrap: unset;
-  overflow: visible;
+  column-gap: 12px;
+  row-gap: 24px;
 }
 
-.practice-session-review-panel__question-btn {
-  width: 100%;
-  min-width: 0;
+.practice-session-review-panel__grid .practice-session-question-nav-grid,
+.practice-session-card--active-drill .practice-session-review-panel__grid .practice-session-question-nav-grid {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 12px;
+  row-gap: 24px;
+  align-content: start;
+}
+
+.practice-session-review-panel__question-btn--answered img {
+  filter: brightness(0) invert(1);
 }
 
 @media (min-width: 768px) {
@@ -3850,20 +3864,20 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
 /* Selected / unselected choice chrome follows Accessibility color scheme tokens */
 .practice-session-choice--selected {
   border-color: var(--practice-choice-selected-border, #0d47a1);
-  background-color: var(--practice-choice-selected-bg, #f3f7ff);
+  background-color: var(--practice-choice-selected-bg, #edf3ff);
   color: var(--practice-accessibility-fg, inherit);
 }
 
 .practice-session-choice-letter--selected {
-  border-color: var(--practice-choice-selected-letter-bg, #0d47a1);
+  border-color: var(--practice-choice-selected-letter-border, #0b4e6e);
   background-color: var(--practice-choice-selected-letter-bg, #0d47a1);
-  color: var(--practice-choice-selected-letter-fg, #ffffff);
+  color: var(--practice-choice-selected-letter-fg, #f3f7ff);
 }
 
 .practice-session-choice-letter--unselected {
-  border-color: var(--practice-choice-unselected-letter-border, #dfe1e7);
+  border-color: var(--practice-choice-unselected-letter-border, transparent);
   background-color: var(--practice-choice-unselected-letter-bg, #ffffff);
-  color: var(--practice-choice-unselected-letter-fg, #0d0d12);
+  color: var(--practice-choice-unselected-letter-fg, #000000);
 }
 
 .practice-session-panel {
@@ -3950,8 +3964,14 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
 }
 
 .practice-session-header--active-drill {
-  overflow: hidden;
+  overflow: visible;
   border-radius: 0;
+}
+
+.practice-session-header--active-drill input[type="search"]::-webkit-search-decoration,
+.practice-session-header--active-drill input[type="search"]::-webkit-search-cancel-button,
+.practice-session-header--active-drill input[type="search"]::-webkit-search-results-button {
+  -webkit-appearance: none;
 }
 
 .practice-session-timer {
@@ -4012,27 +4032,35 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
 }
 
 .practice-session-card--active-drill .practice-session-content mark[data-highlight="pink"] {
-  background-color: #ffb4de;
+  background-color: #ffe2e2;
 }
 
 .practice-session-card--active-drill .practice-session-content mark[data-highlight="yellow"] {
-  background-color: #ffbd4c;
+  background-color: #fef095;
+}
+
+.practice-session-card--active-drill .practice-session-content mark[data-highlight="green"] {
+  background-color: #afe9c7;
+}
+
+.practice-session-card--active-drill .practice-session-content mark[data-highlight="blue"] {
+  background-color: #a6e1fd;
 }
 
 .practice-session-card--active-drill .practice-session-question-nav-grid {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
 }
 
 .practice-session-card--active-drill .practice-session-footer .practice-session-question-nav-grid {
   flex-wrap: nowrap;
-  align-items: flex-start;
-  justify-content: center;
+  align-items: flex-end;
+  justify-content: flex-start;
   gap: 8px;
-  min-height: 48px;
+  min-height: 43px;
   height: auto;
   overflow-x: auto;
   overflow-y: hidden;
@@ -4047,10 +4075,10 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
 }
 
 .practice-session-card--active-drill .practice-session-question-nav-btn {
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  border-radius: 6px;
 }
 
 html.student-shell-immersive .practice-session-card--blind-review {
@@ -4132,11 +4160,19 @@ html.student-shell-immersive .practice-session-card--blind-review {
 }
 
 .practice-session-card--blind-review .practice-session-content mark[data-highlight="pink"] {
-  background-color: #ffb4de;
+  background-color: #ffe2e2;
 }
 
 .practice-session-card--blind-review .practice-session-content mark[data-highlight="yellow"] {
-  background-color: #ffbd4c;
+  background-color: #fef095;
+}
+
+.practice-session-card--blind-review .practice-session-content mark[data-highlight="green"] {
+  background-color: #afe9c7;
+}
+
+.practice-session-card--blind-review .practice-session-content mark[data-highlight="blue"] {
+  background-color: #a6e1fd;
 }
 
 .lsat-html-content mark.practice-find-mark {
@@ -4150,12 +4186,22 @@ html.student-shell-immersive .practice-session-card--blind-review {
 }
 
 .lsat-html-content mark[data-highlight="pink"] {
-  background-color: #ffb4de;
+  background-color: #ffe2e2;
   color: inherit;
 }
 
 .lsat-html-content mark[data-highlight="yellow"] {
-  background-color: #ffbd4c;
+  background-color: #fef095;
+  color: inherit;
+}
+
+.lsat-html-content mark[data-highlight="green"] {
+  background-color: #afe9c7;
+  color: inherit;
+}
+
+.lsat-html-content mark[data-highlight="blue"] {
+  background-color: #a6e1fd;
   color: inherit;
 }
 

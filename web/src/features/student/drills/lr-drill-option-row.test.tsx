@@ -83,4 +83,43 @@ describe("LrDrillOptionRow", () => {
     await user.click(screen.getByRole("button"))
     expect(onSelect).toHaveBeenCalledTimes(1)
   })
+
+  it("uses Figma 20268:102788 14px cards and 46px rounded-square letters", () => {
+    const { container } = render(
+      <LrDrillOptionRow
+        index={1}
+        html="<p>Choice B</p>"
+        selected
+        onSelect={() => undefined}
+        variant="active-drill"
+        showSideAction={false}
+      />,
+    )
+
+    expect(container.firstChild).toHaveClass("rounded-[14px]")
+    expect(container.firstChild).not.toHaveClass("rounded-[16px]")
+    const letter = screen.getByText("B")
+    expect(letter).toHaveClass("size-[46px]", "rounded-[12px]")
+    expect(letter).not.toHaveClass("rounded-full")
+  })
+
+  it("applies the Figma 20280:108037 frost hatch without hiding choice text", () => {
+    const { container } = render(
+      <LrDrillOptionRow
+        index={1}
+        html="<p>Choice B</p>"
+        selected
+        masked
+        onSelect={() => undefined}
+        variant="active-drill"
+        showSideAction={false}
+      />,
+    )
+
+    expect(container.firstChild).toHaveClass("practice-session-choice-masked", "rounded-[14px]")
+    expect(container.firstChild).not.toHaveClass("practice-session-choice--selected")
+    expect(screen.getByRole("button", { name: "Answer choice B, masked" })).toBeInTheDocument()
+    expect(screen.getByText("B")).toBeInTheDocument()
+    expect(screen.getByText("Choice B")).toBeInTheDocument()
+  })
 })

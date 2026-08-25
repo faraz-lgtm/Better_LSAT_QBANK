@@ -1,16 +1,18 @@
 import { render, screen } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { PracticeSessionActiveDrillFooterNav } from "@/features/student/practice-session/practice-session-active-drill-footer-nav"
+import {
+  ACTIVE_DRILL_FOOTER_NAV_CLUSTER_CLASS,
+  ACTIVE_DRILL_QUESTION_NAV_BUTTON_ACTIVE_CLASS,
+  ACTIVE_DRILL_QUESTION_NAV_BUTTON_ANSWERED_CLASS,
+  ACTIVE_DRILL_QUESTION_NAV_BUTTON_DEFAULT_CLASS,
+} from "@/features/student/practice-session/practice-session-active-drill-styles"
 
 describe("PracticeSessionActiveDrillFooterNav", () => {
   const questions = [{ id: "q1" }, { id: "q2" }]
 
-  it("shows submit control on the last question when onSubmit is provided", async () => {
-    const user = userEvent.setup()
-    const onSubmit = vi.fn()
-
+  it("keeps icon-only next on the last question; submit lives in the header menu", () => {
     render(
       <PracticeSessionActiveDrillFooterNav
         questions={questions}
@@ -21,15 +23,16 @@ describe("PracticeSessionActiveDrillFooterNav", () => {
         onSelectQuestion={() => undefined}
         onPrev={() => undefined}
         onNext={() => undefined}
-        onSubmit={onSubmit}
+        onSubmit={vi.fn()}
         submitLabel="Submit Test"
       />,
     )
 
-    expect(screen.queryByRole("button", { name: "Next question" })).not.toBeInTheDocument()
-    const submitButton = screen.getByRole("button", { name: "Submit Test" })
-    await user.click(submitButton)
-    expect(onSubmit).toHaveBeenCalledTimes(1)
+    const nextButton = screen.getByRole("button", { name: "Next question" })
+    expect(nextButton).toBeDisabled()
+    expect(nextButton).not.toHaveTextContent("Next")
+    expect(screen.queryByRole("button", { name: "Submit Test" })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Previous question" })).not.toHaveTextContent("Prev")
   })
 
   it("keeps next control before the last question", () => {
@@ -126,5 +129,90 @@ describe("PracticeSessionActiveDrillFooterNav", () => {
     expect(document.querySelectorAll("[data-review-nav-outcome='correct']")).toHaveLength(1)
     expect(document.querySelectorAll("[data-review-nav-outcome='incorrect']")).toHaveLength(1)
     expect(document.querySelectorAll("[data-review-nav-outcome='unanswered']")).toHaveLength(1)
+  })
+
+  it("left-aligns the prev / pills / next cluster", () => {
+    render(
+      <PracticeSessionActiveDrillFooterNav
+        questions={questions}
+        safeIndex={1}
+        answersByQuestion={{}}
+        isFlagged={() => false}
+        variant="active-drill"
+        onSelectQuestion={() => undefined}
+        onPrev={() => undefined}
+        onNext={() => undefined}
+      />,
+    )
+
+    const cluster = screen.getByRole("button", { name: "Previous question" }).parentElement?.parentElement
+    expect(cluster).toHaveClass(...ACTIVE_DRILL_FOOTER_NAV_CLUSTER_CLASS.split(" "))
+    expect(cluster?.className.split(" ")).not.toContain("justify-center")
+  })
+
+  it("uses light-blue current and solid-blue answered pills", () => {
+    render(
+      <PracticeSessionActiveDrillFooterNav
+        questions={[{ id: "q1" }, { id: "q2" }, { id: "q3" }]}
+        safeIndex={2}
+        answersByQuestion={{ q1: { selectedAnswer: "A" } }}
+        isFlagged={() => false}
+        variant="active-drill"
+        onSelectQuestion={() => undefined}
+        onPrev={() => undefined}
+        onNext={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole("button", { name: "Question 1" })).toHaveClass(
+      ...ACTIVE_DRILL_QUESTION_NAV_BUTTON_ANSWERED_CLASS.split(" "),
+    )
+    expect(screen.getByRole("button", { name: "Question 2" })).toHaveClass(
+      ...ACTIVE_DRILL_QUESTION_NAV_BUTTON_ACTIVE_CLASS.split(" "),
+    )
+    expect(screen.getByRole("button", { name: "Question 2" })).not.toHaveClass("bg-[#0d47a1]")
+    expect(screen.getByRole("button", { name: "Question 3" })).toHaveClass(
+      ...ACTIVE_DRILL_QUESTION_NAV_BUTTON_DEFAULT_CLASS.split(" "),
+    )
+  })
+
+  it("keeps the current pill light-blue even when that question is answered", () => {
+    render(
+      <PracticeSessionActiveDrillFooterNav
+        questions={[{ id: "q1" }, { id: "q2" }]}
+        safeIndex={1}
+        answersByQuestion={{ q1: { selectedAnswer: "A" } }}
+        isFlagged={() => false}
+        variant="active-drill"
+        onSelectQuestion={() => undefined}
+        onPrev={() => undefined}
+        onNext={() => undefined}
+      />,
+    )
+
+    const current = screen.getByRole("button", { name: "Question 1" })
+    expect(current).toHaveClass(...ACTIVE_DRILL_QUESTION_NAV_BUTTON_ACTIVE_CLASS.split(" "))
+    expect(current).not.toHaveClass("bg-[#0d47a1]")
+  })
+
+  it("places the Figma flag above flagged question pills", () => {
+    render(
+      <PracticeSessionActiveDrillFooterNav
+        questions={[{ id: "q1" }, { id: "q2" }, { id: "q3" }]}
+        safeIndex={1}
+        answersByQuestion={{}}
+        isFlagged={(id) => id === "q2" || id === "q3"}
+        variant="active-drill"
+        onSelectQuestion={() => undefined}
+        onPrev={() => undefined}
+        onNext={() => undefined}
+      />,
+    )
+
+    const flaggedTwo = screen.getByRole("button", { name: "Question 2, flagged" })
+    const flaggedThree = screen.getByRole("button", { name: "Question 3, flagged" })
+    expect(flaggedTwo.parentElement?.querySelector("img")).toHaveAttribute("src", "/figma/exam-review/flag.svg")
+    expect(flaggedThree.parentElement?.querySelector("img")).toHaveAttribute("src", "/figma/exam-review/flag.svg")
+    expect(screen.getByRole("button", { name: "Question 1" }).parentElement?.querySelector("img")).toBeNull()
   })
 })

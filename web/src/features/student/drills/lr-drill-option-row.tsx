@@ -119,9 +119,11 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
       toolMode="none"
       className={cn(
         "min-w-0 flex-1",
-        isActiveDrill || isBlindReview
-          ? "text-[1em] leading-[1.5] tracking-[0.32px] text-[color:inherit]"
-          : "pt-0.5",
+        isActiveDrill
+          ? "text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#0d0d12]"
+          : isBlindReview
+            ? "text-[1em] leading-[1.5] tracking-[0.32px] text-[color:inherit]"
+            : "pt-0.5",
         hidden && isBlindReview && "line-through opacity-50",
         hidden && !isBlindReview && !isActiveDrill && "line-through opacity-50 blur-[2px]",
         masked && "select-none",
@@ -291,8 +293,11 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
         className={cn(
           showSideAction ? ACTIVE_DRILL_CHOICE_ROW_GRID_WITH_ACTION_CLASS : ACTIVE_DRILL_CHOICE_ROW_GRID_CLASS,
           "text-left transition-[background-color,box-shadow,border-color]",
-          masked && ACTIVE_DRILL_OPTION_ROW_MASKED_CLASS,
-          selected ? ACTIVE_DRILL_OPTION_ROW_SELECTED_CLASS : ACTIVE_DRILL_OPTION_ROW_UNSELECTED_CLASS,
+          masked
+            ? ACTIVE_DRILL_OPTION_ROW_MASKED_CLASS
+            : selected
+              ? ACTIVE_DRILL_OPTION_ROW_SELECTED_CLASS
+              : ACTIVE_DRILL_OPTION_ROW_UNSELECTED_CLASS,
           disabled ? "cursor-default" : "cursor-pointer",
         )}
         aria-label={
@@ -304,18 +309,23 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
         }
       >
         <span
+          aria-hidden={masked || undefined}
           className={cn(
-            "col-start-1 flex size-8 items-center justify-center self-start rounded-[12px]",
-            selected ? ACTIVE_DRILL_OPTION_LETTER_SELECTED_CLASS : ACTIVE_DRILL_OPTION_LETTER_UNSELECTED_CLASS,
+            "flex items-center justify-center self-start",
+            selected && !masked
+              ? ACTIVE_DRILL_OPTION_LETTER_SELECTED_CLASS
+              : ACTIVE_DRILL_OPTION_LETTER_UNSELECTED_CLASS,
           )}
         >
           {letter}
         </span>
-        <div className="col-start-3 min-w-0 self-start">{choiceContent}</div>
+        <div aria-hidden={masked || undefined} className="min-w-0 flex-1 self-start">
+          {choiceContent}
+        </div>
         {showSideAction ? (
           <button
             type="button"
-            className={cn(ACTIVE_DRILL_OPTION_EYE_BUTTON_CLASS, "col-start-4 self-start")}
+            className={cn(ACTIVE_DRILL_OPTION_EYE_BUTTON_CLASS, "ml-auto self-start")}
             aria-label={hidden ? "Show answer choice" : "Hide answer choice"}
             onClick={(e) => {
               e.stopPropagation()

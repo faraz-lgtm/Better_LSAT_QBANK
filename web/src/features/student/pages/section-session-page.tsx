@@ -36,6 +36,7 @@ import {
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeSessionActiveDrillFooterNav } from "@/features/student/practice-session/practice-session-active-drill-footer-nav"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
+import { PracticeSessionHighlightPopover } from "@/features/student/practice-session/practice-session-highlight-popover"
 import { PracticeQuestionStem } from "@/features/student/practice-session/practice-question-stem"
 import { PracticeSessionAccessibilityPanel } from "@/features/student/practice-session/practice-session-accessibility-panel"
 import { usePracticeSessionAccessibilityPanel } from "@/features/student/practice-session/use-practice-session-accessibility-panel"
@@ -318,7 +319,7 @@ function SectionQuestionPanel({
           onToggleFlag={onToggleFlag}
           flagsDisabled={flagsDisabled}
           variant={variant}
-          hideQuestionNumber={blindReviewChrome || isActiveDrillLayout}
+          hideQuestionNumber={blindReviewChrome}
           showSideFlag={!isActiveDrillLayout}
         />
         {revealed && isCorrect != null ? (
@@ -468,6 +469,7 @@ function SectionSessionPage() {
     predictedScore: number | null
   } | null>(null)
   const timeUpTriggeredRef = useRef(false)
+  const loadGenerationRef = useRef(0)
 
   const submitModalTitle = postCompleteBlindReview
     ? "Finish Blind Review"
@@ -582,10 +584,12 @@ function SectionSessionPage() {
 
   const load = useCallback(async () => {
     if (!sessionId) return
+    const generation = ++loadGenerationRef.current
     setLoading(true)
     setError(null)
     try {
       const data = await practiceApi.getSectionSession(sessionId)
+      if (generation !== loadGenerationRef.current) return
       setSectionSession(data)
       if (searchParams.get("blindReview") !== "1" && searchParams.get("review") !== "1") {
         setInitialCountdown(
@@ -669,14 +673,18 @@ function SectionSessionPage() {
         }
       }
     } catch (e) {
+      if (generation !== loadGenerationRef.current) return
       setError(e instanceof Error ? e.message : "Failed to load section")
     } finally {
-      setLoading(false)
+      if (generation === loadGenerationRef.current) setLoading(false)
     }
   }, [practiceApi, sessionId, setInitialCountdown, searchParams, sectionPostBrActiveKey, sectionPostBrActualKey, sectionPostBrAnswersKey])
 
   useEffect(() => {
     void load()
+    return () => {
+      loadGenerationRef.current += 1
+    }
   }, [load])
 
   useEffect(() => {
@@ -1851,7 +1859,6 @@ function SectionSessionPage() {
         <PracticeSessionHeader
           variant={sessionVariant}
           title={sessionHeaderTitle}
-          titleClassName={useActiveDrillLayout ? "!text-[20px]" : undefined}
           findQuery={findQuery}
           onFindQueryChange={setFindQuery}
           activeColor={highlights.activeColor}
@@ -1884,10 +1891,21 @@ function SectionSessionPage() {
               ? `${safeIndex} of ${questions.length}`
               : null
           }
+          questionNumber={useActiveDrillLayout ? safeIndex : undefined}
+          questionCount={useActiveDrillLayout ? questions.length : undefined}
           finishButton={finishButton}
+          onClose={handleExitSession}
         />
       ) : null}
       {sessionInnerContent}
+      <PracticeSessionHighlightPopover
+        menu={highlights.selectionMenu}
+        onApplyColor={highlights.applySelectionColor}
+        onRemove={highlights.removeSelectionHighlight}
+        onToggleExpanded={highlights.toggleSelectionExpanded}
+        onDismiss={highlights.dismissSelectionMenu}
+        isAnchorConnected={highlights.isSelectionMenuAnchorConnected}
+      />
     </>
   )
 
