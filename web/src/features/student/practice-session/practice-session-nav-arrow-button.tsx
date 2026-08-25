@@ -12,6 +12,9 @@ const FIGMA_NARROW_ARROW_SRC = {
   next: "/figma/review-nav/arrow-narrow-right.svg",
 } as const
 
+/** Figma `20268:107659` — 16×16 exam footer arrow; next is rotated 180°. */
+const EXAM_NAV_ARROW_SRC = "/figma/exam-nav/arrow-narrow-left.svg"
+
 type PracticeSessionNavArrowButtonProps = {
   direction: "prev" | "next"
   disabled?: boolean
@@ -20,6 +23,8 @@ type PracticeSessionNavArrowButtonProps = {
   iconOnly?: boolean
   /** Use Figma `18617:35585` narrow arrow assets (18×14) */
   figmaNarrowArrow?: boolean
+  /** Use Figma `20268:107659` 16×16 exam-nav arrow */
+  examArrow?: boolean
 }
 
 function PracticeSessionNavArrowButton({
@@ -29,6 +34,7 @@ function PracticeSessionNavArrowButton({
   className,
   iconOnly = false,
   figmaNarrowArrow = false,
+  examArrow = false,
 }: PracticeSessionNavArrowButtonProps) {
   const Icon = direction === "prev" ? ArrowLeft : ArrowRight
   const iconClassName = cn("size-4 shrink-0", disabled ? "text-[#a4acb9]" : "text-current")
@@ -42,7 +48,22 @@ function PracticeSessionNavArrowButton({
         aria-label={direction === "prev" ? "Previous question" : "Next question"}
         onClick={onClick}
       >
-        {figmaNarrowArrow ? (
+        {examArrow ? (
+          <span className="relative flex size-4 shrink-0 items-center justify-center overflow-hidden">
+            <img
+              src={EXAM_NAV_ARROW_SRC}
+              alt=""
+              width={16}
+              height={16}
+              className={cn(
+                "size-4 shrink-0",
+                direction === "next" && "rotate-180",
+                disabled && "opacity-40",
+              )}
+              draggable={false}
+            />
+          </span>
+        ) : figmaNarrowArrow ? (
           <span className="relative flex size-6 shrink-0 items-center justify-center overflow-hidden">
             <img
               src={FIGMA_NARROW_ARROW_SRC[direction]}

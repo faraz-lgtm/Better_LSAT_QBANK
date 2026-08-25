@@ -281,15 +281,14 @@ export function createPracticeApi(supabase: SupabaseClient) {
     const accessToken = sessionResult?.data?.session?.access_token
     const baseHeaders = (options?.headers as Record<string, string> | undefined) ?? undefined
     const headers = baseHeaders ? { ...baseHeaders } : undefined
-    if (accessToken) {
-      const nextHeaders = headers ?? {}
-      nextHeaders.Authorization = `Bearer ${accessToken}`
-      return await supabase.functions.invoke<T>(functionName, {
-        ...options,
-        headers: nextHeaders,
-      })
-    }
-    return await supabase.functions.invoke<T>(functionName, options)
+    const result = accessToken
+      ? await supabase.functions.invoke<T>(functionName, {
+          ...options,
+          headers: { ...(headers ?? {}), Authorization: `Bearer ${accessToken}` },
+        })
+      : await supabase.functions.invoke<T>(functionName, options)
+    if (result.error) await throwIfEdgeInvokeFailed(result.error)
+    return result
   }
 
   return {

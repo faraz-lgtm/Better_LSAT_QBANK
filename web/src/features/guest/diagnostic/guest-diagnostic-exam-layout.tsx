@@ -22,6 +22,7 @@ import {
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeSessionActiveDrillFooterNav } from "@/features/student/practice-session/practice-session-active-drill-footer-nav"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
+import { PracticeSessionHighlightPopover } from "@/features/student/practice-session/practice-session-highlight-popover"
 import { PracticeDrillQuestionPanel, regionKey } from "@/features/student/practice-session/practice-drill-question-panel"
 import { PracticeSessionAccessibilityPanel } from "@/features/student/practice-session/practice-session-accessibility-panel"
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
@@ -82,7 +83,7 @@ function persistAnswers(intentId: string, answers: Record<string, GuestDiagnosti
   sessionStorage.setItem(`${GUEST_DIAGNOSTIC_ANSWERS_STORAGE_PREFIX}${intentId}`, JSON.stringify(answers))
 }
 
-/** Figma `19510:22557` — diagnostic start uses the same active-drill exam shell as practice sessions. */
+/** Figma header `20268:105580` / footer `20268:107659` — LSAT default exam chrome (fixed header + footer; content swaps). */
 function GuestDiagnosticExamLayout({
   config,
   interactive = false,
@@ -249,7 +250,7 @@ function GuestDiagnosticExamLayout({
       submitLabel="Submit Test"
       buttonClassName={ACTIVE_DRILL_FINISH_BUTTON_CLASS}
       onSubmitSection={() => setSubmitModalOpen(true)}
-      onExit={() => undefined}
+      onExit={handleSaveAndExit}
     />
   )
 
@@ -307,7 +308,10 @@ function GuestDiagnosticExamLayout({
         timerProgress={timerProgress}
         showTimer={!isPostResultsMode}
         questionProgressLabel={`${safeIndex} of ${questions.length}`}
+        questionNumber={safeIndex}
+        questionCount={questions.length}
         finishButton={finishButton}
+        onClose={isPostResultsMode ? (onExitReview ?? (() => navigate(-1))) : handleSaveAndExit}
       />
 
       <div
@@ -414,8 +418,6 @@ function GuestDiagnosticExamLayout({
           onNext={
             canNavigate ? () => setQIndex((index) => Math.min(questions.length, index + 1)) : () => undefined
           }
-          onSubmit={interactive && mode === "exam" ? () => setSubmitModalOpen(true) : undefined}
-          submitLabel="Submit Test"
         />
       </footer>
 
@@ -436,6 +438,14 @@ function GuestDiagnosticExamLayout({
         onCancel={accessibilityPanel.cancelPanel}
         onPreview={accessibilityPanel.previewSettings}
         onSave={accessibilityPanel.saveSettings}
+      />
+      <PracticeSessionHighlightPopover
+        menu={highlights.selectionMenu}
+        onApplyColor={highlights.applySelectionColor}
+        onRemove={highlights.removeSelectionHighlight}
+        onToggleExpanded={highlights.toggleSelectionExpanded}
+        onDismiss={highlights.dismissSelectionMenu}
+        isAnchorConnected={highlights.isSelectionMenuAnchorConnected}
       />
       <PracticeSessionPauseModal
         open={pauseModal.open}

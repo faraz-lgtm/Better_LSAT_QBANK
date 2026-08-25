@@ -7,6 +7,7 @@ import type { DrillQuestion, DrillSessionResponse } from "@/features/student/dri
 import { ACTIVE_DRILL_BODY_GRID_CLASS, ACTIVE_DRILL_FINISH_BUTTON_CLASS, ACTIVE_DRILL_FOOTER_CLASS, ACTIVE_DRILL_PASSAGE_PANE_CLASS, ACTIVE_DRILL_PASSAGE_TEXT_CLASS, ACTIVE_DRILL_QUESTION_PANE_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeSessionActiveDrillFooterNav } from "@/features/student/practice-session/practice-session-active-drill-footer-nav"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
+import { PracticeSessionHighlightPopover } from "@/features/student/practice-session/practice-session-highlight-popover"
 import type { BlindReviewAnswerView } from "@/features/student/practice-session/practice-blind-review-answer-toggle"
 import { PracticeBlindReviewSessionHeader } from "@/features/student/practice-session/practice-blind-review-session-header"
 import {
@@ -199,12 +200,15 @@ function DrillSessionPage() {
     handleZoomScaleChange,
   )
 
+  const loadGenerationRef = useRef(0)
   const load = useCallback(async () => {
     if (!sessionId) return
+    const generation = ++loadGenerationRef.current
     setLoading(true)
     setError(null)
     try {
       const data = await practiceApi.getDrillSession(sessionId)
+      if (generation !== loadGenerationRef.current) return
       setDrill(data)
       const drillTiming = data.metadata.timing
       if (isDrillCountdownTiming(drillTiming)) {
@@ -247,14 +251,18 @@ function DrillSessionPage() {
         setQIndex(firstUnanswered >= 0 ? firstUnanswered + 1 : 1)
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load drill")
+      if (generation !== loadGenerationRef.current) return
+      setError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to load drill")
     } finally {
-      setLoading(false)
+      if (generation === loadGenerationRef.current) setLoading(false)
     }
   }, [practiceApi, sessionId, drillBlindReviewActiveKey, drillActualAnswersKey, drillBlindReviewAnswersKey, setInitialCountdown])
 
   useEffect(() => {
     void load()
+    return () => {
+      loadGenerationRef.current += 1
+    }
   }, [load])
 
   const questions = drill?.questions ?? []
@@ -379,7 +387,7 @@ function DrillSessionPage() {
         delete next[current.id]
         return next
       })
-      setError(e instanceof Error ? e.message : "Failed to submit answer")
+      setError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to submit answer")
     } finally {
       setSubmitting(false)
     }
@@ -409,7 +417,7 @@ function DrillSessionPage() {
         selectedAnswer: "",
       })
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to reset response")
+      setError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to reset response")
     } finally {
       setSubmitting(false)
     }
@@ -976,10 +984,21 @@ function DrillSessionPage() {
               ? `${safeIndex} of ${questions.length}`
               : null
           }
+          questionNumber={useActiveDrillLayout ? safeIndex : undefined}
+          questionCount={useActiveDrillLayout ? questions.length : undefined}
           finishButton={finishButton}
+          onClose={leaveDrillSession}
         />
       ) : null}
       {sessionInnerContent}
+      <PracticeSessionHighlightPopover
+        menu={highlights.selectionMenu}
+        onApplyColor={highlights.applySelectionColor}
+        onRemove={highlights.removeSelectionHighlight}
+        onToggleExpanded={highlights.toggleSelectionExpanded}
+        onDismiss={highlights.dismissSelectionMenu}
+        isAnchorConnected={highlights.isSelectionMenuAnchorConnected}
+      />
     </>
   )
 

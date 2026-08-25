@@ -138,7 +138,14 @@ function PracticeSessionQuestionNavButton({
       <div className={ACTIVE_DRILL_QUESTION_NAV_ITEM_CLASS}>
         <span className={ACTIVE_DRILL_QUESTION_NAV_FLAG_SLOT_CLASS} aria-hidden>
           {flagged ? (
-            <Flag className={ACTIVE_DRILL_QUESTION_NAV_FLAG_CLASS} strokeWidth={2} aria-hidden />
+            <img
+              src="/figma/exam-review/flag.svg"
+              alt=""
+              width={11}
+              height={13}
+              className={ACTIVE_DRILL_QUESTION_NAV_FLAG_CLASS}
+              draggable={false}
+            />
           ) : null}
         </span>
         <button

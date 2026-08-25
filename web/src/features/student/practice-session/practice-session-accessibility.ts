@@ -32,6 +32,8 @@ type PracticeSessionColorScheme = {
   choiceSelectedBorder: string
   choiceSelectedLetterBg: string
   choiceSelectedLetterFg: string
+  /** Defaults to letter fill when omitted. */
+  choiceSelectedLetterBorder?: string
   choiceUnselectedLetterBg: string
   choiceUnselectedLetterFg: string
   choiceUnselectedLetterBorder: string
@@ -56,13 +58,14 @@ const PRACTICE_SESSION_COLOR_SCHEMES: ReadonlyArray<PracticeSessionColorScheme> 
     label: "Black on white (default)",
     backgroundColor: "#ffffff",
     color: "#0d0d12",
-    choiceSelectedBg: "#f3f7ff",
+    choiceSelectedBg: "#edf3ff",
     choiceSelectedBorder: "#0d47a1",
     choiceSelectedLetterBg: "#0d47a1",
-    choiceSelectedLetterFg: "#ffffff",
+    choiceSelectedLetterFg: "#f3f7ff",
+    choiceSelectedLetterBorder: "#0b4e6e",
     choiceUnselectedLetterBg: "#ffffff",
-    choiceUnselectedLetterFg: "#0d0d12",
-    choiceUnselectedLetterBorder: "#dfe1e7",
+    choiceUnselectedLetterFg: "#000000",
+    choiceUnselectedLetterBorder: "transparent",
     panelBg: "#f6f8fa",
     panelBorder: "#dfe1e7",
     panelMutedFg: "#666d80",
@@ -187,6 +190,8 @@ function getAccessibilityCssVariables(
     ["--practice-choice-selected-border" as string]: scheme.choiceSelectedBorder,
     ["--practice-choice-selected-letter-bg" as string]: scheme.choiceSelectedLetterBg,
     ["--practice-choice-selected-letter-fg" as string]: scheme.choiceSelectedLetterFg,
+    ["--practice-choice-selected-letter-border" as string]:
+      scheme.choiceSelectedLetterBorder ?? scheme.choiceSelectedLetterBg,
     ["--practice-choice-unselected-letter-bg" as string]: scheme.choiceUnselectedLetterBg,
     ["--practice-choice-unselected-letter-fg" as string]: scheme.choiceUnselectedLetterFg,
     ["--practice-choice-unselected-letter-border" as string]: scheme.choiceUnselectedLetterBorder,

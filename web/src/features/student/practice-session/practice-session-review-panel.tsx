@@ -1,21 +1,13 @@
-import { useEffect, useMemo, useState } from "react"
-import { Check, ChevronDown } from "lucide-react"
+import { useMemo, useState } from "react"
+import { Check } from "lucide-react"
 
-import { PracticeSessionNavArrowButton } from "@/features/student/practice-session/practice-session-nav-arrow-button"
 import {
-  PRACTICE_SESSION_REVIEW_PAGE_BUTTON_ACTIVE_CLASS,
-  PRACTICE_SESSION_REVIEW_PAGE_BUTTON_ANSWERED_CLASS,
-  PRACTICE_SESSION_REVIEW_PAGE_BUTTON_CLASS,
-  PRACTICE_SESSION_REVIEW_PAGE_BUTTON_DEFAULT_CLASS,
   PRACTICE_SESSION_REVIEW_PANEL_CLASS,
   PRACTICE_SESSION_REVIEW_PANEL_CLOSE_BUTTON_CLASS,
   PRACTICE_SESSION_REVIEW_PANEL_FILTER_BOX_CHECKED_CLASS,
   PRACTICE_SESSION_REVIEW_PANEL_FILTER_BOX_CLASS,
   PRACTICE_SESSION_REVIEW_PANEL_FILTER_ITEM_CLASS,
   PRACTICE_SESSION_REVIEW_PANEL_FILTERS_CLASS,
-  PRACTICE_SESSION_REVIEW_PANEL_FOOTER_CLASS,
-  PRACTICE_SESSION_REVIEW_PANEL_FOOTER_CLUSTER_CLASS,
-  PRACTICE_SESSION_REVIEW_PANEL_FOOTER_PAGES_CLASS,
   PRACTICE_SESSION_REVIEW_PANEL_GRID_CLASS,
   PRACTICE_SESSION_REVIEW_PANEL_HEADER_CLASS,
   PRACTICE_SESSION_REVIEW_PANEL_TITLE_CLASS,
@@ -23,7 +15,7 @@ import {
   PRACTICE_SESSION_REVIEW_QUESTION_BUTTON_ANSWERED_CLASS,
   PRACTICE_SESSION_REVIEW_QUESTION_BUTTON_CLASS,
   PRACTICE_SESSION_REVIEW_QUESTION_BUTTON_DEFAULT_CLASS,
-  PRACTICE_SESSION_REVIEW_QUESTIONS_PER_PAGE,
+  PRACTICE_SESSION_REVIEW_QUESTION_BUTTON_FLAGGED_CLASS,
 } from "@/features/student/practice-session/practice-session-review-panel-styles"
 import { cn } from "@/lib/utils"
 
@@ -37,14 +29,6 @@ type PracticeSessionReviewPanelProps = {
   isFlagged: (questionId: string) => boolean
   onSelectQuestion: (questionNumber: number) => void
   onClose: () => void
-}
-
-function getReviewPageCount(questionCount: number): number {
-  return Math.max(1, Math.ceil(questionCount / PRACTICE_SESSION_REVIEW_QUESTIONS_PER_PAGE))
-}
-
-function getReviewPageForQuestion(questionNumber: number): number {
-  return Math.floor((questionNumber - 1) / PRACTICE_SESSION_REVIEW_QUESTIONS_PER_PAGE)
 }
 
 function matchesReviewFilters(input: {
@@ -67,7 +51,7 @@ function matchesReviewFilters(input: {
   })
 }
 
-/** Figma `18790:29610` — review drawer opened from side widget */
+/** Figma `20268:103207` — review drawer opened from side widget */
 function PracticeSessionReviewPanel({
   open,
   questions,
@@ -77,29 +61,16 @@ function PracticeSessionReviewPanel({
   onSelectQuestion,
   onClose,
 }: PracticeSessionReviewPanelProps) {
-  const [pageIndex, setPageIndex] = useState(() => getReviewPageForQuestion(currentIndex))
   const [filters, setFilters] = useState<Record<ReviewFilterKey, boolean>>({
     flagged: false,
     unattempted: false,
     partiallyAttempted: false,
   })
 
-  const pageCount = getReviewPageCount(questions.length)
-
-  useEffect(() => {
-    if (!open) return
-    setPageIndex(getReviewPageForQuestion(currentIndex))
-  }, [open, currentIndex])
-
-  const pageQuestions = useMemo(() => {
-    const start = pageIndex * PRACTICE_SESSION_REVIEW_QUESTIONS_PER_PAGE
-    return questions.slice(start, start + PRACTICE_SESSION_REVIEW_QUESTIONS_PER_PAGE)
-  }, [pageIndex, questions])
-
   const visibleQuestions = useMemo(() => {
-    return pageQuestions
+    return questions
       .map((question, offset) => {
-        const questionNumber = pageIndex * PRACTICE_SESSION_REVIEW_QUESTIONS_PER_PAGE + offset + 1
+        const questionNumber = offset + 1
         const answered = Boolean(answersByQuestion[question.id])
         const flagged = isFlagged(question.id)
         return {
@@ -118,7 +89,7 @@ function PracticeSessionReviewPanel({
         }
       })
       .filter((entry) => entry.visible)
-  }, [answersByQuestion, currentIndex, filters, isFlagged, pageIndex, pageQuestions])
+  }, [answersByQuestion, currentIndex, filters, isFlagged, questions])
 
   if (!open) return null
 
@@ -141,7 +112,16 @@ function PracticeSessionReviewPanel({
           aria-label="Close review"
           onClick={onClose}
         >
-          <ChevronDown className="size-5" strokeWidth={2} aria-hidden />
+          <span className="relative inline-flex size-6 shrink-0 overflow-clip" aria-hidden>
+            <img
+              src="/figma/exam-review/remove-rectangle.svg"
+              alt=""
+              width={24}
+              height={24}
+              className="size-full max-w-none object-contain"
+              draggable={false}
+            />
+          </span>
         </button>
       </div>
 
@@ -150,7 +130,6 @@ function PracticeSessionReviewPanel({
           [
             ["flagged", "Flagged"],
             ["unattempted", "Unattempted"],
-            ["partiallyAttempted", "Partially Attempted"],
           ] as const
         ).map(([key, label]) => {
           const checked = filters[key]
@@ -178,78 +157,45 @@ function PracticeSessionReviewPanel({
       </div>
 
       <div className={PRACTICE_SESSION_REVIEW_PANEL_GRID_CLASS}>
-        <div className="practice-session-question-nav-grid w-full">
-          {visibleQuestions.map(({ question, questionNumber, answered, flagged }) => {
-            const active = questionNumber === currentIndex
-            return (
-              <button
-                key={question.id}
-                type="button"
-                className={cn(
-                  PRACTICE_SESSION_REVIEW_QUESTION_BUTTON_CLASS,
-                  active
-                    ? PRACTICE_SESSION_REVIEW_QUESTION_BUTTON_ACTIVE_CLASS
-                    : answered
-                      ? PRACTICE_SESSION_REVIEW_QUESTION_BUTTON_ANSWERED_CLASS
-                      : PRACTICE_SESSION_REVIEW_QUESTION_BUTTON_DEFAULT_CLASS,
-                )}
-                aria-current={active ? "true" : undefined}
-                aria-label={
-                  flagged ? `Question ${questionNumber}, flagged` : `Question ${questionNumber}`
-                }
-                onClick={() => handleSelectQuestion(questionNumber)}
-              >
-                {questionNumber}
-              </button>
-            )
-          })}
-        </div>
+        {visibleQuestions.map(({ question, questionNumber, answered, flagged }) => {
+          const active = questionNumber === currentIndex
+          return (
+            <button
+              key={question.id}
+              type="button"
+              className={cn(
+                PRACTICE_SESSION_REVIEW_QUESTION_BUTTON_CLASS,
+                flagged && PRACTICE_SESSION_REVIEW_QUESTION_BUTTON_FLAGGED_CLASS,
+                active
+                  ? PRACTICE_SESSION_REVIEW_QUESTION_BUTTON_ACTIVE_CLASS
+                  : answered
+                    ? PRACTICE_SESSION_REVIEW_QUESTION_BUTTON_ANSWERED_CLASS
+                    : PRACTICE_SESSION_REVIEW_QUESTION_BUTTON_DEFAULT_CLASS,
+                answered && !active && "practice-session-review-panel__question-btn--answered",
+              )}
+              aria-current={active ? "true" : undefined}
+              aria-label={
+                flagged ? `Question ${questionNumber}, flagged` : `Question ${questionNumber}`
+              }
+              onClick={() => handleSelectQuestion(questionNumber)}
+            >
+              {flagged ? (
+                <img
+                  src="/figma/exam-review/flag.svg"
+                  alt=""
+                  width={11}
+                  height={13}
+                  className="h-[13px] w-[11px] max-w-none shrink-0"
+                  draggable={false}
+                />
+              ) : null}
+              <span>{questionNumber}</span>
+            </button>
+          )
+        })}
       </div>
-
-      {pageCount > 1 ? (
-        <footer className={PRACTICE_SESSION_REVIEW_PANEL_FOOTER_CLASS}>
-          <div className={PRACTICE_SESSION_REVIEW_PANEL_FOOTER_CLUSTER_CLASS}>
-            <PracticeSessionNavArrowButton
-              direction="prev"
-              disabled={pageIndex <= 0}
-              onClick={() => setPageIndex((page) => Math.max(0, page - 1))}
-            />
-            <div className={PRACTICE_SESSION_REVIEW_PANEL_FOOTER_PAGES_CLASS}>
-              {Array.from({ length: pageCount }, (_, i) => {
-                const pageNumber = i + 1
-                const active = i === pageIndex
-                const visited = i < pageIndex
-                return (
-                  <button
-                    key={pageNumber}
-                    type="button"
-                    className={cn(
-                      PRACTICE_SESSION_REVIEW_PAGE_BUTTON_CLASS,
-                      active
-                        ? PRACTICE_SESSION_REVIEW_PAGE_BUTTON_ACTIVE_CLASS
-                        : visited
-                          ? PRACTICE_SESSION_REVIEW_PAGE_BUTTON_ANSWERED_CLASS
-                          : PRACTICE_SESSION_REVIEW_PAGE_BUTTON_DEFAULT_CLASS,
-                    )}
-                    aria-current={active ? "true" : undefined}
-                    aria-label={`Review page ${pageNumber}`}
-                    onClick={() => setPageIndex(i)}
-                  >
-                    {pageNumber}
-                  </button>
-                )
-              })}
-            </div>
-            <PracticeSessionNavArrowButton
-              direction="next"
-              disabled={pageIndex >= pageCount - 1}
-              onClick={() => setPageIndex((page) => Math.min(pageCount - 1, page + 1))}
-            />
-          </div>
-        </footer>
-      ) : null}
     </section>
   )
 }
 
-export { PracticeSessionReviewPanel, getReviewPageCount, matchesReviewFilters }
+export { PracticeSessionReviewPanel, matchesReviewFilters }

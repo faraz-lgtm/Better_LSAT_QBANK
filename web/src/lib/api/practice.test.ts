@@ -351,6 +351,20 @@ describe("createPracticeApi", () => {
     await expect(api.getDrillSession("section-sess-1")).rejects.toThrow("Session is not a drill")
   })
 
+  it("submitAnswer surfaces edge function error messages instead of the generic non-2xx text", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: null,
+      error: new FunctionsHttpError(
+        new Response(JSON.stringify({ error: "Question does not belong to this drill session" }), { status: 400 }),
+      ),
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+
+    await expect(
+      api.submitAnswer({ sessionId: "s1", questionId: "q1", selectedAnswer: "A" }),
+    ).rejects.toThrow("Question does not belong to this drill session")
+  })
+
   it("getDrillPoolStats invokes practice-drill-pool-stats", async () => {
     const invoke = vi.fn().mockResolvedValue({
       data: { selectedCount: 10, totalCount: 100 },

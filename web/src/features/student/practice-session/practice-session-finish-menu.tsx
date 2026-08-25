@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
-import { ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react"
+import { ChevronDown, ChevronUp } from "lucide-react"
 
 import {
   ACTIVE_DRILL_HEADER_MORE_BUTTON_CLASS,
@@ -12,6 +12,8 @@ import {
   FINISH_MENU_WIDTH_PX,
   SESSION_FINISH_BUTTON_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import { PracticeSessionExamMorePanel } from "@/features/student/practice-session/practice-session-exam-more-panel"
+import { ExamHeaderMoreIcon } from "@/features/student/practice-session/practice-session-header-icons"
 import {
   FinishMenuSaveExitIcon,
   FinishMenuSubmitIcon,
@@ -34,6 +36,8 @@ type PracticeSessionFinishMenuProps = {
   iconTrigger?: boolean
   onSubmitSection: () => void
   onExit: () => void
+  /** Exam more panel — defaults to `onExit` when omitted. */
+  onExitWithoutSaving?: () => void
 }
 
 function PracticeSessionFinishMenu({
@@ -47,25 +51,29 @@ function PracticeSessionFinishMenu({
   iconTrigger = false,
   onSubmitSection,
   onExit,
+  onExitWithoutSaving,
 }: PracticeSessionFinishMenuProps) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
+  const discardExit = onExitWithoutSaving ?? onExit
 
   const closedTriggerClassName = buttonClassName ?? SESSION_FINISH_BUTTON_CLASS
   const label = finishing ? "Finishing…" : (finishLabel ?? "Finish")
 
   useLayoutEffect(() => {
     if (!open) return
-    document.documentElement.classList.add("practice-finish-menu-open")
+    const className = iconTrigger ? "practice-exam-more-open" : "practice-finish-menu-open"
+    document.documentElement.classList.add(className)
     return () => {
-      document.documentElement.classList.remove("practice-finish-menu-open")
+      document.documentElement.classList.remove(className)
     }
-  }, [open])
+  }, [open, iconTrigger])
 
   useEffect(() => {
     if (!open) return
     function handlePointerDown(event: PointerEvent) {
+      if (iconTrigger) return
       if (!(event.target instanceof Node)) return
       if (containerRef.current?.contains(event.target)) return
       if (menuRef.current?.contains(event.target)) return
@@ -80,7 +88,7 @@ function PracticeSessionFinishMenu({
       document.removeEventListener("pointerdown", handlePointerDown)
       document.removeEventListener("keydown", handleKey)
     }
-  }, [open])
+  }, [open, iconTrigger])
 
   const triggerContent = (isOpen: boolean) => (
     <>
@@ -93,31 +101,51 @@ function PracticeSessionFinishMenu({
     </>
   )
 
+  if (iconTrigger) {
+    return (
+      <div ref={containerRef} className="relative h-[52px] w-[54px] shrink-0">
+        <button
+          type="button"
+          disabled={disabled || finishing}
+          className={ACTIVE_DRILL_HEADER_MORE_BUTTON_CLASS}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          aria-label="More options"
+          onClick={() => setOpen((value) => !value)}
+        >
+          <ExamHeaderMoreIcon />
+        </button>
+        {open ? (
+          <PracticeSessionExamMorePanel
+            disabled={disabled}
+            finishing={finishing}
+            exitOnly={exitOnly}
+            onClose={() => setOpen(false)}
+            onSubmit={onSubmitSection}
+            onSaveAndExit={onExit}
+            onExitWithoutSaving={discardExit}
+          />
+        ) : null}
+      </div>
+    )
+  }
+
   return (
     <div
       ref={containerRef}
-      className={cn("relative shrink-0", iconTrigger ? "h-[52px] w-[52px]" : "h-[52px]")}
-      style={iconTrigger ? undefined : { width: FINISH_MENU_WIDTH_PX }}
+      className="relative h-[52px] shrink-0"
+      style={{ width: FINISH_MENU_WIDTH_PX }}
     >
       {!open ? (
         <button
           type="button"
           disabled={disabled || finishing}
-          className={cn(
-            iconTrigger
-              ? ACTIVE_DRILL_HEADER_MORE_BUTTON_CLASS
-              : cn("inline-flex w-full items-center justify-between gap-2", closedTriggerClassName),
-          )}
+          className={cn("inline-flex w-full items-center justify-between gap-2", closedTriggerClassName)}
           aria-haspopup="menu"
           aria-expanded={false}
-          aria-label={iconTrigger ? "More options" : undefined}
           onClick={() => setOpen(true)}
         >
-          {iconTrigger ? (
-            <MoreHorizontal className="size-5" strokeWidth={2} aria-hidden />
-          ) : (
-            triggerContent(false)
-          )}
+          {triggerContent(false)}
         </button>
       ) : (
         <div

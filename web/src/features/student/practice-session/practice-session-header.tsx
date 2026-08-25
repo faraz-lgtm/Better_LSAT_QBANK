@@ -1,10 +1,26 @@
 import type { ReactNode } from "react"
+import { Play } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
 import {
   ACTIVE_DRILL_FIND_TEXT_INPUT_CLASS,
+  ACTIVE_DRILL_HEADER_CLOSE_BUTTON_CLASS,
+  ACTIVE_DRILL_HEADER_ICON_BUTTON_CLASS,
+  ACTIVE_DRILL_HEADER_LEFT_CLASS,
   ACTIVE_DRILL_HEADER_PROGRESS_CLASS,
+  ACTIVE_DRILL_HEADER_PROGRESS_FILL_CLASS,
+  ACTIVE_DRILL_HEADER_PROGRESS_TRACK_CLASS,
+  ACTIVE_DRILL_HEADER_RIGHT_CLASS,
+  ACTIVE_DRILL_HEADER_ROW_CLASS,
+  ACTIVE_DRILL_HEADER_SHELL_CLASS,
+  ACTIVE_DRILL_HEADER_STACK_CLASS,
+  ACTIVE_DRILL_HEADER_TITLE_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import { resolveExamProgress } from "@/features/student/practice-session/practice-session-exam-progress"
+import {
+  ExamHeaderCloseIcon,
+  ExamHeaderPauseIcon,
+} from "@/features/student/practice-session/practice-session-header-icons"
 import { PracticeSessionTimer } from "@/features/student/practice-session/practice-session-timer"
 import { PracticeSessionToolbar } from "@/features/student/practice-session/practice-session-toolbar"
 import type { HighlightColor, PracticeSessionVariant, PracticeToolMode } from "@/features/student/practice-session/practice-session-types"
@@ -38,7 +54,10 @@ type PracticeSessionHeaderProps = {
   showTimer?: boolean
   titleClassName?: string
   questionProgressLabel?: string | null
+  questionNumber?: number
+  questionCount?: number
   finishButton: ReactNode
+  onClose?: () => void
 }
 
 function PracticeSessionHeader({
@@ -69,64 +88,94 @@ function PracticeSessionHeader({
   showTimer = true,
   titleClassName,
   questionProgressLabel,
+  questionNumber,
+  questionCount,
   finishButton,
+  onClose,
 }: PracticeSessionHeaderProps) {
   const isActiveDrill = variant === "active-drill"
+  const examProgress = resolveExamProgress({
+    current: questionNumber,
+    total: questionCount,
+    label: questionProgressLabel,
+  })
+  const examProgressPct = examProgress.ratio * 100
 
   if (isActiveDrill) {
     return (
-      <header className="practice-session-header practice-session-header--active-drill flex h-20 shrink-0 items-center overflow-hidden rounded-none border-b border-[#dfe1e7] bg-white px-6 py-3">
-        <div className="flex w-full min-w-0 items-center justify-between gap-4 overflow-hidden lg:gap-6">
-          <div className="practice-session-scroll-hidden flex min-w-0 flex-1 items-center gap-4 overflow-x-auto lg:gap-6">
-            <p
-              className={cn(
-                "m-0 max-w-[220px] shrink-0 truncate font-bold leading-[1.3] text-[#062357] lg:max-w-[280px]",
-                titleClassName ?? "text-[20px]",
-              )}
-              title={title}
-            >
-              {title}
-            </p>
-            <input
-              type="search"
-              placeholder="Find Text, Type Here"
-              value={findQuery}
-              onChange={(e) => onFindQueryChange(e.target.value)}
-              className={ACTIVE_DRILL_FIND_TEXT_INPUT_CLASS}
-            />
-            <PracticeSessionToolbar
-              variant={variant}
-              activeColor={activeColor}
-              toolMode={toolMode}
-              fontScale={fontScale}
-              lineSpacing={lineSpacing}
-              boldEnabled={boldEnabled}
-              italicEnabled={italicEnabled}
-              onSelectColor={onSelectColor}
-              onEraser={onEraser}
-              onUnderline={onUnderline}
-              onFontSize={onFontSize}
-              onLineSpacing={onLineSpacing}
-              onToggleBold={onToggleBold}
-              onToggleItalic={onToggleItalic}
-            />
-          </div>
-          <div className="flex shrink-0 items-center gap-4 lg:gap-6">
-            {questionProgressLabel ? (
-              <span className={ACTIVE_DRILL_HEADER_PROGRESS_CLASS}>{questionProgressLabel}</span>
-            ) : null}
-            {showTimer ? (
-              <PracticeSessionTimer
-                label={timerLabel}
-                displaySeconds={timerDisplaySeconds}
-                paused={timerPaused}
-                onPauseRequest={onTimerPauseRequest}
-                onReset={onResetTimer}
-                progress={timerProgress}
-                displayClassName={timerDisplayClassName}
+      <header className={ACTIVE_DRILL_HEADER_SHELL_CLASS}>
+        <div className={ACTIVE_DRILL_HEADER_STACK_CLASS}>
+          <div className={ACTIVE_DRILL_HEADER_ROW_CLASS}>
+            <div className={ACTIVE_DRILL_HEADER_LEFT_CLASS}>
+              {onClose ? (
+                <button
+                  type="button"
+                  className={ACTIVE_DRILL_HEADER_CLOSE_BUTTON_CLASS}
+                  aria-label="Close exam"
+                  onClick={onClose}
+                >
+                  <ExamHeaderCloseIcon />
+                </button>
+              ) : null}
+              <p className={cn(ACTIVE_DRILL_HEADER_TITLE_CLASS, titleClassName)} title={title}>
+                {title}
+              </p>
+              <input
+                type="search"
+                placeholder="Find Text, Type Here"
+                value={findQuery}
+                onChange={(e) => onFindQueryChange(e.target.value)}
+                className={ACTIVE_DRILL_FIND_TEXT_INPUT_CLASS}
               />
-            ) : null}
-            {finishButton}
+            </div>
+            <div className={ACTIVE_DRILL_HEADER_RIGHT_CLASS}>
+              {questionProgressLabel ? (
+                <span className={ACTIVE_DRILL_HEADER_PROGRESS_CLASS}>{questionProgressLabel}</span>
+              ) : null}
+              {showTimer ? (
+                <PracticeSessionTimer
+                  layout="inline"
+                  label={timerLabel}
+                  displaySeconds={timerDisplaySeconds}
+                  paused={timerPaused}
+                  onPauseRequest={onTimerPauseRequest}
+                  onReset={onResetTimer}
+                  progress={timerProgress}
+                  displayClassName={timerDisplayClassName}
+                />
+              ) : null}
+              {showTimer ? (
+                <button
+                  type="button"
+                  className={ACTIVE_DRILL_HEADER_ICON_BUTTON_CLASS}
+                  aria-label={timerPaused ? "Section paused" : "Pause section timer"}
+                  onClick={onTimerPauseRequest}
+                >
+                  {timerPaused ? (
+                    <Play className="size-6 text-[#6A7282]" strokeWidth={1.5} aria-hidden />
+                  ) : (
+                    <ExamHeaderPauseIcon />
+                  )}
+                </button>
+              ) : null}
+              {finishButton}
+            </div>
+          </div>
+          <div
+            className={ACTIVE_DRILL_HEADER_PROGRESS_TRACK_CLASS}
+            role="progressbar"
+            aria-label="Exam progress"
+            aria-valuemin={0}
+            aria-valuemax={examProgress.total || 100}
+            aria-valuenow={examProgress.current}
+            aria-valuetext={
+              examProgress.total > 0 ? `${examProgress.current} of ${examProgress.total}` : "No questions"
+            }
+          >
+            <div
+              className={ACTIVE_DRILL_HEADER_PROGRESS_FILL_CLASS}
+              style={{ width: `${examProgressPct}%` }}
+            />
           </div>
         </div>
       </header>

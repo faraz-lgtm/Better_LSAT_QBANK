@@ -1,6 +1,60 @@
 import type { SVGProps } from "react"
 
+import { cn } from "@/lib/utils"
+
 type SideWidgetIconProps = SVGProps<SVGSVGElement>
+
+/** Figma `20268:102762` — exam side-widget glyphs */
+const EXAM_SIDE_WIDGET_FIGMA = "/figma/exam-side-widget"
+
+function SideWidgetFigmaIcon({
+  src,
+  size,
+  glyphWidth,
+  glyphHeight,
+  rotate,
+  className,
+}: {
+  src: string
+  size: 20 | 24
+  glyphWidth?: number
+  glyphHeight?: number
+  rotate?: "90" | "270"
+  className?: string
+}) {
+  const hasInset = glyphWidth != null && glyphHeight != null
+  return (
+    <span
+      className={cn(
+        "relative inline-flex shrink-0 overflow-clip",
+        rotate === "90" && "rotate-90",
+        rotate === "270" && "rotate-[270deg]",
+        className,
+      )}
+      style={{ width: size, height: size }}
+      aria-hidden
+    >
+      <img
+        src={src}
+        alt=""
+        width={glyphWidth ?? size}
+        height={glyphHeight ?? size}
+        className={cn("max-w-none", hasInset ? "absolute" : "size-full object-contain")}
+        style={
+          hasInset
+            ? {
+                width: glyphWidth,
+                height: glyphHeight,
+                left: (size - glyphWidth) / 2,
+                top: (size - glyphHeight) / 2,
+              }
+            : undefined
+        }
+        draggable={false}
+      />
+    </span>
+  )
+}
 
 /** Full size — four arrows pointing outward to corners */
 function SideWidgetFullScreenIcon({ className, ...props }: SideWidgetIconProps) {
@@ -46,71 +100,60 @@ function SideWidgetMedSizeIcon({ className, ...props }: SideWidgetIconProps) {
   )
 }
 
-/** Review — three list rows with leading squares */
-function SideWidgetReviewIcon({ className, ...props }: SideWidgetIconProps) {
+/** Figma `20268:102762` — expand/collapse (download-circle-01, rotated) */
+function SideWidgetCollapseDockIcon({
+  className,
+  expanded = false,
+}: SideWidgetIconProps & { expanded?: boolean }) {
   return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden className={className} {...props}>
-      <rect x="3.25" y="4" width="2.75" height="2.75" rx="0.4" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M8.5 5.375H16.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <rect x="3.25" y="8.625" width="2.75" height="2.75" rx="0.4" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M8.5 10H16.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <rect x="3.25" y="13.25" width="2.75" height="2.75" rx="0.4" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M8.5 14.625H16.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
+    <SideWidgetFigmaIcon
+      src={`${EXAM_SIDE_WIDGET_FIGMA}/download-circle-01.svg`}
+      size={20}
+      rotate={expanded ? "270" : "90"}
+      className={className}
+    />
   )
 }
 
-/** Accessibility — figure with outstretched arms and three dots below */
-function SideWidgetAccessibilityIcon({ className, ...props }: SideWidgetIconProps) {
+/** Figma `20268:102762` — review / menu-line-horizontal */
+function SideWidgetReviewIcon({ className }: SideWidgetIconProps) {
   return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden className={className} {...props}>
-      <circle cx="10" cy="3.5" r="1.5" stroke="currentColor" strokeWidth="1.5" />
-      <path
-        d="M4.5 7H15.5M10 5.5V11M7 15L10 11L13 15"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M6 17.25H7.25M9.35 17.25H10.65M12.75 17.25H14"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
+    <SideWidgetFigmaIcon
+      src={`${EXAM_SIDE_WIDGET_FIGMA}/menu-line-horizontal.svg`}
+      size={24}
+      glyphWidth={11.5}
+      glyphHeight={9.5}
+      className={className}
+    />
   )
 }
 
-/** Flag — outline waving flag; parent may apply `fill-current` when active */
-function SideWidgetFlagIcon({ className, ...props }: SideWidgetIconProps) {
+/** Figma `20268:102762` — accessibility */
+function SideWidgetAccessibilityIcon({ className }: SideWidgetIconProps) {
   return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden className={className} {...props}>
-      <path d="M5 3V17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <path
-        d="M5 3.75C5 3.75 6.15 3.1 8.4 3.1C10.65 3.1 11.6 4.35 14 4.35C15.05 4.35 15.85 4.1 16.25 3.9V10.85C15.85 11.05 15.05 11.3 14 11.3C11.6 11.3 10.65 10.05 8.4 10.05C6.15 10.05 5 10.7 5 10.7V3.75Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <SideWidgetFigmaIcon
+      src={`${EXAM_SIDE_WIDGET_FIGMA}/accessibility.svg`}
+      size={24}
+      className={className}
+    />
   )
 }
 
-/** Response masking — eye with slash */
-function SideWidgetResponseMaskingIcon({ className, ...props }: SideWidgetIconProps) {
+/** Figma `20268:102762` — flag */
+function SideWidgetFlagIcon({ className }: SideWidgetIconProps) {
   return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden className={className} {...props}>
-      <path
-        d="M3.5 10C4.95 7.2 7.25 5.75 10 5.75C12.75 5.75 15.05 7.2 16.5 10C15.05 12.8 12.75 14.25 10 14.25C7.25 14.25 4.95 12.8 3.5 10Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="10" cy="10" r="1.85" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M4 4.5L16 15.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
+    <SideWidgetFigmaIcon src={`${EXAM_SIDE_WIDGET_FIGMA}/flag.svg`} size={20} className={className} />
+  )
+}
+
+/** Figma `20268:102762` — response masking / eye-slash */
+function SideWidgetResponseMaskingIcon({ className }: SideWidgetIconProps) {
+  return (
+    <SideWidgetFigmaIcon
+      src={`${EXAM_SIDE_WIDGET_FIGMA}/eye-slash.svg`}
+      size={20}
+      className={className}
+    />
   )
 }
 
@@ -148,6 +191,7 @@ function SideWidgetOpenMenuIcon({ className, ...props }: SideWidgetIconProps) {
 
 export {
   SideWidgetAccessibilityIcon,
+  SideWidgetCollapseDockIcon,
   SideWidgetCollapseMenuIcon,
   SideWidgetFlagIcon,
   SideWidgetFullScreenIcon,

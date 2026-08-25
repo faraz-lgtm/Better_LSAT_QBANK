@@ -11,7 +11,7 @@ function PracticeSessionResetResponseButton({
   className,
 }: PracticeSessionResetResponseButtonProps) {
   return (
-    <div className={cn("flex w-full justify-end pt-2", className)}>
+    <div className={cn("flex w-full justify-end", className)}>
       <button
         type="button"
         className={ACTIVE_DRILL_RESET_RESPONSE_BUTTON_CLASS}
