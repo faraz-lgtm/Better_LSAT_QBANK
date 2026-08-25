@@ -35,6 +35,8 @@ type PrepCourseModulePanelProps = {
   onToggleSection: (sectionId: string) => void
   onExpandModuleSections: () => void
   onToggleModuleBookmark: (next: boolean) => void
+  moduleLocked?: boolean
+  onLockedLessonClick?: () => void
 }
 
 function moduleLessons(mod: PrepCourseModule): PrepLesson[] {
@@ -63,6 +65,8 @@ function PrepCourseModulePanel({
   onToggleSection,
   onExpandModuleSections,
   onToggleModuleBookmark,
+  moduleLocked = false,
+  onLockedLessonClick,
 }: PrepCourseModulePanelProps) {
   const lessons = moduleLessons(module)
   const lessonCount = moduleLessonCount(module)
@@ -185,6 +189,8 @@ function PrepCourseModulePanel({
                 active={lesson.slug === activeLessonSlug}
                 completed={completedLessonSlugs.has(lesson.slug)}
                 bookmarked={bookmarkedLessonSlugs.has(lesson.slug)}
+                locked={moduleLocked}
+                onLockedClick={onLockedLessonClick}
                 onToggleBookmark={
                   onToggleLessonBookmark
                     ? (next) => onToggleLessonBookmark(lesson.slug, next)
@@ -207,6 +213,8 @@ function PrepCourseModulePanel({
                 bookmarkedLessonSlugs={bookmarkedLessonSlugs}
                 onToggleLessonBookmark={onToggleLessonBookmark}
                 onToggle={() => onToggleSection(section.id)}
+                lessonsLocked={moduleLocked}
+                onLockedLessonClick={onLockedLessonClick}
               />
             ))
           : null}

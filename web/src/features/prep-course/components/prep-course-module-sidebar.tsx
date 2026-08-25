@@ -1,3 +1,7 @@
+import {
+  PREP_COURSE_FIGMA,
+  PrepCourseFigmaIcon,
+} from "@/features/prep-course/components/prep-course-figma-icons"
 import { ProgressRing } from "@/features/prep-course/components/prep-course-lesson-sidebar"
 import {
   countCompletedLessons,
@@ -12,7 +16,9 @@ type PrepCourseModuleSidebarProps = {
   modules: PrepCourseModule[]
   selectedModuleId: string | null
   completedLessonSlugs: Set<string>
+  lockedModuleIds?: ReadonlySet<string>
   onSelectModule: (moduleId: string) => void
+  onLockedModuleClick?: (moduleId: string) => void
 }
 
 function moduleLessons(mod: PrepCourseModule): PrepLesson[] {
@@ -23,7 +29,9 @@ function PrepCourseModuleSidebar({
   modules,
   selectedModuleId,
   completedLessonSlugs,
+  lockedModuleIds,
   onSelectModule,
+  onLockedModuleClick,
 }: PrepCourseModuleSidebarProps) {
   return (
     <aside
@@ -36,6 +44,7 @@ function PrepCourseModuleSidebar({
       <ul className="practice-session-pane--scroll-visible min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden py-3 pr-3">
         {modules.map((mod) => {
           const isActive = mod.id === selectedModuleId
+          const isLocked = lockedModuleIds?.has(mod.id) ?? false
           const lessons = moduleLessons(mod)
           const lessonCount = moduleLessonCount(mod)
           const completedCount = countCompletedLessons(lessons, completedLessonSlugs)
@@ -46,7 +55,14 @@ function PrepCourseModuleSidebar({
             <li key={mod.id}>
               <button
                 type="button"
-                onClick={() => onSelectModule(mod.id)}
+                onClick={() => {
+                  if (isLocked) {
+                    onLockedModuleClick?.(mod.id)
+                    return
+                  }
+                  onSelectModule(mod.id)
+                }}
+                aria-label={isLocked ? `${mod.title} (locked)` : undefined}
                 className={cn(
                   "flex h-[62px] w-full items-center gap-3 rounded-[16px] p-3 text-left transition-colors",
                   isActive
@@ -54,11 +70,17 @@ function PrepCourseModuleSidebar({
                     : "hover:bg-white/60",
                 )}
               >
-                <ProgressRing
-                  value={progressPercent}
-                  size="sm"
-                  ringBg={isActive ? "var(--primary-25)" : "var(--primary-0)"}
-                />
+                {isLocked ? (
+                  <span className="flex size-9 shrink-0 items-center justify-center" aria-hidden>
+                    <PrepCourseFigmaIcon src={`${PREP_COURSE_FIGMA}/icon-lock.svg`} className="size-6" />
+                  </span>
+                ) : (
+                  <ProgressRing
+                    value={progressPercent}
+                    size="sm"
+                    ringBg={isActive ? "var(--primary-25)" : "var(--primary-0)"}
+                  />
+                )}
                 <div className="min-w-0 flex-1">
                   <p
                     className={cn(
@@ -73,7 +95,7 @@ function PrepCourseModuleSidebar({
                     {lessonCount} {lessonCount === 1 ? "Lesson" : "Lessons"}
                   </p>
                 </div>
-                {statusLabel && !isActive ? (
+                {statusLabel && !isActive && !isLocked ? (
                   <span className="w-[46px] shrink-0 text-center text-xs font-normal leading-[1.5] tracking-[0.24px] text-[color:var(--primary-100)]">
                     {statusLabel === "Not Started" ? (
                       <>

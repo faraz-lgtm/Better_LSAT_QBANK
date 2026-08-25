@@ -1,7 +1,8 @@
 import { assertEquals, assertRejects } from 'jsr:@std/assert@1'
+import { FREE_PREP_COURSE_SLUG } from '../_shared/prep-course-free-access.ts'
 import type { PrepLessonType } from '../_shared/prep-lesson-type.ts'
 import type { PrepCourseRow, PrepLessonRow, ProfileRoleRow } from './prep-course.repository.ts'
-import { createPrepCourseService } from './prep-course.service.ts'
+import { createPrepCourseService, EntitlementError } from './prep-course.service.ts'
 
 function mockRepo(
   overrides: Partial<{
@@ -527,4 +528,186 @@ Deno.test('prep-course service blocks access when entitlement enforcement is ena
     Error,
     'LSAC account must be linked',
   )
+})
+
+const STRIPE_TEST_ENV: Record<string, string> = {
+  STRIPE_SECRET_KEY_TEST: 'sk_test',
+  STRIPE_WEBHOOK_SECRET_TEST: 'whsec',
+  STRIPE_PUBLISHABLE_KEY_TEST: 'pk_test',
+  STRIPE_PRICE_ID_CORE_TEST: 'price_core_test',
+  STRIPE_PRICE_ID_LIVE_MONTHLY_TEST: 'price_live_test',
+  STRIPE_PRICE_ID_LSAC_YEARLY_TEST: 'price_lsac_test',
+  SUPABASE_URL: 'https://abc.supabase.co',
+}
+
+async function withStripeTestEnv(run: () => Promise<void>): Promise<void> {
+  const previous = { ...Deno.env.toObject() }
+  for (const [key, value] of Object.entries(STRIPE_TEST_ENV)) {
+    Deno.env.set(key, value)
+  }
+  try {
+    await run()
+  } finally {
+    for (const key of Object.keys(STRIPE_TEST_ENV)) {
+      Deno.env.delete(key)
+    }
+    for (const [key, value] of Object.entries(previous)) {
+      if (value != null) Deno.env.set(key, value)
+    }
+  }
+}
+
+function freeAccessLessons() {
+  const kickoffLesson: PrepLessonRow = {
+    id: 'lesson-kickoff',
+    course_id: 'course-1',
+    section_id: 'section-kickoff',
+    slug: 'welcome-to-the-arena',
+    title: 'Welcome to the Arena',
+    lesson_type: 'video_text',
+    sort_order: 1,
+    summary: null,
+    duration_minutes: 1,
+    video_url: null,
+    text_content: '<p>Welcome</p>',
+    is_published: true,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  }
+  const lockedLesson: PrepLessonRow = {
+    ...kickoffLesson,
+    id: 'lesson-anatomy',
+    section_id: 'section-anatomy',
+    slug: 'argument-basics',
+    title: 'Argument Basics',
+    sort_order: 1,
+  }
+  return { kickoffLesson, lockedLesson }
+}
+
+Deno.test('prep-course getLesson allows unpaid students to open The Kickoff', async () => {
+  await withStripeTestEnv(async () => {
+    const { kickoffLesson, lockedLesson } = freeAccessLessons()
+    const service = createPrepCourseService({
+      repository: mockRepo({
+        getPublishedCourseBySlug: async () => ({
+          id: 'course-1',
+          slug: FREE_PREP_COURSE_SLUG,
+          title: 'LSAT Essential Course',
+          description: null,
+          is_published: true,
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        }),
+        getPublishedLessonBySlug: async (_courseId, slug) =>
+          slug === kickoffLesson.slug ? kickoffLesson : slug === lockedLesson.slug ? lockedLesson : null,
+        listPublishedCurriculum: async () => ({
+          modules: [
+            {
+              id: 'kickoff',
+              course_id: 'course-1',
+              title: 'The Kickoff',
+              sort_order: 1,
+              duration_minutes: null,
+              sections: [
+                {
+                  id: 'section-kickoff',
+                  module_id: 'kickoff',
+                  title: 'General',
+                  sort_order: 1,
+                  duration_minutes: null,
+                  lessons: [kickoffLesson],
+                },
+              ],
+            },
+            {
+              id: 'anatomy',
+              course_id: 'course-1',
+              title: 'The Anatomy of an Argument',
+              sort_order: 2,
+              duration_minutes: null,
+              sections: [
+                {
+                  id: 'section-anatomy',
+                  module_id: 'anatomy',
+                  title: 'General',
+                  sort_order: 1,
+                  duration_minutes: null,
+                  lessons: [lockedLesson],
+                },
+              ],
+            },
+          ],
+        }),
+      }),
+      hasActiveSubscription: async () => false,
+    })
+    const out = await service.getLesson('user-1', FREE_PREP_COURSE_SLUG, 'welcome-to-the-arena')
+    assertEquals(out.lesson.slug, 'welcome-to-the-arena')
+  })
+})
+
+Deno.test('prep-course getLesson blocks unpaid students from later modules', async () => {
+  await withStripeTestEnv(async () => {
+    const { kickoffLesson, lockedLesson } = freeAccessLessons()
+    const service = createPrepCourseService({
+      repository: mockRepo({
+        getPublishedCourseBySlug: async () => ({
+          id: 'course-1',
+          slug: FREE_PREP_COURSE_SLUG,
+          title: 'LSAT Essential Course',
+          description: null,
+          is_published: true,
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        }),
+        getPublishedLessonBySlug: async (_courseId, slug) =>
+          slug === kickoffLesson.slug ? kickoffLesson : slug === lockedLesson.slug ? lockedLesson : null,
+        listPublishedCurriculum: async () => ({
+          modules: [
+            {
+              id: 'kickoff',
+              course_id: 'course-1',
+              title: 'The Kickoff',
+              sort_order: 1,
+              duration_minutes: null,
+              sections: [
+                {
+                  id: 'section-kickoff',
+                  module_id: 'kickoff',
+                  title: 'General',
+                  sort_order: 1,
+                  duration_minutes: null,
+                  lessons: [kickoffLesson],
+                },
+              ],
+            },
+            {
+              id: 'anatomy',
+              course_id: 'course-1',
+              title: 'The Anatomy of an Argument',
+              sort_order: 2,
+              duration_minutes: null,
+              sections: [
+                {
+                  id: 'section-anatomy',
+                  module_id: 'anatomy',
+                  title: 'General',
+                  sort_order: 1,
+                  duration_minutes: null,
+                  lessons: [lockedLesson],
+                },
+              ],
+            },
+          ],
+        }),
+      }),
+      hasActiveSubscription: async () => false,
+    })
+    await assertRejects(
+      () => service.getLesson('user-1', FREE_PREP_COURSE_SLUG, 'argument-basics'),
+      EntitlementError,
+      'Subscribe to access this prep course content',
+    )
+  })
 })

@@ -18,7 +18,7 @@ function PathProbe() {
 }
 
 describe("GuestFreePlanSidebar", () => {
-  it("matches the premium menu and locks Academy, Prep, and Insights", () => {
+  it("matches the premium menu, unlocks limited Prep Course, and locks other Academy / Insights items", () => {
     render(
       <MemoryRouter initialEntries={["/app"]}>
         <GuestFreePlanSidebar mobileOpen={false} onMobileClose={() => {}} />
@@ -29,9 +29,8 @@ describe("GuestFreePlanSidebar", () => {
     expect(screen.getByRole("link", { name: "Diagnostic" })).toHaveAttribute("href", "/intent")
     expect(screen.getByRole("button", { name: /Diagnostic Results/i })).toBeInTheDocument()
 
-    expect(screen.getByRole("button", { name: "Prep Course (locked)" })).toHaveClass(
-      "student-sidebar-link--locked",
-    )
+    expect(screen.getByRole("button", { name: "Prep Course" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Prep Course (locked)" })).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Explanations (locked)" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Blind Review (locked)" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Analytics (locked)" })).toBeInTheDocument()
@@ -55,7 +54,29 @@ describe("GuestFreePlanSidebar", () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole("button", { name: "Prep Course (locked)" }))
+    await user.click(screen.getByRole("button", { name: "Explanations (locked)" }))
+    expect(screen.getByRole("dialog", { name: "Subscriber-Only Content" })).toBeInTheDocument()
+    expect(screen.getByTestId("path")).toHaveTextContent("/app")
+  })
+
+  it("lets free students open LSAT Essential Course and locks other prep courses", async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={["/app"]}>
+        <GuestPricingModalProvider>
+          <GuestFreePlanSidebar mobileOpen={false} onMobileClose={() => {}} />
+        </GuestPricingModalProvider>
+        <PathProbe />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Prep Course" }))
+    expect(screen.getByRole("link", { name: "LSAT Essential Course" })).toHaveAttribute(
+      "href",
+      "/app/prep-course/betterlsat-core-syllabus-structure-content",
+    )
+
+    await user.click(screen.getByRole("button", { name: "LR Mastery Course (locked)" }))
     expect(screen.getByRole("dialog", { name: "Subscriber-Only Content" })).toBeInTheDocument()
     expect(screen.getByTestId("path")).toHaveTextContent("/app")
   })
@@ -91,8 +112,6 @@ describe("GuestFreePlanSidebar", () => {
 
     await user.click(screen.getByRole("button", { name: "Collapse sidebar" }))
     expect(container.querySelector(".student-sidebar")).toHaveClass("student-sidebar--collapsed")
-    expect(screen.getByRole("button", { name: "Prep Course (locked)" })).toHaveClass(
-      "student-sidebar-link--locked",
-    )
+    expect(screen.getByRole("button", { name: "Prep Course" })).toBeInTheDocument()
   })
 })

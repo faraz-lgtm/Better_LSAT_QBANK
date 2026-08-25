@@ -1,4 +1,6 @@
 import { isPrepCourseDrillLesson, isPrepLessonType, type PrepLessonType } from '../_shared/prep-lesson-type.ts'
+import { canAccessPrepCourseModule, findCurriculumModuleForLessonSlug } from '../_shared/prep-course-free-access.ts'
+import { parseStripeEnv } from '../_shared/stripe-env.ts'
 import type { PrepCourseRepository, PrepCourseBookmarks, PrepLessonActiveDrillAttempt, PrepLessonDrillBlindReviewAttempt } from './prep-course.repository.ts'
 
 export class AuthorizationError extends Error {
@@ -9,9 +11,9 @@ export class AuthorizationError extends Error {
 }
 
 export class EntitlementError extends Error {
-  readonly reason: 'LSAC_REQUIRED'
+  readonly reason: 'LSAC_REQUIRED' | 'PAYMENT_REQUIRED'
 
-  constructor(message: string, reason: 'LSAC_REQUIRED' = 'LSAC_REQUIRED') {
+  constructor(message: string, reason: 'LSAC_REQUIRED' | 'PAYMENT_REQUIRED' = 'LSAC_REQUIRED') {
     super(message)
     this.name = 'EntitlementError'
     this.reason = reason
@@ -118,9 +120,51 @@ async function buildActiveDrillAttempt(
 export function createPrepCourseService(deps: {
   repository: PrepCourseRepository
   enforceEntitlement?: boolean
+  hasActiveSubscription?: (userId: string) => Promise<boolean>
 }) {
   // Temporary default: keep prep content accessible while LSAC entitlement data stabilizes.
   const enforceEntitlement = deps.enforceEntitlement === true
+
+  async function resolveHasActiveCore(userId: string): Promise<boolean> {
+    if (!deps.hasActiveSubscription) return true
+    const stripeConfigured = parseStripeEnv(Deno.env.toObject()) !== null
+    if (!stripeConfigured) return true
+    return await deps.hasActiveSubscription(userId)
+  }
+
+  async function requirePaidOrFreeModuleAccess(
+    userId: string,
+    courseSlug: string,
+    module: { title: string; sort_order: number },
+  ): Promise<void> {
+    const profile = await deps.repository.getProfileRole(userId)
+    if (profile?.role === 'admin') return
+    const hasActiveCore = await resolveHasActiveCore(userId)
+    if (canAccessPrepCourseModule({
+      hasActiveCore,
+      courseSlug,
+      moduleTitle: module.title,
+      moduleSortOrder: module.sort_order,
+    })) return
+    throw new EntitlementError('Subscribe to access this prep course content', 'PAYMENT_REQUIRED')
+  }
+
+  async function requirePaidOrFreeLessonAccess(
+    userId: string,
+    course: { id: string; slug: string },
+    lessonSlug: string,
+  ): Promise<void> {
+    const profile = await deps.repository.getProfileRole(userId)
+    if (profile?.role === 'admin') return
+    const hasActiveCore = await resolveHasActiveCore(userId)
+    if (hasActiveCore) return
+    const curriculum = await deps.repository.listPublishedCurriculum(course.id)
+    const module = findCurriculumModuleForLessonSlug(curriculum, lessonSlug)
+    if (!module) {
+      throw new EntitlementError('Subscribe to access this prep course content', 'PAYMENT_REQUIRED')
+    }
+    await requirePaidOrFreeModuleAccess(userId, course.slug, module)
+  }
 
   async function requireAdmin(userId: string): Promise<void> {
     const profile = await deps.repository.getProfileRole(userId)
@@ -190,6 +234,7 @@ export function createPrepCourseService(deps: {
       if (!course) throw new Error('Course not found')
       const mod = await deps.repository.getPublishedModuleById(course.id, moduleId)
       if (!mod) throw new Error('Module not found')
+      await requirePaidOrFreeModuleAccess(userId, course.slug, mod)
       await deps.repository.setModuleBookmark(userId, moduleId, bookmarked)
       const bookmarks = await deps.repository.listBookmarksByCourse(userId, course.id)
       return { bookmarks }
@@ -201,6 +246,7 @@ export function createPrepCourseService(deps: {
       if (!course) throw new Error('Course not found')
       const lesson = await deps.repository.getPublishedLessonBySlug(course.id, normalizeSlug(lessonSlug))
       if (!lesson) throw new Error('Lesson not found')
+      await requirePaidOrFreeLessonAccess(userId, course, lesson.slug)
       await deps.repository.setLessonBookmark(userId, lesson.id, bookmarked)
       const bookmarks = await deps.repository.listBookmarksByCourse(userId, course.id)
       return { bookmarks }
@@ -212,6 +258,7 @@ export function createPrepCourseService(deps: {
       if (!course) throw new Error('Course not found')
       const lesson = await deps.repository.getPublishedLessonBySlug(course.id, normalizeSlug(lessonSlug))
       if (!lesson) throw new Error('Lesson not found')
+      await requirePaidOrFreeLessonAccess(userId, course, lesson.slug)
       await deps.repository.upsertLessonCompletion(userId, lesson.id)
       const completedLessonSlugs = await deps.repository.listCompletedLessonSlugsByCourse(userId, course.id)
       return { completedLessonSlugs }
@@ -223,6 +270,7 @@ export function createPrepCourseService(deps: {
       if (!course) throw new Error('Course not found')
       const lesson = await deps.repository.getPublishedLessonBySlug(course.id, normalizeSlug(lessonSlug))
       if (!lesson) throw new Error('Lesson not found')
+      await requirePaidOrFreeLessonAccess(userId, course, lesson.slug)
 
       const linkedQuestionRefs = await deps.repository.listLessonLinkedQuestions(lesson.id)
       const activeDrillAttempt = isPrepCourseDrillLesson(lesson)

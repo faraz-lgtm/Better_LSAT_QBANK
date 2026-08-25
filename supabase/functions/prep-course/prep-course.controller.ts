@@ -1,5 +1,6 @@
 import { CORS_EDGE_NARROW, json, requireAuthUser } from '../_shared/edge-http.ts'
 import { shouldEnforcePrepCourseEntitlement } from '../_shared/prep-course-entitlement.ts'
+import { createUsersRepository } from '../users/users.repository.ts'
 import { createPrepCourseRepository, createServiceRoleClient } from './prep-course.repository.ts'
 import { AuthorizationError, createPrepCourseService, EntitlementError } from './prep-course.service.ts'
 
@@ -11,9 +12,12 @@ export async function handlePrepCourseRequest(req: Request): Promise<Response> {
   const auth = await requireAuthUser(req, corsHeaders)
   if (!auth.ok) return auth.response
 
+  const client = createServiceRoleClient()
+  const usersRepository = createUsersRepository(client)
   const service = createPrepCourseService({
-    repository: createPrepCourseRepository(createServiceRoleClient()),
+    repository: createPrepCourseRepository(client),
     enforceEntitlement: shouldEnforcePrepCourseEntitlement(),
+    hasActiveSubscription: (userId) => usersRepository.hasActiveSubscription(userId),
   })
 
   try {

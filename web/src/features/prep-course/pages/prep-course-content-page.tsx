@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useLocation, useParams } from "react-router-dom"
 
+import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
+import { useGuestPremiumAccount } from "@/features/guest/premium/guest-premium-account"
+import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { PrepCourseContentHeader } from "@/features/prep-course/components/prep-course-content-header"
 import { PrepCourseModulePanel } from "@/features/prep-course/components/prep-course-module-panel"
 import { PrepCourseModuleSidebar } from "@/features/prep-course/components/prep-course-module-sidebar"
 import { moduleMatchesBookmarkFilter } from "@/features/prep-course/lib/prep-course-bookmarks"
+import {
+  isPrepCourseModuleLockedForFreePlan,
+  shouldLimitFreePrepCourseAccess,
+} from "@/features/prep-course/lib/prep-course-free-access"
 import {
   curriculumStats,
   findLessonLocation,
@@ -30,6 +37,14 @@ function PrepCourseContentPage() {
   const courseSlug = courseSlugParam?.trim() ?? ""
   const location = useLocation()
   const locationState = (location.state ?? {}) as LocationState
+  const entitlement = useStudentEntitlementOptional()
+  const premiumAccount = useGuestPremiumAccount()
+  const { openLockedContentModal } = useGuestPricingModal()
+  const limitFreeAccess = shouldLimitFreePrepCourseAccess({
+    hasActiveCore: entitlement?.entitlement?.hasActiveCore,
+    accessState: entitlement?.entitlement?.accessState ?? null,
+    hasGuestPremiumAccount: Boolean(premiumAccount),
+  })
 
   const [course, setCourse] = useState<PrepCourse | null>(null)
   const [curriculum, setCurriculum] = useState<PrepCourseCurriculum>({ modules: [] })
@@ -86,7 +101,17 @@ function PrepCourseContentPage() {
         setInitialBookmarks(data.bookmarks ?? { moduleIds: [], lessonSlugs: [] })
 
         const lessonLoc = activeLessonSlug ? findLessonLocation(normalized, activeLessonSlug) : null
-        const defaultModuleId = lessonLoc?.moduleId ?? normalized.modules[0]?.id ?? null
+        const firstUnlockedId =
+          normalized.modules.find(
+            (module) => !isPrepCourseModuleLockedForFreePlan(courseSlug, module, limitFreeAccess),
+          )?.id ?? null
+        const lessonModule = lessonLoc
+          ? normalized.modules.find((module) => module.id === lessonLoc.moduleId)
+          : null
+        const lessonUnlocked = lessonModule
+          ? !isPrepCourseModuleLockedForFreePlan(courseSlug, lessonModule, limitFreeAccess)
+          : false
+        const defaultModuleId = lessonUnlocked ? lessonLoc?.moduleId ?? firstUnlockedId : firstUnlockedId
         setSelectedModuleId(defaultModuleId)
 
         const defaultModule = normalized.modules.find((module) => module.id === defaultModuleId)
@@ -104,9 +129,17 @@ function PrepCourseContentPage() {
     return () => {
       alive = false
     }
-  }, [activeLessonSlug, courseSlug, prepCourseApi])
+  }, [activeLessonSlug, courseSlug, limitFreeAccess, prepCourseApi])
 
   const stats = useMemo(() => curriculumStats(curriculum), [curriculum])
+
+  const lockedModuleIds = useMemo(() => {
+    return new Set(
+      curriculum.modules
+        .filter((module) => isPrepCourseModuleLockedForFreePlan(courseSlug, module, limitFreeAccess))
+        .map((module) => module.id),
+    )
+  }, [courseSlug, curriculum.modules, limitFreeAccess])
 
   const selectedModule = useMemo(
     () => curriculum.modules.find((mod) => mod.id === selectedModuleId) ?? null,
@@ -131,6 +164,13 @@ function PrepCourseContentPage() {
   }, [bookmarks, selectedModuleId, showBookmarksOnly, visibleModules])
 
   useEffect(() => {
+    if (!selectedModuleId || lockedModuleIds.size === 0) return
+    if (!lockedModuleIds.has(selectedModuleId)) return
+    const firstUnlockedId = curriculum.modules.find((module) => !lockedModuleIds.has(module.id))?.id ?? null
+    setSelectedModuleId(firstUnlockedId)
+  }, [curriculum.modules, lockedModuleIds, selectedModuleId])
+
+  useEffect(() => {
     if (!selectedModule) return
     const shouldExpandForBookmarks =
       showBookmarksOnly || isModuleBookmarked(selectedModule.id)
@@ -147,14 +187,22 @@ function PrepCourseContentPage() {
   }, [bookmarkedLessonSlugs, isModuleBookmarked, selectedModule, showBookmarksOnly])
 
   function handleSelectModule(moduleId: string) {
-    setSelectedModuleId(moduleId)
     const mod = curriculum.modules.find((module) => module.id === moduleId)
     if (!mod) return
+    if (lockedModuleIds.has(moduleId)) {
+      openLockedContentModal()
+      return
+    }
+    setSelectedModuleId(moduleId)
     setExpandedSectionIds((prev) => {
       const next = new Set(prev)
       for (const section of mod.sections) next.add(section.id)
       return next
     })
+  }
+
+  function handleLockedContentClick() {
+    openLockedContentModal()
   }
 
   function handleToggleModuleBookmark(moduleId: string, next: boolean) {
@@ -262,6 +310,8 @@ function PrepCourseContentPage() {
                 bookmarkedLessonSlugs={bookmarkedLessonSlugs}
                 onToggleLessonBookmark={setLessonBookmarked}
                 onToggleModuleBookmark={(next) => handleToggleModuleBookmark(selectedModule.id, next)}
+                moduleLocked={lockedModuleIds.has(selectedModule.id)}
+                onLockedLessonClick={handleLockedContentClick}
               />
             ) : (
               <p className="ds-body-sm ds-text-muted flex-1 p-6">Select a module to view sections.</p>
@@ -270,7 +320,9 @@ function PrepCourseContentPage() {
               modules={visibleModules}
               selectedModuleId={selectedModuleId}
               completedLessonSlugs={completedLessonSlugs}
+              lockedModuleIds={lockedModuleIds}
               onSelectModule={handleSelectModule}
+              onLockedModuleClick={handleLockedContentClick}
             />
           </div>
         </div>

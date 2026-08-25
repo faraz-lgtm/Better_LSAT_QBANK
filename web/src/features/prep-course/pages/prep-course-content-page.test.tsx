@@ -3,6 +3,9 @@ import userEvent from "@testing-library/user-event"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { GuestPricingModalProvider } from "@/features/guest/pricing/guest-pricing-modal-provider"
+import { PREP_COURSE_ESSENTIALS_SLUG } from "@/features/prep-course/lib/prep-course-nav"
+
 import { PrepCourseContentPage } from "./prep-course-content-page"
 
 const getCourseMock = vi.fn()
@@ -10,6 +13,10 @@ const setModuleBookmarkMock = vi.fn()
 const setLessonBookmarkMock = vi.fn()
 
 let bookmarkState = { moduleIds: [] as string[], lessonSlugs: [] as string[] }
+let entitlementMock: {
+  entitlement: { hasActiveCore: boolean; accessState: "PAYMENT_REQUIRED" | "FULL_ACCESS" }
+  loading: boolean
+} | null = null
 
 vi.mock("@/lib/api/prep-course", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api/prep-course")>("@/lib/api/prep-course")
@@ -26,6 +33,16 @@ vi.mock("@/lib/api/prep-course", async () => {
 vi.mock("@/lib/supabase/client", () => ({
   getSupabaseBrowserClient: () => ({}),
 }))
+
+vi.mock("@/features/app-shell/student-entitlement-context", async () => {
+  const actual = await vi.importActual<typeof import("@/features/app-shell/student-entitlement-context")>(
+    "@/features/app-shell/student-entitlement-context",
+  )
+  return {
+    ...actual,
+    useStudentEntitlementOptional: () => entitlementMock,
+  }
+})
 
 const course = {
   id: "c1",
@@ -66,6 +83,7 @@ describe("PrepCourseContentPage", () => {
     getCourseMock.mockReset()
     setModuleBookmarkMock.mockReset()
     setLessonBookmarkMock.mockReset()
+    entitlementMock = null
     bookmarkState = { moduleIds: [], lessonSlugs: [] }
     setModuleBookmarkMock.mockImplementation(async (_courseSlug: string, moduleId: string, bookmarked: boolean) => {
       bookmarkState = {
@@ -519,5 +537,81 @@ describe("PrepCourseContentPage", () => {
 
     expect(screen.getByRole("link", { name: /Lesson A/i })).toBeInTheDocument()
     expect(screen.queryByRole("link", { name: /Lesson B/i })).not.toBeInTheDocument()
+  })
+
+  it("lets free students open The Kickoff and locks later modules behind the pricing popup", async () => {
+    entitlementMock = {
+      entitlement: { hasActiveCore: false, accessState: "PAYMENT_REQUIRED" },
+      loading: false,
+    }
+    const essentialsCourse = { ...course, slug: PREP_COURSE_ESSENTIALS_SLUG }
+    const kickoffLesson = { ...lessonA, course_id: "c1", slug: "welcome-to-the-arena", title: "Welcome to the Arena" }
+    const lockedLesson = { ...lessonB, course_id: "c1", slug: "argument-basics", title: "Argument Basics" }
+    getCourseMock.mockResolvedValue({
+      course: essentialsCourse,
+      lessons: [kickoffLesson, lockedLesson],
+      curriculum: {
+        modules: [
+          {
+            id: "kickoff",
+            course_id: "c1",
+            title: "The Kickoff",
+            sort_order: 1,
+            duration_minutes: null,
+            sections: [
+              {
+                id: "s1",
+                module_id: "kickoff",
+                title: "General",
+                sort_order: 1,
+                duration_minutes: null,
+                lessons: [kickoffLesson],
+              },
+            ],
+          },
+          {
+            id: "anatomy",
+            course_id: "c1",
+            title: "The Anatomy of an Argument",
+            sort_order: 2,
+            duration_minutes: null,
+            sections: [
+              {
+                id: "s2",
+                module_id: "anatomy",
+                title: "General",
+                sort_order: 1,
+                duration_minutes: null,
+                lessons: [lockedLesson],
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={[`/app/prep-course/${PREP_COURSE_ESSENTIALS_SLUG}`]}>
+        <GuestPricingModalProvider>
+          <Routes>
+            <Route path="/app/prep-course/:courseSlug" element={<PrepCourseContentPage />} />
+          </Routes>
+        </GuestPricingModalProvider>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole("heading", { name: "The Kickoff" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: /Welcome to the Arena/i })).toHaveAttribute(
+      "href",
+      `/app/prep-course/${PREP_COURSE_ESSENTIALS_SLUG}/welcome-to-the-arena`,
+    )
+
+    const moduleSidebar = screen.getByRole("complementary", { name: "Course modules" })
+    expect(within(moduleSidebar).getByRole("button", { name: "The Anatomy of an Argument (locked)" })).toBeInTheDocument()
+
+    await user.click(within(moduleSidebar).getByRole("button", { name: "The Anatomy of an Argument (locked)" }))
+    expect(screen.getByRole("dialog", { name: "Subscriber-Only Content" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "The Kickoff" })).toBeInTheDocument()
   })
 })

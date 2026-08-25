@@ -1,6 +1,10 @@
 import { Check, X } from "lucide-react"
 
 import {
+  PREP_COURSE_FIGMA,
+  PrepCourseFigmaIcon,
+} from "@/features/prep-course/components/prep-course-figma-icons"
+import {
   formatDurationShort,
   resolveDrillLessonType,
   resolveLessonRowDisplay,
@@ -52,10 +56,25 @@ function LessonStatusMarker({
   variant,
   surface = "list",
 }: {
-  variant: "complete" | "active" | "incomplete"
+  variant: "complete" | "active" | "incomplete" | "locked"
   surface?: "sidebar" | "list"
 }) {
   const markerSizeClass = "box-border size-6 shrink-0 rounded-full border"
+
+  if (variant === "locked") {
+    return (
+      <span
+        className={cn(
+          "flex items-center justify-center",
+          markerSizeClass,
+          "border-[#dfe1e7] bg-white",
+        )}
+        aria-hidden
+      >
+        <PrepCourseFigmaIcon src={`${PREP_COURSE_FIGMA}/icon-lock-sm.svg`} className="size-3.5" />
+      </span>
+    )
+  }
 
   if (variant === "complete") {
     return (
