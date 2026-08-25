@@ -2385,6 +2385,10 @@ select.ds-input {
   transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.student-sidebar-link--with-trailing {
+  padding-right: 12px;
+}
+
 .student-sidebar-link-icon {
   display: inline-flex;
   width: 16px;
@@ -2566,21 +2570,50 @@ select.ds-input {
     display: none;
   }
 
-  .student-sidebar--collapsed .student-sidebar-link,
-  .student-sidebar--collapsed .student-sidebar-link--active {
+  /*
+    Collapsed rail is 40px. Expanded active padding (16+24) would leave 0px
+    content width under border-box + overflow:hidden, which hides every icon.
+  */
+  .student-sidebar.student-sidebar--collapsed .student-sidebar-link,
+  .student-sidebar.student-sidebar--collapsed .student-sidebar-link.student-sidebar-link--active {
     width: 40px;
+    min-width: 40px;
+    max-width: 40px;
     justify-content: center;
+    align-items: center;
     gap: 0;
     padding: 0;
+    overflow: visible;
   }
 
-  .student-sidebar--collapsed .student-sidebar-link-content {
+  .student-sidebar.student-sidebar--collapsed .student-sidebar-link-content {
+    display: inline-flex;
     flex: 0 0 auto;
+    min-width: auto;
+    width: auto;
     justify-content: center;
+    align-items: center;
     gap: 0;
   }
 
-  .student-sidebar--collapsed .student-sidebar-link--active::before {
+  .student-sidebar.student-sidebar--collapsed .student-sidebar-link-icon,
+  .student-sidebar.student-sidebar--collapsed .student-sidebar-logout-icon {
+    display: inline-flex;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    overflow: visible;
+  }
+
+  .student-sidebar.student-sidebar--collapsed .student-sidebar-link-icon img,
+  .student-sidebar.student-sidebar--collapsed .student-sidebar-logout-icon img {
+    display: block;
+    width: 20px;
+    height: 20px;
+    max-width: none;
+  }
+
+  .student-sidebar.student-sidebar--collapsed .student-sidebar-link--active::before {
     width: 4px;
     border-radius: 8px 0 0 8px;
   }

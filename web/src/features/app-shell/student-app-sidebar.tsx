@@ -105,7 +105,7 @@ function PrepCourseNavItem({
       <button
         type="button"
         className={cn(
-          "student-sidebar-link w-full justify-between pr-3",
+          "student-sidebar-link student-sidebar-link--with-trailing w-full justify-between",
           parentActive && "student-sidebar-link--active",
         )}
         aria-expanded={collapsed ? false : expanded}
@@ -269,7 +269,7 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
                         aria-disabled="true"
                         aria-label={item.label}
                         title="Link your LawHub coach to unlock"
-                        className="student-sidebar-link w-full cursor-not-allowed justify-between pr-4 opacity-60"
+                        className="student-sidebar-link student-sidebar-link--with-trailing w-full cursor-not-allowed justify-between opacity-60"
                       >
                         <span className="student-sidebar-link-content flex min-w-0 items-center gap-2.5">
                           <SidebarNavIcon icon={item.icon} />

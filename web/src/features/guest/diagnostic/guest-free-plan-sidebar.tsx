@@ -157,7 +157,7 @@ function GuestFreePlanSidebar({
                       onClick={handleLockedNavClick}
                       aria-label={item.label}
                       title={item.label}
-                      className="student-sidebar-link w-full justify-between pr-4 opacity-80 hover:opacity-100"
+                      className="student-sidebar-link student-sidebar-link--with-trailing w-full justify-between opacity-80 hover:opacity-100"
                     >
                       <span className="student-sidebar-link-content flex min-w-0 flex-1 items-center gap-2">
                         <GuestFreePlanNavIcon label={item.label} />
