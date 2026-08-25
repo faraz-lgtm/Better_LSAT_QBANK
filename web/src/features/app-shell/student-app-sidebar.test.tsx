@@ -12,7 +12,7 @@ vi.mock("@/lib/supabase/client", () => ({
 }))
 
 describe("StudentAppSidebar", () => {
-  it("shows all navigation links at once", () => {
+  it("shows premium navigation without diagnostic links", () => {
     render(
       <MemoryRouter initialEntries={["/app"]}>
         <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
@@ -20,8 +20,8 @@ describe("StudentAppSidebar", () => {
     )
 
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Diagnostic" })).toHaveAttribute("href", "/intent")
-    expect(screen.getByRole("button", { name: /Diagnostic Results/i })).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "Diagnostic" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /Diagnostic Results/i })).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Prep Course/i })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Explanations" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Blind Review" })).toBeInTheDocument()
@@ -100,7 +100,7 @@ describe("StudentAppSidebar", () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={["/app"]}>
-        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
+        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} showDiagnosticNav />
       </MemoryRouter>,
     )
 
@@ -108,5 +108,26 @@ describe("StudentAppSidebar", () => {
     await user.click(screen.getByRole("button", { name: /Diagnostic Results/i }))
     expect(screen.getByRole("link", { name: "Mini" })).toHaveAttribute("href", "/app/diagnostic/results/mini")
     expect(screen.getByRole("link", { name: "Full" })).toHaveAttribute("href", "/app/diagnostic/results/full")
+  })
+
+  it("collapses to icon rail and expands again", async () => {
+    const user = userEvent.setup()
+    const { container } = render(
+      <MemoryRouter initialEntries={["/app"]}>
+        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
+      </MemoryRouter>,
+    )
+
+    const sidebar = container.querySelector(".student-sidebar")
+    expect(sidebar).toBeTruthy()
+
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }))
+
+    expect(sidebar).toHaveClass("student-sidebar--collapsed")
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "Mini" })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Expand sidebar" }))
+    expect(sidebar).not.toHaveClass("student-sidebar--collapsed")
   })
 })
