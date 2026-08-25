@@ -146,6 +146,7 @@ describe("PrepCourseContentPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Course Content" })).toBeInTheDocument()
     expect(screen.getByText("Show All Bookmark")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Expand All" })).toBeInTheDocument()
     expect(screen.getByText("Modules")).toBeInTheDocument()
     expect(screen.getByText("Sections")).toBeInTheDocument()
 
@@ -311,7 +312,7 @@ describe("PrepCourseContentPage", () => {
     await screen.findByText("Section Alpha")
     expect(screen.getByRole("link", { name: /Lesson A/i })).toBeInTheDocument()
 
-    await user.click(screen.getByRole("button", { name: "Collapse this Sections" }))
+    await user.click(screen.getByRole("button", { name: "Collapse this Section" }))
     expect(screen.queryByRole("link", { name: /Lesson A/i })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Expand this Sections" }))

@@ -1,15 +1,25 @@
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 
 import { createMiniDiagnosticQuestions } from "@/features/guest/diagnostic/mini-diagnostic-content"
 import { buildGuestDiagnosticAnswerState } from "@/features/guest/diagnostic/guest-diagnostic-answer-state"
 import {
   buildGuestDiagnosticResultFromAnswers,
   buildDefaultGuestDiagnosticResult,
+  DIAGNOSTIC_ATTEMPT_HISTORY_STORAGE_KEY,
   formatDiagnosticDateLabel,
+  getDiagnosticAttempt,
   getDiagnosticIntentTitle,
+  GUEST_DIAGNOSTIC_RESULT_STORAGE_KEY,
+  listDiagnosticHistoryBySection,
+  writeGuestDiagnosticResult,
 } from "@/features/guest/diagnostic/guest-diagnostic-result-storage"
 
 describe("guest diagnostic result storage", () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+    localStorage.clear()
+  })
+
   it("builds mini diagnostic demo result with score range", () => {
     const result = buildDefaultGuestDiagnosticResult("mini")
     expect(result.questionCount).toBe(10)
@@ -50,5 +60,34 @@ describe("guest diagnostic result storage", () => {
     expect(getDiagnosticIntentTitle("mini")).toBe("Mini Diagnostic")
     expect(getDiagnosticIntentTitle("quick")).toBe("Full Section Diagnostic")
     expect(getDiagnosticIntentTitle("full")).toBe("Full Diagnostic")
+  })
+
+  it("stores attempts in Mini and Full history with sequential numbers", () => {
+    const miniA = writeGuestDiagnosticResult({
+      ...buildDefaultGuestDiagnosticResult("mini"),
+      completedAt: "2026-01-01T00:00:00.000Z",
+    })
+    const fullA = writeGuestDiagnosticResult({
+      ...buildDefaultGuestDiagnosticResult("quick"),
+      completedAt: "2026-01-02T00:00:00.000Z",
+    })
+    const miniB = writeGuestDiagnosticResult({
+      ...buildDefaultGuestDiagnosticResult("mini"),
+      completedAt: "2026-01-03T00:00:00.000Z",
+    })
+
+    expect(sessionStorage.getItem(GUEST_DIAGNOSTIC_RESULT_STORAGE_KEY)).toContain(miniB.id)
+    expect(localStorage.getItem(DIAGNOSTIC_ATTEMPT_HISTORY_STORAGE_KEY)).toContain(miniA.id)
+
+    const miniHistory = listDiagnosticHistoryBySection("mini")
+    expect(miniHistory.map((row) => row.id)).toEqual([miniB.id, miniA.id])
+    expect(miniHistory[0]?.diagnosticNumber).toBe(2)
+    expect(miniHistory[1]?.diagnosticNumber).toBe(1)
+
+    const fullHistory = listDiagnosticHistoryBySection("full")
+    expect(fullHistory).toHaveLength(1)
+    expect(fullHistory[0]?.id).toBe(fullA.id)
+    expect(fullHistory[0]?.diagnosticNumber).toBe(1)
+    expect(getDiagnosticAttempt(miniA.id)?.id).toBe(miniA.id)
   })
 })

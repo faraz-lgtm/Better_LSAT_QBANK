@@ -1,79 +1,32 @@
-/** Figma `19512:24718` — free-plan sidebar navigation (locked modules). */
-
-export type GuestFreePlanNavItem = {
-  label: string
-  href?: string
-  locked?: boolean
-}
-
-export type GuestFreePlanNavSection = {
-  key: string
-  label: string
-  items: GuestFreePlanNavItem[]
-}
+import {
+  STUDENT_DASHBOARD_HREF,
+  STUDENT_DIAGNOSTIC_HREF,
+} from "@/features/app-shell/student-nav-config"
 
 const GUEST_FREE_PLAN_RESULTS_HREF = "/app/diagnostic/results"
-const GUEST_FREE_PLAN_DASHBOARD_HREF = "/app"
+const GUEST_FREE_PLAN_DASHBOARD_HREF = STUDENT_DASHBOARD_HREF
 const GUEST_FREE_PLAN_PRICING_HREF = "/app/pricing"
 
-const GUEST_FREE_PLAN_NAV_SECTIONS: GuestFreePlanNavSection[] = [
-  {
-    key: "main",
-    label: "Main",
-    items: [
-      { label: "Dashboard", href: GUEST_FREE_PLAN_DASHBOARD_HREF },
-      { label: "Diagnostic", href: "/intent" },
-      { label: "Diagnostic Results", href: GUEST_FREE_PLAN_RESULTS_HREF },
-    ],
-  },
-  {
-    key: "practice",
-    label: "Practice",
-    items: [
-      { label: "Practice Exams", locked: true },
-      { label: "Question Bank", locked: true },
-    ],
-  },
-  {
-    key: "drill",
-    label: "Drill",
-    items: [
-      { label: "Drills", locked: true },
-      { label: "Schedule", locked: true },
-      { label: "Wrong Review", locked: true },
-      { label: "Analytics", locked: true },
-    ],
-  },
-  {
-    key: "reports",
-    label: "Reports",
-    items: [
-      { label: "Trend Line", locked: true },
-      { label: "Skills", locked: true },
-      { label: "Sections", locked: true },
-      { label: "Question", locked: true },
-    ],
-  },
-]
+/**
+ * Free-plan students keep Main (Dashboard, Diagnostic, Diagnostic Results).
+ * Academy, Prep, and Insights stay locked until payment.
+ */
+function isFreePlanLockedNavHref(href: string): boolean {
+  const path = href.split("?")[0] ?? href
+  if (path === STUDENT_DASHBOARD_HREF || path === `${STUDENT_DASHBOARD_HREF}/`) return false
+  if (path === STUDENT_DIAGNOSTIC_HREF) return false
+  if (path.startsWith("/app/diagnostic") || path.startsWith("/diagnostic")) return false
+  return true
+}
 
 function isGuestFreePlanRoute(pathname: string): boolean {
   return pathname.startsWith("/app/diagnostic/results") || pathname.startsWith("/diagnostic/results")
 }
 
-function isGuestFreePlanAnalyticsActive(pathname: string): boolean {
-  return pathname.startsWith("/app/diagnostic/results") || pathname.startsWith("/diagnostic/results")
-}
-
-function isGuestFreePlanDashboardActive(pathname: string): boolean {
-  return pathname === "/app" || pathname === "/app/"
-}
-
 export {
   GUEST_FREE_PLAN_DASHBOARD_HREF,
-  GUEST_FREE_PLAN_NAV_SECTIONS,
   GUEST_FREE_PLAN_PRICING_HREF,
   GUEST_FREE_PLAN_RESULTS_HREF,
-  isGuestFreePlanAnalyticsActive,
-  isGuestFreePlanDashboardActive,
+  isFreePlanLockedNavHref,
   isGuestFreePlanRoute,
 }

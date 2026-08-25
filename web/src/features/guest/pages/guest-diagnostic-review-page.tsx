@@ -14,7 +14,7 @@ import {
   getGuestDiagnosticTestConfig,
   isGuestDiagnosticIntentId,
 } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
-import { GUEST_FREE_PLAN_RESULTS_HREF } from "@/features/guest/diagnostic/guest-free-plan-nav-config"
+import { diagnosticAttemptHref } from "@/features/student/diagnostic/diagnostic-results-routes"
 import { useDiagnosticSubscription } from "@/features/guest/diagnostic/use-diagnostic-subscription"
 import { PracticeSessionImmersiveFrame } from "@/features/student/practice-session/practice-session-immersive-frame"
 import { readDiagnosticIntent } from "@/lib/auth/diagnostic-intent"
@@ -41,7 +41,7 @@ function answersFromResultOutcomes(
 
 function GuestDiagnosticReviewPage({ mode, preview = false }: GuestDiagnosticReviewPageProps) {
   const navigate = useNavigate()
-  const { hasActiveCore, loading: subscriptionLoading } = useDiagnosticSubscription()
+  const { hasActiveCore } = useDiagnosticSubscription()
 
   const result = useMemo(() => {
     const stored = readGuestDiagnosticResult()
@@ -67,9 +67,12 @@ function GuestDiagnosticReviewPage({ mode, preview = false }: GuestDiagnosticRev
 
   const config = getGuestDiagnosticTestConfig(result.intentId)
   const initialAnswers = mode === "review" ? answersFromResultOutcomes(result.outcomes) : {}
-  const resultsHref = preview ? "/diagnostic/results/preview" : GUEST_FREE_PLAN_RESULTS_HREF
+  const resultsHref = preview
+    ? "/diagnostic/results/preview"
+    : diagnosticAttemptHref(result.intentId, result.id)
+  const resultsReturnHref = `${resultsHref}${resultsHref.includes("?") ? "&" : "?"}from=review`
   // Preview routes treat the viewer as free so teaser limits are visible in demos.
-  const explanationsUnlocked = preview ? false : hasActiveCore && !subscriptionLoading
+  const explanationsUnlocked = preview ? false : hasActiveCore
 
   return (
     <PracticeSessionImmersiveFrame hideScrim className="z-30">
@@ -79,7 +82,7 @@ function GuestDiagnosticReviewPage({ mode, preview = false }: GuestDiagnosticRev
         interactive={false}
         initialAnswers={initialAnswers}
         hasActiveCore={explanationsUnlocked}
-        onExitReview={() => navigate(resultsHref)}
+        onExitReview={() => navigate(resultsReturnHref)}
       />
     </PracticeSessionImmersiveFrame>
   )

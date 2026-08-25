@@ -31,11 +31,13 @@ export type ExplanationQuestionNode = {
   number: number
   code: string
   snippet: string
+  topicName: string
   status: ExplanationQuestionStatus
   source: string
   difficulty: 1 | 2 | 3 | 4 | 5
   hasVideo?: boolean
   hasWrittenExplanation?: boolean
+  bookmarked?: boolean
 }
 
 export type ExplanationPassageNode = {
@@ -277,9 +279,26 @@ function hasVideo(q: PrepTestTreeQuestionRow): boolean {
   return (q.video_url?.trim() ?? '').length > 0
 }
 
+export function topicNameFromQuestion(
+  q: PrepTestTreeQuestionRow,
+  typeNamesById: Map<string, string> = new Map(),
+): string {
+  const nested = relOne(q.question_types)?.name?.trim() ?? ''
+  if (nested) return nested
+  const typeId = q.question_type_id?.trim() ?? ''
+  const fromId = typeId ? typeNamesById.get(typeId)?.trim() ?? '' : ''
+  return fromId || '—'
+}
+
 function mapQuestionNode(
   q: PrepTestTreeQuestionRow,
-  ctx: { ptNum: string; secNum: number; passageLabel: string; prepTestTitle: string },
+  ctx: {
+    ptNum: string
+    secNum: number
+    passageLabel: string
+    prepTestTitle: string
+    typeNamesById: Map<string, string>
+  },
   status: ExplanationQuestionStatus,
 ): ExplanationQuestionNode {
   const num = q.question_number ?? 0
@@ -288,6 +307,7 @@ function mapQuestionNode(
     number: num,
     code: `PT${ctx.ptNum}.S${ctx.secNum}.${ctx.passageLabel}.Q${num}`,
     snippet: snippetFromQuestion(q),
+    topicName: topicNameFromQuestion(q, ctx.typeNamesById),
     status,
     source: ctx.prepTestTitle,
     difficulty: clampDifficulty(q.difficulty),
@@ -298,6 +318,51 @@ function mapQuestionNode(
 
 function sortQuestions(a: PrepTestTreeQuestionRow, b: PrepTestTreeQuestionRow): number {
   return (a.question_number ?? 0) - (b.question_number ?? 0)
+}
+
+function firstQuestionNumber(questions: PrepTestTreeQuestionRow[]): number {
+  let min = Number.POSITIVE_INFINITY
+  for (const q of questions) {
+    const n = q.question_number
+    if (n != null && n > 0 && n < min) min = n
+  }
+  return Number.isFinite(min) ? min : Number.MAX_SAFE_INTEGER
+}
+
+type PassageDraft = {
+  id: string
+  titleFromTag: string | null
+  snippet: string
+  questions: PrepTestTreeQuestionRow[]
+}
+
+function finalizeGroupedPassages(
+  drafts: PassageDraft[],
+  ctx: TreeMapCtx,
+  statusByQ: Map<string, ExplanationQuestionStatus>,
+  kind: 'passage' | 'game',
+): ExplanationPassageNode[] {
+  const labelPrefix = kind === 'game' ? 'G' : 'P'
+  const titlePrefix = kind === 'game' ? 'Game' : 'Passage'
+  return [...drafts]
+    .sort((a, b) => firstQuestionNumber(a.questions) - firstQuestionNumber(b.questions))
+    .map((draft, i) => {
+      const index = i + 1
+      const sortedQs = [...draft.questions].sort(sortQuestions)
+      return {
+        id: draft.id,
+        label: `${labelPrefix}${index}`,
+        title: draft.titleFromTag || `${titlePrefix} ${index}`,
+        snippet: draft.snippet,
+        questions: sortedQs.map((q) =>
+          mapQuestionNode(
+            q,
+            { ...ctx, passageLabel: `${labelPrefix}${index}` },
+            statusByQ.get(q.id) ?? 'fresh',
+          ),
+        ),
+      }
+    })
 }
 
 function passageSnippet(content: string | null | undefined, max = 72): string {
@@ -314,10 +379,17 @@ function passageSnippetFromQuestions(questions: PrepTestTreeQuestionRow[], max =
   return ''
 }
 
+type TreeMapCtx = {
+  ptNum: string
+  secNum: number
+  prepTestTitle: string
+  typeNamesById: Map<string, string>
+}
+
 function buildLrPassage(
   section: PrepTestTreeSectionRow,
   questions: PrepTestTreeQuestionRow[],
-  ctx: { ptNum: string; secNum: number; prepTestTitle: string },
+  ctx: TreeMapCtx,
   statusByQ: Map<string, ExplanationQuestionStatus>,
 ): ExplanationPassageNode {
   const passageId = `lr-${section.id}`
@@ -336,7 +408,7 @@ function buildRcPassages(
   section: PrepTestTreeSectionRow,
   questions: PrepTestTreeQuestionRow[],
   passages: PrepTestTreePassageRow[],
-  ctx: { ptNum: string; secNum: number; prepTestTitle: string },
+  ctx: TreeMapCtx,
   statusByQ: Map<string, ExplanationQuestionStatus>,
 ): ExplanationPassageNode[] {
   const byGroup = new Map<string, PrepTestTreeQuestionRow[]>()
@@ -353,63 +425,47 @@ function buildRcPassages(
     byGroup.set(gid, list)
   }
 
-  const out: ExplanationPassageNode[] = []
-  let passageIndex = 0
+  const drafts: PassageDraft[] = []
 
   for (const pass of passages) {
     const gid = pass.source_group_id?.trim() ?? ''
     const qs = gid ? (byGroup.get(gid) ?? []) : []
     if (gid) byGroup.delete(gid)
     if (qs.length === 0 && !pass.content?.trim()) continue
-    passageIndex += 1
-    const sortedQs = [...qs].sort(sortQuestions)
-    out.push({
+    drafts.push({
       id: pass.id,
-      label: `P${passageIndex}`,
-      title: pass.topic_tag?.trim() || `Passage ${passageIndex}`,
-      snippet: passageSnippet(pass.content) || passageSnippetFromQuestions(sortedQs),
-      questions: sortedQs.map((q) =>
-        mapQuestionNode(q, { ...ctx, passageLabel: `P${passageIndex}` }, statusByQ.get(q.id) ?? 'fresh')
-      ),
+      titleFromTag: pass.topic_tag?.trim() || null,
+      snippet: passageSnippet(pass.content) || passageSnippetFromQuestions([...qs].sort(sortQuestions)),
+      questions: qs,
     })
   }
 
   for (const [gid, qs] of byGroup) {
-    passageIndex += 1
-    const sortedQs = [...qs].sort(sortQuestions)
-    out.push({
+    drafts.push({
       id: `orphan-${section.id}-${gid}`,
-      label: `P${passageIndex}`,
-      title: `Passage ${passageIndex}`,
-      snippet: passageSnippetFromQuestions(sortedQs),
-      questions: sortedQs.map((q) =>
-        mapQuestionNode(q, { ...ctx, passageLabel: `P${passageIndex}` }, statusByQ.get(q.id) ?? 'fresh')
-      ),
+      titleFromTag: null,
+      snippet: passageSnippetFromQuestions([...qs].sort(sortQuestions)),
+      questions: qs,
     })
   }
 
   if (ungrouped.length > 0) {
-    passageIndex += 1
-    const sortedQs = [...ungrouped].sort(sortQuestions)
-    out.push({
+    drafts.push({
       id: `ungrouped-${section.id}`,
-      label: `P${passageIndex}`,
-      title: `Passage ${passageIndex}`,
-      snippet: passageSnippetFromQuestions(sortedQs),
-      questions: sortedQs.map((q) =>
-        mapQuestionNode(q, { ...ctx, passageLabel: `P${passageIndex}` }, statusByQ.get(q.id) ?? 'fresh')
-      ),
+      titleFromTag: null,
+      snippet: passageSnippetFromQuestions([...ungrouped].sort(sortQuestions)),
+      questions: ungrouped,
     })
   }
 
-  return out
+  return finalizeGroupedPassages(drafts, ctx, statusByQ, 'passage')
 }
 
 function buildLgPassages(
   section: PrepTestTreeSectionRow,
   questions: PrepTestTreeQuestionRow[],
   games: PrepTestTreeLogicGameRow[],
-  ctx: { ptNum: string; secNum: number; prepTestTitle: string },
+  ctx: TreeMapCtx,
   statusByQ: Map<string, ExplanationQuestionStatus>,
 ): ExplanationPassageNode[] {
   const byGroup = new Map<string, PrepTestTreeQuestionRow[]>()
@@ -421,39 +477,30 @@ function buildLgPassages(
     byGroup.set(gid, list)
   }
 
-  const out: ExplanationPassageNode[] = []
-  let gameIndex = 0
+  const drafts: PassageDraft[] = []
   for (const game of games) {
     const gid = game.source_group_id?.trim() ?? ''
     const qs = gid ? (byGroup.get(gid) ?? []) : []
     if (gid) byGroup.delete(gid)
-    gameIndex += 1
     const setup = [game.setup_text, game.rules_text].filter(Boolean).join('\n\n')
-    out.push({
+    drafts.push({
       id: game.id,
-      label: `G${gameIndex}`,
-      title: `Game ${gameIndex}`,
+      titleFromTag: null,
       snippet: passageSnippet(setup, 100),
-      questions: [...qs].sort(sortQuestions).map((q) =>
-        mapQuestionNode(q, { ...ctx, passageLabel: `G${gameIndex}` }, statusByQ.get(q.id) ?? 'fresh')
-      ),
+      questions: qs,
     })
   }
 
   for (const [gid, qs] of byGroup) {
-    gameIndex += 1
-    out.push({
+    drafts.push({
       id: `lg-orphan-${section.id}-${gid}`,
-      label: `G${gameIndex}`,
-      title: `Game ${gameIndex}`,
+      titleFromTag: null,
       snippet: '',
-      questions: [...qs].sort(sortQuestions).map((q) =>
-        mapQuestionNode(q, { ...ctx, passageLabel: `G${gameIndex}` }, statusByQ.get(q.id) ?? 'fresh')
-      ),
+      questions: qs,
     })
   }
 
-  return out
+  return finalizeGroupedPassages(drafts, ctx, statusByQ, 'game')
 }
 
 export function mapPrepTestTreeRows(
@@ -462,6 +509,7 @@ export function mapPrepTestTreeRows(
   baseModuleId: string,
   primaryTitle: string,
   statusByQ: Map<string, ExplanationQuestionStatus>,
+  typeNamesById: Map<string, string> = new Map(),
 ): ExplanationPrepTestNode {
   const allSections = rows.flatMap((r) => (Array.isArray(r.admin_sections) ? r.admin_sections : []))
   allSections.sort((a, b) => (a.section_number ?? 0) - (b.section_number ?? 0))
@@ -474,7 +522,7 @@ export function mapPrepTestTreeRows(
     const kind = sec.section_type ?? 'LR'
     const secNum = sec.section_number ?? sections.length + 1
     const questions = [...(sec.admin_questions ?? [])]
-    const ctx = { ptNum, secNum, prepTestTitle }
+    const ctx = { ptNum, secNum, prepTestTitle, typeNamesById }
 
     let passages: ExplanationPassageNode[] = []
     if (kind === 'LR') {
@@ -610,7 +658,10 @@ function resolvePassageForQuestion(
 export type ListPrepTestsOptions = {
   page?: number
   pageSize?: number
+  /** Absolute start index; when set, overrides page-based offset. */
+  offset?: number
   sort?: 'newest' | 'oldest'
+  bookmarkedOnly?: boolean
 }
 
 export type ExplanationStatusCounts = {
@@ -673,6 +724,25 @@ export type ListPrepTestsResult = {
   statusCounts: ExplanationStatusCounts
 }
 
+export function applyQuestionBookmarks(
+  tree: ExplanationPrepTestNode,
+  bookmarkedIds: ReadonlySet<string>,
+): ExplanationPrepTestNode {
+  return {
+    ...tree,
+    sections: tree.sections.map((sec) => ({
+      ...sec,
+      passages: sec.passages.map((pass) => ({
+        ...pass,
+        questions: pass.questions.map((q) => ({
+          ...q,
+          bookmarked: bookmarkedIds.has(q.id),
+        })),
+      })),
+    })),
+  }
+}
+
 export function createExplanationsService(deps: { repository: ExplanationsRepository }) {
   return {
     async getExplanationStatusCounts(userId: string): Promise<ExplanationStatusCounts> {
@@ -690,12 +760,22 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
 
       const rows = await deps.repository.listAllPrepTestRows()
       let grouped = groupPrepTestRows(rows).filter((g) => isStudentVisiblePrepTest(g.moduleId))
+      if (options.bookmarkedOnly) {
+        const bookmarkedQuestionIds = await deps.repository.listBookmarkedQuestionIds(userId)
+        const prepTestIds = new Set(
+          await deps.repository.listPrepTestIdsForQuestionIds(bookmarkedQuestionIds),
+        )
+        grouped = grouped.filter((g) => g.prepTestIds.some((id) => prepTestIds.has(id)))
+      }
       if (sort === 'oldest') {
         grouped = [...grouped].reverse()
       }
 
       const total = grouped.length
-      const start = (page - 1) * pageSize
+      const start =
+        typeof options.offset === 'number' && Number.isFinite(options.offset)
+          ? Math.max(0, Math.floor(options.offset))
+          : (page - 1) * pageSize
       const pageGroups = grouped.slice(start, start + pageSize)
 
       const prepTests: ExplanationPrepTestListItem[] = []
@@ -725,7 +805,11 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
 
       const allQuestionIds = rows
         .flatMap((r) => (r.admin_sections ?? []).flatMap((s) => (s.admin_questions ?? []).map((q) => q.id)))
-      const progressLists = await deps.repository.listPrepTestQuestionProgress(userId)
+      const [progressLists, typeNamesById, bookmarkedQuestionIds] = await Promise.all([
+        deps.repository.listPrepTestQuestionProgress(userId),
+        deps.repository.listQuestionTypeNames(),
+        deps.repository.listBookmarkedQuestionIds(userId),
+      ])
       const progress = progressFromLists(progressLists)
       const statusByQ = new Map<string, ExplanationQuestionStatus>()
       for (const qid of allQuestionIds) {
@@ -733,15 +817,36 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
       }
 
       const title = normalizeTitle(grouped.baseModuleId, grouped.primary.title)
-      const prepTest = mapPrepTestTreeRows(
-        rows,
-        grouped.primary.id,
-        grouped.baseModuleId,
-        title,
-        statusByQ,
+      const prepTest = applyQuestionBookmarks(
+        mapPrepTestTreeRows(
+          rows,
+          grouped.primary.id,
+          grouped.baseModuleId,
+          title,
+          statusByQ,
+          typeNamesById,
+        ),
+        new Set(bookmarkedQuestionIds),
       )
 
       return { prepTest }
+    },
+
+    async listQuestionBookmarks(userId: string): Promise<{ questionIds: string[] }> {
+      const questionIds = await deps.repository.listBookmarkedQuestionIds(userId)
+      return { questionIds }
+    },
+
+    async setQuestionBookmark(
+      userId: string,
+      questionId: string,
+      bookmarked: boolean,
+    ): Promise<{ questionIds: string[] }> {
+      const id = questionId.trim()
+      if (!id) throw new Error('questionId is required')
+      await deps.repository.setQuestionBookmark(userId, id, bookmarked)
+      const questionIds = await deps.repository.listBookmarkedQuestionIds(userId)
+      return { questionIds }
     },
 
     async getExplanationDetail(userId: string, questionId: string): Promise<ExplanationDetailPayload> {

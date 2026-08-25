@@ -27,6 +27,7 @@ import { PracticeSessionAccessibilityPanel } from "@/features/student/practice-s
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
 import { PracticeSessionHeader } from "@/features/student/practice-session/practice-session-header"
 import { PracticeSessionPauseModal } from "@/features/student/practice-session/practice-session-pause-modal"
+import { resolvePracticeSessionQuestionNavOutcome } from "@/features/student/practice-session/practice-session-question-nav-outcome"
 import { PracticeSessionReviewPanel } from "@/features/student/practice-session/practice-session-review-panel"
 import { usePracticeSessionAccessibilityPanel } from "@/features/student/practice-session/use-practice-session-accessibility-panel"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
@@ -221,6 +222,16 @@ function GuestDiagnosticExamLayout({
     [canSelectAnswers, current, isTesterMode, revealedByQuestion],
   )
 
+  const handleResetResponse = useCallback(() => {
+    if (!current || !canSelectAnswers) return
+    if (isTesterMode && revealedByQuestion[current.id]) return
+    setAnswersByQuestion((prev) => {
+      const next = { ...prev }
+      delete next[current.id]
+      return next
+    })
+  }, [canSelectAnswers, current, isTesterMode, revealedByQuestion])
+
   const headerTitle = "LSAT Praxis Assessment"
 
   const finishButton = isPostResultsMode ? (
@@ -266,7 +277,7 @@ function GuestDiagnosticExamLayout({
   return (
     <div
       className={cn(
-        "practice-session-card practice-session-card--active-drill relative flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+        "practice-session-card practice-session-card--active-drill relative flex h-full max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
         !canNavigate && "pointer-events-none select-none",
         className,
       )}
@@ -323,7 +334,11 @@ function GuestDiagnosticExamLayout({
           </div>
           <div
             ref={questionPaneRef}
-            className={cn("practice-session-pane min-h-0 overflow-y-auto", ACTIVE_DRILL_QUESTION_PANE_CLASS)}
+            className={cn(
+              "practice-session-pane min-h-0 overflow-y-auto",
+              questionRevealed && explanationHtml ? "practice-session-pane--scroll-visible" : null,
+              ACTIVE_DRILL_QUESTION_PANE_CLASS,
+            )}
           >
             <PracticeDrillQuestionPanel
               key={current.id}
@@ -337,6 +352,7 @@ function GuestDiagnosticExamLayout({
               allowReselect={canSelectAnswers && !questionRevealed}
               getRegionHtml={highlights.getRegionHtml}
               onSelect={canSelectAnswers ? handleSelectChoice : () => undefined}
+              onResetResponse={canSelectAnswers ? handleResetResponse : undefined}
               flagged={isFlagged(current.id)}
               onToggleFlag={() => toggleFlag(current.id)}
               flagsDisabled={!canNavigate}
@@ -346,23 +362,23 @@ function GuestDiagnosticExamLayout({
               choicesDisabled={!canSelectAnswers || questionRevealed}
             />
             {questionRevealed && explanationUnlocked && explanationHtml ? (
-              <div className="mt-6 border-t border-[#dfe1e7] pt-6">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#666d80]">
+              <div className="practice-session-explanation practice-session-inline-divider mt-6 border-t pt-6 pb-6">
+                <p className="practice-session-panel-label mb-3 text-xs font-semibold uppercase tracking-[0.04em]">
                   Explanation
                 </p>
-                <div className="rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] p-5">
+                <div className="practice-session-panel rounded-[16px] border p-5">
                   <HtmlContent
                     html={explanationHtml}
-                    className="explanation-detail-body max-w-none text-[1.05rem] leading-[1.55] text-[#0d0d12]"
+                    className="explanation-detail-body max-w-none text-[1.05rem] leading-[1.55]"
                   />
                 </div>
               </div>
             ) : null}
             {questionRevealed && isPostResultsMode && !explanationUnlocked ? (
-              <div className="mt-6 border-t border-[#dfe1e7] pt-6">
-                <div className="rounded-[16px] border border-[#b8d4ff] bg-[#edf3ff] p-5">
-                  <p className="text-sm font-semibold text-[#062357]">Explanation locked</p>
-                  <p className="mt-1 text-sm leading-relaxed text-[#666d80]">
+              <div className="practice-session-inline-divider mt-6 border-t pt-6">
+                <div className="practice-session-panel rounded-[16px] border p-5">
+                  <p className="text-sm font-semibold">Explanation locked</p>
+                  <p className="practice-session-panel-label mt-1 text-sm leading-relaxed">
                     Free students can review explanations for the first {freeExplanationLimit} questions
                     on this diagnostic. Upgrade to unlock every explanation.
                   </p>
@@ -383,6 +399,16 @@ function GuestDiagnosticExamLayout({
           answersByQuestion={answersByQuestion}
           isFlagged={isFlagged}
           variant="active-drill"
+          outcomeForQuestion={
+            isPostResultsMode
+              ? (questionId) => {
+                  // Review: show scored outcomes for every question.
+                  // Tester: only after the answer is revealed; otherwise unanswered.
+                  if (isTesterMode && !revealedByQuestion[questionId]) return "unanswered"
+                  return resolvePracticeSessionQuestionNavOutcome(answersByQuestion[questionId])
+                }
+              : undefined
+          }
           onSelectQuestion={canNavigate ? setQIndex : () => undefined}
           onPrev={canNavigate ? () => setQIndex((index) => Math.max(1, index - 1)) : () => undefined}
           onNext={

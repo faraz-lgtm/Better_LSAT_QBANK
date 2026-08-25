@@ -57,16 +57,16 @@ const ACTIVE_DRILL_HEADER_PROGRESS_CLASS =
 const ACTIVE_DRILL_HEADER_MORE_BUTTON_CLASS =
   "inline-flex size-[52px] shrink-0 items-center justify-center rounded-[16px] border border-[#dfe1e7] bg-white text-[#666d80] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#f6f8fa] hover:text-[#062357]"
 
-/** Figma `18617:31668` — selected answer choice row */
+/** Figma `18617:31668` — selected answer choice row (colors via a11y CSS vars) */
 const ACTIVE_DRILL_OPTION_ROW_SELECTED_CLASS =
-  "rounded-[16px] border border-[#0d47a1] bg-[#f3f7ff] p-4 shadow-[0px_12px_8px_rgba(13,13,18,0.08),0px_4px_3px_rgba(13,13,18,0.03)]"
+  "practice-session-choice--selected rounded-[16px] border p-4 shadow-[0px_12px_8px_rgba(13,13,18,0.08),0px_4px_3px_rgba(13,13,18,0.03)]"
 
-/** Figma `18617:31670` / `18617:31678` — choice letter badges */
+/** Figma `18617:31670` / `18617:31678` — choice letter badges (colors via a11y CSS vars) */
 const ACTIVE_DRILL_OPTION_LETTER_SELECTED_CLASS =
-  "border-2 border-[#0d47a1] bg-[#0d47a1] text-base font-semibold leading-6 text-white"
+  "practice-session-choice-letter practice-session-choice-letter--selected border-2 text-base font-semibold leading-6"
 
 const ACTIVE_DRILL_OPTION_LETTER_UNSELECTED_CLASS =
-  "border-2 border-[#dfe1e7] bg-white text-base font-semibold leading-6 text-[#0d0d12]"
+  "practice-session-choice-letter practice-session-choice-letter--unselected border-2 text-base font-semibold leading-6"
 
 /** Figma `18617:31663` / `18781:29066` — 36×36 flag / eye controls */
 const ACTIVE_DRILL_ACTION_BUTTON_CLASS =

@@ -96,7 +96,7 @@ describe("IntentPage", () => {
     expect(screen.getByRole("link", { name: /back/i })).toHaveAttribute("href", "/")
   })
 
-  it("does not offer the full diagnostic tier", () => {
+  it("offers Mini and Full cards without the 115-question exam", () => {
     render(
       <MemoryRouter>
         <IntentPage isAuthenticated={false} />

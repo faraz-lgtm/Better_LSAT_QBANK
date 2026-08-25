@@ -27,6 +27,8 @@ export type PrepTestTreeQuestionRow = {
   explanation: string | null
   video_url: string | null
   difficulty: number | null
+  question_type_id?: string | null
+  question_types?: { name: string } | { name: string }[] | null
 }
 
 export type PrepTestTreePassageRow = {
@@ -112,7 +114,8 @@ const prepTestTreeSelect = `
       stimulus_text,
       explanation,
       video_url,
-      difficulty
+      difficulty,
+      question_type_id
     )
   )
 `
@@ -195,6 +198,63 @@ export function createExplanationsRepository(client: SupabaseClient) {
         .in('id', prepTestIds)
       if (error) throw error
       return (data as PrepTestTreePrepTestRow[]) ?? []
+    },
+
+    async listQuestionTypeNames(): Promise<Map<string, string>> {
+      const { data, error } = await client.from('question_types').select('id,name')
+      if (error) throw error
+      const names = new Map<string, string>()
+      for (const row of (data ?? []) as { id: string; name: string | null }[]) {
+        const name = row.name?.trim() ?? ''
+        if (row.id && name) names.set(String(row.id), name)
+      }
+      return names
+    },
+
+    async listBookmarkedQuestionIds(userId: string): Promise<string[]> {
+      const { data, error } = await client
+        .from('explanation_question_bookmarks')
+        .select('question_id')
+        .eq('user_id', userId)
+      if (error) throw error
+      return ((data ?? []) as { question_id: string }[]).map((row) => String(row.question_id))
+    },
+
+    async setQuestionBookmark(userId: string, questionId: string, bookmarked: boolean): Promise<void> {
+      if (bookmarked) {
+        const { error } = await client
+          .from('explanation_question_bookmarks')
+          .upsert(
+            { user_id: userId, question_id: questionId },
+            { onConflict: 'user_id,question_id' },
+          )
+        if (error) throw error
+        return
+      }
+      const { error } = await client
+        .from('explanation_question_bookmarks')
+        .delete()
+        .eq('user_id', userId)
+        .eq('question_id', questionId)
+      if (error) throw error
+    },
+
+    async listPrepTestIdsForQuestionIds(questionIds: string[]): Promise<string[]> {
+      if (questionIds.length === 0) return []
+      const { data, error } = await client
+        .from('admin_questions')
+        .select('id, admin_sections!inner(prep_test_id)')
+        .in('id', questionIds)
+      if (error) throw error
+      const ids = new Set<string>()
+      for (const row of (data ?? []) as Array<{
+        admin_sections?: { prep_test_id: string } | { prep_test_id: string }[] | null
+      }>) {
+        const sec = Array.isArray(row.admin_sections) ? row.admin_sections[0] : row.admin_sections
+        const prepTestId = sec?.prep_test_id?.trim()
+        if (prepTestId) ids.add(prepTestId)
+      }
+      return [...ids]
     },
 
     async fetchQuestionStatsForPrepTestIds(prepTestIds: string[]): Promise<{

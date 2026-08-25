@@ -4,9 +4,7 @@ import {
   BarChart3,
   Bookmark,
   ChevronDown,
-  ChevronLeft,
   ChevronRight,
-  MoreVertical,
   PlayCircle,
 } from "lucide-react"
 
@@ -19,6 +17,12 @@ import {
   getCachedExplanationPrepTestTree,
 } from "@/features/student/explanation-detail/explanation-tree-cache"
 import { explanationQuestionDetailHref } from "@/features/student/explanation-detail/explanation-question-index"
+import {
+  readExplanationBookmarkCache,
+  writeExplanationBookmarkCache,
+} from "@/features/student/explanation-detail/explanation-bookmark-cache"
+import { filterPrepTestTreeToQuestionIds } from "@/features/student/explanation-detail/filter-explanation-tree"
+import { passagesInQuestionOrder } from "@/features/student/explanation-detail/order-explanation-passages"
 import type {
   ExplanationPrepTestListItem,
   ExplanationPrepTestNode,
@@ -57,9 +61,9 @@ const PREP_TEST_BADGE_SIZE = {
 } as const
 
 const TREE_BADGE_SIZE = {
-  width: "40px",
-  height: "40px",
-  borderRadius: "14px",
+  width: "32px",
+  height: "32px",
+  borderRadius: "10px",
 } as const
 
 const TREE_BADGE_CLASS = "flex shrink-0 items-center justify-center"
@@ -134,33 +138,11 @@ function StatusBadge({ status }: { status: ExplanationQuestionStatus }) {
   )
 }
 
-function sectionMetaLine(sec: ExplanationSectionNode): string {
-  return [sec.sectionTitle, sec.flags].filter(Boolean).join(" • ")
-}
-
 function previewLine(snippet: string, max: number): string {
   const text = plainTextFromHtml(snippet).replace(/\s+/g, " ").trim()
   if (!text) return ""
   if (text.length <= max) return text
   return `${text.slice(0, max).trimEnd()}...`
-}
-
-function formatQuestionSource(source: string): { primary: string; secondary?: string } {
-  const parts = source.split(" · ").map((part) => part.trim()).filter(Boolean)
-  if (parts.length <= 1) return { primary: source }
-  return { primary: parts[0]!, secondary: parts.slice(1).join(" · ") }
-}
-
-function QuestionSourceText({ source }: { source: string }) {
-  const { primary, secondary } = formatQuestionSource(source)
-  const text = secondary ? `${primary} ${secondary}` : primary
-  return (
-    <div className="w-[9.4375rem] shrink-0">
-      <p className="truncate text-xs font-normal leading-normal tracking-[0.02em]" style={{ color: S.muted }} title={text}>
-        {text}
-      </p>
-    </div>
-  )
 }
 
 const TREE_ROW_CLASS =
@@ -218,14 +200,13 @@ function prepTestBadgeColors(status: ExplanationQuestionStatus): {
 }
 
 const PASSAGE_PREVIEW_MAX = 56
-const QUESTION_PREVIEW_MAX = 52
 
 function SectionKindBadge({ kind }: { kind: ExplanationSectionNode["kind"] }) {
   const accentColor =
     kind === "RC" ? "var(--explanation-rc-badge-bg)" : "var(--explanation-lr-badge-bg)"
   return (
     <span
-      className={`${TREE_BADGE_CLASS} text-lg font-black leading-none tracking-[0.02em]`}
+      className={`${TREE_BADGE_CLASS} text-xs font-bold leading-none tracking-[0.02em]`}
       style={{
         ...TREE_BADGE_SIZE,
         backgroundColor: accentColor,
@@ -241,7 +222,7 @@ function SectionKindBadge({ kind }: { kind: ExplanationSectionNode["kind"] }) {
 function PassageIndexBadge({ children }: { children: ReactNode }) {
   return (
     <span
-      className="flex shrink-0 items-center justify-center border text-lg font-semibold leading-[1.4] tracking-[0.02em]"
+      className="flex shrink-0 items-center justify-center border text-sm font-semibold leading-none tracking-[0.02em]"
       style={{
         ...TREE_BADGE_SIZE,
         borderColor: "var(--color-student-accent)",
@@ -257,7 +238,7 @@ function PassageIndexBadge({ children }: { children: ReactNode }) {
 function QuestionIndexBadge({ children }: { children: ReactNode }) {
   return (
     <span
-      className="flex shrink-0 items-center justify-center border text-lg font-semibold leading-[1.4] tracking-[0.02em]"
+      className="flex shrink-0 items-center justify-center border text-sm font-semibold leading-none tracking-[0.02em]"
       style={{
         ...TREE_BADGE_SIZE,
         borderColor: "var(--color-student-accent)",
@@ -347,7 +328,8 @@ type PrepTestRow = ExplanationPrepTestListItem & {
   rowSubtitle: string
 }
 
-const PAGE_SIZE = 5
+const INITIAL_PAGE_SIZE = 5
+const SEE_MORE_PAGE_SIZE = 50
 
 const EMPTY_STATUS_COUNTS: ExplanationStatusCounts = {
   in_process: 0,
@@ -367,13 +349,15 @@ function mapListItemToRow(r: ExplanationPrepTestListItem): PrepTestRow {
   }
 }
 
+type ExplanationsListMode = "newest" | "oldest" | "bookmarked"
+
 function ExplanationsPage() {
-  const [sort, setSort] = useState<"newest" | "oldest">("newest")
+  const [listMode, setListMode] = useState<ExplanationsListMode>("newest")
   const [sectionFilter] = useState<"all" | "lr" | "rc">("all")
-  const [page, setPage] = useState(1)
   const [totalPrepTests, setTotalPrepTests] = useState(0)
   const [prepTestRows, setPrepTestRows] = useState<PrepTestRow[]>([])
   const [listLoading, setListLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
   const [useMock, setUseMock] = useState(false)
   const [statusCounts, setStatusCounts] = useState<ExplanationStatusCounts>(EMPTY_STATUS_COUNTS)
@@ -384,6 +368,11 @@ function ExplanationsPage() {
   const [treeLoading, setTreeLoading] = useState(() => new Set<string>())
   const [treeErrors, setTreeErrors] = useState<Record<string, string>>({})
   const [treeVersion, setTreeVersion] = useState(0)
+  const [bookmarkedQuestionIds, setBookmarkedQuestionIds] = useState(() => new Set<string>())
+  const [bookmarkedPrepTestIds, setBookmarkedPrepTestIds] = useState(() => new Set<string>())
+
+  const sort: "newest" | "oldest" = listMode === "oldest" ? "oldest" : "newest"
+  const bookmarkedOnly = listMode === "bookmarked"
 
   const explanationsApi = useMemo(() => {
     try {
@@ -425,10 +414,31 @@ function ExplanationsPage() {
   )
 
   useEffect(() => {
-    setOpenPt(new Set())
-    setOpenSection(new Set())
-    setOpenPassage(new Set())
-  }, [page])
+    const cached = readExplanationBookmarkCache()
+    setBookmarkedQuestionIds(new Set(cached.questionIds))
+    setBookmarkedPrepTestIds(new Set(cached.prepTestIds))
+    if (!explanationsApi) return
+    let alive = true
+    void explanationsApi
+      .listQuestionBookmarks()
+      .then((result) => {
+        if (!alive) return
+        setBookmarkedQuestionIds(new Set(result.questionIds))
+        setBookmarkedPrepTestIds((prev) => {
+          writeExplanationBookmarkCache({
+            questionIds: result.questionIds,
+            prepTestIds: [...prev],
+          })
+          return prev
+        })
+      })
+      .catch(() => {
+        /* Keep the local cache when the hosted function does not support bookmarks yet. */
+      })
+    return () => {
+      alive = false
+    }
+  }, [explanationsApi])
 
   useEffect(() => {
     if (!explanationsApi) {
@@ -449,8 +459,7 @@ function ExplanationsPage() {
           return sort === "newest" ? nb - na : na - nb
         })
         setTotalPrepTests(sorted.length)
-        const start = (page - 1) * PAGE_SIZE
-        setPrepTestRows(sorted.slice(start, start + PAGE_SIZE))
+        setPrepTestRows(sorted.slice(0, INITIAL_PAGE_SIZE))
         for (const pt of mockExplanationPrepTests) {
           cacheExplanationPrepTestTree(pt)
         }
@@ -460,23 +469,51 @@ function ExplanationsPage() {
         setListError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
       }
       setListLoading(false)
+      setLoadingMore(false)
       return
     }
 
     let alive = true
     setListLoading(true)
+    setLoadingMore(false)
     setListError(null)
     setPrepTestRows([])
     void explanationsApi
-      .listPrepTests({ page, pageSize: PAGE_SIZE, sort })
+      .listPrepTests({
+        page: 1,
+        pageSize: INITIAL_PAGE_SIZE,
+        offset: 0,
+        sort,
+        bookmarkedOnly,
+      })
       .then((result) => {
         if (!alive) return
         setPrepTestRows(result.prepTests.map(mapListItemToRow))
         setTotalPrepTests(result.total)
         setStatusCounts(result.statusCounts)
       })
-      .catch((e) => {
+      .catch(async (e) => {
         if (!alive) return
+        if (bookmarkedOnly) {
+          try {
+            const fallback = await explanationsApi.listPrepTests({
+              page: 1,
+              pageSize: INITIAL_PAGE_SIZE,
+              offset: 0,
+              sort,
+            })
+            if (!alive) return
+            setPrepTestRows(fallback.prepTests.map(mapListItemToRow))
+            setTotalPrepTests(fallback.total)
+            setStatusCounts(fallback.statusCounts)
+            return
+          } catch {
+            /* Use the original list error below. */
+          }
+        }
+        setPrepTestRows([])
+        setTotalPrepTests(0)
+        setStatusCounts(EMPTY_STATUS_COUNTS)
         setListError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to load explanations")
       })
       .finally(() => {
@@ -485,7 +522,63 @@ function ExplanationsPage() {
     return () => {
       alive = false
     }
-  }, [explanationsApi, page, sort])
+  }, [bookmarkedOnly, explanationsApi, sort])
+
+  const loadMorePrepTests = useCallback(async () => {
+    if (loadingMore || listLoading) return
+    if (useMock) {
+      const allMockRows: PrepTestRow[] = mockExplanationPrepTests.map((pt) => ({
+        id: pt.id,
+        title: `PrepTest ${pt.prepTestNumber}`,
+        moduleId: `LSAC${pt.prepTestNumber}`,
+        prepTestNumber: pt.prepTestNumber,
+        questionCount: pt.sections.reduce((n, s) => n + s.passages.reduce((m, p) => m + p.questions.length, 0), 0),
+        explainedCount: 0,
+        rowSubtitle: pt.rowSubtitle,
+      }))
+      const sorted = [...allMockRows].sort((a, b) => {
+        const na = Number.parseInt(a.prepTestNumber, 10) || 0
+        const nb = Number.parseInt(b.prepTestNumber, 10) || 0
+        return sort === "newest" ? nb - na : na - nb
+      })
+      setPrepTestRows(sorted.slice(0, Math.min(sorted.length, prepTestRows.length + SEE_MORE_PAGE_SIZE)))
+      return
+    }
+    if (!explanationsApi) return
+    const offset = prepTestRows.length
+    if (offset >= totalPrepTests) return
+    setLoadingMore(true)
+    setListError(null)
+    try {
+      const result = await explanationsApi.listPrepTests({
+        offset,
+        pageSize: SEE_MORE_PAGE_SIZE,
+        sort,
+        bookmarkedOnly,
+      })
+      const rows = result.prepTests.map(mapListItemToRow)
+      setPrepTestRows((prev) => {
+        const seen = new Set(prev.map((row) => row.id))
+        const appended = rows.filter((row) => !seen.has(row.id))
+        return [...prev, ...appended]
+      })
+      setTotalPrepTests(result.total)
+      setStatusCounts(result.statusCounts)
+    } catch (e) {
+      setListError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to load more PrepTests")
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [
+    bookmarkedOnly,
+    explanationsApi,
+    listLoading,
+    loadingMore,
+    prepTestRows.length,
+    sort,
+    totalPrepTests,
+    useMock,
+  ])
 
   const loadedTrees = useMemo(() => {
     void treeVersion
@@ -508,16 +601,68 @@ function ExplanationsPage() {
     { dot: SEEN_GRAY, count: displayStatusCounts.seen, label: "Seen" },
   ] as const
 
-  const displayRows = prepTestRows
+  const displayRows = useMemo(() => {
+    if (!bookmarkedOnly) return prepTestRows
+    if (bookmarkedQuestionIds.size === 0) return []
+    if (bookmarkedPrepTestIds.size === 0) return prepTestRows
+    const matched = prepTestRows.filter((row) => bookmarkedPrepTestIds.has(row.id))
+    return matched.length > 0 ? matched : prepTestRows
+  }, [bookmarkedOnly, bookmarkedPrepTestIds, bookmarkedQuestionIds.size, prepTestRows])
+  const hasMore = !bookmarkedOnly && prepTestRows.length < totalPrepTests
 
-  const totalPages = Math.max(1, Math.ceil(totalPrepTests / PAGE_SIZE))
-  const pageStart = totalPrepTests === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
-  const pageEnd = Math.min(page * PAGE_SIZE, totalPrepTests)
-
-  const handleSortChange = (next: "newest" | "oldest") => {
-    setSort(next)
-    setPage(1)
+  const handleListModeChange = (next: ExplanationsListMode) => {
+    setListMode(next)
+    setOpenPt(new Set())
+    setOpenSection(new Set())
+    setOpenPassage(new Set())
   }
+
+  const persistBookmarks = (questionIds: Set<string>, prepTestIds: Set<string>) => {
+    writeExplanationBookmarkCache({
+      questionIds: [...questionIds],
+      prepTestIds: [...prepTestIds],
+    })
+  }
+
+  const toggleQuestionBookmark = async (prepTestId: string, questionId: string) => {
+    const nextBookmarked = !bookmarkedQuestionIds.has(questionId)
+    const nextQuestionIds = new Set(bookmarkedQuestionIds)
+    const nextPrepTestIds = new Set(bookmarkedPrepTestIds)
+    if (nextBookmarked) {
+      nextQuestionIds.add(questionId)
+      nextPrepTestIds.add(prepTestId)
+    } else {
+      nextQuestionIds.delete(questionId)
+      const tree = getCachedExplanationPrepTestTree(prepTestId)
+      const stillBookmarkedInPt = tree
+        ? tree.sections.some((sec) =>
+            sec.passages.some((pass) =>
+              pass.questions.some((q) => q.id !== questionId && nextQuestionIds.has(q.id)),
+            ),
+          )
+        : false
+      if (!stillBookmarkedInPt) nextPrepTestIds.delete(prepTestId)
+    }
+    setBookmarkedQuestionIds(nextQuestionIds)
+    setBookmarkedPrepTestIds(nextPrepTestIds)
+    persistBookmarks(nextQuestionIds, nextPrepTestIds)
+    if (!explanationsApi) return
+    try {
+      const result = await explanationsApi.setQuestionBookmark(questionId, nextBookmarked)
+      const synced = new Set(result.questionIds)
+      setBookmarkedQuestionIds(synced)
+      persistBookmarks(synced, nextPrepTestIds)
+    } catch {
+      /* Optimistic local bookmark still applies until the function is deployed. */
+    }
+  }
+
+  useEffect(() => {
+    if (!bookmarkedOnly) return
+    for (const row of displayRows) {
+      void loadPrepTestTree(row.id)
+    }
+  }, [bookmarkedOnly, displayRows, loadPrepTestTree])
 
   const secKey = (ptId: string, sId: string) => `${ptId}:${sId}`
   const passKey = (ptId: string, sId: string, pId: string) => `${ptId}:${sId}:${pId}`
@@ -569,11 +714,12 @@ function ExplanationsPage() {
           <div className="flex flex-wrap items-center gap-2">
             <StudentOptionMenu
               ariaLabel="Sort explanations"
-              value={sort}
-              onChange={handleSortChange}
+              value={listMode}
+              onChange={handleListModeChange}
               options={[
                 { value: "newest", label: "Newest" },
                 { value: "oldest", label: "Oldest" },
+                { value: "bookmarked", label: "Bookmarked" },
               ]}
             />
           </div>
@@ -586,16 +732,22 @@ function ExplanationsPage() {
         <StudentPageLoader centered className="min-h-0 flex-1" label="Loading PrepTests…" />
       ) : displayRows.length === 0 ? (
         <p className="mt-6 max-w-xl text-sm text-[#666d80]">
-          No published explanations yet. When an admin adds written or video explanation content to PrepTest questions, they will
-          appear here.
+          {bookmarkedOnly
+            ? "No bookmarked questions yet. Open a PrepTest and tap the bookmark icon on a question."
+            : "No published explanations yet. When an admin adds written or video explanation content to PrepTest questions, they will appear here."}
         </p>
       ) : (
         <div className="mt-6 flex flex-col gap-3">
           {displayRows.map((row) => {
           const ptId = row.id
-          const ptIsOpen = openPt.has(ptId)
           const ptTree = getCachedExplanationPrepTestTree(ptId)
-          const filteredTree = ptTree ? filterPrepTests([ptTree], sectionFilter)[0] : null
+          const sectionFiltered = ptTree ? filterPrepTests([ptTree], sectionFilter)[0] : null
+          const filteredTree =
+            bookmarkedOnly && sectionFiltered
+              ? filterPrepTestTreeToQuestionIds(sectionFiltered, bookmarkedQuestionIds)
+              : sectionFiltered
+          if (bookmarkedOnly && ptTree && !filteredTree) return null
+          const ptIsOpen = bookmarkedOnly || openPt.has(ptId)
           const isLoadingTree = treeLoading.has(ptId)
           const treeError = treeErrors[ptId]
           const ptNum = row.prepTestNumber
@@ -644,16 +796,6 @@ function ExplanationsPage() {
                     <ChevronRight className="size-6 shrink-0" style={{ color: S.heading }} aria-hidden />
                   )}
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="ml-auto size-9 shrink-0 text-[#666d80] hover:text-[color:var(--color-student-heading)]"
-                  aria-label="PrepTest options"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MoreVertical className="size-5" />
-                </Button>
               </button>
 
               {ptIsOpen ? (
@@ -665,7 +807,7 @@ function ExplanationsPage() {
                     </div>
                   ) : null}
                   {filteredTree?.sections.map((sec) => {
-                    const sOpen = openSection.has(secKey(ptId, sec.id))
+                    const sOpen = bookmarkedOnly || openSection.has(secKey(ptId, sec.id))
                     const secHeaderBg = sOpen ? S.listRowAlt : S.surface
                     return (
                       <div key={sec.id} style={{ borderColor: S.border }}>
@@ -675,28 +817,30 @@ function ExplanationsPage() {
                           style={{ backgroundColor: secHeaderBg, borderColor: S.border }}
                           onClick={() => toggleSection(ptId, sec)}
                         >
-                          <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
+                          <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-3 overflow-hidden">
                             <SectionKindBadge kind={sec.kind} />
                             <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-hidden">
-                              <span className="shrink-0 text-2xl font-bold leading-[1.3]" style={{ color: S.heading }}>
+                              <span className="shrink-0 text-base font-semibold leading-[1.4]" style={{ color: S.heading }}>
                                 Section {sec.sectionNumber}
                               </span>
-                              <span className="truncate text-sm font-normal leading-normal" style={{ color: S.muted }}>
-                                {sectionMetaLine(sec)}
-                              </span>
+                              {sec.flags ? (
+                                <span className="truncate text-sm font-normal leading-normal" style={{ color: S.muted }}>
+                                  {sec.flags}
+                                </span>
+                              ) : null}
                             </div>
                           </div>
                           {sOpen ? (
-                            <ChevronDown className="size-6 shrink-0 text-[#666d80]" />
+                            <ChevronDown className="size-5 shrink-0 text-[#666d80]" />
                           ) : (
-                            <ChevronRight className="size-6 shrink-0 text-[#666d80]" />
+                            <ChevronRight className="size-5 shrink-0 text-[#666d80]" />
                           )}
                         </button>
 
                         {sOpen ? (
                           <div>
-                            {sec.passages.map((pass) => {
-                              const pOpen = openPassage.has(passKey(ptId, sec.id, pass.id))
+                            {passagesInQuestionOrder(sec.passages).map((pass) => {
+                              const pOpen = bookmarkedOnly || openPassage.has(passKey(ptId, sec.id, pass.id))
                               const passagePreviewSource =
                                 pass.snippet.trim() || pass.questions[0]?.snippet?.trim() || ""
                               const questionCountLabel = `${pass.questions.length} Question${pass.questions.length === 1 ? "" : "s"}`
@@ -716,10 +860,10 @@ function ExplanationsPage() {
                                       })
                                     }
                                   >
-                                    <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
+                                    <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-3 overflow-hidden">
                                       <PassageIndexBadge>{pass.label}</PassageIndexBadge>
                                       <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-hidden">
-                                        <span className="shrink-0 text-lg font-semibold leading-[1.4]" style={{ color: S.heading }}>
+                                        <span className="shrink-0 text-base font-semibold leading-[1.4]" style={{ color: S.heading }}>
                                           {pass.title}
                                         </span>
                                         {passagePreviewSource ? (
@@ -753,7 +897,7 @@ function ExplanationsPage() {
                                             className={QUESTION_ROW_CLASS}
                                             style={{ borderColor: S.border }}
                                           >
-                                            <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
+                                            <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-3 overflow-hidden">
                                               <QuestionIndexBadge>{q.number}</QuestionIndexBadge>
                                               <Link
                                                 to={detailHref}
@@ -765,15 +909,14 @@ function ExplanationsPage() {
                                                 <span
                                                   className="truncate text-xs font-medium leading-normal tracking-[0.02em]"
                                                   style={{ color: S.muted }}
-                                                  title={plainTextFromHtml(q.snippet)}
+                                                  title={q.topicName?.trim() || "—"}
                                                 >
-                                                  {previewLine(q.snippet, QUESTION_PREVIEW_MAX)}
+                                                  {q.topicName?.trim() || "—"}
                                                 </span>
                                               </Link>
                                               <div className="shrink-0 px-4">
                                                 <StatusBadge status={q.status} />
                                               </div>
-                                              <QuestionSourceText source={q.source} />
                                             </div>
 
                                             <div className="flex shrink-0 flex-nowrap items-center gap-6">
@@ -805,10 +948,23 @@ function ExplanationsPage() {
                                                   type="button"
                                                   variant="ghost"
                                                   size="icon"
-                                                  className="size-9 rounded-xl text-[#666d80] hover:text-[color:var(--color-student-heading)]"
-                                                  aria-label="Bookmark"
+                                                  className={
+                                                    bookmarkedQuestionIds.has(q.id)
+                                                      ? "size-9 rounded-xl text-[#0d47a1] hover:text-[#0d47a1]"
+                                                      : "size-9 rounded-xl text-[#666d80] hover:text-[color:var(--color-student-heading)]"
+                                                  }
+                                                  aria-label={
+                                                    bookmarkedQuestionIds.has(q.id)
+                                                      ? `Remove bookmark from ${q.code}`
+                                                      : `Bookmark ${q.code}`
+                                                  }
+                                                  aria-pressed={bookmarkedQuestionIds.has(q.id)}
+                                                  onClick={() => void toggleQuestionBookmark(ptId, q.id)}
                                                 >
-                                                  <Bookmark className="size-6" />
+                                                  <Bookmark
+                                                    className="size-6"
+                                                    fill={bookmarkedQuestionIds.has(q.id) ? "currentColor" : "none"}
+                                                  />
                                                 </Button>
                                               </div>
                                             </div>
@@ -833,42 +989,17 @@ function ExplanationsPage() {
         </div>
       )}
 
-      {totalPrepTests > PAGE_SIZE ? (
-        <nav
-          className="mt-4 flex flex-col gap-3 border-t border-[#dfe1e7] pt-4 sm:flex-row sm:items-center sm:justify-between"
-          aria-label="PrepTest pagination"
-        >
-          <p className="text-sm text-[#666d80]">
-            Showing {pageStart}–{pageEnd} of {totalPrepTests} PrepTests
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="rounded-lg"
-              disabled={listLoading || page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              <ChevronLeft className="size-4" aria-hidden />
-              Previous
-            </Button>
-            <span className="min-w-[4.5rem] text-center text-sm font-medium tabular-nums" style={{ color: S.heading }}>
-              {page} / {totalPages}
-            </span>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="rounded-lg"
-              disabled={listLoading || page >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            >
-              Next
-              <ChevronRight className="size-4" aria-hidden />
-            </Button>
-          </div>
-        </nav>
+      {hasMore ? (
+        <div className="mt-6 flex justify-center">
+          <button
+            type="button"
+            disabled={listLoading || loadingMore}
+            onClick={() => void loadMorePrepTests()}
+            className="inline-flex h-[52px] min-w-[160px] items-center justify-center rounded-[16px] border border-[#dfe1e7] bg-white px-6 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa] disabled:opacity-60"
+          >
+            {loadingMore ? "Loading…" : "See more"}
+          </button>
+        </div>
       ) : null}
 
     

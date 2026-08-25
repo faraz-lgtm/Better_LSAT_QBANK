@@ -1,5 +1,7 @@
-import { ChevronDown } from "lucide-react"
-
+import {
+  PREP_COURSE_FIGMA,
+  PrepCourseFigmaIcon,
+} from "@/features/prep-course/components/prep-course-figma-icons"
 import { PrepCourseLessonRow } from "@/features/prep-course/components/prep-course-lesson-row"
 import { ProgressRing } from "@/features/prep-course/components/prep-course-lesson-sidebar"
 import {
@@ -42,7 +44,7 @@ function PrepCourseSectionAccordion({
   const remainingLabel = formatRemainingHoursLabel(remainingMinutes).replace(" left", " left in section")
 
   return (
-    <div className="border-b border-l border-[color:var(--greyscale-100)] bg-[var(--greyscale-25)]">
+    <div className="border-b border-[#dfe1e7] bg-[var(--greyscale-25)]">
       <button
         type="button"
         className="flex h-[100px] w-full items-center justify-between gap-3 p-[24px] text-left transition-colors"
@@ -56,23 +58,25 @@ function PrepCourseSectionAccordion({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
-          <div className="hidden text-right text-xs leading-[1.5] tracking-[0.24px] sm:block">
+          <div className="hidden flex-col items-end justify-center gap-1.5 text-right text-xs leading-[1.5] tracking-[0.24px] sm:flex">
             <p className="text-[color:var(--greyscale-500)]">
               Total Time:{" "}
-              <span className="font-semibold text-[color:var(--greyscale-500)]">{formatDurationShort(totalMinutes)}</span>
+              <span className="font-semibold text-[color:var(--greyscale-500)]">
+                {formatDurationShort(totalMinutes).replace(/\s+/g, "")}
+              </span>
             </p>
             {remainingMinutes > 0 ? (
-              <p className="mt-1.5 text-[color:var(--greyscale-400)]">{remainingLabel}</p>
+              <p className="text-[color:var(--greyscale-400)]">{remainingLabel}</p>
             ) : null}
           </div>
-          <ChevronDown
-            className={cn("size-6 shrink-0 text-[color:var(--greyscale-500)] transition-transform", expanded && "rotate-180")}
-            aria-hidden
+          <PrepCourseFigmaIcon
+            src={`${PREP_COURSE_FIGMA}/icon-chevron.svg`}
+            className={cn("size-6 shrink-0 transition-transform", !expanded && "rotate-180")}
           />
         </div>
       </button>
       {expanded ? (
-        <div className="border-t border-[color:var(--greyscale-100)] bg-white">
+        <div className="bg-white">
           {section.lessons.map((lesson) => (
             <PrepCourseLessonRow
               key={lesson.id}

@@ -1,6 +1,7 @@
 import { CORS_EDGE_WIDE, json, optionsNoContent } from '../_shared/edge-http.ts'
 import {
   handlePrepExplanationDetailRequest,
+  handlePrepExplanationsBookmarksRequest,
   handlePrepExplanationsListRequest,
   handlePrepExplanationsPrepTestsRequest,
   handlePrepExplanationsPrepTestTreeRequest,
@@ -13,6 +14,7 @@ const handlers: Record<string, (req: Request) => Promise<Response>> = {
   'prep-explanations-prep-test-tree': handlePrepExplanationsPrepTestTreeRequest,
   'prep-explanation-detail': handlePrepExplanationDetailRequest,
   'prep-explanations-list': handlePrepExplanationsListRequest,
+  'prep-explanations-bookmarks': handlePrepExplanationsBookmarksRequest,
 }
 
 async function handlePrepExplanationsGateway(req: Request): Promise<Response> {

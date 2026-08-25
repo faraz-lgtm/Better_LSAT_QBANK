@@ -185,6 +185,20 @@ function PrepCourseContentPage() {
     })
   }
 
+  function handleToggleExpandAll() {
+    const allSectionIds = curriculum.modules.flatMap((mod) => mod.sections.map((section) => section.id))
+    const allExpanded = allSectionIds.length > 0 && allSectionIds.every((id) => expandedSectionIds.has(id))
+    setExpandedSectionIds(() => {
+      if (allExpanded) return new Set()
+      return new Set(allSectionIds)
+    })
+  }
+
+  const allSectionsExpanded = useMemo(() => {
+    const allSectionIds = curriculum.modules.flatMap((mod) => mod.sections.map((section) => section.id))
+    return allSectionIds.length > 0 && allSectionIds.every((id) => expandedSectionIds.has(id))
+  }, [curriculum.modules, expandedSectionIds])
+
   if (!courseSlug) {
     return (
       <StudentMain>
@@ -221,17 +235,19 @@ function PrepCourseContentPage() {
   }
 
   return (
-    <StudentMain layout="locked" contentClassName="bg-[var(--primary-0)] pb-[24px]">
-      <section className="prep-course-shell-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-[16px] border border-[color:var(--greyscale-100)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+    <StudentMain layout="locked" contentClassName="flex min-h-0 flex-1 flex-col bg-[var(--greyscale-0)] pb-[24px]">
+      <section className="prep-course-shell-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-[16px] border border-[#dfe1e7] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
         <div className="shrink-0">
           <PrepCourseContentHeader
             stats={stats}
             showBookmarksOnly={showBookmarksOnly}
             onToggleShowBookmarksOnly={setShowBookmarksOnly}
+            allSectionsExpanded={allSectionsExpanded}
+            onToggleExpandAll={handleToggleExpandAll}
           />
         </div>
-        <div className="flex min-h-0 flex-1 flex-col bg-[var(--greyscale-0)] p-[24px]">
-          <div className="flex min-h-0 flex-1 flex-col gap-0 lg:flex-row lg:items-stretch">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-[#dfe1e7] bg-white p-[24px]">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[16px] border border-[#dfe1e7] lg:flex-row lg:items-stretch">
             {selectedModule ? (
               <PrepCourseModulePanel
                 course={course}

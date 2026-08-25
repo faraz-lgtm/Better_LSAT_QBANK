@@ -14,13 +14,14 @@ import { AccountPage } from "@/features/account/pages/account-page"
 import { OnboardingPage } from "@/features/auth/pages/onboarding-page"
 import { OnboardingWelcomePreviewPage } from "@/features/auth/pages/onboarding-welcome-preview-page"
 import { GuestDiagnosticStartPage } from "@/features/guest/pages/guest-diagnostic-start-page"
+import { DiagnosticResultsHistoryPage, DiagnosticResultsIndexRedirect } from "@/features/student/pages/diagnostic-results-history-page"
 import { GuestDiagnosticResultsPage } from "@/features/guest/pages/guest-diagnostic-results-page"
 import { GuestDiagnosticResultsPreviewPage } from "@/features/guest/pages/guest-diagnostic-results-preview-page"
 import { GuestDiagnosticReviewPage } from "@/features/guest/pages/guest-diagnostic-review-page"
 import { MarketingHomePage } from "@/features/marketing/pages/marketing-home-page"
 import { IntentPage } from "@/features/auth/pages/intent-page"
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
-import { PrepCourseContentPage } from "@/features/prep-course/pages/prep-course-content-page"
+import { PrepCourseCoursePage } from "@/features/prep-course/pages/prep-course-course-page"
 import { PrepCourseLessonPage } from "@/features/prep-course/pages/prep-course-lesson-page"
 import { PrepCourseListPage } from "@/features/prep-course/pages/prep-course-list-page"
 import { AnalyticsDrillResultsPage } from "@/features/student/pages/analytics-drill-results-page"
@@ -393,6 +394,11 @@ const router = createBrowserRouter([
         ),
         children: [
           { index: true, element: <DashboardPage /> },
+          { path: "diagnostic/results", element: <DiagnosticResultsIndexRedirect /> },
+          { path: "diagnostic/results/mini", element: <DiagnosticResultsHistoryPage section="mini" /> },
+          { path: "diagnostic/results/mini/:attemptId", element: <GuestDiagnosticResultsPage section="mini" /> },
+          { path: "diagnostic/results/full", element: <DiagnosticResultsHistoryPage section="full" /> },
+          { path: "diagnostic/results/full/:attemptId", element: <GuestDiagnosticResultsPage section="full" /> },
           { path: "account", element: <AccountPage /> },
           { path: "diagnostic/results", element: <GuestDiagnosticResultsPage /> },
           { path: "diagnostic/review", element: <Navigate to="/diagnostic/review" replace /> },
@@ -400,7 +406,7 @@ const router = createBrowserRouter([
           { path: "learn/explanations", element: <ExplanationsPage /> },
           { path: "learn/explanations/q/:questionId", element: <ExplanationQuestionDetailPage /> },
           { path: "prep-course", element: <PrepCourseListPage /> },
-          { path: "prep-course/:courseSlug", element: <PrepCourseContentPage /> },
+          { path: "prep-course/:courseSlug", element: <PrepCourseCoursePage /> },
           { path: "prep-course/:courseSlug/:lessonSlug", element: <PrepCourseLessonPage /> },
           { path: "practice/drills", element: <PracticeDrillsPage /> },
           { path: "practice/drills/lr/new", element: <LrNewDrillPage /> },

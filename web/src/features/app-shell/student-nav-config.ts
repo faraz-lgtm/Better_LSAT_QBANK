@@ -1,4 +1,10 @@
 import { PREPTEST_LIST_HREF, isPrepTestHubDetailPath, isPrepTestStudentPath } from "@/features/student/preptests/preptest-routes"
+import {
+  DIAGNOSTIC_RESULTS_FULL_HREF,
+  DIAGNOSTIC_RESULTS_MINI_HREF,
+  diagnosticHistoryHref,
+  diagnosticResultsSectionFromPath,
+} from "@/features/student/diagnostic/diagnostic-results-routes"
 
 export type StudentNavSectionKey = "academy" | "prep" | "insights"
 
@@ -171,7 +177,20 @@ function isPracticeSectionResultsSearch(search: string): boolean {
 
 export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBreadcrumb[] {
   if (pathname.startsWith("/app/diagnostic/results")) {
-    return [{ label: "Home", href: "/app/diagnostic/results" }, { label: "Analytics" }]
+    const resultsSection = diagnosticResultsSectionFromPath(pathname)
+    const crumbs: StudentBreadcrumb[] = [
+      { label: "Diagnostic Results", href: DIAGNOSTIC_RESULTS_MINI_HREF },
+    ]
+    if (resultsSection) {
+      const historyHref = diagnosticHistoryHref(resultsSection)
+      const isAttempt = pathname !== DIAGNOSTIC_RESULTS_MINI_HREF && pathname !== DIAGNOSTIC_RESULTS_FULL_HREF
+      crumbs.push({
+        label: resultsSection === "mini" ? "Mini" : "Full",
+        href: isAttempt ? historyHref : undefined,
+      })
+      if (isAttempt) crumbs.push({ label: "Results" })
+    }
+    return crumbs
   }
 
   if (isDashboardActive(pathname)) {
@@ -249,6 +268,9 @@ export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBre
 
 export function getStudentPageTitle(pathname: string, search = ""): string | null {
   if (isDashboardActive(pathname)) return "Dashboard"
+  if (pathname === DIAGNOSTIC_RESULTS_MINI_HREF) return "Mini Diagnostic History"
+  if (pathname === DIAGNOSTIC_RESULTS_FULL_HREF) return "Full Diagnostic History"
+  if (pathname.startsWith("/app/diagnostic/results/")) return "Diagnostic Results"
   if (pathname === "/app/account") return "Account"
   if (isPrepTestHubDetailPath(pathname)) return null
   if (pathname.startsWith("/app/prep-course/") && pathname !== "/app/prep-course") return null

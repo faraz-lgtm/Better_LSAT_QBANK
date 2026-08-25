@@ -10,6 +10,7 @@ import {
   mapStoredAnswerToLetter,
   prepTestNumberFromModuleId,
   resolveExplanationQuestionStatus,
+  topicNameFromQuestion,
 } from './explanations.service.ts'
 
 function mockRepo(overrides: Partial<ExplanationsRepository> = {}): ExplanationsRepository {
@@ -19,6 +20,7 @@ function mockRepo(overrides: Partial<ExplanationsRepository> = {}): Explanations
       throw new Error('not implemented')
     },
     fetchPrepTestTreeRows: async () => [],
+    listQuestionTypeNames: async () => new Map(),
     fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 0, explainedCount: 0 }),
     getQuestionDetail: async () => null,
     listLatestAnswerStatusByQuestionIds: async () => new Map(),
@@ -31,6 +33,9 @@ function mockRepo(overrides: Partial<ExplanationsRepository> = {}): Explanations
     }),
     listLatestAnswerSelectionsForQuestion: async () => [],
     getLatestUserAnswerSelection: async () => null,
+    listBookmarkedQuestionIds: async () => [],
+    setQuestionBookmark: async () => {},
+    listPrepTestIdsForQuestionIds: async () => [],
     ...overrides,
   }
 }
@@ -84,6 +89,25 @@ Deno.test('prepTestNumberFromModuleId parses LSAC base module', () => {
   assertEquals(prepTestNumberFromModuleId('LSAC159:LA:3:7S:S'), '159')
 })
 
+Deno.test('topicNameFromQuestion uses type id lookup when embed is missing', () => {
+  const base = {
+    id: 'q1',
+    question_number: 1,
+    source_group_id: null,
+    stem_text: 'Stem',
+    stimulus_text: null,
+    explanation: null,
+    video_url: null,
+    difficulty: 3,
+  }
+  assertEquals(topicNameFromQuestion({ ...base, question_types: { name: 'Flaw' } }), 'Flaw')
+  assertEquals(
+    topicNameFromQuestion({ ...base, question_type_id: 'qt-1' }, new Map([['qt-1', 'Weaken']])),
+    'Weaken',
+  )
+  assertEquals(topicNameFromQuestion(base), '—')
+})
+
 Deno.test('groupPrepTestRows collapses split modules', () => {
   const rows: PrepTestRow[] = [
     { id: 'a', module_id: 'LSAC022:LA:3:7S:S', title: 'Logical Reasoning - PT 22', imported_at: null },
@@ -118,6 +142,7 @@ Deno.test('mapPrepTestTreeRows builds LR synthetic passage', () => {
               explanation: null,
               video_url: null,
               difficulty: 3,
+              question_type_id: 'qt-mbt',
             },
             {
               id: 'q2',
@@ -135,14 +160,68 @@ Deno.test('mapPrepTestTreeRows builds LR synthetic passage', () => {
     },
   ]
 
-  const tree = mapPrepTestTreeRows(treeRows, 'pt1', 'LSAC900', 'PrepTest 900', new Map())
+  const tree = mapPrepTestTreeRows(
+    treeRows,
+    'pt1',
+    'LSAC900',
+    'PrepTest 900',
+    new Map(),
+    new Map([['qt-mbt', 'Must Be True']]),
+  )
   assertEquals(tree.prepTestNumber, '900')
   assertEquals(tree.sections.length, 1)
   assertEquals(tree.sections[0]?.kind, 'LR')
   assertEquals(tree.sections[0]?.passages[0]?.id, 'lr-sec1')
   assertEquals(tree.sections[0]?.passages[0]?.questions.length, 2)
+  assertEquals(tree.sections[0]?.passages[0]?.questions[0]?.topicName, 'Must Be True')
+  assertEquals(tree.sections[0]?.passages[0]?.questions[1]?.topicName, '—')
   assertEquals(tree.sections[0]?.passages[0]?.questions[1]?.hasWrittenExplanation, true)
   assertEquals(tree.sections[0]?.passages[0]?.questions[1]?.hasVideo, true)
+})
+
+Deno.test('getPrepTestTree resolves topic names from question_type_id', async () => {
+  const service = createExplanationsService({
+    repository: mockRepo({
+      resolvePrepTestGroup: async () => ({
+        primary: { id: 'pt1', module_id: 'LSAC900', title: 'PrepTest 900', imported_at: null },
+        prepTestIds: ['pt1'],
+        baseModuleId: 'LSAC900',
+      }),
+      fetchPrepTestTreeRows: async () => [
+        {
+          id: 'pt1',
+          module_id: 'LSAC900',
+          title: 'PrepTest 900',
+          admin_sections: [
+            {
+              id: 'sec1',
+              section_id: 'SEED900-LR-1',
+              section_number: 1,
+              section_type: 'LR',
+              title: 'Logical Reasoning',
+              admin_questions: [
+                {
+                  id: 'q1',
+                  question_number: 1,
+                  source_group_id: null,
+                  stem_text: 'Which must be true?',
+                  stimulus_text: null,
+                  explanation: null,
+                  video_url: null,
+                  difficulty: 3,
+                  question_type_id: 'qt-mbt',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      listQuestionTypeNames: async () => new Map([['qt-mbt', 'Must Be True']]),
+    }),
+  })
+
+  const { prepTest } = await service.getPrepTestTree('user-1', 'pt1')
+  assertEquals(prepTest.sections[0]?.passages[0]?.questions[0]?.topicName, 'Must Be True')
 })
 
 Deno.test('mapPrepTestTreeRows groups RC by source_group_id', () => {
@@ -187,6 +266,79 @@ Deno.test('mapPrepTestTreeRows groups RC by source_group_id', () => {
   assertEquals(tree.sections[0]?.kind, 'RC')
   assertEquals(tree.sections[0]?.passages[0]?.id, 'pass1')
   assertEquals(tree.sections[0]?.passages[0]?.questions[0]?.hasWrittenExplanation, true)
+})
+
+Deno.test('mapPrepTestTreeRows orders RC passages by first question number', () => {
+  const treeRows: PrepTestTreePrepTestRow[] = [
+    {
+      id: 'pt-rc-order',
+      module_id: 'LSAC157',
+      title: 'PrepTest 157',
+      admin_sections: [
+        {
+          id: 'sec-rc',
+          section_id: 'RC157-1',
+          section_number: 1,
+          section_type: 'RC',
+          title: 'Reading Comprehension',
+          admin_passages: [
+            {
+              id: 'pass-late',
+              source_group_id: 'grp-late',
+              content: 'Some environmentalists claim…',
+              topic_tag: null,
+            },
+            {
+              id: 'pass-early',
+              source_group_id: 'grp-early',
+              content: 'The late 1950s and early 1960s…',
+              topic_tag: null,
+            },
+          ],
+          admin_questions: [
+            {
+              id: 'q20',
+              question_number: 20,
+              source_group_id: 'grp-late',
+              stem_text: 'Q20?',
+              stimulus_text: null,
+              explanation: null,
+              video_url: null,
+              difficulty: 3,
+            },
+            {
+              id: 'q1',
+              question_number: 1,
+              source_group_id: 'grp-early',
+              stem_text: 'Q1?',
+              stimulus_text: null,
+              explanation: null,
+              video_url: null,
+              difficulty: 3,
+            },
+            {
+              id: 'q7',
+              question_number: 7,
+              source_group_id: 'grp-mid',
+              stem_text: 'Q7?',
+              stimulus_text: null,
+              explanation: null,
+              video_url: null,
+              difficulty: 3,
+            },
+          ],
+        },
+      ],
+    },
+  ]
+
+  const tree = mapPrepTestTreeRows(treeRows, 'pt-rc-order', 'LSAC157', 'PrepTest 157', new Map())
+  const passages = tree.sections[0]?.passages ?? []
+  assertEquals(passages.map((p) => p.label), ['P1', 'P2', 'P3'])
+  assertEquals(passages.map((p) => p.questions[0]?.number), [1, 7, 20])
+  assertEquals(passages[0]?.questions[0]?.code, 'PT157.S1.P1.Q1')
+  assertEquals(passages[1]?.questions[0]?.code, 'PT157.S1.P2.Q7')
+  assertEquals(passages[2]?.questions[0]?.code, 'PT157.S1.P3.Q20')
 })
 
 Deno.test('listPrepTests paginates grouped prep tests', async () => {
@@ -355,4 +507,36 @@ Deno.test('getExplanationDetail returns null userSelectedLetter when never answe
 
   const d = await service.getExplanationDetail('user-1', 'q1')
   assertEquals(d.userSelectedLetter, null)
+})
+
+Deno.test('listPrepTests bookmarkedOnly keeps prep tests that contain bookmarks', async () => {
+  const service = createExplanationsService({
+    repository: mockRepo({
+      listAllPrepTestRows: async () => [
+        { id: 'pt-keep', module_id: 'LSAC157', title: 'PT 157', imported_at: null },
+        { id: 'pt-skip', module_id: 'LSAC158', title: 'PT 158', imported_at: null },
+      ],
+      listBookmarkedQuestionIds: async () => ['q-booked'],
+      listPrepTestIdsForQuestionIds: async (ids) => (ids.includes('q-booked') ? ['pt-keep'] : []),
+      fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 4, explainedCount: 1 }),
+    }),
+  })
+  const out = await service.listPrepTests('user-1', { page: 1, pageSize: 10, bookmarkedOnly: true })
+  assertEquals(out.prepTests.map((pt) => pt.id), ['pt-keep'])
+  assertEquals(out.total, 1)
+})
+
+Deno.test('setQuestionBookmark persists and returns ids', async () => {
+  const stored: string[] = []
+  const service = createExplanationsService({
+    repository: mockRepo({
+      setQuestionBookmark: async (_userId, questionId, bookmarked) => {
+        if (bookmarked) stored.push(questionId)
+        else stored.splice(stored.indexOf(questionId), 1)
+      },
+      listBookmarkedQuestionIds: async () => [...stored],
+    }),
+  })
+  const out = await service.setQuestionBookmark('user-1', 'q9', true)
+  assertEquals(out.questionIds, ['q9'])
 })

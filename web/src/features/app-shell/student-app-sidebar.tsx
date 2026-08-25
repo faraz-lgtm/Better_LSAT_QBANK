@@ -1,3 +1,5 @@
+import { useEffect, useState, type ReactNode } from "react"
+import { ChevronDown, Lock } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { ChevronDown, ChevronsLeft, ChevronsRight, Lock } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
@@ -18,8 +20,10 @@ import {
   type StudentNavItemIconKey,
 } from "@/features/app-shell/student-nav-config"
 import { useStudentEntitlementOptional, isLsacLockedNavItem } from "@/features/app-shell/student-entitlement-context"
+import { GUEST_FREE_PLAN_PRICING_HREF } from "@/features/guest/diagnostic/guest-free-plan-nav-config"
 import { shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
-import { createPrepCourseApi, type PrepCourse } from "@/lib/api/prep-course"
+import { PREP_COURSE_NAV_ITEMS } from "@/features/prep-course/lib/prep-course-nav"
+import { DiagnosticResultsNavItem } from "@/features/student/diagnostic/diagnostic-results-nav-item"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -28,6 +32,10 @@ const PREP_COURSE_HREF = "/app/prep-course"
 type StudentAppSidebarProps = {
   mobileOpen: boolean
   onMobileClose: () => void
+  dashboardHref?: string
+  /** Free-plan: same menu as premium, with Academy / Prep / Insights locked. */
+  lockPremiumNav?: boolean
+  beforeFooter?: ReactNode
 }
 
 function SidebarNavIcon({ icon }: { icon: StudentNavItemIconKey }) {
@@ -64,37 +72,9 @@ function PrepCourseNavItem({
 }) {
   const onPrepCourseRoute = isPrepCourseRoute(pathname)
   const [manualExpanded, setManualExpanded] = useState<boolean | null>(null)
-  const [courses, setCourses] = useState<PrepCourse[]>([])
 
   const expanded = manualExpanded ?? onPrepCourseRoute
   const parentActive = onPrepCourseRoute
-
-  const prepCourseApi = useMemo(() => {
-    try {
-      return createPrepCourseApi(getSupabaseBrowserClient())
-    } catch {
-      return null
-    }
-  }, [])
-
-  useEffect(() => {
-    let alive = true
-    async function load() {
-      if (!prepCourseApi) return
-      try {
-        const rows = await prepCourseApi.listCourses()
-        if (!alive) return
-        setCourses(rows)
-      } catch {
-        if (!alive) return
-        setCourses([])
-      }
-    }
-    void load()
-    return () => {
-      alive = false
-    }
-  }, [prepCourseApi])
 
   useEffect(() => {
     if (onPrepCourseRoute) setManualExpanded(null)
@@ -135,12 +115,12 @@ function PrepCourseNavItem({
 
       {!collapsed && expanded ? (
         <div className="student-sidebar-subnav" role="group" aria-label="Prep courses">
-          {courses.map((course) => {
+          {PREP_COURSE_NAV_ITEMS.map((course) => {
             const href = `${PREP_COURSE_HREF}/${course.slug}`
             const active = isCourseNavActive(pathname, course.slug)
             return (
               <Link
-                key={course.id}
+                key={course.slug}
                 to={href}
                 className={cn(
                   "student-sidebar-link student-sidebar-sublink",
@@ -158,11 +138,36 @@ function PrepCourseNavItem({
   )
 }
 
-function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps) {
+function LockedPremiumNavItem({ item }: { item: StudentNavItem }) {
+  const navigate = useNavigate()
+
+  return (
+    <button
+      type="button"
+      aria-label={`${item.label} (locked)`}
+      onClick={() => navigate(GUEST_FREE_PLAN_PRICING_HREF)}
+      className="student-sidebar-link student-sidebar-link--locked w-full justify-between pr-4"
+    >
+      <span className="flex min-w-0 items-center gap-2.5">
+        <SidebarNavIcon icon={item.icon} />
+        <span className="truncate">{item.label}</span>
+      </span>
+      <Lock className="size-4 shrink-0 text-[#666d80]" aria-hidden />
+    </button>
+  )
+}
+
+function StudentAppSidebar({
+  mobileOpen,
+  onMobileClose,
+  dashboardHref = STUDENT_DASHBOARD_HREF,
+  lockPremiumNav = false,
+  beforeFooter,
+}: StudentAppSidebarProps) {
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
   const entitlement = useStudentEntitlementOptional()
-  const lockLsacNav = entitlement ? !entitlement.canAccessLsacContent : false
+  const lockLsacNav = !lockPremiumNav && entitlement ? !entitlement.canAccessLsacContent : false
   const dashboardActive = isDashboardActive(pathname)
   const [collapsed, setCollapsed] = useState(false)
 
@@ -223,7 +228,7 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
           <div className="student-sidebar-menu">
             <p className="student-sidebar-heading">{STUDENT_MAIN_NAV_SECTION.label}</p>
             <Link
-              to={STUDENT_DASHBOARD_HREF}
+              to={dashboardHref}
               className={cn("student-sidebar-link", dashboardActive && "student-sidebar-link--active")}
               aria-label="Dashboard"
               title="Dashboard"
@@ -240,11 +245,16 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
               <SidebarNavIcon icon={STUDENT_DIAGNOSTIC_ICON} />
               <span className="student-sidebar-label">Diagnostic</span>
             </Link>
+            <DiagnosticResultsNavItem showIcon />
 
             {STUDENT_NAV_SECTIONS.map((section) => (
               <div key={section.key} className="student-sidebar-section">
                 <p className="student-sidebar-heading">{section.label}</p>
                 {section.items.map((item) => {
+                  if (lockPremiumNav) {
+                    return <LockedPremiumNavItem key={item.href} item={item} />
+                  }
+
                   if (isPrepCourseNavItem(item)) {
                     return (
                       <PrepCourseNavItem
@@ -303,7 +313,8 @@ function StudentAppSidebar({ mobileOpen, onMobileClose }: StudentAppSidebarProps
           </div>
         </nav>
 
-        <div className="student-sidebar-footer flex shrink-0 px-4 pb-6">
+        <div className="student-sidebar-footer flex shrink-0 flex-col gap-4 px-4 pb-6">
+          {beforeFooter}
           <div className="student-sidebar-logout-row">
             <button
               type="button"

@@ -1,9 +1,11 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { Bell, ChevronDown, Menu } from "lucide-react"
+import { ChevronDown, Menu } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
 import { getStudentBreadcrumbs, type StudentBreadcrumb } from "@/features/app-shell/student-nav-config"
 import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
+import { resolveStudentShellVariant } from "@/features/app-shell/student-shell-plan-variant"
+import { useGuestPremiumAccount } from "@/features/guest/premium/guest-premium-account"
 import { shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
 import { STUDENT_PAGE_CONTAINER_CLASS, STUDENT_SHELL_GUTTER_CLASS } from "@/features/student/components/student-page-container"
 import { cn } from "@/lib/utils"
@@ -39,7 +41,14 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
   const entitlement = useStudentEntitlementOptional()?.entitlement ?? null
-  const showPremiumBadge = Boolean(entitlement?.hasActiveCore || entitlement?.accessState === "FULL_ACCESS")
+  const premiumAccount = useGuestPremiumAccount()
+  const planLabel =
+    resolveStudentShellVariant({
+      accessState: entitlement?.accessState ?? null,
+      hasGuestPremiumAccount: Boolean(premiumAccount),
+    }) === "premium"
+      ? "Premium"
+      : "Free"
   const [email, setEmail] = useState<string | null>(null)
   const [openProfileMenu, setOpenProfileMenu] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement | null>(null)
@@ -144,18 +153,6 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
 
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           {headerActions ? <div className="flex shrink-0 items-center">{headerActions}</div> : null}
-          {showPremiumBadge ? (
-            <span className="inline-flex h-10 items-center rounded-2xl px-3 text-xs font-semibold tracking-[0.24px] text-[#0d47a1]">
-              Premium
-            </span>
-          ) : null}
-          <button
-            type="button"
-            className="inline-flex size-[25px] items-center justify-center rounded-full bg-[#edf3ff] text-[#062357]"
-            aria-label="Notifications"
-          >
-            <Bell className="size-3.5" strokeWidth={1.75} />
-          </button>
 
           <div ref={profileMenuRef} className="relative">
             <button
@@ -198,6 +195,12 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
               </div>
             ) : null}
           </div>
+          <span
+            className="inline-flex shrink-0 items-center text-[12px] font-semibold tracking-[0.24px] text-[#0d47a1]"
+            aria-label={`Plan: ${planLabel}`}
+          >
+            {planLabel}
+          </span>
         </div>
         </div>
       </div>

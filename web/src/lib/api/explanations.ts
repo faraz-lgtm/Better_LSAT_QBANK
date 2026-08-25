@@ -56,7 +56,9 @@ export function createExplanationsApi(supabase: SupabaseClient) {
     async listPrepTests(options?: {
       page?: number
       pageSize?: number
+      offset?: number
       sort?: "newest" | "oldest"
+      bookmarkedOnly?: boolean
     }): Promise<{
       prepTests: ExplanationPrepTestListItem[]
       total: number
@@ -73,7 +75,9 @@ export function createExplanationsApi(supabase: SupabaseClient) {
       }>("prep-explanations-prep-tests", {
         page: options?.page ?? 1,
         pageSize: options?.pageSize ?? 5,
+        ...(typeof options?.offset === "number" ? { offset: options.offset } : {}),
         sort: options?.sort ?? "newest",
+        ...(options?.bookmarkedOnly ? { bookmarkedOnly: true } : {}),
       })
       if (error) throw error
       return {
@@ -107,6 +111,27 @@ export function createExplanationsApi(supabase: SupabaseClient) {
       if (error) await throwIfEdgeInvokeFailed(error)
       if (!data) throw new Error("No explanation detail returned")
       return data
+    },
+
+    async listQuestionBookmarks(): Promise<{ questionIds: string[] }> {
+      const { data, error } = await invokeExplanationsFn<{ questionIds: string[] }>(
+        "prep-explanations-bookmarks",
+        {},
+      )
+      if (error) throw error
+      return { questionIds: data?.questionIds ?? [] }
+    },
+
+    async setQuestionBookmark(
+      questionId: string,
+      bookmarked: boolean,
+    ): Promise<{ questionIds: string[] }> {
+      const { data, error } = await invokeExplanationsFn<{ questionIds: string[] }>(
+        "prep-explanations-bookmarks",
+        { questionId, bookmarked },
+      )
+      if (error) throw error
+      return { questionIds: data?.questionIds ?? [] }
     },
 
     /** Legacy flat catalog of questions with explanation content. */

@@ -316,6 +316,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
     async submitAnswer(input: {
       sessionId: string
       questionId: string
+      /** Empty string clears the selected response (Reset Response). */
       selectedAnswer: string
       blindReview?: boolean
     }): Promise<AnswerEvent> {

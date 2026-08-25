@@ -4,7 +4,11 @@ import { Link } from 'react-router-dom'
 
 import { GuestDiagnosticExplanationCard } from '@/features/guest/diagnostic/guest-diagnostic-explanation-card'
 import type { GuestDiagnosticResult } from '@/features/guest/diagnostic/guest-diagnostic-result-storage'
-import { getMiniDiagnosticQuestionMeta } from '@/features/guest/diagnostic/mini-diagnostic-content'
+import {
+  buildDiagnosticResultExplanation,
+  getMiniDiagnosticQuestionMeta,
+} from '@/features/guest/diagnostic/mini-diagnostic-content'
+import { canShowDiagnosticResultDetails } from '@/features/guest/diagnostic/diagnostic-explanation-access'
 import {
   formatDiagnosticDateLabel,
   getDiagnosticIntentTitle,
@@ -233,10 +237,12 @@ function GuestDiagnosticPaidScoreCards({
 
 function GuestDiagnosticLockedQuestionRow({
   number,
+  heading = "Mini Diagnostic",
   questionId,
   isCorrect,
 }: {
   number: number
+  heading?: string
   questionId: string
   isCorrect: boolean
 }) {
@@ -255,7 +261,7 @@ function GuestDiagnosticLockedQuestionRow({
         </div>
         <div className="min-w-0 flex-1 select-none blur-[6px]">
           <p className="text-lg font-semibold text-[#062357]">
-            Mini Diagnostic · Q{number}
+            {heading} · Q{number}
             {meta?.questionType ? ` · ${meta.questionType}` : ''}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -350,6 +356,7 @@ function GuestDiagnosticResultsView({
   )
 
   const showPaidContent = hasActiveCore && !subscriptionLoading
+  const heading = getDiagnosticIntentTitle(result.intentId)
 
   return (
     <StudentMain className={PT_RESULTS_PAGE_BG_CLASS} contentClassName={cn(PT_RESULTS_PAGE_GAP_CLASS, 'pb-8')}>
@@ -397,31 +404,51 @@ function GuestDiagnosticResultsView({
           <p className="px-6 py-8 text-sm text-[#df1c41]">{explanationsError}</p>
         ) : null}
 
-        {showPaidContent
-          ? sortedOutcomes.map((outcome) => {
-              const explanation = explanationsById.get(outcome.questionId)
-              if (!explanation) return null
-              const meta = getMiniDiagnosticQuestionMeta(outcome.questionId)
-              return (
-                <GuestDiagnosticExplanationCard
-                  key={outcome.questionId}
-                  number={outcome.originalIndex + 1}
-                  explanation={explanation}
-                  isCorrect={outcome.isCorrect}
-                  selectedAnswer={outcome.selectedAnswer}
-                  targetTimeSeconds={meta?.targetTimeSeconds}
-                  yourTimeSeconds={outcome.timeSpentSeconds}
-                />
-              )
-            })
-          : sortedOutcomes.map((outcome) => (
+        {result.outcomes.map((outcome, index) => {
+          const questionNumber = index + 1
+          const unlocked = canShowDiagnosticResultDetails({
+            intentId: result.intentId,
+            questionNumber,
+            hasActiveCore: showPaidContent,
+          })
+          if (!unlocked) {
+            return (
               <GuestDiagnosticLockedQuestionRow
                 key={outcome.questionId}
-                number={outcome.originalIndex + 1}
+                number={questionNumber}
+                heading={heading}
                 questionId={outcome.questionId}
                 isCorrect={outcome.isCorrect}
               />
-            ))}
+            )
+          }
+          const explanation =
+            explanationsById.get(outcome.questionId) ?? buildDiagnosticResultExplanation(outcome.questionId)
+          if (!explanation) {
+            return (
+              <GuestDiagnosticLockedQuestionRow
+                key={outcome.questionId}
+                number={questionNumber}
+                heading={heading}
+                questionId={outcome.questionId}
+                isCorrect={outcome.isCorrect}
+              />
+            )
+          }
+          const meta = getMiniDiagnosticQuestionMeta(outcome.questionId)
+          return (
+            <GuestDiagnosticExplanationCard
+              key={outcome.questionId}
+              number={questionNumber}
+              heading={heading}
+              explanation={explanation}
+              isCorrect={outcome.isCorrect}
+              selectedAnswer={outcome.selectedAnswer}
+              targetTimeSeconds={meta?.targetTimeSeconds}
+              yourTimeSeconds={outcome.timeSpentSeconds}
+            />
+          )
+        })}
       </section>
 
       {!showPaidContent ? <GuestDiagnosticResultsActions /> : null}

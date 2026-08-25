@@ -49,6 +49,10 @@ function latestAnswerByQuestion(events: AnswerEventRow[]): Map<string, AnswerEve
       byQuestion.set(e.question_id, e)
     }
   }
+  // Cleared responses are stored as blank selected_answer — treat as unanswered.
+  for (const [questionId, event] of [...byQuestion.entries()]) {
+    if (!event.selected_answer.trim()) byQuestion.delete(questionId)
+  }
   return byQuestion
 }
 
@@ -1280,9 +1284,9 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const selectedRaw = typeof body.selectedAnswer === 'string' ? body.selectedAnswer : ''
       if (!sessionId) throw new PracticeValidationError('sessionId is required')
       if (!questionId) throw new PracticeValidationError('questionId is required')
-      if (!selectedRaw.trim()) throw new PracticeValidationError('selectedAnswer is required')
 
       const blindReview = body.blindReview === true
+      const isClearResponse = !selectedRaw.trim()
 
       const session = await deps.repository.getSessionById(sessionId, userId)
       if (!session) throw new PracticeForbiddenError('Session not found')
@@ -1315,11 +1319,40 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       assertQuestionAllowedForSession(session, question)
 
+      const sectionType = question.admin_sections?.section_type ?? null
+
+      if (isClearResponse) {
+        const event = await deps.repository.insertAnswerEvent({
+          userId,
+          practiceSessionId: sessionId,
+          questionId,
+          selectedAnswer: '',
+          isCorrect: false,
+          questionTypeId: question.question_type_id,
+          sectionType,
+          difficulty: question.difficulty,
+          sessionKind: session.kind,
+        })
+
+        if (session.kind === 'DRILL' || session.kind === 'SECTION') {
+          const existing = Array.isArray(session.metadata.answeredQuestionIds)
+            ? (session.metadata.answeredQuestionIds as string[])
+            : []
+          if (existing.includes(questionId)) {
+            const nextMeta = {
+              ...session.metadata,
+              answeredQuestionIds: existing.filter((id) => id !== questionId),
+            }
+            await deps.repository.updateSession(sessionId, userId, { metadata: nextMeta })
+          }
+        }
+
+        return { event }
+      }
+
       const expected = question.correct_answer ? normalizeAnswer(question.correct_answer) : ''
       const selected = normalizeAnswer(selectedRaw)
       const isCorrect = Boolean(expected) && selected === expected
-
-      const sectionType = question.admin_sections?.section_type ?? null
 
       const event = await deps.repository.insertAnswerEvent({
         userId,

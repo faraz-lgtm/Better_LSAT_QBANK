@@ -13,7 +13,7 @@ import {
   buildGuestDiagnosticResultFromAnswers,
   writeGuestDiagnosticResult,
 } from "@/features/guest/diagnostic/guest-diagnostic-result-storage"
-import { GUEST_FREE_PLAN_RESULTS_HREF } from "@/features/guest/diagnostic/guest-free-plan-nav-config"
+import { diagnosticAttemptHref } from "@/features/student/diagnostic/diagnostic-results-routes"
 import type { GuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-intent-types"
 import { PracticeSessionImmersiveFrame } from "@/features/student/practice-session/practice-session-immersive-frame"
 
@@ -75,9 +75,9 @@ function GuestDiagnosticStartPage({ preview = false }: GuestDiagnosticStartPageP
       answersByQuestion,
       timeSpentByQuestion,
     )
-    writeGuestDiagnosticResult(result)
+    const saved = writeGuestDiagnosticResult(result)
     clearDiagnosticFunnel()
-    navigate(preview ? "/diagnostic/results/preview" : GUEST_FREE_PLAN_RESULTS_HREF, { replace: true })
+    navigate(preview ? "/diagnostic/results/preview" : diagnosticAttemptHref(saved.intentId, saved.id), { replace: true })
   }
 
   return (

@@ -1,6 +1,5 @@
-import { Fragment, useEffect, useState, type ComponentType, type SVGProps } from "react"
+import { useEffect, useState, type ComponentType, type SVGProps } from "react"
 
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   ACTIVE_DRILL_SIDE_WIDGET_COLLAPSED_CLASS,
   ACTIVE_DRILL_SIDE_WIDGET_EXPANDED_CLASS,
@@ -40,6 +39,10 @@ type SideWidgetItem = {
   active?: boolean
   disabled?: boolean
 }
+
+/** Hover label stays in-tree (beside the icon) so CSS `zoom` cannot misplace a portaled tooltip. */
+const SIDE_WIDGET_HOVER_LABEL_CLASS =
+  "pointer-events-none absolute right-[calc(100%+8px)] top-1/2 z-20 -translate-y-1/2 whitespace-nowrap rounded-md bg-[#062357] px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
 
 /** Figma `18781:29066` — exam side widget (collapsed icons / expanded labels) */
 function PracticeSessionSideWidget({
@@ -136,53 +139,46 @@ function PracticeSessionSideWidget({
   ]
 
   return (
-    <TooltipProvider delayDuration={300}>
-      <aside
-        className={cn(
-          "practice-session-side-widget absolute right-0 top-6 z-10 flex flex-col",
-          expanded ? ACTIVE_DRILL_SIDE_WIDGET_EXPANDED_CLASS : ACTIVE_DRILL_SIDE_WIDGET_COLLAPSED_CLASS,
-        )}
-        aria-label="Exam tools"
-      >
-        {items.map((item) => {
-          const Icon = item.icon
-          const isFlag = item.id === "flag"
-          const button = (
-            <button
-              type="button"
-              disabled={item.disabled}
-              className={cn(
-                expanded ? ACTIVE_DRILL_SIDE_WIDGET_ITEM_EXPANDED_CLASS : ACTIVE_DRILL_SIDE_WIDGET_ITEM_CLASS,
-                item.active && "text-[#0d47a1]",
-                item.disabled && "cursor-default opacity-50",
-              )}
-              aria-label={item.label}
-              aria-pressed={item.active || undefined}
-              onClick={item.onClick}
-            >
-              <Icon
-                className={cn("size-5 shrink-0", isFlag && item.active && "fill-current")}
-                aria-hidden
-              />
-              {expanded ? (
-                <span className="whitespace-nowrap text-sm font-medium text-[#062357]">{item.label}</span>
-              ) : null}
-            </button>
-          )
-
-          if (expanded) {
-            return <Fragment key={item.id}>{button}</Fragment>
-          }
-
-          return (
-            <Tooltip key={item.id}>
-              <TooltipTrigger asChild>{button}</TooltipTrigger>
-              <TooltipContent side="left">{item.label}</TooltipContent>
-            </Tooltip>
-          )
-        })}
-      </aside>
-    </TooltipProvider>
+    <aside
+      className={cn(
+        "practice-session-side-widget absolute right-0 top-6 z-10 flex flex-col overflow-visible",
+        expanded ? ACTIVE_DRILL_SIDE_WIDGET_EXPANDED_CLASS : ACTIVE_DRILL_SIDE_WIDGET_COLLAPSED_CLASS,
+      )}
+      aria-label="Exam tools"
+    >
+      {items.map((item) => {
+        const Icon = item.icon
+        const isFlag = item.id === "flag"
+        return (
+          <button
+            key={item.id}
+            type="button"
+            disabled={item.disabled}
+            className={cn(
+              "group relative",
+              expanded ? ACTIVE_DRILL_SIDE_WIDGET_ITEM_EXPANDED_CLASS : ACTIVE_DRILL_SIDE_WIDGET_ITEM_CLASS,
+              item.active && "text-[#0d47a1]",
+              item.disabled && "cursor-default opacity-50",
+            )}
+            aria-label={item.label}
+            aria-pressed={item.active || undefined}
+            onClick={item.onClick}
+          >
+            <Icon
+              className={cn("size-5 shrink-0", isFlag && item.active && "fill-current")}
+              aria-hidden
+            />
+            {expanded ? (
+              <span className="whitespace-nowrap text-sm font-medium text-[#062357]">{item.label}</span>
+            ) : (
+              <span className={SIDE_WIDGET_HOVER_LABEL_CLASS} aria-hidden>
+                {item.label}
+              </span>
+            )}
+          </button>
+        )
+      })}
+    </aside>
   )
 }
 

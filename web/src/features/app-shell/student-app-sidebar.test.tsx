@@ -1,11 +1,9 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { MemoryRouter } from "react-router-dom"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { StudentAppSidebar } from "@/features/app-shell/student-app-sidebar"
-
-const listCoursesMock = vi.fn()
 
 vi.mock("@/lib/supabase/client", () => ({
   getSupabaseBrowserClient: () => ({
@@ -13,43 +11,7 @@ vi.mock("@/lib/supabase/client", () => ({
   }),
 }))
 
-vi.mock("@/lib/api/prep-course", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/api/prep-course")>("@/lib/api/prep-course")
-  return {
-    ...actual,
-    createPrepCourseApi: () => ({
-      listCourses: listCoursesMock,
-    }),
-  }
-})
-
-const sampleCourses = [
-  {
-    id: "c1",
-    slug: "prep-course",
-    title: "Essentials Course",
-    description: null,
-    is_published: true,
-    created_at: "2026-01-01T00:00:00Z",
-    updated_at: "2026-01-01T00:00:00Z",
-  },
-  {
-    id: "c2",
-    slug: "betterlsat-core-syllabus",
-    title: "BetterLSAT Core",
-    description: null,
-    is_published: true,
-    created_at: "2026-01-01T00:00:00Z",
-    updated_at: "2026-01-01T00:00:00Z",
-  },
-]
-
 describe("StudentAppSidebar", () => {
-  beforeEach(() => {
-    listCoursesMock.mockReset()
-    listCoursesMock.mockResolvedValue(sampleCourses)
-  })
-
   it("shows all navigation links at once", () => {
     render(
       <MemoryRouter initialEntries={["/app"]}>
@@ -59,6 +21,7 @@ describe("StudentAppSidebar", () => {
 
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Diagnostic" })).toHaveAttribute("href", "/intent")
+    expect(screen.getByRole("button", { name: /Diagnostic Results/i })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Prep Course/i })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Explanations" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Blind Review" })).toBeInTheDocument()
@@ -75,9 +38,9 @@ describe("StudentAppSidebar", () => {
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveClass("student-sidebar-link--active")
   })
 
-  it("marks Prep Course parent active and shows nested course links on prep-course routes", async () => {
+  it("marks Prep Course parent active and shows nested course links on prep-course routes", () => {
     render(
-      <MemoryRouter initialEntries={["/app/prep-course/prep-course"]}>
+      <MemoryRouter initialEntries={["/app/prep-course/betterlsat-core-syllabus-structure-content"]}>
         <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
       </MemoryRouter>,
     )
@@ -85,20 +48,24 @@ describe("StudentAppSidebar", () => {
     expect(screen.getByRole("button", { name: /Prep Course/i })).toHaveClass("student-sidebar-link--active")
     expect(screen.getByRole("link", { name: "Dashboard" })).not.toHaveClass("student-sidebar-link--active")
 
-    await waitFor(() => {
-      expect(screen.getByRole("link", { name: "Essentials Course" })).toBeInTheDocument()
-    })
-
-    expect(screen.getByRole("link", { name: "Essentials Course" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "LSAT Essential Course" })).toHaveAttribute(
       "href",
-      "/app/prep-course/prep-course",
+      "/app/prep-course/betterlsat-core-syllabus-structure-content",
     )
-    expect(screen.getByRole("link", { name: "BetterLSAT Core" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "LR Mastery Course" })).toHaveAttribute(
       "href",
-      "/app/prep-course/betterlsat-core-syllabus",
+      "/app/prep-course/lr-mastery-course",
     )
-    expect(screen.getByRole("link", { name: "Essentials Course" })).toHaveClass("student-sidebar-link--active")
-    expect(screen.getByRole("link", { name: "BetterLSAT Core" })).not.toHaveClass("student-sidebar-link--active")
+    expect(screen.getByRole("link", { name: "RC Mastery" })).toHaveAttribute(
+      "href",
+      "/app/prep-course/rc-mastery",
+    )
+    expect(screen.getByRole("link", { name: "LSAT Essential Course" })).toHaveClass(
+      "student-sidebar-link--active",
+    )
+    expect(screen.getByRole("link", { name: "LR Mastery Course" })).not.toHaveClass(
+      "student-sidebar-link--active",
+    )
   })
 
   it("expands Prep Course on toggle to reveal course names", async () => {
@@ -109,14 +76,13 @@ describe("StudentAppSidebar", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.queryByRole("link", { name: "Essentials Course" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "LSAT Essential Course" })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: /Prep Course/i }))
 
-    await waitFor(() => {
-      expect(screen.getByRole("link", { name: "Essentials Course" })).toBeInTheDocument()
-    })
-    expect(screen.getByRole("link", { name: "BetterLSAT Core" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "LSAT Essential Course" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "LR Mastery Course" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "RC Mastery" })).toBeInTheDocument()
   })
 
   it("shows logout and version in the footer", () => {
@@ -130,7 +96,7 @@ describe("StudentAppSidebar", () => {
     expect(screen.getByText("Version 1.0.3")).toBeInTheDocument()
   })
 
-  it("collapses to icon-only navigation and expands again from the toggle", async () => {
+  it("expands Diagnostic Results to Mini and Full history links", async () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={["/app"]}>
@@ -138,34 +104,9 @@ describe("StudentAppSidebar", () => {
       </MemoryRouter>,
     )
 
-    const sidebar = screen.getByLabelText("Main navigation")
-
-    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }))
-
-    expect(sidebar).toHaveClass("student-sidebar--collapsed")
-    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument()
-
-    await user.click(screen.getByRole("button", { name: "Expand sidebar" }))
-
-    expect(sidebar).not.toHaveClass("student-sidebar--collapsed")
-  })
-
-  it("opens the sidebar when clicking the Prep Course icon while collapsed", async () => {
-    const user = userEvent.setup()
-    render(
-      <MemoryRouter initialEntries={["/app"]}>
-        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
-      </MemoryRouter>,
-    )
-
-    const sidebar = screen.getByLabelText("Main navigation")
-    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }))
-    await user.click(screen.getByRole("button", { name: "Prep Course" }))
-
-    expect(sidebar).not.toHaveClass("student-sidebar--collapsed")
-    await waitFor(() => {
-      expect(screen.getByRole("link", { name: "Essentials Course" })).toBeInTheDocument()
-    })
+    expect(screen.queryByRole("link", { name: "Mini" })).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: /Diagnostic Results/i }))
+    expect(screen.getByRole("link", { name: "Mini" })).toHaveAttribute("href", "/app/diagnostic/results/mini")
+    expect(screen.getByRole("link", { name: "Full" })).toHaveAttribute("href", "/app/diagnostic/results/full")
   })
 })

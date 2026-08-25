@@ -7,6 +7,7 @@ import {
   isResolvedAdaptiveDrillLesson,
   lessonProgressPercent,
   lessonRowSubtitle,
+  prepCourseDisplayTitle,
   resolveLessonRowDisplay,
   normalizeCurriculum,
   shouldFlattenModuleSections,
@@ -181,5 +182,23 @@ describe("prep-course-format curriculum helpers", () => {
     expect(countCompletedLessons(lessons, ["intro"])).toBe(1)
     expect(lessonProgressPercent(1, 2)).toBe(50)
     expect(lessonProgressPercent(0, 0)).toBe(0)
+  })
+})
+
+describe("prepCourseDisplayTitle", () => {
+  it("renames Essentials course by slug or legacy title", () => {
+    expect(
+      prepCourseDisplayTitle({
+        slug: "betterlsat-core-syllabus-structure-content",
+        title: "BetterLSAT Core Syllabus Structure + Content",
+      }),
+    ).toBe("LSAT Essential Course")
+    expect(
+      prepCourseDisplayTitle({
+        slug: "other-course",
+        title: "BetterLSAT Core Syllabus Structure + Content",
+      }),
+    ).toBe("LSAT Essential Course")
+    expect(prepCourseDisplayTitle({ slug: "other", title: "Other Course" })).toBe("Other Course")
   })
 })

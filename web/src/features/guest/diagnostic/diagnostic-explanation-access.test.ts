@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   canShowDiagnosticExplanation,
+  canShowDiagnosticResultDetails,
   freeDiagnosticExplanationLimit,
 } from "@/features/guest/diagnostic/diagnostic-explanation-access"
 
@@ -35,6 +36,29 @@ describe("canShowDiagnosticExplanation", () => {
     ).toBe(true)
     expect(
       canShowDiagnosticExplanation({ intentId: "quick", questionNumber: 11, hasActiveCore: false }),
+    ).toBe(false)
+  })
+})
+
+describe("canShowDiagnosticResultDetails", () => {
+  it("unlocks every Full result row for premium students", () => {
+    expect(
+      canShowDiagnosticResultDetails({ intentId: "quick", questionNumber: 30, hasActiveCore: true }),
+    ).toBe(true)
+  })
+
+  it("unlocks only the first 10 Full rows for free students", () => {
+    expect(
+      canShowDiagnosticResultDetails({ intentId: "quick", questionNumber: 10, hasActiveCore: false }),
+    ).toBe(true)
+    expect(
+      canShowDiagnosticResultDetails({ intentId: "quick", questionNumber: 11, hasActiveCore: false }),
+    ).toBe(false)
+  })
+
+  it("keeps every Mini results row locked for free students", () => {
+    expect(
+      canShowDiagnosticResultDetails({ intentId: "mini", questionNumber: 1, hasActiveCore: false }),
     ).toBe(false)
   })
 })

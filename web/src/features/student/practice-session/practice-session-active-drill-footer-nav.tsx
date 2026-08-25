@@ -7,6 +7,7 @@ import {
   ACTIVE_DRILL_QUESTION_NAV_FLAG_SLOT_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeSessionNavArrowButton } from "@/features/student/practice-session/practice-session-nav-arrow-button"
+import type { PracticeSessionQuestionNavOutcome } from "@/features/student/practice-session/practice-session-question-nav-button"
 import { PracticeSessionQuestionNavStrip } from "@/features/student/practice-session/practice-session-question-nav-strip"
 import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
@@ -23,6 +24,8 @@ type PracticeSessionActiveDrillFooterNavProps = {
   /** When on the last question, replaces the disabled Next control. */
   onSubmit?: () => void
   submitLabel?: string
+  /** When set, question pills show correct / incorrect / unanswered chrome. */
+  outcomeForQuestion?: (questionId: string) => PracticeSessionQuestionNavOutcome | null | undefined
   showPassageBreaks?: boolean
   className?: string
 }
@@ -38,6 +41,7 @@ function PracticeSessionActiveDrillFooterNav({
   onNext,
   onSubmit,
   submitLabel = "Submit",
+  outcomeForQuestion,
   showPassageBreaks = true,
   className,
 }: PracticeSessionActiveDrillFooterNavProps) {
@@ -62,6 +66,7 @@ function PracticeSessionActiveDrillFooterNav({
           isFlagged={isFlagged}
           variant={variant}
           onSelectQuestion={onSelectQuestion}
+          outcomeForQuestion={outcomeForQuestion}
           showPassageBreaks={showPassageBreaks}
           className={ACTIVE_DRILL_FOOTER_NAV_GRID_CLASS}
         />
