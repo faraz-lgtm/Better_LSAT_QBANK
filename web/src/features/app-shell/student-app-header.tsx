@@ -181,6 +181,13 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
             </button>
             {openProfileMenu ? (
               <div className="absolute right-0 top-[calc(100%+8px)] z-30 min-w-[180px] rounded-2xl border border-[color:var(--greyscale-100)] bg-[var(--primary-25)] p-2 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]">
+                <Link
+                  to="/app/account"
+                  className="flex h-10 w-full items-center rounded-xl px-3 text-left text-sm font-semibold tracking-[0.02em] text-[#062357] hover:bg-white/80"
+                  onClick={() => setOpenProfileMenu(false)}
+                >
+                  Account
+                </Link>
                 <button
                   type="button"
                   onClick={() => void handleLogout()}

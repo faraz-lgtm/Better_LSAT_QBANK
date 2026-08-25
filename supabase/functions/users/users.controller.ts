@@ -31,6 +31,16 @@ export async function handleUsersRequest(req: Request): Promise<Response> {
         return json({ profile }, {}, corsHeaders)
       }
 
+      if (action === 'users-update-account-profile') {
+        const profile = await service.updateAccountProfile(auth.user.id, {
+          ...(typeof body.firstName === 'string' ? { firstName: body.firstName } : {}),
+          ...(typeof body.lastName === 'string' ? { lastName: body.lastName } : {}),
+          ...(typeof body.email === 'string' ? { email: body.email } : {}),
+          ...(typeof body.phone === 'string' ? { phone: body.phone } : {}),
+        })
+        return json({ profile }, {}, corsHeaders)
+      }
+
       return json(
         { error: action ? `Unknown action: ${action}` : 'Missing action in request body' },
         { status: 400 },
