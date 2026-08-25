@@ -31,6 +31,32 @@ type GuestDiagnosticResultsViewProps = {
   refreshSubscription?: () => void
 }
 
+type QuestionSortMode = 'number' | 'correct' | 'incorrect'
+
+type SortedOutcome = GuestDiagnosticResult['outcomes'][number] & {
+  originalIndex: number
+}
+
+function sortOutcomes(
+  outcomes: GuestDiagnosticResult['outcomes'],
+  mode: QuestionSortMode,
+): SortedOutcome[] {
+  const withIndex: SortedOutcome[] = outcomes.map((outcome, originalIndex) => ({
+    ...outcome,
+    originalIndex,
+  }))
+
+  if (mode === 'number') return withIndex
+
+  return [...withIndex].sort((a, b) => {
+    if (a.isCorrect !== b.isCorrect) {
+      if (mode === 'correct') return a.isCorrect ? -1 : 1
+      return a.isCorrect ? 1 : -1
+    }
+    return a.originalIndex - b.originalIndex
+  })
+}
+
 function OutcomePill({
   index,
   isCorrect,
@@ -267,6 +293,7 @@ function GuestDiagnosticResultsView({
   const [explanations, setExplanations] = useState<MiniDiagnosticExplanation[]>([])
   const [explanationsLoading, setExplanationsLoading] = useState(false)
   const [explanationsError, setExplanationsError] = useState<string | null>(null)
+  const [sortMode, setSortMode] = useState<QuestionSortMode>('number')
 
   useEffect(() => {
     refreshSubscription?.()
@@ -317,6 +344,11 @@ function GuestDiagnosticResultsView({
     return map
   }, [explanations])
 
+  const sortedOutcomes = useMemo(
+    () => sortOutcomes(result.outcomes, sortMode),
+    [result.outcomes, sortMode],
+  )
+
   const showPaidContent = hasActiveCore && !subscriptionLoading
 
   return (
@@ -346,7 +378,8 @@ function GuestDiagnosticResultsView({
             <span>Sort by</span>
             <select
               className="h-10 rounded-[10px] border border-[#dfe1e7] bg-white px-3 text-sm font-medium text-[#062357]"
-              defaultValue="number"
+              value={sortMode}
+              onChange={(event) => setSortMode(event.target.value as QuestionSortMode)}
               aria-label="Sort questions by"
             >
               <option value="number">Question number</option>
@@ -365,14 +398,14 @@ function GuestDiagnosticResultsView({
         ) : null}
 
         {showPaidContent
-          ? result.outcomes.map((outcome, index) => {
+          ? sortedOutcomes.map((outcome) => {
               const explanation = explanationsById.get(outcome.questionId)
               if (!explanation) return null
               const meta = getMiniDiagnosticQuestionMeta(outcome.questionId)
               return (
                 <GuestDiagnosticExplanationCard
                   key={outcome.questionId}
-                  number={index + 1}
+                  number={outcome.originalIndex + 1}
                   explanation={explanation}
                   isCorrect={outcome.isCorrect}
                   selectedAnswer={outcome.selectedAnswer}
@@ -381,10 +414,10 @@ function GuestDiagnosticResultsView({
                 />
               )
             })
-          : result.outcomes.map((outcome, index) => (
+          : sortedOutcomes.map((outcome) => (
               <GuestDiagnosticLockedQuestionRow
                 key={outcome.questionId}
-                number={index + 1}
+                number={outcome.originalIndex + 1}
                 questionId={outcome.questionId}
                 isCorrect={outcome.isCorrect}
               />
