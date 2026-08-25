@@ -12,7 +12,7 @@ type GuestFreePlanSidebarProps = {
 
 function FreePlanUpgradeCard() {
   return (
-    <div className="rounded-[16px] border border-[#b8d4ff] bg-[#edf3ff] p-4">
+    <div className="guest-free-plan-upgrade-card rounded-[16px] border border-[#b8d4ff] bg-[#edf3ff] p-4">
       <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#0d47a1]">Free plan</p>
       <p className="mt-2 text-sm font-semibold leading-[1.4] tracking-[0.28px] text-[#062357]">
         Unlock Performance, Reports, and Score Tracker
@@ -45,6 +45,7 @@ function GuestFreePlanSidebar({
       mobileOpen={mobileOpen}
       onMobileClose={onMobileClose}
       dashboardHref={dashboardHref}
+      showDiagnosticNav
       lockPremiumNav
       beforeFooter={<FreePlanUpgradeCard />}
     />

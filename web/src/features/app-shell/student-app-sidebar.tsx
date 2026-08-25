@@ -18,7 +18,7 @@ import {
   type StudentNavItemIconKey,
 } from "@/features/app-shell/student-nav-config"
 import { useStudentEntitlementOptional, isLsacLockedNavItem } from "@/features/app-shell/student-entitlement-context"
-import { GUEST_FREE_PLAN_PRICING_HREF } from "@/features/guest/diagnostic/guest-free-plan-nav-config"
+import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
 import { PREP_COURSE_NAV_ITEMS } from "@/features/prep-course/lib/prep-course-nav"
 import { DiagnosticResultsNavItem } from "@/features/student/diagnostic/diagnostic-results-nav-item"
@@ -31,6 +31,7 @@ type StudentAppSidebarProps = {
   mobileOpen: boolean
   onMobileClose: () => void
   dashboardHref?: string
+  showDiagnosticNav?: boolean
   /** Free-plan: same menu as premium, with Academy / Prep / Insights locked. */
   lockPremiumNav?: boolean
   beforeFooter?: ReactNode
@@ -136,21 +137,26 @@ function PrepCourseNavItem({
   )
 }
 
-function LockedPremiumNavItem({ item }: { item: StudentNavItem }) {
-  const navigate = useNavigate()
+function getLockedPremiumNavLabel(item: StudentNavItem): string {
+  return item.href === "/app/analytics" ? "Analytics" : item.label
+}
+
+function LockedPremiumNavItem({ item, onLockedClick }: { item: StudentNavItem; onLockedClick: () => void }) {
+  const label = getLockedPremiumNavLabel(item)
 
   return (
     <button
       type="button"
-      aria-label={`${item.label} (locked)`}
-      onClick={() => navigate(GUEST_FREE_PLAN_PRICING_HREF)}
-      className="student-sidebar-link student-sidebar-link--locked w-full justify-between pr-4"
+      aria-label={`${label} (locked)`}
+      title={`${label} (locked)`}
+      onClick={onLockedClick}
+      className="student-sidebar-link student-sidebar-link--locked student-sidebar-link--with-trailing w-full justify-between"
     >
-      <span className="flex min-w-0 items-center gap-2.5">
+      <span className="student-sidebar-link-content flex min-w-0 items-center gap-2.5">
         <SidebarNavIcon icon={item.icon} />
-        <span className="truncate">{item.label}</span>
+        <span className="student-sidebar-label truncate">{label}</span>
       </span>
-      <Lock className="size-4 shrink-0 text-[#666d80]" aria-hidden />
+      <Lock className="student-sidebar-lock size-4 shrink-0 text-[#666d80]" aria-hidden />
     </button>
   )
 }
@@ -159,12 +165,14 @@ function StudentAppSidebar({
   mobileOpen,
   onMobileClose,
   dashboardHref = STUDENT_DASHBOARD_HREF,
+  showDiagnosticNav = false,
   lockPremiumNav = false,
   beforeFooter,
 }: StudentAppSidebarProps) {
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
   const entitlement = useStudentEntitlementOptional()
+  const { openLockedContentModal } = useGuestPricingModal()
   const lockLsacNav = !lockPremiumNav && entitlement ? !entitlement.canAccessLsacContent : false
   const dashboardActive = isDashboardActive(pathname)
   const [collapsed, setCollapsed] = useState(false)
@@ -177,6 +185,11 @@ function StudentAppSidebar({
     const supabase = getSupabaseBrowserClient()
     await supabase.auth.signOut()
     navigate("/login", { replace: true })
+  }
+
+  function handleLockedContentClick() {
+    onMobileClose()
+    openLockedContentModal()
   }
 
   return (
@@ -234,23 +247,31 @@ function StudentAppSidebar({
               <SidebarNavIcon icon={STUDENT_DASHBOARD_ICON} />
               <span className="student-sidebar-label">Dashboard</span>
             </Link>
-            <Link
-              to={STUDENT_DIAGNOSTIC_HREF}
-              className="student-sidebar-link"
-              aria-label="Diagnostic"
-              title="Diagnostic"
-            >
-              <SidebarNavIcon icon={STUDENT_DIAGNOSTIC_ICON} />
-              <span className="student-sidebar-label">Diagnostic</span>
-            </Link>
-            <DiagnosticResultsNavItem showIcon />
+            {showDiagnosticNav ? (
+              <>
+                <Link
+                  to={STUDENT_DIAGNOSTIC_HREF}
+                  className="student-sidebar-link"
+                  aria-label="Diagnostic"
+                  title="Diagnostic"
+                >
+                  <SidebarNavIcon icon={STUDENT_DIAGNOSTIC_ICON} />
+                  <span className="student-sidebar-label">Diagnostic</span>
+                </Link>
+                <DiagnosticResultsNavItem
+                  showIcon
+                  collapsed={collapsed}
+                  onExpandSidebar={() => setCollapsed(false)}
+                />
+              </>
+            ) : null}
 
             {STUDENT_NAV_SECTIONS.map((section) => (
               <div key={section.key} className="student-sidebar-section">
                 <p className="student-sidebar-heading">{section.label}</p>
                 {section.items.map((item) => {
                   if (lockPremiumNav) {
-                    return <LockedPremiumNavItem key={item.href} item={item} />
+                    return <LockedPremiumNavItem key={item.href} item={item} onLockedClick={handleLockedContentClick} />
                   }
 
                   if (isPrepCourseNavItem(item)) {
@@ -273,11 +294,11 @@ function StudentAppSidebar({
                       <button
                         key={item.href}
                         type="button"
-                        disabled
                         aria-disabled="true"
                         aria-label={item.label}
                         title="Link your LawHub coach to unlock"
-                        className="student-sidebar-link student-sidebar-link--with-trailing w-full cursor-not-allowed justify-between opacity-60"
+                        onClick={handleLockedContentClick}
+                        className="student-sidebar-link student-sidebar-link--with-trailing w-full justify-between opacity-70 hover:opacity-100"
                       >
                         <span className="student-sidebar-link-content flex min-w-0 items-center gap-2.5">
                           <SidebarNavIcon icon={item.icon} />

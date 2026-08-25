@@ -4,6 +4,7 @@ import { MemoryRouter, useLocation } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
 
 import { GuestFreePlanSidebar } from "@/features/guest/diagnostic/guest-free-plan-sidebar"
+import { GuestPricingModalProvider } from "@/features/guest/pricing/guest-pricing-modal-provider"
 
 vi.mock("@/lib/supabase/client", () => ({
   getSupabaseBrowserClient: () => ({
@@ -33,7 +34,7 @@ describe("GuestFreePlanSidebar", () => {
     )
     expect(screen.getByRole("button", { name: "Explanations (locked)" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Blind Review (locked)" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Overview (locked)" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Analytics (locked)" })).toBeInTheDocument()
     expect(screen.getAllByRole("button", { name: "Drills (locked)" })).toHaveLength(2)
     expect(screen.getAllByRole("button", { name: "Sections (locked)" })).toHaveLength(2)
     expect(screen.getAllByRole("button", { name: "PrepTest (locked)" })).toHaveLength(2)
@@ -43,17 +44,20 @@ describe("GuestFreePlanSidebar", () => {
     expect(screen.getByRole("button", { name: /Upgrade to LSAT\+/i })).toBeInTheDocument()
   })
 
-  it("sends locked items to pricing", async () => {
+  it("opens the locked-content popup for locked items", async () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={["/app"]}>
-        <GuestFreePlanSidebar mobileOpen={false} onMobileClose={() => {}} />
+        <GuestPricingModalProvider>
+          <GuestFreePlanSidebar mobileOpen={false} onMobileClose={() => {}} />
+        </GuestPricingModalProvider>
         <PathProbe />
       </MemoryRouter>,
     )
 
     await user.click(screen.getByRole("button", { name: "Prep Course (locked)" }))
-    expect(screen.getByTestId("path")).toHaveTextContent("/app/pricing")
+    expect(screen.getByRole("dialog", { name: "Subscriber-Only Content" })).toBeInTheDocument()
+    expect(screen.getByTestId("path")).toHaveTextContent("/app")
   })
 
   it("still expands Diagnostic Results to Mini and Full", async () => {
@@ -72,6 +76,23 @@ describe("GuestFreePlanSidebar", () => {
     expect(screen.getByRole("link", { name: "Full" })).toHaveAttribute(
       "href",
       "/app/diagnostic/results/full",
+    )
+  })
+
+  it("hides the upgrade card markup class when collapsed styles apply", async () => {
+    const user = userEvent.setup()
+    const { container } = render(
+      <MemoryRouter initialEntries={["/app"]}>
+        <GuestFreePlanSidebar mobileOpen={false} onMobileClose={() => {}} />
+      </MemoryRouter>,
+    )
+
+    expect(container.querySelector(".guest-free-plan-upgrade-card")).toBeTruthy()
+
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }))
+    expect(container.querySelector(".student-sidebar")).toHaveClass("student-sidebar--collapsed")
+    expect(screen.getByRole("button", { name: "Prep Course (locked)" })).toHaveClass(
+      "student-sidebar-link--locked",
     )
   })
 })
