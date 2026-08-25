@@ -43,38 +43,23 @@ type GuestDiagnosticResult = {
 }
 
 function buildResultScoreFields(
-  intentId: GuestDiagnosticIntentId,
+  _intentId: GuestDiagnosticIntentId,
   correctCount: number,
-  questionCount: number,
+  _questionCount: number,
 ) {
-  if (intentId === "mini") {
-    const scoreRange = resolveMiniDiagnosticScoreRange(correctCount)
-    const scaledMid = Math.round((scoreRange.scaledLow + scoreRange.scaledHigh) / 2)
-    const percentileMid = (scoreRange.percentileLow + scoreRange.percentileHigh) / 2
-    return {
-      scaledScore: scaledMid,
-      scaledScoreLow: scoreRange.scaledLow,
-      scaledScoreHigh: scoreRange.scaledHigh,
-      scaledScoreLabel: formatMiniDiagnosticScoreRange(scoreRange),
-      percentile: percentileMid,
-      percentileLow: scoreRange.percentileLow,
-      percentileHigh: scoreRange.percentileHigh,
-      percentileLabel: formatMiniDiagnosticPercentileRange(scoreRange),
-    }
-  }
-
-  const ratio = questionCount > 0 ? correctCount / questionCount : 0
-  const scaledScore = Math.round(120 + ratio * 60)
-  const percentile = Math.round(ratio * 99 * 10) / 10
+  // Same estimated bands for every diagnostic: N correct → band for N (clamped 0–10).
+  const scoreRange = resolveMiniDiagnosticScoreRange(correctCount)
+  const scaledMid = Math.round((scoreRange.scaledLow + scoreRange.scaledHigh) / 2)
+  const percentileMid = (scoreRange.percentileLow + scoreRange.percentileHigh) / 2
   return {
-    scaledScore,
-    scaledScoreLow: scaledScore,
-    scaledScoreHigh: scaledScore,
-    scaledScoreLabel: String(scaledScore),
-    percentile,
-    percentileLow: percentile,
-    percentileHigh: percentile,
-    percentileLabel: String(percentile),
+    scaledScore: scaledMid,
+    scaledScoreLow: scoreRange.scaledLow,
+    scaledScoreHigh: scoreRange.scaledHigh,
+    scaledScoreLabel: formatMiniDiagnosticScoreRange(scoreRange),
+    percentile: percentileMid,
+    percentileLow: scoreRange.percentileLow,
+    percentileHigh: scoreRange.percentileHigh,
+    percentileLabel: formatMiniDiagnosticPercentileRange(scoreRange),
   }
 }
 
