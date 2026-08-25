@@ -17,7 +17,8 @@ import { GuestDiagnosticOptionCard } from "@/features/guest/diagnostic/guest-dia
 
 function getStartLabel(intentId: GuestDiagnosticIntentId): string {
   const option = GUEST_DIAGNOSTIC_INTENT_OPTIONS.find((entry) => entry.id === intentId)
-  return option ? `Start ${option.title} Diagnostic` : "Start Diagnostic"
+  if (!option) return "Start Diagnostic"
+  return option.title.endsWith("Diagnostic") ? `Start ${option.title}` : `Start ${option.title} Diagnostic`
 }
 
 function GuestDiagnosticIntentPage() {

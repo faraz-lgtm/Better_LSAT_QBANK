@@ -94,7 +94,7 @@ function LessonVideoBlock({
   inLessonCard?: boolean
 }) {
   const src = lesson.video_url ? videoIframeSrc(lesson.video_url) : ""
-  const textClass = "ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3"
+  const textClass = "text-[#36394a]"
 
   if (inLessonCard) {
     return (
@@ -179,7 +179,7 @@ function CompletedDrillResultsSection({
   part?: DrillResultsPart
 }) {
   const drillResultItems = resolveDrillResultLinkedRefs(linkedQuestionRefs, activeDrillAttempt)
-  const textClass = "ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3"
+  const textClass = "text-[#36394a]"
 
   const resultCards = (
     <>
@@ -664,10 +664,10 @@ function LessonContentRenderer({
             {lesson.text_content ? (
               <LessonHtmlContent
                 html={lesson.text_content}
-                className={`ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
+                className={`text-[#36394a] ${hideTitle ? "" : "mt-4"}`}
               />
             ) : (
-              <p className={`ds-body-sm leading-7 text-[#36394a] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
+              <p className={`text-[#36394a] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
             )}
           </div>
         ) : (
@@ -676,10 +676,10 @@ function LessonContentRenderer({
             {lesson.text_content ? (
               <LessonHtmlContent
                 html={lesson.text_content}
-                className={`ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
+                className={`text-[#36394a] ${hideTitle ? "" : "mt-4"}`}
               />
             ) : (
-              <p className={`ds-body-sm leading-7 text-[#36394a] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
+              <p className={`text-[#36394a] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
             )}
           </article>
         )}
@@ -694,9 +694,9 @@ function LessonContentRenderer({
 
   if (skipArticleShell) {
     return lesson.text_content ? (
-      <LessonHtmlContent html={lesson.text_content} className="ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3" />
+      <LessonHtmlContent html={lesson.text_content} className="text-[#36394a]" />
     ) : (
-      <p className="ds-body-sm leading-7 text-[#36394a]">No notes available.</p>
+      <p className="m-0 text-[#36394a]">No notes available.</p>
     )
   }
 
@@ -711,10 +711,10 @@ function LessonContentRenderer({
       {lesson.text_content ? (
         <LessonHtmlContent
           html={lesson.text_content}
-          className={`ds-body-sm leading-7 text-[#36394a] [&_p]:mb-3 ${hideTitle ? "" : "mt-4"}`}
+          className={`text-[#36394a] ${hideTitle ? "" : "mt-4"}`}
         />
       ) : (
-        <p className={`ds-body-sm leading-7 text-[#36394a] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
+        <p className={`text-[#36394a] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
       )}
     </article>
   )

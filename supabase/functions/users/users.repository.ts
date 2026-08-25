@@ -11,6 +11,7 @@ export type ProfileRow = {
   full_name: string | null
   first_name: string | null
   last_name: string | null
+  phone: string | null
   role: 'student' | 'admin'
   student_coaching_id: string | null
   stripe_customer_id: string | null

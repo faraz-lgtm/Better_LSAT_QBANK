@@ -7,7 +7,6 @@ import { PrepCourseLessonSidebar } from "@/features/prep-course/components/prep-
 import {
   countCompletedLessons,
   findLessonSectionContext,
-  formatDurationShort,
   formatRemainingHoursLabel,
   incompleteDurationMinutes,
   lessonProgressPercent,
@@ -41,7 +40,7 @@ import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 import { cn } from "@/lib/utils"
 
 const PREP_COURSE_LESSON_CONTENT_CARD_CLASS =
-  "flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden rounded-[14px] border border-[#e2e8f0] bg-white shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]"
+  "flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden rounded-t-[14px] rounded-b-none border border-b-0 border-[#e2e8f0] bg-white shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]"
 
 function PrepCourseLessonPage() {
   const navigate = useNavigate()
@@ -66,7 +65,7 @@ function PrepCourseLessonPage() {
   const [savingComplete, setSavingComplete] = useState(false)
   const [startingDrill, setStartingDrill] = useState(false)
   const [drillStartError, setDrillStartError] = useState<string | null>(null)
-  const [showSidebar, setShowSidebar] = useState(true)
+  const [showSidebar, setShowSidebar] = useState(false)
   const lessonContentRef = useRef<HTMLDivElement>(null)
   const [initialBookmarks, setInitialBookmarks] = useState<PrepCourseBookmarks | null>(null)
 
@@ -127,9 +126,24 @@ function PrepCourseLessonPage() {
 
   const sectionSubtitle = useMemo(() => {
     if (!lesson) return null
-    const duration = formatDurationShort(lesson.duration_minutes)
-    return `${sectionTitle} • ${duration}`
+    return sectionTitle
   }, [lesson, sectionTitle])
+
+  const lessonSequence = useMemo(() => {
+    if (!lesson) return null
+    const total = sidebarLessons.length
+    if (total <= 0) return null
+    const idx = sidebarLessons.findIndex((row) => row.slug === lesson.slug)
+    const current = idx >= 0 ? idx + 1 : 1
+    return { current, total }
+  }, [lesson, sidebarLessons])
+
+  const moduleLessonLine = useMemo(() => {
+    if (!lessonContext || !lessonSequence) return null
+    const moduleNumber = curriculum.modules.findIndex((mod) => mod.id === lessonContext.module.id) + 1
+    const safeModuleNumber = moduleNumber > 0 ? moduleNumber : 1
+    return `Module ${safeModuleNumber} · Lesson ${lessonSequence.current} of ${lessonSequence.total}`
+  }, [curriculum.modules, lessonContext, lessonSequence])
 
   const prevSlug = useMemo(
     () => (lesson ? prevLessonSlug(sidebarLessons, lesson.slug) : null),
@@ -299,6 +313,8 @@ function PrepCourseLessonPage() {
     linkedQuestionRefs,
     activeDrillAttempt,
     sectionSubtitle,
+    moduleLessonLine,
+    lessonSequence,
     onReviewDrill: handleReviewDrill,
     onStartDrill: () => void handleStartDrill(),
     startingDrill,
@@ -315,7 +331,7 @@ function PrepCourseLessonPage() {
         <section className="prep-course-lesson-frame practice-session-card flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden">
           <div
             className={cn(
-              "practice-session-body flex h-0 min-h-0 min-w-0 max-w-full flex-1 overflow-hidden px-[24px] pb-6",
+              "practice-session-body flex h-0 min-h-0 min-w-0 max-w-full flex-1 overflow-hidden px-[24px] pb-0",
               useSplitDrillLayout
                 ? "flex-col"
                 : showSidebar
@@ -357,7 +373,7 @@ function PrepCourseLessonPage() {
               </div>
             ) : (
               <>
-                <div className={cn(PREP_COURSE_LESSON_CONTENT_CARD_CLASS, STUDENT_PAGE_CONTAINER_CLASS)}>
+                <div className={cn(PREP_COURSE_LESSON_CONTENT_CARD_CLASS, STUDENT_PAGE_CONTAINER_CLASS, "max-w-[888px]")}>
                   <PrepCourseLessonPanel
                     {...lessonPanelProps}
                     contentScrollRef={lessonContentRef}

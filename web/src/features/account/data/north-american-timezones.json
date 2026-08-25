@@ -1,0 +1,82 @@
+[
+  {
+    "country": "Canada",
+    "label": "Newfoundland Time - St. John's",
+    "value": "America/St_Johns"
+  },
+  {
+    "country": "Canada",
+    "label": "Atlantic Time - Halifax",
+    "value": "America/Halifax"
+  },
+  {
+    "country": "Canada",
+    "label": "Eastern Time - Toronto",
+    "value": "America/Toronto"
+  },
+  {
+    "country": "Canada",
+    "label": "Central Time - Winnipeg",
+    "value": "America/Winnipeg"
+  },
+  {
+    "country": "Canada",
+    "label": "Central Time - Regina",
+    "value": "America/Regina"
+  },
+  {
+    "country": "Canada",
+    "label": "Mountain Time - Edmonton",
+    "value": "America/Edmonton"
+  },
+  {
+    "country": "Canada",
+    "label": "Pacific Time - Vancouver",
+    "value": "America/Vancouver"
+  },
+  {
+    "country": "Canada",
+    "label": "Yukon Time - Whitehorse",
+    "value": "America/Whitehorse"
+  },
+  {
+    "country": "United States",
+    "label": "Eastern Time - New York",
+    "value": "America/New_York"
+  },
+  {
+    "country": "United States",
+    "label": "Central Time - Chicago",
+    "value": "America/Chicago"
+  },
+  {
+    "country": "United States",
+    "label": "Mountain Time - Denver",
+    "value": "America/Denver"
+  },
+  {
+    "country": "United States",
+    "label": "Mountain Time - Phoenix",
+    "value": "America/Phoenix"
+  },
+  {
+    "country": "United States",
+    "label": "Pacific Time - Los Angeles",
+    "value": "America/Los_Angeles"
+  },
+  {
+    "country": "United States",
+    "label": "Alaska Time - Anchorage",
+    "value": "America/Anchorage"
+  },
+  {
+    "country": "United States",
+    "label": "Hawaii Time - Honolulu",
+    "value": "Pacific/Honolulu"
+  },
+  {
+    "country": "United States",
+    "label": "Aleutian Time - Adak",
+    "value": "America/Adak"
+  }
+]

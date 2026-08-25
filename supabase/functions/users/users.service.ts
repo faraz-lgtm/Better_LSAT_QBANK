@@ -216,6 +216,48 @@ export function createUsersService(deps: UsersServiceDeps) {
       return await deps.repository.getProfileById(userId)
     },
 
+    async updateAccountProfile(
+      userId: string,
+      input: {
+        firstName?: string
+        lastName?: string
+        email?: string
+        phone?: string
+      },
+    ) {
+      const existing = await deps.repository.getProfileById(userId)
+      const hasNameInput = input.firstName !== undefined || input.lastName !== undefined
+      let firstName = existing?.first_name?.trim() || ''
+      let lastName = existing?.last_name?.trim() || ''
+      let fullName = existing?.full_name?.trim() || joinLawHubFullName(firstName, lastName)
+
+      if (hasNameInput) {
+        const nameParts = requireLawHubNameParts({
+          firstName: input.firstName,
+          lastName: input.lastName,
+        })
+        firstName = nameParts.firstName
+        lastName = nameParts.lastName
+        fullName = joinLawHubFullName(firstName, lastName)
+      }
+
+      const email = input.email?.trim().toLowerCase() || existing?.email || null
+      const phone =
+        input.phone !== undefined
+          ? input.phone.trim() || null
+          : existing?.phone ?? null
+
+      return await deps.repository.upsertProfile({
+        id: userId,
+        email,
+        full_name: fullName || null,
+        first_name: firstName || null,
+        last_name: lastName || null,
+        phone,
+        student_coaching_id: existing?.student_coaching_id ?? null,
+      })
+    },
+
     async markFirstTimeLoginComplete(userId: string) {
       return await deps.repository.markFirstTimeLogin(userId, false)
     },
@@ -659,6 +701,7 @@ export function createUsersService(deps: UsersServiceDeps) {
       userId: string,
       input: {
         plannedLsatDate?: string | null
+        plannedLsatWindow?: string | null
         lawSchoolCycle?: string | null
         goalScore?: number | null
       },
@@ -666,6 +709,7 @@ export function createUsersService(deps: UsersServiceDeps) {
       const row = await deps.repository.upsertStudyPreferences({
         userId,
         plannedLsatDate: input.plannedLsatDate,
+        plannedLsatWindow: input.plannedLsatWindow,
         lawSchoolCycle: input.lawSchoolCycle,
         goalScore: input.goalScore,
       })

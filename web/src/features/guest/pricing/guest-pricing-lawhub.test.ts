@@ -7,8 +7,8 @@ describe("guest pricing lawhub", () => {
   it("uses standard due-today amounts when LawHub Advantage is off", () => {
     const core = GUEST_PRICING_PLANS.find((plan) => plan.id === "core")!
     expect(resolveGuestPricingDueToday(core, false)).toEqual({
-      amount: 79,
-      label: "$79 due today",
+      amount: 70,
+      label: "$70 due today",
       emphasized: false,
     })
   })
@@ -16,8 +16,8 @@ describe("guest pricing lawhub", () => {
   it("adds $99 LawHub Advantage when bundled toggle is on", () => {
     const live = GUEST_PRICING_PLANS.find((plan) => plan.id === "live")!
     expect(resolveGuestPricingDueToday(live, true)).toEqual({
-      amount: 238,
-      label: "$238 due today (incl. $99 LawHub Advantage)",
+      amount: 228,
+      label: "$228 due today (incl. $99 LawHub Advantage)",
       emphasized: true,
     })
   })

@@ -197,6 +197,10 @@ export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBre
     return [{ label: "Dashboard" }]
   }
 
+  if (pathname === "/app/account") {
+    return [{ label: "Account" }]
+  }
+
   if (pathname === PREPTEST_LIST_HREF) {
     return [{ label: "PrepTest" }]
   }
@@ -267,6 +271,7 @@ export function getStudentPageTitle(pathname: string, search = ""): string | nul
   if (pathname === DIAGNOSTIC_RESULTS_MINI_HREF) return "Mini Diagnostic History"
   if (pathname === DIAGNOSTIC_RESULTS_FULL_HREF) return "Full Diagnostic History"
   if (pathname.startsWith("/app/diagnostic/results/")) return "Diagnostic Results"
+  if (pathname === "/app/account") return "Account"
   if (isPrepTestHubDetailPath(pathname)) return null
   if (pathname.startsWith("/app/prep-course/") && pathname !== "/app/prep-course") return null
   if (pathname.startsWith("/app/prep-course")) return "Prep Course"

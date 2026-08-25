@@ -35,40 +35,77 @@ function isSafeHexColor(raw: string): boolean {
   return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(raw.trim())
 }
 
-function LessonSectionView({ node, updateAttributes }: NodeViewProps) {
+const DEFAULT_RECAP_BG = "#0d47a1"
+const RECAP_GRADIENT = "linear-gradient(90deg, #0d47a1 0%, #419df8 100%)"
+
+function isRecapDefaultColor(raw: string): boolean {
+  return raw.trim().toLowerCase() === DEFAULT_RECAP_BG
+}
+
+function LessonSectionView({ node, updateAttributes, deleteNode }: NodeViewProps) {
   const label = String(node.attrs.label ?? "")
   const variant = node.attrs.variant === "empty" ? "empty" : "heading"
   const backgroundColor = isSafeHexColor(String(node.attrs.backgroundColor ?? ""))
     ? String(node.attrs.backgroundColor)
-    : "#ffffff"
+    : DEFAULT_RECAP_BG
+
+  if (variant === "heading") {
+    return (
+      <NodeViewWrapper
+        as="section"
+        className="lesson-section-editor lesson-callout-editor my-4 flex flex-col gap-2.5 border-l-4 border-solid border-[#0d47a1] pl-[26px]"
+        data-lesson-section="true"
+        data-variant={variant}
+        data-label={label}
+        data-bg={backgroundColor}
+      >
+        <div className="flex items-center gap-2" contentEditable={false}>
+          <input
+            aria-label="Callout label"
+            className="w-full border-0 bg-transparent text-xs font-bold leading-[1.5] tracking-[0.24px] text-[#0d47a1] outline-none placeholder:text-[#9aa4b2]"
+            placeholder="Key term · stimulus"
+            value={label}
+            onMouseDown={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            onChange={(e) => updateAttributes({ label: e.target.value })}
+          />
+          <button
+            type="button"
+            className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2px] text-[#666d80] hover:bg-[#eef3fb]"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={() => deleteNode()}
+            title="Delete section"
+          >
+            Del
+          </button>
+        </div>
+        <NodeViewContent className="lesson-callout-editor__content min-h-[24px] outline-none" />
+      </NodeViewWrapper>
+    )
+  }
 
   return (
     <NodeViewWrapper
       as="section"
-      className={`lesson-section-editor my-4 rounded-[18px] border border-[#dfe1e7] ${variant === "empty" ? "lesson-section-empty" : "p-6"}`}
+      className="lesson-section-editor lesson-section-empty my-4 rounded-[18px] border border-[#dfe1e7]"
       data-lesson-section="true"
       data-variant={variant}
       data-label={label}
       data-bg={backgroundColor}
-      style={{ backgroundColor }}
+      style={isRecapDefaultColor(backgroundColor) ? { background: RECAP_GRADIENT } : { backgroundColor }}
     >
       <div className="mb-4 flex items-center gap-3" contentEditable={false}>
-        {variant === "heading" ? (
-          <>
-            <span className="lesson-section-editor__num flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-[#edf3ff] bg-[#f3f7ff] text-xs font-bold leading-[1.3] text-[#0d47a1]" />
-            <input
-              aria-label="Section label"
-              className="min-w-0 flex-1 border-0 bg-transparent text-xs font-bold uppercase leading-[1.5] tracking-[0.24px] text-[#0d47a1] outline-none placeholder:text-[#9aa4b2]"
-              placeholder="THE BIG PICTURE"
-              value={label}
-              onMouseDown={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-              onChange={(e) => updateAttributes({ label: e.target.value })}
-            />
-          </>
-        ) : (
-          <p className="m-0 min-w-0 flex-1 text-xs font-medium text-[#666d80]">Empty section</p>
-        )}
+        <input
+          aria-label="Section tag"
+          className={`min-w-0 flex-1 border-0 bg-transparent text-xs font-bold uppercase leading-[1.5] tracking-[0.24px] outline-none ${
+            isRecapDefaultColor(backgroundColor) ? "text-white placeholder:text-[#d7e8ff]" : "text-[#0d47a1] placeholder:text-[#9aa4b2]"
+          }`}
+          placeholder="RECAP"
+          value={label}
+          onMouseDown={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+          onChange={(e) => updateAttributes({ label: e.target.value })}
+        />
         <label
           className="flex shrink-0 cursor-pointer items-center gap-1 rounded px-1 py-0.5 text-[10px] font-medium text-[#666d80] hover:bg-[#eef3fb]"
           title="Section background"
@@ -84,6 +121,15 @@ function LessonSectionView({ node, updateAttributes }: NodeViewProps) {
             }}
           />
         </label>
+        <button
+          type="button"
+          className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2px] text-[#666d80] hover:bg-[#eef3fb]"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={() => deleteNode()}
+          title="Delete section"
+        >
+          Del
+        </button>
       </div>
       <NodeViewContent className="lesson-section-editor__content min-h-[48px] outline-none" />
     </NodeViewWrapper>
@@ -100,8 +146,8 @@ const LessonSection = Node.create({
   addAttributes() {
     return {
       label: {
-        default: "Section",
-        parseHTML: (element) => element.getAttribute("data-label") ?? "Section",
+        default: "Key term · stimulus",
+        parseHTML: (element) => element.getAttribute("data-label") ?? "Key term · stimulus",
         renderHTML: (attributes) => ({ "data-label": attributes.label || "" }),
       },
       variant: {
@@ -110,18 +156,18 @@ const LessonSection = Node.create({
         renderHTML: (attributes) => ({ "data-variant": attributes.variant === "empty" ? "empty" : "heading" }),
       },
       backgroundColor: {
-        default: "#ffffff",
+        default: DEFAULT_RECAP_BG,
         parseHTML: (element) => {
           const fromData = element.getAttribute("data-bg") ?? ""
           if (isSafeHexColor(fromData)) return fromData.trim()
           const fromStyle = element.style?.backgroundColor ?? ""
           if (isSafeHexColor(fromStyle)) return fromStyle.trim()
-          return "#ffffff"
+          return DEFAULT_RECAP_BG
         },
         renderHTML: (attributes) => {
           const color = isSafeHexColor(String(attributes.backgroundColor ?? ""))
             ? String(attributes.backgroundColor)
-            : "#ffffff"
+            : DEFAULT_RECAP_BG
           const padding = attributes.variant === "empty" ? "padding: 14px 16px;" : ""
           return { "data-bg": color, style: `background-color: ${color}; ${padding}`.trim() }
         },
@@ -232,7 +278,7 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
     editorProps: {
       attributes: {
         class:
-          "lesson-tiptap-editor max-w-none focus:outline-none px-4 py-3 text-[15px] leading-relaxed text-[#1a1b25] [&_h1]:m-0 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-[1.3] [&_h1]:text-[#272835] [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:text-base [&_h4]:font-semibold [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_blockquote]:border-l-4 [&_blockquote]:border-[#dfe1e7] [&_blockquote]:pl-4 [&_blockquote]:italic [&_pre]:rounded-md [&_pre]:bg-[#f6f8fa] [&_pre]:p-3 [&_code]:text-sm",
+          "lesson-tiptap-editor max-w-none focus:outline-none px-4 py-3 text-[15px] leading-relaxed text-[#1a1b25] [&_h1]:m-0 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-[1.3] [&_h1]:text-[#36394a] [&_h2]:m-0 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:leading-[1.3] [&_h2]:text-[#36394a] [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:text-base [&_h4]:font-semibold [&_p]:mb-3 [&_p]:text-base [&_p]:leading-[1.5] [&_p]:tracking-[0.32px] [&_p]:text-[#36394a] [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_blockquote]:border-l-4 [&_blockquote]:border-[#dfe1e7] [&_blockquote]:pl-4 [&_blockquote]:italic [&_pre]:rounded-md [&_pre]:bg-[#f6f8fa] [&_pre]:p-3 [&_code]:text-sm",
         style: `min-height:${minHeight}px`,
       },
     },
@@ -296,7 +342,7 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
         .focus()
         .insertContent({
           type: "lessonSection",
-          attrs: { variant: "empty", label: "", backgroundColor: "#ffffff" },
+          attrs: { variant: "empty", label: "RECAP", backgroundColor: DEFAULT_RECAP_BG },
           content: [{ type: "paragraph" }],
         })
         .run()
@@ -307,10 +353,17 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
       .focus()
       .insertContent({
         type: "lessonSection",
-        attrs: { variant: "heading", label: "Section", backgroundColor: "#ffffff" },
+        attrs: { variant: "heading", label: "Key term · stimulus", backgroundColor: "#ffffff" },
         content: [
-          { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Heading" }] },
-          { type: "paragraph" },
+          {
+            type: "paragraph",
+            content: [
+              {
+                type: "text",
+                text: "The paragraph above the question stem. Every argument you analyse lives there.",
+              },
+            ],
+          },
         ],
       })
       .run()
@@ -378,7 +431,7 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
           className={`flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-xs font-medium ${
             editor.isActive("lessonSection") ? "bg-white text-[#1a1b25] hover:bg-[#eef3fb]" : "cursor-not-allowed opacity-40"
           }`}
-          title="Section background color"
+          title="Section background color (default is recap gradient)"
         >
           Sec BG
           <input

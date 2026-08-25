@@ -3,6 +3,42 @@ import { StudentAppSidebar } from "@/features/app-shell/student-app-sidebar"
 import {
   GUEST_FREE_PLAN_DASHBOARD_HREF,
 } from "@/features/guest/diagnostic/guest-free-plan-nav-config"
+import { useEffect, useState } from "react"
+import {
+  BarChart3,
+  BookOpenCheck,
+  Brain,
+  CalendarDays,
+  ChevronsLeft,
+  ChevronsRight,
+  ClipboardCheck,
+  Dumbbell,
+  FileQuestion,
+  FileText,
+  Headphones,
+  LayoutDashboard,
+  LineChart,
+  Lock,
+  LogOut,
+  Moon,
+  RotateCcw,
+  Search,
+  type LucideIcon,
+} from "lucide-react"
+import { Link, useLocation, useNavigate } from "react-router-dom"
+
+import {
+  GUEST_FREE_PLAN_DASHBOARD_HREF,
+  GUEST_FREE_PLAN_NAV_SECTIONS,
+  GUEST_FREE_PLAN_RESULTS_HREF,
+  isGuestFreePlanAnalyticsActive,
+  isGuestFreePlanDashboardActive,
+} from "@/features/guest/diagnostic/guest-free-plan-nav-config"
+import { GuestUpgradeCta } from "@/features/guest/diagnostic/guest-upgrade-cta"
+import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
+import { STUDENT_APP_VERSION } from "@/features/app-shell/student-nav-config"
+import { cn } from "@/lib/utils"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 type GuestFreePlanSidebarProps = {
   mobileOpen: boolean
@@ -10,28 +46,28 @@ type GuestFreePlanSidebarProps = {
   dashboardHref?: string
 }
 
-function FreePlanUpgradeCard() {
+const GUEST_FREE_PLAN_NAV_ICONS: Record<string, LucideIcon> = {
+  Dashboard: LayoutDashboard,
+  Diagnostic: ClipboardCheck,
+  "Diagnostic Results": BarChart3,
+  "Practice Exams": BookOpenCheck,
+  "Question Bank": Search,
+  Drills: Dumbbell,
+  Schedule: CalendarDays,
+  "Wrong Review": RotateCcw,
+  Analytics: LineChart,
+  "Trend Line": LineChart,
+  Skills: Brain,
+  Sections: FileText,
+  Question: FileQuestion,
+}
+
+function GuestFreePlanNavIcon({ label }: { label: string }) {
+  const Icon = GUEST_FREE_PLAN_NAV_ICONS[label] ?? FileText
   return (
-    <div className="rounded-[16px] border border-[#b8d4ff] bg-[#edf3ff] p-4">
-      <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#0d47a1]">Free plan</p>
-      <p className="mt-2 text-sm font-semibold leading-[1.4] tracking-[0.28px] text-[#062357]">
-        Unlock Performance, Reports, and Score Tracker
-      </p>
-      <dl className="mt-3 space-y-1 text-xs tracking-[0.24px] text-[#062357]">
-        <div className="flex justify-between gap-2">
-          <dt className="text-[#666d80]">Trackable score</dt>
-          <dd className="font-semibold">70%</dd>
-        </div>
-        <div className="flex justify-between gap-2">
-          <dt className="text-[#666d80]">Modules</dt>
-          <dd className="font-semibold">20+</dd>
-        </div>
-      </dl>
-      <div className="mt-4 flex flex-col gap-2">
-        <GuestUpgradeCta variant="sidebar-primary" />
-        <GuestUpgradeCta variant="sidebar-secondary" />
-      </div>
-    </div>
+    <span className="student-sidebar-link-icon" aria-hidden>
+      <Icon className="size-4" strokeWidth={1.9} />
+    </span>
   )
 }
 
