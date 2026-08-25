@@ -1,5 +1,5 @@
 import { memo, useRef, type KeyboardEvent, type PointerEvent } from "react"
-import { Eye, EyeOff } from "lucide-react"
+import { ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react"
 
 import {
   ACTIVE_DRILL_CHOICE_ROW_GRID_CLASS,
@@ -13,13 +13,14 @@ import {
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import type { BlindReviewAnswerView } from "@/features/student/practice-session/practice-blind-review-answer-toggle"
 import {
+  BLIND_REVIEW_OPTION_LETTER_CORRECT_CLASS,
   BLIND_REVIEW_OPTION_LETTER_SELECTED_ACTUAL_CLASS,
   BLIND_REVIEW_OPTION_LETTER_SELECTED_BR_CLASS,
+  BLIND_REVIEW_OPTION_ROW_CORRECT_CLASS,
   BLIND_REVIEW_OPTION_ROW_SELECTED_ACTUAL_CLASS,
   BLIND_REVIEW_OPTION_ROW_SELECTED_BR_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
-import { ReviewIdeaIcon } from "@/features/student/practice-session/review-idea-icon"
 import type { RegionKey } from "@/features/student/practice-session/practice-session-types"
 import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
 import { HtmlContent } from "@/lib/html/html-content"
@@ -54,7 +55,10 @@ type LrDrillOptionRowProps = {
   explanationAction?: boolean
   explanationExpanded?: boolean
   explanationHtml?: string | null
+  explanationPercent?: number | null
   onToggleExplanation?: () => void
+  /** Review chrome — teal correct-answer highlight (overrides selected blue/orange). */
+  correctHighlight?: boolean
 }
 
 function selectionFullyInside(node: Node): boolean {
@@ -85,7 +89,9 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
   explanationAction = false,
   explanationExpanded = false,
   explanationHtml = null,
+  explanationPercent = null,
   onToggleExplanation,
+  correctHighlight = false,
 }: LrDrillOptionRowProps) {
   const letter = letters[index] ?? String(index + 1)
   const isActiveDrill = variant === "active-drill"
@@ -93,12 +99,16 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null)
   const hasExplanation = Boolean(explanationHtml?.trim())
   const useActualSelectedStyles = answerView === "actual" || answerView === "clean"
-  const brSelectedRowClass = useActualSelectedStyles
-    ? BLIND_REVIEW_OPTION_ROW_SELECTED_ACTUAL_CLASS
-    : BLIND_REVIEW_OPTION_ROW_SELECTED_BR_CLASS
-  const brSelectedLetterClass = useActualSelectedStyles
-    ? BLIND_REVIEW_OPTION_LETTER_SELECTED_ACTUAL_CLASS
-    : BLIND_REVIEW_OPTION_LETTER_SELECTED_BR_CLASS
+  const brSelectedRowClass = correctHighlight
+    ? BLIND_REVIEW_OPTION_ROW_CORRECT_CLASS
+    : useActualSelectedStyles
+      ? BLIND_REVIEW_OPTION_ROW_SELECTED_ACTUAL_CLASS
+      : BLIND_REVIEW_OPTION_ROW_SELECTED_BR_CLASS
+  const brSelectedLetterClass = correctHighlight
+    ? BLIND_REVIEW_OPTION_LETTER_CORRECT_CLASS
+    : useActualSelectedStyles
+      ? BLIND_REVIEW_OPTION_LETTER_SELECTED_ACTUAL_CLASS
+      : BLIND_REVIEW_OPTION_LETTER_SELECTED_BR_CLASS
 
   // Display-only: annotation tools apply to the passage pane, not answer choices.
   const choiceContent = (
@@ -153,11 +163,15 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
       <div
         className={cn(
           "overflow-hidden rounded-[14px] border transition-colors",
-          selected
-            ? brSelectedRowClass
-            : hidden
-              ? "border-[#dfe1e7] bg-[#f6f8fa]"
-              : "border-[#dfe1e7] bg-white",
+          explanationAction
+            ? selected || correctHighlight
+              ? brSelectedRowClass
+              : "border-transparent bg-[#f6f8fa]"
+            : selected
+              ? brSelectedRowClass
+              : hidden
+                ? "border-[#dfe1e7] bg-[#f6f8fa]"
+                : "border-[#dfe1e7] bg-white",
         )}
       >
         <div
@@ -169,15 +183,21 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
           onClick={explanationAction ? undefined : handleSelect}
           onKeyDown={explanationAction ? undefined : handleKeyDown}
           className={cn(
-            "flex items-center justify-between gap-4 p-4 text-left",
+            "flex items-center justify-between gap-4 text-left",
+            explanationAction ? "py-2 pl-2 pr-6 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#0d0d12]" : "p-4",
             !explanationAction && (disabled ? "cursor-default" : "cursor-pointer"),
           )}
         >
-          <div className="flex min-w-0 flex-1 items-center gap-4">
+          <div className={cn("flex min-w-0 flex-1 items-center", explanationAction ? "gap-3" : "gap-4")}>
             <span
               className={cn(
-                "flex size-12 shrink-0 items-center justify-center rounded-[14px] text-lg font-bold",
-                selected ? brSelectedLetterClass : "bg-[#f3f4f6] text-[#4a5565]",
+                "flex shrink-0 items-center justify-center font-bold",
+                explanationAction ? "size-[46px] rounded-[12px] text-sm tracking-[0.28px]" : "size-12 rounded-[14px] text-lg",
+                selected || correctHighlight
+                  ? brSelectedLetterClass
+                  : explanationAction
+                    ? "bg-white text-black"
+                    : "bg-[#f3f4f6] text-[#4a5565]",
                 hidden && "line-through",
               )}
             >
@@ -191,23 +211,23 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
               className={cn(
                 "inline-flex size-5 shrink-0 items-center justify-center transition",
                 explanationExpanded ? "text-[#0d47a1]" : "text-[#666d80] hover:text-[#062357]",
-                !hasExplanation && "opacity-40",
               )}
               aria-label={
-                hasExplanation
-                  ? explanationExpanded
-                    ? `Hide explanation for choice ${letter}`
-                    : `Show explanation for choice ${letter}`
-                  : `No explanation for choice ${letter}`
+                explanationExpanded
+                  ? `Hide explanation for choice ${letter}`
+                  : `Show explanation for choice ${letter}`
               }
-              aria-expanded={hasExplanation ? explanationExpanded : undefined}
-              disabled={!hasExplanation}
+              aria-expanded={explanationExpanded}
               onClick={(e) => {
                 e.stopPropagation()
                 onToggleExplanation?.()
               }}
             >
-              <ReviewIdeaIcon />
+              {explanationExpanded ? (
+                <ChevronUp className="size-5" strokeWidth={2} aria-hidden />
+              ) : (
+                <ChevronDown className="size-5" strokeWidth={2} aria-hidden />
+              )}
             </button>
           ) : (
             <button
@@ -227,12 +247,31 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
             </button>
           )}
         </div>
-        {explanationAction && explanationExpanded && hasExplanation ? (
-          <div className="border-t border-[#dfe1e7] bg-white p-4 text-left">
-            <p className="mb-1 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[#666d80]">
-              Option explanation
-            </p>
-            <HtmlContent html={explanationHtml ?? ""} className="explanation-option-body text-[#0d0d12]" />
+        {explanationAction && explanationExpanded ? (
+          <div className="mx-0 mb-0 mt-[10px] flex w-full items-start justify-between rounded-[14px] bg-white p-6 text-left">
+            <div className="min-w-0 flex-1 pr-6 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#062357]">
+            {hasExplanation ? (
+              <HtmlContent html={explanationHtml ?? ""} className="explanation-review-body text-[#062357]" />
+            ) : (
+              <p className="m-0">
+                No answer explanation available yet.
+              </p>
+            )}
+            </div>
+            {explanationPercent != null ? (
+              <div className="flex shrink-0 flex-col items-center gap-1">
+                <p className="m-0 h-[15px] text-xs font-medium leading-[1.5] tracking-[0.24px] text-[#062357]">
+                  {Math.round(explanationPercent)}%
+                </p>
+                <div className="flex h-14 w-6 items-end justify-center overflow-hidden rounded-[6px] border border-[#dfe1e7] bg-[#f3f7ff]/60">
+                  <div
+                    className="w-full rounded-t-[10px] bg-gradient-to-t from-[#419df8] to-[#0d47a1]"
+                    style={{ height: `${Math.max(4, Math.min(56, Math.round(explanationPercent)))}px` }}
+                    aria-hidden
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

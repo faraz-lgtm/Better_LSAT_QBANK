@@ -75,7 +75,7 @@ function GuestDiagnosticReviewPage({ mode, preview = false }: GuestDiagnosticRev
   const explanationsUnlocked = preview ? false : hasActiveCore
 
   return (
-    <PracticeSessionImmersiveFrame hideScrim className="z-30">
+    <PracticeSessionImmersiveFrame hideScrim fullBleed className="z-30">
       <GuestDiagnosticExamLayout
         config={config}
         mode={mode}

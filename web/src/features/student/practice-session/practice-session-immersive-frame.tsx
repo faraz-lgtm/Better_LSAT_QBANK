@@ -13,9 +13,16 @@ type PracticeSessionImmersiveFrameProps = {
   children: ReactNode
   className?: string
   hideScrim?: boolean
+  /** Edge-to-edge shell (no outer padding / max-width). */
+  fullBleed?: boolean
 }
 
-function PracticeSessionImmersiveFrame({ children, className, hideScrim = false }: PracticeSessionImmersiveFrameProps) {
+function PracticeSessionImmersiveFrame({
+  children,
+  className,
+  hideScrim = false,
+  fullBleed = false,
+}: PracticeSessionImmersiveFrameProps) {
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
@@ -27,7 +34,8 @@ function PracticeSessionImmersiveFrame({ children, className, hideScrim = false 
   return createPortal(
     <div
       className={cn(
-        "fixed inset-0 z-40 flex items-center justify-center overflow-hidden p-4 md:p-8",
+        "fixed inset-0 z-40 flex items-center justify-center overflow-hidden",
+        fullBleed ? "p-0" : "p-4 md:p-8",
         className,
       )}
     >
@@ -38,7 +46,12 @@ function PracticeSessionImmersiveFrame({ children, className, hideScrim = false 
           aria-hidden
         />
       ) : null}
-      <div className="relative flex h-full max-h-full min-h-0 w-full max-w-[1440px] min-w-0 flex-col items-stretch">
+      <div
+        className={cn(
+          "relative flex h-full max-h-full min-h-0 w-full min-w-0 flex-col items-stretch",
+          fullBleed ? "max-w-none" : "max-w-[1440px]",
+        )}
+      >
         {children}
       </div>
     </div>,
