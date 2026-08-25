@@ -72,6 +72,7 @@ function mockRepo(overrides: Record<string, unknown> = {}): UsersRepository {
     full_name: null,
     first_name: null,
     last_name: null,
+    phone: null,
     role: 'student',
     student_coaching_id: null,
     stripe_customer_id: null,
@@ -187,6 +188,132 @@ Deno.test('createUsersService.getProfile delegates to repository', async () => {
 
   assertEquals(seenId, 'user-1')
   assertEquals(profile?.email, 'a@b.com')
+})
+
+Deno.test('createUsersService.updateAccountProfile stores first and last name', async () => {
+  let savedRow: {
+    full_name: string | null
+    first_name?: string | null
+    last_name?: string | null
+    phone?: string | null
+    email: string | null
+    student_coaching_id: string | null
+  } | undefined
+  const repository = mockRepo({
+    getProfileById: async (id) => ({
+      id,
+      email: 'student@example.com',
+      full_name: 'Old Name',
+      first_name: 'Old',
+      last_name: 'Name',
+      phone: '+15551234567',
+      role: 'student',
+      student_coaching_id: 'coach-1',
+      stripe_customer_id: null,
+      prep_plus_source: null,
+      lawhub_invite_status: null,
+      lawhub_invite_last_error: null,
+      lawhub_invited_at: null,
+      is_first_time_login: false,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }),
+    upsertProfile: async (row) => {
+      savedRow = row
+      return {
+        id: row.id,
+        email: row.email,
+        full_name: row.full_name,
+        first_name: row.first_name ?? null,
+        last_name: row.last_name ?? null,
+        phone: row.phone ?? null,
+        role: 'student',
+        student_coaching_id: row.student_coaching_id,
+        stripe_customer_id: null,
+        prep_plus_source: null,
+        lawhub_invite_status: null,
+        lawhub_invite_last_error: null,
+        lawhub_invited_at: null,
+        is_first_time_login: false,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      }
+    },
+  })
+
+  const service = createUsersService({ repository })
+  const profile = await service.updateAccountProfile('user-1', {
+    firstName: 'Jane',
+    lastName: 'Student',
+  })
+
+  assertEquals(profile.full_name, 'Jane Student')
+  assertEquals(savedRow?.first_name, 'Jane')
+  assertEquals(savedRow?.last_name, 'Student')
+  assertEquals(savedRow?.phone, '+15551234567')
+  assertEquals(savedRow?.email, 'student@example.com')
+  assertEquals(savedRow?.student_coaching_id, 'coach-1')
+})
+
+Deno.test('createUsersService.updateAccountProfile stores phone', async () => {
+  let savedRow: { phone?: string | null } | undefined
+  const repository = mockRepo({
+    getProfileById: async (id) => ({
+      id,
+      email: 'student@example.com',
+      full_name: 'Jane Student',
+      first_name: 'Jane',
+      last_name: 'Student',
+      phone: null,
+      role: 'student',
+      student_coaching_id: null,
+      stripe_customer_id: null,
+      prep_plus_source: null,
+      lawhub_invite_status: null,
+      lawhub_invite_last_error: null,
+      lawhub_invited_at: null,
+      is_first_time_login: false,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }),
+    upsertProfile: async (row) => {
+      savedRow = row
+      return {
+        id: row.id,
+        email: row.email,
+        full_name: row.full_name,
+        first_name: row.first_name ?? null,
+        last_name: row.last_name ?? null,
+        phone: row.phone ?? null,
+        role: 'student',
+        student_coaching_id: row.student_coaching_id,
+        stripe_customer_id: null,
+        prep_plus_source: null,
+        lawhub_invite_status: null,
+        lawhub_invite_last_error: null,
+        lawhub_invited_at: null,
+        is_first_time_login: false,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      }
+    },
+  })
+
+  const service = createUsersService({ repository })
+  const profile = await service.updateAccountProfile('user-1', { phone: ' +1 555 987 6543 ' })
+
+  assertEquals(profile.phone, '+1 555 987 6543')
+  assertEquals(savedRow?.phone, '+1 555 987 6543')
+})
+
+Deno.test('createUsersService.updateAccountProfile rejects missing last name', async () => {
+  const service = createUsersService({ repository: mockRepo() })
+
+  await assertRejects(
+    () => service.updateAccountProfile('user-1', { firstName: 'Jane', lastName: '   ' }),
+    Error,
+    'First and last name are required',
+  )
 })
 
 Deno.test('createUsersService.getEntitlementState returns full access when linked and eligible', async () => {

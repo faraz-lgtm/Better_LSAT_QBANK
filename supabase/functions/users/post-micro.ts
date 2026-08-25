@@ -255,6 +255,12 @@ export async function handleUsersPostMicro(req: Request, slug: string): Promise<
             : typeof body.plannedLsatDate === 'string'
               ? body.plannedLsatDate
               : undefined,
+        plannedLsatWindow:
+          body.plannedLsatWindow === null
+            ? null
+            : typeof body.plannedLsatWindow === 'string'
+              ? body.plannedLsatWindow
+              : undefined,
         lawSchoolCycle:
           body.lawSchoolCycle === null
             ? null

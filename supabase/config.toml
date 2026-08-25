@@ -652,6 +652,9 @@ verify_jwt = false
 [functions.users-complete-first-login]
 verify_jwt = false
 
+[functions.users-update-account-profile]
+verify_jwt = false
+
 [functions.users-get-entitlement-state]
 verify_jwt = false
 

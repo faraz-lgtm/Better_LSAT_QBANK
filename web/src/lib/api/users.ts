@@ -18,6 +18,7 @@ export type UserProfile = {
   full_name: string | null
   first_name: string | null
   last_name: string | null
+  phone: string | null
   role: 'student' | 'admin' | 'super_admin'
   student_coaching_id: string | null
   is_first_time_login: boolean
@@ -259,6 +260,65 @@ export function createUsersApi(supabase: SupabaseClient) {
       return data.profile
     },
 
+    async updateAccountProfile(input: { firstName: string; lastName: string }): Promise<UserProfile> {
+      const { data, error } = await invokeUsersPost<{ profile: UserProfile }>('users', {
+        action: 'users-update-account-profile',
+        firstName: input.firstName,
+        lastName: input.lastName,
+      })
+      if (error) throw error
+      if (!data?.profile) throw new Error('No profile in response')
+      return data.profile
+    },
+
+    async updateAccountEmail(email: string): Promise<UserProfile | null> {
+      const { error } = await supabase.auth.updateUser({ email })
+      if (error) throw error
+      const { data, error: profileError } = await invokeUsersPost<{ profile: UserProfile }>('users', {
+        action: 'users-update-account-profile',
+        email,
+      })
+      if (profileError) throw profileError
+      return data?.profile ?? null
+    },
+
+    async updateAccountPhone(phone: string): Promise<UserProfile> {
+      const { data, error } = await invokeUsersPost<{ profile: UserProfile }>('users', {
+        action: 'users-update-account-profile',
+        phone,
+      })
+      if (error) throw error
+      if (!data?.profile) throw new Error('No profile in response')
+      return data.profile
+    },
+
+    async updateAccountPassword(input: {
+      currentPassword: string
+      newPassword: string
+    }): Promise<void> {
+      const currentPassword = input.currentPassword.trim()
+      const newPassword = input.newPassword.trim()
+      if (!currentPassword) throw new Error('Current password is required')
+      if (!newPassword) throw new Error('New password is required')
+      if (currentPassword === newPassword) {
+        throw new Error('New password must be different from the current password')
+      }
+
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      if (userError) throw userError
+      const email = userData.user?.email?.trim()
+      if (!email) throw new Error('Email is required to change password')
+
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email,
+        password: currentPassword,
+      })
+      if (verifyError) throw new Error('Current password is incorrect')
+
+      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      if (error) throw error
+    },
+
     async saveOnboarding(input: SaveOnboardingInput): Promise<{
       profile: UserProfile
       preferences: StudentStudyPreferences
@@ -281,6 +341,7 @@ export function createUsersApi(supabase: SupabaseClient) {
 
     async updateStudyPreferences(input: {
       plannedLsatDate?: string | null
+      plannedLsatWindow?: string | null
       lawSchoolCycle?: string | null
       goalScore?: number | null
     }): Promise<StudentStudyPreferences> {

@@ -10,6 +10,7 @@ import { ResetPasswordPage } from "@/features/auth/pages/reset-password-page"
 import { AuthCallbackPage } from "@/features/auth/pages/auth-callback-page"
 import { LsacLinkPage } from "@/features/auth/pages/lsac-link-page"
 import { PricingPage } from "@/features/billing/pages/pricing-page"
+import { AccountPage } from "@/features/account/pages/account-page"
 import { OnboardingPage } from "@/features/auth/pages/onboarding-page"
 import { OnboardingWelcomePreviewPage } from "@/features/auth/pages/onboarding-welcome-preview-page"
 import { GuestDiagnosticStartPage } from "@/features/guest/pages/guest-diagnostic-start-page"
@@ -392,6 +393,7 @@ const router = createBrowserRouter([
         ),
         children: [
           { index: true, element: <DashboardPage /> },
+          { path: "account", element: <AccountPage /> },
           { path: "diagnostic/results", element: <GuestDiagnosticResultsPage /> },
           { path: "diagnostic/review", element: <Navigate to="/diagnostic/review" replace /> },
           { path: "diagnostic/tester", element: <Navigate to="/diagnostic/tester" replace /> },

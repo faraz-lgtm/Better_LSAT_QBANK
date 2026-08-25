@@ -130,11 +130,11 @@ function GuestPricingModal({ open, onOpenChange, onSelectPlan }: GuestPricingMod
 
         <div className="student-scrollbar min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable]">
           <div className="pricing-page">
-            <div className="pricing-page__header">
+            <div className="pricing-page__header mb-4">
               <h1 id="guest-pricing-modal-title" className="pricing-page__title">
                 Pricing
               </h1>
-              <p className="pricing-page__subtitle">
+              <p className="pricing-page__subtitle ">
                 {includeLawHub
                   ? "Includes Official LSAT PrepPlus (LawHub Advantage) for year one at checkout."
                   : "Choose Core or Live — you keep your own LawHub PrepPlus subscription."}
@@ -161,7 +161,7 @@ function GuestPricingModal({ open, onOpenChange, onSelectPlan }: GuestPricingMod
               />
             </div>
 
-            <p className="pricing-page__footnote">
+            <p className="pricing-page__footnote mt-4">
               {includeLawHub ? (
                 <>
                   LawHub Advantage (${LAWHUB_ADVANTAGE_YEARLY_PRICE}/year) is billed once today, then $
