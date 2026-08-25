@@ -2410,6 +2410,10 @@ select.ds-input {
   background-color: #0d47a1;
 }
 
+.student-sidebar-link--locked {
+  cursor: pointer;
+}
+
 .student-sidebar-expandable {
   display: flex;
   flex-direction: column;
