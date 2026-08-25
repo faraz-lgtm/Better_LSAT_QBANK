@@ -43,7 +43,13 @@ describe("guest diagnostic exam utils", () => {
   })
 
   it("resolves projected score ranges by correct count", () => {
-    expect(formatMiniDiagnosticScoreRange(resolveMiniDiagnosticScoreRange(10))).toBe("180")
-    expect(formatMiniDiagnosticScoreRange(resolveMiniDiagnosticScoreRange(5))).toBe("155–161")
+    expect(formatMiniDiagnosticScoreRange(resolveMiniDiagnosticScoreRange(10))).toBe("173–180")
+    expect(formatMiniDiagnosticScoreRange(resolveMiniDiagnosticScoreRange(5))).toBe("145–149")
+  })
+
+  it("maps scaled score bands to LSAT percentiles", () => {
+    const band = resolveMiniDiagnosticScoreRange(3) // 135–139
+    expect(band.percentileLow).toBe(5.16)
+    expect(band.percentileHigh).toBe(9.81)
   })
 })

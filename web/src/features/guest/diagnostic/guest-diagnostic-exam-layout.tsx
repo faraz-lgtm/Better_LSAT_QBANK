@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { X } from "lucide-react"
 
 import { createGuestDiagnosticPreviewQuestions } from "@/features/guest/diagnostic/guest-diagnostic-exam-mock-data"
 import {
@@ -27,9 +28,32 @@ import { PracticeDrillQuestionPanel, regionKey } from "@/features/student/practi
 import { PracticeSessionAccessibilityPanel } from "@/features/student/practice-session/practice-session-accessibility-panel"
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
 import { PracticeSessionHeader } from "@/features/student/practice-session/practice-session-header"
+import { PracticeSessionNavArrowButton } from "@/features/student/practice-session/practice-session-nav-arrow-button"
 import { PracticeSessionPauseModal } from "@/features/student/practice-session/practice-session-pause-modal"
+import { PracticeSessionQuestionNavStrip } from "@/features/student/practice-session/practice-session-question-nav-strip"
 import { resolvePracticeSessionQuestionNavOutcome } from "@/features/student/practice-session/practice-session-question-nav-outcome"
 import { PracticeSessionReviewPanel } from "@/features/student/practice-session/practice-session-review-panel"
+import { PracticeSessionReviewSidePanel } from "@/features/student/practice-session/practice-session-review-side-panel"
+import {
+  BLIND_REVIEW_PASSAGE_TEXT_CLASS,
+  REVIEW_BODY_CLASS,
+  REVIEW_BODY_GRID_FULL_CLASS,
+  REVIEW_CARD_CLASS,
+  REVIEW_EXIT_BUTTON_CLASS,
+  REVIEW_FOOTER_CLASS,
+  REVIEW_FOOTER_NAV_CLASS,
+  REVIEW_FOOTER_ROW_CLASS,
+  REVIEW_NAV_ARROW_BUTTON_CLASS,
+  REVIEW_NAV_ARROW_GROUP_CLASS,
+  REVIEW_PASSAGE_PANEL_CLASS,
+  REVIEW_QUESTION_PANEL_CLASS,
+  REVIEW_SHELL_CLASS,
+  REVIEW_SIDE_PANEL_LAYOUT_FULL_CLASS,
+} from "@/features/student/practice-session/practice-session-blind-review-styles"
+import { difficultyLabelFromLevel } from "@/features/student/practice-session/practice-results-ui"
+import type { DrillQuestion } from "@/features/student/drills/drill-types"
+import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
+import { resolveAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
 import { usePracticeSessionAccessibilityPanel } from "@/features/student/practice-session/use-practice-session-accessibility-panel"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { toggleFlaggedId } from "@/features/student/practice-session/practice-question-flags"
@@ -38,12 +62,11 @@ import {
   computeRemainingTimerProgress,
   usePracticeSessionTimer,
 } from "@/features/student/practice-session/use-practice-session-timer"
-import { getMiniDiagnosticExplanationHtml } from "@/features/guest/diagnostic/mini-diagnostic-content"
 import {
-  canShowDiagnosticExplanation,
-  freeDiagnosticExplanationLimit,
-} from "@/features/guest/diagnostic/diagnostic-explanation-access"
-import { GuestUpgradeCta } from "@/features/guest/diagnostic/guest-upgrade-cta"
+  getMiniDiagnosticExplanationHtml,
+  getMiniDiagnosticQuestionMeta,
+} from "@/features/guest/diagnostic/mini-diagnostic-content"
+import { canShowDiagnosticExplanation } from "@/features/guest/diagnostic/diagnostic-explanation-access"
 import { HtmlContent } from "@/lib/html/html-content"
 import { cn } from "@/lib/utils"
 
@@ -115,11 +138,19 @@ function GuestDiagnosticExamLayout({
   const [submitModalOpen, setSubmitModalOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [revealedByQuestion, setRevealedByQuestion] = useState<Record<string, boolean>>({})
+  const [answerViewTab, setAnswerViewTab] = useState<BlindReviewAnswerView>("clean")
+  const [showCorrectAnswer, setShowCorrectAnswer] = useState(false)
+  const [reviewSidePanel, setReviewSidePanel] = useState<PracticeReviewSidePanel>(null)
   const [answersByQuestion, setAnswersByQuestion] = useState<Record<string, GuestDiagnosticAnswerState>>(() => {
     if (initialAnswers && Object.keys(initialAnswers).length > 0) return initialAnswers
     if (isPostResultsMode) return {}
     return readPersistedAnswers(config.intentId)
   })
+
+  const scoredAnswersByQuestion = useMemo(
+    () => (initialAnswers && Object.keys(initialAnswers).length > 0 ? initialAnswers : answersByQuestion),
+    [initialAnswers, answersByQuestion],
+  )
 
   const questions = useMemo(
     () => createGuestDiagnosticPreviewQuestions(config.questionCount),
@@ -150,6 +181,7 @@ function GuestDiagnosticExamLayout({
   }, [])
 
   const currentAnswer = current ? answersByQuestion[current.id] : undefined
+  const scoredAnswer = current ? scoredAnswersByQuestion[current.id] : undefined
   const selectedIndex =
     current && currentAnswer ? choiceIndexFromAnswer(current.choices, currentAnswer.selectedAnswer) : null
   const questionRevealed =
@@ -161,7 +193,17 @@ function GuestDiagnosticExamLayout({
   })
   const explanationHtml =
     current && explanationUnlocked ? getMiniDiagnosticExplanationHtml(current.id) : null
-  const freeExplanationLimit = freeDiagnosticExplanationLimit(config.intentId)
+  const questionMeta = current ? getMiniDiagnosticQuestionMeta(current.id) : null
+  const actualOutcome = answerOutcome(isReviewMode ? scoredAnswer : currentAnswer)
+  const showInsightsPanel = isPostResultsMode && reviewSidePanel === "insights"
+  const analyticsSeed = useMemo(() => {
+    if (!current) return null
+    return buildDiagnosticAnalyticsSeed(
+      current,
+      questionMeta,
+      (isReviewMode ? scoredAnswer : currentAnswer)?.selectedAnswer,
+    )
+  }, [current, questionMeta, isReviewMode, scoredAnswer, currentAnswer])
 
   const passageKey = current ? regionKey(current.id, "passage") : ""
   const passageBody = current?.stimulusText ?? ""
@@ -218,6 +260,7 @@ function GuestDiagnosticExamLayout({
       setAnswersByQuestion((prev) => ({ ...prev, [current.id]: nextAnswer }))
       if (isTesterMode) {
         setRevealedByQuestion((prev) => ({ ...prev, [current.id]: true }))
+        setAnswerViewTab("actual")
       }
     },
     [canSelectAnswers, current, isTesterMode, revealedByQuestion],
@@ -233,6 +276,11 @@ function GuestDiagnosticExamLayout({
     })
   }, [canSelectAnswers, current, isTesterMode, revealedByQuestion])
 
+  function handleExitReview() {
+    if (onExitReview) onExitReview()
+    else navigate(-1)
+  }
+
   const headerTitle = "LSAT Praxis Assessment"
 
   const finishButton = isPostResultsMode ? (
@@ -240,8 +288,8 @@ function GuestDiagnosticExamLayout({
       iconTrigger
       submitLabel="Back to Results"
       buttonClassName={ACTIVE_DRILL_FINISH_BUTTON_CLASS}
-      onSubmitSection={() => (onExitReview ? onExitReview() : navigate(-1))}
-      onExit={() => (onExitReview ? onExitReview() : navigate(-1))}
+      onSubmitSection={handleExitReview}
+      onExit={handleExitReview}
     />
   ) : (
     <PracticeSessionFinishMenu
@@ -262,7 +310,6 @@ function GuestDiagnosticExamLayout({
       const timeSpent = Object.fromEntries(
         Object.entries(timeSpentByQuestionRef.current).map(([id, seconds]) => [id, Math.round(seconds)]),
       )
-      // Keep answers available for Review / Tester after submit.
       persistAnswers(config.intentId, answersByQuestion)
       onSubmitted?.(answersByQuestion, timeSpent)
     } finally {
@@ -273,6 +320,211 @@ function GuestDiagnosticExamLayout({
   function handleSaveAndExit() {
     pauseModal.close()
     navigate("/intent", { replace: true })
+  }
+
+  const questionPanel = (
+    <PracticeDrillQuestionPanel
+      key={current.id}
+      question={current}
+      questionNumber={safeIndex}
+      findQuery={findQuery}
+      selectedIndex={selectedIndex}
+      revealed={questionRevealed}
+      isCorrect={questionRevealed ? (currentAnswer?.isCorrect ?? null) : null}
+      submitting={false}
+      allowReselect={canSelectAnswers && !questionRevealed}
+      getRegionHtml={highlights.getRegionHtml}
+      onSelect={canSelectAnswers ? handleSelectChoice : () => undefined}
+      onResetResponse={canSelectAnswers ? handleResetResponse : undefined}
+      flagged={isFlagged(current.id)}
+      onToggleFlag={() => toggleFlag(current.id)}
+      flagsDisabled={!canNavigate}
+      onOpenReview={canNavigate ? () => setReviewPanelOpen(true) : undefined}
+      onOpenAccessibility={canNavigate ? accessibilityPanel.openPanel : undefined}
+      variant={isPostResultsMode ? "blind-review" : "active-drill"}
+      blindReviewChrome={isPostResultsMode}
+      answerView={answerViewTab}
+      onAnswerViewChange={setAnswerViewTab}
+      choicesDisabled={!canSelectAnswers || questionRevealed}
+      reviewChrome={isPostResultsMode}
+      actualOutcome={actualOutcome}
+      blindReviewOutcome={null}
+      showCorrectAnswer={showCorrectAnswer}
+      onShowCorrectAnswerChange={setShowCorrectAnswer}
+      blindReviewTabEnabled={false}
+      seedStemExplanationHtml={explanationUnlocked ? explanationHtml : null}
+      seedQuestionTypeLabel={explanationUnlocked ? (questionMeta?.questionType ?? null) : null}
+      explanationsEnabled={explanationUnlocked}
+    />
+  )
+
+  if (isPostResultsMode) {
+    return (
+      <div
+        className={cn(
+          REVIEW_SHELL_CLASS,
+          !canNavigate && "pointer-events-none select-none",
+          className,
+        )}
+      >
+        <PracticeBlindReviewSessionHeader
+          prepTestLabel={headerTitle}
+          sectionOptions={[]}
+          activeSectionSessionId={null}
+          onSelectSection={() => {}}
+          questionRef={`Q${safeIndex}`}
+          actualScoreLabel="Actual"
+          answerView={answerViewTab}
+          activeColor={highlights.activeColor}
+          toolMode={highlights.toolMode}
+          fontScale={highlights.fontScale}
+          lineSpacing={highlights.lineSpacing}
+          boldEnabled={highlights.boldEnabled}
+          italicEnabled={highlights.italicEnabled}
+          onSelectColor={canNavigate ? highlights.selectColor : () => undefined}
+          onEraser={canNavigate ? highlights.selectEraser : () => undefined}
+          onUnderline={canNavigate ? highlights.selectUnderline : () => undefined}
+          onFontSize={canNavigate ? highlights.cycleFontSize : () => undefined}
+          onLineSpacing={canNavigate ? highlights.cycleLineSpacing : () => undefined}
+          onToggleBold={canNavigate ? highlights.toggleBold : () => undefined}
+          onToggleItalic={canNavigate ? highlights.toggleItalic : () => undefined}
+          notesOpen={false}
+          notesEnabled={false}
+          onToggleNotes={() => undefined}
+          onExitSection={handleExitReview}
+          showSectionSelect={false}
+          exitButtonLabel="Back to Results"
+          chrome="review"
+          reviewSideActions={["insights"]}
+          sidePanel={reviewSidePanel}
+          onSidePanelChange={setReviewSidePanel}
+          findQuery={findQuery}
+          onFindQueryChange={canNavigate ? setFindQuery : () => undefined}
+          questionProgressLabel={`${safeIndex} of ${questions.length}`}
+        />
+
+        <div className={REVIEW_CARD_CLASS}>
+          <div className={REVIEW_BODY_CLASS} style={highlights.contentStyle}>
+            {showInsightsPanel ? (
+              <div className={REVIEW_SIDE_PANEL_LAYOUT_FULL_CLASS}>
+                <div className="contents">
+                  <div ref={passagePaneRef} className={cn(REVIEW_PASSAGE_PANEL_CLASS, "overflow-y-auto")}>
+                    <ReviewPassageCardHeader />
+                    <PracticeAnnotatedContent
+                      regionKey={passageKey}
+                      html={passageHtml}
+                      findQuery={findQuery}
+                      toolMode={highlights.toolMode}
+                      onMouseUp={canNavigate ? highlights.handleContentMouseUp : () => undefined}
+                      onClickCapture={canNavigate ? highlights.handleContentClick : () => undefined}
+                      className={cn(
+                        BLIND_REVIEW_PASSAGE_TEXT_CLASS,
+                        "text-base leading-[1.5] tracking-[0.32px] text-[#36394a]",
+                      )}
+                    />
+                  </div>
+                  <div ref={questionPaneRef} className={cn(REVIEW_QUESTION_PANEL_CLASS, "overflow-y-auto")}>
+                    {questionPanel}
+                  </div>
+                </div>
+                <PracticeSessionReviewSidePanel
+                  mode="insights"
+                  questionId={current?.id ?? null}
+                  analyticsSeed={analyticsSeed}
+                  onClose={() => setReviewSidePanel(null)}
+                />
+              </div>
+            ) : (
+              <div
+                ref={sessionBodyRef}
+                className={cn("min-h-0 overflow-hidden", REVIEW_BODY_GRID_FULL_CLASS)}
+              >
+                <div ref={passagePaneRef} className={cn(REVIEW_PASSAGE_PANEL_CLASS, "overflow-y-auto")}>
+                  <ReviewPassageCardHeader />
+                  <PracticeAnnotatedContent
+                    regionKey={passageKey}
+                    html={passageHtml}
+                    findQuery={findQuery}
+                    toolMode={highlights.toolMode}
+                    onMouseUp={canNavigate ? highlights.handleContentMouseUp : () => undefined}
+                    onClickCapture={canNavigate ? highlights.handleContentClick : () => undefined}
+                    className={cn(
+                      BLIND_REVIEW_PASSAGE_TEXT_CLASS,
+                      "text-base leading-[1.5] tracking-[0.32px] text-[#36394a]",
+                    )}
+                  />
+                </div>
+                <div ref={questionPaneRef} className={cn(REVIEW_QUESTION_PANEL_CLASS, "overflow-y-auto")}>
+                  {questionPanel}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <footer className={cn("practice-session-footer relative z-10", REVIEW_FOOTER_CLASS)}>
+            <div className={REVIEW_FOOTER_ROW_CLASS}>
+              <PracticeSessionQuestionNavStrip
+                questions={questions}
+                safeIndex={safeIndex}
+                answersByQuestion={answersByQuestion}
+                isFlagged={isFlagged}
+                variant="blind-review"
+                showPassageBreaks={false}
+                outcomeForQuestion={(questionId) => {
+                  if (isTesterMode && !revealedByQuestion[questionId]) return "unanswered"
+                  return resolvePracticeSessionQuestionNavOutcome(
+                    isReviewMode ? scoredAnswersByQuestion[questionId] : answersByQuestion[questionId],
+                  )
+                }}
+                onSelectQuestion={canNavigate ? setQIndex : () => undefined}
+                className={REVIEW_FOOTER_NAV_CLASS}
+              />
+              <div className={REVIEW_NAV_ARROW_GROUP_CLASS}>
+                <PracticeSessionNavArrowButton
+                  direction="prev"
+                  disabled={!canNavigate || safeIndex <= 1}
+                  iconOnly
+                  figmaNarrowArrow
+                  className={REVIEW_NAV_ARROW_BUTTON_CLASS}
+                  onClick={() => setQIndex((index) => Math.max(1, index - 1))}
+                />
+                <PracticeSessionNavArrowButton
+                  direction="next"
+                  disabled={!canNavigate || safeIndex >= questions.length}
+                  iconOnly
+                  figmaNarrowArrow
+                  className={REVIEW_NAV_ARROW_BUTTON_CLASS}
+                  onClick={() => setQIndex((index) => Math.min(questions.length, index + 1))}
+                />
+                <button type="button" className={REVIEW_EXIT_BUTTON_CLASS} onClick={handleExitReview}>
+                  <span>Exit</span>
+                  <X className="size-4" strokeWidth={2} aria-hidden />
+                </button>
+              </div>
+            </div>
+          </footer>
+        </div>
+
+        <PracticeSessionReviewPanel
+          open={reviewPanelOpen}
+          questions={questions}
+          currentIndex={safeIndex}
+          answersByQuestion={answersByQuestion}
+          isFlagged={isFlagged}
+          onSelectQuestion={setQIndex}
+          onClose={() => setReviewPanelOpen(false)}
+        />
+        <PracticeSessionAccessibilityPanel
+          open={accessibilityPanel.open}
+          settings={highlights.accessibilitySettings}
+          timerDisplaySeconds={timerDisplaySeconds}
+          onClose={accessibilityPanel.closePanel}
+          onCancel={accessibilityPanel.cancelPanel}
+          onPreview={accessibilityPanel.previewSettings}
+          onSave={accessibilityPanel.saveSettings}
+        />
+      </div>
+    )
   }
 
   return (
@@ -306,7 +558,7 @@ function GuestDiagnosticExamLayout({
         timerPaused={paused}
         onTimerPauseRequest={interactive && mode === "exam" ? pauseModal.requestPause : () => undefined}
         timerProgress={timerProgress}
-        showTimer={!isPostResultsMode}
+        showTimer
         questionProgressLabel={`${safeIndex} of ${questions.length}`}
         questionNumber={safeIndex}
         questionCount={questions.length}
@@ -378,20 +630,6 @@ function GuestDiagnosticExamLayout({
                 </div>
               </div>
             ) : null}
-            {questionRevealed && isPostResultsMode && !explanationUnlocked ? (
-              <div className="practice-session-inline-divider mt-6 border-t pt-6">
-                <div className="practice-session-panel rounded-[16px] border p-5">
-                  <p className="text-sm font-semibold">Explanation locked</p>
-                  <p className="practice-session-panel-label mt-1 text-sm leading-relaxed">
-                    Free students can review explanations for the first {freeExplanationLimit} questions
-                    on this diagnostic. Upgrade to unlock every explanation.
-                  </p>
-                  <div className="mt-4">
-                    <GuestUpgradeCta variant="banner" />
-                  </div>
-                </div>
-              </div>
-            ) : null}
           </div>
         </div>
       </div>
@@ -403,16 +641,6 @@ function GuestDiagnosticExamLayout({
           answersByQuestion={answersByQuestion}
           isFlagged={isFlagged}
           variant="active-drill"
-          outcomeForQuestion={
-            isPostResultsMode
-              ? (questionId) => {
-                  // Review: show scored outcomes for every question.
-                  // Tester: only after the answer is revealed; otherwise unanswered.
-                  if (isTesterMode && !revealedByQuestion[questionId]) return "unanswered"
-                  return resolvePracticeSessionQuestionNavOutcome(answersByQuestion[questionId])
-                }
-              : undefined
-          }
           onSelectQuestion={canNavigate ? setQIndex : () => undefined}
           onPrev={canNavigate ? () => setQIndex((index) => Math.max(1, index - 1)) : () => undefined}
           onNext={
