@@ -30,9 +30,9 @@ describe("GuestDiagnosticResultsView Full teaser", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText(/Full Diagnostic · Q10/)).toBeInTheDocument()
+    expect(screen.getByText(/Full Section Diagnostic · Q10/)).toBeInTheDocument()
     expect(screen.getAllByText(/Target time:/)).toHaveLength(10)
-    const locked = screen.getByText(/Full Diagnostic · Q11/)
+    const locked = screen.getByText(/Full Section Diagnostic · Q11/)
     expect(locked.closest("[class*='blur']")).toBeTruthy()
   })
 
@@ -45,7 +45,7 @@ describe("GuestDiagnosticResultsView Full teaser", () => {
       </MemoryRouter>,
     )
 
-    const row = screen.getByText(/Full Diagnostic · Q11/)
+    const row = screen.getByText(/Full Section Diagnostic · Q11/)
     expect(row.closest("[class*='blur']")).toBeNull()
     expect(screen.getAllByText(/Target time:/).length).toBeGreaterThan(10)
   })

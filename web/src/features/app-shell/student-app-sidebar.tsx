@@ -1,6 +1,4 @@
 import { useEffect, useState, type ReactNode } from "react"
-import { ChevronDown, Lock } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
 import { ChevronDown, ChevronsLeft, ChevronsRight, Lock } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
