@@ -404,8 +404,8 @@ function GuestDiagnosticResultsView({
           <p className="px-6 py-8 text-sm text-[#df1c41]">{explanationsError}</p>
         ) : null}
 
-        {result.outcomes.map((outcome, index) => {
-          const questionNumber = index + 1
+        {sortedOutcomes.map((outcome) => {
+          const questionNumber = outcome.originalIndex + 1
           const unlocked = canShowDiagnosticResultDetails({
             intentId: result.intentId,
             questionNumber,
