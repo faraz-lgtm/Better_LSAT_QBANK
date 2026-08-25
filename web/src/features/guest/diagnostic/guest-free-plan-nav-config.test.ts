@@ -12,8 +12,21 @@ describe("isFreePlanLockedNavHref", () => {
     expect(isFreePlanLockedNavHref("/app/diagnostic/results/full")).toBe(false)
   })
 
-  it("locks Academy, Prep, and Insights destinations", () => {
-    expect(isFreePlanLockedNavHref("/app/prep-course")).toBe(true)
+  it("keeps limited Prep Course (LSAT Essential Course) unlocked", () => {
+    expect(isFreePlanLockedNavHref("/app/prep-course")).toBe(false)
+    expect(
+      isFreePlanLockedNavHref("/app/prep-course/betterlsat-core-syllabus-structure-content"),
+    ).toBe(false)
+    expect(
+      isFreePlanLockedNavHref(
+        "/app/prep-course/betterlsat-core-syllabus-structure-content/welcome-to-the-arena",
+      ),
+    ).toBe(false)
+  })
+
+  it("locks other Academy, Prep, and Insights destinations", () => {
+    expect(isFreePlanLockedNavHref("/app/prep-course/lr-mastery-course")).toBe(true)
+    expect(isFreePlanLockedNavHref("/app/prep-course/rc-mastery")).toBe(true)
     expect(isFreePlanLockedNavHref("/app/learn/explanations")).toBe(true)
     expect(isFreePlanLockedNavHref("/app/practice/drills")).toBe(true)
     expect(isFreePlanLockedNavHref("/app/practice/sections")).toBe(true)

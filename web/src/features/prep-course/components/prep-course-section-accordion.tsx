@@ -24,6 +24,8 @@ type PrepCourseSectionAccordionProps = {
   bookmarkedLessonSlugs?: ReadonlySet<string>
   onToggleLessonBookmark?: (lessonSlug: string, next: boolean) => void
   onToggle: () => void
+  lessonsLocked?: boolean
+  onLockedLessonClick?: () => void
 }
 
 function PrepCourseSectionAccordion({
@@ -35,6 +37,8 @@ function PrepCourseSectionAccordion({
   bookmarkedLessonSlugs = new Set<string>(),
   onToggleLessonBookmark,
   onToggle,
+  lessonsLocked = false,
+  onLockedLessonClick,
 }: PrepCourseSectionAccordionProps) {
   const totalMinutes = sectionDurationMinutes(section)
   const lessonCount = section.lessons.length
@@ -85,6 +89,8 @@ function PrepCourseSectionAccordion({
               active={lesson.slug === activeLessonSlug}
               completed={completedLessonSlugs.has(lesson.slug)}
               bookmarked={bookmarkedLessonSlugs.has(lesson.slug)}
+              locked={lessonsLocked}
+              onLockedClick={onLockedLessonClick}
               onToggleBookmark={
                 onToggleLessonBookmark
                   ? (next) => onToggleLessonBookmark(lesson.slug, next)

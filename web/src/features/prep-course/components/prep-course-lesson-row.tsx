@@ -16,6 +16,8 @@ type PrepCourseLessonRowProps = {
   active?: boolean
   completed?: boolean
   bookmarked?: boolean
+  locked?: boolean
+  onLockedClick?: () => void
   onToggleBookmark?: (next: boolean) => void
 }
 
@@ -25,12 +27,45 @@ function PrepCourseLessonRow({
   active = false,
   completed = false,
   bookmarked = false,
+  locked = false,
+  onLockedClick,
   onToggleBookmark,
 }: PrepCourseLessonRowProps) {
   const href = `/app/prep-course/${course.slug}/${lesson.slug}`
-  const markerVariant = active ? "active" : completed ? "complete" : "incomplete"
+  const markerVariant = locked ? "locked" : active ? "active" : completed ? "complete" : "incomplete"
   const { title, iconType, subtitle } = resolveLessonRowDisplay(lesson)
   const durationMeta = lessonMetaLine(lesson)
+
+  const titleBlock = (
+    <>
+      <LessonStatusMarker variant={markerVariant} />
+      <PrepCourseLessonTypeIcon lessonType={iconType} />
+      <span className="min-w-0 flex-1">
+        <span
+          className={cn(
+            "block truncate text-sm font-medium leading-[1.5] tracking-[0.28px]",
+            completed && !active ? "text-[color:var(--greyscale-500)]" : "text-[#062357]",
+          )}
+          title={title}
+        >
+          {title}
+        </span>
+        {subtitle ? (
+          <span
+            className="mt-0.5 block truncate text-xs leading-[1.5] tracking-[0.24px]"
+            title={`${subtitle.label} - ${subtitle.duration}`}
+          >
+            <span className={cn("font-bold", subtitle.accentClass)}>{subtitle.label}</span>
+            <span className="text-[color:var(--greyscale-500)]"> - {subtitle.duration}</span>
+          </span>
+        ) : durationMeta ? (
+          <span className="mt-0.5 block text-xs font-medium leading-[1.5] tracking-[0.24px] text-[color:var(--greyscale-500)]">
+            {durationMeta}
+          </span>
+        ) : null}
+      </span>
+    </>
+  )
 
   return (
     <div
@@ -39,36 +74,22 @@ function PrepCourseLessonRow({
         active ? "bg-[var(--primary-0)]" : "bg-white hover:bg-[var(--greyscale-25)]",
       )}
     >
-      <Link to={href} className="flex min-w-0 flex-1 items-center gap-3">
-        <LessonStatusMarker variant={markerVariant} />
-        <PrepCourseLessonTypeIcon lessonType={iconType} />
-        <span className="min-w-0 flex-1">
-          <span
-            className={cn(
-              "block truncate text-sm font-medium leading-[1.5] tracking-[0.28px]",
-              completed && !active ? "text-[color:var(--greyscale-500)]" : "text-[#062357]",
-            )}
-            title={title}
-          >
-            {title}
-          </span>
-          {subtitle ? (
-            <span
-              className="mt-0.5 block truncate text-xs leading-[1.5] tracking-[0.24px]"
-              title={`${subtitle.label} - ${subtitle.duration}`}
-            >
-              <span className={cn("font-bold", subtitle.accentClass)}>{subtitle.label}</span>
-              <span className="text-[color:var(--greyscale-500)]"> - {subtitle.duration}</span>
-            </span>
-          ) : durationMeta ? (
-            <span className="mt-0.5 block text-xs font-medium leading-[1.5] tracking-[0.24px] text-[color:var(--greyscale-500)]">
-              {durationMeta}
-            </span>
-          ) : null}
-        </span>
-      </Link>
+      {locked ? (
+        <button
+          type="button"
+          onClick={onLockedClick}
+          aria-label={`${title} (locked)`}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        >
+          {titleBlock}
+        </button>
+      ) : (
+        <Link to={href} className="flex min-w-0 flex-1 items-center gap-3">
+          {titleBlock}
+        </Link>
+      )}
       <div className="flex shrink-0 items-center gap-3">
-        {active ? (
+        {active && !locked ? (
           <Link
             to={href}
             className="inline-flex h-8 items-center justify-end gap-2 text-xs font-semibold tracking-[0.24px] text-[#0d47a1]"

@@ -20,7 +20,7 @@ import {
 import { useStudentEntitlementOptional, isLsacLockedNavItem } from "@/features/app-shell/student-entitlement-context"
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
-import { PREP_COURSE_NAV_ITEMS } from "@/features/prep-course/lib/prep-course-nav"
+import { PREP_COURSE_ESSENTIALS_SLUG, PREP_COURSE_NAV_ITEMS } from "@/features/prep-course/lib/prep-course-nav"
 import { DiagnosticResultsNavItem } from "@/features/student/diagnostic/diagnostic-results-nav-item"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -32,7 +32,7 @@ type StudentAppSidebarProps = {
   onMobileClose: () => void
   dashboardHref?: string
   showDiagnosticNav?: boolean
-  /** Free-plan: same menu as premium, with Academy / Prep / Insights locked. */
+  /** Free-plan: Academy / Insights locked; Prep Course limited to LSAT Essential Course. */
   lockPremiumNav?: boolean
   beforeFooter?: ReactNode
 }
@@ -63,11 +63,15 @@ function PrepCourseNavItem({
   pathname,
   collapsed,
   onExpandSidebar,
+  lockNonEssentialCourses = false,
+  onLockedCourseClick,
 }: {
   item: StudentNavItem
   pathname: string
   collapsed: boolean
   onExpandSidebar: () => void
+  lockNonEssentialCourses?: boolean
+  onLockedCourseClick?: () => void
 }) {
   const onPrepCourseRoute = isPrepCourseRoute(pathname)
   const [manualExpanded, setManualExpanded] = useState<boolean | null>(null)
@@ -117,6 +121,22 @@ function PrepCourseNavItem({
           {PREP_COURSE_NAV_ITEMS.map((course) => {
             const href = `${PREP_COURSE_HREF}/${course.slug}`
             const active = isCourseNavActive(pathname, course.slug)
+            const locked = lockNonEssentialCourses && course.slug !== PREP_COURSE_ESSENTIALS_SLUG
+            if (locked) {
+              return (
+                <button
+                  key={course.slug}
+                  type="button"
+                  aria-label={`${course.title} (locked)`}
+                  title={`${course.title} (locked)`}
+                  onClick={onLockedCourseClick}
+                  className="student-sidebar-link student-sidebar-sublink student-sidebar-link--locked student-sidebar-link--with-trailing w-full justify-between"
+                >
+                  <span className="truncate">{course.title}</span>
+                  <Lock className="student-sidebar-lock size-4 shrink-0 text-[#666d80]" aria-hidden />
+                </button>
+              )
+            }
             return (
               <Link
                 key={course.slug}
@@ -270,7 +290,7 @@ function StudentAppSidebar({
               <div key={section.key} className="student-sidebar-section">
                 <p className="student-sidebar-heading">{section.label}</p>
                 {section.items.map((item) => {
-                  if (lockPremiumNav) {
+                  if (lockPremiumNav && !isPrepCourseNavItem(item)) {
                     return <LockedPremiumNavItem key={item.href} item={item} onLockedClick={handleLockedContentClick} />
                   }
 
@@ -282,6 +302,8 @@ function StudentAppSidebar({
                         pathname={pathname}
                         collapsed={collapsed}
                         onExpandSidebar={() => setCollapsed(false)}
+                        lockNonEssentialCourses={lockPremiumNav}
+                        onLockedCourseClick={handleLockedContentClick}
                       />
                     )
                   }

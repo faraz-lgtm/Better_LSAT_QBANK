@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 
+import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
+import { useGuestPremiumAccount } from "@/features/guest/premium/guest-premium-account"
+import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { PrepCourseLessonFooter } from "@/features/prep-course/components/prep-course-lesson-footer"
 import { PrepCourseLessonPanel } from "@/features/prep-course/components/prep-course-lesson-panel"
 import { PrepCourseLessonSidebar } from "@/features/prep-course/components/prep-course-lesson-sidebar"
@@ -20,6 +23,7 @@ import {
 } from "@/features/prep-course/lib/prep-course-format"
 import { mergeActiveDrillAttemptBlindReview } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
 import { isPrepCourseComingSoonSlug } from "@/features/prep-course/lib/prep-course-nav"
+import { isPrepCourseLessonLockedForFreePlan, shouldLimitFreePrepCourseAccess } from "@/features/prep-course/lib/prep-course-free-access"
 import { usePrepCourseBookmarks } from "@/features/prep-course/lib/use-prep-course-bookmarks"
 import { PrepCourseComingSoonPage } from "@/features/prep-course/pages/prep-course-coming-soon-page"
 import { StudentMain } from "@/features/student/components/student-main"
@@ -53,6 +57,15 @@ function PrepCourseLessonPage() {
   const lessonSlug = lessonSlugParam?.trim() ?? ""
   const paramsValid = courseSlug.length > 0 && lessonSlug.length > 0
   const comingSoon = isPrepCourseComingSoonSlug(courseSlug)
+  const entitlement = useStudentEntitlementOptional()
+  const premiumAccount = useGuestPremiumAccount()
+  const { openLockedContentModal } = useGuestPricingModal()
+  const limitFreeAccess = shouldLimitFreePrepCourseAccess({
+    hasActiveCore: entitlement?.entitlement?.hasActiveCore,
+    accessState: entitlement?.entitlement?.accessState ?? null,
+    hasGuestPremiumAccount: Boolean(premiumAccount),
+  })
+  const entitlementReady = !entitlement?.loading
   const [course, setCourse] = useState<PrepCourse | null>(null)
   const [curriculum, setCurriculum] = useState<PrepCourseCurriculum>({ modules: [] })
   const [lesson, setLesson] = useState<PrepLesson | null>(null)
@@ -163,6 +176,7 @@ function PrepCourseLessonPage() {
         return
       }
       if (!paramsValid) return
+      if (!entitlementReady) return
       if (!prepCourseApi) {
         if (alive) {
           setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
@@ -181,17 +195,22 @@ function PrepCourseLessonPage() {
         setLessons([])
         setLesson(null)
       }
+      let redirected = false
       try {
-        const [courseData, lessonData] = await Promise.all([
-          prepCourseApi.getCourse(courseSlug),
-          prepCourseApi.getLesson(courseSlug, lessonSlug),
-        ])
+        const courseData = await prepCourseApi.getCourse(courseSlug)
+        if (!alive) return
+        const normalized = normalizeCurriculum(courseData.curriculum, courseData.lessons, courseData.course.id)
+        if (isPrepCourseLessonLockedForFreePlan(normalized, courseSlug, lessonSlug, limitFreeAccess)) {
+          redirected = true
+          openLockedContentModal()
+          navigate(`/app/prep-course/${courseSlug}`, { replace: true })
+          return
+        }
+        const lessonData = await prepCourseApi.getLesson(courseSlug, lessonSlug)
         if (!alive) return
         setCourse(courseData.course)
         setLessons(courseData.lessons)
-        setCurriculum(
-          normalizeCurriculum(courseData.curriculum, courseData.lessons, courseData.course.id),
-        )
+        setCurriculum(normalized)
         setCompletedLessonSlugs(new Set(courseData.completedLessonSlugs ?? []))
         setInitialBookmarks(lessonData.bookmarks ?? courseData.bookmarks ?? { moduleIds: [], lessonSlugs: [] })
         setLesson(lessonData.lesson)
@@ -207,14 +226,14 @@ function PrepCourseLessonPage() {
         if (!alive) return
         setError(e instanceof Error ? e.message : "Failed to load lesson")
       } finally {
-        if (alive) setLoading(false)
+        if (alive && !redirected) setLoading(false)
       }
     }
     void load()
     return () => {
       alive = false
     }
-  }, [comingSoon, paramsValid, courseSlug, lessonSlug, prepCourseApi, practiceApi, location.key])
+  }, [comingSoon, paramsValid, courseSlug, lessonSlug, prepCourseApi, practiceApi, location.key, entitlementReady, limitFreeAccess, navigate, openLockedContentModal])
 
   useEffect(() => {
     setDrillStartError(null)
@@ -274,6 +293,10 @@ function PrepCourseLessonPage() {
       const { completedLessonSlugs: slugs } = await prepCourseApi.completeLesson(course.slug, lesson.slug)
       setCompletedLessonSlugs(new Set(slugs))
       const nextSlug = nextLessonSlug(lessons, lesson.slug)
+      if (nextSlug && isPrepCourseLessonLockedForFreePlan(curriculum, course.slug, nextSlug, limitFreeAccess)) {
+        openLockedContentModal()
+        return
+      }
       if (nextSlug) {
         navigate(`/app/prep-course/${course.slug}/${nextSlug}`)
       }
@@ -410,7 +433,12 @@ function PrepCourseLessonPage() {
             if (prevSlug) navigate(`/app/prep-course/${course.slug}/${prevSlug}`)
           }}
           onNext={() => {
-            if (nextSlug) navigate(`/app/prep-course/${course.slug}/${nextSlug}`)
+            if (!nextSlug) return
+            if (isPrepCourseLessonLockedForFreePlan(curriculum, course.slug, nextSlug, limitFreeAccess)) {
+              openLockedContentModal()
+              return
+            }
+            navigate(`/app/prep-course/${course.slug}/${nextSlug}`)
           }}
           prevDisabled={!prevSlug}
           nextDisabled={!nextSlug}
