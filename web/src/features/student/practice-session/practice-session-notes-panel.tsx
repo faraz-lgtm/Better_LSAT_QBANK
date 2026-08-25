@@ -3,6 +3,7 @@ import { Bookmark, ChevronRight, Eraser, Search, X } from "lucide-react"
 
 import {
   BLIND_REVIEW_NOTES_SIDEBAR_CLASS,
+  REVIEW_SIDEBAR_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
 import { cn } from "@/lib/utils"
 
@@ -36,6 +37,7 @@ type PracticeSessionNotesPanelProps = {
   activeQuestionId: string | null
   onClose: () => void
   variant?: "default" | "blind-review"
+  chrome?: "blind-review" | "review"
 }
 
 function PracticeSessionNotesPanel({
@@ -45,11 +47,13 @@ function PracticeSessionNotesPanel({
   activeQuestionId,
   onClose,
   variant = "default",
+  chrome = "blind-review",
 }: PracticeSessionNotesPanelProps) {
   const [notes, setNotes] = useState<PracticeSessionNote[]>(() => loadNotes(storageKey))
   const [draft, setDraft] = useState("")
   const [search, setSearch] = useState("")
   const isBlindReview = variant === "blind-review"
+  const isReviewChrome = isBlindReview && chrome === "review"
 
   useEffect(() => {
     setNotes(loadNotes(storageKey))
@@ -88,12 +92,31 @@ function PracticeSessionNotesPanel({
 
   if (isBlindReview) {
     return (
-      <aside className={BLIND_REVIEW_NOTES_SIDEBAR_CLASS}>
-        <div className="flex h-[60px] shrink-0 items-center justify-between border-b border-[#e5e7eb] bg-[#f6f8fa] px-4 pt-4">
-          <h2 className="text-lg font-bold leading-[1.35] text-[#062357]">Notes</h2>
+      <aside className={cn(BLIND_REVIEW_NOTES_SIDEBAR_CLASS, isReviewChrome && REVIEW_SIDEBAR_CLASS)}>
+        <div
+          className={cn(
+            "flex shrink-0 items-center justify-between",
+            isReviewChrome
+              ? "h-[70px] px-6 pb-3 pt-9"
+              : "h-[60px] border-b border-[#e5e7eb] bg-[#f6f8fa] px-4 pt-4",
+          )}
+        >
+          <h2
+            className={cn(
+              "text-[#062357]",
+              isReviewChrome
+                ? "text-sm font-semibold leading-[1.5] tracking-[0.28px]"
+                : "text-lg font-bold leading-[1.35]",
+            )}
+          >
+            Notes
+          </h2>
           <button
             type="button"
-            className="inline-flex size-7 items-center justify-center rounded text-[#666d80] transition hover:bg-white hover:text-[#062357]"
+            className={cn(
+              "inline-flex size-7 items-center justify-center rounded text-[#666d80] transition hover:bg-white hover:text-[#062357]",
+              isReviewChrome && "sr-only",
+            )}
             aria-label="Close notes"
             onClick={onClose}
           >
@@ -101,7 +124,7 @@ function PracticeSessionNotesPanel({
           </button>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-6">
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-6 pt-0">
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}

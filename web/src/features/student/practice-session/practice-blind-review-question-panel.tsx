@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { ChevronDown, ChevronUp } from "lucide-react"
 
 import { Switch } from "@/components/ui/switch"
 import { LrDrillOptionRow } from "@/features/student/drills/lr-drill-option-row"
@@ -9,7 +10,6 @@ import {
   type BlindReviewAnswerView,
 } from "@/features/student/practice-session/practice-blind-review-answer-toggle"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
-import { ReviewIdeaIcon } from "@/features/student/practice-session/review-idea-icon"
 import {
   BLIND_REVIEW_OPTIONS_LIST_CLASS,
   BLIND_REVIEW_QUESTION_NUMBER_CLASS,
@@ -43,17 +43,15 @@ type PracticeBlindReviewQuestionPanelProps = {
   showCorrectAnswer?: boolean
   onShowCorrectAnswerChange?: (next: boolean) => void
   blindReviewTabEnabled?: boolean
+  /** Local / guest explanations when the explanations API has no row for this question. */
+  seedStemExplanationHtml?: string | null
+  seedQuestionTypeLabel?: string | null
+  /** When false, hides question/answer explanation dropdowns (e.g. locked diagnostic). */
+  explanationsEnabled?: boolean
 }
 
 function regionKey(questionId: string, part: string) {
   return `${questionId}:${part}`
-}
-
-function stripHtmlToText(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
 }
 
 function PracticeBlindReviewQuestionPanel({
@@ -77,12 +75,17 @@ function PracticeBlindReviewQuestionPanel({
   showCorrectAnswer = false,
   onShowCorrectAnswerChange,
   blindReviewTabEnabled = true,
+  seedStemExplanationHtml = null,
+  seedQuestionTypeLabel = null,
+  explanationsEnabled = true,
 }: PracticeBlindReviewQuestionPanelProps) {
   const [hiddenChoices, setHiddenChoices] = useState<Record<number, boolean>>({})
-  const [expandedChoiceId, setExpandedChoiceId] = useState<string | null>(null)
+  const [expandedChoiceIds, setExpandedChoiceIds] = useState<Set<string>>(() => new Set())
   const [stemExplanationOpen, setStemExplanationOpen] = useState(false)
   const [stemExplanationHtml, setStemExplanationHtml] = useState<string | null>(null)
+  const [questionTypeLabel, setQuestionTypeLabel] = useState<string | null>(null)
   const [choiceExplanations, setChoiceExplanations] = useState<Record<string, string | null>>({})
+  const [choicePopularityPct, setChoicePopularityPct] = useState<Record<string, number | null>>({})
   const [fetchedCorrectChoiceId, setFetchedCorrectChoiceId] = useState<string | null>(null)
 
   const stemKey = regionKey(question.id, "stem")
@@ -98,12 +101,21 @@ function PracticeBlindReviewQuestionPanel({
   }, [reviewChrome])
 
   useEffect(() => {
-    setExpandedChoiceId(null)
-    setStemExplanationOpen(false)
-    setStemExplanationHtml(null)
-    setChoiceExplanations({})
-    setFetchedCorrectChoiceId(null)
-  }, [question.id])
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled) return
+      setExpandedChoiceIds(new Set())
+      setStemExplanationOpen(false)
+      setStemExplanationHtml(seedStemExplanationHtml?.trim() ? seedStemExplanationHtml : null)
+      setQuestionTypeLabel(seedQuestionTypeLabel?.trim() ? seedQuestionTypeLabel : null)
+      setChoiceExplanations({})
+      setChoicePopularityPct({})
+      setFetchedCorrectChoiceId(null)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [question.choices, question.id, reviewChrome, seedStemExplanationHtml, seedQuestionTypeLabel])
 
   useEffect(() => {
     if (!reviewChrome || !explanationsApi) return
@@ -112,22 +124,31 @@ function PracticeBlindReviewQuestionPanel({
       .getExplanationDetail(question.id)
       .then((detail) => {
         if (cancelled) return
-        setStemExplanationHtml(detail.explanationHtml?.trim() ? detail.explanationHtml : null)
+        const apiStem = detail.explanationHtml?.trim() ? detail.explanationHtml : null
+        setStemExplanationHtml(apiStem ?? (seedStemExplanationHtml?.trim() ? seedStemExplanationHtml : null))
+        const apiTopic = detail.topicName?.trim() ? detail.topicName : null
+        setQuestionTypeLabel(apiTopic ?? (seedQuestionTypeLabel?.trim() ? seedQuestionTypeLabel : null))
         setFetchedCorrectChoiceId(detail.correctChoiceId)
         const next: Record<string, string | null> = {}
         for (const c of detail.choices) {
           next[c.id] = c.explanationHtml?.trim() ? c.explanationHtml : null
         }
         setChoiceExplanations(next)
+        const popularity: Record<string, number | null> = {}
+        for (const row of detail.answerPopularity) {
+          popularity[row.letter.trim().toUpperCase()] = row.pct
+        }
+        setChoicePopularityPct(popularity)
       })
       .catch(() => {
         if (cancelled) return
-        setStemExplanationHtml(null)
+        setStemExplanationHtml(seedStemExplanationHtml?.trim() ? seedStemExplanationHtml : null)
+        setQuestionTypeLabel(seedQuestionTypeLabel?.trim() ? seedQuestionTypeLabel : null)
       })
     return () => {
       cancelled = true
     }
-  }, [reviewChrome, explanationsApi, question.id])
+  }, [reviewChrome, explanationsApi, question.id, seedStemExplanationHtml, seedQuestionTypeLabel])
 
   const correctChoiceId = question.correctChoiceId ?? fetchedCorrectChoiceId
   const correctIndex =
@@ -140,12 +161,16 @@ function PracticeBlindReviewQuestionPanel({
         : null
       : selectedIndex
 
-  const stemPlain = stripHtmlToText(question.stemText ?? "") || `Question ${questionNumber}`
   const hasStemExplanation = Boolean(stemExplanationHtml?.trim())
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="shrink-0 border-b border-[#e5e7eb] bg-[#f6f8fa] p-6">
+    <div
+      className={cn(
+        "flex h-full min-h-0 flex-col",
+        reviewChrome ? "practice-session-scroll-hidden overflow-y-auto" : "overflow-hidden",
+      )}
+    >
+      <div className={cn("shrink-0", reviewChrome ? "bg-white" : "border-b border-[#e5e7eb] bg-[#f6f8fa] p-6")}>
         <div
           className={cn("flex gap-3", reviewChrome ? "flex-col items-stretch" : "items-start")}
         >
@@ -153,22 +178,17 @@ function PracticeBlindReviewQuestionPanel({
             <span className={BLIND_REVIEW_QUESTION_NUMBER_CLASS}>{questionNumber}</span>
           ) : null}
           <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <div className="flex items-center justify-between gap-3">
+            <div className={cn("flex flex-wrap items-center justify-between gap-3", reviewChrome && "mb-6")}>
               {reviewChrome ? (
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <span className="inline-flex h-8 items-center rounded-[12px] bg-white px-3 text-sm font-medium tracking-[0.28px] text-[#062357]">
-                    Question {questionNumber}
-                  </span>
-                  <span className="text-xs font-normal tracking-[0.24px] text-[#666d80]">
-                    Show Correct Answer
-                  </span>
-                  <Switch
-                    size="sm"
-                    checked={showCorrectAnswer}
-                    onChange={(e) => onShowCorrectAnswerChange?.(e.target.checked)}
-                    aria-label="Show correct answer"
-                  />
-                </div>
+                <PracticeBlindReviewAnswerToggle
+                  value={answerView}
+                  onChange={onAnswerViewChange ?? (() => {})}
+                  variant="review"
+                  actualOutcome={actualOutcome}
+                  blindReviewOutcome={blindReviewOutcome}
+                  blindReviewEnabled={blindReviewTabEnabled}
+                  showOutcomeIcons={showCorrectAnswer}
+                />
               ) : recommendedForBr ? (
                 <div className="inline-flex h-10 items-center rounded-[16px] bg-white p-1">
                   <span className={BLIND_REVIEW_RECOMMENDED_BADGE_CLASS}>Recommended for BR</span>
@@ -176,7 +196,19 @@ function PracticeBlindReviewQuestionPanel({
               ) : (
                 <span />
               )}
-              {onAnswerViewChange ? (
+              {reviewChrome ? (
+                <label className="inline-flex h-8 shrink-0 items-center gap-3 whitespace-nowrap sm:gap-4">
+                  <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#062357]">
+                    Show Correct
+                  </span>
+                  <Switch
+                    size="sm"
+                    checked={showCorrectAnswer}
+                    onChange={(e) => onShowCorrectAnswerChange?.(e.target.checked)}
+                    aria-label="Show correct answer"
+                  />
+                </label>
+              ) : onAnswerViewChange ? (
                 <PracticeBlindReviewAnswerToggle
                   value={answerView}
                   onChange={onAnswerViewChange}
@@ -187,63 +219,74 @@ function PracticeBlindReviewQuestionPanel({
                 />
               ) : null}
             </div>
-            <div className="flex items-start gap-3">
+            <div className={cn("flex items-start gap-3", reviewChrome && "px-6 py-3")}>
+              {reviewChrome ? (
+                <span className="mt-[3px] shrink-0 text-base font-medium leading-[1.5] tracking-[0.32px] text-[#062357]">
+                  {questionNumber}.
+                </span>
+              ) : null}
               <PracticeAnnotatedContent
                 regionKey={stemKey}
                 html={stemHtml}
                 findQuery={findQuery}
                 toolMode="none"
-                className={cn(BLIND_REVIEW_QUESTION_STEM_CLASS, reviewChrome && "min-w-0 flex-1")}
+                className={cn(
+                  BLIND_REVIEW_QUESTION_STEM_CLASS,
+                  reviewChrome && "min-w-0 flex-1 text-base font-medium leading-[1.5] tracking-[0.32px] text-[#062357]",
+                )}
               />
-              {reviewChrome ? (
+              {reviewChrome && explanationsEnabled ? (
                 <button
                   type="button"
                   className={cn(
                     "mt-1 inline-flex size-5 shrink-0 items-center justify-center transition",
                     stemExplanationOpen ? "text-[#0d47a1]" : "text-[#666d80] hover:text-[#062357]",
-                    !hasStemExplanation && "opacity-40",
                   )}
                   aria-label={
-                    hasStemExplanation
-                      ? stemExplanationOpen
-                        ? "Hide question explanation"
-                        : "Show question explanation"
-                      : "No question explanation"
+                    stemExplanationOpen
+                      ? "Hide passage explanation"
+                      : "Show passage explanation"
                   }
-                  aria-expanded={hasStemExplanation ? stemExplanationOpen : undefined}
-                  disabled={!hasStemExplanation}
+                  aria-expanded={stemExplanationOpen}
                   onClick={() => setStemExplanationOpen((open) => !open)}
                 >
-                  <ReviewIdeaIcon />
+                  {stemExplanationOpen ? (
+                    <ChevronUp className="size-5" strokeWidth={2} aria-hidden />
+                  ) : (
+                    <ChevronDown className="size-5" strokeWidth={2} aria-hidden />
+                  )}
                 </button>
               ) : null}
             </div>
-            {reviewChrome && stemExplanationOpen && hasStemExplanation ? (
-              <div className="overflow-hidden rounded-[14px] border border-[#0d47a1] bg-white">
-                <div className="flex items-center justify-between gap-3 bg-[#0d47a1] px-3 py-2">
-                  <p className="min-w-0 flex-1 truncate text-sm font-medium tracking-[0.28px] text-white">
-                    {stemPlain}
-                  </p>
-                  <ReviewIdeaIcon className="size-5 shrink-0 text-white" />
-                </div>
-                <div className="p-4">
-                  <HtmlContent
-                    html={stemExplanationHtml ?? ""}
-                    className="explanation-option-body text-[#0d0d12]"
-                  />
+            {reviewChrome && explanationsEnabled && stemExplanationOpen ? (
+              <div className="mb-6 mt-6 rounded-[14px] bg-[#f3f7ff] p-6 text-[#062357]">
+                <p className="mb-6 text-base font-medium leading-[1.5] tracking-[0.32px]">
+                  Question Type{questionTypeLabel ? ` - ${questionTypeLabel}` : ""}
+                </p>
+                <div className="text-sm font-normal leading-[1.5] tracking-[0.28px]">
+                  {hasStemExplanation ? (
+                    <HtmlContent
+                      html={stemExplanationHtml ?? ""}
+                      className="explanation-review-body text-[#062357]"
+                    />
+                  ) : (
+                    <p className="m-0">
+                      No question explanation available yet.
+                    </p>
+                  )}
                 </div>
               </div>
             ) : null}
           </div>
         </div>
       </div>
-      {revealed && isCorrect != null ? (
+      {revealed && isCorrect != null && !reviewChrome ? (
         <p className="shrink-0 px-6 pt-4 text-xs font-semibold text-[#df1c41]">
           {isCorrect ? "Correct" : "Incorrect"}
         </p>
       ) : null}
-      <div className="practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto">
-        <div className={BLIND_REVIEW_OPTIONS_LIST_CLASS}>
+      <div className={cn(reviewChrome ? "shrink-0 pb-6" : "practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto")}>
+        <div className={reviewChrome ? "flex flex-col gap-3" : BLIND_REVIEW_OPTIONS_LIST_CLASS}>
           {question.choices.map((choice, index) => {
             const isCorrectChoice = correctIndex === index
             const forceSelected =
@@ -252,6 +295,9 @@ function PracticeBlindReviewQuestionPanel({
               answerView !== "clean" &&
               isCorrectChoice &&
               displaySelectedIndex !== index
+            const isSelected = displaySelectedIndex === index || forceSelected
+            const correctHighlight =
+              reviewChrome && isCorrectChoice && (showCorrectAnswer || displaySelectedIndex === index)
             const explanationHtml =
               choiceExplanations[choice.id] ?? choice.explanationHtml ?? null
 
@@ -262,9 +308,10 @@ function PracticeBlindReviewQuestionPanel({
                 html={getRegionHtml(regionKey(question.id, `choice-${choice.id}`), choice.text)}
                 findQuery={findQuery}
                 regionKey={regionKey(question.id, `choice-${choice.id}`)}
-                selected={displaySelectedIndex === index || forceSelected}
+                selected={isSelected}
+                correctHighlight={correctHighlight}
                 hidden={Boolean(hiddenChoices[index])}
-                disabled={submitting || choicesDisabled || reviewChrome}
+                disabled={submitting || choicesDisabled || (reviewChrome && !allowReselect)}
                 selectedIndex={displaySelectedIndex}
                 allowReselect={allowReselect && !reviewChrome}
                 onSelect={() => onSelect(index)}
@@ -276,11 +323,17 @@ function PracticeBlindReviewQuestionPanel({
                 }
                 variant="blind-review"
                 answerView={answerView}
-                explanationAction={reviewChrome}
-                explanationExpanded={expandedChoiceId === choice.id}
-                explanationHtml={explanationHtml}
+                explanationAction={reviewChrome && explanationsEnabled}
+                explanationExpanded={explanationsEnabled && expandedChoiceIds.has(choice.id)}
+                explanationHtml={explanationsEnabled ? explanationHtml : null}
+                explanationPercent={choicePopularityPct[choice.id.trim().toUpperCase()] ?? null}
                 onToggleExplanation={() =>
-                  setExpandedChoiceId((prev) => (prev === choice.id ? null : choice.id))
+                  setExpandedChoiceIds((prev) => {
+                    const next = new Set(prev)
+                    if (next.has(choice.id)) next.delete(choice.id)
+                    else next.add(choice.id)
+                    return next
+                  })
                 }
               />
             )
