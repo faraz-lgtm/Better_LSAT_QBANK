@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { useState } from "react"
 import { Play } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
@@ -16,14 +17,39 @@ import {
   ACTIVE_DRILL_HEADER_STACK_CLASS,
   ACTIVE_DRILL_HEADER_TITLE_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import {
+  OFFICIAL_FIND_TEXT_INPUT_CLASS,
+  OFFICIAL_FIND_WRAP_CLASS,
+  OFFICIAL_HEADER_CLOSE_BUTTON_CLASS,
+  OFFICIAL_HEADER_LEFT_CLASS,
+  OFFICIAL_HEADER_PAUSE_BUTTON_CLASS,
+  OFFICIAL_HEADER_PILL_BUTTON_CLASS,
+  OFFICIAL_HEADER_PILL_BUTTON_PRESSED_CLASS,
+  OFFICIAL_HEADER_PROGRESS_FILL_CLASS,
+  OFFICIAL_HEADER_PROGRESS_LABEL_CLASS,
+  OFFICIAL_HEADER_PROGRESS_TRACK_CLASS,
+  OFFICIAL_HEADER_RIGHT_CLASS,
+  OFFICIAL_HEADER_SHELL_CLASS,
+  OFFICIAL_HEADER_TIMER_WRAP_CLASS,
+  OFFICIAL_HEADER_TITLE_CLASS,
+  OFFICIAL_HEADER_TITLE_ROW_CLASS,
+  OFFICIAL_HEADER_UTILITY_ROW_CLASS,
+} from "@/features/student/practice-session/practice-session-official-styles"
 import { resolveExamProgress } from "@/features/student/practice-session/practice-session-exam-progress"
 import {
   ExamHeaderCloseIcon,
   ExamHeaderPauseIcon,
+  OfficialHeaderCloseIcon,
+  OfficialHeaderSearchIcon,
 } from "@/features/student/practice-session/practice-session-header-icons"
 import { PracticeSessionTimer } from "@/features/student/practice-session/practice-session-timer"
 import { PracticeSessionToolbar } from "@/features/student/practice-session/practice-session-toolbar"
-import type { HighlightColor, PracticeSessionVariant, PracticeToolMode } from "@/features/student/practice-session/practice-session-types"
+import {
+  isOfficialLayout,
+  type HighlightColor,
+  type PracticeSessionVariant,
+  type PracticeToolMode,
+} from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
 
 type PracticeSessionHeaderProps = {
@@ -58,6 +84,9 @@ type PracticeSessionHeaderProps = {
   questionCount?: number
   finishButton: ReactNode
   onClose?: () => void
+  passageOnlyView?: boolean
+  onPassageOnlyViewChange?: (next: boolean) => void
+  onDirections?: () => void
 }
 
 function PracticeSessionHeader({
@@ -92,14 +121,148 @@ function PracticeSessionHeader({
   questionCount,
   finishButton,
   onClose,
+  passageOnlyView = false,
+  onPassageOnlyViewChange,
+  onDirections,
 }: PracticeSessionHeaderProps) {
   const isActiveDrill = variant === "active-drill"
+  const officialChrome = isOfficialLayout(variant)
   const examProgress = resolveExamProgress({
     current: questionNumber,
     total: questionCount,
     label: questionProgressLabel,
   })
   const examProgressPct = examProgress.ratio * 100
+  const [directionsOpen, setDirectionsOpen] = useState(false)
+
+  if (officialChrome) {
+    return (
+      <header className={OFFICIAL_HEADER_SHELL_CLASS}>
+        <div className={OFFICIAL_HEADER_UTILITY_ROW_CLASS}>
+          <div className={OFFICIAL_HEADER_LEFT_CLASS}>
+            {onClose ? (
+              <button
+                type="button"
+                className={OFFICIAL_HEADER_CLOSE_BUTTON_CLASS}
+                aria-label="Close exam"
+                onClick={onClose}
+              >
+                <OfficialHeaderCloseIcon />
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className={OFFICIAL_HEADER_PILL_BUTTON_CLASS}
+              onClick={() => {
+                if (onDirections) onDirections()
+                else setDirectionsOpen(true)
+              }}
+            >
+              Directions
+            </button>
+            <button
+              type="button"
+              className={cn(
+                OFFICIAL_HEADER_PILL_BUTTON_CLASS,
+                passageOnlyView && OFFICIAL_HEADER_PILL_BUTTON_PRESSED_CLASS,
+              )}
+              aria-pressed={passageOnlyView}
+              onClick={() => onPassageOnlyViewChange?.(!passageOnlyView)}
+            >
+              Passage Only View
+            </button>
+            <label className={OFFICIAL_FIND_WRAP_CLASS}>
+              <input
+                type="search"
+                placeholder="Find Text, Type Here"
+                value={findQuery}
+                onChange={(e) => onFindQueryChange(e.target.value)}
+                className={OFFICIAL_FIND_TEXT_INPUT_CLASS}
+              />
+              <OfficialHeaderSearchIcon />
+            </label>
+          </div>
+          <div className={OFFICIAL_HEADER_RIGHT_CLASS}>
+            {questionProgressLabel ? (
+              <span className={OFFICIAL_HEADER_PROGRESS_LABEL_CLASS}>{questionProgressLabel}</span>
+            ) : null}
+            {showTimer ? (
+              <div className={OFFICIAL_HEADER_TIMER_WRAP_CLASS}>
+                <PracticeSessionTimer
+                  layout="official"
+                  label=""
+                  displaySeconds={timerDisplaySeconds}
+                  paused={timerPaused}
+                  onPauseRequest={onTimerPauseRequest}
+                  onReset={onResetTimer}
+                  progress={timerProgress}
+                  displayClassName={timerDisplayClassName}
+                />
+                <button
+                  type="button"
+                  className={OFFICIAL_HEADER_PAUSE_BUTTON_CLASS}
+                  aria-label={timerPaused ? "Section paused" : "Pause section timer"}
+                  onClick={onTimerPauseRequest}
+                >
+                  {timerPaused ? (
+                    <Play className="size-6 text-[#6A7282]" strokeWidth={1.5} aria-hidden />
+                  ) : (
+                    <ExamHeaderPauseIcon />
+                  )}
+                </button>
+              </div>
+            ) : null}
+            {finishButton}
+          </div>
+        </div>
+        <div className={OFFICIAL_HEADER_TITLE_ROW_CLASS}>
+          <p className={cn(OFFICIAL_HEADER_TITLE_CLASS, titleClassName)} title={title}>
+            {title}
+          </p>
+        </div>
+        <div
+          className={OFFICIAL_HEADER_PROGRESS_TRACK_CLASS}
+          role="progressbar"
+          aria-label="Exam progress"
+          aria-valuemin={0}
+          aria-valuemax={examProgress.total || 100}
+          aria-valuenow={examProgress.current}
+          aria-valuetext={
+            examProgress.total > 0 ? `${examProgress.current} of ${examProgress.total}` : "No questions"
+          }
+        >
+          <div className={OFFICIAL_HEADER_PROGRESS_FILL_CLASS} style={{ width: `${examProgressPct}%` }} />
+        </div>
+        {directionsOpen ? (
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Directions"
+            onClick={() => setDirectionsOpen(false)}
+          >
+            <div
+              className="max-w-lg rounded-[12px] bg-white p-5 text-[14px] leading-5 text-[#2c3143] shadow-lg"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <p className="mb-3 text-[18px] font-medium">Directions</p>
+              <p>
+                Choose the best answer for each question. You may use the tools in this interface to flag
+                items, mask responses, and highlight text in the passage.
+              </p>
+              <button
+                type="button"
+                className={cn(OFFICIAL_HEADER_PILL_BUTTON_CLASS, "mt-4")}
+                onClick={() => setDirectionsOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </header>
+    )
+  }
 
   if (isActiveDrill) {
     return (

@@ -16,6 +16,8 @@ describe("buildAccessibilityContentStyle", () => {
       "--practice-accessibility-fg": "#ffffff",
       "--practice-choice-selected-bg": "#1c2433",
       "--practice-choice-selected-border": "#93c5fd",
+      "--practice-choice-unselected-bg": "#252b38",
+      "--practice-choice-unselected-border": "#3a4252",
       "--practice-choice-selected-letter-bg": "#ffffff",
       "--practice-choice-selected-letter-fg": "#0d0d12",
       "--practice-panel-bg": "#1c2433",

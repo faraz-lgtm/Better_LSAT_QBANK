@@ -38,5 +38,29 @@ function passageBreakAfterIndices(
   return breaks
 }
 
-export { passageBreakAfterIndices, passageNavGroupKey }
+/** 0-based question indices that get an empty LawHub review-grid cell before them. */
+function officialReviewSpacerBeforeIndices(
+  questions: ReadonlyArray<QuestionWithPassage>,
+): ReadonlySet<number> {
+  const keys = questions.map(passageNavGroupKey)
+  const groupSizes = new Map<string, number>()
+  for (const key of keys) {
+    if (key == null) continue
+    groupSizes.set(key, (groupSizes.get(key) ?? 0) + 1)
+  }
+
+  const before = new Set<number>()
+  let prevKey: string | null = null
+  for (let i = 0; i < questions.length; i += 1) {
+    const key = keys[i] ?? null
+    const size = key ? (groupSizes.get(key) ?? 0) : 0
+    if (key != null && size >= 2 && (i === 0 || key !== prevKey)) {
+      before.add(i)
+    }
+    prevKey = key
+  }
+  return before
+}
+
+export { officialReviewSpacerBeforeIndices, passageBreakAfterIndices, passageNavGroupKey }
 export type { QuestionWithPassage }

@@ -215,4 +215,71 @@ describe("PracticeSessionActiveDrillFooterNav", () => {
     expect(flaggedThree.parentElement?.querySelector("img")).toHaveAttribute("src", "/figma/exam-review/flag.svg")
     expect(screen.getByRole("button", { name: "Question 1" }).parentElement?.querySelector("img")).toBeNull()
   })
+
+  it("uses Prev/Next labels, in-pill current caret, and 4px passage breaks in official layout", () => {
+    render(
+      <PracticeSessionActiveDrillFooterNav
+        questions={[
+          { id: "q1", passage: { id: "p1" } },
+          { id: "q2", passage: { id: "p1" } },
+          { id: "q3", passage: { id: "p2" } },
+        ]}
+        safeIndex={1}
+        answersByQuestion={{ q2: { selectedAnswer: "A" } }}
+        isFlagged={() => false}
+        variant="official"
+        onSelectQuestion={() => undefined}
+        onPrev={() => undefined}
+        onNext={() => undefined}
+      />,
+    )
+
+    const prev = screen.getByRole("button", { name: "Previous question" })
+    const next = screen.getByRole("button", { name: "Next question" })
+    const current = screen.getByRole("button", { name: "Question 1" })
+    const answered = screen.getByRole("button", { name: "Question 2" })
+
+    expect(prev).toHaveTextContent("Prev")
+    expect(next).toHaveTextContent("Next")
+    expect(prev).toHaveClass("h-7", "rounded-[6px]", "bg-[#1877b1]", "px-3", "pt-[3px]", "pb-[5px]")
+    expect(prev.parentElement).toHaveClass("gap-2", "px-2")
+    expect(current.closest(".practice-session-question-nav-grid")).toHaveClass("items-end", "gap-2")
+    expect(current).toHaveClass("bg-[#e6f0f6]", "text-[#0d0d12]")
+    expect(current).not.toHaveClass("border-[#d4d7e2]")
+    expect(current.querySelector('img[src="/figma/exam-official/current-caret.svg"]')).toBeInTheDocument()
+    expect(answered).toHaveClass("border-[#d4d7e2]", "bg-white")
+    expect(answered.querySelector("span[aria-hidden]")).toHaveClass("h-[3px]", "bg-[#a4acb9]")
+    expect(document.querySelector(".practice-session-question-nav-passage-break")).toHaveClass(
+      "h-7",
+      "w-[4px]",
+      "bg-[#666d80]",
+    )
+  })
+
+  it("places the LawHub flag above flagged official question pills", () => {
+    render(
+      <PracticeSessionActiveDrillFooterNav
+        questions={[
+          { id: "q1", passage: { id: "p1" } },
+          { id: "q2", passage: { id: "p1" } },
+          { id: "q3", passage: { id: "p2" } },
+        ]}
+        safeIndex={1}
+        answersByQuestion={{ q2: { selectedAnswer: "A" } }}
+        isFlagged={(id) => id === "q2"}
+        variant="official"
+        onSelectQuestion={() => undefined}
+        onPrev={() => undefined}
+        onNext={() => undefined}
+      />,
+    )
+
+    const flagged = screen.getByRole("button", { name: "Question 2, flagged" })
+    const flag = flagged.parentElement?.querySelector('img[src="/figma/exam-official/review-flag.svg"]')
+    expect(flag).toBeInTheDocument()
+    expect(flag?.parentElement).toHaveClass("items-center", "justify-center")
+    expect(flagged.parentElement).toHaveClass("items-center", "gap-0.5")
+    expect(flagged.querySelector('img[src="/figma/exam-official/review-flag.svg"]')).toBeNull()
+    expect(screen.getByRole("button", { name: "Question 1" }).parentElement?.querySelector('img[src="/figma/exam-official/review-flag.svg"]')).toBeNull()
+  })
 })

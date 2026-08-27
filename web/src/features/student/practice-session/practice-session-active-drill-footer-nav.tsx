@@ -5,10 +5,16 @@ import {
   ACTIVE_DRILL_FOOTER_NAV_GRID_CLASS,
   ACTIVE_DRILL_FOOTER_ROW_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import {
+  OFFICIAL_FOOTER_NAV_BUTTON_CLASS,
+  OFFICIAL_FOOTER_NAV_CLUSTER_CLASS,
+  OFFICIAL_FOOTER_NAV_GRID_CLASS,
+  OFFICIAL_FOOTER_ROW_CLASS,
+} from "@/features/student/practice-session/practice-session-official-styles"
 import { PracticeSessionNavArrowButton } from "@/features/student/practice-session/practice-session-nav-arrow-button"
 import type { PracticeSessionQuestionNavOutcome } from "@/features/student/practice-session/practice-session-question-nav-button"
 import { PracticeSessionQuestionNavStrip } from "@/features/student/practice-session/practice-session-question-nav-strip"
-import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
+import { isOfficialLayout, type PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
 
 type PracticeSessionActiveDrillFooterNavProps = {
@@ -45,6 +51,45 @@ function PracticeSessionActiveDrillFooterNav({
   className,
 }: PracticeSessionActiveDrillFooterNavProps) {
   const isLastQuestion = safeIndex >= questions.length
+  const officialChrome = isOfficialLayout(variant)
+
+  if (officialChrome) {
+    return (
+      <div className={cn(OFFICIAL_FOOTER_ROW_CLASS, className)}>
+        <div className={OFFICIAL_FOOTER_NAV_CLUSTER_CLASS}>
+          <button
+            type="button"
+            className={OFFICIAL_FOOTER_NAV_BUTTON_CLASS}
+            disabled={safeIndex <= 1}
+            aria-label="Previous question"
+            onClick={onPrev}
+          >
+            Prev
+          </button>
+          <PracticeSessionQuestionNavStrip
+            questions={questions}
+            safeIndex={safeIndex}
+            answersByQuestion={answersByQuestion}
+            isFlagged={isFlagged}
+            variant={variant}
+            onSelectQuestion={onSelectQuestion}
+            outcomeForQuestion={outcomeForQuestion}
+            showPassageBreaks={showPassageBreaks}
+            className={OFFICIAL_FOOTER_NAV_GRID_CLASS}
+          />
+          <button
+            type="button"
+            className={OFFICIAL_FOOTER_NAV_BUTTON_CLASS}
+            disabled={isLastQuestion}
+            aria-label="Next question"
+            onClick={onNext}
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={cn(ACTIVE_DRILL_FOOTER_ROW_CLASS, className)}>

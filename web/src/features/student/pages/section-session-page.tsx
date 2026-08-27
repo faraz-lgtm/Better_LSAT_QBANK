@@ -34,6 +34,16 @@ import {
   ACTIVE_DRILL_QUESTION_PANE_CLASS,
   SESSION_FINISH_BUTTON_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import {
+  OFFICIAL_BODY_GRID_CLASS,
+  OFFICIAL_CARD_CLASS,
+  OFFICIAL_FOOTER_CLASS,
+  OFFICIAL_OPTIONS_LIST_CLASS,
+  OFFICIAL_PASSAGE_PANE_CLASS,
+  OFFICIAL_PASSAGE_TEXT_CLASS,
+  OFFICIAL_QUESTION_PANEL_WITH_WIDGET_CLASS,
+  OFFICIAL_QUESTION_PANE_CLASS,
+} from "@/features/student/practice-session/practice-session-official-styles"
 import { PracticeSessionActiveDrillFooterNav } from "@/features/student/practice-session/practice-session-active-drill-footer-nav"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import { PracticeSessionHighlightPopover } from "@/features/student/practice-session/practice-session-highlight-popover"
@@ -82,8 +92,13 @@ import { PracticeSessionHeader } from "@/features/student/practice-session/pract
 import { PracticeSessionNotesPanel } from "@/features/student/practice-session/practice-session-notes-panel"
 import {
   canChangePracticeAnswer,
+  isExamChromeLayout,
+  isOfficialLayout,
+  resolveExamSessionVariant,
   type PracticeSessionVariant,
+  type PracticeToolMode,
 } from "@/features/student/practice-session/practice-session-types"
+import { useExamFullscreen, useOfficialInterfacePreference } from "@/features/student/practice-session/use-official-interface"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
 import { PracticeSessionImmersiveFrame } from "@/features/student/practice-session/practice-session-immersive-frame"
@@ -179,6 +194,7 @@ type QuestionPanelProps = {
   flagged: boolean
   onToggleFlag: () => void
   onOpenReview?: () => void
+  reviewActive?: boolean
   onOpenAccessibility?: () => void
   flagsDisabled?: boolean
   blindReviewChrome?: boolean
@@ -186,6 +202,13 @@ type QuestionPanelProps = {
   onAnswerViewChange?: (view: BlindReviewAnswerView) => void
   recommendedForBr?: boolean
   variant?: PracticeSessionVariant
+  toolMode?: PracticeToolMode
+  onHighlighter?: () => void
+  onEraser?: () => void
+  lineFocusActive?: boolean
+  onLineFocus?: () => void
+  onFullscreen?: () => void
+  fullView?: boolean
   /** Results review: disable choice selection */
   reviewChrome?: boolean
   actualOutcome?: BlindReviewAnswerOutcome
@@ -210,6 +233,7 @@ function SectionQuestionPanel({
   flagged,
   onToggleFlag,
   onOpenReview,
+  reviewActive = false,
   onOpenAccessibility,
   flagsDisabled,
   blindReviewChrome = false,
@@ -217,6 +241,13 @@ function SectionQuestionPanel({
   onAnswerViewChange,
   recommendedForBr = false,
   variant = "default",
+  toolMode,
+  onHighlighter,
+  onEraser,
+  lineFocusActive,
+  onLineFocus,
+  onFullscreen,
+  fullView = false,
   reviewChrome = false,
   actualOutcome = null,
   blindReviewOutcome = null,
@@ -236,7 +267,8 @@ function SectionQuestionPanel({
   const stemKey = regionKey(question.id, "stem")
   const stemHtml = getRegionHtml(stemKey, question.stemText ?? "")
   const isBlindReviewLayout = blindReviewChrome && variant === "blind-review"
-  const isActiveDrillLayout = variant === "active-drill"
+  const isActiveDrillLayout = isExamChromeLayout(variant)
+  const officialChrome = isOfficialLayout(variant)
   const canResetResponse =
     !reviewChrome && (selectedIndex != null || responseMasking || hasMaskedChoices)
 
@@ -296,7 +328,7 @@ function SectionQuestionPanel({
           ) : null}
         </div>
       ) : null}
-      <div className={cn(isActiveDrillLayout && ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS)}>
+      <div className={cn(isActiveDrillLayout && (officialChrome ? OFFICIAL_QUESTION_PANEL_WITH_WIDGET_CLASS : ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS))}>
         <PracticeQuestionStem
           questionNumber={questionNumber}
           regionKey={stemKey}
@@ -317,7 +349,7 @@ function SectionQuestionPanel({
             {isCorrect ? "Correct" : "Incorrect"}
           </p>
         ) : null}
-        <div className={isActiveDrillLayout ? ACTIVE_DRILL_OPTIONS_LIST_CLASS : "flex flex-col gap-2"}>
+        <div className={officialChrome ? OFFICIAL_OPTIONS_LIST_CLASS : isActiveDrillLayout ? ACTIVE_DRILL_OPTIONS_LIST_CLASS : "flex flex-col gap-2"}>
           {question.choices.map((choice, index) => (
             <LrDrillOptionRow
               key={choice.id}
@@ -345,18 +377,27 @@ function SectionQuestionPanel({
             />
           ))}
           {isActiveDrillLayout && canResetResponse ? (
-            <PracticeSessionResetResponseButton onClick={handleResetResponse} />
+            <PracticeSessionResetResponseButton variant={variant} onClick={handleResetResponse} />
           ) : null}
         </div>
         {isActiveDrillLayout ? (
           <PracticeSessionSideWidget
+            variant={variant}
             flagged={flagged}
             onToggleFlag={onToggleFlag}
             flagsDisabled={flagsDisabled}
             responseMasking={responseMasking}
             onToggleResponseMasking={toggleResponseMasking}
             onReview={onOpenReview}
+            reviewActive={reviewActive}
             onAccessibility={onOpenAccessibility}
+            toolMode={toolMode}
+            onHighlighter={onHighlighter}
+            onEraser={onEraser}
+            lineFocusActive={lineFocusActive}
+            onLineFocus={onLineFocus}
+            onFullscreen={onFullscreen}
+            fullView={fullView}
           />
         ) : null}
       </div>
@@ -414,6 +455,10 @@ function SectionSessionPage() {
   const [reviewSidePanel, setReviewSidePanel] = useState<PracticeReviewSidePanel>(null)
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false)
   const [reviewPanelOpen, setReviewPanelOpen] = useState(false)
+  const [passageOnlyView, setPassageOnlyView] = useState(false)
+  const [lineFocus, setLineFocus] = useState(false)
+  const { officialInterface, setOfficialInterface } = useOfficialInterfacePreference()
+  const { isFullscreen, toggleExamFullscreen } = useExamFullscreen()
   const [timeUpFlow, setTimeUpFlow] = useState<{
     step: PracticePrepTestSectionTimeUpStep
     predictedScore: number | null
@@ -1332,11 +1377,11 @@ function SectionSessionPage() {
 
   const useBlindReviewLayout = blindReviewMode || postCompleteBlindReview || resultsReviewMode
   const useActiveDrillLayout = !useBlindReviewLayout
-  const sessionVariant: PracticeSessionVariant = useBlindReviewLayout
-    ? "blind-review"
-    : useActiveDrillLayout
-      ? "active-drill"
-      : "default"
+  const sessionVariant: PracticeSessionVariant = resolveExamSessionVariant({
+    blindReview: useBlindReviewLayout,
+    officialInterface: useActiveDrillLayout && officialInterface,
+  })
+  const officialChrome = isOfficialLayout(sessionVariant)
   const prepTestLabel = prepTestHeaderLabel(
     sectionSession?.section.moduleId ?? null,
     metadata?.prepTestTitle ?? sectionSession?.section.prepTestTitle ?? null,
@@ -1366,6 +1411,9 @@ function SectionSessionPage() {
         useActiveDrillLayout ? ACTIVE_DRILL_FINISH_BUTTON_CLASS : SESSION_FINISH_BUTTON_CLASS
       }
       iconTrigger={useActiveDrillLayout}
+      variant={sessionVariant}
+      officialInterface={officialInterface}
+      onOfficialInterfaceChange={setOfficialInterface}
       onSubmitSection={() => setSubmitModalOpen(true)}
       onExit={handleExitSession}
     />
@@ -1449,6 +1497,7 @@ function SectionSessionPage() {
             : "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden",
           timeUpFlow != null && "practice-session-body--scroll-locked",
         )}
+        data-color-scheme={highlights.accessibilitySettings.colorScheme}
         style={useBlindReviewLayout ? undefined : highlights.contentStyle}
       >
         {showNotesPanel && useBlindReviewLayout ? (
@@ -1485,7 +1534,8 @@ function SectionSessionPage() {
                 flagged={current ? questionFlags.isFlagged(current.id) : false}
                 onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
                 flagsDisabled={sessionCompleted || blindReviewMode || resultsReviewMode}
-                onOpenReview={useActiveDrillLayout ? () => setReviewPanelOpen(true) : undefined}
+                onOpenReview={useActiveDrillLayout ? () => setReviewPanelOpen((open) => !open) : undefined}
+                reviewActive={reviewPanelOpen}
                 onOpenAccessibility={useActiveDrillLayout ? accessibilityPanel.openPanel : undefined}
                 blindReviewChrome={useBlindReviewLayout}
                 answerView={answerViewTab}
@@ -1575,7 +1625,9 @@ function SectionSessionPage() {
               cn(
                 useBlindReviewLayout
                   ? BLIND_REVIEW_BODY_GRID_CLASS
-                  : useActiveDrillLayout
+                  : officialChrome
+                    ? cn(OFFICIAL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1 lg:pr-0")
+                    : useActiveDrillLayout
                     ? ACTIVE_DRILL_BODY_GRID_CLASS
                     : "lg:grid-cols-2 lg:divide-x divide-[#dfe1e7]",
               ),
@@ -1585,9 +1637,12 @@ function SectionSessionPage() {
               ref={passagePaneRef}
               className={cn(
                 "practice-session-pane min-h-0",
+                officialChrome && lineFocus && "practice-session-pane--line-focus",
                 useBlindReviewLayout
                   ? BLIND_REVIEW_PASSAGE_PANEL_CLASS
-                  : useActiveDrillLayout
+                  : officialChrome
+                    ? OFFICIAL_PASSAGE_PANE_CLASS
+                    : useActiveDrillLayout
                     ? ACTIVE_DRILL_PASSAGE_PANE_CLASS
                     : "border-[#dfe1e7] border-b p-5 lg:border-b-0",
               )}
@@ -1605,7 +1660,9 @@ function SectionSessionPage() {
                 className={
                   useBlindReviewLayout
                     ? BLIND_REVIEW_PASSAGE_TEXT_CLASS
-                    : useActiveDrillLayout
+                    : officialChrome
+                      ? OFFICIAL_PASSAGE_TEXT_CLASS
+                      : useActiveDrillLayout
                       ? ACTIVE_DRILL_PASSAGE_TEXT_CLASS
                       : undefined
                 }
@@ -1615,9 +1672,12 @@ function SectionSessionPage() {
               ref={questionPaneRef}
               className={cn(
                 "practice-session-pane min-h-0",
+                officialChrome && passageOnlyView && "hidden",
                 useBlindReviewLayout
                   ? BLIND_REVIEW_QUESTION_PANEL_CLASS
-                  : useActiveDrillLayout
+                  : officialChrome
+                    ? OFFICIAL_QUESTION_PANE_CLASS
+                    : useActiveDrillLayout
                     ? ACTIVE_DRILL_QUESTION_PANE_CLASS
                     : "gap-4 border-[#dfe1e7] p-5",
               )}
@@ -1638,13 +1698,21 @@ function SectionSessionPage() {
                 flagged={current ? questionFlags.isFlagged(current.id) : false}
                 onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
                 flagsDisabled={sessionCompleted || blindReviewMode || resultsReviewMode}
-                onOpenReview={useActiveDrillLayout ? () => setReviewPanelOpen(true) : undefined}
+                onOpenReview={useActiveDrillLayout ? () => setReviewPanelOpen((open) => !open) : undefined}
+                reviewActive={reviewPanelOpen}
                 onOpenAccessibility={useActiveDrillLayout ? accessibilityPanel.openPanel : undefined}
                 blindReviewChrome={useBlindReviewLayout}
                 answerView={answerViewTab}
                 onAnswerViewChange={handleAnswerViewChange}
                 recommendedForBr={recommendedForBr}
                 variant={sessionVariant}
+                toolMode={highlights.toolMode}
+                onHighlighter={() => highlights.selectColor("yellow")}
+                onEraser={highlights.selectEraser}
+                lineFocusActive={lineFocus}
+                onLineFocus={() => setLineFocus((value) => !value)}
+                onFullscreen={toggleExamFullscreen}
+                fullView={isFullscreen}
                 reviewChrome={resultsReviewMode}
                 actualOutcome={actualOutcome}
                 blindReviewOutcome={blindReviewOutcome}
@@ -1662,7 +1730,9 @@ function SectionSessionPage() {
           "practice-session-footer relative z-10",
           useBlindReviewLayout
             ? BLIND_REVIEW_FOOTER_CLASS
-            : useActiveDrillLayout
+            : officialChrome
+              ? OFFICIAL_FOOTER_CLASS
+              : useActiveDrillLayout
               ? ACTIVE_DRILL_FOOTER_CLASS
               : "flex shrink-0 items-center justify-between gap-3 border-t border-[#dfe1e7] bg-background px-6 py-3 md:gap-4 md:px-6",
         )}
@@ -1796,6 +1866,8 @@ function SectionSessionPage() {
           questionCount={useActiveDrillLayout ? questions.length : undefined}
           finishButton={finishButton}
           onClose={handleExitSession}
+          passageOnlyView={passageOnlyView}
+          onPassageOnlyViewChange={setPassageOnlyView}
         />
       ) : null}
       {sessionInnerContent}
@@ -1845,19 +1917,24 @@ function SectionSessionPage() {
           ) : null}
           <div
             className={cn(
-              "practice-session-card practice-session-card--active-drill relative flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+              officialChrome
+                ? OFFICIAL_CARD_CLASS
+                : "practice-session-card practice-session-card--active-drill relative flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
               timeUpFlow != null && "overflow-hidden",
             )}
           >
             {sessionCardContent}
             <PracticeSessionReviewPanel
               open={reviewPanelOpen}
+              variant={sessionVariant}
               questions={questions}
               currentIndex={safeIndex}
               answersByQuestion={answersByQuestion}
               isFlagged={questionFlags.isFlagged}
               onSelectQuestion={setQIndex}
               onClose={() => setReviewPanelOpen(false)}
+              onFinish={officialChrome ? () => setSubmitModalOpen(true) : undefined}
+              showPassageBreaks={sectionType === "RC"}
             />
             <PracticeSessionAccessibilityPanel
               open={accessibilityPanel.open}

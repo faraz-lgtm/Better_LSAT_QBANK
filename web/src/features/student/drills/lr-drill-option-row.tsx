@@ -11,6 +11,15 @@ import {
   ACTIVE_DRILL_OPTION_ROW_SELECTED_CLASS,
   ACTIVE_DRILL_OPTION_ROW_UNSELECTED_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import {
+  OFFICIAL_OPTION_LETTER_SELECTED_CLASS,
+  OFFICIAL_OPTION_LETTER_UNSELECTED_CLASS,
+  OFFICIAL_OPTION_ROW_MASKED_CLASS,
+  OFFICIAL_OPTION_ROW_SELECTED_CLASS,
+  OFFICIAL_OPTION_ROW_UNSELECTED_CLASS,
+  OFFICIAL_OPTION_SELECTED_BAR_CLASS,
+  OFFICIAL_OPTION_TEXT_CLASS,
+} from "@/features/student/practice-session/practice-session-official-styles"
 import type { BlindReviewAnswerView } from "@/features/student/practice-session/practice-blind-review-answer-toggle"
 import {
   BLIND_REVIEW_OPTION_LETTER_SELECTED_ACTUAL_CLASS,
@@ -20,8 +29,8 @@ import {
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import { ReviewIdeaIcon } from "@/features/student/practice-session/review-idea-icon"
-import type { RegionKey } from "@/features/student/practice-session/practice-session-types"
-import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
+import type { PracticeSessionVariant, RegionKey } from "@/features/student/practice-session/practice-session-types"
+import { isOfficialLayout } from "@/features/student/practice-session/practice-session-types"
 import { HtmlContent } from "@/lib/html/html-content"
 import { cn } from "@/lib/utils"
 
@@ -88,6 +97,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
   onToggleExplanation,
 }: LrDrillOptionRowProps) {
   const letter = letters[index] ?? String(index + 1)
+  const officialChrome = isOfficialLayout(variant)
   const isActiveDrill = variant === "active-drill"
   const isBlindReview = variant === "blind-review"
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null)
@@ -110,8 +120,10 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
       className={cn(
         "min-w-0 flex-1",
         isActiveDrill
-          ? "text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#0d0d12]"
-          : isBlindReview
+          ? "text-sm font-normal leading-[1.5] tracking-[0.28px] text-[color:inherit]"
+          : officialChrome
+            ? "text-[14px] font-normal leading-5 text-[#2c3143]"
+            : isBlindReview
             ? "text-[1em] leading-[1.5] tracking-[0.32px] text-[color:inherit]"
             : "pt-0.5",
         hidden && isBlindReview && "line-through opacity-50",
@@ -237,6 +249,47 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
             <HtmlContent html={explanationHtml ?? ""} className="explanation-option-body text-[#0d0d12]" />
           </div>
         ) : null}
+      </div>
+    )
+  }
+
+  if (officialChrome) {
+    return (
+      <div
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-pressed={selected}
+        aria-disabled={disabled}
+        onPointerDown={handlePointerDown}
+        onClick={handleSelect}
+        onKeyDown={handleKeyDown}
+        className={cn(
+          "text-left",
+          masked
+            ? OFFICIAL_OPTION_ROW_MASKED_CLASS
+            : selected
+              ? OFFICIAL_OPTION_ROW_SELECTED_CLASS
+              : OFFICIAL_OPTION_ROW_UNSELECTED_CLASS,
+          disabled ? "cursor-default" : "cursor-pointer",
+        )}
+        aria-label={
+          masked
+            ? `Answer choice ${letter}, masked`
+            : maskingMode
+              ? `Answer choice ${letter}, click to mask`
+              : undefined
+        }
+      >
+        {selected && !masked ? <span aria-hidden className={OFFICIAL_OPTION_SELECTED_BAR_CLASS} /> : null}
+        <span
+          aria-hidden={masked || undefined}
+          className={selected && !masked ? OFFICIAL_OPTION_LETTER_SELECTED_CLASS : OFFICIAL_OPTION_LETTER_UNSELECTED_CLASS}
+        >
+          {letter}
+        </span>
+        <div aria-hidden={masked || undefined} className={OFFICIAL_OPTION_TEXT_CLASS}>
+          {choiceContent}
+        </div>
       </div>
     )
   }

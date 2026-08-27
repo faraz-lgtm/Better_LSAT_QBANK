@@ -20,6 +20,14 @@ import {
   ACTIVE_DRILL_PASSAGE_TEXT_CLASS,
   ACTIVE_DRILL_QUESTION_PANE_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import {
+  OFFICIAL_BODY_GRID_CLASS,
+  OFFICIAL_CARD_CLASS,
+  OFFICIAL_FOOTER_CLASS,
+  OFFICIAL_PASSAGE_PANE_CLASS,
+  OFFICIAL_PASSAGE_TEXT_CLASS,
+  OFFICIAL_QUESTION_PANE_CLASS,
+} from "@/features/student/practice-session/practice-session-official-styles"
 import { PracticeSessionActiveDrillFooterNav } from "@/features/student/practice-session/practice-session-active-drill-footer-nav"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import { PracticeSessionHighlightPopover } from "@/features/student/practice-session/practice-session-highlight-popover"
@@ -32,6 +40,8 @@ import { resolvePracticeSessionQuestionNavOutcome } from "@/features/student/pra
 import { PracticeSessionReviewPanel } from "@/features/student/practice-session/practice-session-review-panel"
 import { usePracticeSessionAccessibilityPanel } from "@/features/student/practice-session/use-practice-session-accessibility-panel"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
+import { isOfficialLayout, resolveExamSessionVariant } from "@/features/student/practice-session/practice-session-types"
+import { useExamFullscreen, useOfficialInterfacePreference } from "@/features/student/practice-session/use-official-interface"
 import { toggleFlaggedId } from "@/features/student/practice-session/practice-question-flags"
 import { usePracticeSessionPauseModal } from "@/features/student/practice-session/use-practice-session-pause-modal"
 import {
@@ -112,6 +122,10 @@ function GuestDiagnosticExamLayout({
   const [qIndex, setQIndex] = useState(1)
   const [findQuery, setFindQuery] = useState("")
   const [reviewPanelOpen, setReviewPanelOpen] = useState(false)
+  const [passageOnlyView, setPassageOnlyView] = useState(false)
+  const [lineFocus, setLineFocus] = useState(false)
+  const { officialInterface, setOfficialInterface } = useOfficialInterfacePreference()
+  const { isFullscreen, toggleExamFullscreen } = useExamFullscreen()
   const [submitModalOpen, setSubmitModalOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [revealedByQuestion, setRevealedByQuestion] = useState<Record<string, boolean>>({})
@@ -234,10 +248,18 @@ function GuestDiagnosticExamLayout({
   }, [canSelectAnswers, current, isTesterMode, revealedByQuestion])
 
   const headerTitle = "LSAT Praxis Assessment"
+  const sessionVariant = resolveExamSessionVariant({
+    blindReview: false,
+    officialInterface,
+  })
+  const officialChrome = isOfficialLayout(sessionVariant)
 
   const finishButton = isPostResultsMode ? (
     <PracticeSessionFinishMenu
       iconTrigger
+      variant={sessionVariant}
+      officialInterface={officialInterface}
+      onOfficialInterfaceChange={setOfficialInterface}
       submitLabel="Back to Results"
       buttonClassName={ACTIVE_DRILL_FINISH_BUTTON_CLASS}
       onSubmitSection={() => (onExitReview ? onExitReview() : navigate(-1))}
@@ -247,6 +269,9 @@ function GuestDiagnosticExamLayout({
     <PracticeSessionFinishMenu
       disabled={!interactive}
       iconTrigger
+      variant={sessionVariant}
+      officialInterface={officialInterface}
+      onOfficialInterfaceChange={setOfficialInterface}
       submitLabel="Submit Test"
       buttonClassName={ACTIVE_DRILL_FINISH_BUTTON_CLASS}
       onSubmitSection={() => setSubmitModalOpen(true)}
@@ -278,13 +303,15 @@ function GuestDiagnosticExamLayout({
   return (
     <div
       className={cn(
-        "practice-session-card practice-session-card--active-drill relative flex h-full max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+        officialChrome
+          ? OFFICIAL_CARD_CLASS
+          : "practice-session-card practice-session-card--active-drill relative flex h-full max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
         !canNavigate && "pointer-events-none select-none",
         className,
       )}
     >
       <PracticeSessionHeader
-        variant="active-drill"
+        variant={sessionVariant}
         title={headerTitle}
         findQuery={findQuery}
         onFindQueryChange={canNavigate ? setFindQuery : () => undefined}
@@ -312,19 +339,31 @@ function GuestDiagnosticExamLayout({
         questionCount={questions.length}
         finishButton={finishButton}
         onClose={isPostResultsMode ? (onExitReview ?? (() => navigate(-1))) : handleSaveAndExit}
+        passageOnlyView={passageOnlyView}
+        onPassageOnlyViewChange={setPassageOnlyView}
       />
 
       <div
         className="practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden"
+        data-color-scheme={highlights.accessibilitySettings.colorScheme}
         style={highlights.contentStyle}
       >
         <div
           ref={sessionBodyRef}
-          className={cn("grid min-h-0 min-w-0 flex-1 grid-cols-1 overflow-hidden", ACTIVE_DRILL_BODY_GRID_CLASS)}
+          className={cn(
+            "grid min-h-0 min-w-0 flex-1 grid-cols-1 overflow-hidden",
+            officialChrome
+              ? cn(OFFICIAL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1 lg:pr-0")
+              : ACTIVE_DRILL_BODY_GRID_CLASS,
+          )}
         >
           <div
             ref={passagePaneRef}
-            className={cn("practice-session-pane min-h-0 overflow-y-auto", ACTIVE_DRILL_PASSAGE_PANE_CLASS)}
+            className={cn(
+              "practice-session-pane min-h-0 overflow-y-auto",
+              officialChrome && lineFocus && "practice-session-pane--line-focus",
+              officialChrome ? OFFICIAL_PASSAGE_PANE_CLASS : ACTIVE_DRILL_PASSAGE_PANE_CLASS,
+            )}
           >
             <PracticeAnnotatedContent
               regionKey={passageKey}
@@ -333,15 +372,16 @@ function GuestDiagnosticExamLayout({
               toolMode={highlights.toolMode}
               onMouseUp={canNavigate ? highlights.handleContentMouseUp : () => undefined}
               onClickCapture={canNavigate ? highlights.handleContentClick : () => undefined}
-              className={ACTIVE_DRILL_PASSAGE_TEXT_CLASS}
+              className={officialChrome ? OFFICIAL_PASSAGE_TEXT_CLASS : ACTIVE_DRILL_PASSAGE_TEXT_CLASS}
             />
           </div>
           <div
             ref={questionPaneRef}
             className={cn(
               "practice-session-pane min-h-0 overflow-y-auto",
+              officialChrome && passageOnlyView && "hidden",
               questionRevealed && explanationHtml ? "practice-session-pane--scroll-visible" : null,
-              ACTIVE_DRILL_QUESTION_PANE_CLASS,
+              officialChrome ? OFFICIAL_QUESTION_PANE_CLASS : ACTIVE_DRILL_QUESTION_PANE_CLASS,
             )}
           >
             <PracticeDrillQuestionPanel
@@ -360,9 +400,17 @@ function GuestDiagnosticExamLayout({
               flagged={isFlagged(current.id)}
               onToggleFlag={() => toggleFlag(current.id)}
               flagsDisabled={!canNavigate}
-              onOpenReview={canNavigate ? () => setReviewPanelOpen(true) : undefined}
+              onOpenReview={canNavigate ? () => setReviewPanelOpen((open) => !open) : undefined}
+              reviewActive={reviewPanelOpen}
               onOpenAccessibility={canNavigate ? accessibilityPanel.openPanel : undefined}
-              variant="active-drill"
+              variant={sessionVariant}
+              toolMode={highlights.toolMode}
+              onHighlighter={() => highlights.selectColor("yellow")}
+              onEraser={highlights.selectEraser}
+              lineFocusActive={lineFocus}
+              onLineFocus={() => setLineFocus((value) => !value)}
+              onFullscreen={toggleExamFullscreen}
+              fullView={isFullscreen}
               choicesDisabled={!canSelectAnswers || questionRevealed}
             />
             {questionRevealed && explanationUnlocked && explanationHtml ? (
@@ -396,13 +444,13 @@ function GuestDiagnosticExamLayout({
         </div>
       </div>
 
-      <footer className={cn("practice-session-footer relative z-10", ACTIVE_DRILL_FOOTER_CLASS)}>
+      <footer className={cn("practice-session-footer relative z-10", officialChrome ? OFFICIAL_FOOTER_CLASS : ACTIVE_DRILL_FOOTER_CLASS)}>
         <PracticeSessionActiveDrillFooterNav
           questions={questions}
           safeIndex={safeIndex}
           answersByQuestion={answersByQuestion}
           isFlagged={isFlagged}
-          variant="active-drill"
+          variant={sessionVariant}
           outcomeForQuestion={
             isPostResultsMode
               ? (questionId) => {
@@ -423,12 +471,15 @@ function GuestDiagnosticExamLayout({
 
       <PracticeSessionReviewPanel
         open={reviewPanelOpen}
+        variant={sessionVariant}
         questions={questions}
         currentIndex={safeIndex}
         answersByQuestion={answersByQuestion}
         isFlagged={isFlagged}
         onSelectQuestion={setQIndex}
         onClose={() => setReviewPanelOpen(false)}
+        onFinish={officialChrome ? () => setSubmitModalOpen(true) : undefined}
+        showPassageBreaks
       />
       <PracticeSessionAccessibilityPanel
         open={accessibilityPanel.open}

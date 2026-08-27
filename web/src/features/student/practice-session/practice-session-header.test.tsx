@@ -116,3 +116,38 @@ describe("PracticeSessionHeader LSAT default view", () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 })
+
+describe("PracticeSessionHeader official view", () => {
+  it("renders LawHub chrome with Directions, Passage Only View, and title below the utility row", () => {
+    const { container } = render(
+      <PracticeSessionHeader
+        variant="official"
+        title="Test 123"
+        findQuery=""
+        onFindQueryChange={() => undefined}
+        {...highlightHandlers}
+        timerDisplaySeconds={1940}
+        timerPaused={false}
+        onTimerPauseRequest={() => undefined}
+        timerProgress={0.1}
+        questionProgressLabel="1 of 26"
+        questionNumber={1}
+        questionCount={26}
+        onClose={() => undefined}
+        finishButton={<PracticeSessionFinishMenu iconTrigger variant="official" onSubmitSection={() => undefined} onExit={() => undefined} />}
+      />,
+    )
+
+    expect(screen.getByRole("button", { name: "Directions" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Passage Only View" })).toBeInTheDocument()
+    expect(screen.getByPlaceholderText("Find Text, Type Here")).toBeInTheDocument()
+    expect(screen.queryByText("Time Left")).not.toBeInTheDocument()
+    expect(screen.getByText("32:20")).toBeInTheDocument()
+    expect(container.querySelector('img[src="/figma/exam-official/close.svg"]')).toBeInTheDocument()
+    expect(container.querySelector('img[src="/figma/exam-official/search.svg"]')).toBeInTheDocument()
+    const title = screen.getByText("Test 123")
+    expect(title).toHaveClass("text-[24px]", "leading-8")
+    expect(title.parentElement).toHaveClass("h-[56px]", "px-4")
+    expect(title.compareDocumentPosition(screen.getByPlaceholderText("Find Text, Type Here")) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy()
+  })
+})

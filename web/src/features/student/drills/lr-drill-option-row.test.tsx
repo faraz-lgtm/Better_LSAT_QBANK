@@ -103,6 +103,23 @@ describe("LrDrillOptionRow", () => {
     expect(letter).not.toHaveClass("rounded-full")
   })
 
+  it("marks unselected LSAT cards so white-on-black can restyle them", () => {
+    const { container } = render(
+      <LrDrillOptionRow
+        index={0}
+        html="<p>Choice A</p>"
+        selected={false}
+        onSelect={() => undefined}
+        variant="active-drill"
+        showSideAction={false}
+      />,
+    )
+
+    expect(container.firstChild).toHaveClass("practice-session-choice--unselected")
+    expect(container.firstChild).not.toHaveClass("practice-session-choice--selected")
+    expect(screen.getByText("Choice A").closest(".practice-session-content")).toHaveClass("text-[color:inherit]")
+  })
+
   it("applies the Figma 20280:108037 frost hatch without hiding choice text", () => {
     const { container } = render(
       <LrDrillOptionRow
@@ -121,5 +138,41 @@ describe("LrDrillOptionRow", () => {
     expect(screen.getByRole("button", { name: "Answer choice B, masked" })).toBeInTheDocument()
     expect(screen.getByText("B")).toBeInTheDocument()
     expect(screen.getByText("Choice B")).toBeInTheDocument()
+  })
+
+  it("uses Figma 20243:23534 yellow selected chrome with a left bar only", () => {
+    const { container } = render(
+      <LrDrillOptionRow
+        index={2}
+        html="<p>Choice C</p>"
+        selected
+        onSelect={() => undefined}
+        variant="official"
+        showSideAction={false}
+      />,
+    )
+
+    expect(container.firstChild).toHaveClass("bg-[#fdfac4]", "relative")
+    expect(container.firstChild?.firstElementChild).toHaveClass("w-[3px]", "absolute", "left-0", "bg-[#12162a]")
+    const letter = screen.getByText("C")
+    expect(letter).toHaveClass("w-[60px]", "min-h-[60px]", "bg-[#fdfac4]", "text-[#2c3143]", "text-[28px]")
+    expect(letter).not.toHaveClass("bg-white")
+    expect(letter.nextElementSibling).toHaveClass("py-2", "pl-1.5", "pr-3", "min-h-[60px]")
+  })
+
+  it("uses a white 60px letter cell on the gray unselected official row", () => {
+    const { container } = render(
+      <LrDrillOptionRow
+        index={0}
+        html="<p>Choice A</p>"
+        selected={false}
+        onSelect={() => undefined}
+        variant="official"
+        showSideAction={false}
+      />,
+    )
+
+    expect(container.firstChild).toHaveClass("bg-[#f2f3f8]")
+    expect(screen.getByText("A")).toHaveClass("w-[60px]", "bg-white", "border-[#f2f3f8]", "text-[#50577b]")
   })
 })

@@ -139,8 +139,19 @@ function SideWidgetAccessibilityIcon({ className }: SideWidgetIconProps) {
   )
 }
 
-/** Figma `20268:102762` — flag */
-function SideWidgetFlagIcon({ className }: SideWidgetIconProps) {
+/** Figma `20268:102762` — flag; official flagged uses LawHub filled pennant `20257:89990` */
+function SideWidgetFlagIcon({ className, active = false }: SideWidgetIconProps & { active?: boolean }) {
+  if (active) {
+    return (
+      <SideWidgetFigmaIcon
+        src="/figma/exam-official/review-flag.svg"
+        size={20}
+        glyphWidth={16}
+        glyphHeight={18}
+        className={className}
+      />
+    )
+  }
   return (
     <SideWidgetFigmaIcon src={`${EXAM_SIDE_WIDGET_FIGMA}/flag.svg`} size={20} className={className} />
   )
@@ -152,6 +163,33 @@ function SideWidgetResponseMaskingIcon({ className }: SideWidgetIconProps) {
     <SideWidgetFigmaIcon
       src={`${EXAM_SIDE_WIDGET_FIGMA}/eye-slash.svg`}
       size={20}
+      className={className}
+    />
+  )
+}
+
+function SideWidgetExpandIcon({ className }: SideWidgetIconProps) {
+  return (
+    <SideWidgetFigmaIcon src="/figma/exam-official/arrows-pointing-out.svg" size={20} className={className} />
+  )
+}
+
+function SideWidgetArrowsPointingInIcon({ className }: SideWidgetIconProps) {
+  return (
+    <SideWidgetFigmaIcon src="/figma/exam-official/arrows-pointing-in.svg" size={20} className={className} />
+  )
+}
+
+function SideWidgetHighlighterIcon({ className }: SideWidgetIconProps) {
+  return <SideWidgetFigmaIcon src="/figma/exam-official/pen.svg" size={20} className={className} />
+}
+
+function SideWidgetEraserIcon({ className }: SideWidgetIconProps) {
+  return (
+    <SideWidgetFigmaIcon
+      src={`${EXAM_SIDE_WIDGET_FIGMA}/download-circle-01.svg`}
+      size={20}
+      rotate="90"
       className={className}
     />
   )
@@ -191,10 +229,14 @@ function SideWidgetOpenMenuIcon({ className, ...props }: SideWidgetIconProps) {
 
 export {
   SideWidgetAccessibilityIcon,
+  SideWidgetArrowsPointingInIcon,
   SideWidgetCollapseDockIcon,
   SideWidgetCollapseMenuIcon,
+  SideWidgetEraserIcon,
+  SideWidgetExpandIcon,
   SideWidgetFlagIcon,
   SideWidgetFullScreenIcon,
+  SideWidgetHighlighterIcon,
   SideWidgetMedSizeIcon,
   SideWidgetOpenMenuIcon,
   SideWidgetResponseMaskingIcon,

@@ -11,6 +11,15 @@ describe("PracticeSessionResetResponseButton", () => {
       "h-[34px]",
       "rounded-[6px]",
       "bg-[#f6f8fa]",
+      "practice-session-reset-response",
     )
+  })
+
+  it("uses the official bordered gray pill in the Figma 20243:23534 reset tray", () => {
+    render(<PracticeSessionResetResponseButton variant="official" onClick={() => undefined} />)
+
+    const button = screen.getByRole("button", { name: "Reset Response" })
+    expect(button).toHaveClass("h-[34px]", "border-[#d4d7e2]", "bg-[#eaecf3]", "text-[#2c3143]", "rounded-[6px]")
+    expect(button.parentElement).toHaveClass("h-[46px]", "justify-end", "pt-3")
   })
 })

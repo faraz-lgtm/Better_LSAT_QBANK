@@ -5,6 +5,14 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { isQuestionRecommendedForBlindReview } from "@/features/student/blind-review/blind-review-navigation"
 import type { DrillQuestion, DrillSessionResponse } from "@/features/student/drills/drill-types"
 import { ACTIVE_DRILL_BODY_GRID_CLASS, ACTIVE_DRILL_FINISH_BUTTON_CLASS, ACTIVE_DRILL_FOOTER_CLASS, ACTIVE_DRILL_PASSAGE_PANE_CLASS, ACTIVE_DRILL_PASSAGE_TEXT_CLASS, ACTIVE_DRILL_QUESTION_PANE_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import {
+  OFFICIAL_BODY_GRID_CLASS,
+  OFFICIAL_CARD_CLASS,
+  OFFICIAL_FOOTER_CLASS,
+  OFFICIAL_PASSAGE_PANE_CLASS,
+  OFFICIAL_PASSAGE_TEXT_CLASS,
+  OFFICIAL_QUESTION_PANE_CLASS,
+} from "@/features/student/practice-session/practice-session-official-styles"
 import { PracticeSessionActiveDrillFooterNav } from "@/features/student/practice-session/practice-session-active-drill-footer-nav"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import { PracticeSessionHighlightPopover } from "@/features/student/practice-session/practice-session-highlight-popover"
@@ -40,8 +48,11 @@ import { PracticeSessionPauseModal } from "@/features/student/practice-session/p
 import { PracticeSessionNotesPanel } from "@/features/student/practice-session/practice-session-notes-panel"
 import {
   canChangePracticeAnswer,
+  isOfficialLayout,
+  resolveExamSessionVariant,
   type PracticeSessionVariant,
 } from "@/features/student/practice-session/practice-session-types"
+import { useExamFullscreen, useOfficialInterfacePreference } from "@/features/student/practice-session/use-official-interface"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
@@ -115,6 +126,10 @@ function DrillSessionPage() {
   const [answerViewTab, setAnswerViewTab] = useState<BlindReviewAnswerView>("blind_review")
   const [notesOpen, setNotesOpen] = useState(false)
   const [reviewPanelOpen, setReviewPanelOpen] = useState(false)
+  const [passageOnlyView, setPassageOnlyView] = useState(false)
+  const [lineFocus, setLineFocus] = useState(false)
+  const { officialInterface, setOfficialInterface } = useOfficialInterfacePreference()
+  const { isFullscreen, toggleExamFullscreen } = useExamFullscreen()
   const [actualAnswersByQuestion, setActualAnswersByQuestion] = useState<Record<string, QuestionAnswerState>>({})
 
   const drillBlindReviewActiveKey = sessionId ? `drill-br-active-${sessionId}` : null
@@ -622,11 +637,11 @@ function DrillSessionPage() {
   const blindReviewMode = reviewAfterComplete
   const useBlindReviewLayout = blindReviewMode
   const useActiveDrillLayout = !useBlindReviewLayout
-  const sessionVariant: PracticeSessionVariant = useBlindReviewLayout
-    ? "blind-review"
-    : useActiveDrillLayout
-      ? "active-drill"
-      : "default"
+  const sessionVariant: PracticeSessionVariant = resolveExamSessionVariant({
+    blindReview: useBlindReviewLayout,
+    officialInterface: useActiveDrillLayout && officialInterface,
+  })
+  const officialChrome = isOfficialLayout(sessionVariant)
   const timerBudgetSeconds = resolveTimerBudgetSeconds({
     timing: metadata?.timing,
     questionCount: questions.length,
@@ -670,6 +685,9 @@ function DrillSessionPage() {
       submitLabel="Submit Drill"
       buttonClassName={useActiveDrillLayout ? ACTIVE_DRILL_FINISH_BUTTON_CLASS : undefined}
       iconTrigger={useActiveDrillLayout}
+      variant={sessionVariant}
+      officialInterface={officialInterface}
+      onOfficialInterfaceChange={setOfficialInterface}
       onSubmitSection={requestSubmitDrill}
       onExit={leaveDrillSession}
     />
@@ -716,6 +734,7 @@ function DrillSessionPage() {
             ? BLIND_REVIEW_BODY_CLASS
             : "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden"
         }
+        data-color-scheme={highlights.accessibilitySettings.colorScheme}
         style={useBlindReviewLayout ? undefined : highlights.contentStyle}
       >
         {showNotesPanel && useBlindReviewLayout ? (
@@ -777,6 +796,8 @@ function DrillSessionPage() {
               "grid min-h-0 min-w-0 flex-1 grid-cols-1 overflow-hidden",
                 useBlindReviewLayout
                   ? BLIND_REVIEW_BODY_GRID_CLASS
+                  : officialChrome
+                    ? cn(OFFICIAL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1 lg:pr-0")
                   : useActiveDrillLayout
                   ? ACTIVE_DRILL_BODY_GRID_CLASS
                   : "lg:grid-cols-2 lg:divide-x divide-[#dfe1e7]",
@@ -785,8 +806,11 @@ function DrillSessionPage() {
             <div
               className={cn(
                 "practice-session-pane min-h-0",
+                officialChrome && lineFocus && "practice-session-pane--line-focus",
                 useBlindReviewLayout
                   ? BLIND_REVIEW_PASSAGE_PANEL_CLASS
+                  : officialChrome
+                    ? OFFICIAL_PASSAGE_PANE_CLASS
                   : useActiveDrillLayout
                     ? ACTIVE_DRILL_PASSAGE_PANE_CLASS
                     : "border-[#dfe1e7] border-b p-5 lg:border-b-0",
@@ -805,6 +829,8 @@ function DrillSessionPage() {
                 className={
                   useBlindReviewLayout
                     ? BLIND_REVIEW_PASSAGE_TEXT_CLASS
+                    : officialChrome
+                      ? OFFICIAL_PASSAGE_TEXT_CLASS
                     : useActiveDrillLayout
                       ? ACTIVE_DRILL_PASSAGE_TEXT_CLASS
                       : undefined
@@ -814,8 +840,11 @@ function DrillSessionPage() {
             <div
               className={cn(
                 "practice-session-pane min-h-0",
+                officialChrome && passageOnlyView && "hidden",
                 useBlindReviewLayout
                   ? BLIND_REVIEW_QUESTION_PANEL_CLASS
+                  : officialChrome
+                    ? OFFICIAL_QUESTION_PANE_CLASS
                   : useActiveDrillLayout
                     ? ACTIVE_DRILL_QUESTION_PANE_CLASS
                     : "gap-4 border-[#dfe1e7] p-5",
@@ -837,9 +866,17 @@ function DrillSessionPage() {
                 flagged={current ? questionFlags.isFlagged(current.id) : false}
                 onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
                 flagsDisabled={sessionCompleted || blindReviewMode}
-                onOpenReview={useActiveDrillLayout ? () => setReviewPanelOpen(true) : undefined}
+                onOpenReview={useActiveDrillLayout ? () => setReviewPanelOpen((open) => !open) : undefined}
+                reviewActive={reviewPanelOpen}
                 onOpenAccessibility={useActiveDrillLayout ? accessibilityPanel.openPanel : undefined}
                 variant={sessionVariant}
+                toolMode={highlights.toolMode}
+                onHighlighter={() => highlights.selectColor("yellow")}
+                onEraser={highlights.selectEraser}
+                lineFocusActive={lineFocus}
+                onLineFocus={() => setLineFocus((value) => !value)}
+                onFullscreen={toggleExamFullscreen}
+                fullView={isFullscreen}
                 blindReviewChrome={blindReviewMode}
                 answerView={answerViewTab}
                 onAnswerViewChange={handleAnswerViewChange}
@@ -856,6 +893,8 @@ function DrillSessionPage() {
           "practice-session-footer relative z-10",
           useBlindReviewLayout
             ? BLIND_REVIEW_FOOTER_CLASS
+            : officialChrome
+              ? OFFICIAL_FOOTER_CLASS
             : useActiveDrillLayout
               ? ACTIVE_DRILL_FOOTER_CLASS
               : "flex shrink-0 items-center justify-between gap-3 border-t border-[#dfe1e7] bg-background px-6 py-3 md:gap-4 md:px-6",
@@ -988,6 +1027,8 @@ function DrillSessionPage() {
           questionCount={useActiveDrillLayout ? questions.length : undefined}
           finishButton={finishButton}
           onClose={leaveDrillSession}
+          passageOnlyView={passageOnlyView}
+          onPassageOnlyViewChange={setPassageOnlyView}
         />
       ) : null}
       {sessionInnerContent}
@@ -1037,18 +1078,23 @@ function DrillSessionPage() {
           ) : null}
           <div
             className={cn(
-              "practice-session-card practice-session-card--active-drill relative flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+              officialChrome
+                ? OFFICIAL_CARD_CLASS
+                : "practice-session-card practice-session-card--active-drill relative flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
             )}
           >
             {sessionCardContent}
             <PracticeSessionReviewPanel
               open={reviewPanelOpen}
+              variant={sessionVariant}
               questions={questions}
               currentIndex={safeIndex}
               answersByQuestion={answersByQuestion}
               isFlagged={questionFlags.isFlagged}
               onSelectQuestion={setQIndex}
               onClose={() => setReviewPanelOpen(false)}
+              onFinish={officialChrome ? requestSubmitDrill : undefined}
+              showPassageBreaks={sectionType === "RC"}
             />
             <PracticeSessionAccessibilityPanel
               open={accessibilityPanel.open}

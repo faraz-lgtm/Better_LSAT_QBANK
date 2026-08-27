@@ -3537,9 +3537,33 @@ section[data-lesson-section][data-variant="empty"] {
   overflow-y: auto;
 }
 
+.practice-session-card--official .practice-session-question-panel-with-widget {
+  overflow: visible;
+}
+
+.practice-session-card--official .practice-session-pane:has(.practice-session-side-widget) {
+  overflow-x: clip;
+  overflow-y: auto;
+}
+
+.practice-session-pane--line-focus {
+  background-attachment: local;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 19px,
+    #eceff3 19px,
+    #eceff3 20px
+  );
+}
+
 /* Figma `20268:102762` — tint baked-gray assets when a tool is active */
 .practice-session-side-widget button[aria-pressed="true"] img {
   filter: invert(18%) sepia(86%) saturate(2476%) hue-rotate(201deg) brightness(91%) contrast(101%);
+}
+
+.practice-session-side-widget button[aria-pressed="true"] .practice-session-side-widget__flag-active img {
+  filter: none;
 }
 
 html.practice-finish-menu-open .practice-session-question-panel-with-widget {
@@ -3561,6 +3585,24 @@ html.practice-exam-more-open .practice-session-side-widget {
 
 html.practice-exam-more-open .practice-session-question-panel-with-widget {
   padding-right: 0;
+}
+
+/* Figma `20257:89812` — pin the LawHub rail to the card edge above the Review overlay */
+.practice-session-card--official:has(.practice-session-review-panel--official) .practice-session-question-panel-with-widget {
+  position: static;
+}
+
+.practice-session-card--official:has(.practice-session-review-panel--official) .practice-session-side-widget {
+  top: 111px;
+  z-index: 30;
+}
+
+/* Figma `20257:89990` — 12-column LawHub review tiles (do not rely on Tailwind scanning a .ts const) */
+.practice-session-review-panel--official .practice-session-review-panel__grid {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-rows: 68px;
 }
 
 /* Figma `17920:11448` — session panes: fixed height, scroll without visible scrollbar */
@@ -3682,6 +3724,13 @@ html.student-shell-immersive .practice-session-card--active-drill {
   font-size: 16px;
 }
 
+html.student-shell-immersive .practice-session-card--official {
+  max-width: 1440px;
+  max-height: calc(var(--app-svh) - 32px);
+  height: 100%;
+  border-radius: 10px;
+}
+
 html.student-shell-immersive .practice-session-card--active-drill .practice-session-body {
   flex: 1 1 0%;
   min-height: 0;
@@ -3723,6 +3772,10 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
   }
 
   html.student-shell-immersive .practice-session-card--active-drill {
+    max-height: calc(var(--app-svh) - 64px);
+  }
+
+  html.student-shell-immersive .practice-session-card--official {
     max-height: calc(var(--app-svh) - 64px);
   }
 }
@@ -3775,6 +3828,52 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
   border-color: var(--practice-choice-selected-border, #0d47a1);
   background-color: var(--practice-choice-selected-bg, #edf3ff);
   color: var(--practice-accessibility-fg, inherit);
+}
+
+.practice-session-choice--unselected {
+  border-color: var(--practice-choice-unselected-border, var(--practice-panel-border, transparent));
+  background-color: var(--practice-choice-unselected-bg, var(--practice-panel-bg, #f6f8fa));
+  color: var(--practice-accessibility-fg, inherit);
+}
+
+.practice-session-body .practice-session-choice--unselected,
+.practice-session-body .practice-session-choice--selected {
+  color: var(--practice-accessibility-fg, inherit);
+}
+
+.practice-session-body .practice-session-choice--unselected .practice-session-content,
+.practice-session-body .practice-session-choice--selected .practice-session-content {
+  color: inherit;
+}
+
+.practice-session-body .practice-session-reset-response {
+  background-color: var(--practice-panel-bg, #f6f8fa);
+  color: var(--practice-panel-muted-fg, #666d80);
+}
+
+.practice-session-body .practice-session-reset-response:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--practice-panel-bg, #f6f8fa) 88%,
+    var(--practice-accessibility-fg, #0d0d12)
+  );
+}
+
+.practice-session-body[data-color-scheme="white-on-black"] .practice-session-choice--unselected {
+  background-color: #252b38;
+  border-color: #3a4252;
+  color: #ffffff;
+}
+
+.practice-session-body[data-color-scheme="white-on-black"] .practice-session-reset-response {
+  background-color: #1c2433;
+  color: #a4acb9;
+}
+
+.practice-session-body[data-color-scheme="yellow-on-navy"] .practice-session-choice--unselected {
+  background-color: #0a3a82;
+  border-color: #0a3a82;
+  color: #ffbd4c;
 }
 
 .practice-session-choice-letter--selected {
@@ -3941,12 +4040,30 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
   overflow-y: hidden;
 }
 
+/* Figma `20264:92469` — official footer pills are 28px; centered flags sit in a 13px slot above */
+.practice-session-card--official.practice-session-card--active-drill .practice-session-footer .practice-session-question-nav-grid {
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 43px;
+  height: auto;
+}
+
 .practice-session-question-nav-passage-break {
   flex: 0 0 2px;
   width: 2px;
   min-width: 2px;
   max-width: 2px;
   background-color: #9aa3b5;
+}
+
+.practice-session-card--official .practice-session-question-nav-passage-break {
+  flex: 0 0 4px;
+  width: 4px;
+  min-width: 4px;
+  max-width: 4px;
+  height: 28px;
+  align-self: flex-end;
+  background-color: #666d80;
 }
 
 .practice-session-card--active-drill .practice-session-question-nav-btn {

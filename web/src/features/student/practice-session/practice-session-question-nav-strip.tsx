@@ -5,6 +5,7 @@ import {
   type PracticeSessionQuestionNavOutcome,
 } from "@/features/student/practice-session/practice-session-question-nav-button"
 import { passageBreakAfterIndices } from "@/features/student/practice-session/question-nav-passage-breaks"
+import { OFFICIAL_PASSAGE_BREAK_CLASS } from "@/features/student/practice-session/practice-session-official-styles"
 import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
 
@@ -31,6 +32,9 @@ type PracticeSessionQuestionNavStripProps = {
 
 /** Vertical divider between RC passage question groups (LawHub-style). */
 function passageBreakClass(variant: PracticeSessionVariant): string {
+  if (variant === "official") {
+    return OFFICIAL_PASSAGE_BREAK_CLASS
+  }
   if (variant === "active-drill") {
     return "practice-session-question-nav-passage-break h-7 w-[2px] min-w-[2px] shrink-0 self-end bg-[#9aa3b5]"
   }

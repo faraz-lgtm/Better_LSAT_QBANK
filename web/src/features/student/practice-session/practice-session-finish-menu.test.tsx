@@ -81,4 +81,27 @@ describe("PracticeSessionFinishMenu", () => {
     expect(onExit).toHaveBeenCalledTimes(1)
     expect(document.documentElement.classList.contains("practice-exam-more-open")).toBe(false)
   })
+
+  it("enables Official Interface and reports the toggle change", async () => {
+    const user = userEvent.setup()
+    const onOfficialInterfaceChange = vi.fn()
+
+    render(
+      <PracticeSessionFinishMenu
+        iconTrigger
+        officialInterface={false}
+        onOfficialInterfaceChange={onOfficialInterfaceChange}
+        onSubmitSection={vi.fn()}
+        onExit={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "More options" }))
+    const toggle = screen.getByRole("switch", { name: "Official Interface" })
+    expect(toggle).toHaveAttribute("aria-checked", "false")
+    expect(toggle.querySelector("img")).toHaveAttribute("src", "/figma/exam-finish/toggle-off.svg")
+
+    await user.click(toggle)
+    expect(onOfficialInterfaceChange).toHaveBeenCalledWith(true)
+  })
 })

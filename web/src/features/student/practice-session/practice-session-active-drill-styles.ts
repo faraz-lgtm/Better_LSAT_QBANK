@@ -169,7 +169,7 @@ const ACTIVE_DRILL_OPTIONS_LIST_CLASS = "mt-[11px] flex w-full flex-col items-en
 
 /** Figma `20280:108037` — same 14px choice card, frost + hatch overlay */
 const ACTIVE_DRILL_OPTION_ROW_MASKED_CLASS =
-  "practice-session-choice-masked w-full rounded-[14px] border border-transparent bg-[#f6f8fa] py-2 pl-2 pr-6"
+  "practice-session-choice-masked practice-session-choice--unselected w-full rounded-[14px] border border-solid py-2 pl-2 pr-6"
 
 /** Passage highlight selection popover (Figma `20280:108155` highlight UI) */
 const PASSAGE_HIGHLIGHT_POPOVER_CARD_CLASS =
@@ -188,11 +188,11 @@ const PASSAGE_HIGHLIGHT_REMOVE_CARD_CLASS =
 
 /** Figma `20268:105681` — Reset Response 34×auto gray pill */
 const ACTIVE_DRILL_RESET_RESPONSE_BUTTON_CLASS =
-  "inline-flex h-[34px] shrink-0 items-center justify-center rounded-[6px] bg-[#f6f8fa] px-3 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#666d80] transition hover:bg-[#eceff3]"
+  "practice-session-reset-response inline-flex h-[34px] shrink-0 items-center justify-center rounded-[6px] bg-[#f6f8fa] px-3 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#666d80] transition hover:bg-[#eceff3]"
 
-/** Figma `20268:102788` — unselected answer choice row */
+/** Figma `20268:102788` — unselected answer choice row (colors via a11y CSS vars) */
 const ACTIVE_DRILL_OPTION_ROW_UNSELECTED_CLASS =
-  "w-full rounded-[14px] border border-transparent bg-[#f6f8fa] py-2 pl-2 pr-6"
+  "practice-session-choice--unselected w-full rounded-[14px] border border-solid py-2 pl-2 pr-6"
 
 /** Figma `20268:102789` — question stem */
 const ACTIVE_DRILL_STEM_SECTION_CLASS = "w-full shrink-0 p-3"
@@ -207,10 +207,10 @@ const ACTIVE_DRILL_CHOICE_ROW_GRID_WITH_ACTION_CLASS = "flex w-full items-start 
 const ACTIVE_DRILL_STEM_GRID_CLASS = "min-w-0"
 
 const ACTIVE_DRILL_STEM_TEXT_CLASS =
-  "min-w-0 flex-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d0d12] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-7 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
+  "min-w-0 flex-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[color:inherit] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-7 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
 
 const ACTIVE_DRILL_STEM_NUMBER_CLASS =
-  "shrink-0 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d0d12]"
+  "shrink-0 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[color:inherit]"
 
 /** Figma `18617:31674` / `18617:31682` — hide-choice control */
 const ACTIVE_DRILL_OPTION_EYE_BUTTON_CLASS = ACTIVE_DRILL_ACTION_BUTTON_CLASS
