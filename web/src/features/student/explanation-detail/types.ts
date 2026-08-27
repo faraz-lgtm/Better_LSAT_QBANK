@@ -27,6 +27,8 @@ export type ExplanationAnswerPopularityRow = {
   pct: number
   /** Correct answer (or most chosen when correct unknown). */
   highlight?: boolean
+  /** Average LSAT score for students who chose this answer (when available). */
+  avgScore?: number | null
 }
 
 export type ExplanationHistoryRow = {
@@ -48,7 +50,10 @@ export type ExplanationQuestionDetailView = {
     title: string
     body: string
   }
+  correctChoiceLetter: string
   questionStem: string
+  /** Question-level written explanation (expandable under the stem). */
+  questionExplanationHtml?: string | null
   choices: ExplanationChoice[]
   correctChoiceId: string
   videos: ExplanationVideoBlock[]
@@ -59,14 +64,14 @@ export type ExplanationQuestionDetailView = {
         label: string
         caption: string
         /** Meter + pill accent (Figma analytics difficulty). */
-        tone: "orange" | "red" | "teal"
+        tone: "green" | "teal" | "red"
       }
       passageDifficulty: {
         filled: number
         max: number
         label: string
         caption: string
-        tone: "orange" | "red" | "teal"
+        tone: "green" | "teal" | "red"
       }
     scoreBand: { headline: string; range: string; caption: string }
     answerPopularity: ExplanationAnswerPopularityRow[]

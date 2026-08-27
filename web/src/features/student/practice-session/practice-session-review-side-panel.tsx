@@ -22,10 +22,10 @@ type PracticeSessionReviewSidePanelProps = {
   analyticsSeed?: ExplanationQuestionDetailView["analytics"] | null
 }
 
-function difficultyTone(level: number): "orange" | "red" | "teal" {
+function difficultyTone(level: number): "green" | "teal" | "red" {
   if (level >= 4) return "red"
-  if (level >= 3) return "orange"
-  return "teal"
+  if (level >= 3) return "teal"
+  return "green"
 }
 
 function viewFromDetail(detail: ExplanationDetailPayload): ExplanationQuestionDetailView {
@@ -57,6 +57,10 @@ function viewFromDetail(detail: ExplanationDetailPayload): ExplanationQuestionDe
       explanationHtml: c.explanationHtml,
     })),
     correctChoiceId: detail.correctChoiceId ?? "",
+    correctChoiceLetter: (() => {
+      const raw = (detail.correctChoiceId ?? "").trim().toUpperCase().slice(0, 1)
+      return /^[A-E]$/.test(raw) ? raw : ""
+    })(),
     videos: [
       {
         id: "v-passage",
@@ -128,8 +132,9 @@ function InsightsSectionCard({ title, children }: { title: string; children: Rea
   )
 }
 
-function difficultyToneClasses(tone: "orange" | "red" | "teal") {
+function difficultyToneClasses(tone: "green" | "red" | "teal") {
   if (tone === "red") return { fill: "bg-[#ef4444]", text: "text-[#ef4444]", badge: "bg-[#ef4444]/10" }
+  if (tone === "green") return { fill: "bg-[#40c4aa]", text: "text-[#0f9d82]", badge: "bg-[#40c4aa]/12" }
   return { fill: "bg-[#0bbcc9]", text: "text-[#0bbcc9]", badge: "bg-[#0bbcc9]/10" }
 }
 
@@ -146,7 +151,7 @@ function DifficultyStatCard({
   max: number
   difficultyLabel: string
   caption: string
-  tone: "orange" | "red" | "teal"
+  tone: "green" | "red" | "teal"
 }) {
   const safe = Math.max(0, Math.min(max, Math.round(filled)))
   const colors = difficultyToneClasses(tone)
@@ -264,9 +269,6 @@ function TopAnswerBars({
             >
               {row.letter}
             </span>
-            <p className="m-0 pt-2 text-[11px] font-normal leading-[16.5px] text-[#666d80]">
-              Avg {row.count || "—"}
-            </p>
           </div>
         )
       })}

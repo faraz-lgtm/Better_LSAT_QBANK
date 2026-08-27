@@ -3186,7 +3186,7 @@ select.ds-input {
 /* Figma 18624:81193 — question stem + choice text */
 .explanation-question-stem.lsat-html-content {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.5;
   letter-spacing: 0.32px;
   color: #062357;
@@ -3214,7 +3214,7 @@ select.ds-input {
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: 0.28px;
-  color: #062357;
+  color: #272835;
 }
 
 .explanation-option-body.lsat-html-content p {

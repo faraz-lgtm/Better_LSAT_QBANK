@@ -37,7 +37,6 @@ import {
   type PracticeDifficultyLabel,
 } from "@/features/student/practice-session/practice-results-ui"
 import { createExplanationsApi } from "@/lib/api/explanations"
-import { plainTextFromHtml } from "@/lib/html/plain-text-from-html"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
@@ -55,29 +54,29 @@ const S = {
 } as const
 
 const PREP_TEST_BADGE_SIZE = {
-  width: "56px",
-  height: "56px",
-  borderRadius: "14px",
+  width: "40px",
+  height: "40px",
+  borderRadius: "12px",
 } as const
 
-const TREE_BADGE_SIZE = {
+const SECTION_BADGE_SIZE = {
   width: "32px",
   height: "32px",
-  borderRadius: "10px",
+  borderRadius: "8px",
 } as const
 
 const TREE_BADGE_CLASS = "flex shrink-0 items-center justify-center"
 
-const GREEN = "var(--explanation-answered)"
-const SEEN_GRAY = "#9CA3AF"
+const GREEN = "#287f6e"
+const SEEN_GRAY = "#666d80"
 
 function StatusStat({ dot, count, label }: { dot: string; count: number; label: string }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: dot }} aria-hidden />
-      <span className="text-sm tabular-nums" style={{ color: S.heading }}>
+      <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: dot }} aria-hidden />
+      <span className="text-sm leading-[1.5] tracking-[0.28px] tabular-nums text-[#062357]">
         <span className="font-semibold">{count}</span>
-        <span className="font-medium"> {label}</span>
+        <span className="font-normal"> {label}</span>
       </span>
     </div>
   )
@@ -109,7 +108,7 @@ function statusBadgeStyle(status: ExplanationQuestionStatus): {
     case "in_process":
       return { backgroundColor: "#fff6e0", color: "#ffbd4c", dotColor: "#ffbd4c" }
     case "not_started":
-      return { backgroundColor: "#f3f4f6", color: "#666d80", dotColor: "#666d80" }
+      return { backgroundColor: "#f6f8fa", color: "#666d80", dotColor: "#666d80" }
     case "answered":
       return {
         backgroundColor: "var(--explanation-answered-bg)",
@@ -129,7 +128,7 @@ function StatusBadge({ status }: { status: ExplanationQuestionStatus }) {
   const style = statusBadgeStyle(status)
   return (
     <span
-      className="inline-flex h-7 shrink-0 items-center gap-2 rounded-[10px] px-4 text-xs font-semibold leading-none tracking-[0.02em] whitespace-nowrap"
+      className="inline-flex h-7 shrink-0 items-center gap-2 rounded-[10px] px-4 text-xs font-semibold leading-[1.5] tracking-[0.24px] whitespace-nowrap"
       style={{ backgroundColor: style.backgroundColor, color: style.color }}
     >
       <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: style.dotColor }} aria-hidden />
@@ -138,18 +137,14 @@ function StatusBadge({ status }: { status: ExplanationQuestionStatus }) {
   )
 }
 
-function previewLine(snippet: string, max: number): string {
-  const text = plainTextFromHtml(snippet).replace(/\s+/g, " ").trim()
-  if (!text) return ""
-  if (text.length <= max) return text
-  return `${text.slice(0, max).trimEnd()}...`
-}
-
 const TREE_ROW_CLASS =
-  "flex w-full flex-nowrap items-center justify-between gap-6 border-b p-6 text-left last:border-b-0"
+  "flex h-20 w-full flex-nowrap items-center justify-between gap-6 border-b p-6 text-left last:border-b-0"
 
 const QUESTION_ROW_CLASS =
-  "flex w-full flex-nowrap items-center justify-between gap-6 border-b bg-white p-6 last:border-b-0"
+  "flex h-20 w-full flex-nowrap items-center justify-between gap-6 border-b bg-white p-6 last:border-b-0"
+
+const PREP_TEST_ROW_CLASS =
+  "flex h-[88px] w-full flex-nowrap items-center justify-between gap-6 border-b bg-white px-6 text-left transition-colors hover:bg-[#f3f7ff] last:border-b-0"
 
 function derivePrepTestStatus(tree: ExplanationPrepTestNode | null | undefined): ExplanationQuestionStatus {
   if (!tree) return "fresh"
@@ -183,7 +178,7 @@ function prepTestBadgeColors(status: ExplanationQuestionStatus): {
     case "in_process":
       return { backgroundColor: "#fff6e0", borderColor: "#ffbd4c", color: "#ffbd4c" }
     case "fresh":
-      return { backgroundColor: "#edf3ff", borderColor: "#0d47a1", color: "#0d47a1" }
+      return { backgroundColor: "#f3f7ff", borderColor: "#0d47a1", color: "#0d47a1" }
     case "answered":
       return {
         backgroundColor: "var(--explanation-answered-bg)",
@@ -199,16 +194,14 @@ function prepTestBadgeColors(status: ExplanationQuestionStatus): {
   }
 }
 
-const PASSAGE_PREVIEW_MAX = 56
-
 function SectionKindBadge({ kind }: { kind: ExplanationSectionNode["kind"] }) {
   const accentColor =
-    kind === "RC" ? "var(--explanation-rc-badge-bg)" : "var(--explanation-lr-badge-bg)"
+    kind === "RC" ? "#40c4aa" : "var(--explanation-lr-badge-bg)"
   return (
     <span
-      className={`${TREE_BADGE_CLASS} text-xs font-bold leading-none tracking-[0.02em]`}
+      className={`${TREE_BADGE_CLASS} text-sm font-bold leading-[1.5] tracking-[0.02em]`}
       style={{
-        ...TREE_BADGE_SIZE,
+        ...SECTION_BADGE_SIZE,
         backgroundColor: accentColor,
         color: "#ffffff",
       }}
@@ -222,9 +215,8 @@ function SectionKindBadge({ kind }: { kind: ExplanationSectionNode["kind"] }) {
 function PassageIndexBadge({ children }: { children: ReactNode }) {
   return (
     <span
-      className="flex shrink-0 items-center justify-center border text-sm font-semibold leading-none tracking-[0.02em]"
+      className="flex size-8 shrink-0 items-center justify-center rounded-[10px] border text-sm font-semibold leading-[1.5] tracking-[0.28px]"
       style={{
-        ...TREE_BADGE_SIZE,
         borderColor: "var(--color-student-accent)",
         backgroundColor: "var(--primary-0)",
         color: "var(--color-student-accent)",
@@ -238,9 +230,8 @@ function PassageIndexBadge({ children }: { children: ReactNode }) {
 function QuestionIndexBadge({ children }: { children: ReactNode }) {
   return (
     <span
-      className="flex shrink-0 items-center justify-center border text-sm font-semibold leading-none tracking-[0.02em]"
+      className="flex size-8 shrink-0 items-center justify-center rounded-[10px] border text-sm font-semibold leading-[1.5] tracking-[0.28px]"
       style={{
-        ...TREE_BADGE_SIZE,
         borderColor: "var(--color-student-accent)",
         backgroundColor: "var(--primary-0)",
         color: "var(--color-student-accent)",
@@ -264,7 +255,7 @@ function DifficultyMeter({ level }: { level: ExplanationQuestionNode["difficulty
   const activeColor = DIFFICULTY_METER_COLORS[label]
   return (
     <div
-      className="flex h-10 w-fit shrink-0 items-center gap-2.5 rounded-[10px] bg-[#f3f7ff] px-3"
+      className="flex h-10 w-[132px] shrink-0 items-center gap-2.5 rounded-[10px] bg-[#f3f7ff] px-2.5"
       title={`Difficulty ${level} of 5`}
     >
       <div className="flex items-center gap-1.5">
@@ -276,7 +267,7 @@ function DifficultyMeter({ level }: { level: ExplanationQuestionNode["difficulty
           />
         ))}
       </div>
-      <span className="text-xs font-semibold leading-normal tracking-[0.02em] whitespace-nowrap" style={{ color: activeColor }}>
+      <span className="text-xs font-semibold leading-[1.5] tracking-[0.24px] whitespace-nowrap" style={{ color: activeColor }}>
         {label}
       </span>
     </div>
@@ -595,8 +586,8 @@ function ExplanationsPage() {
   const displayStatusCounts = useMock ? mockStatusCounts : statusCounts
 
   const statusStats = [
-    { dot: "var(--drill-medium)", count: displayStatusCounts.in_process, label: "In Process" },
-    { dot: "var(--color-student-heading)", count: displayStatusCounts.fresh, label: "Fresh" },
+    { dot: "#ffbd4c", count: displayStatusCounts.in_process, label: "In Process" },
+    { dot: "#0d47a1", count: displayStatusCounts.fresh, label: "Fresh" },
     { dot: GREEN, count: displayStatusCounts.answered, label: "Answered" },
     { dot: SEEN_GRAY, count: displayStatusCounts.seen, label: "Seen" },
   ] as const
@@ -703,41 +694,46 @@ function ExplanationsPage() {
 
   return (
     <StudentMain className="bg-[#f0f5ff]" contentClassName="flex min-h-0 flex-1 flex-col pt-6 pb-6">
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-        <h2 className="student-page-heading">LSAT Question Explanations</h2>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 md:gap-x-6">
-            {statusStats.map((s) => (
-              <StatusStat key={s.label} dot={s.dot} count={s.count} label={s.label} />
-            ))}
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <h2 className="m-0 text-2xl font-bold leading-[1.3] text-[#062357]">LSAT Question Explanations</h2>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              {statusStats.map((s) => (
+                <StatusStat key={s.label} dot={s.dot} count={s.count} label={s.label} />
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <StudentOptionMenu
-              ariaLabel="Sort explanations"
-              value={listMode}
-              onChange={handleListModeChange}
-              options={[
-                { value: "newest", label: "Newest" },
-                { value: "oldest", label: "Oldest" },
-                { value: "bookmarked", label: "Bookmarked" },
-              ]}
-            />
-          </div>
+          <StudentOptionMenu
+            ariaLabel="Sort explanations"
+            value={listMode}
+            onChange={handleListModeChange}
+            className="w-full max-w-[160px] shrink-0 lg:w-[160px]"
+            size="lg"
+            variant="surface"
+            options={[
+              { value: "newest", label: "Newest" },
+              { value: "oldest", label: "Oldest" },
+              { value: "bookmarked", label: "Bookmarked" },
+            ]}
+          />
         </div>
-      </div>
 
-      {listError ? <p className="mt-4 text-sm text-[#95122b]">{listError}</p> : null}
+      {listError ? <p className="text-sm text-[#95122b]">{listError}</p> : null}
 
       {listLoading ? (
         <StudentPageLoader centered className="min-h-0 flex-1" label="Loading PrepTests…" />
       ) : displayRows.length === 0 ? (
-        <p className="mt-6 max-w-xl text-sm text-[#666d80]">
+        <p className="max-w-xl text-sm text-[#666d80]">
           {bookmarkedOnly
             ? "No bookmarked questions yet. Open a PrepTest and tap the bookmark icon on a question."
             : "No published explanations yet. When an admin adds written or video explanation content to PrepTest questions, they will appear here."}
         </p>
       ) : (
-        <div className="mt-6 flex flex-col gap-3">
+        <div
+          className="flex flex-col overflow-hidden border border-[#dfe1e7] bg-white"
+          style={{ borderRadius: S.prepTestCardRadius }}
+        >
           {displayRows.map((row) => {
           const ptId = row.id
           const ptTree = getCachedExplanationPrepTestTree(ptId)
@@ -755,17 +751,11 @@ function ExplanationsPage() {
           const ptBadgeColors = prepTestBadgeColors(ptStatus)
 
           return (
-            <section
-              key={ptId}
-              className="overflow-hidden border shadow-[0px_5px_10px_0px_rgba(13,13,18,0.04)]"
-              style={{ borderColor: S.border, backgroundColor: S.surface, borderRadius: S.prepTestCardRadius }}
-            >
+            <div key={ptId} className="contents">
               <button
                 type="button"
-                className="flex min-h-[5.5rem] w-full flex-nowrap items-center justify-between gap-6 bg-white px-6 py-4 text-left transition-colors hover:bg-[#f3f7ff]"
-                style={{
-                  borderBottom: ptIsOpen ? "1px solid var(--greyscale-100)" : undefined,
-                }}
+                className={PREP_TEST_ROW_CLASS}
+                style={{ borderColor: S.border }}
                 onClick={() => togglePrepTest(ptId)}
               >
                 <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
@@ -778,31 +768,31 @@ function ExplanationsPage() {
                       color: ptBadgeColors.color,
                     }}
                   >
-                    <span className="text-xs font-bold leading-normal tracking-[0.02em]">PT</span>
-                    <span className="text-xl font-bold leading-[1.35] tabular-nums">{ptNum}</span>
+                    <span className="text-[10px] font-bold leading-[1.5] tracking-[0.2px]">PT</span>
+                    <span className="text-base font-semibold leading-[1.35] tabular-nums">{ptNum}</span>
                   </span>
-                  <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-hidden">
-                    <span className="shrink-0 text-xl font-bold leading-[1.35]" style={{ color: S.heading }}>
+                  <div className="flex min-w-0 flex-col items-start justify-center gap-2 overflow-hidden">
+                    <span className="text-[20px] font-bold leading-[1.35] whitespace-nowrap text-[#062357]">
                       PT - {ptNum}
                     </span>
-                    <span className="truncate text-sm font-semibold leading-normal" style={{ color: S.muted }}>
+                    <span className="truncate text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#666d80]">
                       {row.rowSubtitle}
                     </span>
-                    {isLoadingTree ? <StudentPageLoader size="sm" /> : null}
                   </div>
+                  {isLoadingTree ? <StudentPageLoader size="sm" /> : null}
                   {ptIsOpen ? (
-                    <ChevronDown className="size-6 shrink-0" style={{ color: S.heading }} aria-hidden />
+                    <ChevronDown className="size-6 shrink-0 text-[#062357]" aria-hidden />
                   ) : (
-                    <ChevronRight className="size-6 shrink-0" style={{ color: S.heading }} aria-hidden />
+                    <ChevronRight className="size-6 shrink-0 text-[#062357]" aria-hidden />
                   )}
                 </div>
               </button>
 
               {ptIsOpen ? (
-                <div className="overflow-x-auto border-t" style={{ borderColor: S.border }}>
-                  {treeError ? <p className="px-4 py-3 text-sm text-[#95122b]">{treeError}</p> : null}
+                <>
+                  {treeError ? <p className="border-b border-[#dfe1e7] px-6 py-3 text-sm text-[#95122b]">{treeError}</p> : null}
                   {isLoadingTree && !filteredTree ? (
-                    <div className="px-4 py-4">
+                    <div className="border-b border-[#dfe1e7] px-6 py-4">
                       <StudentPageLoader label="Loading sections…" />
                     </div>
                   ) : null}
@@ -810,42 +800,40 @@ function ExplanationsPage() {
                     const sOpen = bookmarkedOnly || openSection.has(secKey(ptId, sec.id))
                     const secHeaderBg = sOpen ? S.listRowAlt : S.surface
                     return (
-                      <div key={sec.id} style={{ borderColor: S.border }}>
+                      <div key={sec.id} className="contents">
                         <button
                           type="button"
                           className={TREE_ROW_CLASS}
                           style={{ backgroundColor: secHeaderBg, borderColor: S.border }}
                           onClick={() => toggleSection(ptId, sec)}
                         >
-                          <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-3 overflow-hidden">
+                          <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
                             <SectionKindBadge kind={sec.kind} />
-                            <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-hidden">
-                              <span className="shrink-0 text-base font-semibold leading-[1.4]" style={{ color: S.heading }}>
+                            <div className="flex min-w-0 flex-col items-start gap-1.5 overflow-hidden">
+                              <span className="text-[20px] font-bold leading-[1.35] whitespace-nowrap text-[#062357]">
                                 Section {sec.sectionNumber}
                               </span>
                               {sec.flags ? (
-                                <span className="truncate text-sm font-normal leading-normal" style={{ color: S.muted }}>
+                                <span className="truncate text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#666d80]">
                                   {sec.flags}
                                 </span>
                               ) : null}
                             </div>
                           </div>
                           {sOpen ? (
-                            <ChevronDown className="size-5 shrink-0 text-[#666d80]" />
+                            <ChevronDown className="size-6 shrink-0 text-[#666d80]" />
                           ) : (
-                            <ChevronRight className="size-5 shrink-0 text-[#666d80]" />
+                            <ChevronRight className="size-6 shrink-0 text-[#666d80]" />
                           )}
                         </button>
 
                         {sOpen ? (
-                          <div>
+                          <>
                             {passagesInQuestionOrder(sec.passages).map((pass) => {
                               const pOpen = bookmarkedOnly || openPassage.has(passKey(ptId, sec.id, pass.id))
-                              const passagePreviewSource =
-                                pass.snippet.trim() || pass.questions[0]?.snippet?.trim() || ""
                               const questionCountLabel = `${pass.questions.length} Question${pass.questions.length === 1 ? "" : "s"}`
                               return (
-                                <div key={pass.id}>
+                                <div key={pass.id} className="contents">
                                   <button
                                     type="button"
                                     className={TREE_ROW_CLASS}
@@ -860,66 +848,47 @@ function ExplanationsPage() {
                                       })
                                     }
                                   >
-                                    <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-3 overflow-hidden">
+                                    <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
                                       <PassageIndexBadge>{pass.label}</PassageIndexBadge>
-                                      <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-hidden">
-                                        <span className="shrink-0 text-base font-semibold leading-[1.4]" style={{ color: S.heading }}>
-                                          {pass.title}
-                                        </span>
-                                        {passagePreviewSource ? (
-                                          <span
-                                            className="truncate text-xs font-medium leading-normal"
-                                            style={{ color: S.muted }}
-                                            title={plainTextFromHtml(passagePreviewSource)}
-                                          >
-                                            {previewLine(passagePreviewSource, PASSAGE_PREVIEW_MAX)}
-                                          </span>
-                                        ) : null}
-                                      </div>
+                                      <span className="truncate text-lg font-semibold leading-[1.4] tracking-[0.36px] text-[#062357]">
+                                        {pass.title}
+                                      </span>
                                     </div>
-                                    <span className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-white px-4 text-sm font-medium leading-none text-[#4a5565]">
-                                      {questionCountLabel}
+                                    <div className="flex shrink-0 items-center gap-6">
+                                      <span className="inline-flex h-8 shrink-0 items-center rounded-full bg-white px-4 text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#4a5565]">
+                                        {questionCountLabel}
+                                      </span>
                                       {pOpen ? (
-                                        <ChevronDown className="size-4 shrink-0" aria-hidden />
+                                        <ChevronDown className="size-6 shrink-0 text-[#666d80]" aria-hidden />
                                       ) : (
-                                        <ChevronRight className="size-4 shrink-0" aria-hidden />
+                                        <ChevronRight className="size-6 shrink-0 text-[#666d80]" aria-hidden />
                                       )}
-                                    </span>
+                                    </div>
                                   </button>
 
-                                  {pOpen ? (
-                                    <ul>
-                                      {pass.questions.map((q) => {
+                                  {pOpen
+                                    ? pass.questions.map((q) => {
                                         const detailHref = explanationQuestionDetailHref(q.id)
                                         return (
-                                          <li
+                                          <div
                                             key={q.id}
                                             className={QUESTION_ROW_CLASS}
                                             style={{ borderColor: S.border }}
                                           >
-                                            <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-3 overflow-hidden">
+                                            <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
                                               <QuestionIndexBadge>{q.number}</QuestionIndexBadge>
                                               <Link
                                                 to={detailHref}
-                                                className="flex w-[24.25rem] min-w-[12rem] max-w-[24.25rem] shrink flex-col gap-1.5 rounded-lg outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
+                                                className="block w-[500px] max-w-[500px] min-w-0 shrink truncate rounded-lg text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
                                               >
-                                                <span className="truncate text-sm font-semibold leading-normal tracking-[0.02em]" style={{ color: S.accent }}>
-                                                  {q.code}
-                                                </span>
-                                                <span
-                                                  className="truncate text-xs font-medium leading-normal tracking-[0.02em]"
-                                                  style={{ color: S.muted }}
-                                                  title={q.topicName?.trim() || "—"}
-                                                >
-                                                  {q.topicName?.trim() || "—"}
-                                                </span>
+                                                {q.code}
                                               </Link>
                                               <div className="shrink-0 px-4">
                                                 <StatusBadge status={q.status} />
                                               </div>
                                             </div>
 
-                                            <div className="flex shrink-0 flex-nowrap items-center gap-6">
+                                            <div className="flex w-[412px] shrink-0 flex-nowrap items-center justify-end gap-6">
                                               <DifficultyMeter level={q.difficulty} />
                                               <div className="flex shrink-0 items-center gap-6">
                                                 <Button
@@ -968,29 +937,28 @@ function ExplanationsPage() {
                                                 </Button>
                                               </div>
                                             </div>
-                                          </li>
+                                          </div>
                                         )
-                                      })}
-                                    </ul>
-                                  ) : null}
+                                      })
+                                    : null}
                                 </div>
                               )
                             })}
-                          </div>
+                          </>
                         ) : null}
                       </div>
                     )
                   })}
-                </div>
+                </>
               ) : null}
-            </section>
+            </div>
           )
         })}
         </div>
       )}
 
       {hasMore ? (
-        <div className="mt-6 flex justify-center">
+        <div className="flex justify-center">
           <button
             type="button"
             disabled={listLoading || loadingMore}
@@ -1001,8 +969,7 @@ function ExplanationsPage() {
           </button>
         </div>
       ) : null}
-
-    
+      </div>
     </StudentMain>
   )
 }

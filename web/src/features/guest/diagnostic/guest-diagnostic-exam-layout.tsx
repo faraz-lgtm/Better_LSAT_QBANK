@@ -24,6 +24,14 @@ import {
 import { PracticeSessionActiveDrillFooterNav } from "@/features/student/practice-session/practice-session-active-drill-footer-nav"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import { PracticeSessionHighlightPopover } from "@/features/student/practice-session/practice-session-highlight-popover"
+import {
+  PracticeBlindReviewSessionHeader,
+  type PracticeReviewSidePanel,
+} from "@/features/student/practice-session/practice-blind-review-session-header"
+import type {
+  BlindReviewAnswerOutcome,
+  BlindReviewAnswerView,
+} from "@/features/student/practice-session/practice-blind-review-answer-toggle"
 import { PracticeDrillQuestionPanel, regionKey } from "@/features/student/practice-session/practice-drill-question-panel"
 import { PracticeSessionAccessibilityPanel } from "@/features/student/practice-session/practice-session-accessibility-panel"
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
@@ -104,6 +112,95 @@ function readPersistedAnswers(intentId: string): Record<string, GuestDiagnosticA
 function persistAnswers(intentId: string, answers: Record<string, GuestDiagnosticAnswerState>): void {
   if (typeof window === "undefined") return
   sessionStorage.setItem(`${GUEST_DIAGNOSTIC_ANSWERS_STORAGE_PREFIX}${intentId}`, JSON.stringify(answers))
+}
+
+function ReviewStaticSwitch({ checked = false }: { checked?: boolean }) {
+  return (
+    <span
+      role="switch"
+      aria-checked={checked}
+      aria-disabled="true"
+      className={cn(
+        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent",
+        checked ? "bg-[#0d47a1]" : "bg-[#c5cad3]",
+      )}
+    >
+      <span
+        className={cn(
+          "block size-4 rounded-full bg-white shadow-sm",
+          checked ? "translate-x-4" : "translate-x-0",
+        )}
+      />
+    </span>
+  )
+}
+
+function ReviewPassageCardHeader() {
+  return (
+    <div className="mb-8 flex h-8 shrink-0 items-center justify-between gap-4">
+      <span className="inline-flex h-8 items-center rounded-[8px] bg-[#f6f8fa] px-4 py-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1]">
+        Passage Only View
+      </span>
+      <span className="inline-flex h-8 items-center gap-4" aria-label="Analysis View is display only">
+        <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#062357]">
+          Analysis View
+        </span>
+        <ReviewStaticSwitch />
+      </span>
+    </div>
+  )
+}
+
+function answerOutcome(answer: GuestDiagnosticAnswerState | undefined): BlindReviewAnswerOutcome {
+  if (!answer) return "unanswered"
+  return answer.isCorrect ? "correct" : "incorrect"
+}
+
+function difficultyTone(level: number): "green" | "teal" | "red" {
+  if (level >= 4) return "red"
+  if (level >= 3) return "teal"
+  return "green"
+}
+
+function buildDiagnosticAnalyticsSeed(
+  question: DrillQuestion,
+  meta: { difficulty: number; questionType: string } | null,
+  selectedAnswer: string | null | undefined,
+): ExplanationQuestionDetailView["analytics"] {
+  const diffLevel = meta?.difficulty ?? 3
+  const label = difficultyLabelFromLevel(diffLevel)
+  const correctChoiceId = question.correctChoiceId ?? ""
+  const answerPopularity = resolveAnswerPopularityRows([], question.choices, correctChoiceId)
+  const letter = selectedAnswer?.trim().toUpperCase().slice(0, 1) ?? ""
+  const questionLabel = label === "Hardest" ? "Hard" : label
+
+  return {
+    questionDifficulty: {
+      filled: diffLevel,
+      max: 5,
+      label: questionLabel,
+      caption: "Question difficulty based on diagnostic design.",
+      tone: difficultyTone(diffLevel),
+    },
+    passageDifficulty: {
+      filled: Math.max(1, diffLevel - 1),
+      max: 5,
+      label: diffLevel >= 4 ? "Hard" : diffLevel >= 3 ? "Medium" : "Easy",
+      caption: "Relative difficulty for this stimulus.",
+      tone: difficultyTone(Math.max(1, diffLevel - 1)),
+    },
+    scoreBand: {
+      headline: "—",
+      range: "—",
+      caption: "Score of students with a 50% chance of getting this right",
+    },
+    answerPopularity,
+    answerPopularityTotal: 0,
+    userSelectedLetter: /^[A-E]$/.test(letter) ? letter : null,
+    questionStemTags: meta?.questionType ? [meta.questionType] : [],
+    passageTags: [],
+    history: [],
+  }
 }
 
 /** Figma header `20268:105580` / footer `20268:107659` — LSAT default exam chrome (fixed header + footer; content swaps). */
