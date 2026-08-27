@@ -39,10 +39,8 @@ import {
   BLIND_REVIEW_QUESTION_PANEL_CLASS,
   BLIND_REVIEW_SHELL_CLASS,
   REVIEW_BODY_CLASS,
-  REVIEW_BODY_GRID_CLASS,
   REVIEW_CARD_CLASS,
   REVIEW_EXIT_BUTTON_CLASS,
-  REVIEW_FOOTER_CLASS,
   REVIEW_FOOTER_NAV_CLASS,
   REVIEW_FOOTER_ROW_CLASS,
   REVIEW_NAV_ARROW_BUTTON_CLASS,
@@ -179,6 +177,8 @@ function DrillSessionPage() {
   const [reviewAfterComplete, setReviewAfterComplete] = useState(false)
   const [answerViewTab, setAnswerViewTab] = useState<BlindReviewAnswerView>("blind_review")
   const [notesOpen, setNotesOpen] = useState(false)
+  const [reviewSidePanel, setReviewSidePanel] = useState<PracticeReviewSidePanel>(null)
+  const [showCorrectAnswer, setShowCorrectAnswer] = useState(false)
   const [reviewPanelOpen, setReviewPanelOpen] = useState(false)
   const [passageOnlyView, setPassageOnlyView] = useState(false)
   const [lineFocus, setLineFocus] = useState(false)

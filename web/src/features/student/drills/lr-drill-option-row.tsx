@@ -30,7 +30,6 @@ import {
   BLIND_REVIEW_OPTION_ROW_SELECTED_BR_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
-import { ReviewIdeaIcon } from "@/features/student/practice-session/review-idea-icon"
 import type { PracticeSessionVariant, RegionKey } from "@/features/student/practice-session/practice-session-types"
 import { isOfficialLayout } from "@/features/student/practice-session/practice-session-types"
 import { HtmlContent } from "@/lib/html/html-content"
