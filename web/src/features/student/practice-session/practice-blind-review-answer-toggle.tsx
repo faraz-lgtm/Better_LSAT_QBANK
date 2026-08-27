@@ -15,6 +15,8 @@ type PracticeBlindReviewAnswerToggleProps = {
   blindReviewOutcome?: BlindReviewAnswerOutcome
   /** When false, Blind Review tab is visible but not selectable */
   blindReviewEnabled?: boolean
+  /** Outcome icons (✓/✗) only when Show Correct is on */
+  showOutcomeIcons?: boolean
 }
 
 function OutcomeIcon({ outcome }: { outcome: BlindReviewAnswerOutcome }) {
@@ -66,8 +68,11 @@ function PracticeBlindReviewAnswerToggle({
   actualOutcome = null,
   blindReviewOutcome = null,
   blindReviewEnabled = true,
+  showOutcomeIcons = false,
 }: PracticeBlindReviewAnswerToggleProps) {
   const reviewChrome = variant === "review"
+  const actualIcon = showOutcomeIcons ? actualOutcome : null
+  const blindReviewIcon = showOutcomeIcons ? blindReviewOutcome : null
 
   if (!reviewChrome) {
     return (
@@ -137,29 +142,25 @@ function PracticeBlindReviewAnswerToggle({
         )}
         onClick={() => onChange("actual")}
       >
-        <OutcomeIcon outcome={actualOutcome} />
+        <OutcomeIcon outcome={actualIcon} />
         Actual
       </button>
 
-      <button
-        type="button"
-        role="tab"
-        aria-selected={value === "blind_review"}
-        aria-disabled={!blindReviewEnabled}
-        disabled={!blindReviewEnabled}
-        title={blindReviewEnabled ? undefined : "Complete Blind Review to compare answers"}
-        className={cn(
-          "inline-flex h-8 items-center justify-center gap-2 rounded-[12px] border px-4 text-xs font-semibold tracking-[0.24px] transition-colors",
-          reviewTabClass(value === "blind_review", !blindReviewEnabled),
-        )}
-        onClick={() => {
-          if (!blindReviewEnabled) return
-          onChange("blind_review")
-        }}
-      >
-        {blindReviewEnabled ? <OutcomeIcon outcome={blindReviewOutcome} /> : null}
-        Blind Review
-      </button>
+      {blindReviewEnabled ? (
+        <button
+          type="button"
+          role="tab"
+          aria-selected={value === "blind_review"}
+          className={cn(
+            "inline-flex h-8 items-center justify-center gap-2 rounded-[12px] border px-4 text-xs font-semibold tracking-[0.24px] transition-colors",
+            reviewTabClass(value === "blind_review"),
+          )}
+          onClick={() => onChange("blind_review")}
+        >
+          <OutcomeIcon outcome={blindReviewIcon} />
+          Blind Review
+        </button>
+      ) : null}
     </div>
   )
 }

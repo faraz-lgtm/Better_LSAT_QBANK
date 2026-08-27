@@ -3186,7 +3186,7 @@ select.ds-input {
 /* Figma 18624:81193 — question stem + choice text */
 .explanation-question-stem.lsat-html-content {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.5;
   letter-spacing: 0.32px;
   color: #062357;
@@ -3210,15 +3210,106 @@ select.ds-input {
 
 /* Figma 19432:17972 — option explanation under choice */
 .explanation-option-body.lsat-html-content {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 400;
   line-height: 1.5;
-  letter-spacing: 0.24px;
+  letter-spacing: 0.28px;
   color: #272835;
 }
 
 .explanation-option-body.lsat-html-content p {
-  margin: 0;
+  margin: 0 0 0.5rem;
+}
+
+.explanation-option-body.lsat-html-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* Review chrome — structured question / stimulus explanation */
+.explanation-review-body.lsat-html-content {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.28px;
+  color: #062357;
+}
+
+.explanation-review-body.lsat-html-content h1,
+.explanation-review-body.lsat-html-content h2,
+.explanation-review-body.lsat-html-content h3,
+.explanation-review-body.lsat-html-content h4 {
+  margin: 1rem 0 0.5rem;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.32px;
+  color: #062357;
+}
+
+.explanation-review-body.lsat-html-content h1:first-child,
+.explanation-review-body.lsat-html-content h2:first-child,
+.explanation-review-body.lsat-html-content h3:first-child,
+.explanation-review-body.lsat-html-content h4:first-child {
+  margin-top: 0;
+}
+
+.explanation-review-body.lsat-html-content p {
+  margin: 0 0 0.75rem;
+}
+
+.explanation-review-body.lsat-html-content p:last-child {
+  margin-bottom: 0;
+}
+
+.explanation-review-body.lsat-html-content ul,
+.explanation-review-body.lsat-html-content ol {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.explanation-review-body.lsat-html-content ul {
+  list-style: disc;
+}
+
+.explanation-review-body.lsat-html-content ol {
+  list-style: decimal;
+}
+
+.explanation-review-body.lsat-html-content li {
+  margin: 0 0 0.35rem;
+  padding-left: 0.15rem;
+}
+
+.explanation-review-body.lsat-html-content li:last-child {
+  margin-bottom: 0;
+}
+
+.explanation-review-body.lsat-html-content strong,
+.explanation-review-body.lsat-html-content b {
+  font-weight: 600;
+  color: #062357;
+}
+
+.lsat-html-content ul,
+.lsat-html-content ol {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.lsat-html-content ul {
+  list-style: disc;
+}
+
+.lsat-html-content ol {
+  list-style: decimal;
+}
+
+.lsat-html-content li {
+  margin: 0 0 0.35rem;
+}
+
+.lsat-html-content li:last-child {
+  margin-bottom: 0;
 }
 
 /* Portal scrollbars — soft grey thumb on a light/transparent track (no arrow buttons) */
@@ -3929,6 +4020,40 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
   align-items: center;
   align-self: stretch;
   border-radius: 12px;
+}
+
+.practice-session-review-nav-row {
+  position: relative;
+  display: flex;
+  width: max-content;
+  max-width: none;
+  grid-template-columns: none;
+  gap: 16px;
+  align-items: flex-end;
+  justify-content: flex-start;
+  overflow: visible;
+  padding-top: 0;
+}
+
+.practice-session-review-nav-row::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 7px;
+  z-index: 0;
+  width: auto;
+  height: 2px;
+  background: #dfe1e7;
+}
+
+.practice-session-review-nav-row > * {
+  position: relative;
+  z-index: 1;
+}
+
+.practice-session-question-nav-btn--review {
+  border-radius: 6px;
 }
 
 .practice-session-header {

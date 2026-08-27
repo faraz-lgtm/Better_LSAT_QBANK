@@ -88,4 +88,5 @@ export type ExplanationAnswerPopularityRow = {
   count: number
   pct: number
   highlight?: boolean
+  avgScore?: number | null
 }

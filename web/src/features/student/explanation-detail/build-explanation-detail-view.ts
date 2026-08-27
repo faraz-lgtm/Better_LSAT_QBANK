@@ -37,13 +37,42 @@ function difficultyDisplayLabel(level: number): string {
   return "Easy"
 }
 
+type DifficultyBand = "Easy" | "Medium" | "Hard"
+
+function difficultyBandFromFilled(filled: number): DifficultyBand {
+  if (filled >= 4) return "Hard"
+  if (filled >= 3) return "Medium"
+  return "Easy"
+}
+
+function difficultyTone(band: DifficultyBand): "green" | "teal" | "red" {
+  if (band === "Hard") return "red"
+  if (band === "Medium") return "teal"
+  return "green"
+}
+
+function questionDifficultyCaption(band: DifficultyBand): string {
+  if (band === "Medium") return "75% of people who answer get this correct."
+  if (band === "Hard") return "This is a moderately difficult question."
+  return "Most students answer this question correctly."
+}
+
+function passageDifficultyCaption(band: DifficultyBand): string {
+  if (band === "Hard") {
+    return "A moderately difficult question — similar in difficulty to others in this passage."
+  }
+  if (band === "Medium") {
+    return "This passage is moderately difficult compared to others on the test."
+  }
+  return "This passage is relatively easy compared to others on the test."
+}
+
 function buildAnalytics(
   loc: LocatedExplanationQuestion,
   detail: ExplanationDetailPayload | null,
   choices: ExplanationQuestionDetailView["choices"],
 ): ExplanationQuestionDetailView["analytics"] {
   const diffLevel = detail?.difficulty ?? loc.q.difficulty
-  const diffLabel = difficultyDisplayLabel(diffLevel)
   const tags = detail ? tagsFromTopicName(detail.topicName) : []
 
   const answerPopularity = resolveAnswerPopularityRows(
@@ -53,31 +82,29 @@ function buildAnalytics(
   )
 
   const totalResponses = answerPopularity.reduce((sum, row) => sum + row.count, 0)
+  const questionBand = difficultyDisplayLabel(diffLevel) as DifficultyBand
+  const passageFilled = Math.max(1, Math.min(5, diffLevel + 1))
+  const passageBand = difficultyBandFromFilled(passageFilled)
+  const scoreHeadline = totalResponses > 0 ? "150" : "—"
 
   return {
     questionDifficulty: {
       filled: diffLevel,
       max: 5,
-      label: diffLabel,
-      caption:
-        diffLabel === "Medium"
-          ? "75% of people who answer get this correct."
-          : diffLabel === "Hard"
-            ? "This is a moderately difficult question."
-            : "Most students answer this question correctly.",
-      tone: diffLevel >= 4 ? "red" : diffLevel >= 3 ? "teal" : "orange",
+      label: questionBand,
+      caption: questionDifficultyCaption(questionBand),
+      tone: difficultyTone(questionBand),
     },
     passageDifficulty: {
-      filled: Math.max(1, diffLevel - 1),
+      filled: passageFilled,
       max: 5,
-      label: diffLevel >= 4 ? "Hard" : diffLevel >= 3 ? "Medium" : "Easy",
-      caption:
-        "This is a moderately difficult question. It is similar in difficulty to other questions in this passage.",
-      tone: diffLevel >= 4 ? "red" : "teal",
+      label: passageBand,
+      caption: passageDifficultyCaption(passageBand),
+      tone: difficultyTone(passageBand),
     },
     scoreBand: {
-      headline: totalResponses > 0 ? "150" : "—",
-      range: totalResponses > 0 ? "75% - 160" : "—",
+      headline: scoreHeadline,
+      range: totalResponses > 0 ? "75th percentile · 160" : "—",
       caption: "Score of students with a 50% chance of getting this right",
     },
     answerPopularity,
@@ -113,11 +140,23 @@ export function buildExplanationQuestionDetailView(
   const hasWritten = Boolean(detail?.explanationHtml?.trim())
   const hasVideo = Boolean(detail?.videoUrl?.trim())
 
+  const correctChoiceId = detail?.correctChoiceId ?? ""
+  const correctChoiceLetter = (() => {
+    const match = choices.find((c) => c.id === correctChoiceId)
+    if (match) {
+      const fromId = match.id.trim().toUpperCase().slice(0, 1)
+      if (/^[A-E]$/.test(fromId)) return fromId
+      if (match.index >= 1 && match.index <= 5) return String.fromCharCode(64 + match.index)
+    }
+    const letter = correctChoiceId.trim().toUpperCase().slice(0, 1)
+    return /^[A-E]$/.test(letter) ? letter : ""
+  })()
+
   const videos: ExplanationQuestionDetailView["videos"] = [
     {
       id: "v-passage",
       headerVariant: "yellow",
-      authorTitle: "Passage Explanation",
+      authorTitle: "J.Y.'s explanation",
       dropdownLabel: "Passage explanation",
       dropdownOptions: [{ value: "passage", label: "Passage explanation" }],
       postedLine: "Posted Friday, Apr 5 • Duration: 8:32",
@@ -127,7 +166,7 @@ export function buildExplanationQuestionDetailView(
     {
       id: "v-question",
       headerVariant: "muted",
-      authorTitle: "Video Explanation",
+      authorTitle: "J.Y.'s explanation",
       dropdownLabel: "Question explanation",
       dropdownOptions: [{ value: "question", label: "Question explanation" }],
       postedLine: detail?.prepTestTitle
@@ -149,8 +188,10 @@ export function buildExplanationQuestionDetailView(
       body: passageBody,
     },
     questionStem: stem,
+    questionExplanationHtml: detail?.explanationHtml ?? null,
     choices,
-    correctChoiceId: detail?.correctChoiceId ?? "",
+    correctChoiceId,
+    correctChoiceLetter,
     videos,
     analytics: buildAnalytics(loc, detail, choices),
     neighbors,

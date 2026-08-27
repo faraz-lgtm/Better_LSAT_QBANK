@@ -61,30 +61,47 @@ function PracticeSessionQuestionNavStrip({
     [questions, showPassageBreaks],
   )
 
-  return (
-    <div className={cn("practice-session-question-nav-grid", className)}>
-      {questions.map((q, i) => {
-        const n = i + 1
-        return (
-          <Fragment key={q.id}>
-            <PracticeSessionQuestionNavButton
-              number={n}
-              active={n === safeIndex}
-              answered={Boolean(answersByQuestion[q.id])}
-              flagged={isFlagged(q.id)}
-              recommendedForBr={recommendedForBr?.(q.id)}
-              outcome={outcomeForQuestion?.(q.id) ?? null}
-              variant={variant}
-              onClick={() => onSelectQuestion(n)}
-            />
-            {breakAfter.has(i) ? (
-              <span className={passageBreakClass(variant)} role="separator" aria-hidden />
-            ) : null}
-          </Fragment>
-        )
-      })}
-    </div>
-  )
+  const isReviewNav = Boolean(className?.includes("practice-session-review-nav-row"))
+
+  const items = questions.map((q, i) => {
+    const n = i + 1
+    return (
+      <Fragment key={q.id}>
+        <PracticeSessionQuestionNavButton
+          number={n}
+          active={n === safeIndex}
+          answered={Boolean(answersByQuestion[q.id])}
+          flagged={isFlagged(q.id)}
+          recommendedForBr={recommendedForBr?.(q.id)}
+          outcome={outcomeForQuestion?.(q.id) ?? null}
+          variant={variant}
+          onClick={() => onSelectQuestion(n)}
+        />
+        {breakAfter.has(i) ? (
+          <span className={passageBreakClass(variant)} role="separator" aria-hidden />
+        ) : null}
+      </Fragment>
+    )
+  })
+
+  if (isReviewNav) {
+    return (
+      <div
+        className={cn(
+          "practice-session-scroll-hidden min-h-[51px] min-w-0 flex-1 overflow-x-auto overflow-y-hidden",
+          className
+            ?.replace("practice-session-question-nav-grid", "")
+            .replace("practice-session-review-nav-row", ""),
+        )}
+      >
+        <div className="practice-session-question-nav-grid practice-session-review-nav-row">
+          {items}
+        </div>
+      </div>
+    )
+  }
+
+  return <div className={cn("practice-session-question-nav-grid", className)}>{items}</div>
 }
 
 export { PracticeSessionQuestionNavStrip }

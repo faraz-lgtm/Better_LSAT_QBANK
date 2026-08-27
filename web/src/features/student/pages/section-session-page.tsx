@@ -84,6 +84,19 @@ import {
   BLIND_REVIEW_PASSAGE_TEXT_CLASS,
   BLIND_REVIEW_QUESTION_PANEL_CLASS,
   BLIND_REVIEW_SHELL_CLASS,
+  REVIEW_BODY_CLASS,
+  REVIEW_BODY_GRID_CLASS,
+  REVIEW_CARD_CLASS,
+  REVIEW_EXIT_BUTTON_CLASS,
+  REVIEW_FOOTER_CLASS,
+  REVIEW_FOOTER_NAV_CLASS,
+  REVIEW_FOOTER_ROW_CLASS,
+  REVIEW_NAV_ARROW_BUTTON_CLASS,
+  REVIEW_NAV_ARROW_GROUP_CLASS,
+  REVIEW_PASSAGE_PANEL_CLASS,
+  REVIEW_QUESTION_PANEL_CLASS,
+  REVIEW_SHELL_CLASS,
+  REVIEW_SIDE_PANEL_LAYOUT_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
 import { PracticeSectionIntroHeader } from "@/features/student/practice-session/practice-section-intro-header"
 import { PracticePrepTestSectionIntroPanel } from "@/features/student/practice-session/practice-preptest-section-intro-panel"
@@ -402,6 +415,43 @@ function SectionQuestionPanel({
         ) : null}
       </div>
     </>
+  )
+}
+
+function ReviewStaticSwitch({ checked = false }: { checked?: boolean }) {
+  return (
+    <span
+      role="switch"
+      aria-checked={checked}
+      aria-disabled="true"
+      className={cn(
+        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent",
+        checked ? "bg-[#0d47a1]" : "bg-[#c5cad3]",
+      )}
+    >
+      <span
+        className={cn(
+          "block size-4 rounded-full bg-white shadow-sm",
+          checked ? "translate-x-4" : "translate-x-0",
+        )}
+      />
+    </span>
+  )
+}
+
+function ReviewPassageCardHeader() {
+  return (
+    <div className="mb-8 flex h-8 shrink-0 items-center justify-between gap-4">
+      <span className="inline-flex h-8 items-center rounded-[8px] bg-[#f6f8fa] px-4 py-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1]">
+        Passage Only View
+      </span>
+      <span className="inline-flex h-8 items-center gap-4" aria-label="Analysis View is display only">
+        <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#062357]">
+          Analysis View
+        </span>
+        <ReviewStaticSwitch />
+      </span>
+    </div>
   )
 }
 
@@ -1485,6 +1535,9 @@ function SectionSessionPage() {
       chrome={resultsReviewMode ? "review" : "blind-review"}
       sidePanel={resultsReviewMode ? reviewSidePanel : null}
       onSidePanelChange={resultsReviewMode ? setReviewSidePanel : undefined}
+      findQuery={resultsReviewMode ? findQuery : undefined}
+      onFindQueryChange={resultsReviewMode ? setFindQuery : undefined}
+      questionProgressLabel={resultsReviewMode ? `${safeIndex} of ${questions.length}` : null}
     />
   ) : null
 
@@ -1493,7 +1546,9 @@ function SectionSessionPage() {
       <div
         className={cn(
           useBlindReviewLayout
-            ? BLIND_REVIEW_BODY_CLASS
+            ? resultsReviewMode
+              ? REVIEW_BODY_CLASS
+              : BLIND_REVIEW_BODY_CLASS
             : "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden",
           timeUpFlow != null && "practice-session-body--scroll-locked",
         )}
@@ -1501,9 +1556,13 @@ function SectionSessionPage() {
         style={useBlindReviewLayout ? undefined : highlights.contentStyle}
       >
         {showNotesPanel && useBlindReviewLayout ? (
-          <div className={BLIND_REVIEW_NOTES_LAYOUT_CLASS}>
-            <div className={BLIND_REVIEW_NOTES_STACK_CLASS}>
-              <div ref={passagePaneRef} className={BLIND_REVIEW_NOTES_PASSAGE_PANEL_CLASS}>
+          <div className={resultsReviewMode ? REVIEW_SIDE_PANEL_LAYOUT_CLASS : BLIND_REVIEW_NOTES_LAYOUT_CLASS}>
+            <div className={resultsReviewMode ? "contents" : BLIND_REVIEW_NOTES_STACK_CLASS}>
+              <div
+                ref={passagePaneRef}
+                className={resultsReviewMode ? REVIEW_PASSAGE_PANEL_CLASS : BLIND_REVIEW_NOTES_PASSAGE_PANEL_CLASS}
+              >
+                {resultsReviewMode ? <ReviewPassageCardHeader /> : null}
                 {sectionType === "RC" && current.passage ? (
                   <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
                 ) : null}
@@ -1514,10 +1573,16 @@ function SectionSessionPage() {
                   toolMode={highlights.toolMode}
                   onMouseUp={highlights.handleContentMouseUp}
                   onClickCapture={highlights.handleContentClick}
-                  className={BLIND_REVIEW_PASSAGE_TEXT_CLASS}
+                  className={cn(
+                    BLIND_REVIEW_PASSAGE_TEXT_CLASS,
+                    resultsReviewMode && "text-base leading-[1.5] tracking-[0.32px] text-[#36394a]",
+                  )}
                 />
               </div>
-              <div ref={questionPaneRef} className={BLIND_REVIEW_NOTES_QUESTION_PANEL_CLASS}>
+              <div
+                ref={questionPaneRef}
+                className={resultsReviewMode ? REVIEW_QUESTION_PANEL_CLASS : BLIND_REVIEW_NOTES_QUESTION_PANEL_CLASS}
+              >
               <SectionQuestionPanel
                 key={current.id}
                 question={current}
@@ -1554,6 +1619,7 @@ function SectionSessionPage() {
             <PracticeSessionNotesPanel
               open
               variant="blind-review"
+              chrome={resultsReviewMode ? "review" : "blind-review"}
               storageKey={notesStorageKey}
               questionTag={questionRefLabel}
               activeQuestionId={current?.id ?? null}
@@ -1564,9 +1630,13 @@ function SectionSessionPage() {
             />
           </div>
         ) : showReviewContentPanel && useBlindReviewLayout ? (
-          <div className={BLIND_REVIEW_NOTES_LAYOUT_CLASS}>
-            <div className={BLIND_REVIEW_NOTES_STACK_CLASS}>
-              <div ref={passagePaneRef} className={BLIND_REVIEW_NOTES_PASSAGE_PANEL_CLASS}>
+          <div className={resultsReviewMode ? REVIEW_SIDE_PANEL_LAYOUT_CLASS : BLIND_REVIEW_NOTES_LAYOUT_CLASS}>
+            <div className={resultsReviewMode ? "contents" : BLIND_REVIEW_NOTES_STACK_CLASS}>
+              <div
+                ref={passagePaneRef}
+                className={resultsReviewMode ? REVIEW_PASSAGE_PANEL_CLASS : BLIND_REVIEW_NOTES_PASSAGE_PANEL_CLASS}
+              >
+                {resultsReviewMode ? <ReviewPassageCardHeader /> : null}
                 {sectionType === "RC" && current.passage ? (
                   <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
                 ) : null}
@@ -1577,10 +1647,16 @@ function SectionSessionPage() {
                   toolMode={highlights.toolMode}
                   onMouseUp={highlights.handleContentMouseUp}
                   onClickCapture={highlights.handleContentClick}
-                  className={BLIND_REVIEW_PASSAGE_TEXT_CLASS}
+                  className={cn(
+                    BLIND_REVIEW_PASSAGE_TEXT_CLASS,
+                    resultsReviewMode && "text-base leading-[1.5] tracking-[0.32px] text-[#36394a]",
+                  )}
                 />
               </div>
-              <div ref={questionPaneRef} className={BLIND_REVIEW_NOTES_QUESTION_PANEL_CLASS}>
+              <div
+                ref={questionPaneRef}
+                className={resultsReviewMode ? REVIEW_QUESTION_PANEL_CLASS : BLIND_REVIEW_NOTES_QUESTION_PANEL_CLASS}
+              >
                 <SectionQuestionPanel
                   key={current.id}
                   question={current}
@@ -1647,6 +1723,7 @@ function SectionSessionPage() {
                     : "border-[#dfe1e7] border-b p-5 lg:border-b-0",
               )}
             >
+              {resultsReviewMode ? <ReviewPassageCardHeader /> : null}
               {sectionType === "RC" && current.passage ? (
                 <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
               ) : null}
@@ -1750,7 +1827,7 @@ function SectionSessionPage() {
             onNext={() => setQIndex((i) => Math.min(questions.length, i + 1))}
           />
         ) : useBlindReviewLayout ? (
-          <div className={BLIND_REVIEW_FOOTER_ROW_CLASS}>
+          <div className={resultsReviewMode ? REVIEW_FOOTER_ROW_CLASS : BLIND_REVIEW_FOOTER_ROW_CLASS}>
             <PracticeSessionQuestionNavStrip
               questions={questions}
               safeIndex={safeIndex}
@@ -1763,15 +1840,15 @@ function SectionSessionPage() {
               variant={sessionVariant}
               showPassageBreaks={sectionType === "RC"}
               onSelectQuestion={setQIndex}
-              className={BLIND_REVIEW_FOOTER_NAV_CLASS}
+              className={resultsReviewMode ? REVIEW_FOOTER_NAV_CLASS : BLIND_REVIEW_FOOTER_NAV_CLASS}
             />
-            <div className={BLIND_REVIEW_NAV_ARROW_GROUP_CLASS}>
+            <div className={resultsReviewMode ? REVIEW_NAV_ARROW_GROUP_CLASS : BLIND_REVIEW_NAV_ARROW_GROUP_CLASS}>
               <PracticeSessionNavArrowButton
                 direction="prev"
                 disabled={safeIndex <= 1}
                 iconOnly
                 figmaNarrowArrow
-                className={BLIND_REVIEW_NAV_ARROW_BUTTON_CLASS}
+                className={resultsReviewMode ? REVIEW_NAV_ARROW_BUTTON_CLASS : BLIND_REVIEW_NAV_ARROW_BUTTON_CLASS}
                 onClick={() => setQIndex((i) => Math.max(1, i - 1))}
               />
               <PracticeSessionNavArrowButton
@@ -1779,9 +1856,20 @@ function SectionSessionPage() {
                 disabled={safeIndex >= questions.length}
                 iconOnly
                 figmaNarrowArrow
-                className={BLIND_REVIEW_NAV_ARROW_BUTTON_CLASS}
+                className={resultsReviewMode ? REVIEW_NAV_ARROW_BUTTON_CLASS : BLIND_REVIEW_NAV_ARROW_BUTTON_CLASS}
                 onClick={() => setQIndex((i) => Math.min(questions.length, i + 1))}
               />
+              {resultsReviewMode ? (
+                <button
+                  type="button"
+                  className={REVIEW_EXIT_BUTTON_CLASS}
+                  onClick={handleBlindReviewExit}
+                  disabled={finishing}
+                >
+                  <span>Exit</span>
+                  <X className="size-4" strokeWidth={2} aria-hidden />
+                </button>
+              ) : null}
             </div>
           </div>
         ) : (
@@ -1888,13 +1976,15 @@ function SectionSessionPage() {
       className={cn(
         "flex min-h-0 max-w-none flex-1 flex-col overflow-hidden",
         useBlindReviewLayout
-          ? "h-full bg-[#f5f9ff]"
+          ? resultsReviewMode
+            ? "h-full bg-white"
+            : "h-full bg-[#f5f9ff]"
           : !useActiveDrillLayout &&
               "bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))] px-0 py-4 md:py-5",
       )}
     >
       {useBlindReviewLayout ? (
-        <div className={BLIND_REVIEW_SHELL_CLASS}>
+        <div className={resultsReviewMode ? REVIEW_SHELL_CLASS : BLIND_REVIEW_SHELL_CLASS}>
           {error ? (
             <p className="absolute left-4 right-4 top-0 z-20 text-sm text-red-600 md:left-6 md:right-6" role="alert">
               {error}
@@ -1902,8 +1992,8 @@ function SectionSessionPage() {
           ) : null}
           {blindReviewHeader}
           <div
-            className={BLIND_REVIEW_CARD_CLASS}
-            style={{ maxWidth: showNotesPanel ? 1440 : 1280 }}
+            className={resultsReviewMode ? REVIEW_CARD_CLASS : BLIND_REVIEW_CARD_CLASS}
+            style={resultsReviewMode ? undefined : { maxWidth: showNotesPanel ? 1440 : 1280 }}
           >
             {sessionInnerContent}
           </div>

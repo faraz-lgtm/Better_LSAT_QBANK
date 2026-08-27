@@ -91,6 +91,7 @@ function ExplanationQuestionDetailPage() {
     let alive = true
     setDetailLoading(true)
     setDetailError(null)
+    setDetail(null)
     void explanationsApi
       .getExplanationDetail(questionId)
       .then((d) => {
@@ -161,42 +162,43 @@ function ExplanationQuestionDetailPage() {
   return (
     <StudentMain
       layout={questionTabLocked ? "locked" : "scroll"}
-      className="bg-[#f0f5ff]"
-      contentClassName="bg-[#f0f5ff]"
+      className="bg-[#f3f7ff]"
+      contentClassName="bg-[#f3f7ff]"
     >
       <div className={cn("flex flex-col gap-6", questionTabLocked && "min-h-0 min-w-0 flex-1")}>
-        <header className="shrink-0 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0 flex-1">
-            <h1 className="student-page-heading">{view.headingCode}</h1>
-            <p className="m-0 mt-1 text-xs font-normal leading-normal tracking-[0.02em] text-[#6a7282]">
-              {view.subtitleTrail}
-            </p>
-          </div>
-          <ExplanationDetailTabBar
-            tab={tab}
-            onTabChange={setTab}
-            prevHref={neighborHref(view.neighbors.prevRouteKey, tab)}
-            nextHref={neighborHref(view.neighbors.nextRouteKey, tab)}
-            showExplanationTab={view.hasExplanationTab}
-          />
-        </header>
+        <ExplanationDetailTabBar
+          headingCode={view.headingCode}
+          subtitleTrail={view.subtitleTrail}
+          questionNumber={view.questionNumber}
+          passageQuestions={resolvedLoc.pass.questions.map((q) => ({ id: q.id, number: q.number }))}
+          tab={tab}
+          onTabChange={setTab}
+          prevHref={neighborHref(view.neighbors.prevRouteKey, tab)}
+          nextHref={neighborHref(view.neighbors.nextRouteKey, tab)}
+          showExplanationTab
+        />
 
         {detailError ? <p className="text-sm text-[#95122b]">{detailError}</p> : null}
 
-        <div className={cn(questionTabLocked && "min-h-0 min-w-0 flex-1")}>
+        <div className={cn(questionTabLocked && "flex min-h-0 min-w-0 flex-1 flex-col")}>
           {detailLoading && tab === "question" ? <StudentPageLoader label="Loading question…" /> : null}
-          {tab === "question" && !detailLoading ? (
-            <ExplanationQuestionTabPanel view={view} initialExpandedChoiceId={initialExpandedChoiceId} />
+          {tab === "question" && !detailLoading && detail ? (
+            <ExplanationQuestionTabPanel
+              key={questionId}
+              view={view}
+              initialExpandedChoiceId={initialExpandedChoiceId}
+            />
           ) : null}
-          {tab === "explanation" && view.hasExplanationTab ? (
-            <ExplanationExplainTabPanel videos={view.videos} />
-          ) : null}
+          {tab === "explanation" ? <ExplanationExplainTabPanel videoOnly videos={view.videos} /> : null}
           {tab === "analytics" && detailError ? <p className="text-sm text-[#95122b]">{detailError}</p> : null}
           {tab === "analytics" && !detailError && (detailLoading || !detail) ? (
             <StudentPageLoader label="Loading insights…" />
           ) : null}
           {tab === "analytics" && !detailError && !detailLoading && detail ? (
-            <ExplanationAnalyticsTabPanel analytics={view.analytics} />
+            <ExplanationAnalyticsTabPanel
+              analytics={view.analytics}
+              correctChoiceLetter={view.correctChoiceLetter}
+            />
           ) : null}
         </div>
       </div>

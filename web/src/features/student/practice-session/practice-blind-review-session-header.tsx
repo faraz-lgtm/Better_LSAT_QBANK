@@ -1,4 +1,4 @@
-import { EyeOff } from "lucide-react"
+import { EyeOff, X } from "lucide-react"
 
 import type { BlindReviewAnswerView } from "@/features/student/practice-session/practice-blind-review-answer-toggle"
 import {
@@ -51,12 +51,22 @@ type PracticeBlindReviewSessionHeaderProps = {
   chrome?: "blind-review" | "review"
   sidePanel?: PracticeReviewSidePanel
   onSidePanelChange?: (panel: PracticeReviewSidePanel) => void
+  findQuery?: string
+  onFindQueryChange?: (value: string) => void
+  questionProgressLabel?: string | null
+  /**
+   * Review chrome header actions. Default shows all three.
+   * Pass a subset (e.g. `["insights"]`) for diagnostic.
+   */
+  reviewSideActions?: Array<"explanation" | "insights" | "notes">
 }
 
-function headerActionButtonClass(active: boolean) {
+function reviewHeaderActionButtonClass(active: boolean) {
   return cn(
-    BLIND_REVIEW_HEADER_NOTES_BUTTON_CLASS,
-    active && BLIND_REVIEW_HEADER_NOTES_BUTTON_ACTIVE_CLASS,
+    "box-border inline-flex h-10 shrink-0 items-center gap-2 rounded-[12px] border border-solid px-4 py-2 text-base font-medium leading-normal tracking-[0.32px] transition-colors",
+    active
+      ? "border-[#0b4e6e] bg-[#0d47a1] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
+      : "border-[#dfe1e7] bg-white text-[#666d80] hover:bg-[#f6f8fa] hover:text-[#062357]",
   )
 }
 
@@ -92,13 +102,109 @@ function PracticeBlindReviewSessionHeader({
   chrome = "blind-review",
   sidePanel = null,
   onSidePanelChange,
+  findQuery = "",
+  onFindQueryChange,
+  questionProgressLabel = null,
+  reviewSideActions = ["explanation", "insights", "notes"],
 }: PracticeBlindReviewSessionHeaderProps) {
   const isReviewChrome = chrome === "review"
   const blindReviewView = answerView === "blind_review"
+  const showExplanationAction = reviewSideActions.includes("explanation")
+  const showInsightsAction = reviewSideActions.includes("insights")
+  const showNotesAction = reviewSideActions.includes("notes")
+  const showAnySideAction = showExplanationAction || showInsightsAction || showNotesAction
 
   function toggleSidePanel(panel: Exclude<PracticeReviewSidePanel, null>) {
     if (!onSidePanelChange) return
     onSidePanelChange(sidePanel === panel ? null : panel)
+  }
+
+  if (isReviewChrome) {
+    return (
+      <header className="practice-session-header absolute inset-x-0 top-0 z-10 flex h-[88px] flex-col bg-white">
+        <div className="flex h-[84px] shrink-0 items-center justify-between gap-6 px-10 py-6">
+          <div className="practice-session-scroll-hidden flex min-w-0 flex-1 items-center gap-6 overflow-x-auto">
+            <button
+              type="button"
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] text-[#0d0d12] transition hover:bg-[#f6f8fa]"
+              aria-label="Exit review"
+              onClick={onExitSection}
+              disabled={exiting}
+            >
+              <X className="size-6" strokeWidth={2} aria-hidden />
+            </button>
+            <p className="m-0 shrink-0 text-2xl font-bold leading-[1.3] text-[#062357]">
+              {prepTestLabel}
+            </p>
+            <span className="shrink-0 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[#666d80]">
+              {questionRef}
+            </span>
+            {showSectionSelect ? (
+              <PracticeBlindReviewSectionSelect
+                sections={sectionOptions}
+                activeSectionSessionId={activeSectionSessionId}
+                onSelect={onSelectSection}
+              />
+            ) : null}
+            <input
+              type="search"
+              value={findQuery}
+              onChange={(event) => onFindQueryChange?.(event.target.value)}
+              placeholder="Find Text, Type Here"
+              className="h-10 w-[262px] shrink-0 rounded-[12px] border border-[#dfe1e7] bg-white px-4 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#062357] outline-none placeholder:text-[#818898] focus:border-[#0d47a1] focus:ring-2 focus:ring-[#0d47a1]/10"
+            />
+          </div>
+
+          <div className="flex shrink-0 items-center gap-6">
+            {questionProgressLabel ? (
+              <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#666d80]">
+                {questionProgressLabel}
+              </span>
+            ) : null}
+            {showAnySideAction ? (
+              <>
+                {showExplanationAction ? (
+                  <button
+                    type="button"
+                    className={reviewHeaderActionButtonClass(sidePanel === "explanation")}
+                    aria-pressed={sidePanel === "explanation"}
+                    onClick={() => toggleSidePanel("explanation")}
+                  >
+                    <ReviewIdeaIcon className="size-5 shrink-0" />
+                    <span>Video Explanation</span>
+                  </button>
+                ) : null}
+                {showInsightsAction ? (
+                  <button
+                    type="button"
+                    className={reviewHeaderActionButtonClass(sidePanel === "insights")}
+                    aria-pressed={sidePanel === "insights"}
+                    onClick={() => toggleSidePanel("insights")}
+                  >
+                    <ReviewInsightsIcon className="size-5 shrink-0" />
+                    <span>Insights</span>
+                  </button>
+                ) : null}
+                {showNotesAction ? (
+                  <button
+                    type="button"
+                    className={reviewHeaderActionButtonClass(sidePanel === "notes")}
+                    aria-pressed={sidePanel === "notes"}
+                    onClick={() => toggleSidePanel("notes")}
+                  >
+                    <BlindReviewNotesIcon className="size-5 shrink-0" />
+                    <span>Notes</span>
+                  </button>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+        </div>
+        <div className="relative h-1 shrink-0 bg-[#dfe1e7]">
+          <div className="absolute inset-y-0 left-10 w-[176px] rounded-[5px] bg-[#0d47a1]" />
+        </div>
+      </header>
+    )
   }
 
   return (
@@ -139,46 +245,7 @@ function PracticeBlindReviewSessionHeader({
         </div>
 
         <div className="flex shrink-0 items-center gap-4 md:gap-6">
-          {isReviewChrome ? (
-            <>
-              <button
-                type="button"
-                className={headerActionButtonClass(sidePanel === "explanation")}
-                aria-pressed={sidePanel === "explanation"}
-                onClick={() => toggleSidePanel("explanation")}
-              >
-                <ReviewIdeaIcon className="size-5 shrink-0" />
-                <span className="hidden sm:inline">Explanation</span>
-              </button>
-              <button
-                type="button"
-                className={headerActionButtonClass(sidePanel === "insights")}
-                aria-pressed={sidePanel === "insights"}
-                onClick={() => toggleSidePanel("insights")}
-              >
-                <ReviewInsightsIcon className="size-5 shrink-0" />
-                <span className="hidden sm:inline">Insights</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleSidePanel("notes")}
-                className={headerActionButtonClass(sidePanel === "notes")}
-                aria-pressed={sidePanel === "notes"}
-              >
-                <BlindReviewNotesIcon className="size-5 shrink-0" />
-                <span className="hidden sm:inline">Notes</span>
-              </button>
-              <button
-                type="button"
-                className={BLIND_REVIEW_HEADER_EXIT_BUTTON_CLASS}
-                onClick={onExitSection}
-                disabled={exiting}
-              >
-                {exiting ? exitingLabel : "Exit"}
-              </button>
-            </>
-          ) : (
-            <>
+          <>
               {blindReviewView ? (
                 <PracticeSessionToolbar
                   variant="blind-review"
@@ -220,8 +287,7 @@ function PracticeBlindReviewSessionHeader({
               >
                 {exiting ? exitingLabel : exitButtonLabel}
               </button>
-            </>
-          )}
+          </>
         </div>
       </div>
     </header>
