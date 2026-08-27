@@ -7,6 +7,10 @@ import {
   ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import {
+  OFFICIAL_OPTIONS_LIST_CLASS,
+  OFFICIAL_QUESTION_PANEL_WITH_WIDGET_CLASS,
+} from "@/features/student/practice-session/practice-session-official-styles"
+import {
   PracticeBlindReviewAnswerToggle,
   type BlindReviewAnswerOutcome,
   type BlindReviewAnswerView,
@@ -16,7 +20,12 @@ import { PracticeQuestionStem } from "@/features/student/practice-session/practi
 import { PracticeSessionResetResponseButton } from "@/features/student/practice-session/practice-session-reset-response-button"
 import { PracticeSessionSideWidget } from "@/features/student/practice-session/practice-session-side-action-rail"
 import { useResponseMasking } from "@/features/student/practice-session/use-response-masking"
-import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
+import {
+  isExamChromeLayout,
+  isOfficialLayout,
+  type PracticeSessionVariant,
+  type PracticeToolMode,
+} from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
 
 function regionKey(questionId: string, part: string) {
@@ -39,9 +48,17 @@ type PracticeDrillQuestionPanelProps = {
   flagged: boolean
   onToggleFlag: () => void
   onOpenReview?: () => void
+  reviewActive?: boolean
   onOpenAccessibility?: () => void
   flagsDisabled?: boolean
   variant?: PracticeSessionVariant
+  toolMode?: PracticeToolMode
+  onHighlighter?: () => void
+  onEraser?: () => void
+  lineFocusActive?: boolean
+  onLineFocus?: () => void
+  onFullscreen?: () => void
+  fullView?: boolean
   blindReviewChrome?: boolean
   answerView?: BlindReviewAnswerView
   onAnswerViewChange?: (view: BlindReviewAnswerView) => void
@@ -73,9 +90,17 @@ function PracticeDrillQuestionPanel({
   flagged,
   onToggleFlag,
   onOpenReview,
+  reviewActive = false,
   onOpenAccessibility,
   flagsDisabled,
   variant,
+  toolMode,
+  onHighlighter,
+  onEraser,
+  lineFocusActive,
+  onLineFocus,
+  onFullscreen,
+  fullView = false,
   blindReviewChrome = false,
   answerView = "blind_review",
   onAnswerViewChange,
@@ -102,8 +127,9 @@ function PracticeDrillQuestionPanel({
   } = useResponseMasking()
   const stemKey = regionKey(question.id, "stem")
   const stemHtml = getRegionHtml(stemKey, question.stemText ?? "")
-  const isBlindReviewLayout = reviewChrome || (blindReviewChrome && variant === "blind-review")
-  const isActiveDrillLayout = variant === "active-drill"
+  const isBlindReviewLayout = blindReviewChrome && variant === "blind-review"
+  const isActiveDrillLayout = isExamChromeLayout(variant)
+  const officialChrome = isOfficialLayout(variant)
   const canResetResponse =
     !choicesDisabled &&
     (selectedIndex != null || responseMasking || hasMaskedChoices)
@@ -149,7 +175,7 @@ function PracticeDrillQuestionPanel({
         <div
           className={cn(
             "flex flex-wrap items-center justify-between gap-3",
-            variant === "active-drill" ? "px-4 pt-4" : "",
+            variant === "active-drill" || officialChrome ? "px-4 pt-4" : "",
           )}
         >
           <div className="flex flex-wrap items-center gap-2.5">
@@ -167,7 +193,7 @@ function PracticeDrillQuestionPanel({
           ) : null}
         </div>
       ) : null}
-      <div className={cn(isActiveDrillLayout && ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS)}>
+      <div className={cn(isActiveDrillLayout && (officialChrome ? OFFICIAL_QUESTION_PANEL_WITH_WIDGET_CLASS : ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS))}>
         <PracticeQuestionStem
           questionNumber={questionNumber}
           regionKey={stemKey}
@@ -188,7 +214,7 @@ function PracticeDrillQuestionPanel({
             {isCorrect ? "Correct" : "Incorrect"}
           </p>
         ) : null}
-        <div className={isActiveDrillLayout ? ACTIVE_DRILL_OPTIONS_LIST_CLASS : "flex flex-col gap-2"}>
+        <div className={officialChrome ? OFFICIAL_OPTIONS_LIST_CLASS : isActiveDrillLayout ? ACTIVE_DRILL_OPTIONS_LIST_CLASS : "flex flex-col gap-2"}>
           {question.choices.map((choice, index) => (
             <LrDrillOptionRow
               key={choice.id}
@@ -216,18 +242,27 @@ function PracticeDrillQuestionPanel({
             />
           ))}
           {isActiveDrillLayout && canResetResponse ? (
-            <PracticeSessionResetResponseButton onClick={handleResetResponse} />
+            <PracticeSessionResetResponseButton variant={variant} onClick={handleResetResponse} />
           ) : null}
         </div>
         {isActiveDrillLayout ? (
           <PracticeSessionSideWidget
+            variant={variant}
             flagged={flagged}
             onToggleFlag={onToggleFlag}
             flagsDisabled={flagsDisabled}
             responseMasking={responseMasking}
             onToggleResponseMasking={toggleResponseMasking}
             onReview={onOpenReview}
+            reviewActive={reviewActive}
             onAccessibility={onOpenAccessibility}
+            toolMode={toolMode}
+            onHighlighter={onHighlighter}
+            onEraser={onEraser}
+            lineFocusActive={lineFocusActive}
+            onLineFocus={onLineFocus}
+            onFullscreen={onFullscreen}
+            fullView={fullView}
           />
         ) : null}
       </div>

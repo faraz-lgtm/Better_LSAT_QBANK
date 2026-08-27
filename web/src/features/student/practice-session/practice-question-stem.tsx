@@ -5,10 +5,19 @@ import {
   ACTIVE_DRILL_STEM_SECTION_CLASS,
   ACTIVE_DRILL_STEM_TEXT_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import {
+  OFFICIAL_STEM_NUMBER_CLASS,
+  OFFICIAL_STEM_SECTION_CLASS,
+  OFFICIAL_STEM_TEXT_CLASS,
+} from "@/features/student/practice-session/practice-session-official-styles"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import { PracticeQuestionFlagButton } from "@/features/student/practice-session/practice-question-flag-button"
 import { cn } from "@/lib/utils"
-import type { PracticeSessionVariant, RegionKey } from "@/features/student/practice-session/practice-session-types"
+import {
+  isOfficialLayout,
+  type PracticeSessionVariant,
+  type RegionKey,
+} from "@/features/student/practice-session/practice-session-types"
 
 type PracticeQuestionStemProps = {
   questionNumber: number
@@ -37,6 +46,28 @@ function PracticeQuestionStem({
   showSideFlag = true,
 }: PracticeQuestionStemProps) {
   const isActiveDrill = variant === "active-drill"
+  const officialChrome = isOfficialLayout(variant)
+
+  if (officialChrome) {
+    return (
+      <div className={OFFICIAL_STEM_SECTION_CLASS}>
+        <div className="flex min-w-0 items-start">
+          {hideQuestionNumber ? null : (
+            <span className={OFFICIAL_STEM_NUMBER_CLASS}>{questionNumber} .</span>
+          )}
+          <PracticeAnnotatedContent
+            regionKey={regionKey}
+            html={html}
+            findQuery={findQuery}
+            scrollAnchor
+            as="div"
+            toolMode="none"
+            className={OFFICIAL_STEM_TEXT_CLASS}
+          />
+        </div>
+      </div>
+    )
+  }
 
   if (isActiveDrill) {
     return (

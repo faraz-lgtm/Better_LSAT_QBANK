@@ -34,6 +34,18 @@ function ExamHeaderCloseIcon({ className }: { className?: string }) {
   return <ExamHeaderFigmaIcon src={`${EXAM_HEADER_FIGMA}/block.svg`} size={36} className={className} />
 }
 
+function OfficialHeaderCloseIcon({ className }: { className?: string }) {
+  return <ExamHeaderFigmaIcon src="/figma/exam-official/close.svg" size={22} className={className} />
+}
+
+function OfficialHeaderSearchIcon({ className }: { className?: string }) {
+  return <ExamHeaderFigmaIcon src="/figma/exam-official/search.svg" size={12} className={className} />
+}
+
+function OfficialHeaderTimerIcon({ className }: { className?: string }) {
+  return <ExamHeaderFigmaIcon src="/figma/exam-official/timer.svg" size={14} className={className} />
+}
+
 function ExamHeaderTimerIcon({ className }: { className?: string }) {
   return <ExamHeaderFigmaIcon src={`${EXAM_HEADER_FIGMA}/timer.svg`} size={16} className={className} />
 }
@@ -48,4 +60,12 @@ function ExamHeaderMoreIcon({ className }: { className?: string }) {
   )
 }
 
-export { ExamHeaderCloseIcon, ExamHeaderMoreIcon, ExamHeaderPauseIcon, ExamHeaderTimerIcon }
+export {
+  ExamHeaderCloseIcon,
+  ExamHeaderMoreIcon,
+  ExamHeaderPauseIcon,
+  ExamHeaderTimerIcon,
+  OfficialHeaderCloseIcon,
+  OfficialHeaderSearchIcon,
+  OfficialHeaderTimerIcon,
+}

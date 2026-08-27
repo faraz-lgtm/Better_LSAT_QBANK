@@ -4,7 +4,11 @@ import {
   PRACTICE_SESSION_HEADER_CONTROL_RADIUS_CLASS,
   PRACTICE_SESSION_TIMER_PROGRESS_RADIUS_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
-import { ExamHeaderTimerIcon } from "@/features/student/practice-session/practice-session-header-icons"
+import { OFFICIAL_HEADER_TIMER_CLASS } from "@/features/student/practice-session/practice-session-official-styles"
+import {
+  ExamHeaderTimerIcon,
+  OfficialHeaderTimerIcon,
+} from "@/features/student/practice-session/practice-session-header-icons"
 import { cn } from "@/lib/utils"
 
 type PracticeSessionTimerProps = {
@@ -16,8 +20,8 @@ type PracticeSessionTimerProps = {
   progress: number
   displayClassName?: string
   showClockIcon?: boolean
-  /** `inline` is the LSAT default header (clock + label + time, no nested pause). */
-  layout?: "card" | "inline"
+  /** `inline` is the LSAT default header; `official` is LawHub clock + time only. */
+  layout?: "card" | "inline" | "official"
 }
 
 /** Drill timer stamp — elapsed / remaining pill with progress bar */
@@ -37,6 +41,22 @@ function PracticeSessionTimer({
     label === "Remaining" || label === "Time Left" || label === "Time Left:"
   const timerMinWidthClass = isCountdown ? "min-w-[213px]" : "min-w-[189px]"
   const timeLabel = formatPracticeElapsed(displaySeconds)
+
+  if (layout === "official") {
+    return (
+      <div className={OFFICIAL_HEADER_TIMER_CLASS}>
+        {showClockIcon ? <OfficialHeaderTimerIcon /> : null}
+        <span
+          className={cn(
+            "shrink-0 text-[14px] font-normal leading-5 tabular-nums text-[#2c3143]",
+            displayClassName,
+          )}
+        >
+          {timeLabel}
+        </span>
+      </div>
+    )
+  }
 
   if (layout === "inline") {
     return (

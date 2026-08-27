@@ -29,8 +29,25 @@ export function isPassageHighlightColor(value: string | null | undefined): value
   return value === "yellow" || value === "pink" || value === "green" || value === "blue"
 }
 
-/** LSAT default exam chrome (`active-drill`, Figma header `20268:105580`, footer `20268:107659`). Official LawHub view is a future variant. */
-export type PracticeSessionVariant = "default" | "active-drill" | "blind-review"
+/** LSAT default exam chrome (`active-drill`, Figma header `20268:105580`, footer `20268:107659`). Official LawHub view is `official` (Figma `20255:49920` full page). */
+export type PracticeSessionVariant = "default" | "active-drill" | "blind-review" | "official"
+
+export function isExamChromeLayout(variant: PracticeSessionVariant | undefined): boolean {
+  return variant === "active-drill" || variant === "official"
+}
+
+export function isOfficialLayout(variant: PracticeSessionVariant | undefined): boolean {
+  return variant === "official"
+}
+
+export function resolveExamSessionVariant(options: {
+  blindReview: boolean
+  officialInterface: boolean
+}): PracticeSessionVariant {
+  if (options.blindReview) return "blind-review"
+  if (options.officialInterface) return "official"
+  return "active-drill"
+}
 
 export const FONT_SCALE_STEPS = [0.75, 1, 1.25, 1.5, 1.75] as const
 export const LINE_SPACING_STEPS = [1, 1.25, 1.5] as const

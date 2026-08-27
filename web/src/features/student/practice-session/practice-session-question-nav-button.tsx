@@ -9,8 +9,20 @@ import {
   ACTIVE_DRILL_QUESTION_NAV_FLAG_SLOT_CLASS,
   ACTIVE_DRILL_QUESTION_NAV_ITEM_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import {
+  OFFICIAL_QUESTION_NAV_ANSWERED_BAR_CLASS,
+  OFFICIAL_QUESTION_NAV_BUTTON_ACTIVE_CLASS,
+  OFFICIAL_QUESTION_NAV_BUTTON_ANSWERED_CLASS,
+  OFFICIAL_QUESTION_NAV_BUTTON_CLASS,
+  OFFICIAL_QUESTION_NAV_BUTTON_DEFAULT_CLASS,
+  OFFICIAL_QUESTION_NAV_CARET_CLASS,
+  OFFICIAL_QUESTION_NAV_CURRENT_BAR_CLASS,
+  OFFICIAL_QUESTION_NAV_FLAG_CLASS,
+  OFFICIAL_QUESTION_NAV_FLAG_SLOT_CLASS,
+  OFFICIAL_QUESTION_NAV_ITEM_CLASS,
+} from "@/features/student/practice-session/practice-session-official-styles"
 import { BLIND_REVIEW_QUESTION_NAV_RECOMMENDED_CLASS } from "@/features/student/practice-session/practice-session-blind-review-styles"
-import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
+import { isOfficialLayout, type PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
 
 /** Figma `18617:35585` — Review footer question outcome */
@@ -64,6 +76,7 @@ function PracticeSessionQuestionNavButton({
   onClick,
 }: PracticeSessionQuestionNavButtonProps) {
   const isActiveDrill = variant === "active-drill"
+  const officialChrome = isOfficialLayout(variant)
   const isBlindReview = variant === "blind-review"
 
   if (outcome != null) {
@@ -128,6 +141,56 @@ function PracticeSessionQuestionNavButton({
           }
         >
           {number}
+        </button>
+      </div>
+    )
+  }
+
+  if (officialChrome) {
+    return (
+      <div className={OFFICIAL_QUESTION_NAV_ITEM_CLASS}>
+        <span className={OFFICIAL_QUESTION_NAV_FLAG_SLOT_CLASS} aria-hidden>
+          {flagged ? (
+            <img
+              src="/figma/exam-official/review-flag.svg"
+              alt=""
+              width={11}
+              height={13}
+              className={OFFICIAL_QUESTION_NAV_FLAG_CLASS}
+              draggable={false}
+            />
+          ) : null}
+        </span>
+        <button
+          type="button"
+          onClick={onClick}
+          className={cn(
+            OFFICIAL_QUESTION_NAV_BUTTON_CLASS,
+            active
+              ? OFFICIAL_QUESTION_NAV_BUTTON_ACTIVE_CLASS
+              : answered
+                ? OFFICIAL_QUESTION_NAV_BUTTON_ANSWERED_CLASS
+                : OFFICIAL_QUESTION_NAV_BUTTON_DEFAULT_CLASS,
+          )}
+          aria-current={active ? "true" : undefined}
+          aria-label={flagged ? `Question ${number}, flagged` : `Question ${number}`}
+        >
+          {number}
+          {active ? (
+            <>
+              <span className={OFFICIAL_QUESTION_NAV_CURRENT_BAR_CLASS} aria-hidden />
+              <img
+                src="/figma/exam-official/current-caret.svg"
+                alt=""
+                width={3}
+                height={3}
+                className={OFFICIAL_QUESTION_NAV_CARET_CLASS}
+                draggable={false}
+              />
+            </>
+          ) : answered ? (
+            <span className={OFFICIAL_QUESTION_NAV_ANSWERED_BAR_CLASS} aria-hidden />
+          ) : null}
         </button>
       </div>
     )

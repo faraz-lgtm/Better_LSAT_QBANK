@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 
+import { OFFICIAL_IMMERSIVE_FRAME_CLASS } from "@/features/student/practice-session/practice-session-official-styles"
 import { cn } from "@/lib/utils"
 
 const IMMERSIVE_SCRIM_BACKDROP_STYLE = {
@@ -13,7 +14,7 @@ type PracticeSessionImmersiveFrameProps = {
   children: ReactNode
   className?: string
   hideScrim?: boolean
-  /** Edge-to-edge shell (no outer padding / max-width). */
+  /** Figma `20255:49920` — official exam fills the viewport. */
   fullBleed?: boolean
 }
 
@@ -31,15 +32,17 @@ function PracticeSessionImmersiveFrame({
     }
   }, [])
 
+  const hideBackdrop = hideScrim || fullBleed
+
   return createPortal(
     <div
       className={cn(
         "fixed inset-0 z-40 flex items-center justify-center overflow-hidden",
-        fullBleed ? "p-0" : "p-4 md:p-8",
+        fullBleed ? OFFICIAL_IMMERSIVE_FRAME_CLASS : "p-4 md:p-8",
         className,
       )}
     >
-      {!hideScrim ? (
+      {!hideBackdrop ? (
         <div
           className="pointer-events-none fixed inset-0"
           style={IMMERSIVE_SCRIM_BACKDROP_STYLE}

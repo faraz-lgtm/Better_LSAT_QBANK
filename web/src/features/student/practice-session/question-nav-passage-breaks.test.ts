@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  officialReviewSpacerBeforeIndices,
   passageBreakAfterIndices,
   passageNavGroupKey,
 } from "@/features/student/practice-session/question-nav-passage-breaks"
@@ -65,6 +66,28 @@ describe("passageBreakAfterIndices", () => {
         { passage: { id: "p1" } },
         { passage: null },
         { passage: { id: "p2" } },
+      ]),
+    ).toEqual(new Set())
+  })
+})
+
+describe("officialReviewSpacerBeforeIndices", () => {
+  it("places an empty cell before each RC passage group, including the first", () => {
+    const questions = [
+      { passage: { id: "p1" } },
+      { passage: { id: "p1" } },
+      { passage: { id: "p2" } },
+      { passage: { id: "p2" } },
+    ]
+    expect(officialReviewSpacerBeforeIndices(questions)).toEqual(new Set([0, 2]))
+  })
+
+  it("does not insert LawHub empty cells for singleton LR stimuli", () => {
+    expect(
+      officialReviewSpacerBeforeIndices([
+        { passage: { id: "lr1" } },
+        { passage: { id: "lr2" } },
+        { passage: { id: "lr3" } },
       ]),
     ).toEqual(new Set())
   })

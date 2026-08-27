@@ -19,6 +19,8 @@ type PracticeSessionExamMorePanelProps = {
   disabled?: boolean
   finishing?: boolean
   exitOnly?: boolean
+  officialInterface?: boolean
+  onOfficialInterfaceChange?: (next: boolean) => void
   onClose: () => void
   onSubmit: () => void
   onSaveAndExit: () => void
@@ -33,24 +35,37 @@ function ExamMoreIcon({ src, size }: { src: string; size: number }) {
   )
 }
 
-function ExamMoreToggle({ labelledBy, disabled = false }: { labelledBy: string; disabled?: boolean }) {
+function ExamMoreToggle({
+  labelledBy,
+  checked = false,
+  disabled = false,
+  onCheckedChange,
+}: {
+  labelledBy: string
+  checked?: boolean
+  disabled?: boolean
+  onCheckedChange?: (next: boolean) => void
+}) {
+  const interactive = Boolean(onCheckedChange) && !disabled
   return (
-    <span
-      className="relative inline-flex h-6 w-11 shrink-0 overflow-hidden rounded-full"
+    <button
+      type="button"
+      className="relative inline-flex h-6 w-11 shrink-0 overflow-hidden rounded-full disabled:cursor-default"
       role="switch"
-      aria-checked="false"
+      aria-checked={checked}
       aria-labelledby={labelledBy}
-      aria-disabled={disabled || undefined}
+      disabled={!interactive}
+      onClick={() => onCheckedChange?.(!checked)}
     >
       <img
-        src={`${EXAM_FINISH_FIGMA}/toggle-off.svg`}
+        src={`${EXAM_FINISH_FIGMA}/${checked ? "toggle-on" : "toggle-off"}.svg`}
         alt=""
         width={44}
         height={24}
         className="size-full max-w-none"
         draggable={false}
       />
-    </span>
+    </button>
   )
 }
 
@@ -58,6 +73,8 @@ function PracticeSessionExamMorePanel({
   disabled = false,
   finishing = false,
   exitOnly = false,
+  officialInterface = false,
+  onOfficialInterfaceChange,
   onClose,
   onSubmit,
   onSaveAndExit,
@@ -143,7 +160,11 @@ function PracticeSessionExamMorePanel({
           <span id="exam-more-official-interface" className={EXAM_MORE_PANEL_TOGGLE_LABEL_CLASS}>
             Official Interface
           </span>
-          <ExamMoreToggle labelledBy="exam-more-official-interface" disabled />
+          <ExamMoreToggle
+            labelledBy="exam-more-official-interface"
+            checked={officialInterface}
+            onCheckedChange={onOfficialInterfaceChange}
+          />
         </div>
       </div>
     </>,

@@ -13,6 +13,8 @@ import {
   SESSION_FINISH_BUTTON_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeSessionExamMorePanel } from "@/features/student/practice-session/practice-session-exam-more-panel"
+import { OFFICIAL_HEADER_MORE_BUTTON_CLASS } from "@/features/student/practice-session/practice-session-official-styles"
+import { isOfficialLayout, type PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
 import { ExamHeaderMoreIcon } from "@/features/student/practice-session/practice-session-header-icons"
 import {
   FinishMenuSaveExitIcon,
@@ -38,6 +40,9 @@ type PracticeSessionFinishMenuProps = {
   onExit: () => void
   /** Exam more panel — defaults to `onExit` when omitted. */
   onExitWithoutSaving?: () => void
+  variant?: PracticeSessionVariant
+  officialInterface?: boolean
+  onOfficialInterfaceChange?: (next: boolean) => void
 }
 
 function PracticeSessionFinishMenu({
@@ -52,6 +57,9 @@ function PracticeSessionFinishMenu({
   onSubmitSection,
   onExit,
   onExitWithoutSaving,
+  variant = "default",
+  officialInterface = false,
+  onOfficialInterfaceChange,
 }: PracticeSessionFinishMenuProps) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -102,12 +110,16 @@ function PracticeSessionFinishMenu({
   )
 
   if (iconTrigger) {
+    const officialChrome = isOfficialLayout(variant)
     return (
-      <div ref={containerRef} className="relative h-[52px] w-[54px] shrink-0">
+      <div
+        ref={containerRef}
+        className={officialChrome ? "relative size-7 shrink-0" : "relative h-[52px] w-[54px] shrink-0"}
+      >
         <button
           type="button"
           disabled={disabled || finishing}
-          className={ACTIVE_DRILL_HEADER_MORE_BUTTON_CLASS}
+          className={officialChrome ? OFFICIAL_HEADER_MORE_BUTTON_CLASS : ACTIVE_DRILL_HEADER_MORE_BUTTON_CLASS}
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-label="More options"
@@ -120,6 +132,8 @@ function PracticeSessionFinishMenu({
             disabled={disabled}
             finishing={finishing}
             exitOnly={exitOnly}
+            officialInterface={officialInterface}
+            onOfficialInterfaceChange={onOfficialInterfaceChange}
             onClose={() => setOpen(false)}
             onSubmit={onSubmitSection}
             onSaveAndExit={onExit}
