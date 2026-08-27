@@ -1,7 +1,6 @@
 import { ChevronUp, Video } from "lucide-react"
 
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
-import { HtmlContent } from "@/lib/html/html-content"
 import { cn } from "@/lib/utils"
 
 type ExplanationExplainTabPanelProps = {
@@ -14,38 +13,22 @@ function hasVideoContent(v: ExplanationQuestionDetailView["videos"][number]): bo
   return Boolean(v.videoUrl?.trim())
 }
 
-function hasWrittenContent(v: ExplanationQuestionDetailView["videos"][number]): boolean {
-  return Boolean(v.explanationHtml?.trim())
-}
-
-function placeholderMessage(v: ExplanationQuestionDetailView["videos"][number]): string {
-  if (hasVideoContent(v)) return "Video explanation available"
-  return "Explanation not given"
-}
-
-function VideoExplanationCard({
-  v,
-  videoOnly = false,
-}: {
-  v: ExplanationQuestionDetailView["videos"][number]
-  videoOnly?: boolean
-}) {
+function VideoExplanationCard({ v }: { v: ExplanationQuestionDetailView["videos"][number] }) {
   const hasVideo = hasVideoContent(v)
-  const hasWritten = !videoOnly && hasWrittenContent(v)
 
   return (
-    <article className="overflow-hidden rounded-[14px] border border-[color:var(--greyscale-100)] bg-[var(--greyscale-25)] p-px shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+    <article className="overflow-hidden rounded-[14px] border border-[#dfe1e7] bg-[#f6f8fa] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
       <div
         className={cn(
-          "flex items-center justify-between gap-4 border-b px-5 py-4",
+          "flex items-center justify-between gap-4 border-b px-4 py-4",
           v.headerVariant === "yellow"
             ? "border-[#fff6e0] bg-[#fff6e0]"
-            : "border-[var(--primary-0)] bg-[var(--primary-0)]",
+            : "border-[#f3f7ff] bg-[#f3f7ff]",
         )}
       >
         <div className="flex min-w-0 items-center gap-2">
-          {!videoOnly ? <Video className="size-5 shrink-0 text-[#0d47a1]" aria-hidden /> : null}
-          <span className="text-sm font-medium tracking-[0.02em] text-[#666d80]">{v.authorTitle}</span>
+          <Video className="size-5 shrink-0 text-[#0d47a1]" aria-hidden />
+          <span className="text-base font-medium tracking-[0.02em] text-[#1a1b25]">{v.authorTitle}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-base font-medium tracking-[0.02em] text-[#0d47a1]">{v.dropdownLabel}</span>
@@ -57,24 +40,17 @@ function VideoExplanationCard({
         <div className="bg-white px-4 py-4">
           <video controls className="max-h-[min(50vh,339px)] w-full rounded-xl bg-black" src={v.videoUrl!} />
         </div>
-      ) : hasWritten ? (
-        <div className="bg-white px-4 py-5 md:px-6">
-          <HtmlContent
-            html={v.explanationHtml ?? ""}
-            className="explanation-detail-body max-w-none text-[#062357]"
-          />
-        </div>
       ) : (
-        <div className="flex min-h-[180px] flex-col items-center justify-center bg-[#f6f8fa] px-6 py-10 text-center">
-          <div className="mb-3 flex size-12 items-center justify-center rounded-[10px] bg-[#0d47a1]">
-            <Video className="size-6 text-white" aria-hidden />
+        <div className="flex min-h-[388px] flex-col items-center justify-center bg-[#36394a] px-6 py-10 text-center">
+          <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-white/20">
+            <Video className="size-8 text-white" aria-hidden />
           </div>
-          <p className="m-0 text-sm font-medium leading-5 text-[#062357]">{placeholderMessage(v)}</p>
+          <p className="m-0 text-sm font-normal leading-5 text-[#f5f9ff]">No videos available yet</p>
         </div>
       )}
 
       {v.postedLine ? (
-        <div className="bg-[var(--greyscale-25)] px-4 pt-4 pb-4">
+        <div className="bg-[#f6f8fa] px-4 pb-4 pt-4">
           <p className="m-0 text-xs leading-4 text-[#666d80]">{v.postedLine}</p>
         </div>
       ) : null}
@@ -83,20 +59,20 @@ function VideoExplanationCard({
 }
 
 function ExplanationExplainTabPanel({ videos, videoOnly = false }: ExplanationExplainTabPanelProps) {
-  const visible = videos.filter((v) =>
-    videoOnly ? hasVideoContent(v) : hasVideoContent(v) || hasWrittenContent(v),
-  )
+  const visible = videoOnly ? videos.filter(hasVideoContent) : videos
+
   if (visible.length === 0) {
     return (
       <p className="m-0 rounded-[14px] border border-dashed border-[#dfe1e7] bg-[#f6f8fa] px-4 py-6 text-center text-sm text-[#666d80]">
-        {videoOnly ? "No video explanation available yet." : "No explanation available yet."}
+        No videos available yet
       </p>
     )
   }
+
   return (
     <div className="flex flex-col gap-6">
       {visible.map((v) => (
-        <VideoExplanationCard key={v.id} v={v} videoOnly={videoOnly} />
+        <VideoExplanationCard key={v.id} v={v} />
       ))}
     </div>
   )

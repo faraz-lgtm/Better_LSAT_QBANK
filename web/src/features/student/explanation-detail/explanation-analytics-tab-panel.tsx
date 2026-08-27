@@ -1,54 +1,34 @@
-import { Users } from "lucide-react"
+import type { ReactNode } from "react"
+import { BookOpen, Check, Clock, FileText, Users } from "lucide-react"
 
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
 import { cn } from "@/lib/utils"
 
 type ExplanationAnalyticsTabPanelProps = {
   analytics: ExplanationQuestionDetailView["analytics"]
+  correctChoiceLetter?: string
 }
 
 const cardSurface =
-  "flex flex-col gap-6 rounded-[14px] border border-[color:var(--greyscale-100)] bg-white p-6 shadow-[0px_1px_1.5px_0px_rgba(0,0,0,0.1),0px_1px_1px_0px_rgba(0,0,0,0.1)]"
+  "rounded-[24px] border border-[#dfe1e7] bg-white p-7 shadow-[0px_1px_1px_rgba(6,35,87,0.04),0px_12px_16px_rgba(6,35,87,0.22)]"
 
-function difficultyBarColors(tone: "orange" | "red" | "teal"): { fill: string; text: string } {
-  if (tone === "red") return { fill: "bg-[#ef4444]", text: "text-[#ef4444]" }
-  if (tone === "teal") return { fill: "bg-[#0bbcc9]", text: "text-[#0bbcc9]" }
-  return { fill: "bg-[#0bbcc9]", text: "text-[#0bbcc9]" }
+const BAR_TRACK_HEIGHT = 200
+
+function difficultyToneStyles(tone: "green" | "teal" | "red"): {
+  pillBg: string
+  pillText: string
+  bar: string
+} {
+  if (tone === "red") {
+    return { pillBg: "bg-[rgba(239,68,68,0.1)]", pillText: "text-[#ef4444]", bar: "bg-[#ef4444]" }
+  }
+  if (tone === "teal") {
+    return { pillBg: "bg-[rgba(11,188,201,0.1)]", pillText: "text-[#0bbcc9]", bar: "bg-[#0bbcc9]" }
+  }
+  return { pillBg: "bg-[rgba(64,196,170,0.12)]", pillText: "text-[#0f9d82]", bar: "bg-[#40c4aa]" }
 }
 
-function DifficultyMeterBadge({
-  filled,
-  max,
-  label,
-  tone,
-}: {
-  filled: number
-  max: number
-  label: string
-  tone: "orange" | "red" | "teal"
-}) {
-  const safe = Math.max(0, Math.min(max, Math.round(filled)))
-  const colors = difficultyBarColors(tone)
-
-  return (
-    <div className="flex h-10 w-[132px] items-center gap-2.5 rounded-[10px] bg-[var(--primary-0)] px-2.5">
-      <div className="flex items-center gap-1.5" role="img" aria-label={`${safe} of ${max} bars`}>
-        {Array.from({ length: max }, (_, i) => (
-          <span
-            key={i}
-            className={cn(
-              "h-4 w-1.5 shrink-0 rounded-full",
-              i < safe ? colors.fill : "bg-[#ced0e7]",
-            )}
-          />
-        ))}
-      </div>
-      <span className={cn("text-xs font-semibold tracking-[0.02em]", colors.text)}>{label}</span>
-    </div>
-  )
-}
-
-function DifficultyColumn({
+function ComplexityStat({
   label,
   filled,
   max,
@@ -61,27 +41,229 @@ function DifficultyColumn({
   max: number
   difficultyLabel: string
   caption: string
-  tone: "orange" | "red" | "teal"
+  tone: "green" | "teal" | "red"
 }) {
+  const safe = Math.max(0, Math.min(max, Math.round(filled)))
+  const colors = difficultyToneStyles(tone)
+
   return (
-    <div className="flex max-w-[366px] flex-col gap-3">
-      <p className="m-0 text-base font-normal tracking-[0.02em] text-[#666d80]">{label}</p>
-      <DifficultyMeterBadge filled={filled} max={max} label={difficultyLabel} tone={tone} />
-      <p className="m-0 text-sm leading-5 text-[#4a5565]">{caption}</p>
+    <div className="rounded-2xl border border-[#dfe1e7] bg-white p-5">
+      <div className="flex items-center justify-between gap-3">
+        <p className="m-0 text-[13px] font-semibold uppercase tracking-[0.03em] text-[#666d80]">{label}</p>
+        <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", colors.pillBg, colors.pillText)}>
+          {difficultyLabel}
+        </span>
+      </div>
+      <div className="mt-4 flex h-[26px] items-center gap-2 pt-0">
+        {Array.from({ length: max }, (_, i) => (
+          <span
+            key={i}
+            className={cn("h-2.5 min-w-0 flex-1 rounded-full", i < safe ? colors.bar : "bg-[#e8ebf2]")}
+          />
+        ))}
+      </div>
+      <p className="m-0 pt-1.5 text-[11px] font-medium leading-[16.5px] text-[#99a1af]">
+        {safe} of {max}
+      </p>
+      <p className="m-0 pt-3 text-[13px] leading-[21px] text-[#666d80]">{caption}</p>
     </div>
   )
 }
 
-function ExplanationAnalyticsTabPanel({ analytics }: ExplanationAnalyticsTabPanelProps) {
-  const popularityTotal = analytics.answerPopularityTotal
+function ScoreBandCard({
+  headline,
+  range,
+  caption,
+}: {
+  headline: string
+  range: string
+  caption: string
+}) {
+  const score = Number.parseInt(headline, 10)
+  const sliderPct = Number.isFinite(score) ? Math.max(0, Math.min(100, ((score - 120) / 60) * 100)) : 50
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_440px]">
-      <div className="flex flex-col gap-6">
-        <section className={cardSurface}>
-          <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Difficulty</h3>
-          <div className="flex flex-col justify-between gap-8 md:flex-row md:gap-6">
-            <DifficultyColumn
+    <div
+      className="rounded-2xl border border-[rgba(13,71,161,0.15)] p-5"
+      style={{
+        backgroundImage:
+          "linear-gradient(169.42deg, rgb(13, 71, 161) 0%, rgb(12, 68, 155) 7.14%, rgb(6, 35, 87) 100%)",
+      }}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/10">
+            <Users className="size-5 text-white" aria-hidden />
+          </div>
+          <p className="m-0 max-w-[240px] text-[13px] leading-[17.875px] text-white/75">{caption}</p>
+        </div>
+        <div className="text-right">
+          <p className="m-0 text-[34px] font-bold leading-[34px] text-white">{headline}</p>
+          <p className="m-0 pt-1 text-[11px] font-medium leading-[16.5px] text-[#f3f7ff]">{range}</p>
+        </div>
+      </div>
+      <div className="relative mt-4 h-[43px] pt-4">
+        <div className="absolute inset-x-0 top-[19px] h-1.5 rounded-full bg-white/15" />
+        <div
+          className="absolute top-[19px] h-1.5 rounded-full bg-gradient-to-r from-[#0d47a1] to-[#419df8]"
+          style={{ width: `${sliderPct}%` }}
+        />
+        <span
+          className="absolute top-4 size-3 rounded-full bg-white shadow-sm"
+          style={{ left: `calc(${sliderPct}% - 6px)` }}
+          aria-hidden
+        />
+        <div className="absolute inset-x-0 top-[31px] flex justify-between text-[10px] font-medium leading-[15px] text-white/50">
+          <span>120</span>
+          <span>150</span>
+          <span>180</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const BAR_GRAY_GRADIENT =
+  "linear-gradient(0deg, rgb(154, 163, 178) 0%, rgb(167, 175, 189) 33.333%, rgb(180, 188, 201) 66.667%, rgb(193, 200, 212) 100%)"
+
+function TopAnswerBar({
+  letter,
+  pct,
+  highlight,
+}: {
+  letter: string
+  pct: number
+  highlight?: boolean
+}) {
+  const barHeight = pct > 0 ? Math.max(4, Math.round((pct / 100) * BAR_TRACK_HEIGHT)) : 0
+
+  return (
+    <div className="flex min-w-0 flex-1 flex-col items-center">
+      <p
+        className={cn(
+          "m-0 pb-2 text-base font-bold leading-6 tabular-nums",
+          highlight ? "text-[#0d47a1]" : "text-[#666d80]",
+        )}
+      >
+        {pct}%
+      </p>
+      <div className="relative flex h-[200px] w-16 max-w-[64px] items-end justify-center overflow-hidden rounded-2xl border border-[#dfe1e7] bg-[rgba(243,247,255,0.6)]">
+        {barHeight > 0 ? (
+          <div
+            className={cn(
+              "relative w-[62px] rounded-t-[10px]",
+              highlight && "bg-gradient-to-t from-[#093377] to-[#0d47a1] shadow-[0px_-6px_18px_0px_rgba(11,188,201,0.6)]",
+            )}
+            style={
+              highlight
+                ? { height: `${barHeight}px` }
+                : { height: `${barHeight}px`, backgroundImage: BAR_GRAY_GRADIENT }
+            }
+          />
+        ) : null}
+        {highlight ? (
+          <span className="absolute left-1/2 top-2 flex size-5 -translate-x-1/2 items-center justify-center rounded-full bg-white shadow-[0px_1px_1.5px_rgba(0,0,0,0.1),0px_1px_1px_rgba(0,0,0,0.1)]">
+            <Check className="size-3 text-[#0d47a1]" strokeWidth={3} aria-hidden />
+          </span>
+        ) : null}
+      </div>
+      <span
+        className={cn(
+          "mt-3 flex size-9 items-center justify-center rounded-xl text-sm font-semibold leading-[21px]",
+          highlight
+            ? "border border-[#0d47a1] bg-[#0d47a1] text-white shadow-[0px_4px_3px_rgba(11,188,201,0.3),0px_2px_2px_rgba(11,188,201,0.3)]"
+            : "border border-[#dfe1e7] bg-white text-[#666d80]",
+        )}
+      >
+        {letter}
+      </span>
+    </div>
+  )
+}
+
+function historyStatusPill(status: "in_process" | "answered"): {
+  label: string
+  className: string
+  dotClass: string
+} {
+  if (status === "answered") {
+    return {
+      label: "Completed",
+      className: "bg-[rgba(64,196,170,0.12)] text-[#0f9d82]",
+      dotClass: "bg-[#40c4aa]",
+    }
+  }
+  return {
+    label: "In progress",
+    className: "bg-[rgba(245,158,11,0.12)] text-[#c07a06]",
+    dotClass: "bg-[#f59e0b]",
+  }
+}
+
+function TagGroup({
+  icon,
+  iconBg,
+  title,
+  tags,
+  tagClassName,
+}: {
+  icon: ReactNode
+  iconBg: string
+  title: string
+  tags: string[]
+  tagClassName: string
+}) {
+  return (
+    <div className="rounded-2xl border border-[#dfe1e7] bg-[rgba(243,247,255,0.4)] p-4">
+      <div className="flex items-center gap-2.5">
+        <span className={cn("flex size-7 items-center justify-center rounded-lg", iconBg)}>{icon}</span>
+        <p className="m-0 text-[13px] font-semibold leading-[19.5px] text-[#062357]">{title}</p>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {tags.length > 0 ? (
+          tags.map((t) => (
+            <span
+              key={t}
+              className={cn(
+                "inline-flex h-[30px] items-center rounded-full px-3.5 text-xs font-medium",
+                tagClassName,
+              )}
+            >
+              {t}
+            </span>
+          ))
+        ) : (
+          <span className="text-sm text-[#666d80]">—</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: ExplanationAnalyticsTabPanelProps) {
+  const attemptCount = analytics.history.length
+  const popularityRows =
+    analytics.answerPopularity.length > 0
+      ? analytics.answerPopularity
+      : ["A", "B", "C", "D", "E"].map((letter) => ({
+          letter,
+          count: 0,
+          pct: 0,
+          ...(correctChoiceLetter === letter ? { highlight: true } : {}),
+        }))
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="grid gap-6 xl:grid-cols-2">
+        <section className={cn(cardSurface, "flex flex-col gap-6")}>
+          <div>
+            <h3 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[#062357]">Complexity</h3>
+            <p className="m-0 mt-1 text-xs leading-normal tracking-[0.02em] text-[#666d80]">
+              How this item performs against the test-taker pool.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <ComplexityStat
               label="Question"
               filled={analytics.questionDifficulty.filled}
               max={analytics.questionDifficulty.max}
@@ -89,7 +271,7 @@ function ExplanationAnalyticsTabPanel({ analytics }: ExplanationAnalyticsTabPane
               caption={analytics.questionDifficulty.caption}
               tone={analytics.questionDifficulty.tone}
             />
-            <DifficultyColumn
+            <ComplexityStat
               label="Passage"
               filled={analytics.passageDifficulty.filled}
               max={analytics.passageDifficulty.max}
@@ -98,168 +280,123 @@ function ExplanationAnalyticsTabPanel({ analytics }: ExplanationAnalyticsTabPane
               tone={analytics.passageDifficulty.tone}
             />
           </div>
-          <div className="border-t border-[#e5e7eb] pt-6">
-            <div className="flex items-center gap-3">
-              <Users className="size-5 shrink-0 text-[#818898]" strokeWidth={1.75} aria-hidden />
-              <div className="min-w-0">
-                <p className="m-0 text-sm leading-5 text-[#6a7282]">{analytics.scoreBand.caption}</p>
-                <p className="m-0 mt-0.5 text-2xl font-bold leading-[1.3] tabular-nums text-[#062357]">
-                  {analytics.scoreBand.headline}
-                </p>
-                <p className="m-0 text-xs font-bold leading-normal tracking-[0.02em] tabular-nums text-[#666d80]">
-                  {analytics.scoreBand.range}
-                </p>
-              </div>
-            </div>
-          </div>
+          <ScoreBandCard
+            headline={analytics.scoreBand.headline}
+            range={analytics.scoreBand.range}
+            caption={analytics.scoreBand.caption}
+          />
         </section>
 
-        <section className={cardSurface}>
-          <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Answer Popularity</h3>
-          <div className="flex flex-col gap-4">
-            {popularityTotal === 0 ? (
-              <p className="m-0 rounded-[14px] border border-dashed border-[color:var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-6 text-center text-sm text-[#666d80]">
-                No one has answered this question on the platform yet.
+        <section className={cn(cardSurface, "flex flex-col")}>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="m-0 text-base font-semibold leading-normal tracking-[0.02em] text-[#062357]">
+                Top Answer
+              </h3>
+              <p className="m-0 mt-1 text-xs leading-normal tracking-[0.02em] text-[#666d80]">
+                Distribution of responses across all test takers.
               </p>
+            </div>
+            {correctChoiceLetter ? (
+              <span className="inline-flex items-center gap-1.5 rounded-[10px] bg-[#edf3ff] px-3 py-1 text-xs font-semibold leading-[18px] text-[#0d47a1]">
+                <Check className="size-3.5" aria-hidden />
+                {correctChoiceLetter} is correct
+              </span>
             ) : null}
-            {analytics.answerPopularity.map((row) => {
-              const isYourAnswer =
-                analytics.userSelectedLetter != null && row.letter === analytics.userSelectedLetter
-              const isYourWrong = isYourAnswer && !row.highlight
-              return (
-                <div
-                  key={row.letter}
-                  className={cn(
-                    "flex items-start gap-3 rounded-[14px] border bg-white p-4",
-                    isYourWrong
-                      ? "border-[#fecaca]"
-                      : isYourAnswer
-                        ? "border-[#0bbcc9]/40"
-                        : "border-[color:var(--greyscale-100)]",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex size-7 shrink-0 items-center justify-center rounded-[10px] border text-sm font-medium tracking-[0.02em]",
-                      isYourWrong
-                        ? "border-[#fecaca] bg-[#fef2f2] text-[#ef4444]"
-                        : "border-[color:var(--greyscale-100)] bg-white text-[#666d80]",
-                    )}
-                  >
-                    {row.letter}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-1 flex items-center justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className="text-sm font-normal tracking-[0.02em] tabular-nums text-[#666d80]">
-                          {row.pct}%
-                        </span>
-                        {isYourAnswer ? (
-                          <span
-                            className={cn(
-                              "text-xs font-semibold tracking-[0.02em]",
-                              isYourWrong ? "text-[#ef4444]" : "text-[#0bbcc9]",
-                            )}
-                          >
-                            Your answer
-                          </span>
-                        ) : null}
-                      </div>
-                      <span className="text-sm font-normal tracking-[0.02em] tabular-nums text-[#666d80]">
-                        Avg score: —
-                      </span>
-                    </div>
-                    <div className="h-3 overflow-hidden rounded-full bg-[#eceff3]">
-                      <div
-                        className={cn(
-                          "h-full min-w-0 rounded-full transition-[width]",
-                          isYourWrong
-                            ? "bg-[#ef4444]"
-                            : row.highlight
-                              ? "bg-[#0bbcc9]"
-                              : "bg-[#a4acb9]",
-                        )}
-                        style={{ width: `${Math.min(100, Math.max(row.pct > 0 ? 3 : 0, row.pct))}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+          </div>
+          <div className="flex items-start gap-5 pt-6">
+            {popularityRows.map((row) => (
+              <TopAnswerBar
+                key={row.letter}
+                letter={row.letter}
+                pct={row.pct}
+                highlight={row.highlight}
+              />
+            ))}
           </div>
         </section>
       </div>
 
-      <div className="flex flex-col gap-6">
-        <section className={cardSurface}>
-          <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Analysis</h3>
-          <div className="space-y-4">
-            <div>
-              <p className="m-0 text-base font-normal tracking-[0.02em] text-[#666d80]">Question Stem Tags</p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {analytics.questionStemTags.length > 0 ? (
-                  analytics.questionStemTags.map((t) => (
-                    <span
-                      key={t}
-                      className="inline-flex h-6 items-center rounded-full bg-[var(--greyscale-25)] px-3 text-xs font-normal tracking-[0.02em] text-[#062357]"
-                    >
-                      {t}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-sm text-[#666d80]">—</span>
-                )}
-              </div>
-            </div>
-            <div>
-              <p className="m-0 text-base font-normal tracking-[0.02em] text-[#666d80]">Passage Tags</p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {analytics.passageTags.length > 0 ? (
-                  analytics.passageTags.map((t) => (
-                    <span
-                      key={t}
-                      className="inline-flex h-6 items-center rounded-full bg-[var(--greyscale-25)] px-3 text-xs font-normal tracking-[0.02em] text-[#062357]"
-                    >
-                      {t}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-sm text-[#666d80]">—</span>
-                )}
-              </div>
-            </div>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <section className={cn(cardSurface, "flex flex-col")}>
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[#062357]">
+              Question History
+            </h3>
+            {attemptCount > 0 ? (
+              <span className="rounded-full bg-[#f3f7ff] px-2.5 py-1 text-[11px] font-semibold leading-[16.5px] text-[#666d80]">
+                {attemptCount} {attemptCount === 1 ? "attempt" : "attempts"}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="relative mt-6 min-h-[180px]">
+            {analytics.history.length === 0 ? (
+              <p className="m-0 py-6 text-sm text-[#666d80]">No attempts recorded yet.</p>
+            ) : (
+              <>
+                <span className="absolute bottom-2 left-[7px] top-2 w-px bg-[#dfe1e7]" aria-hidden />
+                <div className="flex flex-col gap-6">
+                  {analytics.history.map((h, i) => {
+                    const pill = historyStatusPill(h.status)
+                    return (
+                      <div key={i} className="relative pl-8">
+                        <span
+                          className={cn(
+                            "absolute left-0 top-1 flex size-3.5 items-center justify-center rounded-full",
+                            pill.dotClass,
+                          )}
+                          aria-hidden
+                        >
+                          <span className="size-1.5 rounded-full bg-white/70" />
+                        </span>
+                        <div className="rounded-2xl border border-[#dfe1e7] bg-[rgba(243,247,255,0.4)] p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <p className="m-0 max-w-[185px] text-sm font-semibold leading-[19.25px] text-[#062357]">
+                              {h.source}
+                            </p>
+                            <span
+                              className={cn(
+                                "shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold leading-[16.5px]",
+                                pill.className,
+                              )}
+                            >
+                              {pill.label}
+                            </span>
+                          </div>
+                          <div className="mt-2.5 flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-1.5 text-xs leading-[18px] text-[#666d80]">
+                              <Clock className="size-3.5 shrink-0" aria-hidden />
+                              <span className="font-mono tabular-nums">{h.timeRange}</span>
+                            </div>
+                            <p className="m-0 text-xs leading-[18px] text-[#666d80]">{h.dateLabel}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </section>
 
-        <section className={cardSurface}>
-          <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Question History</h3>
-          <div className="flex flex-col gap-3">
-            {analytics.history.length === 0 ? (
-              <p className="m-0 py-2 text-sm text-[#666d80]">No attempts recorded yet.</p>
-            ) : (
-              analytics.history.map((h, i) => (
-                <div
-                  key={i}
-                  className="flex h-[60px] items-center justify-between rounded-[10px] bg-[#f9fafb] p-3"
-                >
-                  <div className="min-w-0">
-                    <p className="m-0 truncate text-sm font-medium tracking-[0.02em] text-[#062357]">{h.source}</p>
-                    <p className="m-0 text-xs leading-4 text-[#6a7282]">{h.dateLabel}</p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <span
-                      className={cn(
-                        "size-3 rounded-full",
-                        h.status === "answered" ? "bg-[#40c4aa]" : "bg-[#f59e0b]",
-                      )}
-                      aria-hidden
-                    />
-                    <span className="font-mono text-xs leading-4 tabular-nums text-[#6a7282]">{h.timeRange}</span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+        <section className={cn(cardSurface, "flex flex-col gap-5")}>
+          <h3 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[#062357]">Insights</h3>
+          <TagGroup
+            icon={<FileText className="size-4 text-[#0d47a1]" aria-hidden />}
+            iconBg="bg-[#edf3ff]"
+            title="Question Stem Tags"
+            tags={analytics.questionStemTags}
+            tagClassName="border border-[rgba(13,71,161,0.15)] bg-[#edf3ff] text-[#0d47a1]"
+          />
+          <TagGroup
+            icon={<BookOpen className="size-4 text-[#0a8a94]" aria-hidden />}
+            iconBg="bg-[rgba(11,188,201,0.1)]"
+            title="Passage Tags"
+            tags={analytics.passageTags}
+            tagClassName="border border-[rgba(11,188,201,0.2)] bg-[rgba(11,188,201,0.1)] text-[#0a8a94]"
+          />
         </section>
       </div>
     </div>

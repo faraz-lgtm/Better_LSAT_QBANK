@@ -31,7 +31,7 @@ function mockRepo(overrides: Partial<ExplanationsRepository> = {}): Explanations
       inProcessQuestionIds: [],
       answeredQuestionIds: [],
     }),
-    listLatestAnswerSelectionsForQuestion: async () => [],
+    listLatestAnswerSelectionsWithScoresForQuestion: async () => [],
     getLatestUserAnswerSelection: async () => null,
     listBookmarkedQuestionIds: async () => [],
     setQuestionBookmark: async () => {},
@@ -41,11 +41,32 @@ function mockRepo(overrides: Partial<ExplanationsRepository> = {}): Explanations
 }
 
 Deno.test('buildAnswerPopularity counts latest selections per letter', () => {
-  const rows = buildAnswerPopularity(['B', 'B', 'A', 'C'], ['A', 'B', 'C', 'D', 'E'], 'B')
+  const rows = buildAnswerPopularity(
+    [{ letter: 'B' }, { letter: 'B' }, { letter: 'A' }, { letter: 'C' }],
+    ['A', 'B', 'C', 'D', 'E'],
+    'B',
+  )
   assertEquals(rows.find((r) => r.letter === 'B')?.count, 2)
   assertEquals(rows.find((r) => r.letter === 'B')?.pct, 50)
   assertEquals(rows.find((r) => r.letter === 'B')?.highlight, true)
   assertEquals(rows.find((r) => r.letter === 'A')?.highlight, undefined)
+  assertEquals(rows.find((r) => r.letter === 'B')?.avgScore, null)
+})
+
+Deno.test('buildAnswerPopularity averages scaled scores per letter', () => {
+  const rows = buildAnswerPopularity(
+    [
+      { letter: 'B', scaledScore: 163 },
+      { letter: 'B', scaledScore: 161 },
+      { letter: 'A', scaledScore: 152 },
+      { letter: 'C' },
+    ],
+    ['A', 'B', 'C', 'D', 'E'],
+    'B',
+  )
+  assertEquals(rows.find((r) => r.letter === 'B')?.avgScore, 162)
+  assertEquals(rows.find((r) => r.letter === 'A')?.avgScore, 152)
+  assertEquals(rows.find((r) => r.letter === 'C')?.avgScore, null)
 })
 
 Deno.test('mapStoredAnswerToLetter resolves choice id and numeric index', () => {
@@ -432,7 +453,11 @@ Deno.test('listPrepTests returns global statusCounts for user', async () => {
 Deno.test('getExplanationDetail returns extended payload', async () => {
   const service = createExplanationsService({
     repository: mockRepo({
-      listLatestAnswerSelectionsForQuestion: async () => ['B', 'B', 'A'],
+      listLatestAnswerSelectionsWithScoresForQuestion: async () => [
+        { selectedAnswer: 'B', scaledScore: 163 },
+        { selectedAnswer: 'B', scaledScore: 161 },
+        { selectedAnswer: 'A', scaledScore: 152 },
+      ],
       getLatestUserAnswerSelection: async () => 'A',
       getQuestionDetail: async () => ({
         id: 'q1',
@@ -472,6 +497,8 @@ Deno.test('getExplanationDetail returns extended payload', async () => {
   assertEquals(d.answerPopularity.length, 2)
   assertEquals(d.answerPopularity.find((r) => r.letter === 'B')?.count, 2)
   assertEquals(d.answerPopularity.find((r) => r.letter === 'B')?.pct, 67)
+  assertEquals(d.answerPopularity.find((r) => r.letter === 'B')?.avgScore, 162)
+  assertEquals(d.answerPopularity.find((r) => r.letter === 'A')?.avgScore, 152)
   assertEquals(d.userSelectedLetter, 'A')
   assertEquals(d.tags, ['Flaw', 'LR'])
 })
