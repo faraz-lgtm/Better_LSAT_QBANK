@@ -2874,15 +2874,26 @@ select.ds-input {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  border: none;
   border-radius: 16px;
   background: #f3f7ff;
   padding: 8px 16px;
+  font-family: inherit;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.5;
   letter-spacing: 0.28px;
   color: #062357;
   box-shadow: 0 1px 1px rgba(13, 13, 18, 0.06);
+  cursor: pointer;
+}
+
+.test-day-countdown__date-chip:hover:not(:disabled) {
+  background: #ffffff;
+}
+
+.test-day-countdown__date-chip:disabled {
+  cursor: not-allowed;
 }
 
 .test-day-countdown__edit {
@@ -3020,13 +3031,29 @@ select.ds-input {
   }
 }
 
-.continue-drill-card__action {
+.continue-drill-card__actions {
+  display: flex;
+  width: 100%;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.continue-drill-card__action,
+.continue-drill-card__more {
   width: 100%;
 }
 
 @container drill-card (min-width: 40rem) {
-  .continue-drill-card__action {
+  .continue-drill-card__actions {
     width: auto;
+    align-self: flex-start;
+  }
+
+  .continue-drill-card__action,
+  .continue-drill-card__more {
+    width: auto;
+    min-width: 148px;
   }
 }
 

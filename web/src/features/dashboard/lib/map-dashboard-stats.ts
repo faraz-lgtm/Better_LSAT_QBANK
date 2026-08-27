@@ -92,30 +92,19 @@ function formatMissedAverage(value: number | null): string {
   return rounded > 0 ? `-${rounded}` : String(rounded)
 }
 
-function formatPercentile(value: number | null): string {
-  if (value == null) return "—"
-  const rounded = Math.round(value)
-  const mod10 = rounded % 10
-  const mod100 = rounded % 100
-  if (mod10 === 1 && mod100 !== 11) return `${rounded}st`
-  if (mod10 === 2 && mod100 !== 12) return `${rounded}nd`
-  if (mod10 === 3 && mod100 !== 13) return `${rounded}rd`
-  return `${rounded}th`
-}
-
 export function mapOverviewToPerformance(overview: AnalyticsOverview): DashboardPerformanceOverview {
   return {
     practiceTestCount: overview.completedPrepTestCount,
     metrics: [
       {
+        id: "best-score",
+        label: "Best Score",
+        value: overview.bestScaledScore != null ? String(Math.round(overview.bestScaledScore)) : "—",
+      },
+      {
         id: "avg-score",
         label: "Avg Score",
         value: overview.averageScaledScore != null ? String(Math.round(overview.averageScaledScore)) : "—",
-      },
-      {
-        id: "percentile",
-        label: "Percentile",
-        value: formatPercentile(overview.averagePercentile),
       },
       {
         id: "avg-lr",

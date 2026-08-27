@@ -71,15 +71,26 @@ function TestDayCountdownCard({
       <div className="test-day-countdown__actions">
         <div className="test-day-countdown__date-bar">
           <span className="test-day-countdown__date-label">Test Date</span>
-          <span className="test-day-countdown__date-chip relative">
-            <span>{testDateLabel}</span>
-            <Calendar className="size-4 shrink-0 text-[#666d80]" strokeWidth={1.75} aria-hidden />
+          <span className="relative inline-flex min-w-0">
+            <button
+              type="button"
+              onClick={openDatePicker}
+              disabled={savingTestDate}
+              className="test-day-countdown__date-chip"
+              aria-label="Choose test date"
+              aria-expanded={pickerOpen}
+              aria-haspopup="dialog"
+            >
+              <span>{testDateLabel}</span>
+              <Calendar className="size-4 shrink-0 text-[#666d80]" strokeWidth={1.75} aria-hidden />
+            </button>
             <input
               ref={dateInputRef}
               type="date"
               value={testDateValue}
-              aria-label="Choose test date"
-              className="absolute inset-0 cursor-pointer opacity-0"
+              tabIndex={-1}
+              aria-hidden
+              className="pointer-events-none absolute inset-0 opacity-0"
               onChange={(event) => {
                 const next = event.target.value
                 if (!next) return

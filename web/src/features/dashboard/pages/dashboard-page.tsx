@@ -14,6 +14,11 @@ import {
   mapOverviewToDashboardStats,
   mapOverviewToPerformance,
 } from "@/features/dashboard/lib/map-dashboard-stats"
+import {
+  type DashboardActiveDrill,
+  dashboardDrillMoreHref,
+  pickDashboardActiveDrills,
+} from "@/features/dashboard/lib/pick-dashboard-drills"
 import { mapTrajectoryToScoreProgress } from "@/features/student/analytics/map-analytics"
 import { useAnalyticsApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import { ContinueDrillCard, continueDrillToCardDrill } from "@/features/student/components/continue-drill-card"
@@ -45,9 +50,7 @@ function adaptiveDrillSectionType(filter: "all" | "lr" | "rc"): "LR" | "RC" {
   return filter === "rc" ? "RC" : "LR"
 }
 
-type DashboardDrill = ContinueDrill | (SuggestedDrill & { isSuggested: true })
-
-function isSuggestedDrill(drill: DashboardDrill): drill is SuggestedDrill & { isSuggested: true } {
+function isSuggestedDrill(drill: DashboardActiveDrill): drill is SuggestedDrill & { isSuggested: true } {
   return "isSuggested" in drill && drill.isSuggested === true
 }
 
@@ -162,20 +165,10 @@ function DashboardPage() {
     return mapTrajectoryToScoreProgress(recent)
   }, [trajectory])
 
-  const filteredContinue = useMemo(() => {
-    if (activeFilter === "all") return continueDrills
-    return continueDrills.filter((d) => (activeFilter === "lr" ? d.section === "LR" : d.section === "RC"))
-  }, [activeFilter, continueDrills])
-
-  const filteredSuggested = useMemo(() => {
-    if (activeFilter === "all") return suggestedDrills
-    return suggestedDrills.filter((d) => (activeFilter === "lr" ? d.section === "LR" : d.section === "RC"))
-  }, [activeFilter, suggestedDrills])
-
-  const displayDrills: DashboardDrill[] = useMemo(() => {
-    if (filteredContinue.length > 0) return filteredContinue
-    return filteredSuggested.map((d) => ({ ...d, isSuggested: true as const }))
-  }, [filteredContinue, filteredSuggested])
+  const displayDrills = useMemo(
+    () => pickDashboardActiveDrills(continueDrills, suggestedDrills, activeFilter),
+    [activeFilter, continueDrills, suggestedDrills],
+  )
 
   const handleStartAdaptiveDrill = useCallback(async () => {
     if (!practiceApi || startingAdaptiveDrill) return
@@ -325,6 +318,8 @@ function DashboardPage() {
                       continueLabel={suggested ? "Start" : "Continue"}
                       lastAttemptPrefix={suggested ? "Suggested · " : "Last attempt: "}
                       onContinue={() => navigate(suggested ? drill.configPath : drill.continuePath)}
+                      onMore={() => navigate(dashboardDrillMoreHref(drill.section))}
+                      moreLabel="See more"
                     />
                   )
                 })}
