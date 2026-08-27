@@ -168,4 +168,39 @@ describe("buildExplanationQuestionDetailView", () => {
     expect(view.analytics.passageDifficulty.tone).toBe("red")
     expect(view.analytics.passageDifficulty.caption).toContain("moderately difficult question")
   })
+
+  it("maps RC passageAnalysis paragraphs onto the view", () => {
+    const detail: ExplanationDetailPayload = {
+      questionId: "q1",
+      prepTestId: "pt1",
+      prepTestTitle: "PT 101",
+      prepTestNumber: "101",
+      sectionId: "sec1",
+      sectionType: "RC",
+      sectionNumber: 1,
+      questionNumber: 1,
+      topicName: "Main Point",
+      explanationHtml: null,
+      videoUrl: null,
+      stimulusText: null,
+      stemText: "Stem",
+      choices: [{ id: "A", index: 1, text: "a", explanationHtml: null }],
+      correctChoiceId: "A",
+      passage: { id: "p1", displayNumber: 1, title: "Passage 1", body: "<p>Body</p>" },
+      passageAnalysis: {
+        paragraphs: [
+          { label: "P1", explanationHtml: "<p>Para 1 analysis</p>" },
+          { label: "P2", explanationHtml: "<p>Para 2 analysis</p>" },
+        ],
+        overallHtml: "<p>Overall</p>",
+      },
+      answerPopularity: [],
+      userSelectedLetter: null,
+      difficulty: 2,
+    }
+
+    const view = buildExplanationQuestionDetailView(loc, detail)
+    expect(view.passageAnalysis?.paragraphs.map((p) => p.label)).toEqual(["P1", "P2"])
+    expect(view.passageAnalysis?.overallHtml).toBe("<p>Overall</p>")
+  })
 })

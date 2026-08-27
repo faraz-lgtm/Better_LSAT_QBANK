@@ -1,0 +1,73 @@
+do $chunk$
+declare
+  sec uuid;
+  pass_id uuid;
+  analysis_id uuid;
+  next_ver int;
+  passage_body text;
+begin
+  select q.stimulus_text into passage_body
+  from public.admin_questions q
+  where q.source_group_id = 'RC-Z060'
+    and q.stimulus_text is not null
+    and length(trim(q.stimulus_text)) > 0
+  limit 1;
+
+  if passage_body is null then
+    passage_body := '<p style=''text-indent: 1em;''>To many developers of technologies that affect public health or the environment, "risk communication" means persuading the public that the potential risks of such technologies are small and should be ignored. Those who communicate risks in this way seem to believe that lay people do not understand the actual nature of technological risk, and they can cite <lr data-itemid=''JR000466''>studies</lr> asserting that, although people apparently ignore mundane hazards that pose significant danger, they get upset about exotic hazards that pose little chance of death or injury. Because some risk communicators take this persuasive stance, many lay people see "risk communication" as a euphemism for brainwashing done by experts.</p><p style=''text-indent: 1em;''>Since, however, the goal of risk communication should be to enable people to make informed decisions about technological risks, a clear understanding about how the public perceives risk is needed. Lay people''s definitions of "risk" are more likely to reflect subjective ethical concerns than are experts'' definitions. Lay people, for example, tend to perceive a small risk to children as more significant than a larger risk to consenting adults who benefit from the risk-creating technology. However, if asked to rank hazards by the number of annual fatalities, without reference to ethical judgments, lay people provide quite reasonable estimates, demonstrating that they have substantial knowledge about many risks. Although some studies claim to demonstrate that lay people have inappropriate concerns about exotic hazards, these studies often use questionable methods, such as asking lay people to rank risks that are hard to compare. In contrast, a recent study showed that when lay people were given the necessary facts and time, they understood the specific risks of electromagnetic fields produced by high-voltage power transmission well enough to make informed decisions.</p><p style=''text-indent: 1em;''>Risk communication should therefore be based on the principle that people process new information in the context of their existing beliefs. If people know nothing about a topic, they will find messages about that topic incomprehensible. If they have erroneous beliefs, they are likely to misconstrue the messages. Thus, communicators need to know the nature and extent of recipients'' knowledge and beliefs in order to design messages that will not be dismissed or misinterpreted. This need was demonstrated in a research project concerning the public''s level of knowledge about risks posed by the presence of radon in the home. Researchers used open-ended interviews and questionnaires to determine what information should be included in their brochure on radon. Subjects who read the researchers'' brochure performed significantly better in understanding radon risks than did a control group who read a brochure that was written using a different approach by a government agency. Thus, careful preparation can help risk communicators to produce balanced material that tells people what they need to know to make decisions about technological risks.</p>';
+  end if;
+
+  for sec in
+    select distinct q.section_id
+    from public.admin_questions q
+    where q.source_group_id = 'RC-Z060'
+      and q.section_id is not null
+  loop
+    select p.id into pass_id
+    from public.admin_passages p
+    where p.section_id = sec
+      and p.source_group_id = 'RC-Z060'
+    limit 1;
+
+    if pass_id is null then
+      insert into public.admin_passages (section_id, source_group_id, content)
+      values (sec, 'RC-Z060', passage_body)
+      returning id into pass_id;
+    else
+      update public.admin_passages
+      set content = coalesce(nullif(content, ''), passage_body),
+          updated_at = now()
+      where id = pass_id;
+    end if;
+
+    -- Replace any existing published analysis for a clean import.
+    delete from public.admin_passage_analyses
+    where passage_id = pass_id;
+
+    insert into public.admin_passage_analyses (passage_id, version, status, overall_html)
+    values (pass_id, 1, 'published', nullif('<p>The passage rejects the common practice of treating risk communication as persuasion aimed at a public assumed to be irrational, arguing instead that lay people''s risk judgments are largely sound once their ethical framing is accounted for, and that effective communication must be built on what the audience already believes. The author''s purpose is corrective and prescriptive, moving from the flawed current approach, to a defence of lay understanding, to a principle for doing it properly, closed with the radon study as evidence. The viewpoints to keep apart are the risk communicators the author criticizes, the lay people the author defends, and the author''s own prescription.</p>', ''))
+    returning id into analysis_id;
+
+    insert into public.admin_passage_analysis_segments (
+      analysis_id, sort_order, part_label, segment_type, title, text_excerpt, explanation
+    ) values (
+      analysis_id, 1, 'P1', 'other', 'P1',
+      'To many developers of technologies that affect public health or the environment, "risk communication" means persuading the public that the potential risks of such technologies are small and should be ignored. Those who communicate risks in this way seem to believe that lay people do not understand the actual nature of technological risk, and they can cite studies asserting that, although people apparently ignore mundane hazards that pose significant danger, they get upset about exotic hazards that pose little chance of death or injury. Because some risk communicators take this persuasive stance, many lay people see "risk communication" as a euphemism for brainwashing done by experts.', '<p>The passage opens with a definition the author intends to attack. To many technology developers, <strong>the risk communicators</strong>, ''risk communication'' means talking the public out of worrying — persuading people that risks are small and can be ignored. Their justification is that lay people misjudge danger, fretting over exotic hazards while shrugging at mundane ones that kill more people. The paragraph ends on the consequence rather than an endorsement: because the field is practised this way, many lay people hear ''risk communication'' and think brainwashing. Notice the author is reporting this position, not sharing it.</p>'
+    );
+
+    insert into public.admin_passage_analysis_segments (
+      analysis_id, sort_order, part_label, segment_type, title, text_excerpt, explanation
+    ) values (
+      analysis_id, 2, 'P2', 'other', 'P2',
+      'Since, however, the goal of risk communication should be to enable people to make informed decisions about technological risks, a clear understanding about how the public perceives risk is needed. Lay people''s definitions of "risk" are more likely to reflect subjective ethical concerns than are experts'' definitions. Lay people, for example, tend to perceive a small risk to children as more significant than a larger risk to consenting adults who benefit from the risk-creating technology. However, if asked to rank hazards by the number of annual fatalities, without reference to ethical judgments, lay people provide quite reasonable estimates, demonstrating that they have substantial knowledge about many risks. Although some studies claim to demonstrate that lay people have inappropriate concerns about exotic hazards, these studies often use questionable methods, such as asking lay people to rank risks that are hard to compare. In contrast, a recent study showed that when lay people were given the necessary facts and time, they understood the specific risks of electromagnetic fields produced by high-voltage power transmission well enough to make informed decisions.', '<p>''Since, however'' flips the passage to the author''s own view: the goal should be helping people make informed decisions, which requires understanding how the public actually perceives risk. The defence of <strong>lay people</strong> is careful and worth tracking piece by piece. Their idea of risk carries ethical weight, so a small risk to children outweighs a larger one to consenting adults who benefit — a difference in values, not an error. Strip the ethics out and ask them to rank hazards by annual deaths and their estimates are reasonable. The studies claiming otherwise often use questionable methods, and one recent study found that lay people given facts and time understood power-line electromagnetic fields well enough to decide for themselves.</p>'
+    );
+
+    insert into public.admin_passage_analysis_segments (
+      analysis_id, sort_order, part_label, segment_type, title, text_excerpt, explanation
+    ) values (
+      analysis_id, 3, 'P3', 'other', 'P3',
+      'Risk communication should therefore be based on the principle that people process new information in the context of their existing beliefs. If people know nothing about a topic, they will find messages about that topic incomprehensible. If they have erroneous beliefs, they are likely to misconstrue the messages. Thus, communicators need to know the nature and extent of recipients'' knowledge and beliefs in order to design messages that will not be dismissed or misinterpreted. This need was demonstrated in a research project concerning the public''s level of knowledge about risks posed by the presence of radon in the home. Researchers used open-ended interviews and questionnaires to determine what information should be included in their brochure on radon. Subjects who read the researchers'' brochure performed significantly better in understanding radon risks than did a control group who read a brochure that was written using a different approach by a government agency. Thus, careful preparation can help risk communicators to produce balanced material that tells people what they need to know to make decisions about technological risks.', '<p>The closing paragraph converts the critique into a working principle: people process new information through the beliefs they already hold. Someone who knows nothing finds the message incomprehensible; someone with mistaken beliefs misreads it. So a communicator has to know what the audience already thinks before designing the message. The radon study is the proof — researchers interviewed and surveyed people first, built their brochure around what they learned, and readers of that brochure understood radon risk significantly better than a control group reading a government agency''s differently written version. The author''s conclusion is practical rather than merely critical: careful preparation produces balanced material people can actually use.</p>'
+    );
+  end loop;
+end;
+$chunk$;
