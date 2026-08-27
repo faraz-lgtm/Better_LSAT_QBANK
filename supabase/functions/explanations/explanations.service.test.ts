@@ -557,6 +557,10 @@ Deno.test('getExplanationDetail returns RC passageAnalysis paragraphs as P1, P2'
   const d = await service.getExplanationDetail('user-1', 'q-rc')
   assertEquals(d.passageAnalysis?.paragraphs.map((p) => p.label), ['P1', 'P2'])
   assertEquals(d.passageAnalysis?.paragraphs[0]?.explanationHtml, '<p>Analysis one</p>')
+  assertEquals(
+    d.passageAnalysis?.paragraphs[0]?.passageHtml,
+    '<p>Passage para 1</p>',
+  )
   assertEquals(d.passageAnalysis?.overallHtml, '<p>Overall takeaway</p>')
 })
 

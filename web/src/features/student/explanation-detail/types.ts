@@ -54,6 +54,8 @@ export type ExplanationQuestionDetailView = {
   passageAnalysis?: {
     paragraphs: Array<{
       label: string
+      /** Original passage `<p>` HTML for this paragraph, when available. */
+      passageHtml?: string | null
       explanationHtml: string
     }>
     overallHtml: string | null

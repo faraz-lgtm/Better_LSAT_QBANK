@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp } from "lucide-react"
 
 import { ExplanationChoiceList } from "@/features/student/explanation-detail/explanation-choice-list"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
+import { extractHtmlParagraphs } from "@/lib/html/extract-html-paragraphs"
 import { HtmlContent } from "@/lib/html/html-content"
 import { cn } from "@/lib/utils"
 
@@ -67,12 +68,27 @@ function hasPassageAnalysis(
   return analysis.paragraphs.length > 0 || Boolean(analysis.overallHtml?.trim())
 }
 
+function resolveAnalysisParagraphs(
+  analysis: NonNullable<ExplanationQuestionDetailView["passageAnalysis"]>,
+  passageBody: string,
+) {
+  const fromBody = extractHtmlParagraphs(passageBody)
+  return analysis.paragraphs.map((paragraph, index) => ({
+    ...paragraph,
+    passageHtml: paragraph.passageHtml?.trim() || fromBody[index] || null,
+  }))
+}
+
 function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: ExplanationQuestionTabPanelProps) {
   const [showCorrect, setShowCorrect] = useState(false)
   const [stemExpanded, setStemExpanded] = useState(false)
   const [analysisOpen, setAnalysisOpen] = useState(false)
   const stemExplanationAvailable = hasExplanationHtml(view.questionExplanationHtml)
   const analysisAvailable = hasPassageAnalysis(view.passageAnalysis)
+  const analysisParagraphs =
+    analysisAvailable && view.passageAnalysis
+      ? resolveAnalysisParagraphs(view.passageAnalysis, view.passage.body)
+      : []
 
   return (
     <div className="grid h-full min-h-0 flex-1 gap-5 lg:grid-cols-[minmax(0,1.62fr)_minmax(0,1fr)] lg:gap-6">
@@ -96,34 +112,44 @@ function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: Explanat
             )}
           </div>
 
-          <HtmlContent html={view.passage.body} className="explanation-passage-body" />
-
           {analysisOpen && analysisAvailable && view.passageAnalysis ? (
-            <div className="mt-2 flex flex-col gap-5 border-t border-[#eef1f6] pt-5">
-              {view.passageAnalysis.paragraphs.map((paragraph) => (
-                <section key={paragraph.label} className="flex flex-col gap-2">
+            <div className="flex flex-col gap-6">
+              {analysisParagraphs.map((paragraph) => (
+                <section key={paragraph.label} className="flex flex-col gap-3">
                   <span className="inline-flex w-fit items-center rounded-md bg-[#f3f7ff] px-2.5 py-1 text-xs font-semibold tracking-[0.24px] text-[#062357]">
                     {paragraph.label}
                   </span>
-                  <HtmlContent
-                    html={paragraph.explanationHtml}
-                    className="explanation-review-body text-[#062357]"
-                  />
+                  {paragraph.passageHtml ? (
+                    <HtmlContent
+                      html={paragraph.passageHtml}
+                      className="explanation-passage-body text-[#0d0d12]"
+                    />
+                  ) : null}
+                  <div className="rounded-xl bg-[#f8fafc] px-4 py-3">
+                    <HtmlContent
+                      html={paragraph.explanationHtml}
+                      className="explanation-review-body text-[#062357]"
+                    />
+                  </div>
                 </section>
               ))}
               {view.passageAnalysis.overallHtml?.trim() ? (
-                <section className="flex flex-col gap-2">
+                <section className="flex flex-col gap-3 border-t border-[#eef1f6] pt-5">
                   <span className="inline-flex w-fit items-center rounded-md bg-[#f6f8fa] px-2.5 py-1 text-xs font-semibold tracking-[0.24px] text-[#666d80]">
                     Overall
                   </span>
-                  <HtmlContent
-                    html={view.passageAnalysis.overallHtml}
-                    className="explanation-review-body text-[#062357]"
-                  />
+                  <div className="rounded-xl bg-[#f8fafc] px-4 py-3">
+                    <HtmlContent
+                      html={view.passageAnalysis.overallHtml}
+                      className="explanation-review-body text-[#062357]"
+                    />
+                  </div>
                 </section>
               ) : null}
             </div>
-          ) : null}
+          ) : (
+            <HtmlContent html={view.passage.body} className="explanation-passage-body" />
+          )}
         </div>
       </article>
 

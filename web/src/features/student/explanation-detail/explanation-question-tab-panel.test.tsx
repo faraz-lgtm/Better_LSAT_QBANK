@@ -63,12 +63,17 @@ describe("ExplanationQuestionTabPanel", () => {
     expect(screen.queryByRole("button", { name: /show analysis/i })).not.toBeInTheDocument()
   })
 
-  it("toggles passage analysis paragraphs labeled P1, P2", async () => {
+  it("toggles passage analysis with passage HTML and P1, P2 explanations", async () => {
     const user = userEvent.setup()
     render(
       <ExplanationQuestionTabPanel
         view={{
           ...baseView,
+          passage: {
+            displayNumber: 1,
+            title: "Passage 1",
+            body: "<p>Passage paragraph one</p><p>Passage paragraph two</p>",
+          },
           passageAnalysis: {
             paragraphs: [
               { label: "P1", explanationHtml: "<p>First paragraph analysis</p>" },
@@ -80,10 +85,14 @@ describe("ExplanationQuestionTabPanel", () => {
       />,
     )
 
+    expect(screen.getByText("Passage paragraph one")).toBeInTheDocument()
     expect(screen.queryByText("First paragraph analysis")).not.toBeInTheDocument()
+
     await user.click(screen.getByRole("button", { name: /show analysis/i }))
     expect(screen.getByText("P1")).toBeInTheDocument()
     expect(screen.getByText("P2")).toBeInTheDocument()
+    expect(screen.getByText("Passage paragraph one")).toBeInTheDocument()
+    expect(screen.getByText("Passage paragraph two")).toBeInTheDocument()
     expect(screen.getByText("First paragraph analysis")).toBeInTheDocument()
     expect(screen.getByText("Second paragraph analysis")).toBeInTheDocument()
     expect(screen.getByText("Overall")).toBeInTheDocument()
@@ -91,5 +100,6 @@ describe("ExplanationQuestionTabPanel", () => {
 
     await user.click(screen.getByRole("button", { name: /hide analysis/i }))
     expect(screen.queryByText("First paragraph analysis")).not.toBeInTheDocument()
+    expect(screen.getByText("Passage paragraph one")).toBeInTheDocument()
   })
 })

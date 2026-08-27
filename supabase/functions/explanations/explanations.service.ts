@@ -1,4 +1,5 @@
 import { parseQuestionChoices } from '../_shared/parse-question-choices.ts'
+import { extractHtmlParagraphs } from '../_shared/rc-passage-analysis.ts'
 import {
   isStudentVisiblePrepTest,
   lsacPrepTestOrdinal,
@@ -91,6 +92,8 @@ export type ExplanationDetailPayload = {
   passageAnalysis: {
     paragraphs: Array<{
       label: string
+      /** Original passage `<p>` HTML for this paragraph, when available. */
+      passageHtml: string | null
       explanationHtml: string
     }>
     overallHtml: string | null
@@ -898,12 +901,14 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
         sec.section_type === 'RC'
           ? await deps.repository.getPublishedPassageAnalysis(passage.id)
           : null
+      const passageParagraphs = extractHtmlParagraphs(passage.body ?? '')
       const passageAnalysis =
         publishedAnalysis &&
         (publishedAnalysis.paragraphs.length > 0 || publishedAnalysis.overallHtml)
           ? {
-              paragraphs: publishedAnalysis.paragraphs.map((p) => ({
+              paragraphs: publishedAnalysis.paragraphs.map((p, index) => ({
                 label: p.partLabel,
+                passageHtml: passageParagraphs[index]?.trim() || null,
                 explanationHtml: p.explanationHtml,
               })),
               overallHtml: publishedAnalysis.overallHtml,

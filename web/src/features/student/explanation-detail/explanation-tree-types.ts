@@ -81,6 +81,7 @@ export type ExplanationDetailPayload = {
   passageAnalysis?: {
     paragraphs: Array<{
       label: string
+      passageHtml?: string | null
       explanationHtml: string
     }>
     overallHtml: string | null
