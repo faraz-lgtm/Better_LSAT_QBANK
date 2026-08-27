@@ -77,6 +77,14 @@ export type ExplanationDetailPayload = {
     title: string
     body: string
   }
+  /** RC passage paragraph analysis (P1, P2, …) when published. */
+  passageAnalysis?: {
+    paragraphs: Array<{
+      label: string
+      explanationHtml: string
+    }>
+    overallHtml: string | null
+  } | null
   answerPopularity: ExplanationAnswerPopularityRow[]
   /** Current user's latest submitted answer letter (A–E), or null if never answered. */
   userSelectedLetter?: string | null

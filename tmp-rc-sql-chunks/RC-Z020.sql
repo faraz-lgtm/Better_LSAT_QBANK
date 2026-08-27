@@ -1,0 +1,73 @@
+do $chunk$
+declare
+  sec uuid;
+  pass_id uuid;
+  analysis_id uuid;
+  next_ver int;
+  passage_body text;
+begin
+  select q.stimulus_text into passage_body
+  from public.admin_questions q
+  where q.source_group_id = 'RC-Z020'
+    and q.stimulus_text is not null
+    and length(trim(q.stimulus_text)) > 0
+  limit 1;
+
+  if passage_body is null then
+    passage_body := '<p style=''text-indent: 1em;''>While a new surge of critical interest in the ancient Greek poems conventionally ascribed to Homer has taken place in the last twenty years or so, it was nonspecialists rather than professional scholars who studied the poetic aspects of the Iliad and the Odyssey between, roughly, 1935 and 1970. During these years, while such nonacademic intellectuals as Simone Weil and Erich Auerbach were trying to define the qualities that made these epic accounts of the Trojan War and its aftermath great poetry, the questions that occupied the specialists were directed elsewhere: "Did the Trojan War really happen?" "Does the bard preserve Indo-European folk memories?" "How did the poems get written down?" Something was driving scholars away from the actual works to peripheral issues. Scholars produced books about archaeology, about gift-exchange in ancient societies, about the development of oral poetry, about virtually anything except the Iliad and the Odyssey themselves as unique reflections or distillations of life itself—as, in short, great poetry. The observations of the English poet Alexander Pope seemed as applicable in 1970 as they had been when he wrote them in 1715: according to Pope, the remarks of critics <lr data-itemid=''JR000197''>"are rather Philosophical, Historical, Geographical . . . or rather anything than Critical and Poetical."</lr></p><p style=''text-indent: 1em;''>Ironically, the modern manifestation of this "nonpoetical" emphasis can be traced to the profoundly influential work of Milman Parry, who attempted to demonstrate in detail how the Homeric poems, believed to have been recorded nearly three thousand years ago, were the products of a long and highly developed tradition of oral poetry about the Trojan War. Parry proposed that this tradition built up its diction and its content by a process of constant accumulation and refinement over many generations of storytellers. But after Parry''s death in 1935, his legacy was taken up by scholars who, unlike Parry, forsook intensive analysis of the poetry itself and focused instead on only one element of Parry''s work: the creative limitations and possibilities of oral composition, concentrating on fixed elements and inflexibilities, focusing on the things that oral poetry allegedly can and cannot do. The dryness of this kind of study drove many of the more inventive scholars away from the poems into the rapidly developing field of Homer''s archaeological and historical background.</p><p style=''text-indent: 1em;''>Appropriately, Milman Parry''s son Adam was among those scholars responsible for a renewed interest in Homer''s poetry as literary art. Building on his father''s work, the younger Parry argued that the Homeric poems exist both within and against a tradition. The Iliad and the Odyssey were, Adam Parry thought, the beneficiaries of an inherited store of diction, scenes, and concepts, and at the same time highly individual works that surpassed these conventions. Adam Parry helped prepare the ground for the recent Homeric revival by affirming his father''s belief in a strong inherited tradition, but also by emphasizing Homer''s unique contributions within that tradition.</p>';
+  end if;
+
+  for sec in
+    select distinct q.section_id
+    from public.admin_questions q
+    where q.source_group_id = 'RC-Z020'
+      and q.section_id is not null
+  loop
+    select p.id into pass_id
+    from public.admin_passages p
+    where p.section_id = sec
+      and p.source_group_id = 'RC-Z020'
+    limit 1;
+
+    if pass_id is null then
+      insert into public.admin_passages (section_id, source_group_id, content)
+      values (sec, 'RC-Z020', passage_body)
+      returning id into pass_id;
+    else
+      update public.admin_passages
+      set content = coalesce(nullif(content, ''), passage_body),
+          updated_at = now()
+      where id = pass_id;
+    end if;
+
+    -- Replace any existing published analysis for a clean import.
+    delete from public.admin_passage_analyses
+    where passage_id = pass_id;
+
+    insert into public.admin_passage_analyses (passage_id, version, status, overall_html)
+    values (pass_id, 1, 'published', nullif('<p>The passage explains why professional Homeric scholarship abandoned the poetry itself for peripheral historical and archaeological questions between about 1935 and 1970, tracing the turn to followers of Milman Parry who took up only the mechanics of oral composition from his work, and crediting Adam Parry, who argued that the poems stand both within and against their tradition, with preparing the recent revival of interest in Homer as literary art. The author''s purpose is to account for a shift in a field and its reversal, moving from the contrast between nonspecialists and specialists, to the ironic origin of the problem in Parry''s legacy, to its correction by his son. The viewpoints to distinguish are the nonspecialists, the specialists, Milman Parry, his narrower successors, Adam Parry, and the author, who plainly prefers the poetic approach.</p>', ''))
+    returning id into analysis_id;
+
+    insert into public.admin_passage_analysis_segments (
+      analysis_id, sort_order, part_label, segment_type, title, text_excerpt, explanation
+    ) values (
+      analysis_id, 1, 'P1', 'other', 'P1',
+      'While a new surge of critical interest in the ancient Greek poems conventionally ascribed to Homer has taken place in the last twenty years or so, it was nonspecialists rather than professional scholars who studied the poetic aspects of the Iliad and the Odyssey between, roughly, 1935 and 1970. During these years, while such nonacademic intellectuals as Simone Weil and Erich Auerbach were trying to define the qualities that made these epic accounts of the Trojan War and its aftermath great poetry, the questions that occupied the specialists were directed elsewhere: "Did the Trojan War really happen?" "Does the bard preserve Indo-European folk memories?" "How did the poems get written down?" Something was driving scholars away from the actual works to peripheral issues. Scholars produced books about archaeology, about gift-exchange in ancient societies, about the development of oral poetry, about virtually anything except the Iliad and the Odyssey themselves as unique reflections or distillations of life itself—as, in short, great poetry. The observations of the English poet Alexander Pope seemed as applicable in 1970 as they had been when he wrote them in 1715: according to Pope, the remarks of critics "are rather Philosophical, Historical, Geographical . . . or rather anything than Critical and Poetical."', '<p>The opening paragraph draws a sharp line between two groups working on Homer between roughly 1935 and 1970. <strong>The nonspecialists</strong>, intellectuals such as Simone Weil and Erich Auerbach, were asking what made the <em>Iliad</em> and the <em>Odyssey</em> great poetry. <strong>The professional scholars</strong> were asking whether the Trojan War really happened, whether the bard preserved Indo-European folk memories, and how the poems came to be written down — producing books on archaeology, gift-exchange and the development of oral poetry, on virtually anything except the poems themselves. The author''s phrasing, ''something was driving scholars away,'' frames this as a problem to be diagnosed, and Alexander Pope''s 1715 complaint that critics are philosophical or historical rather than critical and poetical is quoted to show how little had changed by 1970.</p>'
+    );
+
+    insert into public.admin_passage_analysis_segments (
+      analysis_id, sort_order, part_label, segment_type, title, text_excerpt, explanation
+    ) values (
+      analysis_id, 2, 'P2', 'other', 'P2',
+      'Ironically, the modern manifestation of this "nonpoetical" emphasis can be traced to the profoundly influential work of Milman Parry, who attempted to demonstrate in detail how the Homeric poems, believed to have been recorded nearly three thousand years ago, were the products of a long and highly developed tradition of oral poetry about the Trojan War. Parry proposed that this tradition built up its diction and its content by a process of constant accumulation and refinement over many generations of storytellers. But after Parry''s death in 1935, his legacy was taken up by scholars who, unlike Parry, forsook intensive analysis of the poetry itself and focused instead on only one element of Parry''s work: the creative limitations and possibilities of oral composition, concentrating on fixed elements and inflexibilities, focusing on the things that oral poetry allegedly can and cannot do. The dryness of this kind of study drove many of the more inventive scholars away from the poems into the rapidly developing field of Homer''s archaeological and historical background.', '<p>The diagnosis arrives, and the irony the author flags is worth holding onto for viewpoint questions. The nonpoetical emphasis traces back to <strong>Milman Parry</strong>, whose profoundly influential work demonstrated in detail that the Homeric poems were the products of a long, highly developed oral tradition about the Trojan War, built up by constant accumulation and refinement across generations of storytellers. Parry himself analysed the poetry intensively. His successors, after his death in 1935, did not: they seized on one element of his work, the creative limits and possibilities of oral composition, concentrating on fixed elements and inflexibilities and on what oral poetry supposedly can and cannot do. The dryness of that work is what pushed inventive scholars off into archaeology and history.</p>'
+    );
+
+    insert into public.admin_passage_analysis_segments (
+      analysis_id, sort_order, part_label, segment_type, title, text_excerpt, explanation
+    ) values (
+      analysis_id, 3, 'P3', 'other', 'P3',
+      'Appropriately, Milman Parry''s son Adam was among those scholars responsible for a renewed interest in Homer''s poetry as literary art. Building on his father''s work, the younger Parry argued that the Homeric poems exist both within and against a tradition. The Iliad and the Odyssey were, Adam Parry thought, the beneficiaries of an inherited store of diction, scenes, and concepts, and at the same time highly individual works that surpassed these conventions. Adam Parry helped prepare the ground for the recent Homeric revival by affirming his father''s belief in a strong inherited tradition, but also by emphasizing Homer''s unique contributions within that tradition.', '<p>The closing paragraph resolves the story, and the author calls the resolution appropriate — the son repairs what was done in the father''s name. <strong>Adam Parry</strong>, Milman''s son, was among the scholars responsible for renewed interest in Homer''s poetry as literary art. Building on his father''s work rather than rejecting it, he argued that the poems exist both within and against a tradition: they inherit a store of diction, scenes and concepts and are at the same time highly individual works that surpass those conventions. By affirming the inherited tradition his father established while emphasizing Homer''s unique contribution within it, Adam Parry prepared the ground for the recent revival announced in the passage''s first sentence.</p>'
+    );
+  end loop;
+end;
+$chunk$;

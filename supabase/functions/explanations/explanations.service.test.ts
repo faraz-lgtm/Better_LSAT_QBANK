@@ -31,8 +31,9 @@ function mockRepo(overrides: Partial<ExplanationsRepository> = {}): Explanations
       inProcessQuestionIds: [],
       answeredQuestionIds: [],
     }),
-    listLatestAnswerSelectionsWithScoresForQuestion: async () => [],
+    listLatestAnswerSelectionsForQuestion: async () => [],
     getLatestUserAnswerSelection: async () => null,
+    getPublishedPassageAnalysis: async () => null,
     listBookmarkedQuestionIds: async () => [],
     setQuestionBookmark: async () => {},
     listPrepTestIdsForQuestionIds: async () => [],
@@ -453,11 +454,7 @@ Deno.test('listPrepTests returns global statusCounts for user', async () => {
 Deno.test('getExplanationDetail returns extended payload', async () => {
   const service = createExplanationsService({
     repository: mockRepo({
-      listLatestAnswerSelectionsWithScoresForQuestion: async () => [
-        { selectedAnswer: 'B', scaledScore: 163 },
-        { selectedAnswer: 'B', scaledScore: 161 },
-        { selectedAnswer: 'A', scaledScore: 152 },
-      ],
+      listLatestAnswerSelectionsForQuestion: async () => ['B', 'B', 'A'],
       getLatestUserAnswerSelection: async () => 'A',
       getQuestionDetail: async () => ({
         id: 'q1',
@@ -497,10 +494,70 @@ Deno.test('getExplanationDetail returns extended payload', async () => {
   assertEquals(d.answerPopularity.length, 2)
   assertEquals(d.answerPopularity.find((r) => r.letter === 'B')?.count, 2)
   assertEquals(d.answerPopularity.find((r) => r.letter === 'B')?.pct, 67)
-  assertEquals(d.answerPopularity.find((r) => r.letter === 'B')?.avgScore, 162)
-  assertEquals(d.answerPopularity.find((r) => r.letter === 'A')?.avgScore, 152)
   assertEquals(d.userSelectedLetter, 'A')
   assertEquals(d.tags, ['Flaw', 'LR'])
+  assertEquals(d.passageAnalysis, null)
+})
+
+Deno.test('getExplanationDetail returns RC passageAnalysis paragraphs as P1, P2', async () => {
+  const service = createExplanationsService({
+    repository: mockRepo({
+      getQuestionDetail: async () => ({
+        id: 'q-rc',
+        question_number: 1,
+        source_group_id: 'RC-Z060',
+        stimulus_text: null,
+        stem_text: 'RC stem',
+        choices: [{ optionLetter: 'A', optionContent: 'A' }],
+        correct_answer: 'A',
+        explanation: null,
+        video_url: null,
+        difficulty: 2,
+        question_types: { name: 'Main Point' },
+        admin_sections: {
+          id: 'sec-rc',
+          section_type: 'RC',
+          section_number: 1,
+          title: 'RC',
+          admin_prep_tests: { id: 'pt101', title: 'PT 101', module_id: 'LSAC101' },
+          admin_passages: [
+            {
+              id: 'pass-1',
+              source_group_id: 'RC-Z060',
+              content: '<p>Passage para 1</p><p>Passage para 2</p>',
+              topic_tag: null,
+            },
+          ],
+        },
+      }),
+      getPublishedPassageAnalysis: async (passageId) => {
+        assertEquals(passageId, 'pass-1')
+        return {
+          analysisId: 'an-1',
+          overallHtml: '<p>Overall takeaway</p>',
+          paragraphs: [
+            {
+              partLabel: 'P1',
+              sortOrder: 1,
+              explanationHtml: '<p>Analysis one</p>',
+              textExcerpt: 'Passage para 1',
+            },
+            {
+              partLabel: 'P2',
+              sortOrder: 2,
+              explanationHtml: '<p>Analysis two</p>',
+              textExcerpt: 'Passage para 2',
+            },
+          ],
+        }
+      },
+    }),
+  })
+
+  const d = await service.getExplanationDetail('user-1', 'q-rc')
+  assertEquals(d.passageAnalysis?.paragraphs.map((p) => p.label), ['P1', 'P2'])
+  assertEquals(d.passageAnalysis?.paragraphs[0]?.explanationHtml, '<p>Analysis one</p>')
+  assertEquals(d.passageAnalysis?.overallHtml, '<p>Overall takeaway</p>')
 })
 
 Deno.test('getExplanationDetail returns null userSelectedLetter when never answered', async () => {

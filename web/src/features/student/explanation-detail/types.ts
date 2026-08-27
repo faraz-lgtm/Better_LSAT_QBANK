@@ -50,6 +50,14 @@ export type ExplanationQuestionDetailView = {
     title: string
     body: string
   }
+  /** RC paragraph analysis shown via "Show analysis" (P1, P2, …). */
+  passageAnalysis?: {
+    paragraphs: Array<{
+      label: string
+      explanationHtml: string
+    }>
+    overallHtml: string | null
+  } | null
   correctChoiceLetter: string
   questionStem: string
   /** Question-level written explanation (expandable under the stem). */

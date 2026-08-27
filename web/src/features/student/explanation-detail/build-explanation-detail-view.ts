@@ -187,6 +187,7 @@ export function buildExplanationQuestionDetailView(
       title: detail?.passage.title || loc.pass.title || `Passage ${passageNum}`,
       body: passageBody,
     },
+    passageAnalysis: detail?.passageAnalysis ?? null,
     questionStem: stem,
     questionExplanationHtml: detail?.explanationHtml ?? null,
     choices,

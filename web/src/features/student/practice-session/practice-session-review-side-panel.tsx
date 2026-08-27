@@ -49,7 +49,9 @@ function viewFromDetail(detail: ExplanationDetailPayload): ExplanationQuestionDe
       title: detail.passage.title,
       body: detail.passage.body,
     },
+    passageAnalysis: detail.passageAnalysis ?? null,
     questionStem: detail.stemText ?? "",
+    questionExplanationHtml: detail.explanationHtml ?? null,
     choices: detail.choices.map((c) => ({
       id: c.id,
       index: c.index,

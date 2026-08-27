@@ -10,6 +10,7 @@ type ExplanationQuestionTabPanelProps = {
   view: Pick<
     ExplanationQuestionDetailView,
     | "passage"
+    | "passageAnalysis"
     | "questionStem"
     | "questionExplanationHtml"
     | "choices"
@@ -59,10 +60,19 @@ function hasExplanationHtml(html: string | null | undefined): boolean {
   return Boolean(html?.trim())
 }
 
+function hasPassageAnalysis(
+  analysis: ExplanationQuestionDetailView["passageAnalysis"],
+): boolean {
+  if (!analysis) return false
+  return analysis.paragraphs.length > 0 || Boolean(analysis.overallHtml?.trim())
+}
+
 function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: ExplanationQuestionTabPanelProps) {
   const [showCorrect, setShowCorrect] = useState(false)
   const [stemExpanded, setStemExpanded] = useState(false)
+  const [analysisOpen, setAnalysisOpen] = useState(false)
   const stemExplanationAvailable = hasExplanationHtml(view.questionExplanationHtml)
+  const analysisAvailable = hasPassageAnalysis(view.passageAnalysis)
 
   return (
     <div className="grid h-full min-h-0 flex-1 gap-5 lg:grid-cols-[minmax(0,1.62fr)_minmax(0,1fr)] lg:gap-6">
@@ -72,10 +82,48 @@ function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: Explanat
             <span className="inline-flex h-8 items-center rounded-full bg-[#f6f8fa] px-4 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[#666d80]">
               PASSAGE {view.passage.displayNumber}
             </span>
-            <span className="text-sm font-medium leading-5 text-[#0d47a1]">Show analysis</span>
+            {analysisAvailable ? (
+              <button
+                type="button"
+                className="text-sm font-medium leading-5 text-[#0d47a1] hover:underline"
+                aria-expanded={analysisOpen}
+                onClick={() => setAnalysisOpen((prev) => !prev)}
+              >
+                {analysisOpen ? "Hide analysis" : "Show analysis"}
+              </button>
+            ) : (
+              <span className="text-sm font-medium leading-5 text-[#818898]">Show analysis</span>
+            )}
           </div>
 
           <HtmlContent html={view.passage.body} className="explanation-passage-body" />
+
+          {analysisOpen && analysisAvailable && view.passageAnalysis ? (
+            <div className="mt-2 flex flex-col gap-5 border-t border-[#eef1f6] pt-5">
+              {view.passageAnalysis.paragraphs.map((paragraph) => (
+                <section key={paragraph.label} className="flex flex-col gap-2">
+                  <span className="inline-flex w-fit items-center rounded-md bg-[#f3f7ff] px-2.5 py-1 text-xs font-semibold tracking-[0.24px] text-[#062357]">
+                    {paragraph.label}
+                  </span>
+                  <HtmlContent
+                    html={paragraph.explanationHtml}
+                    className="explanation-review-body text-[#062357]"
+                  />
+                </section>
+              ))}
+              {view.passageAnalysis.overallHtml?.trim() ? (
+                <section className="flex flex-col gap-2">
+                  <span className="inline-flex w-fit items-center rounded-md bg-[#f6f8fa] px-2.5 py-1 text-xs font-semibold tracking-[0.24px] text-[#666d80]">
+                    Overall
+                  </span>
+                  <HtmlContent
+                    html={view.passageAnalysis.overallHtml}
+                    className="explanation-review-body text-[#062357]"
+                  />
+                </section>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </article>
 

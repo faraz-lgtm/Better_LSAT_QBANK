@@ -87,6 +87,14 @@ export type ExplanationDetailPayload = {
     title: string
     body: string
   }
+  /** RC passage paragraph analysis (P1, P2, …) when published. */
+  passageAnalysis: {
+    paragraphs: Array<{
+      label: string
+      explanationHtml: string
+    }>
+    overallHtml: string | null
+  } | null
   answerPopularity: ExplanationAnswerPopularityRow[]
   /** Current user's latest submitted answer letter (A–E), or null if never answered. */
   userSelectedLetter: string | null
@@ -886,6 +894,21 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
         : null
       const passage = resolvePassageForQuestion(row, sec)
       const topicName = qt?.name?.trim() || '—'
+      const publishedAnalysis =
+        sec.section_type === 'RC'
+          ? await deps.repository.getPublishedPassageAnalysis(passage.id)
+          : null
+      const passageAnalysis =
+        publishedAnalysis &&
+        (publishedAnalysis.paragraphs.length > 0 || publishedAnalysis.overallHtml)
+          ? {
+              paragraphs: publishedAnalysis.paragraphs.map((p) => ({
+                label: p.partLabel,
+                explanationHtml: p.explanationHtml,
+              })),
+              overallHtml: publishedAnalysis.overallHtml,
+            }
+          : null
 
       return {
         questionId: row.id,
@@ -905,6 +928,7 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
         choices,
         correctChoiceId,
         passage,
+        passageAnalysis,
         answerPopularity,
         userSelectedLetter,
         difficulty: clampDifficulty(row.difficulty),
