@@ -54,21 +54,38 @@ const S = {
 } as const
 
 const PREP_TEST_BADGE_SIZE = {
-  width: "40px",
-  height: "40px",
-  borderRadius: "12px",
+  width: "64px",
+  height: "64px",
+  borderRadius: "14px",
 } as const
 
 const SECTION_BADGE_SIZE = {
-  width: "32px",
-  height: "32px",
-  borderRadius: "8px",
+  width: "40px",
+  height: "40px",
+  borderRadius: "12px",
 } as const
 
 const TREE_BADGE_CLASS = "flex shrink-0 items-center justify-center"
 
 const GREEN = "#287f6e"
 const SEEN_GRAY = "#666d80"
+
+function prepTestStatusTag(status: ExplanationQuestionStatus): string {
+  switch (status) {
+    case "in_process":
+      return "In Process • Blind Review"
+    case "fresh":
+      return "Fresh"
+    case "answered":
+      return "Answered"
+    case "seen":
+      return "Seen"
+    case "not_started":
+      return "Not Started"
+    default:
+      return "Fresh"
+  }
+}
 
 function StatusStat({ dot, count, label }: { dot: string; count: number; label: string }) {
   return (
@@ -175,22 +192,13 @@ function prepTestBadgeColors(status: ExplanationQuestionStatus): {
   color: string
 } {
   switch (status) {
-    case "in_process":
-      return { backgroundColor: "#fff6e0", borderColor: "#ffbd4c", color: "#ffbd4c" }
-    case "fresh":
-      return { backgroundColor: "#f3f7ff", borderColor: "#0d47a1", color: "#0d47a1" }
     case "answered":
-      return {
-        backgroundColor: "var(--explanation-answered-bg)",
-        borderColor: "var(--explanation-answered)",
-        color: "var(--explanation-answered)",
-      }
+      return { backgroundColor: "#effefa", borderColor: "#287f6e", color: "#287f6e" }
     case "seen":
       return { backgroundColor: "#f3f4f6", borderColor: "#9ca3af", color: "#9ca3af" }
-    default: {
-      const { dotColor: color, backgroundColor } = statusBadgeStyle(status)
-      return { backgroundColor, borderColor: color, color }
-    }
+    default:
+      // Fresh / In Process / Not Started — Figma blue PT tag
+      return { backgroundColor: "#f3f7ff", borderColor: "#0d47a1", color: "#0d47a1" }
   }
 }
 
@@ -333,10 +341,7 @@ function mapListItemToRow(r: ExplanationPrepTestListItem): PrepTestRow {
   return {
     ...r,
     prepTestNumber: (r.prepTestNumber ?? r.title.replace(/\D/g, "")) || "—",
-    rowSubtitle:
-      r.explainedCount > 0
-        ? `${r.explainedCount} of ${r.questionCount} questions with explanations`
-        : `${r.questionCount} questions`,
+    rowSubtitle: r.rowSubtitle?.trim() || "Fresh",
   }
 }
 
@@ -749,6 +754,7 @@ function ExplanationsPage() {
           const ptNum = row.prepTestNumber
           const ptStatus = derivePrepTestStatus(ptTree)
           const ptBadgeColors = prepTestBadgeColors(ptStatus)
+          const statusTag = ptTree ? prepTestStatusTag(ptStatus) : row.rowSubtitle
 
           return (
             <div key={ptId} className="contents">
@@ -760,7 +766,7 @@ function ExplanationsPage() {
               >
                 <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
                   <span
-                    className={`${TREE_BADGE_CLASS} flex-col border`}
+                    className={`${TREE_BADGE_CLASS} flex-col border p-px`}
                     style={{
                       ...PREP_TEST_BADGE_SIZE,
                       backgroundColor: ptBadgeColors.backgroundColor,
@@ -768,15 +774,15 @@ function ExplanationsPage() {
                       color: ptBadgeColors.color,
                     }}
                   >
-                    <span className="text-[10px] font-bold leading-[1.5] tracking-[0.2px]">PT</span>
-                    <span className="text-base font-semibold leading-[1.35] tabular-nums">{ptNum}</span>
+                    <span className="w-[35px] text-center text-[12px] font-semibold leading-[1.35]">PT</span>
+                    <span className="text-[24px] font-bold leading-[1.3] tabular-nums">{ptNum}</span>
                   </span>
                   <div className="flex min-w-0 flex-col items-start justify-center gap-2 overflow-hidden">
                     <span className="text-[20px] font-bold leading-[1.35] whitespace-nowrap text-[#062357]">
                       PT - {ptNum}
                     </span>
-                    <span className="truncate text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#666d80]">
-                      {row.rowSubtitle}
+                    <span className="truncate text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#666d80]">
+                      {statusTag}
                     </span>
                   </div>
                   {isLoadingTree ? <StudentPageLoader size="sm" /> : null}

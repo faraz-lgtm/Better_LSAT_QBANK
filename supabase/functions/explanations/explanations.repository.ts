@@ -273,8 +273,9 @@ export function createExplanationsRepository(client: SupabaseClient) {
     async fetchQuestionStatsForPrepTestIds(prepTestIds: string[]): Promise<{
       questionCount: number
       explainedCount: number
+      questionIds: string[]
     }> {
-      if (prepTestIds.length === 0) return { questionCount: 0, explainedCount: 0 }
+      if (prepTestIds.length === 0) return { questionCount: 0, explainedCount: 0, questionIds: [] }
 
       const { data: sections, error: secErr } = await client
         .from('admin_sections')
@@ -282,7 +283,7 @@ export function createExplanationsRepository(client: SupabaseClient) {
         .in('prep_test_id', prepTestIds)
       if (secErr) throw secErr
       const sectionIds = ((sections ?? []) as { id: string }[]).map((s) => s.id)
-      if (sectionIds.length === 0) return { questionCount: 0, explainedCount: 0 }
+      if (sectionIds.length === 0) return { questionCount: 0, explainedCount: 0, questionIds: [] }
 
       const { data: questions, error: qErr } = await client
         .from('admin_questions')
@@ -292,12 +293,14 @@ export function createExplanationsRepository(client: SupabaseClient) {
 
       const rows = (questions ?? []) as { id: string; explanation: string | null; video_url: string | null }[]
       let explainedCount = 0
+      const questionIds: string[] = []
       for (const q of rows) {
+        questionIds.push(q.id)
         const hasExpl = (q.explanation?.trim() ?? '').length > 0
         const hasVid = (q.video_url?.trim() ?? '').length > 0
         if (hasExpl || hasVid) explainedCount += 1
       }
-      return { questionCount: rows.length, explainedCount }
+      return { questionCount: rows.length, explainedCount, questionIds }
     },
 
     async getQuestionDetail(questionId: string): Promise<QuestionDetailRow | null> {

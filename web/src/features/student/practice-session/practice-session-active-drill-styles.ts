@@ -85,9 +85,9 @@ const ACTIVE_DRILL_HEADER_TITLE_CLASS =
 const ACTIVE_DRILL_FIND_TEXT_INPUT_CLASS =
   "h-[52px] w-[200px] shrink-0 rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] px-4 py-2 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#0d0d12] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] outline-none placeholder:text-[#818898]"
 
-/** Figma `20268:105580` — timer card 178×52 */
+/** Figma `20268:105580` — timer card 222×52 */
 const ACTIVE_DRILL_HEADER_TIMER_CLASS =
-  "practice-session-timer flex h-[52px] w-[178px] shrink-0 items-center overflow-visible rounded-[16px] border border-[#dfe1e7] bg-white px-3"
+  "practice-session-timer flex h-[52px] w-[222px] shrink-0 items-center overflow-visible rounded-[16px] border border-[#dfe1e7] bg-white px-3"
 
 const ACTIVE_DRILL_HEADER_PROGRESS_TRACK_CLASS =
   "relative h-1 w-full overflow-hidden rounded-[5px] bg-[#d9d9d9]"
