@@ -396,7 +396,7 @@ function PrepCourseLessonPage() {
               </div>
             ) : (
               <>
-                <div className={cn(PREP_COURSE_LESSON_CONTENT_CARD_CLASS, STUDENT_PAGE_CONTAINER_CLASS, "max-w-[888px]")}>
+                <div className={cn(PREP_COURSE_LESSON_CONTENT_CARD_CLASS, STUDENT_PAGE_CONTAINER_CLASS, "w-full flex-1 self-stretch")}>
                   <PrepCourseLessonPanel
                     {...lessonPanelProps}
                     contentScrollRef={lessonContentRef}

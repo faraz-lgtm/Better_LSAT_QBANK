@@ -574,6 +574,7 @@ function LessonContentRenderer({
         onStartDrill={onStartDrill}
         startingDrill={startingDrill}
         drillStartError={drillStartError}
+        hideTitle={hideTitle}
       />
     )
   }

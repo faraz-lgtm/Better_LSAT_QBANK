@@ -5,9 +5,7 @@ import { LessonContentRenderer } from "@/features/prep-course/components/lesson-
 import { cn } from "@/lib/utils"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import {
-  isResolvedAdaptiveDrillLesson,
   isResolvedPrepCourseDrillLesson,
-  resolveDrillLessonType,
   lessonMetaLine,
 } from "@/features/prep-course/lib/prep-course-format"
 import type {
@@ -18,6 +16,10 @@ import type {
 } from "@/lib/api/prep-course"
 
 type DrillResultsPart = "cards" | "below" | "full"
+
+const LESSON_READING_PAD_CLASS = "px-6 md:px-8"
+const LESSON_READING_SHELL_CLASS = `box-border flex w-full min-w-0 flex-col ${LESSON_READING_PAD_CLASS} pt-12 pb-8`
+const LESSON_CONTENT_COLUMN_CLASS = `box-border w-full ${LESSON_READING_PAD_CLASS} pb-8 pt-8`
 
 type PrepCourseLessonPanelProps = {
   course: PrepCourse
@@ -74,16 +76,15 @@ function PrepCourseLessonPanel({
     (lesson.lesson_type === "video" ||
       lesson.lesson_type === "video_text" ||
       isResolvedPrepCourseDrillLesson(lesson))
-  const isRepWorkLesson = lesson != null && resolveDrillLessonType(lesson) === "rep_work"
-  const isAdaptiveDrillIntro =
-    lesson != null && isResolvedAdaptiveDrillLesson(lesson) && !activeDrillAttempt
-  const hideHeaderForDrillIntro = isAdaptiveDrillIntro
   const hideHeaderForDrillResults =
     Boolean(activeDrillAttempt) &&
     lesson != null &&
     isResolvedPrepCourseDrillLesson(lesson)
+  const useContentColumnShell = Boolean(
+    lesson && !loading && !hideHeaderForDrillResults && inLessonCard && !hasVideo,
+  )
   const useLessonArticleShell = Boolean(
-    lesson && !loading && !hasVideo && !isRepWorkLesson && !hideHeaderForDrillResults && !hideHeaderForDrillIntro,
+    lesson && !loading && !hasVideo && !useContentColumnShell,
   )
 
   const durationReadLabel =
@@ -91,9 +92,9 @@ function PrepCourseLessonPanel({
   const videoMetaLabel = hasVideo ? "video" : "no video"
   const rightMeta = [durationReadLabel, videoMetaLabel].filter(Boolean).join(" · ")
 
-  const renderLessonHeader = () => (
-    <header className="flex min-w-0 flex-col items-center px-16 pb-8 pt-12">
-      <div className="flex w-full max-w-[640px] min-w-0 flex-col gap-5">
+  const renderLessonHeader = (embeddedInShell = false) => {
+    const headerContent = (
+      <>
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-3">
             {moduleLessonLine ? (
@@ -136,19 +137,45 @@ function PrepCourseLessonPanel({
             </p>
           </div>
         ) : null}
-      </div>
-    </header>
-  )
+      </>
+    )
+
+    if (embeddedInShell) {
+      return <header className="flex w-full min-w-0 flex-col gap-5 pb-8">{headerContent}</header>
+    }
+
+    return (
+      <header className={cn("flex min-w-0 flex-col pt-12 pb-8", LESSON_READING_PAD_CLASS)}>
+        <div className="flex w-full min-w-0 flex-col gap-5">{headerContent}</div>
+      </header>
+    )
+  }
 
   const titleBlock =
-    lesson && !loading && !hideHeaderForDrillResults && !hideHeaderForDrillIntro ? (
-      renderLessonHeader()
-    ) : null
+    lesson && !loading && !hideHeaderForDrillResults ? renderLessonHeader(useContentColumnShell) : null
 
   const belowVideoTitleBlock =
-    lesson && !loading && hasVideo && !hideHeaderForDrillIntro ? (
-      renderLessonHeader()
-    ) : null
+    lesson && !loading && hasVideo ? renderLessonHeader() : null
+
+  const renderContentColumnShell = () =>
+    inLessonCard ? (
+      <div className={LESSON_READING_SHELL_CLASS}>
+        {titleBlock}
+        <div className="min-w-0 w-full">{lessonBody}</div>
+      </div>
+    ) : (
+      <article
+        className={cn(
+          "box-border min-w-0 max-w-full overflow-x-clip rounded-[16px] border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]",
+          sidebarAdjacent && "min-h-full",
+        )}
+      >
+        <div className={LESSON_READING_SHELL_CLASS}>
+          {titleBlock}
+          <div className="min-w-0 w-full">{lessonBody}</div>
+        </div>
+      </article>
+    )
 
   const lessonBody = lesson ? (
     <LessonContentRenderer
@@ -247,7 +274,7 @@ function PrepCourseLessonPanel({
       {loading && !lesson ? (
         <StudentPageLoader centered className="min-h-0 flex-1" label="Loading lesson…" />
       ) : lesson ? (
-        isRepWorkLesson ? (
+        useContentColumnShell ? (
           <div
             ref={contentScrollRef}
             className={cn(
@@ -257,35 +284,7 @@ function PrepCourseLessonPanel({
               sidebarAdjacent && !inLessonCard && "min-h-full",
             )}
           >
-            {inLessonCard ? (
-              <div className="box-border flex min-w-0 max-w-full flex-col gap-5 overflow-x-clip">
-                {titleBlock}
-                {lessonBody}
-              </div>
-            ) : (
-              <article
-                className={cn(
-                  "box-border min-w-0 max-w-full overflow-x-clip rounded-[16px] border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]",
-                  sidebarAdjacent && "min-h-full",
-                )}
-              >
-                <div className="box-border flex min-w-0 max-w-full flex-col gap-5 overflow-x-clip p-6">
-                  {titleBlock}
-                  {lessonBody}
-                </div>
-              </article>
-            )}
-          </div>
-        ) : isAdaptiveDrillIntro ? (
-          <div
-            ref={contentScrollRef}
-            className={cn(
-              "practice-session-pane practice-session-scroll-hidden flex h-0 min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain [overflow-anchor:none]",
-              paneBgClass,
-              contentPaddingClass,
-            )}
-          >
-            <div className="flex w-full flex-1 flex-col items-center justify-start pt-2">{lessonBody}</div>
+            {renderContentColumnShell()}
           </div>
         ) : useLessonArticleShell ? (
           <div
@@ -299,9 +298,7 @@ function PrepCourseLessonPanel({
           >
             <div className="box-border flex min-w-0 max-w-full flex-col gap-0 overflow-x-clip">
               {titleBlock}
-              <div className="mx-auto box-border w-full max-w-[640px] px-6 pb-8 pt-8 md:px-0">
-                {lessonBody}
-              </div>
+              <div className={LESSON_CONTENT_COLUMN_CLASS}>{lessonBody}</div>
             </div>
           </div>
         ) : (
