@@ -23,6 +23,8 @@ export type ExplanationPrepTestListItem = {
   prepTestNumber: string | null
   questionCount: number
   explainedCount: number
+  /** Figma list subtitle — e.g. "Fresh", "In Process • Blind Review" */
+  rowSubtitle: string
 }
 
 export type ExplanationQuestionStatus = 'in_process' | 'not_started' | 'answered' | 'fresh' | 'seen'
@@ -561,14 +563,14 @@ export function mapPrepTestTreeRows(
     })
   }
 
-  const explainedTotal = allSections
+  const allStatuses = allSections
     .flatMap((s) => s.admin_questions ?? [])
-    .filter((q) => hasWrittenExplanation(q) || hasVideo(q)).length
+    .map((q) => statusByQ.get(q.id) ?? 'fresh')
 
   return {
     id: primaryId,
     prepTestNumber: ptNum,
-    rowSubtitle: explainedTotal > 0 ? `${explainedTotal} questions with explanations` : 'No explanations yet',
+    rowSubtitle: prepTestRowSubtitleFromStatuses(allStatuses),
     sections,
   }
 }
@@ -698,6 +700,27 @@ export function resolveExplanationQuestionStatus(
   return 'fresh'
 }
 
+/** Aggregate question statuses into the PrepTest list/tree row tag. */
+export function prepTestRowSubtitleFromStatuses(
+  statuses: readonly ExplanationQuestionStatus[],
+): string {
+  let hasInProcess = false
+  let hasFresh = false
+  let hasAnswered = false
+  let hasSeen = false
+  for (const status of statuses) {
+    if (status === 'in_process') hasInProcess = true
+    else if (status === 'fresh' || status === 'not_started') hasFresh = true
+    else if (status === 'answered') hasAnswered = true
+    else if (status === 'seen') hasSeen = true
+  }
+  if (hasInProcess) return 'In Process • Blind Review'
+  if (hasFresh) return 'Fresh'
+  if (hasAnswered) return 'Answered'
+  if (hasSeen) return 'Seen'
+  return 'Fresh'
+}
+
 export function buildExplanationStatusCounts(
   catalogQuestionIds: readonly string[],
   progress: ExplanationQuestionProgress,
@@ -789,9 +812,13 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
           : (page - 1) * pageSize
       const pageGroups = grouped.slice(start, start + pageSize)
 
+      const progressLists = await deps.repository.listPrepTestQuestionProgress(userId)
+      const progress = progressFromLists(progressLists)
+
       const prepTests: ExplanationPrepTestListItem[] = []
       for (const g of pageGroups) {
         const stats = await deps.repository.fetchQuestionStatsForPrepTestIds(g.prepTestIds)
+        const statuses = stats.questionIds.map((id) => resolveExplanationQuestionStatus(id, progress))
         prepTests.push({
           id: g.id,
           title: g.title,
@@ -799,10 +826,12 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
           prepTestNumber: prepTestNumberFromModuleId(g.moduleId),
           questionCount: stats.questionCount,
           explainedCount: stats.explainedCount,
+          rowSubtitle: prepTestRowSubtitleFromStatuses(statuses),
         })
       }
 
-      const statusCounts = await this.getExplanationStatusCounts(userId)
+      const catalogIds = await deps.repository.listLsatCatalogQuestionIds()
+      const statusCounts = buildExplanationStatusCounts(catalogIds, progress)
       return { prepTests, total, page, pageSize, statusCounts }
     },
 

@@ -61,7 +61,7 @@ function PracticeSessionTimer({
   if (layout === "inline") {
     return (
       <div className={ACTIVE_DRILL_HEADER_TIMER_CLASS}>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           {showClockIcon ? (
             <span className="inline-flex size-6 shrink-0 flex-col items-start rounded-lg px-1 pt-1">
               <ExamHeaderTimerIcon />
@@ -74,7 +74,7 @@ function PracticeSessionTimer({
           ) : null}
           <span
             className={cn(
-              "flex h-6 w-[46px] shrink-0 items-center justify-end text-right text-sm font-semibold leading-[1.5] tabular-nums tracking-[0.28px] text-[#062357]",
+              "mr-8 flex h-6 w-[56px] shrink-0 items-center justify-end text-right text-sm font-semibold leading-[1.5] tabular-nums tracking-[0.28px] text-[#062357]",
               displayClassName,
             )}
           >

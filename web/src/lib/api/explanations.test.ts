@@ -60,7 +60,7 @@ describe("createExplanationsApi", () => {
         prepTest: {
           id: "pt1",
           prepTestNumber: "159",
-          rowSubtitle: "12 questions with explanations",
+          rowSubtitle: "Fresh",
           sections: [],
         },
       },

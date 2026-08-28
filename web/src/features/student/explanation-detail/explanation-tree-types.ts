@@ -45,6 +45,8 @@ export type ExplanationPrepTestListItem = {
   prepTestNumber: string | null
   questionCount: number
   explainedCount: number
+  /** Figma list subtitle — e.g. "Fresh", "In Process • Blind Review" */
+  rowSubtitle?: string
 }
 
 export type ExplanationStatusCounts = {
