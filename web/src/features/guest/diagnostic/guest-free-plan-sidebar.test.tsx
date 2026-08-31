@@ -32,7 +32,7 @@ describe("GuestFreePlanSidebar", () => {
     expect(screen.getByRole("button", { name: "Prep Courses" })).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Prep Courses (locked)" })).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Explanations (locked)" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Blind Review (locked)" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Blind Review (locked)" })).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Analytics (locked)" })).toBeInTheDocument()
     expect(screen.getAllByRole("button", { name: "Drills (locked)" })).toHaveLength(2)
     expect(screen.getAllByRole("button", { name: "Sections (locked)" })).toHaveLength(2)

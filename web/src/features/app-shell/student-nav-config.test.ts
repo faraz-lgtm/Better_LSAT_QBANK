@@ -17,6 +17,18 @@ describe("student-nav-config", () => {
     expect(getStudentPageTitle("/app/practice/drills")).toBe("Drills")
   })
 
+  it("keeps Blind Review breadcrumbs without a sidebar item", () => {
+    expect(getStudentBreadcrumbs("/app/practice/blind-review")).toEqual([
+      { label: "Prep", href: "/app/practice/drills" },
+      { label: "Blind Review" },
+    ])
+    expect(getStudentPageTitle("/app/practice/blind-review")).toBe("Blind Review")
+    expect(getStudentBreadcrumbs("/app/practice/blind-review/pt-141")).toEqual([
+      { label: "Prep", href: "/app/practice/drills" },
+      { label: "Blind Review" },
+    ])
+  })
+
   it("maps academy explanations breadcrumbs", () => {
     expect(getActiveSectionKey("/app/prep-course/foo")).toBe("academy")
     expect(getStudentBreadcrumbs("/app/learn/explanations")).toEqual([

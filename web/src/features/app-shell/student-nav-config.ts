@@ -17,7 +17,6 @@ export type StudentNavItemIconKey =
   | "drills"
   | "sections"
   | "preptest"
-  | "blind-review"
   | "overview"
   | "insights-drills"
   | "insights-sections"
@@ -31,7 +30,6 @@ export const STUDENT_NAV_ITEM_ICON_SRC: Record<StudentNavItemIconKey, string> = 
   drills: "/nav/drills.svg",
   sections: "/nav/sections.svg",
   preptest: "/nav/preptest.svg",
-  "blind-review": "/nav/blind-review.svg",
   overview: "/nav/overview.svg",
   "insights-drills": "/nav/insights-drills.svg",
   "insights-sections": "/nav/insights-sections.svg",
@@ -80,7 +78,6 @@ export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
       { label: "Drills", href: "/app/practice/drills", icon: "drills" },
       { label: "Sections", href: "/app/practice/sections", icon: "sections" },
       { label: "PrepTest", href: PREPTEST_LIST_HREF, icon: "preptest" },
-      { label: "Blind Review", href: "/app/practice/blind-review", icon: "blind-review" },
     ],
   },
   {
@@ -245,6 +242,11 @@ export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBre
     return crumbs
   }
 
+  if (pathname === "/app/practice/blind-review" || pathname.startsWith("/app/practice/blind-review/")) {
+    crumbs.push({ label: "Blind Review" })
+    return crumbs
+  }
+
   if (pathname.startsWith("/app/prep-course/") && pathname !== "/app/prep-course") {
     crumbs.push({ label: "Prep Courses", href: "/app/prep-course" })
     crumbs.push({ label: "Course Content" })
@@ -273,6 +275,7 @@ export function getStudentPageTitle(pathname: string, search = ""): string | nul
   if (pathname.startsWith("/app/analytics/preptests/results/")) return null
   if (pathname === "/app/practice/drills/lr/new" || pathname === "/app/practice/drills/rc/new") return null
   if (pathname.startsWith("/app/practice/results/")) return null
+  if (pathname.startsWith("/app/practice/blind-review")) return "Blind Review"
 
   const activeItem = findActiveNavItem(pathname, search)
   if (activeItem) return activeItem.label
