@@ -1,12 +1,14 @@
 import type { ReactNode } from "react"
-import { Pencil } from "lucide-react"
+import { Bookmark, Pencil } from "lucide-react"
 
+import { Switch } from "@/components/ui/switch"
 import {
   PT_RESULTS_PAGE_GAP_CLASS,
   PT_RESULTS_SECTION_BLOCK_CLASS,
   PT_RESULTS_SECTION_HEADER_CLASS,
   PT_RESULTS_SURFACE_CARD_CLASS,
 } from "@/features/student/analytics/prep-test-results-section-styles"
+import { checkedFromToggleEvent } from "@/features/student/analytics/session-bookmarks"
 import {
   PracticeDifficultyMeter,
   type PracticeDifficultyLabel,
@@ -43,10 +45,48 @@ function formatScoreDelta(incorrectCount: number): string {
   return `-${incorrectCount}`
 }
 
-function PracticeResultsTotalQuestionsBar({ total }: { total: number }) {
+function PracticeResultsBookmarkedOnlyToggle({
+  checked,
+  onCheckedChange,
+}: {
+  checked: boolean
+  onCheckedChange: (next: boolean) => void
+}) {
+  return (
+    <div className="flex shrink-0 items-center gap-2.5">
+      <Bookmark className="size-4 shrink-0 text-[#062357]" aria-hidden />
+      <span className="whitespace-nowrap text-base font-semibold leading-normal tracking-[0.02em] text-[#062357]">
+        Bookmarked only
+      </span>
+      <Switch
+        checked={checked}
+        onChange={(event) => onCheckedChange(checkedFromToggleEvent(event))}
+        aria-label="Show bookmarked only"
+      />
+    </div>
+  )
+}
+
+function PracticeResultsTotalQuestionsBar({
+  total,
+  bookmarkedOnly,
+  onBookmarkedOnlyChange,
+}: {
+  total: number
+  bookmarkedOnly?: boolean
+  onBookmarkedOnlyChange?: (next: boolean) => void
+}) {
   return (
     <section className={cn(PT_RESULTS_SURFACE_CARD_CLASS, "px-[24px] py-4")}>
-      <p className="text-2xl font-bold leading-[1.3] text-[#062357]">Total Questions: {total}</p>
+      <div className="flex min-w-0 flex-wrap items-center gap-4">
+        <p className="text-2xl font-bold leading-[1.3] text-[#062357]">Total Questions: {total}</p>
+        {onBookmarkedOnlyChange ? (
+          <PracticeResultsBookmarkedOnlyToggle
+            checked={Boolean(bookmarkedOnly)}
+            onCheckedChange={onBookmarkedOnlyChange}
+          />
+        ) : null}
+      </div>
     </section>
   )
 }
@@ -167,6 +207,7 @@ function PracticeResultsPassageRow({ passage }: { passage: PracticePassageSummar
 }
 
 export {
+  PracticeResultsBookmarkedOnlyToggle,
   PracticeResultsPassageRow,
   PracticeResultsSectionCard,
   PracticeResultsTotalQuestionsBar,

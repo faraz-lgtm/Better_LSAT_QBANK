@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
+import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
 
 import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
@@ -94,5 +95,50 @@ describe("AnalyticsPrepTestHistory", () => {
 
     await user.click(screen.getByRole("button", { name: "Remove bookmark" }))
     expect(onToggleBookmark).toHaveBeenCalledWith("saved")
+  })
+
+  it("previews four rows and links View more to the Insights page", () => {
+    const many = Array.from({ length: 5 }, (_, index) => ({
+      ...entries[1]!,
+      id: `row-${index}`,
+      testLabel: `History ${index + 1}`,
+    }))
+
+    render(
+      <MemoryRouter>
+        <AnalyticsPrepTestHistory
+          title="Drill History"
+          emptyNoun="drills"
+          visibleEntries={many}
+          bookmarkedOnly={false}
+          onBookmarkedOnlyChange={() => {}}
+          onToggleBookmark={() => {}}
+          previewLimit={4}
+          viewMoreHref="/app/analytics/drills"
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText("History 1")).toBeInTheDocument()
+    expect(screen.getByText("History 4")).toBeInTheDocument()
+    expect(screen.queryByText("History 5")).not.toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "View more" })).toHaveAttribute("href", "/app/analytics/drills")
+  })
+
+  it("hides View more when the preview already shows every row", () => {
+    render(
+      <MemoryRouter>
+        <AnalyticsPrepTestHistory
+          visibleEntries={entries}
+          bookmarkedOnly={false}
+          onBookmarkedOnlyChange={() => {}}
+          onToggleBookmark={() => {}}
+          previewLimit={4}
+          viewMoreHref="/app/analytics/sections"
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByRole("link", { name: "View more" })).not.toBeInTheDocument()
   })
 })

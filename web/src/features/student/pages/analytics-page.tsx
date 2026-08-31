@@ -43,6 +43,7 @@ import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics
 
 const VALID_TABS = new Set(["overview", "priorities", "history"])
 const HISTORY_FETCH_LIMIT = 30
+const OVERVIEW_HISTORY_PREVIEW_LIMIT = 4
 
 function tabFromSearch(raw: string | null): string {
   if (raw && VALID_TABS.has(raw)) return raw
@@ -381,6 +382,8 @@ function OverviewTab() {
         onSectionFilterChange={setDrillSectionFilter}
         onToggleBookmark={(id) => toggleHistoryBookmark(id, setDrillHistory, drillHistory)}
         onSelectEntry={(id) => navigate(practiceSessionResultsPath(id))}
+        previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
+        viewMoreHref="/app/analytics/drills"
       />
 
       <AnalyticsPrepTestHistory
@@ -394,6 +397,8 @@ function OverviewTab() {
         onSectionFilterChange={setSectionSectionFilter}
         onToggleBookmark={(id) => toggleHistoryBookmark(id, setSectionHistory, sectionHistory)}
         onSelectEntry={(id) => navigate(practiceSessionResultsPath(id, { source: "section" }))}
+        previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
+        viewMoreHref="/app/analytics/sections"
       />
 
       <AnalyticsPrepTestHistory
@@ -405,6 +410,8 @@ function OverviewTab() {
         onToggleBookmark={(id) => toggleHistoryBookmark(id, setPrepTestHistory, prepTestHistory)}
         onSelectEntry={(id) => navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)}
         onOpenPractice={(id) => navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)}
+        previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
+        viewMoreHref="/app/analytics/preptests"
       />
 
       <section className="flex flex-col gap-4">

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { Link } from "react-router-dom"
 import { Bookmark, Calendar, ExternalLink, MoreVertical } from "lucide-react"
 
 import { Switch } from "@/components/ui/switch"
@@ -255,6 +256,9 @@ type AnalyticsPrepTestHistoryProps = {
   /** When set, shows All / LR / RC filters in the card header. */
   sectionFilter?: AnalyticsSectionFilter
   onSectionFilterChange?: (next: AnalyticsSectionFilter) => void
+  /** Overview preview: show this many rows, then a View more link. */
+  previewLimit?: number
+  viewMoreHref?: string
 }
 
 function AnalyticsPrepTestHistory({
@@ -269,8 +273,14 @@ function AnalyticsPrepTestHistory({
   emptyNoun = "PrepTests",
   sectionFilter,
   onSectionFilterChange,
+  previewLimit,
+  viewMoreHref,
 }: AnalyticsPrepTestHistoryProps) {
   const showSectionFilter = sectionFilter != null && onSectionFilterChange != null
+  const displayedEntries =
+    previewLimit != null ? visibleEntries.slice(0, previewLimit) : visibleEntries
+  const showViewMore =
+    Boolean(viewMoreHref) && previewLimit != null && visibleEntries.length > previewLimit
 
   return (
     <section className="rounded-[16px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
@@ -294,8 +304,13 @@ function AnalyticsPrepTestHistory({
         </div>
       </div>
 
-      <div className="flex max-h-[432px] flex-col gap-3 overflow-y-auto pr-1">
-        {visibleEntries.length === 0 ? (
+      <div
+        className={cn(
+          "flex flex-col gap-3 pr-1",
+          previewLimit == null && "max-h-[432px] overflow-y-auto",
+        )}
+      >
+        {displayedEntries.length === 0 ? (
           <p className="rounded-[16px] border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-6 py-8 text-center text-sm text-[#666d80]">
             {bookmarkedOnly
               ? `No bookmarked ${emptyNoun} in this range. Adjust the time range or bookmark a ${emptyNoun.replace(/s$/, "")}.`
@@ -304,7 +319,7 @@ function AnalyticsPrepTestHistory({
                 : `No ${emptyNoun} recorded in this range. Try widening the time range.`}
           </p>
         ) : (
-          visibleEntries.map((entry) => (
+          displayedEntries.map((entry) => (
             <PrepTestHistoryRow
               key={entry.id}
               entry={entry}
@@ -316,6 +331,17 @@ function AnalyticsPrepTestHistory({
           ))
         )}
       </div>
+
+      {showViewMore && viewMoreHref ? (
+        <div className="mt-4 flex justify-center">
+          <Link
+            to={viewMoreHref}
+            className="inline-flex h-[52px] min-w-[160px] items-center justify-center rounded-[16px] border border-[#dfe1e7] bg-white px-6 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa]"
+          >
+            View more
+          </Link>
+        </div>
+      ) : null}
     </section>
   )
 }

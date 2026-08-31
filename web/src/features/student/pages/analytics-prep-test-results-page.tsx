@@ -10,6 +10,8 @@ import { FigmaIcon } from "@/components/icons/figma-icons"
 import { FIGMA_DROPDOWN_CARD_OPEN_CLASS, FigmaDropdown } from "@/components/ui/figma-dropdown"
 import { Switch } from "@/components/ui/switch"
 import { explanationQuestionDetailHref } from "@/features/student/explanation-detail/explanation-question-index"
+import { useExplanationQuestionBookmarks } from "@/features/student/explanation-detail/use-explanation-question-bookmarks"
+import { PracticeResultsBookmarkedOnlyToggle } from "@/features/student/practice-session/practice-results-list-layout"
 import {
   CalculatingScoreLoader,
   useCalculatingScoreReveal,
@@ -54,18 +56,11 @@ import {
   formatPrepTestResultsTitle,
   mapPrepTestDetailToResults,
 } from "@/features/student/analytics/map-prep-test-results"
-import { checkedFromToggleEvent } from "@/features/student/analytics/session-bookmarks"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import {
   firstBlindReviewSectionSessionId,
   resultsReviewSectionSessionPath,
 } from "@/features/student/blind-review/blind-review-navigation"
-import {
-  readExplanationBookmarkCache,
-  writeExplanationBookmarkCache,
-} from "@/features/student/explanation-detail/explanation-bookmark-cache"
-import { createExplanationsApi } from "@/lib/api/explanations"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const QUESTION_FILTER_OPTIONS = ["Question", "Passage", "Incorrect only"] as const
 
@@ -160,17 +155,10 @@ function TotalQuestionsBar({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 flex-wrap items-center gap-4">
           <p className="text-2xl font-bold leading-[1.3] text-[#062357]">Total Questions: {total}</p>
-          <div className="flex shrink-0 items-center gap-2.5">
-            <Bookmark className="size-4 shrink-0 text-[#062357]" aria-hidden />
-            <span className="whitespace-nowrap text-base font-semibold leading-normal tracking-[0.02em] text-[#062357]">
-              Bookmarked only
-            </span>
-            <Switch
-              checked={bookmarkedOnly}
-              onChange={(event) => onBookmarkedOnlyChange(checkedFromToggleEvent(event))}
-              aria-label="Show bookmarked only"
-            />
-          </div>
+          <PracticeResultsBookmarkedOnlyToggle
+            checked={bookmarkedOnly}
+            onCheckedChange={onBookmarkedOnlyChange}
+          />
         </div>
         <FigmaDropdown
           variant="pill"
@@ -564,16 +552,9 @@ function AnalyticsPrepTestResultsPage() {
   const navigate = useNavigate()
   const analyticsApi = useAnalyticsApi()
   const practiceApi = usePracticeApi()
-  const explanationsApi = useMemo(() => {
-    try {
-      return createExplanationsApi(getSupabaseBrowserClient())
-    } catch {
-      return null
-    }
-  }, [])
+  const { bookmarkedIds, toggleQuestionBookmark } = useExplanationQuestionBookmarks()
   const [questionFilter, setQuestionFilter] = useState<(typeof QUESTION_FILTER_OPTIONS)[number]>("Question")
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
-  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(() => new Set())
   const [excludeFromAnalytics, setExcludeFromAnalytics] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -613,21 +594,6 @@ function AnalyticsPrepTestResultsPage() {
       .finally(() => setLoading(false))
   }, [analyticsApi, testId])
 
-  useEffect(() => {
-    setBookmarkedIds(new Set(readExplanationBookmarkCache().questionIds))
-    if (!explanationsApi) return
-    void explanationsApi
-      .listQuestionBookmarks()
-      .then(({ questionIds }) => {
-        setBookmarkedIds(new Set(questionIds))
-        const cache = readExplanationBookmarkCache()
-        writeExplanationBookmarkCache({ ...cache, questionIds })
-      })
-      .catch(() => {
-        /* Keep cached bookmarks if the function is unavailable. */
-      })
-  }, [explanationsApi])
-
   const pageTitle = useMemo(() => {
     if (!completedAt) return prepTestTitle || "PrepTest results"
     return formatPrepTestResultsTitle(prepTestTitle, moduleId, completedAt)
@@ -642,41 +608,6 @@ function AnalyticsPrepTestResultsPage() {
       })
     },
     [practiceApi, testId],
-  )
-
-  const handleToggleQuestionBookmark = useCallback(
-    (questionId: string) => {
-      const nextBookmarked = !bookmarkedIds.has(questionId)
-      setBookmarkedIds((current) => {
-        const next = new Set(current)
-        if (nextBookmarked) next.add(questionId)
-        else next.delete(questionId)
-        writeExplanationBookmarkCache({
-          ...readExplanationBookmarkCache(),
-          questionIds: [...next],
-        })
-        return next
-      })
-      if (!explanationsApi) return
-      void explanationsApi
-        .setQuestionBookmark(questionId, nextBookmarked)
-        .then(({ questionIds }) => {
-          setBookmarkedIds(new Set(questionIds))
-          writeExplanationBookmarkCache({
-            ...readExplanationBookmarkCache(),
-            questionIds,
-          })
-        })
-        .catch(() => {
-          setBookmarkedIds((current) => {
-            const reverted = new Set(current)
-            if (nextBookmarked) reverted.delete(questionId)
-            else reverted.add(questionId)
-            return reverted
-          })
-        })
-    },
-    [bookmarkedIds, explanationsApi],
   )
 
   const dataReady = !loading && detail != null && error == null
@@ -786,7 +717,7 @@ function AnalyticsPrepTestResultsPage() {
                   questions={group.questions}
                   showBlindReview={detail.blindReviewCompleted}
                   bookmarkedIds={bookmarkedIds}
-                  onToggleBookmark={handleToggleQuestionBookmark}
+                  onToggleBookmark={toggleQuestionBookmark}
                 />
               ))}
             </SectionBlock>

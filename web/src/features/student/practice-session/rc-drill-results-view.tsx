@@ -4,6 +4,11 @@ import { Pencil, Trash2 } from "lucide-react"
 import { FIGMA_DROPDOWN_CARD_OPEN_CLASS, FigmaDropdown } from "@/components/ui/figma-dropdown"
 import { Switch } from "@/components/ui/switch"
 import {
+  filterPracticeResultPassages,
+  practiceResultQuestionBookmarkId,
+} from "@/features/student/practice-session/filter-practice-result-questions"
+import { PracticeResultsBookmarkedOnlyToggle } from "@/features/student/practice-session/practice-results-list-layout"
+import {
   PT_RESULTS_HERO_CARD_CLASS,
   PT_RESULTS_PAGE_GAP_CLASS,
   PT_RESULTS_PASSAGE_BADGE_CLASS,
@@ -46,7 +51,8 @@ type RcDrillResultsViewProps = {
   passages: PracticePassageQuestionGroup[]
   questions: PracticeQuestionResultMeta[]
   showBlindReview: boolean
-  flaggedIds: Set<string>
+  bookmarkedIds: ReadonlySet<string>
+  onToggleBookmark: (questionId: string) => void
   onReviewInTester: () => void
   onExcludedChange: (next: boolean) => void
   variant?: "drill" | "section"
@@ -147,7 +153,8 @@ function RcDrillResultsView({
   passages,
   questions,
   showBlindReview,
-  flaggedIds,
+  bookmarkedIds,
+  onToggleBookmark,
   onReviewInTester,
   onExcludedChange,
   variant = "drill",
@@ -156,6 +163,7 @@ function RcDrillResultsView({
 }: RcDrillResultsViewProps) {
   const [filter, setFilter] = useState<QuestionFilter>("Question")
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
 
   const heroTitle =
     heroTitleOverride ??
@@ -171,15 +179,18 @@ function RcDrillResultsView({
       : `${rawScore}/${questionCount}`
     : formatAccuracyPct(rawScore, questionCount)
 
-  const visiblePassages = useMemo(() => {
-    if (filter !== "Incorrect only") return passages
-    return passages
-      .map((group) => ({
-        ...group,
-        questions: group.questions.filter((q) => !q.isCorrect),
-      }))
-      .filter((group) => group.questions.length > 0)
-  }, [filter, passages])
+  const visiblePassages = useMemo(
+    () =>
+      filterPracticeResultPassages(passages, {
+        incorrectOnly: filter === "Incorrect only",
+        bookmarkedOnly,
+        bookmarkedIds,
+      }),
+    [bookmarkedIds, bookmarkedOnly, filter, passages],
+  )
+  const emptyBookmarkedMessage = isSection
+    ? "No bookmarked questions in this section. Bookmark a question to see it here."
+    : "No bookmarked questions in this drill. Bookmark a question to see it here."
 
   return (
     <div className={PT_RESULTS_PAGE_GAP_CLASS}>
@@ -229,9 +240,15 @@ function RcDrillResultsView({
         )}
       >
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <p className="text-2xl font-bold leading-[1.3] text-[#062357]">
-            {formatTotalQuestionsLabel(questionCount)}
-          </p>
+          <div className="flex min-w-0 flex-wrap items-center gap-4">
+            <p className="text-2xl font-bold leading-[1.3] text-[#062357]">
+              {formatTotalQuestionsLabel(questionCount)}
+            </p>
+            <PracticeResultsBookmarkedOnlyToggle
+              checked={bookmarkedOnly}
+              onCheckedChange={setBookmarkedOnly}
+            />
+          </div>
           <FigmaDropdown
             variant="pill"
             value={filter}
@@ -243,23 +260,30 @@ function RcDrillResultsView({
         </div>
       </section>
 
-      {visiblePassages.map((group) => (
-        <section
-          key={group.passage.id}
-          className="overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white p-6"
-        >
-          <RcDrillPassageHeader passage={group.passage} />
-          {group.questions.map((q) => (
-            <DrillResultsQuestionRow
-              key={q.question.id}
-              meta={q}
-              showBlindReview={showBlindReview}
-              flagged={flaggedIds.has(q.question.id)}
-              first={false}
-            />
-          ))}
-        </section>
-      ))}
+      {visiblePassages.length > 0
+        ? visiblePassages.map((group) => (
+            <section
+              key={group.passage.id}
+              className="overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white p-6"
+            >
+              <RcDrillPassageHeader passage={group.passage} />
+              {group.questions.map((q) => (
+                <DrillResultsQuestionRow
+                  key={q.question.id}
+                  meta={q}
+                  showBlindReview={showBlindReview}
+                  bookmarked={bookmarkedIds.has(practiceResultQuestionBookmarkId(q))}
+                  onToggleBookmark={onToggleBookmark}
+                  first={false}
+                />
+              ))}
+            </section>
+          ))
+        : bookmarkedOnly ? (
+            <p className="rounded-[16px] border border-dashed border-[#dfe1e7] bg-white px-6 py-8 text-center text-sm text-[#666d80]">
+              {emptyBookmarkedMessage}
+            </p>
+          ) : null}
 
       <section className={cn(PT_RESULTS_SURFACE_CARD_CLASS, "flex flex-col gap-6 px-6 py-4")}>
         <div className="flex flex-wrap items-start justify-between gap-4">
