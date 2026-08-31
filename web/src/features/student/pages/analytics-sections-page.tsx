@@ -1,16 +1,24 @@
 import { useEffect, useMemo, useState } from "react"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
 import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
+import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
 import {
   TimeRangeFilter,
   takeLastByTimeRange,
   type TimeRangeValue,
 } from "@/features/student/components/time-range-filter"
 import type { SectionProgressPoint, SectionSummary } from "@/features/student/lib/mock-analytics-sections"
-import { mapPrepTestSessionToHistoryEntry } from "@/features/student/analytics/map-analytics"
+import { mapSectionSessionToHistoryEntry } from "@/features/student/analytics/map-analytics"
+import { practiceSessionResultsPath } from "@/features/student/analytics/analytics-results-paths"
+import {
+  matchesAnalyticsSectionFilter,
+  parseAnalyticsSectionParam,
+  type AnalyticsSectionFilter,
+} from "@/features/student/analytics/section-filter"
 import {
   buildSectionYAxisLabels,
   resolveSectionChartMax,
@@ -286,11 +294,14 @@ function sectionProgressFromSessions(
 }
 
 function AnalyticsSectionsPage() {
+  const navigate = useNavigate()
   const analyticsApi = useAnalyticsApi()
   const practiceApi = usePracticeApi()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const sectionFilter = parseAnalyticsSectionParam(searchParams.get("section"))
   const [loading, setLoading] = useState(true)
   const [sectionSessions, setSectionSessions] = useState<PracticeSessionSummary[]>([])
-  const [prepHistory, setPrepHistory] = useState<PrepTestHistoryEntry[]>([])
+  const [sectionHistory, setSectionHistory] = useState<PrepTestHistoryEntry[]>([])
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
   const [lrScoreTab, setLrScoreTab] = useState<SectionScoreTab>("ptEquivalent")
   const [rcScoreTab, setRcScoreTab] = useState<SectionScoreTab>("ptEquivalent")
@@ -303,23 +314,31 @@ function AnalyticsSectionsPage() {
       return
     }
     setLoading(true)
-    void Promise.all([
-      analyticsApi.getSessions({ kind: "SECTION", limit: 100 }),
-      analyticsApi.getSessions({ kind: "PREPTEST", limit: 50 }),
-    ])
-      .then(([sections, preptests]) => {
+    void analyticsApi
+      .getSessions({ kind: "SECTION", limit: 100 })
+      .then((sections) => {
         setSectionSessions(sections.sessions)
-        setPrepHistory(
-          preptests.sessions.map(mapPrepTestSessionToHistoryEntry).filter((e): e is PrepTestHistoryEntry => e != null),
+        setSectionHistory(
+          sections.sessions
+            .map(mapSectionSessionToHistoryEntry)
+            .filter((e): e is PrepTestHistoryEntry => e != null),
         )
         setBookmarks(
-          Object.fromEntries(
-            preptests.sessions.map((s) => [s.id, s.bookmarked]),
-          ),
+          Object.fromEntries(sections.sessions.map((s) => [s.id, s.bookmarked])),
         )
       })
       .finally(() => setLoading(false))
   }, [analyticsApi])
+
+  const handleSelectSection = (next: AnalyticsSectionFilter) => {
+    const params = new URLSearchParams(searchParams)
+    if (next === "all") params.delete("section")
+    else params.set("section", next.toLowerCase())
+    setSearchParams(params, { replace: true })
+  }
+
+  const showLr = sectionFilter === "all" || sectionFilter === "LR"
+  const showRc = sectionFilter === "all" || sectionFilter === "RC"
 
   const lrSummary = useMemo(
     () => sectionSummaryFromSessions(sectionSessions, "LR"),
@@ -362,8 +381,11 @@ function AnalyticsSectionsPage() {
   )
 
   const entries = useMemo(
-    () => prepHistory.map((entry) => ({ ...entry, bookmarked: bookmarks[entry.id] ?? entry.bookmarked })),
-    [bookmarks, prepHistory],
+    () =>
+      sectionHistory
+        .filter((entry) => matchesAnalyticsSectionFilter(entry.sectionType, sectionFilter))
+        .map((entry) => ({ ...entry, bookmarked: bookmarks[entry.id] ?? entry.bookmarked })),
+    [bookmarks, sectionFilter, sectionHistory],
   )
 
   const visibleEntries = useMemo(() => {
@@ -390,36 +412,70 @@ function AnalyticsSectionsPage() {
   return (
     <StudentMain>
         <div className="mb-6 flex flex-wrap items-center justify-end gap-4">
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by section">
+            <button
+              type="button"
+              onClick={() => handleSelectSection("all")}
+              className={drillFilterPillClass(sectionFilter === "all")}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSelectSection("LR")}
+              className={drillFilterPillClass(sectionFilter === "LR")}
+            >
+              LR
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSelectSection("RC")}
+              className={drillFilterPillClass(sectionFilter === "RC")}
+            >
+              RC
+            </button>
+          </div>
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
         </div>
 
         <section className="mb-6 rounded-[20px] border border-[#dfe1e7] bg-white p-6">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-start">
-            <SectionColumn
-              badge="LR"
-              title="Logical Reasoning"
-              badgeBg="#eafff4"
-              badgeColor="#00bc54"
-              progressTitle="LR PROGRESS"
-              summary={lrSummary}
-              points={lrPoints}
-              yAxisLabels={lrYAxisLabels}
-              scoreTab={lrScoreTab}
-              onScoreTabChange={setLrScoreTab}
-            />
-            <div className="hidden w-px shrink-0 self-stretch bg-[#dfe1e7] xl:block" aria-hidden />
-            <SectionColumn
-              badge="RC"
-              title="Reading Comprehension"
-              badgeBg="#e5fdff"
-              badgeColor="#0bbcc9"
-              progressTitle="RC PROGRESS"
-              summary={rcSummary}
-              points={rcPoints}
-              yAxisLabels={rcYAxisLabels}
-              scoreTab={rcScoreTab}
-              onScoreTabChange={setRcScoreTab}
-            />
+          <div
+            className={cn(
+              "flex flex-col gap-6 xl:items-start",
+              showLr && showRc ? "xl:flex-row" : "",
+            )}
+          >
+            {showLr ? (
+              <SectionColumn
+                badge="LR"
+                title="Logical Reasoning"
+                badgeBg="#eafff4"
+                badgeColor="#00bc54"
+                progressTitle="LR PROGRESS"
+                summary={lrSummary}
+                points={lrPoints}
+                yAxisLabels={lrYAxisLabels}
+                scoreTab={lrScoreTab}
+                onScoreTabChange={setLrScoreTab}
+              />
+            ) : null}
+            {showLr && showRc ? (
+              <div className="hidden w-px shrink-0 self-stretch bg-[#dfe1e7] xl:block" aria-hidden />
+            ) : null}
+            {showRc ? (
+              <SectionColumn
+                badge="RC"
+                title="Reading Comprehension"
+                badgeBg="#e5fdff"
+                badgeColor="#0bbcc9"
+                progressTitle="RC PROGRESS"
+                summary={rcSummary}
+                points={rcPoints}
+                yAxisLabels={rcYAxisLabels}
+                scoreTab={rcScoreTab}
+                onScoreTabChange={setRcScoreTab}
+              />
+            ) : null}
           </div>
         </section>
 
@@ -429,7 +485,10 @@ function AnalyticsSectionsPage() {
           visibleEntries={visibleEntries}
           bookmarkedOnly={bookmarkedOnly}
           onBookmarkedOnlyChange={setBookmarkedOnly}
+          sectionFilter={sectionFilter}
+          onSectionFilterChange={handleSelectSection}
           onToggleBookmark={handleToggleBookmark}
+          onSelectEntry={(id) => navigate(practiceSessionResultsPath(id, { source: "section" }))}
           brBarColor="#df1c41"
         />
       </StudentMain>

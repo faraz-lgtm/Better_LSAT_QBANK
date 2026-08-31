@@ -17,11 +17,13 @@ import {
 import {
   buildDrillStatTiles,
   computeDrillStats,
+  filterDrillsBySection,
   filterDrillsByTimeRange,
   filterDrillsByType,
   getDrillProgressPoints,
   type DrillProgressPoint,
   type DrillRecord,
+  type DrillSectionFilter,
   type DrillType,
 } from "@/features/student/lib/mock-analytics-drills"
 import { practiceSessionResultsPath } from "@/features/student/analytics/analytics-results-paths"
@@ -30,11 +32,17 @@ import {
   mapDrillSessionToHistoryEntry,
   mapSessionToDrillRecord,
 } from "@/features/student/analytics/map-analytics"
+import {
+  analyticsSectionParamValue,
+  matchesAnalyticsSectionFilter,
+  parseAnalyticsSectionParam,
+} from "@/features/student/analytics/section-filter"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import {
   LSAT_SCALED_Y_AXIS_LABELS,
   PERCENT_Y_AXIS_LABELS,
 } from "@/features/student/analytics/chart-y-axis"
+import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 
 const BOOKMARKS_STORAGE_KEY = "analytics:drills:bookmarks"
@@ -413,6 +421,7 @@ function AnalyticsDrillsPage() {
   const practiceApi = usePracticeApi()
   const [searchParams, setSearchParams] = useSearchParams()
   const typeFromUrl = searchParams.get("type")
+  const sectionFilter = parseAnalyticsSectionParam(searchParams.get("section"))
 
   const [loading, setLoading] = useState(true)
   const [drillRecords, setDrillRecords] = useState<DrillRecord[]>([])
@@ -462,28 +471,61 @@ function AnalyticsDrillsPage() {
     }
   }, [bookmarks])
 
-  const activeType = useMemo(
-    () => (typeFromUrl ? drillTypes.find((t) => t.id === typeFromUrl) ?? null : null),
-    [typeFromUrl, drillTypes],
+  const typesForSection = useMemo(
+    () =>
+      sectionFilter === "all"
+        ? drillTypes
+        : drillTypes.filter((t) => t.section === sectionFilter),
+    [drillTypes, sectionFilter],
   )
 
-  const handleSelectType = useCallback(
-    (next: string | null) => {
+  const activeType = useMemo(
+    () => (typeFromUrl ? typesForSection.find((t) => t.id === typeFromUrl) ?? null : null),
+    [typeFromUrl, typesForSection],
+  )
+
+  const updateSearchParams = useCallback(
+    (next: { type?: string | null; section?: DrillSectionFilter }) => {
       const params = new URLSearchParams(searchParams)
-      if (next) {
-        params.set("type", next)
-      } else {
-        params.delete("type")
+      if ("type" in next) {
+        if (next.type) params.set("type", next.type)
+        else params.delete("type")
+      }
+      if ("section" in next && next.section != null) {
+        const sectionValue = analyticsSectionParamValue(next.section)
+        if (sectionValue) params.set("section", sectionValue)
+        else params.delete("section")
       }
       setSearchParams(params, { replace: true })
     },
     [searchParams, setSearchParams],
   )
 
+  const handleSelectSection = useCallback(
+    (next: DrillSectionFilter) => {
+      const typeStillValid =
+        typeFromUrl &&
+        drillTypes.some((t) => t.id === typeFromUrl && matchesAnalyticsSectionFilter(t.section, next))
+      updateSearchParams({
+        section: next,
+        type: typeStillValid ? typeFromUrl : null,
+      })
+    },
+    [drillTypes, typeFromUrl, updateSearchParams],
+  )
+
+  const handleSelectType = useCallback(
+    (next: string | null) => {
+      updateSearchParams({ type: next })
+    },
+    [updateSearchParams],
+  )
+
   const filteredRecords = useMemo(() => {
-    const byType = filterDrillsByType(drillRecords, activeType?.id ?? null)
+    const bySection = filterDrillsBySection(drillRecords, sectionFilter)
+    const byType = filterDrillsByType(bySection, activeType?.id ?? null)
     return filterDrillsByTimeRange(byType, timeRange)
-  }, [activeType, timeRange, drillRecords])
+  }, [activeType, drillRecords, sectionFilter, timeRange])
 
   const stats = useMemo(() => computeDrillStats(filteredRecords), [filteredRecords])
   const statTiles = useMemo(() => (stats ? buildDrillStatTiles(stats) : null), [stats])
@@ -574,7 +616,30 @@ function AnalyticsDrillsPage() {
             ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-4">
-            <DrillTypeMenu value={activeType?.id ?? null} onChange={handleSelectType} types={drillTypes} />
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by section">
+              <button
+                type="button"
+                onClick={() => handleSelectSection("all")}
+                className={drillFilterPillClass(sectionFilter === "all")}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectSection("LR")}
+                className={drillFilterPillClass(sectionFilter === "LR")}
+              >
+                LR
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectSection("RC")}
+                className={drillFilterPillClass(sectionFilter === "RC")}
+              >
+                RC
+              </button>
+            </div>
+            <DrillTypeMenu value={activeType?.id ?? null} onChange={handleSelectType} types={typesForSection} />
             <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
           </div>
         </div>
@@ -590,7 +655,7 @@ function AnalyticsDrillsPage() {
           </div>
         ) : (
           <p className="rounded-2xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-6 py-8 text-center text-sm text-[#666d80]">
-            No drills match the current filters. Try widening the time range or clearing the drill type.
+            No drills match the current filters. Try widening the time range or clearing the section / drill type.
           </p>
         )}
       </section>
@@ -605,6 +670,8 @@ function AnalyticsDrillsPage() {
         visibleEntries={visibleEntries}
         bookmarkedOnly={bookmarkedOnly}
         onBookmarkedOnlyChange={setBookmarkedOnly}
+        sectionFilter={sectionFilter}
+        onSectionFilterChange={handleSelectSection}
         onToggleBookmark={handleToggleBookmark}
         onSelectEntry={handleSelectEntry}
       />

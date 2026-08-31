@@ -631,11 +631,14 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
         drillTypeIds.length > 0 ? await deps.repository.listQuestionTypesByIds(drillTypeIds) : []
       const typeNameById = new Map(typeRows.map((t) => [t.id, t.name]))
 
+      const typeSectionById = new Map(typeRows.map((t) => [t.id, t.section_type]))
+
       return {
         sessions: sessions.map((s: PracticeSessionListRow) => {
           const apt = relOne(s.admin_prep_tests)
           const sec = relOne(s.admin_sections)
           let metadata = s.metadata ?? {}
+          let typeSection: 'LR' | 'RC' | 'LG' | null = null
           if (s.kind === 'DRILL') {
             const existingName =
               typeof metadata.questionTypeName === 'string' ? metadata.questionTypeName.trim() : ''
@@ -645,7 +648,14 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
             if (resolvedName && resolvedName !== existingName) {
               metadata = { ...metadata, questionTypeName: resolvedName }
             }
+            if (typeId) {
+              const st = typeSectionById.get(typeId)
+              if (st === 'LR' || st === 'RC' || st === 'LG') typeSection = st
+            }
           }
+          const metaSection = metadata.sectionType
+          const fromMeta =
+            metaSection === 'LR' || metaSection === 'RC' || metaSection === 'LG' ? metaSection : null
           return {
             id: s.id,
             kind: s.kind,
@@ -663,7 +673,8 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
             metadata,
             prepTestTitle: apt?.title ?? null,
             sectionTitle: sec?.title ?? null,
-            sectionType: sec?.section_type ?? null,
+            // Drills often lack admin_sections; fall back to metadata / question type.
+            sectionType: sec?.section_type ?? fromMeta ?? typeSection,
           }
         }),
         total,

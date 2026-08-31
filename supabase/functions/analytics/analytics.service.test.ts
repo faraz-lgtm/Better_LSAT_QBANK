@@ -764,6 +764,7 @@ Deno.test('getSessions enriches drill metadata with questionTypeName', async () 
     offset: 0,
   })
   assertEquals(out.sessions[0]?.metadata.questionTypeName, 'Main Conclusion')
+  assertEquals(out.sessions[0]?.sectionType, 'LR')
 })
 
 Deno.test('getSessions passes filters to repository', async () => {
