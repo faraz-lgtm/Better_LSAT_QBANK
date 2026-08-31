@@ -89,8 +89,7 @@ function PrepCourseLessonPanel({
 
   const durationReadLabel =
     lesson && (lesson.duration_minutes ?? 0) > 0 ? `${lesson.duration_minutes} min read` : null
-  const videoMetaLabel = hasVideo ? "video" : "no video"
-  const rightMeta = [durationReadLabel, videoMetaLabel].filter(Boolean).join(" · ")
+  const rightMeta = [durationReadLabel, hasVideo ? "video" : null].filter(Boolean).join(" · ")
 
   const renderLessonHeader = (embeddedInShell = false) => {
     const headerContent = (
@@ -119,7 +118,9 @@ function PrepCourseLessonPanel({
               <Bookmark className={cn("size-4", lessonBookmarked && "fill-current")} strokeWidth={2} />
               <span>Save lesson</span>
             </button>
-            <p className="m-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#666d80]">{rightMeta}</p>
+            {rightMeta ? (
+              <p className="m-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#666d80]">{rightMeta}</p>
+            ) : null}
           </div>
         </div>
         {lessonSequence ? (
