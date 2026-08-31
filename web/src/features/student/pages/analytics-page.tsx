@@ -22,6 +22,10 @@ import {
   mapSectionSessionToHistoryEntry,
   mapTrajectoryToScoreProgress,
 } from "@/features/student/analytics/map-analytics"
+import {
+  matchesAnalyticsSectionFilter,
+  type AnalyticsSectionFilter,
+} from "@/features/student/analytics/section-filter"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import {
   TimeRangeFilter,
@@ -53,6 +57,13 @@ function filterHistoryByBookmark(
 ): PrepTestHistoryEntry[] {
   if (!bookmarkedOnly) return entries
   return entries.filter((e) => e.bookmarked)
+}
+
+function filterHistoryBySection(
+  entries: PrepTestHistoryEntry[],
+  sectionFilter: AnalyticsSectionFilter,
+): PrepTestHistoryEntry[] {
+  return entries.filter((entry) => matchesAnalyticsSectionFilter(entry.sectionType, sectionFilter))
 }
 
 function PrioritiesTab() {
@@ -223,6 +234,8 @@ function OverviewTab() {
   const [drillBookmarkedOnly, setDrillBookmarkedOnly] = useState(false)
   const [sectionBookmarkedOnly, setSectionBookmarkedOnly] = useState(false)
   const [prepTestBookmarkedOnly, setPrepTestBookmarkedOnly] = useState(false)
+  const [drillSectionFilter, setDrillSectionFilter] = useState<AnalyticsSectionFilter>("all")
+  const [sectionSectionFilter, setSectionSectionFilter] = useState<AnalyticsSectionFilter>("all")
 
   useEffect(() => {
     if (!analyticsApi) {
@@ -274,12 +287,20 @@ function OverviewTab() {
   )
 
   const visibleDrillHistory = useMemo(
-    () => filterHistoryByBookmark(drillHistory, drillBookmarkedOnly),
-    [drillBookmarkedOnly, drillHistory],
+    () =>
+      filterHistoryByBookmark(
+        filterHistoryBySection(drillHistory, drillSectionFilter),
+        drillBookmarkedOnly,
+      ),
+    [drillBookmarkedOnly, drillHistory, drillSectionFilter],
   )
   const visibleSectionHistory = useMemo(
-    () => filterHistoryByBookmark(sectionHistory, sectionBookmarkedOnly),
-    [sectionBookmarkedOnly, sectionHistory],
+    () =>
+      filterHistoryByBookmark(
+        filterHistoryBySection(sectionHistory, sectionSectionFilter),
+        sectionBookmarkedOnly,
+      ),
+    [sectionBookmarkedOnly, sectionHistory, sectionSectionFilter],
   )
   const visiblePrepTestHistory = useMemo(
     () => filterHistoryByBookmark(prepTestHistory, prepTestBookmarkedOnly),
@@ -364,6 +385,8 @@ function OverviewTab() {
         visibleEntries={visibleDrillHistory}
         bookmarkedOnly={drillBookmarkedOnly}
         onBookmarkedOnlyChange={setDrillBookmarkedOnly}
+        sectionFilter={drillSectionFilter}
+        onSectionFilterChange={setDrillSectionFilter}
         onToggleBookmark={(id) => void toggleHistoryBookmark(id, setDrillHistory)}
         onSelectEntry={(id) => navigate(practiceSessionResultsPath(id))}
       />
@@ -375,6 +398,8 @@ function OverviewTab() {
         visibleEntries={visibleSectionHistory}
         bookmarkedOnly={sectionBookmarkedOnly}
         onBookmarkedOnlyChange={setSectionBookmarkedOnly}
+        sectionFilter={sectionSectionFilter}
+        onSectionFilterChange={setSectionSectionFilter}
         onToggleBookmark={(id) => void toggleHistoryBookmark(id, setSectionHistory)}
         onSelectEntry={(id) => navigate(practiceSessionResultsPath(id, { source: "section" }))}
       />

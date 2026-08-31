@@ -4,8 +4,47 @@ import { Bookmark, Calendar, ExternalLink, MoreVertical } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-drills"
+import type { AnalyticsSectionFilter } from "@/features/student/analytics/section-filter"
 
 const SCORE_BOX_WIDTH_PX = 179
+
+const SECTION_FILTER_OPTIONS: Array<{ id: AnalyticsSectionFilter; label: string }> = [
+  { id: "all", label: "All" },
+  { id: "LR", label: "LR" },
+  { id: "RC", label: "RC" },
+]
+
+function HistorySectionFilter({
+  value,
+  onChange,
+}: {
+  value: AnalyticsSectionFilter
+  onChange: (next: AnalyticsSectionFilter) => void
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by section">
+      {SECTION_FILTER_OPTIONS.map((option) => {
+        const active = value === option.id
+        return (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => onChange(option.id)}
+            aria-pressed={active}
+            className={cn(
+              "h-9 rounded-[12px] px-3 text-sm font-semibold leading-none tracking-[0.02em] transition-colors",
+              active
+                ? "bg-[#0d47a1] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
+                : "border border-[#dfe1e7] bg-white text-[#0d47a1] hover:bg-[#f3f7ff]",
+            )}
+          >
+            {option.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
 function ScoreMetric({
   label,
@@ -210,6 +249,9 @@ type AnalyticsPrepTestHistoryProps = {
   title?: string
   /** Noun used in empty-state copy (e.g. "drills", "sections", "PrepTests"). */
   emptyNoun?: string
+  /** When set, shows All / LR / RC filters in the card header. */
+  sectionFilter?: AnalyticsSectionFilter
+  onSectionFilterChange?: (next: AnalyticsSectionFilter) => void
 }
 
 function AnalyticsPrepTestHistory({
@@ -222,22 +264,31 @@ function AnalyticsPrepTestHistory({
   brBarColor = "#ff6f00",
   title = "PrepTest History",
   emptyNoun = "PrepTests",
+  sectionFilter,
+  onSectionFilterChange,
 }: AnalyticsPrepTestHistoryProps) {
+  const showSectionFilter = sectionFilter != null && onSectionFilterChange != null
+
   return (
     <section className="rounded-[16px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[16px] bg-[#f6f8fa] px-6 py-4">
         <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">{title}</h2>
-        <label className="flex cursor-pointer items-center gap-2.5">
-          <Bookmark className="size-4 text-[#062357]" aria-hidden />
-          <span className="text-base font-semibold leading-normal tracking-[0.02em] text-[#062357]">
-            Bookmarked only
-          </span>
-          <Switch
-            checked={bookmarkedOnly}
-            onChange={(event) => onBookmarkedOnlyChange(event.target.checked)}
-            aria-label="Show bookmarked only"
-          />
-        </label>
+        <div className="flex flex-wrap items-center gap-3">
+          {showSectionFilter ? (
+            <HistorySectionFilter value={sectionFilter} onChange={onSectionFilterChange} />
+          ) : null}
+          <label className="flex cursor-pointer items-center gap-2.5">
+            <Bookmark className="size-4 text-[#062357]" aria-hidden />
+            <span className="text-base font-semibold leading-normal tracking-[0.02em] text-[#062357]">
+              Bookmarked only
+            </span>
+            <Switch
+              checked={bookmarkedOnly}
+              onChange={(event) => onBookmarkedOnlyChange(event.target.checked)}
+              aria-label="Show bookmarked only"
+            />
+          </label>
+        </div>
       </div>
 
       <div className="flex max-h-[432px] flex-col gap-3 overflow-y-auto pr-1">
@@ -245,7 +296,9 @@ function AnalyticsPrepTestHistory({
           <p className="rounded-[16px] border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-6 py-8 text-center text-sm text-[#666d80]">
             {bookmarkedOnly
               ? `No bookmarked ${emptyNoun} in this range. Adjust the time range or bookmark a ${emptyNoun.replace(/s$/, "")}.`
-              : `No ${emptyNoun} recorded in this range. Try widening the time range.`}
+              : showSectionFilter && sectionFilter !== "all"
+                ? `No ${sectionFilter} ${emptyNoun} in this range. Try All or another section.`
+                : `No ${emptyNoun} recorded in this range. Try widening the time range.`}
           </p>
         ) : (
           visibleEntries.map((entry) => (

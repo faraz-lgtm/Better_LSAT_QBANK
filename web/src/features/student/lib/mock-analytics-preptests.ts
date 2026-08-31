@@ -14,6 +14,8 @@ export type PrepTestHistoryEntry = {
   scoreMax: number
   blindReviewScore: number
   blindReviewMax: number
+  /** Present for drill / section history rows when the pool is known. */
+  sectionType?: "LR" | "RC" | "LG" | null
 }
 
 /**

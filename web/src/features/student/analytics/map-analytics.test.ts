@@ -8,6 +8,7 @@ import {
   mapOverviewToHeadlineStats,
   mapPrepTestSessionToHistoryEntry,
   mapSectionSessionToHistoryEntry,
+  mapSessionToDrillRecord,
   mapSessionToPrepTestRecord,
   mapTrajectoryToScoreProgress,
   mapPrioritiesToSections,
@@ -170,6 +171,7 @@ describe("map-analytics", () => {
       score: 3,
       scoreMax: 5,
       bookmarked: true,
+      sectionType: "LR",
     })
 
     const titled = mapDrillSessionToHistoryEntry({
@@ -205,6 +207,7 @@ describe("map-analytics", () => {
       sectionType: null,
     })
     expect(mixed?.testLabel).toBe("Varied Mix")
+    expect(mixed?.sectionType).toBe("LR")
 
     const section = mapSectionSessionToHistoryEntry({
       id: "sec1",
@@ -226,6 +229,31 @@ describe("map-analytics", () => {
       testLabel: "LR Section 2",
       score: 18,
       scoreMax: 25,
+      sectionType: "LR",
+    })
+  })
+
+  it("maps drill records with section from metadata when joined sectionType is null", () => {
+    const record = mapSessionToDrillRecord({
+      id: "d-meta",
+      kind: "DRILL",
+      startedAt: "2026-01-01T00:00:00Z",
+      completedAt: "2026-01-02T00:00:00Z",
+      rawScore: 4,
+      scaledScore: 155,
+      percentile: null,
+      bookmarked: false,
+      excluded: false,
+      metadata: { sectionType: "RC", questionIds: ["a", "b", "c", "d", "e"] },
+      prepTestTitle: null,
+      sectionTitle: null,
+      sectionType: null,
+    })
+    expect(record).toMatchObject({
+      id: "d-meta",
+      section: "RC",
+      questionsCorrect: 4,
+      questionsTotal: 5,
     })
   })
 })

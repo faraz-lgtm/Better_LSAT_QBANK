@@ -229,6 +229,16 @@ export function mapPrioritiesToSections(priorities: PriorityRow[]): AnalyticsSec
     .filter((s): s is AnalyticsSection => s != null)
 }
 
+/** Prefer metadata.sectionType (drills), then joined admin section. */
+export function resolveSessionSectionType(
+  s: Pick<PracticeSessionSummary, "sectionType" | "metadata">,
+): "LR" | "RC" | "LG" | null {
+  const meta = s.metadata.sectionType
+  if (meta === "LR" || meta === "RC" || meta === "LG") return meta
+  if (s.sectionType === "LR" || s.sectionType === "RC" || s.sectionType === "LG") return s.sectionType
+  return null
+}
+
 export function mapSessionToDrillRecord(s: PracticeSessionSummary): DrillRecord | null {
   if (s.kind !== "DRILL" || !s.completedAt) return null
   const meta = s.metadata
@@ -236,9 +246,12 @@ export function mapSessionToDrillRecord(s: PracticeSessionSummary): DrillRecord 
   const questionIds = Array.isArray(meta.questionIds) ? meta.questionIds : []
   const total = questionIds.length > 0 ? questionIds.length : s.rawScore != null ? s.rawScore : 0
   const correct = s.rawScore ?? 0
+  const resolved = resolveSessionSectionType(s)
+  const section = resolved === "LR" || resolved === "RC" ? resolved : null
   return {
     id: s.id,
     typeId,
+    section,
     takenAt: s.completedAt,
     questionsTotal: total > 0 ? total : Math.max(correct, 1),
     questionsCorrect: correct,
@@ -324,6 +337,7 @@ export function mapDrillSessionToHistoryEntry(s: PracticeSessionSummary): PrepTe
   if (s.kind !== "DRILL" || !s.completedAt) return null
   const correct = s.rawScore ?? 0
   const total = questionCountFromSession(s, correct)
+  const resolved = resolveSessionSectionType(s)
   return {
     id: s.id,
     testLabel: formatDrillHistoryLabel(s.metadata),
@@ -333,6 +347,7 @@ export function mapDrillSessionToHistoryEntry(s: PracticeSessionSummary): PrepTe
     scoreMax: total,
     blindReviewScore: correct,
     blindReviewMax: total,
+    sectionType: resolved === "LR" || resolved === "RC" ? resolved : null,
   }
 }
 
@@ -341,9 +356,10 @@ export function mapSectionSessionToHistoryEntry(s: PracticeSessionSummary): Prep
   if (s.kind !== "SECTION" || !s.completedAt) return null
   const correct = s.rawScore ?? 0
   const total = questionCountFromSession(s, correct)
+  const resolved = resolveSessionSectionType(s)
   const testLabel =
     s.sectionTitle?.trim() ||
-    (s.sectionType ? `${s.sectionType} Section` : null) ||
+    (resolved === "LR" || resolved === "RC" || resolved === "LG" ? `${resolved} Section` : null) ||
     "Section"
   const br = s.blindReviewRawScore ?? correct
   return {
@@ -355,6 +371,7 @@ export function mapSectionSessionToHistoryEntry(s: PracticeSessionSummary): Prep
     scoreMax: total,
     blindReviewScore: br,
     blindReviewMax: total,
+    sectionType: resolved === "LR" || resolved === "RC" || resolved === "LG" ? resolved : null,
   }
 }
 

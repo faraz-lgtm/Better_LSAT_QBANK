@@ -38,6 +38,8 @@ export function findDrillType(id: string | null | undefined): DrillType | null {
 export type DrillRecord = {
   id: string
   typeId: DrillType["id"]
+  /** LR / RC pool the drill was built from (null when unknown). */
+  section: "LR" | "RC" | null
   /** ISO date string when the drill was taken. */
   takenAt: string
   questionsTotal: number
@@ -47,36 +49,38 @@ export type DrillRecord = {
   ptEquivalentScore: number
 }
 
+export type DrillSectionFilter = "all" | "LR" | "RC"
+
 /**
  * Twenty-four drills spread across ~6 months and balanced across drill
  * types. Accuracy improves over time so the chart shows an obvious upward
  * trend, mirroring the Figma reference.
  */
 export const mockDrillRecords: DrillRecord[] = [
-  { id: "d1", typeId: "lr-conditional", takenAt: "2025-11-08", questionsTotal: 10, questionsCorrect: 5, durationSeconds: 740, ptEquivalentScore: 146 },
-  { id: "d2", typeId: "lr-flaw", takenAt: "2025-11-15", questionsTotal: 10, questionsCorrect: 4, durationSeconds: 720, ptEquivalentScore: 144 },
-  { id: "d3", typeId: "rc-critique", takenAt: "2025-11-23", questionsTotal: 8, questionsCorrect: 4, durationSeconds: 880, ptEquivalentScore: 145 },
-  { id: "d4", typeId: "lr-link", takenAt: "2025-12-02", questionsTotal: 10, questionsCorrect: 5, durationSeconds: 710, ptEquivalentScore: 148 },
-  { id: "d5", typeId: "rc-comparative", takenAt: "2025-12-13", questionsTotal: 8, questionsCorrect: 5, durationSeconds: 820, ptEquivalentScore: 149 },
-  { id: "d6", typeId: "lr-conditional", takenAt: "2025-12-21", questionsTotal: 10, questionsCorrect: 6, durationSeconds: 680, ptEquivalentScore: 150 },
-  { id: "d7", typeId: "lr-phenomenon", takenAt: "2026-01-04", questionsTotal: 10, questionsCorrect: 5, durationSeconds: 750, ptEquivalentScore: 148 },
-  { id: "d8", typeId: "rc-problem", takenAt: "2026-01-12", questionsTotal: 8, questionsCorrect: 5, durationSeconds: 800, ptEquivalentScore: 150 },
-  { id: "d9", typeId: "lr-flaw", takenAt: "2026-01-20", questionsTotal: 10, questionsCorrect: 7, durationSeconds: 660, ptEquivalentScore: 153 },
-  { id: "d10", typeId: "lr-link", takenAt: "2026-01-28", questionsTotal: 10, questionsCorrect: 6, durationSeconds: 690, ptEquivalentScore: 151 },
-  { id: "d11", typeId: "rc-implied", takenAt: "2026-02-05", questionsTotal: 8, questionsCorrect: 4, durationSeconds: 850, ptEquivalentScore: 147 },
-  { id: "d12", typeId: "lr-conditional", takenAt: "2026-02-14", questionsTotal: 10, questionsCorrect: 7, durationSeconds: 640, ptEquivalentScore: 155 },
-  { id: "d13", typeId: "rc-critique", takenAt: "2026-02-22", questionsTotal: 8, questionsCorrect: 6, durationSeconds: 780, ptEquivalentScore: 154 },
-  { id: "d14", typeId: "lr-flaw", takenAt: "2026-03-02", questionsTotal: 10, questionsCorrect: 7, durationSeconds: 620, ptEquivalentScore: 156 },
-  { id: "d15", typeId: "lr-phenomenon", takenAt: "2026-03-09", questionsTotal: 10, questionsCorrect: 6, durationSeconds: 700, ptEquivalentScore: 152 },
-  { id: "d16", typeId: "rc-comparative", takenAt: "2026-03-17", questionsTotal: 8, questionsCorrect: 6, durationSeconds: 760, ptEquivalentScore: 155 },
-  { id: "d17", typeId: "lr-link", takenAt: "2026-03-25", questionsTotal: 10, questionsCorrect: 8, durationSeconds: 600, ptEquivalentScore: 159 },
-  { id: "d18", typeId: "rc-problem", takenAt: "2026-04-03", questionsTotal: 8, questionsCorrect: 6, durationSeconds: 740, ptEquivalentScore: 156 },
-  { id: "d19", typeId: "lr-conditional", takenAt: "2026-04-12", questionsTotal: 10, questionsCorrect: 8, durationSeconds: 590, ptEquivalentScore: 161 },
-  { id: "d20", typeId: "rc-implied", takenAt: "2026-04-20", questionsTotal: 8, questionsCorrect: 6, durationSeconds: 720, ptEquivalentScore: 158 },
-  { id: "d21", typeId: "lr-flaw", takenAt: "2026-04-27", questionsTotal: 10, questionsCorrect: 9, durationSeconds: 560, ptEquivalentScore: 164 },
-  { id: "d22", typeId: "rc-critique", takenAt: "2026-05-02", questionsTotal: 8, questionsCorrect: 7, durationSeconds: 700, ptEquivalentScore: 162 },
-  { id: "d23", typeId: "lr-link", takenAt: "2026-05-07", questionsTotal: 10, questionsCorrect: 9, durationSeconds: 540, ptEquivalentScore: 166 },
-  { id: "d24", typeId: "lr-conditional", takenAt: "2026-05-10", questionsTotal: 10, questionsCorrect: 9, durationSeconds: 520, ptEquivalentScore: 168 },
+  { id: "d1", typeId: "lr-conditional", section: "LR", takenAt: "2025-11-08", questionsTotal: 10, questionsCorrect: 5, durationSeconds: 740, ptEquivalentScore: 146 },
+  { id: "d2", typeId: "lr-flaw", section: "LR", takenAt: "2025-11-15", questionsTotal: 10, questionsCorrect: 4, durationSeconds: 720, ptEquivalentScore: 144 },
+  { id: "d3", typeId: "rc-critique", section: "RC", takenAt: "2025-11-23", questionsTotal: 8, questionsCorrect: 4, durationSeconds: 880, ptEquivalentScore: 145 },
+  { id: "d4", typeId: "lr-link", section: "LR", takenAt: "2025-12-02", questionsTotal: 10, questionsCorrect: 5, durationSeconds: 710, ptEquivalentScore: 148 },
+  { id: "d5", typeId: "rc-comparative", section: "RC", takenAt: "2025-12-13", questionsTotal: 8, questionsCorrect: 5, durationSeconds: 820, ptEquivalentScore: 149 },
+  { id: "d6", typeId: "lr-conditional", section: "LR", takenAt: "2025-12-21", questionsTotal: 10, questionsCorrect: 6, durationSeconds: 680, ptEquivalentScore: 150 },
+  { id: "d7", typeId: "lr-phenomenon", section: "LR", takenAt: "2026-01-04", questionsTotal: 10, questionsCorrect: 5, durationSeconds: 750, ptEquivalentScore: 148 },
+  { id: "d8", typeId: "rc-problem", section: "RC", takenAt: "2026-01-12", questionsTotal: 8, questionsCorrect: 5, durationSeconds: 800, ptEquivalentScore: 150 },
+  { id: "d9", typeId: "lr-flaw", section: "LR", takenAt: "2026-01-20", questionsTotal: 10, questionsCorrect: 7, durationSeconds: 660, ptEquivalentScore: 153 },
+  { id: "d10", typeId: "lr-link", section: "LR", takenAt: "2026-01-28", questionsTotal: 10, questionsCorrect: 6, durationSeconds: 690, ptEquivalentScore: 151 },
+  { id: "d11", typeId: "rc-implied", section: "RC", takenAt: "2026-02-05", questionsTotal: 8, questionsCorrect: 4, durationSeconds: 850, ptEquivalentScore: 147 },
+  { id: "d12", typeId: "lr-conditional", section: "LR", takenAt: "2026-02-14", questionsTotal: 10, questionsCorrect: 7, durationSeconds: 640, ptEquivalentScore: 155 },
+  { id: "d13", typeId: "rc-critique", section: "RC", takenAt: "2026-02-22", questionsTotal: 8, questionsCorrect: 6, durationSeconds: 780, ptEquivalentScore: 154 },
+  { id: "d14", typeId: "lr-flaw", section: "LR", takenAt: "2026-03-02", questionsTotal: 10, questionsCorrect: 7, durationSeconds: 620, ptEquivalentScore: 156 },
+  { id: "d15", typeId: "lr-phenomenon", section: "LR", takenAt: "2026-03-09", questionsTotal: 10, questionsCorrect: 6, durationSeconds: 700, ptEquivalentScore: 152 },
+  { id: "d16", typeId: "rc-comparative", section: "RC", takenAt: "2026-03-17", questionsTotal: 8, questionsCorrect: 6, durationSeconds: 760, ptEquivalentScore: 155 },
+  { id: "d17", typeId: "lr-link", section: "LR", takenAt: "2026-03-25", questionsTotal: 10, questionsCorrect: 8, durationSeconds: 600, ptEquivalentScore: 159 },
+  { id: "d18", typeId: "rc-problem", section: "RC", takenAt: "2026-04-03", questionsTotal: 8, questionsCorrect: 6, durationSeconds: 740, ptEquivalentScore: 156 },
+  { id: "d19", typeId: "lr-conditional", section: "LR", takenAt: "2026-04-12", questionsTotal: 10, questionsCorrect: 8, durationSeconds: 590, ptEquivalentScore: 161 },
+  { id: "d20", typeId: "rc-implied", section: "RC", takenAt: "2026-04-20", questionsTotal: 8, questionsCorrect: 6, durationSeconds: 720, ptEquivalentScore: 158 },
+  { id: "d21", typeId: "lr-flaw", section: "LR", takenAt: "2026-04-27", questionsTotal: 10, questionsCorrect: 9, durationSeconds: 560, ptEquivalentScore: 164 },
+  { id: "d22", typeId: "rc-critique", section: "RC", takenAt: "2026-05-02", questionsTotal: 8, questionsCorrect: 7, durationSeconds: 700, ptEquivalentScore: 162 },
+  { id: "d23", typeId: "lr-link", section: "LR", takenAt: "2026-05-07", questionsTotal: 10, questionsCorrect: 9, durationSeconds: 540, ptEquivalentScore: 166 },
+  { id: "d24", typeId: "lr-conditional", section: "LR", takenAt: "2026-05-10", questionsTotal: 10, questionsCorrect: 9, durationSeconds: 520, ptEquivalentScore: 168 },
 ]
 
 const DAYS = 24 * 60 * 60 * 1000
@@ -118,6 +122,14 @@ export function filterDrillsByType(
 ): DrillRecord[] {
   if (!typeId) return [...records]
   return records.filter((record) => record.typeId === typeId)
+}
+
+export function filterDrillsBySection(
+  records: readonly DrillRecord[],
+  section: DrillSectionFilter,
+): DrillRecord[] {
+  if (section === "all") return [...records]
+  return records.filter((record) => record.section === section)
 }
 
 export type DrillProgressPoint = {
