@@ -5,7 +5,6 @@ const PLANNED_WINDOW_LABELS: Record<string, string> = {
   "1_3_months": "1–3 months",
   "3_6_months": "3–6 months",
   "6_plus_months": "6+ months",
-  not_sure: "Not sure yet",
 }
 
 export function formatPlannedLsatHeadline(preferences: StudentStudyPreferences | null): string {
