@@ -2845,7 +2845,7 @@ select.ds-input {
   min-width: 0;
   height: 50px;
   flex: 1 1 auto;
-  max-width: 302px;
+  max-width: 360px;
   align-items: center;
   gap: 8px;
   border-radius: 16px;
@@ -2931,12 +2931,9 @@ select.ds-input {
 .test-day-countdown__date-chip {
   display: inline-flex;
   height: 40px;
-  min-width: 0;
-  flex-shrink: 1;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  border: none;
   border-radius: 16px;
   background: #f3f7ff;
   padding: 8px 16px;
@@ -2945,17 +2942,9 @@ select.ds-input {
   font-weight: 600;
   line-height: 1.5;
   letter-spacing: 0.28px;
+  white-space: nowrap;
   color: #062357;
   box-shadow: 0 1px 1px rgba(13, 13, 18, 0.06);
-  cursor: pointer;
-}
-
-.test-day-countdown__date-chip:hover:not(:disabled) {
-  background: #ffffff;
-}
-
-.test-day-countdown__date-chip:disabled {
-  cursor: not-allowed;
 }
 
 .test-day-countdown__edit {
