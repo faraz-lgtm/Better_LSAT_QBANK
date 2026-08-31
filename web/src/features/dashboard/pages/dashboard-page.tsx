@@ -5,7 +5,6 @@ import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-
 import { DashboardAccessSetupCard } from "@/features/dashboard/components/dashboard-access-setup-card"
 import { DashboardQuickStats } from "@/features/dashboard/components/dashboard-quick-stats"
 import { PerformanceOverviewCard } from "@/features/dashboard/components/performance-overview-card"
-import { PrepTestsScoreProgressCard } from "@/features/dashboard/components/preptests-score-progress-card"
 import {
   findLsacTestWindow,
   resolveLsacTestWindowValue,
@@ -23,12 +22,10 @@ import {
   dashboardDrillMoreHref,
   pickDashboardActiveDrills,
 } from "@/features/dashboard/lib/pick-dashboard-drills"
-import { mapTrajectoryToScoreProgress } from "@/features/student/analytics/map-analytics"
 import { useAnalyticsApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import { ContinueDrillCard, continueDrillToCardDrill } from "@/features/student/components/continue-drill-card"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
-import { takeLastByTimeRange } from "@/features/student/components/time-range-filter"
 import { DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT } from "@/features/student/drills/adaptive-drill-config"
 import { DASHBOARD_ADAPTIVE_DRILL_QUERY } from "@/features/student/drills/drill-blind-review-policy"
 import {
@@ -37,7 +34,7 @@ import {
   mapSessionToContinueDrill,
   type SuggestedDrill,
 } from "@/features/student/drills/drill-dashboard-mappers"
-import type { AnalyticsOverview, TrajectoryPoint } from "@/lib/api/analytics"
+import type { AnalyticsOverview } from "@/lib/api/analytics"
 import type { StudentStudyContext } from "@/lib/api/users"
 import { createUsersApi } from "@/lib/api/users"
 import { createPracticeApi } from "@/lib/api/practice"
@@ -84,7 +81,6 @@ function DashboardPage() {
   }, [])
 
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null)
-  const [trajectory, setTrajectory] = useState<TrajectoryPoint[]>([])
   const [continueDrills, setContinueDrills] = useState<ContinueDrill[]>([])
   const [suggestedDrills, setSuggestedDrills] = useState<SuggestedDrill[]>([])
   const [studyContext, setStudyContext] = useState<StudentStudyContext | null>(null)
@@ -99,7 +95,6 @@ function DashboardPage() {
   const loadDashboard = useCallback(async () => {
     if (!canAccessLsacContent) {
       setOverview(null)
-      setTrajectory([])
       setContinueDrills([])
       setSuggestedDrills([])
       setLoading(false)
@@ -115,19 +110,16 @@ function DashboardPage() {
     setLoading(true)
     setError(null)
     try {
-      const [overviewData, drillSessions, priorities, context, trajectoryPoints, profile] =
-        await Promise.all([
-          analyticsApi.getOverview(),
-          analyticsApi.getSessions({ kind: "DRILL", limit: 50 }),
-          analyticsApi.getPriorities(),
-          usersApi.getStudyContext(),
-          analyticsApi.getTrajectory(),
-          usersApi.getMyProfile(),
-        ])
+      const [overviewData, drillSessions, priorities, context, profile] = await Promise.all([
+        analyticsApi.getOverview(),
+        analyticsApi.getSessions({ kind: "DRILL", limit: 50 }),
+        analyticsApi.getPriorities(),
+        usersApi.getStudyContext(),
+        usersApi.getMyProfile(),
+      ])
 
       setOverview(overviewData)
       setStudyContext(context)
-      setTrajectory(trajectoryPoints)
       setFirstName(firstNameFromFullName(profile?.full_name))
 
       const inProgress = drillSessions.sessions
@@ -163,11 +155,6 @@ function DashboardPage() {
     () => (overview ? mapOverviewToPerformance(overview) : null),
     [overview],
   )
-
-  const scoreProgressPoints = useMemo(() => {
-    const recent = takeLastByTimeRange(trajectory, "all")
-    return mapTrajectoryToScoreProgress(recent)
-  }, [trajectory])
 
   const displayDrills = useMemo(
     () => pickDashboardActiveDrills(continueDrills, suggestedDrills, activeFilter),
@@ -342,8 +329,6 @@ function DashboardPage() {
               </div>
             )}
           </section>
-
-          <PrepTestsScoreProgressCard points={scoreProgressPoints} />
         </div>
       </div>
     </StudentMain>

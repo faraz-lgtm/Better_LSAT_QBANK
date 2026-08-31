@@ -2712,12 +2712,6 @@ select.ds-input {
     gap: 1rem;
     align-items: stretch;
   }
-
-  .dashboard-page__bottom {
-    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-    gap: 1.5rem;
-    align-items: start;
-  }
 }
 
 /* Figma 19640:22767 — Test Day Countdown */
