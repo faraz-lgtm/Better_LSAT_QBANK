@@ -1,17 +1,25 @@
-import { useRef, useState } from "react"
-import { Calendar } from "lucide-react"
+import { useEffect, useId, useRef, useState } from "react"
+import { Calendar, Check } from "lucide-react"
+
+import {
+  LSAC_OFFICIAL_TEST_WINDOWS,
+  type LsatTestWindowOption,
+} from "@/lib/lsac-test-window-options"
+import { cn } from "@/lib/utils"
+
+const TEST_DATE_OPTIONS: readonly LsatTestWindowOption[] = LSAC_OFFICIAL_TEST_WINDOWS
 
 type TestDayCountdownCardProps = {
   daysRemaining: number | null
   firstName: string
   testMeta: string
   testDateLabel: string
-  /** ISO date `yyyy-mm-dd` for the native date picker value */
+  /** Selected window value (`yyyy-mm-dd`) */
   testDateValue: string
   adaptiveLoading?: boolean
   adaptiveDisabled?: boolean
   savingTestDate?: boolean
-  onTestDateChange: (isoDate: string) => void
+  onTestDateChange: (value: string) => void
   onStartAdaptiveDrill: () => void
 }
 
@@ -28,27 +36,44 @@ function TestDayCountdownCard({
   onStartAdaptiveDrill,
 }: TestDayCountdownCardProps) {
   const greetingName = firstName.trim() || "there"
-  const dateInputRef = useRef<HTMLInputElement>(null)
+  const controlsRef = useRef<HTMLDivElement>(null)
+  const listboxId = useId()
   const [pickerOpen, setPickerOpen] = useState(false)
 
   function openDatePicker() {
-    const input = dateInputRef.current
-    if (!input || savingTestDate) return
-    setPickerOpen(true)
-    try {
-      if (typeof input.showPicker === "function") {
-        input.showPicker()
-        return
-      }
-    } catch {
-      // Fall through to focus/click for browsers that block showPicker.
+    if (savingTestDate) return
+    setPickerOpen((current) => !current)
+  }
+
+  useEffect(() => {
+    if (!pickerOpen) return
+    function handlePointerDown(event: PointerEvent) {
+      if (!(event.target instanceof Node)) return
+      if (controlsRef.current?.contains(event.target)) return
+      setPickerOpen(false)
     }
-    input.focus()
-    input.click()
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setPickerOpen(false)
+    }
+    document.addEventListener("pointerdown", handlePointerDown)
+    document.addEventListener("keydown", handleKeyDown)
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown)
+      document.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [pickerOpen])
+
+  function handleSelect(nextValue: string) {
+    if (!nextValue || nextValue === testDateValue) {
+      setPickerOpen(false)
+      return
+    }
+    onTestDateChange(nextValue)
+    setPickerOpen(false)
   }
 
   return (
-    <article className="test-day-countdown">
+    <article className={cn("test-day-countdown", pickerOpen && "test-day-countdown--picker-open")}>
       <div className="test-day-countdown__glow" aria-hidden />
 
       <div className="test-day-countdown__header">
@@ -71,34 +96,70 @@ function TestDayCountdownCard({
       <div className="test-day-countdown__actions">
         <div className="test-day-countdown__date-bar">
           <span className="test-day-countdown__date-label">Test Date</span>
-          <span className="test-day-countdown__date-chip relative">
-            <span>{testDateLabel}</span>
-            <Calendar className="size-4 shrink-0 text-[#666d80]" strokeWidth={1.75} aria-hidden />
-            <input
-              ref={dateInputRef}
-              type="date"
-              value={testDateValue}
+          <div ref={controlsRef} className="test-day-countdown__date-controls">
+            <button
+              type="button"
+              onClick={openDatePicker}
+              disabled={savingTestDate}
+              className="test-day-countdown__date-chip"
               aria-label="Choose test date"
-              className="absolute inset-0 cursor-pointer opacity-0"
-              onChange={(event) => {
-                const next = event.target.value
-                if (!next) return
-                onTestDateChange(next)
-                setPickerOpen(false)
-              }}
-              onBlur={() => setPickerOpen(false)}
-            />
-          </span>
-          <button
-            type="button"
-            onClick={openDatePicker}
-            disabled={savingTestDate}
-            className="test-day-countdown__edit"
-            aria-expanded={pickerOpen}
-            aria-haspopup="dialog"
-          >
-            {savingTestDate ? "Saving…" : "Edit"}
-          </button>
+              aria-expanded={pickerOpen}
+              aria-haspopup="listbox"
+              aria-controls={pickerOpen ? listboxId : undefined}
+            >
+              <span>{testDateLabel}</span>
+              <Calendar className="size-4 shrink-0 text-[#666d80]" strokeWidth={1.75} aria-hidden />
+            </button>
+            <button
+              type="button"
+              onClick={openDatePicker}
+              disabled={savingTestDate}
+              className="test-day-countdown__edit"
+              aria-expanded={pickerOpen}
+              aria-haspopup="listbox"
+              aria-controls={pickerOpen ? listboxId : undefined}
+            >
+              {savingTestDate ? "Saving…" : "Edit"}
+            </button>
+
+            {pickerOpen ? (
+              <div
+                id={listboxId}
+                role="listbox"
+                aria-label="Choose LSAC test date"
+                className="test-day-countdown__date-menu"
+              >
+                {TEST_DATE_OPTIONS.map((option) => {
+                  const isSelected = option.value === testDateValue
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      className={cn(
+                        "test-day-countdown__date-menu-item",
+                        isSelected && "test-day-countdown__date-menu-item--selected",
+                      )}
+                      onClick={() => handleSelect(option.value)}
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate">{option.label}</span>
+                        {option.detail ? (
+                          <span className="mt-0.5 block truncate text-xs font-normal tracking-[0.24px] text-[#666d80]">
+                            {option.detail}
+                          </span>
+                        ) : null}
+                      </span>
+                      {isSelected ? (
+                        <Check className="size-4 shrink-0 text-[#082c6b]" strokeWidth={2} aria-hidden />
+                      ) : null}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <div className="test-day-countdown__cta-wrap">

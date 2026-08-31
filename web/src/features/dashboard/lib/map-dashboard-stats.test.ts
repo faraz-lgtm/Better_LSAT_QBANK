@@ -51,8 +51,9 @@ describe("map-dashboard-stats", () => {
   it("maps performance overview metrics", () => {
     const performance = mapOverviewToPerformance(sampleOverview)
     expect(performance.practiceTestCount).toBe(2)
-    expect(performance.metrics.find((m) => m.id === "avg-score")?.value).toBe("165")
-    expect(performance.metrics.find((m) => m.id === "percentile")?.value).toBe("85th")
+    expect(performance.metrics[0]).toEqual({ id: "best-score", label: "Best Score", value: "170" })
+    expect(performance.metrics[1]).toEqual({ id: "avg-score", label: "Avg Score", value: "165" })
+    expect(performance.metrics.find((m) => m.id === "percentile")).toBeUndefined()
     expect(performance.metrics.find((m) => m.id === "avg-lr")?.value).toBe("-5")
     expect(performance.metrics.find((m) => m.id === "avg-rc")?.value).toBe("-3")
     expect(performance.metrics.find((m) => m.id === "questions-drilled")?.value).toBe("200")
@@ -65,7 +66,8 @@ describe("map-dashboard-stats", () => {
   })
 
   it("formats test date for the countdown input", () => {
-    expect(formatTestDateInputValue("2027-01-01")).toBe("01/01/2027")
+    expect(formatTestDateInputValue("2027-01-13")).toBe("January 2027")
+    expect(formatTestDateInputValue("2027-01-01")).toBe("January 2027")
     expect(formatTestDateInputValue(null)).toBe("—")
   })
 })

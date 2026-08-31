@@ -1,6 +1,10 @@
 import type { AnalyticsOverview } from "@/lib/api/analytics"
 
 import { formatStudyTime } from "@/features/student/drills/drill-dashboard-mappers"
+import {
+  formatLsacTestWindowLabel,
+  formatLsacTestWindowMeta,
+} from "@/lib/lsac-test-window-options"
 
 export type DashboardStatCard = {
   id: string
@@ -92,30 +96,19 @@ function formatMissedAverage(value: number | null): string {
   return rounded > 0 ? `-${rounded}` : String(rounded)
 }
 
-function formatPercentile(value: number | null): string {
-  if (value == null) return "—"
-  const rounded = Math.round(value)
-  const mod10 = rounded % 10
-  const mod100 = rounded % 100
-  if (mod10 === 1 && mod100 !== 11) return `${rounded}st`
-  if (mod10 === 2 && mod100 !== 12) return `${rounded}nd`
-  if (mod10 === 3 && mod100 !== 13) return `${rounded}rd`
-  return `${rounded}th`
-}
-
 export function mapOverviewToPerformance(overview: AnalyticsOverview): DashboardPerformanceOverview {
   return {
     practiceTestCount: overview.completedPrepTestCount,
     metrics: [
       {
+        id: "best-score",
+        label: "Best Score",
+        value: overview.bestScaledScore != null ? String(Math.round(overview.bestScaledScore)) : "—",
+      },
+      {
         id: "avg-score",
         label: "Avg Score",
         value: overview.averageScaledScore != null ? String(Math.round(overview.averageScaledScore)) : "—",
-      },
-      {
-        id: "percentile",
-        label: "Percentile",
-        value: formatPercentile(overview.averagePercentile),
       },
       {
         id: "avg-lr",
@@ -153,28 +146,16 @@ export function daysUntilDate(isoDate: string | null | undefined, now = new Date
   return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
 }
 
-export function formatTestDateInputValue(isoDate: string | null | undefined): string {
-  if (!isoDate?.trim()) return "—"
-  try {
-    const d = new Date(`${isoDate.trim()}T12:00:00`)
-    if (Number.isNaN(d.getTime())) return isoDate
-    const mm = String(d.getMonth() + 1).padStart(2, "0")
-    const dd = String(d.getDate()).padStart(2, "0")
-    const yyyy = d.getFullYear()
-    return `${mm}/${dd}/${yyyy}`
-  } catch {
-    return isoDate
-  }
+export function formatTestDateInputValue(
+  isoDate: string | null | undefined,
+  plannedLsatWindow?: string | null,
+): string {
+  return formatLsacTestWindowLabel(isoDate, plannedLsatWindow)
 }
 
-export function formatLsacTestMeta(isoDate: string | null | undefined): string {
-  if (!isoDate?.trim()) return "Set your LSAC test date to start the countdown"
-  try {
-    const d = new Date(`${isoDate.trim()}T12:00:00`)
-    if (Number.isNaN(d.getTime())) return `LSAC · ${isoDate}`
-    const label = d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
-    return `LSAC · ${label}`
-  } catch {
-    return `LSAC · ${isoDate}`
-  }
+export function formatLsacTestMeta(
+  isoDate: string | null | undefined,
+  plannedLsatWindow?: string | null,
+): string {
+  return formatLsacTestWindowMeta(isoDate, plannedLsatWindow)
 }

@@ -82,10 +82,10 @@ function PracticeSessionQuestionNavButton({
   if (outcome != null) {
     const outcomeChrome =
       outcome === "correct"
-        ? "border-[#00bc54] bg-[#00bc54] text-white"
+        ? "border-[#40c4aa] bg-[#effefa] text-[#0d0d12]"
         : outcome === "unanswered"
-          ? "border-[#9aa3b5] bg-[#9aa3b5] text-white"
-          : "border-[#df1c41] bg-[#df1c41] text-white"
+          ? "border-[#ff9d51] bg-[#fff3ea] text-[#0d0d12]"
+          : "border-[#df1c41] bg-[#feeff2] text-[#0d0d12]"
 
     return (
       <div
@@ -97,7 +97,7 @@ function PracticeSessionQuestionNavButton({
           type="button"
           onClick={onClick}
           className={cn(
-            "practice-session-question-nav-btn practice-session-question-nav-btn--review box-border relative inline-flex size-8 shrink-0 items-center justify-center rounded-[12px] border border-solid p-px text-base font-semibold leading-[1.5] tracking-[0.32px]",
+            "practice-session-question-nav-btn practice-session-question-nav-btn--review box-border relative inline-flex size-8 shrink-0 items-center justify-center rounded-[6px] border border-solid p-px text-base font-semibold leading-[1.5] tracking-[0.32px]",
             outcomeChrome,
           )}
           aria-current={active ? "true" : undefined}

@@ -79,6 +79,8 @@ type ContinueDrillCardProps = {
   onContinue: () => void
   continueLabel?: string
   lastAttemptPrefix?: string
+  onMore?: () => void
+  moreLabel?: string
 }
 
 function StatCell({
@@ -108,6 +110,8 @@ function ContinueDrillCard({
   onContinue,
   continueLabel = "Continue",
   lastAttemptPrefix = "Last attempt: ",
+  onMore,
+  moreLabel = "See more",
 }: ContinueDrillCardProps) {
   const ringColor = drill.ringColor ?? sectionRingColor(drill.section)
   const barColor = drill.barColor ?? sectionBarColor(drill.section)
@@ -166,14 +170,26 @@ function ContinueDrillCard({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onContinue}
-          className="continue-drill-card__action inline-flex h-[48px] shrink-0 items-center justify-center gap-[8px] rounded-[16px] border border-[#0b4e6e] bg-[#0d47a1] px-[16px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
-        >
-          {continueLabel}
-          <ChevronRight className="size-[20px]" aria-hidden />
-        </button>
+        <div className="continue-drill-card__actions">
+          <button
+            type="button"
+            onClick={onContinue}
+            className="continue-drill-card__action inline-flex h-[48px] shrink-0 items-center justify-center gap-[8px] rounded-[16px] border border-[#0b4e6e] bg-[#0d47a1] px-[16px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
+          >
+            {continueLabel}
+            <ChevronRight className="size-[20px]" aria-hidden />
+          </button>
+          {onMore ? (
+            <button
+              type="button"
+              onClick={onMore}
+              className="continue-drill-card__more inline-flex h-[40px] shrink-0 items-center justify-center gap-[8px] rounded-[16px] border border-[#dfe1e7] bg-white px-[16px] text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] hover:bg-[#f6f8fa]"
+            >
+              {moreLabel}
+              <ChevronRight className="size-[16px]" aria-hidden />
+            </button>
+          ) : null}
+        </div>
       </div>
     </article>
   )

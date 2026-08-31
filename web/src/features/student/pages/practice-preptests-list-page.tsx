@@ -579,8 +579,8 @@ function PrepTestListFilters({
   return (
     <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-center lg:gap-6">
       <h2 className="shrink-0 text-[24px] font-bold leading-[1.3] text-[#062357]">Start your PrepTest</h2>
-      <div className="min-w-0 flex-1 overflow-x-auto pb-1">
-        <div className="flex w-max items-center gap-6 lg:ml-auto">
+      <div className="min-w-0 flex-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex w-max items-center gap-2 lg:ml-auto">
           {FILTER_TABS.map((tab) => {
             const active = filter === tab.id
             return (

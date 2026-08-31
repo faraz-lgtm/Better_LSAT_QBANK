@@ -45,6 +45,8 @@ export type ExplanationPrepTestListItem = {
   prepTestNumber: string | null
   questionCount: number
   explainedCount: number
+  /** Figma list subtitle — e.g. "Fresh", "In Process • Blind Review" */
+  rowSubtitle?: string
 }
 
 export type ExplanationStatusCounts = {
@@ -77,6 +79,15 @@ export type ExplanationDetailPayload = {
     title: string
     body: string
   }
+  /** RC passage paragraph analysis (P1, P2, …) when published. */
+  passageAnalysis?: {
+    paragraphs: Array<{
+      label: string
+      passageHtml?: string | null
+      explanationHtml: string
+    }>
+    overallHtml: string | null
+  } | null
   answerPopularity: ExplanationAnswerPopularityRow[]
   /** Current user's latest submitted answer letter (A–E), or null if never answered. */
   userSelectedLetter?: string | null
@@ -88,4 +99,5 @@ export type ExplanationAnswerPopularityRow = {
   count: number
   pct: number
   highlight?: boolean
+  avgScore?: number | null
 }

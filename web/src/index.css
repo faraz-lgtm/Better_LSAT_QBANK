@@ -2735,6 +2735,11 @@ select.ds-input {
   background-image: linear-gradient(156.25deg, rgb(255, 255, 255) 0%, rgb(228, 239, 255) 100%);
 }
 
+.test-day-countdown--picker-open {
+  overflow: visible;
+  z-index: 30;
+}
+
 .test-day-countdown__glow {
   pointer-events: none;
   position: absolute;
@@ -2838,6 +2843,7 @@ select.ds-input {
   align-items: flex-end;
   gap: 22.5px;
   padding-top: 16px;
+  overflow: visible;
 }
 
 .test-day-countdown__date-bar {
@@ -2854,6 +2860,7 @@ select.ds-input {
   box-shadow:
     0 4px 3px rgba(13, 13, 18, 0.03),
     0 12px 8px rgba(13, 13, 18, 0.08);
+  overflow: visible;
 }
 
 .test-day-countdown__date-label {
@@ -2866,6 +2873,67 @@ select.ds-input {
   color: #062357;
 }
 
+.test-day-countdown__date-controls {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  margin-left: auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.test-day-countdown__date-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  display: flex;
+  width: max(100%, 280px);
+  max-height: min(360px, calc(100vh - 24px));
+  flex-direction: column;
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid #dfe1e7;
+  background: #fff;
+  padding: 8px;
+  box-shadow:
+    0 12px 16px -4px rgba(13, 13, 18, 0.08),
+    0 4px 6px -2px rgba(13, 13, 18, 0.03);
+}
+
+.test-day-countdown__date-menu-item {
+  box-sizing: border-box;
+  display: flex;
+  min-height: 48px;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  border: none;
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px 12px;
+  text-align: left;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0.28px;
+  color: #062357;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.test-day-countdown__date-menu-item:hover {
+  background: #f3f7ff;
+}
+
+.test-day-countdown__date-menu-item--selected {
+  border-radius: 10px;
+  background: #edf3ff;
+  color: #082c6b;
+}
+
 .test-day-countdown__date-chip {
   display: inline-flex;
   height: 40px;
@@ -2874,15 +2942,26 @@ select.ds-input {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  border: none;
   border-radius: 16px;
   background: #f3f7ff;
   padding: 8px 16px;
+  font-family: inherit;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.5;
   letter-spacing: 0.28px;
   color: #062357;
   box-shadow: 0 1px 1px rgba(13, 13, 18, 0.06);
+  cursor: pointer;
+}
+
+.test-day-countdown__date-chip:hover:not(:disabled) {
+  background: #ffffff;
+}
+
+.test-day-countdown__date-chip:disabled {
+  cursor: not-allowed;
 }
 
 .test-day-countdown__edit {
@@ -3020,13 +3099,29 @@ select.ds-input {
   }
 }
 
-.continue-drill-card__action {
+.continue-drill-card__actions {
+  display: flex;
+  width: 100%;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.continue-drill-card__action,
+.continue-drill-card__more {
   width: 100%;
 }
 
 @container drill-card (min-width: 40rem) {
-  .continue-drill-card__action {
+  .continue-drill-card__actions {
     width: auto;
+    align-self: flex-start;
+  }
+
+  .continue-drill-card__action,
+  .continue-drill-card__more {
+    width: auto;
+    min-width: 148px;
   }
 }
 
@@ -3186,7 +3281,7 @@ select.ds-input {
 /* Figma 18624:81193 — question stem + choice text */
 .explanation-question-stem.lsat-html-content {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.5;
   letter-spacing: 0.32px;
   color: #062357;
@@ -3210,15 +3305,106 @@ select.ds-input {
 
 /* Figma 19432:17972 — option explanation under choice */
 .explanation-option-body.lsat-html-content {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 400;
   line-height: 1.5;
-  letter-spacing: 0.24px;
+  letter-spacing: 0.28px;
   color: #272835;
 }
 
 .explanation-option-body.lsat-html-content p {
-  margin: 0;
+  margin: 0 0 0.5rem;
+}
+
+.explanation-option-body.lsat-html-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* Review chrome — structured question / stimulus explanation */
+.explanation-review-body.lsat-html-content {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.28px;
+  color: #062357;
+}
+
+.explanation-review-body.lsat-html-content h1,
+.explanation-review-body.lsat-html-content h2,
+.explanation-review-body.lsat-html-content h3,
+.explanation-review-body.lsat-html-content h4 {
+  margin: 1rem 0 0.5rem;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.32px;
+  color: #062357;
+}
+
+.explanation-review-body.lsat-html-content h1:first-child,
+.explanation-review-body.lsat-html-content h2:first-child,
+.explanation-review-body.lsat-html-content h3:first-child,
+.explanation-review-body.lsat-html-content h4:first-child {
+  margin-top: 0;
+}
+
+.explanation-review-body.lsat-html-content p {
+  margin: 0 0 0.75rem;
+}
+
+.explanation-review-body.lsat-html-content p:last-child {
+  margin-bottom: 0;
+}
+
+.explanation-review-body.lsat-html-content ul,
+.explanation-review-body.lsat-html-content ol {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.explanation-review-body.lsat-html-content ul {
+  list-style: disc;
+}
+
+.explanation-review-body.lsat-html-content ol {
+  list-style: decimal;
+}
+
+.explanation-review-body.lsat-html-content li {
+  margin: 0 0 0.35rem;
+  padding-left: 0.15rem;
+}
+
+.explanation-review-body.lsat-html-content li:last-child {
+  margin-bottom: 0;
+}
+
+.explanation-review-body.lsat-html-content strong,
+.explanation-review-body.lsat-html-content b {
+  font-weight: 600;
+  color: #062357;
+}
+
+.lsat-html-content ul,
+.lsat-html-content ol {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.lsat-html-content ul {
+  list-style: disc;
+}
+
+.lsat-html-content ol {
+  list-style: decimal;
+}
+
+.lsat-html-content li {
+  margin: 0 0 0.35rem;
+}
+
+.lsat-html-content li:last-child {
+  margin-bottom: 0;
 }
 
 /* Portal scrollbars — soft grey thumb on a light/transparent track (no arrow buttons) */
@@ -3929,6 +4115,40 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
   align-items: center;
   align-self: stretch;
   border-radius: 12px;
+}
+
+.practice-session-review-nav-row {
+  position: relative;
+  display: flex;
+  width: max-content;
+  max-width: none;
+  grid-template-columns: none;
+  gap: 16px;
+  align-items: flex-end;
+  justify-content: flex-start;
+  overflow: visible;
+  padding-top: 0;
+}
+
+.practice-session-review-nav-row::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 7px;
+  z-index: 0;
+  width: auto;
+  height: 2px;
+  background: #dfe1e7;
+}
+
+.practice-session-review-nav-row > * {
+  position: relative;
+  z-index: 1;
+}
+
+.practice-session-question-nav-btn--review {
+  border-radius: 6px;
 }
 
 .practice-session-header {

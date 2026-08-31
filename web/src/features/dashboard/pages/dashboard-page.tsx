@@ -6,6 +6,10 @@ import { DashboardAccessSetupCard } from "@/features/dashboard/components/dashbo
 import { DashboardQuickStats } from "@/features/dashboard/components/dashboard-quick-stats"
 import { PerformanceOverviewCard } from "@/features/dashboard/components/performance-overview-card"
 import { PrepTestsScoreProgressCard } from "@/features/dashboard/components/preptests-score-progress-card"
+import {
+  findLsacTestWindow,
+  resolveLsacTestWindowValue,
+} from "@/lib/lsac-test-window-options"
 import { TestDayCountdownCard } from "@/features/dashboard/components/test-day-countdown-card"
 import {
   daysUntilDate,
@@ -14,6 +18,11 @@ import {
   mapOverviewToDashboardStats,
   mapOverviewToPerformance,
 } from "@/features/dashboard/lib/map-dashboard-stats"
+import {
+  type DashboardActiveDrill,
+  dashboardDrillMoreHref,
+  pickDashboardActiveDrills,
+} from "@/features/dashboard/lib/pick-dashboard-drills"
 import { mapTrajectoryToScoreProgress } from "@/features/student/analytics/map-analytics"
 import { useAnalyticsApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import { ContinueDrillCard, continueDrillToCardDrill } from "@/features/student/components/continue-drill-card"
@@ -45,9 +54,7 @@ function adaptiveDrillSectionType(filter: "all" | "lr" | "rc"): "LR" | "RC" {
   return filter === "rc" ? "RC" : "LR"
 }
 
-type DashboardDrill = ContinueDrill | (SuggestedDrill & { isSuggested: true })
-
-function isSuggestedDrill(drill: DashboardDrill): drill is SuggestedDrill & { isSuggested: true } {
+function isSuggestedDrill(drill: DashboardActiveDrill): drill is SuggestedDrill & { isSuggested: true } {
   return "isSuggested" in drill && drill.isSuggested === true
 }
 
@@ -162,20 +169,10 @@ function DashboardPage() {
     return mapTrajectoryToScoreProgress(recent)
   }, [trajectory])
 
-  const filteredContinue = useMemo(() => {
-    if (activeFilter === "all") return continueDrills
-    return continueDrills.filter((d) => (activeFilter === "lr" ? d.section === "LR" : d.section === "RC"))
-  }, [activeFilter, continueDrills])
-
-  const filteredSuggested = useMemo(() => {
-    if (activeFilter === "all") return suggestedDrills
-    return suggestedDrills.filter((d) => (activeFilter === "lr" ? d.section === "LR" : d.section === "RC"))
-  }, [activeFilter, suggestedDrills])
-
-  const displayDrills: DashboardDrill[] = useMemo(() => {
-    if (filteredContinue.length > 0) return filteredContinue
-    return filteredSuggested.map((d) => ({ ...d, isSuggested: true as const }))
-  }, [filteredContinue, filteredSuggested])
+  const displayDrills = useMemo(
+    () => pickDashboardActiveDrills(continueDrills, suggestedDrills, activeFilter),
+    [activeFilter, continueDrills, suggestedDrills],
+  )
 
   const handleStartAdaptiveDrill = useCallback(async () => {
     if (!practiceApi || startingAdaptiveDrill) return
@@ -202,15 +199,21 @@ function DashboardPage() {
   }, [activeFilter, navigate, practiceApi, startingAdaptiveDrill])
 
   const preferences = studyContext?.preferences ?? null
-  const daysRemaining = daysUntilDate(preferences?.plannedLsatDate)
-  const testDateValue = preferences?.plannedLsatDate?.trim() ?? ""
+  const countdownDate =
+    findLsacTestWindow(preferences?.plannedLsatDate)?.value ?? preferences?.plannedLsatDate ?? null
+  const daysRemaining = daysUntilDate(countdownDate)
+  const testDateValue = resolveLsacTestWindowValue(
+    preferences?.plannedLsatDate,
+    preferences?.plannedLsatWindow,
+  )
 
-  async function handleTestDateChange(isoDate: string) {
-    if (!usersApi || !isoDate.trim()) return
+  async function handleTestDateChange(value: string) {
+    if (!usersApi || !value.trim()) return
     setSavingTestDate(true)
     try {
       const nextPreferences = await usersApi.updateStudyPreferences({
-        plannedLsatDate: isoDate.trim(),
+        plannedLsatDate: value.trim(),
+        plannedLsatWindow: null,
       })
       setStudyContext((prev) =>
         prev ? { ...prev, preferences: nextPreferences } : { preferences: nextPreferences, officialScores: [] },
@@ -249,13 +252,19 @@ function DashboardPage() {
           <TestDayCountdownCard
             daysRemaining={daysRemaining}
             firstName={firstName}
-            testMeta={formatLsacTestMeta(preferences?.plannedLsatDate)}
-            testDateLabel={formatTestDateInputValue(preferences?.plannedLsatDate)}
+            testMeta={formatLsacTestMeta(
+              preferences?.plannedLsatDate,
+              preferences?.plannedLsatWindow,
+            )}
+            testDateLabel={formatTestDateInputValue(
+              preferences?.plannedLsatDate,
+              preferences?.plannedLsatWindow,
+            )}
             testDateValue={testDateValue}
             adaptiveLoading={startingAdaptiveDrill}
             adaptiveDisabled={!practiceApi}
             savingTestDate={savingTestDate}
-            onTestDateChange={(isoDate) => void handleTestDateChange(isoDate)}
+            onTestDateChange={(value) => void handleTestDateChange(value)}
             onStartAdaptiveDrill={() => void handleStartAdaptiveDrill()}
           />
 
@@ -325,6 +334,8 @@ function DashboardPage() {
                       continueLabel={suggested ? "Start" : "Continue"}
                       lastAttemptPrefix={suggested ? "Suggested · " : "Last attempt: "}
                       onContinue={() => navigate(suggested ? drill.configPath : drill.continuePath)}
+                      onMore={() => navigate(dashboardDrillMoreHref(drill.section))}
+                      moreLabel="See more"
                     />
                   )
                 })}

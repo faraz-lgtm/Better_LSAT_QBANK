@@ -23,6 +23,7 @@ export type PassageAnalysisRow = {
   version: number
   status: AnalysisStatus
   passage_style: string | null
+  overall_html?: string | null
   created_by: string | null
   updated_by: string | null
   created_at: string

@@ -135,4 +135,72 @@ describe("buildExplanationQuestionDetailView", () => {
     expect(view.videos[0]?.explanationHtml).toBeNull()
     expect(view.videos[1]?.videoUrl).toBe("https://example.com/v.mp4")
   })
+
+  it("maps passage difficulty label, tone, and caption from filled segments", () => {
+    const detail: ExplanationDetailPayload = {
+      questionId: "q1",
+      prepTestId: "pt1",
+      prepTestTitle: "PT 129",
+      prepTestNumber: "129",
+      sectionId: "sec1",
+      sectionType: "RC",
+      sectionNumber: 2,
+      questionNumber: 2,
+      topicName: "Art",
+      explanationHtml: null,
+      videoUrl: null,
+      stimulusText: null,
+      stemText: "Stem",
+      choices: [{ id: "A", index: 1, text: "a", explanationHtml: null }],
+      correctChoiceId: "A",
+      passage: { id: "p1", displayNumber: 1, title: "P1", body: "" },
+      answerPopularity: [],
+      userSelectedLetter: null,
+      difficulty: 3,
+    }
+
+    const view = buildExplanationQuestionDetailView(loc, detail)
+
+    expect(view.analytics.questionDifficulty.label).toBe("Medium")
+    expect(view.analytics.questionDifficulty.caption).toBe("75% of people who answer get this correct.")
+    expect(view.analytics.passageDifficulty.filled).toBe(4)
+    expect(view.analytics.passageDifficulty.label).toBe("Hard")
+    expect(view.analytics.passageDifficulty.tone).toBe("red")
+    expect(view.analytics.passageDifficulty.caption).toContain("moderately difficult question")
+  })
+
+  it("maps RC passageAnalysis paragraphs onto the view", () => {
+    const detail: ExplanationDetailPayload = {
+      questionId: "q1",
+      prepTestId: "pt1",
+      prepTestTitle: "PT 101",
+      prepTestNumber: "101",
+      sectionId: "sec1",
+      sectionType: "RC",
+      sectionNumber: 1,
+      questionNumber: 1,
+      topicName: "Main Point",
+      explanationHtml: null,
+      videoUrl: null,
+      stimulusText: null,
+      stemText: "Stem",
+      choices: [{ id: "A", index: 1, text: "a", explanationHtml: null }],
+      correctChoiceId: "A",
+      passage: { id: "p1", displayNumber: 1, title: "Passage 1", body: "<p>Body</p>" },
+      passageAnalysis: {
+        paragraphs: [
+          { label: "P1", explanationHtml: "<p>Para 1 analysis</p>" },
+          { label: "P2", explanationHtml: "<p>Para 2 analysis</p>" },
+        ],
+        overallHtml: "<p>Overall</p>",
+      },
+      answerPopularity: [],
+      userSelectedLetter: null,
+      difficulty: 2,
+    }
+
+    const view = buildExplanationQuestionDetailView(loc, detail)
+    expect(view.passageAnalysis?.paragraphs.map((p) => p.label)).toEqual(["P1", "P2"])
+    expect(view.passageAnalysis?.overallHtml).toBe("<p>Overall</p>")
+  })
 })

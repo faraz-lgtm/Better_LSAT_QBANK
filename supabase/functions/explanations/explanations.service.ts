@@ -1,4 +1,5 @@
 import { parseQuestionChoices } from '../_shared/parse-question-choices.ts'
+import { extractHtmlParagraphs } from '../_shared/rc-passage-analysis.ts'
 import {
   isStudentVisiblePrepTest,
   lsacPrepTestOrdinal,
@@ -22,6 +23,8 @@ export type ExplanationPrepTestListItem = {
   prepTestNumber: string | null
   questionCount: number
   explainedCount: number
+  /** Figma list subtitle — e.g. "Fresh", "In Process • Blind Review" */
+  rowSubtitle: string
 }
 
 export type ExplanationQuestionStatus = 'in_process' | 'not_started' | 'answered' | 'fresh' | 'seen'
@@ -87,6 +90,16 @@ export type ExplanationDetailPayload = {
     title: string
     body: string
   }
+  /** RC passage paragraph analysis (P1, P2, …) when published. */
+  passageAnalysis: {
+    paragraphs: Array<{
+      label: string
+      /** Original passage `<p>` HTML for this paragraph, when available. */
+      passageHtml: string | null
+      explanationHtml: string
+    }>
+    overallHtml: string | null
+  } | null
   answerPopularity: ExplanationAnswerPopularityRow[]
   /** Current user's latest submitted answer letter (A–E), or null if never answered. */
   userSelectedLetter: string | null
@@ -550,14 +563,14 @@ export function mapPrepTestTreeRows(
     })
   }
 
-  const explainedTotal = allSections
+  const allStatuses = allSections
     .flatMap((s) => s.admin_questions ?? [])
-    .filter((q) => hasWrittenExplanation(q) || hasVideo(q)).length
+    .map((q) => statusByQ.get(q.id) ?? 'fresh')
 
   return {
     id: primaryId,
     prepTestNumber: ptNum,
-    rowSubtitle: explainedTotal > 0 ? `${explainedTotal} questions with explanations` : 'No explanations yet',
+    rowSubtitle: prepTestRowSubtitleFromStatuses(allStatuses),
     sections,
   }
 }
@@ -687,6 +700,27 @@ export function resolveExplanationQuestionStatus(
   return 'fresh'
 }
 
+/** Aggregate question statuses into the PrepTest list/tree row tag. */
+export function prepTestRowSubtitleFromStatuses(
+  statuses: readonly ExplanationQuestionStatus[],
+): string {
+  let hasInProcess = false
+  let hasFresh = false
+  let hasAnswered = false
+  let hasSeen = false
+  for (const status of statuses) {
+    if (status === 'in_process') hasInProcess = true
+    else if (status === 'fresh' || status === 'not_started') hasFresh = true
+    else if (status === 'answered') hasAnswered = true
+    else if (status === 'seen') hasSeen = true
+  }
+  if (hasInProcess) return 'In Process • Blind Review'
+  if (hasFresh) return 'Fresh'
+  if (hasAnswered) return 'Answered'
+  if (hasSeen) return 'Seen'
+  return 'Fresh'
+}
+
 export function buildExplanationStatusCounts(
   catalogQuestionIds: readonly string[],
   progress: ExplanationQuestionProgress,
@@ -778,9 +812,13 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
           : (page - 1) * pageSize
       const pageGroups = grouped.slice(start, start + pageSize)
 
+      const progressLists = await deps.repository.listPrepTestQuestionProgress(userId)
+      const progress = progressFromLists(progressLists)
+
       const prepTests: ExplanationPrepTestListItem[] = []
       for (const g of pageGroups) {
         const stats = await deps.repository.fetchQuestionStatsForPrepTestIds(g.prepTestIds)
+        const statuses = stats.questionIds.map((id) => resolveExplanationQuestionStatus(id, progress))
         prepTests.push({
           id: g.id,
           title: g.title,
@@ -788,10 +826,12 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
           prepTestNumber: prepTestNumberFromModuleId(g.moduleId),
           questionCount: stats.questionCount,
           explainedCount: stats.explainedCount,
+          rowSubtitle: prepTestRowSubtitleFromStatuses(statuses),
         })
       }
 
-      const statusCounts = await this.getExplanationStatusCounts(userId)
+      const catalogIds = await deps.repository.listLsatCatalogQuestionIds()
+      const statusCounts = buildExplanationStatusCounts(catalogIds, progress)
       return { prepTests, total, page, pageSize, statusCounts }
     },
 
@@ -886,6 +926,23 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
         : null
       const passage = resolvePassageForQuestion(row, sec)
       const topicName = qt?.name?.trim() || '—'
+      const publishedAnalysis =
+        sec.section_type === 'RC'
+          ? await deps.repository.getPublishedPassageAnalysis(passage.id)
+          : null
+      const passageParagraphs = extractHtmlParagraphs(passage.body ?? '')
+      const passageAnalysis =
+        publishedAnalysis &&
+        (publishedAnalysis.paragraphs.length > 0 || publishedAnalysis.overallHtml)
+          ? {
+              paragraphs: publishedAnalysis.paragraphs.map((p, index) => ({
+                label: p.partLabel,
+                passageHtml: passageParagraphs[index]?.trim() || null,
+                explanationHtml: p.explanationHtml,
+              })),
+              overallHtml: publishedAnalysis.overallHtml,
+            }
+          : null
 
       return {
         questionId: row.id,
@@ -905,6 +962,7 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
         choices,
         correctChoiceId,
         passage,
+        passageAnalysis,
         answerPopularity,
         userSelectedLetter,
         difficulty: clampDifficulty(row.difficulty),

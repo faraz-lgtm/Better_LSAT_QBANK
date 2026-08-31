@@ -9,6 +9,7 @@ import {
   mapPrepTestTreeRows,
   mapStoredAnswerToLetter,
   prepTestNumberFromModuleId,
+  prepTestRowSubtitleFromStatuses,
   resolveExplanationQuestionStatus,
   topicNameFromQuestion,
 } from './explanations.service.ts'
@@ -21,7 +22,7 @@ function mockRepo(overrides: Partial<ExplanationsRepository> = {}): Explanations
     },
     fetchPrepTestTreeRows: async () => [],
     listQuestionTypeNames: async () => new Map(),
-    fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 0, explainedCount: 0 }),
+    fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 0, explainedCount: 0, questionIds: [] }),
     getQuestionDetail: async () => null,
     listLatestAnswerStatusByQuestionIds: async () => new Map(),
     listLsatCatalogQuestionIds: async () => [],
@@ -33,6 +34,7 @@ function mockRepo(overrides: Partial<ExplanationsRepository> = {}): Explanations
     }),
     listLatestAnswerSelectionsForQuestion: async () => [],
     getLatestUserAnswerSelection: async () => null,
+    getPublishedPassageAnalysis: async () => null,
     listBookmarkedQuestionIds: async () => [],
     setQuestionBookmark: async () => {},
     listPrepTestIdsForQuestionIds: async () => [],
@@ -41,11 +43,32 @@ function mockRepo(overrides: Partial<ExplanationsRepository> = {}): Explanations
 }
 
 Deno.test('buildAnswerPopularity counts latest selections per letter', () => {
-  const rows = buildAnswerPopularity(['B', 'B', 'A', 'C'], ['A', 'B', 'C', 'D', 'E'], 'B')
+  const rows = buildAnswerPopularity(
+    [{ letter: 'B' }, { letter: 'B' }, { letter: 'A' }, { letter: 'C' }],
+    ['A', 'B', 'C', 'D', 'E'],
+    'B',
+  )
   assertEquals(rows.find((r) => r.letter === 'B')?.count, 2)
   assertEquals(rows.find((r) => r.letter === 'B')?.pct, 50)
   assertEquals(rows.find((r) => r.letter === 'B')?.highlight, true)
   assertEquals(rows.find((r) => r.letter === 'A')?.highlight, undefined)
+  assertEquals(rows.find((r) => r.letter === 'B')?.avgScore, null)
+})
+
+Deno.test('buildAnswerPopularity averages scaled scores per letter', () => {
+  const rows = buildAnswerPopularity(
+    [
+      { letter: 'B', scaledScore: 163 },
+      { letter: 'B', scaledScore: 161 },
+      { letter: 'A', scaledScore: 152 },
+      { letter: 'C' },
+    ],
+    ['A', 'B', 'C', 'D', 'E'],
+    'B',
+  )
+  assertEquals(rows.find((r) => r.letter === 'B')?.avgScore, 162)
+  assertEquals(rows.find((r) => r.letter === 'A')?.avgScore, 152)
+  assertEquals(rows.find((r) => r.letter === 'C')?.avgScore, null)
 })
 
 Deno.test('mapStoredAnswerToLetter resolves choice id and numeric index', () => {
@@ -341,6 +364,14 @@ Deno.test('mapPrepTestTreeRows orders RC passages by first question number', () 
   assertEquals(passages[2]?.questions[0]?.code, 'PT157.S1.P3.Q20')
 })
 
+Deno.test('prepTestRowSubtitleFromStatuses matches Figma status tags', () => {
+  assertEquals(prepTestRowSubtitleFromStatuses(['fresh', 'fresh']), 'Fresh')
+  assertEquals(prepTestRowSubtitleFromStatuses(['fresh', 'in_process']), 'In Process • Blind Review')
+  assertEquals(prepTestRowSubtitleFromStatuses(['answered', 'seen']), 'Answered')
+  assertEquals(prepTestRowSubtitleFromStatuses(['seen']), 'Seen')
+  assertEquals(prepTestRowSubtitleFromStatuses([]), 'Fresh')
+})
+
 Deno.test('listPrepTests paginates grouped prep tests', async () => {
   const rows: PrepTestRow[] = Array.from({ length: 12 }, (_, i) => ({
     id: `pt-${i}`,
@@ -351,7 +382,7 @@ Deno.test('listPrepTests paginates grouped prep tests', async () => {
   const service = createExplanationsService({
     repository: mockRepo({
       listAllPrepTestRows: async () => rows,
-      fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 10, explainedCount: 2 }),
+      fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 10, explainedCount: 2, questionIds: [] }),
     }),
   })
 
@@ -360,6 +391,7 @@ Deno.test('listPrepTests paginates grouped prep tests', async () => {
   assertEquals(page1.page, 1)
   assertEquals(page1.pageSize, 5)
   assertEquals(page1.prepTests.length, 5)
+  assertEquals(page1.prepTests[0]?.rowSubtitle, 'Fresh')
   assertEquals(page1.statusCounts.fresh, 0)
 
   const page3 = await service.listPrepTests('user-1', { page: 3, pageSize: 5, sort: 'newest' })
@@ -378,7 +410,7 @@ Deno.test('listPrepTests hides pre-PT100 tests', async () => {
   const service = createExplanationsService({
     repository: mockRepo({
       listAllPrepTestRows: async () => rows,
-      fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 10, explainedCount: 2 }),
+      fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 10, explainedCount: 2, questionIds: [] }),
     }),
   })
 
@@ -412,7 +444,7 @@ Deno.test('listPrepTests returns global statusCounts for user', async () => {
       listAllPrepTestRows: async () => [
         { id: 'pt-1', module_id: 'LSAC158', title: 'PT 158', imported_at: null },
       ],
-      fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 103, explainedCount: 3 }),
+      fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 103, explainedCount: 3, questionIds: [] }),
       listLsatCatalogQuestionIds: async () => ['q1', 'q2', 'q3'],
       listPrepTestQuestionProgress: async () => ({
         seenQuestionIds: ['q3'],
@@ -474,6 +506,72 @@ Deno.test('getExplanationDetail returns extended payload', async () => {
   assertEquals(d.answerPopularity.find((r) => r.letter === 'B')?.pct, 67)
   assertEquals(d.userSelectedLetter, 'A')
   assertEquals(d.tags, ['Flaw', 'LR'])
+  assertEquals(d.passageAnalysis, null)
+})
+
+Deno.test('getExplanationDetail returns RC passageAnalysis paragraphs as P1, P2', async () => {
+  const service = createExplanationsService({
+    repository: mockRepo({
+      getQuestionDetail: async () => ({
+        id: 'q-rc',
+        question_number: 1,
+        source_group_id: 'RC-Z060',
+        stimulus_text: null,
+        stem_text: 'RC stem',
+        choices: [{ optionLetter: 'A', optionContent: 'A' }],
+        correct_answer: 'A',
+        explanation: null,
+        video_url: null,
+        difficulty: 2,
+        question_types: { name: 'Main Point' },
+        admin_sections: {
+          id: 'sec-rc',
+          section_type: 'RC',
+          section_number: 1,
+          title: 'RC',
+          admin_prep_tests: { id: 'pt101', title: 'PT 101', module_id: 'LSAC101' },
+          admin_passages: [
+            {
+              id: 'pass-1',
+              source_group_id: 'RC-Z060',
+              content: '<p>Passage para 1</p><p>Passage para 2</p>',
+              topic_tag: null,
+            },
+          ],
+        },
+      }),
+      getPublishedPassageAnalysis: async (passageId) => {
+        assertEquals(passageId, 'pass-1')
+        return {
+          analysisId: 'an-1',
+          overallHtml: '<p>Overall takeaway</p>',
+          paragraphs: [
+            {
+              partLabel: 'P1',
+              sortOrder: 1,
+              explanationHtml: '<p>Analysis one</p>',
+              textExcerpt: 'Passage para 1',
+            },
+            {
+              partLabel: 'P2',
+              sortOrder: 2,
+              explanationHtml: '<p>Analysis two</p>',
+              textExcerpt: 'Passage para 2',
+            },
+          ],
+        }
+      },
+    }),
+  })
+
+  const d = await service.getExplanationDetail('user-1', 'q-rc')
+  assertEquals(d.passageAnalysis?.paragraphs.map((p) => p.label), ['P1', 'P2'])
+  assertEquals(d.passageAnalysis?.paragraphs[0]?.explanationHtml, '<p>Analysis one</p>')
+  assertEquals(
+    d.passageAnalysis?.paragraphs[0]?.passageHtml,
+    '<p>Passage para 1</p>',
+  )
+  assertEquals(d.passageAnalysis?.overallHtml, '<p>Overall takeaway</p>')
 })
 
 Deno.test('getExplanationDetail returns null userSelectedLetter when never answered', async () => {
@@ -518,7 +616,7 @@ Deno.test('listPrepTests bookmarkedOnly keeps prep tests that contain bookmarks'
       ],
       listBookmarkedQuestionIds: async () => ['q-booked'],
       listPrepTestIdsForQuestionIds: async (ids) => (ids.includes('q-booked') ? ['pt-keep'] : []),
-      fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 4, explainedCount: 1 }),
+      fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 4, explainedCount: 1, questionIds: [] }),
     }),
   })
   const out = await service.listPrepTests('user-1', { page: 1, pageSize: 10, bookmarkedOnly: true })

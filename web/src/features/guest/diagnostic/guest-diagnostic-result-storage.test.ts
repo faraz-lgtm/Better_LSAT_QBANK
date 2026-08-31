@@ -24,7 +24,7 @@ describe("guest diagnostic result storage", () => {
     const result = buildDefaultGuestDiagnosticResult("mini")
     expect(result.questionCount).toBe(10)
     expect(result.correctCount).toBe(3)
-    expect(result.scaledScoreLabel).toBe("141–147")
+    expect(result.scaledScoreLabel).toBe("135–139")
     expect(result.outcomes[0]?.questionId).toBe("mini-diag-q1")
   })
 
@@ -40,8 +40,11 @@ describe("guest diagnostic result storage", () => {
 
     expect(result.questionCount).toBe(10)
     expect(result.correctCount).toBe(2)
-    expect(result.scaledScoreLabel).toBe("134–140")
-    expect(result.percentileLabel).toBe("15–24")
+    expect(result.scaledScoreLabel).toBe("130–134")
+    // Scaled 130–134 → shared LSAT percentile map (prep-test / CSV)
+    expect(result.percentileLabel).toBe("2.3–4.4")
+    expect(result.percentileLow).toBe(2.27)
+    expect(result.percentileHigh).toBe(4.38)
     expect(result.outcomes.filter((o) => o.isCorrect)).toHaveLength(2)
   })
 
@@ -49,7 +52,31 @@ describe("guest diagnostic result storage", () => {
     const questions = createMiniDiagnosticQuestions().slice(0, 2)
     const result = buildGuestDiagnosticResultFromAnswers("mini", questions, {})
     expect(result.correctCount).toBe(0)
-    expect(result.scaledScoreLabel).toBe("120–126")
+    expect(result.scaledScoreLabel).toBe("120–124")
+  })
+
+  it("maps full-section correct count onto estimated score bands", () => {
+    const questions = Array.from({ length: 30 }, (_, index) => ({
+      id: `q${index + 1}`,
+      questionNumber: index + 1,
+      stimulusText: null,
+      stemText: "stem",
+      passage: null,
+      correctChoiceId: "C",
+      choices: [{ id: "C", index: 0, text: "C", explanationHtml: null }],
+    }))
+    // 5 correct → same band as 5/10: 145–149
+    const answersByQuestion = Object.fromEntries(
+      questions.slice(0, 5).map((q) => [q.id, buildGuestDiagnosticAnswerState(q, "C")]),
+    )
+
+    const result = buildGuestDiagnosticResultFromAnswers("quick", questions, answersByQuestion)
+
+    expect(result.correctCount).toBe(5)
+    expect(result.scaledScoreLabel).toBe("145–149")
+    expect(result.percentileLabel).toBe("22.5–34.7")
+    expect(result.percentileLow).toBe(22.46)
+    expect(result.percentileHigh).toBe(34.68)
   })
 
   it("formats diagnostic date labels", () => {

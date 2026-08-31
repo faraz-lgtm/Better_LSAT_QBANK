@@ -94,6 +94,19 @@ export type QuestionDetailRow = {
   }[] | null
 }
 
+export type PublishedPassageAnalysisSegment = {
+  partLabel: string
+  sortOrder: number
+  explanationHtml: string
+  textExcerpt: string
+}
+
+export type PublishedPassageAnalysis = {
+  analysisId: string
+  overallHtml: string | null
+  paragraphs: PublishedPassageAnalysisSegment[]
+}
+
 const prepTestTreeSelect = `
   id,
   module_id,
@@ -260,8 +273,9 @@ export function createExplanationsRepository(client: SupabaseClient) {
     async fetchQuestionStatsForPrepTestIds(prepTestIds: string[]): Promise<{
       questionCount: number
       explainedCount: number
+      questionIds: string[]
     }> {
-      if (prepTestIds.length === 0) return { questionCount: 0, explainedCount: 0 }
+      if (prepTestIds.length === 0) return { questionCount: 0, explainedCount: 0, questionIds: [] }
 
       const { data: sections, error: secErr } = await client
         .from('admin_sections')
@@ -269,7 +283,7 @@ export function createExplanationsRepository(client: SupabaseClient) {
         .in('prep_test_id', prepTestIds)
       if (secErr) throw secErr
       const sectionIds = ((sections ?? []) as { id: string }[]).map((s) => s.id)
-      if (sectionIds.length === 0) return { questionCount: 0, explainedCount: 0 }
+      if (sectionIds.length === 0) return { questionCount: 0, explainedCount: 0, questionIds: [] }
 
       const { data: questions, error: qErr } = await client
         .from('admin_questions')
@@ -279,12 +293,14 @@ export function createExplanationsRepository(client: SupabaseClient) {
 
       const rows = (questions ?? []) as { id: string; explanation: string | null; video_url: string | null }[]
       let explainedCount = 0
+      const questionIds: string[] = []
       for (const q of rows) {
+        questionIds.push(q.id)
         const hasExpl = (q.explanation?.trim() ?? '').length > 0
         const hasVid = (q.video_url?.trim() ?? '').length > 0
         if (hasExpl || hasVid) explainedCount += 1
       }
-      return { questionCount: rows.length, explainedCount }
+      return { questionCount: rows.length, explainedCount, questionIds }
     },
 
     async getQuestionDetail(questionId: string): Promise<QuestionDetailRow | null> {
@@ -480,6 +496,54 @@ export function createExplanationsRepository(client: SupabaseClient) {
       if (error) throw error
       const answer = (data as { selected_answer: string } | null)?.selected_answer?.trim()
       return answer || null
+    },
+
+    /** Latest published RC passage analysis (paragraph explanations + overall). */
+    async getPublishedPassageAnalysis(passageId: string): Promise<PublishedPassageAnalysis | null> {
+      const id = passageId.trim()
+      if (!id || id.startsWith('lr-')) return null
+
+      const { data: analysis, error: analysisErr } = await client
+        .from('admin_passage_analyses')
+        .select('id, overall_html, version')
+        .eq('passage_id', id)
+        .eq('status', 'published')
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (analysisErr) throw analysisErr
+      if (!analysis) return null
+
+      const analysisId = String((analysis as { id: string }).id)
+      const overallRaw = (analysis as { overall_html?: string | null }).overall_html
+      const overallHtml = overallRaw?.trim() ? overallRaw : null
+
+      const { data: segments, error: segErr } = await client
+        .from('admin_passage_analysis_segments')
+        .select('part_label, sort_order, explanation, text_excerpt')
+        .eq('analysis_id', analysisId)
+        .order('sort_order', { ascending: true })
+      if (segErr) throw segErr
+
+      const paragraphs: PublishedPassageAnalysisSegment[] = []
+      for (const row of (segments ?? []) as Array<{
+        part_label: string
+        sort_order: number
+        explanation: string
+        text_excerpt: string
+      }>) {
+        const explanationHtml = row.explanation?.trim() ?? ''
+        if (!explanationHtml) continue
+        paragraphs.push({
+          partLabel: row.part_label?.trim() || `P${row.sort_order}`,
+          sortOrder: row.sort_order,
+          explanationHtml,
+          textExcerpt: row.text_excerpt ?? '',
+        })
+      }
+
+      if (paragraphs.length === 0 && !overallHtml) return null
+      return { analysisId, overallHtml, paragraphs }
     },
   }
 }

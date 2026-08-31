@@ -13,6 +13,11 @@ import { PasswordInput } from "@/components/ui/password-input"
 import { Select } from "@/components/ui/select"
 import northAmericanTimezones from "@/features/account/data/north-american-timezones.json"
 import { ONBOARDING_LSAT_DATE_OPTIONS } from "@/features/auth/onboarding/onboarding-lsat-date-options"
+import {
+  findLsacTestWindow,
+  formatLsacTestWindowLabel,
+  resolveLsacTestWindowValue,
+} from "@/lib/lsac-test-window-options"
 import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-context"
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { StudentMain } from "@/features/student/components/student-main"
@@ -172,19 +177,16 @@ function NameRow({
 }
 
 function formatLsacDateDisplay(isoDate: string | null, plannedLsatWindow: string | null): string {
-  if (plannedLsatWindow === "not_sure" && !isoDate?.trim()) return "Not sure yet"
   if (!isoDate?.trim()) return "Not set"
-  const option = ONBOARDING_LSAT_DATE_OPTIONS.find((item) => item.value === isoDate.trim())
-  if (option) return option.label.replace(/\s*\(Recommended\)$/, "")
-  return isoDate.trim()
+  const window = findLsacTestWindow(isoDate)
+  if (window) return `${window.label}: ${window.detail}`
+  return formatLsacTestWindowLabel(isoDate, plannedLsatWindow)
 }
 
 function resolveLsacDateDraft(isoDate: string | null, plannedLsatWindow: string | null): string {
-  if (plannedLsatWindow === "not_sure" && !isoDate?.trim()) return "not_sure"
-  if (isoDate?.trim() && ONBOARDING_LSAT_DATE_OPTIONS.some((item) => item.value === isoDate.trim())) {
-    return isoDate.trim()
-  }
-  return isoDate?.trim() || ONBOARDING_LSAT_DATE_OPTIONS[0]?.value || ""
+  const resolved = resolveLsacTestWindowValue(isoDate, plannedLsatWindow)
+  if (resolved) return resolved
+  return ONBOARDING_LSAT_DATE_OPTIONS[0]?.value || ""
 }
 
 type LsatDateRowProps = {
@@ -684,8 +686,8 @@ function AccountPage() {
       } else if (field === "lsacDate") {
         const selected = fieldDraft.trim()
         const nextPreferences = await usersApi.updateStudyPreferences({
-          plannedLsatDate: selected === "not_sure" ? null : selected,
-          plannedLsatWindow: selected === "not_sure" ? "not_sure" : null,
+          plannedLsatDate: selected,
+          plannedLsatWindow: null,
         })
         setLsacDate(nextPreferences.plannedLsatDate)
         setLsacWindow(nextPreferences.plannedLsatWindow)

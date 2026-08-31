@@ -75,6 +75,13 @@ const BLIND_REVIEW_OPTION_ROW_SELECTED_ACTUAL_CLASS =
 const BLIND_REVIEW_OPTION_LETTER_SELECTED_ACTUAL_CLASS =
   "bg-[#0d47a1] text-white shadow-[0px_10px_7px_rgba(13,71,161,0.12),0px_4px_3px_rgba(13,71,161,0.08)]"
 
+/** Review chrome — correct answer highlight (Figma teal) */
+const BLIND_REVIEW_OPTION_ROW_CORRECT_CLASS =
+  "border-[#40c4aa] bg-[#effefa]"
+
+const BLIND_REVIEW_OPTION_LETTER_CORRECT_CLASS =
+  "bg-[#40c4aa] text-white"
+
 /** Selected answer while in Blind Review — orange to match BR chrome */
 const BLIND_REVIEW_OPTION_ROW_SELECTED_BR_CLASS =
   "border-[#ff6f00] bg-[#fff3ea] shadow-[0px_10px_15px_-3px_rgba(255,111,0,0.12),0px_4px_6px_-4px_rgba(255,111,0,0.08)]"
@@ -122,6 +129,54 @@ const BLIND_REVIEW_SECTION_SELECT_TRIGGER_CLASS =
 
 const BLIND_REVIEW_SECTION_SELECT_MENU_CLASS =
   "absolute left-0 top-full z-[110] mt-2 min-w-full overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
+
+/** Figma `20321:55044` / `20344:55732` — post-results Review tester chrome */
+const REVIEW_SHELL_CLASS = "relative h-full min-h-0 w-full flex-1 bg-white"
+
+const REVIEW_CARD_CLASS =
+  "practice-session-card practice-session-card--review absolute inset-x-0 bottom-0 top-[88px] flex min-h-0 flex-col bg-white"
+
+const REVIEW_BODY_CLASS =
+  "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden bg-white"
+
+const REVIEW_BODY_GRID_CLASS =
+  "grid min-h-0 min-w-0 flex-1 grid-cols-1 justify-center gap-[52px] px-[clamp(40px,10.25vw,197px)] pb-5 pt-9 lg:grid-cols-[minmax(0,736px)_minmax(0,736px)]"
+
+/** Full-bleed review body (diagnostic review / tester). */
+const REVIEW_BODY_GRID_FULL_CLASS =
+  "grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-6 px-6 pb-5 pt-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+
+const REVIEW_SIDE_PANEL_LAYOUT_FULL_CLASS =
+  "grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-6 px-6 pb-5 pt-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(300px,424px)]"
+
+const REVIEW_SIDE_PANEL_LAYOUT_CLASS =
+  "grid min-h-0 min-w-0 flex-1 grid-cols-1 justify-center gap-[52px] px-10 pb-5 pt-9 xl:grid-cols-[minmax(0,656px)_minmax(0,656px)_424px]"
+
+const REVIEW_PASSAGE_PANEL_CLASS =
+  "practice-session-pane practice-session-pane--review-column min-h-0 rounded-[18px] border border-[#eceff3] bg-white px-6 py-9"
+
+const REVIEW_QUESTION_PANEL_CLASS =
+  "practice-session-pane practice-session-pane--review-column flex min-h-0 flex-col overflow-hidden rounded-[18px] border border-[#eceff3] bg-white px-6 py-9"
+
+const REVIEW_SIDEBAR_CLASS =
+  "practice-session-pane--review-column flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-[18px] border border-[#eceff3] bg-white"
+
+const REVIEW_FOOTER_CLASS =
+  "practice-session-footer box-border flex min-h-[64px] shrink-0 items-center border-t border-[#dfe1e7] bg-white px-10 py-3"
+
+const REVIEW_FOOTER_ROW_CLASS =
+  "flex w-full min-w-0 items-center justify-between gap-4"
+
+const REVIEW_FOOTER_NAV_CLASS =
+  "practice-session-question-nav-grid practice-session-review-nav-row min-h-[51px] min-w-0 flex-1"
+
+const REVIEW_NAV_ARROW_GROUP_CLASS = "flex shrink-0 items-center gap-4 self-center"
+
+const REVIEW_NAV_ARROW_BUTTON_CLASS =
+  "box-border inline-flex size-10 shrink-0 items-center justify-center rounded-[10px] border border-solid border-[#dfe1e7] bg-white p-1 shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#f6f8fa] disabled:opacity-40"
+
+const REVIEW_EXIT_BUTTON_CLASS =
+  "box-border inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-[10px] border border-solid border-[#dfe1e7] bg-white px-4 text-sm font-medium tracking-[0.28px] text-[#666d80] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#f6f8fa] hover:text-[#062357] disabled:opacity-50"
 
 /** Figma `18617:33893` — blind review notes / prep-test landing */
 const BLIND_REVIEW_NOTES_PAGE_CLASS = "bg-[#f5f9ff]"
@@ -204,8 +259,10 @@ export {
   BLIND_REVIEW_OPTIONS_LIST_CLASS,
   BLIND_REVIEW_OPTION_LETTER_SELECTED_ACTUAL_CLASS,
   BLIND_REVIEW_OPTION_LETTER_SELECTED_BR_CLASS,
+  BLIND_REVIEW_OPTION_LETTER_CORRECT_CLASS,
   BLIND_REVIEW_OPTION_ROW_SELECTED_ACTUAL_CLASS,
   BLIND_REVIEW_OPTION_ROW_SELECTED_BR_CLASS,
+  BLIND_REVIEW_OPTION_ROW_CORRECT_CLASS,
   BLIND_REVIEW_PASSAGE_PANEL_CLASS,
   BLIND_REVIEW_PASSAGE_TEXT_CLASS,
   BLIND_REVIEW_QUESTION_PANEL_CLASS,
@@ -219,4 +276,20 @@ export {
   BLIND_REVIEW_SHELL_CLASS,
   BLIND_REVIEW_SHELL_BOTTOM_PX,
   BLIND_REVIEW_SHELL_GAP_PX,
+  REVIEW_BODY_CLASS,
+  REVIEW_BODY_GRID_CLASS,
+  REVIEW_BODY_GRID_FULL_CLASS,
+  REVIEW_SIDE_PANEL_LAYOUT_FULL_CLASS,
+  REVIEW_CARD_CLASS,
+  REVIEW_EXIT_BUTTON_CLASS,
+  REVIEW_FOOTER_CLASS,
+  REVIEW_FOOTER_NAV_CLASS,
+  REVIEW_FOOTER_ROW_CLASS,
+  REVIEW_NAV_ARROW_BUTTON_CLASS,
+  REVIEW_NAV_ARROW_GROUP_CLASS,
+  REVIEW_PASSAGE_PANEL_CLASS,
+  REVIEW_QUESTION_PANEL_CLASS,
+  REVIEW_SHELL_CLASS,
+  REVIEW_SIDEBAR_CLASS,
+  REVIEW_SIDE_PANEL_LAYOUT_CLASS,
 }

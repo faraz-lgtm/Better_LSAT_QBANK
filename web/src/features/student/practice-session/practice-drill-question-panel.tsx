@@ -12,6 +12,7 @@ import {
 } from "@/features/student/practice-session/practice-session-official-styles"
 import {
   PracticeBlindReviewAnswerToggle,
+  type BlindReviewAnswerOutcome,
   type BlindReviewAnswerView,
 } from "@/features/student/practice-session/practice-blind-review-answer-toggle"
 import { PracticeBlindReviewQuestionPanel } from "@/features/student/practice-session/practice-blind-review-question-panel"
@@ -63,6 +64,15 @@ type PracticeDrillQuestionPanelProps = {
   onAnswerViewChange?: (view: BlindReviewAnswerView) => void
   recommendedForBr?: boolean
   choicesDisabled?: boolean
+  reviewChrome?: boolean
+  actualOutcome?: BlindReviewAnswerOutcome
+  blindReviewOutcome?: BlindReviewAnswerOutcome
+  showCorrectAnswer?: boolean
+  onShowCorrectAnswerChange?: (next: boolean) => void
+  blindReviewTabEnabled?: boolean
+  seedStemExplanationHtml?: string | null
+  seedQuestionTypeLabel?: string | null
+  explanationsEnabled?: boolean
 }
 
 function PracticeDrillQuestionPanel({
@@ -96,6 +106,15 @@ function PracticeDrillQuestionPanel({
   onAnswerViewChange,
   recommendedForBr = false,
   choicesDisabled = false,
+  reviewChrome = false,
+  actualOutcome = null,
+  blindReviewOutcome = null,
+  showCorrectAnswer = false,
+  onShowCorrectAnswerChange,
+  blindReviewTabEnabled = true,
+  seedStemExplanationHtml = null,
+  seedQuestionTypeLabel = null,
+  explanationsEnabled = true,
 }: PracticeDrillQuestionPanelProps) {
   const [hiddenChoices, setHiddenChoices] = useState<Record<number, boolean>>({})
   const {
@@ -137,6 +156,15 @@ function PracticeDrillQuestionPanel({
         onAnswerViewChange={onAnswerViewChange}
         recommendedForBr={recommendedForBr}
         choicesDisabled={choicesDisabled}
+        reviewChrome={reviewChrome}
+        actualOutcome={actualOutcome}
+        blindReviewOutcome={blindReviewOutcome}
+        showCorrectAnswer={showCorrectAnswer}
+        onShowCorrectAnswerChange={onShowCorrectAnswerChange}
+        blindReviewTabEnabled={blindReviewTabEnabled}
+        seedStemExplanationHtml={seedStemExplanationHtml}
+        seedQuestionTypeLabel={seedQuestionTypeLabel}
+        explanationsEnabled={explanationsEnabled}
       />
     )
   }

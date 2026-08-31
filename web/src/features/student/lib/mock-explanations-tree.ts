@@ -41,7 +41,7 @@ export const mockExplanationPrepTests: ExplanationPrepTestNode[] = [
   {
     id: "pt-159",
     prepTestNumber: "159",
-    rowSubtitle: "In Process • Blind Review",
+    rowSubtitle: "Fresh",
     sections: [
       {
         id: "s1",
@@ -62,7 +62,7 @@ export const mockExplanationPrepTests: ExplanationPrepTestNode[] = [
                 code: "PT159.S1.Q1",
                 snippet: "The argument is vulnerable to criticism on the grounds that it…",
                 topicName: "Flaw",
-                status: "seen",
+                status: "fresh",
                 source: "The Official LSAT PrepTest 157+ · 1 other practice",
                 difficulty: 3,
               },

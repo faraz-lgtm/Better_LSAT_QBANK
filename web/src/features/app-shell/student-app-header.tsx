@@ -2,12 +2,13 @@ import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "
 import { ChevronDown, Menu } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
-import { getStudentBreadcrumbs, type StudentBreadcrumb } from "@/features/app-shell/student-nav-config"
+import { getStudentBreadcrumbs, isDashboardActive, type StudentBreadcrumb } from "@/features/app-shell/student-nav-config"
 import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
 import { resolveStudentShellVariant } from "@/features/app-shell/student-shell-plan-variant"
 import { useGuestPremiumAccount } from "@/features/guest/premium/guest-premium-account"
 import { shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
 import { STUDENT_PAGE_CONTAINER_CLASS, STUDENT_SHELL_GUTTER_CLASS } from "@/features/student/components/student-page-container"
+import { createUsersApi } from "@/lib/api/users"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -31,6 +32,10 @@ function getInitials(name: string): string {
   return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase()
 }
 
+function firstToken(value: string | null | undefined): string {
+  return value?.trim().split(/\s+/)[0] ?? ""
+}
+
 type StudentAppHeaderProps = {
   breadcrumbTail?: StudentBreadcrumb[]
   onOpenMobileNav: () => void
@@ -50,8 +55,10 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
       ? "Premium"
       : "Free"
   const [email, setEmail] = useState<string | null>(null)
+  const [profileFirstName, setProfileFirstName] = useState("")
   const [openProfileMenu, setOpenProfileMenu] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement | null>(null)
+  const dashboardActive = isDashboardActive(pathname)
 
   const crumbs = useMemo(
     () => [...getStudentBreadcrumbs(pathname, search), ...breadcrumbTail],
@@ -60,11 +67,22 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
 
   useEffect(() => {
     let mounted = true
-    const supabase = getSupabaseBrowserClient()
-    void supabase.auth.getUser().then(({ data }) => {
-      if (!mounted) return
-      setEmail(data.user?.email ?? null)
-    })
+    try {
+      const supabase = getSupabaseBrowserClient()
+      void supabase.auth.getUser().then(({ data }) => {
+        if (!mounted) return
+        setEmail(data.user?.email ?? null)
+      })
+      void createUsersApi(supabase)
+        .getMyProfile()
+        .then((profile) => {
+          if (!mounted) return
+          setProfileFirstName(firstToken(profile?.first_name) || firstToken(profile?.full_name))
+        })
+        .catch(() => undefined)
+    } catch {
+      // Missing Supabase env (e.g. isolated guest preview).
+    }
     return () => {
       mounted = false
     }
@@ -93,6 +111,7 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
   const displayName = useMemo(() => getDisplayName(email), [email])
   const initials = useMemo(() => getInitials(displayName), [displayName])
   const lastCrumbIndex = crumbs.length - 1
+  const welcomeName = profileFirstName || (email ? firstToken(displayName) : "") || "there"
 
   return (
     <header className="student-topbar sticky top-0 z-30 w-full shrink-0 border-b border-[color:var(--greyscale-100)] bg-[var(--primary-0)]">
@@ -108,47 +127,56 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
             <Menu className="size-5" />
           </button>
 
-          <nav aria-label="Breadcrumb" className="student-topbar-breadcrumbs min-w-0">
-            <ol className="flex flex-wrap items-center gap-1">
-              {crumbs.map((crumb, index) => {
-                const isLast = index === lastCrumbIndex
-                const href = crumb.href
-                return (
-                  <Fragment key={`${crumb.label}-${index}`}>
-                    {index > 0 ? (
-                      <li aria-hidden className="text-xs font-semibold tracking-[0.24px] text-[#666d80]">
-                        /
+          {dashboardActive ? (
+            <p
+              aria-current="page"
+              className="student-topbar-breadcrumbs min-w-0 truncate font-medium text-[#0d47a1]"
+            >
+              Welcome back {welcomeName}
+            </p>
+          ) : (
+            <nav aria-label="Breadcrumb" className="student-topbar-breadcrumbs min-w-0">
+              <ol className="flex flex-wrap items-center gap-1">
+                {crumbs.map((crumb, index) => {
+                  const isLast = index === lastCrumbIndex
+                  const href = crumb.href
+                  return (
+                    <Fragment key={`${crumb.label}-${index}`}>
+                      {index > 0 ? (
+                        <li aria-hidden className="text-xs font-semibold tracking-[0.24px] text-[#666d80]">
+                          /
+                        </li>
+                      ) : null}
+                      <li>
+                        {isLast || !href ? (
+                          <span
+                            aria-current={isLast ? "page" : undefined}
+                            className={cn(
+                              isLast ? "font-medium text-[#0d47a1]" : "font-normal text-[#666d80]",
+                            )}
+                          >
+                            {crumb.label}
+                          </span>
+                        ) : (
+                          <Link
+                            to={href}
+                            className="font-normal text-[#666d80] hover:text-[#0d47a1]"
+                            onClick={(event) => {
+                              if (!shouldForceParentNav(pathname, href)) return
+                              event.preventDefault()
+                              navigate(href)
+                            }}
+                          >
+                            {crumb.label}
+                          </Link>
+                        )}
                       </li>
-                    ) : null}
-                    <li>
-                      {isLast || !href ? (
-                        <span
-                          aria-current={isLast ? "page" : undefined}
-                          className={cn(
-                            isLast ? "font-medium text-[#0d47a1]" : "font-normal text-[#666d80]",
-                          )}
-                        >
-                          {crumb.label}
-                        </span>
-                      ) : (
-                        <Link
-                          to={href}
-                          className="font-normal text-[#666d80] hover:text-[#0d47a1]"
-                          onClick={(event) => {
-                            if (!shouldForceParentNav(pathname, href)) return
-                            event.preventDefault()
-                            navigate(href)
-                          }}
-                        >
-                          {crumb.label}
-                        </Link>
-                      )}
-                    </li>
-                  </Fragment>
-                )
-              })}
-            </ol>
-          </nav>
+                    </Fragment>
+                  )
+                })}
+              </ol>
+            </nav>
+          )}
         </div>
 
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
