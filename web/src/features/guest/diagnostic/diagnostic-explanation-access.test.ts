@@ -47,18 +47,24 @@ describe("canShowDiagnosticResultDetails", () => {
     ).toBe(true)
   })
 
-  it("unlocks only the first 10 Full rows for free students", () => {
+  it("unlocks only the first 5 Mini rows and first 10 Full rows for free students", () => {
+    expect(
+      canShowDiagnosticResultDetails({ intentId: "mini", questionNumber: 5, hasActiveCore: false }),
+    ).toBe(true)
+    expect(
+      canShowDiagnosticResultDetails({ intentId: "mini", questionNumber: 6, hasActiveCore: false }),
+    ).toBe(false)
     expect(
       canShowDiagnosticResultDetails({ intentId: "quick", questionNumber: 10, hasActiveCore: false }),
     ).toBe(true)
     expect(
       canShowDiagnosticResultDetails({ intentId: "quick", questionNumber: 11, hasActiveCore: false }),
     ).toBe(false)
-  })
-
-  it("keeps every Mini results row locked for free students", () => {
     expect(
-      canShowDiagnosticResultDetails({ intentId: "mini", questionNumber: 1, hasActiveCore: false }),
+      canShowDiagnosticResultDetails({ intentId: "full", questionNumber: 10, hasActiveCore: false }),
+    ).toBe(true)
+    expect(
+      canShowDiagnosticResultDetails({ intentId: "full", questionNumber: 11, hasActiveCore: false }),
     ).toBe(false)
   })
 })
