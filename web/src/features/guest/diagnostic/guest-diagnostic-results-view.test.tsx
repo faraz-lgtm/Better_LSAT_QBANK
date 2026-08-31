@@ -50,3 +50,23 @@ describe("GuestDiagnosticResultsView Full teaser", () => {
     expect(screen.getAllByText(/Target time:/).length).toBeGreaterThan(10)
   })
 })
+
+describe("GuestDiagnosticResultsView Mini teaser", () => {
+  it("unlocks the first 5 Mini rows and blurs question 6 for free students", () => {
+    subscription.hasActiveCore = false
+    const result = buildDefaultGuestDiagnosticResult("mini")
+    render(
+      <MemoryRouter>
+        <GuestDiagnosticResultsView result={result} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText(/Mini Diagnostic · Q5/)).toBeInTheDocument()
+    expect(screen.getAllByText(/Target time:/)).toHaveLength(5)
+    expect(screen.getAllByText(/Your time:/)).toHaveLength(5)
+    expect(screen.getAllByText(/Answer popularity/i)).toHaveLength(5)
+    const locked = screen.getByText(/Mini Diagnostic · Q6/)
+    expect(locked.closest("[class*='blur']")).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Upgrade to unlock full access" })).toBeInTheDocument()
+  })
+})

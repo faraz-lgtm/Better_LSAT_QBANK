@@ -152,6 +152,7 @@ describe("LrDrillOptionRow", () => {
       />,
     )
 
+    expect(container.firstElementChild).toHaveClass("bg-[#fdfac4]", "relative")
     expect(container.firstChild).toHaveClass("bg-[#fdfac4]", "relative")
     expect(container.firstElementChild?.firstElementChild).toHaveClass("w-[3px]", "absolute", "left-0", "bg-[#12162a]")
     const letter = screen.getByText("C")
