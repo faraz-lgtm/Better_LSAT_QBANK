@@ -24,7 +24,7 @@ describe("StudentAppSidebar", () => {
     expect(screen.queryByRole("button", { name: /Diagnostic Results/i })).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Prep Courses" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Explanations" })).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Blind Review" })).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "Blind Review" })).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument()
   })
 
