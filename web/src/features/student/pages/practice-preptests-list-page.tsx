@@ -17,7 +17,7 @@ import {
   firstBlindReviewSectionSessionId,
 } from "@/features/student/blind-review/blind-review-navigation"
 import { prepTestHubHref } from "@/features/student/preptests/preptest-hub-navigation"
-import { buildPoolHistoryRows, poolCardDisplayScore } from "@/features/student/preptests/preptest-pool-display"
+import { buildPoolHistoryRows, filterPrepTestPoolItems, poolCardDisplayScore } from "@/features/student/preptests/preptest-pool-display"
 import { AttemptScoreBox, ScoreBadge } from "@/features/student/preptests/preptest-score-badge"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -40,8 +40,8 @@ const EMPTY_STATUS_COUNTS: PrepTestPoolStatusCounts = {
 }
 
 const FILTER_TABS: { id: PrepTestPoolFilter; label: string }[] = [
-  { id: "all", label: "All Test" },
-  { id: "in_progress", label: "In Progress" },
+  { id: "all", label: "All Tests" },
+  { id: "in_progress", label: "In Process" },
   { id: "fresh", label: "Fresh" },
   { id: "completed", label: "Completed" },
   { id: "blind_review", label: "Blind Review" },
@@ -127,7 +127,7 @@ function statusSubtitle(item: PrepTestPoolItem): string {
   if (item.status === "completed" && item.scaledScore != null) {
     return `Scaled score ${item.scaledScore}`
   }
-  return `${item.questionCount} questions · ${item.timeMinutes} min`
+  return ""
 }
 
 function PtBadge({ number, tone }: { number: number; tone: BadgeTone }) {
@@ -203,14 +203,16 @@ function PrepTestListCardShell({
           <PtBadge number={ptNumber} tone={badgeTone} />
           <div className="flex min-w-0 flex-col gap-2">
             <p className={cn("truncate text-[24px] font-bold leading-[1.3]", titleClass)}>{title}</p>
-            <p
-              className={cn(
-                "truncate text-[14px] leading-[1.5] tracking-[0.28px] text-[#666d80]",
-                subtitleClass,
-              )}
-            >
-              {subtitle}
-            </p>
+            {subtitle ? (
+              <p
+                className={cn(
+                  "truncate text-[14px] leading-[1.5] tracking-[0.28px] text-[#666d80]",
+                  subtitleClass,
+                )}
+              >
+                {subtitle}
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -412,7 +414,8 @@ function PracticePrepTestsListPage() {
     }
   }, [practiceApi, filter, sort, page])
 
-  const hasMore = prepTests.length < total
+  const visiblePrepTests = useMemo(() => filterPrepTestPoolItems(prepTests, filter), [prepTests, filter])
+  const hasMore = visiblePrepTests.length < total
 
   function filterTabLabel(tabId: PrepTestPoolFilter): string {
     const base = FILTER_TABS.find((t) => t.id === tabId)?.label ?? tabId
@@ -526,12 +529,12 @@ function PracticePrepTestsListPage() {
         </p>
       ) : null}
 
-      {prepTests.length === 0 ? (
+      {visiblePrepTests.length === 0 ? (
         <p className="text-sm text-[#666d80]">No PrepTests match this filter.</p>
       ) : (
         <>
           <div className="flex flex-col gap-6">
-            {prepTests.map((item) => (
+            {visiblePrepTests.map((item) => (
               <PrepTestListCard
                 key={item.id}
                 item={item}

@@ -1234,6 +1234,39 @@ Deno.test('startPrepTest rejects pre-PT100 tests', async () => {
   )
 })
 
+Deno.test('listPrepTestPool in_progress filter keeps paused takes and excludes blind review', async () => {
+  const pausedTimed = baseSession({
+    id: 'pt-sess-paused',
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-901',
+    completed_at: null,
+  })
+  const awaitingBr = baseSession({
+    id: 'pt-sess-done',
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-900',
+    completed_at: '2026-01-03T00:00:00Z',
+    scaled_score: 162,
+    metadata: { blindReviewActive: true },
+  })
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserSessionsForPrepTests: async () => [pausedTimed, awaitingBr],
+      listUserSessionsForPrepTest: async () => [pausedTimed, awaitingBr],
+    }) as never,
+  })
+
+  const inProcess = await service.listPrepTestPool('user-1', { filter: 'in_progress' })
+  assertEquals(inProcess.prepTests.map((p) => p.id), ['pt-901'])
+  assertEquals(inProcess.prepTests[0]!.blindReviewStatus, null)
+  assertEquals(inProcess.statusCounts.in_progress, 1)
+  assertEquals(inProcess.statusCounts.blind_review, 1)
+
+  const blindReview = await service.listPrepTestPool('user-1', { filter: 'blind_review' })
+  assertEquals(blindReview.prepTests.map((p) => p.id), ['pt-900'])
+  assertEquals(blindReview.prepTests[0]!.blindReviewStatus, 'in_progress')
+})
+
 Deno.test('listPrepTestPool prefers awaiting blind review over a newer open prep test session', async () => {
   const completedAwaitingBr = baseSession({
     id: 'pt-sess-done',
@@ -1272,6 +1305,11 @@ Deno.test('listPrepTestPool prefers awaiting blind review over a newer open prep
   assertEquals(row?.status, 'in_progress')
   assertEquals(row?.blindReviewStatus, 'in_progress')
   assertEquals(row?.scaledScore, 162)
+
+  const inProcess = await service.listPrepTestPool('user-1', { filter: 'in_progress' })
+  assertEquals(inProcess.prepTests.find((p) => p.id === 'pt-900'), undefined)
+  assertEquals(inProcess.statusCounts.in_progress, 0)
+  assertEquals(inProcess.statusCounts.blind_review, 1)
 })
 
 Deno.test('listPrepTestPool blind_review filter returns only tests awaiting blind review', async () => {
@@ -1366,7 +1404,8 @@ Deno.test('listPrepTestPool paginates and uses batch sessions query', async () =
   assertEquals(page1.total, 2)
   assertEquals(page1.prepTests.length, 1)
   assertEquals(page1.prepTests[0]!.id, 'pt-901')
-  assertEquals(page1.statusCounts.in_progress, 1)
+  assertEquals(page1.statusCounts.in_progress, 0)
+  assertEquals(page1.statusCounts.blind_review, 1)
   assertEquals(page1.statusCounts.fresh, 1)
 
   const page2 = await service.listPrepTestPool('user-1', { page: 2, pageSize: 1, sort: 'newest' })

@@ -1126,6 +1126,20 @@ function prepTestNumberSortValue(item: PrepTestPoolItem): number {
   return fromModule ? Number.parseInt(fromModule, 10) : 0
 }
 
+/** Paused / in-progress take — not the Blind Review stage. */
+function isPrepTestPoolInProcess(item: PrepTestPoolItem): boolean {
+  return item.status === 'in_progress' && item.blindReviewStatus == null
+}
+
+function matchesPrepTestPoolFilter(
+  item: PrepTestPoolItem,
+  filter: 'fresh' | 'in_progress' | 'completed' | 'blind_review',
+): boolean {
+  if (filter === 'blind_review') return item.blindReviewStatus != null
+  if (filter === 'in_progress') return isPrepTestPoolInProcess(item)
+  return item.status === filter
+}
+
 function blindReviewPoolSortValue(item: BlindReviewPoolItem): number {
   const n = item.prepTestNumber ? Number.parseInt(item.prepTestNumber, 10) : NaN
   if (Number.isFinite(n)) return n
@@ -2180,17 +2194,12 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const statusCounts: PrepTestPoolStatusCounts = {
         all: items.length,
         fresh: items.filter((i) => i.status === 'fresh').length,
-        in_progress: items.filter((i) => i.status === 'in_progress').length,
+        in_progress: items.filter(isPrepTestPoolInProcess).length,
         completed: items.filter((i) => i.status === 'completed').length,
         blind_review: items.filter((i) => i.blindReviewStatus != null).length,
       }
 
-      const filtered =
-        filter === 'blind_review'
-          ? items.filter((i) => i.blindReviewStatus != null)
-          : filter
-            ? items.filter((i) => i.status === filter)
-            : items
+      const filtered = filter ? items.filter((i) => matchesPrepTestPoolFilter(i, filter)) : items
       const sorted = [...filtered].sort((a, b) => {
         const diff = prepTestNumberSortValue(a) - prepTestNumberSortValue(b)
         return sort === 'newest' ? -diff : diff

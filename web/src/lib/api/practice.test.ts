@@ -280,6 +280,55 @@ describe("createPracticeApi", () => {
     })
   })
 
+  it("listPrepTestPool drops Blind Review tests from an in_progress response", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        prepTests: [
+          {
+            id: "pt-158",
+            moduleId: "LSAC158",
+            title: "PT 158",
+            prepTestNumber: "158",
+            questionCount: 103,
+            sectionCount: 4,
+            practiceableSectionCount: 4,
+            timeMinutes: 140,
+            status: "in_progress",
+            scaledScore: null,
+            blindReviewStatus: null,
+            openPrepTestSessionId: "open-1",
+          },
+          {
+            id: "pt-154",
+            moduleId: "LSAC154",
+            title: "PT 154",
+            prepTestNumber: "154",
+            questionCount: 103,
+            sectionCount: 4,
+            practiceableSectionCount: 4,
+            timeMinutes: 140,
+            status: "in_progress",
+            scaledScore: null,
+            blindReviewStatus: "in_progress",
+            openPrepTestSessionId: "br-1",
+          },
+        ],
+        total: 9,
+        page: 1,
+        pageSize: 5,
+        statusCounts: { all: 58, fresh: 36, in_progress: 9, completed: 13, blind_review: 6 },
+      },
+      error: null,
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+
+    const out = await api.listPrepTestPool({ filter: "in_progress" })
+
+    expect(out.prepTests.map((pt) => pt.id)).toEqual(["pt-158"])
+    expect(out.statusCounts.in_progress).toBe(3)
+    expect(out.total).toBe(3)
+  })
+
   it("getPrepTestDetail surfaces edge function error messages", async () => {
     const invoke = vi.fn().mockResolvedValue({
       data: null,
