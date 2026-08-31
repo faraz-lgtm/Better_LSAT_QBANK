@@ -23,6 +23,12 @@ import {
   mapTrajectoryToScoreProgress,
 } from "@/features/student/analytics/map-analytics"
 import {
+  filterBookmarkedOnly,
+  persistSessionBookmark,
+  sessionBookmarkState,
+  withSessionBookmark,
+} from "@/features/student/analytics/session-bookmarks"
+import {
   matchesAnalyticsSectionFilter,
   type AnalyticsSectionFilter,
 } from "@/features/student/analytics/section-filter"
@@ -49,14 +55,6 @@ function formatShortDate(iso: string): string {
   } catch {
     return iso
   }
-}
-
-function filterHistoryByBookmark(
-  entries: PrepTestHistoryEntry[],
-  bookmarkedOnly: boolean,
-): PrepTestHistoryEntry[] {
-  if (!bookmarkedOnly) return entries
-  return entries.filter((e) => e.bookmarked)
 }
 
 function filterHistoryBySection(
@@ -288,7 +286,7 @@ function OverviewTab() {
 
   const visibleDrillHistory = useMemo(
     () =>
-      filterHistoryByBookmark(
+      filterBookmarkedOnly(
         filterHistoryBySection(drillHistory, drillSectionFilter),
         drillBookmarkedOnly,
       ),
@@ -296,38 +294,32 @@ function OverviewTab() {
   )
   const visibleSectionHistory = useMemo(
     () =>
-      filterHistoryByBookmark(
+      filterBookmarkedOnly(
         filterHistoryBySection(sectionHistory, sectionSectionFilter),
         sectionBookmarkedOnly,
       ),
     [sectionBookmarkedOnly, sectionHistory, sectionSectionFilter],
   )
   const visiblePrepTestHistory = useMemo(
-    () => filterHistoryByBookmark(prepTestHistory, prepTestBookmarkedOnly),
+    () => filterBookmarkedOnly(prepTestHistory, prepTestBookmarkedOnly),
     [prepTestBookmarkedOnly, prepTestHistory],
   )
 
   const toggleHistoryBookmark = useCallback(
-    async (
+    (
       id: string,
       setEntries: Dispatch<SetStateAction<PrepTestHistoryEntry[]>>,
+      entries: PrepTestHistoryEntry[],
     ) => {
-      if (!practiceApi) return
-      let previous = false
-      setEntries((prev) =>
-        prev.map((entry) => {
-          if (entry.id !== id) return entry
-          previous = entry.bookmarked
-          return { ...entry, bookmarked: !entry.bookmarked }
-        }),
-      )
-      try {
-        await practiceApi.updateSession({ sessionId: id, bookmarked: !previous })
-      } catch {
-        setEntries((prev) =>
-          prev.map((entry) => (entry.id === id ? { ...entry, bookmarked: previous } : entry)),
-        )
-      }
+      const previous = sessionBookmarkState(entries, id)
+      const next = !previous
+      setEntries((prev) => withSessionBookmark(prev, id, next))
+      void persistSessionBookmark({
+        sessionId: id,
+        bookmarked: next,
+        practiceApi,
+        onFailure: () => setEntries((prev) => withSessionBookmark(prev, id, previous)),
+      })
     },
     [practiceApi],
   )
@@ -387,7 +379,7 @@ function OverviewTab() {
         onBookmarkedOnlyChange={setDrillBookmarkedOnly}
         sectionFilter={drillSectionFilter}
         onSectionFilterChange={setDrillSectionFilter}
-        onToggleBookmark={(id) => void toggleHistoryBookmark(id, setDrillHistory)}
+        onToggleBookmark={(id) => toggleHistoryBookmark(id, setDrillHistory, drillHistory)}
         onSelectEntry={(id) => navigate(practiceSessionResultsPath(id))}
       />
 
@@ -400,7 +392,7 @@ function OverviewTab() {
         onBookmarkedOnlyChange={setSectionBookmarkedOnly}
         sectionFilter={sectionSectionFilter}
         onSectionFilterChange={setSectionSectionFilter}
-        onToggleBookmark={(id) => void toggleHistoryBookmark(id, setSectionHistory)}
+        onToggleBookmark={(id) => toggleHistoryBookmark(id, setSectionHistory, sectionHistory)}
         onSelectEntry={(id) => navigate(practiceSessionResultsPath(id, { source: "section" }))}
       />
 
@@ -410,7 +402,7 @@ function OverviewTab() {
         visibleEntries={visiblePrepTestHistory}
         bookmarkedOnly={prepTestBookmarkedOnly}
         onBookmarkedOnlyChange={setPrepTestBookmarkedOnly}
-        onToggleBookmark={(id) => void toggleHistoryBookmark(id, setPrepTestHistory)}
+        onToggleBookmark={(id) => toggleHistoryBookmark(id, setPrepTestHistory, prepTestHistory)}
         onSelectEntry={(id) => navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)}
         onOpenPractice={(id) => navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)}
       />

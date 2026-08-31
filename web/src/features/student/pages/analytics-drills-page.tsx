@@ -33,6 +33,12 @@ import {
   mapSessionToDrillRecord,
 } from "@/features/student/analytics/map-analytics"
 import {
+  filterBookmarkedOnly,
+  persistSessionBookmark,
+  sessionBookmarkState,
+  withSessionBookmark,
+} from "@/features/student/analytics/session-bookmarks"
+import {
   analyticsSectionParamValue,
   matchesAnalyticsSectionFilter,
   parseAnalyticsSectionParam,
@@ -44,8 +50,6 @@ import {
 } from "@/features/student/analytics/chart-y-axis"
 import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
-
-const BOOKMARKS_STORAGE_KEY = "analytics:drills:bookmarks"
 
 const SCORE_TABS = [
   { id: "percent", label: "% Score" },
@@ -403,18 +407,6 @@ function HistorySortMenu({ value, onChange }: { value: HistorySort; onChange: (n
   )
 }
 
-function loadBookmarks(initial: Record<string, boolean>): Record<string, boolean> {
-  if (typeof window === "undefined") return initial
-  try {
-    const raw = window.localStorage.getItem(BOOKMARKS_STORAGE_KEY)
-    if (!raw) return initial
-    const parsed = JSON.parse(raw) as Record<string, boolean>
-    return { ...initial, ...parsed }
-  } catch {
-    return initial
-  }
-}
-
 function AnalyticsDrillsPage() {
   const navigate = useNavigate()
   const analyticsApi = useAnalyticsApi()
@@ -432,11 +424,6 @@ function AnalyticsDrillsPage() {
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
   const [historySort, setHistorySort] = useState<HistorySort>("date-desc")
-  const initialBookmarks = useMemo(
-    () => Object.fromEntries(drillHistory.map((entry) => [entry.id, entry.bookmarked])),
-    [drillHistory],
-  )
-  const [bookmarks, setBookmarks] = useState<Record<string, boolean>>(() => loadBookmarks(initialBookmarks))
 
   useEffect(() => {
     if (!analyticsApi) {
@@ -461,15 +448,6 @@ function AnalyticsDrillsPage() {
       })
       .finally(() => setLoading(false))
   }, [analyticsApi])
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    try {
-      window.localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(bookmarks))
-    } catch {
-      // ignore storage failures
-    }
-  }, [bookmarks])
 
   const typesForSection = useMemo(
     () =>
@@ -537,11 +515,8 @@ function AnalyticsDrillsPage() {
   )
 
   const entries = useMemo(
-    () =>
-      drillHistory
-        .filter((entry) => filteredIds.has(entry.id))
-        .map((entry) => ({ ...entry, bookmarked: bookmarks[entry.id] ?? entry.bookmarked })),
-    [bookmarks, drillHistory, filteredIds],
+    () => drillHistory.filter((entry) => filteredIds.has(entry.id)),
+    [drillHistory, filteredIds],
   )
 
   const sortedEntries = useMemo(() => {
@@ -563,19 +538,23 @@ function AnalyticsDrillsPage() {
   }, [entries, historySort])
 
   const visibleEntries = useMemo(
-    () => (bookmarkedOnly ? sortedEntries.filter((entry) => entry.bookmarked) : sortedEntries),
+    () => filterBookmarkedOnly(sortedEntries, bookmarkedOnly),
     [sortedEntries, bookmarkedOnly],
   )
 
   const handleToggleBookmark = useCallback(
     (id: string) => {
-      const next = !(bookmarks[id] ?? false)
-      setBookmarks((current) => ({ ...current, [id]: next }))
-      if (practiceApi) {
-        void practiceApi.updateSession({ sessionId: id, bookmarked: next })
-      }
+      const previous = sessionBookmarkState(drillHistory, id)
+      const next = !previous
+      setDrillHistory((current) => withSessionBookmark(current, id, next))
+      void persistSessionBookmark({
+        sessionId: id,
+        bookmarked: next,
+        practiceApi,
+        onFailure: () => setDrillHistory((current) => withSessionBookmark(current, id, previous)),
+      })
     },
-    [bookmarks, practiceApi],
+    [drillHistory, practiceApi],
   )
 
   const handleSelectEntry = useCallback(

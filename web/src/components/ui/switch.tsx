@@ -24,21 +24,21 @@ function Switch({ className, size, onChange, ...props }: SwitchProps) {
   const checked = Boolean(props.checked)
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
-    event.target.blur()
+    event.currentTarget.blur()
     onChange?.(event)
   }
 
   return (
     <label
-      className="inline-flex shrink-0 cursor-pointer items-center"
+      className="relative inline-flex shrink-0 cursor-pointer items-center"
       onMouseDown={(event) => event.preventDefault()}
     >
       <input
         type="checkbox"
         role="switch"
+        {...props}
         className="peer sr-only"
         onChange={handleChange}
-        {...props}
       />
       <span
         data-slot="switch"

@@ -3,6 +3,7 @@ import type { TimeRangeValue } from "@/features/student/components/time-range-fi
 import {
   getPrepTestHistoryEntries,
   mockPrepTestRecords,
+  sortPrepTestRecords,
   type PrepTestHistoryEntry,
 } from "@/features/student/lib/mock-analytics-preptests"
 
@@ -209,4 +210,6 @@ export const mockDrillScoreProgress: DrillScoreProgressPoint[] = getDrillProgres
  * PrepTest history shown on every analytics page. Derived from the
  * canonical PrepTest records so all three pages stay in sync.
  */
-export const mockPrepTestHistory: PrepTestHistoryEntry[] = getPrepTestHistoryEntries(mockPrepTestRecords)
+export const mockPrepTestHistory: PrepTestHistoryEntry[] = getPrepTestHistoryEntries(
+  sortPrepTestRecords(mockPrepTestRecords, "date-desc"),
+)

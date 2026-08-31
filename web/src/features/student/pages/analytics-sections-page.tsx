@@ -15,6 +15,12 @@ import type { SectionProgressPoint, SectionSummary } from "@/features/student/li
 import { mapSectionSessionToHistoryEntry } from "@/features/student/analytics/map-analytics"
 import { practiceSessionResultsPath } from "@/features/student/analytics/analytics-results-paths"
 import {
+  filterBookmarkedOnly,
+  persistSessionBookmark,
+  sessionBookmarkState,
+  withSessionBookmark,
+} from "@/features/student/analytics/session-bookmarks"
+import {
   matchesAnalyticsSectionFilter,
   parseAnalyticsSectionParam,
   type AnalyticsSectionFilter,
@@ -306,7 +312,6 @@ function AnalyticsSectionsPage() {
   const [lrScoreTab, setLrScoreTab] = useState<SectionScoreTab>("ptEquivalent")
   const [rcScoreTab, setRcScoreTab] = useState<SectionScoreTab>("ptEquivalent")
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
-  const [bookmarks, setBookmarks] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     if (!analyticsApi) {
@@ -322,9 +327,6 @@ function AnalyticsSectionsPage() {
           sections.sessions
             .map(mapSectionSessionToHistoryEntry)
             .filter((e): e is PrepTestHistoryEntry => e != null),
-        )
-        setBookmarks(
-          Object.fromEntries(sections.sessions.map((s) => [s.id, s.bookmarked])),
         )
       })
       .finally(() => setLoading(false))
@@ -382,23 +384,25 @@ function AnalyticsSectionsPage() {
 
   const entries = useMemo(
     () =>
-      sectionHistory
-        .filter((entry) => matchesAnalyticsSectionFilter(entry.sectionType, sectionFilter))
-        .map((entry) => ({ ...entry, bookmarked: bookmarks[entry.id] ?? entry.bookmarked })),
-    [bookmarks, sectionFilter, sectionHistory],
+      sectionHistory.filter((entry) => matchesAnalyticsSectionFilter(entry.sectionType, sectionFilter)),
+    [sectionFilter, sectionHistory],
   )
 
   const visibleEntries = useMemo(() => {
     const ranged = takeLastByTimeRange(entries, timeRange)
-    return bookmarkedOnly ? ranged.filter((entry) => entry.bookmarked) : ranged
+    return filterBookmarkedOnly(ranged, bookmarkedOnly)
   }, [entries, bookmarkedOnly, timeRange])
 
   function handleToggleBookmark(id: string) {
-    const next = !(bookmarks[id] ?? false)
-    setBookmarks((current) => ({ ...current, [id]: next }))
-    if (practiceApi) {
-      void practiceApi.updateSession({ sessionId: id, bookmarked: next })
-    }
+    const previous = sessionBookmarkState(sectionHistory, id)
+    const next = !previous
+    setSectionHistory((current) => withSessionBookmark(current, id, next))
+    void persistSessionBookmark({
+      sessionId: id,
+      bookmarked: next,
+      practiceApi,
+      onFailure: () => setSectionHistory((current) => withSessionBookmark(current, id, previous)),
+    })
   }
 
   if (loading) {
