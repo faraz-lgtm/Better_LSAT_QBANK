@@ -122,16 +122,6 @@ export function mapOverviewToPerformance(overview: AnalyticsOverview): Dashboard
         value: formatMissedAverage(overview.averageRcMissedPerPrepTest),
         valueClassName: "text-[#0bbcc9]",
       },
-      {
-        id: "questions-drilled",
-        label: "Questions Drilled",
-        value: String(overview.totalDrillQuestionsAnswered),
-      },
-      {
-        id: "drilled-accuracy",
-        label: "Drilled Accuracy",
-        value: overview.drillAccuracyPct != null ? `${overview.drillAccuracyPct}%` : "—",
-      },
     ],
   }
 }

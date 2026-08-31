@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react"
-import { Calendar, Check } from "lucide-react"
+import { Check } from "lucide-react"
 
 import {
   LSAC_OFFICIAL_TEST_WINDOWS,
@@ -97,24 +97,13 @@ function TestDayCountdownCard({
         <div className="test-day-countdown__date-bar">
           <span className="test-day-countdown__date-label">Test Date</span>
           <div ref={controlsRef} className="test-day-countdown__date-controls">
-            <button
-              type="button"
-              onClick={openDatePicker}
-              disabled={savingTestDate}
-              className="test-day-countdown__date-chip"
-              aria-label="Choose test date"
-              aria-expanded={pickerOpen}
-              aria-haspopup="listbox"
-              aria-controls={pickerOpen ? listboxId : undefined}
-            >
-              <span>{testDateLabel}</span>
-              <Calendar className="size-4 shrink-0 text-[#666d80]" strokeWidth={1.75} aria-hidden />
-            </button>
+            <span className="test-day-countdown__date-chip">{testDateLabel}</span>
             <button
               type="button"
               onClick={openDatePicker}
               disabled={savingTestDate}
               className="test-day-countdown__edit"
+              aria-label="Choose test date"
               aria-expanded={pickerOpen}
               aria-haspopup="listbox"
               aria-controls={pickerOpen ? listboxId : undefined}

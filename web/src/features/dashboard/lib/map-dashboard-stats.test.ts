@@ -56,8 +56,7 @@ describe("map-dashboard-stats", () => {
     expect(performance.metrics.find((m) => m.id === "percentile")).toBeUndefined()
     expect(performance.metrics.find((m) => m.id === "avg-lr")?.value).toBe("-5")
     expect(performance.metrics.find((m) => m.id === "avg-rc")?.value).toBe("-3")
-    expect(performance.metrics.find((m) => m.id === "questions-drilled")?.value).toBe("200")
-    expect(performance.metrics.find((m) => m.id === "drilled-accuracy")?.value).toBe("78%")
+    expect(performance.metrics).toHaveLength(4)
   })
 
   it("computes days until a planned test date", () => {
