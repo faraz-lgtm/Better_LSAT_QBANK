@@ -172,6 +172,40 @@ describe("map-analytics", () => {
       bookmarked: true,
     })
 
+    const titled = mapDrillSessionToHistoryEntry({
+      id: "d2",
+      kind: "DRILL",
+      startedAt: "2026-01-01T00:00:00Z",
+      completedAt: "2026-01-02T00:00:00Z",
+      rawScore: 1,
+      scaledScore: null,
+      percentile: null,
+      bookmarked: false,
+      excluded: false,
+      metadata: { title: "Main Conclusion", questionIds: ["a"] },
+      prepTestTitle: null,
+      sectionTitle: null,
+      sectionType: null,
+    })
+    expect(titled?.testLabel).toBe("Main Conclusion")
+
+    const mixed = mapDrillSessionToHistoryEntry({
+      id: "d3",
+      kind: "DRILL",
+      startedAt: "2026-01-01T00:00:00Z",
+      completedAt: "2026-01-02T00:00:00Z",
+      rawScore: 0,
+      scaledScore: null,
+      percentile: null,
+      bookmarked: false,
+      excluded: false,
+      metadata: { sectionType: "LR", questionIds: ["a", "b"] },
+      prepTestTitle: null,
+      sectionTitle: null,
+      sectionType: null,
+    })
+    expect(mixed?.testLabel).toBe("Varied Mix")
+
     const section = mapSectionSessionToHistoryEntry({
       id: "sec1",
       kind: "SECTION",

@@ -310,21 +310,23 @@ function questionCountFromSession(s: PracticeSessionSummary, correct: number): n
   return Math.max(correct, 1)
 }
 
+/** Prefer stored type/title fields; untyped pool drills show as Varied Mix. */
+export function formatDrillHistoryLabel(metadata: Record<string, unknown>): string {
+  for (const key of ["questionTypeName", "tagLabel", "title"] as const) {
+    const value = metadata[key]
+    if (typeof value === "string" && value.trim()) return value.trim()
+  }
+  return "Varied Mix"
+}
+
 /** Completed drill → shared history-row shape (raw correct / total). */
 export function mapDrillSessionToHistoryEntry(s: PracticeSessionSummary): PrepTestHistoryEntry | null {
   if (s.kind !== "DRILL" || !s.completedAt) return null
   const correct = s.rawScore ?? 0
   const total = questionCountFromSession(s, correct)
-  const typeName =
-    typeof s.metadata.questionTypeName === "string" ? s.metadata.questionTypeName.trim() : ""
-  const testLabel =
-    typeName ||
-    (s.sectionType ? `${s.sectionType} Drill` : null) ||
-    s.sectionTitle?.trim() ||
-    "Drill"
   return {
     id: s.id,
-    testLabel,
+    testLabel: formatDrillHistoryLabel(s.metadata),
     dateLabel: formatSessionHistoryDate(s.completedAt),
     bookmarked: s.bookmarked,
     score: correct,

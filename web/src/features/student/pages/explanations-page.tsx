@@ -885,9 +885,9 @@ function ExplanationsPage() {
                                               <QuestionIndexBadge>{q.number}</QuestionIndexBadge>
                                               <Link
                                                 to={detailHref}
-                                                className="block w-[500px] max-w-[500px] min-w-0 shrink truncate rounded-lg text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
+                                                className="block min-w-0 shrink truncate rounded-lg text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
                                               >
-                                                {q.code}
+                                                {`Q${q.number}`}
                                               </Link>
                                               <div className="shrink-0 px-4">
                                                 <StatusBadge status={q.status} />
@@ -930,8 +930,8 @@ function ExplanationsPage() {
                                                   }
                                                   aria-label={
                                                     bookmarkedQuestionIds.has(q.id)
-                                                      ? `Remove bookmark from ${q.code}`
-                                                      : `Bookmark ${q.code}`
+                                                      ? `Remove bookmark from Q${q.number}`
+                                                      : `Bookmark Q${q.number}`
                                                   }
                                                   aria-pressed={bookmarkedQuestionIds.has(q.id)}
                                                   onClick={() => void toggleQuestionBookmark(ptId, q.id)}

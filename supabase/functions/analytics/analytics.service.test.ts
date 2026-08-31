@@ -730,6 +730,42 @@ Deno.test('getSessions maps practice session list row', async () => {
   assertEquals(out.sessions[0]?.bookmarked, true)
 })
 
+Deno.test('getSessions enriches drill metadata with questionTypeName', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listSessions: async () => [
+        sessionListRow({
+          kind: 'DRILL',
+          prep_test_id: null,
+          admin_prep_tests: null,
+          admin_sections: null,
+          metadata: {
+            sectionType: 'LR',
+            questionTypeId: 't-high',
+            questionIds: ['q1'],
+          },
+        }),
+      ],
+      countSessions: async () => 1,
+      listQuestionTypesByIds: async () => [
+        {
+          id: 't-high',
+          name: 'Main Conclusion',
+          section_type: 'LR',
+          goal_accuracy: 86,
+          avg_per_test: 5,
+        },
+      ],
+    }),
+  })
+  const out = await service.getSessions('user-1', {
+    kind: 'DRILL',
+    limit: 20,
+    offset: 0,
+  })
+  assertEquals(out.sessions[0]?.metadata.questionTypeName, 'Main Conclusion')
+})
+
 Deno.test('getSessions passes filters to repository', async () => {
   const captured: {
     list: {
