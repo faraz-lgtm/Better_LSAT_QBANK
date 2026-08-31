@@ -17,11 +17,10 @@ describe("student-nav-config", () => {
     expect(getStudentPageTitle("/app/practice/drills")).toBe("Drills")
   })
 
-  it("maps academy explanations with foundation trail", () => {
+  it("maps academy explanations breadcrumbs", () => {
     expect(getActiveSectionKey("/app/prep-course/foo")).toBe("academy")
     expect(getStudentBreadcrumbs("/app/learn/explanations")).toEqual([
       { label: "Academy", href: "/app/prep-course" },
-      { label: "Foundation" },
       { label: "Explanations" },
     ])
     expect(getStudentPageTitle("/app/learn/explanations")).toBe("Explanations")
@@ -30,7 +29,7 @@ describe("student-nav-config", () => {
   it("builds prep course content breadcrumbs", () => {
     expect(getStudentBreadcrumbs("/app/prep-course/prep-course")).toEqual([
       { label: "Academy", href: "/app/prep-course" },
-      { label: "Prep Course", href: "/app/prep-course" },
+      { label: "Prep Courses", href: "/app/prep-course" },
       { label: "Course Content" },
     ])
     expect(getStudentPageTitle("/app/prep-course/prep-course")).toBeNull()

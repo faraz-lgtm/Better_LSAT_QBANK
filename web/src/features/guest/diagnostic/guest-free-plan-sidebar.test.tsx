@@ -29,8 +29,8 @@ describe("GuestFreePlanSidebar", () => {
     expect(screen.getByRole("link", { name: "Diagnostic" })).toHaveAttribute("href", "/intent")
     expect(screen.getByRole("button", { name: /Diagnostic Results/i })).toBeInTheDocument()
 
-    expect(screen.getByRole("button", { name: "Prep Course" })).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Prep Course (locked)" })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Prep Courses" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Prep Courses (locked)" })).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Explanations (locked)" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Blind Review (locked)" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Analytics (locked)" })).toBeInTheDocument()
@@ -70,7 +70,7 @@ describe("GuestFreePlanSidebar", () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole("button", { name: "Prep Course" }))
+    await user.click(screen.getByRole("button", { name: "Prep Courses" }))
     expect(screen.getByRole("link", { name: "LSAT Essential Course" })).toHaveAttribute(
       "href",
       "/app/prep-course/betterlsat-core-syllabus-structure-content",
@@ -112,6 +112,6 @@ describe("GuestFreePlanSidebar", () => {
 
     await user.click(screen.getByRole("button", { name: "Collapse sidebar" }))
     expect(container.querySelector(".student-sidebar")).toHaveClass("student-sidebar--collapsed")
-    expect(screen.getByRole("button", { name: "Prep Course" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Prep Courses" })).toBeInTheDocument()
   })
 })

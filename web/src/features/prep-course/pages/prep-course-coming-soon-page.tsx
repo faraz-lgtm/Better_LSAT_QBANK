@@ -14,7 +14,7 @@ function PrepCourseComingSoonPage() {
 
   return (
     <StudentMain contentClassName="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
-      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#0d47a1]">Prep Course</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#0d47a1]">Prep Courses</p>
       <h1 className="student-page-heading mt-2">{title}</h1>
       <p className="mt-3 max-w-md text-sm leading-6 text-[#666d80]">
         This course is coming soon. Check back later, or continue with LSAT Essential Course.
