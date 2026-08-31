@@ -69,7 +69,7 @@ export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
     key: "academy",
     label: "ACADEMY",
     items: [
-      { label: "Prep Course", href: "/app/prep-course", icon: "prep-course" },
+      { label: "Prep Courses", href: "/app/prep-course", icon: "prep-course" },
       { label: "Explanations", href: "/app/learn/explanations", icon: "explanations" },
     ],
   },
@@ -222,12 +222,6 @@ export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBre
     return crumbs
   }
 
-  if (pathname.startsWith("/app/learn/explanations")) {
-    crumbs.push({ label: "Foundation" })
-    crumbs.push({ label: "Explanations" })
-    return crumbs
-  }
-
   if (pathname === "/app/practice/drills/lr/new") {
     crumbs.push({ label: "Drills", href: "/app/practice/drills" })
     crumbs.push({ label: "LR Drills" })
@@ -252,7 +246,7 @@ export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBre
   }
 
   if (pathname.startsWith("/app/prep-course/") && pathname !== "/app/prep-course") {
-    crumbs.push({ label: "Prep Course", href: "/app/prep-course" })
+    crumbs.push({ label: "Prep Courses", href: "/app/prep-course" })
     crumbs.push({ label: "Course Content" })
     return crumbs
   }
@@ -274,7 +268,7 @@ export function getStudentPageTitle(pathname: string, search = ""): string | nul
   if (pathname === "/app/account") return "Account"
   if (isPrepTestHubDetailPath(pathname)) return null
   if (pathname.startsWith("/app/prep-course/") && pathname !== "/app/prep-course") return null
-  if (pathname.startsWith("/app/prep-course")) return "Prep Course"
+  if (pathname.startsWith("/app/prep-course")) return "Prep Courses"
   if (pathname.startsWith("/app/learn")) return "Explanations"
   if (pathname.startsWith("/app/analytics/preptests/results/")) return null
   if (pathname === "/app/practice/drills/lr/new" || pathname === "/app/practice/drills/rc/new") return null
