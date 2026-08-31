@@ -1684,8 +1684,11 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const selection = typeof body.selection === 'string' ? body.selection : 'auto'
       const questionTypeId =
         typeof body.questionTypeId === 'string' && body.questionTypeId ? body.questionTypeId : null
-      const tagLabel = typeof body.tagLabel === 'string' ? body.tagLabel : null
-      const title = typeof body.title === 'string' ? body.title : tagLabel
+      const tagLabel =
+        typeof body.tagLabel === 'string' && body.tagLabel.trim() ? body.tagLabel.trim() : null
+      const titleRaw = typeof body.title === 'string' && body.title.trim() ? body.title.trim() : null
+      // Untyped / mixed-pool drills get a stable history label when the client omits title.
+      const title = titleRaw ?? tagLabel ?? (questionTypeId ? null : 'Varied Mix')
       const difficulty =
         body.difficulty === 'easy' || body.difficulty === 'hard' || body.difficulty === 'adaptive'
           ? body.difficulty

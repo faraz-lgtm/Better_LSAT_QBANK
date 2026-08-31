@@ -291,7 +291,7 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="m-0 text-base font-semibold leading-normal tracking-[0.02em] text-[#062357]">
-                Top Answer
+              Answer Choice Distribution
               </h3>
               <p className="m-0 mt-1 text-xs leading-normal tracking-[0.02em] text-[#666d80]">
                 Distribution of responses across all test takers.

@@ -618,10 +618,34 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
         }),
       ])
 
+      const drillTypeIds = [
+        ...new Set(
+          sessions.flatMap((s: PracticeSessionListRow) => {
+            if (s.kind !== 'DRILL') return []
+            const id = s.metadata?.questionTypeId
+            return typeof id === 'string' && id.trim() ? [id.trim()] : []
+          }),
+        ),
+      ]
+      const typeRows =
+        drillTypeIds.length > 0 ? await deps.repository.listQuestionTypesByIds(drillTypeIds) : []
+      const typeNameById = new Map(typeRows.map((t) => [t.id, t.name]))
+
       return {
         sessions: sessions.map((s: PracticeSessionListRow) => {
           const apt = relOne(s.admin_prep_tests)
           const sec = relOne(s.admin_sections)
+          let metadata = s.metadata ?? {}
+          if (s.kind === 'DRILL') {
+            const existingName =
+              typeof metadata.questionTypeName === 'string' ? metadata.questionTypeName.trim() : ''
+            const typeId =
+              typeof metadata.questionTypeId === 'string' ? metadata.questionTypeId.trim() : ''
+            const resolvedName = existingName || (typeId ? typeNameById.get(typeId)?.trim() ?? '' : '')
+            if (resolvedName && resolvedName !== existingName) {
+              metadata = { ...metadata, questionTypeName: resolvedName }
+            }
+          }
           return {
             id: s.id,
             kind: s.kind,
@@ -636,7 +660,7 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
             blindReviewPercentile: s.blind_review_percentile,
             bookmarked: s.bookmarked,
             excluded: s.excluded,
-            metadata: s.metadata,
+            metadata,
             prepTestTitle: apt?.title ?? null,
             sectionTitle: sec?.title ?? null,
             sectionType: sec?.section_type ?? null,

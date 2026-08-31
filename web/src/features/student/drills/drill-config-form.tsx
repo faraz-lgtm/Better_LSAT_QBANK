@@ -66,6 +66,11 @@ function DrillConfigForm({
 
   // Customize off = adaptive defaults over the full section pool (ignore tag/status filters).
   const resolvedQuestionTypeId = customize && tags !== "any" ? tags : null
+  const resolvedTagLabel = resolvedQuestionTypeId
+    ? (tagSelectOptions.find((t) => t.value === resolvedQuestionTypeId)?.label ??
+        initialTagLabel ??
+        null)
+    : null
   const resolvedDifficulty = customize ? difficulty : "adaptive"
   const resolvedStatus = customize ? status : "all"
 
@@ -121,10 +126,10 @@ function DrillConfigForm({
         showAnswers,
         selection: selection as "auto" | "manual",
         questionTypeId: resolvedQuestionTypeId,
-        tagLabel: customize ? initialTagLabel : null,
+        tagLabel: resolvedTagLabel,
         difficulty: resolvedDifficulty,
         status: resolvedStatus,
-        title: initialTagLabel ?? undefined,
+        title: resolvedTagLabel ?? "Varied Mix",
       })
       navigate(`/app/practice/drills/session/${out.session.id}`)
     } catch (e) {
