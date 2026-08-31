@@ -122,12 +122,9 @@ function GuestDiagnosticResultsPage({ preview = false, section }: GuestDiagnosti
     )
   }
 
-  const startIntent = result.intentId === 'mini' ? 'mini' : 'quick'
-
   return (
     <GuestDiagnosticResultsView
       result={result}
-      startDiagnosticHref={preview ? '/diagnostic/start/preview?intent=mini' : `/diagnostic/start?intent=${startIntent}`}
       reviewInTesterHref={preview ? '/diagnostic/review/preview' : '/diagnostic/review'}
       refreshSubscription={checkoutSuccess ? refresh : undefined}
     />
