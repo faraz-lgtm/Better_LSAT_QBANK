@@ -134,19 +134,9 @@ function prepTestHubPageTitle(prepTest: { label: string; prepTestNumber: string 
   return prepTest.label
 }
 
-function PrepTestHubStat({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="flex w-[78px] flex-col items-center">
-      <dt className="text-xs font-medium leading-normal tracking-[0.24px] text-[#062357]">{label}</dt>
-      <dd className="text-sm font-semibold leading-normal tracking-[0.28px] text-[#062357]">{value}</dd>
-    </div>
-  )
-}
-
 function sectionShortTitle(row: PrepTestDetailSection): string {
-  const base =
-    row.sectionNumber != null ? `Section ${row.sectionNumber}` : row.title ? row.title : row.sectionType
-  return row.isExperimental ? `${base} (EXP)` : base
+  if (row.sectionNumber != null) return `Section ${row.sectionNumber}`
+  return row.title ? row.title : row.sectionType
 }
 
 function sectionTimeDisplay(minutes: number): string {
@@ -497,16 +487,9 @@ function PracticePrepTestPage() {
 
         <section className="rounded-[16px] border border-[#dfe1e7] bg-white p-6">
           <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-              <p className="text-2xl font-bold leading-[1.3] text-[#062357]">
-                {configLocked ? prepTestContinueHeadline(prepTest) : "Ready to begin your test?"}
-              </p>
-              <dl className="flex shrink-0 flex-wrap items-start gap-6 lg:justify-end">
-                <PrepTestHubStat label="Questions" value={prepTest.questionCount} />
-                <PrepTestHubStat label="Total Time" value={`${prepTest.totalMinutes} min`} />
-                <PrepTestHubStat label="Sections" value={prepTest.practiceableSectionCount} />
-              </dl>
-            </div>
+            <p className="text-2xl font-bold leading-[1.3] text-[#062357]">
+              {configLocked ? prepTestContinueHeadline(prepTest) : "Ready to begin your test?"}
+            </p>
 
             {!configLocked ? (
               <>

@@ -78,13 +78,11 @@ function statusTitle(status: BlindReviewStatus): string {
 function statusSubtitle(item: BlindReviewPoolItem): string {
   if (item.status === "completed") {
     const date = item.blindReviewCompletedAt ?? item.completedAt
-    return date ? formatCompletedDate(date) : `${item.questionCount} questions`
+    return date ? formatCompletedDate(date) : ""
   }
   if (item.status === "in_progress") return "Blind Review"
-  if (item.scaledScore != null) {
-    return `Test score ${item.scaledScore} · ${item.questionCount} questions`
-  }
-  return `${item.questionCount} questions`
+  if (item.scaledScore != null) return `Test score ${item.scaledScore}`
+  return ""
 }
 
 function attemptDetailLabel(attempt: PrepTestPoolAttempt): string {
@@ -163,6 +161,7 @@ function BlindReviewListCard({
 
   const hoverTone: BlindReviewCardHoverTone = isCompleted ? "success" : "default"
   const hoverClass = BLIND_REVIEW_CARD_HOVER_CLASS[hoverTone]
+  const subtitle = statusSubtitle(item)
 
   return (
     <article className={cn(BLIND_REVIEW_CARD_SHELL_BASE_CLASS, hoverClass.shell)}>
@@ -177,9 +176,11 @@ function BlindReviewListCard({
           <PtBadge number={ptNum} tone={badgeTone} />
           <div className="flex min-w-0 flex-col gap-2">
             <p className={cn("truncate text-2xl font-bold leading-[1.3]", titleClass)}>{statusTitle(item.status)}</p>
-            <p className="truncate text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
-              {statusSubtitle(item)}
-            </p>
+            {subtitle ? (
+              <p className="truncate text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
+                {subtitle}
+              </p>
+            ) : null}
           </div>
         </div>
 
