@@ -24,6 +24,7 @@ import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createBillingApi, type BillingPlanId } from "@/lib/api/billing"
 import { createUsersApi, type UserProfile } from "@/lib/api/users"
+import { resolveAccountLsacLinkState } from "@/lib/auth/needs-lsac-link"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
@@ -609,6 +610,10 @@ function AccountPage() {
   const initials = useMemo(() => getInitials(displayName), [displayName])
   const hasProPlan = Boolean(entitlement?.hasActiveCore || entitlement?.accessState === "FULL_ACCESS")
   const planName = hasProPlan ? "Pro" : "Free"
+  const lsacLinkState = useMemo(
+    () => resolveAccountLsacLinkState(profile, entitlement),
+    [entitlement, profile],
+  )
 
   function startFieldEdit(field: EditableAccountField) {
     setAccountStatus(null)
@@ -851,12 +856,28 @@ function AccountPage() {
                     LawHub Advantage · <span className="text-[#0d47a1]">Not required for basic access</span>
                   </p>
                   <p className="text-xs tracking-[0.24px] text-[#666d80]">
-                    Link your LSAC account to sync your PrepTest scores and unlock additional features.
+                    {lsacLinkState === "linked"
+                      ? "Your LSAC account is linked. PrepTest scores and LawHub content stay in sync."
+                      : lsacLinkState === "pending"
+                        ? "LawHub invite is pending. Finish linking in your LSAC email, then return to the dashboard."
+                        : "Link your LSAC account to sync your PrepTest scores and unlock additional features."}
                   </p>
                 </div>
-                <Button type="button" size="xs" className="h-[35px] rounded-lg px-4" onClick={() => navigate("/app/lsac-link")}>
-                  Link Account
-                </Button>
+                {lsacLinkState === "linked" ? (
+                  <span className="inline-flex h-[35px] shrink-0 items-center gap-1.5 rounded-lg bg-[#ecfdf3] px-3 text-xs font-semibold tracking-[0.24px] text-[#067647]">
+                    <Check className="size-3.5" strokeWidth={2.25} />
+                    Linked
+                  </span>
+                ) : (
+                  <Button
+                    type="button"
+                    size="xs"
+                    className="h-[35px] rounded-lg px-4"
+                    onClick={() => navigate(lsacLinkState === "pending" ? "/app" : "/app/lsac-link")}
+                  >
+                    {lsacLinkState === "pending" ? "Finish setup" : "Link Account"}
+                  </Button>
+                )}
               </div>
             </section>
 

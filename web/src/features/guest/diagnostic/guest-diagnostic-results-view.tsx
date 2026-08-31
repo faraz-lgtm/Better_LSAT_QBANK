@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Check, ChevronRight, FolderOpen, X } from 'lucide-react'
+import { Check, FolderOpen, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { GuestDiagnosticExplanationCard } from '@/features/guest/diagnostic/guest-diagnostic-explanation-card'
@@ -30,7 +30,6 @@ import { cn } from '@/lib/utils'
 
 type GuestDiagnosticResultsViewProps = {
   result: GuestDiagnosticResult
-  startDiagnosticHref?: string
   reviewInTesterHref?: string
   refreshSubscription?: () => void
 }
@@ -107,11 +106,9 @@ function GuestDiagnosticResultsActionButtons({ href }: { href: string }) {
 
 function GuestDiagnosticFreeScoreCards({
   result,
-  startDiagnosticHref,
   reviewInTesterHref,
 }: {
   result: GuestDiagnosticResult
-  startDiagnosticHref: string
   reviewInTesterHref: string
 }) {
   const incorrect = Math.max(0, result.questionCount - result.correctCount)
@@ -153,16 +150,7 @@ function GuestDiagnosticFreeScoreCards({
               </span>
             </p>
           </div>
-          <div className="flex flex-col items-stretch gap-3 sm:items-end">
-            <GuestDiagnosticResultsActionButtons href={reviewInTesterHref} />
-            <Link
-              to={startDiagnosticHref}
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-1 rounded-[12px] bg-[#0d47a1] px-5 text-sm font-semibold tracking-[0.28px] text-white hover:bg-[#0b3d8a]"
-            >
-              Start Diagnostic
-              <ChevronRight className="size-4" aria-hidden />
-            </Link>
-          </div>
+          <GuestDiagnosticResultsActionButtons href={reviewInTesterHref} />
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -177,11 +165,9 @@ function GuestDiagnosticFreeScoreCards({
 
 function GuestDiagnosticPaidScoreCards({
   result,
-  startDiagnosticHref,
   reviewInTesterHref,
 }: {
   result: GuestDiagnosticResult
-  startDiagnosticHref: string
   reviewInTesterHref: string
 }) {
   const incorrect = Math.max(0, result.questionCount - result.correctCount)
@@ -221,14 +207,6 @@ function GuestDiagnosticPaidScoreCards({
               <OutcomePill key={outcome.questionId} index={index} isCorrect={outcome.isCorrect} size="lg" />
             ))}
           </div>
-
-          <Link
-            to={startDiagnosticHref}
-            className="inline-flex h-12 shrink-0 items-center justify-center gap-1 self-center rounded-[12px] bg-[#0d47a1] px-6 text-sm font-semibold tracking-[0.28px] text-white hover:bg-[#0b3d8a] xl:self-auto"
-          >
-            Start Diagnostic
-            <ChevronRight className="size-4" aria-hidden />
-          </Link>
         </div>
       </div>
     </section>
@@ -291,7 +269,6 @@ function GuestDiagnosticLockedQuestionRow({
 
 function GuestDiagnosticResultsView({
   result,
-  startDiagnosticHref = '/diagnostic/start',
   reviewInTesterHref = '/diagnostic/review',
   refreshSubscription,
 }: GuestDiagnosticResultsViewProps) {
@@ -365,13 +342,11 @@ function GuestDiagnosticResultsView({
       {showPaidContent ? (
         <GuestDiagnosticPaidScoreCards
           result={result}
-          startDiagnosticHref={startDiagnosticHref}
           reviewInTesterHref={reviewInTesterHref}
         />
       ) : (
         <GuestDiagnosticFreeScoreCards
           result={result}
-          startDiagnosticHref={startDiagnosticHref}
           reviewInTesterHref={reviewInTesterHref}
         />
       )}
