@@ -66,7 +66,8 @@ describe("map-dashboard-stats", () => {
   })
 
   it("formats test date for the countdown input", () => {
-    expect(formatTestDateInputValue("2027-01-01")).toBe("01/01/2027")
+    expect(formatTestDateInputValue("2027-01-13")).toBe("January 2027")
+    expect(formatTestDateInputValue("2027-01-01")).toBe("January 2027")
     expect(formatTestDateInputValue(null)).toBe("—")
   })
 })

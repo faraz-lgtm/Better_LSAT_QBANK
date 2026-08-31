@@ -133,8 +133,8 @@ function OnboardingPage() {
       await usersApi.saveOnboarding({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        plannedLsatDate: plannedLsatDate === "not_sure" ? null : plannedLsatDate,
-        plannedLsatWindow: plannedLsatDate === "not_sure" ? "not_sure" : null,
+        plannedLsatDate: plannedLsatDate || null,
+        plannedLsatWindow: null,
         lawSchoolCycle: lawSchoolCycle.trim() || null,
         goalScore,
         startingScore,
@@ -172,8 +172,8 @@ function OnboardingPage() {
       await usersApi.saveOnboarding({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        plannedLsatDate: plannedLsatDate === "not_sure" ? null : plannedLsatDate,
-        plannedLsatWindow: plannedLsatDate === "not_sure" ? "not_sure" : null,
+        plannedLsatDate: plannedLsatDate || null,
+        plannedLsatWindow: null,
       })
       navigate("/diagnostic/start", { replace: true })
     } catch (e) {

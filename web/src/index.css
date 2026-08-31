@@ -2735,6 +2735,11 @@ select.ds-input {
   background-image: linear-gradient(156.25deg, rgb(255, 255, 255) 0%, rgb(228, 239, 255) 100%);
 }
 
+.test-day-countdown--picker-open {
+  overflow: visible;
+  z-index: 30;
+}
+
 .test-day-countdown__glow {
   pointer-events: none;
   position: absolute;
@@ -2838,6 +2843,7 @@ select.ds-input {
   align-items: flex-end;
   gap: 22.5px;
   padding-top: 16px;
+  overflow: visible;
 }
 
 .test-day-countdown__date-bar {
@@ -2854,6 +2860,7 @@ select.ds-input {
   box-shadow:
     0 4px 3px rgba(13, 13, 18, 0.03),
     0 12px 8px rgba(13, 13, 18, 0.08);
+  overflow: visible;
 }
 
 .test-day-countdown__date-label {
@@ -2864,6 +2871,67 @@ select.ds-input {
   letter-spacing: 0.5625px;
   text-transform: uppercase;
   color: #062357;
+}
+
+.test-day-countdown__date-controls {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  margin-left: auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.test-day-countdown__date-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  display: flex;
+  width: max(100%, 280px);
+  max-height: min(360px, calc(100vh - 24px));
+  flex-direction: column;
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid #dfe1e7;
+  background: #fff;
+  padding: 8px;
+  box-shadow:
+    0 12px 16px -4px rgba(13, 13, 18, 0.08),
+    0 4px 6px -2px rgba(13, 13, 18, 0.03);
+}
+
+.test-day-countdown__date-menu-item {
+  box-sizing: border-box;
+  display: flex;
+  min-height: 48px;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  border: none;
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px 12px;
+  text-align: left;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0.28px;
+  color: #062357;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.test-day-countdown__date-menu-item:hover {
+  background: #f3f7ff;
+}
+
+.test-day-countdown__date-menu-item--selected {
+  border-radius: 10px;
+  background: #edf3ff;
+  color: #082c6b;
 }
 
 .test-day-countdown__date-chip {

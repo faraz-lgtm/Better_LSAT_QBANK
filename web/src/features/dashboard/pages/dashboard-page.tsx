@@ -6,6 +6,10 @@ import { DashboardAccessSetupCard } from "@/features/dashboard/components/dashbo
 import { DashboardQuickStats } from "@/features/dashboard/components/dashboard-quick-stats"
 import { PerformanceOverviewCard } from "@/features/dashboard/components/performance-overview-card"
 import { PrepTestsScoreProgressCard } from "@/features/dashboard/components/preptests-score-progress-card"
+import {
+  findLsacTestWindow,
+  resolveLsacTestWindowValue,
+} from "@/lib/lsac-test-window-options"
 import { TestDayCountdownCard } from "@/features/dashboard/components/test-day-countdown-card"
 import {
   daysUntilDate,
@@ -195,15 +199,21 @@ function DashboardPage() {
   }, [activeFilter, navigate, practiceApi, startingAdaptiveDrill])
 
   const preferences = studyContext?.preferences ?? null
-  const daysRemaining = daysUntilDate(preferences?.plannedLsatDate)
-  const testDateValue = preferences?.plannedLsatDate?.trim() ?? ""
+  const countdownDate =
+    findLsacTestWindow(preferences?.plannedLsatDate)?.value ?? preferences?.plannedLsatDate ?? null
+  const daysRemaining = daysUntilDate(countdownDate)
+  const testDateValue = resolveLsacTestWindowValue(
+    preferences?.plannedLsatDate,
+    preferences?.plannedLsatWindow,
+  )
 
-  async function handleTestDateChange(isoDate: string) {
-    if (!usersApi || !isoDate.trim()) return
+  async function handleTestDateChange(value: string) {
+    if (!usersApi || !value.trim()) return
     setSavingTestDate(true)
     try {
       const nextPreferences = await usersApi.updateStudyPreferences({
-        plannedLsatDate: isoDate.trim(),
+        plannedLsatDate: value.trim(),
+        plannedLsatWindow: null,
       })
       setStudyContext((prev) =>
         prev ? { ...prev, preferences: nextPreferences } : { preferences: nextPreferences, officialScores: [] },
@@ -242,13 +252,19 @@ function DashboardPage() {
           <TestDayCountdownCard
             daysRemaining={daysRemaining}
             firstName={firstName}
-            testMeta={formatLsacTestMeta(preferences?.plannedLsatDate)}
-            testDateLabel={formatTestDateInputValue(preferences?.plannedLsatDate)}
+            testMeta={formatLsacTestMeta(
+              preferences?.plannedLsatDate,
+              preferences?.plannedLsatWindow,
+            )}
+            testDateLabel={formatTestDateInputValue(
+              preferences?.plannedLsatDate,
+              preferences?.plannedLsatWindow,
+            )}
             testDateValue={testDateValue}
             adaptiveLoading={startingAdaptiveDrill}
             adaptiveDisabled={!practiceApi}
             savingTestDate={savingTestDate}
-            onTestDateChange={(isoDate) => void handleTestDateChange(isoDate)}
+            onTestDateChange={(value) => void handleTestDateChange(value)}
             onStartAdaptiveDrill={() => void handleStartAdaptiveDrill()}
           />
 

@@ -1,6 +1,10 @@
 import type { AnalyticsOverview } from "@/lib/api/analytics"
 
 import { formatStudyTime } from "@/features/student/drills/drill-dashboard-mappers"
+import {
+  formatLsacTestWindowLabel,
+  formatLsacTestWindowMeta,
+} from "@/lib/lsac-test-window-options"
 
 export type DashboardStatCard = {
   id: string
@@ -142,28 +146,16 @@ export function daysUntilDate(isoDate: string | null | undefined, now = new Date
   return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
 }
 
-export function formatTestDateInputValue(isoDate: string | null | undefined): string {
-  if (!isoDate?.trim()) return "—"
-  try {
-    const d = new Date(`${isoDate.trim()}T12:00:00`)
-    if (Number.isNaN(d.getTime())) return isoDate
-    const mm = String(d.getMonth() + 1).padStart(2, "0")
-    const dd = String(d.getDate()).padStart(2, "0")
-    const yyyy = d.getFullYear()
-    return `${mm}/${dd}/${yyyy}`
-  } catch {
-    return isoDate
-  }
+export function formatTestDateInputValue(
+  isoDate: string | null | undefined,
+  plannedLsatWindow?: string | null,
+): string {
+  return formatLsacTestWindowLabel(isoDate, plannedLsatWindow)
 }
 
-export function formatLsacTestMeta(isoDate: string | null | undefined): string {
-  if (!isoDate?.trim()) return "Set your LSAC test date to start the countdown"
-  try {
-    const d = new Date(`${isoDate.trim()}T12:00:00`)
-    if (Number.isNaN(d.getTime())) return `LSAC · ${isoDate}`
-    const label = d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
-    return `LSAC · ${label}`
-  } catch {
-    return `LSAC · ${isoDate}`
-  }
+export function formatLsacTestMeta(
+  isoDate: string | null | undefined,
+  plannedLsatWindow?: string | null,
+): string {
+  return formatLsacTestWindowMeta(isoDate, plannedLsatWindow)
 }
