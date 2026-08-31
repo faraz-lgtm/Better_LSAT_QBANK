@@ -50,14 +50,22 @@ import {
   type PrepTestSectionKind,
 } from "@/features/student/lib/prep-test-results-types"
 import {
+  filterPrepTestResultQuestions,
   formatPrepTestResultsTitle,
   mapPrepTestDetailToResults,
 } from "@/features/student/analytics/map-prep-test-results"
+import { checkedFromToggleEvent } from "@/features/student/analytics/session-bookmarks"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import {
   firstBlindReviewSectionSessionId,
   resultsReviewSectionSessionPath,
 } from "@/features/student/blind-review/blind-review-navigation"
+import {
+  readExplanationBookmarkCache,
+  writeExplanationBookmarkCache,
+} from "@/features/student/explanation-detail/explanation-bookmark-cache"
+import { createExplanationsApi } from "@/lib/api/explanations"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const QUESTION_FILTER_OPTIONS = ["Question", "Passage", "Incorrect only"] as const
 
@@ -130,10 +138,14 @@ function TotalQuestionsBar({
   total,
   filter,
   onFilterChange,
+  bookmarkedOnly,
+  onBookmarkedOnlyChange,
 }: {
   total: number
   filter: (typeof QUESTION_FILTER_OPTIONS)[number]
   onFilterChange: (next: (typeof QUESTION_FILTER_OPTIONS)[number]) => void
+  bookmarkedOnly: boolean
+  onBookmarkedOnlyChange: (next: boolean) => void
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
@@ -146,7 +158,20 @@ function TotalQuestionsBar({
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <p className="text-2xl font-bold leading-[1.3] text-[#062357]">Total Questions: {total}</p>
+        <div className="flex min-w-0 flex-wrap items-center gap-4">
+          <p className="text-2xl font-bold leading-[1.3] text-[#062357]">Total Questions: {total}</p>
+          <div className="flex shrink-0 items-center gap-2.5">
+            <Bookmark className="size-4 shrink-0 text-[#062357]" aria-hidden />
+            <span className="whitespace-nowrap text-base font-semibold leading-normal tracking-[0.02em] text-[#062357]">
+              Bookmarked only
+            </span>
+            <Switch
+              checked={bookmarkedOnly}
+              onChange={(event) => onBookmarkedOnlyChange(checkedFromToggleEvent(event))}
+              aria-label="Show bookmarked only"
+            />
+          </div>
+        </div>
         <FigmaDropdown
           variant="pill"
           value={filter}
@@ -236,7 +261,15 @@ function PassageSummaryHeader({ passage }: { passage: PrepTestPassageSummary }) 
   )
 }
 
-function QuestionResultActionButtons({ questionId }: { questionId: string }) {
+function QuestionResultActionButtons({
+  questionId,
+  bookmarked,
+  onToggleBookmark,
+}: {
+  questionId: string
+  bookmarked: boolean
+  onToggleBookmark: (questionId: string) => void
+}) {
   return (
     <div className="flex shrink-0 gap-4">
       <Link
@@ -246,8 +279,17 @@ function QuestionResultActionButtons({ questionId }: { questionId: string }) {
       >
         <Pencil className="size-[18px]" aria-hidden />
       </Link>
-      <button type="button" className={PT_RESULTS_ACTION_BUTTON_CLASS} aria-label="Bookmark question">
-        <Bookmark className="size-[18px]" aria-hidden />
+      <button
+        type="button"
+        className={PT_RESULTS_ACTION_BUTTON_CLASS}
+        aria-label={bookmarked ? "Remove bookmark" : "Bookmark question"}
+        aria-pressed={bookmarked}
+        onClick={() => onToggleBookmark(questionId)}
+      >
+        <Bookmark
+          className={cn("size-[18px]", bookmarked ? "fill-[#0d47a1] text-[#0d47a1]" : "text-[#666d80]")}
+          aria-hidden
+        />
       </button>
     </div>
   )
@@ -258,11 +300,15 @@ function QuestionResultRow({
   showBlindReview = false,
   className,
   bordered = true,
+  bookmarked,
+  onToggleBookmark,
 }: {
   row: PrepTestQuestionResultRow
   showBlindReview?: boolean
   className?: string
   bordered?: boolean
+  bookmarked: boolean
+  onToggleBookmark: (questionId: string) => void
 }) {
   const popularityRows = (["A", "B", "C", "D", "E"] as const).map((letter, i) => ({
     letter,
@@ -326,7 +372,11 @@ function QuestionResultRow({
             </div>
 
             <div className="ml-4 shrink-0">
-              <QuestionResultActionButtons questionId={row.id} />
+              <QuestionResultActionButtons
+                questionId={row.id}
+                bookmarked={bookmarked}
+                onToggleBookmark={onToggleBookmark}
+              />
             </div>
           </div>
 
@@ -349,10 +399,14 @@ function PassageQuestionGroupCard({
   passage,
   questions,
   showBlindReview = false,
+  bookmarkedIds,
+  onToggleBookmark,
 }: {
   passage: PrepTestPassageSummary | null
   questions: PrepTestQuestionResultRow[]
   showBlindReview?: boolean
+  bookmarkedIds: ReadonlySet<string>
+  onToggleBookmark: (questionId: string) => void
 }) {
   if (questions.length === 0) return null
 
@@ -365,6 +419,8 @@ function PassageQuestionGroupCard({
           row={q}
           showBlindReview={showBlindReview}
           bordered={passage != null || index > 0}
+          bookmarked={bookmarkedIds.has(q.id)}
+          onToggleBookmark={onToggleBookmark}
         />
       ))}
     </article>
@@ -508,7 +564,16 @@ function AnalyticsPrepTestResultsPage() {
   const navigate = useNavigate()
   const analyticsApi = useAnalyticsApi()
   const practiceApi = usePracticeApi()
+  const explanationsApi = useMemo(() => {
+    try {
+      return createExplanationsApi(getSupabaseBrowserClient())
+    } catch {
+      return null
+    }
+  }, [])
   const [questionFilter, setQuestionFilter] = useState<(typeof QUESTION_FILTER_OPTIONS)[number]>("Question")
+  const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(() => new Set())
   const [excludeFromAnalytics, setExcludeFromAnalytics] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -548,6 +613,21 @@ function AnalyticsPrepTestResultsPage() {
       .finally(() => setLoading(false))
   }, [analyticsApi, testId])
 
+  useEffect(() => {
+    setBookmarkedIds(new Set(readExplanationBookmarkCache().questionIds))
+    if (!explanationsApi) return
+    void explanationsApi
+      .listQuestionBookmarks()
+      .then(({ questionIds }) => {
+        setBookmarkedIds(new Set(questionIds))
+        const cache = readExplanationBookmarkCache()
+        writeExplanationBookmarkCache({ ...cache, questionIds })
+      })
+      .catch(() => {
+        /* Keep cached bookmarks if the function is unavailable. */
+      })
+  }, [explanationsApi])
+
   const pageTitle = useMemo(() => {
     if (!completedAt) return prepTestTitle || "PrepTest results"
     return formatPrepTestResultsTitle(prepTestTitle, moduleId, completedAt)
@@ -562,6 +642,41 @@ function AnalyticsPrepTestResultsPage() {
       })
     },
     [practiceApi, testId],
+  )
+
+  const handleToggleQuestionBookmark = useCallback(
+    (questionId: string) => {
+      const nextBookmarked = !bookmarkedIds.has(questionId)
+      setBookmarkedIds((current) => {
+        const next = new Set(current)
+        if (nextBookmarked) next.add(questionId)
+        else next.delete(questionId)
+        writeExplanationBookmarkCache({
+          ...readExplanationBookmarkCache(),
+          questionIds: [...next],
+        })
+        return next
+      })
+      if (!explanationsApi) return
+      void explanationsApi
+        .setQuestionBookmark(questionId, nextBookmarked)
+        .then(({ questionIds }) => {
+          setBookmarkedIds(new Set(questionIds))
+          writeExplanationBookmarkCache({
+            ...readExplanationBookmarkCache(),
+            questionIds,
+          })
+        })
+        .catch(() => {
+          setBookmarkedIds((current) => {
+            const reverted = new Set(current)
+            if (nextBookmarked) reverted.delete(questionId)
+            else reverted.add(questionId)
+            return reverted
+          })
+        })
+    },
+    [bookmarkedIds, explanationsApi],
   )
 
   const dataReady = !loading && detail != null && error == null
@@ -637,13 +752,21 @@ function AnalyticsPrepTestResultsPage() {
         </section>
 
       <div className={RESULTS_STACK_CLASS}>
-        <TotalQuestionsBar total={detail.totalQuestions} filter={questionFilter} onFilterChange={setQuestionFilter} />
+        <TotalQuestionsBar
+          total={detail.totalQuestions}
+          filter={questionFilter}
+          onFilterChange={setQuestionFilter}
+          bookmarkedOnly={bookmarkedOnly}
+          onBookmarkedOnlyChange={setBookmarkedOnly}
+        />
 
         {detail.sectionBlocks.map((block) => {
-          const questions =
-            questionFilter === "Incorrect only"
-              ? block.questions.filter((q) => !q.actualCorrect)
-              : block.questions
+          const questions = filterPrepTestResultQuestions(block.questions, {
+            incorrectOnly: questionFilter === "Incorrect only",
+            bookmarkedOnly,
+            bookmarkedIds,
+          })
+          if (questions.length === 0) return null
           const groups = buildPassageQuestionGroups(block.passages, questions)
 
           return (
@@ -662,11 +785,27 @@ function AnalyticsPrepTestResultsPage() {
                   passage={group.passage}
                   questions={group.questions}
                   showBlindReview={detail.blindReviewCompleted}
+                  bookmarkedIds={bookmarkedIds}
+                  onToggleBookmark={handleToggleQuestionBookmark}
                 />
               ))}
             </SectionBlock>
           )
         })}
+
+        {bookmarkedOnly &&
+        detail.sectionBlocks.every(
+          (block) =>
+            filterPrepTestResultQuestions(block.questions, {
+              incorrectOnly: questionFilter === "Incorrect only",
+              bookmarkedOnly,
+              bookmarkedIds,
+            }).length === 0,
+        ) ? (
+          <p className="rounded-[16px] border border-dashed border-[#dfe1e7] bg-white px-6 py-8 text-center text-sm text-[#666d80]">
+            No bookmarked questions in this PrepTest. Bookmark a question to see it here.
+          </p>
+        ) : null}
 
         <AboutPrepTestCard
           meta={detail.about}

@@ -3,7 +3,8 @@ import { Bookmark, Calendar, ExternalLink, MoreVertical } from "lucide-react"
 
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
-import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-drills"
+import { checkedFromToggleEvent } from "@/features/student/analytics/session-bookmarks"
+import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 import type { AnalyticsSectionFilter } from "@/features/student/analytics/section-filter"
 
 const SCORE_BOX_WIDTH_PX = 179
@@ -57,7 +58,9 @@ function ScoreMetric({
   max: number
   barColor: string
 }) {
-  const widthPct = Math.max(0, Math.min(100, (value / Math.max(1, max)) * 100))
+  const safeValue = Number.isFinite(value) ? value : 0
+  const safeMax = Number.isFinite(max) && max > 0 ? max : 1
+  const widthPct = Math.max(0, Math.min(100, (safeValue / safeMax) * 100))
   return (
     <div
       className="flex h-[52px] shrink-0 flex-col justify-center gap-1.5 rounded-[16px] border border-[#e5e7eb] bg-[#f9fafb] px-3"
@@ -66,7 +69,7 @@ function ScoreMetric({
       <div className="flex w-full items-center justify-between gap-2">
         <span className="text-sm font-medium leading-normal tracking-[0.02em] text-[#666d80]">{label}</span>
         <span className="w-[46px] text-right text-sm font-semibold leading-normal tracking-[0.02em] text-[#062357]">
-          {value}
+          {safeValue}
         </span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-lg bg-[#dfe1e7]">
@@ -277,17 +280,17 @@ function AnalyticsPrepTestHistory({
           {showSectionFilter ? (
             <HistorySectionFilter value={sectionFilter} onChange={onSectionFilterChange} />
           ) : null}
-          <label className="flex cursor-pointer items-center gap-2.5">
-            <Bookmark className="size-4 text-[#062357]" aria-hidden />
-            <span className="text-base font-semibold leading-normal tracking-[0.02em] text-[#062357]">
+          <div className="flex shrink-0 items-center gap-2.5">
+            <Bookmark className="size-4 shrink-0 text-[#062357]" aria-hidden />
+            <span className="whitespace-nowrap text-base font-semibold leading-normal tracking-[0.02em] text-[#062357]">
               Bookmarked only
             </span>
             <Switch
               checked={bookmarkedOnly}
-              onChange={(event) => onBookmarkedOnlyChange(event.target.checked)}
+              onChange={(event) => onBookmarkedOnlyChange(checkedFromToggleEvent(event))}
               aria-label="Show bookmarked only"
             />
-          </label>
+          </div>
         </div>
       </div>
 

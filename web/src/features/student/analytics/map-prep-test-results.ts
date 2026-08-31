@@ -263,3 +263,18 @@ export function mapPrepTestDetailToResults(api: PrepTestSessionDetail): PrepTest
     rcSections,
   }
 }
+
+export function filterPrepTestResultQuestions(
+  questions: readonly PrepTestQuestionResultRow[],
+  options: {
+    incorrectOnly: boolean
+    bookmarkedOnly: boolean
+    bookmarkedIds: ReadonlySet<string>
+  },
+): PrepTestQuestionResultRow[] {
+  return questions.filter((question) => {
+    if (options.incorrectOnly && question.actualCorrect) return false
+    if (options.bookmarkedOnly && !options.bookmarkedIds.has(question.id)) return false
+    return true
+  })
+}

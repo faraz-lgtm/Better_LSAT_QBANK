@@ -19,10 +19,18 @@ import {
   filterPrepTestsByTimeRange,
   getPrepTestHistoryEntries,
   getPrepTestProgressPoints,
+  sortPrepTestRecords,
+  type PrepTestHistorySort,
   type PrepTestProgressPoint,
   type PrepTestRecord,
 } from "@/features/student/lib/mock-analytics-preptests"
 import { mapSessionToPrepTestRecord } from "@/features/student/analytics/map-analytics"
+import {
+  filterBookmarkedOnly,
+  persistSessionBookmark,
+  sessionBookmarkState,
+  withSessionBookmark,
+} from "@/features/student/analytics/session-bookmarks"
 import { prepTestHubHref } from "@/features/student/preptests/preptest-hub-navigation"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import {
@@ -32,8 +40,6 @@ import {
 } from "@/features/student/analytics/chart-y-axis"
 import { cn } from "@/lib/utils"
 
-const BOOKMARKS_STORAGE_KEY = "analytics:preptests:bookmarks"
-
 const SCORE_TABS = [
   { id: "scaled", label: "Scaled score" },
   { id: "raw", label: "Raw score" },
@@ -41,7 +47,7 @@ const SCORE_TABS = [
 
 type ScoreTab = (typeof SCORE_TABS)[number]["id"]
 
-type HistorySort = "date-desc" | "date-asc" | "score-desc" | "score-asc"
+type HistorySort = PrepTestHistorySort
 
 const HISTORY_SORT_OPTIONS: Array<{ id: HistorySort; label: string }> = [
   { id: "date-desc", label: "Most recent" },
@@ -272,18 +278,6 @@ function HistorySortMenu({ value, onChange }: { value: HistorySort; onChange: (n
   )
 }
 
-function loadBookmarks(initial: Record<string, boolean>): Record<string, boolean> {
-  if (typeof window === "undefined") return initial
-  try {
-    const raw = window.localStorage.getItem(BOOKMARKS_STORAGE_KEY)
-    if (!raw) return initial
-    const parsed = JSON.parse(raw) as Record<string, boolean>
-    return { ...initial, ...parsed }
-  } catch {
-    return initial
-  }
-}
-
 function AnalyticsPrepTestsPage() {
   const navigate = useNavigate()
   const analyticsApi = useAnalyticsApi()
@@ -294,11 +288,6 @@ function AnalyticsPrepTestsPage() {
   const [scoreTab, setScoreTab] = useState<ScoreTab>("raw")
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
   const [historySort, setHistorySort] = useState<HistorySort>("date-desc")
-  const initialBookmarks = useMemo(
-    () => Object.fromEntries(prepRecords.map((record) => [record.id, record.bookmarked])),
-    [prepRecords],
-  )
-  const [bookmarks, setBookmarks] = useState<Record<string, boolean>>(() => loadBookmarks(initialBookmarks))
 
   useEffect(() => {
     if (!analyticsApi) {
@@ -316,21 +305,7 @@ function AnalyticsPrepTestsPage() {
       .finally(() => setLoading(false))
   }, [analyticsApi])
 
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    try {
-      window.localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(bookmarks))
-    } catch {
-      // ignore quota / storage errors silently
-    }
-  }, [bookmarks])
-
-  const records = useMemo(
-    () => prepRecords.map((record) => ({ ...record, bookmarked: bookmarks[record.id] ?? record.bookmarked })),
-    [bookmarks, prepRecords],
-  )
-
-  const rangedRecords = useMemo(() => filterPrepTestsByTimeRange(records, timeRange), [records, timeRange])
+  const rangedRecords = useMemo(() => filterPrepTestsByTimeRange(prepRecords, timeRange), [prepRecords, timeRange])
 
   const stats = useMemo(() => computePrepTestStats(rangedRecords), [rangedRecords])
   const headlineStats = useMemo((): AnalyticsStat[] => {
@@ -389,41 +364,31 @@ function AnalyticsPrepTestsPage() {
     [headlineStats, secondaryStats],
   )
 
-  const sortedRecords = useMemo(() => {
-    const out = [...rangedRecords]
-    switch (historySort) {
-      case "date-desc":
-        out.sort((a, b) => new Date(b.takenAt).getTime() - new Date(a.takenAt).getTime())
-        break
-      case "date-asc":
-        out.sort((a, b) => new Date(a.takenAt).getTime() - new Date(b.takenAt).getTime())
-        break
-      case "score-desc":
-        out.sort((a, b) => b.scaledScore - a.scaledScore)
-        break
-      case "score-asc":
-        out.sort((a, b) => a.scaledScore - b.scaledScore)
-        break
-    }
-    return out
-  }, [rangedRecords, historySort])
+  const sortedRecords = useMemo(
+    () => sortPrepTestRecords(rangedRecords, historySort),
+    [rangedRecords, historySort],
+  )
 
   const historyEntries = useMemo(() => getPrepTestHistoryEntries(sortedRecords), [sortedRecords])
 
   const visibleEntries = useMemo(
-    () => (bookmarkedOnly ? historyEntries.filter((entry) => entry.bookmarked) : historyEntries),
+    () => filterBookmarkedOnly(historyEntries, bookmarkedOnly),
     [historyEntries, bookmarkedOnly],
   )
 
   const handleToggleBookmark = useCallback(
     (id: string) => {
-      const next = !(bookmarks[id] ?? false)
-      setBookmarks((current) => ({ ...current, [id]: next }))
-      if (practiceApi) {
-        void practiceApi.updateSession({ sessionId: id, bookmarked: next })
-      }
+      const previous = sessionBookmarkState(prepRecords, id)
+      const next = !previous
+      setPrepRecords((current) => withSessionBookmark(current, id, next))
+      void persistSessionBookmark({
+        sessionId: id,
+        bookmarked: next,
+        practiceApi,
+        onFailure: () => setPrepRecords((current) => withSessionBookmark(current, id, previous)),
+      })
     },
-    [bookmarks, practiceApi],
+    [practiceApi, prepRecords],
   )
 
   const handleSelectEntry = useCallback(

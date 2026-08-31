@@ -248,26 +248,63 @@ function formatHistoryDate(iso: string): string {
   return date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })
 }
 
+export type PrepTestHistorySort = "date-desc" | "date-asc" | "score-desc" | "score-asc"
+
+function takenAtMs(iso: string): number {
+  const time = new Date(iso).getTime()
+  return Number.isFinite(time) ? time : 0
+}
+
+function displayedHistoryScore(record: PrepTestRecord): number {
+  return record.lrCorrect + record.rcCorrect
+}
+
+export function sortPrepTestRecords(
+  records: readonly PrepTestRecord[],
+  sort: PrepTestHistorySort,
+): PrepTestRecord[] {
+  const out = [...records]
+  switch (sort) {
+    case "date-desc":
+      out.sort((a, b) => takenAtMs(b.takenAt) - takenAtMs(a.takenAt) || a.id.localeCompare(b.id))
+      break
+    case "date-asc":
+      out.sort((a, b) => takenAtMs(a.takenAt) - takenAtMs(b.takenAt) || a.id.localeCompare(b.id))
+      break
+    case "score-desc":
+      out.sort(
+        (a, b) =>
+          displayedHistoryScore(b) - displayedHistoryScore(a) || b.scaledScore - a.scaledScore,
+      )
+      break
+    case "score-asc":
+      out.sort(
+        (a, b) =>
+          displayedHistoryScore(a) - displayedHistoryScore(b) || a.scaledScore - b.scaledScore,
+      )
+      break
+  }
+  return out
+}
+
 /**
- * Adapt the canonical PrepTest records to the shape used by the shared
- * `AnalyticsPrepTestHistory` component. Sorted newest-first so the most
- * recent test sits at the top of the list.
+ * Adapt PrepTest records to the shared history-row shape. Caller controls order.
  */
 export function getPrepTestHistoryEntries(
   records: readonly PrepTestRecord[],
 ): PrepTestHistoryEntry[] {
-  return [...records]
-    .sort((a, b) => new Date(b.takenAt).getTime() - new Date(a.takenAt).getTime())
-    .map((record) => ({
-      id: record.id,
-      testLabel: `PT${record.prepTestNumber}`,
-      dateLabel: formatHistoryDate(record.takenAt),
-      bookmarked: record.bookmarked,
-      score: record.lrCorrect + record.rcCorrect,
-      scoreMax: record.lrMax + record.rcMax,
-      blindReviewScore: Math.round(((record.blindReviewScaled - 120) / 60) * (record.lrMax + record.rcMax)),
-      blindReviewMax: record.lrMax + record.rcMax,
-    }))
+  return records.map((record) => ({
+    id: record.id,
+    testLabel: `PT${record.prepTestNumber}`,
+    dateLabel: formatHistoryDate(record.takenAt),
+    bookmarked: Boolean(record.bookmarked),
+    score: displayedHistoryScore(record),
+    scoreMax: record.lrMax + record.rcMax,
+    blindReviewScore: Math.round(
+      ((record.blindReviewScaled - 120) / 60) * (record.lrMax + record.rcMax),
+    ),
+    blindReviewMax: record.lrMax + record.rcMax,
+  }))
 }
 
 export type PrepTestStats = {
