@@ -9,6 +9,8 @@ import {
 } from "@/features/student/practice-session/filter-practice-result-questions"
 import { PracticeResultsBookmarkedOnlyToggle } from "@/features/student/practice-session/practice-results-list-layout"
 import {
+  PT_RESULTS_DETAIL_GRID_CLASS,
+  PT_RESULTS_DETAIL_ROW_CLASS,
   PT_RESULTS_HERO_CARD_CLASS,
   PT_RESULTS_PAGE_GAP_CLASS,
   PT_RESULTS_PASSAGE_BADGE_CLASS,
@@ -77,14 +79,14 @@ function padTimeNote(note: string): string {
 
 function RcDrillPassageHeader({ passage }: { passage: PracticePassageSummary }) {
   return (
-    <div className="rounded-t-[24px] border border-[#dfe1e7] bg-[#f3f7ff] p-6">
-      <div className="flex min-w-[1104px] items-start gap-6">
+    <div className="min-w-0 rounded-t-[24px] border border-[#dfe1e7] bg-[#f3f7ff] p-6">
+      <div className={PT_RESULTS_DETAIL_ROW_CLASS}>
         <div className={PT_RESULTS_PASSAGE_BADGE_CLASS}>
           <span className="text-2xl font-bold leading-[1.3] text-[#0d47a1]">{passage.passageLabel}</span>
         </div>
 
-        <div className="flex min-w-0 flex-1 items-center">
-          <div className="flex h-[60px] w-[305px] shrink-0 flex-col justify-center gap-2">
+        <div className={PT_RESULTS_DETAIL_GRID_CLASS}>
+          <div className="flex min-w-0 flex-col justify-center gap-2">
             <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">{passage.title}</h3>
             {passage.tags.length > 0 ? (
               <div className="flex flex-wrap gap-2.5">
@@ -97,15 +99,15 @@ function RcDrillPassageHeader({ passage }: { passage: PracticePassageSummary }) 
             ) : null}
           </div>
 
-          <div className="flex h-[72px] w-[256px] shrink-0 flex-col gap-3">
+          <div className="flex min-w-0 flex-col gap-3">
             <p className={LABEL_CLASS}>Difficulty</p>
             <PracticeDifficultyMeter difficulty={passage.difficulty} />
           </div>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <div className="flex min-w-0 flex-col gap-3">
             <p className={LABEL_CLASS}>Time:</p>
-            <div className="flex flex-wrap items-center gap-5">
-              <div className="flex gap-1">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+              <div className="flex flex-wrap gap-1">
                 <span className="w-20 shrink-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#666d80]">
                   Target time:
                 </span>
@@ -264,7 +266,7 @@ function RcDrillResultsView({
         ? visiblePassages.map((group) => (
             <section
               key={group.passage.id}
-              className="overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white p-6"
+              className="min-w-0 overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white p-6"
             >
               <RcDrillPassageHeader passage={group.passage} />
               {group.questions.map((q) => (

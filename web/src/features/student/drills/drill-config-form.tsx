@@ -2,9 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { FigmaIcon, PlayCircleIcon } from "@/components/icons/figma-icons"
 import { Switch } from "@/components/ui/switch"
 import { DrillConfigSelectField } from "@/features/student/drills/drill-config-field"
+import {
+  clearSavedDrillConfig,
+  readSavedDrillConfig,
+  writeSavedDrillConfig,
+  type SavedDrillConfig,
+} from "@/features/student/drills/drill-config-saved-settings"
 import {
   drillConfigOptions,
   type DrillDifficulty,
@@ -40,22 +47,24 @@ function DrillConfigForm({
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
   const { scaleFactor } = useAccommodations()
   const timingOptions = useMemo(() => buildDrillTimingOptions(scaleFactor), [scaleFactor])
+  const savedConfig = useMemo(() => readSavedDrillConfig(sectionType), [sectionType])
 
   const [bannerOpen, setBannerOpen] = useState(true)
-  const [customize, setCustomize] = useState(Boolean(initialQuestionTypeId))
+  const [saveSettings, setSaveSettings] = useState(() => savedConfig != null)
+  const [customize, setCustomize] = useState(Boolean(initialQuestionTypeId) || Boolean(savedConfig?.customize))
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [poolStats, setPoolStats] = useState({ selectedCount: 0, totalCount: 0 })
 
-  const [questionCount, setQuestionCount] = useState("5")
-  const [passageCount, setPassageCount] = useState("1")
-  const [timing, setTiming] = useState<DrillTiming>("unlimited")
-  const [showAnswers, setShowAnswers] = useState<DrillShowAnswers>("end")
-  const [selection, setSelection] = useState("auto")
-  const [tags, setTags] = useState(initialQuestionTypeId ?? "any")
-  const [difficulty, setDifficulty] = useState<DrillDifficulty>("adaptive")
+  const [questionCount, setQuestionCount] = useState(savedConfig?.questionCount ?? "5")
+  const [passageCount, setPassageCount] = useState(savedConfig?.passageCount ?? "1")
+  const [timing, setTiming] = useState<DrillTiming>(savedConfig?.timing ?? "unlimited")
+  const [showAnswers, setShowAnswers] = useState<DrillShowAnswers>(savedConfig?.showAnswers ?? "end")
+  const [selection, setSelection] = useState(savedConfig?.selection ?? "auto")
+  const [tags, setTags] = useState(initialQuestionTypeId ?? savedConfig?.tags ?? "any")
+  const [difficulty, setDifficulty] = useState<DrillDifficulty>(savedConfig?.difficulty ?? "adaptive")
   // Default to full pool so Start works even after prior practice; "Fresh" is opt-in via Customize.
-  const [status, setStatus] = useState<DrillStatus>("all")
+  const [status, setStatus] = useState<DrillStatus>(savedConfig?.status ?? "all")
 
   const copy = sectionCopy[sectionType]
 
@@ -76,6 +85,7 @@ function DrillConfigForm({
     : null
   const resolvedDifficulty = customize ? difficulty : "adaptive"
   const resolvedStatus = customize ? status : "all"
+  const resolvedShowAnswers = customize ? showAnswers : "end"
 
   const loadPoolStats = useCallback(async () => {
     try {
@@ -97,6 +107,39 @@ function DrillConfigForm({
     }, 0)
     return () => window.clearTimeout(timer)
   }, [loadPoolStats])
+
+  useEffect(() => {
+    if (!saveSettings) return
+    const config: SavedDrillConfig = {
+      questionCount,
+      passageCount,
+      timing,
+      showAnswers,
+      customize,
+      selection,
+      tags,
+      difficulty,
+      status,
+    }
+    writeSavedDrillConfig(sectionType, config)
+  }, [
+    customize,
+    difficulty,
+    passageCount,
+    questionCount,
+    saveSettings,
+    sectionType,
+    selection,
+    showAnswers,
+    status,
+    tags,
+    timing,
+  ])
+
+  function handleSaveSettingsChange(next: boolean) {
+    setSaveSettings(next)
+    if (!next) clearSavedDrillConfig(sectionType)
+  }
 
   async function handleStart() {
     if (poolStats.selectedCount === 0) {
@@ -133,7 +176,7 @@ function DrillConfigForm({
             }
           : {}),
         timing,
-        showAnswers,
+        showAnswers: resolvedShowAnswers,
         selection: selection as "auto" | "manual",
         questionTypeId: resolvedQuestionTypeId,
         tagLabel: resolvedTagLabel,
@@ -220,17 +263,17 @@ function DrillConfigForm({
             onChange={(v) => setTiming(v as DrillTiming)}
             options={timingOptions}
           />
-          <DrillConfigSelectField
-            label="Show Answers"
-            description="When to reveal answers"
-            value={showAnswers}
-            onChange={(v) => setShowAnswers(v as DrillShowAnswers)}
-            options={[...drillConfigOptions.showAnswers]}
-          />
         </div>
 
         {customize ? (
-          <div className="grid grid-cols-4 items-stretch gap-6">
+          <div className="grid gap-6 overflow-visible sm:grid-cols-2">
+            <DrillConfigSelectField
+              label="Show Answers"
+              description="When to reveal answers"
+              value={showAnswers}
+              onChange={(v) => setShowAnswers(v as DrillShowAnswers)}
+              options={[...drillConfigOptions.showAnswers]}
+            />
             <DrillConfigSelectField
               label="Selection"
               description="How questions are chosen for this drill"
@@ -275,17 +318,14 @@ function DrillConfigForm({
           >
             Back
           </Link>
-          <button
-            type="button"
-            className="inline-flex h-[52px] items-center gap-2 px-4 text-base font-semibold tracking-[0.02em] text-[#0d47a1] transition-opacity hover:opacity-80"
-          >
-            <FigmaIcon name="share-circle" className="size-5 shrink-0" />
-            Share
-          </button>
-          <Button type="button" variant="outline" className="ds-btn-outline gap-2 text-base">
-            <FigmaIcon name="gear" className="size-5 shrink-0" />
-            Save Setting
-          </Button>
+          <label className="inline-flex h-[52px] cursor-pointer select-none items-center gap-2.5 text-base font-semibold tracking-[0.02em] text-[#0d47a1]">
+            <Checkbox
+              checked={saveSettings}
+              onChange={(event) => handleSaveSettingsChange(event.target.checked)}
+              aria-label="Save settings"
+            />
+            Save settings
+          </label>
           <Button
             type="button"
             variant="default"

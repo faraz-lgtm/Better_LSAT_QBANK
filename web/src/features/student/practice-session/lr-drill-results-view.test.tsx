@@ -137,4 +137,15 @@ describe("LrDrillResultsView bookmarks", () => {
     expect(screen.getByText("Bookmarked only")).toBeInTheDocument()
     await bookmarkFirstAndFilterToBookmarkedOnly(user, onToggleBookmark)
   })
+
+  it("does not force a horizontal scrollbar on question result rows", () => {
+    renderDrillResults()
+    const title = screen.getByText(/PT 129\s+\.\s+S1\s+\.\s+Q1/)
+    const row = title.closest("article")
+    expect(row).toBeTruthy()
+    expect(row?.className).not.toMatch(/overflow-x-auto/)
+    expect(row?.innerHTML).not.toMatch(/min-w-\[1104px\]/)
+    expect(row?.innerHTML).not.toMatch(/w-\[562px\]/)
+    expect(row?.innerHTML).not.toMatch(/w-\[542px\]/)
+  })
 })

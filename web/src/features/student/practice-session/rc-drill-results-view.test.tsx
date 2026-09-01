@@ -156,4 +156,14 @@ describe("RcDrillResultsView bookmarks", () => {
     expect(screen.getByText("2/2")).toBeInTheDocument()
     await bookmarkFirstAndFilterPassages(user, onToggleBookmark)
   })
+
+  it("keeps passage and question rows from forcing a horizontal scrollbar", () => {
+    renderView(vi.fn())
+    const passageTitle = screen.getByRole("heading", { name: "Passage 1" })
+    expect(passageTitle.closest("div")?.className).not.toMatch(/min-w-\[1104px\]/)
+    const questionTitle = screen.getByText(/PT 128\s+\.\s+S4\s+\.\s+Q1/)
+    const questionRow = questionTitle.closest("article")
+    expect(questionRow?.className).not.toMatch(/overflow-x-auto/)
+    expect(questionRow?.innerHTML).not.toMatch(/min-w-\[1104px\]/)
+  })
 })
