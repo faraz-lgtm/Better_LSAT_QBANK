@@ -9,7 +9,7 @@ export function isUnlimitedDrillQuestionCount(value: unknown): value is "unlimit
 }
 
 export type DrillTiming = "unlimited" | "35" | "per-q"
-export type DrillShowAnswers = "end" | "each" | "never"
+export type DrillShowAnswers = "end" | "each"
 export type DrillSelection = "auto" | "manual"
 export type DrillDifficulty = "adaptive" | "easy" | "hard"
 export type DrillStatus = "fresh" | "all"
@@ -142,7 +142,6 @@ export const drillConfigOptions = {
   showAnswers: [
     { label: "At the end", value: "end" },
     { label: "After each question", value: "each" },
-    { label: "Never (blind)", value: "never" },
   ],
   selection: [
     { label: "Pick automatically", value: "auto" },

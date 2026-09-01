@@ -21,7 +21,6 @@ export const lrDrillConfigOptions = {
   showAnswers: [
     { label: "At the end", value: "end" },
     { label: "After each question", value: "each" },
-    { label: "Never (blind)", value: "never" },
   ],
   selection: [
     { label: "Pick automatically", value: "auto" },

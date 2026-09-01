@@ -13,6 +13,15 @@ describe("drillConfigOptions.questionCount", () => {
   })
 })
 
+describe("drillConfigOptions.showAnswers", () => {
+  it("offers At the end and After each question, not Never (blind)", () => {
+    expect(drillConfigOptions.showAnswers).toEqual([
+      { label: "At the end", value: "end" },
+      { label: "After each question", value: "each" },
+    ])
+  })
+})
+
 describe("drillConfigOptions.passageCount", () => {
   it("keeps RC Number of Passages as Unlimited plus 1–8", () => {
     expect(drillConfigOptions.passageCount.map((option) => option.value)).toEqual([
