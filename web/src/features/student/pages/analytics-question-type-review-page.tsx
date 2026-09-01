@@ -12,7 +12,11 @@ import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import type { ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
 import { PracticeQuestionResultCard } from "@/features/student/practice-session/practice-question-result-card"
-import { FIGMA_DROPDOWN_CARD_OPEN_CLASS, FigmaDropdown } from "@/components/ui/figma-dropdown"
+import {
+  FIGMA_DROPDOWN_CARD_OPEN_CLASS,
+  FIGMA_DROPDOWN_PILL_FILTER_CLASS,
+  FigmaDropdown,
+} from "@/components/ui/figma-dropdown"
 import { createExplanationsApi } from "@/lib/api/explanations"
 import type { QuestionTypeReviewPayload } from "@/lib/api/analytics"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -49,7 +53,7 @@ function ReviewTotalBar({
           onChange={(next) => onFilterChange(next as FilterOption)}
           onOpenChange={setDropdownOpen}
           options={FILTER_OPTIONS.map((opt) => ({ label: opt, value: opt }))}
-          className="w-full min-w-[160px] max-w-[160px] sm:w-[160px]"
+          className={FIGMA_DROPDOWN_PILL_FILTER_CLASS}
         />
       </div>
     </section>

@@ -166,4 +166,16 @@ describe("RcDrillResultsView bookmarks", () => {
     expect(questionRow?.className).not.toMatch(/overflow-x-auto/)
     expect(questionRow?.innerHTML).not.toMatch(/min-w-\[1104px\]/)
   })
+
+  it("filters to Incorrect only and shows an empty state when every question is correct", async () => {
+    const user = userEvent.setup()
+    renderView(vi.fn(), "section")
+
+    await user.click(screen.getByRole("button", { name: "Question" }))
+    expect(screen.getByRole("option", { name: "Incorrect only" }).textContent).toBe("Incorrect only")
+    await user.click(screen.getByRole("option", { name: "Incorrect only" }))
+
+    expect(screen.getByText("No incorrect questions in this section.")).toBeInTheDocument()
+    expect(screen.queryByText("Passage 1")).not.toBeInTheDocument()
+  })
 })

@@ -149,3 +149,54 @@ describe("LrDrillResultsView bookmarks", () => {
     expect(row?.innerHTML).not.toMatch(/w-\[542px\]/)
   })
 })
+
+describe("LrDrillResultsView question filter", () => {
+  it("shows full Incorrect only label and hides correct questions", async () => {
+    const user = userEvent.setup()
+    renderDrillResults(vi.fn(), "section")
+
+    await user.click(screen.getByRole("button", { name: "Question" }))
+    const incorrectOnly = screen.getByRole("option", { name: "Incorrect only" })
+    expect(incorrectOnly.textContent).toBe("Incorrect only")
+    expect(incorrectOnly.className).not.toMatch(/truncate/)
+
+    await user.click(incorrectOnly)
+
+    expect(screen.queryByText(/PT 129\s+\.\s+S1\s+\.\s+Q1/)).not.toBeInTheDocument()
+    expect(screen.getByText(/PT 129\s+\.\s+S1\s+\.\s+Q2/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Incorrect only" })).toBeInTheDocument()
+  })
+
+  it("shows an empty state when Incorrect only matches nothing", async () => {
+    const user = userEvent.setup()
+    function Harness() {
+      return (
+        <MemoryRouter>
+          <LrDrillResultsView
+            variant="section"
+            questionCount={1}
+            rawScore={1}
+            scaledScore={null}
+            elapsedSeconds={12}
+            timing="unlimited"
+            take={1}
+            excluded={false}
+            questions={[meta("q1", 1, true)]}
+            showBlindReview={false}
+            bookmarkedIds={new Set()}
+            onToggleBookmark={() => {}}
+            onReviewInTester={() => {}}
+            onExcludedChange={() => {}}
+          />
+        </MemoryRouter>
+      )
+    }
+    render(<Harness />)
+
+    await user.click(screen.getByRole("button", { name: "Question" }))
+    await user.click(screen.getByRole("option", { name: "Incorrect only" }))
+
+    expect(screen.getByText("No incorrect questions in this section.")).toBeInTheDocument()
+    expect(screen.queryByText(/PT 129\s+\.\s+S1\s+\.\s+Q1/)).not.toBeInTheDocument()
+  })
+})

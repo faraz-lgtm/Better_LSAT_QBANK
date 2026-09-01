@@ -45,6 +45,32 @@ function formatScoreDelta(incorrectCount: number): string {
   return `-${incorrectCount}`
 }
 
+function PracticeResultsEmptyFilterMessage({
+  bookmarkedOnly,
+  incorrectOnly,
+  scope,
+}: {
+  bookmarkedOnly: boolean
+  incorrectOnly: boolean
+  scope: "section" | "drill"
+}) {
+  const message = bookmarkedOnly
+    ? scope === "section"
+      ? "No bookmarked questions in this section. Bookmark a question to see it here."
+      : "No bookmarked questions in this drill. Bookmark a question to see it here."
+    : incorrectOnly
+      ? scope === "section"
+        ? "No incorrect questions in this section."
+        : "No incorrect questions in this drill."
+      : "No questions to show."
+
+  return (
+    <p className="rounded-[16px] border border-dashed border-[#dfe1e7] bg-white px-6 py-8 text-center text-sm text-[#666d80]">
+      {message}
+    </p>
+  )
+}
+
 function PracticeResultsBookmarkedOnlyToggle({
   checked,
   onCheckedChange,
@@ -208,6 +234,7 @@ function PracticeResultsPassageRow({ passage }: { passage: PracticePassageSummar
 
 export {
   PracticeResultsBookmarkedOnlyToggle,
+  PracticeResultsEmptyFilterMessage,
   PracticeResultsPassageRow,
   PracticeResultsSectionCard,
   PracticeResultsTotalQuestionsBar,

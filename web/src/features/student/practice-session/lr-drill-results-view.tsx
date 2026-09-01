@@ -2,7 +2,11 @@ import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { Bookmark, Pencil, Trash2 } from "lucide-react"
 
-import { FIGMA_DROPDOWN_CARD_OPEN_CLASS, FigmaDropdown } from "@/components/ui/figma-dropdown"
+import {
+  FIGMA_DROPDOWN_CARD_OPEN_CLASS,
+  FIGMA_DROPDOWN_PILL_FILTER_CLASS,
+  FigmaDropdown,
+} from "@/components/ui/figma-dropdown"
 import { Switch } from "@/components/ui/switch"
 import { resolveAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
 import { explanationQuestionDetailHref } from "@/features/student/explanation-detail/explanation-question-index"
@@ -10,7 +14,10 @@ import {
   filterPracticeResultQuestions,
   practiceResultQuestionBookmarkId,
 } from "@/features/student/practice-session/filter-practice-result-questions"
-import { PracticeResultsBookmarkedOnlyToggle } from "@/features/student/practice-session/practice-results-list-layout"
+import {
+  PracticeResultsBookmarkedOnlyToggle,
+  PracticeResultsEmptyFilterMessage,
+} from "@/features/student/practice-session/practice-results-list-layout"
 import {
   PT_RESULTS_DETAIL_GRID_CLASS,
   PT_RESULTS_DETAIL_ROW_CLASS,
@@ -337,10 +344,6 @@ function LrDrillResultsView({
       }),
     [bookmarkedIds, bookmarkedOnly, filter, questions],
   )
-  const emptyBookmarkedMessage = isSection
-    ? "No bookmarked questions in this section. Bookmark a question to see it here."
-    : "No bookmarked questions in this drill. Bookmark a question to see it here."
-
   return (
     <div className={PT_RESULTS_PAGE_GAP_CLASS}>
       <section className={PT_RESULTS_HERO_CARD_CLASS}>
@@ -404,7 +407,7 @@ function LrDrillResultsView({
             onChange={(next) => setFilter(next as QuestionFilter)}
             onOpenChange={setDropdownOpen}
             options={QUESTION_FILTER_OPTIONS.map((opt) => ({ label: opt, value: opt }))}
-            className="w-full min-w-[160px] max-w-[160px] sm:w-[160px]"
+            className={FIGMA_DROPDOWN_PILL_FILTER_CLASS}
           />
         </div>
       </section>
@@ -424,11 +427,13 @@ function LrDrillResultsView({
             ))}
           </div>
         </section>
-      ) : bookmarkedOnly ? (
-        <p className="rounded-[16px] border border-dashed border-[#dfe1e7] bg-white px-6 py-8 text-center text-sm text-[#666d80]">
-          {emptyBookmarkedMessage}
-        </p>
-      ) : null}
+      ) : (
+        <PracticeResultsEmptyFilterMessage
+          bookmarkedOnly={bookmarkedOnly}
+          incorrectOnly={filter === "Incorrect only"}
+          scope={isSection ? "section" : "drill"}
+        />
+      )}
 
       <section className={cn(PT_RESULTS_SURFACE_CARD_CLASS, "flex flex-col gap-6 px-6 py-4")}>
         <div className="flex flex-wrap items-start justify-between gap-4">

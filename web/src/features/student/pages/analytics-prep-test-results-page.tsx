@@ -7,16 +7,17 @@ import {
 } from "lucide-react"
 
 import { FigmaIcon } from "@/components/icons/figma-icons"
-import { FIGMA_DROPDOWN_CARD_OPEN_CLASS, FigmaDropdown } from "@/components/ui/figma-dropdown"
+import {
+  FIGMA_DROPDOWN_CARD_OPEN_CLASS,
+  FIGMA_DROPDOWN_PILL_FILTER_CLASS,
+  FigmaDropdown,
+} from "@/components/ui/figma-dropdown"
 import { Switch } from "@/components/ui/switch"
 import { explanationQuestionDetailHref } from "@/features/student/explanation-detail/explanation-question-index"
 import { useExplanationQuestionBookmarks } from "@/features/student/explanation-detail/use-explanation-question-bookmarks"
 import { PracticeResultsBookmarkedOnlyToggle } from "@/features/student/practice-session/practice-results-list-layout"
-import {
-  CalculatingScoreLoader,
-  useCalculatingScoreReveal,
-} from "@/features/student/components/calculating-score-loader"
 import { StudentMain } from "@/features/student/components/student-main"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import {
   PT_RESULTS_ACTION_BUTTON_CLASS,
   PT_RESULTS_BY_SECTION_PANEL_CLASS,
@@ -166,7 +167,7 @@ function TotalQuestionsBar({
           onChange={(next) => onFilterChange(next as (typeof QUESTION_FILTER_OPTIONS)[number])}
           onOpenChange={setDropdownOpen}
           options={QUESTION_FILTER_OPTIONS.map((opt) => ({ label: opt, value: opt }))}
-          className="w-full min-w-[160px] max-w-[160px] sm:w-[160px]"
+          className={FIGMA_DROPDOWN_PILL_FILTER_CLASS}
         />
       </div>
     </section>
@@ -610,12 +611,6 @@ function AnalyticsPrepTestResultsPage() {
     [practiceApi, testId],
   )
 
-  const dataReady = !loading && detail != null && error == null
-  const revealResults = useCalculatingScoreReveal({
-    dataReady,
-    resetKey: testId,
-  })
-
   if (error && !loading) {
     return (
       <StudentMain>
@@ -624,13 +619,13 @@ function AnalyticsPrepTestResultsPage() {
     )
   }
 
-  if (!revealResults || !detail) {
+  if (loading || !detail) {
     return (
       <StudentMain
         className={cn("min-h-full", PT_RESULTS_PAGE_BG_CLASS)}
         contentClassName={cn("flex min-h-0 flex-1 flex-col", PT_RESULTS_PAGE_BG_CLASS)}
       >
-        <CalculatingScoreLoader className="min-h-0 flex-1" />
+        <StudentPageLoader centered className="min-h-0 flex-1" label="Loading…" />
       </StudentMain>
     )
   }
@@ -724,8 +719,7 @@ function AnalyticsPrepTestResultsPage() {
           )
         })}
 
-        {bookmarkedOnly &&
-        detail.sectionBlocks.every(
+        {detail.sectionBlocks.every(
           (block) =>
             filterPrepTestResultQuestions(block.questions, {
               incorrectOnly: questionFilter === "Incorrect only",
@@ -734,7 +728,11 @@ function AnalyticsPrepTestResultsPage() {
             }).length === 0,
         ) ? (
           <p className="rounded-[16px] border border-dashed border-[#dfe1e7] bg-white px-6 py-8 text-center text-sm text-[#666d80]">
-            No bookmarked questions in this PrepTest. Bookmark a question to see it here.
+            {bookmarkedOnly
+              ? "No bookmarked questions in this PrepTest. Bookmark a question to see it here."
+              : questionFilter === "Incorrect only"
+                ? "No incorrect questions in this PrepTest."
+                : "No questions to show."}
           </p>
         ) : null}
 

@@ -238,7 +238,7 @@ function DrillConfigForm({
           </div>
         </div>
 
-        <div className="grid grid-cols-3 items-stretch gap-6 overflow-visible">
+        <div className="grid grid-cols-2 items-stretch gap-6 overflow-visible">
           {sectionType === "RC" ? (
             <DrillConfigSelectField
               label="Number of Passages"
