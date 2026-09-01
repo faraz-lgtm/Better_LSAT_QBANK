@@ -14,6 +14,7 @@ import {
   type DrillTiming,
 } from "@/features/student/drills/drill-types"
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
+import { buildDrillTimingOptions, useAccommodations } from "@/features/student/accommodations/accommodations-context"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -37,6 +38,8 @@ function DrillConfigForm({
 }: DrillConfigFormProps) {
   const navigate = useNavigate()
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
+  const { scaleFactor } = useAccommodations()
+  const timingOptions = useMemo(() => buildDrillTimingOptions(scaleFactor), [scaleFactor])
 
   const [bannerOpen, setBannerOpen] = useState(true)
   const [customize, setCustomize] = useState(Boolean(initialQuestionTypeId))
@@ -192,7 +195,7 @@ function DrillConfigForm({
           </div>
         </div>
 
-        <div className="grid gap-6 overflow-visible lg:grid-cols-3">
+        <div className="grid grid-cols-3 items-stretch gap-6 overflow-visible">
           {sectionType === "RC" ? (
             <DrillConfigSelectField
               label="Number of Passages"
@@ -215,7 +218,7 @@ function DrillConfigForm({
             description="Control your Prep pace"
             value={timing}
             onChange={(v) => setTiming(v as DrillTiming)}
-            options={[...drillConfigOptions.timing]}
+            options={timingOptions}
           />
           <DrillConfigSelectField
             label="Show Answers"
@@ -227,7 +230,7 @@ function DrillConfigForm({
         </div>
 
         {customize ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:[grid-template-columns:repeat(4,minmax(0,1fr))]">
+          <div className="grid grid-cols-4 items-stretch gap-6">
             <DrillConfigSelectField
               label="Selection"
               description="How questions are chosen for this drill"

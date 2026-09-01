@@ -143,9 +143,8 @@ import {
   resolvePrepTestSectionBreakSeconds,
   writeStoredSectionBreak,
 } from "@/features/student/preptests/preptest-section-break"
+import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-
-const SECTION_TIMER_SECONDS = 35 * 60
 
 function countSectionIncorrect(
   questions: DrillQuestion[],
@@ -454,6 +453,7 @@ function ReviewPassageCardHeader() {
 }
 
 function SectionSessionPage() {
+  const { sectionTimerSeconds: SECTION_TIMER_SECONDS } = useAccommodations()
   const { sessionId } = useParams<{ sessionId: string }>()
   const [searchParams] = useSearchParams()
   const location = useLocation()
@@ -602,6 +602,7 @@ function SectionSessionPage() {
   const { elapsed, countdown, paused, pauseTimer, resumeTimer, resetElapsed, setInitialCountdown } = usePracticeSessionTimer({
     enabled: !blindReviewMode && !resultsReviewMode && !sectionIntroActive,
   })
+  const appliedAccommodationScaleRef = useRef<number | null>(null)
   const pauseModal = usePracticeSessionPauseModal(pauseTimer, resumeTimer)
   const highlights = usePracticeHighlights()
   const accessibilityPanel = usePracticeSessionAccessibilityPanel(
@@ -634,13 +635,6 @@ function SectionSessionPage() {
       const data = await practiceApi.getSectionSession(sessionId)
       if (generation !== loadGenerationRef.current) return
       setSectionSession(data)
-      if (searchParams.get("blindReview") !== "1" && searchParams.get("review") !== "1") {
-        setInitialCountdown(
-          isSectionCountdownTiming(data.metadata.timing) ? SECTION_TIMER_SECONDS : null,
-        )
-      } else {
-        setInitialCountdown(null)
-      }
       const map: Record<string, QuestionAnswerState> = {}
       for (const a of data.answers) {
         map[a.questionId] = { selectedAnswer: a.selectedAnswer, isCorrect: a.isCorrect }
@@ -721,7 +715,7 @@ function SectionSessionPage() {
     } finally {
       if (generation === loadGenerationRef.current) setLoading(false)
     }
-  }, [practiceApi, sessionId, setInitialCountdown, searchParams, sectionPostBrActiveKey, sectionPostBrActualKey, sectionPostBrAnswersKey])
+  }, [practiceApi, sessionId, searchParams, sectionPostBrActiveKey, sectionPostBrActualKey, sectionPostBrAnswersKey])
 
   useEffect(() => {
     void load()
@@ -729,6 +723,38 @@ function SectionSessionPage() {
       loadGenerationRef.current += 1
     }
   }, [load])
+
+  useEffect(() => {
+    appliedAccommodationScaleRef.current = null
+  }, [sessionId])
+
+  // Re-apply countdown when accommodations resolve after session load (avoids stuck 35:00).
+  useEffect(() => {
+    if (
+      !sectionSession ||
+      blindReviewMode ||
+      resultsReviewMode ||
+      postCompleteBlindReview
+    ) {
+      return
+    }
+    const timing = sectionSession.metadata.timing
+    if (!isSectionCountdownTiming(timing)) {
+      setInitialCountdown(null)
+      appliedAccommodationScaleRef.current = null
+      return
+    }
+    if (appliedAccommodationScaleRef.current === SECTION_TIMER_SECONDS) return
+    appliedAccommodationScaleRef.current = SECTION_TIMER_SECONDS
+    setInitialCountdown(SECTION_TIMER_SECONDS)
+  }, [
+    SECTION_TIMER_SECONDS,
+    sectionSession?.metadata.timing,
+    blindReviewMode,
+    resultsReviewMode,
+    postCompleteBlindReview,
+    setInitialCountdown,
+  ])
 
   useEffect(() => {
     const prepTestIdForSections =
@@ -1377,7 +1403,7 @@ function SectionSessionPage() {
               timeMinutes={
                 isUnlimitedPracticeTiming(metadata?.timing)
                   ? null
-                  : (sectionSession.section.timeMinutes ?? 35)
+                  : Math.round(SECTION_TIMER_SECONDS / 60)
               }
               onGoToQuestions={handleGoToSectionQuestions}
             />

@@ -704,6 +704,8 @@ export function createUsersService(deps: UsersServiceDeps) {
         plannedLsatWindow?: string | null
         lawSchoolCycle?: string | null
         goalScore?: number | null
+        extraTimeSetting?: 'none' | '1.5x' | '2x' | 'custom'
+        extraTimeCustomMinutes?: number | null
       },
     ): Promise<StudentStudyPreferencesDto> {
       const row = await deps.repository.upsertStudyPreferences({
@@ -712,6 +714,8 @@ export function createUsersService(deps: UsersServiceDeps) {
         plannedLsatWindow: input.plannedLsatWindow,
         lawSchoolCycle: input.lawSchoolCycle,
         goalScore: input.goalScore,
+        extraTimeSetting: input.extraTimeSetting,
+        extraTimeCustomMinutes: input.extraTimeCustomMinutes,
       })
       return mapStudyPreferencesRow(row)
     },

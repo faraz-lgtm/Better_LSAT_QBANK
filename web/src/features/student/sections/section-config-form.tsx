@@ -7,10 +7,10 @@ import { DrillConfigSelectField } from "@/features/student/drills/drill-config-f
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
 import {
   formatSectionPoolLabel,
-  sectionConfigOptions,
   type SectionTiming,
   type SectionType,
 } from "@/features/student/sections/section-types"
+import { buildSectionTimingOptions, useAccommodations } from "@/features/student/accommodations/accommodations-context"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -60,6 +60,8 @@ function SectionConfigSelectCard({ label, description, value, onChange, options 
 function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConfigFormProps) {
   const navigate = useNavigate()
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
+  const { scaleFactor } = useAccommodations()
+  const timingOptions = useMemo(() => buildSectionTimingOptions(scaleFactor), [scaleFactor])
 
   const [starting, setStarting] = useState(false)
   const [loadingPool, setLoadingPool] = useState(true)
@@ -167,7 +169,7 @@ function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConf
           description="Control your Prep pace"
           value={timing}
           onChange={(v) => setTiming(v as SectionTiming)}
-          options={[...sectionConfigOptions.timing]}
+          options={timingOptions}
         />
       </div>
 
