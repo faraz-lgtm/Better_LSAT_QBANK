@@ -16,6 +16,7 @@ import type { DrillRecord } from "@/features/student/lib/mock-analytics-drills"
 import type { PrepTestHistoryEntry, PrepTestRecord } from "@/features/student/lib/mock-analytics-preptests"
 import type { DrillType } from "@/features/student/lib/mock-analytics-drills"
 import { orderPriorityRowsByWeakness } from "@/features/student/drills/tag-drills-priority"
+import { resolvePrepTestLrRcScores } from "@/features/student/analytics/prep-test-lr-rc-scores"
 
 function formatSigned(n: number): string {
   if (n > 0) return `+${n}`
@@ -270,21 +271,25 @@ export function buildDrillTypesFromPriorities(priorities: PriorityRow[]): DrillT
     }))
 }
 
-export function mapSessionToPrepTestRecord(s: PracticeSessionSummary): PrepTestRecord | null {
+export function mapSessionToPrepTestRecord(
+  s: PracticeSessionSummary,
+  sectionSessions: readonly PracticeSessionSummary[] = [],
+): PrepTestRecord | null {
   if (s.kind !== "PREPTEST" || !s.completedAt) return null
   const numMatch = s.prepTestTitle?.match(/\d+/)
   const scaled = s.scaledScore ?? s.rawScore ?? 0
   const br = s.blindReviewScaledScore ?? s.blindReviewRawScore ?? scaled
+  const lrRc = resolvePrepTestLrRcScores(s, sectionSessions)
   return {
     id: s.id,
     prepTestId: s.prepTestId ?? null,
     prepTestNumber: numMatch ? Number.parseInt(numMatch[0]!, 10) : 0,
     takenAt: s.completedAt,
     bookmarked: Boolean(s.bookmarked),
-    lrCorrect: 0,
-    lrMax: 51,
-    rcCorrect: s.rawScore ?? 0,
-    rcMax: 27,
+    lrCorrect: lrRc.lrCorrect,
+    lrMax: lrRc.lrMax,
+    rcCorrect: lrRc.rcCorrect,
+    rcMax: lrRc.rcMax,
     scaledScore: scaled,
     percentile: s.percentile ?? 0,
     blindReviewScaled: br,
@@ -302,6 +307,7 @@ export function mapPrepTestSessionToHistoryEntry(s: PracticeSessionSummary): Pre
     id: s.id,
     testLabel: formatPrepTestHistoryLabel(s.prepTestTitle, s.prepTestId),
     dateLabel,
+    takenAt: s.completedAt,
     bookmarked: Boolean(s.bookmarked),
     score,
     scoreMax: 180,
@@ -342,6 +348,7 @@ export function mapDrillSessionToHistoryEntry(s: PracticeSessionSummary): PrepTe
     id: s.id,
     testLabel: formatDrillHistoryLabel(s.metadata),
     dateLabel: formatSessionHistoryDate(s.completedAt),
+    takenAt: s.completedAt,
     bookmarked: Boolean(s.bookmarked),
     score: correct,
     scoreMax: total,
@@ -366,6 +373,7 @@ export function mapSectionSessionToHistoryEntry(s: PracticeSessionSummary): Prep
     id: s.id,
     testLabel,
     dateLabel: formatSessionHistoryDate(s.completedAt),
+    takenAt: s.completedAt,
     bookmarked: Boolean(s.bookmarked),
     score: correct,
     scoreMax: total,

@@ -408,6 +408,12 @@ export type PrepTestSessionMetadata = {
   answeredQuestionIds?: string[]
   blindReviewActive?: boolean
   blindReviewSkipped?: boolean
+  /** Scored LawHub LR section (one section, typically 24–26 questions). */
+  lrCorrect?: number
+  lrMax?: number
+  /** Scored LawHub RC section (one section, typically 26–28 questions). */
+  rcCorrect?: number
+  rcMax?: number
 }
 
 export type PrepTestDetailResponse = {
@@ -487,6 +493,48 @@ function practiceableSectionsFromRow(
   return sections
     .filter((s) => (s.sectionType === 'LR' || s.sectionType === 'RC') && s.questionCount > 0)
     .map((s) => ({ id: s.id, sectionType: s.sectionType as 'LR' | 'RC', questionCount: s.questionCount }))
+}
+
+/** Current LawHub LSAT: one scored LR (~24–26) and one scored RC (~26–28). */
+const LAWHUB_SCORED_SECTION_QUESTION_MAX = { LR: 26, RC: 28 } as const
+
+function lawHubLrRcFromCompletedSections(
+  sections: PrepTestDetailRow['sections'],
+  completedBySectionId: Map<string, PracticeSessionRow>,
+  experimentalSectionIds: Set<string>,
+): { lrCorrect: number; lrMax: number; rcCorrect: number; rcMax: number } {
+  const lr: { correct: number; max: number }[] = []
+  const rc: { correct: number; max: number }[] = []
+  for (const def of sections) {
+    if (experimentalSectionIds.has(def.id) || def.isExperimental === true) continue
+    const sess = def.id ? completedBySectionId.get(def.id) : undefined
+    if (!sess) continue
+    const max = def.questionCount
+    if (!(max > 0)) continue
+    const correct = typeof sess.raw_score === 'number' ? sess.raw_score : 0
+    if (def.sectionType === 'LR') lr.push({ correct, max })
+    if (def.sectionType === 'RC') rc.push({ correct, max })
+  }
+  function oneScoredSection(
+    rows: { correct: number; max: number }[],
+    cap: number,
+  ): { correct: number; max: number } {
+    if (rows.length === 0) return { correct: 0, max: 0 }
+    const chosen = rows[0]!
+    const boundedMax = Math.min(cap, chosen.max)
+    return {
+      max: boundedMax,
+      correct: Math.max(0, Math.min(boundedMax, chosen.correct)),
+    }
+  }
+  const lrOut = oneScoredSection(lr, LAWHUB_SCORED_SECTION_QUESTION_MAX.LR)
+  const rcOut = oneScoredSection(rc, LAWHUB_SCORED_SECTION_QUESTION_MAX.RC)
+  return {
+    lrCorrect: lrOut.correct,
+    lrMax: lrOut.max,
+    rcCorrect: rcOut.correct,
+    rcMax: rcOut.max,
+  }
 }
 
 function assertStudentVisiblePrepTest(moduleId: string | null | undefined): void {
@@ -2481,11 +2529,16 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         percentile = scoreRow.percentile
       }
 
+      const lrRc = lawHubLrRcFromCompletedSections(row.sections, bySectionId, experimentalSectionIds)
       const sessionRow = await deps.repository.updateSession(prepTestSession.id, userId, {
         completed_at: now,
         raw_score: rawScore,
         scaled_score: scaledScore,
         percentile,
+        metadata: {
+          ...prepTestSession.metadata,
+          ...lrRc,
+        },
       })
 
       return { session: sessionRow }

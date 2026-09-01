@@ -12,14 +12,14 @@ export type SectionSummary = {
 }
 
 export const mockLrSectionSummary: SectionSummary = {
-  bestScore: "169",
+  bestScore: "-3",
   bestAccent: "#0d47a1",
   averageScore: "-11",
   averageAccent: "#ae8b00",
 }
 
 export const mockRcSectionSummary: SectionSummary = {
-  bestScore: "169",
+  bestScore: "-3",
   bestAccent: "#0d47a1",
   averageScore: "-11",
   averageAccent: "#ff9d51",

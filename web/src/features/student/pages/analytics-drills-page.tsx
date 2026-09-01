@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { ArrowDownAZ, ArrowUpAZ, ChevronDown, X } from "lucide-react"
+import { ChevronDown, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
 import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
+import { HistorySortMenu } from "@/features/student/analytics/history-sort-menu"
+import { sortHistoryEntries, type HistorySort } from "@/features/student/analytics/history-sort"
 import {
   TimeRangeFilter,
   type TimeRangeValue,
@@ -57,15 +59,6 @@ const SCORE_TABS = [
 ] as const
 
 type ScoreTab = (typeof SCORE_TABS)[number]["id"]
-
-type HistorySort = "date-desc" | "date-asc" | "score-desc" | "score-asc"
-
-const HISTORY_SORT_OPTIONS: Array<{ id: HistorySort; label: string }> = [
-  { id: "date-desc", label: "Most recent" },
-  { id: "date-asc", label: "Oldest first" },
-  { id: "score-desc", label: "Highest score" },
-  { id: "score-asc", label: "Lowest score" },
-]
 
 function DrillScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next: ScoreTab) => void }) {
   return (
@@ -336,77 +329,6 @@ function DrillTypeMenu({
   )
 }
 
-function HistorySortMenu({ value, onChange }: { value: HistorySort; onChange: (next: HistorySort) => void }) {
-  const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    if (!open) return
-    function handlePointerDown(event: PointerEvent) {
-      if (!(event.target instanceof Node)) return
-      if (containerRef.current?.contains(event.target)) return
-      setOpen(false)
-    }
-    function handleKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false)
-    }
-    document.addEventListener("pointerdown", handlePointerDown)
-    document.addEventListener("keydown", handleKey)
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown)
-      document.removeEventListener("keydown", handleKey)
-    }
-  }, [open])
-
-  const activeLabel = HISTORY_SORT_OPTIONS.find((option) => option.id === value)?.label ?? "Sort"
-  const Icon = value.endsWith("desc") ? ArrowDownAZ : ArrowUpAZ
-
-  return (
-    <div ref={containerRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((c) => !c)}
-        className="flex h-10 items-center gap-2 rounded-[16px] border border-[#dfe1e7] bg-white px-3 text-sm font-semibold text-[#062357] hover:bg-[#f3f7ff]"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-      >
-        <Icon className="size-4 text-[#666d80]" aria-hidden />
-        <span>{activeLabel}</span>
-      </button>
-      {open ? (
-        <ul
-          role="listbox"
-          aria-label="Sort PrepTest history"
-          className="absolute right-0 z-30 mt-2 min-w-[200px] overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
-        >
-          {HISTORY_SORT_OPTIONS.map((option) => {
-            const active = option.id === value
-            return (
-              <li key={option.id} role="presentation">
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={active}
-                  onClick={() => {
-                    onChange(option.id)
-                    setOpen(false)
-                  }}
-                  className={cn(
-                    "flex h-10 w-full items-center rounded-[16px] px-3 text-sm font-medium tracking-[0.02em] transition-colors",
-                    active ? "bg-[#f3f7ff] text-[#0d47a1]" : "text-[#062357] hover:bg-[#f6f8fa]",
-                  )}
-                >
-                  {option.label}
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      ) : null}
-    </div>
-  )
-}
-
 function AnalyticsDrillsPage() {
   const navigate = useNavigate()
   const analyticsApi = useAnalyticsApi()
@@ -519,23 +441,10 @@ function AnalyticsDrillsPage() {
     [drillHistory, filteredIds],
   )
 
-  const sortedEntries = useMemo(() => {
-    const out = [...entries]
-    switch (historySort) {
-      case "date-desc":
-        break
-      case "date-asc":
-        out.reverse()
-        break
-      case "score-desc":
-        out.sort((a, b) => b.score / b.scoreMax - a.score / a.scoreMax)
-        break
-      case "score-asc":
-        out.sort((a, b) => a.score / a.scoreMax - b.score / b.scoreMax)
-        break
-    }
-    return out
-  }, [entries, historySort])
+  const sortedEntries = useMemo(
+    () => sortHistoryEntries(entries, historySort),
+    [entries, historySort],
+  )
 
   const visibleEntries = useMemo(
     () => filterBookmarkedOnly(sortedEntries, bookmarkedOnly),
@@ -640,7 +549,11 @@ function AnalyticsDrillsPage() {
       </section>
 
       <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
-        <HistorySortMenu value={historySort} onChange={setHistorySort} />
+        <HistorySortMenu
+          value={historySort}
+          onChange={setHistorySort}
+          ariaLabel="Sort drill history"
+        />
       </div>
 
       <AnalyticsPrepTestHistory

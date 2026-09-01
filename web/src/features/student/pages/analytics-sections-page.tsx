@@ -13,6 +13,8 @@ import {
 } from "@/features/student/components/time-range-filter"
 import type { SectionProgressPoint, SectionSummary } from "@/features/student/lib/mock-analytics-sections"
 import { mapSectionSessionToHistoryEntry } from "@/features/student/analytics/map-analytics"
+import { HistorySortMenu } from "@/features/student/analytics/history-sort-menu"
+import { sortHistoryEntries, type HistorySort } from "@/features/student/analytics/history-sort"
 import { practiceSessionResultsPath } from "@/features/student/analytics/analytics-results-paths"
 import {
   filterBookmarkedOnly,
@@ -30,7 +32,7 @@ import {
   resolveSectionChartMax,
   sessionSectionQuestionCount,
 } from "@/features/student/analytics/section-progress-axis"
-import { averageSectionMissedDisplay } from "@/features/student/analytics/section-average-score"
+import { averageSectionMissedDisplay, bestSectionMissedDisplay } from "@/features/student/analytics/section-average-score"
 import { LSAT_SCALED_Y_AXIS_LABELS } from "@/features/student/analytics/chart-y-axis"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import type { PracticeSessionSummary } from "@/lib/api/analytics"
@@ -272,12 +274,8 @@ function sectionSummaryFromSessions(
   sessions: PracticeSessionSummary[],
   sectionType: "LR" | "RC",
 ): SectionSummary {
-  const filtered = sessions.filter((s) => s.sectionType === sectionType && s.completedAt)
-  const scores = filtered.map((s) => s.rawScore ?? 0)
-  const best = scores.length ? Math.max(...scores) : 0
-
   return {
-    bestScore: String(best),
+    bestScore: bestSectionMissedDisplay(sessions, sectionType),
     bestAccent: "#0d47a1",
     averageScore: averageSectionMissedDisplay(sessions, sectionType),
     averageAccent: sectionType === "LR" ? "#00bc54" : "#0bbcc9",
@@ -312,6 +310,7 @@ function AnalyticsSectionsPage() {
   const [lrScoreTab, setLrScoreTab] = useState<SectionScoreTab>("ptEquivalent")
   const [rcScoreTab, setRcScoreTab] = useState<SectionScoreTab>("ptEquivalent")
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
+  const [historySort, setHistorySort] = useState<HistorySort>("date-desc")
 
   useEffect(() => {
     if (!analyticsApi) {
@@ -390,8 +389,8 @@ function AnalyticsSectionsPage() {
 
   const visibleEntries = useMemo(() => {
     const ranged = takeLastByTimeRange(entries, timeRange)
-    return filterBookmarkedOnly(ranged, bookmarkedOnly)
-  }, [entries, bookmarkedOnly, timeRange])
+    return filterBookmarkedOnly(sortHistoryEntries(ranged, historySort), bookmarkedOnly)
+  }, [bookmarkedOnly, entries, historySort, timeRange])
 
   function handleToggleBookmark(id: string) {
     const previous = sessionBookmarkState(sectionHistory, id)
@@ -482,6 +481,14 @@ function AnalyticsSectionsPage() {
             ) : null}
           </div>
         </section>
+
+        <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
+          <HistorySortMenu
+            value={historySort}
+            onChange={setHistorySort}
+            ariaLabel="Sort section history"
+          />
+        </div>
 
         <AnalyticsPrepTestHistory
           title="Section History"

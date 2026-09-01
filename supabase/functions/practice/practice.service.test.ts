@@ -1818,6 +1818,10 @@ Deno.test('completePrepTest aggregates section scores', async () => {
   const out = await service.completePrepTest('user-1', { prepTestId: 'pt-900' })
   assertEquals(out.session.raw_score, 3)
   assertEquals(out.session.scaled_score, 165)
+  assertEquals(out.session.metadata.lrCorrect, 2)
+  assertEquals(out.session.metadata.lrMax, 3)
+  assertEquals(out.session.metadata.rcCorrect, 1)
+  assertEquals(out.session.metadata.rcMax, 2)
 })
 
 Deno.test('completePrepTest excludes experimental section scores', async () => {
