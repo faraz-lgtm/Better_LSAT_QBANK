@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react"
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { ChevronLeft, ChevronRight, X } from "lucide-react"
 
@@ -103,11 +103,14 @@ import { PracticeSessionHeader } from "@/features/student/practice-session/pract
 import { PracticeSessionNotesPanel } from "@/features/student/practice-session/practice-session-notes-panel"
 import {
   canChangePracticeAnswer,
+  isEditingBlindReviewAnswers,
   isExamChromeLayout,
   isOfficialLayout,
+  resolveDisplayedPracticeAnswer,
   resolveExamSessionVariant,
   type PracticeSessionVariant,
   type PracticeToolMode,
+  type RegionKey,
 } from "@/features/student/practice-session/practice-session-types"
 import { useExamFullscreen, useOfficialInterfacePreference } from "@/features/student/practice-session/use-official-interface"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
@@ -220,11 +223,14 @@ type QuestionPanelProps = {
   fullView?: boolean
   /** Results review: disable choice selection */
   reviewChrome?: boolean
+  choicesDisabled?: boolean
   actualOutcome?: BlindReviewAnswerOutcome
   blindReviewOutcome?: BlindReviewAnswerOutcome
   showCorrectAnswer?: boolean
   onShowCorrectAnswerChange?: (next: boolean) => void
   blindReviewTabEnabled?: boolean
+  onAnnotateMouseUp?: (regionKey: RegionKey, container: HTMLElement | null, event?: MouseEvent) => void
+  onAnnotateClick?: (regionKey: RegionKey, container: HTMLElement | null, event: MouseEvent) => void
 }
 
 function SectionQuestionPanel({
@@ -257,11 +263,14 @@ function SectionQuestionPanel({
   onFullscreen,
   fullView = false,
   reviewChrome = false,
+  choicesDisabled = false,
   actualOutcome = null,
   blindReviewOutcome = null,
   showCorrectAnswer = false,
   onShowCorrectAnswerChange,
   blindReviewTabEnabled = true,
+  onAnnotateMouseUp,
+  onAnnotateClick,
 }: QuestionPanelProps) {
   const [hiddenChoices, setHiddenChoices] = useState<Record<number, boolean>>({})
   const {
@@ -278,7 +287,7 @@ function SectionQuestionPanel({
   const isActiveDrillLayout = isExamChromeLayout(variant)
   const officialChrome = isOfficialLayout(variant)
   const canResetResponse =
-    !reviewChrome && (selectedIndex != null || hasMaskedChoices)
+    !reviewChrome && !choicesDisabled && (selectedIndex != null || hasMaskedChoices)
 
   function handleResetResponse() {
     resetMaskedChoices()
@@ -307,13 +316,16 @@ function SectionQuestionPanel({
         answerView={answerView}
         onAnswerViewChange={onAnswerViewChange}
         recommendedForBr={recommendedForBr}
-        choicesDisabled={reviewChrome}
+        choicesDisabled={choicesDisabled || reviewChrome}
         reviewChrome={reviewChrome}
         actualOutcome={actualOutcome}
         blindReviewOutcome={blindReviewOutcome}
         showCorrectAnswer={showCorrectAnswer}
         onShowCorrectAnswerChange={onShowCorrectAnswerChange}
         blindReviewTabEnabled={blindReviewTabEnabled}
+        onAnnotateMouseUp={onAnnotateMouseUp}
+        onAnnotateClick={onAnnotateClick}
+        annotateToolMode={toolMode}
       />
     )
   }
@@ -375,7 +387,7 @@ function SectionQuestionPanel({
               hidden={!isActiveDrillLayout && Boolean(hiddenChoices[index])}
               masked={isActiveDrillLayout ? Boolean(maskedChoices[index]) : false}
               maskingMode={isActiveDrillLayout && responseMasking}
-              disabled={submitting}
+              disabled={submitting || choicesDisabled}
               selectedIndex={selectedIndex}
               allowReselect={allowReselect}
               onSelect={() => onSelect(index)}
@@ -875,16 +887,25 @@ function SectionSessionPage() {
     return answer.isCorrect ? "correct" : "incorrect"
   }
 
+  const answeringBlindReview =
+    !resultsReviewMode && (blindReviewMode || postCompleteBlindReview)
+  const editingBlindReviewAnswers = isEditingBlindReviewAnswers({
+    resultsReview: resultsReviewMode,
+    answeringBlindReview,
+    answerView: answerViewTab,
+  })
+  const choicesLockedFromCompareView =
+    (blindReviewMode || postCompleteBlindReview || resultsReviewMode) &&
+    !editingBlindReviewAnswers
   const displayAnswer = current
-    ? resultsReviewMode
-      ? answerViewTab === "clean"
-        ? undefined
-        : answerViewTab === "actual"
-          ? actualAnswersByQuestion[current.id]
-          : answersByQuestion[current.id]
-      : blindReviewMode && answerViewTab === "actual"
-        ? actualAnswersByQuestion[current.id]
-        : answersByQuestion[current.id]
+    ? resolveDisplayedPracticeAnswer({
+        resultsReview: resultsReviewMode,
+        answeringBlindReview,
+        answerView: answerViewTab,
+        actual: actualAnswersByQuestion[current.id],
+        blindReview: answersByQuestion[current.id],
+        live: answersByQuestion[current.id],
+      })
     : undefined
   const currentAnswer = displayAnswer
   const selectedIndex =
@@ -899,9 +920,6 @@ function SectionSessionPage() {
   const recommendedForBr = Boolean(
     current && isQuestionRecommendedForBlindReview(actualAnswersByQuestion[current.id]),
   )
-  const editingBlindReviewAnswers =
-    !resultsReviewMode &&
-    (postCompleteBlindReview || !blindReviewMode || answerViewTab === "blind_review")
   const actualOutcome = current ? answerOutcome(actualAnswersByQuestion[current.id]) : null
   const blindReviewOutcome = current ? answerOutcome(answersByQuestion[current.id]) : null
 
@@ -938,7 +956,7 @@ function SectionSessionPage() {
   async function handleSelectChoice(index: number) {
     if (!sessionId || !current || submitting) return
     if (resultsReviewMode) return
-    if (blindReviewMode && !editingBlindReviewAnswers) return
+    if (answeringBlindReview && !editingBlindReviewAnswers) return
     if (postCompleteBlindReview) {
       const choice = current.choices[index]
       if (!choice || selectedIndex === index) return
@@ -952,7 +970,9 @@ function SectionSessionPage() {
       })
       return
     }
-    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), { blindReview: blindReviewMode })) {
+    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
+      blindReview: editingBlindReviewAnswers,
+    })) {
       return
     }
     if (selectedIndex === index) return
@@ -995,8 +1015,9 @@ function SectionSessionPage() {
 
   async function handleResetResponse() {
     if (!sessionId || !current || submitting || resultsReviewMode) return
+    if (answeringBlindReview && !editingBlindReviewAnswers) return
     if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
-      blindReview: blindReviewMode || postCompleteBlindReview,
+      blindReview: editingBlindReviewAnswers,
     })) {
       return
     }
@@ -1451,9 +1472,9 @@ function SectionSessionPage() {
       : computeElapsedTimerProgress(elapsed, timerBudgetSeconds)
   const allowReselect =
     !resultsReviewMode &&
-    (postCompleteBlindReview || editingBlindReviewAnswers) &&
+    (!answeringBlindReview || editingBlindReviewAnswers) &&
     canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
-      blindReview: blindReviewMode || postCompleteBlindReview,
+      blindReview: editingBlindReviewAnswers,
     })
 
   const useBlindReviewLayout = blindReviewMode || postCompleteBlindReview || resultsReviewMode
@@ -1539,20 +1560,6 @@ function SectionSessionPage() {
       onSelectSection={navigateToBlindReviewSection}
       questionRef={questionRefLabel}
       actualScoreLabel="Actual: BR"
-      answerView={answerViewTab}
-      activeColor={highlights.activeColor}
-      toolMode={highlights.toolMode}
-      fontScale={highlights.fontScale}
-      lineSpacing={highlights.lineSpacing}
-      boldEnabled={highlights.boldEnabled}
-      italicEnabled={highlights.italicEnabled}
-      onSelectColor={highlights.selectColor}
-      onEraser={highlights.selectEraser}
-      onUnderline={highlights.selectUnderline}
-      onFontSize={highlights.cycleFontSize}
-      onLineSpacing={highlights.cycleLineSpacing}
-      onToggleBold={highlights.toggleBold}
-      onToggleItalic={highlights.toggleItalic}
       notesOpen={resultsReviewMode ? reviewSidePanel === "notes" : notesOpen}
       notesEnabled={resultsReviewMode || answerViewTab === "blind_review"}
       onToggleNotes={handleToggleNotes}
@@ -1638,12 +1645,16 @@ function SectionSessionPage() {
                 onAnswerViewChange={handleAnswerViewChange}
                 recommendedForBr={recommendedForBr}
                 variant={sessionVariant}
+                toolMode={highlights.toolMode}
                 reviewChrome={resultsReviewMode}
                 actualOutcome={actualOutcome}
                 blindReviewOutcome={blindReviewOutcome}
                 showCorrectAnswer={showCorrectAnswer}
                 onShowCorrectAnswerChange={setShowCorrectAnswer}
                 blindReviewTabEnabled={!resultsReviewMode || resultsReviewHasBr}
+                choicesDisabled={choicesLockedFromCompareView}
+                onAnnotateMouseUp={highlights.handleContentMouseUp}
+                onAnnotateClick={highlights.handleContentClick}
               />
               </div>
             </div>
@@ -1715,6 +1726,9 @@ function SectionSessionPage() {
                   showCorrectAnswer={showCorrectAnswer}
                   onShowCorrectAnswerChange={setShowCorrectAnswer}
                   blindReviewTabEnabled={resultsReviewHasBr}
+                  choicesDisabled={choicesLockedFromCompareView}
+                  onAnnotateMouseUp={highlights.handleContentMouseUp}
+                  onAnnotateClick={highlights.handleContentClick}
                 />
               </div>
             </div>
@@ -1826,6 +1840,9 @@ function SectionSessionPage() {
                 showCorrectAnswer={showCorrectAnswer}
                 onShowCorrectAnswerChange={setShowCorrectAnswer}
                 blindReviewTabEnabled={!resultsReviewMode || resultsReviewHasBr}
+                choicesDisabled={choicesLockedFromCompareView}
+                onAnnotateMouseUp={highlights.handleContentMouseUp}
+                onAnnotateClick={highlights.handleContentClick}
               />
             </div>
           </div>
@@ -1939,6 +1956,14 @@ function SectionSessionPage() {
           </>
         )}
       </footer>
+      <PracticeSessionHighlightPopover
+        menu={highlights.selectionMenu}
+        onApplyColor={highlights.applySelectionColor}
+        onRemove={highlights.removeSelectionHighlight}
+        onToggleExpanded={highlights.toggleSelectionExpanded}
+        onDismiss={highlights.dismissSelectionMenu}
+        isAnchorConnected={highlights.isSelectionMenuAnchorConnected}
+      />
     </>
   )
 
@@ -1989,14 +2014,6 @@ function SectionSessionPage() {
         />
       ) : null}
       {sessionInnerContent}
-      <PracticeSessionHighlightPopover
-        menu={highlights.selectionMenu}
-        onApplyColor={highlights.applySelectionColor}
-        onRemove={highlights.removeSelectionHighlight}
-        onToggleExpanded={highlights.toggleSelectionExpanded}
-        onDismiss={highlights.dismissSelectionMenu}
-        isAnchorConnected={highlights.isSelectionMenuAnchorConnected}
-      />
     </>
   )
 

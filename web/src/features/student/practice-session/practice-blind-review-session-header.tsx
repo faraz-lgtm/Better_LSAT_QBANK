@@ -1,6 +1,5 @@
 import { EyeOff, X } from "lucide-react"
 
-import type { BlindReviewAnswerView } from "@/features/student/practice-session/practice-blind-review-answer-toggle"
 import {
   PracticeBlindReviewSectionSelect,
   type BlindReviewSectionOption,
@@ -12,8 +11,6 @@ import {
   BLIND_REVIEW_HEADER_NOTES_BUTTON_ACTIVE_CLASS,
   BLIND_REVIEW_HEADER_NOTES_BUTTON_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
-import { PracticeSessionToolbar } from "@/features/student/practice-session/practice-session-toolbar"
-import type { HighlightColor, PracticeToolMode } from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
 
 export type PracticeReviewSidePanel = "explanation" | "insights" | "notes" | null
@@ -25,20 +22,6 @@ type PracticeBlindReviewSessionHeaderProps = {
   onSelectSection: (sectionSessionId: string) => void
   questionRef: string
   actualScoreLabel: string
-  answerView: BlindReviewAnswerView
-  activeColor: HighlightColor | null
-  toolMode: PracticeToolMode
-  fontScale: number
-  lineSpacing?: number
-  boldEnabled: boolean
-  italicEnabled: boolean
-  onSelectColor: (color: HighlightColor) => void
-  onEraser: () => void
-  onUnderline: () => void
-  onFontSize: () => void
-  onLineSpacing?: () => void
-  onToggleBold: () => void
-  onToggleItalic: () => void
   notesOpen: boolean
   notesEnabled: boolean
   onToggleNotes: () => void
@@ -77,20 +60,6 @@ function PracticeBlindReviewSessionHeader({
   onSelectSection,
   questionRef,
   actualScoreLabel,
-  answerView,
-  activeColor,
-  toolMode,
-  fontScale,
-  lineSpacing,
-  boldEnabled,
-  italicEnabled,
-  onSelectColor,
-  onEraser,
-  onUnderline,
-  onFontSize,
-  onLineSpacing,
-  onToggleBold,
-  onToggleItalic,
   notesOpen,
   notesEnabled,
   onToggleNotes,
@@ -108,7 +77,6 @@ function PracticeBlindReviewSessionHeader({
   reviewSideActions = ["explanation", "insights", "notes"],
 }: PracticeBlindReviewSessionHeaderProps) {
   const isReviewChrome = chrome === "review"
-  const blindReviewView = answerView === "blind_review"
   const showExplanationAction = reviewSideActions.includes("explanation")
   const showInsightsAction = reviewSideActions.includes("insights")
   const showNotesAction = reviewSideActions.includes("notes")
@@ -245,49 +213,28 @@ function PracticeBlindReviewSessionHeader({
         </div>
 
         <div className="flex shrink-0 items-center gap-4 md:gap-6">
-          <>
-              {blindReviewView ? (
-                <PracticeSessionToolbar
-                  variant="blind-review"
-                  activeColor={activeColor}
-                  toolMode={toolMode}
-                  fontScale={fontScale}
-                  lineSpacing={lineSpacing}
-                  boldEnabled={boldEnabled}
-                  italicEnabled={italicEnabled}
-                  onSelectColor={onSelectColor}
-                  onEraser={onEraser}
-                  onUnderline={onUnderline}
-                  onFontSize={onFontSize}
-                  onLineSpacing={onLineSpacing}
-                  onToggleBold={onToggleBold}
-                  onToggleItalic={onToggleItalic}
-                />
-              ) : null}
+          <button
+            type="button"
+            onClick={onToggleNotes}
+            disabled={!notesEnabled}
+            className={cn(
+              BLIND_REVIEW_HEADER_NOTES_BUTTON_CLASS,
+              notesOpen && notesEnabled && BLIND_REVIEW_HEADER_NOTES_BUTTON_ACTIVE_CLASS,
+            )}
+            aria-pressed={notesOpen && notesEnabled}
+          >
+            <BlindReviewNotesIcon className="size-5 shrink-0" />
+            <span className="hidden sm:inline">Notes</span>
+          </button>
 
-              <button
-                type="button"
-                onClick={onToggleNotes}
-                disabled={!notesEnabled}
-                className={cn(
-                  BLIND_REVIEW_HEADER_NOTES_BUTTON_CLASS,
-                  notesOpen && notesEnabled && BLIND_REVIEW_HEADER_NOTES_BUTTON_ACTIVE_CLASS,
-                )}
-                aria-pressed={notesOpen && notesEnabled}
-              >
-                <BlindReviewNotesIcon className="size-5 shrink-0" />
-                <span className="hidden sm:inline">Notes</span>
-              </button>
-
-              <button
-                type="button"
-                className={BLIND_REVIEW_HEADER_EXIT_BUTTON_CLASS}
-                onClick={onExitSection}
-                disabled={exiting}
-              >
-                {exiting ? exitingLabel : exitButtonLabel}
-              </button>
-          </>
+          <button
+            type="button"
+            className={BLIND_REVIEW_HEADER_EXIT_BUTTON_CLASS}
+            onClick={onExitSection}
+            disabled={exiting}
+          >
+            {exiting ? exitingLabel : exitButtonLabel}
+          </button>
         </div>
       </div>
     </header>

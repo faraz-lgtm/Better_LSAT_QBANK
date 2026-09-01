@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type MouseEvent } from "react"
 import { ChevronDown, ChevronUp } from "lucide-react"
 
 import { Switch } from "@/components/ui/switch"
@@ -14,8 +14,13 @@ import {
   BLIND_REVIEW_OPTIONS_LIST_CLASS,
   BLIND_REVIEW_QUESTION_NUMBER_CLASS,
   BLIND_REVIEW_QUESTION_STEM_CLASS,
+  BLIND_REVIEW_QUESTION_STEM_WRAP_CLASS,
   BLIND_REVIEW_RECOMMENDED_BADGE_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
+import type {
+  PracticeToolMode,
+  RegionKey,
+} from "@/features/student/practice-session/practice-session-types"
 import { createExplanationsApi } from "@/lib/api/explanations"
 import { HtmlContent } from "@/lib/html/html-content"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -48,6 +53,9 @@ type PracticeBlindReviewQuestionPanelProps = {
   seedQuestionTypeLabel?: string | null
   /** When false, hides question/answer explanation dropdowns (e.g. locked diagnostic). */
   explanationsEnabled?: boolean
+  onAnnotateMouseUp?: (regionKey: RegionKey, container: HTMLElement | null, event?: MouseEvent) => void
+  onAnnotateClick?: (regionKey: RegionKey, container: HTMLElement | null, event: MouseEvent) => void
+  annotateToolMode?: PracticeToolMode
 }
 
 function regionKey(questionId: string, part: string) {
@@ -78,6 +86,9 @@ function PracticeBlindReviewQuestionPanel({
   seedStemExplanationHtml = null,
   seedQuestionTypeLabel = null,
   explanationsEnabled = true,
+  onAnnotateMouseUp,
+  onAnnotateClick,
+  annotateToolMode = "none",
 }: PracticeBlindReviewQuestionPanelProps) {
   const [hiddenChoices, setHiddenChoices] = useState<Record<number, boolean>>({})
   const [expandedChoiceIds, setExpandedChoiceIds] = useState<Set<string>>(() => new Set())
@@ -219,7 +230,11 @@ function PracticeBlindReviewQuestionPanel({
                 />
               ) : null}
             </div>
-            <div className={cn("flex items-start gap-3", reviewChrome && "px-6 py-3")}>
+            <div
+              className={cn(
+                reviewChrome ? "flex items-start gap-3 px-6 py-3" : BLIND_REVIEW_QUESTION_STEM_WRAP_CLASS,
+              )}
+            >
               {reviewChrome ? (
                 <span className="mt-[3px] shrink-0 text-base font-medium leading-[1.5] tracking-[0.32px] text-[#062357]">
                   {questionNumber}.
@@ -229,11 +244,14 @@ function PracticeBlindReviewQuestionPanel({
                 regionKey={stemKey}
                 html={stemHtml}
                 findQuery={findQuery}
-                toolMode="none"
-                className={cn(
-                  BLIND_REVIEW_QUESTION_STEM_CLASS,
-                  reviewChrome && "min-w-0 flex-1 text-base font-medium leading-[1.5] tracking-[0.32px] text-[#062357]",
-                )}
+                toolMode={reviewChrome ? "none" : annotateToolMode}
+                onMouseUp={reviewChrome ? undefined : onAnnotateMouseUp}
+                onClickCapture={reviewChrome ? undefined : onAnnotateClick}
+                className={
+                  reviewChrome
+                    ? "min-w-0 flex-1 text-base font-medium leading-[1.5] tracking-[0.32px] text-[#062357]"
+                    : BLIND_REVIEW_QUESTION_STEM_CLASS
+                }
               />
               {reviewChrome && explanationsEnabled ? (
                 <button
@@ -285,8 +303,7 @@ function PracticeBlindReviewQuestionPanel({
           {isCorrect ? "Correct" : "Incorrect"}
         </p>
       ) : null}
-      <div className={cn(reviewChrome ? "shrink-0 pb-6" : "practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto")}>
-        <div className={reviewChrome ? "flex flex-col gap-3" : BLIND_REVIEW_OPTIONS_LIST_CLASS}>
+      <div className={cn(reviewChrome ? "flex shrink-0 flex-col gap-3 pb-6" : BLIND_REVIEW_OPTIONS_LIST_CLASS)}>
           {question.choices.map((choice, index) => {
             const isCorrectChoice = correctIndex === index
             const forceSelected =
@@ -338,7 +355,6 @@ function PracticeBlindReviewQuestionPanel({
               />
             )
           })}
-        </div>
       </div>
     </div>
   )

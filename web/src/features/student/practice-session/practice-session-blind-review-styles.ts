@@ -37,7 +37,7 @@ const BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS =
 const BLIND_REVIEW_PASSAGE_PANEL_CLASS = `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} h-full p-6`
 
 const BLIND_REVIEW_QUESTION_PANEL_CLASS =
-  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} flex h-full flex-col overflow-hidden`
+  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} practice-session-pane--br-question flex h-full flex-col overflow-hidden`
 
 /** Notes open — stacked passage / question column */
 const BLIND_REVIEW_NOTES_LAYOUT_CLASS =
@@ -49,7 +49,7 @@ const BLIND_REVIEW_NOTES_PASSAGE_PANEL_CLASS =
   `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} practice-session-br-notes-pane practice-session-scroll-hidden px-8 pb-8 pt-8`
 
 const BLIND_REVIEW_NOTES_QUESTION_PANEL_CLASS =
-  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} flex min-h-0 flex-col overflow-hidden`
+  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} practice-session-pane--br-question flex min-h-0 flex-col overflow-hidden`
 
 const BLIND_REVIEW_NOTES_SIDEBAR_CLASS =
   `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} flex h-full min-h-0 w-[451px] shrink-0 flex-col overflow-hidden`
@@ -57,8 +57,12 @@ const BLIND_REVIEW_NOTES_SIDEBAR_CLASS =
 const BLIND_REVIEW_PASSAGE_TEXT_CLASS =
   "text-base font-normal leading-[26px] tracking-[0.02em] text-[#0d0d12]"
 
+const BLIND_REVIEW_QUESTION_STEM_WRAP_CLASS =
+  "flex min-h-[56px] w-full min-w-0 items-center"
+
+/** Figma `18617:35777` — 18px medium stem; size is forced in CSS so HTML content rules cannot shrink it */
 const BLIND_REVIEW_QUESTION_STEM_CLASS =
-  "text-lg font-medium leading-[1.4] tracking-[0.36px] text-[#0d0d12]"
+  "practice-session-br-stem min-w-0 flex-1 font-medium text-[#0d0d12]"
 
 const BLIND_REVIEW_QUESTION_NUMBER_CLASS =
   "inline-flex size-10 shrink-0 items-center justify-center rounded-[14px] border-2 border-[#ff6f00] bg-white text-lg font-bold text-[#ff6f00] shadow-[0px_0px_5px_#ff6f00]"
@@ -66,7 +70,12 @@ const BLIND_REVIEW_QUESTION_NUMBER_CLASS =
 const BLIND_REVIEW_RECOMMENDED_BADGE_CLASS =
   "inline-flex h-8 items-center rounded-[16px] px-4 text-xs font-medium tracking-[0.24px] text-[#ff6f00]"
 
-const BLIND_REVIEW_OPTIONS_LIST_CLASS = "flex flex-col gap-3 p-6"
+const BLIND_REVIEW_OPTIONS_LIST_CLASS =
+  "practice-session-br-options flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-6 py-5"
+
+/** Figma `18617:35791` — 16px inset around the 48px letter so five choices fit the question card */
+const BLIND_REVIEW_OPTION_ROW_INNER_CLASS =
+  "flex items-center justify-between gap-4 py-3 pl-4 pr-4 text-left"
 
 /** Selected answer while viewing timed/actual responses — exam blue */
 const BLIND_REVIEW_OPTION_ROW_SELECTED_ACTUAL_CLASS =
@@ -257,6 +266,7 @@ export {
   BLIND_REVIEW_NOTES_STACK_CLASS,
   BLIND_REVIEW_NOTES_START_BUTTON_CLASS,
   BLIND_REVIEW_OPTIONS_LIST_CLASS,
+  BLIND_REVIEW_OPTION_ROW_INNER_CLASS,
   BLIND_REVIEW_OPTION_LETTER_SELECTED_ACTUAL_CLASS,
   BLIND_REVIEW_OPTION_LETTER_SELECTED_BR_CLASS,
   BLIND_REVIEW_OPTION_LETTER_CORRECT_CLASS,
@@ -269,6 +279,7 @@ export {
   BLIND_REVIEW_QUESTION_NAV_RECOMMENDED_CLASS,
   BLIND_REVIEW_QUESTION_NUMBER_CLASS,
   BLIND_REVIEW_QUESTION_STEM_CLASS,
+  BLIND_REVIEW_QUESTION_STEM_WRAP_CLASS,
   BLIND_REVIEW_RECOMMENDED_BADGE_CLASS,
   BLIND_REVIEW_SECTION_SELECT_MENU_CLASS,
   BLIND_REVIEW_SECTION_SELECT_MIN_WIDTH_PX,

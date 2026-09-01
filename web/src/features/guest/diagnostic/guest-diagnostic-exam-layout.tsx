@@ -501,20 +501,6 @@ function GuestDiagnosticExamLayout({
           onSelectSection={() => {}}
           questionRef={`Q${safeIndex}`}
           actualScoreLabel="Actual"
-          answerView={answerViewTab}
-          activeColor={highlights.activeColor}
-          toolMode={highlights.toolMode}
-          fontScale={highlights.fontScale}
-          lineSpacing={highlights.lineSpacing}
-          boldEnabled={highlights.boldEnabled}
-          italicEnabled={highlights.italicEnabled}
-          onSelectColor={canNavigate ? highlights.selectColor : () => undefined}
-          onEraser={canNavigate ? highlights.selectEraser : () => undefined}
-          onUnderline={canNavigate ? highlights.selectUnderline : () => undefined}
-          onFontSize={canNavigate ? highlights.cycleFontSize : () => undefined}
-          onLineSpacing={canNavigate ? highlights.cycleLineSpacing : () => undefined}
-          onToggleBold={canNavigate ? highlights.toggleBold : () => undefined}
-          onToggleItalic={canNavigate ? highlights.toggleItalic : () => undefined}
           notesOpen={false}
           notesEnabled={false}
           onToggleNotes={() => undefined}

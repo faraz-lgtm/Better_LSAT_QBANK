@@ -10,6 +10,7 @@ import {
   rangeSpansPartialAnnotation,
   underlineContainingRange,
   wrapRangeWithElement,
+  isRangeInSingleContainer,
 } from "./practice-annotation-dom"
 
 describe("practice-annotation-dom", () => {
@@ -98,6 +99,21 @@ describe("practice-annotation-dom", () => {
     expect(marks.every((m) => m.querySelector("p") === null)).toBe(true)
     expect(container.textContent).toBe("End of passage oneStart of passage two")
     expect(marks.map((m) => m.textContent).join("")).toBe("passage oneStart")
+
+    document.body.removeChild(container)
+  })
+
+  it("treats a multi-paragraph selection as inside the passage container", () => {
+    const container = document.createElement("div")
+    container.innerHTML = "<p>First paragraph</p><p>Second paragraph</p>"
+    document.body.appendChild(container)
+
+    const [p1, p2] = [...container.querySelectorAll("p")]
+    const range = document.createRange()
+    range.setStart(p1!.firstChild as Text, 0)
+    range.setEnd(p2!.firstChild as Text, 6)
+
+    expect(isRangeInSingleContainer(range, container)).toBe(true)
 
     document.body.removeChild(container)
   })

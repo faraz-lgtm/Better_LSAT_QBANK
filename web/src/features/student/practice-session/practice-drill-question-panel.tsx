@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, type MouseEvent } from "react"
 
 import { LrDrillOptionRow } from "@/features/student/drills/lr-drill-option-row"
 import type { DrillQuestion } from "@/features/student/drills/drill-types"
@@ -25,6 +25,7 @@ import {
   isOfficialLayout,
   type PracticeSessionVariant,
   type PracticeToolMode,
+  type RegionKey,
 } from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
 
@@ -72,6 +73,8 @@ type PracticeDrillQuestionPanelProps = {
   seedStemExplanationHtml?: string | null
   seedQuestionTypeLabel?: string | null
   explanationsEnabled?: boolean
+  onAnnotateMouseUp?: (regionKey: RegionKey, container: HTMLElement | null, event?: MouseEvent) => void
+  onAnnotateClick?: (regionKey: RegionKey, container: HTMLElement | null, event: MouseEvent) => void
 }
 
 function PracticeDrillQuestionPanel({
@@ -113,6 +116,8 @@ function PracticeDrillQuestionPanel({
   seedStemExplanationHtml = null,
   seedQuestionTypeLabel = null,
   explanationsEnabled = true,
+  onAnnotateMouseUp,
+  onAnnotateClick,
 }: PracticeDrillQuestionPanelProps) {
   const [hiddenChoices, setHiddenChoices] = useState<Record<number, boolean>>({})
   const {
@@ -167,6 +172,9 @@ function PracticeDrillQuestionPanel({
         seedStemExplanationHtml={seedStemExplanationHtml}
         seedQuestionTypeLabel={seedQuestionTypeLabel}
         explanationsEnabled={explanationsEnabled}
+        onAnnotateMouseUp={onAnnotateMouseUp}
+        onAnnotateClick={onAnnotateClick}
+        annotateToolMode={toolMode}
       />
     )
   }
