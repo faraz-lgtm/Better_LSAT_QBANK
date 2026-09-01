@@ -37,10 +37,14 @@ describe("ExplanationChoiceList", () => {
 
     const button = screen.getByRole("button")
     const row = button.parentElement
-    expect(row).toHaveClass("border-[#0d47a1]")
-    const letterBox = button.querySelector("span.flex.size-7")
-    expect(letterBox).toHaveClass("bg-[#f2f7ff]")
-    expect(letterBox?.querySelector("svg")).toBeInTheDocument()
+    expect(row).toHaveClass("border-[3px]", "border-solid", "border-[#00bc54]", "bg-[#eafff4]")
+    expect(row).not.toHaveClass("border-[#0d47a1]")
+    const letterBox = button.querySelector("span.flex.size-8")
+    expect(letterBox).toHaveClass("bg-[#00bc54]", "text-white", "border-[#00bc54]")
+    const check = letterBox?.querySelector("svg")
+    expect(check).toBeInTheDocument()
+    expect(check).toHaveClass("size-6", "text-white")
+    expect(check).toHaveAttribute("stroke-width", "3")
   })
 
   it("auto-expands initial choice from deep link", () => {

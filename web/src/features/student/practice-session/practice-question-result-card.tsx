@@ -25,6 +25,8 @@ type PracticeQuestionResultCardProps = {
   blindReviewUnanswered?: boolean
   showBlindReview?: boolean
   yourTimeSeconds?: number | null
+  bookmarked?: boolean
+  onToggleBookmark?: (questionId: string) => void
   flagged?: boolean
   variant?: "default" | "active-drill" | "in-section"
   className?: string
@@ -47,6 +49,8 @@ function PracticeQuestionResultCard({
   blindReviewUnanswered = false,
   showBlindReview = false,
   yourTimeSeconds,
+  bookmarked,
+  onToggleBookmark,
   flagged,
   variant = "default",
   className,
@@ -91,6 +95,9 @@ function PracticeQuestionResultCard({
   const explanationHref = detail
     ? `/app/learn/explanations/q/${encodeURIComponent(detail.questionId)}`
     : null
+  const bookmarkId = detail?.questionId
+  const isBookmarked = bookmarked ?? flagged ?? false
+  const canToggleBookmark = Boolean(onToggleBookmark && bookmarkId)
 
   const actionButtons = (
     <div className="flex shrink-0 gap-4">
@@ -115,11 +122,19 @@ function PracticeQuestionResultCard({
       <button
         type="button"
         className="flex size-9 items-center justify-center rounded-xl border border-[#dfe1e6] bg-[#f9f9fb] text-[#666d80]"
-        aria-label={flagged ? "Flagged" : "Bookmark question"}
-        disabled
+        aria-label={isBookmarked ? "Remove bookmark" : "Bookmark question"}
+        aria-pressed={isBookmarked}
+        disabled={!canToggleBookmark}
+        onClick={() => {
+          if (!canToggleBookmark || !bookmarkId || !onToggleBookmark) return
+          onToggleBookmark(bookmarkId)
+        }}
       >
         <Bookmark
-          className={cn("size-[18px]", flagged ? "fill-[#0d47a1] text-[#0d47a1]" : "")}
+          className={cn(
+            "size-[18px]",
+            isBookmarked ? "fill-[#0d47a1] text-[#0d47a1]" : "text-[#666d80]",
+          )}
           aria-hidden
         />
       </button>

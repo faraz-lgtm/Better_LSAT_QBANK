@@ -5,6 +5,12 @@ import type { ExplanationChoice } from "@/features/student/explanation-detail/ty
 import { HtmlContent } from "@/lib/html/html-content"
 import { cn } from "@/lib/utils"
 
+const CORRECT_ROW_CLASS = "border-[3px] border-solid border-[#00bc54] bg-[#eafff4]"
+const CORRECT_BADGE_CLASS = "border-[#00bc54] bg-[#00bc54] text-white"
+const HIGHLIGHT_ROW_CLASS = "border-[#0d47a1] bg-[#f3f7ff]"
+const DEFAULT_ROW_CLASS = "border-[#dfe1e7] bg-[#f6f8fa]"
+const DEFAULT_BADGE_CLASS = "border-[#dfe1e7] bg-white"
+
 type ExplanationChoiceListProps = {
   choices: ExplanationChoice[]
   correctChoiceId: string
@@ -43,7 +49,12 @@ function ExplanationChoiceList({
         const highlighted = highlightChoiceId != null && c.id === highlightChoiceId
         const expandable = hasExplanation(c.explanationHtml)
         const expanded = expandedId === c.id
-        const accented = reveal || highlighted
+        const rowClass = reveal
+          ? CORRECT_ROW_CLASS
+          : highlighted
+            ? HIGHLIGHT_ROW_CLASS
+            : DEFAULT_ROW_CLASS
+        const badgeClass = reveal ? CORRECT_BADGE_CLASS : DEFAULT_BADGE_CLASS
 
         const toggleExpanded = () => {
           if (!expandable) return
@@ -55,7 +66,7 @@ function ExplanationChoiceList({
             <div
               className={cn(
                 "overflow-hidden rounded-[14px] border transition-colors",
-                accented ? "border-[#0d47a1] bg-[#f3f7ff]" : "border-[#dfe1e7] bg-[#f6f8fa]",
+                rowClass,
               )}
             >
               {expanded && expandable ? (
@@ -68,14 +79,12 @@ function ExplanationChoiceList({
                   >
                     <span
                       className={cn(
-                        "flex size-7 shrink-0 items-center justify-center rounded-[10px] border",
-                        reveal
-                          ? "border-[#0d47a1] bg-[#f2f7ff]"
-                          : "border-[#dfe1e7] bg-white",
+                        "flex size-8 shrink-0 items-center justify-center rounded-[10px] border",
+                        badgeClass,
                       )}
                     >
                       {reveal ? (
-                        <Check className="size-5 text-[#0d47a1]" strokeWidth={2.5} aria-hidden />
+                        <Check className="size-6 text-white" strokeWidth={3} aria-hidden />
                       ) : (
                         <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#666d80]">
                           {letter}
@@ -101,14 +110,12 @@ function ExplanationChoiceList({
                 >
                   <span
                     className={cn(
-                      "flex size-7 shrink-0 items-center justify-center rounded-[10px] border",
-                      reveal
-                        ? "border-[#0d47a1] bg-[#f2f7ff]"
-                        : "border-[#dfe1e7] bg-white",
+                      "flex size-8 shrink-0 items-center justify-center rounded-[10px] border",
+                      badgeClass,
                     )}
                   >
                     {reveal ? (
-                      <Check className="size-5 text-[#0d47a1]" strokeWidth={2.5} aria-hidden />
+                      <Check className="size-6 text-white" strokeWidth={3} aria-hidden />
                     ) : (
                       <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#666d80]">
                         {letter}
