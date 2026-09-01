@@ -96,6 +96,7 @@ import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createPracticeApi } from "@/lib/api/practice"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
+import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
@@ -148,6 +149,7 @@ function ReviewPassageCardHeader() {
 }
 
 function DrillSessionPage() {
+  const { scaleFactor: accommodationScaleFactor } = useAccommodations()
   const { sessionId } = useParams<{ sessionId: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -249,6 +251,7 @@ function DrillSessionPage() {
 
   const { elapsed, countdown, paused, pauseTimer, resumeTimer, resetElapsed, setInitialCountdown } =
     usePracticeSessionTimer()
+  const appliedAccommodationScaleRef = useRef<number | null>(null)
   const pauseModal = usePracticeSessionPauseModal(pauseTimer, resumeTimer)
   const highlights = usePracticeHighlights()
   const accessibilityPanel = usePracticeSessionAccessibilityPanel(
@@ -281,17 +284,6 @@ function DrillSessionPage() {
       const data = await practiceApi.getDrillSession(sessionId)
       if (generation !== loadGenerationRef.current) return
       setDrill(data)
-      const drillTiming = data.metadata.timing
-      if (isDrillCountdownTiming(drillTiming)) {
-        setInitialCountdown(
-          resolveTimerBudgetSeconds({
-            timing: drillTiming,
-            questionCount: data.questions.length,
-          }),
-        )
-      } else {
-        setInitialCountdown(null)
-      }
       const map: Record<string, { selectedAnswer: string; isCorrect: boolean }> = {}
       for (const a of data.answers) {
         map[a.questionId] = { selectedAnswer: a.selectedAnswer, isCorrect: a.isCorrect }
@@ -327,7 +319,13 @@ function DrillSessionPage() {
     } finally {
       if (generation === loadGenerationRef.current) setLoading(false)
     }
-  }, [practiceApi, sessionId, drillBlindReviewActiveKey, drillActualAnswersKey, drillBlindReviewAnswersKey, setInitialCountdown])
+  }, [
+    practiceApi,
+    sessionId,
+    drillBlindReviewActiveKey,
+    drillActualAnswersKey,
+    drillBlindReviewAnswersKey,
+  ])
 
   useEffect(() => {
     void load()
@@ -335,6 +333,36 @@ function DrillSessionPage() {
       loadGenerationRef.current += 1
     }
   }, [load])
+
+  useEffect(() => {
+    appliedAccommodationScaleRef.current = null
+  }, [sessionId])
+
+  // Re-apply countdown when accommodations resolve after session load (avoids stuck 35:00).
+  useEffect(() => {
+    if (!drill || reviewAfterComplete) return
+    const drillTiming = drill.metadata.timing
+    if (!isDrillCountdownTiming(drillTiming)) {
+      setInitialCountdown(null)
+      appliedAccommodationScaleRef.current = null
+      return
+    }
+    if (appliedAccommodationScaleRef.current === accommodationScaleFactor) return
+    appliedAccommodationScaleRef.current = accommodationScaleFactor
+    setInitialCountdown(
+      resolveTimerBudgetSeconds({
+        timing: drillTiming,
+        questionCount: drill.questions.length,
+        scaleFactor: accommodationScaleFactor,
+      }),
+    )
+  }, [
+    accommodationScaleFactor,
+    drill?.metadata.timing,
+    drill?.questions.length,
+    reviewAfterComplete,
+    setInitialCountdown,
+  ])
 
   const questions = drill?.questions ?? []
   const metadata = drill?.metadata
@@ -776,6 +804,7 @@ function DrillSessionPage() {
   const timerBudgetSeconds = resolveTimerBudgetSeconds({
     timing: metadata?.timing,
     questionCount: questions.length,
+    scaleFactor: accommodationScaleFactor,
   })
   const timedDrill = isDrillCountdownTiming(metadata?.timing) && countdown != null
   const timerLabel = timedDrill ? "Remaining" : "Elapsed"

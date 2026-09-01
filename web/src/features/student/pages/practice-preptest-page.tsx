@@ -39,6 +39,7 @@ import {
   PREPTEST_LIST_HREF,
   sectionSessionHref,
 } from "@/features/student/preptests/preptest-hub-navigation"
+import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { ChevronRight, Timer, X } from "lucide-react"
 
@@ -156,6 +157,8 @@ function PrepTestSectionRow({
   starting: boolean
   onStart: () => void
 }) {
+  const { scaleFactor } = useAccommodations()
+  const displayMinutes = Math.max(1, Math.round(row.timeMinutes * scaleFactor))
   const breakLocked = row.onBreak
   const canContinueSection = Boolean(row.activeSectionSessionId)
   const showStartButton = row.practiceable && !row.completed && (row.unlocked || breakLocked)
@@ -180,7 +183,7 @@ function PrepTestSectionRow({
         >
           <div className="flex items-center gap-2">
             <Timer className="size-4 shrink-0" aria-hidden />
-            <span>{sectionTimeDisplay(row.timeMinutes)}</span>
+            <span>{sectionTimeDisplay(displayMinutes)}</span>
           </div>
           <span className="h-3.5 w-px shrink-0 bg-[#dfe1e7]" aria-hidden />
           <span>{sectionQuestionsLine(row.questionCount)}</span>

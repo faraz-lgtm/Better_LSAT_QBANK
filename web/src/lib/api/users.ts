@@ -61,6 +61,8 @@ export type AdminLogEvent = {
   created_at: string
 }
 
+export type ExtraTimeSetting = 'none' | '1.5x' | '2x' | 'custom'
+
 export type StudentStudyPreferences = {
   userId: string
   username: string | null
@@ -72,6 +74,8 @@ export type StudentStudyPreferences = {
   studyDays: string[]
   studyHoursLabel: string | null
   wantsLessons: boolean
+  extraTimeSetting: ExtraTimeSetting
+  extraTimeCustomMinutes: number | null
 }
 
 export type OfficialLsatScore = {
@@ -344,6 +348,8 @@ export function createUsersApi(supabase: SupabaseClient) {
       plannedLsatWindow?: string | null
       lawSchoolCycle?: string | null
       goalScore?: number | null
+      extraTimeSetting?: ExtraTimeSetting
+      extraTimeCustomMinutes?: number | null
     }): Promise<StudentStudyPreferences> {
       const { data, error } = await invokeUsersPost<{ preferences: StudentStudyPreferences }>(
         'users-update-study-preferences',
