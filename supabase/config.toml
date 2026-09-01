@@ -595,6 +595,9 @@ verify_jwt = false
 [functions.practice-get-drill-session]
 verify_jwt = false
 
+[functions.practice-extend-drill]
+verify_jwt = false
+
 [functions.practice-drill-pool-stats]
 verify_jwt = false
 

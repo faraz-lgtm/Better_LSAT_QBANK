@@ -460,6 +460,28 @@ export function createPracticeApi(supabase: SupabaseClient) {
       }
     },
 
+    async extendDrill(input: {
+      sessionId: string
+    }): Promise<{
+      session: PracticeSession
+      metadata: DrillSessionResponse["metadata"]
+      questions: DrillSessionResponse["questions"]
+      addedCount: number
+    }> {
+      const { data, error } = await invokePracticeFn<{
+        session: PracticeSession
+        metadata: DrillSessionResponse["metadata"]
+        questions: DrillSessionResponse["questions"]
+        addedCount: number
+      }>("practice-extend-drill", {
+        method: "POST",
+        body: { sessionId: input.sessionId },
+      })
+      if (error) await throwIfEdgeInvokeFailed(error)
+      if (!data?.session) throw new Error("No drill session returned from practice")
+      return data
+    },
+
     async getDrillPoolStats(input: DrillPoolStatsInput): Promise<DrillPoolStats> {
       const { data, error } = await invokePracticeFn<DrillPoolStats>("practice-drill-pool-stats", {
         method: "POST",

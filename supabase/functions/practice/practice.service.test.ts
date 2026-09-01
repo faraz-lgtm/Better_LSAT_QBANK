@@ -845,6 +845,85 @@ Deno.test('startDrill creates session with question ids', async () => {
   assertEquals(out.questions[0]!.stemText, 'Stem?')
 })
 
+Deno.test('startDrill LR unlimited stores unlimited metadata and entire pool', async () => {
+  const service = createPracticeService({ repository: drillRepo() as never })
+  const out = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 'unlimited',
+  })
+  assertEquals(out.metadata.questionCount, 'unlimited')
+  assertEquals(out.metadata.questionIds.length, 6)
+  assertEquals(out.questions.length, 6)
+})
+
+Deno.test('startDrill LR accepts up to 30 questions', async () => {
+  const service = createPracticeService({ repository: drillRepo() as never })
+  const out = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 30,
+  })
+  assertEquals(out.metadata.questionIds.length, 6)
+})
+
+Deno.test('extendDrill appends another batch for unlimited LR drills', async () => {
+  let storedMeta: Record<string, unknown> = {
+    sectionType: 'LR',
+    questionCount: 'unlimited',
+    timing: 'unlimited',
+    showAnswers: 'end',
+    selection: 'auto',
+    difficulty: 'adaptive',
+    status: 'all',
+    questionIds: ['q-1', 'q-2', 'q-3', 'q-4', 'q-5'],
+  }
+  const service = createPracticeService({
+    repository: drillRepo({
+      getSessionById: async () =>
+        baseSession({
+          kind: 'DRILL',
+          completed_at: null,
+          metadata: storedMeta,
+        }),
+      updateSession: async (_id: string, _uid: string, patch: Record<string, unknown>) => {
+        if (patch.metadata && typeof patch.metadata === 'object') {
+          storedMeta = patch.metadata as Record<string, unknown>
+        }
+        return baseSession({ kind: 'DRILL', completed_at: null, metadata: storedMeta })
+      },
+    }) as never,
+  })
+  const out = await service.extendDrill('user-1', { sessionId: 'sess-1' })
+  assertEquals(out.addedCount, 1)
+  assertEquals(out.questions.length, 1)
+  assertEquals((storedMeta.questionIds as string[]).length, 6)
+})
+
+Deno.test('extendDrill returns empty batch when the pool is exhausted', async () => {
+  const storedMeta: Record<string, unknown> = {
+    sectionType: 'LR',
+    questionCount: 'unlimited',
+    timing: 'unlimited',
+    showAnswers: 'end',
+    selection: 'auto',
+    difficulty: 'adaptive',
+    status: 'all',
+    questionIds: ['q-1', 'q-2', 'q-3', 'q-4', 'q-5', 'q-6'],
+  }
+  const service = createPracticeService({
+    repository: drillRepo({
+      getSessionById: async () =>
+        baseSession({
+          kind: 'DRILL',
+          completed_at: null,
+          metadata: storedMeta,
+        }),
+    }) as never,
+  })
+  const out = await service.extendDrill('user-1', { sessionId: 'sess-1' })
+  assertEquals(out.addedCount, 0)
+  assertEquals(out.questions.length, 0)
+})
+
 Deno.test('startDrill RC picks complete passages by passageCount', async () => {
   const rcPool: DrillPoolQuestionRow[] = [
     { id: 'a1', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null },
