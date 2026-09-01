@@ -13,8 +13,6 @@ type PrepCourseContentHeaderProps = {
   stats: PrepCourseCurriculumStats
   showBookmarksOnly: boolean
   onToggleShowBookmarksOnly: (next: boolean) => void
-  allSectionsExpanded: boolean
-  onToggleExpandAll: () => void
 }
 
 function StatChip({ icon, value, label }: { icon: ReactNode; value: number | string; label: string }) {
@@ -67,8 +65,6 @@ function PrepCourseContentHeader({
   stats,
   showBookmarksOnly,
   onToggleShowBookmarksOnly,
-  allSectionsExpanded,
-  onToggleExpandAll,
 }: PrepCourseContentHeaderProps) {
   const hoursValue = stats.totalMinutes < 60 ? stats.totalMinutes : Math.floor(stats.totalMinutes / 60)
 
@@ -102,28 +98,20 @@ function PrepCourseContentHeader({
           </div>
         </div>
 
-        <div className="flex h-[88px] shrink-0 flex-col items-end justify-center gap-2">
-          <div className="flex items-center gap-2">
-            <PrepCourseFigmaIcon src={`${PREP_COURSE_FIGMA}/icon-bookmark.svg`} />
-            <span className="text-xs font-medium tracking-[0.24px] text-[color:var(--greyscale-500)]">
-              Show All Bookmark
-            </span>
-            <Switch
-              size="sm"
-              checked={showBookmarksOnly}
-              onChange={(e) => onToggleShowBookmarksOnly(e.target.checked)}
-              className={cn(
-                "h-5 w-9 border border-[#dfe1e7] bg-white p-0.5",
-                showBookmarksOnly ? "bg-[#0d47a1]! border-[#0d47a1]!" : undefined,
-              )}
-              aria-label="Show all bookmark"
-            />
-          </div>
-          <PrepCourseExpandButton
-            expandLabel="Expand All"
-            collapseLabel="Collapse All"
-            expanded={allSectionsExpanded}
-            onClick={onToggleExpandAll}
+        <div className="flex shrink-0 items-center gap-2">
+          <PrepCourseFigmaIcon src={`${PREP_COURSE_FIGMA}/icon-bookmark.svg`} />
+          <span className="text-xs font-medium tracking-[0.24px] text-[color:var(--greyscale-500)]">
+            Show All Bookmark
+          </span>
+          <Switch
+            size="sm"
+            checked={showBookmarksOnly}
+            onChange={(e) => onToggleShowBookmarksOnly(e.target.checked)}
+            className={cn(
+              "h-5 w-9 border border-[#dfe1e7] bg-white p-0.5",
+              showBookmarksOnly ? "bg-[#0d47a1]! border-[#0d47a1]!" : undefined,
+            )}
+            aria-label="Show all bookmark"
           />
         </div>
       </div>

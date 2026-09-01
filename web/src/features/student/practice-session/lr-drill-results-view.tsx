@@ -20,6 +20,7 @@ import {
   PT_RESULTS_TAG_CLASS,
 } from "@/features/student/analytics/prep-test-results-section-styles"
 import type { PracticeQuestionResultMeta } from "@/features/student/practice-session/build-practice-results-section-groups"
+import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
 import {
   formatAccuracyPct,
   formatCorrectSummaryLine,
@@ -38,7 +39,6 @@ import {
   correctChoiceLetter,
   difficultyLabelFromLevel,
   resolveQuestionResultTags,
-  targetTimeForDifficulty,
 } from "@/features/student/practice-session/practice-results-ui"
 import { cn } from "@/lib/utils"
 
@@ -130,10 +130,12 @@ function DrillResultsQuestionRow({
     : `Question ${meta.number}`
   const tags = detail ? resolveQuestionResultTags(detail) : []
   const difficulty = difficultyLabelFromLevel(detail?.difficulty ?? 3)
-  const targetTime = targetTimeForDifficulty(difficulty)
-  const yourTime = formatPaddedMmSs(meta.yourTimeSeconds)
-  const targetSec =
+  const { scaleFactor } = useAccommodations()
+  const targetSecBase =
     difficulty === "Hardest" || difficulty === "Hard" ? 105 : difficulty === "Medium" ? 90 : 75
+  const targetSec = Math.round(targetSecBase * scaleFactor)
+  const targetTime = formatPaddedMmSs(targetSec)
+  const yourTime = formatPaddedMmSs(meta.yourTimeSeconds)
   const deltaSec = targetSec - meta.yourTimeSeconds
   const yourTimeNote =
     deltaSec > 0
@@ -314,12 +316,13 @@ function LrDrillResultsView({
   heroTitle: heroTitleOverride,
   compactLabel,
 }: LrDrillResultsViewProps) {
+  const { scaleFactor } = useAccommodations()
   const [filter, setFilter] = useState<QuestionFilter>("Question")
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
   const isSection = variant === "section"
   const heroTitle =
-    heroTitleOverride ?? formatLrDrillResultsTitle({ questionCount, timing, take })
+    heroTitleOverride ?? formatLrDrillResultsTitle({ questionCount, timing, take, scaleFactor })
   const scoreHeadline = isSection
     ? scaledScore != null
       ? String(scaledScore)
@@ -449,7 +452,7 @@ function LrDrillResultsView({
         <div className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
           {(
             [
-              ["Questions", String(questionCount), "Timing", formatDrillAboutTiming(timing, elapsedSeconds)],
+              ["Questions", String(questionCount), "Timing", formatDrillAboutTiming(timing, elapsedSeconds, scaleFactor)],
               ["Time used", formatMinutesSecondsLabel(elapsedSeconds), "Take", formatTakeLabel(take)],
             ] as const
           ).map(([leftLabel, leftValue, rightLabel, rightValue]) => (

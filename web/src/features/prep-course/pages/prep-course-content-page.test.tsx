@@ -164,7 +164,6 @@ describe("PrepCourseContentPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Course Content" })).toBeInTheDocument()
     expect(screen.getByText("Show All Bookmark")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Expand All" })).toBeInTheDocument()
     expect(screen.getByText("Modules")).toBeInTheDocument()
     expect(screen.getByText("Sections")).toBeInTheDocument()
 

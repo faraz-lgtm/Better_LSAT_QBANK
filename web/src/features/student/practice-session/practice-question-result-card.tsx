@@ -2,6 +2,7 @@ import { Bookmark, Pencil } from "lucide-react"
 
 import { resolveAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
 import type { ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
+import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
 import { PracticeResultOutcomeIcon } from "@/features/student/practice-session/practice-result-outcome-icon"
 import {
   PracticeQuestionResultCardLayout,
@@ -11,6 +12,7 @@ import {
   formatPtQuestionTitle,
   resolveQuestionResultTags,
   targetTimeForDifficulty,
+  targetTimeSecondsForDifficulty,
 } from "@/features/student/practice-session/practice-results-ui"
 import { cn } from "@/lib/utils"
 
@@ -55,19 +57,15 @@ function PracticeQuestionResultCard({
   variant = "default",
   className,
 }: PracticeQuestionResultCardProps) {
+  const { scaleFactor } = useAccommodations()
   const showBlindReviewResult = showBlindReview
   const title = titleOverride ?? (detail ? formatPtQuestionTitle(detail) : `Question ${number}`)
   const tags = detail ? resolveQuestionResultTags(detail) : []
   const difficulty = difficultyLabelFromLevel(detail?.difficulty ?? 3)
-  const targetTime = targetTimeForDifficulty(difficulty)
+  const targetTime = targetTimeForDifficulty(difficulty, scaleFactor)
   const yourTime =
     yourTimeSeconds != null && yourTimeSeconds >= 0 ? formatMmSs(yourTimeSeconds) : "—"
-  const targetSec =
-    difficulty === "Hardest" || difficulty === "Hard"
-      ? 105
-      : difficulty === "Medium"
-        ? 90
-        : 75
+  const targetSec = Math.round(targetTimeSecondsForDifficulty(difficulty) * scaleFactor)
   const yourSec = yourTimeSeconds ?? 0
   const deltaSec = targetSec - yourSec
   const yourTimeNote =
