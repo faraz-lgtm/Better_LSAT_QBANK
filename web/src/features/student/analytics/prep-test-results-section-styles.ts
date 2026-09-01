@@ -33,6 +33,12 @@ const PT_RESULTS_SECTION_CLASS =
 
 const PT_RESULTS_SECTION_BODY_CLASS = "flex flex-col gap-[24px] p-[24px]"
 
+/** Passage + question result rows — equal columns that shrink instead of scrolling. */
+const PT_RESULTS_DETAIL_ROW_CLASS = "flex w-full min-w-0 max-w-full items-start gap-6"
+
+const PT_RESULTS_DETAIL_GRID_CLASS =
+  "grid min-w-0 flex-1 grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1.25fr)_auto] items-start gap-x-6 gap-y-4"
+
 /** One grouped card: passage header + question rows */
 const PT_RESULTS_CARD_CLASS =
   "overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white shadow-[0_10px_15px_-3px_rgba(0,0,0,0.10),0_4px_6px_-4px_rgba(0,0,0,0.10)]"
@@ -65,6 +71,8 @@ export {
   PT_RESULTS_ACTION_BUTTON_CLASS,
   PT_RESULTS_BY_SECTION_PANEL_CLASS,
   PT_RESULTS_CARD_CLASS,
+  PT_RESULTS_DETAIL_GRID_CLASS,
+  PT_RESULTS_DETAIL_ROW_CLASS,
   PT_RESULTS_HERO_CARD_CLASS,
   PT_RESULTS_PAGE_BG_CLASS,
   PT_RESULTS_PAGE_GAP_CLASS,

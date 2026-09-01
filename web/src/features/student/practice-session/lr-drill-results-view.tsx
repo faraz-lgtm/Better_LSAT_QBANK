@@ -12,6 +12,8 @@ import {
 } from "@/features/student/practice-session/filter-practice-result-questions"
 import { PracticeResultsBookmarkedOnlyToggle } from "@/features/student/practice-session/practice-results-list-layout"
 import {
+  PT_RESULTS_DETAIL_GRID_CLASS,
+  PT_RESULTS_DETAIL_ROW_CLASS,
   PT_RESULTS_HERO_CARD_CLASS,
   PT_RESULTS_PAGE_GAP_CLASS,
   PT_RESULTS_SURFACE_CARD_CLASS,
@@ -166,11 +168,11 @@ function DrillResultsQuestionRow({
   return (
     <article
       className={cn(
-        "overflow-x-auto border border-[#dfe1e7] bg-white p-6",
+        "min-w-0 overflow-hidden border border-[#dfe1e7] bg-white p-6",
         first ? "rounded-t-[24px]" : "border-t-0",
       )}
     >
-      <div className="flex min-w-[1104px] items-start gap-6">
+      <div className={PT_RESULTS_DETAIL_ROW_CLASS}>
         <div
           className={cn(
             "flex size-14 shrink-0 items-center justify-center rounded-[14px]",
@@ -180,119 +182,113 @@ function DrillResultsQuestionRow({
           <span className="text-2xl font-bold leading-[1.3] text-white">{meta.number}</span>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
-          <div className="flex h-[60px] w-full items-center">
-            <div className="flex h-full w-[562px] shrink-0 flex-col justify-center gap-2">
-              <h3 className="m-0 whitespace-nowrap text-xl font-bold leading-[1.35] text-[#062357]">
-                {title}
-              </h3>
-              {tags.length > 0 ? (
-                <div className="flex flex-wrap gap-2.5">
-                  {tags.map((tag) => (
-                    <span key={tag} className={PT_RESULTS_TAG_CLASS}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="flex h-full min-w-0 flex-1 flex-col justify-center gap-3">
-              <p className={LR_RESULT_LABEL_CLASS}>Result</p>
-              <div className="flex flex-nowrap items-center gap-5">
-                <div className="flex h-7 shrink-0 items-center gap-2.5">
-                  <PracticeResultOutcomeIcon
-                    correct={meta.isCorrect}
-                    unanswered={meta.isUnanswered}
-                    variant="stroke"
-                    className="size-6"
-                  />
-                  <span className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#062357]">
-                    Actual
+        <div className={PT_RESULTS_DETAIL_GRID_CLASS}>
+          <div className="flex min-w-0 flex-col justify-center gap-2">
+            <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">{title}</h3>
+            {tags.length > 0 ? (
+              <div className="flex flex-wrap gap-2.5">
+                {tags.map((tag) => (
+                  <span key={tag} className={PT_RESULTS_TAG_CLASS}>
+                    {tag}
                   </span>
-                </div>
-                <div className="flex shrink-0 items-center gap-2.5">
-                  <PracticeResultOutcomeIcon
-                    correct={blindReviewCorrect}
-                    unanswered={blindReviewUnanswered}
-                    variant="stroke"
-                    className="size-6"
-                  />
-                  <span className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#062357]">
-                    Blind Review
-                  </span>
-                </div>
+                ))}
               </div>
-            </div>
+            ) : null}
+          </div>
 
-            <div className="flex h-9 w-[88px] shrink-0 items-center justify-end gap-4">
-              {explanationHref ? (
-                <Link to={explanationHref} className={LR_RESULT_ACTION_CLASS} aria-label="View explanation">
-                  <Pencil className="size-[18px]" aria-hidden />
-                </Link>
-              ) : (
-                <button type="button" className={LR_RESULT_ACTION_CLASS} aria-label="Edit question" disabled>
-                  <Pencil className="size-[18px]" aria-hidden />
-                </button>
-              )}
-              <button
-                type="button"
-                className={LR_RESULT_ACTION_CLASS}
-                aria-label={bookmarked ? "Remove bookmark" : "Bookmark question"}
-                aria-pressed={bookmarked}
-                onClick={() => onToggleBookmark(bookmarkId)}
-              >
-                <Bookmark
-                  className={cn(
-                    "size-[18px]",
-                    bookmarked ? "fill-[#0d47a1] text-[#0d47a1]" : "text-[#666d80]",
-                  )}
-                  aria-hidden
+          <div className="flex min-w-0 flex-col gap-3">
+            <p className={LR_RESULT_LABEL_CLASS}>Result</p>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+              <div className="flex h-7 min-w-0 items-center gap-2.5">
+                <PracticeResultOutcomeIcon
+                  correct={meta.isCorrect}
+                  unanswered={meta.isUnanswered}
+                  variant="stroke"
+                  className="size-6 shrink-0"
                 />
-              </button>
+                <span className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#062357]">
+                  Actual
+                </span>
+              </div>
+              <div className="flex min-w-0 items-center gap-2.5">
+                <PracticeResultOutcomeIcon
+                  correct={blindReviewCorrect}
+                  unanswered={blindReviewUnanswered}
+                  variant="stroke"
+                  className="size-6 shrink-0"
+                />
+                <span className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#062357]">
+                  Blind Review
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="flex w-full items-start">
-            <div className="flex h-[113px] w-[305px] shrink-0 flex-col gap-3">
-              <p className={LR_RESULT_LABEL_CLASS}>Timing</p>
-              <div className="flex gap-1">
-                <span className="w-20 shrink-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#666d80]">
-                  Target time:
-                </span>
-                <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#666d80]">
-                  {targetTime}
-                </span>
-              </div>
-              <div className="flex gap-1">
-                <span className="w-20 shrink-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#666d80]">
-                  Your time:
-                </span>
-                <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1]">
-                  {yourTime}
-                </span>
-                {yourTimeNote ? (
-                  <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#666d80]">
-                    {yourTimeNote}
-                  </span>
-                ) : null}
-              </div>
-            </div>
+          <div className="min-w-0 row-span-2">
+            <PracticeAnswerPopularityBars
+              rows={popularityRows}
+              correctLetter={correctLetter}
+              selectedLetter={selectedLetter}
+              isUnanswered={meta.isUnanswered}
+              showLabel
+            />
+          </div>
 
-            <div className="flex h-[113px] w-[257px] shrink-0 flex-col gap-3">
-              <p className={LR_RESULT_LABEL_CLASS}>Difficulty</p>
-              <PracticeDifficultyMeter difficulty={difficulty} />
-            </div>
-
-            <div className="min-w-0 w-[542px] shrink-0">
-              <PracticeAnswerPopularityBars
-                rows={popularityRows}
-                correctLetter={correctLetter}
-                selectedLetter={selectedLetter}
-                isUnanswered={meta.isUnanswered}
-                showLabel
+          <div className="flex h-9 shrink-0 items-center justify-end gap-4">
+            {explanationHref ? (
+              <Link to={explanationHref} className={LR_RESULT_ACTION_CLASS} aria-label="View explanation">
+                <Pencil className="size-[18px]" aria-hidden />
+              </Link>
+            ) : (
+              <button type="button" className={LR_RESULT_ACTION_CLASS} aria-label="Edit question" disabled>
+                <Pencil className="size-[18px]" aria-hidden />
+              </button>
+            )}
+            <button
+              type="button"
+              className={LR_RESULT_ACTION_CLASS}
+              aria-label={bookmarked ? "Remove bookmark" : "Bookmark question"}
+              aria-pressed={bookmarked}
+              onClick={() => onToggleBookmark(bookmarkId)}
+            >
+              <Bookmark
+                className={cn(
+                  "size-[18px]",
+                  bookmarked ? "fill-[#0d47a1] text-[#0d47a1]" : "text-[#666d80]",
+                )}
+                aria-hidden
               />
+            </button>
+          </div>
+
+          <div className="flex min-w-0 flex-col gap-3">
+            <p className={LR_RESULT_LABEL_CLASS}>Timing</p>
+            <div className="flex flex-wrap gap-1">
+              <span className="w-20 shrink-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#666d80]">
+                Target time:
+              </span>
+              <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#666d80]">
+                {targetTime}
+              </span>
             </div>
+            <div className="flex flex-wrap gap-1">
+              <span className="w-20 shrink-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#666d80]">
+                Your time:
+              </span>
+              <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1]">
+                {yourTime}
+              </span>
+              {yourTimeNote ? (
+                <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#666d80]">
+                  {yourTimeNote}
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="flex min-w-0 flex-col gap-3">
+            <p className={LR_RESULT_LABEL_CLASS}>Difficulty</p>
+            <PracticeDifficultyMeter difficulty={difficulty} />
           </div>
         </div>
       </div>
@@ -411,7 +407,7 @@ function LrDrillResultsView({
       </section>
 
       {visibleQuestions.length > 0 ? (
-        <section className="overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white p-6">
+        <section className="min-w-0 overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white p-6">
           <div className="flex flex-col">
             {visibleQuestions.map((q, index) => (
               <DrillResultsQuestionRow
