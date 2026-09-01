@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { ArrowDownAZ, ArrowUpAZ } from "lucide-react"
 
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
@@ -8,6 +7,8 @@ import {
   AnalyticsScoreProgressPanel,
   AnalyticsStatsGrid,
 } from "@/features/student/analytics/components/analytics-overview-ui"
+import { HistorySortMenu } from "@/features/student/analytics/history-sort-menu"
+import { sortHistoryEntries, type HistorySort } from "@/features/student/analytics/history-sort"
 import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
 import type { AnalyticsStat } from "@/features/student/lib/mock-analytics"
 import {
@@ -19,8 +20,6 @@ import {
   filterPrepTestsByTimeRange,
   getPrepTestHistoryEntries,
   getPrepTestProgressPoints,
-  sortPrepTestRecords,
-  type PrepTestHistorySort,
   type PrepTestProgressPoint,
   type PrepTestRecord,
 } from "@/features/student/lib/mock-analytics-preptests"
@@ -46,15 +45,6 @@ const SCORE_TABS = [
 ] as const
 
 type ScoreTab = (typeof SCORE_TABS)[number]["id"]
-
-type HistorySort = PrepTestHistorySort
-
-const HISTORY_SORT_OPTIONS: Array<{ id: HistorySort; label: string }> = [
-  { id: "date-desc", label: "Most recent" },
-  { id: "date-asc", label: "Oldest first" },
-  { id: "score-desc", label: "Highest score" },
-  { id: "score-asc", label: "Lowest score" },
-]
 
 function formatSignedNumber(value: number): string {
   if (value > 0) return `+${value}`
@@ -207,77 +197,6 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
   )
 }
 
-function HistorySortMenu({ value, onChange }: { value: HistorySort; onChange: (next: HistorySort) => void }) {
-  const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    if (!open) return
-    function handlePointerDown(event: PointerEvent) {
-      if (!(event.target instanceof Node)) return
-      if (containerRef.current?.contains(event.target)) return
-      setOpen(false)
-    }
-    function handleKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false)
-    }
-    document.addEventListener("pointerdown", handlePointerDown)
-    document.addEventListener("keydown", handleKey)
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown)
-      document.removeEventListener("keydown", handleKey)
-    }
-  }, [open])
-
-  const activeLabel = HISTORY_SORT_OPTIONS.find((option) => option.id === value)?.label ?? "Sort"
-  const Icon = value.endsWith("desc") ? ArrowDownAZ : ArrowUpAZ
-
-  return (
-    <div ref={containerRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((c) => !c)}
-        className="flex h-10 items-center gap-2 rounded-[16px] border border-[#dfe1e7] bg-white px-3 text-sm font-semibold text-[#062357] hover:bg-[#f3f7ff]"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-      >
-        <Icon className="size-4 text-[#666d80]" aria-hidden />
-        <span>{activeLabel}</span>
-      </button>
-      {open ? (
-        <ul
-          role="listbox"
-          aria-label="Sort PrepTest history"
-          className="absolute right-0 z-30 mt-2 min-w-[200px] overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
-        >
-          {HISTORY_SORT_OPTIONS.map((option) => {
-            const active = option.id === value
-            return (
-              <li key={option.id} role="presentation">
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={active}
-                  onClick={() => {
-                    onChange(option.id)
-                    setOpen(false)
-                  }}
-                  className={cn(
-                    "flex h-10 w-full items-center rounded-[16px] px-3 text-sm font-medium tracking-[0.02em] transition-colors",
-                    active ? "bg-[#f3f7ff] text-[#0d47a1]" : "text-[#062357] hover:bg-[#f6f8fa]",
-                  )}
-                >
-                  {option.label}
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      ) : null}
-    </div>
-  )
-}
-
 function AnalyticsPrepTestsPage() {
   const navigate = useNavigate()
   const analyticsApi = useAnalyticsApi()
@@ -295,11 +214,15 @@ function AnalyticsPrepTestsPage() {
       return
     }
     setLoading(true)
-    void analyticsApi
-      .getSessions({ kind: "PREPTEST", limit: 100 })
-      .then(({ sessions }) => {
+    void Promise.all([
+      analyticsApi.getSessions({ kind: "PREPTEST", limit: 100 }),
+      analyticsApi.getSessions({ kind: "SECTION", limit: 300 }),
+    ])
+      .then(([prepTests, sections]) => {
         setPrepRecords(
-          sessions.map(mapSessionToPrepTestRecord).filter((r): r is PrepTestRecord => r != null),
+          prepTests.sessions
+            .map((s) => mapSessionToPrepTestRecord(s, sections.sessions))
+            .filter((r): r is PrepTestRecord => r != null),
         )
       })
       .finally(() => setLoading(false))
@@ -333,13 +256,15 @@ function AnalyticsPrepTestsPage() {
       {
         id: "avg-lr",
         label: "AVERAGE LR",
-        value: formatSignedNumber(stats.averageLrMissed),
+        value:
+          stats.averageLrMissed != null ? formatSignedNumber(stats.averageLrMissed) : "—",
         accent: "#00bc54",
       },
       {
         id: "avg-rc",
         label: "AVERAGE RC",
-        value: formatSignedNumber(stats.averageRcMissed),
+        value:
+          stats.averageRcMissed != null ? formatSignedNumber(stats.averageRcMissed) : "—",
         accent: "#0bbcc9",
       },
       {
@@ -364,16 +289,16 @@ function AnalyticsPrepTestsPage() {
     [headlineStats, secondaryStats],
   )
 
-  const sortedRecords = useMemo(
-    () => sortPrepTestRecords(rangedRecords, historySort),
-    [rangedRecords, historySort],
+  const historyEntries = useMemo(() => getPrepTestHistoryEntries(rangedRecords), [rangedRecords])
+
+  const sortedEntries = useMemo(
+    () => sortHistoryEntries(historyEntries, historySort),
+    [historyEntries, historySort],
   )
 
-  const historyEntries = useMemo(() => getPrepTestHistoryEntries(sortedRecords), [sortedRecords])
-
   const visibleEntries = useMemo(
-    () => filterBookmarkedOnly(historyEntries, bookmarkedOnly),
-    [historyEntries, bookmarkedOnly],
+    () => filterBookmarkedOnly(sortedEntries, bookmarkedOnly),
+    [sortedEntries, bookmarkedOnly],
   )
 
   const handleToggleBookmark = useCallback(
@@ -400,11 +325,11 @@ function AnalyticsPrepTestsPage() {
 
   const handleOpenPractice = useCallback(
     (sessionId: string) => {
-      const record = sortedRecords.find((row) => row.id === sessionId)
+      const record = rangedRecords.find((row) => row.id === sessionId)
       const prepTestId = record?.prepTestId?.trim() || sessionId
       navigate(prepTestHubHref(prepTestId))
     },
-    [navigate, sortedRecords],
+    [navigate, rangedRecords],
   )
 
   if (loading) {
@@ -437,7 +362,11 @@ function AnalyticsPrepTestsPage() {
         )}
 
         <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
-          <HistorySortMenu value={historySort} onChange={setHistorySort} />
+          <HistorySortMenu
+            value={historySort}
+            onChange={setHistorySort}
+            ariaLabel="Sort PrepTest history"
+          />
         </div>
 
         <AnalyticsPrepTestHistory

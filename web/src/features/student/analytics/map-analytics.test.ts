@@ -87,6 +87,71 @@ describe("map-analytics", () => {
     })
     expect(record?.id).toBe("sess-1")
     expect(record?.prepTestId).toBe("pt-157")
+    expect(record?.lrMax).not.toBe(51)
+    expect(record?.lrCorrect).toBe(0)
+    expect(record?.lrMax).toBe(0)
+    expect(record?.rcCorrect).not.toBe(80)
+  })
+
+  it("maps PrepTest LR/RC from scored section sessions, not a combined 51-question LR", () => {
+    const record = mapSessionToPrepTestRecord(
+      {
+        id: "sess-1",
+        kind: "PREPTEST",
+        prepTestId: "pt-157",
+        startedAt: "2026-01-01T00:00:00Z",
+        completedAt: "2026-01-02T00:00:00Z",
+        rawScore: 38,
+        scaledScore: 160,
+        percentile: 50,
+        bookmarked: false,
+        excluded: false,
+        metadata: {},
+        prepTestTitle: "The Official LSAT PrepTest 157",
+        sectionTitle: null,
+        sectionType: null,
+      },
+      [
+        {
+          id: "lr-1",
+          kind: "SECTION",
+          prepTestId: "pt-157",
+          startedAt: "2026-01-01T00:10:00Z",
+          completedAt: "2026-01-01T00:45:00Z",
+          rawScore: 20,
+          scaledScore: null,
+          percentile: null,
+          bookmarked: false,
+          excluded: false,
+          metadata: { questionCount: 25 },
+          prepTestTitle: null,
+          sectionTitle: "Logical Reasoning",
+          sectionType: "LR",
+        },
+        {
+          id: "rc-1",
+          kind: "SECTION",
+          prepTestId: "pt-157",
+          startedAt: "2026-01-01T00:50:00Z",
+          completedAt: "2026-01-01T01:25:00Z",
+          rawScore: 18,
+          scaledScore: null,
+          percentile: null,
+          bookmarked: false,
+          excluded: false,
+          metadata: { questionCount: 27 },
+          prepTestTitle: null,
+          sectionTitle: "Reading Comprehension",
+          sectionType: "RC",
+        },
+      ],
+    )
+    expect(record).toMatchObject({
+      lrCorrect: 20,
+      lrMax: 25,
+      rcCorrect: 18,
+      rcMax: 27,
+    })
   })
 
   it("maps trajectory labels to PT numbers from module id", () => {
