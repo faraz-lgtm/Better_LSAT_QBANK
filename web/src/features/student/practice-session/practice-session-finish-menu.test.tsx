@@ -70,7 +70,7 @@ describe("PracticeSessionFinishMenu", () => {
     expect(screen.getByRole("button", { name: "Save and exit" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Exit without saving" })).toBeInTheDocument()
     expect(screen.getByText("Dark mode")).toBeInTheDocument()
-    expect(screen.getByText("Official Interface")).toBeInTheDocument()
+    expect(screen.getByText("BetterLSAT Interface")).toBeInTheDocument()
     expect(document.documentElement.classList.contains("practice-exam-more-open")).toBe(true)
     expect(screen.getByRole("button", { name: "Submit" }).querySelector("img")).toHaveAttribute(
       "src",
@@ -82,14 +82,14 @@ describe("PracticeSessionFinishMenu", () => {
     expect(document.documentElement.classList.contains("practice-exam-more-open")).toBe(false)
   })
 
-  it("enables Official Interface and reports the toggle change", async () => {
+  it("opts into BetterLSAT Interface and reports official off", async () => {
     const user = userEvent.setup()
     const onOfficialInterfaceChange = vi.fn()
 
     render(
       <PracticeSessionFinishMenu
         iconTrigger
-        officialInterface={false}
+        officialInterface={true}
         onOfficialInterfaceChange={onOfficialInterfaceChange}
         onSubmitSection={vi.fn()}
         onExit={vi.fn()}
@@ -97,11 +97,11 @@ describe("PracticeSessionFinishMenu", () => {
     )
 
     await user.click(screen.getByRole("button", { name: "More options" }))
-    const toggle = screen.getByRole("switch", { name: "Official Interface" })
+    const toggle = screen.getByRole("switch", { name: "BetterLSAT Interface" })
     expect(toggle).toHaveAttribute("aria-checked", "false")
     expect(toggle.querySelector("img")).toHaveAttribute("src", "/figma/exam-finish/toggle-off.svg")
 
     await user.click(toggle)
-    expect(onOfficialInterfaceChange).toHaveBeenCalledWith(true)
+    expect(onOfficialInterfaceChange).toHaveBeenCalledWith(false)
   })
 })

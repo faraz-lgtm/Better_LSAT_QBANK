@@ -12,7 +12,13 @@ describe("useOfficialInterfacePreference", () => {
     window.localStorage.clear()
   })
 
-  it("defaults to off", () => {
+  it("defaults to official on", () => {
+    const { result } = renderHook(() => useOfficialInterfacePreference())
+    expect(result.current.officialInterface).toBe(true)
+  })
+
+  it("honors an explicit BetterLSAT (official off) preference", () => {
+    window.localStorage.setItem(OFFICIAL_INTERFACE_STORAGE_KEY, "0")
     const { result } = renderHook(() => useOfficialInterfacePreference())
     expect(result.current.officialInterface).toBe(false)
   })
@@ -21,11 +27,11 @@ describe("useOfficialInterfacePreference", () => {
     const { result } = renderHook(() => useOfficialInterfacePreference())
 
     act(() => {
-      result.current.setOfficialInterface(true)
+      result.current.setOfficialInterface(false)
     })
 
-    expect(result.current.officialInterface).toBe(true)
-    expect(window.localStorage.getItem(OFFICIAL_INTERFACE_STORAGE_KEY)).toBe("1")
+    expect(result.current.officialInterface).toBe(false)
+    expect(window.localStorage.getItem(OFFICIAL_INTERFACE_STORAGE_KEY)).toBe("0")
   })
 })
 

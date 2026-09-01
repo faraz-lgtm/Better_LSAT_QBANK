@@ -53,7 +53,6 @@ type PracticeDrillQuestionPanelProps = {
   flagsDisabled?: boolean
   variant?: PracticeSessionVariant
   toolMode?: PracticeToolMode
-  onHighlighter?: () => void
   onEraser?: () => void
   lineFocusActive?: boolean
   onLineFocus?: () => void
@@ -95,7 +94,6 @@ function PracticeDrillQuestionPanel({
   flagsDisabled,
   variant,
   toolMode,
-  onHighlighter,
   onEraser,
   lineFocusActive,
   onLineFocus,
@@ -124,19 +122,23 @@ function PracticeDrillQuestionPanel({
     toggleResponseMasking,
     toggleChoiceMask,
     resetMaskedChoices,
-  } = useResponseMasking()
+  } = useResponseMasking(question.id)
   const stemKey = regionKey(question.id, "stem")
   const stemHtml = getRegionHtml(stemKey, question.stemText ?? "")
   const isBlindReviewLayout = blindReviewChrome && variant === "blind-review"
   const isActiveDrillLayout = isExamChromeLayout(variant)
   const officialChrome = isOfficialLayout(variant)
-  const canResetResponse =
-    !choicesDisabled &&
-    (selectedIndex != null || responseMasking || hasMaskedChoices)
+  const canResetResponse = !choicesDisabled && (selectedIndex != null || hasMaskedChoices)
 
   function handleResetResponse() {
     resetMaskedChoices()
     if (selectedIndex != null) onResetResponse?.()
+  }
+
+  function handleToggleMasked(index: number) {
+    const willMask = !maskedChoices[index]
+    toggleChoiceMask(index)
+    if (willMask && selectedIndex === index) onResetResponse?.()
   }
 
   if (isBlindReviewLayout) {
@@ -236,13 +238,17 @@ function PracticeDrillQuestionPanel({
                   [index]: !prev[index],
                 }))
               }
-              onToggleMasked={() => toggleChoiceMask(index)}
+              onToggleMasked={() => handleToggleMasked(index)}
               variant={variant}
               showSideAction={!isActiveDrillLayout}
             />
           ))}
-          {isActiveDrillLayout && canResetResponse ? (
-            <PracticeSessionResetResponseButton variant={variant} onClick={handleResetResponse} />
+          {isActiveDrillLayout ? (
+            <PracticeSessionResetResponseButton
+              variant={variant}
+              disabled={!canResetResponse}
+              onClick={handleResetResponse}
+            />
           ) : null}
         </div>
         {isActiveDrillLayout ? (
@@ -257,7 +263,6 @@ function PracticeDrillQuestionPanel({
             reviewActive={reviewActive}
             onAccessibility={onOpenAccessibility}
             toolMode={toolMode}
-            onHighlighter={onHighlighter}
             onEraser={onEraser}
             lineFocusActive={lineFocusActive}
             onLineFocus={onLineFocus}

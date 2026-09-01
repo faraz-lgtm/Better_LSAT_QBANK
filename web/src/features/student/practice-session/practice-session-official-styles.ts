@@ -60,7 +60,7 @@ const OFFICIAL_PASSAGE_PANE_CLASS =
 const OFFICIAL_QUESTION_PANE_CLASS = "min-h-0 overflow-y-auto py-[13px] pl-1.5"
 
 const OFFICIAL_PASSAGE_TEXT_CLASS =
-  "text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[#2c3143] [&_p]:mb-0 [&_p+p]:pt-2"
+  "text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[#2c3143] [&_p]:mb-0"
 
 const OFFICIAL_QUESTION_PANEL_WITH_WIDGET_CLASS = "practice-session-question-panel-with-widget relative min-w-0 pr-[50px]"
 

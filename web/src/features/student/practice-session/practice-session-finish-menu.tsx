@@ -58,7 +58,7 @@ function PracticeSessionFinishMenu({
   onExit,
   onExitWithoutSaving,
   variant = "default",
-  officialInterface = false,
+  officialInterface = true,
   onOfficialInterfaceChange,
 }: PracticeSessionFinishMenuProps) {
   const [open, setOpen] = useState(false)

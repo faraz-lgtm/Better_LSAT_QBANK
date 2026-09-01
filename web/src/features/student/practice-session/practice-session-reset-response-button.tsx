@@ -10,12 +10,14 @@ type PracticeSessionResetResponseButtonProps = {
   onClick: () => void
   className?: string
   variant?: PracticeSessionVariant
+  disabled?: boolean
 }
 
 function PracticeSessionResetResponseButton({
   onClick,
   className,
   variant = "default",
+  disabled = false,
 }: PracticeSessionResetResponseButtonProps) {
   return (
     <div
@@ -26,9 +28,11 @@ function PracticeSessionResetResponseButton({
     >
       <button
         type="button"
-        className={
-          isOfficialLayout(variant) ? OFFICIAL_RESET_RESPONSE_BUTTON_CLASS : ACTIVE_DRILL_RESET_RESPONSE_BUTTON_CLASS
-        }
+        disabled={disabled}
+        className={cn(
+          isOfficialLayout(variant) ? OFFICIAL_RESET_RESPONSE_BUTTON_CLASS : ACTIVE_DRILL_RESET_RESPONSE_BUTTON_CLASS,
+          disabled && "cursor-default opacity-40",
+        )}
         onClick={onClick}
       >
         Reset Response

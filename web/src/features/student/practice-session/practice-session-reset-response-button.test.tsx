@@ -22,4 +22,9 @@ describe("PracticeSessionResetResponseButton", () => {
     expect(button).toHaveClass("h-[34px]", "border-[#d4d7e2]", "bg-[#eaecf3]", "text-[#2c3143]", "rounded-[6px]")
     expect(button.parentElement).toHaveClass("h-[46px]", "justify-end", "pt-3")
   })
+
+  it("stays visible but inactive when there is nothing to reset", () => {
+    render(<PracticeSessionResetResponseButton disabled onClick={() => undefined} />)
+    expect(screen.getByRole("button", { name: "Reset Response" })).toBeDisabled()
+  })
 })

@@ -29,7 +29,7 @@ export function isPassageHighlightColor(value: string | null | undefined): value
   return value === "yellow" || value === "pink" || value === "green" || value === "blue"
 }
 
-/** LSAT default exam chrome (`active-drill`, Figma header `20268:105580`, footer `20268:107659`). Official LawHub view is `official` (Figma `20255:49920` full page). */
+/** BetterLSAT exam chrome (`active-drill`, Figma header `20268:105580`, footer `20268:107659`). Official LawHub view is `official` (Figma `20255:49920` full page) and is the product default. */
 export type PracticeSessionVariant = "default" | "active-drill" | "blind-review" | "official"
 
 export function isExamChromeLayout(variant: PracticeSessionVariant | undefined): boolean {

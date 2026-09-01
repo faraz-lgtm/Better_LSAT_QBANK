@@ -167,7 +167,7 @@ const ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS =
 /** Figma `20268:102788` — 11px stack: choices then Reset */
 const ACTIVE_DRILL_OPTIONS_LIST_CLASS = "mt-[11px] flex w-full flex-col items-end gap-[11px]"
 
-/** Figma `20280:108037` — same 14px choice card, frost + hatch overlay */
+/** LSAT exam layout — same 14px unselected card; letter + copy fade via CSS. */
 const ACTIVE_DRILL_OPTION_ROW_MASKED_CLASS =
   "practice-session-choice-masked practice-session-choice--unselected w-full rounded-[14px] border border-solid py-2 pl-2 pr-6"
 

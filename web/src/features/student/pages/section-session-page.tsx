@@ -55,7 +55,7 @@ import { usePracticeSessionZoomShortcuts } from "@/features/student/practice-ses
 import { PracticeSessionReviewPanel } from "@/features/student/practice-session/practice-session-review-panel"
 import { PracticeSessionResetResponseButton } from "@/features/student/practice-session/practice-session-reset-response-button"
 import { PracticeSessionSideWidget } from "@/features/student/practice-session/practice-session-side-action-rail"
-import { useResponseMasking } from "@/features/student/practice-session/use-response-masking"
+import { ResponseMaskingProvider, useResponseMasking } from "@/features/student/practice-session/use-response-masking"
 import {
   PracticeBlindReviewAnswerToggle,
   type BlindReviewAnswerOutcome,
@@ -213,7 +213,6 @@ type QuestionPanelProps = {
   recommendedForBr?: boolean
   variant?: PracticeSessionVariant
   toolMode?: PracticeToolMode
-  onHighlighter?: () => void
   onEraser?: () => void
   lineFocusActive?: boolean
   onLineFocus?: () => void
@@ -252,7 +251,6 @@ function SectionQuestionPanel({
   recommendedForBr = false,
   variant = "default",
   toolMode,
-  onHighlighter,
   onEraser,
   lineFocusActive,
   onLineFocus,
@@ -273,18 +271,24 @@ function SectionQuestionPanel({
     toggleResponseMasking,
     toggleChoiceMask,
     resetMaskedChoices,
-  } = useResponseMasking()
+  } = useResponseMasking(question.id)
   const stemKey = regionKey(question.id, "stem")
   const stemHtml = getRegionHtml(stemKey, question.stemText ?? "")
   const isBlindReviewLayout = blindReviewChrome && variant === "blind-review"
   const isActiveDrillLayout = isExamChromeLayout(variant)
   const officialChrome = isOfficialLayout(variant)
   const canResetResponse =
-    !reviewChrome && (selectedIndex != null || responseMasking || hasMaskedChoices)
+    !reviewChrome && (selectedIndex != null || hasMaskedChoices)
 
   function handleResetResponse() {
     resetMaskedChoices()
     if (selectedIndex != null) onResetResponse?.()
+  }
+
+  function handleToggleMasked(index: number) {
+    const willMask = !maskedChoices[index]
+    toggleChoiceMask(index)
+    if (willMask && selectedIndex === index) onResetResponse?.()
   }
 
   if (isBlindReviewLayout) {
@@ -381,13 +385,17 @@ function SectionQuestionPanel({
                   [index]: !prev[index],
                 }))
               }
-              onToggleMasked={() => toggleChoiceMask(index)}
+              onToggleMasked={() => handleToggleMasked(index)}
               variant={variant}
               showSideAction={!isActiveDrillLayout}
             />
           ))}
-          {isActiveDrillLayout && canResetResponse ? (
-            <PracticeSessionResetResponseButton variant={variant} onClick={handleResetResponse} />
+          {isActiveDrillLayout ? (
+            <PracticeSessionResetResponseButton
+              variant={variant}
+              disabled={!canResetResponse}
+              onClick={handleResetResponse}
+            />
           ) : null}
         </div>
         {isActiveDrillLayout ? (
@@ -402,7 +410,6 @@ function SectionQuestionPanel({
             reviewActive={reviewActive}
             onAccessibility={onOpenAccessibility}
             toolMode={toolMode}
-            onHighlighter={onHighlighter}
             onEraser={onEraser}
             lineFocusActive={lineFocusActive}
             onLineFocus={onLineFocus}
@@ -1808,7 +1815,6 @@ function SectionSessionPage() {
                 recommendedForBr={recommendedForBr}
                 variant={sessionVariant}
                 toolMode={highlights.toolMode}
-                onHighlighter={() => highlights.selectColor("yellow")}
                 onEraser={highlights.selectEraser}
                 lineFocusActive={lineFocus}
                 onLineFocus={() => setLineFocus((value) => !value)}
@@ -1995,6 +2001,7 @@ function SectionSessionPage() {
   )
 
   return (
+    <ResponseMaskingProvider>
     <StudentMain
       layout="immersive"
       className={cn(
@@ -2158,6 +2165,7 @@ function SectionSessionPage() {
         }
       />
     </StudentMain>
+    </ResponseMaskingProvider>
   )
 }
 
