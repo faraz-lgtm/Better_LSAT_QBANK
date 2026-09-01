@@ -38,10 +38,17 @@ export function formatMmSs(totalSeconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`
 }
 
-export function targetTimeForDifficulty(label: PracticeDifficultyLabel): string {
-  if (label === "Hardest" || label === "Hard") return "01:45"
-  if (label === "Medium") return "01:30"
-  return "01:15"
+export function targetTimeSecondsForDifficulty(label: PracticeDifficultyLabel): number {
+  if (label === "Hardest" || label === "Hard") return 105
+  if (label === "Medium") return 90
+  return 75
+}
+
+export function targetTimeForDifficulty(label: PracticeDifficultyLabel, scaleFactor = 1): string {
+  const totalSeconds = Math.round(targetTimeSecondsForDifficulty(label) * scaleFactor)
+  const m = Math.floor(totalSeconds / 60)
+  const s = totalSeconds % 60
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
 }
 
 export function tagsFromTopicName(topicName: string): string[] {

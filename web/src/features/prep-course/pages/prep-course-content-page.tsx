@@ -233,20 +233,6 @@ function PrepCourseContentPage() {
     })
   }
 
-  function handleToggleExpandAll() {
-    const allSectionIds = curriculum.modules.flatMap((mod) => mod.sections.map((section) => section.id))
-    const allExpanded = allSectionIds.length > 0 && allSectionIds.every((id) => expandedSectionIds.has(id))
-    setExpandedSectionIds(() => {
-      if (allExpanded) return new Set()
-      return new Set(allSectionIds)
-    })
-  }
-
-  const allSectionsExpanded = useMemo(() => {
-    const allSectionIds = curriculum.modules.flatMap((mod) => mod.sections.map((section) => section.id))
-    return allSectionIds.length > 0 && allSectionIds.every((id) => expandedSectionIds.has(id))
-  }, [curriculum.modules, expandedSectionIds])
-
   if (!courseSlug) {
     return (
       <StudentMain>
@@ -290,8 +276,6 @@ function PrepCourseContentPage() {
             stats={stats}
             showBookmarksOnly={showBookmarksOnly}
             onToggleShowBookmarksOnly={setShowBookmarksOnly}
-            allSectionsExpanded={allSectionsExpanded}
-            onToggleExpandAll={handleToggleExpandAll}
           />
         </div>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-[#dfe1e7] bg-white p-[24px]">

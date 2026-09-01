@@ -21,6 +21,7 @@ import type {
   PracticePassageQuestionGroup,
   PracticeQuestionResultMeta,
 } from "@/features/student/practice-session/build-practice-results-section-groups"
+import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
 import {
   formatAccuracyPct,
   formatCorrectSummaryLine,
@@ -163,6 +164,7 @@ function RcDrillResultsView({
   heroTitle: heroTitleOverride,
   compactLabel,
 }: RcDrillResultsViewProps) {
+  const { scaleFactor } = useAccommodations()
   const [filter, setFilter] = useState<QuestionFilter>("Question")
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
@@ -173,6 +175,7 @@ function RcDrillResultsView({
       passageCount: passages.length,
       timing,
       take,
+      scaleFactor,
     })
   const isSection = variant === "section"
   const scoreHeadline = isSection
@@ -309,7 +312,7 @@ function RcDrillResultsView({
         <div className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
           {(
             [
-              ["Questions", String(questionCount), "Timing", formatDrillAboutTiming(timing, elapsedSeconds)],
+              ["Questions", String(questionCount), "Timing", formatDrillAboutTiming(timing, elapsedSeconds, scaleFactor)],
               ["Time used", formatMinutesSecondsLabel(elapsedSeconds), "Take", formatTakeLabel(take)],
             ] as const
           ).map(([leftLabel, leftValue, rightLabel, rightValue]) => (

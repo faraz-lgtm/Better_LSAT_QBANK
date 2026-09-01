@@ -1,30 +1,34 @@
-const TIMING_LABEL: Record<string, string> = {
-  unlimited: "Unlimited Time",
-  "35": "35 minutes",
-  "per-q": "Per question",
-}
+import { resolveAccommodatedSectionMinutes } from "@/features/student/accommodations/accommodations-context"
 
-function formatDrillTimingTitleLabel(timing: string): string {
-  return TIMING_LABEL[timing] ?? timing
+function formatDrillTimingTitleLabel(timing: string, scaleFactor = 1): string {
+  if (timing === "unlimited") return "Unlimited Time"
+  if (timing === "per-q") return "Per question"
+  if (timing === "35" || timing === "standard" || timing === "strict") {
+    const mins = resolveAccommodatedSectionMinutes(scaleFactor)
+    return `${mins} minutes`
+  }
+  return timing
 }
 
 function formatLrDrillResultsTitle(input: {
   questionCount: number
   timing: string
   take?: number | null
+  scaleFactor?: number
 }): string {
   const take = input.take != null && input.take > 0 ? input.take : 1
-  return `${input.questionCount} Questions ${formatDrillTimingTitleLabel(input.timing)} - ${take}`
+  return `${input.questionCount} Questions ${formatDrillTimingTitleLabel(input.timing, input.scaleFactor ?? 1)} - ${take}`
 }
 
 function formatRcDrillResultsTitle(input: {
   passageCount: number
   timing: string
   take?: number | null
+  scaleFactor?: number
 }): string {
   const take = input.take != null && input.take > 0 ? input.take : 1
   const count = Math.max(0, input.passageCount)
-  return `${count} Passages ${formatDrillTimingTitleLabel(input.timing)} - ${take}`
+  return `${count} Passages ${formatDrillTimingTitleLabel(input.timing, input.scaleFactor ?? 1)} - ${take}`
 }
 
 function formatSectionResultsTitle(input: {
@@ -67,9 +71,11 @@ function formatMinutesSecondsLabel(totalSeconds: number): string {
   return `${m} min ${s} sec`
 }
 
-function formatDrillAboutTiming(timing: string, elapsedSeconds: number): string {
+function formatDrillAboutTiming(timing: string, elapsedSeconds: number, scaleFactor = 1): string {
   if (timing === "unlimited") return "Unlimited"
-  if (timing === "35") return "35 min"
+  if (timing === "35" || timing === "standard" || timing === "strict") {
+    return `${resolveAccommodatedSectionMinutes(scaleFactor)} min`
+  }
   if (timing === "per-q") return `Per question · ${formatMinutesSecondsLabel(elapsedSeconds)}`
   return timing
 }
