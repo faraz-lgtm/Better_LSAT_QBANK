@@ -8,7 +8,7 @@ import {
   getGuestDiagnosticTestConfig,
   isGuestDiagnosticIntentId,
 } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
-import { createGuestDiagnosticPreviewQuestions } from "@/features/guest/diagnostic/guest-diagnostic-exam-mock-data"
+import { createDiagnosticQuestions } from "@/features/guest/diagnostic/guest-diagnostic-exam-mock-data"
 import {
   buildGuestDiagnosticResultFromAnswers,
   writeGuestDiagnosticResult,
@@ -68,7 +68,7 @@ function GuestDiagnosticStartPage({ preview = false }: GuestDiagnosticStartPageP
     answersByQuestion: Record<string, { selectedAnswer: string; isCorrect: boolean }>,
     timeSpentByQuestion: Record<string, number>,
   ) {
-    const questions = createGuestDiagnosticPreviewQuestions(config.questionCount)
+    const questions = createDiagnosticQuestions(resolvedIntentId)
     const result = buildGuestDiagnosticResultFromAnswers(
       resolvedIntentId,
       questions,

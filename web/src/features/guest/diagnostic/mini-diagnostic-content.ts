@@ -1,12 +1,29 @@
 import type { DrillQuestion } from "@/features/student/drills/drill-types"
+import type { GuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-intent-types"
 import {
   MINI_DIAGNOSTIC_MARKETING_SET,
   formatMiniDiagnosticPercentileRange,
   formatMiniDiagnosticScoreRange,
   resolveMiniDiagnosticScoreRange,
 } from "@data/diagnostics/mini-marketing-set.ts"
+import {
+  buildSectionDiagnosticMarketingSet,
+  formatSectionDiagnosticPercentileRange,
+  formatSectionDiagnosticScoreRange,
+  resolveSectionDiagnosticScoreRange,
+} from "@data/diagnostics/section-marketing-set.ts"
+import { SECTION_DIAGNOSTIC_QUESTIONS } from "@data/diagnostics/section-marketing-questions.ts"
 import type { MiniDiagnosticQuestion } from "@data/diagnostics/mini-marketing-types.ts"
 import type { MiniDiagnosticExplanation } from "@/lib/api/diagnostic"
+
+const SECTION_DIAGNOSTIC_MARKETING_SET = buildSectionDiagnosticMarketingSet(
+  SECTION_DIAGNOSTIC_QUESTIONS,
+)
+
+function getDiagnosticMarketingSet(intentId: GuestDiagnosticIntentId) {
+  if (intentId === "mini") return MINI_DIAGNOSTIC_MARKETING_SET
+  return SECTION_DIAGNOSTIC_MARKETING_SET
+}
 
 function mapMiniDiagnosticQuestionToDrill(question: MiniDiagnosticQuestion): DrillQuestion {
   return {
@@ -29,13 +46,14 @@ function createMiniDiagnosticQuestions(): DrillQuestion[] {
   return MINI_DIAGNOSTIC_MARKETING_SET.questions.map(mapMiniDiagnosticQuestionToDrill)
 }
 
-function createGuestDiagnosticPreviewQuestions(questionCount: number): DrillQuestion[] {
-  const miniQuestions = createMiniDiagnosticQuestions()
-  if (questionCount <= miniQuestions.length) {
-    return miniQuestions.slice(0, questionCount)
-  }
+function createSectionDiagnosticQuestions(): DrillQuestion[] {
+  return SECTION_DIAGNOSTIC_QUESTIONS.map(mapMiniDiagnosticQuestionToDrill)
+}
+
+function extendDiagnosticQuestions(base: DrillQuestion[], questionCount: number): DrillQuestion[] {
+  if (questionCount <= base.length) return base.slice(0, questionCount)
   return Array.from({ length: questionCount }, (_, index) => {
-    const template = miniQuestions[index % miniQuestions.length]!
+    const template = base[index % base.length]!
     return {
       ...template,
       id: `guest-diagnostic-preview-q${index + 1}`,
@@ -44,25 +62,60 @@ function createGuestDiagnosticPreviewQuestions(questionCount: number): DrillQues
   })
 }
 
+function createDiagnosticQuestions(intentId: GuestDiagnosticIntentId): DrillQuestion[] {
+  if (intentId === "mini") return createMiniDiagnosticQuestions()
+  if (intentId === "quick") return createSectionDiagnosticQuestions()
+  return extendDiagnosticQuestions(createSectionDiagnosticQuestions(), 115)
+}
+
+/** @deprecated Use createDiagnosticQuestions(intentId) */
+function createGuestDiagnosticPreviewQuestions(questionCount: number): DrillQuestion[] {
+  if (questionCount <= 10) return createMiniDiagnosticQuestions().slice(0, questionCount)
+  if (questionCount <= 25) return createSectionDiagnosticQuestions().slice(0, questionCount)
+  return extendDiagnosticQuestions(createSectionDiagnosticQuestions(), questionCount)
+}
+
 const PREVIEW_QUESTION_ID = /^guest-diagnostic-preview-q(\d+)$/i
 
-function resolveMiniDiagnosticSourceQuestion(questionId: string): MiniDiagnosticQuestion | null {
-  const direct = MINI_DIAGNOSTIC_MARKETING_SET.questions.find((question) => question.sourceItemId === questionId)
-  if (direct) return direct
-  const match = PREVIEW_QUESTION_ID.exec(questionId.trim())
-  if (!match) return null
-  const number = Number(match[1])
-  const questions = MINI_DIAGNOSTIC_MARKETING_SET.questions
-  if (!Number.isFinite(number) || number < 1 || questions.length === 0) return null
-  return questions[(number - 1) % questions.length] ?? null
+function resolveDiagnosticSourceQuestion(
+  questionId: string,
+  intentId?: GuestDiagnosticIntentId,
+): MiniDiagnosticQuestion | null {
+  const sets = intentId
+    ? [getDiagnosticMarketingSet(intentId)]
+    : [MINI_DIAGNOSTIC_MARKETING_SET, SECTION_DIAGNOSTIC_MARKETING_SET]
+
+  for (const set of sets) {
+    const direct = set.questions.find((question) => question.sourceItemId === questionId)
+    if (direct) return direct
+  }
+
+  const previewMatch = PREVIEW_QUESTION_ID.exec(questionId.trim())
+  if (previewMatch) {
+    const number = Number(previewMatch[1])
+    const questions = SECTION_DIAGNOSTIC_MARKETING_SET.questions
+    if (Number.isFinite(number) && number >= 1 && questions.length > 0) {
+      return questions[(number - 1) % questions.length] ?? null
+    }
+  }
+
+  return null
 }
 
+function getDiagnosticExplanationHtml(
+  questionId: string,
+  intentId?: GuestDiagnosticIntentId,
+): string | null {
+  return resolveDiagnosticSourceQuestion(questionId, intentId)?.explanationHtml ?? null
+}
+
+/** @deprecated Use getDiagnosticExplanationHtml(questionId, intentId) */
 function getMiniDiagnosticExplanationHtml(questionId: string): string | null {
-  return resolveMiniDiagnosticSourceQuestion(questionId)?.explanationHtml ?? null
+  return getDiagnosticExplanationHtml(questionId)
 }
 
-function getMiniDiagnosticQuestionMeta(questionId: string) {
-  const question = resolveMiniDiagnosticSourceQuestion(questionId)
+function getDiagnosticQuestionMeta(questionId: string, intentId?: GuestDiagnosticIntentId) {
+  const question = resolveDiagnosticSourceQuestion(questionId, intentId)
   if (!question) return null
   return {
     questionType: question.questionType,
@@ -72,8 +125,16 @@ function getMiniDiagnosticQuestionMeta(questionId: string) {
   }
 }
 
-function buildDiagnosticResultExplanation(questionId: string): MiniDiagnosticExplanation | null {
-  const question = resolveMiniDiagnosticSourceQuestion(questionId)
+/** @deprecated Use getDiagnosticQuestionMeta(questionId, intentId) */
+function getMiniDiagnosticQuestionMeta(questionId: string) {
+  return getDiagnosticQuestionMeta(questionId)
+}
+
+function buildDiagnosticResultExplanation(
+  questionId: string,
+  intentId?: GuestDiagnosticIntentId,
+): MiniDiagnosticExplanation | null {
+  const question = resolveDiagnosticSourceQuestion(questionId, intentId)
   if (!question) return null
   return {
     sourceItemId: questionId,
@@ -92,15 +153,42 @@ function buildDiagnosticResultExplanation(questionId: string): MiniDiagnosticExp
   }
 }
 
+function resolveDiagnosticScoreRange(intentId: GuestDiagnosticIntentId, correctCount: number) {
+  if (intentId === "mini") return resolveMiniDiagnosticScoreRange(correctCount)
+  return resolveSectionDiagnosticScoreRange(correctCount)
+}
+
+function formatDiagnosticScoreRange(intentId: GuestDiagnosticIntentId, range: ReturnType<typeof resolveMiniDiagnosticScoreRange>) {
+  if (intentId === "mini") return formatMiniDiagnosticScoreRange(range)
+  return formatSectionDiagnosticScoreRange(range)
+}
+
+function formatDiagnosticPercentileRange(
+  intentId: GuestDiagnosticIntentId,
+  range: ReturnType<typeof resolveMiniDiagnosticScoreRange>,
+) {
+  if (intentId === "mini") return formatMiniDiagnosticPercentileRange(range)
+  return formatSectionDiagnosticPercentileRange(range)
+}
+
 export {
   MINI_DIAGNOSTIC_MARKETING_SET,
+  SECTION_DIAGNOSTIC_MARKETING_SET,
   buildDiagnosticResultExplanation,
+  createDiagnosticQuestions,
   createGuestDiagnosticPreviewQuestions,
   createMiniDiagnosticQuestions,
+  createSectionDiagnosticQuestions,
+  formatDiagnosticPercentileRange,
+  formatDiagnosticScoreRange,
   formatMiniDiagnosticPercentileRange,
   formatMiniDiagnosticScoreRange,
+  getDiagnosticExplanationHtml,
+  getDiagnosticQuestionMeta,
   getMiniDiagnosticExplanationHtml,
   getMiniDiagnosticQuestionMeta,
   mapMiniDiagnosticQuestionToDrill,
+  resolveDiagnosticScoreRange,
   resolveMiniDiagnosticScoreRange,
+  resolveSectionDiagnosticScoreRange,
 }

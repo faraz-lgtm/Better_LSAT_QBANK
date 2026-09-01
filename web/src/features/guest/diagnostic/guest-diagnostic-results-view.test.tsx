@@ -20,8 +20,8 @@ vi.mock("@/lib/supabase/client", () => ({
   getSupabaseBrowserClient: () => ({}),
 }))
 
-describe("GuestDiagnosticResultsView Full teaser", () => {
-  it("unlocks the first 10 Full rows and blurs question 11 for free students", () => {
+describe("GuestDiagnosticResultsView Section diagnostic", () => {
+  it("unlocks all 25 section rows for free students", () => {
     subscription.hasActiveCore = false
     const result = buildDefaultGuestDiagnosticResult("quick")
     render(
@@ -30,13 +30,13 @@ describe("GuestDiagnosticResultsView Full teaser", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText(/Full Section Diagnostic · Q10/)).toBeInTheDocument()
-    expect(screen.getAllByText(/Target time:/)).toHaveLength(10)
-    const locked = screen.getByText(/Full Section Diagnostic · Q11/)
-    expect(locked.closest("[class*='blur']")).toBeTruthy()
+    expect(screen.getByText(/Full Section Diagnostic · Q25/)).toBeInTheDocument()
+    expect(screen.getAllByText(/Target time:/)).toHaveLength(25)
+    const last = screen.getByText(/Full Section Diagnostic · Q25/)
+    expect(last.closest("[class*='blur']")).toBeNull()
   })
 
-  it("unlocks question 11 for premium students", () => {
+  it("keeps all section rows unlocked for premium students", () => {
     subscription.hasActiveCore = true
     const result = buildDefaultGuestDiagnosticResult("quick")
     render(
@@ -47,7 +47,7 @@ describe("GuestDiagnosticResultsView Full teaser", () => {
 
     const row = screen.getByText(/Full Section Diagnostic · Q11/)
     expect(row.closest("[class*='blur']")).toBeNull()
-    expect(screen.getAllByText(/Target time:/).length).toBeGreaterThan(10)
+    expect(screen.getAllByText(/Target time:/).length).toBe(25)
   })
 })
 

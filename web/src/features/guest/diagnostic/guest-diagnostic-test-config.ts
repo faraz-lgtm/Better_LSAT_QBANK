@@ -22,8 +22,8 @@ const GUEST_DIAGNOSTIC_TEST_CONFIG: Record<GuestDiagnosticIntentId, GuestDiagnos
   quick: {
     intentId: "quick",
     title: "Full Section Diagnostic - Test Instructions",
-    questionCount: 30,
-    timeMinutes: 40,
+    questionCount: 25,
+    timeMinutes: 35,
     instructions: DIAGNOSTIC_TEST_INSTRUCTIONS,
   },
   full: {
