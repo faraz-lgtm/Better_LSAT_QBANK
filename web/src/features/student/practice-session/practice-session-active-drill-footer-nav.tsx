@@ -26,6 +26,8 @@ type PracticeSessionActiveDrillFooterNavProps = {
   onSelectQuestion: (questionNumber: number) => void
   onPrev: () => void
   onNext: () => void
+  /** When false, Next stays enabled on the last question (e.g. unlimited drills). Default true. */
+  disableNextAtLast?: boolean
   /** Kept for callers; submit lives in the header more menu for LSAT default view. */
   onSubmit?: () => void
   submitLabel?: string
@@ -44,6 +46,7 @@ function PracticeSessionActiveDrillFooterNav({
   onSelectQuestion,
   onPrev,
   onNext,
+  disableNextAtLast = true,
   onSubmit: _onSubmit,
   submitLabel: _submitLabel,
   outcomeForQuestion,
@@ -51,6 +54,7 @@ function PracticeSessionActiveDrillFooterNav({
   className,
 }: PracticeSessionActiveDrillFooterNavProps) {
   const isLastQuestion = safeIndex >= questions.length
+  const nextDisabled = disableNextAtLast && isLastQuestion
   const officialChrome = isOfficialLayout(variant)
 
   if (officialChrome) {
@@ -80,7 +84,7 @@ function PracticeSessionActiveDrillFooterNav({
           <button
             type="button"
             className={OFFICIAL_FOOTER_NAV_BUTTON_CLASS}
-            disabled={isLastQuestion}
+            disabled={nextDisabled}
             aria-label="Next question"
             onClick={onNext}
           >
@@ -118,7 +122,7 @@ function PracticeSessionActiveDrillFooterNav({
         <div className={ACTIVE_DRILL_FOOTER_NAV_ARROW_COLUMN_CLASS}>
           <PracticeSessionNavArrowButton
             direction="next"
-            disabled={isLastQuestion}
+            disabled={nextDisabled}
             iconOnly
             examArrow
             className={ACTIVE_DRILL_FOOTER_NAV_ARROW_BUTTON_CLASS}

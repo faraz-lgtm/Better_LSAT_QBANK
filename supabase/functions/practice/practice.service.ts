@@ -1,7 +1,11 @@
 import { extractPrepTestQuestionRef } from '../_shared/prep-question-ref.ts'
 import { resolvePrepDrillLessonType } from '../_shared/prep-lesson-type.ts'
 import { isStudentVisiblePrepTest } from '../_shared/prep-test-visibility.ts'
-import { DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT, PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT } from './adaptive-drill-config.ts'
+import {
+  DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT,
+  LR_DRILL_MAX_QUESTION_COUNT,
+  PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT,
+} from './adaptive-drill-config.ts'
 import type {
   AnswerEventRow,
   DrillPoolQuestionRow,
@@ -219,10 +223,11 @@ function parseSectionType(value: unknown): 'LR' | 'RC' | null {
   return value === 'LR' || value === 'RC' ? value : null
 }
 
-function parseQuestionCount(value: unknown): number {
+function parseDrillQuestionCount(value: unknown): number | 'unlimited' {
+  if (value === 'unlimited' || value === 'Unlimited') return 'unlimited'
   const n = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10)
   if (!Number.isFinite(n) || n < 1) return 1
-  return Math.min(25, Math.floor(n))
+  return Math.min(LR_DRILL_MAX_QUESTION_COUNT, Math.floor(n))
 }
 
 const RC_DRILL_MAX_PASSAGES = 8
@@ -245,7 +250,7 @@ function filterPoolByStatus(
 
 export type DrillSessionMetadata = {
   sectionType: 'LR' | 'RC'
-  questionCount: number
+  questionCount: number | 'unlimited'
   passageCount?: number | 'unlimited'
   timing: string
   showAnswers: string
@@ -1689,8 +1694,15 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         typeof body.source === 'string' && body.source.trim() === 'dashboard_adaptive_drill'
           ? 'dashboard_adaptive_drill'
           : null
-      let questionCount = parseQuestionCount(body.questionCount)
-      if (source === 'dashboard_adaptive_drill') {
+      const requestedQuestionCount = parseDrillQuestionCount(body.questionCount)
+      const isUnlimitedQuestionCount =
+        requestedQuestionCount === 'unlimited' &&
+        sectionType === 'LR' &&
+        source !== 'dashboard_adaptive_drill'
+      let questionCount: number | 'unlimited' = isUnlimitedQuestionCount
+        ? 'unlimited'
+        : requestedQuestionCount
+      if (source === 'dashboard_adaptive_drill' && typeof questionCount === 'number') {
         questionCount = Math.max(questionCount, DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT)
       }
       const timing = typeof body.timing === 'string' ? body.timing : 'unlimited'
@@ -1724,7 +1736,11 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       let questionIds = useRcPassageCount
         ? pickRcDrillQuestionIdsByPassageCount(filtered, passageCount ?? 1, answeredIds)
-        : pickDrillQuestionIds(filtered, sectionType, questionCount)
+        : pickDrillQuestionIds(
+            filtered,
+            sectionType,
+            isUnlimitedQuestionCount ? 'unlimited' : questionCount,
+          )
       if (
         source === 'dashboard_adaptive_drill' &&
         questionIds.length < DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT
@@ -1753,7 +1769,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       const metadata: DrillSessionMetadata = {
         sectionType,
-        questionCount: questionIds.length,
+        questionCount: isUnlimitedQuestionCount ? 'unlimited' : questionIds.length,
         ...(passageCount != null ? { passageCount } : {}),
         timing,
         showAnswers,
@@ -1913,9 +1929,11 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const metadata: DrillSessionMetadata = {
         sectionType,
         questionCount:
-          typeof metaRaw.questionCount === 'number'
-            ? metaRaw.questionCount
-            : questionIds.length,
+          metaRaw.questionCount === 'unlimited'
+            ? 'unlimited'
+            : typeof metaRaw.questionCount === 'number'
+              ? metaRaw.questionCount
+              : questionIds.length,
         timing: typeof metaRaw.timing === 'string' ? metaRaw.timing : 'unlimited',
         showAnswers: typeof metaRaw.showAnswers === 'string' ? metaRaw.showAnswers : 'end',
         selection: typeof metaRaw.selection === 'string' ? metaRaw.selection : 'auto',
@@ -1948,6 +1966,95 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         answers,
         drillLabel: metadata.title ?? null,
       }
+    },
+
+    async extendDrill(
+      userId: string,
+      body: { sessionId?: unknown },
+    ): Promise<{
+      session: PracticeSessionRow
+      metadata: DrillSessionMetadata
+      questions: DrillQuestionPayload[]
+      addedCount: number
+    }> {
+      const sessionId = typeof body.sessionId === 'string' ? body.sessionId : ''
+      if (!sessionId) throw new PracticeValidationError('sessionId is required')
+
+      const session = await deps.repository.getSessionById(sessionId, userId)
+      if (!session) throw new PracticeForbiddenError('Session not found')
+      if (session.kind !== 'DRILL') throw new PracticeValidationError('Session is not a drill')
+      if (session.completed_at) throw new PracticeValidationError('Drill is already completed')
+
+      const metaRaw = session.metadata
+      if (metaRaw.questionCount !== 'unlimited') {
+        throw new PracticeValidationError('Drill is not configured for unlimited questions')
+      }
+
+      const sectionType = parseSectionType(metaRaw.sectionType)
+      if (!sectionType || sectionType !== 'LR') {
+        throw new PracticeValidationError('Unlimited question drills are only supported for LR')
+      }
+
+      const existingIds = drillQuestionIdsFromMetadata(metaRaw)
+      const existingSet = new Set(existingIds)
+      const questionTypeId =
+        typeof metaRaw.questionTypeId === 'string' && metaRaw.questionTypeId ? metaRaw.questionTypeId : null
+      const difficulty =
+        metaRaw.difficulty === 'easy' || metaRaw.difficulty === 'hard' || metaRaw.difficulty === 'adaptive'
+          ? metaRaw.difficulty
+          : 'adaptive'
+      const status = typeof metaRaw.status === 'string' ? metaRaw.status : 'fresh'
+
+      const pool = await deps.repository.listDrillPoolQuestions({
+        sectionType,
+        questionTypeId,
+        difficulty: difficulty === 'adaptive' ? null : difficulty,
+      })
+      const answeredIds = new Set(await deps.repository.listUserAnsweredQuestionIds(userId))
+      const filtered = filterPoolByStatus(pool, status, answeredIds).filter((q) => !existingSet.has(q.id))
+
+      if (filtered.length === 0) {
+        const metadata: DrillSessionMetadata = {
+          sectionType,
+          questionCount: 'unlimited',
+          timing: typeof metaRaw.timing === 'string' ? metaRaw.timing : 'unlimited',
+          showAnswers: typeof metaRaw.showAnswers === 'string' ? metaRaw.showAnswers : 'end',
+          selection: typeof metaRaw.selection === 'string' ? metaRaw.selection : 'auto',
+          questionTypeId,
+          tagLabel: typeof metaRaw.tagLabel === 'string' ? metaRaw.tagLabel : null,
+          difficulty,
+          status,
+          questionIds: existingIds,
+          title: typeof metaRaw.title === 'string' ? metaRaw.title : null,
+          flaggedQuestionIds: flaggedQuestionIdsFromMetadata(metaRaw),
+        }
+        return { session, metadata, questions: [], addedCount: 0 }
+      }
+
+      const newIds = pickDrillQuestionIds(filtered, sectionType, 'unlimited')
+      const questionIds = [...existingIds, ...newIds]
+      const nextMeta = { ...metaRaw, questionIds }
+      const sessionRow = await deps.repository.updateSession(sessionId, userId, { metadata: nextMeta })
+
+      const metadata: DrillSessionMetadata = {
+        sectionType,
+        questionCount: 'unlimited',
+        timing: typeof metaRaw.timing === 'string' ? metaRaw.timing : 'unlimited',
+        showAnswers: typeof metaRaw.showAnswers === 'string' ? metaRaw.showAnswers : 'end',
+        selection: typeof metaRaw.selection === 'string' ? metaRaw.selection : 'auto',
+        questionTypeId,
+        tagLabel: typeof metaRaw.tagLabel === 'string' ? metaRaw.tagLabel : null,
+        difficulty,
+        status,
+        questionIds,
+        title: typeof metaRaw.title === 'string' ? metaRaw.title : null,
+        flaggedQuestionIds: flaggedQuestionIdsFromMetadata(metaRaw),
+      }
+
+      const rows = await deps.repository.getDrillQuestionRowsByIds(newIds)
+      const questions = mapDrillQuestionRows(rows, false)
+
+      return { session: sessionRow, metadata, questions, addedCount: newIds.length }
     },
 
     async listSectionPool(

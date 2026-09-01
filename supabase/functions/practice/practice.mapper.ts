@@ -4,6 +4,7 @@ export {
 } from '../_shared/prep-test-visibility.ts'
 
 import { parseQuestionChoices } from '../_shared/parse-question-choices.ts'
+import { LR_DRILL_MAX_QUESTION_COUNT } from './adaptive-drill-config.ts'
 
 export type DrillChoice = {
   id: string
@@ -302,14 +303,18 @@ export function pickRcDrillQuestionIdsByPassageCount(
 export function pickDrillQuestionIds(
   pool: DrillPoolCandidate[],
   sectionType: 'LR' | 'RC',
-  questionCount: number,
+  questionCount: number | 'unlimited',
 ): string[] {
-  const allowed = [1, 5, 10, 25]
-  const count = allowed.includes(questionCount)
-    ? questionCount
-    : Math.min(25, Math.max(1, questionCount))
-
   if (pool.length === 0) return []
+
+  if (sectionType === 'LR' && questionCount === 'unlimited') {
+    return shuffleInPlace([...pool]).map((q) => q.id)
+  }
+
+  const count = Math.min(
+    LR_DRILL_MAX_QUESTION_COUNT,
+    Math.max(1, Math.floor(typeof questionCount === 'number' ? questionCount : 1)),
+  )
 
   if (sectionType === 'RC') {
     const groupList = shuffleInPlace(groupRcPassageCandidates(pool))

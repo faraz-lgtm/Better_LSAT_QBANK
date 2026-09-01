@@ -51,6 +51,27 @@ Deno.test('pickDrillQuestionIds LR returns requested count', () => {
   assertEquals(new Set(ids).size, 5)
 })
 
+Deno.test('pickDrillQuestionIds LR caps at 30', () => {
+  const pool = Array.from({ length: 40 }, (_, i) => ({
+    id: `q-${i}`,
+    section_id: 's1',
+    source_group_id: null,
+  }))
+  const ids = pickDrillQuestionIds(pool, 'LR', 30)
+  assertEquals(ids.length, 30)
+})
+
+Deno.test('pickDrillQuestionIds LR unlimited returns every question in the pool', () => {
+  const pool = Array.from({ length: 12 }, (_, i) => ({
+    id: `q-${i}`,
+    section_id: 's1',
+    source_group_id: null,
+  }))
+  const ids = pickDrillQuestionIds(pool, 'LR', 'unlimited')
+  assertEquals(ids.length, 12)
+  assertEquals(new Set(ids).size, 12)
+})
+
 Deno.test('pickDrillQuestionIds RC prefers passage groups', () => {
   const pool = [
     { id: 'a1', section_id: 's1', source_group_id: 'g1' },

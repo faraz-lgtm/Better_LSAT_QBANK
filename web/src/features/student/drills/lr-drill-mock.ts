@@ -3,12 +3,15 @@ export const lrDrillPoolMock = {
   totalCount: 1472,
 }
 
+import { LR_DRILL_MAX_QUESTION_COUNT } from "@/features/student/drills/adaptive-drill-config"
+
 export const lrDrillConfigOptions = {
   questionCount: [
-    { label: "1", value: "1" },
-    { label: "5", value: "5" },
-    { label: "10", value: "10" },
-    { label: "25", value: "25" },
+    { label: "Unlimited", value: "unlimited" },
+    ...Array.from({ length: LR_DRILL_MAX_QUESTION_COUNT }, (_, index) => {
+      const value = String(index + 1)
+      return { label: value, value }
+    }),
   ],
   timing: [
     { label: "Unlimited", value: "unlimited" },

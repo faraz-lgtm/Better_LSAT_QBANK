@@ -1,4 +1,12 @@
+import { LR_DRILL_MAX_QUESTION_COUNT } from "@/features/student/drills/adaptive-drill-config"
+
 export type DrillSectionType = "LR" | "RC"
+
+export type DrillQuestionCount = number | "unlimited"
+
+export function isUnlimitedDrillQuestionCount(value: unknown): value is "unlimited" {
+  return value === "unlimited"
+}
 
 export type DrillTiming = "unlimited" | "35" | "per-q"
 export type DrillShowAnswers = "end" | "each" | "never"
@@ -34,7 +42,7 @@ export type DrillQuestion = {
 
 export type DrillSessionMetadata = {
   sectionType: DrillSectionType
-  questionCount: number
+  questionCount: DrillQuestionCount
   passageCount?: number | "unlimited"
   timing: string
   showAnswers: string
@@ -80,7 +88,7 @@ export type DrillSessionResponse = {
 
 export type StartDrillInput = {
   sectionType: DrillSectionType
-  questionCount: number
+  questionCount: DrillQuestionCount
   passageCount?: number | "unlimited"
   timing?: DrillTiming
   showAnswers?: DrillShowAnswers
@@ -105,13 +113,16 @@ export type DrillPoolStats = {
   totalCount: number
 }
 
+function buildDrillQuestionCountOptions() {
+  const numeric = Array.from({ length: LR_DRILL_MAX_QUESTION_COUNT }, (_, index) => {
+    const value = String(index + 1)
+    return { label: value, value }
+  })
+  return [{ label: "Unlimited", value: "unlimited" }, ...numeric]
+}
+
 export const drillConfigOptions = {
-  questionCount: [
-    { label: "1", value: "1" },
-    { label: "5", value: "5" },
-    { label: "10", value: "10" },
-    { label: "25", value: "25" },
-  ],
+  questionCount: buildDrillQuestionCountOptions(),
   passageCount: [
     { label: "Unlimited", value: "unlimited" },
     { label: "1", value: "1" },

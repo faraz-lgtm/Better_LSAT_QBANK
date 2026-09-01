@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { ChevronLeft, ChevronRight, X } from "lucide-react"
 
 import { isQuestionRecommendedForBlindReview } from "@/features/student/blind-review/blind-review-navigation"
-import type { DrillQuestion, DrillSessionResponse } from "@/features/student/drills/drill-types"
+import { isUnlimitedDrillQuestionCount, type DrillQuestion, type DrillSessionResponse } from "@/features/student/drills/drill-types"
 import { ACTIVE_DRILL_BODY_GRID_CLASS, ACTIVE_DRILL_FINISH_BUTTON_CLASS, ACTIVE_DRILL_FOOTER_CLASS, ACTIVE_DRILL_PASSAGE_PANE_CLASS, ACTIVE_DRILL_PASSAGE_TEXT_CLASS, ACTIVE_DRILL_QUESTION_PANE_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import {
   OFFICIAL_BODY_GRID_CLASS,
@@ -167,6 +167,8 @@ function DrillSessionPage() {
     Record<string, { selectedAnswer: string; isCorrect: boolean }>
   >({})
   const [submitting, setSubmitting] = useState(false)
+  const [extending, setExtending] = useState(false)
+  const [poolExhausted, setPoolExhausted] = useState(false)
   const [finishing, setFinishing] = useState(false)
   const [submitModalOpen, setSubmitModalOpen] = useState(false)
   const [completeModal, setCompleteModal] = useState<{
@@ -336,6 +338,7 @@ function DrillSessionPage() {
 
   const questions = drill?.questions ?? []
   const metadata = drill?.metadata
+  const isUnlimitedQuestionDrill = isUnlimitedDrillQuestionCount(metadata?.questionCount)
   const showAnswersMode = metadata?.showAnswers ?? "end"
   const sectionType = metadata?.sectionType ?? "LR"
   const questionIds = useMemo(() => questions.map((q) => q.id), [questions])
@@ -365,6 +368,57 @@ function DrillSessionPage() {
 
   const safeIndex = Math.min(Math.max(qIndex, 1), Math.max(questions.length, 1))
   const current = questions[safeIndex - 1]
+
+  const goToNextQuestion = useCallback(async () => {
+    if (safeIndex < questions.length) {
+      setQIndex((index) => index + 1)
+      return
+    }
+    if (!isUnlimitedQuestionDrill || !sessionId || extending || poolExhausted || reviewAfterComplete) {
+      return
+    }
+
+    setExtending(true)
+    setError(null)
+    try {
+      const out = await practiceApi.extendDrill({ sessionId })
+      if (out.questions.length === 0) {
+        setPoolExhausted(true)
+        return
+      }
+      setDrill((prev) =>
+        prev
+          ? {
+              ...prev,
+              session: out.session,
+              metadata: out.metadata,
+              questions: [...prev.questions, ...out.questions],
+            }
+          : prev,
+      )
+      setQIndex((index) => index + 1)
+    } catch (e) {
+      setError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to load more questions")
+    } finally {
+      setExtending(false)
+    }
+  }, [
+    extending,
+    isUnlimitedQuestionDrill,
+    poolExhausted,
+    practiceApi,
+    questions.length,
+    reviewAfterComplete,
+    safeIndex,
+    sessionId,
+  ])
+
+  const goToPreviousQuestion = useCallback(() => {
+    setQIndex((index) => Math.max(1, index - 1))
+  }, [])
+
+  const disableNextAtLast = !isUnlimitedQuestionDrill || poolExhausted
+
   const editingBlindReviewAnswers = !reviewAfterComplete || answerViewTab === "blind_review"
   const displayAnswer = current
     ? resultsReviewMode
@@ -470,7 +524,7 @@ function DrillSessionPage() {
       }))
       if (showAnswersMode === "each") {
         window.setTimeout(() => {
-          setQIndex((i) => Math.min(questions.length, i + 1))
+          void goToNextQuestion()
         }, 600)
       }
     } catch (e) {
@@ -1085,8 +1139,9 @@ function DrillSessionPage() {
             variant={sessionVariant}
             showPassageBreaks={sectionType === "RC"}
             onSelectQuestion={setQIndex}
-            onPrev={() => setQIndex((i) => Math.max(1, i - 1))}
-            onNext={() => setQIndex((i) => Math.min(questions.length, i + 1))}
+            onPrev={goToPreviousQuestion}
+            onNext={() => void goToNextQuestion()}
+            disableNextAtLast={disableNextAtLast}
           />
         ) : useBlindReviewLayout ? (
           <div className={resultsReviewMode ? REVIEW_FOOTER_ROW_CLASS : BLIND_REVIEW_FOOTER_ROW_CLASS}>

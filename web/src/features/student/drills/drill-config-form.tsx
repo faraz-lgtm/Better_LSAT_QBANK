@@ -107,13 +107,20 @@ function DrillConfigForm({
     setStarting(true)
     setError(null)
     try {
-      const count = Number.parseInt(questionCount, 10)
+      const parsedQuestionCount =
+        questionCount === "unlimited" ? "unlimited" : Number.parseInt(questionCount, 10)
       const parsedPassageCount =
         passageCount === "unlimited" ? "unlimited" : Number.parseInt(passageCount, 10)
       const out = await practiceApi.startDrill({
         sectionType,
         questionCount:
-          sectionType === "RC" ? 1 : Number.isFinite(count) ? count : 5,
+          sectionType === "RC"
+            ? 1
+            : parsedQuestionCount === "unlimited"
+              ? "unlimited"
+              : Number.isFinite(parsedQuestionCount)
+                ? parsedQuestionCount
+                : 5,
         ...(sectionType === "RC"
           ? {
               passageCount:
@@ -197,7 +204,7 @@ function DrillConfigForm({
           ) : (
             <DrillConfigSelectField
               label="Number of Questions"
-              description="Select as many questions you can"
+              description="Unlimited uses every question in your filtered pool"
               value={questionCount}
               onChange={setQuestionCount}
               options={[...drillConfigOptions.questionCount]}
