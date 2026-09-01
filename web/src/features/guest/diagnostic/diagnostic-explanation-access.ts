@@ -3,7 +3,8 @@ import type { GuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-
 /** Free-plan teaser: first N explanations unlocked on Review in Tester. */
 function freeDiagnosticExplanationLimit(intentId: GuestDiagnosticIntentId): number {
   if (intentId === "mini") return 5
-  if (intentId === "quick") return 10
+  // Section diagnostic: unlock all imported questions so Review shows real explanations.
+  if (intentId === "quick") return 25
   return 10
 }
 
@@ -23,8 +24,8 @@ function canShowDiagnosticExplanation(input: {
 }
 
 /**
- * Results-list access. Free Mini unlocks the first 5 rows; Free Full unlocks
- * the first 10. Remaining rows stay blurred until upgrade.
+ * Results-list access. Free Mini unlocks the first 5 rows; Free Section unlocks
+ * all 25. Remaining Full Diagnostic rows stay blurred until upgrade.
  */
 function canShowDiagnosticResultDetails(input: {
   intentId: GuestDiagnosticIntentId

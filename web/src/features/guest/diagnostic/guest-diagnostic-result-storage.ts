@@ -2,9 +2,9 @@ import type { DrillQuestion } from "@/features/student/drills/drill-types"
 
 import type { GuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-intent-types"
 import {
-  formatMiniDiagnosticPercentileRange,
-  formatMiniDiagnosticScoreRange,
-  resolveMiniDiagnosticScoreRange,
+  formatDiagnosticPercentileRange,
+  formatDiagnosticScoreRange,
+  resolveDiagnosticScoreRange,
 } from "@/features/guest/diagnostic/mini-diagnostic-content"
 import type { GuestDiagnosticAnswerState } from "@/features/guest/diagnostic/guest-diagnostic-exam-utils"
 import { getGuestDiagnosticTestConfig } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
@@ -43,23 +43,22 @@ type GuestDiagnosticResult = {
 }
 
 function buildResultScoreFields(
-  _intentId: GuestDiagnosticIntentId,
+  intentId: GuestDiagnosticIntentId,
   correctCount: number,
   _questionCount: number,
 ) {
-  // Same estimated bands for every diagnostic: N correct → band for N (clamped 0–10).
-  const scoreRange = resolveMiniDiagnosticScoreRange(correctCount)
+  const scoreRange = resolveDiagnosticScoreRange(intentId, correctCount)
   const scaledMid = Math.round((scoreRange.scaledLow + scoreRange.scaledHigh) / 2)
   const percentileMid = (scoreRange.percentileLow + scoreRange.percentileHigh) / 2
   return {
     scaledScore: scaledMid,
     scaledScoreLow: scoreRange.scaledLow,
     scaledScoreHigh: scoreRange.scaledHigh,
-    scaledScoreLabel: formatMiniDiagnosticScoreRange(scoreRange),
+    scaledScoreLabel: formatDiagnosticScoreRange(intentId, scoreRange),
     percentile: percentileMid,
     percentileLow: scoreRange.percentileLow,
     percentileHigh: scoreRange.percentileHigh,
-    percentileLabel: formatMiniDiagnosticPercentileRange(scoreRange),
+    percentileLabel: formatDiagnosticPercentileRange(intentId, scoreRange),
   }
 }
 
@@ -183,7 +182,12 @@ function buildDefaultGuestDiagnosticResult(intentId: GuestDiagnosticIntentId): G
   }
 
   const outcomes: GuestDiagnosticQuestionOutcome[] = Array.from({ length: questionCount }, (_, index) => {
-    const questionId = intentId === "mini" ? `mini-diag-q${index + 1}` : `guest-diagnostic-preview-q${index + 1}`
+    const questionId =
+      intentId === "mini"
+        ? `mini-diag-q${index + 1}`
+        : intentId === "quick"
+          ? `section-diag-q${index + 1}`
+          : `guest-diagnostic-preview-q${index + 1}`
     const isCorrect = index < correctCount
     return {
       questionId,

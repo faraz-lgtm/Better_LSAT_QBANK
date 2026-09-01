@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { X } from "lucide-react"
 
-import { createGuestDiagnosticPreviewQuestions } from "@/features/guest/diagnostic/guest-diagnostic-exam-mock-data"
 import {
   buildGuestDiagnosticAnswerState,
 } from "@/features/guest/diagnostic/guest-diagnostic-answer-state"
@@ -81,8 +80,9 @@ import {
   usePracticeSessionTimer,
 } from "@/features/student/practice-session/use-practice-session-timer"
 import {
-  getMiniDiagnosticExplanationHtml,
-  getMiniDiagnosticQuestionMeta,
+  createDiagnosticQuestions,
+  getDiagnosticExplanationHtml,
+  getDiagnosticQuestionMeta,
 } from "@/features/guest/diagnostic/mini-diagnostic-content"
 import { canShowDiagnosticExplanation } from "@/features/guest/diagnostic/diagnostic-explanation-access"
 import { HtmlContent } from "@/lib/html/html-content"
@@ -264,8 +264,8 @@ function GuestDiagnosticExamLayout({
   )
 
   const questions = useMemo(
-    () => createGuestDiagnosticPreviewQuestions(config.questionCount),
-    [config.questionCount],
+    () => createDiagnosticQuestions(config.intentId),
+    [config.intentId],
   )
   const current = questions[qIndex - 1] ?? questions[0]
   const safeIndex = Math.min(Math.max(qIndex, 1), questions.length)
@@ -303,8 +303,10 @@ function GuestDiagnosticExamLayout({
     hasActiveCore,
   })
   const explanationHtml =
-    current && explanationUnlocked ? getMiniDiagnosticExplanationHtml(current.id) : null
-  const questionMeta = current ? getMiniDiagnosticQuestionMeta(current.id) : null
+    current && explanationUnlocked
+      ? getDiagnosticExplanationHtml(current.id, config.intentId)
+      : null
+  const questionMeta = current ? getDiagnosticQuestionMeta(current.id, config.intentId) : null
   const actualOutcome = answerOutcome(isReviewMode ? scoredAnswer : currentAnswer)
   const showInsightsPanel = isPostResultsMode && reviewSidePanel === "insights"
   const analyticsSeed = useMemo(() => {

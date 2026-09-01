@@ -6,7 +6,7 @@ import { GuestDiagnosticExplanationCard } from '@/features/guest/diagnostic/gues
 import type { GuestDiagnosticResult } from '@/features/guest/diagnostic/guest-diagnostic-result-storage'
 import {
   buildDiagnosticResultExplanation,
-  getMiniDiagnosticQuestionMeta,
+  getDiagnosticQuestionMeta,
 } from '@/features/guest/diagnostic/mini-diagnostic-content'
 import { canShowDiagnosticResultDetails } from '@/features/guest/diagnostic/diagnostic-explanation-access'
 import {
@@ -217,14 +217,16 @@ function GuestDiagnosticLockedQuestionRow({
   number,
   heading = "Mini Diagnostic",
   questionId,
+  intentId,
   isCorrect,
 }: {
   number: number
   heading?: string
   questionId: string
+  intentId: GuestDiagnosticResult['intentId']
   isCorrect: boolean
 }) {
-  const meta = getMiniDiagnosticQuestionMeta(questionId)
+  const meta = getDiagnosticQuestionMeta(questionId, intentId)
 
   return (
     <div className="relative overflow-hidden border-t border-[#dfe1e7] first:border-t-0">
@@ -393,12 +395,14 @@ function GuestDiagnosticResultsView({
                 number={questionNumber}
                 heading={heading}
                 questionId={outcome.questionId}
+                intentId={result.intentId}
                 isCorrect={outcome.isCorrect}
               />
             )
           }
           const explanation =
-            explanationsById.get(outcome.questionId) ?? buildDiagnosticResultExplanation(outcome.questionId)
+            explanationsById.get(outcome.questionId) ??
+            buildDiagnosticResultExplanation(outcome.questionId, result.intentId)
           if (!explanation) {
             return (
               <GuestDiagnosticLockedQuestionRow
@@ -406,11 +410,12 @@ function GuestDiagnosticResultsView({
                 number={questionNumber}
                 heading={heading}
                 questionId={outcome.questionId}
+                intentId={result.intentId}
                 isCorrect={outcome.isCorrect}
               />
             )
           }
-          const meta = getMiniDiagnosticQuestionMeta(outcome.questionId)
+          const meta = getDiagnosticQuestionMeta(outcome.questionId, result.intentId)
           return (
             <GuestDiagnosticExplanationCard
               key={outcome.questionId}
