@@ -15,7 +15,10 @@ describe("practice session timer progress", () => {
   it("resolves drill timing budgets", () => {
     expect(resolveTimerBudgetSeconds({ timing: "35" })).toBe(PRACTICE_SESSION_35_MIN_SECONDS)
     expect(resolveTimerBudgetSeconds({ timing: "standard" })).toBe(PRACTICE_SESSION_35_MIN_SECONDS)
-    expect(resolveTimerBudgetSeconds({ timing: "per-q", questionCount: 5 })).toBe(5 * PRACTICE_PER_QUESTION_SECONDS)
+    expect(resolveTimerBudgetSeconds({ timing: "per-q", questionCount: 5 })).toBe(PRACTICE_PER_QUESTION_SECONDS)
+    expect(resolveTimerBudgetSeconds({ timing: "pace", questionCount: 5 })).toBe(420)
+    expect(resolveTimerBudgetSeconds({ timing: "target", questionCount: 5 })).toBe(442)
+    expect(resolveTimerBudgetSeconds({ timing: "speed:70", questionCount: 5 })).toBe(294)
     expect(resolveTimerBudgetSeconds({ timing: "unlimited" })).toBe(0)
     expect(resolveTimerBudgetSeconds({})).toBe(0)
   })
@@ -26,6 +29,8 @@ describe("practice session timer progress", () => {
     expect(isUnlimitedPracticeTiming("35")).toBe(false)
     expect(isSectionCountdownTiming("standard")).toBe(true)
     expect(isDrillCountdownTiming("per-q")).toBe(true)
+    expect(isDrillCountdownTiming("pace")).toBe(true)
+    expect(isDrillCountdownTiming("speed:94")).toBe(true)
     expect(isDrillCountdownTiming("unlimited")).toBe(false)
   })
 

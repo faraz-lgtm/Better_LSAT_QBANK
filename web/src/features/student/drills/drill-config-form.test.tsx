@@ -109,6 +109,22 @@ describe("DrillConfigForm save settings checkbox", () => {
     expect(screen.getByRole("button", { name: "Timing" })).toBeInTheDocument()
   })
 
+  it("opens the timing menu with Standard, speed training, and per-question options", async () => {
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.click(screen.getByRole("button", { name: "Timing" }))
+    expect(screen.getByRole("option", { name: /Standard/ })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: /Target/ })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "35 minutes" })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "Per question (1:20)" })).toBeInTheDocument()
+    expect(screen.getByText("SPEED TRAINING")).toBeInTheDocument()
+    expect(screen.getByText("CUSTOM")).toBeInTheDocument()
+
+    await user.click(screen.getByRole("option", { name: /Standard/ }))
+    expect(screen.getByRole("button", { name: "Timing" })).toHaveTextContent("Standard")
+  })
+
   it("does not offer Never (blind) in Show answers", async () => {
     const user = userEvent.setup()
     renderForm()

@@ -1,13 +1,9 @@
 import { resolveAccommodatedSectionMinutes } from "@/features/student/accommodations/accommodations-context"
+import { drillTimingTitleLabel, drillTimingTriggerLabel } from "@/features/student/drills/drill-timing"
 
 function formatDrillTimingTitleLabel(timing: string, scaleFactor = 1): string {
-  if (timing === "unlimited") return "Unlimited Time"
   if (timing === "per-q") return "Per question"
-  if (timing === "35" || timing === "standard" || timing === "strict") {
-    const mins = resolveAccommodatedSectionMinutes(scaleFactor)
-    return `${mins} minutes`
-  }
-  return timing
+  return drillTimingTitleLabel(timing, scaleFactor)
 }
 
 function formatLrDrillResultsTitle(input: {
@@ -77,7 +73,8 @@ function formatDrillAboutTiming(timing: string, elapsedSeconds: number, scaleFac
     return `${resolveAccommodatedSectionMinutes(scaleFactor)} min`
   }
   if (timing === "per-q") return `Per question · ${formatMinutesSecondsLabel(elapsedSeconds)}`
-  return timing
+  const label = drillTimingTriggerLabel(timing, 1, scaleFactor)
+  return label === "Timing" ? timing : label
 }
 
 function formatLrDrillQuestionTitle(input: {

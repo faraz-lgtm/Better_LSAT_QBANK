@@ -8,7 +8,8 @@ export function isUnlimitedDrillQuestionCount(value: unknown): value is "unlimit
   return value === "unlimited"
 }
 
-export type DrillTiming = "unlimited" | "35" | "per-q"
+/** Timing id stored on the drill session. Validated by `isValidDrillTiming`. */
+export type DrillTiming = string
 export type DrillShowAnswers = "end" | "each"
 export type DrillSelection = "auto" | "manual"
 export type DrillDifficulty = "adaptive" | "easy" | "hard"
