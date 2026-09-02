@@ -10,6 +10,7 @@ import {
   resolveLsacTestWindowValue,
 } from "@/lib/lsac-test-window-options"
 import { TestDayCountdownCard } from "@/features/dashboard/components/test-day-countdown-card"
+import { DashboardWelcomeHeading } from "@/features/dashboard/components/dashboard-welcome-heading"
 import {
   daysUntilDate,
   formatLsacTestMeta,
@@ -61,6 +62,10 @@ function firstNameFromFullName(fullName: string | null | undefined): string {
   return trimmed.split(/\s+/)[0] ?? ""
 }
 
+function firstNameFromProfile(profile: { first_name?: string | null; full_name?: string | null } | null | undefined): string {
+  return firstNameFromFullName(profile?.first_name) || firstNameFromFullName(profile?.full_name)
+}
+
 function DashboardPage() {
   const navigate = useNavigate()
   const { canAccessLsacContent, loading: entitlementLoading } = useStudentEntitlement()
@@ -97,6 +102,14 @@ function DashboardPage() {
       setOverview(null)
       setContinueDrills([])
       setSuggestedDrills([])
+      if (usersApi) {
+        try {
+          const profile = await usersApi.getMyProfile()
+          setFirstName(firstNameFromProfile(profile))
+        } catch {
+          setFirstName("")
+        }
+      }
       setLoading(false)
       return
     }
@@ -120,7 +133,7 @@ function DashboardPage() {
 
       setOverview(overviewData)
       setStudyContext(context)
-      setFirstName(firstNameFromFullName(profile?.full_name))
+      setFirstName(firstNameFromProfile(profile))
 
       const inProgress = drillSessions.sessions
         .filter((s) => !s.completedAt)
@@ -224,6 +237,7 @@ function DashboardPage() {
     return (
       <StudentMain>
         <div className="dashboard-page flex flex-col gap-6">
+          <DashboardWelcomeHeading firstName={firstName} />
           <DashboardAccessSetupCard />
         </div>
       </StudentMain>
@@ -235,6 +249,8 @@ function DashboardPage() {
       {error ? <p className="mb-4 text-sm text-[#95122b]">{error}</p> : null}
 
       <div className="dashboard-page flex flex-col gap-6">
+        <DashboardWelcomeHeading firstName={firstName} />
+
         <div className="dashboard-page__top">
           <TestDayCountdownCard
             daysRemaining={daysRemaining}

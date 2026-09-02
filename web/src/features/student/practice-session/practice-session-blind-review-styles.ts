@@ -71,11 +71,11 @@ const BLIND_REVIEW_RECOMMENDED_BADGE_CLASS =
   "inline-flex h-8 items-center rounded-[16px] px-4 text-xs font-medium tracking-[0.24px] text-[#ff6f00]"
 
 const BLIND_REVIEW_OPTIONS_LIST_CLASS =
-  "practice-session-br-options flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-6 py-5"
+  "practice-session-br-options flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-6 py-5"
 
-/** Figma `18617:35791` — 16px inset around the 48px letter so five choices fit the question card */
+/** Choice rows grow with wrapped copy; letter and hide control stay top-aligned. */
 const BLIND_REVIEW_OPTION_ROW_INNER_CLASS =
-  "flex items-center justify-between gap-4 py-3 pl-4 pr-4 text-left"
+  "flex items-start justify-between gap-4 py-3 pl-4 pr-4 text-left"
 
 /** Selected answer while viewing timed/actual responses — exam blue */
 const BLIND_REVIEW_OPTION_ROW_SELECTED_ACTUAL_CLASS =

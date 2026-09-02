@@ -119,10 +119,18 @@ describe("PracticeBlindReviewQuestionPanel", () => {
     expect(onAnnotateMouseUp).toHaveBeenCalled()
   })
 
-  it("keeps Blind Review answer choices in a non-scrolling box", () => {
+  it("lets Blind Review answer rows grow with wrapped text instead of clipping", () => {
+    const longChoice =
+      "a doctor prescribing a medication to a patient without first determining whether the patient is allergic to it and without informing them of the possible side effects of that medication being nothing more than a guess"
     render(
       <PracticeBlindReviewQuestionPanel
-        question={question}
+        question={{
+          ...question,
+          choices: [
+            { id: "a", index: 0, text: `<p>${longChoice}</p>` },
+            { id: "b", index: 1, text: "<p>Choice B</p>" },
+          ],
+        }}
         questionNumber={1}
         findQuery=""
         selectedIndex={null}
@@ -136,11 +144,19 @@ describe("PracticeBlindReviewQuestionPanel", () => {
       />,
     )
 
-    const choice = screen.getByRole("button", { name: /choice a/i })
-    const list = choice.closest(".practice-session-br-options")
+    const copy = screen.getByText(longChoice)
+    expect(copy).toBeVisible()
+    expect(copy.closest(".practice-session-content")).toHaveClass("text-pretty")
+    expect(copy.closest(".practice-session-content")?.className).not.toMatch(/line-clamp|truncate/)
+
+    const row = copy.closest(".practice-session-br-option")
+    expect(row).toBeTruthy()
+    expect(row).not.toHaveClass("overflow-hidden")
+    expect(row).toHaveClass("h-auto")
+
+    const list = copy.closest(".practice-session-br-options")
     expect(list).toBeTruthy()
-    expect(list).toHaveClass("overflow-hidden")
-    expect(list).not.toHaveClass("overflow-y-auto")
-    expect(choice).toHaveClass("py-3")
+    expect(list).not.toHaveClass("overflow-hidden")
+    expect(list).toHaveClass("overflow-y-auto")
   })
 })

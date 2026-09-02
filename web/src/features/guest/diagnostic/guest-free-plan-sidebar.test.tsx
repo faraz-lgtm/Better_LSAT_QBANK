@@ -40,7 +40,13 @@ describe("GuestFreePlanSidebar", () => {
 
     expect(screen.queryByRole("button", { name: /Practice Exams/i })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: /Question Bank/i })).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /Upgrade to LSAT\+/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Upgrade to LSAT+" })).toBeInTheDocument()
+    expect(screen.getByText("Unlock Analytics")).toBeInTheDocument()
+    expect(screen.getByText(/79%/)).toBeInTheDocument()
+    expect(screen.getByText(/30\+/)).toBeInTheDocument()
+    expect(screen.getByText(/Score Tracker will be available/)).toBeInTheDocument()
+    expect(screen.queryByText(/Free plan/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /\$79/ })).not.toBeInTheDocument()
   })
 
   it("opens the locked-content popup for locked items", async () => {
@@ -109,6 +115,12 @@ describe("GuestFreePlanSidebar", () => {
     )
 
     expect(container.querySelector(".guest-free-plan-upgrade-card")).toBeTruthy()
+    expect(container.querySelector(".student-sidebar-nav")?.contains(
+      container.querySelector(".guest-free-plan-upgrade-card"),
+    )).toBe(true)
+    expect(container.querySelector(".student-sidebar-footer")?.contains(
+      container.querySelector(".guest-free-plan-upgrade-card"),
+    )).toBe(false)
 
     await user.click(screen.getByRole("button", { name: "Collapse sidebar" }))
     expect(container.querySelector(".student-sidebar")).toHaveClass("student-sidebar--collapsed")
