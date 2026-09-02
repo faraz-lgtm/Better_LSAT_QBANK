@@ -65,18 +65,24 @@ describe("LrDrillOptionRow", () => {
     expect(container.firstChild).toHaveClass("border-[#ff6f00]")
   })
 
-  it("uses compact Blind Review choice padding so five answers fit the card", () => {
-    render(
+  it("sizes Blind Review choice rows to wrapped text instead of a clipped fixed height", () => {
+    const longChoice =
+      "a doctor prescribing a medication to a patient without first determining whether the patient is allergic to it"
+    const { container } = render(
       <LrDrillOptionRow
         index={0}
-        html="<p>Choice A</p>"
+        html={`<p>${longChoice}</p>`}
         selected={false}
         onSelect={() => undefined}
         variant="blind-review"
       />,
     )
 
-    expect(screen.getByRole("button", { name: /choice a/i })).toHaveClass("py-3")
+    expect(container.firstChild).toHaveClass("h-auto")
+    expect(container.firstChild).not.toHaveClass("overflow-hidden")
+    expect(screen.getByRole("button", { name: new RegExp(longChoice, "i") })).toHaveClass("items-start", "py-3")
+    expect(screen.getByText("A")).toHaveClass("self-start")
+    expect(screen.getByText(longChoice).closest(".practice-session-content")).toHaveClass("text-pretty")
   })
 
   it("selects an answer on a simple click", async () => {

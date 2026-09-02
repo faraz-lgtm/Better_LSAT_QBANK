@@ -3147,11 +3147,6 @@ select.ds-input {
   }
 }
 
-.student-topbar-profile-btn {
-  box-sizing: border-box;
-  max-height: 3.5rem;
-}
-
 .lsat-html-content {
   font-family: var(--sans);
   font-size: 0.875rem;
@@ -4323,8 +4318,16 @@ html.student-shell-immersive .practice-session-card--blind-review {
   overflow: hidden;
 }
 
+.practice-session-card--blind-review .practice-session-br-option {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
 .practice-session-card--blind-review .practice-session-br-option p {
   margin: 0;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
 }
 
 .practice-session-card--blind-review .practice-session-footer {

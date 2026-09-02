@@ -352,10 +352,10 @@ function StudentAppSidebar({
               </div>
             ))}
           </div>
+          {beforeFooter}
         </nav>
 
         <div className="student-sidebar-footer flex shrink-0 flex-col gap-4 px-4 pb-6">
-          {beforeFooter}
           <div className="student-sidebar-logout-row">
             <button
               type="button"

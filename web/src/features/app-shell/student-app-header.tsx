@@ -1,13 +1,17 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { ChevronDown, Menu } from "lucide-react"
+import { Menu } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
-import { getStudentBreadcrumbs, isDashboardActive, type StudentBreadcrumb } from "@/features/app-shell/student-nav-config"
+import { FigmaIcon } from "@/components/icons/figma-icons"
+import { getStudentBreadcrumbs, type StudentBreadcrumb } from "@/features/app-shell/student-nav-config"
 import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
 import { resolveStudentShellVariant } from "@/features/app-shell/student-shell-plan-variant"
 import { useGuestPremiumAccount } from "@/features/guest/premium/guest-premium-account"
 import { shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
-import { STUDENT_PAGE_CONTAINER_CLASS, STUDENT_SHELL_GUTTER_CLASS } from "@/features/student/components/student-page-container"
+import {
+  STUDENT_PAGE_CONTAINER_CLASS,
+  STUDENT_SHELL_GUTTER_CLASS,
+} from "@/features/student/components/student-page-container"
 import { createUsersApi } from "@/lib/api/users"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -28,12 +32,36 @@ function getDisplayName(email: string | null): string {
 function getInitials(name: string): string {
   const parts = name.split(" ").filter(Boolean)
   if (parts.length === 0) return "S"
-  if (parts.length === 1) return parts[0][0]!.toUpperCase()
-  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase()
+  if (parts.length === 1) return parts[0]![0]!.toUpperCase()
+  return `${parts[0]![0] ?? ""}${parts[1]![0] ?? ""}`.toUpperCase()
 }
 
 function firstToken(value: string | null | undefined): string {
   return value?.trim().split(/\s+/)[0] ?? ""
+}
+
+function formatHeaderProfileName({
+  firstName,
+  lastName,
+  fullName,
+  email,
+}: {
+  firstName?: string | null
+  lastName?: string | null
+  fullName?: string | null
+  email?: string | null
+}): string {
+  const first = firstToken(firstName) || firstToken(fullName)
+  const lastFromFull = (fullName ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(1)
+    .at(-1)
+  const last = firstToken(lastName) || lastFromFull || ""
+  if (first && last) return `${first} ${last[0]!.toUpperCase()}.`
+  if (first) return first
+  return getDisplayName(email ?? null)
 }
 
 type StudentAppHeaderProps = {
@@ -47,18 +75,18 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
   const navigate = useNavigate()
   const entitlement = useStudentEntitlementOptional()?.entitlement ?? null
   const premiumAccount = useGuestPremiumAccount()
-  const planLabel =
+  const isPremium =
     resolveStudentShellVariant({
       accessState: entitlement?.accessState ?? null,
       hasGuestPremiumAccount: Boolean(premiumAccount),
     }) === "premium"
-      ? "Premium"
-      : "Free"
+  const planLabel = isPremium ? "Premium" : "Free"
   const [email, setEmail] = useState<string | null>(null)
   const [profileFirstName, setProfileFirstName] = useState("")
+  const [profileLastName, setProfileLastName] = useState("")
+  const [profileFullName, setProfileFullName] = useState("")
   const [openProfileMenu, setOpenProfileMenu] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement | null>(null)
-  const dashboardActive = isDashboardActive(pathname)
 
   const crumbs = useMemo(
     () => [...getStudentBreadcrumbs(pathname, search), ...breadcrumbTail],
@@ -77,7 +105,9 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
         .getMyProfile()
         .then((profile) => {
           if (!mounted) return
-          setProfileFirstName(firstToken(profile?.first_name) || firstToken(profile?.full_name))
+          setProfileFirstName(firstToken(profile?.first_name))
+          setProfileLastName(firstToken(profile?.last_name))
+          setProfileFullName(profile?.full_name?.trim() ?? "")
         })
         .catch(() => undefined)
     } catch {
@@ -108,104 +138,117 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
     window.location.assign("/login")
   }
 
-  const displayName = useMemo(() => getDisplayName(email), [email])
+  const displayName = useMemo(
+    () =>
+      formatHeaderProfileName({
+        firstName: profileFirstName,
+        lastName: profileLastName,
+        fullName: profileFullName,
+        email,
+      }),
+    [email, profileFirstName, profileFullName, profileLastName],
+  )
   const initials = useMemo(() => getInitials(displayName), [displayName])
   const lastCrumbIndex = crumbs.length - 1
-  const welcomeName = profileFirstName || (email ? firstToken(displayName) : "") || "there"
 
   return (
-    <header className="student-topbar sticky top-0 z-30 w-full shrink-0 border-b border-[color:var(--greyscale-100)] bg-[var(--primary-0)]">
-      <div className={cn(STUDENT_SHELL_GUTTER_CLASS, STUDENT_PAGE_CONTAINER_CLASS, "student-shell-top-row flex w-full items-center")}>
-        <div className="flex w-full min-w-0 items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-3">
+    <header className="student-topbar sticky top-0 z-30 w-full shrink-0 border-b border-[#dfe1e7] bg-[#f3f7ff]">
+      <div
+        className={cn(
+          STUDENT_SHELL_GUTTER_CLASS,
+          STUDENT_PAGE_CONTAINER_CLASS,
+          "flex h-[72px] w-full items-center justify-between gap-4",
+        )}
+      >
+        <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
-            className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--greyscale-100)] bg-[var(--primary-25)] text-[#0d47a1] lg:hidden"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-[#dfe1e7] bg-[#edf3ff] text-[#0d47a1] lg:hidden"
             aria-label="Open navigation menu"
             onClick={onOpenMobileNav}
           >
             <Menu className="size-5" />
           </button>
 
-          {dashboardActive ? (
-            <p
-              aria-current="page"
-              className="student-topbar-breadcrumbs min-w-0 truncate font-medium text-[#0d47a1]"
-            >
-              Welcome back {welcomeName}
-            </p>
-          ) : (
-            <nav aria-label="Breadcrumb" className="student-topbar-breadcrumbs min-w-0">
-              <ol className="flex flex-wrap items-center gap-1">
-                {crumbs.map((crumb, index) => {
-                  const isLast = index === lastCrumbIndex
-                  const href = crumb.href
-                  return (
-                    <Fragment key={`${crumb.label}-${index}`}>
-                      {index > 0 ? (
-                        <li aria-hidden className="text-xs font-semibold tracking-[0.24px] text-[#666d80]">
-                          /
-                        </li>
-                      ) : null}
-                      <li>
-                        {isLast || !href ? (
-                          <span
-                            aria-current={isLast ? "page" : undefined}
-                            className={cn(
-                              isLast ? "font-medium text-[#0d47a1]" : "font-normal text-[#666d80]",
-                            )}
-                          >
-                            {crumb.label}
-                          </span>
-                        ) : (
-                          <Link
-                            to={href}
-                            className="font-normal text-[#666d80] hover:text-[#0d47a1]"
-                            onClick={(event) => {
-                              if (!shouldForceParentNav(pathname, href)) return
-                              event.preventDefault()
-                              navigate(href)
-                            }}
-                          >
-                            {crumb.label}
-                          </Link>
-                        )}
+          <nav aria-label="Breadcrumb" className="student-topbar-breadcrumbs min-w-0">
+            <ol className="flex flex-wrap items-center gap-1">
+              {crumbs.map((crumb, index) => {
+                const isLast = index === lastCrumbIndex
+                const href = crumb.href
+                return (
+                  <Fragment key={`${crumb.label}-${index}`}>
+                    {index > 0 ? (
+                      <li aria-hidden className="text-xs font-semibold tracking-[0.24px] text-[#666d80]">
+                        /
                       </li>
-                    </Fragment>
-                  )
-                })}
-              </ol>
-            </nav>
-          )}
+                    ) : null}
+                    <li>
+                      {isLast || !href ? (
+                        <span
+                          aria-current={isLast ? "page" : undefined}
+                          className={cn(
+                            isLast
+                              ? "font-medium text-[#0d47a1]"
+                              : "font-normal text-[#666d80]",
+                          )}
+                        >
+                          {crumb.label}
+                        </span>
+                      ) : (
+                        <Link
+                          to={href}
+                          className="font-normal text-[#666d80] hover:text-[#0d47a1]"
+                          onClick={(event) => {
+                            if (!shouldForceParentNav(pathname, href)) return
+                            event.preventDefault()
+                            navigate(href)
+                          }}
+                        >
+                          {crumb.label}
+                        </Link>
+                      )}
+                    </li>
+                  </Fragment>
+                )
+              })}
+            </ol>
+          </nav>
         </div>
 
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          {headerActions ? <div className="flex shrink-0 items-center">{headerActions}</div> : null}
+        <div className="flex shrink-0 items-center gap-3">
+          {isPremium ? null : headerActions}
 
           <div ref={profileMenuRef} className="relative">
             <button
               type="button"
-              className="student-topbar-profile-btn flex max-h-14 items-center gap-3 rounded-[20px] px-3 py-1.5 hover:bg-[#edf3ff]/60"
+              className="flex h-[60px] items-center gap-3 rounded-[20px] px-3 hover:bg-[#edf3ff]/60"
               aria-label="Open profile menu"
               aria-haspopup="menu"
               aria-expanded={openProfileMenu}
               onClick={() => setOpenProfileMenu((current) => !current)}
             >
-              <span className="flex size-[25px] items-center justify-center rounded-full bg-[#0d47a1] text-[11px] font-semibold text-white">
+              <span className="flex size-[42px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#0d47a1] text-sm font-semibold text-white">
                 {initials}
               </span>
-              <span className="hidden flex-col items-start text-left leading-[1.4] sm:flex">
-                <span className="text-[14px] font-semibold tracking-[0.32px] text-[#062357]">{displayName}</span>
-                <span className="max-w-[180px] truncate text-[10px] tracking-[0.24px] text-black/80">
+              <span className="hidden min-w-0 flex-col items-start gap-1 text-left sm:flex">
+                <span className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#041a44]">
+                  {displayName}
+                </span>
+                <span className="max-w-[220px] truncate text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#041a44]">
                   {email ?? "student@example.com"}
                 </span>
               </span>
-              <ChevronDown
-                className={cn("hidden size-4 text-[#666d80] sm:block", openProfileMenu && "rotate-180")}
+              <FigmaIcon
+                name="chevron-down"
+                className={cn(
+                  "hidden size-6 shrink-0 text-[#041a44] sm:block",
+                  openProfileMenu && "rotate-180",
+                )}
+                aria-hidden
               />
             </button>
             {openProfileMenu ? (
-              <div className="absolute right-0 top-[calc(100%+8px)] z-30 min-w-[180px] rounded-2xl border border-[color:var(--greyscale-100)] bg-[var(--primary-25)] p-2 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]">
+              <div className="absolute right-0 top-[calc(100%+8px)] z-30 min-w-[180px] rounded-2xl border border-[#dfe1e7] bg-[#f3f7ff] p-2 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]">
                 <Link
                   to="/app/account"
                   className="flex h-10 w-full items-center rounded-xl px-3 text-left text-sm font-semibold tracking-[0.02em] text-[#062357] hover:bg-white/80"
@@ -223,17 +266,28 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
               </div>
             ) : null}
           </div>
-          <span
-            className="inline-flex shrink-0 items-center text-[12px] font-semibold tracking-[0.24px] text-[#0d47a1]"
-            aria-label={`Plan: ${planLabel}`}
-          >
-            {planLabel}
-          </span>
-        </div>
+
+          {isPremium ? (
+            <span
+              className="inline-flex h-10 w-[97px] shrink-0 items-center justify-center rounded-[14px] bg-[#edf3ff] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1]"
+              aria-label={`Plan: ${planLabel}`}
+            >
+              {planLabel}
+            </span>
+          ) : (
+            <span
+              className="hidden shrink-0 text-xs font-semibold tracking-[0.24px] text-[#0d47a1] sm:inline-flex"
+              aria-label={`Plan: ${planLabel}`}
+            >
+              {planLabel}
+            </span>
+          )}
+
+          {isPremium ? headerActions : null}
         </div>
       </div>
     </header>
   )
 }
 
-export { StudentAppHeader }
+export { formatHeaderProfileName, StudentAppHeader }

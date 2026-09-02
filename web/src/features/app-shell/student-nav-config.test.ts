@@ -8,6 +8,12 @@ import {
 } from "@/features/app-shell/student-nav-config"
 
 describe("student-nav-config", () => {
+  it("builds Main / Dashboard breadcrumbs for the premium home page", () => {
+    expect(getStudentBreadcrumbs("/app")).toEqual([{ label: "Main" }, { label: "Dashboard" }])
+    expect(getStudentBreadcrumbs("/app/")).toEqual([{ label: "Main" }, { label: "Dashboard" }])
+    expect(getStudentPageTitle("/app")).toBe("Dashboard")
+  })
+
   it("maps practice routes to prep section", () => {
     expect(getActiveSectionKey("/app/practice/drills")).toBe("prep")
     expect(getStudentBreadcrumbs("/app/practice/drills")).toEqual([

@@ -191,7 +191,7 @@ export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBre
   }
 
   if (isDashboardActive(pathname)) {
-    return [{ label: "Dashboard" }]
+    return [{ label: "Main" }, { label: "Dashboard" }]
   }
 
   if (pathname === "/app/account") {

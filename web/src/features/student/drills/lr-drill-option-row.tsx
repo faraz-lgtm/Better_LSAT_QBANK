@@ -135,7 +135,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
           : officialChrome
             ? "text-[14px] font-normal leading-5 text-[#2c3143]"
             : isBlindReview
-            ? "text-[1em] leading-[1.5] tracking-[0.32px] text-[color:inherit]"
+            ? "text-pretty text-[1em] leading-[1.5] tracking-[0.32px] text-[color:inherit]"
             : "pt-0.5",
         hidden && isBlindReview && "line-through opacity-50",
         hidden && !isBlindReview && !isActiveDrill && "line-through opacity-50 blur-[2px]",
@@ -178,7 +178,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
     return (
       <div
         className={cn(
-          "practice-session-br-option overflow-hidden rounded-[14px] border transition-colors",
+          "practice-session-br-option h-auto shrink-0 overflow-visible rounded-[14px] border transition-colors",
           explanationAction
             ? selected || correctHighlight
               ? brSelectedRowClass
@@ -200,15 +200,15 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
           onKeyDown={explanationAction ? undefined : handleKeyDown}
           className={cn(
             explanationAction
-              ? "flex items-center justify-between gap-4 py-2 pl-2 pr-6 text-left text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#0d0d12]"
+              ? "flex items-start justify-between gap-4 py-2 pl-2 pr-6 text-left text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#0d0d12]"
               : BLIND_REVIEW_OPTION_ROW_INNER_CLASS,
             !explanationAction && (disabled ? "cursor-default" : "cursor-pointer"),
           )}
         >
-          <div className={cn("flex min-w-0 flex-1 items-center", explanationAction ? "gap-3" : "gap-4")}>
+          <div className={cn("flex min-w-0 flex-1 items-start", explanationAction ? "gap-3" : "gap-4")}>
             <span
               className={cn(
-                "flex shrink-0 items-center justify-center font-bold",
+                "flex shrink-0 self-start items-center justify-center font-bold",
                 explanationAction ? "size-[46px] rounded-[12px] text-sm tracking-[0.28px]" : "size-12 rounded-[14px] text-lg",
                 selected || correctHighlight
                   ? brSelectedLetterClass
@@ -226,7 +226,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
             <button
               type="button"
               className={cn(
-                "inline-flex size-5 shrink-0 items-center justify-center transition",
+                "mt-1 inline-flex size-5 shrink-0 self-start items-center justify-center transition",
                 explanationExpanded ? "text-[#0d47a1]" : "text-[#666d80] hover:text-[#062357]",
               )}
               aria-label={
@@ -249,7 +249,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
           ) : (
             <button
               type="button"
-              className="inline-flex size-5 shrink-0 items-center justify-center text-[#666d80] transition hover:text-[#062357]"
+              className="mt-1.5 inline-flex size-5 shrink-0 self-start items-center justify-center text-[#666d80] transition hover:text-[#062357]"
               aria-label={hidden ? "Show answer choice" : "Hide answer choice"}
               onClick={(e) => {
                 e.stopPropagation()
