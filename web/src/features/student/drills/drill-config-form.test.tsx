@@ -76,6 +76,20 @@ describe("DrillConfigForm save settings checkbox", () => {
     expect(screen.getByRole("button", { name: "Show Answers" })).toHaveTextContent("After each question")
   })
 
+  it("lays out questions and timing in two columns for LR and RC", () => {
+    const { unmount } = renderForm("LR")
+    const lrRow = screen.getByRole("button", { name: "Timing" }).closest(".grid")
+    expect(lrRow?.className).toMatch(/\bgrid-cols-2\b/)
+    expect(lrRow?.className).not.toMatch(/grid-cols-3/)
+    unmount()
+
+    renderForm("RC")
+    const rcRow = screen.getByRole("button", { name: "Timing" }).closest(".grid")
+    expect(rcRow?.className).toMatch(/\bgrid-cols-2\b/)
+    expect(rcRow?.className).not.toMatch(/grid-cols-3/)
+    expect(screen.getByRole("button", { name: "Number of Passages" })).toBeInTheDocument()
+  })
+
   it("keeps questions and timing visible and puts show answers in Customize", async () => {
     const user = userEvent.setup()
     renderForm()

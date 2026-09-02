@@ -218,4 +218,12 @@ describe("AnalyticsPrepTestResultsPage insights toggle", () => {
     expect(screen.getByText(/PT 156\s+\.\s+S1\s+\.\s+Q1/)).toBeInTheDocument()
     expect(screen.queryByText(/PT 156\s+\.\s+S2\s+\.\s+Q1/)).not.toBeInTheDocument()
   })
+
+  it("shows Loading instead of Calculating while PrepTest results load", () => {
+    mockGetPrepTestSessionDetail.mockReturnValue(new Promise(() => {}))
+    renderResultsPage()
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading…")
+    expect(screen.queryByText(/calculating/i)).not.toBeInTheDocument()
+  })
 })
