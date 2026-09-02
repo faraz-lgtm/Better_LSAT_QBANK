@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
 import { GuestPricingModalProvider } from "@/features/guest/pricing/guest-pricing-modal-provider"
+import type { UserEntitlement } from "@/lib/api/users"
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -13,6 +14,26 @@ function deferred<T>() {
   return { promise, resolve }
 }
 
+function paymentRequiredEntitlement(): UserEntitlement {
+  return {
+    isAuthenticated: true,
+    isLsacLinked: false,
+    isLsacEligible: false,
+    hasActiveCore: false,
+    accessState: "PAYMENT_REQUIRED",
+  }
+}
+
+function fullAccessEntitlement(): UserEntitlement {
+  return {
+    isAuthenticated: true,
+    isLsacLinked: true,
+    isLsacEligible: true,
+    hasActiveCore: true,
+    accessState: "FULL_ACCESS",
+  }
+}
+
 const mocks = vi.hoisted(() => ({
   entitlement: {
     entitlement: {
@@ -20,7 +41,7 @@ const mocks = vi.hoisted(() => ({
       isLsacLinked: false,
       isLsacEligible: false,
       hasActiveCore: false,
-      accessState: "PAYMENT_REQUIRED" as const,
+      accessState: "PAYMENT_REQUIRED" as "AUTH_REQUIRED" | "PAYMENT_REQUIRED" | "LSAC_REQUIRED" | "FULL_ACCESS",
     },
     loading: false,
     error: null as string | null,
@@ -84,13 +105,7 @@ describe("DashboardPage", () => {
     mocks.entitlement.loading = false
     mocks.entitlement.canAccessLsacContent = false
     mocks.entitlement.isPaymentRequired = true
-    mocks.entitlement.entitlement = {
-      isAuthenticated: true,
-      isLsacLinked: false,
-      isLsacEligible: false,
-      hasActiveCore: false,
-      accessState: "PAYMENT_REQUIRED",
-    }
+    mocks.entitlement.entitlement = paymentRequiredEntitlement()
     mocks.getMyProfile.mockResolvedValue({
       first_name: "Assad",
       last_name: "Siyal",
@@ -119,13 +134,7 @@ describe("DashboardPage", () => {
   it("keeps the loader up until dashboard data arrives instead of flashing empty drills", async () => {
     mocks.entitlement.canAccessLsacContent = true
     mocks.entitlement.isPaymentRequired = false
-    mocks.entitlement.entitlement = {
-      isAuthenticated: true,
-      isLsacLinked: true,
-      isLsacEligible: true,
-      hasActiveCore: true,
-      accessState: "READY",
-    }
+    mocks.entitlement.entitlement = fullAccessEntitlement()
 
     const overview = deferred<Record<string, unknown>>()
     mocks.getOverview.mockReturnValue(overview.promise)
