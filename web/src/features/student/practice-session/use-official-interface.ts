@@ -4,9 +4,11 @@ export const OFFICIAL_INTERFACE_STORAGE_KEY = "betterlsat.official-interface"
 
 export function readOfficialInterfacePreference(): boolean {
   try {
-    return window.localStorage.getItem(OFFICIAL_INTERFACE_STORAGE_KEY) === "1"
+    const stored = window.localStorage.getItem(OFFICIAL_INTERFACE_STORAGE_KEY)
+    // Missing key → official (product default). Only an explicit "0" opts into BetterLSAT.
+    return stored !== "0"
   } catch {
-    return false
+    return true
   }
 }
 
@@ -41,7 +43,7 @@ export function useExamFullscreen() {
   return { isFullscreen, toggleExamFullscreen }
 }
 
-/** Persists the Official Interface exam-chrome toggle across sessions. */
+/** Persists official vs BetterLSAT exam chrome. Official is the default. */
 export function useOfficialInterfacePreference() {
   const [officialInterface, setOfficialInterfaceState] = useState(readOfficialInterfacePreference)
 

@@ -161,6 +161,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
     pointerStartRef.current = null
     window.getSelection()?.removeAllRanges()
 
+    if (masked) onToggleMasked?.()
     if (allowReselect || selectedIndex == null || selectedIndex !== index) onSelect()
   }
 
@@ -297,7 +298,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
       <div
         role="button"
         tabIndex={disabled ? -1 : 0}
-        aria-pressed={selected}
+        aria-pressed={selected && !masked}
         aria-disabled={disabled}
         onPointerDown={handlePointerDown}
         onClick={handleSelect}
@@ -321,12 +322,14 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
       >
         {selected && !masked ? <span aria-hidden className={OFFICIAL_OPTION_SELECTED_BAR_CLASS} /> : null}
         <span
-          aria-hidden={masked || undefined}
-          className={selected && !masked ? OFFICIAL_OPTION_LETTER_SELECTED_CLASS : OFFICIAL_OPTION_LETTER_UNSELECTED_CLASS}
+          className={cn(
+            selected && !masked ? OFFICIAL_OPTION_LETTER_SELECTED_CLASS : OFFICIAL_OPTION_LETTER_UNSELECTED_CLASS,
+            masked && "practice-session-choice-masked-ink",
+          )}
         >
           {letter}
         </span>
-        <div aria-hidden={masked || undefined} className={OFFICIAL_OPTION_TEXT_CLASS}>
+        <div className={cn(OFFICIAL_OPTION_TEXT_CLASS, masked && "practice-session-choice-masked-ink")}>
           {choiceContent}
         </div>
       </div>
@@ -338,7 +341,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
       <div
         role="button"
         tabIndex={disabled ? -1 : 0}
-        aria-pressed={selected}
+        aria-pressed={selected && !masked}
         aria-disabled={disabled}
         onPointerDown={handlePointerDown}
         onClick={handleSelect}
@@ -362,17 +365,17 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
         }
       >
         <span
-          aria-hidden={masked || undefined}
           className={cn(
             "flex items-center justify-center self-start",
             selected && !masked
               ? ACTIVE_DRILL_OPTION_LETTER_SELECTED_CLASS
               : ACTIVE_DRILL_OPTION_LETTER_UNSELECTED_CLASS,
+            masked && "practice-session-choice-masked-ink",
           )}
         >
           {letter}
         </span>
-        <div aria-hidden={masked || undefined} className="min-w-0 flex-1 self-start">
+        <div className={cn("min-w-0 flex-1 self-start", masked && "practice-session-choice-masked-ink")}>
           {choiceContent}
         </div>
         {showSideAction ? (

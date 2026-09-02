@@ -73,6 +73,7 @@ import { PracticeCompleteModal } from "@/features/student/practice-session/pract
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
 import { PracticeSubmitSectionModal } from "@/features/student/practice-session/practice-submit-section-modal"
 import { PracticeSessionImmersiveFrame } from "@/features/student/practice-session/practice-session-immersive-frame"
+import { ResponseMaskingProvider } from "@/features/student/practice-session/use-response-masking"
 import { PracticeSessionNavArrowButton } from "@/features/student/practice-session/practice-session-nav-arrow-button"
 import { PracticeSessionQuestionNavStrip } from "@/features/student/practice-session/practice-session-question-nav-strip"
 import { resolvePracticeSessionQuestionNavOutcome } from "@/features/student/practice-session/practice-session-question-nav-outcome"
@@ -1124,7 +1125,6 @@ function DrillSessionPage() {
                 onOpenAccessibility={useActiveDrillLayout ? accessibilityPanel.openPanel : undefined}
                 variant={sessionVariant}
                 toolMode={highlights.toolMode}
-                onHighlighter={() => highlights.selectColor("yellow")}
                 onEraser={highlights.selectEraser}
                 lineFocusActive={lineFocus}
                 onLineFocus={() => setLineFocus((value) => !value)}
@@ -1315,6 +1315,7 @@ function DrillSessionPage() {
   )
 
   return (
+    <ResponseMaskingProvider>
     <StudentMain
       layout="immersive"
       className={cn(
@@ -1438,6 +1439,7 @@ function DrillSessionPage() {
         onDone={leaveDrillSession}
       />
     </StudentMain>
+    </ResponseMaskingProvider>
   )
 }
 

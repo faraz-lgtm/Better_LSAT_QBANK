@@ -18,7 +18,6 @@ import {
   SideWidgetCollapseDockIcon,
   SideWidgetExpandIcon,
   SideWidgetFlagIcon,
-  SideWidgetHighlighterIcon,
   SideWidgetResponseMaskingIcon,
   SideWidgetReviewIcon,
 } from "@/features/student/practice-session/practice-session-side-widget-icons"
@@ -38,7 +37,6 @@ type PracticeSessionSideWidgetProps = {
   onAccessibility?: () => void
   variant?: PracticeSessionVariant
   toolMode?: PracticeToolMode
-  onHighlighter?: () => void
   onEraser?: () => void
   lineFocusActive?: boolean
   onLineFocus?: () => void
@@ -71,8 +69,6 @@ function PracticeSessionSideWidget({
   reviewActive = false,
   onAccessibility,
   variant = "default",
-  toolMode = "none",
-  onHighlighter,
   onFullscreen,
   fullView = false,
 }: PracticeSessionSideWidgetProps) {
@@ -113,13 +109,6 @@ function PracticeSessionSideWidget({
       icon: SideWidgetResponseMaskingIcon,
       onClick: onToggleResponseMasking,
       active: responseMasking,
-    },
-    {
-      id: "highlighter",
-      label: "Keyboard Highlight",
-      icon: SideWidgetHighlighterIcon,
-      onClick: () => onHighlighter?.(),
-      active: toolMode === "highlighter",
     },
   ]
 

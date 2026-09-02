@@ -73,7 +73,7 @@ function PracticeSessionExamMorePanel({
   disabled = false,
   finishing = false,
   exitOnly = false,
-  officialInterface = false,
+  officialInterface = true,
   onOfficialInterfaceChange,
   onClose,
   onSubmit,
@@ -157,13 +157,13 @@ function PracticeSessionExamMorePanel({
         </div>
 
         <div className={EXAM_MORE_PANEL_TOGGLE_ROW_CLASS}>
-          <span id="exam-more-official-interface" className={EXAM_MORE_PANEL_TOGGLE_LABEL_CLASS}>
-            Official Interface
+          <span id="exam-more-betterlsat-interface" className={EXAM_MORE_PANEL_TOGGLE_LABEL_CLASS}>
+            BetterLSAT Interface
           </span>
           <ExamMoreToggle
-            labelledBy="exam-more-official-interface"
-            checked={officialInterface}
-            onCheckedChange={onOfficialInterfaceChange}
+            labelledBy="exam-more-betterlsat-interface"
+            checked={!officialInterface}
+            onCheckedChange={(betterLsatInterface) => onOfficialInterfaceChange?.(!betterLsatInterface)}
           />
         </div>
       </div>

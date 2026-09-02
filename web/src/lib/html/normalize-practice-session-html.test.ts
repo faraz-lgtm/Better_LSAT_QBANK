@@ -28,4 +28,13 @@ describe("normalizePracticeSessionHtml", () => {
     expect(out).toContain("font-weight: bold")
     expect(out).toContain("Dark text.")
   })
+
+  it("removes blank spacer paragraphs between two speakers", () => {
+    const out = normalizePracticeSessionHtml(
+      "<p>Using fossil energy more efficiently.</p><p></p><p><br></p><p>&nbsp;</p><p>Objection: Decisions on energy use.</p>",
+    )
+    expect(out).toContain("Using fossil energy more efficiently.")
+    expect(out).toContain("Objection: Decisions on energy use.")
+    expect(out.match(/<p\b/g)).toHaveLength(2)
+  })
 })

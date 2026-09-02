@@ -74,14 +74,19 @@ function nearestClientRect(rects: DOMRectList | undefined, x: number, y: number)
   return best
 }
 
-function rangeClientRect(range: Range): DOMRect {
+function hasLayoutRect(rect: DOMRect): boolean {
+  return rect.width > 0 || rect.height > 0
+}
+
+function rangeClientRect(range: Range, x = 0, y = 0): DOMRect {
   try {
     if (typeof range.getClientRects === "function") {
-      const rects = range.getClientRects()
-      if (rects.length > 0) return rects[rects.length - 1]!
+      const nearest = nearestClientRect(range.getClientRects(), x, y)
+      if (nearest && hasLayoutRect(nearest)) return nearest
     }
     if (typeof range.getBoundingClientRect === "function") {
-      return range.getBoundingClientRect()
+      const box = range.getBoundingClientRect()
+      if (hasLayoutRect(box)) return box
     }
   } catch {
     // Detached range or jsdom without layout.
@@ -104,6 +109,20 @@ function menuPositionFromRect(rect: DOMRect): Pick<PassageHighlightMenu, "x" | "
   const below = rect.top < 96
   return {
     x: rect.left + rect.width / 2,
+    y: below ? rect.bottom : rect.top,
+    below,
+  }
+}
+
+/** Keep X on the pointer; pin Y to the selected/highlighted line so the menu hugs the text. */
+function menuPositionFromPointerAndLine(
+  clientX: number,
+  clientY: number,
+  rect: DOMRect,
+): Pick<PassageHighlightMenu, "x" | "y" | "below"> {
+  const below = rect.top < 96
+  return {
+    x: hasViewportPoint(clientX, clientY) ? clientX : rect.left + rect.width / 2,
     y: below ? rect.bottom : rect.top,
     below,
   }
@@ -159,8 +178,10 @@ export function usePracticeHighlights() {
       const fromEvent = event != null && hasViewportPoint(event.clientX, event.clientY)
       const x = fromPointer ? pointer.x : fromEvent ? event.clientX : 0
       const y = fromPointer ? pointer.y : fromEvent ? event.clientY : 0
+      const rect = fallbackRect(x, y)
+      if (hasLayoutRect(rect)) return menuPositionFromPointerAndLine(x, y, rect)
       if (hasViewportPoint(x, y)) return menuPositionFromPointer(x, y)
-      return menuPositionFromRect(fallbackRect(x, y))
+      return menuPositionFromRect(rect)
     },
     [],
   )
@@ -322,7 +343,7 @@ export function usePracticeHighlights() {
       markRef.current = null
       setSelectionMenu({
         mode: "highlight",
-        ...resolveMenuAnchor(event, () => rangeClientRect(range)),
+        ...resolveMenuAnchor(event, (x, y) => rangeClientRect(range, x, y)),
         expanded: true,
         selectedColor,
       })

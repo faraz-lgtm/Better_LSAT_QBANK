@@ -52,6 +52,19 @@ function stripLayoutInlineStyles(root: ParentNode) {
   })
 }
 
+function isBlankPracticeParagraph(element: Element): boolean {
+  if (element.tagName !== "P") return false
+  const text = (element.textContent ?? "").replace(/\u00a0/g, " ").trim()
+  return text.length === 0 && !element.querySelector("img, table, hr, mark")
+}
+
+/** Drop empty LSAC spacer paragraphs so two-speaker stimuli do not show a multi-line hole. */
+function removeBlankParagraphs(root: ParentNode) {
+  root.querySelectorAll("p").forEach((paragraph) => {
+    if (isBlankPracticeParagraph(paragraph)) paragraph.remove()
+  })
+}
+
 /** Flatten LSAC stimulus markup so speaker labels and argument body share the same left edge. */
 export function normalizePracticeSessionHtml(input: unknown): string {
   const safe = sanitizeHtml(input)
@@ -65,6 +78,7 @@ export function normalizePracticeSessionHtml(input: unknown): string {
 
   unwrapBlockquotes(root)
   stripLayoutInlineStyles(root)
+  removeBlankParagraphs(root)
 
   return root.innerHTML
 }

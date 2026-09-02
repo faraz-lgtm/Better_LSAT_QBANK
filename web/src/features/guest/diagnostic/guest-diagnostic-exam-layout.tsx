@@ -40,6 +40,7 @@ import type {
   BlindReviewAnswerView,
 } from "@/features/student/practice-session/practice-blind-review-answer-toggle"
 import { PracticeDrillQuestionPanel, regionKey } from "@/features/student/practice-session/practice-drill-question-panel"
+import { ResponseMaskingProvider } from "@/features/student/practice-session/use-response-masking"
 import { PracticeSessionAccessibilityPanel } from "@/features/student/practice-session/practice-session-accessibility-panel"
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
 import { PracticeSessionHeader } from "@/features/student/practice-session/practice-session-header"
@@ -447,6 +448,7 @@ function GuestDiagnosticExamLayout({
   }
 
   const questionPanel = (
+    <ResponseMaskingProvider>
     <PracticeDrillQuestionPanel
       key={current.id}
       question={current}
@@ -480,6 +482,7 @@ function GuestDiagnosticExamLayout({
       seedQuestionTypeLabel={explanationUnlocked ? (questionMeta?.questionType ?? null) : null}
       explanationsEnabled={explanationUnlocked}
     />
+    </ResponseMaskingProvider>
   )
 
   if (isPostResultsMode) {
@@ -735,6 +738,7 @@ function GuestDiagnosticExamLayout({
               officialChrome ? OFFICIAL_QUESTION_PANE_CLASS : ACTIVE_DRILL_QUESTION_PANE_CLASS,
             )}
           >
+            <ResponseMaskingProvider>
             <PracticeDrillQuestionPanel
               key={current.id}
               question={current}
@@ -756,7 +760,6 @@ function GuestDiagnosticExamLayout({
               onOpenAccessibility={canNavigate ? accessibilityPanel.openPanel : undefined}
               variant={sessionVariant}
               toolMode={highlights.toolMode}
-              onHighlighter={() => highlights.selectColor("yellow")}
               onEraser={highlights.selectEraser}
               lineFocusActive={lineFocus}
               onLineFocus={() => setLineFocus((value) => !value)}
@@ -764,6 +767,7 @@ function GuestDiagnosticExamLayout({
               fullView={isFullscreen}
               choicesDisabled={!canSelectAnswers || questionRevealed}
             />
+            </ResponseMaskingProvider>
             {questionRevealed && explanationUnlocked && explanationHtml ? (
               <div className="practice-session-explanation practice-session-inline-divider mt-6 border-t pt-6 pb-6">
                 <p className="practice-session-panel-label mb-3 text-xs font-semibold uppercase tracking-[0.04em]">

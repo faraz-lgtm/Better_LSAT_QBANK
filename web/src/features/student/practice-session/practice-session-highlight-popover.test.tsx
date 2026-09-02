@@ -62,7 +62,7 @@ describe("PracticeSessionHighlightPopover", () => {
     const root = document.querySelector("[data-passage-highlight-popover]") as HTMLElement
     const top = Number.parseFloat(root.style.top)
     expect(top).toBeLessThan(240)
-    expect(240 - top).toBeGreaterThanOrEqual(4)
+    expect(240 - top).toBeGreaterThanOrEqual(2)
     expect(240 - top).toBeLessThanOrEqual(96)
   })
 
