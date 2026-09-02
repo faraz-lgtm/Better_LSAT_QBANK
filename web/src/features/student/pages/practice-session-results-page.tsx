@@ -434,11 +434,12 @@ function PracticeSessionResultsPage() {
     const back = `/app/practice/results/${encodeURIComponent(sessionId)}${
       backQuery ? `?${backQuery}` : ""
     }`
-    const testerPath =
-      results.kind === "SECTION"
-        ? `/app/practice/sections/session/${encodeURIComponent(sessionId)}`
-        : `/app/practice/drills/session/${encodeURIComponent(sessionId)}`
-    navigate(`${testerPath}?returnTo=${encodeURIComponent(back)}`)
+    if (results.kind === "SECTION") {
+      const q = new URLSearchParams({ review: "1", returnTo: back })
+      navigate(`/app/practice/sections/session/${encodeURIComponent(sessionId)}?${q.toString()}`)
+    } else {
+      navigate(`/app/practice/drills/session/${encodeURIComponent(sessionId)}?returnTo=${encodeURIComponent(back)}`)
+    }
   }
 
   function handleExcludedChange(next: boolean) {

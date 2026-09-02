@@ -954,7 +954,7 @@ function DrillSessionPage() {
                   onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
                   flagsDisabled={sessionCompleted || blindReviewMode}
                   variant={sessionVariant}
-                  blindReviewChrome={blindReviewMode}
+                  blindReviewChrome={useBlindReviewLayout}
                   answerView={answerViewTab}
                   onAnswerViewChange={handleAnswerViewChange}
                   recommendedForBr={recommendedForBr}
@@ -1130,7 +1130,7 @@ function DrillSessionPage() {
                 onLineFocus={() => setLineFocus((value) => !value)}
                 onFullscreen={toggleExamFullscreen}
                 fullView={isFullscreen}
-                blindReviewChrome={blindReviewMode}
+                blindReviewChrome={useBlindReviewLayout}
                 answerView={answerViewTab}
                 onAnswerViewChange={handleAnswerViewChange}
                 recommendedForBr={recommendedForBr}

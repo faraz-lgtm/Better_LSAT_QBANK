@@ -75,6 +75,29 @@ export function buildSectionTimingOptions(scaleFactor: number): { label: string;
   ]
 }
 
+/** PrepTest hub timing dropdown options with accommodation-aware labels. */
+export function buildPrepTestTimingOptions(scaleFactor: number): { id: string; label: string }[] {
+  const sectionMins = resolveAccommodatedSectionMinutes(scaleFactor)
+  return [
+    { id: "unlimited", label: "Unlimited" },
+    { id: "standard", label: `Standard (${sectionMins} min / section)` },
+    { id: "strict", label: "Strict official timing" },
+  ]
+}
+
+/** Remap a PrepTest timing option label from the API using the user's accommodation scale. */
+export function remapPrepTestTimingOptionLabel(
+  id: string,
+  label: string,
+  scaleFactor: number,
+): string {
+  if (id === "standard") {
+    const sectionMins = resolveAccommodatedSectionMinutes(scaleFactor)
+    return `Standard (${sectionMins} min / section)`
+  }
+  return label
+}
+
 type AccommodationsState = {
   extraTimeSetting: ExtraTimeSetting
   extraTimeCustomMinutes: number | null
