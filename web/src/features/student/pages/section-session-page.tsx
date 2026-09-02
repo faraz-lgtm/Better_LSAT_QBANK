@@ -480,6 +480,7 @@ function SectionSessionPage() {
   const blindReviewMode = searchParams.get("blindReview") === "1"
   const resultsReviewMode = searchParams.get("review") === "1"
   const resultsReviewHasBr = searchParams.get("hasBr") === "1"
+  const resultsReviewReturnTo = searchParams.get("returnTo") ?? ""
   const sectionIntroActive = isPrepTestSectionIntroActive(
     searchParams,
     blindReviewMode || resultsReviewMode,
@@ -1124,6 +1125,7 @@ function SectionSessionPage() {
     if (prepTestSessionId) return prepTestResultsPath(prepTestSessionId)
     const prepTestId = resolveBlindReviewPrepTestId()
     if (prepTestId) return `/app/practice/blind-review/${encodeURIComponent(prepTestId)}`
+    if (resultsReviewReturnTo.startsWith("/app/")) return resultsReviewReturnTo
     return "/app/analytics/preptests"
   }
 

@@ -39,7 +39,7 @@ import {
   PREPTEST_LIST_HREF,
   sectionSessionHref,
 } from "@/features/student/preptests/preptest-hub-navigation"
-import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
+import { useAccommodations, remapPrepTestTimingOptionLabel } from "@/features/student/accommodations/accommodations-context"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { ChevronRight, Timer, X } from "lucide-react"
 
@@ -151,14 +151,17 @@ function sectionQuestionsLine(count: number): string {
 function PrepTestSectionRow({
   row,
   starting,
+  timingId,
   onStart,
 }: {
   row: PrepTestDetailSection
   starting: boolean
+  timingId: string
   onStart: () => void
 }) {
   const { scaleFactor } = useAccommodations()
-  const displayMinutes = Math.max(1, Math.round(row.timeMinutes * scaleFactor))
+  const unlimited = timingId === "unlimited"
+  const displayMinutes = Math.max(1, Math.round((row.timeMinutes > 0 ? row.timeMinutes : 35) * scaleFactor))
   const breakLocked = row.onBreak
   const canContinueSection = Boolean(row.activeSectionSessionId)
   const showStartButton = row.practiceable && !row.completed && (row.unlocked || breakLocked)
@@ -183,7 +186,7 @@ function PrepTestSectionRow({
         >
           <div className="flex items-center gap-2">
             <Timer className="size-4 shrink-0" aria-hidden />
-            <span>{sectionTimeDisplay(displayMinutes)}</span>
+            <span>{unlimited ? "Unlimited" : sectionTimeDisplay(displayMinutes)}</span>
           </div>
           <span className="h-3.5 w-px shrink-0 bg-[#dfe1e7]" aria-hidden />
           <span>{sectionQuestionsLine(row.questionCount)}</span>
@@ -214,6 +217,7 @@ function PracticePrepTestPage() {
   const { testId: testIdParam } = useParams<{ testId: string }>()
   const isRetakeAttempt = isRetakePrepTestAttempt(searchParams)
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
+  const { scaleFactor } = useAccommodations()
 
   const [detail, setDetail] = useState<PrepTestDetailResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -231,6 +235,15 @@ function PracticePrepTestPage() {
   const [scoreHidden, setScoreHidden] = useState(true)
   const [startingBlindReview, setStartingBlindReview] = useState(false)
   const [skippingBreak, setSkippingBreak] = useState(false)
+
+  const timingSelectOptions = useMemo(
+    () =>
+      (detail?.timingOptions ?? []).map((o) => ({
+        value: o.id,
+        label: remapPrepTestTimingOptionLabel(o.id, o.label, scaleFactor),
+      })),
+    [detail?.timingOptions, scaleFactor],
+  )
 
   const breadcrumbTitle = detail ? prepTestHubPageTitle(detail.prepTest) : null
   useStudentPageBreadcrumbTail(breadcrumbTitle)
@@ -508,7 +521,7 @@ function PracticePrepTestPage() {
                       setTimingId(v)
                       void persistConfig(v, formatId)
                     }}
-                    options={detail.timingOptions.map((o) => ({ value: o.id, label: o.label }))}
+                    options={timingSelectOptions}
                   />
                   <DrillConfigSelectField
                     className="w-full max-w-[347px]"
@@ -548,6 +561,7 @@ function PracticePrepTestPage() {
                   <PrepTestSectionRow
                     row={row}
                     starting={startingSectionId === row.id}
+                    timingId={timingId}
                     onStart={() => openPrepTestSection(row)}
                   />
                 </li>,
