@@ -65,6 +65,20 @@ describe("LrDrillOptionRow", () => {
     expect(container.firstChild).toHaveClass("border-[#ff6f00]")
   })
 
+  it("uses compact Blind Review choice padding so five answers fit the card", () => {
+    render(
+      <LrDrillOptionRow
+        index={0}
+        html="<p>Choice A</p>"
+        selected={false}
+        onSelect={() => undefined}
+        variant="blind-review"
+      />,
+    )
+
+    expect(screen.getByRole("button", { name: /choice a/i })).toHaveClass("py-3")
+  })
+
   it("selects an answer on a simple click", async () => {
     const user = userEvent.setup()
     const onSelect = vi.fn()

@@ -64,3 +64,33 @@ export function canChangePracticeAnswer(
   if (showAnswers === "each" && hasAnswer) return false
   return true
 }
+
+export type PracticeAnswerViewTab = "clean" | "actual" | "blind_review"
+
+/**
+ * Blind Review answers are editable only on the Blind Review tab.
+ * Viewing Actual (or Clean) must not also write a Blind Review selection.
+ */
+export function isEditingBlindReviewAnswers(input: {
+  resultsReview: boolean
+  answeringBlindReview: boolean
+  answerView: PracticeAnswerViewTab
+}): boolean {
+  if (input.resultsReview || !input.answeringBlindReview) return false
+  return input.answerView === "blind_review"
+}
+
+/** Which stored answer to highlight for the current Actual / Blind Review / Clean tab. */
+export function resolveDisplayedPracticeAnswer<T>(input: {
+  resultsReview: boolean
+  answeringBlindReview: boolean
+  answerView: PracticeAnswerViewTab
+  actual: T | undefined
+  blindReview: T | undefined
+  live: T | undefined
+}): T | undefined {
+  if (!input.resultsReview && !input.answeringBlindReview) return input.live
+  if (input.answerView === "clean") return undefined
+  if (input.answerView === "actual") return input.actual
+  return input.blindReview
+}

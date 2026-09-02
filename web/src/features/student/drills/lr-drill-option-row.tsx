@@ -26,6 +26,7 @@ import {
   BLIND_REVIEW_OPTION_LETTER_SELECTED_ACTUAL_CLASS,
   BLIND_REVIEW_OPTION_LETTER_SELECTED_BR_CLASS,
   BLIND_REVIEW_OPTION_ROW_CORRECT_CLASS,
+  BLIND_REVIEW_OPTION_ROW_INNER_CLASS,
   BLIND_REVIEW_OPTION_ROW_SELECTED_ACTUAL_CLASS,
   BLIND_REVIEW_OPTION_ROW_SELECTED_BR_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
@@ -177,7 +178,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
     return (
       <div
         className={cn(
-          "overflow-hidden rounded-[14px] border transition-colors",
+          "practice-session-br-option overflow-hidden rounded-[14px] border transition-colors",
           explanationAction
             ? selected || correctHighlight
               ? brSelectedRowClass
@@ -198,8 +199,9 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
           onClick={explanationAction ? undefined : handleSelect}
           onKeyDown={explanationAction ? undefined : handleKeyDown}
           className={cn(
-            "flex items-center justify-between gap-4 text-left",
-            explanationAction ? "py-2 pl-2 pr-6 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#0d0d12]" : "p-4",
+            explanationAction
+              ? "flex items-center justify-between gap-4 py-2 pl-2 pr-6 text-left text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#0d0d12]"
+              : BLIND_REVIEW_OPTION_ROW_INNER_CLASS,
             !explanationAction && (disabled ? "cursor-default" : "cursor-pointer"),
           )}
         >

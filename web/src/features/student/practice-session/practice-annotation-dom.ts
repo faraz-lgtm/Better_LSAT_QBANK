@@ -25,8 +25,8 @@ export function annotationElementFromNode(
 export function isRangeInSingleContainer(range: Range, container: HTMLElement): boolean {
   let node: Node | null = range.commonAncestorContainer
   if (node.nodeType === Node.TEXT_NODE) node = node.parentNode
-  if (!(node instanceof HTMLElement)) return false
-  return container.contains(node)
+  if (!(node instanceof Node)) return false
+  return node === container || container.contains(node)
 }
 
 export function rangeFullyInsideElement(range: Range, el: Element): boolean {

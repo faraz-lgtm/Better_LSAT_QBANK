@@ -3650,6 +3650,18 @@ section[data-lesson-section][data-variant="empty"] {
   line-height: inherit;
 }
 
+/* Figma `18617:35777` — BR question stem is 18px / 1.4 / 0.36px. Unlayered
+   `.lsat-html-content` / `.practice-session-content` font-size otherwise wins. */
+.lsat-html-content.practice-session-content.practice-session-br-stem {
+  font-size: 18px;
+  line-height: 1.4;
+  letter-spacing: 0.36px;
+}
+
+.lsat-html-content.practice-session-content.practice-session-br-stem p {
+  margin: 0;
+}
+
 /* Beat unlayered `.lsat-html-content p { margin-bottom: 0.75rem }` so speaker
    paragraphs (and RC) use a short break instead of stacking with empty spacers. */
 .lsat-html-content.practice-session-content p {
@@ -4305,6 +4317,14 @@ html.student-shell-immersive .practice-session-card--blind-review {
   box-shadow:
     0 10px 15px -3px rgba(0, 0, 0, 0.1),
     0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+
+.practice-session-card--blind-review .practice-session-pane--br-question {
+  overflow: hidden;
+}
+
+.practice-session-card--blind-review .practice-session-br-option p {
+  margin: 0;
 }
 
 .practice-session-card--blind-review .practice-session-footer {

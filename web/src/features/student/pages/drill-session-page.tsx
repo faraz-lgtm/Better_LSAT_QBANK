@@ -63,7 +63,9 @@ import { PracticeSessionNotesPanel } from "@/features/student/practice-session/p
 import { PracticeSessionReviewSidePanel } from "@/features/student/practice-session/practice-session-review-side-panel"
 import {
   canChangePracticeAnswer,
+  isEditingBlindReviewAnswers,
   isOfficialLayout,
+  resolveDisplayedPracticeAnswer,
   resolveExamSessionVariant,
   type PracticeSessionVariant,
 } from "@/features/student/practice-session/practice-session-types"
@@ -448,17 +450,21 @@ function DrillSessionPage() {
 
   const disableNextAtLast = !isUnlimitedQuestionDrill || poolExhausted
 
-  const editingBlindReviewAnswers = !reviewAfterComplete || answerViewTab === "blind_review"
+  const answeringBlindReview = reviewAfterComplete && !resultsReviewMode
+  const editingBlindReviewAnswers = isEditingBlindReviewAnswers({
+    resultsReview: resultsReviewMode,
+    answeringBlindReview,
+    answerView: answerViewTab,
+  })
   const displayAnswer = current
-    ? resultsReviewMode
-      ? answerViewTab === "clean"
-        ? undefined
-        : answerViewTab === "actual"
-          ? actualAnswersByQuestion[current.id]
-          : answersByQuestion[current.id]
-      : reviewAfterComplete && answerViewTab === "actual"
-        ? actualAnswersByQuestion[current.id]
-        : answersByQuestion[current.id]
+    ? resolveDisplayedPracticeAnswer({
+        resultsReview: resultsReviewMode,
+        answeringBlindReview,
+        answerView: answerViewTab,
+        actual: actualAnswersByQuestion[current.id],
+        blindReview: answersByQuestion[current.id],
+        live: answersByQuestion[current.id],
+      })
     : undefined
   const currentAnswer = displayAnswer
   const selectedIndex =
@@ -527,7 +533,9 @@ function DrillSessionPage() {
       })
       return
     }
-    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), { blindReview: reviewAfterComplete })) {
+    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
+      blindReview: editingBlindReviewAnswers,
+    })) {
       return
     }
     if (selectedIndex === index) return
@@ -571,7 +579,7 @@ function DrillSessionPage() {
   async function handleResetResponse() {
     if (!sessionId || !current || submitting) return
     if (reviewAfterComplete && !editingBlindReviewAnswers) return
-    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), { blindReview: reviewAfterComplete })) {
+    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), { blindReview: editingBlindReviewAnswers })) {
       return
     }
 
@@ -815,8 +823,9 @@ function DrillSessionPage() {
     : computeElapsedTimerProgress(elapsed, timerBudgetSeconds)
   const allowReselect =
     !resultsReviewMode &&
+    (!answeringBlindReview || editingBlindReviewAnswers) &&
     canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
-      blindReview: reviewAfterComplete,
+      blindReview: editingBlindReviewAnswers,
     })
   const prepTestLabel = headerLabel.replace(/^PrepTest\s*/i, "PT ")
   const questionRefLabel = `Q${safeIndex}`
@@ -870,20 +879,6 @@ function DrillSessionPage() {
       onSelectSection={() => {}}
       questionRef={questionRefLabel}
       actualScoreLabel="Actual: BR"
-      answerView={answerViewTab}
-      activeColor={highlights.activeColor}
-      toolMode={highlights.toolMode}
-      fontScale={highlights.fontScale}
-      lineSpacing={highlights.lineSpacing}
-      boldEnabled={highlights.boldEnabled}
-      italicEnabled={highlights.italicEnabled}
-      onSelectColor={highlights.selectColor}
-      onEraser={highlights.selectEraser}
-      onUnderline={highlights.selectUnderline}
-      onFontSize={highlights.cycleFontSize}
-      onLineSpacing={highlights.cycleLineSpacing}
-      onToggleBold={highlights.toggleBold}
-      onToggleItalic={highlights.toggleItalic}
       notesOpen={resultsReviewMode ? reviewSidePanel === "notes" : notesOpen}
       notesEnabled={resultsReviewMode || answerViewTab === "blind_review"}
       onToggleNotes={handleToggleNotes}
@@ -963,13 +958,16 @@ function DrillSessionPage() {
                   answerView={answerViewTab}
                   onAnswerViewChange={handleAnswerViewChange}
                   recommendedForBr={recommendedForBr}
-                  choicesDisabled={blindReviewMode && !editingBlindReviewAnswers}
+                  toolMode={highlights.toolMode}
+                  choicesDisabled={(reviewAfterComplete || resultsReviewMode) && !editingBlindReviewAnswers}
                   reviewChrome={resultsReviewMode}
                   actualOutcome={actualOutcome}
                   blindReviewOutcome={blindReviewOutcome}
                   showCorrectAnswer={showCorrectAnswer}
                   onShowCorrectAnswerChange={setShowCorrectAnswer}
                   blindReviewTabEnabled={false}
+                  onAnnotateMouseUp={highlights.handleContentMouseUp}
+                  onAnnotateClick={highlights.handleContentClick}
                 />
               </div>
             </div>
@@ -1033,6 +1031,8 @@ function DrillSessionPage() {
                   showCorrectAnswer={showCorrectAnswer}
                   onShowCorrectAnswerChange={setShowCorrectAnswer}
                   blindReviewTabEnabled={false}
+                  onAnnotateMouseUp={highlights.handleContentMouseUp}
+                  onAnnotateClick={highlights.handleContentClick}
                 />
               </div>
             </div>
@@ -1134,13 +1134,15 @@ function DrillSessionPage() {
                 answerView={answerViewTab}
                 onAnswerViewChange={handleAnswerViewChange}
                 recommendedForBr={recommendedForBr}
-                choicesDisabled={blindReviewMode && !editingBlindReviewAnswers}
+                choicesDisabled={(reviewAfterComplete || resultsReviewMode) && !editingBlindReviewAnswers}
                 reviewChrome={resultsReviewMode}
                 actualOutcome={actualOutcome}
                 blindReviewOutcome={blindReviewOutcome}
                 showCorrectAnswer={showCorrectAnswer}
                 onShowCorrectAnswerChange={setShowCorrectAnswer}
                 blindReviewTabEnabled={false}
+                onAnnotateMouseUp={highlights.handleContentMouseUp}
+                onAnnotateClick={highlights.handleContentClick}
               />
             </div>
           </div>
@@ -1255,6 +1257,14 @@ function DrillSessionPage() {
           </>
         )}
       </footer>
+      <PracticeSessionHighlightPopover
+        menu={highlights.selectionMenu}
+        onApplyColor={highlights.applySelectionColor}
+        onRemove={highlights.removeSelectionHighlight}
+        onToggleExpanded={highlights.toggleSelectionExpanded}
+        onDismiss={highlights.dismissSelectionMenu}
+        isAnchorConnected={highlights.isSelectionMenuAnchorConnected}
+      />
     </>
   )
 
@@ -1303,14 +1313,6 @@ function DrillSessionPage() {
         />
       ) : null}
       {sessionInnerContent}
-      <PracticeSessionHighlightPopover
-        menu={highlights.selectionMenu}
-        onApplyColor={highlights.applySelectionColor}
-        onRemove={highlights.removeSelectionHighlight}
-        onToggleExpanded={highlights.toggleSelectionExpanded}
-        onDismiss={highlights.dismissSelectionMenu}
-        isAnchorConnected={highlights.isSelectionMenuAnchorConnected}
-      />
     </>
   )
 
