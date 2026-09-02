@@ -21,7 +21,7 @@ vi.mock("@/lib/supabase/client", () => ({
 }))
 
 describe("GuestDiagnosticResultsView Section diagnostic", () => {
-  it("unlocks all 25 section rows for free students", () => {
+  it("shows first 5 rows plus free analytics gate (no locked question rows)", () => {
     subscription.hasActiveCore = false
     const result = buildDefaultGuestDiagnosticResult("quick")
     render(
@@ -30,10 +30,12 @@ describe("GuestDiagnosticResultsView Section diagnostic", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText(/Full Section Diagnostic · Q25/)).toBeInTheDocument()
-    expect(screen.getAllByText(/Target time:/)).toHaveLength(25)
-    const last = screen.getByText(/Full Section Diagnostic · Q25/)
-    expect(last.closest("[class*='blur']")).toBeNull()
+    expect(screen.getAllByText(/Q5/)[0]).toBeInTheDocument()
+    expect(screen.queryByText(/Q6 ·/)).toBeNull()
+    expect(
+      screen.getByText("You've reached your free analytics limit!"),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Full Access" })).toBeInTheDocument()
   })
 
   it("keeps all section rows unlocked for premium students", () => {
@@ -45,14 +47,14 @@ describe("GuestDiagnosticResultsView Section diagnostic", () => {
       </MemoryRouter>,
     )
 
-    const row = screen.getByText(/Full Section Diagnostic · Q11/)
+    const row = screen.getAllByText(/Q11/)[0]!
     expect(row.closest("[class*='blur']")).toBeNull()
-    expect(screen.getAllByText(/Target time:/).length).toBe(25)
+    expect(screen.queryByText("You've reached your free analytics limit!")).toBeNull()
   })
 })
 
 describe("GuestDiagnosticResultsView Mini teaser", () => {
-  it("unlocks the first 5 Mini rows and blurs question 6 for free students", () => {
+  it("shows first 5 Mini rows plus free analytics gate for free students", () => {
     subscription.hasActiveCore = false
     const result = buildDefaultGuestDiagnosticResult("mini")
     render(
@@ -61,12 +63,31 @@ describe("GuestDiagnosticResultsView Mini teaser", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText(/Mini Diagnostic · Q5/)).toBeInTheDocument()
-    expect(screen.getAllByText(/Target time:/)).toHaveLength(5)
-    expect(screen.getAllByText(/Your time:/)).toHaveLength(5)
-    expect(screen.getAllByText(/Answer popularity/i)).toHaveLength(5)
-    const locked = screen.getByText(/Mini Diagnostic · Q6/)
-    expect(locked.closest("[class*='blur']")).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Upgrade to unlock full access" })).toBeInTheDocument()
+    expect(screen.getAllByText(/Q5/)[0]).toBeInTheDocument()
+    expect(screen.queryByText(/Q6 ·/)).toBeNull()
+    expect(
+      screen.getByText("You've reached your free analytics limit!"),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Full Access" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "See plans from $59/mo" })).toBeInTheDocument()
+  })
+})
+
+describe("GuestDiagnosticResultsView Full teaser", () => {
+  it("shows free analytics gate after first 5 Full Diagnostic rows", () => {
+    subscription.hasActiveCore = false
+    const result = buildDefaultGuestDiagnosticResult("full")
+    render(
+      <MemoryRouter>
+        <GuestDiagnosticResultsView result={result} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getAllByText(/Q5/)[0]).toBeInTheDocument()
+    expect(screen.queryByText(/Q6 ·/)).toBeNull()
+    expect(
+      screen.getByText("You've reached your free analytics limit!"),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Full Access" })).toBeInTheDocument()
   })
 })
