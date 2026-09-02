@@ -1,53 +1,175 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
 import { GuestPricingModalProvider } from "@/features/guest/pricing/guest-pricing-modal-provider"
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((res) => {
+    resolve = res
+  })
+  return { promise, resolve }
+}
+
+const mocks = vi.hoisted(() => ({
+  entitlement: {
+    entitlement: {
+      isAuthenticated: true,
+      isLsacLinked: false,
+      isLsacEligible: false,
+      hasActiveCore: false,
+      accessState: "PAYMENT_REQUIRED" as const,
+    },
+    loading: false,
+    error: null as string | null,
+    canAccessLsacContent: false,
+    isPaymentRequired: true,
+    isLsacSetupRequired: false,
+    refresh: vi.fn(),
+  },
+  getMyProfile: vi.fn(),
+  getStudyContext: vi.fn(),
+  getOverview: vi.fn(),
+  getSessions: vi.fn(),
+  getPriorities: vi.fn(),
+}))
 
 vi.mock("@/lib/supabase/client", () => ({
   getSupabaseBrowserClient: () => ({}),
 }))
 
 vi.mock("@/features/app-shell/student-entitlement-context", () => ({
-  useStudentEntitlement: () => ({
-    entitlement: {
-      isAuthenticated: true,
-      isLsacLinked: false,
-      isLsacEligible: false,
-      hasActiveCore: false,
-      accessState: "PAYMENT_REQUIRED",
-    },
-    loading: false,
-    error: null,
-    canAccessLsacContent: false,
-    isPaymentRequired: true,
-    isLsacSetupRequired: false,
-    refresh: vi.fn(),
-  }),
+  useStudentEntitlement: () => mocks.entitlement,
 }))
 
 vi.mock("@/lib/api/users", () => ({
   createUsersApi: () => ({
-    getMyProfile: vi.fn().mockResolvedValue({
-      first_name: "Assad",
-      last_name: "Siyal",
-      full_name: "Assad Siyal",
-    }),
+    getMyProfile: mocks.getMyProfile,
+    getStudyContext: mocks.getStudyContext,
+    updateStudyPreferences: vi.fn(),
   }),
 }))
 
 vi.mock("@/lib/api/analytics", () => ({
-  createAnalyticsApi: () => null,
+  createAnalyticsApi: () => ({
+    getOverview: mocks.getOverview,
+    getSessions: mocks.getSessions,
+    getPriorities: mocks.getPriorities,
+  }),
 }))
 
 vi.mock("@/lib/api/practice", () => ({
   createPracticeApi: () => null,
 }))
 
-describe("DashboardPage free-plan welcome", () => {
+function renderDashboard() {
+  return render(
+    <MemoryRouter>
+      <GuestPricingModalProvider>
+        <DashboardPage />
+      </GuestPricingModalProvider>
+    </MemoryRouter>,
+  )
+}
+
+function expectDashboardLoader() {
+  expect(screen.getByRole("status")).toBeInTheDocument()
+  expect(screen.getAllByText("Loading dashboard…").length).toBeGreaterThan(0)
+}
+
+describe("DashboardPage", () => {
+  beforeEach(() => {
+    mocks.entitlement.loading = false
+    mocks.entitlement.canAccessLsacContent = false
+    mocks.entitlement.isPaymentRequired = true
+    mocks.entitlement.entitlement = {
+      isAuthenticated: true,
+      isLsacLinked: false,
+      isLsacEligible: false,
+      hasActiveCore: false,
+      accessState: "PAYMENT_REQUIRED",
+    }
+    mocks.getMyProfile.mockResolvedValue({
+      first_name: "Assad",
+      last_name: "Siyal",
+      full_name: "Assad Siyal",
+    })
+    mocks.getStudyContext.mockResolvedValue({ preferences: null, officialScores: [] })
+    mocks.getOverview.mockResolvedValue({
+      questionsAnswered: 0,
+      accuracyPct: 0,
+      studyMinutes: 0,
+      predictedScore: null,
+    })
+    mocks.getSessions.mockResolvedValue({ sessions: [] })
+    mocks.getPriorities.mockResolvedValue([])
+  })
+
   it("shows the same Figma welcome heading as premium when LSAC content is locked", async () => {
-    render(
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { level: 1, name: "Welcome back, Assad" })).toBeInTheDocument()
+      expect(screen.getByText("Choose a plan to continue")).toBeInTheDocument()
+    })
+  })
+
+  it("keeps the loader up until dashboard data arrives instead of flashing empty drills", async () => {
+    mocks.entitlement.canAccessLsacContent = true
+    mocks.entitlement.isPaymentRequired = false
+    mocks.entitlement.entitlement = {
+      isAuthenticated: true,
+      isLsacLinked: true,
+      isLsacEligible: true,
+      hasActiveCore: true,
+      accessState: "READY",
+    }
+
+    const overview = deferred<Record<string, unknown>>()
+    mocks.getOverview.mockReturnValue(overview.promise)
+    mocks.getSessions.mockReturnValue(new Promise(() => undefined))
+    mocks.getPriorities.mockReturnValue(new Promise(() => undefined))
+    mocks.getStudyContext.mockReturnValue(new Promise(() => undefined))
+    mocks.getMyProfile.mockReturnValue(new Promise(() => undefined))
+
+    renderDashboard()
+
+    expectDashboardLoader()
+    expect(screen.queryByText(/No drills in progress/)).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading", { name: /Welcome back/ })).not.toBeInTheDocument()
+
+    overview.resolve({
+      questionsAnswered: 0,
+      accuracyPct: 0,
+      studyMinutes: 0,
+      predictedScore: null,
+    })
+    await waitFor(() => {
+      expectDashboardLoader()
+    })
+    expect(screen.queryByText(/No drills in progress/)).not.toBeInTheDocument()
+  })
+
+  it("does not clear the loader when entitlement flips to premium before a stale fetch finishes", async () => {
+    mocks.entitlement.loading = true
+    mocks.entitlement.canAccessLsacContent = false
+
+    const profile = deferred<{ first_name: string }>()
+    mocks.getMyProfile.mockReturnValue(profile.promise)
+    mocks.getOverview.mockReturnValue(new Promise(() => undefined))
+    mocks.getSessions.mockReturnValue(new Promise(() => undefined))
+    mocks.getPriorities.mockReturnValue(new Promise(() => undefined))
+    mocks.getStudyContext.mockReturnValue(new Promise(() => undefined))
+
+    const view = renderDashboard()
+    expectDashboardLoader()
+
+    mocks.entitlement.loading = false
+    mocks.entitlement.canAccessLsacContent = true
+    mocks.entitlement.isPaymentRequired = false
+    view.rerender(
       <MemoryRouter>
         <GuestPricingModalProvider>
           <DashboardPage />
@@ -55,9 +177,14 @@ describe("DashboardPage free-plan welcome", () => {
       </MemoryRouter>,
     )
 
+    expectDashboardLoader()
+    expect(screen.queryByText(/No drills in progress/)).not.toBeInTheDocument()
+
+    profile.resolve({ first_name: "Assad" })
     await waitFor(() => {
-      expect(screen.getByRole("heading", { level: 1, name: "Welcome back, Assad" })).toBeInTheDocument()
-      expect(screen.getByText("Choose a plan to continue")).toBeInTheDocument()
+      expectDashboardLoader()
     })
+    expect(screen.queryByText(/No drills in progress/)).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading", { name: /Welcome back/ })).not.toBeInTheDocument()
   })
 })

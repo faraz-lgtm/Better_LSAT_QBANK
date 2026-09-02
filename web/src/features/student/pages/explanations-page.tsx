@@ -22,7 +22,7 @@ import {
   writeExplanationBookmarkCache,
 } from "@/features/student/explanation-detail/explanation-bookmark-cache"
 import { filterPrepTestTreeToQuestionIds } from "@/features/student/explanation-detail/filter-explanation-tree"
-import { passagesInQuestionOrder } from "@/features/student/explanation-detail/order-explanation-passages"
+import { passagesInQuestionOrder, questionsInSectionOrder, shouldFlattenExplanationPassages } from "@/features/student/explanation-detail/order-explanation-passages"
 import type {
   ExplanationPrepTestListItem,
   ExplanationPrepTestNode,
@@ -32,6 +32,7 @@ import type {
   ExplanationStatusCounts,
 } from "@/features/student/explanation-detail/explanation-tree-types"
 import { mockExplanationPrepTests } from "@/features/student/lib/mock-explanations-tree"
+import { EXPLANATION_TREE_PL_CLASS } from "@/features/student/pages/explanations-tree-indent"
 import {
   difficultyLabelFromLevel,
   type PracticeDifficultyLabel,
@@ -39,6 +40,7 @@ import {
 import { createExplanationsApi } from "@/lib/api/explanations"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
+import { cn } from "@/lib/utils"
 
 const S = {
   heading: "var(--color-student-heading)",
@@ -155,13 +157,13 @@ function StatusBadge({ status }: { status: ExplanationQuestionStatus }) {
 }
 
 const TREE_ROW_CLASS =
-  "flex h-20 w-full flex-nowrap items-center justify-between gap-6 border-b p-6 text-left last:border-b-0"
+  "explanations-tree-row flex h-20 w-full flex-nowrap items-center justify-between gap-6 border-b pr-6 text-left"
 
 const QUESTION_ROW_CLASS =
-  "flex h-20 w-full flex-nowrap items-center justify-between gap-6 border-b bg-white p-6 last:border-b-0"
+  "explanations-tree-row flex h-20 w-full flex-nowrap items-center justify-between gap-6 border-b bg-white pr-6"
 
 const PREP_TEST_ROW_CLASS =
-  "flex h-[88px] w-full flex-nowrap items-center justify-between gap-6 border-b bg-white px-6 text-left transition-colors hover:bg-[#f3f7ff] last:border-b-0"
+  "explanations-tree-row flex h-[88px] w-full flex-nowrap items-center justify-between gap-6 border-b bg-white pr-6 text-left transition-colors hover:bg-[#f3f7ff]"
 
 function derivePrepTestStatus(tree: ExplanationPrepTestNode | null | undefined): ExplanationQuestionStatus {
   if (!tree) return "fresh"
@@ -263,21 +265,103 @@ function DifficultyMeter({ level }: { level: ExplanationQuestionNode["difficulty
   const activeColor = DIFFICULTY_METER_COLORS[label]
   return (
     <div
-      className="flex h-10 w-[132px] shrink-0 items-center gap-2.5 rounded-[10px] bg-[#f3f7ff] px-2.5"
+      className="flex h-10 w-fit shrink-0 items-center gap-2.5 overflow-visible rounded-[10px] bg-[#f3f7ff] px-3"
       title={`Difficulty ${level} of 5`}
     >
-      <div className="flex items-center gap-1.5">
+      <div className="flex shrink-0 items-center gap-1.5">
         {Array.from({ length: 5 }, (_, i) => (
           <span
             key={i}
-            className="h-4 w-1.5 shrink-0 rounded-full"
+            className="block h-4 w-1.5 shrink-0 rounded-full"
             style={{ backgroundColor: i < level ? activeColor : "#ced0e7" }}
           />
         ))}
       </div>
-      <span className="text-xs font-semibold leading-[1.5] tracking-[0.24px] whitespace-nowrap" style={{ color: activeColor }}>
+      <span
+        className="flex h-4 items-center whitespace-nowrap text-xs font-semibold leading-none tracking-[0.02em]"
+        style={{ color: activeColor }}
+      >
         {label}
       </span>
+    </div>
+  )
+}
+
+function ExplanationTreeQuestionRow({
+  question,
+  indentClass,
+  bookmarked,
+  onToggleBookmark,
+}: {
+  question: ExplanationQuestionNode
+  indentClass: string
+  bookmarked: boolean
+  onToggleBookmark: () => void
+}) {
+  const detailHref = explanationQuestionDetailHref(question.id)
+  return (
+    <div
+      className={cn(QUESTION_ROW_CLASS, indentClass)}
+      data-tree-level="question"
+      style={{ borderColor: S.border }}
+    >
+      <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
+        <QuestionIndexBadge>{question.number}</QuestionIndexBadge>
+        <Link
+          to={detailHref}
+          className="block min-w-0 shrink truncate rounded-lg text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
+        >
+          {`Q${question.number}`}
+        </Link>
+        <div className="shrink-0 px-4">
+          <StatusBadge status={question.status} />
+        </div>
+      </div>
+
+      <div className="flex w-[412px] shrink-0 flex-nowrap items-center justify-end gap-6">
+        <DifficultyMeter level={question.difficulty} />
+        <div className="flex shrink-0 items-center gap-6">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-9 rounded-xl text-[#666d80] hover:text-[color:var(--color-student-heading)]"
+            asChild
+          >
+            <Link to={`${detailHref}?tab=analytics`} aria-label="Open analytics tab">
+              <BarChart3 className="size-6" />
+            </Link>
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-9 rounded-xl text-[#666d80] hover:text-[color:var(--color-student-heading)]"
+            asChild
+          >
+            <Link to={detailHref} aria-label="Open question">
+              <PlayCircle className="size-6" />
+            </Link>
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={
+              bookmarked
+                ? "size-9 rounded-xl text-[#0d47a1] hover:text-[#0d47a1]"
+                : "size-9 rounded-xl text-[#666d80] hover:text-[color:var(--color-student-heading)]"
+            }
+            aria-label={
+              bookmarked ? `Remove bookmark from Q${question.number}` : `Bookmark Q${question.number}`
+            }
+            aria-pressed={bookmarked}
+            onClick={onToggleBookmark}
+          >
+            <Bookmark className="size-6" fill={bookmarked ? "currentColor" : "none"} />
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -757,10 +841,10 @@ function ExplanationsPage() {
           const statusTag = ptTree ? prepTestStatusTag(ptStatus) : row.rowSubtitle
 
           return (
-            <div key={ptId} className="contents">
+            <div key={ptId} className="explanations-tree-pt" data-tree-level="prep-test">
               <button
                 type="button"
-                className={PREP_TEST_ROW_CLASS}
+                className={cn(PREP_TEST_ROW_CLASS, EXPLANATION_TREE_PL_CLASS.prepTest)}
                 style={{ borderColor: S.border }}
                 onClick={() => togglePrepTest(ptId)}
               >
@@ -795,10 +879,14 @@ function ExplanationsPage() {
               </button>
 
               {ptIsOpen ? (
-                <>
-                  {treeError ? <p className="border-b border-[#dfe1e7] px-6 py-3 text-sm text-[#95122b]">{treeError}</p> : null}
+                <div className="explanations-tree-sections" data-tree-children="sections">
+                  {treeError ? (
+                    <p className={cn("border-b border-[#dfe1e7] py-3 pr-6 text-sm text-[#95122b]", EXPLANATION_TREE_PL_CLASS.section)}>
+                      {treeError}
+                    </p>
+                  ) : null}
                   {isLoadingTree && !filteredTree ? (
-                    <div className="border-b border-[#dfe1e7] px-6 py-4">
+                    <div className={cn("border-b border-[#dfe1e7] py-4 pr-6", EXPLANATION_TREE_PL_CLASS.section)}>
                       <StudentPageLoader label="Loading sections…" />
                     </div>
                   ) : null}
@@ -806,10 +894,10 @@ function ExplanationsPage() {
                     const sOpen = bookmarkedOnly || openSection.has(secKey(ptId, sec.id))
                     const secHeaderBg = sOpen ? S.listRowAlt : S.surface
                     return (
-                      <div key={sec.id} className="contents">
+                      <div key={sec.id} className="explanations-tree-section" data-tree-level="section">
                         <button
                           type="button"
-                          className={TREE_ROW_CLASS}
+                          className={cn(TREE_ROW_CLASS, EXPLANATION_TREE_PL_CLASS.section)}
                           style={{ backgroundColor: secHeaderBg, borderColor: S.border }}
                           onClick={() => toggleSection(ptId, sec)}
                         >
@@ -834,15 +922,28 @@ function ExplanationsPage() {
                         </button>
 
                         {sOpen ? (
-                          <>
+                          shouldFlattenExplanationPassages(sec) ? (
+                            <div className="explanations-tree-questions" data-tree-children="questions">
+                              {questionsInSectionOrder(sec).map((q) => (
+                                <ExplanationTreeQuestionRow
+                                  key={q.id}
+                                  question={q}
+                                  indentClass={EXPLANATION_TREE_PL_CLASS.passage}
+                                  bookmarked={bookmarkedQuestionIds.has(q.id)}
+                                  onToggleBookmark={() => void toggleQuestionBookmark(ptId, q.id)}
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                          <div className="explanations-tree-passages" data-tree-children="passages">
                             {passagesInQuestionOrder(sec.passages).map((pass) => {
                               const pOpen = bookmarkedOnly || openPassage.has(passKey(ptId, sec.id, pass.id))
                               const questionCountLabel = `${pass.questions.length} Question${pass.questions.length === 1 ? "" : "s"}`
                               return (
-                                <div key={pass.id} className="contents">
+                                <div key={pass.id} className="explanations-tree-passage" data-tree-level="passage">
                                   <button
                                     type="button"
-                                    className={TREE_ROW_CLASS}
+                                    className={cn(TREE_ROW_CLASS, EXPLANATION_TREE_PL_CLASS.passage)}
                                     style={{ backgroundColor: S.listRowAlt, borderColor: S.border }}
                                     onClick={() =>
                                       setOpenPassage((prev) => {
@@ -872,90 +973,29 @@ function ExplanationsPage() {
                                     </div>
                                   </button>
 
-                                  {pOpen
-                                    ? pass.questions.map((q) => {
-                                        const detailHref = explanationQuestionDetailHref(q.id)
-                                        return (
-                                          <div
-                                            key={q.id}
-                                            className={QUESTION_ROW_CLASS}
-                                            style={{ borderColor: S.border }}
-                                          >
-                                            <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
-                                              <QuestionIndexBadge>{q.number}</QuestionIndexBadge>
-                                              <Link
-                                                to={detailHref}
-                                                className="block min-w-0 shrink truncate rounded-lg text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
-                                              >
-                                                {`Q${q.number}`}
-                                              </Link>
-                                              <div className="shrink-0 px-4">
-                                                <StatusBadge status={q.status} />
-                                              </div>
-                                            </div>
-
-                                            <div className="flex w-[412px] shrink-0 flex-nowrap items-center justify-end gap-6">
-                                              <DifficultyMeter level={q.difficulty} />
-                                              <div className="flex shrink-0 items-center gap-6">
-                                                <Button
-                                                  type="button"
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  className="size-9 rounded-xl text-[#666d80] hover:text-[color:var(--color-student-heading)]"
-                                                  asChild
-                                                >
-                                                  <Link to={`${detailHref}?tab=analytics`} aria-label="Open analytics tab">
-                                                    <BarChart3 className="size-6" />
-                                                  </Link>
-                                                </Button>
-                                                <Button
-                                                  type="button"
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  className="size-9 rounded-xl text-[#666d80] hover:text-[color:var(--color-student-heading)]"
-                                                  asChild
-                                                >
-                                                  <Link to={detailHref} aria-label="Open question">
-                                                    <PlayCircle className="size-6" />
-                                                  </Link>
-                                                </Button>
-                                                <Button
-                                                  type="button"
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  className={
-                                                    bookmarkedQuestionIds.has(q.id)
-                                                      ? "size-9 rounded-xl text-[#0d47a1] hover:text-[#0d47a1]"
-                                                      : "size-9 rounded-xl text-[#666d80] hover:text-[color:var(--color-student-heading)]"
-                                                  }
-                                                  aria-label={
-                                                    bookmarkedQuestionIds.has(q.id)
-                                                      ? `Remove bookmark from Q${q.number}`
-                                                      : `Bookmark Q${q.number}`
-                                                  }
-                                                  aria-pressed={bookmarkedQuestionIds.has(q.id)}
-                                                  onClick={() => void toggleQuestionBookmark(ptId, q.id)}
-                                                >
-                                                  <Bookmark
-                                                    className="size-6"
-                                                    fill={bookmarkedQuestionIds.has(q.id) ? "currentColor" : "none"}
-                                                  />
-                                                </Button>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        )
-                                      })
-                                    : null}
+                                  {pOpen ? (
+                                    <div className="explanations-tree-questions" data-tree-children="questions">
+                                      {pass.questions.map((q) => (
+                                        <ExplanationTreeQuestionRow
+                                          key={q.id}
+                                          question={q}
+                                          indentClass={EXPLANATION_TREE_PL_CLASS.question}
+                                          bookmarked={bookmarkedQuestionIds.has(q.id)}
+                                          onToggleBookmark={() => void toggleQuestionBookmark(ptId, q.id)}
+                                        />
+                                      ))}
+                                    </div>
+                                  ) : null}
                                 </div>
                               )
                             })}
-                          </>
+                          </div>
+                          )
                         ) : null}
                       </div>
                     )
                   })}
-                </>
+                </div>
               ) : null}
             </div>
           )

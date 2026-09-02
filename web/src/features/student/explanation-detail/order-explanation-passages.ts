@@ -1,4 +1,8 @@
-import type { ExplanationPassageNode, ExplanationQuestionNode } from "@/features/student/explanation-detail/explanation-tree-types"
+import type {
+  ExplanationPassageNode,
+  ExplanationQuestionNode,
+  ExplanationSectionNode,
+} from "@/features/student/explanation-detail/explanation-tree-types"
 
 function firstQuestionNumber(questions: ExplanationQuestionNode[]): number {
   let min = Number.POSITIVE_INFINITY
@@ -38,4 +42,25 @@ export function passagesInQuestionOrder(passages: ExplanationPassageNode[]): Exp
       questions,
     }
   })
+}
+
+/** Backend wraps all LR items in one synthetic "Section questions" group — not a real passage. */
+export function isSyntheticLrPassage(pass: ExplanationPassageNode): boolean {
+  if (/^P\d+$/i.test(pass.label) || /^G\d+$/i.test(pass.label)) return false
+  return pass.label === "LR" || /^section questions$/i.test(pass.title.trim())
+}
+
+/** LR has no real passages — skip the extra accordion row and list questions under the section. */
+export function shouldFlattenExplanationPassages(
+  section: Pick<ExplanationSectionNode, "kind" | "passages">,
+): boolean {
+  if (section.kind !== "LR") return false
+  if (section.passages.length === 0) return true
+  return section.passages.every(isSyntheticLrPassage)
+}
+
+export function questionsInSectionOrder(section: Pick<ExplanationSectionNode, "passages">): ExplanationQuestionNode[] {
+  return passagesInQuestionOrder(section.passages).flatMap((pass) =>
+    [...pass.questions].sort((a, b) => a.number - b.number),
+  )
 }
