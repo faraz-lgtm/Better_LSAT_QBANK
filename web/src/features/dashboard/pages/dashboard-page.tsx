@@ -97,67 +97,81 @@ function DashboardPage() {
   const [startingAdaptiveDrill, setStartingAdaptiveDrill] = useState(false)
   const [savingTestDate, setSavingTestDate] = useState(false)
 
-  const loadDashboard = useCallback(async () => {
-    if (!canAccessLsacContent) {
-      setOverview(null)
-      setContinueDrills([])
-      setSuggestedDrills([])
-      if (usersApi) {
-        try {
-          const profile = await usersApi.getMyProfile()
-          setFirstName(firstNameFromProfile(profile))
-        } catch {
-          setFirstName("")
-        }
-      }
-      setLoading(false)
-      return
-    }
-
-    if (!analyticsApi || !usersApi) {
-      setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
-      setLoading(false)
-      return
-    }
-
-    setLoading(true)
-    setError(null)
-    try {
-      const [overviewData, drillSessions, priorities, context, profile] = await Promise.all([
-        analyticsApi.getOverview(),
-        analyticsApi.getSessions({ kind: "DRILL", limit: 50 }),
-        analyticsApi.getPriorities(),
-        usersApi.getStudyContext(),
-        usersApi.getMyProfile(),
-      ])
-
-      setOverview(overviewData)
-      setStudyContext(context)
-      setFirstName(firstNameFromProfile(profile))
-
-      const inProgress = drillSessions.sessions
-        .filter((s) => !s.completedAt)
-        .map(mapSessionToContinueDrill)
-        .filter((d): d is ContinueDrill => d != null)
-      setContinueDrills(inProgress)
-
-      setSuggestedDrills(
-        priorities
-          .filter((p) => p.sectionType === "LR" || p.sectionType === "RC" || p.sectionType === null)
-          .map(mapPriorityToSuggestedDrill)
-          .filter((d): d is SuggestedDrill => d != null)
-          .slice(0, 4),
-      )
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load dashboard")
-    } finally {
-      setLoading(false)
-    }
-  }, [analyticsApi, canAccessLsacContent, usersApi])
-
   useEffect(() => {
+    if (entitlementLoading) {
+      setLoading(true)
+      return
+    }
+
+    let cancelled = false
+
+    async function loadDashboard() {
+      if (!canAccessLsacContent) {
+        setOverview(null)
+        setContinueDrills([])
+        setSuggestedDrills([])
+        if (usersApi) {
+          try {
+            const profile = await usersApi.getMyProfile()
+            if (cancelled) return
+            setFirstName(firstNameFromProfile(profile))
+          } catch {
+            if (!cancelled) setFirstName("")
+          }
+        }
+        if (!cancelled) setLoading(false)
+        return
+      }
+
+      if (!analyticsApi || !usersApi) {
+        if (!cancelled) {
+          setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
+          setLoading(false)
+        }
+        return
+      }
+
+      setLoading(true)
+      setError(null)
+      try {
+        const [overviewData, drillSessions, priorities, context, profile] = await Promise.all([
+          analyticsApi.getOverview(),
+          analyticsApi.getSessions({ kind: "DRILL", limit: 50 }),
+          analyticsApi.getPriorities(),
+          usersApi.getStudyContext(),
+          usersApi.getMyProfile(),
+        ])
+        if (cancelled) return
+
+        setOverview(overviewData)
+        setStudyContext(context)
+        setFirstName(firstNameFromProfile(profile))
+
+        const inProgress = drillSessions.sessions
+          .filter((s) => !s.completedAt)
+          .map(mapSessionToContinueDrill)
+          .filter((d): d is ContinueDrill => d != null)
+        setContinueDrills(inProgress)
+
+        setSuggestedDrills(
+          priorities
+            .filter((p) => p.sectionType === "LR" || p.sectionType === "RC" || p.sectionType === null)
+            .map(mapPriorityToSuggestedDrill)
+            .filter((d): d is SuggestedDrill => d != null)
+            .slice(0, 4),
+        )
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load dashboard")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
     void loadDashboard()
-  }, [loadDashboard])
+    return () => {
+      cancelled = true
+    }
+  }, [analyticsApi, canAccessLsacContent, entitlementLoading, usersApi])
 
   const statCards = useMemo(
     () => (overview ? mapOverviewToDashboardStats(overview) : []),
