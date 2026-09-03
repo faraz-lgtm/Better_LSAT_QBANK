@@ -48,6 +48,7 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
   let sessionKind: PracticeSessionKind | undefined
   let sessionId: string | undefined
   let questionTypeId: string | undefined
+  let includeKinds: PracticeSessionKind[] | undefined
 
   if (req.method === 'GET') {
     const kindParam = url.searchParams.get('kind')
@@ -61,6 +62,8 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
     sessionId = typeof sid === 'string' && sid.length > 0 ? sid : undefined
     const qtid = url.searchParams.get('questionTypeId')
     questionTypeId = typeof qtid === 'string' && qtid.length > 0 ? qtid : undefined
+    const kindsParam = url.searchParams.getAll('includeKinds').filter(isSessionKind)
+    includeKinds = kindsParam.length > 0 ? kindsParam : undefined
   } else {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
     const readNum = (v: unknown, fallback: number) => {
@@ -79,6 +82,12 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
       typeof body.questionTypeId === 'string' && body.questionTypeId.length > 0
         ? body.questionTypeId
         : undefined
+    if (Array.isArray(body.includeKinds)) {
+      const parsed = body.includeKinds.filter(
+        (k): k is PracticeSessionKind => typeof k === 'string' && isSessionKind(k),
+      )
+      includeKinds = parsed.length > 0 ? parsed : undefined
+    }
   }
 
   const service = createAnalyticsService({
@@ -95,7 +104,7 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
       return json({ points: data }, {}, corsHeaders)
     }
     if (resource === 'priorities') {
-      const data = await service.getPriorities(user.id)
+      const data = await service.getPriorities(user.id, { includeKinds })
       return json(data, {}, corsHeaders)
     }
     if (resource === 'sessions') {

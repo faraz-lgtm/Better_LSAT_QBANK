@@ -55,8 +55,8 @@ function sessionSectionType(session: PracticeSessionSummary): "LR" | "RC" | null
   return null
 }
 
-function priorityVisual(priority: PriorityRow["priorityLevel"]) {
-  if (priority === "high") {
+function priorityVisual(priority: PriorityRow["priorityLevel"] | PriorityRow["priorityTier"]) {
+  if (priority === "highest" || priority === "high") {
     return { label: "hardest" as const, bars: 5, color: "#df1c41" }
   }
   if (priority === "medium") {
@@ -139,7 +139,7 @@ export function mapSessionToContinueDrill(session: PracticeSessionSummary): Cont
 
 export function mapPriorityToSuggestedDrill(row: PriorityRow): SuggestedDrill | null {
   const section = row.sectionType === "LR" || row.sectionType === "RC" ? row.sectionType : "LR"
-  const visual = priorityVisual(row.priorityLevel)
+  const visual = priorityVisual(row.priorityTier ?? row.priorityLevel)
   const configPath =
     section === "LR"
       ? `/app/practice/drills/lr/new?questionTypeId=${encodeURIComponent(row.questionTypeId)}&tag=${encodeURIComponent(row.name)}`
@@ -149,7 +149,7 @@ export function mapPriorityToSuggestedDrill(row: PriorityRow): SuggestedDrill | 
     id: row.questionTypeId,
     section,
     title: row.name,
-    progressPct: row.accuracyPct,
+    progressPct: row.accuracyPct ?? 0,
     answered: `${row.correctCount}/${row.attemptCount}`,
     timeLabel: "—",
     lastAttempt: `${row.attemptCount} attempts`,

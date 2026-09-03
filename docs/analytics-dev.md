@@ -61,4 +61,18 @@ curl -sS -X POST 'http://127.0.0.1:54321/functions/v1/analytics-overview' \
   -d '{}'
 ```
 
-Other read endpoints: `analytics-trajectory`, `analytics-priorities`, `analytics-sessions`, `analytics-kind-breakdown` (requires `"sessionKind":"DRILL"` or `SECTION` / `PREPTEST` in the body or query string). Student explanations library: `prep-explanations-prep-tests` (grouped PrepTest list), `prep-explanations-prep-test-tree` (requires `prepTestId`), `prep-explanation-detail` (requires `questionId`), and legacy `prep-explanations-list` (flat catalog of questions with explanation or video).
+**Priorities / accuracy vs goal** (`analytics-priorities`)
+
+Goal accuracy is derived from the student's onboarding `goal_score` (120–180) via a linear curve (50% at 120 → 98% at 180; ≈86% at 165), then adjusted per tag by average question difficulty (easier tags higher Goal%, harder tags lower). Changing the goal score recomputes goals and relative priority tiers on the next request.
+
+Optional body: `includeKinds: ["PREPTEST","SECTION","DRILL"]` to limit which practice types count toward accuracy (excluded sessions are always omitted).
+
+```bash
+curl -sS -X POST 'http://127.0.0.1:54321/functions/v1/analytics-priorities' \
+  -H "Authorization: Bearer USER_JWT" \
+  -H "apikey: ANON_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+Other read endpoints: `analytics-trajectory`, `analytics-sessions`, `analytics-kind-breakdown` (requires `"sessionKind":"DRILL"` or `SECTION` / `PREPTEST` in the body or query string). Student explanations library: `prep-explanations-prep-tests` (grouped PrepTest list), `prep-explanations-prep-test-tree` (requires `prepTestId`), `prep-explanation-detail` (requires `questionId`), and legacy `prep-explanations-list` (flat catalog of questions with explanation or video).

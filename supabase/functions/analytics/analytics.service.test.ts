@@ -113,11 +113,11 @@ function mockRepo(overrides: Partial<AnalyticsRepository> = {}): AnalyticsReposi
     getScoreRowForScaled: async () => null,
     listPrepTestQuestionsWithMeta: async () => [],
     listAnswerEventsWithTypes: async () => [
-      { question_type_id: 't-low', is_correct: true, question_id: 'q-low-1' },
-      { question_type_id: 't-low', is_correct: false, question_id: 'q-low-2' },
-      { question_type_id: 't-high', is_correct: false, question_id: 'q-high-1' },
-      { question_type_id: 't-high', is_correct: false, question_id: 'q-high-2' },
-      { question_type_id: 't-high', is_correct: false, question_id: 'q-high-3' },
+      { question_type_id: 't-low', is_correct: true, question_id: 'q-low-1', session_kind: 'DRILL' as const },
+      { question_type_id: 't-low', is_correct: false, question_id: 'q-low-2', session_kind: 'DRILL' as const },
+      { question_type_id: 't-high', is_correct: false, question_id: 'q-high-1', session_kind: 'DRILL' as const },
+      { question_type_id: 't-high', is_correct: false, question_id: 'q-high-2', session_kind: 'DRILL' as const },
+      { question_type_id: 't-high', is_correct: false, question_id: 'q-high-3', session_kind: 'DRILL' as const },
     ],
     listAnswerEventsForQuestionType: async () => [],
     listQuestionTypesByIds: async (ids) =>
@@ -138,6 +138,8 @@ function mockRepo(overrides: Partial<AnalyticsRepository> = {}): AnalyticsReposi
               avg_per_test: 8,
             },
       ),
+    getUserGoalScore: async () => 165,
+    listExcludedSessionIds: async () => new Set<string>(),
     listSessions: async () => [],
     countSessions: async () => 0,
     countAnswerEventsByKind: async () => 0,
@@ -421,18 +423,23 @@ Deno.test('getTrajectory falls back when admin_prep_tests is missing', async () 
 
 // --- getPriorities ---
 
-Deno.test('getPriorities sorts by gap descending', async () => {
+Deno.test('getPriorities sorts by priorityScore (gap × avg per test) descending', async () => {
   const service = createAnalyticsService({ repository: mockRepo() })
-  const { priorities } = await service.getPriorities('user-1')
+  const { priorities, goalScore, goalAccuracyFromScore: derived } = await service.getPriorities(
+    'user-1',
+  )
+  assertEquals(goalScore, 165)
+  assertEquals(derived, 86)
   assertEquals(priorities[0]?.questionTypeId, 't-high')
+  assertEquals(priorities[0]?.goalAccuracy, 86)
 })
 
-Deno.test('getPriorities assigns low priority when attempts < 3', async () => {
+Deno.test('getPriorities suppresses goal/priority when attempts < 3', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({
       listAnswerEventsWithTypes: async () => [
-        { question_type_id: 't-few', is_correct: false, question_id: 'q1' },
-        { question_type_id: 't-few', is_correct: false, question_id: 'q2' },
+        { question_type_id: 't-few', is_correct: false, question_id: 'q1', session_kind: 'DRILL' },
+        { question_type_id: 't-few', is_correct: false, question_id: 'q2', session_kind: 'DRILL' },
       ],
       listQuestionTypesByIds: async () => [
         {
@@ -446,48 +453,90 @@ Deno.test('getPriorities assigns low priority when attempts < 3', async () => {
     }),
   })
   const { priorities } = await service.getPriorities('user-1')
+  assertEquals(priorities[0]?.unlocked, false)
+  assertEquals(priorities[0]?.goalAccuracy, null)
+  assertEquals(priorities[0]?.gap, null)
+  assertEquals(priorities[0]?.priorityTier, null)
   assertEquals(priorities[0]?.priorityLevel, 'low')
 })
 
-Deno.test('getPriorities assigns high priority when gap >= 15 and attempts >= 3', async () => {
+Deno.test('getPriorities derives goalAccuracy from user goal_score (not static type goal)', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({
+      getUserGoalScore: async () => 165,
       listAnswerEventsWithTypes: async () => [
-        { question_type_id: 't-gap', is_correct: true, question_id: 'q1' },
-        { question_type_id: 't-gap', is_correct: true, question_id: 'q2' },
-        { question_type_id: 't-gap', is_correct: true, question_id: 'q3' },
-        { question_type_id: 't-gap', is_correct: false, question_id: 'q4' },
+        { question_type_id: 't-gap', is_correct: true, question_id: 'q1', session_kind: 'DRILL' },
+        { question_type_id: 't-gap', is_correct: true, question_id: 'q2', session_kind: 'DRILL' },
+        { question_type_id: 't-gap', is_correct: true, question_id: 'q3', session_kind: 'DRILL' },
+        { question_type_id: 't-gap', is_correct: false, question_id: 'q4', session_kind: 'DRILL' },
       ],
       listQuestionTypesByIds: async () => [
         {
           id: 't-gap',
           name: 'Big gap',
           section_type: 'LR',
-          goal_accuracy: 90,
+          goal_accuracy: 90, // ignored when goal_score is set
           avg_per_test: 5,
         },
       ],
     }),
   })
   const { priorities } = await service.getPriorities('user-1')
-  assertEquals(priorities[0]?.gap, 15)
-  assertEquals(priorities[0]?.priorityLevel, 'high')
+  // 75% accuracy vs 86% goal → gap 11; extra correct = 0.11 * 5 = 0.6
+  assertEquals(priorities[0]?.accuracyPct, 75)
+  assertEquals(priorities[0]?.goalAccuracy, 86)
+  assertEquals(priorities[0]?.gap, 11)
+  assertEquals(priorities[0]?.extraCorrectNeededPerTest, 0.6)
+  assertEquals(priorities[0]?.priorityScore, 55) // 11 * 5
 })
 
-Deno.test('getPriorities assigns medium priority when gap is 8-14', async () => {
+Deno.test('getPriorities adjusts goalAccuracy by tag difficulty', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({
+      getUserGoalScore: async () => 180, // base goal 98%
       listAnswerEventsWithTypes: async () => [
-        { question_type_id: 't-med', is_correct: true, question_id: 'q1' },
-        { question_type_id: 't-med', is_correct: true, question_id: 'q2' },
-        { question_type_id: 't-med', is_correct: true, question_id: 'q3' },
-        { question_type_id: 't-med', is_correct: true, question_id: 'q4' },
-        { question_type_id: 't-med', is_correct: false, question_id: 'q5' },
+        { question_type_id: 't-easy', is_correct: true, question_id: 'e1', session_kind: 'DRILL' },
+        { question_type_id: 't-easy', is_correct: true, question_id: 'e2', session_kind: 'DRILL' },
+        { question_type_id: 't-easy', is_correct: true, question_id: 'e3', session_kind: 'DRILL' },
+        { question_type_id: 't-hard', is_correct: true, question_id: 'h1', session_kind: 'DRILL' },
+        { question_type_id: 't-hard', is_correct: false, question_id: 'h2', session_kind: 'DRILL' },
+        { question_type_id: 't-hard', is_correct: false, question_id: 'h3', session_kind: 'DRILL' },
+      ],
+      listAnswerEventsWithTypeDifficulty: async () => [
+        { question_type_id: 't-easy', difficulty: 1 },
+        { question_type_id: 't-easy', difficulty: 1 },
+        { question_type_id: 't-easy', difficulty: 1 },
+        { question_type_id: 't-hard', difficulty: 5 },
+        { question_type_id: 't-hard', difficulty: 5 },
+        { question_type_id: 't-hard', difficulty: 5 },
+      ],
+      listQuestionTypesByIds: async () => [
+        { id: 't-easy', name: 'Easy', section_type: 'LR', goal_accuracy: null, avg_per_test: 5 },
+        { id: 't-hard', name: 'Hard', section_type: 'LR', goal_accuracy: null, avg_per_test: 5 },
+      ],
+    }),
+  })
+  const { priorities } = await service.getPriorities('user-1')
+  const byId = Object.fromEntries(priorities.map((p) => [p.questionTypeId, p.goalAccuracy]))
+  assertEquals(byId['t-easy'], 99) // 98 + 8, clamped
+  assertEquals(byId['t-hard'], 86) // 98 - 12
+})
+
+Deno.test('getPriorities falls back to question_types.goal_accuracy when no goal_score', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      getUserGoalScore: async () => null,
+      listAnswerEventsWithTypes: async () => [
+        { question_type_id: 't-fb', is_correct: true, question_id: 'q1', session_kind: 'DRILL' },
+        { question_type_id: 't-fb', is_correct: true, question_id: 'q2', session_kind: 'DRILL' },
+        { question_type_id: 't-fb', is_correct: true, question_id: 'q3', session_kind: 'DRILL' },
+        { question_type_id: 't-fb', is_correct: false, question_id: 'q4', session_kind: 'DRILL' },
+        { question_type_id: 't-fb', is_correct: false, question_id: 'q5', session_kind: 'DRILL' },
       ],
       listQuestionTypesByIds: async () => [
         {
-          id: 't-med',
-          name: 'Medium gap',
+          id: 't-fb',
+          name: 'Fallback',
           section_type: 'LR',
           goal_accuracy: 90,
           avg_per_test: 5,
@@ -495,18 +544,96 @@ Deno.test('getPriorities assigns medium priority when gap is 8-14', async () => 
       ],
     }),
   })
+  const { priorities, goalAccuracyFromScore: derived } = await service.getPriorities('user-1')
+  assertEquals(derived, null)
+  assertEquals(priorities[0]?.goalAccuracy, 90)
+  assertEquals(priorities[0]?.gap, 30) // 90 - 60
+})
+
+Deno.test('getPriorities assigns relative quartile tiers by priorityScore', async () => {
+  const mkEvents = (typeId: string, correct: number, total: number) =>
+    Array.from({ length: total }, (_, i) => ({
+      question_type_id: typeId,
+      is_correct: i < correct,
+      question_id: `${typeId}-q${i}`,
+      session_kind: 'DRILL' as const,
+    }))
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      getUserGoalScore: async () => 165, // goal accuracy 86%
+      listAnswerEventsWithTypes: async () => [
+        ...mkEvents('t-a', 0, 4), // 0% → gap 86 × avg 10 = 860
+        ...mkEvents('t-b', 2, 4), // 50% → gap 36 × avg 8 = 288
+        ...mkEvents('t-c', 3, 4), // 75% → gap 11 × avg 6 = 66
+        ...mkEvents('t-d', 4, 4), // 100% → gap -14 × avg 4 = -56
+      ],
+      listQuestionTypesByIds: async () => [
+        { id: 't-a', name: 'A', section_type: 'LR', goal_accuracy: null, avg_per_test: 10 },
+        { id: 't-b', name: 'B', section_type: 'LR', goal_accuracy: null, avg_per_test: 8 },
+        { id: 't-c', name: 'C', section_type: 'LR', goal_accuracy: null, avg_per_test: 6 },
+        { id: 't-d', name: 'D', section_type: 'LR', goal_accuracy: null, avg_per_test: 4 },
+      ],
+    }),
+  })
   const { priorities } = await service.getPriorities('user-1')
-  assertEquals(priorities[0]?.gap, 10)
-  assertEquals(priorities[0]?.priorityLevel, 'medium')
+  const byId = Object.fromEntries(priorities.map((p) => [p.questionTypeId, p.priorityTier]))
+  assertEquals(byId['t-a'], 'highest')
+  assertEquals(byId['t-b'], 'high')
+  assertEquals(byId['t-c'], 'medium')
+  assertEquals(byId['t-d'], 'low')
+  assertEquals(priorities[0]?.priorityLevel, 'high') // legacy: highest → high
+})
+
+Deno.test('getPriorities excludes tags with 0 avg_per_test from ranking', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listAnswerEventsWithTypes: async () => [
+        { question_type_id: 't-zero', is_correct: false, question_id: 'q1', session_kind: 'DRILL' },
+        { question_type_id: 't-zero', is_correct: false, question_id: 'q2', session_kind: 'DRILL' },
+        { question_type_id: 't-zero', is_correct: false, question_id: 'q3', session_kind: 'DRILL' },
+        { question_type_id: 't-ok', is_correct: false, question_id: 'q4', session_kind: 'DRILL' },
+        { question_type_id: 't-ok', is_correct: false, question_id: 'q5', session_kind: 'DRILL' },
+        { question_type_id: 't-ok', is_correct: false, question_id: 'q6', session_kind: 'DRILL' },
+      ],
+      listQuestionTypesByIds: async () => [
+        { id: 't-zero', name: 'Zero avg', section_type: 'LR', goal_accuracy: null, avg_per_test: 0 },
+        { id: 't-ok', name: 'Ok', section_type: 'LR', goal_accuracy: null, avg_per_test: 5 },
+      ],
+    }),
+  })
+  const { priorities } = await service.getPriorities('user-1')
+  assertEquals(priorities.find((p) => p.questionTypeId === 't-zero')?.priorityTier, null)
+  assertEquals(priorities.find((p) => p.questionTypeId === 't-ok')?.priorityTier, 'highest')
+})
+
+Deno.test('getPriorities filters by includeKinds', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listAnswerEventsWithTypes: async () => [
+        { question_type_id: 't-k', is_correct: true, question_id: 'q1', session_kind: 'DRILL' },
+        { question_type_id: 't-k', is_correct: false, question_id: 'q2', session_kind: 'SECTION' },
+        { question_type_id: 't-k', is_correct: false, question_id: 'q3', session_kind: 'SECTION' },
+        { question_type_id: 't-k', is_correct: false, question_id: 'q4', session_kind: 'SECTION' },
+      ],
+      listQuestionTypesByIds: async () => [
+        { id: 't-k', name: 'Kinds', section_type: 'LR', goal_accuracy: null, avg_per_test: 5 },
+      ],
+    }),
+  })
+  const all = await service.getPriorities('user-1')
+  assertEquals(all.priorities[0]?.attemptCount, 4)
+  const drillsOnly = await service.getPriorities('user-1', { includeKinds: ['DRILL'] })
+  assertEquals(drillsOnly.priorities[0]?.attemptCount, 1)
+  assertEquals(drillsOnly.priorities[0]?.unlocked, false)
 })
 
 Deno.test('getPriorities averages difficulty events per type', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({
       listAnswerEventsWithTypes: async () => [
-        { question_type_id: 't-diff', is_correct: true, question_id: 'q1' },
-        { question_type_id: 't-diff', is_correct: true, question_id: 'q2' },
-        { question_type_id: 't-diff', is_correct: true, question_id: 'q3' },
+        { question_type_id: 't-diff', is_correct: true, question_id: 'q1', session_kind: 'DRILL' },
+        { question_type_id: 't-diff', is_correct: true, question_id: 'q2', session_kind: 'DRILL' },
+        { question_type_id: 't-diff', is_correct: true, question_id: 'q3', session_kind: 'DRILL' },
       ],
       listAnswerEventsWithTypeDifficulty: async () => [
         { question_type_id: 't-diff', difficulty: 2 },
@@ -527,15 +654,17 @@ Deno.test('getPriorities averages difficulty events per type', async () => {
   assertEquals(priorities[0]?.difficulty, 3)
 })
 
-Deno.test('getPriorities tie-breaks equal gap by attempt count', async () => {
+Deno.test('getPriorities tie-breaks equal priorityScore by attempt count', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({
+      getUserGoalScore: async () => null,
       listAnswerEventsWithTypes: async () => [
-        { question_type_id: 't-a', is_correct: false, question_id: 'qa1' },
-        { question_type_id: 't-a', is_correct: false, question_id: 'qa2' },
-        { question_type_id: 't-a', is_correct: false, question_id: 'qa3' },
-        { question_type_id: 't-b', is_correct: false, question_id: 'qb1' },
-        { question_type_id: 't-b', is_correct: false, question_id: 'qb2' },
+        { question_type_id: 't-a', is_correct: false, question_id: 'qa1', session_kind: 'DRILL' },
+        { question_type_id: 't-a', is_correct: false, question_id: 'qa2', session_kind: 'DRILL' },
+        { question_type_id: 't-a', is_correct: false, question_id: 'qa3', session_kind: 'DRILL' },
+        { question_type_id: 't-b', is_correct: false, question_id: 'qb1', session_kind: 'DRILL' },
+        { question_type_id: 't-b', is_correct: false, question_id: 'qb2', session_kind: 'DRILL' },
+        { question_type_id: 't-b', is_correct: false, question_id: 'qb3', session_kind: 'DRILL' },
       ],
       listQuestionTypesByIds: async () => [
         {
@@ -556,18 +685,20 @@ Deno.test('getPriorities tie-breaks equal gap by attempt count', async () => {
     }),
   })
   const { priorities } = await service.getPriorities('user-1')
-  assertEquals(priorities[0]?.questionTypeId, 't-a')
+  // Equal gap and avg → equal priorityScore; both unlocked with 3 attempts
+  assertEquals(priorities[0]?.priorityScore, priorities[1]?.priorityScore)
   assertEquals(priorities[0]?.attemptCount, 3)
-  assertEquals(priorities[1]?.questionTypeId, 't-b')
+  assertEquals(priorities[1]?.attemptCount, 3)
 })
 
 Deno.test('getPriorities uses Unknown type when metadata missing', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({
+      getUserGoalScore: async () => null,
       listAnswerEventsWithTypes: async () => [
-        { question_type_id: 'orphan', is_correct: false, question_id: 'q1' },
-        { question_type_id: 'orphan', is_correct: false, question_id: 'q2' },
-        { question_type_id: 'orphan', is_correct: false, question_id: 'q3' },
+        { question_type_id: 'orphan', is_correct: false, question_id: 'q1', session_kind: 'DRILL' },
+        { question_type_id: 'orphan', is_correct: false, question_id: 'q2', session_kind: 'DRILL' },
+        { question_type_id: 'orphan', is_correct: false, question_id: 'q3', session_kind: 'DRILL' },
       ],
       listQuestionTypesByIds: async () => [],
     }),
@@ -581,9 +712,9 @@ Deno.test('getPriorities reviewCount counts unique questions', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({
       listAnswerEventsWithTypes: async () => [
-        { question_type_id: 't-dup', is_correct: false, question_id: 'q1' },
-        { question_type_id: 't-dup', is_correct: true, question_id: 'q1' },
-        { question_type_id: 't-dup', is_correct: false, question_id: 'q2' },
+        { question_type_id: 't-dup', is_correct: false, question_id: 'q1', session_kind: 'DRILL' },
+        { question_type_id: 't-dup', is_correct: true, question_id: 'q1', session_kind: 'DRILL' },
+        { question_type_id: 't-dup', is_correct: false, question_id: 'q2', session_kind: 'DRILL' },
       ],
       listQuestionTypesByIds: async () => [
         {

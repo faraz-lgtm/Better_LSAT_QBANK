@@ -117,7 +117,40 @@ function DifficultyPill({ difficulty }: { difficulty: Difficulty }) {
   )
 }
 
-function AccuracyProgress({ accuracy, goal }: { accuracy: number; goal: number }) {
+function AccuracyProgress({
+  accuracy,
+  goal,
+  unlocked,
+}: {
+  accuracy: number | null
+  goal: number | null
+  unlocked: boolean
+}) {
+  if (!unlocked || accuracy == null) {
+    return (
+      <div className="flex w-[232px] shrink-0 flex-col gap-2">
+        <span className="text-xs font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
+          Keep practicing to unlock this.
+        </span>
+        <div className="relative h-3 w-full overflow-hidden rounded-full bg-[#dfe1e7]" />
+      </div>
+    )
+  }
+  if (goal == null) {
+    return (
+      <div className="flex w-[232px] shrink-0 flex-col gap-2">
+        <span className="text-xs font-semibold leading-[1.5] tracking-[0.02em] text-[#0d47a1]">
+          Your accuracy: {Math.max(0, Math.min(100, accuracy))}%
+        </span>
+        <div className="relative h-3 w-full overflow-hidden rounded-full bg-[#dfe1e7]">
+          <div
+            className="absolute inset-y-0 left-0 rounded-full bg-[#0d47a1]"
+            style={{ width: `${Math.max(0, Math.min(100, accuracy))}%` }}
+          />
+        </div>
+      </div>
+    )
+  }
   const safeAccuracy = Math.max(0, Math.min(100, accuracy))
   const safeGoal = Math.max(0, Math.min(100, goal))
   return (
@@ -126,7 +159,9 @@ function AccuracyProgress({ accuracy, goal }: { accuracy: number; goal: number }
         <span className="text-xs font-semibold leading-[1.5] tracking-[0.02em] text-[#0d47a1]">
           Your accuracy: {safeAccuracy}%
         </span>
-        <span className="text-xs font-semibold leading-[1.5] tracking-[0.02em] text-[#df1c41]">Goal: {safeGoal}%</span>
+        <span className="text-xs font-semibold leading-[1.5] tracking-[0.02em] text-[#df1c41]">
+          Goal: {safeGoal}%
+        </span>
       </div>
       <div className="relative h-3 w-full overflow-hidden rounded-full bg-[#dfe1e7]">
         <div className="absolute inset-y-0 left-0 rounded-full bg-[#0d47a1]" style={{ width: `${safeAccuracy}%` }} />
@@ -136,25 +171,44 @@ function AccuracyProgress({ accuracy, goal }: { accuracy: number; goal: number }
   )
 }
 
+const PRIORITY_BAR: Record<string, string> = {
+  highest: "#df1c41",
+  high: "#ff6f00",
+  medium: "#ffbd4c",
+  low: "#00bc54",
+}
+
 function QuestionTypeRow({ row, accentBar }: { row: QuestionTypeRowData; accentBar: string }) {
+  const barColor = (row.priorityTier && PRIORITY_BAR[row.priorityTier]) || accentBar
   return (
-    <div className="flex h-[88px] min-w-[880px] items-center justify-between border-b border-[#dfe1e7] px-6 last:border-b-0">
+    <div className="flex min-h-[88px] min-w-[880px] items-center justify-between border-b border-[#dfe1e7] px-6 py-3 last:border-b-0">
       <div className="flex w-[392px] shrink-0 items-center gap-6">
         <div
           className="h-14 w-1 shrink-0 rounded-br-[10px] rounded-tr-[10px]"
-          style={{ backgroundColor: accentBar }}
+          style={{ backgroundColor: barColor }}
           aria-hidden
         />
-        <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-1.5">
           <p className="text-base font-semibold leading-[1.35] text-[#062357]">{row.title}</p>
           <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
             {row.averagePerTest.toFixed(1)} questions avg. per test
           </p>
+          {row.unlocked &&
+          row.accuracyPct != null &&
+          row.goalPct != null &&
+          row.extraCorrectNeededPerTest != null &&
+          row.extraCorrectNeededPerTest > 0 ? (
+            <p className="text-xs leading-[1.4] text-[#666d80]">
+              Closing the gap requires getting{" "}
+              <strong className="font-semibold text-[#062357]">{row.extraCorrectNeededPerTest}</strong> more
+              correct per test in this tag.
+            </p>
+          ) : null}
         </div>
       </div>
 
       <DifficultyPill difficulty={row.difficulty} />
-      <AccuracyProgress accuracy={row.accuracyPct} goal={row.goalPct} />
+      <AccuracyProgress accuracy={row.accuracyPct} goal={row.goalPct} unlocked={row.unlocked} />
 
       <Link
         to={`/app/analytics/review/${encodeURIComponent(row.id)}`}
