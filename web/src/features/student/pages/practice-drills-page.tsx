@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { ChevronDown, ChevronUp, ExternalLink, LineChart } from "lucide-react"
+import { ExternalLink } from "lucide-react"
 
-import {
-  ContinueDrillCard,
-  continueDrillToCardDrill,
-} from "@/features/student/components/continue-drill-card"
-import { DrillDifficultyStatus } from "@/features/student/components/drill-difficulty-status"
 import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
+import { PracticeDrillContinueRow } from "@/features/student/components/practice-drill-continue-row"
+import { PracticeDrillTypeRow } from "@/features/student/components/practice-drill-type-row"
+import { PracticeListFooter } from "@/features/student/components/practice-list-footer"
 import { PracticeLrRcStarterCards } from "@/features/student/components/practice-lr-rc-starter-cards"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
@@ -22,11 +20,12 @@ import {
 import { createAnalyticsApi, type PriorityRow } from "@/lib/api/analytics"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
+type SectionFilter = "all" | "lr" | "rc"
+
 type TagDrill = {
   id: string
   questionTypeId: string
-  sectionLabel: string
-  sectionTone: "lr" | "rc"
+  section: "LR" | "RC"
   title: string
   difficultyLabel: string
   filledBars: number
@@ -55,8 +54,7 @@ function mapPriorityToTagDrill(row: PriorityRow): TagDrill | null {
   return {
     id: row.questionTypeId,
     questionTypeId: row.questionTypeId,
-    sectionLabel: section === "LR" ? "Logical Reasoning" : "Reading Comprehension",
-    sectionTone: section === "LR" ? "lr" : "rc",
+    section,
     title: row.name,
     difficultyLabel: visual.label,
     filledBars: visual.filledBars,
@@ -65,14 +63,24 @@ function mapPriorityToTagDrill(row: PriorityRow): TagDrill | null {
   }
 }
 
+function difficultyLabelFromContinue(level: ContinueDrill["difficulty"]): string {
+  if (level === "hardest") return "Hardest"
+  if (level === "medium") return "Medium"
+  return "Easy"
+}
+
+function padInProcessCount(count: number): string {
+  return `${String(count).padStart(2, "0")} In process`
+}
+
 function PracticeDrillsPage() {
   const navigate = useNavigate()
   const analyticsApi = useMemo(() => createAnalyticsApi(getSupabaseBrowserClient()), [])
 
-  const [continueFilter, setContinueFilter] = useState<"all" | "lr" | "rc">("all")
-  const [sectionFilter, setSectionFilter] = useState<"all" | "lr" | "rc">("all")
+  const [sectionFilter, setSectionFilter] = useState<SectionFilter>("all")
   const [continueDrills, setContinueDrills] = useState<ContinueDrill[]>([])
   const [tagDrills, setTagDrills] = useState<TagDrill[]>([])
+  const [continueExpanded, setContinueExpanded] = useState(false)
   const [tagsExpanded, setTagsExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -100,6 +108,7 @@ function PracticeDrillsPage() {
             .map(mapPriorityToTagDrill)
             .filter((d): d is TagDrill => d != null),
         )
+        setContinueExpanded(false)
         setTagsExpanded(false)
       } catch {
         if (!cancelled) {
@@ -116,46 +125,80 @@ function PracticeDrillsPage() {
   }, [analyticsApi])
 
   const filteredContinue = continueDrills.filter((drill) => {
-    if (continueFilter === "all") return true
-    return continueFilter === "lr" ? drill.section === "LR" : drill.section === "RC"
+    if (sectionFilter === "all") return true
+    return sectionFilter === "lr" ? drill.section === "LR" : drill.section === "RC"
   })
+
   const filteredTags = useMemo(() => {
     return tagDrills.filter((drill) => {
       if (sectionFilter === "all") return true
-      return sectionFilter === "lr" ? drill.sectionTone === "lr" : drill.sectionTone === "rc"
+      return sectionFilter === "lr" ? drill.section === "LR" : drill.section === "RC"
     })
   }, [sectionFilter, tagDrills])
 
+  const visibleContinueCount = visibleTagDrillCount(filteredContinue.length, continueExpanded)
+  const visibleContinue = filteredContinue.slice(0, visibleContinueCount)
+  const canShowMoreContinue =
+    !continueExpanded && filteredContinue.length > visibleTagDrillCount(filteredContinue.length, false)
+
   const visibleTagCount = visibleTagDrillCount(filteredTags.length, tagsExpanded)
   const visibleTags = filteredTags.slice(0, visibleTagCount)
-  const canToggleTags = filteredTags.length > visibleTagDrillCount(filteredTags.length, false)
+  const canShowMoreTags =
+    !tagsExpanded && filteredTags.length > visibleTagDrillCount(filteredTags.length, false)
 
   useEffect(() => {
+    setContinueExpanded(false)
     setTagsExpanded(false)
   }, [sectionFilter])
 
+  const starterVisible =
+    sectionFilter === "all" ? (["lr", "rc"] as const) : sectionFilter === "lr" ? (["lr"] as const) : (["rc"] as const)
+
   return (
-    <StudentMain className="drills-page" contentClassName="flex flex-col gap-[24px]">
-      <section className="flex flex-col gap-[16px] rounded-[24px] border border-[#dfe1e7] bg-white p-[24px]">
-        <div className="flex items-center gap-[8px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1]">
+    <StudentMain className="drills-page" contentClassName="flex flex-col gap-[25px]">
+      <div className="flex flex-wrap items-center justify-between gap-[12px]">
+        <div className="flex flex-wrap items-center gap-[8px]">
           <button
             type="button"
-            className="inline-flex items-center gap-[8px] hover:underline"
-            onClick={() => navigate("/app/analytics/drills")}
+            onClick={() => setSectionFilter("all")}
+            className={drillFilterPillClass(sectionFilter === "all")}
           >
-            Drills History
-            <ExternalLink className="size-[20px]" />
+            All
           </button>
-          <span className="mx-1 h-[14px] w-px bg-[#dfe1e7]" />
-          <span>In Process</span>
-          <span className="inline-flex size-[20px] items-center justify-center rounded-[12px] bg-[#eceff3] text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-[#0d47a1]">
-            {continueDrills.length}
-          </span>
+          <button
+            type="button"
+            onClick={() => setSectionFilter("lr")}
+            className={drillFilterPillClass(sectionFilter === "lr")}
+          >
+            Logical Reasoning
+          </button>
+          <button
+            type="button"
+            onClick={() => setSectionFilter("rc")}
+            className={drillFilterPillClass(sectionFilter === "rc")}
+          >
+            Reading Comprehension
+          </button>
         </div>
+        <button
+          type="button"
+          className="inline-flex h-[32px] items-center gap-[8px] pr-[16px] text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-[#0d47a1] hover:underline"
+          onClick={() => navigate("/app/analytics/drills")}
+        >
+          Drills Insight
+          <ExternalLink className="size-[16px]" aria-hidden />
+        </button>
+      </div>
 
+      <section className="rounded-[20px] border border-[#dfe1e7] bg-white p-[24px]">
+        <h2 className="mb-[24px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#041a44]">
+          Start A New Drill
+        </h2>
         <PracticeLrRcStarterCards
-          lrButtonLabel="New Drill"
-          rcButtonLabel="Start Drill"
+          layout="stacked"
+          visibleSections={[...starterVisible]}
+          lrButtonLabel="Start LR Drill"
+          rcButtonLabel="Start RC Drill"
           lrSubtitle="Master argument analysis and critical thinking skills"
           rcSubtitle="Improve passage analysis and comprehension strategies"
           onStartLr={() => navigate("/app/practice/drills/lr/new")}
@@ -163,91 +206,56 @@ function PracticeDrillsPage() {
         />
       </section>
 
-      <section className="rounded-[24px] border border-[#dfe1e7] bg-white p-[24px]">
-        <div className="mb-[24px] flex flex-wrap items-center justify-between gap-[12px]">
-          <h2 className="text-[24px] font-bold leading-[1.3] text-[#062357]">Continue Drills</h2>
-          <div className="flex flex-wrap items-center gap-[8px]">
-            <button
-              type="button"
-              onClick={() => setContinueFilter("all")}
-              className={drillFilterPillClass(continueFilter === "all")}
-            >
-              All Drills
-            </button>
-            <button
-              type="button"
-              onClick={() => setContinueFilter("lr")}
-              className={drillFilterPillClass(continueFilter === "lr")}
-            >
-              Logical Reasoning
-            </button>
-            <button
-              type="button"
-              onClick={() => setContinueFilter("rc")}
-              className={drillFilterPillClass(continueFilter === "rc")}
-            >
-              Reading Comprehension
-            </button>
-          </div>
+      <section className="flex flex-col gap-[24px] rounded-[20px] border border-[#dfe1e7] bg-white p-[24px]">
+        <div className="flex flex-wrap items-center justify-between gap-[12px]">
+          <h2 className="text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#041a44]">
+            Pick Up Where You Left Off
+          </h2>
+          <p className="text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[#666d80]">
+            {padInProcessCount(filteredContinue.length)}
+          </p>
         </div>
+
         {loading ? (
           <StudentPageLoader label="Loading drills…" />
         ) : filteredContinue.length === 0 ? (
-          <p className="text-[14px] text-[#666d80]">No drills in progress. Start a new LR or RC drill above.</p>
+          <p className="text-[14px] text-[#666d80]">
+            No drills in progress. Start a new LR or RC drill above.
+          </p>
         ) : (
-          <div className="flex flex-col gap-[24px]">
-            {filteredContinue.map((drill) => (
-              <ContinueDrillCard
-                key={drill.id}
-                drill={continueDrillToCardDrill(drill)}
-                onContinue={() => navigate(drill.continuePath)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="flex flex-col">
+              {visibleContinue.map((drill) => (
+                <PracticeDrillContinueRow
+                  key={drill.id}
+                  section={drill.section}
+                  title={drill.title}
+                  answered={drill.answered}
+                  lastAttempt={drill.lastAttempt}
+                  progressPct={drill.progressPct}
+                  difficultyLabel={difficultyLabelFromContinue(drill.difficulty)}
+                  difficultyFilledBars={drill.difficultyBars}
+                  difficultyColor={drill.difficultyColor}
+                  onContinue={() => navigate(drill.continuePath)}
+                />
+              ))}
+            </div>
+            <PracticeListFooter
+              hasMore={canShowMoreContinue}
+              onShowMore={() => setContinueExpanded(true)}
+            />
+          </>
         )}
       </section>
 
-      <section className="rounded-[24px] border border-[#dfe1e7] bg-white p-[24px]">
-        <div className="mb-[24px] flex flex-wrap items-center justify-between gap-[12px]">
-          <h2 className="text-[24px] font-bold leading-[1.3] text-[#062357]">Drills by Tags</h2>
-          <div className="flex flex-wrap items-center gap-[8px]">
-            <button
-              type="button"
-              onClick={() => setSectionFilter("all")}
-              className={drillFilterPillClass(sectionFilter === "all")}
-            >
-              All Drills
-            </button>
-            <button
-              type="button"
-              onClick={() => setSectionFilter("lr")}
-              className={drillFilterPillClass(sectionFilter === "lr")}
-            >
-              Logical Reasoning
-            </button>
-            <button
-              type="button"
-              onClick={() => setSectionFilter("rc")}
-              className={drillFilterPillClass(sectionFilter === "rc")}
-            >
-              Reading Comprehension
-            </button>
-          </div>
-        </div>
-
-        <div className="mb-[24px] flex flex-wrap items-center justify-between gap-[12px]">
-          <p className="inline-flex items-center gap-[8px] text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1]">
-            <LineChart className="size-[24px] shrink-0" />
-            Priority ratings are assigned to tags based on your past performance and potential impact on your score.
+      <section className="flex flex-col gap-[24px] rounded-[20px] border border-[#dfe1e7] bg-white p-[24px]">
+        <div className="flex flex-col gap-[8px]">
+          <h2 className="text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#041a44]">
+            Drills by Types
+          </h2>
+          <p className="text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[#666d80]">
+            Ranked by your past performance and score impact
           </p>
-          <button
-            type="button"
-            className="inline-flex h-[32px] items-center gap-[8px] text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-[#0d47a1] hover:underline"
-            onClick={() => navigate("/app/analytics")}
-          >
-            View all priorities
-            <ExternalLink className="size-[16px]" />
-          </button>
         </div>
 
         {loading ? (
@@ -255,59 +263,22 @@ function PracticeDrillsPage() {
         ) : filteredTags.length === 0 ? (
           <p className="text-[14px] text-[#666d80]">Answer more questions to unlock priority tag drills.</p>
         ) : (
-          <div className="flex flex-col gap-[24px]">
-            <div className="grid grid-cols-1 gap-[24px] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          <>
+            <div className="flex flex-col gap-[16px]">
               {visibleTags.map((drill) => (
-                <article
+                <PracticeDrillTypeRow
                   key={drill.id}
-                  className="flex min-w-0 flex-col overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
-                >
-                  <div className="flex h-[48px] items-center justify-center bg-[#f6f8fa] text-[18px] font-bold leading-[1.35] text-[#062357]">
-                    {drill.sectionLabel}
-                  </div>
-                  <div className="flex flex-1 flex-col gap-[24px] p-[24px]">
-                    <div className="flex items-start justify-between gap-[12px]">
-                      <h3 className="min-w-0 flex-1 text-[18px] font-bold leading-[1.35] text-[#062357]">{drill.title}</h3>
-                      <DrillDifficultyStatus
-                        label={drill.difficultyLabel}
-                        filledBars={drill.filledBars}
-                        color={drill.difficultyColor}
-                        layout="stacked"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className="mt-auto inline-flex h-[40px] w-full items-center justify-center rounded-[16px] border border-[#0b4e6e] bg-[#0d47a1] text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
-                      onClick={() => navigate(drill.configPath)}
-                    >
-                      Start Drill
-                    </button>
-                  </div>
-                </article>
+                  section={drill.section}
+                  title={drill.title}
+                  difficultyLabel={drill.difficultyLabel}
+                  difficultyFilledBars={drill.filledBars}
+                  difficultyColor={drill.difficultyColor}
+                  onStart={() => navigate(drill.configPath)}
+                />
               ))}
             </div>
-            {canToggleTags ? (
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  className="inline-flex h-[40px] items-center gap-[8px] rounded-[16px] border border-[#dfe1e7] bg-white px-[16px] text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1] hover:bg-[#f6f8fa]"
-                  onClick={() => setTagsExpanded((current) => !current)}
-                >
-                  {tagsExpanded ? (
-                    <>
-                      Show less
-                      <ChevronUp className="size-[16px]" />
-                    </>
-                  ) : (
-                    <>
-                      Show more ({filteredTags.length - visibleTagCount} more)
-                      <ChevronDown className="size-[16px]" />
-                    </>
-                  )}
-                </button>
-              </div>
-            ) : null}
-          </div>
+            <PracticeListFooter hasMore={canShowMoreTags} onShowMore={() => setTagsExpanded(true)} />
+          </>
         )}
       </section>
     </StudentMain>

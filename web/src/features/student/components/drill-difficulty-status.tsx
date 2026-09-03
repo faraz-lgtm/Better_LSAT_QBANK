@@ -3,6 +3,8 @@ type DrillDifficultyStatusProps = {
   filledBars: number
   color: string
   layout?: "inline" | "stacked"
+  /** Figma “Drills by Types” uses muted primary-0 chip; continue rows use white. */
+  surface?: "white" | "muted"
 }
 
 function DifficultyBars({ filledBars, color }: { filledBars: number; color: string }) {
@@ -24,10 +26,13 @@ function DrillDifficultyStatus({
   filledBars,
   color,
   layout = "inline",
+  surface = "white",
 }: DrillDifficultyStatusProps) {
+  const surfaceClass = surface === "muted" ? "bg-[#f3f7ff]" : "bg-white"
+
   if (layout === "stacked") {
     return (
-      <div className="shrink-0 rounded-[10px] bg-[#f3f7ff] px-[10px] py-[8px]">
+      <div className={`shrink-0 rounded-[10px] px-[10px] py-[8px] ${surfaceClass}`}>
         <p className="text-[12px] font-semibold leading-[1.5] tracking-[0.24px]" style={{ color }}>
           {label}
         </p>
@@ -39,7 +44,9 @@ function DrillDifficultyStatus({
   }
 
   return (
-    <div className="flex h-[40px] shrink-0 items-center gap-[10px] rounded-[10px] bg-white px-[10px]">
+    <div
+      className={`flex h-[40px] shrink-0 items-center gap-[10px] rounded-[10px] px-[10px] ${surfaceClass}`}
+    >
       <DifficultyBars filledBars={filledBars} color={color} />
       <span className="text-[12px] font-semibold leading-[1.5] tracking-[0.24px]" style={{ color }}>
         {label}
