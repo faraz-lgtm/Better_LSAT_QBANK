@@ -254,22 +254,57 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       }[]) ?? []
     },
 
+    async getUserGoalScore(userId: string): Promise<number | null> {
+      const { data, error } = await client
+        .from('student_study_preferences')
+        .select('goal_score')
+        .eq('user_id', userId)
+        .maybeSingle()
+      if (error) throw error
+      const score = (data as { goal_score: number | null } | null)?.goal_score
+      return typeof score === 'number' && Number.isFinite(score) ? score : null
+    },
+
+    async listExcludedSessionIds(userId: string): Promise<Set<string>> {
+      const { data, error } = await client
+        .from('practice_sessions')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('excluded', true)
+      if (error) throw error
+      return new Set(((data as { id: string }[]) ?? []).map((row) => row.id))
+    },
+
     async listAnswerEventsWithTypes(userId: string) {
       const { data, error } = await client
         .from('answer_events')
-        .select('question_type_id, is_correct, question_id')
+        .select('question_type_id, is_correct, question_id, session_kind, practice_session_id')
         .eq('user_id', userId)
         .not('question_type_id', 'is', null)
       if (error) throw error
-      const rows = (data as { question_type_id: string; is_correct: boolean; question_id: string }[]) ?? []
+      const rows = (data as {
+        question_type_id: string
+        is_correct: boolean
+        question_id: string
+        session_kind: PracticeSessionKind
+        practice_session_id: string
+      }[]) ?? []
       if (rows.length === 0) return []
-      const visibility = await this.resolveQuestionVisibility(rows.map((row) => row.question_id))
+      const [visibility, excludedIds] = await Promise.all([
+        this.resolveQuestionVisibility(rows.map((row) => row.question_id)),
+        this.listExcludedSessionIds(userId),
+      ])
       return rows
-        .filter((row) => visibility.get(row.question_id) === true)
-        .map(({ question_type_id, is_correct, question_id }) => ({
+        .filter(
+          (row) =>
+            visibility.get(row.question_id) === true &&
+            !excludedIds.has(row.practice_session_id),
+        )
+        .map(({ question_type_id, is_correct, question_id, session_kind }) => ({
           question_type_id,
           is_correct,
           question_id,
+          session_kind,
         }))
     },
 
@@ -312,15 +347,27 @@ export function createAnalyticsRepository(client: SupabaseClient) {
     async listAnswerEventsWithTypeDifficulty(userId: string) {
       const { data, error } = await client
         .from('answer_events')
-        .select('question_type_id, difficulty, question_id')
+        .select('question_type_id, difficulty, question_id, practice_session_id')
         .eq('user_id', userId)
         .not('question_type_id', 'is', null)
       if (error) throw error
-      const rows = (data as { question_type_id: string; difficulty: number | null; question_id: string }[]) ?? []
+      const rows = (data as {
+        question_type_id: string
+        difficulty: number | null
+        question_id: string
+        practice_session_id: string
+      }[]) ?? []
       if (rows.length === 0) return []
-      const visibility = await this.resolveQuestionVisibility(rows.map((row) => row.question_id))
+      const [visibility, excludedIds] = await Promise.all([
+        this.resolveQuestionVisibility(rows.map((row) => row.question_id)),
+        this.listExcludedSessionIds(userId),
+      ])
       return rows
-        .filter((row) => visibility.get(row.question_id) === true)
+        .filter(
+          (row) =>
+            visibility.get(row.question_id) === true &&
+            !excludedIds.has(row.practice_session_id),
+        )
         .map(({ question_type_id, difficulty }) => ({ question_type_id, difficulty }))
     },
 

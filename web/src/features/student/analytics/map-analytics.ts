@@ -208,8 +208,11 @@ export function mapPrioritiesToSections(priorities: PriorityRow[]): AnalyticsSec
       averagePerTest: p.averagePerTest ?? 0,
       difficulty: numericToDifficulty(p.difficulty),
       accuracyPct: p.accuracyPct,
-      goalPct: p.goalAccuracy ?? 86,
+      goalPct: p.goalAccuracy,
       reviewCount: p.reviewCount,
+      unlocked: p.unlocked !== false && p.attemptCount >= 3,
+      extraCorrectNeededPerTest: p.extraCorrectNeededPerTest,
+      priorityTier: p.priorityTier ?? null,
     })
     bySection.set(p.sectionType, rows)
   }

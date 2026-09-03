@@ -66,9 +66,12 @@ export type QuestionTypeRow = {
   title: string
   averagePerTest: number
   difficulty: Difficulty
-  accuracyPct: number
-  goalPct: number
+  accuracyPct: number | null
+  goalPct: number | null
   reviewCount: number
+  unlocked: boolean
+  extraCorrectNeededPerTest: number | null
+  priorityTier: "highest" | "high" | "medium" | "low" | null
 }
 
 export type SectionId = "LR" | "RC"
@@ -98,6 +101,9 @@ export const mockAnalyticsSections: AnalyticsSection[] = [
         accuracyPct: 50,
         goalPct: 86,
         reviewCount: 549,
+        unlocked: true,
+        extraCorrectNeededPerTest: 3.7,
+        priorityTier: "highest",
       },
       {
         id: "lr-flaw",
@@ -107,6 +113,9 @@ export const mockAnalyticsSections: AnalyticsSection[] = [
         accuracyPct: 50,
         goalPct: 86,
         reviewCount: 549,
+        unlocked: true,
+        extraCorrectNeededPerTest: 3.5,
+        priorityTier: "high",
       },
       {
         id: "lr-link",
@@ -116,6 +125,9 @@ export const mockAnalyticsSections: AnalyticsSection[] = [
         accuracyPct: 50,
         goalPct: 86,
         reviewCount: 549,
+        unlocked: true,
+        extraCorrectNeededPerTest: 3.0,
+        priorityTier: "medium",
       },
       {
         id: "lr-phenomenon",
@@ -125,6 +137,9 @@ export const mockAnalyticsSections: AnalyticsSection[] = [
         accuracyPct: 50,
         goalPct: 86,
         reviewCount: 549,
+        unlocked: true,
+        extraCorrectNeededPerTest: 1.4,
+        priorityTier: "low",
       },
     ],
   },
@@ -143,6 +158,9 @@ export const mockAnalyticsSections: AnalyticsSection[] = [
         accuracyPct: 50,
         goalPct: 86,
         reviewCount: 549,
+        unlocked: true,
+        extraCorrectNeededPerTest: 3.7,
+        priorityTier: "highest",
       },
       {
         id: "rc-comparative",
@@ -152,6 +170,9 @@ export const mockAnalyticsSections: AnalyticsSection[] = [
         accuracyPct: 50,
         goalPct: 86,
         reviewCount: 549,
+        unlocked: true,
+        extraCorrectNeededPerTest: 3.5,
+        priorityTier: "high",
       },
       {
         id: "rc-problem",
@@ -161,6 +182,9 @@ export const mockAnalyticsSections: AnalyticsSection[] = [
         accuracyPct: 50,
         goalPct: 86,
         reviewCount: 549,
+        unlocked: true,
+        extraCorrectNeededPerTest: 3.0,
+        priorityTier: "medium",
       },
       {
         id: "rc-implied",
@@ -170,6 +194,9 @@ export const mockAnalyticsSections: AnalyticsSection[] = [
         accuracyPct: 50,
         goalPct: 86,
         reviewCount: 549,
+        unlocked: true,
+        extraCorrectNeededPerTest: 1.4,
+        priorityTier: "low",
       },
     ],
   },

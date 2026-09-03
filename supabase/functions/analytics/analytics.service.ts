@@ -6,6 +6,14 @@ import type {
 } from './analytics.repository.ts'
 import type { PracticeSessionKind } from '../practice/practice.repository.ts'
 import { isStudentVisiblePrepTest } from '../_shared/prep-test-visibility.ts'
+import {
+  adjustGoalAccuracyByDifficulty,
+  assignRelativePriorityTiers,
+  extraCorrectNeededPerTest,
+  goalAccuracyFromScore,
+  legacyPriorityLevel,
+  MIN_ATTEMPTS_TO_UNLOCK_PRIORITY,
+} from './goal-accuracy.ts'
 
 const PREPTEST_EXPLANATION_CATALOG_LIMIT = 8000
 
@@ -165,13 +173,6 @@ function lrRcMissesFromAnswers(
     }
   }
   return { lrMiss, rcMiss, hadLr, hadRc }
-}
-
-function priorityLevel(gap: number, attempts: number): 'high' | 'medium' | 'low' {
-  if (attempts < 3) return 'low'
-  if (gap >= 15) return 'high'
-  if (gap >= 8) return 'medium'
-  return 'low'
 }
 
 function difficultyLabel(n: number | null): 'Easiest' | 'Easy' | 'Medium' | 'Hard' | 'Hardest' {
@@ -536,12 +537,29 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
       return points
     },
 
-    async getPriorities(userId: string) {
-      const events = await deps.repository.listAnswerEventsWithTypes(userId)
-      const diffEvents = await deps.repository.listAnswerEventsWithTypeDifficulty(userId)
+    async getPriorities(
+      userId: string,
+      options?: { includeKinds?: PracticeSessionKind[] },
+    ) {
+      const includeKinds = options?.includeKinds
+      const includeKindSet =
+        includeKinds && includeKinds.length > 0 ? new Set(includeKinds) : null
+
+      const [events, diffEvents, userGoalScore] = await Promise.all([
+        deps.repository.listAnswerEventsWithTypes(userId),
+        deps.repository.listAnswerEventsWithTypeDifficulty(userId),
+        deps.repository.getUserGoalScore(userId),
+      ])
+
+      // Option B: goal accuracy from onboarding target score (global until peer data exists).
+      // Fall back to static question_types.goal_accuracy only when the user has no goal_score.
+      const scoreDerivedGoal =
+        userGoalScore != null ? goalAccuracyFromScore(userGoalScore) : null
+
       const byType = new Map<string, { correct: number; total: number; questionIds: Set<string> }>()
       const difficultyByType = new Map<string, number[]>()
       for (const e of events) {
+        if (includeKindSet && !includeKindSet.has(e.session_kind)) continue
         const cur = byType.get(e.question_type_id) ?? {
           correct: 0,
           total: 0,
@@ -562,18 +580,48 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
       const types = await deps.repository.listQuestionTypesByIds(ids)
       const typeById = new Map(types.map((t) => [t.id, t]))
 
-      const items = [...byType.entries()].map(([questionTypeId, { correct, total, questionIds }]) => {
+      const draft = [...byType.entries()].map(([questionTypeId, { correct, total, questionIds }]) => {
         const meta = typeById.get(questionTypeId)
-        const accuracyPct = total > 0 ? round1((100 * correct) / total) : 0
-        const goal = meta?.goal_accuracy != null ? Number(meta.goal_accuracy) : null
-        const gap = goal != null ? round1(goal - accuracyPct) : null
-        const pl = gap != null ? priorityLevel(gap, total) : priorityLevel(0, total)
+        const avgPerTest =
+          meta?.avg_per_test != null ? Number(meta.avg_per_test) : null
+        const unlocked = total >= MIN_ATTEMPTS_TO_UNLOCK_PRIORITY
+        // Guard divide-by-zero / no data: accuracy is null until there is at least one attempt.
+        const accuracyPct = total > 0 ? round1((100 * correct) / total) : null
+
         const diffs = difficultyByType.get(questionTypeId) ?? []
         const difficulty =
           diffs.length > 0 ? Math.round(diffs.reduce((a, b) => a + b, 0) / diffs.length) : null
-        const avgPerTest =
-          meta?.avg_per_test != null ? Number(meta.avg_per_test) : null
+
+        let goalAccuracy: number | null = null
+        if (unlocked) {
+          if (scoreDerivedGoal != null) {
+            goalAccuracy = adjustGoalAccuracyByDifficulty(scoreDerivedGoal, difficulty)
+          } else if (meta?.goal_accuracy != null) {
+            goalAccuracy = adjustGoalAccuracyByDifficulty(Number(meta.goal_accuracy), difficulty)
+          }
+        }
+
+        const gap =
+          unlocked && goalAccuracy != null && accuracyPct != null
+            ? round1(goalAccuracy - accuracyPct)
+            : null
+
+        const priorityScore =
+          gap != null && avgPerTest != null && avgPerTest > 0
+            ? round1(gap * avgPerTest)
+            : null
+
+        const rankable =
+          unlocked &&
+          priorityScore != null &&
+          avgPerTest != null &&
+          avgPerTest > 0
+
         const uniqueCount = questionIds.size > 0 ? questionIds.size : total
+        const extraCorrectNeeded = unlocked
+          ? extraCorrectNeededPerTest(gap, avgPerTest)
+          : null
+
         return {
           questionTypeId,
           name: meta?.name ?? 'Unknown type',
@@ -581,22 +629,42 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
           attemptCount: total,
           correctCount: correct,
           accuracyPct,
-          goalAccuracy: goal,
+          goalAccuracy,
           gap,
-          priorityLevel: pl,
+          priorityScore,
+          extraCorrectNeededPerTest: extraCorrectNeeded,
+          unlocked,
+          rankable,
           difficulty,
           averagePerTest: avgPerTest,
           reviewCount: uniqueCount,
+          goalScoreUsed: unlocked ? userGoalScore : null,
         }
       })
 
+      const withTiers = assignRelativePriorityTiers(draft)
+      const items = withTiers.map(({ rankable: _rankable, ...row }) => ({
+        ...row,
+        priorityTier: row.priorityTier,
+        // Legacy field for existing drill/dashboard UI (highest/high → high).
+        priorityLevel: legacyPriorityLevel(row.priorityTier),
+      }))
+
       items.sort((a, b) => {
-        const ga = a.gap ?? -999
-        const gb = b.gap ?? -999
+        const sa = a.priorityScore ?? Number.NEGATIVE_INFINITY
+        const sb = b.priorityScore ?? Number.NEGATIVE_INFINITY
+        if (sb !== sa) return sb - sa
+        const ga = a.gap ?? Number.NEGATIVE_INFINITY
+        const gb = b.gap ?? Number.NEGATIVE_INFINITY
         if (gb !== ga) return gb - ga
         return b.attemptCount - a.attemptCount
       })
-      return { priorities: items }
+
+      return {
+        priorities: items,
+        goalScore: userGoalScore,
+        goalAccuracyFromScore: scoreDerivedGoal,
+      }
     },
 
     async getSessions(

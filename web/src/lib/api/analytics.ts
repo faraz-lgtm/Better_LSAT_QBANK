@@ -31,19 +31,29 @@ export type TrajectoryPoint = {
   completedAt: string
 }
 
+export type PriorityTier = "highest" | "high" | "medium" | "low"
+
 export type PriorityRow = {
   questionTypeId: string
   name: string
   sectionType: "LR" | "RC" | "LG" | null
   attemptCount: number
   correctCount: number
-  accuracyPct: number
+  /** null when there are no attempts yet ("Not enough data"). */
+  accuracyPct: number | null
   goalAccuracy: number | null
   gap: number | null
+  /** Relative quartile tier; null when locked / not rankable. */
+  priorityTier: PriorityTier | null
+  /** Legacy high/medium/low (highest maps to high). */
   priorityLevel: "high" | "medium" | "low"
+  priorityScore: number | null
+  extraCorrectNeededPerTest: number | null
+  unlocked: boolean
   difficulty: number | null
   averagePerTest: number | null
   reviewCount: number
+  goalScoreUsed?: number | null
 }
 
 export type PrepTestSessionDetail = {
@@ -177,8 +187,15 @@ export function createAnalyticsApi(supabase: SupabaseClient) {
       return data?.points ?? []
     },
 
-    async getPriorities(): Promise<PriorityRow[]> {
-      const { data, error } = await invokeAnalyticsFn<{ priorities: PriorityRow[] }>("analytics-priorities", {})
+    async getPriorities(input?: {
+      includeKinds?: PracticeSessionKind[]
+    }): Promise<PriorityRow[]> {
+      const { data, error } = await invokeAnalyticsFn<{ priorities: PriorityRow[] }>(
+        "analytics-priorities",
+        {
+          includeKinds: input?.includeKinds,
+        },
+      )
       if (error) throw error
       return data?.priorities ?? []
     },

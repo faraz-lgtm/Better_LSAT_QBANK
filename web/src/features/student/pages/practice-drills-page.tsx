@@ -34,8 +34,8 @@ type TagDrill = {
   configPath: string
 }
 
-function priorityVisual(priority: PriorityRow["priorityLevel"]) {
-  if (priority === "high") {
+function priorityVisual(priority: PriorityRow["priorityLevel"] | PriorityRow["priorityTier"]) {
+  if (priority === "highest" || priority === "high") {
     return { label: "Hardest", filledBars: 5, color: "#df1c41" }
   }
   if (priority === "medium") {
@@ -46,7 +46,7 @@ function priorityVisual(priority: PriorityRow["priorityLevel"]) {
 
 function mapPriorityToTagDrill(row: PriorityRow): TagDrill | null {
   const section = row.sectionType === "LR" || row.sectionType === "RC" ? row.sectionType : "LR"
-  const visual = priorityVisual(row.priorityLevel)
+  const visual = priorityVisual(row.priorityTier ?? row.priorityLevel)
   const configPath =
     section === "LR"
       ? `/app/practice/drills/lr/new?questionTypeId=${encodeURIComponent(row.questionTypeId)}&tag=${encodeURIComponent(row.name)}`

@@ -108,23 +108,37 @@ function PrioritiesTab() {
             </div>
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                r.priorityLevel === "high"
+                r.priorityTier === "highest"
                   ? "bg-red-100 text-red-800"
-                  : r.priorityLevel === "medium"
-                    ? "bg-amber-100 text-amber-900"
-                    : "bg-[#e8ecf2] text-[#4b5565]"
+                  : r.priorityTier === "high" ||
+                      (r.priorityTier == null && r.priorityLevel === "high")
+                    ? "bg-orange-100 text-orange-800"
+                    : r.priorityTier === "medium" || r.priorityLevel === "medium"
+                      ? "bg-amber-100 text-amber-900"
+                      : "bg-[#e8ecf2] text-[#4b5565]"
               }`}
             >
-              {r.priorityLevel} priority
+              {!r.unlocked
+                ? "Keep practicing"
+                : `${r.priorityTier ?? r.priorityLevel} priority`}
             </span>
           </div>
           <div className="mt-3 flex flex-wrap gap-4 text-sm text-[#666d80]">
             <span>
-              Accuracy: <strong className="text-[#082c6b]">{r.accuracyPct}%</strong>
+              Accuracy:{" "}
+              <strong className="text-[#082c6b]">
+                {r.accuracyPct != null ? `${r.accuracyPct}%` : "Not enough data"}
+              </strong>
             </span>
-            {r.goalAccuracy != null ? (
+            {r.unlocked && r.goalAccuracy != null ? (
               <span>
                 Goal: <strong className="text-[#082c6b]">{r.goalAccuracy}%</strong>
+              </span>
+            ) : null}
+            {r.unlocked && r.extraCorrectNeededPerTest != null && r.extraCorrectNeededPerTest > 0 ? (
+              <span>
+                Need <strong className="text-[#082c6b]">+{r.extraCorrectNeededPerTest}</strong> correct /
+                test
               </span>
             ) : null}
             <span>
