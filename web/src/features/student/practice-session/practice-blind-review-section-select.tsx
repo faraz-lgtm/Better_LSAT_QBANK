@@ -17,12 +17,15 @@ type PracticeBlindReviewSectionSelectProps = {
   sections: BlindReviewSectionOption[]
   activeSectionSessionId: string | null
   onSelect: (sectionSessionId: string) => void
+  /** Figma `20596:145393` — full-width trigger inside the more panel */
+  fullWidth?: boolean
 }
 
 function PracticeBlindReviewSectionSelect({
   sections,
   activeSectionSessionId,
   onSelect,
+  fullWidth = false,
 }: PracticeBlindReviewSectionSelectProps) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -30,6 +33,9 @@ function PracticeBlindReviewSectionSelect({
   const activeSection =
     sections.find((s) => s.sectionSessionId === activeSectionSessionId) ?? sections[0] ?? null
   const activeLabel = activeSection?.label ?? "Section"
+  const triggerClass = fullWidth
+    ? "inline-flex h-12 w-full items-center justify-between gap-2 rounded-[12px] border border-[#dfe1e7] bg-white px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#041a44] transition-colors hover:bg-[#f6f8fa]"
+    : BLIND_REVIEW_SECTION_SELECT_TRIGGER_CLASS
 
   useEffect(() => {
     if (!open) return
@@ -51,17 +57,20 @@ function PracticeBlindReviewSectionSelect({
 
   if (sections.length === 0) {
     return (
-      <span className={cn(BLIND_REVIEW_SECTION_SELECT_TRIGGER_CLASS, "cursor-default")}>
+      <span className={cn(triggerClass, "cursor-default")}>
         {activeLabel}
       </span>
     )
   }
 
   return (
-    <div ref={containerRef} className="relative inline-flex min-w-[123px] shrink-0 flex-col">
+    <div
+      ref={containerRef}
+      className={cn("relative inline-flex shrink-0 flex-col", fullWidth ? "w-full min-w-0" : "min-w-[123px]")}
+    >
       <button
         type="button"
-        className={BLIND_REVIEW_SECTION_SELECT_TRIGGER_CLASS}
+        className={triggerClass}
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}

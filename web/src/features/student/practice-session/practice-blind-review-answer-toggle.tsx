@@ -74,10 +74,11 @@ function PracticeBlindReviewAnswerToggle({
   const actualIcon = showOutcomeIcons ? actualOutcome : null
   const blindReviewIcon = showOutcomeIcons ? blindReviewOutcome : null
 
+  /** Figma `20596:144371` — Actual / Blind Review both use primary blue chrome */
   if (!reviewChrome) {
     return (
       <div
-        className="inline-flex h-10 shrink-0 items-center gap-2 rounded-[16px] bg-white p-1"
+        className="inline-flex h-8 shrink-0 items-center gap-2 rounded-[16px]"
         role="tablist"
         aria-label="Answer view"
       >
@@ -86,10 +87,8 @@ function PracticeBlindReviewAnswerToggle({
           role="tab"
           aria-selected={value === "actual"}
           className={cn(
-            "inline-flex h-8 items-center justify-center rounded-[16px] px-4 text-xs font-medium tracking-[0.24px] transition-colors",
-            value === "actual"
-              ? "bg-[#0d47a1] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
-              : "text-[#0d47a1] hover:bg-[#edf3ff]",
+            "inline-flex h-8 items-center justify-center rounded-[10px] border px-4 text-xs font-semibold tracking-[0.24px] transition-colors",
+            reviewTabClass(value === "actual"),
           )}
           onClick={() => onChange("actual")}
         >
@@ -100,12 +99,13 @@ function PracticeBlindReviewAnswerToggle({
           role="tab"
           aria-selected={value === "blind_review"}
           className={cn(
-            "inline-flex h-8 items-center justify-center rounded-[16px] border px-4 text-xs font-semibold tracking-[0.24px] transition-colors",
-            value === "blind_review"
-              ? "border-[#ff6f00] bg-[#ff6f00] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
-              : "border-transparent text-[#ff6f00] hover:bg-[#fff3ea]",
+            "inline-flex h-8 items-center justify-center rounded-[10px] border px-4 text-xs font-semibold tracking-[0.24px] transition-colors",
+            reviewTabClass(value === "blind_review", !blindReviewEnabled),
           )}
-          onClick={() => onChange("blind_review")}
+          disabled={!blindReviewEnabled}
+          onClick={() => {
+            if (blindReviewEnabled) onChange("blind_review")
+          }}
         >
           Blind Review
         </button>
@@ -146,21 +146,22 @@ function PracticeBlindReviewAnswerToggle({
         Actual
       </button>
 
-      {blindReviewEnabled ? (
-        <button
-          type="button"
-          role="tab"
-          aria-selected={value === "blind_review"}
-          className={cn(
-            "inline-flex h-8 items-center justify-center gap-2 rounded-[12px] border px-4 text-xs font-semibold tracking-[0.24px] transition-colors",
-            reviewTabClass(value === "blind_review"),
-          )}
-          onClick={() => onChange("blind_review")}
-        >
-          <OutcomeIcon outcome={blindReviewIcon} />
-          Blind Review
-        </button>
-      ) : null}
+      <button
+        type="button"
+        role="tab"
+        aria-selected={value === "blind_review"}
+        disabled={!blindReviewEnabled}
+        className={cn(
+          "inline-flex h-8 items-center justify-center gap-2 rounded-[12px] border px-4 text-xs font-semibold tracking-[0.24px] transition-colors",
+          reviewTabClass(value === "blind_review", !blindReviewEnabled),
+        )}
+        onClick={() => {
+          if (blindReviewEnabled) onChange("blind_review")
+        }}
+      >
+        <OutcomeIcon outcome={blindReviewIcon} />
+        Blind Review
+      </button>
     </div>
   )
 }

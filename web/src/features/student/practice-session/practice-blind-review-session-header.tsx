@@ -1,16 +1,11 @@
-import { EyeOff, X } from "lucide-react"
+import type { ReactNode } from "react"
+import { X } from "lucide-react"
 
 import {
   PracticeBlindReviewSectionSelect,
   type BlindReviewSectionOption,
 } from "@/features/student/practice-session/practice-blind-review-section-select"
 import { ReviewIdeaIcon } from "@/features/student/practice-session/review-idea-icon"
-import {
-  BLIND_REVIEW_HEADER_CLASS,
-  BLIND_REVIEW_HEADER_EXIT_BUTTON_CLASS,
-  BLIND_REVIEW_HEADER_NOTES_BUTTON_ACTIVE_CLASS,
-  BLIND_REVIEW_HEADER_NOTES_BUTTON_CLASS,
-} from "@/features/student/practice-session/practice-session-blind-review-styles"
 import { cn } from "@/lib/utils"
 
 export type PracticeReviewSidePanel = "explanation" | "insights" | "notes" | null
@@ -42,6 +37,8 @@ type PracticeBlindReviewSessionHeaderProps = {
    * Pass a subset (e.g. `["insights"]`) for diagnostic.
    */
   reviewSideActions?: Array<"explanation" | "insights" | "notes">
+  /** Figma `20596:144371` — more-menu trigger (dots) for Blind Review exam chrome */
+  moreMenu?: ReactNode
 }
 
 function reviewHeaderActionButtonClass(active: boolean) {
@@ -59,15 +56,12 @@ function PracticeBlindReviewSessionHeader({
   activeSectionSessionId,
   onSelectSection,
   questionRef,
-  actualScoreLabel,
   notesOpen,
   notesEnabled,
   onToggleNotes,
   onExitSection,
   exiting = false,
   showSectionSelect = true,
-  exitButtonLabel = "Exit Section",
-  exitingLabel = "Exiting…",
   chrome = "blind-review",
   sidePanel = null,
   onSidePanelChange,
@@ -75,6 +69,7 @@ function PracticeBlindReviewSessionHeader({
   onFindQueryChange,
   questionProgressLabel = null,
   reviewSideActions = ["explanation", "insights", "notes"],
+  moreMenu = null,
 }: PracticeBlindReviewSessionHeaderProps) {
   const isReviewChrome = chrome === "review"
   const showExplanationAction = reviewSideActions.includes("explanation")
@@ -87,184 +82,148 @@ function PracticeBlindReviewSessionHeader({
     onSidePanelChange(sidePanel === panel ? null : panel)
   }
 
-  if (isReviewChrome) {
+  /** Figma `20596:144371` / `20596:145049` — Blind Review exam header */
+  if (!isReviewChrome) {
     return (
-      <header className="practice-session-header absolute inset-x-0 top-0 z-10 flex h-[88px] flex-col bg-white">
+      <header className="practice-session-header absolute inset-x-0 top-0 z-10 flex h-[100px] flex-col bg-white">
         <div className="flex h-[84px] shrink-0 items-center justify-between gap-6 px-10 py-6">
           <div className="practice-session-scroll-hidden flex min-w-0 flex-1 items-center gap-6 overflow-x-auto">
             <button
               type="button"
               className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] text-[#0d0d12] transition hover:bg-[#f6f8fa]"
-              aria-label="Exit review"
+              aria-label="Exit blind review"
               onClick={onExitSection}
               disabled={exiting}
             >
               <X className="size-6" strokeWidth={2} aria-hidden />
             </button>
-            <p className="m-0 shrink-0 text-2xl font-bold leading-[1.3] text-[#062357]">
+            <p className="m-0 shrink-0 text-2xl font-bold leading-[1.3] text-[#041a44]">
               {prepTestLabel}
             </p>
-            <span className="shrink-0 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[#666d80]">
-              {questionRef}
-            </span>
-            {showSectionSelect ? (
-              <PracticeBlindReviewSectionSelect
-                sections={sectionOptions}
-                activeSectionSessionId={activeSectionSessionId}
-                onSelect={onSelectSection}
-              />
-            ) : null}
             <input
               type="search"
               value={findQuery}
               onChange={(event) => onFindQueryChange?.(event.target.value)}
               placeholder="Find Text, Type Here"
-              className="h-10 w-[262px] shrink-0 rounded-[12px] border border-[#dfe1e7] bg-white px-4 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#062357] outline-none placeholder:text-[#818898] focus:border-[#0d47a1] focus:ring-2 focus:ring-[#0d47a1]/10"
+              className="h-[52px] w-[262px] shrink-0 rounded-[12px] border border-[#dfe1e7] bg-white px-4 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#062357] outline-none placeholder:text-[#818898] focus:border-[#0d47a1] focus:ring-2 focus:ring-[#0d47a1]/10"
             />
           </div>
 
-          <div className="flex shrink-0 items-center gap-6">
+          <div className="flex h-[52px] shrink-0 items-center gap-2.5">
             {questionProgressLabel ? (
               <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#666d80]">
                 {questionProgressLabel}
               </span>
             ) : null}
-            {showAnySideAction ? (
-              <>
-                {showExplanationAction ? (
-                  <button
-                    type="button"
-                    className={reviewHeaderActionButtonClass(sidePanel === "explanation")}
-                    aria-pressed={sidePanel === "explanation"}
-                    onClick={() => toggleSidePanel("explanation")}
-                  >
-                    <ReviewIdeaIcon className="size-5 shrink-0" />
-                    <span>Video Explanation</span>
-                  </button>
-                ) : null}
-                {showInsightsAction ? (
-                  <button
-                    type="button"
-                    className={reviewHeaderActionButtonClass(sidePanel === "insights")}
-                    aria-pressed={sidePanel === "insights"}
-                    onClick={() => toggleSidePanel("insights")}
-                  >
-                    <ReviewInsightsIcon className="size-5 shrink-0" />
-                    <span>Insights</span>
-                  </button>
-                ) : null}
-                {showNotesAction ? (
-                  <button
-                    type="button"
-                    className={reviewHeaderActionButtonClass(sidePanel === "notes")}
-                    aria-pressed={sidePanel === "notes"}
-                    onClick={() => toggleSidePanel("notes")}
-                  >
-                    <BlindReviewNotesIcon className="size-5 shrink-0" />
-                    <span>Notes</span>
-                  </button>
-                ) : null}
-              </>
-            ) : null}
+            <button
+              type="button"
+              onClick={onToggleNotes}
+              disabled={!notesEnabled}
+              className={cn(
+                "box-border inline-flex h-[52px] shrink-0 items-center gap-2 rounded-[16px] border border-solid px-4 py-2 text-base font-medium leading-normal tracking-[0.32px] transition-colors disabled:cursor-not-allowed disabled:opacity-45",
+                notesOpen && notesEnabled
+                  ? "border-[#0b4e6e] bg-[#0d47a1] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
+                  : "border-[#dfe1e7] bg-white text-[#666d80] hover:bg-[#f6f8fa] hover:text-[#062357]",
+              )}
+              aria-pressed={notesOpen && notesEnabled}
+            >
+              <BlindReviewNotesIcon className="size-5 shrink-0" />
+              <span>Notes</span>
+            </button>
+            {moreMenu}
           </div>
         </div>
-        <div className="relative h-1 shrink-0 bg-[#dfe1e7]">
-          <div className="absolute inset-y-0 left-10 w-[176px] rounded-[5px] bg-[#0d47a1]" />
+        <div className="relative mx-10 h-1 shrink-0 rounded-[5px] bg-[#eceff3]">
+          <div className="absolute inset-y-0 left-0 w-[176px] rounded-[5px] bg-[#0d47a1]" />
         </div>
       </header>
     )
   }
 
   return (
-    <header className={BLIND_REVIEW_HEADER_CLASS}>
-      <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-4 md:gap-6">
-        <div className="flex min-w-0 flex-col gap-2.5">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <p className="shrink-0 text-xl font-bold leading-[1.35] text-[#062357]">{prepTestLabel}</p>
-            {showSectionSelect ? (
-              <PracticeBlindReviewSectionSelect
-                sections={sectionOptions}
-                activeSectionSessionId={activeSectionSessionId}
-                onSelect={onSelectSection}
-              />
-            ) : null}
-          </div>
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            {isReviewChrome ? (
-              <span className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-[#fff3ea] px-4 text-xs font-medium tracking-[0.24px] text-[#ff6f00]">
-                <ReviewBadgeIcon className="size-3 shrink-0" />
-                Review
-              </span>
-            ) : (
-              <>
-                <span className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-[#fff3ea] px-4 text-xs font-medium tracking-[0.24px] text-[#ff6f00]">
-                  <EyeOff className="size-3 shrink-0" aria-hidden />
-                  Blind Review
-                </span>
-                <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-[#fff6e0] px-4 text-xs font-medium tracking-[0.24px] text-[#956321]">
-                  {actualScoreLabel}
-                </span>
-              </>
-            )}
-            <span className="min-w-0 truncate text-xs font-medium tracking-[0.24px] text-[#666d80]">
-              {questionRef}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-4 md:gap-6">
+    <header className="practice-session-header absolute inset-x-0 top-0 z-10 flex h-[88px] flex-col bg-white">
+      <div className="flex h-[84px] shrink-0 items-center justify-between gap-6 px-10 py-6">
+        <div className="practice-session-scroll-hidden flex min-w-0 flex-1 items-center gap-6 overflow-x-auto">
           <button
             type="button"
-            onClick={onToggleNotes}
-            disabled={!notesEnabled}
-            className={cn(
-              BLIND_REVIEW_HEADER_NOTES_BUTTON_CLASS,
-              notesOpen && notesEnabled && BLIND_REVIEW_HEADER_NOTES_BUTTON_ACTIVE_CLASS,
-            )}
-            aria-pressed={notesOpen && notesEnabled}
-          >
-            <BlindReviewNotesIcon className="size-5 shrink-0" />
-            <span className="hidden sm:inline">Notes</span>
-          </button>
-
-          <button
-            type="button"
-            className={BLIND_REVIEW_HEADER_EXIT_BUTTON_CLASS}
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] text-[#0d0d12] transition hover:bg-[#f6f8fa]"
+            aria-label="Exit review"
             onClick={onExitSection}
             disabled={exiting}
           >
-            {exiting ? exitingLabel : exitButtonLabel}
+            <X className="size-6" strokeWidth={2} aria-hidden />
           </button>
+          <p className="m-0 shrink-0 text-2xl font-bold leading-[1.3] text-[#062357]">
+            {prepTestLabel}
+          </p>
+          <span className="shrink-0 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[#666d80]">
+            {questionRef}
+          </span>
+          {showSectionSelect ? (
+            <PracticeBlindReviewSectionSelect
+              sections={sectionOptions}
+              activeSectionSessionId={activeSectionSessionId}
+              onSelect={onSelectSection}
+            />
+          ) : null}
+          <input
+            type="search"
+            value={findQuery}
+            onChange={(event) => onFindQueryChange?.(event.target.value)}
+            placeholder="Find Text, Type Here"
+            className="h-10 w-[262px] shrink-0 rounded-[12px] border border-[#dfe1e7] bg-white px-4 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#062357] outline-none placeholder:text-[#818898] focus:border-[#0d47a1] focus:ring-2 focus:ring-[#0d47a1]/10"
+          />
+        </div>
+
+        <div className="flex shrink-0 items-center gap-6">
+          {questionProgressLabel ? (
+            <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#666d80]">
+              {questionProgressLabel}
+            </span>
+          ) : null}
+          {showAnySideAction ? (
+            <>
+              {showExplanationAction ? (
+                <button
+                  type="button"
+                  className={reviewHeaderActionButtonClass(sidePanel === "explanation")}
+                  aria-pressed={sidePanel === "explanation"}
+                  onClick={() => toggleSidePanel("explanation")}
+                >
+                  <ReviewIdeaIcon className="size-5 shrink-0" />
+                  <span>Video Explanation</span>
+                </button>
+              ) : null}
+              {showInsightsAction ? (
+                <button
+                  type="button"
+                  className={reviewHeaderActionButtonClass(sidePanel === "insights")}
+                  aria-pressed={sidePanel === "insights"}
+                  onClick={() => toggleSidePanel("insights")}
+                >
+                  <ReviewInsightsIcon className="size-5 shrink-0" />
+                  <span>Insights</span>
+                </button>
+              ) : null}
+              {showNotesAction ? (
+                <button
+                  type="button"
+                  className={reviewHeaderActionButtonClass(sidePanel === "notes")}
+                  aria-pressed={sidePanel === "notes"}
+                  onClick={() => toggleSidePanel("notes")}
+                >
+                  <BlindReviewNotesIcon className="size-5 shrink-0" />
+                  <span>Notes</span>
+                </button>
+              ) : null}
+            </>
+          ) : null}
         </div>
       </div>
+      <div className="relative h-1 shrink-0 bg-[#dfe1e7]">
+        <div className="absolute inset-y-0 left-10 w-[176px] rounded-[5px] bg-[#0d47a1]" />
+      </div>
     </header>
-  )
-}
-
-/** Figma `18617:33953` — Review badge glyph */
-function ReviewBadgeIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 12 12" fill="none" aria-hidden>
-      <path
-        d="M5.36719 2.53775C6.53188 2.39895 7.70999 2.64516 8.72162 3.23878C9.73325 3.83239 10.5228 4.74079 10.9697 5.82525C11.0114 5.93751 11.0114 6.06099 10.9697 6.17325C10.7859 6.61875 10.5431 7.0375 10.2477 7.41825"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M7.04207 7.07803C6.75916 7.35127 6.38026 7.50246 5.98697 7.49904C5.59367 7.49562 5.21745 7.33787 4.93934 7.05976C4.66123 6.78165 4.50347 6.40543 4.50006 6.01213C4.49664 5.61884 4.64783 5.23993 4.92107 4.95703"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8.73975 8.74891C8.07649 9.14179 7.33648 9.38741 6.56993 9.4691C5.80338 9.55079 5.02823 9.46664 4.29707 9.22235C3.56591 8.97806 2.89585 8.57935 2.33236 8.05328C1.76887 7.52721 1.32513 6.88608 1.03125 6.17341C0.989582 6.06115 0.989582 5.93766 1.03125 5.82541C1.47457 4.75033 2.25459 3.84803 3.25425 3.25391"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path d="M1 1L11 11" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   )
 }
 

@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom"
+import type { ReactNode } from "react"
 
 import {
   EXAM_MORE_PANEL_ACTION_CLASS,
@@ -21,6 +22,10 @@ type PracticeSessionExamMorePanelProps = {
   exitOnly?: boolean
   officialInterface?: boolean
   onOfficialInterfaceChange?: (next: boolean) => void
+  /** Figma `20596:145393` — section dropdown above exit actions */
+  sectionSelect?: ReactNode
+  /** Defaults to "BetterLSAT Interface"; Blind Review Figma uses "Official Interface" */
+  interfaceToggleLabel?: string
   onClose: () => void
   onSubmit: () => void
   onSaveAndExit: () => void
@@ -75,12 +80,15 @@ function PracticeSessionExamMorePanel({
   exitOnly = false,
   officialInterface = true,
   onOfficialInterfaceChange,
+  sectionSelect = null,
+  interfaceToggleLabel = "BetterLSAT Interface",
   onClose,
   onSubmit,
   onSaveAndExit,
   onExitWithoutSaving,
 }: PracticeSessionExamMorePanelProps) {
   const actionsDisabled = disabled || finishing
+  const officialToggleSemantics = interfaceToggleLabel === "Official Interface"
 
   return createPortal(
     <>
@@ -97,6 +105,8 @@ function PracticeSessionExamMorePanel({
             <ExamMoreIcon src={`${EXAM_FINISH_FIGMA}/close.svg`} size={24} />
           </button>
         </div>
+
+        {sectionSelect ? <div className="mb-1 w-full shrink-0">{sectionSelect}</div> : null}
 
         {exitOnly ? null : (
           <button
@@ -158,12 +168,15 @@ function PracticeSessionExamMorePanel({
 
         <div className={EXAM_MORE_PANEL_TOGGLE_ROW_CLASS}>
           <span id="exam-more-betterlsat-interface" className={EXAM_MORE_PANEL_TOGGLE_LABEL_CLASS}>
-            BetterLSAT Interface
+            {interfaceToggleLabel}
           </span>
           <ExamMoreToggle
             labelledBy="exam-more-betterlsat-interface"
-            checked={!officialInterface}
-            onCheckedChange={(betterLsatInterface) => onOfficialInterfaceChange?.(!betterLsatInterface)}
+            checked={officialToggleSemantics ? officialInterface : !officialInterface}
+            onCheckedChange={(next) => {
+              if (officialToggleSemantics) onOfficialInterfaceChange?.(next)
+              else onOfficialInterfaceChange?.(!next)
+            }}
           />
         </div>
       </div>

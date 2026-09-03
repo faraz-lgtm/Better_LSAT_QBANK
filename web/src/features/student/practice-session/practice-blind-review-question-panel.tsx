@@ -12,11 +12,12 @@ import {
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import {
   BLIND_REVIEW_OPTIONS_LIST_CLASS,
-  BLIND_REVIEW_QUESTION_NUMBER_CLASS,
   BLIND_REVIEW_QUESTION_STEM_CLASS,
-  BLIND_REVIEW_QUESTION_STEM_WRAP_CLASS,
   BLIND_REVIEW_RECOMMENDED_BADGE_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
+import { ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import { PracticeSessionSideWidget } from "@/features/student/practice-session/practice-session-side-action-rail"
+import { PracticeSessionResetResponseButton } from "@/features/student/practice-session/practice-session-reset-response-button"
 import type {
   PracticeToolMode,
   RegionKey,
@@ -37,6 +38,7 @@ type PracticeBlindReviewQuestionPanelProps = {
   allowReselect: boolean
   getRegionHtml: (key: string, base: string) => string
   onSelect: (index: number) => void
+  onResetResponse?: () => void
   answerView?: BlindReviewAnswerView
   onAnswerViewChange?: (view: BlindReviewAnswerView) => void
   recommendedForBr?: boolean
@@ -56,6 +58,18 @@ type PracticeBlindReviewQuestionPanelProps = {
   onAnnotateMouseUp?: (regionKey: RegionKey, container: HTMLElement | null, event?: MouseEvent) => void
   onAnnotateClick?: (regionKey: RegionKey, container: HTMLElement | null, event: MouseEvent) => void
   annotateToolMode?: PracticeToolMode
+  /** Figma `20596:144514` — exam side widget (same as active drill) */
+  showSideWidget?: boolean
+  flagged?: boolean
+  onToggleFlag?: () => void
+  flagsDisabled?: boolean
+  responseMasking?: boolean
+  maskedChoices?: Record<number, boolean>
+  onToggleResponseMasking?: () => void
+  onToggleMasked?: (index: number) => void
+  onOpenReview?: () => void
+  reviewActive?: boolean
+  onOpenAccessibility?: () => void
 }
 
 function regionKey(questionId: string, part: string) {
@@ -73,6 +87,7 @@ function PracticeBlindReviewQuestionPanel({
   allowReselect,
   getRegionHtml,
   onSelect,
+  onResetResponse,
   answerView = "blind_review",
   onAnswerViewChange,
   recommendedForBr = false,
@@ -89,6 +104,17 @@ function PracticeBlindReviewQuestionPanel({
   onAnnotateMouseUp,
   onAnnotateClick,
   annotateToolMode = "none",
+  showSideWidget = false,
+  flagged = false,
+  onToggleFlag,
+  flagsDisabled = false,
+  responseMasking = false,
+  maskedChoices = {},
+  onToggleResponseMasking,
+  onToggleMasked,
+  onOpenReview,
+  reviewActive = false,
+  onOpenAccessibility,
 }: PracticeBlindReviewQuestionPanelProps) {
   const [hiddenChoices, setHiddenChoices] = useState<Record<number, boolean>>({})
   const [expandedChoiceIds, setExpandedChoiceIds] = useState<Set<string>>(() => new Set())
@@ -101,6 +127,8 @@ function PracticeBlindReviewQuestionPanel({
 
   const stemKey = regionKey(question.id, "stem")
   const stemHtml = getRegionHtml(stemKey, question.stemText ?? "")
+  const useSideWidget = showSideWidget && !reviewChrome
+  const hasMaskedChoices = Object.values(maskedChoices).some(Boolean)
 
   const explanationsApi = useMemo(() => {
     if (!reviewChrome) return null
@@ -174,20 +202,20 @@ function PracticeBlindReviewQuestionPanel({
 
   const hasStemExplanation = Boolean(stemExplanationHtml?.trim())
 
-  return (
+  const canResetResponse =
+    !reviewChrome && !choicesDisabled && (selectedIndex != null || hasMaskedChoices)
+
+  const panel = (
     <div
       className={cn(
         "flex h-full min-h-0 flex-col",
         reviewChrome ? "practice-session-scroll-hidden overflow-y-auto" : "overflow-hidden",
       )}
     >
-      <div className={cn("shrink-0", reviewChrome ? "bg-white" : "border-b border-[#e5e7eb] bg-[#f6f8fa] p-6")}>
+      <div className={cn("shrink-0", reviewChrome ? "bg-white" : "bg-white p-3")}>
         <div
           className={cn("flex gap-3", reviewChrome ? "flex-col items-stretch" : "items-start")}
         >
-          {!reviewChrome ? (
-            <span className={BLIND_REVIEW_QUESTION_NUMBER_CLASS}>{questionNumber}</span>
-          ) : null}
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <div className={cn("flex flex-wrap items-center justify-between gap-3", reviewChrome && "mb-6")}>
               {reviewChrome ? (
@@ -200,10 +228,15 @@ function PracticeBlindReviewQuestionPanel({
                   blindReviewEnabled={blindReviewTabEnabled}
                   showOutcomeIcons={showCorrectAnswer}
                 />
-              ) : recommendedForBr ? (
-                <div className="inline-flex h-10 items-center rounded-[16px] bg-white p-1">
-                  <span className={BLIND_REVIEW_RECOMMENDED_BADGE_CLASS}>Recommended for BR</span>
-                </div>
+              ) : onAnswerViewChange ? (
+                <PracticeBlindReviewAnswerToggle
+                  value={answerView}
+                  onChange={onAnswerViewChange}
+                  variant="blind-review"
+                  actualOutcome={actualOutcome}
+                  blindReviewOutcome={blindReviewOutcome}
+                  blindReviewEnabled={blindReviewTabEnabled}
+                />
               ) : (
                 <span />
               )}
@@ -219,27 +252,28 @@ function PracticeBlindReviewQuestionPanel({
                     aria-label="Show correct answer"
                   />
                 </label>
-              ) : onAnswerViewChange ? (
-                <PracticeBlindReviewAnswerToggle
-                  value={answerView}
-                  onChange={onAnswerViewChange}
-                  variant={reviewChrome ? "review" : "blind-review"}
-                  actualOutcome={actualOutcome}
-                  blindReviewOutcome={blindReviewOutcome}
-                  blindReviewEnabled={blindReviewTabEnabled}
-                />
+              ) : recommendedForBr ? (
+                <span className={BLIND_REVIEW_RECOMMENDED_BADGE_CLASS}>
+                  Recommended for Blind Review
+                </span>
               ) : null}
             </div>
             <div
               className={cn(
-                reviewChrome ? "flex items-start gap-3 px-6 py-3" : BLIND_REVIEW_QUESTION_STEM_WRAP_CLASS,
+                reviewChrome
+                  ? "flex items-start gap-3 px-6 py-3"
+                  : "flex min-w-0 items-start gap-2 px-0 py-3",
               )}
             >
-              {reviewChrome ? (
+              {!reviewChrome ? (
+                <span className="mt-px shrink-0 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d0d12]">
+                  {questionNumber}.
+                </span>
+              ) : (
                 <span className="mt-[3px] shrink-0 text-base font-medium leading-[1.5] tracking-[0.32px] text-[#062357]">
                   {questionNumber}.
                 </span>
-              ) : null}
+              )}
               <PracticeAnnotatedContent
                 regionKey={stemKey}
                 html={stemHtml}
@@ -250,7 +284,7 @@ function PracticeBlindReviewQuestionPanel({
                 className={
                   reviewChrome
                     ? "min-w-0 flex-1 text-base font-medium leading-[1.5] tracking-[0.32px] text-[#062357]"
-                    : BLIND_REVIEW_QUESTION_STEM_CLASS
+                    : cn(BLIND_REVIEW_QUESTION_STEM_CLASS, "text-sm font-semibold leading-[1.5] tracking-[0.28px]")
                 }
               />
               {reviewChrome && explanationsEnabled ? (
@@ -327,7 +361,9 @@ function PracticeBlindReviewQuestionPanel({
                 regionKey={regionKey(question.id, `choice-${choice.id}`)}
                 selected={isSelected}
                 correctHighlight={correctHighlight}
-                hidden={Boolean(hiddenChoices[index])}
+                hidden={!useSideWidget && Boolean(hiddenChoices[index])}
+                masked={useSideWidget ? Boolean(maskedChoices[index]) : false}
+                maskingMode={useSideWidget && responseMasking}
                 disabled={submitting || choicesDisabled || (reviewChrome && !allowReselect)}
                 selectedIndex={displaySelectedIndex}
                 allowReselect={allowReselect && !reviewChrome}
@@ -338,8 +374,11 @@ function PracticeBlindReviewQuestionPanel({
                     [index]: !prev[index],
                   }))
                 }
+                onToggleMasked={() => onToggleMasked?.(index)}
                 variant="blind-review"
-                answerView={answerView}
+                /** Figma `20596:144371` — selected answers use primary blue in both Actual and Blind Review */
+                answerView="actual"
+                showSideAction={!useSideWidget}
                 explanationAction={reviewChrome && explanationsEnabled}
                 explanationExpanded={explanationsEnabled && expandedChoiceIds.has(choice.id)}
                 explanationHtml={explanationsEnabled ? explanationHtml : null}
@@ -355,7 +394,33 @@ function PracticeBlindReviewQuestionPanel({
               />
             )
           })}
+          {!reviewChrome ? (
+            <PracticeSessionResetResponseButton
+              variant="active-drill"
+              disabled={!canResetResponse}
+              onClick={() => onResetResponse?.()}
+            />
+          ) : null}
       </div>
+    </div>
+  )
+
+  if (!useSideWidget) return panel
+
+  return (
+    <div className={cn(ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS, "h-full min-h-0 overflow-visible")}>
+      {panel}
+      <PracticeSessionSideWidget
+        variant="active-drill"
+        flagged={flagged}
+        onToggleFlag={onToggleFlag ?? (() => undefined)}
+        flagsDisabled={flagsDisabled}
+        responseMasking={responseMasking}
+        onToggleResponseMasking={onToggleResponseMasking ?? (() => undefined)}
+        onReview={onOpenReview}
+        reviewActive={reviewActive}
+        onAccessibility={onOpenAccessibility}
+      />
     </div>
   )
 }
