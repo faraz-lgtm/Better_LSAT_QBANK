@@ -8,7 +8,7 @@ import { checkedFromToggleEvent } from "@/features/student/analytics/session-boo
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 import type { AnalyticsSectionFilter } from "@/features/student/analytics/section-filter"
 
-const SCORE_BOX_WIDTH_PX = 179
+const SCORE_BOX_WIDTH_PX = 148
 
 const SECTION_FILTER_OPTIONS: Array<{ id: AnalyticsSectionFilter; label: string }> = [
   { id: "all", label: "All" },
@@ -34,7 +34,7 @@ function HistorySectionFilter({
             onClick={() => onChange(option.id)}
             aria-pressed={active}
             className={cn(
-              "h-9 rounded-[12px] px-3 text-sm font-semibold leading-none tracking-[0.02em] transition-colors",
+              "h-7 rounded-[8px] px-2.5 text-xs font-semibold leading-none tracking-[0.02em] transition-colors",
               active
                 ? "bg-[#0d47a1] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
                 : "border border-[#dfe1e7] bg-white text-[#0d47a1] hover:bg-[#f3f7ff]",
@@ -64,16 +64,16 @@ function ScoreMetric({
   const widthPct = Math.max(0, Math.min(100, (safeValue / safeMax) * 100))
   return (
     <div
-      className="flex h-[52px] shrink-0 flex-col justify-center gap-1.5 rounded-[16px] border border-[#e5e7eb] bg-[#f9fafb] px-3"
+      className="flex h-10 shrink-0 flex-col justify-center gap-1 rounded-[10px] border border-[#e5e7eb] bg-[#f9fafb] px-2.5"
       style={{ width: SCORE_BOX_WIDTH_PX }}
     >
       <div className="flex w-full items-center justify-between gap-2">
-        <span className="text-sm font-medium leading-normal tracking-[0.02em] text-[#666d80]">{label}</span>
-        <span className="w-[46px] text-right text-sm font-semibold leading-normal tracking-[0.02em] text-[#062357]">
+        <span className="text-xs font-medium leading-normal tracking-[0.02em] text-[#666d80]">{label}</span>
+        <span className="w-9 text-right text-xs font-semibold leading-normal tracking-[0.02em] text-[#062357]">
           {safeValue}
         </span>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-lg bg-[#dfe1e7]">
+      <div className="h-1 w-full overflow-hidden rounded-md bg-[#dfe1e7]">
         <div className="h-full rounded-lg" style={{ width: `${widthPct}%`, backgroundColor: barColor }} />
       </div>
     </div>
@@ -115,12 +115,12 @@ function RowMenu({
       <button
         type="button"
         onClick={() => setOpen((c) => !c)}
-        className="flex size-10 items-center justify-center rounded-[16px] border border-[#dfe1e6] bg-[#f9f9fb] text-[#666d80] transition-colors hover:bg-white"
+        className="flex size-8 items-center justify-center rounded-[10px] border border-[#dfe1e6] bg-[#f9f9fb] text-[#666d80] transition-colors hover:bg-white"
         aria-label="More options"
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <MoreVertical className="size-[18px]" aria-hidden />
+        <MoreVertical className="size-4" aria-hidden />
       </button>
       {open ? (
         <ul
@@ -136,7 +136,7 @@ function RowMenu({
                   onOpenPractice(entry.id)
                   setOpen(false)
                 }}
-                className="flex h-10 w-full items-center gap-2 rounded-[16px] px-3 text-sm font-medium tracking-[0.02em] text-[#062357] transition-colors hover:bg-[#f6f8fa]"
+                className="flex h-8 w-full items-center gap-2 rounded-[10px] px-3 text-xs font-medium tracking-[0.02em] text-[#062357] transition-colors hover:bg-[#f6f8fa]"
               >
                 <ExternalLink className="size-4 text-[#666d80]" aria-hidden />
                 Practice this PrepTest
@@ -151,7 +151,7 @@ function RowMenu({
                 onToggleBookmark(entry.id)
                 setOpen(false)
               }}
-              className="flex h-10 w-full items-center gap-2 rounded-[16px] px-3 text-sm font-medium tracking-[0.02em] text-[#062357] transition-colors hover:bg-[#f6f8fa]"
+              className="flex h-8 w-full items-center gap-2 rounded-[10px] px-3 text-xs font-medium tracking-[0.02em] text-[#062357] transition-colors hover:bg-[#f6f8fa]"
             >
               <Bookmark
                 className={cn(
@@ -186,54 +186,54 @@ function PrepTestHistoryRow({
   return (
     <div
       className={cn(
-        "grid grid-cols-1 gap-3 rounded-[16px] border border-[#dfe1e7] bg-white p-3 lg:h-[72px] lg:grid-cols-[361px_minmax(0,1fr)_minmax(0,1fr)_97px] lg:items-center lg:gap-0 lg:p-0",
+        "grid grid-cols-1 gap-2 rounded-[12px] border border-[#dfe1e7] bg-white p-2.5 lg:h-14 lg:grid-cols-[280px_minmax(0,1fr)_minmax(0,1fr)_72px] lg:items-center lg:gap-0 lg:p-0",
         labelClickable && "hover:bg-[#f9fbff]",
       )}
     >
-      <div className="flex min-w-0 items-center gap-2.5 lg:h-[72px] lg:px-3">
+      <div className="flex min-w-0 items-center gap-2 lg:h-14 lg:px-2.5">
         <button
           type="button"
           onClick={() => onToggleBookmark(entry.id)}
-          className="flex size-10 shrink-0 items-center justify-center rounded-[16px] border border-[#dfe1e6] bg-[#f9f9fb] text-[#0d47a1] transition-colors hover:bg-white"
+          className="flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-[#dfe1e6] bg-[#f9f9fb] text-[#0d47a1] transition-colors hover:bg-white"
           aria-label={entry.bookmarked ? "Remove bookmark" : "Bookmark"}
           aria-pressed={entry.bookmarked}
         >
           <Bookmark
-            className={cn("size-[18px]", entry.bookmarked ? "fill-[#0d47a1] text-[#0d47a1]" : "text-[#666d80]")}
+            className={cn("size-4", entry.bookmarked ? "fill-[#0d47a1] text-[#0d47a1]" : "text-[#666d80]")}
             aria-hidden
           />
         </button>
-        <div className="min-w-0 flex flex-col gap-0.5">
+        <div className="min-w-0 flex flex-col gap-0">
           {labelClickable ? (
             <button
               type="button"
               onClick={() => onSelectEntry?.(entry.id)}
-              className="truncate text-left text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[#0d47a1] hover:underline focus-visible:underline focus-visible:outline-none"
+              className="truncate text-left text-sm font-semibold leading-[1.35] tracking-[0.02em] text-[#0d47a1] hover:underline focus-visible:underline focus-visible:outline-none"
             >
               {entry.testLabel}
             </button>
           ) : (
-            <p className="truncate text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[#0d47a1]">
+            <p className="truncate text-sm font-semibold leading-[1.35] tracking-[0.02em] text-[#0d47a1]">
               {entry.testLabel}
             </p>
           )}
-          <div className="inline-flex min-w-0 items-center gap-2 text-xs leading-normal tracking-[0.02em] text-[#666d80]">
-            <Calendar className="size-4 shrink-0" aria-hidden />
+          <div className="inline-flex min-w-0 items-center gap-1.5 text-[11px] leading-normal tracking-[0.02em] text-[#666d80]">
+            <Calendar className="size-3.5 shrink-0" aria-hidden />
             <span className="truncate">{entry.dateLabel}</span>
           </div>
         </div>
       </div>
 
-      <div className="flex gap-3 lg:contents">
-        <div className="flex flex-1 items-center justify-center lg:h-[72px] lg:flex-none lg:px-3">
+      <div className="flex gap-2 lg:contents">
+        <div className="flex flex-1 items-center justify-center lg:h-14 lg:flex-none lg:px-2.5">
           <ScoreMetric label="Score" value={entry.score} max={entry.scoreMax} barColor="#0d47a1" />
         </div>
-        <div className="flex flex-1 items-center justify-center lg:h-[72px] lg:flex-none lg:px-3">
+        <div className="flex flex-1 items-center justify-center lg:h-14 lg:flex-none lg:px-2.5">
           <ScoreMetric label="BR" value={entry.blindReviewScore} max={entry.blindReviewMax} barColor={brBarColor} />
         </div>
       </div>
 
-      <div className="flex items-center justify-end lg:h-[72px] lg:justify-center lg:px-3">
+      <div className="flex items-center justify-end lg:h-14 lg:justify-center lg:px-2.5">
         <RowMenu entry={entry} onToggleBookmark={onToggleBookmark} onOpenPractice={onOpenPractice} />
       </div>
     </div>
@@ -283,16 +283,16 @@ function AnalyticsPrepTestHistory({
     Boolean(viewMoreHref) && previewLimit != null && visibleEntries.length > previewLimit
 
   return (
-    <section className="rounded-[16px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[16px] bg-[#f6f8fa] px-6 py-4">
-        <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">{title}</h2>
-        <div className="flex flex-wrap items-center gap-3">
+    <section className="rounded-[14px] border border-[#dfe1e7] bg-white p-4 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-[12px] bg-[#f6f8fa] px-3 py-2">
+        <h2 className="text-base font-bold leading-[1.3] text-[#062357]">{title}</h2>
+        <div className="flex flex-wrap items-center gap-2">
           {showSectionFilter ? (
             <HistorySectionFilter value={sectionFilter} onChange={onSectionFilterChange} />
           ) : null}
-          <div className="flex shrink-0 items-center gap-2.5">
-            <Bookmark className="size-4 shrink-0 text-[#062357]" aria-hidden />
-            <span className="whitespace-nowrap text-base font-semibold leading-normal tracking-[0.02em] text-[#062357]">
+          <div className="flex shrink-0 items-center gap-2">
+            <Bookmark className="size-3.5 shrink-0 text-[#062357]" aria-hidden />
+            <span className="whitespace-nowrap text-xs font-semibold leading-normal tracking-[0.02em] text-[#062357]">
               Bookmarked only
             </span>
             <Switch
@@ -306,12 +306,12 @@ function AnalyticsPrepTestHistory({
 
       <div
         className={cn(
-          "flex flex-col gap-3 pr-1",
-          previewLimit == null && "max-h-[432px] overflow-y-auto",
+          "flex flex-col gap-2 pr-1",
+          previewLimit == null && "max-h-[360px] overflow-y-auto",
         )}
       >
         {displayedEntries.length === 0 ? (
-          <p className="rounded-[16px] border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-6 py-8 text-center text-sm text-[#666d80]">
+          <p className="rounded-[12px] border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-5 text-center text-xs text-[#666d80]">
             {bookmarkedOnly
               ? `No bookmarked ${emptyNoun} in this range. Adjust the time range or bookmark a ${emptyNoun.replace(/s$/, "")}.`
               : showSectionFilter && sectionFilter !== "all"
@@ -333,10 +333,10 @@ function AnalyticsPrepTestHistory({
       </div>
 
       {showViewMore && viewMoreHref ? (
-        <div className="mt-4 flex justify-center">
+        <div className="mt-3 flex justify-center">
           <Link
             to={viewMoreHref}
-            className="inline-flex h-[52px] min-w-[160px] items-center justify-center rounded-[16px] border border-[#dfe1e7] bg-white px-6 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa]"
+            className="inline-flex h-8 min-w-[120px] items-center justify-center rounded-[10px] border border-[#dfe1e7] bg-white px-4 text-xs font-semibold leading-[1.4] tracking-[0.02em] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa]"
           >
             View more
           </Link>

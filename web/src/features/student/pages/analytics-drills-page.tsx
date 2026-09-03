@@ -62,7 +62,7 @@ type ScoreTab = (typeof SCORE_TABS)[number]["id"]
 
 function DrillScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next: ScoreTab) => void }) {
   return (
-    <div className="flex h-10 flex-wrap items-center gap-2 rounded-[16px] bg-white p-1">
+    <div className="flex h-8 flex-wrap items-center gap-1.5 rounded-[10px] bg-white p-0.5">
       {SCORE_TABS.map((tab) => {
         const active = value === tab.id
         if (tab.id === "percent") {
@@ -73,7 +73,7 @@ function DrillScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next:
               onClick={() => onChange(tab.id)}
               aria-pressed={active}
               className={cn(
-                "flex min-h-8 items-center justify-center gap-2 rounded-[16px] px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors",
+                "flex min-h-7 items-center justify-center gap-1.5 rounded-[10px] px-2.5 py-1 text-xs font-semibold leading-[1.4] tracking-[0.02em] transition-colors",
                 active ? "bg-[#0d47a1] text-white" : "text-[#666d80] hover:bg-[#f3f7ff]",
               )}
             >
@@ -92,7 +92,7 @@ function DrillScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next:
             onClick={() => onChange(tab.id)}
             aria-pressed={active}
             className={cn(
-              "rounded-[10px] px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors hover:rounded-[10px] active:rounded-[10px] focus-visible:rounded-[10px]",
+              "rounded-[8px] px-2.5 py-1 text-xs font-semibold leading-[1.4] tracking-[0.02em] transition-colors hover:rounded-[8px] active:rounded-[8px] focus-visible:rounded-[8px]",
               active ? "bg-[#0d47a1] text-white" : "border border-[#dfe1e7] bg-white text-[#666d80] hover:bg-[#f3f7ff]",
             )}
           >
@@ -114,7 +114,7 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
 
   if (points.length === 0) {
     return (
-      <div className="flex h-[260px] items-center justify-center rounded-2xl border border-dashed border-[#dfe1e7] text-sm text-[#666d80]">
+      <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-[#dfe1e7] text-xs text-[#666d80]">
         No drills in the selected range.
       </div>
     )
@@ -136,7 +136,7 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
 
   return (
     <div className="w-full">
-      <div className="flex h-[260px] w-full items-stretch gap-4">
+      <div className="flex h-[220px] w-full items-stretch gap-3">
         <div className="relative w-10 shrink-0 pr-2 text-sm font-medium text-[#062357]">
           {yAxisLabels.map((label, index) => {
             const isFirst = index === 0
@@ -270,7 +270,7 @@ function DrillTypeMenu({
         onClick={() => setOpen((c) => !c)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex h-[52px] items-center gap-2 rounded-[16px] border border-[#dfe1e7] bg-white px-3 text-base font-medium text-[#062357] hover:bg-[#f3f7ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d47a1]/30"
+        className="flex h-8 items-center gap-1.5 rounded-[10px] border border-[#dfe1e7] bg-white px-2.5 text-xs font-medium text-[#062357] hover:bg-[#f3f7ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d47a1]/30"
       >
         <span className="max-w-[240px] truncate text-left">{label}</span>
         <ChevronDown className={cn("size-5 text-[#666d80] transition-transform", open ? "rotate-180" : "")} aria-hidden />
@@ -483,10 +483,10 @@ function AnalyticsDrillsPage() {
 
   return (
     <StudentMain>
-      <section className="mb-6 flex flex-col gap-6 rounded-[24px] border border-[#dfe1e7] bg-white p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex min-w-0 flex-col gap-2">
-            <h1 className="!m-0 !text-[24px] !font-bold !leading-[1.3] text-[#062357]">Drills</h1>
+      <section className="mb-4 flex flex-col gap-3 rounded-[14px] border border-[#dfe1e7] bg-white p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <h1 className="!m-0 !text-lg !font-bold !leading-[1.3] text-[#062357]">Drills</h1>
             {activeType ? (
               <p className="inline-flex w-fit items-center gap-2 rounded-full bg-[#f3f7ff] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#0d47a1]">
                 <span>{activeType.section}</span>
@@ -533,7 +533,7 @@ function AnalyticsDrillsPage() {
         </div>
 
         {statTiles ? (
-          <div className="grid gap-6 lg:grid-cols-[minmax(280px,380px)_1fr]">
+          <div className="grid gap-3 lg:grid-cols-[minmax(240px,320px)_1fr]">
             <AnalyticsStatsGrid stats={statTiles} />
             <AnalyticsScoreProgressPanel
               title="Score progress"

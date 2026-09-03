@@ -31,7 +31,7 @@ export const SCORE_PROGRESS_TABS = [
 export type ScoreProgressTab = (typeof SCORE_PROGRESS_TABS)[number]["id"]
 
 const ANALYTICS_SEGMENTED_TAB_BUTTON_CLASS =
-  "flex h-8 items-center justify-center rounded-[10px] px-3 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors hover:rounded-[10px] active:rounded-[10px] focus-visible:rounded-[10px]"
+  "flex h-7 items-center justify-center rounded-[8px] px-2.5 text-xs font-semibold leading-[1.4] tracking-[0.02em] transition-colors hover:rounded-[8px] active:rounded-[8px] focus-visible:rounded-[8px]"
 
 export function StatTile({
   stat,
@@ -53,22 +53,22 @@ export function StatTile({
 
 export function AnalyticsStatsGrid({ stats }: { stats: AnalyticsStat[] }) {
   return (
-    <article className="flex h-full min-h-[280px] flex-col justify-center rounded-[20px] border border-[#dfe1e7] bg-white p-4 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)] sm:p-5">
-      <div className="grid h-full grid-cols-2 gap-3">
+    <article className="flex h-full min-h-[200px] flex-col justify-center rounded-[14px] border border-[#dfe1e7] bg-white p-3 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+      <div className="grid h-full grid-cols-2 gap-2">
         {stats.map((stat) => (
           <div
             key={stat.id}
-            className="flex min-w-0 flex-col justify-center gap-1 rounded-[20px] bg-[#f6f8fa] p-4 sm:p-5"
+            className="flex min-w-0 flex-col justify-center gap-0.5 rounded-[12px] bg-[#f6f8fa] p-3"
           >
-            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#062357]">{stat.label}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#062357]">{stat.label}</p>
             <p
-              className="text-[40px] font-extrabold leading-[1.1] tracking-tight sm:text-[44px]"
+              className="text-[26px] font-extrabold leading-[1.1] tracking-tight sm:text-[28px]"
               style={{ color: stat.accent }}
             >
               {stat.value}
             </p>
             {stat.caption ? (
-              <p className="text-xs font-semibold tracking-[0.02em] text-[#062357]">{stat.caption}</p>
+              <p className="text-[11px] font-semibold tracking-[0.02em] text-[#062357]">{stat.caption}</p>
             ) : null}
           </div>
         ))}
@@ -87,8 +87,8 @@ export function AnalyticsScoreProgressPanel({
   chart: ReactNode
 }) {
   return (
-    <section className="flex h-full min-h-[280px] flex-col rounded-[20px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <section className="flex h-full min-h-[200px] flex-col rounded-[14px] border border-[#dfe1e7] bg-white p-4 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#062357]">{title}</h2>
         {legend}
       </div>
@@ -100,17 +100,17 @@ export function AnalyticsScoreProgressPanel({
 function DifficultyPill({ difficulty }: { difficulty: Difficulty }) {
   const { dots, color } = DIFFICULTY_META[difficulty]
   return (
-    <div className="flex h-10 w-fit shrink-0 items-center gap-2.5 rounded-[10px] bg-[#f3f7ff] px-3">
-      <div className="flex items-center gap-1.5">
+    <div className="flex h-7 w-fit shrink-0 items-center gap-1.5 rounded-[8px] bg-[#f3f7ff] px-2">
+      <div className="flex items-center gap-1">
         {Array.from({ length: 5 }).map((_, i) => (
           <span
             key={i}
-            className="block h-4 w-[6px] rounded-full"
+            className="block h-2.5 w-[4px] rounded-full"
             style={{ backgroundColor: i < dots ? color : "#ced0e7" }}
           />
         ))}
       </div>
-      <span className="text-xs font-semibold leading-[1.5] tracking-[0.02em]" style={{ color }}>
+      <span className="text-[11px] font-semibold leading-[1.4] tracking-[0.02em]" style={{ color }}>
         {difficulty}
       </span>
     </div>
@@ -128,21 +128,21 @@ function AccuracyProgress({
 }) {
   if (!unlocked || accuracy == null) {
     return (
-      <div className="flex w-[232px] shrink-0 flex-col gap-2">
-        <span className="text-xs font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
+      <div className="flex w-[180px] shrink-0 flex-col gap-1">
+        <span className="text-[11px] font-semibold leading-[1.4] tracking-[0.02em] text-[#666d80]">
           Keep practicing to unlock this.
         </span>
-        <div className="relative h-3 w-full overflow-hidden rounded-full bg-[#dfe1e7]" />
+        <div className="relative h-2 w-full overflow-hidden rounded-full bg-[#dfe1e7]" />
       </div>
     )
   }
   if (goal == null) {
     return (
-      <div className="flex w-[232px] shrink-0 flex-col gap-2">
-        <span className="text-xs font-semibold leading-[1.5] tracking-[0.02em] text-[#0d47a1]">
+      <div className="flex w-[180px] shrink-0 flex-col gap-1">
+        <span className="text-[11px] font-semibold leading-[1.4] tracking-[0.02em] text-[#0d47a1]">
           Your accuracy: {Math.max(0, Math.min(100, accuracy))}%
         </span>
-        <div className="relative h-3 w-full overflow-hidden rounded-full bg-[#dfe1e7]">
+        <div className="relative h-2 w-full overflow-hidden rounded-full bg-[#dfe1e7]">
           <div
             className="absolute inset-y-0 left-0 rounded-full bg-[#0d47a1]"
             style={{ width: `${Math.max(0, Math.min(100, accuracy))}%` }}
@@ -154,16 +154,16 @@ function AccuracyProgress({
   const safeAccuracy = Math.max(0, Math.min(100, accuracy))
   const safeGoal = Math.max(0, Math.min(100, goal))
   return (
-    <div className="flex w-[232px] shrink-0 flex-col gap-2">
-      <div className="flex h-5 items-center justify-between">
-        <span className="text-xs font-semibold leading-[1.5] tracking-[0.02em] text-[#0d47a1]">
+    <div className="flex w-[180px] shrink-0 flex-col gap-1">
+      <div className="flex h-4 items-center justify-between">
+        <span className="text-[11px] font-semibold leading-[1.4] tracking-[0.02em] text-[#0d47a1]">
           Your accuracy: {safeAccuracy}%
         </span>
-        <span className="text-xs font-semibold leading-[1.5] tracking-[0.02em] text-[#df1c41]">
+        <span className="text-[11px] font-semibold leading-[1.4] tracking-[0.02em] text-[#df1c41]">
           Goal: {safeGoal}%
         </span>
       </div>
-      <div className="relative h-3 w-full overflow-hidden rounded-full bg-[#dfe1e7]">
+      <div className="relative h-2 w-full overflow-hidden rounded-full bg-[#dfe1e7]">
         <div className="absolute inset-y-0 left-0 rounded-full bg-[#0d47a1]" style={{ width: `${safeAccuracy}%` }} />
         <div className="absolute inset-y-0 w-0.5 bg-[#df1c41]" style={{ left: `calc(${safeGoal}% - 1px)` }} />
       </div>
@@ -181,16 +181,16 @@ const PRIORITY_BAR: Record<string, string> = {
 function QuestionTypeRow({ row, accentBar }: { row: QuestionTypeRowData; accentBar: string }) {
   const barColor = (row.priorityTier && PRIORITY_BAR[row.priorityTier]) || accentBar
   return (
-    <div className="flex min-h-[88px] min-w-[880px] items-center justify-between border-b border-[#dfe1e7] px-6 py-3 last:border-b-0">
-      <div className="flex w-[392px] shrink-0 items-center gap-6">
+    <div className="flex min-h-[56px] min-w-[720px] items-center justify-between border-b border-[#dfe1e7] px-4 py-2 last:border-b-0">
+      <div className="flex w-[300px] shrink-0 items-center gap-3">
         <div
-          className="h-14 w-1 shrink-0 rounded-br-[10px] rounded-tr-[10px]"
+          className="h-10 w-1 shrink-0 rounded-br-[8px] rounded-tr-[8px]"
           style={{ backgroundColor: barColor }}
           aria-hidden
         />
-        <div className="flex min-w-0 flex-col gap-1.5">
-          <p className="text-base font-semibold leading-[1.35] text-[#062357]">{row.title}</p>
-          <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <p className="text-sm font-semibold leading-[1.35] text-[#062357]">{row.title}</p>
+          <p className="text-[11px] font-semibold leading-[1.4] tracking-[0.02em] text-[#666d80]">
             {row.averagePerTest.toFixed(1)} questions avg. per test
           </p>
           {row.unlocked &&
@@ -198,7 +198,7 @@ function QuestionTypeRow({ row, accentBar }: { row: QuestionTypeRowData; accentB
           row.goalPct != null &&
           row.extraCorrectNeededPerTest != null &&
           row.extraCorrectNeededPerTest > 0 ? (
-            <p className="text-xs leading-[1.4] text-[#666d80]">
+            <p className="text-[11px] leading-[1.35] text-[#666d80]">
               Closing the gap requires getting{" "}
               <strong className="font-semibold text-[#062357]">{row.extraCorrectNeededPerTest}</strong> more
               correct per test in this tag.
@@ -212,13 +212,13 @@ function QuestionTypeRow({ row, accentBar }: { row: QuestionTypeRowData; accentB
 
       <Link
         to={`/app/analytics/review/${encodeURIComponent(row.id)}`}
-        className="flex h-10 shrink-0 items-center justify-center rounded-[16px] border border-[#dfe1e7] bg-white px-4 text-sm font-semibold tracking-[0.02em] text-[#0d47a1] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f3f7ff]"
+        className="flex h-8 shrink-0 items-center justify-center rounded-[10px] border border-[#dfe1e7] bg-white px-3 text-xs font-semibold tracking-[0.02em] text-[#0d47a1] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f3f7ff]"
       >
         Review ({row.reviewCount})
       </Link>
       <Link
         to={`/app/analytics/drills?type=${encodeURIComponent(row.id)}`}
-        className="ds-btn-sm shrink-0 rounded-[16px] text-sm tracking-[0.02em]"
+        className="inline-flex h-8 shrink-0 items-center justify-center rounded-[10px] bg-[#0d47a1] px-3 text-xs font-semibold tracking-[0.02em] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0b3d88]"
       >
         Drill
       </Link>
@@ -233,21 +233,21 @@ export function SectionCard({ section }: { section: AnalyticsSection }) {
   const canToggle = section.rows.length > visibleOverviewSectionDrillCount(section.rows.length, false)
 
   return (
-    <section className="mb-6 flex w-full flex-col gap-6 rounded-[20px] border border-[#dfe1e7] bg-white p-6">
-      <div className="flex items-center rounded-[20px] bg-[#f6f8fa] px-6 py-4">
-        <div className="flex items-center gap-2.5">
+    <section className="mb-4 flex w-full flex-col gap-3 rounded-[14px] border border-[#dfe1e7] bg-white p-4">
+      <div className="flex items-center rounded-[12px] bg-[#f6f8fa] px-3 py-2">
+        <div className="flex items-center gap-2">
           <div
-            className="flex size-10 items-center justify-center rounded-[12px] border"
+            className="flex size-7 items-center justify-center rounded-[8px] border"
             style={{ backgroundColor: section.badgeBg, borderColor: section.badgeColor }}
           >
             <span
-              className="text-xl font-black leading-[1.5] tracking-[0.02em]"
+              className="text-sm font-black leading-none tracking-[0.02em]"
               style={{ color: section.badgeColor }}
             >
               {section.id}
             </span>
           </div>
-          <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">{section.title}</h2>
+          <h2 className="text-base font-bold leading-[1.3] text-[#062357]">{section.title}</h2>
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -261,7 +261,7 @@ export function SectionCard({ section }: { section: AnalyticsSection }) {
         <div className="flex justify-center">
           <button
             type="button"
-            className="inline-flex h-10 items-center gap-2 rounded-[16px] border border-[#dfe1e7] bg-white px-4 text-sm font-semibold tracking-[0.02em] text-[#0d47a1] hover:bg-[#f6f8fa]"
+            className="inline-flex h-8 items-center gap-1.5 rounded-[10px] border border-[#dfe1e7] bg-white px-3 text-xs font-semibold tracking-[0.02em] text-[#0d47a1] hover:bg-[#f6f8fa]"
             onClick={() => setExpanded((current) => !current)}
           >
             {expanded ? (
@@ -293,7 +293,7 @@ export function ScoreProgressChart({
 }) {
   if (points.length === 0) {
     return (
-      <p className="py-12 text-center text-sm text-[#666d80]">Complete a PrepTest to see your score progress.</p>
+      <p className="py-8 text-center text-xs text-[#666d80]">Complete a PrepTest to see your score progress.</p>
     )
   }
 
@@ -321,10 +321,10 @@ export function ScoreProgressChart({
   const blindPolyline = blindPoints.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ")
 
   return (
-    <div className={cn("flex w-full items-stretch gap-4", dashboard ? "h-[268px]" : "h-[300px]")}>
+    <div className="flex h-[220px] w-full items-stretch gap-3">
       <div
         className={cn(
-          "flex h-full flex-col justify-between py-1 pr-4 text-sm font-medium leading-5",
+          "flex h-full flex-col justify-between py-0.5 pr-3 text-xs font-medium leading-4",
           dashboard ? "text-[#62748e]" : "text-[#062357]",
         )}
       >
@@ -376,7 +376,7 @@ export function ScoreProgressChart({
                   key={`r-${i}`}
                   className={cn(
                     "absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0d47a1]",
-                    dashboard ? "size-[14px]" : "size-4",
+                    dashboard ? "size-[10px]" : "size-2.5",
                   )}
                   style={{ left: `${p.x}%`, top: `${p.y}%` }}
                 />
@@ -388,7 +388,7 @@ export function ScoreProgressChart({
                   key={`b-${i}`}
                   className={cn(
                     "absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#ff6f00]",
-                    dashboard ? "size-[14px]" : "size-4",
+                    dashboard ? "size-[10px]" : "size-2.5",
                   )}
                   style={{ left: `${p.x}%`, top: `${p.y}%` }}
                 />
@@ -428,8 +428,8 @@ export function ScoreProgressTabs({
   return (
     <div
       className={cn(
-        "flex h-10 items-center gap-2 p-1",
-        dashboard ? "rounded-[10px] bg-white" : "rounded-[16px] bg-white",
+        "flex h-8 items-center gap-1.5 p-0.5",
+        dashboard ? "rounded-[8px] bg-white" : "rounded-[10px] bg-white",
       )}
     >
       {SCORE_PROGRESS_TABS.map((tab) => {
@@ -441,7 +441,7 @@ export function ScoreProgressTabs({
             onClick={() => onChange(tab.id)}
             className={cn(
               dashboard
-                ? "flex h-8 items-center justify-center rounded-lg px-3 text-sm font-semibold leading-[1.5] tracking-[0.28px] transition-colors"
+                ? "flex h-7 items-center justify-center rounded-md px-2.5 text-xs font-semibold leading-[1.4] tracking-[0.28px] transition-colors"
                 : ANALYTICS_SEGMENTED_TAB_BUTTON_CLASS,
               active
                 ? "bg-[#0d47a1] text-white"

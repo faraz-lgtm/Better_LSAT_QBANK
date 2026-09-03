@@ -47,7 +47,7 @@ function HistorySortMenu({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex h-10 items-center gap-2 rounded-[16px] border border-[#dfe1e7] bg-white px-3 text-sm font-semibold text-[#062357] hover:bg-[#f3f7ff]"
+        className="flex h-8 items-center gap-1.5 rounded-[10px] border border-[#dfe1e7] bg-white px-2.5 text-xs font-semibold text-[#062357] hover:bg-[#f3f7ff]"
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
@@ -75,7 +75,7 @@ function HistorySortMenu({
                     setOpen(false)
                   }}
                   className={cn(
-                    "flex h-10 w-full items-center rounded-[16px] px-3 text-sm font-medium tracking-[0.02em] transition-colors",
+                    "flex h-8 w-full items-center rounded-[8px] px-3 text-xs font-medium tracking-[0.02em] transition-colors",
                     active ? "bg-[#f3f7ff] text-[#0d47a1]" : "text-[#062357] hover:bg-[#f6f8fa]",
                   )}
                 >
