@@ -159,6 +159,7 @@ function PracticeDrillQuestionPanel({
         allowReselect={allowReselect}
         getRegionHtml={getRegionHtml}
         onSelect={onSelect}
+        onResetResponse={handleResetResponse}
         answerView={answerView}
         onAnswerViewChange={onAnswerViewChange}
         recommendedForBr={recommendedForBr}
@@ -175,6 +176,17 @@ function PracticeDrillQuestionPanel({
         onAnnotateMouseUp={onAnnotateMouseUp}
         onAnnotateClick={onAnnotateClick}
         annotateToolMode={toolMode}
+        showSideWidget={!reviewChrome}
+        flagged={flagged}
+        onToggleFlag={onToggleFlag}
+        flagsDisabled={flagsDisabled}
+        responseMasking={responseMasking}
+        maskedChoices={maskedChoices}
+        onToggleResponseMasking={toggleResponseMasking}
+        onToggleMasked={handleToggleMasked}
+        onOpenReview={onOpenReview}
+        reviewActive={reviewActive}
+        onOpenAccessibility={onOpenAccessibility}
       />
     )
   }

@@ -11,48 +11,48 @@ const BLIND_REVIEW_CARD_HEIGHT_PX = 743
 /** Figma `18617:35757` — card top offset (header + gap) */
 const BLIND_REVIEW_CARD_TOP_PX = BLIND_REVIEW_HEADER_HEIGHT_PX + BLIND_REVIEW_SHELL_GAP_PX
 
-/** Figma `18617:35728` — full-height shell; header + card are absolutely positioned */
-const BLIND_REVIEW_SHELL_CLASS =
-  "relative mx-auto h-full min-h-0 w-full flex-1 px-4 md:px-6"
+/** Figma `20596:144371` — full-bleed Blind Review shell (exam chrome) */
+const BLIND_REVIEW_SHELL_CLASS = "relative h-full min-h-0 w-full flex-1 bg-white"
 
-/** Figma `18617:35729` — header band with bottom rule */
+/** Legacy header band (unused by Figma exam chrome; kept for exports) */
 const BLIND_REVIEW_HEADER_CLASS =
   "practice-session-header absolute inset-x-0 top-0 z-10 box-border flex h-[102px] shrink-0 items-center border-b border-[#dfe1e7] bg-[#f5f9ff] px-4 py-4 md:px-6"
 
-/** Figma `18617:35757` — white card anchored 30px below header, 49px above viewport bottom */
+/** Figma `20596:144371` — content under exam header */
 const BLIND_REVIEW_CARD_CLASS =
-  "practice-session-card practice-session-card--blind-review absolute bottom-[49px] left-4 right-4 top-[132px] mx-auto flex min-h-0 w-full max-w-[1280px] flex-col gap-[24px] rounded-[16px] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)] md:left-6 md:right-6"
+  "practice-session-card practice-session-card--blind-review absolute inset-x-0 bottom-0 top-[100px] flex min-h-0 flex-col bg-white"
 
-/** Figma `18617:33486` — body fills card; 24px gap to footer is on the card */
+/** Figma `18617:33486` — body fills card */
 const BLIND_REVIEW_BODY_CLASS =
-  "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden"
+  "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden bg-white"
 
-/** Figma `18617:33486` — flush to card top; 24px side inset; columns stretch to footer gap */
+/** Figma `20596:144371` — passage | question split with center divider */
 const BLIND_REVIEW_BODY_GRID_CLASS =
-  "grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-[24px] px-6 pt-0 lg:grid-cols-[minmax(0,584px)_minmax(0,1fr)]"
+  "grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-0 px-10 pb-5 pt-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
 
 const BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS =
-  "practice-session-pane practice-session-pane--br-column min-h-0 rounded-[16px] border border-[#e5e7eb] bg-white"
+  "practice-session-pane practice-session-pane--br-column min-h-0 bg-white"
 
-const BLIND_REVIEW_PASSAGE_PANEL_CLASS = `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} h-full p-6`
+const BLIND_REVIEW_PASSAGE_PANEL_CLASS =
+  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} h-full overflow-y-auto py-2 pr-6 lg:border-r lg:border-[#eceff3] lg:pr-10`
 
 const BLIND_REVIEW_QUESTION_PANEL_CLASS =
-  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} practice-session-pane--br-question flex h-full flex-col overflow-hidden`
+  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} practice-session-pane--br-question relative flex h-full flex-col overflow-visible py-2 pl-0 lg:pl-10`
 
-/** Notes open — stacked passage / question column */
+/** Notes open — Figma `20596:145049`: passage | question (+ side widget) | notes */
 const BLIND_REVIEW_NOTES_LAYOUT_CLASS =
-  "flex min-h-0 flex-1 gap-5 overflow-visible px-6 pt-0"
+  "grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-4 px-6 pb-5 pt-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(300px,426px)] lg:gap-5 lg:overflow-hidden"
 
-const BLIND_REVIEW_NOTES_STACK_CLASS = "practice-session-br-notes-stack min-h-0 min-w-0 flex-1"
+const BLIND_REVIEW_NOTES_STACK_CLASS = "practice-session-br-notes-stack"
 
 const BLIND_REVIEW_NOTES_PASSAGE_PANEL_CLASS =
-  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} practice-session-br-notes-pane practice-session-scroll-hidden px-8 pb-8 pt-8`
+  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} practice-session-br-notes-pane practice-session-scroll-hidden min-h-0 overflow-y-auto px-2 py-2 lg:pr-4`
 
 const BLIND_REVIEW_NOTES_QUESTION_PANEL_CLASS =
-  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} practice-session-pane--br-question flex min-h-0 flex-col overflow-hidden`
+  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} practice-session-pane--br-question relative flex min-h-0 flex-col overflow-visible px-2 py-2 lg:pl-2 lg:pr-14`
 
 const BLIND_REVIEW_NOTES_SIDEBAR_CLASS =
-  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} flex h-full min-h-0 w-[451px] shrink-0 flex-col overflow-hidden`
+  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-[18px] border border-[#eceff3] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]`
 
 const BLIND_REVIEW_PASSAGE_TEXT_CLASS =
   "text-base font-normal leading-[26px] tracking-[0.02em] text-[#0d0d12]"
@@ -68,10 +68,10 @@ const BLIND_REVIEW_QUESTION_NUMBER_CLASS =
   "inline-flex size-10 shrink-0 items-center justify-center rounded-[14px] border-2 border-[#ff6f00] bg-white text-lg font-bold text-[#ff6f00] shadow-[0px_0px_5px_#ff6f00]"
 
 const BLIND_REVIEW_RECOMMENDED_BADGE_CLASS =
-  "inline-flex h-8 items-center rounded-[16px] px-4 text-xs font-medium tracking-[0.24px] text-[#ff6f00]"
+  "inline-flex h-8 items-center text-xs font-bold tracking-[0.24px] text-[#ff6f00]"
 
 const BLIND_REVIEW_OPTIONS_LIST_CLASS =
-  "practice-session-br-options flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-6 py-5"
+  "practice-session-br-options flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-0 py-3"
 
 /** Choice rows grow with wrapped copy; letter and hide control stay top-aligned. */
 const BLIND_REVIEW_OPTION_ROW_INNER_CLASS =
@@ -98,9 +98,9 @@ const BLIND_REVIEW_OPTION_ROW_SELECTED_BR_CLASS =
 const BLIND_REVIEW_OPTION_LETTER_SELECTED_BR_CLASS =
   "bg-[#ff6f00] text-white shadow-[0px_10px_7px_rgba(255,111,0,0.14),0px_4px_3px_rgba(255,111,0,0.1)]"
 
-/** Figma `18617:33677` — footer band */
+/** Figma `20596:144371` — footer band */
 const BLIND_REVIEW_FOOTER_CLASS =
-  "practice-session-footer box-border flex min-h-[76px] shrink-0 flex-col justify-center border-t border-[#dfe1e7] bg-[#f6f8fa] px-6 py-3"
+  "practice-session-footer box-border flex min-h-[72px] shrink-0 flex-col justify-center border-t border-[#eceff3] bg-white px-2 py-3"
 
 /** Nav pills wrap to the next line; arrows stay on the right */
 const BLIND_REVIEW_FOOTER_ROW_CLASS =
@@ -109,9 +109,9 @@ const BLIND_REVIEW_FOOTER_ROW_CLASS =
 const BLIND_REVIEW_FOOTER_NAV_CLASS =
   "practice-session-question-nav-grid min-h-[48px] min-w-0 flex-1"
 
-/** Figma `18617:33695` — prev/next controls */
+/** Figma `20596:144371` — prev/next controls */
 const BLIND_REVIEW_NAV_ARROW_BUTTON_CLASS =
-  "box-border inline-flex size-[52px] shrink-0 items-center justify-center rounded-[16px] border-2 border-solid border-[#dfe1e7] bg-[#f6f8fa] p-1 shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-white disabled:opacity-40"
+  "box-border inline-flex size-7 shrink-0 items-center justify-center rounded-[6px] border border-solid border-[#dfe1e7] bg-[#f6f8fa] p-1 shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-white disabled:opacity-40"
 
 /** Figma `18617:33677` — recommended-for-BR nav pill glow */
 const BLIND_REVIEW_QUESTION_NAV_RECOMMENDED_CLASS = "drop-shadow-[0px_0px_5px_#ff6f00]"

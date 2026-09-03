@@ -91,22 +91,21 @@ function PracticeSessionNotesPanel({
   if (!open) return null
 
   if (isBlindReview) {
+    const examNotesChrome = !isReviewChrome
     return (
       <aside className={cn(BLIND_REVIEW_NOTES_SIDEBAR_CLASS, isReviewChrome && REVIEW_SIDEBAR_CLASS)}>
         <div
           className={cn(
             "flex shrink-0 items-center justify-between",
-            isReviewChrome
-              ? "h-[70px] px-6 pb-3 pt-9"
-              : "h-[60px] border-b border-[#e5e7eb] bg-[#f6f8fa] px-4 pt-4",
+            isReviewChrome ? "h-[70px] px-6 pb-3 pt-9" : "px-6 pb-0 pt-9",
           )}
         >
           <h2
             className={cn(
-              "text-[#062357]",
+              "text-[#041a44]",
               isReviewChrome
                 ? "text-sm font-semibold leading-[1.5] tracking-[0.28px]"
-                : "text-lg font-bold leading-[1.35]",
+                : "text-sm font-medium leading-[1.5] tracking-[0.28px]",
             )}
           >
             Notes
@@ -114,8 +113,8 @@ function PracticeSessionNotesPanel({
           <button
             type="button"
             className={cn(
-              "inline-flex size-7 items-center justify-center rounded text-[#666d80] transition hover:bg-white hover:text-[#062357]",
-              isReviewChrome && "sr-only",
+              "inline-flex size-7 items-center justify-center rounded text-[#666d80] transition hover:bg-[#f6f8fa] hover:text-[#062357]",
+              (isReviewChrome || examNotesChrome) && "sr-only",
             )}
             aria-label="Close notes"
             onClick={onClose}
@@ -124,15 +123,15 @@ function PracticeSessionNotesPanel({
           </button>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-6 pt-0">
+        <div className={cn("flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto", examNotesChrome ? "p-6 pt-6" : "p-6 pt-0")}>
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Start typing your notes..."
-            className="min-h-[256px] w-full resize-none rounded-[10px] border border-[#e5e7eb] bg-white px-4 py-4 text-sm leading-normal tracking-[0.02em] text-[#062357] placeholder:text-[rgba(10,10,10,0.5)] focus:outline-none focus:ring-2 focus:ring-[#0d47a1]/20"
+            className="min-h-[256px] w-full resize-none rounded-[10px] border border-[#dfe1e7] bg-white px-4 py-4 text-sm leading-[1.5] tracking-[0.28px] text-[#062357] placeholder:text-[rgba(10,10,10,0.5)] focus:outline-none focus:ring-2 focus:ring-[#0d47a1]/20"
           />
 
-          <div className="flex items-center gap-2 text-[#666d80]">
+          <div className="flex h-8 items-center gap-2 text-[#666d80]">
             <button
               type="button"
               className="inline-flex size-8 items-center justify-center rounded transition hover:bg-[#f6f8fa]"
@@ -154,13 +153,13 @@ function PracticeSessionNotesPanel({
             type="button"
             disabled={!draft.trim() || !activeQuestionId}
             onClick={handleAddNote}
-            className="inline-flex h-12 w-full items-center justify-center rounded-[10px] bg-[#0d47a1] text-base font-medium tracking-[0.02em] text-white transition hover:bg-[#0a3d8a] disabled:opacity-50"
+            className="inline-flex h-12 w-full items-center justify-center rounded-[10px] bg-[#0d47a1] text-base font-medium tracking-[0.32px] text-white transition hover:bg-[#0a3d8a] disabled:opacity-50"
           >
             Add Note
           </button>
 
-          <div className="border-t border-[#e5e7eb] pt-6">
-            <p className="text-sm uppercase tracking-[0.05em] text-[#6a7282]">Tags</p>
+          <div className="border-t border-[#dfe1e7] pt-6">
+            <p className="text-sm uppercase tracking-[0.05em] text-[#666d80]">Tags</p>
             <span className="mt-3 inline-flex h-6 items-center rounded-full bg-[#e3f2fd] px-3 text-xs text-[#0d47a1]">
               {questionTag}
             </span>
@@ -173,7 +172,7 @@ function PracticeSessionNotesPanel({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search notes..."
-              className="h-[38px] w-full rounded-[10px] border border-[#e5e7eb] bg-white pl-10 pr-4 text-sm text-[#062357] placeholder:text-[rgba(10,10,10,0.5)] focus:outline-none focus:ring-2 focus:ring-[#0d47a1]/20"
+              className="h-[38px] w-full rounded-[10px] border border-[#dfe1e7] bg-white pl-10 pr-4 text-sm text-[#062357] placeholder:text-[rgba(10,10,10,0.5)] focus:outline-none focus:ring-2 focus:ring-[#0d47a1]/20"
             />
           </label>
 

@@ -175,6 +175,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
   }
 
   if (isBlindReview) {
+    const isMasked = masked
     return (
       <div
         className={cn(
@@ -185,9 +186,10 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
               : "border-transparent bg-[#f6f8fa]"
             : selected
               ? brSelectedRowClass
-              : hidden
+              : hidden || isMasked
                 ? "border-[#dfe1e7] bg-[#f6f8fa]"
                 : "border-[#dfe1e7] bg-white",
+          isMasked && "practice-session-choice-masked opacity-45",
         )}
       >
         <div
@@ -215,7 +217,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
                   : explanationAction
                     ? "bg-white text-black"
                     : "bg-[#f3f4f6] text-[#4a5565]",
-                hidden && "line-through",
+                (hidden || isMasked) && "line-through",
               )}
             >
               {letter}
@@ -246,7 +248,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
                 <ChevronDown className="size-5" strokeWidth={2} aria-hidden />
               )}
             </button>
-          ) : (
+          ) : showSideAction ? (
             <button
               type="button"
               className="mt-1.5 inline-flex size-5 shrink-0 self-start items-center justify-center text-[#666d80] transition hover:text-[#062357]"
@@ -262,7 +264,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
                 <Eye className="size-5" strokeWidth={2} aria-hidden />
               )}
             </button>
-          )}
+          ) : null}
         </div>
         {explanationAction && explanationExpanded ? (
           <div className="mx-0 mb-0 mt-[10px] flex w-full items-start justify-between rounded-[14px] bg-white p-6 text-left">

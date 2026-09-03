@@ -4179,19 +4179,10 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
   height: 0;
 }
 
-/* Blind review + notes: passage scrolls in top band; question/answers get the larger lower band */
+/* Blind review + notes (Figma `20596:145049`): passage | question | notes side-by-side.
+   Stack wrapper uses `contents` so its children become grid columns of the parent. */
 .practice-session-br-notes-stack {
-  display: grid;
-  min-height: 0;
-  min-width: 0;
-  flex: 1 1 0;
-  grid-template-rows: minmax(0, 0.38fr) minmax(0, 0.62fr);
-  gap: 24px;
-  overflow: visible;
-}
-
-.practice-session-card--blind-review .practice-session-br-notes-stack {
-  overflow: visible;
+  display: contents;
 }
 
 .practice-session-br-notes-pane {

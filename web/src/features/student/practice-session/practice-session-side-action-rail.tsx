@@ -222,7 +222,7 @@ function PracticeSessionSideWidget({
             ? OFFICIAL_SIDE_WIDGET_EXPANDED_CLASS
             : OFFICIAL_SIDE_WIDGET_CLASS
           : cn(
-              "practice-session-side-widget absolute right-0 top-6 z-10 flex flex-col overflow-visible",
+              "practice-session-side-widget absolute right-0 top-6 z-20 flex flex-col overflow-visible",
               expanded ? ACTIVE_DRILL_SIDE_WIDGET_EXPANDED_CLASS : ACTIVE_DRILL_SIDE_WIDGET_COLLAPSED_CLASS,
             ),
       )}
