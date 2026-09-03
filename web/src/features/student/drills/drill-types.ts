@@ -137,7 +137,6 @@ export const drillConfigOptions = {
   ],
   timing: [
     { label: "Unlimited", value: "unlimited" },
-    { label: "35 minutes", value: "35" },
     { label: "Per question (1:20)", value: "per-q" },
   ],
   showAnswers: [

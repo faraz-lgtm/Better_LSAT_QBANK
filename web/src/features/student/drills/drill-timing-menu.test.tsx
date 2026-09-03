@@ -29,7 +29,7 @@ describe("DrillTimingMenu", () => {
     expect(screen.getByRole("option", { name: /Standard/ })).toHaveTextContent("07:00")
     expect(screen.getByRole("option", { name: /Unlimited/ })).toHaveTextContent("∞")
     expect(screen.getByRole("option", { name: /Target/ })).toHaveTextContent("07:22")
-    expect(screen.getByRole("option", { name: "35 minutes" })).toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "35 minutes" })).not.toBeInTheDocument()
     expect(screen.getByRole("option", { name: "Per question (1:20)" })).toBeInTheDocument()
     expect(screen.getByRole("option", { name: /97%/ })).toHaveTextContent("06:47")
     expect(screen.getByRole("option", { name: /70%/ })).toHaveTextContent("04:54")
@@ -57,12 +57,12 @@ describe("DrillTimingMenu", () => {
     expect(screen.getByRole("button", { name: "Pace" })).toHaveTextContent("101%")
   })
 
-  it("scales 35 minutes and per-question labels for 1.5x accommodations", async () => {
+  it("scales per-question labels for 1.5x accommodations and omits the 35-minute option", async () => {
     const user = userEvent.setup()
     render(<TimingHarness scaleFactor={1.5} />)
 
     await user.click(screen.getByRole("button", { name: "Pace" }))
-    expect(screen.getByRole("option", { name: "53 minutes" })).toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "53 minutes" })).not.toBeInTheDocument()
     expect(screen.getByRole("option", { name: "Per question (2:00)" })).toBeInTheDocument()
   })
 })

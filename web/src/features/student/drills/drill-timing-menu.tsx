@@ -24,7 +24,6 @@ type DrillTimingMenuProps = {
   questionCount: number
   scaleFactor?: number
   perQuestionSeconds?: number
-  sectionMinutes?: number
   ariaLabel?: string
 }
 
@@ -110,7 +109,6 @@ function DrillTimingMenu({
   questionCount,
   scaleFactor = 1,
   perQuestionSeconds = 80,
-  sectionMinutes,
   ariaLabel = "Pace",
 }: DrillTimingMenuProps) {
   const [open, setOpen] = useState(false)
@@ -120,7 +118,6 @@ function DrillTimingMenu({
   const count = Math.max(1, questionCount)
   const standardSeconds = standardDrillSeconds(count, scaleFactor)
   const targetSeconds = targetDrillSeconds(count, scaleFactor)
-  const sectionLabel = `${sectionMinutes ?? Math.max(1, Math.round(35 * scaleFactor))} minutes`
   const triggerLabel = drillTimingTriggerLabel(value, count, scaleFactor, perQuestionSeconds)
   const customPercent = customPercentFromTiming(value, count, scaleFactor)
   const customTime = customTimeFromTiming(value, count, scaleFactor)
@@ -213,7 +210,6 @@ function DrillTimingMenu({
             detail={`${formatDrillMmSs(targetSeconds)} • ${averageLabel(targetSeconds, count)}`}
             onSelect={() => select("target")}
           />
-          <PresetRow selected={value === "35"} title={sectionLabel} onSelect={() => select("35")} />
           <PresetRow
             selected={value === "per-q"}
             title={drillTimingTriggerLabel("per-q", count, scaleFactor, perQuestionSeconds)}

@@ -8,7 +8,10 @@ function RcNewSectionPage() {
   const sectionId = searchParams.get("sectionId")
 
   return (
-    <StudentMain className="max-w-none bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))] py-6 md:py-8">
+    <StudentMain
+      className="max-w-none bg-[#f3f7ff] py-6 md:py-8"
+      contentClassName="bg-[#f3f7ff]"
+    >
       <SectionConfigForm sectionType="RC" initialSectionId={sectionId} />
     </StudentMain>
   )

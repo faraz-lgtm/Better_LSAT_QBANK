@@ -467,12 +467,23 @@ export function createPracticeRepository(client: SupabaseClient) {
       return (data as SectionDetailRow | null) ?? null
     },
 
-    async listQuestionIdsBySectionId(sectionId: string): Promise<string[]> {
-      const { data, error } = await client
+    async listQuestionIdsBySectionId(
+      sectionId: string,
+      difficulty?: 'adaptive' | 'easy' | 'hard' | null,
+    ): Promise<string[]> {
+      let q = client
         .from('admin_questions')
         .select('id')
         .eq('section_id', sectionId)
         .order('question_number', { ascending: true, nullsFirst: false })
+
+      if (difficulty === 'easy') {
+        q = q.lte('difficulty', 2)
+      } else if (difficulty === 'hard') {
+        q = q.gte('difficulty', 4)
+      }
+
+      const { data, error } = await q
       if (error) throw error
       return ((data ?? []) as { id: string }[]).map((r) => r.id)
     },

@@ -236,7 +236,7 @@ describe("createPracticeApi", () => {
     expect(out.session.id).toBe("section-sess-1")
     expect(invoke).toHaveBeenCalledWith("practice-start-section", {
       method: "POST",
-      body: { sectionId: "sec-1", timing: undefined, showAnswers: undefined },
+      body: { sectionId: "sec-1", timing: undefined, showAnswers: undefined, difficulty: undefined },
       headers: { Authorization: "Bearer token-1" },
     })
   })

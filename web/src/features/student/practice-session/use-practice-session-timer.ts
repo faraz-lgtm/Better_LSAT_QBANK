@@ -24,6 +24,10 @@ export function isDrillCountdownTiming(timing?: string | null): boolean {
   return isValidDrillTiming(timing)
 }
 
+export function isPracticeCountdownTiming(timing?: string | null): boolean {
+  return isSectionCountdownTiming(timing) || isDrillCountdownTiming(timing)
+}
+
 export function resolveTimerBudgetSeconds(options: {
   timing?: string | null
   questionCount?: number
