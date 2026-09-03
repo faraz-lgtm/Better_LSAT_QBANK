@@ -5,6 +5,7 @@ import { ExternalLink } from "lucide-react"
 import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
 import { PracticeDrillContinueRow } from "@/features/student/components/practice-drill-continue-row"
 import { PracticeDrillTypeRow } from "@/features/student/components/practice-drill-type-row"
+import { PracticeListFooter } from "@/features/student/components/practice-list-footer"
 import { PracticeLrRcStarterCards } from "@/features/student/components/practice-lr-rc-starter-cards"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
@@ -70,30 +71,6 @@ function difficultyLabelFromContinue(level: ContinueDrill["difficulty"]): string
 
 function padInProcessCount(count: number): string {
   return `${String(count).padStart(2, "0")} In process`
-}
-
-function ListFooter({
-  hasMore,
-  onShowMore,
-}: {
-  hasMore: boolean
-  onShowMore: () => void
-}) {
-  return (
-    <div className="flex h-[32px] items-center justify-center">
-      {hasMore ? (
-        <button
-          type="button"
-          className="text-[16px] font-semibold leading-[1.35] text-[#082c6b] hover:underline"
-          onClick={onShowMore}
-        >
-          Show more
-        </button>
-      ) : (
-        <p className="text-[16px] font-semibold leading-[1.35] text-[#082c6b]">No More</p>
-      )}
-    </div>
-  )
 }
 
 function PracticeDrillsPage() {
@@ -263,7 +240,10 @@ function PracticeDrillsPage() {
                 />
               ))}
             </div>
-            <ListFooter hasMore={canShowMoreContinue} onShowMore={() => setContinueExpanded(true)} />
+            <PracticeListFooter
+              hasMore={canShowMoreContinue}
+              onShowMore={() => setContinueExpanded(true)}
+            />
           </>
         )}
       </section>
@@ -297,7 +277,7 @@ function PracticeDrillsPage() {
                 />
               ))}
             </div>
-            <ListFooter hasMore={canShowMoreTags} onShowMore={() => setTagsExpanded(true)} />
+            <PracticeListFooter hasMore={canShowMoreTags} onShowMore={() => setTagsExpanded(true)} />
           </>
         )}
       </section>
