@@ -50,4 +50,13 @@ describe("drill-config-saved-settings", () => {
     window.localStorage.setItem(drillConfigSettingsKey("LR"), "{\"timing\":\"nope\"}")
     expect(readSavedDrillConfig("LR")).toBeNull()
   })
+
+  it("accepts Standard, percent, and custom time values", () => {
+    writeSavedDrillConfig("LR", { ...sample, timing: "pace" })
+    expect(readSavedDrillConfig("LR")?.timing).toBe("pace")
+    writeSavedDrillConfig("LR", { ...sample, timing: "pct:100" })
+    expect(readSavedDrillConfig("LR")?.timing).toBe("pct:100")
+    writeSavedDrillConfig("LR", { ...sample, timing: "time:420" })
+    expect(readSavedDrillConfig("LR")?.timing).toBe("time:420")
+  })
 })

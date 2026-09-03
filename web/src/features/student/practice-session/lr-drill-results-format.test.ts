@@ -28,6 +28,9 @@ describe("lr-drill-results-format", () => {
     expect(
       formatLrDrillResultsTitle({ questionCount: 5, timing: "unlimited", take: 3 }),
     ).toBe("5 Questions Unlimited Time - 3")
+    expect(
+      formatLrDrillResultsTitle({ questionCount: 5, timing: "pace", take: 1 }),
+    ).toBe("5 Questions Standard - 1")
   })
 
   it("builds the Figma RC hero title", () => {

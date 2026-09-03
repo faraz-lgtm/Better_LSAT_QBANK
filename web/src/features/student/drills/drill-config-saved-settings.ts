@@ -6,6 +6,7 @@ import {
   type DrillStatus,
   type DrillTiming,
 } from "@/features/student/drills/drill-types"
+import { isValidDrillTiming } from "@/features/student/drills/drill-timing"
 
 const STORAGE_PREFIX = "lsat.drill-config-settings"
 
@@ -32,7 +33,6 @@ function optionValues(options: readonly { value: string }[]): Set<string> {
 function parseSavedDrillConfig(raw: unknown): SavedDrillConfig | null {
   if (!raw || typeof raw !== "object") return null
   const parsed = raw as Partial<SavedDrillConfig>
-  const timingValues = optionValues(drillConfigOptions.timing)
   const showAnswersValues = optionValues(drillConfigOptions.showAnswers)
   const difficultyValues = optionValues(drillConfigOptions.difficulty)
   const statusValues = optionValues(drillConfigOptions.status)
@@ -46,7 +46,7 @@ function parseSavedDrillConfig(raw: unknown): SavedDrillConfig | null {
   if (typeof parsed.passageCount !== "string" || !passageCountValues.has(parsed.passageCount)) {
     return null
   }
-  if (typeof parsed.timing !== "string" || !timingValues.has(parsed.timing)) return null
+  if (typeof parsed.timing !== "string" || !isValidDrillTiming(parsed.timing)) return null
   const rawShowAnswers = (raw as { showAnswers?: unknown }).showAnswers
   const showAnswers = rawShowAnswers === "never" ? "end" : rawShowAnswers
   if (typeof showAnswers !== "string" || !showAnswersValues.has(showAnswers)) {

@@ -81,6 +81,7 @@ import { PracticeSessionQuestionNavStrip } from "@/features/student/practice-ses
 import { resolvePracticeSessionQuestionNavOutcome } from "@/features/student/practice-session/practice-session-question-nav-outcome"
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
 import { usePracticeQuestionFlags } from "@/features/student/practice-session/use-practice-question-flags"
+import { isPerQuestionDrillTiming } from "@/features/student/drills/drill-timing"
 import {
   computeElapsedTimerProgress,
   computeRemainingTimerProgress,
@@ -342,6 +343,7 @@ function DrillSessionPage() {
   }, [sessionId])
 
   // Re-apply countdown when accommodations resolve after session load (avoids stuck 35:00).
+  // Per-question mode resets on each item; other modes keep a single session budget.
   useEffect(() => {
     if (!drill || reviewAfterComplete) return
     const drillTiming = drill.metadata.timing
@@ -350,8 +352,11 @@ function DrillSessionPage() {
       appliedAccommodationScaleRef.current = null
       return
     }
-    if (appliedAccommodationScaleRef.current === accommodationScaleFactor) return
-    appliedAccommodationScaleRef.current = accommodationScaleFactor
+    const perQuestion = isPerQuestionDrillTiming(drillTiming)
+    if (!perQuestion && appliedAccommodationScaleRef.current === accommodationScaleFactor) return
+    if (!perQuestion) {
+      appliedAccommodationScaleRef.current = accommodationScaleFactor
+    }
     setInitialCountdown(
       resolveTimerBudgetSeconds({
         timing: drillTiming,
@@ -363,6 +368,7 @@ function DrillSessionPage() {
     accommodationScaleFactor,
     drill?.metadata.timing,
     drill?.questions.length,
+    qIndex,
     reviewAfterComplete,
     setInitialCountdown,
   ])

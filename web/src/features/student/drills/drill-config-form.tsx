@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { FigmaIcon, PlayCircleIcon } from "@/components/icons/figma-icons"
 import { Switch } from "@/components/ui/switch"
-import { DrillConfigSelectField } from "@/features/student/drills/drill-config-field"
+import { DrillConfigField, DrillConfigSelectField } from "@/features/student/drills/drill-config-field"
 import {
   clearSavedDrillConfig,
   readSavedDrillConfig,
@@ -18,10 +18,11 @@ import {
   type DrillSectionType,
   type DrillShowAnswers,
   type DrillStatus,
-  type DrillTiming,
 } from "@/features/student/drills/drill-types"
+import { DrillTimingMenu } from "@/features/student/drills/drill-timing-menu"
+import { isValidDrillTiming } from "@/features/student/drills/drill-timing"
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
-import { buildDrillTimingOptions, useAccommodations } from "@/features/student/accommodations/accommodations-context"
+import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -46,7 +47,6 @@ function DrillConfigForm({
   const navigate = useNavigate()
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
   const { scaleFactor } = useAccommodations()
-  const timingOptions = useMemo(() => buildDrillTimingOptions(scaleFactor), [scaleFactor])
   const savedConfig = useMemo(() => readSavedDrillConfig(sectionType), [sectionType])
 
   const [bannerOpen, setBannerOpen] = useState(true)
@@ -58,7 +58,7 @@ function DrillConfigForm({
 
   const [questionCount, setQuestionCount] = useState(savedConfig?.questionCount ?? "5")
   const [passageCount, setPassageCount] = useState(savedConfig?.passageCount ?? "1")
-  const [timing, setTiming] = useState<DrillTiming>(savedConfig?.timing ?? "unlimited")
+  const [timing, setTiming] = useState(savedConfig?.timing ?? "unlimited")
   const [showAnswers, setShowAnswers] = useState<DrillShowAnswers>(savedConfig?.showAnswers ?? "end")
   const [selection, setSelection] = useState(savedConfig?.selection ?? "auto")
   const [tags, setTags] = useState(initialQuestionTypeId ?? savedConfig?.tags ?? "any")
@@ -86,6 +86,14 @@ function DrillConfigForm({
   const resolvedDifficulty = customize ? difficulty : "adaptive"
   const resolvedStatus = customize ? status : "all"
   const resolvedShowAnswers = customize ? showAnswers : "end"
+
+  const timingQuestionCount = useMemo(() => {
+    if (sectionType === "RC" || questionCount === "unlimited") {
+      return Math.max(1, poolStats.selectedCount || 5)
+    }
+    const parsed = Number.parseInt(questionCount, 10)
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 5
+  }, [sectionType, questionCount, poolStats.selectedCount])
 
   const loadPoolStats = useCallback(async () => {
     try {
@@ -175,7 +183,7 @@ function DrillConfigForm({
                   : 1,
             }
           : {}),
-        timing,
+        timing: isValidDrillTiming(timing) ? timing : "unlimited",
         showAnswers: resolvedShowAnswers,
         selection: selection as "auto" | "manual",
         questionTypeId: resolvedQuestionTypeId,
@@ -256,13 +264,14 @@ function DrillConfigForm({
               options={[...drillConfigOptions.questionCount]}
             />
           )}
-          <DrillConfigSelectField
-            label="Timing"
-            description="Control your Prep pace"
-            value={timing}
-            onChange={(v) => setTiming(v as DrillTiming)}
-            options={timingOptions}
-          />
+          <DrillConfigField label="Timing" description="Control your Prep pace">
+            <DrillTimingMenu
+              value={timing}
+              onChange={setTiming}
+              questionCount={timingQuestionCount}
+              scaleFactor={scaleFactor}
+            />
+          </DrillConfigField>
         </div>
 
         {customize ? (
