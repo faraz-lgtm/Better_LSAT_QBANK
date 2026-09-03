@@ -3,15 +3,14 @@ import { Link, useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { FigmaIcon } from "@/components/icons/figma-icons"
-import { Switch } from "@/components/ui/switch"
 import { DrillConfigField, DrillConfigSelectField } from "@/features/student/drills/drill-config-field"
+import { type DrillDifficulty } from "@/features/student/drills/drill-types"
 import { DrillTimingMenu } from "@/features/student/drills/drill-timing-menu"
 import { isValidDrillTiming } from "@/features/student/drills/drill-timing"
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
+import { SectionBuildMyOwnFields, SectionBuildMyOwnHeader } from "@/features/student/sections/section-build-my-own"
 import {
   formatSectionPoolLabel,
-  sectionConfigOptions,
-  type SectionDifficulty,
   type SectionShowAnswers,
   type SectionType,
 } from "@/features/student/sections/section-types"
@@ -73,25 +72,23 @@ function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConf
   const [poolTotal, setPoolTotal] = useState(0)
   const [bannerOpen, setBannerOpen] = useState(true)
 
-  const [customize, setCustomize] = useState(false)
   const [sectionId, setSectionId] = useState(initialSectionId ?? "")
   const [timing, setTiming] = useState("unlimited")
+  const [customize, setCustomize] = useState(false)
   const [showAnswers, setShowAnswers] = useState<SectionShowAnswers>("end")
-  const [difficulty, setDifficulty] = useState<SectionDifficulty>("adaptive")
+  const [difficulty, setDifficulty] = useState<DrillDifficulty>("adaptive")
   const [sectionOptions, setSectionOptions] = useState<{ label: string; value: string }[]>([])
   const [sectionQuestionCountById, setSectionQuestionCountById] = useState<Record<string, number>>({})
 
   const copy = sectionCopy[sectionType]
+  const readyCount = sectionQuestionCountById[sectionId] ?? 0
+  const resolvedShowAnswers = customize ? showAnswers : "end"
+  const resolvedDifficulty = customize ? difficulty : "adaptive"
   const timingQuestionCount = useMemo(() => {
     const fromSection = sectionQuestionCountById[sectionId]
     if (fromSection && fromSection > 0) return fromSection
     return sectionType === "RC" ? 27 : 25
   }, [sectionQuestionCountById, sectionId, sectionType])
-  const resolvedShowAnswers = customize ? showAnswers : "end"
-  const resolvedDifficulty = customize ? difficulty : "adaptive"
-  const readyQuestionCount = sectionId
-    ? (sectionQuestionCountById[sectionId] ?? 0)
-    : Object.values(sectionQuestionCountById).reduce((sum, count) => sum + count, 0)
 
   const loadPool = useCallback(async () => {
     setLoadingPool(true)
@@ -143,7 +140,7 @@ function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConf
       const out = await practiceApi.startSection({
         sectionId,
         timing: isValidDrillTiming(timing) ? timing : "unlimited",
-        showAnswers: resolvedShowAnswers === "never" ? "end" : resolvedShowAnswers,
+        showAnswers: resolvedShowAnswers,
         difficulty: resolvedDifficulty,
       })
       navigate(`/app/practice/sections/session/${out.session.id}`)
@@ -188,20 +185,11 @@ function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConf
               </p>
             </div>
           </div>
-          <div className="flex w-full flex-col gap-0.5 lg:w-auto lg:shrink-0 lg:items-end">
-            <div className="flex w-full items-start justify-between gap-4">
-              <p className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Build My Own</p>
-              <Switch
-                checked={customize}
-                onChange={(e) => setCustomize(e.target.checked)}
-                className={customize ? "!bg-[#0d47a1]" : "!bg-[#dfe1e6]"}
-                aria-label="Build My Own"
-              />
-            </div>
-            <p className="m-0 whitespace-nowrap text-xs font-normal leading-normal tracking-[0.02em] text-[#666d80] lg:text-right">
-              {readyQuestionCount} new {readyQuestionCount === 1 ? "question" : "questions"} ready
-            </p>
-          </div>
+          <SectionBuildMyOwnHeader
+            customize={customize}
+            onCustomizeChange={setCustomize}
+            readyCount={readyCount}
+          />
         </div>
 
         <div className="flex flex-wrap items-start gap-6">
@@ -228,22 +216,13 @@ function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConf
         </div>
 
         {customize ? (
-          <div className="flex flex-wrap items-start gap-6">
-            <SectionConfigSelectCard
-              label="Answer Check"
-              description="Choose when to check your work."
-              value={showAnswers === "never" ? "end" : showAnswers}
-              onChange={(v) => setShowAnswers(v as SectionShowAnswers)}
-              options={[...sectionConfigOptions.showAnswers]}
-            />
-            <SectionConfigSelectCard
-              label="Challenge"
-              description="Choose your level."
-              value={difficulty}
-              onChange={(v) => setDifficulty(v as SectionDifficulty)}
-              options={[...sectionConfigOptions.difficulty]}
-            />
-          </div>
+          <SectionBuildMyOwnFields
+            showAnswers={showAnswers}
+            onShowAnswersChange={setShowAnswers}
+            difficulty={difficulty}
+            onDifficultyChange={setDifficulty}
+            fieldClassName={sectionConfigCardClassName}
+          />
         ) : null}
 
         {error ? (
