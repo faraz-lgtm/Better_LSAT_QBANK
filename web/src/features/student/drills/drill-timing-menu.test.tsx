@@ -25,7 +25,7 @@ describe("DrillTimingMenu", () => {
     const user = userEvent.setup()
     render(<TimingHarness />)
 
-    await user.click(screen.getByRole("button", { name: "Timing" }))
+    await user.click(screen.getByRole("button", { name: "Pace" }))
     expect(screen.getByRole("option", { name: /Standard/ })).toHaveTextContent("07:00")
     expect(screen.getByRole("option", { name: /Unlimited/ })).toHaveTextContent("∞")
     expect(screen.getByRole("option", { name: /Target/ })).toHaveTextContent("07:22")
@@ -41,9 +41,9 @@ describe("DrillTimingMenu", () => {
     const user = userEvent.setup()
     render(<TimingHarness />)
 
-    await user.click(screen.getByRole("button", { name: "Timing" }))
+    await user.click(screen.getByRole("button", { name: "Pace" }))
     await user.click(screen.getByRole("option", { name: /Standard/ }))
-    expect(screen.getByRole("button", { name: "Timing" })).toHaveTextContent("Standard")
+    expect(screen.getByRole("button", { name: "Pace" })).toHaveTextContent("Standard")
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
   })
 
@@ -51,17 +51,17 @@ describe("DrillTimingMenu", () => {
     const user = userEvent.setup()
     render(<TimingHarness />)
 
-    await user.click(screen.getByRole("button", { name: "Timing" }))
+    await user.click(screen.getByRole("button", { name: "Pace" }))
     await user.click(screen.getByRole("button", { name: "Increase 100 %" }))
     expect(screen.getByRole("listbox")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Timing" })).toHaveTextContent("101%")
+    expect(screen.getByRole("button", { name: "Pace" })).toHaveTextContent("101%")
   })
 
   it("scales 35 minutes and per-question labels for 1.5x accommodations", async () => {
     const user = userEvent.setup()
     render(<TimingHarness scaleFactor={1.5} />)
 
-    await user.click(screen.getByRole("button", { name: "Timing" }))
+    await user.click(screen.getByRole("button", { name: "Pace" }))
     expect(screen.getByRole("option", { name: "53 minutes" })).toBeInTheDocument()
     expect(screen.getByRole("option", { name: "Per question (2:00)" })).toBeInTheDocument()
   })

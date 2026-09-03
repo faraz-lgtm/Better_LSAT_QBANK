@@ -119,21 +119,21 @@ function buildDrillQuestionCountOptions() {
     const value = String(index + 1)
     return { label: value, value }
   })
-  return [{ label: "Unlimited", value: "unlimited" }, ...numeric]
+  return [{ label: "All questions", value: "unlimited" }, ...numeric]
 }
 
 export const drillConfigOptions = {
   questionCount: buildDrillQuestionCountOptions(),
   passageCount: [
     { label: "Unlimited", value: "unlimited" },
-    { label: "1", value: "1" },
-    { label: "2", value: "2" },
-    { label: "3", value: "3" },
-    { label: "4", value: "4" },
-    { label: "5", value: "5" },
-    { label: "6", value: "6" },
-    { label: "7", value: "7" },
-    { label: "8", value: "8" },
+    { label: "1 passage", value: "1" },
+    { label: "2 passages", value: "2" },
+    { label: "3 passages", value: "3" },
+    { label: "4 passages", value: "4" },
+    { label: "5 passages", value: "5" },
+    { label: "6 passages", value: "6" },
+    { label: "7 passages", value: "7" },
+    { label: "8 passages", value: "8" },
   ],
   timing: [
     { label: "Unlimited", value: "unlimited" },
@@ -141,21 +141,21 @@ export const drillConfigOptions = {
     { label: "Per question (1:20)", value: "per-q" },
   ],
   showAnswers: [
-    { label: "At the end", value: "end" },
+    { label: "After the drill", value: "end" },
     { label: "After each question", value: "each" },
   ],
   selection: [
-    { label: "Pick automatically", value: "auto" },
-    { label: "Choose manually", value: "manual" },
+    { label: "Priority mix", value: "auto" },
+    { label: "Pick my own", value: "manual" },
   ],
-  tags: [{ label: "Any", value: "any" }],
+  tags: [{ label: "All skills", value: "any" }],
   difficulty: [
-    { label: "Adaptive", value: "adaptive" },
+    { label: "Auto-adjust", value: "adaptive" },
     { label: "Easy", value: "easy" },
     { label: "Hard", value: "hard" },
   ],
   status: [
-    { label: "Fresh", value: "fresh" },
-    { label: "Include reviewed", value: "all" },
+    { label: "New only", value: "fresh" },
+    { label: "New + reviewed", value: "all" },
   ],
 } as const
