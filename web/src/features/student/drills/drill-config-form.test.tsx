@@ -51,7 +51,7 @@ describe("DrillConfigForm save settings checkbox", () => {
     renderForm()
 
     expect(screen.queryByRole("button", { name: /save setting/i })).not.toBeInTheDocument()
-    const checkbox = screen.getByRole("checkbox", { name: "Save settings" })
+    const checkbox = screen.getByRole("checkbox", { name: "Remember setup" })
     expect(checkbox).not.toBeChecked()
 
     await user.click(checkbox)
@@ -68,52 +68,63 @@ describe("DrillConfigForm save settings checkbox", () => {
     writeSavedDrillConfig("LR", savedLrConfig)
     renderForm()
 
-    expect(screen.getByRole("checkbox", { name: "Save settings" })).toBeChecked()
-    expect(screen.getByRole("button", { name: "Timing" })).toHaveTextContent("35 minutes")
-    expect(screen.queryByRole("button", { name: "Show Answers" })).not.toBeInTheDocument()
+    expect(screen.getByRole("checkbox", { name: "Remember setup" })).toBeChecked()
+    expect(screen.getByRole("button", { name: "Pace" })).toHaveTextContent("35 minutes")
+    expect(screen.queryByRole("button", { name: "Answer Check" })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole("switch", { name: "Customize drill settings" }))
-    expect(screen.getByRole("button", { name: "Show Answers" })).toHaveTextContent("After each question")
+    await user.click(screen.getByRole("switch", { name: "Build My Own" }))
+    expect(screen.getByRole("button", { name: "Answer Check" })).toHaveTextContent("After each question")
   })
 
-  it("lays out questions and timing in two columns for LR and RC", () => {
+  it("lays out questions and timing in two columns for LR and RC", async () => {
+    const user = userEvent.setup()
     const { unmount } = renderForm("LR")
-    const lrRow = screen.getByRole("button", { name: "Timing" }).closest(".grid")
+    const lrRow = screen.getByRole("button", { name: "Pace" }).closest(".grid")
     expect(lrRow?.className).toMatch(/\bgrid-cols-2\b/)
     expect(lrRow?.className).not.toMatch(/grid-cols-3/)
     unmount()
 
     renderForm("RC")
-    const rcRow = screen.getByRole("button", { name: "Timing" }).closest(".grid")
+    const rcRow = screen.getByRole("button", { name: "Pace" }).closest(".grid")
     expect(rcRow?.className).toMatch(/\bgrid-cols-2\b/)
     expect(rcRow?.className).not.toMatch(/grid-cols-3/)
-    expect(screen.getByRole("button", { name: "Number of Passages" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Passages" })).toBeInTheDocument()
+
+    await user.click(screen.getByRole("switch", { name: "Build My Own" }))
+    expect(screen.getByRole("button", { name: "Reading Focus" })).toBeInTheDocument()
+    expect(screen.getByText("Choose the reading skills to practise.")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Skill Focus" })).not.toBeInTheDocument()
   })
 
-  it("keeps questions and timing visible and puts show answers in Customize", async () => {
+  it("keeps questions and timing visible and puts show answers in Build My Own", async () => {
     const user = userEvent.setup()
     renderForm()
 
-    expect(screen.getByRole("button", { name: "Number of Questions" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Timing" })).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Show Answers" })).not.toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Selection" })).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", {
+        name: "Practice With More Clarity About Your Weaknesses & Strengths",
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Drill Size" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Pace" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Answer Check" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Question Mix" })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole("switch", { name: "Customize drill settings" }))
-    expect(screen.getByRole("button", { name: "Show Answers" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Selection" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Tags" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Difficulty" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Status" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Number of Questions" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Timing" })).toBeInTheDocument()
+    await user.click(screen.getByRole("switch", { name: "Build My Own" }))
+    expect(screen.getByRole("button", { name: "Answer Check" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Question Mix" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Skill Focus" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Challenge" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Question History" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Drill Size" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Pace" })).toBeInTheDocument()
   })
 
   it("opens the timing menu with Standard, speed training, and per-question options", async () => {
     const user = userEvent.setup()
     renderForm()
 
-    await user.click(screen.getByRole("button", { name: "Timing" }))
+    await user.click(screen.getByRole("button", { name: "Pace" }))
     expect(screen.getByRole("option", { name: /Standard/ })).toBeInTheDocument()
     expect(screen.getByRole("option", { name: /Target/ })).toBeInTheDocument()
     expect(screen.getByRole("option", { name: "35 minutes" })).toBeInTheDocument()
@@ -122,16 +133,16 @@ describe("DrillConfigForm save settings checkbox", () => {
     expect(screen.getByText("CUSTOM")).toBeInTheDocument()
 
     await user.click(screen.getByRole("option", { name: /Standard/ }))
-    expect(screen.getByRole("button", { name: "Timing" })).toHaveTextContent("Standard")
+    expect(screen.getByRole("button", { name: "Pace" })).toHaveTextContent("Standard")
   })
 
   it("does not offer Never (blind) in Show answers", async () => {
     const user = userEvent.setup()
     renderForm()
 
-    await user.click(screen.getByRole("switch", { name: "Customize drill settings" }))
-    await user.click(screen.getByRole("button", { name: "Show Answers" }))
-    expect(screen.getByRole("option", { name: "At the end" })).toBeInTheDocument()
+    await user.click(screen.getByRole("switch", { name: "Build My Own" }))
+    await user.click(screen.getByRole("button", { name: "Answer Check" }))
+    expect(screen.getByRole("option", { name: "After the drill" })).toBeInTheDocument()
     expect(screen.getByRole("option", { name: "After each question" })).toBeInTheDocument()
     expect(screen.queryByRole("option", { name: "Never (blind)" })).not.toBeInTheDocument()
   })

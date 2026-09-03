@@ -111,7 +111,7 @@ function DrillTimingMenu({
   scaleFactor = 1,
   perQuestionSeconds = 80,
   sectionMinutes,
-  ariaLabel = "Timing",
+  ariaLabel = "Pace",
 }: DrillTimingMenuProps) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
