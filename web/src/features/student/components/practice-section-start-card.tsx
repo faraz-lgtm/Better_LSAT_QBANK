@@ -1,18 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
-import { DrillConfigSelectField } from "@/features/student/drills/drill-config-field"
+import { DrillConfigField, DrillConfigSelectField } from "@/features/student/drills/drill-config-field"
 import { type DrillDifficulty } from "@/features/student/drills/drill-types"
+import { DrillTimingMenu } from "@/features/student/drills/drill-timing-menu"
+import { isValidDrillTiming } from "@/features/student/drills/drill-timing"
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
-import {
-  buildSectionTimingOptions,
-  useAccommodations,
-} from "@/features/student/accommodations/accommodations-context"
+import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
 import { SectionBuildMyOwnFields, SectionBuildMyOwnHeader } from "@/features/student/sections/section-build-my-own"
 import {
   formatSectionPoolLabel,
   type SectionShowAnswers,
-  type SectionTiming,
   type SectionType,
 } from "@/features/student/sections/section-types"
 import { createPracticeApi } from "@/lib/api/practice"
@@ -47,7 +45,6 @@ function PracticeSectionStartCard({ sectionType }: PracticeSectionStartCardProps
   const navigate = useNavigate()
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
   const { scaleFactor } = useAccommodations()
-  const timingOptions = useMemo(() => buildSectionTimingOptions(scaleFactor), [scaleFactor])
   const copy = sectionCopy[sectionType]
 
   const [starting, setStarting] = useState(false)
@@ -55,7 +52,7 @@ function PracticeSectionStartCard({ sectionType }: PracticeSectionStartCardProps
   const [error, setError] = useState<string | null>(null)
   const [poolTotal, setPoolTotal] = useState(0)
   const [sectionId, setSectionId] = useState("")
-  const [timing, setTiming] = useState<SectionTiming>("unlimited")
+  const [timing, setTiming] = useState("unlimited")
   const [customize, setCustomize] = useState(false)
   const [showAnswers, setShowAnswers] = useState<SectionShowAnswers>("end")
   const [difficulty, setDifficulty] = useState<DrillDifficulty>("adaptive")
@@ -110,7 +107,7 @@ function PracticeSectionStartCard({ sectionType }: PracticeSectionStartCardProps
     try {
       const out = await practiceApi.startSection({
         sectionId,
-        timing,
+        timing: isValidDrillTiming(timing) ? timing : "unlimited",
         showAnswers: customize ? showAnswers : "end",
         difficulty: customize ? difficulty : "adaptive",
       })
@@ -123,6 +120,11 @@ function PracticeSectionStartCard({ sectionType }: PracticeSectionStartCardProps
   }
 
   const readyCount = sectionQuestionCountById[sectionId] ?? 0
+  const timingQuestionCount = useMemo(() => {
+    const fromSection = sectionQuestionCountById[sectionId]
+    if (fromSection && fromSection > 0) return fromSection
+    return sectionType === "RC" ? 27 : 25
+  }, [sectionQuestionCountById, sectionId, sectionType])
 
   return (
     <section className="flex w-full flex-col gap-[24px] rounded-[20px] border border-[#dfe1e7] bg-white p-[24px]">
@@ -145,7 +147,7 @@ function PracticeSectionStartCard({ sectionType }: PracticeSectionStartCardProps
         />
       </div>
 
-      <div className="flex flex-col gap-[24px] lg:flex-row">
+      <div className="flex flex-col gap-[24px] overflow-visible lg:flex-row">
         <DrillConfigSelectField
           className={selectCardClassName}
           label="Section"
@@ -155,15 +157,15 @@ function PracticeSectionStartCard({ sectionType }: PracticeSectionStartCardProps
           options={sectionOptions}
           menuVariant="surface"
         />
-        <DrillConfigSelectField
-          className={selectCardClassName}
-          label="Timing"
-          description="Control your Prep pace"
-          value={timing}
-          onChange={(v) => setTiming(v as SectionTiming)}
-          options={timingOptions}
-          menuVariant="surface"
-        />
+        <DrillConfigField className={selectCardClassName} label="Pace" description="Choose your timing.">
+          <DrillTimingMenu
+            value={timing}
+            onChange={setTiming}
+            questionCount={timingQuestionCount}
+            scaleFactor={scaleFactor}
+            ariaLabel="Pace"
+          />
+        </DrillConfigField>
       </div>
 
       {customize ? (

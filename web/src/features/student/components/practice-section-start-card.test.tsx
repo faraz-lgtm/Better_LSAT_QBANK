@@ -42,6 +42,39 @@ vi.mock("@/lib/api/practice", () => ({
 }))
 
 describe("PracticeSectionStartCard Build My Own", () => {
+  it("uses the same Pace menu as drills", async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <PracticeSectionStartCard sectionType="LR" />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText("Pace")).toBeInTheDocument()
+    expect(screen.getByText("Choose your timing.")).toBeInTheDocument()
+    expect(screen.queryByText("Timing")).not.toBeInTheDocument()
+    expect(screen.queryByText("Control your Prep pace")).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Pace" }))
+    expect(screen.getByRole("option", { name: /Standard/ })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: /Unlimited/ })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: /Target/ })).toBeInTheDocument()
+    expect(screen.getByText("SPEED TRAINING")).toBeInTheDocument()
+    expect(screen.getByText("CUSTOM")).toBeInTheDocument()
+
+    await user.click(screen.getByRole("option", { name: /Standard/ }))
+    startSection.mockClear()
+    await user.click(await screen.findByRole("button", { name: "Start LR Section" }))
+    await waitFor(() => {
+      expect(startSection).toHaveBeenCalledWith({
+        sectionId: "sec-lr",
+        timing: "pace",
+        showAnswers: "end",
+        difficulty: "adaptive",
+      })
+    })
+  })
+
   it("starts an LR section with Answer Check and Challenge when Build My Own is on", async () => {
     const user = userEvent.setup()
     startSection.mockClear()
