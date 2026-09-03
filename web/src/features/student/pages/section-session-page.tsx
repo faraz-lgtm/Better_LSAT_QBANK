@@ -131,10 +131,11 @@ import {
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
 import { usePracticeQuestionFlags } from "@/features/student/practice-session/use-practice-question-flags"
 import { usePracticeQuestionSeen } from "@/features/student/practice-session/use-practice-question-seen"
+import { isPerQuestionDrillTiming } from "@/features/student/drills/drill-timing"
 import {
   computeElapsedTimerProgress,
   computeRemainingTimerProgress,
-  isSectionCountdownTiming,
+  isPracticeCountdownTiming,
   isUnlimitedPracticeTiming,
   resolveTimerBudgetSeconds,
   usePracticeSessionTimer,
@@ -485,7 +486,7 @@ function ReviewPassageCardHeader() {
 }
 
 function SectionSessionPage() {
-  const { sectionTimerSeconds: SECTION_TIMER_SECONDS } = useAccommodations()
+  const { sectionTimerSeconds: SECTION_TIMER_SECONDS, scaleFactor: accommodationScaleFactor } = useAccommodations()
   const { sessionId } = useParams<{ sessionId: string }>()
   const [searchParams] = useSearchParams()
   const location = useLocation()
@@ -762,6 +763,7 @@ function SectionSessionPage() {
   }, [sessionId])
 
   // Re-apply countdown when accommodations resolve after session load (avoids stuck 35:00).
+  // Per-question mode resets on each item; other modes keep a single session budget.
   useEffect(() => {
     if (
       !sectionSession ||
@@ -772,17 +774,31 @@ function SectionSessionPage() {
       return
     }
     const timing = sectionSession.metadata.timing
-    if (!isSectionCountdownTiming(timing)) {
+    if (!isPracticeCountdownTiming(timing)) {
       setInitialCountdown(null)
       appliedAccommodationScaleRef.current = null
       return
     }
-    if (appliedAccommodationScaleRef.current === SECTION_TIMER_SECONDS) return
-    appliedAccommodationScaleRef.current = SECTION_TIMER_SECONDS
-    setInitialCountdown(SECTION_TIMER_SECONDS)
+    const budget =
+      timing === "standard" || timing === "strict"
+        ? SECTION_TIMER_SECONDS
+        : resolveTimerBudgetSeconds({
+            timing,
+            questionCount: sectionSession.questions.length,
+            scaleFactor: accommodationScaleFactor,
+          })
+    const perQuestion = isPerQuestionDrillTiming(timing)
+    if (!perQuestion && appliedAccommodationScaleRef.current === budget) return
+    if (!perQuestion) {
+      appliedAccommodationScaleRef.current = budget
+    }
+    setInitialCountdown(budget)
   }, [
     SECTION_TIMER_SECONDS,
+    accommodationScaleFactor,
     sectionSession?.metadata.timing,
+    sectionSession?.questions.length,
+    qIndex,
     blindReviewMode,
     resultsReviewMode,
     postCompleteBlindReview,
@@ -825,7 +841,7 @@ function SectionSessionPage() {
 
   const questions = sectionSession?.questions ?? []
   const metadata = sectionSession?.metadata
-  const timedSection = !blindReviewMode && !resultsReviewMode && isSectionCountdownTiming(metadata?.timing)
+  const timedSection = !blindReviewMode && !resultsReviewMode && isPracticeCountdownTiming(metadata?.timing)
   const showAnswersMode = metadata?.showAnswers ?? "end"
   const sectionType = metadata?.sectionType ?? "LR"
   const questionIds = useMemo(() => questions.map((q) => q.id), [questions])
@@ -1396,7 +1412,7 @@ function SectionSessionPage() {
     const introTimerBudgetSeconds = resolveTimerBudgetSeconds({
       timing: metadata?.timing,
       questionCount: questions.length,
-      sectionTimerSeconds: timedSection ? SECTION_TIMER_SECONDS : undefined,
+      scaleFactor: accommodationScaleFactor,
     })
     const introTimerLabel = timedSection ? "Time Left:" : "Elapsed"
     const introTimerDisplaySeconds = timedSection ? introTimerBudgetSeconds : elapsed
@@ -1446,7 +1462,7 @@ function SectionSessionPage() {
               timeMinutes={
                 isUnlimitedPracticeTiming(metadata?.timing)
                   ? null
-                  : Math.round(SECTION_TIMER_SECONDS / 60)
+                  : Math.max(1, Math.round(introTimerBudgetSeconds / 60))
               }
               onGoToQuestions={handleGoToSectionQuestions}
             />
@@ -1476,7 +1492,7 @@ function SectionSessionPage() {
   const timerBudgetSeconds = resolveTimerBudgetSeconds({
     timing: metadata?.timing,
     questionCount: questions.length,
-    sectionTimerSeconds: timedSection ? SECTION_TIMER_SECONDS : undefined,
+    scaleFactor: accommodationScaleFactor,
   })
   const timerLabel = timedSection && countdown != null ? "Remaining" : "Elapsed"
   const timerDisplaySeconds =

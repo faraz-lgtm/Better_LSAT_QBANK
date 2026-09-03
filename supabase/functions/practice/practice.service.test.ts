@@ -1166,6 +1166,30 @@ Deno.test('startSection creates session with all section questions', async () =>
   assertEquals(out.section.sectionType, 'LR')
 })
 
+Deno.test('startSection stores Answer Check and Challenge settings', async () => {
+  const service = createPracticeService({
+    repository: sectionRepo({
+      listQuestionIdsBySectionId: async (
+        _sectionId: string,
+        difficulty?: 'adaptive' | 'easy' | 'hard' | null,
+      ) => {
+        if (difficulty === 'hard') return ['q-3']
+        if (difficulty === 'easy') return ['q-1']
+        return ['q-1', 'q-2', 'q-3']
+      },
+    }) as never,
+  })
+  const out = await service.startSection('user-1', {
+    sectionId: 'sec-db-1',
+    showAnswers: 'each',
+    difficulty: 'hard',
+  })
+  assertEquals(out.metadata.showAnswers, 'each')
+  assertEquals(out.metadata.difficulty, 'hard')
+  assertEquals(out.metadata.questionIds, ['q-3'])
+  assertEquals(out.questions.length, 1)
+})
+
 Deno.test('getSectionSession returns questions and resume answers', async () => {
   const service = createPracticeService({
     repository: sectionRepo({

@@ -4,6 +4,7 @@ import {
   computeElapsedTimerProgress,
   computeRemainingTimerProgress,
   isDrillCountdownTiming,
+  isPracticeCountdownTiming,
   isSectionCountdownTiming,
   isUnlimitedPracticeTiming,
   PRACTICE_PER_QUESTION_SECONDS,
@@ -28,6 +29,9 @@ describe("practice session timer progress", () => {
     expect(isUnlimitedPracticeTiming(undefined)).toBe(true)
     expect(isUnlimitedPracticeTiming("35")).toBe(false)
     expect(isSectionCountdownTiming("standard")).toBe(true)
+    expect(isPracticeCountdownTiming("pace")).toBe(true)
+    expect(isPracticeCountdownTiming("standard")).toBe(true)
+    expect(isPracticeCountdownTiming("unlimited")).toBe(false)
     expect(isDrillCountdownTiming("per-q")).toBe(true)
     expect(isDrillCountdownTiming("pace")).toBe(true)
     expect(isDrillCountdownTiming("speed:94")).toBe(true)

@@ -127,7 +127,7 @@ describe("DrillConfigForm save settings checkbox", () => {
     await user.click(screen.getByRole("button", { name: "Pace" }))
     expect(screen.getByRole("option", { name: /Standard/ })).toBeInTheDocument()
     expect(screen.getByRole("option", { name: /Target/ })).toBeInTheDocument()
-    expect(screen.getByRole("option", { name: "35 minutes" })).toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "35 minutes" })).not.toBeInTheDocument()
     expect(screen.getByRole("option", { name: "Per question (1:20)" })).toBeInTheDocument()
     expect(screen.getByText("SPEED TRAINING")).toBeInTheDocument()
     expect(screen.getByText("CUSTOM")).toBeInTheDocument()
