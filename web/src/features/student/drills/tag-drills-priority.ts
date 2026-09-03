@@ -7,11 +7,11 @@ const PRIORITY_RANK: Record<PriorityTier | "high" | "medium" | "low", number> = 
   low: 3,
 }
 
-/** Initial visible tag drills — one strong row of priorities without overwhelming the page. */
-const TAG_DRILLS_INITIAL_VISIBLE = 8
+/** Initial visible drills in collapsed lists (continue + by-types). */
+const TAG_DRILLS_INITIAL_VISIBLE = 5
 
-/** Cap for the collapsed list (must stay in the 5–10 range). */
-const TAG_DRILLS_VISIBLE_MAX = 10
+/** Cap for the collapsed list (kept equal to the initial window). */
+const TAG_DRILLS_VISIBLE_MAX = 5
 
 function resolveTier(row: PriorityRow): PriorityTier | "low" {
   if (row.priorityTier) return row.priorityTier
