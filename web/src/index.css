@@ -3545,6 +3545,16 @@ html {
   color: #36394a;
 }
 
+.lesson-html-body hr,
+.lesson-html-content hr,
+.lesson-tiptap-editor hr,
+.ProseMirror hr {
+  margin: 24px 0;
+  border: 0;
+  border-top: 1px solid #dfe1e7;
+  height: 0;
+}
+
 .lesson-callout-body {
   font-family: var(--sans);
 }

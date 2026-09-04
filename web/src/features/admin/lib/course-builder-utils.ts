@@ -39,3 +39,20 @@ export type BuilderSelection =
   | { kind: "module"; id: string }
   | { kind: "section"; id: string }
   | { kind: "lesson"; id: string }
+
+/** Append a block (e.g. `<hr>`, `<p>…</p>`) to lesson HTML body content. */
+export function appendLessonHtmlBlock(existingHtml: string, blockHtml: string): string {
+  const base = (existingHtml || "").trim() || "<p></p>"
+  const block = blockHtml.trim()
+  if (!block) return base
+  return `${base}${block}`
+}
+
+export function focusLessonBodyEditor(anchorId = "lesson-instructions-anchor"): void {
+  const anchor = document.getElementById(anchorId)
+  anchor?.scrollIntoView({ behavior: "smooth", block: "start" })
+  window.requestAnimationFrame(() => {
+    const prose = anchor?.querySelector<HTMLElement>(".ProseMirror")
+    prose?.focus()
+  })
+}
