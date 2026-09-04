@@ -35,11 +35,11 @@ function PrepCourseModuleSidebar({
 }: PrepCourseModuleSidebarProps) {
   return (
     <aside
-      className="flex min-h-0 w-full shrink-0 flex-col border-t border-[#dfe1e7] bg-[var(--primary-0)] pl-4 lg:w-[288px] lg:border-t-0 lg:border-l"
+      className="flex min-h-0 w-full shrink-0 flex-col border-t border-[var(--greyscale-100)] bg-[var(--primary-0)] pl-4 lg:w-[288px] lg:border-t-0 lg:border-l"
       aria-label="Course modules"
     >
       <div className="shrink-0 pt-6 pr-3">
-        <h2 className="text-xl font-bold leading-[1.35] text-[#082c6b]">Course Modules</h2>
+        <h2 className="text-xl font-bold leading-[1.35] text-[var(--primary-700)]">Course Modules</h2>
       </div>
       <ul className="practice-session-pane--scroll-visible min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden py-3 pr-3">
         {modules.map((mod) => {
@@ -67,7 +67,7 @@ function PrepCourseModuleSidebar({
                   "flex h-[62px] w-full items-center gap-3 rounded-[16px] p-3 text-left transition-colors",
                   isActive
                     ? "max-w-[256px] bg-[var(--primary-25)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
-                    : "hover:bg-white/60",
+                    : "hover:bg-[var(--greyscale-0)]/60",
                 )}
               >
                 {isLocked ? (
@@ -85,7 +85,7 @@ function PrepCourseModuleSidebar({
                   <p
                     className={cn(
                       "truncate text-xs font-semibold leading-[1.5] tracking-[0.24px]",
-                      isActive ? "text-[#062357]" : "text-[#082c6b]",
+                      isActive ? "text-[var(--color-student-heading)]" : "text-[var(--primary-700)]",
                     )}
                     title={mod.title}
                   >

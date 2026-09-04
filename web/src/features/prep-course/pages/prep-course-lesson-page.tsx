@@ -44,7 +44,7 @@ import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 import { cn } from "@/lib/utils"
 
 const PREP_COURSE_LESSON_CONTENT_CARD_CLASS =
-  "flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden rounded-t-[14px] rounded-b-none border border-b-0 border-[#e2e8f0] bg-white shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]"
+  "flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden rounded-t-[14px] rounded-b-none border border-b-0 border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]"
 
 function PrepCourseLessonPage() {
   const navigate = useNavigate()
@@ -319,7 +319,7 @@ function PrepCourseLessonPage() {
     return (
       <StudentMain>
         <p className="text-sm text-[#95122b]">{error ?? "Lesson not found."}</p>
-        <Link to="/app/prep-course" className="mt-3 inline-block text-sm font-medium text-[#0d47a1]">
+        <Link to="/app/prep-course" className="mt-3 inline-block text-sm font-medium text-[var(--primary)]">
           Back to courses
         </Link>
       </StudentMain>
@@ -347,30 +347,30 @@ function PrepCourseLessonPage() {
   }
 
   return (
-    <StudentMain layout="locked" fullBleed contentClassName="px-0 pb-0">
-      <div className="prep-course-lesson-shell flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-y-hidden">
+    <StudentMain layout="locked" fullBleed contentClassName="bg-[var(--background)] px-0 pb-0">
+      <div className="prep-course-lesson-shell flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-y-hidden bg-[var(--background)]">
         {error ? <p className="mb-4 shrink-0 text-xs text-[#95122b]">{error}</p> : null}
 
         <section className="prep-course-lesson-frame practice-session-card flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden">
           <div
             className={cn(
-              "practice-session-body flex h-0 min-h-0 min-w-0 max-w-full flex-1 overflow-hidden px-[24px] pb-0",
+              "practice-session-body flex h-0 min-h-0 min-w-0 max-w-full flex-1 overflow-hidden bg-[var(--background)] px-[24px] pb-0",
               useSplitDrillLayout
                 ? "flex-col"
                 : showSidebar
-                  ? "practice-session-body--with-sidebar flex-row items-stretch gap-6"
-                  : "flex-col",
+                  ? "practice-session-body--with-sidebar mx-auto w-full max-w-[calc(1168px+320px+24px)] flex-row items-stretch justify-center gap-6"
+                  : "flex-col items-center",
             )}
           >
             {useSplitDrillLayout ? (
               <div
                 ref={lessonContentRef}
-                className="practice-session-pane practice-session-scroll-hidden flex min-h-0 flex-1 flex-col gap-6 overflow-x-clip overflow-y-auto overscroll-contain bg-[var(--primary-0)] [overflow-anchor:none]"
+                className="practice-session-pane practice-session-scroll-hidden flex min-h-0 flex-1 flex-col gap-6 overflow-x-clip overflow-y-auto overscroll-contain bg-[var(--background)] [overflow-anchor:none]"
               >
                 <div className={cn(STUDENT_PAGE_CONTAINER_CLASS, "w-full")}>
                   <PrepCourseLessonPanel {...lessonPanelProps} drillResultsPart="cards" sidebarAdjacent={false} />
                 </div>
-                <div className="flex min-w-0 gap-6">
+                <div className="mx-auto flex w-full min-w-0 max-w-[calc(1168px+320px+24px)] gap-6">
                   <div className={cn(STUDENT_PAGE_CONTAINER_CLASS, "min-w-0 flex-1")}>
                     <PrepCourseLessonPanel
                       {...lessonPanelProps}
@@ -396,7 +396,14 @@ function PrepCourseLessonPage() {
               </div>
             ) : (
               <>
-                <div className={cn(PREP_COURSE_LESSON_CONTENT_CARD_CLASS, STUDENT_PAGE_CONTAINER_CLASS, "w-full flex-1 self-stretch")}>
+                <div
+                  className={cn(
+                    PREP_COURSE_LESSON_CONTENT_CARD_CLASS,
+                    STUDENT_PAGE_CONTAINER_CLASS,
+                    "w-full flex-1",
+                    !showSidebar && "mx-auto",
+                  )}
+                >
                   <PrepCourseLessonPanel
                     {...lessonPanelProps}
                     contentScrollRef={lessonContentRef}

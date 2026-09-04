@@ -18,15 +18,15 @@ function SectionBuildMyOwnHeader({ customize, onCustomizeChange, readyCount }: S
   return (
     <div className="flex w-full flex-col gap-0.5 lg:w-auto lg:shrink-0 lg:items-end">
       <div className="flex w-full items-start justify-between gap-4">
-        <p className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Build My Own</p>
+        <p className="m-0 text-xl font-bold leading-[1.35] text-[var(--primary)]">Build My Own</p>
         <Switch
           checked={customize}
           onChange={(e) => onCustomizeChange(e.target.checked)}
-          className={customize ? "!bg-[#0d47a1]" : "!bg-[#dfe1e6]"}
+          className={customize ? "!bg-[var(--primary)]" : "!bg-[var(--greyscale-100)]"}
           aria-label="Build My Own"
         />
       </div>
-      <p className="m-0 whitespace-nowrap text-xs font-normal leading-normal tracking-[0.02em] text-[#666d80] lg:text-right">
+      <p className="m-0 whitespace-nowrap text-xs font-normal leading-normal tracking-[0.02em] text-[var(--greyscale-500)] lg:text-right">
         {readyCount} new {readyCount === 1 ? "question" : "questions"} ready
       </p>
     </div>

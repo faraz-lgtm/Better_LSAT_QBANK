@@ -378,7 +378,7 @@ function PracticeSessionResultsPage() {
         <p className="text-sm text-red-600">{error ?? "Results not found."}</p>
         <button
           type="button"
-          className="mt-3 text-sm font-semibold text-[#0d47a1] hover:underline"
+          className="mt-3 text-sm font-semibold text-[var(--primary)] hover:underline"
           onClick={handleBack}
         >
           Go back
@@ -495,7 +495,7 @@ function PracticeSessionResultsPage() {
       ) : (
       <div className={PT_RESULTS_PAGE_GAP_CLASS}>
         <section className={PT_RESULTS_HERO_CARD_CLASS}>
-          <h1 className="!m-0 !text-[24px] font-bold leading-[1.3] text-[#062357]">{results.title}</h1>
+          <h1 className="!m-0 !text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">{results.title}</h1>
 
           <PracticeResultsSummaryPanel
             rawScore={results.rawScore}
@@ -582,7 +582,7 @@ function PracticeSessionResultsPage() {
             </PracticeResultsSectionCard>
           ))}
           {bookmarkedOnly && filteredSectionGroups.length === 0 ? (
-            <p className="rounded-[16px] border border-dashed border-[#dfe1e7] bg-white px-6 py-8 text-center text-sm text-[#666d80]">
+            <p className="rounded-[16px] border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-8 text-center text-sm text-[var(--greyscale-500)]">
               {results.kind === "SECTION"
                 ? "No bookmarked questions in this section. Bookmark a question to see it here."
                 : "No bookmarked questions in this drill. Bookmark a question to see it here."}
@@ -591,8 +591,8 @@ function PracticeSessionResultsPage() {
         </div>
 
         {returnTo.startsWith("/app/prep-course/") ? (
-          <p className="text-center text-sm text-[#666d80]">
-            <Link to={returnTo} className="font-semibold text-[#0d47a1] hover:underline">
+          <p className="text-center text-sm text-[var(--greyscale-500)]">
+            <Link to={returnTo} className="font-semibold text-[var(--primary)] hover:underline">
               Return to lesson
             </Link>
           </p>

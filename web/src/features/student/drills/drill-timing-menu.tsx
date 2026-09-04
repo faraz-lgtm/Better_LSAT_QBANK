@@ -42,10 +42,10 @@ function Stepper({
   onIncrement: () => void
 }) {
   return (
-    <div className="inline-flex h-9 shrink-0 items-center rounded-[10px] border border-[#dfe1e7] bg-white">
+    <div className="inline-flex h-9 shrink-0 items-center rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
       <button
         type="button"
-        className="inline-flex size-9 items-center justify-center text-[#666d80] transition hover:text-[#062357]"
+        className="inline-flex size-9 items-center justify-center text-[var(--greyscale-500)] transition hover:text-[var(--color-student-heading)]"
         aria-label={`Decrease ${label}`}
         onClick={(event) => {
           event.stopPropagation()
@@ -54,10 +54,10 @@ function Stepper({
       >
         <Minus className="size-4" strokeWidth={2} aria-hidden />
       </button>
-      <span className="min-w-[3.5rem] text-center text-sm font-semibold tabular-nums text-[#062357]">{label}</span>
+      <span className="min-w-[3.5rem] text-center text-sm font-semibold tabular-nums text-[var(--color-student-heading)]">{label}</span>
       <button
         type="button"
-        className="inline-flex size-9 items-center justify-center text-[#666d80] transition hover:text-[#062357]"
+        className="inline-flex size-9 items-center justify-center text-[var(--greyscale-500)] transition hover:text-[var(--color-student-heading)]"
         aria-label={`Increase ${label}`}
         onClick={(event) => {
           event.stopPropagation()
@@ -89,13 +89,15 @@ function PresetRow({
       onClick={onSelect}
       className={cn(
         "flex w-full items-center justify-between gap-3 rounded-[10px] px-3 py-2.5 text-left transition-colors",
-        selected ? "bg-[#edf3ff] text-[#082c6b]" : "text-[#062357] hover:bg-[#edf3ff]/60",
+        selected
+          ? "bg-[var(--primary-25)] text-[var(--color-student-heading)]"
+          : "text-[var(--color-student-heading)] hover:bg-[color:var(--primary-25)]/60",
       )}
     >
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold leading-snug">{title}</span>
         {detail ? (
-          <span className="mt-0.5 block text-xs font-normal tracking-[0.24px] text-[#666d80]">{detail}</span>
+          <span className="mt-0.5 block text-xs font-normal tracking-[0.24px] text-[var(--greyscale-500)]">{detail}</span>
         ) : null}
       </span>
       {selected ? <Check className="size-4 shrink-0" aria-hidden /> : <span className="size-4 shrink-0" aria-hidden />}
@@ -176,16 +178,16 @@ function DrillTimingMenu({
         aria-controls={listboxId}
         aria-label={ariaLabel}
         className={cn(
-          "flex h-[52px] w-full min-w-[140px] items-center gap-2 border px-3 text-base font-normal tracking-[0.32px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d47a1]/30",
+          "flex h-[52px] w-full min-w-[140px] items-center gap-2 border px-3 text-base font-normal tracking-[0.32px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--primary)]/30",
           "rounded-[16px]",
           open
-            ? "border-[#0d47a1] bg-[#f0f5ff] font-medium text-[#062357]"
-            : "border-[#dfe1e7] bg-[#f0f5ff] text-[#062357] hover:border-[#c5d4ef]",
+            ? "border-[var(--primary)] bg-[var(--primary-25)] font-medium text-[var(--color-student-heading)]"
+            : "border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--color-student-heading)] hover:border-[color:var(--primary-100)]",
         )}
       >
         <span className="flex-1 truncate text-left">{triggerLabel}</span>
         <ChevronDown
-          className={cn("size-5 shrink-0 text-[#666d80] transition-transform", open && "rotate-180")}
+          className={cn("size-5 shrink-0 text-[var(--greyscale-500)] transition-transform", open && "rotate-180")}
           aria-hidden
         />
       </button>
@@ -195,7 +197,7 @@ function DrillTimingMenu({
           id={listboxId}
           role="listbox"
           aria-label={ariaLabel}
-          className="absolute left-0 z-40 mt-2 flex max-h-[min(32rem,calc(100vh-8rem))] w-max min-w-full max-w-[min(26.25rem,calc(100vw-2rem))] flex-col overflow-y-auto rounded-[12px] border border-[#dfe1e7] bg-white p-2 shadow-[0px_12px_24px_rgba(13,13,18,0.12)]"
+          className="absolute left-0 z-40 mt-2 flex max-h-[min(32rem,calc(100vh-8rem))] w-max min-w-full max-w-[min(26.25rem,calc(100vw-2rem))] flex-col overflow-y-auto rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-2 shadow-[0px_12px_24px_rgba(13,13,18,0.12)]"
         >
           <PresetRow
             selected={value === "pace"}
@@ -216,7 +218,7 @@ function DrillTimingMenu({
             onSelect={() => select("per-q")}
           />
 
-          <p className="mb-1 mt-2 px-3 text-[11px] font-semibold tracking-[0.08em] text-[#666d80]">SPEED TRAINING</p>
+          <p className="mb-1 mt-2 px-3 text-[11px] font-semibold tracking-[0.08em] text-[var(--greyscale-500)]">SPEED TRAINING</p>
           {DRILL_SPEED_PERCENTS.map((percent) => {
             const seconds = speedDrillSeconds(count, percent, scaleFactor)
             return (
@@ -230,15 +232,15 @@ function DrillTimingMenu({
             )
           })}
 
-          <p className="mb-1 mt-2 px-3 text-[11px] font-semibold tracking-[0.08em] text-[#666d80]">CUSTOM</p>
+          <p className="mb-1 mt-2 px-3 text-[11px] font-semibold tracking-[0.08em] text-[var(--greyscale-500)]">CUSTOM</p>
           <div className="flex items-center justify-between gap-3 rounded-[10px] px-2 py-2">
             <Stepper
               label={`${customPercent} %`}
               onDecrement={() => setPercent(customPercent - 1)}
               onIncrement={() => setPercent(customPercent + 1)}
             />
-            <p className="m-0 min-w-0 text-right text-xs leading-snug text-[#666d80]">
-              <span className="block font-semibold tabular-nums text-[#062357]">{formatDrillMmSs(customPercentSeconds)}</span>
+            <p className="m-0 min-w-0 text-right text-xs leading-snug text-[var(--greyscale-500)]">
+              <span className="block font-semibold tabular-nums text-[var(--color-student-heading)]">{formatDrillMmSs(customPercentSeconds)}</span>
               {averageLabel(customPercentSeconds, count)}
             </p>
           </div>
@@ -248,8 +250,8 @@ function DrillTimingMenu({
               onDecrement={() => setTime(customTime - DRILL_CUSTOM_TIME_STEP_SECONDS)}
               onIncrement={() => setTime(customTime + DRILL_CUSTOM_TIME_STEP_SECONDS)}
             />
-            <p className="m-0 min-w-0 text-right text-xs leading-snug text-[#666d80]">
-              <span className="block font-semibold text-[#062357]">{customTimePercent}% standard</span>
+            <p className="m-0 min-w-0 text-right text-xs leading-snug text-[var(--greyscale-500)]">
+              <span className="block font-semibold text-[var(--color-student-heading)]">{customTimePercent}% standard</span>
               {formatDrillMmSs(customTime / count)}/question
             </p>
           </div>

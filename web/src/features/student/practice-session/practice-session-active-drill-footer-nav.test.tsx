@@ -241,18 +241,18 @@ describe("PracticeSessionActiveDrillFooterNav", () => {
 
     expect(prev).toHaveTextContent("Prev")
     expect(next).toHaveTextContent("Next")
-    expect(prev).toHaveClass("h-7", "rounded-[6px]", "bg-[#1877b1]", "px-3", "pt-[3px]", "pb-[5px]")
+    expect(prev).toHaveClass("h-7", "rounded-[6px]", "bg-[var(--primary)]", "px-3", "pt-[3px]", "pb-[5px]")
     expect(prev.parentElement).toHaveClass("gap-2", "px-2")
     expect(current.closest(".practice-session-question-nav-grid")).toHaveClass("items-end", "gap-2")
-    expect(current).toHaveClass("bg-[#e6f0f6]", "text-[#0d0d12]")
-    expect(current).not.toHaveClass("border-[#d4d7e2]")
+    expect(current).toHaveClass("bg-[var(--primary-25)]", "text-[var(--color-student-heading)]")
+    expect(current).not.toHaveClass("border-[var(--greyscale-100)]")
     expect(current.querySelector('img[src="/figma/exam-official/current-caret.svg"]')).toBeInTheDocument()
-    expect(answered).toHaveClass("border-[#d4d7e2]", "bg-white")
-    expect(answered.querySelector("span[aria-hidden]")).toHaveClass("h-[3px]", "bg-[#a4acb9]")
+    expect(answered).toHaveClass("border-[var(--greyscale-100)]", "bg-[var(--greyscale-0)]")
+    expect(answered.querySelector("span[aria-hidden]")).toHaveClass("h-[3px]", "bg-[var(--greyscale-300)]")
     expect(document.querySelector(".practice-session-question-nav-passage-break")).toHaveClass(
       "h-7",
       "w-[4px]",
-      "bg-[#666d80]",
+      "bg-[var(--greyscale-500)]",
     )
   })
 

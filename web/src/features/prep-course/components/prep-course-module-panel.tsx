@@ -109,7 +109,7 @@ function PrepCourseModulePanel({
           Total Time:{" "}
           <span className="font-semibold text-[color:var(--greyscale-500)]">{formatTotalHoursLabel(totalMinutes)}</span>
         </p>
-        <p className="text-[#0d47a1]">
+        <p className="text-[var(--primary)]">
           {completedCount} of {lessonCount} Lessons completed • {formatRemainingHoursLabel(remainingMinutes)}
         </p>
       </div>
@@ -125,7 +125,7 @@ function PrepCourseModulePanel({
   const titleRow = (
     <div className="flex h-12 min-w-0 items-center gap-3">
       <ProgressRing value={progressPercent} size="sm" ringBg="var(--primary-0)" />
-      <h2 className="min-w-0 truncate text-2xl font-bold leading-[1.3] text-[#062357]" title={module.title}>
+      <h2 className="min-w-0 truncate text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]" title={module.title}>
         {module.title}
       </h2>
     </div>
@@ -143,8 +143,8 @@ function PrepCourseModulePanel({
         checked={moduleBookmarked}
         onChange={(event) => onToggleModuleBookmark(event.target.checked)}
         className={cn(
-          "h-5 w-9 border border-[#dfe1e7] bg-white p-0.5",
-          moduleBookmarked ? "bg-[#0d47a1]! border-[#0d47a1]!" : undefined,
+          "h-5 w-9 border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-0.5",
+          moduleBookmarked ? "bg-[var(--primary)]! border-[var(--primary)]!" : undefined,
         )}
         aria-label="Bookmark module"
       />
@@ -153,7 +153,7 @@ function PrepCourseModulePanel({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="shrink-0 border-b border-[#dfe1e7] bg-[var(--primary-0)] p-[24px]">
+      <div className="shrink-0 border-b border-[var(--greyscale-100)] bg-[var(--primary-0)] p-[24px]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             {flattenSections && flatSection ? (
@@ -174,13 +174,13 @@ function PrepCourseModulePanel({
         </div>
       </div>
 
-      <div className="practice-session-pane--scroll-visible min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-white">
+      <div className="practice-session-pane--scroll-visible min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-[var(--greyscale-25)]">
         {!hasVisibleBookmarkedLessons ? (
           <p className="ds-body-sm ds-text-muted p-6">No bookmarked lessons in this module.</p>
         ) : null}
 
         {flattenSections && flatSection && flatExpanded && hasVisibleBookmarkedLessons ? (
-          <div className="bg-white">
+          <div className="bg-[var(--greyscale-0)]">
             {visibleFlatLessons.map((lesson) => (
               <PrepCourseLessonRow
                 key={lesson.id}

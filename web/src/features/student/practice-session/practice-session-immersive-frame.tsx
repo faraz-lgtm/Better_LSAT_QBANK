@@ -5,7 +5,7 @@ import { OFFICIAL_IMMERSIVE_FRAME_CLASS } from "@/features/student/practice-sess
 import { cn } from "@/lib/utils"
 
 const IMMERSIVE_SCRIM_BACKDROP_STYLE = {
-  background: "#F2F4F7",
+  background: "var(--background)",
   backdropFilter: "blur(3px)",
   WebkitBackdropFilter: "blur(3px)",
 } as const

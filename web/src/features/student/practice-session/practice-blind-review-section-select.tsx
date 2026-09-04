@@ -34,7 +34,7 @@ function PracticeBlindReviewSectionSelect({
     sections.find((s) => s.sectionSessionId === activeSectionSessionId) ?? sections[0] ?? null
   const activeLabel = activeSection?.label ?? "Section"
   const triggerClass = fullWidth
-    ? "inline-flex h-12 w-full items-center justify-between gap-2 rounded-[12px] border border-[#dfe1e7] bg-white px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#041a44] transition-colors hover:bg-[#f6f8fa]"
+    ? "inline-flex h-12 w-full items-center justify-between gap-2 rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)] transition-colors hover:bg-[var(--greyscale-25)]"
     : BLIND_REVIEW_SECTION_SELECT_TRIGGER_CLASS
 
   useEffect(() => {
@@ -77,9 +77,9 @@ function PracticeBlindReviewSectionSelect({
       >
         <span className="whitespace-nowrap">{activeLabel}</span>
         {open ? (
-          <ChevronUp className="size-5 shrink-0 text-[#666d80]" aria-hidden />
+          <ChevronUp className="size-5 shrink-0 text-[var(--greyscale-500)]" aria-hidden />
         ) : (
-          <ChevronDown className="size-5 shrink-0 text-[#666d80]" aria-hidden />
+          <ChevronDown className="size-5 shrink-0 text-[var(--greyscale-500)]" aria-hidden />
         )}
       </button>
 
@@ -96,8 +96,8 @@ function PracticeBlindReviewSectionSelect({
                   className={cn(
                     "flex h-9 w-full items-center whitespace-nowrap rounded-[16px] px-3 text-left text-base leading-6 tracking-[0.32px] transition-colors",
                     isActive
-                      ? "bg-[#edf3ff] font-semibold text-[#062357]"
-                      : "font-medium text-[#062357] hover:bg-[#f6f8fa]",
+                      ? "bg-[var(--primary-25)] font-semibold text-[var(--color-student-heading)]"
+                      : "font-medium text-[var(--color-student-heading)] hover:bg-[var(--greyscale-25)]",
                   )}
                   onClick={() => {
                     setOpen(false)

@@ -62,7 +62,7 @@ type ScoreTab = (typeof SCORE_TABS)[number]["id"]
 
 function DrillScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next: ScoreTab) => void }) {
   return (
-    <div className="flex h-8 flex-wrap items-center gap-1.5 rounded-[10px] bg-white p-0.5">
+    <div className="flex h-8 flex-wrap items-center gap-1.5 rounded-[10px] bg-[var(--greyscale-0)] p-0.5">
       {SCORE_TABS.map((tab) => {
         const active = value === tab.id
         if (tab.id === "percent") {
@@ -74,11 +74,11 @@ function DrillScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next:
               aria-pressed={active}
               className={cn(
                 "flex min-h-7 items-center justify-center gap-1.5 rounded-[10px] px-2.5 py-1 text-xs font-semibold leading-[1.4] tracking-[0.02em] transition-colors",
-                active ? "bg-[#0d47a1] text-white" : "text-[#666d80] hover:bg-[#f3f7ff]",
+                active ? "bg-[var(--primary)] text-white" : "text-[var(--greyscale-500)] hover:bg-[var(--primary-0)]",
               )}
             >
               <span
-                className={cn("size-2.5 rounded-full", active ? "bg-white" : "bg-[#9ca3af]")}
+                className={cn("size-2.5 rounded-full", active ? "bg-white" : "bg-[var(--greyscale-400)]")}
                 aria-hidden
               />
               {tab.label}
@@ -93,7 +93,7 @@ function DrillScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next:
             aria-pressed={active}
             className={cn(
               "rounded-[8px] px-2.5 py-1 text-xs font-semibold leading-[1.4] tracking-[0.02em] transition-colors hover:rounded-[8px] active:rounded-[8px] focus-visible:rounded-[8px]",
-              active ? "bg-[#0d47a1] text-white" : "border border-[#dfe1e7] bg-white text-[#666d80] hover:bg-[#f3f7ff]",
+              active ? "bg-[var(--primary)] text-white" : "border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--greyscale-500)] hover:bg-[var(--primary-0)]",
             )}
           >
             {tab.label}
@@ -114,7 +114,7 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
 
   if (points.length === 0) {
     return (
-      <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-[#dfe1e7] text-xs text-[#666d80]">
+      <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-[var(--greyscale-100)] text-xs text-[var(--greyscale-500)]">
         No drills in the selected range.
       </div>
     )
@@ -137,7 +137,7 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
   return (
     <div className="w-full">
       <div className="flex h-[220px] w-full items-stretch gap-3">
-        <div className="relative w-10 shrink-0 pr-2 text-sm font-medium text-[#062357]">
+        <div className="relative w-10 shrink-0 pr-2 text-sm font-medium text-[var(--color-student-heading)]">
           {yAxisLabels.map((label, index) => {
             const isFirst = index === 0
             const isLast = index === yAxisLabels.length - 1
@@ -164,7 +164,7 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
                 <div
                   key={`${label}-${index}`}
                   className={cn(
-                    "absolute left-0 right-0 h-px bg-[#e5e7eb]",
+                    "absolute left-0 right-0 h-px bg-[var(--greyscale-100)]",
                     isFirst ? "" : isLast ? "-translate-y-full" : "-translate-y-1/2",
                   )}
                   style={{ top: `${tickTopPct(index)}%` }}
@@ -178,11 +178,11 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
             preserveAspectRatio="none"
             aria-hidden
           >
-            <polygon points={areaPolygon} fill="#0d47a1" fillOpacity="0.08" />
+            <polygon points={areaPolygon} fill="var(--primary)" fillOpacity="0.08" />
             <polyline
               points={polyline}
               fill="none"
-              stroke="#0d47a1"
+              stroke="var(--primary)"
               strokeWidth="0.6"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -206,15 +206,15 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
                 >
                   <span
                     className={cn(
-                      "absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#df1c41] transition-transform",
-                      isActive ? "scale-150 ring-2 ring-[#df1c41]/30" : "",
+                      "absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--destructive)] transition-transform",
+                      isActive ? "scale-150 ring-2 ring-[var(--destructive)]/30" : "",
                     )}
                     style={{ left: "50%", top: `${linePoints[i].y}%` }}
                     aria-hidden
                   />
                   {isActive ? (
                     <span
-                      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-[#062357] px-2 py-1 text-xs font-semibold text-white shadow-lg"
+                      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-[var(--color-student-heading)] px-2 py-1 text-xs font-semibold text-white shadow-lg"
                       style={{ left: "50%", top: `calc(${linePoints[i].y}% - 8px)` }}
                     >
                       {point.label}: {value}
@@ -270,16 +270,16 @@ function DrillTypeMenu({
         onClick={() => setOpen((c) => !c)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex h-8 items-center gap-1.5 rounded-[10px] border border-[#dfe1e7] bg-white px-2.5 text-xs font-medium text-[#062357] hover:bg-[#f3f7ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d47a1]/30"
+        className="flex h-8 items-center gap-1.5 rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-2.5 text-xs font-medium text-[var(--color-student-heading)] hover:bg-[var(--primary-0)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]/30"
       >
         <span className="max-w-[240px] truncate text-left">{label}</span>
-        <ChevronDown className={cn("size-5 text-[#666d80] transition-transform", open ? "rotate-180" : "")} aria-hidden />
+        <ChevronDown className={cn("size-5 text-[var(--greyscale-500)] transition-transform", open ? "rotate-180" : "")} aria-hidden />
       </button>
       {open ? (
         <ul
           role="listbox"
           aria-label="Filter by drill type"
-          className="absolute right-0 z-30 mt-2 min-w-[260px] overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
+          className="absolute right-0 z-30 mt-2 min-w-[260px] overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
         >
           <li role="presentation">
             <button
@@ -292,7 +292,7 @@ function DrillTypeMenu({
               }}
               className={cn(
                 "flex h-10 w-full items-center rounded-[16px] px-3 text-sm font-medium tracking-[0.02em] transition-colors",
-                value === null ? "bg-[#f3f7ff] text-[#0d47a1]" : "text-[#062357] hover:bg-[#f6f8fa]",
+                value === null ? "bg-[var(--primary-0)] text-[var(--primary)]" : "text-[var(--color-student-heading)] hover:bg-[var(--greyscale-25)]",
               )}
             >
               All drill types
@@ -312,11 +312,11 @@ function DrillTypeMenu({
                   }}
                   className={cn(
                     "flex h-10 w-full items-center justify-between gap-3 rounded-[16px] px-3 text-sm font-medium tracking-[0.02em] transition-colors",
-                    active ? "bg-[#f3f7ff] text-[#0d47a1]" : "text-[#062357] hover:bg-[#f6f8fa]",
+                    active ? "bg-[var(--primary-0)] text-[var(--primary)]" : "text-[var(--color-student-heading)] hover:bg-[var(--greyscale-25)]",
                   )}
                 >
                   <span className="truncate">{type.label}</span>
-                  <span className="rounded-full bg-[#f6f8fa] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#666d80]">
+                  <span className="rounded-full bg-[var(--greyscale-25)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--greyscale-500)]">
                     {type.section}
                   </span>
                 </button>
@@ -483,19 +483,19 @@ function AnalyticsDrillsPage() {
 
   return (
     <StudentMain>
-      <section className="mb-4 flex flex-col gap-3 rounded-[14px] border border-[#dfe1e7] bg-white p-4">
+      <section className="mb-4 flex flex-col gap-3 rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-1.5">
-            <h1 className="!m-0 !text-lg !font-bold !leading-[1.3] text-[#062357]">Drills</h1>
+            <h1 className="!m-0 !text-lg !font-bold !leading-[1.3] text-[var(--color-student-heading)]">Drills</h1>
             {activeType ? (
-              <p className="inline-flex w-fit items-center gap-2 rounded-full bg-[#f3f7ff] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#0d47a1]">
+              <p className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--primary-0)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--primary)]">
                 <span>{activeType.section}</span>
                 <span aria-hidden>·</span>
                 <span className="normal-case tracking-normal">{activeType.label}</span>
                 <button
                   type="button"
                   onClick={() => handleSelectType(null)}
-                  className="ml-1 inline-flex size-4 items-center justify-center rounded-full text-[#0d47a1] hover:bg-white"
+                  className="ml-1 inline-flex size-4 items-center justify-center rounded-full text-[var(--primary)] hover:bg-[var(--greyscale-0)]"
                   aria-label="Clear drill type filter"
                 >
                   <X className="size-3" aria-hidden />
@@ -542,7 +542,7 @@ function AnalyticsDrillsPage() {
             />
           </div>
         ) : (
-          <p className="rounded-2xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-6 py-8 text-center text-sm text-[#666d80]">
+          <p className="rounded-2xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-6 py-8 text-center text-sm text-[var(--greyscale-500)]">
             No drills match the current filters. Try widening the time range or clearing the section / drill type.
           </p>
         )}

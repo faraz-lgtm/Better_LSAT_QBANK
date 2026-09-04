@@ -45,7 +45,7 @@ type SectionConfigSelectCardProps = {
 }
 
 const sectionConfigCardClassName =
-  "w-full max-w-[502px] shrink-0 gap-3 rounded-[24px] bg-[#f6f8fa] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
+  "w-full max-w-[502px] shrink-0 gap-3 rounded-[24px] bg-[var(--greyscale-25)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
 
 function SectionConfigSelectCard({ label, description, value, onChange, options }: SectionConfigSelectCardProps) {
   return (
@@ -154,17 +154,17 @@ function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConf
   return (
     <div className="flex w-full flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="m-0 text-base font-semibold leading-snug tracking-[0.02em] text-[#062357]">
+        <h1 className="m-0 text-base font-semibold leading-snug tracking-[0.02em] text-[var(--color-student-heading)]">
           Spend More Time Where You Need It
         </h1>
         {bannerOpen ? (
           <div className="flex items-center justify-between gap-4">
-            <p className="m-0 min-w-0 flex-1 text-sm font-normal leading-normal tracking-[0.02em] text-[#666d80]">
+            <p className="m-0 min-w-0 flex-1 text-sm font-normal leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
               Choose a section to target your practice.
             </p>
             <button
               type="button"
-              className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[#666d80] transition hover:bg-white/80 hover:text-[#062357]"
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[var(--greyscale-500)] transition hover:bg-[var(--greyscale-0)]/80 hover:text-[var(--color-student-heading)]"
               aria-label="Dismiss banner"
               onClick={() => setBannerOpen(false)}
             >
@@ -174,13 +174,13 @@ function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConf
         ) : null}
       </div>
 
-      <section className="flex w-full flex-col gap-6 rounded-[24px] border border-[#dfe1e7] bg-white p-6">
+      <section className="flex w-full flex-col gap-6 rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex min-w-0 items-center gap-4">
             <SectionInitialBadge section={sectionType} variant="section" />
             <div>
               <p className="student-page-heading m-0">{copy.title}</p>
-              <p className="mt-[3px] text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[#062357]">
+              <p className="mt-[3px] text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[var(--color-student-heading)]">
                 {copy.subtitle}
               </p>
             </div>
@@ -232,9 +232,9 @@ function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConf
         ) : null}
 
         {poolTotal === 0 && !loadingPool ? (
-          <p className="m-0 text-sm text-[#666d80]">
+          <p className="m-0 text-sm text-[var(--greyscale-500)]">
             No sections are available in your pool yet. Update your{" "}
-            <Link to="/app/practice/drills" className="font-semibold text-[#0d47a1] hover:underline">
+            <Link to="/app/practice/drills" className="font-semibold text-[var(--primary)] hover:underline">
               Prep pool settings
             </Link>{" "}
             to add sections.
@@ -244,7 +244,7 @@ function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConf
         <div className="flex flex-wrap items-center justify-end gap-6">
           <Link
             to="/app/practice/sections"
-            className="inline-flex h-[52px] items-center px-4 text-base font-semibold tracking-[0.02em] text-[#0d47a1] transition-colors hover:underline"
+            className="inline-flex h-[52px] items-center px-4 text-base font-semibold tracking-[0.02em] text-[var(--primary)] transition-colors hover:underline"
           >
             Back
           </Link>

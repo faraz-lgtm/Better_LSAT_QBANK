@@ -102,7 +102,7 @@ function PracticeQuestionResultCard({
       {explanationHref ? (
         <a
           href={explanationHref}
-          className="flex size-9 items-center justify-center rounded-xl border border-[#dfe1e6] bg-[#f9f9fb] text-[#666d80] transition-colors hover:bg-white"
+          className="flex size-9 items-center justify-center rounded-xl border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] text-[var(--greyscale-500)] transition-colors hover:bg-[var(--greyscale-0)]"
           aria-label="View explanation"
         >
           <Pencil className="size-[18px]" aria-hidden />
@@ -110,7 +110,7 @@ function PracticeQuestionResultCard({
       ) : (
         <button
           type="button"
-          className="flex size-9 items-center justify-center rounded-xl border border-[#dfe1e6] bg-[#f9f9fb] text-[#666d80]"
+          className="flex size-9 items-center justify-center rounded-xl border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] text-[var(--greyscale-500)]"
           aria-label="Edit question"
           disabled
         >
@@ -119,7 +119,7 @@ function PracticeQuestionResultCard({
       )}
       <button
         type="button"
-        className="flex size-9 items-center justify-center rounded-xl border border-[#dfe1e6] bg-[#f9f9fb] text-[#666d80]"
+        className="flex size-9 items-center justify-center rounded-xl border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] text-[var(--greyscale-500)]"
         aria-label={isBookmarked ? "Remove bookmark" : "Bookmark question"}
         aria-pressed={isBookmarked}
         disabled={!canToggleBookmark}
@@ -131,7 +131,7 @@ function PracticeQuestionResultCard({
         <Bookmark
           className={cn(
             "size-[18px]",
-            isBookmarked ? "fill-[#0d47a1] text-[#0d47a1]" : "text-[#666d80]",
+            isBookmarked ? "fill-[var(--primary)] text-[var(--primary)]" : "text-[var(--greyscale-500)]",
           )}
           aria-hidden
         />
@@ -148,7 +148,7 @@ function PracticeQuestionResultCard({
           variant={iconVariant}
           className={iconVariant === "stroke" ? "size-6" : undefined}
         />
-        <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">Actual</span>
+        <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[var(--color-student-heading)]">Actual</span>
       </div>
       {showBlindReviewResult ? (
         <div className="flex shrink-0 items-center gap-2.5">
@@ -158,7 +158,7 @@ function PracticeQuestionResultCard({
             variant={iconVariant}
             className={iconVariant === "stroke" ? "size-6" : undefined}
           />
-          <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
+          <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[var(--color-student-heading)]">
             Blind Review
           </span>
         </div>
@@ -196,7 +196,7 @@ function PracticeQuestionResultCard({
     return (
       <article
         className={cn(
-          "border-t border-[#dfe1e7] bg-white p-6",
+          "border-t border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6",
           className,
         )}
       >
@@ -222,7 +222,7 @@ function PracticeQuestionResultCard({
     return (
       <article
         className={cn(
-          "relative min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
+          "relative min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
           className,
         )}
       >
@@ -247,7 +247,7 @@ function PracticeQuestionResultCard({
   return (
     <article
       className={cn(
-        "overflow-hidden rounded-[20px] border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
+        "overflow-hidden rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
         className,
       )}
     >

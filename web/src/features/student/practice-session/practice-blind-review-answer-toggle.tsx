@@ -24,7 +24,7 @@ function OutcomeIcon({ outcome }: { outcome: BlindReviewAnswerOutcome }) {
   if (outcome === "correct") {
     return (
       <span
-        className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-[#00bc54]"
+        className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-[var(--explanation-answered)]"
         aria-hidden
       >
         <Check className="size-2.5 text-white" strokeWidth={3} />
@@ -43,7 +43,7 @@ function OutcomeIcon({ outcome }: { outcome: BlindReviewAnswerOutcome }) {
   }
   return (
     <span
-      className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-[#df1c41]"
+        className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-[var(--destructive)]"
       aria-hidden
     >
       <X className="size-2.5 text-white" strokeWidth={3} />
@@ -53,12 +53,13 @@ function OutcomeIcon({ outcome }: { outcome: BlindReviewAnswerOutcome }) {
 
 function reviewTabClass(active: boolean, disabled = false) {
   if (disabled) {
-    return "cursor-not-allowed border-[#dfe1e7] bg-[#f6f8fa] text-[#a4acb9] opacity-70"
+    return "cursor-not-allowed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] text-[var(--greyscale-300)] opacity-70"
   }
   if (active) {
-    return "border-[#0b4e6e] bg-[#0d47a1] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
+    return "border-[var(--primary-border)] bg-[var(--primary)] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
   }
-  return "border-[#dfe1e7] bg-white text-[#0d47a1] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] hover:bg-[#f6f8fa]"
+  /* Figma inactive: outline on page Primary — no elevated fill */
+  return "border-[var(--greyscale-100)] bg-transparent text-[var(--primary)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] hover:bg-[var(--greyscale-25)] dark:text-[var(--color-student-heading)]"
 }
 
 function PracticeBlindReviewAnswerToggle({
@@ -115,7 +116,7 @@ function PracticeBlindReviewAnswerToggle({
 
   return (
     <div
-      className="inline-flex h-10 shrink-0 items-center gap-2 rounded-[16px] bg-white p-1"
+      className="inline-flex h-10 shrink-0 items-center gap-2 rounded-[16px] bg-[var(--greyscale-0)] p-1"
       role="tablist"
       aria-label="Answer view"
     >

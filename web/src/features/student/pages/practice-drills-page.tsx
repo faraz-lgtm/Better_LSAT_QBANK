@@ -155,7 +155,7 @@ function PracticeDrillsPage() {
     sectionFilter === "all" ? (["lr", "rc"] as const) : sectionFilter === "lr" ? (["lr"] as const) : (["rc"] as const)
 
   return (
-    <StudentMain className="drills-page" contentClassName="flex flex-col gap-[25px]">
+    <StudentMain className="drills-page bg-[var(--background)]" contentClassName="flex flex-col gap-[25px] bg-[var(--background)]">
       <div className="flex flex-wrap items-center justify-between gap-[12px]">
         <div className="flex flex-wrap items-center gap-[8px]">
           <button
@@ -182,7 +182,7 @@ function PracticeDrillsPage() {
         </div>
         <button
           type="button"
-          className="inline-flex h-[32px] items-center gap-[8px] pr-[16px] text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-[#0d47a1] hover:underline"
+          className="inline-flex h-[32px] items-center gap-[8px] pr-[16px] text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-[var(--primary)] hover:underline"
           onClick={() => navigate("/app/analytics/drills")}
         >
           Drills Insight
@@ -190,8 +190,8 @@ function PracticeDrillsPage() {
         </button>
       </div>
 
-      <section className="rounded-[20px] border border-[#dfe1e7] bg-white p-[24px]">
-        <h2 className="mb-[24px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#041a44]">
+      <section className="rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]">
+        <h2 className="mb-[24px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
           Start A New Drill
         </h2>
         <PracticeLrRcStarterCards
@@ -206,12 +206,12 @@ function PracticeDrillsPage() {
         />
       </section>
 
-      <section className="flex flex-col gap-[24px] rounded-[20px] border border-[#dfe1e7] bg-white p-[24px]">
+      <section className="flex flex-col gap-[24px] rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]">
         <div className="flex flex-wrap items-center justify-between gap-[12px]">
-          <h2 className="text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#041a44]">
+          <h2 className="text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
             Pick Up Where You Left Off
           </h2>
-          <p className="text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[#666d80]">
+          <p className="text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
             {padInProcessCount(filteredContinue.length)}
           </p>
         </div>
@@ -219,7 +219,7 @@ function PracticeDrillsPage() {
         {loading ? (
           <StudentPageLoader label="Loading drills…" />
         ) : filteredContinue.length === 0 ? (
-          <p className="text-[14px] text-[#666d80]">
+          <p className="text-[14px] text-[var(--greyscale-500)]">
             No drills in progress. Start a new LR or RC drill above.
           </p>
         ) : (
@@ -248,12 +248,12 @@ function PracticeDrillsPage() {
         )}
       </section>
 
-      <section className="flex flex-col gap-[24px] rounded-[20px] border border-[#dfe1e7] bg-white p-[24px]">
+      <section className="flex flex-col gap-[24px] rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]">
         <div className="flex flex-col gap-[8px]">
-          <h2 className="text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#041a44]">
+          <h2 className="text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
             Drills by Types
           </h2>
-          <p className="text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[#666d80]">
+          <p className="text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
             Ranked by your past performance and score impact
           </p>
         </div>
@@ -261,7 +261,7 @@ function PracticeDrillsPage() {
         {loading ? (
           <StudentPageLoader label="Loading tag drills…" />
         ) : filteredTags.length === 0 ? (
-          <p className="text-[14px] text-[#666d80]">Answer more questions to unlock priority tag drills.</p>
+          <p className="text-[14px] text-[var(--greyscale-500)]">Answer more questions to unlock priority tag drills.</p>
         ) : (
           <>
             <div className="flex flex-col gap-[16px]">

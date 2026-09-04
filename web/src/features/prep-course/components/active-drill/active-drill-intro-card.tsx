@@ -31,16 +31,16 @@ function ActiveDrillIntroCard({
   const body = activeDrillIntroCopy(lesson)
 
   return (
-    <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+    <article className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
       {hideTitle ? null : (
-        <h2 className="text-2xl font-bold text-[#062357] md:text-[28px]">{lesson.title}</h2>
+        <h2 className="text-2xl font-bold text-[var(--color-student-heading)] md:text-[28px]">{lesson.title}</h2>
       )}
       {linked ? (
-        <p className={`text-sm font-medium tracking-[0.02em] text-[#666d80] ${hideTitle ? "" : "mt-2"}`}>
+        <p className={`text-sm font-medium tracking-[0.02em] text-[var(--greyscale-500)] ${hideTitle ? "" : "mt-2"}`}>
           {formatPtRef(linked)}
         </p>
       ) : null}
-      <p className={`text-sm leading-7 text-[#36394a] ${hideTitle ? "mt-0" : "mt-6"}`}>{body}</p>
+      <p className={`text-sm leading-7 text-[var(--color-student-heading)] ${hideTitle ? "mt-0" : "mt-6"}`}>{body}</p>
       {drillStartError ? (
         <p className="mt-6 text-sm text-[#95122b]" role="alert">
           {drillStartError}

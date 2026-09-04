@@ -97,11 +97,11 @@ function PrepCourseLessonPanel({
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-3">
             {moduleLessonLine ? (
-              <p className="m-0 text-xs font-bold leading-[1.5] tracking-[0.24px] text-[#0d47a1]">{moduleLessonLine}</p>
+              <p className="m-0 text-xs font-bold leading-[1.5] tracking-[0.24px] text-[var(--primary)]">{moduleLessonLine}</p>
             ) : null}
-            <h2 className="m-0 text-[24px] font-bold leading-[1.3] text-[#36394a]">{lesson?.title}</h2>
+            <h2 className="m-0 text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">{lesson?.title}</h2>
             {subtitle ? (
-              <p className="m-0 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#666d80]">{subtitle}</p>
+              <p className="m-0 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">{subtitle}</p>
             ) : null}
           </div>
           <div className="flex shrink-0 flex-col items-end gap-3">
@@ -111,7 +111,7 @@ function PrepCourseLessonPanel({
               aria-pressed={lessonBookmarked}
               className={cn(
                 "inline-flex h-9 items-center gap-2 rounded-full px-[14px] text-xs font-medium leading-[1.5] tracking-[0.24px] transition-colors",
-                lessonBookmarked ? "text-[#0d47a1]" : "text-[#666d80] hover:text-[#0d47a1]",
+                lessonBookmarked ? "text-[var(--primary)]" : "text-[var(--greyscale-500)] hover:text-[var(--primary)]",
               )}
               onClick={() => onToggleLessonBookmark?.(!lessonBookmarked)}
             >
@@ -119,7 +119,7 @@ function PrepCourseLessonPanel({
               <span>Save lesson</span>
             </button>
             {rightMeta ? (
-              <p className="m-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#666d80]">{rightMeta}</p>
+              <p className="m-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">{rightMeta}</p>
             ) : null}
           </div>
         </div>
@@ -129,11 +129,11 @@ function PrepCourseLessonPanel({
               {Array.from({ length: lessonSequence.total }).map((_, idx) => (
                 <span
                   key={idx}
-                  className={`h-[5px] min-w-0 flex-1 rounded-full ${idx < lessonSequence.current ? "bg-[#0d47a1]" : "bg-[#dfe1e7]"}`}
+                  className={`h-[5px] min-w-0 flex-1 rounded-full ${idx < lessonSequence.current ? "bg-[var(--primary)]" : "bg-[var(--greyscale-100)] dark:bg-[var(--greyscale-50)]"}`}
                 />
               ))}
             </div>
-            <p className="m-0 text-xs font-bold leading-[1.5] tracking-[0.24px] text-[#062357]">
+            <p className="m-0 text-xs font-bold leading-[1.5] tracking-[0.24px] text-[var(--color-student-heading)]">
               {lessonSequence.current} / {lessonSequence.total}
             </p>
           </div>
@@ -167,7 +167,7 @@ function PrepCourseLessonPanel({
     ) : (
       <article
         className={cn(
-          "box-border min-w-0 max-w-full overflow-x-clip rounded-[16px] border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]",
+          "box-border min-w-0 max-w-full overflow-x-clip rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]",
           sidebarAdjacent && "min-h-full",
         )}
       >
@@ -190,7 +190,7 @@ function PrepCourseLessonPanel({
       startingDrill={startingDrill}
       drillStartError={drillStartError}
       edgeToSidebar={false}
-      skipArticleShell={useLessonArticleShell}
+          skipArticleShell={useLessonArticleShell}
       inLessonCard={inLessonCard}
       sectionSubtitle={subtitle}
       lessonBookmarked={lessonBookmarked}
@@ -200,7 +200,7 @@ function PrepCourseLessonPanel({
   ) : null
 
   const contentPaddingClass = inLessonCard ? "p-0" : sidebarAdjacent ? "pt-6 pb-6 pl-6 pr-0" : "p-6"
-  const paneBgClass = inLessonCard ? "bg-white" : "bg-[var(--primary-0)]"
+  const paneBgClass = inLessonCard ? "bg-[var(--greyscale-0)]" : "bg-[var(--primary-0)]"
 
   if (lesson && hideHeaderForDrillResults && drillResultsPart === "cards") {
     return (
@@ -311,7 +311,7 @@ function PrepCourseLessonPanel({
               ref={contentScrollRef}
               className={cn(
                 "practice-session-pane practice-session-scroll-hidden h-0 min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain [overflow-anchor:none]",
-                inLessonCard ? "bg-white" : paneBgClass,
+                inLessonCard ? "bg-[var(--greyscale-0)]" : paneBgClass,
                 inLessonCard && hasVideo ? "p-0" : contentPaddingClass,
                 !hasVideo && "pt-0",
               )}

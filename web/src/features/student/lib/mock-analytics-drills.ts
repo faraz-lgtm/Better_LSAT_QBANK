@@ -175,10 +175,10 @@ export function computeDrillStats(records: readonly DrillRecord[]): DrillStats |
 
 export function buildDrillStatTiles(stats: DrillStats): AnalyticsStat[] {
   return [
-    { id: "drills-taken", label: "DRILLS TAKEN", value: String(stats.drillsTaken), accent: "#0d47a1" },
-    { id: "accuracy", label: "ACCURACY", value: `${stats.accuracyPct}%`, accent: "#5463a9" },
-    { id: "questions-drilled", label: "QUESTIONS DRILLED", value: String(stats.questionsDrilled), accent: "#116b97" },
-    { id: "answered-correctly", label: "ANSWERED CORRECTLY", value: String(stats.questionsCorrect), accent: "#0bbcc9" },
+    { id: "drills-taken", label: "DRILLS TAKEN", value: String(stats.drillsTaken), accent: "var(--primary)" },
+    { id: "accuracy", label: "ACCURACY", value: `${stats.accuracyPct}%`, accent: "var(--primary-100)" },
+    { id: "questions-drilled", label: "QUESTIONS DRILLED", value: String(stats.questionsDrilled), accent: "var(--color-student-heading)" },
+    { id: "answered-correctly", label: "ANSWERED CORRECTLY", value: String(stats.questionsCorrect), accent: "var(--explanation-teal)" },
   ]
 }
 

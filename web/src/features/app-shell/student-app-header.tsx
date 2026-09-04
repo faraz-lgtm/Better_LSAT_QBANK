@@ -12,6 +12,7 @@ import {
   STUDENT_PAGE_CONTAINER_CLASS,
   STUDENT_SHELL_GUTTER_CLASS,
 } from "@/features/student/components/student-page-container"
+import { ThemeToggleButton } from "@/features/theme/theme-toggle"
 import { createUsersApi } from "@/lib/api/users"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -152,18 +153,18 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
   const lastCrumbIndex = crumbs.length - 1
 
   return (
-    <header className="student-topbar sticky top-0 z-30 w-full shrink-0 border-b border-[#dfe1e7] bg-[#f3f7ff]">
+    <header className="student-topbar sticky top-0 z-30 w-full shrink-0 border-b border-[color:var(--greyscale-100)] bg-[var(--primary-0)]">
       <div
         className={cn(
           STUDENT_SHELL_GUTTER_CLASS,
           STUDENT_PAGE_CONTAINER_CLASS,
-          "flex h-[72px] w-full items-center justify-between gap-4",
+          "student-shell-top-row flex w-full items-center justify-between gap-4",
         )}
       >
         <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
-            className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-[#dfe1e7] bg-[#edf3ff] text-[#0d47a1] lg:hidden"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--greyscale-100)] bg-[var(--primary-25)] text-[color:var(--primary)] lg:hidden"
             aria-label="Open navigation menu"
             onClick={onOpenMobileNav}
           >
@@ -178,7 +179,7 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
                 return (
                   <Fragment key={`${crumb.label}-${index}`}>
                     {index > 0 ? (
-                      <li aria-hidden className="text-xs font-semibold tracking-[0.24px] text-[#666d80]">
+                      <li aria-hidden className="text-xs font-semibold tracking-[0.24px] text-[color:var(--greyscale-500)]">
                         /
                       </li>
                     ) : null}
@@ -188,8 +189,8 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
                           aria-current={isLast ? "page" : undefined}
                           className={cn(
                             isLast
-                              ? "font-medium text-[#0d47a1]"
-                              : "font-normal text-[#666d80]",
+                              ? "font-medium text-[color:var(--primary)]"
+                              : "font-normal text-[color:var(--greyscale-500)]",
                           )}
                         >
                           {crumb.label}
@@ -197,7 +198,7 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
                       ) : (
                         <Link
                           to={href}
-                          className="font-normal text-[#666d80] hover:text-[#0d47a1]"
+                          className="font-normal text-[color:var(--greyscale-500)] hover:text-[color:var(--primary)]"
                           onClick={(event) => {
                             if (!shouldForceParentNav(pathname, href)) return
                             event.preventDefault()
@@ -218,40 +219,42 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
         <div className="flex shrink-0 items-center gap-3">
           {isPremium ? null : headerActions}
 
+          <ThemeToggleButton />
+
           <div ref={profileMenuRef} className="relative">
             <button
               type="button"
-              className="flex h-[60px] items-center gap-3 rounded-[20px] px-3 hover:bg-[#edf3ff]/60"
+              className="flex h-[60px] items-center gap-3 rounded-[20px] px-3 hover:bg-[color:var(--primary-25)]/60"
               aria-label="Open profile menu"
               aria-haspopup="menu"
               aria-expanded={openProfileMenu}
               onClick={() => setOpenProfileMenu((current) => !current)}
             >
-              <span className="flex size-[42px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#0d47a1] text-sm font-semibold text-white">
+              <span className="flex size-[42px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--primary)] text-sm font-semibold text-white">
                 {initials}
               </span>
               <span className="hidden min-w-0 flex-col items-start gap-0 text-left sm:flex">
-                <span className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#041a44]">
+                <span className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[color:var(--primary-900)]">
                   {displayName}
                 </span>
-                <span className="max-w-[220px] truncate text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#041a44]">
+                <span className="max-w-[220px] truncate text-xs font-normal leading-[1.5] tracking-[0.24px] text-[color:var(--primary-900)]">
                   {email ?? "student@example.com"}
                 </span>
               </span>
               <FigmaIcon
                 name="chevron-down"
                 className={cn(
-                  "hidden size-6 shrink-0 text-[#041a44] sm:block",
+                  "hidden size-6 shrink-0 text-[color:var(--primary-900)] sm:block",
                   openProfileMenu && "rotate-180",
                 )}
                 aria-hidden
               />
             </button>
             {openProfileMenu ? (
-              <div className="absolute right-0 top-[calc(100%+8px)] z-30 min-w-[180px] rounded-2xl border border-[#dfe1e7] bg-[#f3f7ff] p-2 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]">
+              <div className="absolute right-0 top-[calc(100%+8px)] z-30 min-w-[180px] rounded-2xl border border-[color:var(--greyscale-100)] bg-[var(--primary-0)] p-2 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]">
                 <Link
                   to="/app/account"
-                  className="flex h-10 w-full items-center rounded-xl px-3 text-left text-sm font-semibold tracking-[0.02em] text-[#062357] hover:bg-white/80"
+                  className="flex h-10 w-full items-center rounded-xl px-3 text-left text-sm font-semibold tracking-[0.02em] text-[color:var(--color-student-heading)] hover:bg-[color:var(--greyscale-0)]/80"
                   onClick={() => setOpenProfileMenu(false)}
                 >
                   Account
@@ -259,7 +262,7 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
                 <button
                   type="button"
                   onClick={() => void handleLogout()}
-                  className="flex h-10 w-full items-center rounded-xl px-3 text-left text-sm font-semibold tracking-[0.02em] text-[#062357] hover:bg-white/80"
+                  className="flex h-10 w-full items-center rounded-xl px-3 text-left text-sm font-semibold tracking-[0.02em] text-[color:var(--color-student-heading)] hover:bg-[color:var(--greyscale-0)]/80"
                 >
                   Logout
                 </button>
@@ -269,14 +272,14 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
 
           {isPremium ? (
             <span
-              className="inline-flex h-10 w-[97px] shrink-0 items-center justify-center rounded-[14px] bg-[#edf3ff] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1]"
+              className="inline-flex h-10 w-[97px] shrink-0 items-center justify-center rounded-[14px] bg-[var(--primary-25)] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[color:var(--primary)]"
               aria-label={`Plan: ${planLabel}`}
             >
               {planLabel}
             </span>
           ) : (
             <span
-              className="hidden shrink-0 text-xs font-semibold tracking-[0.24px] text-[#0d47a1] sm:inline-flex"
+              className="hidden shrink-0 text-xs font-semibold tracking-[0.24px] text-[color:var(--primary)] sm:inline-flex"
               aria-label={`Plan: ${planLabel}`}
             >
               {planLabel}

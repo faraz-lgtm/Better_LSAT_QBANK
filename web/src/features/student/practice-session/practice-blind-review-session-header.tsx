@@ -45,8 +45,8 @@ function reviewHeaderActionButtonClass(active: boolean) {
   return cn(
     "box-border inline-flex h-10 shrink-0 items-center gap-2 rounded-[12px] border border-solid px-4 py-2 text-base font-medium leading-normal tracking-[0.32px] transition-colors",
     active
-      ? "border-[#0b4e6e] bg-[#0d47a1] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
-      : "border-[#dfe1e7] bg-white text-[#666d80] hover:bg-[#f6f8fa] hover:text-[#062357]",
+      ? "border-[var(--primary-border)] bg-[var(--primary)] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
+      : "border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--greyscale-500)] hover:bg-[var(--greyscale-25)] hover:text-[var(--color-student-heading)]",
   )
 }
 
@@ -85,19 +85,19 @@ function PracticeBlindReviewSessionHeader({
   /** Figma `20596:144371` / `20596:145049` — Blind Review exam header */
   if (!isReviewChrome) {
     return (
-      <header className="practice-session-header absolute inset-x-0 top-0 z-10 flex h-[100px] flex-col bg-white">
+      <header className="practice-session-header absolute inset-x-0 top-0 z-10 flex h-[100px] flex-col bg-[var(--greyscale-0)]">
         <div className="flex h-[84px] shrink-0 items-center justify-between gap-6 px-10 py-6">
           <div className="practice-session-scroll-hidden flex min-w-0 flex-1 items-center gap-6 overflow-x-auto">
             <button
               type="button"
-              className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] text-[#0d0d12] transition hover:bg-[#f6f8fa]"
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] text-[var(--color-student-heading)] transition hover:bg-[var(--greyscale-25)]"
               aria-label="Exit blind review"
               onClick={onExitSection}
               disabled={exiting}
             >
               <X className="size-6" strokeWidth={2} aria-hidden />
             </button>
-            <p className="m-0 shrink-0 text-2xl font-bold leading-[1.3] text-[#041a44]">
+            <p className="m-0 shrink-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">
               {prepTestLabel}
             </p>
             <input
@@ -105,13 +105,13 @@ function PracticeBlindReviewSessionHeader({
               value={findQuery}
               onChange={(event) => onFindQueryChange?.(event.target.value)}
               placeholder="Find Text, Type Here"
-              className="h-[52px] w-[262px] shrink-0 rounded-[12px] border border-[#dfe1e7] bg-white px-4 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#062357] outline-none placeholder:text-[#818898] focus:border-[#0d47a1] focus:ring-2 focus:ring-[#0d47a1]/10"
+              className="h-[52px] w-[262px] shrink-0 rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)] outline-none placeholder:text-[var(--greyscale-400)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
             />
           </div>
 
           <div className="flex h-[52px] shrink-0 items-center gap-2.5">
             {questionProgressLabel ? (
-              <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#666d80]">
+              <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
                 {questionProgressLabel}
               </span>
             ) : null}
@@ -122,8 +122,8 @@ function PracticeBlindReviewSessionHeader({
               className={cn(
                 "box-border inline-flex h-[52px] shrink-0 items-center gap-2 rounded-[16px] border border-solid px-4 py-2 text-base font-medium leading-normal tracking-[0.32px] transition-colors disabled:cursor-not-allowed disabled:opacity-45",
                 notesOpen && notesEnabled
-                  ? "border-[#0b4e6e] bg-[#0d47a1] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
-                  : "border-[#dfe1e7] bg-white text-[#666d80] hover:bg-[#f6f8fa] hover:text-[#062357]",
+                  ? "border-[var(--primary-border)] bg-[var(--primary)] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
+                  : "border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--greyscale-500)] hover:bg-[var(--greyscale-25)] hover:text-[var(--color-student-heading)]",
               )}
               aria-pressed={notesOpen && notesEnabled}
             >
@@ -133,30 +133,30 @@ function PracticeBlindReviewSessionHeader({
             {moreMenu}
           </div>
         </div>
-        <div className="relative mx-10 h-1 shrink-0 rounded-[5px] bg-[#eceff3]">
-          <div className="absolute inset-y-0 left-0 w-[176px] rounded-[5px] bg-[#0d47a1]" />
+        <div className="relative mx-10 h-1 shrink-0 rounded-[5px] bg-[var(--greyscale-50)]">
+          <div className="absolute inset-y-0 left-0 w-[176px] rounded-[5px] bg-[var(--primary)]" />
         </div>
       </header>
     )
   }
 
   return (
-    <header className="practice-session-header absolute inset-x-0 top-0 z-10 flex h-[88px] flex-col bg-white">
+    <header className="practice-session-header absolute inset-x-0 top-0 z-10 flex h-[88px] flex-col bg-[var(--greyscale-0)]">
       <div className="flex h-[84px] shrink-0 items-center justify-between gap-6 px-10 py-6">
         <div className="practice-session-scroll-hidden flex min-w-0 flex-1 items-center gap-6 overflow-x-auto">
           <button
             type="button"
-            className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] text-[#0d0d12] transition hover:bg-[#f6f8fa]"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] text-[var(--color-student-heading)] transition hover:bg-[var(--greyscale-25)]"
             aria-label="Exit review"
             onClick={onExitSection}
             disabled={exiting}
           >
             <X className="size-6" strokeWidth={2} aria-hidden />
           </button>
-          <p className="m-0 shrink-0 text-2xl font-bold leading-[1.3] text-[#062357]">
+          <p className="m-0 shrink-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">
             {prepTestLabel}
           </p>
-          <span className="shrink-0 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[#666d80]">
+          <span className="shrink-0 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
             {questionRef}
           </span>
           {showSectionSelect ? (
@@ -171,13 +171,13 @@ function PracticeBlindReviewSessionHeader({
             value={findQuery}
             onChange={(event) => onFindQueryChange?.(event.target.value)}
             placeholder="Find Text, Type Here"
-            className="h-10 w-[262px] shrink-0 rounded-[12px] border border-[#dfe1e7] bg-white px-4 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#062357] outline-none placeholder:text-[#818898] focus:border-[#0d47a1] focus:ring-2 focus:ring-[#0d47a1]/10"
+            className="h-10 w-[262px] shrink-0 rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)] outline-none placeholder:text-[var(--greyscale-300)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
           />
         </div>
 
         <div className="flex shrink-0 items-center gap-6">
           {questionProgressLabel ? (
-            <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#666d80]">
+            <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
               {questionProgressLabel}
             </span>
           ) : null}
@@ -220,8 +220,8 @@ function PracticeBlindReviewSessionHeader({
           ) : null}
         </div>
       </div>
-      <div className="relative h-1 shrink-0 bg-[#dfe1e7]">
-        <div className="absolute inset-y-0 left-10 w-[176px] rounded-[5px] bg-[#0d47a1]" />
+      <div className="relative h-1 shrink-0 bg-[var(--greyscale-100)]">
+        <div className="absolute inset-y-0 left-10 w-[176px] rounded-[5px] bg-[var(--primary)]" />
       </div>
     </header>
   )

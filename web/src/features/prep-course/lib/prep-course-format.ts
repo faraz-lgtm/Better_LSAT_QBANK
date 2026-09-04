@@ -395,9 +395,9 @@ export function lessonTypeBadgeClass(
   if (variant === "onPrimary") {
     if (type === "adaptive_drill") return "bg-[#fff8e6] text-[#ae8b00]"
     if (type === "active_drill") return "bg-[#fff4e5] text-[#c45c00]"
-    return "bg-white/90 text-[#0d47a1]"
+    return "bg-[var(--greyscale-0)]/90 text-[var(--primary)]"
   }
   if (type === "adaptive_drill") return "bg-[#fff8e6] text-[#ae8b00]"
   if (type === "active_drill") return "bg-[#fff4e5] text-[#c45c00]"
-  return "bg-[#edf3ff] text-[#0d47a1]"
+  return "bg-[var(--primary-25)] text-[var(--primary)]"
 }

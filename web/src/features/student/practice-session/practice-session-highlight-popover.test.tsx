@@ -51,7 +51,7 @@ describe("PracticeSessionHighlightPopover", () => {
     )
 
     const card = screen.getByRole("toolbar", { name: "Highlight" })
-    expect(card.className).toContain("bg-white")
+    expect(card.className).toContain("bg-[var(--greyscale-0)]")
     expect(card.className).toContain("min-w-[168px]")
     expect(card.className).toContain("gap-2")
 

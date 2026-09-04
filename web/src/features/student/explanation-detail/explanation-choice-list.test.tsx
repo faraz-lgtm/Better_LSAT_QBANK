@@ -37,10 +37,10 @@ describe("ExplanationChoiceList", () => {
 
     const button = screen.getByRole("button")
     const row = button.parentElement
-    expect(row).toHaveClass("border-[3px]", "border-solid", "border-[#00bc54]", "bg-[#eafff4]")
-    expect(row).not.toHaveClass("border-[#0d47a1]")
+    expect(row).toHaveClass("border-[3px]", "border-solid", "border-[var(--explanation-answered)]", "bg-[var(--explanation-answered-bg)]")
+    expect(row).not.toHaveClass("border-[var(--primary)]")
     const letterBox = button.querySelector("span.flex.size-8")
-    expect(letterBox).toHaveClass("bg-[#00bc54]", "text-white", "border-[#00bc54]")
+    expect(letterBox).toHaveClass("bg-[var(--explanation-answered)]", "text-white", "border-[var(--explanation-answered)]")
     const check = letterBox?.querySelector("svg")
     expect(check).toBeInTheDocument()
     expect(check).toHaveClass("size-6", "text-white")

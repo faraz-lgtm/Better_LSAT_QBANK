@@ -207,9 +207,9 @@ function OutcomePill({ index, isCorrect }: { index: number; isCorrect: boolean }
 
 function SectionLockedBadge() {
   return (
-    <div className="flex items-center gap-1.5 rounded-full border border-[#dfe1e7] bg-[#f6f8fa] px-3 py-1">
-      <Lock className="size-3 text-[#666d80]" />
-      <span className="text-xs font-semibold text-[#666d80]">Locked</span>
+    <div className="flex items-center gap-1.5 rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-3 py-1">
+      <Lock className="size-3 text-[var(--greyscale-500)]" />
+      <span className="text-xs font-semibold text-[var(--greyscale-500)]">Locked</span>
     </div>
   )
 }
@@ -233,9 +233,9 @@ function ScoreRangeBar({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="relative h-2 w-full overflow-hidden rounded-full bg-[#e8edf5]">
+      <div className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--greyscale-100)]">
         <div
-          className="absolute top-0 h-full rounded-full bg-[#0d47a1]"
+          className="absolute top-0 h-full rounded-full bg-[var(--primary)]"
           style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
         />
         {showGoal && goalPct != null && (
@@ -247,7 +247,7 @@ function ScoreRangeBar({
       </div>
       <div className="flex justify-between">
         {[120, 135, 150, 165, 180].map((label) => (
-          <span key={label} className="text-[11px] leading-none text-[#9aa3b2]">
+          <span key={label} className="text-[11px] leading-none text-[var(--greyscale-400)]">
             {label}
           </span>
         ))}
@@ -271,26 +271,26 @@ function DiagnosticPageHeader({
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div className="flex flex-col gap-1">
-        <h1 className="text-[28px] font-bold leading-[1.3] text-[#062357]">
+        <h1 className="text-[28px] font-bold leading-[1.3] text-[var(--color-student-heading)]">
           Here&apos;s your baseline
         </h1>
-        <p className="text-sm font-medium leading-normal tracking-[0.02em] text-[#666d80]">
+        <p className="text-sm font-medium leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
           {intentTitle} · {result.questionCount} questions
           {dateLabel ? ` · completed ${dateLabel}` : ''}
         </p>
       </div>
 
       <div className="flex shrink-0 items-center gap-3">
-        <div className="hidden items-center gap-2 rounded-full border border-[#dfe1e7] bg-white px-3 py-2 sm:flex">
-          <span className="size-2 shrink-0 rounded-full bg-[#0d47a1]" />
-          <span className="text-xs font-semibold leading-normal text-[#062357]">
+        <div className="hidden items-center gap-2 rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 py-2 sm:flex">
+          <span className="size-2 shrink-0 rounded-full bg-[var(--primary)]" />
+          <span className="text-xs font-semibold leading-normal text-[var(--color-student-heading)]">
             Take your first full exam to track progress
           </span>
         </div>
         <button
           type="button"
           onClick={onSubscribe}
-          className="hidden h-10 shrink-0 items-center rounded-[12px] bg-[#0d47a1] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#0b3d8a] sm:flex"
+          className="hidden h-10 shrink-0 items-center rounded-[12px] bg-[var(--primary)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-600)] sm:flex"
         >
           Subscribe
         </button>
@@ -305,22 +305,22 @@ function EstimatedScoreCard({ result }: { result: GuestDiagnosticResult }) {
   const gapPoints = LSAT_GOAL_SCORE - result.scaledScore
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-4 rounded-[16px] border border-[#dfe1e7] bg-white p-6">
-      <p className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]">
+    <div className="flex min-w-0 flex-1 flex-col gap-4 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
+      <p className="text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
         Estimated scaled score
       </p>
 
       <div className="flex flex-col gap-1">
-        <p className="text-[52px] font-extrabold leading-none text-[#062357]">
+        <p className="text-[52px] font-extrabold leading-none text-[var(--color-student-heading)]">
           {result.scaledScore}
         </p>
-        <p className="text-base font-medium leading-normal text-[#666d80]">
+        <p className="text-base font-medium leading-normal text-[var(--greyscale-500)]">
           Likely range{' '}
-          <span className="font-semibold text-[#062357]">
+          <span className="font-semibold text-[var(--color-student-heading)]">
             {result.scaledScoreLow}–{result.scaledScoreHigh}
           </span>
           {' · '}
-          <span className="font-semibold text-[#062357]">
+          <span className="font-semibold text-[var(--color-student-heading)]">
             {Math.round(result.percentile)}th percentile
           </span>
         </p>
@@ -335,28 +335,28 @@ function EstimatedScoreCard({ result }: { result: GuestDiagnosticResult }) {
 
       <div className="flex flex-wrap gap-5">
         <div className="flex items-center gap-2">
-          <span className="inline-block size-2 rounded-full bg-[#0d47a1]" />
-          <span className="text-xs leading-normal text-[#666d80]">Your estimated range</span>
+          <span className="inline-block size-2 rounded-full bg-[var(--primary)]" />
+          <span className="text-xs leading-normal text-[var(--greyscale-500)]">Your estimated range</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="inline-block h-3 w-0.5 bg-[#df1c41]" />
-          <span className="text-xs leading-normal text-[#666d80]">
+          <span className="text-xs leading-normal text-[var(--greyscale-500)]">
             Your goal score ({LSAT_GOAL_SCORE})
           </span>
         </div>
       </div>
 
-      <p className="text-[11px] leading-relaxed text-[#9aa3b2]">
+      <p className="text-[11px] leading-relaxed text-[var(--greyscale-400)]">
         Estimated from {result.questionCount} questions. Your first full-length PrepTest will give
         a more accurate score.
       </p>
 
       {gapPoints > 0 && (
-        <div className="mt-auto rounded-[10px] bg-[#f3f7ff] px-4 py-3">
-          <p className="text-sm font-semibold text-[#062357]">
+        <div className="mt-auto rounded-[10px] bg-[var(--primary-0)] px-4 py-3">
+          <p className="text-sm font-semibold text-[var(--color-student-heading)]">
             {gapPoints} points from your goal
           </p>
-          <p className="mt-0.5 text-xs text-[#666d80]">
+          <p className="mt-0.5 text-xs text-[var(--greyscale-500)]">
             Score {LSAT_GOAL_SCORE} to reach the top law schools
           </p>
         </div>
@@ -377,18 +377,18 @@ function GapToGoalCard({
   const projectedHigh = Math.min(180, result.scaledScoreHigh + 11)
 
   return (
-    <div className="relative flex min-w-0 flex-1 flex-col gap-4 overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white p-6">
-      <p className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]">
+    <div className="relative flex min-w-0 flex-1 flex-col gap-4 overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
+      <p className="text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
         Gap to your goal
       </p>
 
       <div className="flex flex-col gap-1">
-        <p className="text-[52px] font-extrabold leading-none text-[#062357]">
+        <p className="text-[52px] font-extrabold leading-none text-[var(--color-student-heading)]">
           {gapPoints} {gapPoints === 1 ? 'point' : 'points'}
         </p>
-        <p className="text-sm font-medium leading-normal text-[#666d80]">
+        <p className="text-sm font-medium leading-normal text-[var(--greyscale-500)]">
           Students who started in your range and studied consistently reached{' '}
-          <span className="font-semibold text-[#062357]">
+          <span className="font-semibold text-[var(--color-student-heading)]">
             {projectedLow}–{projectedHigh}
           </span>{' '}
           in 14 weeks.
@@ -398,12 +398,12 @@ function GapToGoalCard({
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[#666d80]">Today</span>
-            <span className="text-xs font-bold text-[#062357]">
+            <span className="text-xs font-medium text-[var(--greyscale-500)]">Today</span>
+            <span className="text-xs font-bold text-[var(--color-student-heading)]">
               {result.scaledScoreLow}–{result.scaledScoreHigh}
             </span>
           </div>
-          <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-[#e8edf5]">
+          <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-[var(--greyscale-100)]">
             <div
               className="absolute top-0 h-full rounded-full bg-[#9ab4e0]"
               style={{
@@ -415,16 +415,16 @@ function GapToGoalCard({
         </div>
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[#666d80]">
+            <span className="text-xs font-medium text-[var(--greyscale-500)]">
               Projected, 14 weeks of structured prep
             </span>
-            <span className="text-xs font-bold text-[#062357]">
+            <span className="text-xs font-bold text-[var(--color-student-heading)]">
               {projectedLow}–{projectedHigh}
             </span>
           </div>
-          <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-[#e8edf5]">
+          <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-[var(--greyscale-100)]">
             <div
-              className="absolute top-0 h-full rounded-full bg-[#0d47a1]"
+              className="absolute top-0 h-full rounded-full bg-[var(--primary)]"
               style={{
                 left: `${scaledScoreToPercent(projectedLow)}%`,
                 width: `${Math.max(2, scaledScoreToPercent(projectedHigh) - scaledScoreToPercent(projectedLow))}%`,
@@ -433,27 +433,27 @@ function GapToGoalCard({
           </div>
         </div>
         <div className="flex justify-between">
-          <span className="text-[11px] text-[#9aa3b2]">120</span>
-          <span className="text-[11px] text-[#9aa3b2]">180</span>
+          <span className="text-[11px] text-[var(--greyscale-400)]">120</span>
+          <span className="text-[11px] text-[var(--greyscale-400)]">180</span>
         </div>
       </div>
 
-      <p className="text-[11px] leading-relaxed text-[#9aa3b2]">
+      <p className="text-[11px] leading-relaxed text-[var(--greyscale-400)]">
         Projection from past betterLSAT students with similar starting diagnostics. Individual
         results vary.
       </p>
 
       {/* Lock gradient + CTA */}
-      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-end rounded-[16px] bg-gradient-to-t from-white/95 via-white/60 to-transparent pb-8">
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-end rounded-[16px] bg-gradient-to-t from-[var(--greyscale-0)]/95 via-[var(--greyscale-0)]/60 to-transparent pb-8">
         <div className="pointer-events-auto flex flex-col items-center gap-3 px-6 text-center">
-          <div className="flex size-10 items-center justify-center rounded-full border border-[#dfe1e7] bg-white">
-            <Lock className="size-4 text-[#666d80]" />
+          <div className="flex size-10 items-center justify-center rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
+            <Lock className="size-4 text-[var(--greyscale-500)]" />
           </div>
-          <p className="text-sm font-semibold text-[#062357]">Unlock your full projection</p>
+          <p className="text-sm font-semibold text-[var(--color-student-heading)]">Unlock your full projection</p>
           <button
             type="button"
             onClick={onSubscribe}
-            className="h-9 rounded-[10px] bg-[#0d47a1] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#0b3d8a]"
+            className="h-9 rounded-[10px] bg-[var(--primary)] px-5 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-600)]"
           >
             Unlock my full report
           </button>
@@ -475,44 +475,44 @@ function DiagnosticStatsRow({
   const accuracyPct = Math.round((result.correctCount / Math.max(1, result.questionCount)) * 100)
 
   return (
-    <div className="grid grid-cols-1 overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white sm:grid-cols-3">
-      <div className="flex flex-col gap-2 border-b border-[#dfe1e7] p-6 sm:border-b-0 sm:border-r">
-        <p className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]">
+    <div className="grid grid-cols-1 overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] sm:grid-cols-3">
+      <div className="flex flex-col gap-2 border-b border-[var(--greyscale-100)] p-6 sm:border-b-0 sm:border-r">
+        <p className="text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
           Correct answers
         </p>
-        <p className="text-[28px] font-bold leading-[1.2] text-[#062357]">
+        <p className="text-[28px] font-bold leading-[1.2] text-[var(--color-student-heading)]">
           {result.correctCount}/{result.questionCount}
         </p>
-        <p className="text-sm font-medium leading-normal text-[#666d80]">{accuracyPct}% accuracy</p>
+        <p className="text-sm font-medium leading-normal text-[var(--greyscale-500)]">{accuracyPct}% accuracy</p>
       </div>
 
-      <div className="flex flex-col gap-2 border-b border-[#dfe1e7] p-6 sm:border-b-0 sm:border-r">
-        <p className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]">
+      <div className="flex flex-col gap-2 border-b border-[var(--greyscale-100)] p-6 sm:border-b-0 sm:border-r">
+        <p className="text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
           Percentile
         </p>
-        <p className="text-[28px] font-bold leading-[1.2] text-[#062357]">
+        <p className="text-[28px] font-bold leading-[1.2] text-[var(--color-student-heading)]">
           {result.percentileLabel}
         </p>
-        <p className="text-sm font-medium leading-normal text-[#666d80]">
+        <p className="text-sm font-medium leading-normal text-[var(--greyscale-500)]">
           Range: {result.scaledScoreLow}–{result.scaledScoreHigh}
         </p>
       </div>
 
       <div className="relative overflow-hidden p-6">
-        <p className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]">
+        <p className="text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
           Projected Score Band
         </p>
-        <p className="mt-2 select-none text-[28px] font-bold leading-[1.2] text-[#062357] blur-sm">
+        <p className="mt-2 select-none text-[28px] font-bold leading-[1.2] text-[var(--color-student-heading)] blur-sm">
           —
         </p>
-        <p className="mt-1 select-none text-sm font-medium leading-normal text-[#666d80] blur-sm">
+        <p className="mt-1 select-none text-sm font-medium leading-normal text-[var(--greyscale-500)] blur-sm">
           After 14 weeks of prep
         </p>
-        <div className="absolute inset-0 flex items-center justify-center rounded-br-[16px] bg-white/80">
+        <div className="absolute inset-0 flex items-center justify-center rounded-br-[16px] bg-[var(--greyscale-0)]/80">
           <button
             type="button"
             onClick={onSubscribe}
-            className="flex items-center gap-1.5 text-xs font-semibold text-[#0d47a1] hover:underline"
+            className="flex items-center gap-1.5 text-xs font-semibold text-[var(--primary)] hover:underline"
           >
             <Lock className="size-3.5" />
             Unlock full analysis
@@ -527,20 +527,20 @@ function DiagnosticStatsRow({
 
 function FreeAnalyticsLimitGate({ onSubscribe }: { onSubscribe: () => void }) {
   return (
-    <div className="flex flex-col items-center gap-6 rounded-[18px] border border-[#dfe1e7] bg-white px-6 py-10 text-center shadow-[0px_1px_2px_rgba(13,13,18,0.06)]">
-      <Lock className="size-9 text-[#0d47a1]" strokeWidth={2} aria-hidden />
+    <div className="flex flex-col items-center gap-6 rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-10 text-center shadow-[0px_1px_2px_rgba(13,13,18,0.06)]">
+      <Lock className="size-9 text-[var(--primary)]" strokeWidth={2} aria-hidden />
       <div className="flex max-w-[36rem] flex-col items-center gap-4">
-        <h3 className="text-2xl font-bold leading-[1.3] text-[#041a44]">
+        <h3 className="text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">
           You&apos;ve reached your free analytics limit!
         </h3>
-        <p className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#041a44]">
+        <p className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
           Subscribe today for unlimited practice results, detailed analytics, and full access to
           everything BetterLSAT has to offer.
         </p>
         <button
           type="button"
           onClick={onSubscribe}
-          className="inline-flex h-12 items-center justify-center rounded-[16px] border border-[#0b4e6e] bg-[#0d47a1] px-4 text-base font-semibold tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0b3d8a]"
+          className="inline-flex h-12 items-center justify-center rounded-[16px] border border-[var(--primary-border)] bg-[var(--primary)] px-4 text-base font-semibold tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-600)]"
         >
           Full Access
         </button>
@@ -567,24 +567,24 @@ function PointLeakRow({
       : '')
 
   return (
-    <div className="flex items-center gap-3 border-t border-[#f1f5f9] px-6 py-4 first:border-t-0">
+    <div className="flex items-center gap-3 border-t border-[var(--greyscale-100)] px-6 py-4 first:border-t-0">
       <div className="flex w-7 shrink-0 justify-start">
-        <span className="text-sm font-bold text-[#9aa3b2]">{rank}</span>
+        <span className="text-sm font-bold text-[var(--greyscale-400)]">{rank}</span>
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-[#062357]">
+        <p className="text-sm font-semibold text-[var(--color-student-heading)]">
           {leak.questionType}
-          <span className="ml-1.5 font-normal text-[#666d80]">· {leak.section}</span>
+          <span className="ml-1.5 font-normal text-[var(--greyscale-500)]">· {leak.section}</span>
         </p>
-        <p className="mt-0.5 text-xs font-medium text-[#666d80]">{missLabel}</p>
+        <p className="mt-0.5 text-xs font-medium text-[var(--greyscale-500)]">{missLabel}</p>
         <div className="mt-2 flex items-center gap-2">
-          <div className="h-1.5 w-32 overflow-hidden rounded-full bg-[#e8edf5]">
+          <div className="h-1.5 w-32 overflow-hidden rounded-full bg-[var(--greyscale-100)]">
             <div
-              className="h-full rounded-full bg-[#0d47a1]"
+              className="h-full rounded-full bg-[var(--primary)]"
               style={{ width: `${(leak.missed / leak.total) * 100}%` }}
             />
           </div>
-          <span className="text-[10px] text-[#9aa3b2]">
+          <span className="text-[10px] text-[var(--greyscale-400)]">
             {Math.round((leak.missed / leak.total) * 100)}% miss rate
           </span>
         </div>
@@ -594,14 +594,14 @@ function PointLeakRow({
           <p className="text-lg font-bold leading-none text-[#df1c41]">
             +{leak.pointsRecoverable}
           </p>
-          <p className="mt-0.5 text-[10px] text-[#9aa3b2]">
+          <p className="mt-0.5 text-[10px] text-[var(--greyscale-400)]">
             {leak.pointsRecoverable === 1 ? 'point' : 'points'}
           </p>
         </div>
         <button
           type="button"
           onClick={onDrill}
-          className="h-8 rounded-[8px] bg-[#0d47a1] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#0b3d8a]"
+          className="h-8 rounded-[8px] bg-[var(--primary)] px-3 text-xs font-semibold text-white transition-colors hover:bg-[var(--primary-600)]"
         >
           Drill
         </button>
@@ -623,21 +623,21 @@ function PointLeakMapSection({
   const totalRecoverable = leaks.reduce((sum, l) => sum + l.pointsRecoverable, 0)
 
   return (
-    <div className="overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white">
+    <div className="overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
       {/* Header */}
-      <div className="flex items-start justify-between border-b border-[#dfe1e7] px-6 py-5">
+      <div className="flex items-start justify-between border-b border-[var(--greyscale-100)] px-6 py-5">
         <div>
-          <h3 className="text-xl font-bold leading-[1.35] text-[#062357]">Your point leak map</h3>
-          <p className="mt-0.5 text-sm font-medium text-[#666d80]">
+          <h3 className="text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">Your point leak map</h3>
+          <p className="mt-0.5 text-sm font-medium text-[var(--greyscale-500)]">
             All {leaks.length} leaks, ranked by points you can realistically get back. Total
             recoverable:{' '}
-            <span className="font-semibold text-[#062357]">~{totalRecoverable} points</span>
+            <span className="font-semibold text-[var(--color-student-heading)]">~{totalRecoverable} points</span>
           </p>
         </div>
         <button
           type="button"
           onClick={onSubscribe}
-          className="shrink-0 rounded-[8px] border border-[#dfe1e7] px-3 py-1.5 text-sm font-semibold text-[#062357] transition-colors hover:bg-[#f6f8fa]"
+          className="shrink-0 rounded-[8px] border border-[var(--greyscale-100)] px-3 py-1.5 text-sm font-semibold text-[var(--color-student-heading)] transition-colors hover:bg-[var(--greyscale-25)]"
         >
           Drill all {leaks.length}
         </button>
@@ -645,7 +645,7 @@ function PointLeakMapSection({
 
       {/* Visible rows (with Drill button) */}
       {visibleLeaks.length === 0 ? (
-        <div className="px-6 py-8 text-sm text-[#666d80]">No point leaks found — great work!</div>
+        <div className="px-6 py-8 text-sm text-[var(--greyscale-500)]">No point leaks found — great work!</div>
       ) : (
         <div>
           {visibleLeaks.map((leak, i) => (
@@ -660,7 +660,7 @@ function PointLeakMapSection({
           {lockedLeaks.map((leak, i) => (
             <div
               key={leak.questionType}
-              className="border-t border-[#f1f5f9]"
+              className="border-t border-[var(--greyscale-100)]"
               style={{ filter: 'blur(3px)', userSelect: 'none' }}
               aria-hidden
             >
@@ -668,22 +668,22 @@ function PointLeakMapSection({
             </div>
           ))}
           {/* Upgrade card */}
-          <div className="absolute inset-0 flex items-center justify-center bg-white/85">
-            <div className="mx-6 w-full max-w-sm rounded-[16px] border border-[#dfe1e7] bg-white p-6 text-center shadow-sm">
-              <p className="flex items-center justify-center gap-1.5 text-sm font-semibold text-[#9aa3b2]">
+          <div className="absolute inset-0 flex items-center justify-center bg-[var(--greyscale-0)]/85">
+            <div className="mx-6 w-full max-w-sm rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 text-center shadow-sm">
+              <p className="flex items-center justify-center gap-1.5 text-sm font-semibold text-[var(--greyscale-400)]">
                 <span className="inline-block size-3 rounded-full bg-[#f59e0b]" />
                 {lockedLeaks.length} more leak{lockedLeaks.length !== 1 ? 's' : ''} worth ~
                 {lockedPoints} points
               </p>
-              <h4 className="mt-3 text-lg font-bold text-[#062357]">See every leak, ranked</h4>
-              <p className="mt-2 text-sm leading-relaxed text-[#666d80]">
+              <h4 className="mt-3 text-lg font-bold text-[var(--color-student-heading)]">See every leak, ranked</h4>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--greyscale-500)]">
                 Plus the drill set that targets each one, so you&apos;re closing the right gaps in
                 the right order.
               </p>
               <button
                 type="button"
                 onClick={onSubscribe}
-                className="mt-5 h-10 rounded-[10px] bg-[#0d47a1] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#0b3d8a]"
+                className="mt-5 h-10 rounded-[10px] bg-[var(--primary)] px-6 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-600)]"
               >
                 Unlock my full report
               </button>
@@ -705,11 +705,11 @@ function AccuracyByDifficultySection({
   onSubscribe: () => void
 }) {
   return (
-    <div className="overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white">
-      <div className="flex items-start justify-between border-b border-[#dfe1e7] px-6 py-5">
+    <div className="overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
+      <div className="flex items-start justify-between border-b border-[var(--greyscale-100)] px-6 py-5">
         <div>
-          <h3 className="text-xl font-bold leading-[1.35] text-[#062357]">Accuracy by difficulty</h3>
-          <p className="mt-0.5 text-sm font-medium text-[#666d80]">
+          <h3 className="text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">Accuracy by difficulty</h3>
+          <p className="mt-0.5 text-sm font-medium text-[var(--greyscale-500)]">
             Whether you&apos;re losing points to carelessness or to harder questions
           </p>
         </div>
@@ -721,24 +721,24 @@ function AccuracyByDifficultySection({
         {accuracyData.slice(0, 3).map((row, i) => (
           <div
             key={row.difficulty}
-            className={cn('flex items-center gap-4 px-6 py-4', i > 0 && 'border-t border-[#f1f5f9]')}
+            className={cn('flex items-center gap-4 px-6 py-4', i > 0 && 'border-t border-[var(--greyscale-100)]')}
             style={{ filter: `blur(${i === 0 ? 3 : 5}px)`, userSelect: 'none' }}
           >
             <div className="w-24 shrink-0">
-              <p className="text-sm font-semibold text-[#062357]">
+              <p className="text-sm font-semibold text-[var(--color-student-heading)]">
                 {DIFFICULTY_LABELS[row.difficulty] ?? `Level ${row.difficulty}`}
               </p>
-              <p className="text-xs text-[#9aa3b2]">{row.total} questions</p>
+              <p className="text-xs text-[var(--greyscale-400)]">{row.total} questions</p>
             </div>
             <div className="flex-1">
-              <div className="h-2 w-full overflow-hidden rounded-full bg-[#e8edf5]">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--greyscale-100)]">
                 <div
                   className={cn('h-full rounded-full', row.accuracy >= 0.7 ? 'bg-[#00bc54]' : row.accuracy >= 0.4 ? 'bg-[#f59e0b]' : 'bg-[#df1c41]')}
                   style={{ width: `${row.accuracy * 100}%` }}
                 />
               </div>
             </div>
-            <span className="w-12 shrink-0 text-right text-sm font-bold text-[#062357]">
+            <span className="w-12 shrink-0 text-right text-sm font-bold text-[var(--color-student-heading)]">
               {Math.round(row.accuracy * 100)}%
             </span>
           </div>
@@ -749,26 +749,26 @@ function AccuracyByDifficultySection({
           [1, 2, 3].map((i) => (
             <div
               key={i}
-              className={cn('flex items-center gap-4 px-6 py-4', i > 1 && 'border-t border-[#f1f5f9]')}
+              className={cn('flex items-center gap-4 px-6 py-4', i > 1 && 'border-t border-[var(--greyscale-100)]')}
               style={{ filter: `blur(${i === 1 ? 3 : 5}px)`, userSelect: 'none' }}
             >
-              <div className="h-4 w-24 rounded-full bg-[#e8edf5]" />
-              <div className="h-2 flex-1 rounded-full bg-[#e8edf5]" />
-              <div className="h-4 w-10 rounded-full bg-[#e8edf5]" />
+              <div className="h-4 w-24 rounded-full bg-[var(--greyscale-100)]" />
+              <div className="h-2 flex-1 rounded-full bg-[var(--greyscale-100)]" />
+              <div className="h-4 w-10 rounded-full bg-[var(--greyscale-100)]" />
             </div>
           ))}
 
         {/* Overlay */}
-        <div className="absolute inset-0 flex items-center justify-center bg-white/80">
+        <div className="absolute inset-0 flex items-center justify-center bg-[var(--greyscale-0)]/80">
           <div className="text-center">
-            <h4 className="text-base font-bold text-[#062357]">Where the easy points went</h4>
-            <p className="mt-1 text-sm text-[#666d80]">
+            <h4 className="text-base font-bold text-[var(--color-student-heading)]">Where the easy points went</h4>
+            <p className="mt-1 text-sm text-[var(--greyscale-500)]">
               See which difficulty bands are costing you the most
             </p>
             <button
               type="button"
               onClick={onSubscribe}
-              className="mt-4 flex items-center gap-2 rounded-[10px] border border-[#0d47a1] bg-white px-4 py-2 text-sm font-semibold text-[#0d47a1] transition-colors hover:bg-[#edf3ff] mx-auto"
+              className="mt-4 flex items-center gap-2 rounded-[10px] border border-[var(--primary)] bg-[var(--greyscale-0)] px-4 py-2 text-sm font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary-25)] mx-auto"
             >
               <Lock className="size-3.5" />
               Unlock
@@ -817,11 +817,11 @@ function TimingBreakdownSection({
   }, [outcomes, intentId])
 
   return (
-    <div className="overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white">
-      <div className="flex items-start justify-between border-b border-[#dfe1e7] px-6 py-5">
+    <div className="overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
+      <div className="flex items-start justify-between border-b border-[var(--greyscale-100)] px-6 py-5">
         <div>
-          <h3 className="text-xl font-bold leading-[1.35] text-[#062357]">Timing breakdown</h3>
-          <p className="mt-0.5 text-sm font-medium text-[#666d80]">
+          <h3 className="text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">Timing breakdown</h3>
+          <p className="mt-0.5 text-sm font-medium text-[var(--greyscale-500)]">
             Average seconds per question across the test, in budget vs. over
           </p>
         </div>
@@ -832,19 +832,19 @@ function TimingBreakdownSection({
         {(rows.length > 0 ? rows : [1, 2, 3].map((d) => ({ difficulty: d, avgTime: 90, avgTarget: 90, overSeconds: 0 }))).map((row, i) => (
           <div
             key={row.difficulty}
-            className={cn('flex items-center gap-4 px-6 py-4', i > 0 && 'border-t border-[#f1f5f9]')}
+            className={cn('flex items-center gap-4 px-6 py-4', i > 0 && 'border-t border-[var(--greyscale-100)]')}
             style={{ filter: `blur(${i === 0 ? 3 : 5}px)`, userSelect: 'none' }}
           >
             <div className="w-24 shrink-0">
-              <p className="text-sm font-semibold text-[#062357]">
+              <p className="text-sm font-semibold text-[var(--color-student-heading)]">
                 {DIFFICULTY_LABELS[row.difficulty] ?? `Level ${row.difficulty}`}
               </p>
-              <p className="text-xs text-[#9aa3b2]">avg {formatSeconds(row.avgTime)}</p>
+              <p className="text-xs text-[var(--greyscale-400)]">avg {formatSeconds(row.avgTime)}</p>
             </div>
             <div className="flex-1">
-              <div className="relative h-2 w-full overflow-hidden rounded-full bg-[#e8edf5]">
+              <div className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--greyscale-100)]">
                 <div
-                  className="absolute top-0 h-full rounded-full bg-[#0d47a1]"
+                  className="absolute top-0 h-full rounded-full bg-[var(--primary)]"
                   style={{ width: `${Math.min(100, (row.avgTarget / 180) * 100)}%` }}
                 />
                 {row.overSeconds > 0 && (
@@ -870,16 +870,16 @@ function TimingBreakdownSection({
         ))}
 
         {/* Overlay */}
-        <div className="absolute inset-0 flex items-center justify-center bg-white/80">
+        <div className="absolute inset-0 flex items-center justify-center bg-[var(--greyscale-0)]/80">
           <div className="text-center">
-            <h4 className="text-base font-bold text-[#062357]">Where your clock broke</h4>
-            <p className="mt-1 text-sm text-[#666d80]">
+            <h4 className="text-base font-bold text-[var(--color-student-heading)]">Where your clock broke</h4>
+            <p className="mt-1 text-sm text-[var(--greyscale-500)]">
               Plus the drill set that targets each one
             </p>
             <button
               type="button"
               onClick={onSubscribe}
-              className="mt-4 flex items-center gap-2 rounded-[10px] border border-[#0d47a1] bg-white px-4 py-2 text-sm font-semibold text-[#0d47a1] transition-colors hover:bg-[#edf3ff] mx-auto"
+              className="mt-4 flex items-center gap-2 rounded-[10px] border border-[var(--primary)] bg-[var(--greyscale-0)] px-4 py-2 text-sm font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary-25)] mx-auto"
             >
               <Lock className="size-3.5" />
               Unlock
@@ -895,17 +895,17 @@ function TimingBreakdownSection({
 
 function YourPlanSection({ onSubscribe }: { onSubscribe: () => void }) {
   return (
-    <div className="overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white">
-      <div className="flex items-start justify-between border-b border-[#dfe1e7] px-6 py-5">
+    <div className="overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
+      <div className="flex items-start justify-between border-b border-[var(--greyscale-100)] px-6 py-5">
         <div>
-          <h3 className="text-xl font-bold leading-[1.35] text-[#062357]">Your plan to test day</h3>
-          <p className="mt-0.5 text-sm font-medium text-[#666d80]">
+          <h3 className="text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">Your plan to test day</h3>
+          <p className="mt-0.5 text-sm font-medium text-[var(--greyscale-500)]">
             14 weeks · 8–10 hrs/week · 4 sessions per week. Reviewed weekly.
           </p>
         </div>
-        <div className="flex items-center gap-1.5 rounded-full border border-[#dfe1e7] bg-[#f6f8fa] px-3 py-1">
-          <Lock className="size-3 text-[#666d80]" />
-          <span className="text-xs font-semibold text-[#666d80]">Week 1 of 14 shown</span>
+        <div className="flex items-center gap-1.5 rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-3 py-1">
+          <Lock className="size-3 text-[var(--greyscale-500)]" />
+          <span className="text-xs font-semibold text-[var(--greyscale-500)]">Week 1 of 14 shown</span>
         </div>
       </div>
 
@@ -914,33 +914,33 @@ function YourPlanSection({ onSubscribe }: { onSubscribe: () => void }) {
         {[1, 2, 3].map((week) => (
           <div
             key={week}
-            className={cn('flex gap-4 px-6 py-4', week > 1 && 'border-t border-[#f1f5f9]')}
+            className={cn('flex gap-4 px-6 py-4', week > 1 && 'border-t border-[var(--greyscale-100)]')}
             style={{ filter: `blur(${week === 1 ? 3 : 5}px)`, userSelect: 'none' }}
           >
             <div className="w-16 shrink-0 pt-1">
-              <p className="text-xs font-semibold text-[#9aa3b2]">Week {week}</p>
+              <p className="text-xs font-semibold text-[var(--greyscale-400)]">Week {week}</p>
             </div>
             <div className="min-w-0 flex-1">
-              <div className="h-4 w-72 rounded-full bg-[#e8edf5]" />
-              <div className="mt-2 h-3 w-48 rounded-full bg-[#f1f5f9]" />
+              <div className="h-4 w-72 rounded-full bg-[var(--greyscale-100)]" />
+              <div className="mt-2 h-3 w-48 rounded-full bg-[var(--greyscale-25)]" />
             </div>
             <div className="shrink-0">
-              <div className="h-4 w-16 rounded-full bg-[#e8edf5]" />
+              <div className="h-4 w-16 rounded-full bg-[var(--greyscale-100)]" />
             </div>
           </div>
         ))}
 
         {/* Overlay */}
-        <div className="absolute inset-0 flex items-center justify-center bg-white/85">
+        <div className="absolute inset-0 flex items-center justify-center bg-[var(--greyscale-0)]/85">
           <div className="text-center">
-            <h4 className="text-base font-bold text-[#062357]">Your week-by-week plan</h4>
-            <p className="mt-1 text-sm text-[#666d80]">
+            <h4 className="text-base font-bold text-[var(--color-student-heading)]">Your week-by-week plan</h4>
+            <p className="mt-1 text-sm text-[var(--greyscale-500)]">
               Built from your diagnostic, targeting your exact leaks in order
             </p>
             <button
               type="button"
               onClick={onSubscribe}
-              className="mt-4 flex items-center gap-2 rounded-[10px] border border-[#0d47a1] bg-white px-4 py-2 text-sm font-semibold text-[#0d47a1] transition-colors hover:bg-[#edf3ff] mx-auto"
+              className="mt-4 flex items-center gap-2 rounded-[10px] border border-[var(--primary)] bg-[var(--greyscale-0)] px-4 py-2 text-sm font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary-25)] mx-auto"
             >
               <Lock className="size-3.5" />
               Unlock my plan
@@ -1007,7 +1007,7 @@ function DiagnosticUpgradeCTA({
         <button
           type="button"
           onClick={onSubscribe}
-          className="h-10 rounded-[10px] bg-white px-5 text-sm font-semibold text-[#0d47a1] transition-opacity hover:opacity-90"
+          className="h-10 rounded-[10px] bg-white px-5 text-sm font-semibold text-[var(--primary)] transition-opacity hover:opacity-90"
         >
           See plans from $59/mo
         </button>
@@ -1082,14 +1082,14 @@ function WrongQuestionsReviewSection({
   if (wrongOutcomes.length === 0) return null
 
   return (
-    <div className="overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white">
+    <div className="overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
       {/* Header */}
-      <div className="flex flex-col gap-3 border-b border-[#dfe1e7] px-6 py-5 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-3 border-b border-[var(--greyscale-100)] px-6 py-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-xl font-bold leading-[1.35] text-[#062357]">
+          <h3 className="text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">
             Review your test with explanations on
           </h3>
-          <p className="mt-0.5 text-sm font-medium text-[#666d80]">
+          <p className="mt-0.5 text-sm font-medium text-[var(--greyscale-500)]">
             {showPaidContent
               ? `All ${result.questionCount} questions unlocked, plus written explanations across the full official LSAC question bank.`
               : `${unlockedWrongCount} of ${wrongOutcomes.length} missed questions unlocked, plus written explanations.`}
@@ -1100,7 +1100,7 @@ function WrongQuestionsReviewSection({
             'flex shrink-0 items-center gap-1.5 self-start rounded-full px-3 py-1 text-xs font-semibold',
             totalLocked === 0
               ? 'bg-[#e8fff1] text-[#00bc54]'
-              : 'bg-[#f3f7ff] text-[#0d47a1]',
+              : 'bg-[var(--primary-0)] text-[var(--primary)]',
           )}
         >
           {totalLocked === 0 ? (
@@ -1115,10 +1115,10 @@ function WrongQuestionsReviewSection({
       </div>
 
       {/* Reopen in tester panel */}
-      <div className="flex items-start gap-4 border-b border-[#dfe1e7] px-6 py-4 sm:items-center">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-[10px] border border-[#dfe1e7] bg-[#f6f8fa]">
+      <div className="flex items-start gap-4 border-b border-[var(--greyscale-100)] px-6 py-4 sm:items-center">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)]">
           <svg
-            className="size-5 text-[#666d80]"
+            className="size-5 text-[var(--greyscale-500)]"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -1132,10 +1132,10 @@ function WrongQuestionsReviewSection({
           </svg>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-[#062357]">
+          <p className="text-sm font-semibold text-[var(--color-student-heading)]">
             Reopen your test in the review interface
           </p>
-          <p className="mt-0.5 text-xs leading-relaxed text-[#666d80]">
+          <p className="mt-0.5 text-xs leading-relaxed text-[var(--greyscale-500)]">
             Each question exactly as you took it, your answer and the correct one marked, and an
             Explanations toggle in the toolbar. Leave it off to reattempt cold first — that&apos;s
             blind review, and it&apos;s the highest yield hour in your week.
@@ -1143,15 +1143,15 @@ function WrongQuestionsReviewSection({
         </div>
         <Link
           to={reviewInTesterHref}
-          className="hidden h-9 shrink-0 items-center rounded-[10px] bg-[#0d47a1] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#0b3d8a] sm:flex"
+          className="hidden h-9 shrink-0 items-center rounded-[10px] bg-[var(--primary)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-600)] sm:flex"
         >
           Review my test
         </Link>
       </div>
 
       {/* "Jump straight to a question" label */}
-      <div className="border-b border-[#f1f5f9] px-6 py-3">
-        <p className="text-sm font-semibold text-[#062357]">Jump straight to a question</p>
+      <div className="border-b border-[var(--greyscale-100)] px-6 py-3">
+        <p className="text-sm font-semibold text-[var(--color-student-heading)]">Jump straight to a question</p>
       </div>
 
       {/* Compact wrong-answer rows */}
@@ -1202,10 +1202,10 @@ function WrongQuestionsReviewSection({
 
       {/* Footer banner: locked explanations */}
       {totalLocked > 0 && (
-        <div className="flex items-start gap-3 border-t border-[#dfe1e7] bg-[#f3f7ff] px-6 py-4">
-          <Lock className="mt-0.5 size-4 shrink-0 text-[#0d47a1]" />
-          <p className="text-sm text-[#666d80]">
-            <span className="font-semibold text-[#062357]">
+        <div className="flex items-start gap-3 border-t border-[var(--greyscale-100)] bg-[var(--primary-0)] px-6 py-4">
+          <Lock className="mt-0.5 size-4 shrink-0 text-[var(--primary)]" />
+          <p className="text-sm text-[var(--greyscale-500)]">
+            <span className="font-semibold text-[var(--color-student-heading)]">
               {totalLocked} explanations still locked
             </span>
             {wrongLocked > 0
@@ -1216,7 +1216,7 @@ function WrongQuestionsReviewSection({
             <button
               type="button"
               onClick={onSubscribe}
-              className="font-semibold text-[#0d47a1] hover:underline"
+              className="font-semibold text-[var(--primary)] hover:underline"
             >
               See plans →
             </button>
@@ -1251,7 +1251,7 @@ function CompactReviewRow({
   const meta = getDiagnosticQuestionMeta(outcome.questionId, intentId)
 
   return (
-    <div className="border-t border-[#f1f5f9] first:border-t-0">
+    <div className="border-t border-[var(--greyscale-100)] first:border-t-0">
       <div className="flex items-center gap-3 px-6 py-3.5">
         {/* Wrong indicator */}
         <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[#fff0f3]">
@@ -1260,13 +1260,13 @@ function CompactReviewRow({
 
         {/* Question label */}
         <div className="w-10 shrink-0">
-          <span className="text-sm font-semibold text-[#666d80]">Q{questionNumber}</span>
+          <span className="text-sm font-semibold text-[var(--greyscale-500)]">Q{questionNumber}</span>
         </div>
 
         {/* Type + answer info */}
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-[#062357]">{qType ?? 'Question'}</p>
-          <p className="mt-0.5 text-xs text-[#9aa3b2]">{subline}</p>
+          <p className="text-sm font-semibold text-[var(--color-student-heading)]">{qType ?? 'Question'}</p>
+          <p className="mt-0.5 text-xs text-[var(--greyscale-400)]">{subline}</p>
         </div>
 
         {/* Action */}
@@ -1274,7 +1274,7 @@ function CompactReviewRow({
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="shrink-0 text-xs font-semibold text-[#0d47a1] hover:underline"
+            className="shrink-0 text-xs font-semibold text-[var(--primary)] hover:underline"
           >
             {expanded ? 'Hide ↑' : 'Open with explanation →'}
           </button>
@@ -1282,7 +1282,7 @@ function CompactReviewRow({
           <button
             type="button"
             onClick={onSubscribe}
-            className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-[#9aa3b2] hover:text-[#0d47a1]"
+            className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-[var(--greyscale-400)] hover:text-[var(--primary)]"
           >
             <Lock className="size-3" />
             Locked
@@ -1292,7 +1292,7 @@ function CompactReviewRow({
 
       {/* Inline expansion */}
       {expanded && explanation && (
-        <div className="border-t border-[#f1f5f9]">
+        <div className="border-t border-[var(--greyscale-100)]">
           <GuestDiagnosticExplanationCard
             number={questionNumber}
             heading={getDiagnosticIntentTitle(intentId)}
@@ -1312,10 +1312,10 @@ function CompactReviewRow({
 
 function NotReadySection({ onSubscribe }: { onSubscribe: () => void }) {
   return (
-    <div className="flex flex-col gap-4 rounded-[16px] border border-[#dfe1e7] bg-white px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-4 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <p className="text-base font-bold text-[#062357]">Not ready to decide?</p>
-        <p className="mt-0.5 text-sm font-medium text-[#666d80]">
+        <p className="text-base font-bold text-[var(--color-student-heading)]">Not ready to decide?</p>
+        <p className="mt-0.5 text-sm font-medium text-[var(--greyscale-500)]">
           We&apos;ll email this report to you, and send your leak map when you&apos;re ready to
           start prepping.
         </p>
@@ -1324,14 +1324,14 @@ function NotReadySection({ onSubscribe }: { onSubscribe: () => void }) {
         <button
           type="button"
           onClick={onSubscribe}
-          className="h-10 rounded-[10px] border border-[#dfe1e7] bg-white px-4 text-sm font-semibold text-[#062357] transition-colors hover:bg-[#f6f8fa]"
+          className="h-10 rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 text-sm font-semibold text-[var(--color-student-heading)] transition-colors hover:bg-[var(--greyscale-25)]"
         >
           Email me my report
         </button>
         <button
           type="button"
           onClick={onSubscribe}
-          className="h-10 rounded-[10px] border border-[#dfe1e7] bg-white px-4 text-sm font-semibold text-[#062357] transition-colors hover:bg-[#f6f8fa]"
+          className="h-10 rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 text-sm font-semibold text-[var(--color-student-heading)] transition-colors hover:bg-[var(--greyscale-25)]"
         >
           Retake diagnostic
         </button>
@@ -1352,11 +1352,11 @@ function BottomReportBar({
   const gapPoints = Math.max(0, LSAT_GOAL_SCORE - result.scaledScore)
 
   return (
-    <div className="rounded-[12px] border border-[#dfe1e7] bg-[#f3f7ff] px-6 py-4">
+    <div className="rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--primary-0)] px-6 py-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm font-medium text-[#666d80]">
+        <p className="text-sm font-medium text-[var(--greyscale-500)]">
           You&apos;re seeing about a third of your report.{' '}
-          <span className="font-semibold text-[#062357]">
+          <span className="font-semibold text-[var(--color-student-heading)]">
             {gapPoints} point{gapPoints !== 1 ? 's' : ''} still to close
           </span>{' '}
           — unlock the full leak map, your week-by-week plan, and every explanation.
@@ -1364,7 +1364,7 @@ function BottomReportBar({
         <button
           type="button"
           onClick={onSubscribe}
-          className="h-10 shrink-0 rounded-[10px] bg-[#0d47a1] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#0b3d8a]"
+          className="h-10 shrink-0 rounded-[10px] bg-[var(--primary)] px-5 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-600)]"
         >
           Unlock full report · from $59/mo
         </button>
@@ -1467,19 +1467,19 @@ function GuestDiagnosticResultsView({
       <DiagnosticStatsRow result={result} onSubscribe={openPricingModal} />
 
       {/* 4 + 5. Mini diagnostic section + Question list (single card, as in Figma) */}
-      <section className="overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white">
+      <section className="overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
 
         {/* ── Score header ── */}
-        <div className="border-b border-[#dfe1e7] px-6 py-5">
-          <p className="text-center text-xl font-bold leading-[1.35] text-[#062357]">{heading}</p>
+        <div className="border-b border-[var(--greyscale-100)] px-6 py-5">
+          <p className="text-center text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">{heading}</p>
           <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.4px] text-[#666d80]">
+              <p className="text-xs font-semibold uppercase tracking-[0.4px] text-[var(--greyscale-500)]">
                 Your Score
               </p>
-              <p className="mt-1 text-3xl font-bold leading-none text-[#062357]">
+              <p className="mt-1 text-3xl font-bold leading-none text-[var(--color-student-heading)]">
                 {result.correctCount}/{result.questionCount}{' '}
-                <span className="text-xl font-semibold text-[#666d80]">Correct</span>
+                <span className="text-xl font-semibold text-[var(--greyscale-500)]">Correct</span>
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -1497,14 +1497,14 @@ function GuestDiagnosticResultsView({
         </div>
 
         {/* ── Sort bar ── */}
-        <div className="flex flex-col gap-3 border-b border-[#dfe1e7] px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-2xl font-bold leading-[1.3] text-[#062357]">
+        <div className="flex flex-col gap-3 border-b border-[var(--greyscale-100)] px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">
             Total Questions: {result.questionCount}
           </p>
-          <label className="flex items-center gap-2 text-sm text-[#666d80]">
+          <label className="flex items-center gap-2 text-sm text-[var(--greyscale-500)]">
             <span className="shrink-0">Sort by</span>
             <select
-              className="h-10 min-w-[10rem] rounded-[10px] border border-[#dfe1e7] bg-white px-3 text-sm font-medium text-[#062357]"
+              className="h-10 min-w-[10rem] rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 text-sm font-medium text-[var(--color-student-heading)]"
               value={sortMode}
               onChange={(e) => setSortMode(e.target.value as QuestionSortMode)}
               aria-label="Sort questions by"
@@ -1518,7 +1518,7 @@ function GuestDiagnosticResultsView({
 
         {/* ── Loading / error states ── */}
         {showPaidContent && explanationsLoading ? (
-          <p className="px-6 py-8 text-sm text-[#666d80]">Loading explanations…</p>
+          <p className="px-6 py-8 text-sm text-[var(--greyscale-500)]">Loading explanations…</p>
         ) : null}
         {showPaidContent && explanationsError ? (
           <p className="px-6 py-8 text-sm text-[#df1c41]">{explanationsError}</p>

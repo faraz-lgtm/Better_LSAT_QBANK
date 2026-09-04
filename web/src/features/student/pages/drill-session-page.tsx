@@ -74,6 +74,7 @@ import { usePracticeHighlights } from "@/features/student/practice-session/use-p
 import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
 import { PracticeSubmitSectionModal } from "@/features/student/practice-session/practice-submit-section-modal"
+import { PracticeTimeUpModal } from "@/features/student/practice-session/practice-time-up-modal"
 import { PracticeSessionImmersiveFrame } from "@/features/student/practice-session/practice-session-immersive-frame"
 import { ResponseMaskingProvider } from "@/features/student/practice-session/use-response-masking"
 import { PracticeSessionNavArrowButton } from "@/features/student/practice-session/practice-session-nav-arrow-button"
@@ -123,12 +124,12 @@ function ReviewStaticSwitch({ checked = false }: { checked?: boolean }) {
       aria-disabled="true"
       className={cn(
         "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent",
-        checked ? "bg-[#0d47a1]" : "bg-[#c5cad3]",
+        checked ? "bg-[var(--primary)]" : "bg-[var(--greyscale-300)]",
       )}
     >
       <span
         className={cn(
-          "block size-4 rounded-full bg-white shadow-sm",
+          "block size-4 rounded-full bg-[var(--greyscale-0)] shadow-sm dark:bg-[var(--greyscale-900)]",
           checked ? "translate-x-4" : "translate-x-0",
         )}
       />
@@ -139,11 +140,11 @@ function ReviewStaticSwitch({ checked = false }: { checked?: boolean }) {
 function ReviewPassageCardHeader() {
   return (
     <div className="mb-8 flex h-8 shrink-0 items-center justify-between gap-4">
-      <span className="inline-flex h-8 items-center rounded-[8px] bg-[#f6f8fa] px-4 py-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1]">
+      <span className="inline-flex h-8 items-center rounded-[8px] bg-[var(--primary-25)] px-4 py-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)]">
         Passage Only View
       </span>
       <span className="inline-flex h-8 items-center gap-4" aria-label="Analysis View is display only">
-        <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#062357]">
+        <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
           Analysis View
         </span>
         <ReviewStaticSwitch />
@@ -177,6 +178,8 @@ function DrillSessionPage() {
   const [poolExhausted, setPoolExhausted] = useState(false)
   const [finishing, setFinishing] = useState(false)
   const [submitModalOpen, setSubmitModalOpen] = useState(false)
+  const [drillTimeUpOpen, setDrillTimeUpOpen] = useState(false)
+  const drillTimeUpTriggeredRef = useRef(false)
   const [completeModal, setCompleteModal] = useState<{
     rawScore: number
     questionCount: number
@@ -750,6 +753,29 @@ function DrillSessionPage() {
     }
   }
 
+  const timedDrillForTimeUp = isDrillCountdownTiming(metadata?.timing) && countdown != null
+
+  useEffect(() => {
+    if (
+      drillTimeUpTriggeredRef.current ||
+      !timedDrillForTimeUp ||
+      countdown !== 0 ||
+      sessionCompleted ||
+      reviewAfterComplete ||
+      resultsReviewMode
+    ) {
+      return
+    }
+    drillTimeUpTriggeredRef.current = true
+    setDrillTimeUpOpen(true)
+  }, [
+    countdown,
+    resultsReviewMode,
+    reviewAfterComplete,
+    sessionCompleted,
+    timedDrillForTimeUp,
+  ])
+
   if (!sessionId) {
     return (
       <StudentMain layout="immersive">
@@ -821,12 +847,13 @@ function DrillSessionPage() {
     questionCount: questions.length,
     scaleFactor: accommodationScaleFactor,
   })
-  const timedDrill = isDrillCountdownTiming(metadata?.timing) && countdown != null
+  const timedDrill = timedDrillForTimeUp
   const timerLabel = timedDrill ? "Remaining" : "Elapsed"
   const timerDisplaySeconds = timedDrill ? countdown : elapsed
   const timerProgress = timedDrill
     ? computeRemainingTimerProgress(countdown, timerBudgetSeconds)
     : computeElapsedTimerProgress(elapsed, timerBudgetSeconds)
+
   const allowReselect =
     !resultsReviewMode &&
     (!answeringBlindReview || editingBlindReviewAnswers) &&
@@ -910,7 +937,7 @@ function DrillSessionPage() {
             ? resultsReviewMode
               ? REVIEW_BODY_CLASS
               : BLIND_REVIEW_BODY_CLASS
-            : "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden"
+            : "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--greyscale-0)] text-[var(--color-student-heading)]"
         }
         data-color-scheme={highlights.accessibilitySettings.colorScheme}
         style={useBlindReviewLayout ? undefined : highlights.contentStyle}
@@ -935,7 +962,7 @@ function DrillSessionPage() {
                   onClickCapture={highlights.handleContentClick}
                   className={cn(
                     BLIND_REVIEW_PASSAGE_TEXT_CLASS,
-                    resultsReviewMode && "text-base leading-[1.5] tracking-[0.32px] text-[#36394a]",
+                    resultsReviewMode && "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]",
                   )}
                 />
               </div>
@@ -1005,7 +1032,7 @@ function DrillSessionPage() {
                   toolMode={highlights.toolMode}
                   onMouseUp={highlights.handleContentMouseUp}
                   onClickCapture={highlights.handleContentClick}
-                  className={cn(BLIND_REVIEW_PASSAGE_TEXT_CLASS, "text-base leading-[1.5] tracking-[0.32px] text-[#36394a]")}
+                  className={cn(BLIND_REVIEW_PASSAGE_TEXT_CLASS, "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]")}
                 />
               </div>
               <div ref={questionPaneRef} className={REVIEW_QUESTION_PANEL_CLASS}>
@@ -1059,7 +1086,7 @@ function DrillSessionPage() {
                     ? cn(OFFICIAL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1 lg:pr-0")
                   : useActiveDrillLayout
                   ? ACTIVE_DRILL_BODY_GRID_CLASS
-                  : "lg:grid-cols-2 lg:divide-x divide-[#dfe1e7]",
+                  : "lg:grid-cols-2 lg:divide-x divide-[var(--greyscale-100)] dark:divide-[var(--greyscale-600)]",
             )}
           >
             <div
@@ -1072,7 +1099,7 @@ function DrillSessionPage() {
                     ? OFFICIAL_PASSAGE_PANE_CLASS
                   : useActiveDrillLayout
                     ? ACTIVE_DRILL_PASSAGE_PANE_CLASS
-                    : "border-[#dfe1e7] border-b p-5 lg:border-b-0",
+                    : "border-b border-[var(--greyscale-100)] p-5 lg:border-b-0",
               )}
             >
               {resultsReviewMode ? <ReviewPassageCardHeader /> : null}
@@ -1107,7 +1134,7 @@ function DrillSessionPage() {
                     ? OFFICIAL_QUESTION_PANE_CLASS
                   : useActiveDrillLayout
                     ? ACTIVE_DRILL_QUESTION_PANE_CLASS
-                    : "gap-4 border-[#dfe1e7] p-5",
+                    : "gap-4 border-[var(--greyscale-100)] p-5",
               )}
             >
               <PracticeDrillQuestionPanel
@@ -1164,7 +1191,7 @@ function DrillSessionPage() {
               ? OFFICIAL_FOOTER_CLASS
             : useActiveDrillLayout
               ? ACTIVE_DRILL_FOOTER_CLASS
-              : "flex shrink-0 items-center justify-between gap-3 border-t border-[#dfe1e7] bg-background px-6 py-3 md:gap-4 md:px-6",
+              : "flex shrink-0 items-center justify-between gap-3 border-t border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-3 md:gap-4 md:px-6",
         )}
       >
         {useActiveDrillLayout ? (
@@ -1329,9 +1356,7 @@ function DrillSessionPage() {
       className={cn(
         "flex min-h-0 max-w-none flex-1 flex-col overflow-hidden",
         useBlindReviewLayout
-          ? resultsReviewMode
-            ? "h-full bg-white"
-            : "h-full bg-[#f5f9ff]"
+          ? "h-full bg-[var(--background)]"
           : !useActiveDrillLayout && "px-0 py-4 md:py-5",
         !useActiveDrillLayout && !blindReviewMode && "bg-[var(--primary-900,#041A44)]",
       )}
@@ -1362,7 +1387,7 @@ function DrillSessionPage() {
             className={cn(
               officialChrome
                 ? OFFICIAL_CARD_CLASS
-                : "practice-session-card practice-session-card--active-drill relative flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+                : "practice-session-card practice-session-card--active-drill relative flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
             )}
           >
             {sessionCardContent}
@@ -1399,7 +1424,7 @@ function DrillSessionPage() {
               {error}
             </p>
           ) : null}
-          <div className="practice-session-card flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-2xl border border-[#dfe1e7] bg-background shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+          <div className="practice-session-card flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
             {sessionCardContent}
           </div>
         </div>
@@ -1426,15 +1451,33 @@ function DrillSessionPage() {
         onConfirm={() => void handleConfirmSubmitDrill()}
       />
 
+      <PracticeTimeUpModal
+        open={drillTimeUpOpen}
+        submitting={finishing}
+        onNext={() => {
+          setDrillTimeUpOpen(false)
+          void handleConfirmSubmitDrill()
+        }}
+      />
+
       <PracticeCompleteModal
         open={completeModal != null}
         titleId="drill-complete-title"
+        title={
+          isPrepCourseAdaptiveDrill
+            ? "Smart Drill Done!"
+            : sectionType === "RC"
+              ? "Reading Comprehension Drill Done!"
+              : "Logical Reasoning Drill Done!"
+        }
         subtitle={
           isPrepCourseAdaptiveDrill
             ? "You've completed the Smart Drill"
             : isPrepCourseDrill
               ? "You've completed the active drill"
-              : "You've completed the drill"
+              : sectionType === "RC"
+                ? "You've completed the RC drill"
+                : "You've completed the LR drill"
         }
         rawScore={completeModal?.rawScore ?? 0}
         questionCount={completeModal?.questionCount ?? 1}

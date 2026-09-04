@@ -133,12 +133,12 @@ function ReviewStaticSwitch({ checked = false }: { checked?: boolean }) {
       aria-disabled="true"
       className={cn(
         "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent",
-        checked ? "bg-[#0d47a1]" : "bg-[#c5cad3]",
+        checked ? "bg-[var(--primary)]" : "bg-[var(--greyscale-300)]",
       )}
     >
       <span
         className={cn(
-          "block size-4 rounded-full bg-white shadow-sm",
+          "block size-4 rounded-full bg-[var(--greyscale-0)] shadow-sm dark:bg-[var(--greyscale-900)]",
           checked ? "translate-x-4" : "translate-x-0",
         )}
       />
@@ -149,11 +149,11 @@ function ReviewStaticSwitch({ checked = false }: { checked?: boolean }) {
 function ReviewPassageCardHeader() {
   return (
     <div className="mb-8 flex h-8 shrink-0 items-center justify-between gap-4">
-      <span className="inline-flex h-8 items-center rounded-[8px] bg-[#f6f8fa] px-4 py-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1]">
+      <span className="inline-flex h-8 items-center rounded-[8px] bg-[var(--primary-25)] px-4 py-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)]">
         Passage Only View
       </span>
       <span className="inline-flex h-8 items-center gap-4" aria-label="Analysis View is display only">
-        <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#062357]">
+        <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
           Analysis View
         </span>
         <ReviewStaticSwitch />
@@ -526,7 +526,7 @@ function GuestDiagnosticExamLayout({
                       onClickCapture={canNavigate ? highlights.handleContentClick : () => undefined}
                       className={cn(
                         BLIND_REVIEW_PASSAGE_TEXT_CLASS,
-                        "text-base leading-[1.5] tracking-[0.32px] text-[#36394a]",
+                        "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]",
                       )}
                     />
                   </div>
@@ -557,7 +557,7 @@ function GuestDiagnosticExamLayout({
                     onClickCapture={canNavigate ? highlights.handleContentClick : () => undefined}
                     className={cn(
                       BLIND_REVIEW_PASSAGE_TEXT_CLASS,
-                      "text-base leading-[1.5] tracking-[0.32px] text-[#36394a]",
+                      "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]",
                     )}
                   />
                 </div>
@@ -639,7 +639,7 @@ function GuestDiagnosticExamLayout({
       className={cn(
         officialChrome
           ? OFFICIAL_CARD_CLASS
-          : "practice-session-card practice-session-card--active-drill relative flex h-full max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+          : "practice-session-card practice-session-card--active-drill relative flex h-full max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
         !canNavigate && "pointer-events-none select-none",
         className,
       )}

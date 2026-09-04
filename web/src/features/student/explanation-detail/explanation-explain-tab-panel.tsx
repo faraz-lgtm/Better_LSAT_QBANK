@@ -17,27 +17,27 @@ function VideoExplanationCard({ v }: { v: ExplanationQuestionDetailView["videos"
   const hasVideo = hasVideoContent(v)
 
   return (
-    <article className="overflow-hidden rounded-[14px] border border-[#dfe1e7] bg-[#f6f8fa] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+    <article className="overflow-hidden rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
       <div
         className={cn(
           "flex items-center justify-between gap-4 border-b px-4 py-4",
           v.headerVariant === "yellow"
-            ? "border-[#fff6e0] bg-[#fff6e0]"
-            : "border-[#f3f7ff] bg-[#f3f7ff]",
+            ? "border-[var(--explanation-in-process-bg)] bg-[var(--explanation-in-process-bg)]"
+            : "border-[var(--primary-0)] bg-[var(--primary-0)]",
         )}
       >
         <div className="flex min-w-0 items-center gap-2">
-          <Video className="size-5 shrink-0 text-[#0d47a1]" aria-hidden />
+          <Video className="size-5 shrink-0 text-[var(--primary)]" aria-hidden />
           <span className="text-base font-medium tracking-[0.02em] text-[#1a1b25]">{v.authorTitle}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-base font-medium tracking-[0.02em] text-[#0d47a1]">{v.dropdownLabel}</span>
-          <ChevronUp className="size-6 shrink-0 text-[#0d47a1]" aria-hidden />
+          <span className="text-base font-medium tracking-[0.02em] text-[var(--primary)]">{v.dropdownLabel}</span>
+          <ChevronUp className="size-6 shrink-0 text-[var(--primary)]" aria-hidden />
         </div>
       </div>
 
       {hasVideo ? (
-        <div className="bg-white px-4 py-4">
+        <div className="bg-[var(--greyscale-0)] px-4 py-4">
           <video controls className="max-h-[min(50vh,339px)] w-full rounded-xl bg-black" src={v.videoUrl!} />
         </div>
       ) : (
@@ -50,8 +50,8 @@ function VideoExplanationCard({ v }: { v: ExplanationQuestionDetailView["videos"
       )}
 
       {v.postedLine ? (
-        <div className="bg-[#f6f8fa] px-4 pb-4 pt-4">
-          <p className="m-0 text-xs leading-4 text-[#666d80]">{v.postedLine}</p>
+        <div className="bg-[var(--greyscale-25)] px-4 pb-4 pt-4">
+          <p className="m-0 text-xs leading-4 text-[var(--greyscale-500)]">{v.postedLine}</p>
         </div>
       ) : null}
     </article>
@@ -63,7 +63,7 @@ function ExplanationExplainTabPanel({ videos, videoOnly = false }: ExplanationEx
 
   if (visible.length === 0) {
     return (
-      <p className="m-0 rounded-[14px] border border-dashed border-[#dfe1e7] bg-[#f6f8fa] px-4 py-6 text-center text-sm text-[#666d80]">
+      <p className="m-0 rounded-[14px] border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-6 text-center text-sm text-[var(--greyscale-500)]">
         No videos available yet
       </p>
     )

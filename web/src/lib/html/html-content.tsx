@@ -32,10 +32,11 @@ function isSafeHexColor(raw: string): boolean {
 }
 
 const DEFAULT_RECAP_BG = "#0d47a1"
-const RECAP_GRADIENT = "linear-gradient(90deg, #0d47a1 0%, #419df8 100%)"
+const RECAP_GRADIENT = "linear-gradient(90deg, var(--primary) 0%, #419df8 100%)"
 
 function isRecapDefaultColor(raw: string): boolean {
-  return raw.trim().toLowerCase() === DEFAULT_RECAP_BG
+  const normalized = raw.trim().toLowerCase()
+  return normalized === DEFAULT_RECAP_BG || normalized === "var(--primary)"
 }
 
 function isDarkHexColor(raw: string): boolean {
@@ -129,10 +130,10 @@ function LessonHtmlContent({ html, className }: { html: unknown; className?: str
           return (
             <aside
               key={i}
-              className="lesson-callout flex w-full min-w-0 flex-col gap-2.5 border-l-4 border-solid border-[#0d47a1] pl-[26px]"
+              className="lesson-callout flex w-full min-w-0 flex-col gap-2.5 border-l-4 border-solid border-[var(--primary)] pl-[26px]"
             >
               {block.label ? (
-                <p className="m-0 text-xs font-bold leading-[1.5] tracking-[0.24px] text-[#0d47a1]">{block.label}</p>
+                <p className="m-0 text-xs font-bold leading-[1.5] tracking-[0.24px] text-[var(--primary)]">{block.label}</p>
               ) : null}
               {block.innerHtml.trim() ? (
                 <div
@@ -152,7 +153,7 @@ function LessonHtmlContent({ html, className }: { html: unknown; className?: str
             style={isRecapDefaultColor(block.backgroundColor) ? { background: RECAP_GRADIENT } : { backgroundColor: block.backgroundColor }}
           >
             {block.label ? (
-              <p className={`m-0 text-xs font-bold uppercase leading-[1.5] tracking-[0.24px] ${isDarkHexColor(block.backgroundColor) ? "text-white" : "text-[#0d47a1]"}`}>
+              <p className={`m-0 text-xs font-bold uppercase leading-[1.5] tracking-[0.24px] ${isDarkHexColor(block.backgroundColor) ? "text-white" : "text-[var(--primary)]"}`}>
                 {block.label}
               </p>
             ) : null}

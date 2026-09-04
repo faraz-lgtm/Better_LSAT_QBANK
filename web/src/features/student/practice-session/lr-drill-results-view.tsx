@@ -90,10 +90,10 @@ function LrDrillCompactResultsCard({
   const rows = chunkOutcomes(questions, 7)
 
   return (
-    <article className="flex w-[212px] shrink-0 flex-col gap-3 rounded-[16px] border border-[#f6f8fa] bg-white p-4">
+    <article className="flex w-[212px] shrink-0 flex-col gap-3 rounded-[16px] border border-[var(--greyscale-25)] bg-[var(--greyscale-0)] p-4">
       <div className="flex h-8 w-full items-center justify-between gap-1.5">
-        <p className="text-xs font-semibold leading-[1.5] tracking-[0.24px] text-[#062357]">{label}</p>
-        <p className="text-2xl font-bold leading-[1.3] text-[#041a44]">{scoreDelta}</p>
+        <p className="text-xs font-semibold leading-[1.5] tracking-[0.24px] text-[var(--color-student-heading)]">{label}</p>
+        <p className="text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">{scoreDelta}</p>
       </div>
       <div className="flex flex-col gap-1">
         {rows.map((row, rowIndex) => (
@@ -114,9 +114,9 @@ function LrDrillCompactResultsCard({
 }
 
 const LR_RESULT_LABEL_CLASS =
-  "m-0 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#666d80]"
+  "m-0 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]"
 const LR_RESULT_ACTION_CLASS =
-  "flex size-9 shrink-0 items-center justify-center rounded-[12px] border border-[#dfe1e6] bg-[#f9f9fb] text-[#666d80] transition-colors hover:bg-white"
+  "flex size-9 shrink-0 items-center justify-center rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] text-[var(--greyscale-500)] transition-colors hover:bg-[var(--greyscale-0)]"
 
 function DrillResultsQuestionRow({
   meta,
@@ -177,7 +177,7 @@ function DrillResultsQuestionRow({
   return (
     <article
       className={cn(
-        "min-w-0 overflow-hidden border border-[#dfe1e7] bg-white p-6",
+        "min-w-0 overflow-hidden border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6",
         first ? "rounded-t-[24px]" : "border-t-0",
       )}
     >
@@ -193,7 +193,7 @@ function DrillResultsQuestionRow({
 
         <div className={PT_RESULTS_DETAIL_GRID_CLASS}>
           <div className="flex min-w-0 flex-col justify-center gap-2">
-            <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">{title}</h3>
+            <h3 className="m-0 text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">{title}</h3>
             {tags.length > 0 ? (
               <div className="flex flex-wrap gap-2.5">
                 {tags.map((tag) => (
@@ -215,7 +215,7 @@ function DrillResultsQuestionRow({
                   variant="stroke"
                   className="size-6 shrink-0"
                 />
-                <span className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#062357]">
+                <span className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
                   Actual
                 </span>
               </div>
@@ -226,7 +226,7 @@ function DrillResultsQuestionRow({
                   variant="stroke"
                   className="size-6 shrink-0"
                 />
-                <span className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#062357]">
+                <span className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
                   Blind Review
                 </span>
               </div>
@@ -263,7 +263,7 @@ function DrillResultsQuestionRow({
               <Bookmark
                 className={cn(
                   "size-[18px]",
-                  bookmarked ? "fill-[#0d47a1] text-[#0d47a1]" : "text-[#666d80]",
+                  bookmarked ? "fill-[var(--primary)] text-[var(--primary)]" : "text-[var(--greyscale-500)]",
                 )}
                 aria-hidden
               />
@@ -273,22 +273,22 @@ function DrillResultsQuestionRow({
           <div className="flex min-w-0 flex-col gap-3">
             <p className={LR_RESULT_LABEL_CLASS}>Timing</p>
             <div className="flex flex-wrap gap-1">
-              <span className="w-20 shrink-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#666d80]">
+              <span className="w-20 shrink-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
                 Target time:
               </span>
-              <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#666d80]">
+              <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
                 {targetTime}
               </span>
             </div>
             <div className="flex flex-wrap gap-1">
-              <span className="w-20 shrink-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#666d80]">
+              <span className="w-20 shrink-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
                 Your time:
               </span>
-              <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1]">
+              <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)]">
                 {yourTime}
               </span>
               {yourTimeNote ? (
-                <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#666d80]">
+                <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
                   {yourTimeNote}
                 </span>
               ) : null}
@@ -348,18 +348,18 @@ function LrDrillResultsView({
     <div className={PT_RESULTS_PAGE_GAP_CLASS}>
       <section className={PT_RESULTS_HERO_CARD_CLASS}>
         <div className="flex items-center justify-between gap-4">
-          <h1 className="!m-0 !text-[24px] font-bold leading-[1.3] text-[#062357]">{heroTitle}</h1>
+          <h1 className="!m-0 !text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">{heroTitle}</h1>
           <button
             type="button"
             onClick={onReviewInTester}
-            className="inline-flex h-10 shrink-0 items-center rounded-[14px] bg-[#df1c41] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#df1c41]/90"
+            className="inline-flex h-10 shrink-0 items-center rounded-[14px] bg-[#df1c41] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[color-mix(in_srgb,#df1c41_90%,black)]"
           >
             Review in tester
           </button>
         </div>
 
         <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-start">
-          <div className="flex h-[199px] w-full shrink-0 flex-col justify-between rounded-[16px] bg-[#0d47a1] p-6 lg:w-[290px]">
+          <div className="flex h-[199px] w-full shrink-0 flex-col justify-between rounded-[16px] bg-[var(--primary)] p-6 lg:w-[290px]">
             <p className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#edf3ff]">YOUR SCORE</p>
             <p className="text-[48px] font-extrabold leading-[1.2] text-white">
               {scoreHeadline}
@@ -372,8 +372,8 @@ function LrDrillResultsView({
             </p>
           </div>
 
-          <div className="flex min-h-[199px] min-w-0 w-full flex-col gap-[18px] rounded-[16px] bg-[#f6f8fa] p-6">
-            <p className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#062357]">RESULTS</p>
+          <div className="flex min-h-[199px] min-w-0 w-full flex-col gap-[18px] rounded-[16px] bg-[var(--greyscale-25)] p-6">
+            <p className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">RESULTS</p>
             <div className="flex min-w-0 gap-[7px] overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <LrDrillCompactResultsCard
                 questions={questions}
@@ -393,7 +393,7 @@ function LrDrillResultsView({
       >
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex min-w-0 flex-wrap items-center gap-4">
-            <p className="text-2xl font-bold leading-[1.3] text-[#062357]">
+            <p className="text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">
               {formatTotalQuestionsLabel(questionCount)}
             </p>
             <PracticeResultsBookmarkedOnlyToggle
@@ -413,7 +413,7 @@ function LrDrillResultsView({
       </section>
 
       {visibleQuestions.length > 0 ? (
-        <section className="min-w-0 overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white p-6">
+        <section className="min-w-0 overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
           <div className="flex flex-col">
             {visibleQuestions.map((q, index) => (
               <DrillResultsQuestionRow
@@ -437,10 +437,10 @@ function LrDrillResultsView({
 
       <section className={cn(PT_RESULTS_SURFACE_CARD_CLASS, "flex flex-col gap-6 px-6 py-4")}>
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <p className="!m-0 !text-[24px] font-bold leading-[1.3] text-[#062357]">About this PrepTest</p>
+          <p className="!m-0 !text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">About this PrepTest</p>
           <div className="flex w-[212px] shrink-0 flex-col gap-1.5">
             <div className="flex items-center justify-between gap-3">
-              <span className="!text-[20px] font-bold leading-[1.35] text-[#062357]">Insights</span>
+              <span className="!text-[20px] font-bold leading-[1.35] text-[var(--color-student-heading)]">Insights</span>
               <Switch
                 checked={excluded}
                 onChange={(event) => onExcludedChange(event.target.checked)}
@@ -448,7 +448,7 @@ function LrDrillResultsView({
                 size="md"
               />
             </div>
-            <p className="text-xs font-normal leading-[1.5] tracking-[0.02em] text-[#666d80]">
+            <p className="text-xs font-normal leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
               Exclude from Insights
             </p>
           </div>
@@ -462,19 +462,19 @@ function LrDrillResultsView({
             ] as const
           ).map(([leftLabel, leftValue, rightLabel, rightValue]) => (
             <div key={leftLabel} className="contents">
-              <div className="flex min-h-12 items-center justify-between gap-4 border-b border-[#f1f5f9] py-3">
-                <span className="text-base font-medium leading-[1.5] tracking-[0.02em] text-[#062357]">
+              <div className="flex min-h-12 items-center justify-between gap-4 border-b border-[var(--greyscale-50)] py-3">
+                <span className="text-base font-medium leading-[1.5] tracking-[0.02em] text-[var(--color-student-heading)]">
                   {leftLabel}
                 </span>
-                <span className="text-right text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
+                <span className="text-right text-base font-semibold leading-[1.5] tracking-[0.02em] text-[var(--color-student-heading)]">
                   {leftValue}
                 </span>
               </div>
-              <div className="flex min-h-12 items-center justify-between gap-4 border-b border-[#f1f5f9] py-3">
-                <span className="text-base font-medium leading-[1.5] tracking-[0.02em] text-[#062357]">
+              <div className="flex min-h-12 items-center justify-between gap-4 border-b border-[var(--greyscale-50)] py-3">
+                <span className="text-base font-medium leading-[1.5] tracking-[0.02em] text-[var(--color-student-heading)]">
                   {rightLabel}
                 </span>
-                <span className="text-right text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
+                <span className="text-right text-base font-semibold leading-[1.5] tracking-[0.02em] text-[var(--color-student-heading)]">
                   {rightValue}
                 </span>
               </div>

@@ -9,11 +9,12 @@ type PracticeSessionPauseModalProps = {
   onResume: () => void
 }
 
+/** Matches practice complete / pause modal chrome (Figma dark Neutral-0 elevated) */
 const PAUSE_MODAL_SAVE_EXIT_BUTTON_CLASS =
-  "inline-flex h-[48px] min-w-[140px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[#dfe1e7] bg-white px-4 py-2 text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_2px_rgba(13,13,18,0.06)] transition hover:bg-[#f6f8fa] disabled:opacity-50"
+  "inline-flex h-[48px] min-w-[140px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[var(--greyscale-100)] bg-transparent px-4 py-2 text-base font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary)] shadow-[0px_1px_2px_rgba(13,13,18,0.06)] transition hover:bg-[var(--primary-0)] disabled:opacity-50"
 
 const PAUSE_MODAL_RESUME_BUTTON_CLASS =
-  "inline-flex h-[48px] min-w-[140px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[#0b4e6e] bg-[#0d47a1] px-4 py-2 text-base font-semibold leading-[1.5] tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#0a3d8a] disabled:opacity-50"
+  "inline-flex h-[48px] min-w-[140px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[var(--primary-border)] bg-[var(--primary)] px-4 py-2 text-base font-semibold leading-[1.5] tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[var(--primary-600)] disabled:opacity-50"
 
 function PracticeSessionPauseModal({
   open,
@@ -32,15 +33,15 @@ function PracticeSessionPauseModal({
       aria-modal="true"
       aria-labelledby="practice-session-pause-title"
     >
-      <div className="flex w-full max-w-[484px] flex-col items-center gap-6 rounded-[16px] border border-[#dfe1e7] bg-[#f2f7ff] p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+      <div className="flex w-full max-w-[484px] flex-col items-center gap-6 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--primary-25)] p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
         <div className="flex w-full max-w-[436px] flex-col items-center gap-4">
           <h2
             id="practice-session-pause-title"
-            className="w-full text-center text-[24px] font-bold leading-[1.3] text-[#062357]"
+            className="w-full text-center text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]"
           >
             {title}
           </h2>
-          <p className="text-center text-[14px] font-medium leading-[1.5] tracking-[0.28px] text-[#062357]">
+          <p className="text-center text-[14px] font-medium leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
             {message}
           </p>
         </div>

@@ -203,17 +203,17 @@ function DrillConfigForm({
   return (
     <div className="flex w-full flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="m-0 text-base font-semibold leading-snug tracking-[0.02em] text-[#062357]">
+        <h1 className="m-0 text-base font-semibold leading-snug tracking-[0.02em] text-[var(--color-student-heading)]">
           Practice With More Clarity About Your Weaknesses & Strengths
         </h1>
         {bannerOpen ? (
           <div className="flex items-center justify-between gap-4">
-            <p className="m-0 min-w-0 flex-1 text-sm font-normal leading-normal tracking-[0.02em] text-[#666d80]">
+            <p className="m-0 min-w-0 flex-1 text-sm font-normal leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
               Work on your priority skills or build your own drill.
             </p>
             <button
               type="button"
-              className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[#666d80] transition hover:bg-white/80 hover:text-[#062357]"
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[var(--greyscale-500)] transition hover:bg-[var(--greyscale-0)]/80 hover:text-[var(--color-student-heading)]"
               aria-label="Dismiss banner"
               onClick={() => setBannerOpen(false)}
             >
@@ -223,23 +223,23 @@ function DrillConfigForm({
         ) : null}
       </div>
 
-      <section className="flex w-full flex-col gap-6 rounded-[24px] border border-[#dfe1e7] bg-white p-6">
+      <section className="flex w-full flex-col gap-6 rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <SectionInitialBadge section={sectionType} />
-            <p className="m-0 text-[24px] font-bold leading-[1.3] text-[#062357]">{copy.title}</p>
+            <p className="m-0 text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">{copy.title}</p>
           </div>
           <div className="flex w-full flex-col gap-0.5 lg:w-auto lg:shrink-0 lg:items-end">
             <div className="flex w-full items-start justify-between gap-4">
-              <p className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Build My Own</p>
+              <p className="m-0 text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">Build My Own</p>
               <Switch
                 checked={customize}
                 onChange={(e) => setCustomize(e.target.checked)}
-                className={customize ? "!bg-[#0d47a1]" : "!bg-[#dfe1e6]"}
+                className={customize ? "!bg-[var(--primary)]" : "!bg-[var(--greyscale-100)]"}
                 aria-label="Build My Own"
               />
             </div>
-            <p className="m-0 whitespace-nowrap text-xs font-normal leading-normal tracking-[0.02em] text-[#666d80] lg:text-right">
+            <p className="m-0 whitespace-nowrap text-xs font-normal leading-normal tracking-[0.02em] text-[var(--greyscale-500)] lg:text-right">
               {poolStats.selectedCount} new {poolStats.selectedCount === 1 ? "question" : "questions"} ready
             </p>
             {poolStats.selectedCount === 0 && poolStats.totalCount > 0 ? (
@@ -330,11 +330,11 @@ function DrillConfigForm({
         <div className="flex flex-wrap items-center justify-end gap-6">
           <Link
             to="/app/practice/drills"
-            className="inline-flex h-[52px] items-center px-4 text-base font-semibold tracking-[0.02em] text-[#0d47a1] transition-colors hover:underline"
+            className="inline-flex h-[52px] items-center px-4 text-base font-semibold tracking-[0.02em] text-[var(--primary)] transition-colors hover:underline"
           >
             Back
           </Link>
-          <label className="inline-flex h-[52px] cursor-pointer select-none items-center gap-2.5 text-base font-semibold tracking-[0.02em] text-[#0d47a1]">
+          <label className="inline-flex h-[52px] cursor-pointer select-none items-center gap-2.5 text-base font-semibold tracking-[0.02em] text-[var(--primary)]">
             <Checkbox
               checked={saveSettings}
               onChange={(event) => handleSaveSettingsChange(event.target.checked)}

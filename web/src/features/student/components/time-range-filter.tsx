@@ -104,7 +104,7 @@ function TimeRangeFilter({
         aria-expanded={open}
         aria-controls={listboxId}
         aria-label={ariaLabel}
-        className="flex h-8 w-[140px] items-center gap-1.5 rounded-[8px] border border-[#dfe1e7] bg-white px-2.5 text-xs font-medium text-[#666d80] transition-colors hover:bg-[#f3f7ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d47a1]/30"
+        className="flex h-8 w-[140px] items-center gap-1.5 rounded-[8px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-2.5 text-xs font-medium text-[var(--greyscale-500)] transition-colors hover:bg-[var(--primary-0)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]/30"
       >
         <span className="whitespace-nowrap">{getTimeRangeLabel(value)}</span>
         <ChevronDown
@@ -118,7 +118,7 @@ function TimeRangeFilter({
           id={listboxId}
           role="listbox"
           aria-label={ariaLabel}
-          className="absolute right-0 z-30 mt-2 min-w-[200px] overflow-hidden rounded-[10px] border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
+          className="absolute right-0 z-30 mt-2 min-w-[200px] overflow-hidden rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
         >
           {TIME_RANGE_OPTIONS.map((option) => {
             const active = option.value === value
@@ -131,7 +131,7 @@ function TimeRangeFilter({
                   onClick={() => handleSelect(option.value)}
                   className={cn(
                     "flex h-8 w-full items-center justify-between gap-3 rounded-[8px] px-3 text-xs font-medium leading-normal tracking-[0.02em] transition-colors",
-                    active ? "bg-[#f3f7ff] text-[#0d47a1]" : "text-[#062357] hover:bg-[#f6f8fa]",
+                    active ? "bg-[var(--primary-0)] text-[var(--primary)]" : "text-[var(--color-student-heading)] hover:bg-[var(--greyscale-25)]",
                   )}
                 >
                   <span>{option.label}</span>

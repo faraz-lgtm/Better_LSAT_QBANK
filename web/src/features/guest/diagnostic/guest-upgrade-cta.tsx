@@ -19,7 +19,7 @@ function GuestUpgradeCta({ variant = 'header', className }: GuestUpgradeCtaProps
         type="button"
         onClick={handleUpgrade}
         className={cn(
-          'h-10 shrink-0 rounded-[10px] bg-[#0d47a1] px-5 text-xs font-bold uppercase tracking-[0.48px] text-white hover:bg-[#0b3d8a]',
+          'h-10 shrink-0 rounded-[10px] bg-[var(--primary)] px-5 text-xs font-bold uppercase tracking-[0.48px] text-white hover:bg-[var(--primary-600)]',
           className,
         )}
       >
@@ -48,7 +48,7 @@ function GuestUpgradeCta({ variant = 'header', className }: GuestUpgradeCtaProps
         variant="outline"
         onClick={handleUpgrade}
         className={cn(
-          'h-10 w-full rounded-[10px] border-[#0d47a1] bg-white text-sm font-semibold tracking-[0.28px] text-[#0d47a1] hover:bg-[#edf3ff]',
+          'h-10 w-full rounded-[10px] border-[var(--primary)] bg-[var(--greyscale-0)] text-sm font-semibold tracking-[0.28px] text-[var(--primary)] hover:bg-[var(--primary-25)]',
           className,
         )}
       >
@@ -72,13 +72,13 @@ function GuestFreePlanUpgradeBanner({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'flex flex-col gap-3 rounded-[16px] border border-[#b8d4ff] bg-[#edf3ff] px-5 py-4 sm:flex-row sm:items-center sm:justify-between',
+        'flex flex-col gap-3 rounded-[16px] border border-[#b8d4ff] bg-[var(--primary-25)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between',
         className,
       )}
     >
-      <p className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#062357]">
+      <p className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
         Official Performance, Reports, and Score Tracker are now available –{' '}
-        <span className="font-semibold text-[#0d47a1]">95.8%</span> for plan transition
+        <span className="font-semibold text-[var(--primary)]">95.8%</span> for plan transition
       </p>
       <GuestUpgradeCta variant="banner" />
     </div>
@@ -93,7 +93,7 @@ function GuestDiagnosticResultsActions() {
     <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
       <Button
         type="button"
-        className="h-11 rounded-[12px] bg-[#0d47a1] px-6 text-sm font-semibold tracking-[0.28px] text-white hover:bg-[#0b3d8a]"
+        className="h-11 rounded-[12px] bg-[var(--primary)] px-6 text-sm font-semibold tracking-[0.28px] text-white hover:bg-[var(--primary-600)]"
         onClick={openPricingModal}
       >
         Upgrade to unlock full access
@@ -101,7 +101,7 @@ function GuestDiagnosticResultsActions() {
       <Button
         type="button"
         variant="outline"
-        className="h-11 rounded-[12px] border-[#0d47a1] px-6 text-sm font-semibold tracking-[0.28px] text-[#0d47a1] hover:bg-[#edf3ff]"
+        className="h-11 rounded-[12px] border-[var(--primary)] px-6 text-sm font-semibold tracking-[0.28px] text-[var(--primary)] hover:bg-[var(--primary-25)]"
         onClick={() => navigate('/app')}
       >
         Continue to app

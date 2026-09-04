@@ -22,7 +22,7 @@ function StatChip({ icon, value, label }: { icon: ReactNode; value: number | str
         {icon}
       </span>
       <div className="leading-[1.5] tracking-[0.24px] text-[color:var(--greyscale-500)]">
-        <p className="text-base font-semibold tracking-[0.32px] text-[#062357]">{value}</p>
+        <p className="text-base font-semibold tracking-[0.32px] text-[var(--color-student-heading)]">{value}</p>
         <p className="text-xs font-medium">{label}</p>
       </div>
     </div>
@@ -45,7 +45,7 @@ function PrepCourseExpandButton({
   return (
     <button
       type="button"
-      className="inline-flex h-8 items-center justify-center gap-2 rounded-[12px] border border-[#dfe1e7] bg-white px-4 py-2 text-xs font-semibold tracking-[0.24px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)]"
+      className="inline-flex h-8 items-center justify-center gap-2 rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 py-2 text-xs font-semibold tracking-[0.24px] text-[var(--primary)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)] dark:text-[var(--greyscale-900)]"
       aria-expanded={expanded}
       onClick={(event) => {
         event.stopPropagation()
@@ -73,7 +73,7 @@ function PrepCourseContentHeader({
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-4">
           <div className="flex h-12 items-center">
-            <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">Course Content</h2>
+            <h2 className="text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">Course Content</h2>
           </div>
           <div className="flex flex-wrap items-center gap-4">
             <StatChip
@@ -81,19 +81,19 @@ function PrepCourseContentHeader({
               value={stats.moduleCount}
               label="Modules"
             />
-            <span className="h-5 w-px bg-[#dfe1e7]" aria-hidden />
+            <span className="h-5 w-px bg-[var(--greyscale-100)]" aria-hidden />
             <StatChip
               icon={<PrepCourseFigmaIcon src={`${PREP_COURSE_FIGMA}/stat-sections.svg`} />}
               value={stats.sectionCount}
               label="Sections"
             />
-            <span className="h-5 w-px bg-[#dfe1e7]" aria-hidden />
+            <span className="h-5 w-px bg-[var(--greyscale-100)]" aria-hidden />
             <StatChip
               icon={<PrepCourseFigmaIcon src={`${PREP_COURSE_FIGMA}/stat-lessons.svg`} />}
               value={stats.lessonCount}
               label="Lessons"
             />
-            <span className="h-5 w-px bg-[#dfe1e7]" aria-hidden />
+            <span className="h-5 w-px bg-[var(--greyscale-100)]" aria-hidden />
             <StatChip icon={<PrepCourseStatClockIcon />} value={hoursValue} label="Hours total length" />
           </div>
         </div>
@@ -108,8 +108,8 @@ function PrepCourseContentHeader({
             checked={showBookmarksOnly}
             onChange={(e) => onToggleShowBookmarksOnly(e.target.checked)}
             className={cn(
-              "h-5 w-9 border border-[#dfe1e7] bg-white p-0.5",
-              showBookmarksOnly ? "bg-[#0d47a1]! border-[#0d47a1]!" : undefined,
+              "h-5 w-9 border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-0.5",
+              showBookmarksOnly ? "bg-[var(--primary)]! border-[var(--primary)]!" : undefined,
             )}
             aria-label="Show all bookmark"
           />

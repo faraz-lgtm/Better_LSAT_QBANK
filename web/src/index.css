@@ -26,7 +26,7 @@
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
-  /* Portal is light UI — avoid OS-dark native scrollbars (black track + arrows). */
+  /* Default light; `.dark` sets color-scheme: dark for native controls. */
   color-scheme: light;
   color: var(--text);
   background: var(--bg);
@@ -52,6 +52,8 @@
   --primary-foreground: #ffffff;
   --primary-500: #0d47a1;
   --primary-600: #0a357f;
+  --primary-700: #0a357f;
+  --primary-800: #041a44;
   --primary-900: #041a44;
   --primary-border: #0b4e6e;
   --shadow-xsmall: 0 1px 2px 0 rgba(13, 13, 18, 0.06);
@@ -112,11 +114,16 @@
   --greyscale-100: #dfe1e6;
   --greyscale-25: #f6f8fa;
   --greyscale-0: #ffffff;
+  --greyscale-50: #f0f1f6;
   --greyscale-300: #a4acb9;
   --greyscale-400: #818898;
   --greyscale-500: #666d80;
+  --greyscale-600: #666d80;
+  --greyscale-800: #121a26;
+  --greyscale-900: #121a26;
   --primary-0: #f3f7ff;
   --primary-25: #edf3ff;
+  --primary-50: #ced0e7;
   --primary-100: #6d78b6;
   --secondary-100: #f2f7ff;
   --shadow-medium: 0 5px 10px -2px rgba(13, 13, 18, 0.04), 0 4px 8px -1px rgba(13, 13, 18, 0.02);
@@ -148,12 +155,28 @@
   --explanation-passage-panel-bg: #f6f8fa;
   --explanation-answered: #00bc54;
   --explanation-answered-bg: #eafff4;
+  --explanation-in-process-bg: #fff6e0;
+  --explanation-in-process: #ffbd4c;
+  --explanation-fresh-bg: #eff6ff;
+  --explanation-seen-bg: #f3f4f6;
+  --explanation-seen: #9ca3af;
   --explanation-teal: #0bbcc9;
   --explanation-lr-badge-bg: #00bc54;
   --explanation-rc-badge-bg: #0bbcc9;
   --explanation-rc-badge-bg-light: #e5fdff;
   --explanation-prep-test-card-radius: 20px;
   --explanation-badge-radius: 14px 14px 14px 14px;
+
+  /* Blind Review (Figma secondary-orange / warning CTA) */
+  --blind-review-accent: #ff6f00;
+  --blind-review-badge-bg: #fff3ea;
+  --blind-review-selected-bg: #fff3ea;
+  --blind-review-actual-fg: #956321;
+  --blind-review-recommended-border: #fff3ea;
+  --blind-review-cta-bg: #ffbd4c;
+  --blind-review-cta-border: #ffe5b7;
+  --blind-review-cta-fg: #0d0d12;
+  --blind-review-cta-hover: #f0a830;
 
   --nav-surface: #edf3ff;
   --nav-pill-height: 48px;
@@ -206,6 +229,11 @@ html.student-shell-active body {
   height: var(--app-svh);
   overflow: hidden;
   color-scheme: light;
+}
+
+html.student-shell-active.dark,
+html.student-shell-active.dark body {
+  color-scheme: dark;
 }
 
 html.student-shell-active #root {
@@ -311,8 +339,13 @@ html.student-shell-active :is(
   cursor: text;
 }
 
-/* Auth routes: keep light surfaces and readable headings even when OS prefers dark */
 .auth-page {
+  overflow: hidden;
+}
+
+/* Login/signup: keep light surfaces even when html has `.dark` (student theme).
+   Intent picker (`auth-split-page--intent-only`) inherits theme tokens so dark mode works. */
+.auth-page:not(.auth-split-page--intent-only) {
   color-scheme: light;
   --text: #667085;
   --text-h: #121a26;
@@ -324,14 +357,26 @@ html.student-shell-active :is(
   --popover-foreground: #121a26;
   --primary: #0d47a1;
   --primary-foreground: #ffffff;
+  --primary-500: #0d47a1;
+  --primary-600: #0a357f;
+  --primary-border: #0b4e6e;
+  --btn-disabled-bg: #e4e8f2;
+  --btn-disabled-border: #dfe1e6;
+  --btn-disabled-fg: rgba(255, 255, 255, 0.55);
   --secondary: #f9fbfc;
   --secondary-foreground: #121a26;
+  --secondary-0: #f5f9ff;
   --muted: #f9fbfc;
   --muted-foreground: #667085;
   --accent-foreground: #121a26;
+  --greyscale-100: #dfe1e6;
+  --greyscale-300: #a4acb9;
+  --greyscale-400: #818898;
+  --greyscale-500: #666d80;
+  --field-focus: #082c6b;
+  --input: #e2e8f0;
   color: #0d0d12;
   background-color: #f5f9ff;
-  overflow: hidden;
 }
 
 .auth-page .auth-card {
@@ -1497,7 +1542,7 @@ html.student-shell-active :is(
   flex-direction: column;
   align-items: flex-start;
   border-radius: 16px;
-  border: 0.5px solid #dfe1e7;
+  border: 1px solid var(--greyscale-100);
   background: #fff;
   padding: 1.5rem 1.5rem 0;
   text-align: left;
@@ -1621,7 +1666,7 @@ html.student-shell-active :is(
 .intent-card__footer {
   width: 100%;
   margin-top: auto;
-  border-top: 1px solid #dfe1e7;
+  border-top: 1px solid var(--greyscale-100);
   padding: 1rem 0 1.25rem;
 }
 
@@ -1688,6 +1733,88 @@ html.student-shell-active :is(
   .intent-page__cta-wrap {
     padding-top: 1.25rem;
   }
+}
+
+/* Intent page — dark theme (accent greens/blues unchanged) */
+.dark .auth-split-page--intent-only {
+  background: var(--background);
+  color: var(--color-student-heading);
+}
+
+.dark .auth-split-page--intent-only .auth-split-content--full {
+  background: var(--background);
+}
+
+.dark .auth-split-page--intent-only .auth-split-header {
+  background: var(--primary-0);
+  border-bottom: 1px solid var(--greyscale-100);
+}
+
+.dark .auth-split-page--intent-only .auth-split-cta {
+  color: var(--greyscale-500);
+}
+
+.dark .auth-split-page--intent-only .auth-split-footer {
+  background: var(--primary-0);
+  color: var(--greyscale-500);
+  border-top: 1px solid var(--greyscale-100);
+}
+
+.dark .intent-page__back {
+  color: var(--primary);
+}
+
+.dark .intent-page__title,
+.dark .intent-page__section-label {
+  color: var(--color-student-heading);
+}
+
+.dark .intent-page__subtitle,
+.dark .intent-page__sign-in-prompt,
+.dark .intent-card__tagline,
+.dark .intent-card__stat {
+  color: var(--greyscale-500);
+}
+
+.dark .intent-card {
+  background: var(--primary-0);
+  border-color: var(--greyscale-100);
+  box-shadow: none;
+}
+
+.dark .intent-card--selected {
+  border-color: var(--primary);
+  box-shadow: none;
+}
+
+.dark .intent-card__badge {
+  background: var(--primary-25);
+  color: var(--primary);
+}
+
+.dark .intent-card__features li {
+  color: var(--color-student-heading);
+}
+
+.dark .intent-card__footer {
+  border-top-color: var(--greyscale-100);
+}
+
+.dark .intent-page__cta {
+  background: var(--primary);
+  border: 1px solid var(--primary-border);
+}
+
+.dark .intent-page__cta:hover {
+  background: var(--primary-600);
+}
+
+.dark .auth-split-header-intent-upgrade {
+  background: var(--primary);
+}
+
+.dark .auth-split-header-intent-upgrade:hover {
+  background: var(--primary-600);
 }
 
 @media (max-height: 820px) {
@@ -1904,38 +2031,104 @@ code {
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Figma dark theme tokens (BetterLSAT dark mode frames). */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  color-scheme: dark;
+  --text: #c1c7d0;
+  --text-h: #ffffff;
+  --bg: #121a26;
+  --border: #3f4247;
+  --code-bg: #2e3033;
+  --social-bg: rgba(47, 48, 58, 0.5);
+  --shadow:
+    rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+
+  --background: #121a26;
+  --foreground: #ffffff;
+  --card: #303338;
+  --card-foreground: #ffffff;
+  --popover: #303338;
+  --popover-foreground: #ffffff;
+
+  --primary: #1a57b8;
+  --primary-foreground: #ffffff;
+  --primary-500: #1a57b8;
+  --primary-600: #0a357f;
+  --primary-700: #ced0e7;
+  --primary-800: #edf3ff;
+  --primary-900: #f3f7ff;
+  --primary-border: #1a57b8;
+  --btn-disabled-bg: #3f4247;
+  --btn-disabled-border: #3f4247;
+  --btn-disabled-fg: rgba(255, 255, 255, 0.45);
+
+  --secondary: #2e3033;
+  --secondary-foreground: #ffffff;
+  --muted: #2e3033;
+  --muted-foreground: #c1c7d0;
+  --accent: #2e3033;
+  --accent-foreground: #ffffff;
+  --destructive: #df1c41;
+  --input: #3f4247;
+  --ring: #a4acb9;
+
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+
+  --sidebar: #303338;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #1a57b8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2e3033;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #3f4247;
+  --sidebar-ring: #a4acb9;
+
+  --greyscale-0: #3f4247;
+  --greyscale-25: #35373c;
+  --greyscale-50: #272835;
+  --greyscale-100: #3f4247;
+  --greyscale-300: #818898;
+  --greyscale-400: #a4acb9;
+  --greyscale-500: #c1c7d0;
+  --greyscale-600: #dfe1e7;
+  --greyscale-800: #f6f8fa;
+  --greyscale-900: #ffffff;
+
+  --primary-0: #303338;
+  --primary-25: #2e3033;
+  --primary-50: #ced0e7;
+  --primary-100: #6d78b6;
+  --secondary-0: #28303f;
+  --secondary-100: #183045;
+  --field-focus: #ced0e7;
+
+  --color-student-heading: #edf3ff;
+  --color-student-cta: #1a57b8;
+  --color-student-accent: #1a57b8;
+  --nav-surface: #303338;
+
+  --explanation-list-row-alt: #272835;
+  --explanation-passage-panel-bg: #35373c;
+  --student-expanded-row: #183045;
+  --explanation-answered-bg: #1a3437;
+  --explanation-in-process-bg: #3d3420;
+  --explanation-fresh-bg: #1a2a3f;
+  --explanation-seen-bg: #2e3033;
+  --explanation-rc-badge-bg-light: #183045;
+
+  --blind-review-accent: #ff6f00;
+  --blind-review-badge-bg: #3d2a1a;
+  --blind-review-selected-bg: #3d2a1a;
+  --blind-review-actual-fg: #ffbd4c;
+  --blind-review-recommended-border: #fff3ea;
+  --blind-review-cta-bg: #ffbd4c;
+  --blind-review-cta-border: #ffe5b7;
+  --blind-review-cta-fg: #0d0d12;
+  --blind-review-cta-hover: #f0a830;
 }
 
 @layer base {
@@ -2023,7 +2216,7 @@ code {
   flex-direction: column;
   gap: 2px;
   border-radius: 14px;
-  background: #f6f8fa;
+  background: var(--greyscale-25);
   padding: 12px 14px;
 }
 
@@ -2033,7 +2226,7 @@ code {
 
 .ds-analytics-stat--pair {
   width: auto;
-  background: #f6f8fa;
+  background: var(--greyscale-25);
   padding: 12px 14px;
 }
 
@@ -2042,7 +2235,7 @@ code {
   font-weight: 600;
   line-height: 1.4;
   letter-spacing: 0.06em;
-  color: #062357;
+  color: var(--color-student-heading);
 }
 
 .ds-analytics-stat__value {
@@ -2057,7 +2250,7 @@ code {
   font-weight: 600;
   line-height: 1.4;
   letter-spacing: 0.04em;
-  color: #062357;
+  color: var(--color-student-heading);
 }
 
 /* Figma text field — use class `ds-input` or <Input size="lg" /> */
@@ -2249,7 +2442,7 @@ select.ds-input {
   gap: 8px;
   border-radius: 16px;
   border: 1px solid var(--greyscale-100);
-  background: #fff;
+  background: var(--greyscale-0);
   color: var(--field-focus);
   box-shadow: var(--shadow-xsmall);
   font-size: 16px;
@@ -2274,7 +2467,7 @@ select.ds-input {
 .ds-btn-outline:focus-visible {
   outline: none;
   border-color: var(--greyscale-100);
-  background: #fff;
+  background: var(--greyscale-0);
   color: var(--field-focus);
   box-shadow: var(--btn-focus-ring);
 }
@@ -2298,7 +2491,7 @@ select.ds-input {
   gap: 8px;
   border-radius: 16px;
   border: 1px solid var(--greyscale-100);
-  background: #fff;
+  background: var(--greyscale-0);
   color: var(--field-focus);
   box-shadow: var(--shadow-xsmall);
   font-size: 14px;
@@ -2323,7 +2516,7 @@ select.ds-input {
 .ds-btn-outline-sm:focus-visible {
   outline: none;
   border-color: var(--greyscale-100);
-  background: #fff;
+  background: var(--greyscale-0);
   color: var(--field-focus);
   box-shadow: var(--btn-focus-ring);
 }
@@ -2358,7 +2551,7 @@ select.ds-input {
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  background: #0d47a1;
+  background: var(--primary);
   color: #ffffff;
   font-size: 16px;
   font-weight: 700;
@@ -2405,7 +2598,7 @@ select.ds-input {
   font-weight: 500;
   line-height: 1.5;
   letter-spacing: 0.24px;
-  color: #0d47a1;
+  color: var(--primary);
   text-transform: uppercase;
 }
 
@@ -2423,7 +2616,7 @@ select.ds-input {
   font-weight: 500;
   line-height: 1.5;
   letter-spacing: 0.28px;
-  color: #062357;
+  color: var(--color-student-heading);
   transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -2447,25 +2640,35 @@ select.ds-input {
   object-fit: contain;
 }
 
+/* Dark mode: inactive nav icons white; active icons brand blue (Figma 20645:65725). */
+.dark .student-sidebar-link-icon img {
+  filter: brightness(0) invert(1);
+}
+
+.dark .student-sidebar-link--active .student-sidebar-link-icon img,
+.dark .student-sidebar-logout-icon img {
+  filter: invert(28%) sepia(92%) saturate(1650%) hue-rotate(198deg) brightness(92%) contrast(92%);
+}
+
 .student-sidebar-link:hover {
-  color: #062357;
-  background-color: #edf3ff;
+  color: var(--color-student-heading);
+  background-color: var(--primary-25);
 }
 
 .student-sidebar-link--active {
   padding: 0 24px 0 16px;
   font-weight: 600;
-  color: #0d47a1;
-  background-color: #edf3ff;
-  border: 0.6px solid #edf3ff;
+  color: var(--primary);
+  background-color: var(--primary-25);
+  border: 0.6px solid var(--primary-25);
   box-shadow:
     0 4px 4px rgba(13, 13, 18, 0.02),
     0 5px 5px rgba(13, 13, 18, 0.04);
 }
 
 .student-sidebar-link--active:hover {
-  color: #0d47a1;
-  background-color: #edf3ff;
+  color: var(--primary);
+  background-color: var(--primary-25);
 }
 
 .student-sidebar-link--active::before {
@@ -2476,7 +2679,7 @@ select.ds-input {
   left: 0;
   width: 10px;
   border-radius: 8px 0 0 8px;
-  background-color: #0d47a1;
+  background-color: var(--primary);
 }
 
 .student-sidebar-link--locked {
@@ -2501,15 +2704,15 @@ select.ds-input {
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.2px;
-  color: #666d80;
+  color: var(--greyscale-500);
 }
 
 .student-sidebar-sublink:hover {
-  color: #062357;
+  color: var(--color-student-heading);
 }
 
 .student-sidebar-sublink.student-sidebar-link--active {
-  color: #0d47a1;
+  color: var(--primary);
 }
 
 .student-sidebar-footer {
@@ -2533,7 +2736,7 @@ select.ds-input {
   font-weight: 600;
   line-height: 1.5;
   letter-spacing: 0.28px;
-  color: #0d47a1;
+  color: var(--primary);
   transition: color 0.15s ease;
 }
 
@@ -2554,7 +2757,7 @@ select.ds-input {
 }
 
 .student-sidebar-logout:hover {
-  color: #062357;
+  color: var(--color-student-heading);
 }
 
 .student-sidebar-version {
@@ -2562,7 +2765,7 @@ select.ds-input {
   font-weight: 600;
   line-height: 1.5;
   letter-spacing: 0.16px;
-  color: #0d47a1;
+  color: var(--primary);
   white-space: nowrap;
 }
 
@@ -2715,7 +2918,7 @@ select.ds-input {
   font-weight: 700;
   line-height: 27px;
   letter-spacing: 0;
-  color: #062357;
+  color: var(--color-student-heading);
 }
 
 .student-page-title-row {
@@ -2766,9 +2969,9 @@ select.ds-input {
   flex-direction: column;
   overflow: hidden;
   border-radius: 24px;
-  border: 1px solid rgba(13, 71, 161, 0.15);
+  border: 1px solid var(--greyscale-100);
   padding: 25px;
-  background-image: linear-gradient(156.25deg, rgb(255, 255, 255) 0%, rgb(228, 239, 255) 100%);
+  background-image: linear-gradient(156.25deg, var(--greyscale-0) 0%, var(--primary-25) 100%);
 }
 
 .test-day-countdown--picker-open {
@@ -2784,7 +2987,7 @@ select.ds-input {
   width: 210px;
   height: 210px;
   border-radius: 9999px;
-  background: radial-gradient(circle, rgba(79, 70, 229, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--primary) 18%, transparent) 0%, rgba(0, 0, 0, 0) 70%);
 }
 
 .test-day-countdown__header {
@@ -2807,7 +3010,7 @@ select.ds-input {
   line-height: 15px;
   letter-spacing: 0.5625px;
   text-transform: uppercase;
-  color: #0d47a1;
+  color: var(--primary);
 }
 
 .test-day-countdown__days {
@@ -2824,7 +3027,7 @@ select.ds-input {
   font-size: 56.25px;
   font-weight: 800;
   line-height: 56.25px;
-  color: #062357;
+  color: var(--color-student-heading);
 }
 
 .test-day-countdown__days-unit {
@@ -2832,7 +3035,7 @@ select.ds-input {
   font-size: 16.875px;
   font-weight: 600;
   line-height: 26.25px;
-  color: #0d47a1;
+  color: var(--primary);
 }
 
 .test-day-countdown__flame {
@@ -2858,7 +3061,7 @@ select.ds-input {
   font-size: 13.125px;
   font-weight: 400;
   line-height: 18.75px;
-  color: #666d80;
+  color: var(--greyscale-500);
 }
 
 .test-day-countdown__meta {
@@ -2868,7 +3071,7 @@ select.ds-input {
   font-size: 11.25px;
   font-weight: 400;
   line-height: 15px;
-  color: #666d80;
+  color: var(--greyscale-500);
 }
 
 .test-day-countdown__actions {
@@ -2891,7 +3094,7 @@ select.ds-input {
   align-items: center;
   gap: 8px;
   border-radius: 16px;
-  background: #edf3ff;
+  background: var(--primary-25);
   padding: 5px 20px;
   box-shadow:
     0 4px 3px rgba(13, 13, 18, 0.03),
@@ -2906,7 +3109,7 @@ select.ds-input {
   line-height: 15px;
   letter-spacing: 0.5625px;
   text-transform: uppercase;
-  color: #062357;
+  color: var(--color-student-heading);
 }
 
 .test-day-countdown__date-controls {
@@ -2929,8 +3132,8 @@ select.ds-input {
   flex-direction: column;
   overflow: auto;
   border-radius: 12px;
-  border: 1px solid #dfe1e7;
-  background: #fff;
+  border: 1px solid var(--greyscale-100);
+  background: var(--greyscale-0);
   padding: 8px;
   box-shadow:
     0 12px 16px -4px rgba(13, 13, 18, 0.08),
@@ -2947,7 +3150,7 @@ select.ds-input {
   overflow: hidden;
   border: none;
   border-radius: 8px;
-  background: #fff;
+  background: var(--greyscale-0);
   padding: 8px 12px;
   text-align: left;
   font-family: inherit;
@@ -2955,19 +3158,19 @@ select.ds-input {
   font-weight: 500;
   line-height: 1.5;
   letter-spacing: 0.28px;
-  color: #062357;
+  color: var(--color-student-heading);
   cursor: pointer;
   transition: background-color 0.15s ease;
 }
 
 .test-day-countdown__date-menu-item:hover {
-  background: #f3f7ff;
+  background: var(--primary-0);
 }
 
 .test-day-countdown__date-menu-item--selected {
   border-radius: 10px;
-  background: #edf3ff;
-  color: #082c6b;
+  background: var(--primary-25);
+  color: var(--color-student-heading);
 }
 
 .test-day-countdown__date-chip {
@@ -2977,7 +3180,7 @@ select.ds-input {
   align-items: center;
   justify-content: center;
   border-radius: 16px;
-  background: #f3f7ff;
+  background: var(--primary-0);
   padding: 8px 16px;
   font-family: inherit;
   font-size: 14px;
@@ -2985,7 +3188,7 @@ select.ds-input {
   line-height: 1.5;
   letter-spacing: 0.28px;
   white-space: nowrap;
-  color: #062357;
+  color: var(--color-student-heading);
   box-shadow: 0 1px 1px rgba(13, 13, 18, 0.06);
 }
 
@@ -2996,19 +3199,19 @@ select.ds-input {
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  background: #f3f7ff;
+  background: var(--primary-0);
   padding: 8px 16px;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.5;
   letter-spacing: 0.28px;
-  color: #0d47a1;
+  color: var(--primary);
   box-shadow: 0 1px 1px rgba(13, 13, 18, 0.06);
   transition: background-color 0.15s ease;
 }
 
 .test-day-countdown__edit:hover {
-  background: #ffffff;
+  background: var(--greyscale-0);
 }
 
 .test-day-countdown__cta-wrap {
@@ -3026,8 +3229,8 @@ select.ds-input {
   align-items: center;
   justify-content: center;
   border-radius: 16px;
-  border: 1px solid #0b4e6e;
-  background: #0d47a1;
+  border: 1px solid var(--primary-border);
+  background: var(--primary);
   padding: 8px 16px;
   font-size: 14px;
   font-weight: 600;
@@ -3040,7 +3243,7 @@ select.ds-input {
 }
 
 .test-day-countdown__cta:hover:not(:disabled) {
-  background: #0b3d8a;
+  background: var(--primary-600);
 }
 
 .test-day-countdown__cta:disabled {
@@ -3211,7 +3414,7 @@ select.ds-input {
   font-weight: 700;
   line-height: 1.3;
   letter-spacing: 0;
-  color: #272835;
+  color: var(--color-student-heading);
 }
 
 .lsat-html-content h2,
@@ -3220,7 +3423,7 @@ select.ds-input {
   margin: 0 0 8px;
   font-family: var(--sans);
   font-weight: 700;
-  color: #272835;
+  color: var(--color-student-heading);
 }
 
 .rep-work-instructions-body.lsat-html-content {
@@ -3287,7 +3490,7 @@ select.ds-input {
   font-weight: 400;
   line-height: 1.8;
   letter-spacing: 0.28px;
-  color: #0d0d12;
+  color: var(--color-student-heading);
 }
 
 .explanation-passage-body.lsat-html-content p {
@@ -3304,7 +3507,7 @@ select.ds-input {
   font-weight: 600;
   line-height: 1.5;
   letter-spacing: 0.32px;
-  color: #062357;
+  color: var(--color-student-heading);
 }
 
 .explanation-question-stem.lsat-html-content p {
@@ -3316,7 +3519,7 @@ select.ds-input {
   font-weight: 500;
   line-height: 1.5;
   letter-spacing: 0.28px;
-  color: #272835;
+  color: var(--color-student-heading);
 }
 
 .explanation-choice-text.lsat-html-content p {
@@ -3329,7 +3532,7 @@ select.ds-input {
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: 0.28px;
-  color: #272835;
+  color: var(--color-student-heading);
 }
 
 .explanation-option-body.lsat-html-content p {
@@ -3346,7 +3549,7 @@ select.ds-input {
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: 0.28px;
-  color: #062357;
+  color: var(--color-student-heading);
 }
 
 .explanation-review-body.lsat-html-content h1,
@@ -3358,7 +3561,7 @@ select.ds-input {
   font-weight: 600;
   line-height: 1.4;
   letter-spacing: 0.32px;
-  color: #062357;
+  color: var(--color-student-heading);
 }
 
 .explanation-review-body.lsat-html-content h1:first-child,
@@ -3402,7 +3605,7 @@ select.ds-input {
 .explanation-review-body.lsat-html-content strong,
 .explanation-review-body.lsat-html-content b {
   font-weight: 600;
-  color: #062357;
+  color: var(--color-student-heading);
 }
 
 .lsat-html-content ul,
@@ -3512,7 +3715,7 @@ html {
 
 .lesson-html-content {
   font-family: var(--sans);
-  color: #36394a;
+  color: var(--color-student-heading);
 }
 
 .lesson-html-body {
@@ -3526,14 +3729,14 @@ html {
   font-size: 24px;
   font-weight: 700;
   line-height: 1.3;
-  color: #36394a;
+  color: var(--color-student-heading);
 }
 
 .lesson-html-body h3,
 .lesson-html-body h4 {
   margin: 0;
   font-weight: 700;
-  color: #36394a;
+  color: var(--color-student-heading);
 }
 
 .lesson-html-body p {
@@ -3542,7 +3745,7 @@ html {
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: 0.32px;
-  color: #36394a;
+  color: var(--color-student-heading);
 }
 
 .lesson-html-body hr,
@@ -3551,7 +3754,7 @@ html {
 .ProseMirror hr {
   margin: 24px 0;
   border: 0;
-  border-top: 1px solid #dfe1e7;
+  border-top: 1px solid var(--greyscale-100);
   height: 0;
 }
 
@@ -3565,7 +3768,7 @@ html {
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: 0.32px;
-  color: #36394a;
+  color: var(--color-student-heading);
 }
 
 .lesson-callout-body p + p {
@@ -3577,7 +3780,7 @@ html {
   font-size: 16px;
   line-height: 1.5;
   letter-spacing: 0.32px;
-  color: #36394a;
+  color: var(--color-student-heading);
 }
 
 .lesson-section-empty,
@@ -3595,7 +3798,7 @@ section[data-lesson-section][data-variant="empty"] {
   font-size: 24px;
   font-weight: 700;
   line-height: 1.3;
-  color: #272835;
+  color: var(--color-student-heading);
 }
 
 .lesson-section-body {
@@ -3607,7 +3810,7 @@ section[data-lesson-section][data-variant="empty"] {
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: 0.32px;
-  color: #36394a;
+  color: var(--color-student-heading);
 }
 
 .lesson-section-body--inverse,
@@ -3627,7 +3830,7 @@ section[data-lesson-section][data-variant="empty"] {
   font-weight: 700;
   line-height: 1.3;
   letter-spacing: 0;
-  color: #272835;
+  color: var(--color-student-heading);
 }
 
 .lesson-section-body h2,
@@ -3636,7 +3839,7 @@ section[data-lesson-section][data-variant="empty"] {
   margin: 0;
   font-family: var(--sans);
   font-weight: 700;
-  color: #272835;
+  color: var(--color-student-heading);
 }
 
 .lesson-section-body p {
@@ -3644,7 +3847,7 @@ section[data-lesson-section][data-variant="empty"] {
   font-size: 16px;
   line-height: 1.5;
   letter-spacing: 0.32px;
-  color: #36394a;
+  color: var(--color-student-heading);
 }
 
 .lesson-section-body p:last-child {
@@ -3662,24 +3865,24 @@ section[data-lesson-section][data-variant="empty"] {
   font-size: 16px;
   line-height: 1.5;
   letter-spacing: 0.32px;
-  color: #36394a;
+  color: var(--color-student-heading);
 }
 
 .lesson-section-body li::marker {
-  color: #0d47a1;
+  color: var(--primary);
 }
 
 .lesson-section-body blockquote {
   margin: 0;
   padding: 14px 16px;
-  border: 1px solid #eceff3;
-  border-left: 1px solid #eceff3;
+  border: 1px solid var(--greyscale-100);
+  border-left: 1px solid var(--greyscale-100);
   border-radius: 14px;
-  background: #f3f7ff;
+  background: var(--primary-0);
   font-size: 14px;
   font-style: normal;
   line-height: 23.2px;
-  color: #36394a;
+  color: var(--color-student-heading);
 }
 
 .lesson-section-body blockquote p {
@@ -4009,7 +4212,15 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
   min-height: 0;
   flex: 1 1 0;
   height: 0;
+  /* Figma dark: Neutral/0 #3f4247 elevated over Primary/0 shell #303338 */
   background-color: var(--greyscale-0);
+  color: var(--color-student-heading);
+}
+
+/* Dark: prep-course Figma SVG icons render light (assets are dark navy strokes). */
+.dark .prep-course-shell-card img[src^="/figma/prep-course/"],
+.dark .prep-course-lesson-shell img[src^="/figma/prep-course/"] {
+  filter: brightness(0) invert(1);
 }
 
 .prep-course-shell-card.practice-session-card {
@@ -4024,7 +4235,9 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
 }
 
 .prep-course-lesson-frame {
-  background: transparent;
+  /* Figma: page gutter is Background (#121a26 dark); lesson card elevates as greyscale-0 */
+  background: var(--background);
+  color: var(--color-student-heading);
 }
 
 .prep-course-lesson-footer {
@@ -4351,10 +4564,183 @@ html.student-shell-immersive .practice-session-card--blind-review {
 }
 
 .practice-session-card--blind-review .practice-session-pane--br-column {
-  border-radius: 16px;
-  box-shadow:
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/*
+ * Figma `20645:49778` dark theme — default accessibility scheme is black-on-white
+ * (inline CSS vars). Remap so passage/choices stay light on Neutral-0 chrome.
+ */
+.dark .practice-session-card--blind-review .practice-session-body[data-color-scheme="black-on-white"],
+.dark .practice-session-card--blind-review .practice-session-body:not([data-color-scheme]) {
+  --practice-accessibility-bg: var(--greyscale-0) !important;
+  --practice-accessibility-fg: var(--color-student-heading) !important;
+  --practice-choice-selected-bg: var(--primary-25) !important;
+  --practice-choice-selected-border: var(--primary) !important;
+  --practice-choice-selected-letter-bg: var(--primary) !important;
+  --practice-choice-selected-letter-fg: #ffffff !important;
+  --practice-choice-selected-letter-border: var(--primary-border) !important;
+  --practice-choice-unselected-bg: var(--greyscale-25) !important;
+  --practice-choice-unselected-border: var(--greyscale-100) !important;
+  --practice-choice-unselected-letter-bg: var(--greyscale-0) !important;
+  --practice-choice-unselected-letter-fg: var(--greyscale-500) !important;
+  --practice-choice-unselected-letter-border: transparent !important;
+  --practice-panel-bg: var(--greyscale-25) !important;
+  --practice-panel-border: var(--greyscale-100) !important;
+  --practice-panel-muted-fg: var(--greyscale-500) !important;
+  background-color: var(--greyscale-0) !important;
+  color: var(--color-student-heading) !important;
+}
+
+.dark .practice-session-card--blind-review .practice-session-body .lsat-html-content,
+.dark .practice-session-card--blind-review .practice-session-body .practice-session-content {
+  color: var(--color-student-heading) !important;
+}
+
+.dark .practice-session-card--blind-review .practice-session-br-option {
+  color: var(--color-student-heading);
+}
+
+.dark .practice-session-card--blind-review .practice-session-br-option .lsat-html-content,
+.dark .practice-session-card--blind-review .practice-session-br-option .practice-session-content {
+  color: inherit !important;
+}
+
+.dark .practice-session-card--blind-review .practice-session-reset-response {
+  background-color: var(--greyscale-25) !important;
+  color: var(--greyscale-500) !important;
+}
+
+/*
+ * Same Figma dark chrome for section/drill sessions (including official LawHub chrome).
+ * Default accessibility black-on-white must not paint a white body under light text.
+ */
+.dark .practice-session-card--active-drill .practice-session-body[data-color-scheme="black-on-white"],
+.dark .practice-session-card--active-drill .practice-session-body:not([data-color-scheme]),
+.dark .practice-session-card--active-drill .practice-session-body[data-color-scheme="grey-on-light-grey"] {
+  --practice-accessibility-bg: var(--greyscale-0) !important;
+  --practice-accessibility-fg: var(--color-student-heading) !important;
+  --practice-choice-selected-bg: var(--primary-25) !important;
+  --practice-choice-selected-border: var(--primary) !important;
+  --practice-choice-selected-letter-bg: var(--primary) !important;
+  --practice-choice-selected-letter-fg: #ffffff !important;
+  --practice-choice-selected-letter-border: var(--primary-border) !important;
+  --practice-choice-unselected-bg: var(--greyscale-25) !important;
+  --practice-choice-unselected-border: var(--greyscale-100) !important;
+  --practice-choice-unselected-letter-bg: var(--greyscale-0) !important;
+  --practice-choice-unselected-letter-fg: var(--greyscale-500) !important;
+  --practice-choice-unselected-letter-border: transparent !important;
+  --practice-panel-bg: var(--greyscale-25) !important;
+  --practice-panel-border: var(--greyscale-100) !important;
+  --practice-panel-muted-fg: var(--greyscale-500) !important;
+  background-color: var(--greyscale-0) !important;
+  color: var(--color-student-heading) !important;
+}
+
+.dark .practice-session-card--active-drill .practice-session-body .lsat-html-content,
+.dark .practice-session-card--active-drill .practice-session-body .practice-session-content {
+  color: var(--color-student-heading) !important;
+}
+
+.dark .practice-session-card--active-drill .practice-session-reset-response {
+  background-color: var(--greyscale-25) !important;
+  color: var(--greyscale-500) !important;
+}
+
+/*
+ * Results Review / tester chrome (`practice-session-card--review`).
+ * Same black-on-white accessibility remaps as blind-review / active-drill.
+ */
+.dark .practice-session-card--review .practice-session-body[data-color-scheme="black-on-white"],
+.dark .practice-session-card--review .practice-session-body:not([data-color-scheme]),
+.dark .practice-session-card--review .practice-session-body[data-color-scheme="grey-on-light-grey"] {
+  --practice-accessibility-bg: var(--greyscale-0) !important;
+  --practice-accessibility-fg: var(--color-student-heading) !important;
+  --practice-choice-selected-bg: var(--primary-25) !important;
+  --practice-choice-selected-border: var(--primary) !important;
+  --practice-choice-selected-letter-bg: var(--primary) !important;
+  --practice-choice-selected-letter-fg: #ffffff !important;
+  --practice-choice-selected-letter-border: var(--primary-border) !important;
+  --practice-choice-unselected-bg: var(--greyscale-25) !important;
+  --practice-choice-unselected-border: var(--greyscale-100) !important;
+  --practice-choice-unselected-letter-bg: var(--greyscale-0) !important;
+  --practice-choice-unselected-letter-fg: var(--greyscale-500) !important;
+  --practice-choice-unselected-letter-border: transparent !important;
+  --practice-panel-bg: var(--greyscale-25) !important;
+  --practice-panel-border: var(--greyscale-100) !important;
+  --practice-panel-muted-fg: var(--greyscale-500) !important;
+  background-color: var(--greyscale-0) !important;
+  color: var(--color-student-heading) !important;
+}
+
+.dark .practice-session-card--review .practice-session-body .lsat-html-content,
+.dark .practice-session-card--review .practice-session-body .practice-session-content {
+  color: var(--color-student-heading) !important;
+}
+
+.dark .practice-session-card--review .practice-session-br-option {
+  color: var(--color-student-heading);
+}
+
+.dark .practice-session-card--review .practice-session-br-option .lsat-html-content,
+.dark .practice-session-card--review .practice-session-br-option .practice-session-content {
+  color: inherit !important;
+}
+
+.dark .practice-session-card--review .practice-session-pane--review-column {
+  border-color: var(--greyscale-100);
+}
+
+.dark .practice-session-card--review .practice-session-footer {
+  border-color: var(--greyscale-100);
+  background-color: var(--greyscale-0);
+}
+
+.dark .practice-session-header--active-drill {
+  background-color: var(--greyscale-0);
+  color: var(--color-student-heading);
+}
+
+.dark .practice-session-card--official {
+  background-color: var(--greyscale-0) !important;
+  color: var(--color-student-heading);
+}
+
+.dark .practice-session-header--official {
+  background-color: var(--greyscale-0) !important;
+  color: var(--color-student-heading);
+}
+
+.dark .practice-session-card--official .practice-session-body {
+  background-color: var(--greyscale-0) !important;
+  color: var(--color-student-heading) !important;
+}
+
+.dark .practice-session-card--official .practice-session-pane {
+  background-color: transparent;
+  color: var(--color-student-heading);
+}
+
+.dark .practice-session-card--official .practice-session-body .lsat-html-content,
+.dark .practice-session-card--official .practice-session-body .practice-session-content {
+  color: var(--color-student-heading) !important;
+}
+
+/* LawHub yellow selected row — keep dark ink for contrast on #fdfac4 */
+.dark .practice-session-card--official .practice-session-official-choice--selected,
+.dark .practice-session-card--official .practice-session-official-choice--selected .lsat-html-content,
+.dark .practice-session-card--official .practice-session-official-choice--selected .practice-session-content {
+  color: #2c3143 !important;
+}
+
+.dark .practice-session-card--official .practice-session-official-choice-letter--selected {
+  color: #2c3143 !important;
+}
+
+.dark .practice-session-card--official .practice-session-footer {
+  background-color: var(--greyscale-0) !important;
+  border-color: var(--greyscale-100);
 }
 
 .practice-session-card--blind-review .practice-session-pane--br-question {
@@ -4430,6 +4816,26 @@ html.student-shell-immersive .practice-session-card--blind-review {
 }
 
 .practice-session-card--blind-review .practice-session-content mark[data-highlight="blue"] {
+  background-color: #a6e1fd;
+}
+
+.practice-session-card--review .practice-session-content mark[data-highlight="orange"] {
+  background-color: #ff6f00;
+}
+
+.practice-session-card--review .practice-session-content mark[data-highlight="pink"] {
+  background-color: #ffe2e2;
+}
+
+.practice-session-card--review .practice-session-content mark[data-highlight="yellow"] {
+  background-color: #fef095;
+}
+
+.practice-session-card--review .practice-session-content mark[data-highlight="green"] {
+  background-color: #afe9c7;
+}
+
+.practice-session-card--review .practice-session-content mark[data-highlight="blue"] {
   background-color: #a6e1fd;
 }
 

@@ -9,8 +9,8 @@ function LrNewSectionPage() {
 
   return (
     <StudentMain
-      className="max-w-none bg-[#f3f7ff] py-6 md:py-8"
-      contentClassName="bg-[#f3f7ff]"
+      className="max-w-none bg-[var(--background)] py-6 md:py-8"
+      contentClassName="bg-[var(--background)]"
     >
       <SectionConfigForm sectionType="LR" initialSectionId={sectionId} />
     </StudentMain>

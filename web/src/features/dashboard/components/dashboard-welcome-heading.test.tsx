@@ -22,6 +22,6 @@ describe("DashboardWelcomeHeading", () => {
     const heading = screen.getByRole("heading", { level: 1, name: "Welcome back, Daniyal" })
     expect(heading).toBeInTheDocument()
     expect(heading.className).toMatch(/text-\[48px\]/)
-    expect(heading.className).toMatch(/text-\[#041a44\]/)
+    expect(heading.className).toMatch(/text-\[var\(--color-student-heading\)\]/)
   })
 })

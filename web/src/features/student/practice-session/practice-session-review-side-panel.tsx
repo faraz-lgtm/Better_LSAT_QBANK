@@ -126,12 +126,12 @@ type AnalyticsView = ExplanationQuestionDetailView["analytics"]
 
 function InsightsSectionCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="w-full overflow-hidden rounded-[14px] border border-[#dfe1e7] bg-white px-px pb-4 pt-px">
-      <div className="flex h-[53px] items-start justify-between bg-[#edf3ff] px-4 pt-4">
-        <h3 className="m-0 text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#1a1b25]">
+    <section className="w-full overflow-hidden rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-px pb-4 pt-px">
+      <div className="flex h-[53px] items-start justify-between bg-[var(--primary-25)] px-4 pt-4">
+        <h3 className="m-0 text-base font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
           {title}
         </h3>
-        <ChevronUp className="size-5 shrink-0 text-[#666d80]" strokeWidth={2} aria-hidden />
+        <ChevronUp className="size-5 shrink-0 text-[var(--greyscale-500)]" strokeWidth={2} aria-hidden />
       </div>
       <div className="flex flex-col items-center gap-4 px-3 pt-4">{children}</div>
     </section>
@@ -139,9 +139,25 @@ function InsightsSectionCard({ title, children }: { title: string; children: Rea
 }
 
 function difficultyToneClasses(tone: "green" | "red" | "teal") {
-  if (tone === "red") return { fill: "bg-[#ef4444]", text: "text-[#ef4444]", badge: "bg-[#ef4444]/10" }
-  if (tone === "green") return { fill: "bg-[#40c4aa]", text: "text-[#0f9d82]", badge: "bg-[#40c4aa]/12" }
-  return { fill: "bg-[#0bbcc9]", text: "text-[#0bbcc9]", badge: "bg-[#0bbcc9]/10" }
+  if (tone === "red") {
+    return {
+      fill: "bg-[#ef4444]",
+      text: "text-[#ef4444]",
+      badge: "bg-[rgba(239,68,68,0.1)]",
+    }
+  }
+  if (tone === "green") {
+    return {
+      fill: "bg-[#40c4aa]",
+      text: "text-[#0f9d82]",
+      badge: "bg-[rgba(64,196,170,0.12)]",
+    }
+  }
+  return {
+    fill: "bg-[#0bbcc9]",
+    text: "text-[#0bbcc9]",
+    badge: "bg-[rgba(11,188,201,0.1)]",
+  }
 }
 
 function DifficultyStatCard({
@@ -162,9 +178,9 @@ function DifficultyStatCard({
   const safe = Math.max(0, Math.min(max, Math.round(filled)))
   const colors = difficultyToneClasses(tone)
   return (
-    <div className="w-full rounded-[16px] border border-[#dfe1e7] bg-white p-5">
+    <div className="w-full rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--primary-0)] p-5 dark:bg-[var(--greyscale-25)]">
       <div className="flex items-center justify-between gap-3">
-        <p className="m-0 text-[13px] font-semibold uppercase leading-[19.5px] tracking-[0.325px] text-[#666d80]">
+        <p className="m-0 text-[13px] font-semibold uppercase leading-[19.5px] tracking-[0.325px] text-[var(--greyscale-500)]">
           {label}
         </p>
         <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold leading-[18px]", colors.badge, colors.text)}>
@@ -175,21 +191,24 @@ function DifficultyStatCard({
         {Array.from({ length: max }, (_, i) => (
           <span
             key={i}
-            className={cn("h-2.5 min-w-0 flex-1 rounded-full", i < safe ? colors.fill : "bg-[#e8ebf2]")}
+            className={cn(
+              "h-2.5 min-w-0 flex-1 rounded-full",
+              i < safe ? colors.fill : "bg-[var(--greyscale-100)]",
+            )}
           />
         ))}
       </div>
-      <p className="m-0 pt-1.5 text-[11px] font-medium leading-[16.5px] text-[#99a1af]">
+      <p className="m-0 pt-1.5 text-[11px] font-medium leading-[16.5px] text-[var(--greyscale-400)]">
         {safe} of {max}
       </p>
-      <p className="m-0 pt-3 text-[13px] font-normal leading-[21px] text-[#666d80]">{caption}</p>
+      <p className="m-0 pt-3 text-[13px] font-normal leading-[21px] text-[var(--greyscale-500)]">{caption}</p>
     </div>
   )
 }
 
 function ScoreBandCard({ scoreBand }: { scoreBand: AnalyticsView["scoreBand"] }) {
   return (
-    <div className="w-full overflow-hidden rounded-[16px] border border-[#0d47a1]/15 bg-[linear-gradient(158deg,#0d47a1_0%,#062357_100%)] p-5 text-white">
+    <div className="w-full overflow-hidden rounded-[16px] border border-[var(--primary)]/15 bg-[linear-gradient(158deg,var(--primary)_0%,var(--primary-600)_100%)] p-5 text-white">
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 gap-3">
           <span className="flex size-7 shrink-0 items-center justify-center rounded-[8px] bg-white/10">
@@ -201,12 +220,14 @@ function ScoreBandCard({ scoreBand }: { scoreBand: AnalyticsView["scoreBand"] })
         </div>
         <div className="shrink-0 text-right">
           <p className="m-0 text-2xl font-bold leading-[1.3]">{scoreBand.headline}</p>
-          <p className="m-0 pt-1 text-[8px] leading-[1.5] tracking-[0.16px] text-[#f3f7ff]">{scoreBand.range}</p>
+          <p className="m-0 pt-1 text-[8px] leading-[1.5] tracking-[0.16px] text-[var(--primary-900)]">
+            {scoreBand.range}
+          </p>
         </div>
       </div>
       <div className="pt-4">
         <div className="h-1.5 rounded-full bg-white/15">
-          <div className="h-1.5 w-1/2 rounded-full bg-gradient-to-r from-[#0d47a1] to-[#419df8]" />
+          <div className="h-1.5 w-1/2 rounded-full bg-gradient-to-r from-[var(--primary)] to-[#419df8]" />
         </div>
         <div className="flex justify-between pt-1.5 text-[10px] font-medium leading-[15px] text-white/50">
           <span>120</span>
@@ -233,7 +254,7 @@ function TopAnswerBars({
     )?.letter
   if (rows.length === 0) {
     return (
-      <p className="m-0 w-full rounded-[14px] border border-dashed border-[#dfe1e7] bg-[#f6f8fa] px-4 py-6 text-center text-sm text-[#666d80]">
+      <p className="m-0 w-full rounded-[14px] border border-dashed border-[var(--greyscale-100)] bg-[var(--primary-25)] px-4 py-6 text-center text-sm text-[var(--greyscale-500)]">
         No answer popularity yet.
       </p>
     )
@@ -246,22 +267,27 @@ function TopAnswerBars({
         const fillHeight = `${Math.min(100, Math.max(row.pct > 0 ? 6 : 0, row.pct))}%`
         return (
           <div key={row.letter} className="flex min-w-0 flex-1 flex-col items-center">
-            <p className={cn("m-0 pb-2 text-base font-bold leading-6", active ? "text-[#0d47a1]" : "text-[#666d80]")}>
+            <p
+              className={cn(
+                "m-0 pb-2 text-base font-bold leading-6",
+                active ? "text-[var(--primary)]" : "text-[var(--greyscale-500)]",
+              )}
+            >
               {row.pct}%
             </p>
-            <div className="relative flex h-[100px] w-10 items-end justify-center overflow-hidden rounded-[10px] border border-[#dfe1e7] bg-[#f3f7ff]/60">
+            <div className="relative flex h-[100px] w-10 items-end justify-center overflow-hidden rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--primary-25)]">
               <div
                 className={cn(
                   "w-full rounded-t-[10px]",
                   active
-                    ? "bg-gradient-to-t from-[#093377] to-[#0d47a1] shadow-[0px_-6px_18px_rgba(11,188,201,0.45)]"
+                    ? "bg-gradient-to-t from-[var(--primary-600)] to-[var(--primary)] shadow-[0px_-6px_18px_rgba(11,188,201,0.45)]"
                     : "bg-gradient-to-t from-[#9aa3b2] via-[#adb5c3] to-[#c1c8d4]",
                 )}
                 style={{ height: fillHeight }}
               />
               {active ? (
-                <span className="absolute top-2 flex size-5 items-center justify-center rounded-full bg-white shadow-[0px_1px_2px_rgba(0,0,0,0.14)]">
-                  <Check className="size-3 text-[#0d47a1]" strokeWidth={3} aria-hidden />
+                <span className="absolute top-2 flex size-5 items-center justify-center rounded-full bg-[var(--greyscale-0)] shadow-[0px_1px_2px_rgba(0,0,0,0.14)]">
+                  <Check className="size-3 text-[var(--primary)]" strokeWidth={3} aria-hidden />
                 </span>
               ) : null}
             </div>
@@ -269,8 +295,8 @@ function TopAnswerBars({
               className={cn(
                 "mt-3 flex size-9 items-center justify-center rounded-[12px] border text-sm font-semibold leading-[21px]",
                 active
-                  ? "border-[#0d47a1] bg-[#0d47a1] text-white shadow-[0px_4px_3px_rgba(11,188,201,0.3)]"
-                  : "border-[#dfe1e7] bg-white text-[#666d80]",
+                  ? "border-[var(--primary)] bg-[var(--primary)] text-white shadow-[0px_4px_3px_rgba(11,188,201,0.3)]"
+                  : "border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--greyscale-500)]",
               )}
             >
               {row.letter}
@@ -291,24 +317,30 @@ function TagGroup({
   tags: string[]
   tone: "blue" | "teal"
 }) {
-  const iconClasses = tone === "blue" ? "bg-[#edf3ff] text-[#0d47a1]" : "bg-[#0bbcc9]/10 text-[#0a8a94]"
+  const iconClasses =
+    tone === "blue"
+      ? "bg-[var(--primary-25)] text-[var(--primary)]"
+      : "bg-[rgba(11,188,201,0.1)] text-[#0a8a94]"
   const chipClasses =
     tone === "blue"
-      ? "border-[#0d47a1]/15 bg-[#edf3ff] text-[#0d47a1]"
-      : "border-[#0bbcc9]/20 bg-[#0bbcc9]/10 text-[#0a8a94]"
+      ? "border-[var(--primary)]/15 bg-[var(--primary-25)] text-[var(--primary)]"
+      : "border-[rgba(11,188,201,0.2)] bg-[rgba(11,188,201,0.1)] text-[#0a8a94]"
   return (
-    <div className="w-full rounded-[16px] border border-[#dfe1e7] bg-[#f3f7ff]/40 p-4">
+    <div className="w-full rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--primary-25)]/40 p-4 dark:bg-[var(--greyscale-25)]">
       <div className="flex items-center gap-2.5">
         <span className={cn("flex size-7 items-center justify-center rounded-lg", iconClasses)}>
           <Tags className="size-4" strokeWidth={1.8} aria-hidden />
         </span>
-        <p className="m-0 text-[13px] font-semibold leading-[19.5px] text-[#062357]">{title}</p>
+        <p className="m-0 text-[13px] font-semibold leading-[19.5px] text-[var(--color-student-heading)]">{title}</p>
       </div>
       <div className="flex flex-wrap gap-2 pt-3">
         {(tags.length > 0 ? tags : ["—"]).map((tag) => (
           <span
             key={tag}
-            className={cn("inline-flex h-8 items-center rounded-full border px-3.5 py-1.5 text-xs font-medium leading-[18px]", chipClasses)}
+            className={cn(
+              "inline-flex h-8 items-center rounded-full border px-3.5 py-1.5 text-xs font-medium leading-[18px]",
+              chipClasses,
+            )}
           >
             {tag}
           </span>
@@ -321,13 +353,15 @@ function TagGroup({
 function QuestionHistory({ history }: { history: AnalyticsView["history"] }) {
   return (
     <div className="relative w-full">
-      <div className="absolute left-[7px] top-2 h-[calc(100%-16px)] w-px bg-[#dfe1e7]" aria-hidden />
+      <div className="absolute left-[7px] top-2 h-[calc(100%-16px)] w-px bg-[var(--greyscale-100)] dark:bg-[var(--greyscale-600)]" aria-hidden />
       <div className="flex flex-col gap-4">
         {history.length === 0 ? (
           <div className="relative pl-8">
             <span className="absolute left-0 top-1 flex size-3.5 rounded-full bg-[#40c4aa]" aria-hidden />
-            <div className="rounded-[16px] border border-[#dfe1e7] bg-[#f3f7ff]/40 p-4">
-              <p className="m-0 text-sm font-semibold leading-[19.25px] text-[#062357]">No attempts recorded yet.</p>
+            <div className="rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--primary-25)]/40 p-4 dark:bg-[var(--greyscale-25)]">
+              <p className="m-0 text-sm font-semibold leading-[19.25px] text-[var(--color-student-heading)]">
+                No attempts recorded yet.
+              </p>
             </div>
           </div>
         ) : (
@@ -335,15 +369,30 @@ function QuestionHistory({ history }: { history: AnalyticsView["history"] }) {
             const done = row.status === "answered"
             return (
               <div key={`${row.source}-${index}`} className="relative pl-8">
-                <span className={cn("absolute left-0 top-1 flex size-3.5 rounded-full", done ? "bg-[#40c4aa]" : "bg-[#f59e0b]")} aria-hidden />
-                <div className="rounded-[16px] border border-[#dfe1e7] bg-[#f3f7ff]/40 p-4">
+                <span
+                  className={cn(
+                    "absolute left-0 top-1 flex size-3.5 rounded-full",
+                    done ? "bg-[#40c4aa]" : "bg-[#f59e0b]",
+                  )}
+                  aria-hidden
+                />
+                <div className="rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--primary-25)]/40 p-4 dark:bg-[var(--greyscale-25)]">
                   <div className="flex items-start justify-between gap-3">
-                    <p className="m-0 text-sm font-semibold leading-[19.25px] text-[#062357]">{row.source}</p>
-                    <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-semibold leading-[16.5px]", done ? "bg-[#40c4aa]/12 text-[#0f9d82]" : "bg-[#f59e0b]/12 text-[#c07a06]")}>
+                    <p className="m-0 text-sm font-semibold leading-[19.25px] text-[var(--color-student-heading)]">
+                      {row.source}
+                    </p>
+                    <span
+                      className={cn(
+                        "rounded-full px-2.5 py-0.5 text-[11px] font-semibold leading-[16.5px]",
+                        done
+                          ? "bg-[rgba(64,196,170,0.12)] text-[#0f9d82]"
+                          : "bg-[rgba(245,158,11,0.12)] text-[#c07a06]",
+                      )}
+                    >
                       {done ? "Completed" : "In progress"}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between gap-3 pt-2.5 text-xs leading-[18px] text-[#666d80]">
+                  <div className="flex items-center justify-between gap-3 pt-2.5 text-xs leading-[18px] text-[var(--greyscale-500)]">
                     <span className="inline-flex items-center gap-1.5">
                       <Clock3 className="size-3.5" strokeWidth={1.7} aria-hidden />
                       {row.timeRange}
@@ -461,7 +510,7 @@ function PracticeSessionReviewSidePanel({
   return (
     <aside className={cn(BLIND_REVIEW_NOTES_SIDEBAR_CLASS, REVIEW_SIDEBAR_CLASS)}>
       <div className="flex h-[70px] shrink-0 items-center justify-between px-6 pb-3 pt-9">
-        <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#062357]">
+        <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)]">
           {mode === "explanation" ? "Explanation" : "Insights"}
         </p>
         <button
@@ -476,11 +525,11 @@ function PracticeSessionReviewSidePanel({
         {useSeedAnalytics ? (
           insightsAnalytics ? <ReviewInsightsPanel analytics={insightsAnalytics} /> : null
         ) : loading ? (
-          <p className="m-0 text-sm text-[#666d80]">Loading…</p>
+          <p className="m-0 text-sm text-[var(--greyscale-500)]">Loading…</p>
         ) : error ? (
           <p className="m-0 text-sm text-red-600">{error}</p>
         ) : !view ? (
-          <p className="m-0 text-sm text-[#666d80]">No content available for this question yet.</p>
+          <p className="m-0 text-sm text-[var(--greyscale-500)]">No content available for this question yet.</p>
         ) : mode === "explanation" ? (
           <ExplanationExplainTabPanel videos={view.videos} videoOnly />
         ) : (

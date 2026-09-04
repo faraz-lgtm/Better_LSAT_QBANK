@@ -35,7 +35,7 @@ const sectionCopy: Record<
 }
 
 const selectCardClassName =
-  "w-full min-w-0 flex-1 gap-[12px] rounded-[18px] border border-[#dfe1e7] bg-white p-[24px] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)] [&_p:first-child]:text-[16px] [&_p:first-child]:font-semibold [&_p:first-child]:leading-[1.5] [&_p:first-child]:tracking-[0.32px] [&_p:first-child]:text-[#041a44]"
+  "w-full min-w-0 flex-1 gap-[12px] rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] p-[24px] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)] [&_p:first-child]:text-[16px] [&_p:first-child]:font-semibold [&_p:first-child]:leading-[1.5] [&_p:first-child]:tracking-[0.32px]"
 
 type PracticeSectionStartCardProps = {
   sectionType: SectionType
@@ -127,15 +127,15 @@ function PracticeSectionStartCard({ sectionType }: PracticeSectionStartCardProps
   }, [sectionQuestionCountById, sectionId, sectionType])
 
   return (
-    <section className="flex w-full flex-col gap-[24px] rounded-[20px] border border-[#dfe1e7] bg-white p-[24px]">
+    <section className="flex w-full flex-col gap-[24px] rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex min-w-0 items-center gap-[12px]">
           <SectionInitialBadge section={sectionType} variant="compact" />
           <div>
-            <h2 className="text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#041a44]">
+            <h2 className="text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
               {copy.title}
             </h2>
-            <p className="m-0 text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[#666d80]">
+            <p className="m-0 text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
               {copy.countLabel}
             </p>
           </div>
@@ -185,7 +185,7 @@ function PracticeSectionStartCard({ sectionType }: PracticeSectionStartCardProps
       ) : null}
 
       {poolTotal === 0 && !loadingPool ? (
-        <p className="m-0 text-sm text-[#666d80]">
+        <p className="m-0 text-sm text-[var(--greyscale-500)]">
           No sections are available in your pool yet.
         </p>
       ) : null}
@@ -194,7 +194,7 @@ function PracticeSectionStartCard({ sectionType }: PracticeSectionStartCardProps
         <button
           type="button"
           disabled={starting || loadingPool || !sectionId || poolTotal === 0}
-          className="inline-flex h-[48px] min-w-[172px] items-center justify-center rounded-[14px] border border-[#0b4e6e] bg-[#0d47a1] px-[16px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-[48px] min-w-[172px] items-center justify-center rounded-[14px] border border-[#0b4e6e] bg-[var(--primary)] px-[16px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] disabled:cursor-not-allowed disabled:opacity-60"
           onClick={() => void handleStart()}
         >
           {starting ? "Starting…" : copy.startLabel}
