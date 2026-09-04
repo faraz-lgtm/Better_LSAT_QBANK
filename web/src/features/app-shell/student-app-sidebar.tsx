@@ -256,7 +256,7 @@ function StudentAppSidebar({
         </div>
 
         <nav className="student-sidebar-nav flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <div className="student-sidebar-menu">
+          <div className="student-sidebar-menu shrink-0">
             <p className="student-sidebar-heading">{STUDENT_MAIN_NAV_SECTION.label}</p>
             <Link
               to={dashboardHref}
