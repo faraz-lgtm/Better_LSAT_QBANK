@@ -215,8 +215,8 @@ function AnalyticsPrepTestsPage() {
     }
     setLoading(true)
     void Promise.all([
-      analyticsApi.getSessions({ kind: "PREPTEST", limit: 100 }),
-      analyticsApi.getSessions({ kind: "SECTION", limit: 300 }),
+      analyticsApi.getSessions({ kind: "PREPTEST", completedOnly: true, limit: 500 }),
+      analyticsApi.getSessions({ kind: "SECTION", completedOnly: true, limit: 500 }),
     ])
       .then(([prepTests, sections]) => {
         setPrepRecords(

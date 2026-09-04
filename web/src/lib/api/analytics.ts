@@ -203,6 +203,8 @@ export function createAnalyticsApi(supabase: SupabaseClient) {
     async getSessions(input?: {
       kind?: PracticeSessionKind
       bookmarked?: boolean
+      /** Completed sessions only, newest completion first (analytics charts/history). */
+      completedOnly?: boolean
       limit?: number
       offset?: number
     }): Promise<{ sessions: PracticeSessionSummary[]; total: number; limit: number; offset: number }> {
@@ -214,6 +216,7 @@ export function createAnalyticsApi(supabase: SupabaseClient) {
       }>("analytics-sessions", {
         kind: input?.kind,
         bookmarked: input?.bookmarked === true ? true : undefined,
+        completedOnly: input?.completedOnly === true ? true : undefined,
         limit: input?.limit,
         offset: input?.offset,
       })

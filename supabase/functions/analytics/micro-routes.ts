@@ -6,8 +6,16 @@ import { createAnalyticsService } from './analytics.service.ts'
 
 const corsHeaders = CORS_EDGE_WIDE
 
+/** Analytics history / charts need more than the old 100-row cap. */
+const MAX_SESSIONS_LIMIT = 500
+
 function isSessionKind(value: string | null): value is PracticeSessionKind {
   return value === 'PREPTEST' || value === 'SECTION' || value === 'DRILL'
+}
+
+function clampSessionsLimit(value: number, fallback = 20): number {
+  const n = Number.isFinite(value) ? value : fallback
+  return Math.min(MAX_SESSIONS_LIMIT, Math.max(1, n))
 }
 
 export async function handleAnalyticsMicro(req: Request, slug: string): Promise<Response> {
@@ -43,6 +51,7 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
 
   let kind: PracticeSessionKind | undefined
   let bookmarkedOnly = false
+  let completedOnly = false
   let limit = 20
   let offset = 0
   let sessionKind: PracticeSessionKind | undefined
@@ -55,7 +64,8 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
     const sk = url.searchParams.get('sessionKind')
     kind = kindParam && isSessionKind(kindParam) ? kindParam : undefined
     bookmarkedOnly = url.searchParams.get('bookmarked') === 'true'
-    limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 20))
+    completedOnly = url.searchParams.get('completedOnly') === 'true'
+    limit = clampSessionsLimit(Number(url.searchParams.get('limit')) || 20)
     offset = Math.max(0, Number(url.searchParams.get('offset')) || 0)
     sessionKind = sk && isSessionKind(sk) ? sk : undefined
     const sid = url.searchParams.get('sessionId')
@@ -74,7 +84,8 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
     const skRaw = typeof body.sessionKind === 'string' ? body.sessionKind : undefined
     kind = kindRaw && isSessionKind(kindRaw) ? kindRaw : undefined
     bookmarkedOnly = body.bookmarked === true
-    limit = Math.min(100, Math.max(1, readNum(body.limit, 20)))
+    completedOnly = body.completedOnly === true
+    limit = clampSessionsLimit(readNum(body.limit, 20))
     offset = Math.max(0, readNum(body.offset, 0))
     sessionKind = skRaw && isSessionKind(skRaw) ? skRaw : undefined
     sessionId = typeof body.sessionId === 'string' && body.sessionId.length > 0 ? body.sessionId : undefined
@@ -111,6 +122,7 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
       const data = await service.getSessions(user.id, {
         kind,
         bookmarked: bookmarkedOnly ? true : undefined,
+        completedOnly: completedOnly ? true : undefined,
         limit,
         offset,
       })

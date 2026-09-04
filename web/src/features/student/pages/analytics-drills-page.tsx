@@ -354,7 +354,7 @@ function AnalyticsDrillsPage() {
     }
     setLoading(true)
     void Promise.all([
-      analyticsApi.getSessions({ kind: "DRILL", limit: 100 }),
+      analyticsApi.getSessions({ kind: "DRILL", completedOnly: true, limit: 500 }),
       analyticsApi.getPriorities(),
     ])
       .then(([drills, priorities]) => {

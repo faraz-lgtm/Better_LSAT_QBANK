@@ -261,9 +261,9 @@ function OverviewTab() {
       analyticsApi.getOverview(),
       analyticsApi.getTrajectory(),
       analyticsApi.getPriorities(),
-      analyticsApi.getSessions({ kind: "DRILL", limit: HISTORY_FETCH_LIMIT, offset: 0 }),
-      analyticsApi.getSessions({ kind: "SECTION", limit: HISTORY_FETCH_LIMIT, offset: 0 }),
-      analyticsApi.getSessions({ kind: "PREPTEST", limit: HISTORY_FETCH_LIMIT, offset: 0 }),
+      analyticsApi.getSessions({ kind: "DRILL", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
+      analyticsApi.getSessions({ kind: "SECTION", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
+      analyticsApi.getSessions({ kind: "PREPTEST", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
     ])
       .then(([o, t, p, drills, sectionSessions, prepTests]) => {
         setOverview(o)

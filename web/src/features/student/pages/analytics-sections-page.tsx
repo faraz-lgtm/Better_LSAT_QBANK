@@ -319,7 +319,7 @@ function AnalyticsSectionsPage() {
     }
     setLoading(true)
     void analyticsApi
-      .getSessions({ kind: "SECTION", limit: 100 })
+      .getSessions({ kind: "SECTION", completedOnly: true, limit: 500 })
       .then((sections) => {
         setSectionSessions(sections.sessions)
         setSectionHistory(
