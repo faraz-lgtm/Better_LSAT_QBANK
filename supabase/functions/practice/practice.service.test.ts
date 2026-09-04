@@ -1495,6 +1495,9 @@ Deno.test('listPrepTestPool paginates and uses batch sessions query', async () =
 
   const completedOnly = await service.listPrepTestPool('user-1', { filter: 'completed' })
   assertEquals(completedOnly.total, 0)
+
+  const oldest = await service.listPrepTestPool('user-1', { page: 1, pageSize: 2, sort: 'oldest' })
+  assertEquals(oldest.prepTests.map((p) => p.id), ['pt-900', 'pt-901'])
 })
 
 Deno.test('listPrepTestPool resolves scaled scores from section raw scores when missing', async () => {
