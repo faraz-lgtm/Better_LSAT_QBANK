@@ -60,4 +60,32 @@ describe("ExplanationChoiceList", () => {
     )
     expect(screen.getByText("Expl A")).toBeInTheDocument()
   })
+
+  it("does not repeat a struck-through restatement of the answer choice in the explanation", async () => {
+    const user = userEvent.setup()
+    const choiceText = "Some of the great creative geniuses in history were first-born children."
+    render(
+      <ExplanationChoiceList
+        choices={[
+          {
+            id: "A",
+            index: 1,
+            text: `<p>${choiceText}</p>`,
+            explanationHtml:
+              `<blockquote>A) ${choiceText}</blockquote> ` +
+              "<p>This choice is problematic because birth order is not established.</p>",
+          },
+        ]}
+        correctChoiceId="B"
+        showCorrect={false}
+      />,
+    )
+
+    await user.click(screen.getByText(choiceText).closest("button")!)
+    expect(
+      screen.getByText("This choice is problematic because birth order is not established."),
+    ).toBeInTheDocument()
+    expect(screen.getAllByText(choiceText)).toHaveLength(1)
+    expect(screen.queryByText(`A) ${choiceText}`)).not.toBeInTheDocument()
+  })
 })

@@ -91,9 +91,9 @@ function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: Explanat
       : []
 
   return (
-    <div className="grid h-full min-h-0 flex-1 gap-5 lg:grid-cols-[minmax(0,1.62fr)_minmax(0,1fr)] lg:gap-6">
+    <div className="grid h-full min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-5">
       <article className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl bg-white lg:h-full">
-        <div className={cn(paneScrollClass, "flex flex-col gap-4 px-6 py-6 lg:px-[72px]")}>
+        <div className={cn(paneScrollClass, "flex flex-col gap-4 px-4 py-5")}>
           <div className="flex flex-wrap items-center gap-3">
             <span className="inline-flex h-8 items-center rounded-full bg-[#f6f8fa] px-4 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[#666d80]">
               PASSAGE {view.passage.displayNumber}
@@ -154,7 +154,7 @@ function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: Explanat
       </article>
 
       <article className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl bg-white lg:h-full">
-        <div className={cn(paneScrollClass, "flex flex-col gap-4 p-6")}>
+        <div className={cn(paneScrollClass, "flex flex-col gap-4 px-4 py-5")}>
           <div className="flex flex-col gap-3">
             <div className="flex h-8 items-center justify-between gap-3">
               <span className="inline-flex h-8 items-center rounded-xl bg-[#f3f7ff] px-3 text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#062357]">
