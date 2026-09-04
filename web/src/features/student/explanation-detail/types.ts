@@ -68,7 +68,8 @@ export type ExplanationQuestionDetailView = {
   correctChoiceId: string
   videos: ExplanationVideoBlock[]
     analytics: {
-      questionDifficulty: {
+      /** Present for LR/LG — RC shows passage difficulty instead. */
+      questionDifficulty?: {
         filled: number
         max: number
         label: string
@@ -76,7 +77,8 @@ export type ExplanationQuestionDetailView = {
         /** Meter + pill accent (Figma analytics difficulty). */
         tone: "green" | "teal" | "red"
       }
-      passageDifficulty: {
+      /** Present for RC only — LR/LG have no multi-question passage difficulty. */
+      passageDifficulty?: {
         filled: number
         max: number
         label: string
