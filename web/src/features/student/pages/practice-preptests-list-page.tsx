@@ -10,7 +10,6 @@ import type {
   PrepTestPoolAttempt,
   PrepTestPoolFilter,
   PrepTestPoolItem,
-  PrepTestPoolStatusCounts,
 } from "@/features/student/preptests/preptest-types"
 import {
   blindReviewSectionSessionPath,
@@ -30,14 +29,6 @@ import {
 } from "lucide-react"
 
 const PAGE_SIZE = 5
-
-const EMPTY_STATUS_COUNTS: PrepTestPoolStatusCounts = {
-  all: 0,
-  fresh: 0,
-  in_progress: 0,
-  completed: 0,
-  blind_review: 0,
-}
 
 const FILTER_TABS: { id: PrepTestPoolFilter; label: string }[] = [
   { id: "all", label: "All Tests" },
@@ -366,7 +357,6 @@ function PracticePrepTestsListPage() {
   const [page, setPage] = useState(1)
   const [prepTests, setPrepTests] = useState<PrepTestPoolItem[]>([])
   const [total, setTotal] = useState(0)
-  const [statusCounts, setStatusCounts] = useState<PrepTestPoolStatusCounts>(EMPTY_STATUS_COUNTS)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [startingId, setStartingId] = useState<string | null>(null)
@@ -391,14 +381,12 @@ function PracticePrepTestsListPage() {
         if (!cancelled) {
           setPrepTests((prev) => (isLoadMore ? [...prev, ...out.prepTests] : out.prepTests))
           setTotal(out.total)
-          setStatusCounts(out.statusCounts)
         }
       } catch (e) {
         if (!cancelled) {
           if (!isLoadMore) {
             setPrepTests([])
             setTotal(0)
-            setStatusCounts(EMPTY_STATUS_COUNTS)
           }
           setError(e instanceof Error ? e.message : "Failed to load PrepTests")
         }
@@ -416,12 +404,6 @@ function PracticePrepTestsListPage() {
 
   const visiblePrepTests = useMemo(() => filterPrepTestPoolItems(prepTests, filter), [prepTests, filter])
   const hasMore = visiblePrepTests.length < total
-
-  function filterTabLabel(tabId: PrepTestPoolFilter): string {
-    const base = FILTER_TABS.find((t) => t.id === tabId)?.label ?? tabId
-    if (tabId === "all" || tabId === "blind_review") return base
-    return `${base} (${statusCounts[tabId]})`
-  }
 
   async function handlePrimary(item: PrepTestPoolItem) {
     setStartingId(item.id)
@@ -519,7 +501,6 @@ function PracticePrepTestsListPage() {
             setPage(1)
             setSort(s)
           }}
-          filterTabLabel={filterTabLabel}
         />
       </div>
 
@@ -571,19 +552,17 @@ function PrepTestListFilters({
   setFilter,
   sort,
   setSort,
-  filterTabLabel,
 }: {
   filter: PrepTestPoolFilter
   setFilter: (f: PrepTestPoolFilter) => void
   sort: (typeof SORT_OPTIONS)[number]
   setSort: (s: (typeof SORT_OPTIONS)[number]) => void
-  filterTabLabel: (tabId: PrepTestPoolFilter) => string
 }) {
   return (
     <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-center lg:gap-6">
       <h2 className="shrink-0 text-[24px] font-bold leading-[1.3] text-[#062357]">Start your PrepTest</h2>
-      <div className="min-w-0 flex-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="flex w-max items-center gap-2 lg:ml-auto">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 lg:justify-end">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           {FILTER_TABS.map((tab) => {
             const active = filter === tab.id
             return (
@@ -593,22 +572,22 @@ function PrepTestListFilters({
                 onClick={() => setFilter(tab.id)}
                 className={active ? FILTER_PILL_ACTIVE_CLASS : FILTER_PILL_INACTIVE_CLASS}
               >
-                {filterTabLabel(tab.id)}
+                {tab.label}
               </button>
             )
           })}
-          <div className="w-[160px] shrink-0">
-            <label htmlFor="preptest-sort" className="sr-only">
-              Sort PrepTests
-            </label>
-            <FigmaDropdown
-              id="preptest-sort"
-              variant="pill"
-              value={sort}
-              onChange={(next) => setSort(next as (typeof SORT_OPTIONS)[number])}
-              options={SORT_OPTIONS.map((option) => ({ value: option, label: option }))}
-            />
-          </div>
+        </div>
+        <div className="relative z-20 w-[160px] shrink-0">
+          <label htmlFor="preptest-sort" className="sr-only">
+            Sort PrepTests
+          </label>
+          <FigmaDropdown
+            id="preptest-sort"
+            variant="pill"
+            value={sort}
+            onChange={(next) => setSort(next as (typeof SORT_OPTIONS)[number])}
+            options={SORT_OPTIONS.map((option) => ({ value: option, label: option }))}
+          />
         </div>
       </div>
     </div>
