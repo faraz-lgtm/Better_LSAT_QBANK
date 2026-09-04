@@ -904,6 +904,7 @@ Deno.test('getSessions passes filters to repository', async () => {
       userId: string
       kind?: 'PREPTEST' | 'SECTION' | 'DRILL'
       bookmarked?: boolean
+      completedOnly?: boolean
       limit: number
       offset: number
     } | null
@@ -911,6 +912,7 @@ Deno.test('getSessions passes filters to repository', async () => {
       userId: string
       kind?: 'PREPTEST' | 'SECTION' | 'DRILL'
       bookmarked?: boolean
+      completedOnly?: boolean
     } | null
   } = { list: null, count: null }
   const service = createAnalyticsService({
@@ -926,17 +928,20 @@ Deno.test('getSessions passes filters to repository', async () => {
     }),
   })
   const out = await service.getSessions('user-1', {
-    kind: 'DRILL',
+    kind: 'SECTION',
     bookmarked: true,
+    completedOnly: true,
     limit: 10,
     offset: 5,
   })
-  assertEquals(captured.list?.kind, 'DRILL')
+  assertEquals(captured.list?.kind, 'SECTION')
   assertEquals(captured.list?.bookmarked, true)
+  assertEquals(captured.list?.completedOnly, true)
   assertEquals(captured.list?.limit, 10)
   assertEquals(captured.list?.offset, 5)
-  assertEquals(captured.count?.kind, 'DRILL')
+  assertEquals(captured.count?.kind, 'SECTION')
   assertEquals(captured.count?.bookmarked, true)
+  assertEquals(captured.count?.completedOnly, true)
   assertEquals(out.total, 5)
   assertEquals(out.limit, 10)
   assertEquals(out.offset, 5)

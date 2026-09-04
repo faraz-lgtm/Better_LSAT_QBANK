@@ -669,13 +669,20 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
 
     async getSessions(
       userId: string,
-      query: { kind?: PracticeSessionKind; bookmarked?: boolean; limit: number; offset: number },
+      query: {
+        kind?: PracticeSessionKind
+        bookmarked?: boolean
+        completedOnly?: boolean
+        limit: number
+        offset: number
+      },
     ) {
       const [sessions, total] = await Promise.all([
         deps.repository.listSessions({
           userId,
           kind: query.kind,
           bookmarked: query.bookmarked,
+          completedOnly: query.completedOnly,
           limit: query.limit,
           offset: query.offset,
         }),
@@ -683,6 +690,7 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
           userId,
           kind: query.kind,
           bookmarked: query.bookmarked,
+          completedOnly: query.completedOnly,
         }),
       ])
 

@@ -585,6 +585,8 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       userId: string
       kind?: PracticeSessionKind
       bookmarked?: boolean
+      /** When true, only completed sessions, ordered by completed_at desc. */
+      completedOnly?: boolean
       limit: number
       offset: number
     }): Promise<PracticeSessionListRow[]> {
@@ -595,6 +597,7 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       ) {
         return []
       }
+      const orderColumn = input.completedOnly ? 'completed_at' : 'started_at'
       let q = client
         .from('practice_sessions')
         .select(
@@ -619,7 +622,11 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         `,
         )
         .eq('user_id', input.userId)
-        .order('started_at', { ascending: false })
+        .order(orderColumn, { ascending: false })
+
+      if (input.completedOnly) {
+        q = q.not('completed_at', 'is', null)
+      }
 
       if (input.kind === 'PREPTEST' || input.kind === 'SECTION') {
         q = q.in('prep_test_id', visiblePrepTestIds)
@@ -632,6 +639,12 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       }
       if (input.bookmarked === true) {
         q = q.eq('bookmarked', true)
+      }
+
+      // SECTION/PREPTEST rows need no post-fetch visibility shrink — page at the DB.
+      const pageAtDb = input.kind === 'PREPTEST' || input.kind === 'SECTION'
+      if (pageAtDb) {
+        q = q.range(input.offset, input.offset + Math.max(0, input.limit) - 1)
       }
 
       const { data, error } = await q
@@ -658,6 +671,7 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         })
       }
 
+      if (pageAtDb) return rows
       return rows.slice(input.offset, input.offset + input.limit)
     },
 
@@ -665,6 +679,7 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       userId: string
       kind?: PracticeSessionKind
       bookmarked?: boolean
+      completedOnly?: boolean
     }): Promise<number> {
       const visiblePrepTestIds = await this.listStudentVisiblePrepTestIds()
       if (input.kind === 'PREPTEST' || input.kind === 'SECTION') {
@@ -675,6 +690,7 @@ export function createAnalyticsRepository(client: SupabaseClient) {
           .eq('user_id', input.userId)
           .eq('kind', input.kind)
           .in('prep_test_id', visiblePrepTestIds)
+        if (input.completedOnly) q = q.not('completed_at', 'is', null)
         if (input.bookmarked === true) q = q.eq('bookmarked', true)
         const { count, error } = await q
         if (error) throw error
@@ -685,6 +701,7 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         userId: input.userId,
         kind: input.kind,
         bookmarked: input.bookmarked,
+        completedOnly: input.completedOnly,
         limit: 10_000,
         offset: 0,
       })
