@@ -87,6 +87,13 @@ function viewFromDetail(detail: ExplanationDetailPayload): ExplanationQuestionDe
       },
     ],
     analytics: {
+      questionDifficulty: {
+        filled: diffLevel,
+        max: 5,
+        label: label === "Hardest" ? "Hard" : label,
+        caption: "Question difficulty based on student performance.",
+        tone: difficultyTone(diffLevel),
+      },
       ...(detail.sectionType === "RC"
         ? {
             passageDifficulty: {
@@ -97,15 +104,7 @@ function viewFromDetail(detail: ExplanationDetailPayload): ExplanationQuestionDe
               tone: difficultyTone(Math.max(1, diffLevel - 1)),
             },
           }
-        : {
-            questionDifficulty: {
-              filled: diffLevel,
-              max: 5,
-              label: label === "Hardest" ? "Hard" : label,
-              caption: "Question difficulty based on student performance.",
-              tone: difficultyTone(diffLevel),
-            },
-          }),
+        : {}),
       scoreBand: {
         headline: totalResponses > 0 ? "150" : "—",
         range: totalResponses > 0 ? "75% - 160" : "—",
@@ -365,16 +364,14 @@ function ReviewInsightsPanel({ analytics }: { analytics: AnalyticsView }) {
   return (
     <div className="flex w-full flex-col gap-6">
       <InsightsSectionCard title="Complexity">
-        {analytics.questionDifficulty ? (
-          <DifficultyStatCard
-            label="Question"
-            filled={analytics.questionDifficulty.filled}
-            max={analytics.questionDifficulty.max}
-            difficultyLabel={analytics.questionDifficulty.label}
-            caption={analytics.questionDifficulty.caption}
-            tone={analytics.questionDifficulty.tone}
-          />
-        ) : null}
+        <DifficultyStatCard
+          label="Question"
+          filled={analytics.questionDifficulty.filled}
+          max={analytics.questionDifficulty.max}
+          difficultyLabel={analytics.questionDifficulty.label}
+          caption={analytics.questionDifficulty.caption}
+          tone={analytics.questionDifficulty.tone}
+        />
         {analytics.passageDifficulty ? (
           <DifficultyStatCard
             label="Passage"

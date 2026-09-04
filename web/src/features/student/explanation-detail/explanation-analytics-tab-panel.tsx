@@ -262,17 +262,20 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
               How this item performs against the test-taker pool.
             </p>
           </div>
-          <div className="grid gap-4 md:grid-cols-1">
-            {analytics.questionDifficulty ? (
-              <ComplexityStat
-                label="Question"
-                filled={analytics.questionDifficulty.filled}
-                max={analytics.questionDifficulty.max}
-                difficultyLabel={analytics.questionDifficulty.label}
-                caption={analytics.questionDifficulty.caption}
-                tone={analytics.questionDifficulty.tone}
-              />
-            ) : null}
+          <div
+            className={cn(
+              "grid gap-4",
+              analytics.passageDifficulty ? "md:grid-cols-2" : "md:grid-cols-1",
+            )}
+          >
+            <ComplexityStat
+              label="Question"
+              filled={analytics.questionDifficulty.filled}
+              max={analytics.questionDifficulty.max}
+              difficultyLabel={analytics.questionDifficulty.label}
+              caption={analytics.questionDifficulty.caption}
+              tone={analytics.questionDifficulty.tone}
+            />
             {analytics.passageDifficulty ? (
               <ComplexityStat
                 label="Passage"

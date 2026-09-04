@@ -28,6 +28,12 @@ describe("ExplanationQuestionTabPanel", () => {
     expect(screen.queryByText(/<p>/)).not.toBeInTheDocument()
   })
 
+  it("uses equal two-column grid so answer choices share the page container width", () => {
+    const { container } = render(<ExplanationQuestionTabPanel view={baseView} />)
+    const grid = container.firstElementChild
+    expect(grid?.className).toContain("lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]")
+  })
+
   it("keeps question explanation collapsed by default when available", () => {
     render(
       <ExplanationQuestionTabPanel

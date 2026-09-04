@@ -3,6 +3,7 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react"
 
 import type { ExplanationChoice } from "@/features/student/explanation-detail/types"
 import { HtmlContent } from "@/lib/html/html-content"
+import { stripLeadingChoiceRestatement } from "@/lib/html/strip-leading-choice-restatement"
 import { cn } from "@/lib/utils"
 
 const CORRECT_ROW_CLASS = "border-[3px] border-solid border-[#00bc54] bg-[#eafff4]"
@@ -95,7 +96,10 @@ function ExplanationChoiceList({
                     <ChevronUp className="size-6 shrink-0 text-[#818898]" aria-hidden />
                   </button>
                   <div className="rounded-b-[13px] bg-white p-4 text-left">
-                    <HtmlContent html={c.explanationHtml ?? ""} className="explanation-option-body" />
+                    <HtmlContent
+                      html={stripLeadingChoiceRestatement(c.explanationHtml, c.text)}
+                      className="explanation-option-body"
+                    />
                   </div>
                 </div>
               ) : (

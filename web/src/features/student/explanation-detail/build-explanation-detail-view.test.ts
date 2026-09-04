@@ -136,7 +136,7 @@ describe("buildExplanationQuestionDetailView", () => {
     expect(view.videos[1]?.videoUrl).toBe("https://example.com/v.mp4")
   })
 
-  it("maps passage difficulty only for RC (no question difficulty)", () => {
+  it("maps passage difficulty label, tone, and caption from filled segments for RC", () => {
     const detail: ExplanationDetailPayload = {
       questionId: "q1",
       prepTestId: "pt1",
@@ -161,14 +161,15 @@ describe("buildExplanationQuestionDetailView", () => {
 
     const view = buildExplanationQuestionDetailView(loc, detail)
 
-    expect(view.analytics.questionDifficulty).toBeUndefined()
+    expect(view.analytics.questionDifficulty.label).toBe("Medium")
+    expect(view.analytics.questionDifficulty.caption).toBe("75% of people who answer get this correct.")
     expect(view.analytics.passageDifficulty?.filled).toBe(4)
     expect(view.analytics.passageDifficulty?.label).toBe("Hard")
     expect(view.analytics.passageDifficulty?.tone).toBe("red")
     expect(view.analytics.passageDifficulty?.caption).toContain("moderately difficult question")
   })
 
-  it("maps question difficulty only for LR (no passage difficulty)", () => {
+  it("omits passage difficulty for LR questions", () => {
     const detail: ExplanationDetailPayload = {
       questionId: "q1",
       prepTestId: "pt1",
@@ -193,7 +194,7 @@ describe("buildExplanationQuestionDetailView", () => {
 
     const view = buildExplanationQuestionDetailView(loc, detail)
 
-    expect(view.analytics.questionDifficulty?.label).toBe("Easy")
+    expect(view.analytics.questionDifficulty.label).toBe("Easy")
     expect(view.analytics.passageDifficulty).toBeUndefined()
   })
 
