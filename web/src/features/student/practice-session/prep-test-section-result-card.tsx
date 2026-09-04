@@ -2,7 +2,7 @@ import { PracticeResultOutcomeIcon } from "@/features/student/practice-session/p
 
 /** Figma `18942:44485` — results-by-section card (212×228) */
 const PREP_TEST_SECTION_RESULT_CARD_CLASS =
-  "flex h-[228px] w-[212px] shrink-0 flex-col gap-3 rounded-[16px] border border-[#f6f8fa] bg-white p-4"
+  "flex h-[228px] w-[212px] shrink-0 flex-col gap-3 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4"
 
 const PREP_TEST_SECTION_KIND_BADGE_CLASS =
   "flex size-6 shrink-0 items-center justify-center rounded-[8px] border text-xs font-extrabold leading-[1.3]"
@@ -45,19 +45,19 @@ function PrepTestSectionResultCard({
         >
           {badge.short}
         </div>
-        <p className="text-[10px] font-bold leading-normal tracking-[0.2px] text-[#062357]">{longName}</p>
+        <p className="text-[10px] font-bold leading-normal tracking-[0.2px] text-[var(--color-student-heading)]">{longName}</p>
         {isExperimental ? (
-          <span className="rounded-[6px] border border-[#c2410c] bg-[#fff7ed] px-1.5 py-0.5 text-[10px] font-extrabold leading-none tracking-[0.2px] text-[#c2410c]">
+          <span className="rounded-[6px] border border-[var(--blind-review-accent)] bg-[var(--blind-review-badge-bg)] px-1.5 py-0.5 text-[10px] font-extrabold leading-none tracking-[0.2px] text-[var(--blind-review-accent)]">
             EXP
           </span>
         ) : null}
       </div>
 
       <div className="flex h-8 w-full items-center justify-between gap-1.5">
-        <p className="shrink-0 text-xs font-semibold leading-normal tracking-[0.24px] text-[#062357]">
+        <p className="shrink-0 text-xs font-semibold leading-normal tracking-[0.24px] text-[var(--color-student-heading)]">
           {sectionLabel}
         </p>
-        <p className="shrink-0 text-2xl font-bold leading-[1.3] text-[#041a44]">{scoreDelta}</p>
+        <p className="shrink-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">{scoreDelta}</p>
       </div>
 
       <div className="flex flex-col gap-1">
@@ -76,13 +76,13 @@ function PrepTestSectionResultCard({
       </div>
 
       <div className="flex h-5 w-full items-center gap-2">
-        <div className="h-1.5 w-[134px] shrink-0 overflow-hidden rounded-[8px] bg-[#f6f8fa]">
+        <div className="h-1.5 w-[134px] shrink-0 overflow-hidden rounded-[8px] bg-[var(--greyscale-25)]">
           <div
-            className="h-full rounded-[8px] bg-[#0d47a1]"
+            className="h-full rounded-[8px] bg-[var(--primary)]"
             style={{ width: `${accuracyPct}%` }}
           />
         </div>
-        <p className="w-[38px] text-right text-sm font-medium leading-normal tracking-[0.28px] text-[#0d47a1]">
+        <p className="w-[38px] text-right text-sm font-medium leading-normal tracking-[0.28px] text-[var(--primary)]">
           {accuracyPct}%
         </p>
       </div>

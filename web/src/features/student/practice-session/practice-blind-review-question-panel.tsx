@@ -212,7 +212,7 @@ function PracticeBlindReviewQuestionPanel({
         reviewChrome ? "practice-session-scroll-hidden overflow-y-auto" : "overflow-hidden",
       )}
     >
-      <div className={cn("shrink-0", reviewChrome ? "bg-white" : "bg-white p-3")}>
+      <div className={cn("shrink-0", reviewChrome ? "bg-[var(--greyscale-0)]" : "bg-[var(--greyscale-0)] p-3")}>
         <div
           className={cn("flex gap-3", reviewChrome ? "flex-col items-stretch" : "items-start")}
         >
@@ -242,7 +242,7 @@ function PracticeBlindReviewQuestionPanel({
               )}
               {reviewChrome ? (
                 <label className="inline-flex h-8 shrink-0 items-center gap-3 whitespace-nowrap sm:gap-4">
-                  <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#062357]">
+                  <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
                     Show Correct
                   </span>
                   <Switch
@@ -266,11 +266,11 @@ function PracticeBlindReviewQuestionPanel({
               )}
             >
               {!reviewChrome ? (
-                <span className="mt-px shrink-0 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d0d12]">
+                <span className="mt-px shrink-0 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
                   {questionNumber}.
                 </span>
               ) : (
-                <span className="mt-[3px] shrink-0 text-base font-medium leading-[1.5] tracking-[0.32px] text-[#062357]">
+                <span className="mt-[3px] shrink-0 text-base font-medium leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
                   {questionNumber}.
                 </span>
               )}
@@ -283,7 +283,7 @@ function PracticeBlindReviewQuestionPanel({
                 onClickCapture={reviewChrome ? undefined : onAnnotateClick}
                 className={
                   reviewChrome
-                    ? "min-w-0 flex-1 text-base font-medium leading-[1.5] tracking-[0.32px] text-[#062357]"
+                    ? "min-w-0 flex-1 text-base font-medium leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]"
                     : cn(BLIND_REVIEW_QUESTION_STEM_CLASS, "text-sm font-semibold leading-[1.5] tracking-[0.28px]")
                 }
               />
@@ -292,7 +292,7 @@ function PracticeBlindReviewQuestionPanel({
                   type="button"
                   className={cn(
                     "mt-1 inline-flex size-5 shrink-0 items-center justify-center transition",
-                    stemExplanationOpen ? "text-[#0d47a1]" : "text-[#666d80] hover:text-[#062357]",
+                    stemExplanationOpen ? "text-[var(--primary)]" : "text-[var(--greyscale-500)] hover:text-[var(--color-student-heading)]",
                   )}
                   aria-label={
                     stemExplanationOpen
@@ -311,7 +311,7 @@ function PracticeBlindReviewQuestionPanel({
               ) : null}
             </div>
             {reviewChrome && explanationsEnabled && stemExplanationOpen ? (
-              <div className="mb-6 mt-6 rounded-[14px] bg-[#f3f7ff] p-6 text-[#062357]">
+              <div className="mb-6 mt-6 rounded-[14px] bg-[var(--primary-0)] p-6 text-[var(--color-student-heading)]">
                 <p className="mb-6 text-base font-medium leading-[1.5] tracking-[0.32px]">
                   Question Type{questionTypeLabel ? ` - ${questionTypeLabel}` : ""}
                 </p>
@@ -319,7 +319,7 @@ function PracticeBlindReviewQuestionPanel({
                   {hasStemExplanation ? (
                     <HtmlContent
                       html={stemExplanationHtml ?? ""}
-                      className="explanation-review-body text-[#062357]"
+                      className="explanation-review-body text-[var(--color-student-heading)]"
                     />
                   ) : (
                     <p className="m-0">
@@ -333,7 +333,7 @@ function PracticeBlindReviewQuestionPanel({
         </div>
       </div>
       {revealed && isCorrect != null && !reviewChrome ? (
-        <p className="shrink-0 px-6 pt-4 text-xs font-semibold text-[#df1c41]">
+        <p className="shrink-0 px-6 pt-4 text-xs font-semibold text-[var(--destructive)]">
           {isCorrect ? "Correct" : "Incorrect"}
         </p>
       ) : null}

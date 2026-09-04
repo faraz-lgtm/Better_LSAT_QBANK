@@ -43,9 +43,9 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 function filterChipStyles(active: boolean): string {
   if (active) {
-    return "inline-flex h-8 items-center rounded-xl border border-[#0b4e6e] bg-[#0d47a1] px-4 text-xs font-semibold tracking-[0.24px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
+    return "inline-flex h-8 items-center rounded-xl border border-[var(--primary-border)] bg-[var(--primary)] px-4 text-xs font-semibold tracking-[0.24px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
   }
-  return "inline-flex h-8 items-center rounded-xl border border-[#dfe1e7] bg-white px-4 text-xs font-semibold tracking-[0.24px] text-[#0d47a1] shadow-[0px_1px_2px_rgba(13,13,18,0.06)]"
+  return "inline-flex h-8 items-center rounded-xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 text-xs font-semibold tracking-[0.24px] text-[var(--primary)] shadow-[0px_1px_2px_rgba(13,13,18,0.06)]"
 }
 
 function adaptiveDrillSectionType(filter: "all" | "lr" | "rc"): "LR" | "RC" {
@@ -293,11 +293,11 @@ function DashboardPage() {
         </div>
 
         <div className="dashboard-page__bottom">
-          <section className="min-w-0 rounded-[24px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+          <section className="min-w-0 rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
             <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold tracking-[0.36px] text-[#062357]">Active Drills</h2>
-                <p className="text-xs tracking-[0.24px] text-[#666d80]">Pick up where you left off</p>
+                <h2 className="text-lg font-semibold tracking-[0.36px] text-[var(--color-student-heading)]">Active Drills</h2>
+                <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">Pick up where you left off</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -325,11 +325,11 @@ function DashboardPage() {
             </div>
 
             {displayDrills.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-6 text-sm text-[#666d80]">
+              <p className="rounded-xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-6 text-sm text-[var(--greyscale-500)]">
                 No drills in progress. Start a new drill from{" "}
                 <button
                   type="button"
-                  className="font-semibold text-[#0d47a1] hover:underline"
+                  className="font-semibold text-[var(--primary)] hover:underline"
                   onClick={() => navigate("/app/practice/drills")}
                 >
                   Practice → Drills

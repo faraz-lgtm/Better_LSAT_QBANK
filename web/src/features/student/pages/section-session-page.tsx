@@ -123,6 +123,7 @@ import { PracticeSessionQuestionNavStrip } from "@/features/student/practice-ses
 import { resolvePracticeSessionQuestionNavOutcome } from "@/features/student/practice-session/practice-session-question-nav-outcome"
 import { PracticeSessionPauseModal } from "@/features/student/practice-session/practice-session-pause-modal"
 import { PracticeSubmitSectionModal } from "@/features/student/practice-session/practice-submit-section-modal"
+import { PracticeTimeUpModal } from "@/features/student/practice-session/practice-time-up-modal"
 import {
   buildPrepTestSectionTimeUpSummary,
   PracticePrepTestSectionTimeUpModal,
@@ -456,12 +457,12 @@ function ReviewStaticSwitch({ checked = false }: { checked?: boolean }) {
       aria-disabled="true"
       className={cn(
         "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent",
-        checked ? "bg-[#0d47a1]" : "bg-[#c5cad3]",
+        checked ? "bg-[var(--primary)]" : "bg-[var(--greyscale-300)]",
       )}
     >
       <span
         className={cn(
-          "block size-4 rounded-full bg-white shadow-sm",
+          "block size-4 rounded-full bg-[var(--greyscale-0)] shadow-sm dark:bg-[var(--greyscale-900)]",
           checked ? "translate-x-4" : "translate-x-0",
         )}
       />
@@ -472,11 +473,11 @@ function ReviewStaticSwitch({ checked = false }: { checked?: boolean }) {
 function ReviewPassageCardHeader() {
   return (
     <div className="mb-8 flex h-8 shrink-0 items-center justify-between gap-4">
-      <span className="inline-flex h-8 items-center rounded-[8px] bg-[#f6f8fa] px-4 py-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1]">
+      <span className="inline-flex h-8 items-center rounded-[8px] bg-[var(--primary-25)] px-4 py-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)]">
         Passage Only View
       </span>
       <span className="inline-flex h-8 items-center gap-4" aria-label="Analysis View is display only">
-        <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#062357]">
+        <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
           Analysis View
         </span>
         <ReviewStaticSwitch />
@@ -517,6 +518,7 @@ function SectionSessionPage() {
   const [submitting, setSubmitting] = useState(false)
   const [finishing, setFinishing] = useState(false)
   const [submitModalOpen, setSubmitModalOpen] = useState(false)
+  const [standaloneTimeUpOpen, setStandaloneTimeUpOpen] = useState(false)
   const [startingBlindReview, setStartingBlindReview] = useState(false)
   const [completeModal, setCompleteModal] = useState<{
     rawScore: number
@@ -860,7 +862,6 @@ function SectionSessionPage() {
   useEffect(() => {
     if (
       timeUpTriggeredRef.current ||
-      !prepTestFlowId ||
       !timedSection ||
       countdown !== 0 ||
       sessionCompleted ||
@@ -871,7 +872,11 @@ function SectionSessionPage() {
       return
     }
     timeUpTriggeredRef.current = true
-    setTimeUpFlow({ step: "predict", predictedScore: null })
+    if (prepTestFlowId) {
+      setTimeUpFlow({ step: "predict", predictedScore: null })
+      return
+    }
+    setStandaloneTimeUpOpen(true)
   }, [
     blindReviewMode,
     countdown,
@@ -1420,7 +1425,7 @@ function SectionSessionPage() {
     const introCloseButton = (
       <button
         type="button"
-        className="inline-flex size-[52px] shrink-0 items-center justify-center rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] text-[#666d80] transition-colors hover:bg-[#eceff3] hover:text-[#062357]"
+        className="inline-flex size-[52px] shrink-0 items-center justify-center rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] text-[var(--greyscale-500)] transition-colors hover:bg-[var(--greyscale-50)] hover:text-[var(--color-student-heading)]"
         aria-label="Close section introduction"
         onClick={handleExitSession}
       >
@@ -1642,7 +1647,7 @@ function SectionSessionPage() {
             ? resultsReviewMode
               ? REVIEW_BODY_CLASS
               : BLIND_REVIEW_BODY_CLASS
-            : "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden",
+            : "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--greyscale-0)] text-[var(--color-student-heading)]",
           timeUpFlow != null && "practice-session-body--scroll-locked",
         )}
         data-color-scheme={highlights.accessibilitySettings.colorScheme}
@@ -1668,7 +1673,7 @@ function SectionSessionPage() {
                   onClickCapture={highlights.handleContentClick}
                   className={cn(
                     BLIND_REVIEW_PASSAGE_TEXT_CLASS,
-                    resultsReviewMode && "text-base leading-[1.5] tracking-[0.32px] text-[#36394a]",
+                    resultsReviewMode && "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]",
                   )}
                 />
               </div>
@@ -1754,7 +1759,7 @@ function SectionSessionPage() {
                   onClickCapture={highlights.handleContentClick}
                   className={cn(
                     BLIND_REVIEW_PASSAGE_TEXT_CLASS,
-                    resultsReviewMode && "text-base leading-[1.5] tracking-[0.32px] text-[#36394a]",
+                    resultsReviewMode && "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]",
                   )}
                 />
               </div>
@@ -1813,7 +1818,7 @@ function SectionSessionPage() {
                     ? cn(OFFICIAL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1 lg:pr-0")
                     : useActiveDrillLayout
                     ? ACTIVE_DRILL_BODY_GRID_CLASS
-                    : "lg:grid-cols-2 lg:divide-x divide-[#dfe1e7]",
+                    : "lg:grid-cols-2 lg:divide-x divide-[var(--greyscale-100)] dark:divide-[var(--greyscale-600)]",
               ),
             )}
           >
@@ -1828,7 +1833,7 @@ function SectionSessionPage() {
                     ? OFFICIAL_PASSAGE_PANE_CLASS
                     : useActiveDrillLayout
                     ? ACTIVE_DRILL_PASSAGE_PANE_CLASS
-                    : "border-[#dfe1e7] border-b p-5 lg:border-b-0",
+                    : "border-b border-[var(--greyscale-100)] p-5 lg:border-b-0",
               )}
             >
               {resultsReviewMode ? <ReviewPassageCardHeader /> : null}
@@ -1864,7 +1869,7 @@ function SectionSessionPage() {
                     ? OFFICIAL_QUESTION_PANE_CLASS
                     : useActiveDrillLayout
                     ? ACTIVE_DRILL_QUESTION_PANE_CLASS
-                    : "gap-4 border-[#dfe1e7] p-5",
+                    : "gap-4 border-[var(--greyscale-100)] p-5",
               )}
             >
               <SectionQuestionPanel
@@ -1929,7 +1934,7 @@ function SectionSessionPage() {
               ? OFFICIAL_FOOTER_CLASS
               : useActiveDrillLayout
               ? ACTIVE_DRILL_FOOTER_CLASS
-              : "flex shrink-0 items-center justify-between gap-3 border-t border-[#dfe1e7] bg-background px-6 py-3 md:gap-4 md:px-6",
+              : "flex shrink-0 items-center justify-between gap-3 border-t border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-3 md:gap-4 md:px-6",
         )}
       >
         {useActiveDrillLayout ? (
@@ -2095,9 +2100,7 @@ function SectionSessionPage() {
       className={cn(
         "flex min-h-0 max-w-none flex-1 flex-col overflow-hidden",
         useBlindReviewLayout
-          ? resultsReviewMode
-            ? "h-full bg-white"
-            : "h-full bg-white"
+          ? "h-full bg-[var(--background)]"
           : !useActiveDrillLayout &&
               "bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))] px-0 py-4 md:py-5",
       )}
@@ -2151,7 +2154,7 @@ function SectionSessionPage() {
             className={cn(
               officialChrome
                 ? OFFICIAL_CARD_CLASS
-                : "practice-session-card practice-session-card--active-drill relative flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+                : "practice-session-card practice-session-card--active-drill relative flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
               timeUpFlow != null && "overflow-hidden",
             )}
           >
@@ -2189,7 +2192,7 @@ function SectionSessionPage() {
               {error}
             </p>
           ) : null}
-          <div className="practice-session-card flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-2xl border border-[#dfe1e7] bg-background shadow-[0px_1px_1.5px_rgba(13,13,18,0.05)]">
+          <div className="practice-session-card flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_1.5px_rgba(13,13,18,0.05)]">
             {sessionCardContent}
           </div>
         </div>
@@ -2227,12 +2230,28 @@ function SectionSessionPage() {
         onContinue={() => void handleTimeUpContinue()}
       />
 
+      <PracticeTimeUpModal
+        open={standaloneTimeUpOpen}
+        submitting={finishing}
+        onNext={() => {
+          setStandaloneTimeUpOpen(false)
+          void handleConfirmSubmitSection({ showWellDoneAfterTimeUp: true })
+        }}
+      />
+
       <PracticeCompleteModal
         open={completeModal != null}
         titleId={
           completeModal?.flow === "standalone" || completeModal?.flow === "preptest-section"
             ? "section-complete-title"
             : "preptest-complete-title"
+        }
+        title={
+          completeModal?.flow === "standalone" || completeModal?.flow === "preptest-section"
+            ? sectionType === "RC"
+              ? "Reading Comprehension Section Done!"
+              : "Logical Reasoning Section Done!"
+            : "PrepTest Done!"
         }
         subtitle={
           completeModal?.flow === "standalone" || completeModal?.flow === "preptest-section"

@@ -107,9 +107,9 @@ function PracticeSessionFinishMenu({
     <>
       <span className="shrink-0 whitespace-nowrap">{label}</span>
       {isOpen ? (
-        <ChevronUp className="ml-auto size-5 shrink-0 text-[#818898]" strokeWidth={2} aria-hidden />
+        <ChevronUp className="ml-auto size-5 shrink-0 text-[var(--greyscale-400)]" strokeWidth={2} aria-hidden />
       ) : (
-        <ChevronDown className="ml-auto size-5 shrink-0 text-[#818898]" strokeWidth={2} aria-hidden />
+        <ChevronDown className="ml-auto size-5 shrink-0 text-[var(--greyscale-400)]" strokeWidth={2} aria-hidden />
       )}
     </>
   )

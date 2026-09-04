@@ -1,35 +1,35 @@
-/** Figma `18644:33040` — prep test results page tokens */
+/** Figma `18644:33040` / dark `20645` — prep test results page tokens */
 
-/** Figma `18644:33040` — Primary/0 page canvas behind white surfaces */
-const PT_RESULTS_PAGE_BG_CLASS = "bg-[#f3f7ff]"
+/** Page canvas behind elevated surfaces */
+const PT_RESULTS_PAGE_BG_CLASS = "bg-[var(--background)]"
 
 /** Figma `18644:33040` — 24px vertical rhythm between major blocks */
 const PT_RESULTS_PAGE_GAP_CLASS = "flex flex-col gap-[24px]"
 
 /** Figma `18644:33809` — hero card: title, actions, score + results-by-section */
 const PT_RESULTS_HERO_CARD_CLASS =
-  "flex w-full flex-col gap-[24px] overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white p-[24px]"
+  "flex w-full flex-col gap-[24px] overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]"
 
-/** Figma `18644:33827` — Primary/0 panel behind section summary cards */
+/** Figma `18644:33827` — panel behind section summary cards */
 const PT_RESULTS_BY_SECTION_PANEL_CLASS =
-  "flex min-h-[316px] min-w-0 w-full flex-col gap-[18px] rounded-[16px] bg-[#f3f7ff] p-[24px] lg:w-[918px] lg:shrink-0"
+  "flex min-h-[316px] min-w-0 w-full flex-col gap-[18px] rounded-[16px] bg-[var(--primary-0)] p-[24px] lg:w-[918px] lg:shrink-0"
 
-/** Figma `18644:33834` — secondary white surface (total questions, about, etc.) */
+/** Figma `18644:33834` — secondary elevated surface (total questions, about, etc.) */
 const PT_RESULTS_SURFACE_CARD_CLASS =
-  "overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white"
+  "overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
 
 /** Figma `18644:33810` — score column + results-by-section row (290 + 24 + 918) */
 const PT_RESULTS_SUMMARY_ROW_CLASS =
   "flex w-full max-w-[1232px] flex-col gap-[24px] lg:flex-row lg:items-start"
 
-/** Figma `18644:33841` — section block: white surface + gray header + passage groups */
+/** Figma `18644:33841` — section block: elevated surface + gray header + passage groups */
 const PT_RESULTS_SECTION_BLOCK_CLASS =
-  "flex flex-col gap-[24px] overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white p-[24px]"
+  "flex flex-col gap-[24px] overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]"
 
-const PT_RESULTS_SECTION_HEADER_CLASS = "rounded-[16px] bg-[#f6f8fa] px-[24px] py-4"
+const PT_RESULTS_SECTION_HEADER_CLASS = "rounded-[16px] bg-[var(--greyscale-25)] px-[24px] py-4"
 
 const PT_RESULTS_SECTION_CLASS =
-  "overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white"
+  "overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
 
 const PT_RESULTS_SECTION_BODY_CLASS = "flex flex-col gap-[24px] p-[24px]"
 
@@ -41,22 +41,23 @@ const PT_RESULTS_DETAIL_GRID_CLASS =
 
 /** One grouped card: passage header + question rows */
 const PT_RESULTS_CARD_CLASS =
-  "overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white shadow-[0_10px_15px_-3px_rgba(0,0,0,0.10),0_4px_6px_-4px_rgba(0,0,0,0.10)]"
+  "overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.10),0_4px_6px_-4px_rgba(0,0,0,0.10)]"
 
-const PT_RESULTS_PASSAGE_HEADER_CLASS = "rounded-t-[24px] border border-b-0 border-[#dfe1e7] bg-[#f3f7ff] p-[24px]"
+const PT_RESULTS_PASSAGE_HEADER_CLASS =
+  "rounded-t-[24px] border border-b-0 border-[var(--greyscale-100)] bg-[var(--primary-0)] p-[24px]"
 
 const PT_RESULTS_QUESTION_ROW_PAD_CLASS = "p-6"
 
-const PT_RESULTS_QUESTION_ROW_BORDER_CLASS = "border-t border-[#dfe1e7]"
+const PT_RESULTS_QUESTION_ROW_BORDER_CLASS = "border-t border-[var(--greyscale-100)]"
 
 const PT_RESULTS_TAG_CLASS =
-  "inline-flex h-5 items-center rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px] font-normal leading-[1.5] tracking-[0.02em] text-[#0d0d12]"
+  "inline-flex h-5 items-center rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-2 py-0.5 text-[10px] font-normal leading-[1.5] tracking-[0.02em] text-[var(--color-student-heading)]"
 
 const PT_RESULTS_ACTION_BUTTON_CLASS =
-  "flex size-9 items-center justify-center rounded-[10px] border border-[#dfe1e6] bg-[#f9f9fb] text-[#666d80] transition-colors hover:bg-white"
+  "flex size-9 items-center justify-center rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] text-[var(--greyscale-500)] transition-colors hover:bg-[var(--greyscale-0)]"
 
 const PT_RESULTS_PASSAGE_BADGE_CLASS =
-  "flex size-14 shrink-0 items-center justify-center rounded-[14px] border border-[#0d47a1] bg-[#f3f7ff]"
+  "flex size-14 shrink-0 items-center justify-center rounded-[14px] border border-[var(--primary)] bg-[var(--primary-0)]"
 
 const PT_RESULTS_QUESTION_BADGE_CORRECT_CLASS =
   "flex size-14 shrink-0 items-center justify-center rounded-[14px] bg-[#00bc54]"

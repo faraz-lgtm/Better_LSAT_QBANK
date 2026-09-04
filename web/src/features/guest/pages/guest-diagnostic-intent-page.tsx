@@ -33,12 +33,12 @@ function GuestDiagnosticIntentPage() {
   return (
     <GuestDiagnosticIntentLayout>
       <div className={GUEST_INTENT_CONTENT_CLASS}>
-        <h1 className="text-center text-2xl font-bold leading-[1.3] text-[#062357]">How do you want to start?</h1>
-        <p className="pt-3 text-center text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#8a8aaa]">
+        <h1 className="text-center text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">How do you want to start?</h1>
+        <p className="pt-3 text-center text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
           Pick the path that fits your schedule. Everything free upgrade only when you&apos;re ready.
         </p>
 
-        <h2 className="pt-3 text-center text-xl font-bold leading-[1.35] text-[#062357]">Take diagnostic</h2>
+        <h2 className="pt-3 text-center text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">Take diagnostic</h2>
 
         <div className={GUEST_INTENT_CARD_GRID_CLASS}>
           {GUEST_DIAGNOSTIC_INTENT_OPTIONS.map((option) => (

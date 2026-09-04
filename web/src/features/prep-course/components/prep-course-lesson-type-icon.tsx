@@ -75,9 +75,9 @@ function LessonRepWorkIcon(props: IconProps) {
 const LESSON_TYPE_ICON: Partial<
   Record<PrepLesson["lesson_type"], { icon: (props: IconProps) => ReactElement; className: string }>
 > = {
-  text: { icon: LessonTextIcon, className: "text-[#0d47a1]" },
-  video: { icon: LessonTextIcon, className: "text-[#0d47a1]" },
-  video_text: { icon: LessonTextIcon, className: "text-[#0d47a1]" },
+  text: { icon: LessonTextIcon, className: "text-[var(--primary)]" },
+  video: { icon: LessonTextIcon, className: "text-[var(--primary)]" },
+  video_text: { icon: LessonTextIcon, className: "text-[var(--primary)]" },
   adaptive_drill: { icon: LessonAdaptiveDrillIcon, className: "text-[#0bbcc9]" },
   active_drill: { icon: LessonActiveDrillIcon, className: "text-[#00bc54]" },
   rep_work: { icon: LessonRepWorkIcon, className: "text-[#3374ff]" },

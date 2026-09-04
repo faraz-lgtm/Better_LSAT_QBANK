@@ -186,7 +186,7 @@ function PracticeSessionHighlightPopover({
                     )}
                     style={{
                       backgroundColor: swatch.hex,
-                      borderColor: selected ? swatch.border : "#dfe1e7",
+                      borderColor: selected ? swatch.border : "var(--greyscale-100)",
                     }}
                     aria-label={`Highlight ${swatch.id}`}
                     aria-pressed={selected}

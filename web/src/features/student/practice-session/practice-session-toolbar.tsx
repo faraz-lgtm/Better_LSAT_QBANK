@@ -32,9 +32,9 @@ type PracticeSessionToolbarProps = {
 }
 
 const toolBtnClass =
-  "flex size-7 items-center justify-center rounded text-[#666d80] transition hover:bg-[#eceff3] hover:text-[#062357]"
+  "flex size-7 items-center justify-center rounded text-[var(--greyscale-500)] transition hover:bg-[var(--greyscale-50)] hover:text-[var(--color-student-heading)]"
 const toolTextBtnClass =
-  "flex size-7 items-center justify-center rounded text-xs font-bold text-[#666d80] transition hover:bg-[#eceff3] hover:text-[#062357]"
+  "flex size-7 items-center justify-center rounded text-xs font-bold text-[var(--greyscale-500)] transition hover:bg-[var(--greyscale-50)] hover:text-[var(--color-student-heading)]"
 
 function PracticeSessionToolbar({
   variant = "default",
@@ -59,7 +59,7 @@ function PracticeSessionToolbar({
   if (isActiveDrill) {
     return (
       <div className="flex shrink-0 flex-nowrap items-center gap-2.5">
-        <span className="shrink-0 text-sm font-medium tracking-[0.28px] text-[#666d80]">Tools:</span>
+        <span className="shrink-0 text-sm font-medium tracking-[0.28px] text-[var(--greyscale-500)]">Tools:</span>
         <div className={ACTIVE_DRILL_HEADER_TOOL_GROUP_CLASS}>
           {HIGHLIGHT_COLORS.map((c) => (
             <button
@@ -67,7 +67,7 @@ function PracticeSessionToolbar({
               type="button"
               className={cn(
                 "size-7 shrink-0 rounded-[4px] border-2 border-transparent",
-                activeColor === c.id && toolMode === "highlighter" && "border-[#062357]",
+                activeColor === c.id && toolMode === "highlighter" && "border-[var(--color-student-heading)]",
               )}
               style={{ backgroundColor: c.hex }}
               aria-label={`Highlighter ${c.id}`}
@@ -75,12 +75,12 @@ function PracticeSessionToolbar({
               onClick={() => onSelectColor(c.id)}
             />
           ))}
-          <div className="mx-0.5 h-6 w-px shrink-0 bg-[#dfe1e7]" aria-hidden />
+          <div className="mx-0.5 h-6 w-px shrink-0 bg-[var(--greyscale-100)] dark:bg-[var(--greyscale-600)]" aria-hidden />
           <button
             type="button"
             className={cn(
-              "inline-flex size-7 items-center justify-center rounded text-[#666d80] transition hover:text-[#062357]",
-              toolMode === "eraser" && "bg-[#eceff3] text-[#062357]",
+              "inline-flex size-7 items-center justify-center rounded text-[var(--greyscale-500)] transition hover:text-[var(--color-student-heading)]",
+              toolMode === "eraser" && "bg-[var(--greyscale-50)] text-[var(--color-student-heading)]",
             )}
             aria-label="Eraser"
             aria-pressed={toolMode === "eraser"}
@@ -94,7 +94,7 @@ function PracticeSessionToolbar({
           className={cn(
             ACTIVE_DRILL_HEADER_UNDERLINE_BUTTON_CLASS,
             "underline",
-            toolMode === "underline" && "bg-[#eceff3] text-[#062357]",
+            toolMode === "underline" && "bg-[var(--greyscale-50)] text-[var(--color-student-heading)]",
           )}
           aria-label="Underline"
           aria-pressed={toolMode === "underline"}
@@ -109,13 +109,13 @@ function PracticeSessionToolbar({
   const swatches = HIGHLIGHT_COLORS
   const toolGroupClass = useDrillToolbar
     ? ACTIVE_DRILL_HEADER_TOOL_GROUP_CLASS
-    : "flex h-[52px] items-center rounded-2xl border border-[#dfe1e7] bg-[#f6f8fa] px-3"
+    : "flex h-[52px] items-center rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-3"
 
   return (
     <div className={cn("flex shrink-0 flex-nowrap items-center", useDrillToolbar ? "gap-2.5" : "gap-2")}>
       <span
         className={cn(
-          "shrink-0 text-sm font-medium tracking-[0.28px] text-[#666d80]",
+          "shrink-0 text-sm font-medium tracking-[0.28px] text-[var(--greyscale-500)]",
           useDrillToolbar ? "inline" : "hidden xl:inline",
         )}
       >
@@ -128,7 +128,7 @@ function PracticeSessionToolbar({
             type="button"
             className={cn(
               "size-7 shrink-0 rounded-[4px] border-2 border-transparent",
-              activeColor === c.id && toolMode === "highlighter" && "border-[#062357]",
+              activeColor === c.id && toolMode === "highlighter" && "border-[var(--color-student-heading)]",
             )}
             style={{ backgroundColor: c.hex }}
             aria-label={`Highlighter ${c.id}`}
@@ -136,10 +136,10 @@ function PracticeSessionToolbar({
             onClick={() => onSelectColor(c.id)}
           />
         ))}
-        <div className="mx-0.5 h-6 w-px shrink-0 bg-[#dfe1e7]" aria-hidden />
+        <div className="mx-0.5 h-6 w-px shrink-0 bg-[var(--greyscale-100)] dark:bg-[var(--greyscale-600)]" aria-hidden />
         <button
           type="button"
-          className={cn(toolBtnClass, toolMode === "eraser" && "bg-[#eceff3] text-[#062357]")}
+          className={cn(toolBtnClass, toolMode === "eraser" && "bg-[var(--greyscale-50)] text-[var(--color-student-heading)]")}
           aria-label="Eraser"
           aria-pressed={toolMode === "eraser"}
           onClick={onEraser}
@@ -155,7 +155,7 @@ function PracticeSessionToolbar({
         {useDrillToolbar ? (
           <button
             type="button"
-            className={cn(toolBtnClass, lineSpacing !== 1 && "bg-[#eceff3] text-[#062357]")}
+            className={cn(toolBtnClass, lineSpacing !== 1 && "bg-[var(--greyscale-50)] text-[var(--color-student-heading)]")}
             aria-label="Line spacing"
             onClick={onLineSpacing}
           >
@@ -166,7 +166,7 @@ function PracticeSessionToolbar({
           <>
             <button
               type="button"
-              className={cn(toolTextBtnClass, boldEnabled && "bg-[#eceff3] text-[#062357]")}
+              className={cn(toolTextBtnClass, boldEnabled && "bg-[var(--greyscale-50)] text-[var(--color-student-heading)]")}
               aria-label="Bold"
               aria-pressed={boldEnabled}
               onClick={onToggleBold}
@@ -175,7 +175,7 @@ function PracticeSessionToolbar({
             </button>
             <button
               type="button"
-              className={cn(toolTextBtnClass, "italic", italicEnabled && "bg-[#eceff3] text-[#062357]")}
+              className={cn(toolTextBtnClass, "italic", italicEnabled && "bg-[var(--greyscale-50)] text-[var(--color-student-heading)]")}
               aria-label="Italic"
               aria-pressed={italicEnabled}
               onClick={onToggleItalic}
@@ -189,7 +189,7 @@ function PracticeSessionToolbar({
           className={cn(
             toolTextBtnClass,
             "underline",
-            toolMode === "underline" && "bg-[#eceff3] text-[#062357]",
+            toolMode === "underline" && "bg-[var(--greyscale-50)] text-[var(--color-student-heading)]",
           )}
           aria-label="Underline"
           aria-pressed={toolMode === "underline"}

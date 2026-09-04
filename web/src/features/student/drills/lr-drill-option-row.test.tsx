@@ -47,7 +47,7 @@ describe("LrDrillOptionRow", () => {
         explanationAction
       />,
     )
-    expect(container.firstChild).toHaveClass("border-[#0d47a1]")
+    expect(container.firstChild).toHaveClass("border-[var(--primary)]")
     expect(container.firstChild).not.toHaveClass("border-[#ff6f00]")
   })
 
@@ -62,7 +62,8 @@ describe("LrDrillOptionRow", () => {
         answerView="blind_review"
       />,
     )
-    expect(container.firstChild).toHaveClass("border-[#ff6f00]")
+    expect(container.firstChild).toHaveClass("border-[var(--primary)]")
+    expect(container.firstChild).not.toHaveClass("border-[#ff6f00]")
   })
 
   it("sizes Blind Review choice rows to wrapped text instead of a clipped fixed height", () => {
@@ -243,7 +244,7 @@ describe("LrDrillOptionRow", () => {
     expect(container.firstElementChild?.firstElementChild).toHaveClass("w-[3px]", "absolute", "left-0", "bg-[#12162a]")
     const letter = screen.getByText("C")
     expect(letter).toHaveClass("w-[60px]", "min-h-[60px]", "bg-[#fdfac4]", "text-[#2c3143]", "text-[28px]")
-    expect(letter).not.toHaveClass("bg-white")
+    expect(letter).not.toHaveClass("bg-[var(--greyscale-0)]")
     expect(letter.nextElementSibling).toHaveClass("py-2", "pl-1.5", "pr-3", "min-h-[60px]")
   })
 
@@ -259,7 +260,12 @@ describe("LrDrillOptionRow", () => {
       />,
     )
 
-    expect(container.firstChild).toHaveClass("bg-[#f2f3f8]")
-    expect(screen.getByText("A")).toHaveClass("w-[60px]", "bg-white", "border-[#f2f3f8]", "text-[#50577b]")
+    expect(container.firstChild).toHaveClass("bg-[var(--greyscale-25)]")
+    expect(screen.getByText("A")).toHaveClass(
+      "w-[60px]",
+      "bg-[var(--greyscale-0)]",
+      "border-[var(--greyscale-25)]",
+      "text-[var(--greyscale-500)]",
+    )
   })
 })

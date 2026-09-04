@@ -1,38 +1,32 @@
 import { cn } from "@/lib/utils"
 
-type PracticeSubmitSectionModalProps = {
+type PracticeTimeUpModalProps = {
   open: boolean
-  message: string
   submitting?: boolean
-  onCancel: () => void
-  onConfirm: () => void
+  onNext: () => void
   titleId?: string
   title?: string
-  confirmLabel?: string
+  message?: string
+  nextLabel?: string
 }
 
-/** Figma `20645:71891` — Submit Section shell */
-const SUBMIT_MODAL_SHELL_CLASS =
+/** Figma `20645:70277` — Time's Up shell (dark Neutral / primary-25 elevated) */
+const TIME_UP_MODAL_SHELL_CLASS =
   "flex w-full max-w-[484px] flex-col items-center gap-6 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--primary-25)] p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
 
-/** Figma `20645:71899` — Cancel outline */
-const SUBMIT_MODAL_CANCEL_BUTTON_CLASS =
-  "inline-flex h-[48px] w-[110px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[var(--greyscale-100)] bg-transparent px-4 py-2 text-base font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary)] shadow-[0px_1px_2px_rgba(13,13,18,0.06)] transition hover:bg-[var(--primary-0)] disabled:opacity-50"
-
-/** Figma `20645:71900` — Submit primary */
-const SUBMIT_MODAL_CONFIRM_BUTTON_CLASS =
+/** Figma `20645:70285` — primary Next CTA */
+const TIME_UP_NEXT_BUTTON_CLASS =
   "inline-flex h-[48px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[var(--primary-border)] bg-[var(--primary)] px-4 py-2 text-base font-semibold leading-[1.5] tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[var(--primary-600)] disabled:opacity-50"
 
-function PracticeSubmitSectionModal({
+function PracticeTimeUpModal({
   open,
-  message,
   submitting = false,
-  onCancel,
-  onConfirm,
-  titleId = "submit-section-title",
-  title = "Submit Section",
-  confirmLabel = "Submit Section",
-}: PracticeSubmitSectionModalProps) {
+  onNext,
+  titleId = "practice-time-up-title",
+  title = "Time's Up!",
+  message = "Your time is up! Please click next to see result data",
+  nextLabel = "Next",
+}: PracticeTimeUpModalProps) {
   if (!open) return null
 
   return (
@@ -42,7 +36,7 @@ function PracticeSubmitSectionModal({
       aria-modal="true"
       aria-labelledby={titleId}
     >
-      <div className={SUBMIT_MODAL_SHELL_CLASS}>
+      <div className={TIME_UP_MODAL_SHELL_CLASS}>
         <div className="flex w-full max-w-[436px] flex-col items-center">
           <h2
             id={titleId}
@@ -57,22 +51,14 @@ function PracticeSubmitSectionModal({
             {message}
           </p>
 
-          <div className="flex items-center justify-center gap-8">
+          <div className="flex items-center justify-center">
             <button
               type="button"
-              className={cn(SUBMIT_MODAL_CANCEL_BUTTON_CLASS)}
+              className={cn(TIME_UP_NEXT_BUTTON_CLASS)}
               disabled={submitting}
-              onClick={onCancel}
+              onClick={onNext}
             >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className={cn(SUBMIT_MODAL_CONFIRM_BUTTON_CLASS)}
-              disabled={submitting}
-              onClick={onConfirm}
-            >
-              {submitting ? "Submitting…" : confirmLabel}
+              {submitting ? "Submitting…" : nextLabel}
             </button>
           </div>
         </div>
@@ -81,4 +67,4 @@ function PracticeSubmitSectionModal({
   )
 }
 
-export { PracticeSubmitSectionModal }
+export { PracticeTimeUpModal }

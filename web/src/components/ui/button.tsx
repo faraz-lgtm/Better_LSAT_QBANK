@@ -12,7 +12,7 @@ const buttonVariants = cva(
         default:
           "text-white hover:text-white focus-visible:ring-0 disabled:opacity-100 [a]:hover:text-white",
         outline:
-          "text-[#082c6b] hover:text-white focus-visible:ring-0 disabled:opacity-100",
+          "text-[var(--field-focus)] hover:text-white focus-visible:ring-0 disabled:opacity-100",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:

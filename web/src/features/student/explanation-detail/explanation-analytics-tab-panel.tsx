@@ -10,7 +10,7 @@ type ExplanationAnalyticsTabPanelProps = {
 }
 
 const cardSurface =
-  "rounded-[24px] border border-[#dfe1e7] bg-white p-7 shadow-[0px_1px_1px_rgba(6,35,87,0.04),0px_12px_16px_rgba(6,35,87,0.22)]"
+  "rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-7 shadow-[0px_1px_1px_rgba(6,35,87,0.04),0px_12px_16px_rgba(6,35,87,0.22)]"
 
 const BAR_TRACK_HEIGHT = 200
 
@@ -47,9 +47,9 @@ function ComplexityStat({
   const colors = difficultyToneStyles(tone)
 
   return (
-    <div className="rounded-2xl border border-[#dfe1e7] bg-white p-5">
+    <div className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-5">
       <div className="flex items-center justify-between gap-3">
-        <p className="m-0 text-[13px] font-semibold uppercase tracking-[0.03em] text-[#666d80]">{label}</p>
+        <p className="m-0 text-[13px] font-semibold uppercase tracking-[0.03em] text-[var(--greyscale-500)]">{label}</p>
         <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", colors.pillBg, colors.pillText)}>
           {difficultyLabel}
         </span>
@@ -58,14 +58,14 @@ function ComplexityStat({
         {Array.from({ length: max }, (_, i) => (
           <span
             key={i}
-            className={cn("h-2.5 min-w-0 flex-1 rounded-full", i < safe ? colors.bar : "bg-[#e8ebf2]")}
+            className={cn("h-2.5 min-w-0 flex-1 rounded-full", i < safe ? colors.bar : "bg-[var(--greyscale-100)]")}
           />
         ))}
       </div>
-      <p className="m-0 pt-1.5 text-[11px] font-medium leading-[16.5px] text-[#99a1af]">
+      <p className="m-0 pt-1.5 text-[11px] font-medium leading-[16.5px] text-[var(--greyscale-400)]">
         {safe} of {max}
       </p>
-      <p className="m-0 pt-3 text-[13px] leading-[21px] text-[#666d80]">{caption}</p>
+      <p className="m-0 pt-3 text-[13px] leading-[21px] text-[var(--greyscale-500)]">{caption}</p>
     </div>
   )
 }
@@ -99,17 +99,17 @@ function ScoreBandCard({
         </div>
         <div className="text-right">
           <p className="m-0 text-[34px] font-bold leading-[34px] text-white">{headline}</p>
-          <p className="m-0 pt-1 text-[11px] font-medium leading-[16.5px] text-[#f3f7ff]">{range}</p>
+          <p className="m-0 pt-1 text-[11px] font-medium leading-[16.5px] text-[var(--primary-900)]">{range}</p>
         </div>
       </div>
       <div className="relative mt-4 h-[43px] pt-4">
         <div className="absolute inset-x-0 top-[19px] h-1.5 rounded-full bg-white/15" />
         <div
-          className="absolute top-[19px] h-1.5 rounded-full bg-gradient-to-r from-[#0d47a1] to-[#419df8]"
+          className="absolute top-[19px] h-1.5 rounded-full bg-gradient-to-r from-[var(--primary)] to-[#419df8]"
           style={{ width: `${sliderPct}%` }}
         />
         <span
-          className="absolute top-4 size-3 rounded-full bg-white shadow-sm"
+          className="absolute top-4 size-3 rounded-full bg-[var(--greyscale-0)] shadow-sm"
           style={{ left: `calc(${sliderPct}% - 6px)` }}
           aria-hidden
         />
@@ -142,17 +142,17 @@ function TopAnswerBar({
       <p
         className={cn(
           "m-0 pb-2 text-base font-bold leading-6 tabular-nums",
-          highlight ? "text-[#0d47a1]" : "text-[#666d80]",
+          highlight ? "text-[var(--primary)]" : "text-[var(--greyscale-500)]",
         )}
       >
         {pct}%
       </p>
-      <div className="relative flex h-[200px] w-16 max-w-[64px] items-end justify-center overflow-hidden rounded-2xl border border-[#dfe1e7] bg-[rgba(243,247,255,0.6)]">
+      <div className="relative flex h-[200px] w-16 max-w-[64px] items-end justify-center overflow-hidden rounded-2xl border border-[var(--greyscale-100)] bg-[rgba(243,247,255,0.6)]">
         {barHeight > 0 ? (
           <div
             className={cn(
               "relative w-[62px] rounded-t-[10px]",
-              highlight && "bg-gradient-to-t from-[#093377] to-[#0d47a1] shadow-[0px_-6px_18px_0px_rgba(11,188,201,0.6)]",
+              highlight && "bg-gradient-to-t from-[var(--primary-600)] to-[var(--primary)] shadow-[0px_-6px_18px_0px_rgba(11,188,201,0.6)]",
             )}
             style={
               highlight
@@ -162,8 +162,8 @@ function TopAnswerBar({
           />
         ) : null}
         {highlight ? (
-          <span className="absolute left-1/2 top-2 flex size-5 -translate-x-1/2 items-center justify-center rounded-full bg-white shadow-[0px_1px_1.5px_rgba(0,0,0,0.1),0px_1px_1px_rgba(0,0,0,0.1)]">
-            <Check className="size-3 text-[#0d47a1]" strokeWidth={3} aria-hidden />
+          <span className="absolute left-1/2 top-2 flex size-5 -translate-x-1/2 items-center justify-center rounded-full bg-[var(--greyscale-0)] shadow-[0px_1px_1.5px_rgba(0,0,0,0.1),0px_1px_1px_rgba(0,0,0,0.1)]">
+            <Check className="size-3 text-[var(--primary)]" strokeWidth={3} aria-hidden />
           </span>
         ) : null}
       </div>
@@ -171,8 +171,8 @@ function TopAnswerBar({
         className={cn(
           "mt-3 flex size-9 items-center justify-center rounded-xl text-sm font-semibold leading-[21px]",
           highlight
-            ? "border border-[#0d47a1] bg-[#0d47a1] text-white shadow-[0px_4px_3px_rgba(11,188,201,0.3),0px_2px_2px_rgba(11,188,201,0.3)]"
-            : "border border-[#dfe1e7] bg-white text-[#666d80]",
+            ? "border border-[var(--primary)] bg-[var(--primary)] text-white shadow-[0px_4px_3px_rgba(11,188,201,0.3),0px_2px_2px_rgba(11,188,201,0.3)]"
+            : "border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--greyscale-500)]",
         )}
       >
         {letter}
@@ -214,10 +214,10 @@ function TagGroup({
   tagClassName: string
 }) {
   return (
-    <div className="rounded-2xl border border-[#dfe1e7] bg-[rgba(243,247,255,0.4)] p-4">
+    <div className="rounded-2xl border border-[var(--greyscale-100)] bg-[rgba(243,247,255,0.4)] p-4">
       <div className="flex items-center gap-2.5">
         <span className={cn("flex size-7 items-center justify-center rounded-lg", iconBg)}>{icon}</span>
-        <p className="m-0 text-[13px] font-semibold leading-[19.5px] text-[#062357]">{title}</p>
+        <p className="m-0 text-[13px] font-semibold leading-[19.5px] text-[var(--color-student-heading)]">{title}</p>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {tags.length > 0 ? (
@@ -233,7 +233,7 @@ function TagGroup({
             </span>
           ))
         ) : (
-          <span className="text-sm text-[#666d80]">—</span>
+          <span className="text-sm text-[var(--greyscale-500)]">—</span>
         )}
       </div>
     </div>
@@ -257,8 +257,8 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
       <div className="grid gap-6 xl:grid-cols-2">
         <section className={cn(cardSurface, "flex flex-col gap-6")}>
           <div>
-            <h3 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[#062357]">Complexity</h3>
-            <p className="m-0 mt-1 text-xs leading-normal tracking-[0.02em] text-[#666d80]">
+            <h3 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[var(--color-student-heading)]">Complexity</h3>
+            <p className="m-0 mt-1 text-xs leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
               How this item performs against the test-taker pool.
             </p>
           </div>
@@ -297,15 +297,15 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
         <section className={cn(cardSurface, "flex flex-col")}>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h3 className="m-0 text-base font-semibold leading-normal tracking-[0.02em] text-[#062357]">
+              <h3 className="m-0 text-base font-semibold leading-normal tracking-[0.02em] text-[var(--color-student-heading)]">
               Answer Choice Distribution
               </h3>
-              <p className="m-0 mt-1 text-xs leading-normal tracking-[0.02em] text-[#666d80]">
+              <p className="m-0 mt-1 text-xs leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
                 Distribution of responses across all test takers.
               </p>
             </div>
             {correctChoiceLetter ? (
-              <span className="inline-flex items-center gap-1.5 rounded-[10px] bg-[#edf3ff] px-3 py-1 text-xs font-semibold leading-[18px] text-[#0d47a1]">
+              <span className="inline-flex items-center gap-1.5 rounded-[10px] bg-[var(--primary-25)] px-3 py-1 text-xs font-semibold leading-[18px] text-[var(--primary)]">
                 <Check className="size-3.5" aria-hidden />
                 {correctChoiceLetter} is correct
               </span>
@@ -327,11 +327,11 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
       <div className="grid gap-6 xl:grid-cols-2">
         <section className={cn(cardSurface, "flex flex-col")}>
           <div className="flex items-center justify-between gap-3">
-            <h3 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[#062357]">
+            <h3 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[var(--color-student-heading)]">
               Question History
             </h3>
             {attemptCount > 0 ? (
-              <span className="rounded-full bg-[#f3f7ff] px-2.5 py-1 text-[11px] font-semibold leading-[16.5px] text-[#666d80]">
+              <span className="rounded-full bg-[var(--primary-0)] px-2.5 py-1 text-[11px] font-semibold leading-[16.5px] text-[var(--greyscale-500)]">
                 {attemptCount} {attemptCount === 1 ? "attempt" : "attempts"}
               </span>
             ) : null}
@@ -339,10 +339,10 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
 
           <div className="relative mt-6 min-h-[180px]">
             {analytics.history.length === 0 ? (
-              <p className="m-0 py-6 text-sm text-[#666d80]">No attempts recorded yet.</p>
+              <p className="m-0 py-6 text-sm text-[var(--greyscale-500)]">No attempts recorded yet.</p>
             ) : (
               <>
-                <span className="absolute bottom-2 left-[7px] top-2 w-px bg-[#dfe1e7]" aria-hidden />
+                <span className="absolute bottom-2 left-[7px] top-2 w-px bg-[var(--greyscale-100)]" aria-hidden />
                 <div className="flex flex-col gap-6">
                   {analytics.history.map((h, i) => {
                     const pill = historyStatusPill(h.status)
@@ -357,9 +357,9 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
                         >
                           <span className="size-1.5 rounded-full bg-white/70" />
                         </span>
-                        <div className="rounded-2xl border border-[#dfe1e7] bg-[rgba(243,247,255,0.4)] p-4">
+                        <div className="rounded-2xl border border-[var(--greyscale-100)] bg-[rgba(243,247,255,0.4)] p-4">
                           <div className="flex items-start justify-between gap-3">
-                            <p className="m-0 max-w-[185px] text-sm font-semibold leading-[19.25px] text-[#062357]">
+                            <p className="m-0 max-w-[185px] text-sm font-semibold leading-[19.25px] text-[var(--color-student-heading)]">
                               {h.source}
                             </p>
                             <span
@@ -372,11 +372,11 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
                             </span>
                           </div>
                           <div className="mt-2.5 flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-1.5 text-xs leading-[18px] text-[#666d80]">
+                            <div className="flex items-center gap-1.5 text-xs leading-[18px] text-[var(--greyscale-500)]">
                               <Clock className="size-3.5 shrink-0" aria-hidden />
                               <span className="font-mono tabular-nums">{h.timeRange}</span>
                             </div>
-                            <p className="m-0 text-xs leading-[18px] text-[#666d80]">{h.dateLabel}</p>
+                            <p className="m-0 text-xs leading-[18px] text-[var(--greyscale-500)]">{h.dateLabel}</p>
                           </div>
                         </div>
                       </div>
@@ -389,13 +389,13 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
         </section>
 
         <section className={cn(cardSurface, "flex flex-col gap-5")}>
-          <h3 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[#062357]">Insights</h3>
+          <h3 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[var(--color-student-heading)]">Insights</h3>
           <TagGroup
-            icon={<FileText className="size-4 text-[#0d47a1]" aria-hidden />}
-            iconBg="bg-[#edf3ff]"
+            icon={<FileText className="size-4 text-[var(--primary)]" aria-hidden />}
+            iconBg="bg-[var(--primary-25)]"
             title="Question Stem Tags"
             tags={analytics.questionStemTags}
-            tagClassName="border border-[rgba(13,71,161,0.15)] bg-[#edf3ff] text-[#0d47a1]"
+            tagClassName="border border-[rgba(13,71,161,0.15)] bg-[var(--primary-25)] text-[var(--primary)]"
           />
           <TagGroup
             icon={<BookOpen className="size-4 text-[#0a8a94]" aria-hidden />}

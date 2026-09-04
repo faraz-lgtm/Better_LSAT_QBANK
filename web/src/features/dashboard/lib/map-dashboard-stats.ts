@@ -114,13 +114,13 @@ export function mapOverviewToPerformance(overview: AnalyticsOverview): Dashboard
         id: "avg-lr",
         label: "Average LR",
         value: formatMissedAverage(overview.averageLrMissedPerPrepTest),
-        valueClassName: "text-[#00bc54]",
+        valueClassName: "text-[var(--explanation-answered)]",
       },
       {
         id: "avg-rc",
         label: "Average RC",
         value: formatMissedAverage(overview.averageRcMissedPerPrepTest),
-        valueClassName: "text-[#0bbcc9]",
+        valueClassName: "text-[var(--explanation-teal)]",
       },
     ],
   }

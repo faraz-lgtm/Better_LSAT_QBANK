@@ -133,7 +133,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
         isActiveDrill
           ? "text-sm font-normal leading-[1.5] tracking-[0.28px] text-[color:inherit]"
           : officialChrome
-            ? "text-[14px] font-normal leading-5 text-[#2c3143]"
+            ? "text-[14px] font-normal leading-5 text-[var(--color-student-heading)]"
             : isBlindReview
             ? "text-pretty text-[1em] leading-[1.5] tracking-[0.32px] text-[color:inherit]"
             : "pt-0.5",
@@ -183,12 +183,12 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
           explanationAction
             ? selected || correctHighlight
               ? brSelectedRowClass
-              : "border-transparent bg-[#f6f8fa]"
+              : "border-transparent bg-[var(--greyscale-25)]"
             : selected
               ? brSelectedRowClass
               : hidden || isMasked
-                ? "border-[#dfe1e7] bg-[#f6f8fa]"
-                : "border-[#dfe1e7] bg-white",
+                ? "border border-[var(--greyscale-100)] bg-[var(--greyscale-50)]"
+                : "border border-[var(--greyscale-100)] bg-[var(--greyscale-25)]",
           isMasked && "practice-session-choice-masked opacity-45",
         )}
       >
@@ -202,8 +202,8 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
           onKeyDown={explanationAction ? undefined : handleKeyDown}
           className={cn(
             explanationAction
-              ? "flex items-start justify-between gap-4 py-2 pl-2 pr-6 text-left text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#0d0d12]"
-              : BLIND_REVIEW_OPTION_ROW_INNER_CLASS,
+              ? "flex items-start justify-between gap-4 py-2 pl-2 pr-6 text-left text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]"
+              : cn(BLIND_REVIEW_OPTION_ROW_INNER_CLASS, "text-[var(--color-student-heading)]"),
             !explanationAction && (disabled ? "cursor-default" : "cursor-pointer"),
           )}
         >
@@ -215,8 +215,8 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
                 selected || correctHighlight
                   ? brSelectedLetterClass
                   : explanationAction
-                    ? "bg-white text-black"
-                    : "bg-[#f3f4f6] text-[#4a5565]",
+                    ? "bg-[var(--greyscale-0)] text-[var(--color-student-heading)]"
+                    : "bg-[var(--greyscale-0)] text-[var(--greyscale-500)]",
                 (hidden || isMasked) && "line-through",
               )}
             >
@@ -229,7 +229,9 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
               type="button"
               className={cn(
                 "mt-1 inline-flex size-5 shrink-0 self-start items-center justify-center transition",
-                explanationExpanded ? "text-[#0d47a1]" : "text-[#666d80] hover:text-[#062357]",
+                explanationExpanded
+                  ? "text-[var(--primary)]"
+                  : "text-[var(--greyscale-500)] hover:text-[var(--color-student-heading)]",
               )}
               aria-label={
                 explanationExpanded
@@ -251,7 +253,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
           ) : showSideAction ? (
             <button
               type="button"
-              className="mt-1.5 inline-flex size-5 shrink-0 self-start items-center justify-center text-[#666d80] transition hover:text-[#062357]"
+              className="mt-1.5 inline-flex size-5 shrink-0 self-start items-center justify-center text-[var(--greyscale-500)] transition hover:text-[var(--color-student-heading)]"
               aria-label={hidden ? "Show answer choice" : "Hide answer choice"}
               onClick={(e) => {
                 e.stopPropagation()
@@ -267,10 +269,13 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
           ) : null}
         </div>
         {explanationAction && explanationExpanded ? (
-          <div className="mx-0 mb-0 mt-[10px] flex w-full items-start justify-between rounded-[14px] bg-white p-6 text-left">
-            <div className="min-w-0 flex-1 pr-6 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#062357]">
+          <div className="mx-0 mb-0 mt-[10px] flex w-full items-start justify-between rounded-[14px] bg-[var(--greyscale-0)] p-6 text-left">
+            <div className="min-w-0 flex-1 pr-6 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
             {hasExplanation ? (
-              <HtmlContent html={explanationHtml ?? ""} className="explanation-review-body text-[#062357]" />
+              <HtmlContent
+                html={explanationHtml ?? ""}
+                className="explanation-review-body text-[var(--color-student-heading)]"
+              />
             ) : (
               <p className="m-0">
                 No answer explanation available yet.
@@ -279,12 +284,12 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
             </div>
             {explanationPercent != null ? (
               <div className="flex shrink-0 flex-col items-center gap-1">
-                <p className="m-0 h-[15px] text-xs font-medium leading-[1.5] tracking-[0.24px] text-[#062357]">
+                <p className="m-0 h-[15px] text-xs font-medium leading-[1.5] tracking-[0.24px] text-[var(--color-student-heading)]">
                   {Math.round(explanationPercent)}%
                 </p>
-                <div className="flex h-14 w-6 items-end justify-center overflow-hidden rounded-[6px] border border-[#dfe1e7] bg-[#f3f7ff]/60">
+                <div className="flex h-14 w-6 items-end justify-center overflow-hidden rounded-[6px] border border-[var(--greyscale-100)] bg-[var(--primary-0)]/60">
                   <div
-                    className="w-full rounded-t-[10px] bg-gradient-to-t from-[#419df8] to-[#0d47a1]"
+                    className="w-full rounded-t-[10px] bg-gradient-to-t from-[var(--student-meter-light)] to-[var(--primary)]"
                     style={{ height: `${Math.max(4, Math.min(56, Math.round(explanationPercent)))}px` }}
                     aria-hidden
                   />

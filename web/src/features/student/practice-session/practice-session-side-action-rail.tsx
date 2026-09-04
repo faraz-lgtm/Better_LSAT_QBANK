@@ -56,7 +56,7 @@ type SideWidgetItem = {
 
 /** Hover label stays in-tree (beside the icon) so CSS `zoom` cannot misplace a portaled tooltip. */
 const SIDE_WIDGET_HOVER_LABEL_CLASS =
-  "pointer-events-none absolute right-[calc(100%+8px)] top-1/2 z-20 -translate-y-1/2 whitespace-nowrap rounded-md bg-[#062357] px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+  "pointer-events-none absolute right-[calc(100%+8px)] top-1/2 z-20 -translate-y-1/2 whitespace-nowrap rounded-md bg-[var(--color-student-heading)] px-2.5 py-1.5 text-xs font-medium text-[var(--greyscale-0)] opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
 
 /** Figma `20268:102762` — exam side widget; official expanded rail is Figma `20255:51704`. */
 function PracticeSessionSideWidget({
@@ -180,8 +180,8 @@ function PracticeSessionSideWidget({
             (officialChrome
               ? item.id === "flag"
                 ? "text-[#1877b1]"
-                : "bg-white text-[#1877b1]"
-              : "text-[#0d47a1]"),
+                : "bg-[var(--greyscale-0)] text-[#1877b1]"
+              : "text-[var(--primary)]"),
           item.disabled && "cursor-default opacity-50",
         )}
         aria-label={item.label}
@@ -199,8 +199,8 @@ function PracticeSessionSideWidget({
           <span
             className={
               officialChrome
-                ? "whitespace-nowrap text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[#0d0d12]"
-                : "whitespace-nowrap text-sm font-medium text-[#062357]"
+                ? "whitespace-nowrap text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[var(--color-student-heading)]"
+                : "whitespace-nowrap text-sm font-medium text-[var(--color-student-heading)]"
             }
           >
             {item.label}

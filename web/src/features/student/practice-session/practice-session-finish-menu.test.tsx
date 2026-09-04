@@ -1,16 +1,32 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import type { ReactNode } from "react"
 
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
+import { ThemeProvider, THEME_STORAGE_KEY } from "@/features/theme/theme-provider"
+
+function renderWithTheme(ui: ReactNode) {
+  return render(<ThemeProvider>{ui}</ThemeProvider>)
+}
 
 describe("PracticeSessionFinishMenu", () => {
+  beforeEach(() => {
+    window.localStorage.removeItem(THEME_STORAGE_KEY)
+    document.documentElement.classList.remove("dark")
+  })
+
+  afterEach(() => {
+    window.localStorage.removeItem(THEME_STORAGE_KEY)
+    document.documentElement.classList.remove("dark")
+  })
+
   it("opens submit and exit options when Finish is clicked", async () => {
     const user = userEvent.setup()
     const onSubmitSection = vi.fn()
     const onExit = vi.fn()
 
-    render(
+    renderWithTheme(
       <PracticeSessionFinishMenu onSubmitSection={onSubmitSection} onExit={onExit} />,
     )
 
@@ -26,7 +42,7 @@ describe("PracticeSessionFinishMenu", () => {
   it("clears the finish-menu-open class when the menu closes", async () => {
     const user = userEvent.setup()
 
-    render(
+    renderWithTheme(
       <PracticeSessionFinishMenu onSubmitSection={vi.fn()} onExit={vi.fn()} />,
     )
 
@@ -38,7 +54,7 @@ describe("PracticeSessionFinishMenu", () => {
   })
 
   it("renders the Figma dots-circle icon for the exam more trigger", () => {
-    render(
+    renderWithTheme(
       <PracticeSessionFinishMenu iconTrigger onSubmitSection={vi.fn()} onExit={vi.fn()} />,
     )
 
@@ -54,7 +70,7 @@ describe("PracticeSessionFinishMenu", () => {
     const onExit = vi.fn()
     const onExitWithoutSaving = vi.fn()
 
-    render(
+    renderWithTheme(
       <PracticeSessionFinishMenu
         iconTrigger
         onSubmitSection={onSubmitSection}
@@ -86,7 +102,7 @@ describe("PracticeSessionFinishMenu", () => {
     const user = userEvent.setup()
     const onOfficialInterfaceChange = vi.fn()
 
-    render(
+    renderWithTheme(
       <PracticeSessionFinishMenu
         iconTrigger
         officialInterface={true}
@@ -103,5 +119,26 @@ describe("PracticeSessionFinishMenu", () => {
 
     await user.click(toggle)
     expect(onOfficialInterfaceChange).toHaveBeenCalledWith(false)
+  })
+
+  it("toggles dark mode through ThemeProvider", async () => {
+    const user = userEvent.setup()
+
+    renderWithTheme(
+      <PracticeSessionFinishMenu iconTrigger onSubmitSection={vi.fn()} onExit={vi.fn()} />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "More options" }))
+    const darkToggle = screen.getByRole("switch", { name: "Dark mode" })
+    expect(darkToggle).toHaveAttribute("aria-checked", "false")
+
+    await user.click(darkToggle)
+    expect(document.documentElement.classList.contains("dark")).toBe(true)
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark")
+    expect(darkToggle).toHaveAttribute("aria-checked", "true")
+
+    await user.click(darkToggle)
+    expect(document.documentElement.classList.contains("dark")).toBe(false)
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("light")
   })
 })

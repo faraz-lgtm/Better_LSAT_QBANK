@@ -73,4 +73,25 @@ describe("PracticeCompleteModal", () => {
 
     expect(screen.getByLabelText("60% percent")).toBeInTheDocument()
   })
+
+  it("renders the Figma 20645:44601 title when provided", () => {
+    render(
+      <PracticeCompleteModal
+        open
+        title="Reading Comprehension Drill Done!"
+        subtitle="You've completed the RC drill"
+        rawScore={4}
+        questionCount={5}
+        scoreHidden
+        onToggleScoreHidden={vi.fn()}
+        showBlindReview
+        onBlindReview={vi.fn()}
+        onSkipDetails={vi.fn()}
+        onDone={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole("heading", { name: "Reading Comprehension Drill Done!" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Peek at Score/i })).toBeInTheDocument()
+  })
 })

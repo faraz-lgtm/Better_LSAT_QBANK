@@ -29,7 +29,7 @@ describe("PracticeSessionImmersiveFrame", () => {
     const exam = screen.getByText("Exam chrome")
     const inner = exam.parentElement
     const frame = inner?.parentElement
-    expect(frame).toHaveClass("p-0", "bg-white")
+    expect(frame).toHaveClass("p-0", "bg-[var(--background)]")
     expect(inner).toHaveClass("max-w-none")
   })
 })
@@ -37,7 +37,7 @@ describe("PracticeSessionImmersiveFrame", () => {
 describe("official full-page card", () => {
   it("uses the Figma 20255:49920 10px rounded 1440 card, not edge-to-edge chrome", () => {
     expect(OFFICIAL_CARD_CLASS).toContain("rounded-[10px]")
-    expect(OFFICIAL_CARD_CLASS).toContain("border-[#d4d7e2]")
+    expect(OFFICIAL_CARD_CLASS).toContain("border-[var(--greyscale-100)]")
     expect(OFFICIAL_CARD_CLASS).not.toContain("rounded-none")
     expect(OFFICIAL_CARD_CLASS).not.toContain("border-0")
   })

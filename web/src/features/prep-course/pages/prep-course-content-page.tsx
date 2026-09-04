@@ -253,7 +253,7 @@ function PrepCourseContentPage() {
     return (
       <StudentMain>
         <p className="text-sm text-[#95122b]">{error ?? "Course not found."}</p>
-        <Link to="/app/prep-course" className="mt-3 inline-block text-sm font-medium text-[#0d47a1]">
+        <Link to="/app/prep-course" className="mt-3 inline-block text-sm font-medium text-[var(--primary)]">
           Back to courses
         </Link>
       </StudentMain>
@@ -269,8 +269,8 @@ function PrepCourseContentPage() {
   }
 
   return (
-    <StudentMain layout="locked" contentClassName="flex min-h-0 flex-1 flex-col bg-[var(--greyscale-0)] pb-[24px]">
-      <section className="prep-course-shell-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-[16px] border border-[#dfe1e7] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+    <StudentMain layout="locked" contentClassName="flex min-h-0 flex-1 flex-col bg-[var(--primary-0)] pb-[24px]">
+      <section className="prep-course-shell-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
         <div className="shrink-0">
           <PrepCourseContentHeader
             stats={stats}
@@ -278,8 +278,8 @@ function PrepCourseContentPage() {
             onToggleShowBookmarksOnly={setShowBookmarksOnly}
           />
         </div>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-[#dfe1e7] bg-white p-[24px]">
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[16px] border border-[#dfe1e7] lg:flex-row lg:items-stretch">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--primary-0)] lg:flex-row lg:items-stretch">
             {selectedModule ? (
               <PrepCourseModulePanel
                 course={course}

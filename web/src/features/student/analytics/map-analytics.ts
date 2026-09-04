@@ -85,7 +85,7 @@ export function mapOverviewToHeadlineStats(overview: AnalyticsOverview): Analyti
       id: "best-score",
       label: "BEST SCORE",
       value: String(overview.bestScaledScore),
-      accent: "#0d47a1",
+      accent: "var(--primary)",
       caption:
         overview.bestPercentile != null
           ? formatOverviewPercentileCaption(overview.bestPercentile)
@@ -97,7 +97,7 @@ export function mapOverviewToHeadlineStats(overview: AnalyticsOverview): Analyti
       id: "average-score",
       label: "AVERAGE SCORE",
       value: String(overview.averageScaledScore),
-      accent: "#5463a9",
+      accent: "var(--primary-100)",
       caption:
         overview.averagePercentile != null
           ? formatOverviewPercentileCaption(overview.averagePercentile)
@@ -109,13 +109,13 @@ export function mapOverviewToHeadlineStats(overview: AnalyticsOverview): Analyti
       id: "best-score",
       label: "BEST SCORE",
       value: "—",
-      accent: "#0d47a1",
+      accent: "var(--primary)",
     })
     stats.push({
       id: "average-score",
       label: "AVERAGE SCORE",
       value: "—",
-      accent: "#5463a9",
+      accent: "var(--primary-100)",
     })
   }
   return stats
@@ -130,7 +130,7 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
         overview.averageLrMissedPerPrepTest != null
           ? formatSigned(-Math.round(overview.averageLrMissedPerPrepTest))
           : "—",
-      accent: "#00BC54",
+      accent: "var(--explanation-answered)",
     },
     {
       id: "avg-rc",
@@ -139,19 +139,19 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
         overview.averageRcMissedPerPrepTest != null
           ? formatSigned(-Math.round(overview.averageRcMissedPerPrepTest))
           : "—",
-      accent: "#0BBCC9",
+      accent: "var(--explanation-teal)",
     },
     {
       id: "drilled",
       label: "QUESTIONS DRILLED",
       value: String(overview.totalDrillQuestionsAnswered),
-      accent: "#116b97",
+      accent: "var(--color-student-heading)",
     },
     {
       id: "accuracy",
       label: "DRILLING ACCURACY",
       value: overview.drillAccuracyPct != null ? `${overview.drillAccuracyPct}%` : "—",
-      accent: "#956321",
+      accent: "var(--color-student-heading)",
     },
   ]
 }

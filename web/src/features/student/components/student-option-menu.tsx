@@ -11,8 +11,10 @@ export type StudentOptionMenuOption<T extends string> = {
 type StudentOptionMenuVariant = "default" | "surface"
 
 const closedTriggerClass: Record<StudentOptionMenuVariant, string> = {
-  default: "border-[#dfe1e7] bg-[#f0f5ff] text-[#062357] hover:border-[#c5d4ef]",
-  surface: "border-[#dfe1e7] bg-[#f6f8fa] text-[#062357] hover:border-[#c5d4ef]",
+  default:
+    "border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--color-student-heading)] hover:border-[color:var(--primary-100)]",
+  surface:
+    "border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--color-student-heading)] hover:border-[color:var(--primary-100)]",
 }
 
 type StudentOptionMenuProps<T extends string> = {
@@ -83,12 +85,12 @@ function StudentOptionMenu<T extends string>({
         aria-controls={listboxId}
         aria-label={ariaLabel}
         className={cn(
-          "flex w-full min-w-[140px] items-center gap-2 border px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d47a1]/30",
+          "flex w-full min-w-[140px] items-center gap-2 border px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--primary)]/30",
           size === "lg"
             ? "h-[52px] rounded-[16px] text-base font-normal tracking-[0.32px]"
             : "h-10 rounded-[10px] text-sm font-medium",
           open
-            ? "border-[#0d47a1] bg-[#f0f5ff] font-medium text-[#062357]"
+            ? "border-[var(--primary)] bg-[var(--primary-25)] font-medium text-[var(--color-student-heading)]"
             : closedTriggerClass[variant],
           triggerClassName,
         )}
@@ -96,7 +98,7 @@ function StudentOptionMenu<T extends string>({
         <span className="flex-1 truncate text-left">{activeLabel}</span>
         <ChevronDown
           className={cn(
-            "shrink-0 text-[#666d80] transition-transform",
+            "shrink-0 text-[var(--greyscale-500)] transition-transform",
             size === "lg" ? "size-5" : "size-4",
             open && "rotate-180",
           )}
@@ -110,7 +112,7 @@ function StudentOptionMenu<T extends string>({
           role="listbox"
           aria-label={ariaLabel}
           className={cn(
-            "absolute z-30 mt-2 flex max-h-[min(24rem,calc(100vh-8rem))] w-full max-w-full flex-col gap-1 overflow-y-auto border border-[#dfe1e7] bg-white p-2 shadow-[0px_12px_24px_rgba(13,13,18,0.12)]",
+            "absolute z-30 mt-2 flex max-h-[min(24rem,calc(100vh-8rem))] w-full max-w-full flex-col gap-1 overflow-y-auto border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-2 shadow-[0px_12px_24px_rgba(13,13,18,0.12)]",
             size === "lg" ? "rounded-[12px]" : "rounded-[10px]",
             menuAlign === "right" ? "right-0" : "left-0",
           )}
@@ -129,7 +131,9 @@ function StudentOptionMenu<T extends string>({
                     size === "lg"
                       ? "min-h-[44px] rounded-[8px] text-base font-normal tracking-[0.32px]"
                       : "min-h-10 rounded-[8px] text-sm",
-                    active ? "bg-[#edf3ff] text-[#082c6b]" : "text-[#062357] hover:bg-[#edf3ff]/60",
+                    active
+                      ? "bg-[var(--primary-25)] text-[var(--color-student-heading)]"
+                      : "text-[var(--color-student-heading)] hover:bg-[color:var(--primary-25)]/60",
                   )}
                 >
                   <span className="min-w-0 flex-1 whitespace-normal text-left leading-snug">

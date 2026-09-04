@@ -43,20 +43,20 @@ const SORT_OPTIONS = ["Newest", "Oldest"] as const
 const FILTER_PILL_ACTIVE_CLASS =
   "ds-btn h-[52px] shrink-0 rounded-[16px] px-4 text-[16px] font-semibold leading-[1.5] tracking-[0.32px]"
 const FILTER_PILL_INACTIVE_CLASS =
-  "inline-flex h-[52px] shrink-0 items-center justify-center whitespace-nowrap rounded-[16px] border border-[#dfe1e7] bg-white px-4 text-[16px] font-medium leading-[1.5] tracking-[0.32px] text-[#666d80] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa]"
+  "inline-flex h-[52px] shrink-0 items-center justify-center whitespace-nowrap rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 text-[16px] font-medium leading-[1.5] tracking-[0.32px] text-[var(--greyscale-500)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)]"
 
 const PRIMARY_ACTION_CLASS =
   "ds-btn h-[52px] w-[148px] shrink-0 rounded-[16px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px]"
 const RETAKE_ACTION_CLASS =
-  "inline-flex h-[52px] w-[148px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[#dfe1e7] bg-white text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#666d80] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa]"
+  "inline-flex h-[52px] w-[148px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--greyscale-500)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)]"
 const BLIND_REVIEW_ACTION_CLASS =
-  "inline-flex h-[52px] w-[148px] shrink-0 items-center justify-center rounded-[16px] border border-[#ffe5b7] bg-[#ffbd4c] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#062357] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f5b03f] disabled:opacity-60"
+  "inline-flex h-[52px] w-[148px] shrink-0 items-center justify-center rounded-[16px] border border-[#ffe5b7] bg-[#ffbd4c] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#121a26] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f5b03f] disabled:opacity-60"
 const RESULT_ACTION_CLASS =
-  "inline-flex h-[52px] w-[148px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[#0d47a1] bg-[#f3f7ff] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#e8f0ff]"
+  "inline-flex h-[52px] w-[148px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[var(--primary)] bg-[var(--primary-0)] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-25)]"
 
 /** Figma `18643:26555` — default pool row hover */
 const PREPTEST_LIST_CARD_SHELL_BASE_CLASS =
-  "w-full overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white transition-[border-color]"
+  "w-full overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] transition-[border-color]"
 
 type PrepTestListCardHoverTone = "default" | "success"
 
@@ -65,13 +65,13 @@ const PREPTEST_LIST_CARD_HOVER_CLASS: Record<
   { shell: string; row: string }
 > = {
   default: {
-    shell: "hover:border-[#0d47a1]",
+    shell: "hover:border-[var(--primary)]",
     row: "transition-[background-color] hover:bg-[var(--primary-25)]",
   },
-  /** Figma `18643:27007` — completed pool row hover */
+  /** Completed rows use primary blue (Figma 20645:71901) — not green. */
   success: {
-    shell: "hover:border-[#287f6e]",
-    row: "transition-[background-color] hover:bg-[#effefa]",
+    shell: "hover:border-[var(--primary)]",
+    row: "transition-[background-color] hover:bg-[var(--primary-25)]",
   },
 }
 
@@ -121,11 +121,8 @@ function statusSubtitle(item: PrepTestPoolItem): string {
   return ""
 }
 
-function PtBadge({ number, tone }: { number: number; tone: BadgeTone }) {
-  const palette =
-    tone === "success"
-      ? "border-[#287f6e] bg-[#effefa] text-[#287f6e]"
-      : "border-[#0d47a1] bg-[#f3f7ff] text-[#0d47a1]"
+function PtBadge({ number }: { number: number; tone?: BadgeTone }) {
+  const palette = "border-[var(--primary)] bg-[var(--primary-0)] text-[var(--primary)]"
   return (
     <div className={cn("flex size-16 shrink-0 flex-col items-center justify-center rounded-[14px] border p-px", palette)}>
       <span className="w-[35px] text-center text-[12px] font-semibold leading-[1.35]">PT</span>
@@ -138,7 +135,7 @@ function MoreMenuButton() {
   return (
     <button
       type="button"
-      className="inline-flex size-6 shrink-0 items-center justify-center text-[#666d80] transition-colors hover:text-[#062357]"
+      className="inline-flex size-6 shrink-0 items-center justify-center text-[var(--greyscale-500)] transition-colors hover:text-[var(--color-student-heading)]"
       aria-label="More options"
     >
       <MoreVertical className="size-6" />
@@ -187,7 +184,7 @@ function PrepTestListCardShell({
           "flex h-[110px] items-center gap-4 px-6",
           hoverClass.row,
           layout === "completed" ? "justify-between" : undefined,
-          expanded ? "rounded-t-[16px] border-b border-[#dfe1e7]" : undefined,
+          expanded ? "rounded-t-[16px] border-b border-[var(--greyscale-100)]" : undefined,
         )}
       >
         <div className={cn("flex min-w-0 items-center gap-6", layout === "standard" ? "flex-1" : "shrink-0")}>
@@ -197,7 +194,7 @@ function PrepTestListCardShell({
             {subtitle ? (
               <p
                 className={cn(
-                  "truncate text-[14px] leading-[1.5] tracking-[0.28px] text-[#666d80]",
+                  "truncate text-[14px] leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]",
                   subtitleClass,
                 )}
               >
@@ -243,7 +240,7 @@ function PrepTestListCard({
   const isCompleted = item.status === "completed"
   const blindReviewPending = item.blindReviewStatus != null
   const badgeTone: BadgeTone = isCompleted ? "success" : "default"
-  const titleClass = isCompleted ? "text-[#287f6e]" : "text-[#0d47a1]"
+  const titleClass = "text-[var(--primary)]"
   const historyRows = buildPoolHistoryRows(item, { includeFallback: isCompleted })
   const latestAttempt = historyRows[0] ?? null
   const displayScore = poolCardDisplayScore(item, latestAttempt, historyRows)
@@ -286,7 +283,7 @@ function PrepTestListCard({
         <button
           type="button"
           onClick={onToggleExpanded}
-          className="inline-flex size-6 shrink-0 items-center justify-center text-[#666d80] transition-colors hover:text-[#062357]"
+          className="inline-flex size-6 shrink-0 items-center justify-center text-[var(--greyscale-500)] transition-colors hover:text-[var(--color-student-heading)]"
           aria-expanded={expanded}
           aria-label={expanded ? "Collapse attempt history" : "Expand attempt history"}
         >
@@ -303,15 +300,15 @@ function PrepTestListCard({
           <li
             key={attempt.sessionId}
             className={cn(
-              "flex flex-wrap items-center justify-between gap-4 bg-[#f6f8fa] py-7 pl-6 pr-6",
-              index < historyRows.length - 1 ? "border-b border-[#dfe1e7]" : "rounded-b-[16px]",
+              "flex flex-wrap items-center justify-between gap-4 bg-[var(--greyscale-25)] py-7 pl-6 pr-6",
+              index < historyRows.length - 1 ? "border-b border-[var(--greyscale-100)]" : "rounded-b-[16px]",
             )}
           >
             <div className="min-w-0">
-              <p className="text-lg font-semibold leading-[1.4] tracking-[0.36px] text-[#062357]">
+              <p className="text-lg font-semibold leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]">
                 {formatCompletedDate(attempt.completedAt)}
               </p>
-              <p className="text-sm font-medium leading-normal tracking-[0.28px] text-[#666d80]">
+              <p className="text-sm font-medium leading-normal tracking-[0.28px] text-[var(--greyscale-500)]">
                 {attemptDetailLabel(attempt)}
               </p>
             </div>
@@ -472,14 +469,14 @@ function PracticePrepTestsListPage() {
     <StudentMain>
       <div className="mb-6 flex flex-col gap-6">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <p className="max-w-[908px] text-[14px] font-medium leading-[1.5] tracking-[0.28px] text-[#666d80]">
+          <p className="max-w-[908px] text-[14px] font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
             Try a free PrepTest to gauge your starting point and see how to improve. When you&apos;re done, our
             Insights will tell you what to work on.
           </p>
           <button
             type="button"
             disabled
-            className="inline-flex shrink-0 cursor-not-allowed items-center gap-2 self-start rounded-[16px] py-2 pl-2 pr-4 text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-[#0d47a1] lg:self-center"
+            className="inline-flex shrink-0 cursor-not-allowed items-center gap-2 self-start rounded-[16px] py-2 pl-2 pr-4 text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-[var(--primary)] lg:self-center"
           >
             PrepTest settings
             <Settings className="size-4 shrink-0" aria-hidden />
@@ -511,7 +508,7 @@ function PracticePrepTestsListPage() {
       ) : null}
 
       {visiblePrepTests.length === 0 ? (
-        <p className="text-sm text-[#666d80]">No PrepTests match this filter.</p>
+        <p className="text-sm text-[var(--greyscale-500)]">No PrepTests match this filter.</p>
       ) : (
         <>
           <div className="flex flex-col gap-6">
@@ -535,7 +532,7 @@ function PracticePrepTestsListPage() {
                 type="button"
                 disabled={loadingMore}
                 onClick={() => setPage((p) => p + 1)}
-                className="inline-flex h-[52px] min-w-[160px] items-center justify-center rounded-[16px] border border-[#dfe1e7] bg-white px-6 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa] disabled:opacity-60"
+                className="inline-flex h-[52px] min-w-[160px] items-center justify-center rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)] disabled:opacity-60"
               >
                 {loadingMore ? "Loading…" : "See more"}
               </button>
@@ -560,9 +557,9 @@ function PrepTestListFilters({
 }) {
   return (
     <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-center lg:gap-6">
-      <h2 className="shrink-0 text-[24px] font-bold leading-[1.3] text-[#062357]">Start your PrepTest</h2>
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 lg:justify-end">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <h2 className="shrink-0 text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">Start your PrepTest</h2>
+      <div className="min-w-0 flex-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex w-max items-center gap-2 lg:ml-auto">
           {FILTER_TABS.map((tab) => {
             const active = filter === tab.id
             return (

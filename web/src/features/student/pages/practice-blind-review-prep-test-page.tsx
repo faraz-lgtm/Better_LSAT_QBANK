@@ -60,7 +60,7 @@ function BlindReviewNotesHeader({
         <button
           type="button"
           onClick={onClose}
-          className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[#666d80] transition-colors hover:bg-[#edf3ff] hover:text-[#062357]"
+          className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[var(--greyscale-500)] transition-colors hover:bg-[var(--primary-25)] hover:text-[var(--color-student-heading)]"
           aria-label={`Close ${prepTestLabel}`}
         >
           <FigmaIcon name="block-circle" className="size-6" aria-hidden />
@@ -107,7 +107,7 @@ function BlindReviewSectionCard({
           <ChevronRight className="size-5 shrink-0" aria-hidden />
         </button>
       ) : !row.sectionSessionId ? (
-        <span className="shrink-0 text-xs font-semibold text-[#a4acb9]">Complete in PrepTest first</span>
+        <span className="shrink-0 text-xs font-semibold text-[var(--greyscale-300)]">Complete in PrepTest first</span>
       ) : null}
     </div>
   )
@@ -222,7 +222,7 @@ function PracticeBlindReviewPrepTestPage() {
     return pageShell(
       <>
         <p className="pt-6 text-sm text-red-600">{error ?? "PrepTest not found."}</p>
-        <Link to="/app/practice/blind-review" className="text-sm font-semibold text-[#0d47a1] hover:underline">
+        <Link to="/app/practice/blind-review" className="text-sm font-semibold text-[var(--primary)] hover:underline">
           Back to Blind Review
         </Link>
       </>,
@@ -260,10 +260,10 @@ function PracticeBlindReviewPrepTestPage() {
 
           <section className={BLIND_REVIEW_NOTES_CARD_CLASS}>
         <div className="flex h-12 w-full items-center justify-between gap-2.5">
-          <h2 className="shrink-0 text-2xl font-bold leading-[1.3] text-[#062357]">Blind Review</h2>
-          <p className="min-w-0 text-right text-sm font-normal leading-normal tracking-[0.28px] text-[#666d80]">
+          <h2 className="shrink-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">Blind Review</h2>
+          <p className="min-w-0 text-right text-sm font-normal leading-normal tracking-[0.28px] text-[var(--greyscale-500)]">
             Go to your{" "}
-            <Link to={PREP_POOL_SETTINGS_HREF} className="font-semibold text-[#0d47a1] hover:underline">
+            <Link to={PREP_POOL_SETTINGS_HREF} className="font-semibold text-[var(--primary)] hover:underline">
               Prep pool settings
             </Link>{" "}
             to change what sections are available.
@@ -271,7 +271,7 @@ function PracticeBlindReviewPrepTestPage() {
         </div>
 
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="w-full max-w-[513px] text-base font-normal leading-normal tracking-[0.32px] text-[#0d0d12]">
+          <div className="w-full max-w-[513px] text-base font-normal leading-normal tracking-[0.32px] text-[var(--color-student-heading)]">
             <p className="mb-0">
               Review and redo your answers without time pressure. We&apos;ll tell you which questions to look at, but not
               what the answers are or whether you got them wrong. This is the best way to build your LSAT intuition and
@@ -285,7 +285,7 @@ function PracticeBlindReviewPrepTestPage() {
                 <p className="mb-0 mt-6">
                   {recommendedTotal} question{recommendedTotal === 1 ? "" : "s"} are recommended for BR
                 </p>
-                <p className="mb-0 mt-6 font-normal text-[#ff6f00]">
+                <p className="mb-0 mt-6 font-normal text-[var(--blind-review-accent)]">
                   The questions with orange color are the ones we think you should review.
                 </p>
               </>
@@ -294,14 +294,14 @@ function PracticeBlindReviewPrepTestPage() {
 
           <div className="flex w-full max-w-[513px] flex-col gap-6">
             {blindReviewDone ? (
-              <p className="rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] px-6 py-8 text-sm font-semibold text-[#287f6e]">
+              <p className="rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-6 py-8 text-sm font-semibold text-[var(--explanation-answered)]">
                 Blind review completed
                 {blindReview.blindReviewScaledScore != null ? ` · BR score ${blindReview.blindReviewScaledScore}` : ""}
                 .
               </p>
             ) : null}
             {!blindReviewDone && !blindReviewActive ? (
-              <p className="rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] px-6 py-8 text-sm text-[#666d80]">
+              <p className="rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-6 py-8 text-sm text-[var(--greyscale-500)]">
                 {starting ? "Starting blind review…" : "Preparing sections…"}
               </p>
             ) : practiceableSections.length > 0 ? (

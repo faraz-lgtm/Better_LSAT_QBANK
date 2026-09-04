@@ -48,7 +48,7 @@ const S = {
   border: "var(--greyscale-100)",
   rowOpen: "var(--primary-25)",
   muted: "var(--text)",
-  surface: "var(--background)",
+  surface: "var(--greyscale-0)",
   listRowAlt: "var(--explanation-list-row-alt)",
   passagePanel: "var(--explanation-passage-panel-bg)",
   badgeRadius: "14px",
@@ -69,8 +69,7 @@ const SECTION_BADGE_SIZE = {
 
 const TREE_BADGE_CLASS = "flex shrink-0 items-center justify-center"
 
-const GREEN = "#287f6e"
-const SEEN_GRAY = "#666d80"
+const SEEN_GRAY = "var(--greyscale-500)"
 
 function prepTestStatusTag(status: ExplanationQuestionStatus): string {
   switch (status) {
@@ -93,7 +92,7 @@ function StatusStat({ dot, count, label }: { dot: string; count: number; label: 
   return (
     <div className="flex items-center gap-2">
       <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: dot }} aria-hidden />
-      <span className="text-sm leading-[1.5] tracking-[0.28px] tabular-nums text-[#062357]">
+      <span className="text-sm leading-[1.5] tracking-[0.28px] tabular-nums text-[var(--color-student-heading)]">
         <span className="font-semibold">{count}</span>
         <span className="font-normal"> {label}</span>
       </span>
@@ -125,9 +124,13 @@ function statusBadgeStyle(status: ExplanationQuestionStatus): {
 } {
   switch (status) {
     case "in_process":
-      return { backgroundColor: "#fff6e0", color: "#ffbd4c", dotColor: "#ffbd4c" }
+      return {
+        backgroundColor: "var(--explanation-in-process-bg)",
+        color: "var(--explanation-in-process)",
+        dotColor: "var(--explanation-in-process)",
+      }
     case "not_started":
-      return { backgroundColor: "#f6f8fa", color: "#666d80", dotColor: "#666d80" }
+      return { backgroundColor: "var(--greyscale-25)", color: "var(--greyscale-500)", dotColor: "var(--greyscale-500)" }
     case "answered":
       return {
         backgroundColor: "var(--explanation-answered-bg)",
@@ -135,11 +138,19 @@ function statusBadgeStyle(status: ExplanationQuestionStatus): {
         dotColor: "var(--explanation-answered)",
       }
     case "fresh":
-      return { backgroundColor: "#eff6ff", color: "#0d47a1", dotColor: "#0d47a1" }
+      return {
+        backgroundColor: "var(--explanation-fresh-bg)",
+        color: "var(--primary)",
+        dotColor: "var(--primary)",
+      }
     case "seen":
-      return { backgroundColor: "#f3f4f6", color: "#9ca3af", dotColor: "#9ca3af" }
+      return {
+        backgroundColor: "var(--explanation-seen-bg)",
+        color: "var(--explanation-seen)",
+        dotColor: "var(--explanation-seen)",
+      }
     default:
-      return { backgroundColor: "#f3f4f6", color: "#666d80", dotColor: "#666d80" }
+      return { backgroundColor: "var(--greyscale-25)", color: "var(--greyscale-500)", dotColor: "var(--greyscale-500)" }
   }
 }
 
@@ -160,10 +171,10 @@ const TREE_ROW_CLASS =
   "explanations-tree-row flex h-20 w-full flex-nowrap items-center justify-between gap-6 border-b pr-6 text-left"
 
 const QUESTION_ROW_CLASS =
-  "explanations-tree-row flex h-20 w-full flex-nowrap items-center justify-between gap-6 border-b bg-white pr-6"
+  "explanations-tree-row flex h-20 w-full flex-nowrap items-center justify-between gap-6 border-b bg-[var(--greyscale-0)] pr-6"
 
 const PREP_TEST_ROW_CLASS =
-  "explanations-tree-row flex h-[88px] w-full flex-nowrap items-center justify-between gap-6 border-b bg-white pr-6 text-left transition-colors hover:bg-[#f3f7ff]"
+  "explanations-tree-row flex h-[88px] w-full flex-nowrap items-center justify-between gap-6 border-b bg-[var(--greyscale-0)] pr-6 text-left transition-colors hover:bg-[var(--primary-0)]"
 
 function derivePrepTestStatus(tree: ExplanationPrepTestNode | null | undefined): ExplanationQuestionStatus {
   if (!tree) return "fresh"
@@ -195,12 +206,20 @@ function prepTestBadgeColors(status: ExplanationQuestionStatus): {
 } {
   switch (status) {
     case "answered":
-      return { backgroundColor: "#effefa", borderColor: "#287f6e", color: "#287f6e" }
+      return {
+        backgroundColor: "var(--explanation-answered-bg)",
+        borderColor: "var(--explanation-answered)",
+        color: "var(--explanation-answered)",
+      }
     case "seen":
-      return { backgroundColor: "#f3f4f6", borderColor: "#9ca3af", color: "#9ca3af" }
+      return {
+        backgroundColor: "var(--explanation-seen-bg)",
+        borderColor: "var(--explanation-seen)",
+        color: "var(--explanation-seen)",
+      }
     default:
       // Fresh / In Process / Not Started — Figma blue PT tag
-      return { backgroundColor: "#f3f7ff", borderColor: "#0d47a1", color: "#0d47a1" }
+      return { backgroundColor: "var(--primary-0)", borderColor: "var(--primary)", color: "var(--primary)" }
   }
 }
 
@@ -265,7 +284,7 @@ function DifficultyMeter({ level }: { level: ExplanationQuestionNode["difficulty
   const activeColor = DIFFICULTY_METER_COLORS[label]
   return (
     <div
-      className="flex h-10 w-fit shrink-0 items-center gap-2.5 overflow-visible rounded-[10px] bg-[#f3f7ff] px-3"
+      className="flex h-10 w-fit shrink-0 items-center gap-2.5 overflow-visible rounded-[10px] bg-[var(--primary-0)] px-3"
       title={`Difficulty ${level} of 5`}
     >
       <div className="flex shrink-0 items-center gap-1.5">
@@ -273,7 +292,7 @@ function DifficultyMeter({ level }: { level: ExplanationQuestionNode["difficulty
           <span
             key={i}
             className="block h-4 w-1.5 shrink-0 rounded-full"
-            style={{ backgroundColor: i < level ? activeColor : "#ced0e7" }}
+            style={{ backgroundColor: i < level ? activeColor : "var(--primary-50)" }}
           />
         ))}
       </div>
@@ -309,7 +328,7 @@ function ExplanationTreeQuestionRow({
         <QuestionIndexBadge>{question.number}</QuestionIndexBadge>
         <Link
           to={detailHref}
-          className="block min-w-0 shrink truncate rounded-lg text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
+          className="block min-w-0 shrink truncate rounded-lg text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
         >
           {`Q${question.number}`}
         </Link>
@@ -325,7 +344,7 @@ function ExplanationTreeQuestionRow({
             type="button"
             variant="ghost"
             size="icon"
-            className="size-9 rounded-xl text-[#666d80] hover:text-[color:var(--color-student-heading)]"
+            className="size-9 rounded-xl text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)]"
             asChild
           >
             <Link to={`${detailHref}?tab=analytics`} aria-label="Open analytics tab">
@@ -336,7 +355,7 @@ function ExplanationTreeQuestionRow({
             type="button"
             variant="ghost"
             size="icon"
-            className="size-9 rounded-xl text-[#666d80] hover:text-[color:var(--color-student-heading)]"
+            className="size-9 rounded-xl text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)]"
             asChild
           >
             <Link to={detailHref} aria-label="Open question">
@@ -349,8 +368,8 @@ function ExplanationTreeQuestionRow({
             size="icon"
             className={
               bookmarked
-                ? "size-9 rounded-xl text-[#0d47a1] hover:text-[#0d47a1]"
-                : "size-9 rounded-xl text-[#666d80] hover:text-[color:var(--color-student-heading)]"
+                ? "size-9 rounded-xl text-[var(--primary)] hover:text-[var(--primary)]"
+                : "size-9 rounded-xl text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)]"
             }
             aria-label={
               bookmarked ? `Remove bookmark from Q${question.number}` : `Bookmark Q${question.number}`
@@ -675,9 +694,9 @@ function ExplanationsPage() {
   const displayStatusCounts = useMock ? mockStatusCounts : statusCounts
 
   const statusStats = [
-    { dot: "#ffbd4c", count: displayStatusCounts.in_process, label: "In Process" },
-    { dot: "#0d47a1", count: displayStatusCounts.fresh, label: "Fresh" },
-    { dot: GREEN, count: displayStatusCounts.answered, label: "Answered" },
+    { dot: "var(--explanation-in-process)", count: displayStatusCounts.in_process, label: "In Process" },
+    { dot: "var(--primary)", count: displayStatusCounts.fresh, label: "Fresh" },
+    { dot: "var(--explanation-answered)", count: displayStatusCounts.answered, label: "Answered" },
     { dot: SEEN_GRAY, count: displayStatusCounts.seen, label: "Seen" },
   ] as const
 
@@ -782,11 +801,11 @@ function ExplanationsPage() {
   }
 
   return (
-    <StudentMain className="bg-[#f0f5ff]" contentClassName="flex min-h-0 flex-1 flex-col pt-6 pb-6">
-      <div className="flex flex-col gap-6">
+    <StudentMain className="bg-[var(--background)]" contentClassName="flex min-h-0 flex-1 flex-col pt-6 pb-6">
+      <div className="mx-auto flex w-full max-w-[1168px] flex-col gap-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <h2 className="m-0 text-2xl font-bold leading-[1.3] text-[#062357]">LSAT Question Explanations</h2>
+            <h2 className="m-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">LSAT Question Explanations</h2>
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
               {statusStats.map((s) => (
                 <StatusStat key={s.label} dot={s.dot} count={s.count} label={s.label} />
@@ -813,14 +832,14 @@ function ExplanationsPage() {
       {listLoading ? (
         <StudentPageLoader centered className="min-h-0 flex-1" label="Loading PrepTests…" />
       ) : displayRows.length === 0 ? (
-        <p className="max-w-xl text-sm text-[#666d80]">
+        <p className="max-w-xl text-sm text-[var(--greyscale-500)]">
           {bookmarkedOnly
             ? "No bookmarked questions yet. Open a PrepTest and tap the bookmark icon on a question."
             : "No published explanations yet. When an admin adds written or video explanation content to PrepTest questions, they will appear here."}
         </p>
       ) : (
         <div
-          className="flex flex-col overflow-hidden border border-[#dfe1e7] bg-white"
+          className="flex flex-col overflow-hidden border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
           style={{ borderRadius: S.prepTestCardRadius }}
         >
           {displayRows.map((row) => {
@@ -862,18 +881,18 @@ function ExplanationsPage() {
                     <span className="text-[24px] font-bold leading-[1.3] tabular-nums">{ptNum}</span>
                   </span>
                   <div className="flex min-w-0 flex-col items-start justify-center gap-2 overflow-hidden">
-                    <span className="text-[20px] font-bold leading-[1.35] whitespace-nowrap text-[#062357]">
+                    <span className="text-[20px] font-bold leading-[1.35] whitespace-nowrap text-[var(--color-student-heading)]">
                       PT - {ptNum}
                     </span>
-                    <span className="truncate text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#666d80]">
+                    <span className="truncate text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
                       {statusTag}
                     </span>
                   </div>
                   {isLoadingTree ? <StudentPageLoader size="sm" /> : null}
                   {ptIsOpen ? (
-                    <ChevronDown className="size-6 shrink-0 text-[#062357]" aria-hidden />
+                    <ChevronDown className="size-6 shrink-0 text-[var(--color-student-heading)]" aria-hidden />
                   ) : (
-                    <ChevronRight className="size-6 shrink-0 text-[#062357]" aria-hidden />
+                    <ChevronRight className="size-6 shrink-0 text-[var(--color-student-heading)]" aria-hidden />
                   )}
                 </div>
               </button>
@@ -881,12 +900,12 @@ function ExplanationsPage() {
               {ptIsOpen ? (
                 <div className="explanations-tree-sections" data-tree-children="sections">
                   {treeError ? (
-                    <p className={cn("border-b border-[#dfe1e7] py-3 pr-6 text-sm text-[#95122b]", EXPLANATION_TREE_PL_CLASS.section)}>
+                    <p className={cn("border-b border-[var(--greyscale-100)] py-3 pr-6 text-sm text-[#95122b]", EXPLANATION_TREE_PL_CLASS.section)}>
                       {treeError}
                     </p>
                   ) : null}
                   {isLoadingTree && !filteredTree ? (
-                    <div className={cn("border-b border-[#dfe1e7] py-4 pr-6", EXPLANATION_TREE_PL_CLASS.section)}>
+                    <div className={cn("border-b border-[var(--greyscale-100)] py-4 pr-6", EXPLANATION_TREE_PL_CLASS.section)}>
                       <StudentPageLoader label="Loading sections…" />
                     </div>
                   ) : null}
@@ -904,20 +923,20 @@ function ExplanationsPage() {
                           <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
                             <SectionKindBadge kind={sec.kind} />
                             <div className="flex min-w-0 flex-col items-start gap-1.5 overflow-hidden">
-                              <span className="text-[20px] font-bold leading-[1.35] whitespace-nowrap text-[#062357]">
+                              <span className="text-[20px] font-bold leading-[1.35] whitespace-nowrap text-[var(--color-student-heading)]">
                                 Section {sec.sectionNumber}
                               </span>
                               {sec.flags ? (
-                                <span className="truncate text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#666d80]">
+                                <span className="truncate text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
                                   {sec.flags}
                                 </span>
                               ) : null}
                             </div>
                           </div>
                           {sOpen ? (
-                            <ChevronDown className="size-6 shrink-0 text-[#666d80]" />
+                            <ChevronDown className="size-6 shrink-0 text-[var(--greyscale-500)]" />
                           ) : (
-                            <ChevronRight className="size-6 shrink-0 text-[#666d80]" />
+                            <ChevronRight className="size-6 shrink-0 text-[var(--greyscale-500)]" />
                           )}
                         </button>
 
@@ -957,18 +976,18 @@ function ExplanationsPage() {
                                   >
                                     <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
                                       <PassageIndexBadge>{pass.label}</PassageIndexBadge>
-                                      <span className="truncate text-lg font-semibold leading-[1.4] tracking-[0.36px] text-[#062357]">
+                                      <span className="truncate text-lg font-semibold leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]">
                                         {pass.title}
                                       </span>
                                     </div>
                                     <div className="flex shrink-0 items-center gap-6">
-                                      <span className="inline-flex h-8 shrink-0 items-center rounded-full bg-white px-4 text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#4a5565]">
+                                      <span className="inline-flex h-8 shrink-0 items-center rounded-full bg-[var(--greyscale-0)] px-4 text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
                                         {questionCountLabel}
                                       </span>
                                       {pOpen ? (
-                                        <ChevronDown className="size-6 shrink-0 text-[#666d80]" aria-hidden />
+                                        <ChevronDown className="size-6 shrink-0 text-[var(--greyscale-500)]" aria-hidden />
                                       ) : (
-                                        <ChevronRight className="size-6 shrink-0 text-[#666d80]" aria-hidden />
+                                        <ChevronRight className="size-6 shrink-0 text-[var(--greyscale-500)]" aria-hidden />
                                       )}
                                     </div>
                                   </button>
@@ -1009,7 +1028,7 @@ function ExplanationsPage() {
             type="button"
             disabled={listLoading || loadingMore}
             onClick={() => void loadMorePrepTests()}
-            className="inline-flex h-[52px] min-w-[160px] items-center justify-center rounded-[16px] border border-[#dfe1e7] bg-white px-6 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f6f8fa] disabled:opacity-60"
+            className="inline-flex h-[52px] min-w-[160px] items-center justify-center rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)] disabled:opacity-60"
           >
             {loadingMore ? "Loading…" : "See more"}
           </button>

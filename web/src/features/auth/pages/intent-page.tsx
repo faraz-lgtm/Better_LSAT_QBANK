@@ -104,7 +104,7 @@ function IntentPage({ isAuthenticated = false }: IntentPageProps) {
                 <Link
                   to="/login"
                   state={intentNavigationState(selectedTier)}
-                  className="font-semibold text-[#0d47a1]"
+                  className="font-semibold text-[var(--primary)]"
                   onClick={() => saveDiagnosticIntent(selectedTier)}
                 >
                   Sign in

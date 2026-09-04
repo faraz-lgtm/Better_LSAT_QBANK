@@ -13,6 +13,7 @@ import {
   EXAM_MORE_PANEL_TOGGLE_LABEL_CLASS,
   EXAM_MORE_PANEL_TOGGLE_ROW_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import { useTheme } from "@/features/theme/theme-provider"
 
 const EXAM_FINISH_FIGMA = "/figma/exam-finish"
 
@@ -87,6 +88,7 @@ function PracticeSessionExamMorePanel({
   onSaveAndExit,
   onExitWithoutSaving,
 }: PracticeSessionExamMorePanelProps) {
+  const { isDark, setTheme } = useTheme()
   const actionsDisabled = disabled || finishing
   const officialToggleSemantics = interfaceToggleLabel === "Official Interface"
 
@@ -163,7 +165,11 @@ function PracticeSessionExamMorePanel({
           <span id="exam-more-dark-mode" className={EXAM_MORE_PANEL_TOGGLE_LABEL_CLASS}>
             Dark mode
           </span>
-          <ExamMoreToggle labelledBy="exam-more-dark-mode" />
+          <ExamMoreToggle
+            labelledBy="exam-more-dark-mode"
+            checked={isDark}
+            onCheckedChange={(next) => setTheme(next ? "dark" : "light")}
+          />
         </div>
 
         <div className={EXAM_MORE_PANEL_TOGGLE_ROW_CLASS}>

@@ -6,11 +6,11 @@ import { HtmlContent } from "@/lib/html/html-content"
 import { stripLeadingChoiceRestatement } from "@/lib/html/strip-leading-choice-restatement"
 import { cn } from "@/lib/utils"
 
-const CORRECT_ROW_CLASS = "border-[3px] border-solid border-[#00bc54] bg-[#eafff4]"
-const CORRECT_BADGE_CLASS = "border-[#00bc54] bg-[#00bc54] text-white"
-const HIGHLIGHT_ROW_CLASS = "border-[#0d47a1] bg-[#f3f7ff]"
-const DEFAULT_ROW_CLASS = "border-[#dfe1e7] bg-[#f6f8fa]"
-const DEFAULT_BADGE_CLASS = "border-[#dfe1e7] bg-white"
+const CORRECT_ROW_CLASS = "border-[3px] border-solid border-[var(--explanation-answered)] bg-[var(--explanation-answered-bg)]"
+const CORRECT_BADGE_CLASS = "border-[var(--explanation-answered)] bg-[var(--explanation-answered)] text-white"
+const HIGHLIGHT_ROW_CLASS = "border-[var(--primary)] bg-[var(--primary-0)]"
+const DEFAULT_ROW_CLASS = "border-[var(--greyscale-100)] bg-[var(--greyscale-25)]"
+const DEFAULT_BADGE_CLASS = "border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
 
 type ExplanationChoiceListProps = {
   choices: ExplanationChoice[]
@@ -74,7 +74,7 @@ function ExplanationChoiceList({
                 <div className="flex flex-col">
                   <button
                     type="button"
-                    className="flex w-full items-center gap-3 border-b border-[#dfe1e7] p-4 text-left hover:opacity-90"
+                    className="flex w-full items-center gap-3 border-b border-[var(--greyscale-100)] p-4 text-left hover:opacity-90"
                     onClick={toggleExpanded}
                     aria-expanded
                   >
@@ -87,15 +87,15 @@ function ExplanationChoiceList({
                       {reveal ? (
                         <Check className="size-6 text-white" strokeWidth={3} aria-hidden />
                       ) : (
-                        <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#666d80]">
+                        <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
                           {letter}
                         </span>
                       )}
                     </span>
                     <HtmlContent html={c.text} className="explanation-choice-text min-w-0 flex-1" />
-                    <ChevronUp className="size-6 shrink-0 text-[#818898]" aria-hidden />
+                    <ChevronUp className="size-6 shrink-0 text-[var(--greyscale-300)]" aria-hidden />
                   </button>
-                  <div className="rounded-b-[13px] bg-white p-4 text-left">
+                  <div className="rounded-b-[13px] bg-[var(--greyscale-0)] p-4 text-left">
                     <HtmlContent
                       html={stripLeadingChoiceRestatement(c.explanationHtml, c.text)}
                       className="explanation-option-body"
@@ -121,13 +121,13 @@ function ExplanationChoiceList({
                     {reveal ? (
                       <Check className="size-6 text-white" strokeWidth={3} aria-hidden />
                     ) : (
-                      <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#666d80]">
+                      <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
                         {letter}
                       </span>
                     )}
                   </span>
                   <HtmlContent html={c.text} className="explanation-choice-text min-w-0 flex-1" />
-                  <ChevronDown className="size-6 shrink-0 text-[#818898]" aria-hidden />
+                  <ChevronDown className="size-6 shrink-0 text-[var(--greyscale-300)]" aria-hidden />
                 </button>
               )}
             </div>

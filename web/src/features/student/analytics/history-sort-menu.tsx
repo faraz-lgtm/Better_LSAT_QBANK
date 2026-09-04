@@ -47,19 +47,19 @@ function HistorySortMenu({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex h-8 items-center gap-1.5 rounded-[10px] border border-[#dfe1e7] bg-white px-2.5 text-xs font-semibold text-[#062357] hover:bg-[#f3f7ff]"
+        className="flex h-8 items-center gap-1.5 rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-2.5 text-xs font-semibold text-[var(--color-student-heading)] hover:bg-[var(--primary-0)]"
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
       >
-        <Icon className="size-4 text-[#666d80]" aria-hidden />
+        <Icon className="size-4 text-[var(--greyscale-500)]" aria-hidden />
         <span>{activeLabel}</span>
       </button>
       {open ? (
         <ul
           role="listbox"
           aria-label={ariaLabel}
-          className="absolute right-0 z-30 mt-2 min-w-[200px] overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
+          className="absolute right-0 z-30 mt-2 min-w-[200px] overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
           onPointerDown={(event) => event.stopPropagation()}
         >
           {HISTORY_SORT_OPTIONS.map((option) => {
@@ -76,7 +76,7 @@ function HistorySortMenu({
                   }}
                   className={cn(
                     "flex h-8 w-full items-center rounded-[8px] px-3 text-xs font-medium tracking-[0.02em] transition-colors",
-                    active ? "bg-[#f3f7ff] text-[#0d47a1]" : "text-[#062357] hover:bg-[#f6f8fa]",
+                    active ? "bg-[var(--primary-0)] text-[var(--primary)]" : "text-[var(--color-student-heading)] hover:bg-[var(--greyscale-25)]",
                   )}
                 >
                   {option.label}

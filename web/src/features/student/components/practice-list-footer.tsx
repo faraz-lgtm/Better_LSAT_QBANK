@@ -14,13 +14,13 @@ function PracticeListFooter({
       {hasMore ? (
         <button
           type="button"
-          className="text-[16px] font-semibold leading-[1.35] text-[#082c6b] hover:underline"
+          className="text-[16px] font-semibold leading-[1.35] text-[var(--primary)] hover:underline"
           onClick={onShowMore}
         >
           {showMoreLabel}
         </button>
       ) : (
-        <p className="text-[16px] font-semibold leading-[1.35] text-[#082c6b]">No More</p>
+        <p className="text-[16px] font-semibold leading-[1.35] text-[var(--primary)]">No More</p>
       )}
     </div>
   )

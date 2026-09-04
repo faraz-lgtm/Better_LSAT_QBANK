@@ -2,11 +2,13 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
+import type { ReactElement } from "react"
 
 import {
   formatHeaderProfileName,
   StudentAppHeader,
 } from "@/features/app-shell/student-app-header"
+import { ThemeProvider } from "@/features/theme/theme-provider"
 
 vi.mock("@/lib/supabase/client", () => ({
   getSupabaseBrowserClient: () => ({
@@ -28,6 +30,10 @@ vi.mock("@/lib/api/users", () => ({
     }),
   }),
 }))
+
+function renderHeader(ui: ReactElement) {
+  return render(<ThemeProvider>{ui}</ThemeProvider>)
+}
 
 describe("formatHeaderProfileName", () => {
   it("uses first name and last initial", () => {
@@ -55,7 +61,7 @@ describe("formatHeaderProfileName", () => {
 
 describe("StudentAppHeader", () => {
   it("renders the premium dashboard header from Figma 19956:63585", async () => {
-    render(
+    renderHeader(
       <MemoryRouter initialEntries={["/app"]}>
         <StudentAppHeader onOpenMobileNav={() => {}} />
       </MemoryRouter>,
@@ -67,6 +73,7 @@ describe("StudentAppHeader", () => {
     expect(screen.queryByRole("button", { name: "Notifications" })).not.toBeInTheDocument()
     expect(screen.getByLabelText("Plan: Premium")).toHaveTextContent("Premium")
     expect(screen.getByRole("banner").firstElementChild?.className).toMatch(/max-w-\[1168px\]/)
+    expect(screen.getByRole("button", { name: "Switch to dark mode" })).toBeInTheDocument()
 
     await waitFor(() => {
       expect(screen.getByText("Assad K.")).toBeInTheDocument()
@@ -76,7 +83,7 @@ describe("StudentAppHeader", () => {
 
   it("keeps non-dashboard breadcrumbs and the profile menu", async () => {
     const user = userEvent.setup()
-    render(
+    renderHeader(
       <MemoryRouter initialEntries={["/app/practice/drills"]}>
         <StudentAppHeader onOpenMobileNav={() => {}} />
       </MemoryRouter>,

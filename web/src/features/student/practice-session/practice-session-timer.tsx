@@ -48,7 +48,7 @@ function PracticeSessionTimer({
         {showClockIcon ? <OfficialHeaderTimerIcon /> : null}
         <span
           className={cn(
-            "shrink-0 text-[14px] font-normal leading-5 tabular-nums text-[#2c3143]",
+            "shrink-0 text-[14px] font-normal leading-5 tabular-nums text-[var(--color-student-heading)]",
             displayClassName,
           )}
         >
@@ -68,13 +68,13 @@ function PracticeSessionTimer({
             </span>
           ) : null}
           {label ? (
-            <span className="flex h-6 shrink-0 items-center text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#666d80]">
+            <span className="flex h-6 shrink-0 items-center text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
               {label}
             </span>
           ) : null}
           <span
             className={cn(
-              "mr-8 flex h-6 w-[56px] shrink-0 items-center justify-end text-right text-sm font-semibold leading-[1.5] tabular-nums tracking-[0.28px] text-[#062357]",
+              "mr-8 flex h-6 w-[56px] shrink-0 items-center justify-end text-right text-sm font-semibold leading-[1.5] tabular-nums tracking-[0.28px] text-[var(--color-student-heading)]",
               displayClassName,
             )}
           >
@@ -88,7 +88,7 @@ function PracticeSessionTimer({
   return (
     <div
       className={cn(
-        "practice-session-timer flex shrink-0 flex-col gap-1.5 overflow-hidden border border-[#dfe1e7] bg-white px-4 py-2 shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
+        "practice-session-timer flex shrink-0 flex-col gap-1.5 overflow-hidden border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 py-2 shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
         PRACTICE_SESSION_HEADER_CONTROL_RADIUS_CLASS,
         timerMinWidthClass,
       )}
@@ -101,7 +101,7 @@ function PracticeSessionTimer({
             height="16"
             viewBox="0 0 16 16"
             fill="none"
-            className="size-4 shrink-0 text-[#666d80]"
+            className="size-4 shrink-0 text-[var(--greyscale-500)]"
             aria-hidden
           >
             <path
@@ -112,13 +112,13 @@ function PracticeSessionTimer({
             <path d="M8 5V8L10 9" stroke="currentColor" strokeWidth="1.33333" strokeLinecap="round" />
           </svg>
         ) : null}
-        <span className="shrink-0 text-sm font-medium leading-none tracking-[0.02em] text-[#666d80]">
+        <span className="shrink-0 text-sm font-medium leading-none tracking-[0.02em] text-[var(--greyscale-500)]">
           {label}
         </span>
         <button
           type="button"
           className={cn(
-            "shrink-0 rounded-[6px] text-sm font-bold leading-none tabular-nums tracking-[0.02em] text-[#062357] transition hover:bg-[#f6f8fa]",
+            "shrink-0 rounded-[6px] text-sm font-bold leading-none tabular-nums tracking-[0.02em] text-[var(--color-student-heading)] transition hover:bg-[var(--greyscale-25)]",
             displayClassName,
           )}
           aria-label={paused ? "Section paused" : "Pause section timer"}
@@ -130,7 +130,7 @@ function PracticeSessionTimer({
           {onReset ? (
             <button
               type="button"
-              className="inline-flex size-4 items-center justify-center text-[#666d80] transition hover:text-[#062357]"
+              className="inline-flex size-4 items-center justify-center text-[var(--greyscale-500)] transition hover:text-[var(--color-student-heading)]"
               aria-label="Reset timer"
               onClick={onReset}
             >
@@ -155,7 +155,7 @@ function PracticeSessionTimer({
           ) : null}
           <button
             type="button"
-            className="inline-flex size-4 shrink-0 items-center justify-center text-[#666d80] transition hover:text-[#062357]"
+            className="inline-flex size-4 shrink-0 items-center justify-center text-[var(--greyscale-500)] transition hover:text-[var(--color-student-heading)]"
             aria-label={paused ? "Section paused" : "Pause section timer"}
             onClick={onPauseRequest}
           >
@@ -215,13 +215,13 @@ function PracticeSessionTimer({
       </div>
       <div
         className={cn(
-          "h-[6px] w-full overflow-hidden bg-[#dfe1e7]",
+          "h-[6px] w-full overflow-hidden bg-[var(--greyscale-100)] dark:bg-[var(--greyscale-50)]",
           PRACTICE_SESSION_TIMER_PROGRESS_RADIUS_CLASS,
         )}
       >
         <div
           className={cn(
-            "h-full bg-[#0d47a1] transition-[width] duration-300 ease-linear",
+            "h-full bg-[var(--primary)] transition-[width] duration-300 ease-linear",
             PRACTICE_SESSION_TIMER_PROGRESS_RADIUS_CLASS,
           )}
           style={{ width: `${pct}%` }}

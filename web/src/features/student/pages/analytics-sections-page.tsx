@@ -51,7 +51,7 @@ type SectionProgressPointWithCount = SectionProgressPoint & {
 
 function SectionScoreTabs({ value, onChange }: { value: SectionScoreTab; onChange: (next: SectionScoreTab) => void }) {
   return (
-    <div className="flex h-8 flex-wrap items-center gap-1.5 rounded-[10px] bg-white p-0.5">
+    <div className="flex h-8 flex-wrap items-center gap-1.5 rounded-[10px] bg-[var(--greyscale-0)] p-0.5">
       {SECTION_SCORE_TABS.map((tab) => {
         const active = value === tab.id
         return (
@@ -62,7 +62,7 @@ function SectionScoreTabs({ value, onChange }: { value: SectionScoreTab; onChang
             aria-pressed={active}
             className={cn(
               "flex min-h-7 items-center justify-center rounded-[8px] px-2.5 py-1 text-xs font-semibold leading-[1.4] tracking-[0.02em] transition-colors hover:rounded-[8px] active:rounded-[8px] focus-visible:rounded-[8px]",
-              active ? "bg-[#0d47a1] text-white" : "text-[#666d80] hover:bg-[#f3f7ff]",
+              active ? "bg-[var(--primary)] text-white" : "text-[var(--greyscale-500)] hover:bg-[var(--primary-0)]",
             )}
           >
             {tab.label}
@@ -91,7 +91,7 @@ function SectionProgressChart({
 
   if (points.length === 0) {
     return (
-      <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-[#dfe1e7] text-xs text-[#666d80]">
+      <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-[var(--greyscale-100)] text-xs text-[var(--greyscale-500)]">
         No sections in the selected range.
       </div>
     )
@@ -122,7 +122,7 @@ function SectionProgressChart({
   return (
     <div className="w-full">
       <div className="flex h-[220px] w-full items-stretch gap-3">
-        <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[#062357]">
+        <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[var(--color-student-heading)]">
           {yAxisLabels.map((label, index) => (
             <span key={`${label}-${index}`} className="leading-5">
               {label}
@@ -132,7 +132,7 @@ function SectionProgressChart({
         <div className="relative flex-1">
           <div className="absolute inset-0 flex flex-col justify-between" aria-hidden>
             {yAxisLabels.map((label, index) => (
-              <div key={`${label}-${index}`} className="h-px w-full bg-[#e5e7eb]" />
+              <div key={`${label}-${index}`} className="h-px w-full bg-[var(--greyscale-100)]" />
             ))}
           </div>
           <svg
@@ -143,13 +143,13 @@ function SectionProgressChart({
           >
             <polygon
               points={`${linePortion[0]?.x ?? 0},100 ${linePortionPolyline} ${linePortion[linePortion.length - 1]?.x ?? 0},100`}
-              fill="#0d47a1"
+              fill="var(--primary)"
               fillOpacity="0.08"
             />
             <polyline
               points={linePortionPolyline}
               fill="none"
-              stroke="#0d47a1"
+              stroke="var(--primary)"
               strokeWidth="0.6"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -173,15 +173,15 @@ function SectionProgressChart({
                 >
                   <span
                     className={cn(
-                      "absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#df1c41] transition-transform",
-                      isActive ? "scale-150 ring-2 ring-[#df1c41]/30" : "",
+                      "absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--destructive)] transition-transform",
+                      isActive ? "scale-150 ring-2 ring-[var(--destructive)]/30" : "",
                     )}
                     style={{ left: "50%", top: `${linePoints[i]!.y}%` }}
                     aria-hidden
                   />
                   {isActive ? (
                     <span
-                      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-[#062357] px-2 py-1 text-xs font-semibold text-white shadow-lg"
+                      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-[var(--color-student-heading)] px-2 py-1 text-xs font-semibold text-white shadow-lg"
                       style={{ left: "50%", top: `calc(${linePoints[i]!.y}% - 8px)` }}
                     >
                       {point.label}: {value}
@@ -243,7 +243,7 @@ function SectionColumn({
 }: SectionColumnProps) {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-3">
-      <div className="rounded-[12px] bg-[#f6f8fa] px-3 py-2">
+      <div className="rounded-[12px] bg-[var(--greyscale-25)] px-3 py-2">
         <div className="flex items-center gap-2">
           <div
             className="flex size-7 shrink-0 items-center justify-center rounded-[8px] border"
@@ -253,15 +253,15 @@ function SectionColumn({
               {badge}
             </span>
           </div>
-          <h2 className="text-base font-bold leading-[1.3] text-[#062357]">{title}</h2>
+          <h2 className="text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">{title}</h2>
         </div>
       </div>
 
       <SectionStatPair summary={summary} />
 
-      <div className="flex min-h-[260px] flex-1 flex-col gap-3 rounded-[12px] bg-[#f6f8fa] p-4">
+      <div className="flex min-h-[260px] flex-1 flex-col gap-3 rounded-[12px] bg-[var(--greyscale-25)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs font-semibold leading-[1.4] tracking-[0.06em] text-[#062357]">{progressTitle}</p>
+          <p className="text-xs font-semibold leading-[1.4] tracking-[0.06em] text-[var(--color-student-heading)]">{progressTitle}</p>
           <SectionScoreTabs value={scoreTab} onChange={onScoreTabChange} />
         </div>
         <SectionProgressChart points={points} tab={scoreTab} rawYAxisLabels={yAxisLabels} />
@@ -276,9 +276,9 @@ function sectionSummaryFromSessions(
 ): SectionSummary {
   return {
     bestScore: bestSectionMissedDisplay(sessions, sectionType),
-    bestAccent: "#0d47a1",
+    bestAccent: "var(--primary)",
     averageScore: averageSectionMissedDisplay(sessions, sectionType),
-    averageAccent: sectionType === "LR" ? "#00bc54" : "#0bbcc9",
+    averageAccent: sectionType === "LR" ? "var(--explanation-answered)" : "var(--explanation-teal)",
   }
 }
 
@@ -441,7 +441,7 @@ function AnalyticsSectionsPage() {
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
         </div>
 
-        <section className="mb-4 rounded-[14px] border border-[#dfe1e7] bg-white p-4">
+        <section className="mb-4 rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4">
           <div
             className={cn(
               "flex flex-col gap-4 xl:items-start",
@@ -452,8 +452,8 @@ function AnalyticsSectionsPage() {
               <SectionColumn
                 badge="LR"
                 title="Logical Reasoning"
-                badgeBg="#eafff4"
-                badgeColor="#00bc54"
+                badgeBg="var(--explanation-answered-bg)"
+                badgeColor="var(--explanation-answered)"
                 progressTitle="LR PROGRESS"
                 summary={lrSummary}
                 points={lrPoints}
@@ -463,14 +463,14 @@ function AnalyticsSectionsPage() {
               />
             ) : null}
             {showLr && showRc ? (
-              <div className="hidden w-px shrink-0 self-stretch bg-[#dfe1e7] xl:block" aria-hidden />
+              <div className="hidden w-px shrink-0 self-stretch bg-[var(--greyscale-100)] xl:block" aria-hidden />
             ) : null}
             {showRc ? (
               <SectionColumn
                 badge="RC"
                 title="Reading Comprehension"
-                badgeBg="#e5fdff"
-                badgeColor="#0bbcc9"
+                badgeBg="var(--explanation-rc-badge-bg-light)"
+                badgeColor="var(--explanation-teal)"
                 progressTitle="RC PROGRESS"
                 summary={rcSummary}
                 points={rcPoints}
@@ -500,7 +500,7 @@ function AnalyticsSectionsPage() {
           onSectionFilterChange={handleSelectSection}
           onToggleBookmark={handleToggleBookmark}
           onSelectEntry={(id) => navigate(practiceSessionResultsPath(id, { source: "section" }))}
-          brBarColor="#df1c41"
+          brBarColor="var(--destructive)"
         />
       </StudentMain>
   )

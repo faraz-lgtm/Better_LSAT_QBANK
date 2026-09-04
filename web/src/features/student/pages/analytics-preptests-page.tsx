@@ -69,7 +69,7 @@ function ordinal(n: number): string {
 
 function PrepTestScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next: ScoreTab) => void }) {
   return (
-    <div className="flex h-8 flex-wrap items-center gap-1.5 rounded-[10px] bg-white p-0.5">
+    <div className="flex h-8 flex-wrap items-center gap-1.5 rounded-[10px] bg-[var(--greyscale-0)] p-0.5">
       {SCORE_TABS.map((tab) => {
         const active = value === tab.id
         return (
@@ -80,7 +80,7 @@ function PrepTestScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (ne
             aria-pressed={active}
             className={cn(
               "flex min-h-7 items-center justify-center rounded-[8px] px-2.5 py-1 text-xs font-semibold leading-[1.4] tracking-[0.02em] transition-colors hover:rounded-[8px] active:rounded-[8px] focus-visible:rounded-[8px]",
-              active ? "bg-[#0d47a1] text-white" : "text-[#666d80] hover:bg-[#f3f7ff]",
+              active ? "bg-[var(--primary)] text-white" : "text-[var(--greyscale-500)] hover:bg-[var(--primary-0)]",
             )}
           >
             {tab.label}
@@ -103,7 +103,7 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
 
   if (points.length === 0) {
     return (
-      <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-[#dfe1e7] text-xs text-[#666d80]">
+      <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-[var(--greyscale-100)] text-xs text-[var(--greyscale-500)]">
         No PrepTests in the selected range.
       </div>
     )
@@ -126,7 +126,7 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
   return (
     <div className="w-full">
       <div className="flex h-[220px] w-full items-stretch gap-3">
-        <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[#062357]">
+        <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[var(--color-student-heading)]">
           {yAxisLabels.map((label, index) => (
             <span key={`${label}-${index}`} className="leading-5">
               {label}
@@ -136,7 +136,7 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
         <div className="relative flex-1">
           <div className="absolute inset-0 flex flex-col justify-between" aria-hidden>
             {yAxisLabels.map((label, index) => (
-              <div key={`${label}-${index}`} className="h-px w-full bg-[#e5e7eb]" />
+              <div key={`${label}-${index}`} className="h-px w-full bg-[var(--greyscale-100)]" />
             ))}
           </div>
           <svg
@@ -145,11 +145,11 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
             preserveAspectRatio="none"
             aria-hidden
           >
-            <polygon points={areaPolygon} fill="#0d47a1" fillOpacity="0.08" />
+            <polygon points={areaPolygon} fill="var(--primary)" fillOpacity="0.08" />
             <polyline
               points={polyline}
               fill="none"
-              stroke="#0d47a1"
+              stroke="var(--primary)"
               strokeWidth="0.6"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -173,15 +173,15 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
                 >
                   <span
                     className={cn(
-                      "absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#df1c41] transition-transform",
-                      isActive ? "scale-150 ring-2 ring-[#df1c41]/30" : "",
+                      "absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--destructive)] transition-transform",
+                      isActive ? "scale-150 ring-2 ring-[var(--destructive)]/30" : "",
                     )}
                     style={{ left: "50%", top: `${linePoints[i].y}%` }}
                     aria-hidden
                   />
                   {isActive ? (
                     <span
-                      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-[#062357] px-2 py-1 text-xs font-semibold text-white shadow-lg"
+                      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-[var(--color-student-heading)] px-2 py-1 text-xs font-semibold text-white shadow-lg"
                       style={{ left: "50%", top: `calc(${linePoints[i].y}% - 8px)` }}
                     >
                       {point.test}: {value}
@@ -238,14 +238,14 @@ function AnalyticsPrepTestsPage() {
         id: "best-score",
         label: "BEST SCORE",
         value: String(stats.bestScore),
-        accent: "#0d47a1",
+        accent: "var(--primary)",
         caption: `PERCENTILE: ${ordinal(stats.bestPercentile)}`,
       },
       {
         id: "average-score",
         label: "AVERAGE SCORE",
         value: String(stats.averageScore),
-        accent: "#5463a9",
+        accent: "var(--primary-100)",
         caption: `PERCENTILE: ${ordinal(stats.averagePercentile)}`,
       },
     ]
@@ -258,27 +258,27 @@ function AnalyticsPrepTestsPage() {
         label: "AVERAGE LR",
         value:
           stats.averageLrMissed != null ? formatSignedNumber(stats.averageLrMissed) : "—",
-        accent: "#00bc54",
+        accent: "var(--explanation-answered)",
       },
       {
         id: "avg-rc",
         label: "AVERAGE RC",
         value:
           stats.averageRcMissed != null ? formatSignedNumber(stats.averageRcMissed) : "—",
-        accent: "#0bbcc9",
+        accent: "var(--explanation-teal)",
       },
       {
         id: "best-br",
         label: "BEST BLIND REVIEW",
         value: String(stats.bestBlindReview),
-        accent: "#df1c41",
+        accent: "var(--destructive)",
         caption: `Average BR: ${stats.averageBlindReview}`,
       },
       {
         id: "avg-br-diff",
         label: "AVG. BR DIFFERENCE",
         value: formatSignedNumber(stats.averageBlindReviewDifference),
-        accent: "#956321",
+        accent: "var(--color-student-heading)",
         caption: `High: ${formatSignedNumber(stats.blindReviewDifferenceHigh)}  Low: ${formatSignedNumber(stats.blindReviewDifferenceLow)}`,
       },
     ]
@@ -356,7 +356,7 @@ function AnalyticsPrepTestsPage() {
             />
           </section>
         ) : (
-          <p className="mb-6 rounded-2xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-6 py-8 text-center text-sm text-[#666d80]">
+          <p className="mb-6 rounded-2xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-6 py-8 text-center text-sm text-[var(--greyscale-500)]">
             No PrepTests recorded in this range. Try widening the time range.
           </p>
         )}

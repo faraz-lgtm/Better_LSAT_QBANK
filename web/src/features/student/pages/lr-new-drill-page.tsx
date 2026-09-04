@@ -35,7 +35,7 @@ function LrNewDrillPage() {
   }, [analyticsApi])
 
   return (
-    <StudentMain className="bg-[var(--primary-0)]" contentClassName="bg-[var(--primary-0)]">
+    <StudentMain className="bg-[var(--background)]" contentClassName="bg-[var(--background)]">
       <DrillConfigForm
         sectionType="LR"
         initialQuestionTypeId={questionTypeId}

@@ -80,7 +80,7 @@ function ResultsSummaryPanel({ detail }: { detail: PrepTestResultsDetail }) {
   return (
     <section className={PT_RESULTS_SUMMARY_ROW_CLASS}>
       <div className="flex w-full shrink-0 flex-col gap-[24px] lg:w-[290px]">
-        <div className="flex w-full flex-col gap-[5px] rounded-[16px] bg-[#0d47a1] p-[24px]">
+        <div className="flex w-full flex-col gap-[5px] rounded-[16px] bg-[var(--primary)] p-[24px]">
           <p className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#edf3ff]">YOUR SCORE</p>
           <p className="text-[48px] font-extrabold leading-[1.2] text-white">{detail.scaledScore}</p>
           <p className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#edf3ff]">
@@ -90,15 +90,15 @@ function ResultsSummaryPanel({ detail }: { detail: PrepTestResultsDetail }) {
             PERCENTILE: {detail.percentile % 1 === 0 ? detail.percentile : detail.percentile.toFixed(1)}
           </p>
         </div>
-        <div className="w-full rounded-[16px] bg-[#f6f8fa] p-[24px]">
+        <div className="w-full rounded-[16px] bg-[var(--greyscale-25)] p-[24px]">
           <div className="flex w-full items-center justify-between">
-            <div className="flex flex-col gap-[5px] font-bold text-[#062357]">
+            <div className="flex flex-col gap-[5px] font-bold text-[var(--color-student-heading)]">
               <p className="text-xs font-bold leading-[1.5] tracking-[0.24px]">YOUR PREDICTION</p>
               <p className="text-2xl font-bold leading-[1.3]">{detail.prediction}</p>
             </div>
             {detail.blindReviewCompleted ? (
               <>
-                <div className="h-[32px] w-[2px] shrink-0 bg-[#dfe1e7]" aria-hidden />
+                <div className="h-[32px] w-[2px] shrink-0 bg-[var(--greyscale-100)]" aria-hidden />
                 <div className="flex flex-col gap-[5px] font-bold text-[#df1c41]">
                   <p className="text-xs font-bold leading-[1.5] tracking-[0.24px]">BLIND REVIEW</p>
                   <p className="text-2xl font-bold leading-[1.3]">{detail.blindReview}</p>
@@ -110,7 +110,7 @@ function ResultsSummaryPanel({ detail }: { detail: PrepTestResultsDetail }) {
       </div>
 
       <div className={PT_RESULTS_BY_SECTION_PANEL_CLASS}>
-        <h2 className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#062357]">RESULTS BY SECTION</h2>
+        <h2 className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">RESULTS BY SECTION</h2>
         <div className="flex min-w-0 gap-[7px] overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {detail.sections.map((section) => (
             <PrepTestSectionResultCard
@@ -155,7 +155,7 @@ function TotalQuestionsBar({
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 flex-wrap items-center gap-4">
-          <p className="text-2xl font-bold leading-[1.3] text-[#062357]">Total Questions: {total}</p>
+          <p className="text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">Total Questions: {total}</p>
           <PracticeResultsBookmarkedOnlyToggle
             checked={bookmarkedOnly}
             onCheckedChange={onBookmarkedOnlyChange}
@@ -196,11 +196,11 @@ function PassageSummaryHeader({ passage }: { passage: PrepTestPassageSummary }) 
     <div className={PT_RESULTS_PASSAGE_HEADER_CLASS}>
       <div className="flex items-start gap-5">
         <div className={PT_RESULTS_PASSAGE_BADGE_CLASS}>
-          <span className="text-2xl font-bold leading-[1.3] text-[#0d47a1]">{passage.passageLabel}</span>
+          <span className="text-2xl font-bold leading-[1.3] text-[var(--primary)]">{passage.passageLabel}</span>
         </div>
         <div className="flex min-w-0 flex-1 flex-wrap items-start gap-x-6 gap-y-4 lg:flex-nowrap">
           <div className="w-full min-w-[200px] shrink-0 lg:w-[305px]">
-            <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">{passage.title}</h3>
+            <h3 className="m-0 text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">{passage.title}</h3>
             <div className="mt-2 flex flex-wrap gap-2.5">
               {passage.tags.map((t) => (
                 <span key={t} className={PT_RESULTS_TAG_CLASS}>
@@ -210,28 +210,28 @@ function PassageSummaryHeader({ passage }: { passage: PrepTestPassageSummary }) 
             </div>
           </div>
           <div className="w-full shrink-0 sm:w-[256px] lg:w-[257px]">
-            <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Difficulty</p>
+            <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">Difficulty</p>
             <div className="mt-3">
               <PracticeDifficultyMeter difficulty={passage.difficulty} />
             </div>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Time:</p>
+            <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">Time:</p>
             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm">
               <div className="flex gap-1">
-                <span className="text-xs font-normal leading-[1.5] tracking-[0.02em] text-[#666d80]">
+                <span className="text-xs font-normal leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
                   Target time:
                 </span>
-                <span className="font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
+                <span className="font-semibold leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
                   {passage.targetTime}
                 </span>
               </div>
               <div className="flex flex-wrap gap-1">
-                <span className="text-xs font-normal leading-[1.5] tracking-[0.02em] text-[#666d80]">
+                <span className="text-xs font-normal leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
                   Your time:
                 </span>
-                <span className="font-semibold leading-[1.5] tracking-[0.02em] text-[#0d47a1]">{passage.yourTime}</span>
-                <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">
+                <span className="font-semibold leading-[1.5] tracking-[0.02em] text-[var(--primary)]">{passage.yourTime}</span>
+                <span className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
                   {passage.yourTimeNote}
                 </span>
               </div>
@@ -276,7 +276,7 @@ function QuestionResultActionButtons({
         onClick={() => onToggleBookmark(questionId)}
       >
         <Bookmark
-          className={cn("size-[18px]", bookmarked ? "fill-[#0d47a1] text-[#0d47a1]" : "text-[#666d80]")}
+          className={cn("size-[18px]", bookmarked ? "fill-[var(--primary)] text-[var(--primary)]" : "text-[var(--greyscale-500)]")}
           aria-hidden
         />
       </button>
@@ -320,7 +320,7 @@ function QuestionResultRow({
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           <div className="flex w-full items-start">
             <div className="flex w-[562px] shrink-0 flex-col justify-center gap-2">
-              <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">{row.title}</h3>
+              <h3 className="m-0 text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">{row.title}</h3>
               <div className="flex flex-wrap gap-2.5">
                 {row.tags.map((t) => (
                   <span key={t} className={PT_RESULTS_TAG_CLASS}>
@@ -331,7 +331,7 @@ function QuestionResultRow({
             </div>
 
             <div className="flex min-w-0 flex-1 flex-col items-start gap-3">
-              <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#666d80]">Result</p>
+              <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">Result</p>
               <div className="flex flex-nowrap items-center gap-5">
                 <div className="flex shrink-0 items-center gap-2.5">
                   <PracticeResultOutcomeIcon
@@ -340,7 +340,7 @@ function QuestionResultRow({
                     variant="stroke"
                     className="size-6"
                   />
-                  <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
+                  <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[var(--color-student-heading)]">
                     Actual
                   </span>
                 </div>
@@ -352,7 +352,7 @@ function QuestionResultRow({
                       variant="stroke"
                       className="size-6"
                     />
-                    <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
+                    <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[var(--color-student-heading)]">
                       Blind Review
                     </span>
                   </div>
@@ -447,22 +447,22 @@ function SectionBlock({
             >
               {badge.short}
             </div>
-            <h2 className="whitespace-nowrap text-2xl font-bold leading-[1.3] text-[#062357]">{sectionTitle}</h2>
+            <h2 className="whitespace-nowrap text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">{sectionTitle}</h2>
             {isExperimental ? (
-              <span className="rounded-[8px] border border-[#c2410c] bg-[#fff7ed] px-2 py-1 text-xs font-extrabold leading-none tracking-[0.24px] text-[#c2410c]">
+              <span className="rounded-[8px] border border-[var(--blind-review-accent)] bg-[var(--blind-review-badge-bg)] px-2 py-1 text-xs font-extrabold leading-none tracking-[0.24px] text-[var(--blind-review-accent)]">
                 EXP
               </span>
             ) : null}
           </div>
           <div className="flex w-[258px] shrink-0 items-center justify-between">
-            <div className="flex flex-col gap-[5px] font-bold text-[#062357]">
+            <div className="flex flex-col gap-[5px] font-bold text-[var(--color-student-heading)]">
               <p className="text-xs font-bold leading-[1.5] tracking-[0.24px]">SCORE</p>
               <p className="text-2xl font-bold leading-[1.3]">{score}</p>
             </div>
             {showBlindReview ? (
               <>
-                <div className="h-[32px] w-[2px] shrink-0 bg-[#dfe1e7]" aria-hidden />
-                <div className="flex flex-col gap-[5px] font-bold text-[#062357]">
+                <div className="h-[32px] w-[2px] shrink-0 bg-[var(--greyscale-100)]" aria-hidden />
+                <div className="flex flex-col gap-[5px] font-bold text-[var(--color-student-heading)]">
                   <p className="text-xs font-bold leading-[1.5] tracking-[0.24px]">BLIND REVIEW</p>
                   <p className="text-2xl font-bold leading-[1.3]">{blind}</p>
                 </div>
@@ -478,9 +478,9 @@ function SectionBlock({
 
 function AboutMetricRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex min-h-12 items-center justify-between gap-4 border-b border-[#f1f5f9] py-3">
-      <span className="text-base font-medium leading-[1.5] tracking-[0.02em] text-[#45556c]">{label}</span>
-      <span className="text-right text-base font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
+    <div className="flex min-h-12 items-center justify-between gap-4 border-b border-[var(--greyscale-50)] py-3">
+      <span className="text-base font-medium leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">{label}</span>
+      <span className="text-right text-base font-semibold leading-[1.5] tracking-[0.02em] text-[var(--color-student-heading)]">
         {value}
       </span>
     </div>
@@ -511,10 +511,10 @@ function AboutPrepTestCard({
       )}
     >
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <p className="!m-0 !text-[24px] font-bold leading-[1.3] text-[#062357]">About this PrepTest</p>
+        <p className="!m-0 !text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">About this PrepTest</p>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <div className="flex items-center gap-3">
-            <span className="!text-[20px] font-bold leading-[1.35] text-[#062357]">Insights</span>
+            <span className="!text-[20px] font-bold leading-[1.35] text-[var(--color-student-heading)]">Insights</span>
             <Switch
               checked={excludeFromAnalytics}
               onChange={(event) => onExcludeFromAnalyticsChange(event.target.checked)}
@@ -522,7 +522,7 @@ function AboutPrepTestCard({
               size="sm"
             />
           </div>
-          <p className="text-xs font-normal leading-[1.5] tracking-[0.02em] text-[#666d80]">
+          <p className="text-xs font-normal leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
             Exclude from Insights
           </p>
         </div>
@@ -638,11 +638,11 @@ function AnalyticsPrepTestResultsPage() {
       <div className={PT_RESULTS_PAGE_GAP_CLASS}>
         <section className={PT_RESULTS_HERO_CARD_CLASS}>
           <div className="flex flex-col gap-[24px] sm:flex-row sm:items-center sm:justify-between">
-            <h1 className="!m-0 !text-[24px] font-bold leading-[1.3] text-[#062357]">{pageTitle}</h1>
+            <h1 className="!m-0 !text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">{pageTitle}</h1>
             <div className="flex flex-wrap items-center gap-[24px]">
               <button
                 type="button"
-                className="inline-flex h-10 items-center gap-2 rounded-[12px] border border-[#dfe1e7] bg-white px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f3f7ff]"
+                className="inline-flex h-10 items-center gap-2 rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-0)]"
               >
                 <FigmaIcon name="share-square" className="size-4 shrink-0" aria-hidden />
                 Share
@@ -666,7 +666,7 @@ function AnalyticsPrepTestResultsPage() {
                       /* stay on results — Review needs a completed PrepTest section session */
                     })
                 }}
-                className="inline-flex h-10 items-center gap-2 rounded-[16px] bg-[#df1c41] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#df1c41]/90"
+                className="inline-flex h-10 items-center gap-2 rounded-[16px] bg-[#df1c41] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[color-mix(in_srgb,#df1c41_90%,black)]"
               >
                 <FigmaIcon name="folder" className="size-4 shrink-0 text-white" aria-hidden />
                 Review
@@ -727,7 +727,7 @@ function AnalyticsPrepTestResultsPage() {
               bookmarkedIds,
             }).length === 0,
         ) ? (
-          <p className="rounded-[16px] border border-dashed border-[#dfe1e7] bg-white px-6 py-8 text-center text-sm text-[#666d80]">
+          <p className="rounded-[16px] border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-8 text-center text-sm text-[var(--greyscale-500)]">
             {bookmarkedOnly
               ? "No bookmarked questions in this PrepTest. Bookmark a question to see it here."
               : questionFilter === "Incorrect only"

@@ -59,7 +59,7 @@ function StudentAppShellLayout() {
         <div
           className={cn(
             "flex h-svh min-h-0 overflow-hidden",
-            "flex h-svh min-h-0 overflow-hidden bg-[var(--primary-0)]",
+            immersive ? "bg-[var(--background)]" : "bg-[var(--primary-0)]",
           )}
         >
           {immersive ? null : freePlanShell ? (

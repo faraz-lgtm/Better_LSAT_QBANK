@@ -91,7 +91,7 @@ function PrioritiesTab() {
   if (error) return <p className="text-sm text-red-600">{error}</p>
   if (rows.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-6 text-sm text-[#666d80]">
+      <p className="rounded-xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-6 text-sm text-[var(--greyscale-500)]">
         No typed question attempts yet. Priorities appear once answers are linked to question types.
       </p>
     )
@@ -100,11 +100,11 @@ function PrioritiesTab() {
   return (
     <ul className="space-y-2">
       {rows.map((r) => (
-        <li key={r.questionTypeId} className="rounded-[12px] border border-[#dfe1e7] bg-white p-3 shadow-sm">
+        <li key={r.questionTypeId} className="rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-3 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <p className="text-[11px] font-semibold uppercase text-[#666d80]">{r.sectionType ?? "—"}</p>
-              <p className="text-sm font-semibold text-[#082c6b]">{r.name}</p>
+              <p className="text-[11px] font-semibold uppercase text-[var(--greyscale-500)]">{r.sectionType ?? "—"}</p>
+              <p className="text-sm font-semibold text-[var(--field-focus)]">{r.name}</p>
             </div>
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
@@ -123,26 +123,26 @@ function PrioritiesTab() {
                 : `${r.priorityTier ?? r.priorityLevel} priority`}
             </span>
           </div>
-          <div className="mt-2 flex flex-wrap gap-3 text-xs text-[#666d80]">
+          <div className="mt-2 flex flex-wrap gap-3 text-xs text-[var(--greyscale-500)]">
             <span>
               Accuracy:{" "}
-              <strong className="text-[#082c6b]">
+              <strong className="text-[var(--field-focus)]">
                 {r.accuracyPct != null ? `${r.accuracyPct}%` : "Not enough data"}
               </strong>
             </span>
             {r.unlocked && r.goalAccuracy != null ? (
               <span>
-                Goal: <strong className="text-[#082c6b]">{r.goalAccuracy}%</strong>
+                Goal: <strong className="text-[var(--field-focus)]">{r.goalAccuracy}%</strong>
               </span>
             ) : null}
             {r.unlocked && r.extraCorrectNeededPerTest != null && r.extraCorrectNeededPerTest > 0 ? (
               <span>
-                Need <strong className="text-[#082c6b]">+{r.extraCorrectNeededPerTest}</strong> correct /
+                Need <strong className="text-[var(--field-focus)]">+{r.extraCorrectNeededPerTest}</strong> correct /
                 test
               </span>
             ) : null}
             <span>
-              Attempts: <strong className="text-[#082c6b]">{r.attemptCount}</strong>
+              Attempts: <strong className="text-[var(--field-focus)]">{r.attemptCount}</strong>
             </span>
           </div>
         </li>
@@ -190,25 +190,25 @@ function HistoryTab() {
   if (error) return <p className="text-sm text-red-600">{error}</p>
   if (sessions.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-6 text-sm text-[#666d80]">
+      <p className="rounded-xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-6 text-sm text-[var(--greyscale-500)]">
         No sessions yet. Completed drills, sections, and PrepTests will show up here.
       </p>
     )
   }
 
   return (
-    <ul className="divide-y divide-[#dfe1e7] rounded-[12px] border border-[#dfe1e7] bg-white shadow-sm">
+    <ul className="divide-y divide-[var(--greyscale-100)] rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-sm">
       {sessions.map((s) => (
         <li
           key={s.id}
           className={`flex flex-wrap items-center justify-between gap-2 px-3 py-2 ${s.excluded ? "opacity-50" : ""}`}
         >
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase text-[#666d80]">{s.kind}</p>
-            <p className="truncate text-sm font-medium text-[#082c6b]">
+            <p className="text-[11px] font-semibold uppercase text-[var(--greyscale-500)]">{s.kind}</p>
+            <p className="truncate text-sm font-medium text-[var(--field-focus)]">
               {s.prepTestTitle ?? s.sectionTitle ?? "Practice session"}
             </p>
-            <p className="text-[11px] text-[#666d80]">
+            <p className="text-[11px] text-[var(--greyscale-500)]">
               {formatShortDate(s.startedAt)}
               {s.completedAt ? ` · Completed ${formatShortDate(s.completedAt)}` : " · In progress"}
               {s.scaledScore != null ? ` · Scaled ${s.scaledScore}` : s.rawScore != null ? ` · Raw ${s.rawScore}` : ""}
@@ -216,12 +216,12 @@ function HistoryTab() {
           </div>
           <button
             type="button"
-            className="flex shrink-0 items-center gap-1 rounded-[8px] border border-[#dfe1e7] px-2.5 py-1 text-xs text-[#082c6b] hover:bg-[#f6f8fa] disabled:opacity-50"
+            className="flex shrink-0 items-center gap-1 rounded-[8px] border border-[var(--greyscale-100)] px-2.5 py-1 text-xs text-[var(--field-focus)] hover:bg-[var(--greyscale-25)] disabled:opacity-50"
             disabled={pendingId === s.id || !practiceApi}
             onClick={() => void toggleBookmark(s)}
             aria-pressed={s.bookmarked}
           >
-            <Bookmark className={`size-4 ${s.bookmarked ? "fill-[#0d47a1] text-[#0d47a1]" : ""}`} aria-hidden />
+            <Bookmark className={`size-4 ${s.bookmarked ? "fill-[var(--primary)] text-[var(--primary)]" : ""}`} aria-hidden />
             {s.bookmarked ? "Saved" : "Bookmark"}
           </button>
         </li>
@@ -346,9 +346,9 @@ function OverviewTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <section className="flex w-full flex-col gap-3 rounded-[14px] border border-[#dfe1e7] bg-white p-4">
+      <section className="flex w-full flex-col gap-3 rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="m-0 text-base font-bold leading-[1.3] text-[#062357]">Overview</h2>
+          <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">Overview</h2>
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} className="shrink-0" />
         </div>
 
@@ -364,21 +364,21 @@ function OverviewTab() {
         </div>
       </section>
 
-      <section className="rounded-[14px] border border-[#dfe1e7] bg-white p-4">
-        <div className="flex flex-col gap-3 rounded-[12px] bg-[#f6f8fa] p-4">
+      <section className="rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4">
+        <div className="flex flex-col gap-3 rounded-[12px] bg-[var(--greyscale-25)] p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xs font-semibold leading-[1.4] tracking-[0.06em] text-[#062357]">
+            <h2 className="text-xs font-semibold leading-[1.4] tracking-[0.06em] text-[var(--color-student-heading)]">
               PREPTESTS SCORE PROGRESS
             </h2>
             <ScoreProgressTabs value={scoreTab} onChange={setScoreTab} />
           </div>
           <ScoreProgressChart points={trajectory} tab={scoreTab} />
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-4 border-t border-[#e5e7eb] pt-3">
-            <span className="flex items-center gap-1.5 text-xs leading-[1.4] tracking-[0.02em] text-[#666d80]">
-              <span className="size-2.5 rounded-full bg-[#0d47a1]" aria-hidden />
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-4 border-t border-[var(--greyscale-100)] pt-3">
+            <span className="flex items-center gap-1.5 text-xs leading-[1.4] tracking-[0.02em] text-[var(--greyscale-500)]">
+              <span className="size-2.5 rounded-full bg-[var(--primary)]" aria-hidden />
               Regular Score
             </span>
-            <span className="flex items-center gap-1.5 text-xs leading-[1.4] tracking-[0.02em] text-[#666d80]">
+            <span className="flex items-center gap-1.5 text-xs leading-[1.4] tracking-[0.02em] text-[var(--greyscale-500)]">
               <span className="size-2.5 rounded-full bg-[#ff6f00]" aria-hidden />
               Blind Review
             </span>
@@ -403,7 +403,7 @@ function OverviewTab() {
       <AnalyticsPrepTestHistory
         title="Section History"
         emptyNoun="sections"
-        brBarColor="#df1c41"
+        brBarColor="var(--destructive)"
         visibleEntries={visibleSectionHistory}
         bookmarkedOnly={sectionBookmarkedOnly}
         onBookmarkedOnlyChange={setSectionBookmarkedOnly}
@@ -431,14 +431,14 @@ function OverviewTab() {
       <section className="flex flex-col gap-3">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <h2 className="m-0 text-base font-bold leading-[1.3] text-[#062357]">Reports overview</h2>
-            <p className="mt-0.5 text-xs text-[#666d80]">
+            <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">Reports overview</h2>
+            <p className="mt-0.5 text-xs text-[var(--greyscale-500)]">
               Question-type accuracy by section — open Review or Drill from a row to practice weak areas.
             </p>
           </div>
         </div>
         {sections.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-6 text-sm text-[#666d80]">
+          <p className="rounded-xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-6 text-sm text-[var(--greyscale-500)]">
             Question-type reports appear once you answer questions linked to LR/RC types.
           </p>
         ) : (

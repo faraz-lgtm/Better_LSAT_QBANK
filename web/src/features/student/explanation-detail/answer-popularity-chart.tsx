@@ -34,13 +34,13 @@ function AnswerPopularityBar({
       <p
         className={cn(
           "m-0 pb-2 text-base font-bold leading-6 tabular-nums",
-          highlight ? "text-[#0d47a1]" : "text-[#666d80]",
+          highlight ? "text-[var(--primary)]" : "text-[var(--greyscale-500)]",
         )}
       >
         {pct}%
       </p>
       <div
-        className="relative flex w-16 max-w-[64px] items-end justify-center overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-[rgba(243,247,255,0.6)]"
+        className="relative flex w-16 max-w-[64px] items-end justify-center overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[rgba(243,247,255,0.6)]"
         style={{ height: `${trackHeight}px` }}
       >
         {barHeight > 0 ? (
@@ -48,7 +48,7 @@ function AnswerPopularityBar({
             className={cn(
               "relative w-[62px] shrink-0 rounded-t-[10px]",
               highlight &&
-                "bg-gradient-to-t from-[#093377] to-[#0d47a1] shadow-[0px_-6px_18px_0px_rgba(11,188,201,0.6)]",
+                "bg-gradient-to-t from-[var(--primary-600)] to-[var(--primary)] shadow-[0px_-6px_18px_0px_rgba(11,188,201,0.6)]",
             )}
             style={
               highlight
@@ -58,8 +58,8 @@ function AnswerPopularityBar({
           />
         ) : null}
         {highlight ? (
-          <span className="absolute left-[21px] top-2 flex size-5 items-center justify-center rounded-full bg-white shadow-[0px_1px_1.5px_rgba(0,0,0,0.1),0px_1px_1px_rgba(0,0,0,0.1)]">
-            <Check className="size-3 text-[#0d47a1]" strokeWidth={3} aria-hidden />
+          <span className="absolute left-[21px] top-2 flex size-5 items-center justify-center rounded-full bg-[var(--greyscale-0)] shadow-[0px_1px_1.5px_rgba(0,0,0,0.1),0px_1px_1px_rgba(0,0,0,0.1)]">
+            <Check className="size-3 text-[var(--primary)]" strokeWidth={3} aria-hidden />
           </span>
         ) : null}
       </div>
@@ -67,8 +67,8 @@ function AnswerPopularityBar({
         className={cn(
           "mt-3 flex size-9 items-center justify-center rounded-xl text-sm font-semibold leading-[21px]",
           highlight
-            ? "border border-[#0d47a1] bg-[#0d47a1] text-white shadow-[0px_4px_3px_rgba(11,188,201,0.3),0px_2px_2px_rgba(11,188,201,0.3)]"
-            : "border border-[#dfe1e7] bg-white text-[#666d80]",
+            ? "border border-[var(--primary)] bg-[var(--primary)] text-white shadow-[0px_4px_3px_rgba(11,188,201,0.3),0px_2px_2px_rgba(11,188,201,0.3)]"
+            : "border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--greyscale-500)]",
         )}
       >
         {letter}
