@@ -1,7 +1,14 @@
 import type { ReactNode } from "react"
 import { BookOpen, Check, Clock, FileText, Users } from "lucide-react"
 
+import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
+import {
+  formatMmSs,
+  formatYourTimeAgainstTarget,
+  targetTimeForDifficulty,
+  difficultyLabelFromLevel,
+} from "@/features/student/practice-session/practice-results-ui"
 import { cn } from "@/lib/utils"
 
 type ExplanationAnalyticsTabPanelProps = {
@@ -240,7 +247,39 @@ function TagGroup({
   )
 }
 
+function TimingStat({
+  targetTime,
+  yourTime,
+  yourTimeNote,
+}: {
+  targetTime: string
+  yourTime: string
+  yourTimeNote: string
+}) {
+  return (
+    <div className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-5">
+      <p className="m-0 text-[13px] font-semibold uppercase tracking-[0.03em] text-[var(--greyscale-500)]">
+        Timing
+      </p>
+      <div className="mt-4 flex flex-col gap-1.5">
+        <div className="flex flex-wrap gap-1 text-sm leading-normal tracking-[0.02em]">
+          <span className="font-normal text-[var(--greyscale-500)]">Target time:</span>
+          <span className="font-semibold text-[var(--greyscale-500)]">{targetTime}</span>
+        </div>
+        <div className="flex flex-wrap gap-1 text-sm leading-normal tracking-[0.02em]">
+          <span className="font-normal text-[var(--greyscale-500)]">Your time:</span>
+          <span className="font-semibold text-[var(--primary)]">{yourTime}</span>
+          {yourTimeNote ? (
+            <span className="font-semibold text-[var(--greyscale-500)]">{yourTimeNote}</span>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: ExplanationAnalyticsTabPanelProps) {
+  const { scaleFactor } = useAccommodations()
   const attemptCount = analytics.history.length
   const popularityRows =
     analytics.answerPopularity.length > 0
@@ -251,6 +290,11 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
           pct: 0,
           ...(correctChoiceLetter === letter ? { highlight: true } : {}),
         }))
+
+  const difficultyLevel = analytics.questionDifficulty.filled
+  const targetSec = Math.round(analytics.targetTimeSeconds * scaleFactor)
+  const targetTime = targetTimeForDifficulty(difficultyLabelFromLevel(difficultyLevel), scaleFactor)
+  const { yourTime, yourTimeNote } = formatYourTimeAgainstTarget(targetSec, analytics.yourTimeSeconds)
 
   return (
     <div className="flex flex-col gap-6">
@@ -287,6 +331,7 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
               />
             ) : null}
           </div>
+          <TimingStat targetTime={targetTime} yourTime={yourTime} yourTimeNote={yourTimeNote} />
           <ScoreBandCard
             headline={analytics.scoreBand.headline}
             range={analytics.scoreBand.range}
@@ -374,7 +419,13 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
                           <div className="mt-2.5 flex items-center justify-between gap-4">
                             <div className="flex items-center gap-1.5 text-xs leading-[18px] text-[var(--greyscale-500)]">
                               <Clock className="size-3.5 shrink-0" aria-hidden />
-                              <span className="font-mono tabular-nums">{h.timeRange}</span>
+                              <span className="font-mono tabular-nums">
+                                Your time {h.timeRange}
+                                <span className="text-[var(--greyscale-400)]">
+                                  {" "}
+                                  · Target {formatMmSs(targetSec)}
+                                </span>
+                              </span>
                             </div>
                             <p className="m-0 text-xs leading-[18px] text-[var(--greyscale-500)]">{h.dateLabel}</p>
                           </div>

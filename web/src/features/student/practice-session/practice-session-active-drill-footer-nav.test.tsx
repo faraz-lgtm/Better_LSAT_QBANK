@@ -131,6 +131,33 @@ describe("PracticeSessionActiveDrillFooterNav", () => {
     expect(document.querySelectorAll("[data-review-nav-outcome='unanswered']")).toHaveLength(1)
   })
 
+  it("shows target time on question list hover when difficulty is present", () => {
+    render(
+      <PracticeSessionActiveDrillFooterNav
+        questions={[
+          { id: "q1", difficulty: 3 },
+          { id: "q2", difficulty: 5 },
+        ]}
+        safeIndex={1}
+        answersByQuestion={{}}
+        isFlagged={() => false}
+        variant="active-drill"
+        onSelectQuestion={() => undefined}
+        onPrev={() => undefined}
+        onNext={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole("button", { name: /Question 1.*Target time: 01:30/ })).toHaveAttribute(
+      "title",
+      "Target time: 01:30",
+    )
+    expect(screen.getByRole("button", { name: /Question 2.*Target time: 01:45/ })).toHaveAttribute(
+      "title",
+      "Target time: 01:45",
+    )
+  })
+
   it("left-aligns the prev / pills / next cluster", () => {
     render(
       <PracticeSessionActiveDrillFooterNav

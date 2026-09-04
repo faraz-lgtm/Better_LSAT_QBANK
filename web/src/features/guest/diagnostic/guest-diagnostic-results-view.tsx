@@ -21,6 +21,7 @@ import {
 import { StudentMain } from '@/features/student/components/student-main'
 import { createDiagnosticApi, type MiniDiagnosticExplanation } from '@/lib/api/diagnostic'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { formatMmSs } from '@/features/student/practice-session/practice-results-ui'
 import { cn } from '@/lib/utils'
 import type { GuestDiagnosticIntentId } from '@/features/guest/diagnostic/guest-diagnostic-intent-types'
 
@@ -1252,7 +1253,16 @@ function CompactReviewRow({
 
   return (
     <div className="border-t border-[var(--greyscale-100)] first:border-t-0">
-      <div className="flex items-center gap-3 px-6 py-3.5">
+      <div
+        className="flex items-center gap-3 px-6 py-3.5"
+        title={
+          meta?.targetTimeSeconds != null
+            ? outcome.timeSpentSeconds != null
+              ? `Target time: ${formatMmSs(meta.targetTimeSeconds)} · Your time: ${formatMmSs(outcome.timeSpentSeconds)}`
+              : `Target time: ${formatMmSs(meta.targetTimeSeconds)}`
+            : undefined
+        }
+      >
         {/* Wrong indicator */}
         <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[#fff0f3]">
           <X className="size-3 text-[#df1c41]" strokeWidth={3} />

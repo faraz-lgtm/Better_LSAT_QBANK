@@ -18,7 +18,12 @@ import { isOfficialLayout, type PracticeSessionVariant } from "@/features/studen
 import { cn } from "@/lib/utils"
 
 type PracticeSessionActiveDrillFooterNavProps = {
-  questions: ReadonlyArray<{ id: string; passage?: { id: string } | null; sourceGroupId?: string | null }>
+  questions: ReadonlyArray<{
+    id: string
+    passage?: { id: string } | null
+    sourceGroupId?: string | null
+    difficulty?: number | null
+  }>
   safeIndex: number
   answersByQuestion: Readonly<Record<string, unknown>>
   isFlagged: (questionId: string) => boolean

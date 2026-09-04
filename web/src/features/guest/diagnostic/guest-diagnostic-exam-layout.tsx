@@ -66,7 +66,7 @@ import {
   REVIEW_SHELL_CLASS,
   REVIEW_SIDE_PANEL_LAYOUT_FULL_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
-import { difficultyLabelFromLevel } from "@/features/student/practice-session/practice-results-ui"
+import { difficultyLabelFromLevel, targetTimeSecondsForDifficulty } from "@/features/student/practice-session/practice-results-ui"
 import type { DrillQuestion } from "@/features/student/drills/drill-types"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
 import { resolveAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
@@ -175,8 +175,9 @@ function difficultyTone(level: number): "green" | "teal" | "red" {
 
 function buildDiagnosticAnalyticsSeed(
   question: DrillQuestion,
-  meta: { difficulty: number; questionType: string } | null,
+  meta: { difficulty: number; questionType: string; targetTimeSeconds?: number } | null,
   selectedAnswer: string | null | undefined,
+  yourTimeSeconds?: number | null,
 ): ExplanationQuestionDetailView["analytics"] {
   const diffLevel = meta?.difficulty ?? 3
   const label = difficultyLabelFromLevel(diffLevel)
@@ -184,6 +185,10 @@ function buildDiagnosticAnalyticsSeed(
   const answerPopularity = resolveAnswerPopularityRows([], question.choices, correctChoiceId)
   const letter = selectedAnswer?.trim().toUpperCase().slice(0, 1) ?? ""
   const questionLabel = label === "Hardest" ? "Hard" : label
+  const targetTimeSeconds =
+    typeof meta?.targetTimeSeconds === "number" && Number.isFinite(meta.targetTimeSeconds)
+      ? meta.targetTimeSeconds
+      : targetTimeSecondsForDifficulty(label)
 
   return {
     questionDifficulty: {
@@ -202,6 +207,8 @@ function buildDiagnosticAnalyticsSeed(
     answerPopularity,
     answerPopularityTotal: 0,
     userSelectedLetter: /^[A-E]$/.test(letter) ? letter : null,
+    targetTimeSeconds,
+    yourTimeSeconds: yourTimeSeconds ?? null,
     questionStemTags: meta?.questionType ? [meta.questionType] : [],
     passageTags: [],
     history: [],
@@ -306,10 +313,12 @@ function GuestDiagnosticExamLayout({
   const showInsightsPanel = isPostResultsMode && reviewSidePanel === "insights"
   const analyticsSeed = useMemo(() => {
     if (!current) return null
+    const spent = timeSpentByQuestionRef.current[current.id]
     return buildDiagnosticAnalyticsSeed(
       current,
       questionMeta,
       (isReviewMode ? scoredAnswer : currentAnswer)?.selectedAnswer,
+      typeof spent === "number" ? Math.round(spent) : null,
     )
   }, [current, questionMeta, isReviewMode, scoredAnswer, currentAnswer])
 

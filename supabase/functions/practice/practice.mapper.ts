@@ -29,6 +29,8 @@ export type DrillQuestionPayload = {
   passage: DrillPassage | null
   /** LSAC/RC passage group id — used for nav dividers when passage rows lack source_group_id. */
   sourceGroupId?: string | null
+  /** 1–5 difficulty for target-time pacing; null when unknown. */
+  difficulty?: number | null
   /** Set only when serving completed sessions for review (not during active practice). */
   correctChoiceId?: string | null
 }
@@ -56,6 +58,7 @@ export type DrillQuestionRow = {
   stem_text: string | null
   choices: unknown
   correct_answer?: string | null
+  difficulty?: number | null
   admin_sections: SectionRow | SectionRow[] | null
 }
 
@@ -218,6 +221,11 @@ export function mapDrillQuestionRow(
 
   const includeReviewFields = options?.includeOptionExplanations === true
 
+  const difficulty =
+    typeof row.difficulty === 'number' && Number.isFinite(row.difficulty)
+      ? Math.max(1, Math.min(5, Math.round(row.difficulty)))
+      : null
+
   return {
     id: row.id,
     questionNumber: row.question_number,
@@ -226,6 +234,7 @@ export function mapDrillQuestionRow(
     choices,
     passage,
     sourceGroupId,
+    difficulty,
     correctChoiceId: includeReviewFields
       ? correctChoiceIdFromAnswer(row.correct_answer, choices)
       : undefined,

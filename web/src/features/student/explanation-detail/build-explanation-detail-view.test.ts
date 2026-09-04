@@ -24,6 +24,12 @@ const loc = {
 } satisfies LocatedExplanationQuestion
 
 describe("buildExplanationQuestionDetailView", () => {
+  it("includes difficulty-based target time for Insights timing", () => {
+    const view = buildExplanationQuestionDetailView(loc, null)
+    expect(view.analytics.targetTimeSeconds).toBe(105)
+    expect(view.analytics.yourTimeSeconds).toBeNull()
+  })
+
   it("maps answer popularity from API detail", () => {
     const detail: ExplanationDetailPayload = {
       questionId: "q1",

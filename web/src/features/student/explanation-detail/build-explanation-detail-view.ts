@@ -6,6 +6,7 @@ import { getExplanationQuestionNeighbors } from "@/features/student/explanation-
 import {
   difficultyLabelFromLevel,
   tagsFromTopicName,
+  targetTimeSecondsForDifficulty,
 } from "@/features/student/practice-session/practice-results-ui"
 
 function passageDisplayNumber(loc: LocatedExplanationQuestion): number {
@@ -86,6 +87,7 @@ function buildAnalytics(
   const scoreHeadline = totalResponses > 0 ? "150" : "—"
   const sectionType = detail?.sectionType ?? loc.sec.kind
   const showPassageDifficulty = sectionType === "RC"
+  const targetTimeSeconds = targetTimeSecondsForDifficulty(difficultyLabelFromLevel(diffLevel))
 
   const passageDifficulty = (() => {
     if (!showPassageDifficulty) return undefined
@@ -121,6 +123,8 @@ function buildAnalytics(
       const letter = detail?.userSelectedLetter?.trim().toUpperCase().slice(0, 1) ?? ""
       return /^[A-E]$/.test(letter) ? letter : null
     })(),
+    targetTimeSeconds,
+    yourTimeSeconds: null,
     questionStemTags: tags,
     passageTags: [],
     history: [],
