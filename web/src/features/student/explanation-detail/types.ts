@@ -68,8 +68,7 @@ export type ExplanationQuestionDetailView = {
   correctChoiceId: string
   videos: ExplanationVideoBlock[]
     analytics: {
-      /** Present for LR/LG — RC shows passage difficulty instead. */
-      questionDifficulty?: {
+      questionDifficulty: {
         filled: number
         max: number
         label: string

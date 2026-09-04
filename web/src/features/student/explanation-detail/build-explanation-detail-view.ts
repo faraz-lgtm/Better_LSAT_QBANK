@@ -82,43 +82,34 @@ function buildAnalytics(
   )
 
   const totalResponses = answerPopularity.reduce((sum, row) => sum + row.count, 0)
-  const band = difficultyDisplayLabel(diffLevel) as DifficultyBand
+  const questionBand = difficultyDisplayLabel(diffLevel) as DifficultyBand
   const scoreHeadline = totalResponses > 0 ? "150" : "—"
   const sectionType = detail?.sectionType ?? loc.sec.kind
-  const isRc = sectionType === "RC"
+  const showPassageDifficulty = sectionType === "RC"
 
-  // RC: passage difficulty only. LR/LG: question difficulty only.
-  const complexity: Pick<
-    ExplanationQuestionDetailView["analytics"],
-    "questionDifficulty" | "passageDifficulty"
-  > = (() => {
-    if (isRc) {
-      // Placeholder until real passage-level difficulty is available from the API.
-      const passageFilled = Math.max(1, Math.min(5, diffLevel + 1))
-      const passageBand = difficultyBandFromFilled(passageFilled)
-      return {
-        passageDifficulty: {
-          filled: passageFilled,
-          max: 5,
-          label: passageBand,
-          caption: passageDifficultyCaption(passageBand),
-          tone: difficultyTone(passageBand),
-        },
-      }
-    }
+  const passageDifficulty = (() => {
+    if (!showPassageDifficulty) return undefined
+    // Placeholder until real passage-level difficulty is available from the API.
+    const passageFilled = Math.max(1, Math.min(5, diffLevel + 1))
+    const passageBand = difficultyBandFromFilled(passageFilled)
     return {
-      questionDifficulty: {
-        filled: diffLevel,
-        max: 5,
-        label: band,
-        caption: questionDifficultyCaption(band),
-        tone: difficultyTone(band),
-      },
+      filled: passageFilled,
+      max: 5,
+      label: passageBand,
+      caption: passageDifficultyCaption(passageBand),
+      tone: difficultyTone(passageBand),
     }
   })()
 
   return {
-    ...complexity,
+    questionDifficulty: {
+      filled: diffLevel,
+      max: 5,
+      label: questionBand,
+      caption: questionDifficultyCaption(questionBand),
+      tone: difficultyTone(questionBand),
+    },
+    ...(passageDifficulty ? { passageDifficulty } : {}),
     scoreBand: {
       headline: scoreHeadline,
       range: totalResponses > 0 ? "75th percentile · 160" : "—",
