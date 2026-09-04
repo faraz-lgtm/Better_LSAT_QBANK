@@ -491,8 +491,8 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
         <ToolbarButton title="Blockquote" active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
           “”
         </ToolbarButton>
-        <ToolbarButton title="Horizontal rule" onClick={() => editor.chain().focus().setHorizontalRule().run()}>
-          HR
+        <ToolbarButton title="Insert divider" onClick={() => editor.chain().focus().setHorizontalRule().run()}>
+          Divider
         </ToolbarButton>
         <ToolbarButton title="Code" active={editor.isActive("code")} onClick={() => editor.chain().focus().toggleCode().run()}>
           {"</>"}
