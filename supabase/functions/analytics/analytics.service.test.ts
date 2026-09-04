@@ -170,7 +170,38 @@ function mockRepo(overrides: Partial<AnalyticsRepository> = {}): AnalyticsReposi
 // --- getOverview ---
 
 Deno.test('getOverview aggregates scaled scores and drill accuracy', async () => {
-  const service = createAnalyticsService({ repository: mockRepo() })
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listCompletedSectionSessions: async () => [
+        {
+          id: 'sec-lr',
+          prep_test_id: 'pt-1',
+          section_id: 'section-lr',
+          started_at: '2025-12-31T00:10:00Z',
+          completed_at: '2025-12-31T00:40:00Z',
+          raw_score: 25,
+          metadata: {
+            sectionType: 'LR',
+            questionIds: Array.from({ length: 25 }, (_, i) => `lr${i}`),
+          },
+          admin_sections: { is_experimental: false, section_type: 'LR' as const },
+        },
+        {
+          id: 'sec-rc',
+          prep_test_id: 'pt-1',
+          section_id: 'section-rc',
+          started_at: '2025-12-31T00:45:00Z',
+          completed_at: '2025-12-31T01:15:00Z',
+          raw_score: 26,
+          metadata: {
+            sectionType: 'RC',
+            questionIds: Array.from({ length: 27 }, (_, i) => `rc${i}`),
+          },
+          admin_sections: { is_experimental: false, section_type: 'RC' as const },
+        },
+      ],
+    }),
+  })
   const o = await service.getOverview('user-1')
   assertEquals(o.bestScaledScore, 170)
   assertEquals(o.averageScaledScore, 167.5)
@@ -218,7 +249,7 @@ Deno.test('getOverview returns null drill accuracy when zero drill events', asyn
   assertEquals(o.totalDrillQuestionsAnswered, 0)
 })
 
-Deno.test('getOverview uses section session answers for LR/RC misses', async () => {
+Deno.test('getOverview uses scored section raw_score for LR/RC misses', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({
       listCompletedPreptests: async () => [completedPreptestRow({ id: 's1', prep_test_id: 'pt-1' })],
@@ -227,33 +258,17 @@ Deno.test('getOverview uses section session answers for LR/RC misses', async () 
           id: 'sec-1',
           prep_test_id: 'pt-1',
           section_id: 'section-1',
-          started_at: '2026-01-01T00:00:00Z',
-          completed_at: '2026-01-01T00:30:00Z',
-          raw_score: 20,
-          metadata: { sectionType: 'LR', questionIds: ['q1', 'q2'] },
+          started_at: '2025-12-31T00:10:00Z',
+          completed_at: '2025-12-31T00:40:00Z',
+          raw_score: 24,
+          metadata: {
+            sectionType: 'LR',
+            questionIds: Array.from({ length: 25 }, (_, i) => `q${i}`),
+          },
+          admin_sections: { is_experimental: false, section_type: 'LR' as const },
         },
       ],
-      listAnswerEventsForSessions: async (sessionIds) => {
-        if (sessionIds.includes('sec-1')) {
-          return [
-            answerEvent({
-              practice_session_id: 'sec-1',
-              question_id: 'q1',
-              is_correct: true,
-              section_type: 'LR',
-              created_at: '2026-01-01T00:00:00Z',
-            }),
-            answerEvent({
-              practice_session_id: 'sec-1',
-              question_id: 'q1',
-              is_correct: false,
-              section_type: 'LR',
-              created_at: '2026-01-01T00:05:00Z',
-            }),
-          ]
-        }
-        return []
-      },
+      listAnswerEventsForSessions: async () => [],
     }),
   })
   const o = await service.getOverview('user-1')
@@ -369,6 +384,7 @@ Deno.test('getOverview falls back to section sessions for LR/RC when preptest ev
           completed_at: '2026-01-01T00:30:00Z',
           raw_score: 18,
           metadata: { sectionType: 'LR', questionIds: Array.from({ length: 26 }, (_, i) => `q${i}`) },
+          admin_sections: null,
         },
       ],
       listAnswerEventsForSessions: async () => [],
@@ -376,6 +392,119 @@ Deno.test('getOverview falls back to section sessions for LR/RC when preptest ev
   })
   const o = await service.getOverview('user-1')
   assertEquals(o.averageLrMissedPerPrepTest, 8)
+})
+
+Deno.test('getOverview Average LR uses one scored LR section (never combined ~51)', async () => {
+  const lrScoredIds = Array.from({ length: 25 }, (_, i) => `lr-s-${i}`)
+  const lrExpIds = Array.from({ length: 26 }, (_, i) => `lr-e-${i}`)
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listCompletedPreptests: async () => [completedPreptestRow({ id: 'pt-sess', prep_test_id: 'pt-1' })],
+      listCompletedSectionSessions: async () => [
+        {
+          id: 'sec-lr-scored',
+          prep_test_id: 'pt-1',
+          section_id: 'section-lr-1',
+          started_at: '2025-12-31T00:10:00Z',
+          completed_at: '2025-12-31T00:45:00Z',
+          raw_score: 20,
+          metadata: { sectionType: 'LR', questionIds: lrScoredIds },
+          admin_sections: { is_experimental: false, section_type: 'LR' as const },
+        },
+        {
+          id: 'sec-lr-exp',
+          prep_test_id: 'pt-1',
+          section_id: 'section-lr-exp',
+          started_at: '2025-12-31T01:00:00Z',
+          completed_at: '2025-12-31T01:35:00Z',
+          raw_score: 0,
+          metadata: { sectionType: 'LR', questionIds: lrExpIds, isExperimental: true },
+          admin_sections: { is_experimental: true, section_type: 'LR' as const },
+        },
+        {
+          id: 'sec-rc',
+          prep_test_id: 'pt-1',
+          section_id: 'section-rc',
+          started_at: '2025-12-31T02:00:00Z',
+          completed_at: '2025-12-31T02:35:00Z',
+          raw_score: 24,
+          metadata: {
+            sectionType: 'RC',
+            questionIds: Array.from({ length: 27 }, (_, i) => `rc-${i}`),
+          },
+          admin_sections: { is_experimental: false, section_type: 'RC' as const },
+        },
+      ],
+      // Parent PrepTest events still include experimental LR misses — must be ignored.
+      listAnswerEventsForSessions: async () => [
+        ...lrScoredIds.map((question_id, i) =>
+          answerEvent({
+            practice_session_id: 'pt-sess',
+            question_id,
+            is_correct: i < 20,
+            section_type: 'LR',
+            created_at: `2025-12-31T00:${String(10 + i).padStart(2, '0')}:00Z`,
+          }),
+        ),
+        ...lrExpIds.map((question_id, i) =>
+          answerEvent({
+            practice_session_id: 'pt-sess',
+            question_id,
+            is_correct: false,
+            section_type: 'LR',
+            created_at: `2025-12-31T01:${String(10 + (i % 50)).padStart(2, '0')}:00Z`,
+          }),
+        ),
+      ],
+    }),
+  })
+  const o = await service.getOverview('user-1')
+  // Scored LR 20/25 → 5 missed; must not sum experimental (26) into ~31 or ~51.
+  assertEquals(o.averageLrMissedPerPrepTest, 5)
+  assertEquals(o.averageRcMissedPerPrepTest, 3)
+})
+
+Deno.test('getOverview Average LR caps at one LawHub section when two unlabeled LRs exist', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listCompletedPreptests: async () => [completedPreptestRow({ id: 'pt-sess', prep_test_id: 'pt-1' })],
+      listCompletedSectionSessions: async () => [
+        {
+          id: 'sec-lr-a',
+          prep_test_id: 'pt-1',
+          section_id: 'section-lr-a',
+          started_at: '2025-12-31T00:10:00Z',
+          completed_at: '2025-12-31T00:45:00Z',
+          raw_score: 19,
+          metadata: {
+            sectionType: 'LR',
+            questionIds: Array.from({ length: 25 }, (_, i) => `a-${i}`),
+          },
+          admin_sections: { is_experimental: false, section_type: 'LR' as const },
+        },
+        {
+          id: 'sec-lr-b',
+          prep_test_id: 'pt-1',
+          section_id: 'section-lr-b',
+          started_at: '2025-12-31T01:00:00Z',
+          completed_at: '2025-12-31T01:35:00Z',
+          raw_score: 0,
+          metadata: {
+            sectionType: 'LR',
+            questionIds: Array.from({ length: 26 }, (_, i) => `b-${i}`),
+          },
+          admin_sections: { is_experimental: false, section_type: 'LR' as const },
+        },
+      ],
+      listAnswerEventsForSessions: async () => [],
+    }),
+  })
+  const o = await service.getOverview('user-1')
+  assertEquals(o.averageLrMissedPerPrepTest, 6)
+  assertEquals(
+    (o.averageLrMissedPerPrepTest ?? 0) <= 26,
+    true,
+  )
 })
 
 // --- getTrajectory ---
@@ -1039,7 +1168,7 @@ Deno.test('getPrepTestSessionDetail separates at-completion vs blind review corr
   const service = createAnalyticsService({
     repository: mockRepo({
       getPracticeSession: async () => prepTestSessionFixture(),
-      listSectionSessionsForPrepTest: async () => [{ id: 'sec-s1', section_id: 's1', completed_at: PREP_TEST_COMPLETED_AT, raw_score: 20 }],
+      listSectionSessionsForPrepTest: async () => [{ id: 'sec-s1', section_id: 's1', started_at: '2026-01-01T10:00:00Z', completed_at: PREP_TEST_COMPLETED_AT, raw_score: 20 }],
       listAnswerEventsForSessions: async () => [
         {
           practice_session_id: 'sec-s1',
@@ -1072,7 +1201,7 @@ Deno.test('getPrepTestSessionDetail counts correct from at-completion only', asy
   const service = createAnalyticsService({
     repository: mockRepo({
       getPracticeSession: async () => prepTestSessionFixture(),
-      listSectionSessionsForPrepTest: async () => [{ id: 'sec-s1', section_id: 's1', completed_at: PREP_TEST_COMPLETED_AT, raw_score: 20 }],
+      listSectionSessionsForPrepTest: async () => [{ id: 'sec-s1', section_id: 's1', started_at: '2026-01-01T10:00:00Z', completed_at: PREP_TEST_COMPLETED_AT, raw_score: 20 }],
       listAnswerEventsForSessions: async () => [
         {
           practice_session_id: 'sec-s1',
@@ -1119,8 +1248,20 @@ Deno.test('getPrepTestSessionDetail excludes experimental sections from score to
     repository: mockRepo({
       getPracticeSession: async () => prepTestSessionFixture(),
       listSectionSessionsForPrepTest: async () => [
-        { id: 'sec-s1', section_id: 's1', completed_at: PREP_TEST_COMPLETED_AT, raw_score: 1 },
-        { id: 'sec-s-exp', section_id: 's-exp', completed_at: PREP_TEST_COMPLETED_AT, raw_score: 1 },
+        {
+          id: 'sec-s1',
+          section_id: 's1',
+          started_at: '2026-01-01T10:00:00Z',
+          completed_at: PREP_TEST_COMPLETED_AT,
+          raw_score: 1,
+        },
+        {
+          id: 'sec-s-exp',
+          section_id: 's-exp',
+          started_at: '2026-01-01T11:00:00Z',
+          completed_at: PREP_TEST_COMPLETED_AT,
+          raw_score: 1,
+        },
       ],
       listAnswerEventsForSessions: async () => [
         {
@@ -1163,7 +1304,7 @@ Deno.test('getPrepTestSessionDetail resolves latest completed session by prep te
     repository: mockRepo({
       getPracticeSession: async () => null,
       resolveCompletedPrepTestSession: async () => prepTestSessionFixture({ id: 'pt-session-1', prep_test_id: 'pt-900' }),
-      listSectionSessionsForPrepTest: async () => [{ id: 'sec-s1', section_id: 's1', completed_at: PREP_TEST_COMPLETED_AT, raw_score: 20 }],
+      listSectionSessionsForPrepTest: async () => [{ id: 'sec-s1', section_id: 's1', started_at: '2026-01-01T10:00:00Z', completed_at: PREP_TEST_COMPLETED_AT, raw_score: 20 }],
       listPrepTestQuestionsWithMeta: async () => [],
     }),
   })
