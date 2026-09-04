@@ -33,6 +33,16 @@ Deno.test('mapDrillQuestionRow omits review fields during active practice', () =
   assertEquals(out.choices.every((c) => c.explanationHtml == null), true)
 })
 
+Deno.test('mapDrillQuestionRow includes difficulty for target-time pacing', () => {
+  const out = mapDrillQuestionRow({ ...baseRow, difficulty: 4 }, { includeOptionExplanations: false })
+  assertEquals(out.difficulty, 4)
+})
+
+Deno.test('mapDrillQuestionRow clamps difficulty to 1–5', () => {
+  assertEquals(mapDrillQuestionRow({ ...baseRow, difficulty: 0 }, {}).difficulty, 1)
+  assertEquals(mapDrillQuestionRow({ ...baseRow, difficulty: 9 }, {}).difficulty, 5)
+})
+
 Deno.test('mapDrillQuestionRow includes option explanations and correct answer when review', () => {
   const out = mapDrillQuestionRow(baseRow, { includeOptionExplanations: true })
   assertEquals(out.correctChoiceId, 'B')

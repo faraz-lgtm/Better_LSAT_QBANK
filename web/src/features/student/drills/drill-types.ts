@@ -38,6 +38,8 @@ export type DrillQuestion = {
   passage: DrillPassage | null
   /** LSAC/RC passage group — preferred for nav passage dividers. */
   sourceGroupId?: string | null
+  /** 1–5 difficulty for target-time pacing; null when unknown. */
+  difficulty?: number | null
   correctChoiceId?: string | null
 }
 

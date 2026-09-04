@@ -4,6 +4,8 @@ import {
   PracticeQuestionResultStatsRow,
   difficultyLabelFromLevel,
   formatMmSs,
+  formatYourTimeAgainstTarget,
+  targetTimeSecondsForDifficulty,
 } from '@/features/student/practice-session/practice-results-ui'
 import { cn } from '@/lib/utils'
 
@@ -30,17 +32,9 @@ function GuestDiagnosticExplanationCard({
   const normalizedSelected = selectedAnswer?.trim().toUpperCase() ?? null
   const correctLetter = explanation.correctAnswer?.trim().toUpperCase() ?? 'A'
   const difficulty = difficultyLabelFromLevel(explanation.difficulty ?? 3)
-  const targetSec = targetTimeSeconds ?? (difficulty === 'Hardest' || difficulty === 'Hard' ? 105 : difficulty === 'Medium' ? 90 : 75)
+  const targetSec = targetTimeSeconds ?? targetTimeSecondsForDifficulty(difficulty)
   const targetTime = formatMmSs(targetSec)
-  const yourTime =
-    yourTimeSeconds != null && yourTimeSeconds >= 0 ? formatMmSs(yourTimeSeconds) : '—'
-  const deltaSec = targetSec - (yourTimeSeconds ?? 0)
-  const yourTimeNote =
-    yourTimeSeconds != null && deltaSec > 0
-      ? `(${formatMmSs(deltaSec)} under)`
-      : yourTimeSeconds != null && deltaSec < 0
-        ? `(${formatMmSs(-deltaSec)} over)`
-        : ''
+  const { yourTime, yourTimeNote } = formatYourTimeAgainstTarget(targetSec, yourTimeSeconds)
   const popularityRows = buildDiagnosticAnswerPopularity(
     explanation.sourceItemId,
     correctLetter,

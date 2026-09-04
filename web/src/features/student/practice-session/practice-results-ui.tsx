@@ -51,6 +51,31 @@ export function targetTimeForDifficulty(label: PracticeDifficultyLabel, scaleFac
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
 }
 
+/** Hover / aria label for question lists — difficulty 1–5 → accommodated target. */
+export function targetTimeHoverLabel(
+  difficultyLevel: number | null | undefined,
+  scaleFactor = 1,
+): string | null {
+  if (difficultyLevel == null || !Number.isFinite(difficultyLevel)) return null
+  const level = Math.max(1, Math.min(5, Math.round(difficultyLevel)))
+  return `Target time: ${targetTimeForDifficulty(difficultyLabelFromLevel(level), scaleFactor)}`
+}
+
+export function formatYourTimeAgainstTarget(
+  targetSec: number,
+  yourTimeSeconds: number | null | undefined,
+): { yourTime: string; yourTimeNote: string } {
+  const yourTime =
+    yourTimeSeconds != null && yourTimeSeconds >= 0 ? formatMmSs(yourTimeSeconds) : "—"
+  if (yourTimeSeconds == null || yourTimeSeconds < 0) {
+    return { yourTime, yourTimeNote: "" }
+  }
+  const deltaSec = targetSec - yourTimeSeconds
+  if (deltaSec > 0) return { yourTime, yourTimeNote: `(${formatMmSs(deltaSec)} under)` }
+  if (deltaSec < 0) return { yourTime, yourTimeNote: `(${formatMmSs(-deltaSec)} over)` }
+  return { yourTime, yourTimeNote: "" }
+}
+
 export function tagsFromTopicName(topicName: string): string[] {
   const t = topicName.trim()
   if (!t || t === "—") return []

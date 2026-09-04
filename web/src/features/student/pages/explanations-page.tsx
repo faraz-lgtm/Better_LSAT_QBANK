@@ -35,8 +35,10 @@ import { mockExplanationPrepTests } from "@/features/student/lib/mock-explanatio
 import { EXPLANATION_TREE_PL_CLASS } from "@/features/student/pages/explanations-tree-indent"
 import {
   difficultyLabelFromLevel,
+  targetTimeHoverLabel,
   type PracticeDifficultyLabel,
 } from "@/features/student/practice-session/practice-results-ui"
+import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
 import { createExplanationsApi } from "@/lib/api/explanations"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
@@ -280,12 +282,18 @@ const DIFFICULTY_METER_COLORS: Record<PracticeDifficultyLabel, string> = {
 }
 
 function DifficultyMeter({ level }: { level: ExplanationQuestionNode["difficulty"] }) {
+  const { scaleFactor } = useAccommodations()
   const label = difficultyLabelFromLevel(level)
   const activeColor = DIFFICULTY_METER_COLORS[label]
+  const targetHover = targetTimeHoverLabel(level, scaleFactor)
   return (
     <div
       className="flex h-10 w-fit shrink-0 items-center gap-2.5 overflow-visible rounded-[10px] bg-[var(--primary-0)] px-3"
-      title={`Difficulty ${level} of 5`}
+      title={
+        targetHover
+          ? `Difficulty ${level} of 5 · ${targetHover}`
+          : `Difficulty ${level} of 5`
+      }
     >
       <div className="flex shrink-0 items-center gap-1.5">
         {Array.from({ length: 5 }, (_, i) => (

@@ -127,6 +127,7 @@ const drillQuestionSelect = `
   stem_text,
   choices,
   correct_answer,
+  difficulty,
   admin_sections (
     id,
     section_type,

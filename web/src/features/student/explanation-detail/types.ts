@@ -89,6 +89,10 @@ export type ExplanationQuestionDetailView = {
     answerPopularityTotal: number
     /** Current user's latest submitted answer letter (A–E), or null if never answered. */
     userSelectedLetter: string | null
+    /** Difficulty-based target seconds (accommodations applied in the UI). */
+    targetTimeSeconds: number
+    /** Latest attempt dwell time when available; null until per-question timing is tracked. */
+    yourTimeSeconds: number | null
     questionStemTags: string[]
     passageTags: string[]
     history: ExplanationHistoryRow[]

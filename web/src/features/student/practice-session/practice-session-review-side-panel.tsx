@@ -9,7 +9,7 @@ import {
   BLIND_REVIEW_NOTES_SIDEBAR_CLASS,
   REVIEW_SIDEBAR_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
-import { difficultyLabelFromLevel, tagsFromTopicName } from "@/features/student/practice-session/practice-results-ui"
+import { difficultyLabelFromLevel, formatMmSs, tagsFromTopicName, targetTimeSecondsForDifficulty } from "@/features/student/practice-session/practice-results-ui"
 import { createExplanationsApi, type ExplanationDetailPayload } from "@/lib/api/explanations"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -113,6 +113,8 @@ function viewFromDetail(detail: ExplanationDetailPayload): ExplanationQuestionDe
       answerPopularity,
       answerPopularityTotal: totalResponses,
       userSelectedLetter: /^[A-E]$/.test(letter) ? letter : null,
+      targetTimeSeconds: targetTimeSecondsForDifficulty(label),
+      yourTimeSeconds: null,
       questionStemTags: detail.tags?.length ? detail.tags : tagsFromTopicName(detail.topicName),
       passageTags: tagsFromTopicName(detail.passage.title),
       history: [],
@@ -410,6 +412,14 @@ function QuestionHistory({ history }: { history: AnalyticsView["history"] }) {
 }
 
 function ReviewInsightsPanel({ analytics }: { analytics: AnalyticsView }) {
+  const targetTime = formatMmSs(
+    Math.round(analytics.targetTimeSeconds),
+  )
+  const yourTime =
+    analytics.yourTimeSeconds != null && analytics.yourTimeSeconds >= 0
+      ? formatMmSs(analytics.yourTimeSeconds)
+      : "—"
+
   return (
     <div className="flex w-full flex-col gap-6">
       <InsightsSectionCard title="Complexity">
@@ -431,6 +441,21 @@ function ReviewInsightsPanel({ analytics }: { analytics: AnalyticsView }) {
             tone={analytics.passageDifficulty.tone}
           />
         ) : null}
+        <div className="w-full rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--primary-0)] p-5 dark:bg-[var(--greyscale-25)]">
+          <p className="m-0 text-[13px] font-semibold uppercase leading-[19.5px] tracking-[0.325px] text-[var(--greyscale-500)]">
+            Timing
+          </p>
+          <div className="mt-3 flex flex-col gap-1 text-sm leading-normal tracking-[0.02em]">
+            <div className="flex flex-wrap gap-1">
+              <span className="text-[var(--greyscale-500)]">Target time:</span>
+              <span className="font-semibold text-[var(--greyscale-500)]">{targetTime}</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              <span className="text-[var(--greyscale-500)]">Your time:</span>
+              <span className="font-semibold text-[var(--primary)]">{yourTime}</span>
+            </div>
+          </div>
+        </div>
         <ScoreBandCard scoreBand={analytics.scoreBand} />
       </InsightsSectionCard>
 
