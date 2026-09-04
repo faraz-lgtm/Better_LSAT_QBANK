@@ -223,11 +223,6 @@ function parseSectionType(value: unknown): 'LR' | 'RC' | null {
   return value === 'LR' || value === 'RC' ? value : null
 }
 
-function parseSectionDifficulty(value: unknown): 'adaptive' | 'easy' | 'hard' {
-  if (value === 'easy' || value === 'hard' || value === 'adaptive') return value
-  return 'adaptive'
-}
-
 function parseDrillQuestionCount(value: unknown): number | 'unlimited' {
   if (value === 'unlimited' || value === 'Unlimited') return 'unlimited'
   const n = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10)
@@ -289,7 +284,7 @@ export type SectionSessionMetadata = {
   sectionType: 'LR' | 'RC'
   timing: string
   showAnswers: string
-  difficulty?: 'adaptive' | 'easy' | 'hard' | null
+  difficulty?: string | null
   questionIds: string[]
   prepTestTitle?: string | null
   sectionTitle?: string | null
@@ -2153,7 +2148,6 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         sectionId?: unknown
         timing?: unknown
         showAnswers?: unknown
-        difficulty?: unknown
       },
     ): Promise<SectionSessionResponse> {
       const sectionId = typeof body.sectionId === 'string' ? body.sectionId : ''
@@ -2168,17 +2162,9 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         throw new PracticeValidationError('Only LR and RC sections are supported for practice')
       }
 
-      const difficulty = parseSectionDifficulty(body.difficulty)
-      const questionIds = await deps.repository.listQuestionIdsBySectionId(
-        sectionId,
-        difficulty === 'adaptive' ? null : difficulty,
-      )
+      const questionIds = await deps.repository.listQuestionIdsBySectionId(sectionId)
       if (questionIds.length === 0) {
-        throw new PracticeValidationError(
-          difficulty === 'adaptive'
-            ? 'This section has no questions available'
-            : 'No questions in this section match the selected challenge level',
-        )
+        throw new PracticeValidationError('This section has no questions available')
       }
 
       const timing = typeof body.timing === 'string' ? body.timing : '35'
@@ -2192,7 +2178,6 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         sectionType,
         timing,
         showAnswers,
-        difficulty,
         questionIds,
         prepTestTitle,
         sectionTitle,
@@ -2259,7 +2244,6 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         sectionType,
         timing: typeof metaRaw.timing === 'string' ? metaRaw.timing : '35',
         showAnswers: typeof metaRaw.showAnswers === 'string' ? metaRaw.showAnswers : 'end',
-        difficulty: parseSectionDifficulty(metaRaw.difficulty),
         questionIds,
         prepTestTitle: typeof metaRaw.prepTestTitle === 'string' ? metaRaw.prepTestTitle : null,
         sectionTitle: typeof metaRaw.sectionTitle === 'string' ? metaRaw.sectionTitle : null,

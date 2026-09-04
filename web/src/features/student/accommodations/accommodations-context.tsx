@@ -65,16 +65,6 @@ export function buildDrillTimingOptions(scaleFactor: number): { label: string; v
   ]
 }
 
-/** Section config timing dropdown options with accommodation-aware labels. */
-export function buildSectionTimingOptions(scaleFactor: number): { label: string; value: string }[] {
-  const sectionMins = resolveAccommodatedSectionMinutes(scaleFactor)
-  return [
-    { label: "Unlimited", value: "unlimited" },
-    { label: `${sectionMins} minutes`, value: "35" },
-    { label: "Standard", value: "standard" },
-  ]
-}
-
 /** PrepTest hub timing dropdown options with accommodation-aware labels. */
 export function buildPrepTestTimingOptions(scaleFactor: number): { id: string; label: string }[] {
   const sectionMins = resolveAccommodatedSectionMinutes(scaleFactor)

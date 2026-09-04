@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
-import { DrillConfigSelectField } from "@/features/student/drills/drill-config-field"
+import { DrillConfigField, DrillConfigSelectField } from "@/features/student/drills/drill-config-field"
+import { type DrillDifficulty } from "@/features/student/drills/drill-types"
+import { DrillTimingMenu } from "@/features/student/drills/drill-timing-menu"
+import { isValidDrillTiming } from "@/features/student/drills/drill-timing"
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
-import {
-  buildSectionTimingOptions,
-  useAccommodations,
-} from "@/features/student/accommodations/accommodations-context"
+import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
+import { SectionBuildMyOwnFields, SectionBuildMyOwnHeader } from "@/features/student/sections/section-build-my-own"
 import {
   formatSectionPoolLabel,
-  type SectionTiming,
+  type SectionShowAnswers,
   type SectionType,
 } from "@/features/student/sections/section-types"
 import { createPracticeApi } from "@/lib/api/practice"
@@ -22,7 +23,7 @@ const sectionCopy: Record<
   LR: {
     title: "Logical Reasoning",
     countLabel: "16-20 Questions",
-    sectionDescription: "Select passage section",
+    sectionDescription: "Select your focus",
     startLabel: "Start LR Section",
   },
   RC: {
@@ -44,7 +45,6 @@ function PracticeSectionStartCard({ sectionType }: PracticeSectionStartCardProps
   const navigate = useNavigate()
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
   const { scaleFactor } = useAccommodations()
-  const timingOptions = useMemo(() => buildSectionTimingOptions(scaleFactor), [scaleFactor])
   const copy = sectionCopy[sectionType]
 
   const [starting, setStarting] = useState(false)
@@ -52,8 +52,12 @@ function PracticeSectionStartCard({ sectionType }: PracticeSectionStartCardProps
   const [error, setError] = useState<string | null>(null)
   const [poolTotal, setPoolTotal] = useState(0)
   const [sectionId, setSectionId] = useState("")
-  const [timing, setTiming] = useState<SectionTiming>("unlimited")
+  const [timing, setTiming] = useState("unlimited")
+  const [customize, setCustomize] = useState(false)
+  const [showAnswers, setShowAnswers] = useState<SectionShowAnswers>("end")
+  const [difficulty, setDifficulty] = useState<DrillDifficulty>("adaptive")
   const [sectionOptions, setSectionOptions] = useState<{ label: string; value: string }[]>([])
+  const [sectionQuestionCountById, setSectionQuestionCountById] = useState<Record<string, number>>({})
 
   const loadPool = useCallback(async () => {
     setLoadingPool(true)
@@ -68,7 +72,12 @@ function PracticeSectionStartCard({ sectionType }: PracticeSectionStartCardProps
         label: formatSectionPoolLabel(item),
         value: item.id,
       }))
+      const counts: Record<string, number> = {}
+      for (const item of pool.sections) {
+        counts[item.id] = item.questionCount
+      }
       setSectionOptions(options)
+      setSectionQuestionCountById(counts)
       setPoolTotal(pool.total)
       setSectionId((current) => {
         if (current && options.some((o) => o.value === current)) return current
@@ -76,6 +85,7 @@ function PracticeSectionStartCard({ sectionType }: PracticeSectionStartCardProps
       })
     } catch {
       setSectionOptions([])
+      setSectionQuestionCountById({})
       setPoolTotal(0)
       setSectionId("")
     } finally {
@@ -95,7 +105,12 @@ function PracticeSectionStartCard({ sectionType }: PracticeSectionStartCardProps
     setStarting(true)
     setError(null)
     try {
-      const out = await practiceApi.startSection({ sectionId, timing, showAnswers: "end" })
+      const out = await practiceApi.startSection({
+        sectionId,
+        timing: isValidDrillTiming(timing) ? timing : "unlimited",
+        showAnswers: customize ? showAnswers : "end",
+        difficulty: customize ? difficulty : "adaptive",
+      })
       navigate(`/app/practice/sections/session/${out.session.id}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to start section")
@@ -104,21 +119,35 @@ function PracticeSectionStartCard({ sectionType }: PracticeSectionStartCardProps
     }
   }
 
+  const readyCount = sectionQuestionCountById[sectionId] ?? 0
+  const timingQuestionCount = useMemo(() => {
+    const fromSection = sectionQuestionCountById[sectionId]
+    if (fromSection && fromSection > 0) return fromSection
+    return sectionType === "RC" ? 27 : 25
+  }, [sectionQuestionCountById, sectionId, sectionType])
+
   return (
     <section className="flex w-full flex-col gap-[24px] rounded-[20px] border border-[#dfe1e7] bg-white p-[24px]">
-      <div className="flex flex-wrap items-center justify-between gap-[12px]">
-        <div className="flex items-center gap-[12px]">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 items-center gap-[12px]">
           <SectionInitialBadge section={sectionType} variant="compact" />
-          <h2 className="text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#041a44]">
-            {copy.title}
-          </h2>
+          <div>
+            <h2 className="text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#041a44]">
+              {copy.title}
+            </h2>
+            <p className="m-0 text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[#666d80]">
+              {copy.countLabel}
+            </p>
+          </div>
         </div>
-        <p className="text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[#666d80]">
-          {copy.countLabel}
-        </p>
+        <SectionBuildMyOwnHeader
+          customize={customize}
+          onCustomizeChange={setCustomize}
+          readyCount={readyCount}
+        />
       </div>
 
-      <div className="flex flex-col gap-[24px] lg:flex-row">
+      <div className="flex flex-col gap-[24px] overflow-visible lg:flex-row">
         <DrillConfigSelectField
           className={selectCardClassName}
           label="Section"
@@ -128,16 +157,26 @@ function PracticeSectionStartCard({ sectionType }: PracticeSectionStartCardProps
           options={sectionOptions}
           menuVariant="surface"
         />
-        <DrillConfigSelectField
-          className={selectCardClassName}
-          label="Timing"
-          description="Control your Prep pace"
-          value={timing}
-          onChange={(v) => setTiming(v as SectionTiming)}
-          options={timingOptions}
-          menuVariant="surface"
-        />
+        <DrillConfigField className={selectCardClassName} label="Pace" description="Choose your timing.">
+          <DrillTimingMenu
+            value={timing}
+            onChange={setTiming}
+            questionCount={timingQuestionCount}
+            scaleFactor={scaleFactor}
+            ariaLabel="Pace"
+          />
+        </DrillConfigField>
       </div>
+
+      {customize ? (
+        <SectionBuildMyOwnFields
+          showAnswers={showAnswers}
+          onShowAnswersChange={setShowAnswers}
+          difficulty={difficulty}
+          onDifficultyChange={setDifficulty}
+          fieldClassName={selectCardClassName}
+        />
+      ) : null}
 
       {error ? (
         <p className="m-0 text-sm font-medium text-red-600" role="alert">

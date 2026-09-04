@@ -1,4 +1,8 @@
-import type { DrillAnswerState, DrillQuestion } from "@/features/student/drills/drill-types"
+import type {
+  DrillAnswerState,
+  DrillDifficulty,
+  DrillQuestion,
+} from "@/features/student/drills/drill-types"
 
 export type SectionType = "LR" | "RC"
 
@@ -18,13 +22,11 @@ export type SectionPoolItem = {
   timeMinutes: number
 }
 
-export type SectionDifficulty = "adaptive" | "easy" | "hard"
-
 export type SectionSessionMetadata = {
   sectionType: SectionType
   timing: string
   showAnswers: string
-  difficulty?: SectionDifficulty | null
+  difficulty?: string | null
   questionIds: string[]
   prepTestTitle?: string | null
   sectionTitle?: string | null
@@ -87,7 +89,7 @@ export type StartSectionInput = {
   sectionId: string
   timing?: SectionTiming
   showAnswers?: SectionShowAnswers
-  difficulty?: SectionDifficulty
+  difficulty?: DrillDifficulty
 }
 
 export function formatSectionPoolLabel(item: SectionPoolItem): string {

@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { MemoryRouter } from "react-router-dom"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { SectionConfigForm } from "@/features/student/sections/section-config-form"
 
@@ -39,15 +39,15 @@ vi.mock("@/lib/api/practice", () => ({
   }),
 }))
 
-function renderForm() {
+function renderForm(sectionType: "LR" | "RC" = "LR") {
   return render(
     <MemoryRouter>
-      <SectionConfigForm sectionType="LR" />
+      <SectionConfigForm sectionType={sectionType} />
     </MemoryRouter>,
   )
 }
 
-describe("SectionConfigForm timing", () => {
+describe("SectionConfigForm Build My Own", () => {
   it("uses the same Pace menu as drills", async () => {
     const user = userEvent.setup()
     renderForm()
@@ -66,20 +66,12 @@ describe("SectionConfigForm timing", () => {
     expect(screen.getByText("CUSTOM")).toBeInTheDocument()
     expect(screen.queryByText("Control your Prep pace")).not.toBeInTheDocument()
   })
-})
-
-describe("SectionConfigForm Build My Own", () => {
-  beforeEach(() => {
-    startSection.mockClear()
-  })
 
   it("hides Answer Check and Challenge until Build My Own is on", async () => {
     const user = userEvent.setup()
     renderForm()
 
-    expect(screen.getByRole("switch", { name: "Build My Own" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Section" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Pace" })).toBeInTheDocument()
+    expect(screen.getByRole("switch", { name: "Build My Own" })).not.toBeChecked()
     expect(screen.queryByRole("button", { name: "Answer Check" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Challenge" })).not.toBeInTheDocument()
     expect(await screen.findByText("25 new questions ready")).toBeInTheDocument()
@@ -91,7 +83,7 @@ describe("SectionConfigForm Build My Own", () => {
     expect(screen.getByText("Choose your level.")).toBeInTheDocument()
   })
 
-  it("uses After the section in Answer Check and omits Never (blind)", async () => {
+  it("offers After the section and does not offer Never (blind)", async () => {
     const user = userEvent.setup()
     renderForm()
 
@@ -99,43 +91,55 @@ describe("SectionConfigForm Build My Own", () => {
     await user.click(screen.getByRole("button", { name: "Answer Check" }))
     expect(screen.getByRole("option", { name: "After the section" })).toBeInTheDocument()
     expect(screen.getByRole("option", { name: "After each question" })).toBeInTheDocument()
-    expect(screen.queryByRole("option", { name: "Never (blind)" })).not.toBeInTheDocument()
     expect(screen.queryByRole("option", { name: "After the drill" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "Never (blind)" })).not.toBeInTheDocument()
   })
 
-  it("starts with default Answer Check and Challenge when Build My Own is off", async () => {
+  it("starts with default Answer Check and Challenge when the toggle is off", async () => {
     const user = userEvent.setup()
+    startSection.mockClear()
     renderForm()
 
-    const start = await screen.findByRole("button", { name: "Start Section" })
-    await waitFor(() => expect(start).toBeEnabled())
-    await user.click(start)
-    expect(startSection).toHaveBeenCalledWith({
-      sectionId: "sec-1",
-      timing: "unlimited",
-      showAnswers: "end",
-      difficulty: "adaptive",
+    await user.click(await screen.findByRole("button", { name: "Start Section" }))
+    await waitFor(() => {
+      expect(startSection).toHaveBeenCalledWith({
+        sectionId: "sec-1",
+        timing: "unlimited",
+        showAnswers: "end",
+        difficulty: "adaptive",
+      })
     })
   })
 
-  it("passes Answer Check and Challenge into startSection when Build My Own is on", async () => {
+  it("passes Answer Check and Challenge when starting an LR section", async () => {
     const user = userEvent.setup()
-    renderForm()
+    startSection.mockClear()
+    renderForm("LR")
 
     await user.click(screen.getByRole("switch", { name: "Build My Own" }))
     await user.click(screen.getByRole("button", { name: "Answer Check" }))
     await user.click(screen.getByRole("option", { name: "After each question" }))
     await user.click(screen.getByRole("button", { name: "Challenge" }))
     await user.click(screen.getByRole("option", { name: "Hard" }))
-    const start = await screen.findByRole("button", { name: "Start Section" })
-    await waitFor(() => expect(start).toBeEnabled())
-    await user.click(start)
+    await user.click(screen.getByRole("button", { name: "Start Section" }))
 
-    expect(startSection).toHaveBeenCalledWith({
-      sectionId: "sec-1",
-      timing: "unlimited",
-      showAnswers: "each",
-      difficulty: "hard",
+    await waitFor(() => {
+      expect(startSection).toHaveBeenCalledWith({
+        sectionId: "sec-1",
+        timing: "unlimited",
+        showAnswers: "each",
+        difficulty: "hard",
+      })
     })
+  })
+
+  it("shows Build My Own on RC section setup", async () => {
+    const user = userEvent.setup()
+    renderForm("RC")
+
+    expect(screen.getByRole("switch", { name: "Build My Own" })).toBeInTheDocument()
+    await user.click(screen.getByRole("switch", { name: "Build My Own" }))
+    expect(screen.getByRole("button", { name: "Answer Check" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Challenge" })).toBeInTheDocument()
   })
 })
