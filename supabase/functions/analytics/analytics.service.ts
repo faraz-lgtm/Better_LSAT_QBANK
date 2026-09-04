@@ -59,14 +59,6 @@ function formatQuestionResultTitle(
   return `${pt}  .  ${section}  .  Q${questionNumber}`
 }
 
-type AnswerEventSlice = {
-  practice_session_id: string
-  question_id: string
-  is_correct: boolean
-  section_type: 'LR' | 'RC' | 'LG' | null
-  created_at: string
-}
-
 function latestByQuestion(
   events: {
     practice_session_id: string
@@ -88,17 +80,6 @@ function latestByQuestion(
     m.set(e.question_id, { is_correct: e.is_correct, section_type: e.section_type })
   }
   return bySession
-}
-
-function latestAnswersAcrossSessions(
-  events: AnswerEventSlice[],
-): Map<string, { is_correct: boolean; section_type: 'LR' | 'RC' | 'LG' | null }> {
-  const sorted = [...events].sort((a, b) => a.created_at.localeCompare(b.created_at))
-  const map = new Map<string, { is_correct: boolean; section_type: 'LR' | 'RC' | 'LG' | null }>()
-  for (const e of sorted) {
-    map.set(e.question_id, { is_correct: e.is_correct, section_type: e.section_type })
-  }
-  return map
 }
 
 function filterSectionSessionsForAttempt<
@@ -123,13 +104,126 @@ function filterSectionSessionsForAttempt<
 }
 
 function sectionSessionIsExperimental(session: {
+  metadata?: Record<string, unknown>
   admin_sections?:
-    | { is_experimental?: boolean | null }
-    | { is_experimental?: boolean | null }[]
+    | { is_experimental?: boolean | null; section_type?: 'LR' | 'RC' | 'LG' | null }
+    | { is_experimental?: boolean | null; section_type?: 'LR' | 'RC' | 'LG' | null }[]
     | null
 }): boolean {
+  if (session.metadata?.isExperimental === true) return true
+  const title =
+    typeof session.metadata?.sectionTitle === 'string' ? session.metadata.sectionTitle : ''
+  if (/\bEXP\b/i.test(title) || /experimental/i.test(title)) return true
   const sec = relOne(session.admin_sections ?? null)
   return sec?.is_experimental === true
+}
+
+/** Current LawHub LSAT: one scored LR (~24–26) and one scored RC (~26–28). */
+const LAWHUB_SCORED_SECTION_QUESTION_MAX = { LR: 26, RC: 28 } as const
+
+type SectionSessionForMisses = {
+  id: string
+  started_at: string
+  completed_at: string
+  raw_score: number | null
+  metadata: Record<string, unknown>
+  admin_sections?:
+    | { is_experimental?: boolean | null; section_type?: 'LR' | 'RC' | 'LG' | null }
+    | { is_experimental?: boolean | null; section_type?: 'LR' | 'RC' | 'LG' | null }[]
+    | null
+}
+
+function sectionTypeOfSession(session: SectionSessionForMisses): 'LR' | 'RC' | null {
+  const fromMeta = session.metadata.sectionType
+  if (fromMeta === 'LR' || fromMeta === 'RC') return fromMeta
+  const sec = relOne(session.admin_sections ?? null)
+  if (sec?.section_type === 'LR' || sec?.section_type === 'RC') return sec.section_type
+  return null
+}
+
+function rawQuestionCountOfSession(session: SectionSessionForMisses): number {
+  const meta = session.metadata
+  if (typeof meta.questionCount === 'number' && meta.questionCount > 0) {
+    return Math.round(meta.questionCount)
+  }
+  if (Array.isArray(meta.questionIds) && meta.questionIds.length > 0) {
+    return meta.questionIds.length
+  }
+  return 0
+}
+
+function lawHubQuestionCountOfSession(
+  session: SectionSessionForMisses,
+  kind: 'LR' | 'RC',
+): number {
+  const raw = rawQuestionCountOfSession(session)
+  if (raw <= 0) return 0
+  return Math.min(LAWHUB_SCORED_SECTION_QUESTION_MAX[kind], raw)
+}
+
+function pickLawHubScoredSection(
+  sessions: SectionSessionForMisses[],
+  kind: 'LR' | 'RC',
+): SectionSessionForMisses | null {
+  const ofKind = sessions
+    .filter((s) => sectionTypeOfSession(s) === kind && !sectionSessionIsExperimental(s))
+    .sort(
+      (a, b) =>
+        Date.parse(a.started_at) - Date.parse(b.started_at) || a.id.localeCompare(b.id),
+    )
+  if (ofKind.length === 0) return null
+  const inRange = ofKind.filter(
+    (s) => rawQuestionCountOfSession(s) <= LAWHUB_SCORED_SECTION_QUESTION_MAX[kind],
+  )
+  const pool = inRange.length > 0 ? inRange : ofKind
+  return pool[0] ?? null
+}
+
+/**
+ * Missed count for one LawHub scored section (never both LR sections / experimental).
+ * Prefer raw_score vs section question count; fall back to that section's answer events.
+ */
+function missedFromLawHubSection(
+  session: SectionSessionForMisses | null,
+  kind: 'LR' | 'RC',
+  eventsBySession: Map<
+    string,
+    Map<string, { is_correct: boolean; section_type: 'LR' | 'RC' | 'LG' | null }>
+  >,
+): number | null {
+  if (!session) return null
+  const cap = LAWHUB_SCORED_SECTION_QUESTION_MAX[kind]
+  const total = lawHubQuestionCountOfSession(session, kind)
+  if (total > 0) {
+    const correct = Math.max(0, Math.min(total, session.raw_score ?? 0))
+    return Math.min(cap, Math.max(0, total - correct))
+  }
+  const answers = eventsBySession.get(session.id)
+  if (answers && answers.size > 0) {
+    let miss = 0
+    for (const v of answers.values()) {
+      if (v.section_type === kind || (v.section_type == null && sectionTypeOfSession(session) === kind)) {
+        if (!v.is_correct) miss += 1
+      }
+    }
+    return Math.min(cap, miss)
+  }
+  return null
+}
+
+function lawHubLrRcMissesForAttempt(
+  attemptSections: SectionSessionForMisses[],
+  eventsBySession: Map<
+    string,
+    Map<string, { is_correct: boolean; section_type: 'LR' | 'RC' | 'LG' | null }>
+  >,
+): { lrMiss: number | null; rcMiss: number | null } {
+  const lrSession = pickLawHubScoredSection(attemptSections, 'LR')
+  const rcSession = pickLawHubScoredSection(attemptSections, 'RC')
+  return {
+    lrMiss: missedFromLawHubSection(lrSession, 'LR', eventsBySession),
+    rcMiss: missedFromLawHubSection(rcSession, 'RC', eventsBySession),
+  }
 }
 
 /** Latest completed section session per section_id within an attempt window. */
@@ -153,26 +247,6 @@ function latestScoredSectionSessionsBySectionId<
     }
   }
   return [...bySection.values()]
-}
-
-function lrRcMissesFromAnswers(
-  answers: Iterable<{ is_correct: boolean; section_type: 'LR' | 'RC' | 'LG' | null }>,
-): { lrMiss: number; rcMiss: number; hadLr: boolean; hadRc: boolean } {
-  let lrMiss = 0
-  let rcMiss = 0
-  let hadLr = false
-  let hadRc = false
-  for (const v of answers) {
-    if (v.section_type === 'LR') {
-      hadLr = true
-      if (!v.is_correct) lrMiss += 1
-    }
-    if (v.section_type === 'RC') {
-      hadRc = true
-      if (!v.is_correct) rcMiss += 1
-    }
-  }
-  return { lrMiss, rcMiss, hadLr, hadRc }
 }
 
 function difficultyLabel(n: number | null): 'Easiest' | 'Easy' | 'Medium' | 'Hard' | 'Hardest' {
@@ -401,75 +475,42 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
           row.started_at,
           row.completed_at,
         )
-        const sessionIds = [row.id, ...attemptSections.map((s) => s.id)]
-        const events = sessionIds.length
-          ? await deps.repository.listAnswerEventsForSessions(sessionIds, userId)
+        // Only load answer events for scored section sessions — never the parent PrepTest
+        // session (that still contains experimental LR and can inflate misses to ~51).
+        const sectionIds = attemptSections.map((s) => s.id)
+        const events = sectionIds.length
+          ? await deps.repository.listAnswerEventsForSessions(sectionIds, userId)
           : []
-        const answers = latestAnswersAcrossSessions(events)
-        const { lrMiss, rcMiss, hadLr, hadRc } = lrRcMissesFromAnswers(answers.values())
-        if (hadLr) {
+        const eventsBySession = latestByQuestion(events)
+        const { lrMiss, rcMiss } = lawHubLrRcMissesForAttempt(attemptSections, eventsBySession)
+        if (lrMiss != null) {
           lrSum += lrMiss
           ptWithLr += 1
         }
-        if (hadRc) {
+        if (rcMiss != null) {
           rcSum += rcMiss
           ptWithRc += 1
         }
       }
 
       if (ptWithLr === 0 && ptWithRc === 0 && allSectionSessions.length > 0) {
-        const sectionIds = allSectionSessions.map((s) => s.id)
+        const scoredStandalone = allSectionSessions.filter((s) => !sectionSessionIsExperimental(s))
+        const sectionIds = scoredStandalone.map((s) => s.id)
         const sectionEvents = sectionIds.length
           ? await deps.repository.listAnswerEventsForSessions(sectionIds, userId)
           : []
         const eventsBySession = latestByQuestion(sectionEvents)
-        for (const session of allSectionSessions) {
-          const sectionType =
-            typeof session.metadata.sectionType === 'string' ? session.metadata.sectionType : null
-          const answers = eventsBySession.get(session.id)
-          if (answers && answers.size > 0) {
-            const { lrMiss, rcMiss, hadLr, hadRc } = lrRcMissesFromAnswers(answers.values())
-            if (hadLr) {
-              lrSum += lrMiss
-              ptWithLr += 1
-            } else if (sectionType === 'LR') {
-              const total = Array.isArray(session.metadata.questionIds)
-                ? session.metadata.questionIds.length
-                : 0
-              const correct = session.raw_score ?? 0
-              if (total > 0) {
-                lrSum += total - correct
-                ptWithLr += 1
-              }
-            }
-            if (hadRc) {
-              rcSum += rcMiss
-              ptWithRc += 1
-            } else if (sectionType === 'RC') {
-              const total = Array.isArray(session.metadata.questionIds)
-                ? session.metadata.questionIds.length
-                : 0
-              const correct = session.raw_score ?? 0
-              if (total > 0) {
-                rcSum += total - correct
-                ptWithRc += 1
-              }
-            }
+        for (const session of scoredStandalone) {
+          const sectionType = sectionTypeOfSession(session)
+          if (sectionType !== 'LR' && sectionType !== 'RC') continue
+          const missed = missedFromLawHubSection(session, sectionType, eventsBySession)
+          if (missed == null) continue
+          if (sectionType === 'LR') {
+            lrSum += missed
+            ptWithLr += 1
           } else {
-            const total = Array.isArray(session.metadata.questionIds)
-              ? session.metadata.questionIds.length
-              : 0
-            const correct = session.raw_score ?? 0
-            if (total > 0 && (sectionType === 'LR' || sectionType === 'RC')) {
-              const missed = total - correct
-              if (sectionType === 'LR') {
-                lrSum += missed
-                ptWithLr += 1
-              } else {
-                rcSum += missed
-                ptWithRc += 1
-              }
-            }
+            rcSum += missed
+            ptWithRc += 1
           }
         }
       }
@@ -835,6 +876,7 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
       const latest = latestEventsByQuestion(events)
 
       const completedAt = session.completed_at
+      if (!completedAt) throw new Error('PrepTest session not found or not completed')
       const atCompletion = eventsAtCompletion(events, completedAt)
       const afterCompletion = eventsAfterCompletion(events, completedAt)
 

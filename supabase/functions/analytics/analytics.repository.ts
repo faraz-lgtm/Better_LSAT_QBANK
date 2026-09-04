@@ -470,7 +470,7 @@ export function createAnalyticsRepository(client: SupabaseClient) {
           completed_at,
           raw_score,
           metadata,
-          admin_sections ( is_experimental )
+          admin_sections ( is_experimental, section_type )
         `,
         )
         .eq('user_id', userId)
@@ -488,8 +488,8 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         raw_score: number | null
         metadata: Record<string, unknown>
         admin_sections:
-          | { is_experimental: boolean | null }
-          | { is_experimental: boolean | null }[]
+          | { is_experimental: boolean | null; section_type?: 'LR' | 'RC' | 'LG' | null }
+          | { is_experimental: boolean | null; section_type?: 'LR' | 'RC' | 'LG' | null }[]
           | null
       }[]) ?? []
     },
