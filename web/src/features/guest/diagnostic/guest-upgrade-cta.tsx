@@ -29,14 +29,12 @@ function GuestUpgradeCta({ variant = 'header', className }: GuestUpgradeCtaProps
   }
 
   if (variant === 'sidebar-primary') {
+    // Figma `20593:34154`
     return (
       <Button
         type="button"
         onClick={handleUpgrade}
-        className={cn(
-          'h-8 w-auto rounded-[10px] border border-[#0d47a1] bg-[#0d47a1] px-[13px] py-[7px] text-xs font-semibold leading-[18px] text-white hover:bg-[#0b3d8a]',
-          className,
-        )}
+        className={cn('guest-upgrade-cta-primary', className)}
       >
         Upgrade to LSAT+
       </Button>
@@ -63,10 +61,7 @@ function GuestUpgradeCta({ variant = 'header', className }: GuestUpgradeCtaProps
     <Button
       type="button"
       onClick={handleUpgrade}
-      className={cn(
-        'hidden h-10 shrink-0 rounded-[12px] bg-[#0d47a1] px-5 text-sm font-semibold tracking-[0.28px] text-white hover:bg-[#0b3d8a] sm:inline-flex',
-        className,
-      )}
+      className={cn('guest-upgrade-cta-primary hidden sm:inline-flex', className)}
     >
       Upgrade to LSAT+
     </Button>

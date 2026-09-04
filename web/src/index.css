@@ -2158,6 +2158,43 @@ select.ds-input {
   pointer-events: none;
 }
 
+/* Figma `20593:34154` — Upgrade to LSAT+ (header + sidebar free-plan card) */
+.ds-btn.guest-upgrade-cta-primary {
+  height: auto;
+  min-height: 0;
+  width: auto;
+  gap: 0;
+  padding: 7px 13px;
+  border-radius: 10px;
+  border: 1px solid #0d47a1;
+  background-color: transparent;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.2) 100%),
+    linear-gradient(#0d47a1, #0d47a1);
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.ds-btn.guest-upgrade-cta-primary:hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: #0a357f;
+  background-color: transparent;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.15) 100%),
+    linear-gradient(#0a357f, #0a357f);
+  box-shadow: none;
+}
+
+.ds-btn.guest-upgrade-cta-primary:focus-visible {
+  border-color: #0d47a1;
+  background-color: transparent;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.2) 100%),
+    linear-gradient(#0d47a1, #0d47a1);
+  box-shadow: var(--btn-focus-ring);
+}
+
 /* Compact primary button (40px) */
 .ds-btn-sm {
   display: inline-flex;
@@ -2342,11 +2379,16 @@ select.ds-input {
   padding: 8px 16px 16px;
 }
 
+.student-sidebar-nav .guest-free-plan-upgrade-card {
+  flex-shrink: 0;
+}
+
 .student-sidebar-menu {
   display: flex;
   flex-direction: column;
   gap: 12px;
   width: 100%;
+  flex-shrink: 0;
 }
 
 .student-sidebar-section {

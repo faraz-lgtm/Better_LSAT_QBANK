@@ -230,7 +230,7 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
               <span className="flex size-[42px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#0d47a1] text-sm font-semibold text-white">
                 {initials}
               </span>
-              <span className="hidden min-w-0 flex-col items-start gap-1 text-left sm:flex">
+              <span className="hidden min-w-0 flex-col items-start gap-0 text-left sm:flex">
                 <span className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#041a44]">
                   {displayName}
                 </span>
