@@ -87,20 +87,25 @@ function viewFromDetail(detail: ExplanationDetailPayload): ExplanationQuestionDe
       },
     ],
     analytics: {
-      questionDifficulty: {
-        filled: diffLevel,
-        max: 5,
-        label: label === "Hardest" ? "Hard" : label,
-        caption: "Question difficulty based on student performance.",
-        tone: difficultyTone(diffLevel),
-      },
-      passageDifficulty: {
-        filled: Math.max(1, diffLevel - 1),
-        max: 5,
-        label: diffLevel >= 4 ? "Hard" : diffLevel >= 3 ? "Medium" : "Easy",
-        caption: "Passage difficulty relative to other passages.",
-        tone: difficultyTone(Math.max(1, diffLevel - 1)),
-      },
+      ...(detail.sectionType === "RC"
+        ? {
+            passageDifficulty: {
+              filled: Math.max(1, diffLevel - 1),
+              max: 5,
+              label: diffLevel >= 4 ? "Hard" : diffLevel >= 3 ? "Medium" : "Easy",
+              caption: "Passage difficulty relative to other passages.",
+              tone: difficultyTone(Math.max(1, diffLevel - 1)),
+            },
+          }
+        : {
+            questionDifficulty: {
+              filled: diffLevel,
+              max: 5,
+              label: label === "Hardest" ? "Hard" : label,
+              caption: "Question difficulty based on student performance.",
+              tone: difficultyTone(diffLevel),
+            },
+          }),
       scoreBand: {
         headline: totalResponses > 0 ? "150" : "—",
         range: totalResponses > 0 ? "75% - 160" : "—",
@@ -360,22 +365,26 @@ function ReviewInsightsPanel({ analytics }: { analytics: AnalyticsView }) {
   return (
     <div className="flex w-full flex-col gap-6">
       <InsightsSectionCard title="Complexity">
-        <DifficultyStatCard
-          label="Question"
-          filled={analytics.questionDifficulty.filled}
-          max={analytics.questionDifficulty.max}
-          difficultyLabel={analytics.questionDifficulty.label}
-          caption={analytics.questionDifficulty.caption}
-          tone={analytics.questionDifficulty.tone}
-        />
-        <DifficultyStatCard
-          label="Passage"
-          filled={analytics.passageDifficulty.filled}
-          max={analytics.passageDifficulty.max}
-          difficultyLabel={analytics.passageDifficulty.label}
-          caption={analytics.passageDifficulty.caption}
-          tone={analytics.passageDifficulty.tone}
-        />
+        {analytics.questionDifficulty ? (
+          <DifficultyStatCard
+            label="Question"
+            filled={analytics.questionDifficulty.filled}
+            max={analytics.questionDifficulty.max}
+            difficultyLabel={analytics.questionDifficulty.label}
+            caption={analytics.questionDifficulty.caption}
+            tone={analytics.questionDifficulty.tone}
+          />
+        ) : null}
+        {analytics.passageDifficulty ? (
+          <DifficultyStatCard
+            label="Passage"
+            filled={analytics.passageDifficulty.filled}
+            max={analytics.passageDifficulty.max}
+            difficultyLabel={analytics.passageDifficulty.label}
+            caption={analytics.passageDifficulty.caption}
+            tone={analytics.passageDifficulty.tone}
+          />
+        ) : null}
         <ScoreBandCard scoreBand={analytics.scoreBand} />
       </InsightsSectionCard>
 

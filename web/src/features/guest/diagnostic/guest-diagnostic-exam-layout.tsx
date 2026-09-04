@@ -193,13 +193,7 @@ function buildDiagnosticAnalyticsSeed(
       caption: "Question difficulty based on diagnostic design.",
       tone: difficultyTone(diffLevel),
     },
-    passageDifficulty: {
-      filled: Math.max(1, diffLevel - 1),
-      max: 5,
-      label: diffLevel >= 4 ? "Hard" : diffLevel >= 3 ? "Medium" : "Easy",
-      caption: "Relative difficulty for this stimulus.",
-      tone: difficultyTone(Math.max(1, diffLevel - 1)),
-    },
+    // Diagnostic is LR-only — no multi-question passage difficulty.
     scoreBand: {
       headline: "—",
       range: "—",
