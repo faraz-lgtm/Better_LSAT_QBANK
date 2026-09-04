@@ -69,7 +69,7 @@ function ordinal(n: number): string {
 
 function PrepTestScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next: ScoreTab) => void }) {
   return (
-    <div className="flex h-10 flex-wrap items-center gap-2 rounded-[16px] bg-white p-1">
+    <div className="flex h-8 flex-wrap items-center gap-1.5 rounded-[10px] bg-white p-0.5">
       {SCORE_TABS.map((tab) => {
         const active = value === tab.id
         return (
@@ -79,7 +79,7 @@ function PrepTestScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (ne
             onClick={() => onChange(tab.id)}
             aria-pressed={active}
             className={cn(
-              "flex min-h-8 items-center justify-center rounded-[10px] px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors hover:rounded-[10px] active:rounded-[10px] focus-visible:rounded-[10px]",
+              "flex min-h-7 items-center justify-center rounded-[8px] px-2.5 py-1 text-xs font-semibold leading-[1.4] tracking-[0.02em] transition-colors hover:rounded-[8px] active:rounded-[8px] focus-visible:rounded-[8px]",
               active ? "bg-[#0d47a1] text-white" : "text-[#666d80] hover:bg-[#f3f7ff]",
             )}
           >
@@ -103,7 +103,7 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
 
   if (points.length === 0) {
     return (
-      <div className="flex h-[300px] items-center justify-center rounded-2xl border border-dashed border-[#dfe1e7] text-sm text-[#666d80]">
+      <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-[#dfe1e7] text-xs text-[#666d80]">
         No PrepTests in the selected range.
       </div>
     )
@@ -125,7 +125,7 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
 
   return (
     <div className="w-full">
-      <div className="flex h-[300px] w-full items-stretch gap-4">
+      <div className="flex h-[220px] w-full items-stretch gap-3">
         <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[#062357]">
           {yAxisLabels.map((label, index) => (
             <span key={`${label}-${index}`} className="leading-5">
@@ -342,12 +342,12 @@ function AnalyticsPrepTestsPage() {
 
   return (
     <StudentMain>
-        <div className="mb-6 flex flex-wrap items-center justify-end gap-4">
+        <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
         </div>
 
         {stats ? (
-          <section className="mb-6 grid gap-6 lg:grid-cols-[minmax(280px,420px)_1fr]">
+          <section className="mb-4 grid gap-3 lg:grid-cols-[minmax(240px,360px)_1fr]">
             <AnalyticsStatsGrid stats={allStatTiles} />
             <AnalyticsScoreProgressPanel
               title="Score progress"

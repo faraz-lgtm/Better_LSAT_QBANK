@@ -51,7 +51,7 @@ type SectionProgressPointWithCount = SectionProgressPoint & {
 
 function SectionScoreTabs({ value, onChange }: { value: SectionScoreTab; onChange: (next: SectionScoreTab) => void }) {
   return (
-    <div className="flex h-10 flex-wrap items-center gap-2 rounded-[16px] bg-white p-1">
+    <div className="flex h-8 flex-wrap items-center gap-1.5 rounded-[10px] bg-white p-0.5">
       {SECTION_SCORE_TABS.map((tab) => {
         const active = value === tab.id
         return (
@@ -61,7 +61,7 @@ function SectionScoreTabs({ value, onChange }: { value: SectionScoreTab; onChang
             onClick={() => onChange(tab.id)}
             aria-pressed={active}
             className={cn(
-              "flex min-h-8 items-center justify-center rounded-[10px] px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors hover:rounded-[10px] active:rounded-[10px] focus-visible:rounded-[10px]",
+              "flex min-h-7 items-center justify-center rounded-[8px] px-2.5 py-1 text-xs font-semibold leading-[1.4] tracking-[0.02em] transition-colors hover:rounded-[8px] active:rounded-[8px] focus-visible:rounded-[8px]",
               active ? "bg-[#0d47a1] text-white" : "text-[#666d80] hover:bg-[#f3f7ff]",
             )}
           >
@@ -91,7 +91,7 @@ function SectionProgressChart({
 
   if (points.length === 0) {
     return (
-      <div className="flex h-[300px] items-center justify-center rounded-2xl border border-dashed border-[#dfe1e7] text-sm text-[#666d80]">
+      <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-[#dfe1e7] text-xs text-[#666d80]">
         No sections in the selected range.
       </div>
     )
@@ -121,7 +121,7 @@ function SectionProgressChart({
 
   return (
     <div className="w-full">
-      <div className="flex h-[300px] w-full items-stretch gap-4">
+      <div className="flex h-[220px] w-full items-stretch gap-3">
         <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[#062357]">
           {yAxisLabels.map((label, index) => (
             <span key={`${label}-${index}`} className="leading-5">
@@ -199,7 +199,7 @@ function SectionProgressChart({
 
 function SectionStatPair({ summary }: { summary: SectionSummary }) {
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-2 gap-2">
       <article className="ds-analytics-stat ds-analytics-stat--pair min-w-0">
         <p className="ds-analytics-stat__label">BEST SCORE</p>
         <p className="ds-analytics-stat__value" style={{ color: summary.bestAccent }}>
@@ -242,26 +242,26 @@ function SectionColumn({
   onScoreTabChange,
 }: SectionColumnProps) {
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-6">
-      <div className="rounded-[20px] bg-[#f6f8fa] px-6 py-4">
-        <div className="flex items-center gap-2.5">
+    <div className="flex min-w-0 flex-1 flex-col gap-3">
+      <div className="rounded-[12px] bg-[#f6f8fa] px-3 py-2">
+        <div className="flex items-center gap-2">
           <div
-            className="flex size-10 shrink-0 items-center justify-center rounded-[12px] border"
+            className="flex size-7 shrink-0 items-center justify-center rounded-[8px] border"
             style={{ backgroundColor: badgeBg, borderColor: badgeColor }}
           >
-            <span className="text-xl font-black leading-[1.5] tracking-[0.02em]" style={{ color: badgeColor }}>
+            <span className="text-sm font-black leading-none tracking-[0.02em]" style={{ color: badgeColor }}>
               {badge}
             </span>
           </div>
-          <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">{title}</h2>
+          <h2 className="text-base font-bold leading-[1.3] text-[#062357]">{title}</h2>
         </div>
       </div>
 
       <SectionStatPair summary={summary} />
 
-      <div className="flex min-h-[382px] flex-1 flex-col gap-[18px] rounded-[20px] bg-[#f6f8fa] p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">{progressTitle}</p>
+      <div className="flex min-h-[260px] flex-1 flex-col gap-3 rounded-[12px] bg-[#f6f8fa] p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs font-semibold leading-[1.4] tracking-[0.06em] text-[#062357]">{progressTitle}</p>
           <SectionScoreTabs value={scoreTab} onChange={onScoreTabChange} />
         </div>
         <SectionProgressChart points={points} tab={scoreTab} rawYAxisLabels={yAxisLabels} />
@@ -414,7 +414,7 @@ function AnalyticsSectionsPage() {
 
   return (
     <StudentMain>
-        <div className="mb-6 flex flex-wrap items-center justify-end gap-4">
+        <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
           <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by section">
             <button
               type="button"
@@ -441,10 +441,10 @@ function AnalyticsSectionsPage() {
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
         </div>
 
-        <section className="mb-6 rounded-[20px] border border-[#dfe1e7] bg-white p-6">
+        <section className="mb-4 rounded-[14px] border border-[#dfe1e7] bg-white p-4">
           <div
             className={cn(
-              "flex flex-col gap-6 xl:items-start",
+              "flex flex-col gap-4 xl:items-start",
               showLr && showRc ? "xl:flex-row" : "",
             )}
           >
