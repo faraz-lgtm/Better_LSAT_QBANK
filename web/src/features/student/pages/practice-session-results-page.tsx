@@ -49,7 +49,7 @@ type LoadedResults = {
   questionCount: number
   elapsedSeconds: number
   questions: DrillQuestion[]
-  answersByQuestion: Map<string, { selectedAnswer: string; isCorrect: boolean }>
+  answersByQuestion: Map<string, { selectedAnswer: string; isCorrect: boolean; timeSpentSeconds?: number | null }>
   flaggedIds: Set<string>
   sessionMetadata: Record<string, unknown>
   returnTo: string
@@ -122,11 +122,15 @@ function mapDrillResponse(data: DrillSessionResponse, returnTo: string): LoadedR
 }
 
 function mapSectionResponse(data: SectionSessionResponse, returnTo: string): LoadedResults {
-  const answersByQuestion = new Map<string, { selectedAnswer: string; isCorrect: boolean }>()
+  const answersByQuestion = new Map<
+    string,
+    { selectedAnswer: string; isCorrect: boolean; timeSpentSeconds?: number | null }
+  >()
   for (const a of data.answers) {
     answersByQuestion.set(a.questionId, {
       selectedAnswer: a.selectedAnswer,
       isCorrect: a.isCorrect,
+      timeSpentSeconds: a.timeSpentSeconds ?? null,
     })
   }
   const completedAt = data.session.completed_at ?? new Date().toISOString()
@@ -274,6 +278,15 @@ function PracticeSessionResultsPage() {
     return Math.max(1, Math.round(results.elapsedSeconds / results.questions.length))
   }, [results])
 
+  const yourTimeByQuestion = useMemo(() => {
+    if (!results || results.kind !== "SECTION") return undefined
+    const map = new Map<string, number | null>()
+    for (const [id, answer] of results.answersByQuestion) {
+      map.set(id, answer.timeSpentSeconds ?? null)
+    }
+    return map
+  }, [results])
+
   const sectionGroups = useMemo(() => {
     if (!results) return []
     return buildPracticeResultsSectionGroups({
@@ -284,8 +297,9 @@ function PracticeSessionResultsPage() {
       defaultKind: results.defaultSectionKind,
       fallbackSectionNumber: results.fallbackSectionNumber,
       perQuestionSeconds,
+      yourTimeByQuestion,
     })
-  }, [detailsByQuestion, perQuestionSeconds, results])
+  }, [detailsByQuestion, perQuestionSeconds, results, yourTimeByQuestion])
 
   const sectionSummaries = useMemo(() => {
     if (!results) return []
@@ -525,6 +539,7 @@ function PracticeSessionResultsPage() {
                       blindReviewUnanswered={q.blindReviewUnanswered}
                       showBlindReview={showBlindReview}
                       yourTimeSeconds={q.yourTimeSeconds}
+                      targetTimeSeconds={q.question.targetTimeSeconds}
                       flagged={results.flaggedIds.has(q.question.id)}
                       variant="in-section"
                     />
@@ -543,6 +558,7 @@ function PracticeSessionResultsPage() {
                   blindReviewUnanswered={q.blindReviewUnanswered}
                   showBlindReview={showBlindReview}
                   yourTimeSeconds={q.yourTimeSeconds}
+                  targetTimeSeconds={q.question.targetTimeSeconds}
                   flagged={results.flaggedIds.has(q.question.id)}
                   variant="in-section"
                 />

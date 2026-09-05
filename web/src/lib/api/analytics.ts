@@ -79,6 +79,10 @@ export type PrepTestSessionDetail = {
     sectionNumber: number | null
     /** Unscored experimental section question; still listed in results. */
     isExperimental?: boolean
+    /** Difficulty-weighted share of 0.90 × 35 min for this question's section. */
+    targetTimeSeconds?: number
+    /** Pause-aware dwell seconds on the scored attempt; omitted when unanswered. */
+    yourTimeSeconds?: number
   }>
 }
 

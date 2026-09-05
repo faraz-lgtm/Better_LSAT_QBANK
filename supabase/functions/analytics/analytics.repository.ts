@@ -238,7 +238,7 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       const { data, error } = await client
         .from('answer_events')
         .select(
-          'practice_session_id, question_id, is_correct, selected_answer, section_type, created_at',
+          'practice_session_id, question_id, is_correct, selected_answer, section_type, created_at, time_spent_seconds',
         )
         .eq('user_id', userId)
         .in('practice_session_id', sessionIds)
@@ -251,6 +251,7 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         selected_answer: string
         section_type: 'LR' | 'RC' | 'LG' | null
         created_at: string
+        time_spent_seconds?: number | null
       }[]) ?? []
     },
 

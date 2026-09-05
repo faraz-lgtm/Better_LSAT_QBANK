@@ -351,6 +351,45 @@ describe("createPracticeApi", () => {
     await expect(api.getDrillSession("section-sess-1")).rejects.toThrow("Session is not a drill")
   })
 
+  it("submitAnswer forwards timeSpentSeconds", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        event: {
+          id: "e1",
+          user_id: "u1",
+          practice_session_id: "s1",
+          question_id: "q1",
+          selected_answer: "A",
+          is_correct: true,
+          question_type_id: null,
+          section_type: "LR",
+          difficulty: 3,
+          session_kind: "SECTION",
+          created_at: "2026-01-01T00:00:00Z",
+        },
+      },
+      error: null,
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+    await api.submitAnswer({
+      sessionId: "s1",
+      questionId: "q1",
+      selectedAnswer: "A",
+      timeSpentSeconds: 54,
+    })
+    expect(invoke).toHaveBeenCalledWith("practice-submit-answer", {
+      method: "POST",
+      body: {
+        sessionId: "s1",
+        questionId: "q1",
+        selectedAnswer: "A",
+        blindReview: undefined,
+        timeSpentSeconds: 54,
+      },
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
+
   it("submitAnswer surfaces edge function error messages instead of the generic non-2xx text", async () => {
     const invoke = vi.fn().mockResolvedValue({
       data: null,

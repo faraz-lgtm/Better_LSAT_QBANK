@@ -30,6 +30,8 @@ export type DrillQuestionPayload = {
   sourceGroupId?: string | null
   /** Set only when serving completed sessions for review (not during active practice). */
   correctChoiceId?: string | null
+  /** Difficulty-weighted section target; set on SECTION responses only. */
+  targetTimeSeconds?: number
 }
 
 type PassageRow = {
@@ -55,6 +57,7 @@ export type DrillQuestionRow = {
   stem_text: string | null
   choices: unknown
   correct_answer?: string | null
+  difficulty?: number | null
   admin_sections: SectionRow | SectionRow[] | null
 }
 

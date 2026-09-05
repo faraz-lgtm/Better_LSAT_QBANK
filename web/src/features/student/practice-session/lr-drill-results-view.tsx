@@ -30,10 +30,12 @@ import {
   PracticeDifficultyMeter,
   correctChoiceLetter,
   difficultyLabelFromLevel,
+  formatPaddedTargetTime,
   resolveQuestionResultTags,
-  targetTimeForDifficulty,
+  targetSecondsForDifficulty,
 } from "@/features/student/practice-session/practice-results-ui"
 import { cn } from "@/lib/utils"
+import { isFiniteTargetSeconds } from "@/lib/question-target-time"
 
 const QUESTION_FILTER_OPTIONS = ["Question", "Incorrect only"] as const
 
@@ -120,17 +122,24 @@ function DrillResultsQuestionRow({
     : `Question ${meta.number}`
   const tags = detail ? resolveQuestionResultTags(detail) : []
   const difficulty = difficultyLabelFromLevel(detail?.difficulty ?? 3)
-  const targetTime = targetTimeForDifficulty(difficulty)
-  const yourTime = formatPaddedMmSs(meta.yourTimeSeconds)
-  const targetSec =
-    difficulty === "Hardest" || difficulty === "Hard" ? 105 : difficulty === "Medium" ? 90 : 75
-  const deltaSec = targetSec - meta.yourTimeSeconds
+  const targetSec = isFiniteTargetSeconds(meta.question.targetTimeSeconds)
+    ? meta.question.targetTimeSeconds
+    : targetSecondsForDifficulty(difficulty)
+  const targetTime = formatPaddedTargetTime(targetSec)
+  const recordedYour =
+    typeof meta.yourTimeSeconds === "number" && Number.isFinite(meta.yourTimeSeconds) && meta.yourTimeSeconds >= 0
+      ? meta.yourTimeSeconds
+      : null
+  const yourTime = recordedYour != null ? formatPaddedMmSs(recordedYour) : "—"
+  const deltaSec = recordedYour != null ? targetSec - recordedYour : 0
   const yourTimeNote =
-    deltaSec > 0
-      ? `(${formatPaddedMmSs(deltaSec)} under)`
-      : deltaSec < 0
-        ? `(${formatPaddedMmSs(-deltaSec)} over)`
-        : ""
+    recordedYour == null
+      ? ""
+      : deltaSec > 0
+        ? `(${formatPaddedMmSs(deltaSec)} under)`
+        : deltaSec < 0
+          ? `(${formatPaddedMmSs(-deltaSec)} over)`
+          : ""
   const correctLetter = detail ? correctChoiceLetter(detail.choices, detail.correctChoiceId) : "A"
   const selectedLetter =
     detail && meta.selectedAnswer?.trim()
@@ -142,7 +151,7 @@ function DrillResultsQuestionRow({
         detail.choices,
         detail.correctChoiceId ?? "",
       )
-    : ["A", "B", "C", "D", "E"].map((letter) => ({ letter, count: 0, pct: 0 }))
+    : []
   const explanationHref = detail ? explanationQuestionDetailHref(detail.questionId) : null
   const badgeClass = meta.isUnanswered
     ? "bg-[#ff6683]"

@@ -18,6 +18,7 @@ import {
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
 import { createExplanationsApi } from "@/lib/api/explanations"
 import { HtmlContent } from "@/lib/html/html-content"
+import { hasEnoughPlatformAnswerSample, platformAnswerSampleSize } from "@/lib/platform-answer-sample"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
@@ -135,8 +136,11 @@ function PracticeBlindReviewQuestionPanel({
         }
         setChoiceExplanations(next)
         const popularity: Record<string, number | null> = {}
-        for (const row of detail.answerPopularity) {
-          popularity[row.letter.trim().toUpperCase()] = row.pct
+        const sampleSize = detail.answerPopularityTotal ?? platformAnswerSampleSize(detail.answerPopularity)
+        if (hasEnoughPlatformAnswerSample(sampleSize)) {
+          for (const row of detail.answerPopularity) {
+            popularity[row.letter.trim().toUpperCase()] = row.pct
+          }
         }
         setChoicePopularityPct(popularity)
       })

@@ -6,6 +6,7 @@ import type {
 } from './analytics.repository.ts'
 import type { PracticeSessionKind } from '../practice/practice.repository.ts'
 import { isStudentVisiblePrepTest } from '../_shared/prep-test-visibility.ts'
+import { allocateQuestionTargetTimesByGroup } from '../_shared/question-target-time.ts'
 
 const PREPTEST_EXPLANATION_CATALOG_LIMIT = 8000
 
@@ -37,6 +38,18 @@ function relOne<T>(v: T | T[] | null | undefined): T | null {
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10
+}
+
+type PrepTestSectionRel = {
+  id?: string | null
+  section_type: 'LR' | 'RC' | 'LG' | null
+  section_number: number | null
+  is_experimental?: boolean | null
+}
+
+function prepTestSectionGroupKey(sec: PrepTestSectionRel | null): string {
+  if (sec?.id) return sec.id
+  return `${sec?.section_number ?? 'x'}:${sec?.section_type ?? 'LR'}:${sec?.is_experimental === true ? 'exp' : 'scored'}`
 }
 
 function formatQuestionResultTitle(
@@ -182,48 +195,43 @@ function difficultyLabel(n: number | null): 'Easiest' | 'Easy' | 'Medium' | 'Har
   return 'Hardest'
 }
 
+type AnswerEventLite = {
+  question_id: string
+  is_correct: boolean
+  selected_answer: string
+  practice_session_id: string
+  created_at: string
+  time_spent_seconds?: number | null
+}
+
 function latestEventsByQuestion(
-  events: {
-    question_id: string
-    is_correct: boolean
-    selected_answer: string
-    practice_session_id: string
-    created_at: string
-  }[],
-): Map<string, { is_correct: boolean; selected_answer: string }> {
+  events: AnswerEventLite[],
+): Map<string, { is_correct: boolean; selected_answer: string; time_spent_seconds?: number | null }> {
   const sorted = [...events].sort((a, b) => a.created_at.localeCompare(b.created_at))
-  const map = new Map<string, { is_correct: boolean; selected_answer: string }>()
+  const map = new Map<string, { is_correct: boolean; selected_answer: string; time_spent_seconds?: number | null }>()
   for (const e of sorted) {
-    map.set(e.question_id, { is_correct: e.is_correct, selected_answer: e.selected_answer })
+    map.set(e.question_id, {
+      is_correct: e.is_correct,
+      selected_answer: e.selected_answer,
+      time_spent_seconds: e.time_spent_seconds,
+    })
   }
   return map
 }
 
 function eventsAtCompletion(
-  events: {
-    question_id: string
-    is_correct: boolean
-    selected_answer: string
-    practice_session_id: string
-    created_at: string
-  }[],
+  events: AnswerEventLite[],
   completedAt: string,
-): Map<string, { is_correct: boolean; selected_answer: string }> {
+): Map<string, { is_correct: boolean; selected_answer: string; time_spent_seconds?: number | null }> {
   const cutoff = new Date(completedAt).getTime()
   const before = events.filter((e) => new Date(e.created_at).getTime() <= cutoff)
   return latestEventsByQuestion(before)
 }
 
 function eventsAfterCompletion(
-  events: {
-    question_id: string
-    is_correct: boolean
-    selected_answer: string
-    practice_session_id: string
-    created_at: string
-  }[],
+  events: AnswerEventLite[],
   completedAt: string,
-): Map<string, { is_correct: boolean; selected_answer: string }> {
+): Map<string, { is_correct: boolean; selected_answer: string; time_spent_seconds?: number | null }> {
   const cutoff = new Date(completedAt).getTime()
   const after = events.filter((e) => new Date(e.created_at).getTime() > cutoff)
   return latestEventsByQuestion(after)
@@ -752,6 +760,20 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
       const afterCompletion = eventsAfterCompletion(events, completedAt)
 
       const questionsRaw = await deps.repository.listPrepTestQuestionsWithMeta(prepTestId)
+      const sectionRel = (row: Record<string, unknown>) =>
+        relOne(
+          row.admin_sections as PrepTestSectionRel | PrepTestSectionRel[] | null,
+        )
+      const targetTimeSecondsByQuestion = allocateQuestionTargetTimesByGroup(
+        questionsRaw.map((row) => {
+          const sec = sectionRel(row)
+          return {
+            id: String(row.id),
+            difficulty: typeof row.difficulty === 'number' ? row.difficulty : null,
+            groupKey: prepTestSectionGroupKey(sec),
+          }
+        }),
+      )
       let correct = 0
       let total = 0
       const questionRows: Array<{
@@ -770,24 +792,13 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
         sectionType: 'LR' | 'RC' | 'LG' | null
         sectionNumber: number | null
         isExperimental: boolean
+        targetTimeSeconds: number
+        yourTimeSeconds?: number
       }> = []
 
       for (const row of questionsRaw) {
         const qid = String(row.id)
-        const sec = relOne(
-          row.admin_sections as
-            | {
-                section_type: 'LR' | 'RC' | 'LG' | null
-                section_number: number | null
-                is_experimental?: boolean | null
-              }
-            | {
-                section_type: 'LR' | 'RC' | 'LG' | null
-                section_number: number | null
-                is_experimental?: boolean | null
-              }[]
-            | null,
-        )
+        const sec = sectionRel(row)
         const qt = relOne(row.question_types as { name: string } | { name: string }[] | null)
         const diff = typeof row.difficulty === 'number' ? row.difficulty : null
         const initial = atCompletion.get(qid)
@@ -838,6 +849,13 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
           sectionType: sec?.section_type ?? null,
           sectionNumber: sec?.section_number ?? null,
           isExperimental,
+          targetTimeSeconds: targetTimeSecondsByQuestion[qid] ?? 0,
+          yourTimeSeconds:
+            isUnanswered ||
+            typeof initial?.time_spent_seconds !== 'number' ||
+            !Number.isFinite(initial.time_spent_seconds)
+              ? undefined
+              : Math.max(0, Math.round(initial.time_spent_seconds)),
         })
       }
 

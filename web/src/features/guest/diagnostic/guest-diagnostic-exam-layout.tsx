@@ -69,7 +69,7 @@ import {
 import { difficultyLabelFromLevel } from "@/features/student/practice-session/practice-results-ui"
 import type { DrillQuestion } from "@/features/student/drills/drill-types"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
-import { resolveAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
+import { NOT_ENOUGH_ANSWERS_YET } from "@/lib/platform-answer-sample"
 import { usePracticeSessionAccessibilityPanel } from "@/features/student/practice-session/use-practice-session-accessibility-panel"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { isOfficialLayout, resolveExamSessionVariant } from "@/features/student/practice-session/practice-session-types"
@@ -173,14 +173,12 @@ function difficultyTone(level: number): "green" | "teal" | "red" {
 }
 
 function buildDiagnosticAnalyticsSeed(
-  question: DrillQuestion,
+  _question: DrillQuestion,
   meta: { difficulty: number; questionType: string } | null,
   selectedAnswer: string | null | undefined,
 ): ExplanationQuestionDetailView["analytics"] {
   const diffLevel = meta?.difficulty ?? 3
   const label = difficultyLabelFromLevel(diffLevel)
-  const correctChoiceId = question.correctChoiceId ?? ""
-  const answerPopularity = resolveAnswerPopularityRows([], question.choices, correctChoiceId)
   const letter = selectedAnswer?.trim().toUpperCase().slice(0, 1) ?? ""
   const questionLabel = label === "Hardest" ? "Hard" : label
 
@@ -202,9 +200,9 @@ function buildDiagnosticAnalyticsSeed(
     scoreBand: {
       headline: "—",
       range: "—",
-      caption: "Score of students with a 50% chance of getting this right",
+      caption: NOT_ENOUGH_ANSWERS_YET,
     },
-    answerPopularity,
+    answerPopularity: [],
     answerPopularityTotal: 0,
     userSelectedLetter: /^[A-E]$/.test(letter) ? letter : null,
     questionStemTags: meta?.questionType ? [meta.questionType] : [],

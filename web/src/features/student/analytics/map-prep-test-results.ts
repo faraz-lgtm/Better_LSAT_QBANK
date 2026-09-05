@@ -1,4 +1,5 @@
 import type { PrepTestSessionDetail } from "@/lib/api/analytics"
+import { formatPaddedTargetTime, targetSecondsForDifficulty } from "@/features/student/practice-session/practice-results-ui"
 import {
   scorePrepTestQuestions,
   withExperimentalSectionFlags,
@@ -14,6 +15,10 @@ import type {
   PrepTestSectionSummary,
   QuestionResultStatus,
 } from "@/features/student/lib/prep-test-results-types"
+import {
+  allocateQuestionTargetTimes,
+  isFiniteTargetSeconds,
+} from "@/lib/question-target-time"
 
 const QUESTIONS_PER_ROW = 7
 
@@ -32,6 +37,22 @@ function formatScoreDelta(incorrectCount: number): string {
 
 function sectionHeading(sectionNumber: number, isExperimental: boolean): string {
   return isExperimental ? `Section ${sectionNumber} (EXP)` : `Section ${sectionNumber}`
+}
+
+function resolveQuestionTargetSeconds(
+  q: PrepTestResultQuestion,
+  allocated: Record<string, number>,
+): number {
+  if (isFiniteTargetSeconds(q.targetTimeSeconds)) return q.targetTimeSeconds
+  const fromSection = allocated[q.id]
+  if (isFiniteTargetSeconds(fromSection)) return fromSection
+  return targetSecondsForDifficulty(q.difficulty)
+}
+
+function allocatedTargetsForSection(questions: PrepTestResultQuestion[]): Record<string, number> {
+  return allocateQuestionTargetTimes(
+    questions.map((q) => ({ id: q.id, difficulty: q.difficultyDots })),
+  )
 }
 
 export function prepTestBlindReviewWasCompleted(
@@ -58,25 +79,37 @@ export function formatQuestionRefLabel(
 function mapQuestionRow(
   q: PrepTestResultQuestion,
   api: Pick<PrepTestSessionDetail, "moduleId" | "prepTestTitle">,
+  allocated: Record<string, number>,
 ): PrepTestQuestionResultRow {
   const letter = q.correctLetter.trim().toUpperCase().slice(0, 1)
   const correctLetter =
     letter === "A" || letter === "B" || letter === "C" || letter === "D" || letter === "E" ? letter : "A"
+  const targetSeconds = resolveQuestionTargetSeconds(q, allocated)
+  const recordedYour =
+    q.isUnanswered || !isFiniteTargetSeconds(q.yourTimeSeconds) ? null : q.yourTimeSeconds
+  const deltaSec = recordedYour != null ? targetSeconds - recordedYour : 0
   return {
     id: q.id,
     number: q.number,
     title: formatQuestionRefLabel(api.moduleId, api.prepTestTitle, q.sectionNumber, q.number),
     tags: q.tags,
-    targetTime: "01:45",
-    yourTime: "—",
-    yourTimeNote: "",
+    targetTime: formatPaddedTargetTime(targetSeconds),
+    yourTime: recordedYour != null ? formatPaddedTargetTime(recordedYour) : "—",
+    yourTimeNote:
+      recordedYour == null
+        ? ""
+        : deltaSec > 0
+          ? `(${formatPaddedTargetTime(deltaSec)} under)`
+          : deltaSec < 0
+            ? `(${formatPaddedTargetTime(-deltaSec)} over)`
+            : "",
     difficulty: q.difficulty,
     difficultyDots: q.difficultyDots,
     actualCorrect: q.actualCorrect,
     blindReviewCorrect: q.blindReviewCorrect,
     blindReviewUnanswered: q.blindReviewUnanswered,
     isUnanswered: q.isUnanswered,
-    answerPopularity: [20, 20, 20, 20, 20],
+    answerPopularity: [0, 0, 0, 0, 0],
     correctLetter,
   }
 }
@@ -113,13 +146,14 @@ function buildLrSectionBlock(
 ): PrepTestLrSectionBlock {
   const incorrect = questions.filter((q) => !q.actualCorrect).length
   const blindIncorrect = questions.filter((q) => q.blindReviewUnanswered || !q.blindReviewCorrect).length
+  const allocated = allocatedTargetsForSection(questions)
   return {
     sectionTitle: sectionHeading(sectionNumber, isExperimental),
     isExperimental,
     scoreDisplay: formatScoreDelta(incorrect),
     blindReviewDisplay: formatScoreDelta(blindIncorrect),
     passages: [],
-    questions: questions.map((q) => mapQuestionRow(q, api)),
+    questions: questions.map((q) => mapQuestionRow(q, api, allocated)),
   }
 }
 
@@ -131,12 +165,13 @@ function buildRcSectionBlock(
 ): PrepTestRcSectionBlock {
   const incorrect = questions.filter((q) => !q.actualCorrect).length
   const blindIncorrect = questions.filter((q) => q.blindReviewUnanswered || !q.blindReviewCorrect).length
+  const allocated = allocatedTargetsForSection(questions)
   return {
     sectionTitle: sectionHeading(sectionNumber, isExperimental),
     isExperimental,
     scoreDisplay: formatScoreDelta(incorrect),
     blindReviewDisplay: formatScoreDelta(blindIncorrect),
-    questions: questions.map((q) => mapQuestionRow(q, api)),
+    questions: questions.map((q) => mapQuestionRow(q, api, allocated)),
   }
 }
 

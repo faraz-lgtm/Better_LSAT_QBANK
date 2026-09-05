@@ -46,6 +46,8 @@ const sessionDetail: PrepTestSessionDetail = {
       tags: ["MB"],
       difficulty: "Hard",
       difficultyDots: 4,
+      targetTimeSeconds: 105,
+      yourTimeSeconds: 80,
       actualCorrect: true,
       blindReviewCorrect: true,
       blindReviewUnanswered: false,
@@ -63,6 +65,7 @@ const sessionDetail: PrepTestSessionDetail = {
       tags: ["Strg"],
       difficulty: "Medium",
       difficultyDots: 3,
+      targetTimeSeconds: 90,
       actualCorrect: false,
       blindReviewCorrect: false,
       blindReviewUnanswered: false,
@@ -80,6 +83,7 @@ const sessionDetail: PrepTestSessionDetail = {
       tags: ["RC"],
       difficulty: "Easy",
       difficultyDots: 2,
+      targetTimeSeconds: 75,
       actualCorrect: true,
       blindReviewCorrect: true,
       blindReviewUnanswered: false,
@@ -97,6 +101,7 @@ const sessionDetail: PrepTestSessionDetail = {
       tags: ["RC"],
       difficulty: "Easy",
       difficultyDots: 2,
+      targetTimeSeconds: 75,
       actualCorrect: true,
       blindReviewCorrect: true,
       blindReviewUnanswered: false,
@@ -171,5 +176,12 @@ describe("AnalyticsPrepTestResultsPage insights toggle", () => {
     const editLinks = screen.getAllByRole("link", { name: /view explanation/i })
     expect(editLinks.length).toBeGreaterThan(0)
     expect(editLinks[0]).toHaveAttribute("href", "/app/learn/explanations/q/q1")
+  })
+
+  it("shows padded your time and under/over vs target", async () => {
+    renderResultsPage()
+    await screen.findByRole("heading", { name: /PT156 - June 19, 2026/i })
+    expect(screen.getByText("01:20")).toBeInTheDocument()
+    expect(screen.getByText("(00:25 under)")).toBeInTheDocument()
   })
 })

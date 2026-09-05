@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { BookOpen, Check, Clock, FileText, Users } from "lucide-react"
 
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
+import { NOT_ENOUGH_ANSWERS_YET, hasEnoughPlatformAnswerSample } from "@/lib/platform-answer-sample"
 import { cn } from "@/lib/utils"
 
 type ExplanationAnalyticsTabPanelProps = {
@@ -80,7 +81,14 @@ function ScoreBandCard({
   caption: string
 }) {
   const score = Number.parseInt(headline, 10)
-  const sliderPct = Number.isFinite(score) ? Math.max(0, Math.min(100, ((score - 120) / 60) * 100)) : 50
+  if (!Number.isFinite(score)) {
+    return (
+      <p className="m-0 rounded-[14px] border border-dashed border-[#dfe1e7] bg-[#f6f8fa] px-4 py-6 text-center text-sm text-[#666d80]">
+        {caption}
+      </p>
+    )
+  }
+  const sliderPct = Math.max(0, Math.min(100, ((score - 120) / 60) * 100))
 
   return (
     <div
@@ -242,15 +250,8 @@ function TagGroup({
 
 function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: ExplanationAnalyticsTabPanelProps) {
   const attemptCount = analytics.history.length
-  const popularityRows =
-    analytics.answerPopularity.length > 0
-      ? analytics.answerPopularity
-      : ["A", "B", "C", "D", "E"].map((letter) => ({
-          letter,
-          count: 0,
-          pct: 0,
-          ...(correctChoiceLetter === letter ? { highlight: true } : {}),
-        }))
+  const showPopularity = hasEnoughPlatformAnswerSample(analytics.answerPopularityTotal)
+  const popularityRows = showPopularity ? analytics.answerPopularity : []
 
   return (
     <div className="flex flex-col gap-6">
@@ -305,14 +306,20 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
             ) : null}
           </div>
           <div className="flex items-start gap-5 pt-6">
-            {popularityRows.map((row) => (
-              <TopAnswerBar
-                key={row.letter}
-                letter={row.letter}
-                pct={row.pct}
-                highlight={row.highlight}
-              />
-            ))}
+            {showPopularity && popularityRows.length > 0 ? (
+              popularityRows.map((row) => (
+                <TopAnswerBar
+                  key={row.letter}
+                  letter={row.letter}
+                  pct={row.pct}
+                  highlight={row.highlight}
+                />
+              ))
+            ) : (
+              <p className="m-0 w-full rounded-[14px] border border-dashed border-[#dfe1e7] bg-[#f6f8fa] px-4 py-6 text-center text-sm text-[#666d80]">
+                {NOT_ENOUGH_ANSWERS_YET}
+              </p>
+            )}
           </div>
         </section>
       </div>

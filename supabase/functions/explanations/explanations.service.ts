@@ -1,4 +1,5 @@
 import { parseQuestionChoices } from '../_shared/parse-question-choices.ts'
+import { hasEnoughPlatformAnswerSample } from '../_shared/platform-answer-sample.ts'
 import { extractHtmlParagraphs } from '../_shared/rc-passage-analysis.ts'
 import {
   isStudentVisiblePrepTest,
@@ -101,6 +102,8 @@ export type ExplanationDetailPayload = {
     overallHtml: string | null
   } | null
   answerPopularity: ExplanationAnswerPopularityRow[]
+  /** Unique users whose latest answer was counted. Percents omitted when below the sample floor. */
+  answerPopularityTotal: number
   /** Current user's latest submitted answer letter (A–E), or null if never answered. */
   userSelectedLetter: string | null
   difficulty: 1 | 2 | 3 | 4 | 5
@@ -177,6 +180,8 @@ export function buildAnswerPopularity(
     counts.set(letter, (counts.get(letter) ?? 0) + 1)
     total += 1
   }
+
+  if (!hasEnoughPlatformAnswerSample(total)) return []
 
   const correct = correctLetter ? normalizeAnswerLetter(correctLetter) : null
   let maxCount = 0
@@ -920,6 +925,7 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
         const letter = mapStoredAnswerToLetter(raw, choices, letters)
         if (letter) mappedSelections.push(letter)
       }
+      const answerPopularityTotal = mappedSelections.length
       const answerPopularity = buildAnswerPopularity(mappedSelections, letters, correctChoiceId)
       const userSelectedLetter = rawUserSelection
         ? mapStoredAnswerToLetter(rawUserSelection, choices, letters)
@@ -964,6 +970,7 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
         passage,
         passageAnalysis,
         answerPopularity,
+        answerPopularityTotal,
         userSelectedLetter,
         difficulty: clampDifficulty(row.difficulty),
       }

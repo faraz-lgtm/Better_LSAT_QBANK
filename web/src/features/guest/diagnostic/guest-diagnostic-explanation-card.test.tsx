@@ -36,6 +36,7 @@ describe('GuestDiagnosticExplanationCard', () => {
     expect(screen.getByText(/Target time:/)).toBeInTheDocument()
     expect(screen.getByText(/Your time:/)).toBeInTheDocument()
     expect(screen.getByText(/Answer popularity/i)).toBeInTheDocument()
+    expect(screen.getByText("Not enough answers yet")).toBeInTheDocument()
     expect(screen.queryByText('Stimulus text')).not.toBeInTheDocument()
     expect(screen.queryByText('Which conclusion?')).not.toBeInTheDocument()
     expect(screen.queryByText(/Choice C/)).not.toBeInTheDocument()

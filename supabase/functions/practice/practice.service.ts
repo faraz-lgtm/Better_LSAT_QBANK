@@ -1,6 +1,7 @@
 import { extractPrepTestQuestionRef } from '../_shared/prep-question-ref.ts'
 import { resolvePrepDrillLessonType } from '../_shared/prep-lesson-type.ts'
 import { isStudentVisiblePrepTest } from '../_shared/prep-test-visibility.ts'
+import { allocateQuestionTargetTimes } from '../_shared/question-target-time.ts'
 import { DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT, PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT } from './adaptive-drill-config.ts'
 import type {
   AnswerEventRow,
@@ -16,6 +17,7 @@ import {
   pickRcDrillQuestionIdsByPassageCount,
   prepTestNumberFromModuleId,
   type DrillQuestionPayload,
+  type DrillQuestionRow,
 } from './practice.mapper.ts'
 import type { PrepTestDetailRow, PrepTestPoolRow } from './practice.repository.ts'
 
@@ -35,6 +37,18 @@ export class PracticeForbiddenError extends Error {
 
 function normalizeAnswer(value: string): string {
   return value.trim().toUpperCase().slice(0, 1)
+}
+
+const SECTION_TIME_SPENT_CAP_SECONDS = 35 * 60
+
+function parseSectionTimeSpentSeconds(
+  raw: unknown,
+  sessionKind: PracticeSessionKind,
+  blindReview: boolean,
+): number | null {
+  if (blindReview || sessionKind !== 'SECTION') return null
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return null
+  return Math.min(SECTION_TIME_SPENT_CAP_SECONDS, Math.max(0, Math.round(raw)))
 }
 
 function isValidKind(value: unknown): value is PracticeSessionKind {
@@ -94,11 +108,28 @@ function mapAnswerSnapshotsToStates(snapshots: PracticeAnswerSnapshot[]): DrillA
   }))
 }
 
+function timeSpentSecondsFromEvent(event: AnswerEventRow | undefined): number | null {
+  return typeof event?.time_spent_seconds === 'number' && Number.isFinite(event.time_spent_seconds)
+    ? event.time_spent_seconds
+    : null
+}
+
 function mapAnswerEventsToStates(events: Map<string, AnswerEventRow>): DrillAnswerState[] {
   return [...events.values()].map((e) => ({
     questionId: e.question_id,
     selectedAnswer: e.selected_answer,
     isCorrect: e.is_correct,
+    timeSpentSeconds: timeSpentSecondsFromEvent(e),
+  }))
+}
+
+function withTimeSpentFromEvents(
+  states: DrillAnswerState[],
+  events: Map<string, AnswerEventRow>,
+): DrillAnswerState[] {
+  return states.map((state) => ({
+    ...state,
+    timeSpentSeconds: timeSpentSecondsFromEvent(events.get(state.questionId)) ?? state.timeSpentSeconds ?? null,
   }))
 }
 
@@ -265,6 +296,7 @@ export type DrillAnswerState = {
   questionId: string
   selectedAnswer: string
   isCorrect: boolean
+  timeSpentSeconds?: number | null
 }
 
 export type DrillSessionResponse = {
@@ -331,6 +363,19 @@ function sectionTypeForPool(value: string | null | undefined): 'LR' | 'RC' | nul
 
 function defaultTimeMinutes(sectionType: 'LR' | 'RC'): number {
   return sectionType === 'LR' ? 35 : 35
+}
+
+function withSectionTargetTimes(
+  questions: DrillQuestionPayload[],
+  rows: DrillQuestionRow[],
+): DrillQuestionPayload[] {
+  const targets = allocateQuestionTargetTimes(
+    rows.map((row) => ({ id: row.id, difficulty: row.difficulty })),
+  )
+  return questions.map((question) => ({
+    ...question,
+    targetTimeSeconds: targets[question.id],
+  }))
 }
 
 export type PrepTestPracticeStatus = 'fresh' | 'in_progress' | 'completed'
@@ -1277,7 +1322,13 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
     async submitAnswer(
       userId: string,
-      body: { sessionId?: unknown; questionId?: unknown; selectedAnswer?: unknown; blindReview?: unknown },
+      body: {
+        sessionId?: unknown
+        questionId?: unknown
+        selectedAnswer?: unknown
+        blindReview?: unknown
+        timeSpentSeconds?: unknown
+      },
     ): Promise<{ event: AnswerEventRow }> {
       const sessionId = typeof body.sessionId === 'string' ? body.sessionId : ''
       const questionId = typeof body.questionId === 'string' ? body.questionId : ''
@@ -1320,6 +1371,11 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       assertQuestionAllowedForSession(session, question)
 
       const sectionType = question.admin_sections?.section_type ?? null
+      const timeSpentSeconds = parseSectionTimeSpentSeconds(
+        body.timeSpentSeconds,
+        session.kind,
+        blindReview,
+      )
 
       if (isClearResponse) {
         const event = await deps.repository.insertAnswerEvent({
@@ -1332,6 +1388,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           sectionType,
           difficulty: question.difficulty,
           sessionKind: session.kind,
+          timeSpentSeconds,
         })
 
         if (session.kind === 'DRILL' || session.kind === 'SECTION') {
@@ -1364,6 +1421,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         sectionType,
         difficulty: question.difficulty,
         sessionKind: session.kind,
+        timeSpentSeconds,
       })
 
       if (session.kind === 'DRILL' || session.kind === 'SECTION') {
@@ -1925,6 +1983,10 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         questionId: e.question_id,
         selectedAnswer: e.selected_answer,
         isCorrect: e.is_correct,
+        timeSpentSeconds:
+          typeof e.time_spent_seconds === 'number' && Number.isFinite(e.time_spent_seconds)
+            ? e.time_spent_seconds
+            : null,
       }))
 
       return {
@@ -2023,7 +2085,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       })
 
       const rows = await deps.repository.getDrillQuestionRowsByIds(questionIds)
-      const questions = mapDrillQuestionRows(rows, false)
+      const questions = withSectionTargetTimes(mapDrillQuestionRows(rows, false), rows)
 
       const poolItem: SectionPoolItem = {
         id: section.id,
@@ -2102,17 +2164,24 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       const rows = await deps.repository.getDrillQuestionRowsByIds(questionIds)
       const includeOptionExplanations = session.completed_at != null
-      const questions = mapDrillQuestionRows(rows, includeOptionExplanations)
+      const questions = withSectionTargetTimes(
+        mapDrillQuestionRows(rows, includeOptionExplanations),
+        rows,
+      )
 
       const events = await deps.repository.listAnswerEventsForSession(sessionId, userId)
       const latest = latestAnswerByQuestion(events)
+      const scoredEvents = session.completed_at
+        ? answerEventsAtCompletion(events, session.completed_at)
+        : latest
 
       const actualFromMeta = parsePracticeAnswerSnapshots(metaRaw.sectionActualAnswers)
-      const answers: DrillAnswerState[] = actualFromMeta
-        ? mapAnswerSnapshotsToStates(actualFromMeta)
-        : session.completed_at
-          ? mapAnswerEventsToStates(answerEventsAtCompletion(events, session.completed_at))
-          : mapAnswerEventsToStates(latest)
+      const answers: DrillAnswerState[] = withTimeSpentFromEvents(
+        actualFromMeta
+          ? mapAnswerSnapshotsToStates(actualFromMeta)
+          : mapAnswerEventsToStates(scoredEvents),
+        scoredEvents,
+      )
 
       const blindReviewFromMeta = parsePracticeAnswerSnapshots(metaRaw.sectionBlindReviewAnswers)
       let blindReviewAnswers: DrillAnswerState[] = blindReviewFromMeta

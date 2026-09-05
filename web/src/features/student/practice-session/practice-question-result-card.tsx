@@ -8,11 +8,13 @@ import {
   correctChoiceLetter,
   difficultyLabelFromLevel,
   formatMmSs,
+  formatPaddedTargetTime,
   formatPtQuestionTitle,
   resolveQuestionResultTags,
-  targetTimeForDifficulty,
+  targetSecondsForDifficulty,
 } from "@/features/student/practice-session/practice-results-ui"
 import { cn } from "@/lib/utils"
+import { isFiniteTargetSeconds } from "@/lib/question-target-time"
 
 type PracticeQuestionResultCardProps = {
   number: number
@@ -28,6 +30,7 @@ type PracticeQuestionResultCardProps = {
   flagged?: boolean
   variant?: "default" | "active-drill" | "in-section"
   className?: string
+  targetTimeSeconds?: number | null
 }
 
 function questionResultBadgeClass(isUnanswered: boolean, isCorrect: boolean) {
@@ -50,20 +53,18 @@ function PracticeQuestionResultCard({
   flagged,
   variant = "default",
   className,
+  targetTimeSeconds,
 }: PracticeQuestionResultCardProps) {
   const showBlindReviewResult = showBlindReview
   const title = titleOverride ?? (detail ? formatPtQuestionTitle(detail) : `Question ${number}`)
   const tags = detail ? resolveQuestionResultTags(detail) : []
   const difficulty = difficultyLabelFromLevel(detail?.difficulty ?? 3)
-  const targetTime = targetTimeForDifficulty(difficulty)
+  const targetSec = isFiniteTargetSeconds(targetTimeSeconds)
+    ? targetTimeSeconds
+    : targetSecondsForDifficulty(difficulty)
+  const targetTime = formatPaddedTargetTime(targetSec)
   const yourTime =
     yourTimeSeconds != null && yourTimeSeconds >= 0 ? formatMmSs(yourTimeSeconds) : "—"
-  const targetSec =
-    difficulty === "Hardest" || difficulty === "Hard"
-      ? 105
-      : difficulty === "Medium"
-        ? 90
-        : 75
   const yourSec = yourTimeSeconds ?? 0
   const deltaSec = targetSec - yourSec
   const yourTimeNote =
@@ -153,14 +154,7 @@ function PracticeQuestionResultCard({
     </div>
   )
 
-  const resolvedPopularityRows =
-    popularityRows.length > 0
-      ? popularityRows
-      : ["A", "B", "C", "D", "E"].map((letter) => ({
-          letter,
-          count: 0,
-          pct: 0,
-        }))
+  const resolvedPopularityRows = popularityRows
 
   const questionCardBody = (
     <PracticeQuestionResultCardLayout
