@@ -116,6 +116,122 @@ Deno.test('createSession rejects PREPTEST without prepTestId', async () => {
   )
 })
 
+Deno.test('submitAnswer stores clamped timeSpentSeconds on SECTION scored submit', async () => {
+  let captured: number | null | undefined
+  const base = mockRepo()
+  const repo = {
+    ...base,
+    getSessionById: async () =>
+      baseSession({ kind: 'SECTION', section_id: 'sec-1', prep_test_id: 'pt-1' }),
+    insertAnswerEvent: async (input: { isCorrect: boolean; timeSpentSeconds?: number | null }) => {
+      captured = input.timeSpentSeconds ?? null
+      return base.insertAnswerEvent(input)
+    },
+  }
+  const service = createPracticeService({ repository: repo as never })
+  await service.submitAnswer('user-1', {
+    sessionId: 'sess-1',
+    questionId: 'q-1',
+    selectedAnswer: 'C',
+    timeSpentSeconds: 87.6,
+  })
+  assertEquals(captured, 88)
+})
+
+Deno.test('submitAnswer clamps SECTION timeSpentSeconds to 0..35 minutes', async () => {
+  const captured: Array<number | null> = []
+  const base = mockRepo()
+  const repo = {
+    ...base,
+    getSessionById: async () =>
+      baseSession({ kind: 'SECTION', section_id: 'sec-1', prep_test_id: 'pt-1' }),
+    insertAnswerEvent: async (input: { isCorrect: boolean; timeSpentSeconds?: number | null }) => {
+      captured.push(input.timeSpentSeconds ?? null)
+      return base.insertAnswerEvent(input)
+    },
+  }
+  const service = createPracticeService({ repository: repo as never })
+  await service.submitAnswer('user-1', {
+    sessionId: 'sess-1',
+    questionId: 'q-1',
+    selectedAnswer: 'C',
+    timeSpentSeconds: -12,
+  })
+  await service.submitAnswer('user-1', {
+    sessionId: 'sess-1',
+    questionId: 'q-1',
+    selectedAnswer: 'C',
+    timeSpentSeconds: 99999,
+  })
+  await service.submitAnswer('user-1', {
+    sessionId: 'sess-1',
+    questionId: 'q-1',
+    selectedAnswer: 'C',
+    timeSpentSeconds: 'nope',
+  })
+  assertEquals(captured, [0, 35 * 60, null])
+})
+
+Deno.test('submitAnswer ignores timeSpentSeconds on drills', async () => {
+  let captured: number | null | undefined = 0
+  const base = mockRepo()
+  const repo = {
+    ...base,
+    getSessionById: async () =>
+      baseSession({
+        kind: 'DRILL',
+        prep_test_id: null,
+        metadata: { questionIds: ['q-1'] },
+      }),
+    insertAnswerEvent: async (input: { isCorrect: boolean; timeSpentSeconds?: number | null }) => {
+      captured = input.timeSpentSeconds ?? null
+      return base.insertAnswerEvent(input)
+    },
+  }
+  const service = createPracticeService({ repository: repo as never })
+  await service.submitAnswer('user-1', {
+    sessionId: 'sess-1',
+    questionId: 'q-1',
+    selectedAnswer: 'C',
+    timeSpentSeconds: 40,
+  })
+  assertEquals(captured, null)
+})
+
+Deno.test('submitAnswer ignores timeSpentSeconds during blind review', async () => {
+  let captured: number | null | undefined = 0
+  const completedPt = baseSession({
+    kind: 'PREPTEST',
+    completed_at: '2026-01-02T00:00:00Z',
+    metadata: { blindReviewActive: true },
+  })
+  const base = mockRepo()
+  const repo = {
+    ...base,
+    getSessionById: async () =>
+      baseSession({
+        kind: 'SECTION',
+        section_id: 'sec-1',
+        prep_test_id: 'pt-1',
+        completed_at: '2026-01-02T00:00:00Z',
+      }),
+    listUserSessionsForPrepTest: async () => [completedPt],
+    insertAnswerEvent: async (input: { isCorrect: boolean; timeSpentSeconds?: number | null }) => {
+      captured = input.timeSpentSeconds ?? null
+      return base.insertAnswerEvent(input)
+    },
+  }
+  const service = createPracticeService({ repository: repo as never })
+  await service.submitAnswer('user-1', {
+    sessionId: 'sess-1',
+    questionId: 'q-1',
+    selectedAnswer: 'C',
+    blindReview: true,
+    timeSpentSeconds: 40,
+  })
+  assertEquals(captured, null)
+})
+
 Deno.test('submitAnswer marks incorrect when choice wrong', async () => {
   let captured: boolean | null = null
   const base = mockRepo()
@@ -843,6 +959,7 @@ Deno.test('startDrill creates session with question ids', async () => {
   assertEquals(out.metadata.questionIds.length, 1)
   assertEquals(out.questions.length, 1)
   assertEquals(out.questions[0]!.stemText, 'Stem?')
+  assertEquals(out.questions[0]!.targetTimeSeconds, undefined)
 })
 
 Deno.test('startDrill LR unlimited stores unlimited metadata and entire pool', async () => {
@@ -1189,6 +1306,95 @@ Deno.test('getSectionSession returns questions and resume answers', async () => 
   assertEquals(out.questions.length, 2)
   assertEquals(out.answers.length, 1)
   assertEquals(out.answers[0]!.selectedAnswer, 'C')
+})
+
+Deno.test('getSectionSession copies timeSpentSeconds from at-completion events', async () => {
+  const service = createPracticeService({
+    repository: sectionRepo({
+      getSessionById: async () =>
+        baseSession({
+          kind: 'SECTION',
+          section_id: 'sec-db-1',
+          prep_test_id: 'pt-900',
+          completed_at: '2026-01-01T12:00:00Z',
+          metadata: {
+            sectionType: 'LR',
+            timing: '35',
+            showAnswers: 'end',
+            questionIds: ['q-1'],
+            sectionActualAnswers: [{ questionId: 'q-1', selectedAnswer: 'C', isCorrect: true }],
+          },
+        }),
+      listAnswerEventsForSession: async () =>
+        [
+          {
+            id: 'e1',
+            user_id: 'user-1',
+            practice_session_id: 'sess-1',
+            question_id: 'q-1',
+            selected_answer: 'C',
+            is_correct: true,
+            question_type_id: 'qt-1',
+            section_type: 'LR',
+            difficulty: 2,
+            session_kind: 'SECTION' as const,
+            created_at: '2026-01-01T11:00:00Z',
+            time_spent_seconds: 54,
+          },
+          {
+            id: 'e2',
+            user_id: 'user-1',
+            practice_session_id: 'sess-1',
+            question_id: 'q-1',
+            selected_answer: 'A',
+            is_correct: false,
+            question_type_id: 'qt-1',
+            section_type: 'LR',
+            difficulty: 2,
+            session_kind: 'SECTION' as const,
+            created_at: '2026-01-01T13:00:00Z',
+            time_spent_seconds: 999,
+          },
+        ] as AnswerEventRow[],
+    }) as never,
+  })
+  const out = await service.getSectionSession('user-1', { sessionId: 'sess-1' })
+  assertEquals(out.answers[0]?.timeSpentSeconds, 54)
+})
+
+Deno.test('getSectionSession allocates targetTimeSeconds from difficulty mix', async () => {
+  const service = createPracticeService({
+    repository: sectionRepo({
+      getSessionById: async () =>
+        baseSession({
+          kind: 'SECTION',
+          section_id: 'sec-db-1',
+          prep_test_id: 'pt-900',
+          metadata: {
+            sectionType: 'LR',
+            timing: '35',
+            showAnswers: 'end',
+            questionIds: ['q-easy', 'q-hard'],
+            prepTestTitle: 'Local Seed — PrepTest Alpha',
+            sectionTitle: 'Logical Reasoning',
+          },
+        }),
+      getDrillQuestionRowsByIds: async (ids: string[]) =>
+        ids.map((id) => ({
+          ...drillQuestionRow,
+          id,
+          difficulty: id === 'q-hard' ? 5 : 1,
+        })),
+    }) as never,
+  })
+  const out = await service.getSectionSession('user-1', { sessionId: 'sess-1' })
+  assertEquals(
+    (out.questions[0]?.targetTimeSeconds ?? 0) + (out.questions[1]?.targetTimeSeconds ?? 0),
+    1890,
+  )
+  const easy = out.questions.find((q) => q.id === 'q-easy')
+  const hard = out.questions.find((q) => q.id === 'q-hard')
+  assertEquals((hard?.targetTimeSeconds ?? 0) > (easy?.targetTimeSeconds ?? 0), true)
 })
 
 const prepTestPoolRows: PrepTestPoolRow[] = [

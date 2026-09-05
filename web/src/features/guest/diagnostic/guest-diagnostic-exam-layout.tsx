@@ -69,7 +69,7 @@ import {
 import { difficultyLabelFromLevel, targetTimeSecondsForDifficulty } from "@/features/student/practice-session/practice-results-ui"
 import type { DrillQuestion } from "@/features/student/drills/drill-types"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
-import { buildDiagnosticAnswerPopularity } from "@/features/guest/diagnostic/diagnostic-answer-popularity"
+import { NOT_ENOUGH_ANSWERS_YET } from "@/lib/platform-answer-sample"
 import { usePracticeSessionAccessibilityPanel } from "@/features/student/practice-session/use-practice-session-accessibility-panel"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { isOfficialLayout, resolveExamSessionVariant } from "@/features/student/practice-session/practice-session-types"
@@ -174,23 +174,13 @@ function difficultyTone(level: number): "green" | "teal" | "red" {
 }
 
 function buildDiagnosticAnalyticsSeed(
-  question: DrillQuestion,
+  _question: DrillQuestion,
   meta: { difficulty: number; questionType: string; targetTimeSeconds?: number } | null,
   selectedAnswer: string | null | undefined,
   yourTimeSeconds?: number | null,
 ): ExplanationQuestionDetailView["analytics"] {
   const diffLevel = meta?.difficulty ?? 3
   const label = difficultyLabelFromLevel(diffLevel)
-  const correctChoiceId = question.correctChoiceId ?? ""
-  const choiceLetters = question.choices.map((choice) => {
-    const fromId = choice.id.trim().toUpperCase().slice(0, 1)
-    return /^[A-E]$/.test(fromId) ? fromId : String.fromCharCode(65 + choice.index)
-  })
-  const answerPopularity = buildDiagnosticAnswerPopularity(
-    question.id,
-    correctChoiceId,
-    choiceLetters,
-  )
   const letter = selectedAnswer?.trim().toUpperCase().slice(0, 1) ?? ""
   const questionLabel = label === "Hardest" ? "Hard" : label
   const targetTimeSeconds =
@@ -210,10 +200,10 @@ function buildDiagnosticAnalyticsSeed(
     scoreBand: {
       headline: "—",
       range: "—",
-      caption: "Score of students with a 50% chance of getting this right",
+      caption: NOT_ENOUGH_ANSWERS_YET,
     },
-    answerPopularity,
-    answerPopularityTotal: answerPopularity.reduce((sum, row) => sum + row.count, 0),
+    answerPopularity: [],
+    answerPopularityTotal: 0,
     userSelectedLetter: /^[A-E]$/.test(letter) ? letter : null,
     targetTimeSeconds,
     yourTimeSeconds: yourTimeSeconds ?? null,

@@ -8,6 +8,11 @@ import {
   tagsFromTopicName,
   targetTimeSecondsForDifficulty,
 } from "@/features/student/practice-session/practice-results-ui"
+import {
+  NOT_ENOUGH_ANSWERS_YET,
+  hasEnoughPlatformAnswerSample,
+  platformAnswerSampleSize,
+} from "@/lib/platform-answer-sample"
 
 function passageDisplayNumber(loc: LocatedExplanationQuestion): number {
   const m = /^P(\d+)$/i.exec(loc.pass.label)
@@ -53,9 +58,9 @@ function difficultyTone(band: DifficultyBand): "green" | "teal" | "red" {
 }
 
 function questionDifficultyCaption(band: DifficultyBand): string {
-  if (band === "Medium") return "75% of people who answer get this correct."
-  if (band === "Hard") return "This is a moderately difficult question."
-  return "Most students answer this question correctly."
+  if (band === "Medium") return "This is a moderately difficult question."
+  if (band === "Hard") return "This is a difficult question."
+  return "This question is relatively easy."
 }
 
 function passageDifficultyCaption(band: DifficultyBand): string {
@@ -76,22 +81,21 @@ function buildAnalytics(
   const diffLevel = detail?.difficulty ?? loc.q.difficulty
   const tags = detail ? tagsFromTopicName(detail.topicName) : []
 
-  const answerPopularity = resolveAnswerPopularityRows(
+  const resolvedPopularity = resolveAnswerPopularityRows(
     detail?.answerPopularity,
     choices.length > 0 ? choices : [{ id: "A", index: 1 }, { id: "B", index: 2 }, { id: "C", index: 3 }, { id: "D", index: 4 }, { id: "E", index: 5 }],
     detail?.correctChoiceId ?? "",
   )
 
-  const totalResponses = answerPopularity.reduce((sum, row) => sum + row.count, 0)
+  const totalResponses = detail?.answerPopularityTotal ?? platformAnswerSampleSize(resolvedPopularity)
+  const answerPopularity = hasEnoughPlatformAnswerSample(totalResponses) ? resolvedPopularity : []
   const questionBand = difficultyDisplayLabel(diffLevel) as DifficultyBand
-  const scoreHeadline = totalResponses > 0 ? "150" : "—"
   const sectionType = detail?.sectionType ?? loc.sec.kind
   const showPassageDifficulty = sectionType === "RC"
   const targetTimeSeconds = targetTimeSecondsForDifficulty(difficultyLabelFromLevel(diffLevel))
 
   const passageDifficulty = (() => {
     if (!showPassageDifficulty) return undefined
-    // Placeholder until real passage-level difficulty is available from the API.
     const passageFilled = Math.max(1, Math.min(5, diffLevel + 1))
     const passageBand = difficultyBandFromFilled(passageFilled)
     return {
@@ -113,9 +117,9 @@ function buildAnalytics(
     },
     ...(passageDifficulty ? { passageDifficulty } : {}),
     scoreBand: {
-      headline: scoreHeadline,
-      range: totalResponses > 0 ? "75th percentile · 160" : "—",
-      caption: "Score of students with a 50% chance of getting this right",
+      headline: "—",
+      range: "—",
+      caption: NOT_ENOUGH_ANSWERS_YET,
     },
     answerPopularity,
     answerPopularityTotal: totalResponses,

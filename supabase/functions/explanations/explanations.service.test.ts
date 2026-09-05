@@ -42,33 +42,36 @@ function mockRepo(overrides: Partial<ExplanationsRepository> = {}): Explanations
   }
 }
 
-Deno.test('buildAnswerPopularity counts latest selections per letter', () => {
-  const rows = buildAnswerPopularity(
-    [{ letter: 'B' }, { letter: 'B' }, { letter: 'A' }, { letter: 'C' }],
-    ['A', 'B', 'C', 'D', 'E'],
-    'B',
+Deno.test('buildAnswerPopularity returns empty below 5 unique answers', () => {
+  assertEquals(buildAnswerPopularity([], ['A', 'B', 'C', 'D', 'E'], 'A'), [])
+  assertEquals(
+    buildAnswerPopularity(['A', 'B', 'C', 'D'], ['A', 'B', 'C', 'D', 'E'], 'A'),
+    [],
   )
-  assertEquals(rows.find((r) => r.letter === 'B')?.count, 2)
-  assertEquals(rows.find((r) => r.letter === 'B')?.pct, 50)
-  assertEquals(rows.find((r) => r.letter === 'B')?.highlight, true)
-  assertEquals(rows.find((r) => r.letter === 'A')?.highlight, undefined)
-  assertEquals(rows.find((r) => r.letter === 'B')?.avgScore, null)
 })
 
-Deno.test('buildAnswerPopularity averages scaled scores per letter', () => {
+Deno.test('buildAnswerPopularity counts latest selections per letter at sample of 5', () => {
   const rows = buildAnswerPopularity(
-    [
-      { letter: 'B', scaledScore: 163 },
-      { letter: 'B', scaledScore: 161 },
-      { letter: 'A', scaledScore: 152 },
-      { letter: 'C' },
-    ],
+    ['B', 'B', 'A', 'C', 'B'],
     ['A', 'B', 'C', 'D', 'E'],
     'B',
   )
-  assertEquals(rows.find((r) => r.letter === 'B')?.avgScore, 162)
-  assertEquals(rows.find((r) => r.letter === 'A')?.avgScore, 152)
-  assertEquals(rows.find((r) => r.letter === 'C')?.avgScore, null)
+  assertEquals(rows.find((r) => r.letter === 'B')?.count, 3)
+  assertEquals(rows.find((r) => r.letter === 'B')?.pct, 60)
+  assertEquals(rows.find((r) => r.letter === 'B')?.highlight, true)
+  assertEquals(rows.find((r) => r.letter === 'A')?.highlight, undefined)
+})
+
+Deno.test('buildAnswerPopularity returns percents at exactly 5 unique answers', () => {
+  const rows = buildAnswerPopularity(
+    ['A', 'A', 'B', 'C', 'D'],
+    ['A', 'B', 'C', 'D', 'E'],
+    'A',
+  )
+  assertEquals(rows.length, 5)
+  assertEquals(rows.find((r) => r.letter === 'A')?.count, 2)
+  assertEquals(rows.find((r) => r.letter === 'A')?.pct, 40)
+  assertEquals(rows.find((r) => r.letter === 'E')?.count, 0)
 })
 
 Deno.test('mapStoredAnswerToLetter resolves choice id and numeric index', () => {
@@ -501,12 +504,49 @@ Deno.test('getExplanationDetail returns extended payload', async () => {
   assertEquals(d.explanationHtml, '<p>expl</p>')
   assertEquals(d.choices[0]!.explanationHtml, '<p>Why not A</p>')
   assertEquals(d.choices[1]!.explanationHtml, null)
-  assertEquals(d.answerPopularity.length, 2)
-  assertEquals(d.answerPopularity.find((r) => r.letter === 'B')?.count, 2)
-  assertEquals(d.answerPopularity.find((r) => r.letter === 'B')?.pct, 67)
+  assertEquals(d.answerPopularity.length, 0)
+  assertEquals(d.answerPopularityTotal, 3)
   assertEquals(d.userSelectedLetter, 'A')
   assertEquals(d.tags, ['Flaw', 'LR'])
   assertEquals(d.passageAnalysis, null)
+})
+
+Deno.test('getExplanationDetail returns popularity percents at 5 unique answers', async () => {
+  const service = createExplanationsService({
+    repository: mockRepo({
+      listLatestAnswerSelectionsForQuestion: async () => ['B', 'B', 'A', 'B', 'A'],
+      getLatestUserAnswerSelection: async () => 'A',
+      getQuestionDetail: async () => ({
+        id: 'q1',
+        question_number: 5,
+        source_group_id: null,
+        stimulus_text: 'Stim',
+        stem_text: 'Stem here',
+        choices: [
+          { optionLetter: 'A', optionContent: 'A text' },
+          { optionLetter: 'B', optionContent: 'B text' },
+        ],
+        correct_answer: 'B',
+        explanation: '<p>expl</p>',
+        video_url: null,
+        difficulty: 3,
+        question_types: { name: 'Flaw' },
+        admin_sections: {
+          id: 'sec1',
+          section_type: 'LR',
+          section_number: 1,
+          title: 'LR',
+          admin_prep_tests: { id: 'pt1', title: 'PT 100', module_id: 'LSAC100' },
+        },
+      }),
+    }),
+  })
+
+  const d = await service.getExplanationDetail('user-1', 'q1')
+  assertEquals(d.answerPopularityTotal, 5)
+  assertEquals(d.answerPopularity.length, 2)
+  assertEquals(d.answerPopularity.find((r) => r.letter === 'B')?.count, 3)
+  assertEquals(d.answerPopularity.find((r) => r.letter === 'B')?.pct, 60)
 })
 
 Deno.test('getExplanationDetail returns RC passageAnalysis paragraphs as P1, P2', async () => {

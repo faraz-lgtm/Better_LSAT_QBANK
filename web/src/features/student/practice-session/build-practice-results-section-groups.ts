@@ -7,10 +7,12 @@ import {
   difficultyLabelFromLevel,
   formatMmSs,
   resolveQuestionResultTags,
+  targetSecondsForDifficulty,
   type PracticeDifficultyLabel,
 } from "@/features/student/practice-session/practice-results-ui"
 import { isPracticeAnswerUnanswered } from "@/features/student/practice-session/practice-result-outcome-icon"
 import { passageNavGroupKey } from "@/features/student/practice-session/question-nav-passage-breaks"
+import { allocateQuestionTargetTimes, isFiniteTargetSeconds } from "@/lib/question-target-time"
 
 export type PracticeQuestionResultMeta = {
   question: DrillQuestion
@@ -21,7 +23,7 @@ export type PracticeQuestionResultMeta = {
   selectedAnswer: string | null
   blindReviewCorrect?: boolean
   blindReviewUnanswered?: boolean
-  yourTimeSeconds: number
+  yourTimeSeconds: number | null
 }
 
 export type PracticePassageQuestionGroup = {
@@ -44,14 +46,30 @@ function passageDifficulty(questions: PracticeQuestionResultMeta[]): PracticeDif
   return difficultyLabelFromLevel(maxLevel || 3)
 }
 
+function questionTargetSeconds(q: PracticeQuestionResultMeta): number {
+  if (isFiniteTargetSeconds(q.question.targetTimeSeconds)) return q.question.targetTimeSeconds
+  return targetSecondsForDifficulty(difficultyLabelFromLevel(q.detail?.difficulty ?? 3))
+}
+
+function recordedYourTimeSeconds(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null
+}
+
 function passageTiming(questions: PracticeQuestionResultMeta[]) {
-  const targetSec = questions.reduce((sum, q) => {
-    const label = difficultyLabelFromLevel(q.detail?.difficulty ?? 3)
-    if (label === "Hardest" || label === "Hard") return sum + 105
-    if (label === "Medium") return sum + 90
-    return sum + 75
-  }, 0)
-  const yourSec = questions.reduce((sum, q) => sum + q.yourTimeSeconds, 0)
+  const targetSec = questions.reduce((sum, q) => sum + questionTargetSeconds(q), 0)
+  const recorded = questions
+    .map((q) => recordedYourTimeSeconds(q.yourTimeSeconds))
+    .filter((seconds): seconds is number => seconds != null)
+  const hardest = passageDifficulty(questions)
+  if (recorded.length === 0) {
+    return {
+      targetTime: formatMmSs(targetSec),
+      yourTime: "—",
+      yourTimeNote: "",
+      difficulty: hardest,
+    }
+  }
+  const yourSec = recorded.reduce((sum, seconds) => sum + seconds, 0)
   const deltaSec = targetSec - yourSec
   const yourTimeNote =
     deltaSec > 0
@@ -59,7 +77,6 @@ function passageTiming(questions: PracticeQuestionResultMeta[]) {
       : deltaSec < 0
         ? `(${formatMmSs(-deltaSec)} over)`
         : ""
-  const hardest = passageDifficulty(questions)
   return {
     targetTime: formatMmSs(targetSec),
     yourTime: formatMmSs(yourSec),
@@ -113,6 +130,25 @@ function buildPassageSummary(
   }
 }
 
+function withSectionFallbackTargets(
+  questions: DrillQuestion[],
+  detailsByQuestion: Record<string, ExplanationDetailPayload>,
+): DrillQuestion[] {
+  if (questions.every((q) => isFiniteTargetSeconds(q.targetTimeSeconds))) return questions
+  const allocated = allocateQuestionTargetTimes(
+    questions.map((q) => ({
+      id: q.id,
+      difficulty: detailsByQuestion[q.id]?.difficulty ?? 3,
+    })),
+  )
+  return questions.map((q) => ({
+    ...q,
+    targetTimeSeconds: isFiniteTargetSeconds(q.targetTimeSeconds)
+      ? q.targetTimeSeconds
+      : allocated[q.id],
+  }))
+}
+
 export function buildPracticeResultsSectionGroups(input: {
   questions: DrillQuestion[]
   answersByQuestion: Map<string, { selectedAnswer: string; isCorrect: boolean }>
@@ -121,7 +157,12 @@ export function buildPracticeResultsSectionGroups(input: {
   defaultKind: PracticeSectionKind
   fallbackSectionNumber: number | null
   perQuestionSeconds: number
+  yourTimeByQuestion?: Map<string, number | null>
 }): PracticeResultsSectionGroup[] {
+  const questions =
+    input.fallbackSectionNumber != null
+      ? withSectionFallbackTargets(input.questions, input.detailsByQuestion)
+      : input.questions
   const hasBlindReview = input.blindReviewAnswersByQuestion != null
   const grouped = new Map<
     string,
@@ -132,7 +173,7 @@ export function buildPracticeResultsSectionGroups(input: {
     }
   >()
 
-  input.questions.forEach((question) => {
+  questions.forEach((question) => {
     const detail = input.detailsByQuestion[question.id] ?? null
     const kind: PracticeSectionKind =
       detail?.sectionType === "RC" ? "RC" : detail?.sectionType === "LR" ? "LR" : input.defaultKind
@@ -165,7 +206,12 @@ export function buildPracticeResultsSectionGroups(input: {
       selectedAnswer: answer?.selectedAnswer?.trim() ? answer.selectedAnswer : null,
       blindReviewUnanswered: hasBlindReview ? blindReviewUnanswered : undefined,
       blindReviewCorrect,
-      yourTimeSeconds: input.perQuestionSeconds,
+      yourTimeSeconds:
+        input.yourTimeByQuestion != null
+          ? isUnanswered
+            ? null
+            : recordedYourTimeSeconds(input.yourTimeByQuestion.get(question.id))
+          : input.perQuestionSeconds,
     }
     const existing = grouped.get(key)
     if (existing) {

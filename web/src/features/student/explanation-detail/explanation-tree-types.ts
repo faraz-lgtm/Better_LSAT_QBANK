@@ -89,6 +89,8 @@ export type ExplanationDetailPayload = {
     overallHtml: string | null
   } | null
   answerPopularity: ExplanationAnswerPopularityRow[]
+  /** Unique users whose latest answer was counted. Percents omitted when below the sample floor. */
+  answerPopularityTotal?: number
   /** Current user's latest submitted answer letter (A–E), or null if never answered. */
   userSelectedLetter?: string | null
   difficulty?: 1 | 2 | 3 | 4 | 5

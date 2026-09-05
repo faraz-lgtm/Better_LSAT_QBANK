@@ -52,8 +52,8 @@ describe("buildExplanationQuestionDetailView", () => {
       correctChoiceId: "A",
       passage: { id: "p1", displayNumber: 1, title: "P1", body: "" },
       answerPopularity: [
-        { letter: "A", count: 3, pct: 75, highlight: true },
-        { letter: "B", count: 1, pct: 25 },
+        { letter: "A", count: 4, pct: 80, highlight: true },
+        { letter: "B", count: 1, pct: 20 },
       ],
       userSelectedLetter: "B",
       difficulty: 5,
@@ -61,12 +61,45 @@ describe("buildExplanationQuestionDetailView", () => {
 
     const view = buildExplanationQuestionDetailView(loc, detail)
     const a = view.analytics.answerPopularity.find((r) => r.letter === "A")
-    expect(a?.count).toBe(3)
-    expect(a?.pct).toBe(75)
+    expect(a?.count).toBe(4)
+    expect(a?.pct).toBe(80)
     expect(a?.highlight).toBe(true)
-    expect(view.analytics.answerPopularityTotal).toBe(4)
+    expect(view.analytics.answerPopularityTotal).toBe(5)
     expect(view.analytics.userSelectedLetter).toBe("B")
     expect(view.analytics.questionStemTags).toEqual(["Art", "Sing"])
+  })
+
+  it("omits popularity percents below 5 unique answers", () => {
+    const detail: ExplanationDetailPayload = {
+      questionId: "q1",
+      prepTestId: "pt1",
+      prepTestTitle: "PT 129",
+      prepTestNumber: "129",
+      sectionId: "sec1",
+      sectionType: "LR",
+      sectionNumber: 1,
+      questionNumber: 19,
+      topicName: "Flaw",
+      explanationHtml: null,
+      videoUrl: null,
+      stimulusText: null,
+      stemText: "Stem",
+      choices: [
+        { id: "A", index: 1, text: "a", explanationHtml: null },
+        { id: "B", index: 2, text: "b", explanationHtml: null },
+      ],
+      correctChoiceId: "A",
+      passage: { id: "p1", displayNumber: 1, title: "P1", body: "" },
+      answerPopularity: [{ letter: "A", count: 3, pct: 75, highlight: true }],
+      answerPopularityTotal: 3,
+      userSelectedLetter: "B",
+      difficulty: 5,
+    }
+
+    const view = buildExplanationQuestionDetailView(loc, detail)
+    expect(view.analytics.answerPopularity).toEqual([])
+    expect(view.analytics.answerPopularityTotal).toBe(3)
+    expect(view.analytics.scoreBand.caption).toBe("Not enough answers yet")
   })
 
   it("maps null userSelectedLetter when never answered", () => {
@@ -168,7 +201,7 @@ describe("buildExplanationQuestionDetailView", () => {
     const view = buildExplanationQuestionDetailView(loc, detail)
 
     expect(view.analytics.questionDifficulty.label).toBe("Medium")
-    expect(view.analytics.questionDifficulty.caption).toBe("75% of people who answer get this correct.")
+    expect(view.analytics.questionDifficulty.caption).toBe("This is a moderately difficult question.")
     expect(view.analytics.passageDifficulty?.filled).toBe(4)
     expect(view.analytics.passageDifficulty?.label).toBe("Hard")
     expect(view.analytics.passageDifficulty?.tone).toBe("red")

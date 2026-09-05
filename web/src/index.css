@@ -279,8 +279,8 @@ html.student-shell-active #root {
   }
 }
 
-/* Hand pointer on interactive controls across the student / LSAT portal */
-html.student-shell-active :is(
+/* Hand pointer on interactive controls across the app */
+:is(
   a[href],
   button:not(:disabled),
   summary,
@@ -307,7 +307,7 @@ html.student-shell-active :is(
   cursor: pointer;
 }
 
-html.student-shell-active :is(
+:is(
   button:disabled,
   select:disabled,
   input:disabled,
@@ -319,7 +319,7 @@ html.student-shell-active :is(
 }
 
 /* Keep the I-beam for typing / passage annotation areas */
-html.student-shell-active :is(
+:is(
   input:not([type]),
   input[type="text"],
   input[type="search"],

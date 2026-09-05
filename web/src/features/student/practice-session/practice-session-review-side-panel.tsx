@@ -11,6 +11,11 @@ import {
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
 import { difficultyLabelFromLevel, formatMmSs, tagsFromTopicName, targetTimeSecondsForDifficulty } from "@/features/student/practice-session/practice-results-ui"
 import { createExplanationsApi, type ExplanationDetailPayload } from "@/lib/api/explanations"
+import {
+  NOT_ENOUGH_ANSWERS_YET,
+  hasEnoughPlatformAnswerSample,
+  platformAnswerSampleSize,
+} from "@/lib/platform-answer-sample"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
@@ -31,12 +36,13 @@ function difficultyTone(level: number): "green" | "teal" | "red" {
 function viewFromDetail(detail: ExplanationDetailPayload): ExplanationQuestionDetailView {
   const diffLevel = detail.difficulty ?? 3
   const label = difficultyLabelFromLevel(diffLevel)
-  const answerPopularity = resolveAnswerPopularityRows(
+  const resolvedPopularity = resolveAnswerPopularityRows(
     detail.answerPopularity,
     detail.choices,
     detail.correctChoiceId ?? "",
   )
-  const totalResponses = answerPopularity.reduce((sum, row) => sum + row.count, 0)
+  const totalResponses = detail.answerPopularityTotal ?? platformAnswerSampleSize(resolvedPopularity)
+  const answerPopularity = hasEnoughPlatformAnswerSample(totalResponses) ? resolvedPopularity : []
   const letter = detail.userSelectedLetter?.trim().toUpperCase().slice(0, 1) ?? ""
 
   return {
@@ -91,7 +97,7 @@ function viewFromDetail(detail: ExplanationDetailPayload): ExplanationQuestionDe
         filled: diffLevel,
         max: 5,
         label: label === "Hardest" ? "Hard" : label,
-        caption: "Question difficulty based on student performance.",
+        caption: "Assigned question difficulty.",
         tone: difficultyTone(diffLevel),
       },
       ...(detail.sectionType === "RC"
@@ -106,9 +112,9 @@ function viewFromDetail(detail: ExplanationDetailPayload): ExplanationQuestionDe
           }
         : {}),
       scoreBand: {
-        headline: totalResponses > 0 ? "150" : "—",
-        range: totalResponses > 0 ? "75% - 160" : "—",
-        caption: "Score of students with a 50% chance of getting this right",
+        headline: "—",
+        range: "—",
+        caption: NOT_ENOUGH_ANSWERS_YET,
       },
       answerPopularity,
       answerPopularityTotal: totalResponses,
@@ -209,6 +215,15 @@ function DifficultyStatCard({
 }
 
 function ScoreBandCard({ scoreBand }: { scoreBand: AnalyticsView["scoreBand"] }) {
+  const score = Number.parseInt(scoreBand.headline, 10)
+  if (!Number.isFinite(score)) {
+    return (
+      <p className="m-0 w-full rounded-[14px] border border-dashed border-[#dfe1e7] bg-[#f6f8fa] px-4 py-6 text-center text-sm text-[#666d80]">
+        {scoreBand.caption}
+      </p>
+    )
+  }
+
   return (
     <div className="w-full overflow-hidden rounded-[16px] border border-[var(--primary)]/15 bg-[linear-gradient(158deg,var(--primary)_0%,var(--primary-600)_100%)] p-5 text-white">
       <div className="flex items-start justify-between gap-4">
@@ -254,10 +269,10 @@ function TopAnswerBars({
       (best, row) => (!best || row.pct > best.pct ? row : best),
       null,
     )?.letter
-  if (rows.length === 0) {
+  if (rows.length === 0 || !hasEnoughPlatformAnswerSample(platformAnswerSampleSize(rows))) {
     return (
-      <p className="m-0 w-full rounded-[14px] border border-dashed border-[var(--greyscale-100)] bg-[var(--primary-25)] px-4 py-6 text-center text-sm text-[var(--greyscale-500)]">
-        No answer popularity yet.
+      <p className="m-0 w-full rounded-[14px] border border-dashed border-[#dfe1e7] bg-[#f6f8fa] px-4 py-6 text-center text-sm text-[#666d80]">
+        {NOT_ENOUGH_ANSWERS_YET}
       </p>
     )
   }

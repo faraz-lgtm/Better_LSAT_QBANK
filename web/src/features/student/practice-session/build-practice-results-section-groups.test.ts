@@ -14,6 +14,7 @@ function question(id: string, extras: Partial<DrillQuestion> = {}): DrillQuestio
     passage: extras.passage ?? { id: "collapsed", displayNumber: 1, title: "Passage 1", body: "" },
     sourceGroupId: extras.sourceGroupId ?? null,
     correctChoiceId: null,
+    targetTimeSeconds: extras.targetTimeSeconds,
   }
 }
 
@@ -72,5 +73,50 @@ describe("buildPracticeResultsSectionGroups RC passages", () => {
     expect(groups[0]?.passages[1]?.questions.map((q) => q.question.id)).toEqual(["q3", "q4"])
     expect(groups[0]?.passages[2]?.questions.map((q) => q.question.id)).toEqual(["q5"])
     expect(groups[0]?.passages[1]?.questions[0]?.number).toBe(3)
+  })
+
+  it("sums API targetTimeSeconds for passage target time", () => {
+    const questions = [
+      question("q1", { sourceGroupId: "g1", targetTimeSeconds: 70 }),
+      question("q2", { sourceGroupId: "g1", targetTimeSeconds: 80 }),
+    ]
+    const detailsByQuestion = Object.fromEntries(questions.map((q) => [q.id, detail(q.id)]))
+
+    const groups = buildPracticeResultsSectionGroups({
+      questions,
+      answersByQuestion: new Map(),
+      blindReviewAnswersByQuestion: null,
+      detailsByQuestion,
+      defaultKind: "RC",
+      fallbackSectionNumber: 4,
+      perQuestionSeconds: 30,
+    })
+
+    expect(groups[0]?.passages[0]?.passage.targetTime).toBe("2:30")
+  })
+
+  it("uses per-question times for SECTION results and leaves unanswered as null", () => {
+    const questions = [
+      question("q1", { sourceGroupId: "g1", targetTimeSeconds: 70 }),
+      question("q2", { sourceGroupId: "g1", targetTimeSeconds: 80 }),
+    ]
+    const detailsByQuestion = Object.fromEntries(questions.map((q) => [q.id, detail(q.id)]))
+    const groups = buildPracticeResultsSectionGroups({
+      questions,
+      answersByQuestion: new Map([["q1", { selectedAnswer: "A", isCorrect: true }]]),
+      blindReviewAnswersByQuestion: null,
+      detailsByQuestion,
+      defaultKind: "RC",
+      fallbackSectionNumber: 4,
+      perQuestionSeconds: 30,
+      yourTimeByQuestion: new Map([
+        ["q1", 40],
+        ["q2", 12],
+      ]),
+    })
+
+    expect(groups[0]?.passages[0]?.questions[0]?.yourTimeSeconds).toBe(40)
+    expect(groups[0]?.passages[0]?.questions[1]?.yourTimeSeconds).toBeNull()
+    expect(groups[0]?.passages[0]?.passage.yourTime).toBe("0:40")
   })
 })

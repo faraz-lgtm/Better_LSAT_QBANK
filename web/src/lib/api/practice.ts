@@ -324,6 +324,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
       /** Empty string clears the selected response (Reset Response). */
       selectedAnswer: string
       blindReview?: boolean
+      timeSpentSeconds?: number
     }): Promise<AnswerEvent> {
       const { data, error } = await invokePracticeFn<{ event: AnswerEvent }>("practice-submit-answer", {
         method: "POST",
@@ -332,6 +333,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
           questionId: input.questionId,
           selectedAnswer: input.selectedAnswer,
           blindReview: input.blindReview,
+          timeSpentSeconds: input.timeSpentSeconds,
         },
       })
       if (error) throw error
