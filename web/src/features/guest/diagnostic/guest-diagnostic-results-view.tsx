@@ -8,7 +8,7 @@ import {
   buildDiagnosticResultExplanation,
   getDiagnosticQuestionMeta,
 } from '@/features/guest/diagnostic/mini-diagnostic-content'
-import { canShowDiagnosticResultDetails, freeDiagnosticExplanationLimit } from '@/features/guest/diagnostic/diagnostic-explanation-access'
+import { canShowDiagnosticResultDetails } from '@/features/guest/diagnostic/diagnostic-explanation-access'
 import {
   formatDiagnosticDateLabel,
   getDiagnosticIntentTitle,
@@ -524,28 +524,53 @@ function DiagnosticStatsRow({
   )
 }
 
-// ─── Free analytics limit gate (standalone; no locked question rows) ─────────
+// ─── Locked question teaser (dummy only — no real content in the DOM) ─────────
 
-function FreeAnalyticsLimitGate({ onSubscribe }: { onSubscribe: () => void }) {
+const LOCKED_TEASER_DUMMY_TYPES = ['Assumption', 'Inference', 'Flaw', 'Strengthen', 'Weaken'] as const
+
+/** Placeholder row for gated questions. Never reads real question/explanation data. */
+function GuestDiagnosticLockedQuestionRow({
+  number,
+  heading = 'Mini Diagnostic',
+}: {
+  number: number
+  heading?: string
+}) {
+  const dummyType = LOCKED_TEASER_DUMMY_TYPES[(number - 1) % LOCKED_TEASER_DUMMY_TYPES.length]!
+
   return (
-    <div className="flex flex-col items-center gap-6 rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-10 text-center shadow-[0px_1px_2px_rgba(13,13,18,0.06)]">
-      <Lock className="size-9 text-[var(--primary)]" strokeWidth={2} aria-hidden />
-      <div className="flex max-w-[36rem] flex-col items-center gap-4">
-        <h3 className="text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">
-          You&apos;ve reached your free analytics limit!
-        </h3>
-        <p className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
-          Subscribe today for unlimited practice results, detailed analytics, and full access to
-          everything BetterLSAT has to offer.
-        </p>
-        <button
-          type="button"
-          onClick={onSubscribe}
-          className="inline-flex h-12 items-center justify-center rounded-[16px] border border-[var(--primary-border)] bg-[var(--primary)] px-4 text-base font-semibold tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-600)]"
-        >
-          Full Access
-        </button>
+    <div
+      className="relative overflow-hidden border-t border-[var(--greyscale-100)] first:border-t-0"
+      data-testid="diagnostic-locked-question-row"
+      aria-label={`Question ${number} locked`}
+    >
+      <div className="flex gap-4 p-6">
+        <div className="flex size-14 shrink-0 items-center justify-center rounded-[14px] bg-[var(--greyscale-300)] text-lg font-bold text-white">
+          {number}
+        </div>
+        <div className="min-w-0 flex-1 select-none blur-[6px]" aria-hidden>
+          <p className="text-lg font-semibold text-[var(--color-student-heading)]">
+            {heading} · Q{number} · {dummyType}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <span className="rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-2 py-0.5 text-[10px]">
+              LR
+            </span>
+            <span className="rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-2 py-0.5 text-[10px]">
+              {dummyType}
+            </span>
+            <span className="rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-2 py-0.5 text-[10px]">
+              Level —
+            </span>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="h-12 rounded-lg bg-[var(--greyscale-25)]" />
+            <div className="h-12 rounded-lg bg-[var(--greyscale-25)]" />
+            <div className="h-12 rounded-lg bg-[var(--greyscale-25)]" />
+          </div>
+        </div>
       </div>
+      <div className="pointer-events-none absolute inset-0 bg-[var(--greyscale-0)]/30" aria-hidden />
     </div>
   )
 }
@@ -1163,6 +1188,25 @@ function WrongQuestionsReviewSection({
           questionNumber,
           hasActiveCore: showPaidContent,
         })
+
+        // Locked: never resolve real explanation / answer details into the DOM.
+        if (!unlocked) {
+          return (
+            <CompactReviewRow
+              key={outcome.questionId}
+              questionNumber={questionNumber}
+              qType="Locked question"
+              subline="Upgrade to see your answer, the correct choice, and the explanation."
+              isUnlocked={false}
+              intentId={result.intentId}
+              explanation={null}
+              outcome={outcome}
+              onSubscribe={onSubscribe}
+              hideSensitiveMeta
+            />
+          )
+        }
+
         const explanation =
           explanationsById.get(outcome.questionId) ??
           buildDiagnosticResultExplanation(outcome.questionId, result.intentId)
@@ -1192,9 +1236,9 @@ function WrongQuestionsReviewSection({
             questionNumber={questionNumber}
             qType={qType}
             subline={subline}
-            isUnlocked={unlocked && explanation != null}
+            isUnlocked={explanation != null}
             intentId={result.intentId}
-            explanation={unlocked ? explanation : null}
+            explanation={explanation}
             outcome={outcome}
             onSubscribe={onSubscribe}
           />
@@ -1238,6 +1282,7 @@ function CompactReviewRow({
   explanation,
   outcome,
   onSubscribe,
+  hideSensitiveMeta = false,
 }: {
   questionNumber: number
   qType: string | null
@@ -1247,9 +1292,11 @@ function CompactReviewRow({
   explanation: MiniDiagnosticExplanation | null
   outcome: GuestDiagnosticResult['outcomes'][number]
   onSubscribe: () => void
+  /** When true, skip real timing / answer tooltips (locked teaser). */
+  hideSensitiveMeta?: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
-  const meta = getDiagnosticQuestionMeta(outcome.questionId, intentId)
+  const meta = hideSensitiveMeta ? null : getDiagnosticQuestionMeta(outcome.questionId, intentId)
 
   return (
     <div className="border-t border-[var(--greyscale-100)] first:border-t-0">
@@ -1534,7 +1581,7 @@ function GuestDiagnosticResultsView({
           <p className="px-6 py-8 text-sm text-[#df1c41]">{explanationsError}</p>
         ) : null}
 
-        {/* ── Question rows (free: only first N unlocked; no locked teaser rows) ── */}
+        {/* ── Question rows (free: first N unlocked; remaining = dummy teaser only) ── */}
         {sortedOutcomes.map((outcome) => {
           const questionNumber = outcome.originalIndex + 1
           const unlocked = canShowDiagnosticResultDetails({
@@ -1542,12 +1589,28 @@ function GuestDiagnosticResultsView({
             questionNumber,
             hasActiveCore: showPaidContent,
           })
-          if (!unlocked) return null
+          if (!unlocked) {
+            return (
+              <GuestDiagnosticLockedQuestionRow
+                key={`locked-${questionNumber}`}
+                number={questionNumber}
+                heading={heading}
+              />
+            )
+          }
 
           const explanation =
             explanationsById.get(outcome.questionId) ??
             buildDiagnosticResultExplanation(outcome.questionId, result.intentId)
-          if (!explanation) return null
+          if (!explanation) {
+            return (
+              <GuestDiagnosticLockedQuestionRow
+                key={`locked-${questionNumber}`}
+                number={questionNumber}
+                heading={heading}
+              />
+            )
+          }
 
           const meta = getDiagnosticQuestionMeta(outcome.questionId, result.intentId)
           return (
@@ -1564,12 +1627,6 @@ function GuestDiagnosticResultsView({
           )
         })}
       </section>
-
-      {/* Free analytics limit gate — after first 5 questions, no locked Q rows */}
-      {!showPaidContent &&
-      result.questionCount > freeDiagnosticExplanationLimit(result.intentId) ? (
-        <FreeAnalyticsLimitGate onSubscribe={openPricingModal} />
-      ) : null}
 
       {/* 6. Point Leak Map */}
       {pointLeaks.length > 0 ? (

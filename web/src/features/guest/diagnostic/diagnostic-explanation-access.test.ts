@@ -4,13 +4,17 @@ import {
   canShowDiagnosticExplanation,
   canShowDiagnosticResultDetails,
   freeDiagnosticExplanationLimit,
+  FREE_FULL_DIAGNOSTIC_EXPLANATION_LIMIT,
+  FREE_MINI_DIAGNOSTIC_EXPLANATION_LIMIT,
 } from "@/features/guest/diagnostic/diagnostic-explanation-access"
 
 describe("freeDiagnosticExplanationLimit", () => {
-  it("returns a 5-question teaser for every diagnostic type", () => {
+  it("returns 5 for mini and 10 for full section / full", () => {
+    expect(FREE_MINI_DIAGNOSTIC_EXPLANATION_LIMIT).toBe(5)
+    expect(FREE_FULL_DIAGNOSTIC_EXPLANATION_LIMIT).toBe(10)
     expect(freeDiagnosticExplanationLimit("mini")).toBe(5)
-    expect(freeDiagnosticExplanationLimit("full")).toBe(5)
-    expect(freeDiagnosticExplanationLimit("quick")).toBe(5)
+    expect(freeDiagnosticExplanationLimit("quick")).toBe(10)
+    expect(freeDiagnosticExplanationLimit("full")).toBe(10)
   })
 })
 
@@ -24,24 +28,27 @@ describe("canShowDiagnosticExplanation", () => {
     ).toBe(true)
   })
 
-  it("limits free mini, full, and section diagnostics to the first 5 questions", () => {
+  it("limits free mini to the first 5 questions", () => {
     expect(
       canShowDiagnosticExplanation({ intentId: "mini", questionNumber: 5, hasActiveCore: false }),
     ).toBe(true)
     expect(
       canShowDiagnosticExplanation({ intentId: "mini", questionNumber: 6, hasActiveCore: false }),
     ).toBe(false)
+  })
+
+  it("limits free full section and full to the first 10 questions", () => {
     expect(
-      canShowDiagnosticExplanation({ intentId: "full", questionNumber: 5, hasActiveCore: false }),
+      canShowDiagnosticExplanation({ intentId: "quick", questionNumber: 10, hasActiveCore: false }),
     ).toBe(true)
     expect(
-      canShowDiagnosticExplanation({ intentId: "full", questionNumber: 6, hasActiveCore: false }),
+      canShowDiagnosticExplanation({ intentId: "quick", questionNumber: 11, hasActiveCore: false }),
     ).toBe(false)
     expect(
-      canShowDiagnosticExplanation({ intentId: "quick", questionNumber: 5, hasActiveCore: false }),
+      canShowDiagnosticExplanation({ intentId: "full", questionNumber: 10, hasActiveCore: false }),
     ).toBe(true)
     expect(
-      canShowDiagnosticExplanation({ intentId: "quick", questionNumber: 6, hasActiveCore: false }),
+      canShowDiagnosticExplanation({ intentId: "full", questionNumber: 11, hasActiveCore: false }),
     ).toBe(false)
   })
 })
@@ -53,24 +60,27 @@ describe("canShowDiagnosticResultDetails", () => {
     ).toBe(true)
   })
 
-  it("unlocks only the first 5 rows for free students on mini and full section", () => {
+  it("unlocks only the first 5 rows for free students on mini", () => {
     expect(
       canShowDiagnosticResultDetails({ intentId: "mini", questionNumber: 5, hasActiveCore: false }),
     ).toBe(true)
     expect(
       canShowDiagnosticResultDetails({ intentId: "mini", questionNumber: 6, hasActiveCore: false }),
     ).toBe(false)
+  })
+
+  it("unlocks only the first 10 rows for free students on full section", () => {
     expect(
-      canShowDiagnosticResultDetails({ intentId: "quick", questionNumber: 5, hasActiveCore: false }),
+      canShowDiagnosticResultDetails({ intentId: "quick", questionNumber: 10, hasActiveCore: false }),
     ).toBe(true)
     expect(
-      canShowDiagnosticResultDetails({ intentId: "quick", questionNumber: 7, hasActiveCore: false }),
+      canShowDiagnosticResultDetails({ intentId: "quick", questionNumber: 11, hasActiveCore: false }),
     ).toBe(false)
     expect(
-      canShowDiagnosticResultDetails({ intentId: "full", questionNumber: 5, hasActiveCore: false }),
+      canShowDiagnosticResultDetails({ intentId: "full", questionNumber: 10, hasActiveCore: false }),
     ).toBe(true)
     expect(
-      canShowDiagnosticResultDetails({ intentId: "full", questionNumber: 6, hasActiveCore: false }),
+      canShowDiagnosticResultDetails({ intentId: "full", questionNumber: 11, hasActiveCore: false }),
     ).toBe(false)
   })
 })
