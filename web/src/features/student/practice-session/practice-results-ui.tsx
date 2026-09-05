@@ -368,15 +368,25 @@ export function PracticeAnswerPopularityBars({
   showLabel?: boolean
   className?: string
 }) {
-  const max = Math.max(1, ...rows.map((r) => r.pct))
   const normalizedSelected = selectedLetter?.trim().toUpperCase() ?? null
+  const safeRows =
+    rows.length > 0
+      ? rows
+      : (["A", "B", "C", "D", "E"] as const).map((letter) => ({
+          letter,
+          count: 0,
+          pct: 0,
+          highlight: letter === correctLetter.trim().toUpperCase(),
+        }))
+  const max = Math.max(1, ...safeRows.map((r) => r.pct))
+
   return (
     <div className={cn("flex min-w-0 flex-col gap-3", className)}>
       {showLabel ? <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Answer Popularity</p> : null}
       <div className="flex w-full items-end gap-2">
-        {rows.map((row) => {
+        {safeRows.map((row) => {
           const h = Math.round((row.pct / max) * 100)
-          const isCorrect = row.letter === correctLetter
+          const isCorrect = row.letter === correctLetter.trim().toUpperCase()
           const isUserWrong =
             !isUnanswered &&
             normalizedSelected === row.letter &&
@@ -397,9 +407,17 @@ export function PracticeAnswerPopularityBars({
               key={row.letter}
               className={cn(
                 "flex min-w-0 flex-1 flex-col items-center gap-1",
-                hasOutcomeBadge ? "h-20" : "h-[68px]",
+                hasOutcomeBadge ? "h-24" : "h-[88px]",
               )}
             >
+              <span
+                className={cn(
+                  "text-[11px] font-bold tabular-nums leading-none",
+                  isCorrect ? "text-[#00d492]" : "text-[var(--greyscale-500)]",
+                )}
+              >
+                {row.pct}%
+              </span>
               <div className="flex min-h-0 w-full flex-1 flex-col justify-end overflow-hidden rounded-t-[10px] bg-[var(--greyscale-25)]">
                 {isUserWrong ? (
                   <div
@@ -422,9 +440,7 @@ export function PracticeAnswerPopularityBars({
                     "text-xs leading-4",
                     isCorrect
                       ? "font-bold text-[#00d492]"
-                      : isUserWrong
-                        ? "font-normal text-[var(--greyscale-500)]"
-                        : "font-normal text-[var(--greyscale-500)]",
+                      : "font-normal text-[var(--greyscale-500)]",
                   )}
                 >
                   {row.letter}

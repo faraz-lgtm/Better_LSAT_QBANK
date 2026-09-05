@@ -69,7 +69,7 @@ import {
 import { difficultyLabelFromLevel, targetTimeSecondsForDifficulty } from "@/features/student/practice-session/practice-results-ui"
 import type { DrillQuestion } from "@/features/student/drills/drill-types"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
-import { resolveAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
+import { buildDiagnosticAnswerPopularity } from "@/features/guest/diagnostic/diagnostic-answer-popularity"
 import { usePracticeSessionAccessibilityPanel } from "@/features/student/practice-session/use-practice-session-accessibility-panel"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { isOfficialLayout, resolveExamSessionVariant } from "@/features/student/practice-session/practice-session-types"
@@ -182,7 +182,15 @@ function buildDiagnosticAnalyticsSeed(
   const diffLevel = meta?.difficulty ?? 3
   const label = difficultyLabelFromLevel(diffLevel)
   const correctChoiceId = question.correctChoiceId ?? ""
-  const answerPopularity = resolveAnswerPopularityRows([], question.choices, correctChoiceId)
+  const choiceLetters = question.choices.map((choice) => {
+    const fromId = choice.id.trim().toUpperCase().slice(0, 1)
+    return /^[A-E]$/.test(fromId) ? fromId : String.fromCharCode(65 + choice.index)
+  })
+  const answerPopularity = buildDiagnosticAnswerPopularity(
+    question.id,
+    correctChoiceId,
+    choiceLetters,
+  )
   const letter = selectedAnswer?.trim().toUpperCase().slice(0, 1) ?? ""
   const questionLabel = label === "Hardest" ? "Hard" : label
   const targetTimeSeconds =
@@ -205,7 +213,7 @@ function buildDiagnosticAnalyticsSeed(
       caption: "Score of students with a 50% chance of getting this right",
     },
     answerPopularity,
-    answerPopularityTotal: 0,
+    answerPopularityTotal: answerPopularity.reduce((sum, row) => sum + row.count, 0),
     userSelectedLetter: /^[A-E]$/.test(letter) ? letter : null,
     targetTimeSeconds,
     yourTimeSeconds: yourTimeSeconds ?? null,
