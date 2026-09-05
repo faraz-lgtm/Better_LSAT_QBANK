@@ -124,6 +124,37 @@ describe("PracticePrepTestPage + section navigation", () => {
     expect(router.state.location.search).toBe("?prepTestId=pt-900")
   })
 
+  it("does not reveal which section is experimental on the PrepTest hub", async () => {
+    mockGetPrepTestDetail.mockResolvedValue({
+      ...mockDetail,
+      sections: [
+        { ...mockDetail.sections[0], unlocked: true },
+        {
+          id: "sec-exp",
+          sectionId: "SEED900-LR-EXP",
+          sectionNumber: 4,
+          sectionType: "LR" as const,
+          title: "Logical Reasoning",
+          questionCount: 26,
+          timeMinutes: 35,
+          practiceable: true,
+          isExperimental: true,
+          unlocked: false,
+          onBreak: false,
+          answeredCount: 0,
+          completed: false,
+          activeSectionSessionId: null,
+        },
+      ],
+    })
+
+    renderPrepTestRoutes("/app/preptest/pt-900")
+
+    expect(await screen.findByText("Section 4")).toBeInTheDocument()
+    expect(screen.queryByText(/\(EXP\)/i)).not.toBeInTheDocument()
+    expect(screen.queryByText("EXP")).not.toBeInTheDocument()
+  })
+
   it("shows only the first unlocked section during retake, same as a fresh attempt", async () => {
     mockGetPrepTestDetail.mockResolvedValue({
       ...mockDetail,

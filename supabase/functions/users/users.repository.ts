@@ -64,6 +64,8 @@ export type LsacLogEventRow = {
   created_at: string
 }
 
+export type ExtraTimeSetting = 'none' | '1.5x' | '2x' | 'custom'
+
 export type StudentStudyPreferencesRow = {
   user_id: string
   username: string | null
@@ -75,6 +77,8 @@ export type StudentStudyPreferencesRow = {
   study_days: string[]
   study_hours_label: string | null
   wants_lessons: boolean
+  extra_time_setting: ExtraTimeSetting
+  extra_time_custom_minutes: number | null
   created_at: string
   updated_at: string
 }
@@ -101,6 +105,8 @@ export type StudentStudyPreferencesUpsertInput = {
   studyDays?: string[]
   studyHoursLabel?: string | null
   wantsLessons?: boolean
+  extraTimeSetting?: ExtraTimeSetting
+  extraTimeCustomMinutes?: number | null
 }
 
 export type OfficialLsatScoreUpsertInput = {
@@ -370,6 +376,14 @@ export function createUsersRepository(client: SupabaseClient) {
           input.wantsLessons !== undefined
             ? input.wantsLessons
             : (existing?.wants_lessons ?? false),
+        extra_time_setting:
+          input.extraTimeSetting !== undefined
+            ? input.extraTimeSetting
+            : (existing?.extra_time_setting ?? 'none'),
+        extra_time_custom_minutes:
+          input.extraTimeCustomMinutes !== undefined
+            ? input.extraTimeCustomMinutes
+            : (existing?.extra_time_custom_minutes ?? null),
         updated_at: now,
       }
 

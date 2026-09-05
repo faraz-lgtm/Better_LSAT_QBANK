@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest"
 import {
   formatPrepTestResultsTitle,
   formatQuestionRefLabel,
+  filterPrepTestResultQuestions,
   mapPrepTestDetailToResults,
   prepTestBlindReviewWasCompleted,
 } from "@/features/student/analytics/map-prep-test-results"
+import type { PrepTestQuestionResultRow } from "@/features/student/lib/prep-test-results-types"
 import type { PrepTestSessionDetail } from "@/lib/api/analytics"
 
 const baseApi: PrepTestSessionDetail = {
@@ -317,5 +319,23 @@ describe("mapPrepTestDetailToResults", () => {
     expect(out.correctSummary).toBe("2/3 CORRECT (-1)")
     expect(out.totalQuestions).toBe(3)
     expect(out.listedQuestionCount).toBe(4)
+  })
+})
+
+describe("filterPrepTestResultQuestions", () => {
+  const rows = [
+    { id: "q1", actualCorrect: true, isUnanswered: false },
+    { id: "q2", actualCorrect: false, isUnanswered: false },
+    { id: "q3", actualCorrect: false, isUnanswered: true },
+  ] as Array<Pick<PrepTestQuestionResultRow, "id" | "actualCorrect" | "isUnanswered">>
+
+  it("keeps only bookmarked questions when that filter is on", () => {
+    expect(
+      filterPrepTestResultQuestions(rows as PrepTestQuestionResultRow[], {
+        incorrectOnly: false,
+        bookmarkedOnly: true,
+        bookmarkedIds: new Set(["q2"]),
+      }).map((row) => row.id),
+    ).toEqual(["q2"])
   })
 })

@@ -66,4 +66,26 @@ describe("createAnalyticsApi", () => {
       headers: { Authorization: "Bearer token-1" },
     })
   })
+
+  it("getSessions passes completedOnly for analytics history", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: { sessions: [], total: 0, limit: 500, offset: 0 },
+      error: null,
+    })
+    const api = createAnalyticsApi(mockSupabase(invoke))
+
+    await api.getSessions({ kind: "SECTION", completedOnly: true, limit: 500 })
+
+    expect(invoke).toHaveBeenCalledWith("analytics-sessions", {
+      method: "POST",
+      body: {
+        kind: "SECTION",
+        bookmarked: undefined,
+        completedOnly: true,
+        limit: 500,
+        offset: undefined,
+      },
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
 })

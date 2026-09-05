@@ -8,6 +8,7 @@ import {
   mapOverviewToHeadlineStats,
   mapPrepTestSessionToHistoryEntry,
   mapSectionSessionToHistoryEntry,
+  mapSessionToDrillRecord,
   mapSessionToPrepTestRecord,
   mapTrajectoryToScoreProgress,
   mapPrioritiesToSections,
@@ -86,6 +87,71 @@ describe("map-analytics", () => {
     })
     expect(record?.id).toBe("sess-1")
     expect(record?.prepTestId).toBe("pt-157")
+    expect(record?.lrMax).not.toBe(51)
+    expect(record?.lrCorrect).toBe(0)
+    expect(record?.lrMax).toBe(0)
+    expect(record?.rcCorrect).not.toBe(80)
+  })
+
+  it("maps PrepTest LR/RC from scored section sessions, not a combined 51-question LR", () => {
+    const record = mapSessionToPrepTestRecord(
+      {
+        id: "sess-1",
+        kind: "PREPTEST",
+        prepTestId: "pt-157",
+        startedAt: "2026-01-01T00:00:00Z",
+        completedAt: "2026-01-02T00:00:00Z",
+        rawScore: 38,
+        scaledScore: 160,
+        percentile: 50,
+        bookmarked: false,
+        excluded: false,
+        metadata: {},
+        prepTestTitle: "The Official LSAT PrepTest 157",
+        sectionTitle: null,
+        sectionType: null,
+      },
+      [
+        {
+          id: "lr-1",
+          kind: "SECTION",
+          prepTestId: "pt-157",
+          startedAt: "2026-01-01T00:10:00Z",
+          completedAt: "2026-01-01T00:45:00Z",
+          rawScore: 20,
+          scaledScore: null,
+          percentile: null,
+          bookmarked: false,
+          excluded: false,
+          metadata: { questionCount: 25 },
+          prepTestTitle: null,
+          sectionTitle: "Logical Reasoning",
+          sectionType: "LR",
+        },
+        {
+          id: "rc-1",
+          kind: "SECTION",
+          prepTestId: "pt-157",
+          startedAt: "2026-01-01T00:50:00Z",
+          completedAt: "2026-01-01T01:25:00Z",
+          rawScore: 18,
+          scaledScore: null,
+          percentile: null,
+          bookmarked: false,
+          excluded: false,
+          metadata: { questionCount: 27 },
+          prepTestTitle: null,
+          sectionTitle: "Reading Comprehension",
+          sectionType: "RC",
+        },
+      ],
+    )
+    expect(record).toMatchObject({
+      lrCorrect: 20,
+      lrMax: 25,
+      rcCorrect: 18,
+      rcMax: 27,
+    })
   })
 
   it("maps trajectory labels to PT numbers from module id", () => {
@@ -122,7 +188,11 @@ describe("map-analytics", () => {
         accuracyPct: 90,
         goalAccuracy: 86,
         gap: -4,
+        priorityTier: "low",
         priorityLevel: "low",
+        priorityScore: -16,
+        extraCorrectNeededPerTest: 0,
+        unlocked: true,
         difficulty: 2,
         averagePerTest: 4,
         reviewCount: 4,
@@ -136,7 +206,11 @@ describe("map-analytics", () => {
         accuracyPct: 50,
         goalAccuracy: 86,
         gap: 36,
+        priorityTier: "highest",
         priorityLevel: "high",
+        priorityScore: 324,
+        extraCorrectNeededPerTest: 3.2,
+        unlocked: true,
         difficulty: 3,
         averagePerTest: 9,
         reviewCount: 10,
@@ -170,6 +244,7 @@ describe("map-analytics", () => {
       score: 3,
       scoreMax: 5,
       bookmarked: true,
+      sectionType: "LR",
     })
 
     const titled = mapDrillSessionToHistoryEntry({
@@ -205,6 +280,7 @@ describe("map-analytics", () => {
       sectionType: null,
     })
     expect(mixed?.testLabel).toBe("Varied Mix")
+    expect(mixed?.sectionType).toBe("LR")
 
     const section = mapSectionSessionToHistoryEntry({
       id: "sec1",
@@ -226,6 +302,31 @@ describe("map-analytics", () => {
       testLabel: "LR Section 2",
       score: 18,
       scoreMax: 25,
+      sectionType: "LR",
+    })
+  })
+
+  it("maps drill records with section from metadata when joined sectionType is null", () => {
+    const record = mapSessionToDrillRecord({
+      id: "d-meta",
+      kind: "DRILL",
+      startedAt: "2026-01-01T00:00:00Z",
+      completedAt: "2026-01-02T00:00:00Z",
+      rawScore: 4,
+      scaledScore: 155,
+      percentile: null,
+      bookmarked: false,
+      excluded: false,
+      metadata: { sectionType: "RC", questionIds: ["a", "b", "c", "d", "e"] },
+      prepTestTitle: null,
+      sectionTitle: null,
+      sectionType: null,
+    })
+    expect(record).toMatchObject({
+      id: "d-meta",
+      section: "RC",
+      questionsCorrect: 4,
+      questionsTotal: 5,
     })
   })
 })

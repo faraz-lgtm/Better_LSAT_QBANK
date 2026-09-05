@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import { PracticeSessionHighlightPopover } from "@/features/student/practice-session/practice-session-highlight-popover"
@@ -26,6 +26,17 @@ function PassageHighlightHarness({ html = "<p>Hello world today</p>" }: { html?:
       />
     </div>
   )
+}
+
+function mockClientRects(rect: DOMRect): DOMRectList {
+  return {
+    0: rect,
+    length: 1,
+    item: (i: number) => (i === 0 ? rect : null),
+    [Symbol.iterator]: function* () {
+      yield rect
+    },
+  } as unknown as DOMRectList
 }
 
 function firstTextNode(container: HTMLElement): Text {
@@ -69,7 +80,7 @@ describe("passage selection highlighting", () => {
     expect(Number.parseFloat(root.style.left)).toBe(480)
     const top = Number.parseFloat(root.style.top)
     expect(top).toBeLessThan(390)
-    expect(390 - top).toBeGreaterThanOrEqual(4)
+    expect(390 - top).toBeGreaterThanOrEqual(2)
     expect(390 - top).toBeLessThanOrEqual(96)
   })
 
@@ -130,7 +141,55 @@ describe("passage selection highlighting", () => {
     expect(Number.parseFloat(root.style.left)).toBe(520)
     const top = Number.parseFloat(root.style.top)
     expect(top).toBeLessThan(310)
-    expect(310 - top).toBeGreaterThanOrEqual(4)
+    expect(310 - top).toBeGreaterThanOrEqual(2)
     expect(310 - top).toBeLessThanOrEqual(48)
   })
+
+  it("pins Highlight to the selected line instead of the pointer", async () => {
+    const line = new DOMRect(400, 300, 80, 18)
+    const originalRects = Range.prototype.getClientRects
+    const originalBox = Range.prototype.getBoundingClientRect
+    Range.prototype.getClientRects = () => mockClientRects(line)
+    Range.prototype.getBoundingClientRect = () => line
+
+    try {
+      const { container } = render(<PassageHighlightHarness />)
+      const passage = container.querySelector(".practice-session-content") as HTMLElement
+
+      selectOffsets(passage, 0, 5)
+      fireEvent.mouseUp(passage, { clientX: 430, clientY: 315 })
+
+      await screen.findByRole("toolbar", { name: "Highlight" })
+      const root = document.querySelector("[data-passage-highlight-popover]") as HTMLElement
+      expect(Number.parseFloat(root.style.left)).toBe(430)
+      const top = Number.parseFloat(root.style.top)
+      expect(top).toBe(300 - 80 - 2)
+    } finally {
+      Range.prototype.getClientRects = originalRects
+      Range.prototype.getBoundingClientRect = originalBox
+    }
+  })
+
+  it("pins Remove to the highlighted line instead of the pointer", async () => {
+    const { container } = render(
+      <PassageHighlightHarness html={'<p><mark data-highlight="green">Hello</mark> world today</p>'} />,
+    )
+    const mark = container.querySelector("mark[data-highlight='green']") as HTMLElement
+    const line = new DOMRect(400, 280, 60, 18)
+    vi.spyOn(mark, "getClientRects").mockReturnValue(mockClientRects(line))
+
+    window.getSelection()?.removeAllRanges()
+    fireEvent.mouseUp(mark, { clientX: 420, clientY: 292 })
+
+    await screen.findByRole("button", { name: "Remove highlight" })
+    const root = document.querySelector("[data-passage-highlight-popover]") as HTMLElement
+    expect(Number.parseFloat(root.style.left)).toBe(420)
+    const top = Number.parseFloat(root.style.top)
+    expect(top).toBeLessThan(280)
+    expect(top).toBe(280 - 36 - 2)
+  })
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
 })

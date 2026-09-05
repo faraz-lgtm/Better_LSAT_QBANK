@@ -16,6 +16,7 @@ import type { DrillRecord } from "@/features/student/lib/mock-analytics-drills"
 import type { PrepTestHistoryEntry, PrepTestRecord } from "@/features/student/lib/mock-analytics-preptests"
 import type { DrillType } from "@/features/student/lib/mock-analytics-drills"
 import { orderPriorityRowsByWeakness } from "@/features/student/drills/tag-drills-priority"
+import { resolvePrepTestLrRcScores } from "@/features/student/analytics/prep-test-lr-rc-scores"
 
 function formatSigned(n: number): string {
   if (n > 0) return `+${n}`
@@ -84,7 +85,7 @@ export function mapOverviewToHeadlineStats(overview: AnalyticsOverview): Analyti
       id: "best-score",
       label: "BEST SCORE",
       value: String(overview.bestScaledScore),
-      accent: "#0d47a1",
+      accent: "var(--primary)",
       caption:
         overview.bestPercentile != null
           ? formatOverviewPercentileCaption(overview.bestPercentile)
@@ -96,7 +97,7 @@ export function mapOverviewToHeadlineStats(overview: AnalyticsOverview): Analyti
       id: "average-score",
       label: "AVERAGE SCORE",
       value: String(overview.averageScaledScore),
-      accent: "#5463a9",
+      accent: "var(--primary-100)",
       caption:
         overview.averagePercentile != null
           ? formatOverviewPercentileCaption(overview.averagePercentile)
@@ -108,13 +109,13 @@ export function mapOverviewToHeadlineStats(overview: AnalyticsOverview): Analyti
       id: "best-score",
       label: "BEST SCORE",
       value: "—",
-      accent: "#0d47a1",
+      accent: "var(--primary)",
     })
     stats.push({
       id: "average-score",
       label: "AVERAGE SCORE",
       value: "—",
-      accent: "#5463a9",
+      accent: "var(--primary-100)",
     })
   }
   return stats
@@ -129,7 +130,7 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
         overview.averageLrMissedPerPrepTest != null
           ? formatSigned(-Math.round(overview.averageLrMissedPerPrepTest))
           : "—",
-      accent: "#00BC54",
+      accent: "var(--explanation-answered)",
     },
     {
       id: "avg-rc",
@@ -138,19 +139,19 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
         overview.averageRcMissedPerPrepTest != null
           ? formatSigned(-Math.round(overview.averageRcMissedPerPrepTest))
           : "—",
-      accent: "#0BBCC9",
+      accent: "var(--explanation-teal)",
     },
     {
       id: "drilled",
       label: "QUESTIONS DRILLED",
       value: String(overview.totalDrillQuestionsAnswered),
-      accent: "#116b97",
+      accent: "var(--color-student-heading)",
     },
     {
       id: "accuracy",
       label: "DRILLING ACCURACY",
       value: overview.drillAccuracyPct != null ? `${overview.drillAccuracyPct}%` : "—",
-      accent: "#956321",
+      accent: "var(--color-student-heading)",
     },
   ]
 }
@@ -207,8 +208,11 @@ export function mapPrioritiesToSections(priorities: PriorityRow[]): AnalyticsSec
       averagePerTest: p.averagePerTest ?? 0,
       difficulty: numericToDifficulty(p.difficulty),
       accuracyPct: p.accuracyPct,
-      goalPct: p.goalAccuracy ?? 86,
+      goalPct: p.goalAccuracy,
       reviewCount: p.reviewCount,
+      unlocked: p.unlocked !== false && p.attemptCount >= 3,
+      extraCorrectNeededPerTest: p.extraCorrectNeededPerTest,
+      priorityTier: p.priorityTier ?? null,
     })
     bySection.set(p.sectionType, rows)
   }
@@ -229,6 +233,16 @@ export function mapPrioritiesToSections(priorities: PriorityRow[]): AnalyticsSec
     .filter((s): s is AnalyticsSection => s != null)
 }
 
+/** Prefer metadata.sectionType (drills), then joined admin section. */
+export function resolveSessionSectionType(
+  s: Pick<PracticeSessionSummary, "sectionType" | "metadata">,
+): "LR" | "RC" | "LG" | null {
+  const meta = s.metadata.sectionType
+  if (meta === "LR" || meta === "RC" || meta === "LG") return meta
+  if (s.sectionType === "LR" || s.sectionType === "RC" || s.sectionType === "LG") return s.sectionType
+  return null
+}
+
 export function mapSessionToDrillRecord(s: PracticeSessionSummary): DrillRecord | null {
   if (s.kind !== "DRILL" || !s.completedAt) return null
   const meta = s.metadata
@@ -236,9 +250,12 @@ export function mapSessionToDrillRecord(s: PracticeSessionSummary): DrillRecord 
   const questionIds = Array.isArray(meta.questionIds) ? meta.questionIds : []
   const total = questionIds.length > 0 ? questionIds.length : s.rawScore != null ? s.rawScore : 0
   const correct = s.rawScore ?? 0
+  const resolved = resolveSessionSectionType(s)
+  const section = resolved === "LR" || resolved === "RC" ? resolved : null
   return {
     id: s.id,
     typeId,
+    section,
     takenAt: s.completedAt,
     questionsTotal: total > 0 ? total : Math.max(correct, 1),
     questionsCorrect: correct,
@@ -257,21 +274,25 @@ export function buildDrillTypesFromPriorities(priorities: PriorityRow[]): DrillT
     }))
 }
 
-export function mapSessionToPrepTestRecord(s: PracticeSessionSummary): PrepTestRecord | null {
+export function mapSessionToPrepTestRecord(
+  s: PracticeSessionSummary,
+  sectionSessions: readonly PracticeSessionSummary[] = [],
+): PrepTestRecord | null {
   if (s.kind !== "PREPTEST" || !s.completedAt) return null
   const numMatch = s.prepTestTitle?.match(/\d+/)
   const scaled = s.scaledScore ?? s.rawScore ?? 0
   const br = s.blindReviewScaledScore ?? s.blindReviewRawScore ?? scaled
+  const lrRc = resolvePrepTestLrRcScores(s, sectionSessions)
   return {
     id: s.id,
     prepTestId: s.prepTestId ?? null,
     prepTestNumber: numMatch ? Number.parseInt(numMatch[0]!, 10) : 0,
     takenAt: s.completedAt,
-    bookmarked: s.bookmarked,
-    lrCorrect: 0,
-    lrMax: 51,
-    rcCorrect: s.rawScore ?? 0,
-    rcMax: 27,
+    bookmarked: Boolean(s.bookmarked),
+    lrCorrect: lrRc.lrCorrect,
+    lrMax: lrRc.lrMax,
+    rcCorrect: lrRc.rcCorrect,
+    rcMax: lrRc.rcMax,
     scaledScore: scaled,
     percentile: s.percentile ?? 0,
     blindReviewScaled: br,
@@ -289,7 +310,8 @@ export function mapPrepTestSessionToHistoryEntry(s: PracticeSessionSummary): Pre
     id: s.id,
     testLabel: formatPrepTestHistoryLabel(s.prepTestTitle, s.prepTestId),
     dateLabel,
-    bookmarked: s.bookmarked,
+    takenAt: s.completedAt,
+    bookmarked: Boolean(s.bookmarked),
     score,
     scoreMax: 180,
     blindReviewScore: br,
@@ -324,15 +346,18 @@ export function mapDrillSessionToHistoryEntry(s: PracticeSessionSummary): PrepTe
   if (s.kind !== "DRILL" || !s.completedAt) return null
   const correct = s.rawScore ?? 0
   const total = questionCountFromSession(s, correct)
+  const resolved = resolveSessionSectionType(s)
   return {
     id: s.id,
     testLabel: formatDrillHistoryLabel(s.metadata),
     dateLabel: formatSessionHistoryDate(s.completedAt),
-    bookmarked: s.bookmarked,
+    takenAt: s.completedAt,
+    bookmarked: Boolean(s.bookmarked),
     score: correct,
     scoreMax: total,
     blindReviewScore: correct,
     blindReviewMax: total,
+    sectionType: resolved === "LR" || resolved === "RC" ? resolved : null,
   }
 }
 
@@ -341,20 +366,23 @@ export function mapSectionSessionToHistoryEntry(s: PracticeSessionSummary): Prep
   if (s.kind !== "SECTION" || !s.completedAt) return null
   const correct = s.rawScore ?? 0
   const total = questionCountFromSession(s, correct)
+  const resolved = resolveSessionSectionType(s)
   const testLabel =
     s.sectionTitle?.trim() ||
-    (s.sectionType ? `${s.sectionType} Section` : null) ||
+    (resolved === "LR" || resolved === "RC" || resolved === "LG" ? `${resolved} Section` : null) ||
     "Section"
   const br = s.blindReviewRawScore ?? correct
   return {
     id: s.id,
     testLabel,
     dateLabel: formatSessionHistoryDate(s.completedAt),
-    bookmarked: s.bookmarked,
+    takenAt: s.completedAt,
+    bookmarked: Boolean(s.bookmarked),
     score: correct,
     scoreMax: total,
     blindReviewScore: br,
     blindReviewMax: total,
+    sectionType: resolved === "LR" || resolved === "RC" || resolved === "LG" ? resolved : null,
   }
 }
 

@@ -29,7 +29,7 @@ export function isPassageHighlightColor(value: string | null | undefined): value
   return value === "yellow" || value === "pink" || value === "green" || value === "blue"
 }
 
-/** LSAT default exam chrome (`active-drill`, Figma header `20268:105580`, footer `20268:107659`). Official LawHub view is `official` (Figma `20255:49920` full page). */
+/** BetterLSAT exam chrome (`active-drill`, Figma header `20268:105580`, footer `20268:107659`). Official LawHub view is `official` (Figma `20255:49920` full page) and is the product default. */
 export type PracticeSessionVariant = "default" | "active-drill" | "blind-review" | "official"
 
 export function isExamChromeLayout(variant: PracticeSessionVariant | undefined): boolean {
@@ -63,4 +63,34 @@ export function canChangePracticeAnswer(
   if (options?.blindReview) return true
   if (showAnswers === "each" && hasAnswer) return false
   return true
+}
+
+export type PracticeAnswerViewTab = "clean" | "actual" | "blind_review"
+
+/**
+ * Blind Review answers are editable only on the Blind Review tab.
+ * Viewing Actual (or Clean) must not also write a Blind Review selection.
+ */
+export function isEditingBlindReviewAnswers(input: {
+  resultsReview: boolean
+  answeringBlindReview: boolean
+  answerView: PracticeAnswerViewTab
+}): boolean {
+  if (input.resultsReview || !input.answeringBlindReview) return false
+  return input.answerView === "blind_review"
+}
+
+/** Which stored answer to highlight for the current Actual / Blind Review / Clean tab. */
+export function resolveDisplayedPracticeAnswer<T>(input: {
+  resultsReview: boolean
+  answeringBlindReview: boolean
+  answerView: PracticeAnswerViewTab
+  actual: T | undefined
+  blindReview: T | undefined
+  live: T | undefined
+}): T | undefined {
+  if (!input.resultsReview && !input.answeringBlindReview) return input.live
+  if (input.answerView === "clean") return undefined
+  if (input.answerView === "actual") return input.actual
+  return input.blindReview
 }

@@ -39,6 +39,7 @@ import {
   PREPTEST_LIST_HREF,
   sectionSessionHref,
 } from "@/features/student/preptests/preptest-hub-navigation"
+import { useAccommodations, remapPrepTestTimingOptionLabel } from "@/features/student/accommodations/accommodations-context"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { ChevronRight, Timer, X } from "lucide-react"
 
@@ -90,26 +91,26 @@ function SectionBreakRow({
   return (
     <div className="flex h-[100px] items-center gap-6 rounded-[16px] border border-[#ffe5b7] bg-[#fff6e0] px-6 py-3 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)]">
       <div className="flex min-w-0 flex-1 items-center">
-        <p className="text-2xl font-bold leading-[1.3] text-[#062357]">Section Break</p>
+        <p className="text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">Section Break</p>
       </div>
       <div className="flex w-full max-w-[398px] shrink-0 flex-col gap-3">
         <div className="flex items-center gap-2.5">
-          <p className="min-w-0 flex-1 text-sm font-medium leading-normal tracking-[0.28px] text-[#062357]">
+          <p className="min-w-0 flex-1 text-sm font-medium leading-normal tracking-[0.28px] text-[var(--color-student-heading)]">
             Starting next section in {formatBreakCountdown(remainingSeconds)}
           </p>
           <button
             type="button"
             disabled={skipping}
             onClick={onSkip}
-            className="inline-flex shrink-0 items-center gap-0 text-sm font-semibold tracking-[0.28px] text-[#0d47a1] hover:underline disabled:opacity-60"
+            className="inline-flex shrink-0 items-center gap-0 text-sm font-semibold tracking-[0.28px] text-[var(--primary)] hover:underline disabled:opacity-60"
           >
             {skipping ? "Skipping…" : "Skip Break"}
             <ChevronRight className="size-6" aria-hidden />
           </button>
         </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-lg bg-[#dfe1e7]">
+        <div className="h-1.5 w-full overflow-hidden rounded-lg bg-[var(--greyscale-100)]">
           <div
-            className="h-full rounded-l-lg bg-[#0d47a1] transition-[width] duration-300 ease-linear"
+            className="h-full rounded-l-lg bg-[var(--primary)] transition-[width] duration-300 ease-linear"
             style={{ width: `${Math.max(0, Math.min(100, progress * 100))}%` }}
           />
         </div>
@@ -134,19 +135,9 @@ function prepTestHubPageTitle(prepTest: { label: string; prepTestNumber: string 
   return prepTest.label
 }
 
-function PrepTestHubStat({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="flex w-[78px] flex-col items-center">
-      <dt className="text-xs font-medium leading-normal tracking-[0.24px] text-[#062357]">{label}</dt>
-      <dd className="text-sm font-semibold leading-normal tracking-[0.28px] text-[#062357]">{value}</dd>
-    </div>
-  )
-}
-
 function sectionShortTitle(row: PrepTestDetailSection): string {
-  const base =
-    row.sectionNumber != null ? `Section ${row.sectionNumber}` : row.title ? row.title : row.sectionType
-  return row.isExperimental ? `${base} (EXP)` : base
+  if (row.sectionNumber != null) return `Section ${row.sectionNumber}`
+  return row.title ? row.title : row.sectionType
 }
 
 function sectionTimeDisplay(minutes: number): string {
@@ -160,24 +151,29 @@ function sectionQuestionsLine(count: number): string {
 function PrepTestSectionRow({
   row,
   starting,
+  timingId,
   onStart,
 }: {
   row: PrepTestDetailSection
   starting: boolean
+  timingId: string
   onStart: () => void
 }) {
+  const { scaleFactor } = useAccommodations()
+  const unlimited = timingId === "unlimited"
+  const displayMinutes = Math.max(1, Math.round((row.timeMinutes > 0 ? row.timeMinutes : 35) * scaleFactor))
   const breakLocked = row.onBreak
   const canContinueSection = Boolean(row.activeSectionSessionId)
   const showStartButton = row.practiceable && !row.completed && (row.unlocked || breakLocked)
   const activeSection = row.practiceable && row.unlocked && !row.completed
 
   return (
-    <div className="flex h-[100px] items-center gap-6 rounded-[16px] border border-[#dfe1e7] bg-white px-6 py-3 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)]">
+    <div className="flex h-[100px] items-center gap-6 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-3 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)]">
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
         <p
           className={cn(
             "text-2xl font-bold leading-[1.3]",
-            activeSection ? "text-[#0d47a1]" : "text-[#a4acb9]",
+            activeSection ? "text-[var(--primary)]" : "text-[var(--greyscale-300)]",
           )}
         >
           {sectionShortTitle(row)}
@@ -185,14 +181,14 @@ function PrepTestSectionRow({
         <div
           className={cn(
             "flex items-center gap-3 text-sm font-semibold leading-normal tracking-[0.28px]",
-            activeSection ? "text-[#666d80]" : "text-[#a4acb9]",
+            activeSection ? "text-[var(--greyscale-500)]" : "text-[var(--greyscale-300)]",
           )}
         >
           <div className="flex items-center gap-2">
             <Timer className="size-4 shrink-0" aria-hidden />
-            <span>{sectionTimeDisplay(row.timeMinutes)}</span>
+            <span>{unlimited ? "Unlimited" : sectionTimeDisplay(displayMinutes)}</span>
           </div>
-          <span className="h-3.5 w-px shrink-0 bg-[#dfe1e7]" aria-hidden />
+          <span className="h-3.5 w-px shrink-0 bg-[var(--greyscale-100)]" aria-hidden />
           <span>{sectionQuestionsLine(row.questionCount)}</span>
         </div>
       </div>
@@ -221,6 +217,7 @@ function PracticePrepTestPage() {
   const { testId: testIdParam } = useParams<{ testId: string }>()
   const isRetakeAttempt = isRetakePrepTestAttempt(searchParams)
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
+  const { scaleFactor } = useAccommodations()
 
   const [detail, setDetail] = useState<PrepTestDetailResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -238,6 +235,15 @@ function PracticePrepTestPage() {
   const [scoreHidden, setScoreHidden] = useState(true)
   const [startingBlindReview, setStartingBlindReview] = useState(false)
   const [skippingBreak, setSkippingBreak] = useState(false)
+
+  const timingSelectOptions = useMemo(
+    () =>
+      (detail?.timingOptions ?? []).map((o) => ({
+        value: o.id,
+        label: remapPrepTestTimingOptionLabel(o.id, o.label, scaleFactor),
+      })),
+    [detail?.timingOptions, scaleFactor],
+  )
 
   const breadcrumbTitle = detail ? prepTestHubPageTitle(detail.prepTest) : null
   useStudentPageBreadcrumbTail(breadcrumbTitle)
@@ -471,7 +477,7 @@ function PracticePrepTestPage() {
     return (
       <StudentMain>
         <p className="text-sm text-red-600">{error ?? "PrepTest not found."}</p>
-        <Link to={PREPTEST_LIST_HREF} className="mt-2 text-sm font-semibold text-[#0d47a1] hover:underline">
+        <Link to={PREPTEST_LIST_HREF} className="mt-2 text-sm font-semibold text-[var(--primary)] hover:underline">
           Back to PrepTests
         </Link>
       </StudentMain>
@@ -495,22 +501,15 @@ function PracticePrepTestPage() {
           </p>
         ) : null}
 
-        <section className="rounded-[16px] border border-[#dfe1e7] bg-white p-6">
+        <section className="rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
           <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-              <p className="text-2xl font-bold leading-[1.3] text-[#062357]">
-                {configLocked ? prepTestContinueHeadline(prepTest) : "Ready to begin your test?"}
-              </p>
-              <dl className="flex shrink-0 flex-wrap items-start gap-6 lg:justify-end">
-                <PrepTestHubStat label="Questions" value={prepTest.questionCount} />
-                <PrepTestHubStat label="Total Time" value={`${prepTest.totalMinutes} min`} />
-                <PrepTestHubStat label="Sections" value={prepTest.practiceableSectionCount} />
-              </dl>
-            </div>
+            <p className="text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">
+              {configLocked ? prepTestContinueHeadline(prepTest) : "Ready to begin your test?"}
+            </p>
 
             {!configLocked ? (
               <>
-                <p className="text-2xl font-bold leading-[1.3] text-[#062357]">{prepTest.label}</p>
+                <p className="text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">{prepTest.label}</p>
 
                 <div className="flex flex-wrap gap-6">
                   <DrillConfigSelectField
@@ -522,7 +521,7 @@ function PracticePrepTestPage() {
                       setTimingId(v)
                       void persistConfig(v, formatId)
                     }}
-                    options={detail.timingOptions.map((o) => ({ value: o.id, label: o.label }))}
+                    options={timingSelectOptions}
                   />
                   <DrillConfigSelectField
                     className="w-full max-w-[347px]"
@@ -543,7 +542,7 @@ function PracticePrepTestPage() {
 
         <section className="mt-6">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">Test Section</h2>
+            <h2 className="text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">Test Section</h2>
             {detail.allPracticeableSectionsComplete ? (
               <Button
                 type="button"
@@ -562,6 +561,7 @@ function PracticePrepTestPage() {
                   <PrepTestSectionRow
                     row={row}
                     starting={startingSectionId === row.id}
+                    timingId={timingId}
                     onStart={() => openPrepTestSection(row)}
                   />
                 </li>,
@@ -589,6 +589,7 @@ function PracticePrepTestPage() {
       <PracticeCompleteModal
         open={completeModal != null}
         titleId="preptest-complete-title"
+        title="PrepTest Done!"
         subtitle={`You've completed ${prepTest.label}`}
         rawScore={completeModal?.rawScore ?? 0}
         questionCount={completeModal?.questionCount ?? 1}
@@ -614,11 +615,11 @@ function PrepTestDetailHeader({
 }) {
   return (
     <div className="mb-6 flex items-center justify-between gap-4">
-      <h1 className="!m-0 !text-[20px] !font-bold !leading-[1.35] text-[#062357]">{pageTitle}</h1>
+      <h1 className="!m-0 !text-[20px] !font-bold !leading-[1.35] text-[var(--color-student-heading)]">{pageTitle}</h1>
       <button
         type="button"
         onClick={() => navigate(PREPTEST_LIST_HREF)}
-        className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[#666d80] transition-colors hover:bg-[#edf3ff] hover:text-[#062357]"
+        className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[var(--greyscale-500)] transition-colors hover:bg-[var(--primary-25)] hover:text-[var(--color-student-heading)]"
         aria-label={`Close ${pageTitle}`}
       >
         <X className="size-6" />

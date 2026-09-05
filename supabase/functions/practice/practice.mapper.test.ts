@@ -33,6 +33,16 @@ Deno.test('mapDrillQuestionRow omits review fields during active practice', () =
   assertEquals(out.choices.every((c) => c.explanationHtml == null), true)
 })
 
+Deno.test('mapDrillQuestionRow includes difficulty for target-time pacing', () => {
+  const out = mapDrillQuestionRow({ ...baseRow, difficulty: 4 }, { includeOptionExplanations: false })
+  assertEquals(out.difficulty, 4)
+})
+
+Deno.test('mapDrillQuestionRow clamps difficulty to 1–5', () => {
+  assertEquals(mapDrillQuestionRow({ ...baseRow, difficulty: 0 }, {}).difficulty, 1)
+  assertEquals(mapDrillQuestionRow({ ...baseRow, difficulty: 9 }, {}).difficulty, 5)
+})
+
 Deno.test('mapDrillQuestionRow includes option explanations and correct answer when review', () => {
   const out = mapDrillQuestionRow(baseRow, { includeOptionExplanations: true })
   assertEquals(out.correctChoiceId, 'B')
@@ -49,6 +59,27 @@ Deno.test('pickDrillQuestionIds LR returns requested count', () => {
   const ids = pickDrillQuestionIds(pool, 'LR', 5)
   assertEquals(ids.length, 5)
   assertEquals(new Set(ids).size, 5)
+})
+
+Deno.test('pickDrillQuestionIds LR caps at 30', () => {
+  const pool = Array.from({ length: 40 }, (_, i) => ({
+    id: `q-${i}`,
+    section_id: 's1',
+    source_group_id: null,
+  }))
+  const ids = pickDrillQuestionIds(pool, 'LR', 30)
+  assertEquals(ids.length, 30)
+})
+
+Deno.test('pickDrillQuestionIds LR unlimited returns every question in the pool', () => {
+  const pool = Array.from({ length: 12 }, (_, i) => ({
+    id: `q-${i}`,
+    section_id: 's1',
+    source_group_id: null,
+  }))
+  const ids = pickDrillQuestionIds(pool, 'LR', 'unlimited')
+  assertEquals(ids.length, 12)
+  assertEquals(new Set(ids).size, 12)
 })
 
 Deno.test('pickDrillQuestionIds RC prefers passage groups', () => {

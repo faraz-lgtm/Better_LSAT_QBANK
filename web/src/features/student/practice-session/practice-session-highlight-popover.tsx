@@ -15,7 +15,7 @@ import {
 } from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
 
-const POPOVER_GAP_PX = 4
+const POPOVER_GAP_PX = 2
 const POPOVER_VIEWPORT_PAD_PX = 8
 const HIGHLIGHT_POPOVER_WIDTH_PX = 168
 const HIGHLIGHT_POPOVER_EXPANDED_HEIGHT_PX = 80
@@ -186,7 +186,7 @@ function PracticeSessionHighlightPopover({
                     )}
                     style={{
                       backgroundColor: swatch.hex,
-                      borderColor: selected ? swatch.border : "#dfe1e7",
+                      borderColor: selected ? swatch.border : "var(--greyscale-100)",
                     }}
                     aria-label={`Highlight ${swatch.id}`}
                     aria-pressed={selected}

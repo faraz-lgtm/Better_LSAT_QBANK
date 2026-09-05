@@ -8,6 +8,12 @@ import {
 } from "@/features/app-shell/student-nav-config"
 
 describe("student-nav-config", () => {
+  it("builds Main / Dashboard breadcrumbs for the premium home page", () => {
+    expect(getStudentBreadcrumbs("/app")).toEqual([{ label: "Main" }, { label: "Dashboard" }])
+    expect(getStudentBreadcrumbs("/app/")).toEqual([{ label: "Main" }, { label: "Dashboard" }])
+    expect(getStudentPageTitle("/app")).toBe("Dashboard")
+  })
+
   it("maps practice routes to prep section", () => {
     expect(getActiveSectionKey("/app/practice/drills")).toBe("prep")
     expect(getStudentBreadcrumbs("/app/practice/drills")).toEqual([
@@ -17,11 +23,22 @@ describe("student-nav-config", () => {
     expect(getStudentPageTitle("/app/practice/drills")).toBe("Drills")
   })
 
-  it("maps academy explanations with foundation trail", () => {
+  it("keeps Blind Review breadcrumbs without a sidebar item", () => {
+    expect(getStudentBreadcrumbs("/app/practice/blind-review")).toEqual([
+      { label: "Prep", href: "/app/practice/drills" },
+      { label: "Blind Review" },
+    ])
+    expect(getStudentPageTitle("/app/practice/blind-review")).toBe("Blind Review")
+    expect(getStudentBreadcrumbs("/app/practice/blind-review/pt-141")).toEqual([
+      { label: "Prep", href: "/app/practice/drills" },
+      { label: "Blind Review" },
+    ])
+  })
+
+  it("maps academy explanations breadcrumbs", () => {
     expect(getActiveSectionKey("/app/prep-course/foo")).toBe("academy")
     expect(getStudentBreadcrumbs("/app/learn/explanations")).toEqual([
       { label: "Academy", href: "/app/prep-course" },
-      { label: "Foundation" },
       { label: "Explanations" },
     ])
     expect(getStudentPageTitle("/app/learn/explanations")).toBe("Explanations")
@@ -30,7 +47,7 @@ describe("student-nav-config", () => {
   it("builds prep course content breadcrumbs", () => {
     expect(getStudentBreadcrumbs("/app/prep-course/prep-course")).toEqual([
       { label: "Academy", href: "/app/prep-course" },
-      { label: "Prep Course", href: "/app/prep-course" },
+      { label: "Prep Courses", href: "/app/prep-course" },
       { label: "Course Content" },
     ])
     expect(getStudentPageTitle("/app/prep-course/prep-course")).toBeNull()

@@ -1,8 +1,12 @@
-import type { DrillAnswerState, DrillQuestion } from "@/features/student/drills/drill-types"
+import type {
+  DrillAnswerState,
+  DrillDifficulty,
+  DrillQuestion,
+} from "@/features/student/drills/drill-types"
 
 export type SectionType = "LR" | "RC"
 
-export type SectionTiming = "unlimited" | "35" | "standard"
+export type SectionTiming = string
 export type SectionShowAnswers = "end" | "each" | "never"
 
 export type SectionPoolItem = {
@@ -22,6 +26,7 @@ export type SectionSessionMetadata = {
   sectionType: SectionType
   timing: string
   showAnswers: string
+  difficulty?: string | null
   questionIds: string[]
   prepTestTitle?: string | null
   sectionTitle?: string | null
@@ -84,6 +89,7 @@ export type StartSectionInput = {
   sectionId: string
   timing?: SectionTiming
   showAnswers?: SectionShowAnswers
+  difficulty?: DrillDifficulty
 }
 
 export function formatSectionPoolLabel(item: SectionPoolItem): string {
@@ -100,13 +106,16 @@ export function formatSectionPoolLabel(item: SectionPoolItem): string {
 export const sectionConfigOptions = {
   timing: [
     { label: "Unlimited", value: "unlimited" },
-    { label: "35 minutes", value: "35" },
     { label: "Standard", value: "standard" },
   ],
   showAnswers: [
-    { label: "At the end", value: "end" },
+    { label: "After the section", value: "end" },
     { label: "After each question", value: "each" },
-    { label: "Never (blind)", value: "never" },
+  ],
+  difficulty: [
+    { label: "Auto-adjust", value: "adaptive" },
+    { label: "Easy", value: "easy" },
+    { label: "Hard", value: "hard" },
   ],
   sort: [
     { label: "Newest first", value: "newest" },

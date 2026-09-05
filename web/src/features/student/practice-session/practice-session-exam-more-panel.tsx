@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom"
+import type { ReactNode } from "react"
 
 import {
   EXAM_MORE_PANEL_ACTION_CLASS,
@@ -12,6 +13,7 @@ import {
   EXAM_MORE_PANEL_TOGGLE_LABEL_CLASS,
   EXAM_MORE_PANEL_TOGGLE_ROW_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import { useTheme } from "@/features/theme/theme-provider"
 
 const EXAM_FINISH_FIGMA = "/figma/exam-finish"
 
@@ -21,6 +23,10 @@ type PracticeSessionExamMorePanelProps = {
   exitOnly?: boolean
   officialInterface?: boolean
   onOfficialInterfaceChange?: (next: boolean) => void
+  /** Figma `20596:145393` — section dropdown above exit actions */
+  sectionSelect?: ReactNode
+  /** Defaults to "BetterLSAT Interface"; Blind Review Figma uses "Official Interface" */
+  interfaceToggleLabel?: string
   onClose: () => void
   onSubmit: () => void
   onSaveAndExit: () => void
@@ -73,14 +79,18 @@ function PracticeSessionExamMorePanel({
   disabled = false,
   finishing = false,
   exitOnly = false,
-  officialInterface = false,
+  officialInterface = true,
   onOfficialInterfaceChange,
+  sectionSelect = null,
+  interfaceToggleLabel = "BetterLSAT Interface",
   onClose,
   onSubmit,
   onSaveAndExit,
   onExitWithoutSaving,
 }: PracticeSessionExamMorePanelProps) {
+  const { isDark, setTheme } = useTheme()
   const actionsDisabled = disabled || finishing
+  const officialToggleSemantics = interfaceToggleLabel === "Official Interface"
 
   return createPortal(
     <>
@@ -97,6 +107,8 @@ function PracticeSessionExamMorePanel({
             <ExamMoreIcon src={`${EXAM_FINISH_FIGMA}/close.svg`} size={24} />
           </button>
         </div>
+
+        {sectionSelect ? <div className="mb-1 w-full shrink-0">{sectionSelect}</div> : null}
 
         {exitOnly ? null : (
           <button
@@ -153,17 +165,24 @@ function PracticeSessionExamMorePanel({
           <span id="exam-more-dark-mode" className={EXAM_MORE_PANEL_TOGGLE_LABEL_CLASS}>
             Dark mode
           </span>
-          <ExamMoreToggle labelledBy="exam-more-dark-mode" />
+          <ExamMoreToggle
+            labelledBy="exam-more-dark-mode"
+            checked={isDark}
+            onCheckedChange={(next) => setTheme(next ? "dark" : "light")}
+          />
         </div>
 
         <div className={EXAM_MORE_PANEL_TOGGLE_ROW_CLASS}>
-          <span id="exam-more-official-interface" className={EXAM_MORE_PANEL_TOGGLE_LABEL_CLASS}>
-            Official Interface
+          <span id="exam-more-betterlsat-interface" className={EXAM_MORE_PANEL_TOGGLE_LABEL_CLASS}>
+            {interfaceToggleLabel}
           </span>
           <ExamMoreToggle
-            labelledBy="exam-more-official-interface"
-            checked={officialInterface}
-            onCheckedChange={onOfficialInterfaceChange}
+            labelledBy="exam-more-betterlsat-interface"
+            checked={officialToggleSemantics ? officialInterface : !officialInterface}
+            onCheckedChange={(next) => {
+              if (officialToggleSemantics) onOfficialInterfaceChange?.(next)
+              else onOfficialInterfaceChange?.(!next)
+            }}
           />
         </div>
       </div>

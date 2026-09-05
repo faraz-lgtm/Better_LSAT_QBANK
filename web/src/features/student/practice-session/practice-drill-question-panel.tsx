@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, type MouseEvent } from "react"
 
 import { LrDrillOptionRow } from "@/features/student/drills/lr-drill-option-row"
 import type { DrillQuestion } from "@/features/student/drills/drill-types"
@@ -25,6 +25,7 @@ import {
   isOfficialLayout,
   type PracticeSessionVariant,
   type PracticeToolMode,
+  type RegionKey,
 } from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
 
@@ -53,7 +54,6 @@ type PracticeDrillQuestionPanelProps = {
   flagsDisabled?: boolean
   variant?: PracticeSessionVariant
   toolMode?: PracticeToolMode
-  onHighlighter?: () => void
   onEraser?: () => void
   lineFocusActive?: boolean
   onLineFocus?: () => void
@@ -73,6 +73,8 @@ type PracticeDrillQuestionPanelProps = {
   seedStemExplanationHtml?: string | null
   seedQuestionTypeLabel?: string | null
   explanationsEnabled?: boolean
+  onAnnotateMouseUp?: (regionKey: RegionKey, container: HTMLElement | null, event?: MouseEvent) => void
+  onAnnotateClick?: (regionKey: RegionKey, container: HTMLElement | null, event: MouseEvent) => void
 }
 
 function PracticeDrillQuestionPanel({
@@ -95,7 +97,6 @@ function PracticeDrillQuestionPanel({
   flagsDisabled,
   variant,
   toolMode,
-  onHighlighter,
   onEraser,
   lineFocusActive,
   onLineFocus,
@@ -115,6 +116,8 @@ function PracticeDrillQuestionPanel({
   seedStemExplanationHtml = null,
   seedQuestionTypeLabel = null,
   explanationsEnabled = true,
+  onAnnotateMouseUp,
+  onAnnotateClick,
 }: PracticeDrillQuestionPanelProps) {
   const [hiddenChoices, setHiddenChoices] = useState<Record<number, boolean>>({})
   const {
@@ -124,19 +127,23 @@ function PracticeDrillQuestionPanel({
     toggleResponseMasking,
     toggleChoiceMask,
     resetMaskedChoices,
-  } = useResponseMasking()
+  } = useResponseMasking(question.id)
   const stemKey = regionKey(question.id, "stem")
   const stemHtml = getRegionHtml(stemKey, question.stemText ?? "")
   const isBlindReviewLayout = blindReviewChrome && variant === "blind-review"
   const isActiveDrillLayout = isExamChromeLayout(variant)
   const officialChrome = isOfficialLayout(variant)
-  const canResetResponse =
-    !choicesDisabled &&
-    (selectedIndex != null || responseMasking || hasMaskedChoices)
+  const canResetResponse = !choicesDisabled && (selectedIndex != null || hasMaskedChoices)
 
   function handleResetResponse() {
     resetMaskedChoices()
     if (selectedIndex != null) onResetResponse?.()
+  }
+
+  function handleToggleMasked(index: number) {
+    const willMask = !maskedChoices[index]
+    toggleChoiceMask(index)
+    if (willMask && selectedIndex === index) onResetResponse?.()
   }
 
   if (isBlindReviewLayout) {
@@ -152,6 +159,7 @@ function PracticeDrillQuestionPanel({
         allowReselect={allowReselect}
         getRegionHtml={getRegionHtml}
         onSelect={onSelect}
+        onResetResponse={handleResetResponse}
         answerView={answerView}
         onAnswerViewChange={onAnswerViewChange}
         recommendedForBr={recommendedForBr}
@@ -165,6 +173,20 @@ function PracticeDrillQuestionPanel({
         seedStemExplanationHtml={seedStemExplanationHtml}
         seedQuestionTypeLabel={seedQuestionTypeLabel}
         explanationsEnabled={explanationsEnabled}
+        onAnnotateMouseUp={onAnnotateMouseUp}
+        onAnnotateClick={onAnnotateClick}
+        annotateToolMode={toolMode}
+        showSideWidget={!reviewChrome}
+        flagged={flagged}
+        onToggleFlag={onToggleFlag}
+        flagsDisabled={flagsDisabled}
+        responseMasking={responseMasking}
+        maskedChoices={maskedChoices}
+        onToggleResponseMasking={toggleResponseMasking}
+        onToggleMasked={handleToggleMasked}
+        onOpenReview={onOpenReview}
+        reviewActive={reviewActive}
+        onOpenAccessibility={onOpenAccessibility}
       />
     )
   }
@@ -236,13 +258,17 @@ function PracticeDrillQuestionPanel({
                   [index]: !prev[index],
                 }))
               }
-              onToggleMasked={() => toggleChoiceMask(index)}
+              onToggleMasked={() => handleToggleMasked(index)}
               variant={variant}
               showSideAction={!isActiveDrillLayout}
             />
           ))}
-          {isActiveDrillLayout && canResetResponse ? (
-            <PracticeSessionResetResponseButton variant={variant} onClick={handleResetResponse} />
+          {isActiveDrillLayout ? (
+            <PracticeSessionResetResponseButton
+              variant={variant}
+              disabled={!canResetResponse}
+              onClick={handleResetResponse}
+            />
           ) : null}
         </div>
         {isActiveDrillLayout ? (
@@ -257,7 +283,6 @@ function PracticeDrillQuestionPanel({
             reviewActive={reviewActive}
             onAccessibility={onOpenAccessibility}
             toolMode={toolMode}
-            onHighlighter={onHighlighter}
             onEraser={onEraser}
             lineFocusActive={lineFocusActive}
             onLineFocus={onLineFocus}

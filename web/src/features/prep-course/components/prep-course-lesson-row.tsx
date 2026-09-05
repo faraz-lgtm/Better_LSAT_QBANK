@@ -44,7 +44,7 @@ function PrepCourseLessonRow({
         <span
           className={cn(
             "block truncate text-sm font-medium leading-[1.5] tracking-[0.28px]",
-            completed && !active ? "text-[color:var(--greyscale-500)]" : "text-[#062357]",
+            completed && !active ? "text-[color:var(--greyscale-500)]" : "text-[var(--color-student-heading)]",
           )}
           title={title}
         >
@@ -70,8 +70,8 @@ function PrepCourseLessonRow({
   return (
     <div
       className={cn(
-        "flex min-h-[68px] items-center justify-between gap-3 border-b border-[#dfe1e7] px-6 py-3 transition-colors last:border-b-0",
-        active ? "bg-[var(--primary-0)]" : "bg-white hover:bg-[var(--greyscale-25)]",
+        "flex min-h-[68px] items-center justify-between gap-3 border-b border-[var(--greyscale-100)] px-6 py-3 transition-colors last:border-b-0",
+        active ? "bg-[var(--primary-0)]" : "bg-[var(--greyscale-0)] hover:bg-[var(--greyscale-25)]",
       )}
     >
       {locked ? (
@@ -92,7 +92,7 @@ function PrepCourseLessonRow({
         {active && !locked ? (
           <Link
             to={href}
-            className="inline-flex h-8 items-center justify-end gap-2 text-xs font-semibold tracking-[0.24px] text-[#0d47a1]"
+            className="inline-flex h-8 items-center justify-end gap-2 text-xs font-semibold tracking-[0.24px] text-[var(--primary)]"
           >
             Continue
             <PrepCourseFigmaIcon src={`${PREP_COURSE_FIGMA}/icon-continue.svg`} className="size-4" />
@@ -104,8 +104,8 @@ function PrepCourseLessonRow({
             aria-label={bookmarked ? `Remove bookmark for ${title}` : `Bookmark ${title}`}
             aria-pressed={bookmarked}
             className={cn(
-              "flex size-[34px] shrink-0 items-center justify-center rounded-[12px] border border-[#dfe1e6] bg-[#f9f9fb] transition-colors",
-              bookmarked ? "text-[#0d47a1]" : "text-[color:var(--greyscale-500)] hover:text-[#0d47a1]",
+              "flex size-[34px] shrink-0 items-center justify-center rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] transition-colors",
+              bookmarked ? "text-[var(--primary)]" : "text-[color:var(--greyscale-500)] hover:text-[var(--primary)]",
             )}
             onClick={() => onToggleBookmark(!bookmarked)}
           >

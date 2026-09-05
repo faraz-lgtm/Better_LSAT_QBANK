@@ -10,7 +10,7 @@ describe("PracticeSessionResetResponseButton", () => {
     expect(screen.getByRole("button", { name: "Reset Response" })).toHaveClass(
       "h-[34px]",
       "rounded-[6px]",
-      "bg-[#f6f8fa]",
+      "bg-[var(--greyscale-25)]",
       "practice-session-reset-response",
     )
   })
@@ -19,7 +19,18 @@ describe("PracticeSessionResetResponseButton", () => {
     render(<PracticeSessionResetResponseButton variant="official" onClick={() => undefined} />)
 
     const button = screen.getByRole("button", { name: "Reset Response" })
-    expect(button).toHaveClass("h-[34px]", "border-[#d4d7e2]", "bg-[#eaecf3]", "text-[#2c3143]", "rounded-[6px]")
+    expect(button).toHaveClass(
+      "h-[34px]",
+      "border-[var(--greyscale-100)]",
+      "bg-[var(--greyscale-25)]",
+      "text-[var(--color-student-heading)]",
+      "rounded-[6px]",
+    )
     expect(button.parentElement).toHaveClass("h-[46px]", "justify-end", "pt-3")
+  })
+
+  it("stays visible but inactive when there is nothing to reset", () => {
+    render(<PracticeSessionResetResponseButton disabled onClick={() => undefined} />)
+    expect(screen.getByRole("button", { name: "Reset Response" })).toBeDisabled()
   })
 })

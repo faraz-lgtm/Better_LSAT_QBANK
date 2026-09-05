@@ -2,7 +2,11 @@ import { extractPrepTestQuestionRef } from '../_shared/prep-question-ref.ts'
 import { resolvePrepDrillLessonType } from '../_shared/prep-lesson-type.ts'
 import { isStudentVisiblePrepTest } from '../_shared/prep-test-visibility.ts'
 import { allocateQuestionTargetTimes } from '../_shared/question-target-time.ts'
-import { DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT, PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT } from './adaptive-drill-config.ts'
+import {
+  DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT,
+  LR_DRILL_MAX_QUESTION_COUNT,
+  PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT,
+} from './adaptive-drill-config.ts'
 import type {
   AnswerEventRow,
   DrillPoolQuestionRow,
@@ -250,10 +254,11 @@ function parseSectionType(value: unknown): 'LR' | 'RC' | null {
   return value === 'LR' || value === 'RC' ? value : null
 }
 
-function parseQuestionCount(value: unknown): number {
+function parseDrillQuestionCount(value: unknown): number | 'unlimited' {
+  if (value === 'unlimited' || value === 'Unlimited') return 'unlimited'
   const n = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10)
   if (!Number.isFinite(n) || n < 1) return 1
-  return Math.min(25, Math.floor(n))
+  return Math.min(LR_DRILL_MAX_QUESTION_COUNT, Math.floor(n))
 }
 
 const RC_DRILL_MAX_PASSAGES = 8
@@ -276,7 +281,7 @@ function filterPoolByStatus(
 
 export type DrillSessionMetadata = {
   sectionType: 'LR' | 'RC'
-  questionCount: number
+  questionCount: number | 'unlimited'
   passageCount?: number | 'unlimited'
   timing: string
   showAnswers: string
@@ -311,6 +316,7 @@ export type SectionSessionMetadata = {
   sectionType: 'LR' | 'RC'
   timing: string
   showAnswers: string
+  difficulty?: string | null
   questionIds: string[]
   prepTestTitle?: string | null
   sectionTitle?: string | null
@@ -448,6 +454,12 @@ export type PrepTestSessionMetadata = {
   answeredQuestionIds?: string[]
   blindReviewActive?: boolean
   blindReviewSkipped?: boolean
+  /** Scored LawHub LR section (one section, typically 24–26 questions). */
+  lrCorrect?: number
+  lrMax?: number
+  /** Scored LawHub RC section (one section, typically 26–28 questions). */
+  rcCorrect?: number
+  rcMax?: number
 }
 
 export type PrepTestDetailResponse = {
@@ -527,6 +539,48 @@ function practiceableSectionsFromRow(
   return sections
     .filter((s) => (s.sectionType === 'LR' || s.sectionType === 'RC') && s.questionCount > 0)
     .map((s) => ({ id: s.id, sectionType: s.sectionType as 'LR' | 'RC', questionCount: s.questionCount }))
+}
+
+/** Current LawHub LSAT: one scored LR (~24–26) and one scored RC (~26–28). */
+const LAWHUB_SCORED_SECTION_QUESTION_MAX = { LR: 26, RC: 28 } as const
+
+function lawHubLrRcFromCompletedSections(
+  sections: PrepTestDetailRow['sections'],
+  completedBySectionId: Map<string, PracticeSessionRow>,
+  experimentalSectionIds: Set<string>,
+): { lrCorrect: number; lrMax: number; rcCorrect: number; rcMax: number } {
+  const lr: { correct: number; max: number }[] = []
+  const rc: { correct: number; max: number }[] = []
+  for (const def of sections) {
+    if (experimentalSectionIds.has(def.id) || def.isExperimental === true) continue
+    const sess = def.id ? completedBySectionId.get(def.id) : undefined
+    if (!sess) continue
+    const max = def.questionCount
+    if (!(max > 0)) continue
+    const correct = typeof sess.raw_score === 'number' ? sess.raw_score : 0
+    if (def.sectionType === 'LR') lr.push({ correct, max })
+    if (def.sectionType === 'RC') rc.push({ correct, max })
+  }
+  function oneScoredSection(
+    rows: { correct: number; max: number }[],
+    cap: number,
+  ): { correct: number; max: number } {
+    if (rows.length === 0) return { correct: 0, max: 0 }
+    const chosen = rows[0]!
+    const boundedMax = Math.min(cap, chosen.max)
+    return {
+      max: boundedMax,
+      correct: Math.max(0, Math.min(boundedMax, chosen.correct)),
+    }
+  }
+  const lrOut = oneScoredSection(lr, LAWHUB_SCORED_SECTION_QUESTION_MAX.LR)
+  const rcOut = oneScoredSection(rc, LAWHUB_SCORED_SECTION_QUESTION_MAX.RC)
+  return {
+    lrCorrect: lrOut.correct,
+    lrMax: lrOut.max,
+    rcCorrect: rcOut.correct,
+    rcMax: rcOut.max,
+  }
 }
 
 function assertStudentVisiblePrepTest(moduleId: string | null | undefined): void {
@@ -1171,6 +1225,20 @@ function prepTestNumberSortValue(item: PrepTestPoolItem): number {
   return fromModule ? Number.parseInt(fromModule, 10) : 0
 }
 
+/** Paused / in-progress take — not the Blind Review stage. */
+function isPrepTestPoolInProcess(item: PrepTestPoolItem): boolean {
+  return item.status === 'in_progress' && item.blindReviewStatus == null
+}
+
+function matchesPrepTestPoolFilter(
+  item: PrepTestPoolItem,
+  filter: 'fresh' | 'in_progress' | 'completed' | 'blind_review',
+): boolean {
+  if (filter === 'blind_review') return item.blindReviewStatus != null
+  if (filter === 'in_progress') return isPrepTestPoolInProcess(item)
+  return item.status === filter
+}
+
 function blindReviewPoolSortValue(item: BlindReviewPoolItem): number {
   const n = item.prepTestNumber ? Number.parseInt(item.prepTestNumber, 10) : NaN
   if (Number.isFinite(n)) return n
@@ -1733,8 +1801,15 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         typeof body.source === 'string' && body.source.trim() === 'dashboard_adaptive_drill'
           ? 'dashboard_adaptive_drill'
           : null
-      let questionCount = parseQuestionCount(body.questionCount)
-      if (source === 'dashboard_adaptive_drill') {
+      const requestedQuestionCount = parseDrillQuestionCount(body.questionCount)
+      const isUnlimitedQuestionCount =
+        requestedQuestionCount === 'unlimited' &&
+        sectionType === 'LR' &&
+        source !== 'dashboard_adaptive_drill'
+      let questionCount: number | 'unlimited' = isUnlimitedQuestionCount
+        ? 'unlimited'
+        : requestedQuestionCount
+      if (source === 'dashboard_adaptive_drill' && typeof questionCount === 'number') {
         questionCount = Math.max(questionCount, DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT)
       }
       const timing = typeof body.timing === 'string' ? body.timing : 'unlimited'
@@ -1768,7 +1843,11 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       let questionIds = useRcPassageCount
         ? pickRcDrillQuestionIdsByPassageCount(filtered, passageCount ?? 1, answeredIds)
-        : pickDrillQuestionIds(filtered, sectionType, questionCount)
+        : pickDrillQuestionIds(
+            filtered,
+            sectionType,
+            isUnlimitedQuestionCount ? 'unlimited' : questionCount,
+          )
       if (
         source === 'dashboard_adaptive_drill' &&
         questionIds.length < DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT
@@ -1797,7 +1876,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       const metadata: DrillSessionMetadata = {
         sectionType,
-        questionCount: questionIds.length,
+        questionCount: isUnlimitedQuestionCount ? 'unlimited' : questionIds.length,
         ...(passageCount != null ? { passageCount } : {}),
         timing,
         showAnswers,
@@ -1957,9 +2036,11 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const metadata: DrillSessionMetadata = {
         sectionType,
         questionCount:
-          typeof metaRaw.questionCount === 'number'
-            ? metaRaw.questionCount
-            : questionIds.length,
+          metaRaw.questionCount === 'unlimited'
+            ? 'unlimited'
+            : typeof metaRaw.questionCount === 'number'
+              ? metaRaw.questionCount
+              : questionIds.length,
         timing: typeof metaRaw.timing === 'string' ? metaRaw.timing : 'unlimited',
         showAnswers: typeof metaRaw.showAnswers === 'string' ? metaRaw.showAnswers : 'end',
         selection: typeof metaRaw.selection === 'string' ? metaRaw.selection : 'auto',
@@ -1996,6 +2077,95 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         answers,
         drillLabel: metadata.title ?? null,
       }
+    },
+
+    async extendDrill(
+      userId: string,
+      body: { sessionId?: unknown },
+    ): Promise<{
+      session: PracticeSessionRow
+      metadata: DrillSessionMetadata
+      questions: DrillQuestionPayload[]
+      addedCount: number
+    }> {
+      const sessionId = typeof body.sessionId === 'string' ? body.sessionId : ''
+      if (!sessionId) throw new PracticeValidationError('sessionId is required')
+
+      const session = await deps.repository.getSessionById(sessionId, userId)
+      if (!session) throw new PracticeForbiddenError('Session not found')
+      if (session.kind !== 'DRILL') throw new PracticeValidationError('Session is not a drill')
+      if (session.completed_at) throw new PracticeValidationError('Drill is already completed')
+
+      const metaRaw = session.metadata
+      if (metaRaw.questionCount !== 'unlimited') {
+        throw new PracticeValidationError('Drill is not configured for unlimited questions')
+      }
+
+      const sectionType = parseSectionType(metaRaw.sectionType)
+      if (!sectionType || sectionType !== 'LR') {
+        throw new PracticeValidationError('Unlimited question drills are only supported for LR')
+      }
+
+      const existingIds = drillQuestionIdsFromMetadata(metaRaw)
+      const existingSet = new Set(existingIds)
+      const questionTypeId =
+        typeof metaRaw.questionTypeId === 'string' && metaRaw.questionTypeId ? metaRaw.questionTypeId : null
+      const difficulty =
+        metaRaw.difficulty === 'easy' || metaRaw.difficulty === 'hard' || metaRaw.difficulty === 'adaptive'
+          ? metaRaw.difficulty
+          : 'adaptive'
+      const status = typeof metaRaw.status === 'string' ? metaRaw.status : 'fresh'
+
+      const pool = await deps.repository.listDrillPoolQuestions({
+        sectionType,
+        questionTypeId,
+        difficulty: difficulty === 'adaptive' ? null : difficulty,
+      })
+      const answeredIds = new Set(await deps.repository.listUserAnsweredQuestionIds(userId))
+      const filtered = filterPoolByStatus(pool, status, answeredIds).filter((q) => !existingSet.has(q.id))
+
+      if (filtered.length === 0) {
+        const metadata: DrillSessionMetadata = {
+          sectionType,
+          questionCount: 'unlimited',
+          timing: typeof metaRaw.timing === 'string' ? metaRaw.timing : 'unlimited',
+          showAnswers: typeof metaRaw.showAnswers === 'string' ? metaRaw.showAnswers : 'end',
+          selection: typeof metaRaw.selection === 'string' ? metaRaw.selection : 'auto',
+          questionTypeId,
+          tagLabel: typeof metaRaw.tagLabel === 'string' ? metaRaw.tagLabel : null,
+          difficulty,
+          status,
+          questionIds: existingIds,
+          title: typeof metaRaw.title === 'string' ? metaRaw.title : null,
+          flaggedQuestionIds: flaggedQuestionIdsFromMetadata(metaRaw),
+        }
+        return { session, metadata, questions: [], addedCount: 0 }
+      }
+
+      const newIds = pickDrillQuestionIds(filtered, sectionType, 'unlimited')
+      const questionIds = [...existingIds, ...newIds]
+      const nextMeta = { ...metaRaw, questionIds }
+      const sessionRow = await deps.repository.updateSession(sessionId, userId, { metadata: nextMeta })
+
+      const metadata: DrillSessionMetadata = {
+        sectionType,
+        questionCount: 'unlimited',
+        timing: typeof metaRaw.timing === 'string' ? metaRaw.timing : 'unlimited',
+        showAnswers: typeof metaRaw.showAnswers === 'string' ? metaRaw.showAnswers : 'end',
+        selection: typeof metaRaw.selection === 'string' ? metaRaw.selection : 'auto',
+        questionTypeId,
+        tagLabel: typeof metaRaw.tagLabel === 'string' ? metaRaw.tagLabel : null,
+        difficulty,
+        status,
+        questionIds,
+        title: typeof metaRaw.title === 'string' ? metaRaw.title : null,
+        flaggedQuestionIds: flaggedQuestionIdsFromMetadata(metaRaw),
+      }
+
+      const rows = await deps.repository.getDrillQuestionRowsByIds(newIds)
+      const questions = mapDrillQuestionRows(rows, false)
+
+      return { session: sessionRow, metadata, questions, addedCount: newIds.length }
     },
 
     async listSectionPool(
@@ -2249,17 +2419,12 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const statusCounts: PrepTestPoolStatusCounts = {
         all: items.length,
         fresh: items.filter((i) => i.status === 'fresh').length,
-        in_progress: items.filter((i) => i.status === 'in_progress').length,
+        in_progress: items.filter(isPrepTestPoolInProcess).length,
         completed: items.filter((i) => i.status === 'completed').length,
         blind_review: items.filter((i) => i.blindReviewStatus != null).length,
       }
 
-      const filtered =
-        filter === 'blind_review'
-          ? items.filter((i) => i.blindReviewStatus != null)
-          : filter
-            ? items.filter((i) => i.status === filter)
-            : items
+      const filtered = filter ? items.filter((i) => matchesPrepTestPoolFilter(i, filter)) : items
       const sorted = [...filtered].sort((a, b) => {
         const diff = prepTestNumberSortValue(a) - prepTestNumberSortValue(b)
         return sort === 'newest' ? -diff : diff
@@ -2434,11 +2599,16 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         percentile = scoreRow.percentile
       }
 
+      const lrRc = lawHubLrRcFromCompletedSections(row.sections, bySectionId, experimentalSectionIds)
       const sessionRow = await deps.repository.updateSession(prepTestSession.id, userId, {
         completed_at: now,
         raw_score: rawScore,
         scaled_score: scaledScore,
         percentile,
+        metadata: {
+          ...prepTestSession.metadata,
+          ...lrRc,
+        },
       })
 
       return { session: sessionRow }

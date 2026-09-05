@@ -15,8 +15,8 @@ describe("guest diagnostic test config", () => {
     })
     expect(getGuestDiagnosticTestConfig("quick")).toMatchObject({
       title: "Full Section Diagnostic - Test Instructions",
-      questionCount: 30,
-      timeMinutes: 40,
+      questionCount: 25,
+      timeMinutes: 35,
     })
     expect(getGuestDiagnosticTestConfig("full")).toMatchObject({
       title: "Full Diagnostic - Test Instructions",

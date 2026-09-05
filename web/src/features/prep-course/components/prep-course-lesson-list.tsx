@@ -22,7 +22,7 @@ function LessonLink({
     <Link
       to={`/app/prep-course/${course.slug}/${lesson.slug}`}
       className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm font-semibold tracking-[0.28px] ${
-        active ? "ds-btn-sm border-[var(--primary-border)] text-white" : "border-[#dfe1e7] bg-[#f6f8fa] ds-text-heading"
+        active ? "ds-btn-sm border-[var(--primary-border)] text-white" : "border-[var(--greyscale-100)] bg-[var(--greyscale-25)] ds-text-heading"
       }`}
     >
       <span>{lesson.title}</span>
@@ -35,19 +35,19 @@ function PrepCourseLessonList({ course, lessons, curriculum, activeLessonSlug }:
   const hasCurriculum = curriculum && curriculum.modules.length > 0
 
   return (
-    <aside className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+    <aside className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
       <h2 className="ds-heading-3 ds-text-heading">Lessons</h2>
       <div className="mt-4 space-y-4">
         {hasCurriculum
           ? curriculum.modules.map((mod) => (
               <div key={mod.id}>
-                <p className="text-xs font-bold uppercase tracking-wide text-[#666d80]">
+                <p className="text-xs font-bold uppercase tracking-wide text-[var(--greyscale-500)]">
                   Module {mod.sort_order}: {mod.title}
                 </p>
                 <div className="mt-2 space-y-3">
                   {mod.sections.map((section) => (
                     <div key={section.id}>
-                      <p className="text-sm font-semibold text-[#1a1b25]">{section.title}</p>
+                      <p className="text-sm font-semibold text-[var(--color-student-heading)]">{section.title}</p>
                       <div className="mt-2 space-y-2">
                         {section.lessons.map((lesson) => (
                           <LessonLink

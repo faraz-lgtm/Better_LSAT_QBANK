@@ -26,6 +26,7 @@ import {
   BLIND_REVIEW_OPTION_LETTER_SELECTED_ACTUAL_CLASS,
   BLIND_REVIEW_OPTION_LETTER_SELECTED_BR_CLASS,
   BLIND_REVIEW_OPTION_ROW_CORRECT_CLASS,
+  BLIND_REVIEW_OPTION_ROW_INNER_CLASS,
   BLIND_REVIEW_OPTION_ROW_SELECTED_ACTUAL_CLASS,
   BLIND_REVIEW_OPTION_ROW_SELECTED_BR_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
@@ -132,9 +133,9 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
         isActiveDrill
           ? "text-sm font-normal leading-[1.5] tracking-[0.28px] text-[color:inherit]"
           : officialChrome
-            ? "text-[14px] font-normal leading-5 text-[#2c3143]"
+            ? "text-[14px] font-normal leading-5 text-[var(--color-student-heading)]"
             : isBlindReview
-            ? "text-[1em] leading-[1.5] tracking-[0.32px] text-[color:inherit]"
+            ? "text-pretty text-[1em] leading-[1.5] tracking-[0.32px] text-[color:inherit]"
             : "pt-0.5",
         hidden && isBlindReview && "line-through opacity-50",
         hidden && !isBlindReview && !isActiveDrill && "line-through opacity-50 blur-[2px]",
@@ -161,6 +162,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
     pointerStartRef.current = null
     window.getSelection()?.removeAllRanges()
 
+    if (masked) onToggleMasked?.()
     if (allowReselect || selectedIndex == null || selectedIndex !== index) onSelect()
   }
 
@@ -173,19 +175,21 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
   }
 
   if (isBlindReview) {
+    const isMasked = masked
     return (
       <div
         className={cn(
-          "overflow-hidden rounded-[14px] border transition-colors",
+          "practice-session-br-option h-auto shrink-0 overflow-visible rounded-[14px] border transition-colors",
           explanationAction
             ? selected || correctHighlight
               ? brSelectedRowClass
-              : "border-transparent bg-[#f6f8fa]"
+              : "border-transparent bg-[var(--greyscale-25)]"
             : selected
               ? brSelectedRowClass
-              : hidden
-                ? "border-[#dfe1e7] bg-[#f6f8fa]"
-                : "border-[#dfe1e7] bg-white",
+              : hidden || isMasked
+                ? "border border-[var(--greyscale-100)] bg-[var(--greyscale-50)]"
+                : "border border-[var(--greyscale-100)] bg-[var(--greyscale-25)]",
+          isMasked && "practice-session-choice-masked opacity-45",
         )}
       >
         <div
@@ -197,22 +201,23 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
           onClick={explanationAction ? undefined : handleSelect}
           onKeyDown={explanationAction ? undefined : handleKeyDown}
           className={cn(
-            "flex items-center justify-between gap-4 text-left",
-            explanationAction ? "py-2 pl-2 pr-6 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#0d0d12]" : "p-4",
+            explanationAction
+              ? "flex items-start justify-between gap-4 py-2 pl-2 pr-6 text-left text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]"
+              : cn(BLIND_REVIEW_OPTION_ROW_INNER_CLASS, "text-[var(--color-student-heading)]"),
             !explanationAction && (disabled ? "cursor-default" : "cursor-pointer"),
           )}
         >
-          <div className={cn("flex min-w-0 flex-1 items-center", explanationAction ? "gap-3" : "gap-4")}>
+          <div className={cn("flex min-w-0 flex-1 items-start", explanationAction ? "gap-3" : "gap-4")}>
             <span
               className={cn(
-                "flex shrink-0 items-center justify-center font-bold",
+                "flex shrink-0 self-start items-center justify-center font-bold",
                 explanationAction ? "size-[46px] rounded-[12px] text-sm tracking-[0.28px]" : "size-12 rounded-[14px] text-lg",
                 selected || correctHighlight
                   ? brSelectedLetterClass
                   : explanationAction
-                    ? "bg-white text-black"
-                    : "bg-[#f3f4f6] text-[#4a5565]",
-                hidden && "line-through",
+                    ? "bg-[var(--greyscale-0)] text-[var(--color-student-heading)]"
+                    : "bg-[var(--greyscale-0)] text-[var(--greyscale-500)]",
+                (hidden || isMasked) && "line-through",
               )}
             >
               {letter}
@@ -223,8 +228,10 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
             <button
               type="button"
               className={cn(
-                "inline-flex size-5 shrink-0 items-center justify-center transition",
-                explanationExpanded ? "text-[#0d47a1]" : "text-[#666d80] hover:text-[#062357]",
+                "mt-1 inline-flex size-5 shrink-0 self-start items-center justify-center transition",
+                explanationExpanded
+                  ? "text-[var(--primary)]"
+                  : "text-[var(--greyscale-500)] hover:text-[var(--color-student-heading)]",
               )}
               aria-label={
                 explanationExpanded
@@ -243,10 +250,10 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
                 <ChevronDown className="size-5" strokeWidth={2} aria-hidden />
               )}
             </button>
-          ) : (
+          ) : showSideAction ? (
             <button
               type="button"
-              className="inline-flex size-5 shrink-0 items-center justify-center text-[#666d80] transition hover:text-[#062357]"
+              className="mt-1.5 inline-flex size-5 shrink-0 self-start items-center justify-center text-[var(--greyscale-500)] transition hover:text-[var(--color-student-heading)]"
               aria-label={hidden ? "Show answer choice" : "Hide answer choice"}
               onClick={(e) => {
                 e.stopPropagation()
@@ -259,13 +266,16 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
                 <Eye className="size-5" strokeWidth={2} aria-hidden />
               )}
             </button>
-          )}
+          ) : null}
         </div>
         {explanationAction && explanationExpanded ? (
-          <div className="mx-0 mb-0 mt-[10px] flex w-full items-start justify-between rounded-[14px] bg-white p-6 text-left">
-            <div className="min-w-0 flex-1 pr-6 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#062357]">
+          <div className="mx-0 mb-0 mt-[10px] flex w-full items-start justify-between rounded-[14px] bg-[var(--greyscale-0)] p-6 text-left">
+            <div className="min-w-0 flex-1 pr-6 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
             {hasExplanation ? (
-              <HtmlContent html={explanationHtml ?? ""} className="explanation-review-body text-[#062357]" />
+              <HtmlContent
+                html={explanationHtml ?? ""}
+                className="explanation-review-body text-[var(--color-student-heading)]"
+              />
             ) : (
               <p className="m-0">
                 No answer explanation available yet.
@@ -274,12 +284,12 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
             </div>
             {explanationPercent != null ? (
               <div className="flex shrink-0 flex-col items-center gap-1">
-                <p className="m-0 h-[15px] text-xs font-medium leading-[1.5] tracking-[0.24px] text-[#062357]">
+                <p className="m-0 h-[15px] text-xs font-medium leading-[1.5] tracking-[0.24px] text-[var(--color-student-heading)]">
                   {Math.round(explanationPercent)}%
                 </p>
-                <div className="flex h-14 w-6 items-end justify-center overflow-hidden rounded-[6px] border border-[#dfe1e7] bg-[#f3f7ff]/60">
+                <div className="flex h-14 w-6 items-end justify-center overflow-hidden rounded-[6px] border border-[var(--greyscale-100)] bg-[var(--primary-0)]/60">
                   <div
-                    className="w-full rounded-t-[10px] bg-gradient-to-t from-[#419df8] to-[#0d47a1]"
+                    className="w-full rounded-t-[10px] bg-gradient-to-t from-[var(--student-meter-light)] to-[var(--primary)]"
                     style={{ height: `${Math.max(4, Math.min(56, Math.round(explanationPercent)))}px` }}
                     aria-hidden
                   />
@@ -297,7 +307,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
       <div
         role="button"
         tabIndex={disabled ? -1 : 0}
-        aria-pressed={selected}
+        aria-pressed={selected && !masked}
         aria-disabled={disabled}
         onPointerDown={handlePointerDown}
         onClick={handleSelect}
@@ -321,12 +331,14 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
       >
         {selected && !masked ? <span aria-hidden className={OFFICIAL_OPTION_SELECTED_BAR_CLASS} /> : null}
         <span
-          aria-hidden={masked || undefined}
-          className={selected && !masked ? OFFICIAL_OPTION_LETTER_SELECTED_CLASS : OFFICIAL_OPTION_LETTER_UNSELECTED_CLASS}
+          className={cn(
+            selected && !masked ? OFFICIAL_OPTION_LETTER_SELECTED_CLASS : OFFICIAL_OPTION_LETTER_UNSELECTED_CLASS,
+            masked && "practice-session-choice-masked-ink",
+          )}
         >
           {letter}
         </span>
-        <div aria-hidden={masked || undefined} className={OFFICIAL_OPTION_TEXT_CLASS}>
+        <div className={cn(OFFICIAL_OPTION_TEXT_CLASS, masked && "practice-session-choice-masked-ink")}>
           {choiceContent}
         </div>
       </div>
@@ -338,7 +350,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
       <div
         role="button"
         tabIndex={disabled ? -1 : 0}
-        aria-pressed={selected}
+        aria-pressed={selected && !masked}
         aria-disabled={disabled}
         onPointerDown={handlePointerDown}
         onClick={handleSelect}
@@ -362,17 +374,17 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
         }
       >
         <span
-          aria-hidden={masked || undefined}
           className={cn(
             "flex items-center justify-center self-start",
             selected && !masked
               ? ACTIVE_DRILL_OPTION_LETTER_SELECTED_CLASS
               : ACTIVE_DRILL_OPTION_LETTER_UNSELECTED_CLASS,
+            masked && "practice-session-choice-masked-ink",
           )}
         >
           {letter}
         </span>
-        <div aria-hidden={masked || undefined} className="min-w-0 flex-1 self-start">
+        <div className={cn("min-w-0 flex-1 self-start", masked && "practice-session-choice-masked-ink")}>
           {choiceContent}
         </div>
         {showSideAction ? (

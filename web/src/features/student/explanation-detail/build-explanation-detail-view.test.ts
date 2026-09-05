@@ -24,6 +24,12 @@ const loc = {
 } satisfies LocatedExplanationQuestion
 
 describe("buildExplanationQuestionDetailView", () => {
+  it("includes difficulty-based target time for Insights timing", () => {
+    const view = buildExplanationQuestionDetailView(loc, null)
+    expect(view.analytics.targetTimeSeconds).toBe(105)
+    expect(view.analytics.yourTimeSeconds).toBeNull()
+  })
+
   it("maps answer popularity from API detail", () => {
     const detail: ExplanationDetailPayload = {
       questionId: "q1",
@@ -169,7 +175,7 @@ describe("buildExplanationQuestionDetailView", () => {
     expect(view.videos[1]?.videoUrl).toBe("https://example.com/v.mp4")
   })
 
-  it("maps passage difficulty label, tone, and caption from filled segments", () => {
+  it("maps passage difficulty label, tone, and caption from filled segments for RC", () => {
     const detail: ExplanationDetailPayload = {
       questionId: "q1",
       prepTestId: "pt1",
@@ -196,10 +202,39 @@ describe("buildExplanationQuestionDetailView", () => {
 
     expect(view.analytics.questionDifficulty.label).toBe("Medium")
     expect(view.analytics.questionDifficulty.caption).toBe("This is a moderately difficult question.")
-    expect(view.analytics.passageDifficulty.filled).toBe(4)
-    expect(view.analytics.passageDifficulty.label).toBe("Hard")
-    expect(view.analytics.passageDifficulty.tone).toBe("red")
-    expect(view.analytics.passageDifficulty.caption).toContain("moderately difficult question")
+    expect(view.analytics.passageDifficulty?.filled).toBe(4)
+    expect(view.analytics.passageDifficulty?.label).toBe("Hard")
+    expect(view.analytics.passageDifficulty?.tone).toBe("red")
+    expect(view.analytics.passageDifficulty?.caption).toContain("moderately difficult question")
+  })
+
+  it("omits passage difficulty for LR questions", () => {
+    const detail: ExplanationDetailPayload = {
+      questionId: "q1",
+      prepTestId: "pt1",
+      prepTestTitle: "PT 129",
+      prepTestNumber: "129",
+      sectionId: "sec1",
+      sectionType: "LR",
+      sectionNumber: 1,
+      questionNumber: 19,
+      topicName: "Flaw",
+      explanationHtml: null,
+      videoUrl: null,
+      stimulusText: null,
+      stemText: "Stem",
+      choices: [{ id: "A", index: 1, text: "a", explanationHtml: null }],
+      correctChoiceId: "A",
+      passage: { id: "p1", displayNumber: 1, title: "P1", body: "" },
+      answerPopularity: [],
+      userSelectedLetter: null,
+      difficulty: 2,
+    }
+
+    const view = buildExplanationQuestionDetailView(loc, detail)
+
+    expect(view.analytics.questionDifficulty.label).toBe("Easy")
+    expect(view.analytics.passageDifficulty).toBeUndefined()
   })
 
   it("maps RC passageAnalysis paragraphs onto the view", () => {

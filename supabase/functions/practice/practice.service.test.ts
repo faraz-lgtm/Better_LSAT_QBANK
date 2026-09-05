@@ -962,6 +962,85 @@ Deno.test('startDrill creates session with question ids', async () => {
   assertEquals(out.questions[0]!.targetTimeSeconds, undefined)
 })
 
+Deno.test('startDrill LR unlimited stores unlimited metadata and entire pool', async () => {
+  const service = createPracticeService({ repository: drillRepo() as never })
+  const out = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 'unlimited',
+  })
+  assertEquals(out.metadata.questionCount, 'unlimited')
+  assertEquals(out.metadata.questionIds.length, 6)
+  assertEquals(out.questions.length, 6)
+})
+
+Deno.test('startDrill LR accepts up to 30 questions', async () => {
+  const service = createPracticeService({ repository: drillRepo() as never })
+  const out = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 30,
+  })
+  assertEquals(out.metadata.questionIds.length, 6)
+})
+
+Deno.test('extendDrill appends another batch for unlimited LR drills', async () => {
+  let storedMeta: Record<string, unknown> = {
+    sectionType: 'LR',
+    questionCount: 'unlimited',
+    timing: 'unlimited',
+    showAnswers: 'end',
+    selection: 'auto',
+    difficulty: 'adaptive',
+    status: 'all',
+    questionIds: ['q-1', 'q-2', 'q-3', 'q-4', 'q-5'],
+  }
+  const service = createPracticeService({
+    repository: drillRepo({
+      getSessionById: async () =>
+        baseSession({
+          kind: 'DRILL',
+          completed_at: null,
+          metadata: storedMeta,
+        }),
+      updateSession: async (_id: string, _uid: string, patch: Record<string, unknown>) => {
+        if (patch.metadata && typeof patch.metadata === 'object') {
+          storedMeta = patch.metadata as Record<string, unknown>
+        }
+        return baseSession({ kind: 'DRILL', completed_at: null, metadata: storedMeta })
+      },
+    }) as never,
+  })
+  const out = await service.extendDrill('user-1', { sessionId: 'sess-1' })
+  assertEquals(out.addedCount, 1)
+  assertEquals(out.questions.length, 1)
+  assertEquals((storedMeta.questionIds as string[]).length, 6)
+})
+
+Deno.test('extendDrill returns empty batch when the pool is exhausted', async () => {
+  const storedMeta: Record<string, unknown> = {
+    sectionType: 'LR',
+    questionCount: 'unlimited',
+    timing: 'unlimited',
+    showAnswers: 'end',
+    selection: 'auto',
+    difficulty: 'adaptive',
+    status: 'all',
+    questionIds: ['q-1', 'q-2', 'q-3', 'q-4', 'q-5', 'q-6'],
+  }
+  const service = createPracticeService({
+    repository: drillRepo({
+      getSessionById: async () =>
+        baseSession({
+          kind: 'DRILL',
+          completed_at: null,
+          metadata: storedMeta,
+        }),
+    }) as never,
+  })
+  const out = await service.extendDrill('user-1', { sessionId: 'sess-1' })
+  assertEquals(out.addedCount, 0)
+  assertEquals(out.questions.length, 0)
+})
+
 Deno.test('startDrill RC picks complete passages by passageCount', async () => {
   const rcPool: DrillPoolQuestionRow[] = [
     { id: 'a1', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null },
@@ -1440,6 +1519,39 @@ Deno.test('startPrepTest rejects pre-PT100 tests', async () => {
   )
 })
 
+Deno.test('listPrepTestPool in_progress filter keeps paused takes and excludes blind review', async () => {
+  const pausedTimed = baseSession({
+    id: 'pt-sess-paused',
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-901',
+    completed_at: null,
+  })
+  const awaitingBr = baseSession({
+    id: 'pt-sess-done',
+    kind: 'PREPTEST',
+    prep_test_id: 'pt-900',
+    completed_at: '2026-01-03T00:00:00Z',
+    scaled_score: 162,
+    metadata: { blindReviewActive: true },
+  })
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserSessionsForPrepTests: async () => [pausedTimed, awaitingBr],
+      listUserSessionsForPrepTest: async () => [pausedTimed, awaitingBr],
+    }) as never,
+  })
+
+  const inProcess = await service.listPrepTestPool('user-1', { filter: 'in_progress' })
+  assertEquals(inProcess.prepTests.map((p) => p.id), ['pt-901'])
+  assertEquals(inProcess.prepTests[0]!.blindReviewStatus, null)
+  assertEquals(inProcess.statusCounts.in_progress, 1)
+  assertEquals(inProcess.statusCounts.blind_review, 1)
+
+  const blindReview = await service.listPrepTestPool('user-1', { filter: 'blind_review' })
+  assertEquals(blindReview.prepTests.map((p) => p.id), ['pt-900'])
+  assertEquals(blindReview.prepTests[0]!.blindReviewStatus, 'in_progress')
+})
+
 Deno.test('listPrepTestPool prefers awaiting blind review over a newer open prep test session', async () => {
   const completedAwaitingBr = baseSession({
     id: 'pt-sess-done',
@@ -1478,6 +1590,11 @@ Deno.test('listPrepTestPool prefers awaiting blind review over a newer open prep
   assertEquals(row?.status, 'in_progress')
   assertEquals(row?.blindReviewStatus, 'in_progress')
   assertEquals(row?.scaledScore, 162)
+
+  const inProcess = await service.listPrepTestPool('user-1', { filter: 'in_progress' })
+  assertEquals(inProcess.prepTests.find((p) => p.id === 'pt-900'), undefined)
+  assertEquals(inProcess.statusCounts.in_progress, 0)
+  assertEquals(inProcess.statusCounts.blind_review, 1)
 })
 
 Deno.test('listPrepTestPool blind_review filter returns only tests awaiting blind review', async () => {
@@ -1572,7 +1689,8 @@ Deno.test('listPrepTestPool paginates and uses batch sessions query', async () =
   assertEquals(page1.total, 2)
   assertEquals(page1.prepTests.length, 1)
   assertEquals(page1.prepTests[0]!.id, 'pt-901')
-  assertEquals(page1.statusCounts.in_progress, 1)
+  assertEquals(page1.statusCounts.in_progress, 0)
+  assertEquals(page1.statusCounts.blind_review, 1)
   assertEquals(page1.statusCounts.fresh, 1)
 
   const page2 = await service.listPrepTestPool('user-1', { page: 2, pageSize: 1, sort: 'newest' })
@@ -1583,6 +1701,9 @@ Deno.test('listPrepTestPool paginates and uses batch sessions query', async () =
 
   const completedOnly = await service.listPrepTestPool('user-1', { filter: 'completed' })
   assertEquals(completedOnly.total, 0)
+
+  const oldest = await service.listPrepTestPool('user-1', { page: 1, pageSize: 2, sort: 'oldest' })
+  assertEquals(oldest.prepTests.map((p) => p.id), ['pt-900', 'pt-901'])
 })
 
 Deno.test('listPrepTestPool resolves scaled scores from section raw scores when missing', async () => {
@@ -1906,6 +2027,10 @@ Deno.test('completePrepTest aggregates section scores', async () => {
   const out = await service.completePrepTest('user-1', { prepTestId: 'pt-900' })
   assertEquals(out.session.raw_score, 3)
   assertEquals(out.session.scaled_score, 165)
+  assertEquals(out.session.metadata.lrCorrect, 2)
+  assertEquals(out.session.metadata.lrMax, 3)
+  assertEquals(out.session.metadata.rcCorrect, 1)
+  assertEquals(out.session.metadata.rcMax, 2)
 })
 
 Deno.test('completePrepTest excludes experimental section scores', async () => {

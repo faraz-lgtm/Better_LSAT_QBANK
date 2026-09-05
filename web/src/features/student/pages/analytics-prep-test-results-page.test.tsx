@@ -6,12 +6,23 @@ import { describe, expect, it, vi, beforeEach } from "vitest"
 import { AnalyticsPrepTestResultsPage } from "@/features/student/pages/analytics-prep-test-results-page"
 import type { PrepTestSessionDetail } from "@/lib/api/analytics"
 
-const { mockGetPrepTestSessionDetail, mockUpdateSession, analyticsApi, practiceApi } = vi.hoisted(() => {
+const {
+  mockGetPrepTestSessionDetail,
+  mockUpdateSession,
+  mockListQuestionBookmarks,
+  mockSetQuestionBookmark,
+  analyticsApi,
+  practiceApi,
+} = vi.hoisted(() => {
   const mockGetPrepTestSessionDetail = vi.fn()
   const mockUpdateSession = vi.fn()
+  const mockListQuestionBookmarks = vi.fn()
+  const mockSetQuestionBookmark = vi.fn()
   return {
     mockGetPrepTestSessionDetail,
     mockUpdateSession,
+    mockListQuestionBookmarks,
+    mockSetQuestionBookmark,
     analyticsApi: { getPrepTestSessionDetail: mockGetPrepTestSessionDetail },
     practiceApi: { updateSession: mockUpdateSession },
   }
@@ -20,6 +31,17 @@ const { mockGetPrepTestSessionDetail, mockUpdateSession, analyticsApi, practiceA
 vi.mock("@/features/student/analytics/hooks/use-analytics-api", () => ({
   useAnalyticsApi: () => analyticsApi,
   usePracticeApi: () => practiceApi,
+}))
+
+vi.mock("@/lib/supabase/client", () => ({
+  getSupabaseBrowserClient: () => ({}),
+}))
+
+vi.mock("@/lib/api/explanations", () => ({
+  createExplanationsApi: () => ({
+    listQuestionBookmarks: mockListQuestionBookmarks,
+    setQuestionBookmark: mockSetQuestionBookmark,
+  }),
 }))
 
 const sessionDetail: PrepTestSessionDetail = {
@@ -125,10 +147,15 @@ function renderResultsPage(sessionId = sessionDetail.sessionId) {
 
 describe("AnalyticsPrepTestResultsPage insights toggle", () => {
   beforeEach(() => {
+    window.localStorage.clear()
     mockGetPrepTestSessionDetail.mockReset()
     mockUpdateSession.mockReset()
+    mockListQuestionBookmarks.mockReset()
+    mockSetQuestionBookmark.mockReset()
     mockGetPrepTestSessionDetail.mockResolvedValue(sessionDetail)
     mockUpdateSession.mockResolvedValue({ id: sessionDetail.sessionId, excluded: true })
+    mockListQuestionBookmarks.mockResolvedValue({ questionIds: [] })
+    mockSetQuestionBookmark.mockResolvedValue({ questionIds: ["q1"] })
   })
 
   it("turns exclude-from-insights on and keeps the results page visible", async () => {
@@ -183,5 +210,32 @@ describe("AnalyticsPrepTestResultsPage insights toggle", () => {
     await screen.findByRole("heading", { name: /PT156 - June 19, 2026/i })
     expect(screen.getByText("01:20")).toBeInTheDocument()
     expect(screen.getByText("(00:25 under)")).toBeInTheDocument()
+  })
+
+  it("bookmarks a question and filters the list with Bookmarked only", async () => {
+    const user = userEvent.setup()
+    renderResultsPage()
+    await screen.findByRole("heading", { name: /PT156 - June 19, 2026/i })
+
+    expect(screen.getByText(/PT 156\s+\.\s+S1\s+\.\s+Q1/)).toBeInTheDocument()
+    expect(screen.getByText(/PT 156\s+\.\s+S1\s+\.\s+Q2/)).toBeInTheDocument()
+
+    await user.click(screen.getAllByRole("button", { name: "Bookmark question" })[0]!)
+    await waitFor(() => {
+      expect(mockSetQuestionBookmark).toHaveBeenCalledWith("q1", true)
+    })
+    expect(screen.getByRole("button", { name: "Remove bookmark" })).toBeInTheDocument()
+
+    await user.click(screen.getByRole("switch", { name: "Show bookmarked only" }))
+    expect(screen.getByText(/PT 156\s+\.\s+S1\s+\.\s+Q1/)).toBeInTheDocument()
+    expect(screen.queryByText(/PT 156\s+\.\s+S2\s+\.\s+Q1/)).not.toBeInTheDocument()
+  })
+
+  it("shows Loading instead of Calculating while PrepTest results load", () => {
+    mockGetPrepTestSessionDetail.mockReturnValue(new Promise(() => {}))
+    renderResultsPage()
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading…")
+    expect(screen.queryByText(/calculating/i)).not.toBeInTheDocument()
   })
 })

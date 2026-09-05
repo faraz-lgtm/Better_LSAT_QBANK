@@ -4,6 +4,7 @@ export {
 } from '../_shared/prep-test-visibility.ts'
 
 import { parseQuestionChoices } from '../_shared/parse-question-choices.ts'
+import { LR_DRILL_MAX_QUESTION_COUNT } from './adaptive-drill-config.ts'
 
 export type DrillChoice = {
   id: string
@@ -28,6 +29,8 @@ export type DrillQuestionPayload = {
   passage: DrillPassage | null
   /** LSAC/RC passage group id — used for nav dividers when passage rows lack source_group_id. */
   sourceGroupId?: string | null
+  /** 1–5 difficulty for target-time pacing; null when unknown. */
+  difficulty?: number | null
   /** Set only when serving completed sessions for review (not during active practice). */
   correctChoiceId?: string | null
   /** Difficulty-weighted section target; set on SECTION responses only. */
@@ -220,6 +223,11 @@ export function mapDrillQuestionRow(
 
   const includeReviewFields = options?.includeOptionExplanations === true
 
+  const difficulty =
+    typeof row.difficulty === 'number' && Number.isFinite(row.difficulty)
+      ? Math.max(1, Math.min(5, Math.round(row.difficulty)))
+      : null
+
   return {
     id: row.id,
     questionNumber: row.question_number,
@@ -228,6 +236,7 @@ export function mapDrillQuestionRow(
     choices,
     passage,
     sourceGroupId,
+    difficulty,
     correctChoiceId: includeReviewFields
       ? correctChoiceIdFromAnswer(row.correct_answer, choices)
       : undefined,
@@ -305,14 +314,18 @@ export function pickRcDrillQuestionIdsByPassageCount(
 export function pickDrillQuestionIds(
   pool: DrillPoolCandidate[],
   sectionType: 'LR' | 'RC',
-  questionCount: number,
+  questionCount: number | 'unlimited',
 ): string[] {
-  const allowed = [1, 5, 10, 25]
-  const count = allowed.includes(questionCount)
-    ? questionCount
-    : Math.min(25, Math.max(1, questionCount))
-
   if (pool.length === 0) return []
+
+  if (sectionType === 'LR' && questionCount === 'unlimited') {
+    return shuffleInPlace([...pool]).map((q) => q.id)
+  }
+
+  const count = Math.min(
+    LR_DRILL_MAX_QUESTION_COUNT,
+    Math.max(1, Math.floor(typeof questionCount === 'number' ? questionCount : 1)),
+  )
 
   if (sectionType === 'RC') {
     const groupList = shuffleInPlace(groupRcPassageCandidates(pool))

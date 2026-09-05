@@ -22,20 +22,20 @@ function ActiveDrillResultBar({
   retakeLabel = "Retake",
 }: ActiveDrillResultBarProps) {
   return (
-    <section className="min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[#dfe1e7] bg-white shadow-[0px_1px_1px_rgba(13,13,18,0.04)]">
+    <section className="min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_1px_rgba(13,13,18,0.04)]">
       <div className="flex flex-col items-center gap-4 p-6">
         {lessonTitle ? (
-          <h2 className="m-0 text-center text-xl font-bold leading-[1.35] text-[#062357]">{lessonTitle}</h2>
+          <h2 className="m-0 text-center text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">{lessonTitle}</h2>
         ) : null}
 
         <div className="flex h-[76px] w-full min-w-0 items-center justify-between gap-4">
           <div className="flex min-w-0 shrink-0 flex-col gap-2">
-            <p className="m-0 text-base font-medium leading-[1.5] tracking-[0.02em] text-[#666d80]">Your Score</p>
-            <p className="m-0 whitespace-nowrap text-[#062357]">
+            <p className="m-0 text-base font-medium leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">Your Score</p>
+            <p className="m-0 whitespace-nowrap text-[var(--color-student-heading)]">
               <span className="text-[32px] font-bold leading-[1.25]">
                 {attempt.rawScore}/{attempt.questionCount}
               </span>
-              <span className="text-2xl font-bold leading-[1.3] text-[#666d80]"> Correct</span>
+              <span className="text-2xl font-bold leading-[1.3] text-[var(--greyscale-500)]"> Correct</span>
             </p>
           </div>
 
@@ -59,7 +59,7 @@ function ActiveDrillResultBar({
               type="button"
               disabled={retaking}
               onClick={onRetake}
-              className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[#0b4e6e] bg-[#0d47a1] px-4 text-base font-semibold tracking-[0.02em] text-white shadow-[0_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-600)] disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[var(--primary-border)] bg-[var(--primary)] px-4 text-base font-semibold tracking-[0.02em] text-white shadow-[0_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-600)] disabled:cursor-not-allowed disabled:opacity-70"
             >
               {retaking ? "Starting…" : retakeLabel}
               <ChevronRight className="size-5 shrink-0" aria-hidden />

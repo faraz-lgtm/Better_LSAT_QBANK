@@ -31,15 +31,15 @@ function tabButtonClass(active: boolean): string {
   return cn(
     "inline-flex h-10 items-center justify-center rounded-[14px] px-4 text-sm font-semibold tracking-[0.02em] transition-colors",
     active
-      ? "border border-[#0b4e6e] bg-[#0d47a1] text-white shadow-[0_1px_1px_rgba(13,13,18,0.06)]"
-      : "bg-[#edf3ff] text-[#0d47a1] hover:bg-[#e4ecff]",
+      ? "border border-[var(--primary)] bg-[var(--primary)] text-white shadow-[0_1px_1px_rgba(13,13,18,0.06)]"
+      : "bg-[var(--primary-25)] text-[var(--primary)] hover:bg-[var(--primary-25)]",
   )
 }
 
 function navArrowClass(enabled: boolean): string {
   return cn(
     "flex size-6 shrink-0 items-center justify-center rounded-lg shadow-[0_1px_1px_rgba(13,13,18,0.06)] transition-colors",
-    enabled ? "text-[#062357] hover:bg-[#edf3ff]" : "cursor-default text-[#666d80] opacity-40",
+    enabled ? "text-[var(--color-student-heading)] hover:bg-[var(--primary-25)]" : "cursor-default text-[var(--greyscale-500)] opacity-40",
   )
 }
 
@@ -60,16 +60,16 @@ function ExplanationDetailTabBar({
   const questionSelectValue = passageQuestions.find((q) => q.number === questionNumber)?.id ?? ""
 
   return (
-    <header className="flex shrink-0 flex-col gap-6 rounded-2xl bg-[#edf3ff] p-6 lg:flex-row lg:items-start lg:justify-between">
+    <header className="flex shrink-0 flex-col gap-6 rounded-2xl bg-[var(--primary-25)] p-6 lg:flex-row lg:items-start lg:justify-between">
       <div className="flex min-w-0 flex-wrap items-center gap-4">
         <div className="min-w-0">
           <h1 className="student-page-heading">{headingCode}</h1>
-          <p className="m-0 mt-0 text-xs font-normal leading-normal tracking-[0.02em] text-[#6a7282]">
+          <p className="m-0 mt-0 text-xs font-normal leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
             {subtitleTrail}
           </p>
         </div>
 
-        <div className="inline-flex items-center gap-2 rounded-2xl bg-white p-2">
+        <div className="inline-flex items-center gap-2 rounded-2xl bg-[var(--greyscale-0)] p-2">
           {prevHref ? (
             <Link to={prevHref} aria-label="Previous question" className={navArrowClass(true)}>
               <ChevronLeft className="size-3.5" aria-hidden />
@@ -90,7 +90,7 @@ function ExplanationDetailTabBar({
                 const q = tab === "question" ? "" : `?tab=${tab}`
                 void navigate(`/app/learn/explanations/q/${encodeURIComponent(id)}${q}`)
               }}
-              className="h-full w-full appearance-none rounded-lg bg-[#edf3ff] px-2 pr-7 text-[10px] font-semibold tracking-[0.02em] text-[#062357] outline-none"
+              className="h-full w-full appearance-none rounded-lg bg-[var(--primary-25)] px-2 pr-7 text-[10px] font-semibold tracking-[0.02em] text-[var(--color-student-heading)] outline-none"
             >
               {passageQuestions.map((q) => (
                 <option key={q.id} value={q.id}>
@@ -98,7 +98,7 @@ function ExplanationDetailTabBar({
                 </option>
               ))}
             </select>
-            <ChevronDown className="pointer-events-none absolute right-2 size-3 text-[#062357]" aria-hidden />
+            <ChevronDown className="pointer-events-none absolute right-2 size-3 text-[var(--color-student-heading)]" aria-hidden />
           </label>
 
           {nextHref ? (
@@ -114,7 +114,7 @@ function ExplanationDetailTabBar({
       </div>
 
       <div
-        className="inline-flex items-center gap-2 self-start rounded-2xl bg-white p-2"
+        className="inline-flex items-center gap-2 self-start rounded-2xl bg-[var(--greyscale-0)] p-2"
         role="tablist"
         aria-label="Question detail"
       >

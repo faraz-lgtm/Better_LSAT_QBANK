@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest"
 
-import { passagesInQuestionOrder } from "@/features/student/explanation-detail/order-explanation-passages"
+import {
+  isSyntheticLrPassage,
+  passagesInQuestionOrder,
+  questionsInSectionOrder,
+  shouldFlattenExplanationPassages,
+} from "@/features/student/explanation-detail/order-explanation-passages"
 import type { ExplanationPassageNode, ExplanationQuestionNode } from "@/features/student/explanation-detail/explanation-tree-types"
 
 function q(number: number, code: string): ExplanationQuestionNode {
@@ -50,5 +55,16 @@ describe("passagesInQuestionOrder", () => {
   it("leaves LR synthetic passages unchanged", () => {
     const lr = passage("lr", "LR", "Section questions", [1, 2])
     expect(passagesInQuestionOrder([lr])).toEqual([lr])
+  })
+
+  it("flattens LR Section questions so items sit directly under the section", () => {
+    const lr = passage("lr", "LR", "Section questions", [2, 1])
+    const rc = passage("p1", "P1", "Passage 1", [1, 2])
+
+    expect(isSyntheticLrPassage(lr)).toBe(true)
+    expect(isSyntheticLrPassage(rc)).toBe(false)
+    expect(shouldFlattenExplanationPassages({ kind: "LR", passages: [lr] })).toBe(true)
+    expect(shouldFlattenExplanationPassages({ kind: "RC", passages: [rc] })).toBe(false)
+    expect(questionsInSectionOrder({ passages: [lr] }).map((q) => q.number)).toEqual([1, 2])
   })
 })

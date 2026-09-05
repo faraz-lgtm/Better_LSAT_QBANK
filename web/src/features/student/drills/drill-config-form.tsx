@@ -2,18 +2,27 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { FigmaIcon, PlayCircleIcon } from "@/components/icons/figma-icons"
 import { Switch } from "@/components/ui/switch"
-import { DrillConfigSelectField } from "@/features/student/drills/drill-config-field"
+import { DrillConfigField, DrillConfigSelectField } from "@/features/student/drills/drill-config-field"
+import {
+  clearSavedDrillConfig,
+  readSavedDrillConfig,
+  writeSavedDrillConfig,
+  type SavedDrillConfig,
+} from "@/features/student/drills/drill-config-saved-settings"
 import {
   drillConfigOptions,
   type DrillDifficulty,
   type DrillSectionType,
   type DrillShowAnswers,
   type DrillStatus,
-  type DrillTiming,
 } from "@/features/student/drills/drill-types"
+import { DrillTimingMenu } from "@/features/student/drills/drill-timing-menu"
+import { isValidDrillTiming } from "@/features/student/drills/drill-timing"
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
+import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -37,27 +46,30 @@ function DrillConfigForm({
 }: DrillConfigFormProps) {
   const navigate = useNavigate()
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
+  const { scaleFactor } = useAccommodations()
+  const savedConfig = useMemo(() => readSavedDrillConfig(sectionType), [sectionType])
 
   const [bannerOpen, setBannerOpen] = useState(true)
-  const [customize, setCustomize] = useState(Boolean(initialQuestionTypeId))
+  const [saveSettings, setSaveSettings] = useState(() => savedConfig != null)
+  const [customize, setCustomize] = useState(Boolean(initialQuestionTypeId) || Boolean(savedConfig?.customize))
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [poolStats, setPoolStats] = useState({ selectedCount: 0, totalCount: 0 })
 
-  const [questionCount, setQuestionCount] = useState("5")
-  const [passageCount, setPassageCount] = useState("1")
-  const [timing, setTiming] = useState<DrillTiming>("unlimited")
-  const [showAnswers, setShowAnswers] = useState<DrillShowAnswers>("end")
-  const [selection, setSelection] = useState("auto")
-  const [tags, setTags] = useState(initialQuestionTypeId ?? "any")
-  const [difficulty, setDifficulty] = useState<DrillDifficulty>("adaptive")
+  const [questionCount, setQuestionCount] = useState(savedConfig?.questionCount ?? "5")
+  const [passageCount, setPassageCount] = useState(savedConfig?.passageCount ?? "1")
+  const [timing, setTiming] = useState(savedConfig?.timing ?? "unlimited")
+  const [showAnswers, setShowAnswers] = useState<DrillShowAnswers>(savedConfig?.showAnswers ?? "end")
+  const [selection, setSelection] = useState(savedConfig?.selection ?? "auto")
+  const [tags, setTags] = useState(initialQuestionTypeId ?? savedConfig?.tags ?? "any")
+  const [difficulty, setDifficulty] = useState<DrillDifficulty>(savedConfig?.difficulty ?? "adaptive")
   // Default to full pool so Start works even after prior practice; "Fresh" is opt-in via Customize.
-  const [status, setStatus] = useState<DrillStatus>("all")
+  const [status, setStatus] = useState<DrillStatus>(savedConfig?.status ?? "all")
 
   const copy = sectionCopy[sectionType]
 
   const tagSelectOptions = useMemo(() => {
-    const base = [{ label: "Any", value: "any" }, ...tagOptions]
+    const base = [{ label: "All skills", value: "any" }, ...tagOptions]
     if (initialQuestionTypeId && !tagOptions.some((t) => t.value === initialQuestionTypeId)) {
       return [{ label: initialTagLabel ?? "Selected tag", value: initialQuestionTypeId }, ...base]
     }
@@ -73,6 +85,15 @@ function DrillConfigForm({
     : null
   const resolvedDifficulty = customize ? difficulty : "adaptive"
   const resolvedStatus = customize ? status : "all"
+  const resolvedShowAnswers = customize ? showAnswers : "end"
+
+  const timingQuestionCount = useMemo(() => {
+    if (sectionType === "RC" || questionCount === "unlimited") {
+      return Math.max(1, poolStats.selectedCount || 5)
+    }
+    const parsed = Number.parseInt(questionCount, 10)
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 5
+  }, [sectionType, questionCount, poolStats.selectedCount])
 
   const loadPoolStats = useCallback(async () => {
     try {
@@ -95,11 +116,44 @@ function DrillConfigForm({
     return () => window.clearTimeout(timer)
   }, [loadPoolStats])
 
+  useEffect(() => {
+    if (!saveSettings) return
+    const config: SavedDrillConfig = {
+      questionCount,
+      passageCount,
+      timing,
+      showAnswers,
+      customize,
+      selection,
+      tags,
+      difficulty,
+      status,
+    }
+    writeSavedDrillConfig(sectionType, config)
+  }, [
+    customize,
+    difficulty,
+    passageCount,
+    questionCount,
+    saveSettings,
+    sectionType,
+    selection,
+    showAnswers,
+    status,
+    tags,
+    timing,
+  ])
+
+  function handleSaveSettingsChange(next: boolean) {
+    setSaveSettings(next)
+    if (!next) clearSavedDrillConfig(sectionType)
+  }
+
   async function handleStart() {
     if (poolStats.selectedCount === 0) {
       setError(
         poolStats.totalCount > 0
-          ? "No questions match these filters. Turn on Customize and set Status to “Include reviewed”, or clear tag/difficulty filters."
+          ? "No questions match these filters. Turn on Build My Own and set Question History to “New + reviewed”, or clear tag/difficulty filters."
           : "No questions are available in this drill pool yet.",
       )
       return
@@ -107,13 +161,20 @@ function DrillConfigForm({
     setStarting(true)
     setError(null)
     try {
-      const count = Number.parseInt(questionCount, 10)
+      const parsedQuestionCount =
+        questionCount === "unlimited" ? "unlimited" : Number.parseInt(questionCount, 10)
       const parsedPassageCount =
         passageCount === "unlimited" ? "unlimited" : Number.parseInt(passageCount, 10)
       const out = await practiceApi.startDrill({
         sectionType,
         questionCount:
-          sectionType === "RC" ? 1 : Number.isFinite(count) ? count : 5,
+          sectionType === "RC"
+            ? 1
+            : parsedQuestionCount === "unlimited"
+              ? "unlimited"
+              : Number.isFinite(parsedQuestionCount)
+                ? parsedQuestionCount
+                : 5,
         ...(sectionType === "RC"
           ? {
               passageCount:
@@ -122,8 +183,8 @@ function DrillConfigForm({
                   : 1,
             }
           : {}),
-        timing,
-        showAnswers,
+        timing: isValidDrillTiming(timing) ? timing : "unlimited",
+        showAnswers: resolvedShowAnswers,
         selection: selection as "auto" | "manual",
         questionTypeId: resolvedQuestionTypeId,
         tagLabel: resolvedTagLabel,
@@ -141,110 +202,118 @@ function DrillConfigForm({
 
   return (
     <div className="flex w-full flex-col gap-6">
-      {bannerOpen ? (
-        <div className="flex items-center justify-between gap-4">
-          <p className="m-0 min-w-0 flex-1 text-sm font-normal leading-normal tracking-[0.02em] text-[#666d80]">
-            We&apos;ll target your weaknesses with Smart Drills powered by our smart Insights.{" "}
-            <span className="font-semibold">On/Off the settings to customize.</span>
-          </p>
-          <button
-            type="button"
-            className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[#666d80] transition hover:bg-white/80 hover:text-[#062357]"
-            aria-label="Dismiss banner"
-            onClick={() => setBannerOpen(false)}
-          >
-            <FigmaIcon name="block-circle" className="size-6" />
-          </button>
-        </div>
-      ) : null}
+      <div className="flex flex-col gap-1">
+        <h1 className="m-0 text-base font-semibold leading-snug tracking-[0.02em] text-[var(--color-student-heading)]">
+          Practice With More Clarity About Your Weaknesses & Strengths
+        </h1>
+        {bannerOpen ? (
+          <div className="flex items-center justify-between gap-4">
+            <p className="m-0 min-w-0 flex-1 text-sm font-normal leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
+              Work on your priority skills or build your own drill.
+            </p>
+            <button
+              type="button"
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[var(--greyscale-500)] transition hover:bg-[var(--greyscale-0)]/80 hover:text-[var(--color-student-heading)]"
+              aria-label="Dismiss banner"
+              onClick={() => setBannerOpen(false)}
+            >
+              <FigmaIcon name="block-circle" className="size-6" />
+            </button>
+          </div>
+        ) : null}
+      </div>
 
-      <section className="flex w-full flex-col gap-6 rounded-[24px] border border-[#dfe1e7] bg-white p-6">
+      <section className="flex w-full flex-col gap-6 rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <SectionInitialBadge section={sectionType} />
-            <p className="m-0 text-[24px] font-bold leading-[1.3] text-[#062357]">{copy.title}</p>
+            <p className="m-0 text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">{copy.title}</p>
           </div>
           <div className="flex w-full flex-col gap-0.5 lg:w-auto lg:shrink-0 lg:items-end">
             <div className="flex w-full items-start justify-between gap-4">
-              <p className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Customize</p>
+              <p className="m-0 text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">Build My Own</p>
               <Switch
                 checked={customize}
                 onChange={(e) => setCustomize(e.target.checked)}
-                className={customize ? "!bg-[#0d47a1]" : "!bg-[#dfe1e6]"}
-                aria-label="Customize drill settings"
+                className={customize ? "!bg-[var(--primary)]" : "!bg-[var(--greyscale-100)]"}
+                aria-label="Build My Own"
               />
             </div>
-            <p className="m-0 whitespace-nowrap text-xs font-normal leading-normal tracking-[0.02em] text-[#666d80] lg:text-right">
-              Selecting from {poolStats.selectedCount} of {poolStats.totalCount} questions in your drill pool.
+            <p className="m-0 whitespace-nowrap text-xs font-normal leading-normal tracking-[0.02em] text-[var(--greyscale-500)] lg:text-right">
+              {poolStats.selectedCount} new {poolStats.selectedCount === 1 ? "question" : "questions"} ready
             </p>
             {poolStats.selectedCount === 0 && poolStats.totalCount > 0 ? (
               <p className="m-0 max-w-sm text-xs font-medium leading-normal tracking-[0.02em] text-[#df1c41] lg:text-right">
-                No unused questions match. Turn on Customize and set Status to “Include reviewed”.
+                No unused questions match. Turn on Build My Own and set Question History to “New + reviewed”.
               </p>
             ) : null}
           </div>
         </div>
 
-        <div className="grid gap-6 overflow-visible lg:grid-cols-3">
+        <div className="grid grid-cols-2 items-stretch gap-6 overflow-visible">
           {sectionType === "RC" ? (
             <DrillConfigSelectField
-              label="Number of Passages"
-              description="Select as many questions you can"
+              label="Passages"
+              description="Choose your drill length."
               value={passageCount}
               onChange={setPassageCount}
               options={[...drillConfigOptions.passageCount]}
             />
           ) : (
             <DrillConfigSelectField
-              label="Number of Questions"
-              description="Select as many questions you can"
+              label="Drill Size"
+              description="Choose your length."
               value={questionCount}
               onChange={setQuestionCount}
               options={[...drillConfigOptions.questionCount]}
             />
           )}
-          <DrillConfigSelectField
-            label="Timing"
-            description="Control your Prep pace"
-            value={timing}
-            onChange={(v) => setTiming(v as DrillTiming)}
-            options={[...drillConfigOptions.timing]}
-          />
-          <DrillConfigSelectField
-            label="Show Answers"
-            description="When to reveal answers"
-            value={showAnswers}
-            onChange={(v) => setShowAnswers(v as DrillShowAnswers)}
-            options={[...drillConfigOptions.showAnswers]}
-          />
+          <DrillConfigField label="Pace" description="Choose your timing.">
+            <DrillTimingMenu
+              value={timing}
+              onChange={setTiming}
+              questionCount={timingQuestionCount}
+              scaleFactor={scaleFactor}
+              ariaLabel="Pace"
+            />
+          </DrillConfigField>
         </div>
 
         {customize ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:[grid-template-columns:repeat(4,minmax(0,1fr))]">
+          <div className="grid gap-6 overflow-visible sm:grid-cols-2">
             <DrillConfigSelectField
-              label="Selection"
-              description="How questions are chosen for this drill"
+              label="Answer Check"
+              description="Choose when to check your work."
+              value={showAnswers}
+              onChange={(v) => setShowAnswers(v as DrillShowAnswers)}
+              options={[...drillConfigOptions.showAnswers]}
+            />
+            <DrillConfigSelectField
+              label="Question Mix"
+              description="Use our picks or choose your own."
               value={selection}
               onChange={setSelection}
               options={[...drillConfigOptions.selection]}
             />
             <DrillConfigSelectField
-              label="Tags"
-              description="Filter by reasoning tags"
+              label={sectionType === "RC" ? "Reading Focus" : "Skill Focus"}
+              description={
+                sectionType === "RC" ? "Choose the reading skills to practise." : "Filter by question type"
+              }
               value={tags}
               onChange={setTags}
               options={tagSelectOptions}
             />
             <DrillConfigSelectField
-              label="Difficulty"
-              description="Match difficulty to your goals"
+              label="Challenge"
+              description="Choose your level."
               value={difficulty}
               onChange={(v) => setDifficulty(v as DrillDifficulty)}
               options={[...drillConfigOptions.difficulty]}
             />
             <DrillConfigSelectField
-              label="Status"
-              description="Include questions you have seen before"
+              label="Question History"
+              description="Use new questions or revisit old ones."
               value={status}
               onChange={(v) => setStatus(v as DrillStatus)}
               options={[...drillConfigOptions.status]}
@@ -261,21 +330,18 @@ function DrillConfigForm({
         <div className="flex flex-wrap items-center justify-end gap-6">
           <Link
             to="/app/practice/drills"
-            className="inline-flex h-[52px] items-center px-4 text-base font-semibold tracking-[0.02em] text-[#0d47a1] transition-colors hover:underline"
+            className="inline-flex h-[52px] items-center px-4 text-base font-semibold tracking-[0.02em] text-[var(--primary)] transition-colors hover:underline"
           >
             Back
           </Link>
-          <button
-            type="button"
-            className="inline-flex h-[52px] items-center gap-2 px-4 text-base font-semibold tracking-[0.02em] text-[#0d47a1] transition-opacity hover:opacity-80"
-          >
-            <FigmaIcon name="share-circle" className="size-5 shrink-0" />
-            Share
-          </button>
-          <Button type="button" variant="outline" className="ds-btn-outline gap-2 text-base">
-            <FigmaIcon name="gear" className="size-5 shrink-0" />
-            Save Setting
-          </Button>
+          <label className="inline-flex h-[52px] cursor-pointer select-none items-center gap-2.5 text-base font-semibold tracking-[0.02em] text-[var(--primary)]">
+            <Checkbox
+              checked={saveSettings}
+              onChange={(event) => handleSaveSettingsChange(event.target.checked)}
+              aria-label="Remember setup"
+            />
+            Remember setup
+          </label>
           <Button
             type="button"
             variant="default"
@@ -284,7 +350,7 @@ function DrillConfigForm({
             onClick={() => void handleStart()}
           >
             <PlayCircleIcon className="size-5 shrink-0 text-white" />
-            {starting ? "Starting…" : "Start a Drill"}
+            {starting ? "Starting…" : "Begin Drill"}
           </Button>
         </div>
       </section>

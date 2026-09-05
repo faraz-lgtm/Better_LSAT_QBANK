@@ -248,6 +248,19 @@ export async function handleUsersPostMicro(req: Request, slug: string): Promise<
         goalScoreRaw === null || goalScoreRaw === undefined
           ? undefined
           : parseLsatScoreValue(goalScoreRaw)
+      const validExtraTimeSettings = ['none', '1.5x', '2x', 'custom'] as const
+      type ExtraTimeSetting = typeof validExtraTimeSettings[number]
+      const extraTimeSetting: ExtraTimeSetting | undefined =
+        typeof body.extraTimeSetting === 'string' &&
+        (validExtraTimeSettings as readonly string[]).includes(body.extraTimeSetting)
+          ? (body.extraTimeSetting as ExtraTimeSetting)
+          : undefined
+      const extraTimeCustomMinutes: number | null | undefined =
+        body.extraTimeCustomMinutes === null
+          ? null
+          : typeof body.extraTimeCustomMinutes === 'number' && Number.isInteger(body.extraTimeCustomMinutes)
+            ? body.extraTimeCustomMinutes
+            : undefined
       const preferences = await service.updateStudyPreferences(user.id, {
         plannedLsatDate:
           body.plannedLsatDate === null
@@ -268,6 +281,8 @@ export async function handleUsersPostMicro(req: Request, slug: string): Promise<
               ? body.lawSchoolCycle
               : undefined,
         goalScore,
+        extraTimeSetting,
+        extraTimeCustomMinutes,
       })
       return json({ preferences }, {}, corsHeaders)
     }

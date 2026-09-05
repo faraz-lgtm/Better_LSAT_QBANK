@@ -245,7 +245,7 @@ function StudentAppSidebar({
           </Link>
           <button
             type="button"
-            className="student-sidebar-collapse-toggle hidden size-9 shrink-0 items-center justify-center rounded-xl border border-[color:var(--greyscale-100)] bg-[var(--primary-25)] text-[#0d47a1] hover:bg-[#edf3ff] lg:inline-flex"
+            className="student-sidebar-collapse-toggle hidden size-9 shrink-0 items-center justify-center rounded-xl border border-[color:var(--greyscale-100)] bg-[var(--primary-25)] text-[color:var(--primary)] hover:bg-[color:var(--primary-25)] lg:inline-flex"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-pressed={collapsed}
@@ -256,7 +256,7 @@ function StudentAppSidebar({
         </div>
 
         <nav className="student-sidebar-nav flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <div className="student-sidebar-menu">
+          <div className="student-sidebar-menu shrink-0">
             <p className="student-sidebar-heading">{STUDENT_MAIN_NAV_SECTION.label}</p>
             <Link
               to={dashboardHref}
@@ -352,10 +352,10 @@ function StudentAppSidebar({
               </div>
             ))}
           </div>
+          {beforeFooter}
         </nav>
 
         <div className="student-sidebar-footer flex shrink-0 flex-col gap-4 px-4 pb-6">
-          {beforeFooter}
           <div className="student-sidebar-logout-row">
             <button
               type="button"

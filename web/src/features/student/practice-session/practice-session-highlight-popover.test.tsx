@@ -51,7 +51,7 @@ describe("PracticeSessionHighlightPopover", () => {
     )
 
     const card = screen.getByRole("toolbar", { name: "Highlight" })
-    expect(card.className).toContain("bg-white")
+    expect(card.className).toContain("bg-[var(--greyscale-0)]")
     expect(card.className).toContain("min-w-[168px]")
     expect(card.className).toContain("gap-2")
 
@@ -62,7 +62,7 @@ describe("PracticeSessionHighlightPopover", () => {
     const root = document.querySelector("[data-passage-highlight-popover]") as HTMLElement
     const top = Number.parseFloat(root.style.top)
     expect(top).toBeLessThan(240)
-    expect(240 - top).toBeGreaterThanOrEqual(4)
+    expect(240 - top).toBeGreaterThanOrEqual(2)
     expect(240 - top).toBeLessThanOrEqual(96)
   })
 

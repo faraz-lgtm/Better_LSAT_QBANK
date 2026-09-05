@@ -12,6 +12,11 @@ import {
 import { Button } from "@/components/ui/button"
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
 import { buildPracticeResultsSectionGroups } from "@/features/student/practice-session/build-practice-results-section-groups"
+import {
+  filterPracticeResultPassages,
+  filterPracticeResultQuestions,
+  practiceResultQuestionBookmarkId,
+} from "@/features/student/practice-session/filter-practice-result-questions"
 import { PracticeQuestionResultCard } from "@/features/student/practice-session/practice-question-result-card"
 import {
   PRACTICE_RESULTS_STACK_CLASS,
@@ -35,6 +40,7 @@ import {
 import type { SectionSessionResponse } from "@/features/student/sections/section-types"
 import type { DrillSessionResponse } from "@/features/student/drills/drill-types"
 import type { ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
+import { useExplanationQuestionBookmarks } from "@/features/student/explanation-detail/use-explanation-question-bookmarks"
 import { StudentMain } from "@/features/student/components/student-main"
 import { createExplanationsApi } from "@/lib/api/explanations"
 import { createPracticeApi } from "@/lib/api/practice"
@@ -183,6 +189,8 @@ function PracticeSessionResultsPage() {
   const navigate = useNavigate()
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
   const explanationsApi = useMemo(() => createExplanationsApi(getSupabaseBrowserClient()), [])
+  const { bookmarkedIds, toggleQuestionBookmark } = useExplanationQuestionBookmarks()
+  const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -301,6 +309,21 @@ function PracticeSessionResultsPage() {
     })
   }, [detailsByQuestion, perQuestionSeconds, results, yourTimeByQuestion])
 
+  const filteredSectionGroups = useMemo(() => {
+    const options = {
+      incorrectOnly: false,
+      bookmarkedOnly,
+      bookmarkedIds,
+    }
+    return sectionGroups
+      .map((section) => ({
+        ...section,
+        passages: filterPracticeResultPassages(section.passages, options),
+        questions: filterPracticeResultQuestions(section.questions, options),
+      }))
+      .filter((section) => section.passages.length > 0 || section.questions.length > 0)
+  }, [bookmarkedIds, bookmarkedOnly, sectionGroups])
+
   const sectionSummaries = useMemo(() => {
     if (!results) return []
     return buildPracticeSectionSummaries({
@@ -369,7 +392,7 @@ function PracticeSessionResultsPage() {
         <p className="text-sm text-red-600">{error ?? "Results not found."}</p>
         <button
           type="button"
-          className="mt-3 text-sm font-semibold text-[#0d47a1] hover:underline"
+          className="mt-3 text-sm font-semibold text-[var(--primary)] hover:underline"
           onClick={handleBack}
         >
           Go back
@@ -425,11 +448,12 @@ function PracticeSessionResultsPage() {
     const back = `/app/practice/results/${encodeURIComponent(sessionId)}${
       backQuery ? `?${backQuery}` : ""
     }`
-    const testerPath =
-      results.kind === "SECTION"
-        ? `/app/practice/sections/session/${encodeURIComponent(sessionId)}`
-        : `/app/practice/drills/session/${encodeURIComponent(sessionId)}`
-    navigate(`${testerPath}?returnTo=${encodeURIComponent(back)}`)
+    if (results.kind === "SECTION") {
+      const q = new URLSearchParams({ review: "1", returnTo: back })
+      navigate(`/app/practice/sections/session/${encodeURIComponent(sessionId)}?${q.toString()}`)
+    } else {
+      navigate(`/app/practice/drills/session/${encodeURIComponent(sessionId)}?returnTo=${encodeURIComponent(back)}`)
+    }
   }
 
   function handleExcludedChange(next: boolean) {
@@ -457,7 +481,8 @@ function PracticeSessionResultsPage() {
           excluded={results.excluded}
           questions={lrDrillQuestions}
           showBlindReview={showBlindReview}
-          flaggedIds={results.flaggedIds}
+          bookmarkedIds={bookmarkedIds}
+          onToggleBookmark={toggleQuestionBookmark}
           onReviewInTester={reviewInTesterHref}
           onExcludedChange={handleExcludedChange}
         />
@@ -476,14 +501,15 @@ function PracticeSessionResultsPage() {
           passages={rcDrillPassages}
           questions={lrDrillQuestions}
           showBlindReview={showBlindReview}
-          flaggedIds={results.flaggedIds}
+          bookmarkedIds={bookmarkedIds}
+          onToggleBookmark={toggleQuestionBookmark}
           onReviewInTester={reviewInTesterHref}
           onExcludedChange={handleExcludedChange}
         />
       ) : (
       <div className={PT_RESULTS_PAGE_GAP_CLASS}>
         <section className={PT_RESULTS_HERO_CARD_CLASS}>
-          <h1 className="!m-0 !text-[24px] font-bold leading-[1.3] text-[#062357]">{results.title}</h1>
+          <h1 className="!m-0 !text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">{results.title}</h1>
 
           <PracticeResultsSummaryPanel
             rawScore={results.rawScore}
@@ -513,9 +539,13 @@ function PracticeSessionResultsPage() {
         ) : null}
 
         <div className={PRACTICE_RESULTS_STACK_CLASS}>
-          <PracticeResultsTotalQuestionsBar total={results.questionCount} />
+          <PracticeResultsTotalQuestionsBar
+            total={results.questionCount}
+            bookmarkedOnly={bookmarkedOnly}
+            onBookmarkedOnlyChange={setBookmarkedOnly}
+          />
 
-          {sectionGroups.map((section) => (
+          {filteredSectionGroups.map((section) => (
             <PracticeResultsSectionCard
               key={section.id}
               sectionTitle={section.sectionTitle}
@@ -541,6 +571,8 @@ function PracticeSessionResultsPage() {
                       yourTimeSeconds={q.yourTimeSeconds}
                       targetTimeSeconds={q.question.targetTimeSeconds}
                       flagged={results.flaggedIds.has(q.question.id)}
+                      bookmarked={bookmarkedIds.has(practiceResultQuestionBookmarkId(q))}
+                      onToggleBookmark={toggleQuestionBookmark}
                       variant="in-section"
                     />
                   ))}
@@ -560,16 +592,25 @@ function PracticeSessionResultsPage() {
                   yourTimeSeconds={q.yourTimeSeconds}
                   targetTimeSeconds={q.question.targetTimeSeconds}
                   flagged={results.flaggedIds.has(q.question.id)}
+                  bookmarked={bookmarkedIds.has(practiceResultQuestionBookmarkId(q))}
+                  onToggleBookmark={toggleQuestionBookmark}
                   variant="in-section"
                 />
               ))}
             </PracticeResultsSectionCard>
           ))}
+          {bookmarkedOnly && filteredSectionGroups.length === 0 ? (
+            <p className="rounded-[16px] border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-8 text-center text-sm text-[var(--greyscale-500)]">
+              {results.kind === "SECTION"
+                ? "No bookmarked questions in this section. Bookmark a question to see it here."
+                : "No bookmarked questions in this drill. Bookmark a question to see it here."}
+            </p>
+          ) : null}
         </div>
 
         {returnTo.startsWith("/app/prep-course/") ? (
-          <p className="text-center text-sm text-[#666d80]">
-            <Link to={returnTo} className="font-semibold text-[#0d47a1] hover:underline">
+          <p className="text-center text-sm text-[var(--greyscale-500)]">
+            <Link to={returnTo} className="font-semibold text-[var(--primary)] hover:underline">
               Return to lesson
             </Link>
           </p>

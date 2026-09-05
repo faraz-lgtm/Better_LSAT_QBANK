@@ -1,3 +1,4 @@
+import { estimatedDrillBudgetMinutes } from "@/features/student/drills/drill-timing"
 import type { PracticeSessionSummary, PriorityRow } from "@/lib/api/analytics"
 
 export type ContinueDrill = {
@@ -54,8 +55,8 @@ function sessionSectionType(session: PracticeSessionSummary): "LR" | "RC" | null
   return null
 }
 
-function priorityVisual(priority: PriorityRow["priorityLevel"]) {
-  if (priority === "high") {
+function priorityVisual(priority: PriorityRow["priorityLevel"] | PriorityRow["priorityTier"]) {
+  if (priority === "highest" || priority === "high") {
     return { label: "hardest" as const, bars: 5, color: "#df1c41" }
   }
   if (priority === "medium") {
@@ -78,15 +79,13 @@ export function formatDrillTimeLabel(
         ? meta.questionIds.length
         : 0
 
-  if (timing === "35") return "35 min"
-  if (timing === "per-q") {
-    const totalMinutes = Math.max(1, Math.round((questionCount * 80) / 60))
-    return `${totalMinutes} min`
-  }
   if (timing === "unlimited") {
     return formatDrillElapsedLabel(session.startedAt, session.completedAt, nowMs)
   }
-  if (timing) return timing
+  if (timing) {
+    const minutes = estimatedDrillBudgetMinutes(timing, questionCount)
+    return minutes > 0 ? `${minutes} min` : timing
+  }
   return "—"
 }
 
@@ -140,7 +139,7 @@ export function mapSessionToContinueDrill(session: PracticeSessionSummary): Cont
 
 export function mapPriorityToSuggestedDrill(row: PriorityRow): SuggestedDrill | null {
   const section = row.sectionType === "LR" || row.sectionType === "RC" ? row.sectionType : "LR"
-  const visual = priorityVisual(row.priorityLevel)
+  const visual = priorityVisual(row.priorityTier ?? row.priorityLevel)
   const configPath =
     section === "LR"
       ? `/app/practice/drills/lr/new?questionTypeId=${encodeURIComponent(row.questionTypeId)}&tag=${encodeURIComponent(row.name)}`
@@ -150,7 +149,7 @@ export function mapPriorityToSuggestedDrill(row: PriorityRow): SuggestedDrill | 
     id: row.questionTypeId,
     section,
     title: row.name,
-    progressPct: row.accuracyPct,
+    progressPct: row.accuracyPct ?? 0,
     answered: `${row.correctCount}/${row.attemptCount}`,
     timeLabel: "—",
     lastAttempt: `${row.attemptCount} attempts`,
@@ -178,9 +177,6 @@ export function sessionStudyMinutes(
   const timing = typeof meta.timing === "string" ? meta.timing : null
   const questionCount = sessionQuestionCount(meta)
 
-  if (timing === "35") return 35
-  if (timing === "per-q") return Math.max(1, Math.round((questionCount * 80) / 60))
-
   if (timing === "unlimited" || !timing) {
     const start = new Date(session.startedAt).getTime()
     const end = new Date(session.completedAt).getTime()
@@ -188,10 +184,7 @@ export function sessionStudyMinutes(
     return Math.max(0, Math.round((end - start) / 60_000))
   }
 
-  const parsed = Number.parseInt(timing, 10)
-  if (Number.isFinite(parsed) && parsed > 0) return parsed
-
-  return 0
+  return estimatedDrillBudgetMinutes(timing, questionCount)
 }
 
 export function sumCompletedSessionStudyMinutes(sessions: PracticeSessionSummary[]): number {

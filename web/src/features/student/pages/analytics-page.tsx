@@ -22,6 +22,16 @@ import {
   mapSectionSessionToHistoryEntry,
   mapTrajectoryToScoreProgress,
 } from "@/features/student/analytics/map-analytics"
+import {
+  filterBookmarkedOnly,
+  persistSessionBookmark,
+  sessionBookmarkState,
+  withSessionBookmark,
+} from "@/features/student/analytics/session-bookmarks"
+import {
+  matchesAnalyticsSectionFilter,
+  type AnalyticsSectionFilter,
+} from "@/features/student/analytics/section-filter"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import {
   TimeRangeFilter,
@@ -33,6 +43,7 @@ import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics
 
 const VALID_TABS = new Set(["overview", "priorities", "history"])
 const HISTORY_FETCH_LIMIT = 30
+const OVERVIEW_HISTORY_PREVIEW_LIMIT = 4
 
 function tabFromSearch(raw: string | null): string {
   if (raw && VALID_TABS.has(raw)) return raw
@@ -47,12 +58,11 @@ function formatShortDate(iso: string): string {
   }
 }
 
-function filterHistoryByBookmark(
+function filterHistoryBySection(
   entries: PrepTestHistoryEntry[],
-  bookmarkedOnly: boolean,
+  sectionFilter: AnalyticsSectionFilter,
 ): PrepTestHistoryEntry[] {
-  if (!bookmarkedOnly) return entries
-  return entries.filter((e) => e.bookmarked)
+  return entries.filter((entry) => matchesAnalyticsSectionFilter(entry.sectionType, sectionFilter))
 }
 
 function PrioritiesTab() {
@@ -81,44 +91,58 @@ function PrioritiesTab() {
   if (error) return <p className="text-sm text-red-600">{error}</p>
   if (rows.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-6 text-sm text-[#666d80]">
+      <p className="rounded-xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-6 text-sm text-[var(--greyscale-500)]">
         No typed question attempts yet. Priorities appear once answers are linked to question types.
       </p>
     )
   }
 
   return (
-    <ul className="space-y-3">
+    <ul className="space-y-2">
       {rows.map((r) => (
-        <li key={r.questionTypeId} className="rounded-2xl border border-[#dfe1e7] bg-white p-4 shadow-sm">
+        <li key={r.questionTypeId} className="rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-3 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <p className="text-xs font-semibold uppercase text-[#666d80]">{r.sectionType ?? "—"}</p>
-              <p className="text-lg font-semibold text-[#082c6b]">{r.name}</p>
+              <p className="text-[11px] font-semibold uppercase text-[var(--greyscale-500)]">{r.sectionType ?? "—"}</p>
+              <p className="text-sm font-semibold text-[var(--field-focus)]">{r.name}</p>
             </div>
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                r.priorityLevel === "high"
+                r.priorityTier === "highest"
                   ? "bg-red-100 text-red-800"
-                  : r.priorityLevel === "medium"
-                    ? "bg-amber-100 text-amber-900"
-                    : "bg-[#e8ecf2] text-[#4b5565]"
+                  : r.priorityTier === "high" ||
+                      (r.priorityTier == null && r.priorityLevel === "high")
+                    ? "bg-orange-100 text-orange-800"
+                    : r.priorityTier === "medium" || r.priorityLevel === "medium"
+                      ? "bg-amber-100 text-amber-900"
+                      : "bg-[#e8ecf2] text-[#4b5565]"
               }`}
             >
-              {r.priorityLevel} priority
+              {!r.unlocked
+                ? "Keep practicing"
+                : `${r.priorityTier ?? r.priorityLevel} priority`}
             </span>
           </div>
-          <div className="mt-3 flex flex-wrap gap-4 text-sm text-[#666d80]">
+          <div className="mt-2 flex flex-wrap gap-3 text-xs text-[var(--greyscale-500)]">
             <span>
-              Accuracy: <strong className="text-[#082c6b]">{r.accuracyPct}%</strong>
+              Accuracy:{" "}
+              <strong className="text-[var(--field-focus)]">
+                {r.accuracyPct != null ? `${r.accuracyPct}%` : "Not enough data"}
+              </strong>
             </span>
-            {r.goalAccuracy != null ? (
+            {r.unlocked && r.goalAccuracy != null ? (
               <span>
-                Goal: <strong className="text-[#082c6b]">{r.goalAccuracy}%</strong>
+                Goal: <strong className="text-[var(--field-focus)]">{r.goalAccuracy}%</strong>
+              </span>
+            ) : null}
+            {r.unlocked && r.extraCorrectNeededPerTest != null && r.extraCorrectNeededPerTest > 0 ? (
+              <span>
+                Need <strong className="text-[var(--field-focus)]">+{r.extraCorrectNeededPerTest}</strong> correct /
+                test
               </span>
             ) : null}
             <span>
-              Attempts: <strong className="text-[#082c6b]">{r.attemptCount}</strong>
+              Attempts: <strong className="text-[var(--field-focus)]">{r.attemptCount}</strong>
             </span>
           </div>
         </li>
@@ -166,25 +190,25 @@ function HistoryTab() {
   if (error) return <p className="text-sm text-red-600">{error}</p>
   if (sessions.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-6 text-sm text-[#666d80]">
+      <p className="rounded-xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-6 text-sm text-[var(--greyscale-500)]">
         No sessions yet. Completed drills, sections, and PrepTests will show up here.
       </p>
     )
   }
 
   return (
-    <ul className="divide-y divide-[#dfe1e7] rounded-2xl border border-[#dfe1e7] bg-white shadow-sm">
+    <ul className="divide-y divide-[var(--greyscale-100)] rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-sm">
       {sessions.map((s) => (
         <li
           key={s.id}
-          className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 ${s.excluded ? "opacity-50" : ""}`}
+          className={`flex flex-wrap items-center justify-between gap-2 px-3 py-2 ${s.excluded ? "opacity-50" : ""}`}
         >
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase text-[#666d80]">{s.kind}</p>
-            <p className="truncate font-medium text-[#082c6b]">
+            <p className="text-[11px] font-semibold uppercase text-[var(--greyscale-500)]">{s.kind}</p>
+            <p className="truncate text-sm font-medium text-[var(--field-focus)]">
               {s.prepTestTitle ?? s.sectionTitle ?? "Practice session"}
             </p>
-            <p className="text-xs text-[#666d80]">
+            <p className="text-[11px] text-[var(--greyscale-500)]">
               {formatShortDate(s.startedAt)}
               {s.completedAt ? ` · Completed ${formatShortDate(s.completedAt)}` : " · In progress"}
               {s.scaledScore != null ? ` · Scaled ${s.scaledScore}` : s.rawScore != null ? ` · Raw ${s.rawScore}` : ""}
@@ -192,12 +216,12 @@ function HistoryTab() {
           </div>
           <button
             type="button"
-            className="flex shrink-0 items-center gap-1 rounded-xl border border-[#dfe1e7] px-3 py-1.5 text-sm text-[#082c6b] hover:bg-[#f6f8fa] disabled:opacity-50"
+            className="flex shrink-0 items-center gap-1 rounded-[8px] border border-[var(--greyscale-100)] px-2.5 py-1 text-xs text-[var(--field-focus)] hover:bg-[var(--greyscale-25)] disabled:opacity-50"
             disabled={pendingId === s.id || !practiceApi}
             onClick={() => void toggleBookmark(s)}
             aria-pressed={s.bookmarked}
           >
-            <Bookmark className={`size-4 ${s.bookmarked ? "fill-[#0d47a1] text-[#0d47a1]" : ""}`} aria-hidden />
+            <Bookmark className={`size-4 ${s.bookmarked ? "fill-[var(--primary)] text-[var(--primary)]" : ""}`} aria-hidden />
             {s.bookmarked ? "Saved" : "Bookmark"}
           </button>
         </li>
@@ -223,6 +247,8 @@ function OverviewTab() {
   const [drillBookmarkedOnly, setDrillBookmarkedOnly] = useState(false)
   const [sectionBookmarkedOnly, setSectionBookmarkedOnly] = useState(false)
   const [prepTestBookmarkedOnly, setPrepTestBookmarkedOnly] = useState(false)
+  const [drillSectionFilter, setDrillSectionFilter] = useState<AnalyticsSectionFilter>("all")
+  const [sectionSectionFilter, setSectionSectionFilter] = useState<AnalyticsSectionFilter>("all")
 
   useEffect(() => {
     if (!analyticsApi) {
@@ -235,9 +261,9 @@ function OverviewTab() {
       analyticsApi.getOverview(),
       analyticsApi.getTrajectory(),
       analyticsApi.getPriorities(),
-      analyticsApi.getSessions({ kind: "DRILL", limit: HISTORY_FETCH_LIMIT, offset: 0 }),
-      analyticsApi.getSessions({ kind: "SECTION", limit: HISTORY_FETCH_LIMIT, offset: 0 }),
-      analyticsApi.getSessions({ kind: "PREPTEST", limit: HISTORY_FETCH_LIMIT, offset: 0 }),
+      analyticsApi.getSessions({ kind: "DRILL", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
+      analyticsApi.getSessions({ kind: "SECTION", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
+      analyticsApi.getSessions({ kind: "PREPTEST", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
     ])
       .then(([o, t, p, drills, sectionSessions, prepTests]) => {
         setOverview(o)
@@ -274,39 +300,41 @@ function OverviewTab() {
   )
 
   const visibleDrillHistory = useMemo(
-    () => filterHistoryByBookmark(drillHistory, drillBookmarkedOnly),
-    [drillBookmarkedOnly, drillHistory],
+    () =>
+      filterBookmarkedOnly(
+        filterHistoryBySection(drillHistory, drillSectionFilter),
+        drillBookmarkedOnly,
+      ),
+    [drillBookmarkedOnly, drillHistory, drillSectionFilter],
   )
   const visibleSectionHistory = useMemo(
-    () => filterHistoryByBookmark(sectionHistory, sectionBookmarkedOnly),
-    [sectionBookmarkedOnly, sectionHistory],
+    () =>
+      filterBookmarkedOnly(
+        filterHistoryBySection(sectionHistory, sectionSectionFilter),
+        sectionBookmarkedOnly,
+      ),
+    [sectionBookmarkedOnly, sectionHistory, sectionSectionFilter],
   )
   const visiblePrepTestHistory = useMemo(
-    () => filterHistoryByBookmark(prepTestHistory, prepTestBookmarkedOnly),
+    () => filterBookmarkedOnly(prepTestHistory, prepTestBookmarkedOnly),
     [prepTestBookmarkedOnly, prepTestHistory],
   )
 
   const toggleHistoryBookmark = useCallback(
-    async (
+    (
       id: string,
       setEntries: Dispatch<SetStateAction<PrepTestHistoryEntry[]>>,
+      entries: PrepTestHistoryEntry[],
     ) => {
-      if (!practiceApi) return
-      let previous = false
-      setEntries((prev) =>
-        prev.map((entry) => {
-          if (entry.id !== id) return entry
-          previous = entry.bookmarked
-          return { ...entry, bookmarked: !entry.bookmarked }
-        }),
-      )
-      try {
-        await practiceApi.updateSession({ sessionId: id, bookmarked: !previous })
-      } catch {
-        setEntries((prev) =>
-          prev.map((entry) => (entry.id === id ? { ...entry, bookmarked: previous } : entry)),
-        )
-      }
+      const previous = sessionBookmarkState(entries, id)
+      const next = !previous
+      setEntries((prev) => withSessionBookmark(prev, id, next))
+      void persistSessionBookmark({
+        sessionId: id,
+        bookmarked: next,
+        practiceApi,
+        onFailure: () => setEntries((prev) => withSessionBookmark(prev, id, previous)),
+      })
     },
     [practiceApi],
   )
@@ -317,41 +345,41 @@ function OverviewTab() {
   if (error) return <p className="text-sm text-red-600">{error}</p>
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="flex w-full flex-col gap-6 rounded-[20px] border border-[#dfe1e7] bg-white p-6">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Overview</h2>
+    <div className="flex flex-col gap-4">
+      <section className="flex w-full flex-col gap-3 rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">Overview</h2>
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} className="shrink-0" />
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2">
           {headlineStats.map((stat) => (
             <StatTile key={stat.id} stat={stat} />
           ))}
         </div>
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {secondaryStats.map((stat) => (
             <StatTile key={stat.id} stat={stat} />
           ))}
         </div>
       </section>
 
-      <section className="rounded-[20px] border border-[#dfe1e7] bg-white p-6">
-        <div className="flex flex-col gap-[18px] rounded-[20px] bg-[#f6f8fa] p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <h2 className="text-[14px] font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">
+      <section className="rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4">
+        <div className="flex flex-col gap-3 rounded-[12px] bg-[var(--greyscale-25)] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-xs font-semibold leading-[1.4] tracking-[0.06em] text-[var(--color-student-heading)]">
               PREPTESTS SCORE PROGRESS
             </h2>
             <ScoreProgressTabs value={scoreTab} onChange={setScoreTab} />
           </div>
           <ScoreProgressChart points={trajectory} tab={scoreTab} />
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-6 border-t border-[#e5e7eb] pt-5">
-            <span className="flex items-center gap-2 text-sm leading-[1.5] tracking-[0.02em] text-[#666d80]">
-              <span className="size-4 rounded-full bg-[#0d47a1]" aria-hidden />
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-4 border-t border-[var(--greyscale-100)] pt-3">
+            <span className="flex items-center gap-1.5 text-xs leading-[1.4] tracking-[0.02em] text-[var(--greyscale-500)]">
+              <span className="size-2.5 rounded-full bg-[var(--primary)]" aria-hidden />
               Regular Score
             </span>
-            <span className="flex items-center gap-2 text-sm leading-[1.5] tracking-[0.02em] text-[#666d80]">
-              <span className="size-4 rounded-full bg-[#ff6f00]" aria-hidden />
+            <span className="flex items-center gap-1.5 text-xs leading-[1.4] tracking-[0.02em] text-[var(--greyscale-500)]">
+              <span className="size-2.5 rounded-full bg-[#ff6f00]" aria-hidden />
               Blind Review
             </span>
           </div>
@@ -364,19 +392,27 @@ function OverviewTab() {
         visibleEntries={visibleDrillHistory}
         bookmarkedOnly={drillBookmarkedOnly}
         onBookmarkedOnlyChange={setDrillBookmarkedOnly}
-        onToggleBookmark={(id) => void toggleHistoryBookmark(id, setDrillHistory)}
+        sectionFilter={drillSectionFilter}
+        onSectionFilterChange={setDrillSectionFilter}
+        onToggleBookmark={(id) => toggleHistoryBookmark(id, setDrillHistory, drillHistory)}
         onSelectEntry={(id) => navigate(practiceSessionResultsPath(id))}
+        previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
+        viewMoreHref="/app/analytics/drills"
       />
 
       <AnalyticsPrepTestHistory
         title="Section History"
         emptyNoun="sections"
-        brBarColor="#df1c41"
+        brBarColor="var(--destructive)"
         visibleEntries={visibleSectionHistory}
         bookmarkedOnly={sectionBookmarkedOnly}
         onBookmarkedOnlyChange={setSectionBookmarkedOnly}
-        onToggleBookmark={(id) => void toggleHistoryBookmark(id, setSectionHistory)}
+        sectionFilter={sectionSectionFilter}
+        onSectionFilterChange={setSectionSectionFilter}
+        onToggleBookmark={(id) => toggleHistoryBookmark(id, setSectionHistory, sectionHistory)}
         onSelectEntry={(id) => navigate(practiceSessionResultsPath(id, { source: "section" }))}
+        previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
+        viewMoreHref="/app/analytics/sections"
       />
 
       <AnalyticsPrepTestHistory
@@ -385,22 +421,24 @@ function OverviewTab() {
         visibleEntries={visiblePrepTestHistory}
         bookmarkedOnly={prepTestBookmarkedOnly}
         onBookmarkedOnlyChange={setPrepTestBookmarkedOnly}
-        onToggleBookmark={(id) => void toggleHistoryBookmark(id, setPrepTestHistory)}
+        onToggleBookmark={(id) => toggleHistoryBookmark(id, setPrepTestHistory, prepTestHistory)}
         onSelectEntry={(id) => navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)}
         onOpenPractice={(id) => navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)}
+        previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
+        viewMoreHref="/app/analytics/preptests"
       />
 
-      <section className="flex flex-col gap-4">
-        <div className="flex items-end justify-between gap-4">
+      <section className="flex flex-col gap-3">
+        <div className="flex items-end justify-between gap-3">
           <div>
-            <h2 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">Reports overview</h2>
-            <p className="mt-1 text-sm text-[#666d80]">
+            <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">Reports overview</h2>
+            <p className="mt-0.5 text-xs text-[var(--greyscale-500)]">
               Question-type accuracy by section — open Review or Drill from a row to practice weak areas.
             </p>
           </div>
         </div>
         {sections.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-6 text-sm text-[#666d80]">
+          <p className="rounded-xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-6 text-sm text-[var(--greyscale-500)]">
             Question-type reports appear once you answer questions linked to LR/RC types.
           </p>
         ) : (

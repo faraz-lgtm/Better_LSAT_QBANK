@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { ArrowDownAZ, ArrowUpAZ, ChevronDown, X } from "lucide-react"
+import { ChevronDown, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
 import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
+import { HistorySortMenu } from "@/features/student/analytics/history-sort-menu"
+import { sortHistoryEntries, type HistorySort } from "@/features/student/analytics/history-sort"
 import {
   TimeRangeFilter,
   type TimeRangeValue,
@@ -17,11 +19,13 @@ import {
 import {
   buildDrillStatTiles,
   computeDrillStats,
+  filterDrillsBySection,
   filterDrillsByTimeRange,
   filterDrillsByType,
   getDrillProgressPoints,
   type DrillProgressPoint,
   type DrillRecord,
+  type DrillSectionFilter,
   type DrillType,
 } from "@/features/student/lib/mock-analytics-drills"
 import { practiceSessionResultsPath } from "@/features/student/analytics/analytics-results-paths"
@@ -30,14 +34,24 @@ import {
   mapDrillSessionToHistoryEntry,
   mapSessionToDrillRecord,
 } from "@/features/student/analytics/map-analytics"
+import {
+  filterBookmarkedOnly,
+  persistSessionBookmark,
+  sessionBookmarkState,
+  withSessionBookmark,
+} from "@/features/student/analytics/session-bookmarks"
+import {
+  analyticsSectionParamValue,
+  matchesAnalyticsSectionFilter,
+  parseAnalyticsSectionParam,
+} from "@/features/student/analytics/section-filter"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import {
   LSAT_SCALED_Y_AXIS_LABELS,
   PERCENT_Y_AXIS_LABELS,
 } from "@/features/student/analytics/chart-y-axis"
+import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
-
-const BOOKMARKS_STORAGE_KEY = "analytics:drills:bookmarks"
 
 const SCORE_TABS = [
   { id: "percent", label: "% Score" },
@@ -46,18 +60,9 @@ const SCORE_TABS = [
 
 type ScoreTab = (typeof SCORE_TABS)[number]["id"]
 
-type HistorySort = "date-desc" | "date-asc" | "score-desc" | "score-asc"
-
-const HISTORY_SORT_OPTIONS: Array<{ id: HistorySort; label: string }> = [
-  { id: "date-desc", label: "Most recent" },
-  { id: "date-asc", label: "Oldest first" },
-  { id: "score-desc", label: "Highest score" },
-  { id: "score-asc", label: "Lowest score" },
-]
-
 function DrillScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next: ScoreTab) => void }) {
   return (
-    <div className="flex h-10 flex-wrap items-center gap-2 rounded-[16px] bg-white p-1">
+    <div className="flex h-8 flex-wrap items-center gap-1.5 rounded-[10px] bg-[var(--greyscale-0)] p-0.5">
       {SCORE_TABS.map((tab) => {
         const active = value === tab.id
         if (tab.id === "percent") {
@@ -68,12 +73,12 @@ function DrillScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next:
               onClick={() => onChange(tab.id)}
               aria-pressed={active}
               className={cn(
-                "flex min-h-8 items-center justify-center gap-2 rounded-[16px] px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors",
-                active ? "bg-[#0d47a1] text-white" : "text-[#666d80] hover:bg-[#f3f7ff]",
+                "flex min-h-7 items-center justify-center gap-1.5 rounded-[10px] px-2.5 py-1 text-xs font-semibold leading-[1.4] tracking-[0.02em] transition-colors",
+                active ? "bg-[var(--primary)] text-white" : "text-[var(--greyscale-500)] hover:bg-[var(--primary-0)]",
               )}
             >
               <span
-                className={cn("size-2.5 rounded-full", active ? "bg-white" : "bg-[#9ca3af]")}
+                className={cn("size-2.5 rounded-full", active ? "bg-white" : "bg-[var(--greyscale-400)]")}
                 aria-hidden
               />
               {tab.label}
@@ -87,8 +92,8 @@ function DrillScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next:
             onClick={() => onChange(tab.id)}
             aria-pressed={active}
             className={cn(
-              "rounded-[10px] px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors hover:rounded-[10px] active:rounded-[10px] focus-visible:rounded-[10px]",
-              active ? "bg-[#0d47a1] text-white" : "border border-[#dfe1e7] bg-white text-[#666d80] hover:bg-[#f3f7ff]",
+              "rounded-[8px] px-2.5 py-1 text-xs font-semibold leading-[1.4] tracking-[0.02em] transition-colors hover:rounded-[8px] active:rounded-[8px] focus-visible:rounded-[8px]",
+              active ? "bg-[var(--primary)] text-white" : "border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--greyscale-500)] hover:bg-[var(--primary-0)]",
             )}
           >
             {tab.label}
@@ -109,7 +114,7 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
 
   if (points.length === 0) {
     return (
-      <div className="flex h-[260px] items-center justify-center rounded-2xl border border-dashed border-[#dfe1e7] text-sm text-[#666d80]">
+      <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-[var(--greyscale-100)] text-xs text-[var(--greyscale-500)]">
         No drills in the selected range.
       </div>
     )
@@ -131,8 +136,8 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
 
   return (
     <div className="w-full">
-      <div className="flex h-[260px] w-full items-stretch gap-4">
-        <div className="relative w-10 shrink-0 pr-2 text-sm font-medium text-[#062357]">
+      <div className="flex h-[220px] w-full items-stretch gap-3">
+        <div className="relative w-10 shrink-0 pr-2 text-sm font-medium text-[var(--color-student-heading)]">
           {yAxisLabels.map((label, index) => {
             const isFirst = index === 0
             const isLast = index === yAxisLabels.length - 1
@@ -159,7 +164,7 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
                 <div
                   key={`${label}-${index}`}
                   className={cn(
-                    "absolute left-0 right-0 h-px bg-[#e5e7eb]",
+                    "absolute left-0 right-0 h-px bg-[var(--greyscale-100)]",
                     isFirst ? "" : isLast ? "-translate-y-full" : "-translate-y-1/2",
                   )}
                   style={{ top: `${tickTopPct(index)}%` }}
@@ -173,11 +178,11 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
             preserveAspectRatio="none"
             aria-hidden
           >
-            <polygon points={areaPolygon} fill="#0d47a1" fillOpacity="0.08" />
+            <polygon points={areaPolygon} fill="var(--primary)" fillOpacity="0.08" />
             <polyline
               points={polyline}
               fill="none"
-              stroke="#0d47a1"
+              stroke="var(--primary)"
               strokeWidth="0.6"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -201,15 +206,15 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
                 >
                   <span
                     className={cn(
-                      "absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#df1c41] transition-transform",
-                      isActive ? "scale-150 ring-2 ring-[#df1c41]/30" : "",
+                      "absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--destructive)] transition-transform",
+                      isActive ? "scale-150 ring-2 ring-[var(--destructive)]/30" : "",
                     )}
                     style={{ left: "50%", top: `${linePoints[i].y}%` }}
                     aria-hidden
                   />
                   {isActive ? (
                     <span
-                      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-[#062357] px-2 py-1 text-xs font-semibold text-white shadow-lg"
+                      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-[var(--color-student-heading)] px-2 py-1 text-xs font-semibold text-white shadow-lg"
                       style={{ left: "50%", top: `calc(${linePoints[i].y}% - 8px)` }}
                     >
                       {point.label}: {value}
@@ -265,16 +270,16 @@ function DrillTypeMenu({
         onClick={() => setOpen((c) => !c)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex h-[52px] items-center gap-2 rounded-[16px] border border-[#dfe1e7] bg-white px-3 text-base font-medium text-[#062357] hover:bg-[#f3f7ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d47a1]/30"
+        className="flex h-8 items-center gap-1.5 rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-2.5 text-xs font-medium text-[var(--color-student-heading)] hover:bg-[var(--primary-0)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]/30"
       >
         <span className="max-w-[240px] truncate text-left">{label}</span>
-        <ChevronDown className={cn("size-5 text-[#666d80] transition-transform", open ? "rotate-180" : "")} aria-hidden />
+        <ChevronDown className={cn("size-5 text-[var(--greyscale-500)] transition-transform", open ? "rotate-180" : "")} aria-hidden />
       </button>
       {open ? (
         <ul
           role="listbox"
           aria-label="Filter by drill type"
-          className="absolute right-0 z-30 mt-2 min-w-[260px] overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
+          className="absolute right-0 z-30 mt-2 min-w-[260px] overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
         >
           <li role="presentation">
             <button
@@ -287,7 +292,7 @@ function DrillTypeMenu({
               }}
               className={cn(
                 "flex h-10 w-full items-center rounded-[16px] px-3 text-sm font-medium tracking-[0.02em] transition-colors",
-                value === null ? "bg-[#f3f7ff] text-[#0d47a1]" : "text-[#062357] hover:bg-[#f6f8fa]",
+                value === null ? "bg-[var(--primary-0)] text-[var(--primary)]" : "text-[var(--color-student-heading)] hover:bg-[var(--greyscale-25)]",
               )}
             >
               All drill types
@@ -307,11 +312,11 @@ function DrillTypeMenu({
                   }}
                   className={cn(
                     "flex h-10 w-full items-center justify-between gap-3 rounded-[16px] px-3 text-sm font-medium tracking-[0.02em] transition-colors",
-                    active ? "bg-[#f3f7ff] text-[#0d47a1]" : "text-[#062357] hover:bg-[#f6f8fa]",
+                    active ? "bg-[var(--primary-0)] text-[var(--primary)]" : "text-[var(--color-student-heading)] hover:bg-[var(--greyscale-25)]",
                   )}
                 >
                   <span className="truncate">{type.label}</span>
-                  <span className="rounded-full bg-[#f6f8fa] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#666d80]">
+                  <span className="rounded-full bg-[var(--greyscale-25)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--greyscale-500)]">
                     {type.section}
                   </span>
                 </button>
@@ -324,95 +329,13 @@ function DrillTypeMenu({
   )
 }
 
-function HistorySortMenu({ value, onChange }: { value: HistorySort; onChange: (next: HistorySort) => void }) {
-  const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    if (!open) return
-    function handlePointerDown(event: PointerEvent) {
-      if (!(event.target instanceof Node)) return
-      if (containerRef.current?.contains(event.target)) return
-      setOpen(false)
-    }
-    function handleKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false)
-    }
-    document.addEventListener("pointerdown", handlePointerDown)
-    document.addEventListener("keydown", handleKey)
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown)
-      document.removeEventListener("keydown", handleKey)
-    }
-  }, [open])
-
-  const activeLabel = HISTORY_SORT_OPTIONS.find((option) => option.id === value)?.label ?? "Sort"
-  const Icon = value.endsWith("desc") ? ArrowDownAZ : ArrowUpAZ
-
-  return (
-    <div ref={containerRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((c) => !c)}
-        className="flex h-10 items-center gap-2 rounded-[16px] border border-[#dfe1e7] bg-white px-3 text-sm font-semibold text-[#062357] hover:bg-[#f3f7ff]"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-      >
-        <Icon className="size-4 text-[#666d80]" aria-hidden />
-        <span>{activeLabel}</span>
-      </button>
-      {open ? (
-        <ul
-          role="listbox"
-          aria-label="Sort PrepTest history"
-          className="absolute right-0 z-30 mt-2 min-w-[200px] overflow-hidden rounded-[16px] border border-[#dfe1e7] bg-white p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
-        >
-          {HISTORY_SORT_OPTIONS.map((option) => {
-            const active = option.id === value
-            return (
-              <li key={option.id} role="presentation">
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={active}
-                  onClick={() => {
-                    onChange(option.id)
-                    setOpen(false)
-                  }}
-                  className={cn(
-                    "flex h-10 w-full items-center rounded-[16px] px-3 text-sm font-medium tracking-[0.02em] transition-colors",
-                    active ? "bg-[#f3f7ff] text-[#0d47a1]" : "text-[#062357] hover:bg-[#f6f8fa]",
-                  )}
-                >
-                  {option.label}
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      ) : null}
-    </div>
-  )
-}
-
-function loadBookmarks(initial: Record<string, boolean>): Record<string, boolean> {
-  if (typeof window === "undefined") return initial
-  try {
-    const raw = window.localStorage.getItem(BOOKMARKS_STORAGE_KEY)
-    if (!raw) return initial
-    const parsed = JSON.parse(raw) as Record<string, boolean>
-    return { ...initial, ...parsed }
-  } catch {
-    return initial
-  }
-}
-
 function AnalyticsDrillsPage() {
   const navigate = useNavigate()
   const analyticsApi = useAnalyticsApi()
   const practiceApi = usePracticeApi()
   const [searchParams, setSearchParams] = useSearchParams()
   const typeFromUrl = searchParams.get("type")
+  const sectionFilter = parseAnalyticsSectionParam(searchParams.get("section"))
 
   const [loading, setLoading] = useState(true)
   const [drillRecords, setDrillRecords] = useState<DrillRecord[]>([])
@@ -423,11 +346,6 @@ function AnalyticsDrillsPage() {
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
   const [historySort, setHistorySort] = useState<HistorySort>("date-desc")
-  const initialBookmarks = useMemo(
-    () => Object.fromEntries(drillHistory.map((entry) => [entry.id, entry.bookmarked])),
-    [drillHistory],
-  )
-  const [bookmarks, setBookmarks] = useState<Record<string, boolean>>(() => loadBookmarks(initialBookmarks))
 
   useEffect(() => {
     if (!analyticsApi) {
@@ -436,7 +354,7 @@ function AnalyticsDrillsPage() {
     }
     setLoading(true)
     void Promise.all([
-      analyticsApi.getSessions({ kind: "DRILL", limit: 100 }),
+      analyticsApi.getSessions({ kind: "DRILL", completedOnly: true, limit: 500 }),
       analyticsApi.getPriorities(),
     ])
       .then(([drills, priorities]) => {
@@ -453,37 +371,61 @@ function AnalyticsDrillsPage() {
       .finally(() => setLoading(false))
   }, [analyticsApi])
 
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    try {
-      window.localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(bookmarks))
-    } catch {
-      // ignore storage failures
-    }
-  }, [bookmarks])
-
-  const activeType = useMemo(
-    () => (typeFromUrl ? drillTypes.find((t) => t.id === typeFromUrl) ?? null : null),
-    [typeFromUrl, drillTypes],
+  const typesForSection = useMemo(
+    () =>
+      sectionFilter === "all"
+        ? drillTypes
+        : drillTypes.filter((t) => t.section === sectionFilter),
+    [drillTypes, sectionFilter],
   )
 
-  const handleSelectType = useCallback(
-    (next: string | null) => {
+  const activeType = useMemo(
+    () => (typeFromUrl ? typesForSection.find((t) => t.id === typeFromUrl) ?? null : null),
+    [typeFromUrl, typesForSection],
+  )
+
+  const updateSearchParams = useCallback(
+    (next: { type?: string | null; section?: DrillSectionFilter }) => {
       const params = new URLSearchParams(searchParams)
-      if (next) {
-        params.set("type", next)
-      } else {
-        params.delete("type")
+      if ("type" in next) {
+        if (next.type) params.set("type", next.type)
+        else params.delete("type")
+      }
+      if ("section" in next && next.section != null) {
+        const sectionValue = analyticsSectionParamValue(next.section)
+        if (sectionValue) params.set("section", sectionValue)
+        else params.delete("section")
       }
       setSearchParams(params, { replace: true })
     },
     [searchParams, setSearchParams],
   )
 
+  const handleSelectSection = useCallback(
+    (next: DrillSectionFilter) => {
+      const typeStillValid =
+        typeFromUrl &&
+        drillTypes.some((t) => t.id === typeFromUrl && matchesAnalyticsSectionFilter(t.section, next))
+      updateSearchParams({
+        section: next,
+        type: typeStillValid ? typeFromUrl : null,
+      })
+    },
+    [drillTypes, typeFromUrl, updateSearchParams],
+  )
+
+  const handleSelectType = useCallback(
+    (next: string | null) => {
+      updateSearchParams({ type: next })
+    },
+    [updateSearchParams],
+  )
+
   const filteredRecords = useMemo(() => {
-    const byType = filterDrillsByType(drillRecords, activeType?.id ?? null)
+    const bySection = filterDrillsBySection(drillRecords, sectionFilter)
+    const byType = filterDrillsByType(bySection, activeType?.id ?? null)
     return filterDrillsByTimeRange(byType, timeRange)
-  }, [activeType, timeRange, drillRecords])
+  }, [activeType, drillRecords, sectionFilter, timeRange])
 
   const stats = useMemo(() => computeDrillStats(filteredRecords), [filteredRecords])
   const statTiles = useMemo(() => (stats ? buildDrillStatTiles(stats) : null), [stats])
@@ -495,45 +437,33 @@ function AnalyticsDrillsPage() {
   )
 
   const entries = useMemo(
-    () =>
-      drillHistory
-        .filter((entry) => filteredIds.has(entry.id))
-        .map((entry) => ({ ...entry, bookmarked: bookmarks[entry.id] ?? entry.bookmarked })),
-    [bookmarks, drillHistory, filteredIds],
+    () => drillHistory.filter((entry) => filteredIds.has(entry.id)),
+    [drillHistory, filteredIds],
   )
 
-  const sortedEntries = useMemo(() => {
-    const out = [...entries]
-    switch (historySort) {
-      case "date-desc":
-        break
-      case "date-asc":
-        out.reverse()
-        break
-      case "score-desc":
-        out.sort((a, b) => b.score / b.scoreMax - a.score / a.scoreMax)
-        break
-      case "score-asc":
-        out.sort((a, b) => a.score / a.scoreMax - b.score / b.scoreMax)
-        break
-    }
-    return out
-  }, [entries, historySort])
+  const sortedEntries = useMemo(
+    () => sortHistoryEntries(entries, historySort),
+    [entries, historySort],
+  )
 
   const visibleEntries = useMemo(
-    () => (bookmarkedOnly ? sortedEntries.filter((entry) => entry.bookmarked) : sortedEntries),
+    () => filterBookmarkedOnly(sortedEntries, bookmarkedOnly),
     [sortedEntries, bookmarkedOnly],
   )
 
   const handleToggleBookmark = useCallback(
     (id: string) => {
-      const next = !(bookmarks[id] ?? false)
-      setBookmarks((current) => ({ ...current, [id]: next }))
-      if (practiceApi) {
-        void practiceApi.updateSession({ sessionId: id, bookmarked: next })
-      }
+      const previous = sessionBookmarkState(drillHistory, id)
+      const next = !previous
+      setDrillHistory((current) => withSessionBookmark(current, id, next))
+      void persistSessionBookmark({
+        sessionId: id,
+        bookmarked: next,
+        practiceApi,
+        onFailure: () => setDrillHistory((current) => withSessionBookmark(current, id, previous)),
+      })
     },
-    [bookmarks, practiceApi],
+    [drillHistory, practiceApi],
   )
 
   const handleSelectEntry = useCallback(
@@ -553,19 +483,19 @@ function AnalyticsDrillsPage() {
 
   return (
     <StudentMain>
-      <section className="mb-6 flex flex-col gap-6 rounded-[24px] border border-[#dfe1e7] bg-white p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex min-w-0 flex-col gap-2">
-            <h1 className="!m-0 !text-[24px] !font-bold !leading-[1.3] text-[#062357]">Drills</h1>
+      <section className="mb-4 flex flex-col gap-3 rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <h1 className="!m-0 !text-lg !font-bold !leading-[1.3] text-[var(--color-student-heading)]">Drills</h1>
             {activeType ? (
-              <p className="inline-flex w-fit items-center gap-2 rounded-full bg-[#f3f7ff] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#0d47a1]">
+              <p className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--primary-0)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--primary)]">
                 <span>{activeType.section}</span>
                 <span aria-hidden>·</span>
                 <span className="normal-case tracking-normal">{activeType.label}</span>
                 <button
                   type="button"
                   onClick={() => handleSelectType(null)}
-                  className="ml-1 inline-flex size-4 items-center justify-center rounded-full text-[#0d47a1] hover:bg-white"
+                  className="ml-1 inline-flex size-4 items-center justify-center rounded-full text-[var(--primary)] hover:bg-[var(--greyscale-0)]"
                   aria-label="Clear drill type filter"
                 >
                   <X className="size-3" aria-hidden />
@@ -574,13 +504,36 @@ function AnalyticsDrillsPage() {
             ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-4">
-            <DrillTypeMenu value={activeType?.id ?? null} onChange={handleSelectType} types={drillTypes} />
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by section">
+              <button
+                type="button"
+                onClick={() => handleSelectSection("all")}
+                className={drillFilterPillClass(sectionFilter === "all")}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectSection("LR")}
+                className={drillFilterPillClass(sectionFilter === "LR")}
+              >
+                LR
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectSection("RC")}
+                className={drillFilterPillClass(sectionFilter === "RC")}
+              >
+                RC
+              </button>
+            </div>
+            <DrillTypeMenu value={activeType?.id ?? null} onChange={handleSelectType} types={typesForSection} />
             <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
           </div>
         </div>
 
         {statTiles ? (
-          <div className="grid gap-6 lg:grid-cols-[minmax(280px,380px)_1fr]">
+          <div className="grid gap-3 lg:grid-cols-[minmax(240px,320px)_1fr]">
             <AnalyticsStatsGrid stats={statTiles} />
             <AnalyticsScoreProgressPanel
               title="Score progress"
@@ -589,14 +542,18 @@ function AnalyticsDrillsPage() {
             />
           </div>
         ) : (
-          <p className="rounded-2xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-6 py-8 text-center text-sm text-[#666d80]">
-            No drills match the current filters. Try widening the time range or clearing the drill type.
+          <p className="rounded-2xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-6 py-8 text-center text-sm text-[var(--greyscale-500)]">
+            No drills match the current filters. Try widening the time range or clearing the section / drill type.
           </p>
         )}
       </section>
 
       <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
-        <HistorySortMenu value={historySort} onChange={setHistorySort} />
+        <HistorySortMenu
+          value={historySort}
+          onChange={setHistorySort}
+          ariaLabel="Sort drill history"
+        />
       </div>
 
       <AnalyticsPrepTestHistory
@@ -605,6 +562,8 @@ function AnalyticsDrillsPage() {
         visibleEntries={visibleEntries}
         bookmarkedOnly={bookmarkedOnly}
         onBookmarkedOnlyChange={setBookmarkedOnly}
+        sectionFilter={sectionFilter}
+        onSectionFilterChange={handleSelectSection}
         onToggleBookmark={handleToggleBookmark}
         onSelectEntry={handleSelectEntry}
       />

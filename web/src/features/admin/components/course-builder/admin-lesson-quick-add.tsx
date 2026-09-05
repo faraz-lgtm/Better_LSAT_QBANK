@@ -1,16 +1,24 @@
-import { Image as ImageIcon, List, SquarePlay } from "lucide-react"
+import { Image as ImageIcon, List, Minus, SquarePlay, Type } from "lucide-react"
 
 type AdminLessonQuickAddProps = {
   onAddVideo: () => void
   onAddText: () => void
+  onAddDivider: () => void
   onAddImage: () => void
   onAddQuestion: () => void
 }
 
-function AdminLessonQuickAdd({ onAddVideo, onAddText, onAddImage, onAddQuestion }: AdminLessonQuickAddProps) {
+function AdminLessonQuickAdd({
+  onAddVideo,
+  onAddText,
+  onAddDivider,
+  onAddImage,
+  onAddQuestion,
+}: AdminLessonQuickAddProps) {
   const items = [
     { label: "Add Video", icon: SquarePlay, onClick: onAddVideo },
-    { label: "Add Text", icon: List, onClick: onAddText },
+    { label: "Add Text", icon: Type, onClick: onAddText },
+    { label: "Add Divider", icon: Minus, onClick: onAddDivider },
     { label: "Add Image", icon: ImageIcon, onClick: onAddImage },
     { label: "Add Question", icon: List, onClick: onAddQuestion },
   ] as const

@@ -1,11 +1,13 @@
 import { Fragment, useMemo } from "react"
 
+import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
 import {
   PracticeSessionQuestionNavButton,
   type PracticeSessionQuestionNavOutcome,
 } from "@/features/student/practice-session/practice-session-question-nav-button"
 import { passageBreakAfterIndices } from "@/features/student/practice-session/question-nav-passage-breaks"
 import { OFFICIAL_PASSAGE_BREAK_CLASS } from "@/features/student/practice-session/practice-session-official-styles"
+import { targetTimeHoverLabel } from "@/features/student/practice-session/practice-results-ui"
 import type { PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
 
@@ -13,6 +15,7 @@ type NavQuestion = {
   id: string
   passage?: { id: string } | null
   sourceGroupId?: string | null
+  difficulty?: number | null
 }
 
 type PracticeSessionQuestionNavStripProps = {
@@ -56,6 +59,7 @@ function PracticeSessionQuestionNavStrip({
   showPassageBreaks = true,
   className,
 }: PracticeSessionQuestionNavStripProps) {
+  const { scaleFactor } = useAccommodations()
   const breakAfter = useMemo(
     () => (showPassageBreaks ? passageBreakAfterIndices(questions) : new Set<number>()),
     [questions, showPassageBreaks],
@@ -74,6 +78,7 @@ function PracticeSessionQuestionNavStrip({
           flagged={isFlagged(q.id)}
           recommendedForBr={recommendedForBr?.(q.id)}
           outcome={outcomeForQuestion?.(q.id) ?? null}
+          targetTimeLabel={targetTimeHoverLabel(q.difficulty, scaleFactor)}
           variant={variant}
           onClick={() => onSelectQuestion(n)}
         />

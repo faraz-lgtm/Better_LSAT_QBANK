@@ -255,22 +255,57 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       }[]) ?? []
     },
 
+    async getUserGoalScore(userId: string): Promise<number | null> {
+      const { data, error } = await client
+        .from('student_study_preferences')
+        .select('goal_score')
+        .eq('user_id', userId)
+        .maybeSingle()
+      if (error) throw error
+      const score = (data as { goal_score: number | null } | null)?.goal_score
+      return typeof score === 'number' && Number.isFinite(score) ? score : null
+    },
+
+    async listExcludedSessionIds(userId: string): Promise<Set<string>> {
+      const { data, error } = await client
+        .from('practice_sessions')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('excluded', true)
+      if (error) throw error
+      return new Set(((data as { id: string }[]) ?? []).map((row) => row.id))
+    },
+
     async listAnswerEventsWithTypes(userId: string) {
       const { data, error } = await client
         .from('answer_events')
-        .select('question_type_id, is_correct, question_id')
+        .select('question_type_id, is_correct, question_id, session_kind, practice_session_id')
         .eq('user_id', userId)
         .not('question_type_id', 'is', null)
       if (error) throw error
-      const rows = (data as { question_type_id: string; is_correct: boolean; question_id: string }[]) ?? []
+      const rows = (data as {
+        question_type_id: string
+        is_correct: boolean
+        question_id: string
+        session_kind: PracticeSessionKind
+        practice_session_id: string
+      }[]) ?? []
       if (rows.length === 0) return []
-      const visibility = await this.resolveQuestionVisibility(rows.map((row) => row.question_id))
+      const [visibility, excludedIds] = await Promise.all([
+        this.resolveQuestionVisibility(rows.map((row) => row.question_id)),
+        this.listExcludedSessionIds(userId),
+      ])
       return rows
-        .filter((row) => visibility.get(row.question_id) === true)
-        .map(({ question_type_id, is_correct, question_id }) => ({
+        .filter(
+          (row) =>
+            visibility.get(row.question_id) === true &&
+            !excludedIds.has(row.practice_session_id),
+        )
+        .map(({ question_type_id, is_correct, question_id, session_kind }) => ({
           question_type_id,
           is_correct,
           question_id,
+          session_kind,
         }))
     },
 
@@ -313,15 +348,27 @@ export function createAnalyticsRepository(client: SupabaseClient) {
     async listAnswerEventsWithTypeDifficulty(userId: string) {
       const { data, error } = await client
         .from('answer_events')
-        .select('question_type_id, difficulty, question_id')
+        .select('question_type_id, difficulty, question_id, practice_session_id')
         .eq('user_id', userId)
         .not('question_type_id', 'is', null)
       if (error) throw error
-      const rows = (data as { question_type_id: string; difficulty: number | null; question_id: string }[]) ?? []
+      const rows = (data as {
+        question_type_id: string
+        difficulty: number | null
+        question_id: string
+        practice_session_id: string
+      }[]) ?? []
       if (rows.length === 0) return []
-      const visibility = await this.resolveQuestionVisibility(rows.map((row) => row.question_id))
+      const [visibility, excludedIds] = await Promise.all([
+        this.resolveQuestionVisibility(rows.map((row) => row.question_id)),
+        this.listExcludedSessionIds(userId),
+      ])
       return rows
-        .filter((row) => visibility.get(row.question_id) === true)
+        .filter(
+          (row) =>
+            visibility.get(row.question_id) === true &&
+            !excludedIds.has(row.practice_session_id),
+        )
         .map(({ question_type_id, difficulty }) => ({ question_type_id, difficulty }))
     },
 
@@ -424,7 +471,7 @@ export function createAnalyticsRepository(client: SupabaseClient) {
           completed_at,
           raw_score,
           metadata,
-          admin_sections ( is_experimental )
+          admin_sections ( is_experimental, section_type )
         `,
         )
         .eq('user_id', userId)
@@ -442,8 +489,8 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         raw_score: number | null
         metadata: Record<string, unknown>
         admin_sections:
-          | { is_experimental: boolean | null }
-          | { is_experimental: boolean | null }[]
+          | { is_experimental: boolean | null; section_type?: 'LR' | 'RC' | 'LG' | null }
+          | { is_experimental: boolean | null; section_type?: 'LR' | 'RC' | 'LG' | null }[]
           | null
       }[]) ?? []
     },
@@ -539,6 +586,8 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       userId: string
       kind?: PracticeSessionKind
       bookmarked?: boolean
+      /** When true, only completed sessions, ordered by completed_at desc. */
+      completedOnly?: boolean
       limit: number
       offset: number
     }): Promise<PracticeSessionListRow[]> {
@@ -549,6 +598,7 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       ) {
         return []
       }
+      const orderColumn = input.completedOnly ? 'completed_at' : 'started_at'
       let q = client
         .from('practice_sessions')
         .select(
@@ -573,7 +623,11 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         `,
         )
         .eq('user_id', input.userId)
-        .order('started_at', { ascending: false })
+        .order(orderColumn, { ascending: false })
+
+      if (input.completedOnly) {
+        q = q.not('completed_at', 'is', null)
+      }
 
       if (input.kind === 'PREPTEST' || input.kind === 'SECTION') {
         q = q.in('prep_test_id', visiblePrepTestIds)
@@ -586,6 +640,12 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       }
       if (input.bookmarked === true) {
         q = q.eq('bookmarked', true)
+      }
+
+      // SECTION/PREPTEST rows need no post-fetch visibility shrink — page at the DB.
+      const pageAtDb = input.kind === 'PREPTEST' || input.kind === 'SECTION'
+      if (pageAtDb) {
+        q = q.range(input.offset, input.offset + Math.max(0, input.limit) - 1)
       }
 
       const { data, error } = await q
@@ -612,6 +672,7 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         })
       }
 
+      if (pageAtDb) return rows
       return rows.slice(input.offset, input.offset + input.limit)
     },
 
@@ -619,6 +680,7 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       userId: string
       kind?: PracticeSessionKind
       bookmarked?: boolean
+      completedOnly?: boolean
     }): Promise<number> {
       const visiblePrepTestIds = await this.listStudentVisiblePrepTestIds()
       if (input.kind === 'PREPTEST' || input.kind === 'SECTION') {
@@ -629,6 +691,7 @@ export function createAnalyticsRepository(client: SupabaseClient) {
           .eq('user_id', input.userId)
           .eq('kind', input.kind)
           .in('prep_test_id', visiblePrepTestIds)
+        if (input.completedOnly) q = q.not('completed_at', 'is', null)
         if (input.bookmarked === true) q = q.eq('bookmarked', true)
         const { count, error } = await q
         if (error) throw error
@@ -639,6 +702,7 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         userId: input.userId,
         kind: input.kind,
         bookmarked: input.bookmarked,
+        completedOnly: input.completedOnly,
         limit: 10_000,
         offset: 0,
       })

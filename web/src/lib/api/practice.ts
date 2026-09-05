@@ -22,14 +22,16 @@ import type {
 } from "@/features/student/blind-review/blind-review-types"
 import type {
   PrepTestDetailResponse,
+  PrepTestPoolBlindReviewStatus,
   PrepTestPoolFilter,
   PrepTestPoolItem,
   PrepTestPoolListResult,
   PrepTestPoolSort,
+  PrepTestPoolStatusCounts,
   StartPrepTestInput,
   StartPrepTestResponse,
 } from "@/features/student/preptests/preptest-types"
-import { coercePoolScore } from "@/features/student/preptests/preptest-pool-display"
+import { coercePoolScore, filterPrepTestPoolItems, adjustPrepTestPoolStatusCounts, adjustPrepTestPoolTotal } from "@/features/student/preptests/preptest-pool-display"
 import { normalizePrepTestDetail } from "@/features/student/preptests/preptest-section-break"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
@@ -127,6 +129,10 @@ function blindReviewPoolSortValue(item: BlindReviewPoolItem): number {
 
 type PrepTestPoolItemRaw = Partial<PrepTestPoolItem> & Record<string, unknown>
 
+function coerceBlindReviewStatus(value: unknown): PrepTestPoolBlindReviewStatus | null {
+  return value === "eligible" || value === "in_progress" ? value : null
+}
+
 function normalizePrepTestPoolItem(pt: PrepTestPoolItemRaw): PrepTestPoolItem {
   const scaledScore = coercePoolScore(pt.scaledScore ?? pt.scaled_score)
   const blindReviewScaledScore = coercePoolScore(pt.blindReviewScaledScore ?? pt.blind_review_scaled_score)
@@ -154,7 +160,7 @@ function normalizePrepTestPoolItem(pt: PrepTestPoolItemRaw): PrepTestPoolItem {
     blindReviewScaledScore,
     completedAt,
     attempts,
-    blindReviewStatus: pt.blindReviewStatus ?? null,
+    blindReviewStatus: coerceBlindReviewStatus(pt.blindReviewStatus ?? pt.blind_review_status),
     openPrepTestSessionId:
       typeof pt.openPrepTestSessionId === "string"
         ? pt.openPrepTestSessionId
@@ -456,6 +462,28 @@ export function createPracticeApi(supabase: SupabaseClient) {
       }
     },
 
+    async extendDrill(input: {
+      sessionId: string
+    }): Promise<{
+      session: PracticeSession
+      metadata: DrillSessionResponse["metadata"]
+      questions: DrillSessionResponse["questions"]
+      addedCount: number
+    }> {
+      const { data, error } = await invokePracticeFn<{
+        session: PracticeSession
+        metadata: DrillSessionResponse["metadata"]
+        questions: DrillSessionResponse["questions"]
+        addedCount: number
+      }>("practice-extend-drill", {
+        method: "POST",
+        body: { sessionId: input.sessionId },
+      })
+      if (error) await throwIfEdgeInvokeFailed(error)
+      if (!data?.session) throw new Error("No drill session returned from practice")
+      return data
+    },
+
     async getDrillPoolStats(input: DrillPoolStatsInput): Promise<DrillPoolStats> {
       const { data, error } = await invokePracticeFn<DrillPoolStats>("practice-drill-pool-stats", {
         method: "POST",
@@ -496,6 +524,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
           sectionId: input.sectionId,
           timing: input.timing,
           showAnswers: input.showAnswers,
+          difficulty: input.difficulty,
         },
       })
       if (error) throw error
@@ -541,9 +570,17 @@ export function createPracticeApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       if (!data?.prepTests) throw new Error("No prep tests returned from practice")
+      const prepTests = data.prepTests.map((pt) => normalizePrepTestPoolItem(pt))
+      const statusCounts: PrepTestPoolStatusCounts | undefined = data.statusCounts
+        ? adjustPrepTestPoolStatusCounts(data.statusCounts, prepTests, input.filter)
+        : undefined
       return {
         ...data,
-        prepTests: data.prepTests.map((pt) => normalizePrepTestPoolItem(pt)),
+        prepTests: filterPrepTestPoolItems(prepTests, input.filter),
+        total: statusCounts
+          ? adjustPrepTestPoolTotal(data.total, data.statusCounts!, prepTests, input.filter)
+          : data.total,
+        ...(statusCounts ? { statusCounts } : {}),
       }
     },
 

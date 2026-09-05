@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type MouseEvent } from "react"
 import { ChevronDown, ChevronUp } from "lucide-react"
 
 import { Switch } from "@/components/ui/switch"
@@ -12,10 +12,16 @@ import {
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
 import {
   BLIND_REVIEW_OPTIONS_LIST_CLASS,
-  BLIND_REVIEW_QUESTION_NUMBER_CLASS,
   BLIND_REVIEW_QUESTION_STEM_CLASS,
   BLIND_REVIEW_RECOMMENDED_BADGE_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
+import { ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import { PracticeSessionSideWidget } from "@/features/student/practice-session/practice-session-side-action-rail"
+import { PracticeSessionResetResponseButton } from "@/features/student/practice-session/practice-session-reset-response-button"
+import type {
+  PracticeToolMode,
+  RegionKey,
+} from "@/features/student/practice-session/practice-session-types"
 import { createExplanationsApi } from "@/lib/api/explanations"
 import { HtmlContent } from "@/lib/html/html-content"
 import { hasEnoughPlatformAnswerSample, platformAnswerSampleSize } from "@/lib/platform-answer-sample"
@@ -33,6 +39,7 @@ type PracticeBlindReviewQuestionPanelProps = {
   allowReselect: boolean
   getRegionHtml: (key: string, base: string) => string
   onSelect: (index: number) => void
+  onResetResponse?: () => void
   answerView?: BlindReviewAnswerView
   onAnswerViewChange?: (view: BlindReviewAnswerView) => void
   recommendedForBr?: boolean
@@ -49,6 +56,21 @@ type PracticeBlindReviewQuestionPanelProps = {
   seedQuestionTypeLabel?: string | null
   /** When false, hides question/answer explanation dropdowns (e.g. locked diagnostic). */
   explanationsEnabled?: boolean
+  onAnnotateMouseUp?: (regionKey: RegionKey, container: HTMLElement | null, event?: MouseEvent) => void
+  onAnnotateClick?: (regionKey: RegionKey, container: HTMLElement | null, event: MouseEvent) => void
+  annotateToolMode?: PracticeToolMode
+  /** Figma `20596:144514` — exam side widget (same as active drill) */
+  showSideWidget?: boolean
+  flagged?: boolean
+  onToggleFlag?: () => void
+  flagsDisabled?: boolean
+  responseMasking?: boolean
+  maskedChoices?: Record<number, boolean>
+  onToggleResponseMasking?: () => void
+  onToggleMasked?: (index: number) => void
+  onOpenReview?: () => void
+  reviewActive?: boolean
+  onOpenAccessibility?: () => void
 }
 
 function regionKey(questionId: string, part: string) {
@@ -66,6 +88,7 @@ function PracticeBlindReviewQuestionPanel({
   allowReselect,
   getRegionHtml,
   onSelect,
+  onResetResponse,
   answerView = "blind_review",
   onAnswerViewChange,
   recommendedForBr = false,
@@ -79,6 +102,20 @@ function PracticeBlindReviewQuestionPanel({
   seedStemExplanationHtml = null,
   seedQuestionTypeLabel = null,
   explanationsEnabled = true,
+  onAnnotateMouseUp,
+  onAnnotateClick,
+  annotateToolMode = "none",
+  showSideWidget = false,
+  flagged = false,
+  onToggleFlag,
+  flagsDisabled = false,
+  responseMasking = false,
+  maskedChoices = {},
+  onToggleResponseMasking,
+  onToggleMasked,
+  onOpenReview,
+  reviewActive = false,
+  onOpenAccessibility,
 }: PracticeBlindReviewQuestionPanelProps) {
   const [hiddenChoices, setHiddenChoices] = useState<Record<number, boolean>>({})
   const [expandedChoiceIds, setExpandedChoiceIds] = useState<Set<string>>(() => new Set())
@@ -91,6 +128,8 @@ function PracticeBlindReviewQuestionPanel({
 
   const stemKey = regionKey(question.id, "stem")
   const stemHtml = getRegionHtml(stemKey, question.stemText ?? "")
+  const useSideWidget = showSideWidget && !reviewChrome
+  const hasMaskedChoices = Object.values(maskedChoices).some(Boolean)
 
   const explanationsApi = useMemo(() => {
     if (!reviewChrome) return null
@@ -167,20 +206,20 @@ function PracticeBlindReviewQuestionPanel({
 
   const hasStemExplanation = Boolean(stemExplanationHtml?.trim())
 
-  return (
+  const canResetResponse =
+    !reviewChrome && !choicesDisabled && (selectedIndex != null || hasMaskedChoices)
+
+  const panel = (
     <div
       className={cn(
         "flex h-full min-h-0 flex-col",
         reviewChrome ? "practice-session-scroll-hidden overflow-y-auto" : "overflow-hidden",
       )}
     >
-      <div className={cn("shrink-0", reviewChrome ? "bg-white" : "border-b border-[#e5e7eb] bg-[#f6f8fa] p-6")}>
+      <div className={cn("shrink-0", reviewChrome ? "bg-[var(--greyscale-0)]" : "bg-[var(--greyscale-0)] p-3")}>
         <div
           className={cn("flex gap-3", reviewChrome ? "flex-col items-stretch" : "items-start")}
         >
-          {!reviewChrome ? (
-            <span className={BLIND_REVIEW_QUESTION_NUMBER_CLASS}>{questionNumber}</span>
-          ) : null}
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <div className={cn("flex flex-wrap items-center justify-between gap-3", reviewChrome && "mb-6")}>
               {reviewChrome ? (
@@ -193,16 +232,21 @@ function PracticeBlindReviewQuestionPanel({
                   blindReviewEnabled={blindReviewTabEnabled}
                   showOutcomeIcons={showCorrectAnswer}
                 />
-              ) : recommendedForBr ? (
-                <div className="inline-flex h-10 items-center rounded-[16px] bg-white p-1">
-                  <span className={BLIND_REVIEW_RECOMMENDED_BADGE_CLASS}>Recommended for BR</span>
-                </div>
+              ) : onAnswerViewChange ? (
+                <PracticeBlindReviewAnswerToggle
+                  value={answerView}
+                  onChange={onAnswerViewChange}
+                  variant="blind-review"
+                  actualOutcome={actualOutcome}
+                  blindReviewOutcome={blindReviewOutcome}
+                  blindReviewEnabled={blindReviewTabEnabled}
+                />
               ) : (
                 <span />
               )}
               {reviewChrome ? (
                 <label className="inline-flex h-8 shrink-0 items-center gap-3 whitespace-nowrap sm:gap-4">
-                  <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#062357]">
+                  <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
                     Show Correct
                   </span>
                   <Switch
@@ -212,39 +256,47 @@ function PracticeBlindReviewQuestionPanel({
                     aria-label="Show correct answer"
                   />
                 </label>
-              ) : onAnswerViewChange ? (
-                <PracticeBlindReviewAnswerToggle
-                  value={answerView}
-                  onChange={onAnswerViewChange}
-                  variant={reviewChrome ? "review" : "blind-review"}
-                  actualOutcome={actualOutcome}
-                  blindReviewOutcome={blindReviewOutcome}
-                  blindReviewEnabled={blindReviewTabEnabled}
-                />
-              ) : null}
-            </div>
-            <div className={cn("flex items-start gap-3", reviewChrome && "px-6 py-3")}>
-              {reviewChrome ? (
-                <span className="mt-[3px] shrink-0 text-base font-medium leading-[1.5] tracking-[0.32px] text-[#062357]">
-                  {questionNumber}.
+              ) : recommendedForBr ? (
+                <span className={BLIND_REVIEW_RECOMMENDED_BADGE_CLASS}>
+                  Recommended for Blind Review
                 </span>
               ) : null}
+            </div>
+            <div
+              className={cn(
+                reviewChrome
+                  ? "flex items-start gap-3 px-6 py-3"
+                  : "flex min-w-0 items-start gap-2 px-0 py-3",
+              )}
+            >
+              {!reviewChrome ? (
+                <span className="mt-px shrink-0 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
+                  {questionNumber}.
+                </span>
+              ) : (
+                <span className="mt-[3px] shrink-0 text-base font-medium leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
+                  {questionNumber}.
+                </span>
+              )}
               <PracticeAnnotatedContent
                 regionKey={stemKey}
                 html={stemHtml}
                 findQuery={findQuery}
-                toolMode="none"
-                className={cn(
-                  BLIND_REVIEW_QUESTION_STEM_CLASS,
-                  reviewChrome && "min-w-0 flex-1 text-base font-medium leading-[1.5] tracking-[0.32px] text-[#062357]",
-                )}
+                toolMode={reviewChrome ? "none" : annotateToolMode}
+                onMouseUp={reviewChrome ? undefined : onAnnotateMouseUp}
+                onClickCapture={reviewChrome ? undefined : onAnnotateClick}
+                className={
+                  reviewChrome
+                    ? "min-w-0 flex-1 text-base font-medium leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]"
+                    : cn(BLIND_REVIEW_QUESTION_STEM_CLASS, "text-sm font-semibold leading-[1.5] tracking-[0.28px]")
+                }
               />
               {reviewChrome && explanationsEnabled ? (
                 <button
                   type="button"
                   className={cn(
                     "mt-1 inline-flex size-5 shrink-0 items-center justify-center transition",
-                    stemExplanationOpen ? "text-[#0d47a1]" : "text-[#666d80] hover:text-[#062357]",
+                    stemExplanationOpen ? "text-[var(--primary)]" : "text-[var(--greyscale-500)] hover:text-[var(--color-student-heading)]",
                   )}
                   aria-label={
                     stemExplanationOpen
@@ -263,7 +315,7 @@ function PracticeBlindReviewQuestionPanel({
               ) : null}
             </div>
             {reviewChrome && explanationsEnabled && stemExplanationOpen ? (
-              <div className="mb-6 mt-6 rounded-[14px] bg-[#f3f7ff] p-6 text-[#062357]">
+              <div className="mb-6 mt-6 rounded-[14px] bg-[var(--primary-0)] p-6 text-[var(--color-student-heading)]">
                 <p className="mb-6 text-base font-medium leading-[1.5] tracking-[0.32px]">
                   Question Type{questionTypeLabel ? ` - ${questionTypeLabel}` : ""}
                 </p>
@@ -271,7 +323,7 @@ function PracticeBlindReviewQuestionPanel({
                   {hasStemExplanation ? (
                     <HtmlContent
                       html={stemExplanationHtml ?? ""}
-                      className="explanation-review-body text-[#062357]"
+                      className="explanation-review-body text-[var(--color-student-heading)]"
                     />
                   ) : (
                     <p className="m-0">
@@ -285,12 +337,11 @@ function PracticeBlindReviewQuestionPanel({
         </div>
       </div>
       {revealed && isCorrect != null && !reviewChrome ? (
-        <p className="shrink-0 px-6 pt-4 text-xs font-semibold text-[#df1c41]">
+        <p className="shrink-0 px-6 pt-4 text-xs font-semibold text-[var(--destructive)]">
           {isCorrect ? "Correct" : "Incorrect"}
         </p>
       ) : null}
-      <div className={cn(reviewChrome ? "shrink-0 pb-6" : "practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto")}>
-        <div className={reviewChrome ? "flex flex-col gap-3" : BLIND_REVIEW_OPTIONS_LIST_CLASS}>
+      <div className={cn(reviewChrome ? "flex shrink-0 flex-col gap-3 pb-6" : BLIND_REVIEW_OPTIONS_LIST_CLASS)}>
           {question.choices.map((choice, index) => {
             const isCorrectChoice = correctIndex === index
             const forceSelected =
@@ -314,7 +365,9 @@ function PracticeBlindReviewQuestionPanel({
                 regionKey={regionKey(question.id, `choice-${choice.id}`)}
                 selected={isSelected}
                 correctHighlight={correctHighlight}
-                hidden={Boolean(hiddenChoices[index])}
+                hidden={!useSideWidget && Boolean(hiddenChoices[index])}
+                masked={useSideWidget ? Boolean(maskedChoices[index]) : false}
+                maskingMode={useSideWidget && responseMasking}
                 disabled={submitting || choicesDisabled || (reviewChrome && !allowReselect)}
                 selectedIndex={displaySelectedIndex}
                 allowReselect={allowReselect && !reviewChrome}
@@ -325,8 +378,11 @@ function PracticeBlindReviewQuestionPanel({
                     [index]: !prev[index],
                   }))
                 }
+                onToggleMasked={() => onToggleMasked?.(index)}
                 variant="blind-review"
-                answerView={answerView}
+                /** Figma `20596:144371` — selected answers use primary blue in both Actual and Blind Review */
+                answerView="actual"
+                showSideAction={!useSideWidget}
                 explanationAction={reviewChrome && explanationsEnabled}
                 explanationExpanded={explanationsEnabled && expandedChoiceIds.has(choice.id)}
                 explanationHtml={explanationsEnabled ? explanationHtml : null}
@@ -342,8 +398,33 @@ function PracticeBlindReviewQuestionPanel({
               />
             )
           })}
-        </div>
+          {!reviewChrome ? (
+            <PracticeSessionResetResponseButton
+              variant="active-drill"
+              disabled={!canResetResponse}
+              onClick={() => onResetResponse?.()}
+            />
+          ) : null}
       </div>
+    </div>
+  )
+
+  if (!useSideWidget) return panel
+
+  return (
+    <div className={cn(ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS, "h-full min-h-0 overflow-visible")}>
+      {panel}
+      <PracticeSessionSideWidget
+        variant="active-drill"
+        flagged={flagged}
+        onToggleFlag={onToggleFlag ?? (() => undefined)}
+        flagsDisabled={flagsDisabled}
+        responseMasking={responseMasking}
+        onToggleResponseMasking={onToggleResponseMasking ?? (() => undefined)}
+        onReview={onOpenReview}
+        reviewActive={reviewActive}
+        onAccessibility={onOpenAccessibility}
+      />
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { Camera, Check, CreditCard, Calendar, Globe2, LockKeyhole, Mail, Phone, UserRound } from "lucide-react"
+import { Camera, Check, CreditCard, Calendar, Clock, Globe2, LockKeyhole, Mail, Moon, Phone, UserRound } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
@@ -22,10 +22,22 @@ import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
+import { ThemeToggleSwitch } from "@/features/theme/theme-toggle"
 import { createBillingApi, type BillingPlanId } from "@/lib/api/billing"
 import { createUsersApi, type UserProfile } from "@/lib/api/users"
+import { resolveAccountLsacLinkState } from "@/lib/auth/needs-lsac-link"
+import {
+  useAccommodations,
+  type ExtraTimeSetting,
+} from "@/features/student/accommodations/accommodations-context"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
+
+const ACCOUNT_EDIT_BTN_CLASS =
+  "h-[30px] rounded-lg border border-[rgba(44,49,67,0.12)] !bg-transparent px-3 text-xs font-medium tracking-[0.24px] text-[var(--greyscale-500)] !shadow-none hover:!border-[var(--primary)] hover:!bg-[var(--primary)] hover:!text-white"
+
+const ACCOUNT_CANCEL_BTN_CLASS =
+  "h-[30px] rounded-lg !bg-[var(--greyscale-25)] px-3 text-xs font-medium tracking-[0.24px] text-[var(--greyscale-500)] hover:!bg-[var(--greyscale-50)] hover:!text-[var(--color-student-heading)]"
 
 const ACCOUNT_TIMEZONE_STORAGE_KEY = "betterlsat.account.timezone"
 
@@ -124,12 +136,12 @@ function NameRow({
 }: NameRowProps) {
   return (
     <div className="flex items-center gap-4 border-b border-[rgba(44,49,67,0.07)] px-6 py-[18px]">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#f0f1f6] text-[#667085]">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
         <UserRound className="size-3.5" strokeWidth={1.75} />
       </span>
       <div className="flex min-w-0 flex-1 items-end gap-4">
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="text-xs tracking-[0.24px] text-[#666d80]">Name</p>
+          <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">Name</p>
           {editing ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <Input
@@ -137,18 +149,18 @@ function NameRow({
                 placeholder="First name"
                 autoComplete="given-name"
                 onChange={(event) => onFirstNameChange(event.target.value)}
-                className="h-10 rounded-lg border-0 bg-[#f6f8fa] px-2.5 text-sm font-medium tracking-[0.28px] text-[#062357] shadow-none focus-visible:ring-0"
+                className="h-10 rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-0"
               />
               <Input
                 value={lastNameDraft}
                 placeholder="Last name"
                 autoComplete="family-name"
                 onChange={(event) => onLastNameChange(event.target.value)}
-                className="h-10 rounded-lg border-0 bg-[#f6f8fa] px-2.5 text-sm font-medium tracking-[0.28px] text-[#062357] shadow-none focus-visible:ring-0"
+                className="h-10 rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-0"
               />
             </div>
           ) : (
-            <p className="truncate text-sm font-medium tracking-[0.28px] text-[#062357]">{displayValue}</p>
+            <p className="truncate text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)]">{displayValue}</p>
           )}
         </div>
         {editing ? (
@@ -156,7 +168,7 @@ function NameRow({
             <Button type="button" size="xs" disabled={saving} onClick={onSave}>
               {saving ? "Saving…" : "Save"}
             </Button>
-            <Button type="button" size="xs" variant="ghost" disabled={saving} onClick={onCancel}>
+            <Button type="button" size="xs" variant="ghost" disabled={saving} className={ACCOUNT_CANCEL_BTN_CLASS} onClick={onCancel}>
               Cancel
             </Button>
           </div>
@@ -165,7 +177,7 @@ function NameRow({
             type="button"
             size="xs"
             variant="outline"
-            className="h-[30px] rounded-lg border-[rgba(44,49,67,0.12)] px-3 text-xs text-[#666d80]"
+            className={ACCOUNT_EDIT_BTN_CLASS}
             onClick={onEdit}
           >
             Edit
@@ -212,23 +224,23 @@ function LsatDateRow({
 }: LsatDateRowProps) {
   return (
     <div className="flex items-center gap-4 border-b border-[rgba(44,49,67,0.07)] px-6 py-[18px]">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#f0f1f6] text-[#667085]">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
         <Calendar className="size-3.5" strokeWidth={1.75} />
       </span>
       <div className="flex min-w-0 flex-1 items-end gap-4">
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="text-xs tracking-[0.24px] text-[#666d80]">LSAC Test Date</p>
+          <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">LSAC Test Date</p>
           {editing ? (
             <Select
               value={draftValue}
               onChange={(event) => onDraftChange(event.target.value)}
               options={[...ONBOARDING_LSAT_DATE_OPTIONS]}
               placeholder="Select a test date"
-              className="h-10 rounded-lg border-0 bg-[#f6f8fa] px-2.5 text-sm font-medium tracking-[0.28px] text-[#062357] shadow-none focus-visible:ring-0"
+              className="h-10 rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-0"
               disabled={saving}
             />
           ) : (
-            <p className="truncate text-sm font-medium tracking-[0.28px] text-[#062357]">{displayValue}</p>
+            <p className="truncate text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)]">{displayValue}</p>
           )}
         </div>
         {editing ? (
@@ -236,7 +248,7 @@ function LsatDateRow({
             <Button type="button" size="xs" disabled={saving} onClick={onSave}>
               {saving ? "Saving…" : "Save"}
             </Button>
-            <Button type="button" size="xs" variant="ghost" disabled={saving} onClick={onCancel}>
+            <Button type="button" size="xs" variant="ghost" disabled={saving} className={ACCOUNT_CANCEL_BTN_CLASS} onClick={onCancel}>
               Cancel
             </Button>
           </div>
@@ -245,7 +257,7 @@ function LsatDateRow({
             type="button"
             size="xs"
             variant="outline"
-            className="h-[30px] rounded-lg border-[rgba(44,49,67,0.12)] px-3 text-xs text-[#666d80]"
+            className={ACCOUNT_EDIT_BTN_CLASS}
             onClick={onEdit}
           >
             Edit
@@ -292,22 +304,22 @@ function ProfileRow({
   const isEditing = editable && editing
   return (
     <div className="flex items-center gap-4 border-b border-[rgba(44,49,67,0.07)] px-6 py-[18px] last:border-b-0">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#f0f1f6] text-[#667085]">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
         <Icon className="size-3.5" strokeWidth={1.75} />
       </span>
       <div className="flex min-w-0 flex-1 items-end gap-4">
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="text-xs tracking-[0.24px] text-[#666d80]">{label}</p>
+          <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{label}</p>
           {isEditing ? (
             <Input
               type={type}
               value={draftValue}
               placeholder={placeholder}
               onChange={(event) => onDraftChange(event.target.value)}
-              className="h-10 rounded-lg border-0 bg-[#f6f8fa] px-2.5 text-sm font-medium tracking-[0.28px] text-[#062357] shadow-none focus-visible:ring-0"
+              className="h-10 rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-0"
             />
           ) : (
-            <p className="truncate text-sm font-medium tracking-[0.28px] text-[#062357]">{displayValue}</p>
+            <p className="truncate text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)]">{displayValue}</p>
           )}
         </div>
         {!editable ? null : isEditing ? (
@@ -315,7 +327,7 @@ function ProfileRow({
             <Button type="button" size="xs" disabled={saving} onClick={onSave}>
               {saving ? "Saving…" : "Save"}
             </Button>
-            <Button type="button" size="xs" variant="ghost" disabled={saving} onClick={onCancel}>
+            <Button type="button" size="xs" variant="ghost" disabled={saving} className={ACCOUNT_CANCEL_BTN_CLASS} onClick={onCancel}>
               Cancel
             </Button>
           </div>
@@ -324,7 +336,7 @@ function ProfileRow({
             type="button"
             size="xs"
             variant="outline"
-            className="h-[30px] rounded-lg border-[rgba(44,49,67,0.12)] px-3 text-xs text-[#666d80]"
+            className={ACCOUNT_EDIT_BTN_CLASS}
             onClick={onEdit}
           >
             {actionLabel}
@@ -360,12 +372,12 @@ function PasswordRow({
 }: PasswordRowProps) {
   return (
     <div className="flex items-center gap-4 border-b border-[rgba(44,49,67,0.07)] px-6 py-[18px]">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#f0f1f6] text-[#667085]">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
         <LockKeyhole className="size-3.5" strokeWidth={1.75} />
       </span>
       <div className="flex min-w-0 flex-1 items-end gap-4">
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="text-xs tracking-[0.24px] text-[#666d80]">Password</p>
+          <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">Password</p>
           {editing ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <PasswordInput
@@ -373,18 +385,18 @@ function PasswordRow({
                 placeholder="Current password"
                 autoComplete="current-password"
                 onChange={(event) => onCurrentPasswordChange(event.target.value)}
-                className="h-10 rounded-lg border-0 bg-[#f6f8fa] px-2.5 text-sm font-medium tracking-[0.28px] text-[#062357] shadow-none focus-visible:ring-0"
+                className="h-10 rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-0"
               />
               <PasswordInput
                 value={newPasswordDraft}
                 placeholder="New password"
                 autoComplete="new-password"
                 onChange={(event) => onNewPasswordChange(event.target.value)}
-                className="h-10 rounded-lg border-0 bg-[#f6f8fa] px-2.5 text-sm font-medium tracking-[0.28px] text-[#062357] shadow-none focus-visible:ring-0"
+                className="h-10 rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-0"
               />
             </div>
           ) : (
-            <p className="truncate text-sm font-medium tracking-[0.28px] text-[#062357]">••••••••</p>
+            <p className="truncate text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)]">••••••••</p>
           )}
         </div>
         {editing ? (
@@ -392,7 +404,7 @@ function PasswordRow({
             <Button type="button" size="xs" disabled={saving} onClick={onSave}>
               {saving ? "Saving…" : "Save"}
             </Button>
-            <Button type="button" size="xs" variant="ghost" disabled={saving} onClick={onCancel}>
+            <Button type="button" size="xs" variant="ghost" disabled={saving} className={ACCOUNT_CANCEL_BTN_CLASS} onClick={onCancel}>
               Cancel
             </Button>
           </div>
@@ -401,7 +413,7 @@ function PasswordRow({
             type="button"
             size="xs"
             variant="outline"
-            className="h-[30px] rounded-lg border-[rgba(44,49,67,0.12)] px-3 text-xs text-[#666d80]"
+            className={ACCOUNT_EDIT_BTN_CLASS}
             onClick={onEdit}
           >
             Change
@@ -435,17 +447,17 @@ function TimezoneRow({
 
   return (
     <div className="flex items-center gap-4 px-6 py-[18px]">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#f0f1f6] text-[#667085]">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
         <Globe2 className="size-3.5" strokeWidth={1.75} />
       </span>
       <div className="flex min-w-0 flex-1 items-end gap-4">
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="text-xs tracking-[0.24px] text-[#666d80]">Timezone</p>
+          <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">Timezone</p>
           {editing ? (
             <select
               value={draftValue}
               onChange={(event) => onDraftChange(event.target.value)}
-              className="h-10 w-full rounded-lg border-0 bg-[#f6f8fa] px-2.5 text-sm font-medium tracking-[0.28px] text-[#062357] shadow-none outline-none focus-visible:ring-2 focus-visible:ring-[#0d47a1]/20"
+              className="h-10 w-full rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
             >
               <optgroup label="Canada">
                 {TIMEZONE_OPTIONS.filter((option) => option.country === "Canada").map((option) => (
@@ -463,7 +475,7 @@ function TimezoneRow({
               </optgroup>
             </select>
           ) : (
-            <p className="truncate text-sm font-medium tracking-[0.28px] text-[#062357]">
+            <p className="truncate text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)]">
               {formatTimezoneOption(selectedOption)}
             </p>
           )}
@@ -473,7 +485,7 @@ function TimezoneRow({
             <Button type="button" size="xs" onClick={onSave}>
               Save
             </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={onCancel}>
+            <Button type="button" size="xs" variant="ghost" className={ACCOUNT_CANCEL_BTN_CLASS} onClick={onCancel}>
               Cancel
             </Button>
           </div>
@@ -482,12 +494,189 @@ function TimezoneRow({
             type="button"
             size="xs"
             variant="outline"
-            className="h-[30px] rounded-lg border-[rgba(44,49,67,0.12)] px-3 text-xs text-[#666d80]"
+            className={ACCOUNT_EDIT_BTN_CLASS}
             onClick={onEdit}
           >
             Edit
           </Button>
         )}
+      </div>
+    </div>
+  )
+}
+
+const EXTRA_TIME_PRESETS: {
+  value: ExtraTimeSetting
+  label: string
+  detail: string
+  minutesLabel: string | null
+}[] = [
+  { value: "none", label: "Standard", detail: "Official LSAT timing", minutesLabel: "35 min" },
+  { value: "1.5x", label: "Time and a half", detail: "50% more time per section", minutesLabel: "53 min" },
+  { value: "2x", label: "Double time", detail: "Twice the standard time", minutesLabel: "70 min" },
+  { value: "custom", label: "Custom", detail: "Set your own section length", minutesLabel: null },
+]
+
+type AccommodationsRowProps = {
+  setting: ExtraTimeSetting
+  customMinutes: number | null
+  editing: boolean
+  saving?: boolean
+  draftSetting: ExtraTimeSetting
+  draftCustomMinutes: string
+  onDraftSettingChange: (value: ExtraTimeSetting) => void
+  onDraftCustomMinutesChange: (value: string) => void
+  onEdit: () => void
+  onCancel: () => void
+  onSave: () => void
+}
+
+function formatAccommodationsDisplay(setting: ExtraTimeSetting, customMinutes: number | null): string {
+  switch (setting) {
+    case "1.5x":
+      return "Time and a half (53 min)"
+    case "2x":
+      return "Double time (70 min)"
+    case "custom":
+      return customMinutes != null ? `Custom (${customMinutes} min)` : "Custom"
+    default:
+      return "Standard (35 min)"
+  }
+}
+
+function AccommodationsRow({
+  setting,
+  customMinutes,
+  editing,
+  saving = false,
+  draftSetting,
+  draftCustomMinutes,
+  onDraftSettingChange,
+  onDraftCustomMinutesChange,
+  onEdit,
+  onCancel,
+  onSave,
+}: AccommodationsRowProps) {
+  if (!editing) {
+    return (
+      <div className="flex items-center gap-4 px-6 py-[18px]">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
+          <Clock className="size-3.5" strokeWidth={1.75} />
+        </span>
+        <div className="flex min-w-0 flex-1 items-end gap-4">
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">Extra Time</p>
+            <p className="truncate text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)]">
+              {formatAccommodationsDisplay(setting, customMinutes)}
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="xs"
+            variant="outline"
+            className={cn(ACCOUNT_EDIT_BTN_CLASS, "shrink-0")}
+            onClick={onEdit}
+          >
+            Edit
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4 px-6 py-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
+              <Clock className="size-3.5" strokeWidth={1.75} />
+            </span>
+            <div>
+              <p className="text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">Extra Time</p>
+              <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
+                Applies to PrepTests, sections, and timed drills
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button type="button" size="xs" disabled={saving} onClick={onSave}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+          <Button type="button" size="xs" variant="ghost" disabled={saving} className={ACCOUNT_CANCEL_BTN_CLASS} onClick={onCancel}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-2.5 sm:grid-cols-2">
+        {EXTRA_TIME_PRESETS.map((preset) => {
+          const selected = draftSetting === preset.value
+          return (
+            <label
+              key={preset.value}
+              className={cn(
+                "relative flex cursor-pointer flex-col gap-3 rounded-[10px] border p-3.5 transition-colors",
+                selected
+                  ? "border-[var(--primary)] bg-[var(--primary-25)] shadow-[0px_1px_2px_0px_rgba(13,71,161,0.12)]"
+                  : "border-[rgba(44,49,67,0.08)] bg-[var(--greyscale-0)] hover:border-[rgba(13,71,161,0.28)] hover:bg-[var(--greyscale-25)]",
+                saving && "pointer-events-none opacity-60",
+              )}
+            >
+              <input
+                type="radio"
+                name="extra-time-setting"
+                value={preset.value}
+                checked={selected}
+                disabled={saving}
+                onChange={() => onDraftSettingChange(preset.value)}
+                className="sr-only"
+              />
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 space-y-0.5">
+                  <p className="text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">{preset.label}</p>
+                  <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{preset.detail}</p>
+                </div>
+                <span
+                  className={cn(
+                    "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border",
+                    selected ? "border-[var(--primary)] bg-[var(--primary)]" : "border-[#c5cad3] bg-[var(--greyscale-0)]",
+                  )}
+                  aria-hidden
+                >
+                  {selected ? <span className="size-1.5 rounded-full bg-white" /> : null}
+                </span>
+              </div>
+              {preset.minutesLabel ? (
+                <span
+                  className={cn(
+                    "inline-flex w-fit rounded-md px-2 py-1 text-xs font-semibold tracking-[0.24px]",
+                    selected ? "bg-[var(--greyscale-0)] text-[var(--primary)]" : "bg-[var(--greyscale-50)] text-[var(--greyscale-500)]",
+                  )}
+                >
+                  {preset.minutesLabel}
+                </span>
+              ) : null}
+              {preset.value === "custom" && selected ? (
+                <div className="flex items-center gap-2 border-t border-[rgba(13,71,161,0.12)] pt-3">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={999}
+                    value={draftCustomMinutes}
+                    placeholder="e.g. 45"
+                    disabled={saving}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => onDraftCustomMinutesChange(e.target.value)}
+                    className="h-9 w-[88px] rounded-lg border border-[rgba(44,49,67,0.12)] bg-[var(--greyscale-0)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-1 focus-visible:ring-[var(--primary)]/30"
+                  />
+                  <span className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">minutes / section</span>
+                </div>
+              ) : null}
+            </label>
+          )
+        })}
       </div>
     </div>
   )
@@ -503,10 +692,10 @@ function AccountSection({
   children: ReactNode
 }) {
   return (
-    <section className="overflow-hidden rounded-[10px] border border-[rgba(44,49,67,0.07)] bg-white">
+    <section className="overflow-hidden rounded-[10px] border border-[rgba(44,49,67,0.07)] bg-[var(--greyscale-0)]">
       <div className="flex items-center gap-2 border-b border-[rgba(44,49,67,0.07)] px-6 py-4">
-        <Icon className="size-[15px] text-[#667085]" strokeWidth={1.75} />
-        <h2 className="text-sm font-semibold tracking-[0.28px] text-[#062357]">{title}</h2>
+        <Icon className="size-[15px] text-[var(--muted-foreground)]" strokeWidth={1.75} />
+        <h2 className="text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">{title}</h2>
       </div>
       {children}
     </section>
@@ -524,7 +713,7 @@ function PlanBanner({
     <aside
       className={cn(
         "flex flex-col gap-4 overflow-hidden rounded-xl p-4 shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]",
-        "bg-[linear-gradient(180deg,rgba(255,255,255,0)_0%,rgba(13,71,161,0.20)_100%),linear-gradient(90deg,#edf3ff_0%,#edf3ff_100%)]",
+        "bg-[linear-gradient(180deg,rgba(255,255,255,0)_0%,rgba(26,87,184,0.22)_100%),linear-gradient(90deg,var(--primary-0)_0%,var(--primary-0)_100%)]",
         className,
       )}
     >
@@ -535,8 +724,13 @@ function PlanBanner({
 
 function CheckListItem({ children, muted = false }: { children: ReactNode; muted?: boolean }) {
   return (
-    <li className={cn("flex items-center gap-2 text-xs tracking-[0.24px]", muted ? "text-[#666d80]" : "text-[#062357]")}>
-      <Check className="size-[13px] shrink-0 text-[#0d47a1]" strokeWidth={2} />
+    <li
+      className={cn(
+        "flex items-center gap-2 tracking-[0.24px]",
+        muted ? "text-xs text-[var(--greyscale-500)]" : "text-sm text-[var(--color-student-heading)]",
+      )}
+    >
+      <Check className="size-[13px] shrink-0 text-[var(--primary)]" strokeWidth={2} />
       <span>{children}</span>
     </li>
   )
@@ -546,6 +740,11 @@ function AccountPage() {
   const navigate = useNavigate()
   const { openPricingModal } = useGuestPricingModal()
   const { entitlement, loading: entitlementLoading } = useStudentEntitlement()
+  const {
+    extraTimeSetting,
+    extraTimeCustomMinutes,
+    updateAccommodations,
+  } = useAccommodations()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [email, setEmail] = useState<string | null>(null)
   const [phone, setPhone] = useState<string | null>(null)
@@ -565,6 +764,10 @@ function AccountPage() {
   const [timezoneValue, setTimezoneValue] = useState(getInitialTimezoneValue)
   const [timezoneDraft, setTimezoneDraft] = useState(timezoneValue)
   const [editingTimezone, setEditingTimezone] = useState(false)
+  const [editingAccommodations, setEditingAccommodations] = useState(false)
+  const [accommodationDraftSetting, setAccommodationDraftSetting] = useState<ExtraTimeSetting>("none")
+  const [accommodationDraftCustomMinutes, setAccommodationDraftCustomMinutes] = useState("")
+  const [savingAccommodations, setSavingAccommodations] = useState(false)
   const [addingPayment, setAddingPayment] = useState(false)
   const [paymentPlan, setPaymentPlan] = useState<BillingPlanId>("core")
   const [paymentPlanMenuOpen, setPaymentPlanMenuOpen] = useState(false)
@@ -609,6 +812,10 @@ function AccountPage() {
   const initials = useMemo(() => getInitials(displayName), [displayName])
   const hasProPlan = Boolean(entitlement?.hasActiveCore || entitlement?.accessState === "FULL_ACCESS")
   const planName = hasProPlan ? "Pro" : "Free"
+  const lsacLinkState = useMemo(
+    () => resolveAccountLsacLinkState(profile, entitlement),
+    [entitlement, profile],
+  )
 
   function startFieldEdit(field: EditableAccountField) {
     setAccountStatus(null)
@@ -723,6 +930,40 @@ function AccountPage() {
     setEditingTimezone(false)
   }
 
+  function startAccommodationsEdit() {
+    setAccommodationDraftSetting(extraTimeSetting)
+    setAccommodationDraftCustomMinutes(extraTimeCustomMinutes != null ? String(extraTimeCustomMinutes) : "")
+    setEditingAccommodations(true)
+  }
+
+  function cancelAccommodationsEdit() {
+    setEditingAccommodations(false)
+  }
+
+  async function saveAccommodationsEdit() {
+    const setting = accommodationDraftSetting
+    let customMinutes: number | null = null
+    if (setting === "custom") {
+      const parsed = parseInt(accommodationDraftCustomMinutes.trim(), 10)
+      if (!Number.isFinite(parsed) || parsed < 1 || parsed > 999) {
+        setError("Custom minutes must be a number between 1 and 999.")
+        return
+      }
+      customMinutes = parsed
+    }
+    setSavingAccommodations(true)
+    setError(null)
+    try {
+      await updateAccommodations(setting, customMinutes)
+      setAccountStatus("Accommodations updated.")
+      setEditingAccommodations(false)
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Failed to update accommodations.")
+    } finally {
+      setSavingAccommodations(false)
+    }
+  }
+
   async function startPaymentCheckout() {
     setStartingPayment(true)
     setPaymentError(null)
@@ -749,27 +990,27 @@ function AccountPage() {
 
   return (
     <StudentMain fullBleed contentClassName="px-6">
-      <div className="mx-auto w-full max-w-[1304px] rounded-3xl border border-[#dfe1e7] bg-white p-6">
-        <h1 className="m-0 text-2xl font-bold leading-[1.3] text-[#062357]">Account</h1>
+      <div className="mx-auto w-full max-w-[1304px] rounded-3xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
+        <h1 className="m-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">Account</h1>
 
         {error ? <p className="mt-4 text-sm text-[#95122b]">{error}</p> : null}
-        {accountStatus ? <p className="mt-4 text-sm font-medium text-[#0d47a1]">{accountStatus}</p> : null}
+        {accountStatus ? <p className="mt-4 text-sm font-medium text-[var(--primary)]">{accountStatus}</p> : null}
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="flex min-w-0 flex-col gap-6">
             <AccountSection title="Profile" icon={UserRound}>
               <div className="flex items-center gap-4 border-b border-[rgba(44,49,67,0.07)] p-6">
                 <div className="relative shrink-0">
-                  <div className="flex size-16 items-center justify-center rounded-full bg-[#062357] text-xl font-extrabold tracking-[-0.45px] text-[#f0f4ff]">
+                  <div className="flex size-16 items-center justify-center rounded-full bg-[var(--primary)] text-xl font-extrabold tracking-[-0.45px] text-[#f0f4ff]">
                     {initials}
                   </div>
-                  <span className="absolute -bottom-0.5 -right-0.5 flex size-6 items-center justify-center rounded-full border-2 border-[#f4f5f9] bg-[#062357] text-white">
+                  <span className="absolute -bottom-0.5 -right-0.5 flex size-6 items-center justify-center rounded-full border-2 border-[var(--greyscale-25)] bg-[var(--primary)] text-white">
                     <Camera className="size-3" strokeWidth={1.75} />
                   </span>
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-base font-semibold tracking-[0.32px] text-[#062357]">{displayName}</p>
-                  <p className="truncate text-xs tracking-[0.24px] text-[#666d80]">{email ?? "No email on file"}</p>
+                  <p className="truncate text-base font-semibold tracking-[0.32px] text-[var(--color-student-heading)]">{displayName}</p>
+                  <p className="truncate text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{email ?? "No email on file"}</p>
                 </div>
               </div>
               <NameRow
@@ -843,41 +1084,90 @@ function AccountPage() {
               />
             </AccountSection>
 
-            <section className="rounded-[10px] border border-[rgba(44,49,67,0.07)] bg-white px-6 py-5">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <AccountSection title="Appearance" icon={Moon}>
+              <div className="flex items-center justify-between gap-4 px-6 py-[18px]">
                 <div className="min-w-0 space-y-1">
-                  <h2 className="text-sm font-semibold tracking-[0.28px] text-[#062357]">LSAC Account</h2>
-                  <p className="text-xs tracking-[0.24px] text-[#666d80]">
-                    LawHub Advantage · <span className="text-[#0d47a1]">Not required for basic access</span>
-                  </p>
-                  <p className="text-xs tracking-[0.24px] text-[#666d80]">
-                    Link your LSAC account to sync your PrepTest scores and unlock additional features.
+                  <label
+                    htmlFor="account-dark-mode"
+                    className="text-sm font-medium tracking-[0.28px] text-[color:var(--color-student-heading)]"
+                  >
+                    Dark mode
+                  </label>
+                  <p className="text-xs tracking-[0.24px] text-[color:var(--greyscale-500)]">
+                    Switch between light and dark theme
                   </p>
                 </div>
-                <Button type="button" size="xs" className="h-[35px] rounded-lg px-4" onClick={() => navigate("/app/lsac-link")}>
-                  Link Account
-                </Button>
+                <ThemeToggleSwitch />
+              </div>
+            </AccountSection>
+
+            <AccountSection title="Accommodations" icon={Clock}>
+              <AccommodationsRow
+                setting={extraTimeSetting}
+                customMinutes={extraTimeCustomMinutes}
+                editing={editingAccommodations}
+                saving={savingAccommodations}
+                draftSetting={accommodationDraftSetting}
+                draftCustomMinutes={accommodationDraftCustomMinutes}
+                onDraftSettingChange={setAccommodationDraftSetting}
+                onDraftCustomMinutesChange={setAccommodationDraftCustomMinutes}
+                onEdit={startAccommodationsEdit}
+                onCancel={cancelAccommodationsEdit}
+                onSave={() => void saveAccommodationsEdit()}
+              />
+            </AccountSection>
+
+            <section className="rounded-[10px] border border-[rgba(44,49,67,0.07)] bg-[var(--greyscale-0)] px-6 py-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0 space-y-1">
+                  <h2 className="text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">LSAC Account</h2>
+                  <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
+                    LawHub Advantage · <span className="text-[var(--primary)]">Not required for basic access</span>
+                  </p>
+                  <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
+                    {lsacLinkState === "linked"
+                      ? "Your LSAC account is linked. PrepTest scores and LawHub content stay in sync."
+                      : lsacLinkState === "pending"
+                        ? "LawHub invite is pending. Finish linking in your LSAC email, then return to the dashboard."
+                        : "Link your LSAC account to sync your PrepTest scores and unlock additional features."}
+                  </p>
+                </div>
+                {lsacLinkState === "linked" ? (
+                  <span className="inline-flex h-[35px] shrink-0 items-center gap-1.5 rounded-lg bg-[var(--explanation-answered-bg)] px-3 text-xs font-semibold tracking-[0.24px] text-[var(--explanation-answered)]">
+                    <Check className="size-3.5" strokeWidth={2.25} />
+                    Linked
+                  </span>
+                ) : (
+                  <Button
+                    type="button"
+                    size="xs"
+                    className="h-[35px] rounded-lg px-4"
+                    onClick={() => navigate(lsacLinkState === "pending" ? "/app" : "/app/lsac-link")}
+                  >
+                    {lsacLinkState === "pending" ? "Finish setup" : "Link Account"}
+                  </Button>
+                )}
               </div>
             </section>
 
             <AccountSection title="Payment Methods" icon={CreditCard}>
               <div className="p-6">
                 <div className="flex min-h-[142px] flex-col items-center justify-center rounded-[10px] border-2 border-dashed border-[rgba(44,49,67,0.12)] p-6 text-center">
-                  <CreditCard className="size-7 text-[#a4acb9]" strokeWidth={1.75} />
-                  <p className="mt-2 text-sm font-semibold tracking-[0.28px] text-[#062357]">No payment method</p>
-                  <p className="mt-1 text-xs tracking-[0.24px] text-[#666d80]">
+                  <CreditCard className="size-7 text-[var(--greyscale-300)]" strokeWidth={1.75} />
+                  <p className="mt-2 text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">No payment method</p>
+                  <p className="mt-1 text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
                     Add a card securely through Stripe Checkout.
                   </p>
 
                   {addingPayment ? (
                     <div
                       className={cn(
-                        "mt-4 w-full max-w-[460px] rounded-xl bg-[#f6f8fa] p-4 text-left",
+                        "mt-4 w-full max-w-[460px] rounded-xl bg-[var(--greyscale-25)] p-4 text-left",
                         paymentPlanMenuOpen && FIGMA_DROPDOWN_CARD_OPEN_CLASS,
                       )}
                     >
                       <label
-                        className="block text-xs font-semibold tracking-[0.24px] text-[#062357]"
+                        className="block text-xs font-semibold tracking-[0.24px] text-[var(--color-student-heading)]"
                         htmlFor="payment-plan"
                       >
                         Choose plan before entering card details
@@ -892,7 +1182,7 @@ function AccountPage() {
                         onOpenChange={setPaymentPlanMenuOpen}
                         onChange={(value) => setPaymentPlan(value as BillingPlanId)}
                       />
-                      <p className="mt-2 text-xs leading-5 tracking-[0.24px] text-[#666d80]">
+                      <p className="mt-2 text-xs leading-5 tracking-[0.24px] text-[var(--greyscale-500)]">
                         Card number, expiry, CVC, and billing details are collected on Stripe's secure checkout page.
                       </p>
                       {paymentError ? <p className="mt-2 text-xs text-[#95122b]">{paymentError}</p> : null}
@@ -938,8 +1228,8 @@ function AccountPage() {
 
           <div className="flex min-w-0 flex-col gap-4">
             <PlanBanner>
-              <p className="text-xs font-semibold tracking-[0.24px] text-[#0d47a1]">Current Plan</p>
-              <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">{planName}</h2>
+              <p className="text-xs font-semibold tracking-[0.24px] text-[var(--primary)]">Current Plan</p>
+              <h2 className="text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">{planName}</h2>
               <ul className="flex flex-col gap-2">
                 <CheckListItem muted>{hasProPlan ? "Unlimited questions & drills" : "50 questions/day"}</CheckListItem>
                 <CheckListItem muted>{hasProPlan ? "Advanced analytics" : "Basic analytics"}</CheckListItem>
@@ -948,7 +1238,7 @@ function AccountPage() {
               </ul>
               {!hasProPlan ? (
                 <>
-                  <p className="text-xs font-medium tracking-[0.24px] text-[#666d80]">
+                  <p className="text-xs font-medium tracking-[0.24px] text-[var(--greyscale-500)]">
                     <strong>79%</strong> Performance, <strong>30+</strong> Reports, and Score Tracker will be available.
                   </p>
                   <Button type="button" size="xs" className="h-8 w-full rounded-[10px]" onClick={openPricingModal}>
@@ -959,7 +1249,7 @@ function AccountPage() {
             </PlanBanner>
 
             <PlanBanner>
-              <p className="text-xs font-semibold tracking-[0.24px] text-[#0d47a1]">Pro includes everything, plus:</p>
+              <p className="text-xs font-semibold tracking-[0.24px] text-[var(--primary)]">Pro includes everything, plus:</p>
               <ul className="flex flex-col gap-2">
                 <CheckListItem>Unlimited questions &amp; drills</CheckListItem>
                 <CheckListItem>Full PrepTest library (90+)</CheckListItem>

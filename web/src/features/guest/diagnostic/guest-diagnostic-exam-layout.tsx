@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { X } from "lucide-react"
 
-import { createGuestDiagnosticPreviewQuestions } from "@/features/guest/diagnostic/guest-diagnostic-exam-mock-data"
 import {
   buildGuestDiagnosticAnswerState,
 } from "@/features/guest/diagnostic/guest-diagnostic-answer-state"
@@ -41,6 +40,7 @@ import type {
   BlindReviewAnswerView,
 } from "@/features/student/practice-session/practice-blind-review-answer-toggle"
 import { PracticeDrillQuestionPanel, regionKey } from "@/features/student/practice-session/practice-drill-question-panel"
+import { ResponseMaskingProvider } from "@/features/student/practice-session/use-response-masking"
 import { PracticeSessionAccessibilityPanel } from "@/features/student/practice-session/practice-session-accessibility-panel"
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
 import { PracticeSessionHeader } from "@/features/student/practice-session/practice-session-header"
@@ -66,7 +66,7 @@ import {
   REVIEW_SHELL_CLASS,
   REVIEW_SIDE_PANEL_LAYOUT_FULL_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
-import { difficultyLabelFromLevel } from "@/features/student/practice-session/practice-results-ui"
+import { difficultyLabelFromLevel, targetTimeSecondsForDifficulty } from "@/features/student/practice-session/practice-results-ui"
 import type { DrillQuestion } from "@/features/student/drills/drill-types"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
 import { NOT_ENOUGH_ANSWERS_YET } from "@/lib/platform-answer-sample"
@@ -81,8 +81,9 @@ import {
   usePracticeSessionTimer,
 } from "@/features/student/practice-session/use-practice-session-timer"
 import {
-  getMiniDiagnosticExplanationHtml,
-  getMiniDiagnosticQuestionMeta,
+  createDiagnosticQuestions,
+  getDiagnosticExplanationHtml,
+  getDiagnosticQuestionMeta,
 } from "@/features/guest/diagnostic/mini-diagnostic-content"
 import { canShowDiagnosticExplanation } from "@/features/guest/diagnostic/diagnostic-explanation-access"
 import { HtmlContent } from "@/lib/html/html-content"
@@ -132,12 +133,12 @@ function ReviewStaticSwitch({ checked = false }: { checked?: boolean }) {
       aria-disabled="true"
       className={cn(
         "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent",
-        checked ? "bg-[#0d47a1]" : "bg-[#c5cad3]",
+        checked ? "bg-[var(--primary)]" : "bg-[var(--greyscale-300)]",
       )}
     >
       <span
         className={cn(
-          "block size-4 rounded-full bg-white shadow-sm",
+          "block size-4 rounded-full bg-[var(--greyscale-0)] shadow-sm dark:bg-[var(--greyscale-900)]",
           checked ? "translate-x-4" : "translate-x-0",
         )}
       />
@@ -148,11 +149,11 @@ function ReviewStaticSwitch({ checked = false }: { checked?: boolean }) {
 function ReviewPassageCardHeader() {
   return (
     <div className="mb-8 flex h-8 shrink-0 items-center justify-between gap-4">
-      <span className="inline-flex h-8 items-center rounded-[8px] bg-[#f6f8fa] px-4 py-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1]">
+      <span className="inline-flex h-8 items-center rounded-[8px] bg-[var(--primary-25)] px-4 py-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)]">
         Passage Only View
       </span>
       <span className="inline-flex h-8 items-center gap-4" aria-label="Analysis View is display only">
-        <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#062357]">
+        <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
           Analysis View
         </span>
         <ReviewStaticSwitch />
@@ -174,13 +175,18 @@ function difficultyTone(level: number): "green" | "teal" | "red" {
 
 function buildDiagnosticAnalyticsSeed(
   _question: DrillQuestion,
-  meta: { difficulty: number; questionType: string } | null,
+  meta: { difficulty: number; questionType: string; targetTimeSeconds?: number } | null,
   selectedAnswer: string | null | undefined,
+  yourTimeSeconds?: number | null,
 ): ExplanationQuestionDetailView["analytics"] {
   const diffLevel = meta?.difficulty ?? 3
   const label = difficultyLabelFromLevel(diffLevel)
   const letter = selectedAnswer?.trim().toUpperCase().slice(0, 1) ?? ""
   const questionLabel = label === "Hardest" ? "Hard" : label
+  const targetTimeSeconds =
+    typeof meta?.targetTimeSeconds === "number" && Number.isFinite(meta.targetTimeSeconds)
+      ? meta.targetTimeSeconds
+      : targetTimeSecondsForDifficulty(label)
 
   return {
     questionDifficulty: {
@@ -190,13 +196,7 @@ function buildDiagnosticAnalyticsSeed(
       caption: "Question difficulty based on diagnostic design.",
       tone: difficultyTone(diffLevel),
     },
-    passageDifficulty: {
-      filled: Math.max(1, diffLevel - 1),
-      max: 5,
-      label: diffLevel >= 4 ? "Hard" : diffLevel >= 3 ? "Medium" : "Easy",
-      caption: "Relative difficulty for this stimulus.",
-      tone: difficultyTone(Math.max(1, diffLevel - 1)),
-    },
+    // Diagnostic is LR-only — no multi-question passage difficulty.
     scoreBand: {
       headline: "—",
       range: "—",
@@ -205,6 +205,8 @@ function buildDiagnosticAnalyticsSeed(
     answerPopularity: [],
     answerPopularityTotal: 0,
     userSelectedLetter: /^[A-E]$/.test(letter) ? letter : null,
+    targetTimeSeconds,
+    yourTimeSeconds: yourTimeSeconds ?? null,
     questionStemTags: meta?.questionType ? [meta.questionType] : [],
     passageTags: [],
     history: [],
@@ -262,8 +264,8 @@ function GuestDiagnosticExamLayout({
   )
 
   const questions = useMemo(
-    () => createGuestDiagnosticPreviewQuestions(config.questionCount),
-    [config.questionCount],
+    () => createDiagnosticQuestions(config.intentId),
+    [config.intentId],
   )
   const current = questions[qIndex - 1] ?? questions[0]
   const safeIndex = Math.min(Math.max(qIndex, 1), questions.length)
@@ -301,16 +303,20 @@ function GuestDiagnosticExamLayout({
     hasActiveCore,
   })
   const explanationHtml =
-    current && explanationUnlocked ? getMiniDiagnosticExplanationHtml(current.id) : null
-  const questionMeta = current ? getMiniDiagnosticQuestionMeta(current.id) : null
+    current && explanationUnlocked
+      ? getDiagnosticExplanationHtml(current.id, config.intentId)
+      : null
+  const questionMeta = current ? getDiagnosticQuestionMeta(current.id, config.intentId) : null
   const actualOutcome = answerOutcome(isReviewMode ? scoredAnswer : currentAnswer)
   const showInsightsPanel = isPostResultsMode && reviewSidePanel === "insights"
   const analyticsSeed = useMemo(() => {
     if (!current) return null
+    const spent = timeSpentByQuestionRef.current[current.id]
     return buildDiagnosticAnalyticsSeed(
       current,
       questionMeta,
       (isReviewMode ? scoredAnswer : currentAnswer)?.selectedAnswer,
+      typeof spent === "number" ? Math.round(spent) : null,
     )
   }, [current, questionMeta, isReviewMode, scoredAnswer, currentAnswer])
 
@@ -443,6 +449,7 @@ function GuestDiagnosticExamLayout({
   }
 
   const questionPanel = (
+    <ResponseMaskingProvider>
     <PracticeDrillQuestionPanel
       key={current.id}
       question={current}
@@ -476,6 +483,7 @@ function GuestDiagnosticExamLayout({
       seedQuestionTypeLabel={explanationUnlocked ? (questionMeta?.questionType ?? null) : null}
       explanationsEnabled={explanationUnlocked}
     />
+    </ResponseMaskingProvider>
   )
 
   if (isPostResultsMode) {
@@ -494,20 +502,6 @@ function GuestDiagnosticExamLayout({
           onSelectSection={() => {}}
           questionRef={`Q${safeIndex}`}
           actualScoreLabel="Actual"
-          answerView={answerViewTab}
-          activeColor={highlights.activeColor}
-          toolMode={highlights.toolMode}
-          fontScale={highlights.fontScale}
-          lineSpacing={highlights.lineSpacing}
-          boldEnabled={highlights.boldEnabled}
-          italicEnabled={highlights.italicEnabled}
-          onSelectColor={canNavigate ? highlights.selectColor : () => undefined}
-          onEraser={canNavigate ? highlights.selectEraser : () => undefined}
-          onUnderline={canNavigate ? highlights.selectUnderline : () => undefined}
-          onFontSize={canNavigate ? highlights.cycleFontSize : () => undefined}
-          onLineSpacing={canNavigate ? highlights.cycleLineSpacing : () => undefined}
-          onToggleBold={canNavigate ? highlights.toggleBold : () => undefined}
-          onToggleItalic={canNavigate ? highlights.toggleItalic : () => undefined}
           notesOpen={false}
           notesEnabled={false}
           onToggleNotes={() => undefined}
@@ -539,7 +533,7 @@ function GuestDiagnosticExamLayout({
                       onClickCapture={canNavigate ? highlights.handleContentClick : () => undefined}
                       className={cn(
                         BLIND_REVIEW_PASSAGE_TEXT_CLASS,
-                        "text-base leading-[1.5] tracking-[0.32px] text-[#36394a]",
+                        "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]",
                       )}
                     />
                   </div>
@@ -570,7 +564,7 @@ function GuestDiagnosticExamLayout({
                     onClickCapture={canNavigate ? highlights.handleContentClick : () => undefined}
                     className={cn(
                       BLIND_REVIEW_PASSAGE_TEXT_CLASS,
-                      "text-base leading-[1.5] tracking-[0.32px] text-[#36394a]",
+                      "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]",
                     )}
                   />
                 </div>
@@ -652,7 +646,7 @@ function GuestDiagnosticExamLayout({
       className={cn(
         officialChrome
           ? OFFICIAL_CARD_CLASS
-          : "practice-session-card practice-session-card--active-drill relative flex h-full max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+          : "practice-session-card practice-session-card--active-drill relative flex h-full max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
         !canNavigate && "pointer-events-none select-none",
         className,
       )}
@@ -731,6 +725,7 @@ function GuestDiagnosticExamLayout({
               officialChrome ? OFFICIAL_QUESTION_PANE_CLASS : ACTIVE_DRILL_QUESTION_PANE_CLASS,
             )}
           >
+            <ResponseMaskingProvider>
             <PracticeDrillQuestionPanel
               key={current.id}
               question={current}
@@ -752,7 +747,6 @@ function GuestDiagnosticExamLayout({
               onOpenAccessibility={canNavigate ? accessibilityPanel.openPanel : undefined}
               variant={sessionVariant}
               toolMode={highlights.toolMode}
-              onHighlighter={() => highlights.selectColor("yellow")}
               onEraser={highlights.selectEraser}
               lineFocusActive={lineFocus}
               onLineFocus={() => setLineFocus((value) => !value)}
@@ -760,6 +754,7 @@ function GuestDiagnosticExamLayout({
               fullView={isFullscreen}
               choicesDisabled={!canSelectAnswers || questionRevealed}
             />
+            </ResponseMaskingProvider>
             {questionRevealed && explanationUnlocked && explanationHtml ? (
               <div className="practice-session-explanation practice-session-inline-divider mt-6 border-t pt-6 pb-6">
                 <p className="practice-session-panel-label mb-3 text-xs font-semibold uppercase tracking-[0.04em]">

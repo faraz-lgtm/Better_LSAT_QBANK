@@ -48,7 +48,7 @@ function PrepCourseSectionAccordion({
   const remainingLabel = formatRemainingHoursLabel(remainingMinutes).replace(" left", " left in section")
 
   return (
-    <div className="border-b border-[#dfe1e7] bg-[var(--greyscale-25)]">
+    <div className="border-b border-[var(--greyscale-100)] bg-[var(--greyscale-25)]">
       <button
         type="button"
         className="flex h-[100px] w-full items-center justify-between gap-3 p-[24px] text-left transition-colors"
@@ -57,7 +57,7 @@ function PrepCourseSectionAccordion({
       >
         <div className="flex min-w-0 items-center gap-3">
           <ProgressRing value={progressPercent} size="sm" ringBg="var(--greyscale-25)" />
-          <p className="truncate text-lg font-bold leading-[1.35] text-[#062357]" title={section.title}>
+          <p className="truncate text-lg font-bold leading-[1.35] text-[var(--color-student-heading)]" title={section.title}>
             {section.title}
           </p>
         </div>
@@ -80,7 +80,7 @@ function PrepCourseSectionAccordion({
         </div>
       </button>
       {expanded ? (
-        <div className="bg-white">
+        <div className="bg-[var(--greyscale-0)]">
           {section.lessons.map((lesson) => (
             <PrepCourseLessonRow
               key={lesson.id}

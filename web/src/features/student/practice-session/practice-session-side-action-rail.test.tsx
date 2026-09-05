@@ -50,7 +50,7 @@ describe("PracticeSessionSideWidget LSAT default view", () => {
 })
 
 describe("PracticeSessionSideWidget official view", () => {
-  it("exposes LawHub tools including keyboard highlight and collapse", () => {
+  it("exposes LawHub tools including collapse and omits keyboard highlight", () => {
     render(
       <PracticeSessionSideWidget
         variant="official"
@@ -60,7 +60,6 @@ describe("PracticeSessionSideWidget official view", () => {
         onToggleResponseMasking={() => undefined}
         onReview={() => undefined}
         onAccessibility={() => undefined}
-        onHighlighter={() => undefined}
         onLineFocus={() => undefined}
         onFullscreen={() => undefined}
       />,
@@ -71,7 +70,7 @@ describe("PracticeSessionSideWidget official view", () => {
       "/figma/exam-official/arrows-pointing-out.svg",
     )
     expect(screen.getByRole("button", { name: "Review" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Keyboard Highlight" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Keyboard Highlight" })).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Open menu" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Open menu" }).querySelector("img")).toHaveAttribute(
       "src",
@@ -99,7 +98,7 @@ describe("PracticeSessionSideWidget official view", () => {
     const rail = screen.getByRole("complementary", { name: "Exam tools" })
     expect(rail).toHaveClass("w-[174px]", "justify-between")
     expect(screen.getByRole("button", { name: "Collapse menu" })).toBeInTheDocument()
-    expect(screen.getByText("Keyboard Highlight", { selector: "span" })).toBeInTheDocument()
+    expect(screen.queryByText("Keyboard Highlight")).not.toBeInTheDocument()
     expect(screen.getByText("Full Screen", { selector: "span" })).toBeInTheDocument()
     const buttons = screen.getAllByRole("button")
     expect(buttons.at(-1)).toHaveAccessibleName("Collapse menu")

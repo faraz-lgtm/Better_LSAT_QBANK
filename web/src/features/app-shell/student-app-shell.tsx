@@ -10,6 +10,7 @@ import {
   StudentEntitlementProvider,
   useStudentEntitlement,
 } from "@/features/app-shell/student-entitlement-context"
+import { AccommodationsProvider } from "@/features/student/accommodations/accommodations-context"
 import { resolveStudentShellVariant } from "@/features/app-shell/student-shell-plan-variant"
 import { GuestFreePlanSidebar } from "@/features/guest/diagnostic/guest-free-plan-sidebar"
 import { GuestUpgradeCta } from "@/features/guest/diagnostic/guest-upgrade-cta"
@@ -58,7 +59,7 @@ function StudentAppShellLayout() {
         <div
           className={cn(
             "flex h-svh min-h-0 overflow-hidden",
-            "flex h-svh min-h-0 overflow-hidden bg-[var(--primary-0)]",
+            immersive ? "bg-[var(--background)]" : "bg-[var(--primary-0)]",
           )}
         >
           {immersive ? null : freePlanShell ? (
@@ -90,7 +91,9 @@ function StudentAppShellLayout() {
 function StudentAppShell() {
   return (
     <StudentEntitlementProvider>
-      <StudentAppShellLayout />
+      <AccommodationsProvider>
+        <StudentAppShellLayout />
+      </AccommodationsProvider>
     </StudentEntitlementProvider>
   )
 }

@@ -39,14 +39,14 @@ function RepWorkAnswerToggle({
       onClick={() => onCheckedChange(!checked)}
       onMouseDown={(event) => event.preventDefault()}
       className={cn(
-        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-transparent outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0d47a1]/30",
-        checked ? "bg-[#0d47a1]" : "bg-[#dfe1e7]",
+        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-transparent outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]/30",
+        checked ? "bg-[var(--primary)]" : "bg-[var(--greyscale-50)]",
       )}
     >
       <span
         aria-hidden
         className={cn(
-          "pointer-events-none block size-5 rounded-full bg-white shadow-sm transition-transform",
+          "pointer-events-none block size-5 rounded-full bg-[var(--greyscale-0)] shadow-sm transition-transform",
           checked ? "translate-x-5" : "translate-x-0.5",
         )}
       />
@@ -91,24 +91,24 @@ function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: Explanat
       : []
 
   return (
-    <div className="grid h-full min-h-0 flex-1 gap-5 lg:grid-cols-[minmax(0,1.62fr)_minmax(0,1fr)] lg:gap-6">
-      <article className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl bg-white lg:h-full">
-        <div className={cn(paneScrollClass, "flex flex-col gap-4 px-6 py-6 lg:px-[72px]")}>
+    <div className="grid h-full min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-5">
+      <article className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl bg-[var(--greyscale-0)] lg:h-full">
+        <div className={cn(paneScrollClass, "flex flex-col gap-4 px-4 py-5")}>
           <div className="flex flex-wrap items-center gap-3">
-            <span className="inline-flex h-8 items-center rounded-full bg-[#f6f8fa] px-4 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[#666d80]">
+            <span className="inline-flex h-8 items-center rounded-full bg-[var(--greyscale-25)] px-4 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
               PASSAGE {view.passage.displayNumber}
             </span>
             {analysisAvailable ? (
               <button
                 type="button"
-                className="text-sm font-medium leading-5 text-[#0d47a1] hover:underline"
+                className="text-sm font-medium leading-5 text-[var(--primary)] hover:underline"
                 aria-expanded={analysisOpen}
                 onClick={() => setAnalysisOpen((prev) => !prev)}
               >
                 {analysisOpen ? "Hide analysis" : "Show analysis"}
               </button>
             ) : (
-              <span className="text-sm font-medium leading-5 text-[#818898]">Show analysis</span>
+              <span className="text-sm font-medium leading-5 text-[var(--greyscale-300)]">Show analysis</span>
             )}
           </div>
 
@@ -116,32 +116,32 @@ function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: Explanat
             <div className="flex flex-col gap-6">
               {analysisParagraphs.map((paragraph) => (
                 <section key={paragraph.label} className="flex flex-col gap-3">
-                  <span className="inline-flex w-fit items-center rounded-md bg-[#f3f7ff] px-2.5 py-1 text-xs font-semibold tracking-[0.24px] text-[#062357]">
+                  <span className="inline-flex w-fit items-center rounded-md bg-[var(--primary-0)] px-2.5 py-1 text-xs font-semibold tracking-[0.24px] text-[var(--color-student-heading)]">
                     {paragraph.label}
                   </span>
                   {paragraph.passageHtml ? (
                     <HtmlContent
                       html={paragraph.passageHtml}
-                      className="explanation-passage-body text-[#0d0d12]"
+                      className="explanation-passage-body text-[var(--color-student-heading)]"
                     />
                   ) : null}
-                  <div className="rounded-xl bg-[#f8fafc] px-4 py-3">
+                  <div className="rounded-xl bg-[var(--greyscale-25)] px-4 py-3">
                     <HtmlContent
                       html={paragraph.explanationHtml}
-                      className="explanation-review-body text-[#062357]"
+                      className="explanation-review-body text-[var(--color-student-heading)]"
                     />
                   </div>
                 </section>
               ))}
               {view.passageAnalysis.overallHtml?.trim() ? (
-                <section className="flex flex-col gap-3 border-t border-[#eef1f6] pt-5">
-                  <span className="inline-flex w-fit items-center rounded-md bg-[#f6f8fa] px-2.5 py-1 text-xs font-semibold tracking-[0.24px] text-[#666d80]">
+                <section className="flex flex-col gap-3 border-t border-[var(--greyscale-100)] pt-5">
+                  <span className="inline-flex w-fit items-center rounded-md bg-[var(--greyscale-25)] px-2.5 py-1 text-xs font-semibold tracking-[0.24px] text-[var(--greyscale-500)]">
                     Overall
                   </span>
-                  <div className="rounded-xl bg-[#f8fafc] px-4 py-3">
+                  <div className="rounded-xl bg-[var(--greyscale-25)] px-4 py-3">
                     <HtmlContent
                       html={view.passageAnalysis.overallHtml}
-                      className="explanation-review-body text-[#062357]"
+                      className="explanation-review-body text-[var(--color-student-heading)]"
                     />
                   </div>
                 </section>
@@ -153,15 +153,15 @@ function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: Explanat
         </div>
       </article>
 
-      <article className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl bg-white lg:h-full">
-        <div className={cn(paneScrollClass, "flex flex-col gap-4 p-6")}>
+      <article className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl bg-[var(--greyscale-0)] lg:h-full">
+        <div className={cn(paneScrollClass, "flex flex-col gap-4 px-4 py-5")}>
           <div className="flex flex-col gap-3">
             <div className="flex h-8 items-center justify-between gap-3">
-              <span className="inline-flex h-8 items-center rounded-xl bg-[#f3f7ff] px-3 text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#062357]">
+              <span className="inline-flex h-8 items-center rounded-xl bg-[var(--primary-0)] px-3 text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
                 Question {view.questionNumber}
               </span>
               <div className="flex items-center gap-4 px-2">
-                <span className="text-xs font-normal leading-[1.5] tracking-[0.24px] text-[#666d80]">
+                <span className="text-xs font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
                   Show Correct Answer
                 </span>
                 <RepWorkAnswerToggle
@@ -188,12 +188,12 @@ function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: Explanat
                 <HtmlContent html={view.questionStem} className="explanation-question-stem min-w-0 flex-1" />
                 {stemExplanationAvailable ? (
                   stemExpanded ? (
-                    <ChevronUp className="size-6 shrink-0 text-[#818898]" aria-hidden />
+                    <ChevronUp className="size-6 shrink-0 text-[var(--greyscale-300)]" aria-hidden />
                   ) : (
-                    <ChevronDown className="size-6 shrink-0 text-[#818898]" aria-hidden />
+                    <ChevronDown className="size-6 shrink-0 text-[var(--greyscale-300)]" aria-hidden />
                   )
                 ) : (
-                  <ChevronDown className="size-6 shrink-0 text-[#818898]" aria-hidden />
+                  <ChevronDown className="size-6 shrink-0 text-[var(--greyscale-300)]" aria-hidden />
                 )}
               </button>
               {stemExpanded && stemExplanationAvailable ? (

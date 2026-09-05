@@ -14,7 +14,7 @@ describe("exam chrome variants", () => {
     expect(isExamChromeLayout("default")).toBe(false)
   })
 
-  it("resolves official only when the interface toggle is on", () => {
+  it("resolves official when official chrome is selected", () => {
     expect(resolveExamSessionVariant({ blindReview: false, officialInterface: true })).toBe("official")
     expect(resolveExamSessionVariant({ blindReview: false, officialInterface: false })).toBe("active-drill")
     expect(resolveExamSessionVariant({ blindReview: true, officialInterface: true })).toBe("blind-review")

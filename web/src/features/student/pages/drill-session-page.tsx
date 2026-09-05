@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { ChevronLeft, ChevronRight, X } from "lucide-react"
 
 import { isQuestionRecommendedForBlindReview } from "@/features/student/blind-review/blind-review-navigation"
-import type { DrillQuestion, DrillSessionResponse } from "@/features/student/drills/drill-types"
+import { isUnlimitedDrillQuestionCount, type DrillQuestion, type DrillSessionResponse } from "@/features/student/drills/drill-types"
 import { ACTIVE_DRILL_BODY_GRID_CLASS, ACTIVE_DRILL_FINISH_BUTTON_CLASS, ACTIVE_DRILL_FOOTER_CLASS, ACTIVE_DRILL_PASSAGE_PANE_CLASS, ACTIVE_DRILL_PASSAGE_TEXT_CLASS, ACTIVE_DRILL_QUESTION_PANE_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import {
   OFFICIAL_BODY_GRID_CLASS,
@@ -63,7 +63,9 @@ import { PracticeSessionNotesPanel } from "@/features/student/practice-session/p
 import { PracticeSessionReviewSidePanel } from "@/features/student/practice-session/practice-session-review-side-panel"
 import {
   canChangePracticeAnswer,
+  isEditingBlindReviewAnswers,
   isOfficialLayout,
+  resolveDisplayedPracticeAnswer,
   resolveExamSessionVariant,
   type PracticeSessionVariant,
 } from "@/features/student/practice-session/practice-session-types"
@@ -72,12 +74,15 @@ import { usePracticeHighlights } from "@/features/student/practice-session/use-p
 import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
 import { PracticeSubmitSectionModal } from "@/features/student/practice-session/practice-submit-section-modal"
+import { PracticeTimeUpModal } from "@/features/student/practice-session/practice-time-up-modal"
 import { PracticeSessionImmersiveFrame } from "@/features/student/practice-session/practice-session-immersive-frame"
+import { ResponseMaskingProvider } from "@/features/student/practice-session/use-response-masking"
 import { PracticeSessionNavArrowButton } from "@/features/student/practice-session/practice-session-nav-arrow-button"
 import { PracticeSessionQuestionNavStrip } from "@/features/student/practice-session/practice-session-question-nav-strip"
 import { resolvePracticeSessionQuestionNavOutcome } from "@/features/student/practice-session/practice-session-question-nav-outcome"
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
 import { usePracticeQuestionFlags } from "@/features/student/practice-session/use-practice-question-flags"
+import { isPerQuestionDrillTiming } from "@/features/student/drills/drill-timing"
 import {
   computeElapsedTimerProgress,
   computeRemainingTimerProgress,
@@ -96,6 +101,7 @@ import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createPracticeApi } from "@/lib/api/practice"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
+import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
@@ -118,12 +124,12 @@ function ReviewStaticSwitch({ checked = false }: { checked?: boolean }) {
       aria-disabled="true"
       className={cn(
         "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent",
-        checked ? "bg-[#0d47a1]" : "bg-[#c5cad3]",
+        checked ? "bg-[var(--primary)]" : "bg-[var(--greyscale-300)]",
       )}
     >
       <span
         className={cn(
-          "block size-4 rounded-full bg-white shadow-sm",
+          "block size-4 rounded-full bg-[var(--greyscale-0)] shadow-sm dark:bg-[var(--greyscale-900)]",
           checked ? "translate-x-4" : "translate-x-0",
         )}
       />
@@ -134,11 +140,11 @@ function ReviewStaticSwitch({ checked = false }: { checked?: boolean }) {
 function ReviewPassageCardHeader() {
   return (
     <div className="mb-8 flex h-8 shrink-0 items-center justify-between gap-4">
-      <span className="inline-flex h-8 items-center rounded-[8px] bg-[#f6f8fa] px-4 py-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1]">
+      <span className="inline-flex h-8 items-center rounded-[8px] bg-[var(--primary-25)] px-4 py-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)]">
         Passage Only View
       </span>
       <span className="inline-flex h-8 items-center gap-4" aria-label="Analysis View is display only">
-        <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#062357]">
+        <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
           Analysis View
         </span>
         <ReviewStaticSwitch />
@@ -148,6 +154,7 @@ function ReviewPassageCardHeader() {
 }
 
 function DrillSessionPage() {
+  const { scaleFactor: accommodationScaleFactor } = useAccommodations()
   const { sessionId } = useParams<{ sessionId: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -167,8 +174,12 @@ function DrillSessionPage() {
     Record<string, { selectedAnswer: string; isCorrect: boolean }>
   >({})
   const [submitting, setSubmitting] = useState(false)
+  const [extending, setExtending] = useState(false)
+  const [poolExhausted, setPoolExhausted] = useState(false)
   const [finishing, setFinishing] = useState(false)
   const [submitModalOpen, setSubmitModalOpen] = useState(false)
+  const [drillTimeUpOpen, setDrillTimeUpOpen] = useState(false)
+  const drillTimeUpTriggeredRef = useRef(false)
   const [completeModal, setCompleteModal] = useState<{
     rawScore: number
     questionCount: number
@@ -247,6 +258,7 @@ function DrillSessionPage() {
 
   const { elapsed, countdown, paused, pauseTimer, resumeTimer, resetElapsed, setInitialCountdown } =
     usePracticeSessionTimer()
+  const appliedAccommodationScaleRef = useRef<number | null>(null)
   const pauseModal = usePracticeSessionPauseModal(pauseTimer, resumeTimer)
   const highlights = usePracticeHighlights()
   const accessibilityPanel = usePracticeSessionAccessibilityPanel(
@@ -279,17 +291,6 @@ function DrillSessionPage() {
       const data = await practiceApi.getDrillSession(sessionId)
       if (generation !== loadGenerationRef.current) return
       setDrill(data)
-      const drillTiming = data.metadata.timing
-      if (isDrillCountdownTiming(drillTiming)) {
-        setInitialCountdown(
-          resolveTimerBudgetSeconds({
-            timing: drillTiming,
-            questionCount: data.questions.length,
-          }),
-        )
-      } else {
-        setInitialCountdown(null)
-      }
       const map: Record<string, { selectedAnswer: string; isCorrect: boolean }> = {}
       for (const a of data.answers) {
         map[a.questionId] = { selectedAnswer: a.selectedAnswer, isCorrect: a.isCorrect }
@@ -325,7 +326,13 @@ function DrillSessionPage() {
     } finally {
       if (generation === loadGenerationRef.current) setLoading(false)
     }
-  }, [practiceApi, sessionId, drillBlindReviewActiveKey, drillActualAnswersKey, drillBlindReviewAnswersKey, setInitialCountdown])
+  }, [
+    practiceApi,
+    sessionId,
+    drillBlindReviewActiveKey,
+    drillActualAnswersKey,
+    drillBlindReviewAnswersKey,
+  ])
 
   useEffect(() => {
     void load()
@@ -334,8 +341,44 @@ function DrillSessionPage() {
     }
   }, [load])
 
+  useEffect(() => {
+    appliedAccommodationScaleRef.current = null
+  }, [sessionId])
+
+  // Re-apply countdown when accommodations resolve after session load (avoids stuck 35:00).
+  // Per-question mode resets on each item; other modes keep a single session budget.
+  useEffect(() => {
+    if (!drill || reviewAfterComplete) return
+    const drillTiming = drill.metadata.timing
+    if (!isDrillCountdownTiming(drillTiming)) {
+      setInitialCountdown(null)
+      appliedAccommodationScaleRef.current = null
+      return
+    }
+    const perQuestion = isPerQuestionDrillTiming(drillTiming)
+    if (!perQuestion && appliedAccommodationScaleRef.current === accommodationScaleFactor) return
+    if (!perQuestion) {
+      appliedAccommodationScaleRef.current = accommodationScaleFactor
+    }
+    setInitialCountdown(
+      resolveTimerBudgetSeconds({
+        timing: drillTiming,
+        questionCount: drill.questions.length,
+        scaleFactor: accommodationScaleFactor,
+      }),
+    )
+  }, [
+    accommodationScaleFactor,
+    drill?.metadata.timing,
+    drill?.questions.length,
+    qIndex,
+    reviewAfterComplete,
+    setInitialCountdown,
+  ])
+
   const questions = drill?.questions ?? []
   const metadata = drill?.metadata
+  const isUnlimitedQuestionDrill = isUnlimitedDrillQuestionCount(metadata?.questionCount)
   const showAnswersMode = metadata?.showAnswers ?? "end"
   const sectionType = metadata?.sectionType ?? "LR"
   const questionIds = useMemo(() => questions.map((q) => q.id), [questions])
@@ -365,17 +408,72 @@ function DrillSessionPage() {
 
   const safeIndex = Math.min(Math.max(qIndex, 1), Math.max(questions.length, 1))
   const current = questions[safeIndex - 1]
-  const editingBlindReviewAnswers = !reviewAfterComplete || answerViewTab === "blind_review"
+
+  const goToNextQuestion = useCallback(async () => {
+    if (safeIndex < questions.length) {
+      setQIndex((index) => index + 1)
+      return
+    }
+    if (!isUnlimitedQuestionDrill || !sessionId || extending || poolExhausted || reviewAfterComplete) {
+      return
+    }
+
+    setExtending(true)
+    setError(null)
+    try {
+      const out = await practiceApi.extendDrill({ sessionId })
+      if (out.questions.length === 0) {
+        setPoolExhausted(true)
+        return
+      }
+      setDrill((prev) =>
+        prev
+          ? {
+              ...prev,
+              session: out.session,
+              metadata: out.metadata,
+              questions: [...prev.questions, ...out.questions],
+            }
+          : prev,
+      )
+      setQIndex((index) => index + 1)
+    } catch (e) {
+      setError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to load more questions")
+    } finally {
+      setExtending(false)
+    }
+  }, [
+    extending,
+    isUnlimitedQuestionDrill,
+    poolExhausted,
+    practiceApi,
+    questions.length,
+    reviewAfterComplete,
+    safeIndex,
+    sessionId,
+  ])
+
+  const goToPreviousQuestion = useCallback(() => {
+    setQIndex((index) => Math.max(1, index - 1))
+  }, [])
+
+  const disableNextAtLast = !isUnlimitedQuestionDrill || poolExhausted
+
+  const answeringBlindReview = reviewAfterComplete && !resultsReviewMode
+  const editingBlindReviewAnswers = isEditingBlindReviewAnswers({
+    resultsReview: resultsReviewMode,
+    answeringBlindReview,
+    answerView: answerViewTab,
+  })
   const displayAnswer = current
-    ? resultsReviewMode
-      ? answerViewTab === "clean"
-        ? undefined
-        : answerViewTab === "actual"
-          ? actualAnswersByQuestion[current.id]
-          : answersByQuestion[current.id]
-      : reviewAfterComplete && answerViewTab === "actual"
-        ? actualAnswersByQuestion[current.id]
-        : answersByQuestion[current.id]
+    ? resolveDisplayedPracticeAnswer({
+        resultsReview: resultsReviewMode,
+        answeringBlindReview,
+        answerView: answerViewTab,
+        actual: actualAnswersByQuestion[current.id],
+        blindReview: answersByQuestion[current.id],
+        live: answersByQuestion[current.id],
+      })
     : undefined
   const currentAnswer = displayAnswer
   const selectedIndex =
@@ -444,7 +542,9 @@ function DrillSessionPage() {
       })
       return
     }
-    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), { blindReview: reviewAfterComplete })) {
+    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
+      blindReview: editingBlindReviewAnswers,
+    })) {
       return
     }
     if (selectedIndex === index) return
@@ -470,7 +570,7 @@ function DrillSessionPage() {
       }))
       if (showAnswersMode === "each") {
         window.setTimeout(() => {
-          setQIndex((i) => Math.min(questions.length, i + 1))
+          void goToNextQuestion()
         }, 600)
       }
     } catch (e) {
@@ -488,7 +588,7 @@ function DrillSessionPage() {
   async function handleResetResponse() {
     if (!sessionId || !current || submitting) return
     if (reviewAfterComplete && !editingBlindReviewAnswers) return
-    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), { blindReview: reviewAfterComplete })) {
+    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), { blindReview: editingBlindReviewAnswers })) {
       return
     }
 
@@ -653,6 +753,29 @@ function DrillSessionPage() {
     }
   }
 
+  const timedDrillForTimeUp = isDrillCountdownTiming(metadata?.timing) && countdown != null
+
+  useEffect(() => {
+    if (
+      drillTimeUpTriggeredRef.current ||
+      !timedDrillForTimeUp ||
+      countdown !== 0 ||
+      sessionCompleted ||
+      reviewAfterComplete ||
+      resultsReviewMode
+    ) {
+      return
+    }
+    drillTimeUpTriggeredRef.current = true
+    setDrillTimeUpOpen(true)
+  }, [
+    countdown,
+    resultsReviewMode,
+    reviewAfterComplete,
+    sessionCompleted,
+    timedDrillForTimeUp,
+  ])
+
   if (!sessionId) {
     return (
       <StudentMain layout="immersive">
@@ -722,17 +845,20 @@ function DrillSessionPage() {
   const timerBudgetSeconds = resolveTimerBudgetSeconds({
     timing: metadata?.timing,
     questionCount: questions.length,
+    scaleFactor: accommodationScaleFactor,
   })
-  const timedDrill = isDrillCountdownTiming(metadata?.timing) && countdown != null
+  const timedDrill = timedDrillForTimeUp
   const timerLabel = timedDrill ? "Remaining" : "Elapsed"
   const timerDisplaySeconds = timedDrill ? countdown : elapsed
   const timerProgress = timedDrill
     ? computeRemainingTimerProgress(countdown, timerBudgetSeconds)
     : computeElapsedTimerProgress(elapsed, timerBudgetSeconds)
+
   const allowReselect =
     !resultsReviewMode &&
+    (!answeringBlindReview || editingBlindReviewAnswers) &&
     canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
-      blindReview: reviewAfterComplete,
+      blindReview: editingBlindReviewAnswers,
     })
   const prepTestLabel = headerLabel.replace(/^PrepTest\s*/i, "PT ")
   const questionRefLabel = `Q${safeIndex}`
@@ -786,20 +912,6 @@ function DrillSessionPage() {
       onSelectSection={() => {}}
       questionRef={questionRefLabel}
       actualScoreLabel="Actual: BR"
-      answerView={answerViewTab}
-      activeColor={highlights.activeColor}
-      toolMode={highlights.toolMode}
-      fontScale={highlights.fontScale}
-      lineSpacing={highlights.lineSpacing}
-      boldEnabled={highlights.boldEnabled}
-      italicEnabled={highlights.italicEnabled}
-      onSelectColor={highlights.selectColor}
-      onEraser={highlights.selectEraser}
-      onUnderline={highlights.selectUnderline}
-      onFontSize={highlights.cycleFontSize}
-      onLineSpacing={highlights.cycleLineSpacing}
-      onToggleBold={highlights.toggleBold}
-      onToggleItalic={highlights.toggleItalic}
       notesOpen={resultsReviewMode ? reviewSidePanel === "notes" : notesOpen}
       notesEnabled={resultsReviewMode || answerViewTab === "blind_review"}
       onToggleNotes={handleToggleNotes}
@@ -825,7 +937,7 @@ function DrillSessionPage() {
             ? resultsReviewMode
               ? REVIEW_BODY_CLASS
               : BLIND_REVIEW_BODY_CLASS
-            : "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden"
+            : "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--greyscale-0)] text-[var(--color-student-heading)]"
         }
         data-color-scheme={highlights.accessibilitySettings.colorScheme}
         style={useBlindReviewLayout ? undefined : highlights.contentStyle}
@@ -850,7 +962,7 @@ function DrillSessionPage() {
                   onClickCapture={highlights.handleContentClick}
                   className={cn(
                     BLIND_REVIEW_PASSAGE_TEXT_CLASS,
-                    resultsReviewMode && "text-base leading-[1.5] tracking-[0.32px] text-[#36394a]",
+                    resultsReviewMode && "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]",
                   )}
                 />
               </div>
@@ -875,17 +987,20 @@ function DrillSessionPage() {
                   onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
                   flagsDisabled={sessionCompleted || blindReviewMode}
                   variant={sessionVariant}
-                  blindReviewChrome={blindReviewMode}
+                  blindReviewChrome={useBlindReviewLayout}
                   answerView={answerViewTab}
                   onAnswerViewChange={handleAnswerViewChange}
                   recommendedForBr={recommendedForBr}
-                  choicesDisabled={blindReviewMode && !editingBlindReviewAnswers}
+                  toolMode={highlights.toolMode}
+                  choicesDisabled={(reviewAfterComplete || resultsReviewMode) && !editingBlindReviewAnswers}
                   reviewChrome={resultsReviewMode}
                   actualOutcome={actualOutcome}
                   blindReviewOutcome={blindReviewOutcome}
                   showCorrectAnswer={showCorrectAnswer}
                   onShowCorrectAnswerChange={setShowCorrectAnswer}
                   blindReviewTabEnabled={false}
+                  onAnnotateMouseUp={highlights.handleContentMouseUp}
+                  onAnnotateClick={highlights.handleContentClick}
                 />
               </div>
             </div>
@@ -917,7 +1032,7 @@ function DrillSessionPage() {
                   toolMode={highlights.toolMode}
                   onMouseUp={highlights.handleContentMouseUp}
                   onClickCapture={highlights.handleContentClick}
-                  className={cn(BLIND_REVIEW_PASSAGE_TEXT_CLASS, "text-base leading-[1.5] tracking-[0.32px] text-[#36394a]")}
+                  className={cn(BLIND_REVIEW_PASSAGE_TEXT_CLASS, "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]")}
                 />
               </div>
               <div ref={questionPaneRef} className={REVIEW_QUESTION_PANEL_CLASS}>
@@ -949,6 +1064,8 @@ function DrillSessionPage() {
                   showCorrectAnswer={showCorrectAnswer}
                   onShowCorrectAnswerChange={setShowCorrectAnswer}
                   blindReviewTabEnabled={false}
+                  onAnnotateMouseUp={highlights.handleContentMouseUp}
+                  onAnnotateClick={highlights.handleContentClick}
                 />
               </div>
             </div>
@@ -969,7 +1086,7 @@ function DrillSessionPage() {
                     ? cn(OFFICIAL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1 lg:pr-0")
                   : useActiveDrillLayout
                   ? ACTIVE_DRILL_BODY_GRID_CLASS
-                  : "lg:grid-cols-2 lg:divide-x divide-[#dfe1e7]",
+                  : "lg:grid-cols-2 lg:divide-x divide-[var(--greyscale-100)] dark:divide-[var(--greyscale-600)]",
             )}
           >
             <div
@@ -982,7 +1099,7 @@ function DrillSessionPage() {
                     ? OFFICIAL_PASSAGE_PANE_CLASS
                   : useActiveDrillLayout
                     ? ACTIVE_DRILL_PASSAGE_PANE_CLASS
-                    : "border-[#dfe1e7] border-b p-5 lg:border-b-0",
+                    : "border-b border-[var(--greyscale-100)] p-5 lg:border-b-0",
               )}
             >
               {resultsReviewMode ? <ReviewPassageCardHeader /> : null}
@@ -1017,7 +1134,7 @@ function DrillSessionPage() {
                     ? OFFICIAL_QUESTION_PANE_CLASS
                   : useActiveDrillLayout
                     ? ACTIVE_DRILL_QUESTION_PANE_CLASS
-                    : "gap-4 border-[#dfe1e7] p-5",
+                    : "gap-4 border-[var(--greyscale-100)] p-5",
               )}
             >
               <PracticeDrillQuestionPanel
@@ -1041,23 +1158,24 @@ function DrillSessionPage() {
                 onOpenAccessibility={useActiveDrillLayout ? accessibilityPanel.openPanel : undefined}
                 variant={sessionVariant}
                 toolMode={highlights.toolMode}
-                onHighlighter={() => highlights.selectColor("yellow")}
                 onEraser={highlights.selectEraser}
                 lineFocusActive={lineFocus}
                 onLineFocus={() => setLineFocus((value) => !value)}
                 onFullscreen={toggleExamFullscreen}
                 fullView={isFullscreen}
-                blindReviewChrome={blindReviewMode}
+                blindReviewChrome={useBlindReviewLayout}
                 answerView={answerViewTab}
                 onAnswerViewChange={handleAnswerViewChange}
                 recommendedForBr={recommendedForBr}
-                choicesDisabled={blindReviewMode && !editingBlindReviewAnswers}
+                choicesDisabled={(reviewAfterComplete || resultsReviewMode) && !editingBlindReviewAnswers}
                 reviewChrome={resultsReviewMode}
                 actualOutcome={actualOutcome}
                 blindReviewOutcome={blindReviewOutcome}
                 showCorrectAnswer={showCorrectAnswer}
                 onShowCorrectAnswerChange={setShowCorrectAnswer}
                 blindReviewTabEnabled={false}
+                onAnnotateMouseUp={highlights.handleContentMouseUp}
+                onAnnotateClick={highlights.handleContentClick}
               />
             </div>
           </div>
@@ -1073,7 +1191,7 @@ function DrillSessionPage() {
               ? OFFICIAL_FOOTER_CLASS
             : useActiveDrillLayout
               ? ACTIVE_DRILL_FOOTER_CLASS
-              : "flex shrink-0 items-center justify-between gap-3 border-t border-[#dfe1e7] bg-background px-6 py-3 md:gap-4 md:px-6",
+              : "flex shrink-0 items-center justify-between gap-3 border-t border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-3 md:gap-4 md:px-6",
         )}
       >
         {useActiveDrillLayout ? (
@@ -1085,8 +1203,9 @@ function DrillSessionPage() {
             variant={sessionVariant}
             showPassageBreaks={sectionType === "RC"}
             onSelectQuestion={setQIndex}
-            onPrev={() => setQIndex((i) => Math.max(1, i - 1))}
-            onNext={() => setQIndex((i) => Math.min(questions.length, i + 1))}
+            onPrev={goToPreviousQuestion}
+            onNext={() => void goToNextQuestion()}
+            disableNextAtLast={disableNextAtLast}
           />
         ) : useBlindReviewLayout ? (
           <div className={resultsReviewMode ? REVIEW_FOOTER_ROW_CLASS : BLIND_REVIEW_FOOTER_ROW_CLASS}>
@@ -1171,6 +1290,14 @@ function DrillSessionPage() {
           </>
         )}
       </footer>
+      <PracticeSessionHighlightPopover
+        menu={highlights.selectionMenu}
+        onApplyColor={highlights.applySelectionColor}
+        onRemove={highlights.removeSelectionHighlight}
+        onToggleExpanded={highlights.toggleSelectionExpanded}
+        onDismiss={highlights.dismissSelectionMenu}
+        isAnchorConnected={highlights.isSelectionMenuAnchorConnected}
+      />
     </>
   )
 
@@ -1219,26 +1346,17 @@ function DrillSessionPage() {
         />
       ) : null}
       {sessionInnerContent}
-      <PracticeSessionHighlightPopover
-        menu={highlights.selectionMenu}
-        onApplyColor={highlights.applySelectionColor}
-        onRemove={highlights.removeSelectionHighlight}
-        onToggleExpanded={highlights.toggleSelectionExpanded}
-        onDismiss={highlights.dismissSelectionMenu}
-        isAnchorConnected={highlights.isSelectionMenuAnchorConnected}
-      />
     </>
   )
 
   return (
+    <ResponseMaskingProvider>
     <StudentMain
       layout="immersive"
       className={cn(
         "flex min-h-0 max-w-none flex-1 flex-col overflow-hidden",
         useBlindReviewLayout
-          ? resultsReviewMode
-            ? "h-full bg-white"
-            : "h-full bg-[#f5f9ff]"
+          ? "h-full bg-[var(--background)]"
           : !useActiveDrillLayout && "px-0 py-4 md:py-5",
         !useActiveDrillLayout && !blindReviewMode && "bg-[var(--primary-900,#041A44)]",
       )}
@@ -1269,7 +1387,7 @@ function DrillSessionPage() {
             className={cn(
               officialChrome
                 ? OFFICIAL_CARD_CLASS
-                : "practice-session-card practice-session-card--active-drill relative flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[#dfe1e7] bg-white shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+                : "practice-session-card practice-session-card--active-drill relative flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
             )}
           >
             {sessionCardContent}
@@ -1306,7 +1424,7 @@ function DrillSessionPage() {
               {error}
             </p>
           ) : null}
-          <div className="practice-session-card flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-2xl border border-[#dfe1e7] bg-background shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+          <div className="practice-session-card flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
             {sessionCardContent}
           </div>
         </div>
@@ -1333,15 +1451,33 @@ function DrillSessionPage() {
         onConfirm={() => void handleConfirmSubmitDrill()}
       />
 
+      <PracticeTimeUpModal
+        open={drillTimeUpOpen}
+        submitting={finishing}
+        onNext={() => {
+          setDrillTimeUpOpen(false)
+          void handleConfirmSubmitDrill()
+        }}
+      />
+
       <PracticeCompleteModal
         open={completeModal != null}
         titleId="drill-complete-title"
+        title={
+          isPrepCourseAdaptiveDrill
+            ? "Smart Drill Done!"
+            : sectionType === "RC"
+              ? "Reading Comprehension Drill Done!"
+              : "Logical Reasoning Drill Done!"
+        }
         subtitle={
           isPrepCourseAdaptiveDrill
             ? "You've completed the Smart Drill"
             : isPrepCourseDrill
               ? "You've completed the active drill"
-              : "You've completed the drill"
+              : sectionType === "RC"
+                ? "You've completed the RC drill"
+                : "You've completed the LR drill"
         }
         rawScore={completeModal?.rawScore ?? 0}
         questionCount={completeModal?.questionCount ?? 1}
@@ -1354,6 +1490,7 @@ function DrillSessionPage() {
         onDone={leaveDrillSession}
       />
     </StudentMain>
+    </ResponseMaskingProvider>
   )
 }
 

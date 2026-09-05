@@ -1,10 +1,10 @@
 import type { GuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-intent-types"
 
-/** Free-plan teaser: first N explanations unlocked on Review in Tester. */
-function freeDiagnosticExplanationLimit(intentId: GuestDiagnosticIntentId): number {
-  if (intentId === "mini") return 5
-  if (intentId === "quick") return 10
-  return 10
+/** Free-plan teaser: first N explanations unlocked on Review in Tester / results. */
+function freeDiagnosticExplanationLimit(_intentId: GuestDiagnosticIntentId): number {
+  // Free users see the first 5 result rows on Mini and Full (incl. section diagnostic),
+  // then the analytics limit gate.
+  return 5
 }
 
 /**
@@ -23,8 +23,8 @@ function canShowDiagnosticExplanation(input: {
 }
 
 /**
- * Results-list access. Free Mini unlocks the first 5 rows; Free Full unlocks
- * the first 10. Remaining rows stay blurred until upgrade.
+ * Results-list access. Free students unlock the first 5 rows on Mini and Full
+ * (including Full Section / quick). Remaining rows stay gated until upgrade.
  */
 function canShowDiagnosticResultDetails(input: {
   intentId: GuestDiagnosticIntentId

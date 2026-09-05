@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   formatAccuracyPct,
   formatCorrectSummaryLine,
+  formatDrillAboutTiming,
   formatLrDrillQuestionTitle,
   formatLrDrillResultsTitle,
   formatRcDrillResultsTitle,
@@ -27,6 +28,9 @@ describe("lr-drill-results-format", () => {
     expect(
       formatLrDrillResultsTitle({ questionCount: 5, timing: "unlimited", take: 3 }),
     ).toBe("5 Questions Unlimited Time - 3")
+    expect(
+      formatLrDrillResultsTitle({ questionCount: 5, timing: "pace", take: 1 }),
+    ).toBe("5 Questions Standard - 1")
   })
 
   it("builds the Figma RC hero title", () => {
@@ -62,5 +66,11 @@ describe("lr-drill-results-format", () => {
   it("labels the first take as First", () => {
     expect(formatTakeLabel(1)).toBe("First")
     expect(formatTakeLabel(3)).toBe("Third")
+  })
+
+  it("scales About timing for accommodations", () => {
+    expect(formatDrillAboutTiming("35", 0)).toBe("35 min")
+    expect(formatDrillAboutTiming("35", 0, 1.5)).toBe("53 min")
+    expect(formatDrillAboutTiming("standard", 0, 2)).toBe("70 min")
   })
 })

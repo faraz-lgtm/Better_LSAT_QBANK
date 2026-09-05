@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import type { PracticeSessionSummary } from "@/lib/api/analytics"
 import {
   averageSectionMissedDisplay,
+  bestSectionMissedDisplay,
   formatSignedMissedAverage,
 } from "./section-average-score"
 
@@ -47,5 +48,32 @@ describe("averageSectionMissedDisplay", () => {
 
   it("returns an em dash when there are no completed sessions", () => {
     expect(averageSectionMissedDisplay([], "RC")).toBe("—")
+  })
+})
+
+describe("bestSectionMissedDisplay", () => {
+  it("uses the fewest missed questions in the same minus format as average", () => {
+    const value = bestSectionMissedDisplay(
+      [
+        session({ id: "1", sectionType: "LR", rawScore: 20, metadata: { questionCount: 25 } }),
+        session({ id: "2", sectionType: "LR", rawScore: 22, metadata: { questionCount: 25 } }),
+      ],
+      "LR",
+    )
+    // Best raw 22/25 → missed 3
+    expect(value).toBe("-3")
+  })
+
+  it("returns 0 when a section was completed with no misses", () => {
+    expect(
+      bestSectionMissedDisplay(
+        [session({ id: "1", sectionType: "RC", rawScore: 27, metadata: { questionCount: 27 } })],
+        "RC",
+      ),
+    ).toBe("0")
+  })
+
+  it("returns an em dash when there are no completed sessions", () => {
+    expect(bestSectionMissedDisplay([], "LR")).toBe("—")
   })
 })

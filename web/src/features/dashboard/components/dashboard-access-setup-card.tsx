@@ -189,12 +189,12 @@ function DashboardAccessSetupCard() {
   if (!showCard || !namesLoaded) return null
 
   return (
-    <section className="dashboard-access-setup rounded-2xl border border-[#dfe1e7] bg-white p-5 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)] sm:p-6">
+    <section className="dashboard-access-setup rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-5 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)] sm:p-6">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-[#0f172b]">
+        <h2 className="text-lg font-semibold text-[var(--color-student-heading)]">
           {isPaymentRequired ? "Choose a plan to continue" : "Complete LawHub setup"}
         </h2>
-        <p className="mt-1 text-sm leading-relaxed text-[#62748e]">
+        <p className="mt-1 text-sm leading-relaxed text-[var(--greyscale-500)]">
           {isPaymentRequired
             ? "Subscribe to Core or Live to unlock practice, analytics, and LawHub PrepPlus linking."
             : "Link your Official LSAT PrepPlus through LawHub to unlock PrepTests, drills, and other LSAC content."}
@@ -202,7 +202,7 @@ function DashboardAccessSetupCard() {
       </div>
 
       {checkoutSuccess ? (
-        <p className="mb-4 rounded-xl bg-[#ecfdf3] px-3 py-2 text-sm font-medium text-[#067647]">
+        <p className="mb-4 rounded-xl bg-[var(--explanation-answered-bg)] px-3 py-2 text-sm font-medium text-[var(--explanation-answered)]">
           Payment successful. Your Better LSAT subscription is active.
         </p>
       ) : null}
@@ -212,7 +212,7 @@ function DashboardAccessSetupCard() {
           <Button type="button" className="w-full sm:w-auto" onClick={openPricingModal}>
             View plans
           </Button>
-          <p className="text-xs leading-relaxed text-[#62748e]">
+          <p className="text-xs leading-relaxed text-[var(--greyscale-500)]">
             The LawHub fee goes to LSAC. One PrepPlus subscription works across prep platforms.
           </p>
         </div>
@@ -220,14 +220,14 @@ function DashboardAccessSetupCard() {
 
       {!isPaymentRequired && isPendingCoachLink ? (
         <div className="space-y-4">
-          <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-[#334155]">
+          <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-[var(--color-student-heading)]">
             <li>Check your email from LSAC (same address you used to sign up).</li>
             <li>
               Click <strong>Activate</strong> or <strong>Link to Coach</strong> and sign in to LawHub.
             </li>
             <li>Return here and click the button below.</li>
           </ol>
-          <p className="text-xs leading-relaxed text-[#62748e]">
+          <p className="text-xs leading-relaxed text-[var(--greyscale-500)]">
             The LawHub fee goes to LSAC. One PrepPlus subscription works across prep platforms.
           </p>
           <Button
@@ -244,7 +244,7 @@ function DashboardAccessSetupCard() {
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label htmlFor="dashboard-lsac-first-name" className="mb-1.5 block text-sm font-medium text-[#334155]">
+              <label htmlFor="dashboard-lsac-first-name" className="mb-1.5 block text-sm font-medium text-[var(--color-student-heading)]">
                 First name
               </label>
               <Input
@@ -256,7 +256,7 @@ function DashboardAccessSetupCard() {
               />
             </div>
             <div>
-              <label htmlFor="dashboard-lsac-last-name" className="mb-1.5 block text-sm font-medium text-[#334155]">
+              <label htmlFor="dashboard-lsac-last-name" className="mb-1.5 block text-sm font-medium text-[var(--color-student-heading)]">
                 Last name
               </label>
               <Input
@@ -270,9 +270,9 @@ function DashboardAccessSetupCard() {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-[#e2e8f0] p-4">
-              <h3 className="text-sm font-semibold text-[#0f172b]">PrepPlus included with your plan</h3>
-              <p className="mt-1 text-xs leading-relaxed text-[#62748e]">
+            <div className="rounded-xl border border-[var(--greyscale-100)] p-4">
+              <h3 className="text-sm font-semibold text-[var(--color-student-heading)]">PrepPlus included with your plan</h3>
+              <p className="mt-1 text-xs leading-relaxed text-[var(--greyscale-500)]">
                 Register or link LawHub using the name above and your signup email.
               </p>
               <Button
@@ -283,9 +283,9 @@ function DashboardAccessSetupCard() {
                 {isSubmitting ? "Linking…" : "Complete LawHub setup"}
               </Button>
             </div>
-            <div className="rounded-xl border border-[#e2e8f0] p-4">
-              <h3 className="text-sm font-semibold text-[#0f172b]">I already have LawHub PrepPlus</h3>
-              <p className="mt-1 text-xs leading-relaxed text-[#62748e]">
+            <div className="rounded-xl border border-[var(--greyscale-100)] p-4">
+              <h3 className="text-sm font-semibold text-[var(--color-student-heading)]">I already have LawHub PrepPlus</h3>
+              <p className="mt-1 text-xs leading-relaxed text-[var(--greyscale-500)]">
                 Link your existing LawHub account after subscribing to Core or Live.
               </p>
               <Button
@@ -302,7 +302,7 @@ function DashboardAccessSetupCard() {
       ) : null}
 
       {error ? <p className="mt-3 text-sm text-[#95122b]">{error}</p> : null}
-      {statusMessage && !error ? <p className="mt-3 text-sm text-[#067647]">{statusMessage}</p> : null}
+      {statusMessage && !error ? <p className="mt-3 text-sm text-[var(--explanation-answered)]">{statusMessage}</p> : null}
     </section>
   )
 }

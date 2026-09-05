@@ -1,4 +1,57 @@
-import type { PrepTestPoolAttempt, PrepTestPoolItem } from "@/features/student/preptests/preptest-types"
+import type {
+  PrepTestPoolAttempt,
+  PrepTestPoolFilter,
+  PrepTestPoolItem,
+  PrepTestPoolStatusCounts,
+} from "@/features/student/preptests/preptest-types"
+
+/** Timed take that is paused/saved — not Blind Review. */
+export function isPrepTestInProcess(
+  item: Pick<PrepTestPoolItem, "status" | "blindReviewStatus">,
+): boolean {
+  return item.status === "in_progress" && item.blindReviewStatus == null
+}
+
+export function matchesPrepTestPoolFilter(
+  item: Pick<PrepTestPoolItem, "status" | "blindReviewStatus">,
+  filter: PrepTestPoolFilter | undefined,
+): boolean {
+  if (!filter || filter === "all") return true
+  if (filter === "blind_review") return item.blindReviewStatus != null
+  if (filter === "in_progress") return isPrepTestInProcess(item)
+  return item.status === filter
+}
+
+export function filterPrepTestPoolItems(
+  items: PrepTestPoolItem[],
+  filter: PrepTestPoolFilter | undefined,
+): PrepTestPoolItem[] {
+  return items.filter((item) => matchesPrepTestPoolFilter(item, filter))
+}
+
+export function adjustPrepTestPoolStatusCounts(
+  counts: PrepTestPoolStatusCounts,
+  items: PrepTestPoolItem[],
+  filter: PrepTestPoolFilter | undefined,
+): PrepTestPoolStatusCounts {
+  const staleInProcess = filter === "in_progress" && items.some((item) => item.blindReviewStatus != null)
+  if (!staleInProcess) return counts
+  return {
+    ...counts,
+    in_progress: Math.max(0, counts.in_progress - counts.blind_review),
+  }
+}
+
+export function adjustPrepTestPoolTotal(
+  total: number,
+  counts: PrepTestPoolStatusCounts,
+  items: PrepTestPoolItem[],
+  filter: PrepTestPoolFilter | undefined,
+): number {
+  const staleInProcess = filter === "in_progress" && items.some((item) => item.blindReviewStatus != null)
+  if (!staleInProcess) return total
+  return Math.max(0, total - counts.blind_review)
+}
 
 export function coercePoolScore(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value

@@ -2,26 +2,53 @@ import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { ExternalLink } from "lucide-react"
 
-import { PracticeLrRcStarterCards } from "@/features/student/components/practice-lr-rc-starter-cards"
+import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
+import { PracticeListFooter } from "@/features/student/components/practice-list-footer"
+import { PracticeSectionContinueRow } from "@/features/student/components/practice-section-continue-row"
+import { PracticeSectionStartCard } from "@/features/student/components/practice-section-start-card"
 import { StudentMain } from "@/features/student/components/student-main"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
+import { visibleTagDrillCount } from "@/features/student/drills/tag-drills-priority"
+import {
+  mapSessionToContinueSection,
+  type ContinueSection,
+} from "@/features/student/sections/section-dashboard-mappers"
 import { createAnalyticsApi } from "@/lib/api/analytics"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+
+type SectionFilter = "all" | "lr" | "rc"
+
+function padInProcessCount(count: number): string {
+  return `${String(count).padStart(2, "0")} In process`
+}
 
 function PracticeSectionsPage() {
   const navigate = useNavigate()
   const analyticsApi = useMemo(() => createAnalyticsApi(getSupabaseBrowserClient()), [])
 
-  const [inProcessCount, setInProcessCount] = useState(0)
+  const [sectionFilter, setSectionFilter] = useState<SectionFilter>("all")
+  const [continueSections, setContinueSections] = useState<ContinueSection[]>([])
+  const [continueExpanded, setContinueExpanded] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
     void (async () => {
+      setLoading(true)
       try {
         const sessionsResult = await analyticsApi.getSessions({ kind: "SECTION", limit: 50 })
         if (cancelled) return
-        setInProcessCount(sessionsResult.sessions.filter((s) => !s.completedAt).length)
+        setContinueSections(
+          sessionsResult.sessions
+            .filter((s) => !s.completedAt)
+            .map(mapSessionToContinueSection)
+            .filter((s): s is ContinueSection => s != null),
+        )
+        setContinueExpanded(false)
       } catch {
-        if (!cancelled) setInProcessCount(0)
+        if (!cancelled) setContinueSections([])
+      } finally {
+        if (!cancelled) setLoading(false)
       }
     })()
     return () => {
@@ -29,43 +56,100 @@ function PracticeSectionsPage() {
     }
   }, [analyticsApi])
 
-  return (
-    <StudentMain>
-        <section className="rounded-2xl border border-[#d8dee8] bg-[#ffffff] p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div className="flex items-start gap-3 mb-3">
-            
-              <p className="max-w-xl text-[14px] font-semibold leading-snug tracking-[0.1px] text-[#0D47A1]">
-                Take a complete section from an official PrepTest.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-[14px] font-semibold leading-none tracking-[0.1px] text-[#0d47a1]">
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 hover:underline"
-                onClick={() => navigate("/app/analytics/sections")}
-              >
-                Sections History
-                <ExternalLink className="size-3.5" />
-              </button>
-              <span className="mx-1 h-3.5 w-px bg-[#dfe1e7]" />
-              <span>In Process</span>
-              <span className="inline-flex size-4.5 items-center justify-center rounded-full bg-[#e7ecf4] text-[10px] font-semibold text-[#0d47a1]">
-                {inProcessCount}
-              </span>
-            </div>
-          </div>
+  const filteredContinue = continueSections.filter((row) => {
+    if (sectionFilter === "all") return true
+    return sectionFilter === "lr" ? row.section === "LR" : row.section === "RC"
+  })
 
-          <PracticeLrRcStarterCards
-            lrButtonLabel="Start Section"
-            rcButtonLabel="Start Section"
-            lrSubtitle="24–26 Questions"
-            rcSubtitle="4 Passages"
-            onStartLr={() => navigate("/app/practice/sections/lr/new")}
-            onStartRc={() => navigate("/app/practice/sections/rc/new")}
-          />
-        </section>
-      </StudentMain>
+  const visibleCount = visibleTagDrillCount(filteredContinue.length, continueExpanded)
+  const visibleContinue = filteredContinue.slice(0, visibleCount)
+  const canShowMore =
+    !continueExpanded && filteredContinue.length > visibleTagDrillCount(filteredContinue.length, false)
+
+  useEffect(() => {
+    setContinueExpanded(false)
+  }, [sectionFilter])
+
+  const showLr = sectionFilter === "all" || sectionFilter === "lr"
+  const showRc = sectionFilter === "all" || sectionFilter === "rc"
+
+  return (
+    <StudentMain className="practice-section-intro" contentClassName="flex flex-col gap-[25px]">
+      <div className="flex flex-wrap items-center justify-between gap-[12px]">
+        <div className="flex flex-wrap items-center gap-[8px]">
+          <button
+            type="button"
+            onClick={() => setSectionFilter("all")}
+            className={drillFilterPillClass(sectionFilter === "all")}
+          >
+            All Section
+          </button>
+          <button
+            type="button"
+            onClick={() => setSectionFilter("lr")}
+            className={drillFilterPillClass(sectionFilter === "lr")}
+          >
+            Logical Reasoning
+          </button>
+          <button
+            type="button"
+            onClick={() => setSectionFilter("rc")}
+            className={drillFilterPillClass(sectionFilter === "rc")}
+          >
+            Reading Comprehension
+          </button>
+        </div>
+        <button
+          type="button"
+          className="inline-flex h-[32px] items-center gap-[8px] pr-[16px] text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-[var(--primary)] hover:underline"
+          onClick={() => navigate("/app/analytics/sections")}
+        >
+          Sections Insight
+          <ExternalLink className="size-[16px]" aria-hidden />
+        </button>
+      </div>
+
+      {showLr ? <PracticeSectionStartCard sectionType="LR" /> : null}
+      {showRc ? <PracticeSectionStartCard sectionType="RC" /> : null}
+
+      <section className="flex flex-col gap-[24px] rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]">
+        <div className="flex flex-wrap items-center justify-between gap-[12px]">
+          <h2 className="text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
+            Pick Up Where You Left Off
+          </h2>
+          <p className="text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
+            {padInProcessCount(filteredContinue.length)}
+          </p>
+        </div>
+
+        {loading ? (
+          <StudentPageLoader label="Loading sections…" />
+        ) : filteredContinue.length === 0 ? (
+          <p className="text-[14px] text-[var(--greyscale-500)]">
+            No sections in progress. Start a new LR or RC section above.
+          </p>
+        ) : (
+          <>
+            <div className="flex flex-col">
+              {visibleContinue.map((row) => (
+                <PracticeSectionContinueRow
+                  key={row.id}
+                  section={row.section}
+                  title={row.title}
+                  timeLeftLabel={row.timeLeftLabel}
+                  onContinue={() => navigate(row.continuePath)}
+                />
+              ))}
+            </div>
+            <PracticeListFooter
+              hasMore={canShowMore}
+              onShowMore={() => setContinueExpanded(true)}
+              showMoreLabel="Show more"
+            />
+          </>
+        )}
+      </section>
+    </StudentMain>
   )
 }
 

@@ -6,6 +6,7 @@ import { getExplanationQuestionNeighbors } from "@/features/student/explanation-
 import {
   difficultyLabelFromLevel,
   tagsFromTopicName,
+  targetTimeSecondsForDifficulty,
 } from "@/features/student/practice-session/practice-results-ui"
 import {
   NOT_ENOUGH_ANSWERS_YET,
@@ -89,8 +90,22 @@ function buildAnalytics(
   const totalResponses = detail?.answerPopularityTotal ?? platformAnswerSampleSize(resolvedPopularity)
   const answerPopularity = hasEnoughPlatformAnswerSample(totalResponses) ? resolvedPopularity : []
   const questionBand = difficultyDisplayLabel(diffLevel) as DifficultyBand
-  const passageFilled = Math.max(1, Math.min(5, diffLevel + 1))
-  const passageBand = difficultyBandFromFilled(passageFilled)
+  const sectionType = detail?.sectionType ?? loc.sec.kind
+  const showPassageDifficulty = sectionType === "RC"
+  const targetTimeSeconds = targetTimeSecondsForDifficulty(difficultyLabelFromLevel(diffLevel))
+
+  const passageDifficulty = (() => {
+    if (!showPassageDifficulty) return undefined
+    const passageFilled = Math.max(1, Math.min(5, diffLevel + 1))
+    const passageBand = difficultyBandFromFilled(passageFilled)
+    return {
+      filled: passageFilled,
+      max: 5,
+      label: passageBand,
+      caption: passageDifficultyCaption(passageBand),
+      tone: difficultyTone(passageBand),
+    }
+  })()
 
   return {
     questionDifficulty: {
@@ -100,13 +115,7 @@ function buildAnalytics(
       caption: questionDifficultyCaption(questionBand),
       tone: difficultyTone(questionBand),
     },
-    passageDifficulty: {
-      filled: passageFilled,
-      max: 5,
-      label: passageBand,
-      caption: passageDifficultyCaption(passageBand),
-      tone: difficultyTone(passageBand),
-    },
+    ...(passageDifficulty ? { passageDifficulty } : {}),
     scoreBand: {
       headline: "—",
       range: "—",
@@ -118,6 +127,8 @@ function buildAnalytics(
       const letter = detail?.userSelectedLetter?.trim().toUpperCase().slice(0, 1) ?? ""
       return /^[A-E]$/.test(letter) ? letter : null
     })(),
+    targetTimeSeconds,
+    yourTimeSeconds: null,
     questionStemTags: tags,
     passageTags: [],
     history: [],

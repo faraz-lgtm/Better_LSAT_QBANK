@@ -3,6 +3,8 @@ import {
   PracticeQuestionResultStatsRow,
   difficultyLabelFromLevel,
   formatMmSs,
+  formatYourTimeAgainstTarget,
+  targetTimeSecondsForDifficulty,
 } from '@/features/student/practice-session/practice-results-ui'
 import { cn } from '@/lib/utils'
 
@@ -29,21 +31,13 @@ function GuestDiagnosticExplanationCard({
   const normalizedSelected = selectedAnswer?.trim().toUpperCase() ?? null
   const correctLetter = explanation.correctAnswer?.trim().toUpperCase() ?? 'A'
   const difficulty = difficultyLabelFromLevel(explanation.difficulty ?? 3)
-  const targetSec = targetTimeSeconds ?? (difficulty === 'Hardest' || difficulty === 'Hard' ? 105 : difficulty === 'Medium' ? 90 : 75)
+  const targetSec = targetTimeSeconds ?? targetTimeSecondsForDifficulty(difficulty)
   const targetTime = formatMmSs(targetSec)
-  const yourTime =
-    yourTimeSeconds != null && yourTimeSeconds >= 0 ? formatMmSs(yourTimeSeconds) : '—'
-  const deltaSec = targetSec - (yourTimeSeconds ?? 0)
-  const yourTimeNote =
-    yourTimeSeconds != null && deltaSec > 0
-      ? `(${formatMmSs(deltaSec)} under)`
-      : yourTimeSeconds != null && deltaSec < 0
-        ? `(${formatMmSs(-deltaSec)} over)`
-        : ''
+  const { yourTime, yourTimeNote } = formatYourTimeAgainstTarget(targetSec, yourTimeSeconds)
   const popularityRows: { letter: string; count: number; pct: number }[] = []
 
   return (
-    <article className="border-t border-[#dfe1e7] bg-white p-6">
+    <article className="border-t border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
       <div className="flex items-start gap-6">
         <div
           className={cn(
@@ -56,19 +50,19 @@ function GuestDiagnosticExplanationCard({
 
         <div className="min-w-0 flex-1 space-y-4">
           <div>
-            <p className="text-lg font-semibold text-[#062357]">
+            <p className="text-lg font-semibold text-[var(--color-student-heading)]">
               {heading} · Q{number}
               {explanation.questionType ? ` · ${explanation.questionType}` : ''}
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
-              <span className="rounded-full border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px]">LR</span>
+              <span className="rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-2 py-0.5 text-[10px]">LR</span>
               {explanation.questionType ? (
-                <span className="rounded-full border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px]">
+                <span className="rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-2 py-0.5 text-[10px]">
                   {explanation.questionType}
                 </span>
               ) : null}
               {explanation.difficulty ? (
-                <span className="rounded-full border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px]">
+                <span className="rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-2 py-0.5 text-[10px]">
                   Level {explanation.difficulty}
                 </span>
               ) : null}

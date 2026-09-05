@@ -32,7 +32,7 @@ function AuthSplitHeader({
           {!hideIntentSignIn ? (
             <p className="auth-split-cta">
               Already have an account?{" "}
-              <Link to="/login" className="font-semibold text-[#0d47a1]">
+              <Link to="/login" className="font-semibold text-[var(--primary)]">
                 Sign In
               </Link>
             </p>

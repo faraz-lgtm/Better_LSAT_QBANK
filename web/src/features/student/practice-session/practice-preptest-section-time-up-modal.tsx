@@ -5,16 +5,19 @@ import { cn } from "@/lib/utils"
 import { ChevronRight } from "lucide-react"
 
 const MODAL_SHELL_CLASS =
-  "flex w-full max-w-[484px] flex-col items-center gap-6 rounded-[16px] border border-[#dfe1e7] bg-[#f2f7ff] p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
+  "flex w-full max-w-[484px] flex-col items-center gap-6 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--primary-25)] p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]"
 
 const SCORE_FIELD_CLASS =
-  "h-[40px] w-full max-w-[300px] rounded-[12px] border border-[#dfe1e7] bg-[#edf3ff] px-4 py-2 text-center text-sm font-normal leading-[1.5] tracking-[0.28px] text-[#062357] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] outline-none placeholder:text-[#666d80] focus:border-[#0d47a1] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+  "h-[40px] w-full max-w-[300px] rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--primary-0)] px-4 py-2 text-center text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] outline-none placeholder:text-[var(--greyscale-500)] focus:border-[var(--primary)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+
+const SCORE_DISPLAY_CLASS =
+  "flex h-[40px] w-full max-w-[300px] items-center justify-center rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--primary-0)] px-4 py-2 shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
 
 const CONTINUE_BTN_CLASS =
-  "inline-flex h-[48px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[#0b4e6e] bg-[#0d47a1] px-4 py-2 text-base font-semibold leading-[1.5] tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[#0a3d8a] disabled:opacity-50"
+  "inline-flex h-[48px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[var(--primary-border)] bg-[var(--primary)] px-4 py-2 text-base font-semibold leading-[1.5] tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[var(--primary-600)] disabled:opacity-50"
 
 const SKIP_BTN_CLASS =
-  "inline-flex h-[48px] shrink-0 items-center justify-center gap-2 rounded-[16px] px-4 py-2 text-base font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] transition hover:underline disabled:opacity-50"
+  "inline-flex h-[48px] shrink-0 items-center justify-center gap-2 rounded-[16px] px-4 py-2 text-base font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary)] transition hover:underline disabled:opacity-50"
 
 export type PracticePrepTestSectionTimeUpStep = "predict" | "done"
 
@@ -84,7 +87,7 @@ function PracticePrepTestSectionTimeUpModal({
         <div className="flex w-full max-w-[436px] flex-col items-center">
           <h2
             id={titleId}
-            className="w-full text-center text-[24px] font-bold leading-[1.3] text-[#062357]"
+            className="w-full text-center text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]"
           >
             {step === "predict" ? "Time's Up!" : "Done!"}
           </h2>
@@ -96,7 +99,7 @@ function PracticePrepTestSectionTimeUpModal({
             step === "predict" ? "max-w-[300px]" : "max-w-[346px]",
           )}
         >
-          <p className="w-full text-center text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#062357]">
+          <p className="w-full text-center text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
             How do you think you scored?
           </p>
 
@@ -131,12 +134,12 @@ function PracticePrepTestSectionTimeUpModal({
             />
           ) : (
             <>
-              <div className="flex h-[40px] w-full max-w-[300px] items-center justify-center rounded-[12px] border border-[#dfe1e7] bg-[#edf3ff] px-4 py-2 shadow-[0px_1px_1px_rgba(13,13,18,0.06)]">
-                <p className="text-center text-lg font-bold leading-[1.35] text-[#062357]">
+              <div className={SCORE_DISPLAY_CLASS}>
+                <p className="text-center text-lg font-bold leading-[1.35] text-[var(--color-student-heading)]">
                   {predictedScore ?? "—"}
                 </p>
               </div>
-              <p className="w-full text-center text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#062357]">
+              <p className="w-full text-center text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
                 {formatIncorrectSummary(summary)}
               </p>
             </>

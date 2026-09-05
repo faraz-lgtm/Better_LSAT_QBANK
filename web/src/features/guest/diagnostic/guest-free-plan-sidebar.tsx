@@ -10,27 +10,21 @@ type GuestFreePlanSidebarProps = {
   dashboardHref?: string
 }
 
+/** Figma `20593:121782` — free-plan sidebar upgrade banner */
 function FreePlanUpgradeCard() {
   return (
-    <div className="guest-free-plan-upgrade-card rounded-[16px] border border-[#b8d4ff] bg-[#edf3ff] p-4">
-      <p className="text-[10px] font-bold uppercase tracking-[0.8px] text-[#0d47a1]">Free plan</p>
-      <p className="mt-2 text-sm font-semibold leading-[1.4] tracking-[0.28px] text-[#062357]">
-        Unlock Performance, Reports, and Score Tracker
+    <div
+      className="guest-free-plan-upgrade-card mt-4 flex w-full shrink-0 flex-col items-center gap-4 overflow-hidden rounded-[20px] border border-[var(--greyscale-100)] p-4 shadow-[0px_1px_2px_rgba(13,13,18,0.06)] [background-image:linear-gradient(180deg,rgba(255,255,255,0)_0%,rgba(13,71,161,0.2)_100%),linear-gradient(var(--primary-25),var(--primary-25))]"
+    >
+      <p className="m-0 w-full text-xs font-semibold leading-[1.5] tracking-[0.24px] text-[var(--primary)]">
+        Unlock Analytics
       </p>
-      <dl className="mt-3 space-y-1 text-xs tracking-[0.24px] text-[#062357]">
-        <div className="flex justify-between gap-2">
-          <dt className="text-[#666d80]">Trackable score</dt>
-          <dd className="font-semibold">70%</dd>
-        </div>
-        <div className="flex justify-between gap-2">
-          <dt className="text-[#666d80]">Modules</dt>
-          <dd className="font-semibold">20+</dd>
-        </div>
-      </dl>
-      <div className="mt-4 flex flex-col gap-2">
-        <GuestUpgradeCta variant="sidebar-primary" />
-        <GuestUpgradeCta variant="sidebar-secondary" />
-      </div>
+      <p className="m-0 w-full text-xs font-medium leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
+        <span className="font-bold">79% </span>
+        Performance, <span className="font-bold">30+</span> Reports, and Score Tracker will be
+        available.
+      </p>
+      <GuestUpgradeCta variant="sidebar-primary" />
     </div>
   )
 }

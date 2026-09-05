@@ -37,10 +37,14 @@ describe("ExplanationChoiceList", () => {
 
     const button = screen.getByRole("button")
     const row = button.parentElement
-    expect(row).toHaveClass("border-[#0d47a1]")
-    const letterBox = button.querySelector("span.flex.size-7")
-    expect(letterBox).toHaveClass("bg-[#f2f7ff]")
-    expect(letterBox?.querySelector("svg")).toBeInTheDocument()
+    expect(row).toHaveClass("border-[3px]", "border-solid", "border-[var(--explanation-answered)]", "bg-[var(--explanation-answered-bg)]")
+    expect(row).not.toHaveClass("border-[var(--primary)]")
+    const letterBox = button.querySelector("span.flex.size-8")
+    expect(letterBox).toHaveClass("bg-[var(--explanation-answered)]", "text-white", "border-[var(--explanation-answered)]")
+    const check = letterBox?.querySelector("svg")
+    expect(check).toBeInTheDocument()
+    expect(check).toHaveClass("size-6", "text-white")
+    expect(check).toHaveAttribute("stroke-width", "3")
   })
 
   it("auto-expands initial choice from deep link", () => {
@@ -55,5 +59,33 @@ describe("ExplanationChoiceList", () => {
       />,
     )
     expect(screen.getByText("Expl A")).toBeInTheDocument()
+  })
+
+  it("does not repeat a struck-through restatement of the answer choice in the explanation", async () => {
+    const user = userEvent.setup()
+    const choiceText = "Some of the great creative geniuses in history were first-born children."
+    render(
+      <ExplanationChoiceList
+        choices={[
+          {
+            id: "A",
+            index: 1,
+            text: `<p>${choiceText}</p>`,
+            explanationHtml:
+              `<blockquote>A) ${choiceText}</blockquote> ` +
+              "<p>This choice is problematic because birth order is not established.</p>",
+          },
+        ]}
+        correctChoiceId="B"
+        showCorrect={false}
+      />,
+    )
+
+    await user.click(screen.getByText(choiceText).closest("button")!)
+    expect(
+      screen.getByText("This choice is problematic because birth order is not established."),
+    ).toBeInTheDocument()
+    expect(screen.getAllByText(choiceText)).toHaveLength(1)
+    expect(screen.queryByText(`A) ${choiceText}`)).not.toBeInTheDocument()
   })
 })

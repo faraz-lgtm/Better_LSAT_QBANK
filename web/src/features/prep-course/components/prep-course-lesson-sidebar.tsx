@@ -67,7 +67,7 @@ function LessonStatusMarker({
         className={cn(
           "flex items-center justify-center",
           markerSizeClass,
-          "border-[#dfe1e7] bg-white",
+          "border-[var(--greyscale-100)] bg-[var(--greyscale-0)]",
         )}
         aria-hidden
       >
@@ -82,7 +82,7 @@ function LessonStatusMarker({
         className={cn(
           "flex items-center justify-center",
           markerSizeClass,
-          "border-[#0d47a1] bg-[#0d47a1]",
+          "border-[var(--primary)] bg-[var(--primary)]",
         )}
         aria-label="Completed"
       >
@@ -95,11 +95,11 @@ function LessonStatusMarker({
     <span
       className={cn(
         markerSizeClass,
-        variant === "active" && surface === "sidebar" && "border-[#dfe1e7] bg-[#0d47a1]",
+        variant === "active" && surface === "sidebar" && "border-[var(--greyscale-100)] bg-[var(--primary)]",
         variant === "active" &&
           surface === "list" &&
-          "border-[color:var(--greyscale-100)] bg-white shadow-[0px_0px_1px_3px_rgba(129,136,152,0.15)] ring-1 ring-inset ring-[#c1c7d0]",
-        variant === "incomplete" && "border-[color:var(--greyscale-100)] bg-white",
+          "border-[color:var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_0px_1px_3px_rgba(129,136,152,0.15)] ring-1 ring-inset ring-[var(--greyscale-400)]",
+        variant === "incomplete" && "border-[color:var(--greyscale-100)] bg-[var(--greyscale-0)]",
       )}
       aria-hidden
     />
@@ -118,16 +118,16 @@ function PrepCourseLessonSidebar({
 }: PrepCourseLessonSidebarProps) {
   return (
     <aside
-      className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-t-[16px] border border-[#dfe1e7] bg-white"
+      className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-t-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
       aria-label="Course lessons"
     >
-      <div className="shrink-0 rounded-t-[16px] border-b border-[#dfe1e7] bg-[#f2f7ff] p-6">
+      <div className="shrink-0 rounded-t-[16px] border-b border-[var(--greyscale-100)] bg-[var(--primary-25)] p-6">
         <div className="flex items-start gap-4">
-          <h2 className="min-w-0 flex-1 text-2xl font-bold leading-[1.3] text-[#062357]">All Lessons</h2>
+          <h2 className="min-w-0 flex-1 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">All Lessons</h2>
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex size-9 shrink-0 items-center justify-center rounded-[12px] bg-[#edf3ff] text-[color:var(--greyscale-500)] transition hover:text-[#062357]"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-[12px] bg-[var(--primary-25)] text-[color:var(--greyscale-500)] transition hover:text-[var(--color-student-heading)]"
             aria-label="Close lesson sidebar"
           >
             <X className="size-6" strokeWidth={1.75} />
@@ -136,9 +136,9 @@ function PrepCourseLessonSidebar({
 
         <div className="mt-6 flex flex-col gap-2.5">
           <div className="flex items-center gap-3">
-            <ProgressRing value={progressPercent} ringBg="#f2f7ff" />
+            <ProgressRing value={progressPercent} ringBg="var(--primary-25)" />
             <p
-              className="min-w-0 text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[#062357]"
+              className="min-w-0 text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[var(--color-student-heading)]"
               title={sectionTitle}
             >
               {sectionTitle}
@@ -150,7 +150,7 @@ function PrepCourseLessonSidebar({
         </div>
       </div>
 
-      <div className="student-scrollbar h-0 min-h-0 flex-1 overflow-y-auto bg-white p-6">
+      <div className="student-scrollbar h-0 min-h-0 flex-1 overflow-y-auto bg-[var(--greyscale-0)] p-6">
         <ul className="flex flex-col gap-3">
           {lessons.map((lesson, index) => {
             const isActive = lesson.slug === activeLessonSlug
@@ -159,10 +159,10 @@ function PrepCourseLessonSidebar({
             const drillKind = resolveDrillLessonType(lesson)
 
             const rowBg = isActive
-              ? "bg-[#0d47a1]"
+              ? "bg-[var(--primary)]"
               : index % 2 === 0
-                ? "bg-[#f3f7ff]"
-                : "bg-[#f6f8fa]"
+                ? "bg-[var(--primary-0)]"
+                : "bg-[var(--greyscale-25)]"
 
             const markerVariant = isActive ? "active" : isComplete ? "complete" : "incomplete"
 
@@ -184,7 +184,7 @@ function PrepCourseLessonSidebar({
                       <span
                         className={cn(
                           "block truncate text-xs font-medium leading-normal tracking-[0.24px]",
-                          isActive ? "text-white" : "text-[#062357]",
+                          isActive ? "text-white" : "text-[var(--color-student-heading)]",
                         )}
                         title={title}
                       >

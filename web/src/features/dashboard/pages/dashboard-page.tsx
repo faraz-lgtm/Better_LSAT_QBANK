@@ -10,6 +10,7 @@ import {
   resolveLsacTestWindowValue,
 } from "@/lib/lsac-test-window-options"
 import { TestDayCountdownCard } from "@/features/dashboard/components/test-day-countdown-card"
+import { DashboardWelcomeHeading } from "@/features/dashboard/components/dashboard-welcome-heading"
 import {
   daysUntilDate,
   formatLsacTestMeta,
@@ -42,9 +43,9 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 function filterChipStyles(active: boolean): string {
   if (active) {
-    return "inline-flex h-8 items-center rounded-xl border border-[#0b4e6e] bg-[#0d47a1] px-4 text-xs font-semibold tracking-[0.24px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
+    return "inline-flex h-8 items-center rounded-xl border border-[var(--primary-border)] bg-[var(--primary)] px-4 text-xs font-semibold tracking-[0.24px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
   }
-  return "inline-flex h-8 items-center rounded-xl border border-[#dfe1e7] bg-white px-4 text-xs font-semibold tracking-[0.24px] text-[#0d47a1] shadow-[0px_1px_2px_rgba(13,13,18,0.06)]"
+  return "inline-flex h-8 items-center rounded-xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 text-xs font-semibold tracking-[0.24px] text-[var(--primary)] shadow-[0px_1px_2px_rgba(13,13,18,0.06)]"
 }
 
 function adaptiveDrillSectionType(filter: "all" | "lr" | "rc"): "LR" | "RC" {
@@ -59,6 +60,10 @@ function firstNameFromFullName(fullName: string | null | undefined): string {
   const trimmed = fullName?.trim() ?? ""
   if (!trimmed) return ""
   return trimmed.split(/\s+/)[0] ?? ""
+}
+
+function firstNameFromProfile(profile: { first_name?: string | null; full_name?: string | null } | null | undefined): string {
+  return firstNameFromFullName(profile?.first_name) || firstNameFromFullName(profile?.full_name)
 }
 
 function DashboardPage() {
@@ -92,59 +97,81 @@ function DashboardPage() {
   const [startingAdaptiveDrill, setStartingAdaptiveDrill] = useState(false)
   const [savingTestDate, setSavingTestDate] = useState(false)
 
-  const loadDashboard = useCallback(async () => {
-    if (!canAccessLsacContent) {
-      setOverview(null)
-      setContinueDrills([])
-      setSuggestedDrills([])
-      setLoading(false)
-      return
-    }
-
-    if (!analyticsApi || !usersApi) {
-      setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
-      setLoading(false)
-      return
-    }
-
-    setLoading(true)
-    setError(null)
-    try {
-      const [overviewData, drillSessions, priorities, context, profile] = await Promise.all([
-        analyticsApi.getOverview(),
-        analyticsApi.getSessions({ kind: "DRILL", limit: 50 }),
-        analyticsApi.getPriorities(),
-        usersApi.getStudyContext(),
-        usersApi.getMyProfile(),
-      ])
-
-      setOverview(overviewData)
-      setStudyContext(context)
-      setFirstName(firstNameFromFullName(profile?.full_name))
-
-      const inProgress = drillSessions.sessions
-        .filter((s) => !s.completedAt)
-        .map(mapSessionToContinueDrill)
-        .filter((d): d is ContinueDrill => d != null)
-      setContinueDrills(inProgress)
-
-      setSuggestedDrills(
-        priorities
-          .filter((p) => p.sectionType === "LR" || p.sectionType === "RC" || p.sectionType === null)
-          .map(mapPriorityToSuggestedDrill)
-          .filter((d): d is SuggestedDrill => d != null)
-          .slice(0, 4),
-      )
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load dashboard")
-    } finally {
-      setLoading(false)
-    }
-  }, [analyticsApi, canAccessLsacContent, usersApi])
-
   useEffect(() => {
+    if (entitlementLoading) {
+      setLoading(true)
+      return
+    }
+
+    let cancelled = false
+
+    async function loadDashboard() {
+      if (!canAccessLsacContent) {
+        setOverview(null)
+        setContinueDrills([])
+        setSuggestedDrills([])
+        if (usersApi) {
+          try {
+            const profile = await usersApi.getMyProfile()
+            if (cancelled) return
+            setFirstName(firstNameFromProfile(profile))
+          } catch {
+            if (!cancelled) setFirstName("")
+          }
+        }
+        if (!cancelled) setLoading(false)
+        return
+      }
+
+      if (!analyticsApi || !usersApi) {
+        if (!cancelled) {
+          setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
+          setLoading(false)
+        }
+        return
+      }
+
+      setLoading(true)
+      setError(null)
+      try {
+        const [overviewData, drillSessions, priorities, context, profile] = await Promise.all([
+          analyticsApi.getOverview(),
+          analyticsApi.getSessions({ kind: "DRILL", limit: 50 }),
+          analyticsApi.getPriorities(),
+          usersApi.getStudyContext(),
+          usersApi.getMyProfile(),
+        ])
+        if (cancelled) return
+
+        setOverview(overviewData)
+        setStudyContext(context)
+        setFirstName(firstNameFromProfile(profile))
+
+        const inProgress = drillSessions.sessions
+          .filter((s) => !s.completedAt)
+          .map(mapSessionToContinueDrill)
+          .filter((d): d is ContinueDrill => d != null)
+        setContinueDrills(inProgress)
+
+        setSuggestedDrills(
+          priorities
+            .filter((p) => p.sectionType === "LR" || p.sectionType === "RC" || p.sectionType === null)
+            .map(mapPriorityToSuggestedDrill)
+            .filter((d): d is SuggestedDrill => d != null)
+            .slice(0, 4),
+        )
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load dashboard")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
     void loadDashboard()
-  }, [loadDashboard])
+    return () => {
+      cancelled = true
+    }
+  }, [analyticsApi, canAccessLsacContent, entitlementLoading, usersApi])
 
   const statCards = useMemo(
     () => (overview ? mapOverviewToDashboardStats(overview) : []),
@@ -224,6 +251,7 @@ function DashboardPage() {
     return (
       <StudentMain>
         <div className="dashboard-page flex flex-col gap-6">
+          <DashboardWelcomeHeading firstName={firstName} />
           <DashboardAccessSetupCard />
         </div>
       </StudentMain>
@@ -235,6 +263,8 @@ function DashboardPage() {
       {error ? <p className="mb-4 text-sm text-[#95122b]">{error}</p> : null}
 
       <div className="dashboard-page flex flex-col gap-6">
+        <DashboardWelcomeHeading firstName={firstName} />
+
         <div className="dashboard-page__top">
           <TestDayCountdownCard
             daysRemaining={daysRemaining}
@@ -263,11 +293,11 @@ function DashboardPage() {
         </div>
 
         <div className="dashboard-page__bottom">
-          <section className="min-w-0 rounded-[24px] border border-[#dfe1e7] bg-white p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
+          <section className="min-w-0 rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
             <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold tracking-[0.36px] text-[#062357]">Active Drills</h2>
-                <p className="text-xs tracking-[0.24px] text-[#666d80]">Pick up where you left off</p>
+                <h2 className="text-lg font-semibold tracking-[0.36px] text-[var(--color-student-heading)]">Active Drills</h2>
+                <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">Pick up where you left off</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -295,11 +325,11 @@ function DashboardPage() {
             </div>
 
             {displayDrills.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-[#dfe1e7] bg-[#f9fbfc] px-4 py-6 text-sm text-[#666d80]">
+              <p className="rounded-xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-6 text-sm text-[var(--greyscale-500)]">
                 No drills in progress. Start a new drill from{" "}
                 <button
                   type="button"
-                  className="font-semibold text-[#0d47a1] hover:underline"
+                  className="font-semibold text-[var(--primary)] hover:underline"
                   onClick={() => navigate("/app/practice/drills")}
                 >
                   Practice → Drills

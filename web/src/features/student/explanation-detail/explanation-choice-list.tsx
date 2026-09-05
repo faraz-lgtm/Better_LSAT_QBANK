@@ -3,7 +3,14 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react"
 
 import type { ExplanationChoice } from "@/features/student/explanation-detail/types"
 import { HtmlContent } from "@/lib/html/html-content"
+import { stripLeadingChoiceRestatement } from "@/lib/html/strip-leading-choice-restatement"
 import { cn } from "@/lib/utils"
+
+const CORRECT_ROW_CLASS = "border-[3px] border-solid border-[var(--explanation-answered)] bg-[var(--explanation-answered-bg)]"
+const CORRECT_BADGE_CLASS = "border-[var(--explanation-answered)] bg-[var(--explanation-answered)] text-white"
+const HIGHLIGHT_ROW_CLASS = "border-[var(--primary)] bg-[var(--primary-0)]"
+const DEFAULT_ROW_CLASS = "border-[var(--greyscale-100)] bg-[var(--greyscale-25)]"
+const DEFAULT_BADGE_CLASS = "border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
 
 type ExplanationChoiceListProps = {
   choices: ExplanationChoice[]
@@ -43,7 +50,12 @@ function ExplanationChoiceList({
         const highlighted = highlightChoiceId != null && c.id === highlightChoiceId
         const expandable = hasExplanation(c.explanationHtml)
         const expanded = expandedId === c.id
-        const accented = reveal || highlighted
+        const rowClass = reveal
+          ? CORRECT_ROW_CLASS
+          : highlighted
+            ? HIGHLIGHT_ROW_CLASS
+            : DEFAULT_ROW_CLASS
+        const badgeClass = reveal ? CORRECT_BADGE_CLASS : DEFAULT_BADGE_CLASS
 
         const toggleExpanded = () => {
           if (!expandable) return
@@ -55,38 +67,39 @@ function ExplanationChoiceList({
             <div
               className={cn(
                 "overflow-hidden rounded-[14px] border transition-colors",
-                accented ? "border-[#0d47a1] bg-[#f3f7ff]" : "border-[#dfe1e7] bg-[#f6f8fa]",
+                rowClass,
               )}
             >
               {expanded && expandable ? (
                 <div className="flex flex-col">
                   <button
                     type="button"
-                    className="flex w-full items-center gap-3 border-b border-[#dfe1e7] p-4 text-left hover:opacity-90"
+                    className="flex w-full items-center gap-3 border-b border-[var(--greyscale-100)] p-4 text-left hover:opacity-90"
                     onClick={toggleExpanded}
                     aria-expanded
                   >
                     <span
                       className={cn(
-                        "flex size-7 shrink-0 items-center justify-center rounded-[10px] border",
-                        reveal
-                          ? "border-[#0d47a1] bg-[#f2f7ff]"
-                          : "border-[#dfe1e7] bg-white",
+                        "flex size-8 shrink-0 items-center justify-center rounded-[10px] border",
+                        badgeClass,
                       )}
                     >
                       {reveal ? (
-                        <Check className="size-5 text-[#0d47a1]" strokeWidth={2.5} aria-hidden />
+                        <Check className="size-6 text-white" strokeWidth={3} aria-hidden />
                       ) : (
-                        <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#666d80]">
+                        <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
                           {letter}
                         </span>
                       )}
                     </span>
                     <HtmlContent html={c.text} className="explanation-choice-text min-w-0 flex-1" />
-                    <ChevronUp className="size-6 shrink-0 text-[#818898]" aria-hidden />
+                    <ChevronUp className="size-6 shrink-0 text-[var(--greyscale-300)]" aria-hidden />
                   </button>
-                  <div className="rounded-b-[13px] bg-white p-4 text-left">
-                    <HtmlContent html={c.explanationHtml ?? ""} className="explanation-option-body" />
+                  <div className="rounded-b-[13px] bg-[var(--greyscale-0)] p-4 text-left">
+                    <HtmlContent
+                      html={stripLeadingChoiceRestatement(c.explanationHtml, c.text)}
+                      className="explanation-option-body"
+                    />
                   </div>
                 </div>
               ) : (
@@ -101,22 +114,20 @@ function ExplanationChoiceList({
                 >
                   <span
                     className={cn(
-                      "flex size-7 shrink-0 items-center justify-center rounded-[10px] border",
-                      reveal
-                        ? "border-[#0d47a1] bg-[#f2f7ff]"
-                        : "border-[#dfe1e7] bg-white",
+                      "flex size-8 shrink-0 items-center justify-center rounded-[10px] border",
+                      badgeClass,
                     )}
                   >
                     {reveal ? (
-                      <Check className="size-5 text-[#0d47a1]" strokeWidth={2.5} aria-hidden />
+                      <Check className="size-6 text-white" strokeWidth={3} aria-hidden />
                     ) : (
-                      <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#666d80]">
+                      <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
                         {letter}
                       </span>
                     )}
                   </span>
                   <HtmlContent html={c.text} className="explanation-choice-text min-w-0 flex-1" />
-                  <ChevronDown className="size-6 shrink-0 text-[#818898]" aria-hidden />
+                  <ChevronDown className="size-6 shrink-0 text-[var(--greyscale-300)]" aria-hidden />
                 </button>
               )}
             </div>

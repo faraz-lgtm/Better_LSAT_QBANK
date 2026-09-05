@@ -11,11 +11,11 @@ const DIFFICULTY_STYLE: Record<
   PracticeDifficultyLabel,
   { dots: number; color: string; inactive: string }
 > = {
-  Easiest: { dots: 1, color: "#40c4aa", inactive: "#ced0e7" },
-  Easy: { dots: 2, color: "#ffbd4c", inactive: "#ced0e7" },
-  Medium: { dots: 3, color: "#ff6f00", inactive: "#ced0e7" },
-  Hard: { dots: 4, color: "#df1c41", inactive: "#ced0e7" },
-  Hardest: { dots: 5, color: "#df1c41", inactive: "#ced0e7" },
+  Easiest: { dots: 1, color: "#40c4aa", inactive: "var(--greyscale-50)" },
+  Easy: { dots: 2, color: "#ffbd4c", inactive: "var(--greyscale-50)" },
+  Medium: { dots: 3, color: "#ff6f00", inactive: "var(--greyscale-50)" },
+  Hard: { dots: 4, color: "#df1c41", inactive: "var(--greyscale-50)" },
+  Hardest: { dots: 5, color: "#df1c41", inactive: "var(--greyscale-50)" },
 }
 
 export function difficultyLabelFromLevel(level: number): PracticeDifficultyLabel {
@@ -39,11 +39,13 @@ export function formatMmSs(totalSeconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`
 }
 
-export function targetSecondsForDifficulty(label: PracticeDifficultyLabel): number {
+export function targetTimeSecondsForDifficulty(label: PracticeDifficultyLabel): number {
   if (label === "Hardest" || label === "Hard") return 105
   if (label === "Medium") return 90
   return 75
 }
+
+export const targetSecondsForDifficulty = targetTimeSecondsForDifficulty
 
 export function formatPaddedTargetTime(totalSeconds: number): string {
   const n = typeof totalSeconds === "number" && Number.isFinite(totalSeconds) ? totalSeconds : 0
@@ -53,8 +55,33 @@ export function formatPaddedTargetTime(totalSeconds: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
 }
 
-export function targetTimeForDifficulty(label: PracticeDifficultyLabel): string {
-  return formatPaddedTargetTime(targetSecondsForDifficulty(label))
+export function targetTimeForDifficulty(label: PracticeDifficultyLabel, scaleFactor = 1): string {
+  return formatPaddedTargetTime(Math.round(targetTimeSecondsForDifficulty(label) * scaleFactor))
+}
+
+/** Hover / aria label for question lists — difficulty 1–5 → accommodated target. */
+export function targetTimeHoverLabel(
+  difficultyLevel: number | null | undefined,
+  scaleFactor = 1,
+): string | null {
+  if (difficultyLevel == null || !Number.isFinite(difficultyLevel)) return null
+  const level = Math.max(1, Math.min(5, Math.round(difficultyLevel)))
+  return `Target time: ${targetTimeForDifficulty(difficultyLabelFromLevel(level), scaleFactor)}`
+}
+
+export function formatYourTimeAgainstTarget(
+  targetSec: number,
+  yourTimeSeconds: number | null | undefined,
+): { yourTime: string; yourTimeNote: string } {
+  const yourTime =
+    yourTimeSeconds != null && yourTimeSeconds >= 0 ? formatMmSs(yourTimeSeconds) : "—"
+  if (yourTimeSeconds == null || yourTimeSeconds < 0) {
+    return { yourTime, yourTimeNote: "" }
+  }
+  const deltaSec = targetSec - yourTimeSeconds
+  if (deltaSec > 0) return { yourTime, yourTimeNote: `(${formatMmSs(deltaSec)} under)` }
+  if (deltaSec < 0) return { yourTime, yourTimeNote: `(${formatMmSs(-deltaSec)} over)` }
+  return { yourTime, yourTimeNote: "" }
 }
 
 export function tagsFromTopicName(topicName: string): string[] {
@@ -105,7 +132,7 @@ export function correctChoiceLetter(
 export function PracticeDifficultyMeter({ difficulty }: { difficulty: PracticeDifficultyLabel }) {
   const { dots, color, inactive } = DIFFICULTY_STYLE[difficulty]
   return (
-    <div className="flex h-10 w-fit items-center gap-2.5 rounded-[10px] bg-[#f3f7ff] px-3">
+    <div className="flex h-10 w-fit items-center gap-2.5 rounded-[10px] bg-[var(--primary-0)] px-3">
       <div className="flex shrink-0 items-center gap-1.5">
         {Array.from({ length: 5 }).map((_, i) => (
           <span
@@ -137,10 +164,10 @@ function CorrectAnswerPopularityBadge() {
 }
 
 const PRACTICE_RESULT_STATS_LABEL_CLASS =
-  "m-0 text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]"
+  "m-0 text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]"
 
 const PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS =
-  "w-20 shrink-0 text-xs font-normal leading-normal tracking-[0.02em] text-[#666d80]"
+  "w-20 shrink-0 text-xs font-normal leading-normal tracking-[0.02em] text-[var(--greyscale-500)]"
 
 function WrongAnswerPopularityBadge() {
   return (
@@ -201,13 +228,13 @@ function PracticeQuestionResultCardLayout({
   return (
     <div className={cn(PRACTICE_QUESTION_RESULT_GRID_CLASS, className)}>
       <div className="col-span-2 flex min-w-0 flex-col gap-2">
-        <h3 className="m-0 text-xl font-bold leading-[1.35] text-[#062357]">{title}</h3>
+        <h3 className="m-0 text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">{title}</h3>
         {tags.length > 0 ? (
           <div className="flex flex-wrap gap-2.5">
             {tags.map((tag) => (
               <span
                 key={tag}
-                className="inline-flex h-5 items-center rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] px-2 py-0.5 text-[10px] font-normal leading-normal tracking-[0.02em] text-[#0d0d12]"
+                className="inline-flex h-5 items-center rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-2 py-0.5 text-[10px] font-normal leading-normal tracking-[0.02em] text-[var(--color-student-heading)]"
               >
                 {tag}
               </span>
@@ -228,17 +255,17 @@ function PracticeQuestionResultCardLayout({
         <div className="flex flex-col gap-1">
           <div className="flex flex-wrap gap-1">
             <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>Target time:</span>
-            <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]">
+            <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
               {targetTime}
             </span>
           </div>
           <div className="flex flex-wrap gap-1">
             <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>Your time:</span>
-            <span className="whitespace-nowrap text-sm font-semibold leading-normal tracking-[0.02em] text-[#0d47a1]">
+            <span className="whitespace-nowrap text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--primary)]">
               {yourTime}
             </span>
             {yourTimeNote ? (
-              <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]">
+              <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
                 {yourTimeNote}
               </span>
             ) : null}
@@ -297,17 +324,17 @@ function PracticeQuestionResultStatsRow({
           <div className="flex flex-col gap-1">
             <div className="flex flex-wrap gap-1">
               <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>Target time:</span>
-              <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]">
+              <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
                 {targetTime}
               </span>
             </div>
             <div className="flex flex-wrap gap-1">
               <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>Your time:</span>
-              <span className="whitespace-nowrap text-sm font-semibold leading-normal tracking-[0.02em] text-[#0d47a1]">
+              <span className="whitespace-nowrap text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--primary)]">
                 {yourTime}
               </span>
               {yourTimeNote ? (
-                <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[#666d80]">
+                <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
                   {yourTimeNote}
                 </span>
               ) : null}
@@ -393,7 +420,7 @@ export function PracticeAnswerPopularityBars({
                 hasOutcomeBadge ? "h-20" : "h-[68px]",
               )}
             >
-              <div className="flex min-h-0 w-full flex-1 flex-col justify-end overflow-hidden rounded-t-[10px] bg-[#f3f4f6]">
+              <div className="flex min-h-0 w-full flex-1 flex-col justify-end overflow-hidden rounded-t-[10px] bg-[var(--greyscale-25)]">
                 {isUserWrong ? (
                   <div
                     className="w-full shrink-0 rounded-t-[10px] bg-[#ef4444]"
@@ -403,7 +430,7 @@ export function PracticeAnswerPopularityBars({
                   <div
                     className={cn(
                       "w-full shrink-0 rounded-t-[10px]",
-                      isCorrect ? "bg-[#00d492]" : "bg-[#dfe1e7]",
+                      isCorrect ? "bg-[#00d492]" : "bg-[var(--greyscale-100)]",
                     )}
                     style={{ height: fillHeight }}
                   />
@@ -416,8 +443,8 @@ export function PracticeAnswerPopularityBars({
                     isCorrect
                       ? "font-bold text-[#00d492]"
                       : isUserWrong
-                        ? "font-normal text-[#6a7282]"
-                        : "font-normal text-[#666d80]",
+                        ? "font-normal text-[var(--greyscale-500)]"
+                        : "font-normal text-[var(--greyscale-500)]",
                   )}
                 >
                   {row.letter}

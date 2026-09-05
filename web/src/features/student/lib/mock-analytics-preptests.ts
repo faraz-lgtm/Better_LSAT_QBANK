@@ -1,4 +1,5 @@
 import type { TimeRangeValue } from "@/features/student/components/time-range-filter"
+import { hasLawHubLrStats, hasLawHubRcStats } from "@/features/student/analytics/prep-test-lr-rc-scores"
 
 /**
  * Shape consumed by the shared `AnalyticsPrepTestHistory` component. Owned
@@ -9,11 +10,15 @@ export type PrepTestHistoryEntry = {
   id: string
   testLabel: string
   dateLabel: string
+  /** ISO timestamp used for history sort. */
+  takenAt?: string | null
   bookmarked: boolean
   score: number
   scoreMax: number
   blindReviewScore: number
   blindReviewMax: number
+  /** Present for drill / section history rows when the pool is known. */
+  sectionType?: "LR" | "RC" | "LG" | null
 }
 
 /**
@@ -55,9 +60,9 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     prepTestNumber: 145,
     takenAt: "2025-10-03",
     bookmarked: false,
-    lrCorrect: 33,
-    lrMax: 51,
-    rcCorrect: 33,
+    lrCorrect: 20,
+    lrMax: 26,
+    rcCorrect: 22,
     rcMax: 27,
     scaledScore: 167,
     percentile: 90.6,
@@ -246,26 +251,64 @@ function formatHistoryDate(iso: string): string {
   return date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })
 }
 
+export type PrepTestHistorySort = "date-desc" | "date-asc" | "score-desc" | "score-asc"
+
+function takenAtMs(iso: string): number {
+  const time = new Date(iso).getTime()
+  return Number.isFinite(time) ? time : 0
+}
+
+function displayedHistoryScore(record: PrepTestRecord): number {
+  return record.lrCorrect + record.rcCorrect
+}
+
+export function sortPrepTestRecords(
+  records: readonly PrepTestRecord[],
+  sort: PrepTestHistorySort,
+): PrepTestRecord[] {
+  const out = [...records]
+  switch (sort) {
+    case "date-desc":
+      out.sort((a, b) => takenAtMs(b.takenAt) - takenAtMs(a.takenAt) || b.id.localeCompare(a.id))
+      break
+    case "date-asc":
+      out.sort((a, b) => takenAtMs(a.takenAt) - takenAtMs(b.takenAt) || a.id.localeCompare(b.id))
+      break
+    case "score-desc":
+      out.sort(
+        (a, b) =>
+          displayedHistoryScore(b) - displayedHistoryScore(a) || b.scaledScore - a.scaledScore,
+      )
+      break
+    case "score-asc":
+      out.sort(
+        (a, b) =>
+          displayedHistoryScore(a) - displayedHistoryScore(b) || a.scaledScore - b.scaledScore,
+      )
+      break
+  }
+  return out
+}
+
 /**
- * Adapt the canonical PrepTest records to the shape used by the shared
- * `AnalyticsPrepTestHistory` component. Sorted newest-first so the most
- * recent test sits at the top of the list.
+ * Adapt PrepTest records to the shared history-row shape. Caller controls order.
  */
 export function getPrepTestHistoryEntries(
   records: readonly PrepTestRecord[],
 ): PrepTestHistoryEntry[] {
-  return [...records]
-    .sort((a, b) => new Date(b.takenAt).getTime() - new Date(a.takenAt).getTime())
-    .map((record) => ({
-      id: record.id,
-      testLabel: `PT${record.prepTestNumber}`,
-      dateLabel: formatHistoryDate(record.takenAt),
-      bookmarked: record.bookmarked,
-      score: record.lrCorrect + record.rcCorrect,
-      scoreMax: record.lrMax + record.rcMax,
-      blindReviewScore: Math.round(((record.blindReviewScaled - 120) / 60) * (record.lrMax + record.rcMax)),
-      blindReviewMax: record.lrMax + record.rcMax,
-    }))
+  return records.map((record) => ({
+    id: record.id,
+    testLabel: `PT${record.prepTestNumber}`,
+    dateLabel: formatHistoryDate(record.takenAt),
+    takenAt: record.takenAt,
+    bookmarked: Boolean(record.bookmarked),
+    score: displayedHistoryScore(record),
+    scoreMax: record.lrMax + record.rcMax,
+    blindReviewScore: Math.round(
+      ((record.blindReviewScaled - 120) / 60) * (record.lrMax + record.rcMax),
+    ),
+    blindReviewMax: record.lrMax + record.rcMax,
+  }))
 }
 
 export type PrepTestStats = {
@@ -273,8 +316,9 @@ export type PrepTestStats = {
   bestPercentile: number
   averageScore: number
   averagePercentile: number
-  averageLrMissed: number
-  averageRcMissed: number
+  /** Signed missed count (e.g. -5). Null when no LawHub-valid LR section stats exist. */
+  averageLrMissed: number | null
+  averageRcMissed: number | null
   bestBlindReview: number
   averageBlindReview: number
   averageBlindReviewDifference: number
@@ -294,8 +338,12 @@ export function computePrepTestStats(records: readonly PrepTestRecord[]): PrepTe
   if (records.length === 0) return null
   const scaled = records.map((r) => r.scaledScore)
   const percentiles = records.map((r) => r.percentile)
-  const lrMissed = records.map((r) => r.lrCorrect - r.lrMax)
-  const rcMissed = records.map((r) => r.rcCorrect - r.rcMax)
+  const lrMissed = records
+    .filter((r) => hasLawHubLrStats(r.lrMax) && r.lrCorrect >= 0 && r.lrCorrect <= r.lrMax)
+    .map((r) => Math.max(-r.lrMax, Math.min(0, r.lrCorrect - r.lrMax)))
+  const rcMissed = records
+    .filter((r) => hasLawHubRcStats(r.rcMax) && r.rcCorrect >= 0 && r.rcCorrect <= r.rcMax)
+    .map((r) => Math.max(-r.rcMax, Math.min(0, r.rcCorrect - r.rcMax)))
   const brScaled = records.map((r) => r.blindReviewScaled)
   const brDiffs = records.map((r) => r.blindReviewScaled - r.scaledScore)
 
@@ -315,8 +363,8 @@ export function computePrepTestStats(records: readonly PrepTestRecord[]): PrepTe
     bestPercentile: percentiles[bestIndex],
     averageScore: round(avg(scaled)),
     averagePercentile: round(avg(percentiles)),
-    averageLrMissed: signed(avg(lrMissed)),
-    averageRcMissed: signed(avg(rcMissed)),
+    averageLrMissed: lrMissed.length > 0 ? signed(avg(lrMissed)) : null,
+    averageRcMissed: rcMissed.length > 0 ? signed(avg(rcMissed)) : null,
     bestBlindReview: brScaled[bestBrIndex],
     averageBlindReview: round(avg(brScaled)),
     averageBlindReviewDifference: signed(avg(brDiffs)),

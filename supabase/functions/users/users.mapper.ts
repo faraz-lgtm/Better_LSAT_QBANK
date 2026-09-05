@@ -51,6 +51,7 @@ function asOptionalString(v: unknown): string | undefined {
 }
 
 import type {
+  ExtraTimeSetting,
   OfficialLsatScoreRow,
   StudentStudyPreferencesRow,
 } from './users.repository.ts'
@@ -66,6 +67,8 @@ export type StudentStudyPreferencesDto = {
   studyDays: string[]
   studyHoursLabel: string | null
   wantsLessons: boolean
+  extraTimeSetting: ExtraTimeSetting
+  extraTimeCustomMinutes: number | null
 }
 
 export type OfficialLsatScoreDto = {
@@ -100,6 +103,8 @@ export function mapStudyPreferencesRow(row: StudentStudyPreferencesRow): Student
     studyDays: row.study_days ?? [],
     studyHoursLabel: row.study_hours_label,
     wantsLessons: row.wants_lessons,
+    extraTimeSetting: row.extra_time_setting ?? 'none',
+    extraTimeCustomMinutes: row.extra_time_custom_minutes ?? null,
   }
 }
 

@@ -114,6 +114,10 @@ describe("formatDrillTimeLabel", () => {
     expect(formatDrillTimeLabel(baseSession, { timing: "per-q", questionCount: 5 })).toBe("7 min")
   })
 
+  it("shows Standard pace as the LSAT-timed budget", () => {
+    expect(formatDrillTimeLabel(baseSession, { timing: "pace", questionCount: 5 })).toBe("7 min")
+  })
+
   it("shows elapsed time instead of raw unlimited", () => {
     const now = new Date("2026-01-01T12:15:00Z").getTime()
     expect(formatDrillTimeLabel(baseSession, { timing: "unlimited" }, now)).toBe("15 min")

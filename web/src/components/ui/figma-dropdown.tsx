@@ -1,5 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react"
-import { createPortal } from "react-dom"
+import { useEffect, useId, useRef, useState } from "react"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -10,6 +9,7 @@ type FigmaDropdownOption = {
 }
 
 type FigmaDropdownVariant = "config" | "pill"
+type FigmaDropdownMenuAlign = "start" | "end"
 
 type FigmaDropdownProps = {
   id?: string
@@ -22,27 +22,22 @@ type FigmaDropdownProps = {
   onOpenChange?: (open: boolean) => void
   /** `config` — gray card fields; `pill` — white toolbar pills (e.g. sort) */
   variant?: FigmaDropdownVariant
+  /** Defaults to `end` for pills so the menu stays under the trigger on the right. */
+  menuAlign?: FigmaDropdownMenuAlign
 }
-
-const MENU_GAP_PX = 8
-const MENU_Z_INDEX = 110
 
 /** Apply to the gray config card while its dropdown menu is open. */
 const FIGMA_DROPDOWN_CARD_OPEN_CLASS = "relative z-30 overflow-visible"
 
-function updateMenuPosition(trigger: HTMLDivElement) {
-  const rect = trigger.getBoundingClientRect()
-  return {
-    top: rect.bottom + MENU_GAP_PX,
-    left: rect.left,
-    width: rect.width,
-  }
-}
+/** Results Question / Incorrect-only filter — wide enough for the longest label. */
+const FIGMA_DROPDOWN_PILL_FILTER_CLASS = "w-[220px] shrink-0"
 
 /** Figma `19329:25047` — config dropdown trigger + floating menu */
 const TRIGGER_CLOSED_CLASS: Record<FigmaDropdownVariant, string> = {
-  config: "border-[#dfe1e7] bg-[#f5f9ff] font-normal text-[#062357]",
-  pill: "border-[#dfe1e7] bg-white font-medium text-[#666d80] shadow-[0px_1px_1px_rgba(13,13,18,0.06)]",
+  config:
+    "border-[var(--greyscale-100)] bg-[var(--secondary-0,#f5f9ff)] font-normal text-[var(--color-student-heading)]",
+  pill:
+    "border-[var(--greyscale-100)] bg-[var(--greyscale-0)] font-medium text-[var(--greyscale-500)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)]",
 }
 
 function FigmaDropdown({
@@ -55,43 +50,19 @@ function FigmaDropdown({
   disabled = false,
   onOpenChange,
   variant = "config",
+  menuAlign,
 }: FigmaDropdownProps) {
   const [open, setOpen] = useState(false)
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; width: number } | null>(null)
   const triggerRef = useRef<HTMLDivElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
   const listboxId = useId()
   const selected = options.find((option) => option.value === value)
   const displayLabel = selected?.label ?? placeholder
+  const align = menuAlign ?? (variant === "pill" ? "end" : "start")
 
   useEffect(() => {
     onOpenChange?.(open)
   }, [open, onOpenChange])
-
-  useLayoutEffect(() => {
-    if (!open || !triggerRef.current) {
-      return
-    }
-
-    function syncPosition() {
-      const trigger = triggerRef.current
-      if (!trigger) return
-      setMenuPosition(updateMenuPosition(trigger))
-    }
-
-    syncPosition()
-    window.addEventListener("resize", syncPosition)
-    window.addEventListener("scroll", syncPosition, true)
-    return () => {
-      window.removeEventListener("resize", syncPosition)
-      window.removeEventListener("scroll", syncPosition, true)
-    }
-  }, [open])
-
-  useEffect(() => {
-    if (open) return
-    setMenuPosition(null)
-  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -117,85 +88,80 @@ function FigmaDropdown({
     setOpen(false)
   }
 
-  const openMenu =
-    open && menuPosition
-      ? createPortal(
-          <div
-            ref={menuRef}
-            id={listboxId}
-            role="listbox"
-            aria-labelledby={id}
-            style={{
-              position: "fixed",
-              top: menuPosition.top,
-              left: menuPosition.left,
-              width: menuPosition.width,
-              zIndex: MENU_Z_INDEX,
-            }}
-            className="flex flex-col overflow-hidden rounded-[12px] border border-[#dfe1e7] bg-[#f5f9ff] p-2 shadow-[0px_12px_16px_-4px_rgba(13,13,18,0.08),0px_4px_6px_-2px_rgba(13,13,18,0.03)]"
-          >
-            {options.map((option) => {
-              const isSelected = option.value === value
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  role="option"
-                  aria-selected={isSelected}
-                  className={cn(
-                    "box-border flex h-[44px] w-full items-center gap-2 overflow-hidden px-3 py-2 text-left text-[16px] font-normal leading-[1.5] tracking-[0.32px] transition-colors",
-                    isSelected
-                      ? "rounded-[12px] bg-[#edf3ff] text-[#082c6b]"
-                      : "rounded-[8px] bg-[#f5f9ff] text-[#062357] hover:bg-[#edf3ff]/60",
-                  )}
-                  onClick={() => handleSelect(option.value)}
-                >
-                  <span className="min-w-0 flex-1 truncate">{option.label}</span>
-                  {isSelected ? (
-                    <Check className="size-5 shrink-0 text-[#082c6b]" strokeWidth={2} aria-hidden />
-                  ) : null}
-                </button>
-              )
-            })}
-          </div>,
-          document.body,
-        )
-      : null
-
   return (
-    <>
-      <div ref={triggerRef} className={cn("relative w-full", className)}>
-        <button
-          id={id}
-          type="button"
-          disabled={disabled}
-          aria-haspopup="listbox"
-          aria-expanded={open}
-          aria-controls={open ? listboxId : undefined}
+    <div
+      ref={triggerRef}
+      className={cn("relative", variant === "pill" ? "w-auto shrink-0" : "w-full", className)}
+    >
+      <button
+        id={id}
+        type="button"
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={open ? listboxId : undefined}
+        className={cn(
+          "box-border flex h-[52px] w-full items-center gap-2 overflow-hidden rounded-[16px] border border-solid px-3 py-2 text-left text-[16px] font-normal leading-[1.5] tracking-[0.32px] transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+          open
+            ? "border-[var(--primary)] bg-[var(--primary-25)] font-medium text-[var(--color-student-heading)]"
+            : TRIGGER_CLOSED_CLASS[variant],
+        )}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="min-w-0 flex-1 truncate">{displayLabel}</span>
+        {open ? (
+          <ChevronUp className="size-5 shrink-0 text-[var(--primary)]" strokeWidth={2} aria-hidden />
+        ) : (
+          <ChevronDown className="size-5 shrink-0 text-[var(--greyscale-500)]" strokeWidth={2} aria-hidden />
+        )}
+      </button>
+      {open ? (
+        <div
+          ref={menuRef}
+          id={listboxId}
+          role="listbox"
+          aria-labelledby={id}
           className={cn(
-            "box-border flex h-[52px] w-full items-center gap-2 overflow-hidden rounded-[16px] border border-solid px-3 py-2 text-left text-[16px] font-normal leading-[1.5] tracking-[0.32px] transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-            open
-              ? "border-[#0d47a1] bg-[#edf3ff] font-medium text-[#082c6b]"
-              : TRIGGER_CLOSED_CLASS[variant],
+            "absolute top-[calc(100%+8px)] z-[110] flex w-max min-w-full flex-col overflow-hidden rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-2 shadow-[0px_12px_16px_-4px_rgba(13,13,18,0.08),0px_4px_6px_-2px_rgba(13,13,18,0.03)]",
+            align === "end" ? "right-0" : "left-0",
           )}
-          onClick={() => setOpen((current) => !current)}
         >
-          <span className="min-w-0 flex-1 truncate">{displayLabel}</span>
-          {open ? (
-            <ChevronUp className="size-5 shrink-0 text-[#082c6b]" strokeWidth={2} aria-hidden />
-          ) : (
-            <ChevronDown className="size-5 shrink-0 text-[#666d80]" strokeWidth={2} aria-hidden />
-          )}
-        </button>
-      </div>
-      {openMenu}
-    </>
+          {options.map((option) => {
+            const isSelected = option.value === value
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                className={cn(
+                  "box-border flex h-[44px] w-full items-center gap-2 px-3 py-2 text-left text-[16px] font-normal leading-[1.5] tracking-[0.32px] transition-colors",
+                  isSelected
+                    ? "rounded-[12px] bg-[var(--primary-25)] text-[var(--color-student-heading)]"
+                    : "rounded-[8px] bg-transparent text-[var(--color-student-heading)] hover:bg-[color:var(--primary-25)]/60",
+                )}
+                onClick={() => handleSelect(option.value)}
+              >
+                <span className="flex-1 whitespace-nowrap">{option.label}</span>
+                {isSelected ? (
+                  <Check className="size-5 shrink-0 text-[var(--primary)]" strokeWidth={2} aria-hidden />
+                ) : (
+                  <span className="size-5 shrink-0" aria-hidden />
+                )}
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
+    </div>
   )
 }
 
 export {
   FIGMA_DROPDOWN_CARD_OPEN_CLASS,
+  FIGMA_DROPDOWN_PILL_FILTER_CLASS,
   FigmaDropdown,
+  type FigmaDropdownMenuAlign,
   type FigmaDropdownOption,
   type FigmaDropdownVariant,
 }

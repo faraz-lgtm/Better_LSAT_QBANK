@@ -7,10 +7,10 @@ import {
 } from "@/features/guest/diagnostic/diagnostic-explanation-access"
 
 describe("freeDiagnosticExplanationLimit", () => {
-  it("returns teaser limits by diagnostic type", () => {
+  it("returns a 5-question teaser for every diagnostic type", () => {
     expect(freeDiagnosticExplanationLimit("mini")).toBe(5)
-    expect(freeDiagnosticExplanationLimit("quick")).toBe(10)
-    expect(freeDiagnosticExplanationLimit("full")).toBe(10)
+    expect(freeDiagnosticExplanationLimit("full")).toBe(5)
+    expect(freeDiagnosticExplanationLimit("quick")).toBe(5)
   })
 })
 
@@ -20,11 +20,11 @@ describe("canShowDiagnosticExplanation", () => {
       canShowDiagnosticExplanation({ intentId: "mini", questionNumber: 10, hasActiveCore: true }),
     ).toBe(true)
     expect(
-      canShowDiagnosticExplanation({ intentId: "quick", questionNumber: 30, hasActiveCore: true }),
+      canShowDiagnosticExplanation({ intentId: "quick", questionNumber: 25, hasActiveCore: true }),
     ).toBe(true)
   })
 
-  it("limits free mini to first 5 and free quick to first 10", () => {
+  it("limits free mini, full, and section diagnostics to the first 5 questions", () => {
     expect(
       canShowDiagnosticExplanation({ intentId: "mini", questionNumber: 5, hasActiveCore: false }),
     ).toBe(true)
@@ -32,22 +32,28 @@ describe("canShowDiagnosticExplanation", () => {
       canShowDiagnosticExplanation({ intentId: "mini", questionNumber: 6, hasActiveCore: false }),
     ).toBe(false)
     expect(
-      canShowDiagnosticExplanation({ intentId: "quick", questionNumber: 10, hasActiveCore: false }),
+      canShowDiagnosticExplanation({ intentId: "full", questionNumber: 5, hasActiveCore: false }),
     ).toBe(true)
     expect(
-      canShowDiagnosticExplanation({ intentId: "quick", questionNumber: 11, hasActiveCore: false }),
+      canShowDiagnosticExplanation({ intentId: "full", questionNumber: 6, hasActiveCore: false }),
+    ).toBe(false)
+    expect(
+      canShowDiagnosticExplanation({ intentId: "quick", questionNumber: 5, hasActiveCore: false }),
+    ).toBe(true)
+    expect(
+      canShowDiagnosticExplanation({ intentId: "quick", questionNumber: 6, hasActiveCore: false }),
     ).toBe(false)
   })
 })
 
 describe("canShowDiagnosticResultDetails", () => {
-  it("unlocks every Full result row for premium students", () => {
+  it("unlocks every section result row for premium students", () => {
     expect(
-      canShowDiagnosticResultDetails({ intentId: "quick", questionNumber: 30, hasActiveCore: true }),
+      canShowDiagnosticResultDetails({ intentId: "quick", questionNumber: 25, hasActiveCore: true }),
     ).toBe(true)
   })
 
-  it("unlocks only the first 5 Mini rows and first 10 Full rows for free students", () => {
+  it("unlocks only the first 5 rows for free students on mini and full section", () => {
     expect(
       canShowDiagnosticResultDetails({ intentId: "mini", questionNumber: 5, hasActiveCore: false }),
     ).toBe(true)
@@ -55,16 +61,16 @@ describe("canShowDiagnosticResultDetails", () => {
       canShowDiagnosticResultDetails({ intentId: "mini", questionNumber: 6, hasActiveCore: false }),
     ).toBe(false)
     expect(
-      canShowDiagnosticResultDetails({ intentId: "quick", questionNumber: 10, hasActiveCore: false }),
+      canShowDiagnosticResultDetails({ intentId: "quick", questionNumber: 5, hasActiveCore: false }),
     ).toBe(true)
     expect(
-      canShowDiagnosticResultDetails({ intentId: "quick", questionNumber: 11, hasActiveCore: false }),
+      canShowDiagnosticResultDetails({ intentId: "quick", questionNumber: 7, hasActiveCore: false }),
     ).toBe(false)
     expect(
-      canShowDiagnosticResultDetails({ intentId: "full", questionNumber: 10, hasActiveCore: false }),
+      canShowDiagnosticResultDetails({ intentId: "full", questionNumber: 5, hasActiveCore: false }),
     ).toBe(true)
     expect(
-      canShowDiagnosticResultDetails({ intentId: "full", questionNumber: 11, hasActiveCore: false }),
+      canShowDiagnosticResultDetails({ intentId: "full", questionNumber: 6, hasActiveCore: false }),
     ).toBe(false)
   })
 })

@@ -8,7 +8,9 @@ import { AdminLessonStatusDropdown } from "@/features/admin/components/admin-les
 import { AdminTipTapEditor } from "@/features/admin/components/admin-tip-tap-editor"
 import { LessonQuestionPreviewModal } from "@/features/admin/components/lesson-question-preview-modal"
 import {
+  appendLessonHtmlBlock,
   flattenLessonsFromCurriculum,
+  focusLessonBodyEditor,
   formatMinutesAsDuration,
   parseDurationInputToMinutes,
   type BuilderSelection,
@@ -1503,10 +1505,27 @@ function AdminCoursesPage() {
             <AdminLessonQuickAdd
               onAddVideo={() => {
                 setLessonForm((p) => ({ ...p, lessonType: "video_text" }))
-                document.getElementById("lesson-instructions-anchor")?.scrollIntoView({ behavior: "smooth" })
+                focusLessonBodyEditor()
               }}
               onAddText={() => {
-                document.getElementById("lesson-instructions-anchor")?.scrollIntoView({ behavior: "smooth" })
+                setLessonForm((p) => {
+                  if (p.lessonType === "rep_work") return p
+                  return {
+                    ...p,
+                    textContent: appendLessonHtmlBlock(p.textContent, "<p></p>"),
+                  }
+                })
+                focusLessonBodyEditor()
+              }}
+              onAddDivider={() => {
+                setLessonForm((p) => {
+                  if (p.lessonType === "rep_work") return p
+                  return {
+                    ...p,
+                    textContent: appendLessonHtmlBlock(p.textContent, "<hr><p></p>"),
+                  }
+                })
+                focusLessonBodyEditor()
               }}
               onAddImage={() => {
                 const raw = window.prompt("Image URL (https://…)", "https://")
@@ -1515,8 +1534,9 @@ function AdminCoursesPage() {
                 if (!url) return
                 setLessonForm((p) => ({
                   ...p,
-                  textContent: `${p.textContent || "<p></p>"}<p><img src="${url}" alt="" /></p>`,
+                  textContent: appendLessonHtmlBlock(p.textContent, `<p><img src="${url}" alt="" /></p>`),
                 }))
+                focusLessonBodyEditor()
               }}
               onAddQuestion={() => {
                 document.getElementById("lesson-link-questions")?.scrollIntoView({ behavior: "smooth" })

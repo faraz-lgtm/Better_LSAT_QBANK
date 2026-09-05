@@ -1,22 +1,38 @@
 import { useEffect, useMemo, useState } from "react"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
 import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
+import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
 import {
   TimeRangeFilter,
   takeLastByTimeRange,
   type TimeRangeValue,
 } from "@/features/student/components/time-range-filter"
 import type { SectionProgressPoint, SectionSummary } from "@/features/student/lib/mock-analytics-sections"
-import { mapPrepTestSessionToHistoryEntry } from "@/features/student/analytics/map-analytics"
+import { mapSectionSessionToHistoryEntry } from "@/features/student/analytics/map-analytics"
+import { HistorySortMenu } from "@/features/student/analytics/history-sort-menu"
+import { sortHistoryEntries, type HistorySort } from "@/features/student/analytics/history-sort"
+import { practiceSessionResultsPath } from "@/features/student/analytics/analytics-results-paths"
+import {
+  filterBookmarkedOnly,
+  persistSessionBookmark,
+  sessionBookmarkState,
+  withSessionBookmark,
+} from "@/features/student/analytics/session-bookmarks"
+import {
+  matchesAnalyticsSectionFilter,
+  parseAnalyticsSectionParam,
+  type AnalyticsSectionFilter,
+} from "@/features/student/analytics/section-filter"
 import {
   buildSectionYAxisLabels,
   resolveSectionChartMax,
   sessionSectionQuestionCount,
 } from "@/features/student/analytics/section-progress-axis"
-import { averageSectionMissedDisplay } from "@/features/student/analytics/section-average-score"
+import { averageSectionMissedDisplay, bestSectionMissedDisplay } from "@/features/student/analytics/section-average-score"
 import { LSAT_SCALED_Y_AXIS_LABELS } from "@/features/student/analytics/chart-y-axis"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import type { PracticeSessionSummary } from "@/lib/api/analytics"
@@ -35,7 +51,7 @@ type SectionProgressPointWithCount = SectionProgressPoint & {
 
 function SectionScoreTabs({ value, onChange }: { value: SectionScoreTab; onChange: (next: SectionScoreTab) => void }) {
   return (
-    <div className="flex h-10 flex-wrap items-center gap-2 rounded-[16px] bg-white p-1">
+    <div className="flex h-8 flex-wrap items-center gap-1.5 rounded-[10px] bg-[var(--greyscale-0)] p-0.5">
       {SECTION_SCORE_TABS.map((tab) => {
         const active = value === tab.id
         return (
@@ -45,8 +61,8 @@ function SectionScoreTabs({ value, onChange }: { value: SectionScoreTab; onChang
             onClick={() => onChange(tab.id)}
             aria-pressed={active}
             className={cn(
-              "flex min-h-8 items-center justify-center rounded-[10px] px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.02em] transition-colors hover:rounded-[10px] active:rounded-[10px] focus-visible:rounded-[10px]",
-              active ? "bg-[#0d47a1] text-white" : "text-[#666d80] hover:bg-[#f3f7ff]",
+              "flex min-h-7 items-center justify-center rounded-[8px] px-2.5 py-1 text-xs font-semibold leading-[1.4] tracking-[0.02em] transition-colors hover:rounded-[8px] active:rounded-[8px] focus-visible:rounded-[8px]",
+              active ? "bg-[var(--primary)] text-white" : "text-[var(--greyscale-500)] hover:bg-[var(--primary-0)]",
             )}
           >
             {tab.label}
@@ -75,7 +91,7 @@ function SectionProgressChart({
 
   if (points.length === 0) {
     return (
-      <div className="flex h-[300px] items-center justify-center rounded-2xl border border-dashed border-[#dfe1e7] text-sm text-[#666d80]">
+      <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-[var(--greyscale-100)] text-xs text-[var(--greyscale-500)]">
         No sections in the selected range.
       </div>
     )
@@ -105,8 +121,8 @@ function SectionProgressChart({
 
   return (
     <div className="w-full">
-      <div className="flex h-[300px] w-full items-stretch gap-4">
-        <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[#062357]">
+      <div className="flex h-[220px] w-full items-stretch gap-3">
+        <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[var(--color-student-heading)]">
           {yAxisLabels.map((label, index) => (
             <span key={`${label}-${index}`} className="leading-5">
               {label}
@@ -116,7 +132,7 @@ function SectionProgressChart({
         <div className="relative flex-1">
           <div className="absolute inset-0 flex flex-col justify-between" aria-hidden>
             {yAxisLabels.map((label, index) => (
-              <div key={`${label}-${index}`} className="h-px w-full bg-[#e5e7eb]" />
+              <div key={`${label}-${index}`} className="h-px w-full bg-[var(--greyscale-100)]" />
             ))}
           </div>
           <svg
@@ -127,13 +143,13 @@ function SectionProgressChart({
           >
             <polygon
               points={`${linePortion[0]?.x ?? 0},100 ${linePortionPolyline} ${linePortion[linePortion.length - 1]?.x ?? 0},100`}
-              fill="#0d47a1"
+              fill="var(--primary)"
               fillOpacity="0.08"
             />
             <polyline
               points={linePortionPolyline}
               fill="none"
-              stroke="#0d47a1"
+              stroke="var(--primary)"
               strokeWidth="0.6"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -157,15 +173,15 @@ function SectionProgressChart({
                 >
                   <span
                     className={cn(
-                      "absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#df1c41] transition-transform",
-                      isActive ? "scale-150 ring-2 ring-[#df1c41]/30" : "",
+                      "absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--destructive)] transition-transform",
+                      isActive ? "scale-150 ring-2 ring-[var(--destructive)]/30" : "",
                     )}
                     style={{ left: "50%", top: `${linePoints[i]!.y}%` }}
                     aria-hidden
                   />
                   {isActive ? (
                     <span
-                      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-[#062357] px-2 py-1 text-xs font-semibold text-white shadow-lg"
+                      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-[var(--color-student-heading)] px-2 py-1 text-xs font-semibold text-white shadow-lg"
                       style={{ left: "50%", top: `calc(${linePoints[i]!.y}% - 8px)` }}
                     >
                       {point.label}: {value}
@@ -183,7 +199,7 @@ function SectionProgressChart({
 
 function SectionStatPair({ summary }: { summary: SectionSummary }) {
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-2 gap-2">
       <article className="ds-analytics-stat ds-analytics-stat--pair min-w-0">
         <p className="ds-analytics-stat__label">BEST SCORE</p>
         <p className="ds-analytics-stat__value" style={{ color: summary.bestAccent }}>
@@ -226,26 +242,26 @@ function SectionColumn({
   onScoreTabChange,
 }: SectionColumnProps) {
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-6">
-      <div className="rounded-[20px] bg-[#f6f8fa] px-6 py-4">
-        <div className="flex items-center gap-2.5">
+    <div className="flex min-w-0 flex-1 flex-col gap-3">
+      <div className="rounded-[12px] bg-[var(--greyscale-25)] px-3 py-2">
+        <div className="flex items-center gap-2">
           <div
-            className="flex size-10 shrink-0 items-center justify-center rounded-[12px] border"
+            className="flex size-7 shrink-0 items-center justify-center rounded-[8px] border"
             style={{ backgroundColor: badgeBg, borderColor: badgeColor }}
           >
-            <span className="text-xl font-black leading-[1.5] tracking-[0.02em]" style={{ color: badgeColor }}>
+            <span className="text-sm font-black leading-none tracking-[0.02em]" style={{ color: badgeColor }}>
               {badge}
             </span>
           </div>
-          <h2 className="text-2xl font-bold leading-[1.3] text-[#062357]">{title}</h2>
+          <h2 className="text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">{title}</h2>
         </div>
       </div>
 
       <SectionStatPair summary={summary} />
 
-      <div className="flex min-h-[382px] flex-1 flex-col gap-[18px] rounded-[20px] bg-[#f6f8fa] p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <p className="text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[#062357]">{progressTitle}</p>
+      <div className="flex min-h-[260px] flex-1 flex-col gap-3 rounded-[12px] bg-[var(--greyscale-25)] p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs font-semibold leading-[1.4] tracking-[0.06em] text-[var(--color-student-heading)]">{progressTitle}</p>
           <SectionScoreTabs value={scoreTab} onChange={onScoreTabChange} />
         </div>
         <SectionProgressChart points={points} tab={scoreTab} rawYAxisLabels={yAxisLabels} />
@@ -258,15 +274,11 @@ function sectionSummaryFromSessions(
   sessions: PracticeSessionSummary[],
   sectionType: "LR" | "RC",
 ): SectionSummary {
-  const filtered = sessions.filter((s) => s.sectionType === sectionType && s.completedAt)
-  const scores = filtered.map((s) => s.rawScore ?? 0)
-  const best = scores.length ? Math.max(...scores) : 0
-
   return {
-    bestScore: String(best),
-    bestAccent: "#0d47a1",
+    bestScore: bestSectionMissedDisplay(sessions, sectionType),
+    bestAccent: "var(--primary)",
     averageScore: averageSectionMissedDisplay(sessions, sectionType),
-    averageAccent: sectionType === "LR" ? "#00bc54" : "#0bbcc9",
+    averageAccent: sectionType === "LR" ? "var(--explanation-answered)" : "var(--explanation-teal)",
   }
 }
 
@@ -286,16 +298,19 @@ function sectionProgressFromSessions(
 }
 
 function AnalyticsSectionsPage() {
+  const navigate = useNavigate()
   const analyticsApi = useAnalyticsApi()
   const practiceApi = usePracticeApi()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const sectionFilter = parseAnalyticsSectionParam(searchParams.get("section"))
   const [loading, setLoading] = useState(true)
   const [sectionSessions, setSectionSessions] = useState<PracticeSessionSummary[]>([])
-  const [prepHistory, setPrepHistory] = useState<PrepTestHistoryEntry[]>([])
+  const [sectionHistory, setSectionHistory] = useState<PrepTestHistoryEntry[]>([])
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
   const [lrScoreTab, setLrScoreTab] = useState<SectionScoreTab>("ptEquivalent")
   const [rcScoreTab, setRcScoreTab] = useState<SectionScoreTab>("ptEquivalent")
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
-  const [bookmarks, setBookmarks] = useState<Record<string, boolean>>({})
+  const [historySort, setHistorySort] = useState<HistorySort>("date-desc")
 
   useEffect(() => {
     if (!analyticsApi) {
@@ -303,23 +318,28 @@ function AnalyticsSectionsPage() {
       return
     }
     setLoading(true)
-    void Promise.all([
-      analyticsApi.getSessions({ kind: "SECTION", limit: 100 }),
-      analyticsApi.getSessions({ kind: "PREPTEST", limit: 50 }),
-    ])
-      .then(([sections, preptests]) => {
+    void analyticsApi
+      .getSessions({ kind: "SECTION", completedOnly: true, limit: 500 })
+      .then((sections) => {
         setSectionSessions(sections.sessions)
-        setPrepHistory(
-          preptests.sessions.map(mapPrepTestSessionToHistoryEntry).filter((e): e is PrepTestHistoryEntry => e != null),
-        )
-        setBookmarks(
-          Object.fromEntries(
-            preptests.sessions.map((s) => [s.id, s.bookmarked]),
-          ),
+        setSectionHistory(
+          sections.sessions
+            .map(mapSectionSessionToHistoryEntry)
+            .filter((e): e is PrepTestHistoryEntry => e != null),
         )
       })
       .finally(() => setLoading(false))
   }, [analyticsApi])
+
+  const handleSelectSection = (next: AnalyticsSectionFilter) => {
+    const params = new URLSearchParams(searchParams)
+    if (next === "all") params.delete("section")
+    else params.set("section", next.toLowerCase())
+    setSearchParams(params, { replace: true })
+  }
+
+  const showLr = sectionFilter === "all" || sectionFilter === "LR"
+  const showRc = sectionFilter === "all" || sectionFilter === "RC"
 
   const lrSummary = useMemo(
     () => sectionSummaryFromSessions(sectionSessions, "LR"),
@@ -362,21 +382,26 @@ function AnalyticsSectionsPage() {
   )
 
   const entries = useMemo(
-    () => prepHistory.map((entry) => ({ ...entry, bookmarked: bookmarks[entry.id] ?? entry.bookmarked })),
-    [bookmarks, prepHistory],
+    () =>
+      sectionHistory.filter((entry) => matchesAnalyticsSectionFilter(entry.sectionType, sectionFilter)),
+    [sectionFilter, sectionHistory],
   )
 
   const visibleEntries = useMemo(() => {
     const ranged = takeLastByTimeRange(entries, timeRange)
-    return bookmarkedOnly ? ranged.filter((entry) => entry.bookmarked) : ranged
-  }, [entries, bookmarkedOnly, timeRange])
+    return filterBookmarkedOnly(sortHistoryEntries(ranged, historySort), bookmarkedOnly)
+  }, [bookmarkedOnly, entries, historySort, timeRange])
 
   function handleToggleBookmark(id: string) {
-    const next = !(bookmarks[id] ?? false)
-    setBookmarks((current) => ({ ...current, [id]: next }))
-    if (practiceApi) {
-      void practiceApi.updateSession({ sessionId: id, bookmarked: next })
-    }
+    const previous = sessionBookmarkState(sectionHistory, id)
+    const next = !previous
+    setSectionHistory((current) => withSessionBookmark(current, id, next))
+    void persistSessionBookmark({
+      sessionId: id,
+      bookmarked: next,
+      practiceApi,
+      onFailure: () => setSectionHistory((current) => withSessionBookmark(current, id, previous)),
+    })
   }
 
   if (loading) {
@@ -389,39 +414,81 @@ function AnalyticsSectionsPage() {
 
   return (
     <StudentMain>
-        <div className="mb-6 flex flex-wrap items-center justify-end gap-4">
+        <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by section">
+            <button
+              type="button"
+              onClick={() => handleSelectSection("all")}
+              className={drillFilterPillClass(sectionFilter === "all")}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSelectSection("LR")}
+              className={drillFilterPillClass(sectionFilter === "LR")}
+            >
+              LR
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSelectSection("RC")}
+              className={drillFilterPillClass(sectionFilter === "RC")}
+            >
+              RC
+            </button>
+          </div>
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
         </div>
 
-        <section className="mb-6 rounded-[20px] border border-[#dfe1e7] bg-white p-6">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-start">
-            <SectionColumn
-              badge="LR"
-              title="Logical Reasoning"
-              badgeBg="#eafff4"
-              badgeColor="#00bc54"
-              progressTitle="LR PROGRESS"
-              summary={lrSummary}
-              points={lrPoints}
-              yAxisLabels={lrYAxisLabels}
-              scoreTab={lrScoreTab}
-              onScoreTabChange={setLrScoreTab}
-            />
-            <div className="hidden w-px shrink-0 self-stretch bg-[#dfe1e7] xl:block" aria-hidden />
-            <SectionColumn
-              badge="RC"
-              title="Reading Comprehension"
-              badgeBg="#e5fdff"
-              badgeColor="#0bbcc9"
-              progressTitle="RC PROGRESS"
-              summary={rcSummary}
-              points={rcPoints}
-              yAxisLabels={rcYAxisLabels}
-              scoreTab={rcScoreTab}
-              onScoreTabChange={setRcScoreTab}
-            />
+        <section className="mb-4 rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4">
+          <div
+            className={cn(
+              "flex flex-col gap-4 xl:items-start",
+              showLr && showRc ? "xl:flex-row" : "",
+            )}
+          >
+            {showLr ? (
+              <SectionColumn
+                badge="LR"
+                title="Logical Reasoning"
+                badgeBg="var(--explanation-answered-bg)"
+                badgeColor="var(--explanation-answered)"
+                progressTitle="LR PROGRESS"
+                summary={lrSummary}
+                points={lrPoints}
+                yAxisLabels={lrYAxisLabels}
+                scoreTab={lrScoreTab}
+                onScoreTabChange={setLrScoreTab}
+              />
+            ) : null}
+            {showLr && showRc ? (
+              <div className="hidden w-px shrink-0 self-stretch bg-[var(--greyscale-100)] xl:block" aria-hidden />
+            ) : null}
+            {showRc ? (
+              <SectionColumn
+                badge="RC"
+                title="Reading Comprehension"
+                badgeBg="var(--explanation-rc-badge-bg-light)"
+                badgeColor="var(--explanation-teal)"
+                progressTitle="RC PROGRESS"
+                summary={rcSummary}
+                points={rcPoints}
+                yAxisLabels={rcYAxisLabels}
+                scoreTab={rcScoreTab}
+                onScoreTabChange={setRcScoreTab}
+              />
+            ) : null}
           </div>
         </section>
+
+        <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
+          <HistorySortMenu
+            value={historySort}
+            onChange={setHistorySort}
+            ariaLabel="Sort section history"
+          />
+        </div>
 
         <AnalyticsPrepTestHistory
           title="Section History"
@@ -429,8 +496,11 @@ function AnalyticsSectionsPage() {
           visibleEntries={visibleEntries}
           bookmarkedOnly={bookmarkedOnly}
           onBookmarkedOnlyChange={setBookmarkedOnly}
+          sectionFilter={sectionFilter}
+          onSectionFilterChange={handleSelectSection}
           onToggleBookmark={handleToggleBookmark}
-          brBarColor="#df1c41"
+          onSelectEntry={(id) => navigate(practiceSessionResultsPath(id, { source: "section" }))}
+          brBarColor="var(--destructive)"
         />
       </StudentMain>
   )

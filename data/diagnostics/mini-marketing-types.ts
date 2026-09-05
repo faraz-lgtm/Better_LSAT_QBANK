@@ -25,8 +25,10 @@ export type MiniDiagnosticScoreRange = {
   percentileHigh: number
 }
 
-export type MiniDiagnosticMarketingSet = {
-  intentId: "mini"
+export type DiagnosticMarketingIntentId = "mini" | "quick"
+
+export type DiagnosticMarketingSet = {
+  intentId: DiagnosticMarketingIntentId
   moduleId: string
   moduleName: string
   sectionId: string
@@ -36,3 +38,6 @@ export type MiniDiagnosticMarketingSet = {
   questions: MiniDiagnosticQuestion[]
   scoreRanges: MiniDiagnosticScoreRange[]
 }
+
+/** @deprecated Use DiagnosticMarketingSet */
+export type MiniDiagnosticMarketingSet = DiagnosticMarketingSet & { intentId: "mini" }

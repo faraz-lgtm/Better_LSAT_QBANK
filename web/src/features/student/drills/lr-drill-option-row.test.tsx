@@ -47,7 +47,7 @@ describe("LrDrillOptionRow", () => {
         explanationAction
       />,
     )
-    expect(container.firstChild).toHaveClass("border-[#0d47a1]")
+    expect(container.firstChild).toHaveClass("border-[var(--primary)]")
     expect(container.firstChild).not.toHaveClass("border-[#ff6f00]")
   })
 
@@ -62,7 +62,28 @@ describe("LrDrillOptionRow", () => {
         answerView="blind_review"
       />,
     )
-    expect(container.firstChild).toHaveClass("border-[#ff6f00]")
+    expect(container.firstChild).toHaveClass("border-[var(--primary)]")
+    expect(container.firstChild).not.toHaveClass("border-[#ff6f00]")
+  })
+
+  it("sizes Blind Review choice rows to wrapped text instead of a clipped fixed height", () => {
+    const longChoice =
+      "a doctor prescribing a medication to a patient without first determining whether the patient is allergic to it"
+    const { container } = render(
+      <LrDrillOptionRow
+        index={0}
+        html={`<p>${longChoice}</p>`}
+        selected={false}
+        onSelect={() => undefined}
+        variant="blind-review"
+      />,
+    )
+
+    expect(container.firstChild).toHaveClass("h-auto")
+    expect(container.firstChild).not.toHaveClass("overflow-hidden")
+    expect(screen.getByRole("button", { name: new RegExp(longChoice, "i") })).toHaveClass("items-start", "py-3")
+    expect(screen.getByText("A")).toHaveClass("self-start")
+    expect(screen.getByText(longChoice).closest(".practice-session-content")).toHaveClass("text-pretty")
   })
 
   it("selects an answer on a simple click", async () => {
@@ -120,7 +141,7 @@ describe("LrDrillOptionRow", () => {
     expect(screen.getByText("Choice A").closest(".practice-session-content")).toHaveClass("text-[color:inherit]")
   })
 
-  it("applies the Figma 20280:108037 frost hatch without hiding choice text", () => {
+  it("fades letter and copy when masked in the LSAT exam layout, without a hatch overlay", () => {
     const { container } = render(
       <LrDrillOptionRow
         index={1}
@@ -136,8 +157,74 @@ describe("LrDrillOptionRow", () => {
     expect(container.firstChild).toHaveClass("practice-session-choice-masked", "rounded-[14px]")
     expect(container.firstChild).not.toHaveClass("practice-session-choice--selected")
     expect(screen.getByRole("button", { name: "Answer choice B, masked" })).toBeInTheDocument()
-    expect(screen.getByText("B")).toBeInTheDocument()
-    expect(screen.getByText("Choice B")).toBeInTheDocument()
+    expect(screen.getByText("B")).toHaveClass("practice-session-choice-masked-ink")
+    expect(screen.getByText("Choice B").closest(".practice-session-choice-masked-ink")).toBeTruthy()
+  })
+
+  it("fades official LawHub letter cell and copy the same way", () => {
+    render(
+      <LrDrillOptionRow
+        index={1}
+        html="<p>Choice B</p>"
+        selected={false}
+        masked
+        onSelect={() => undefined}
+        variant="official"
+        showSideAction={false}
+      />,
+    )
+
+    expect(screen.getByRole("button", { name: "Answer choice B, masked" })).toHaveClass(
+      "practice-session-choice-masked",
+    )
+    expect(screen.getByText("B")).toHaveClass("practice-session-choice-masked-ink")
+    expect(screen.getByText("Choice B").closest(".practice-session-choice-masked-ink")).toBeTruthy()
+  })
+
+  it("masks the choice instead of selecting while response masking is on", async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+    const onToggleMasked = vi.fn()
+
+    render(
+      <LrDrillOptionRow
+        index={0}
+        html="<p>Choice A</p>"
+        selected={false}
+        maskingMode
+        onSelect={onSelect}
+        onToggleMasked={onToggleMasked}
+        variant="active-drill"
+        showSideAction={false}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Answer choice A, click to mask" }))
+    expect(onToggleMasked).toHaveBeenCalledTimes(1)
+    expect(onSelect).not.toHaveBeenCalled()
+  })
+
+  it("unmasks then selects when masking mode is off", async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+    const onToggleMasked = vi.fn()
+
+    render(
+      <LrDrillOptionRow
+        index={0}
+        html="<p>Choice A</p>"
+        selected={false}
+        masked
+        onSelect={onSelect}
+        onToggleMasked={onToggleMasked}
+        variant="official"
+        showSideAction={false}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Answer choice A, masked" }))
+    expect(onToggleMasked).toHaveBeenCalledTimes(1)
+    expect(onSelect).toHaveBeenCalledTimes(1)
   })
 
   it("uses Figma 20243:23534 yellow selected chrome with a left bar only", () => {
@@ -157,7 +244,7 @@ describe("LrDrillOptionRow", () => {
     expect(container.firstElementChild?.firstElementChild).toHaveClass("w-[3px]", "absolute", "left-0", "bg-[#12162a]")
     const letter = screen.getByText("C")
     expect(letter).toHaveClass("w-[60px]", "min-h-[60px]", "bg-[#fdfac4]", "text-[#2c3143]", "text-[28px]")
-    expect(letter).not.toHaveClass("bg-white")
+    expect(letter).not.toHaveClass("bg-[var(--greyscale-0)]")
     expect(letter.nextElementSibling).toHaveClass("py-2", "pl-1.5", "pr-3", "min-h-[60px]")
   })
 
@@ -173,7 +260,12 @@ describe("LrDrillOptionRow", () => {
       />,
     )
 
-    expect(container.firstChild).toHaveClass("bg-[#f2f3f8]")
-    expect(screen.getByText("A")).toHaveClass("w-[60px]", "bg-white", "border-[#f2f3f8]", "text-[#50577b]")
+    expect(container.firstChild).toHaveClass("bg-[var(--greyscale-25)]")
+    expect(screen.getByText("A")).toHaveClass(
+      "w-[60px]",
+      "bg-[var(--greyscale-0)]",
+      "border-[var(--greyscale-25)]",
+      "text-[var(--greyscale-500)]",
+    )
   })
 })

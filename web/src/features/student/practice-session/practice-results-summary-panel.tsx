@@ -98,7 +98,7 @@ function PracticeResultsSummaryPanel({
   return (
     <section className={PT_RESULTS_SUMMARY_ROW_CLASS}>
       <div className="flex w-full shrink-0 flex-col gap-[24px] lg:w-[290px]">
-        <div className="flex w-full flex-col gap-[5px] rounded-[16px] bg-[#0d47a1] p-[24px]">
+        <div className="flex w-full flex-col gap-[5px] rounded-[16px] bg-[var(--primary)] p-[24px]">
           <p className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#edf3ff]">YOUR SCORE</p>
           <p className="text-[48px] font-extrabold leading-[1.2] text-white">
             {scaledScore != null ? scaledScore : `${rawScore}/${questionCount}`}
@@ -117,13 +117,13 @@ function PracticeResultsSummaryPanel({
           )}
         </div>
         {showBlindReview ? (
-          <div className="w-full rounded-[16px] bg-[#f6f8fa] p-[24px]">
+          <div className="w-full rounded-[16px] bg-[var(--greyscale-25)] p-[24px]">
             <div className="flex w-full items-center justify-between">
-              <div className="flex flex-col gap-[5px] font-bold text-[#062357]">
+              <div className="flex flex-col gap-[5px] font-bold text-[var(--color-student-heading)]">
                 <p className="text-xs font-bold leading-[1.5] tracking-[0.24px]">YOUR PREDICTION</p>
                 <p className="text-2xl font-bold leading-[1.3]">{prediction ?? "—"}</p>
               </div>
-              <div className="h-[32px] w-[2px] shrink-0 bg-[#dfe1e7]" aria-hidden />
+              <div className="h-[32px] w-[2px] shrink-0 bg-[var(--greyscale-100)]" aria-hidden />
               <div className="flex flex-col gap-[5px] font-bold text-[#df1c41]">
                 <p className="text-xs font-bold leading-[1.5] tracking-[0.24px]">BLIND REVIEW</p>
                 <p className="text-2xl font-bold leading-[1.3]">{blindReviewScore ?? "—"}</p>
@@ -134,7 +134,7 @@ function PracticeResultsSummaryPanel({
       </div>
 
       <div className={PT_RESULTS_BY_SECTION_PANEL_CLASS}>
-        <h2 className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#062357]">RESULTS BY SECTION</h2>
+        <h2 className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">RESULTS BY SECTION</h2>
         <div className="flex min-w-0 gap-[7px] overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {sections.map((section) => (
             <PrepTestSectionResultCard

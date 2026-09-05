@@ -22,9 +22,9 @@ describe("StudentAppSidebar", () => {
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument()
     expect(screen.queryByRole("link", { name: "Diagnostic" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: /Diagnostic Results/i })).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /Prep Course/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Prep Courses" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Explanations" })).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Blind Review" })).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "Blind Review" })).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument()
   })
 
@@ -45,7 +45,7 @@ describe("StudentAppSidebar", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole("button", { name: /Prep Course/i })).toHaveClass("student-sidebar-link--active")
+    expect(screen.getByRole("button", { name: "Prep Courses" })).toHaveClass("student-sidebar-link--active")
     expect(screen.getByRole("link", { name: "Dashboard" })).not.toHaveClass("student-sidebar-link--active")
 
     expect(screen.getByRole("link", { name: "LSAT Essential Course" })).toHaveAttribute(
@@ -78,7 +78,7 @@ describe("StudentAppSidebar", () => {
 
     expect(screen.queryByRole("link", { name: "LSAT Essential Course" })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole("button", { name: /Prep Course/i }))
+    await user.click(screen.getByRole("button", { name: "Prep Courses" }))
 
     expect(screen.getByRole("link", { name: "LSAT Essential Course" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "LR Mastery Course" })).toBeInTheDocument()

@@ -94,12 +94,12 @@ function LessonVideoBlock({
   inLessonCard?: boolean
 }) {
   const src = lesson.video_url ? videoIframeSrc(lesson.video_url) : ""
-  const textClass = "text-[#36394a]"
+  const textClass = "text-[var(--color-student-heading)]"
 
   if (inLessonCard) {
     return (
       <>
-        <div className="aspect-video w-full bg-[#e5efff]">
+        <div className="aspect-video w-full bg-[var(--primary-25)]">
           <iframe
             className="h-full w-full"
             src={src}
@@ -109,7 +109,7 @@ function LessonVideoBlock({
           />
         </div>
         {belowVideo || lesson.text_content ? (
-          <div className="flex flex-col gap-5 border-t border-[#dfe1e7] p-6">
+          <div className="flex flex-col gap-5 border-t border-[var(--greyscale-100)] p-6">
             {belowVideo}
             {lesson.text_content ? (
               hideTitle ? (
@@ -129,8 +129,8 @@ function LessonVideoBlock({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-hidden rounded-2xl border border-[#dfe1e7] bg-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
-        <div className="aspect-video w-full bg-[#e5efff]">
+      <div className="overflow-hidden rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+        <div className="aspect-video w-full bg-[var(--primary-25)]">
           <iframe
             className="h-full w-full"
             src={src}
@@ -179,7 +179,7 @@ function CompletedDrillResultsSection({
   part?: DrillResultsPart
 }) {
   const drillResultItems = resolveDrillResultLinkedRefs(linkedQuestionRefs, activeDrillAttempt)
-  const textClass = "text-[#36394a]"
+  const textClass = "text-[var(--color-student-heading)]"
 
   const resultCards = (
     <>
@@ -206,7 +206,7 @@ function CompletedDrillResultsSection({
     showVideo ? (
       <LessonVideoBlock lesson={lesson} belowVideo={belowVideo} hideTitle={hideTitle} />
     ) : lesson.text_content ? (
-      <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+      <article className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
         {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
         <HtmlContent
           html={lesson.text_content}
@@ -247,7 +247,7 @@ function RepWorkInstructions({ html }: { html: string }) {
 
   return (
     <div className="flex w-full flex-col gap-1">
-      <p className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.36px] text-[#1a1b25]">Instructions:</p>
+      <p className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]">Instructions:</p>
       <HtmlContent html={bodyHtml} className={repWorkBodyClass} />
     </div>
   )
@@ -325,19 +325,19 @@ const RepWorkEditableQuestion = memo(function RepWorkEditableQuestion({
         defaultValue={plainText}
         aria-label={questionLabel}
         onInput={(event) => resizeRepWorkTextarea(event.currentTarget)}
-        className={`rep-work-question-input box-border max-w-full min-h-[88px] w-full resize-none overflow-hidden rounded-[16px] border bg-white p-4 text-[#041a44] outline-none transition-colors focus-visible:border-[#0d47a1] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0d47a1]/15 ${
-          showAnswer ? "border-[#0d47a1]" : "border-[color:var(--greyscale-100)]"
+        className={`rep-work-question-input box-border max-w-full min-h-[88px] w-full resize-none overflow-hidden rounded-[16px] border bg-[var(--greyscale-0)] p-4 text-[var(--color-student-heading)] outline-none transition-colors focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]/15 ${
+          showAnswer ? "border-[var(--primary)]" : "border-[color:var(--greyscale-100)]"
         }`}
       />
 
       <div className="flex h-6 min-w-0 max-w-full items-center justify-end gap-6">
-        <p className="m-0 min-w-0 text-right text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[#818898]">
+        <p className="m-0 min-w-0 text-right text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[var(--greyscale-300)]">
           Click box to edit the text.
         </p>
         {showAnswer ? (
           <button
             type="button"
-            className="inline-flex h-[22px] shrink-0 items-center justify-center gap-2 rounded-[16px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#0d47a1] transition-opacity hover:opacity-80"
+            className="inline-flex h-[22px] shrink-0 items-center justify-center gap-2 rounded-[16px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary)] transition-opacity hover:opacity-80"
             onClick={handleReset}
           >
             <RepWorkResetIcon className="size-5 shrink-0" />
@@ -367,8 +367,8 @@ function RepWorkAnswerToggle({
       onClick={() => onCheckedChange(!checked)}
       onMouseDown={(event) => event.preventDefault()}
       className={cn(
-        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-transparent outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0d47a1]/30",
-        checked ? "bg-[#0d47a1]" : "bg-[color:var(--greyscale-100)]",
+        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-transparent outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]/30",
+        checked ? "bg-[var(--primary)]" : "bg-[color:var(--greyscale-100)]",
       )}
     >
       <span
@@ -408,24 +408,24 @@ function RepWorkPairCard({ pair, index }: { pair: RepWorkPair; index: number }) 
   return (
     <li
       ref={cardRef}
-      className="prep-course-rep-work-pair min-w-0 max-w-full overflow-x-clip rounded-[16px] border border-[color:var(--greyscale-100)] bg-white p-6"
+      className="prep-course-rep-work-pair min-w-0 max-w-full overflow-x-clip rounded-[16px] border border-[color:var(--greyscale-100)] bg-[var(--greyscale-0)] p-6"
     >
       <div className="flex min-w-0 max-w-full flex-col gap-4">
         <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
-          <h2 className="m-0 min-w-0 flex-1 text-2xl font-bold leading-[1.3] text-[#062357]">
+          <h2 className="m-0 min-w-0 flex-1 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">
             Question {index + 1}
           </h2>
           <div className="shrink-0 sm:ml-auto">
             <div className="flex flex-col items-end gap-0.5">
               <div className="flex items-center gap-3">
-                <span className="text-xl font-bold leading-[1.35] text-[#062357]">Answer</span>
+                <span className="text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">Answer</span>
                 <RepWorkAnswerToggle
                   checked={showAnswer}
                   onCheckedChange={setShowAnswer}
                   label={`Show or hide answer for question ${index + 1}`}
                 />
               </div>
-              <span className="whitespace-nowrap text-[12px] tracking-[0.02em] text-[#666d80]">
+              <span className="whitespace-nowrap text-[12px] tracking-[0.02em] text-[var(--greyscale-500)]">
                 On/Off to see and hide the answer
               </span>
             </div>
@@ -442,8 +442,8 @@ function RepWorkPairCard({ pair, index }: { pair: RepWorkPair; index: number }) 
 
             {showAnswer ? (
               <div className="flex min-w-0 flex-col gap-3">
-                <h3 className="m-0 text-[20px] font-bold leading-[1.35] text-[#062357]">Answer</h3>
-                <p className="m-0 max-w-full break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-[18px] leading-[1.4] tracking-[0.36px] text-[#1a1b25]">
+                <h3 className="m-0 text-[20px] font-bold leading-[1.35] text-[var(--color-student-heading)]">Answer</h3>
+                <p className="m-0 max-w-full break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-[18px] leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]">
                   {answerText || "No answer provided."}
                 </p>
               </div>
@@ -468,9 +468,9 @@ function LessonDrillLinkedQuestions({
 
   if (items.length === 0) {
     return (
-      <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+      <article className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
         <h3 className="ds-heading-4 ds-text-heading">PrepTest question</h3>
-        <p className="ds-body-sm mt-3 text-[#666d80]">No PrepTest question is linked to this lesson yet.</p>
+        <p className="ds-body-sm mt-3 text-[var(--greyscale-500)]">No PrepTest question is linked to this lesson yet.</p>
       </article>
     )
   }
@@ -481,11 +481,11 @@ function LessonDrillLinkedQuestions({
   const showNav = !isActive && items.length > 1
 
   return (
-    <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+    <article className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="ds-heading-4 ds-text-heading">{isActive ? "Your drill question" : "PrepTest questions"}</h3>
-          <p className="ds-body-sm mt-1 text-[#666d80]">
+          <p className="ds-body-sm mt-1 text-[var(--greyscale-500)]">
             {current.prep_test_module_id ?? current.prep_test_title ?? "PrepTest"} · {formatLinkedSectionLabel(current)}{" "}
             · Q{Number(current.question_number ?? 0)}
           </p>
@@ -496,25 +496,25 @@ function LessonDrillLinkedQuestions({
               type="button"
               disabled={safeIdx <= 0}
               onClick={() => setIdx((i) => Math.max(0, Math.min(i, items.length - 1) - 1))}
-              className="rounded-lg border border-[#dfe1e7] px-3 py-1.5 text-sm font-semibold text-[#0d47a1] disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg border border-[var(--greyscale-100)] px-3 py-1.5 text-sm font-semibold text-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Previous
             </button>
-            <span className="text-xs text-[#666d80]">
+            <span className="text-xs text-[var(--greyscale-500)]">
               {safeIdx + 1} / {items.length}
             </span>
             <button
               type="button"
               disabled={safeIdx >= items.length - 1}
               onClick={() => setIdx((i) => Math.min(items.length - 1, Math.min(i, items.length - 1) + 1))}
-              className="rounded-lg border border-[#dfe1e7] px-3 py-1.5 text-sm font-semibold text-[#0d47a1] disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg border border-[var(--greyscale-100)] px-3 py-1.5 text-sm font-semibold text-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Next
             </button>
           </div>
         ) : null}
       </div>
-      <p className="ds-body-sm mt-4 leading-7 text-[#36394a]">
+      <p className="ds-body-sm mt-4 leading-7 text-[var(--color-student-heading)]">
         Open this question in LawHub or your practice flow using the identifiers above. In-product question playback is
         coming soon.
       </p>
@@ -665,22 +665,22 @@ function LessonContentRenderer({
             {lesson.text_content ? (
               <LessonHtmlContent
                 html={lesson.text_content}
-                className={`text-[#36394a] ${hideTitle ? "" : "mt-4"}`}
+                className={`text-[var(--color-student-heading)] ${hideTitle ? "" : "mt-4"}`}
               />
             ) : (
-              <p className={`text-[#36394a] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
+              <p className={`text-[var(--color-student-heading)] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
             )}
           </div>
         ) : (
-          <article className="rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+          <article className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
             {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
             {lesson.text_content ? (
               <LessonHtmlContent
                 html={lesson.text_content}
-                className={`text-[#36394a] ${hideTitle ? "" : "mt-4"}`}
+                className={`text-[var(--color-student-heading)] ${hideTitle ? "" : "mt-4"}`}
               />
             ) : (
-              <p className={`text-[#36394a] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
+              <p className={`text-[var(--color-student-heading)] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
             )}
           </article>
         )}
@@ -695,9 +695,9 @@ function LessonContentRenderer({
 
   if (skipArticleShell) {
     return lesson.text_content ? (
-      <LessonHtmlContent html={lesson.text_content} className="text-[#36394a]" />
+      <LessonHtmlContent html={lesson.text_content} className="text-[var(--color-student-heading)]" />
     ) : (
-      <p className="m-0 text-[#36394a]">No notes available.</p>
+      <p className="m-0 text-[var(--color-student-heading)]">No notes available.</p>
     )
   }
 
@@ -705,17 +705,17 @@ function LessonContentRenderer({
     <article
       className={lessonArticleCardClass(
         edgeToSidebar,
-        "rounded-2xl border border-[#dfe1e7] bg-white p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]",
+        "rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]",
       )}
     >
       {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
       {lesson.text_content ? (
         <LessonHtmlContent
           html={lesson.text_content}
-          className={`text-[#36394a] ${hideTitle ? "" : "mt-4"}`}
+          className={`text-[var(--color-student-heading)] ${hideTitle ? "" : "mt-4"}`}
         />
       ) : (
-        <p className={`text-[#36394a] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
+        <p className={`text-[var(--color-student-heading)] ${hideTitle ? "" : "mt-4"}`}>No notes available.</p>
       )}
     </article>
   )

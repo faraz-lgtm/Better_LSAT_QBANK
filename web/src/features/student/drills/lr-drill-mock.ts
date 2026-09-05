@@ -3,40 +3,41 @@ export const lrDrillPoolMock = {
   totalCount: 1472,
 }
 
+import { LR_DRILL_MAX_QUESTION_COUNT } from "@/features/student/drills/adaptive-drill-config"
+
 export const lrDrillConfigOptions = {
   questionCount: [
-    { label: "1", value: "1" },
-    { label: "5", value: "5" },
-    { label: "10", value: "10" },
-    { label: "25", value: "25" },
+    { label: "All questions", value: "unlimited" },
+    ...Array.from({ length: LR_DRILL_MAX_QUESTION_COUNT }, (_, index) => {
+      const value = String(index + 1)
+      return { label: value, value }
+    }),
   ],
   timing: [
     { label: "Unlimited", value: "unlimited" },
-    { label: "35 minutes", value: "35" },
     { label: "Per question (1:20)", value: "per-q" },
   ],
   showAnswers: [
-    { label: "At the end", value: "end" },
+    { label: "After the drill", value: "end" },
     { label: "After each question", value: "each" },
-    { label: "Never (blind)", value: "never" },
   ],
   selection: [
-    { label: "Pick automatically", value: "auto" },
-    { label: "Choose manually", value: "manual" },
+    { label: "Priority mix", value: "auto" },
+    { label: "Pick my own", value: "manual" },
   ],
   tags: [
-    { label: "Any", value: "any" },
+    { label: "All skills", value: "any" },
     { label: "Flaw", value: "flaw" },
     { label: "Strengthen / Weaken", value: "sw" },
   ],
   difficulty: [
-    { label: "Adaptive", value: "adaptive" },
+    { label: "Auto-adjust", value: "adaptive" },
     { label: "Easy", value: "easy" },
     { label: "Hard", value: "hard" },
   ],
   status: [
-    { label: "Fresh", value: "fresh" },
-    { label: "Include reviewed", value: "all" },
+    { label: "New only", value: "fresh" },
+    { label: "New + reviewed", value: "all" },
   ],
 } as const
 

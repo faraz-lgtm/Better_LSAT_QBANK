@@ -36,8 +36,14 @@ type PracticeSessionQuestionNavButtonProps = {
   recommendedForBr?: boolean
   /** When set, renders Review-mode outcome chrome (Figma `18617:35585`) */
   outcome?: PracticeSessionQuestionNavOutcome | null
+  /** Hover label e.g. "Target time: 01:30" */
+  targetTimeLabel?: string | null
   variant?: PracticeSessionVariant
   onClick: () => void
+}
+
+function withTargetTimeAria(base: string, targetTimeLabel?: string | null): string {
+  return targetTimeLabel ? `${base}, ${targetTimeLabel}` : base
 }
 
 const REVIEW_OUTCOME_ICON_SRC: Record<PracticeSessionQuestionNavOutcome, string> = {
@@ -72,20 +78,22 @@ function PracticeSessionQuestionNavButton({
   flagged = false,
   recommendedForBr = false,
   outcome = null,
+  targetTimeLabel = null,
   variant = "default",
   onClick,
 }: PracticeSessionQuestionNavButtonProps) {
   const isActiveDrill = variant === "active-drill"
   const officialChrome = isOfficialLayout(variant)
   const isBlindReview = variant === "blind-review"
+  const hoverTitle = targetTimeLabel ?? undefined
 
   if (outcome != null) {
     const outcomeChrome =
       outcome === "correct"
-        ? "border-[#40c4aa] bg-[#effefa] text-[#0d0d12]"
+        ? "border-[#40c4aa] bg-[#effefa] text-[#0d0d12] dark:bg-[rgba(64,196,170,0.18)] dark:text-[#40c4aa]"
         : outcome === "unanswered"
-          ? "border-[#ff9d51] bg-[#fff3ea] text-[#0d0d12]"
-          : "border-[#df1c41] bg-[#feeff2] text-[#0d0d12]"
+          ? "border-[#ff9d51] bg-[#fff3ea] text-[#0d0d12] dark:bg-[rgba(255,157,81,0.18)] dark:text-[#ff9d51]"
+          : "border-[#df1c41] bg-[#feeff2] text-[#0d0d12] dark:bg-[rgba(223,28,65,0.18)] dark:text-[#ff6683]"
 
     return (
       <div
@@ -96,14 +104,18 @@ function PracticeSessionQuestionNavButton({
         <button
           type="button"
           onClick={onClick}
+          title={hoverTitle}
           className={cn(
             "practice-session-question-nav-btn practice-session-question-nav-btn--review box-border relative inline-flex size-8 shrink-0 items-center justify-center rounded-[6px] border border-solid p-px text-base font-semibold leading-[1.5] tracking-[0.32px]",
             outcomeChrome,
           )}
           aria-current={active ? "true" : undefined}
-          aria-label={`Question ${number}, ${
-            outcome === "correct" ? "correct" : outcome === "unanswered" ? "unanswered" : "incorrect"
-          }`}
+          aria-label={withTargetTimeAria(
+            `Question ${number}, ${
+              outcome === "correct" ? "correct" : outcome === "unanswered" ? "unanswered" : "incorrect"
+            }`,
+            targetTimeLabel,
+          )}
         >
           {number}
         </button>
@@ -117,28 +129,30 @@ function PracticeSessionQuestionNavButton({
     return (
       <div className="flex w-8 shrink-0 flex-col items-center gap-[6px]">
         {active ? (
-          <span className="h-[10px] w-1 shrink-0 rounded-sm bg-[#062357]" aria-hidden />
+          <span className="h-[10px] w-1 shrink-0 rounded-sm bg-[var(--color-student-heading)]" aria-hidden />
         ) : (
           <span className="h-[10px] w-1 shrink-0" aria-hidden />
         )}
         <button
           type="button"
           onClick={onClick}
+          title={hoverTitle}
           className={cn(
             "practice-session-question-nav-btn box-border relative shrink-0 text-base font-semibold tracking-[0.32px] transition-colors",
             filled
-              ? "border-2 border-[#0b4e6e] bg-[#0d47a1] text-white"
-              : "border-2 border-[#dfe1e7] bg-white text-[#062357]",
+              ? "border-2 border-[var(--primary-border)] bg-[var(--primary)] text-white"
+              : "border-2 border-[var(--greyscale-600)] bg-[var(--greyscale-25)] text-[var(--color-student-heading)]",
             recommendedForBr && BLIND_REVIEW_QUESTION_NAV_RECOMMENDED_CLASS,
           )}
           aria-current={active ? "true" : undefined}
-          aria-label={
+          aria-label={withTargetTimeAria(
             flagged
               ? `Question ${number}, flagged`
               : recommendedForBr
                 ? `Question ${number}, recommended for blind review`
-                : `Question ${number}`
-          }
+                : `Question ${number}`,
+            targetTimeLabel,
+          )}
         >
           {number}
         </button>
@@ -164,6 +178,7 @@ function PracticeSessionQuestionNavButton({
         <button
           type="button"
           onClick={onClick}
+          title={hoverTitle}
           className={cn(
             OFFICIAL_QUESTION_NAV_BUTTON_CLASS,
             active
@@ -173,7 +188,10 @@ function PracticeSessionQuestionNavButton({
                 : OFFICIAL_QUESTION_NAV_BUTTON_DEFAULT_CLASS,
           )}
           aria-current={active ? "true" : undefined}
-          aria-label={flagged ? `Question ${number}, flagged` : `Question ${number}`}
+          aria-label={withTargetTimeAria(
+            flagged ? `Question ${number}, flagged` : `Question ${number}`,
+            targetTimeLabel,
+          )}
         >
           {number}
           {active ? (
@@ -214,6 +232,7 @@ function PracticeSessionQuestionNavButton({
         <button
           type="button"
           onClick={onClick}
+          title={hoverTitle}
           className={cn(
             ACTIVE_DRILL_QUESTION_NAV_BUTTON_CLASS,
             active
@@ -223,7 +242,10 @@ function PracticeSessionQuestionNavButton({
                 : ACTIVE_DRILL_QUESTION_NAV_BUTTON_DEFAULT_CLASS,
           )}
           aria-current={active ? "true" : undefined}
-          aria-label={flagged ? `Question ${number}, flagged` : `Question ${number}`}
+          aria-label={withTargetTimeAria(
+            flagged ? `Question ${number}, flagged` : `Question ${number}`,
+            targetTimeLabel,
+          )}
         >
           {number}
         </button>
@@ -235,14 +257,18 @@ function PracticeSessionQuestionNavButton({
     <button
       type="button"
       onClick={onClick}
+      title={hoverTitle}
       className="practice-session-question-nav-btn relative shrink-0 text-xs font-bold transition-colors"
       style={{
-        backgroundColor: active || answered ? "var(--color-student-cta)" : "#fff",
+        backgroundColor: active || answered ? "var(--color-student-cta)" : "var(--greyscale-0)",
         color: active || answered ? "#fff" : "var(--color-student-heading)",
         border: `1px solid ${active || answered ? "var(--color-student-cta)" : "var(--greyscale-100)"}`,
       }}
       aria-current={active ? "true" : undefined}
-      aria-label={flagged ? `Question ${number}, flagged` : `Question ${number}`}
+      aria-label={withTargetTimeAria(
+        flagged ? `Question ${number}, flagged` : `Question ${number}`,
+        targetTimeLabel,
+      )}
     >
       {active ? (
         <span

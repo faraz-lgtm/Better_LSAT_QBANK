@@ -29,8 +29,8 @@ const DIAGNOSTIC_TIERS: DiagnosticIntentTierConfig[] = [
     id: "quick",
     name: "Full Section Diagnostic",
     tagline: "Find your biggest point leaks fast",
-    questions: "30q",
-    duration: "~40 min",
+    questions: "25q",
+    duration: "~35 min",
     features: ["All 4 sections covered", "Detailed score breakdown", "Point leak map"],
     accent: "quick",
     recommended: true,
@@ -104,7 +104,7 @@ function IntentPage({ isAuthenticated = false }: IntentPageProps) {
                 <Link
                   to="/login"
                   state={intentNavigationState(selectedTier)}
-                  className="font-semibold text-[#0d47a1]"
+                  className="font-semibold text-[var(--primary)]"
                   onClick={() => saveDiagnosticIntent(selectedTier)}
                 >
                   Sign in

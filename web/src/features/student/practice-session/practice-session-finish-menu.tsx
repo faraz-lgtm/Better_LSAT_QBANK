@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
 import { ChevronDown, ChevronUp } from "lucide-react"
 
 import {
@@ -43,6 +43,9 @@ type PracticeSessionFinishMenuProps = {
   variant?: PracticeSessionVariant
   officialInterface?: boolean
   onOfficialInterfaceChange?: (next: boolean) => void
+  /** Passed through to exam more panel (Blind Review Figma). */
+  morePanelSectionSelect?: ReactNode
+  morePanelInterfaceLabel?: string
 }
 
 function PracticeSessionFinishMenu({
@@ -58,8 +61,10 @@ function PracticeSessionFinishMenu({
   onExit,
   onExitWithoutSaving,
   variant = "default",
-  officialInterface = false,
+  officialInterface = true,
   onOfficialInterfaceChange,
+  morePanelSectionSelect = null,
+  morePanelInterfaceLabel,
 }: PracticeSessionFinishMenuProps) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -102,9 +107,9 @@ function PracticeSessionFinishMenu({
     <>
       <span className="shrink-0 whitespace-nowrap">{label}</span>
       {isOpen ? (
-        <ChevronUp className="ml-auto size-5 shrink-0 text-[#818898]" strokeWidth={2} aria-hidden />
+        <ChevronUp className="ml-auto size-5 shrink-0 text-[var(--greyscale-400)]" strokeWidth={2} aria-hidden />
       ) : (
-        <ChevronDown className="ml-auto size-5 shrink-0 text-[#818898]" strokeWidth={2} aria-hidden />
+        <ChevronDown className="ml-auto size-5 shrink-0 text-[var(--greyscale-400)]" strokeWidth={2} aria-hidden />
       )}
     </>
   )
@@ -134,6 +139,8 @@ function PracticeSessionFinishMenu({
             exitOnly={exitOnly}
             officialInterface={officialInterface}
             onOfficialInterfaceChange={onOfficialInterfaceChange}
+            sectionSelect={morePanelSectionSelect}
+            interfaceToggleLabel={morePanelInterfaceLabel}
             onClose={() => setOpen(false)}
             onSubmit={onSubmitSection}
             onSaveAndExit={onExit}

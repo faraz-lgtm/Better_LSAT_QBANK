@@ -205,7 +205,7 @@ function PracticeSessionHeader({
                   onClick={onTimerPauseRequest}
                 >
                   {timerPaused ? (
-                    <Play className="size-6 text-[#6A7282]" strokeWidth={1.5} aria-hidden />
+                    <Play className="size-6 text-[var(--greyscale-500)]" strokeWidth={1.5} aria-hidden />
                   ) : (
                     <ExamHeaderPauseIcon />
                   )}
@@ -242,7 +242,7 @@ function PracticeSessionHeader({
             onClick={() => setDirectionsOpen(false)}
           >
             <div
-              className="max-w-lg rounded-[12px] bg-white p-5 text-[14px] leading-5 text-[#2c3143] shadow-lg"
+              className="max-w-lg rounded-[12px] bg-[var(--greyscale-0)] p-5 text-[14px] leading-5 text-[var(--color-student-heading)] shadow-lg"
               onClick={(event) => event.stopPropagation()}
             >
               <p className="mb-3 text-[18px] font-medium">Directions</p>
@@ -315,7 +315,7 @@ function PracticeSessionHeader({
                   onClick={onTimerPauseRequest}
                 >
                   {timerPaused ? (
-                    <Play className="size-6 text-[#6A7282]" strokeWidth={1.5} aria-hidden />
+                    <Play className="size-6 text-[var(--greyscale-500)]" strokeWidth={1.5} aria-hidden />
                   ) : (
                     <ExamHeaderPauseIcon />
                   )}
@@ -348,14 +348,14 @@ function PracticeSessionHeader({
   return (
     <header
       className={cn(
-        "practice-session-header flex shrink-0 items-center gap-3 overflow-hidden border-b border-[#dfe1e7] px-6 py-3 md:gap-4",
-        "min-h-[80px] bg-[#eceff3]",
+        "practice-session-header flex shrink-0 items-center gap-3 overflow-hidden border-b border-[var(--greyscale-100)] bg-[var(--greyscale-50)] px-6 py-3 md:gap-4",
+        "min-h-[80px]",
       )}
     >
       <div className="min-w-0 flex-1 basis-0 overflow-hidden pr-1">
         <p
           className={cn(
-            "m-0 truncate font-bold text-[#062357]",
+            "m-0 truncate font-bold text-[var(--color-student-heading)]",
             isActiveDrill ? "text-[24px] leading-[1.3]" : "text-lg leading-tight md:text-xl",
           )}
           title={title}
@@ -370,8 +370,8 @@ function PracticeSessionHeader({
             value={findQuery}
             onChange={(e) => onFindQueryChange(e.target.value)}
             className={cn(
-              "h-[52px] rounded-2xl border border-[#dfe1e7] pl-4 pr-4 text-sm shadow-[0px_1px_1px_rgba(13,13,18,0.06)] placeholder:text-[#818898]",
-              isActiveDrill ? "w-[200px] bg-[#f6f8fa]" : "w-[160px] bg-[#f6f8fa] pl-10 xl:w-[200px]",
+              "h-[52px] rounded-2xl border border-[var(--greyscale-100)] pl-4 pr-4 text-sm shadow-[0px_1px_1px_rgba(13,13,18,0.06)] placeholder:text-[var(--greyscale-400)]",
+              isActiveDrill ? "w-[200px] bg-[var(--greyscale-25)]" : "w-[160px] bg-[var(--greyscale-25)] pl-10 xl:w-[200px]",
             )}
           />
         </div>

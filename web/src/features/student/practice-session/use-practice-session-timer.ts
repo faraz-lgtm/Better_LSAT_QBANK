@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 
+import { isValidDrillTiming, resolveDrillTimingSeconds } from "@/features/student/drills/drill-timing"
+
 export const PRACTICE_SESSION_35_MIN_SECONDS = 35 * 60
 export const PRACTICE_PER_QUESTION_SECONDS = 80
 
@@ -18,25 +20,34 @@ export function isSectionCountdownTiming(timing?: string | null): boolean {
 }
 
 export function isDrillCountdownTiming(timing?: string | null): boolean {
-  return timing === "35" || timing === "per-q"
+  if (!timing || timing === "unlimited") return false
+  return isValidDrillTiming(timing)
+}
+
+export function isPracticeCountdownTiming(timing?: string | null): boolean {
+  return isSectionCountdownTiming(timing) || isDrillCountdownTiming(timing)
 }
 
 export function resolveTimerBudgetSeconds(options: {
   timing?: string | null
   questionCount?: number
   sectionTimerSeconds?: number
+  /** Accommodation scale factor (e.g. 1.5 for time-and-a-half). Defaults to 1.0. */
+  scaleFactor?: number
 }): number {
   if (options.sectionTimerSeconds != null && options.sectionTimerSeconds > 0) {
+    // sectionTimerSeconds is already scaled by the caller
     return options.sectionTimerSeconds
   }
 
+  const scale = options.scaleFactor ?? 1.0
   const timing = options.timing ?? "unlimited"
-  if (timing === "35" || timing === "standard" || timing === "strict") {
-    return PRACTICE_SESSION_35_MIN_SECONDS
+  // Section PrepTest timings: "standard" is a 35-minute section, not drill LSAT-pace.
+  if (timing === "standard" || timing === "strict") {
+    return Math.round(PRACTICE_SESSION_35_MIN_SECONDS * scale)
   }
-  if (timing === "per-q") {
-    const count = Math.max(1, options.questionCount ?? 1)
-    return count * PRACTICE_PER_QUESTION_SECONDS
+  if (isValidDrillTiming(timing)) {
+    return resolveDrillTimingSeconds(timing, options.questionCount ?? 1, scale)
   }
 
   return 0

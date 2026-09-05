@@ -8,7 +8,10 @@ function LrNewSectionPage() {
   const sectionId = searchParams.get("sectionId")
 
   return (
-    <StudentMain className="max-w-none bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))] py-6 md:py-8">
+    <StudentMain
+      className="max-w-none bg-[var(--background)] py-6 md:py-8"
+      contentClassName="bg-[var(--background)]"
+    >
       <SectionConfigForm sectionType="LR" initialSectionId={sectionId} />
     </StudentMain>
   )

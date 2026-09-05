@@ -55,9 +55,9 @@ describe("guest diagnostic result storage", () => {
     expect(result.scaledScoreLabel).toBe("120–124")
   })
 
-  it("maps full-section correct count onto estimated score bands", () => {
-    const questions = Array.from({ length: 30 }, (_, index) => ({
-      id: `q${index + 1}`,
+  it("maps section diagnostic correct count onto estimated score bands", () => {
+    const questions = Array.from({ length: 25 }, (_, index) => ({
+      id: `section-diag-q${index + 1}`,
       questionNumber: index + 1,
       stimulusText: null,
       stemText: "stem",
@@ -65,7 +65,7 @@ describe("guest diagnostic result storage", () => {
       correctChoiceId: "C",
       choices: [{ id: "C", index: 0, text: "C", explanationHtml: null }],
     }))
-    // 5 correct → same band as 5/10: 145–149
+    // 5/25 correct → mini-equivalent 2 → 130–134
     const answersByQuestion = Object.fromEntries(
       questions.slice(0, 5).map((q) => [q.id, buildGuestDiagnosticAnswerState(q, "C")]),
     )
@@ -73,10 +73,10 @@ describe("guest diagnostic result storage", () => {
     const result = buildGuestDiagnosticResultFromAnswers("quick", questions, answersByQuestion)
 
     expect(result.correctCount).toBe(5)
-    expect(result.scaledScoreLabel).toBe("145–149")
-    expect(result.percentileLabel).toBe("22.5–34.7")
-    expect(result.percentileLow).toBe(22.46)
-    expect(result.percentileHigh).toBe(34.68)
+    expect(result.scaledScoreLabel).toBe("130–134")
+    expect(result.percentileLabel).toBe("2.3–4.4")
+    expect(result.percentileLow).toBe(2.27)
+    expect(result.percentileHigh).toBe(4.38)
   })
 
   it("formats diagnostic date labels", () => {
