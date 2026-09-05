@@ -34,6 +34,7 @@ const baseApi: PrepTestSessionDetail = {
       tags: ["Art"],
       difficulty: "Hard",
       difficultyDots: 4,
+      targetTimeSeconds: 105,
       actualCorrect: true,
       blindReviewCorrect: true,
       blindReviewUnanswered: false,
@@ -51,6 +52,7 @@ const baseApi: PrepTestSessionDetail = {
       tags: ["Art"],
       difficulty: "Medium",
       difficultyDots: 3,
+      targetTimeSeconds: 90,
       actualCorrect: false,
       blindReviewCorrect: true,
       blindReviewUnanswered: false,
@@ -68,6 +70,7 @@ const baseApi: PrepTestSessionDetail = {
       tags: ["RC"],
       difficulty: "Easy",
       difficultyDots: 2,
+      targetTimeSeconds: 75,
       actualCorrect: true,
       blindReviewCorrect: false,
       blindReviewUnanswered: false,
@@ -85,6 +88,7 @@ const baseApi: PrepTestSessionDetail = {
       tags: ["RC"],
       difficulty: "Easy",
       difficultyDots: 2,
+      targetTimeSeconds: 75,
       actualCorrect: true,
       blindReviewCorrect: true,
       blindReviewUnanswered: false,
@@ -109,6 +113,7 @@ describe("mapPrepTestDetailToResults", () => {
     expect(out.lrSections[0]?.blindReviewDisplay).toBe("0")
     expect(out.lrSections[0]?.questions).toHaveLength(2)
     expect(out.lrSections[0]?.questions[0]?.title).toBe("PT 145  .  S1  .  Q1")
+    expect(out.lrSections[0]?.questions[0]?.answerPopularity).toEqual([0, 0, 0, 0, 0])
     expect(out.rcSection.questions).toHaveLength(2)
     expect(out.rcSection.questions[0]?.title).toBe("PT 145  .  S2  .  Q1")
     expect(out.correctSummary).toBe("3/4 CORRECT (-1)")
@@ -116,6 +121,37 @@ describe("mapPrepTestDetailToResults", () => {
     expect(out.prediction).toBe(167)
     expect(out.blindReview).toBe(170)
     expect(out.blindReviewCompleted).toBe(true)
+    expect(out.lrSections[0]?.questions[0]?.targetTime).toBe("01:45")
+    expect(out.lrSections[0]?.questions[1]?.targetTime).toBe("01:30")
+    expect(out.rcSection.questions[0]?.targetTime).toBe("01:15")
+    expect(out.lrSections[0]?.questions[0]?.yourTime).toBe("—")
+    expect(out.lrSections[0]?.questions[0]?.yourTimeNote).toBe("")
+  })
+
+  it("formats recorded yourTime against target time", () => {
+    const questions = baseApi.questions.map((q, index) =>
+      index === 0 ? { ...q, yourTimeSeconds: 80 } : q,
+    )
+    const out = mapPrepTestDetailToResults({ ...baseApi, questions })
+    expect(out.lrSections[0]?.questions[0]?.yourTime).toBe("01:20")
+    expect(out.lrSections[0]?.questions[0]?.yourTimeNote).toBe("(00:25 under)")
+    expect(out.lrSections[0]?.questions[1]?.yourTime).toBe("—")
+  })
+
+  it("allocates padded target times when the API omits targetTimeSeconds", () => {
+    const questions = baseApi.questions.map(({ targetTimeSeconds: _ignored, ...q }) => q)
+    const out = mapPrepTestDetailToResults({ ...baseApi, questions })
+    const hard = out.lrSections[0]?.questions[0]?.targetTime
+    const medium = out.lrSections[0]?.questions[1]?.targetTime
+    expect(hard).toMatch(/^\d{2}:\d{2}$/)
+    expect(medium).toMatch(/^\d{2}:\d{2}$/)
+    expect(hard).not.toContain("NaN")
+    expect(medium).not.toContain("NaN")
+    const toSeconds = (value: string) => {
+      const [m, s] = value.split(":").map(Number)
+      return m * 60 + s
+    }
+    expect(toSeconds(hard ?? "00:00")).toBeGreaterThan(toSeconds(medium ?? "00:00"))
   })
 
   it("formats question ref labels like Figma PT 129  .  S1  .  Q19", () => {
@@ -140,6 +176,7 @@ describe("mapPrepTestDetailToResults", () => {
             tags: [],
             difficulty: "Easy",
             difficultyDots: 2,
+            targetTimeSeconds: 75,
       actualCorrect: false,
       blindReviewCorrect: true,
       blindReviewUnanswered: false,
@@ -170,6 +207,7 @@ describe("mapPrepTestDetailToResults", () => {
           tags: ["Flaw"],
           difficulty: "Medium",
           difficultyDots: 3,
+          targetTimeSeconds: 90,
           actualCorrect: true,
           blindReviewCorrect: true,
           blindReviewUnanswered: false,
@@ -203,6 +241,7 @@ describe("mapPrepTestDetailToResults", () => {
           tags: [],
           difficulty: "Easy",
           difficultyDots: 2,
+          targetTimeSeconds: 75,
           actualCorrect: true,
           blindReviewCorrect: true,
           blindReviewUnanswered: false,
@@ -219,6 +258,7 @@ describe("mapPrepTestDetailToResults", () => {
           tags: [],
           difficulty: "Easy",
           difficultyDots: 2,
+          targetTimeSeconds: 75,
           actualCorrect: true,
           blindReviewCorrect: true,
           blindReviewUnanswered: false,
@@ -235,6 +275,7 @@ describe("mapPrepTestDetailToResults", () => {
           tags: [],
           difficulty: "Easy",
           difficultyDots: 2,
+          targetTimeSeconds: 75,
           actualCorrect: false,
           blindReviewCorrect: false,
           blindReviewUnanswered: false,
@@ -251,6 +292,7 @@ describe("mapPrepTestDetailToResults", () => {
           tags: [],
           difficulty: "Easy",
           difficultyDots: 2,
+          targetTimeSeconds: 75,
           actualCorrect: true,
           blindReviewCorrect: true,
           blindReviewUnanswered: false,

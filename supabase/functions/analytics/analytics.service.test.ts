@@ -1197,6 +1197,40 @@ Deno.test('getPrepTestSessionDetail separates at-completion vs blind review corr
   assertEquals(q?.selectedLetter, 'C')
 })
 
+Deno.test('getPrepTestSessionDetail sets yourTimeSeconds from the at-completion event', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      getPracticeSession: async () => prepTestSessionFixture(),
+      listSectionSessionsForPrepTest: async () => [{ id: 'sec-s1', section_id: 's1', completed_at: PREP_TEST_COMPLETED_AT, raw_score: 20 }],
+      listAnswerEventsForSessions: async () => [
+        {
+          practice_session_id: 'sec-s1',
+          question_id: 'q-lr-1',
+          is_correct: false,
+          selected_answer: 'B',
+          section_type: 'LR',
+          created_at: '2026-01-01T11:00:00Z',
+          time_spent_seconds: 42,
+        },
+        {
+          practice_session_id: 'sec-s1',
+          question_id: 'q-lr-1',
+          is_correct: true,
+          selected_answer: 'C',
+          section_type: 'LR',
+          created_at: '2026-01-01T13:00:00Z',
+          time_spent_seconds: 999,
+        },
+      ],
+      listPrepTestQuestionsWithMeta: async () => [prepTestQuestion()],
+    }),
+  })
+  const d = await service.getPrepTestSessionDetail('user-1', 'pt-session-1')
+  const q = d.questions.find((row) => row.id === 'q-lr-1')
+  assertEquals(q?.yourTimeSeconds, 42)
+  assertEquals(q?.actualCorrect, false)
+})
+
 Deno.test('getPrepTestSessionDetail counts correct from at-completion only', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({
@@ -1396,6 +1430,48 @@ Deno.test('getPrepTestSessionDetail maps difficulty labels', async () => {
   const d = await service.getPrepTestSessionDetail('user-1', 'pt-session-1')
   const labels = d.questions.map((q) => q.difficulty)
   assertEquals(labels, ['Easiest', 'Easy', 'Medium', 'Hard', 'Hardest'])
+})
+
+Deno.test('getPrepTestSessionDetail allocates targetTimeSeconds by section difficulty', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      getPracticeSession: async () => prepTestSessionFixture(),
+      listSectionSessionsForPrepTest: async () => [],
+      listAnswerEventsForSessions: async () => [],
+      listPrepTestQuestionsWithMeta: async () => [
+        prepTestQuestion({
+          id: 'q1',
+          difficulty: 1,
+          admin_sections: { id: 's-lr', section_type: 'LR', section_number: 1 },
+        }),
+        prepTestQuestion({
+          id: 'q2',
+          difficulty: 3,
+          admin_sections: { id: 's-lr', section_type: 'LR', section_number: 1 },
+        }),
+        prepTestQuestion({
+          id: 'q3',
+          difficulty: 5,
+          admin_sections: { id: 's-lr', section_type: 'LR', section_number: 1 },
+        }),
+        prepTestQuestion({
+          id: 'q-rc',
+          difficulty: 3,
+          question_number: 1,
+          admin_sections: { id: 's-rc', section_type: 'RC', section_number: 2 },
+        }),
+      ],
+    }),
+  })
+  const d = await service.getPrepTestSessionDetail('user-1', 'pt-session-1')
+  const lrSeconds = d.questions
+    .filter((q) => q.id !== 'q-rc')
+    .reduce((sum, q) => sum + q.targetTimeSeconds, 0)
+  assertEquals(lrSeconds, 1890)
+  assertEquals(d.questions.find((q) => q.id === 'q-rc')?.targetTimeSeconds, 1890)
+  const easiest = d.questions.find((q) => q.id === 'q1')?.targetTimeSeconds ?? 0
+  const hardest = d.questions.find((q) => q.id === 'q3')?.targetTimeSeconds ?? 0
+  assertEquals(hardest > easiest, true)
 })
 
 // --- legacy explanations ---

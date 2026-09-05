@@ -40,6 +40,7 @@ export type AnswerEventRow = {
   difficulty: number | null
   session_kind: PracticeSessionKind
   created_at: string
+  time_spent_seconds?: number | null
 }
 
 export type QuestionDetailRow = {
@@ -256,6 +257,7 @@ export function createPracticeRepository(client: SupabaseClient) {
       sectionType: 'LR' | 'RC' | 'LG' | null
       difficulty: number | null
       sessionKind: PracticeSessionKind
+      timeSpentSeconds?: number | null
     }): Promise<AnswerEventRow> {
       const { data, error } = await client
         .from('answer_events')
@@ -269,6 +271,7 @@ export function createPracticeRepository(client: SupabaseClient) {
           section_type: input.sectionType,
           difficulty: input.difficulty,
           session_kind: input.sessionKind,
+          time_spent_seconds: input.timeSpentSeconds ?? null,
         })
         .select()
         .single()

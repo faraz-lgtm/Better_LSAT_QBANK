@@ -2,6 +2,7 @@ import { Check, Minus, X } from "lucide-react"
 import type { ReactNode } from "react"
 
 import type { ExplanationAnswerPopularityRow, ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
+import { NOT_ENOUGH_ANSWERS_YET, hasEnoughPlatformAnswerSample, platformAnswerSampleSize } from "@/lib/platform-answer-sample"
 import { cn } from "@/lib/utils"
 
 export type PracticeDifficultyLabel = "Easiest" | "Easy" | "Medium" | "Hard" | "Hardest"
@@ -44,11 +45,18 @@ export function targetTimeSecondsForDifficulty(label: PracticeDifficultyLabel): 
   return 75
 }
 
-export function targetTimeForDifficulty(label: PracticeDifficultyLabel, scaleFactor = 1): string {
-  const totalSeconds = Math.round(targetTimeSecondsForDifficulty(label) * scaleFactor)
-  const m = Math.floor(totalSeconds / 60)
-  const s = totalSeconds % 60
+export const targetSecondsForDifficulty = targetTimeSecondsForDifficulty
+
+export function formatPaddedTargetTime(totalSeconds: number): string {
+  const n = typeof totalSeconds === "number" && Number.isFinite(totalSeconds) ? totalSeconds : 0
+  const safe = Math.max(0, Math.round(n))
+  const m = Math.floor(safe / 60)
+  const s = safe % 60
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+}
+
+export function targetTimeForDifficulty(label: PracticeDifficultyLabel, scaleFactor = 1): string {
+  return formatPaddedTargetTime(Math.round(targetTimeSecondsForDifficulty(label) * scaleFactor))
 }
 
 /** Hover / aria label for question lists — difficulty 1–5 → accommodated target. */
@@ -368,6 +376,18 @@ export function PracticeAnswerPopularityBars({
   showLabel?: boolean
   className?: string
 }) {
+  const sampleSize = platformAnswerSampleSize(rows)
+  if (!hasEnoughPlatformAnswerSample(sampleSize)) {
+    return (
+      <div className={cn("flex min-w-0 flex-col gap-3", className)}>
+        {showLabel ? <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Answer Popularity</p> : null}
+        <p className="m-0 rounded-[14px] border border-dashed border-[#dfe1e7] bg-[#f6f8fa] px-4 py-6 text-center text-sm text-[#666d80]">
+          {NOT_ENOUGH_ANSWERS_YET}
+        </p>
+      </div>
+    )
+  }
+
   const max = Math.max(1, ...rows.map((r) => r.pct))
   const normalizedSelected = selectedLetter?.trim().toUpperCase() ?? null
   return (

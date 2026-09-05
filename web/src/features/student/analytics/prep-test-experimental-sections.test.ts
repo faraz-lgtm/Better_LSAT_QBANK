@@ -16,6 +16,7 @@ function q(
     tags: [],
     difficulty: "Medium",
     difficultyDots: 3,
+    targetTimeSeconds: 90,
     actualCorrect: true,
     blindReviewCorrect: true,
     blindReviewUnanswered: false,

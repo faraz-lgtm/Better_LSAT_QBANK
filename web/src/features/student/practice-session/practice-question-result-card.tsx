@@ -9,12 +9,13 @@ import {
   correctChoiceLetter,
   difficultyLabelFromLevel,
   formatMmSs,
+  formatPaddedTargetTime,
   formatPtQuestionTitle,
   resolveQuestionResultTags,
-  targetTimeForDifficulty,
   targetTimeSecondsForDifficulty,
 } from "@/features/student/practice-session/practice-results-ui"
 import { cn } from "@/lib/utils"
+import { isFiniteTargetSeconds } from "@/lib/question-target-time"
 
 type PracticeQuestionResultCardProps = {
   number: number
@@ -32,6 +33,7 @@ type PracticeQuestionResultCardProps = {
   flagged?: boolean
   variant?: "default" | "active-drill" | "in-section"
   className?: string
+  targetTimeSeconds?: number | null
 }
 
 function questionResultBadgeClass(isUnanswered: boolean, isCorrect: boolean) {
@@ -56,16 +58,20 @@ function PracticeQuestionResultCard({
   flagged,
   variant = "default",
   className,
+  targetTimeSeconds,
 }: PracticeQuestionResultCardProps) {
   const { scaleFactor } = useAccommodations()
   const showBlindReviewResult = showBlindReview
   const title = titleOverride ?? (detail ? formatPtQuestionTitle(detail) : `Question ${number}`)
   const tags = detail ? resolveQuestionResultTags(detail) : []
   const difficulty = difficultyLabelFromLevel(detail?.difficulty ?? 3)
-  const targetTime = targetTimeForDifficulty(difficulty, scaleFactor)
+  const baseTargetSec = isFiniteTargetSeconds(targetTimeSeconds)
+    ? targetTimeSeconds
+    : targetTimeSecondsForDifficulty(difficulty)
+  const targetSec = Math.round(baseTargetSec * scaleFactor)
+  const targetTime = formatPaddedTargetTime(targetSec)
   const yourTime =
     yourTimeSeconds != null && yourTimeSeconds >= 0 ? formatMmSs(yourTimeSeconds) : "—"
-  const targetSec = Math.round(targetTimeSecondsForDifficulty(difficulty) * scaleFactor)
   const yourSec = yourTimeSeconds ?? 0
   const deltaSec = targetSec - yourSec
   const yourTimeNote =
@@ -166,14 +172,7 @@ function PracticeQuestionResultCard({
     </div>
   )
 
-  const resolvedPopularityRows =
-    popularityRows.length > 0
-      ? popularityRows
-      : ["A", "B", "C", "D", "E"].map((letter) => ({
-          letter,
-          count: 0,
-          pct: 0,
-        }))
+  const resolvedPopularityRows = popularityRows
 
   const questionCardBody = (
     <PracticeQuestionResultCardLayout

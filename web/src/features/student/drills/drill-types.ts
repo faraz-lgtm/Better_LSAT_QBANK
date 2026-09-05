@@ -41,6 +41,8 @@ export type DrillQuestion = {
   /** 1–5 difficulty for target-time pacing; null when unknown. */
   difficulty?: number | null
   correctChoiceId?: string | null
+  /** Difficulty-weighted section target; present on SECTION sessions only. */
+  targetTimeSeconds?: number
 }
 
 export type DrillSessionMetadata = {
@@ -63,6 +65,7 @@ export type DrillAnswerState = {
   questionId: string
   selectedAnswer: string
   isCorrect: boolean
+  timeSpentSeconds?: number | null
 }
 
 export type DrillSessionResponse = {

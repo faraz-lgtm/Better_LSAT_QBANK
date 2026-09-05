@@ -115,6 +115,7 @@ import {
 } from "@/features/student/practice-session/practice-session-types"
 import { useExamFullscreen, useOfficialInterfacePreference } from "@/features/student/practice-session/use-official-interface"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
+import { useQuestionDwellTime } from "@/features/student/practice-session/use-question-dwell-time"
 import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
 import { PracticeSessionImmersiveFrame } from "@/features/student/practice-session/practice-session-immersive-frame"
 import { PracticeSessionNavArrowButton } from "@/features/student/practice-session/practice-session-nav-arrow-button"
@@ -905,6 +906,17 @@ function SectionSessionPage() {
 
   const safeIndex = Math.min(Math.max(qIndex, 1), Math.max(questions.length, 1))
   const current = questions[safeIndex - 1]
+  const scoredExamActive =
+    !blindReviewMode &&
+    !resultsReviewMode &&
+    !sectionIntroActive &&
+    !postCompleteBlindReview &&
+    !sessionCompleted
+  const questionDwell = useQuestionDwellTime({
+    questionId: current?.id ?? null,
+    active: scoredExamActive,
+    paused,
+  })
 
   usePracticeQuestionSeen({
     sessionId: sessionId ?? "",
@@ -1024,6 +1036,7 @@ function SectionSessionPage() {
         questionId: current.id,
         selectedAnswer: choice.id,
         blindReview: blindReviewMode || undefined,
+        timeSpentSeconds: blindReviewMode ? undefined : questionDwell.getCumulativeSeconds(current.id),
       })
       setAnswersByQuestion((prev) => ({
         ...prev,
@@ -1071,6 +1084,7 @@ function SectionSessionPage() {
         sessionId,
         questionId: current.id,
         selectedAnswer: "",
+        timeSpentSeconds: questionDwell.getCumulativeSeconds(current.id),
       })
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to reset response")

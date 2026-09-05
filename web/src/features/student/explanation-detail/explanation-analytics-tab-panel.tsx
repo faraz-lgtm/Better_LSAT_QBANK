@@ -5,10 +5,10 @@ import { useAccommodations } from "@/features/student/accommodations/accommodati
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
 import {
   formatMmSs,
+  formatPaddedTargetTime,
   formatYourTimeAgainstTarget,
-  targetTimeForDifficulty,
-  difficultyLabelFromLevel,
 } from "@/features/student/practice-session/practice-results-ui"
+import { NOT_ENOUGH_ANSWERS_YET, hasEnoughPlatformAnswerSample } from "@/lib/platform-answer-sample"
 import { cn } from "@/lib/utils"
 
 type ExplanationAnalyticsTabPanelProps = {
@@ -87,7 +87,14 @@ function ScoreBandCard({
   caption: string
 }) {
   const score = Number.parseInt(headline, 10)
-  const sliderPct = Number.isFinite(score) ? Math.max(0, Math.min(100, ((score - 120) / 60) * 100)) : 50
+  if (!Number.isFinite(score)) {
+    return (
+      <p className="m-0 rounded-[14px] border border-dashed border-[#dfe1e7] bg-[#f6f8fa] px-4 py-6 text-center text-sm text-[#666d80]">
+        {caption}
+      </p>
+    )
+  }
+  const sliderPct = Math.max(0, Math.min(100, ((score - 120) / 60) * 100))
 
   return (
     <div
@@ -281,19 +288,11 @@ function TimingStat({
 function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: ExplanationAnalyticsTabPanelProps) {
   const { scaleFactor } = useAccommodations()
   const attemptCount = analytics.history.length
-  const popularityRows =
-    analytics.answerPopularity.length > 0
-      ? analytics.answerPopularity
-      : ["A", "B", "C", "D", "E"].map((letter) => ({
-          letter,
-          count: 0,
-          pct: 0,
-          ...(correctChoiceLetter === letter ? { highlight: true } : {}),
-        }))
+  const showPopularity = hasEnoughPlatformAnswerSample(analytics.answerPopularityTotal)
+  const popularityRows = showPopularity ? analytics.answerPopularity : []
 
-  const difficultyLevel = analytics.questionDifficulty.filled
   const targetSec = Math.round(analytics.targetTimeSeconds * scaleFactor)
-  const targetTime = targetTimeForDifficulty(difficultyLabelFromLevel(difficultyLevel), scaleFactor)
+  const targetTime = formatPaddedTargetTime(targetSec)
   const { yourTime, yourTimeNote } = formatYourTimeAgainstTarget(targetSec, analytics.yourTimeSeconds)
 
   return (
@@ -357,14 +356,20 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
             ) : null}
           </div>
           <div className="flex items-start gap-5 pt-6">
-            {popularityRows.map((row) => (
-              <TopAnswerBar
-                key={row.letter}
-                letter={row.letter}
-                pct={row.pct}
-                highlight={row.highlight}
-              />
-            ))}
+            {showPopularity && popularityRows.length > 0 ? (
+              popularityRows.map((row) => (
+                <TopAnswerBar
+                  key={row.letter}
+                  letter={row.letter}
+                  pct={row.pct}
+                  highlight={row.highlight}
+                />
+              ))
+            ) : (
+              <p className="m-0 w-full rounded-[14px] border border-dashed border-[#dfe1e7] bg-[#f6f8fa] px-4 py-6 text-center text-sm text-[#666d80]">
+                {NOT_ENOUGH_ANSWERS_YET}
+              </p>
+            )}
           </div>
         </section>
       </div>
