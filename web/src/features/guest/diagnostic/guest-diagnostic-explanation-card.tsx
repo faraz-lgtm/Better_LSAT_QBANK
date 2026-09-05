@@ -1,4 +1,5 @@
 import type { MiniDiagnosticExplanation } from '@/lib/api/diagnostic'
+import { buildDiagnosticAnswerPopularity } from '@/features/guest/diagnostic/diagnostic-answer-popularity'
 import {
   PracticeQuestionResultStatsRow,
   difficultyLabelFromLevel,
@@ -34,7 +35,11 @@ function GuestDiagnosticExplanationCard({
   const targetSec = targetTimeSeconds ?? targetTimeSecondsForDifficulty(difficulty)
   const targetTime = formatMmSs(targetSec)
   const { yourTime, yourTimeNote } = formatYourTimeAgainstTarget(targetSec, yourTimeSeconds)
-  const popularityRows: { letter: string; count: number; pct: number }[] = []
+  const popularityRows = buildDiagnosticAnswerPopularity(
+    explanation.sourceItemId,
+    correctLetter,
+    explanation.choices.map((choice) => choice.letter),
+  )
 
   return (
     <article className="border-t border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">

@@ -66,10 +66,11 @@ import {
   REVIEW_SHELL_CLASS,
   REVIEW_SIDE_PANEL_LAYOUT_FULL_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
+import { buildDiagnosticAnswerPopularity } from "@/features/guest/diagnostic/diagnostic-answer-popularity"
 import { difficultyLabelFromLevel, targetTimeSecondsForDifficulty } from "@/features/student/practice-session/practice-results-ui"
 import type { DrillQuestion } from "@/features/student/drills/drill-types"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
-import { NOT_ENOUGH_ANSWERS_YET } from "@/lib/platform-answer-sample"
+import { NOT_ENOUGH_ANSWERS_YET, platformAnswerSampleSize } from "@/lib/platform-answer-sample"
 import { usePracticeSessionAccessibilityPanel } from "@/features/student/practice-session/use-practice-session-accessibility-panel"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { isOfficialLayout, resolveExamSessionVariant } from "@/features/student/practice-session/practice-session-types"
@@ -174,7 +175,7 @@ function difficultyTone(level: number): "green" | "teal" | "red" {
 }
 
 function buildDiagnosticAnalyticsSeed(
-  _question: DrillQuestion,
+  question: DrillQuestion,
   meta: { difficulty: number; questionType: string; targetTimeSeconds?: number } | null,
   selectedAnswer: string | null | undefined,
   yourTimeSeconds?: number | null,
@@ -187,6 +188,10 @@ function buildDiagnosticAnalyticsSeed(
     typeof meta?.targetTimeSeconds === "number" && Number.isFinite(meta.targetTimeSeconds)
       ? meta.targetTimeSeconds
       : targetTimeSecondsForDifficulty(label)
+  const answerPopularity = buildDiagnosticAnswerPopularity(
+    question.id,
+    question.correctChoiceId,
+  )
 
   return {
     questionDifficulty: {
@@ -202,8 +207,8 @@ function buildDiagnosticAnalyticsSeed(
       range: "—",
       caption: NOT_ENOUGH_ANSWERS_YET,
     },
-    answerPopularity: [],
-    answerPopularityTotal: 0,
+    answerPopularity,
+    answerPopularityTotal: platformAnswerSampleSize(answerPopularity),
     userSelectedLetter: /^[A-E]$/.test(letter) ? letter : null,
     targetTimeSeconds,
     yourTimeSeconds: yourTimeSeconds ?? null,
