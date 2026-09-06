@@ -190,9 +190,6 @@ function QuestionTypeRow({ row, accentBar }: { row: QuestionTypeRowData; accentB
         />
         <div className="flex min-w-0 flex-col gap-0.5">
           <p className="text-sm font-semibold leading-[1.35] text-[var(--color-student-heading)]">{row.title}</p>
-          <p className="text-[11px] font-semibold leading-[1.4] tracking-[0.02em] text-[var(--greyscale-500)]">
-            {row.averagePerTest.toFixed(1)} questions avg. per test
-          </p>
           {row.unlocked &&
           row.accuracyPct != null &&
           row.goalPct != null &&
