@@ -923,9 +923,9 @@ function DrillSessionPage() {
       chrome={resultsReviewMode ? "review" : "blind-review"}
       sidePanel={resultsReviewMode ? reviewSidePanel : null}
       onSidePanelChange={resultsReviewMode ? setReviewSidePanel : undefined}
-      findQuery={resultsReviewMode ? findQuery : undefined}
-      onFindQueryChange={resultsReviewMode ? setFindQuery : undefined}
-      questionProgressLabel={resultsReviewMode ? `${safeIndex} of ${questions.length}` : null}
+      findQuery={findQuery}
+      onFindQueryChange={setFindQuery}
+      questionProgressLabel={questions.length > 0 ? `${safeIndex} of ${questions.length}` : null}
     />
   ) : null
 
@@ -940,7 +940,7 @@ function DrillSessionPage() {
             : "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--greyscale-0)] text-[var(--color-student-heading)]"
         }
         data-color-scheme={highlights.accessibilitySettings.colorScheme}
-        style={useBlindReviewLayout ? undefined : highlights.contentStyle}
+        style={highlights.contentStyle}
       >
         {showNotesPanel && useBlindReviewLayout ? (
           <div className={resultsReviewMode ? REVIEW_SIDE_PANEL_LAYOUT_CLASS : BLIND_REVIEW_NOTES_LAYOUT_CLASS}>
@@ -986,6 +986,17 @@ function DrillSessionPage() {
                   flagged={current ? questionFlags.isFlagged(current.id) : false}
                   onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
                   flagsDisabled={sessionCompleted || blindReviewMode}
+                  onOpenReview={
+                    useActiveDrillLayout || (useBlindReviewLayout && !resultsReviewMode)
+                      ? () => setReviewPanelOpen((open) => !open)
+                      : undefined
+                  }
+                  reviewActive={reviewPanelOpen}
+                  onOpenAccessibility={
+                    useActiveDrillLayout || (useBlindReviewLayout && !resultsReviewMode)
+                      ? accessibilityPanel.openPanel
+                      : undefined
+                  }
                   variant={sessionVariant}
                   blindReviewChrome={useBlindReviewLayout}
                   answerView={answerViewTab}
@@ -998,7 +1009,7 @@ function DrillSessionPage() {
                   blindReviewOutcome={blindReviewOutcome}
                   showCorrectAnswer={showCorrectAnswer}
                   onShowCorrectAnswerChange={setShowCorrectAnswer}
-                  blindReviewTabEnabled={false}
+                  blindReviewTabEnabled={!resultsReviewMode}
                   onAnnotateMouseUp={highlights.handleContentMouseUp}
                   onAnnotateClick={highlights.handleContentClick}
                 />
@@ -1153,9 +1164,17 @@ function DrillSessionPage() {
                 flagged={current ? questionFlags.isFlagged(current.id) : false}
                 onToggleFlag={() => current && questionFlags.toggleFlag(current.id)}
                 flagsDisabled={sessionCompleted || blindReviewMode}
-                onOpenReview={useActiveDrillLayout ? () => setReviewPanelOpen((open) => !open) : undefined}
+                onOpenReview={
+                  useActiveDrillLayout || (useBlindReviewLayout && !resultsReviewMode)
+                    ? () => setReviewPanelOpen((open) => !open)
+                    : undefined
+                }
                 reviewActive={reviewPanelOpen}
-                onOpenAccessibility={useActiveDrillLayout ? accessibilityPanel.openPanel : undefined}
+                onOpenAccessibility={
+                  useActiveDrillLayout || (useBlindReviewLayout && !resultsReviewMode)
+                    ? accessibilityPanel.openPanel
+                    : undefined
+                }
                 variant={sessionVariant}
                 toolMode={highlights.toolMode}
                 onEraser={highlights.selectEraser}
@@ -1173,7 +1192,7 @@ function DrillSessionPage() {
                 blindReviewOutcome={blindReviewOutcome}
                 showCorrectAnswer={showCorrectAnswer}
                 onShowCorrectAnswerChange={setShowCorrectAnswer}
-                blindReviewTabEnabled={false}
+                blindReviewTabEnabled={!resultsReviewMode}
                 onAnnotateMouseUp={highlights.handleContentMouseUp}
                 onAnnotateClick={highlights.handleContentClick}
               />
@@ -1369,11 +1388,32 @@ function DrillSessionPage() {
             </p>
           ) : null}
           {blindReviewHeader}
-          <div
-            className={resultsReviewMode ? REVIEW_CARD_CLASS : BLIND_REVIEW_CARD_CLASS}
-            style={resultsReviewMode ? undefined : { maxWidth: showNotesPanel ? 1440 : 1280 }}
-          >
+          <div className={resultsReviewMode ? REVIEW_CARD_CLASS : BLIND_REVIEW_CARD_CLASS}>
             {sessionInnerContent}
+            {!resultsReviewMode ? (
+              <>
+                <PracticeSessionReviewPanel
+                  open={reviewPanelOpen}
+                  variant="active-drill"
+                  questions={questions}
+                  currentIndex={safeIndex}
+                  answersByQuestion={answersByQuestion}
+                  isFlagged={questionFlags.isFlagged}
+                  onSelectQuestion={setQIndex}
+                  onClose={() => setReviewPanelOpen(false)}
+                  showPassageBreaks={sectionType === "RC"}
+                />
+                <PracticeSessionAccessibilityPanel
+                  open={accessibilityPanel.open}
+                  settings={highlights.accessibilitySettings}
+                  timerDisplaySeconds={timerDisplaySeconds}
+                  onClose={accessibilityPanel.closePanel}
+                  onCancel={accessibilityPanel.cancelPanel}
+                  onPreview={accessibilityPanel.previewSettings}
+                  onSave={accessibilityPanel.saveSettings}
+                />
+              </>
+            ) : null}
           </div>
         </div>
       ) : useActiveDrillLayout ? (

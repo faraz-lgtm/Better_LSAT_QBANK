@@ -20,9 +20,9 @@ function PerformanceOverviewCard({ overview }: PerformanceOverviewCardProps) {
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-[var(--greyscale-100)] sm:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
         {overview.metrics.map((metric) => (
-          <div key={metric.id} className="flex min-w-0 flex-col gap-1.5 bg-[var(--greyscale-0)] p-4">
+          <div key={metric.id} className="flex min-w-0 flex-col gap-1.5 p-4">
             <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{metric.label}</p>
             <p className={cn("text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]", metric.valueClassName)}>
               {metric.value}

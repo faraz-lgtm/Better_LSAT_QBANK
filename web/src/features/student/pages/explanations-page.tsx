@@ -282,19 +282,10 @@ const DIFFICULTY_METER_COLORS: Record<PracticeDifficultyLabel, string> = {
 }
 
 function DifficultyMeter({ level }: { level: ExplanationQuestionNode["difficulty"] }) {
-  const { scaleFactor } = useAccommodations()
   const label = difficultyLabelFromLevel(level)
   const activeColor = DIFFICULTY_METER_COLORS[label]
-  const targetHover = targetTimeHoverLabel(level, scaleFactor)
   return (
-    <div
-      className="flex h-10 w-fit shrink-0 items-center gap-2.5 overflow-visible rounded-[10px] bg-[var(--primary-0)] px-3"
-      title={
-        targetHover
-          ? `Difficulty ${level} of 5 · ${targetHover}`
-          : `Difficulty ${level} of 5`
-      }
-    >
+    <div className="flex h-10 w-fit shrink-0 items-center gap-2.5 overflow-visible rounded-[10px] bg-[var(--primary-0)] px-3">
       <div className="flex shrink-0 items-center gap-1.5">
         {Array.from({ length: 5 }, (_, i) => (
           <span
@@ -314,6 +305,13 @@ function DifficultyMeter({ level }: { level: ExplanationQuestionNode["difficulty
   )
 }
 
+function questionRowHoverTitle(difficulty: ExplanationQuestionNode["difficulty"], scaleFactor: number): string {
+  const targetHover = targetTimeHoverLabel(difficulty, scaleFactor)
+  return targetHover
+    ? `Difficulty ${difficulty} of 5 · ${targetHover}`
+    : `Difficulty ${difficulty} of 5`
+}
+
 function ExplanationTreeQuestionRow({
   question,
   indentClass,
@@ -325,12 +323,14 @@ function ExplanationTreeQuestionRow({
   bookmarked: boolean
   onToggleBookmark: () => void
 }) {
+  const { scaleFactor } = useAccommodations()
   const detailHref = explanationQuestionDetailHref(question.id)
   return (
     <div
       className={cn(QUESTION_ROW_CLASS, indentClass)}
       data-tree-level="question"
       style={{ borderColor: S.border }}
+      title={questionRowHoverTitle(question.difficulty, scaleFactor)}
     >
       <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
         <QuestionIndexBadge>{question.number}</QuestionIndexBadge>

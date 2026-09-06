@@ -556,8 +556,10 @@ function PrepTestListFilters({
   setSort: (s: (typeof SORT_OPTIONS)[number]) => void
 }) {
   return (
-    <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-center lg:gap-6">
-      <h2 className="shrink-0 text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">Start your PrepTest</h2>
+    <div className="flex w-full flex-wrap items-center gap-4 lg:gap-6">
+      <h2 className="shrink-0 text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">
+        Start your PrepTest
+      </h2>
       <div className="min-w-0 flex-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex w-max items-center gap-2 lg:ml-auto">
           {FILTER_TABS.map((tab) => {
@@ -574,18 +576,20 @@ function PrepTestListFilters({
             )
           })}
         </div>
-        <div className="relative z-20 w-[160px] shrink-0">
-          <label htmlFor="preptest-sort" className="sr-only">
-            Sort PrepTests
-          </label>
-          <FigmaDropdown
-            id="preptest-sort"
-            variant="pill"
-            value={sort}
-            onChange={(next) => setSort(next as (typeof SORT_OPTIONS)[number])}
-            options={SORT_OPTIONS.map((option) => ({ value: option, label: option }))}
-          />
-        </div>
+      </div>
+      <div className="relative z-20 w-[160px] shrink-0">
+        <label htmlFor="preptest-sort" className="sr-only">
+          Sort PrepTests
+        </label>
+        <FigmaDropdown
+          id="preptest-sort"
+          variant="pill"
+          menuAlign="end"
+          value={sort}
+          onChange={(next) => setSort(next as (typeof SORT_OPTIONS)[number])}
+          options={SORT_OPTIONS.map((option) => ({ value: option, label: option }))}
+          className="w-full"
+        />
       </div>
     </div>
   )
