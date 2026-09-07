@@ -99,6 +99,11 @@ import {
 } from "@/features/student/drills/drill-blind-review-policy"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
+import { usePracticeAnswerPersist } from "@/features/student/practice-session/practice-answer-persist"
+import {
+  applyPersistedAnswerToMap,
+  shouldDeferPracticeAnswerPersist,
+} from "@/features/student/practice-session/practice-deferred-answers"
 import { createPracticeApi } from "@/lib/api/practice"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
@@ -282,6 +287,20 @@ function DrillSessionPage() {
   )
 
   const loadGenerationRef = useRef(0)
+  const prevQuestionIdRef = useRef<string | null>(null)
+  const answerPersist = usePracticeAnswerPersist({
+    sessionId: sessionId ?? null,
+    enabled:
+      shouldDeferPracticeAnswerPersist(drill?.metadata?.showAnswers ?? "end") &&
+      !reviewAfterComplete &&
+      !returnTo.includes("/app/practice/results/"),
+    submitAnswer: (input) => practiceApi.submitAnswer(input),
+    onPersisted: (questionId, answer) => {
+      setAnswersByQuestion((prev) => applyPersistedAnswerToMap(prev, questionId, answer))
+    },
+    onError: (error) => setError(error.message),
+  })
+
   const load = useCallback(async () => {
     if (!sessionId) return
     const generation = ++loadGenerationRef.current
@@ -295,6 +314,7 @@ function DrillSessionPage() {
       for (const a of data.answers) {
         map[a.questionId] = { selectedAnswer: a.selectedAnswer, isCorrect: a.isCorrect }
       }
+      const hydrated = answerPersist.hydrate(map)
 
       const blindReviewActive =
         Boolean(data.session.completed_at) &&
@@ -313,11 +333,11 @@ function DrillSessionPage() {
         const firstBlindUnanswered = data.questions.findIndex((q) => !blindReviewAnswers[q.id])
         setQIndex(firstBlindUnanswered >= 0 ? firstBlindUnanswered + 1 : 1)
       } else {
-        setAnswersByQuestion(map)
+        setAnswersByQuestion(hydrated)
         setActualAnswersByQuestion(map)
         setReviewAfterComplete(false)
         setAnswerViewTab("blind_review")
-        const firstUnanswered = data.questions.findIndex((q) => !map[q.id])
+        const firstUnanswered = data.questions.findIndex((q) => !hydrated[q.id])
         setQIndex(firstUnanswered >= 0 ? firstUnanswered + 1 : 1)
       }
     } catch (e) {
@@ -327,6 +347,7 @@ function DrillSessionPage() {
       if (generation === loadGenerationRef.current) setLoading(false)
     }
   }, [
+    answerPersist,
     practiceApi,
     sessionId,
     drillBlindReviewActiveKey,
@@ -408,6 +429,18 @@ function DrillSessionPage() {
 
   const safeIndex = Math.min(Math.max(qIndex, 1), Math.max(questions.length, 1))
   const current = questions[safeIndex - 1]
+
+  useEffect(() => {
+    prevQuestionIdRef.current = null
+  }, [sessionId])
+
+  useEffect(() => {
+    const prev = prevQuestionIdRef.current
+    prevQuestionIdRef.current = current?.id ?? null
+    if (prev && prev !== current?.id) {
+      void answerPersist.flushQuestion(prev)
+    }
+  }, [answerPersist, current?.id])
 
   const goToNextQuestion = useCallback(async () => {
     if (safeIndex < questions.length) {
@@ -529,7 +562,7 @@ function DrillSessionPage() {
   }, [findQuery, safeIndex, current?.id])
 
   async function handleSelectChoice(index: number) {
-    if (!sessionId || !current || submitting) return
+    if (!sessionId || !current) return
     if (reviewAfterComplete && !editingBlindReviewAnswers) return
     if (reviewAfterComplete) {
       const choice = current.choices[index]
@@ -553,8 +586,12 @@ function DrillSessionPage() {
 
     const optimistic = { selectedAnswer: choice.id, isCorrect: false }
     setAnswersByQuestion((prev) => ({ ...prev, [current.id]: optimistic }))
-    setSubmitting(true)
+    if (shouldDeferPracticeAnswerPersist(showAnswersMode)) {
+      answerPersist.markDirty(current.id, choice.id)
+      return
+    }
 
+    setSubmitting(true)
     try {
       const event = await practiceApi.submitAnswer({
         sessionId,
@@ -586,7 +623,7 @@ function DrillSessionPage() {
   }
 
   async function handleResetResponse() {
-    if (!sessionId || !current || submitting) return
+    if (!sessionId || !current) return
     if (reviewAfterComplete && !editingBlindReviewAnswers) return
     if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), { blindReview: editingBlindReviewAnswers })) {
       return
@@ -600,6 +637,10 @@ function DrillSessionPage() {
     })
 
     if (reviewAfterComplete) return
+    if (shouldDeferPracticeAnswerPersist(showAnswersMode)) {
+      answerPersist.markDirty(current.id, "")
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -739,7 +780,9 @@ function DrillSessionPage() {
     setFinishing(true)
     setError(null)
     try {
+      await answerPersist.flushAll()
       const completed = await practiceApi.completeSession(sessionId)
+      answerPersist.clearPending()
       setDrill((prev) => (prev ? { ...prev, session: completed } : prev))
       const questionCount = questions.length > 0 ? questions.length : 1
       const rawScore = completed.raw_score ?? 0

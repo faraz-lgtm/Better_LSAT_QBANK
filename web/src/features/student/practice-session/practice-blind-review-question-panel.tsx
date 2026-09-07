@@ -84,7 +84,6 @@ function PracticeBlindReviewQuestionPanel({
   selectedIndex,
   revealed,
   isCorrect,
-  submitting,
   allowReselect,
   getRegionHtml,
   onSelect,
@@ -368,7 +367,7 @@ function PracticeBlindReviewQuestionPanel({
                 hidden={!useSideWidget && Boolean(hiddenChoices[index])}
                 masked={useSideWidget ? Boolean(maskedChoices[index]) : false}
                 maskingMode={useSideWidget && responseMasking}
-                disabled={submitting || choicesDisabled || (reviewChrome && !allowReselect)}
+                disabled={choicesDisabled || (reviewChrome && !allowReselect)}
                 selectedIndex={displaySelectedIndex}
                 allowReselect={allowReselect && !reviewChrome}
                 onSelect={() => onSelect(index)}

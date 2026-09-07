@@ -248,7 +248,7 @@ function PracticeDrillQuestionPanel({
               hidden={!isActiveDrillLayout && Boolean(hiddenChoices[index])}
               masked={isActiveDrillLayout ? Boolean(maskedChoices[index]) : false}
               maskingMode={isActiveDrillLayout && responseMasking}
-              disabled={submitting || choicesDisabled}
+              disabled={choicesDisabled}
               selectedIndex={selectedIndex}
               allowReselect={allowReselect}
               onSelect={() => onSelect(index)}

@@ -2,8 +2,6 @@ import { PREPTEST_LIST_HREF, isPrepTestHubDetailPath, isPrepTestStudentPath } fr
 import {
   DIAGNOSTIC_RESULTS_FULL_HREF,
   DIAGNOSTIC_RESULTS_MINI_HREF,
-  diagnosticHistoryHref,
-  diagnosticResultsSectionFromPath,
 } from "@/features/student/diagnostic/diagnostic-results-routes"
 
 export type StudentNavSectionKey = "academy" | "prep" | "insights"
@@ -149,117 +147,8 @@ export function isNavItemActive(
   return pathname.startsWith(`${path}/`)
 }
 
-export type StudentBreadcrumb = {
-  label: string
-  href?: string
-}
-
-function getSectionLandingHref(key: StudentNavSectionKey): string | undefined {
-  if (key === "prep") return "/app/practice/drills"
-  if (key === "academy") return "/app/prep-course"
-  if (key === "insights") return "/app/analytics"
-  return undefined
-}
-
-function sectionBreadcrumbLabel(label: string): string {
+function sectionLabel(label: string): string {
   return label.charAt(0) + label.slice(1).toLowerCase()
-}
-
-function isPracticeSectionResultsSearch(search: string): boolean {
-  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search)
-  if (params.get("source") === "section") return true
-  const returnTo = params.get("returnTo") ?? ""
-  return returnTo.includes("/practice/sections")
-}
-
-export function getStudentBreadcrumbs(pathname: string, search = ""): StudentBreadcrumb[] {
-  if (pathname.startsWith("/app/diagnostic/results")) {
-    const resultsSection = diagnosticResultsSectionFromPath(pathname)
-    const crumbs: StudentBreadcrumb[] = [
-      { label: "Diagnostic Results", href: DIAGNOSTIC_RESULTS_MINI_HREF },
-    ]
-    if (resultsSection) {
-      const historyHref = diagnosticHistoryHref(resultsSection)
-      const isAttempt = pathname !== DIAGNOSTIC_RESULTS_MINI_HREF && pathname !== DIAGNOSTIC_RESULTS_FULL_HREF
-      crumbs.push({
-        label: resultsSection === "mini" ? "Mini" : "Full",
-        href: isAttempt ? historyHref : undefined,
-      })
-      if (isAttempt) crumbs.push({ label: "Results" })
-    }
-    return crumbs
-  }
-
-  if (isDashboardActive(pathname)) {
-    return [{ label: "Main" }, { label: "Dashboard" }]
-  }
-
-  if (pathname === "/app/account") {
-    return [{ label: "Account" }]
-  }
-
-  if (pathname === PREPTEST_LIST_HREF) {
-    return [{ label: "PrepTest" }]
-  }
-
-  if (isPrepTestHubDetailPath(pathname)) {
-    return [{ label: "PrepTest", href: PREPTEST_LIST_HREF }]
-  }
-
-  const section = getActiveSection(pathname)
-  if (!section) return []
-
-  const crumbs: StudentBreadcrumb[] = [
-    { label: sectionBreadcrumbLabel(section.label), href: getSectionLandingHref(section.key) },
-  ]
-
-  if (pathname.startsWith("/app/analytics/preptests/results/")) {
-    crumbs.push({ label: "PrepTest", href: "/app/analytics/preptests" })
-    crumbs.push({ label: "Results" })
-    return crumbs
-  }
-
-  if (pathname === "/app/practice/drills/lr/new") {
-    crumbs.push({ label: "Drills", href: "/app/practice/drills" })
-    crumbs.push({ label: "LR Drills" })
-    return crumbs
-  }
-
-  if (pathname === "/app/practice/drills/rc/new") {
-    crumbs.push({ label: "Drills", href: "/app/practice/drills" })
-    crumbs.push({ label: "RC Drills" })
-    return crumbs
-  }
-
-  if (pathname.startsWith("/app/practice/results/")) {
-    if (isPracticeSectionResultsSearch(search)) {
-      crumbs.push({ label: "Sections", href: "/app/practice/sections" })
-      crumbs.push({ label: "Section result" })
-      return crumbs
-    }
-    crumbs.push({ label: "Drills", href: "/app/practice/drills" })
-    crumbs.push({ label: "Drill results" })
-    return crumbs
-  }
-
-  if (pathname === "/app/practice/blind-review" || pathname.startsWith("/app/practice/blind-review/")) {
-    crumbs.push({ label: "Blind Review" })
-    return crumbs
-  }
-
-  if (pathname.startsWith("/app/prep-course/") && pathname !== "/app/prep-course") {
-    crumbs.push({ label: "Prep Courses", href: "/app/prep-course" })
-    crumbs.push({ label: "Course Content" })
-    return crumbs
-  }
-
-  const activeItem = findActiveNavItem(pathname, search)
-
-  if (activeItem && !crumbs.some((crumb) => crumb.label === activeItem.label)) {
-    crumbs.push({ label: activeItem.label })
-  }
-
-  return crumbs
 }
 
 export function getStudentPageTitle(pathname: string, search = ""): string | null {
@@ -281,5 +170,5 @@ export function getStudentPageTitle(pathname: string, search = ""): string | nul
   if (activeItem) return activeItem.label
 
   const section = getActiveSection(pathname)
-  return section ? sectionBreadcrumbLabel(section.label) : null
+  return section ? sectionLabel(section.label) : null
 }

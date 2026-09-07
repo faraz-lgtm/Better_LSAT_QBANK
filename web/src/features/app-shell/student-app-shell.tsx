@@ -31,7 +31,7 @@ function StudentAppShellLayout() {
   const { entitlement } = useStudentEntitlement()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), [])
-  const { headerActions, breadcrumbTail, setHeaderActions, setBreadcrumbTail } = useStudentPageHeaderSlotState()
+  const { headerActions, setHeaderActions } = useStudentPageHeaderSlotState()
 
   const freePlanShell =
     resolveStudentShellVariant({
@@ -54,7 +54,7 @@ function StudentAppShellLayout() {
   }, [immersive])
 
   return (
-    <StudentPageHeaderSlotProvider setHeaderActions={setHeaderActions} setBreadcrumbTail={setBreadcrumbTail}>
+    <StudentPageHeaderSlotProvider setHeaderActions={setHeaderActions}>
       <GuestPricingModalProvider>
         <div
           className={cn(
@@ -70,7 +70,6 @@ function StudentAppShellLayout() {
           <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             {immersive ? null : (
               <StudentAppHeader
-                breadcrumbTail={breadcrumbTail}
                 onOpenMobileNav={() => setMobileNavOpen(true)}
                 headerActions={freePlanShell ? <GuestUpgradeCta /> : headerActions}
               />

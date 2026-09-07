@@ -144,6 +144,11 @@ import {
 } from "@/features/student/practice-session/use-practice-session-timer"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
+import { usePracticeAnswerPersist } from "@/features/student/practice-session/practice-answer-persist"
+import {
+  applyPersistedAnswerToMap,
+  shouldDeferPracticeAnswerPersist,
+} from "@/features/student/practice-session/practice-deferred-answers"
 import { createPracticeApi } from "@/lib/api/practice"
 import {
   resolvePrepTestBreakAfterSectionId,
@@ -403,7 +408,7 @@ function SectionQuestionPanel({
               hidden={!isActiveDrillLayout && Boolean(hiddenChoices[index])}
               masked={isActiveDrillLayout ? Boolean(maskedChoices[index]) : false}
               maskingMode={isActiveDrillLayout && responseMasking}
-              disabled={submitting || choicesDisabled}
+              disabled={choicesDisabled}
               selectedIndex={selectedIndex}
               allowReselect={allowReselect}
               onSelect={() => onSelect(index)}
@@ -550,6 +555,23 @@ function SectionSessionPage() {
   } | null>(null)
   const timeUpTriggeredRef = useRef(false)
   const loadGenerationRef = useRef(0)
+  const dwellSecondsRef = useRef<(questionId: string) => number | undefined>(() => undefined)
+  const prevQuestionIdRef = useRef<string | null>(null)
+
+  const answerPersist = usePracticeAnswerPersist({
+    sessionId: sessionId ?? null,
+    enabled:
+      shouldDeferPracticeAnswerPersist(sectionSession?.metadata?.showAnswers ?? "end") &&
+      !postCompleteBlindReview &&
+      !resultsReviewMode,
+    submitAnswer: (input) => practiceApi.submitAnswer(input),
+    getTimeSpentSeconds: (questionId) => dwellSecondsRef.current(questionId),
+    blindReview: blindReviewMode,
+    onPersisted: (questionId, answer) => {
+      setAnswersByQuestion((prev) => applyPersistedAnswerToMap(prev, questionId, answer))
+    },
+    onError: (error) => setError(error.message),
+  })
 
   const submitModalTitle = postCompleteBlindReview
     ? "Finish Blind Review"
@@ -676,6 +698,7 @@ function SectionSessionPage() {
       for (const a of data.answers) {
         map[a.questionId] = { selectedAnswer: a.selectedAnswer, isCorrect: a.isCorrect }
       }
+      const hydrated = answerPersist.hydrate(map)
       if (searchParams.get("review") === "1" && sessionId) {
         const storageKey = `br-actual-${sessionId}`
         const storedActual = sessionStorage.getItem(storageKey)
@@ -739,10 +762,10 @@ function SectionSessionPage() {
           const firstBlindUnanswered = data.questions.findIndex((q) => !blindReviewAnswers[q.id])
           setQIndex(firstBlindUnanswered >= 0 ? firstBlindUnanswered + 1 : 1)
         } else {
-          setAnswersByQuestion(map)
+          setAnswersByQuestion(hydrated)
           setActualAnswersByQuestion(map)
           setPostCompleteBlindReview(false)
-          const firstUnanswered = data.questions.findIndex((q) => !map[q.id])
+          const firstUnanswered = data.questions.findIndex((q) => !hydrated[q.id])
           setQIndex(firstUnanswered >= 0 ? firstUnanswered + 1 : 1)
         }
       }
@@ -752,7 +775,7 @@ function SectionSessionPage() {
     } finally {
       if (generation === loadGenerationRef.current) setLoading(false)
     }
-  }, [practiceApi, sessionId, searchParams, sectionPostBrActiveKey, sectionPostBrActualKey, sectionPostBrAnswersKey])
+  }, [answerPersist, practiceApi, sessionId, searchParams, sectionPostBrActiveKey, sectionPostBrActualKey, sectionPostBrAnswersKey])
 
   useEffect(() => {
     void load()
@@ -917,6 +940,19 @@ function SectionSessionPage() {
     active: scoredExamActive,
     paused,
   })
+  dwellSecondsRef.current = (id) => questionDwell.getCumulativeSeconds(id)
+
+  useEffect(() => {
+    prevQuestionIdRef.current = null
+  }, [sessionId])
+
+  useEffect(() => {
+    const prev = prevQuestionIdRef.current
+    prevQuestionIdRef.current = current?.id ?? null
+    if (prev && prev !== current?.id) {
+      void answerPersist.flushQuestion(prev)
+    }
+  }, [answerPersist, current?.id])
 
   usePracticeQuestionSeen({
     sessionId: sessionId ?? "",
@@ -1001,7 +1037,7 @@ function SectionSessionPage() {
   }, [findQuery, safeIndex, current?.id])
 
   async function handleSelectChoice(index: number) {
-    if (!sessionId || !current || submitting) return
+    if (!sessionId || !current) return
     if (resultsReviewMode) return
     if (answeringBlindReview && !editingBlindReviewAnswers) return
     if (postCompleteBlindReview) {
@@ -1028,8 +1064,12 @@ function SectionSessionPage() {
 
     const optimistic = { selectedAnswer: choice.id, isCorrect: false }
     setAnswersByQuestion((prev) => ({ ...prev, [current.id]: optimistic }))
-    setSubmitting(true)
+    if (shouldDeferPracticeAnswerPersist(showAnswersMode)) {
+      answerPersist.markDirty(current.id, choice.id)
+      return
+    }
 
+    setSubmitting(true)
     try {
       const event = await practiceApi.submitAnswer({
         sessionId,
@@ -1062,7 +1102,7 @@ function SectionSessionPage() {
   }
 
   async function handleResetResponse() {
-    if (!sessionId || !current || submitting || resultsReviewMode) return
+    if (!sessionId || !current || resultsReviewMode) return
     if (answeringBlindReview && !editingBlindReviewAnswers) return
     if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
       blindReview: editingBlindReviewAnswers,
@@ -1076,7 +1116,12 @@ function SectionSessionPage() {
       return next
     })
 
-    if (blindReviewMode || postCompleteBlindReview) return
+    if (postCompleteBlindReview) return
+    if (shouldDeferPracticeAnswerPersist(showAnswersMode)) {
+      answerPersist.markDirty(current.id, "")
+      return
+    }
+    if (blindReviewMode) return
 
     setSubmitting(true)
     try {
@@ -1223,6 +1268,11 @@ function SectionSessionPage() {
       return
     }
     if (blindReviewMode) {
+      try {
+        await answerPersist.flushAll()
+      } catch {
+        return
+      }
       setSubmitModalOpen(false)
       navigate(blindReviewExitPath(), { replace: true })
       return
@@ -1230,7 +1280,9 @@ function SectionSessionPage() {
     setFinishing(true)
     setError(null)
     try {
+      await answerPersist.flushAll()
       const completed = await practiceApi.completeSession(sessionId)
+      answerPersist.clearPending()
       setSectionSession((prev) => (prev ? { ...prev, session: completed } : prev))
       setSubmitModalOpen(false)
 
