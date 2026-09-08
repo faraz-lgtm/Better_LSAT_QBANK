@@ -848,6 +848,52 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       if (error) throw error
       return (data as QuestionExplanationMetaRow | null) ?? null
     },
+
+    /**
+     * Latest submitted answer per user for each question (platform-wide popularity).
+     * Events are read newest-first so the first row per (question, user) wins.
+     */
+    async listLatestAnswerSelectionsByQuestionIds(
+      questionIds: string[],
+    ): Promise<Map<string, string[]>> {
+      const unique = [...new Set(questionIds.map((id) => id.trim()).filter(Boolean))]
+      const result = new Map<string, string[]>()
+      for (const id of unique) result.set(id, [])
+      if (unique.length === 0) return result
+
+      const seen = new Set<string>()
+      const chunkSize = 40
+      const pageSize = 1000
+      for (let i = 0; i < unique.length; i += chunkSize) {
+        const chunk = unique.slice(i, i + chunkSize)
+        let from = 0
+        while (true) {
+          const { data, error } = await client
+            .from('answer_events')
+            .select('question_id, user_id, selected_answer')
+            .in('question_id', chunk)
+            .order('created_at', { ascending: false })
+            .range(from, from + pageSize - 1)
+          if (error) throw error
+          const rows = (data ?? []) as {
+            question_id: string
+            user_id: string
+            selected_answer: string | null
+          }[]
+          for (const row of rows) {
+            const key = `${row.question_id}\0${row.user_id}`
+            if (seen.has(key)) continue
+            const answer = row.selected_answer?.trim()
+            if (!answer) continue
+            seen.add(key)
+            result.get(row.question_id)?.push(answer)
+          }
+          if (rows.length < pageSize) break
+          from += pageSize
+        }
+      }
+      return result
+    },
   }
 }
 

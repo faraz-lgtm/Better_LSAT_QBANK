@@ -4,7 +4,7 @@ import type {
   CompletedPreptestRow,
   PracticeSessionListRow,
 } from './analytics.repository.ts'
-import { createAnalyticsService } from './analytics.service.ts'
+import { answerPopularityPctTuple, createAnalyticsService } from './analytics.service.ts'
 
 function completedPreptestRow(
   overrides: Partial<CompletedPreptestRow> = {},
@@ -112,6 +112,7 @@ function mockRepo(overrides: Partial<AnalyticsRepository> = {}): AnalyticsReposi
     getScoreRowForRaw: async () => null,
     getScoreRowForScaled: async () => null,
     listPrepTestQuestionsWithMeta: async () => [],
+    listLatestAnswerSelectionsByQuestionIds: async () => new Map<string, string[]>(),
     listAnswerEventsWithTypes: async () => [
       { question_type_id: 't-low', is_correct: true, question_id: 'q-low-1', session_kind: 'DRILL' as const },
       { question_type_id: 't-low', is_correct: false, question_id: 'q-low-2', session_kind: 'DRILL' as const },
@@ -1201,7 +1202,7 @@ Deno.test('getPrepTestSessionDetail sets yourTimeSeconds from the at-completion 
   const service = createAnalyticsService({
     repository: mockRepo({
       getPracticeSession: async () => prepTestSessionFixture(),
-      listSectionSessionsForPrepTest: async () => [{ id: 'sec-s1', section_id: 's1', completed_at: PREP_TEST_COMPLETED_AT, raw_score: 20 }],
+      listSectionSessionsForPrepTest: async () => [{ id: 'sec-s1', section_id: 's1', started_at: '2026-01-01T10:00:00Z', completed_at: PREP_TEST_COMPLETED_AT, raw_score: 20 }],
       listAnswerEventsForSessions: async () => [
         {
           practice_session_id: 'sec-s1',
@@ -1472,6 +1473,29 @@ Deno.test('getPrepTestSessionDetail allocates targetTimeSeconds by section diffi
   const easiest = d.questions.find((q) => q.id === 'q1')?.targetTimeSeconds ?? 0
   const hardest = d.questions.find((q) => q.id === 'q3')?.targetTimeSeconds ?? 0
   assertEquals(hardest > easiest, true)
+})
+
+Deno.test('answerPopularityPctTuple returns zeros below sample threshold', () => {
+  assertEquals(answerPopularityPctTuple(['A', 'B', 'C', 'D']), [0, 0, 0, 0, 0])
+})
+
+Deno.test('answerPopularityPctTuple returns A–E percents at sample of 5', () => {
+  assertEquals(answerPopularityPctTuple(['B', 'B', 'B', 'A', 'A']), [40, 60, 0, 0, 0])
+})
+
+Deno.test('getPrepTestSessionDetail includes platform answer popularity when sample is enough', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      getPracticeSession: async () => prepTestSessionFixture(),
+      listSectionSessionsForPrepTest: async () => [],
+      listAnswerEventsForSessions: async () => [],
+      listPrepTestQuestionsWithMeta: async () => [prepTestQuestion({ id: 'q-pop' })],
+      listLatestAnswerSelectionsByQuestionIds: async () =>
+        new Map([['q-pop', ['A', 'A', 'B', 'B', 'B']]]),
+    }),
+  })
+  const d = await service.getPrepTestSessionDetail('user-1', 'pt-session-1')
+  assertEquals(d.questions[0]?.answerPopularity, [40, 60, 0, 0, 0])
 })
 
 // --- legacy explanations ---

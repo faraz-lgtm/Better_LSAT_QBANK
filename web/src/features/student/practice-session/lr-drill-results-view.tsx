@@ -7,7 +7,6 @@ import {
   FIGMA_DROPDOWN_PILL_FILTER_CLASS,
   FigmaDropdown,
 } from "@/components/ui/figma-dropdown"
-import { Switch } from "@/components/ui/switch"
 import { resolveAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
 import { explanationQuestionDetailHref } from "@/features/student/explanation-detail/explanation-question-index"
 import {
@@ -52,7 +51,7 @@ import {
 import { cn } from "@/lib/utils"
 import { isFiniteTargetSeconds } from "@/lib/question-target-time"
 
-const QUESTION_FILTER_OPTIONS = ["Question", "Incorrect only"] as const
+const QUESTION_FILTER_OPTIONS = ["Both", "Correct", "Incorrect"] as const
 
 type QuestionFilter = (typeof QUESTION_FILTER_OPTIONS)[number]
 
@@ -63,13 +62,11 @@ type LrDrillResultsViewProps = {
   elapsedSeconds: number
   timing: string
   take: number
-  excluded: boolean
   questions: PracticeQuestionResultMeta[]
   showBlindReview: boolean
   bookmarkedIds: ReadonlySet<string>
   onToggleBookmark: (questionId: string) => void
   onReviewInTester: () => void
-  onExcludedChange: (next: boolean) => void
   variant?: "drill" | "section"
   heroTitle?: string
   compactLabel?: string
@@ -322,19 +319,17 @@ function LrDrillResultsView({
   elapsedSeconds,
   timing,
   take,
-  excluded,
   questions,
   showBlindReview,
   bookmarkedIds,
   onToggleBookmark,
   onReviewInTester,
-  onExcludedChange,
   variant = "drill",
   heroTitle: heroTitleOverride,
   compactLabel,
 }: LrDrillResultsViewProps) {
   const { scaleFactor } = useAccommodations()
-  const [filter, setFilter] = useState<QuestionFilter>("Question")
+  const [filter, setFilter] = useState<QuestionFilter>("Both")
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
   const isSection = variant === "section"
@@ -345,14 +340,17 @@ function LrDrillResultsView({
       ? String(scaledScore)
       : `${rawScore}/${questionCount}`
     : formatAccuracyPct(rawScore, questionCount)
+  const correctOnly = filter === "Correct"
+  const incorrectOnly = filter === "Incorrect"
   const visibleQuestions = useMemo(
     () =>
       filterPracticeResultQuestions(questions, {
-        incorrectOnly: filter === "Incorrect only",
+        correctOnly,
+        incorrectOnly,
         bookmarkedOnly,
         bookmarkedIds,
       }),
-    [bookmarkedIds, bookmarkedOnly, filter, questions],
+    [bookmarkedIds, bookmarkedOnly, correctOnly, incorrectOnly, questions],
   )
   return (
     <div className={PT_RESULTS_PAGE_GAP_CLASS}>
@@ -440,29 +438,14 @@ function LrDrillResultsView({
       ) : (
         <PracticeResultsEmptyFilterMessage
           bookmarkedOnly={bookmarkedOnly}
-          incorrectOnly={filter === "Incorrect only"}
+          incorrectOnly={incorrectOnly}
+          correctOnly={correctOnly}
           scope={isSection ? "section" : "drill"}
         />
       )}
 
       <section className={cn(PT_RESULTS_SURFACE_CARD_CLASS, "flex flex-col gap-6 px-6 py-4")}>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <p className="!m-0 !text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">About this PrepTest</p>
-          <div className="flex w-[212px] shrink-0 flex-col gap-1.5">
-            <div className="flex items-center justify-between gap-3">
-              <span className="!text-[20px] font-bold leading-[1.35] text-[var(--color-student-heading)]">Insights</span>
-              <Switch
-                checked={excluded}
-                onChange={(event) => onExcludedChange(event.target.checked)}
-                aria-label="Exclude this drill from insights"
-                size="md"
-              />
-            </div>
-            <p className="text-xs font-normal leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
-              Exclude from Insights
-            </p>
-          </div>
-        </div>
+        <p className="!m-0 !text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">About this PrepTest</p>
 
         <div className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
           {(

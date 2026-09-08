@@ -6,21 +6,30 @@ const PT_RESULTS_PAGE_BG_CLASS = "bg-[var(--background)]"
 /** Figma `18644:33040` — 24px vertical rhythm between major blocks */
 const PT_RESULTS_PAGE_GAP_CLASS = "flex flex-col gap-[24px]"
 
+/**
+ * Page shell width so score (290) + gap (24) + four section cards (4×212 + 3×7 + panel pad 48)
+ * fit inside the hero padding without clipping. 1328 = 1280 content + 24×2 shell gutter.
+ */
+const PT_RESULTS_PAGE_CONTAINER_CLASS = "mx-auto w-full min-w-0 max-w-[1328px]"
+
 /** Figma `18644:33809` — hero card: title, actions, score + results-by-section */
 const PT_RESULTS_HERO_CARD_CLASS =
   "flex w-full flex-col gap-[24px] overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]"
 
-/** Figma `18644:33827` — panel behind section summary cards */
+/** Figma `18644:33827` — panel behind section summary cards (grows to fill remaining row width) */
 const PT_RESULTS_BY_SECTION_PANEL_CLASS =
-  "flex min-h-[316px] min-w-0 w-full flex-col gap-[18px] rounded-[16px] bg-[var(--primary-0)] p-[24px] lg:w-[918px] lg:shrink-0"
+  "flex min-w-0 w-full flex-1 flex-col gap-[18px] overflow-hidden rounded-[16px] bg-[var(--primary-0)] p-[24px]"
+
+/** Section summary cards row — equal flex children, no scroll */
+const PT_RESULTS_BY_SECTION_CARDS_ROW_CLASS = "flex w-full min-w-0 gap-[7px]"
 
 /** Figma `18644:33834` — secondary elevated surface (total questions, about, etc.) */
 const PT_RESULTS_SURFACE_CARD_CLASS =
   "overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
 
-/** Figma `18644:33810` — score column + results-by-section row (290 + 24 + 918) */
+/** Figma `18644:33810` — score column + results-by-section row */
 const PT_RESULTS_SUMMARY_ROW_CLASS =
-  "flex w-full max-w-[1232px] flex-col gap-[24px] lg:flex-row lg:items-start"
+  "flex w-full flex-col gap-[24px] lg:flex-row lg:items-start"
 
 /** Figma `18644:33841` — section block: elevated surface + gray header + passage groups */
 const PT_RESULTS_SECTION_BLOCK_CLASS =
@@ -70,12 +79,14 @@ const PT_RESULTS_QUESTION_BADGE_UNANSWERED_CLASS =
 
 export {
   PT_RESULTS_ACTION_BUTTON_CLASS,
+  PT_RESULTS_BY_SECTION_CARDS_ROW_CLASS,
   PT_RESULTS_BY_SECTION_PANEL_CLASS,
   PT_RESULTS_CARD_CLASS,
   PT_RESULTS_DETAIL_GRID_CLASS,
   PT_RESULTS_DETAIL_ROW_CLASS,
   PT_RESULTS_HERO_CARD_CLASS,
   PT_RESULTS_PAGE_BG_CLASS,
+  PT_RESULTS_PAGE_CONTAINER_CLASS,
   PT_RESULTS_PAGE_GAP_CLASS,
   PT_RESULTS_PASSAGE_BADGE_CLASS,
   PT_RESULTS_PASSAGE_HEADER_CLASS,

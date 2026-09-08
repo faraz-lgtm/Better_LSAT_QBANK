@@ -7,8 +7,13 @@ import { StudentPageLoader } from "@/features/student/components/student-page-lo
 import {
   PT_RESULTS_HERO_CARD_CLASS,
   PT_RESULTS_PAGE_BG_CLASS,
+  PT_RESULTS_PAGE_CONTAINER_CLASS,
   PT_RESULTS_PAGE_GAP_CLASS,
 } from "@/features/student/analytics/prep-test-results-section-styles"
+import {
+  STUDENT_MAIN_PADDING_CLASS,
+  STUDENT_SHELL_GUTTER_CLASS,
+} from "@/features/student/components/student-page-container"
 import { Button } from "@/components/ui/button"
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
 import { buildPracticeResultsSectionGroups } from "@/features/student/practice-session/build-practice-results-section-groups"
@@ -456,17 +461,17 @@ function PracticeSessionResultsPage() {
     }
   }
 
-  function handleExcludedChange(next: boolean) {
-    setResults((current) => (current ? { ...current, excluded: next } : current))
-    void practiceApi.updateSession({ sessionId, excluded: next }).catch(() => {
-      setResults((current) => (current ? { ...current, excluded: !next } : current))
-    })
-  }
-
   return (
     <StudentMain
+      fullBleed
       className={cn("min-h-full", PT_RESULTS_PAGE_BG_CLASS)}
-      contentClassName={cn("min-h-full", PT_RESULTS_PAGE_BG_CLASS)}
+      contentClassName={cn(
+        "min-h-full",
+        PT_RESULTS_PAGE_CONTAINER_CLASS,
+        STUDENT_SHELL_GUTTER_CLASS,
+        STUDENT_MAIN_PADDING_CLASS,
+        PT_RESULTS_PAGE_BG_CLASS,
+      )}
     >
       {isLrDrill || isLrSection ? (
         <LrDrillResultsView
@@ -478,13 +483,11 @@ function PracticeSessionResultsPage() {
           elapsedSeconds={results.elapsedSeconds}
           timing={results.timing}
           take={results.take}
-          excluded={results.excluded}
           questions={lrDrillQuestions}
           showBlindReview={showBlindReview}
           bookmarkedIds={bookmarkedIds}
           onToggleBookmark={toggleQuestionBookmark}
           onReviewInTester={reviewInTesterHref}
-          onExcludedChange={handleExcludedChange}
         />
       ) : isRcDrill || isRcSection ? (
         <RcDrillResultsView
@@ -497,14 +500,12 @@ function PracticeSessionResultsPage() {
           elapsedSeconds={results.elapsedSeconds}
           timing={results.timing}
           take={results.take}
-          excluded={results.excluded}
           passages={rcDrillPassages}
           questions={lrDrillQuestions}
           showBlindReview={showBlindReview}
           bookmarkedIds={bookmarkedIds}
           onToggleBookmark={toggleQuestionBookmark}
           onReviewInTester={reviewInTesterHref}
-          onExcludedChange={handleExcludedChange}
         />
       ) : (
       <div className={PT_RESULTS_PAGE_GAP_CLASS}>
