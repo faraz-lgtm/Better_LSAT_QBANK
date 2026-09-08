@@ -81,7 +81,6 @@ function renderDrillResults(
           elapsedSeconds={12}
           timing="unlimited"
           take={1}
-          excluded={false}
           questions={questions}
           showBlindReview={false}
           bookmarkedIds={bookmarkedIds}
@@ -95,7 +94,6 @@ function renderDrillResults(
             })
           }}
           onReviewInTester={() => {}}
-          onExcludedChange={() => {}}
         />
       </MemoryRouter>
     )
@@ -110,7 +108,7 @@ async function bookmarkFirstAndFilterToBookmarkedOnly(
   onToggleBookmark: Mock<(questionId: string) => void>,
 ) {
   expect(screen.getByText(/PT 129\s+\.\s+S1\s+\.\s+Q1/)).toBeInTheDocument()
-  expect(screen.getByText(/PT 129\s+\.\s+S1\s+\.\s+Q2/)).toBeInTheDocument()
+  expect(screen.queryByText(/PT 129\s+\.\s+S1\s+\.\s+Q2/)).not.toBeInTheDocument()
   expect(screen.getByText("Bookmarked only")).toBeInTheDocument()
 
   await user.click(screen.getAllByRole("button", { name: "Bookmark question" })[0]!)
@@ -119,7 +117,6 @@ async function bookmarkFirstAndFilterToBookmarkedOnly(
 
   await user.click(screen.getByRole("switch", { name: "Show bookmarked only" }))
   expect(screen.getByText(/PT 129\s+\.\s+S1\s+\.\s+Q1/)).toBeInTheDocument()
-  expect(screen.queryByText(/PT 129\s+\.\s+S1\s+\.\s+Q2/)).not.toBeInTheDocument()
 }
 
 describe("LrDrillResultsView bookmarks", () => {
@@ -151,23 +148,25 @@ describe("LrDrillResultsView bookmarks", () => {
 })
 
 describe("LrDrillResultsView question filter", () => {
-  it("shows full Incorrect only label and hides correct questions", async () => {
+  it("shows Correct and Incorrect options and hides correct questions when Incorrect is selected", async () => {
     const user = userEvent.setup()
     renderDrillResults(vi.fn(), "section")
 
-    await user.click(screen.getByRole("button", { name: "Question" }))
-    const incorrectOnly = screen.getByRole("option", { name: "Incorrect only" })
-    expect(incorrectOnly.textContent).toBe("Incorrect only")
-    expect(incorrectOnly.className).not.toMatch(/truncate/)
+    await user.click(screen.getByRole("button", { name: "Correct" }))
+    const incorrect = screen.getByRole("option", { name: "Incorrect" })
+    expect(incorrect.textContent).toBe("Incorrect")
+    expect(screen.getByRole("option", { name: "Correct" }).textContent).toBe("Correct")
+    expect(screen.queryByRole("option", { name: "Question" })).not.toBeInTheDocument()
+    expect(incorrect.className).not.toMatch(/truncate/)
 
-    await user.click(incorrectOnly)
+    await user.click(incorrect)
 
     expect(screen.queryByText(/PT 129\s+\.\s+S1\s+\.\s+Q1/)).not.toBeInTheDocument()
     expect(screen.getByText(/PT 129\s+\.\s+S1\s+\.\s+Q2/)).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Incorrect only" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Incorrect" })).toBeInTheDocument()
   })
 
-  it("shows an empty state when Incorrect only matches nothing", async () => {
+  it("shows an empty state when Incorrect matches nothing", async () => {
     const user = userEvent.setup()
     function Harness() {
       return (
@@ -180,21 +179,19 @@ describe("LrDrillResultsView question filter", () => {
             elapsedSeconds={12}
             timing="unlimited"
             take={1}
-            excluded={false}
             questions={[meta("q1", 1, true)]}
             showBlindReview={false}
             bookmarkedIds={new Set()}
             onToggleBookmark={() => {}}
             onReviewInTester={() => {}}
-            onExcludedChange={() => {}}
           />
         </MemoryRouter>
       )
     }
     render(<Harness />)
 
-    await user.click(screen.getByRole("button", { name: "Question" }))
-    await user.click(screen.getByRole("option", { name: "Incorrect only" }))
+    await user.click(screen.getByRole("button", { name: "Correct" }))
+    await user.click(screen.getByRole("option", { name: "Incorrect" }))
 
     expect(screen.getByText("No incorrect questions in this section.")).toBeInTheDocument()
     expect(screen.queryByText(/PT 129\s+\.\s+S1\s+\.\s+Q1/)).not.toBeInTheDocument()

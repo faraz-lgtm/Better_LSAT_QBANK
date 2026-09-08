@@ -48,10 +48,12 @@ function formatScoreDelta(incorrectCount: number): string {
 function PracticeResultsEmptyFilterMessage({
   bookmarkedOnly,
   incorrectOnly,
+  correctOnly = false,
   scope,
 }: {
   bookmarkedOnly: boolean
   incorrectOnly: boolean
+  correctOnly?: boolean
   scope: "section" | "drill"
 }) {
   const message = bookmarkedOnly
@@ -62,7 +64,11 @@ function PracticeResultsEmptyFilterMessage({
       ? scope === "section"
         ? "No incorrect questions in this section."
         : "No incorrect questions in this drill."
-      : "No questions to show."
+      : correctOnly
+        ? scope === "section"
+          ? "No correct questions in this section."
+          : "No correct questions in this drill."
+        : "No questions to show."
 
   return (
     <p className="rounded-[16px] border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-8 text-center text-sm text-[var(--greyscale-500)]">

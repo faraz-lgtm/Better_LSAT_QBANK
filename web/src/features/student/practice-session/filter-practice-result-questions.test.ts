@@ -91,6 +91,16 @@ describe("filterPracticeResultQuestions", () => {
       }).map((row) => row.question.id),
     ).toEqual(["q3"])
   })
+
+  it("keeps only correct questions when correct-only is on", () => {
+    expect(
+      filterPracticeResultQuestions(questions, {
+        correctOnly: true,
+        bookmarkedOnly: false,
+        bookmarkedIds: new Set(),
+      }).map((row) => row.question.id),
+    ).toEqual(["q1"])
+  })
 })
 
 describe("filterPracticeResultPassages", () => {

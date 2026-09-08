@@ -145,7 +145,7 @@ function renderResultsPage(sessionId = sessionDetail.sessionId) {
   render(<RouterProvider router={router} />)
 }
 
-describe("AnalyticsPrepTestResultsPage insights toggle", () => {
+describe("AnalyticsPrepTestResultsPage", () => {
   beforeEach(() => {
     window.localStorage.clear()
     mockGetPrepTestSessionDetail.mockReset()
@@ -158,42 +158,15 @@ describe("AnalyticsPrepTestResultsPage insights toggle", () => {
     mockSetQuestionBookmark.mockResolvedValue({ questionIds: ["q1"] })
   })
 
-  it("turns exclude-from-insights on and keeps the results page visible", async () => {
-    const user = userEvent.setup()
+  it("renders About this PrepTest without the Exclude from Insights toggle", async () => {
     renderResultsPage()
 
     await screen.findByRole("heading", { name: /PT156 - June 19, 2026/i })
     expect(screen.getByText("About this PrepTest")).toBeInTheDocument()
     expect(screen.getByText("YOUR SCORE")).toBeInTheDocument()
-
-    const toggle = screen.getByRole("switch", { name: /exclude this preptest from insights/i })
-    expect(toggle).not.toBeChecked()
-
-    await user.click(toggle)
-
-    await waitFor(() => {
-      expect(toggle).toBeChecked()
-    })
-    expect(mockUpdateSession).toHaveBeenCalledWith({
-      sessionId: sessionDetail.sessionId,
-      excluded: true,
-    })
-    await screen.findByText("About this PrepTest")
-    expect(screen.getByText("YOUR SCORE")).toBeInTheDocument()
     expect(screen.getByText("RESULTS BY SECTION")).toBeInTheDocument()
-  })
-
-  it("reverts toggle when updateSession fails", async () => {
-    const user = userEvent.setup()
-    mockUpdateSession.mockRejectedValueOnce(new Error("network"))
-    renderResultsPage()
-
-    const toggle = await screen.findByRole("switch", { name: /exclude this preptest from insights/i })
-    await user.click(toggle)
-
-    await waitFor(() => expect(mockUpdateSession).toHaveBeenCalled())
-    await waitFor(() => expect(toggle).not.toBeChecked())
-    await screen.findByText("About this PrepTest")
+    expect(screen.queryByRole("switch", { name: /exclude this preptest from insights/i })).not.toBeInTheDocument()
+    expect(screen.queryByText("Exclude from Insights")).not.toBeInTheDocument()
   })
 
   it("links the edit pencil to the explanation detail page for that question", async () => {
@@ -217,8 +190,15 @@ describe("AnalyticsPrepTestResultsPage insights toggle", () => {
     renderResultsPage()
     await screen.findByRole("heading", { name: /PT156 - June 19, 2026/i })
 
+    expect(screen.getByRole("button", { name: "Correct" })).toBeInTheDocument()
     expect(screen.getByText(/PT 156\s+\.\s+S1\s+\.\s+Q1/)).toBeInTheDocument()
-    expect(screen.getByText(/PT 156\s+\.\s+S1\s+\.\s+Q2/)).toBeInTheDocument()
+    expect(screen.queryByText(/PT 156\s+\.\s+S1\s+\.\s+Q2/)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Correct" }))
+    expect(screen.getByRole("option", { name: "Incorrect" })).toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "Question" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "Passage" })).not.toBeInTheDocument()
+    await user.click(screen.getByRole("option", { name: "Correct" }))
 
     await user.click(screen.getAllByRole("button", { name: "Bookmark question" })[0]!)
     await waitFor(() => {
