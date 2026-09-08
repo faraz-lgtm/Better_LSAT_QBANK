@@ -68,7 +68,7 @@ import {
   resultsReviewSectionSessionPath,
 } from "@/features/student/blind-review/blind-review-navigation"
 
-const QUESTION_FILTER_OPTIONS = ["Correct", "Incorrect"] as const
+const QUESTION_FILTER_OPTIONS = ["Both", "Correct", "Incorrect"] as const
 
 /** Figma results list — 24px gaps between white cards */
 const RESULTS_STACK_CLASS = "flex flex-col gap-6"
@@ -381,6 +381,7 @@ function QuestionResultRow({
             difficulty={row.difficulty}
             popularityRows={popularityRows}
             correctLetter={row.correctLetter}
+            selectedLetter={row.selectedLetter}
             isUnanswered={row.isUnanswered}
           />
         </div>
@@ -535,7 +536,7 @@ function AnalyticsPrepTestResultsPage() {
   const analyticsApi = useAnalyticsApi()
   const practiceApi = usePracticeApi()
   const { bookmarkedIds, toggleQuestionBookmark } = useExplanationQuestionBookmarks()
-  const [questionFilter, setQuestionFilter] = useState<(typeof QUESTION_FILTER_OPTIONS)[number]>("Correct")
+  const [questionFilter, setQuestionFilter] = useState<(typeof QUESTION_FILTER_OPTIONS)[number]>("Both")
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

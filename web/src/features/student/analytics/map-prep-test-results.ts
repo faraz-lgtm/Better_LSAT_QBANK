@@ -88,6 +88,26 @@ function mapQuestionRow(
   const recordedYour =
     q.isUnanswered || !isFiniteTargetSeconds(q.yourTimeSeconds) ? null : q.yourTimeSeconds
   const deltaSec = recordedYour != null ? targetSeconds - recordedYour : 0
+  const popularity = q.answerPopularity
+  const answerPopularity: [number, number, number, number, number] =
+    popularity != null && popularity.length === 5
+      ? [
+          Math.max(0, Math.round(popularity[0] ?? 0)),
+          Math.max(0, Math.round(popularity[1] ?? 0)),
+          Math.max(0, Math.round(popularity[2] ?? 0)),
+          Math.max(0, Math.round(popularity[3] ?? 0)),
+          Math.max(0, Math.round(popularity[4] ?? 0)),
+        ]
+      : [0, 0, 0, 0, 0]
+  const selectedRaw = q.selectedLetter?.trim().toUpperCase().slice(0, 1) ?? null
+  const selectedLetter =
+    selectedRaw === "A" ||
+    selectedRaw === "B" ||
+    selectedRaw === "C" ||
+    selectedRaw === "D" ||
+    selectedRaw === "E"
+      ? selectedRaw
+      : null
   return {
     id: q.id,
     number: q.number,
@@ -109,8 +129,9 @@ function mapQuestionRow(
     blindReviewCorrect: q.blindReviewCorrect,
     blindReviewUnanswered: q.blindReviewUnanswered,
     isUnanswered: q.isUnanswered,
-    answerPopularity: [0, 0, 0, 0, 0],
+    answerPopularity,
     correctLetter,
+    selectedLetter,
   }
 }
 

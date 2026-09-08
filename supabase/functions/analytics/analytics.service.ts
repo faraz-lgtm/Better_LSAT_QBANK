@@ -6,6 +6,7 @@ import type {
 } from './analytics.repository.ts'
 import type { PracticeSessionKind } from '../practice/practice.repository.ts'
 import { isStudentVisiblePrepTest } from '../_shared/prep-test-visibility.ts'
+import { hasEnoughPlatformAnswerSample } from '../_shared/platform-answer-sample.ts'
 import { allocateQuestionTargetTimesByGroup } from '../_shared/question-target-time.ts'
 import {
   adjustGoalAccuracyByDifficulty,
@@ -17,6 +18,37 @@ import {
 } from './goal-accuracy.ts'
 
 const PREPTEST_EXPLANATION_CATALOG_LIMIT = 8000
+const POPULARITY_LETTERS = ['A', 'B', 'C', 'D', 'E'] as const
+
+/** A–E bar heights (0–100). Zeros when platform sample is below the display threshold. */
+export function answerPopularityPctTuple(
+  selections: readonly string[],
+): [number, number, number, number, number] {
+  const counts: Record<(typeof POPULARITY_LETTERS)[number], number> = {
+    A: 0,
+    B: 0,
+    C: 0,
+    D: 0,
+    E: 0,
+  }
+  let total = 0
+  for (const raw of selections) {
+    const letter = raw.trim().toUpperCase().slice(0, 1)
+    if (letter !== 'A' && letter !== 'B' && letter !== 'C' && letter !== 'D' && letter !== 'E') {
+      continue
+    }
+    counts[letter] += 1
+    total += 1
+  }
+  if (!hasEnoughPlatformAnswerSample(total)) return [0, 0, 0, 0, 0]
+  return POPULARITY_LETTERS.map((letter) => Math.round((100 * counts[letter]) / total)) as [
+    number,
+    number,
+    number,
+    number,
+    number,
+  ]
+}
 
 export type ExplanationsSummaryRow = {
   questionId: string
@@ -903,6 +935,9 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
           }
         }),
       )
+      const popularityByQuestion = await deps.repository.listLatestAnswerSelectionsByQuestionIds(
+        questionsRaw.map((row) => String(row.id)),
+      )
       let correct = 0
       let total = 0
       const questionRows: Array<{
@@ -923,6 +958,7 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
         isExperimental: boolean
         targetTimeSeconds: number
         yourTimeSeconds?: number
+        answerPopularity: [number, number, number, number, number]
       }> = []
 
       for (const row of questionsRaw) {
@@ -985,6 +1021,7 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
             !Number.isFinite(initial.time_spent_seconds)
               ? undefined
               : Math.max(0, Math.round(initial.time_spent_seconds)),
+          answerPopularity: answerPopularityPctTuple(popularityByQuestion.get(qid) ?? []),
         })
       }
 

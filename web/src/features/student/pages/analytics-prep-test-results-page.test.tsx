@@ -190,15 +190,17 @@ describe("AnalyticsPrepTestResultsPage", () => {
     renderResultsPage()
     await screen.findByRole("heading", { name: /PT156 - June 19, 2026/i })
 
-    expect(screen.getByRole("button", { name: "Correct" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Both" })).toBeInTheDocument()
     expect(screen.getByText(/PT 156\s+\.\s+S1\s+\.\s+Q1/)).toBeInTheDocument()
-    expect(screen.queryByText(/PT 156\s+\.\s+S1\s+\.\s+Q2/)).not.toBeInTheDocument()
+    expect(screen.getByText(/PT 156\s+\.\s+S1\s+\.\s+Q2/)).toBeInTheDocument()
 
-    await user.click(screen.getByRole("button", { name: "Correct" }))
+    await user.click(screen.getByRole("button", { name: "Both" }))
+    expect(screen.getByRole("option", { name: "Correct" })).toBeInTheDocument()
     expect(screen.getByRole("option", { name: "Incorrect" })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "Both" })).toBeInTheDocument()
     expect(screen.queryByRole("option", { name: "Question" })).not.toBeInTheDocument()
     expect(screen.queryByRole("option", { name: "Passage" })).not.toBeInTheDocument()
-    await user.click(screen.getByRole("option", { name: "Correct" }))
+    await user.click(screen.getByRole("option", { name: "Both" }))
 
     await user.click(screen.getAllByRole("button", { name: "Bookmark question" })[0]!)
     await waitFor(() => {

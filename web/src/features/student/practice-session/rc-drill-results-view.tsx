@@ -45,7 +45,7 @@ import type { PracticePassageSummary } from "@/features/student/practice-session
 import { PracticeDifficultyMeter } from "@/features/student/practice-session/practice-results-ui"
 import { cn } from "@/lib/utils"
 
-const QUESTION_FILTER_OPTIONS = ["Correct", "Incorrect"] as const
+const QUESTION_FILTER_OPTIONS = ["Both", "Correct", "Incorrect"] as const
 
 type QuestionFilter = (typeof QUESTION_FILTER_OPTIONS)[number]
 
@@ -167,7 +167,7 @@ function RcDrillResultsView({
   compactLabel,
 }: RcDrillResultsViewProps) {
   const { scaleFactor } = useAccommodations()
-  const [filter, setFilter] = useState<QuestionFilter>("Correct")
+  const [filter, setFilter] = useState<QuestionFilter>("Both")
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
 

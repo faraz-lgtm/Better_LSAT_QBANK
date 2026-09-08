@@ -114,6 +114,7 @@ describe("mapPrepTestDetailToResults", () => {
     expect(out.lrSections[0]?.questions).toHaveLength(2)
     expect(out.lrSections[0]?.questions[0]?.title).toBe("PT 145  .  S1  .  Q1")
     expect(out.lrSections[0]?.questions[0]?.answerPopularity).toEqual([0, 0, 0, 0, 0])
+    expect(out.lrSections[0]?.questions[0]?.selectedLetter).toBe("A")
     expect(out.rcSection.questions).toHaveLength(2)
     expect(out.rcSection.questions[0]?.title).toBe("PT 145  .  S2  .  Q1")
     expect(out.correctSummary).toBe("3/4 CORRECT (-1)")
@@ -126,6 +127,23 @@ describe("mapPrepTestDetailToResults", () => {
     expect(out.rcSection.questions[0]?.targetTime).toBe("01:15")
     expect(out.lrSections[0]?.questions[0]?.yourTime).toBe("—")
     expect(out.lrSections[0]?.questions[0]?.yourTimeNote).toBe("")
+  })
+
+  it("maps platform answer popularity and selected letter from the API", () => {
+    const out = mapPrepTestDetailToResults({
+      ...baseApi,
+      questions: [
+        {
+          ...baseApi.questions[0]!,
+          id: "q-pop",
+          answerPopularity: [20, 40, 10, 20, 10],
+          selectedLetter: "B",
+          actualCorrect: false,
+        },
+      ],
+    })
+    expect(out.lrSections[0]?.questions[0]?.answerPopularity).toEqual([20, 40, 10, 20, 10])
+    expect(out.lrSections[0]?.questions[0]?.selectedLetter).toBe("B")
   })
 
   it("formats recorded yourTime against target time", () => {

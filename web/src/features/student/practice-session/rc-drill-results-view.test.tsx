@@ -169,14 +169,15 @@ describe("RcDrillResultsView bookmarks", () => {
     const user = userEvent.setup()
     renderView(vi.fn(), "section")
 
-    await user.click(screen.getByRole("button", { name: "Correct" }))
+    await user.click(screen.getByRole("button", { name: "Both" }))
+    expect(screen.getByRole("option", { name: "Both" }).textContent).toBe("Both")
     expect(screen.getByRole("option", { name: "Correct" }).textContent).toBe("Correct")
     expect(screen.getByRole("option", { name: "Incorrect" }).textContent).toBe("Incorrect")
     expect(screen.queryByRole("option", { name: "Question" })).not.toBeInTheDocument()
     expect(screen.queryByRole("option", { name: "Passage" })).not.toBeInTheDocument()
-    expect(screen.queryByRole("option", { name: "All" })).not.toBeInTheDocument()
     await user.click(screen.getByRole("option", { name: "Incorrect" }))
 
+    expect(screen.getByRole("button", { name: "Incorrect" })).toBeInTheDocument()
     expect(screen.getByText("No incorrect questions in this section.")).toBeInTheDocument()
     expect(screen.queryByText("Passage 1")).not.toBeInTheDocument()
   })
@@ -217,12 +218,21 @@ describe("RcDrillResultsView bookmarks", () => {
 
     render(<Harness />)
 
+    expect(screen.getByRole("button", { name: "Both" })).toBeInTheDocument()
+    expect(screen.getByText("Passage 1")).toBeInTheDocument()
+    expect(screen.getByText("Passage 2")).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Both" }))
+    await user.click(screen.getByRole("option", { name: "Correct" }))
+
+    expect(screen.getByRole("button", { name: "Correct" })).toBeInTheDocument()
     expect(screen.getByText("Passage 1")).toBeInTheDocument()
     expect(screen.queryByText("Passage 2")).not.toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Correct" }))
     await user.click(screen.getByRole("option", { name: "Incorrect" }))
 
+    expect(screen.getByRole("button", { name: "Incorrect" })).toBeInTheDocument()
     expect(screen.queryByText("Passage 1")).not.toBeInTheDocument()
     expect(screen.getByText("Passage 2")).toBeInTheDocument()
   })

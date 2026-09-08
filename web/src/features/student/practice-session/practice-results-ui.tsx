@@ -2,7 +2,8 @@ import { Check, Minus, X } from "lucide-react"
 import type { ReactNode } from "react"
 
 import type { ExplanationAnswerPopularityRow, ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
-import { NOT_ENOUGH_ANSWERS_YET, hasEnoughPlatformAnswerSample, platformAnswerSampleSize } from "@/lib/platform-answer-sample"
+import { buildProvisionalAnswerPopularity } from "@/features/student/explanation-detail/answer-popularity-rows"
+import { hasEnoughPlatformAnswerSample, platformAnswerSampleSize } from "@/lib/platform-answer-sample"
 import { cn } from "@/lib/utils"
 
 export type PracticeDifficultyLabel = "Easiest" | "Easy" | "Medium" | "Hard" | "Hardest"
@@ -377,18 +378,12 @@ export function PracticeAnswerPopularityBars({
   className?: string
 }) {
   const sampleSize = platformAnswerSampleSize(rows)
-  if (!hasEnoughPlatformAnswerSample(sampleSize)) {
-    return (
-      <div className={cn("flex min-w-0 flex-col gap-3", className)}>
-        {showLabel ? <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Answer Popularity</p> : null}
-        <p className="m-0 rounded-[14px] border border-dashed border-[#dfe1e7] bg-[#f6f8fa] px-4 py-6 text-center text-sm text-[#666d80]">
-          {NOT_ENOUGH_ANSWERS_YET}
-        </p>
-      </div>
-    )
-  }
+  const letters = rows.length > 0 ? rows.map((row) => row.letter) : ["A", "B", "C", "D", "E"]
+  const displayRows = hasEnoughPlatformAnswerSample(sampleSize)
+    ? rows
+    : buildProvisionalAnswerPopularity(correctLetter || "A", correctLetter, letters)
 
-  const max = Math.max(1, ...rows.map((r) => r.pct))
+  const max = Math.max(1, ...displayRows.map((r) => r.pct))
   const normalizedSelected = selectedLetter?.trim().toUpperCase() ?? null
   const normalizedCorrect = correctLetter.trim().toUpperCase()
 
@@ -396,7 +391,7 @@ export function PracticeAnswerPopularityBars({
     <div className={cn("flex min-w-0 flex-col gap-3", className)}>
       {showLabel ? <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Answer Popularity</p> : null}
       <div className="flex w-full items-end gap-2">
-        {rows.map((row) => {
+        {displayRows.map((row) => {
           const h = Math.round((row.pct / max) * 100)
           const isCorrect = row.letter === normalizedCorrect
           const isUserWrong =

@@ -51,7 +51,7 @@ import {
 import { cn } from "@/lib/utils"
 import { isFiniteTargetSeconds } from "@/lib/question-target-time"
 
-const QUESTION_FILTER_OPTIONS = ["Correct", "Incorrect"] as const
+const QUESTION_FILTER_OPTIONS = ["Both", "Correct", "Incorrect"] as const
 
 type QuestionFilter = (typeof QUESTION_FILTER_OPTIONS)[number]
 
@@ -329,7 +329,7 @@ function LrDrillResultsView({
   compactLabel,
 }: LrDrillResultsViewProps) {
   const { scaleFactor } = useAccommodations()
-  const [filter, setFilter] = useState<QuestionFilter>("Correct")
+  const [filter, setFilter] = useState<QuestionFilter>("Both")
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
   const isSection = variant === "section"
