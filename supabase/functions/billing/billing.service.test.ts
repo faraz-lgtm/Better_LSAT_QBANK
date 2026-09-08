@@ -474,8 +474,175 @@ Deno.test('billing service checkout.session.completed invokes onCheckoutComplete
     },
   } as unknown as import('npm:stripe@17.7.0').default.Event)
 
-  assertEquals(callbackCtx?.userId, 'u-1')
-  assertEquals(callbackCtx?.email, 'buyer@example.com')
-  assertEquals(callbackCtx?.includeLawHub, true)
-  assertEquals(callbackCtx?.customerName, 'Buyer Name')
+  assertEquals(callbackCtx!.userId, 'u-1')
+  assertEquals(callbackCtx!.email, 'buyer@example.com')
+  assertEquals(callbackCtx!.includeLawHub, true)
+  assertEquals(callbackCtx!.customerName, 'Buyer Name')
+})
+
+Deno.test('getPaymentMethods returns empty when no stripe customer', async () => {
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo(),
+    stripe: {} as unknown as import('npm:stripe@17.7.0').default,
+  })
+  const out = await service.getPaymentMethods('u-1')
+  assertEquals(out.paymentMethods, [])
+})
+
+Deno.test('getPaymentMethods maps default card last4 from Stripe', async () => {
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getProfileBillingFields() {
+        return {
+          id: 'u-1',
+          email: 'a@b.com',
+          full_name: 'Ada Lovelace',
+          first_name: 'Ada',
+          last_name: 'Lovelace',
+          stripe_customer_id: 'cus_1',
+          prep_plus_source: 'vendor_subscription',
+        }
+      },
+    }),
+    stripe: {
+      customers: {
+        retrieve: async () => ({
+          id: 'cus_1',
+          deleted: false,
+          invoice_settings: { default_payment_method: 'pm_1' },
+        }),
+      },
+      paymentMethods: {
+        list: async () => ({
+          data: [
+            {
+              id: 'pm_1',
+              card: {
+                brand: 'visa',
+                last4: '4242',
+                exp_month: 9,
+                exp_year: 2028,
+                funding: 'credit',
+              },
+            },
+          ],
+        }),
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  const out = await service.getPaymentMethods('u-1')
+  assertEquals(out.paymentMethods.length, 1)
+  assertEquals(out.paymentMethods[0]?.last4, '4242')
+  assertEquals(out.paymentMethods[0]?.brandLabel, 'VISA')
+  assertEquals(out.paymentMethods[0]?.isDefault, true)
+})
+
+Deno.test('getBillingHistory maps paid invoices', async () => {
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getProfileBillingFields() {
+        return {
+          id: 'u-1',
+          email: 'a@b.com',
+          full_name: 'Ada Lovelace',
+          first_name: 'Ada',
+          last_name: 'Lovelace',
+          stripe_customer_id: 'cus_1',
+          prep_plus_source: 'vendor_subscription',
+        }
+      },
+      async getLatestSubscriptionByUserId() {
+        return {
+          id: 'sub-row-1',
+          user_id: 'u-1',
+          stripe_subscription_id: 'sub_1',
+          stripe_price_id: 'price_core_test',
+          status: 'active',
+          current_period_start: null,
+          current_period_end: null,
+          cancel_at_period_end: false,
+          livemode: false,
+          plan_tier: 'core' as const,
+          created_at: '2026-01-01T00:00:00.000Z',
+          updated_at: '2026-01-01T00:00:00.000Z',
+        }
+      },
+    }),
+    stripe: {
+      invoices: {
+        list: async () => ({
+          data: [
+            {
+              id: 'in_1',
+              number: 'INV-2026-008',
+              amount_paid: 3900,
+              currency: 'usd',
+              status: 'paid',
+              created: 1_724_500_000,
+              invoice_pdf: 'https://stripe.test/pdf',
+              hosted_invoice_url: null,
+              lines: { data: [{ description: 'Better LSAT Core' }] },
+            },
+          ],
+        }),
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  const out = await service.getBillingHistory('u-1')
+  assertEquals(out.invoices.length, 1)
+  assertEquals(out.invoices[0]?.number, 'INV-2026-008')
+  assertEquals(out.invoices[0]?.amountPaidCents, 3900)
+  assertEquals(out.invoices[0]?.title, 'Core Monthly')
+})
+
+Deno.test('createBillingPortalSession returns portal url', async () => {
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getProfileBillingFields() {
+        return {
+          id: 'u-1',
+          email: 'a@b.com',
+          full_name: 'Ada Lovelace',
+          first_name: 'Ada',
+          last_name: 'Lovelace',
+          stripe_customer_id: 'cus_1',
+          prep_plus_source: 'vendor_subscription',
+        }
+      },
+    }),
+    stripe: {
+      billingPortal: {
+        sessions: {
+          create: async (params: Record<string, unknown>) => {
+            assertEquals(params.customer, 'cus_1')
+            assertEquals(params.return_url, 'http://localhost:5173/app/account')
+            const flowData = params.flow_data as {
+              type: string
+              after_completion: { type: string; redirect: { return_url: string } }
+            }
+            assertEquals(flowData.type, 'payment_method_update')
+            assertEquals(flowData.after_completion.type, 'redirect')
+            assertEquals(
+              flowData.after_completion.redirect.return_url,
+              'http://localhost:5173/app/account',
+            )
+            return { url: 'https://billing.stripe.test/session' }
+          },
+        },
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  const out = await service.createBillingPortalSession('u-1')
+  assertEquals(out.url, 'https://billing.stripe.test/session')
 })
