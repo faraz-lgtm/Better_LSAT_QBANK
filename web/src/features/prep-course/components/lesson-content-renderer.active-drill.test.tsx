@@ -222,6 +222,43 @@ describe("LessonContentRenderer rep_work", () => {
     expect(box).toHaveValue("All surgeons enjoy the sight of blood.")
   })
 
+  it("renders answer lists, headings, and tables from the editor", async () => {
+    const user = userEvent.setup()
+    render(
+      <LessonContentRenderer
+        lesson={{
+          ...repWorkLesson,
+          text_content: serializeRepWorkContent("<h3>How to drill</h3><p>Translate the argument.</p>", [
+            {
+              question: "<p>Since caffeine blocks adenosine receptors, drink espresso.</p>",
+              answer: [
+                "<ul>",
+                "<li><strong>Conclusion:</strong> You should have a coffee.</li>",
+                "<li><strong>Premises:</strong> Caffeine blocks adenosine receptors.</li>",
+                "</ul>",
+                "<h4>Answer Choice Analysis</h4>",
+                "<table><thead><tr><th>Choice</th><th>Verdict</th></tr></thead>",
+                "<tbody><tr><td>A</td><td>CORRECT</td></tr></tbody></table>",
+              ].join(""),
+            },
+          ]),
+        }}
+      />,
+    )
+
+    expect(screen.getByRole("heading", { level: 3, name: "How to drill" })).toBeInTheDocument()
+
+    await user.click(screen.getByRole("switch", { name: "Show or hide answer for question 1" }))
+
+    const card = document.querySelector(".prep-course-rep-work-pair")
+    expect(card?.querySelector("ul")).not.toBeNull()
+    expect(card?.querySelector("strong")?.textContent).toContain("Conclusion")
+    expect(screen.getByRole("heading", { level: 4, name: "Answer Choice Analysis" })).toBeInTheDocument()
+    expect(card?.querySelector("table")).not.toBeNull()
+    expect(screen.getByText("Choice")).toBeInTheDocument()
+    expect(screen.getByText("CORRECT")).toBeInTheDocument()
+  })
+
   it("resets editable question text", async () => {
     const user = userEvent.setup()
     render(<LessonContentRenderer lesson={repWorkLesson} />)

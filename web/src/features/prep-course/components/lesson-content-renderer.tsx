@@ -15,7 +15,7 @@ import type {
   PrepLessonActiveDrillAttempt,
   PrepLessonLinkedQuestionRef,
 } from "@/lib/api/prep-course"
-import { HtmlContent, LessonHtmlContent } from "@/lib/html/html-content"
+import { LessonHtmlContent } from "@/lib/html/html-content"
 
 type DrillResultsPart = "cards" | "below" | "full"
 
@@ -208,7 +208,7 @@ function CompletedDrillResultsSection({
     ) : lesson.text_content ? (
       <article className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
         {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
-        <HtmlContent
+        <LessonHtmlContent
           html={lesson.text_content}
           className={`${textClass} ${hideTitle ? "" : "mt-4"}`}
         />
@@ -248,7 +248,7 @@ function RepWorkInstructions({ html }: { html: string }) {
   return (
     <div className="flex w-full flex-col gap-1">
       <p className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]">Instructions:</p>
-      <HtmlContent html={bodyHtml} className={repWorkBodyClass} />
+      <LessonHtmlContent html={bodyHtml} className={repWorkBodyClass} />
     </div>
   )
 }
@@ -398,7 +398,7 @@ function clampHorizontalScroll(origin: HTMLElement | null) {
 function RepWorkPairCard({ pair, index }: { pair: RepWorkPair; index: number }) {
   const cardRef = useRef<HTMLLIElement>(null)
   const plainQuestionText = useMemo(() => htmlToPlainText(pair.question), [pair.question])
-  const answerText = useMemo(() => htmlToPlainText(pair.answer), [pair.answer])
+  const hasAnswer = Boolean(htmlToPlainText(pair.answer))
   const [showAnswer, setShowAnswer] = useState(false)
 
   useLayoutEffect(() => {
@@ -443,9 +443,13 @@ function RepWorkPairCard({ pair, index }: { pair: RepWorkPair; index: number }) 
             {showAnswer ? (
               <div className="flex min-w-0 flex-col gap-3">
                 <h3 className="m-0 text-[20px] font-bold leading-[1.35] text-[var(--color-student-heading)]">Answer</h3>
-                <p className="m-0 max-w-full break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-[18px] leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]">
-                  {answerText || "No answer provided."}
-                </p>
+                {hasAnswer ? (
+                  <LessonHtmlContent html={pair.answer} className="rep-work-answer-body" />
+                ) : (
+                  <p className="m-0 max-w-full break-words [overflow-wrap:anywhere] text-[18px] leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]">
+                    No answer provided.
+                  </p>
+                )}
               </div>
             ) : null}
           </div>
@@ -612,7 +616,7 @@ function LessonContentRenderer({
     return (
       <div className="border-t border-[color:var(--greyscale-100)] pt-4">
         {lesson.text_content ? (
-          <HtmlContent html={lesson.text_content} className={repWorkBodyClass} />
+          <LessonHtmlContent html={lesson.text_content} className={repWorkBodyClass} />
         ) : (
           <p className={`m-0 ${repWorkBodyClass}`}>No notes available.</p>
         )}

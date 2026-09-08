@@ -57,4 +57,35 @@ describe("LessonHtmlContent", () => {
     expect(screen.getByText("Legacy paragraph")).toBeInTheDocument()
     expect(document.querySelector(".lesson-callout")).toBeNull()
   })
+
+  it("renders editor headings as heading elements", () => {
+    render(<LessonHtmlContent html="<h2>Myth #1: The LSAT is an IQ Test</h2><p>The Truth: it is not.</p>" />)
+    const heading = screen.getByRole("heading", { level: 2, name: "Myth #1: The LSAT is an IQ Test" })
+    expect(heading).toBeInTheDocument()
+    expect(heading.closest(".lesson-html-body")).not.toBeNull()
+  })
+
+  it("renders editor tables as a real table, not stacked paragraphs", () => {
+    render(
+      <LessonHtmlContent
+        html={[
+          "<table>",
+          "<thead><tr><th>Choice</th><th>Verdict</th><th>Reason</th></tr></thead>",
+          "<tbody>",
+          "<tr><td>A</td><td>CORRECT</td><td>Value Judgment</td></tr>",
+          "<tr><td>B</td><td>Incorrect</td><td>Premise</td></tr>",
+          "</tbody>",
+          "</table>",
+        ].join("")}
+      />,
+    )
+
+    const table = document.querySelector(".lesson-html-body table")
+    expect(table).not.toBeNull()
+    expect(table?.querySelectorAll("th")).toHaveLength(3)
+    expect(table?.querySelectorAll("tr")).toHaveLength(3)
+    expect(screen.getByText("Choice")).toBeInTheDocument()
+    expect(screen.getByText("CORRECT")).toBeInTheDocument()
+    expect(getComputedStyle(table!).display).toBe("table")
+  })
 })
