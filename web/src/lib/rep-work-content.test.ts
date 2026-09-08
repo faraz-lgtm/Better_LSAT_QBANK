@@ -27,6 +27,13 @@ describe("rep-work-content", () => {
     expect(htmlToPlainText("<p>All surgeons enjoy blood.</p>")).toBe("All surgeons enjoy blood.")
   })
 
+  it("htmlToPlainText keeps paragraph and list breaks for the editable question box", () => {
+    expect(htmlToPlainText("<p>First.</p><p>Second.</p>")).toBe("First.\nSecond.")
+    expect(htmlToPlainText("<ul><li>Conclusion: coffee.</li><li>Premises: caffeine.</li></ul>")).toBe(
+      "Conclusion: coffee.\nPremises: caffeine.",
+    )
+  })
+
   it("stripInstructionsLabel removes leading Instructions paragraph", () => {
     expect(
       stripInstructionsLabel("<p>Instructions:</p><p>Translate all English statements.</p>"),

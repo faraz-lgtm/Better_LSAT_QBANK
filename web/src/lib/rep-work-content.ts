@@ -1,4 +1,4 @@
-import { sanitizeHtml } from "@/lib/html/sanitize-html"
+import { sanitizeLessonHtml } from "@/lib/html/sanitize-html"
 
 export type RepWorkPair = { question: string; answer: string }
 
@@ -52,14 +52,28 @@ export function htmlToPlainText(html: string): string {
   if (!html.trim()) return ""
   if (typeof document !== "undefined") {
     const el = document.createElement("div")
-    el.innerHTML = sanitizeHtml(html)
-    return (el.textContent ?? "").replace(/\s+/g, " ").trim()
+    el.innerHTML = sanitizeLessonHtml(html)
+    el.querySelectorAll("br").forEach((br) => {
+      br.replaceWith("\n")
+    })
+    el.querySelectorAll("p, li, h1, h2, h3, h4, h5, h6, tr, blockquote").forEach((node) => {
+      node.append("\n")
+    })
+    return (el.textContent ?? "")
+      .replace(/\u00a0/g, " ")
+      .replace(/[^\S\n]+/g, " ")
+      .replace(/ ?\n ?/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
   }
   return html
-    .replace(/<br\s*\/?>/gi, " ")
-    .replace(/<\/p>/gi, " ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|li|h[1-6]|tr|blockquote)>/gi, "\n")
     .replace(/<[^>]+>/g, "")
-    .replace(/\s+/g, " ")
+    .replace(/\u00a0/g, " ")
+    .replace(/[^\S\n]+/g, " ")
+    .replace(/ ?\n ?/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim()
 }
 
