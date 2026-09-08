@@ -152,6 +152,79 @@ export async function handleBillingGetPlans(req: Request): Promise<Response> {
   return json({ catalog: service.getPlans() }, {}, cors)
 }
 
+export async function handleBillingGetPaymentMethods(req: Request): Promise<Response> {
+  if (req.method === 'OPTIONS') return optionsOk(cors)
+  if (req.method !== 'POST') {
+    return json({ error: 'Method not allowed' }, { status: 405 }, cors)
+  }
+
+  const auth = await requireAuthUser(req, cors)
+  if (!auth.ok) return auth.response
+
+  const service = buildBillingService(() => resolveAppBaseUrlFromEnv() ?? 'http://localhost:5173')
+  if (!service) return stripeDisabled()
+
+  try {
+    const result = await service.getPaymentMethods(auth.user.id)
+    return json(result, {}, cors)
+  } catch (error) {
+    const message = formatUnknownError(error)
+    return json({ error: message }, { status: 500 }, cors)
+  }
+}
+
+export async function handleBillingGetInvoices(req: Request): Promise<Response> {
+  if (req.method === 'OPTIONS') return optionsOk(cors)
+  if (req.method !== 'POST') {
+    return json({ error: 'Method not allowed' }, { status: 405 }, cors)
+  }
+
+  const auth = await requireAuthUser(req, cors)
+  if (!auth.ok) return auth.response
+
+  const service = buildBillingService(() => resolveAppBaseUrlFromEnv() ?? 'http://localhost:5173')
+  if (!service) return stripeDisabled()
+
+  try {
+    const result = await service.getBillingHistory(auth.user.id)
+    return json(result, {}, cors)
+  } catch (error) {
+    const message = formatUnknownError(error)
+    return json({ error: message }, { status: 500 }, cors)
+  }
+}
+
+export async function handleBillingCreatePortalSession(req: Request): Promise<Response> {
+  if (req.method === 'OPTIONS') return optionsOk(cors)
+  if (req.method !== 'POST') {
+    return json({ error: 'Method not allowed' }, { status: 405 }, cors)
+  }
+
+  const auth = await requireAuthUser(req, cors)
+  if (!auth.ok) return auth.response
+
+  let appBaseUrl: string
+  try {
+    const body = (await req.clone().json().catch(() => ({}))) as Record<string, unknown>
+    appBaseUrl = resolveAppBaseUrlForCheckout(req, body.appBaseUrl)
+  } catch (error) {
+    const message = formatUnknownError(error)
+    return json({ error: message }, { status: 500 }, cors)
+  }
+
+  const service = buildBillingService(() => appBaseUrl)
+  if (!service) return stripeDisabled()
+
+  try {
+    const result = await service.createBillingPortalSession(auth.user.id)
+    return json(result, {}, cors)
+  } catch (error) {
+    const message = formatUnknownError(error)
+    const status = message.includes('No Stripe customer') ? 400 : 500
+    return json({ error: message }, { status }, cors)
+  }
+}
+
 export async function handleStripeWebhook(req: Request): Promise<Response> {
   if (req.method !== 'POST') {
     return json({ error: 'Method not allowed' }, { status: 405 })

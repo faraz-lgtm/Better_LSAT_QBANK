@@ -718,6 +718,15 @@ verify_jwt = false
 [functions.billing-get-plans]
 verify_jwt = false
 
+[functions.billing-get-payment-methods]
+verify_jwt = false
+
+[functions.billing-get-invoices]
+verify_jwt = false
+
+[functions.billing-create-portal-session]
+verify_jwt = false
+
 [functions.stripe-webhook]
 verify_jwt = false
 

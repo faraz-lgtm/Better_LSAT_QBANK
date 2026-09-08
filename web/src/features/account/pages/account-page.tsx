@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { Camera, Check, CreditCard, Calendar, Clock, Globe2, LockKeyhole, Mail, Moon, Phone, UserRound } from "lucide-react"
+import { Camera, Check, CreditCard, Calendar, Clock, ExternalLink, FileText, Globe2, LockKeyhole, Mail, Moon, Phone, UserRound } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,13 @@ import { Input } from "@/components/ui/input"
 import { PasswordInput } from "@/components/ui/password-input"
 import { Select } from "@/components/ui/select"
 import northAmericanTimezones from "@/features/account/data/north-american-timezones.json"
+import {
+  formatCardExpiry,
+  formatInvoiceAmount,
+  formatInvoiceMeta,
+  formatMaskedCardNumber,
+  invoiceStatusLabel,
+} from "@/features/account/format-billing-display"
 import { ONBOARDING_LSAT_DATE_OPTIONS } from "@/features/auth/onboarding/onboarding-lsat-date-options"
 import {
   findLsacTestWindow,
@@ -23,7 +30,12 @@ import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-mod
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { ThemeToggleSwitch } from "@/features/theme/theme-toggle"
-import { createBillingApi, type BillingPlanId } from "@/lib/api/billing"
+import {
+  createBillingApi,
+  type BillingInvoice,
+  type BillingPaymentMethod,
+  type BillingPlanId,
+} from "@/lib/api/billing"
 import { createUsersApi, type UserProfile } from "@/lib/api/users"
 import { resolveAccountLsacLinkState } from "@/lib/auth/needs-lsac-link"
 import {
@@ -736,6 +748,84 @@ function CheckListItem({ children, muted = false }: { children: ReactNode; muted
   )
 }
 
+function PaymentMethodCardRow({
+  method,
+  onReplace,
+  replacing,
+}: {
+  method: BillingPaymentMethod
+  onReplace: () => void
+  replacing: boolean
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-3.5 rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-3.5">
+      <div className="flex h-8 w-12 shrink-0 items-center justify-center rounded-md bg-[var(--primary)]">
+        <span className="text-[9px] font-black tracking-[-0.03px] text-white">{method.brandLabel}</span>
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">
+          {formatMaskedCardNumber(method.last4)}
+        </p>
+        <p className="mt-px text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
+          {formatCardExpiry(method.expMonth, method.expYear)} · {method.displayLabel}
+        </p>
+      </div>
+      {method.isDefault ? (
+        <span className="rounded-full bg-[var(--explanation-answered-bg)] px-2.5 py-0.5 text-xs font-bold tracking-[0.24px] text-[var(--explanation-answered)]">
+          Default
+        </span>
+      ) : null}
+      <button
+        type="button"
+        className={ACCOUNT_EDIT_BTN_CLASS}
+        disabled={replacing}
+        onClick={onReplace}
+      >
+        {replacing ? "Opening…" : "Replace"}
+      </button>
+    </div>
+  )
+}
+
+function BillingHistoryRow({ invoice }: { invoice: BillingInvoice }) {
+  const pdfUrl = invoice.invoicePdfUrl ?? invoice.hostedInvoiceUrl
+  const isPaid = invoice.status === "paid"
+  return (
+    <div className="flex flex-wrap items-center gap-3.5 border-b border-[rgba(44,49,67,0.06)] px-6 py-3.5 last:border-b-0">
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold tracking-[0.24px] text-[var(--color-student-heading)]">{invoice.title}</p>
+        <p className="mt-0.5 text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{formatInvoiceMeta(invoice)}</p>
+      </div>
+      <p className="text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">
+        {formatInvoiceAmount(invoice.amountPaidCents, invoice.currency)}
+      </p>
+      <span
+        className={cn(
+          "rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-[0.24px]",
+          isPaid
+            ? "bg-[var(--explanation-answered-bg)] text-[var(--explanation-answered)]"
+            : "bg-[var(--greyscale-25)] text-[var(--greyscale-500)]",
+        )}
+      >
+        {invoiceStatusLabel(invoice.status)}
+      </span>
+      {pdfUrl ? (
+        <a
+          href={pdfUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-0.5 text-xs font-semibold tracking-[0.24px] text-[var(--primary)] hover:underline"
+        >
+          <ExternalLink className="size-[11px]" strokeWidth={2.25} />
+          PDF
+        </a>
+      ) : (
+        <span className="text-xs tracking-[0.24px] text-[var(--greyscale-300)]">PDF</span>
+      )}
+    </div>
+  )
+}
+
 function AccountPage() {
   const navigate = useNavigate()
   const { openPricingModal } = useGuestPricingModal()
@@ -773,6 +863,10 @@ function AccountPage() {
   const [paymentPlanMenuOpen, setPaymentPlanMenuOpen] = useState(false)
   const [startingPayment, setStartingPayment] = useState(false)
   const [paymentError, setPaymentError] = useState<string | null>(null)
+  const [paymentMethods, setPaymentMethods] = useState<BillingPaymentMethod[]>([])
+  const [billingInvoices, setBillingInvoices] = useState<BillingInvoice[]>([])
+  const [billingDetailsLoading, setBillingDetailsLoading] = useState(false)
+  const [openingPortal, setOpeningPortal] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -816,6 +910,47 @@ function AccountPage() {
     () => resolveAccountLsacLinkState(profile, entitlement),
     [entitlement, profile],
   )
+
+  useEffect(() => {
+    if (!hasProPlan || entitlementLoading) return
+    let alive = true
+    async function loadBillingDetails() {
+      setBillingDetailsLoading(true)
+      try {
+        const billingApi = createBillingApi(getSupabaseBrowserClient())
+        const [methods, invoices] = await Promise.all([
+          billingApi.getPaymentMethods(),
+          billingApi.getInvoices(),
+        ])
+        if (!alive) return
+        setPaymentMethods(methods)
+        setBillingInvoices(invoices)
+      } catch {
+        if (!alive) return
+        setPaymentMethods([])
+        setBillingInvoices([])
+      } finally {
+        if (alive) setBillingDetailsLoading(false)
+      }
+    }
+    void loadBillingDetails()
+    return () => {
+      alive = false
+    }
+  }, [entitlementLoading, hasProPlan])
+
+  async function openBillingPortal() {
+    setOpeningPortal(true)
+    setPaymentError(null)
+    try {
+      const billingApi = createBillingApi(getSupabaseBrowserClient())
+      const url = await billingApi.createBillingPortalSession()
+      window.location.assign(url)
+    } catch (portalError) {
+      setPaymentError(portalError instanceof Error ? portalError.message : "Unable to open billing portal.")
+      setOpeningPortal(false)
+    }
+  }
 
   function startFieldEdit(field: EditableAccountField) {
     setAccountStatus(null)
@@ -1150,80 +1285,126 @@ function AccountPage() {
               </div>
             </section>
 
-            <AccountSection title="Payment Methods" icon={CreditCard}>
-              <div className="p-6">
-                <div className="flex min-h-[142px] flex-col items-center justify-center rounded-[10px] border-2 border-dashed border-[rgba(44,49,67,0.12)] p-6 text-center">
-                  <CreditCard className="size-7 text-[var(--greyscale-300)]" strokeWidth={1.75} />
-                  <p className="mt-2 text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">No payment method</p>
-                  <p className="mt-1 text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
-                    Add a card securely through Stripe Checkout.
-                  </p>
-
-                  {addingPayment ? (
-                    <div
-                      className={cn(
-                        "mt-4 w-full max-w-[460px] rounded-xl bg-[var(--greyscale-25)] p-4 text-left",
-                        paymentPlanMenuOpen && FIGMA_DROPDOWN_CARD_OPEN_CLASS,
-                      )}
-                    >
-                      <label
-                        className="block text-xs font-semibold tracking-[0.24px] text-[var(--color-student-heading)]"
-                        htmlFor="payment-plan"
-                      >
-                        Choose plan before entering card details
-                      </label>
-                      <FigmaDropdown
-                        id="payment-plan"
-                        className="mt-2"
-                        value={paymentPlan}
-                        options={PAYMENT_PLAN_OPTIONS}
-                        placeholder="Select a plan"
-                        disabled={startingPayment}
-                        onOpenChange={setPaymentPlanMenuOpen}
-                        onChange={(value) => setPaymentPlan(value as BillingPlanId)}
+            <AccountSection title="Payment Method" icon={CreditCard}>
+              <div className="px-6 py-5">
+                {hasProPlan && billingDetailsLoading ? (
+                  <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">Loading payment method…</p>
+                ) : hasProPlan && paymentMethods.length > 0 ? (
+                  <div className="flex flex-col gap-3">
+                    {paymentMethods.map((method) => (
+                      <PaymentMethodCardRow
+                        key={method.id}
+                        method={method}
+                        replacing={openingPortal}
+                        onReplace={() => void openBillingPortal()}
                       />
-                      <p className="mt-2 text-xs leading-5 tracking-[0.24px] text-[var(--greyscale-500)]">
-                        Card number, expiry, CVC, and billing details are collected on Stripe's secure checkout page.
-                      </p>
-                      {paymentError ? <p className="mt-2 text-xs text-[#95122b]">{paymentError}</p> : null}
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="h-[35px] rounded-lg px-4"
-                          disabled={startingPayment}
-                          onClick={() => void startPaymentCheckout()}
-                        >
-                          {startingPayment ? "Opening…" : "Enter Card Details"}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          disabled={startingPayment}
-                          onClick={() => {
-                            setAddingPayment(false)
-                            setPaymentPlanMenuOpen(false)
-                            setPaymentError(null)
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <Button
+                    ))}
+                    {paymentError ? <p className="text-xs text-[#95122b]">{paymentError}</p> : null}
+                    <button
                       type="button"
-                      size="sm"
-                      className="mt-4 h-[35px] rounded-lg px-4"
-                      onClick={() => setAddingPayment(true)}
+                      className="self-start text-[13px] font-semibold tracking-[-0.08px] text-[var(--primary)] hover:underline disabled:opacity-60"
+                      disabled={openingPortal}
+                      onClick={() => void openBillingPortal()}
                     >
-                      Add Payment Method
-                    </Button>
-                  )}
-                </div>
+                      + Add another card
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex min-h-[142px] flex-col items-center justify-center rounded-[10px] border-2 border-dashed border-[rgba(44,49,67,0.12)] p-6 text-center">
+                    <CreditCard className="size-7 text-[var(--greyscale-300)]" strokeWidth={1.75} />
+                    <p className="mt-2 text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">No payment method</p>
+                    <p className="mt-1 text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
+                      Add a card securely through Stripe Checkout.
+                    </p>
+
+                    {addingPayment ? (
+                      <div
+                        className={cn(
+                          "mt-4 w-full max-w-[460px] rounded-xl bg-[var(--greyscale-25)] p-4 text-left",
+                          paymentPlanMenuOpen && FIGMA_DROPDOWN_CARD_OPEN_CLASS,
+                        )}
+                      >
+                        <label
+                          className="block text-xs font-semibold tracking-[0.24px] text-[var(--color-student-heading)]"
+                          htmlFor="payment-plan"
+                        >
+                          Choose plan before entering card details
+                        </label>
+                        <FigmaDropdown
+                          id="payment-plan"
+                          className="mt-2"
+                          value={paymentPlan}
+                          options={PAYMENT_PLAN_OPTIONS}
+                          placeholder="Select a plan"
+                          disabled={startingPayment}
+                          onOpenChange={setPaymentPlanMenuOpen}
+                          onChange={(value) => setPaymentPlan(value as BillingPlanId)}
+                        />
+                        <p className="mt-2 text-xs leading-5 tracking-[0.24px] text-[var(--greyscale-500)]">
+                          Card number, expiry, CVC, and billing details are collected on Stripe&apos;s secure checkout page.
+                        </p>
+                        {paymentError ? <p className="mt-2 text-xs text-[#95122b]">{paymentError}</p> : null}
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="h-[35px] rounded-lg px-4"
+                            disabled={startingPayment}
+                            onClick={() => void startPaymentCheckout()}
+                          >
+                            {startingPayment ? "Opening…" : "Enter Card Details"}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            disabled={startingPayment}
+                            onClick={() => {
+                              setAddingPayment(false)
+                              setPaymentPlanMenuOpen(false)
+                              setPaymentError(null)
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="mt-4 h-[35px] rounded-lg px-4"
+                        onClick={() => setAddingPayment(true)}
+                      >
+                        Add Payment Method
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             </AccountSection>
+
+            {hasProPlan ? (
+              <AccountSection title="Billing History" icon={FileText}>
+                {billingDetailsLoading ? (
+                  <div className="px-6 py-5">
+                    <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">Loading billing history…</p>
+                  </div>
+                ) : billingInvoices.length > 0 ? (
+                  <div className="flex flex-col">
+                    {billingInvoices.map((invoice) => (
+                      <BillingHistoryRow key={invoice.id} invoice={invoice} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-6 py-5">
+                    <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
+                      No invoices yet. Paid invoices will appear here after your first billing cycle.
+                    </p>
+                  </div>
+                )}
+              </AccountSection>
+            ) : null}
           </div>
 
           <div className="flex min-w-0 flex-col gap-4">

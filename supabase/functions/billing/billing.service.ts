@@ -12,6 +12,12 @@ import {
 } from '../_shared/stripe-env.ts'
 import type { BillingRepository } from './billing.repository.ts'
 import { isActiveSubscriptionStatus } from './billing.repository.ts'
+import {
+  mapStripeCardPaymentMethod,
+  mapStripeInvoice,
+  type BillingInvoiceDto,
+  type BillingPaymentMethodDto,
+} from './billing-payment-mapper.ts'
 
 export type CheckoutCompletedContext = {
   userId: string
@@ -228,6 +234,116 @@ export function createBillingService(deps: BillingServiceDeps) {
             }
           : null,
       }
+    },
+
+    async getPaymentMethods(userId: string): Promise<{ paymentMethods: BillingPaymentMethodDto[] }> {
+      const profile = await deps.repository.getProfileBillingFields(userId)
+      const customerId = profile?.stripe_customer_id?.trim() ?? ''
+      if (!customerId) return { paymentMethods: [] }
+
+      const customer = await deps.stripe.customers.retrieve(customerId)
+      if (customer.deleted) return { paymentMethods: [] }
+
+      const defaultPm =
+        typeof customer.invoice_settings?.default_payment_method === 'string'
+          ? customer.invoice_settings.default_payment_method
+          : customer.invoice_settings?.default_payment_method?.id ?? null
+
+      const listed = await deps.stripe.paymentMethods.list({
+        customer: customerId,
+        type: 'card',
+        limit: 10,
+      })
+
+      const paymentMethods = listed.data
+        .filter((pm) => pm.card != null)
+        .map((pm) =>
+          mapStripeCardPaymentMethod({
+            id: pm.id,
+            brand: pm.card!.brand,
+            last4: pm.card!.last4,
+            expMonth: pm.card!.exp_month,
+            expYear: pm.card!.exp_year,
+            funding: pm.card!.funding ?? null,
+            isDefault: defaultPm != null ? pm.id === defaultPm : listed.data[0]?.id === pm.id,
+          })
+        )
+
+      return { paymentMethods }
+    },
+
+    async getBillingHistory(userId: string): Promise<{ invoices: BillingInvoiceDto[] }> {
+      const profile = await deps.repository.getProfileBillingFields(userId)
+      const customerId = profile?.stripe_customer_id?.trim() ?? ''
+      if (!customerId) return { invoices: [] }
+
+      const subscription = await deps.repository.getLatestSubscriptionByUserId(userId)
+      const planTierFallback = subscription?.plan_tier ?? null
+
+      const listed = await deps.stripe.invoices.list({
+        customer: customerId,
+        limit: 24,
+        status: 'paid',
+      })
+
+      const invoices = listed.data.map((invoice) => {
+        const lineDescriptions = (invoice.lines?.data ?? []).map((line) => {
+          if (line.description?.trim()) return line.description.trim()
+          const price = line.price
+          if (price && typeof price === 'object' && price.product) {
+            const product = price.product
+            if (typeof product === 'object' && product && 'name' in product && typeof product.name === 'string') {
+              return product.name
+            }
+          }
+          return ''
+        })
+
+        return mapStripeInvoice({
+          id: invoice.id,
+          number: invoice.number,
+          amountPaid: invoice.amount_paid,
+          currency: invoice.currency,
+          status: invoice.status,
+          created: invoice.created,
+          invoicePdf: invoice.invoice_pdf ?? null,
+          hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
+          lineDescriptions,
+          planTierFallback,
+        })
+      })
+
+      return { invoices }
+    },
+
+    /**
+     * Opens Stripe Customer Portal in payment-method-update flow only.
+     * Intentionally avoids the portal home (cancel subscription / plan changes).
+     */
+    async createBillingPortalSession(userId: string): Promise<{ url: string }> {
+      const profile = await deps.repository.getProfileBillingFields(userId)
+      const customerId = profile?.stripe_customer_id?.trim() ?? ''
+      if (!customerId) {
+        throw new Error('No Stripe customer on file. Add a payment method via checkout first.')
+      }
+
+      const baseUrl = deps.getAppBaseUrl().replace(/\/$/, '')
+      const returnUrl = `${baseUrl}/app/account`
+      const session = await deps.stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: returnUrl,
+        flow_data: {
+          type: 'payment_method_update',
+          after_completion: {
+            type: 'redirect',
+            redirect: { return_url: returnUrl },
+          },
+        },
+      })
+      if (!session.url) {
+        throw new Error('Stripe billing portal session missing url')
+      }
+      return { url: session.url }
     },
 
     async createCheckoutSession(
