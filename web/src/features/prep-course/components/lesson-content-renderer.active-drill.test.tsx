@@ -67,8 +67,35 @@ const adaptiveAttempt: PrepLessonActiveDrillAttempt = {
 describe("LessonContentRenderer active_drill", () => {
   it("shows intro card when drill not attempted", () => {
     render(<LessonContentRenderer lesson={baseLesson} linkedQuestionRefs={[linked]} activeDrillAttempt={null} />)
-    expect(screen.getByText("Try this question.")).toBeInTheDocument()
-    expect(screen.queryByText("Hidden until complete.")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /start/i })).toBeInTheDocument()
+    expect(screen.getByText("LSAC133 · S2 · Q5")).toBeInTheDocument()
+    expect(screen.getByText("Hidden until complete.")).toBeInTheDocument()
+  })
+
+  it("renders uploaded drill HTML structure instead of flattened text", () => {
+    render(
+      <LessonContentRenderer
+        lesson={{
+          ...baseLesson,
+          summary: "LSAC135 · S1 · Q2",
+          text_content: [
+            "<p><strong>Florist:</strong> Some people like green carnations.</p>",
+            "<h3>Stimulus Analysis</h3>",
+            "<p>First, is the analysis of the stimulus.&nbsp; The second line.</p>",
+            "<ol><li>It is a good idea to have green carnations.</li><li>Flowers that are naturally green are rare.</li></ol>",
+          ].join(""),
+        }}
+        linkedQuestionRefs={[{ ...linked, prep_test_module_id: "LSAC135", section_number: 1, question_number: 2 }]}
+        activeDrillAttempt={null}
+      />,
+    )
+
+    expect(screen.getByText("LSAC135 · S1 · Q2")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 3, name: "Stimulus Analysis" })).toBeInTheDocument()
+    expect(document.querySelector("article ol")).not.toBeNull()
+    expect(screen.getByText("It is a good idea to have green carnations.")).toBeInTheDocument()
+    expect(screen.queryByText(/&nbsp;/)).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /start/i })).toBeInTheDocument()
   })
 
   it("shows result and full content after drill", () => {
@@ -132,17 +159,18 @@ describe("LessonContentRenderer adaptive_drill", () => {
         activeDrillAttempt={null}
       />,
     )
-    expect(screen.getByText(/Mixed practice keeps your thinking flexible/)).toBeInTheDocument()
-    expect(screen.queryByText("Lesson notes after drill.")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /start/i })).toBeInTheDocument()
+    expect(screen.getByText("Lesson notes after drill.")).toBeInTheDocument()
   })
 
-  it("shows intro card with Start for Full Drill title stored as video_text", () => {
+  it("renders video_text lessons as reading content even when the title says Full Drill", () => {
     render(
       <LessonContentRenderer
         lesson={{
           ...adaptiveLesson,
           lesson_type: "video_text",
           title: "Full Drill: Main Conclusion Questions",
+          text_content: "<p>Lesson notes after drill.</p>",
         }}
         linkedQuestionRefs={[linked, { ...linked, question_id: "q2", question_number: 6 }]}
         activeDrillAttempt={null}
@@ -150,9 +178,8 @@ describe("LessonContentRenderer adaptive_drill", () => {
         onStartDrill={() => {}}
       />,
     )
-    expect(screen.getByRole("button", { name: /start/i })).toBeInTheDocument()
-    expect(screen.getByText("The Anatomy of an Argument • 30 mins")).toBeInTheDocument()
-    expect(screen.getByText(/Mixed practice keeps your thinking flexible/i)).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /start/i })).not.toBeInTheDocument()
+    expect(screen.getByText("Lesson notes after drill.")).toBeInTheDocument()
   })
 
   it("shows results panel after drill", () => {
