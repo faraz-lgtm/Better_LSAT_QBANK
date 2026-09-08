@@ -2,7 +2,12 @@ import { isPrepTestQuestionReferenceText } from "@/features/prep-course/lib/prep
 import type { PrepLesson } from "@/lib/api/prep-course"
 
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#160;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim()
 }
 
 const DEFAULT_INTRO =

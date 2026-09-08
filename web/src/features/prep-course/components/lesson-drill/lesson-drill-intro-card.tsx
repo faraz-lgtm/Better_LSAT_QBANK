@@ -1,7 +1,9 @@
 import { ArrowRight, Bookmark } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { drillLessonHasBodyHtml } from "@/features/prep-course/lib/drill-lesson-body-html"
 import { lessonDrillIntroCopy } from "@/features/prep-course/lib/lesson-drill-intro-copy"
+import { LessonHtmlContent } from "@/lib/html/html-content"
 import { cn } from "@/lib/utils"
 import type { PrepLesson, PrepLessonLinkedQuestionRef } from "@/lib/api/prep-course"
 
@@ -28,6 +30,7 @@ function LessonDrillIntroCard({
   hideTitle = false,
 }: LessonDrillIntroCardProps) {
   const body = lessonDrillIntroCopy(lesson)
+  const showUploadedHtml = drillLessonHasBodyHtml(lesson.text_content)
 
   return (
     <article className="w-full rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
@@ -57,7 +60,11 @@ function LessonDrillIntroCard({
       )}
 
       <div className={hideTitle ? undefined : "pt-6"}>
-        <p className={`ds-body-sm leading-7 text-[var(--color-student-heading)] ${hideTitle ? "mt-0" : ""}`}>{body}</p>
+        {showUploadedHtml ? (
+          <LessonHtmlContent html={lesson.text_content} />
+        ) : (
+          <p className={`ds-body-sm leading-7 text-[var(--color-student-heading)] ${hideTitle ? "mt-0" : ""}`}>{body}</p>
+        )}
 
         {drillStartError ? (
           <p className="mt-6 text-sm text-[#95122b]" role="alert">

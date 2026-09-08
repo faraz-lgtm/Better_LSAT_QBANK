@@ -2,6 +2,9 @@ import { ArrowRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { activeDrillIntroCopy } from "@/features/prep-course/lib/active-drill-intro-copy"
+import { drillLessonHasBodyHtml } from "@/features/prep-course/lib/drill-lesson-body-html"
+import { LessonHtmlContent } from "@/lib/html/html-content"
+import { cn } from "@/lib/utils"
 import type { PrepLesson, PrepLessonLinkedQuestionRef } from "@/lib/api/prep-course"
 
 type ActiveDrillIntroCardProps = {
@@ -29,6 +32,7 @@ function ActiveDrillIntroCard({
   drillStartError = null,
 }: ActiveDrillIntroCardProps) {
   const body = activeDrillIntroCopy(lesson)
+  const showUploadedHtml = drillLessonHasBodyHtml(lesson.text_content)
 
   return (
     <article className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
@@ -40,7 +44,13 @@ function ActiveDrillIntroCard({
           {formatPtRef(linked)}
         </p>
       ) : null}
-      <p className={`text-sm leading-7 text-[var(--color-student-heading)] ${hideTitle ? "mt-0" : "mt-6"}`}>{body}</p>
+      {showUploadedHtml ? (
+        <div className={cn((!hideTitle || Boolean(linked)) && "mt-6")}>
+          <LessonHtmlContent html={lesson.text_content} />
+        </div>
+      ) : (
+        <p className={`text-sm leading-7 text-[var(--color-student-heading)] ${hideTitle ? "mt-0" : "mt-6"}`}>{body}</p>
+      )}
       {drillStartError ? (
         <p className="mt-6 text-sm text-[#95122b]" role="alert">
           {drillStartError}
