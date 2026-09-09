@@ -620,13 +620,6 @@ function AnalyticsPrepTestResultsPage() {
             <div className="flex flex-wrap items-center gap-[24px]">
               <button
                 type="button"
-                className="inline-flex h-10 items-center gap-2 rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-0)]"
-              >
-                <FigmaIcon name="share-square" className="size-4 shrink-0" aria-hidden />
-                Share
-              </button>
-              <button
-                type="button"
                 onClick={() => {
                   if (!practiceApi || !prepTestId) return
                   void practiceApi
