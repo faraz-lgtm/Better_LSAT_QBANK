@@ -204,6 +204,74 @@ describe("LrDrillOptionRow", () => {
     expect(onSelect).not.toHaveBeenCalled()
   })
 
+  it("fades Blind Review letter and copy the same way as the LSAT exam, without strikethrough", () => {
+    const { container } = render(
+      <LrDrillOptionRow
+        index={2}
+        html="<p>Choice C</p>"
+        selected={false}
+        masked
+        onSelect={() => undefined}
+        variant="blind-review"
+        showSideAction={false}
+      />,
+    )
+
+    expect(container.firstChild).toHaveClass("practice-session-choice-masked")
+    expect(container.firstChild).not.toHaveClass("opacity-45")
+    expect(screen.getByRole("button", { name: "Answer choice C, masked" })).toBeInTheDocument()
+    expect(screen.getByText("C")).toHaveClass("practice-session-choice-masked-ink")
+    expect(screen.getByText("C")).not.toHaveClass("line-through")
+    expect(screen.getByText("Choice C").closest(".practice-session-choice-masked-ink")).toBeTruthy()
+  })
+
+  it("masks the choice instead of selecting while response masking is on, even when the row is locked", async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+    const onToggleMasked = vi.fn()
+
+    render(
+      <LrDrillOptionRow
+        index={0}
+        html="<p>Choice A</p>"
+        selected={false}
+        maskingMode
+        disabled
+        onSelect={onSelect}
+        onToggleMasked={onToggleMasked}
+        variant="official"
+        showSideAction={false}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Answer choice A, click to mask" }))
+    expect(onToggleMasked).toHaveBeenCalledTimes(1)
+    expect(onSelect).not.toHaveBeenCalled()
+  })
+
+  it("masks instead of selecting in Blind Review while the response masking tool is on", async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+    const onToggleMasked = vi.fn()
+
+    render(
+      <LrDrillOptionRow
+        index={1}
+        html="<p>Choice B</p>"
+        selected={false}
+        maskingMode
+        onSelect={onSelect}
+        onToggleMasked={onToggleMasked}
+        variant="blind-review"
+        showSideAction={false}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Answer choice B, click to mask" }))
+    expect(onToggleMasked).toHaveBeenCalledTimes(1)
+    expect(onSelect).not.toHaveBeenCalled()
+  })
+
   it("unmasks then selects when masking mode is off", async () => {
     const user = userEvent.setup()
     const onSelect = vi.fn()

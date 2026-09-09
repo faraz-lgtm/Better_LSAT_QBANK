@@ -37,6 +37,13 @@ import { HtmlContent } from "@/lib/html/html-content"
 import { cn } from "@/lib/utils"
 
 const letters = ["A", "B", "C", "D", "E"] as const
+const MASKED_INK_CLASS = "practice-session-choice-masked-ink"
+
+function choiceMaskAriaLabel(letter: string, masked: boolean, maskingMode: boolean) {
+  if (masked) return `Answer choice ${letter}, masked`
+  if (maskingMode) return `Answer choice ${letter}, click to mask`
+  return undefined
+}
 
 type LrDrillOptionRowProps = {
   index: number
@@ -152,12 +159,15 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
     }
   }
 
+  const maskingLocksSelection = maskingMode
+  const rowInteractive = maskingLocksSelection || !disabled
+
   function handleSelect() {
-    if (disabled) return
-    if (maskingMode) {
+    if (maskingLocksSelection) {
       onToggleMasked?.()
       return
     }
+    if (disabled) return
 
     pointerStartRef.current = null
     window.getSelection()?.removeAllRanges()
@@ -167,7 +177,6 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
-    if (disabled) return
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault()
       handleSelect()
@@ -176,27 +185,29 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
 
   if (isBlindReview) {
     const isMasked = masked
+    const showSelectedChrome = (selected || correctHighlight) && !isMasked
     return (
       <div
         className={cn(
           "practice-session-br-option h-auto shrink-0 overflow-visible rounded-[14px] border transition-colors",
           explanationAction
-            ? selected || correctHighlight
+            ? showSelectedChrome
               ? brSelectedRowClass
               : "border-transparent bg-[var(--greyscale-25)]"
-            : selected
+            : showSelectedChrome
               ? brSelectedRowClass
-              : hidden || isMasked
+              : hidden
                 ? "border border-[var(--greyscale-100)] bg-[var(--greyscale-50)]"
                 : "border border-[var(--greyscale-100)] bg-[var(--greyscale-25)]",
-          isMasked && "practice-session-choice-masked opacity-45",
+          isMasked && "practice-session-choice-masked",
         )}
       >
         <div
           role={explanationAction ? undefined : "button"}
-          tabIndex={disabled || explanationAction ? -1 : 0}
-          aria-pressed={explanationAction ? undefined : selected}
-          aria-disabled={disabled}
+          tabIndex={explanationAction || !rowInteractive ? -1 : 0}
+          aria-pressed={explanationAction ? undefined : selected && !isMasked}
+          aria-disabled={disabled && !maskingLocksSelection ? true : undefined}
+          aria-label={explanationAction ? undefined : choiceMaskAriaLabel(letter, isMasked, maskingMode)}
           onPointerDown={explanationAction ? undefined : handlePointerDown}
           onClick={explanationAction ? undefined : handleSelect}
           onKeyDown={explanationAction ? undefined : handleKeyDown}
@@ -204,7 +215,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
             explanationAction
               ? "flex items-center justify-between gap-4 py-2 pl-2 pr-6 text-left text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]"
               : cn(BLIND_REVIEW_OPTION_ROW_INNER_CLASS, "text-[var(--color-student-heading)]"),
-            !explanationAction && (disabled ? "cursor-default" : "cursor-pointer"),
+            !explanationAction && (rowInteractive ? "cursor-pointer" : "cursor-default"),
           )}
         >
           <div className={cn("flex min-w-0 flex-1 items-center", explanationAction ? "gap-3" : "gap-4")}>
@@ -212,17 +223,18 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
               className={cn(
                 "flex shrink-0 items-center justify-center font-bold",
                 explanationAction ? "size-[46px] rounded-[12px] text-sm tracking-[0.28px]" : "size-12 rounded-[14px] text-lg",
-                selected || correctHighlight
+                showSelectedChrome
                   ? brSelectedLetterClass
                   : explanationAction
                     ? "bg-[var(--greyscale-0)] text-[var(--color-student-heading)]"
                     : "bg-[var(--greyscale-0)] text-[var(--greyscale-500)]",
-                (hidden || isMasked) && "line-through",
+                hidden && "line-through",
+                isMasked && MASKED_INK_CLASS,
               )}
             >
               {letter}
             </span>
-            {choiceContent}
+            <div className={cn("min-w-0 flex-1", isMasked && MASKED_INK_CLASS)}>{choiceContent}</div>
           </div>
           {explanationAction ? (
             <button
@@ -306,9 +318,9 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
     return (
       <div
         role="button"
-        tabIndex={disabled ? -1 : 0}
+        tabIndex={rowInteractive ? 0 : -1}
         aria-pressed={selected && !masked}
-        aria-disabled={disabled}
+        aria-disabled={disabled && !maskingLocksSelection ? true : undefined}
         onPointerDown={handlePointerDown}
         onClick={handleSelect}
         onKeyDown={handleKeyDown}
@@ -319,26 +331,20 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
             : selected
               ? OFFICIAL_OPTION_ROW_SELECTED_CLASS
               : OFFICIAL_OPTION_ROW_UNSELECTED_CLASS,
-          disabled ? "cursor-default" : "cursor-pointer",
+          rowInteractive ? "cursor-pointer" : "cursor-default",
         )}
-        aria-label={
-          masked
-            ? `Answer choice ${letter}, masked`
-            : maskingMode
-              ? `Answer choice ${letter}, click to mask`
-              : undefined
-        }
+        aria-label={choiceMaskAriaLabel(letter, masked, maskingMode)}
       >
         {selected && !masked ? <span aria-hidden className={OFFICIAL_OPTION_SELECTED_BAR_CLASS} /> : null}
         <span
           className={cn(
             selected && !masked ? OFFICIAL_OPTION_LETTER_SELECTED_CLASS : OFFICIAL_OPTION_LETTER_UNSELECTED_CLASS,
-            masked && "practice-session-choice-masked-ink",
+            masked && MASKED_INK_CLASS,
           )}
         >
           {letter}
         </span>
-        <div className={cn(OFFICIAL_OPTION_TEXT_CLASS, masked && "practice-session-choice-masked-ink")}>
+        <div className={cn(OFFICIAL_OPTION_TEXT_CLASS, masked && MASKED_INK_CLASS)}>
           {choiceContent}
         </div>
       </div>
@@ -349,9 +355,9 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
     return (
       <div
         role="button"
-        tabIndex={disabled ? -1 : 0}
+        tabIndex={rowInteractive ? 0 : -1}
         aria-pressed={selected && !masked}
-        aria-disabled={disabled}
+        aria-disabled={disabled && !maskingLocksSelection ? true : undefined}
         onPointerDown={handlePointerDown}
         onClick={handleSelect}
         onKeyDown={handleKeyDown}
@@ -363,15 +369,9 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
             : selected
               ? ACTIVE_DRILL_OPTION_ROW_SELECTED_CLASS
               : ACTIVE_DRILL_OPTION_ROW_UNSELECTED_CLASS,
-          disabled ? "cursor-default" : "cursor-pointer",
+          rowInteractive ? "cursor-pointer" : "cursor-default",
         )}
-        aria-label={
-          masked
-            ? `Answer choice ${letter}, masked`
-            : maskingMode
-              ? `Answer choice ${letter}, click to mask`
-              : undefined
-        }
+        aria-label={choiceMaskAriaLabel(letter, masked, maskingMode)}
       >
         <span
           className={cn(
@@ -379,12 +379,12 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
             selected && !masked
               ? ACTIVE_DRILL_OPTION_LETTER_SELECTED_CLASS
               : ACTIVE_DRILL_OPTION_LETTER_UNSELECTED_CLASS,
-            masked && "practice-session-choice-masked-ink",
+            masked && MASKED_INK_CLASS,
           )}
         >
           {letter}
         </span>
-        <div className={cn("min-w-0 flex-1 self-start", masked && "practice-session-choice-masked-ink")}>
+        <div className={cn("min-w-0 flex-1 self-start", masked && MASKED_INK_CLASS)}>
           {choiceContent}
         </div>
         {showSideAction ? (
@@ -411,16 +411,18 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
   return (
     <div
       role="button"
-      tabIndex={disabled ? -1 : 0}
-      aria-pressed={selected}
-      aria-disabled={disabled}
+      tabIndex={rowInteractive ? 0 : -1}
+      aria-pressed={selected && !masked}
+      aria-disabled={disabled && !maskingLocksSelection ? true : undefined}
+      aria-label={choiceMaskAriaLabel(letter, masked, maskingMode)}
       onPointerDown={handlePointerDown}
       onClick={handleSelect}
       onKeyDown={handleKeyDown}
       className={cn(
         "flex items-stretch gap-2 rounded-xl border border-solid text-sm leading-snug text-left transition-colors",
         hidden && "opacity-50",
-        disabled ? "cursor-default" : "cursor-pointer",
+        masked && "practice-session-choice-masked",
+        rowInteractive ? "cursor-pointer" : "cursor-default",
       )}
       style={{
         borderColor: selected ? "var(--color-student-cta)" : "var(--greyscale-100)",
@@ -431,7 +433,10 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
     >
       <div className="flex min-w-0 flex-1 items-start gap-3 px-3 py-3">
         <span
-          className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+          className={cn(
+            "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+            masked && MASKED_INK_CLASS,
+          )}
           style={{
             backgroundColor: "var(--greyscale-25)",
             color: "var(--color-student-heading)",
@@ -440,7 +445,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
         >
           {letter}
         </span>
-        {choiceContent}
+        <div className={cn("min-w-0 flex-1", masked && MASKED_INK_CLASS)}>{choiceContent}</div>
       </div>
       <div className="flex shrink-0 items-center border-l pr-2 pl-1" style={{ borderColor: "var(--greyscale-100)" }}>
         <button

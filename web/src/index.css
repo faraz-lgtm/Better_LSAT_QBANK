@@ -7,6 +7,7 @@
 
 :root {
   --figma-base-w: 1920;
+  --exam-normal-w: 1440;
   --figma-base-h: 924;
   --text: #667085;
   --text-h: #121a26;
@@ -4229,6 +4230,12 @@ section[data-lesson-section][data-variant="empty"] {
   overflow: visible;
 }
 
+.practice-session-card--active-drill:not(.practice-session-card--official) .practice-session-question-panel-with-widget {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
 /* Keep vertical scroll working; clip only the x-axis so side-widget labels can still paint. */
 .practice-session-card--active-drill .practice-session-pane:has(.practice-session-side-widget) {
   overflow-x: clip;
@@ -4237,6 +4244,7 @@ section[data-lesson-section][data-variant="empty"] {
 
 .practice-session-card--official .practice-session-question-panel-with-widget {
   overflow: visible;
+  padding-right: 50px;
 }
 
 .practice-session-card--official .practice-session-pane:has(.practice-session-side-widget) {
@@ -4413,7 +4421,8 @@ html.portal-chat-hidden [class*="lc_text-widget"] {
 
 html.student-shell-immersive .practice-session-card--active-drill {
   width: 100%;
-  max-width: 1440px;
+  max-width: calc(var(--exam-normal-w) * 1px);
+  margin-inline: auto;
   height: 100%;
   max-height: calc(var(--app-svh) - 32px);
   flex: 1 1 auto;
@@ -4424,10 +4433,16 @@ html.student-shell-immersive .practice-session-card--active-drill {
 }
 
 html.student-shell-immersive .practice-session-card--official {
-  max-width: 1440px;
+  max-width: calc(var(--exam-normal-w) * 1px);
+  margin-inline: auto;
   max-height: calc(var(--app-svh) - 32px);
   height: 100%;
   border-radius: 10px;
+}
+
+/* Figma full-width exam canvas — 1920px. Applied when Full Screen / full-width view is on. */
+html.student-shell-immersive .practice-session-card.practice-session-card--full-width {
+  max-width: calc(var(--figma-base-w) * 1px);
 }
 
 html.student-shell-immersive .practice-session-card--active-drill .practice-session-body {

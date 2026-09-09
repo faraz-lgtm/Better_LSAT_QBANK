@@ -82,7 +82,7 @@ function GuestDiagnosticStartPage({ preview = false }: GuestDiagnosticStartPageP
 
   return (
     <>
-      <PracticeSessionImmersiveFrame hideScrim className="z-30">
+      <PracticeSessionImmersiveFrame hideScrim fullWidth className="z-30">
         <GuestDiagnosticExamLayout
           config={config}
           interactive={!showInstructions}

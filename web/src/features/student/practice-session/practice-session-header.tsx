@@ -8,6 +8,8 @@ import {
   ACTIVE_DRILL_HEADER_CLOSE_BUTTON_CLASS,
   ACTIVE_DRILL_HEADER_ICON_BUTTON_CLASS,
   ACTIVE_DRILL_HEADER_LEFT_CLASS,
+  ACTIVE_DRILL_HEADER_PILL_BUTTON_CLASS,
+  ACTIVE_DRILL_HEADER_PILL_BUTTON_PRESSED_CLASS,
   ACTIVE_DRILL_HEADER_PROGRESS_CLASS,
   ACTIVE_DRILL_HEADER_PROGRESS_FILL_CLASS,
   ACTIVE_DRILL_HEADER_PROGRESS_TRACK_CLASS,
@@ -283,6 +285,17 @@ function PracticeSessionHeader({
               <p className={cn(ACTIVE_DRILL_HEADER_TITLE_CLASS, titleClassName)} title={title}>
                 {title}
               </p>
+              <button
+                type="button"
+                className={cn(
+                  ACTIVE_DRILL_HEADER_PILL_BUTTON_CLASS,
+                  passageOnlyView && ACTIVE_DRILL_HEADER_PILL_BUTTON_PRESSED_CLASS,
+                )}
+                aria-pressed={passageOnlyView}
+                onClick={() => onPassageOnlyViewChange?.(!passageOnlyView)}
+              >
+                Passage Only View
+              </button>
               <input
                 type="search"
                 placeholder="Find Text, Type Here"
