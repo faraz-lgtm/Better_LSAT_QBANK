@@ -202,15 +202,15 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
           onKeyDown={explanationAction ? undefined : handleKeyDown}
           className={cn(
             explanationAction
-              ? "flex items-start justify-between gap-4 py-2 pl-2 pr-6 text-left text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]"
+              ? "flex items-center justify-between gap-4 py-2 pl-2 pr-6 text-left text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]"
               : cn(BLIND_REVIEW_OPTION_ROW_INNER_CLASS, "text-[var(--color-student-heading)]"),
             !explanationAction && (disabled ? "cursor-default" : "cursor-pointer"),
           )}
         >
-          <div className={cn("flex min-w-0 flex-1 items-start", explanationAction ? "gap-3" : "gap-4")}>
+          <div className={cn("flex min-w-0 flex-1 items-center", explanationAction ? "gap-3" : "gap-4")}>
             <span
               className={cn(
-                "flex shrink-0 self-start items-center justify-center font-bold",
+                "flex shrink-0 items-center justify-center font-bold",
                 explanationAction ? "size-[46px] rounded-[12px] text-sm tracking-[0.28px]" : "size-12 rounded-[14px] text-lg",
                 selected || correctHighlight
                   ? brSelectedLetterClass
@@ -228,7 +228,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
             <button
               type="button"
               className={cn(
-                "mt-1 inline-flex size-5 shrink-0 self-start items-center justify-center transition",
+                "inline-flex size-5 shrink-0 items-center justify-center transition",
                 explanationExpanded
                   ? "text-[var(--primary)]"
                   : "text-[var(--greyscale-500)] hover:text-[var(--color-student-heading)]",
@@ -253,7 +253,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
           ) : showSideAction ? (
             <button
               type="button"
-              className="mt-1.5 inline-flex size-5 shrink-0 self-start items-center justify-center text-[var(--greyscale-500)] transition hover:text-[var(--color-student-heading)]"
+              className="inline-flex size-5 shrink-0 items-center justify-center text-[var(--greyscale-500)] transition hover:text-[var(--color-student-heading)]"
               aria-label={hidden ? "Show answer choice" : "Hide answer choice"}
               onClick={(e) => {
                 e.stopPropagation()

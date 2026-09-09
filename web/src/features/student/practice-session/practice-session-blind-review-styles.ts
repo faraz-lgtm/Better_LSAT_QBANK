@@ -73,9 +73,9 @@ const BLIND_REVIEW_RECOMMENDED_BADGE_CLASS =
 const BLIND_REVIEW_OPTIONS_LIST_CLASS =
   "practice-session-br-options flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-0 py-3"
 
-/** Choice rows grow with wrapped copy; letter and hide control stay top-aligned. */
+/** Choice rows grow with wrapped copy; letter, text, and hide control stay vertically centered. */
 const BLIND_REVIEW_OPTION_ROW_INNER_CLASS =
-  "flex items-start justify-between gap-4 py-3 pl-4 pr-4 text-left"
+  "flex items-center justify-between gap-4 py-3 pl-4 pr-4 text-left"
 
 /** Selected answer while viewing timed/actual responses — Figma primary-25 + primary */
 const BLIND_REVIEW_OPTION_ROW_SELECTED_ACTUAL_CLASS =

@@ -128,7 +128,9 @@ function PracticeBlindReviewQuestionPanel({
 
   const stemKey = regionKey(question.id, "stem")
   const stemHtml = getRegionHtml(stemKey, question.stemText ?? "")
+  /** Exam tools rail stays available only on Blind Review — hide on Actual (and Clean). */
   const useSideWidget = showSideWidget && !reviewChrome
+  const showExamToolsRail = useSideWidget && answerView === "blind_review"
   const hasMaskedChoices = Object.values(maskedChoices).some(Boolean)
 
   const explanationsApi = useMemo(() => {
@@ -412,19 +414,26 @@ function PracticeBlindReviewQuestionPanel({
   if (!useSideWidget) return panel
 
   return (
-    <div className={cn(ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS, "h-full min-h-0 overflow-visible")}>
+    <div
+      className={cn(
+        showExamToolsRail ? ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS : "relative min-w-0",
+        "h-full min-h-0 overflow-visible",
+      )}
+    >
       {panel}
-      <PracticeSessionSideWidget
-        variant="active-drill"
-        flagged={flagged}
-        onToggleFlag={onToggleFlag ?? (() => undefined)}
-        flagsDisabled={flagsDisabled}
-        responseMasking={responseMasking}
-        onToggleResponseMasking={onToggleResponseMasking ?? (() => undefined)}
-        onReview={onOpenReview}
-        reviewActive={reviewActive}
-        onAccessibility={onOpenAccessibility}
-      />
+      {showExamToolsRail ? (
+        <PracticeSessionSideWidget
+          variant="active-drill"
+          flagged={flagged}
+          onToggleFlag={onToggleFlag ?? (() => undefined)}
+          flagsDisabled={flagsDisabled}
+          responseMasking={responseMasking}
+          onToggleResponseMasking={onToggleResponseMasking ?? (() => undefined)}
+          onReview={onOpenReview}
+          reviewActive={reviewActive}
+          onAccessibility={onOpenAccessibility}
+        />
+      ) : null}
     </div>
   )
 }

@@ -121,6 +121,25 @@ describe("PracticeSessionFinishMenu", () => {
     expect(onOfficialInterfaceChange).toHaveBeenCalledWith(false)
   })
 
+  it("can hide the Official Interface toggle during Blind Review", async () => {
+    const user = userEvent.setup()
+
+    renderWithTheme(
+      <PracticeSessionFinishMenu
+        iconTrigger
+        showInterfaceToggle={false}
+        morePanelInterfaceLabel="Official Interface"
+        onSubmitSection={vi.fn()}
+        onExit={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "More options" }))
+    expect(screen.getByText("Dark mode")).toBeInTheDocument()
+    expect(screen.queryByText("Official Interface")).not.toBeInTheDocument()
+    expect(screen.queryByText("BetterLSAT Interface")).not.toBeInTheDocument()
+  })
+
   it("toggles dark mode through ThemeProvider", async () => {
     const user = userEvent.setup()
 

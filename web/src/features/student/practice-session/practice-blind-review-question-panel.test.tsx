@@ -65,6 +65,48 @@ describe("PracticeBlindReviewQuestionPanel", () => {
     expect(onSelect).not.toHaveBeenCalled()
   })
 
+  it("hides the exam tools rail on Actual and shows it on Blind Review", () => {
+    const { rerender } = render(
+      <PracticeBlindReviewQuestionPanel
+        question={question}
+        questionNumber={1}
+        findQuery=""
+        selectedIndex={null}
+        revealed={false}
+        isCorrect={null}
+        submitting={false}
+        allowReselect
+        getRegionHtml={(_key, base) => base}
+        onSelect={() => undefined}
+        answerView="blind_review"
+        onAnswerViewChange={() => undefined}
+        showSideWidget
+      />,
+    )
+
+    expect(screen.getByRole("complementary", { name: /exam tools/i })).toBeInTheDocument()
+
+    rerender(
+      <PracticeBlindReviewQuestionPanel
+        question={question}
+        questionNumber={1}
+        findQuery=""
+        selectedIndex={null}
+        revealed={false}
+        isCorrect={null}
+        submitting={false}
+        allowReselect
+        getRegionHtml={(_key, base) => base}
+        onSelect={() => undefined}
+        answerView="actual"
+        onAnswerViewChange={() => undefined}
+        showSideWidget
+      />,
+    )
+
+    expect(screen.queryByRole("complementary", { name: /exam tools/i })).not.toBeInTheDocument()
+  })
+
   it("lets Remove erase highlights on the stem", async () => {
     const onAnnotateClick = vi.fn()
     const user = userEvent.setup()
