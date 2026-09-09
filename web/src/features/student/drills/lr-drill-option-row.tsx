@@ -140,7 +140,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
         isActiveDrill
           ? "text-sm font-normal leading-[1.5] tracking-[0.28px] text-[color:inherit]"
           : officialChrome
-            ? "text-[14px] font-normal leading-5 text-[var(--color-student-heading)]"
+            ? "text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[var(--primary-800)]"
             : isBlindReview
             ? "text-pretty text-[1em] leading-[1.5] tracking-[0.32px] text-[color:inherit]"
             : "pt-0.5",

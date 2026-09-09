@@ -1440,27 +1440,16 @@ function SectionSessionPage() {
       questionCount: questions.length,
       scaleFactor: accommodationScaleFactor,
     })
-    const introTimerLabel = timedSection ? "Time Left:" : "Elapsed"
+    const introTimerLabel = timedSection ? "Time Left" : "Elapsed"
     const introTimerDisplaySeconds = timedSection ? introTimerBudgetSeconds : elapsed
-    const introTimerProgress = timedSection ? 1 : computeElapsedTimerProgress(elapsed, introTimerBudgetSeconds)
-    const introCloseButton = (
-      <button
-        type="button"
-        className="inline-flex size-[52px] shrink-0 items-center justify-center rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] text-[var(--greyscale-500)] transition-colors hover:bg-[var(--greyscale-50)] hover:text-[var(--color-student-heading)]"
-        aria-label="Close section introduction"
-        onClick={handleExitSession}
-      >
-        <X className="size-5" strokeWidth={2} aria-hidden />
-      </button>
-    )
 
     return (
       <StudentMain
         layout="immersive"
-        className="flex min-h-0 max-w-none flex-1 flex-col overflow-hidden bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))] px-0 py-4 md:py-5"
+        className="flex min-h-0 max-w-none flex-1 flex-col overflow-hidden bg-[var(--greyscale-500)] px-0 py-4 md:py-5"
       >
         <div
-          className="fixed inset-0 z-[100] flex min-h-0 items-center justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-[3px] md:p-6"
+          className="fixed inset-0 z-[100] flex min-h-0 items-center justify-center overflow-y-auto bg-[rgba(0,0,0,0.3)] p-4 backdrop-blur-[3px] md:p-6"
           role="dialog"
           aria-modal="true"
           aria-label="PrepTest section introduction"
@@ -1469,15 +1458,10 @@ function SectionSessionPage() {
             header={
               <PracticeSectionIntroHeader
                 title={introHeaderLabel}
-                fontScale={highlights.fontScale}
-                toolMode={highlights.toolMode}
-                onFontSize={highlights.cycleFontSize}
-                onLineSpacing={highlights.cycleLineSpacing}
-                onUnderline={highlights.selectUnderline}
                 timerLabel={introTimerLabel}
                 timerDisplaySeconds={introTimerDisplaySeconds}
-                timerProgress={introTimerProgress}
-                closeButton={introCloseButton}
+                onPause={pauseModal.requestPause}
+                onClose={handleExitSession}
               />
             }
           >
@@ -1495,6 +1479,16 @@ function SectionSessionPage() {
           </PracticePrepTestSectionIntroFrame>
         </div>
 
+        <PracticeSessionPauseModal
+          open={pauseModal.open}
+          title="Section"
+          message="Your section is paused"
+          onResume={pauseModal.resume}
+          onSaveAndExit={() => {
+            pauseModal.close()
+            handleExitSession()
+          }}
+        />
       </StudentMain>
     )
   }

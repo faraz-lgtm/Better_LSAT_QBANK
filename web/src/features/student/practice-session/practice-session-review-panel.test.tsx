@@ -141,10 +141,11 @@ describe("PracticeSessionReviewPanel official overlay", () => {
     const flagged = screen.getByRole("button", { name: "Question 2, flagged" })
     expect(flagged).toHaveAttribute("aria-current", "true")
     expect(flagged.querySelector("img[src='/figma/exam-official/review-flag.svg']")).toBeInTheDocument()
-    expect(flagged).not.toHaveTextContent("2")
+    expect(flagged).toHaveTextContent("2")
     expect(screen.getByRole("button", { name: "Question 1" })).toHaveTextContent("1")
-    expect(document.querySelectorAll(".practice-session-review-panel__passage-break")).toHaveLength(2)
-    expect(document.querySelector(".practice-session-review-panel__grid")).toHaveClass("grid-cols-12")
+    expect(document.querySelectorAll(".practice-session-review-panel__passage-break")).toHaveLength(0)
+    expect(document.querySelector(".practice-session-review-panel__grid")).toHaveClass("grid-cols-10")
+    expect(document.querySelector(".practice-session-review-panel--official")).toHaveClass("bottom-[72px]")
   })
 
   it("selects a question, closes the overlay, and finishes the section", async () => {
