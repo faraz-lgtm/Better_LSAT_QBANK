@@ -19,7 +19,7 @@ function GuestDiagnosticTestInstructionsPanel({
 }: GuestDiagnosticTestInstructionsPanelProps) {
   return (
     <div
-      className={`flex w-full max-w-[648px] flex-col gap-6 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] p-6 ${CARD_SHADOW}`}
+      className={`flex w-full max-w-[648px] flex-col gap-6 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 ${CARD_SHADOW}`}
       data-node-id="19510:22745"
     >
       <div className="flex w-full flex-col gap-4">
@@ -33,7 +33,7 @@ function GuestDiagnosticTestInstructionsPanel({
       </div>
 
       <div className="flex w-full flex-col items-end gap-4">
-        <p className="w-full text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
+        <p className="w-full text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[#0d0d12]">
           {config.instructions}
         </p>
         <Button

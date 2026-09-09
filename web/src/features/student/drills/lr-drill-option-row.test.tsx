@@ -227,7 +227,7 @@ describe("LrDrillOptionRow", () => {
     expect(onSelect).toHaveBeenCalledTimes(1)
   })
 
-  it("uses Figma 20243:23534 yellow selected chrome with a left bar only", () => {
+  it("uses Figma 20255:50065 peach selected chrome with a primary-800 left bar", () => {
     const { container } = render(
       <LrDrillOptionRow
         index={2}
@@ -239,16 +239,34 @@ describe("LrDrillOptionRow", () => {
       />,
     )
 
-    expect(container.firstElementChild).toHaveClass("bg-[#fdfac4]", "relative")
-    expect(container.firstChild).toHaveClass("bg-[#fdfac4]", "relative")
-    expect(container.firstElementChild?.firstElementChild).toHaveClass("w-[3px]", "absolute", "left-0", "bg-[#12162a]")
+    expect(container.firstElementChild).toHaveClass("bg-[#ffe5b7]", "relative")
+    expect(container.firstChild).toHaveClass("bg-[#ffe5b7]", "relative")
+    expect(container.firstElementChild?.firstElementChild).toHaveClass(
+      "w-[3px]",
+      "absolute",
+      "left-0",
+      "bg-[var(--primary-800)]",
+    )
     const letter = screen.getByText("C")
-    expect(letter).toHaveClass("w-[60px]", "min-h-[60px]", "bg-[#fdfac4]", "text-[#2c3143]", "text-[28px]")
+    expect(letter).toHaveClass(
+      "w-[60px]",
+      "min-h-[60px]",
+      "bg-[#ffe5b7]",
+      "text-[var(--primary-800)]",
+      "text-[28px]",
+    )
     expect(letter).not.toHaveClass("bg-[var(--greyscale-0)]")
-    expect(letter.nextElementSibling).toHaveClass("py-2", "pl-1.5", "pr-3", "min-h-[60px]")
+    expect(letter.nextElementSibling).toHaveClass(
+      "py-2",
+      "pl-1.5",
+      "pr-3",
+      "min-h-[60px]",
+      "leading-[1.5]",
+      "tracking-[0.28px]",
+    )
   })
 
-  it("uses a white 60px letter cell on the gray unselected official row", () => {
+  it("uses a white 60px letter cell on the Figma 20255:50083 neutral unselected row", () => {
     const { container } = render(
       <LrDrillOptionRow
         index={0}
@@ -260,12 +278,17 @@ describe("LrDrillOptionRow", () => {
       />,
     )
 
-    expect(container.firstChild).toHaveClass("bg-[var(--greyscale-25)]")
+    expect(container.firstChild).toHaveClass("bg-[#eceff3]")
     expect(screen.getByText("A")).toHaveClass(
       "w-[60px]",
       "bg-[var(--greyscale-0)]",
-      "border-[var(--greyscale-25)]",
+      "border-[#eceff3]",
       "text-[var(--greyscale-500)]",
+    )
+    expect(screen.getByText("Choice A").closest(".practice-session-content")).toHaveClass(
+      "leading-[1.5]",
+      "tracking-[0.28px]",
+      "text-[var(--primary-800)]",
     )
   })
 })

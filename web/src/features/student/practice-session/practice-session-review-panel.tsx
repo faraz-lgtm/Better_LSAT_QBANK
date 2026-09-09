@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { Check } from "lucide-react"
 
 import {
@@ -16,7 +16,6 @@ import {
   OFFICIAL_REVIEW_GRID_WRAP_CLASS,
   OFFICIAL_REVIEW_HEADER_CLASS,
   OFFICIAL_REVIEW_PANEL_CLASS,
-  OFFICIAL_REVIEW_PASSAGE_BREAK_CLASS,
   OFFICIAL_REVIEW_QUESTION_BUTTON_CLASS,
   OFFICIAL_REVIEW_TITLE_CLASS,
 } from "@/features/student/practice-session/practice-session-official-styles"
@@ -36,7 +35,7 @@ import {
   PRACTICE_SESSION_REVIEW_QUESTION_BUTTON_DEFAULT_CLASS,
   PRACTICE_SESSION_REVIEW_QUESTION_BUTTON_FLAGGED_CLASS,
 } from "@/features/student/practice-session/practice-session-review-panel-styles"
-import { officialReviewSpacerBeforeIndices, type QuestionWithPassage } from "@/features/student/practice-session/question-nav-passage-breaks"
+import type { QuestionWithPassage } from "@/features/student/practice-session/question-nav-passage-breaks"
 import { isOfficialLayout, type PracticeSessionVariant } from "@/features/student/practice-session/practice-session-types"
 import { cn } from "@/lib/utils"
 
@@ -54,6 +53,7 @@ type PracticeSessionReviewPanelProps = {
   onClose: () => void
   variant?: PracticeSessionVariant
   onFinish?: () => void
+  /** @deprecated Review grid no longer renders passage spacer cells; footer nav keeps dividers. */
   showPassageBreaks?: boolean
 }
 
@@ -77,7 +77,7 @@ function matchesReviewFilters(input: {
   })
 }
 
-/** Figma `20268:103207` LSAT drawer; official overlay is Figma `20257:89990`. */
+/** Figma `20268:103207` LSAT drawer; official overlay is Figma `20257:89990` / `20257:89743`. */
 function PracticeSessionReviewPanel({
   open,
   questions,
@@ -88,7 +88,6 @@ function PracticeSessionReviewPanel({
   onClose,
   variant = "default",
   onFinish,
-  showPassageBreaks = false,
 }: PracticeSessionReviewPanelProps) {
   const [filters, setFilters] = useState<Record<ReviewFilterKey, boolean>>({
     flagged: false,
@@ -96,12 +95,6 @@ function PracticeSessionReviewPanel({
     partiallyAttempted: false,
   })
   const officialChrome = isOfficialLayout(variant)
-  const filtersActive = filters.flagged || filters.unattempted || filters.partiallyAttempted
-
-  const spacerBefore = useMemo(
-    () => (showPassageBreaks ? officialReviewSpacerBeforeIndices(questions) : new Set<number>()),
-    [questions, showPassageBreaks],
-  )
 
   const visibleQuestions = useMemo(() => {
     return questions
@@ -192,50 +185,45 @@ function PracticeSessionReviewPanel({
         <div className={OFFICIAL_REVIEW_FILTERS_CLASS}>{filterButtons}</div>
 
         <div className={OFFICIAL_REVIEW_GRID_WRAP_CLASS}>
-          <div className={cn(OFFICIAL_REVIEW_GRID_CLASS, "grid-cols-12")}>
-            {visibleQuestions.map(({ question, questionNumber, offset, answered, flagged }) => {
+          <div className={OFFICIAL_REVIEW_GRID_CLASS}>
+            {visibleQuestions.map(({ question, questionNumber, answered, flagged }) => {
               const active = questionNumber === currentIndex
               return (
-                <Fragment key={question.id}>
-                  {!filtersActive && spacerBefore.has(offset) ? (
-                    <div className={OFFICIAL_REVIEW_PASSAGE_BREAK_CLASS} role="separator" aria-hidden />
+                <button
+                  key={question.id}
+                  type="button"
+                  className={OFFICIAL_REVIEW_QUESTION_BUTTON_CLASS}
+                  aria-current={active ? "true" : undefined}
+                  aria-label={flagged ? `Question ${questionNumber}, flagged` : `Question ${questionNumber}`}
+                  onClick={() => handleSelectQuestion(questionNumber)}
+                >
+                  {flagged ? (
+                    <img
+                      src="/figma/exam-official/review-flag.svg"
+                      alt=""
+                      width={16}
+                      height={18}
+                      className="h-[18px] w-4 max-w-none shrink-0"
+                      draggable={false}
+                    />
                   ) : null}
-                  <button
-                    type="button"
-                    className={OFFICIAL_REVIEW_QUESTION_BUTTON_CLASS}
-                    aria-current={active ? "true" : undefined}
-                    aria-label={flagged ? `Question ${questionNumber}, flagged` : `Question ${questionNumber}`}
-                    onClick={() => handleSelectQuestion(questionNumber)}
-                  >
-                    {flagged ? (
+                  <span>{questionNumber}</span>
+                  {active ? (
+                    <>
                       <img
-                        src="/figma/exam-official/review-flag.svg"
+                        src="/figma/exam-official/current-caret.svg"
                         alt=""
-                        width={16}
-                        height={18}
-                        className="h-[18px] w-4 max-w-none shrink-0"
+                        width={12}
+                        height={6}
+                        className={OFFICIAL_REVIEW_CURRENT_CARET_CLASS}
                         draggable={false}
                       />
-                    ) : (
-                      <span>{questionNumber}</span>
-                    )}
-                    {active ? (
-                      <>
-                        <img
-                          src="/figma/exam-official/current-caret.svg"
-                          alt=""
-                          width={12}
-                          height={6}
-                          className={OFFICIAL_REVIEW_CURRENT_CARET_CLASS}
-                          draggable={false}
-                        />
-                        <span className={OFFICIAL_REVIEW_CURRENT_BAR_CLASS} aria-hidden />
-                      </>
-                    ) : answered ? (
-                      <span className={OFFICIAL_REVIEW_ANSWERED_BAR_CLASS} aria-hidden />
-                    ) : null}
-                  </button>
-                </Fragment>
+                      <span className={OFFICIAL_REVIEW_CURRENT_BAR_CLASS} aria-hidden />
+                    </>
+                  ) : answered ? (
+                    <span className={OFFICIAL_REVIEW_ANSWERED_BAR_CLASS} aria-hidden />
+                  ) : null}
+                </button>
               )
             })}
           </div>

@@ -4998,15 +4998,15 @@ html.student-shell-immersive .practice-session-card--blind-review {
   color: var(--color-student-heading) !important;
 }
 
-/* LawHub yellow selected row — keep dark ink for contrast on #fdfac4 */
+/* LawHub peach selected row — keep primary-800 ink for contrast on #ffe5b7 */
 .dark .practice-session-card--official .practice-session-official-choice--selected,
 .dark .practice-session-card--official .practice-session-official-choice--selected .lsat-html-content,
 .dark .practice-session-card--official .practice-session-official-choice--selected .practice-session-content {
-  color: #2c3143 !important;
+  color: var(--primary-800) !important;
 }
 
 .dark .practice-session-card--official .practice-session-official-choice-letter--selected {
-  color: #2c3143 !important;
+  color: var(--primary-800) !important;
 }
 
 .dark .practice-session-card--official .practice-session-footer {
