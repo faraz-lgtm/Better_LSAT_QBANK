@@ -23,6 +23,8 @@ type PracticeSessionExamMorePanelProps = {
   exitOnly?: boolean
   officialInterface?: boolean
   onOfficialInterfaceChange?: (next: boolean) => void
+  /** When false, hides BetterLSAT / Official Interface toggle (e.g. Blind Review). */
+  showInterfaceToggle?: boolean
   /** Figma `20596:145393` — section dropdown above exit actions */
   sectionSelect?: ReactNode
   /** Defaults to "BetterLSAT Interface"; Blind Review Figma uses "Official Interface" */
@@ -81,6 +83,7 @@ function PracticeSessionExamMorePanel({
   exitOnly = false,
   officialInterface = true,
   onOfficialInterfaceChange,
+  showInterfaceToggle = true,
   sectionSelect = null,
   interfaceToggleLabel = "BetterLSAT Interface",
   onClose,
@@ -172,19 +175,21 @@ function PracticeSessionExamMorePanel({
           />
         </div>
 
-        <div className={EXAM_MORE_PANEL_TOGGLE_ROW_CLASS}>
-          <span id="exam-more-betterlsat-interface" className={EXAM_MORE_PANEL_TOGGLE_LABEL_CLASS}>
-            {interfaceToggleLabel}
-          </span>
-          <ExamMoreToggle
-            labelledBy="exam-more-betterlsat-interface"
-            checked={officialToggleSemantics ? officialInterface : !officialInterface}
-            onCheckedChange={(next) => {
-              if (officialToggleSemantics) onOfficialInterfaceChange?.(next)
-              else onOfficialInterfaceChange?.(!next)
-            }}
-          />
-        </div>
+        {showInterfaceToggle ? (
+          <div className={EXAM_MORE_PANEL_TOGGLE_ROW_CLASS}>
+            <span id="exam-more-betterlsat-interface" className={EXAM_MORE_PANEL_TOGGLE_LABEL_CLASS}>
+              {interfaceToggleLabel}
+            </span>
+            <ExamMoreToggle
+              labelledBy="exam-more-betterlsat-interface"
+              checked={officialToggleSemantics ? officialInterface : !officialInterface}
+              onCheckedChange={(next) => {
+                if (officialToggleSemantics) onOfficialInterfaceChange?.(next)
+                else onOfficialInterfaceChange?.(!next)
+              }}
+            />
+          </div>
+        ) : null}
       </div>
     </>,
     document.body,

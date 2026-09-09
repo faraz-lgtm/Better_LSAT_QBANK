@@ -43,6 +43,8 @@ type PracticeSessionFinishMenuProps = {
   variant?: PracticeSessionVariant
   officialInterface?: boolean
   onOfficialInterfaceChange?: (next: boolean) => void
+  /** When false, hides BetterLSAT / Official Interface toggle (e.g. Blind Review). */
+  showInterfaceToggle?: boolean
   /** Passed through to exam more panel (Blind Review Figma). */
   morePanelSectionSelect?: ReactNode
   morePanelInterfaceLabel?: string
@@ -63,6 +65,7 @@ function PracticeSessionFinishMenu({
   variant = "default",
   officialInterface = true,
   onOfficialInterfaceChange,
+  showInterfaceToggle = true,
   morePanelSectionSelect = null,
   morePanelInterfaceLabel,
 }: PracticeSessionFinishMenuProps) {
@@ -139,6 +142,7 @@ function PracticeSessionFinishMenu({
             exitOnly={exitOnly}
             officialInterface={officialInterface}
             onOfficialInterfaceChange={onOfficialInterfaceChange}
+            showInterfaceToggle={showInterfaceToggle}
             sectionSelect={morePanelSectionSelect}
             interfaceToggleLabel={morePanelInterfaceLabel}
             onClose={() => setOpen(false)}

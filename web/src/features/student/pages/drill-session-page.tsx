@@ -90,6 +90,7 @@ import {
   resolveTimerBudgetSeconds,
   usePracticeSessionTimer,
 } from "@/features/student/practice-session/use-practice-session-timer"
+import { practiceSessionResultsPath } from "@/features/student/analytics/analytics-results-paths"
 import { stashDrillBlindReviewResult } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
 import {
   DASHBOARD_ADAPTIVE_DRILL_QUERY,
@@ -493,7 +494,7 @@ function DrillSessionPage() {
   }
   const actualOutcome = current ? answerOutcome(actualAnswersByQuestion[current.id]) : null
   const blindReviewOutcome = current ? answerOutcome(answersByQuestion[current.id]) : null
-  const reviewNavOutcome = reviewAfterComplete || resultsReviewMode
+  const resultsReviewNavOutcome = resultsReviewMode
     ? (questionId: string) =>
         resolvePracticeSessionQuestionNavOutcome(
           answerViewTab === "blind_review"
@@ -688,8 +689,13 @@ function DrillSessionPage() {
       navigate(path, { replace: true })
       return
     }
-    const params = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""
-    navigate(`/app/practice/results/${encodeURIComponent(sessionId)}${params}`, { replace: true })
+    navigate(
+      practiceSessionResultsPath(sessionId, {
+        source: "drill",
+        returnTo: returnTo || undefined,
+      }),
+      { replace: true },
+    )
   }
 
   const unansweredCount = useMemo(
@@ -904,6 +910,20 @@ function DrillSessionPage() {
     />
   )
 
+  const blindReviewMoreMenu =
+    useBlindReviewLayout && !resultsReviewMode ? (
+      <PracticeSessionFinishMenu
+        finishing={finishing}
+        submitLabel="Submit Drill"
+        iconTrigger
+        variant="active-drill"
+        showInterfaceToggle={false}
+        onSubmitSection={requestSubmitDrill}
+        onExit={leaveDrillSession}
+        onExitWithoutSaving={leaveDrillSession}
+      />
+    ) : null
+
   const blindReviewHeader = useBlindReviewLayout ? (
     <PracticeBlindReviewSessionHeader
       prepTestLabel={prepTestLabel}
@@ -926,6 +946,7 @@ function DrillSessionPage() {
       findQuery={findQuery}
       onFindQueryChange={setFindQuery}
       questionProgressLabel={questions.length > 0 ? `${safeIndex} of ${questions.length}` : null}
+      moreMenu={blindReviewMoreMenu}
     />
   ) : null
 
@@ -1236,7 +1257,7 @@ function DrillSessionPage() {
               recommendedForBr={(questionId) =>
                 isQuestionRecommendedForBlindReview(actualAnswersByQuestion[questionId])
               }
-              outcomeForQuestion={reviewNavOutcome}
+              outcomeForQuestion={resultsReviewNavOutcome}
               variant={sessionVariant}
               showPassageBreaks={sectionType === "RC"}
               onSelectQuestion={setQIndex}

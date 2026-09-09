@@ -1579,9 +1579,7 @@ function SectionSessionPage() {
         exitOnly
         iconTrigger
         variant="active-drill"
-        officialInterface={officialInterface}
-        onOfficialInterfaceChange={setOfficialInterface}
-        morePanelInterfaceLabel="Official Interface"
+        showInterfaceToggle={false}
         morePanelSectionSelect={
           blindReviewSectionOptions.length > 0 ? (
             <PracticeBlindReviewSectionSelect

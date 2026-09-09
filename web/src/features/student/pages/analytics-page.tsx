@@ -395,7 +395,7 @@ function OverviewTab() {
         sectionFilter={drillSectionFilter}
         onSectionFilterChange={setDrillSectionFilter}
         onToggleBookmark={(id) => toggleHistoryBookmark(id, setDrillHistory, drillHistory)}
-        onSelectEntry={(id) => navigate(practiceSessionResultsPath(id))}
+        onSelectEntry={(id) => navigate(practiceSessionResultsPath(id, { source: "drill" }))}
         previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
         viewMoreHref="/app/analytics/drills"
       />

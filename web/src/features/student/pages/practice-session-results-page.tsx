@@ -204,12 +204,13 @@ function PracticeSessionResultsPage() {
   const [startingAnother, setStartingAnother] = useState(false)
 
   useEffect(() => {
-    if (results?.kind !== "SECTION") return
-    if (searchParams.get("source") === "section") return
+    if (!results) return
+    const expectedSource = results.kind === "SECTION" ? "section" : "drill"
+    if (searchParams.get("source") === expectedSource) return
     const next = new URLSearchParams(searchParams)
-    next.set("source", "section")
+    next.set("source", expectedSource)
     navigate({ search: `?${next.toString()}` }, { replace: true })
-  }, [navigate, results?.kind, searchParams])
+  }, [navigate, results, searchParams])
 
   useEffect(() => {
     if (!sessionId) {
@@ -220,6 +221,7 @@ function PracticeSessionResultsPage() {
     let alive = true
     setLoading(true)
     setError(null)
+    const sourceHint = searchParams.get("source")
 
     async function load() {
       try {
@@ -241,15 +243,21 @@ function PracticeSessionResultsPage() {
           return mapDrillResponse(drill, returnTo)
         }
 
-        try {
-          loaded = await loadSection()
-        } catch (sectionErr) {
-          const sectionMsg =
-            sectionErr instanceof Error ? sectionErr.message.toLowerCase() : ""
-          if (!sectionMsg.includes("not a section")) {
-            throw sectionErr
-          }
+        if (sourceHint === "drill") {
           loaded = await loadDrill()
+        } else if (sourceHint === "section") {
+          loaded = await loadSection()
+        } else {
+          try {
+            loaded = await loadSection()
+          } catch (sectionErr) {
+            const sectionMsg =
+              sectionErr instanceof Error ? sectionErr.message.toLowerCase() : ""
+            if (!sectionMsg.includes("not a section")) {
+              throw sectionErr
+            }
+            loaded = await loadDrill()
+          }
         }
 
         if (!alive || !loaded) return
@@ -284,7 +292,7 @@ function PracticeSessionResultsPage() {
     return () => {
       alive = false
     }
-  }, [explanationsApi, practiceApi, returnTo, sessionId])
+  }, [explanationsApi, practiceApi, returnTo, searchParams, sessionId])
 
   const perQuestionSeconds = useMemo(() => {
     if (!results || results.questions.length === 0) return 0
@@ -448,7 +456,7 @@ function PracticeSessionResultsPage() {
       : "Section 1"
   const reviewInTesterHref = () => {
     const backParams = new URLSearchParams(searchParams)
-    if (results.kind === "SECTION") backParams.set("source", "section")
+    backParams.set("source", results.kind === "SECTION" ? "section" : "drill")
     const backQuery = backParams.toString()
     const back = `/app/practice/results/${encodeURIComponent(sessionId)}${
       backQuery ? `?${backQuery}` : ""

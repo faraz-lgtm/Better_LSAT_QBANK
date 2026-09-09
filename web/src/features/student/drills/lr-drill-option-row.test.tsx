@@ -81,8 +81,8 @@ describe("LrDrillOptionRow", () => {
 
     expect(container.firstChild).toHaveClass("h-auto")
     expect(container.firstChild).not.toHaveClass("overflow-hidden")
-    expect(screen.getByRole("button", { name: new RegExp(longChoice, "i") })).toHaveClass("items-start", "py-3")
-    expect(screen.getByText("A")).toHaveClass("self-start")
+    expect(screen.getByRole("button", { name: new RegExp(longChoice, "i") })).toHaveClass("items-center", "py-3")
+    expect(screen.getByText("A")).not.toHaveClass("self-start")
     expect(screen.getByText(longChoice).closest(".practice-session-content")).toHaveClass("text-pretty")
   })
 
