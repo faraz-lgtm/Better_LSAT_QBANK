@@ -64,3 +64,22 @@ describe("buildAccessibilityContentStyle", () => {
     })
   })
 })
+
+describe("accessibility panel layout", () => {
+  it("sizes the dialog and tabs to their content without an inner scrollbar", async () => {
+    const {
+      PRACTICE_SESSION_ACCESSIBILITY_PANEL_BODY_CLASS,
+      PRACTICE_SESSION_ACCESSIBILITY_PANEL_CLASS,
+      PRACTICE_SESSION_ACCESSIBILITY_PANEL_TABS_CLASS,
+    } = await import("@/features/student/practice-session/practice-session-accessibility-panel-styles")
+
+    expect(PRACTICE_SESSION_ACCESSIBILITY_PANEL_CLASS).toContain("h-auto")
+    expect(PRACTICE_SESSION_ACCESSIBILITY_PANEL_CLASS).not.toContain("overflow-hidden")
+    expect(PRACTICE_SESSION_ACCESSIBILITY_PANEL_CLASS).not.toContain("max-h-[")
+    expect(PRACTICE_SESSION_ACCESSIBILITY_PANEL_TABS_CLASS).toContain("h-auto")
+    expect(PRACTICE_SESSION_ACCESSIBILITY_PANEL_TABS_CLASS).toContain("overflow-visible")
+    expect(PRACTICE_SESSION_ACCESSIBILITY_PANEL_TABS_CLASS).not.toContain("overflow-x-auto")
+    expect(PRACTICE_SESSION_ACCESSIBILITY_PANEL_BODY_CLASS).toContain("h-auto")
+    expect(PRACTICE_SESSION_ACCESSIBILITY_PANEL_BODY_CLASS).not.toContain("overflow-y-auto")
+  })
+})

@@ -17,10 +17,12 @@ import {
   ACTIVE_DRILL_FINISH_BUTTON_CLASS,
   ACTIVE_DRILL_FOOTER_CLASS,
   ACTIVE_DRILL_PASSAGE_PANE_CLASS,
+  ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS,
   ACTIVE_DRILL_PASSAGE_TEXT_CLASS,
   ACTIVE_DRILL_QUESTION_PANE_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import {
+  EXAM_CARD_FULL_WIDTH_CLASS,
   OFFICIAL_BODY_GRID_CLASS,
   OFFICIAL_CARD_CLASS,
   OFFICIAL_FOOTER_CLASS,
@@ -454,7 +456,6 @@ function GuestDiagnosticExamLayout({
   }
 
   const questionPanel = (
-    <ResponseMaskingProvider>
     <PracticeDrillQuestionPanel
       key={current.id}
       question={current}
@@ -488,11 +489,11 @@ function GuestDiagnosticExamLayout({
       seedQuestionTypeLabel={explanationUnlocked ? (questionMeta?.questionType ?? null) : null}
       explanationsEnabled={explanationUnlocked}
     />
-    </ResponseMaskingProvider>
   )
 
   if (isPostResultsMode) {
     return (
+      <ResponseMaskingProvider>
       <div
         className={cn(
           REVIEW_SHELL_CLASS,
@@ -643,15 +644,18 @@ function GuestDiagnosticExamLayout({
           onSave={accessibilityPanel.saveSettings}
         />
       </div>
+      </ResponseMaskingProvider>
     )
   }
 
   return (
+    <ResponseMaskingProvider>
     <div
       className={cn(
         officialChrome
           ? OFFICIAL_CARD_CLASS
-          : "practice-session-card practice-session-card--active-drill relative flex h-full max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+          : "practice-session-card practice-session-card--active-drill relative mx-auto flex h-full max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+        isFullscreen && EXAM_CARD_FULL_WIDTH_CLASS,
         !canNavigate && "pointer-events-none select-none",
         className,
       )}
@@ -700,7 +704,7 @@ function GuestDiagnosticExamLayout({
             "grid min-h-0 min-w-0 flex-1 grid-cols-1 overflow-hidden",
             officialChrome
               ? cn(OFFICIAL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1 lg:pr-0")
-              : ACTIVE_DRILL_BODY_GRID_CLASS,
+              : cn(ACTIVE_DRILL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1"),
           )}
         >
           <div
@@ -708,7 +712,11 @@ function GuestDiagnosticExamLayout({
             className={cn(
               "practice-session-pane min-h-0 overflow-y-auto",
               officialChrome && lineFocus && "practice-session-pane--line-focus",
-              officialChrome ? OFFICIAL_PASSAGE_PANE_CLASS : ACTIVE_DRILL_PASSAGE_PANE_CLASS,
+              officialChrome
+                ? OFFICIAL_PASSAGE_PANE_CLASS
+                : passageOnlyView
+                  ? ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS
+                  : ACTIVE_DRILL_PASSAGE_PANE_CLASS,
             )}
           >
             <PracticeAnnotatedContent
@@ -725,12 +733,11 @@ function GuestDiagnosticExamLayout({
             ref={questionPaneRef}
             className={cn(
               "practice-session-pane min-h-0 overflow-y-auto",
-              officialChrome && passageOnlyView && "hidden",
+              passageOnlyView && "hidden",
               questionRevealed && explanationHtml ? "practice-session-pane--scroll-visible" : null,
               officialChrome ? OFFICIAL_QUESTION_PANE_CLASS : ACTIVE_DRILL_QUESTION_PANE_CLASS,
             )}
           >
-            <ResponseMaskingProvider>
             <PracticeDrillQuestionPanel
               key={current.id}
               question={current}
@@ -759,7 +766,6 @@ function GuestDiagnosticExamLayout({
               fullView={isFullscreen}
               choicesDisabled={!canSelectAnswers || questionRevealed}
             />
-            </ResponseMaskingProvider>
             {questionRevealed && explanationUnlocked && explanationHtml ? (
               <div className="practice-session-explanation practice-session-inline-divider mt-6 border-t pt-6 pb-6">
                 <p className="practice-session-panel-label mb-3 text-xs font-semibold uppercase tracking-[0.04em]">
@@ -847,6 +853,7 @@ function GuestDiagnosticExamLayout({
         />
       ) : null}
     </div>
+    </ResponseMaskingProvider>
   )
 }
 

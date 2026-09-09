@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { PracticeSessionSideWidget } from "@/features/student/practice-session/practice-session-side-action-rail"
 
@@ -17,6 +17,7 @@ describe("PracticeSessionSideWidget LSAT default view", () => {
       />,
     )
 
+    expect(screen.getByRole("button", { name: "Full Screen" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Review" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Accessibility" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Flag item" })).toBeInTheDocument()
@@ -27,6 +28,23 @@ describe("PracticeSessionSideWidget LSAT default view", () => {
       "src",
       "/figma/exam-side-widget/download-circle-01.svg",
     )
+  })
+
+  it("keeps the LSAT default tools rail in document flow so it cannot overlay answers", () => {
+    render(
+      <PracticeSessionSideWidget
+        flagged={false}
+        onToggleFlag={() => undefined}
+        responseMasking={false}
+        onToggleResponseMasking={() => undefined}
+        onReview={() => undefined}
+        onAccessibility={() => undefined}
+      />,
+    )
+
+    const rail = screen.getByRole("complementary", { name: "Exam tools" })
+    expect(rail).not.toHaveClass("absolute")
+    expect(rail).toHaveClass("shrink-0", "sticky")
   })
 
   it("expands to labeled tools and collapses back", async () => {
@@ -46,6 +64,54 @@ describe("PracticeSessionSideWidget LSAT default view", () => {
 
     await user.click(screen.getByRole("button", { name: "Collapse Menu" }))
     expect(screen.getByRole("button", { name: "Open Menu" })).toBeInTheDocument()
+  })
+
+  it("toggles full-width exam layout from the LSAT tools rail", async () => {
+    const user = userEvent.setup()
+    const onFullscreen = vi.fn()
+    render(
+      <PracticeSessionSideWidget
+        flagged={false}
+        onToggleFlag={() => undefined}
+        responseMasking={false}
+        onToggleResponseMasking={() => undefined}
+        onFullscreen={onFullscreen}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Full Screen" }))
+    expect(onFullscreen).toHaveBeenCalledOnce()
+  })
+
+  it("shows the normal-view control after expanding the LSAT exam canvas", () => {
+    render(
+      <PracticeSessionSideWidget
+        fullView
+        flagged={false}
+        onToggleFlag={() => undefined}
+        responseMasking={false}
+        onToggleResponseMasking={() => undefined}
+        onFullscreen={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole("button", { name: "Normal view" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Full Screen" })).not.toBeInTheDocument()
+  })
+
+  it("highlights Response Masking in primary blue while the tool is on", () => {
+    render(
+      <PracticeSessionSideWidget
+        flagged={false}
+        onToggleFlag={() => undefined}
+        responseMasking
+        onToggleResponseMasking={() => undefined}
+      />,
+    )
+
+    const masking = screen.getByRole("button", { name: "Response Masking" })
+    expect(masking).toHaveAttribute("aria-pressed", "true")
+    expect(masking).toHaveClass("text-[var(--primary)]")
   })
 })
 
@@ -79,6 +145,7 @@ describe("PracticeSessionSideWidget official view", () => {
     expect(screen.queryByRole("button", { name: /^Highlighter$/ })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Eraser" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Line focus" })).not.toBeInTheDocument()
+    expect(screen.getByRole("complementary", { name: "Exam tools" })).toHaveClass("absolute")
   })
 
   it("expands to labeled tools with collapse pinned to the bottom", async () => {
@@ -142,5 +209,22 @@ describe("PracticeSessionSideWidget official view", () => {
     const flag = screen.getByRole("button", { name: "Flag item" })
     expect(flag).toHaveAttribute("aria-pressed", "true")
     expect(flag.querySelector("img")).toHaveAttribute("src", "/figma/exam-official/review-flag.svg")
+  })
+
+  it("highlights Response Masking while the official tool is on", () => {
+    render(
+      <PracticeSessionSideWidget
+        variant="official"
+        flagged={false}
+        onToggleFlag={() => undefined}
+        responseMasking
+        onToggleResponseMasking={() => undefined}
+        onFullscreen={() => undefined}
+      />,
+    )
+
+    const masking = screen.getByRole("button", { name: "Response Masking" })
+    expect(masking).toHaveAttribute("aria-pressed", "true")
+    expect(masking).toHaveClass("text-[#1877b1]")
   })
 })

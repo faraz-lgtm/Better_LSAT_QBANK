@@ -201,4 +201,36 @@ describe("PracticeBlindReviewQuestionPanel", () => {
     expect(list).not.toHaveClass("overflow-hidden")
     expect(list).toHaveClass("overflow-y-auto")
   })
+
+  it("masks a locked choice from the exam tools rail instead of selecting it", async () => {
+    const onSelect = vi.fn()
+    const onToggleMasked = vi.fn()
+    const user = userEvent.setup()
+
+    render(
+      <PracticeBlindReviewQuestionPanel
+        question={question}
+        questionNumber={1}
+        findQuery=""
+        selectedIndex={null}
+        revealed={false}
+        isCorrect={null}
+        submitting={false}
+        allowReselect
+        getRegionHtml={(_key, base) => base}
+        onSelect={onSelect}
+        answerView="blind_review"
+        showSideWidget
+        responseMasking
+        maskedChoices={{}}
+        onToggleMasked={onToggleMasked}
+        choicesDisabled
+      />,
+    )
+
+    expect(screen.getByRole("button", { name: "Response Masking" })).toHaveAttribute("aria-pressed", "true")
+    await user.click(screen.getByRole("button", { name: "Answer choice A, click to mask" }))
+    expect(onToggleMasked).toHaveBeenCalledWith(0)
+    expect(onSelect).not.toHaveBeenCalled()
+  })
 })

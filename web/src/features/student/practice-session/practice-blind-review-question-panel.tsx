@@ -15,7 +15,7 @@ import {
   BLIND_REVIEW_QUESTION_STEM_CLASS,
   BLIND_REVIEW_RECOMMENDED_BADGE_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
-import { ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import { ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS, ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeSessionSideWidget } from "@/features/student/practice-session/practice-session-side-action-rail"
 import { PracticeSessionResetResponseButton } from "@/features/student/practice-session/practice-session-reset-response-button"
 import type {
@@ -71,6 +71,8 @@ type PracticeBlindReviewQuestionPanelProps = {
   onOpenReview?: () => void
   reviewActive?: boolean
   onOpenAccessibility?: () => void
+  onFullscreen?: () => void
+  fullView?: boolean
 }
 
 function regionKey(questionId: string, part: string) {
@@ -116,6 +118,8 @@ function PracticeBlindReviewQuestionPanel({
   onOpenReview,
   reviewActive = false,
   onOpenAccessibility,
+  onFullscreen,
+  fullView = false,
 }: PracticeBlindReviewQuestionPanelProps) {
   const [hiddenChoices, setHiddenChoices] = useState<Record<number, boolean>>({})
   const [expandedChoiceIds, setExpandedChoiceIds] = useState<Set<string>>(() => new Set())
@@ -215,6 +219,7 @@ function PracticeBlindReviewQuestionPanel({
     <div
       className={cn(
         "flex h-full min-h-0 flex-col",
+        useSideWidget && ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS,
         reviewChrome ? "practice-session-scroll-hidden overflow-y-auto" : "overflow-hidden",
       )}
     >
@@ -368,8 +373,8 @@ function PracticeBlindReviewQuestionPanel({
                 selected={isSelected}
                 correctHighlight={correctHighlight}
                 hidden={!useSideWidget && Boolean(hiddenChoices[index])}
-                masked={useSideWidget ? Boolean(maskedChoices[index]) : false}
-                maskingMode={useSideWidget && responseMasking}
+                masked={Boolean(maskedChoices[index])}
+                maskingMode={showExamToolsRail && responseMasking}
                 disabled={submitting || choicesDisabled || (reviewChrome && !allowReselect)}
                 selectedIndex={displaySelectedIndex}
                 allowReselect={allowReselect && !reviewChrome}
@@ -432,6 +437,8 @@ function PracticeBlindReviewQuestionPanel({
           onReview={onOpenReview}
           reviewActive={reviewActive}
           onAccessibility={onOpenAccessibility}
+          onFullscreen={onFullscreen}
+          fullView={fullView}
         />
       ) : null}
     </div>

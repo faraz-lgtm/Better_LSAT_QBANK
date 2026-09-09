@@ -86,6 +86,13 @@ const ACTIVE_DRILL_HEADER_TITLE_CLASS =
 const ACTIVE_DRILL_FIND_TEXT_INPUT_CLASS =
   "h-[52px] w-[200px] shrink-0 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-2 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] outline-none placeholder:text-[var(--greyscale-400)]"
 
+/** LSAT header — Passage Only View, same toggle chrome as official */
+const ACTIVE_DRILL_HEADER_PILL_BUTTON_CLASS =
+  "inline-flex h-[52px] shrink-0 items-center justify-center rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)] transition hover:bg-[var(--greyscale-25)]"
+
+const ACTIVE_DRILL_HEADER_PILL_BUTTON_PRESSED_CLASS =
+  "border-[var(--primary)] bg-[var(--primary-25)] text-[var(--primary)]"
+
 /** Figma `20268:105580` — timer card 222×52 */
 const ACTIVE_DRILL_HEADER_TIMER_CLASS =
   "practice-session-timer flex h-[52px] w-[222px] shrink-0 items-center overflow-visible rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3"
@@ -141,6 +148,10 @@ const ACTIVE_DRILL_BODY_GRID_CLASS = "px-6 pt-6 lg:grid-cols-2"
 const ACTIVE_DRILL_PASSAGE_PANE_CLASS =
   "border-b border-[var(--greyscale-100)] pb-6 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-6"
 
+/** Passage Only View — full-width passage, no question-column divider */
+const ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS =
+  "border-b border-[var(--greyscale-100)] pb-6 lg:border-b-0 lg:pb-0"
+
 /** Figma LSAT default — question + answers column */
 const ACTIVE_DRILL_QUESTION_PANE_CLASS = "pt-6 lg:pt-0 lg:pl-6"
 
@@ -161,9 +172,12 @@ const ACTIVE_DRILL_SIDE_WIDGET_ITEM_CLASS =
 const ACTIVE_DRILL_SIDE_WIDGET_ITEM_EXPANDED_CLASS =
   "flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-[var(--greyscale-500)] transition hover:bg-[var(--greyscale-25)] hover:text-[var(--color-student-heading)]"
 
-/** Figma `18781:29066` — room for floating side widget */
+/** Stem + choices column; sits beside the in-flow side widget. */
+const ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS = "min-w-0 flex-1"
+
+/** Figma `18781:29066` — answers and floating side widget in one row (no overlay). */
 const ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS =
-  "practice-session-question-panel-with-widget relative min-w-0 pr-14"
+  "practice-session-question-panel-with-widget relative flex min-w-0 items-start gap-3"
 
 /** Figma `20268:102788` — 11px stack: choices then Reset */
 const ACTIVE_DRILL_OPTIONS_LIST_CLASS = "mt-[11px] flex w-full flex-col items-end gap-[11px]"
@@ -280,6 +294,8 @@ export {
   ACTIVE_DRILL_HEADER_ICON_BUTTON_CLASS,
   ACTIVE_DRILL_HEADER_LEFT_CLASS,
   ACTIVE_DRILL_HEADER_MORE_BUTTON_CLASS,
+  ACTIVE_DRILL_HEADER_PILL_BUTTON_CLASS,
+  ACTIVE_DRILL_HEADER_PILL_BUTTON_PRESSED_CLASS,
   ACTIVE_DRILL_HEADER_PROGRESS_CLASS,
   ACTIVE_DRILL_HEADER_PROGRESS_FILL_CLASS,
   ACTIVE_DRILL_HEADER_PROGRESS_TRACK_CLASS,
@@ -311,7 +327,9 @@ export {
   ACTIVE_DRILL_OPTION_EYE_BUTTON_CLASS,
   ACTIVE_DRILL_OPTIONS_LIST_CLASS,
   ACTIVE_DRILL_PASSAGE_PANE_CLASS,
+  ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS,
   ACTIVE_DRILL_PASSAGE_TEXT_CLASS,
+  ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS,
   ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS,
   ACTIVE_DRILL_QUESTION_PANE_CLASS,
   ACTIVE_DRILL_SIDE_WIDGET_COLLAPSED_CLASS,

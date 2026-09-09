@@ -2,8 +2,11 @@
 
 const OFFICIAL_IMMERSIVE_FRAME_CLASS = "bg-[var(--background)] p-0"
 
+/** Figma normal exam canvas is 1440px; Full Screen / full-width raises this to 1920px. */
+const EXAM_CARD_FULL_WIDTH_CLASS = "practice-session-card--full-width max-w-[1920px]"
+
 const OFFICIAL_CARD_CLASS =
-  "practice-session-card practice-session-card--active-drill practice-session-card--official relative flex h-full max-h-full min-h-0 w-full flex-col overflow-hidden rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
+  "practice-session-card practice-session-card--active-drill practice-session-card--official relative mx-auto flex h-full max-h-full min-h-0 w-full max-w-[1440px] flex-col overflow-hidden rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
 
 const OFFICIAL_HEADER_SHELL_CLASS =
   "practice-session-header practice-session-header--official box-border flex shrink-0 flex-col overflow-visible rounded-none bg-[var(--greyscale-0)]"
@@ -201,6 +204,7 @@ const OFFICIAL_PASSAGE_BREAK_CLASS =
   "practice-session-question-nav-passage-break h-7 w-[4px] min-w-[4px] max-w-[4px] shrink-0 self-end bg-[var(--greyscale-500)]"
 
 export {
+  EXAM_CARD_FULL_WIDTH_CLASS,
   OFFICIAL_BODY_GRID_CLASS,
   OFFICIAL_CARD_CLASS,
   OFFICIAL_FIND_TEXT_INPUT_CLASS,

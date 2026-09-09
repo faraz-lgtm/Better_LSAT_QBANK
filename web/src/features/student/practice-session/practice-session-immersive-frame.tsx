@@ -14,8 +14,10 @@ type PracticeSessionImmersiveFrameProps = {
   children: ReactNode
   className?: string
   hideScrim?: boolean
-  /** Figma `20255:49920` — official exam fills the viewport. */
+  /** Skip the 1920px cap (results / review shells that own their own width). */
   fullBleed?: boolean
+  /** Fill the viewport horizontally, still capped at the Figma 1920px desktop canvas. */
+  fullWidth?: boolean
 }
 
 function PracticeSessionImmersiveFrame({
@@ -23,6 +25,7 @@ function PracticeSessionImmersiveFrame({
   className,
   hideScrim = false,
   fullBleed = false,
+  fullWidth = false,
 }: PracticeSessionImmersiveFrameProps) {
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
@@ -32,13 +35,15 @@ function PracticeSessionImmersiveFrame({
     }
   }, [])
 
-  const hideBackdrop = hideScrim || fullBleed
+  const edgeToEdge = fullBleed || fullWidth
+  const hideBackdrop = hideScrim || edgeToEdge
 
   return createPortal(
     <div
+      data-practice-session-immersive-frame
       className={cn(
         "fixed inset-0 z-40 flex items-center justify-center overflow-hidden",
-        fullBleed ? OFFICIAL_IMMERSIVE_FRAME_CLASS : "p-4 md:p-8",
+        edgeToEdge ? OFFICIAL_IMMERSIVE_FRAME_CLASS : "p-4 md:p-8",
         className,
       )}
     >
@@ -52,7 +57,7 @@ function PracticeSessionImmersiveFrame({
       <div
         className={cn(
           "relative flex h-full max-h-full min-h-0 w-full min-w-0 flex-col items-stretch",
-          fullBleed ? "max-w-none" : "max-w-[1440px]",
+          fullBleed ? "max-w-none" : "mx-auto max-w-[1920px]",
         )}
       >
         {children}
