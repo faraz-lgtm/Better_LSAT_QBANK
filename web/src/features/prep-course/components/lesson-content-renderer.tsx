@@ -697,7 +697,7 @@ function LessonContentRenderer({
     )
   }
 
-  if (skipArticleShell) {
+  if (skipArticleShell || inLessonCard) {
     return lesson.text_content ? (
       <LessonHtmlContent html={lesson.text_content} className="text-[var(--color-student-heading)]" />
     ) : (

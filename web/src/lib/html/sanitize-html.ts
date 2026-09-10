@@ -84,5 +84,7 @@ export function sanitizeHtml(input: unknown): string {
 }
 
 export function sanitizeLessonHtml(input: unknown): string {
-  return purify(input, LESSON_TAGS, LESSON_ATTR)
+  const safe = purify(input, LESSON_TAGS, LESSON_ATTR)
+  // Keep intentional blank lines from the lesson editor (empty <p> would collapse visually).
+  return safe.replace(/<p(\b[^>]*)?>\s*<\/p>/gi, "<p$1><br></p>")
 }

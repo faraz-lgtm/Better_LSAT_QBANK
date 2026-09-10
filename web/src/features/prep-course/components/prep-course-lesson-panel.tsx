@@ -17,9 +17,10 @@ import type {
 
 type DrillResultsPart = "cards" | "below" | "full"
 
-const LESSON_READING_PAD_CLASS = "px-6 md:px-8"
-const LESSON_READING_SHELL_CLASS = `box-border flex w-full min-w-0 flex-col ${LESSON_READING_PAD_CLASS} pt-12 pb-8`
-const LESSON_CONTENT_COLUMN_CLASS = `box-border w-full ${LESSON_READING_PAD_CLASS} pb-8 pt-8`
+/** Figma `20222:22512` — header px 64 / body px 124 → 640 reading column */
+const LESSON_READING_COLUMN_CLASS = "mx-auto w-full max-w-[640px]"
+const LESSON_HEADER_PAD_CLASS = "px-8 md:px-16 pt-12 pb-8"
+const LESSON_BODY_PAD_CLASS = "px-6 md:px-[124px] py-8"
 
 type PrepCourseLessonPanelProps = {
   course: PrepCourse
@@ -142,12 +143,16 @@ function PrepCourseLessonPanel({
     )
 
     if (embeddedInShell) {
-      return <header className="flex w-full min-w-0 flex-col gap-5 pb-8">{headerContent}</header>
+      return (
+        <header className={cn("flex w-full min-w-0 flex-col gap-5", LESSON_READING_COLUMN_CLASS)}>
+          {headerContent}
+        </header>
+      )
     }
 
     return (
-      <header className={cn("flex min-w-0 flex-col pt-12 pb-8", LESSON_READING_PAD_CLASS)}>
-        <div className="flex w-full min-w-0 flex-col gap-5">{headerContent}</div>
+      <header className={cn("flex min-w-0 flex-col items-center", LESSON_HEADER_PAD_CLASS)}>
+        <div className={cn("flex w-full min-w-0 flex-col gap-5", LESSON_READING_COLUMN_CLASS)}>{headerContent}</div>
       </header>
     )
   }
@@ -160,20 +165,26 @@ function PrepCourseLessonPanel({
 
   const renderContentColumnShell = () =>
     inLessonCard ? (
-      <div className={LESSON_READING_SHELL_CLASS}>
-        {titleBlock}
-        <div className="min-w-0 w-full">{lessonBody}</div>
+      <div className="box-border flex w-full min-w-0 flex-col">
+        <div className={cn("flex w-full min-w-0 flex-col items-center", LESSON_HEADER_PAD_CLASS)}>
+          {titleBlock}
+        </div>
+        <div className={cn("flex w-full min-w-0 flex-col items-center", LESSON_BODY_PAD_CLASS)}>
+          <div className={cn("min-w-0 w-full", LESSON_READING_COLUMN_CLASS)}>{lessonBody}</div>
+        </div>
       </div>
     ) : (
       <article
         className={cn(
-          "box-border min-w-0 max-w-full overflow-x-clip rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]",
+          "box-border min-w-0 max-w-full overflow-x-clip rounded-[18px] bg-[var(--greyscale-0)]",
           sidebarAdjacent && "min-h-full",
         )}
       >
-        <div className={LESSON_READING_SHELL_CLASS}>
+        <div className={cn("flex w-full min-w-0 flex-col items-center", LESSON_HEADER_PAD_CLASS)}>
           {titleBlock}
-          <div className="min-w-0 w-full">{lessonBody}</div>
+        </div>
+        <div className={cn("flex w-full min-w-0 flex-col items-center", LESSON_BODY_PAD_CLASS)}>
+          <div className={cn("min-w-0 w-full", LESSON_READING_COLUMN_CLASS)}>{lessonBody}</div>
         </div>
       </article>
     )
@@ -190,7 +201,7 @@ function PrepCourseLessonPanel({
       startingDrill={startingDrill}
       drillStartError={drillStartError}
       edgeToSidebar={false}
-          skipArticleShell={useLessonArticleShell}
+      skipArticleShell={useLessonArticleShell || inLessonCard}
       inLessonCard={inLessonCard}
       sectionSubtitle={subtitle}
       lessonBookmarked={lessonBookmarked}
@@ -299,7 +310,9 @@ function PrepCourseLessonPanel({
           >
             <div className="box-border flex min-w-0 max-w-full flex-col gap-0 overflow-x-clip">
               {titleBlock}
-              <div className={LESSON_CONTENT_COLUMN_CLASS}>{lessonBody}</div>
+              <div className={cn("flex w-full min-w-0 flex-col items-center", LESSON_BODY_PAD_CLASS)}>
+                <div className={cn("min-w-0 w-full", LESSON_READING_COLUMN_CLASS)}>{lessonBody}</div>
+              </div>
             </div>
           </div>
         ) : (

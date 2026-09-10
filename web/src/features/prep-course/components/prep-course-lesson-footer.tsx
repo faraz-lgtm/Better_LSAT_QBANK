@@ -81,7 +81,7 @@ function PrepCourseLessonFooter({
   primaryAction = null,
 }: PrepCourseLessonFooterProps) {
   return (
-    <footer className="practice-session-footer prep-course-lesson-footer box-border flex w-full min-w-0 shrink-0 flex-col items-center justify-center border-t border-[var(--greyscale-100)] bg-[var(--background)] px-[24px] py-2">
+    <footer className="practice-session-footer prep-course-lesson-footer box-border flex w-full min-w-0 shrink-0 flex-col items-center justify-center border-t border-[var(--greyscale-100)] bg-[var(--primary-0)] px-[24px] py-2">
       <div className="flex min-h-[48px] w-full min-w-0 items-center justify-between gap-4">
         <div className="flex min-w-0 flex-wrap items-center gap-6">
           <button type="button" onClick={onPrev} disabled={prevDisabled} className={navBtnClass} aria-label="Previous lesson">

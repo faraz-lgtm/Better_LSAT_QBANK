@@ -40,6 +40,15 @@ export type BuilderSelection =
   | { kind: "section"; id: string }
   | { kind: "lesson"; id: string }
 
+/**
+ * TipTap serializes blank lines as `<p></p>`. Empty paragraphs have no box height,
+ * so CSS margin-collapse makes several Enters look like a single gap. Persist a `<br>`
+ * so each blank line keeps vertical space in the editor and student lesson view.
+ */
+export function preserveEmptyParagraphBreaks(html: string): string {
+  return html.replace(/<p(\b[^>]*)?>\s*<\/p>/gi, "<p$1><br></p>")
+}
+
 /** Append a block (e.g. `<hr>`, `<p>…</p>`) to lesson HTML body content. */
 export function appendLessonHtmlBlock(existingHtml: string, blockHtml: string): string {
   const base = (existingHtml || "").trim() || "<p></p>"

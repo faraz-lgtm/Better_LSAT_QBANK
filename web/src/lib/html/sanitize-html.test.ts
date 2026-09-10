@@ -66,6 +66,11 @@ describe("sanitizeLessonHtml", () => {
     expect(out).toContain('data-bg="#f3f7ff"')
   })
 
+  it("turns empty paragraphs into br spacers so multiple blank lines render", () => {
+    const out = sanitizeLessonHtml("<p>One</p><p></p><p></p><p>Two</p>")
+    expect(out).toBe("<p>One</p><p><br></p><p><br></p><p>Two</p>")
+  })
+
   it("strips script tags", () => {
     const out = sanitizeLessonHtml("<h1>Safe</h1><script>alert(1)</script>")
     expect(out).not.toContain("<script")
