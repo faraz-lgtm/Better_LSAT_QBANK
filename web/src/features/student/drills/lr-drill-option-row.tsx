@@ -363,7 +363,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
         onKeyDown={handleKeyDown}
         className={cn(
           showSideAction ? ACTIVE_DRILL_CHOICE_ROW_GRID_WITH_ACTION_CLASS : ACTIVE_DRILL_CHOICE_ROW_GRID_CLASS,
-          "text-left transition-[background-color,box-shadow,border-color]",
+          "text-left",
           masked
             ? ACTIVE_DRILL_OPTION_ROW_MASKED_CLASS
             : selected

@@ -25,29 +25,6 @@ function PracticeRcSectionPage() {
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl" style={{ color: "var(--color-student-heading)" }}>
             RC Section
           </h1>
-          <nav className="text-sm" aria-label="Breadcrumb">
-            <ol className="flex flex-wrap items-center gap-1 text-[color:var(--muted-foreground)]">
-              <li>
-                <Link to="/app/practice/drills" className="font-medium hover:underline" style={{ color: "var(--color-student-accent)" }}>
-                  Practice
-                </Link>
-              </li>
-              <li aria-hidden className="text-[color:var(--border)]">
-                /
-              </li>
-              <li>
-                <Link to="/app/practice/sections" className="font-medium hover:underline" style={{ color: "var(--color-student-accent)" }}>
-                  Sections
-                </Link>
-              </li>
-              <li aria-hidden className="text-[color:var(--border)]">
-                /
-              </li>
-              <li className="font-semibold" style={{ color: "var(--color-student-heading)" }}>
-                Reading Comprehension
-              </li>
-            </ol>
-          </nav>
         </div>
 
         <section

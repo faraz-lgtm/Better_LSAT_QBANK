@@ -141,6 +141,24 @@ describe("LrDrillOptionRow", () => {
     expect(screen.getByText("Choice A").closest(".practice-session-content")).toHaveClass("text-[color:inherit]")
   })
 
+  it("snaps selected exam styles without a color transition", () => {
+    const { container } = render(
+      <LrDrillOptionRow
+        index={0}
+        html="<p>Choice A</p>"
+        selected
+        onSelect={() => undefined}
+        variant="active-drill"
+        showSideAction={false}
+      />,
+    )
+
+    expect(container.firstChild).toHaveClass("practice-session-choice--selected")
+    expect(String((container.firstChild as HTMLElement).className)).not.toContain(
+      "transition-[background-color,box-shadow,border-color]",
+    )
+  })
+
   it("fades letter and copy when masked in the LSAT exam layout, without a hatch overlay", () => {
     const { container } = render(
       <LrDrillOptionRow

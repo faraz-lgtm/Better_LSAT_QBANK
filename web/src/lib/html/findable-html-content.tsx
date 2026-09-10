@@ -29,7 +29,7 @@ const FindableHtmlContent = forwardRef<HTMLElement, FindableHtmlContentProps>(fu
   const lastRenderedRef = useRef<string | null>(null)
   useImperativeHandle(forwardedRef, () => innerRef.current as HTMLElement)
 
-  const safe = sanitizeHtml(html)
+  const safe = useMemo(() => sanitizeHtml(html), [html])
   const rendered = useMemo(() => highlightFindInHtml(safe, findQuery), [safe, findQuery])
 
   // Only replace innerHTML when content actually changes. Parent re-renders (e.g. timer

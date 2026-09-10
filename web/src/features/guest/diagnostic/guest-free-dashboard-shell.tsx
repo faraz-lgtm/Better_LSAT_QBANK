@@ -33,7 +33,6 @@ function GuestFreeDashboardShell({ children, dashboardHref }: GuestFreeDashboard
         />
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <StudentAppHeader
-            breadcrumbTail={[{ label: "Home", href: dashboardHref ?? "/diagnostic/results/preview" }, { label: "Analytics" }]}
             onOpenMobileNav={() => setMobileNavOpen(true)}
             headerActions={<GuestUpgradeCta />}
           />

@@ -1,13 +1,11 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Menu } from "lucide-react"
-import { Link, useLocation, useNavigate } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 
 import { FigmaIcon } from "@/components/icons/figma-icons"
-import { getStudentBreadcrumbs, type StudentBreadcrumb } from "@/features/app-shell/student-nav-config"
 import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
 import { resolveStudentShellVariant } from "@/features/app-shell/student-shell-plan-variant"
 import { useGuestPremiumAccount } from "@/features/guest/premium/guest-premium-account"
-import { shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
 import {
   STUDENT_PAGE_CONTAINER_CLASS,
   STUDENT_SHELL_GUTTER_CLASS,
@@ -66,14 +64,12 @@ function formatHeaderProfileName({
 }
 
 type StudentAppHeaderProps = {
-  breadcrumbTail?: StudentBreadcrumb[]
   onOpenMobileNav: () => void
   headerActions?: ReactNode
 }
 
-function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions }: StudentAppHeaderProps) {
+function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderProps) {
   const { pathname, search } = useLocation()
-  const navigate = useNavigate()
   const entitlement = useStudentEntitlementOptional()?.entitlement ?? null
   const premiumAccount = useGuestPremiumAccount()
   const isPremium =
@@ -88,11 +84,6 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
   const [profileFullName, setProfileFullName] = useState("")
   const [openProfileMenu, setOpenProfileMenu] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement | null>(null)
-
-  const crumbs = useMemo(
-    () => [...getStudentBreadcrumbs(pathname, search), ...breadcrumbTail],
-    [breadcrumbTail, pathname, search],
-  )
 
   useEffect(() => {
     let mounted = true
@@ -150,7 +141,6 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
     [email, profileFirstName, profileFullName, profileLastName],
   )
   const initials = useMemo(() => getInitials(displayName), [displayName])
-  const lastCrumbIndex = crumbs.length - 1
 
   return (
     <header className="student-topbar sticky top-0 z-30 w-full shrink-0 border-b border-[color:var(--greyscale-100)] bg-[var(--primary-0)]">
@@ -170,50 +160,6 @@ function StudentAppHeader({ breadcrumbTail = [], onOpenMobileNav, headerActions 
           >
             <Menu className="size-5" />
           </button>
-
-          <nav aria-label="Breadcrumb" className="student-topbar-breadcrumbs min-w-0">
-            <ol className="flex flex-wrap items-center gap-1">
-              {crumbs.map((crumb, index) => {
-                const isLast = index === lastCrumbIndex
-                const href = crumb.href
-                return (
-                  <Fragment key={`${crumb.label}-${index}`}>
-                    {index > 0 ? (
-                      <li aria-hidden className="text-xs font-semibold tracking-[0.24px] text-[color:var(--greyscale-500)]">
-                        /
-                      </li>
-                    ) : null}
-                    <li>
-                      {isLast || !href ? (
-                        <span
-                          aria-current={isLast ? "page" : undefined}
-                          className={cn(
-                            isLast
-                              ? "font-medium text-[color:var(--primary)]"
-                              : "font-normal text-[color:var(--greyscale-500)]",
-                          )}
-                        >
-                          {crumb.label}
-                        </span>
-                      ) : (
-                        <Link
-                          to={href}
-                          className="font-normal text-[color:var(--greyscale-500)] hover:text-[color:var(--primary)]"
-                          onClick={(event) => {
-                            if (!shouldForceParentNav(pathname, href)) return
-                            event.preventDefault()
-                            navigate(href)
-                          }}
-                        >
-                          {crumb.label}
-                        </Link>
-                      )}
-                    </li>
-                  </Fragment>
-                )
-              })}
-            </ol>
-          </nav>
         </div>
 
         <div className="flex shrink-0 items-center gap-3">

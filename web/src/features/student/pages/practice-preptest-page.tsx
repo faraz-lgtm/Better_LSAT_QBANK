@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom"
 
-import { useStudentPageBreadcrumbTail } from "@/features/app-shell/student-page-header-slot"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
@@ -244,9 +243,6 @@ function PracticePrepTestPage() {
       })),
     [detail?.timingOptions, scaleFactor],
   )
-
-  const breadcrumbTitle = detail ? prepTestHubPageTitle(detail.prepTest) : null
-  useStudentPageBreadcrumbTail(breadcrumbTitle)
 
   const load = useCallback(async () => {
     if (!testIdParam) return

@@ -2906,13 +2906,6 @@ select.ds-input {
   }
 }
 
-.student-topbar-breadcrumbs {
-  font-family: var(--sans);
-  font-size: 14px;
-  line-height: 1.5;
-  letter-spacing: 0.28px;
-}
-
 .student-page-heading {
   margin: 0;
   font-size: 24px;

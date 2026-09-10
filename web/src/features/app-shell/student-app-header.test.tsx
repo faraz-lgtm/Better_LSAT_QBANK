@@ -67,8 +67,9 @@ describe("StudentAppHeader", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText("Main")).toBeInTheDocument()
-    expect(screen.getByText("Dashboard")).toBeInTheDocument()
+    expect(screen.queryByText("Main")).not.toBeInTheDocument()
+    expect(screen.queryByText("Dashboard")).not.toBeInTheDocument()
+    expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).not.toBeInTheDocument()
     expect(screen.queryByText(/Welcome back/)).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Notifications" })).not.toBeInTheDocument()
     expect(screen.getByLabelText("Plan: Premium")).toHaveTextContent("Premium")
@@ -81,7 +82,7 @@ describe("StudentAppHeader", () => {
     expect(screen.getByText("assad@acelebrands.co")).toBeInTheDocument()
   })
 
-  it("keeps non-dashboard breadcrumbs and the profile menu", async () => {
+  it("hides breadcrumbs on non-dashboard pages and keeps the profile menu", async () => {
     const user = userEvent.setup()
     renderHeader(
       <MemoryRouter initialEntries={["/app/practice/drills"]}>
@@ -89,12 +90,25 @@ describe("StudentAppHeader", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText("Prep")).toBeInTheDocument()
-    expect(screen.getByText("Drills")).toBeInTheDocument()
-    expect(screen.queryByText("Main")).not.toBeInTheDocument()
+    expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).not.toBeInTheDocument()
+    expect(screen.queryByText("Prep")).not.toBeInTheDocument()
+    expect(screen.queryByText("Academy")).not.toBeInTheDocument()
+    expect(screen.queryByText("Drills")).not.toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Open profile menu" }))
     expect(screen.getByRole("link", { name: "Account" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Logout" })).toBeInTheDocument()
+  })
+
+  it("does not show Academy / Explanations breadcrumbs", () => {
+    renderHeader(
+      <MemoryRouter initialEntries={["/app/learn/explanations"]}>
+        <StudentAppHeader onOpenMobileNav={() => {}} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).not.toBeInTheDocument()
+    expect(screen.queryByText("Academy")).not.toBeInTheDocument()
+    expect(screen.queryByText("Explanations")).not.toBeInTheDocument()
   })
 })
