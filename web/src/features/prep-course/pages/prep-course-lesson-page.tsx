@@ -27,7 +27,6 @@ import { isPrepCourseLessonLockedForFreePlan, shouldLimitFreePrepCourseAccess } 
 import { usePrepCourseBookmarks } from "@/features/prep-course/lib/use-prep-course-bookmarks"
 import { PrepCourseComingSoonPage } from "@/features/prep-course/pages/prep-course-coming-soon-page"
 import { StudentMain } from "@/features/student/components/student-main"
-import { STUDENT_PAGE_CONTAINER_CLASS } from "@/features/student/components/student-page-container"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createPracticeApi } from "@/lib/api/practice"
 import {
@@ -43,8 +42,13 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 import { cn } from "@/lib/utils"
 
+/** Figma `20222:22512` — white lesson card on Primary/0 canvas (no border/shadow) */
 const PREP_COURSE_LESSON_CONTENT_CARD_CLASS =
-  "flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden rounded-t-[14px] rounded-b-none border border-b-0 border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]"
+  "flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden rounded-[18px] border-0 bg-[var(--greyscale-0)] shadow-none"
+
+const PREP_COURSE_LESSON_CARD_WIDTH_CLASS = "mx-auto w-full max-w-[888px]"
+
+const PREP_COURSE_LESSON_WITH_SIDEBAR_WIDTH_CLASS = "mx-auto w-full max-w-[calc(888px+320px+24px)]"
 
 function PrepCourseLessonPage() {
   const navigate = useNavigate()
@@ -347,31 +351,34 @@ function PrepCourseLessonPage() {
   }
 
   return (
-    <StudentMain layout="locked" fullBleed contentClassName="bg-[var(--background)] px-0 pb-0">
-      <div className="prep-course-lesson-shell flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-y-hidden bg-[var(--background)]">
+    <StudentMain layout="locked" fullBleed contentClassName="bg-[var(--primary-0)] px-0 pb-0">
+      <div className="prep-course-lesson-shell flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-y-hidden bg-[var(--primary-0)]">
         {error ? <p className="mb-4 shrink-0 text-xs text-[#95122b]">{error}</p> : null}
 
         <section className="prep-course-lesson-frame practice-session-card flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden">
           <div
             className={cn(
-              "practice-session-body flex h-0 min-h-0 min-w-0 max-w-full flex-1 overflow-hidden bg-[var(--background)] px-[24px] pb-0",
+              "practice-session-body flex h-0 min-h-0 min-w-0 max-w-full flex-1 overflow-hidden bg-[var(--primary-0)] px-[24px] pb-3",
               useSplitDrillLayout
                 ? "flex-col"
                 : showSidebar
-                  ? "practice-session-body--with-sidebar mx-auto w-full max-w-[calc(1168px+320px+24px)] flex-row items-stretch justify-center gap-6"
+                  ? cn(
+                      "practice-session-body--with-sidebar flex-row items-stretch justify-center gap-6",
+                      PREP_COURSE_LESSON_WITH_SIDEBAR_WIDTH_CLASS,
+                    )
                   : "flex-col items-center",
             )}
           >
             {useSplitDrillLayout ? (
               <div
                 ref={lessonContentRef}
-                className="practice-session-pane practice-session-scroll-hidden flex min-h-0 flex-1 flex-col gap-6 overflow-x-clip overflow-y-auto overscroll-contain bg-[var(--background)] [overflow-anchor:none]"
+                className="practice-session-pane practice-session-scroll-hidden flex min-h-0 flex-1 flex-col gap-6 overflow-x-clip overflow-y-auto overscroll-contain bg-[var(--primary-0)] [overflow-anchor:none]"
               >
-                <div className={cn(STUDENT_PAGE_CONTAINER_CLASS, "w-full")}>
+                <div className={cn(PREP_COURSE_LESSON_CARD_WIDTH_CLASS, "w-full")}>
                   <PrepCourseLessonPanel {...lessonPanelProps} drillResultsPart="cards" sidebarAdjacent={false} />
                 </div>
-                <div className="mx-auto flex w-full min-w-0 max-w-[calc(1168px+320px+24px)] gap-6">
-                  <div className={cn(STUDENT_PAGE_CONTAINER_CLASS, "min-w-0 flex-1")}>
+                <div className={cn(PREP_COURSE_LESSON_WITH_SIDEBAR_WIDTH_CLASS, "flex min-w-0 gap-6")}>
+                  <div className={cn(PREP_COURSE_LESSON_CARD_WIDTH_CLASS, "min-w-0 flex-1")}>
                     <PrepCourseLessonPanel
                       {...lessonPanelProps}
                       drillResultsPart="below"
@@ -399,7 +406,7 @@ function PrepCourseLessonPage() {
                 <div
                   className={cn(
                     PREP_COURSE_LESSON_CONTENT_CARD_CLASS,
-                    STUDENT_PAGE_CONTAINER_CLASS,
+                    PREP_COURSE_LESSON_CARD_WIDTH_CLASS,
                     "w-full flex-1",
                     !showSidebar && "mx-auto",
                   )}

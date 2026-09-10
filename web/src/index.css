@@ -3947,6 +3947,15 @@ html {
   color: var(--color-student-heading);
 }
 
+/* TipTap blank lines are empty <p> / <p><br></p>; without a line box they collapse to one gap. */
+.lesson-html-body p:empty,
+.lesson-html-body p:has(> br:only-child),
+.lesson-tiptap-editor p:empty,
+.lesson-tiptap-editor p:has(> br:only-child),
+.lesson-tiptap-editor p:has(> br.ProseMirror-trailingBreak:only-child) {
+  min-height: 1.5em;
+}
+
 .lesson-html-body p:last-child {
   margin-bottom: 0;
 }
@@ -4514,8 +4523,8 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
 }
 
 .prep-course-lesson-frame {
-  /* Figma: page gutter is Background (#121a26 dark); lesson card elevates as greyscale-0 */
-  background: var(--background);
+  /* Figma `20222:22512` — Primary/0 canvas behind elevated lesson card */
+  background: var(--primary-0);
   color: var(--color-student-heading);
 }
 

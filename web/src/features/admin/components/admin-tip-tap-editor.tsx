@@ -13,6 +13,8 @@ import { mergeAttributes, Node, type Editor } from "@tiptap/core"
 import { EditorContent, NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, useEditor, type NodeViewProps } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 
+import { preserveEmptyParagraphBreaks } from "@/features/admin/lib/course-builder-utils"
+
 function isSafeHttpUrl(raw: string): boolean {
   const t = raw.trim().toLowerCase()
   if (!t) return false
@@ -274,7 +276,7 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
         HTMLAttributes: { class: "w-full max-w-full rounded-lg", style: "aspect-ratio:16/9;height:auto;width:100%" },
       }),
     ],
-    content: value || "<p></p>",
+    content: preserveEmptyParagraphBreaks(value || "<p></p>"),
     editorProps: {
       attributes: {
         class:
@@ -283,14 +285,14 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
       },
     },
     onUpdate: ({ editor: ed }: { editor: Editor }) => {
-      onChange(ed.getHTML())
+      onChange(preserveEmptyParagraphBreaks(ed.getHTML()))
     },
   })
 
   useEffect(() => {
     if (!editor) return
-    const incoming = (value || "").trim() ? value : "<p></p>"
-    const current = editor.getHTML()
+    const incoming = preserveEmptyParagraphBreaks((value || "").trim() ? value : "<p></p>")
+    const current = preserveEmptyParagraphBreaks(editor.getHTML())
     if (incoming === current) return
     editor.commands.setContent(incoming, { emitUpdate: false })
   }, [value, editor])
