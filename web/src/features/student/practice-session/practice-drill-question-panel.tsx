@@ -4,6 +4,7 @@ import { LrDrillOptionRow } from "@/features/student/drills/lr-drill-option-row"
 import type { DrillQuestion } from "@/features/student/drills/drill-types"
 import {
   ACTIVE_DRILL_OPTIONS_LIST_CLASS,
+  ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS,
   ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import {
@@ -187,6 +188,8 @@ function PracticeDrillQuestionPanel({
         onOpenReview={onOpenReview}
         reviewActive={reviewActive}
         onOpenAccessibility={onOpenAccessibility}
+        onFullscreen={onFullscreen}
+        fullView={fullView}
       />
     )
   }
@@ -216,6 +219,7 @@ function PracticeDrillQuestionPanel({
         </div>
       ) : null}
       <div className={cn(isActiveDrillLayout && (officialChrome ? OFFICIAL_QUESTION_PANEL_WITH_WIDGET_CLASS : ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS))}>
+        <div className={cn(isActiveDrillLayout && ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS)}>
         <PracticeQuestionStem
           questionNumber={questionNumber}
           regionKey={stemKey}
@@ -270,6 +274,7 @@ function PracticeDrillQuestionPanel({
               onClick={handleResetResponse}
             />
           ) : null}
+        </div>
         </div>
         {isActiveDrillLayout ? (
           <PracticeSessionSideWidget

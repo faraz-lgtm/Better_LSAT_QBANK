@@ -82,7 +82,7 @@ function GuestDiagnosticStartPage({ preview = false }: GuestDiagnosticStartPageP
 
   return (
     <>
-      <PracticeSessionImmersiveFrame hideScrim className="z-30">
+      <PracticeSessionImmersiveFrame hideScrim fullWidth className="z-30">
         <GuestDiagnosticExamLayout
           config={config}
           interactive={!showInstructions}
@@ -92,7 +92,7 @@ function GuestDiagnosticStartPage({ preview = false }: GuestDiagnosticStartPageP
 
       {showInstructions ? (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-[3px] md:p-6"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(0,0,0,0.3)] p-4 backdrop-blur-[3px] md:p-6"
           role="dialog"
           aria-modal="true"
           aria-label={config.title}

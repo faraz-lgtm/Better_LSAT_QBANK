@@ -93,6 +93,8 @@ export type PrepTestSessionDetail = {
     targetTimeSeconds?: number
     /** Pause-aware dwell seconds on the scored attempt; omitted when unanswered. */
     yourTimeSeconds?: number
+    /** A–E popularity bar heights 0–100; zeros when platform sample is too small. */
+    answerPopularity?: [number, number, number, number, number]
   }>
 }
 

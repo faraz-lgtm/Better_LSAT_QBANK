@@ -7,6 +7,7 @@
 
 :root {
   --figma-base-w: 1920;
+  --exam-normal-w: 1440;
   --figma-base-h: 924;
   --text: #667085;
   --text-h: #121a26;
@@ -3400,7 +3401,8 @@ select.ds-input {
   margin-bottom: 0;
 }
 
-.lsat-html-content h1 {
+.lsat-html-content h1,
+.lsat-html-content h2 {
   margin: 0 0 12px;
   font-family: var(--sans);
   font-size: 24px;
@@ -3410,46 +3412,127 @@ select.ds-input {
   color: var(--color-student-heading);
 }
 
-.lsat-html-content h2,
-.lsat-html-content h3,
-.lsat-html-content h4 {
+.lsat-html-content h3 {
   margin: 0 0 8px;
   font-family: var(--sans);
-  font-weight: 700;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.4;
   color: var(--color-student-heading);
 }
 
-.rep-work-instructions-body.lsat-html-content {
+.lsat-html-content h4,
+.lsat-html-content h5,
+.lsat-html-content h6 {
+  margin: 0 0 8px;
+  font-family: var(--sans);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-student-heading);
+}
+
+.rep-work-question-input,
+.rep-work-answer-body,
+.rep-work-instructions-body.lsat-html-content,
+.rep-work-instructions-body .lsat-html-content,
+.rep-work-instructions-body .lesson-html-body,
+.rep-work-answer-body .lsat-html-content,
+.rep-work-answer-body .lesson-html-body {
   font-family: var(--sans);
   font-size: 18px;
   font-style: normal;
- 
+  font-weight: 400;
   line-height: 1.4;
   letter-spacing: 0.36px;
-  color: #1a1b25;
+  color: var(--color-student-heading);
 }
 
-.rep-work-instructions-body.lsat-html-content p {
-  margin: 0;
+.rep-work-answer-body .lsat-html-content *,
+.rep-work-answer-body .lesson-html-body *,
+.rep-work-instructions-body .lsat-html-content *,
+.rep-work-instructions-body .lesson-html-body * {
+  font-family: inherit !important;
+}
+
+.rep-work-instructions-body.lsat-html-content p,
+.rep-work-instructions-body .lsat-html-content p,
+.rep-work-instructions-body .lesson-html-body p,
+.rep-work-answer-body .lsat-html-content p,
+.rep-work-answer-body .lesson-html-body p {
+  margin: 0 0 0.75rem;
   font-family: inherit;
   font-size: 18px;
   font-style: normal;
-
   line-height: 1.4;
+  letter-spacing: 0.36px;
 }
 
-.rep-work-instructions-body.lsat-html-content p + p {
-  margin-top: 0;
+.rep-work-instructions-body.lsat-html-content p:last-child,
+.rep-work-instructions-body .lsat-html-content p:last-child,
+.rep-work-instructions-body .lesson-html-body p:last-child,
+.rep-work-answer-body .lsat-html-content p:last-child,
+.rep-work-answer-body .lesson-html-body p:last-child {
+  margin-bottom: 0;
 }
 
-.rep-work-instructions-body.lsat-html-content p:empty {
+.rep-work-instructions-body.lsat-html-content p:empty,
+.rep-work-instructions-body .lsat-html-content p:empty,
+.rep-work-answer-body .lsat-html-content p:empty {
   display: none;
 }
 
-.rep-work-question-input {
+.rep-work-instructions-body .lesson-html-body ul,
+.rep-work-instructions-body .lesson-html-body ol,
+.rep-work-answer-body .lesson-html-body ul,
+.rep-work-answer-body .lesson-html-body ol {
+  margin: 0 0 0.75rem;
+  padding-left: 1.5rem;
   font-size: 18px;
   line-height: 1.4;
+}
+
+.rep-work-instructions-body .lesson-html-body li,
+.rep-work-answer-body .lesson-html-body li {
+  margin: 0 0 0.35rem;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.rep-work-instructions-body .lesson-html-body h1,
+.rep-work-instructions-body .lesson-html-body h2,
+.rep-work-answer-body .lesson-html-body h1,
+.rep-work-answer-body .lesson-html-body h2 {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.rep-work-instructions-body .lesson-html-body h3,
+.rep-work-answer-body .lesson-html-body h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.rep-work-instructions-body .lesson-html-body h4,
+.rep-work-instructions-body .lesson-html-body h5,
+.rep-work-instructions-body .lesson-html-body h6,
+.rep-work-answer-body .lesson-html-body h4,
+.rep-work-answer-body .lesson-html-body h5,
+.rep-work-answer-body .lesson-html-body h6 {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.rep-work-question-input {
+  font-family: var(--sans);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.4;
   letter-spacing: 0.36px;
+  color: var(--color-student-heading);
   field-sizing: content;
   overflow: hidden;
   scrollbar-width: none;
@@ -3623,6 +3706,109 @@ select.ds-input {
   margin-bottom: 0;
 }
 
+.lsat-html-content .tableWrapper {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.lsat-html-content table {
+  display: table;
+  width: 100%;
+  max-width: 100%;
+  margin: 0.5rem 0 1rem;
+  table-layout: auto;
+  border-collapse: collapse;
+  border: 1px solid var(--greyscale-100, #dfe1e7);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.lsat-html-content caption {
+  display: table-caption;
+  caption-side: top;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.lsat-html-content thead {
+  display: table-header-group;
+}
+
+.lsat-html-content tbody {
+  display: table-row-group;
+}
+
+.lsat-html-content tfoot {
+  display: table-footer-group;
+}
+
+.lsat-html-content colgroup {
+  display: table-column-group;
+}
+
+.lsat-html-content col {
+  display: table-column;
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+.lsat-html-content tr {
+  display: table-row;
+}
+
+.lsat-html-content th,
+.lsat-html-content td {
+  display: table-cell;
+  width: auto;
+  min-width: 0;
+  border: 1px solid var(--greyscale-100, #dfe1e7);
+  padding: 0.25rem 0.5rem;
+  vertical-align: top;
+}
+
+.lsat-html-content th:first-child,
+.lsat-html-content td:first-child {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.lsat-html-content th {
+  background: #f6f8fa;
+  font-weight: 600;
+  text-align: left;
+}
+
+.lsat-html-content th p,
+.lsat-html-content td p {
+  margin: 0;
+}
+
+.lsat-html-content th p + p,
+.lsat-html-content td p + p {
+  margin-top: 0.35rem;
+}
+
+.lsat-html-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.375rem;
+}
+
+.lsat-html-content pre {
+  margin: 0.75rem 0;
+  overflow-x: auto;
+  border-radius: 0.375rem;
+  background: #f6f8fa;
+  padding: 0.75rem;
+}
+
+.lsat-html-content code {
+  font-size: 0.875rem;
+}
+
 /* Portal scrollbars — soft grey thumb on a light/transparent track (no arrow buttons) */
 html {
   scrollbar-width: thin;
@@ -3712,33 +3898,57 @@ html {
 }
 
 .lesson-html-body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  display: block;
+  overflow-x: auto;
 }
 
+.lesson-html-body h1,
 .lesson-html-body h2 {
-  margin: 0;
+  margin: 1rem 0 0.5rem;
   font-size: 24px;
   font-weight: 700;
   line-height: 1.3;
   color: var(--color-student-heading);
 }
 
-.lesson-html-body h3,
-.lesson-html-body h4 {
-  margin: 0;
-  font-weight: 700;
+.lesson-html-body h3 {
+  margin: 1rem 0 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.4;
   color: var(--color-student-heading);
 }
 
+.lesson-html-body h4,
+.lesson-html-body h5,
+.lesson-html-body h6 {
+  margin: 1rem 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-student-heading);
+}
+
+.lesson-html-body h1:first-child,
+.lesson-html-body h2:first-child,
+.lesson-html-body h3:first-child,
+.lesson-html-body h4:first-child,
+.lesson-html-body h5:first-child,
+.lesson-html-body h6:first-child {
+  margin-top: 0;
+}
+
 .lesson-html-body p {
-  margin: 0;
+  margin: 0 0 0.75rem;
   font-size: 16px;
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: 0.32px;
   color: var(--color-student-heading);
+}
+
+.lesson-html-body p:last-child {
+  margin-bottom: 0;
 }
 
 .lesson-html-body hr,
@@ -3795,9 +4005,8 @@ section[data-lesson-section][data-variant="empty"] {
 }
 
 .lesson-section-body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  display: block;
+  overflow-x: auto;
   font-family: var(--sans);
   font-size: 16px;
   font-weight: 400;
@@ -3816,8 +4025,9 @@ section[data-lesson-section][data-variant="empty"] {
   color: #ffffff;
 }
 
-.lesson-section-body h1 {
-  margin: 0;
+.lesson-section-body h1,
+.lesson-section-body h2 {
+  margin: 1rem 0 0.5rem;
   font-family: var(--sans);
   font-size: 24px;
   font-weight: 700;
@@ -3826,17 +4036,37 @@ section[data-lesson-section][data-variant="empty"] {
   color: var(--color-student-heading);
 }
 
-.lesson-section-body h2,
-.lesson-section-body h3,
-.lesson-section-body h4 {
-  margin: 0;
+.lesson-section-body h3 {
+  margin: 1rem 0 0.5rem;
   font-family: var(--sans);
-  font-weight: 700;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.4;
   color: var(--color-student-heading);
 }
 
+.lesson-section-body h4,
+.lesson-section-body h5,
+.lesson-section-body h6 {
+  margin: 1rem 0 0.5rem;
+  font-family: var(--sans);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-student-heading);
+}
+
+.lesson-section-body h1:first-child,
+.lesson-section-body h2:first-child,
+.lesson-section-body h3:first-child,
+.lesson-section-body h4:first-child,
+.lesson-section-body h5:first-child,
+.lesson-section-body h6:first-child {
+  margin-top: 0;
+}
+
 .lesson-section-body p {
-  margin: 0;
+  margin: 0 0 0.75rem;
   font-size: 16px;
   line-height: 1.5;
   letter-spacing: 0.32px;
@@ -3882,6 +4112,47 @@ section[data-lesson-section][data-variant="empty"] {
   font-size: 14px;
   line-height: 23.2px;
   letter-spacing: 0;
+}
+
+/* Course HTML uses editor inline colors (#1a1b25 / #36394a). Force light text in student dark theme. */
+.dark .lesson-html-content {
+  color: var(--color-student-heading);
+}
+
+.dark .lesson-html-content * {
+  color: inherit !important;
+}
+
+.dark .lesson-html-content a {
+  color: var(--primary-700) !important;
+}
+
+.dark .lesson-html-content a * {
+  color: inherit !important;
+}
+
+.dark .lesson-html-content mark,
+.dark .lesson-html-content mark * {
+  color: #121a26 !important;
+}
+
+.dark .lesson-html-content .lesson-section-body--inverse,
+.dark .lesson-html-content .lesson-section-body--inverse * {
+  color: #ffffff !important;
+}
+
+.dark .lesson-html-content table,
+.dark .lesson-html-content th,
+.dark .lesson-html-content td {
+  border-color: var(--greyscale-100);
+}
+
+.dark .lesson-html-content th {
+  background: var(--greyscale-25);
+}
+
+.dark .lesson-html-content pre {
+  background: var(--greyscale-25);
 }
 
 .lsat-html-content .ss-line-number {
@@ -3952,6 +4223,12 @@ section[data-lesson-section][data-variant="empty"] {
   overflow: visible;
 }
 
+.practice-session-card--active-drill:not(.practice-session-card--official) .practice-session-question-panel-with-widget {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
 /* Keep vertical scroll working; clip only the x-axis so side-widget labels can still paint. */
 .practice-session-card--active-drill .practice-session-pane:has(.practice-session-side-widget) {
   overflow-x: clip;
@@ -3960,6 +4237,7 @@ section[data-lesson-section][data-variant="empty"] {
 
 .practice-session-card--official .practice-session-question-panel-with-widget {
   overflow: visible;
+  padding-right: 50px;
 }
 
 .practice-session-card--official .practice-session-pane:has(.practice-session-side-widget) {
@@ -4066,6 +4344,7 @@ html.practice-exam-more-open .practice-session-question-panel-with-widget {
 
 .prep-course-rep-work-pair {
   contain: inline-size;
+  font-family: var(--sans);
 }
 
 .practice-session-pane::-webkit-scrollbar {
@@ -4135,7 +4414,8 @@ html.portal-chat-hidden [class*="lc_text-widget"] {
 
 html.student-shell-immersive .practice-session-card--active-drill {
   width: 100%;
-  max-width: 1440px;
+  max-width: calc(var(--exam-normal-w) * 1px);
+  margin-inline: auto;
   height: 100%;
   max-height: calc(var(--app-svh) - 32px);
   flex: 1 1 auto;
@@ -4146,10 +4426,16 @@ html.student-shell-immersive .practice-session-card--active-drill {
 }
 
 html.student-shell-immersive .practice-session-card--official {
-  max-width: 1440px;
+  max-width: calc(var(--exam-normal-w) * 1px);
+  margin-inline: auto;
   max-height: calc(var(--app-svh) - 32px);
   height: 100%;
   border-radius: 10px;
+}
+
+/* Figma full-width exam canvas — 1920px. Applied when Full Screen / full-width view is on. */
+html.student-shell-immersive .practice-session-card.practice-session-card--full-width {
+  max-width: calc(var(--figma-base-w) * 1px);
 }
 
 html.student-shell-immersive .practice-session-card--active-drill .practice-session-body {
@@ -4720,15 +5006,15 @@ html.student-shell-immersive .practice-session-card--blind-review {
   color: var(--color-student-heading) !important;
 }
 
-/* LawHub yellow selected row — keep dark ink for contrast on #fdfac4 */
+/* LawHub peach selected row — keep primary-800 ink for contrast on #ffe5b7 */
 .dark .practice-session-card--official .practice-session-official-choice--selected,
 .dark .practice-session-card--official .practice-session-official-choice--selected .lsat-html-content,
 .dark .practice-session-card--official .practice-session-official-choice--selected .practice-session-content {
-  color: #2c3143 !important;
+  color: var(--primary-800) !important;
 }
 
 .dark .practice-session-card--official .practice-session-official-choice-letter--selected {
-  color: #2c3143 !important;
+  color: var(--primary-800) !important;
 }
 
 .dark .practice-session-card--official .practice-session-footer {

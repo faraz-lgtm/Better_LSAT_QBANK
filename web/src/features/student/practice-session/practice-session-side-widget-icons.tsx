@@ -57,9 +57,9 @@ function SideWidgetFigmaIcon({
 }
 
 /** Full size — four arrows pointing outward to corners */
-function SideWidgetFullScreenIcon({ className, ...props }: SideWidgetIconProps) {
+function SideWidgetFullScreenIcon({ className }: SideWidgetIconProps) {
   return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden className={className} {...props}>
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden className={cn("size-5", className)}>
       <path
         d="M8 3.5H3.5V8M12 3.5H16.5V8M3.5 12V16.5H8M16.5 12V16.5H12"
         stroke="currentColor"
@@ -79,9 +79,9 @@ function SideWidgetFullScreenIcon({ className, ...props }: SideWidgetIconProps) 
 }
 
 /** Med size — four arrows pointing inward (exit full screen) */
-function SideWidgetMedSizeIcon({ className, ...props }: SideWidgetIconProps) {
+function SideWidgetMedSizeIcon({ className }: SideWidgetIconProps) {
   return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden className={className} {...props}>
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden className={cn("size-5", className)}>
       <path
         d="M4.25 4.25L8 8M15.75 4.25L12 8M4.25 15.75L8 12M15.75 15.75L12 12"
         stroke="currentColor"

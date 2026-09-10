@@ -468,7 +468,7 @@ function AnalyticsDrillsPage() {
 
   const handleSelectEntry = useCallback(
     (id: string) => {
-      navigate(practiceSessionResultsPath(id))
+      navigate(practiceSessionResultsPath(id, { source: "drill" }))
     },
     [navigate],
   )

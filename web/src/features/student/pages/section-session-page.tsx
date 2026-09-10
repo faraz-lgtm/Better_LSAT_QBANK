@@ -30,12 +30,15 @@ import {
   ACTIVE_DRILL_FOOTER_CLASS,
   ACTIVE_DRILL_OPTIONS_LIST_CLASS,
   ACTIVE_DRILL_PASSAGE_PANE_CLASS,
+  ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS,
   ACTIVE_DRILL_PASSAGE_TEXT_CLASS,
+  ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS,
   ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS,
   ACTIVE_DRILL_QUESTION_PANE_CLASS,
   SESSION_FINISH_BUTTON_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import {
+  EXAM_CARD_FULL_WIDTH_CLASS,
   OFFICIAL_BODY_GRID_CLASS,
   OFFICIAL_CARD_CLASS,
   OFFICIAL_FOOTER_CLASS,
@@ -347,6 +350,8 @@ function SectionQuestionPanel({
         onOpenReview={onOpenReview}
         reviewActive={reviewActive}
         onOpenAccessibility={onOpenAccessibility}
+        onFullscreen={onFullscreen}
+        fullView={fullView}
       />
     )
   }
@@ -376,6 +381,7 @@ function SectionQuestionPanel({
         </div>
       ) : null}
       <div className={cn(isActiveDrillLayout && (officialChrome ? OFFICIAL_QUESTION_PANEL_WITH_WIDGET_CLASS : ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS))}>
+        <div className={cn(isActiveDrillLayout && ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS)}>
         <PracticeQuestionStem
           questionNumber={questionNumber}
           regionKey={stemKey}
@@ -430,6 +436,7 @@ function SectionQuestionPanel({
               onClick={handleResetResponse}
             />
           ) : null}
+        </div>
         </div>
         {isActiveDrillLayout ? (
           <PracticeSessionSideWidget
@@ -1485,27 +1492,16 @@ function SectionSessionPage() {
       questionCount: questions.length,
       scaleFactor: accommodationScaleFactor,
     })
-    const introTimerLabel = timedSection ? "Time Left:" : "Elapsed"
+    const introTimerLabel = timedSection ? "Time Left" : "Elapsed"
     const introTimerDisplaySeconds = timedSection ? introTimerBudgetSeconds : elapsed
-    const introTimerProgress = timedSection ? 1 : computeElapsedTimerProgress(elapsed, introTimerBudgetSeconds)
-    const introCloseButton = (
-      <button
-        type="button"
-        className="inline-flex size-[52px] shrink-0 items-center justify-center rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] text-[var(--greyscale-500)] transition-colors hover:bg-[var(--greyscale-50)] hover:text-[var(--color-student-heading)]"
-        aria-label="Close section introduction"
-        onClick={handleExitSession}
-      >
-        <X className="size-5" strokeWidth={2} aria-hidden />
-      </button>
-    )
 
     return (
       <StudentMain
         layout="immersive"
-        className="flex min-h-0 max-w-none flex-1 flex-col overflow-hidden bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))] px-0 py-4 md:py-5"
+        className="flex min-h-0 max-w-none flex-1 flex-col overflow-hidden bg-[var(--greyscale-500)] px-0 py-4 md:py-5"
       >
         <div
-          className="fixed inset-0 z-[100] flex min-h-0 items-center justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-[3px] md:p-6"
+          className="fixed inset-0 z-[100] flex min-h-0 items-center justify-center overflow-y-auto bg-[rgba(0,0,0,0.3)] p-4 backdrop-blur-[3px] md:p-6"
           role="dialog"
           aria-modal="true"
           aria-label="PrepTest section introduction"
@@ -1514,15 +1510,10 @@ function SectionSessionPage() {
             header={
               <PracticeSectionIntroHeader
                 title={introHeaderLabel}
-                fontScale={highlights.fontScale}
-                toolMode={highlights.toolMode}
-                onFontSize={highlights.cycleFontSize}
-                onLineSpacing={highlights.cycleLineSpacing}
-                onUnderline={highlights.selectUnderline}
                 timerLabel={introTimerLabel}
                 timerDisplaySeconds={introTimerDisplaySeconds}
-                timerProgress={introTimerProgress}
-                closeButton={introCloseButton}
+                onPause={pauseModal.requestPause}
+                onClose={handleExitSession}
               />
             }
           >
@@ -1540,6 +1531,16 @@ function SectionSessionPage() {
           </PracticePrepTestSectionIntroFrame>
         </div>
 
+        <PracticeSessionPauseModal
+          open={pauseModal.open}
+          title="Section"
+          message="Your section is paused"
+          onResume={pauseModal.resume}
+          onSaveAndExit={() => {
+            pauseModal.close()
+            handleExitSession()
+          }}
+        />
       </StudentMain>
     )
   }
@@ -1631,9 +1632,7 @@ function SectionSessionPage() {
         exitOnly
         iconTrigger
         variant="active-drill"
-        officialInterface={officialInterface}
-        onOfficialInterfaceChange={setOfficialInterface}
-        morePanelInterfaceLabel="Official Interface"
+        showInterfaceToggle={false}
         morePanelSectionSelect={
           blindReviewSectionOptions.length > 0 ? (
             <PracticeBlindReviewSectionSelect
@@ -1883,7 +1882,7 @@ function SectionSessionPage() {
                   : officialChrome
                     ? cn(OFFICIAL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1 lg:pr-0")
                     : useActiveDrillLayout
-                    ? ACTIVE_DRILL_BODY_GRID_CLASS
+                    ? cn(ACTIVE_DRILL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1")
                     : "lg:grid-cols-2 lg:divide-x divide-[var(--greyscale-100)] dark:divide-[var(--greyscale-600)]",
               ),
             )}
@@ -1898,7 +1897,9 @@ function SectionSessionPage() {
                   : officialChrome
                     ? OFFICIAL_PASSAGE_PANE_CLASS
                     : useActiveDrillLayout
-                    ? ACTIVE_DRILL_PASSAGE_PANE_CLASS
+                    ? passageOnlyView
+                      ? ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS
+                      : ACTIVE_DRILL_PASSAGE_PANE_CLASS
                     : "border-b border-[var(--greyscale-100)] p-5 lg:border-b-0",
               )}
             >
@@ -1929,6 +1930,7 @@ function SectionSessionPage() {
               className={cn(
                 "practice-session-pane min-h-0",
                 officialChrome && passageOnlyView && "hidden",
+                useActiveDrillLayout && passageOnlyView && "hidden",
                 useBlindReviewLayout
                   ? BLIND_REVIEW_QUESTION_PANEL_CLASS
                   : officialChrome
@@ -2210,7 +2212,7 @@ function SectionSessionPage() {
           </div>
         </div>
       ) : useActiveDrillLayout ? (
-        <PracticeSessionImmersiveFrame>
+        <PracticeSessionImmersiveFrame fullWidth={officialChrome}>
           {error ? (
             <p className="mb-3 shrink-0 text-sm text-red-600" role="alert">
               {error}
@@ -2220,7 +2222,8 @@ function SectionSessionPage() {
             className={cn(
               officialChrome
                 ? OFFICIAL_CARD_CLASS
-                : "practice-session-card practice-session-card--active-drill relative flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+                : "practice-session-card practice-session-card--active-drill relative mx-auto flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+              isFullscreen && EXAM_CARD_FULL_WIDTH_CLASS,
               timeUpFlow != null && "overflow-hidden",
             )}
           >

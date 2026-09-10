@@ -102,7 +102,6 @@ describe("RcDrillResultsView bookmarks", () => {
             elapsedSeconds={12}
             timing="unlimited"
             take={1}
-            excluded={false}
             passages={passages}
             questions={[meta("q1", 1), meta("q2", 2)]}
             showBlindReview={false}
@@ -117,7 +116,6 @@ describe("RcDrillResultsView bookmarks", () => {
               })
             }}
             onReviewInTester={() => {}}
-            onExcludedChange={() => {}}
           />
         </MemoryRouter>
       )
@@ -167,15 +165,75 @@ describe("RcDrillResultsView bookmarks", () => {
     expect(questionRow?.innerHTML).not.toMatch(/min-w-\[1104px\]/)
   })
 
-  it("filters to Incorrect only and shows an empty state when every question is correct", async () => {
+  it("filters to Incorrect and shows an empty state when every question is correct", async () => {
     const user = userEvent.setup()
     renderView(vi.fn(), "section")
 
-    await user.click(screen.getByRole("button", { name: "Question" }))
-    expect(screen.getByRole("option", { name: "Incorrect only" }).textContent).toBe("Incorrect only")
-    await user.click(screen.getByRole("option", { name: "Incorrect only" }))
+    await user.click(screen.getByRole("button", { name: "Both" }))
+    expect(screen.getByRole("option", { name: "Both" }).textContent).toBe("Both")
+    expect(screen.getByRole("option", { name: "Correct" }).textContent).toBe("Correct")
+    expect(screen.getByRole("option", { name: "Incorrect" }).textContent).toBe("Incorrect")
+    expect(screen.queryByRole("option", { name: "Question" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "Passage" })).not.toBeInTheDocument()
+    await user.click(screen.getByRole("option", { name: "Incorrect" }))
 
+    expect(screen.getByRole("button", { name: "Incorrect" })).toBeInTheDocument()
     expect(screen.getByText("No incorrect questions in this section.")).toBeInTheDocument()
     expect(screen.queryByText("Passage 1")).not.toBeInTheDocument()
+  })
+
+  it("filters to Correct only", async () => {
+    const user = userEvent.setup()
+    function Harness() {
+      return (
+        <MemoryRouter>
+          <RcDrillResultsView
+            variant="section"
+            questionCount={2}
+            rawScore={1}
+            scaledScore={null}
+            elapsedSeconds={12}
+            timing="unlimited"
+            take={1}
+            passages={[
+              passageGroup("p1", "P1", "Passage 1", [
+                { ...meta("q1", 1), isCorrect: true },
+              ]),
+              passageGroup("p2", "P2", "Passage 2", [
+                { ...meta("q2", 2), isCorrect: false, selectedAnswer: "b" },
+              ]),
+            ]}
+            questions={[
+              { ...meta("q1", 1), isCorrect: true },
+              { ...meta("q2", 2), isCorrect: false, selectedAnswer: "b" },
+            ]}
+            showBlindReview={false}
+            bookmarkedIds={new Set()}
+            onToggleBookmark={() => {}}
+            onReviewInTester={() => {}}
+          />
+        </MemoryRouter>
+      )
+    }
+
+    render(<Harness />)
+
+    expect(screen.getByRole("button", { name: "Both" })).toBeInTheDocument()
+    expect(screen.getByText("Passage 1")).toBeInTheDocument()
+    expect(screen.getByText("Passage 2")).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Both" }))
+    await user.click(screen.getByRole("option", { name: "Correct" }))
+
+    expect(screen.getByRole("button", { name: "Correct" })).toBeInTheDocument()
+    expect(screen.getByText("Passage 1")).toBeInTheDocument()
+    expect(screen.queryByText("Passage 2")).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Correct" }))
+    await user.click(screen.getByRole("option", { name: "Incorrect" }))
+
+    expect(screen.getByRole("button", { name: "Incorrect" })).toBeInTheDocument()
+    expect(screen.queryByText("Passage 1")).not.toBeInTheDocument()
+    expect(screen.getByText("Passage 2")).toBeInTheDocument()
   })
 })

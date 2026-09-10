@@ -18,6 +18,8 @@ import {
   SideWidgetCollapseDockIcon,
   SideWidgetExpandIcon,
   SideWidgetFlagIcon,
+  SideWidgetFullScreenIcon,
+  SideWidgetMedSizeIcon,
   SideWidgetResponseMaskingIcon,
   SideWidgetReviewIcon,
 } from "@/features/student/practice-session/practice-session-side-widget-icons"
@@ -41,7 +43,7 @@ type PracticeSessionSideWidgetProps = {
   lineFocusActive?: boolean
   onLineFocus?: () => void
   onFullscreen?: () => void
-  /** Official full-page / browser-fullscreen chrome uses arrows-in. */
+  /** Full-width (1920) vs normal (1440) exam canvas; also enters browser fullscreen. */
   fullView?: boolean
 }
 
@@ -75,13 +77,22 @@ function PracticeSessionSideWidget({
   const [expanded, setExpanded] = useState(false)
   const officialChrome = isOfficialLayout(variant)
 
+  const fullscreenItem: SideWidgetItem = {
+    id: "fullscreen",
+    label: fullView ? "Normal view" : "Full Screen",
+    icon: officialChrome
+      ? fullView
+        ? SideWidgetArrowsPointingInIcon
+        : SideWidgetExpandIcon
+      : fullView
+        ? SideWidgetMedSizeIcon
+        : SideWidgetFullScreenIcon,
+    onClick: () => onFullscreen?.(),
+    active: fullView,
+  }
+
   const officialTools: SideWidgetItem[] = [
-    {
-      id: "fullscreen",
-      label: fullView ? "Normal view" : "Full Screen",
-      icon: fullView ? SideWidgetArrowsPointingInIcon : SideWidgetExpandIcon,
-      onClick: () => onFullscreen?.(),
-    },
+    fullscreenItem,
     {
       id: "review",
       label: "Review",
@@ -128,6 +139,7 @@ function PracticeSessionSideWidget({
   const items: SideWidgetItem[] = officialChrome
     ? [...officialTools, collapseItem]
     : [
+        fullscreenItem,
         {
           id: "review",
           label: "Review",
@@ -222,7 +234,7 @@ function PracticeSessionSideWidget({
             ? OFFICIAL_SIDE_WIDGET_EXPANDED_CLASS
             : OFFICIAL_SIDE_WIDGET_CLASS
           : cn(
-              "practice-session-side-widget absolute right-0 top-6 z-20 flex flex-col overflow-visible",
+              "practice-session-side-widget sticky top-6 z-20 flex shrink-0 flex-col overflow-visible",
               expanded ? ACTIVE_DRILL_SIDE_WIDGET_EXPANDED_CLASS : ACTIVE_DRILL_SIDE_WIDGET_COLLAPSED_CLASS,
             ),
       )}

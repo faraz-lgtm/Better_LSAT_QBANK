@@ -19,7 +19,7 @@ type PracticePrepTestSectionIntroPanelProps = {
   onGoToQuestions: () => void
 }
 
-/** Figma `18617:26312` — inner directions card (648×326) */
+/** Figma section-intro directions card — white elevated panel on exam chrome */
 function PracticePrepTestSectionIntroPanel({
   sectionNumber,
   sectionType,
@@ -28,14 +28,12 @@ function PracticePrepTestSectionIntroPanel({
   onGoToQuestions,
 }: PracticePrepTestSectionIntroPanelProps) {
   return (
-    <div
-      className={`flex w-full flex-col gap-6 rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] p-6 ${CARD_SHADOW}`}
-    >
+    <div className="flex w-full flex-col gap-6 bg-[var(--greyscale-0)]">
       <div className="flex w-full flex-col gap-4">
-        <h2 className="text-[20px] font-bold leading-[1.35] text-[#062357]">
+        <h2 className="text-[20px] font-bold leading-[1.35] text-[var(--color-student-heading)]">
           {sectionIntroTitle(sectionNumber, sectionType)}
         </h2>
-        <div className="flex items-center justify-between text-[14px] font-medium leading-[1.5] tracking-[0.28px] text-[#0d47a1]">
+        <div className="flex items-center justify-between text-[14px] font-medium leading-[1.5] tracking-[0.28px] text-[var(--primary)]">
           <span>
             {questionCount} question{questionCount === 1 ? "" : "s"}
           </span>

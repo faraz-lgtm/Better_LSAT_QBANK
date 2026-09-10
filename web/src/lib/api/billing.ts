@@ -40,6 +40,30 @@ export type BillingPublicConfig = {
   liveMode: boolean
 }
 
+export type BillingPaymentMethod = {
+  id: string
+  brand: string
+  brandLabel: string
+  last4: string
+  expMonth: number
+  expYear: number
+  funding: string | null
+  displayLabel: string
+  isDefault: boolean
+}
+
+export type BillingInvoice = {
+  id: string
+  number: string | null
+  title: string
+  amountPaidCents: number
+  currency: string
+  status: string
+  createdAt: string
+  invoicePdfUrl: string | null
+  hostedInvoiceUrl: string | null
+}
+
 export function createBillingApi(supabase: SupabaseClient) {
   async function invokeBillingPost<T>(
     functionName: string,
@@ -103,6 +127,34 @@ export function createBillingApi(supabase: SupabaseClient) {
       if (error) throw error
       if (!data?.status) throw new Error('No billing status in response')
       return data.status
+    },
+
+    async getPaymentMethods(): Promise<BillingPaymentMethod[]> {
+      const { data, error } = await invokeBillingPost<{ paymentMethods: BillingPaymentMethod[] }>(
+        'billing-get-payment-methods',
+      )
+      if (error) throw error
+      return data?.paymentMethods ?? []
+    },
+
+    async getInvoices(): Promise<BillingInvoice[]> {
+      const { data, error } = await invokeBillingPost<{ invoices: BillingInvoice[] }>(
+        'billing-get-invoices',
+      )
+      if (error) throw error
+      return data?.invoices ?? []
+    },
+
+    async createBillingPortalSession(options?: { appBaseUrl?: string }): Promise<string> {
+      const { data, error } = await invokeBillingPost<{ url: string }>(
+        'billing-create-portal-session',
+        {
+          appBaseUrl: options?.appBaseUrl ?? window.location.origin,
+        },
+      )
+      if (error) throw error
+      if (!data?.url) throw new Error('No billing portal URL in response')
+      return data.url
     },
   }
 }

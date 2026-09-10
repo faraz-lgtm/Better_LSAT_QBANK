@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import {
   Bookmark,
@@ -12,7 +12,6 @@ import {
   FIGMA_DROPDOWN_PILL_FILTER_CLASS,
   FigmaDropdown,
 } from "@/components/ui/figma-dropdown"
-import { Switch } from "@/components/ui/switch"
 import { explanationQuestionDetailHref } from "@/features/student/explanation-detail/explanation-question-index"
 import { useExplanationQuestionBookmarks } from "@/features/student/explanation-detail/use-explanation-question-bookmarks"
 import { PracticeResultsBookmarkedOnlyToggle } from "@/features/student/practice-session/practice-results-list-layout"
@@ -20,10 +19,12 @@ import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import {
   PT_RESULTS_ACTION_BUTTON_CLASS,
+  PT_RESULTS_BY_SECTION_CARDS_ROW_CLASS,
   PT_RESULTS_BY_SECTION_PANEL_CLASS,
   PT_RESULTS_CARD_CLASS,
   PT_RESULTS_HERO_CARD_CLASS,
   PT_RESULTS_PAGE_BG_CLASS,
+  PT_RESULTS_PAGE_CONTAINER_CLASS,
   PT_RESULTS_PAGE_GAP_CLASS,
   PT_RESULTS_PASSAGE_BADGE_CLASS,
   PT_RESULTS_PASSAGE_HEADER_CLASS,
@@ -38,6 +39,10 @@ import {
   PT_RESULTS_SURFACE_CARD_CLASS,
   PT_RESULTS_TAG_CLASS,
 } from "@/features/student/analytics/prep-test-results-section-styles"
+import {
+  STUDENT_MAIN_PADDING_CLASS,
+  STUDENT_SHELL_GUTTER_CLASS,
+} from "@/features/student/components/student-page-container"
 import { cn } from "@/lib/utils"
 import { PracticeResultOutcomeIcon } from "@/features/student/practice-session/practice-result-outcome-icon"
 import { PrepTestSectionResultCard } from "@/features/student/practice-session/prep-test-section-result-card"
@@ -63,7 +68,7 @@ import {
   resultsReviewSectionSessionPath,
 } from "@/features/student/blind-review/blind-review-navigation"
 
-const QUESTION_FILTER_OPTIONS = ["Question", "Passage", "Incorrect only"] as const
+const QUESTION_FILTER_OPTIONS = ["Both", "Correct", "Incorrect"] as const
 
 /** Figma results list — 24px gaps between white cards */
 const RESULTS_STACK_CLASS = "flex flex-col gap-6"
@@ -111,7 +116,7 @@ function ResultsSummaryPanel({ detail }: { detail: PrepTestResultsDetail }) {
 
       <div className={PT_RESULTS_BY_SECTION_PANEL_CLASS}>
         <h2 className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">RESULTS BY SECTION</h2>
-        <div className="flex min-w-0 gap-[7px] overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className={PT_RESULTS_BY_SECTION_CARDS_ROW_CLASS}>
           {detail.sections.map((section) => (
             <PrepTestSectionResultCard
               key={section.id}
@@ -376,6 +381,7 @@ function QuestionResultRow({
             difficulty={row.difficulty}
             popularityRows={popularityRows}
             correctLetter={row.correctLetter}
+            selectedLetter={row.selectedLetter}
             isUnanswered={row.isUnanswered}
           />
         </div>
@@ -488,15 +494,7 @@ function AboutMetricRow({ label, value }: { label: string; value: string }) {
 }
 
 /** Figma `18617:36795` — About this PrepTest */
-function AboutPrepTestCard({
-  meta,
-  excludeFromAnalytics,
-  onExcludeFromAnalyticsChange,
-}: {
-  meta: PrepTestAboutMeta
-  excludeFromAnalytics: boolean
-  onExcludeFromAnalyticsChange: (next: boolean) => void
-}) {
+function AboutPrepTestCard({ meta }: { meta: PrepTestAboutMeta }) {
   const rows: Array<[string, string, string, string]> = [
     ["Questions", meta.questionCount, "Timing", meta.timing],
     ["Time used", meta.timeUsed, "Take", meta.take],
@@ -510,23 +508,7 @@ function AboutPrepTestCard({
         "flex flex-col gap-6 px-6 py-4 shadow-[0px_1px_2px_rgba(16,24,40,0.06),0px_1px_3px_rgba(16,24,40,0.1)]",
       )}
     >
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <p className="!m-0 !text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">About this PrepTest</p>
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          <div className="flex items-center gap-3">
-            <span className="!text-[20px] font-bold leading-[1.35] text-[var(--color-student-heading)]">Insights</span>
-            <Switch
-              checked={excludeFromAnalytics}
-              onChange={(event) => onExcludeFromAnalyticsChange(event.target.checked)}
-              aria-label="Exclude this PrepTest from insights"
-              size="sm"
-            />
-          </div>
-          <p className="text-xs font-normal leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
-            Exclude from Insights
-          </p>
-        </div>
-      </div>
+      <p className="!m-0 !text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">About this PrepTest</p>
 
       <div className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
         {rows.map(([leftLabel, leftValue, rightLabel, rightValue]) => (
@@ -554,9 +536,8 @@ function AnalyticsPrepTestResultsPage() {
   const analyticsApi = useAnalyticsApi()
   const practiceApi = usePracticeApi()
   const { bookmarkedIds, toggleQuestionBookmark } = useExplanationQuestionBookmarks()
-  const [questionFilter, setQuestionFilter] = useState<(typeof QUESTION_FILTER_OPTIONS)[number]>("Question")
+  const [questionFilter, setQuestionFilter] = useState<(typeof QUESTION_FILTER_OPTIONS)[number]>("Both")
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
-  const [excludeFromAnalytics, setExcludeFromAnalytics] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [detail, setDetail] = useState<PrepTestResultsDetail | null>(null)
@@ -587,7 +568,6 @@ function AnalyticsPrepTestResultsPage() {
         setPrepTestId(api.prepTestId)
         setPrepTestTitle(api.prepTestTitle)
         setModuleId(api.moduleId)
-        setExcludeFromAnalytics(api.excluded)
       })
       .catch((e) => {
         setError(e instanceof Error ? e.message : "Failed to load")
@@ -600,17 +580,6 @@ function AnalyticsPrepTestResultsPage() {
     return formatPrepTestResultsTitle(prepTestTitle, moduleId, completedAt)
   }, [completedAt, moduleId, prepTestTitle])
 
-  const handleExcludeFromInsightsChange = useCallback(
-    (next: boolean) => {
-      setExcludeFromAnalytics(next)
-      if (!practiceApi || !testId) return
-      void practiceApi.updateSession({ sessionId: testId, excluded: next }).catch(() => {
-        setExcludeFromAnalytics((current) => (current === next ? !next : current))
-      })
-    },
-    [practiceApi, testId],
-  )
-
   if (error && !loading) {
     return (
       <StudentMain>
@@ -619,11 +588,19 @@ function AnalyticsPrepTestResultsPage() {
     )
   }
 
+  const resultsShellClassName = cn(
+    PT_RESULTS_PAGE_CONTAINER_CLASS,
+    STUDENT_SHELL_GUTTER_CLASS,
+    STUDENT_MAIN_PADDING_CLASS,
+    PT_RESULTS_PAGE_BG_CLASS,
+  )
+
   if (loading || !detail) {
     return (
       <StudentMain
+        fullBleed
         className={cn("min-h-full", PT_RESULTS_PAGE_BG_CLASS)}
-        contentClassName={cn("flex min-h-0 flex-1 flex-col", PT_RESULTS_PAGE_BG_CLASS)}
+        contentClassName={cn("flex min-h-0 flex-1 flex-col", resultsShellClassName)}
       >
         <StudentPageLoader centered className="min-h-0 flex-1" label="Loading…" />
       </StudentMain>
@@ -632,21 +609,15 @@ function AnalyticsPrepTestResultsPage() {
 
   return (
     <StudentMain
+      fullBleed
       className={cn("min-h-full", PT_RESULTS_PAGE_BG_CLASS)}
-      contentClassName={cn("min-h-full", PT_RESULTS_PAGE_BG_CLASS)}
+      contentClassName={cn("min-h-full", resultsShellClassName)}
     >
       <div className={PT_RESULTS_PAGE_GAP_CLASS}>
         <section className={PT_RESULTS_HERO_CARD_CLASS}>
           <div className="flex flex-col gap-[24px] sm:flex-row sm:items-center sm:justify-between">
             <h1 className="!m-0 !text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">{pageTitle}</h1>
             <div className="flex flex-wrap items-center gap-[24px]">
-              <button
-                type="button"
-                className="inline-flex h-10 items-center gap-2 rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-0)]"
-              >
-                <FigmaIcon name="share-square" className="size-4 shrink-0" aria-hidden />
-                Share
-              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -688,7 +659,8 @@ function AnalyticsPrepTestResultsPage() {
 
         {detail.sectionBlocks.map((block) => {
           const questions = filterPrepTestResultQuestions(block.questions, {
-            incorrectOnly: questionFilter === "Incorrect only",
+            correctOnly: questionFilter === "Correct",
+            incorrectOnly: questionFilter === "Incorrect",
             bookmarkedOnly,
             bookmarkedIds,
           })
@@ -722,7 +694,8 @@ function AnalyticsPrepTestResultsPage() {
         {detail.sectionBlocks.every(
           (block) =>
             filterPrepTestResultQuestions(block.questions, {
-              incorrectOnly: questionFilter === "Incorrect only",
+              correctOnly: questionFilter === "Correct",
+              incorrectOnly: questionFilter === "Incorrect",
               bookmarkedOnly,
               bookmarkedIds,
             }).length === 0,
@@ -730,17 +703,15 @@ function AnalyticsPrepTestResultsPage() {
           <p className="rounded-[16px] border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-8 text-center text-sm text-[var(--greyscale-500)]">
             {bookmarkedOnly
               ? "No bookmarked questions in this PrepTest. Bookmark a question to see it here."
-              : questionFilter === "Incorrect only"
+              : questionFilter === "Incorrect"
                 ? "No incorrect questions in this PrepTest."
-                : "No questions to show."}
+                : questionFilter === "Correct"
+                  ? "No correct questions in this PrepTest."
+                  : "No questions to show."}
           </p>
         ) : null}
 
-        <AboutPrepTestCard
-          meta={detail.about}
-          excludeFromAnalytics={excludeFromAnalytics}
-          onExcludeFromAnalyticsChange={handleExcludeFromInsightsChange}
-        />
+        <AboutPrepTestCard meta={detail.about} />
       </div>
       </div>
     </StudentMain>

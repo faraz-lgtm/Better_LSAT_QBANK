@@ -115,6 +115,57 @@ describe("PracticeSessionHeader LSAT default view", () => {
     await user.click(screen.getByRole("button", { name: "Close exam" }))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it("toggles Passage Only View from the LSAT header like official", async () => {
+    const user = userEvent.setup()
+    const onPassageOnlyViewChange = vi.fn()
+
+    const { rerender } = render(
+      <PracticeSessionHeader
+        variant="active-drill"
+        title="Varied Mix"
+        findQuery=""
+        onFindQueryChange={() => undefined}
+        {...highlightHandlers}
+        timerDisplaySeconds={60}
+        timerPaused={false}
+        onTimerPauseRequest={() => undefined}
+        timerProgress={1}
+        finishButton={null}
+        passageOnlyView={false}
+        onPassageOnlyViewChange={onPassageOnlyViewChange}
+      />,
+    )
+
+    const toggle = screen.getByRole("button", { name: "Passage Only View" })
+    expect(toggle).toHaveAttribute("aria-pressed", "false")
+    await user.click(toggle)
+    expect(onPassageOnlyViewChange).toHaveBeenCalledWith(true)
+
+    rerender(
+      <PracticeSessionHeader
+        variant="active-drill"
+        title="Varied Mix"
+        findQuery=""
+        onFindQueryChange={() => undefined}
+        {...highlightHandlers}
+        timerDisplaySeconds={60}
+        timerPaused={false}
+        onTimerPauseRequest={() => undefined}
+        timerProgress={1}
+        finishButton={null}
+        passageOnlyView
+        onPassageOnlyViewChange={onPassageOnlyViewChange}
+      />,
+    )
+
+    expect(screen.getByRole("button", { name: "Passage Only View" })).toHaveAttribute("aria-pressed", "true")
+    expect(screen.getByRole("button", { name: "Passage Only View" })).toHaveClass(
+      "border-[var(--primary)]",
+      "bg-[var(--primary-25)]",
+      "text-[var(--primary)]",
+    )
+  })
 })
 
 describe("PracticeSessionHeader official view", () => {

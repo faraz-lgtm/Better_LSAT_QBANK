@@ -15,7 +15,7 @@ import {
   BLIND_REVIEW_QUESTION_STEM_CLASS,
   BLIND_REVIEW_RECOMMENDED_BADGE_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
-import { ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import { ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS, ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeSessionSideWidget } from "@/features/student/practice-session/practice-session-side-action-rail"
 import { PracticeSessionResetResponseButton } from "@/features/student/practice-session/practice-session-reset-response-button"
 import type {
@@ -71,6 +71,8 @@ type PracticeBlindReviewQuestionPanelProps = {
   onOpenReview?: () => void
   reviewActive?: boolean
   onOpenAccessibility?: () => void
+  onFullscreen?: () => void
+  fullView?: boolean
 }
 
 function regionKey(questionId: string, part: string) {
@@ -115,6 +117,8 @@ function PracticeBlindReviewQuestionPanel({
   onOpenReview,
   reviewActive = false,
   onOpenAccessibility,
+  onFullscreen,
+  fullView = false,
 }: PracticeBlindReviewQuestionPanelProps) {
   const [hiddenChoices, setHiddenChoices] = useState<Record<number, boolean>>({})
   const [expandedChoiceIds, setExpandedChoiceIds] = useState<Set<string>>(() => new Set())
@@ -127,7 +131,9 @@ function PracticeBlindReviewQuestionPanel({
 
   const stemKey = regionKey(question.id, "stem")
   const stemHtml = getRegionHtml(stemKey, question.stemText ?? "")
+  /** Exam tools rail stays available only on Blind Review — hide on Actual (and Clean). */
   const useSideWidget = showSideWidget && !reviewChrome
+  const showExamToolsRail = useSideWidget && answerView === "blind_review"
   const hasMaskedChoices = Object.values(maskedChoices).some(Boolean)
 
   const explanationsApi = useMemo(() => {
@@ -212,6 +218,7 @@ function PracticeBlindReviewQuestionPanel({
     <div
       className={cn(
         "flex h-full min-h-0 flex-col",
+        useSideWidget && ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS,
         reviewChrome ? "practice-session-scroll-hidden overflow-y-auto" : "overflow-hidden",
       )}
     >
@@ -411,19 +418,28 @@ function PracticeBlindReviewQuestionPanel({
   if (!useSideWidget) return panel
 
   return (
-    <div className={cn(ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS, "h-full min-h-0 overflow-visible")}>
+    <div
+      className={cn(
+        showExamToolsRail ? ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS : "relative min-w-0",
+        "h-full min-h-0 overflow-visible",
+      )}
+    >
       {panel}
-      <PracticeSessionSideWidget
-        variant="active-drill"
-        flagged={flagged}
-        onToggleFlag={onToggleFlag ?? (() => undefined)}
-        flagsDisabled={flagsDisabled}
-        responseMasking={responseMasking}
-        onToggleResponseMasking={onToggleResponseMasking ?? (() => undefined)}
-        onReview={onOpenReview}
-        reviewActive={reviewActive}
-        onAccessibility={onOpenAccessibility}
-      />
+      {showExamToolsRail ? (
+        <PracticeSessionSideWidget
+          variant="active-drill"
+          flagged={flagged}
+          onToggleFlag={onToggleFlag ?? (() => undefined)}
+          flagsDisabled={flagsDisabled}
+          responseMasking={responseMasking}
+          onToggleResponseMasking={onToggleResponseMasking ?? (() => undefined)}
+          onReview={onOpenReview}
+          reviewActive={reviewActive}
+          onAccessibility={onOpenAccessibility}
+          onFullscreen={onFullscreen}
+          fullView={fullView}
+        />
+      ) : null}
     </div>
   )
 }

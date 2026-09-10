@@ -4,8 +4,9 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react"
 
 import { isQuestionRecommendedForBlindReview } from "@/features/student/blind-review/blind-review-navigation"
 import { isUnlimitedDrillQuestionCount, type DrillQuestion, type DrillSessionResponse } from "@/features/student/drills/drill-types"
-import { ACTIVE_DRILL_BODY_GRID_CLASS, ACTIVE_DRILL_FINISH_BUTTON_CLASS, ACTIVE_DRILL_FOOTER_CLASS, ACTIVE_DRILL_PASSAGE_PANE_CLASS, ACTIVE_DRILL_PASSAGE_TEXT_CLASS, ACTIVE_DRILL_QUESTION_PANE_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import { ACTIVE_DRILL_BODY_GRID_CLASS, ACTIVE_DRILL_FINISH_BUTTON_CLASS, ACTIVE_DRILL_FOOTER_CLASS, ACTIVE_DRILL_PASSAGE_PANE_CLASS, ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS, ACTIVE_DRILL_PASSAGE_TEXT_CLASS, ACTIVE_DRILL_QUESTION_PANE_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import {
+  EXAM_CARD_FULL_WIDTH_CLASS,
   OFFICIAL_BODY_GRID_CLASS,
   OFFICIAL_CARD_CLASS,
   OFFICIAL_FOOTER_CLASS,
@@ -90,6 +91,7 @@ import {
   resolveTimerBudgetSeconds,
   usePracticeSessionTimer,
 } from "@/features/student/practice-session/use-practice-session-timer"
+import { practiceSessionResultsPath } from "@/features/student/analytics/analytics-results-paths"
 import { stashDrillBlindReviewResult } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
 import {
   DASHBOARD_ADAPTIVE_DRILL_QUERY,
@@ -526,7 +528,7 @@ function DrillSessionPage() {
   }
   const actualOutcome = current ? answerOutcome(actualAnswersByQuestion[current.id]) : null
   const blindReviewOutcome = current ? answerOutcome(answersByQuestion[current.id]) : null
-  const reviewNavOutcome = reviewAfterComplete || resultsReviewMode
+  const resultsReviewNavOutcome = resultsReviewMode
     ? (questionId: string) =>
         resolvePracticeSessionQuestionNavOutcome(
           answerViewTab === "blind_review"
@@ -729,8 +731,13 @@ function DrillSessionPage() {
       navigate(path, { replace: true })
       return
     }
-    const params = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""
-    navigate(`/app/practice/results/${encodeURIComponent(sessionId)}${params}`, { replace: true })
+    navigate(
+      practiceSessionResultsPath(sessionId, {
+        source: "drill",
+        returnTo: returnTo || undefined,
+      }),
+      { replace: true },
+    )
   }
 
   const unansweredCount = useMemo(
@@ -947,6 +954,20 @@ function DrillSessionPage() {
     />
   )
 
+  const blindReviewMoreMenu =
+    useBlindReviewLayout && !resultsReviewMode ? (
+      <PracticeSessionFinishMenu
+        finishing={finishing}
+        submitLabel="Submit Drill"
+        iconTrigger
+        variant="active-drill"
+        showInterfaceToggle={false}
+        onSubmitSection={requestSubmitDrill}
+        onExit={leaveDrillSession}
+        onExitWithoutSaving={leaveDrillSession}
+      />
+    ) : null
+
   const blindReviewHeader = useBlindReviewLayout ? (
     <PracticeBlindReviewSessionHeader
       prepTestLabel={prepTestLabel}
@@ -969,6 +990,7 @@ function DrillSessionPage() {
       findQuery={findQuery}
       onFindQueryChange={setFindQuery}
       questionProgressLabel={questions.length > 0 ? `${safeIndex} of ${questions.length}` : null}
+      moreMenu={blindReviewMoreMenu}
     />
   ) : null
 
@@ -1139,7 +1161,7 @@ function DrillSessionPage() {
                   : officialChrome
                     ? cn(OFFICIAL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1 lg:pr-0")
                   : useActiveDrillLayout
-                  ? ACTIVE_DRILL_BODY_GRID_CLASS
+                  ? cn(ACTIVE_DRILL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1")
                   : "lg:grid-cols-2 lg:divide-x divide-[var(--greyscale-100)] dark:divide-[var(--greyscale-600)]",
             )}
           >
@@ -1152,7 +1174,9 @@ function DrillSessionPage() {
                   : officialChrome
                     ? OFFICIAL_PASSAGE_PANE_CLASS
                   : useActiveDrillLayout
-                    ? ACTIVE_DRILL_PASSAGE_PANE_CLASS
+                    ? passageOnlyView
+                      ? ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS
+                      : ACTIVE_DRILL_PASSAGE_PANE_CLASS
                     : "border-b border-[var(--greyscale-100)] p-5 lg:border-b-0",
               )}
             >
@@ -1182,6 +1206,7 @@ function DrillSessionPage() {
               className={cn(
                 "practice-session-pane min-h-0",
                 officialChrome && passageOnlyView && "hidden",
+                useActiveDrillLayout && passageOnlyView && "hidden",
                 useBlindReviewLayout
                   ? BLIND_REVIEW_QUESTION_PANEL_CLASS
                   : officialChrome
@@ -1279,7 +1304,7 @@ function DrillSessionPage() {
               recommendedForBr={(questionId) =>
                 isQuestionRecommendedForBlindReview(actualAnswersByQuestion[questionId])
               }
-              outcomeForQuestion={reviewNavOutcome}
+              outcomeForQuestion={resultsReviewNavOutcome}
               variant={sessionVariant}
               showPassageBreaks={sectionType === "RC"}
               onSelectQuestion={setQIndex}
@@ -1460,7 +1485,7 @@ function DrillSessionPage() {
           </div>
         </div>
       ) : useActiveDrillLayout ? (
-        <PracticeSessionImmersiveFrame>
+        <PracticeSessionImmersiveFrame fullWidth={officialChrome}>
           {error ? (
             <p className="mb-3 shrink-0 text-sm text-red-600" role="alert">
               {error}
@@ -1470,7 +1495,8 @@ function DrillSessionPage() {
             className={cn(
               officialChrome
                 ? OFFICIAL_CARD_CLASS
-                : "practice-session-card practice-session-card--active-drill relative flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+                : "practice-session-card practice-session-card--active-drill relative mx-auto flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+              isFullscreen && EXAM_CARD_FULL_WIDTH_CLASS,
             )}
           >
             {sessionCardContent}

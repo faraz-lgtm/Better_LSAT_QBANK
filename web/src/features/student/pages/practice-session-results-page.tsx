@@ -7,8 +7,13 @@ import { StudentPageLoader } from "@/features/student/components/student-page-lo
 import {
   PT_RESULTS_HERO_CARD_CLASS,
   PT_RESULTS_PAGE_BG_CLASS,
+  PT_RESULTS_PAGE_CONTAINER_CLASS,
   PT_RESULTS_PAGE_GAP_CLASS,
 } from "@/features/student/analytics/prep-test-results-section-styles"
+import {
+  STUDENT_MAIN_PADDING_CLASS,
+  STUDENT_SHELL_GUTTER_CLASS,
+} from "@/features/student/components/student-page-container"
 import { Button } from "@/components/ui/button"
 import { parseFlaggedQuestionIds } from "@/features/student/practice-session/practice-question-flags"
 import { buildPracticeResultsSectionGroups } from "@/features/student/practice-session/build-practice-results-section-groups"
@@ -199,12 +204,13 @@ function PracticeSessionResultsPage() {
   const [startingAnother, setStartingAnother] = useState(false)
 
   useEffect(() => {
-    if (results?.kind !== "SECTION") return
-    if (searchParams.get("source") === "section") return
+    if (!results) return
+    const expectedSource = results.kind === "SECTION" ? "section" : "drill"
+    if (searchParams.get("source") === expectedSource) return
     const next = new URLSearchParams(searchParams)
-    next.set("source", "section")
+    next.set("source", expectedSource)
     navigate({ search: `?${next.toString()}` }, { replace: true })
-  }, [navigate, results?.kind, searchParams])
+  }, [navigate, results, searchParams])
 
   useEffect(() => {
     if (!sessionId) {
@@ -215,6 +221,7 @@ function PracticeSessionResultsPage() {
     let alive = true
     setLoading(true)
     setError(null)
+    const sourceHint = searchParams.get("source")
 
     async function load() {
       try {
@@ -236,15 +243,21 @@ function PracticeSessionResultsPage() {
           return mapDrillResponse(drill, returnTo)
         }
 
-        try {
-          loaded = await loadSection()
-        } catch (sectionErr) {
-          const sectionMsg =
-            sectionErr instanceof Error ? sectionErr.message.toLowerCase() : ""
-          if (!sectionMsg.includes("not a section")) {
-            throw sectionErr
-          }
+        if (sourceHint === "drill") {
           loaded = await loadDrill()
+        } else if (sourceHint === "section") {
+          loaded = await loadSection()
+        } else {
+          try {
+            loaded = await loadSection()
+          } catch (sectionErr) {
+            const sectionMsg =
+              sectionErr instanceof Error ? sectionErr.message.toLowerCase() : ""
+            if (!sectionMsg.includes("not a section")) {
+              throw sectionErr
+            }
+            loaded = await loadDrill()
+          }
         }
 
         if (!alive || !loaded) return
@@ -279,7 +292,7 @@ function PracticeSessionResultsPage() {
     return () => {
       alive = false
     }
-  }, [explanationsApi, practiceApi, returnTo, sessionId])
+  }, [explanationsApi, practiceApi, returnTo, searchParams, sessionId])
 
   const perQuestionSeconds = useMemo(() => {
     if (!results || results.questions.length === 0) return 0
@@ -443,7 +456,7 @@ function PracticeSessionResultsPage() {
       : "Section 1"
   const reviewInTesterHref = () => {
     const backParams = new URLSearchParams(searchParams)
-    if (results.kind === "SECTION") backParams.set("source", "section")
+    backParams.set("source", results.kind === "SECTION" ? "section" : "drill")
     const backQuery = backParams.toString()
     const back = `/app/practice/results/${encodeURIComponent(sessionId)}${
       backQuery ? `?${backQuery}` : ""
@@ -456,17 +469,17 @@ function PracticeSessionResultsPage() {
     }
   }
 
-  function handleExcludedChange(next: boolean) {
-    setResults((current) => (current ? { ...current, excluded: next } : current))
-    void practiceApi.updateSession({ sessionId, excluded: next }).catch(() => {
-      setResults((current) => (current ? { ...current, excluded: !next } : current))
-    })
-  }
-
   return (
     <StudentMain
+      fullBleed
       className={cn("min-h-full", PT_RESULTS_PAGE_BG_CLASS)}
-      contentClassName={cn("min-h-full", PT_RESULTS_PAGE_BG_CLASS)}
+      contentClassName={cn(
+        "min-h-full",
+        PT_RESULTS_PAGE_CONTAINER_CLASS,
+        STUDENT_SHELL_GUTTER_CLASS,
+        STUDENT_MAIN_PADDING_CLASS,
+        PT_RESULTS_PAGE_BG_CLASS,
+      )}
     >
       {isLrDrill || isLrSection ? (
         <LrDrillResultsView
@@ -478,13 +491,11 @@ function PracticeSessionResultsPage() {
           elapsedSeconds={results.elapsedSeconds}
           timing={results.timing}
           take={results.take}
-          excluded={results.excluded}
           questions={lrDrillQuestions}
           showBlindReview={showBlindReview}
           bookmarkedIds={bookmarkedIds}
           onToggleBookmark={toggleQuestionBookmark}
           onReviewInTester={reviewInTesterHref}
-          onExcludedChange={handleExcludedChange}
         />
       ) : isRcDrill || isRcSection ? (
         <RcDrillResultsView
@@ -497,14 +508,12 @@ function PracticeSessionResultsPage() {
           elapsedSeconds={results.elapsedSeconds}
           timing={results.timing}
           take={results.take}
-          excluded={results.excluded}
           passages={rcDrillPassages}
           questions={lrDrillQuestions}
           showBlindReview={showBlindReview}
           bookmarkedIds={bookmarkedIds}
           onToggleBookmark={toggleQuestionBookmark}
           onReviewInTester={reviewInTesterHref}
-          onExcludedChange={handleExcludedChange}
         />
       ) : (
       <div className={PT_RESULTS_PAGE_GAP_CLASS}>

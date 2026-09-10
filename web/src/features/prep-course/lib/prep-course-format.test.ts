@@ -122,35 +122,28 @@ describe("prep-course-format curriculum helpers", () => {
     expect(lessonRowSubtitle(baseLesson)).toBeNull()
   })
 
-  it("resolveLessonRowDisplay infers drill styling from title prefixes", () => {
+  it("resolveLessonRowDisplay uses the uploaded lesson type, not title or body guesses", () => {
+    expect(
+      resolveLessonRowDisplay({
+        ...baseLesson,
+        lesson_type: "video_text",
+        title: "Active Drill: Identifying Premises and Conclusions (Easy)",
+        text_content: "<p>You try this example after reading.</p>",
+        duration_minutes: 0,
+      }),
+    ).toEqual({
+      title: "Active Drill: Identifying Premises and Conclusions (Easy)",
+      iconType: "video_text",
+      subtitle: null,
+    })
     expect(
       resolveLessonRowDisplay({
         ...baseLesson,
         lesson_type: "video_text",
         title: "Rep Work: Following the Signs",
         duration_minutes: 0,
-      }),
-    ).toEqual({
-      title: "Following the Signs",
-      iconType: "rep_work",
-      subtitle: {
-        label: "Rep Work",
-        duration: "0 mins",
-        accentClass: "text-[#3374ff]",
-      },
-    })
-    expect(
-      resolveLessonRowDisplay({
-        ...baseLesson,
-        lesson_type: "video_text",
-        title: "Active Drill: Identifying Premises and Conclusions (Easy)",
-        duration_minutes: 0,
       }).subtitle,
-    ).toEqual({
-      label: "Active Drill",
-      duration: "0 mins",
-      accentClass: "text-[#00bc54]",
-    })
+    ).toBeNull()
     expect(
       resolveLessonRowDisplay({
         ...baseLesson,
@@ -158,23 +151,31 @@ describe("prep-course-format curriculum helpers", () => {
         title: "Full Drill: Main Conclusion Questions",
         duration_minutes: 0,
       }).subtitle,
+    ).toBeNull()
+    expect(
+      isResolvedAdaptiveDrillLesson({
+        ...baseLesson,
+        lesson_type: "video_text",
+        slug: "full-drill-main-conclusion-questions",
+        title: "Main Conclusion Questions",
+      }),
+    ).toBe(false)
+    expect(
+      resolveLessonRowDisplay({
+        ...baseLesson,
+        lesson_type: "active_drill",
+        title: "Active Drill: Identifying Premises and Conclusions (Easy)",
+        duration_minutes: 11,
+      }),
     ).toEqual({
-      label: "Smart Drill",
-      duration: "0 mins",
-      accentClass: "text-[#0bbcc9]",
+      title: "Identifying Premises and Conclusions (Easy)",
+      iconType: "active_drill",
+      subtitle: {
+        label: "Active Drill",
+        duration: "11 mins",
+        accentClass: "text-[#00bc54]",
+      },
     })
-    expect(isResolvedAdaptiveDrillLesson({
-      ...baseLesson,
-      lesson_type: "video_text",
-      slug: "full-drill-main-conclusion-questions",
-      title: "Main Conclusion Questions",
-    })).toBe(true)
-    expect(isResolvedAdaptiveDrillLesson({
-      ...baseLesson,
-      lesson_type: "video_text",
-      slug: "intro-to-lsat",
-      title: "Adaptive Drill - Mixed Prep (5 Qs)",
-    })).toBe(true)
   })
 
   it("countCompletedLessons and lessonProgressPercent", () => {

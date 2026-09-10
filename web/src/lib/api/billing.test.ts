@@ -24,7 +24,12 @@ describe('createBillingApi', () => {
     expect(url).toBe('https://checkout.stripe.test/session')
     expect(invoke).toHaveBeenCalledWith('billing-create-checkout-session', {
       method: 'POST',
-      body: { plan: 'core' },
+      body: {
+        plan: 'core',
+        includeLawHub: undefined,
+        appBaseUrl: window.location.origin,
+        successPath: undefined,
+      },
       headers: { Authorization: 'Bearer t1' },
     })
   })
@@ -63,6 +68,79 @@ describe('createBillingApi', () => {
     expect(invoke).toHaveBeenCalledWith('billing-get-status', {
       method: 'POST',
       body: {},
+      headers: { Authorization: 'Bearer t1' },
+    })
+  })
+
+  it('getPaymentMethods invokes billing-get-payment-methods', async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        paymentMethods: [
+          {
+            id: 'pm_1',
+            brand: 'visa',
+            brandLabel: 'VISA',
+            last4: '4242',
+            expMonth: 9,
+            expYear: 2028,
+            funding: 'credit',
+            displayLabel: 'Visa Credit',
+            isDefault: true,
+          },
+        ],
+      },
+      error: null,
+    })
+    const api = createBillingApi(mockSupabase(invoke))
+    const methods = await api.getPaymentMethods()
+    expect(methods[0]?.last4).toBe('4242')
+    expect(invoke).toHaveBeenCalledWith('billing-get-payment-methods', {
+      method: 'POST',
+      body: {},
+      headers: { Authorization: 'Bearer t1' },
+    })
+  })
+
+  it('getInvoices invokes billing-get-invoices', async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        invoices: [
+          {
+            id: 'in_1',
+            number: 'INV-1',
+            title: 'Pro Monthly',
+            amountPaidCents: 3900,
+            currency: 'usd',
+            status: 'paid',
+            createdAt: '2026-08-24T00:00:00.000Z',
+            invoicePdfUrl: 'https://stripe.test/pdf',
+            hostedInvoiceUrl: null,
+          },
+        ],
+      },
+      error: null,
+    })
+    const api = createBillingApi(mockSupabase(invoke))
+    const invoices = await api.getInvoices()
+    expect(invoices).toHaveLength(1)
+    expect(invoke).toHaveBeenCalledWith('billing-get-invoices', {
+      method: 'POST',
+      body: {},
+      headers: { Authorization: 'Bearer t1' },
+    })
+  })
+
+  it('createBillingPortalSession invokes billing-create-portal-session', async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: { url: 'https://billing.stripe.test/session' },
+      error: null,
+    })
+    const api = createBillingApi(mockSupabase(invoke))
+    const url = await api.createBillingPortalSession({ appBaseUrl: 'http://localhost:5173' })
+    expect(url).toBe('https://billing.stripe.test/session')
+    expect(invoke).toHaveBeenCalledWith('billing-create-portal-session', {
+      method: 'POST',
+      body: { appBaseUrl: 'http://localhost:5173' },
       headers: { Authorization: 'Bearer t1' },
     })
   })
