@@ -16,6 +16,7 @@ import type {
   PrepLessonLinkedQuestionRef,
 } from "@/lib/api/prep-course"
 import { LessonHtmlContent } from "@/lib/html/html-content"
+import { sanitizeLessonHtml } from "@/lib/html/sanitize-html"
 
 type DrillResultsPart = "cards" | "below" | "full"
 
@@ -288,44 +289,73 @@ function RepWorkResetIcon({ className, ...props }: SVGProps<SVGSVGElement>) {
   )
 }
 
-function resizeRepWorkTextarea(el: HTMLTextAreaElement) {
+function resizeRepWorkEditable(el: HTMLElement) {
+  el.style.minHeight = "88px"
   el.style.height = "auto"
-  el.style.overflow = "hidden"
   el.style.height = `${Math.max(88, el.scrollHeight)}px`
 }
 
 const RepWorkEditableQuestion = memo(function RepWorkEditableQuestion({
-  plainText,
+  html,
   questionLabel,
   showAnswer,
 }: {
-  plainText: string
+  html: string
   questionLabel: string
   showAnswer: boolean
 }) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const editorRef = useRef<HTMLDivElement>(null)
+  const safeHtml = useMemo(() => sanitizeLessonHtml(html) || "<p><br></p>", [html])
+  const [dirty, setDirty] = useState(false)
 
   useLayoutEffect(() => {
-    if (textareaRef.current) {
-      resizeRepWorkTextarea(textareaRef.current)
-    }
-  }, [plainText])
+    const el = editorRef.current
+    if (!el) return
+    if (document.activeElement === el) return
+    el.innerHTML = safeHtml
+    resizeRepWorkEditable(el)
+    setDirty(false)
+  }, [safeHtml])
 
   function handleReset() {
-    if (textareaRef.current) {
-      textareaRef.current.value = plainText
-      resizeRepWorkTextarea(textareaRef.current)
-    }
+    const el = editorRef.current
+    if (!el) return
+    el.innerHTML = safeHtml
+    resizeRepWorkEditable(el)
+    setDirty(false)
   }
 
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-2">
-      <textarea
-        ref={textareaRef}
-        defaultValue={plainText}
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        role="textbox"
+        aria-multiline="true"
         aria-label={questionLabel}
-        onInput={(event) => resizeRepWorkTextarea(event.currentTarget)}
-        className={`rep-work-question-input box-border max-w-full min-h-[88px] w-full resize-none overflow-hidden rounded-[16px] border bg-[var(--greyscale-0)] p-4 text-[var(--color-student-heading)] outline-none transition-colors focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]/15 ${
+        onInput={(event) => {
+          resizeRepWorkEditable(event.currentTarget)
+          setDirty(true)
+        }}
+        onPaste={(event) => {
+          event.preventDefault()
+          const text = event.clipboardData.getData("text/plain")
+          const selection = window.getSelection()
+          if (!selection?.rangeCount) return
+          const range = selection.getRangeAt(0)
+          range.deleteContents()
+          range.insertNode(document.createTextNode(text))
+          range.collapse(false)
+          selection.removeAllRanges()
+          selection.addRange(range)
+          const el = editorRef.current
+          if (el) {
+            resizeRepWorkEditable(el)
+            setDirty(true)
+          }
+        }}
+        className={`rep-work-question-input rep-work-question-body lsat-html-content lesson-html-body box-border max-w-full min-h-[88px] w-full overflow-hidden rounded-[16px] border bg-[var(--greyscale-0)] p-4 text-left text-[var(--color-student-heading)] outline-none transition-colors focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]/15 ${
           showAnswer ? "border-[var(--primary)]" : "border-[color:var(--greyscale-100)]"
         }`}
       />
@@ -334,7 +364,7 @@ const RepWorkEditableQuestion = memo(function RepWorkEditableQuestion({
         <p className="m-0 min-w-0 text-right text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[var(--greyscale-300)]">
           Click box to edit the text.
         </p>
-        {showAnswer ? (
+        {showAnswer || dirty ? (
           <button
             type="button"
             className="inline-flex h-[22px] shrink-0 items-center justify-center gap-2 rounded-[16px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary)] transition-opacity hover:opacity-80"
@@ -397,7 +427,6 @@ function clampHorizontalScroll(origin: HTMLElement | null) {
 
 function RepWorkPairCard({ pair, index }: { pair: RepWorkPair; index: number }) {
   const cardRef = useRef<HTMLLIElement>(null)
-  const plainQuestionText = useMemo(() => htmlToPlainText(pair.question), [pair.question])
   const hasAnswer = Boolean(htmlToPlainText(pair.answer))
   const [showAnswer, setShowAnswer] = useState(false)
 
@@ -435,7 +464,7 @@ function RepWorkPairCard({ pair, index }: { pair: RepWorkPair; index: number }) 
         <div className="min-w-0 max-w-full overflow-x-clip rounded-[16px] border border-[color:var(--greyscale-100)] bg-[var(--secondary-0)] p-6">
           <div className="flex min-w-0 flex-col gap-3">
             <RepWorkEditableQuestion
-              plainText={plainQuestionText}
+              html={pair.question}
               questionLabel={`Question ${index + 1} text`}
               showAnswer={showAnswer}
             />
