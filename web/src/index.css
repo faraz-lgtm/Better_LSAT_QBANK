@@ -3433,10 +3433,13 @@ select.ds-input {
 }
 
 .rep-work-question-input,
+.rep-work-question-body,
 .rep-work-answer-body,
 .rep-work-instructions-body.lsat-html-content,
 .rep-work-instructions-body .lsat-html-content,
 .rep-work-instructions-body .lesson-html-body,
+.rep-work-question-body .lsat-html-content,
+.rep-work-question-body .lesson-html-body,
 .rep-work-answer-body .lsat-html-content,
 .rep-work-answer-body .lesson-html-body {
   font-family: var(--sans);
@@ -3448,6 +3451,8 @@ select.ds-input {
   color: var(--color-student-heading);
 }
 
+.rep-work-question-body .lsat-html-content *,
+.rep-work-question-body .lesson-html-body *,
 .rep-work-answer-body .lsat-html-content *,
 .rep-work-answer-body .lesson-html-body *,
 .rep-work-instructions-body .lsat-html-content *,
@@ -3458,6 +3463,10 @@ select.ds-input {
 .rep-work-instructions-body.lsat-html-content p,
 .rep-work-instructions-body .lsat-html-content p,
 .rep-work-instructions-body .lesson-html-body p,
+.rep-work-question-body .lsat-html-content p,
+.rep-work-question-body .lesson-html-body p,
+.rep-work-question-body.lsat-html-content p,
+.rep-work-question-body.lesson-html-body p,
 .rep-work-answer-body .lsat-html-content p,
 .rep-work-answer-body .lesson-html-body p {
   margin: 0 0 0.75rem;
@@ -3471,6 +3480,8 @@ select.ds-input {
 .rep-work-instructions-body.lsat-html-content p:last-child,
 .rep-work-instructions-body .lsat-html-content p:last-child,
 .rep-work-instructions-body .lesson-html-body p:last-child,
+.rep-work-question-body .lsat-html-content p:last-child,
+.rep-work-question-body .lesson-html-body p:last-child,
 .rep-work-answer-body .lsat-html-content p:last-child,
 .rep-work-answer-body .lesson-html-body p:last-child {
   margin-bottom: 0;
@@ -3478,12 +3489,15 @@ select.ds-input {
 
 .rep-work-instructions-body.lsat-html-content p:empty,
 .rep-work-instructions-body .lsat-html-content p:empty,
+.rep-work-question-body .lsat-html-content p:empty,
 .rep-work-answer-body .lsat-html-content p:empty {
   display: none;
 }
 
 .rep-work-instructions-body .lesson-html-body ul,
 .rep-work-instructions-body .lesson-html-body ol,
+.rep-work-question-body .lesson-html-body ul,
+.rep-work-question-body .lesson-html-body ol,
 .rep-work-answer-body .lesson-html-body ul,
 .rep-work-answer-body .lesson-html-body ol {
   margin: 0 0 0.75rem;
@@ -3493,6 +3507,7 @@ select.ds-input {
 }
 
 .rep-work-instructions-body .lesson-html-body li,
+.rep-work-question-body .lesson-html-body li,
 .rep-work-answer-body .lesson-html-body li {
   margin: 0 0 0.35rem;
   font-size: 18px;
@@ -3501,29 +3516,83 @@ select.ds-input {
 
 .rep-work-instructions-body .lesson-html-body h1,
 .rep-work-instructions-body .lesson-html-body h2,
+.rep-work-question-body .lesson-html-body h1,
+.rep-work-question-body .lesson-html-body h2,
+.rep-work-question-body.lesson-html-body h1,
+.rep-work-question-body.lesson-html-body h2,
+.rep-work-question-body.lsat-html-content h1,
+.rep-work-question-body.lsat-html-content h2,
 .rep-work-answer-body .lesson-html-body h1,
 .rep-work-answer-body .lesson-html-body h2 {
-  font-size: 24px;
+  margin: 0.5rem 0;
+  font-size: 32px;
   font-weight: 700;
-  line-height: 1.3;
+  line-height: 1.25;
+  color: var(--color-student-heading);
 }
 
 .rep-work-instructions-body .lesson-html-body h3,
+.rep-work-question-body .lesson-html-body h3,
+.rep-work-question-body.lesson-html-body h3,
+.rep-work-question-body.lsat-html-content h3,
 .rep-work-answer-body .lesson-html-body h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  line-height: 1.4;
+  margin: 0.4rem 0;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-student-heading);
 }
 
 .rep-work-instructions-body .lesson-html-body h4,
 .rep-work-instructions-body .lesson-html-body h5,
 .rep-work-instructions-body .lesson-html-body h6,
+.rep-work-question-body .lesson-html-body h4,
+.rep-work-question-body .lesson-html-body h5,
+.rep-work-question-body .lesson-html-body h6,
+.rep-work-question-body.lesson-html-body h4,
+.rep-work-question-body.lesson-html-body h5,
+.rep-work-question-body.lesson-html-body h6,
+.rep-work-question-body.lsat-html-content h4,
+.rep-work-question-body.lsat-html-content h5,
+.rep-work-question-body.lsat-html-content h6,
 .rep-work-answer-body .lesson-html-body h4,
 .rep-work-answer-body .lesson-html-body h5,
 .rep-work-answer-body .lesson-html-body h6 {
-  font-size: 1rem;
+  margin: 0.35rem 0;
+  font-size: 20px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.35;
+  color: var(--color-student-heading);
+}
+
+.rep-work-question-body.lesson-html-body h1:first-child,
+.rep-work-question-body.lesson-html-body h2:first-child,
+.rep-work-question-body.lesson-html-body h3:first-child,
+.rep-work-question-body.lesson-html-body h4:first-child,
+.rep-work-question-body.lesson-html-body p:first-child,
+.rep-work-question-body .lesson-html-body h1:first-child,
+.rep-work-question-body .lesson-html-body h2:first-child,
+.rep-work-question-body .lesson-html-body h3:first-child,
+.rep-work-question-body .lesson-html-body p:first-child {
+  margin-top: 0;
+}
+
+.rep-work-question-body.lsat-html-content strong,
+.rep-work-question-body.lsat-html-content b,
+.rep-work-question-body .lsat-html-content strong,
+.rep-work-question-body .lsat-html-content b,
+.rep-work-question-body .lesson-html-body strong,
+.rep-work-question-body .lesson-html-body b {
+  font-weight: 700;
+}
+
+.rep-work-question-body.lsat-html-content hr,
+.rep-work-question-body.lesson-html-body hr,
+.rep-work-question-body .lesson-html-body hr {
+  margin: 16px 0;
+  border: 0;
+  border-top: 1px solid var(--greyscale-100);
+  height: 0;
 }
 
 .rep-work-question-input {
