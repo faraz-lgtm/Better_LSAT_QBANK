@@ -4356,6 +4356,22 @@ html.practice-finish-menu-open .practice-session-header--active-drill > div {
   z-index: 120;
 }
 
+/* Section select stays in-tree (app zoom breaks portaled fixed coords); lift header so menu paints above the card.
+   Do NOT raise z-index on every header child — the progress track is a later sibling and would paint over the menu. */
+html.practice-section-select-open .practice-session-header {
+  overflow: visible;
+  z-index: 120;
+}
+
+html.practice-section-select-open .practice-session-header > div:first-child,
+html.practice-section-select-open .practice-session-header .practice-session-scroll-hidden {
+  overflow: visible;
+}
+
+html.practice-section-select-open .practice-session-header > div:last-child {
+  z-index: 0;
+}
+
 /* Figma `20268:107290` — hide the exam side widget while the more panel is open */
 html.practice-exam-more-open .practice-session-side-widget {
   display: none;

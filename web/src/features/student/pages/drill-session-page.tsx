@@ -16,6 +16,9 @@ import {
 } from "@/features/student/practice-session/practice-session-official-styles"
 import { PracticeSessionActiveDrillFooterNav } from "@/features/student/practice-session/practice-session-active-drill-footer-nav"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
+import { PassageAnalysisBody } from "@/features/student/practice-session/passage-analysis-view"
+import { ReviewPassageCardHeader } from "@/features/student/practice-session/review-passage-card-header"
+import { useReviewPassageAnalysis } from "@/features/student/practice-session/use-review-passage-analysis"
 import { PracticeSessionHighlightPopover } from "@/features/student/practice-session/practice-session-highlight-popover"
 import type { BlindReviewAnswerView } from "@/features/student/practice-session/practice-blind-review-answer-toggle"
 import {
@@ -123,43 +126,6 @@ function choiceIndexFromAnswer(choices: DrillQuestion["choices"], selectedAnswer
 
 type QuestionAnswerState = { selectedAnswer: string; isCorrect: boolean }
 
-function ReviewStaticSwitch({ checked = false }: { checked?: boolean }) {
-  return (
-    <span
-      role="switch"
-      aria-checked={checked}
-      aria-disabled="true"
-      className={cn(
-        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent",
-        checked ? "bg-[var(--primary)]" : "bg-[var(--greyscale-300)]",
-      )}
-    >
-      <span
-        className={cn(
-          "block size-4 rounded-full bg-[var(--greyscale-0)] shadow-sm dark:bg-[var(--greyscale-900)]",
-          checked ? "translate-x-4" : "translate-x-0",
-        )}
-      />
-    </span>
-  )
-}
-
-function ReviewPassageCardHeader() {
-  return (
-    <div className="mb-8 flex h-8 shrink-0 items-center justify-between gap-4">
-      <span className="inline-flex h-8 items-center rounded-[8px] bg-[var(--primary-25)] px-4 py-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)]">
-        Passage Only View
-      </span>
-      <span className="inline-flex h-8 items-center gap-4" aria-label="Analysis View is display only">
-        <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
-          Analysis View
-        </span>
-        <ReviewStaticSwitch />
-      </span>
-    </div>
-  )
-}
-
 function DrillSessionPage() {
   const { scaleFactor: accommodationScaleFactor } = useAccommodations()
   const { sessionId } = useParams<{ sessionId: string }>()
@@ -197,6 +163,7 @@ function DrillSessionPage() {
   const [notesOpen, setNotesOpen] = useState(false)
   const [reviewSidePanel, setReviewSidePanel] = useState<PracticeReviewSidePanel>(null)
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false)
+  const [analysisViewOpen, setAnalysisViewOpen] = useState(false)
   const [reviewPanelOpen, setReviewPanelOpen] = useState(false)
   const [passageOnlyView, setPassageOnlyView] = useState(false)
   const [lineFocus, setLineFocus] = useState(false)
@@ -431,6 +398,17 @@ function DrillSessionPage() {
 
   const safeIndex = Math.min(Math.max(qIndex, 1), Math.max(questions.length, 1))
   const current = questions[safeIndex - 1]
+  const { passageAnalysis, analysisAvailable } = useReviewPassageAnalysis({
+    enabled: resultsReviewMode,
+    questionId: current?.id,
+    sectionType,
+  })
+  const showPassageAnalysis =
+    resultsReviewMode && analysisViewOpen && analysisAvailable && Boolean(passageAnalysis)
+
+  useEffect(() => {
+    setAnalysisViewOpen(false)
+  }, [current?.id])
 
   useEffect(() => {
     prevQuestionIdRef.current = null
@@ -994,6 +972,38 @@ function DrillSessionPage() {
     />
   ) : null
 
+  const reviewPassageHeader = resultsReviewMode ? (
+    <ReviewPassageCardHeader
+      analysisEnabled={analysisAvailable}
+      analysisChecked={analysisViewOpen}
+      onAnalysisCheckedChange={setAnalysisViewOpen}
+    />
+  ) : null
+
+  const renderPassagePaneBody = (annotatedClassName: string | undefined) =>
+    showPassageAnalysis && passageAnalysis ? (
+      <>
+        {reviewPassageHeader}
+        <PassageAnalysisBody analysis={passageAnalysis} passageBody={passageBody} />
+      </>
+    ) : (
+      <>
+        {reviewPassageHeader}
+        {sectionType === "RC" && current?.passage ? (
+          <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
+        ) : null}
+        <PracticeAnnotatedContent
+          regionKey={passageKey}
+          html={passageHtml}
+          findQuery={findQuery}
+          toolMode={highlights.toolMode}
+          onMouseUp={highlights.handleContentMouseUp}
+          onClickCapture={highlights.handleContentClick}
+          className={annotatedClassName}
+        />
+      </>
+    )
+
   const sessionInnerContent = (
     <>
       <div
@@ -1014,22 +1024,12 @@ function DrillSessionPage() {
                 ref={passagePaneRef}
                 className={resultsReviewMode ? REVIEW_PASSAGE_PANEL_CLASS : BLIND_REVIEW_NOTES_PASSAGE_PANEL_CLASS}
               >
-                {resultsReviewMode ? <ReviewPassageCardHeader /> : null}
-                {sectionType === "RC" && current.passage ? (
-                  <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
-                ) : null}
-                <PracticeAnnotatedContent
-                  regionKey={passageKey}
-                  html={passageHtml}
-                  findQuery={findQuery}
-                  toolMode={highlights.toolMode}
-                  onMouseUp={highlights.handleContentMouseUp}
-                  onClickCapture={highlights.handleContentClick}
-                  className={cn(
+                {renderPassagePaneBody(
+                  cn(
                     BLIND_REVIEW_PASSAGE_TEXT_CLASS,
                     resultsReviewMode && "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]",
-                  )}
-                />
+                  ),
+                )}
               </div>
               <div
                 ref={questionPaneRef}
@@ -1097,19 +1097,12 @@ function DrillSessionPage() {
           <div className={REVIEW_SIDE_PANEL_LAYOUT_CLASS}>
             <div className="contents">
               <div ref={passagePaneRef} className={REVIEW_PASSAGE_PANEL_CLASS}>
-                <ReviewPassageCardHeader />
-                {sectionType === "RC" && current.passage ? (
-                  <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
-                ) : null}
-                <PracticeAnnotatedContent
-                  regionKey={passageKey}
-                  html={passageHtml}
-                  findQuery={findQuery}
-                  toolMode={highlights.toolMode}
-                  onMouseUp={highlights.handleContentMouseUp}
-                  onClickCapture={highlights.handleContentClick}
-                  className={cn(BLIND_REVIEW_PASSAGE_TEXT_CLASS, "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]")}
-                />
+                {renderPassagePaneBody(
+                  cn(
+                    BLIND_REVIEW_PASSAGE_TEXT_CLASS,
+                    "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]",
+                  ),
+                )}
               </div>
               <div ref={questionPaneRef} className={REVIEW_QUESTION_PANEL_CLASS}>
                 <PracticeDrillQuestionPanel
@@ -1180,27 +1173,15 @@ function DrillSessionPage() {
                     : "border-b border-[var(--greyscale-100)] p-5 lg:border-b-0",
               )}
             >
-              {resultsReviewMode ? <ReviewPassageCardHeader /> : null}
-              {sectionType === "RC" && current.passage ? (
-                <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
-              ) : null}
-              <PracticeAnnotatedContent
-                regionKey={passageKey}
-                html={passageHtml}
-                findQuery={findQuery}
-                toolMode={highlights.toolMode}
-                onMouseUp={highlights.handleContentMouseUp}
-                onClickCapture={highlights.handleContentClick}
-                className={
-                  useBlindReviewLayout
-                    ? BLIND_REVIEW_PASSAGE_TEXT_CLASS
-                    : officialChrome
-                      ? OFFICIAL_PASSAGE_TEXT_CLASS
+              {renderPassagePaneBody(
+                useBlindReviewLayout
+                  ? BLIND_REVIEW_PASSAGE_TEXT_CLASS
+                  : officialChrome
+                    ? OFFICIAL_PASSAGE_TEXT_CLASS
                     : useActiveDrillLayout
                       ? ACTIVE_DRILL_PASSAGE_TEXT_CLASS
-                      : undefined
-                }
-              />
+                      : undefined,
+              )}
             </div>
             <div
               className={cn(
