@@ -65,6 +65,10 @@ const LESSON_ATTR = [
   "data-lesson-section",
   "data-variant",
   "data-bg",
+  "data-mt",
+  "data-mr",
+  "data-mb",
+  "data-ml",
 ] as const
 
 function purify(input: unknown, tags: readonly string[], attrs: readonly string[]): string {

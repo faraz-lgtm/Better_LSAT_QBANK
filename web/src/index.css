@@ -3394,7 +3394,7 @@ select.ds-input {
 }
 
 .lsat-html-content p {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0;
 }
 
 .lsat-html-content p:last-child {
@@ -3939,7 +3939,7 @@ html {
 }
 
 .lesson-html-body p {
-  margin: 0 0 0.75rem;
+  margin: 0;
   font-size: 16px;
   font-weight: 400;
   line-height: 1.5;
@@ -3953,7 +3953,8 @@ html {
 .lesson-tiptap-editor p:empty,
 .lesson-tiptap-editor p:has(> br:only-child),
 .lesson-tiptap-editor p:has(> br.ProseMirror-trailingBreak:only-child) {
-  min-height: 1.5em;
+  min-height: 0;
+  margin-bottom: 0;
 }
 
 .lesson-html-body p:last-child {
@@ -4075,7 +4076,7 @@ section[data-lesson-section][data-variant="empty"] {
 }
 
 .lesson-section-body p {
-  margin: 0 0 0.75rem;
+  margin: 0;
   font-size: 16px;
   line-height: 1.5;
   letter-spacing: 0.32px;

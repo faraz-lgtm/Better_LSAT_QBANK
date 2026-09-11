@@ -9,11 +9,118 @@ import TextAlign from "@tiptap/extension-text-align"
 import { TextStyle } from "@tiptap/extension-text-style"
 import Underline from "@tiptap/extension-underline"
 import Youtube from "@tiptap/extension-youtube"
-import { mergeAttributes, Node, type Editor } from "@tiptap/core"
+import { Extension, mergeAttributes, Node, type Editor } from "@tiptap/core"
 import { EditorContent, NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, useEditor, type NodeViewProps } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 
 import { preserveEmptyParagraphBreaks } from "@/features/admin/lib/course-builder-utils"
+
+/** Safe CSS length for block margins (px / rem / em, or bare number → px). Max 240px equivalent. */
+function normalizeMarginValue(raw: string): string | null {
+  const t = raw.trim().toLowerCase()
+  if (!t || t === "0") return t === "0" ? "0" : null
+  const m = /^(-?\d+(?:\.\d+)?)(px|rem|em)?$/.exec(t)
+  if (!m) return null
+  const num = Number(m[1])
+  if (!Number.isFinite(num) || Math.abs(num) > 240) return null
+  const unit = m[2] ?? "px"
+  return `${num}${unit}`
+}
+
+function readMarginFromElement(el: HTMLElement, prop: "marginTop" | "marginRight" | "marginBottom" | "marginLeft"): string | null {
+  const dataKey =
+    prop === "marginTop" ? "data-mt" : prop === "marginRight" ? "data-mr" : prop === "marginBottom" ? "data-mb" : "data-ml"
+  const fromData = normalizeMarginValue(el.getAttribute(dataKey) ?? "")
+  if (fromData) return fromData
+  return normalizeMarginValue(el.style?.[prop] ?? "")
+}
+
+function marginAttrsToCssProps(attrs: Record<string, unknown>): {
+  marginTop?: string
+  marginRight?: string
+  marginBottom?: string
+  marginLeft?: string
+} {
+  const out: {
+    marginTop?: string
+    marginRight?: string
+    marginBottom?: string
+    marginLeft?: string
+  } = {}
+  const mt = normalizeMarginValue(String(attrs.marginTop ?? ""))
+  const mr = normalizeMarginValue(String(attrs.marginRight ?? ""))
+  const mb = normalizeMarginValue(String(attrs.marginBottom ?? ""))
+  const ml = normalizeMarginValue(String(attrs.marginLeft ?? ""))
+  if (mt) out.marginTop = mt
+  if (mr) out.marginRight = mr
+  if (mb) out.marginBottom = mb
+  if (ml) out.marginLeft = ml
+  return out
+}
+
+function marginAttrsToData(attrs: Record<string, unknown>): Record<string, string> {
+  const out: Record<string, string> = {}
+  const mt = normalizeMarginValue(String(attrs.marginTop ?? ""))
+  const mr = normalizeMarginValue(String(attrs.marginRight ?? ""))
+  const mb = normalizeMarginValue(String(attrs.marginBottom ?? ""))
+  const ml = normalizeMarginValue(String(attrs.marginLeft ?? ""))
+  if (mt) out["data-mt"] = mt
+  if (mr) out["data-mr"] = mr
+  if (mb) out["data-mb"] = mb
+  if (ml) out["data-ml"] = ml
+  return out
+}
+
+const MARGIN_ATTR_DEFS = {
+  marginTop: {
+    default: null as string | null,
+    parseHTML: (element: HTMLElement) => readMarginFromElement(element, "marginTop"),
+    renderHTML: (attributes: Record<string, unknown>) => {
+      const v = normalizeMarginValue(String(attributes.marginTop ?? ""))
+      if (!v) return {}
+      return { "data-mt": v, style: `margin-top: ${v}` }
+    },
+  },
+  marginRight: {
+    default: null as string | null,
+    parseHTML: (element: HTMLElement) => readMarginFromElement(element, "marginRight"),
+    renderHTML: (attributes: Record<string, unknown>) => {
+      const v = normalizeMarginValue(String(attributes.marginRight ?? ""))
+      if (!v) return {}
+      return { "data-mr": v, style: `margin-right: ${v}` }
+    },
+  },
+  marginBottom: {
+    default: null as string | null,
+    parseHTML: (element: HTMLElement) => readMarginFromElement(element, "marginBottom"),
+    renderHTML: (attributes: Record<string, unknown>) => {
+      const v = normalizeMarginValue(String(attributes.marginBottom ?? ""))
+      if (!v) return {}
+      return { "data-mb": v, style: `margin-bottom: ${v}` }
+    },
+  },
+  marginLeft: {
+    default: null as string | null,
+    parseHTML: (element: HTMLElement) => readMarginFromElement(element, "marginLeft"),
+    renderHTML: (attributes: Record<string, unknown>) => {
+      const v = normalizeMarginValue(String(attributes.marginLeft ?? ""))
+      if (!v) return {}
+      return { "data-ml": v, style: `margin-left: ${v}` }
+    },
+  },
+}
+
+const BlockMargin = Extension.create({
+  name: "blockMargin",
+  addGlobalAttributes() {
+    return [
+      {
+        types: ["paragraph", "heading", "lessonSection"],
+        attributes: MARGIN_ATTR_DEFS,
+      },
+    ]
+  },
+})
 
 function isSafeHttpUrl(raw: string): boolean {
   const t = raw.trim().toLowerCase()
@@ -50,6 +157,8 @@ function LessonSectionView({ node, updateAttributes, deleteNode }: NodeViewProps
   const backgroundColor = isSafeHexColor(String(node.attrs.backgroundColor ?? ""))
     ? String(node.attrs.backgroundColor)
     : DEFAULT_RECAP_BG
+  const marginCss = marginAttrsToCssProps(node.attrs as Record<string, unknown>)
+  const marginData = marginAttrsToData(node.attrs as Record<string, unknown>)
 
   if (variant === "heading") {
     return (
@@ -60,6 +169,8 @@ function LessonSectionView({ node, updateAttributes, deleteNode }: NodeViewProps
         data-variant={variant}
         data-label={label}
         data-bg={backgroundColor}
+        {...marginData}
+        style={marginCss}
       >
         <div className="flex items-center gap-2" contentEditable={false}>
           <input
@@ -94,7 +205,11 @@ function LessonSectionView({ node, updateAttributes, deleteNode }: NodeViewProps
       data-variant={variant}
       data-label={label}
       data-bg={backgroundColor}
-      style={isRecapDefaultColor(backgroundColor) ? { background: RECAP_GRADIENT } : { backgroundColor }}
+      {...marginData}
+      style={{
+        ...(isRecapDefaultColor(backgroundColor) ? { background: RECAP_GRADIENT } : { backgroundColor }),
+        ...marginCss,
+      }}
     >
       <div className="mb-4 flex items-center gap-3" contentEditable={false}>
         <input
@@ -243,6 +358,7 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
         orderedList: { keepMarks: true, keepAttributes: false },
       }),
       LessonSection,
+      BlockMargin,
       Underline,
       Link.configure({
         openOnClick: false,
@@ -280,7 +396,7 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
     editorProps: {
       attributes: {
         class:
-          "lesson-tiptap-editor max-w-none focus:outline-none px-4 py-3 text-[15px] leading-relaxed text-[#1a1b25] [&_h1]:m-0 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-[1.3] [&_h1]:text-[#36394a] [&_h2]:m-0 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:leading-[1.3] [&_h2]:text-[#36394a] [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:text-base [&_h4]:font-semibold [&_p]:mb-3 [&_p]:text-base [&_p]:leading-[1.5] [&_p]:tracking-[0.32px] [&_p]:text-[#36394a] [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_blockquote]:border-l-4 [&_blockquote]:border-[#dfe1e7] [&_blockquote]:pl-4 [&_blockquote]:italic [&_pre]:rounded-md [&_pre]:bg-[#f6f8fa] [&_pre]:p-3 [&_code]:text-sm",
+          "lesson-tiptap-editor max-w-none focus:outline-none px-4 py-3 text-[15px] leading-relaxed text-[#1a1b25] [&_h1]:m-0 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-[1.3] [&_h1]:text-[#36394a] [&_h2]:m-0 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:leading-[1.3] [&_h2]:text-[#36394a] [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:text-base [&_h4]:font-semibold [&_p]:mb-0 [&_p]:text-base [&_p]:leading-[1.5] [&_p]:tracking-[0.32px] [&_p]:text-[#36394a] [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_blockquote]:border-l-4 [&_blockquote]:border-[#dfe1e7] [&_blockquote]:pl-4 [&_blockquote]:italic [&_pre]:rounded-md [&_pre]:bg-[#f6f8fa] [&_pre]:p-3 [&_code]:text-sm",
         style: `min-height:${minHeight}px`,
       },
     },
@@ -379,6 +495,61 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
     [editor],
   )
 
+  const activeMarginBlockType = useCallback((): "lessonSection" | "heading" | "paragraph" | null => {
+    if (!editor) return null
+    if (editor.isActive("lessonSection")) return "lessonSection"
+    if (editor.isActive("heading")) return "heading"
+    if (editor.isActive("paragraph")) return "paragraph"
+    return null
+  }, [editor])
+
+  const getActiveMarginAttrs = useCallback(() => {
+    const type = activeMarginBlockType()
+    if (!editor || !type) {
+      return { marginTop: "", marginRight: "", marginBottom: "", marginLeft: "" }
+    }
+    const attrs = editor.getAttributes(type)
+    return {
+      marginTop: String(attrs.marginTop ?? ""),
+      marginRight: String(attrs.marginRight ?? ""),
+      marginBottom: String(attrs.marginBottom ?? ""),
+      marginLeft: String(attrs.marginLeft ?? ""),
+    }
+  }, [activeMarginBlockType, editor])
+
+  const setBlockMargin = useCallback(
+    (side: "marginTop" | "marginRight" | "marginBottom" | "marginLeft", raw: string) => {
+      if (!editor) return
+      const type = activeMarginBlockType()
+      if (!type) return
+      const trimmed = raw.trim()
+      if (!trimmed) {
+        editor.chain().focus().updateAttributes(type, { [side]: null }).run()
+        return
+      }
+      const value = normalizeMarginValue(trimmed)
+      if (!value) return
+      editor.chain().focus().updateAttributes(type, { [side]: value }).run()
+    },
+    [activeMarginBlockType, editor],
+  )
+
+  const clearBlockMargins = useCallback(() => {
+    if (!editor) return
+    const type = activeMarginBlockType()
+    if (!type) return
+    editor
+      .chain()
+      .focus()
+      .updateAttributes(type, {
+        marginTop: null,
+        marginRight: null,
+        marginBottom: null,
+        marginLeft: null,
+      })
+      .run()
+  }, [activeMarginBlockType, editor])
+
   const insertVideoLink = useCallback(() => {
     if (!editor) return
     const raw = window.prompt("Video page URL (Vimeo, direct file, etc.) — inserted as a link", "https://")
@@ -448,6 +619,59 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
             onChange={(e) => setSectionBackground(e.target.value)}
           />
         </label>
+        {(() => {
+          const canMargin = Boolean(activeMarginBlockType())
+          const margins = getActiveMarginAttrs()
+          const toPxNumber = (raw: string) => {
+            const n = normalizeMarginValue(raw)
+            if (!n) return ""
+            const m = /^(-?\d+(?:\.\d+)?)px$/.exec(n)
+            return m ? m[1] : ""
+          }
+          const fieldClass =
+            "h-6 w-14 rounded border border-[#dfe1e7] bg-white px-1 text-[11px] text-[#1a1b25] outline-none disabled:cursor-not-allowed disabled:opacity-40"
+          return (
+            <div
+              className={`flex flex-wrap items-center gap-1 rounded px-1 py-0.5 ${canMargin ? "" : "opacity-40"}`}
+              title="Margins (px) for the selected paragraph, heading, or section"
+            >
+              {(
+                [
+                  ["MT", "marginTop", margins.marginTop],
+                  ["MR", "marginRight", margins.marginRight],
+                  ["MB", "marginBottom", margins.marginBottom],
+                  ["ML", "marginLeft", margins.marginLeft],
+                ] as const
+              ).map(([label, side, value]) => (
+                <label key={side} className="flex items-center gap-0.5 text-[10px] font-semibold uppercase tracking-[0.2px] text-[#666d80]">
+                  {label}
+                  <input
+                    type="number"
+                    min={0}
+                    max={240}
+                    step={1}
+                    placeholder="0"
+                    disabled={!canMargin}
+                    className={fieldClass}
+                    value={toPxNumber(value)}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      const next = e.target.value.trim()
+                      if (!next) {
+                        setBlockMargin(side, "")
+                        return
+                      }
+                      setBlockMargin(side, `${next}px`)
+                    }}
+                  />
+                </label>
+              ))}
+              <ToolbarButton title="Clear margins on selected block" disabled={!canMargin} onClick={clearBlockMargins}>
+                Clear M
+              </ToolbarButton>
+            </div>
+          )
+        })()}
         <ToolbarButton title="Heading 1" active={editor.isActive("heading", { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>
           H1
         </ToolbarButton>

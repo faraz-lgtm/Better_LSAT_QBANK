@@ -105,4 +105,14 @@ describe("sanitizeLessonHtml", () => {
     expect(out).toContain("colwidth")
     expect(out).toContain("text-align: center")
   })
+
+  it("keeps per-block margin styles and data attrs from the course builder", () => {
+    const out = sanitizeLessonHtml(
+      '<p data-mt="24px" data-mb="8px" style="margin-top: 24px; margin-bottom: 8px">Spaced</p>',
+    )
+    expect(out).toContain('data-mt="24px"')
+    expect(out).toContain('data-mb="8px"')
+    expect(out).toContain("margin-top: 24px")
+    expect(out).toContain("margin-bottom: 8px")
+  })
 })
