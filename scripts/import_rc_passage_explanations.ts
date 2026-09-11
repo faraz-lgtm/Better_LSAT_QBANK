@@ -23,10 +23,7 @@ type PassageRef = { id: string; source_group_id: string; created?: boolean }
 
 function defaultCsvPath(): string {
   return fromFileUrl(
-    new URL(
-      "../BetterLSAT_RC_Passage_Explanations - RC Passage Explanations.csv",
-      import.meta.url,
-    ),
+    new URL("../BetterLSAT_RC_Passage_Explanations.csv", import.meta.url),
   )
 }
 
