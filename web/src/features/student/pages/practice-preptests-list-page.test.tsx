@@ -47,14 +47,14 @@ const newestFirst = [poolItem("pt-901", "901"), poolItem("pt-900", "900")]
 const oldestFirst = [poolItem("pt-900", "900"), poolItem("pt-901", "901")]
 
 function mockPool(sort: PrepTestPoolSort = "newest") {
-  listPrepTestPool.mockImplementation((input: { sort?: PrepTestPoolSort } = {}) => {
+  listPrepTestPool.mockImplementation((input: { sort?: PrepTestPoolSort; pageSize?: number } = {}) => {
     const requested = input.sort === "oldest" ? "oldest" : sort
     const prepTests = requested === "oldest" ? oldestFirst : newestFirst
     return Promise.resolve({
       prepTests,
       total: prepTests.length,
       page: 1,
-      pageSize: 5,
+      pageSize: input.pageSize ?? 5,
       statusCounts: { all: 2, fresh: 2, in_progress: 0, completed: 0, blind_review: 0 },
     })
   })
@@ -90,7 +90,7 @@ describe("PracticePrepTestsListPage sort", () => {
 
     await waitFor(() => {
       expect(listPrepTestPool).toHaveBeenCalledWith(
-        expect.objectContaining({ sort: "oldest", page: 1 }),
+        expect.objectContaining({ sort: "oldest", page: 1, pageSize: 5 }),
       )
     })
     await waitFor(() => {
@@ -99,5 +99,57 @@ describe("PracticePrepTestsListPage sort", () => {
         "preptest-list-row-pt-901",
       ])
     })
+  })
+})
+
+describe("PracticePrepTestsListPage see more", () => {
+  it("loads the full PrepTest pool across capped pages when See more is clicked", async () => {
+    const user = userEvent.setup()
+    const allItems = Array.from({ length: 55 }, (_, i) => {
+      const n = 955 - i
+      return poolItem(`pt-${n}`, String(n))
+    })
+    listPrepTestPool.mockImplementation((input: { page?: number; pageSize?: number } = {}) => {
+      const page = input.page ?? 1
+      const pageSize = input.pageSize ?? 5
+      const start = (page - 1) * pageSize
+      return Promise.resolve({
+        prepTests: allItems.slice(start, start + pageSize),
+        total: allItems.length,
+        page,
+        pageSize,
+        statusCounts: {
+          all: allItems.length,
+          fresh: allItems.length,
+          in_progress: 0,
+          completed: 0,
+          blind_review: 0,
+        },
+      })
+    })
+
+    renderPage()
+
+    expect(await screen.findByTestId("preptest-list-row-pt-955")).toBeInTheDocument()
+    expect(screen.getAllByTestId(/preptest-list-row-/)).toHaveLength(5)
+    expect(screen.queryByTestId("preptest-list-row-pt-901")).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "See more" }))
+
+    await waitFor(() => {
+      expect(listPrepTestPool).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 1, pageSize: 50, sort: "newest" }),
+      )
+    })
+    await waitFor(() => {
+      expect(listPrepTestPool).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 2, pageSize: 50, sort: "newest" }),
+      )
+    })
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/preptest-list-row-/)).toHaveLength(55)
+    })
+    expect(screen.getByTestId("preptest-list-row-pt-901")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "See more" })).not.toBeInTheDocument()
   })
 })

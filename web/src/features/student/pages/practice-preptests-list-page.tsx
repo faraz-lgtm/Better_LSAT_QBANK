@@ -28,7 +28,13 @@ import {
   Settings,
 } from "lucide-react"
 
-const PAGE_SIZE = 5
+/** First paint shows a short list; “See more” loads the full filtered pool. */
+const INITIAL_PAGE_SIZE = 5
+/**
+ * Chunk size when expanding to the full list. Keep ≤ the edge `listPrepTestPool`
+ * max (deployed functions may still cap at 50).
+ */
+const LOAD_ALL_CHUNK_SIZE = 50
 
 const FILTER_TABS: { id: PrepTestPoolFilter; label: string }[] = [
   { id: "all", label: "All Tests" },
@@ -351,7 +357,6 @@ function PracticePrepTestsListPage() {
 
   const [filter, setFilter] = useState<PrepTestPoolFilter>("all")
   const [sort, setSort] = useState<(typeof SORT_OPTIONS)[number]>("Newest")
-  const [page, setPage] = useState(1)
   const [prepTests, setPrepTests] = useState<PrepTestPoolItem[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -361,46 +366,83 @@ function PracticePrepTestsListPage() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set())
   const [error, setError] = useState<string | null>(null)
 
+  const poolSort = sort === "Newest" ? "newest" : "oldest"
+
   useEffect(() => {
     let cancelled = false
-    const isLoadMore = page > 1
     void (async () => {
-      if (isLoadMore) setLoadingMore(true)
-      else setLoading(true)
+      setLoading(true)
       setError(null)
       try {
         const out = await practiceApi.listPrepTestPool({
           filter,
-          page,
-          pageSize: PAGE_SIZE,
-          sort: sort === "Newest" ? "newest" : "oldest",
+          page: 1,
+          pageSize: INITIAL_PAGE_SIZE,
+          sort: poolSort,
         })
         if (!cancelled) {
-          setPrepTests((prev) => (isLoadMore ? [...prev, ...out.prepTests] : out.prepTests))
+          setPrepTests(out.prepTests)
           setTotal(out.total)
         }
       } catch (e) {
         if (!cancelled) {
-          if (!isLoadMore) {
-            setPrepTests([])
-            setTotal(0)
-          }
+          setPrepTests([])
+          setTotal(0)
           setError(e instanceof Error ? e.message : "Failed to load PrepTests")
         }
       } finally {
-        if (!cancelled) {
-          if (isLoadMore) setLoadingMore(false)
-          else setLoading(false)
-        }
+        if (!cancelled) setLoading(false)
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [practiceApi, filter, sort, page])
+  }, [practiceApi, filter, poolSort])
 
   const visiblePrepTests = useMemo(() => filterPrepTestPoolItems(prepTests, filter), [prepTests, filter])
   const hasMore = visiblePrepTests.length < total
+
+  async function handleSeeMore() {
+    if (loadingMore || loading || !hasMore) return
+    setLoadingMore(true)
+    setError(null)
+    try {
+      const collected: PrepTestPoolItem[] = []
+      const seen = new Set<string>()
+      let nextTotal = total
+      let page = 1
+
+      // One click should expand to the full pool. Page in chunks so this still
+      // works when the edge function caps pageSize (historically 50).
+      while (collected.length < nextTotal) {
+        const out = await practiceApi.listPrepTestPool({
+          filter,
+          page,
+          pageSize: LOAD_ALL_CHUNK_SIZE,
+          sort: poolSort,
+        })
+        nextTotal = out.total
+        for (const item of out.prepTests) {
+          if (seen.has(item.id)) continue
+          seen.add(item.id)
+          collected.push(item)
+        }
+        if (out.prepTests.length === 0) break
+        page += 1
+        // Safety: avoid an infinite loop if total is stale vs returned rows.
+        if (page > Math.ceil(Math.max(nextTotal, 1) / LOAD_ALL_CHUNK_SIZE) + 2) break
+      }
+
+      setPrepTests(collected)
+      // Prefer the rows we actually collected so “See more” cannot stick when
+      // the API total is higher than what pagination returns.
+      setTotal(collected.length)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load PrepTests")
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   async function handlePrimary(item: PrepTestPoolItem) {
     setStartingId(item.id)
@@ -470,8 +512,7 @@ function PracticePrepTestsListPage() {
       <div className="mb-6 flex flex-col gap-6">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <p className="max-w-[908px] text-[14px] font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
-            Try a free PrepTest to gauge your starting point and see how to improve. When you&apos;re done, our
-            Insights will tell you what to work on.
+          Here you can find all official Prep Tests from the Law School Admission Council. When you're finished a PT, our Insights will tell you what to work on.
           </p>
           <button
             type="button"
@@ -488,14 +529,12 @@ function PracticePrepTestsListPage() {
           setFilter={(f) => {
             setLoading(true)
             setPrepTests([])
-            setPage(1)
             setFilter(f)
           }}
           sort={sort}
           setSort={(s) => {
             setLoading(true)
             setPrepTests([])
-            setPage(1)
             setSort(s)
           }}
         />
@@ -531,7 +570,7 @@ function PracticePrepTestsListPage() {
               <button
                 type="button"
                 disabled={loadingMore}
-                onClick={() => setPage((p) => p + 1)}
+                onClick={() => void handleSeeMore()}
                 className="inline-flex h-[52px] min-w-[160px] items-center justify-center rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)] disabled:opacity-60"
               >
                 {loadingMore ? "Loading…" : "See more"}
