@@ -50,6 +50,7 @@ import {
   LSAT_SCALED_Y_AXIS_LABELS,
   PERCENT_Y_AXIS_LABELS,
 } from "@/features/student/analytics/chart-y-axis"
+import { DEFAULT_DRILL_SCORE_TAB } from "@/features/student/analytics/score-chart-defaults"
 import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 
@@ -342,7 +343,7 @@ function AnalyticsDrillsPage() {
   const [drillTypes, setDrillTypes] = useState<DrillType[]>([])
   const [drillHistory, setDrillHistory] = useState<PrepTestHistoryEntry[]>([])
 
-  const [scoreTab, setScoreTab] = useState<ScoreTab>("ptEquivalent")
+  const [scoreTab, setScoreTab] = useState<ScoreTab>(DEFAULT_DRILL_SCORE_TAB)
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
   const [historySort, setHistorySort] = useState<HistorySort>("date-desc")

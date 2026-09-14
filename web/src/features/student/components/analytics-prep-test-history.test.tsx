@@ -125,6 +125,44 @@ describe("AnalyticsPrepTestHistory", () => {
     expect(screen.getByRole("link", { name: "View more" })).toHaveAttribute("href", "/app/analytics/drills")
   })
 
+  it("shows the practice-page LR and RC badges beside drill titles", () => {
+    render(
+      <AnalyticsPrepTestHistory
+        title="Drill History"
+        emptyNoun="drills"
+        visibleEntries={[
+          entries[0]!,
+          {
+            ...entries[1]!,
+            id: "rc-mix",
+            testLabel: "Passage Mix",
+            sectionType: "RC",
+          },
+        ]}
+        bookmarkedOnly={false}
+        onBookmarkedOnlyChange={() => {}}
+        onToggleBookmark={() => {}}
+      />,
+    )
+
+    expect(screen.getByLabelText("LR")).toBeInTheDocument()
+    expect(screen.getByLabelText("RC")).toBeInTheDocument()
+  })
+
+  it("omits the section badge when the history row has no section type", () => {
+    render(
+      <AnalyticsPrepTestHistory
+        visibleEntries={[{ ...entries[0]!, sectionType: null }]}
+        bookmarkedOnly={false}
+        onBookmarkedOnlyChange={() => {}}
+        onToggleBookmark={() => {}}
+      />,
+    )
+
+    expect(screen.queryByLabelText("LR")).not.toBeInTheDocument()
+    expect(screen.queryByLabelText("RC")).not.toBeInTheDocument()
+  })
+
   it("hides View more when the preview already shows every row", () => {
     render(
       <MemoryRouter>

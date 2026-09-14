@@ -15,6 +15,7 @@ function SectionInitialBadge({ section, variant = "default" }: SectionInitialBad
   if (variant === "compact") {
     return (
       <span
+        aria-label={section}
         className={`inline-flex size-[32px] shrink-0 items-center justify-center rounded-[8px] border-[0.5px] p-[5px] text-[14px] font-black leading-[1.5] tracking-[0.28px] ${tone}`}
       >
         {section}

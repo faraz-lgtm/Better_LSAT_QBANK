@@ -37,6 +37,7 @@ import {
   buildChartYAxisLabels,
   resolveRawScoreAxisMax,
 } from "@/features/student/analytics/chart-y-axis"
+import { DEFAULT_PREPTEST_SCORE_TAB } from "@/features/student/analytics/score-chart-defaults"
 import { cn } from "@/lib/utils"
 
 const SCORE_TABS = [
@@ -204,7 +205,7 @@ function AnalyticsPrepTestsPage() {
   const [loading, setLoading] = useState(true)
   const [prepRecords, setPrepRecords] = useState<PrepTestRecord[]>([])
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
-  const [scoreTab, setScoreTab] = useState<ScoreTab>("raw")
+  const [scoreTab, setScoreTab] = useState<ScoreTab>(DEFAULT_PREPTEST_SCORE_TAB)
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
   const [historySort, setHistorySort] = useState<HistorySort>("date-desc")
 
