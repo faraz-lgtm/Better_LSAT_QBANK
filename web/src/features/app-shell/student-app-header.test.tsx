@@ -79,6 +79,7 @@ describe("StudentAppHeader", () => {
     await waitFor(() => {
       expect(screen.getByText("Assad K.")).toBeInTheDocument()
     })
+    expect(screen.getByText("Assad K.")).toHaveClass("text-sm")
     expect(screen.getByText("assad@acelebrands.co")).toBeInTheDocument()
   })
 

@@ -12,7 +12,7 @@ vi.mock("@/lib/supabase/client", () => ({
 }))
 
 describe("StudentAppSidebar", () => {
-  it("shows premium navigation without diagnostic links", () => {
+  it("shows premium navigation including diagnostic links", () => {
     render(
       <MemoryRouter initialEntries={["/app"]}>
         <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
@@ -20,8 +20,8 @@ describe("StudentAppSidebar", () => {
     )
 
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument()
-    expect(screen.queryByRole("link", { name: "Diagnostic" })).not.toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: /Diagnostic Results/i })).not.toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Diagnostic" })).toHaveAttribute("href", "/intent")
+    expect(screen.getByRole("button", { name: /Diagnostic Results/i })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Prep Courses" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Explanations" })).toBeInTheDocument()
     expect(screen.queryByRole("link", { name: "Blind Review" })).not.toBeInTheDocument()
@@ -110,7 +110,7 @@ describe("StudentAppSidebar", () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={["/app"]}>
-        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} showDiagnosticNav />
+        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
       </MemoryRouter>,
     )
 
