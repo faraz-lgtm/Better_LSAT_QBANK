@@ -39,7 +39,9 @@ function ExplanationChoiceList({
   highlightChoiceId,
   initialExpandedChoiceId,
 }: ExplanationChoiceListProps) {
-  const [expandedId, setExpandedId] = useState<string | null>(initialExpandedChoiceId ?? null)
+  const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(
+    () => new Set(initialExpandedChoiceId ? [initialExpandedChoiceId] : []),
+  )
 
   return (
     <ul className="m-0 flex list-none flex-col gap-3 p-0">
@@ -49,7 +51,7 @@ function ExplanationChoiceList({
         const reveal = showCorrect && isCorrect
         const highlighted = highlightChoiceId != null && c.id === highlightChoiceId
         const expandable = hasExplanation(c.explanationHtml)
-        const expanded = expandedId === c.id
+        const expanded = expandedIds.has(c.id)
         const rowClass = reveal
           ? CORRECT_ROW_CLASS
           : highlighted
@@ -59,7 +61,12 @@ function ExplanationChoiceList({
 
         const toggleExpanded = () => {
           if (!expandable) return
-          setExpandedId((prev) => (prev === c.id ? null : c.id))
+          setExpandedIds((prev) => {
+            const next = new Set(prev)
+            if (next.has(c.id)) next.delete(c.id)
+            else next.add(c.id)
+            return next
+          })
         }
 
         return (

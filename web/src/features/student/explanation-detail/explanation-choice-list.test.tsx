@@ -26,6 +26,25 @@ describe("ExplanationChoiceList", () => {
     expect(screen.queryByText("Option explanation")).not.toBeInTheDocument()
   })
 
+  it("keeps multiple choice explanations open at once", async () => {
+    const user = userEvent.setup()
+    render(
+      <ExplanationChoiceList
+        choices={[
+          { id: "A", index: 1, text: "<p>Choice A</p>", explanationHtml: "<p>Because A is wrong</p>" },
+          { id: "B", index: 2, text: "<p>Choice B</p>", explanationHtml: "<p>Because B is wrong</p>" },
+        ]}
+        correctChoiceId="C"
+        showCorrect={false}
+      />,
+    )
+
+    await user.click(screen.getByText("Choice A").closest("button")!)
+    await user.click(screen.getByText("Choice B").closest("button")!)
+    expect(screen.getByText("Because A is wrong")).toBeInTheDocument()
+    expect(screen.getByText("Because B is wrong")).toBeInTheDocument()
+  })
+
   it("shows Figma-style check badge when correct answer is revealed", () => {
     render(
       <ExplanationChoiceList
