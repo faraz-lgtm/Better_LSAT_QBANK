@@ -320,10 +320,11 @@ function mapQuestionNode(
   status: ExplanationQuestionStatus,
 ): ExplanationQuestionNode {
   const num = q.question_number ?? 0
+  const passagePart = ctx.passageLabel && ctx.passageLabel !== 'LR' ? `.${ctx.passageLabel}` : ''
   return {
     id: q.id,
     number: num,
-    code: `PT${ctx.ptNum}.S${ctx.secNum}.${ctx.passageLabel}.Q${num}`,
+    code: `PT${ctx.ptNum}.S${ctx.secNum}${passagePart}.Q${num}`,
     snippet: snippetFromQuestion(q),
     topicName: topicNameFromQuestion(q, ctx.typeNamesById),
     status,

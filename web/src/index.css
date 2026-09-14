@@ -4197,6 +4197,13 @@ section[data-lesson-section][data-variant="empty"] {
   letter-spacing: 0;
 }
 
+/* After `.lesson-section-body p/li { color: heading }` and TipTap inline colors. */
+.lsat-html-content.passage-analysis-overall,
+.lsat-html-content.passage-analysis-overall * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
 /* Course HTML uses editor inline colors (#1a1b25 / #36394a). Force light text in student dark theme. */
 .dark .lesson-html-content {
   color: var(--color-student-heading);
@@ -5119,6 +5126,12 @@ html.student-shell-immersive .practice-session-card--blind-review {
 .dark .practice-session-card--official .practice-session-footer {
   background-color: var(--greyscale-0) !important;
   border-color: var(--greyscale-100);
+}
+
+.dark .practice-session-body .lsat-html-content.passage-analysis-overall,
+.dark .practice-session-body .lsat-html-content.passage-analysis-overall * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 .practice-session-card--blind-review .practice-session-pane--br-question {
