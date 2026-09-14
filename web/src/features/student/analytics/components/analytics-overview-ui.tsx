@@ -1,11 +1,14 @@
 import type { ReactNode } from "react"
-import { useState } from "react"
 import { Link } from "react-router-dom"
-import { ChevronDown, ChevronUp } from "lucide-react"
 
+import { Select } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { LSAT_SCALED_Y_AXIS_LABELS } from "@/features/student/analytics/chart-y-axis"
-import { visibleOverviewSectionDrillCount } from "@/features/student/analytics/overview-section-drills"
+import { LSAT_GOAL_SCORE_OPTIONS } from "@/features/student/analytics/lsat-goal-score"
+import {
+  OVERVIEW_SECTION_DRILLS_MAX,
+  topOverviewSectionDrills,
+} from "@/features/student/analytics/overview-section-drills"
 import type {
   AnalyticsSection,
   AnalyticsStat,
@@ -128,7 +131,7 @@ function AccuracyProgress({
 }) {
   if (!unlocked || accuracy == null) {
     return (
-      <div className="flex w-[180px] shrink-0 flex-col gap-1">
+      <div className="flex w-[240px] shrink-0 flex-col gap-1">
         <span className="text-[11px] font-semibold leading-[1.4] tracking-[0.02em] text-[var(--greyscale-500)]">
           Keep practicing to unlock this.
         </span>
@@ -138,8 +141,8 @@ function AccuracyProgress({
   }
   if (goal == null) {
     return (
-      <div className="flex w-[180px] shrink-0 flex-col gap-1">
-        <span className="text-[11px] font-semibold leading-[1.4] tracking-[0.02em] text-[var(--primary)]">
+      <div className="flex w-[240px] shrink-0 flex-col gap-1">
+        <span className="whitespace-nowrap text-[11px] font-semibold leading-[1.4] tracking-[0.02em] text-[var(--primary)]">
           Your accuracy: {Math.max(0, Math.min(100, accuracy))}%
         </span>
         <div className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--greyscale-100)]">
@@ -154,12 +157,12 @@ function AccuracyProgress({
   const safeAccuracy = Math.max(0, Math.min(100, accuracy))
   const safeGoal = Math.max(0, Math.min(100, goal))
   return (
-    <div className="flex w-[180px] shrink-0 flex-col gap-1">
-      <div className="flex h-4 items-center justify-between">
-        <span className="text-[11px] font-semibold leading-[1.4] tracking-[0.02em] text-[var(--primary)]">
+    <div className="flex w-[240px] shrink-0 flex-col gap-1">
+      <div className="flex h-4 items-center justify-between gap-3">
+        <span className="min-w-0 whitespace-nowrap text-[11px] font-semibold leading-[1.4] tracking-[0.02em] text-[var(--primary)]">
           Your accuracy: {safeAccuracy}%
         </span>
-        <span className="text-[11px] font-semibold leading-[1.4] tracking-[0.02em] text-[#df1c41]">
+        <span className="shrink-0 whitespace-nowrap text-[11px] font-semibold leading-[1.4] tracking-[0.02em] text-[#df1c41]">
           Goal: {safeGoal}%
         </span>
       </div>
@@ -181,7 +184,7 @@ const PRIORITY_BAR: Record<string, string> = {
 function QuestionTypeRow({ row, accentBar }: { row: QuestionTypeRowData; accentBar: string }) {
   const barColor = (row.priorityTier && PRIORITY_BAR[row.priorityTier]) || accentBar
   return (
-    <div className="flex min-h-[56px] min-w-[720px] items-center justify-between border-b border-[var(--greyscale-100)] px-4 py-2 last:border-b-0">
+    <div className="flex min-h-[56px] min-w-[780px] items-center justify-between gap-3 border-b border-[var(--greyscale-100)] px-4 py-2 last:border-b-0">
       <div className="flex w-[300px] shrink-0 items-center gap-3">
         <div
           className="h-10 w-1 shrink-0 rounded-br-[8px] rounded-tr-[8px]"
@@ -223,11 +226,38 @@ function QuestionTypeRow({ row, accentBar }: { row: QuestionTypeRowData; accentB
   )
 }
 
+export function TargetGoalScoreControl({
+  value,
+  onChange,
+  disabled = false,
+}: {
+  value: number | null
+  onChange: (score: number) => void
+  disabled?: boolean
+}) {
+  return (
+    <label className="flex shrink-0 flex-col gap-1 sm:items-end">
+      <span className="text-[11px] font-semibold leading-[1.4] tracking-[0.02em] text-[var(--greyscale-500)]">
+        Target LSAT score
+      </span>
+      <Select
+        aria-label="Target LSAT score"
+        value={value != null ? String(value) : ""}
+        disabled={disabled}
+        options={LSAT_GOAL_SCORE_OPTIONS}
+        placeholder="Set target"
+        className="h-9 w-[120px] rounded-[10px] bg-[var(--greyscale-0)] px-2.5 pr-9 text-xs font-semibold"
+        onChange={(e) => {
+          const next = Number.parseInt(e.target.value, 10)
+          if (Number.isFinite(next)) onChange(next)
+        }}
+      />
+    </label>
+  )
+}
+
 export function SectionCard({ section }: { section: AnalyticsSection }) {
-  const [expanded, setExpanded] = useState(false)
-  const visibleCount = visibleOverviewSectionDrillCount(section.rows.length, expanded)
-  const visibleRows = section.rows.slice(0, visibleCount)
-  const canToggle = section.rows.length > visibleOverviewSectionDrillCount(section.rows.length, false)
+  const visibleRows = topOverviewSectionDrills(section.rows)
 
   return (
     <section className="mb-4 flex w-full flex-col gap-3 rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4">
@@ -245,6 +275,9 @@ export function SectionCard({ section }: { section: AnalyticsSection }) {
             </span>
           </div>
           <h2 className="text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">{section.title}</h2>
+          <span className="text-[11px] font-semibold text-[var(--greyscale-500)]">
+            Top {Math.min(OVERVIEW_SECTION_DRILLS_MAX, section.rows.length)} weakest
+          </span>
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -254,27 +287,6 @@ export function SectionCard({ section }: { section: AnalyticsSection }) {
           ))}
         </div>
       </div>
-      {canToggle ? (
-        <div className="flex justify-center">
-          <button
-            type="button"
-            className="inline-flex h-8 items-center gap-1.5 rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 text-xs font-semibold tracking-[0.02em] text-[var(--primary)] hover:bg-[var(--greyscale-25)]"
-            onClick={() => setExpanded((current) => !current)}
-          >
-            {expanded ? (
-              <>
-                Show less
-                <ChevronUp className="size-4" />
-              </>
-            ) : (
-              <>
-                Show more ({section.rows.length - visibleCount} more)
-                <ChevronDown className="size-4" />
-              </>
-            )}
-          </button>
-        </div>
-      ) : null}
     </section>
   )
 }

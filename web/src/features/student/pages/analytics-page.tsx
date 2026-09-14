@@ -10,6 +10,7 @@ import {
   ScoreProgressTabs,
   SectionCard,
   StatTile,
+  TargetGoalScoreControl,
   type ScoreProgressTab,
 } from "@/features/student/analytics/components/analytics-overview-ui"
 import { practiceSessionResultsPath } from "@/features/student/analytics/analytics-results-paths"
@@ -32,7 +33,7 @@ import {
   matchesAnalyticsSectionFilter,
   type AnalyticsSectionFilter,
 } from "@/features/student/analytics/section-filter"
-import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
+import { useAnalyticsApi, usePracticeApi, useUsersApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import {
   TimeRangeFilter,
   takeLastByTimeRange,
@@ -233,6 +234,7 @@ function HistoryTab() {
 function OverviewTab() {
   const analyticsApi = useAnalyticsApi()
   const practiceApi = usePracticeApi()
+  const usersApi = useUsersApi()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -241,6 +243,9 @@ function OverviewTab() {
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
   const [trajectory, setTrajectory] = useState<ReturnType<typeof mapTrajectoryToScoreProgress>>([])
   const [sections, setSections] = useState<ReturnType<typeof mapPrioritiesToSections>>([])
+  const [goalScore, setGoalScore] = useState<number | null>(null)
+  const [savingGoalScore, setSavingGoalScore] = useState(false)
+  const [goalScoreError, setGoalScoreError] = useState<string | null>(null)
   const [drillHistory, setDrillHistory] = useState<PrepTestHistoryEntry[]>([])
   const [sectionHistory, setSectionHistory] = useState<PrepTestHistoryEntry[]>([])
   const [prepTestHistory, setPrepTestHistory] = useState<PrepTestHistoryEntry[]>([])
@@ -264,12 +269,15 @@ function OverviewTab() {
       analyticsApi.getSessions({ kind: "DRILL", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
       analyticsApi.getSessions({ kind: "SECTION", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
       analyticsApi.getSessions({ kind: "PREPTEST", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
+      usersApi?.getStudyContext() ?? Promise.resolve(null),
     ])
-      .then(([o, t, p, drills, sectionSessions, prepTests]) => {
+      .then(([o, t, p, drills, sectionSessions, prepTests, studyContext]) => {
         setOverview(o)
         const filtered = takeLastByTimeRange(t, timeRange)
         setTrajectory(mapTrajectoryToScoreProgress(filtered))
         setSections(mapPrioritiesToSections(p))
+        setGoalScore(studyContext?.preferences?.goalScore ?? null)
+        setGoalScoreError(null)
         setDrillHistory(
           drills.sessions
             .map(mapDrillSessionToHistoryEntry)
@@ -288,7 +296,37 @@ function OverviewTab() {
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
       .finally(() => setLoading(false))
-  }, [analyticsApi, timeRange])
+  }, [analyticsApi, timeRange, usersApi])
+
+  const refreshPrioritySections = useCallback(async () => {
+    if (!analyticsApi) return
+    const priorities = await analyticsApi.getPriorities()
+    setSections(mapPrioritiesToSections(priorities))
+  }, [analyticsApi])
+
+  const handleGoalScoreChange = useCallback(
+    async (nextScore: number) => {
+      if (!usersApi) {
+        setGoalScoreError("Unable to save goal score right now.")
+        return
+      }
+      const previous = goalScore
+      setGoalScore(nextScore)
+      setSavingGoalScore(true)
+      setGoalScoreError(null)
+      try {
+        const prefs = await usersApi.updateStudyPreferences({ goalScore: nextScore })
+        setGoalScore(prefs.goalScore)
+        await refreshPrioritySections()
+      } catch (e) {
+        setGoalScore(previous)
+        setGoalScoreError(e instanceof Error ? e.message : "Failed to update goal score")
+      } finally {
+        setSavingGoalScore(false)
+      }
+    },
+    [goalScore, refreshPrioritySections, usersApi],
+  )
 
   const headlineStats = useMemo(
     () => (overview ? mapOverviewToHeadlineStats(overview) : []),
@@ -429,14 +467,23 @@ function OverviewTab() {
       />
 
       <section className="flex flex-col gap-3">
-        <div className="flex items-end justify-between gap-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">Reports overview</h2>
+            <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">
+              Priority question types
+            </h2>
             <p className="mt-0.5 text-xs text-[var(--greyscale-500)]">
-              Question-type accuracy by section — open Review or Drill from a row to practice weak areas.
+              Top weakest topics by section — Goal % follows your target LSAT score. Open Review or Drill to
+              practice.
             </p>
           </div>
+          <TargetGoalScoreControl
+            value={goalScore}
+            disabled={savingGoalScore || !usersApi}
+            onChange={(score) => void handleGoalScoreChange(score)}
+          />
         </div>
+        {goalScoreError ? <p className="text-sm text-red-600">{goalScoreError}</p> : null}
         {sections.length === 0 ? (
           <p className="rounded-xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-6 text-sm text-[var(--greyscale-500)]">
             Question-type reports appear once you answer questions linked to LR/RC types.
