@@ -1,15 +1,13 @@
 import type { ReactNode } from "react"
-import { useState } from "react"
 import { Link } from "react-router-dom"
-import { ChevronDown, ChevronUp } from "lucide-react"
 
 import { Select } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { LSAT_SCALED_Y_AXIS_LABELS } from "@/features/student/analytics/chart-y-axis"
 import { LSAT_GOAL_SCORE_OPTIONS } from "@/features/student/analytics/lsat-goal-score"
 import {
-  OVERVIEW_SECTION_DRILLS_INITIAL_VISIBLE,
-  visibleOverviewSectionDrillCount,
+  OVERVIEW_SECTION_DRILLS_MAX,
+  topOverviewSectionDrills,
 } from "@/features/student/analytics/overview-section-drills"
 import type {
   AnalyticsSection,
@@ -259,10 +257,7 @@ export function TargetGoalScoreControl({
 }
 
 export function SectionCard({ section }: { section: AnalyticsSection }) {
-  const [expanded, setExpanded] = useState(false)
-  const visibleCount = visibleOverviewSectionDrillCount(section.rows.length, expanded)
-  const visibleRows = section.rows.slice(0, visibleCount)
-  const canToggle = section.rows.length > visibleOverviewSectionDrillCount(section.rows.length, false)
+  const visibleRows = topOverviewSectionDrills(section.rows)
 
   return (
     <section className="mb-4 flex w-full flex-col gap-3 rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4">
@@ -280,11 +275,9 @@ export function SectionCard({ section }: { section: AnalyticsSection }) {
             </span>
           </div>
           <h2 className="text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">{section.title}</h2>
-          {!expanded ? (
-            <span className="text-[11px] font-semibold text-[var(--greyscale-500)]">
-              Top {Math.min(OVERVIEW_SECTION_DRILLS_INITIAL_VISIBLE, section.rows.length)} weakest
-            </span>
-          ) : null}
+          <span className="text-[11px] font-semibold text-[var(--greyscale-500)]">
+            Top {Math.min(OVERVIEW_SECTION_DRILLS_MAX, section.rows.length)} weakest
+          </span>
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -294,27 +287,6 @@ export function SectionCard({ section }: { section: AnalyticsSection }) {
           ))}
         </div>
       </div>
-      {canToggle ? (
-        <div className="flex justify-center">
-          <button
-            type="button"
-            className="inline-flex h-8 items-center gap-1.5 rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 text-xs font-semibold tracking-[0.02em] text-[var(--primary)] hover:bg-[var(--greyscale-25)]"
-            onClick={() => setExpanded((current) => !current)}
-          >
-            {expanded ? (
-              <>
-                Show less
-                <ChevronUp className="size-4" />
-              </>
-            ) : (
-              <>
-                Show more ({section.rows.length - visibleCount} more)
-                <ChevronDown className="size-4" />
-              </>
-            )}
-          </button>
-        </div>
-      ) : null}
     </section>
   )
 }
