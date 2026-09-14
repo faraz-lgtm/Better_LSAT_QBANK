@@ -185,7 +185,7 @@ function StudentAppSidebar({
   mobileOpen,
   onMobileClose,
   dashboardHref = STUDENT_DASHBOARD_HREF,
-  showDiagnosticNav = false,
+  showDiagnosticNav = true,
   lockPremiumNav = false,
   beforeFooter,
 }: StudentAppSidebarProps) {

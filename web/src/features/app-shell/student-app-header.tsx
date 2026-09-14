@@ -180,7 +180,7 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
                 {initials}
               </span>
               <span className="hidden min-w-0 flex-col items-start gap-0 text-left sm:flex">
-                <span className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[color:var(--primary-900)]">
+                <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[color:var(--primary-900)]">
                   {displayName}
                 </span>
                 <span className="max-w-[220px] truncate text-xs font-normal leading-[1.5] tracking-[0.24px] text-[color:var(--primary-900)]">
