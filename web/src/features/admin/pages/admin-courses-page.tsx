@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Eye } from "lucide-react"
 
 import { AdminCurriculumTree } from "@/features/admin/components/course-builder/admin-curriculum-tree"
@@ -13,6 +13,7 @@ import {
   focusLessonBodyEditor,
   formatMinutesAsDuration,
   parseDurationInputToMinutes,
+  shouldHydrateLessonForm,
   type BuilderSelection,
 } from "@/features/admin/lib/course-builder-utils"
 import { formatSectionOptionLabel } from "@/features/admin/lib/admin-section-display"
@@ -244,7 +245,7 @@ function AdminCoursesPage() {
         const rows = (await adminApi.listCourses()) as CourseRow[]
         if (!alive) return
         setCourses(rows)
-        if (!selectedCourseId && rows[0]) setSelectedCourseId(String(rows[0].id))
+        setSelectedCourseId((current) => current || (rows[0] ? String(rows[0].id) : ""))
       } catch (e) {
         if (alive) setError(e instanceof Error ? e.message : "Failed to load courses")
       } finally {
@@ -255,7 +256,7 @@ function AdminCoursesPage() {
     return () => {
       alive = false
     }
-  }, [adminApi, selectedCourseId])
+  }, [adminApi])
 
   useEffect(() => {
     let alive = true
@@ -334,9 +335,12 @@ function AdminCoursesPage() {
   }, [lessonForm.lessonType])
   const showQuestionLinking = linkedQuestionCap > 0
   const canLinkMore = linkedQuestions.length < linkedQuestionCap
+  const hydratedLessonIdRef = useRef("")
 
   useEffect(() => {
     if (!selectedLesson) return
+    if (!shouldHydrateLessonForm(hydratedLessonIdRef.current, selectedLesson.id)) return
+    hydratedLessonIdRef.current = selectedLesson.id
     const lessonType = normalizeLessonStatus(selectedLesson.lesson_type)
     const base: LessonFormState = {
       title: selectedLesson.title ?? "",
@@ -353,8 +357,8 @@ function AdminCoursesPage() {
       base.repWorkInstructions = parsed.instructions
       base.repWorkPairs = parsed.pairs
     }
-    // Editor state is intentionally reset when the selected lesson row changes.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync local form to server row
+    // Hydrate once per lesson id. Reloading curriculum must not wipe in-progress edits.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync local form to newly selected lesson
     setLessonForm(base)
   }, [selectedLesson])
 
@@ -1282,6 +1286,7 @@ function AdminCoursesPage() {
                           </div>
                         )}
                         <AdminRichBlock
+                          key={selectedLessonId}
                           label={lessonForm.lessonType === "video_text" ? "Lesson body" : "Instructions"}
                           value={lessonForm.textContent}
                           onChange={(html) => setLessonForm((p) => ({ ...p, textContent: html }))}

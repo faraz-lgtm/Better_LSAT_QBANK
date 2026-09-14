@@ -1,4 +1,4 @@
-import { useCallback, useEffect, type ReactNode } from "react"
+import { useCallback, useEffect, useRef, type ReactNode } from "react"
 import { Color } from "@tiptap/extension-color"
 import Highlight from "@tiptap/extension-highlight"
 import Image from "@tiptap/extension-image"
@@ -13,7 +13,10 @@ import { Extension, mergeAttributes, Node, type Editor } from "@tiptap/core"
 import { EditorContent, NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, useEditor, type NodeViewProps } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 
-import { preserveEmptyParagraphBreaks } from "@/features/admin/lib/course-builder-utils"
+import {
+  normalizeTipTapHtml,
+  shouldApplyIncomingEditorHtml,
+} from "@/features/admin/lib/course-builder-utils"
 
 /** Safe CSS length for block margins (px / rem / em, or bare number → px). Max 240px equivalent. */
 function normalizeMarginValue(raw: string): string | null {
@@ -349,6 +352,11 @@ function ToolbarButton({
 }
 
 function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "Start typing…" }: AdminTipTapEditorProps) {
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+  const lastEmittedRef = useRef(normalizeTipTapHtml(value || "<p></p>"))
+  const applyingExternalRef = useRef(false)
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -392,7 +400,7 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
         HTMLAttributes: { class: "w-full max-w-full rounded-lg", style: "aspect-ratio:16/9;height:auto;width:100%" },
       }),
     ],
-    content: preserveEmptyParagraphBreaks(value || "<p></p>"),
+    content: normalizeTipTapHtml(value || "<p></p>"),
     editorProps: {
       attributes: {
         class:
@@ -401,16 +409,23 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
       },
     },
     onUpdate: ({ editor: ed }: { editor: Editor }) => {
-      onChange(preserveEmptyParagraphBreaks(ed.getHTML()))
+      if (applyingExternalRef.current) return
+      const html = normalizeTipTapHtml(ed.getHTML())
+      lastEmittedRef.current = html
+      onChangeRef.current(html)
     },
-  })
+  }, [])
 
   useEffect(() => {
     if (!editor) return
-    const incoming = preserveEmptyParagraphBreaks((value || "").trim() ? value : "<p></p>")
-    const current = preserveEmptyParagraphBreaks(editor.getHTML())
-    if (incoming === current) return
+    if (!shouldApplyIncomingEditorHtml(value, lastEmittedRef.current, editor.getHTML())) return
+    const incoming = normalizeTipTapHtml(value || "<p></p>")
+    applyingExternalRef.current = true
     editor.commands.setContent(incoming, { emitUpdate: false })
+    lastEmittedRef.current = incoming
+    queueMicrotask(() => {
+      applyingExternalRef.current = false
+    })
   }, [value, editor])
 
   const setLink = useCallback(() => {

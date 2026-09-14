@@ -167,6 +167,8 @@ describe("AnalyticsPrepTestResultsPage", () => {
     expect(screen.getByText("RESULTS BY SECTION")).toBeInTheDocument()
     expect(screen.queryByRole("switch", { name: /exclude this preptest from insights/i })).not.toBeInTheDocument()
     expect(screen.queryByText("Exclude from Insights")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Share" })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Review" })).toBeInTheDocument()
   })
 
   it("links the edit pencil to the explanation detail page for that question", async () => {
