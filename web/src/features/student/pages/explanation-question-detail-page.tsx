@@ -3,6 +3,7 @@ import { Navigate, useParams, useSearchParams } from "react-router-dom"
 
 import { StudentMain } from "@/features/student/components/student-main"
 import { buildExplanationQuestionDetailView } from "@/features/student/explanation-detail/build-explanation-detail-view"
+import { buildExplanationQuestionNav } from "@/features/student/explanation-detail/build-explanation-question-nav"
 import { ExplanationAnalyticsTabPanel } from "@/features/student/explanation-detail/explanation-analytics-tab-panel"
 import { ExplanationDetailTabBar } from "@/features/student/explanation-detail/explanation-detail-tab-bar"
 import { ExplanationExplainTabPanel } from "@/features/student/explanation-detail/explanation-explain-tab-panel"
@@ -17,7 +18,6 @@ import { createExplanationsApi, type ExplanationDetailPayload } from "@/lib/api/
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
-import { cn } from "@/lib/utils"
 
 function parseTab(raw: string | null, showExplanationTab: boolean): ExplanationDetailTabId {
   if (raw === "analytics") return "analytics"
@@ -131,6 +131,11 @@ function ExplanationQuestionDetailPage() {
     return match?.id ?? null
   }, [searchParams, view])
 
+  const questionNav = useMemo(
+    () => (resolvedLoc ? buildExplanationQuestionNav(resolvedLoc.pt) : []),
+    [resolvedLoc],
+  )
+
   if (!questionId) return <Navigate to="/app/learn/explanations" replace />
 
   if (!explanationsApi) {
@@ -157,20 +162,15 @@ function ExplanationQuestionDetailPage() {
     return <Navigate to="/app/learn/explanations" replace />
   }
 
-  const questionTabLocked = tab === "question"
-
   return (
-    <StudentMain
-      layout={questionTabLocked ? "locked" : "scroll"}
-      className="bg-[var(--background)]"
-      contentClassName="bg-[var(--background)]"
-    >
-      <div className={cn("flex flex-col gap-6", questionTabLocked && "min-h-0 min-w-0 flex-1")}>
+    <StudentMain layout="scroll" className="bg-[var(--background)]" contentClassName="bg-[var(--background)]">
+      <div className="flex flex-col gap-6">
         <ExplanationDetailTabBar
           headingCode={view.headingCode}
           subtitleTrail={view.subtitleTrail}
+          questionId={questionId}
           questionNumber={view.questionNumber}
-          passageQuestions={resolvedLoc.pass.questions.map((q) => ({ id: q.id, number: q.number }))}
+          questionNav={questionNav}
           tab={tab}
           onTabChange={setTab}
           prevHref={neighborHref(view.neighbors.prevRouteKey, tab)}
@@ -180,7 +180,7 @@ function ExplanationQuestionDetailPage() {
 
         {detailError ? <p className="text-sm text-[#95122b]">{detailError}</p> : null}
 
-        <div className={cn(questionTabLocked && "flex min-h-0 min-w-0 flex-1 flex-col")}>
+        <div>
           {detailLoading && tab === "question" ? <StudentPageLoader label="Loading question…" /> : null}
           {tab === "question" && !detailLoading && detail ? (
             <ExplanationQuestionTabPanel

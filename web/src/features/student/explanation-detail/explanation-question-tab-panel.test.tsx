@@ -34,6 +34,16 @@ describe("ExplanationQuestionTabPanel", () => {
     expect(grid?.className).toContain("lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]")
   })
 
+  it("lets the page scroll instead of nesting overflow on the passage pane", () => {
+    const { container } = render(<ExplanationQuestionTabPanel view={baseView} />)
+    const grid = container.firstElementChild
+    expect(grid?.className).not.toContain("h-full")
+    expect(grid?.className).not.toContain("min-h-0")
+    const passagePane = grid?.querySelector("article")
+    expect(passagePane?.className).not.toContain("overflow-hidden")
+    expect(passagePane?.firstElementChild?.className).not.toContain("overflow-y-auto")
+  })
+
   it("keeps question explanation collapsed by default when available", () => {
     render(
       <ExplanationQuestionTabPanel

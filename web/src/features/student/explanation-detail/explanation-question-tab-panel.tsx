@@ -57,8 +57,7 @@ function RepWorkAnswerToggle({
   )
 }
 
-const paneScrollClass =
-  "practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain"
+const paneBodyClass = "flex flex-col gap-4 px-4 py-5"
 
 function hasExplanationHtml(html: string | null | undefined): boolean {
   return Boolean(html?.trim())
@@ -72,9 +71,9 @@ function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: Explanat
   const analysisAvailable = hasPassageAnalysis(view.passageAnalysis)
 
   return (
-    <div className="grid h-full min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-5">
-      <article className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl bg-[var(--greyscale-0)] lg:h-full">
-        <div className={cn(paneScrollClass, "flex flex-col gap-4 px-4 py-5")}>
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-5">
+      <article className="min-w-0 rounded-2xl bg-[var(--greyscale-0)]">
+        <div className={paneBodyClass}>
           <div className="flex flex-wrap items-center gap-3">
             <span className="inline-flex h-8 items-center rounded-full bg-[var(--greyscale-25)] px-4 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
               PASSAGE {view.passage.displayNumber}
@@ -100,8 +99,8 @@ function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: Explanat
         </div>
       </article>
 
-      <article className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl bg-[var(--greyscale-0)] lg:h-full">
-        <div className={cn(paneScrollClass, "flex flex-col gap-4 px-4 py-5")}>
+      <article className="min-w-0 rounded-2xl bg-[var(--greyscale-0)]">
+        <div className={paneBodyClass}>
           <div className="flex flex-col gap-3">
             <div className="flex h-8 items-center justify-between gap-3">
               <span className="inline-flex h-8 items-center rounded-xl bg-[var(--primary-0)] px-3 text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
