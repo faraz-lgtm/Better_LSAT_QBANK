@@ -2393,7 +2393,8 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       body: { filter?: unknown; page?: unknown; pageSize?: unknown; sort?: unknown },
     ): Promise<PrepTestPoolListResult> {
       const page = Math.max(1, Math.floor(typeof body.page === 'number' ? body.page : 1))
-      const pageSize = Math.min(50, Math.max(1, Math.floor(typeof body.pageSize === 'number' ? body.pageSize : 10)))
+      // Cap high enough that student “See more” can return the full visible pool in one page.
+      const pageSize = Math.min(200, Math.max(1, Math.floor(typeof body.pageSize === 'number' ? body.pageSize : 10)))
       const sort = body.sort === 'oldest' ? 'oldest' : 'newest'
       const filter =
         body.filter === 'fresh' ||
