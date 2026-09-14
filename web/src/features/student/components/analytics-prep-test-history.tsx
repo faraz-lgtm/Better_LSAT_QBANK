@@ -5,6 +5,7 @@ import { Bookmark, Calendar, ExternalLink, MoreVertical } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import { checkedFromToggleEvent } from "@/features/student/analytics/session-bookmarks"
+import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 import type { AnalyticsSectionFilter } from "@/features/student/analytics/section-filter"
 
@@ -203,6 +204,9 @@ function PrepTestHistoryRow({
             aria-hidden
           />
         </button>
+        {entry.sectionType === "LR" || entry.sectionType === "RC" ? (
+          <SectionInitialBadge section={entry.sectionType} variant="compact" />
+        ) : null}
         <div className="min-w-0 flex flex-col gap-0">
           {labelClickable ? (
             <button

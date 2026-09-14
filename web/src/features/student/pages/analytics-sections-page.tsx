@@ -34,6 +34,7 @@ import {
 } from "@/features/student/analytics/section-progress-axis"
 import { averageSectionMissedDisplay, bestSectionMissedDisplay } from "@/features/student/analytics/section-average-score"
 import { LSAT_SCALED_Y_AXIS_LABELS } from "@/features/student/analytics/chart-y-axis"
+import { DEFAULT_SECTION_SCORE_TAB } from "@/features/student/analytics/score-chart-defaults"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import type { PracticeSessionSummary } from "@/lib/api/analytics"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
@@ -307,8 +308,8 @@ function AnalyticsSectionsPage() {
   const [sectionSessions, setSectionSessions] = useState<PracticeSessionSummary[]>([])
   const [sectionHistory, setSectionHistory] = useState<PrepTestHistoryEntry[]>([])
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
-  const [lrScoreTab, setLrScoreTab] = useState<SectionScoreTab>("ptEquivalent")
-  const [rcScoreTab, setRcScoreTab] = useState<SectionScoreTab>("ptEquivalent")
+  const [lrScoreTab, setLrScoreTab] = useState<SectionScoreTab>(DEFAULT_SECTION_SCORE_TAB)
+  const [rcScoreTab, setRcScoreTab] = useState<SectionScoreTab>(DEFAULT_SECTION_SCORE_TAB)
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
   const [historySort, setHistorySort] = useState<HistorySort>("date-desc")
 
