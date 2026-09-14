@@ -1751,6 +1751,10 @@ html.student-shell-active #root {
   border-bottom: 1px solid var(--greyscale-100);
 }
 
+.dark .auth-split-page--intent-only .auth-split-logo {
+  filter: brightness(0) invert(1);
+}
+
 .dark .auth-split-page--intent-only .auth-split-cta {
   color: var(--greyscale-500);
 }
@@ -2051,14 +2055,14 @@ code {
   --popover: #303338;
   --popover-foreground: #ffffff;
 
-  --primary: #1a57b8;
+  --primary: #75A1E8;
   --primary-foreground: #ffffff;
-  --primary-500: #1a57b8;
+  --primary-500: #75A1E8;
   --primary-600: #0a357f;
   --primary-700: #ced0e7;
   --primary-800: #edf3ff;
   --primary-900: #f3f7ff;
-  --primary-border: #1a57b8;
+  --primary-border: #75A1E8;
   --btn-disabled-bg: #3f4247;
   --btn-disabled-border: #3f4247;
   --btn-disabled-fg: rgba(255, 255, 255, 0.45);
@@ -2081,7 +2085,7 @@ code {
 
   --sidebar: #303338;
   --sidebar-foreground: #ffffff;
-  --sidebar-primary: #1a57b8;
+  --sidebar-primary: #75A1E8;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #2e3033;
   --sidebar-accent-foreground: #ffffff;
@@ -2108,8 +2112,8 @@ code {
   --field-focus: #ced0e7;
 
   --color-student-heading: #edf3ff;
-  --color-student-cta: #1a57b8;
-  --color-student-accent: #1a57b8;
+  --color-student-cta: #75A1E8;
+  --color-student-accent: #75A1E8;
   --nav-surface: #303338;
 
   --explanation-list-row-alt: #272835;

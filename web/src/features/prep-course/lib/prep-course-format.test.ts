@@ -193,13 +193,18 @@ describe("prepCourseDisplayTitle", () => {
         slug: "betterlsat-core-syllabus-structure-content",
         title: "BetterLSAT Core Syllabus Structure + Content",
       }),
-    ).toBe("LSAT Essential Course")
+    ).toBe("LSAT Essentials Course")
     expect(
       prepCourseDisplayTitle({
         slug: "other-course",
         title: "BetterLSAT Core Syllabus Structure + Content",
       }),
-    ).toBe("LSAT Essential Course")
+    ).toBe("LSAT Essentials Course")
+    expect(prepCourseDisplayTitle({ slug: "other", title: "LSAT Essential Course" })).toBe(
+      "LSAT Essentials Course",
+    )
+    expect(prepCourseDisplayTitle({ slug: "rc-mastery", title: "RC Mastery" })).toBe("RC Mastery Course")
+    expect(prepCourseDisplayTitle({ slug: "other", title: "RC Mastery" })).toBe("RC Mastery Course")
     expect(prepCourseDisplayTitle({ slug: "other", title: "Other Course" })).toBe("Other Course")
   })
 })

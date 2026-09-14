@@ -32,7 +32,7 @@ type StudentAppSidebarProps = {
   onMobileClose: () => void
   dashboardHref?: string
   showDiagnosticNav?: boolean
-  /** Free-plan: Academy / Insights locked; Prep Course limited to LSAT Essential Course. */
+  /** Free-plan: Academy / Insights locked; Prep Course limited to LSAT Essentials Course. */
   lockPremiumNav?: boolean
   beforeFooter?: ReactNode
 }
@@ -238,7 +238,11 @@ function StudentAppSidebar({
             aria-label="betterLSAT home"
             title="betterLSAT home"
           >
-            <img src="/betterLSAT_LOGO.png" alt="betterLSAT" className="h-auto w-[140px] object-contain" />
+            <img
+              src="/betterLSAT_LOGO.png"
+              alt="betterLSAT"
+              className="h-auto w-[140px] object-contain dark:brightness-0 dark:invert"
+            />
             <span className="student-sidebar-brand-mark" aria-hidden>
               B
             </span>

@@ -12,7 +12,7 @@ describe("isFreePlanLockedNavHref", () => {
     expect(isFreePlanLockedNavHref("/app/diagnostic/results/full")).toBe(false)
   })
 
-  it("keeps limited Prep Course (LSAT Essential Course) unlocked", () => {
+  it("keeps limited Prep Course (LSAT Essentials Course) unlocked", () => {
     expect(isFreePlanLockedNavHref("/app/prep-course")).toBe(false)
     expect(
       isFreePlanLockedNavHref("/app/prep-course/betterlsat-core-syllabus-structure-content"),

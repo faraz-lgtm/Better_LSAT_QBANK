@@ -78,7 +78,7 @@ function AdminSidebar() {
     <aside className="flex h-full w-64 flex-col border-r border-[var(--border)] bg-[var(--surface2)]">
       <div className="mb-4 border-b border-[var(--border)] px-4 py-4">
         <div className="flex items-center gap-2">
-          <img src="/betterLSAT_LOGO.png" alt="betterLSAT" className="h-8 w-auto" />
+          <img src="/betterLSAT_LOGO.png" alt="betterLSAT" className="h-8 w-auto dark:brightness-0 dark:invert" />
         </div>
       </div>
       <nav className="space-y-5 flex-1 px-3">
