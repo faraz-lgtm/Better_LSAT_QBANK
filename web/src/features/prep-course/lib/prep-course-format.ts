@@ -5,13 +5,17 @@ import type {
   PrepLesson,
 } from "@/lib/api/prep-course"
 
-/** Sidebar / UI display title; maps legacy DB title until migration is applied everywhere. */
+/** Sidebar / UI display title; maps legacy DB titles until migration is applied everywhere. */
 export function prepCourseDisplayTitle(course: { slug: string; title: string }): string {
   if (
     course.slug === "betterlsat-core-syllabus-structure-content" ||
-    course.title === "BetterLSAT Core Syllabus Structure + Content"
+    course.title === "BetterLSAT Core Syllabus Structure + Content" ||
+    course.title === "LSAT Essential Course"
   ) {
-    return "LSAT Essential Course"
+    return "LSAT Essentials Course"
+  }
+  if (course.slug === "rc-mastery" || course.title === "RC Mastery") {
+    return "RC Mastery Course"
   }
   return course.title
 }

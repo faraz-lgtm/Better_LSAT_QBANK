@@ -16,7 +16,7 @@ describe("PrepCourseComingSoonPage", () => {
 
     expect(screen.getByRole("heading", { name: "LR Mastery Course" })).toBeInTheDocument()
     expect(screen.getByText(/coming soon/i)).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Open LSAT Essential Course" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Open LSAT Essentials Course" })).toHaveAttribute(
       "href",
       "/app/prep-course/betterlsat-core-syllabus-structure-content",
     )
