@@ -5,13 +5,14 @@ import userEvent from "@testing-library/user-event"
 import { ReviewPassageCardHeader } from "@/features/student/practice-session/review-passage-card-header"
 
 describe("ReviewPassageCardHeader", () => {
-  it("keeps Analysis View disabled when analysis is unavailable", () => {
+  it("hides Analysis View when analysis is unavailable (e.g. LR)", () => {
     render(<ReviewPassageCardHeader analysisEnabled={false} />)
-    expect(screen.getByLabelText("Analysis View is display only")).toBeInTheDocument()
+    expect(screen.getByText("Passage Only View")).toBeInTheDocument()
+    expect(screen.queryByText("Analysis View")).not.toBeInTheDocument()
     expect(screen.queryByRole("switch", { name: /analysis view/i })).not.toBeInTheDocument()
   })
 
-  it("toggles Analysis View when enabled", async () => {
+  it("toggles Analysis View when enabled (RC)", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
     render(
@@ -21,6 +22,7 @@ describe("ReviewPassageCardHeader", () => {
         onAnalysisCheckedChange={onChange}
       />,
     )
+    expect(screen.getByText("Analysis View")).toBeInTheDocument()
     await user.click(screen.getByRole("switch", { name: /analysis view/i }))
     expect(onChange).toHaveBeenCalledWith(true)
   })
