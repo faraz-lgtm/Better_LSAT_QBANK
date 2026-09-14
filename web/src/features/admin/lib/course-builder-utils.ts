@@ -49,6 +49,33 @@ export function preserveEmptyParagraphBreaks(html: string): string {
   return html.replace(/<p(\b[^>]*)?>\s*<\/p>/gi, "<p$1><br></p>")
 }
 
+/**
+ * TipTap's getHTML() and our persisted HTML often differ only by empty-paragraph
+ * form or the editor-only trailing-break class. Treat those as the same document
+ * so the controlled editor does not call setContent on every keystroke.
+ */
+export function normalizeTipTapHtml(html: string): string {
+  const source = (html || "").trim() ? html : "<p></p>"
+  return preserveEmptyParagraphBreaks(source).replace(/\s*class="ProseMirror-trailingBreak"/gi, "")
+}
+
+export function shouldApplyIncomingEditorHtml(
+  incoming: string,
+  lastEmitted: string,
+  currentEditorHtml: string,
+): boolean {
+  const next = normalizeTipTapHtml(incoming)
+  if (next === normalizeTipTapHtml(lastEmitted)) return false
+  if (next === normalizeTipTapHtml(currentEditorHtml)) return false
+  return true
+}
+
+/** Re-hydrate the lesson form only when the selected lesson id changes — not when the row object is replaced after a curriculum reload. */
+export function shouldHydrateLessonForm(hydratedLessonId: string, nextLessonId: string | null | undefined): boolean {
+  if (!nextLessonId) return false
+  return hydratedLessonId !== nextLessonId
+}
+
 /** Append a block (e.g. `<hr>`, `<p>…</p>`) to lesson HTML body content. */
 export function appendLessonHtmlBlock(existingHtml: string, blockHtml: string): string {
   const base = (existingHtml || "").trim() || "<p></p>"
