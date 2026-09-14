@@ -79,6 +79,7 @@ function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: Explanat
             <span className="inline-flex h-8 items-center rounded-full bg-[var(--greyscale-25)] px-4 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
               PASSAGE {view.passage.displayNumber}
             </span>
+            {/* RC only — LR has no passage analysis. */}
             {analysisAvailable ? (
               <button
                 type="button"
@@ -88,9 +89,7 @@ function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: Explanat
               >
                 {analysisOpen ? "Hide analysis" : "Show analysis"}
               </button>
-            ) : (
-              <span className="text-sm font-medium leading-5 text-[var(--greyscale-300)]">Show analysis</span>
-            )}
+            ) : null}
           </div>
 
           {analysisOpen && analysisAvailable && view.passageAnalysis ? (

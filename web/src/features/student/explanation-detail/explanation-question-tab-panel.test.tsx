@@ -63,9 +63,9 @@ describe("ExplanationQuestionTabPanel", () => {
     expect(screen.getByText("Question-level explanation")).toBeInTheDocument()
   })
 
-  it("shows disabled Show analysis label when no passage analysis", () => {
+  it("hides Show analysis when no passage analysis (e.g. LR)", () => {
     render(<ExplanationQuestionTabPanel view={baseView} />)
-    expect(screen.getByText("Show analysis")).toBeInTheDocument()
+    expect(screen.queryByText("Show analysis")).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: /show analysis/i })).not.toBeInTheDocument()
   })
 
