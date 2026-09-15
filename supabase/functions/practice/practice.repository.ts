@@ -58,6 +58,21 @@ export type DrillPoolQuestionRow = {
   source_group_id: string | null
   difficulty: number | null
   question_type_id: string | null
+  prep_test_id: string | null
+  module_id: string | null
+}
+
+export type PrepTestPoolOverrideRow = {
+  prep_test_id: string
+  in_drills: boolean
+  in_sections: boolean
+  in_tests: boolean
+}
+
+export type PrepTestFreshnessRow = {
+  prepTestId: string
+  totalQuestions: number
+  answeredQuestions: number
 }
 
 export type SectionPoolRow = {
@@ -348,7 +363,12 @@ export function createPracticeRepository(client: SupabaseClient) {
           source_group_id,
           difficulty,
           question_type_id,
-          admin_sections!inner ( section_type, module_id, admin_prep_tests ( module_id ) )
+          admin_sections!inner (
+            section_type,
+            module_id,
+            prep_test_id,
+            admin_prep_tests ( id, module_id )
+          )
         `,
         )
         .eq('admin_sections.section_type', input.sectionType)
@@ -378,7 +398,11 @@ export function createPracticeRepository(client: SupabaseClient) {
           const secObj = sec as
             | {
                 module_id?: string | null
-                admin_prep_tests?: { module_id?: string } | { module_id?: string }[] | null
+                prep_test_id?: string | null
+                admin_prep_tests?:
+                  | { id?: string; module_id?: string }
+                  | { id?: string; module_id?: string }[]
+                  | null
               }
             | null
             | undefined
@@ -387,13 +411,130 @@ export function createPracticeRepository(client: SupabaseClient) {
           const moduleId = pt?.module_id ?? secObj?.module_id ?? null
           return isStudentVisiblePrepTest(moduleId)
         })
-        .map((row) => ({
-        id: String(row.id),
-        section_id: row.section_id != null ? String(row.section_id) : null,
-        source_group_id: row.source_group_id != null ? String(row.source_group_id) : null,
-        difficulty: typeof row.difficulty === 'number' ? row.difficulty : null,
-        question_type_id: row.question_type_id != null ? String(row.question_type_id) : null,
+        .map((row) => {
+          const secRaw = row.admin_sections
+          const sec = Array.isArray(secRaw) ? secRaw[0] : secRaw
+          const secObj = sec as
+            | {
+                prep_test_id?: string | null
+                module_id?: string | null
+                admin_prep_tests?:
+                  | { id?: string; module_id?: string }
+                  | { id?: string; module_id?: string }[]
+                  | null
+              }
+            | null
+            | undefined
+          const ptRaw = secObj?.admin_prep_tests
+          const pt = Array.isArray(ptRaw) ? ptRaw[0] : ptRaw
+          const prepTestId = pt?.id ?? secObj?.prep_test_id ?? null
+          const moduleId = pt?.module_id ?? secObj?.module_id ?? null
+          return {
+            id: String(row.id),
+            section_id: row.section_id != null ? String(row.section_id) : null,
+            source_group_id: row.source_group_id != null ? String(row.source_group_id) : null,
+            difficulty: typeof row.difficulty === 'number' ? row.difficulty : null,
+            question_type_id: row.question_type_id != null ? String(row.question_type_id) : null,
+            prep_test_id: prepTestId != null ? String(prepTestId) : null,
+            module_id: moduleId != null ? String(moduleId) : null,
+          }
+        })
+    },
+
+    async listUserPrepTestPoolOverrides(userId: string): Promise<PrepTestPoolOverrideRow[]> {
+      const { data, error } = await client
+        .from('student_prep_test_pool_overrides')
+        .select('prep_test_id, in_drills, in_sections, in_tests')
+        .eq('user_id', userId)
+      if (error) throw error
+      return ((data ?? []) as PrepTestPoolOverrideRow[]).map((row) => ({
+        prep_test_id: String(row.prep_test_id),
+        in_drills: Boolean(row.in_drills),
+        in_sections: Boolean(row.in_sections),
+        in_tests: Boolean(row.in_tests),
       }))
+    },
+
+    async upsertUserPrepTestPoolOverrides(
+      userId: string,
+      rows: PrepTestPoolOverrideRow[],
+    ): Promise<void> {
+      if (rows.length === 0) return
+      const payload = rows.map((row) => ({
+        user_id: userId,
+        prep_test_id: row.prep_test_id,
+        in_drills: row.in_drills,
+        in_sections: row.in_sections,
+        in_tests: row.in_tests,
+        updated_at: new Date().toISOString(),
+      }))
+      const { error } = await client
+        .from('student_prep_test_pool_overrides')
+        .upsert(payload, { onConflict: 'user_id,prep_test_id' })
+      if (error) throw error
+    },
+
+    async deleteUserPrepTestPoolOverrides(userId: string): Promise<void> {
+      const { error } = await client
+        .from('student_prep_test_pool_overrides')
+        .delete()
+        .eq('user_id', userId)
+      if (error) throw error
+    },
+
+    async listPrepTestFreshnessRows(userId: string): Promise<PrepTestFreshnessRow[]> {
+      const { data: questionRows, error: questionError } = await client
+        .from('admin_questions')
+        .select('id, admin_sections!inner ( prep_test_id, module_id, admin_prep_tests ( module_id ) )')
+      if (questionError) throw questionError
+
+      const totalByPrepTest = new Map<string, number>()
+      const questionsByPrepTest = new Map<string, Set<string>>()
+      for (const row of (questionRows ?? []) as Array<Record<string, unknown>>) {
+        const secRaw = row.admin_sections
+        const sec = Array.isArray(secRaw) ? secRaw[0] : secRaw
+        const secObj = sec as
+          | {
+              prep_test_id?: string | null
+              module_id?: string | null
+              admin_prep_tests?: { module_id?: string } | { module_id?: string }[] | null
+            }
+          | null
+          | undefined
+        const ptRaw = secObj?.admin_prep_tests
+        const pt = Array.isArray(ptRaw) ? ptRaw[0] : ptRaw
+        const moduleId = pt?.module_id ?? secObj?.module_id ?? null
+        if (!isStudentVisiblePrepTest(moduleId)) continue
+        const prepTestId = secObj?.prep_test_id != null ? String(secObj.prep_test_id) : null
+        if (!prepTestId) continue
+        const questionId = String(row.id)
+        totalByPrepTest.set(prepTestId, (totalByPrepTest.get(prepTestId) ?? 0) + 1)
+        let set = questionsByPrepTest.get(prepTestId)
+        if (!set) {
+          set = new Set()
+          questionsByPrepTest.set(prepTestId, set)
+        }
+        set.add(questionId)
+      }
+
+      const { data: answeredRows, error: answeredError } = await client
+        .from('answer_events')
+        .select('question_id')
+        .eq('user_id', userId)
+      if (answeredError) throw answeredError
+      const answeredIds = new Set(
+        ((answeredRows ?? []) as { question_id: string }[]).map((row) => row.question_id),
+      )
+      const out: PrepTestFreshnessRow[] = []
+      for (const [prepTestId, totalQuestions] of totalByPrepTest) {
+        const questionIds = questionsByPrepTest.get(prepTestId) ?? new Set()
+        let answeredQuestions = 0
+        for (const questionId of questionIds) {
+          if (answeredIds.has(questionId)) answeredQuestions += 1
+        }
+        out.push({ prepTestId, totalQuestions, answeredQuestions })
+      }
+      return out
     },
 
     async listUserAnsweredQuestionIds(userId: string): Promise<string[]> {

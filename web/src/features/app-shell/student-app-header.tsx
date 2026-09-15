@@ -3,6 +3,7 @@ import { Menu } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 
 import { FigmaIcon } from "@/components/icons/figma-icons"
+import { PREP_TEST_POOLS_HREF } from "@/features/account/prep-test-pool-types"
 import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
 import { resolveStudentShellVariant } from "@/features/app-shell/student-shell-plan-variant"
 import { useGuestPremiumAccount } from "@/features/guest/premium/guest-premium-account"
@@ -204,6 +205,13 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
                   onClick={() => setOpenProfileMenu(false)}
                 >
                   Account
+                </Link>
+                <Link
+                  to={PREP_TEST_POOLS_HREF}
+                  className="flex h-10 w-full items-center rounded-xl px-3 text-left text-sm font-semibold tracking-[0.02em] text-[color:var(--color-student-heading)] hover:bg-[color:var(--greyscale-0)]/80"
+                  onClick={() => setOpenProfileMenu(false)}
+                >
+                  Settings
                 </Link>
                 <button
                   type="button"

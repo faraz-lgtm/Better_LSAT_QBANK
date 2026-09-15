@@ -613,6 +613,15 @@ verify_jwt = false
 [functions.practice-list-prep-test-pool]
 verify_jwt = false
 
+[functions.practice-list-prep-test-pool-settings]
+verify_jwt = false
+
+[functions.practice-update-prep-test-pool-settings]
+verify_jwt = false
+
+[functions.practice-reset-prep-test-pool-settings]
+verify_jwt = false
+
 [functions.practice-get-prep-test-detail]
 verify_jwt = false
 

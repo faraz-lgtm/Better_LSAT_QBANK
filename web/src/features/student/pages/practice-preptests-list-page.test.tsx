@@ -23,7 +23,7 @@ vi.mock("@/lib/api/practice", () => ({
   }),
 }))
 
-function poolItem(id: string, number: string): PrepTestPoolItem {
+function poolItem(id: string, number: string, overrides: Partial<PrepTestPoolItem> = {}): PrepTestPoolItem {
   return {
     id,
     moduleId: `LSAC${number}`,
@@ -40,6 +40,10 @@ function poolItem(id: string, number: string): PrepTestPoolItem {
     completedAt: null,
     attempts: [],
     openPrepTestSessionId: null,
+    inDrills: true,
+    inSections: true,
+    inTests: true,
+    ...overrides,
   }
 }
 
@@ -69,6 +73,13 @@ function renderPage() {
 }
 
 describe("PracticePrepTestsListPage sort", () => {
+  it("does not show a PrepTest settings control on the list page", async () => {
+    mockPool("newest")
+    renderPage()
+    expect(await screen.findByTestId("preptest-list-row-pt-901")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /PrepTest settings/i })).not.toBeInTheDocument()
+  })
+
   it("reloads the pool from Oldest to Newest when the sort control changes", async () => {
     const user = userEvent.setup()
     mockPool("newest")
@@ -151,5 +162,38 @@ describe("PracticePrepTestsListPage see more", () => {
     })
     expect(screen.getByTestId("preptest-list-row-pt-901")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "See more" })).not.toBeInTheDocument()
+  })
+
+  it("shows unclickable availability text when tests pool is off", async () => {
+    listPrepTestPool.mockResolvedValue({
+      prepTests: [
+        poolItem("pt-155", "155", {
+          status: "completed",
+          completedAt: "2026-08-06T00:00:00Z",
+          scaledScore: 120,
+          inDrills: false,
+          inSections: true,
+          inTests: false,
+          attempts: [
+            {
+              sessionId: "sess-1",
+              completedAt: "2026-08-06T00:00:00Z",
+              scaledScore: 120,
+              blindReviewScaledScore: null,
+              attemptNumber: 1,
+            },
+          ],
+        }),
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 5,
+      statusCounts: { all: 1, fresh: 0, in_progress: 0, completed: 1, blind_review: 0 },
+    })
+    renderPage()
+    expect(await screen.findByText("Available only for sections")).toBeInTheDocument()
+    expect(screen.getByTestId("preptest-list-row-pt-155")).toHaveAttribute("data-muted", "true")
+    expect(screen.queryByRole("button", { name: "Retake" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Start" })).not.toBeInTheDocument()
   })
 })

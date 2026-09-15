@@ -98,6 +98,10 @@ describe("StudentAppHeader", () => {
 
     await user.click(screen.getByRole("button", { name: "Open profile menu" }))
     expect(screen.getByRole("link", { name: "Account" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute(
+      "href",
+      "/app/settings",
+    )
     expect(screen.getByRole("button", { name: "Logout" })).toBeInTheDocument()
   })
 
