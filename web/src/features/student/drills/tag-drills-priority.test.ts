@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest"
 import type { PriorityRow } from "@/lib/api/analytics"
 import {
   TAG_DRILLS_INITIAL_VISIBLE,
+  TAG_DRILLS_PER_SECTION_INITIAL,
+  groupPriorityRowsBySection,
   orderPriorityRowsByWeakness,
+  priorityMeterFromRow,
   visibleTagDrillCount,
 } from "./tag-drills-priority"
 
@@ -46,6 +49,35 @@ describe("orderPriorityRowsByWeakness", () => {
   })
 })
 
+describe("priorityMeterFromRow", () => {
+  it("labels the meter as student priority, not type difficulty", () => {
+    expect(priorityMeterFromRow({ priorityTier: "highest", priorityLevel: "high" }).label).toBe("Highest")
+    expect(priorityMeterFromRow({ priorityTier: "high", priorityLevel: "high" }).label).toBe("High")
+    expect(priorityMeterFromRow({ priorityTier: "medium", priorityLevel: "medium" }).label).toBe("Medium")
+    expect(priorityMeterFromRow({ priorityTier: "low", priorityLevel: "low" }).label).toBe("Low")
+    expect(priorityMeterFromRow({ priorityTier: null, priorityLevel: "high" }).label).toBe("High")
+  })
+
+  it("fills more bars for higher student priority", () => {
+    expect(priorityMeterFromRow({ priorityTier: "highest", priorityLevel: "high" }).filledBars).toBe(5)
+    expect(priorityMeterFromRow({ priorityTier: "high", priorityLevel: "high" }).filledBars).toBe(4)
+    expect(priorityMeterFromRow({ priorityTier: "medium", priorityLevel: "medium" }).filledBars).toBe(3)
+    expect(priorityMeterFromRow({ priorityTier: "low", priorityLevel: "low" }).filledBars).toBe(2)
+  })
+})
+
+describe("groupPriorityRowsBySection", () => {
+  it("splits ordered tags into LR and RC lists", () => {
+    const grouped = groupPriorityRowsBySection([
+      row({ questionTypeId: "rc1", name: "Main Point", sectionType: "RC", priorityLevel: "high" }),
+      row({ questionTypeId: "lr1", name: "Flaw", sectionType: "LR", priorityLevel: "high" }),
+      row({ questionTypeId: "lr2", name: "Necessary Assumption", sectionType: "LR", priorityLevel: "medium" }),
+    ])
+    expect(grouped.lr.map((r) => r.name)).toEqual(["Flaw", "Necessary Assumption"])
+    expect(grouped.rc.map((r) => r.name)).toEqual(["Main Point"])
+  })
+})
+
 describe("visibleTagDrillCount", () => {
   it("shows all tags when there are at most the initial window", () => {
     expect(visibleTagDrillCount(5, false)).toBe(5)
@@ -58,5 +90,9 @@ describe("visibleTagDrillCount", () => {
 
   it("shows every tag when expanded", () => {
     expect(visibleTagDrillCount(24, true)).toBe(24)
+  })
+
+  it("collapses each section to a few top-priority types", () => {
+    expect(visibleTagDrillCount(12, false, TAG_DRILLS_PER_SECTION_INITIAL)).toBe(TAG_DRILLS_PER_SECTION_INITIAL)
   })
 })
