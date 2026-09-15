@@ -16,6 +16,13 @@ import type { DrillRecord } from "@/features/student/lib/mock-analytics-drills"
 import type { PrepTestHistoryEntry, PrepTestRecord } from "@/features/student/lib/mock-analytics-preptests"
 import type { DrillType } from "@/features/student/lib/mock-analytics-drills"
 import { orderPriorityRowsByWeakness } from "@/features/student/drills/tag-drills-priority"
+import {
+  ensureDrillTitleSuffix,
+  formatDrillTitleFromTypeNames,
+  isVariedMixTitle,
+  typeNamesFromDrillMetadata,
+  VARIED_MIX_DRILL_TITLE,
+} from "@/features/student/drills/format-drill-title"
 import { resolvePrepTestLrRcScores } from "@/features/student/analytics/prep-test-lr-rc-scores"
 
 function formatSigned(n: number): string {
@@ -332,13 +339,20 @@ function questionCountFromSession(s: PracticeSessionSummary, correct: number): n
   return Math.max(correct, 1)
 }
 
-/** Prefer stored type/title fields; untyped pool drills show as Varied Mix. */
+/**
+ * Prefer selected type names / stored title.
+ * Ignore a stale stored "Varied Mix" title when type labels are present.
+ */
 export function formatDrillHistoryLabel(metadata: Record<string, unknown>): string {
-  for (const key of ["questionTypeName", "tagLabel", "title"] as const) {
-    const value = metadata[key]
-    if (typeof value === "string" && value.trim()) return value.trim()
+  const fromTypes = formatDrillTitleFromTypeNames(typeNamesFromDrillMetadata(metadata))
+  if (!isVariedMixTitle(fromTypes)) return fromTypes
+
+  const title = metadata.title
+  if (typeof title === "string" && title.trim() && !isVariedMixTitle(title)) {
+    return ensureDrillTitleSuffix(title)
   }
-  return "Varied Mix"
+
+  return VARIED_MIX_DRILL_TITLE
 }
 
 /** Completed drill → shared history-row shape (raw correct / total). */

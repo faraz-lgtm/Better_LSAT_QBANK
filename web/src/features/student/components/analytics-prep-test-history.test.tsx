@@ -149,6 +149,29 @@ describe("AnalyticsPrepTestHistory", () => {
     expect(screen.getByLabelText("RC")).toBeInTheDocument()
   })
 
+  it("exposes the full truncated drill title on hover via title", () => {
+    const fullLabel = "Rule Application, Correct Answer, Flaw Drill"
+    render(
+      <AnalyticsPrepTestHistory
+        title="Drill History"
+        emptyNoun="drills"
+        visibleEntries={[
+          {
+            ...entries[0]!,
+            id: "long-drill",
+            testLabel: fullLabel,
+          },
+        ]}
+        bookmarkedOnly={false}
+        onBookmarkedOnlyChange={() => {}}
+        onToggleBookmark={() => {}}
+        onSelectEntry={() => {}}
+      />,
+    )
+
+    expect(screen.getByRole("button", { name: fullLabel })).toHaveAttribute("title", fullLabel)
+  })
+
   it("omits the section badge when the history row has no section type", () => {
     render(
       <AnalyticsPrepTestHistory

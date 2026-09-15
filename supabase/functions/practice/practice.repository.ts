@@ -336,6 +336,7 @@ export function createPracticeRepository(client: SupabaseClient) {
     async listDrillPoolQuestions(input: {
       sectionType: 'LR' | 'RC'
       questionTypeId?: string | null
+      questionTypeIds?: string[] | null
       difficulty?: 'adaptive' | 'easy' | 'hard' | null
     }): Promise<DrillPoolQuestionRow[]> {
       let q = client
@@ -352,7 +353,12 @@ export function createPracticeRepository(client: SupabaseClient) {
         )
         .eq('admin_sections.section_type', input.sectionType)
 
-      if (input.questionTypeId) {
+      const typeIds = Array.isArray(input.questionTypeIds)
+        ? input.questionTypeIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+        : []
+      if (typeIds.length > 0) {
+        q = q.in('question_type_id', typeIds)
+      } else if (input.questionTypeId) {
         q = q.eq('question_type_id', input.questionTypeId)
       }
 

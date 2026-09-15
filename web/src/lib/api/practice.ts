@@ -416,7 +416,9 @@ export function createPracticeApi(supabase: SupabaseClient) {
           showAnswers: input.showAnswers,
           selection: input.selection,
           questionTypeId: input.questionTypeId,
+          questionTypeIds: input.questionTypeIds,
           tagLabel: input.tagLabel,
+          tagLabels: input.tagLabels,
           difficulty: input.difficulty,
           status: input.status,
           title: input.title,
@@ -490,6 +492,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
         body: {
           sectionType: input.sectionType,
           questionTypeId: input.questionTypeId,
+          questionTypeIds: input.questionTypeIds,
           difficulty: input.difficulty,
           status: input.status,
         },

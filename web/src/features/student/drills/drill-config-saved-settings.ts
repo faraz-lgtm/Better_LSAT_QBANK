@@ -17,7 +17,8 @@ export type SavedDrillConfig = {
   showAnswers: DrillShowAnswers
   customize: boolean
   selection: string
-  tags: string
+  /** Selected question-type ids; empty means all skills. */
+  tags: string[]
   difficulty: DrillDifficulty
   status: DrillStatus
 }
@@ -28,6 +29,27 @@ export function drillConfigSettingsKey(sectionType: DrillSectionType): string {
 
 function optionValues(options: readonly { value: string }[]): Set<string> {
   return new Set(options.map((option) => option.value))
+}
+
+function normalizeTags(raw: unknown): string[] | null {
+  if (Array.isArray(raw)) {
+    const out: string[] = []
+    const seen = new Set<string>()
+    for (const item of raw) {
+      if (typeof item !== "string") continue
+      const trimmed = item.trim()
+      if (!trimmed || trimmed === "any" || seen.has(trimmed)) continue
+      seen.add(trimmed)
+      out.push(trimmed)
+    }
+    return out
+  }
+  if (typeof raw === "string") {
+    const trimmed = raw.trim()
+    if (!trimmed || trimmed === "any") return []
+    return [trimmed]
+  }
+  return null
 }
 
 function parseSavedDrillConfig(raw: unknown): SavedDrillConfig | null {
@@ -54,7 +76,8 @@ function parseSavedDrillConfig(raw: unknown): SavedDrillConfig | null {
   }
   if (typeof parsed.customize !== "boolean") return null
   if (typeof parsed.selection !== "string" || !selectionValues.has(parsed.selection)) return null
-  if (typeof parsed.tags !== "string") return null
+  const tags = normalizeTags((raw as { tags?: unknown }).tags)
+  if (tags == null) return null
   if (typeof parsed.difficulty !== "string" || !difficultyValues.has(parsed.difficulty)) return null
   if (typeof parsed.status !== "string" || !statusValues.has(parsed.status)) return null
 
@@ -65,7 +88,7 @@ function parseSavedDrillConfig(raw: unknown): SavedDrillConfig | null {
     showAnswers: showAnswers as SavedDrillConfig["showAnswers"],
     customize: parsed.customize,
     selection: parsed.selection,
-    tags: parsed.tags,
+    tags,
     difficulty: parsed.difficulty,
     status: parsed.status,
   }

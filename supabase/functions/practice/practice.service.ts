@@ -7,6 +7,10 @@ import {
   LR_DRILL_MAX_QUESTION_COUNT,
   PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT,
 } from './adaptive-drill-config.ts'
+import {
+  formatDrillTitleFromTypeNames,
+  VARIED_MIX_DRILL_TITLE,
+} from './format-drill-title.ts'
 import type {
   AnswerEventRow,
   DrillPoolQuestionRow,
@@ -270,6 +274,41 @@ function parsePassageCount(value: unknown): number | 'unlimited' {
   return Math.min(RC_DRILL_MAX_PASSAGES, Math.floor(n))
 }
 
+function parseStringIdList(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const item of value) {
+    if (typeof item !== 'string') continue
+    const trimmed = item.trim()
+    if (!trimmed || seen.has(trimmed)) continue
+    seen.add(trimmed)
+    out.push(trimmed)
+  }
+  return out
+}
+
+function resolveDrillQuestionTypeIds(
+  questionTypeIdRaw: unknown,
+  questionTypeIdsRaw: unknown,
+): string[] {
+  const fromList = parseStringIdList(questionTypeIdsRaw)
+  if (fromList.length > 0) return fromList
+  if (typeof questionTypeIdRaw === 'string' && questionTypeIdRaw.trim()) {
+    return [questionTypeIdRaw.trim()]
+  }
+  return []
+}
+
+function resolveDrillTagLabels(tagLabelRaw: unknown, tagLabelsRaw: unknown): string[] {
+  const fromList = parseStringIdList(tagLabelsRaw)
+  if (fromList.length > 0) return fromList
+  if (typeof tagLabelRaw === 'string' && tagLabelRaw.trim()) {
+    return [tagLabelRaw.trim()]
+  }
+  return []
+}
+
 function filterPoolByStatus(
   pool: DrillPoolQuestionRow[],
   status: unknown,
@@ -287,7 +326,9 @@ export type DrillSessionMetadata = {
   showAnswers: string
   selection?: string
   questionTypeId?: string | null
+  questionTypeIds?: string[] | null
   tagLabel?: string | null
+  tagLabels?: string[] | null
   difficulty?: string | null
   status?: string
   questionIds: string[]
@@ -1748,6 +1789,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       body: {
         sectionType?: unknown
         questionTypeId?: unknown
+        questionTypeIds?: unknown
         difficulty?: unknown
         status?: unknown
       },
@@ -1755,8 +1797,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const sectionType = parseSectionType(body.sectionType)
       if (!sectionType) throw new PracticeValidationError('sectionType must be LR or RC')
 
-      const questionTypeId =
-        typeof body.questionTypeId === 'string' && body.questionTypeId ? body.questionTypeId : null
+      const questionTypeIds = resolveDrillQuestionTypeIds(body.questionTypeId, body.questionTypeIds)
       const difficulty =
         body.difficulty === 'easy' || body.difficulty === 'hard' || body.difficulty === 'adaptive'
           ? body.difficulty
@@ -1764,7 +1805,8 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       const totalPool = await deps.repository.listDrillPoolQuestions({
         sectionType,
-        questionTypeId,
+        questionTypeId: questionTypeIds[0] ?? null,
+        questionTypeIds,
         difficulty: difficulty === 'adaptive' ? null : difficulty,
       })
 
@@ -1787,7 +1829,9 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         showAnswers?: unknown
         selection?: unknown
         questionTypeId?: unknown
+        questionTypeIds?: unknown
         tagLabel?: unknown
+        tagLabels?: unknown
         difficulty?: unknown
         status?: unknown
         title?: unknown
@@ -1815,13 +1859,14 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const timing = typeof body.timing === 'string' ? body.timing : 'unlimited'
       const showAnswers = typeof body.showAnswers === 'string' ? body.showAnswers : 'end'
       const selection = typeof body.selection === 'string' ? body.selection : 'auto'
-      const questionTypeId =
-        typeof body.questionTypeId === 'string' && body.questionTypeId ? body.questionTypeId : null
-      const tagLabel =
-        typeof body.tagLabel === 'string' && body.tagLabel.trim() ? body.tagLabel.trim() : null
+      const questionTypeIds = resolveDrillQuestionTypeIds(body.questionTypeId, body.questionTypeIds)
+      const questionTypeId = questionTypeIds[0] ?? null
+      const tagLabels = resolveDrillTagLabels(body.tagLabel, body.tagLabels)
+      const tagLabel = tagLabels[0] ?? null
+      const titleFromTypes = formatDrillTitleFromTypeNames(tagLabels)
       const titleRaw = typeof body.title === 'string' && body.title.trim() ? body.title.trim() : null
-      // Untyped / mixed-pool drills get a stable history label when the client omits title.
-      const title = titleRaw ?? tagLabel ?? (questionTypeId ? null : 'Varied Mix')
+      // Prefer authoritative title from selected type labels; untyped pool → Varied Mix.
+      const title = tagLabels.length > 0 ? titleFromTypes : (titleRaw ?? VARIED_MIX_DRILL_TITLE)
       const difficulty =
         body.difficulty === 'easy' || body.difficulty === 'hard' || body.difficulty === 'adaptive'
           ? body.difficulty
@@ -1830,6 +1875,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const pool = await deps.repository.listDrillPoolQuestions({
         sectionType,
         questionTypeId,
+        questionTypeIds,
         difficulty: difficulty === 'adaptive' ? null : difficulty,
       })
 
@@ -1882,7 +1928,9 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         showAnswers,
         selection,
         questionTypeId,
+        questionTypeIds,
         tagLabel,
+        tagLabels,
         difficulty,
         status,
         questionIds,
@@ -2033,6 +2081,8 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (!sectionType) throw new PracticeValidationError('Invalid drill session metadata')
 
       const questionIds = drillQuestionIdsFromMetadata(metaRaw)
+      const questionTypeIds = resolveDrillQuestionTypeIds(metaRaw.questionTypeId, metaRaw.questionTypeIds)
+      const tagLabels = resolveDrillTagLabels(metaRaw.tagLabel, metaRaw.tagLabels)
       const metadata: DrillSessionMetadata = {
         sectionType,
         questionCount:
@@ -2045,8 +2095,10 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         showAnswers: typeof metaRaw.showAnswers === 'string' ? metaRaw.showAnswers : 'end',
         selection: typeof metaRaw.selection === 'string' ? metaRaw.selection : 'auto',
         questionTypeId:
-          typeof metaRaw.questionTypeId === 'string' ? metaRaw.questionTypeId : null,
-        tagLabel: typeof metaRaw.tagLabel === 'string' ? metaRaw.tagLabel : null,
+          typeof metaRaw.questionTypeId === 'string' ? metaRaw.questionTypeId : questionTypeIds[0] ?? null,
+        questionTypeIds,
+        tagLabel: typeof metaRaw.tagLabel === 'string' ? metaRaw.tagLabel : tagLabels[0] ?? null,
+        tagLabels,
         difficulty: typeof metaRaw.difficulty === 'string' ? metaRaw.difficulty : null,
         status: typeof metaRaw.status === 'string' ? metaRaw.status : 'fresh',
         questionIds,
@@ -2108,8 +2160,8 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       const existingIds = drillQuestionIdsFromMetadata(metaRaw)
       const existingSet = new Set(existingIds)
-      const questionTypeId =
-        typeof metaRaw.questionTypeId === 'string' && metaRaw.questionTypeId ? metaRaw.questionTypeId : null
+      const questionTypeIds = resolveDrillQuestionTypeIds(metaRaw.questionTypeId, metaRaw.questionTypeIds)
+      const questionTypeId = questionTypeIds[0] ?? null
       const difficulty =
         metaRaw.difficulty === 'easy' || metaRaw.difficulty === 'hard' || metaRaw.difficulty === 'adaptive'
           ? metaRaw.difficulty
@@ -2119,6 +2171,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const pool = await deps.repository.listDrillPoolQuestions({
         sectionType,
         questionTypeId,
+        questionTypeIds,
         difficulty: difficulty === 'adaptive' ? null : difficulty,
       })
       const answeredIds = new Set(await deps.repository.listUserAnsweredQuestionIds(userId))

@@ -15,7 +15,7 @@ const sample: SavedDrillConfig = {
   showAnswers: "each",
   customize: true,
   selection: "auto",
-  tags: "mb",
+  tags: ["mb"],
   difficulty: "hard",
   status: "fresh",
 }
@@ -44,6 +44,22 @@ describe("drill-config-saved-settings", () => {
       JSON.stringify({ ...sample, showAnswers: "never" }),
     )
     expect(readSavedDrillConfig("LR")?.showAnswers).toBe("end")
+  })
+
+  it("normalizes legacy string tags into an array", () => {
+    window.localStorage.setItem(
+      drillConfigSettingsKey("LR"),
+      JSON.stringify({ ...sample, tags: "flaw" }),
+    )
+    expect(readSavedDrillConfig("LR")?.tags).toEqual(["flaw"])
+  })
+
+  it("treats legacy any tag as empty selection", () => {
+    window.localStorage.setItem(
+      drillConfigSettingsKey("LR"),
+      JSON.stringify({ ...sample, tags: "any" }),
+    )
+    expect(readSavedDrillConfig("LR")?.tags).toEqual([])
   })
 
   it("ignores invalid stored JSON", () => {

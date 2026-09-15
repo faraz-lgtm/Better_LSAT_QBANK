@@ -53,7 +53,9 @@ export type DrillSessionMetadata = {
   showAnswers: string
   selection?: string
   questionTypeId?: string | null
+  questionTypeIds?: string[] | null
   tagLabel?: string | null
+  tagLabels?: string[] | null
   difficulty?: string | null
   status?: string
   questionIds: string[]
@@ -100,7 +102,9 @@ export type StartDrillInput = {
   showAnswers?: DrillShowAnswers
   selection?: DrillSelection
   questionTypeId?: string | null
+  questionTypeIds?: string[] | null
   tagLabel?: string | null
+  tagLabels?: string[] | null
   difficulty?: DrillDifficulty
   status?: DrillStatus
   title?: string | null
@@ -110,6 +114,7 @@ export type StartDrillInput = {
 export type DrillPoolStatsInput = {
   sectionType: DrillSectionType
   questionTypeId?: string | null
+  questionTypeIds?: string[] | null
   difficulty?: DrillDifficulty
   status?: DrillStatus
 }

@@ -5,7 +5,11 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { FigmaIcon, PlayCircleIcon } from "@/components/icons/figma-icons"
 import { Switch } from "@/components/ui/switch"
-import { DrillConfigField, DrillConfigSelectField } from "@/features/student/drills/drill-config-field"
+import {
+  DrillConfigField,
+  DrillConfigMultiSelectField,
+  DrillConfigSelectField,
+} from "@/features/student/drills/drill-config-field"
 import {
   clearSavedDrillConfig,
   readSavedDrillConfig,
@@ -19,6 +23,7 @@ import {
   type DrillShowAnswers,
   type DrillStatus,
 } from "@/features/student/drills/drill-types"
+import { formatDrillTitleFromTypeNames } from "@/features/student/drills/format-drill-title"
 import { DrillTimingMenu } from "@/features/student/drills/drill-timing-menu"
 import { isValidDrillTiming } from "@/features/student/drills/drill-timing"
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
@@ -51,7 +56,9 @@ function DrillConfigForm({
 
   const [bannerOpen, setBannerOpen] = useState(true)
   const [saveSettings, setSaveSettings] = useState(() => savedConfig != null)
-  const [customize, setCustomize] = useState(Boolean(initialQuestionTypeId) || Boolean(savedConfig?.customize))
+  const [customize, setCustomize] = useState(
+    Boolean(initialQuestionTypeId) || Boolean(savedConfig?.customize),
+  )
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [poolStats, setPoolStats] = useState({ selectedCount: 0, totalCount: 0 })
@@ -61,7 +68,10 @@ function DrillConfigForm({
   const [timing, setTiming] = useState(savedConfig?.timing ?? "unlimited")
   const [showAnswers, setShowAnswers] = useState<DrillShowAnswers>(savedConfig?.showAnswers ?? "end")
   const [selection, setSelection] = useState(savedConfig?.selection ?? "auto")
-  const [tags, setTags] = useState(initialQuestionTypeId ?? savedConfig?.tags ?? "any")
+  const [tags, setTags] = useState<string[]>(() => {
+    if (initialQuestionTypeId) return [initialQuestionTypeId]
+    return savedConfig?.tags ?? []
+  })
   const [difficulty, setDifficulty] = useState<DrillDifficulty>(savedConfig?.difficulty ?? "adaptive")
   // Default to full pool so Start works even after prior practice; "Fresh" is opt-in via Customize.
   const [status, setStatus] = useState<DrillStatus>(savedConfig?.status ?? "all")
@@ -69,7 +79,7 @@ function DrillConfigForm({
   const copy = sectionCopy[sectionType]
 
   const tagSelectOptions = useMemo(() => {
-    const base = [{ label: "All skills", value: "any" }, ...tagOptions]
+    const base = [...tagOptions]
     if (initialQuestionTypeId && !tagOptions.some((t) => t.value === initialQuestionTypeId)) {
       return [{ label: initialTagLabel ?? "Selected tag", value: initialQuestionTypeId }, ...base]
     }
@@ -77,12 +87,20 @@ function DrillConfigForm({
   }, [tagOptions, initialQuestionTypeId, initialTagLabel])
 
   // Customize off = adaptive defaults over the full section pool (ignore tag/status filters).
-  const resolvedQuestionTypeId = customize && tags !== "any" ? tags : null
-  const resolvedTagLabel = resolvedQuestionTypeId
-    ? (tagSelectOptions.find((t) => t.value === resolvedQuestionTypeId)?.label ??
-        initialTagLabel ??
-        null)
-    : null
+  const resolvedQuestionTypeIds = useMemo(() => (customize ? tags : []), [customize, tags])
+  const resolvedTagLabels = useMemo(
+    () =>
+      resolvedQuestionTypeIds.map(
+        (id) =>
+          tagSelectOptions.find((option) => option.value === id)?.label ??
+          (id === initialQuestionTypeId ? initialTagLabel : null) ??
+          id,
+      ),
+    [resolvedQuestionTypeIds, tagSelectOptions, initialQuestionTypeId, initialTagLabel],
+  )
+  const resolvedQuestionTypeId = resolvedQuestionTypeIds[0] ?? null
+  const resolvedTagLabel = resolvedTagLabels[0] ?? null
+  const drillTitle = formatDrillTitleFromTypeNames(resolvedTagLabels)
   const resolvedDifficulty = customize ? difficulty : "adaptive"
   const resolvedStatus = customize ? status : "all"
   const resolvedShowAnswers = customize ? showAnswers : "end"
@@ -100,6 +118,7 @@ function DrillConfigForm({
       const stats = await practiceApi.getDrillPoolStats({
         sectionType,
         questionTypeId: resolvedQuestionTypeId,
+        questionTypeIds: resolvedQuestionTypeIds,
         difficulty: resolvedDifficulty,
         status: resolvedStatus,
       })
@@ -107,7 +126,14 @@ function DrillConfigForm({
     } catch {
       setPoolStats({ selectedCount: 0, totalCount: 0 })
     }
-  }, [practiceApi, sectionType, resolvedQuestionTypeId, resolvedDifficulty, resolvedStatus])
+  }, [
+    practiceApi,
+    sectionType,
+    resolvedQuestionTypeId,
+    resolvedQuestionTypeIds,
+    resolvedDifficulty,
+    resolvedStatus,
+  ])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -187,10 +213,12 @@ function DrillConfigForm({
         showAnswers: resolvedShowAnswers,
         selection: selection as "auto" | "manual",
         questionTypeId: resolvedQuestionTypeId,
+        questionTypeIds: resolvedQuestionTypeIds,
         tagLabel: resolvedTagLabel,
+        tagLabels: resolvedTagLabels,
         difficulty: resolvedDifficulty,
         status: resolvedStatus,
-        title: resolvedTagLabel ?? "Varied Mix",
+        title: drillTitle,
       })
       navigate(`/app/practice/drills/session/${out.session.id}`)
     } catch (e) {
@@ -295,14 +323,17 @@ function DrillConfigForm({
               onChange={setSelection}
               options={[...drillConfigOptions.selection]}
             />
-            <DrillConfigSelectField
+            <DrillConfigMultiSelectField
               label={sectionType === "RC" ? "Reading Focus" : "Skill Focus"}
               description={
-                sectionType === "RC" ? "Choose the reading skills to practise." : "Filter by question type"
+                sectionType === "RC"
+                  ? "Choose up to three reading skills to name this drill."
+                  : "Choose up to three question types to name this drill."
               }
-              value={tags}
+              values={tags}
               onChange={setTags}
               options={tagSelectOptions}
+              emptyLabel="All skills"
             />
             <DrillConfigSelectField
               label="Challenge"

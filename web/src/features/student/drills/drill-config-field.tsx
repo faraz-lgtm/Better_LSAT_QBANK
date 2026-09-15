@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 
+import { StudentMultiOptionMenu } from "@/features/student/components/student-multi-option-menu"
 import { StudentOptionMenu } from "@/features/student/components/student-option-menu"
 import { cn } from "@/lib/utils"
 
@@ -60,4 +61,40 @@ function DrillConfigSelectField({
   )
 }
 
-export { DrillConfigField, DrillConfigSelectField }
+type DrillConfigMultiSelectFieldProps = Omit<DrillConfigFieldProps, "children"> & {
+  values: string[]
+  onChange: (values: string[]) => void
+  options: { label: string; value: string }[]
+  emptyLabel?: string
+  menuTriggerClassName?: string
+  menuVariant?: "default" | "surface"
+}
+
+function DrillConfigMultiSelectField({
+  label,
+  description,
+  className,
+  values,
+  onChange,
+  options,
+  emptyLabel,
+  menuTriggerClassName,
+  menuVariant = "default",
+}: DrillConfigMultiSelectFieldProps) {
+  return (
+    <DrillConfigField label={label} description={description} className={className}>
+      <StudentMultiOptionMenu
+        values={values}
+        onChange={onChange}
+        options={options}
+        ariaLabel={label}
+        emptyLabel={emptyLabel}
+        size="lg"
+        variant={menuVariant}
+        triggerClassName={menuTriggerClassName}
+      />
+    </DrillConfigField>
+  )
+}
+
+export { DrillConfigField, DrillConfigMultiSelectField, DrillConfigSelectField }
