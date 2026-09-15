@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { Camera, Check, CreditCard, Calendar, Clock, ExternalLink, FileText, Globe2, LockKeyhole, Mail, Moon, Phone, UserRound } from "lucide-react"
+import { Camera, Check, CreditCard, Calendar, ExternalLink, FileText, Globe2, LockKeyhole, Mail, Phone, UserRound } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
@@ -29,7 +29,6 @@ import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
-import { ThemeToggleSwitch } from "@/features/theme/theme-toggle"
 import {
   createBillingApi,
   type BillingInvoice,
@@ -38,10 +37,6 @@ import {
 } from "@/lib/api/billing"
 import { createUsersApi, type UserProfile } from "@/lib/api/users"
 import { resolveAccountLsacLinkState } from "@/lib/auth/needs-lsac-link"
-import {
-  useAccommodations,
-  type ExtraTimeSetting,
-} from "@/features/student/accommodations/accommodations-context"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
@@ -517,183 +512,6 @@ function TimezoneRow({
   )
 }
 
-const EXTRA_TIME_PRESETS: {
-  value: ExtraTimeSetting
-  label: string
-  detail: string
-  minutesLabel: string | null
-}[] = [
-  { value: "none", label: "Standard", detail: "Official LSAT timing", minutesLabel: "35 min" },
-  { value: "1.5x", label: "Time and a half", detail: "50% more time per section", minutesLabel: "53 min" },
-  { value: "2x", label: "Double time", detail: "Twice the standard time", minutesLabel: "70 min" },
-  { value: "custom", label: "Custom", detail: "Set your own section length", minutesLabel: null },
-]
-
-type AccommodationsRowProps = {
-  setting: ExtraTimeSetting
-  customMinutes: number | null
-  editing: boolean
-  saving?: boolean
-  draftSetting: ExtraTimeSetting
-  draftCustomMinutes: string
-  onDraftSettingChange: (value: ExtraTimeSetting) => void
-  onDraftCustomMinutesChange: (value: string) => void
-  onEdit: () => void
-  onCancel: () => void
-  onSave: () => void
-}
-
-function formatAccommodationsDisplay(setting: ExtraTimeSetting, customMinutes: number | null): string {
-  switch (setting) {
-    case "1.5x":
-      return "Time and a half (53 min)"
-    case "2x":
-      return "Double time (70 min)"
-    case "custom":
-      return customMinutes != null ? `Custom (${customMinutes} min)` : "Custom"
-    default:
-      return "Standard (35 min)"
-  }
-}
-
-function AccommodationsRow({
-  setting,
-  customMinutes,
-  editing,
-  saving = false,
-  draftSetting,
-  draftCustomMinutes,
-  onDraftSettingChange,
-  onDraftCustomMinutesChange,
-  onEdit,
-  onCancel,
-  onSave,
-}: AccommodationsRowProps) {
-  if (!editing) {
-    return (
-      <div className="flex items-center gap-4 px-6 py-[18px]">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
-          <Clock className="size-3.5" strokeWidth={1.75} />
-        </span>
-        <div className="flex min-w-0 flex-1 items-end gap-4">
-          <div className="min-w-0 flex-1 space-y-1">
-            <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">Extra Time</p>
-            <p className="truncate text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)]">
-              {formatAccommodationsDisplay(setting, customMinutes)}
-            </p>
-          </div>
-          <Button
-            type="button"
-            size="xs"
-            variant="outline"
-            className={cn(ACCOUNT_EDIT_BTN_CLASS, "shrink-0")}
-            onClick={onEdit}
-          >
-            Edit
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4 px-6 py-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
-              <Clock className="size-3.5" strokeWidth={1.75} />
-            </span>
-            <div>
-              <p className="text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">Extra Time</p>
-              <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
-                Applies to PrepTests, sections, and timed drills
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Button type="button" size="xs" disabled={saving} onClick={onSave}>
-            {saving ? "Saving…" : "Save"}
-          </Button>
-          <Button type="button" size="xs" variant="ghost" disabled={saving} className={ACCOUNT_CANCEL_BTN_CLASS} onClick={onCancel}>
-            Cancel
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid gap-2.5 sm:grid-cols-2">
-        {EXTRA_TIME_PRESETS.map((preset) => {
-          const selected = draftSetting === preset.value
-          return (
-            <label
-              key={preset.value}
-              className={cn(
-                "relative flex cursor-pointer flex-col gap-3 rounded-[10px] border p-3.5 transition-colors",
-                selected
-                  ? "border-[var(--primary)] bg-[var(--primary-25)] shadow-[0px_1px_2px_0px_rgba(13,71,161,0.12)]"
-                  : "border-[rgba(44,49,67,0.08)] bg-[var(--greyscale-0)] hover:border-[rgba(13,71,161,0.28)] hover:bg-[var(--greyscale-25)]",
-                saving && "pointer-events-none opacity-60",
-              )}
-            >
-              <input
-                type="radio"
-                name="extra-time-setting"
-                value={preset.value}
-                checked={selected}
-                disabled={saving}
-                onChange={() => onDraftSettingChange(preset.value)}
-                className="sr-only"
-              />
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 space-y-0.5">
-                  <p className="text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">{preset.label}</p>
-                  <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{preset.detail}</p>
-                </div>
-                <span
-                  className={cn(
-                    "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border",
-                    selected ? "border-[var(--primary)] bg-[var(--primary)]" : "border-[#c5cad3] bg-[var(--greyscale-0)]",
-                  )}
-                  aria-hidden
-                >
-                  {selected ? <span className="size-1.5 rounded-full bg-white" /> : null}
-                </span>
-              </div>
-              {preset.minutesLabel ? (
-                <span
-                  className={cn(
-                    "inline-flex w-fit rounded-md px-2 py-1 text-xs font-semibold tracking-[0.24px]",
-                    selected ? "bg-[var(--greyscale-0)] text-[var(--primary)]" : "bg-[var(--greyscale-50)] text-[var(--greyscale-500)]",
-                  )}
-                >
-                  {preset.minutesLabel}
-                </span>
-              ) : null}
-              {preset.value === "custom" && selected ? (
-                <div className="flex items-center gap-2 border-t border-[rgba(13,71,161,0.12)] pt-3">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={999}
-                    value={draftCustomMinutes}
-                    placeholder="e.g. 45"
-                    disabled={saving}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => onDraftCustomMinutesChange(e.target.value)}
-                    className="h-9 w-[88px] rounded-lg border border-[rgba(44,49,67,0.12)] bg-[var(--greyscale-0)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-1 focus-visible:ring-[var(--primary)]/30"
-                  />
-                  <span className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">minutes / section</span>
-                </div>
-              ) : null}
-            </label>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 function AccountSection({
   title,
   icon: Icon,
@@ -830,11 +648,6 @@ function AccountPage() {
   const navigate = useNavigate()
   const { openPricingModal } = useGuestPricingModal()
   const { entitlement, loading: entitlementLoading } = useStudentEntitlement()
-  const {
-    extraTimeSetting,
-    extraTimeCustomMinutes,
-    updateAccommodations,
-  } = useAccommodations()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [email, setEmail] = useState<string | null>(null)
   const [phone, setPhone] = useState<string | null>(null)
@@ -854,10 +667,6 @@ function AccountPage() {
   const [timezoneValue, setTimezoneValue] = useState(getInitialTimezoneValue)
   const [timezoneDraft, setTimezoneDraft] = useState(timezoneValue)
   const [editingTimezone, setEditingTimezone] = useState(false)
-  const [editingAccommodations, setEditingAccommodations] = useState(false)
-  const [accommodationDraftSetting, setAccommodationDraftSetting] = useState<ExtraTimeSetting>("none")
-  const [accommodationDraftCustomMinutes, setAccommodationDraftCustomMinutes] = useState("")
-  const [savingAccommodations, setSavingAccommodations] = useState(false)
   const [addingPayment, setAddingPayment] = useState(false)
   const [paymentPlan, setPaymentPlan] = useState<BillingPlanId>("core")
   const [paymentPlanMenuOpen, setPaymentPlanMenuOpen] = useState(false)
@@ -1065,40 +874,6 @@ function AccountPage() {
     setEditingTimezone(false)
   }
 
-  function startAccommodationsEdit() {
-    setAccommodationDraftSetting(extraTimeSetting)
-    setAccommodationDraftCustomMinutes(extraTimeCustomMinutes != null ? String(extraTimeCustomMinutes) : "")
-    setEditingAccommodations(true)
-  }
-
-  function cancelAccommodationsEdit() {
-    setEditingAccommodations(false)
-  }
-
-  async function saveAccommodationsEdit() {
-    const setting = accommodationDraftSetting
-    let customMinutes: number | null = null
-    if (setting === "custom") {
-      const parsed = parseInt(accommodationDraftCustomMinutes.trim(), 10)
-      if (!Number.isFinite(parsed) || parsed < 1 || parsed > 999) {
-        setError("Custom minutes must be a number between 1 and 999.")
-        return
-      }
-      customMinutes = parsed
-    }
-    setSavingAccommodations(true)
-    setError(null)
-    try {
-      await updateAccommodations(setting, customMinutes)
-      setAccountStatus("Accommodations updated.")
-      setEditingAccommodations(false)
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Failed to update accommodations.")
-    } finally {
-      setSavingAccommodations(false)
-    }
-  }
-
   async function startPaymentCheckout() {
     setStartingPayment(true)
     setPaymentError(null)
@@ -1216,39 +991,6 @@ function AccountPage() {
                 onEdit={startTimezoneEdit}
                 onCancel={cancelTimezoneEdit}
                 onSave={saveTimezoneEdit}
-              />
-            </AccountSection>
-
-            <AccountSection title="Appearance" icon={Moon}>
-              <div className="flex items-center justify-between gap-4 px-6 py-[18px]">
-                <div className="min-w-0 space-y-1">
-                  <label
-                    htmlFor="account-dark-mode"
-                    className="text-sm font-medium tracking-[0.28px] text-[color:var(--color-student-heading)]"
-                  >
-                    Dark mode
-                  </label>
-                  <p className="text-xs tracking-[0.24px] text-[color:var(--greyscale-500)]">
-                    Switch between light and dark theme
-                  </p>
-                </div>
-                <ThemeToggleSwitch />
-              </div>
-            </AccountSection>
-
-            <AccountSection title="Accommodations" icon={Clock}>
-              <AccommodationsRow
-                setting={extraTimeSetting}
-                customMinutes={extraTimeCustomMinutes}
-                editing={editingAccommodations}
-                saving={savingAccommodations}
-                draftSetting={accommodationDraftSetting}
-                draftCustomMinutes={accommodationDraftCustomMinutes}
-                onDraftSettingChange={setAccommodationDraftSetting}
-                onDraftCustomMinutesChange={setAccommodationDraftCustomMinutes}
-                onEdit={startAccommodationsEdit}
-                onCancel={cancelAccommodationsEdit}
-                onSave={() => void saveAccommodationsEdit()}
               />
             </AccountSection>
 

@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react"
+
 import { PracticeDrillTypeRow } from "@/features/student/components/practice-drill-type-row"
 import { PracticeListFooter } from "@/features/student/components/practice-list-footer"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
@@ -22,12 +24,6 @@ type PracticeTagDrillsSectionsProps = {
   lr: TagDrill[]
   rc: TagDrill[]
   visibleSections: Array<"lr" | "rc">
-  lrExpanded: boolean
-  rcExpanded: boolean
-  onExpandLr: () => void
-  onCollapseLr: () => void
-  onExpandRc: () => void
-  onCollapseRc: () => void
   onStart: (configPath: string) => void
   loading: boolean
 }
@@ -35,18 +31,19 @@ type PracticeTagDrillsSectionsProps = {
 function TagDrillsSectionCard({
   section,
   drills,
-  expanded,
-  onExpand,
-  onCollapse,
   onStart,
 }: {
   section: "LR" | "RC"
   drills: TagDrill[]
-  expanded: boolean
-  onExpand: () => void
-  onCollapse: () => void
   onStart: (configPath: string) => void
 }) {
+  const [expanded, setExpanded] = useState(false)
+  const drillIds = drills.map((drill) => drill.id).join("|")
+
+  useEffect(() => {
+    setExpanded(false)
+  }, [drillIds])
+
   if (drills.length === 0) return null
 
   const canExpand = drills.length > TAG_DRILLS_PER_SECTION_INITIAL
@@ -63,7 +60,9 @@ function TagDrillsSectionCard({
           </h2>
         </div>
         <p className="pl-[44px] text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
-          Highest-priority types for you in this section
+          {expanded && canExpand
+            ? "All priority types for you in this section"
+            : "Your top 3 weakest types in this section"}
         </p>
       </div>
       <div className="flex flex-col">
@@ -83,8 +82,8 @@ function TagDrillsSectionCard({
       <PracticeListFooter
         hasMore={canExpand && !expanded}
         expanded={expanded && canExpand}
-        onShowMore={onExpand}
-        onShowLess={onCollapse}
+        onShowMore={() => setExpanded(true)}
+        onShowLess={() => setExpanded(false)}
       />
     </section>
   )
@@ -94,12 +93,6 @@ function PracticeTagDrillsSections({
   lr,
   rc,
   visibleSections,
-  lrExpanded,
-  rcExpanded,
-  onExpandLr,
-  onCollapseLr,
-  onExpandRc,
-  onCollapseRc,
   onStart,
   loading,
 }: PracticeTagDrillsSectionsProps) {
@@ -127,26 +120,8 @@ function PracticeTagDrillsSections({
 
   return (
     <div className="flex flex-col gap-[24px]">
-      {showLr ? (
-        <TagDrillsSectionCard
-          section="LR"
-          drills={lrDrills}
-          expanded={lrExpanded}
-          onExpand={onExpandLr}
-          onCollapse={onCollapseLr}
-          onStart={onStart}
-        />
-      ) : null}
-      {showRc ? (
-        <TagDrillsSectionCard
-          section="RC"
-          drills={rcDrills}
-          expanded={rcExpanded}
-          onExpand={onExpandRc}
-          onCollapse={onCollapseRc}
-          onStart={onStart}
-        />
-      ) : null}
+      {showLr ? <TagDrillsSectionCard section="LR" drills={lrDrills} onStart={onStart} /> : null}
+      {showRc ? <TagDrillsSectionCard section="RC" drills={rcDrills} onStart={onStart} /> : null}
     </div>
   )
 }

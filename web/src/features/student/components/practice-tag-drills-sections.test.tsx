@@ -25,12 +25,6 @@ describe("PracticeTagDrillsSections", () => {
         lr={[drill({ id: "lr1", section: "LR", title: "Flaw" })]}
         rc={[drill({ id: "rc1", section: "RC", title: "Comparative" })]}
         visibleSections={["lr", "rc"]}
-        lrExpanded={false}
-        rcExpanded={false}
-        onExpandLr={() => undefined}
-        onCollapseLr={() => undefined}
-        onExpandRc={() => undefined}
-        onCollapseRc={() => undefined}
         onStart={() => undefined}
         loading={false}
       />,
@@ -40,6 +34,7 @@ describe("PracticeTagDrillsSections", () => {
     expect(screen.getByRole("heading", { name: "Drill by Types (RC)" })).toBeInTheDocument()
     expect(screen.getByText("Flaw")).toBeInTheDocument()
     expect(screen.getByText("Comparative")).toBeInTheDocument()
+    expect(screen.getAllByText("Your top 3 weakest types in this section")).toHaveLength(2)
     expect(screen.getAllByText("High").length).toBeGreaterThan(0)
     expect(screen.queryByText("Easy")).not.toBeInTheDocument()
     expect(screen.queryByText("Hardest")).not.toBeInTheDocument()
@@ -49,9 +44,9 @@ describe("PracticeTagDrillsSections", () => {
     expect(rcCta).toHaveClass("w-[176px]", "whitespace-nowrap")
   })
 
-  it("shows a couple of top LR types until See more", async () => {
+  it("expands beyond the top 3 weakest after See more", async () => {
     const user = userEvent.setup()
-    const onExpandLr = vi.fn()
+    const onStart = vi.fn()
     const lr = ["Flaw", "Necessary Assumption", "Strengthen", "Weaken"].map((title, i) =>
       drill({ id: `lr${i}`, section: "LR", title }),
     )
@@ -61,13 +56,7 @@ describe("PracticeTagDrillsSections", () => {
         lr={lr}
         rc={[]}
         visibleSections={["lr", "rc"]}
-        lrExpanded={false}
-        rcExpanded={false}
-        onExpandLr={onExpandLr}
-        onCollapseLr={() => undefined}
-        onExpandRc={() => undefined}
-        onCollapseRc={() => undefined}
-        onStart={() => undefined}
+        onStart={onStart}
         loading={false}
       />,
     )
@@ -76,9 +65,13 @@ describe("PracticeTagDrillsSections", () => {
     expect(screen.getByText("Necessary Assumption")).toBeInTheDocument()
     expect(screen.getByText("Strengthen")).toBeInTheDocument()
     expect(screen.queryByText("Weaken")).not.toBeInTheDocument()
+    expect(screen.getByText("Your top 3 weakest types in this section")).toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "See more" }))
-    expect(onExpandLr).toHaveBeenCalled()
+
+    expect(screen.getByText("Weaken")).toBeInTheDocument()
+    expect(screen.getByText("All priority types for you in this section")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "See less" })).toBeInTheDocument()
   })
 
   it("hides a section when the page filter excludes it", () => {
@@ -87,12 +80,6 @@ describe("PracticeTagDrillsSections", () => {
         lr={[drill({ id: "lr1", section: "LR", title: "Flaw" })]}
         rc={[drill({ id: "rc1", section: "RC", title: "Main Point" })]}
         visibleSections={["lr"]}
-        lrExpanded={false}
-        rcExpanded={false}
-        onExpandLr={() => undefined}
-        onCollapseLr={() => undefined}
-        onExpandRc={() => undefined}
-        onCollapseRc={() => undefined}
         onStart={() => undefined}
         loading={false}
       />,
