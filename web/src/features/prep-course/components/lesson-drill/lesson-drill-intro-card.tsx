@@ -33,7 +33,7 @@ function LessonDrillIntroCard({
   const showUploadedHtml = drillLessonHasBodyHtml(lesson.text_content)
 
   return (
-    <article className="w-full rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+    <article className="w-full bg-transparent">
       {hideTitle ? null : (
         <div className="flex items-start justify-between gap-4 border-b border-[var(--greyscale-100)] pb-6">
           <div className="min-w-0 flex-1">

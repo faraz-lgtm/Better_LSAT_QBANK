@@ -35,7 +35,7 @@ function ActiveDrillIntroCard({
   const showUploadedHtml = drillLessonHasBodyHtml(lesson.text_content)
 
   return (
-    <article className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+    <article className="w-full bg-transparent">
       {hideTitle ? null : (
         <h2 className="text-2xl font-bold text-[var(--color-student-heading)] md:text-[28px]">{lesson.title}</h2>
       )}

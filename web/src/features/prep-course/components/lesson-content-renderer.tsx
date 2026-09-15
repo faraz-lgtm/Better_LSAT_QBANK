@@ -40,8 +40,11 @@ type LessonContentRendererProps = {
 }
 
 function lessonArticleCardClass(edgeToSidebar: boolean, className: string) {
-  return cn(className, edgeToSidebar && "rounded-r-none border-r-0")
+  return cn(className, edgeToSidebar && "border-r-0")
 }
+
+/** Lesson body surface without a Google Doc paper frame. */
+const LESSON_OPEN_SURFACE_CLASS = "bg-transparent p-6"
 
 function youtubeEmbedUrl(url: string): string | null {
   try {
@@ -130,7 +133,7 @@ function LessonVideoBlock({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-hidden rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+      <div className="overflow-hidden bg-transparent">
         <div className="aspect-video w-full bg-[var(--primary-25)]">
           <iframe
             className="h-full w-full"
@@ -207,7 +210,7 @@ function CompletedDrillResultsSection({
     showVideo ? (
       <LessonVideoBlock lesson={lesson} belowVideo={belowVideo} hideTitle={hideTitle} />
     ) : lesson.text_content ? (
-      <article className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+      <article className={LESSON_OPEN_SURFACE_CLASS}>
         {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
         <LessonHtmlContent
           html={lesson.text_content}
@@ -501,7 +504,7 @@ function LessonDrillLinkedQuestions({
 
   if (items.length === 0) {
     return (
-      <article className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+      <article className={LESSON_OPEN_SURFACE_CLASS}>
         <h3 className="ds-heading-4 ds-text-heading">PrepTest question</h3>
         <p className="ds-body-sm mt-3 text-[var(--greyscale-500)]">No PrepTest question is linked to this lesson yet.</p>
       </article>
@@ -514,7 +517,7 @@ function LessonDrillLinkedQuestions({
   const showNav = !isActive && items.length > 1
 
   return (
-    <article className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+    <article className={LESSON_OPEN_SURFACE_CLASS}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="ds-heading-4 ds-text-heading">{isActive ? "Your drill question" : "PrepTest questions"}</h3>
@@ -705,7 +708,7 @@ function LessonContentRenderer({
             )}
           </div>
         ) : (
-          <article className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+          <article className={LESSON_OPEN_SURFACE_CLASS}>
             {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
             {lesson.text_content ? (
               <LessonHtmlContent
@@ -738,7 +741,7 @@ function LessonContentRenderer({
     <article
       className={lessonArticleCardClass(
         edgeToSidebar,
-        "rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]",
+        LESSON_OPEN_SURFACE_CLASS,
       )}
     >
       {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
