@@ -17,7 +17,7 @@ const savedLrConfig: SavedDrillConfig = {
   showAnswers: "each",
   customize: false,
   selection: "auto",
-  tags: "any",
+  tags: [],
   difficulty: "adaptive",
   status: "all",
 }

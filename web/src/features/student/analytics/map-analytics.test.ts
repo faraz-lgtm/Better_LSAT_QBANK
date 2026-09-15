@@ -240,7 +240,7 @@ describe("map-analytics", () => {
     })
     expect(drill).toMatchObject({
       id: "d1",
-      testLabel: "Flaw",
+      testLabel: "Flaw Drill",
       score: 3,
       scoreMax: 5,
       bookmarked: true,
@@ -262,7 +262,28 @@ describe("map-analytics", () => {
       sectionTitle: null,
       sectionType: null,
     })
-    expect(titled?.testLabel).toBe("Main Conclusion")
+    expect(titled?.testLabel).toBe("Main Conclusion Drill")
+
+    const multi = mapDrillSessionToHistoryEntry({
+      id: "d2b",
+      kind: "DRILL",
+      startedAt: "2026-01-01T00:00:00Z",
+      completedAt: "2026-01-02T00:00:00Z",
+      rawScore: 2,
+      scaledScore: null,
+      percentile: null,
+      bookmarked: false,
+      excluded: false,
+      metadata: {
+        title: "Varied Mix",
+        tagLabels: ["Flaw", "Assumption"],
+        questionIds: ["a", "b"],
+      },
+      prepTestTitle: null,
+      sectionTitle: null,
+      sectionType: "LR",
+    })
+    expect(multi?.testLabel).toBe("Flaw, Assumption Drill")
 
     const mixed = mapDrillSessionToHistoryEntry({
       id: "d3",

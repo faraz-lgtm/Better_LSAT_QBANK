@@ -212,12 +212,16 @@ function PrepTestHistoryRow({
             <button
               type="button"
               onClick={() => onSelectEntry?.(entry.id)}
+              title={entry.testLabel}
               className="truncate text-left text-sm font-semibold leading-[1.35] tracking-[0.02em] text-[var(--primary)] hover:underline focus-visible:underline focus-visible:outline-none"
             >
               {entry.testLabel}
             </button>
           ) : (
-            <p className="truncate text-sm font-semibold leading-[1.35] tracking-[0.02em] text-[var(--primary)]">
+            <p
+              title={entry.testLabel}
+              className="truncate text-sm font-semibold leading-[1.35] tracking-[0.02em] text-[var(--primary)]"
+            >
               {entry.testLabel}
             </p>
           )}

@@ -919,6 +919,36 @@ Deno.test('startDrill creates session with question ids', async () => {
   assertEquals(out.questions.length, 1)
   assertEquals(out.questions[0]!.stemText, 'Stem?')
   assertEquals(out.questions[0]!.targetTimeSeconds, undefined)
+  assertEquals(out.drillLabel, 'Varied Mix')
+  assertEquals(out.metadata.title, 'Varied Mix')
+})
+
+Deno.test('startDrill titles 1–3 selected types and falls back for more', async () => {
+  const service = createPracticeService({ repository: drillRepo() as never })
+  const one = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 1,
+    questionTypeIds: ['qt-1'],
+    tagLabels: ['Flaw'],
+  })
+  assertEquals(one.drillLabel, 'Flaw Drill')
+  assertEquals(one.metadata.tagLabels, ['Flaw'])
+
+  const three = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 1,
+    questionTypeIds: ['qt-1', 'qt-2', 'qt-3'],
+    tagLabels: ['Flaw', 'Assumption', 'Strengthen'],
+  })
+  assertEquals(three.drillLabel, 'Flaw, Assumption, Strengthen Drill')
+
+  const many = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 1,
+    questionTypeIds: ['qt-1', 'qt-2', 'qt-3', 'qt-4'],
+    tagLabels: ['A', 'B', 'C', 'D'],
+  })
+  assertEquals(many.drillLabel, 'Varied Mix')
 })
 
 Deno.test('startDrill LR unlimited stores unlimited metadata and entire pool', async () => {
