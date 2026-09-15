@@ -17,10 +17,9 @@ import type {
 
 type DrillResultsPart = "cards" | "below" | "full"
 
-/** Figma `20222:22512` — header px 64 / body px 124 → 640 reading column */
-const LESSON_READING_COLUMN_CLASS = "mx-auto w-full max-w-[640px]"
-const LESSON_HEADER_PAD_CLASS = "px-8 md:px-16 pt-12 pb-8"
-const LESSON_BODY_PAD_CLASS = "px-6 md:px-[124px] py-8"
+const LESSON_READING_COLUMN_CLASS = "mx-auto w-full max-w-[840px]"
+const LESSON_HEADER_PAD_CLASS = "px-5 md:px-8 pt-10 pb-6"
+const LESSON_BODY_PAD_CLASS = "px-5 md:px-8 py-6"
 
 type PrepCourseLessonPanelProps = {
   course: PrepCourse
@@ -176,7 +175,7 @@ function PrepCourseLessonPanel({
     ) : (
       <article
         className={cn(
-          "box-border min-w-0 max-w-full overflow-x-clip rounded-[18px] bg-[var(--greyscale-0)]",
+          "box-border min-w-0 max-w-full overflow-x-clip bg-transparent",
           sidebarAdjacent && "min-h-full",
         )}
       >
@@ -211,11 +210,12 @@ function PrepCourseLessonPanel({
   ) : null
 
   const contentPaddingClass = inLessonCard ? "p-0" : sidebarAdjacent ? "pt-6 pb-6 pl-6 pr-0" : "p-6"
-  const paneBgClass = inLessonCard ? "bg-[var(--greyscale-0)]" : "bg-[var(--primary-0)]"
+  const paneBgClass = "bg-[var(--greyscale-0)]"
+  const lessonFlowClass = cn("min-w-0 w-full", paneBgClass, contentPaddingClass)
 
   if (lesson && hideHeaderForDrillResults && drillResultsPart === "cards") {
     return (
-      <div className="box-border w-full shrink-0 bg-[var(--primary-0)]">
+      <div className="box-border w-full shrink-0 bg-[var(--greyscale-0)]">
         <LessonContentRenderer
           lesson={lesson}
           linkedQuestionRefs={linkedQuestionRefs}
@@ -260,53 +260,32 @@ function PrepCourseLessonPanel({
 
     if (contentScrollRef) {
       return (
-        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <div
-            ref={contentScrollRef}
-            className={cn(
-              "practice-session-pane practice-session-scroll-hidden h-0 min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain bg-[var(--primary-0)] [overflow-anchor:none]",
-              contentPaddingClass,
-            )}
-          >
-            {belowContent}
-          </div>
+        <div ref={contentScrollRef} className={lessonFlowClass}>
+          {belowContent}
         </div>
       )
     }
 
     return (
-      <div className="box-border min-w-0 bg-[var(--primary-0)]">
+      <div className="box-border min-w-0 bg-[var(--greyscale-0)]">
         {belowContent}
       </div>
     )
   }
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+    <div className="flex min-w-0 w-full flex-col">
       {loading && !lesson ? (
-        <StudentPageLoader centered className="min-h-0 flex-1" label="Loading lesson…" />
+        <StudentPageLoader centered className="min-h-[40vh] flex-1" label="Loading lesson…" />
       ) : lesson ? (
         useContentColumnShell ? (
-          <div
-            ref={contentScrollRef}
-            className={cn(
-              "practice-session-pane practice-session-scroll-hidden h-0 min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain [overflow-anchor:none]",
-              paneBgClass,
-              contentPaddingClass,
-              sidebarAdjacent && !inLessonCard && "min-h-full",
-            )}
-          >
+          <div ref={contentScrollRef} className={cn(lessonFlowClass)}>
             {renderContentColumnShell()}
           </div>
         ) : useLessonArticleShell ? (
           <div
             ref={contentScrollRef}
-            className={cn(
-              "practice-session-pane practice-session-scroll-hidden h-0 min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain [overflow-anchor:none]",
-              paneBgClass,
-              contentPaddingClass,
-              (sidebarAdjacent || inLessonCard) && "min-h-full",
-            )}
+            className={cn(lessonFlowClass)}
           >
             <div className="box-border flex min-w-0 max-w-full flex-col gap-0 overflow-x-clip">
               {titleBlock}
@@ -316,16 +295,15 @@ function PrepCourseLessonPanel({
             </div>
           </div>
         ) : (
-          <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="flex min-w-0 w-full flex-col">
             {!hasVideo ? (
               <div className={cn("shrink-0 bg-transparent", contentPaddingClass, "pb-0")}>{titleBlock}</div>
             ) : null}
             <div
               ref={contentScrollRef}
               className={cn(
-                "practice-session-pane practice-session-scroll-hidden h-0 min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain [overflow-anchor:none]",
-                inLessonCard ? "bg-[var(--greyscale-0)]" : paneBgClass,
-                inLessonCard && hasVideo ? "p-0" : contentPaddingClass,
+                lessonFlowClass,
+                inLessonCard && hasVideo && "p-0",
                 !hasVideo && "pt-0",
               )}
             >

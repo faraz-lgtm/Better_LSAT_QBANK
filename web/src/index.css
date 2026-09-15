@@ -4430,12 +4430,16 @@ html.practice-exam-more-open .practice-session-question-panel-with-widget {
 }
 
 /* Prep course lesson — clip horizontal bleed from toggles, shadows, or flex min-content */
-.prep-course-lesson-shell,
+.prep-course-lesson-shell {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
 .prep-course-lesson-shell .practice-session-card,
 .prep-course-lesson-shell .practice-session-body {
   min-width: 0;
   max-width: 100%;
-  overflow-x: clip;
 }
 
 .prep-course-lesson-shell .practice-session-body--with-sidebar > :first-child {
@@ -4445,7 +4449,6 @@ html.practice-exam-more-open .practice-session-question-panel-with-widget {
 
 .prep-course-lesson-shell .practice-session-body--with-sidebar > :last-child {
   min-height: 0;
-  align-self: stretch;
 }
 
 .prep-course-rep-work-pair {
@@ -4516,6 +4519,17 @@ html.portal-chat-hidden [class*="lc_text-widget"] {
   visibility: hidden !important;
   pointer-events: none !important;
   opacity: 0 !important;
+}
+
+/* Sit the chat bubble above the lesson footer so Mark Complete / Next stays clickable */
+html.prep-course-lesson-active chat-widget,
+html.prep-course-lesson-active iframe[src*="leadconnectorhq.com"],
+html.prep-course-lesson-active iframe[src*="msgsndr.com"],
+html.prep-course-lesson-active iframe[src*="chat-widget"],
+html.prep-course-lesson-active [id*="leadconnector"],
+html.prep-course-lesson-active [id*="lc_text"],
+html.prep-course-lesson-active [class*="lc_text-widget"] {
+  bottom: 112px !important;
 }
 
 html.student-shell-immersive .practice-session-card--active-drill {
@@ -4617,6 +4631,15 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
   height: 0;
   min-height: 0;
   max-height: none;
+  overflow-x: clip;
+  overflow-y: auto;
+}
+
+.prep-course-lesson-shell .practice-session-body {
+  flex: none;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
 }
 
 .prep-course-lesson-frame {

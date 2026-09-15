@@ -22,7 +22,7 @@ function ActiveDrillResultBar({
   retakeLabel = "Retake",
 }: ActiveDrillResultBarProps) {
   return (
-    <section className="min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_1px_rgba(13,13,18,0.04)]">
+    <section className="min-w-0 max-w-full overflow-hidden bg-transparent">
       <div className="flex flex-col items-center gap-4 p-6">
         {lessonTitle ? (
           <h2 className="m-0 text-center text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">{lessonTitle}</h2>
