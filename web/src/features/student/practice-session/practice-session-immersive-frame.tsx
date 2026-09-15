@@ -43,7 +43,11 @@ function PracticeSessionImmersiveFrame({
       data-practice-session-immersive-frame
       className={cn(
         "fixed inset-0 z-40 flex items-center justify-center overflow-hidden",
-        edgeToEdge ? OFFICIAL_IMMERSIVE_FRAME_CLASS : "p-4 md:p-8",
+        fullBleed
+          ? OFFICIAL_IMMERSIVE_FRAME_CLASS
+          : fullWidth
+            ? cn(OFFICIAL_IMMERSIVE_FRAME_CLASS, "p-4 md:p-8")
+            : "p-4 md:p-8",
         className,
       )}
     >

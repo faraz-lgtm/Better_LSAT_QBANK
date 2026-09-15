@@ -159,7 +159,7 @@ describe("LrDrillOptionRow", () => {
     )
   })
 
-  it("fades letter and copy when masked in the LSAT exam layout, without a hatch overlay", () => {
+  it("covers a masked LSAT exam choice with a hatch overlay", () => {
     const { container } = render(
       <LrDrillOptionRow
         index={1}
@@ -172,14 +172,36 @@ describe("LrDrillOptionRow", () => {
       />,
     )
 
-    expect(container.firstChild).toHaveClass("practice-session-choice-masked", "rounded-[14px]")
+    expect(container.firstChild).toHaveClass("practice-session-choice-masked", "overflow-hidden", "rounded-[14px]")
     expect(container.firstChild).not.toHaveClass("practice-session-choice--selected")
     expect(screen.getByRole("button", { name: "Answer choice B, masked" })).toBeInTheDocument()
     expect(screen.getByText("B")).toHaveClass("practice-session-choice-masked-ink")
     expect(screen.getByText("Choice B").closest(".practice-session-choice-masked-ink")).toBeTruthy()
   })
 
-  it("fades official LawHub letter cell and copy the same way", () => {
+  it("uses 15px / 22px / regular for official choice copy and Regular 28/60 letters", () => {
+    render(
+      <LrDrillOptionRow
+        index={0}
+        html="<p>Choice A</p>"
+        selected={false}
+        onSelect={() => undefined}
+        variant="official"
+        showSideAction={false}
+      />,
+    )
+
+    const letter = screen.getByText("A")
+    expect(letter).toHaveClass("text-[28px]", "font-normal", "leading-[60px]")
+    expect(letter).not.toHaveClass("font-light")
+
+    const copy = screen.getByText("Choice A").closest(".practice-session-content")
+    expect(copy).toHaveClass("text-[15px]", "font-normal", "leading-[22px]")
+    expect(copy).not.toHaveClass("leading-[1.5]")
+    expect(copy).not.toHaveClass("tracking-[0.28px]")
+  })
+
+  it("covers a masked official LawHub choice with a hatch overlay", () => {
     render(
       <LrDrillOptionRow
         index={1}
@@ -194,6 +216,7 @@ describe("LrDrillOptionRow", () => {
 
     expect(screen.getByRole("button", { name: "Answer choice B, masked" })).toHaveClass(
       "practice-session-choice-masked",
+      "overflow-hidden",
     )
     expect(screen.getByText("B")).toHaveClass("practice-session-choice-masked-ink")
     expect(screen.getByText("Choice B").closest(".practice-session-choice-masked-ink")).toBeTruthy()
@@ -222,7 +245,7 @@ describe("LrDrillOptionRow", () => {
     expect(onSelect).not.toHaveBeenCalled()
   })
 
-  it("fades Blind Review letter and copy the same way as the LSAT exam, without strikethrough", () => {
+  it("covers a masked Blind Review choice with a hatch overlay, without strikethrough", () => {
     const { container } = render(
       <LrDrillOptionRow
         index={2}
@@ -235,7 +258,7 @@ describe("LrDrillOptionRow", () => {
       />,
     )
 
-    expect(container.firstChild).toHaveClass("practice-session-choice-masked")
+    expect(container.firstChild).toHaveClass("practice-session-choice-masked", "overflow-hidden")
     expect(container.firstChild).not.toHaveClass("opacity-45")
     expect(screen.getByRole("button", { name: "Answer choice C, masked" })).toBeInTheDocument()
     expect(screen.getByText("C")).toHaveClass("practice-session-choice-masked-ink")
@@ -331,24 +354,24 @@ describe("LrDrillOptionRow", () => {
       "w-[3px]",
       "absolute",
       "left-0",
-      "bg-[var(--primary-800)]",
+      "bg-[#041a44]",
     )
     const letter = screen.getByText("C")
     expect(letter).toHaveClass(
       "w-[60px]",
       "min-h-[60px]",
       "bg-[#ffe5b7]",
-      "text-[var(--primary-800)]",
+      "text-[#041a44]",
       "text-[28px]",
     )
     expect(letter).not.toHaveClass("bg-[var(--greyscale-0)]")
     expect(letter.nextElementSibling).toHaveClass(
-      "py-2",
-      "pl-1.5",
-      "pr-3",
+      "py-[8px]",
+      "pl-[6px]",
+      "pr-[12px]",
       "min-h-[60px]",
-      "leading-[1.5]",
-      "tracking-[0.28px]",
+      "leading-[22px]",
+      "font-normal",
     )
   })
 
@@ -364,17 +387,17 @@ describe("LrDrillOptionRow", () => {
       />,
     )
 
-    expect(container.firstChild).toHaveClass("bg-[#eceff3]")
+    expect(container.firstChild).toHaveClass("bg-[#eceff3]", "practice-session-official-choice", "items-start")
     expect(screen.getByText("A")).toHaveClass(
       "w-[60px]",
-      "bg-[var(--greyscale-0)]",
+      "bg-[#ffffff]",
       "border-[#eceff3]",
-      "text-[var(--greyscale-500)]",
+      "text-[#666d80]",
     )
     expect(screen.getByText("Choice A").closest(".practice-session-content")).toHaveClass(
-      "leading-[1.5]",
-      "tracking-[0.28px]",
-      "text-[var(--primary-800)]",
+      "leading-[22px]",
+      "font-normal",
+      "text-[#041a44]",
     )
   })
 })

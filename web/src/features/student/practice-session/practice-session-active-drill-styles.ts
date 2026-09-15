@@ -184,7 +184,7 @@ const ACTIVE_DRILL_OPTIONS_LIST_CLASS = "mt-[11px] flex w-full flex-col items-en
 
 /** LSAT exam layout — same 14px unselected card; letter + copy fade via CSS. */
 const ACTIVE_DRILL_OPTION_ROW_MASKED_CLASS =
-  "practice-session-choice-masked practice-session-choice--unselected w-full rounded-[14px] border border-solid py-2 pl-2 pr-6"
+  "practice-session-choice-masked practice-session-choice--unselected w-full overflow-hidden rounded-[14px] border border-solid py-2 pl-2 pr-6"
 
 /** Passage highlight selection popover (Figma `20280:108155` highlight UI) */
 const PASSAGE_HIGHLIGHT_POPOVER_CARD_CLASS =
