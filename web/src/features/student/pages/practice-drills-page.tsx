@@ -61,8 +61,6 @@ function PracticeDrillsPage() {
   const [rcTagDrills, setRcTagDrills] = useState<TagDrill[]>([])
   const [lrContinueExpanded, setLrContinueExpanded] = useState(false)
   const [rcContinueExpanded, setRcContinueExpanded] = useState(false)
-  const [lrTagsExpanded, setLrTagsExpanded] = useState(false)
-  const [rcTagsExpanded, setRcTagsExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -88,8 +86,6 @@ function PracticeDrillsPage() {
         setContinueFilter("all")
         setLrContinueExpanded(false)
         setRcContinueExpanded(false)
-        setLrTagsExpanded(false)
-        setRcTagsExpanded(false)
       } catch {
         if (!cancelled) {
           setContinueDrills([])
@@ -114,8 +110,6 @@ function PracticeDrillsPage() {
     setContinueFilter(sectionFilter)
     setLrContinueExpanded(false)
     setRcContinueExpanded(false)
-    setLrTagsExpanded(false)
-    setRcTagsExpanded(false)
   }, [sectionFilter])
 
   const starterVisible =
@@ -196,12 +190,6 @@ function PracticeDrillsPage() {
         lr={lrTagDrills}
         rc={rcTagDrills}
         visibleSections={[...starterVisible]}
-        lrExpanded={lrTagsExpanded}
-        rcExpanded={rcTagsExpanded}
-        onExpandLr={() => setLrTagsExpanded(true)}
-        onCollapseLr={() => setLrTagsExpanded(false)}
-        onExpandRc={() => setRcTagsExpanded(true)}
-        onCollapseRc={() => setRcTagsExpanded(false)}
         onStart={(configPath) => navigate(configPath)}
         loading={loading}
       />
