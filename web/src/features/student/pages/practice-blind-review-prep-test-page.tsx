@@ -25,10 +25,9 @@ import {
   BLIND_REVIEW_NOTES_SHELL_GUTTER_CLASS,
   BLIND_REVIEW_NOTES_START_BUTTON_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
+import { PREP_TEST_POOLS_HREF } from "@/features/account/prep-test-pool-types"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-
-const PREP_POOL_SETTINGS_HREF = "/app/practice/drills"
 
 function sectionDisplayTitle(row: BlindReviewDetailSection, index: number): string {
   if (row.sectionNumber != null) return `Section ${row.sectionNumber}`
@@ -263,7 +262,7 @@ function PracticeBlindReviewPrepTestPage() {
           <h2 className="shrink-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">Blind Review</h2>
           <p className="min-w-0 text-right text-sm font-normal leading-normal tracking-[0.28px] text-[var(--greyscale-500)]">
             Go to your{" "}
-            <Link to={PREP_POOL_SETTINGS_HREF} className="font-semibold text-[var(--primary)] hover:underline">
+            <Link to={PREP_TEST_POOLS_HREF} className="font-semibold text-[var(--primary)] hover:underline">
               Prep pool settings
             </Link>{" "}
             to change what sections are available.

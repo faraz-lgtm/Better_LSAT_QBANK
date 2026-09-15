@@ -21,6 +21,10 @@ import type {
   BlindReviewPoolStatusCounts,
 } from "@/features/student/blind-review/blind-review-types"
 import type {
+  PrepTestPoolSettingsListResult,
+  PrepTestPoolSettingsUpdate,
+} from "@/features/account/prep-test-pool-types"
+import type {
   PrepTestDetailResponse,
   PrepTestPoolBlindReviewStatus,
   PrepTestPoolFilter,
@@ -167,6 +171,9 @@ function normalizePrepTestPoolItem(pt: PrepTestPoolItemRaw): PrepTestPoolItem {
         : typeof pt.open_prep_test_session_id === "string"
           ? pt.open_prep_test_session_id
           : null,
+    inDrills: typeof pt.inDrills === "boolean" ? pt.inDrills : Boolean(pt.in_drills ?? true),
+    inSections: typeof pt.inSections === "boolean" ? pt.inSections : Boolean(pt.in_sections ?? true),
+    inTests: typeof pt.inTests === "boolean" ? pt.inTests : Boolean(pt.in_tests ?? true),
   }
 }
 
@@ -585,6 +592,38 @@ export function createPracticeApi(supabase: SupabaseClient) {
           : data.total,
         ...(statusCounts ? { statusCounts } : {}),
       }
+    },
+
+    async listPrepTestPoolSettings(): Promise<PrepTestPoolSettingsListResult> {
+      const { data, error } = await invokePracticeFn<PrepTestPoolSettingsListResult>(
+        "practice-list-prep-test-pool-settings",
+        { method: "POST", body: {} },
+      )
+      if (error) await throwIfEdgeInvokeFailed(error)
+      if (!data?.prepTests) throw new Error("No PrepTest pool settings returned from practice")
+      return data
+    },
+
+    async updatePrepTestPoolSettings(
+      updates: PrepTestPoolSettingsUpdate[],
+    ): Promise<PrepTestPoolSettingsListResult> {
+      const { data, error } = await invokePracticeFn<PrepTestPoolSettingsListResult>(
+        "practice-update-prep-test-pool-settings",
+        { method: "POST", body: { updates } },
+      )
+      if (error) await throwIfEdgeInvokeFailed(error)
+      if (!data?.prepTests) throw new Error("No PrepTest pool settings returned from practice")
+      return data
+    },
+
+    async resetPrepTestPoolSettings(): Promise<PrepTestPoolSettingsListResult> {
+      const { data, error } = await invokePracticeFn<PrepTestPoolSettingsListResult>(
+        "practice-reset-prep-test-pool-settings",
+        { method: "POST", body: {} },
+      )
+      if (error) await throwIfEdgeInvokeFailed(error)
+      if (!data?.prepTests) throw new Error("No PrepTest pool settings returned from practice")
+      return data
     },
 
     async getPrepTestDetail(prepTestId: string): Promise<PrepTestDetailResponse> {

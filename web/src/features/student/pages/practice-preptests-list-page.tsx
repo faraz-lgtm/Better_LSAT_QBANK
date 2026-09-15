@@ -23,10 +23,11 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import {
   ChevronDown,
   ChevronRight,
+  Info,
   MoreVertical,
   RefreshCw,
-  Settings,
 } from "lucide-react"
+import { prepTestFullTestUnavailableLabel } from "@/lib/prep-test-pool-availability"
 
 /** First paint shows a short list; “See more” loads the full filtered pool. */
 const INITIAL_PAGE_SIZE = 5
@@ -64,7 +65,7 @@ const RESULT_ACTION_CLASS =
 const PREPTEST_LIST_CARD_SHELL_BASE_CLASS =
   "w-full overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] transition-[border-color]"
 
-type PrepTestListCardHoverTone = "default" | "success"
+type PrepTestListCardHoverTone = "default" | "success" | "muted"
 
 const PREPTEST_LIST_CARD_HOVER_CLASS: Record<
   PrepTestListCardHoverTone,
@@ -79,9 +80,14 @@ const PREPTEST_LIST_CARD_HOVER_CLASS: Record<
     shell: "hover:border-[var(--primary)]",
     row: "transition-[background-color] hover:bg-[var(--primary-25)]",
   },
+  /** Not in full-tests pool — 7Sage-style gray / non-interactive look. */
+  muted: {
+    shell: "border-[var(--greyscale-100)] bg-[var(--greyscale-25)] border-l-4 border-l-[var(--greyscale-300)]",
+    row: "",
+  },
 }
 
-type BadgeTone = "default" | "success"
+type BadgeTone = "default" | "success" | "muted"
 
 function displayPrepTestNumber(item: PrepTestPoolItem): number {
   const n = item.prepTestNumber ? Number.parseInt(item.prepTestNumber, 10) : NaN
@@ -127,8 +133,11 @@ function statusSubtitle(item: PrepTestPoolItem): string {
   return ""
 }
 
-function PtBadge({ number }: { number: number; tone?: BadgeTone }) {
-  const palette = "border-[var(--primary)] bg-[var(--primary-0)] text-[var(--primary)]"
+function PtBadge({ number, tone = "default" }: { number: number; tone?: BadgeTone }) {
+  const palette =
+    tone === "muted"
+      ? "border-[var(--greyscale-200)] bg-[var(--greyscale-0)] text-[var(--greyscale-400)]"
+      : "border-[var(--primary)] bg-[var(--primary-0)] text-[var(--primary)]"
   return (
     <div className={cn("flex size-16 shrink-0 flex-col items-center justify-center rounded-[14px] border p-px", palette)}>
       <span className="w-[35px] text-center text-[12px] font-semibold leading-[1.35]">PT</span>
@@ -159,6 +168,7 @@ function PrepTestListCardShell({
   subtitleClass = "font-medium",
   layout = "standard",
   hoverTone = "default",
+  muted = false,
   center,
   actions,
   expanded,
@@ -173,6 +183,7 @@ function PrepTestListCardShell({
   subtitleClass?: string
   layout?: "standard" | "completed"
   hoverTone?: PrepTestListCardHoverTone
+  muted?: boolean
   center?: ReactNode
   actions: ReactNode
   expanded?: boolean
@@ -184,6 +195,7 @@ function PrepTestListCardShell({
     <article
       className={cn(PREPTEST_LIST_CARD_SHELL_BASE_CLASS, hoverClass.shell)}
       data-testid={`preptest-list-row-${testId}`}
+      data-muted={muted ? "true" : undefined}
     >
       <div
         className={cn(
@@ -200,7 +212,8 @@ function PrepTestListCardShell({
             {subtitle ? (
               <p
                 className={cn(
-                  "truncate text-[14px] leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]",
+                  "truncate text-[14px] leading-[1.5] tracking-[0.28px]",
+                  muted ? "text-[var(--greyscale-400)]" : "text-[var(--greyscale-500)]",
                   subtitleClass,
                 )}
               >
@@ -245,8 +258,14 @@ function PrepTestListCard({
   const ptNum = displayPrepTestNumber(item)
   const isCompleted = item.status === "completed"
   const blindReviewPending = item.blindReviewStatus != null
-  const badgeTone: BadgeTone = isCompleted ? "success" : "default"
-  const titleClass = "text-[var(--primary)]"
+  const unavailableLabel = prepTestFullTestUnavailableLabel({
+    inDrills: item.inDrills,
+    inSections: item.inSections,
+    inTests: item.inTests,
+  })
+  const isPoolRestricted = unavailableLabel != null && !blindReviewPending
+  const badgeTone: BadgeTone = isPoolRestricted ? "muted" : isCompleted ? "success" : "default"
+  const titleClass = isPoolRestricted ? "text-[var(--greyscale-400)]" : "text-[var(--primary)]"
   const historyRows = buildPoolHistoryRows(item, { includeFallback: isCompleted })
   const latestAttempt = historyRows[0] ?? null
   const displayScore = poolCardDisplayScore(item, latestAttempt, historyRows)
@@ -264,6 +283,14 @@ function PrepTestListCard({
     >
       {startingBlindReview ? "…" : "Blind Review"}
     </button>
+  ) : unavailableLabel ? (
+    <span
+      className="inline-flex max-w-[220px] items-center gap-1.5 text-right text-[14px] font-medium leading-[1.4] tracking-[0.28px] text-[var(--greyscale-400)]"
+      title={unavailableLabel}
+    >
+      {unavailableLabel}
+      <Info className="size-4 shrink-0 text-[var(--greyscale-300)]" aria-hidden />
+    </span>
   ) : (
     <button
       type="button"
@@ -284,12 +311,18 @@ function PrepTestListCard({
 
   const center = showScoreBlock ? (
     <>
-      {!expanded && displayScore != null ? <ScoreBadge score={displayScore} /> : null}
+      {!expanded && displayScore != null && !isPoolRestricted ? <ScoreBadge score={displayScore} /> : null}
+      {!expanded && displayScore != null && isPoolRestricted ? (
+        <div className="inline-flex h-[90px] shrink-0 flex-col items-center justify-center gap-1 rounded-[14px] border border-[var(--greyscale-200)] bg-[var(--greyscale-0)] px-6 opacity-70">
+          <span className="text-sm font-semibold leading-normal tracking-[0.28px] text-[var(--greyscale-400)]">Score</span>
+          <span className="text-[36px] font-bold leading-10 tabular-nums text-[var(--greyscale-400)]">{displayScore}</span>
+        </div>
+      ) : null}
       {canExpand ? (
         <button
           type="button"
           onClick={onToggleExpanded}
-          className="inline-flex size-6 shrink-0 items-center justify-center text-[var(--greyscale-500)] transition-colors hover:text-[var(--color-student-heading)]"
+          className="inline-flex size-6 shrink-0 items-center justify-center text-[var(--primary)] transition-colors hover:text-[var(--primary-600)]"
           aria-expanded={expanded}
           aria-label={expanded ? "Collapse attempt history" : "Expand attempt history"}
         >
@@ -306,12 +339,18 @@ function PrepTestListCard({
           <li
             key={attempt.sessionId}
             className={cn(
-              "flex flex-wrap items-center justify-between gap-4 bg-[var(--greyscale-25)] py-7 pl-6 pr-6",
+              "flex flex-wrap items-center justify-between gap-4 py-7 pl-6 pr-6",
+              isPoolRestricted ? "bg-[var(--greyscale-50)]" : "bg-[var(--greyscale-25)]",
               index < historyRows.length - 1 ? "border-b border-[var(--greyscale-100)]" : "rounded-b-[16px]",
             )}
           >
             <div className="min-w-0">
-              <p className="text-lg font-semibold leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]">
+              <p
+                className={cn(
+                  "text-lg font-semibold leading-[1.4] tracking-[0.36px]",
+                  isPoolRestricted ? "text-[var(--greyscale-500)]" : "text-[var(--color-student-heading)]",
+                )}
+              >
                 {formatCompletedDate(attempt.completedAt)}
               </p>
               <p className="text-sm font-medium leading-normal tracking-[0.28px] text-[var(--greyscale-500)]">
@@ -340,7 +379,8 @@ function PrepTestListCard({
       titleClass={titleClass}
       subtitle={statusSubtitle(item)}
       layout={isCompleted ? "completed" : "standard"}
-      hoverTone={isCompleted ? "success" : "default"}
+      hoverTone={isPoolRestricted ? "muted" : isCompleted ? "success" : "default"}
+      muted={isPoolRestricted}
       center={center}
       actions={action}
       expanded={expanded}
@@ -514,14 +554,6 @@ function PracticePrepTestsListPage() {
           <p className="max-w-[908px] text-[14px] font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
           Here you can find all official Prep Tests from the Law School Admission Council. When you're finished a PT, our Insights will tell you what to work on.
           </p>
-          <button
-            type="button"
-            disabled
-            className="inline-flex shrink-0 cursor-not-allowed items-center gap-2 self-start rounded-[16px] py-2 pl-2 pr-4 text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-[var(--primary)] lg:self-center"
-          >
-            PrepTest settings
-            <Settings className="size-4 shrink-0" aria-hidden />
-          </button>
         </div>
 
         <PrepTestListFilters

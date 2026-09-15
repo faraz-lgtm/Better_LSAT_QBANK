@@ -93,6 +93,9 @@ describe("preptest-pool-display", () => {
       completedAt: null,
       attempts: [],
       openPrepTestSessionId: "sess-open",
+      inDrills: false,
+      inSections: false,
+      inTests: true,
     }
     const blindReview: PrepTestPoolItem = {
       ...paused,

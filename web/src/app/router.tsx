@@ -11,6 +11,7 @@ import { AuthCallbackPage } from "@/features/auth/pages/auth-callback-page"
 import { LsacLinkPage } from "@/features/auth/pages/lsac-link-page"
 import { PricingPage } from "@/features/billing/pages/pricing-page"
 import { AccountPage } from "@/features/account/pages/account-page"
+import { PrepTestPoolsPage } from "@/features/account/pages/prep-test-pools-page"
 import { OnboardingPage } from "@/features/auth/pages/onboarding-page"
 import { OnboardingWelcomePreviewPage } from "@/features/auth/pages/onboarding-welcome-preview-page"
 import { GuestDiagnosticStartPage } from "@/features/guest/pages/guest-diagnostic-start-page"
@@ -400,6 +401,9 @@ const router = createBrowserRouter([
           { path: "diagnostic/results/full", element: <DiagnosticResultsHistoryPage section="full" /> },
           { path: "diagnostic/results/full/:attemptId", element: <GuestDiagnosticResultsPage section="full" /> },
           { path: "account", element: <AccountPage /> },
+          { path: "settings", element: <PrepTestPoolsPage /> },
+          { path: "account/prep-test-pools", element: <Navigate to="/app/settings" replace /> },
+          { path: "account/settings", element: <Navigate to="/app/settings" replace /> },
           { path: "diagnostic/results", element: <GuestDiagnosticResultsPage /> },
           { path: "diagnostic/review", element: <Navigate to="/diagnostic/review" replace /> },
           { path: "diagnostic/tester", element: <Navigate to="/diagnostic/tester" replace /> },

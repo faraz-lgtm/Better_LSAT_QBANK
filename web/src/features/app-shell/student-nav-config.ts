@@ -157,6 +157,7 @@ export function getStudentPageTitle(pathname: string, search = ""): string | nul
   if (pathname === DIAGNOSTIC_RESULTS_FULL_HREF) return "Full Diagnostic History"
   if (pathname.startsWith("/app/diagnostic/results/")) return "Diagnostic Results"
   if (pathname === "/app/account") return "Account"
+  if (pathname === "/app/settings") return "Settings"
   if (isPrepTestHubDetailPath(pathname)) return null
   if (pathname.startsWith("/app/prep-course/") && pathname !== "/app/prep-course") return null
   if (pathname.startsWith("/app/prep-course")) return "Prep Courses"

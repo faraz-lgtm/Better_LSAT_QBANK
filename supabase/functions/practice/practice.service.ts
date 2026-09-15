@@ -1,6 +1,14 @@
 import { extractPrepTestQuestionRef } from '../_shared/prep-question-ref.ts'
 import { resolvePrepDrillLessonType } from '../_shared/prep-lesson-type.ts'
-import { isStudentVisiblePrepTest } from '../_shared/prep-test-visibility.ts'
+import {
+  defaultPrepTestPoolMembership,
+  membershipEquals,
+  type PrepTestPoolMembership,
+} from '../_shared/prep-test-pool-defaults.ts'
+import {
+  isStudentVisiblePrepTest,
+  lsacPrepTestOrdinal,
+} from '../_shared/prep-test-visibility.ts'
 import { allocateQuestionTargetTimes } from '../_shared/question-target-time.ts'
 import {
   DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT,
@@ -318,6 +326,85 @@ function filterPoolByStatus(
   return pool.filter((q) => !answeredIds.has(q.id))
 }
 
+function prepTestOrdinalFromModuleId(moduleId: string | null | undefined): number | null {
+  if (!moduleId) return null
+  return lsacPrepTestOrdinal(moduleId.split(':')[0] ?? moduleId)
+}
+
+function overrideMembershipFromRow(row: {
+  in_drills: boolean
+  in_sections: boolean
+  in_tests: boolean
+}): PrepTestPoolMembership {
+  return {
+    inDrills: row.in_drills,
+    inSections: row.in_sections,
+    inTests: row.in_tests,
+  }
+}
+
+async function loadPoolOverrideMap(
+  repository: PracticeRepository,
+  userId: string,
+): Promise<Map<string, PrepTestPoolMembership>> {
+  const rows = await repository.listUserPrepTestPoolOverrides(userId)
+  const map = new Map<string, PrepTestPoolMembership>()
+  for (const row of rows) {
+    map.set(row.prep_test_id, overrideMembershipFromRow(row))
+  }
+  return map
+}
+
+function resolvePoolMembership(
+  prepTestId: string | null | undefined,
+  moduleId: string | null | undefined,
+  overrides: Map<string, PrepTestPoolMembership>,
+): PrepTestPoolMembership {
+  if (prepTestId && overrides.has(prepTestId)) {
+    return overrides.get(prepTestId)!
+  }
+  const n = prepTestOrdinalFromModuleId(moduleId)
+  if (n == null) return { inDrills: false, inSections: false, inTests: false }
+  return defaultPrepTestPoolMembership(n)
+}
+
+function filterDrillPoolByMembership(
+  pool: DrillPoolQuestionRow[],
+  overrides: Map<string, PrepTestPoolMembership>,
+): DrillPoolQuestionRow[] {
+  return pool.filter((q) => resolvePoolMembership(q.prep_test_id, q.module_id, overrides).inDrills)
+}
+
+function freshnessPercent(totalQuestions: number, answeredQuestions: number): number {
+  if (totalQuestions <= 0) return 100
+  const unanswered = Math.max(0, totalQuestions - answeredQuestions)
+  return Math.round((unanswered / totalQuestions) * 100)
+}
+
+export type PrepTestPoolSettingsItem = {
+  prepTestId: string
+  moduleId: string
+  prepTestNumber: string | null
+  title: string | null
+  inDrills: boolean
+  inSections: boolean
+  inTests: boolean
+  freshnessPercent: number
+  isDefault: boolean
+}
+
+export type PrepTestPoolSettingsListResult = {
+  prepTests: PrepTestPoolSettingsItem[]
+  counts: { drills: number; sections: number; tests: number }
+}
+
+export type PrepTestPoolSettingsUpdate = {
+  prepTestId: string
+  inDrills: boolean
+  inSections: boolean
+  inTests: boolean
+}
+
 export type DrillSessionMetadata = {
   sectionType: 'LR' | 'RC'
   questionCount: number | 'unlimited'
@@ -453,6 +540,9 @@ export type PrepTestPoolItem = {
   completedAt: string | null
   attempts: PrepTestPoolAttempt[]
   openPrepTestSessionId: string | null
+  inDrills: boolean
+  inSections: boolean
+  inTests: boolean
 }
 
 export type PrepTestPoolStatusCounts = {
@@ -1333,7 +1423,11 @@ function groupSessionsByPrepTestId(sessions: PracticeSessionRow[]): Map<string, 
   return map
 }
 
-function poolItemFromRow(row: PrepTestPoolRow, sessions: PracticeSessionRow[]): PrepTestPoolItem {
+function poolItemFromRow(
+  row: PrepTestPoolRow,
+  sessions: PracticeSessionRow[],
+  membership: PrepTestPoolMembership = { inDrills: true, inSections: true, inTests: true },
+): PrepTestPoolItem {
   const practiceable = practiceableSectionsFromRow(row.sections)
   const practiceableIds = practiceable.map((s) => s.id)
   const {
@@ -1363,11 +1457,14 @@ function poolItemFromRow(row: PrepTestPoolRow, sessions: PracticeSessionRow[]): 
     completedAt,
     attempts: poolAttemptsFromSessions(sessions),
     openPrepTestSessionId,
+    inDrills: membership.inDrills,
+    inSections: membership.inSections,
+    inTests: membership.inTests,
   }
 }
 
 export function createPracticeService(deps: { repository: PracticeRepository }) {
-  return {
+  const service = {
     async createSession(
       userId: string,
       body: {
@@ -1803,12 +1900,14 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           ? body.difficulty
           : null
 
-      const totalPool = await deps.repository.listDrillPoolQuestions({
+      const totalPoolRaw = await deps.repository.listDrillPoolQuestions({
         sectionType,
         questionTypeId: questionTypeIds[0] ?? null,
         questionTypeIds,
         difficulty: difficulty === 'adaptive' ? null : difficulty,
       })
+      const overrides = await loadPoolOverrideMap(deps.repository, userId)
+      const totalPool = filterDrillPoolByMembership(totalPoolRaw, overrides)
 
       const answeredIds = new Set(await deps.repository.listUserAnsweredQuestionIds(userId))
       const selectedPool = filterPoolByStatus(totalPool, body.status ?? 'fresh', answeredIds)
@@ -1872,12 +1971,14 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           ? body.difficulty
           : 'adaptive'
       const status = typeof body.status === 'string' ? body.status : 'fresh'
-      const pool = await deps.repository.listDrillPoolQuestions({
+      const poolRaw = await deps.repository.listDrillPoolQuestions({
         sectionType,
         questionTypeId,
         questionTypeIds,
         difficulty: difficulty === 'adaptive' ? null : difficulty,
       })
+      const overrides = await loadPoolOverrideMap(deps.repository, userId)
+      const pool = filterDrillPoolByMembership(poolRaw, overrides)
 
       const answeredIds = new Set(await deps.repository.listUserAnsweredQuestionIds(userId))
       const filtered = filterPoolByStatus(pool, status, answeredIds)
@@ -2020,11 +2121,13 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (isAdaptive && questionIds.length < PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT) {
         const needed = PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT - questionIds.length
         const answeredIds = new Set(await deps.repository.listUserAnsweredQuestionIds(userId))
-        const pool = await deps.repository.listDrillPoolQuestions({
+        const poolRaw = await deps.repository.listDrillPoolQuestions({
           sectionType,
           questionTypeId: null,
           difficulty: null,
         })
+        const overrides = await loadPoolOverrideMap(deps.repository, userId)
+        const pool = filterDrillPoolByMembership(poolRaw, overrides)
         const linked = new Set(questionIds)
         const filtered = filterPoolByStatus(pool, 'fresh', answeredIds).filter((q) => !linked.has(q.id))
         const extraIds = pickDrillQuestionIds(filtered, sectionType, needed)
@@ -2168,12 +2271,14 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           : 'adaptive'
       const status = typeof metaRaw.status === 'string' ? metaRaw.status : 'fresh'
 
-      const pool = await deps.repository.listDrillPoolQuestions({
+      const poolRaw = await deps.repository.listDrillPoolQuestions({
         sectionType,
         questionTypeId,
         questionTypeIds,
         difficulty: difficulty === 'adaptive' ? null : difficulty,
       })
+      const overrides = await loadPoolOverrideMap(deps.repository, userId)
+      const pool = filterDrillPoolByMembership(poolRaw, overrides)
       const answeredIds = new Set(await deps.repository.listUserAnsweredQuestionIds(userId))
       const filtered = filterPoolByStatus(pool, status, answeredIds).filter((q) => !existingSet.has(q.id))
 
@@ -2222,7 +2327,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
     },
 
     async listSectionPool(
-      _userId: string,
+      userId: string,
       body: { sectionType?: unknown; page?: unknown; pageSize?: unknown; sort?: unknown },
     ): Promise<SectionPoolListResult> {
       const page = Math.max(1, Math.floor(typeof body.page === 'number' ? body.page : 1))
@@ -2233,10 +2338,12 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       )
 
       const rows = await deps.repository.listSectionPoolRows({})
+      const overrides = await loadPoolOverrideMap(deps.repository, userId)
       const allItems = rows
         .map(mapSectionPoolRow)
         .filter((s): s is SectionPoolItem => s != null && s.questionCount > 0)
         .filter((s) => isStudentVisiblePrepTest(s.moduleId))
+        .filter((s) => resolvePoolMembership(s.prepTestId, s.moduleId, overrides).inSections)
 
       const sectionTypeCounts: SectionPoolTypeCounts = {
         all: allItems.length,
@@ -2270,7 +2377,12 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       const section = await deps.repository.getSectionDetail(sectionId)
       if (!section) throw new PracticeValidationError('sectionId not found')
-      assertStudentVisiblePrepTest(prepTestModuleIdFromSection(section))
+      const sectionModuleId = prepTestModuleIdFromSection(section)
+      assertStudentVisiblePrepTest(sectionModuleId)
+      const sectionOverrides = await loadPoolOverrideMap(deps.repository, userId)
+      if (!resolvePoolMembership(section.prep_test_id, sectionModuleId, sectionOverrides).inSections) {
+        throw new PracticeValidationError('This section is not in your sections pool')
+      }
 
       const sectionType = sectionTypeForPool(section.section_type)
       if (!sectionType) {
@@ -2461,13 +2573,15 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const rowsById = new Map(rows.map((row) => [row.id, row]))
       const allSessions = await deps.repository.listUserSessionsForPrepTests(userId)
       const sessionsByPrepTestId = groupSessionsByPrepTestId(allSessions)
+      const overrides = await loadPoolOverrideMap(deps.repository, userId)
 
       const items: PrepTestPoolItem[] = []
       for (const row of rows) {
         if (!isStudentVisiblePrepTest(row.moduleId)) continue
         if (practiceableSectionsFromRow(row.sections).length === 0) continue
+        const membership = resolvePoolMembership(row.id, row.moduleId, overrides)
         const sessions = sessionsByPrepTestId.get(row.id) ?? []
-        items.push(poolItemFromRow(row, sessions))
+        items.push(poolItemFromRow(row, sessions, membership))
       }
 
       const statusCounts: PrepTestPoolStatusCounts = {
@@ -2531,6 +2645,10 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const row = await deps.repository.getPrepTestDetailRow(prepTestId)
       if (!row) throw new PracticeValidationError('prepTestId not found')
       assertStudentVisiblePrepTest(row.moduleId)
+      const testOverrides = await loadPoolOverrideMap(deps.repository, userId)
+      if (!resolvePoolMembership(row.id, row.moduleId, testOverrides).inTests) {
+        throw new PracticeValidationError('This PrepTest is not in your tests pool')
+      }
 
       const practiceable = practiceableSectionsFromRow(row.sections)
       if (practiceable.length === 0) {
@@ -2666,6 +2784,120 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       })
 
       return { session: sessionRow }
+    },
+
+    async listPrepTestPoolSettings(userId: string): Promise<PrepTestPoolSettingsListResult> {
+      const [rows, overrides, freshnessRows] = await Promise.all([
+        deps.repository.listPrepTestPoolRows(),
+        loadPoolOverrideMap(deps.repository, userId),
+        deps.repository.listPrepTestFreshnessRows(userId),
+      ])
+      const freshnessById = new Map(
+        freshnessRows.map((row) => [row.prepTestId, row] as const),
+      )
+
+      const prepTests: PrepTestPoolSettingsItem[] = []
+      for (const row of rows) {
+        if (!isStudentVisiblePrepTest(row.moduleId)) continue
+        if (practiceableSectionsFromRow(row.sections).length === 0) continue
+        const prepTestNumber = prepTestNumberFromModuleId(row.moduleId)
+        const ordinal = prepTestOrdinalFromModuleId(row.moduleId)
+        const defaultMembership =
+          ordinal != null
+            ? defaultPrepTestPoolMembership(ordinal)
+            : { inDrills: false, inSections: false, inTests: false }
+        const membership = resolvePoolMembership(row.id, row.moduleId, overrides)
+        const freshness = freshnessById.get(row.id)
+        const totalFromSections = practiceableSectionsFromRow(row.sections).reduce(
+          (sum, s) => sum + s.questionCount,
+          0,
+        )
+        const totalQuestions = freshness?.totalQuestions ?? totalFromSections
+        const answeredQuestions = freshness?.answeredQuestions ?? 0
+        prepTests.push({
+          prepTestId: row.id,
+          moduleId: row.moduleId,
+          prepTestNumber,
+          title: row.title,
+          inDrills: membership.inDrills,
+          inSections: membership.inSections,
+          inTests: membership.inTests,
+          freshnessPercent: freshnessPercent(totalQuestions, answeredQuestions),
+          isDefault: membershipEquals(membership, defaultMembership),
+        })
+      }
+
+      prepTests.sort((a, b) => {
+        const na = Number.parseInt(a.prepTestNumber ?? '', 10)
+        const nb = Number.parseInt(b.prepTestNumber ?? '', 10)
+        const av = Number.isFinite(na) ? na : 0
+        const bv = Number.isFinite(nb) ? nb : 0
+        return bv - av
+      })
+
+      return {
+        prepTests,
+        counts: {
+          drills: prepTests.filter((pt) => pt.inDrills).length,
+          sections: prepTests.filter((pt) => pt.inSections).length,
+          tests: prepTests.filter((pt) => pt.inTests).length,
+        },
+      }
+    },
+
+    async updatePrepTestPoolSettings(
+      userId: string,
+      body: { updates?: unknown },
+    ): Promise<PrepTestPoolSettingsListResult> {
+      const rawUpdates = Array.isArray(body.updates) ? body.updates : null
+      if (!rawUpdates || rawUpdates.length === 0) {
+        throw new PracticeValidationError('updates must be a non-empty array')
+      }
+
+      const updates: PrepTestPoolSettingsUpdate[] = []
+      for (const item of rawUpdates) {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) {
+          throw new PracticeValidationError('each update must be an object')
+        }
+        const row = item as Record<string, unknown>
+        const prepTestId = typeof row.prepTestId === 'string' ? row.prepTestId.trim() : ''
+        if (!prepTestId) throw new PracticeValidationError('prepTestId is required')
+        if (typeof row.inDrills !== 'boolean') {
+          throw new PracticeValidationError('inDrills must be a boolean')
+        }
+        if (typeof row.inSections !== 'boolean') {
+          throw new PracticeValidationError('inSections must be a boolean')
+        }
+        if (typeof row.inTests !== 'boolean') {
+          throw new PracticeValidationError('inTests must be a boolean')
+        }
+        const detail = await deps.repository.getPrepTestDetailRow(prepTestId)
+        if (!detail) throw new PracticeValidationError(`prepTestId not found: ${prepTestId}`)
+        assertStudentVisiblePrepTest(detail.moduleId)
+        updates.push({
+          prepTestId,
+          inDrills: row.inDrills,
+          inSections: row.inSections,
+          inTests: row.inTests,
+        })
+      }
+
+      await deps.repository.upsertUserPrepTestPoolOverrides(
+        userId,
+        updates.map((u) => ({
+          prep_test_id: u.prepTestId,
+          in_drills: u.inDrills,
+          in_sections: u.inSections,
+          in_tests: u.inTests,
+        })),
+      )
+
+      return service.listPrepTestPoolSettings(userId)
+    },
+
+    async resetPrepTestPoolSettings(userId: string): Promise<PrepTestPoolSettingsListResult> {
+      await deps.repository.deleteUserPrepTestPoolOverrides(userId)
+      return service.listPrepTestPoolSettings(userId)
     },
 
     async listBlindReviewPool(
@@ -2874,6 +3106,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       return { session: sessionRow }
     },
   }
+  return service
 }
 
 export type PracticeService = ReturnType<typeof createPracticeService>

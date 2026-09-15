@@ -48,6 +48,10 @@ export type PrepTestPoolItem = {
   completedAt: string | null
   attempts: PrepTestPoolAttempt[]
   openPrepTestSessionId: string | null
+  /** Resolved PrepTest pool membership (defaults + overrides). */
+  inDrills: boolean
+  inSections: boolean
+  inTests: boolean
 }
 
 export type PrepTestDetailSection = {
