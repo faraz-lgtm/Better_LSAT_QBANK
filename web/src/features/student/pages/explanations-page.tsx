@@ -21,6 +21,7 @@ import {
   readExplanationBookmarkCache,
   writeExplanationBookmarkCache,
 } from "@/features/student/explanation-detail/explanation-bookmark-cache"
+import { explanationListQuestionLabel } from "@/features/student/explanation-detail/explanation-list-question-label"
 import { filterPrepTestTreeToQuestionIds } from "@/features/student/explanation-detail/filter-explanation-tree"
 import { passagesInQuestionOrder, questionsInSectionOrder, shouldFlattenExplanationPassages } from "@/features/student/explanation-detail/order-explanation-passages"
 import type {
@@ -336,9 +337,9 @@ function ExplanationTreeQuestionRow({
         <QuestionIndexBadge>{question.number}</QuestionIndexBadge>
         <Link
           to={detailHref}
-          className="block min-w-0 shrink truncate rounded-lg text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
+          className="block shrink-0 whitespace-nowrap rounded-lg text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
         >
-          {`Q${question.number}`}
+          {explanationListQuestionLabel(question)}
         </Link>
         <div className="shrink-0 px-4">
           <StatusBadge status={question.status} />
@@ -380,7 +381,9 @@ function ExplanationTreeQuestionRow({
                 : "size-9 rounded-xl text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)]"
             }
             aria-label={
-              bookmarked ? `Remove bookmark from Q${question.number}` : `Bookmark Q${question.number}`
+              bookmarked
+                ? `Remove bookmark from ${explanationListQuestionLabel(question)}`
+                : `Bookmark ${explanationListQuestionLabel(question)}`
             }
             aria-pressed={bookmarked}
             onClick={onToggleBookmark}
