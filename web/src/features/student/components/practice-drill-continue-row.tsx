@@ -18,6 +18,8 @@ type PracticeDrillContinueRowProps = {
   difficultyFilledBars: number
   difficultyColor: string
   onContinue: () => void
+  /** When the list already has an LR/RC heading, hide the per-row badge. */
+  showSectionBadge?: boolean
 }
 
 function formatAnsweredMeta(answered: string, lastAttempt: string): string {
@@ -40,18 +42,20 @@ function PracticeDrillContinueRow({
   difficultyFilledBars,
   difficultyColor,
   onContinue,
+  showSectionBadge = true,
 }: PracticeDrillContinueRowProps) {
   const barColor = section === "LR" ? "var(--explanation-answered)" : "var(--explanation-teal)"
+  const indentClass = showSectionBadge ? "pl-[44px]" : undefined
 
   return (
     <div className="border-b border-[var(--greyscale-100)]">
       <div className="flex flex-col gap-[16px] p-[16px] sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 flex-col gap-[6px]">
           <div className="flex min-w-0 items-center gap-[12px]">
-            <SectionInitialBadge section={section} variant="compact" />
+            {showSectionBadge ? <SectionInitialBadge section={section} variant="compact" /> : null}
             <h3 className="truncate text-[16px] font-semibold leading-[1.35] text-[var(--color-student-heading)]">{title}</h3>
           </div>
-          <div className="flex flex-wrap items-center gap-[12px] pl-[44px]">
+          <div className={`flex flex-wrap items-center gap-[12px] ${indentClass ?? ""}`}>
             <p className="text-[14px] font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
               {formatAnsweredMeta(answered, lastAttempt)}
             </p>
@@ -64,7 +68,7 @@ function PracticeDrillContinueRow({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-[24px] pl-[44px] sm:pl-0">
+        <div className={`flex shrink-0 items-center gap-[24px] ${showSectionBadge ? "pl-[44px] sm:pl-0" : ""}`}>
           <div className="flex w-[145px] flex-col gap-[12px]">
             <p className="text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
               {progressPct}%

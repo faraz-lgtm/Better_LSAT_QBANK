@@ -3,49 +3,30 @@ import { useNavigate } from "react-router-dom"
 import { ExternalLink } from "lucide-react"
 
 import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
-import { PracticeDrillContinueRow } from "@/features/student/components/practice-drill-continue-row"
-import { PracticeDrillTypeRow } from "@/features/student/components/practice-drill-type-row"
-import { PracticeListFooter } from "@/features/student/components/practice-list-footer"
+import {
+  PracticeContinueDrillsSection,
+  type ContinueSectionFilter,
+} from "@/features/student/components/practice-continue-drills-section"
 import { PracticeLrRcStarterCards } from "@/features/student/components/practice-lr-rc-starter-cards"
-import { StudentPageLoader } from "@/features/student/components/student-page-loader"
+import { PracticeTagDrillsSections, type TagDrill } from "@/features/student/components/practice-tag-drills-sections"
 import { StudentMain } from "@/features/student/components/student-main"
 import {
   mapSessionToContinueDrill,
   type ContinueDrill,
 } from "@/features/student/drills/drill-dashboard-mappers"
 import {
-  orderPriorityRowsByWeakness,
-  visibleTagDrillCount,
+  groupPriorityRowsBySection,
+  priorityMeterFromRow,
 } from "@/features/student/drills/tag-drills-priority"
 import { createAnalyticsApi, type PriorityRow } from "@/lib/api/analytics"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 type SectionFilter = "all" | "lr" | "rc"
 
-type TagDrill = {
-  id: string
-  questionTypeId: string
-  section: "LR" | "RC"
-  title: string
-  difficultyLabel: string
-  filledBars: number
-  difficultyColor: string
-  configPath: string
-}
-
-function priorityVisual(priority: PriorityRow["priorityLevel"] | PriorityRow["priorityTier"]) {
-  if (priority === "highest" || priority === "high") {
-    return { label: "Hardest", filledBars: 5, color: "#df1c41" }
-  }
-  if (priority === "medium") {
-    return { label: "Medium", filledBars: 3, color: "#ff6f00" }
-  }
-  return { label: "Easy", filledBars: 2, color: "#ffbd4c" }
-}
-
 function mapPriorityToTagDrill(row: PriorityRow): TagDrill | null {
-  const section = row.sectionType === "LR" || row.sectionType === "RC" ? row.sectionType : "LR"
-  const visual = priorityVisual(row.priorityTier ?? row.priorityLevel)
+  const section = row.sectionType === "LR" || row.sectionType === "RC" ? row.sectionType : null
+  if (!section) return null
+  const visual = priorityMeterFromRow(row)
   const configPath =
     section === "LR"
       ? `/app/practice/drills/lr/new?questionTypeId=${encodeURIComponent(row.questionTypeId)}&tag=${encodeURIComponent(row.name)}`
@@ -69,19 +50,19 @@ function difficultyLabelFromContinue(level: ContinueDrill["difficulty"]): string
   return "Easy"
 }
 
-function padInProcessCount(count: number): string {
-  return `${String(count).padStart(2, "0")} In process`
-}
-
 function PracticeDrillsPage() {
   const navigate = useNavigate()
   const analyticsApi = useMemo(() => createAnalyticsApi(getSupabaseBrowserClient()), [])
 
   const [sectionFilter, setSectionFilter] = useState<SectionFilter>("all")
   const [continueDrills, setContinueDrills] = useState<ContinueDrill[]>([])
-  const [tagDrills, setTagDrills] = useState<TagDrill[]>([])
-  const [continueExpanded, setContinueExpanded] = useState(false)
-  const [tagsExpanded, setTagsExpanded] = useState(false)
+  const [continueFilter, setContinueFilter] = useState<ContinueSectionFilter>("all")
+  const [lrTagDrills, setLrTagDrills] = useState<TagDrill[]>([])
+  const [rcTagDrills, setRcTagDrills] = useState<TagDrill[]>([])
+  const [lrContinueExpanded, setLrContinueExpanded] = useState(false)
+  const [rcContinueExpanded, setRcContinueExpanded] = useState(false)
+  const [lrTagsExpanded, setLrTagsExpanded] = useState(false)
+  const [rcTagsExpanded, setRcTagsExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -99,21 +80,21 @@ function PracticeDrillsPage() {
           .map(mapSessionToContinueDrill)
           .filter((d): d is ContinueDrill => d != null)
         setContinueDrills(inProgress)
-        setTagDrills(
-          orderPriorityRowsByWeakness(
-            priorities.filter(
-              (p) => p.sectionType === "LR" || p.sectionType === "RC" || p.sectionType === null,
-            ),
-          )
-            .map(mapPriorityToTagDrill)
-            .filter((d): d is TagDrill => d != null),
+        const grouped = groupPriorityRowsBySection(
+          priorities.filter((p) => p.sectionType === "LR" || p.sectionType === "RC"),
         )
-        setContinueExpanded(false)
-        setTagsExpanded(false)
+        setLrTagDrills(grouped.lr.map(mapPriorityToTagDrill).filter((d): d is TagDrill => d != null))
+        setRcTagDrills(grouped.rc.map(mapPriorityToTagDrill).filter((d): d is TagDrill => d != null))
+        setContinueFilter("all")
+        setLrContinueExpanded(false)
+        setRcContinueExpanded(false)
+        setLrTagsExpanded(false)
+        setRcTagsExpanded(false)
       } catch {
         if (!cancelled) {
           setContinueDrills([])
-          setTagDrills([])
+          setLrTagDrills([])
+          setRcTagDrills([])
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -129,26 +110,12 @@ function PracticeDrillsPage() {
     return sectionFilter === "lr" ? drill.section === "LR" : drill.section === "RC"
   })
 
-  const filteredTags = useMemo(() => {
-    return tagDrills.filter((drill) => {
-      if (sectionFilter === "all") return true
-      return sectionFilter === "lr" ? drill.section === "LR" : drill.section === "RC"
-    })
-  }, [sectionFilter, tagDrills])
-
-  const visibleContinueCount = visibleTagDrillCount(filteredContinue.length, continueExpanded)
-  const visibleContinue = filteredContinue.slice(0, visibleContinueCount)
-  const canShowMoreContinue =
-    !continueExpanded && filteredContinue.length > visibleTagDrillCount(filteredContinue.length, false)
-
-  const visibleTagCount = visibleTagDrillCount(filteredTags.length, tagsExpanded)
-  const visibleTags = filteredTags.slice(0, visibleTagCount)
-  const canShowMoreTags =
-    !tagsExpanded && filteredTags.length > visibleTagDrillCount(filteredTags.length, false)
-
   useEffect(() => {
-    setContinueExpanded(false)
-    setTagsExpanded(false)
+    setContinueFilter(sectionFilter)
+    setLrContinueExpanded(false)
+    setRcContinueExpanded(false)
+    setLrTagsExpanded(false)
+    setRcTagsExpanded(false)
   }, [sectionFilter])
 
   const starterVisible =
@@ -206,81 +173,38 @@ function PracticeDrillsPage() {
         />
       </section>
 
-      <section className="flex flex-col gap-[24px] rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]">
-        <div className="flex flex-wrap items-center justify-between gap-[12px]">
-          <h2 className="text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
-            Pick Up Where You Left Off
-          </h2>
-          <p className="text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
-            {padInProcessCount(filteredContinue.length)}
-          </p>
-        </div>
+      <PracticeContinueDrillsSection
+        drills={filteredContinue}
+        filter={continueFilter}
+        onFilterChange={(next) => {
+          setContinueFilter(next)
+          setLrContinueExpanded(false)
+          setRcContinueExpanded(false)
+        }}
+        lrExpanded={lrContinueExpanded}
+        rcExpanded={rcContinueExpanded}
+        onExpandLr={() => setLrContinueExpanded(true)}
+        onCollapseLr={() => setLrContinueExpanded(false)}
+        onExpandRc={() => setRcContinueExpanded(true)}
+        onCollapseRc={() => setRcContinueExpanded(false)}
+        onContinue={(path) => navigate(path)}
+        loading={loading}
+        difficultyLabelFromContinue={difficultyLabelFromContinue}
+      />
 
-        {loading ? (
-          <StudentPageLoader label="Loading drills…" />
-        ) : filteredContinue.length === 0 ? (
-          <p className="text-[14px] text-[var(--greyscale-500)]">
-            No drills in progress. Start a new LR or RC drill above.
-          </p>
-        ) : (
-          <>
-            <div className="flex flex-col">
-              {visibleContinue.map((drill) => (
-                <PracticeDrillContinueRow
-                  key={drill.id}
-                  section={drill.section}
-                  title={drill.title}
-                  answered={drill.answered}
-                  lastAttempt={drill.lastAttempt}
-                  progressPct={drill.progressPct}
-                  difficultyLabel={difficultyLabelFromContinue(drill.difficulty)}
-                  difficultyFilledBars={drill.difficultyBars}
-                  difficultyColor={drill.difficultyColor}
-                  onContinue={() => navigate(drill.continuePath)}
-                />
-              ))}
-            </div>
-            <PracticeListFooter
-              hasMore={canShowMoreContinue}
-              onShowMore={() => setContinueExpanded(true)}
-            />
-          </>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-[24px] rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]">
-        <div className="flex flex-col gap-[8px]">
-          <h2 className="text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
-            Drills by Types
-          </h2>
-          <p className="text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
-            Ranked by your past performance and score impact
-          </p>
-        </div>
-
-        {loading ? (
-          <StudentPageLoader label="Loading tag drills…" />
-        ) : filteredTags.length === 0 ? (
-          <p className="text-[14px] text-[var(--greyscale-500)]">Answer more questions to unlock priority tag drills.</p>
-        ) : (
-          <>
-            <div className="flex flex-col gap-[16px]">
-              {visibleTags.map((drill) => (
-                <PracticeDrillTypeRow
-                  key={drill.id}
-                  section={drill.section}
-                  title={drill.title}
-                  difficultyLabel={drill.difficultyLabel}
-                  difficultyFilledBars={drill.filledBars}
-                  difficultyColor={drill.difficultyColor}
-                  onStart={() => navigate(drill.configPath)}
-                />
-              ))}
-            </div>
-            <PracticeListFooter hasMore={canShowMoreTags} onShowMore={() => setTagsExpanded(true)} />
-          </>
-        )}
-      </section>
+      <PracticeTagDrillsSections
+        lr={lrTagDrills}
+        rc={rcTagDrills}
+        visibleSections={[...starterVisible]}
+        lrExpanded={lrTagsExpanded}
+        rcExpanded={rcTagsExpanded}
+        onExpandLr={() => setLrTagsExpanded(true)}
+        onCollapseLr={() => setLrTagsExpanded(false)}
+        onExpandRc={() => setRcTagsExpanded(true)}
+        onCollapseRc={() => setRcTagsExpanded(false)}
+        onStart={(configPath) => navigate(configPath)}
+        loading={loading}
+      />
     </StudentMain>
   )
 }

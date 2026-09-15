@@ -143,8 +143,10 @@ function PracticeSectionsPage() {
             </div>
             <PracticeListFooter
               hasMore={canShowMore}
+              expanded={continueExpanded && filteredContinue.length > visibleTagDrillCount(filteredContinue.length, false)}
               onShowMore={() => setContinueExpanded(true)}
-              showMoreLabel="Show more"
+              onShowLess={() => setContinueExpanded(false)}
+              showMoreLabel="See more"
             />
           </>
         )}

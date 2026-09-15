@@ -13,9 +13,30 @@ const TAG_DRILLS_INITIAL_VISIBLE = 5
 /** Cap for the collapsed list (kept equal to the initial window). */
 const TAG_DRILLS_VISIBLE_MAX = 5
 
-function resolveTier(row: PriorityRow): PriorityTier | "low" {
+/** A couple of top-priority types per section in the collapsed drills page lists. */
+const TAG_DRILLS_PER_SECTION_INITIAL = 3
+
+/** In-progress drills previewed under each LR/RC continue section. */
+const CONTINUE_DRILLS_PER_SECTION_INITIAL = 3
+
+const PRIORITY_METER: Record<
+  PriorityTier | "high" | "medium" | "low",
+  { label: string; filledBars: number; color: string }
+> = {
+  highest: { label: "Highest", filledBars: 5, color: "#df1c41" },
+  high: { label: "High", filledBars: 4, color: "#df1c41" },
+  medium: { label: "Medium", filledBars: 3, color: "#ff6f00" },
+  low: { label: "Low", filledBars: 2, color: "#ffbd4c" },
+}
+
+function resolveTier(row: Pick<PriorityRow, "priorityTier" | "priorityLevel">): PriorityTier | "low" {
   if (row.priorityTier) return row.priorityTier
   return row.priorityLevel ?? "low"
+}
+
+/** Meter for how high-priority a tag is for this student (not how hard the type is). */
+function priorityMeterFromRow(row: Pick<PriorityRow, "priorityTier" | "priorityLevel">) {
+  return PRIORITY_METER[resolveTier(row)]
 }
 
 function comparePriorityRows(a: PriorityRow, b: PriorityRow): number {
@@ -41,15 +62,27 @@ function orderPriorityRowsByWeakness(rows: PriorityRow[]): PriorityRow[] {
   return [...rows].sort(comparePriorityRows)
 }
 
-function visibleTagDrillCount(total: number, expanded: boolean): number {
-  if (expanded || total <= TAG_DRILLS_INITIAL_VISIBLE) return total
-  return Math.min(TAG_DRILLS_INITIAL_VISIBLE, TAG_DRILLS_VISIBLE_MAX)
+function groupPriorityRowsBySection(rows: PriorityRow[]): { lr: PriorityRow[]; rc: PriorityRow[] } {
+  const ordered = orderPriorityRowsByWeakness(rows)
+  return {
+    lr: ordered.filter((row) => row.sectionType === "LR"),
+    rc: ordered.filter((row) => row.sectionType === "RC"),
+  }
+}
+
+function visibleTagDrillCount(total: number, expanded: boolean, initial: number = TAG_DRILLS_INITIAL_VISIBLE): number {
+  if (expanded || total <= initial) return total
+  return initial
 }
 
 export {
   TAG_DRILLS_INITIAL_VISIBLE,
+  TAG_DRILLS_PER_SECTION_INITIAL,
+  CONTINUE_DRILLS_PER_SECTION_INITIAL,
   TAG_DRILLS_VISIBLE_MAX,
   comparePriorityRows,
+  groupPriorityRowsBySection,
   orderPriorityRowsByWeakness,
+  priorityMeterFromRow,
   visibleTagDrillCount,
 }
