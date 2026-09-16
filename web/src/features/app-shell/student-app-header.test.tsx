@@ -79,7 +79,7 @@ describe("StudentAppHeader", () => {
     await waitFor(() => {
       expect(screen.getByText("Assad K.")).toBeInTheDocument()
     })
-    expect(screen.getByText("Assad K.")).toHaveClass("text-sm")
+    expect(screen.getByText("Assad K.")).toHaveClass("text-base")
     expect(screen.getByText("assad@acelebrands.co")).toBeInTheDocument()
   })
 
@@ -97,12 +97,15 @@ describe("StudentAppHeader", () => {
     expect(screen.queryByText("Drills")).not.toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Open profile menu" }))
-    expect(screen.getByRole("link", { name: "Account" })).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute(
+    expect(screen.getByRole("menuitem", { name: "Account" })).toHaveAttribute(
+      "href",
+      "/app/account",
+    )
+    expect(screen.getByRole("menuitem", { name: "Settings" })).toHaveAttribute(
       "href",
       "/app/settings",
     )
-    expect(screen.getByRole("button", { name: "Logout" })).toBeInTheDocument()
+    expect(screen.getByRole("menuitem", { name: "Log out" })).toBeInTheDocument()
   })
 
   it("does not show Academy / Explanations breadcrumbs", () => {
