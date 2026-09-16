@@ -5,6 +5,7 @@ import { formatStudyTime } from "@/features/student/drills/drill-dashboard-mappe
 import {
   daysUntilDate,
   formatTestDateInputValue,
+  isCurrentLsacTestAdministrationInProgress,
   mapOverviewToDashboardStats,
   mapOverviewToPerformance,
 } from "./map-dashboard-stats"
@@ -62,6 +63,18 @@ describe("map-dashboard-stats", () => {
   it("computes days until a planned test date", () => {
     expect(daysUntilDate("2026-08-01", new Date("2026-07-28T12:00:00"))).toBe(4)
     expect(daysUntilDate(null)).toBeNull()
+  })
+
+  it("flags the selected LSAC window once its test dates have begun", () => {
+    expect(isCurrentLsacTestAdministrationInProgress("2026-09-09", new Date("2026-09-09T12:00:00"))).toBe(true)
+    expect(isCurrentLsacTestAdministrationInProgress("2026-09-09", new Date("2026-09-16T12:00:00"))).toBe(true)
+    expect(isCurrentLsacTestAdministrationInProgress("2026-09-01", new Date("2026-09-12T08:00:00"))).toBe(true)
+  })
+
+  it("does not flag a future selected window or an unset date", () => {
+    expect(isCurrentLsacTestAdministrationInProgress("2026-10-07", new Date("2026-09-16T12:00:00"))).toBe(false)
+    expect(isCurrentLsacTestAdministrationInProgress(null, new Date("2026-09-16T12:00:00"))).toBe(false)
+    expect(isCurrentLsacTestAdministrationInProgress("2025-06-01", new Date("2026-09-16T12:00:00"))).toBe(false)
   })
 
   it("formats test date for the countdown input", () => {

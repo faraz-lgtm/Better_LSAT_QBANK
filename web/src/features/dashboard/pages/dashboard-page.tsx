@@ -15,6 +15,7 @@ import {
   daysUntilDate,
   formatLsacTestMeta,
   formatTestDateInputValue,
+  isCurrentLsacTestAdministrationInProgress,
   mapOverviewToDashboardStats,
   mapOverviewToPerformance,
 } from "@/features/dashboard/lib/map-dashboard-stats"
@@ -216,6 +217,7 @@ function DashboardPage() {
   const countdownDate =
     findLsacTestWindow(preferences?.plannedLsatDate)?.value ?? preferences?.plannedLsatDate ?? null
   const daysRemaining = daysUntilDate(countdownDate)
+  const administrationInProgress = isCurrentLsacTestAdministrationInProgress(preferences?.plannedLsatDate)
   const testDateValue = resolveLsacTestWindowValue(
     preferences?.plannedLsatDate,
     preferences?.plannedLsatWindow,
@@ -268,6 +270,7 @@ function DashboardPage() {
         <div className="dashboard-page__top">
           <TestDayCountdownCard
             daysRemaining={daysRemaining}
+            administrationInProgress={administrationInProgress}
             firstName={firstName}
             testMeta={formatLsacTestMeta(
               preferences?.plannedLsatDate,

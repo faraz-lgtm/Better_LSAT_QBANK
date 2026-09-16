@@ -16,6 +16,7 @@ type TestDayCountdownCardProps = {
   testDateLabel: string
   /** Selected window value (`yyyy-mm-dd`) */
   testDateValue: string
+  administrationInProgress?: boolean
   adaptiveLoading?: boolean
   adaptiveDisabled?: boolean
   savingTestDate?: boolean
@@ -29,6 +30,7 @@ function TestDayCountdownCard({
   testMeta,
   testDateLabel,
   testDateValue,
+  administrationInProgress = false,
   adaptiveLoading = false,
   adaptiveDisabled = false,
   savingTestDate = false,
@@ -79,12 +81,16 @@ function TestDayCountdownCard({
       <div className="test-day-countdown__header">
         <div className="test-day-countdown__title-block">
           <p className="test-day-countdown__eyebrow">Test Day Countdown</p>
-          <div className="test-day-countdown__days">
-            <span className="test-day-countdown__days-value">
-              {daysRemaining != null ? daysRemaining : "—"}
-            </span>
-            <span className="test-day-countdown__days-unit">days</span>
-          </div>
+          {administrationInProgress ? (
+            <p className="test-day-countdown__in-progress">Current Test Administration In Progress</p>
+          ) : (
+            <div className="test-day-countdown__days">
+              <span className="test-day-countdown__days-value">
+                {daysRemaining != null ? daysRemaining : "—"}
+              </span>
+              <span className="test-day-countdown__days-unit">days</span>
+            </div>
+          )}
         </div>
       </div>
 
