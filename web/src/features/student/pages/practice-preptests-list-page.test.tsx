@@ -86,10 +86,14 @@ describe("PracticePrepTestsListPage sort", () => {
     renderPage()
 
     expect(await screen.findByTestId("preptest-list-row-pt-901")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "In Process" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Fresh" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Completed" })).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: /Fresh \(\d+\)/ })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "All Test" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "In Progress (0)" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Fresh (2)" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Completed (0)" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Blind Review" })).toBeInTheDocument()
+    expect(screen.getAllByText("Ready to Take")).toHaveLength(2)
+    expect(screen.queryByRole("button", { name: /^Start$/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "In Process" })).not.toBeInTheDocument()
     const rows = screen.getAllByTestId(/preptest-list-row-/)
     expect(rows.map((row) => row.getAttribute("data-testid"))).toEqual([
       "preptest-list-row-pt-901",
@@ -192,8 +196,53 @@ describe("PracticePrepTestsListPage see more", () => {
     })
     renderPage()
     expect(await screen.findByText("Available only for sections")).toBeInTheDocument()
+    expect(screen.getByText("Section")).toBeInTheDocument()
     expect(screen.getByTestId("preptest-list-row-pt-155")).toHaveAttribute("data-muted", "true")
     expect(screen.queryByRole("button", { name: "Retake" })).not.toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Start" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /^Start$/ })).not.toBeInTheDocument()
+  })
+
+  it("renders completed score chrome and retake", async () => {
+    listPrepTestPool.mockResolvedValue({
+      prepTests: [
+        poolItem("pt-122", "122", {
+          status: "completed",
+          completedAt: "2025-09-28T00:00:00Z",
+          scaledScore: 139,
+          blindReviewScaledScore: 139,
+          attempts: [
+            {
+              sessionId: "sess-2",
+              completedAt: "2025-09-28T00:00:00Z",
+              scaledScore: 139,
+              blindReviewScaledScore: 139,
+              attemptNumber: 2,
+            },
+            {
+              sessionId: "sess-1",
+              completedAt: "2025-09-25T00:00:00Z",
+              scaledScore: 139,
+              blindReviewScaledScore: null,
+              attemptNumber: 1,
+            },
+          ],
+        }),
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 5,
+      statusCounts: { all: 1, fresh: 0, in_progress: 0, completed: 1, blind_review: 0 },
+    })
+    const user = userEvent.setup()
+    renderPage()
+    expect(await screen.findByText("Completed")).toBeInTheDocument()
+    expect(screen.getByText("Score:")).toBeInTheDocument()
+    expect(screen.getByText("Blind Review:")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Retake" })).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Expand attempt history" }))
+    expect(screen.getByText("2nd take")).toBeInTheDocument()
+    expect(screen.getAllByText("Score: 139")).toHaveLength(2)
+    expect(screen.getAllByRole("button", { name: "Result" })).toHaveLength(2)
   })
 })

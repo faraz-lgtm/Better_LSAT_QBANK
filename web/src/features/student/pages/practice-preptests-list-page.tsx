@@ -10,23 +10,22 @@ import type {
   PrepTestPoolAttempt,
   PrepTestPoolFilter,
   PrepTestPoolItem,
+  PrepTestPoolStatusCounts,
 } from "@/features/student/preptests/preptest-types"
 import {
   blindReviewSectionSessionPath,
   firstBlindReviewSectionSessionId,
 } from "@/features/student/blind-review/blind-review-navigation"
 import { prepTestHubHref } from "@/features/student/preptests/preptest-hub-navigation"
-import { buildPoolHistoryRows, filterPrepTestPoolItems, poolCardDisplayScore } from "@/features/student/preptests/preptest-pool-display"
-import { AttemptScoreBox, ScoreBadge } from "@/features/student/preptests/preptest-score-badge"
+import {
+  buildPoolHistoryRows,
+  getAttemptDisplayScores,
+  filterPrepTestPoolItems,
+  poolCardDisplayScore,
+} from "@/features/student/preptests/preptest-pool-display"
+import { PrepTestScoreText } from "@/features/student/preptests/preptest-score-badge"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-import {
-  ChevronDown,
-  ChevronRight,
-  Info,
-  MoreVertical,
-  RefreshCw,
-} from "lucide-react"
 import { prepTestFullTestUnavailableLabel } from "@/lib/prep-test-pool-availability"
 
 /** First paint shows a short list; “See more” loads the full filtered pool. */
@@ -37,9 +36,19 @@ const INITIAL_PAGE_SIZE = 5
  */
 const LOAD_ALL_CHUNK_SIZE = 50
 
+const PREPTEST_FIGMA = "/figma/preptest"
+
+const EMPTY_STATUS_COUNTS: PrepTestPoolStatusCounts = {
+  all: 0,
+  fresh: 0,
+  in_progress: 0,
+  completed: 0,
+  blind_review: 0,
+}
+
 const FILTER_TABS: { id: PrepTestPoolFilter; label: string }[] = [
-  { id: "all", label: "All Tests" },
-  { id: "in_progress", label: "In Process" },
+  { id: "all", label: "All Test" },
+  { id: "in_progress", label: "In Progress" },
   { id: "fresh", label: "Fresh" },
   { id: "completed", label: "Completed" },
   { id: "blind_review", label: "Blind Review" },
@@ -48,44 +57,18 @@ const FILTER_TABS: { id: PrepTestPoolFilter; label: string }[] = [
 const SORT_OPTIONS = ["Newest", "Oldest"] as const
 
 const FILTER_PILL_ACTIVE_CLASS =
-  "ds-btn h-[52px] shrink-0 rounded-[16px] px-4 text-[16px] font-semibold leading-[1.5] tracking-[0.32px]"
+  "inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-[10px] border border-[var(--primary-border)] bg-[var(--primary)] px-4 py-2 text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
 const FILTER_PILL_INACTIVE_CLASS =
-  "inline-flex h-[52px] shrink-0 items-center justify-center whitespace-nowrap rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 text-[16px] font-medium leading-[1.5] tracking-[0.32px] text-[var(--greyscale-500)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)]"
+  "inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 py-2 text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-[var(--primary)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)]"
 
-const PRIMARY_ACTION_CLASS =
-  "ds-btn h-[52px] w-[148px] shrink-0 rounded-[16px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px]"
+const CONTINUE_ACTION_CLASS =
+  "ds-btn-sm h-10 w-[106px] shrink-0 rounded-[12px] px-4 py-2 text-[14px] font-semibold leading-[1.5] tracking-[0.28px]"
 const RETAKE_ACTION_CLASS =
-  "inline-flex h-[52px] w-[148px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--greyscale-500)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)]"
+  "inline-flex h-10 w-[106px] shrink-0 items-center justify-center gap-2 rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 py-2 text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)]"
 const BLIND_REVIEW_ACTION_CLASS =
-  "inline-flex h-[52px] w-[148px] shrink-0 items-center justify-center rounded-[16px] border border-[#ffe5b7] bg-[#ffbd4c] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[#121a26] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f5b03f] disabled:opacity-60"
+  "inline-flex h-10 shrink-0 items-center justify-center rounded-[12px] border border-[#ffe5b7] bg-[#ffbd4c] px-4 py-2 text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f5b03f] disabled:opacity-60"
 const RESULT_ACTION_CLASS =
-  "inline-flex h-[52px] w-[148px] shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[var(--primary)] bg-[var(--primary-0)] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-25)]"
-
-/** Figma `18643:26555` — default pool row hover */
-const PREPTEST_LIST_CARD_SHELL_BASE_CLASS =
-  "w-full overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] transition-[border-color]"
-
-type PrepTestListCardHoverTone = "default" | "success" | "muted"
-
-const PREPTEST_LIST_CARD_HOVER_CLASS: Record<
-  PrepTestListCardHoverTone,
-  { shell: string; row: string }
-> = {
-  default: {
-    shell: "hover:border-[var(--primary)]",
-    row: "transition-[background-color] hover:bg-[var(--primary-25)]",
-  },
-  /** Completed rows use primary blue (Figma 20645:71901) — not green. */
-  success: {
-    shell: "hover:border-[var(--primary)]",
-    row: "transition-[background-color] hover:bg-[var(--primary-25)]",
-  },
-  /** Not in full-tests pool — 7Sage-style gray / non-interactive look. */
-  muted: {
-    shell: "border-[var(--greyscale-100)] bg-[var(--greyscale-25)] border-l-4 border-l-[var(--greyscale-300)]",
-    row: "",
-  },
-}
+  "inline-flex h-10 w-[106px] shrink-0 items-center justify-center gap-2 rounded-[12px] border border-[var(--primary)] bg-[var(--primary-0)] px-4 py-2 text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-25)]"
 
 type BadgeTone = "default" | "success" | "muted"
 
@@ -116,7 +99,22 @@ function attemptDetailLabel(attempt: PrepTestPoolAttempt): string {
   return ord
 }
 
-function statusTitle(item: PrepTestPoolItem): string {
+function displayUnavailableLabel(label: string): string {
+  if (label === "Available only for drills and sections") {
+    return "Available only for drills and Section"
+  }
+  return label
+}
+
+function restrictedTitle(item: PrepTestPoolItem): string {
+  if (item.inDrills && item.inSections) return "Drills and Section"
+  if (item.inDrills) return "Drills"
+  if (item.inSections) return "Section"
+  return "Not available"
+}
+
+function statusTitle(item: PrepTestPoolItem, isPoolRestricted: boolean): string {
+  if (isPoolRestricted) return restrictedTitle(item)
   if (item.status === "fresh") return "Ready to Take"
   if (item.status === "in_progress" || item.blindReviewStatus) return "In Process"
   return "Completed"
@@ -133,15 +131,54 @@ function statusSubtitle(item: PrepTestPoolItem): string {
   return ""
 }
 
+function filterTabLabel(
+  tab: (typeof FILTER_TABS)[number],
+  counts: PrepTestPoolStatusCounts,
+): string {
+  if (tab.id === "fresh" || tab.id === "in_progress" || tab.id === "completed") {
+    return `${tab.label} (${counts[tab.id]})`
+  }
+  return tab.label
+}
+
+function FigmaIcon({
+  name,
+  width,
+  height,
+  className,
+}: {
+  name: string
+  width: number
+  height: number
+  className?: string
+}) {
+  return (
+    <img
+      src={`${PREPTEST_FIGMA}/${name}.svg`}
+      alt=""
+      width={width}
+      height={height}
+      className={cn("max-w-none shrink-0 object-contain", className)}
+      draggable={false}
+    />
+  )
+}
+
 function PtBadge({ number, tone = "default" }: { number: number; tone?: BadgeTone }) {
   const palette =
     tone === "muted"
-      ? "border-[var(--greyscale-200)] bg-[var(--greyscale-0)] text-[var(--greyscale-400)]"
-      : "border-[var(--primary)] bg-[var(--primary-0)] text-[var(--primary)]"
+      ? "border-[var(--greyscale-500)] bg-[var(--greyscale-25)] text-[var(--greyscale-500)]"
+      : tone === "success"
+        ? "border-[#287f6e] bg-[#effefa] text-[#287f6e]"
+        : "border-[var(--primary)] bg-[var(--primary-0)] text-[var(--primary)]"
   return (
-    <div className={cn("flex size-16 shrink-0 flex-col items-center justify-center rounded-[14px] border p-px", palette)}>
-      <span className="w-[35px] text-center text-[12px] font-semibold leading-[1.35]">PT</span>
-      <span className="text-[24px] font-bold leading-[1.3]">{number || "—"}</span>
+    <div className={cn("flex size-8 shrink-0 flex-col items-center justify-center rounded-lg border p-px", palette)}>
+      <span className="flex h-2.5 items-center justify-center text-center text-[10px] font-bold leading-[1.5] tracking-[0.2px]">
+        PT
+      </span>
+      <span className="flex h-3.5 w-6 items-center justify-center text-center text-[12px] font-bold leading-[1.5] tracking-[0.24px]">
+        {number || "—"}
+      </span>
     </div>
   )
 }
@@ -150,11 +187,42 @@ function MoreMenuButton() {
   return (
     <button
       type="button"
-      className="inline-flex size-6 shrink-0 items-center justify-center text-[var(--greyscale-500)] transition-colors hover:text-[var(--color-student-heading)]"
+      className="inline-flex size-6 shrink-0 items-center justify-center"
       aria-label="More options"
+      onClick={(event) => event.stopPropagation()}
     >
-      <MoreVertical className="size-6" />
+      <span className="inline-flex size-6 items-center justify-center">
+        <FigmaIcon name="dots-vertical" width={24} height={24} className="size-6" />
+      </span>
     </button>
+  )
+}
+
+function PrepTestIdentity({
+  ptNumber,
+  badgeTone,
+  title,
+  titleClass,
+  subtitle,
+}: {
+  ptNumber: number
+  badgeTone: BadgeTone
+  title: string
+  titleClass: string
+  subtitle: string
+}) {
+  return (
+    <>
+      <PtBadge number={ptNumber} tone={badgeTone} />
+      <div className="flex min-w-0 flex-col items-start justify-center gap-2">
+        <p className={cn("truncate text-[16px] font-semibold leading-[1.5] tracking-[0.32px]", titleClass)}>{title}</p>
+        {subtitle ? (
+          <p className="truncate text-[12px] font-medium leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
+            {subtitle}
+          </p>
+        ) : null}
+      </div>
+    </>
   )
 }
 
@@ -165,10 +233,10 @@ function PrepTestListCardShell({
   title,
   titleClass,
   subtitle,
-  subtitleClass = "font-medium",
-  layout = "standard",
-  hoverTone = "default",
-  muted = false,
+  hoverShellClass,
+  interactive,
+  starting,
+  onActivate,
   center,
   actions,
   expanded,
@@ -180,50 +248,55 @@ function PrepTestListCardShell({
   title: string
   titleClass: string
   subtitle: string
-  subtitleClass?: string
-  layout?: "standard" | "completed"
-  hoverTone?: PrepTestListCardHoverTone
-  muted?: boolean
+  hoverShellClass: string
+  interactive?: boolean
+  starting?: boolean
+  onActivate?: () => void
   center?: ReactNode
   actions: ReactNode
   expanded?: boolean
   expandedContent?: ReactNode
 }) {
-  const hoverClass = PREPTEST_LIST_CARD_HOVER_CLASS[hoverTone]
+  const identityClass = cn("flex min-w-0 items-center gap-4", center ? "w-[198px] shrink-0" : "min-h-0 flex-1")
+  const identity = (
+    <PrepTestIdentity
+      ptNumber={ptNumber}
+      badgeTone={badgeTone}
+      title={title}
+      titleClass={titleClass}
+      subtitle={subtitle}
+    />
+  )
 
   return (
     <article
-      className={cn(PREPTEST_LIST_CARD_SHELL_BASE_CLASS, hoverClass.shell)}
+      className={cn("w-full overflow-hidden rounded-[16px] border border-solid", hoverShellClass)}
       data-testid={`preptest-list-row-${testId}`}
-      data-muted={muted ? "true" : undefined}
+      data-muted={badgeTone === "muted" ? "true" : undefined}
     >
       <div
         className={cn(
-          "flex h-[110px] items-center gap-4 px-6",
-          hoverClass.row,
-          layout === "completed" ? "justify-between" : undefined,
-          expanded ? "rounded-t-[16px] border-b border-[var(--greyscale-100)]" : undefined,
+          "flex h-[82px] items-center gap-4 p-4",
+          expanded ? "rounded-t-[16px]" : undefined,
+          center ? "justify-between" : undefined,
         )}
       >
-        <div className={cn("flex min-w-0 items-center gap-6", layout === "standard" ? "flex-1" : "shrink-0")}>
-          <PtBadge number={ptNumber} tone={badgeTone} />
-          <div className="flex min-w-0 flex-col gap-2">
-            <p className={cn("truncate text-[24px] font-bold leading-[1.3]", titleClass)}>{title}</p>
-            {subtitle ? (
-              <p
-                className={cn(
-                  "truncate text-[14px] leading-[1.5] tracking-[0.28px]",
-                  muted ? "text-[var(--greyscale-400)]" : "text-[var(--greyscale-500)]",
-                  subtitleClass,
-                )}
-              >
-                {subtitle}
-              </p>
-            ) : null}
-          </div>
-        </div>
+        {interactive ? (
+          <button
+            type="button"
+            disabled={starting}
+            aria-busy={starting || undefined}
+            aria-label={`Take PrepTest ${ptNumber || ""}`.trim()}
+            onClick={onActivate}
+            className={cn(identityClass, "text-left")}
+          >
+            {identity}
+          </button>
+        ) : (
+          <div className={identityClass}>{identity}</div>
+        )}
 
-        {center ? <div className="flex min-w-0 flex-1 items-center justify-center gap-4">{center}</div> : null}
+        {center ? <div className="flex min-w-0 flex-1 items-center justify-center">{center}</div> : null}
 
         <div className="flex shrink-0 items-center gap-4">
           {actions}
@@ -264,15 +337,21 @@ function PrepTestListCard({
     inTests: item.inTests,
   })
   const isPoolRestricted = unavailableLabel != null && !blindReviewPending
+  const isReadyToTake = item.status === "fresh" && !isPoolRestricted && !blindReviewPending
   const badgeTone: BadgeTone = isPoolRestricted ? "muted" : isCompleted ? "success" : "default"
-  const titleClass = isPoolRestricted ? "text-[var(--greyscale-400)]" : "text-[var(--primary)]"
+  const titleClass = isPoolRestricted
+    ? "text-[var(--greyscale-500)]"
+    : isCompleted
+      ? "text-[#287f6e]"
+      : "text-[var(--primary)]"
   const historyRows = buildPoolHistoryRows(item, { includeFallback: isCompleted })
   const latestAttempt = historyRows[0] ?? null
   const displayScore = poolCardDisplayScore(item, latestAttempt, historyRows)
-  const canExpand = historyRows.length > 0
-  const showScoreBlock = isCompleted && (displayScore != null || canExpand)
-
-  const primaryLabel = isCompleted ? "Retake" : item.status === "in_progress" && !blindReviewPending ? "Continue" : "Start"
+  const latestScores = latestAttempt
+    ? getAttemptDisplayScores(latestAttempt)
+    : { test: displayScore, br: item.blindReviewScaledScore }
+  const canExpand = !isPoolRestricted && historyRows.length > 0
+  const showScoreBlock = !isPoolRestricted && isCompleted && (displayScore != null || canExpand)
 
   const action = blindReviewPending ? (
     <button
@@ -285,102 +364,115 @@ function PrepTestListCard({
     </button>
   ) : unavailableLabel ? (
     <span
-      className="inline-flex max-w-[220px] items-center gap-1.5 text-right text-[14px] font-medium leading-[1.4] tracking-[0.28px] text-[var(--greyscale-400)]"
+      className="inline-flex h-10 max-w-[280px] items-center justify-center gap-2 rounded-2xl px-4 py-2 text-center text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]"
       title={unavailableLabel}
     >
-      {unavailableLabel}
-      <Info className="size-4 shrink-0 text-[var(--greyscale-300)]" aria-hidden />
+      <span className="inline-flex size-5 shrink-0 items-center justify-center">
+        <FigmaIcon name="alert-circle" width={20} height={20} className="size-5" />
+      </span>
+      {displayUnavailableLabel(unavailableLabel)}
     </span>
-  ) : (
-    <button
-      type="button"
-      disabled={starting}
-      onClick={onPrimary}
-      className={isCompleted ? RETAKE_ACTION_CLASS : PRIMARY_ACTION_CLASS}
-    >
-      {starting ? "…" : isCompleted ? (
-        <>
-          <RefreshCw className="size-5 shrink-0" aria-hidden />
-          {primaryLabel}
-        </>
-      ) : (
-        primaryLabel
-      )}
+  ) : isCompleted ? (
+    <button type="button" disabled={starting} onClick={onPrimary} className={RETAKE_ACTION_CLASS}>
+      <span className="inline-flex size-4 shrink-0 items-center justify-center">
+        <FigmaIcon name="reset" width={16} height={16} className="size-4" />
+      </span>
+      {starting ? "…" : "Retake"}
+    </button>
+  ) : isReadyToTake ? null : (
+    <button type="button" disabled={starting} onClick={onPrimary} className={CONTINUE_ACTION_CLASS}>
+      {starting ? "…" : "Continue"}
     </button>
   )
 
   const center = showScoreBlock ? (
-    <>
-      {!expanded && displayScore != null && !isPoolRestricted ? <ScoreBadge score={displayScore} /> : null}
-      {!expanded && displayScore != null && isPoolRestricted ? (
-        <div className="inline-flex h-[90px] shrink-0 flex-col items-center justify-center gap-1 rounded-[14px] border border-[var(--greyscale-200)] bg-[var(--greyscale-0)] px-6 opacity-70">
-          <span className="text-sm font-semibold leading-normal tracking-[0.28px] text-[var(--greyscale-400)]">Score</span>
-          <span className="text-[36px] font-bold leading-10 tabular-nums text-[var(--greyscale-400)]">{displayScore}</span>
-        </div>
-      ) : null}
+    <button
+      type="button"
+      onClick={onToggleExpanded}
+      disabled={!canExpand}
+      className={cn(
+        "inline-flex h-[52px] shrink-0 items-center justify-center rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6",
+        expanded || !latestAttempt ? "gap-0" : "gap-4",
+        canExpand ? "cursor-pointer" : "cursor-default",
+      )}
+      aria-expanded={canExpand ? expanded : undefined}
+      aria-label={
+        canExpand ? (expanded ? "Collapse attempt history" : "Expand attempt history") : undefined
+      }
+    >
+      {!expanded ? <PrepTestScoreText variant="header" test={latestScores.test} br={latestScores.br} /> : null}
       {canExpand ? (
-        <button
-          type="button"
-          onClick={onToggleExpanded}
-          className="inline-flex size-6 shrink-0 items-center justify-center text-[var(--primary)] transition-colors hover:text-[var(--primary-600)]"
-          aria-expanded={expanded}
-          aria-label={expanded ? "Collapse attempt history" : "Expand attempt history"}
-        >
-          <ChevronDown className={cn("size-6 transition-transform", expanded && "rotate-180")} />
-        </button>
+        <span className="inline-flex size-6 shrink-0 items-center justify-center">
+          <FigmaIcon
+            name="chevron-down-primary"
+            width={24}
+            height={24}
+            className={cn("size-6 transition-transform", expanded && "rotate-180")}
+          />
+        </span>
       ) : null}
-    </>
+    </button>
   ) : null
 
   const expandedContent =
     canExpand && expanded ? (
       <ul>
-        {historyRows.map((attempt, index) => (
-          <li
-            key={attempt.sessionId}
-            className={cn(
-              "flex flex-wrap items-center justify-between gap-4 py-7 pl-6 pr-6",
-              isPoolRestricted ? "bg-[var(--greyscale-50)]" : "bg-[var(--greyscale-25)]",
-              index < historyRows.length - 1 ? "border-b border-[var(--greyscale-100)]" : "rounded-b-[16px]",
-            )}
-          >
-            <div className="min-w-0">
-              <p
-                className={cn(
-                  "text-lg font-semibold leading-[1.4] tracking-[0.36px]",
-                  isPoolRestricted ? "text-[var(--greyscale-500)]" : "text-[var(--color-student-heading)]",
-                )}
-              >
-                {formatCompletedDate(attempt.completedAt)}
-              </p>
-              <p className="text-sm font-medium leading-normal tracking-[0.28px] text-[var(--greyscale-500)]">
-                {attemptDetailLabel(attempt)}
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <AttemptScoreBox attempt={attempt} />
-              <button type="button" onClick={() => onViewResult(attempt.sessionId)} className={RESULT_ACTION_CLASS}>
-                Result
-                <ChevronRight className="size-5 shrink-0" aria-hidden />
-              </button>
-              <MoreMenuButton />
-            </div>
-          </li>
-        ))}
+        {historyRows.map((attempt, index) => {
+          const scores = getAttemptDisplayScores(attempt)
+          return (
+            <li
+              key={attempt.sessionId}
+              className={cn(
+                "flex h-[68px] items-center justify-between bg-[var(--greyscale-25)] px-4 py-2",
+                index === historyRows.length - 1
+                  ? "rounded-b-[16px] border-t border-[var(--greyscale-100)]"
+                  : "border-t border-[var(--greyscale-100)]",
+              )}
+            >
+              <div className="flex w-[198px] shrink-0 items-center">
+                <div className="flex min-w-0 flex-col items-start justify-center gap-2">
+                  <p className="truncate text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary-800)]">
+                    {formatCompletedDate(attempt.completedAt)}
+                  </p>
+                  <p className="truncate text-[12px] font-medium leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
+                    {attemptDetailLabel(attempt)}
+                  </p>
+                </div>
+              </div>
+              <div className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6">
+                <PrepTestScoreText variant="history" test={scores.test} br={scores.br} />
+              </div>
+              <div className="flex shrink-0 items-center gap-4">
+                <button type="button" onClick={() => onViewResult(attempt.sessionId)} className={RESULT_ACTION_CLASS}>
+                  Result
+                  <span className="inline-flex size-4 shrink-0 items-center justify-center">
+                    <FigmaIcon name="chevron-right" width={16} height={16} className="size-4" />
+                  </span>
+                </button>
+                <MoreMenuButton />
+              </div>
+            </li>
+          )
+        })}
       </ul>
     ) : null
+
+  const hoverShellClass = isReadyToTake
+    ? "border-[var(--primary)] bg-[var(--primary-25)]"
+    : "border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
 
   return (
     <PrepTestListCardShell
       testId={item.id}
       ptNumber={ptNum}
       badgeTone={badgeTone}
-      title={statusTitle(item)}
+      title={statusTitle(item, isPoolRestricted)}
       titleClass={titleClass}
       subtitle={statusSubtitle(item)}
-      layout={isCompleted ? "completed" : "standard"}
-      hoverTone={isPoolRestricted ? "muted" : isCompleted ? "success" : "default"}
-      muted={isPoolRestricted}
+      hoverShellClass={hoverShellClass}
+      interactive={isReadyToTake}
+      starting={isReadyToTake && starting}
+      onActivate={isReadyToTake ? onPrimary : undefined}
       center={center}
       actions={action}
       expanded={expanded}
@@ -399,6 +491,7 @@ function PracticePrepTestsListPage() {
   const [sort, setSort] = useState<(typeof SORT_OPTIONS)[number]>("Newest")
   const [prepTests, setPrepTests] = useState<PrepTestPoolItem[]>([])
   const [total, setTotal] = useState(0)
+  const [statusCounts, setStatusCounts] = useState<PrepTestPoolStatusCounts>(EMPTY_STATUS_COUNTS)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [startingId, setStartingId] = useState<string | null>(null)
@@ -423,11 +516,13 @@ function PracticePrepTestsListPage() {
         if (!cancelled) {
           setPrepTests(out.prepTests)
           setTotal(out.total)
+          setStatusCounts(out.statusCounts ?? EMPTY_STATUS_COUNTS)
         }
       } catch (e) {
         if (!cancelled) {
           setPrepTests([])
           setTotal(0)
+          setStatusCounts(EMPTY_STATUS_COUNTS)
           setError(e instanceof Error ? e.message : "Failed to load PrepTests")
         }
       } finally {
@@ -462,6 +557,7 @@ function PracticePrepTestsListPage() {
           sort: poolSort,
         })
         nextTotal = out.total
+        if (out.statusCounts) setStatusCounts(out.statusCounts)
         for (const item of out.prepTests) {
           if (seen.has(item.id)) continue
           seen.add(item.id)
@@ -549,12 +645,11 @@ function PracticePrepTestsListPage() {
 
   return (
     <StudentMain>
-      <div className="mb-6 flex flex-col gap-6">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <p className="max-w-[908px] text-[14px] font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
-          Here you can find all official Prep Tests from the Law School Admission Council. When you're finished a PT, our Insights will tell you what to work on.
-          </p>
-        </div>
+      <div className="flex flex-col gap-6">
+        <p className="max-w-[756px] text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
+          Try a free PrepTest to gauge your starting point and see how to improve. When you're done, our Insights will
+          tell you what to work on.
+        </p>
 
         <PrepTestListFilters
           filter={filter}
@@ -569,48 +664,49 @@ function PracticePrepTestsListPage() {
             setPrepTests([])
             setSort(s)
           }}
+          statusCounts={statusCounts}
         />
-      </div>
 
-      {error ? (
-        <p className="mb-4 text-sm text-red-600" role="alert">
-          {error}
-        </p>
-      ) : null}
+        {error ? (
+          <p className="text-sm text-red-600" role="alert">
+            {error}
+          </p>
+        ) : null}
 
-      {visiblePrepTests.length === 0 ? (
-        <p className="text-sm text-[var(--greyscale-500)]">No PrepTests match this filter.</p>
-      ) : (
-        <>
-          <div className="flex flex-col gap-6">
-            {visiblePrepTests.map((item) => (
-              <PrepTestListCard
-                key={item.id}
-                item={item}
-                starting={startingId === item.id}
-                startingBlindReview={startingBlindReviewId === item.id}
-                expanded={expandedIds.has(item.id)}
-                onToggleExpanded={() => toggleExpanded(item.id)}
-                onPrimary={() => void handlePrimary(item)}
-                onBlindReview={() => void handleBlindReview(item)}
-                onViewResult={viewResult}
-              />
-            ))}
-          </div>
-          {hasMore ? (
-            <div className="mt-6 flex justify-center">
-              <button
-                type="button"
-                disabled={loadingMore}
-                onClick={() => void handleSeeMore()}
-                className="inline-flex h-[52px] min-w-[160px] items-center justify-center rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)] disabled:opacity-60"
-              >
-                {loadingMore ? "Loading…" : "See more"}
-              </button>
+        {visiblePrepTests.length === 0 ? (
+          <p className="text-sm text-[var(--greyscale-500)]">No PrepTests match this filter.</p>
+        ) : (
+          <>
+            <div className="flex flex-col gap-6">
+              {visiblePrepTests.map((item) => (
+                <PrepTestListCard
+                  key={item.id}
+                  item={item}
+                  starting={startingId === item.id}
+                  startingBlindReview={startingBlindReviewId === item.id}
+                  expanded={expandedIds.has(item.id)}
+                  onToggleExpanded={() => toggleExpanded(item.id)}
+                  onPrimary={() => void handlePrimary(item)}
+                  onBlindReview={() => void handleBlindReview(item)}
+                  onViewResult={viewResult}
+                />
+              ))}
             </div>
-          ) : null}
-        </>
-      )}
+            {hasMore ? (
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  disabled={loadingMore}
+                  onClick={() => void handleSeeMore()}
+                  className="inline-flex h-10 min-w-[120px] items-center justify-center rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)] disabled:opacity-60"
+                >
+                  {loadingMore ? "Loading…" : "See more"}
+                </button>
+              </div>
+            ) : null}
+          </>
+        )}
+      </div>
     </StudentMain>
   )
 }
@@ -620,47 +716,53 @@ function PrepTestListFilters({
   setFilter,
   sort,
   setSort,
+  statusCounts,
 }: {
   filter: PrepTestPoolFilter
   setFilter: (f: PrepTestPoolFilter) => void
   sort: (typeof SORT_OPTIONS)[number]
   setSort: (s: (typeof SORT_OPTIONS)[number]) => void
+  statusCounts: PrepTestPoolStatusCounts
 }) {
   return (
-    <div className="flex w-full flex-wrap items-center gap-4 lg:gap-6">
-      <h2 className="shrink-0 text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">
+    <div className="flex w-full flex-wrap items-center justify-between gap-4">
+      <h2 className="shrink-0 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary-800)]">
         Start your PrepTest
       </h2>
-      <div className="min-w-0 flex-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="flex w-max items-center gap-2 lg:ml-auto">
-          {FILTER_TABS.map((tab) => {
-            const active = filter === tab.id
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setFilter(tab.id)}
-                className={active ? FILTER_PILL_ACTIVE_CLASS : FILTER_PILL_INACTIVE_CLASS}
-              >
-                {tab.label}
-              </button>
-            )
-          })}
+      <div className="flex min-w-0 flex-wrap items-center gap-6">
+        <div className="min-w-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex w-max items-center gap-2">
+            {FILTER_TABS.map((tab) => {
+              const active = filter === tab.id
+              const label = filterTabLabel(tab, statusCounts)
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setFilter(tab.id)}
+                  className={active ? FILTER_PILL_ACTIVE_CLASS : FILTER_PILL_INACTIVE_CLASS}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
         </div>
-      </div>
-      <div className="relative z-20 w-[160px] shrink-0">
-        <label htmlFor="preptest-sort" className="sr-only">
-          Sort PrepTests
-        </label>
-        <FigmaDropdown
-          id="preptest-sort"
-          variant="pill"
-          menuAlign="end"
-          value={sort}
-          onChange={(next) => setSort(next as (typeof SORT_OPTIONS)[number])}
-          options={SORT_OPTIONS.map((option) => ({ value: option, label: option }))}
-          className="w-full"
-        />
+        <div className="relative z-20 w-[106px] shrink-0">
+          <label htmlFor="preptest-sort" className="sr-only">
+            Sort PrepTests
+          </label>
+          <FigmaDropdown
+            id="preptest-sort"
+            variant="pill"
+            size="sm"
+            menuAlign="end"
+            value={sort}
+            onChange={(next) => setSort(next as (typeof SORT_OPTIONS)[number])}
+            options={SORT_OPTIONS.map((option) => ({ value: option, label: option }))}
+            className="w-full"
+          />
+        </div>
       </div>
     </div>
   )
