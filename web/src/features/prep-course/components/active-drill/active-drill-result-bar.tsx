@@ -1,7 +1,5 @@
-import { ChevronRight } from "lucide-react"
-
 import type { DrillQuestionOutcome } from "@/features/prep-course/lib/resolve-drill-question-outcomes"
-import { PracticeResultOutcomeIcon } from "@/features/student/practice-session/practice-result-outcome-icon"
+import { ActiveDrillOutcomeIcon } from "@/features/prep-course/components/active-drill/active-drill-outcome-icon"
 import type { PrepLessonActiveDrillAttempt } from "@/lib/api/prep-course"
 
 type ActiveDrillResultBarProps = {
@@ -22,16 +20,20 @@ function ActiveDrillResultBar({
   retakeLabel = "Retake",
 }: ActiveDrillResultBarProps) {
   return (
-    <section className="min-w-0 max-w-full overflow-hidden bg-transparent">
-      <div className="flex flex-col items-center gap-4 p-6">
+    <section className="min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
+      <div className="flex flex-col items-center gap-4">
         {lessonTitle ? (
-          <h2 className="m-0 text-center text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">{lessonTitle}</h2>
+          <h2 className="m-0 text-center text-[20px] font-bold leading-[1.35] text-[var(--primary-800)]">
+            {lessonTitle}
+          </h2>
         ) : null}
 
         <div className="flex h-[76px] w-full min-w-0 items-center justify-between gap-4">
           <div className="flex min-w-0 shrink-0 flex-col gap-2">
-            <p className="m-0 text-base font-medium leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">Your Score</p>
-            <p className="m-0 whitespace-nowrap text-[var(--color-student-heading)]">
+            <p className="m-0 text-base font-medium leading-[1.5] tracking-[0.32px] text-[var(--greyscale-500)]">
+              Your Score
+            </p>
+            <p className="m-0 whitespace-nowrap text-[var(--primary-800)]">
               <span className="text-[32px] font-bold leading-[1.25]">
                 {attempt.rawScore}/{attempt.questionCount}
               </span>
@@ -42,7 +44,7 @@ function ActiveDrillResultBar({
           {questionOutcomes.length > 0 ? (
             <div className="flex min-w-0 flex-1 items-center justify-center gap-3 px-2">
               {questionOutcomes.map((outcome, index) => (
-                <PracticeResultOutcomeIcon
+                <ActiveDrillOutcomeIcon
                   key={index}
                   correct={outcome.correct}
                   unanswered={outcome.unanswered}
@@ -59,13 +61,19 @@ function ActiveDrillResultBar({
               type="button"
               disabled={retaking}
               onClick={onRetake}
-              className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-[16px] border border-[var(--primary-border)] bg-[var(--primary)] px-4 text-base font-semibold tracking-[0.02em] text-white shadow-[0_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-600)] disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-[14px] border border-[var(--primary-border)] bg-[var(--primary)] px-4 py-2 text-sm font-semibold tracking-[0.28px] text-white shadow-[0_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-600)] disabled:cursor-not-allowed disabled:opacity-70"
             >
               {retaking ? "Starting…" : retakeLabel}
-              <ChevronRight className="size-5 shrink-0" aria-hidden />
+              <img
+                src="/figma/active-drill/chevron-right.svg"
+                alt=""
+                width={16}
+                height={16}
+                className="size-4 shrink-0"
+              />
             </button>
           ) : (
-            <div className="hidden w-[108px] shrink-0 sm:block" aria-hidden />
+            <div className="hidden w-[105px] shrink-0 sm:block" aria-hidden />
           )}
         </div>
       </div>

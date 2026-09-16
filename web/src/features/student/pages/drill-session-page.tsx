@@ -96,6 +96,7 @@ import {
 } from "@/features/student/practice-session/use-practice-session-timer"
 import { practiceSessionResultsPath } from "@/features/student/analytics/analytics-results-paths"
 import { stashDrillBlindReviewResult } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
+import { withActiveDrillResultsQuery } from "@/features/prep-course/lib/active-drill-results-query"
 import {
   DASHBOARD_ADAPTIVE_DRILL_QUERY,
   drillSessionSupportsBlindReview,
@@ -706,7 +707,7 @@ function DrillSessionPage() {
     setReviewAfterComplete(false)
     const path = resolveReturnPath()
     if (path.startsWith("/app/prep-course/")) {
-      navigate(path, { replace: true })
+      navigate(withActiveDrillResultsQuery(path), { replace: true })
       return
     }
     navigate(

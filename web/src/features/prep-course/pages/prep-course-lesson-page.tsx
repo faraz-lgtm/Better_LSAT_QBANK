@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
+import { Link, useLocation, useMatch, useNavigate, useParams } from "react-router-dom"
 
 import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
 import { useGuestPremiumAccount } from "@/features/guest/premium/guest-premium-account"
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
+import { ActiveDrillStartScreen } from "@/features/prep-course/components/active-drill/active-drill-start-screen"
 import { PrepCourseLessonFooter } from "@/features/prep-course/components/prep-course-lesson-footer"
 import { PrepCourseLessonPanel } from "@/features/prep-course/components/prep-course-lesson-panel"
 import { PrepCourseLessonSidebar } from "@/features/prep-course/components/prep-course-lesson-sidebar"
@@ -22,6 +23,12 @@ import {
   isResolvedPrepCourseDrillLesson,
 } from "@/features/prep-course/lib/prep-course-format"
 import { mergeActiveDrillAttemptBlindReview } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
+import { resolveDisplayedActiveDrillAttempt } from "@/features/prep-course/lib/active-drill-results-query"
+import {
+  activeDrillStartPath,
+  resolveLessonDrillStartAction,
+  startLessonDrillRequest,
+} from "@/features/prep-course/lib/start-lesson-drill-request"
 import { isPrepCourseComingSoonSlug } from "@/features/prep-course/lib/prep-course-nav"
 import { isPrepCourseLessonLockedForFreePlan, shouldLimitFreePrepCourseAccess } from "@/features/prep-course/lib/prep-course-free-access"
 import { usePrepCourseBookmarks } from "@/features/prep-course/lib/use-prep-course-bookmarks"
@@ -57,6 +64,9 @@ function PrepCourseLessonPage() {
     courseSlug: string
     lessonSlug: string
   }>()
+  const isStartScreen = Boolean(
+    useMatch({ path: "/app/prep-course/:courseSlug/:lessonSlug/start", end: true }),
+  )
   const courseSlug = courseSlugParam?.trim() ?? ""
   const lessonSlug = lessonSlugParam?.trim() ?? ""
   const paramsValid = courseSlug.length > 0 && lessonSlug.length > 0
@@ -249,7 +259,14 @@ function PrepCourseLessonPage() {
   useEffect(() => {
     setDrillStartError(null)
     lessonContentRef.current?.closest("section")?.scrollTo({ top: 0 })
-  }, [lessonSlug])
+  }, [lessonSlug, isStartScreen])
+
+  useEffect(() => {
+    if (!course || !lesson || loading) return
+    if (isStartScreen && resolveDrillLessonType(lesson) !== "active_drill") {
+      navigate(`/app/prep-course/${course.slug}/${lesson.slug}`, { replace: true })
+    }
+  }, [course, isStartScreen, lesson, loading, navigate])
 
   const handleReviewDrill = useCallback(() => {
     lessonContentRef.current?.closest("section")?.scrollTo({ top: 0, behavior: "smooth" })
@@ -257,6 +274,10 @@ function PrepCourseLessonPage() {
 
   const handleStartDrill = useCallback(async () => {
     if (!lesson || !course || startingDrill) return
+    if (resolveLessonDrillStartAction(lesson, isStartScreen) === "open-start-screen") {
+      navigate(activeDrillStartPath(course.slug, lesson.slug))
+      return
+    }
     if (!practiceApi) {
       const msg = "Practice API is unavailable. Check Supabase env configuration."
       setDrillStartError(msg)
@@ -267,13 +288,7 @@ function PrepCourseLessonPage() {
     setDrillStartError(null)
     setError(null)
     try {
-      const linkedQuestionId = linkedQuestionRefs[0]?.question_id ?? null
-      const { session } = await practiceApi.startLessonDrill({
-        lessonId: lesson.id,
-        ...(resolveDrillLessonType(lesson) === "active_drill" && linkedQuestionId
-          ? { questionId: linkedQuestionId }
-          : {}),
-      })
+      const { session } = await practiceApi.startLessonDrill(startLessonDrillRequest(lesson, linkedQuestionRefs))
       const returnTo = `/app/prep-course/${course.slug}/${lesson.slug}`
       navigate(`/app/practice/drills/session/${session.id}?returnTo=${encodeURIComponent(returnTo)}`)
     } catch (e) {
@@ -283,7 +298,7 @@ function PrepCourseLessonPage() {
     } finally {
       setStartingDrill(false)
     }
-  }, [course, lesson, linkedQuestionRefs, navigate, practiceApi, startingDrill])
+  }, [course, isStartScreen, lesson, linkedQuestionRefs, navigate, practiceApi, startingDrill])
 
   if (comingSoon) {
     return <PrepCourseComingSoonPage />
@@ -338,15 +353,25 @@ function PrepCourseLessonPage() {
     )
   }
 
-  const useSplitDrillLayout = Boolean(
-    activeDrillAttempt && showSidebar && isResolvedPrepCourseDrillLesson(lesson),
+  const showActiveDrillStart =
+    isStartScreen && resolveDrillLessonType(lesson) === "active_drill"
+  const lessonActiveDrillAttempt = resolveDisplayedActiveDrillAttempt(
+    resolveDrillLessonType(lesson),
+    activeDrillAttempt,
+    location.search,
   )
+  const isDrillResultsView = Boolean(
+    !showActiveDrillStart &&
+      lessonActiveDrillAttempt &&
+      isResolvedPrepCourseDrillLesson(lesson),
+  )
+  const useSplitDrillLayout = Boolean(isDrillResultsView && showSidebar)
 
   const lessonPanelProps = {
     course,
     lesson,
     linkedQuestionRefs,
-    activeDrillAttempt,
+    activeDrillAttempt: lessonActiveDrillAttempt,
     sectionSubtitle,
     moduleLessonLine,
     lessonSequence,
@@ -382,11 +407,11 @@ function PrepCourseLessonPage() {
                 ref={lessonContentRef}
                 className="flex min-w-0 w-full flex-col gap-6 overflow-x-clip"
               >
-                <div className={cn(PREP_COURSE_LESSON_CONTENT_CARD_CLASS, PREP_COURSE_LESSON_CARD_WIDTH_CLASS, "w-full")}>
+                <div className={cn(PREP_COURSE_LESSON_CARD_WIDTH_CLASS, "w-full")}>
                   <PrepCourseLessonPanel {...lessonPanelProps} drillResultsPart="cards" sidebarAdjacent={false} />
                 </div>
                 <div className={cn(PREP_COURSE_LESSON_WITH_SIDEBAR_WIDTH_CLASS, "flex min-w-0 gap-6")}>
-                  <div className={cn(PREP_COURSE_LESSON_CONTENT_CARD_CLASS, PREP_COURSE_LESSON_CARD_WIDTH_CLASS, "min-w-0 flex-1")}>
+                  <div className={cn(PREP_COURSE_LESSON_CARD_WIDTH_CLASS, "min-w-0 flex-1")}>
                     <PrepCourseLessonPanel
                       {...lessonPanelProps}
                       drillResultsPart="below"
@@ -413,17 +438,33 @@ function PrepCourseLessonPage() {
               <>
                 <div
                   className={cn(
-                    PREP_COURSE_LESSON_CONTENT_CARD_CLASS,
+                    isDrillResultsView ? null : PREP_COURSE_LESSON_CONTENT_CARD_CLASS,
                     PREP_COURSE_LESSON_CARD_WIDTH_CLASS,
                     "w-full",
                     !showSidebar && "mx-auto",
                   )}
                 >
-                  <PrepCourseLessonPanel
-                    {...lessonPanelProps}
-                    contentScrollRef={lessonContentRef}
-                    inLessonCard
-                  />
+                  {showActiveDrillStart ? (
+                    <div ref={lessonContentRef}>
+                      <ActiveDrillStartScreen
+                        lesson={lesson}
+                        moduleLessonLine={moduleLessonLine}
+                        sectionSubtitle={sectionSubtitle}
+                        lessonSequence={lessonSequence}
+                        lessonBookmarked={isLessonBookmarked(lesson.slug)}
+                        onToggleLessonBookmark={(next) => setLessonBookmarked(lesson.slug, next)}
+                        onStartDrill={() => void handleStartDrill()}
+                        startingDrill={startingDrill}
+                        drillStartError={drillStartError}
+                      />
+                    </div>
+                  ) : (
+                    <PrepCourseLessonPanel
+                      {...lessonPanelProps}
+                      contentScrollRef={lessonContentRef}
+                      inLessonCard
+                    />
+                  )}
                 </div>
 
                 {showSidebar ? (
