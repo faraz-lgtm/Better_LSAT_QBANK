@@ -2,6 +2,7 @@ import type { AnalyticsOverview } from "@/lib/api/analytics"
 
 import { formatStudyTime } from "@/features/student/drills/drill-dashboard-mappers"
 import {
+  findLsacTestWindow,
   formatLsacTestWindowLabel,
   formatLsacTestWindowMeta,
 } from "@/lib/lsac-test-window-options"
@@ -134,6 +135,16 @@ export function daysUntilDate(isoDate: string | null | undefined, now = new Date
   start.setHours(12, 0, 0, 0)
   const diffMs = target.getTime() - start.getTime()
   return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
+}
+
+/** True only for an official LSAC window the student selected, once that window has started. */
+export function isCurrentLsacTestAdministrationInProgress(
+  isoDate: string | null | undefined,
+  now = new Date(),
+): boolean {
+  const window = findLsacTestWindow(isoDate)
+  if (!window) return false
+  return daysUntilDate(window.value, now) === 0
 }
 
 export function formatTestDateInputValue(

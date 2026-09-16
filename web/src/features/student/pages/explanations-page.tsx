@@ -812,7 +812,7 @@ function ExplanationsPage() {
   }
 
   return (
-    <StudentMain className="bg-[var(--background)]" contentClassName="flex min-h-0 flex-1 flex-col pt-6 pb-6">
+    <StudentMain className="bg-[var(--primary-0)]" contentClassName="flex min-h-0 flex-1 flex-col bg-[var(--primary-0)] pt-6 pb-6">
       <div className="mx-auto flex w-full max-w-[1168px] flex-col gap-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

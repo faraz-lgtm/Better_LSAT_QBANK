@@ -116,7 +116,7 @@ function PracticeDrillsPage() {
     sectionFilter === "all" ? (["lr", "rc"] as const) : sectionFilter === "lr" ? (["lr"] as const) : (["rc"] as const)
 
   return (
-    <StudentMain className="drills-page bg-[var(--background)]" contentClassName="flex flex-col gap-[25px] bg-[var(--background)] pb-[48px]">
+    <StudentMain className="drills-page bg-[var(--primary-0)]" contentClassName="flex flex-col gap-[25px] bg-[var(--primary-0)] pb-[48px]">
       <div className="flex flex-wrap items-center justify-between gap-[12px]">
         <div className="flex flex-wrap items-center gap-[8px]">
           <button

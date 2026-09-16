@@ -140,7 +140,7 @@ function ExplanationQuestionDetailPage() {
 
   if (!explanationsApi) {
     return (
-      <StudentMain className="py-10">
+      <StudentMain className="bg-[var(--primary-0)] py-10" contentClassName="bg-[var(--primary-0)]">
         <p className="text-sm text-[#95122b]">Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.</p>
       </StudentMain>
     )
@@ -152,7 +152,7 @@ function ExplanationQuestionDetailPage() {
 
   if (!resolvedLoc && (bootstrapLoading || detailLoading)) {
     return (
-      <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
+      <StudentMain className="bg-[var(--primary-0)]" contentClassName="flex min-h-0 flex-1 flex-col bg-[var(--primary-0)]">
         <StudentPageLoader centered className="min-h-0 flex-1" label="Loading question…" />
       </StudentMain>
     )
@@ -163,7 +163,7 @@ function ExplanationQuestionDetailPage() {
   }
 
   return (
-    <StudentMain layout="scroll" className="bg-[var(--background)]" contentClassName="bg-[var(--background)]">
+    <StudentMain layout="scroll" className="bg-[var(--primary-0)]" contentClassName="bg-[var(--primary-0)]">
       <div className="flex flex-col gap-6">
         <ExplanationDetailTabBar
           headingCode={view.headingCode}

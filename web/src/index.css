@@ -2645,14 +2645,14 @@ select.ds-input {
   object-fit: contain;
 }
 
-/* Dark mode: inactive nav icons white; active icons brand blue (Figma 20645:65725). */
+/* Dark mode: inactive nav icons white; active icons --primary #75A1E8. */
 .dark .student-sidebar-link-icon img {
   filter: brightness(0) invert(1);
 }
 
 .dark .student-sidebar-link--active .student-sidebar-link-icon img,
 .dark .student-sidebar-logout-icon img {
-  filter: invert(28%) sepia(92%) saturate(1650%) hue-rotate(198deg) brightness(92%) contrast(92%);
+  filter: brightness(0) saturate(100%) invert(58.8%) sepia(100%) saturate(569.4%) hue-rotate(187.7deg) brightness(93.9%) contrast(92.9%);
 }
 
 .student-sidebar-link:hover {
@@ -3025,6 +3025,15 @@ select.ds-input {
   font-size: 56.25px;
   font-weight: 800;
   line-height: 56.25px;
+  color: var(--color-student-heading);
+}
+
+.test-day-countdown__in-progress {
+  margin: 8px 0 0;
+  max-width: 22rem;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.2;
   color: var(--color-student-heading);
 }
 
