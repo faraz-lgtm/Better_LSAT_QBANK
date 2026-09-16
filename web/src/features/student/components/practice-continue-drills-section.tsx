@@ -111,7 +111,7 @@ function PracticeContinueDrillsSection({
   const inProcessCount = visibleLr.length + visibleRc.length
 
   return (
-    <section className="flex flex-col gap-[24px] rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]">
+    <section className="flex flex-col gap-[24px] rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-[24px] pb-[32px] pt-[24px]">
       <div className="flex flex-wrap items-center justify-between gap-[12px]">
         <h2 className="text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
           Pick Up Where You Left Off

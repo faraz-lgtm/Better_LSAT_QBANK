@@ -900,8 +900,8 @@ function AccountPage() {
 
   return (
     <StudentMain fullBleed contentClassName="px-6">
-      <div className="mx-auto w-full max-w-[1304px] rounded-3xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
-        <h1 className="m-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">Account</h1>
+      <div className="mx-auto w-full max-w-[1304px] rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
+        <h2 className="m-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">Account</h2>
 
         {error ? <p className="mt-4 text-sm text-[#95122b]">{error}</p> : null}
         {accountStatus ? <p className="mt-4 text-sm font-medium text-[var(--primary)]">{accountStatus}</p> : null}

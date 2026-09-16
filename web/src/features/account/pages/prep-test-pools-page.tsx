@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { Check } from "lucide-react"
 
 import {
   AccommodationsSettingsSection,
@@ -9,6 +10,8 @@ import type {
   PrepTestPoolSettingsListResult,
   PrepTestPoolSettingsUpdate,
 } from "@/features/account/prep-test-pool-types"
+import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-context"
+import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { AppToast } from "@/components/ui/app-toast"
@@ -95,6 +98,12 @@ const RECOMMENDATIONS = [
     active: { drills: false, sections: false, tests: true } as const,
   },
 ] as const
+
+/** Figma `20961:27340` — Official PrepTests row shell */
+const POOL_TABLE_ROW_CLASS = "flex w-full items-center px-5"
+
+/** Right cluster: Fresh (80) + D/S/P (36) with 16px gaps — Figma `20961:27377` */
+const POOL_TABLE_ACTIONS_CLASS = "flex shrink-0 items-center gap-4"
 
 type BandMeta = {
   id: BandId
@@ -263,8 +272,8 @@ function FreshnessBar({ percent }: { percent: number }) {
   const color = freshnessTone(percent)
   const clamped = Math.max(0, Math.min(100, percent))
   return (
-    <div className="flex min-w-[80px] items-center gap-1.5">
-      <div className="h-[3px] w-[46px] overflow-hidden rounded-[2px] bg-[var(--greyscale-100)]">
+    <div className="flex w-20 shrink-0 items-center gap-1.5">
+      <div className="h-[3px] w-[46px] shrink-0 overflow-hidden rounded-[2px] bg-[var(--greyscale-100)]">
         <div
           className="h-[3px] rounded-[2px]"
           style={{ width: `${clamped}%`, backgroundColor: color }}
@@ -290,14 +299,91 @@ function CoverageMeter({
 }) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0
   return (
-    <div className="min-w-0 flex-1">
-      <div className="flex items-center justify-between">
+    <div className="min-w-0 w-full max-w-[230px] flex-1">
+      <div className="flex items-center justify-between gap-2">
         <p className={cn("m-0 text-xs font-semibold tracking-[0.24px]", tone.activeText)}>{label}</p>
         <p className="m-0 text-sm font-semibold tracking-[0.28px] text-[var(--primary-800)]">{value}</p>
       </div>
       <div className="mt-[5px] h-1 overflow-hidden rounded-[2px] bg-[var(--greyscale-100)]">
         <div className={cn("h-1 rounded-[2px] opacity-70", tone.bar)} style={{ width: `${pct}%` }} />
       </div>
+    </div>
+  )
+}
+
+function PlanBanner({
+  className,
+  children,
+}: {
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <aside
+      className={cn(
+        "flex flex-col gap-4 overflow-hidden rounded-[24px] p-4 shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]",
+        "bg-[linear-gradient(180deg,rgba(255,255,255,0)_0%,rgba(26,87,184,0.22)_100%),linear-gradient(90deg,var(--primary-0)_0%,var(--primary-0)_100%)]",
+        className,
+      )}
+    >
+      {children}
+    </aside>
+  )
+}
+
+function CheckListItem({ children, muted = false }: { children: ReactNode; muted?: boolean }) {
+  return (
+    <li
+      className={cn(
+        "flex items-center gap-2 tracking-[0.24px]",
+        muted ? "text-xs text-[var(--greyscale-500)]" : "text-sm text-[var(--color-student-heading)]",
+      )}
+    >
+      <Check className="size-[13px] shrink-0 text-[var(--primary)]" strokeWidth={2} />
+      <span>{children}</span>
+    </li>
+  )
+}
+
+function SettingsPlanSidebar() {
+  const { openPricingModal } = useGuestPricingModal()
+  const { entitlement } = useStudentEntitlement()
+  const hasProPlan = Boolean(entitlement?.hasActiveCore || entitlement?.accessState === "FULL_ACCESS")
+  const planName = hasProPlan ? "Pro" : "Free"
+
+  return (
+    <div className="flex w-full flex-col gap-4 xl:sticky xl:top-0">
+      <PlanBanner>
+        <p className="m-0 text-xs font-semibold tracking-[0.24px] text-[var(--primary)]">Current Plan</p>
+        <h2 className="m-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">{planName}</h2>
+        <ul className="m-0 flex list-none flex-col gap-2 p-0">
+          <CheckListItem muted>{hasProPlan ? "Unlimited questions & drills" : "50 questions/day"}</CheckListItem>
+          <CheckListItem muted>{hasProPlan ? "Advanced analytics" : "Basic analytics"}</CheckListItem>
+          <CheckListItem muted>{hasProPlan ? "Full PrepTest library" : "3 practice tests"}</CheckListItem>
+          <CheckListItem muted>{hasProPlan ? "All lessons" : "Limited lessons"}</CheckListItem>
+        </ul>
+        {!hasProPlan ? (
+          <>
+            <p className="m-0 text-xs font-medium tracking-[0.24px] text-[var(--greyscale-500)]">
+              <strong>79%</strong> Performance, <strong>30+</strong> Reports, and Score Tracker will be available.
+            </p>
+            <Button type="button" size="xs" className="h-8 w-full rounded-[10px]" onClick={openPricingModal}>
+              Upgrade · $99/mo
+            </Button>
+          </>
+        ) : null}
+      </PlanBanner>
+
+      <PlanBanner>
+        <p className="m-0 text-xs font-semibold tracking-[0.24px] text-[var(--primary)]">Pro includes everything, plus:</p>
+        <ul className="m-0 flex list-none flex-col gap-2 p-0">
+          <CheckListItem>Unlimited questions &amp; drills</CheckListItem>
+          <CheckListItem>Full PrepTest library (90+)</CheckListItem>
+          <CheckListItem>Advanced analytics &amp; weak areas</CheckListItem>
+          <CheckListItem>All lesson videos</CheckListItem>
+          <CheckListItem>Priority support</CheckListItem>
+        </ul>
+      </PlanBanner>
     </div>
   )
 }
@@ -431,7 +517,9 @@ export function PrepTestPoolsPage() {
   if (loading) {
     return (
       <StudentMain fullBleed contentClassName="px-6">
-        <StudentPageLoader centered className="min-h-0 flex-1" label="Loading PrepTest pools…" />
+        <div className="mx-auto w-full max-w-[1304px] rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
+          <StudentPageLoader centered className="min-h-[min(480px,70vh)]" label="Loading PrepTest pools…" />
+        </div>
       </StudentMain>
     )
   }
@@ -441,217 +529,248 @@ export function PrepTestPoolsPage() {
 
   return (
     <StudentMain fullBleed contentClassName="px-6">
-      <div className="mx-auto flex w-full max-w-[1304px] flex-col gap-6 rounded-3xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
-        <h1 className="m-0 text-2xl font-bold leading-[1.3] text-[var(--primary-800)]">Setting</h1>
+      {/* Figma `20933:22919` — white settings shell */}
+      <div className="mx-auto flex w-full max-w-[1304px] flex-col gap-6 rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
+        {/* Figma Heading/H4 — Setting */}
+        <h2 className="m-0 text-[24px] font-bold leading-[1.3] text-[var(--primary-800)]">Setting</h2>
 
-        <AppearanceSettingsSection />
-        <AccommodationsSettingsSection
-          onError={(message) => {
-            if (message) showError(message)
-          }}
-          onStatus={(message) => {
-            if (message) showSuccess(message)
-          }}
-        />
-
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="m-0 text-2xl font-bold leading-[1.3] text-[var(--primary-800)]">
-              PrepTest Setting
-            </h2>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-10 rounded-xl border-[var(--greyscale-100)] px-4 text-sm font-semibold tracking-[0.28px] text-[var(--primary)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]"
-              disabled={saving}
-              onClick={() => void onReset()}
-            >
-              Reset to defaults
-            </Button>
-          </div>
-
-          <p className="m-0 text-[13px] leading-[20.8px] text-[var(--greyscale-500)]">
-            Control which PrepTests appear in each practice pool. A test can belong to multiple pools.
-          </p>
-
-        <div className="flex flex-wrap items-center gap-4">
-          {POOL_TONES.map((tone) => (
-            <div key={tone.key} className="flex items-center gap-[5px]">
-              <span
-                className={cn("size-4 shrink-0 rounded-[4px] border", tone.legendBg, tone.legendBorder)}
-                aria-hidden
-              />
-              <span className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{tone.label}</span>
-            </div>
-          ))}
-          <div className="flex items-center gap-[5px]">
-            <span
-              className="h-[3px] w-7 shrink-0 rounded-[2px] bg-gradient-to-r from-[#059669] via-[#d97706] to-[#dc2626]"
-              aria-hidden
+        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="flex min-w-0 flex-col gap-6">
+            <AppearanceSettingsSection />
+            <AccommodationsSettingsSection
+              onError={(message) => {
+                if (message) showError(message)
+              }}
+              onStatus={(message) => {
+                if (message) showSuccess(message)
+              }}
             />
-            <span className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">Freshness</span>
-          </div>
-        </div>
 
-        <div className="rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--primary-0)] px-5 py-[18px] shadow-[0px_1px_1.5px_rgba(0,0,0,0.05)]">
-          <p className="m-0 text-xs tracking-[0.24px] text-[var(--primary-800)]">
-            Pool coverage · {totalTests} PrepTests
-          </p>
-          <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:justify-between sm:gap-6">
-            <CoverageMeter label="Drills" value={counts.drills} total={totalTests} tone={POOL_TONES[0]!} />
-            <CoverageMeter label="Sections" value={counts.sections} total={totalTests} tone={POOL_TONES[1]!} />
-            <CoverageMeter label="Preptests" value={counts.tests} total={totalTests} tone={POOL_TONES[2]!} />
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.05)]">
-          <button
-            type="button"
-            className="flex w-full items-center justify-between px-5 py-[13px] text-left"
-            aria-expanded={tipsOpen}
-            onClick={() => setTipsOpen((open) => !open)}
-          >
-            <span className="flex items-center gap-2">
-              <span className="text-sm font-medium leading-[14px] text-[#b5b0a4]">?</span>
-              <span className="text-sm tracking-[0.28px] text-[var(--color-student-heading)]">
-                Which tests work best for each pool?
-              </span>
-            </span>
-            <img
-              src="/figma/prep-course/icon-chevron.svg"
-              alt=""
-              width={14}
-              height={8}
-              className={cn("size-[14px] transition-transform", tipsOpen ? "rotate-180" : "rotate-0")}
-              aria-hidden
-            />
-          </button>
-          {tipsOpen ? (
-            <div className="border-t border-[#ede9e1] px-5 py-[18px]">
-              <div className="grid gap-3 md:grid-cols-3">
-                {RECOMMENDATIONS.map((card) => (
-                  <div
-                    key={card.title}
-                    className="rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--primary-0)] px-3.5 py-3"
-                  >
-                    <p className="m-0 text-xs font-bold tracking-[0.24px] text-[var(--primary-800)]">
-                      {card.title}
-                    </p>
-                    <div className="mt-[7px] flex gap-1">
-                      {POOL_TONES.map((tone) => {
-                        const on = card.active[tone.key]
-                        return (
-                          <span
-                            key={tone.key}
-                            className={cn(
-                              "inline-flex h-[18px] w-[22px] items-center justify-center rounded-[4px] border text-[10px] leading-[15px]",
-                              on
-                                ? cn(tone.activeBg, tone.activeBorder, tone.activeText)
-                                : "border-[var(--greyscale-100)] text-[var(--greyscale-500)]",
-                            )}
-                          >
-                            {tone.letter}
-                          </span>
-                        )
-                      })}
-                    </div>
-                    <p className="mt-2 m-0 text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
-                      {card.description}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="overflow-hidden rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.05)]">
-          <div className="overflow-x-auto">
-            <div className="min-w-[640px]">
-          <div className="flex items-center justify-between px-5 py-[13px]">
-            <p className="m-0 text-sm tracking-[0.28px] text-[var(--primary-800)]">Official PrepTests</p>
-            <div className="flex items-center gap-4">
-              <span className="w-20 text-center text-xs tracking-[0.24px] text-[var(--primary-800)]">Fresh</span>
-              {POOL_TONES.map((tone) => (
-                <span
-                  key={tone.key}
-                  className={cn("w-9 text-center text-xs font-bold tracking-[0.24px] opacity-80", tone.activeText)}
+            <section className="flex flex-col gap-6 rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                {/* Figma Heading/H4 — same size as page title */}
+                <h2 className="m-0 text-[24px] font-bold leading-[1.3] text-[var(--primary-800)]">
+                  PrepTest Setting
+                </h2>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 rounded-xl border-[var(--greyscale-100)] px-4 text-sm font-semibold tracking-[0.28px] text-[var(--primary)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]"
+                  disabled={saving}
+                  onClick={() => void onReset()}
                 >
-                  {tone.letter}
-                </span>
-              ))}
-            </div>
-          </div>
+                  Reset to defaults
+                </Button>
+              </div>
 
-          <div className="border-t border-[var(--greyscale-100)]">
-            {bands.map((band) => {
-              const allFlags = {
-                inDrills: band.items.every((item) => item.inDrills),
-                inSections: band.items.every((item) => item.inSections),
-                inTests: band.items.every((item) => item.inTests),
-              }
-              return (
-                <div key={band.id}>
-                  <div className="flex items-center border-b border-[var(--greyscale-100)] bg-[var(--primary-0)] px-5 py-[7px]">
-                    <div className="flex min-w-0 flex-1 items-center gap-[7px]">
-                      <span className="text-xs font-semibold tracking-[0.24px] text-[var(--primary-800)]">
-                        {band.title}
-                      </span>
-                      {band.rangeLabel ? (
-                        <span className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
-                          {band.rangeLabel}
-                        </span>
-                      ) : null}
+              <div className="flex flex-col gap-6">
+                <p className="m-0 text-[14px] leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
+                  Control which PrepTests appear in each practice pool. A test can belong to multiple pools.
+                </p>
+
+                {/* Figma `20961:27248` — content stack gap 24 */}
+                <div className="flex flex-col gap-6">
+                <div className="flex h-8 flex-wrap items-center gap-4">
+                  {POOL_TONES.map((tone) => (
+                    <div key={tone.key} className="flex items-center gap-[5px]">
+                      <span
+                        className={cn("size-4 shrink-0 rounded-[4px] border", tone.legendBg, tone.legendBorder)}
+                        aria-hidden
+                      />
+                      <span className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{tone.label}</span>
                     </div>
-                    <div className="w-20" aria-hidden />
-                    <div className="flex items-center gap-4">
-                      {POOL_TONES.map((tone) => (
-                        <div key={tone.key} className="flex w-9 justify-center">
-                          <BandBulkToggle
-                            tone={tone}
-                            checked={allFlags[tone.flag]}
-                            label={`Toggle all ${band.title} ${tone.label}`}
-                            disabled={saving}
-                            onClick={() => onBandBulkToggle(band.items, tone.flag)}
-                          />
-                        </div>
-                      ))}
-                    </div>
+                  ))}
+                  <div className="flex items-center gap-[5px]">
+                    <span
+                      className="h-[3px] w-7 shrink-0 rounded-[2px] bg-gradient-to-r from-[#059669] via-[#d97706] to-[#dc2626]"
+                      aria-hidden
+                    />
+                    <span className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">Freshness</span>
                   </div>
+                </div>
 
-                  <ul className="m-0 list-none p-0">
-                    {band.items.map((item) => (
-                      <li
-                        key={item.prepTestId}
-                        className="flex items-center border-b border-[var(--greyscale-100)] px-5 py-[9px] last:border-b-0"
-                      >
-                        <p className="m-0 min-w-0 flex-1 text-sm font-medium tracking-[0.28px] text-[var(--primary-800)]">
-                          {prepTestLabel(item)}
-                        </p>
-                        <div className="flex items-center gap-4">
-                          <FreshnessBar percent={item.freshnessPercent} />
-                          {POOL_TONES.map((tone) => (
-                            <div key={tone.key} className="flex w-9 justify-center">
-                              <PoolPill
-                                tone={tone}
-                                active={item[tone.flag]}
-                                label={`${prepTestLabel(item)} ${tone.label.toLowerCase()}`}
-                                disabled={saving}
-                                onClick={() => onToggle(item, tone.flag, !item[tone.flag])}
-                              />
+                <div className="rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--primary-0)] px-5 py-[18px] shadow-[0px_1px_1.5px_rgba(0,0,0,0.05)]">
+                  <p className="m-0 text-xs tracking-[0.24px] text-[var(--primary-800)]">
+                    Pool coverage · {totalTests} PrepTests
+                  </p>
+                  <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+                    <CoverageMeter label="Drills" value={counts.drills} total={totalTests} tone={POOL_TONES[0]!} />
+                    <CoverageMeter label="Sections" value={counts.sections} total={totalTests} tone={POOL_TONES[1]!} />
+                    <CoverageMeter label="Preptests" value={counts.tests} total={totalTests} tone={POOL_TONES[2]!} />
+                  </div>
+                </div>
+
+                <div className="overflow-hidden rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.05)]">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between px-5 py-[13px] text-left"
+                    aria-expanded={tipsOpen}
+                    onClick={() => setTipsOpen((open) => !open)}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm font-medium leading-[14px] text-[#b5b0a4]">?</span>
+                      <span className="text-sm tracking-[0.28px] text-[var(--color-student-heading)]">
+                        Which tests work best for each pool?
+                      </span>
+                    </span>
+                    <span className="relative inline-flex size-[14px] shrink-0 overflow-hidden" aria-hidden>
+                      <img
+                        src="/figma/settings/tips-chevron.svg"
+                        alt=""
+                        width={14}
+                        height={14}
+                        className={cn(
+                          "size-[14px] max-w-none object-contain transition-transform",
+                          tipsOpen && "rotate-180",
+                        )}
+                      />
+                    </span>
+                  </button>
+                  {tipsOpen ? (
+                    <div className="border-t border-[#ede9e1] px-5 py-[18px]">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-stretch md:justify-between md:gap-3">
+                        {RECOMMENDATIONS.map((card) => (
+                          <div
+                            key={card.title}
+                            className="flex min-w-0 flex-1 flex-col rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--primary-0)] px-3.5 py-3"
+                          >
+                            <p className="m-0 text-xs font-bold leading-[1.5] tracking-[0.24px] text-[var(--primary-800)]">
+                              {card.title}
+                            </p>
+                            <div className="flex gap-1 pt-[7px]">
+                              {POOL_TONES.map((tone) => {
+                                const on = card.active[tone.key]
+                                return (
+                                  <span
+                                    key={tone.key}
+                                    className={cn(
+                                      "inline-flex h-[18px] w-[22px] items-center justify-center rounded-[4px] border text-[10px] leading-[15px]",
+                                      on
+                                        ? cn(tone.activeBg, tone.activeBorder, tone.activeText)
+                                        : "border-[var(--greyscale-100)] text-[var(--greyscale-500)]",
+                                    )}
+                                  >
+                                    {tone.letter}
+                                  </span>
+                                )
+                              })}
                             </div>
+                            <p className="m-0 pt-2 text-xs leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
+                              {card.description}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="overflow-hidden rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.05)]">
+                  <div className="overflow-x-auto">
+                    <div className="min-w-[560px]">
+                      <div className={cn(POOL_TABLE_ROW_CLASS, "justify-between py-[13px]")}>
+                        <p className="m-0 text-sm tracking-[0.28px] text-[var(--primary-800)]">Official PrepTests</p>
+                        <div className={POOL_TABLE_ACTIONS_CLASS}>
+                          <span className="w-20 text-center text-xs tracking-[0.24px] text-[var(--primary-800)]">
+                            Fresh
+                          </span>
+                          {POOL_TONES.map((tone) => (
+                            <span
+                              key={tone.key}
+                              className={cn(
+                                "w-9 text-center text-xs font-bold tracking-[0.24px] opacity-80",
+                                tone.activeText,
+                              )}
+                            >
+                              {tone.letter}
+                            </span>
                           ))}
                         </div>
-                      </li>
-                    ))}
-                  </ul>
+                      </div>
+
+                      <div className="border-t border-[var(--greyscale-100)]">
+                        {bands.map((band) => {
+                          const allFlags = {
+                            inDrills: band.items.every((item) => item.inDrills),
+                            inSections: band.items.every((item) => item.inSections),
+                            inTests: band.items.every((item) => item.inTests),
+                          }
+                          return (
+                            <div key={band.id}>
+                              <div
+                                className={cn(
+                                  POOL_TABLE_ROW_CLASS,
+                                  "h-14 border-b border-[var(--greyscale-100)] bg-[var(--primary-0)] py-[7px]",
+                                )}
+                              >
+                                <div className="flex min-w-0 flex-1 items-center gap-[7px]">
+                                  <span className="text-xs font-semibold tracking-[0.24px] text-[var(--primary-800)]">
+                                    {band.title}
+                                  </span>
+                                  {band.rangeLabel ? (
+                                    <span className="truncate text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
+                                      {band.rangeLabel}
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <div className={POOL_TABLE_ACTIONS_CLASS}>
+                                  <span className="w-20" aria-hidden />
+                                  {POOL_TONES.map((tone) => (
+                                    <div key={tone.key} className="flex w-9 justify-center">
+                                      <BandBulkToggle
+                                        tone={tone}
+                                        checked={allFlags[tone.flag]}
+                                        label={`Toggle all ${band.title} ${tone.label}`}
+                                        disabled={saving}
+                                        onClick={() => onBandBulkToggle(band.items, tone.flag)}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <ul className="m-0 list-none p-0">
+                                {band.items.map((item) => (
+                                  <li
+                                    key={item.prepTestId}
+                                    className={cn(
+                                      POOL_TABLE_ROW_CLASS,
+                                      "border-b border-[var(--greyscale-100)] py-[9px] last:border-b-0",
+                                    )}
+                                  >
+                                    <p className="m-0 min-w-0 flex-1 truncate text-sm font-medium leading-6 tracking-[0.28px] text-[var(--primary-800)]">
+                                      {prepTestLabel(item)}
+                                    </p>
+                                    <div className={POOL_TABLE_ACTIONS_CLASS}>
+                                      <FreshnessBar percent={item.freshnessPercent} />
+                                      {POOL_TONES.map((tone) => (
+                                        <div key={tone.key} className="flex w-9 justify-center">
+                                          <PoolPill
+                                            tone={tone}
+                                            active={item[tone.flag]}
+                                            label={`${prepTestLabel(item)} ${tone.label.toLowerCase()}`}
+                                            disabled={saving}
+                                            onClick={() => onToggle(item, tone.flag, !item[tone.flag])}
+                                          />
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )
-            })}
+                </div>
+              </div>
+            </section>
           </div>
-            </div>
-          </div>
-        </div>
+
+          <SettingsPlanSidebar />
         </div>
       </div>
 

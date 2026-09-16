@@ -116,7 +116,7 @@ function PracticeDrillsPage() {
     sectionFilter === "all" ? (["lr", "rc"] as const) : sectionFilter === "lr" ? (["lr"] as const) : (["rc"] as const)
 
   return (
-    <StudentMain className="drills-page bg-[var(--background)]" contentClassName="flex flex-col gap-[25px] bg-[var(--background)]">
+    <StudentMain className="drills-page bg-[var(--background)]" contentClassName="flex flex-col gap-[25px] bg-[var(--background)] pb-[48px]">
       <div className="flex flex-wrap items-center justify-between gap-[12px]">
         <div className="flex flex-wrap items-center gap-[8px]">
           <button
@@ -151,8 +151,8 @@ function PracticeDrillsPage() {
         </button>
       </div>
 
-      <section className="rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]">
-        <h2 className="mb-[24px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
+      <section className="flex flex-col gap-[24px] rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]">
+        <h2 className="m-0 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
           Start A New Drill
         </h2>
         <PracticeLrRcStarterCards

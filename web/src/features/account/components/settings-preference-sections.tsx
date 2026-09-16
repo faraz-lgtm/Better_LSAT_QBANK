@@ -51,9 +51,9 @@ function SettingsCardSection({
   children: ReactNode
 }) {
   return (
-    <section className="overflow-hidden rounded-[10px] border border-[rgba(44,49,67,0.07)] bg-[var(--greyscale-0)]">
-      <div className="flex items-center gap-2 border-b border-[rgba(44,49,67,0.07)] px-6 py-4">
-        <Icon className="size-[15px] text-[var(--muted-foreground)]" strokeWidth={1.75} />
+    <section className="overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
+      <div className="flex items-center gap-2 border-b border-[var(--greyscale-100)] px-6 py-4">
+        <Icon className="size-4 text-[var(--greyscale-500)]" strokeWidth={1.75} />
         <h2 className="text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">{title}</h2>
       </div>
       {children}
