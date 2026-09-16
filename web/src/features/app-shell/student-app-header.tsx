@@ -16,6 +16,19 @@ import { createUsersApi } from "@/lib/api/users"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
+const PROFILE_MENU_FIGMA = "/figma/profile-menu"
+
+const PROFILE_MENU_ITEM_CLASS =
+  "flex w-full items-center gap-2 rounded-[14px] p-2 text-left text-sm font-medium leading-[1.5] tracking-[0.28px] text-[color:var(--primary-800)] hover:bg-[color:var(--primary-25)]/80"
+
+function ProfileMenuIcon({ src }: { src: string }) {
+  return (
+    <span className="relative inline-flex size-4 shrink-0 overflow-hidden" aria-hidden>
+      <img src={src} alt="" width={16} height={16} className="size-4 max-w-none object-contain" />
+    </span>
+  )
+}
+
 function getDisplayName(email: string | null): string {
   if (!email) return "Student"
   const [local] = email.split("@")
@@ -171,7 +184,7 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
           <div ref={profileMenuRef} className="relative">
             <button
               type="button"
-              className="flex h-[60px] items-center gap-3 rounded-[20px] px-3 hover:bg-[color:var(--primary-25)]/60"
+              className="flex h-[60px] items-center gap-3 overflow-hidden rounded-[20px] px-3 hover:bg-[color:var(--primary-25)]/60"
               aria-label="Open profile menu"
               aria-haspopup="menu"
               aria-expanded={openProfileMenu}
@@ -180,65 +193,72 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
               <span className="flex size-[42px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--primary)] text-sm font-semibold text-white">
                 {initials}
               </span>
-              <span className="hidden min-w-0 flex-col items-start gap-0 text-left sm:flex">
-                <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[color:var(--primary-900)]">
+              <span className="hidden min-w-0 flex-col items-start gap-1 text-left sm:flex">
+                <span className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[color:var(--primary-800)]">
                   {displayName}
                 </span>
-                <span className="max-w-[220px] truncate text-xs font-normal leading-[1.5] tracking-[0.24px] text-[color:var(--primary-900)]">
+                <span className="max-w-[220px] truncate text-xs font-normal leading-[1.5] tracking-[0.24px] text-[color:var(--primary-800)]">
                   {email ?? "student@example.com"}
                 </span>
               </span>
               <FigmaIcon
                 name="chevron-down"
                 className={cn(
-                  "hidden size-6 shrink-0 text-[color:var(--primary-900)] sm:block",
+                  "hidden size-6 shrink-0 text-[color:var(--primary-800)] sm:block",
                   openProfileMenu && "rotate-180",
                 )}
                 aria-hidden
               />
             </button>
             {openProfileMenu ? (
-              <div className="absolute right-0 top-[calc(100%+8px)] z-30 min-w-[180px] rounded-2xl border border-[color:var(--greyscale-100)] bg-[var(--primary-0)] p-2 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]">
+              <div
+                role="menu"
+                className="absolute right-0 top-[calc(100%+8px)] z-30 flex w-[246px] flex-col items-start rounded-[16px] border border-[color:var(--greyscale-100)] bg-[var(--primary-0)] p-3 shadow-[0px_4px_25px_rgba(0,0,0,0.25)]"
+              >
                 <Link
                   to="/app/account"
-                  className="flex h-10 w-full items-center rounded-xl px-3 text-left text-sm font-semibold tracking-[0.02em] text-[color:var(--color-student-heading)] hover:bg-[color:var(--greyscale-0)]/80"
+                  role="menuitem"
+                  className={PROFILE_MENU_ITEM_CLASS}
                   onClick={() => setOpenProfileMenu(false)}
                 >
+                  <ProfileMenuIcon src={`${PROFILE_MENU_FIGMA}/shield-key-hole.svg`} />
                   Account
                 </Link>
                 <Link
                   to={PREP_TEST_POOLS_HREF}
-                  className="flex h-10 w-full items-center rounded-xl px-3 text-left text-sm font-semibold tracking-[0.02em] text-[color:var(--color-student-heading)] hover:bg-[color:var(--greyscale-0)]/80"
+                  role="menuitem"
+                  className={PROFILE_MENU_ITEM_CLASS}
                   onClick={() => setOpenProfileMenu(false)}
                 >
+                  <ProfileMenuIcon src={`${PROFILE_MENU_FIGMA}/gear.svg`} />
                   Settings
                 </Link>
+                <div className="flex w-full flex-col items-start py-2" aria-hidden>
+                  <div className="h-px w-full border-t border-b-2 border-[color:var(--greyscale-50,#eceff3)]" />
+                </div>
                 <button
                   type="button"
+                  role="menuitem"
                   onClick={() => void handleLogout()}
-                  className="flex h-10 w-full items-center rounded-xl px-3 text-left text-sm font-semibold tracking-[0.02em] text-[color:var(--color-student-heading)] hover:bg-[color:var(--greyscale-0)]/80"
+                  className={PROFILE_MENU_ITEM_CLASS}
                 >
-                  Logout
+                  <ProfileMenuIcon src={`${PROFILE_MENU_FIGMA}/log-out-02.svg`} />
+                  Log out
                 </button>
               </div>
             ) : null}
           </div>
 
-          {isPremium ? (
-            <span
-              className="inline-flex h-10 w-[97px] shrink-0 items-center justify-center rounded-[14px] bg-[var(--primary-25)] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[color:var(--primary)]"
-              aria-label={`Plan: ${planLabel}`}
-            >
-              {planLabel}
-            </span>
-          ) : (
-            <span
-              className="hidden shrink-0 text-xs font-semibold tracking-[0.24px] text-[color:var(--primary)] sm:inline-flex"
-              aria-label={`Plan: ${planLabel}`}
-            >
-              {planLabel}
-            </span>
-          )}
+          <span
+            className={cn(
+              "inline-flex h-10 shrink-0 items-center justify-center rounded-[14px] bg-[var(--primary-25)] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[color:var(--primary)]",
+              !isPremium && "hidden sm:inline-flex",
+              isPremium && "w-[97px]",
+            )}
+            aria-label={`Plan: ${planLabel}`}
+          >
+            {planLabel}
+          </span>
 
           {isPremium ? headerActions : null}
         </div>
