@@ -34,6 +34,19 @@ vi.mock("@/features/student/accommodations/accommodations-context", () => ({
   }),
 }))
 
+vi.mock("@/features/app-shell/student-entitlement-context", () => ({
+  useStudentEntitlement: () => ({
+    entitlement: { hasActiveCore: false, accessState: "LIMITED" },
+    loading: false,
+  }),
+}))
+
+vi.mock("@/features/guest/pricing/guest-pricing-modal-provider", () => ({
+  useGuestPricingModal: () => ({
+    openPricingModal: vi.fn(),
+  }),
+}))
+
 function renderPage() {
   return render(
     <MemoryRouter>
@@ -88,6 +101,7 @@ describe("PrepTestPoolsPage", () => {
     expect(screen.getByRole("heading", { name: "Appearance" })).toBeInTheDocument()
     expect(screen.getByRole("heading", { name: "Accommodations" })).toBeInTheDocument()
     expect(screen.getByRole("heading", { name: "PrepTest Setting" })).toBeInTheDocument()
+    expect(screen.getByText("Current Plan")).toBeInTheDocument()
     expect(screen.getByText("Standard (35 min)")).toBeInTheDocument()
     expect(screen.getByRole("switch", { name: "Dark mode" })).toBeInTheDocument()
     expect(screen.queryByRole("navigation", { name: "Settings" })).not.toBeInTheDocument()
