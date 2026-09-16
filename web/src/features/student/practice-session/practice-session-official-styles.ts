@@ -62,48 +62,53 @@ const OFFICIAL_PASSAGE_PANE_CLASS =
 
 const OFFICIAL_QUESTION_PANE_CLASS = "min-h-0 overflow-y-auto py-[13px] pl-1.5"
 
+/** Official exam passage, stem, and choice copy: 15 / 22 / regular. */
+const OFFICIAL_BODY_TYPE_CLASS = "text-[15px] font-normal leading-[22px] tracking-normal"
+
 const OFFICIAL_PASSAGE_TEXT_CLASS =
-  "text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)] [&_p]:mb-0"
+  `${OFFICIAL_BODY_TYPE_CLASS} text-[var(--color-student-heading)] [&_p]:mb-0`
 
 const OFFICIAL_QUESTION_PANEL_WITH_WIDGET_CLASS = "practice-session-question-panel-with-widget relative min-w-0 pr-[50px]"
 
 const OFFICIAL_STEM_SECTION_CLASS = "w-full shrink-0 px-5"
 
-const OFFICIAL_STEM_NUMBER_CLASS = "shrink-0 pr-2 text-[14px] font-normal leading-5 text-[var(--color-student-heading)]"
+const OFFICIAL_STEM_NUMBER_CLASS = `shrink-0 pr-2 ${OFFICIAL_BODY_TYPE_CLASS} text-[var(--color-student-heading)]`
 
 const OFFICIAL_STEM_TEXT_CLASS =
-  "min-w-0 flex-1 text-[14px] font-normal leading-5 text-[var(--color-student-heading)] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-7 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
+  `min-w-0 flex-1 ${OFFICIAL_BODY_TYPE_CLASS} text-[var(--color-student-heading)] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-7 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0`
 
-/** Figma `20255:50046` — choices + Reset, 20px × 16px inset */
-const OFFICIAL_OPTIONS_LIST_CLASS = "flex w-full flex-col items-stretch gap-[2px] px-5 py-4"
+/** Figma `20243:23534` — choices + Reset, 20px × 16px inset, 2px row gaps */
+const OFFICIAL_OPTIONS_LIST_CLASS = "flex w-full flex-col items-stretch gap-[2px] px-[20px] py-[16px]"
 
-/** Figma `20255:50083` — unselected row (neutral-50 `#eceff3`) */
-const OFFICIAL_OPTION_ROW_UNSELECTED_CLASS = "flex w-full items-stretch bg-[#eceff3]"
+const OFFICIAL_OPTION_ROW_BASE_CLASS = "practice-session-official-choice flex w-full items-start"
 
-/** Figma `20255:50065` — selected row (warning-50 `#ffe5b7`) + left bar */
+/** Figma `20243:23536` — unselected row (neutral-50 `#eceff3`) */
+const OFFICIAL_OPTION_ROW_UNSELECTED_CLASS = `${OFFICIAL_OPTION_ROW_BASE_CLASS} bg-[#eceff3]`
+
+/** Figma `20243:23562` — selected row (warning-50 `#ffe5b7`) + 3px primary-800 bar */
 const OFFICIAL_OPTION_ROW_SELECTED_CLASS =
-  "practice-session-official-choice--selected relative flex w-full items-stretch overflow-hidden bg-[#ffe5b7]"
+  `${OFFICIAL_OPTION_ROW_BASE_CLASS} practice-session-official-choice--selected relative overflow-hidden bg-[#ffe5b7]`
 
 const OFFICIAL_OPTION_SELECTED_BAR_CLASS =
-  "pointer-events-none absolute inset-y-0 left-0 z-[1] w-[3px] bg-[var(--primary-800)]"
+  "pointer-events-none absolute inset-y-0 left-0 z-[1] w-[3px] bg-[#041a44]"
 
 const OFFICIAL_OPTION_ROW_MASKED_CLASS =
-  "practice-session-choice-masked flex w-full items-stretch bg-[#eceff3]"
+  `${OFFICIAL_OPTION_ROW_BASE_CLASS} practice-session-choice-masked relative overflow-hidden bg-[#eceff3]`
 
 const OFFICIAL_OPTION_LETTER_UNSELECTED_CLASS =
-  "box-border flex w-[60px] min-h-[60px] shrink-0 items-center justify-center self-stretch border-2 border-[#eceff3] bg-[var(--greyscale-0)] text-[28px] font-normal leading-[60px] text-[var(--greyscale-500)]"
+  "box-border flex w-[60px] min-h-[60px] shrink-0 items-center justify-center self-stretch border-2 border-solid border-[#eceff3] bg-[#ffffff] text-[28px] font-normal leading-[60px] text-[#666d80]"
 
 const OFFICIAL_OPTION_LETTER_SELECTED_CLASS =
-  "practice-session-official-choice-letter--selected box-border flex w-[60px] min-h-[60px] shrink-0 items-center justify-center self-stretch border-2 border-transparent bg-[#ffe5b7] text-[28px] font-normal leading-[60px] text-[var(--primary-800)]"
+  "practice-session-official-choice-letter--selected box-border flex w-[60px] min-h-[60px] shrink-0 items-center justify-center self-stretch border-2 border-solid border-transparent bg-[#ffe5b7] text-[28px] font-normal leading-[60px] text-[#041a44]"
 
-/** Figma `20255:50070` / `20255:50088` — choice copy: 14px / 1.5 / 0.28px, 6×12×8 padding */
+/** Figma `20243:23545` — copy inset 6 / 12 / 8, min 60px. Type: 15 / 22 / regular. */
 const OFFICIAL_OPTION_TEXT_CLASS =
-  "box-border flex min-h-[60px] min-w-0 flex-1 flex-col justify-center self-stretch py-2 pl-1.5 pr-3 text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[var(--primary-800)]"
+  `box-border flex min-h-[60px] min-w-0 flex-1 flex-col justify-center self-stretch py-[8px] pl-[6px] pr-[12px] ${OFFICIAL_BODY_TYPE_CLASS} text-[#041a44]`
 
-const OFFICIAL_RESET_RESPONSE_WRAP_CLASS = "flex h-[46px] w-full shrink-0 items-start justify-end pt-3"
+const OFFICIAL_RESET_RESPONSE_WRAP_CLASS = "flex h-[46px] w-full shrink-0 items-start justify-end pt-[12px]"
 
 const OFFICIAL_RESET_RESPONSE_BUTTON_CLASS =
-  "inline-flex h-[34px] shrink-0 items-center justify-center rounded-[6px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-[11px] pb-[5px] pt-[3px] text-[14px] font-normal leading-5 text-[var(--color-student-heading)] transition hover:bg-[var(--greyscale-50)]"
+  "inline-flex h-[34px] shrink-0 items-center justify-center rounded-[6px] border border-solid border-[#eceff3] bg-[#eceff3] px-[11px] pb-[5px] pt-[3px] text-[14px] font-normal leading-[20px] text-[#041a44] transition hover:bg-[#e2e6ec]"
 
 const OFFICIAL_SIDE_WIDGET_CLASS =
   "practice-session-side-widget absolute bottom-0 right-0 top-0 z-10 flex w-[50px] flex-col items-center overflow-visible bg-[var(--greyscale-25)]"
@@ -206,6 +211,7 @@ const OFFICIAL_PASSAGE_BREAK_CLASS =
 export {
   EXAM_CARD_FULL_WIDTH_CLASS,
   OFFICIAL_BODY_GRID_CLASS,
+  OFFICIAL_BODY_TYPE_CLASS,
   OFFICIAL_CARD_CLASS,
   OFFICIAL_FIND_TEXT_INPUT_CLASS,
   OFFICIAL_FIND_WRAP_CLASS,

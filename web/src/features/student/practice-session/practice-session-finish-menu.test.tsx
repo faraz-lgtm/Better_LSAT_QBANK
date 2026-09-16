@@ -86,7 +86,7 @@ describe("PracticeSessionFinishMenu", () => {
     expect(screen.getByRole("button", { name: "Save and exit" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Exit without saving" })).toBeInTheDocument()
     expect(screen.getByText("Dark mode")).toBeInTheDocument()
-    expect(screen.getByText("BetterLSAT Interface")).toBeInTheDocument()
+    expect(screen.getByText("Official Testing Interface")).toBeInTheDocument()
     expect(document.documentElement.classList.contains("practice-exam-more-open")).toBe(true)
     expect(screen.getByRole("button", { name: "Submit" }).querySelector("img")).toHaveAttribute(
       "src",
@@ -98,7 +98,7 @@ describe("PracticeSessionFinishMenu", () => {
     expect(document.documentElement.classList.contains("practice-exam-more-open")).toBe(false)
   })
 
-  it("opts into BetterLSAT Interface and reports official off", async () => {
+  it("shows Official Testing Interface on by default and turning it off reports official off", async () => {
     const user = userEvent.setup()
     const onOfficialInterfaceChange = vi.fn()
 
@@ -113,9 +113,9 @@ describe("PracticeSessionFinishMenu", () => {
     )
 
     await user.click(screen.getByRole("button", { name: "More options" }))
-    const toggle = screen.getByRole("switch", { name: "BetterLSAT Interface" })
-    expect(toggle).toHaveAttribute("aria-checked", "false")
-    expect(toggle.querySelector("img")).toHaveAttribute("src", "/figma/exam-finish/toggle-off.svg")
+    const toggle = screen.getByRole("switch", { name: "Official Testing Interface" })
+    expect(toggle).toHaveAttribute("aria-checked", "true")
+    expect(toggle.querySelector("img")).toHaveAttribute("src", "/figma/exam-finish/toggle-on.svg")
 
     await user.click(toggle)
     expect(onOfficialInterfaceChange).toHaveBeenCalledWith(false)
@@ -136,6 +136,7 @@ describe("PracticeSessionFinishMenu", () => {
 
     await user.click(screen.getByRole("button", { name: "More options" }))
     expect(screen.getByText("Dark mode")).toBeInTheDocument()
+    expect(screen.queryByText("Official Testing Interface")).not.toBeInTheDocument()
     expect(screen.queryByText("Official Interface")).not.toBeInTheDocument()
     expect(screen.queryByText("BetterLSAT Interface")).not.toBeInTheDocument()
   })

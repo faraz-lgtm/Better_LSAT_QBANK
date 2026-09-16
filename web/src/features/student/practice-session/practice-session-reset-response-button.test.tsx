@@ -21,12 +21,14 @@ describe("PracticeSessionResetResponseButton", () => {
     const button = screen.getByRole("button", { name: "Reset Response" })
     expect(button).toHaveClass(
       "h-[34px]",
-      "border-[var(--greyscale-100)]",
-      "bg-[var(--greyscale-25)]",
-      "text-[var(--color-student-heading)]",
+      "border-[#eceff3]",
+      "bg-[#eceff3]",
+      "text-[#041a44]",
       "rounded-[6px]",
+      "leading-[20px]",
+      "px-[11px]",
     )
-    expect(button.parentElement).toHaveClass("h-[46px]", "justify-end", "pt-3")
+    expect(button.parentElement).toHaveClass("h-[46px]", "justify-end", "pt-[12px]")
   })
 
   it("stays visible but inactive when there is nothing to reset", () => {

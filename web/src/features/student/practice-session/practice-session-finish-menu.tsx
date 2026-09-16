@@ -43,7 +43,7 @@ type PracticeSessionFinishMenuProps = {
   variant?: PracticeSessionVariant
   officialInterface?: boolean
   onOfficialInterfaceChange?: (next: boolean) => void
-  /** When false, hides BetterLSAT / Official Interface toggle (e.g. Blind Review). */
+  /** When false, hides Official Testing Interface toggle (e.g. Blind Review). */
   showInterfaceToggle?: boolean
   /** Passed through to exam more panel (Blind Review Figma). */
   morePanelSectionSelect?: ReactNode

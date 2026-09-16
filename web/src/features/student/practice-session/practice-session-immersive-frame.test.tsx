@@ -44,7 +44,8 @@ describe("PracticeSessionImmersiveFrame", () => {
     const exam = screen.getByText("Exam chrome")
     const inner = exam.parentElement
     const frame = inner?.parentElement
-    expect(frame).toHaveClass("p-0", "bg-[var(--background)]")
+    expect(frame).toHaveClass("p-4", "md:p-8", "bg-[var(--background)]")
+    expect(frame).not.toHaveClass("p-0")
     expect(inner).toHaveClass("max-w-[1920px]")
     expect(inner).not.toHaveClass("max-w-none")
   })

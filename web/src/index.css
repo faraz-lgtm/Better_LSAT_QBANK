@@ -4298,14 +4298,31 @@ section[data-lesson-section][data-variant="empty"] {
   margin-bottom: 0;
 }
 
-/* LSAT Demon / LawHub: masked choices stay in layout but fade letter + copy. */
+/* LawHub response masking: keep the choice in layout, fade copy, overlay diagonal hatch. */
 .practice-session-choice-masked {
   position: relative;
   box-shadow: none;
+  isolation: isolate;
+}
+
+.practice-session-choice-masked::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background-color: rgb(180 186 196 / 12%);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgb(130 138 150 / 42%) 0,
+    rgb(130 138 150 / 42%) 1.5px,
+    transparent 1.5px,
+    transparent 11px
+  );
 }
 
 .practice-session-choice-masked-ink {
-  opacity: 0.3;
+  opacity: 0.7;
   user-select: none;
 }
 
@@ -4323,6 +4340,28 @@ section[data-lesson-section][data-variant="empty"] {
 .practice-session-card--active-drill .practice-session-pane:has(.practice-session-side-widget) {
   overflow-x: clip;
   overflow-y: auto;
+}
+
+.practice-session-card--official .practice-session-official-choice {
+  background-color: #eceff3;
+}
+
+.practice-session-card--official .practice-session-official-choice--selected {
+  background-color: #ffe5b7;
+}
+
+.practice-session-card--official .practice-session-official-choice-letter--selected {
+  background-color: #ffe5b7;
+  color: #041a44;
+}
+
+/* Official exam body copy — beat unlayered .lsat-html-content 0.875rem / 1.625. */
+.practice-session-card--official .practice-session-body .lsat-html-content,
+.practice-session-card--official .practice-session-body .practice-session-content {
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 22px;
+  letter-spacing: 0;
 }
 
 .practice-session-card--official .practice-session-question-panel-with-widget {
@@ -4548,8 +4587,8 @@ html.student-shell-immersive .practice-session-card--active-drill {
 html.student-shell-immersive .practice-session-card--official {
   max-width: calc(var(--exam-normal-w) * 1px);
   margin-inline: auto;
-  max-height: calc(var(--app-svh) - 32px);
   height: 100%;
+  max-height: 100%;
   border-radius: 10px;
 }
 
@@ -4603,7 +4642,7 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
   }
 
   html.student-shell-immersive .practice-session-card--official {
-    max-height: calc(var(--app-svh) - 64px);
+    max-height: 100%;
   }
 }
 

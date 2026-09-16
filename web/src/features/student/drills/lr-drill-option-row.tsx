@@ -12,6 +12,7 @@ import {
   ACTIVE_DRILL_OPTION_ROW_UNSELECTED_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import {
+  OFFICIAL_BODY_TYPE_CLASS,
   OFFICIAL_OPTION_LETTER_SELECTED_CLASS,
   OFFICIAL_OPTION_LETTER_UNSELECTED_CLASS,
   OFFICIAL_OPTION_ROW_MASKED_CLASS,
@@ -140,7 +141,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
         isActiveDrill
           ? "text-sm font-normal leading-[1.5] tracking-[0.28px] text-[color:inherit]"
           : officialChrome
-            ? "text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[var(--primary-800)]"
+            ? cn(OFFICIAL_BODY_TYPE_CLASS, "text-[#041a44]")
             : isBlindReview
             ? "text-pretty text-[1em] leading-[1.5] tracking-[0.32px] text-[color:inherit]"
             : "pt-0.5",
@@ -189,7 +190,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
     return (
       <div
         className={cn(
-          "practice-session-br-option h-auto shrink-0 overflow-visible rounded-[14px] border transition-colors",
+          "practice-session-br-option h-auto shrink-0 rounded-[14px] border transition-colors",
           explanationAction
             ? showSelectedChrome
               ? brSelectedRowClass
@@ -199,7 +200,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
               : hidden
                 ? "border border-[var(--greyscale-100)] bg-[var(--greyscale-50)]"
                 : "border border-[var(--greyscale-100)] bg-[var(--greyscale-25)]",
-          isMasked && "practice-session-choice-masked",
+          isMasked ? "practice-session-choice-masked overflow-hidden" : "overflow-visible",
         )}
       >
         <div
@@ -421,7 +422,7 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
       className={cn(
         "flex items-stretch gap-2 rounded-xl border border-solid text-sm leading-snug text-left transition-colors",
         hidden && "opacity-50",
-        masked && "practice-session-choice-masked",
+        masked && "practice-session-choice-masked overflow-hidden",
         rowInteractive ? "cursor-pointer" : "cursor-default",
       )}
       style={{
