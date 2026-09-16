@@ -303,6 +303,7 @@ type PracticeQuestionResultStatsRowProps = {
   correctLetter: string
   selectedLetter?: string | null
   isUnanswered?: boolean
+  showPercentages?: boolean
   className?: string
 }
 
@@ -315,6 +316,7 @@ function PracticeQuestionResultStatsRow({
   correctLetter,
   selectedLetter = null,
   isUnanswered = false,
+  showPercentages = true,
   className,
 }: PracticeQuestionResultStatsRowProps) {
   return (
@@ -323,19 +325,19 @@ function PracticeQuestionResultStatsRow({
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Timing</p>
           <div className="flex flex-col gap-1">
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-nowrap items-center gap-1">
               <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>Target time:</span>
               <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
                 {targetTime}
               </span>
             </div>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-nowrap items-center gap-1">
               <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>Your time:</span>
               <span className="whitespace-nowrap text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--primary)]">
                 {yourTime}
               </span>
               {yourTimeNote ? (
-                <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
+                <span className="whitespace-nowrap text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
                   {yourTimeNote}
                 </span>
               ) : null}
@@ -355,6 +357,7 @@ function PracticeQuestionResultStatsRow({
             selectedLetter={selectedLetter}
             isUnanswered={isUnanswered}
             showLabel
+            showPercentages={showPercentages}
           />
         </div>
       </div>
@@ -368,6 +371,7 @@ export function PracticeAnswerPopularityBars({
   selectedLetter = null,
   isUnanswered = false,
   showLabel = true,
+  showPercentages = true,
   className,
 }: {
   rows: ExplanationAnswerPopularityRow[]
@@ -375,6 +379,7 @@ export function PracticeAnswerPopularityBars({
   selectedLetter?: string | null
   isUnanswered?: boolean
   showLabel?: boolean
+  showPercentages?: boolean
   className?: string
 }) {
   const sampleSize = platformAnswerSampleSize(rows)
@@ -414,17 +419,25 @@ export function PracticeAnswerPopularityBars({
               key={row.letter}
               className={cn(
                 "flex min-w-0 flex-1 flex-col items-center gap-1",
-                hasOutcomeBadge ? "h-24" : "h-[88px]",
+                hasOutcomeBadge
+                  ? showPercentages
+                    ? "h-24"
+                    : "h-20"
+                  : showPercentages
+                    ? "h-[88px]"
+                    : "h-[68px]",
               )}
             >
-              <span
-                className={cn(
-                  "text-[11px] font-bold tabular-nums leading-none",
-                  isCorrect ? "text-[#00d492]" : "text-[var(--greyscale-500)]",
-                )}
-              >
-                {row.pct}%
-              </span>
+              {showPercentages ? (
+                <span
+                  className={cn(
+                    "text-[11px] font-bold tabular-nums leading-none",
+                    isCorrect ? "text-[#00d492]" : "text-[var(--greyscale-500)]",
+                  )}
+                >
+                  {row.pct}%
+                </span>
+              ) : null}
               <div className="flex min-h-0 w-full flex-1 flex-col justify-end overflow-hidden rounded-t-[10px] bg-[var(--greyscale-25)]">
                 {isUserWrong ? (
                   <div

@@ -1,7 +1,7 @@
-import { Bookmark } from "lucide-react"
 import type { RefObject } from "react"
 
 import { LessonContentRenderer } from "@/features/prep-course/components/lesson-content-renderer"
+import { PrepCourseLessonSectionHeader } from "@/features/prep-course/components/prep-course-lesson-section-header"
 import { cn } from "@/lib/utils"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import {
@@ -93,57 +93,20 @@ function PrepCourseLessonPanel({
 
   const renderLessonHeader = (embeddedInShell = false) => {
     const headerContent = (
-      <>
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex min-w-0 flex-col gap-3">
-            {moduleLessonLine ? (
-              <p className="m-0 text-xs font-bold leading-[1.5] tracking-[0.24px] text-[var(--primary)]">{moduleLessonLine}</p>
-            ) : null}
-            <h2 className="m-0 text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">{lesson?.title}</h2>
-            {subtitle ? (
-              <p className="m-0 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">{subtitle}</p>
-            ) : null}
-          </div>
-          <div className="flex shrink-0 flex-col items-end gap-3">
-            <button
-              type="button"
-              aria-label={lessonBookmarked ? "Remove lesson bookmark" : "Save lesson"}
-              aria-pressed={lessonBookmarked}
-              className={cn(
-                "inline-flex h-9 items-center gap-2 rounded-full px-[14px] text-xs font-medium leading-[1.5] tracking-[0.24px] transition-colors",
-                lessonBookmarked ? "text-[var(--primary)]" : "text-[var(--greyscale-500)] hover:text-[var(--primary)]",
-              )}
-              onClick={() => onToggleLessonBookmark?.(!lessonBookmarked)}
-            >
-              <Bookmark className={cn("size-4", lessonBookmarked && "fill-current")} strokeWidth={2} />
-              <span>Save lesson</span>
-            </button>
-            {rightMeta ? (
-              <p className="m-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">{rightMeta}</p>
-            ) : null}
-          </div>
-        </div>
-        {lessonSequence ? (
-          <div className="flex items-center gap-[14px]">
-            <div className="flex min-w-0 flex-1 items-start gap-[3px]">
-              {Array.from({ length: lessonSequence.total }).map((_, idx) => (
-                <span
-                  key={idx}
-                  className={`h-[5px] min-w-0 flex-1 rounded-full ${idx < lessonSequence.current ? "bg-[var(--primary)]" : "bg-[var(--greyscale-100)] dark:bg-[var(--greyscale-50)]"}`}
-                />
-              ))}
-            </div>
-            <p className="m-0 text-xs font-bold leading-[1.5] tracking-[0.24px] text-[var(--color-student-heading)]">
-              {lessonSequence.current} / {lessonSequence.total}
-            </p>
-          </div>
-        ) : null}
-      </>
+      <PrepCourseLessonSectionHeader
+        title={lesson?.title ?? ""}
+        moduleLessonLine={moduleLessonLine}
+        subtitle={subtitle}
+        rightMeta={rightMeta || null}
+        lessonSequence={lessonSequence}
+        lessonBookmarked={lessonBookmarked}
+        onToggleLessonBookmark={onToggleLessonBookmark}
+      />
     )
 
     if (embeddedInShell) {
       return (
-        <header className={cn("flex w-full min-w-0 flex-col gap-5", LESSON_READING_COLUMN_CLASS)}>
+        <header className={cn("flex w-full min-w-0 flex-col", LESSON_READING_COLUMN_CLASS)}>
           {headerContent}
         </header>
       )
@@ -151,7 +114,7 @@ function PrepCourseLessonPanel({
 
     return (
       <header className={cn("flex min-w-0 flex-col items-center", LESSON_HEADER_PAD_CLASS)}>
-        <div className={cn("flex w-full min-w-0 flex-col gap-5", LESSON_READING_COLUMN_CLASS)}>{headerContent}</div>
+        <div className={cn("w-full min-w-0", LESSON_READING_COLUMN_CLASS)}>{headerContent}</div>
       </header>
     )
   }
@@ -215,7 +178,7 @@ function PrepCourseLessonPanel({
 
   if (lesson && hideHeaderForDrillResults && drillResultsPart === "cards") {
     return (
-      <div className="box-border w-full shrink-0 bg-[var(--greyscale-0)]">
+      <div className="box-border w-full shrink-0 bg-transparent">
         <LessonContentRenderer
           lesson={lesson}
           linkedQuestionRefs={linkedQuestionRefs}
@@ -260,15 +223,42 @@ function PrepCourseLessonPanel({
 
     if (contentScrollRef) {
       return (
-        <div ref={contentScrollRef} className={lessonFlowClass}>
+        <div ref={contentScrollRef} className={cn("min-w-0 w-full bg-transparent", contentPaddingClass)}>
           {belowContent}
         </div>
       )
     }
 
     return (
-      <div className="box-border min-w-0 bg-[var(--greyscale-0)]">
+      <div className="box-border min-w-0 bg-transparent">
         {belowContent}
+      </div>
+    )
+  }
+
+  if (lesson && hideHeaderForDrillResults) {
+    return (
+      <div
+        ref={contentScrollRef}
+        className="box-border min-w-0 w-full bg-transparent"
+      >
+        <LessonContentRenderer
+          lesson={lesson}
+          linkedQuestionRefs={linkedQuestionRefs}
+          activeDrillAttempt={activeDrillAttempt}
+          hideTitle
+          belowVideo={hasVideo ? belowVideoTitleBlock : undefined}
+          onReviewDrill={onReviewDrill}
+          onStartDrill={onStartDrill}
+          startingDrill={startingDrill}
+          drillStartError={drillStartError}
+          edgeToSidebar={false}
+          skipArticleShell
+          sectionSubtitle={subtitle}
+          lessonBookmarked={lessonBookmarked}
+          onToggleLessonBookmark={onToggleLessonBookmark}
+          drillResultsPart="full"
+        />
       </div>
     )
   }

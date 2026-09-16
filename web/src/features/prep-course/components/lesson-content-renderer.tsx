@@ -3,8 +3,10 @@ import { memo, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type 
 import { resolveDrillLessonType } from "@/features/prep-course/lib/prep-course-format"
 import { cn } from "@/lib/utils"
 
+import { formatActiveDrillResultTitle } from "@/features/prep-course/lib/format-active-drill-result-title"
 import { ActiveDrillIntroCard } from "@/features/prep-course/components/active-drill/active-drill-intro-card"
 import { ActiveDrillQuestionResultDetail } from "@/features/prep-course/components/active-drill/active-drill-question-result-detail"
+import { ActiveDrillResultsExplanation } from "@/features/prep-course/components/active-drill/active-drill-results-explanation"
 import { resolveDrillQuestionOutcomes } from "@/features/prep-course/lib/resolve-drill-question-outcomes"
 import { resolveDrillResultLinkedRefs } from "@/features/prep-course/lib/resolve-drill-result-linked-refs"
 import { ActiveDrillResultBar } from "@/features/prep-course/components/active-drill/active-drill-result-bar"
@@ -166,8 +168,6 @@ function CompletedDrillResultsSection({
   drillTitlePrefix,
   onStartDrill,
   startingDrill,
-  hideTitle,
-  belowVideo,
   showVideo,
   part = "full",
 }: {
@@ -177,19 +177,16 @@ function CompletedDrillResultsSection({
   drillTitlePrefix: string
   onStartDrill?: () => void
   startingDrill?: boolean
-  hideTitle?: boolean
-  belowVideo?: ReactNode
   showVideo: boolean
   part?: DrillResultsPart
 }) {
   const drillResultItems = resolveDrillResultLinkedRefs(linkedQuestionRefs, activeDrillAttempt)
-  const textClass = "text-[var(--color-student-heading)]"
 
   const resultCards = (
     <>
       <ActiveDrillResultBar
         attempt={activeDrillAttempt}
-        lessonTitle={`${drillTitlePrefix} - ${lesson.title}`}
+        lessonTitle={formatActiveDrillResultTitle(drillTitlePrefix, lesson.title)}
         questionOutcomes={resolveDrillQuestionOutcomes(linkedQuestionRefs, activeDrillAttempt)}
         onRetake={onStartDrill}
         retaking={startingDrill}
@@ -206,31 +203,37 @@ function CompletedDrillResultsSection({
     </>
   )
 
-  const lessonBelow =
-    showVideo ? (
-      <LessonVideoBlock lesson={lesson} belowVideo={belowVideo} hideTitle={hideTitle} />
-    ) : lesson.text_content ? (
-      <article className={LESSON_OPEN_SURFACE_CLASS}>
-        {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
-        <LessonHtmlContent
-          html={lesson.text_content}
-          className={`${textClass} ${hideTitle ? "" : "mt-4"}`}
+  const explanations =
+    drillResultItems.length > 0 ? (
+      drillResultItems.map((linked, index) => (
+        <ActiveDrillResultsExplanation
+          key={linked.question_id}
+          questionId={linked.question_id}
+          videoUrl={showVideo && index === 0 ? lesson.video_url : null}
+          videoTitle={lesson.title}
+          fallbackHtml={index === 0 ? lesson.text_content : null}
         />
-      </article>
-    ) : null
+      ))
+    ) : (
+      <ActiveDrillResultsExplanation
+        videoUrl={showVideo ? lesson.video_url : null}
+        videoTitle={lesson.title}
+        fallbackHtml={lesson.text_content}
+      />
+    )
 
   if (part === "cards") {
     return <div className="flex min-w-0 max-w-full flex-col gap-6">{resultCards}</div>
   }
 
   if (part === "below") {
-    return lessonBelow
+    return <div className="flex min-w-0 max-w-full flex-col gap-6">{explanations}</div>
   }
 
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-6">
       {resultCards}
-      {lessonBelow}
+      {explanations}
     </div>
   )
 }
@@ -593,8 +596,6 @@ function LessonContentRenderer({
           drillTitlePrefix="Smart Drill"
           onStartDrill={onStartDrill}
           startingDrill={startingDrill}
-          hideTitle={hideTitle}
-          belowVideo={belowVideo}
           showVideo={showVideo}
           part={drillResultsPart}
         />
@@ -625,8 +626,6 @@ function LessonContentRenderer({
           drillTitlePrefix="Active Drill"
           onStartDrill={onStartDrill}
           startingDrill={startingDrill}
-          hideTitle={hideTitle}
-          belowVideo={belowVideo}
           showVideo={showVideo}
           part={drillResultsPart}
         />

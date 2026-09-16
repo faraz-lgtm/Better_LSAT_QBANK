@@ -2084,7 +2084,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           throw new PracticeValidationError('Active drill lessons must have exactly one linked question')
         }
         const bodyQuestionId = typeof body.questionId === 'string' ? body.questionId.trim() : ''
-        let questionId = questionIds[0] ?? (bodyQuestionId || null)
+        let questionId = bodyQuestionId || questionIds[0] || null
         if (!questionId) {
           const ref = extractPrepTestQuestionRef(lesson.summary, lesson.text_content, lesson.title)
           if (ref) {
@@ -2096,8 +2096,8 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           } else {
             throw new PracticeValidationError('No PrepTest question reference found for this lesson')
           }
-          questionIds = [questionId]
         }
+        questionIds = [questionId]
       } else {
         if (questionIds.length === 0) {
           throw new PracticeValidationError('No questions are linked to this Smart Drill lesson')

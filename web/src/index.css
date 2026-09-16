@@ -3757,6 +3757,56 @@ select.ds-input {
   color: var(--color-student-heading);
 }
 
+/* Figma 20966:45427 — Active Drill results explanation */
+.active-drill-results-stem.lsat-html-content,
+p.active-drill-results-stem {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.36px;
+  color: var(--greyscale-500);
+}
+
+.active-drill-results-stem.lsat-html-content p {
+  margin: 0;
+}
+
+.active-drill-results-choice.lsat-html-content,
+p.active-drill-results-choice {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0.32px;
+  color: var(--greyscale-500);
+}
+
+.active-drill-results-choice.lsat-html-content p {
+  margin: 0;
+}
+
+.active-drill-results-body.lsat-html-content {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.32px;
+  color: #36394a;
+}
+
+.active-drill-results-body.lsat-html-content p {
+  margin: 0 0 1rem;
+}
+
+.active-drill-results-body.lsat-html-content p:last-child {
+  margin-bottom: 0;
+}
+
+.active-drill-results-body.lsat-html-content strong,
+.active-drill-results-body.lsat-html-content b {
+  font-weight: 700;
+}
+
 .lsat-html-content ul,
 .lsat-html-content ol {
   margin: 0 0 0.75rem;

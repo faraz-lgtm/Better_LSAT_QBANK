@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react"
-
 import { PracticeQuestionResultCard } from "@/features/student/practice-session/practice-question-result-card"
 import type { ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
 import type { PrepLessonActiveDrillAttempt, PrepLessonLinkedQuestionRef } from "@/lib/api/prep-course"
-import { createExplanationsApi } from "@/lib/api/explanations"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+
+import { useActiveDrillExplanationDetail } from "@/features/prep-course/components/active-drill/use-active-drill-explanation-detail"
 
 function formatPtLabel(linked: PrepLessonLinkedQuestionRef): string {
   const pt = linked.prep_test_module_id ?? linked.prep_test_title ?? "PrepTest"
@@ -24,23 +22,7 @@ function ActiveDrillQuestionResultDetail({
   attempt,
   sequenceNumber,
 }: ActiveDrillQuestionResultDetailProps) {
-  const [detail, setDetail] = useState<ExplanationDetailPayload | null>(null)
-
-  useEffect(() => {
-    let alive = true
-    const api = createExplanationsApi(getSupabaseBrowserClient())
-    void api
-      .getExplanationDetail(linked.question_id)
-      .then((d) => {
-        if (alive) setDetail(d)
-      })
-      .catch(() => {
-        if (alive) setDetail(null)
-      })
-    return () => {
-      alive = false
-    }
-  }, [linked.question_id])
+  const detail = useActiveDrillExplanationDetail(linked.question_id)
 
   const answer = attempt.answers.find((a) => a.questionId === linked.question_id)
   const isUnanswered = !answer || !answer.selectedAnswer.trim()

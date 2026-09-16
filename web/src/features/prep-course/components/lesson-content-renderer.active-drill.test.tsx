@@ -107,12 +107,13 @@ describe("LessonContentRenderer active_drill", () => {
       />,
     )
     expect(screen.getByText("Your Score")).toBeInTheDocument()
-    expect(screen.getByText(/Active Drill - Active Drill: Sample/)).toBeInTheDocument()
+    expect(screen.getByText(/Active Drill - Sample/)).toBeInTheDocument()
     expect(screen.getByText("Hidden until complete.")).toBeInTheDocument()
     expect(screen.getByText(/PT LSAC133/)).toBeInTheDocument()
     expect(screen.getByText("Answer Popularity")).toBeInTheDocument()
     expect(screen.getByText("Timing")).toBeInTheDocument()
     expect(screen.getByText("Difficulty")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: /Active Drill - Sample/ })).toHaveClass("text-[20px]")
   })
 
   it("shows blind review score and per-question result after blind review", () => {

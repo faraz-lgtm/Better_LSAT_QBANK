@@ -412,6 +412,7 @@ const router = createBrowserRouter([
           { path: "prep-course", element: <PrepCourseListPage /> },
           { path: "prep-course/:courseSlug", element: <PrepCourseCoursePage /> },
           { path: "prep-course/:courseSlug/:lessonSlug", element: <PrepCourseLessonPage /> },
+          { path: "prep-course/:courseSlug/:lessonSlug/start", element: <PrepCourseLessonPage /> },
           { path: "practice/drills", element: <PracticeDrillsPage /> },
           { path: "practice/drills/lr/new", element: <LrNewDrillPage /> },
           { path: "practice/drills/rc/new", element: <RcNewDrillPage /> },

@@ -70,6 +70,12 @@ const BLIND_REVIEW_ACTION_CLASS =
 const RESULT_ACTION_CLASS =
   "inline-flex h-10 w-[106px] shrink-0 items-center justify-center gap-2 rounded-[12px] border border-[var(--primary)] bg-[var(--primary-0)] px-4 py-2 text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-25)]"
 
+/** Default white card; Figma `19956:59132` on hover (collapsed only). */
+const PREPTEST_CARD_SHELL_CLASS =
+  "border-[var(--greyscale-100)] bg-[var(--greyscale-0)] transition-colors hover:border-[var(--primary)]"
+const PREPTEST_CARD_SHELL_HOVER_FILL_CLASS = "hover:bg-[var(--primary-25)]"
+const PREPTEST_CARD_SHELL_MUTED_CLASS = "border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
+
 type BadgeTone = "default" | "success" | "muted"
 
 function displayPrepTestNumber(item: PrepTestPoolItem): number {
@@ -172,13 +178,29 @@ function PtBadge({ number, tone = "default" }: { number: number; tone?: BadgeTon
         ? "border-[#287f6e] bg-[#effefa] text-[#287f6e]"
         : "border-[var(--primary)] bg-[var(--primary-0)] text-[var(--primary)]"
   return (
-    <div className={cn("flex size-8 shrink-0 flex-col items-center justify-center rounded-lg border p-px", palette)}>
-      <span className="flex h-2.5 items-center justify-center text-center text-[10px] font-bold leading-[1.5] tracking-[0.2px]">
-        PT
-      </span>
-      <span className="flex h-3.5 w-6 items-center justify-center text-center text-[12px] font-bold leading-[1.5] tracking-[0.24px]">
-        {number || "—"}
-      </span>
+    <div
+      data-pt-badge
+      className={cn("relative box-border shrink-0 overflow-hidden rounded-[8px] border", palette)}
+      style={{ width: 32, height: 32, minWidth: 32, minHeight: 32 }}
+    >
+      {/* Figma `I19956:59132;20920:43051` — 24×24 stack inset 4px inside the 32px badge */}
+      <div
+        className="absolute flex flex-col items-center overflow-hidden"
+        style={{ top: 4, left: 4, width: 24, height: 24 }}
+      >
+        <span
+          className="flex items-center justify-center font-bold"
+          style={{ height: 10, fontSize: 10, lineHeight: "10px", letterSpacing: 0.2 }}
+        >
+          PT
+        </span>
+        <span
+          className="flex items-center justify-center font-bold"
+          style={{ height: 14, width: 24, fontSize: 12, lineHeight: "14px", letterSpacing: 0.24 }}
+        >
+          {number || "—"}
+        </span>
+      </div>
     </div>
   )
 }
@@ -257,7 +279,10 @@ function PrepTestListCardShell({
   expanded?: boolean
   expandedContent?: ReactNode
 }) {
-  const identityClass = cn("flex min-w-0 items-center gap-4", center ? "w-[198px] shrink-0" : "min-h-0 flex-1")
+  const identityClass = cn(
+    "flex min-w-0 items-center gap-4",
+    center ? "w-[198px] shrink-0" : "min-h-0 flex-1",
+  )
   const identity = (
     <PrepTestIdentity
       ptNumber={ptNumber}
@@ -270,15 +295,20 @@ function PrepTestListCardShell({
 
   return (
     <article
-      className={cn("w-full overflow-hidden rounded-[16px] border border-solid", hoverShellClass)}
+      className={cn(
+        "group w-full overflow-hidden rounded-[16px] border border-solid",
+        hoverShellClass,
+        interactive && "cursor-pointer",
+      )}
       data-testid={`preptest-list-row-${testId}`}
       data-muted={badgeTone === "muted" ? "true" : undefined}
     >
       <div
         className={cn(
-          "flex h-[82px] items-center gap-4 p-4",
+          "flex h-[82px] items-center transition-colors",
+          center ? "justify-between px-4" : "gap-4 p-4",
           expanded ? "rounded-t-[16px]" : undefined,
-          center ? "justify-between" : undefined,
+          !expanded && badgeTone !== "muted" && "group-hover:bg-[var(--primary-25)]",
         )}
       >
         {interactive ? (
@@ -288,7 +318,7 @@ function PrepTestListCardShell({
             aria-busy={starting || undefined}
             aria-label={`Take PrepTest ${ptNumber || ""}`.trim()}
             onClick={onActivate}
-            className={cn(identityClass, "text-left")}
+            className={cn(identityClass, "bg-transparent text-left")}
           >
             {identity}
           </button>
@@ -296,7 +326,7 @@ function PrepTestListCardShell({
           <div className={identityClass}>{identity}</div>
         )}
 
-        {center ? <div className="flex min-w-0 flex-1 items-center justify-center">{center}</div> : null}
+        {center}
 
         <div className="flex shrink-0 items-center gap-4">
           {actions}
@@ -391,8 +421,8 @@ function PrepTestListCard({
       onClick={onToggleExpanded}
       disabled={!canExpand}
       className={cn(
-        "inline-flex h-[52px] shrink-0 items-center justify-center rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6",
-        expanded || !latestAttempt ? "gap-0" : "gap-4",
+        "inline-flex h-[52px] w-max shrink-0 items-center justify-center rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6",
+        expanded ? "gap-0" : "gap-4",
         canExpand ? "cursor-pointer" : "cursor-default",
       )}
       aria-expanded={canExpand ? expanded : undefined}
@@ -402,12 +432,12 @@ function PrepTestListCard({
     >
       {!expanded ? <PrepTestScoreText variant="header" test={latestScores.test} br={latestScores.br} /> : null}
       {canExpand ? (
-        <span className="inline-flex size-6 shrink-0 items-center justify-center">
+        <span className="relative inline-flex size-6 shrink-0 items-center justify-center">
           <FigmaIcon
             name="chevron-down-primary"
             width={24}
             height={24}
-            className={cn("size-6 transition-transform", expanded && "rotate-180")}
+            className={cn("size-6 max-w-none", expanded && "rotate-180")}
           />
         </span>
       ) : null}
@@ -419,12 +449,13 @@ function PrepTestListCard({
       <ul>
         {historyRows.map((attempt, index) => {
           const scores = getAttemptDisplayScores(attempt)
+          const isLast = index === historyRows.length - 1
           return (
             <li
               key={attempt.sessionId}
               className={cn(
                 "flex h-[68px] items-center justify-between bg-[var(--greyscale-25)] px-4 py-2",
-                index === historyRows.length - 1
+                isLast
                   ? "rounded-b-[16px] border-t border-[var(--greyscale-100)]"
                   : "border-t border-[var(--greyscale-100)]",
               )}
@@ -439,14 +470,14 @@ function PrepTestListCard({
                   </p>
                 </div>
               </div>
-              <div className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6">
+              <div className="inline-flex h-10 w-max shrink-0 items-center justify-center rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6">
                 <PrepTestScoreText variant="history" test={scores.test} br={scores.br} />
               </div>
               <div className="flex shrink-0 items-center gap-4">
                 <button type="button" onClick={() => onViewResult(attempt.sessionId)} className={RESULT_ACTION_CLASS}>
                   Result
-                  <span className="inline-flex size-4 shrink-0 items-center justify-center">
-                    <FigmaIcon name="chevron-right" width={16} height={16} className="size-4" />
+                  <span className="relative inline-flex size-4 shrink-0 items-center justify-center">
+                    <FigmaIcon name="chevron-right" width={16} height={16} className="size-4 max-w-none" />
                   </span>
                 </button>
                 <MoreMenuButton />
@@ -457,9 +488,9 @@ function PrepTestListCard({
       </ul>
     ) : null
 
-  const hoverShellClass = isReadyToTake
-    ? "border-[var(--primary)] bg-[var(--primary-25)]"
-    : "border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
+  const hoverShellClass = isPoolRestricted
+    ? PREPTEST_CARD_SHELL_MUTED_CLASS
+    : cn(PREPTEST_CARD_SHELL_CLASS, !expanded && PREPTEST_CARD_SHELL_HOVER_FILL_CLASS)
 
   return (
     <PrepTestListCardShell
@@ -647,8 +678,8 @@ function PracticePrepTestsListPage() {
     <StudentMain>
       <div className="flex flex-col gap-6">
         <p className="max-w-[756px] text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
-          Try a free PrepTest to gauge your starting point and see how to improve. When you're done, our Insights will
-          tell you what to work on.
+          Here you can find all official Prep Tests from the Law School Admission Council. When you're finished a PT,
+          our Insights will tell you what to work on
         </p>
 
         <PrepTestListFilters

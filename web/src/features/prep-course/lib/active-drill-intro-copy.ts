@@ -11,19 +11,26 @@ function stripHtml(html: string): string {
 }
 
 const DEFAULT_INTRO =
-  "Work through this LSAT question with the concepts you've learned so far. After you finish, we'll walk you through our solution so you can tackle similar questions in the future."
+  "Work through this LSAT question with the concepts you've learned so far. After you finish, we'll walk you through our solution so you can handle similar questions in the future."
 
-/** Intro copy for the You Try card — avoids showing the full question before the drill. */
+function looksLikeLessonAnalysis(text: string): boolean {
+  return /stimulus analysis|answer choice analysis/i.test(text)
+}
+
+/** Intro copy for the pre-test start screen — avoids showing the full question before the drill. */
 export function activeDrillIntroCopy(lesson: PrepLesson): string {
   const summary = lesson.summary?.trim()
   if (summary && !isPrepTestQuestionReferenceText(summary)) return summary
 
   const raw = lesson.text_content?.trim()
   if (raw) {
-    const beforeQuestion = raw.split(/the question:/i)[0]?.trim()
-    if (beforeQuestion) {
+    const parts = raw.split(/the question:/i)
+    const beforeQuestion = parts[0]?.trim()
+    if (parts.length > 1 && beforeQuestion) {
       const text = stripHtml(beforeQuestion)
-      if (text.length > 0) return text
+      if (text.length > 0 && !isPrepTestQuestionReferenceText(text) && !looksLikeLessonAnalysis(text)) {
+        return text
+      }
     }
   }
 
