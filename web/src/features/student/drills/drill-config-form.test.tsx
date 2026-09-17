@@ -20,22 +20,64 @@ const savedLrConfig: SavedDrillConfig = {
   tags: [],
   difficulty: "adaptive",
   status: "all",
+  manualQuestionIds: [],
+  manualPrepTestNumbers: [],
 }
+
+const startDrillMock = vi.fn().mockResolvedValue({
+  session: { id: "sess-1" },
+  metadata: { questionIds: ["q-1"] },
+  questions: [],
+  answers: [],
+})
 
 vi.mock("@/lib/supabase/client", () => ({
   getSupabaseBrowserClient: () => ({}),
 }))
 
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom")
+  return {
+    ...actual,
+    useNavigate: () => vi.fn(),
+  }
+})
+
 vi.mock("@/lib/api/practice", () => ({
   createPracticeApi: () => ({
     getDrillPoolStats: vi.fn().mockResolvedValue({ selectedCount: 10, totalCount: 20 }),
-    startDrill: vi.fn(),
+    startDrill: (...args: unknown[]) => startDrillMock(...args),
+    listDrillPickerQuestions: vi.fn().mockResolvedValue({
+      questions: [
+        {
+          id: "q-1",
+          label: "PT158.S2.Q1",
+          difficulty: 4,
+          questionTypeId: "qt-1",
+          tagLabel: "Flaw",
+          prepTestId: "pt-158",
+          moduleId: "LSAC158",
+          prepTestNumber: 158,
+          status: "fresh",
+          result: "untouched",
+          timeSpentSeconds: null,
+          bookmarked: false,
+          hasNotes: false,
+          searchText: "pt158.s2.q1 flaw",
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 25,
+      selectedCount: 1,
+    }),
   }),
 }))
 
 describe("DrillConfigForm save settings checkbox", () => {
   beforeEach(() => {
     window.localStorage.clear()
+    startDrillMock.mockClear()
   })
 
   function renderForm(sectionType: "LR" | "RC" = "LR") {
@@ -92,7 +134,7 @@ describe("DrillConfigForm save settings checkbox", () => {
 
     await user.click(screen.getByRole("switch", { name: "Build My Own" }))
     expect(screen.getByRole("button", { name: "Reading Focus" })).toBeInTheDocument()
-    expect(screen.getByText("Choose the reading skills to practise.")).toBeInTheDocument()
+    expect(screen.getByText("Choose up to three reading skills to name this drill.")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Skill Focus" })).not.toBeInTheDocument()
   })
 
@@ -145,5 +187,69 @@ describe("DrillConfigForm save settings checkbox", () => {
     expect(screen.getByRole("option", { name: "After the drill" })).toBeInTheDocument()
     expect(screen.getByRole("option", { name: "After each question" })).toBeInTheDocument()
     expect(screen.queryByRole("option", { name: "Never (blind)" })).not.toBeInTheDocument()
+  })
+
+  it("opens the select-questions modal when Pick my own is chosen", async () => {
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.click(screen.getByRole("switch", { name: "Build My Own" }))
+    await user.click(screen.getByRole("button", { name: "Question Mix" }))
+    await user.click(screen.getByRole("option", { name: "Pick my own" }))
+
+    expect(await screen.findByRole("heading", { name: "Select questions" })).toBeInTheDocument()
+    expect(await screen.findByText("PT158.S2.Q1")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Start a Drill" })).toBeDisabled()
+  })
+
+  it("moves a match into Selected when plus is clicked", async () => {
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.click(screen.getByRole("switch", { name: "Build My Own" }))
+    await user.click(screen.getByRole("button", { name: "Question Mix" }))
+    await user.click(screen.getByRole("option", { name: "Pick my own" }))
+
+    expect(await screen.findByText("0 selected")).toBeInTheDocument()
+    await user.click(await screen.findByRole("button", { name: "Add PT158.S2.Q1" }))
+
+    expect(screen.getByText("1 selected")).toBeInTheDocument()
+    expect(screen.getAllByRole("button", { name: "Remove PT158.S2.Q1" }).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByRole("button", { name: "Start a Drill" })).toBeEnabled()
+  })
+
+  it("starts the drill with only the selected question ids", async () => {
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.click(screen.getByRole("switch", { name: "Build My Own" }))
+    await user.click(screen.getByRole("button", { name: "Question Mix" }))
+    await user.click(screen.getByRole("option", { name: "Pick my own" }))
+
+    await user.click(await screen.findByRole("button", { name: "Add PT158.S2.Q1" }))
+    await user.click(screen.getByRole("button", { name: "Start a Drill" }))
+
+    expect(startDrillMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selection: "manual",
+        questionCount: 1,
+        questionIds: ["q-1"],
+        title: "1 Question from PT 158",
+      }),
+    )
+  })
+
+  it("restores Question Mix as Priority mix even when manual picks were saved", () => {
+    writeSavedDrillConfig("LR", {
+      ...savedLrConfig,
+      customize: true,
+      selection: "manual",
+      manualQuestionIds: ["q-1"],
+      manualPrepTestNumbers: [158],
+    })
+    renderForm()
+
+    expect(screen.getByRole("switch", { name: "Build My Own" })).toBeChecked()
+    expect(screen.getByRole("button", { name: "Question Mix" })).toHaveTextContent("Priority mix")
   })
 })

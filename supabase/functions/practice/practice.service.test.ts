@@ -176,7 +176,7 @@ Deno.test('submitAnswer clamps SECTION timeSpentSeconds to 0..35 minutes', async
   assertEquals(captured, [0, 35 * 60, null])
 })
 
-Deno.test('submitAnswer ignores timeSpentSeconds on drills', async () => {
+Deno.test('submitAnswer stores timeSpentSeconds on drills', async () => {
   let captured: number | null | undefined = 0
   const base = mockRepo()
   const repo = {
@@ -199,7 +199,7 @@ Deno.test('submitAnswer ignores timeSpentSeconds on drills', async () => {
     selectedAnswer: 'C',
     timeSpentSeconds: 40,
   })
-  assertEquals(captured, null)
+  assertEquals(captured, 40)
 })
 
 Deno.test('submitAnswer ignores timeSpentSeconds during blind review', async () => {
@@ -925,6 +925,77 @@ Deno.test('startDrill creates session with question ids', async () => {
   assertEquals(out.questions[0]!.targetTimeSeconds, undefined)
   assertEquals(out.drillLabel, 'Varied Mix')
   assertEquals(out.metadata.title, 'Varied Mix')
+})
+
+Deno.test('startDrill manual selection uses provided questionIds', async () => {
+  const service = createPracticeService({
+    repository: drillRepo({
+      getDrillQuestionRowsByIds: async (ids: string[]) =>
+        ids
+          .filter((id) => drillPool.some((q) => q.id === id))
+          .map((id) => ({ ...drillQuestionRow, id })),
+    }) as never,
+  })
+  const out = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 5,
+    selection: 'manual',
+    questionIds: ['q-3', 'q-1', 'missing'],
+  })
+  assertEquals(out.metadata.selection, 'manual')
+  assertEquals(out.metadata.questionIds, ['q-3', 'q-1'])
+  assertEquals(out.metadata.questionCount, 2)
+  assertEquals(out.questions.map((q) => q.id), ['q-3', 'q-1'])
+  assertEquals(out.drillLabel, '2 Questions from PT 120')
+  assertEquals(out.metadata.title, '2 Questions from PT 120')
+})
+
+Deno.test('startDrill uses questionIds even when selection is auto', async () => {
+  const service = createPracticeService({
+    repository: drillRepo({
+      getDrillQuestionRowsByIds: async (ids: string[]) =>
+        ids
+          .filter((id) => drillPool.some((q) => q.id === id))
+          .map((id) => ({ ...drillQuestionRow, id })),
+    }) as never,
+  })
+  const out = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 5,
+    selection: 'auto',
+    questionIds: ['q-6', 'q-2'],
+  })
+  assertEquals(out.metadata.selection, 'manual')
+  assertEquals(out.metadata.questionIds, ['q-6', 'q-2'])
+  assertEquals(out.questions.map((q) => q.id), ['q-6', 'q-2'])
+})
+
+Deno.test('listDrillPickerQuestions filters and paginates', async () => {
+  const service = createPracticeService({
+    repository: drillRepo({
+      listDrillPickerPoolQuestions: async () =>
+        drillPool.map((q, index) => ({
+          ...q,
+          question_number: index + 1,
+          section_number: 2,
+          stimulus_text: `Stimulus ${index + 1}`,
+          stem_text: `Stem ${index + 1}`,
+          tag_label: index % 2 === 0 ? 'Flaw' : 'Assumption',
+        })),
+      listLatestAnswerSummariesForUser: async () => [
+        { question_id: 'q-1', is_correct: true, time_spent_seconds: 52, created_at: '2026-01-01T00:00:00Z' },
+      ],
+    }) as never,
+  })
+  const out = await service.listDrillPickerQuestions('user-1', {
+    sectionType: 'LR',
+    search: 'flaw',
+    page: 1,
+    pageSize: 10,
+  })
+  assertEquals(out.total, 3)
+  assertEquals(out.questions.every((q) => q.tagLabel === 'Flaw'), true)
+  assertEquals(out.questions.some((q) => q.id === 'q-1' && q.result === 'correct'), true)
 })
 
 Deno.test('startDrill titles 1–3 selected types and falls back for more', async () => {

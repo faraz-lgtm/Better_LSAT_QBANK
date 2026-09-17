@@ -601,6 +601,9 @@ verify_jwt = false
 [functions.practice-drill-pool-stats]
 verify_jwt = false
 
+[functions.practice-list-drill-picker]
+verify_jwt = false
+
 [functions.practice-list-section-pool]
 verify_jwt = false
 

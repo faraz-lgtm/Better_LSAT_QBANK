@@ -18,6 +18,8 @@ const sample: SavedDrillConfig = {
   tags: ["mb"],
   difficulty: "hard",
   status: "fresh",
+  manualQuestionIds: [],
+  manualPrepTestNumbers: [],
 }
 
 describe("drill-config-saved-settings", () => {
@@ -74,5 +76,26 @@ describe("drill-config-saved-settings", () => {
     expect(readSavedDrillConfig("LR")?.timing).toBe("pct:100")
     writeSavedDrillConfig("LR", { ...sample, timing: "time:420" })
     expect(readSavedDrillConfig("LR")?.timing).toBe("time:420")
+  })
+
+  it("persists pick-my-own question ids", () => {
+    writeSavedDrillConfig("LR", {
+      ...sample,
+      selection: "auto",
+      manualQuestionIds: ["q-1", "q-2"],
+      manualPrepTestNumbers: [158, 159],
+    })
+    expect(readSavedDrillConfig("LR")).toMatchObject({
+      selection: "auto",
+      manualQuestionIds: ["q-1", "q-2"],
+      manualPrepTestNumbers: [158, 159],
+    })
+  })
+
+  it("defaults missing manual pick fields for legacy saved configs", () => {
+    const { manualQuestionIds: _ids, manualPrepTestNumbers: _pts, ...legacy } = sample
+    window.localStorage.setItem(drillConfigSettingsKey("LR"), JSON.stringify(legacy))
+    expect(readSavedDrillConfig("LR")?.manualQuestionIds).toEqual([])
+    expect(readSavedDrillConfig("LR")?.manualPrepTestNumbers).toEqual([])
   })
 })

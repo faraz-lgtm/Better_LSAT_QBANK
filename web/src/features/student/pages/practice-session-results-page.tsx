@@ -37,6 +37,7 @@ import {
   PracticeResultsSummaryPanel,
 } from "@/features/student/practice-session/practice-results-summary-panel"
 import type { DrillQuestion, DrillSectionType } from "@/features/student/drills/drill-types"
+import { resolveDrillDisplayTitle } from "@/features/student/drills/format-drill-title"
 import {
   applyActualFallbackToBlindReview,
   parseDrillBlindReviewFromMetadata,
@@ -110,7 +111,11 @@ function mapDrillResponse(data: DrillSessionResponse, returnTo: string): LoadedR
   })
   return {
     kind: "DRILL",
-    title: data.drillLabel ?? data.metadata.title ?? "Drill results",
+    title: resolveDrillDisplayTitle({
+      title: data.drillLabel ?? data.metadata.title ?? null,
+      selection: typeof data.metadata.selection === "string" ? data.metadata.selection : null,
+      tagLabels: Array.isArray(data.metadata.tagLabels) ? data.metadata.tagLabels : null,
+    }) || "Drill results",
     rawScore: data.session.raw_score ?? 0,
     questionCount: data.questions.length > 0 ? data.questions.length : 1,
     elapsedSeconds: sessionElapsedSeconds(data.session.started_at, completedAt),
