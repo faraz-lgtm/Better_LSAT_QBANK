@@ -110,4 +110,29 @@ describe("PracticeContinueDrillsSection", () => {
     await user.click(screen.getByRole("button", { name: "See less" }))
     expect(onCollapseLr).toHaveBeenCalled()
   })
+
+  it("uses custom empty copy for the sections continue card", () => {
+    render(
+      <PracticeContinueDrillsSection
+        drills={[]}
+        filter="all"
+        onFilterChange={noop}
+        lrExpanded={false}
+        rcExpanded={false}
+        onExpandLr={noop}
+        onCollapseLr={noop}
+        onExpandRc={noop}
+        onCollapseRc={noop}
+        onContinue={noop}
+        loading={false}
+        difficultyLabelFromContinue={() => "Hardest"}
+        emptyLabel="No sections in progress. Start a new LR or RC section above."
+      />,
+    )
+
+    expect(screen.getByText("No sections in progress. Start a new LR or RC section above.")).toBeInTheDocument()
+    expect(screen.getByRole("tab", { name: "All" })).toBeInTheDocument()
+    expect(screen.getByRole("tab", { name: "LR" })).toBeInTheDocument()
+    expect(screen.getByRole("tab", { name: "RC" })).toBeInTheDocument()
+  })
 })

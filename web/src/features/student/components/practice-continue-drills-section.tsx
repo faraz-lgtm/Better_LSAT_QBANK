@@ -24,6 +24,8 @@ type PracticeContinueDrillsSectionProps = {
   onContinue: (path: string) => void
   loading: boolean
   difficultyLabelFromContinue: (level: ContinueDrill["difficulty"]) => string
+  loadingLabel?: string
+  emptyLabel?: string
 }
 
 function padInProcessCount(count: number): string {
@@ -101,6 +103,8 @@ function PracticeContinueDrillsSection({
   onContinue,
   loading,
   difficultyLabelFromContinue,
+  loadingLabel = "Loading drills…",
+  emptyLabel = "No drills in progress. Start a new LR or RC drill above.",
 }: PracticeContinueDrillsSectionProps) {
   const lr = drills.filter((drill) => drill.section === "LR")
   const rc = drills.filter((drill) => drill.section === "RC")
@@ -153,11 +157,9 @@ function PracticeContinueDrillsSection({
       </div>
 
       {loading ? (
-        <StudentPageLoader label="Loading drills…" />
+        <StudentPageLoader label={loadingLabel} />
       ) : inProcessCount === 0 ? (
-        <p className="text-[14px] text-[var(--greyscale-500)]">
-          No drills in progress. Start a new LR or RC drill above.
-        </p>
+        <p className="text-[14px] text-[var(--greyscale-500)]">{emptyLabel}</p>
       ) : (
         <div className="flex flex-col gap-[24px]">
           {showLr ? (
