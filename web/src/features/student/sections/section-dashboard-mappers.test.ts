@@ -36,6 +36,19 @@ describe("formatContinueSectionTitle", () => {
       ),
     ).toBe("Section - PT128.S3")
   })
+
+  it("formats LSAC section ids like LR158A-1 as PT158.S1", () => {
+    expect(
+      formatContinueSectionTitle(
+        session({
+          id: "1",
+          sectionTitle: "LR158A-1",
+          prepTestTitle: "PT 158",
+          metadata: { sectionType: "LR" },
+        }),
+      ),
+    ).toBe("Section - PT158.S1")
+  })
 })
 
 describe("formatSectionTimeLeftLabel", () => {
@@ -75,12 +88,33 @@ describe("mapSessionToContinueSection", () => {
         metadata: { moduleId: "LSAC101", sectionNumber: 1, sectionType: "LR", timing: "unlimited" },
       }),
     )
-    expect(mapped).toEqual({
+    expect(mapped).toMatchObject({
       id: "sess-9",
       section: "LR",
       title: "Section - PT101.S1",
       timeLeftLabel: "Time: Unlimited",
+      answered: "0/—",
+      progressPct: 0,
       continuePath: "/app/practice/sections/session/sess-9",
+    })
+  })
+
+  it("maps answered progress from session metadata", () => {
+    const mapped = mapSessionToContinueSection(
+      session({
+        id: "sess-10",
+        metadata: {
+          moduleId: "LSAC158",
+          sectionNumber: 1,
+          sectionType: "LR",
+          questionCount: 25,
+          answeredQuestionIds: ["a", "b"],
+        },
+      }),
+    )
+    expect(mapped).toMatchObject({
+      answered: "2/25",
+      progressPct: 8,
     })
   })
 })

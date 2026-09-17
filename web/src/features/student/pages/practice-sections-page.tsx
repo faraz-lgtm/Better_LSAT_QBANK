@@ -3,13 +3,15 @@ import { useNavigate } from "react-router-dom"
 import { ExternalLink } from "lucide-react"
 
 import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
-import { PracticeListFooter } from "@/features/student/components/practice-list-footer"
-import { PracticeSectionContinueRow } from "@/features/student/components/practice-section-continue-row"
+import {
+  PracticeContinueDrillsSection,
+  type ContinueSectionFilter,
+} from "@/features/student/components/practice-continue-drills-section"
 import { PracticeSectionStartCard } from "@/features/student/components/practice-section-start-card"
 import { StudentMain } from "@/features/student/components/student-main"
-import { StudentPageLoader } from "@/features/student/components/student-page-loader"
-import { visibleTagDrillCount } from "@/features/student/drills/tag-drills-priority"
+import type { ContinueDrill } from "@/features/student/drills/drill-dashboard-mappers"
 import {
+  continueSectionToDrill,
   mapSessionToContinueSection,
   type ContinueSection,
 } from "@/features/student/sections/section-dashboard-mappers"
@@ -18,8 +20,10 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 type SectionFilter = "all" | "lr" | "rc"
 
-function padInProcessCount(count: number): string {
-  return `${String(count).padStart(2, "0")} In process`
+function difficultyLabelFromContinue(level: ContinueDrill["difficulty"]): string {
+  if (level === "hardest") return "Hardest"
+  if (level === "medium") return "Medium"
+  return "Easy"
 }
 
 function PracticeSectionsPage() {
@@ -28,7 +32,9 @@ function PracticeSectionsPage() {
 
   const [sectionFilter, setSectionFilter] = useState<SectionFilter>("all")
   const [continueSections, setContinueSections] = useState<ContinueSection[]>([])
-  const [continueExpanded, setContinueExpanded] = useState(false)
+  const [continueFilter, setContinueFilter] = useState<ContinueSectionFilter>("all")
+  const [lrContinueExpanded, setLrContinueExpanded] = useState(false)
+  const [rcContinueExpanded, setRcContinueExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -44,7 +50,9 @@ function PracticeSectionsPage() {
             .map(mapSessionToContinueSection)
             .filter((s): s is ContinueSection => s != null),
         )
-        setContinueExpanded(false)
+        setContinueFilter("all")
+        setLrContinueExpanded(false)
+        setRcContinueExpanded(false)
       } catch {
         if (!cancelled) setContinueSections([])
       } finally {
@@ -61,13 +69,10 @@ function PracticeSectionsPage() {
     return sectionFilter === "lr" ? row.section === "LR" : row.section === "RC"
   })
 
-  const visibleCount = visibleTagDrillCount(filteredContinue.length, continueExpanded)
-  const visibleContinue = filteredContinue.slice(0, visibleCount)
-  const canShowMore =
-    !continueExpanded && filteredContinue.length > visibleTagDrillCount(filteredContinue.length, false)
-
   useEffect(() => {
-    setContinueExpanded(false)
+    setContinueFilter(sectionFilter)
+    setLrContinueExpanded(false)
+    setRcContinueExpanded(false)
   }, [sectionFilter])
 
   const showLr = sectionFilter === "all" || sectionFilter === "lr"
@@ -112,45 +117,26 @@ function PracticeSectionsPage() {
       {showLr ? <PracticeSectionStartCard sectionType="LR" /> : null}
       {showRc ? <PracticeSectionStartCard sectionType="RC" /> : null}
 
-      <section className="flex flex-col gap-[24px] rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]">
-        <div className="flex flex-wrap items-center justify-between gap-[12px]">
-          <h2 className="text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
-            Pick Up Where You Left Off
-          </h2>
-          <p className="text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
-            {padInProcessCount(filteredContinue.length)}
-          </p>
-        </div>
-
-        {loading ? (
-          <StudentPageLoader label="Loading sections…" />
-        ) : filteredContinue.length === 0 ? (
-          <p className="text-[14px] text-[var(--greyscale-500)]">
-            No sections in progress. Start a new LR or RC section above.
-          </p>
-        ) : (
-          <>
-            <div className="flex flex-col">
-              {visibleContinue.map((row) => (
-                <PracticeSectionContinueRow
-                  key={row.id}
-                  section={row.section}
-                  title={row.title}
-                  timeLeftLabel={row.timeLeftLabel}
-                  onContinue={() => navigate(row.continuePath)}
-                />
-              ))}
-            </div>
-            <PracticeListFooter
-              hasMore={canShowMore}
-              expanded={continueExpanded && filteredContinue.length > visibleTagDrillCount(filteredContinue.length, false)}
-              onShowMore={() => setContinueExpanded(true)}
-              onShowLess={() => setContinueExpanded(false)}
-              showMoreLabel="See more"
-            />
-          </>
-        )}
-      </section>
+      <PracticeContinueDrillsSection
+        drills={filteredContinue.map(continueSectionToDrill)}
+        filter={continueFilter}
+        onFilterChange={(next) => {
+          setContinueFilter(next)
+          setLrContinueExpanded(false)
+          setRcContinueExpanded(false)
+        }}
+        lrExpanded={lrContinueExpanded}
+        rcExpanded={rcContinueExpanded}
+        onExpandLr={() => setLrContinueExpanded(true)}
+        onCollapseLr={() => setLrContinueExpanded(false)}
+        onExpandRc={() => setRcContinueExpanded(true)}
+        onCollapseRc={() => setRcContinueExpanded(false)}
+        onContinue={(path) => navigate(path)}
+        loading={loading}
+        difficultyLabelFromContinue={difficultyLabelFromContinue}
+        loadingLabel="Loading sections…"
+        emptyLabel="No sections in progress. Start a new LR or RC section above."
+      />
     </StudentMain>
   )
 }
