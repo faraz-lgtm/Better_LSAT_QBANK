@@ -45,10 +45,11 @@ const OFFICIAL_HEADER_PAUSE_BUTTON_CLASS =
 const OFFICIAL_HEADER_MORE_BUTTON_CLASS =
   "inline-flex size-7 shrink-0 items-center justify-center rounded-[6px] p-1 transition hover:bg-[var(--greyscale-25)]"
 
-const OFFICIAL_HEADER_TITLE_ROW_CLASS = "flex h-[56px] w-full shrink-0 flex-col items-start overflow-hidden px-4 pb-4 pt-2"
+const OFFICIAL_HEADER_TITLE_ROW_CLASS =
+  "flex min-h-[56px] w-full shrink-0 flex-col items-start justify-center px-4 pb-4 pt-2"
 
 const OFFICIAL_HEADER_TITLE_CLASS =
-  "m-0 min-w-0 truncate text-[24px] font-normal leading-8 tracking-[-0.5px] text-[var(--color-student-heading)]"
+  "m-0 min-w-0 overflow-x-hidden text-ellipsis whitespace-nowrap text-[24px] font-normal leading-8 tracking-[-0.5px] text-[var(--color-student-heading)]"
 
 const OFFICIAL_HEADER_PROGRESS_TRACK_CLASS = "relative h-[5px] w-full overflow-hidden bg-[var(--greyscale-25)]"
 

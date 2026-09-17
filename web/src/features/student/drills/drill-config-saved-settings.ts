@@ -21,6 +21,10 @@ export type SavedDrillConfig = {
   tags: string[]
   difficulty: DrillDifficulty
   status: DrillStatus
+  /** Pick-my-own question ids when selection is `manual`. */
+  manualQuestionIds: string[]
+  /** PrepTest ordinals for the saved manual picks (for titles). */
+  manualPrepTestNumbers: number[]
 }
 
 export function drillConfigSettingsKey(sectionType: DrillSectionType): string {
@@ -52,6 +56,35 @@ function normalizeTags(raw: unknown): string[] | null {
   return null
 }
 
+function normalizeStringIdList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const item of raw) {
+    if (typeof item !== "string") continue
+    const trimmed = item.trim()
+    if (!trimmed || seen.has(trimmed)) continue
+    seen.add(trimmed)
+    out.push(trimmed)
+  }
+  return out
+}
+
+function normalizePrepTestNumbers(raw: unknown): number[] {
+  if (!Array.isArray(raw)) return []
+  const out: number[] = []
+  const seen = new Set<number>()
+  for (const item of raw) {
+    const n = typeof item === "number" ? item : Number.parseInt(String(item), 10)
+    if (!Number.isFinite(n) || n <= 0) continue
+    const rounded = Math.round(n)
+    if (seen.has(rounded)) continue
+    seen.add(rounded)
+    out.push(rounded)
+  }
+  return out
+}
+
 function parseSavedDrillConfig(raw: unknown): SavedDrillConfig | null {
   if (!raw || typeof raw !== "object") return null
   const parsed = raw as Partial<SavedDrillConfig>
@@ -81,6 +114,11 @@ function parseSavedDrillConfig(raw: unknown): SavedDrillConfig | null {
   if (typeof parsed.difficulty !== "string" || !difficultyValues.has(parsed.difficulty)) return null
   if (typeof parsed.status !== "string" || !statusValues.has(parsed.status)) return null
 
+  const manualQuestionIds = normalizeStringIdList((raw as { manualQuestionIds?: unknown }).manualQuestionIds)
+  const manualPrepTestNumbers = normalizePrepTestNumbers(
+    (raw as { manualPrepTestNumbers?: unknown }).manualPrepTestNumbers,
+  )
+
   return {
     questionCount: parsed.questionCount,
     passageCount: parsed.passageCount,
@@ -91,6 +129,8 @@ function parseSavedDrillConfig(raw: unknown): SavedDrillConfig | null {
     tags,
     difficulty: parsed.difficulty,
     status: parsed.status,
+    manualQuestionIds,
+    manualPrepTestNumbers,
   }
 }
 

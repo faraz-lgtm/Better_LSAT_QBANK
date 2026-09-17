@@ -49,6 +49,7 @@ function DrillConfigSelectField({
   return (
     <DrillConfigField label={label} description={description} className={className}>
       <StudentOptionMenu
+        className="w-full"
         value={value}
         onChange={onChange}
         options={options}

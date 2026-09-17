@@ -1,4 +1,6 @@
 import type {
+  DrillPickerListInput,
+  DrillPickerListResult,
   DrillPoolStats,
   DrillPoolStatsInput,
   DrillSessionResponse,
@@ -430,6 +432,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
           status: input.status,
           title: input.title,
           source: input.source,
+          ...(input.questionIds?.length ? { questionIds: input.questionIds } : {}),
         },
       })
       if (error) throw error
@@ -506,6 +509,29 @@ export function createPracticeApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       if (!data) throw new Error("No pool stats returned from practice")
+      return data
+    },
+
+    async listDrillPickerQuestions(input: DrillPickerListInput): Promise<DrillPickerListResult> {
+      const { data, error } = await invokePracticeFn<DrillPickerListResult>("practice-list-drill-picker", {
+        method: "POST",
+        body: {
+          sectionType: input.sectionType,
+          search: input.search,
+          status: input.status,
+          questionTypeIds: input.questionTypeIds,
+          difficultyLevels: input.difficultyLevels,
+          prepTestIds: input.prepTestIds,
+          result: input.result,
+          availableForDrills: input.availableForDrills,
+          availability: input.availability,
+          sort: input.sort,
+          page: input.page,
+          pageSize: input.pageSize,
+        },
+      })
+      if (error) throw error
+      if (!data?.questions) throw new Error("No drill picker questions returned from practice")
       return data
     },
 

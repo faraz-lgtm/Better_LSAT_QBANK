@@ -109,6 +109,8 @@ export type StartDrillInput = {
   status?: DrillStatus
   title?: string | null
   source?: "dashboard_adaptive_drill"
+  /** Explicit picks when selection is `manual`. */
+  questionIds?: string[]
 }
 
 export type DrillPoolStatsInput = {
@@ -122,6 +124,47 @@ export type DrillPoolStatsInput = {
 export type DrillPoolStats = {
   selectedCount: number
   totalCount: number
+}
+
+export type DrillPickerQuestionItem = {
+  id: string
+  label: string
+  difficulty: number | null
+  questionTypeId: string | null
+  tagLabel: string | null
+  prepTestId: string | null
+  moduleId: string | null
+  prepTestNumber: number | null
+  status: "fresh" | "reviewed"
+  result: "correct" | "incorrect" | "untouched"
+  timeSpentSeconds: number | null
+  bookmarked: boolean
+  hasNotes: boolean
+  searchText: string
+}
+
+export type DrillPickerListInput = {
+  sectionType: DrillSectionType
+  search?: string
+  status?: "fresh" | "reviewed" | "all"
+  questionTypeIds?: string[]
+  difficultyLevels?: number[]
+  prepTestIds?: string[]
+  result?: "correct" | "incorrect" | "untouched" | "all"
+  availableForDrills?: boolean
+  /** Pool membership filter for the picker. Defaults to drills. */
+  availability?: "all" | "drills" | "sections" | "tests"
+  sort?: "newest" | "oldest"
+  page?: number
+  pageSize?: number
+}
+
+export type DrillPickerListResult = {
+  questions: DrillPickerQuestionItem[]
+  total: number
+  page: number
+  pageSize: number
+  selectedCount: number
 }
 
 function buildDrillQuestionCountOptions() {

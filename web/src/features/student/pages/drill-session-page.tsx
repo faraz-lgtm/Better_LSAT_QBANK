@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react"
 
 import { isQuestionRecommendedForBlindReview } from "@/features/student/blind-review/blind-review-navigation"
 import { isUnlimitedDrillQuestionCount, type DrillQuestion, type DrillSessionResponse } from "@/features/student/drills/drill-types"
+import { resolveDrillDisplayTitle } from "@/features/student/drills/format-drill-title"
 import { ACTIVE_DRILL_BODY_GRID_CLASS, ACTIVE_DRILL_FINISH_BUTTON_CLASS, ACTIVE_DRILL_FOOTER_CLASS, ACTIVE_DRILL_PASSAGE_PANE_CLASS, ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS, ACTIVE_DRILL_PASSAGE_TEXT_CLASS, ACTIVE_DRILL_QUESTION_PANE_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import {
   EXAM_CARD_FULL_WIDTH_CLASS,
@@ -848,7 +849,13 @@ function DrillSessionPage() {
     )
   }
 
-  const headerLabel = drill?.drillLabel ?? metadata?.title ?? (sectionType === "LR" ? "LR Drill" : "RC Drill")
+  const headerLabel = resolveDrillDisplayTitle({
+    title: drill?.drillLabel ?? metadata?.title ?? null,
+    selection: typeof metadata?.selection === "string" ? metadata.selection : null,
+    tagLabels: Array.isArray(metadata?.tagLabels)
+      ? metadata.tagLabels.filter((value): value is string => typeof value === "string")
+      : null,
+  }) || (sectionType === "LR" ? "LR Drill" : "RC Drill")
   const isPrepCourseDrill = Boolean(resolveReturnPath())
   const sessionMetadata =
     drill?.session.metadata != null && typeof drill.session.metadata === "object"

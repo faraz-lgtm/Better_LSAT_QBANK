@@ -198,7 +198,7 @@ describe("PracticeSessionHeader official view", () => {
     expect(container.querySelector('img[src="/figma/exam-official/search.svg"]')).toBeInTheDocument()
     const title = screen.getByText("Test 123")
     expect(title).toHaveClass("text-[24px]", "leading-8")
-    expect(title.parentElement).toHaveClass("h-[56px]", "px-4")
+    expect(title.parentElement).toHaveClass("min-h-[56px]", "px-4")
     expect(title.compareDocumentPosition(screen.getByPlaceholderText("Find Text, Type Here")) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy()
   })
 })

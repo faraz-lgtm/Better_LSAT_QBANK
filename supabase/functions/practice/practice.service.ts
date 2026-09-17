@@ -17,10 +17,13 @@ import {
 } from './adaptive-drill-config.ts'
 import {
   formatDrillTitleFromTypeNames,
-  VARIED_MIX_DRILL_TITLE,
+  formatPickMyOwnDrillTitle,
+  resolveDrillDisplayTitle,
 } from './format-drill-title.ts'
 import type {
   AnswerEventRow,
+  DrillPickerAnswerSummary,
+  DrillPickerPoolQuestionRow,
   DrillPoolQuestionRow,
   PracticeRepository,
   PracticeSessionKind,
@@ -56,15 +59,33 @@ function normalizeAnswer(value: string): string {
 }
 
 const SECTION_TIME_SPENT_CAP_SECONDS = 35 * 60
+const DRILL_TIME_SPENT_CAP_SECONDS = 10 * 60
 
+function parseAnswerTimeSpentSeconds(
+  raw: unknown,
+  sessionKind: PracticeSessionKind,
+  blindReview: boolean,
+): number | null {
+  if (blindReview) return null
+  const n =
+    typeof raw === 'number'
+      ? raw
+      : typeof raw === 'string' && raw.trim()
+        ? Number(raw)
+        : NaN
+  if (!Number.isFinite(n)) return null
+  const cap =
+    sessionKind === 'DRILL' ? DRILL_TIME_SPENT_CAP_SECONDS : SECTION_TIME_SPENT_CAP_SECONDS
+  return Math.min(cap, Math.max(0, Math.round(n)))
+}
+
+/** @deprecated Use parseAnswerTimeSpentSeconds — kept for call-site clarity in older tests. */
 function parseSectionTimeSpentSeconds(
   raw: unknown,
   sessionKind: PracticeSessionKind,
   blindReview: boolean,
 ): number | null {
-  if (blindReview || sessionKind !== 'SECTION') return null
-  if (typeof raw !== 'number' || !Number.isFinite(raw)) return null
-  return Math.min(SECTION_TIME_SPENT_CAP_SECONDS, Math.max(0, Math.round(raw)))
+  return parseAnswerTimeSpentSeconds(raw, sessionKind, blindReview)
 }
 
 function isValidKind(value: unknown): value is PracticeSessionKind {
@@ -296,6 +317,43 @@ function parseStringIdList(value: unknown): string[] {
   return out
 }
 
+function formatDrillPickerLabel(row: DrillPickerPoolQuestionRow): string {
+  const pt = row.module_id ? prepTestNumberFromModuleId(row.module_id) : null
+  const ptPart = pt != null ? `PT${pt}` : 'PT?'
+  const sectionPart = row.section_number != null ? `S${row.section_number}` : 'S?'
+  const questionPart = row.question_number != null ? `Q${row.question_number}` : 'Q?'
+  return `${ptPart}.${sectionPart}.${questionPart}`
+}
+
+function stripHtml(raw: string): string {
+  return raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+export type DrillPickerQuestionItem = {
+  id: string
+  label: string
+  difficulty: number | null
+  questionTypeId: string | null
+  tagLabel: string | null
+  prepTestId: string | null
+  moduleId: string | null
+  prepTestNumber: number | null
+  status: 'fresh' | 'reviewed'
+  result: 'correct' | 'incorrect' | 'untouched'
+  timeSpentSeconds: number | null
+  bookmarked: boolean
+  hasNotes: boolean
+  searchText: string
+}
+
+export type DrillPickerListResult = {
+  questions: DrillPickerQuestionItem[]
+  total: number
+  page: number
+  pageSize: number
+  selectedCount: number
+}
+
 function resolveDrillQuestionTypeIds(
   questionTypeIdRaw: unknown,
   questionTypeIdsRaw: unknown,
@@ -368,11 +426,24 @@ function resolvePoolMembership(
   return defaultPrepTestPoolMembership(n)
 }
 
+function filterDrillPoolByAvailability(
+  pool: DrillPoolQuestionRow[],
+  overrides: Map<string, PrepTestPoolMembership>,
+  availability: 'drills' | 'sections' | 'tests',
+): DrillPoolQuestionRow[] {
+  return pool.filter((q) => {
+    const membership = resolvePoolMembership(q.prep_test_id, q.module_id, overrides)
+    if (availability === 'sections') return membership.inSections
+    if (availability === 'tests') return membership.inTests
+    return membership.inDrills
+  })
+}
+
 function filterDrillPoolByMembership(
   pool: DrillPoolQuestionRow[],
   overrides: Map<string, PrepTestPoolMembership>,
 ): DrillPoolQuestionRow[] {
-  return pool.filter((q) => resolvePoolMembership(q.prep_test_id, q.module_id, overrides).inDrills)
+  return filterDrillPoolByAvailability(pool, overrides, 'drills')
 }
 
 function freshnessPercent(totalQuestions: number, answeredQuestions: number): number {
@@ -1881,6 +1952,149 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       return { session: sessionRow }
     },
 
+    async listDrillPickerQuestions(
+      userId: string,
+      body: {
+        sectionType?: unknown
+        search?: unknown
+        status?: unknown
+        questionTypeIds?: unknown
+        difficultyLevels?: unknown
+        prepTestIds?: unknown
+        result?: unknown
+        availableForDrills?: unknown
+        availability?: unknown
+        sort?: unknown
+        page?: unknown
+        pageSize?: unknown
+      },
+    ): Promise<DrillPickerListResult> {
+      const sectionType = parseSectionType(body.sectionType)
+      if (!sectionType) throw new PracticeValidationError('sectionType must be LR or RC')
+
+      const page = Math.max(1, Math.floor(typeof body.page === 'number' ? body.page : Number(body.page) || 1))
+      const pageSize = Math.min(
+        50,
+        Math.max(1, Math.floor(typeof body.pageSize === 'number' ? body.pageSize : Number(body.pageSize) || 25)),
+      )
+      const search =
+        typeof body.search === 'string' ? body.search.trim().toLowerCase() : ''
+      const statusFilter =
+        body.status === 'fresh' || body.status === 'reviewed' || body.status === 'all'
+          ? body.status
+          : 'all'
+      const resultFilter =
+        body.result === 'correct' ||
+        body.result === 'incorrect' ||
+        body.result === 'untouched' ||
+        body.result === 'all'
+          ? body.result
+          : 'all'
+      const typeIds = parseStringIdList(body.questionTypeIds)
+      const prepTestIds = new Set(parseStringIdList(body.prepTestIds))
+      const difficultyLevels = Array.isArray(body.difficultyLevels)
+        ? body.difficultyLevels
+            .map((v) => (typeof v === 'number' ? v : Number.parseInt(String(v), 10)))
+            .filter((n) => Number.isFinite(n) && n >= 1 && n <= 5)
+        : []
+      const availability =
+        body.availability === 'sections' || body.availability === 'tests' || body.availability === 'drills'
+          ? body.availability
+          : body.availability === 'all'
+            ? 'all'
+            : body.availableForDrills === false
+              ? 'all'
+              : 'drills'
+      const sort = body.sort === 'oldest' ? 'oldest' : 'newest'
+
+      const poolRaw = await deps.repository.listDrillPickerPoolQuestions({ sectionType })
+      const overrides = await loadPoolOverrideMap(deps.repository, userId)
+      const pool = (
+        availability === 'all'
+          ? poolRaw
+          : filterDrillPoolByAvailability(poolRaw, overrides, availability)
+      ) as DrillPickerPoolQuestionRow[]
+
+      const answerSummaries = await deps.repository.listLatestAnswerSummariesForUser(userId)
+      const answerById = new Map<string, DrillPickerAnswerSummary>()
+      for (const row of answerSummaries) answerById.set(row.question_id, row)
+
+      let items: DrillPickerQuestionItem[] = pool.map((row) => {
+        const answer = answerById.get(row.id)
+        const reviewed = Boolean(answer)
+        const result: DrillPickerQuestionItem['result'] = !answer
+          ? 'untouched'
+          : answer.is_correct
+            ? 'correct'
+            : 'incorrect'
+        const label = formatDrillPickerLabel(row)
+        const searchText = [
+          label,
+          row.tag_label ?? '',
+          stripHtml(row.stimulus_text ?? ''),
+          stripHtml(row.stem_text ?? ''),
+        ]
+          .join(' ')
+          .toLowerCase()
+        return {
+          id: row.id,
+          label,
+          difficulty: row.difficulty,
+          questionTypeId: row.question_type_id,
+          tagLabel: row.tag_label,
+          prepTestId: row.prep_test_id,
+          moduleId: row.module_id,
+          prepTestNumber: prepTestOrdinalFromModuleId(row.module_id),
+          status: reviewed ? 'reviewed' : 'fresh',
+          result,
+          timeSpentSeconds: answer?.time_spent_seconds ?? null,
+          bookmarked: false,
+          hasNotes: false,
+          searchText,
+        }
+      })
+
+      if (search) {
+        items = items.filter((item) => item.searchText.includes(search))
+      }
+      if (statusFilter === 'fresh') {
+        items = items.filter((item) => item.status === 'fresh')
+      } else if (statusFilter === 'reviewed') {
+        items = items.filter((item) => item.status === 'reviewed')
+      }
+      if (resultFilter !== 'all') {
+        items = items.filter((item) => item.result === resultFilter)
+      }
+      if (typeIds.length > 0) {
+        const allowed = new Set(typeIds)
+        items = items.filter((item) => item.questionTypeId != null && allowed.has(item.questionTypeId))
+      }
+      if (difficultyLevels.length > 0) {
+        const allowed = new Set(difficultyLevels)
+        items = items.filter((item) => item.difficulty != null && allowed.has(item.difficulty))
+      }
+      if (prepTestIds.size > 0) {
+        items = items.filter((item) => item.prepTestId != null && prepTestIds.has(item.prepTestId))
+      }
+
+      items.sort((a, b) => {
+        const aNum = a.prepTestNumber ?? 0
+        const bNum = b.prepTestNumber ?? 0
+        if (aNum !== bNum) return sort === 'newest' ? bNum - aNum : aNum - bNum
+        return a.label.localeCompare(b.label)
+      })
+
+      const total = items.length
+      const start = (page - 1) * pageSize
+      return {
+        questions: items.slice(start, start + pageSize),
+        total,
+        page,
+        pageSize,
+        selectedCount: total,
+      }
+    },
+
     async getDrillPoolStats(
       userId: string,
       body: {
@@ -1935,6 +2149,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         status?: unknown
         title?: unknown
         source?: unknown
+        questionIds?: unknown
       },
     ): Promise<DrillSessionResponse> {
       const sectionType = parseSectionType(body.sectionType)
@@ -1958,14 +2173,19 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const timing = typeof body.timing === 'string' ? body.timing : 'unlimited'
       const showAnswers = typeof body.showAnswers === 'string' ? body.showAnswers : 'end'
       const selection = typeof body.selection === 'string' ? body.selection : 'auto'
+      const manualQuestionIds = parseStringIdList(body.questionIds).slice(0, LR_DRILL_MAX_QUESTION_COUNT)
       const questionTypeIds = resolveDrillQuestionTypeIds(body.questionTypeId, body.questionTypeIds)
       const questionTypeId = questionTypeIds[0] ?? null
       const tagLabels = resolveDrillTagLabels(body.tagLabel, body.tagLabels)
       const tagLabel = tagLabels[0] ?? null
       const titleFromTypes = formatDrillTitleFromTypeNames(tagLabels)
       const titleRaw = typeof body.title === 'string' && body.title.trim() ? body.title.trim() : null
-      // Prefer authoritative title from selected type labels; untyped pool → Varied Mix.
-      const title = tagLabels.length > 0 ? titleFromTypes : (titleRaw ?? VARIED_MIX_DRILL_TITLE)
+      // Prefer authoritative title from selected type labels; manual title is finalized after picks resolve.
+      let title = resolveDrillDisplayTitle({
+        title: tagLabels.length > 0 ? titleFromTypes : titleRaw,
+        selection: manualQuestionIds.length > 0 ? 'manual' : selection,
+        tagLabels,
+      })
       const difficulty =
         body.difficulty === 'easy' || body.difficulty === 'hard' || body.difficulty === 'adaptive'
           ? body.difficulty
@@ -1973,9 +2193,14 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const status = typeof body.status === 'string' ? body.status : 'fresh'
       const poolRaw = await deps.repository.listDrillPoolQuestions({
         sectionType,
-        questionTypeId,
-        questionTypeIds,
-        difficulty: difficulty === 'adaptive' ? null : difficulty,
+        questionTypeId: selection === 'manual' && manualQuestionIds.length > 0 ? null : questionTypeId,
+        questionTypeIds: selection === 'manual' && manualQuestionIds.length > 0 ? [] : questionTypeIds,
+        difficulty:
+          selection === 'manual' && manualQuestionIds.length > 0
+            ? null
+            : difficulty === 'adaptive'
+              ? null
+              : difficulty,
       })
       const overrides = await loadPoolOverrideMap(deps.repository, userId)
       const pool = filterDrillPoolByMembership(poolRaw, overrides)
@@ -1988,14 +2213,41 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         ? parsePassageCount(body.passageCount ?? body.questionCount)
         : null
 
-      let questionIds = useRcPassageCount
-        ? pickRcDrillQuestionIdsByPassageCount(filtered, passageCount ?? 1, answeredIds)
-        : pickDrillQuestionIds(
-            filtered,
-            sectionType,
-            isUnlimitedQuestionCount ? 'unlimited' : questionCount,
-          )
+      let questionIds: string[]
+      if (manualQuestionIds.length > 0) {
+        // Explicit picks from the question browser always win — do not re-roll from the pool.
+        const rows = await deps.repository.getDrillQuestionRowsByIds(manualQuestionIds)
+        const byId = new Map(rows.map((row) => [row.id, row]))
+        questionIds = manualQuestionIds.filter((id) => {
+          const row = byId.get(id)
+          if (!row) return false
+          const sec = Array.isArray(row.admin_sections) ? row.admin_sections[0] : row.admin_sections
+          const rowType =
+            sec && typeof sec === 'object' ? (sec as { section_type?: string }).section_type : null
+          return rowType === sectionType
+        })
+        if (questionIds.length === 0) {
+          throw new PracticeValidationError('None of the selected questions are available for this drill')
+        }
+        const poolById = new Map(poolRaw.map((q) => [q.id, q]))
+        const prepTestNumbers = questionIds
+          .map((id) => prepTestOrdinalFromModuleId(poolById.get(id)?.module_id))
+          .filter((n): n is number => n != null)
+        title = formatPickMyOwnDrillTitle({
+          questionCount: questionIds.length,
+          prepTestNumbers,
+        })
+      } else {
+        questionIds = useRcPassageCount
+          ? pickRcDrillQuestionIdsByPassageCount(filtered, passageCount ?? 1, answeredIds)
+          : pickDrillQuestionIds(
+              filtered,
+              sectionType,
+              isUnlimitedQuestionCount ? 'unlimited' : questionCount,
+            )
+      }
       if (
+        manualQuestionIds.length === 0 &&
         source === 'dashboard_adaptive_drill' &&
         questionIds.length < DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT
       ) {
@@ -2013,6 +2265,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         throw new PracticeValidationError('No questions available for this drill configuration')
       }
       if (
+        manualQuestionIds.length === 0 &&
         source === 'dashboard_adaptive_drill' &&
         questionIds.length < DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT
       ) {
@@ -2023,11 +2276,13 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       const metadata: DrillSessionMetadata = {
         sectionType,
-        questionCount: isUnlimitedQuestionCount ? 'unlimited' : questionIds.length,
-        ...(passageCount != null ? { passageCount } : {}),
+        questionCount: isUnlimitedQuestionCount && manualQuestionIds.length === 0
+          ? 'unlimited'
+          : questionIds.length,
+        ...(passageCount != null && manualQuestionIds.length === 0 ? { passageCount } : {}),
         timing,
         showAnswers,
-        selection,
+        selection: manualQuestionIds.length > 0 ? 'manual' : selection,
         questionTypeId,
         questionTypeIds,
         tagLabel,
