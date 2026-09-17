@@ -4,6 +4,7 @@ import {
   formatOverviewPercentileCaption,
   formatPrepTestChartLabel,
   formatPrepTestHistoryLabel,
+  formatSectionHistoryLabel,
   mapDrillSessionToHistoryEntry,
   mapOverviewToHeadlineStats,
   mapPrepTestSessionToHistoryEntry,
@@ -325,6 +326,36 @@ describe("map-analytics", () => {
       scoreMax: 25,
       sectionType: "LR",
     })
+
+    const lsacId = mapSectionSessionToHistoryEntry({
+      id: "sec2",
+      kind: "SECTION",
+      startedAt: "2026-01-01T00:00:00Z",
+      completedAt: "2026-01-03T00:00:00Z",
+      rawScore: 1,
+      scaledScore: null,
+      percentile: null,
+      bookmarked: false,
+      excluded: false,
+      metadata: {},
+      prepTestTitle: null,
+      sectionTitle: "LR135A-1",
+      sectionType: "LR",
+    })
+    expect(lsacId?.testLabel).toBe("PT135.S1")
+  })
+
+  it("formats LSAC section ids as PT#.S#", () => {
+    expect(formatSectionHistoryLabel({ sectionTitle: "LR135A-1" })).toBe("PT135.S1")
+    expect(formatSectionHistoryLabel({ sectionTitle: "LR155B-4" })).toBe("PT155.S4")
+    expect(formatSectionHistoryLabel({ sectionTitle: "RC155A-3" })).toBe("PT155.S3")
+    expect(formatSectionHistoryLabel({ sectionTitle: "LR155V-1" })).toBe("PT155.S1")
+    expect(
+      formatSectionHistoryLabel({
+        metadata: { moduleId: "LSAC128", sectionNumber: 3 },
+      }),
+    ).toBe("PT128.S3")
+    expect(formatSectionHistoryLabel({ sectionTitle: "LR Section 2" })).toBe("LR Section 2")
   })
 
   it("maps drill records with section from metadata when joined sectionType is null", () => {

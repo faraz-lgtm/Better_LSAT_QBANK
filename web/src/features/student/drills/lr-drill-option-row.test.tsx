@@ -179,7 +179,7 @@ describe("LrDrillOptionRow", () => {
     expect(screen.getByText("Choice B").closest(".practice-session-choice-masked-ink")).toBeTruthy()
   })
 
-  it("uses 15px / 22px / regular for official choice copy and Regular 28/60 letters", () => {
+  it("uses 15px / 30px / regular for official choice copy and Regular 28/60 letters", () => {
     render(
       <LrDrillOptionRow
         index={0}
@@ -196,7 +196,7 @@ describe("LrDrillOptionRow", () => {
     expect(letter).not.toHaveClass("font-light")
 
     const copy = screen.getByText("Choice A").closest(".practice-session-content")
-    expect(copy).toHaveClass("text-[15px]", "font-normal", "leading-[22px]")
+    expect(copy).toHaveClass("text-[15px]", "font-normal", "leading-[30px]")
     expect(copy).not.toHaveClass("leading-[1.5]")
     expect(copy).not.toHaveClass("tracking-[0.28px]")
   })
@@ -370,7 +370,7 @@ describe("LrDrillOptionRow", () => {
       "pl-[6px]",
       "pr-[12px]",
       "min-h-[60px]",
-      "leading-[22px]",
+      "leading-[30px]",
       "font-normal",
     )
   })
@@ -395,7 +395,7 @@ describe("LrDrillOptionRow", () => {
       "text-[#666d80]",
     )
     expect(screen.getByText("Choice A").closest(".practice-session-content")).toHaveClass(
-      "leading-[22px]",
+      "leading-[30px]",
       "font-normal",
       "text-[#041a44]",
     )

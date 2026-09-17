@@ -139,11 +139,11 @@ const LrDrillOptionRow = memo(function LrDrillOptionRow({
       className={cn(
         "min-w-0 flex-1",
         isActiveDrill
-          ? "text-sm font-normal leading-[1.5] tracking-[0.28px] text-[color:inherit]"
+          ? "text-sm font-normal leading-[30px] tracking-[0.28px] text-[color:inherit]"
           : officialChrome
             ? cn(OFFICIAL_BODY_TYPE_CLASS, "text-[#041a44]")
             : isBlindReview
-            ? "text-pretty text-[1em] leading-[1.5] tracking-[0.32px] text-[color:inherit]"
+            ? "text-pretty text-[1em] leading-[30px] tracking-[0.32px] text-[color:inherit]"
             : "pt-0.5",
         hidden && isBlindReview && "line-through opacity-50",
         hidden && !isBlindReview && !isActiveDrill && "line-through opacity-50 blur-[2px]",

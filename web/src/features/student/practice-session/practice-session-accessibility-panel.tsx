@@ -85,22 +85,18 @@ function PracticeSessionAccessibilityPanel({
     if (!open) return
     setDraft((current) => {
       if (current.zoomScale === settings.zoomScale) return current
-      const next = { ...current, zoomScale: settings.zoomScale }
-      onPreview(next)
-      return next
+      return { ...current, zoomScale: settings.zoomScale }
     })
-  }, [open, settings.zoomScale, onPreview])
+  }, [open, settings.zoomScale])
 
   if (!open) return null
 
   const modifierKey = getZoomShortcutModifierLabel()
 
   function updateDraft(patch: Partial<PracticeSessionAccessibilitySettings>) {
-    setDraft((current) => {
-      const next = { ...current, ...patch }
-      onPreview(next)
-      return next
-    })
+    const next = { ...draft, ...patch }
+    setDraft(next)
+    onPreview(next)
   }
 
   function handleDismiss() {

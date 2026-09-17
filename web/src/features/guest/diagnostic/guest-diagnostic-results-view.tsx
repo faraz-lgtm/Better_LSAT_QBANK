@@ -15,9 +15,6 @@ import {
 } from '@/features/guest/diagnostic/guest-diagnostic-result-storage'
 import { useGuestPricingModal } from '@/features/guest/pricing/guest-pricing-modal-provider'
 import { useDiagnosticSubscription } from '@/features/guest/diagnostic/use-diagnostic-subscription'
-import {
-  PT_RESULTS_PAGE_BG_CLASS,
-} from '@/features/student/analytics/prep-test-results-section-styles'
 import { StudentMain } from '@/features/student/components/student-main'
 import { createDiagnosticApi, type MiniDiagnosticExplanation } from '@/lib/api/diagnostic'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -1508,8 +1505,8 @@ function GuestDiagnosticResultsView({
 
   return (
     <StudentMain
-      className={PT_RESULTS_PAGE_BG_CLASS}
-      contentClassName="flex flex-col gap-6 pb-10"
+      className="bg-[var(--primary-0)]"
+      contentClassName="flex flex-col gap-6 bg-[var(--primary-0)] pb-10"
     >
       {/* 1. Page header */}
       <DiagnosticPageHeader result={result} onSubscribe={openPricingModal} />
