@@ -41,6 +41,9 @@ function TestDayCountdownCard({
   const controlsRef = useRef<HTMLDivElement>(null)
   const listboxId = useId()
   const [pickerOpen, setPickerOpen] = useState(false)
+  const selectedOfficialWindow = TEST_DATE_OPTIONS.some((option) => option.value === testDateValue)
+  const showAdministrationInProgress =
+    administrationInProgress || (selectedOfficialWindow && daysRemaining === 0)
 
   function openDatePicker() {
     if (savingTestDate) return
@@ -81,7 +84,7 @@ function TestDayCountdownCard({
       <div className="test-day-countdown__header">
         <div className="test-day-countdown__title-block">
           <p className="test-day-countdown__eyebrow">Test Day Countdown</p>
-          {administrationInProgress ? (
+          {showAdministrationInProgress ? (
             <p className="test-day-countdown__in-progress">Current Test Administration In Progress</p>
           ) : (
             <div className="test-day-countdown__days">

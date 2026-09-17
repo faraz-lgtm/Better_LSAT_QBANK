@@ -26,6 +26,13 @@ describe("lsac-test-window-options", () => {
     expect(resolveLsacTestWindowValue("2026-11-01", null)).toBe("2026-11-11")
   })
 
+  it("matches ISO timestamps and month labels to the official window", () => {
+    expect(findLsacTestWindow("2026-09-09T00:00:00.000Z")?.value).toBe("2026-09-09")
+    expect(findLsacTestWindow("2026-09-08T19:00:00.000Z")?.value).toBe("2026-09-09")
+    expect(findLsacTestWindow(null, "September 2026")?.value).toBe("2026-09-09")
+    expect(resolveLsacTestWindowValue("2026-09-09T00:00:00+00:00", "September 2026")).toBe("2026-09-09")
+  })
+
   it("formats meta with official date ranges", () => {
     expect(formatLsacTestWindowMeta("2026-11-11")).toBe("LSAC · Nov 11–14, 2026")
     expect(formatLsacTestWindowMeta("2026-11-01")).toBe("LSAC · Nov 11–14, 2026")

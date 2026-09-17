@@ -36,4 +36,33 @@ describe("TestDayCountdownCard", () => {
     expect(screen.queryByText("0")).not.toBeInTheDocument()
     expect(screen.queryByText("days")).not.toBeInTheDocument()
   })
+
+  it("never shows 0 days for a selected official window that has already started", () => {
+    render(
+      <TestDayCountdownCard
+        {...baseProps}
+        daysRemaining={0}
+        testMeta="LSAC · Sep 8–12, 2026"
+        testDateLabel="September 2026"
+        testDateValue="2026-09-09"
+      />,
+    )
+    expect(screen.getByText("Current Test Administration In Progress")).toBeInTheDocument()
+    expect(screen.queryByText("days")).not.toBeInTheDocument()
+  })
+
+  it("keeps 0 days for a custom past date that is not an official LSAC window", () => {
+    render(
+      <TestDayCountdownCard
+        {...baseProps}
+        daysRemaining={0}
+        testDateValue="2025-06-01"
+        testDateLabel="June 2025"
+        testMeta="LSAC · Jun 1, 2025"
+      />,
+    )
+    expect(screen.getByText("0")).toBeInTheDocument()
+    expect(screen.getByText("days")).toBeInTheDocument()
+    expect(screen.queryByText("Current Test Administration In Progress")).not.toBeInTheDocument()
+  })
 })

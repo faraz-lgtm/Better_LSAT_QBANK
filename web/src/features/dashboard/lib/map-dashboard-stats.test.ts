@@ -71,6 +71,16 @@ describe("map-dashboard-stats", () => {
     expect(isCurrentLsacTestAdministrationInProgress("2026-09-01", new Date("2026-09-12T08:00:00"))).toBe(true)
   })
 
+  it("keeps a started official window in progress after the administration week", () => {
+    expect(isCurrentLsacTestAdministrationInProgress("2026-09-09", new Date("2026-09-17T08:00:00"))).toBe(true)
+    expect(
+      isCurrentLsacTestAdministrationInProgress("2026-09-09T00:00:00.000Z", new Date("2026-09-17T23:30:00")),
+    ).toBe(true)
+    expect(
+      isCurrentLsacTestAdministrationInProgress("2026-09-09", new Date("2026-09-17T12:00:00"), "September 2026"),
+    ).toBe(true)
+  })
+
   it("does not flag a future selected window or an unset date", () => {
     expect(isCurrentLsacTestAdministrationInProgress("2026-10-07", new Date("2026-09-16T12:00:00"))).toBe(false)
     expect(isCurrentLsacTestAdministrationInProgress(null, new Date("2026-09-16T12:00:00"))).toBe(false)
