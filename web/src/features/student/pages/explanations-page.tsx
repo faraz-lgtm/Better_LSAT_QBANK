@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { StudentOptionMenu } from "@/features/student/components/student-option-menu"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
+import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
 import {
   cacheExplanationPrepTestTree,
   getCachedExplanationPrepTestTree,
@@ -62,12 +63,6 @@ const PREP_TEST_BADGE_SIZE = {
   width: "64px",
   height: "64px",
   borderRadius: "14px",
-} as const
-
-const SECTION_BADGE_SIZE = {
-  width: "40px",
-  height: "40px",
-  borderRadius: "12px",
 } as const
 
 const TREE_BADGE_CLASS = "flex shrink-0 items-center justify-center"
@@ -227,17 +222,13 @@ function prepTestBadgeColors(status: ExplanationQuestionStatus): {
 }
 
 function SectionKindBadge({ kind }: { kind: ExplanationSectionNode["kind"] }) {
-  const accentColor =
-    kind === "RC" ? "#40c4aa" : "var(--explanation-lr-badge-bg)"
+  if (kind === "LR" || kind === "RC") {
+    return <SectionInitialBadge section={kind} variant="compact" />
+  }
   return (
     <span
-      className={`${TREE_BADGE_CLASS} text-sm font-bold leading-[1.5] tracking-[0.02em]`}
-      style={{
-        ...SECTION_BADGE_SIZE,
-        backgroundColor: accentColor,
-        color: "#ffffff",
-      }}
-      aria-hidden
+      aria-label={kind}
+      className="inline-flex size-[32px] shrink-0 items-center justify-center rounded-[8px] border-[0.5px] border-[var(--greyscale-100)] bg-[var(--greyscale-25)] p-[5px] text-[14px] font-black leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]"
     >
       {kind}
     </span>

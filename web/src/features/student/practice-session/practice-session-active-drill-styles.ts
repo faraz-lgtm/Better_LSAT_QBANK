@@ -156,7 +156,7 @@ const ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS =
 const ACTIVE_DRILL_QUESTION_PANE_CLASS = "pt-6 lg:pt-0 lg:pl-6"
 
 /** Figma `19641:44925` — stimulus / passage typography */
-const ACTIVE_DRILL_PASSAGE_TEXT_CLASS = "text-[1.125em] leading-[1.5] text-[color:inherit]"
+const ACTIVE_DRILL_PASSAGE_TEXT_CLASS = "text-[1.125em] leading-[30px] text-[color:inherit]"
 
 /** Figma `20268:102762` — LSAT default side widget */
 const ACTIVE_DRILL_SIDE_WIDGET_COLLAPSED_CLASS =
@@ -222,10 +222,10 @@ const ACTIVE_DRILL_CHOICE_ROW_GRID_WITH_ACTION_CLASS = "flex w-full items-start 
 const ACTIVE_DRILL_STEM_GRID_CLASS = "min-w-0"
 
 const ACTIVE_DRILL_STEM_TEXT_CLASS =
-  "min-w-0 flex-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[color:inherit] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-7 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
+  "min-w-0 flex-1 text-sm font-semibold leading-[30px] tracking-[0.28px] text-[color:inherit] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-7 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
 
 const ACTIVE_DRILL_STEM_NUMBER_CLASS =
-  "shrink-0 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[color:inherit]"
+  "shrink-0 text-sm font-semibold leading-[30px] tracking-[0.28px] text-[color:inherit]"
 
 /** Figma `18617:31674` / `18617:31682` — hide-choice control */
 const ACTIVE_DRILL_OPTION_EYE_BUTTON_CLASS = ACTIVE_DRILL_ACTION_BUTTON_CLASS

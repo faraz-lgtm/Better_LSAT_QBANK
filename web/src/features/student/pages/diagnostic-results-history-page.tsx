@@ -75,7 +75,7 @@ function DiagnosticResultsHistoryPage({ section }: DiagnosticResultsHistoryPageP
   const attempts = listDiagnosticHistoryBySection(section)
 
   return (
-    <StudentMain className="bg-[var(--background)]" contentClassName="flex min-h-0 flex-1 flex-col bg-[var(--background)] pt-6 pb-6">
+    <StudentMain className="bg-[var(--primary-0)]" contentClassName="flex min-h-0 flex-1 flex-col bg-[var(--primary-0)] pt-6 pb-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="student-page-heading">{copy.title}</h1>
         <Link
