@@ -214,10 +214,19 @@ function DashboardPage() {
   }, [activeFilter, navigate, practiceApi, startingAdaptiveDrill])
 
   const preferences = studyContext?.preferences ?? null
-  const countdownDate =
-    findLsacTestWindow(preferences?.plannedLsatDate)?.value ?? preferences?.plannedLsatDate ?? null
+  const selectedLsacWindow = findLsacTestWindow(
+    preferences?.plannedLsatDate,
+    preferences?.plannedLsatWindow,
+  )
+  const countdownDate = selectedLsacWindow?.value ?? preferences?.plannedLsatDate ?? null
   const daysRemaining = daysUntilDate(countdownDate)
-  const administrationInProgress = isCurrentLsacTestAdministrationInProgress(preferences?.plannedLsatDate)
+  const administrationInProgress =
+    isCurrentLsacTestAdministrationInProgress(
+      preferences?.plannedLsatDate,
+      new Date(),
+      preferences?.plannedLsatWindow,
+    ) ||
+    (selectedLsacWindow != null && daysRemaining === 0)
   const testDateValue = resolveLsacTestWindowValue(
     preferences?.plannedLsatDate,
     preferences?.plannedLsatWindow,

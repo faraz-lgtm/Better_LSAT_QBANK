@@ -46,41 +46,58 @@ export const LSAC_OFFICIAL_TEST_WINDOWS: readonly LsatTestWindowOption[] = [
   },
 ]
 
-function monthKeyFromIso(isoDate: string): string {
-  return isoDate.trim().slice(0, 7)
+/** First `YYYY-MM-DD` in an ISO date or timestamp (`2026-09-09T00:00:00.000Z`). */
+export function toIsoDateOnly(value: string | null | undefined): string | null {
+  const match = value?.trim().match(/^(\d{4}-\d{2}-\d{2})/)
+  return match?.[1] ?? null
 }
 
-/** Match by exact value or same calendar month (legacy first-of-month values). */
+function monthKeyFromIso(isoDate: string): string | null {
+  const day = toIsoDateOnly(isoDate)
+  return day ? day.slice(0, 7) : null
+}
+
+function findLsacTestWindowByLabel(value: string | null | undefined): LsatTestWindowOption | undefined {
+  const key = value?.trim()
+  if (!key) return undefined
+  return LSAC_OFFICIAL_TEST_WINDOWS.find((item) => item.label === key || item.value === key)
+}
+
+/** Match by exact value, same calendar month (legacy first-of-month), or saved window label. */
 export function findLsacTestWindow(
   isoDate: string | null | undefined,
+  plannedLsatWindow?: string | null,
 ): LsatTestWindowOption | undefined {
-  if (!isoDate?.trim()) return undefined
-  const trimmed = isoDate.trim()
-  const exact = LSAC_OFFICIAL_TEST_WINDOWS.find((item) => item.value === trimmed)
-  if (exact) return exact
-  const key = monthKeyFromIso(trimmed)
-  return LSAC_OFFICIAL_TEST_WINDOWS.find((item) => monthKeyFromIso(item.value) === key)
+  const day = toIsoDateOnly(isoDate)
+  if (day) {
+    const exact = LSAC_OFFICIAL_TEST_WINDOWS.find((item) => item.value === day)
+    if (exact) return exact
+    const key = monthKeyFromIso(day)
+    const byMonth = LSAC_OFFICIAL_TEST_WINDOWS.find((item) => monthKeyFromIso(item.value) === key)
+    if (byMonth) return byMonth
+  }
+  return findLsacTestWindowByLabel(plannedLsatWindow) ?? findLsacTestWindowByLabel(isoDate)
 }
 
 export function resolveLsacTestWindowValue(
   isoDate: string | null | undefined,
-  _plannedLsatWindow?: string | null,
+  plannedLsatWindow?: string | null,
 ): string {
-  const match = findLsacTestWindow(isoDate)
+  const match = findLsacTestWindow(isoDate, plannedLsatWindow)
   if (match) return match.value
-  if (isoDate?.trim()) return isoDate.trim()
-  return ""
+  return toIsoDateOnly(isoDate) ?? isoDate?.trim() ?? ""
 }
 
 export function formatLsacTestWindowLabel(
   isoDate: string | null | undefined,
-  _plannedLsatWindow?: string | null,
+  plannedLsatWindow?: string | null,
 ): string {
-  if (!isoDate?.trim()) return "—"
-  const option = findLsacTestWindow(isoDate)
+  const option = findLsacTestWindow(isoDate, plannedLsatWindow)
   if (option) return option.label
+  if (!isoDate?.trim()) return "—"
+  const day = toIsoDateOnly(isoDate) ?? isoDate.trim()
   try {
-    const d = new Date(`${isoDate.trim()}T12:00:00`)
+    const d = new Date(`${day}T12:00:00`)
     if (Number.isNaN(d.getTime())) return isoDate.trim()
     return d.toLocaleDateString(undefined, { month: "long", year: "numeric" })
   } catch {
@@ -90,13 +107,14 @@ export function formatLsacTestWindowLabel(
 
 export function formatLsacTestWindowMeta(
   isoDate: string | null | undefined,
-  _plannedLsatWindow?: string | null,
+  plannedLsatWindow?: string | null,
 ): string {
-  if (!isoDate?.trim()) return "Set your LSAC test date to start the countdown"
-  const option = findLsacTestWindow(isoDate)
+  const option = findLsacTestWindow(isoDate, plannedLsatWindow)
   if (option) return `LSAC · ${option.detail.replace(/^Test dates\s+/i, "")}`
+  if (!isoDate?.trim()) return "Set your LSAC test date to start the countdown"
+  const day = toIsoDateOnly(isoDate) ?? isoDate.trim()
   try {
-    const d = new Date(`${isoDate.trim()}T12:00:00`)
+    const d = new Date(`${day}T12:00:00`)
     if (Number.isNaN(d.getTime())) return `LSAC · ${isoDate}`
     const label = d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
     return `LSAC · ${label}`
