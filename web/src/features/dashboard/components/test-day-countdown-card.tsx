@@ -1,13 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react"
 import { Check } from "lucide-react"
 
-import {
-  LSAC_OFFICIAL_TEST_WINDOWS,
-  type LsatTestWindowOption,
-} from "@/lib/lsac-test-window-options"
+import { listUpcomingLsacTestWindows } from "@/lib/lsac-test-window-options"
 import { cn } from "@/lib/utils"
-
-const TEST_DATE_OPTIONS: readonly LsatTestWindowOption[] = LSAC_OFFICIAL_TEST_WINDOWS
 
 type TestDayCountdownCardProps = {
   daysRemaining: number | null
@@ -41,9 +36,7 @@ function TestDayCountdownCard({
   const controlsRef = useRef<HTMLDivElement>(null)
   const listboxId = useId()
   const [pickerOpen, setPickerOpen] = useState(false)
-  const selectedOfficialWindow = TEST_DATE_OPTIONS.some((option) => option.value === testDateValue)
-  const showAdministrationInProgress =
-    administrationInProgress || (selectedOfficialWindow && daysRemaining === 0)
+  const testDateOptions = listUpcomingLsacTestWindows()
 
   function openDatePicker() {
     if (savingTestDate) return
@@ -127,7 +120,7 @@ function TestDayCountdownCard({
                 aria-label="Choose LSAC test date"
                 className="test-day-countdown__date-menu"
               >
-                {TEST_DATE_OPTIONS.map((option) => {
+                {testDateOptions.map((option) => {
                   const isSelected = option.value === testDateValue
                   return (
                     <button

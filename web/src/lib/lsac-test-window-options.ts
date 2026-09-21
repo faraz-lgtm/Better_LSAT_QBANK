@@ -132,3 +132,20 @@ export function toLsacSelectOptions(
     label: option.detail ? `${option.label}: ${option.detail}` : option.label,
   }))
 }
+
+/**
+ * Official windows still available to pick — excludes administrations whose
+ * first test day has already arrived (in progress or fully passed).
+ */
+export function listUpcomingLsacTestWindows(
+  now: Date = new Date(),
+  options: readonly LsatTestWindowOption[] = LSAC_OFFICIAL_TEST_WINDOWS,
+): LsatTestWindowOption[] {
+  const today = new Date(now)
+  today.setHours(12, 0, 0, 0)
+  return options.filter((option) => {
+    const start = new Date(`${option.value.trim()}T12:00:00`)
+    if (Number.isNaN(start.getTime())) return false
+    return start.getTime() > today.getTime()
+  })
+}
