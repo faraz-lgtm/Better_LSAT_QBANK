@@ -451,14 +451,51 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
       }
 
       const scaledScores = resolvedScores.map((r) => r.scaled)
-      const bestScaledScore = scaledScores.length ? Math.max(...scaledScores) : null
       const averageScaledScore = scaledScores.length
         ? round1(scaledScores.reduce((a, b) => a + b, 0) / scaledScores.length)
         : null
 
-      const bestResolved = resolvedScores.length
+      type ScoreCandidate = { scaled: number; percentile: number | null; prepTestId: string | null }
+      const higherScore = (a: ScoreCandidate | null, b: ScoreCandidate | null): ScoreCandidate | null => {
+        if (a == null) return b
+        if (b == null) return a
+        return b.scaled > a.scaled ? b : a
+      }
+
+      let bestResolved: ScoreCandidate | null = resolvedScores.length
         ? resolvedScores.reduce((best, cur) => (cur.scaled > best.scaled ? cur : best))
         : null
+
+      for (const row of completedPreptests) {
+        if (row.scaled_score != null) {
+          bestResolved = higherScore(bestResolved, {
+            scaled: row.scaled_score,
+            percentile: row.percentile,
+            prepTestId: row.prep_test_id,
+          })
+        }
+        let brScaled = row.blind_review_scaled_score
+        let brPercentile = row.blind_review_percentile
+        if (brScaled == null && row.blind_review_raw_score != null && row.prep_test_id) {
+          const brRow = await deps.repository.getScoreRowForRaw(
+            row.prep_test_id,
+            row.blind_review_raw_score,
+          )
+          if (brRow?.scaled_score != null) {
+            brScaled = brRow.scaled_score
+            brPercentile = brRow.percentile
+          }
+        }
+        if (brScaled != null) {
+          bestResolved = higherScore(bestResolved, {
+            scaled: brScaled,
+            percentile: brPercentile,
+            prepTestId: row.prep_test_id,
+          })
+        }
+      }
+
+      const bestScaledScore = bestResolved?.scaled ?? null
       let bestPercentile = bestResolved?.percentile ?? null
       if (bestPercentile == null && bestResolved?.prepTestId != null && bestScaledScore != null) {
         const byScaled = await deps.repository.getScoreRowForScaled(

@@ -80,7 +80,7 @@ function statusSubtitle(item: BlindReviewPoolItem): string {
     const date = item.blindReviewCompletedAt ?? item.completedAt
     return date ? formatCompletedDate(date) : ""
   }
-  if (item.status === "in_progress") return "Blind Review"
+  if (item.status === "in_progress") return "Untimed Review"
   if (item.scaledScore != null) return `Test score ${item.scaledScore}`
   return ""
 }
@@ -150,7 +150,7 @@ function BlindReviewListCard({
   const canExpand = historyRows.length > 0
   const showScoreBlock = isCompleted && (displayScore != null || canExpand)
 
-  const primaryLabel = isCompleted ? "View" : isInProgress ? "Blind Review" : "Start"
+  const primaryLabel = isCompleted ? "View" : isInProgress ? "Untimed Review" : "Start"
   const primaryClass = isCompleted
     ? "inline-flex h-[52px] w-[148px] shrink-0 items-center justify-center rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-base font-semibold text-[var(--greyscale-500)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)] dark:text-white"
     : isInProgress
@@ -282,7 +282,7 @@ function PracticeBlindReviewPage() {
           setPrepTests([])
           setTotal(0)
           setStatusCounts(EMPTY_STATUS_COUNTS)
-          setError(e instanceof Error ? e.message : "Failed to load blind review")
+          setError(e instanceof Error ? e.message : "Failed to load untimed review")
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -311,7 +311,7 @@ function PracticeBlindReviewPage() {
   return (
     <StudentMain className="bg-[var(--background)]" contentClassName="flex min-h-0 flex-1 flex-col bg-[var(--background)]">
       <p className="mb-6 max-w-[908px] text-[14px] font-medium leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)] md:text-base">
-          After you finish a PrepTest, blind review lets you revisit every question without seeing correct answers.
+          After you finish a PrepTest, untimed review lets you revisit every question without seeing correct answers.
           
         </p>
 
@@ -351,12 +351,12 @@ function PracticeBlindReviewPage() {
         ) : null}
 
         {loading ? (
-          <StudentPageLoader centered className="min-h-0 flex-1" label="Loading blind review…" />
+          <StudentPageLoader centered className="min-h-0 flex-1" label="Loading untimed review…" />
         ) : prepTests.length === 0 ? (
           <section className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-8 text-center shadow-sm">
             <p className="text-sm text-[var(--greyscale-500)]">
               {statusCounts.all === 0
-                ? "Complete a PrepTest first (use Finish test on the PrepTest hub), then return here for blind review."
+                ? "Complete a PrepTest first (use Finish test on the PrepTest hub), then return here for untimed review."
                 : "No PrepTests match this filter."}
             </p>
             {statusCounts.all === 0 ? (
@@ -385,7 +385,7 @@ function PracticeBlindReviewPage() {
             {total > PAGE_SIZE ? (
               <nav
                 className="flex flex-col gap-3 border-t border-[var(--greyscale-100)] pt-4 sm:flex-row sm:items-center sm:justify-between"
-                aria-label="Blind review pagination"
+                aria-label="Untimed review pagination"
               >
                 <p className="text-sm text-[var(--greyscale-500)]">
                   Showing {pageStart}–{pageEnd} of {total} PrepTests

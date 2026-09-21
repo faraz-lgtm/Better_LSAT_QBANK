@@ -11,7 +11,7 @@ describe("PracticeBlindReviewAnswerToggle", () => {
     )
     expect(screen.queryByRole("tab", { name: "Clean" })).toBeNull()
     expect(screen.getByRole("tab", { name: "Actual" })).toBeInTheDocument()
-    expect(screen.getByRole("tab", { name: "Blind Review" })).toBeInTheDocument()
+    expect(screen.getByRole("tab", { name: "Untimed Review" })).toBeInTheDocument()
   })
 
   it("calls onChange when switching to Actual in blind-review variant", async () => {
@@ -38,7 +38,7 @@ describe("PracticeBlindReviewAnswerToggle", () => {
     )
     expect(screen.getByRole("tab", { name: "Clean" })).toBeInTheDocument()
     expect(screen.getByRole("tab", { name: "Actual" })).toBeInTheDocument()
-    expect(screen.getByRole("tab", { name: "Blind Review" })).toBeInTheDocument()
+    expect(screen.getByRole("tab", { name: "Untimed Review" })).toBeInTheDocument()
     await user.click(screen.getByRole("tab", { name: "Actual" }))
     expect(onChange).toHaveBeenCalledWith("actual")
     await user.click(screen.getByRole("tab", { name: "Clean" }))
@@ -54,7 +54,7 @@ describe("PracticeBlindReviewAnswerToggle", () => {
         blindReviewEnabled={false}
       />,
     )
-    expect(screen.getByRole("tab", { name: "Blind Review" })).toBeDisabled()
+    expect(screen.getByRole("tab", { name: "Untimed Review" })).toBeDisabled()
     expect(screen.getByRole("tab", { name: "Clean" })).not.toBeDisabled()
     expect(screen.getByRole("tab", { name: "Actual" })).not.toBeDisabled()
   })

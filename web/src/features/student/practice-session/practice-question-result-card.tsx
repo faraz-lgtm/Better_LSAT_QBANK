@@ -180,7 +180,7 @@ function PracticeQuestionResultCard({
             className={iconVariant === "stroke" ? "size-6" : undefined}
           />
           <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[var(--color-student-heading)]">
-            Blind Review
+            Untimed Review
           </span>
         </div>
       ) : null}

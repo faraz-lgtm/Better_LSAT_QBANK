@@ -13,6 +13,7 @@ import {
   mapSessionToPrepTestRecord,
   mapTrajectoryToScoreProgress,
   mapPrioritiesToSections,
+  withBestScoreFromTrajectory,
 } from "@/features/student/analytics/map-analytics"
 import type { AnalyticsOverview, PracticeSessionSummary, PriorityRow, TrajectoryPoint } from "@/lib/api/analytics"
 
@@ -176,6 +177,75 @@ describe("map-analytics", () => {
     expect(mapped[0]?.test).toBe("PT 150")
     expect(mapped[0]?.regular).toBe(160)
     expect(mapped[0]?.blindReview).toBe(165)
+  })
+
+  it("lifts headline best score from a higher untimed-review trajectory point", () => {
+    const overview: AnalyticsOverview = {
+      bestScaledScore: 161,
+      averageScaledScore: 123,
+      bestPercentile: 76,
+      averagePercentile: 10,
+      completedPrepTestCount: 31,
+      totalQuestionsAnswered: 100,
+      drillAccuracyPct: 70,
+      totalDrillQuestionsAnswered: 50,
+      averageLrMissedPerPrepTest: 23,
+      averageRcMissedPerPrepTest: 25,
+      totalStudyMinutes: 0,
+    }
+    const lifted = withBestScoreFromTrajectory(overview, [
+      {
+        sessionId: "s1",
+        prepTestTitle: "PrepTest 158",
+        moduleId: "LSAC158",
+        rawScore: 80,
+        scaledScore: 161,
+        percentile: 76,
+        regularRawScore: 80,
+        regularScaledScore: 161,
+        blindReviewRawScore: 99,
+        blindReviewScaledScore: 176,
+        blindReviewPercentile: 99.9,
+        completedAt: "2026-01-01T00:00:00Z",
+      },
+    ])
+    expect(lifted.bestScaledScore).toBe(176)
+    expect(lifted.bestPercentile).toBe(99.9)
+    expect(lifted.averageScaledScore).toBe(123)
+  })
+
+  it("lifts headline best score from a higher stored timed trajectory point", () => {
+    const overview: AnalyticsOverview = {
+      bestScaledScore: 161,
+      averageScaledScore: 123,
+      bestPercentile: 76,
+      averagePercentile: 10,
+      completedPrepTestCount: 1,
+      totalQuestionsAnswered: 100,
+      drillAccuracyPct: 70,
+      totalDrillQuestionsAnswered: 50,
+      averageLrMissedPerPrepTest: 5,
+      averageRcMissedPerPrepTest: 6,
+      totalStudyMinutes: 0,
+    }
+    const lifted = withBestScoreFromTrajectory(overview, [
+      {
+        sessionId: "s1",
+        prepTestTitle: "PrepTest 158",
+        moduleId: "LSAC158",
+        rawScore: 99,
+        scaledScore: 176,
+        percentile: 99.9,
+        regularRawScore: 99,
+        regularScaledScore: 176,
+        blindReviewRawScore: null,
+        blindReviewScaledScore: null,
+        blindReviewPercentile: null,
+        completedAt: "2026-01-01T00:00:00Z",
+      },
+    ])
+    expect(lifted.bestScaledScore).toBe(176)
+    expect(lifted.bestPercentile).toBe(99.9)
   })
 
   it("groups priorities into LR and RC sections ordered by weakness", () => {

@@ -270,14 +270,14 @@ function AnalyticsPrepTestsPage() {
       },
       {
         id: "best-br",
-        label: "BEST BLIND REVIEW",
+        label: "BEST UNTIMED REVIEW",
         value: String(stats.bestBlindReview),
         accent: "var(--destructive)",
-        caption: `Average BR: ${stats.averageBlindReview}`,
+        caption: `Average Untimed Review: ${stats.averageBlindReview}`,
       },
       {
         id: "avg-br-diff",
-        label: "AVG. BR DIFFERENCE",
+        label: "AVG. UNTIMED REVIEW DIFF.",
         value: formatSignedNumber(stats.averageBlindReviewDifference),
         accent: "var(--color-student-heading)",
         caption: `High: ${formatSignedNumber(stats.blindReviewDifferenceHigh)}  Low: ${formatSignedNumber(stats.blindReviewDifferenceLow)}`,

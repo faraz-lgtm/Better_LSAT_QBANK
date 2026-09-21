@@ -16,8 +16,8 @@ describe("student-nav-config", () => {
     expect(getStudentPageTitle("/app/practice/drills")).toBe("Drills")
   })
 
-  it("titles Blind Review without a sidebar item", () => {
-    expect(getStudentPageTitle("/app/practice/blind-review")).toBe("Blind Review")
+  it("titles Untimed Review without a sidebar item", () => {
+    expect(getStudentPageTitle("/app/practice/blind-review")).toBe("Untimed Review")
   })
 
   it("maps academy explanations", () => {

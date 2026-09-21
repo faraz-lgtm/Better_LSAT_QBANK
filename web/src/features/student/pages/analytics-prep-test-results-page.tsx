@@ -358,7 +358,7 @@ function QuestionResultRow({
                       className="size-6"
                     />
                     <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[var(--color-student-heading)]">
-                      Blind Review
+                      Untimed Review
                     </span>
                   </div>
                 ) : null}

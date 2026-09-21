@@ -696,7 +696,7 @@ function DrillSessionPage() {
           stashDrillBlindReviewResult(session, lessonId)
         }
       } catch (e) {
-        setError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to save blind review")
+        setError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to save untimed review")
         setFinishing(false)
         return
       } finally {
@@ -729,9 +729,9 @@ function DrillSessionPage() {
     if (reviewAfterComplete) {
       if (unansweredCount > 0) {
         const noun = unansweredCount === 1 ? "question" : "questions"
-        return `Finish blind review and view your results? You have ${unansweredCount} unanswered ${noun} in blind review.`
+        return `Finish untimed review and view your results? You have ${unansweredCount} unanswered ${noun} in untimed review.`
       }
-      return "Finish blind review and view your results?"
+      return "Finish untimed review and view your results?"
     }
     if (unansweredCount > 0) {
       const noun = unansweredCount === 1 ? "question" : "questions"
@@ -961,7 +961,7 @@ function DrillSessionPage() {
       activeSectionSessionId={sessionId ?? null}
       onSelectSection={() => {}}
       questionRef={questionRefLabel}
-      actualScoreLabel="Actual: BR"
+      actualScoreLabel="Actual: —"
       notesOpen={resultsReviewMode ? reviewSidePanel === "notes" : notesOpen}
       notesEnabled={resultsReviewMode || answerViewTab === "blind_review"}
       onToggleNotes={handleToggleNotes}

@@ -72,7 +72,7 @@ const SEEN_GRAY = "var(--greyscale-500)"
 function prepTestStatusTag(status: ExplanationQuestionStatus): string {
   switch (status) {
     case "in_process":
-      return "In Process • Blind Review"
+      return "In Process • Untimed Review"
     case "fresh":
       return "Fresh"
     case "answered":

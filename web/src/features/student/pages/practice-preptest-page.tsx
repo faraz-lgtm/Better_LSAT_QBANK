@@ -433,12 +433,12 @@ function PracticePrepTestPage() {
       const detail = await practiceApi.getBlindReviewDetail(testIdParam)
       const firstSessionId = firstBlindReviewSectionSessionId(detail)
       if (!firstSessionId) {
-        throw new Error("No sections available for blind review")
+        throw new Error("No sections available for untimed review")
       }
       setCompleteModal(null)
       navigate(blindReviewSectionSessionPath(testIdParam, firstSessionId), { replace: true })
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to start blind review")
+      setError(e instanceof Error ? e.message : "Failed to start untimed review")
     } finally {
       setStartingBlindReview(false)
     }

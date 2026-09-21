@@ -27,7 +27,7 @@ const DIFFICULTY_META: Record<Difficulty, { dots: number; color: string }> = {
 
 export const SCORE_PROGRESS_TABS = [
   { id: "regular", label: "Regular Score" },
-  { id: "blindReview", label: "Blind Review" },
+  { id: "blindReview", label: "Untimed Review" },
   { id: "both", label: "Both" },
 ] as const
 

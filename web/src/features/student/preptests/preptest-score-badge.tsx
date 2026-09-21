@@ -24,7 +24,7 @@ export function PrepTestScoreText({
       <p className="whitespace-nowrap text-center text-[16px] font-semibold leading-[1.35]">
         <span className="text-[#082c6b]">Score: {scoreText}</span>
         <span className="text-[#082c6b]">{"\u00a0"}</span>
-        <span className="text-[var(--greyscale-400)]">- Blind Review: {brText}</span>
+        <span className="text-[var(--greyscale-400)]">- Untimed Review: {brText}</span>
       </p>
     )
   }
@@ -34,7 +34,7 @@ export function PrepTestScoreText({
       <span className="font-medium text-[#082c6b]">Score:</span>
       <span className="font-semibold text-[#082c6b]">{` ${scoreText} `}</span>
       <span className="text-[var(--greyscale-400)]">- </span>
-      <span className="font-medium text-[var(--greyscale-400)]">Blind Review:</span>
+      <span className="font-medium text-[var(--greyscale-400)]">Untimed Review:</span>
       <span className="text-[var(--greyscale-400)]">{` ${brText}`}</span>
     </p>
   )
@@ -64,7 +64,7 @@ export function AttemptScoreBox({ attempt }: { attempt: PrepTestPoolAttempt }) {
     return (
       <span className={attemptScoreBoxClass}>
         <span className="text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">{test}</span>
-        <span className="text-2xl font-bold leading-[1.3] text-[var(--greyscale-400)]">{` · ${br} BR`}</span>
+        <span className="text-2xl font-bold leading-[1.3] text-[var(--greyscale-400)]">{` · ${br} Untimed`}</span>
       </span>
     )
   }
@@ -79,7 +79,7 @@ export function AttemptScoreBox({ attempt }: { attempt: PrepTestPoolAttempt }) {
 
   return (
     <span className={`${attemptScoreBoxClass} text-2xl font-bold leading-[1.3] text-[var(--greyscale-400)]`}>
-      {br} BR
+      {br} Untimed
     </span>
   )
 }

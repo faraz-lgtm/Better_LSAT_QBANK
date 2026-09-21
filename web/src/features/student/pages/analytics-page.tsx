@@ -22,6 +22,7 @@ import {
   mapPrioritiesToSections,
   mapSectionSessionToHistoryEntry,
   mapTrajectoryToScoreProgress,
+  withBestScoreFromTrajectory,
 } from "@/features/student/analytics/map-analytics"
 import {
   filterBookmarkedOnly,
@@ -272,7 +273,7 @@ function OverviewTab() {
       usersApi?.getStudyContext() ?? Promise.resolve(null),
     ])
       .then(([o, t, p, drills, sectionSessions, prepTests, studyContext]) => {
-        setOverview(o)
+        setOverview(withBestScoreFromTrajectory(o, t))
         const filtered = takeLastByTimeRange(t, timeRange)
         setTrajectory(mapTrajectoryToScoreProgress(filtered))
         setSections(mapPrioritiesToSections(p))
@@ -418,7 +419,7 @@ function OverviewTab() {
             </span>
             <span className="flex items-center gap-1.5 text-xs leading-[1.4] tracking-[0.02em] text-[var(--greyscale-500)]">
               <span className="size-2.5 rounded-full bg-[#ff6f00]" aria-hidden />
-              Blind Review
+              Untimed Review
             </span>
           </div>
         </div>

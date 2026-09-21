@@ -209,7 +209,7 @@ function PracticeDrillQuestionPanel({
             </span>
             {recommendedForBr ? (
               <span className="inline-flex rounded-full border border-[#ff9d51] bg-[#fff3ea] px-3 py-1 text-xs font-semibold text-[#c45a00]">
-                Recommended for BR
+                Recommended for Untimed Review
               </span>
             ) : null}
           </div>

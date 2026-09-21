@@ -80,9 +80,9 @@ export function getAttemptDisplayScores(attempt: PrepTestPoolAttempt): {
 
 export function attemptScoreLabel(attempt: PrepTestPoolAttempt): string {
   const { test, br } = getAttemptDisplayScores(attempt)
-  if (test != null && br != null) return `${test} · ${br} BR`
+  if (test != null && br != null) return `${test} · ${br} Untimed`
   if (test != null) return String(test)
-  if (br != null) return `${br} BR`
+  if (br != null) return `${br} Untimed`
   return "—"
 }
 

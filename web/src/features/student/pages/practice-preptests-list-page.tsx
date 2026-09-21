@@ -51,7 +51,7 @@ const FILTER_TABS: { id: PrepTestPoolFilter; label: string }[] = [
   { id: "in_progress", label: "In Progress" },
   { id: "fresh", label: "Fresh" },
   { id: "completed", label: "Completed" },
-  { id: "blind_review", label: "Blind Review" },
+  { id: "blind_review", label: "Untimed Review" },
 ]
 
 const SORT_OPTIONS = ["Newest", "Oldest"] as const
@@ -127,7 +127,7 @@ function statusTitle(item: PrepTestPoolItem, isPoolRestricted: boolean): string 
 }
 
 function statusSubtitle(item: PrepTestPoolItem): string {
-  if (item.blindReviewStatus) return "Blind Review"
+  if (item.blindReviewStatus) return "Untimed Review"
   if (item.status === "completed" && item.completedAt) {
     return formatCompletedDate(item.completedAt)
   }
@@ -390,7 +390,7 @@ function PrepTestListCard({
       onClick={onBlindReview}
       className={BLIND_REVIEW_ACTION_CLASS}
     >
-      {startingBlindReview ? "…" : "Blind Review"}
+      {startingBlindReview ? "…" : "Untimed Review"}
     </button>
   ) : unavailableLabel ? (
     <span
@@ -643,7 +643,7 @@ function PracticePrepTestsListPage() {
       }
       navigate(`/app/practice/blind-review/${encodeURIComponent(item.id)}`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to start blind review")
+      setError(e instanceof Error ? e.message : "Failed to start untimed review")
     } finally {
       setStartingBlindReviewId(null)
     }
