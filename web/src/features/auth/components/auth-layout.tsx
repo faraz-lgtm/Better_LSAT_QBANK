@@ -17,6 +17,8 @@ type AuthLayoutProps = {
   hideSidebar?: boolean
   /** Hide intent header sign-in prompt when user is already authenticated. */
   hideIntentSignIn?: boolean
+  /** Hide intent Upgrade CTA for paid accounts. */
+  hideIntentUpgrade?: boolean
 }
 
 function getDefaultCtaPrompt(ctaHref: "/login" | "/signup"): string {
@@ -32,6 +34,7 @@ function AuthLayout({
   contentLayout = "default",
   hideSidebar = false,
   hideIntentSignIn = false,
+  hideIntentUpgrade = false,
 }: AuthLayoutProps) {
   const prompt = ctaPrompt ?? (ctaHref ? getDefaultCtaPrompt(ctaHref) : undefined)
   const showFooter = headerVariant === "auth" || headerVariant === "intent"
@@ -69,6 +72,7 @@ function AuthLayout({
             ctaPrompt={prompt}
             variant={headerVariant}
             hideIntentSignIn={hideIntentSignIn}
+            hideIntentUpgrade={hideIntentUpgrade}
           />
           <main className={mainClass}>
             <div className={shellClass}>{children}</div>

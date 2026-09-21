@@ -508,16 +508,16 @@ function DiagnosticStatsRow({
         </p>
       </div>
 
-      <div className="relative overflow-hidden p-6">
+      <div className="relative flex flex-col gap-2 overflow-hidden p-6">
         <p className="text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
           Projected Score Band
         </p>
         {locked ? (
           <>
-            <p className="mt-2 select-none text-[28px] font-bold leading-[1.2] text-[var(--color-student-heading)] blur-sm">
+            <p className="select-none text-[28px] font-bold leading-[1.2] text-[var(--color-student-heading)] blur-sm">
               —
             </p>
-            <p className="mt-1 select-none text-sm font-medium leading-normal text-[var(--greyscale-500)] blur-sm">
+            <p className="select-none text-sm font-medium leading-normal text-[var(--greyscale-500)] blur-sm">
               After 14 weeks of prep
             </p>
             <div className="absolute inset-0 flex items-center justify-center rounded-br-[16px] bg-[var(--greyscale-0)]/80">
@@ -533,10 +533,10 @@ function DiagnosticStatsRow({
           </>
         ) : (
           <>
-            <p className="mt-2 text-[28px] font-bold leading-[1.2] text-[var(--color-student-heading)]">
+            <p className="text-[28px] font-bold leading-[1.2] text-[var(--color-student-heading)]">
               {projectedLow}–{projectedHigh}
             </p>
-            <p className="mt-1 text-sm font-medium leading-normal text-[var(--greyscale-500)]">
+            <p className="text-sm font-medium leading-normal text-[var(--greyscale-500)]">
               After 14 weeks of prep
             </p>
           </>
@@ -1568,7 +1568,7 @@ function GuestDiagnosticResultsView({
         {/* ── Score header ── */}
         <div className="border-b border-[var(--greyscale-100)] px-6 py-5">
           <p className="text-center text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">{heading}</p>
-          <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.4px] text-[var(--greyscale-500)]">
                 Your Score
@@ -1578,14 +1578,14 @@ function GuestDiagnosticResultsView({
                 <span className="text-xl font-semibold text-[var(--greyscale-500)]">Correct</span>
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex min-w-0 flex-1 flex-wrap justify-center gap-2 sm:px-4">
               {result.outcomes.map((outcome, index) => (
                 <OutcomePill key={outcome.questionId} index={index} isCorrect={outcome.isCorrect} />
               ))}
             </div>
             <Link
               to={reviewInTesterHref}
-              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-[14px] bg-[#df1c41] px-4 text-sm font-semibold text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#df1c41]/90"
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 self-center rounded-[14px] bg-[#df1c41] px-4 text-sm font-semibold text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#df1c41]/90 sm:self-auto"
             >
               Review in Tester
             </Link>
