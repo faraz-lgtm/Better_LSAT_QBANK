@@ -153,7 +153,6 @@ export function buildExplanationQuestionDetailView(
       explanationHtml: c.explanationHtml,
     })) ?? []
 
-  const hasWritten = Boolean(detail?.explanationHtml?.trim())
   const hasVideo = Boolean(detail?.videoUrl?.trim())
 
   const correctChoiceId = detail?.correctChoiceId ?? ""
@@ -212,6 +211,7 @@ export function buildExplanationQuestionDetailView(
     videos,
     analytics: buildAnalytics(loc, detail, choices),
     neighbors,
-    hasExplanationTab: hasWritten || hasVideo,
+    /** Video Explanation tab — only when a video URL exists (written content lives on Question). */
+    hasExplanationTab: hasVideo,
   }
 }

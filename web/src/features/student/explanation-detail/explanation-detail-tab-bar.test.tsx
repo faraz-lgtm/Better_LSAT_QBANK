@@ -39,6 +39,53 @@ const questionNav: ExplanationQuestionNavSection[] = [
   },
 ]
 
+describe("ExplanationDetailTabBar tabs", () => {
+  it("hides Video Explanation when showExplanationTab is false", () => {
+    render(
+      <MemoryRouter>
+        <ExplanationDetailTabBar
+          headingCode="PT 160 S1 P1 Q5"
+          subtitleTrail="PrepTest 160"
+          questionId="q5"
+          questionNumber={5}
+          questionNav={questionNav}
+          tab="question"
+          onTabChange={() => {}}
+          prevHref={null}
+          nextHref={null}
+          showExplanationTab={false}
+        />
+      </MemoryRouter>,
+    )
+
+    const tablist = screen.getByRole("tablist", { name: "Question detail" })
+    expect(within(tablist).getByRole("tab", { name: "Question" })).toBeInTheDocument()
+    expect(within(tablist).getByRole("tab", { name: "Insights" })).toBeInTheDocument()
+    expect(within(tablist).queryByRole("tab", { name: "Video Explanation" })).not.toBeInTheDocument()
+  })
+
+  it("shows Video Explanation when showExplanationTab is true", () => {
+    render(
+      <MemoryRouter>
+        <ExplanationDetailTabBar
+          headingCode="PT 160 S1 P1 Q5"
+          subtitleTrail="PrepTest 160"
+          questionId="q5"
+          questionNumber={5}
+          questionNav={questionNav}
+          tab="question"
+          onTabChange={() => {}}
+          prevHref={null}
+          nextHref={null}
+          showExplanationTab
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole("tab", { name: "Video Explanation" })).toBeInTheDocument()
+  })
+})
+
 describe("ExplanationDetailTabBar question jump menu", () => {
   it("lists the full PrepTest across sections and passages", async () => {
     const user = userEvent.setup()

@@ -175,7 +175,7 @@ function ExplanationQuestionDetailPage() {
           onTabChange={setTab}
           prevHref={neighborHref(view.neighbors.prevRouteKey, tab)}
           nextHref={neighborHref(view.neighbors.nextRouteKey, tab)}
-          showExplanationTab
+          showExplanationTab={view.hasExplanationTab}
         />
 
         {detailError ? <p className="text-sm text-[#95122b]">{detailError}</p> : null}

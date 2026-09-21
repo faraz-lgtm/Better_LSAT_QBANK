@@ -88,6 +88,8 @@ function PracticeSessionQuestionNavButton({
   const hoverTitle = targetTimeLabel ?? undefined
 
   if (outcome != null) {
+    const outcomeLabel =
+      outcome === "correct" ? "correct" : outcome === "unanswered" ? "unanswered" : "incorrect"
     const outcomeChrome =
       outcome === "correct"
         ? "border-[#40c4aa] bg-[#effefa] text-[#0d0d12] dark:bg-[rgba(64,196,170,0.18)] dark:text-[#40c4aa]"
@@ -101,6 +103,14 @@ function PracticeSessionQuestionNavButton({
         data-review-nav-outcome={outcome}
       >
         <ReviewOutcomeIcon outcome={outcome} />
+        {active ? (
+          <span
+            className="h-[10px] w-1 shrink-0 rounded-sm bg-[var(--color-student-heading)]"
+            aria-hidden
+          />
+        ) : (
+          <span className="h-[10px] w-1 shrink-0" aria-hidden />
+        )}
         <button
           type="button"
           onClick={onClick}
@@ -111,9 +121,7 @@ function PracticeSessionQuestionNavButton({
           )}
           aria-current={active ? "true" : undefined}
           aria-label={withTargetTimeAria(
-            `Question ${number}, ${
-              outcome === "correct" ? "correct" : outcome === "unanswered" ? "unanswered" : "incorrect"
-            }`,
+            `Question ${number}, ${outcomeLabel}`,
             targetTimeLabel,
           )}
         >
@@ -248,6 +256,19 @@ function PracticeSessionQuestionNavButton({
           )}
         >
           {number}
+          {active ? (
+            <>
+              <span className={OFFICIAL_QUESTION_NAV_CURRENT_BAR_CLASS} aria-hidden />
+              <img
+                src="/figma/exam-official/current-caret.svg"
+                alt=""
+                width={3}
+                height={3}
+                className={OFFICIAL_QUESTION_NAV_CARET_CLASS}
+                draggable={false}
+              />
+            </>
+          ) : null}
         </button>
       </div>
     )
