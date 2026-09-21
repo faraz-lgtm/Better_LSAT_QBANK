@@ -151,10 +151,7 @@ function ReviewStaticSwitch({ checked = false }: { checked?: boolean }) {
 
 function ReviewPassageCardHeader() {
   return (
-    <div className="mb-8 flex h-8 shrink-0 items-center justify-between gap-4">
-      <span className="inline-flex h-8 items-center rounded-[8px] bg-[var(--primary-25)] px-4 py-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)]">
-        Passage Only View
-      </span>
+    <div className="mb-8 flex h-8 shrink-0 items-center justify-end gap-4">
       <span className="inline-flex h-8 items-center gap-4" aria-label="Analysis View is display only">
         <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
           Analysis View

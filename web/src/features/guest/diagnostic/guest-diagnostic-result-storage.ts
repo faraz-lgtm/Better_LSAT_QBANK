@@ -77,11 +77,22 @@ function parseGuestDiagnosticResult(value: unknown): GuestDiagnosticResult | nul
     typeof parsed.completedAt === "string" && parsed.completedAt.trim()
       ? parsed.completedAt
       : new Date().toISOString()
+  const correctCount = Number.isFinite(parsed.correctCount)
+    ? Number(parsed.correctCount)
+    : parsed.outcomes.filter((o) => o && typeof o === "object" && (o as { isCorrect?: boolean }).isCorrect)
+        .length
+  const questionCount = Number.isFinite(parsed.questionCount)
+    ? Number(parsed.questionCount)
+    : parsed.outcomes.length
+  const scoreFields = buildResultScoreFields(parsed.intentId, correctCount, questionCount)
   return {
     ...(parsed as GuestDiagnosticResult),
     id: typeof parsed.id === "string" && parsed.id.trim() ? parsed.id : newDiagnosticAttemptId(),
     completedAt,
     diagnosticNumber: Number.isFinite(parsed.diagnosticNumber) ? Number(parsed.diagnosticNumber) : 1,
+    correctCount,
+    questionCount,
+    ...scoreFields,
   }
 }
 
@@ -260,7 +271,8 @@ function readGuestDiagnosticResult(): GuestDiagnosticResult | null {
 function formatDiagnosticDateLabel(isoDate: string): string {
   const date = new Date(isoDate)
   if (Number.isNaN(date.getTime())) return ""
-  return `${date.getMonth() + 1}/${date.getDate()}`
+  // "Sep 21" — not M/D, which reads like a raw score (e.g. 9/21).
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
 }
 
 function getDiagnosticIntentTitle(intentId: GuestDiagnosticIntentId): string {

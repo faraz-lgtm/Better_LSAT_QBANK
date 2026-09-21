@@ -37,28 +37,25 @@ export type ReviewPassageCardHeaderProps = {
   onAnalysisCheckedChange?: (checked: boolean) => void
 }
 
-/** Review-tester passage chrome: Passage Only View badge + Analysis View switch (RC only). */
+/** Review-tester passage chrome: Analysis View switch (RC only). */
 export function ReviewPassageCardHeader({
   analysisEnabled = false,
   analysisChecked = false,
   onAnalysisCheckedChange,
 }: ReviewPassageCardHeaderProps) {
+  if (!analysisEnabled) return null
+
   return (
-    <div className="mb-8 flex h-8 shrink-0 items-center justify-between gap-4">
-      <span className="inline-flex h-8 items-center rounded-[8px] bg-[var(--primary-25)] px-4 py-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)]">
-        Passage Only View
-      </span>
-      {analysisEnabled ? (
-        <span className="inline-flex h-8 items-center gap-4">
-          <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
-            Analysis View
-          </span>
-          <ReviewAnalysisSwitch
-            checked={analysisChecked}
-            onCheckedChange={(next) => onAnalysisCheckedChange?.(next)}
-          />
+    <div className="mb-8 flex h-8 shrink-0 items-center justify-end gap-4">
+      <span className="inline-flex h-8 items-center gap-4">
+        <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
+          Analysis View
         </span>
-      ) : null}
+        <ReviewAnalysisSwitch
+          checked={analysisChecked}
+          onCheckedChange={(next) => onAnalysisCheckedChange?.(next)}
+        />
+      </span>
     </div>
   )
 }

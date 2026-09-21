@@ -5,9 +5,9 @@ import userEvent from "@testing-library/user-event"
 import { ReviewPassageCardHeader } from "@/features/student/practice-session/review-passage-card-header"
 
 describe("ReviewPassageCardHeader", () => {
-  it("hides Analysis View when analysis is unavailable (e.g. LR)", () => {
-    render(<ReviewPassageCardHeader analysisEnabled={false} />)
-    expect(screen.getByText("Passage Only View")).toBeInTheDocument()
+  it("renders nothing when analysis is unavailable (e.g. LR)", () => {
+    const { container } = render(<ReviewPassageCardHeader analysisEnabled={false} />)
+    expect(container).toBeEmptyDOMElement()
     expect(screen.queryByText("Analysis View")).not.toBeInTheDocument()
     expect(screen.queryByRole("switch", { name: /analysis view/i })).not.toBeInTheDocument()
   })
