@@ -51,7 +51,7 @@ function BlindReviewNotesHeader({
           <div className="flex h-6 flex-wrap items-center gap-2">
             <span className={BLIND_REVIEW_NOTES_BADGE_BLIND_CLASS}>
               <EyeOff className="size-3 shrink-0" aria-hidden />
-              Blind Review
+              Untimed Review
             </span>
             <span className={BLIND_REVIEW_NOTES_BADGE_ACTUAL_CLASS}>{actualScoreLabel}</span>
           </div>
@@ -82,7 +82,7 @@ function BlindReviewSectionCard({
 }) {
   const canStart = blindReviewActive && row.practiceable && row.sectionSessionId
   const recommendedCount = row.questionCount
-  const recommendedLabel = `${recommendedCount} Question${recommendedCount === 1 ? "" : "s"} recommended for BR`
+  const recommendedLabel = `${recommendedCount} Question${recommendedCount === 1 ? "" : "s"} recommended for untimed review`
 
   return (
     <div className={BLIND_REVIEW_NOTES_SECTION_CARD_CLASS}>
@@ -132,7 +132,7 @@ function PracticeBlindReviewPrepTestPage() {
       setDetail(data)
       return data
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load blind review")
+      setError(e instanceof Error ? e.message : "Failed to load untimed review")
       setDetail(null)
       return null
     } finally {
@@ -154,7 +154,7 @@ function PracticeBlindReviewPrepTestPage() {
         if (!cancelled) await load()
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Failed to start blind review")
+          setError(e instanceof Error ? e.message : "Failed to start untimed review")
         }
       } finally {
         if (!cancelled) setStarting(false)
@@ -181,7 +181,7 @@ function PracticeBlindReviewPrepTestPage() {
       })
       navigate(`/app/analytics/preptests/results/${encodeURIComponent(completed.id)}`, { replace: true })
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to complete blind review")
+      setError(e instanceof Error ? e.message : "Failed to complete untimed review")
     } finally {
       setFinishing(false)
     }
@@ -214,7 +214,7 @@ function PracticeBlindReviewPrepTestPage() {
   }
 
   if (loading) {
-    return pageShell(<StudentPageLoader centered className="py-16" label="Loading blind review…" />)
+    return pageShell(<StudentPageLoader centered className="py-16" label="Loading untimed review…" />)
   }
 
   if (!detail) {
@@ -222,7 +222,7 @@ function PracticeBlindReviewPrepTestPage() {
       <>
         <p className="pt-6 text-sm text-red-600">{error ?? "PrepTest not found."}</p>
         <Link to="/app/practice/blind-review" className="text-sm font-semibold text-[var(--primary)] hover:underline">
-          Back to Blind Review
+          Back to Untimed Review
         </Link>
       </>,
     )
@@ -235,7 +235,7 @@ function PracticeBlindReviewPrepTestPage() {
   const practiceableSections = detail.sections.filter((s) => s.practiceable && s.sectionSessionId)
   const recommendedTotal = practiceableSections.reduce((sum, s) => sum + s.questionCount, 0)
   const actualScoreLabel =
-    blindReview.scaledScore != null ? `Actual: ${blindReview.scaledScore}` : "Actual: BR"
+    blindReview.scaledScore != null ? `Actual: ${blindReview.scaledScore}` : "Actual: —"
 
   return (
     <StudentMain
@@ -259,7 +259,7 @@ function PracticeBlindReviewPrepTestPage() {
 
           <section className={BLIND_REVIEW_NOTES_CARD_CLASS}>
         <div className="flex h-12 w-full items-center justify-between gap-2.5">
-          <h2 className="shrink-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">Blind Review</h2>
+          <h2 className="shrink-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">Untimed Review</h2>
           <p className="min-w-0 text-right text-sm font-normal leading-normal tracking-[0.28px] text-[var(--greyscale-500)]">
             Go to your{" "}
             <Link to={PREP_TEST_POOLS_HREF} className="font-semibold text-[var(--primary)] hover:underline">
@@ -282,7 +282,7 @@ function PracticeBlindReviewPrepTestPage() {
               <>
                 <br/>
                 <p className="mb-0 mt-6">
-                  {recommendedTotal} question{recommendedTotal === 1 ? "" : "s"} are recommended for BR
+                  {recommendedTotal} question{recommendedTotal === 1 ? "" : "s"} are recommended for untimed review
                 </p>
                 <p className="mb-0 mt-6 font-normal text-[var(--blind-review-accent)]">
                   The questions with orange color are the ones we think you should review.
@@ -294,14 +294,14 @@ function PracticeBlindReviewPrepTestPage() {
           <div className="flex w-full max-w-[513px] flex-col gap-6">
             {blindReviewDone ? (
               <p className="rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-6 py-8 text-sm font-semibold text-[var(--explanation-answered)]">
-                Blind review completed
-                {blindReview.blindReviewScaledScore != null ? ` · BR score ${blindReview.blindReviewScaledScore}` : ""}
+                Untimed review completed
+                {blindReview.blindReviewScaledScore != null ? ` · Untimed Review score ${blindReview.blindReviewScaledScore}` : ""}
                 .
               </p>
             ) : null}
             {!blindReviewDone && !blindReviewActive ? (
               <p className="rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-6 py-8 text-sm text-[var(--greyscale-500)]">
-                {starting ? "Starting blind review…" : "Preparing sections…"}
+                {starting ? "Starting untimed review…" : "Preparing sections…"}
               </p>
             ) : practiceableSections.length > 0 ? (
               <ul className="flex flex-col gap-6">
@@ -342,7 +342,7 @@ function PracticeBlindReviewPrepTestPage() {
               className={cn(BLIND_REVIEW_NOTES_START_BUTTON_CLASS, "min-w-[220px] disabled:opacity-50")}
             >
               <FigmaIcon name="notification-text-square" className="size-5 shrink-0" aria-hidden />
-              {finishing ? "Submitting…" : "Submit Blind Review"}
+              {finishing ? "Submitting…" : "Submit Untimed Review"}
             </button>
           )}
         </div>

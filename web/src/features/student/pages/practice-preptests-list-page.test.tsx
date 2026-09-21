@@ -90,7 +90,7 @@ describe("PracticePrepTestsListPage sort", () => {
     expect(screen.getByRole("button", { name: "In Progress (0)" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Fresh (2)" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Completed (0)" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Blind Review" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Untimed Review" })).toBeInTheDocument()
     expect(screen.getAllByText("Ready to Take")).toHaveLength(2)
     expect(screen.getByText("901").closest("[data-pt-badge]")).toHaveStyle({ width: "32px", height: "32px" })
     expect(screen.getByTestId("preptest-list-row-pt-901").className).toMatch(/bg-\[var\(--greyscale-0\)\]/)
@@ -242,7 +242,7 @@ describe("PracticePrepTestsListPage see more", () => {
     expect(await screen.findByText("Completed")).toBeInTheDocument()
     expect(screen.getByTestId("preptest-list-row-pt-122").className).toMatch(/hover:bg-\[var\(--primary-25\)\]/)
     expect(screen.getByText("Score:")).toBeInTheDocument()
-    expect(screen.getByText("Blind Review:")).toBeInTheDocument()
+    expect(screen.getByText("Untimed Review:")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Retake" })).toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Expand attempt history" }))

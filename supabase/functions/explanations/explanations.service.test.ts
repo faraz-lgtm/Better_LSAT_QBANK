@@ -372,7 +372,7 @@ Deno.test('mapPrepTestTreeRows orders RC passages by first question number', () 
 
 Deno.test('prepTestRowSubtitleFromStatuses matches Figma status tags', () => {
   assertEquals(prepTestRowSubtitleFromStatuses(['fresh', 'fresh']), 'Fresh')
-  assertEquals(prepTestRowSubtitleFromStatuses(['fresh', 'in_process']), 'In Process • Blind Review')
+  assertEquals(prepTestRowSubtitleFromStatuses(['fresh', 'in_process']), 'In Process • Untimed Review')
   assertEquals(prepTestRowSubtitleFromStatuses(['answered', 'seen']), 'Answered')
   assertEquals(prepTestRowSubtitleFromStatuses(['seen']), 'Seen')
   assertEquals(prepTestRowSubtitleFromStatuses([]), 'Fresh')

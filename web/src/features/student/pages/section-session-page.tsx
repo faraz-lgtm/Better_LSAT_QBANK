@@ -374,7 +374,7 @@ function SectionQuestionPanel({
             </span>
             {recommendedForBr ? (
               <span className="inline-flex rounded-full border border-[#ff9d51] bg-[#fff3ea] px-3 py-1 text-xs font-semibold text-[#c45a00]">
-                Recommended for BR
+                Recommended for Untimed Review
               </span>
             ) : null}
           </div>
@@ -548,7 +548,7 @@ function SectionSessionPage() {
   })
 
   const submitModalTitle = postCompleteBlindReview
-    ? "Finish Blind Review"
+    ? "Finish Untimed Review"
     : blindReviewMode
       ? "Exit Section"
       : "Submit Section"
@@ -608,7 +608,7 @@ function SectionSessionPage() {
           await practiceApi.completeSectionBlindReview({ sessionId, answers })
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to save blind review")
+        setError(e instanceof Error ? e.message : "Failed to save untimed review")
         setFinishing(false)
         return
       } finally {
@@ -1216,16 +1216,16 @@ function SectionSessionPage() {
     if (postCompleteBlindReview) {
       if (unansweredCount > 0) {
         const noun = unansweredCount === 1 ? "question" : "questions"
-        return `Finish blind review and view your results? You have ${unansweredCount} unanswered ${noun} in blind review.`
+        return `Finish untimed review and view your results? You have ${unansweredCount} unanswered ${noun} in untimed review.`
       }
-      return "Finish blind review and view your results?"
+      return "Finish untimed review and view your results?"
     }
     if (blindReviewMode) {
       if (unansweredCount > 0) {
         const noun = unansweredCount === 1 ? "question" : "questions"
-        return `Submit this section and return to blind review? You have ${unansweredCount} unanswered ${noun} in your blind review answers.`
+        return `Submit this section and return to untimed review? You have ${unansweredCount} unanswered ${noun} in your untimed review answers.`
       }
-      return "Submit this section and return to blind review?"
+      return "Submit this section and return to untimed review?"
     }
     if (unansweredCount > 0) {
       const noun = unansweredCount === 1 ? "question" : "questions"
@@ -1395,7 +1395,7 @@ function SectionSessionPage() {
       const detail = await practiceApi.getBlindReviewDetail(testId)
       const firstSessionId = firstBlindReviewSectionSessionId(detail)
       if (!firstSessionId) {
-        throw new Error("No sections available for blind review")
+        throw new Error("No sections available for untimed review")
       }
       setCompleteModal(null)
       const targetPath = blindReviewSectionSessionPath(testId, firstSessionId)
@@ -1405,7 +1405,7 @@ function SectionSessionPage() {
       }
       navigate(targetPath, { replace: true })
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to start blind review")
+      setError(e instanceof Error ? e.message : "Failed to start untimed review")
     } finally {
       setStartingBlindReview(false)
     }
@@ -1589,7 +1589,7 @@ function SectionSessionPage() {
     <PracticeSessionFinishMenu
       disabled={sessionCompleted && !postCompleteBlindReview}
       finishing={finishing}
-      submitLabel={postCompleteBlindReview ? "Finish Blind Review" : undefined}
+      submitLabel={postCompleteBlindReview ? "Finish Untimed Review" : undefined}
       buttonClassName={
         useActiveDrillLayout ? ACTIVE_DRILL_FINISH_BUTTON_CLASS : SESSION_FINISH_BUTTON_CLASS
       }
@@ -1661,7 +1661,7 @@ function SectionSessionPage() {
       activeSectionSessionId={sessionId ?? null}
       onSelectSection={navigateToBlindReviewSection}
       questionRef={questionRefLabel}
-      actualScoreLabel="Actual: BR"
+      actualScoreLabel="Actual: —"
       notesOpen={resultsReviewMode ? reviewSidePanel === "notes" : notesOpen}
       notesEnabled
       onToggleNotes={handleToggleNotes}

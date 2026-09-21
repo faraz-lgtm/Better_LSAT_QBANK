@@ -1625,20 +1625,20 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       if (blindReview) {
         if (session.kind !== 'SECTION' || !session.prep_test_id) {
-          throw new PracticeValidationError('Blind review answers require a section session tied to a PrepTest')
+          throw new PracticeValidationError('Untimed review answers require a section session tied to a PrepTest')
         }
         const ptSessions = await deps.repository.listUserSessionsForPrepTest(userId, session.prep_test_id)
         const prepTestSession = prepTestSessionEligibleToStartBlindReview(ptSessions)
         if (!prepTestSession) {
           const newest = sortedPrepTestSessions(ptSessions)[0]
           if (newest?.blind_review_completed_at) {
-            throw new PracticeValidationError('Blind review is already completed for this PrepTest')
+            throw new PracticeValidationError('Untimed review is already completed for this PrepTest')
           }
-          throw new PracticeValidationError('Complete the PrepTest before blind review')
+          throw new PracticeValidationError('Complete the PrepTest before untimed review')
         }
         const meta = prepTestSession.metadata
         if (meta.blindReviewActive !== true) {
-          throw new PracticeValidationError('Start blind review for this PrepTest first')
+          throw new PracticeValidationError('Start untimed review for this PrepTest first')
         }
       }
 
@@ -1792,10 +1792,10 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const session = await deps.repository.getSessionById(sessionId, userId)
       if (!session) throw new PracticeForbiddenError('Session not found')
       if (session.kind !== 'DRILL') {
-        throw new PracticeValidationError('Blind review is only available for drill sessions')
+        throw new PracticeValidationError('Untimed review is only available for drill sessions')
       }
       if (!session.completed_at) {
-        throw new PracticeValidationError('Complete the drill before blind review')
+        throw new PracticeValidationError('Complete the drill before untimed review')
       }
 
       const allowedQuestionIds = new Set(drillQuestionIdsFromMetadata(session.metadata))
@@ -1854,10 +1854,10 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const session = await deps.repository.getSessionById(sessionId, userId)
       if (!session) throw new PracticeForbiddenError('Session not found')
       if (session.kind !== 'SECTION') {
-        throw new PracticeValidationError('Blind review is only available for section sessions')
+        throw new PracticeValidationError('Untimed review is only available for section sessions')
       }
       if (!session.completed_at) {
-        throw new PracticeValidationError('Complete the section before blind review')
+        throw new PracticeValidationError('Complete the section before untimed review')
       }
 
       const allowedQuestionIds = new Set(drillQuestionIdsFromMetadata(session.metadata))
@@ -3218,7 +3218,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         prepTestSession = sortedPrepTestSessions(sessions).find((s) => Boolean(s.completed_at)) ?? null
       }
       if (!prepTestSession) {
-        throw new PracticeValidationError('Complete the PrepTest before blind review')
+        throw new PracticeValidationError('Complete the PrepTest before untimed review')
       }
 
       return buildBlindReviewDetail(row, sessions, prepTestSession)
@@ -3238,7 +3238,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
       const prepTestSession = prepTestSessionAwaitingBlindReview(sessions)
       if (!prepTestSession) {
-        throw new PracticeValidationError('No PrepTest awaiting blind review')
+        throw new PracticeValidationError('No PrepTest awaiting untimed review')
       }
 
       const sessionRow = await deps.repository.updateSession(prepTestSession.id, userId, {
@@ -3267,9 +3267,9 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (!prepTestSession) {
         const newest = sortedPrepTestSessions(sessions)[0]
         if (newest?.blind_review_completed_at) {
-          throw new PracticeValidationError('Blind review is already completed for this PrepTest')
+          throw new PracticeValidationError('Untimed review is already completed for this PrepTest')
         }
-        throw new PracticeValidationError('Complete the PrepTest before starting blind review')
+        throw new PracticeValidationError('Complete the PrepTest before starting untimed review')
       }
 
       const sessionRow = await deps.repository.updateSession(prepTestSession.id, userId, {
@@ -3314,7 +3314,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (!prepTestSession) {
         const newest = sortedPrepTestSessions(sessions)[0]
         if (newest?.blind_review_completed_at) {
-          throw new PracticeValidationError('Blind review is already completed for this PrepTest')
+          throw new PracticeValidationError('Untimed review is already completed for this PrepTest')
         }
         throw new PracticeValidationError('No completed PrepTest session found')
       }

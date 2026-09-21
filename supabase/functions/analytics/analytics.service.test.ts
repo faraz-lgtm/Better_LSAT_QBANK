@@ -342,6 +342,60 @@ Deno.test('getOverview excludes experimental sections from score and percentile'
   assertEquals(o.averagePercentile, 44)
 })
 
+Deno.test('getOverview best score uses untimed review when it is higher than the timed score', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listCompletedPreptests: async () => [
+        completedPreptestRow({
+          scaled_score: 161,
+          percentile: 76,
+          blind_review_scaled_score: 176,
+          blind_review_percentile: 99,
+        }),
+      ],
+    }),
+  })
+  const o = await service.getOverview('user-1')
+  assertEquals(o.bestScaledScore, 176)
+  assertEquals(o.bestPercentile, 99)
+  assertEquals(o.averageScaledScore, 161)
+})
+
+Deno.test('getOverview best score keeps a higher stored scaled score than section conversion', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listCompletedPreptests: async () => [
+        completedPreptestRow({
+          scaled_score: 176,
+          percentile: 99,
+          raw_score: 90,
+          prep_test_id: 'pt-1',
+        }),
+      ],
+      listCompletedSectionSessions: async () => [
+        {
+          id: 'sec-lr',
+          prep_test_id: 'pt-1',
+          section_id: 's-lr',
+          started_at: '2025-12-31T00:10:00Z',
+          completed_at: '2025-12-31T00:40:00Z',
+          raw_score: 20,
+          metadata: { sectionType: 'LR' },
+          admin_sections: { is_experimental: false, section_type: 'LR' as const },
+        },
+      ],
+      getScoreRowForRaw: async (_pt, raw) => {
+        if (raw === 20) return { scaled_score: 161, percentile: 76 }
+        return { scaled_score: 176, percentile: 99 }
+      },
+    }),
+  })
+  const o = await service.getOverview('user-1')
+  assertEquals(o.bestScaledScore, 176)
+  assertEquals(o.bestPercentile, 99)
+  assertEquals(o.averageScaledScore, 161)
+})
+
 Deno.test('getOverview average percentile uses conversion for average scaled score', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({

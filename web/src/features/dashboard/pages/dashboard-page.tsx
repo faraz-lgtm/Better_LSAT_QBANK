@@ -24,6 +24,7 @@ import {
   dashboardDrillMoreHref,
   pickDashboardActiveDrills,
 } from "@/features/dashboard/lib/pick-dashboard-drills"
+import { withBestScoreFromTrajectory } from "@/features/student/analytics/map-analytics"
 import { useAnalyticsApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import { ContinueDrillCard, continueDrillToCardDrill } from "@/features/student/components/continue-drill-card"
 import { StudentMain } from "@/features/student/components/student-main"
@@ -135,8 +136,9 @@ function DashboardPage() {
       setLoading(true)
       setError(null)
       try {
-        const [overviewData, drillSessions, priorities, context, profile] = await Promise.all([
+        const [overviewData, trajectoryPoints, drillSessions, priorities, context, profile] = await Promise.all([
           analyticsApi.getOverview(),
+          analyticsApi.getTrajectory(),
           analyticsApi.getSessions({ kind: "DRILL", limit: 50 }),
           analyticsApi.getPriorities(),
           usersApi.getStudyContext(),
@@ -144,7 +146,7 @@ function DashboardPage() {
         ])
         if (cancelled) return
 
-        setOverview(overviewData)
+        setOverview(withBestScoreFromTrajectory(overviewData, trajectoryPoints))
         setStudyContext(context)
         setFirstName(firstNameFromProfile(profile))
 

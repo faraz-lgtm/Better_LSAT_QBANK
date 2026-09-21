@@ -149,7 +149,7 @@ function PracticeSessionQuestionNavButton({
             flagged
               ? `Question ${number}, flagged`
               : recommendedForBr
-                ? `Question ${number}, recommended for blind review`
+                ? `Question ${number}, recommended for untimed review`
                 : `Question ${number}`,
             targetTimeLabel,
           )}

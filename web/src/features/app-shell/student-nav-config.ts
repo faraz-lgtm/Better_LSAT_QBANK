@@ -165,7 +165,7 @@ export function getStudentPageTitle(pathname: string, search = ""): string | nul
   if (pathname.startsWith("/app/analytics/preptests/results/")) return null
   if (pathname === "/app/practice/drills/lr/new" || pathname === "/app/practice/drills/rc/new") return null
   if (pathname.startsWith("/app/practice/results/")) return null
-  if (pathname.startsWith("/app/practice/blind-review")) return "Blind Review"
+  if (pathname.startsWith("/app/practice/blind-review")) return "Untimed Review"
 
   const activeItem = findActiveNavItem(pathname, search)
   if (activeItem) return activeItem.label

@@ -264,7 +264,7 @@ function PracticeBlindReviewQuestionPanel({
                 </label>
               ) : recommendedForBr ? (
                 <span className={BLIND_REVIEW_RECOMMENDED_BADGE_CLASS}>
-                  Recommended for Blind Review
+                  Recommended for Untimed Review
                 </span>
               ) : null}
             </div>

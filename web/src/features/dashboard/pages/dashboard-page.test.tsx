@@ -53,6 +53,7 @@ const mocks = vi.hoisted(() => ({
   getMyProfile: vi.fn(),
   getStudyContext: vi.fn(),
   getOverview: vi.fn(),
+  getTrajectory: vi.fn(),
   getSessions: vi.fn(),
   getPriorities: vi.fn(),
 }))
@@ -76,6 +77,7 @@ vi.mock("@/lib/api/users", () => ({
 vi.mock("@/lib/api/analytics", () => ({
   createAnalyticsApi: () => ({
     getOverview: mocks.getOverview,
+    getTrajectory: mocks.getTrajectory,
     getSessions: mocks.getSessions,
     getPriorities: mocks.getPriorities,
   }),
@@ -118,6 +120,7 @@ describe("DashboardPage", () => {
       studyMinutes: 0,
       predictedScore: null,
     })
+    mocks.getTrajectory.mockResolvedValue([])
     mocks.getSessions.mockResolvedValue({ sessions: [] })
     mocks.getPriorities.mockResolvedValue([])
   })
@@ -138,6 +141,7 @@ describe("DashboardPage", () => {
 
     const overview = deferred<Record<string, unknown>>()
     mocks.getOverview.mockReturnValue(overview.promise)
+    mocks.getTrajectory.mockReturnValue(new Promise(() => undefined))
     mocks.getSessions.mockReturnValue(new Promise(() => undefined))
     mocks.getPriorities.mockReturnValue(new Promise(() => undefined))
     mocks.getStudyContext.mockReturnValue(new Promise(() => undefined))
@@ -168,6 +172,7 @@ describe("DashboardPage", () => {
     const profile = deferred<{ first_name: string }>()
     mocks.getMyProfile.mockReturnValue(profile.promise)
     mocks.getOverview.mockReturnValue(new Promise(() => undefined))
+    mocks.getTrajectory.mockReturnValue(new Promise(() => undefined))
     mocks.getSessions.mockReturnValue(new Promise(() => undefined))
     mocks.getPriorities.mockReturnValue(new Promise(() => undefined))
     mocks.getStudyContext.mockReturnValue(new Promise(() => undefined))

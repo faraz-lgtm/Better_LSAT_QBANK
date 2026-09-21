@@ -135,10 +135,10 @@ describe("LessonContentRenderer active_drill", () => {
       />,
     )
     expect(screen.queryByText("Your prediction")).not.toBeInTheDocument()
-    expect(screen.queryByText("Blind review")).not.toBeInTheDocument()
+    expect(screen.queryByText("Untimed review")).not.toBeInTheDocument()
     expect(screen.getByText("Result")).toBeInTheDocument()
     expect(screen.getByText("Actual")).toBeInTheDocument()
-    expect(screen.getByText("Blind Review")).toBeInTheDocument()
+    expect(screen.getByText("Untimed Review")).toBeInTheDocument()
   })
 
   it("shows question result card from attempt when lesson has no linked refs", () => {

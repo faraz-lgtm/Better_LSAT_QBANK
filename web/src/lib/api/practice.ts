@@ -724,7 +724,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
         { method: "POST", body },
       )
       if (error) throw error
-      if (!data?.prepTests) throw new Error("No blind review pool returned from practice")
+      if (!data?.prepTests) throw new Error("No untimed review pool returned from practice")
       const normalized = {
         ...data,
         prepTests: data.prepTests.map((pt) =>
@@ -745,7 +745,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
         body: { prepTestId },
       })
       if (error) await throwIfEdgeInvokeFailed(error)
-      if (!data?.prepTest) throw new Error("No blind review detail returned from practice")
+      if (!data?.prepTest) throw new Error("No untimed review detail returned from practice")
       return data
     },
 

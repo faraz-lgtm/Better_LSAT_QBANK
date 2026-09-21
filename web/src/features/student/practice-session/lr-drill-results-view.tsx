@@ -234,7 +234,7 @@ function DrillResultsQuestionRow({
                   className="size-6 shrink-0"
                 />
                 <span className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
-                  Blind Review
+                  Untimed Review
                 </span>
               </div>
             </div>

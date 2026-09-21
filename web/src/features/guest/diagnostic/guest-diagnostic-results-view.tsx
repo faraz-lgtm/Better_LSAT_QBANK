@@ -1203,7 +1203,7 @@ function WrongQuestionsReviewSection({
           <p className="mt-0.5 text-xs leading-relaxed text-[var(--greyscale-500)]">
             Each question exactly as you took it, your answer and the correct one marked, and an
             Explanations toggle in the toolbar. Leave it off to reattempt cold first — that&apos;s
-            blind review, and it&apos;s the highest yield hour in your week.
+            untimed review, and it&apos;s the highest yield hour in your week.
           </p>
         </div>
         <Link

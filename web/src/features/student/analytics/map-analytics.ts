@@ -218,6 +218,30 @@ function toScaledProgressValue(scaled: number | null, raw: number | null): numbe
   return 120
 }
 
+/** Headline Best Score must match the chart: max of stored timed and untimed-review scores. */
+export function withBestScoreFromTrajectory(
+  overview: AnalyticsOverview,
+  points: readonly TrajectoryPoint[],
+): AnalyticsOverview {
+  let bestScaled = overview.bestScaledScore
+  let bestPercentile = overview.bestPercentile
+  for (const point of points) {
+    const candidates: Array<{ scaled: number | null; percentile: number | null }> = [
+      { scaled: point.regularScaledScore ?? point.scaledScore, percentile: point.percentile },
+      { scaled: point.blindReviewScaledScore, percentile: point.blindReviewPercentile },
+    ]
+    for (const candidate of candidates) {
+      if (candidate.scaled == null) continue
+      if (bestScaled == null || candidate.scaled > bestScaled) {
+        bestScaled = candidate.scaled
+        bestPercentile = candidate.percentile
+      }
+    }
+  }
+  if (bestScaled === overview.bestScaledScore) return overview
+  return { ...overview, bestScaledScore: bestScaled, bestPercentile }
+}
+
 export function mapTrajectoryToScoreProgress(points: TrajectoryPoint[]): ScoreProgressPoint[] {
   return points.map((p) => {
     const label = formatPrepTestChartLabel(p.prepTestTitle, p.moduleId)
