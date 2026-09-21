@@ -1564,7 +1564,10 @@ html.student-shell-active #root {
 }
 
 .intent-card__badge {
-  margin-bottom: 0.25rem;
+  position: absolute;
+  top: -0.5rem;
+  left: 1.5rem;
+  border: 1px solid #0d47a1;
   border-radius: 6px;
   background: #f3f7ff;
   padding: 0.125rem 0.5rem;
@@ -1793,6 +1796,7 @@ html.student-shell-active #root {
 }
 
 .dark .intent-card__badge {
+  border-color: var(--primary);
   background: var(--primary-25);
   color: var(--primary);
 }

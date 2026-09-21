@@ -76,6 +76,26 @@ describe("IntentPage", () => {
     expect(screen.queryByRole("link", { name: /sign in/i })).not.toBeInTheDocument()
   })
 
+  it("shows Upgrade CTA for free / guest accounts", () => {
+    render(
+      <MemoryRouter>
+        <IntentPage isAuthenticated={false} showUpgradeCta={true} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole("link", { name: /upgrade/i })).toBeInTheDocument()
+  })
+
+  it("hides Upgrade CTA for paid accounts", () => {
+    render(
+      <MemoryRouter>
+        <IntentPage isAuthenticated={true} showUpgradeCta={false} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByRole("link", { name: /upgrade/i })).not.toBeInTheDocument()
+  })
+
   it("links back to the app home when authenticated", () => {
     render(
       <MemoryRouter>

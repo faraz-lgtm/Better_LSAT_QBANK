@@ -21,6 +21,7 @@ import { GuestDiagnosticResultsPreviewPage } from "@/features/guest/pages/guest-
 import { GuestDiagnosticReviewPage } from "@/features/guest/pages/guest-diagnostic-review-page"
 import { MarketingHomePage } from "@/features/marketing/pages/marketing-home-page"
 import { IntentPage } from "@/features/auth/pages/intent-page"
+import { resolveStudentShellVariant } from "@/features/app-shell/student-shell-plan-variant"
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
 import { PrepCourseCoursePage } from "@/features/prep-course/pages/prep-course-course-page"
 import { PrepCourseLessonPage } from "@/features/prep-course/pages/prep-course-lesson-page"
@@ -156,7 +157,7 @@ function PublicOnly({ children }: { children: ReactElement }) {
 function IntentRouteGuard({
   render,
 }: {
-  render: (isAuthenticated: boolean) => ReactElement
+  render: (opts: { isAuthenticated: boolean; showUpgradeCta: boolean }) => ReactElement
 }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -226,10 +227,16 @@ function IntentRouteGuard({
   }, [])
 
   if (isAuthenticated === null) return null
-  if (!isAuthenticated) return render(false)
+  if (!isAuthenticated) return render({ isAuthenticated: false, showUpgradeCta: true })
   if (!profile) return null
   if (destination) return <Navigate to={destination} replace />
-  if (shouldAllowAuthenticatedIntentPage(entitlement, readDiagnosticFunnelState())) return render(true)
+  if (shouldAllowAuthenticatedIntentPage(entitlement, readDiagnosticFunnelState())) {
+    const showUpgradeCta =
+      resolveStudentShellVariant({
+        accessState: entitlement?.accessState ?? null,
+      }) === "free-plan"
+    return render({ isAuthenticated: true, showUpgradeCta })
+  }
   return null
 }
 
@@ -339,7 +346,13 @@ const router = createBrowserRouter([
   { path: "/login", element: <PublicOnly><LoginPage /></PublicOnly> },
   {
     path: "/intent",
-    element: <IntentRouteGuard render={(isAuthenticated) => <IntentPage isAuthenticated={isAuthenticated} />} />,
+    element: (
+      <IntentRouteGuard
+        render={({ isAuthenticated, showUpgradeCta }) => (
+          <IntentPage isAuthenticated={isAuthenticated} showUpgradeCta={showUpgradeCta} />
+        )}
+      />
+    ),
   },
   { path: "/signup", element: <PublicOnly><SignupPage /></PublicOnly> },
   { path: "/signup/check-email", element: <SignupCheckEmailPage /> },
