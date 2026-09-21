@@ -193,11 +193,11 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
               <span className="flex size-[42px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--primary)] text-sm font-semibold text-white">
                 {initials}
               </span>
-              <span className="hidden min-w-0 flex-col items-start gap-1 text-left sm:flex">
-                <span className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[color:var(--primary-800)]">
+              <span className="hidden min-w-0 flex-col items-start gap-0 text-left sm:flex">
+                <span className="text-base font-semibold leading-tight tracking-[0.32px] text-[color:var(--primary-800)]">
                   {displayName}
                 </span>
-                <span className="max-w-[220px] truncate text-xs font-normal leading-[1.5] tracking-[0.24px] text-[color:var(--primary-800)]">
+                <span className="max-w-[220px] truncate text-xs font-normal leading-tight tracking-[0.24px] text-[color:var(--primary-800)]">
                   {email ?? "student@example.com"}
                 </span>
               </span>
