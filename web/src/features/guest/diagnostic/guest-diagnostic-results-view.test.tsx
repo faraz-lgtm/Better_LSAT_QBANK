@@ -33,6 +33,7 @@ describe("GuestDiagnosticResultsView Section diagnostic", () => {
 
     expect(screen.getAllByText(/Full Section Diagnostic · Q10/)[0]!.closest("[class*='blur']")).toBeNull()
     expect(screen.getAllByText(/Full Section Diagnostic · Q6/)[0]!.closest("[class*='blur']")).toBeNull()
+    expect(screen.getByRole("button", { name: "Subscribe" })).toBeInTheDocument()
 
     const lockedRows = screen.getAllByTestId("diagnostic-locked-question-row")
     expect(lockedRows.length).toBeGreaterThan(0)
@@ -56,6 +57,9 @@ describe("GuestDiagnosticResultsView Section diagnostic", () => {
 
     expect(screen.queryByTestId("diagnostic-locked-question-row")).toBeNull()
     expect(screen.getAllByText(/Q11/)[0]!.closest("[class*='blur']")).toBeNull()
+    expect(screen.queryByRole("button", { name: "Subscribe" })).not.toBeInTheDocument()
+    expect(screen.queryByText("Take your first full exam to track progress")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Unlock my full report" })).not.toBeInTheDocument()
   })
 })
 

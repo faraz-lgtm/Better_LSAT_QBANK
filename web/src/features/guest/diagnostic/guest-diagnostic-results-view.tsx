@@ -15,9 +15,6 @@ import {
 } from '@/features/guest/diagnostic/guest-diagnostic-result-storage'
 import { useGuestPricingModal } from '@/features/guest/pricing/guest-pricing-modal-provider'
 import { useDiagnosticSubscription } from '@/features/guest/diagnostic/use-diagnostic-subscription'
-import {
-  PT_RESULTS_PAGE_BG_CLASS,
-} from '@/features/student/analytics/prep-test-results-section-styles'
 import { StudentMain } from '@/features/student/components/student-main'
 import { createDiagnosticApi, type MiniDiagnosticExplanation } from '@/lib/api/diagnostic'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -261,9 +258,11 @@ function ScoreRangeBar({
 
 function DiagnosticPageHeader({
   result,
+  showSubscribe,
   onSubscribe,
 }: {
   result: GuestDiagnosticResult
+  showSubscribe: boolean
   onSubscribe: () => void
 }) {
   const dateLabel = formatDiagnosticDateLabel(result.completedAt)
@@ -281,21 +280,23 @@ function DiagnosticPageHeader({
         </p>
       </div>
 
-      <div className="flex shrink-0 items-center gap-3">
-        <div className="hidden items-center gap-2 rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 py-2 sm:flex">
-          <span className="size-2 shrink-0 rounded-full bg-[var(--primary)]" />
-          <span className="text-xs font-semibold leading-normal text-[var(--color-student-heading)]">
-            Take your first full exam to track progress
-          </span>
+      {showSubscribe ? (
+        <div className="flex shrink-0 items-center gap-3">
+          <div className="hidden items-center gap-2 rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 py-2 sm:flex">
+            <span className="size-2 shrink-0 rounded-full bg-[var(--primary)]" />
+            <span className="text-xs font-semibold leading-normal text-[var(--color-student-heading)]">
+              Take your first full exam to track progress
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={onSubscribe}
+            className="hidden h-10 shrink-0 items-center rounded-[12px] bg-[var(--primary)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-600)] sm:flex"
+          >
+            Subscribe
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onSubscribe}
-          className="hidden h-10 shrink-0 items-center rounded-[12px] bg-[var(--primary)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-600)] sm:flex"
-        >
-          Subscribe
-        </button>
-      </div>
+      ) : null}
     </div>
   )
 }
@@ -368,9 +369,11 @@ function EstimatedScoreCard({ result }: { result: GuestDiagnosticResult }) {
 
 function GapToGoalCard({
   result,
+  locked,
   onSubscribe,
 }: {
   result: GuestDiagnosticResult
+  locked: boolean
   onSubscribe: () => void
 }) {
   const gapPoints = Math.max(0, LSAT_GOAL_SCORE - result.scaledScore)
@@ -445,21 +448,23 @@ function GapToGoalCard({
       </p>
 
       {/* Lock gradient + CTA */}
-      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-end rounded-[16px] bg-gradient-to-t from-[var(--greyscale-0)]/95 via-[var(--greyscale-0)]/60 to-transparent pb-8">
-        <div className="pointer-events-auto flex flex-col items-center gap-3 px-6 text-center">
-          <div className="flex size-10 items-center justify-center rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
-            <Lock className="size-4 text-[var(--greyscale-500)]" />
+      {locked ? (
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-end rounded-[16px] bg-gradient-to-t from-[var(--greyscale-0)]/95 via-[var(--greyscale-0)]/60 to-transparent pb-8">
+          <div className="pointer-events-auto flex flex-col items-center gap-3 px-6 text-center">
+            <div className="flex size-10 items-center justify-center rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
+              <Lock className="size-4 text-[var(--greyscale-500)]" />
+            </div>
+            <p className="text-sm font-semibold text-[var(--color-student-heading)]">Unlock your full projection</p>
+            <button
+              type="button"
+              onClick={onSubscribe}
+              className="h-9 rounded-[10px] bg-[var(--primary)] px-5 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-600)]"
+            >
+              Unlock my full report
+            </button>
           </div>
-          <p className="text-sm font-semibold text-[var(--color-student-heading)]">Unlock your full projection</p>
-          <button
-            type="button"
-            onClick={onSubscribe}
-            className="h-9 rounded-[10px] bg-[var(--primary)] px-5 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-600)]"
-          >
-            Unlock my full report
-          </button>
         </div>
-      </div>
+      ) : null}
     </div>
   )
 }
@@ -468,12 +473,16 @@ function GapToGoalCard({
 
 function DiagnosticStatsRow({
   result,
+  locked,
   onSubscribe,
 }: {
   result: GuestDiagnosticResult
+  locked: boolean
   onSubscribe: () => void
 }) {
   const accuracyPct = Math.round((result.correctCount / Math.max(1, result.questionCount)) * 100)
+  const projectedLow = Math.min(180, result.scaledScoreLow + 9)
+  const projectedHigh = Math.min(180, result.scaledScoreHigh + 11)
 
   return (
     <div className="grid grid-cols-1 overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] sm:grid-cols-3">
@@ -503,22 +512,35 @@ function DiagnosticStatsRow({
         <p className="text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
           Projected Score Band
         </p>
-        <p className="mt-2 select-none text-[28px] font-bold leading-[1.2] text-[var(--color-student-heading)] blur-sm">
-          —
-        </p>
-        <p className="mt-1 select-none text-sm font-medium leading-normal text-[var(--greyscale-500)] blur-sm">
-          After 14 weeks of prep
-        </p>
-        <div className="absolute inset-0 flex items-center justify-center rounded-br-[16px] bg-[var(--greyscale-0)]/80">
-          <button
-            type="button"
-            onClick={onSubscribe}
-            className="flex items-center gap-1.5 text-xs font-semibold text-[var(--primary)] hover:underline"
-          >
-            <Lock className="size-3.5" />
-            Unlock full analysis
-          </button>
-        </div>
+        {locked ? (
+          <>
+            <p className="mt-2 select-none text-[28px] font-bold leading-[1.2] text-[var(--color-student-heading)] blur-sm">
+              —
+            </p>
+            <p className="mt-1 select-none text-sm font-medium leading-normal text-[var(--greyscale-500)] blur-sm">
+              After 14 weeks of prep
+            </p>
+            <div className="absolute inset-0 flex items-center justify-center rounded-br-[16px] bg-[var(--greyscale-0)]/80">
+              <button
+                type="button"
+                onClick={onSubscribe}
+                className="flex items-center gap-1.5 text-xs font-semibold text-[var(--primary)] hover:underline"
+              >
+                <Lock className="size-3.5" />
+                Unlock full analysis
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="mt-2 text-[28px] font-bold leading-[1.2] text-[var(--color-student-heading)]">
+              {projectedLow}–{projectedHigh}
+            </p>
+            <p className="mt-1 text-sm font-medium leading-normal text-[var(--greyscale-500)]">
+              After 14 weeks of prep
+            </p>
+          </>
+        )}
       </div>
     </div>
   )
@@ -584,7 +606,7 @@ function PointLeakRow({
 }: {
   rank: number
   leak: PointLeak
-  onDrill: () => void
+  onDrill?: () => void
 }) {
   const missLabel =
     `Missed ${leak.missed} of ${leak.total}` +
@@ -624,13 +646,15 @@ function PointLeakRow({
             {leak.pointsRecoverable === 1 ? 'point' : 'points'}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onDrill}
-          className="h-8 rounded-[8px] bg-[var(--primary)] px-3 text-xs font-semibold text-white transition-colors hover:bg-[var(--primary-600)]"
-        >
-          Drill
-        </button>
+        {onDrill ? (
+          <button
+            type="button"
+            onClick={onDrill}
+            className="h-8 rounded-[8px] bg-[var(--primary)] px-3 text-xs font-semibold text-white transition-colors hover:bg-[var(--primary-600)]"
+          >
+            Drill
+          </button>
+        ) : null}
       </div>
     </div>
   )
@@ -638,13 +662,15 @@ function PointLeakRow({
 
 function PointLeakMapSection({
   leaks,
+  locked,
   onSubscribe,
 }: {
   leaks: PointLeak[]
+  locked: boolean
   onSubscribe: () => void
 }) {
-  const visibleLeaks = leaks.slice(0, 2)
-  const lockedLeaks = leaks.slice(2)
+  const visibleLeaks = locked ? leaks.slice(0, 2) : leaks
+  const lockedLeaks = locked ? leaks.slice(2) : []
   const lockedPoints = lockedLeaks.reduce((sum, l) => sum + l.pointsRecoverable, 0)
   const totalRecoverable = leaks.reduce((sum, l) => sum + l.pointsRecoverable, 0)
 
@@ -660,13 +686,15 @@ function PointLeakMapSection({
             <span className="font-semibold text-[var(--color-student-heading)]">~{totalRecoverable} points</span>
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onSubscribe}
-          className="shrink-0 rounded-[8px] border border-[var(--greyscale-100)] px-3 py-1.5 text-sm font-semibold text-[var(--color-student-heading)] transition-colors hover:bg-[var(--greyscale-25)]"
-        >
-          Drill all {leaks.length}
-        </button>
+        {locked ? (
+          <button
+            type="button"
+            onClick={onSubscribe}
+            className="shrink-0 rounded-[8px] border border-[var(--greyscale-100)] px-3 py-1.5 text-sm font-semibold text-[var(--color-student-heading)] transition-colors hover:bg-[var(--greyscale-25)]"
+          >
+            Drill all {leaks.length}
+          </button>
+        ) : null}
       </div>
 
       {/* Visible rows (with Drill button) */}
@@ -675,7 +703,12 @@ function PointLeakMapSection({
       ) : (
         <div>
           {visibleLeaks.map((leak, i) => (
-            <PointLeakRow key={leak.questionType} rank={i + 1} leak={leak} onDrill={onSubscribe} />
+            <PointLeakRow
+              key={leak.questionType}
+              rank={i + 1}
+              leak={leak}
+              onDrill={locked ? onSubscribe : undefined}
+            />
           ))}
         </div>
       )}
@@ -725,11 +758,15 @@ function PointLeakMapSection({
 
 function AccuracyByDifficultySection({
   accuracyData,
+  locked,
   onSubscribe,
 }: {
   accuracyData: DifficultyAccuracy[]
+  locked: boolean
   onSubscribe: () => void
 }) {
+  const rows = accuracyData.slice(0, locked ? 3 : accuracyData.length)
+
   return (
     <div className="overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
       <div className="flex items-start justify-between border-b border-[var(--greyscale-100)] px-6 py-5">
@@ -739,16 +776,15 @@ function AccuracyByDifficultySection({
             Whether you&apos;re losing points to carelessness or to harder questions
           </p>
         </div>
-        <SectionLockedBadge />
+        {locked ? <SectionLockedBadge /> : null}
       </div>
 
-      {/* Blurred rows + overlay */}
       <div className="relative">
-        {accuracyData.slice(0, 3).map((row, i) => (
+        {rows.map((row, i) => (
           <div
             key={row.difficulty}
             className={cn('flex items-center gap-4 px-6 py-4', i > 0 && 'border-t border-[var(--greyscale-100)]')}
-            style={{ filter: `blur(${i === 0 ? 3 : 5}px)`, userSelect: 'none' }}
+            style={locked ? { filter: `blur(${i === 0 ? 3 : 5}px)`, userSelect: 'none' } : undefined}
           >
             <div className="w-24 shrink-0">
               <p className="text-sm font-semibold text-[var(--color-student-heading)]">
@@ -770,13 +806,12 @@ function AccuracyByDifficultySection({
           </div>
         ))}
 
-        {/* Placeholder rows if not enough data */}
         {accuracyData.length === 0 &&
           [1, 2, 3].map((i) => (
             <div
               key={i}
               className={cn('flex items-center gap-4 px-6 py-4', i > 1 && 'border-t border-[var(--greyscale-100)]')}
-              style={{ filter: `blur(${i === 1 ? 3 : 5}px)`, userSelect: 'none' }}
+              style={locked ? { filter: `blur(${i === 1 ? 3 : 5}px)`, userSelect: 'none' } : undefined}
             >
               <div className="h-4 w-24 rounded-full bg-[var(--greyscale-100)]" />
               <div className="h-2 flex-1 rounded-full bg-[var(--greyscale-100)]" />
@@ -784,23 +819,24 @@ function AccuracyByDifficultySection({
             </div>
           ))}
 
-        {/* Overlay */}
-        <div className="absolute inset-0 flex items-center justify-center bg-[var(--greyscale-0)]/80">
-          <div className="text-center">
-            <h4 className="text-base font-bold text-[var(--color-student-heading)]">Where the easy points went</h4>
-            <p className="mt-1 text-sm text-[var(--greyscale-500)]">
-              See which difficulty bands are costing you the most
-            </p>
-            <button
-              type="button"
-              onClick={onSubscribe}
-              className="mt-4 flex items-center gap-2 rounded-[10px] border border-[var(--primary)] bg-[var(--greyscale-0)] px-4 py-2 text-sm font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary-25)] mx-auto"
-            >
-              <Lock className="size-3.5" />
-              Unlock
-            </button>
+        {locked ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-[var(--greyscale-0)]/80">
+            <div className="text-center">
+              <h4 className="text-base font-bold text-[var(--color-student-heading)]">Where the easy points went</h4>
+              <p className="mt-1 text-sm text-[var(--greyscale-500)]">
+                See which difficulty bands are costing you the most
+              </p>
+              <button
+                type="button"
+                onClick={onSubscribe}
+                className="mt-4 mx-auto flex items-center gap-2 rounded-[10px] border border-[var(--primary)] bg-[var(--greyscale-0)] px-4 py-2 text-sm font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary-25)]"
+              >
+                <Lock className="size-3.5" />
+                Unlock
+              </button>
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
     </div>
   )
@@ -811,10 +847,12 @@ function AccuracyByDifficultySection({
 function TimingBreakdownSection({
   outcomes,
   intentId,
+  locked,
   onSubscribe,
 }: {
   outcomes: GuestDiagnosticResult['outcomes']
   intentId: GuestDiagnosticIntentId
+  locked: boolean
   onSubscribe: () => void
 }) {
   const rows = useMemo(() => {
@@ -851,15 +889,15 @@ function TimingBreakdownSection({
             Average seconds per question across the test, in budget vs. over
           </p>
         </div>
-        <SectionLockedBadge />
+        {locked ? <SectionLockedBadge /> : null}
       </div>
 
       <div className="relative">
-        {(rows.length > 0 ? rows : [1, 2, 3].map((d) => ({ difficulty: d, avgTime: 90, avgTarget: 90, overSeconds: 0 }))).map((row, i) => (
+        {(rows.length > 0 ? rows : locked ? [1, 2, 3].map((d) => ({ difficulty: d, avgTime: 90, avgTarget: 90, overSeconds: 0 })) : []).map((row, i) => (
           <div
             key={row.difficulty}
             className={cn('flex items-center gap-4 px-6 py-4', i > 0 && 'border-t border-[var(--greyscale-100)]')}
-            style={{ filter: `blur(${i === 0 ? 3 : 5}px)`, userSelect: 'none' }}
+            style={locked ? { filter: `blur(${i === 0 ? 3 : 5}px)`, userSelect: 'none' } : undefined}
           >
             <div className="w-24 shrink-0">
               <p className="text-sm font-semibold text-[var(--color-student-heading)]">
@@ -895,23 +933,24 @@ function TimingBreakdownSection({
           </div>
         ))}
 
-        {/* Overlay */}
-        <div className="absolute inset-0 flex items-center justify-center bg-[var(--greyscale-0)]/80">
-          <div className="text-center">
-            <h4 className="text-base font-bold text-[var(--color-student-heading)]">Where your clock broke</h4>
-            <p className="mt-1 text-sm text-[var(--greyscale-500)]">
-              Plus the drill set that targets each one
-            </p>
-            <button
-              type="button"
-              onClick={onSubscribe}
-              className="mt-4 flex items-center gap-2 rounded-[10px] border border-[var(--primary)] bg-[var(--greyscale-0)] px-4 py-2 text-sm font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary-25)] mx-auto"
-            >
-              <Lock className="size-3.5" />
-              Unlock
-            </button>
+        {locked ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-[var(--greyscale-0)]/80">
+            <div className="text-center">
+              <h4 className="text-base font-bold text-[var(--color-student-heading)]">Where your clock broke</h4>
+              <p className="mt-1 text-sm text-[var(--greyscale-500)]">
+                Plus the drill set that targets each one
+              </p>
+              <button
+                type="button"
+                onClick={onSubscribe}
+                className="mt-4 mx-auto flex items-center gap-2 rounded-[10px] border border-[var(--primary)] bg-[var(--greyscale-0)] px-4 py-2 text-sm font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary-25)]"
+              >
+                <Lock className="size-3.5" />
+                Unlock
+              </button>
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
     </div>
   )
@@ -1508,20 +1547,20 @@ function GuestDiagnosticResultsView({
 
   return (
     <StudentMain
-      className={PT_RESULTS_PAGE_BG_CLASS}
-      contentClassName="flex flex-col gap-6 pb-10"
+      className="bg-[var(--primary-0)]"
+      contentClassName="flex flex-col gap-6 bg-[var(--primary-0)] pb-10"
     >
       {/* 1. Page header */}
-      <DiagnosticPageHeader result={result} onSubscribe={openPricingModal} />
+      <DiagnosticPageHeader result={result} showSubscribe={!showPaidContent} onSubscribe={openPricingModal} />
 
       {/* 2. Two score cards */}
       <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-stretch">
         <EstimatedScoreCard result={result} />
-        <GapToGoalCard result={result} onSubscribe={openPricingModal} />
+        <GapToGoalCard result={result} locked={!showPaidContent} onSubscribe={openPricingModal} />
       </div>
 
       {/* 3. Three stats row */}
-      <DiagnosticStatsRow result={result} onSubscribe={openPricingModal} />
+      <DiagnosticStatsRow result={result} locked={!showPaidContent} onSubscribe={openPricingModal} />
 
       {/* 4 + 5. Mini diagnostic section + Question list (single card, as in Figma) */}
       <section className="overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
@@ -1630,7 +1669,7 @@ function GuestDiagnosticResultsView({
 
       {/* 6. Point Leak Map */}
       {pointLeaks.length > 0 ? (
-        <PointLeakMapSection leaks={pointLeaks} onSubscribe={openPricingModal} />
+        <PointLeakMapSection leaks={pointLeaks} locked={!showPaidContent} onSubscribe={openPricingModal} />
       ) : null}
 
       {/* 7. Big Upgrade CTA — shown before locked sections, free only */}
@@ -1638,22 +1677,18 @@ function GuestDiagnosticResultsView({
         <DiagnosticUpgradeCTA result={result} onSubscribe={openPricingModal} />
       )}
 
-      {/* 8. Accuracy by Difficulty (locked for free) */}
-      {!showPaidContent && (
-        <AccuracyByDifficultySection
-          accuracyData={accuracyByDifficulty}
-          onSubscribe={openPricingModal}
-        />
-      )}
+      <AccuracyByDifficultySection
+        accuracyData={accuracyByDifficulty}
+        locked={!showPaidContent}
+        onSubscribe={openPricingModal}
+      />
 
-      {/* 9. Timing Breakdown (locked for free) */}
-      {!showPaidContent && (
-        <TimingBreakdownSection
-          outcomes={result.outcomes}
-          intentId={result.intentId}
-          onSubscribe={openPricingModal}
-        />
-      )}
+      <TimingBreakdownSection
+        outcomes={result.outcomes}
+        intentId={result.intentId}
+        locked={!showPaidContent}
+        onSubscribe={openPricingModal}
+      />
 
       {/* 10. Your Plan (locked for free) */}
       {!showPaidContent && <YourPlanSection onSubscribe={openPricingModal} />}
@@ -1668,7 +1703,7 @@ function GuestDiagnosticResultsView({
       />
 
       {/* 12. Not ready to decide? */}
-      <NotReadySection onSubscribe={openPricingModal} />
+      {!showPaidContent && <NotReadySection onSubscribe={openPricingModal} />}
 
       {/* 13. Bottom sticky bar (free only) */}
       {!showPaidContent && (

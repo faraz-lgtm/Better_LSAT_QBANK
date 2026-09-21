@@ -55,7 +55,7 @@ const BLIND_REVIEW_NOTES_SIDEBAR_CLASS =
   `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]`
 
 const BLIND_REVIEW_PASSAGE_TEXT_CLASS =
-  "text-base font-normal leading-[26px] tracking-[0.02em] text-[var(--color-student-heading)]"
+  "text-base font-normal leading-[30px] tracking-[0.02em] text-[var(--color-student-heading)]"
 
 const BLIND_REVIEW_QUESTION_STEM_WRAP_CLASS =
   "flex min-h-[56px] w-full min-w-0 items-center"

@@ -21,7 +21,7 @@ const entries: PrepTestHistoryEntry[] = [
   },
   {
     id: "plain",
-    testLabel: "LR141B-4",
+    testLabel: "PT141.S4",
     dateLabel: "Thursday, Aug 27",
     bookmarked: false,
     score: 0,
@@ -63,13 +63,13 @@ describe("AnalyticsPrepTestHistory", () => {
     render(<HistoryHarness />)
 
     expect(screen.getByText("Varied Mix")).toBeInTheDocument()
-    expect(screen.getByText("LR141B-4")).toBeInTheDocument()
+    expect(screen.getByText("PT141.S4")).toBeInTheDocument()
 
     await user.click(screen.getByRole("switch", { name: "Show bookmarked only" }))
 
     expect(screen.getByRole("switch", { name: "Show bookmarked only" })).toBeChecked()
     expect(screen.getByText("Varied Mix")).toBeInTheDocument()
-    expect(screen.queryByText("LR141B-4")).not.toBeInTheDocument()
+    expect(screen.queryByText("PT141.S4")).not.toBeInTheDocument()
   })
 
   it("shows an empty state when nothing is bookmarked", async () => {

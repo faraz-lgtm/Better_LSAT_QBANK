@@ -16,14 +16,12 @@ import {
   useCalculatingScoreReveal,
 } from '@/features/student/components/calculating-score-loader'
 import { StudentMain } from '@/features/student/components/student-main'
-import { PT_RESULTS_PAGE_BG_CLASS } from '@/features/student/analytics/prep-test-results-section-styles'
 import {
   diagnosticAttemptHref,
   diagnosticHistoryHref,
   diagnosticResultsSectionFromIntent,
   type DiagnosticResultsSection,
 } from '@/features/student/diagnostic/diagnostic-results-routes'
-import { cn } from '@/lib/utils'
 
 type GuestDiagnosticResultsPageProps = {
   preview?: boolean
@@ -114,8 +112,8 @@ function GuestDiagnosticResultsPage({ preview = false, section }: GuestDiagnosti
   if (!revealResults) {
     return (
       <StudentMain
-        className={cn('min-h-full', PT_RESULTS_PAGE_BG_CLASS)}
-        contentClassName={cn('flex min-h-0 flex-1 flex-col', PT_RESULTS_PAGE_BG_CLASS)}
+        className="min-h-full bg-[var(--primary-0)]"
+        contentClassName="flex min-h-0 flex-1 flex-col bg-[var(--primary-0)]"
       >
         <CalculatingScoreLoader className="min-h-0 flex-1" />
       </StudentMain>

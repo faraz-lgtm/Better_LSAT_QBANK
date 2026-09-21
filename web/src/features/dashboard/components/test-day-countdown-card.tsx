@@ -77,7 +77,7 @@ function TestDayCountdownCard({
       <div className="test-day-countdown__header">
         <div className="test-day-countdown__title-block">
           <p className="test-day-countdown__eyebrow">Test Day Countdown</p>
-          {administrationInProgress ? (
+          {showAdministrationInProgress ? (
             <p className="test-day-countdown__in-progress">Current Test Administration In Progress</p>
           ) : (
             <div className="test-day-countdown__days">

@@ -5,6 +5,7 @@ import {
   findLsacTestWindow,
   formatLsacTestWindowLabel,
   formatLsacTestWindowMeta,
+  toIsoDateOnly,
 } from "@/lib/lsac-test-window-options"
 
 export type DashboardStatCard = {
@@ -127,24 +128,34 @@ export function mapOverviewToPerformance(overview: AnalyticsOverview): Dashboard
   }
 }
 
-export function daysUntilDate(isoDate: string | null | undefined, now = new Date()): number | null {
-  if (!isoDate?.trim()) return null
-  const target = new Date(`${isoDate.trim()}T12:00:00`)
+/** Signed local calendar days until `isoDate` (negative once that date has passed). */
+function calendarDaysUntil(isoDate: string | null | undefined, now = new Date()): number | null {
+  const day = toIsoDateOnly(isoDate)
+  if (!day) return null
+  const target = new Date(`${day}T12:00:00`)
   if (Number.isNaN(target.getTime())) return null
   const start = new Date(now)
   start.setHours(12, 0, 0, 0)
-  const diffMs = target.getTime() - start.getTime()
-  return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
+  return Math.ceil((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+export function daysUntilDate(isoDate: string | null | undefined, now = new Date()): number | null {
+  const days = calendarDaysUntil(isoDate, now)
+  if (days == null) return null
+  return Math.max(0, days)
 }
 
 /** True only for an official LSAC window the student selected, once that window has started. */
 export function isCurrentLsacTestAdministrationInProgress(
   isoDate: string | null | undefined,
   now = new Date(),
+  plannedLsatWindow?: string | null,
 ): boolean {
-  const window = findLsacTestWindow(isoDate)
+  const window = findLsacTestWindow(isoDate, plannedLsatWindow)
   if (!window) return false
-  return daysUntilDate(window.value, now) === 0
+  const daysUntilStart = calendarDaysUntil(window.value, now)
+  if (daysUntilStart == null) return false
+  return daysUntilStart <= 0
 }
 
 export function formatTestDateInputValue(

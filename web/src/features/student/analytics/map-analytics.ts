@@ -24,6 +24,7 @@ import {
   VARIED_MIX_DRILL_TITLE,
 } from "@/features/student/drills/format-drill-title"
 import { resolvePrepTestLrRcScores } from "@/features/student/analytics/prep-test-lr-rc-scores"
+import { formatSectionResultsTitle } from "@/features/student/practice-session/lr-drill-results-format"
 
 function formatSigned(n: number): string {
   if (n > 0) return `+${n}`
@@ -75,6 +76,53 @@ export function formatPrepTestHistoryLabel(
 ): string {
   const moduleId = prepTestId?.match(/^LSAC\d+$/i) ? prepTestId : null
   return formatPrepTestChartLabel(prepTestTitle ?? "", moduleId).replace(/^PT\s+/i, "PT")
+}
+
+const LSAC_SECTION_ID_RE = /^(?:LR|RC|LG)(\d+)[A-Z]-(\d+)$/i
+
+/** `LR135A-1` → `PT135.S1` for Section History. */
+export function formatSectionHistoryLabel(input: {
+  sectionTitle?: string | null
+  prepTestTitle?: string | null
+  prepTestId?: string | null
+  metadata?: Record<string, unknown>
+}): string {
+  const meta = input.metadata ?? {}
+  const moduleId =
+    typeof meta.moduleId === "string"
+      ? meta.moduleId
+      : typeof input.prepTestId === "string"
+        ? input.prepTestId
+        : null
+  const sectionNumber =
+    typeof meta.sectionNumber === "number"
+      ? meta.sectionNumber
+      : typeof meta.section_number === "number"
+        ? meta.section_number
+        : null
+  const fromModule = moduleId ? /^LSAC(\d+)$/i.exec(moduleId)?.[1] : undefined
+  if (fromModule && sectionNumber != null) {
+    return formatSectionResultsTitle({ prepTestNumber: fromModule, sectionNumber })
+  }
+
+  const title = input.sectionTitle?.trim() ?? ""
+  if (/^PT\d+\.S\d+$/i.test(title)) {
+    return title.replace(/^pt/i, "PT")
+  }
+  const parsed = LSAC_SECTION_ID_RE.exec(title)
+  if (parsed?.[1] && parsed[2]) {
+    return formatSectionResultsTitle({
+      prepTestNumber: parsed[1],
+      sectionNumber: Number(parsed[2]),
+    })
+  }
+
+  const ptNum = input.prepTestTitle?.match(/\d+/)?.[0] ?? fromModule
+  if (ptNum && sectionNumber != null) {
+    return formatSectionResultsTitle({ prepTestNumber: ptNum, sectionNumber })
+  }
+
+  return title || "Section"
 }
 
 function numericToDifficulty(n: number | null): Difficulty {
@@ -381,10 +429,12 @@ export function mapSectionSessionToHistoryEntry(s: PracticeSessionSummary): Prep
   const correct = s.rawScore ?? 0
   const total = questionCountFromSession(s, correct)
   const resolved = resolveSessionSectionType(s)
-  const testLabel =
-    s.sectionTitle?.trim() ||
-    (resolved === "LR" || resolved === "RC" || resolved === "LG" ? `${resolved} Section` : null) ||
-    "Section"
+  const testLabel = formatSectionHistoryLabel({
+    sectionTitle: s.sectionTitle,
+    prepTestTitle: s.prepTestTitle,
+    prepTestId: s.prepTestId,
+    metadata: s.metadata,
+  })
   const br = s.blindReviewRawScore ?? correct
   return {
     id: s.id,

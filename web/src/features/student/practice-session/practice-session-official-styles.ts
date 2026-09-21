@@ -63,8 +63,8 @@ const OFFICIAL_PASSAGE_PANE_CLASS =
 
 const OFFICIAL_QUESTION_PANE_CLASS = "min-h-0 overflow-y-auto py-[13px] pl-1.5"
 
-/** Official exam passage, stem, and choice copy: 15 / 22 / regular. */
-const OFFICIAL_BODY_TYPE_CLASS = "text-[15px] font-normal leading-[22px] tracking-normal"
+/** Official exam passage, stem, and choice copy: 15 / 30 / regular. */
+const OFFICIAL_BODY_TYPE_CLASS = "text-[15px] font-normal leading-[30px] tracking-normal"
 
 const OFFICIAL_PASSAGE_TEXT_CLASS =
   `${OFFICIAL_BODY_TYPE_CLASS} text-[var(--color-student-heading)] [&_p]:mb-0`
