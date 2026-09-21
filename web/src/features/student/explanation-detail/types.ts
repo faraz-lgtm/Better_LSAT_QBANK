@@ -98,5 +98,6 @@ export type ExplanationQuestionDetailView = {
     history: ExplanationHistoryRow[]
   }
   neighbors: { prevRouteKey: string | null; nextRouteKey: string | null }
+  /** True when a video URL exists — controls Video Explanation tab visibility. */
   hasExplanationTab: boolean
 }

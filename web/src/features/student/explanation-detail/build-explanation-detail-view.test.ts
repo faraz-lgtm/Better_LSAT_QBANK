@@ -107,7 +107,7 @@ describe("buildExplanationQuestionDetailView", () => {
     expect(view.analytics.userSelectedLetter).toBeNull()
   })
 
-  it("keeps explanation tab hidden until content is ready", () => {
+  it("keeps Video Explanation tab hidden until a video URL exists", () => {
     const view = buildExplanationQuestionDetailView(loc, null)
     expect(view.hasExplanationTab).toBe(false)
     expect(view.videos).toHaveLength(2)
@@ -116,7 +116,7 @@ describe("buildExplanationQuestionDetailView", () => {
     expect(view.videos[0]?.explanationHtml).toBeNull()
   })
 
-  it("maps written explanation to passage card and shows analysis tab", () => {
+  it("maps written explanation to passage card but does not show Video Explanation tab", () => {
     const detail: ExplanationDetailPayload = {
       questionId: "q1",
       prepTestId: "pt1",
@@ -140,13 +140,13 @@ describe("buildExplanationQuestionDetailView", () => {
     }
 
     const view = buildExplanationQuestionDetailView(loc, detail)
-    expect(view.hasExplanationTab).toBe(true)
+    expect(view.hasExplanationTab).toBe(false)
     expect(view.videos[0]?.explanationHtml).toBe("<p>Passage analysis body</p>")
     expect(view.videos[1]?.explanationHtml).toBeNull()
     expect(view.videos[1]?.videoUrl).toBeNull()
   })
 
-  it("shows analysis tab when only video explanation exists", () => {
+  it("shows Video Explanation tab when a video URL exists", () => {
     const detail: ExplanationDetailPayload = {
       questionId: "q1",
       prepTestId: "pt1",
