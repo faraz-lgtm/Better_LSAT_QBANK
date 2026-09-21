@@ -1,7 +1,10 @@
 import { useEffect, useId, useRef, useState } from "react"
 import { Check } from "lucide-react"
 
-import { listUpcomingLsacTestWindows } from "@/lib/lsac-test-window-options"
+import {
+  LSAC_OFFICIAL_TEST_WINDOWS,
+  listUpcomingLsacTestWindows,
+} from "@/lib/lsac-test-window-options"
 import { cn } from "@/lib/utils"
 
 type TestDayCountdownCardProps = {
@@ -37,6 +40,11 @@ function TestDayCountdownCard({
   const listboxId = useId()
   const [pickerOpen, setPickerOpen] = useState(false)
   const testDateOptions = listUpcomingLsacTestWindows()
+  const selectedOfficialWindow = LSAC_OFFICIAL_TEST_WINDOWS.some(
+    (option) => option.value === testDateValue,
+  )
+  const showAdministrationInProgress =
+    administrationInProgress || (selectedOfficialWindow && daysRemaining === 0)
 
   function openDatePicker() {
     if (savingTestDate) return
