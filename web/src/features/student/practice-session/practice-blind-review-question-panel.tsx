@@ -56,6 +56,10 @@ type PracticeBlindReviewQuestionPanelProps = {
   seedQuestionTypeLabel?: string | null
   /** When false, hides question/answer explanation dropdowns (e.g. locked diagnostic). */
   explanationsEnabled?: boolean
+  /** Keep choice explanations while hiding the stem/question explanation action. */
+  showStemExplanationAction?: boolean
+  /** Diagnostic review supplies local explanations; only PrepTest review should fetch remote detail. */
+  fetchRemoteExplanations?: boolean
   onAnnotateMouseUp?: (regionKey: RegionKey, container: HTMLElement | null, event?: MouseEvent) => void
   onAnnotateClick?: (regionKey: RegionKey, container: HTMLElement | null, event: MouseEvent) => void
   annotateToolMode?: PracticeToolMode
@@ -103,6 +107,8 @@ function PracticeBlindReviewQuestionPanel({
   seedStemExplanationHtml = null,
   seedQuestionTypeLabel = null,
   explanationsEnabled = true,
+  showStemExplanationAction = true,
+  fetchRemoteExplanations = true,
   onAnnotateMouseUp,
   onAnnotateClick,
   annotateToolMode = "none",
@@ -137,13 +143,13 @@ function PracticeBlindReviewQuestionPanel({
   const hasMaskedChoices = Object.values(maskedChoices).some(Boolean)
 
   const explanationsApi = useMemo(() => {
-    if (!reviewChrome) return null
+    if (!reviewChrome || !fetchRemoteExplanations) return null
     try {
       return createExplanationsApi(getSupabaseBrowserClient())
     } catch {
       return null
     }
-  }, [reviewChrome])
+  }, [fetchRemoteExplanations, reviewChrome])
 
   useEffect(() => {
     let cancelled = false
@@ -297,7 +303,7 @@ function PracticeBlindReviewQuestionPanel({
                     : cn(BLIND_REVIEW_QUESTION_STEM_CLASS, "text-sm font-semibold leading-[1.5] tracking-[0.28px]")
                 }
               />
-              {reviewChrome && explanationsEnabled ? (
+              {reviewChrome && explanationsEnabled && showStemExplanationAction ? (
                 <button
                   type="button"
                   className={cn(
@@ -320,7 +326,7 @@ function PracticeBlindReviewQuestionPanel({
                 </button>
               ) : null}
             </div>
-            {reviewChrome && explanationsEnabled && stemExplanationOpen ? (
+            {reviewChrome && explanationsEnabled && showStemExplanationAction && stemExplanationOpen ? (
               <div className="mb-6 mt-6 rounded-[14px] bg-[var(--primary-0)] p-6 text-[var(--color-student-heading)]">
                 <p className="mb-6 text-base font-medium leading-[1.5] tracking-[0.32px]">
                   Question Type{questionTypeLabel ? ` - ${questionTypeLabel}` : ""}

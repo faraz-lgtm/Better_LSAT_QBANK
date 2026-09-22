@@ -19,7 +19,7 @@ describe("freeDiagnosticExplanationLimit", () => {
 })
 
 describe("canShowDiagnosticExplanation", () => {
-  it("allows all questions for premium students", () => {
+  it("allows all questions in review/tester for premium students", () => {
     expect(
       canShowDiagnosticExplanation({ intentId: "mini", questionNumber: 10, hasActiveCore: true }),
     ).toBe(true)
@@ -28,27 +28,33 @@ describe("canShowDiagnosticExplanation", () => {
     ).toBe(true)
   })
 
-  it("limits free mini to the first 5 questions", () => {
+  it("allows all local mini diagnostic explanations in review/tester for free students", () => {
     expect(
       canShowDiagnosticExplanation({ intentId: "mini", questionNumber: 5, hasActiveCore: false }),
     ).toBe(true)
     expect(
       canShowDiagnosticExplanation({ intentId: "mini", questionNumber: 6, hasActiveCore: false }),
-    ).toBe(false)
+    ).toBe(true)
   })
 
-  it("limits free full section and full to the first 10 questions", () => {
+  it("allows all local full section and full diagnostic explanations in review/tester for free students", () => {
     expect(
       canShowDiagnosticExplanation({ intentId: "quick", questionNumber: 10, hasActiveCore: false }),
     ).toBe(true)
     expect(
       canShowDiagnosticExplanation({ intentId: "quick", questionNumber: 11, hasActiveCore: false }),
-    ).toBe(false)
+    ).toBe(true)
     expect(
       canShowDiagnosticExplanation({ intentId: "full", questionNumber: 10, hasActiveCore: false }),
     ).toBe(true)
     expect(
       canShowDiagnosticExplanation({ intentId: "full", questionNumber: 11, hasActiveCore: false }),
+    ).toBe(true)
+  })
+
+  it("rejects invalid question numbers", () => {
+    expect(
+      canShowDiagnosticExplanation({ intentId: "mini", questionNumber: 0, hasActiveCore: false }),
     ).toBe(false)
   })
 })

@@ -17,8 +17,8 @@ function freeDiagnosticExplanationLimit(intentId: GuestDiagnosticIntentId): numb
 }
 
 /**
- * Premium students see every explanation. Free students only see the first N
- * questions (1-based index) for mini / full-section teaser access.
+ * Review in Tester uses local diagnostic content, so every question can show its
+ * explanation there. Result rows stay teaser-gated via canShowDiagnosticResultDetails.
  */
 function canShowDiagnosticExplanation(input: {
   intentId: GuestDiagnosticIntentId
@@ -26,9 +26,7 @@ function canShowDiagnosticExplanation(input: {
   questionNumber: number
   hasActiveCore: boolean
 }): boolean {
-  if (input.hasActiveCore) return true
-  if (input.questionNumber < 1) return false
-  return input.questionNumber <= freeDiagnosticExplanationLimit(input.intentId)
+  return input.questionNumber >= 1
 }
 
 /**
@@ -40,7 +38,9 @@ function canShowDiagnosticResultDetails(input: {
   questionNumber: number
   hasActiveCore: boolean
 }): boolean {
-  return canShowDiagnosticExplanation(input)
+  if (input.hasActiveCore) return true
+  if (input.questionNumber < 1) return false
+  return input.questionNumber <= freeDiagnosticExplanationLimit(input.intentId)
 }
 
 export {

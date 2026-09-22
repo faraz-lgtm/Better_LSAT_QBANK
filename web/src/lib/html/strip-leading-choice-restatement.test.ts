@@ -43,4 +43,22 @@ describe("stripLeadingChoiceRestatement", () => {
     expect(stripLeadingChoiceRestatement(null, "<p>A</p>")).toBe("")
     expect(stripLeadingChoiceRestatement("  ", "<p>A</p>")).toBe("")
   })
+
+  it("keeps a single paragraph that embeds the choice text plus real analysis", () => {
+    const choiceHtml =
+      "<p>Any good source of used exercise machines will offer at least some well-maintained machines at reasonable prices.</p>"
+    const explanation =
+      "<p>A) Any good source of used exercise machines will offer at least some well-maintained machines at reasonable prices. Answer Choice (A) is a mistaken reversal.</p>"
+
+    expect(stripLeadingChoiceRestatement(explanation, choiceHtml)).toBe(explanation)
+  })
+
+  it("does not blank the panel when the only block is a pure restatement", () => {
+    const choiceHtml =
+      "<p>Any good source of used exercise machines will offer at least some well-maintained machines at reasonable prices.</p>"
+    const explanation =
+      "<blockquote>A) Any good source of used exercise machines will offer at least some well-maintained machines at reasonable prices.</blockquote>"
+
+    expect(stripLeadingChoiceRestatement(explanation, choiceHtml)).toBe(explanation)
+  })
 })

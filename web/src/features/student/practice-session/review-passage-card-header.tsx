@@ -31,13 +31,13 @@ function ReviewAnalysisSwitch({ checked, onCheckedChange }: ReviewAnalysisSwitch
 }
 
 export type ReviewPassageCardHeaderProps = {
-  /** When true, Analysis View is shown (RC with published analysis). Hidden for LR. */
+  /** When true, Analysis View is shown for available review analysis/explanation content. */
   analysisEnabled?: boolean
   analysisChecked?: boolean
   onAnalysisCheckedChange?: (checked: boolean) => void
 }
 
-/** Review-tester passage chrome: Analysis View switch (RC only). */
+/** Review-tester passage chrome: Analysis View switch. */
 export function ReviewPassageCardHeader({
   analysisEnabled = false,
   analysisChecked = false,
