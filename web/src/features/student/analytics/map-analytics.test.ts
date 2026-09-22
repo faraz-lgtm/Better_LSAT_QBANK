@@ -93,6 +93,10 @@ describe("map-analytics", () => {
     expect(record?.lrCorrect).toBe(0)
     expect(record?.lrMax).toBe(0)
     expect(record?.rcCorrect).not.toBe(80)
+    expect(record?.rawScore).toBe(80)
+    expect(record?.rawMax).toBe(80)
+    expect(record?.scaledScore).toBe(160)
+    expect(record?.hasScaledScore).toBe(true)
   })
 
   it("maps PrepTest LR/RC from scored section sessions, not a combined 51-question LR", () => {
@@ -153,6 +157,35 @@ describe("map-analytics", () => {
       lrMax: 25,
       rcCorrect: 18,
       rcMax: 27,
+      rawScore: 38,
+      rawMax: 52,
+      scaledScore: 160,
+      hasScaledScore: true,
+    })
+  })
+
+  it("keeps raw PrepTest scores when no scaled conversion exists", () => {
+    const record = mapSessionToPrepTestRecord({
+      id: "sess-raw",
+      kind: "PREPTEST",
+      prepTestId: "pt-120",
+      startedAt: "2026-01-01T00:00:00Z",
+      completedAt: "2026-01-02T00:00:00Z",
+      rawScore: 41,
+      scaledScore: null,
+      percentile: null,
+      bookmarked: false,
+      excluded: false,
+      metadata: {},
+      prepTestTitle: "The Official LSAT PrepTest 120",
+      sectionTitle: null,
+      sectionType: null,
+    })
+    expect(record).toMatchObject({
+      rawScore: 41,
+      rawMax: 41,
+      scaledScore: 0,
+      hasScaledScore: false,
     })
   })
 

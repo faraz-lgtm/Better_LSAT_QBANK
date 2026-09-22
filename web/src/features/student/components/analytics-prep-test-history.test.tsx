@@ -202,4 +202,18 @@ describe("AnalyticsPrepTestHistory", () => {
 
     expect(screen.queryByRole("link", { name: "View more" })).not.toBeInTheDocument()
   })
+
+  it("labels untimed review scores as UR instead of BR", () => {
+    render(
+      <AnalyticsPrepTestHistory
+        visibleEntries={entries}
+        bookmarkedOnly={false}
+        onBookmarkedOnlyChange={() => {}}
+        onToggleBookmark={() => {}}
+      />,
+    )
+
+    expect(screen.getAllByText("UR")).toHaveLength(entries.length)
+    expect(screen.queryByText("BR")).not.toBeInTheDocument()
+  })
 })

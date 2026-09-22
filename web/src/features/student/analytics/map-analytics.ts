@@ -24,7 +24,12 @@ import {
   VARIED_MIX_DRILL_TITLE,
 } from "@/features/student/drills/format-drill-title"
 import { resolvePrepTestLrRcScores } from "@/features/student/analytics/prep-test-lr-rc-scores"
+import { LSAT_SCALED_MAX, LSAT_SCALED_MIN } from "@/features/student/analytics/chart-y-axis"
 import { formatSectionResultsTitle } from "@/features/student/practice-session/lr-drill-results-format"
+
+function isLsatScaledScore(value: number | null | undefined): value is number {
+  return value != null && value >= LSAT_SCALED_MIN && value <= LSAT_SCALED_MAX
+}
 
 function formatSigned(n: number): string {
   if (n > 0) return `+${n}`
@@ -359,9 +364,14 @@ export function mapSessionToPrepTestRecord(
 ): PrepTestRecord | null {
   if (s.kind !== "PREPTEST" || !s.completedAt) return null
   const numMatch = s.prepTestTitle?.match(/\d+/)
-  const scaled = s.scaledScore ?? s.rawScore ?? 0
-  const br = s.blindReviewScaledScore ?? s.blindReviewRawScore ?? scaled
+  const hasScaledScore = isLsatScaledScore(s.scaledScore)
+  const scaled: number = isLsatScaledScore(s.scaledScore) ? s.scaledScore : 0
+  const br: number = isLsatScaledScore(s.blindReviewScaledScore) ? s.blindReviewScaledScore : scaled
   const lrRc = resolvePrepTestLrRcScores(s, sectionSessions)
+  const sectionMax = lrRc.lrMax + lrRc.rcMax
+  const sectionCorrect = lrRc.lrCorrect + lrRc.rcCorrect
+  const rawScore = s.rawScore ?? sectionCorrect
+  const rawMax = Math.max(sectionMax, rawScore, 1)
   return {
     id: s.id,
     prepTestId: s.prepTestId ?? null,
@@ -373,6 +383,9 @@ export function mapSessionToPrepTestRecord(
     rcCorrect: lrRc.rcCorrect,
     rcMax: lrRc.rcMax,
     scaledScore: scaled,
+    hasScaledScore,
+    rawScore,
+    rawMax,
     percentile: s.percentile ?? 0,
     blindReviewScaled: br,
     blindReviewPercentile: s.blindReviewPercentile ?? s.percentile ?? 0,
