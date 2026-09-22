@@ -52,6 +52,7 @@ import { PracticeSessionQuestionNavStrip } from "@/features/student/practice-ses
 import { resolvePracticeSessionQuestionNavOutcome } from "@/features/student/practice-session/practice-session-question-nav-outcome"
 import { PracticeSessionReviewPanel } from "@/features/student/practice-session/practice-session-review-panel"
 import { PracticeSessionReviewSidePanel } from "@/features/student/practice-session/practice-session-review-side-panel"
+import { ReviewPassageCardHeader } from "@/features/student/practice-session/review-passage-card-header"
 import {
   BLIND_REVIEW_PASSAGE_TEXT_CLASS,
   REVIEW_BODY_CLASS,
@@ -128,43 +129,31 @@ function persistAnswers(intentId: string, answers: Record<string, GuestDiagnosti
   sessionStorage.setItem(`${GUEST_DIAGNOSTIC_ANSWERS_STORAGE_PREFIX}${intentId}`, JSON.stringify(answers))
 }
 
-function ReviewStaticSwitch({ checked = false }: { checked?: boolean }) {
-  return (
-    <span
-      role="switch"
-      aria-checked={checked}
-      aria-disabled="true"
-      className={cn(
-        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent",
-        checked ? "bg-[var(--primary)]" : "bg-[var(--greyscale-300)]",
-      )}
-    >
-      <span
-        className={cn(
-          "block size-4 rounded-full bg-[var(--greyscale-0)] shadow-sm dark:bg-[var(--greyscale-900)]",
-          checked ? "translate-x-4" : "translate-x-0",
-        )}
-      />
-    </span>
-  )
-}
-
-function ReviewPassageCardHeader() {
-  return (
-    <div className="mb-8 flex h-8 shrink-0 items-center justify-end gap-4">
-      <span className="inline-flex h-8 items-center gap-4" aria-label="Analysis View is display only">
-        <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
-          Analysis View
-        </span>
-        <ReviewStaticSwitch />
-      </span>
-    </div>
-  )
-}
-
 function answerOutcome(answer: GuestDiagnosticAnswerState | undefined): BlindReviewAnswerOutcome {
   if (!answer) return "unanswered"
   return answer.isCorrect ? "correct" : "incorrect"
+}
+
+function DiagnosticQuestionAnalysisView({
+  explanationHtml,
+  questionTypeLabel,
+}: {
+  explanationHtml: string
+  questionTypeLabel?: string | null
+}) {
+  return (
+    <div className="flex flex-col gap-6 text-[var(--color-student-heading)]">
+      <section className="rounded-[14px] bg-[var(--primary-0)] p-6">
+        <p className="mb-6 text-base font-medium leading-[1.5] tracking-[0.32px]">
+          Question Type{questionTypeLabel ? ` - ${questionTypeLabel}` : ""}
+        </p>
+        <HtmlContent
+          html={explanationHtml}
+          className="explanation-review-body text-[var(--color-student-heading)]"
+        />
+      </section>
+    </div>
+  )
 }
 
 function difficultyTone(level: number): "green" | "teal" | "red" {
@@ -256,6 +245,7 @@ function GuestDiagnosticExamLayout({
   const [answerViewTab, setAnswerViewTab] = useState<BlindReviewAnswerView>("clean")
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false)
   const [reviewSidePanel, setReviewSidePanel] = useState<PracticeReviewSidePanel>(null)
+  const [analysisViewOpen, setAnalysisViewOpen] = useState(false)
   const [answersByQuestion, setAnswersByQuestion] = useState<Record<string, GuestDiagnosticAnswerState>>(() => {
     if (initialAnswers && Object.keys(initialAnswers).length > 0) return initialAnswers
     if (isPostResultsMode) return {}
@@ -311,6 +301,9 @@ function GuestDiagnosticExamLayout({
       ? getDiagnosticExplanationHtml(current.id, config.intentId)
       : null
   const questionMeta = current ? getDiagnosticQuestionMeta(current.id, config.intentId) : null
+  const analysisAvailable = isPostResultsMode && Boolean(explanationHtml?.trim())
+  const currentAnalysisHtml = analysisAvailable ? (explanationHtml?.trim() ?? "") : ""
+  const showAnalysisView = analysisViewOpen && currentAnalysisHtml.length > 0
   const actualOutcome = answerOutcome(isReviewMode ? scoredAnswer : currentAnswer)
   const showInsightsPanel = isPostResultsMode && reviewSidePanel === "insights"
   const analyticsSeed = useMemo(() => {
@@ -485,7 +478,43 @@ function GuestDiagnosticExamLayout({
       seedStemExplanationHtml={explanationUnlocked ? explanationHtml : null}
       seedQuestionTypeLabel={explanationUnlocked ? (questionMeta?.questionType ?? null) : null}
       explanationsEnabled={explanationUnlocked}
+      showStemExplanationAction={false}
+      fetchRemoteExplanations={false}
     />
+  )
+
+  const reviewStimulusContent = (
+    <PracticeAnnotatedContent
+      regionKey={passageKey}
+      html={passageHtml}
+      findQuery={findQuery}
+      toolMode={highlights.toolMode}
+      onMouseUp={canNavigate ? highlights.handleContentMouseUp : () => undefined}
+      onClickCapture={canNavigate ? highlights.handleContentClick : () => undefined}
+      className={cn(
+        BLIND_REVIEW_PASSAGE_TEXT_CLASS,
+        "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]",
+      )}
+    />
+  )
+
+  const reviewLeftPaneContent = (
+    <>
+      <ReviewPassageCardHeader
+        analysisEnabled={analysisAvailable}
+        analysisChecked={showAnalysisView}
+        onAnalysisCheckedChange={setAnalysisViewOpen}
+      />
+      <div className="flex flex-col gap-6">
+        {reviewStimulusContent}
+        {showAnalysisView ? (
+          <DiagnosticQuestionAnalysisView
+            explanationHtml={currentAnalysisHtml}
+            questionTypeLabel={questionMeta?.questionType ?? null}
+          />
+        ) : null}
+      </div>
+    </>
   )
 
   if (isPostResultsMode) {
@@ -526,19 +555,7 @@ function GuestDiagnosticExamLayout({
               <div className={REVIEW_SIDE_PANEL_LAYOUT_FULL_CLASS}>
                 <div className="contents">
                   <div ref={passagePaneRef} className={cn(REVIEW_PASSAGE_PANEL_CLASS, "overflow-y-auto")}>
-                    <ReviewPassageCardHeader />
-                    <PracticeAnnotatedContent
-                      regionKey={passageKey}
-                      html={passageHtml}
-                      findQuery={findQuery}
-                      toolMode={highlights.toolMode}
-                      onMouseUp={canNavigate ? highlights.handleContentMouseUp : () => undefined}
-                      onClickCapture={canNavigate ? highlights.handleContentClick : () => undefined}
-                      className={cn(
-                        BLIND_REVIEW_PASSAGE_TEXT_CLASS,
-                        "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]",
-                      )}
-                    />
+                    {reviewLeftPaneContent}
                   </div>
                   <div ref={questionPaneRef} className={cn(REVIEW_QUESTION_PANEL_CLASS, "overflow-y-auto")}>
                     {questionPanel}
@@ -557,19 +574,7 @@ function GuestDiagnosticExamLayout({
                 className={cn("min-h-0 overflow-hidden", REVIEW_BODY_GRID_FULL_CLASS)}
               >
                 <div ref={passagePaneRef} className={cn(REVIEW_PASSAGE_PANEL_CLASS, "overflow-y-auto")}>
-                  <ReviewPassageCardHeader />
-                  <PracticeAnnotatedContent
-                    regionKey={passageKey}
-                    html={passageHtml}
-                    findQuery={findQuery}
-                    toolMode={highlights.toolMode}
-                    onMouseUp={canNavigate ? highlights.handleContentMouseUp : () => undefined}
-                    onClickCapture={canNavigate ? highlights.handleContentClick : () => undefined}
-                    className={cn(
-                      BLIND_REVIEW_PASSAGE_TEXT_CLASS,
-                      "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]",
-                    )}
-                  />
+                  {reviewLeftPaneContent}
                 </div>
                 <div ref={questionPaneRef} className={cn(REVIEW_QUESTION_PANEL_CLASS, "overflow-y-auto")}>
                   {questionPanel}

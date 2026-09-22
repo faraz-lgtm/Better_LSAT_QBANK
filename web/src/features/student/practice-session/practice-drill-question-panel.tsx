@@ -74,6 +74,8 @@ type PracticeDrillQuestionPanelProps = {
   seedStemExplanationHtml?: string | null
   seedQuestionTypeLabel?: string | null
   explanationsEnabled?: boolean
+  showStemExplanationAction?: boolean
+  fetchRemoteExplanations?: boolean
   onAnnotateMouseUp?: (regionKey: RegionKey, container: HTMLElement | null, event?: MouseEvent) => void
   onAnnotateClick?: (regionKey: RegionKey, container: HTMLElement | null, event: MouseEvent) => void
 }
@@ -117,6 +119,8 @@ function PracticeDrillQuestionPanel({
   seedStemExplanationHtml = null,
   seedQuestionTypeLabel = null,
   explanationsEnabled = true,
+  showStemExplanationAction = true,
+  fetchRemoteExplanations = true,
   onAnnotateMouseUp,
   onAnnotateClick,
 }: PracticeDrillQuestionPanelProps) {
@@ -174,6 +178,8 @@ function PracticeDrillQuestionPanel({
         seedStemExplanationHtml={seedStemExplanationHtml}
         seedQuestionTypeLabel={seedQuestionTypeLabel}
         explanationsEnabled={explanationsEnabled}
+        showStemExplanationAction={showStemExplanationAction}
+        fetchRemoteExplanations={fetchRemoteExplanations}
         onAnnotateMouseUp={onAnnotateMouseUp}
         onAnnotateClick={onAnnotateClick}
         annotateToolMode={toolMode}
