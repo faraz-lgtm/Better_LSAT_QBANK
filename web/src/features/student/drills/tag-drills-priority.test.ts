@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import type { PriorityRow } from "@/lib/api/analytics"
 import {
   TAG_DRILLS_INITIAL_VISIBLE,
+  TAG_DRILLS_PER_SECTION_EXPANDED,
   TAG_DRILLS_PER_SECTION_INITIAL,
   groupPriorityRowsBySection,
   orderPriorityRowsByWeakness,
@@ -88,11 +89,20 @@ describe("visibleTagDrillCount", () => {
     expect(visibleTagDrillCount(24, false)).toBe(TAG_DRILLS_INITIAL_VISIBLE)
   })
 
-  it("shows every tag when expanded", () => {
+  it("shows every tag when expanded without a max", () => {
     expect(visibleTagDrillCount(24, true)).toBe(24)
   })
 
   it("collapses each section to a few top-priority types", () => {
     expect(visibleTagDrillCount(12, false, TAG_DRILLS_PER_SECTION_INITIAL)).toBe(TAG_DRILLS_PER_SECTION_INITIAL)
+  })
+
+  it("caps expanded by-type lists at the per-section max", () => {
+    expect(
+      visibleTagDrillCount(24, true, TAG_DRILLS_PER_SECTION_INITIAL, TAG_DRILLS_PER_SECTION_EXPANDED),
+    ).toBe(TAG_DRILLS_PER_SECTION_EXPANDED)
+    expect(
+      visibleTagDrillCount(8, true, TAG_DRILLS_PER_SECTION_INITIAL, TAG_DRILLS_PER_SECTION_EXPANDED),
+    ).toBe(8)
   })
 })

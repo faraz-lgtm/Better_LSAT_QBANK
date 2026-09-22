@@ -16,6 +16,9 @@ const TAG_DRILLS_VISIBLE_MAX = 5
 /** A couple of top-priority types per section in the collapsed drills page lists. */
 const TAG_DRILLS_PER_SECTION_INITIAL = 3
 
+/** Max LR/RC by-type drills shown after “See more”. */
+const TAG_DRILLS_PER_SECTION_EXPANDED = 10
+
 /** In-progress drills previewed under each LR/RC continue section. */
 const CONTINUE_DRILLS_PER_SECTION_INITIAL = 3
 
@@ -70,14 +73,22 @@ function groupPriorityRowsBySection(rows: PriorityRow[]): { lr: PriorityRow[]; r
   }
 }
 
-function visibleTagDrillCount(total: number, expanded: boolean, initial: number = TAG_DRILLS_INITIAL_VISIBLE): number {
-  if (expanded || total <= initial) return total
-  return initial
+function visibleTagDrillCount(
+  total: number,
+  expanded: boolean,
+  initial: number = TAG_DRILLS_INITIAL_VISIBLE,
+  expandedMax: number = Number.POSITIVE_INFINITY,
+): number {
+  if (!expanded) {
+    return total <= initial ? total : initial
+  }
+  return Math.min(total, expandedMax)
 }
 
 export {
   TAG_DRILLS_INITIAL_VISIBLE,
   TAG_DRILLS_PER_SECTION_INITIAL,
+  TAG_DRILLS_PER_SECTION_EXPANDED,
   CONTINUE_DRILLS_PER_SECTION_INITIAL,
   TAG_DRILLS_VISIBLE_MAX,
   comparePriorityRows,
