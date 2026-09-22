@@ -69,7 +69,7 @@ describe("buildExplanationQuestionDetailView", () => {
     expect(view.analytics.questionStemTags).toEqual(["Art", "Sing"])
   })
 
-  it("omits popularity percents below 5 unique answers", () => {
+  it("omits thin-sample percents and fills provisional bars instead", () => {
     const detail: ExplanationDetailPayload = {
       questionId: "q1",
       prepTestId: "pt1",
@@ -97,9 +97,13 @@ describe("buildExplanationQuestionDetailView", () => {
     }
 
     const view = buildExplanationQuestionDetailView(loc, detail)
-    expect(view.analytics.answerPopularity).toEqual([])
+    expect(view.analytics.answerPopularity.length).toBeGreaterThan(0)
+    expect(view.analytics.answerPopularity.every((r) => r.pct >= 0)).toBe(true)
+    expect(view.analytics.answerPopularity.reduce((sum, r) => sum + r.pct, 0)).toBe(100)
+    expect(view.analytics.answerPopularity.find((r) => r.letter === "A")?.highlight).toBe(true)
     expect(view.analytics.answerPopularityTotal).toBe(3)
-    expect(view.analytics.scoreBand.caption).toBe("Not enough answers yet")
+    expect(Number.parseInt(view.analytics.scoreBand.headline, 10)).toBeGreaterThanOrEqual(120)
+    expect(view.analytics.scoreBand.caption).not.toBe("Not enough answers yet")
   })
 
   it("maps null userSelectedLetter when never answered", () => {

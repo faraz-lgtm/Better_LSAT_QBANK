@@ -1,4 +1,8 @@
 import type { ExplanationAnswerPopularityRow } from "@/features/student/explanation-detail/types"
+import {
+  hasEnoughPlatformAnswerSample,
+  platformAnswerSampleSize,
+} from "@/lib/platform-answer-sample"
 
 const DEFAULT_LETTERS = ["A", "B", "C", "D", "E"] as const
 
@@ -91,4 +95,23 @@ export function resolveAnswerPopularityRows(
       ...(correct && letter === correct ? { highlight: true } : {}),
     }
   })
+}
+
+/**
+ * Always returns bars suitable for display: real platform rows when the sample
+ * is large enough, otherwise stable provisional A–E percentages.
+ */
+export function displayAnswerPopularityRows(
+  rows: readonly ExplanationAnswerPopularityRow[],
+  correctLetter: string | null | undefined,
+  seedKey?: string,
+  sampleSize?: number,
+): ExplanationAnswerPopularityRow[] {
+  const letters = rows.length > 0 ? rows.map((row) => row.letter) : [...DEFAULT_LETTERS]
+  const size = sampleSize ?? platformAnswerSampleSize(rows)
+  if (hasEnoughPlatformAnswerSample(size) && rows.length > 0) {
+    return [...rows]
+  }
+  const correct = correctLetter ? normalizeLetter(correctLetter) : null
+  return buildProvisionalAnswerPopularity(seedKey || correct || "A", correct, letters)
 }

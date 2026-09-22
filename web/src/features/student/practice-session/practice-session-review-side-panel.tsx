@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { Check, ChevronUp, Clock3, Tags, Target } from "lucide-react"
 
-import { resolveAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
+import { displayAnswerPopularityRows, resolveAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
+import { resolveScoreBand } from "@/features/student/explanation-detail/provisional-score-band"
 import { ExplanationExplainTabPanel } from "@/features/student/explanation-detail/explanation-explain-tab-panel"
 import type { ExplanationAnswerPopularityRow, ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
 import type { PracticeReviewSidePanel } from "@/features/student/practice-session/practice-blind-review-session-header"
@@ -11,11 +12,7 @@ import {
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
 import { difficultyLabelFromLevel, formatMmSs, tagsFromTopicName, targetTimeSecondsForDifficulty } from "@/features/student/practice-session/practice-results-ui"
 import { createExplanationsApi, type ExplanationDetailPayload } from "@/lib/api/explanations"
-import {
-  NOT_ENOUGH_ANSWERS_YET,
-  hasEnoughPlatformAnswerSample,
-  platformAnswerSampleSize,
-} from "@/lib/platform-answer-sample"
+import { platformAnswerSampleSize } from "@/lib/platform-answer-sample"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
@@ -42,7 +39,16 @@ function viewFromDetail(detail: ExplanationDetailPayload): ExplanationQuestionDe
     detail.correctChoiceId ?? "",
   )
   const totalResponses = detail.answerPopularityTotal ?? platformAnswerSampleSize(resolvedPopularity)
-  const answerPopularity = hasEnoughPlatformAnswerSample(totalResponses) ? resolvedPopularity : []
+  const correctLetter = (() => {
+    const raw = (detail.correctChoiceId ?? "").trim().toUpperCase().slice(0, 1)
+    return /^[A-E]$/.test(raw) ? raw : null
+  })()
+  const answerPopularity = displayAnswerPopularityRows(
+    resolvedPopularity,
+    correctLetter,
+    detail.questionId,
+    totalResponses,
+  )
   const letter = detail.userSelectedLetter?.trim().toUpperCase().slice(0, 1) ?? ""
 
   return {
@@ -111,11 +117,7 @@ function viewFromDetail(detail: ExplanationDetailPayload): ExplanationQuestionDe
             },
           }
         : {}),
-      scoreBand: {
-        headline: "—",
-        range: "—",
-        caption: NOT_ENOUGH_ANSWERS_YET,
-      },
+      scoreBand: resolveScoreBand(null, detail.questionId, diffLevel),
       answerPopularity,
       answerPopularityTotal: totalResponses,
       userSelectedLetter: /^[A-E]$/.test(letter) ? letter : null,
@@ -215,14 +217,8 @@ function DifficultyStatCard({
 }
 
 function ScoreBandCard({ scoreBand }: { scoreBand: AnalyticsView["scoreBand"] }) {
-  const score = Number.parseInt(scoreBand.headline, 10)
-  if (!Number.isFinite(score)) {
-    return (
-      <p className="m-0 w-full rounded-[14px] border border-dashed border-[#dfe1e7] bg-[#f6f8fa] px-4 py-6 text-center text-sm text-[#666d80]">
-        {scoreBand.caption}
-      </p>
-    )
-  }
+  const resolved = resolveScoreBand(scoreBand, scoreBand.headline || "score", 3)
+  const score = Number.parseInt(resolved.headline, 10)
 
   return (
     <div className="w-full overflow-hidden rounded-[16px] border border-[var(--primary)]/15 bg-[linear-gradient(158deg,var(--primary)_0%,var(--primary-600)_100%)] p-5 text-white">
@@ -232,19 +228,22 @@ function ScoreBandCard({ scoreBand }: { scoreBand: AnalyticsView["scoreBand"] })
             <Target className="size-3.5 text-white/80" strokeWidth={1.8} aria-hidden />
           </span>
           <p className="m-0 max-w-[175px] text-xs font-normal leading-[1.5] tracking-[0.24px] text-white/75">
-            {scoreBand.caption}
+            {resolved.caption}
           </p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="m-0 text-2xl font-bold leading-[1.3]">{scoreBand.headline}</p>
+          <p className="m-0 text-2xl font-bold leading-[1.3]">{resolved.headline}</p>
           <p className="m-0 pt-1 text-[8px] leading-[1.5] tracking-[0.16px] text-[var(--primary-900)]">
-            {scoreBand.range}
+            {resolved.range}
           </p>
         </div>
       </div>
       <div className="pt-4">
         <div className="h-1.5 rounded-full bg-white/15">
-          <div className="h-1.5 w-1/2 rounded-full bg-gradient-to-r from-[var(--primary)] to-[#419df8]" />
+          <div
+            className="h-1.5 rounded-full bg-gradient-to-r from-[var(--primary)] to-[#419df8]"
+            style={{ width: `${Math.max(0, Math.min(100, ((score - 120) / 60) * 100))}%` }}
+          />
         </div>
         <div className="flex justify-between pt-1.5 text-[10px] font-medium leading-[15px] text-white/50">
           <span>120</span>
@@ -259,27 +258,23 @@ function ScoreBandCard({ scoreBand }: { scoreBand: AnalyticsView["scoreBand"] })
 function TopAnswerBars({
   rows,
   selectedLetter,
+  correctLetter,
 }: {
   rows: ExplanationAnswerPopularityRow[]
   selectedLetter: string | null
+  correctLetter?: string | null
 }) {
+  const displayRows = displayAnswerPopularityRows(rows, correctLetter, correctLetter || "A")
   const highlighted =
-    rows.find((row) => row.highlight)?.letter ??
-    rows.reduce<ExplanationAnswerPopularityRow | null>(
+    displayRows.find((row) => row.highlight)?.letter ??
+    displayRows.reduce<ExplanationAnswerPopularityRow | null>(
       (best, row) => (!best || row.pct > best.pct ? row : best),
       null,
     )?.letter
-  if (rows.length === 0 || !hasEnoughPlatformAnswerSample(platformAnswerSampleSize(rows))) {
-    return (
-      <p className="m-0 w-full rounded-[14px] border border-dashed border-[#dfe1e7] bg-[#f6f8fa] px-4 py-6 text-center text-sm text-[#666d80]">
-        {NOT_ENOUGH_ANSWERS_YET}
-      </p>
-    )
-  }
 
   return (
     <div className="flex w-full items-end justify-between gap-2">
-      {rows.map((row) => {
+      {displayRows.map((row) => {
         const active = row.letter === highlighted || row.letter === selectedLetter
         const fillHeight = `${Math.min(100, Math.max(row.pct > 0 ? 6 : 0, row.pct))}%`
         return (

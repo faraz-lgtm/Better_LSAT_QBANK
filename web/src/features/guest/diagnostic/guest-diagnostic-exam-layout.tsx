@@ -73,7 +73,8 @@ import { buildDiagnosticAnswerPopularity } from "@/features/guest/diagnostic/dia
 import { difficultyLabelFromLevel, targetTimeSecondsForDifficulty } from "@/features/student/practice-session/practice-results-ui"
 import type { DrillQuestion } from "@/features/student/drills/drill-types"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
-import { NOT_ENOUGH_ANSWERS_YET, platformAnswerSampleSize } from "@/lib/platform-answer-sample"
+import { resolveScoreBand } from "@/features/student/explanation-detail/provisional-score-band"
+import { platformAnswerSampleSize } from "@/lib/platform-answer-sample"
 import { usePracticeSessionAccessibilityPanel } from "@/features/student/practice-session/use-practice-session-accessibility-panel"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { isOfficialLayout, resolveExamSessionVariant } from "@/features/student/practice-session/practice-session-types"
@@ -190,11 +191,7 @@ function buildDiagnosticAnalyticsSeed(
       tone: difficultyTone(diffLevel),
     },
     // Diagnostic is LR-only — no multi-question passage difficulty.
-    scoreBand: {
-      headline: "—",
-      range: "—",
-      caption: NOT_ENOUGH_ANSWERS_YET,
-    },
+    scoreBand: resolveScoreBand(null, question.id, diffLevel),
     answerPopularity,
     answerPopularityTotal: platformAnswerSampleSize(answerPopularity),
     userSelectedLetter: /^[A-E]$/.test(letter) ? letter : null,
