@@ -179,7 +179,7 @@ describe("LrDrillOptionRow", () => {
     expect(screen.getByText("Choice B").closest(".practice-session-choice-masked-ink")).toBeTruthy()
   })
 
-  it("uses 15px / 30px / regular for official choice copy and Regular 28/60 letters", () => {
+  it("uses 18px / 1.5 / 300 for official choice copy and Regular 28/60 letters", () => {
     render(
       <LrDrillOptionRow
         index={0}
@@ -192,12 +192,19 @@ describe("LrDrillOptionRow", () => {
     )
 
     const letter = screen.getByText("A")
-    expect(letter).toHaveClass("text-[28px]", "font-normal", "leading-[60px]")
+    expect(letter).toHaveClass(
+      "practice-session-official-choice-letter",
+      "text-[28px]",
+      "font-normal",
+      "leading-[60px]",
+    )
+    expect(letter.className).toContain("[font-family:Apostrophe,halyard-text,sans-serif]")
     expect(letter).not.toHaveClass("font-light")
 
     const copy = screen.getByText("Choice A").closest(".practice-session-content")
-    expect(copy).toHaveClass("text-[15px]", "font-normal", "leading-[30px]")
-    expect(copy).not.toHaveClass("leading-[1.5]")
+    expect(copy).toHaveClass("text-[18px]", "font-light", "leading-[1.5]")
+    expect(copy?.className).toContain("[font-family:Apostrophe,halyard-text,sans-serif]")
+    expect(copy).not.toHaveClass("leading-[30px]")
     expect(copy).not.toHaveClass("tracking-[0.28px]")
   })
 
@@ -370,8 +377,8 @@ describe("LrDrillOptionRow", () => {
       "pl-[6px]",
       "pr-[12px]",
       "min-h-[60px]",
-      "leading-[30px]",
-      "font-normal",
+      "leading-[1.5]",
+      "font-light",
     )
   })
 
@@ -387,16 +394,16 @@ describe("LrDrillOptionRow", () => {
       />,
     )
 
-    expect(container.firstChild).toHaveClass("bg-[#eceff3]", "practice-session-official-choice", "items-start")
+    expect(container.firstChild).toHaveClass("bg-[#f2f3f8]", "practice-session-official-choice", "items-start")
     expect(screen.getByText("A")).toHaveClass(
       "w-[60px]",
       "bg-[#ffffff]",
-      "border-[#eceff3]",
+      "border-[#f2f3f8]",
       "text-[#666d80]",
     )
     expect(screen.getByText("Choice A").closest(".practice-session-content")).toHaveClass(
-      "leading-[30px]",
-      "font-normal",
+      "leading-[1.5]",
+      "font-light",
       "text-[#041a44]",
     )
   })

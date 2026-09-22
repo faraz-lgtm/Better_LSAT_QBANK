@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent } from "react"
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react"
 import { ChevronDown, ChevronUp } from "lucide-react"
 
 import { Switch } from "@/components/ui/switch"
@@ -231,6 +231,14 @@ function PracticeBlindReviewQuestionPanel({
 
   const canResetResponse =
     !reviewChrome && !choicesDisabled && (selectedIndex != null || hasMaskedChoices)
+  const optionsListRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    window.getSelection()?.removeAllRanges()
+    if (displaySelectedIndex == null) return
+    const selected = optionsListRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]')
+    selected?.focus({ preventScroll: true })
+  }, [question.id, questionNumber, displaySelectedIndex])
 
   const panel = (
     <div
@@ -365,7 +373,10 @@ function PracticeBlindReviewQuestionPanel({
           {isCorrect ? "Correct" : "Incorrect"}
         </p>
       ) : null}
-      <div className={cn(reviewChrome ? "flex shrink-0 flex-col gap-3 pb-6" : BLIND_REVIEW_OPTIONS_LIST_CLASS)}>
+      <div
+        ref={optionsListRef}
+        className={cn(reviewChrome ? "flex shrink-0 flex-col gap-3 pb-6" : BLIND_REVIEW_OPTIONS_LIST_CLASS)}
+      >
           {question.choices.map((choice, index) => {
             const isCorrectChoice = correctIndex === index
             const forceSelected =
@@ -382,7 +393,7 @@ function PracticeBlindReviewQuestionPanel({
 
             return (
               <LrDrillOptionRow
-                key={choice.id}
+                key={`${question.id}-${questionNumber}-${choice.id}`}
                 index={index}
                 html={getRegionHtml(regionKey(question.id, `choice-${choice.id}`), choice.text)}
                 findQuery={findQuery}

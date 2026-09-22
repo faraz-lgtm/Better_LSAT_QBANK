@@ -119,6 +119,7 @@ import {
   type PracticeToolMode,
   type RegionKey,
 } from "@/features/student/practice-session/practice-session-types"
+import { choiceIndexFromAnswer, hasPracticeAnswer } from "@/features/student/practice-session/practice-choice-index"
 import { useExamFullscreen, useOfficialInterfacePreference } from "@/features/student/practice-session/use-official-interface"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { useQuestionDwellTime } from "@/features/student/practice-session/use-question-dwell-time"
@@ -177,15 +178,6 @@ function countSectionIncorrect(
 
 function storePrepTestSectionScorePrediction(sessionId: string, score: number): void {
   sessionStorage.setItem(`preptest-section-prediction-${sessionId}`, String(score))
-}
-
-function choiceIndexFromAnswer(choices: DrillQuestion["choices"], selectedAnswer: string): number | null {
-  const letter = selectedAnswer.trim().toUpperCase()
-  const byId = choices.findIndex((c) => c.id.toUpperCase() === letter)
-  if (byId >= 0) return byId
-  const idx = letter.charCodeAt(0) - 65
-  if (idx >= 0 && idx < choices.length) return idx
-  return null
 }
 
 function regionKey(questionId: string, part: string) {
@@ -303,6 +295,14 @@ function SectionQuestionPanel({
   const officialChrome = isOfficialLayout(variant)
   const canResetResponse =
     !reviewChrome && !choicesDisabled && (selectedIndex != null || hasMaskedChoices)
+  const optionsListRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    window.getSelection()?.removeAllRanges()
+    if (selectedIndex == null) return
+    const selected = optionsListRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]')
+    selected?.focus({ preventScroll: true })
+  }, [question.id, questionNumber, selectedIndex])
 
   function handleResetResponse() {
     resetMaskedChoices()
@@ -405,10 +405,13 @@ function SectionQuestionPanel({
             {isCorrect ? "Correct" : "Incorrect"}
           </p>
         ) : null}
-        <div className={officialChrome ? OFFICIAL_OPTIONS_LIST_CLASS : isActiveDrillLayout ? ACTIVE_DRILL_OPTIONS_LIST_CLASS : "flex flex-col gap-2"}>
+        <div
+          ref={optionsListRef}
+          className={officialChrome ? OFFICIAL_OPTIONS_LIST_CLASS : isActiveDrillLayout ? ACTIVE_DRILL_OPTIONS_LIST_CLASS : "flex flex-col gap-2"}
+        >
           {question.choices.map((choice, index) => (
             <LrDrillOptionRow
-              key={choice.id}
+              key={`${question.id}-${questionNumber}-${choice.id}`}
               index={index}
               html={getRegionHtml(regionKey(question.id, `choice-${choice.id}`), choice.text)}
               findQuery={findQuery}
@@ -531,6 +534,7 @@ function SectionSessionPage() {
   const loadGenerationRef = useRef(0)
   const dwellSecondsRef = useRef<(questionId: string) => number | undefined>(() => undefined)
   const prevQuestionIdRef = useRef<string | null>(null)
+  const autoAdvanceTimeoutRef = useRef<number | null>(null)
 
   const answerPersist = usePracticeAnswerPersist({
     sessionId: sessionId ?? null,
@@ -937,6 +941,10 @@ function SectionSessionPage() {
     if (prev && prev !== current?.id) {
       void answerPersist.flushQuestion(prev)
     }
+    if (autoAdvanceTimeoutRef.current != null) {
+      window.clearTimeout(autoAdvanceTimeoutRef.current)
+      autoAdvanceTimeoutRef.current = null
+    }
   }, [answerPersist, current?.id])
 
   usePracticeQuestionSeen({
@@ -977,13 +985,13 @@ function SectionSessionPage() {
     : undefined
   const currentAnswer = displayAnswer
   const selectedIndex =
-    current && currentAnswer
+    current && hasPracticeAnswer(currentAnswer)
       ? choiceIndexFromAnswer(current.choices, currentAnswer.selectedAnswer)
       : null
   const revealed = blindReviewMode || resultsReviewMode
     ? false
     : showAnswersMode === "each"
-      ? Boolean(currentAnswer)
+      ? hasPracticeAnswer(currentAnswer)
       : false
   const recommendedForBr = Boolean(
     current && isQuestionRecommendedForBlindReview(actualAnswersByQuestion[current.id]),
@@ -1038,7 +1046,7 @@ function SectionSessionPage() {
       })
       return
     }
-    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
+    if (!canChangePracticeAnswer(showAnswersMode, hasPracticeAnswer(currentAnswer), {
       blindReview: editingBlindReviewAnswers,
     })) {
       return
@@ -1068,7 +1076,11 @@ function SectionSessionPage() {
         [current.id]: { selectedAnswer: event.selected_answer, isCorrect: event.is_correct },
       }))
       if (!blindReviewMode && showAnswersMode === "each") {
-        window.setTimeout(() => {
+        if (autoAdvanceTimeoutRef.current != null) {
+          window.clearTimeout(autoAdvanceTimeoutRef.current)
+        }
+        autoAdvanceTimeoutRef.current = window.setTimeout(() => {
+          autoAdvanceTimeoutRef.current = null
           setQIndex((i) => Math.min(questions.length, i + 1))
         }, 600)
       }
@@ -1089,7 +1101,7 @@ function SectionSessionPage() {
   async function handleResetResponse() {
     if (!sessionId || !current || resultsReviewMode) return
     if (answeringBlindReview && !editingBlindReviewAnswers) return
-    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
+    if (!canChangePracticeAnswer(showAnswersMode, hasPracticeAnswer(currentAnswer), {
       blindReview: editingBlindReviewAnswers,
     })) {
       return
@@ -1554,7 +1566,7 @@ function SectionSessionPage() {
   const allowReselect =
     !resultsReviewMode &&
     (!answeringBlindReview || editingBlindReviewAnswers) &&
-    canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
+    canChangePracticeAnswer(showAnswersMode, hasPracticeAnswer(currentAnswer), {
       blindReview: editingBlindReviewAnswers,
     })
 
@@ -1747,7 +1759,7 @@ function SectionSessionPage() {
                 className={resultsReviewMode ? REVIEW_QUESTION_PANEL_CLASS : BLIND_REVIEW_NOTES_QUESTION_PANEL_CLASS}
               >
               <SectionQuestionPanel
-                key={current.id}
+                key={`${current.id}:${safeIndex}`}
                 question={current}
                 questionNumber={safeIndex}
                 findQuery={findQuery}
@@ -1823,7 +1835,7 @@ function SectionSessionPage() {
                 className={resultsReviewMode ? REVIEW_QUESTION_PANEL_CLASS : BLIND_REVIEW_NOTES_QUESTION_PANEL_CLASS}
               >
                 <SectionQuestionPanel
-                  key={current.id}
+                  key={`${current.id}:${safeIndex}`}
                   question={current}
                   questionNumber={safeIndex}
                   findQuery={findQuery}
@@ -1919,7 +1931,7 @@ function SectionSessionPage() {
               )}
             >
               <SectionQuestionPanel
-                key={current.id}
+                key={`${current.id}:${safeIndex}`}
                 question={current}
                 questionNumber={safeIndex}
                 findQuery={findQuery}

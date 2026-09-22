@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest"
 import { PracticeQuestionStem } from "./practice-question-stem"
 
 describe("PracticeQuestionStem", () => {
-  it("uses 15px / 30px / regular for official stem number and copy", () => {
+  it("uses 18px / 1.5 / Apostrophe for official stem number and copy", () => {
     render(
       <PracticeQuestionStem
         questionNumber={1}
@@ -18,11 +18,12 @@ describe("PracticeQuestionStem", () => {
       />,
     )
 
-    expect(screen.getByText("1 .")).toHaveClass("text-[15px]", "font-normal", "leading-[30px]")
+    expect(screen.getByText("1 .")).toHaveClass("text-[18px]", "font-light", "leading-[1.5]")
     const stem = screen
       .getByText("Which one of the following most accurately states the main point of the passage?")
       .closest(".practice-session-content")
-    expect(stem).toHaveClass("text-[15px]", "font-normal", "leading-[30px]")
+    expect(stem).toHaveClass("text-[18px]", "font-light", "leading-[1.5]")
+    expect(stem?.className).toContain("[font-family:Apostrophe,halyard-text,sans-serif]")
     expect(stem).not.toHaveClass("leading-5")
   })
 })
