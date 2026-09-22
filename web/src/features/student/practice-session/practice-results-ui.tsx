@@ -2,8 +2,7 @@ import { Check, Minus, X } from "lucide-react"
 import type { ReactNode } from "react"
 
 import type { ExplanationAnswerPopularityRow, ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
-import { buildProvisionalAnswerPopularity } from "@/features/student/explanation-detail/answer-popularity-rows"
-import { hasEnoughPlatformAnswerSample, platformAnswerSampleSize } from "@/lib/platform-answer-sample"
+import { displayAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
 import { cn } from "@/lib/utils"
 
 export type PracticeDifficultyLabel = "Easiest" | "Easy" | "Medium" | "Hard" | "Hardest"
@@ -382,11 +381,7 @@ export function PracticeAnswerPopularityBars({
   showPercentages?: boolean
   className?: string
 }) {
-  const sampleSize = platformAnswerSampleSize(rows)
-  const letters = rows.length > 0 ? rows.map((row) => row.letter) : ["A", "B", "C", "D", "E"]
-  const displayRows = hasEnoughPlatformAnswerSample(sampleSize)
-    ? rows
-    : buildProvisionalAnswerPopularity(correctLetter || "A", correctLetter, letters)
+  const displayRows = displayAnswerPopularityRows(rows, correctLetter, correctLetter || "A")
 
   const max = Math.max(1, ...displayRows.map((r) => r.pct))
   const normalizedSelected = selectedLetter?.trim().toUpperCase() ?? null
