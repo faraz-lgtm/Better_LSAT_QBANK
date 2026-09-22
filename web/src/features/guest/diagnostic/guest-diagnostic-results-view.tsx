@@ -3,6 +3,10 @@ import { Check, Lock, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { GuestDiagnosticExplanationCard } from '@/features/guest/diagnostic/guest-diagnostic-explanation-card'
+import {
+  DiagnosticOutcomeIcon,
+  diagnosticOutcomeKind,
+} from '@/features/guest/diagnostic/diagnostic-outcome-icon'
 import type { GuestDiagnosticResult } from '@/features/guest/diagnostic/guest-diagnostic-result-storage'
 import {
   buildDiagnosticResultExplanation,
@@ -59,6 +63,9 @@ type DifficultyAccuracy = {
 const LSAT_MIN = 120
 const LSAT_MAX = 180
 const LSAT_GOAL_SCORE = 165
+
+/** Collapsed question lists (Total Questions + review jump list) show this many rows before "Show All". */
+const DIAGNOSTIC_QUESTIONS_COLLAPSED_VISIBLE = 3
 
 const DIFFICULTY_LABELS: Record<number, string> = {
   1: 'Very Easy',
@@ -183,22 +190,20 @@ function sortOutcomes(
 
 // ─── Small shared atoms ───────────────────────────────────────────────────────
 
-function OutcomePill({ index, isCorrect }: { index: number; isCorrect: boolean }) {
+function OutcomePill({
+  index,
+  isCorrect,
+  isUnanswered = false,
+}: {
+  index: number
+  isCorrect: boolean
+  isUnanswered?: boolean
+}) {
+  const kind = diagnosticOutcomeKind({ isCorrect, isUnanswered })
+  const outcomeLabel = kind === 'empty' ? 'unanswered' : kind
   return (
-    <span
-      className={cn(
-        'inline-flex size-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold',
-        isCorrect
-          ? 'border-[#00bc54] bg-[#e8fff1] text-[#00bc54]'
-          : 'border-[#df1c41] bg-[#fff0f3] text-[#df1c41]',
-      )}
-      aria-label={`Q${index + 1}: ${isCorrect ? 'correct' : 'incorrect'}`}
-    >
-      {isCorrect ? (
-        <Check className="size-3.5" strokeWidth={2.5} />
-      ) : (
-        <X className="size-3.5" strokeWidth={2.5} />
-      )}
+    <span aria-label={`Q${index + 1}: ${outcomeLabel}`}>
+      <DiagnosticOutcomeIcon kind={kind} variant="pill" />
     </span>
   )
 }
@@ -562,33 +567,33 @@ function GuestDiagnosticLockedQuestionRow({
 
   return (
     <div
-      className="relative overflow-hidden border-t border-[var(--greyscale-100)] first:border-t-0"
+      className="relative overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
       data-testid="diagnostic-locked-question-row"
       aria-label={`Question ${number} locked`}
     >
-      <div className="flex gap-4 p-6">
-        <div className="flex size-14 shrink-0 items-center justify-center rounded-[14px] bg-[var(--greyscale-300)] text-lg font-bold text-white">
-          {number}
+      <div className="flex items-start gap-6 p-6">
+        <div className="flex w-8 shrink-0 flex-col items-center gap-2">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-[var(--greyscale-300)]">
+            <span className="text-base font-semibold text-white">{number}</span>
+          </div>
+          <div className="size-6 rounded-full bg-[var(--greyscale-200)]" />
         </div>
         <div className="min-w-0 flex-1 select-none blur-[6px]" aria-hidden>
-          <p className="text-lg font-semibold text-[var(--color-student-heading)]">
-            {heading} · Q{number} · {dummyType}
+          <p className="text-base font-semibold text-[var(--primary-800,#041a44)]">
+            {heading} Q{number}
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <span className="rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-2 py-0.5 text-[10px]">
+          <div className="mt-2 flex flex-wrap gap-2.5">
+            <span className="inline-flex h-5 items-center rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-2 py-0.5 text-[10px]">
               LR
             </span>
-            <span className="rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-2 py-0.5 text-[10px]">
+            <span className="inline-flex h-5 items-center rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-2 py-0.5 text-[10px]">
               {dummyType}
-            </span>
-            <span className="rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-2 py-0.5 text-[10px]">
-              Level —
             </span>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div className="h-12 rounded-lg bg-[var(--greyscale-25)]" />
-            <div className="h-12 rounded-lg bg-[var(--greyscale-25)]" />
-            <div className="h-12 rounded-lg bg-[var(--greyscale-25)]" />
+            <div className="h-16 rounded-lg bg-[var(--greyscale-25)]" />
+            <div className="h-16 rounded-lg bg-[var(--greyscale-25)]" />
+            <div className="h-16 rounded-lg bg-[var(--greyscale-25)]" />
           </div>
         </div>
       </div>
@@ -1123,6 +1128,8 @@ function WrongQuestionsReviewSection({
   reviewInTesterHref: string
   onSubscribe: () => void
 }) {
+  const [reviewExpanded, setReviewExpanded] = useState(false)
+
   const wrongOutcomes = result.outcomes
     .map((o, i) => ({ ...o, originalIndex: i }))
     .filter((o) => !o.isCorrect)
@@ -1145,6 +1152,11 @@ function WrongQuestionsReviewSection({
   const wrongLocked = wrongOutcomes.length - unlockedWrongCount
 
   if (wrongOutcomes.length === 0) return null
+
+  const visibleWrongOutcomes = reviewExpanded
+    ? wrongOutcomes
+    : wrongOutcomes.slice(0, DIAGNOSTIC_QUESTIONS_COLLAPSED_VISIBLE)
+  const hasHiddenWrong = wrongOutcomes.length > DIAGNOSTIC_QUESTIONS_COLLAPSED_VISIBLE
 
   return (
     <div className="overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
@@ -1220,7 +1232,7 @@ function WrongQuestionsReviewSection({
       </div>
 
       {/* Compact wrong-answer rows */}
-      {wrongOutcomes.map((outcome) => {
+      {visibleWrongOutcomes.map((outcome) => {
         const questionNumber = outcome.originalIndex + 1
         const unlocked = canShowDiagnosticResultDetails({
           intentId: result.intentId,
@@ -1283,6 +1295,21 @@ function WrongQuestionsReviewSection({
           />
         )
       })}
+
+      {hasHiddenWrong ? (
+        <div className="flex items-center justify-center border-t border-[var(--greyscale-100)] px-6 py-3">
+          <button
+            type="button"
+            onClick={() => setReviewExpanded((open) => !open)}
+            aria-expanded={reviewExpanded}
+            className="h-10 rounded-[10px] px-4 text-sm font-semibold text-[var(--primary-700,#082c6b)] transition-colors hover:bg-[var(--greyscale-25)]"
+          >
+            {reviewExpanded
+              ? 'Show less'
+              : `Show all ${result.questionCount} questions`}
+          </button>
+        </div>
+      ) : null}
 
       {/* Footer banner: locked explanations */}
       {totalLocked > 0 && (
@@ -1388,7 +1415,7 @@ function CompactReviewRow({
 
       {/* Inline expansion */}
       {expanded && explanation && (
-        <div className="border-t border-[var(--greyscale-100)]">
+        <div className="border-t border-[var(--greyscale-100)] bg-[var(--greyscale-25)]/40">
           <GuestDiagnosticExplanationCard
             number={questionNumber}
             heading={getDiagnosticIntentTitle(intentId)}
@@ -1397,6 +1424,7 @@ function CompactReviewRow({
             selectedAnswer={outcome.selectedAnswer}
             targetTimeSeconds={meta?.targetTimeSeconds}
             yourTimeSeconds={outcome.timeSpentSeconds}
+            className="rounded-none border-0"
           />
         </div>
       )}
@@ -1482,6 +1510,7 @@ function GuestDiagnosticResultsView({
   const [explanationsLoading, setExplanationsLoading] = useState(false)
   const [explanationsError, setExplanationsError] = useState<string | null>(null)
   const [sortMode, setSortMode] = useState<QuestionSortMode>('number')
+  const [questionsExpanded, setQuestionsExpanded] = useState(false)
 
   useEffect(() => {
     refreshSubscription?.()
@@ -1532,6 +1561,11 @@ function GuestDiagnosticResultsView({
     [result.outcomes, sortMode],
   )
 
+  const visibleOutcomes = questionsExpanded
+    ? sortedOutcomes
+    : sortedOutcomes.slice(0, DIAGNOSTIC_QUESTIONS_COLLAPSED_VISIBLE)
+  const hasHiddenQuestions = sortedOutcomes.length > DIAGNOSTIC_QUESTIONS_COLLAPSED_VISIBLE
+
   const pointLeaks = useMemo(
     () => computePointLeaks(result.outcomes, result.intentId),
     [result.outcomes, result.intentId],
@@ -1562,50 +1596,57 @@ function GuestDiagnosticResultsView({
       {/* 3. Three stats row */}
       <DiagnosticStatsRow result={result} locked={!showPaidContent} onSubscribe={openPricingModal} />
 
-      {/* 4 + 5. Mini diagnostic section + Question list (single card, as in Figma) */}
-      <section className="overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
-
-        {/* ── Score header ── */}
-        <div className="border-b border-[var(--greyscale-100)] px-6 py-5">
-          <p className="text-center text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">{heading}</p>
-          <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.4px] text-[var(--greyscale-500)]">
+      {/* 4 + 5. Mini diagnostic section + Question list (Figma 20583:29737) */}
+      <div className="flex w-full flex-col gap-8">
+        {/* ── Score header card ── */}
+        <section className="rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
+          <p className="text-center text-xl font-bold leading-[1.35] text-[var(--primary-800,#041a44)]">
+            {heading}
+          </p>
+          <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="shrink-0">
+              <p className="text-base font-medium leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
                 Your Score
               </p>
-              <p className="mt-1 text-3xl font-bold leading-none text-[var(--color-student-heading)]">
+              <p className="mt-2 text-[32px] font-bold leading-[1.25] text-[var(--primary-800,#041a44)]">
                 {result.correctCount}/{result.questionCount}{' '}
-                <span className="text-xl font-semibold text-[var(--greyscale-500)]">Correct</span>
+                <span className="text-2xl font-bold leading-[1.3] text-[var(--greyscale-500)]">
+                  Correct
+                </span>
               </p>
             </div>
-            <div className="flex min-w-0 flex-1 flex-wrap justify-center gap-2 sm:px-4">
+            <div className="flex min-w-0 flex-1 flex-wrap justify-center gap-3 sm:px-4">
               {result.outcomes.map((outcome, index) => (
-                <OutcomePill key={outcome.questionId} index={index} isCorrect={outcome.isCorrect} />
+                <OutcomePill
+                  key={outcome.questionId}
+                  index={index}
+                  isCorrect={outcome.isCorrect}
+                  isUnanswered={!outcome.selectedAnswer?.trim()}
+                />
               ))}
             </div>
             <Link
               to={reviewInTesterHref}
-              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 self-center rounded-[14px] bg-[#df1c41] px-4 text-sm font-semibold text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#df1c41]/90 sm:self-auto"
+              className="inline-flex h-10 w-[170px] shrink-0 items-center justify-center gap-2 self-center rounded-[14px] bg-[#0d47a1] px-4 text-sm font-semibold tracking-[0.02em] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0d47a1]/90 sm:self-auto"
             >
-              Review in Tester
+              Review Tester
             </Link>
           </div>
-        </div>
+        </section>
 
         {/* ── Sort bar ── */}
-        <div className="flex flex-col gap-3 border-b border-[var(--greyscale-100)] px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">
+        <div className="flex flex-col gap-3 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-2xl font-bold leading-[1.3] text-[var(--primary-800,#041a44)]">
             Total Questions: {result.questionCount}
           </p>
-          <label className="flex items-center gap-2 text-sm text-[var(--greyscale-500)]">
-            <span className="shrink-0">Sort by</span>
+          <label className="flex items-center gap-2 text-base font-medium text-[var(--greyscale-500)]">
             <select
-              className="h-10 min-w-[10rem] rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 text-sm font-medium text-[var(--color-student-heading)]"
+              className="h-[52px] min-w-[10rem] rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 text-base font-medium text-[var(--greyscale-500)]"
               value={sortMode}
               onChange={(e) => setSortMode(e.target.value as QuestionSortMode)}
               aria-label="Sort questions by"
             >
-              <option value="number">Question number</option>
+              <option value="number">Question</option>
               <option value="correct">Correct first</option>
               <option value="incorrect">Incorrect first</option>
             </select>
@@ -1621,51 +1662,68 @@ function GuestDiagnosticResultsView({
         ) : null}
 
         {/* ── Question rows (free: first N unlocked; remaining = dummy teaser only) ── */}
-        {sortedOutcomes.map((outcome) => {
-          const questionNumber = outcome.originalIndex + 1
-          const unlocked = canShowDiagnosticResultDetails({
-            intentId: result.intentId,
-            questionNumber,
-            hasActiveCore: showPaidContent,
-          })
-          if (!unlocked) {
+        <div className="flex flex-col gap-4">
+          {visibleOutcomes.map((outcome) => {
+            const questionNumber = outcome.originalIndex + 1
+            const unlocked = canShowDiagnosticResultDetails({
+              intentId: result.intentId,
+              questionNumber,
+              hasActiveCore: showPaidContent,
+            })
+            if (!unlocked) {
+              return (
+                <GuestDiagnosticLockedQuestionRow
+                  key={`locked-${questionNumber}`}
+                  number={questionNumber}
+                  heading={heading}
+                />
+              )
+            }
+
+            const explanation =
+              explanationsById.get(outcome.questionId) ??
+              buildDiagnosticResultExplanation(outcome.questionId, result.intentId)
+            if (!explanation) {
+              return (
+                <GuestDiagnosticLockedQuestionRow
+                  key={`locked-${questionNumber}`}
+                  number={questionNumber}
+                  heading={heading}
+                />
+              )
+            }
+
+            const meta = getDiagnosticQuestionMeta(outcome.questionId, result.intentId)
+            const isUnanswered = !outcome.selectedAnswer?.trim()
             return (
-              <GuestDiagnosticLockedQuestionRow
-                key={`locked-${questionNumber}`}
+              <GuestDiagnosticExplanationCard
+                key={outcome.questionId}
                 number={questionNumber}
                 heading={heading}
+                explanation={explanation}
+                isCorrect={outcome.isCorrect}
+                isUnanswered={isUnanswered}
+                selectedAnswer={outcome.selectedAnswer}
+                targetTimeSeconds={meta?.targetTimeSeconds}
+                yourTimeSeconds={outcome.timeSpentSeconds}
               />
             )
-          }
+          })}
 
-          const explanation =
-            explanationsById.get(outcome.questionId) ??
-            buildDiagnosticResultExplanation(outcome.questionId, result.intentId)
-          if (!explanation) {
-            return (
-              <GuestDiagnosticLockedQuestionRow
-                key={`locked-${questionNumber}`}
-                number={questionNumber}
-                heading={heading}
-              />
-            )
-          }
-
-          const meta = getDiagnosticQuestionMeta(outcome.questionId, result.intentId)
-          return (
-            <GuestDiagnosticExplanationCard
-              key={outcome.questionId}
-              number={questionNumber}
-              heading={heading}
-              explanation={explanation}
-              isCorrect={outcome.isCorrect}
-              selectedAnswer={outcome.selectedAnswer}
-              targetTimeSeconds={meta?.targetTimeSeconds}
-              yourTimeSeconds={outcome.timeSpentSeconds}
-            />
-          )
-        })}
-      </section>
+          {hasHiddenQuestions ? (
+            <div className="flex items-center justify-center py-2">
+              <button
+                type="button"
+                onClick={() => setQuestionsExpanded((open) => !open)}
+                aria-expanded={questionsExpanded}
+                className="text-base font-semibold leading-[1.35] text-[var(--primary-700,#082c6b)] transition-colors hover:text-[var(--primary)]"
+              >
+                {questionsExpanded ? 'Show less' : 'Show All'}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
 
       {/* 6. Point Leak Map */}
       {pointLeaks.length > 0 ? (
