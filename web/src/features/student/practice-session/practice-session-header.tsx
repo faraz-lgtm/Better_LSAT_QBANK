@@ -207,7 +207,7 @@ function PracticeSessionHeader({
                   onClick={onTimerPauseRequest}
                 >
                   {timerPaused ? (
-                    <Play className="size-6 text-[var(--greyscale-500)]" strokeWidth={1.5} aria-hidden />
+                    <Play className="size-6 text-[var(--color-student-heading)]" strokeWidth={1.5} aria-hidden />
                   ) : (
                     <ExamHeaderPauseIcon />
                   )}
@@ -328,7 +328,7 @@ function PracticeSessionHeader({
                   onClick={onTimerPauseRequest}
                 >
                   {timerPaused ? (
-                    <Play className="size-6 text-[var(--greyscale-500)]" strokeWidth={1.5} aria-hidden />
+                    <Play className="size-6 text-[var(--color-student-heading)]" strokeWidth={1.5} aria-hidden />
                   ) : (
                     <ExamHeaderPauseIcon />
                   )}

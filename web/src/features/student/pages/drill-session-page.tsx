@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { ChevronLeft, ChevronRight, X } from "lucide-react"
 
 import { isQuestionRecommendedForBlindReview } from "@/features/student/blind-review/blind-review-navigation"
-import { isUnlimitedDrillQuestionCount, type DrillQuestion, type DrillSessionResponse } from "@/features/student/drills/drill-types"
+import { isUnlimitedDrillQuestionCount, type DrillSessionResponse } from "@/features/student/drills/drill-types"
 import { resolveDrillDisplayTitle } from "@/features/student/drills/format-drill-title"
 import { ACTIVE_DRILL_BODY_GRID_CLASS, ACTIVE_DRILL_FINISH_BUTTON_CLASS, ACTIVE_DRILL_FOOTER_CLASS, ACTIVE_DRILL_PASSAGE_PANE_CLASS, ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS, ACTIVE_DRILL_PASSAGE_TEXT_CLASS, ACTIVE_DRILL_QUESTION_PANE_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import {
@@ -74,6 +74,7 @@ import {
   resolveExamSessionVariant,
   type PracticeSessionVariant,
 } from "@/features/student/practice-session/practice-session-types"
+import { choiceIndexFromAnswer, hasPracticeAnswer } from "@/features/student/practice-session/practice-choice-index"
 import { useExamFullscreen, useOfficialInterfacePreference } from "@/features/student/practice-session/use-official-interface"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
@@ -116,15 +117,6 @@ import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
-
-function choiceIndexFromAnswer(choices: DrillQuestion["choices"], selectedAnswer: string): number | null {
-  const letter = selectedAnswer.trim().toUpperCase()
-  const byId = choices.findIndex((c) => c.id.toUpperCase() === letter)
-  if (byId >= 0) return byId
-  const idx = letter.charCodeAt(0) - 65
-  if (idx >= 0 && idx < choices.length) return idx
-  return null
-}
 
 type QuestionAnswerState = { selectedAnswer: string; isCorrect: boolean }
 
@@ -259,6 +251,7 @@ function DrillSessionPage() {
 
   const loadGenerationRef = useRef(0)
   const prevQuestionIdRef = useRef<string | null>(null)
+  const autoAdvanceTimeoutRef = useRef<number | null>(null)
   const answerPersist = usePracticeAnswerPersist({
     sessionId: sessionId ?? null,
     enabled:
@@ -422,6 +415,10 @@ function DrillSessionPage() {
     if (prev && prev !== current?.id) {
       void answerPersist.flushQuestion(prev)
     }
+    if (autoAdvanceTimeoutRef.current != null) {
+      window.clearTimeout(autoAdvanceTimeoutRef.current)
+      autoAdvanceTimeoutRef.current = null
+    }
   }, [answerPersist, current?.id])
 
   const goToNextQuestion = useCallback(async () => {
@@ -492,7 +489,7 @@ function DrillSessionPage() {
     : undefined
   const currentAnswer = displayAnswer
   const selectedIndex =
-    current && currentAnswer
+    current && hasPracticeAnswer(currentAnswer)
       ? choiceIndexFromAnswer(current.choices, currentAnswer.selectedAnswer)
       : null
   const recommendedForBr = Boolean(
@@ -519,7 +516,7 @@ function DrillSessionPage() {
   const revealed = reviewAfterComplete
     ? false
     : showAnswersMode === "each"
-      ? Boolean(currentAnswer)
+      ? hasPracticeAnswer(currentAnswer)
       : false
 
   const passageBody =
@@ -557,7 +554,7 @@ function DrillSessionPage() {
       })
       return
     }
-    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
+    if (!canChangePracticeAnswer(showAnswersMode, hasPracticeAnswer(currentAnswer), {
       blindReview: editingBlindReviewAnswers,
     })) {
       return
@@ -588,7 +585,11 @@ function DrillSessionPage() {
         },
       }))
       if (showAnswersMode === "each") {
-        window.setTimeout(() => {
+        if (autoAdvanceTimeoutRef.current != null) {
+          window.clearTimeout(autoAdvanceTimeoutRef.current)
+        }
+        autoAdvanceTimeoutRef.current = window.setTimeout(() => {
+          autoAdvanceTimeoutRef.current = null
           void goToNextQuestion()
         }, 600)
       }
@@ -607,7 +608,7 @@ function DrillSessionPage() {
   async function handleResetResponse() {
     if (!sessionId || !current) return
     if (reviewAfterComplete && !editingBlindReviewAnswers) return
-    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), { blindReview: editingBlindReviewAnswers })) {
+    if (!canChangePracticeAnswer(showAnswersMode, hasPracticeAnswer(currentAnswer), { blindReview: editingBlindReviewAnswers })) {
       return
     }
 
@@ -893,7 +894,7 @@ function DrillSessionPage() {
   const allowReselect =
     !resultsReviewMode &&
     (!answeringBlindReview || editingBlindReviewAnswers) &&
-    canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
+    canChangePracticeAnswer(showAnswersMode, hasPracticeAnswer(currentAnswer), {
       blindReview: editingBlindReviewAnswers,
     })
   const prepTestLabel = headerLabel.replace(/^PrepTest\s*/i, "PT ")
@@ -1044,7 +1045,7 @@ function DrillSessionPage() {
                 className={resultsReviewMode ? REVIEW_QUESTION_PANEL_CLASS : BLIND_REVIEW_NOTES_QUESTION_PANEL_CLASS}
               >
                 <PracticeDrillQuestionPanel
-                  key={current.id}
+                  key={`${current.id}:${safeIndex}`}
                   question={current}
                   questionNumber={safeIndex}
                   findQuery={findQuery}
@@ -1114,7 +1115,7 @@ function DrillSessionPage() {
               </div>
               <div ref={questionPaneRef} className={REVIEW_QUESTION_PANEL_CLASS}>
                 <PracticeDrillQuestionPanel
-                  key={current.id}
+                  key={`${current.id}:${safeIndex}`}
                   question={current}
                   questionNumber={safeIndex}
                   findQuery={findQuery}
@@ -1206,7 +1207,7 @@ function DrillSessionPage() {
               )}
             >
               <PracticeDrillQuestionPanel
-                key={current.id}
+                key={`${current.id}:${safeIndex}`}
                 question={current}
                 questionNumber={safeIndex}
                 findQuery={findQuery}

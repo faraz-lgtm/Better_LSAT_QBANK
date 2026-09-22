@@ -70,7 +70,7 @@ function PracticeSessionQuestionNavStrip({
   const items = questions.map((q, i) => {
     const n = i + 1
     return (
-      <Fragment key={q.id}>
+      <Fragment key={`${q.id}-${n}`}>
         <PracticeSessionQuestionNavButton
           number={n}
           active={n === safeIndex}

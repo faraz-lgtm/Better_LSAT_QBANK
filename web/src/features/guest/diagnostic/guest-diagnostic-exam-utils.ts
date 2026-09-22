@@ -1,20 +1,10 @@
+export { choiceIndexFromAnswer } from "@/features/student/practice-session/practice-choice-index"
+
 export const GUEST_DIAGNOSTIC_MOCK_CORRECT_CHOICE_ID = "B"
 
 export type GuestDiagnosticAnswerState = {
   selectedAnswer: string
   isCorrect: boolean
-}
-
-export function choiceIndexFromAnswer(
-  choices: { id: string }[],
-  selectedAnswer: string,
-): number | null {
-  const letter = selectedAnswer.trim().toUpperCase()
-  const byId = choices.findIndex((c) => c.id.toUpperCase() === letter)
-  if (byId >= 0) return byId
-  const idx = letter.charCodeAt(0) - 65
-  if (idx >= 0 && idx < choices.length) return idx
-  return null
 }
 
 export function resolveGuestDiagnosticPassageHtml(

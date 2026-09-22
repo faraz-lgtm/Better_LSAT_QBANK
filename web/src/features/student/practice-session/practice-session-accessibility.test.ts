@@ -1,6 +1,13 @@
+/// <reference types="node" />
+
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
+
 import { describe, expect, it } from "vitest"
 
 import { buildAccessibilityContentStyle } from "@/features/student/practice-session/practice-session-accessibility"
+
+const examCss = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8")
 
 describe("buildAccessibilityContentStyle", () => {
   it("maps color scheme and typography settings to css variables", () => {
@@ -81,5 +88,51 @@ describe("accessibility panel layout", () => {
     expect(PRACTICE_SESSION_ACCESSIBILITY_PANEL_TABS_CLASS).not.toContain("overflow-x-auto")
     expect(PRACTICE_SESSION_ACCESSIBILITY_PANEL_BODY_CLASS).toContain("h-auto")
     expect(PRACTICE_SESSION_ACCESSIBILITY_PANEL_BODY_CLASS).not.toContain("overflow-y-auto")
+  })
+})
+
+describe("official exam dark-mode choice ink", () => {
+  it("uses Neutral-25 rows and white copy; selected peach keeps navy", () => {
+    const marker =
+      ".dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected)"
+    const start = examCss.indexOf(marker)
+    expect(start).toBeGreaterThan(-1)
+    const unselected = examCss.slice(start, start + 700)
+    expect(unselected).toContain("background-color: #35373c !important")
+    expect(unselected).toContain("color: #ffffff !important")
+    const selectedMarker =
+      ".dark .practice-session-card--official .practice-session-official-choice--selected,"
+    const selectedStart = examCss.indexOf(selectedMarker)
+    expect(selectedStart).toBeGreaterThan(-1)
+    expect(examCss.slice(selectedStart, selectedStart + 900)).toContain("color: #041a44 !important")
+  })
+})
+
+describe("official exam Halyard Text", () => {
+  it("loads Halyard Text Regular from a local woff2", () => {
+    expect(examCss).toContain('font-family: "halyard-text"')
+    expect(examCss).toContain('url("/fonts/HalyardText-Regular.woff2")')
+    expect(examCss).toContain("font-weight: 300")
+  })
+
+  it("scales official A–E letters at 28px with the same font-size control as stems", () => {
+    const marker = ".practice-session-card--official .practice-session-official-choice-letter {"
+    const start = examCss.indexOf(marker)
+    expect(start).toBeGreaterThan(-1)
+    const block = examCss.slice(start, start + 280)
+    expect(block).toContain("font-family: Apostrophe, halyard-text, sans-serif")
+    expect(block).toContain("font-size: calc(28px * var(--practice-font-scale, 1))")
+    expect(block).toContain("font-weight: 400")
+  })
+})
+
+describe("exam chrome dark-mode glyphs", () => {
+  it("inverts header and side-widget Figma icons to white", () => {
+    const marker = ".dark .practice-session-header img,"
+    const start = examCss.indexOf(marker)
+    expect(start).toBeGreaterThan(-1)
+    const block = examCss.slice(start, start + 280)
+    expect(block).toContain(".dark .practice-session-side-widget img")
+    expect(block).toContain("filter: brightness(0) invert(1)")
   })
 })

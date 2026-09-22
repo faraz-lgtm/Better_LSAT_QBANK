@@ -10,6 +10,7 @@ import {
   choiceIndexFromAnswer,
   resolveGuestDiagnosticPassageHtml,
 } from "@/features/guest/diagnostic/guest-diagnostic-exam-utils"
+import { hasPracticeAnswer } from "@/features/student/practice-session/practice-choice-index"
 import { GuestDiagnosticSubmitModal } from "@/features/guest/diagnostic/guest-diagnostic-submit-modal"
 import type { GuestDiagnosticTestConfig } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
 import {
@@ -298,7 +299,9 @@ function GuestDiagnosticExamLayout({
   const currentAnswer = current ? answersByQuestion[current.id] : undefined
   const scoredAnswer = current ? scoredAnswersByQuestion[current.id] : undefined
   const selectedIndex =
-    current && currentAnswer ? choiceIndexFromAnswer(current.choices, currentAnswer.selectedAnswer) : null
+    current && hasPracticeAnswer(currentAnswer)
+      ? choiceIndexFromAnswer(current.choices, currentAnswer.selectedAnswer)
+      : null
   const questionRevealed =
     isReviewMode || (isTesterMode && Boolean(current && revealedByQuestion[current.id]))
   const explanationUnlocked = canShowDiagnosticExplanation({
@@ -454,7 +457,7 @@ function GuestDiagnosticExamLayout({
 
   const questionPanel = (
     <PracticeDrillQuestionPanel
-      key={current.id}
+      key={`${current.id}:${safeIndex}`}
       question={current}
       questionNumber={safeIndex}
       findQuery={findQuery}
@@ -736,7 +739,7 @@ function GuestDiagnosticExamLayout({
             )}
           >
             <PracticeDrillQuestionPanel
-              key={current.id}
+              key={`${current.id}:${safeIndex}`}
               question={current}
               questionNumber={safeIndex}
               findQuery={findQuery}

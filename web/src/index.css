@@ -3,6 +3,14 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
+@font-face {
+  font-family: "halyard-text";
+  src: url("/fonts/HalyardText-Regular.woff2") format("woff2");
+  font-weight: 300 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
@@ -4411,7 +4419,7 @@ section[data-lesson-section][data-variant="empty"] {
 }
 
 .practice-session-card--official .practice-session-official-choice {
-  background-color: #eceff3;
+  background-color: #f2f3f8;
 }
 
 .practice-session-card--official .practice-session-official-choice--selected {
@@ -4423,18 +4431,34 @@ section[data-lesson-section][data-variant="empty"] {
   color: #041a44;
 }
 
-/* Official exam body copy — beat unlayered .lsat-html-content 0.875rem / 1.625. */
+/* Official exam body copy — LawHub Apostrophe / Halyard Text, 18 / 1.5 / 300. */
+.practice-session-card--official .practice-session-body {
+  font-family: Apostrophe, halyard-text, sans-serif;
+  font-weight: 300;
+  line-height: calc(1.5 * var(--practice-line-height-scale, 1));
+}
+
 .practice-session-card--official .practice-session-body .lsat-html-content,
 .practice-session-card--official .practice-session-body .practice-session-content {
-  font-size: calc(15px * var(--practice-font-scale, 1));
-  font-weight: 400;
-  line-height: calc(30px * var(--practice-font-scale, 1) * var(--practice-line-height-scale, 1));
+  font-family: Apostrophe, halyard-text, sans-serif;
+  font-size: calc(18px * var(--practice-font-scale, 1));
+  font-weight: 300;
+  line-height: calc(1.5 * var(--practice-line-height-scale, 1));
   letter-spacing: 0;
 }
 
 .practice-session-card--official .practice-session-body .lsat-html-content p,
 .practice-session-card--official .practice-session-body .practice-session-content p {
-  line-height: calc(30px * var(--practice-font-scale, 1) * var(--practice-line-height-scale, 1));
+  line-height: calc(1.5 * var(--practice-line-height-scale, 1));
+}
+
+/* LawHub answer index: 28px Apostrophe, scaled with the same font-size control as stems. */
+.practice-session-card--official .practice-session-official-choice-letter {
+  font-family: Apostrophe, halyard-text, sans-serif;
+  font-size: calc(28px * var(--practice-font-scale, 1));
+  font-weight: 400;
+  line-height: calc(60px * var(--practice-font-scale, 1));
+  letter-spacing: 0;
 }
 
 .practice-session-card--official .practice-session-question-panel-with-widget {
@@ -4455,6 +4479,16 @@ section[data-lesson-section][data-variant="empty"] {
     transparent calc(30px * var(--practice-font-scale, 1) * var(--practice-line-height-scale, 1) - 1px),
     #eceff3 calc(30px * var(--practice-font-scale, 1) * var(--practice-line-height-scale, 1) - 1px),
     #eceff3 calc(30px * var(--practice-font-scale, 1) * var(--practice-line-height-scale, 1))
+  );
+}
+
+.practice-session-card--official .practice-session-pane--line-focus {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(18px * var(--practice-font-scale, 1) * 1.5 * var(--practice-line-height-scale, 1) - 1px),
+    #eceff3 calc(18px * var(--practice-font-scale, 1) * 1.5 * var(--practice-line-height-scale, 1) - 1px),
+    #eceff3 calc(18px * var(--practice-font-scale, 1) * 1.5 * var(--practice-line-height-scale, 1))
   );
 }
 
@@ -4663,6 +4697,12 @@ html.student-shell-immersive .practice-session-card--official {
   height: 100%;
   max-height: 100%;
   border-radius: 10px;
+}
+
+/* LawHub official chrome — cooler gray than --greyscale-100 (#dfe1e6). */
+.practice-session-card--official.border-\[var\(--greyscale-100\)\],
+.practice-session-card--official .border-\[var\(--greyscale-100\)\] {
+  border-color: #d4d7e2;
 }
 
 /* Figma full-width exam canvas — 1920px. Applied when Full Screen / full-width view is on. */
@@ -5000,7 +5040,7 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
 }
 
 .practice-session-card--active-drill .practice-session-content mark[data-highlight="yellow"] {
-  background-color: #fef095;
+  background-color: #fdfac4;
 }
 
 .practice-session-card--active-drill .practice-session-content mark[data-highlight="green"] {
@@ -5234,9 +5274,24 @@ html.student-shell-immersive .practice-session-card--blind-review {
   color: var(--color-student-heading);
 }
 
+.dark .practice-session-card--official.border-\[var\(--greyscale-100\)\],
+.dark .practice-session-card--official .border-\[var\(--greyscale-100\)\] {
+  border-color: var(--greyscale-100);
+}
+
 .dark .practice-session-header--official {
   background-color: var(--greyscale-0) !important;
   color: var(--color-student-heading);
+}
+
+/* Figma exam glyphs are navy/blue-gray; force white on dark chrome. */
+.dark .practice-session-header img,
+.dark .practice-session-side-widget img {
+  filter: brightness(0) invert(1);
+}
+
+.dark .practice-session-header svg {
+  color: #ffffff;
 }
 
 .dark .practice-session-card--official .practice-session-body {
@@ -5254,15 +5309,48 @@ html.student-shell-immersive .practice-session-card--blind-review {
   color: var(--color-student-heading) !important;
 }
 
-/* LawHub peach selected row — keep primary-800 ink for contrast on #ffe5b7 */
+/*
+ * Dark official choices: Neutral-25 rows + white copy. Selected LawHub
+ * peach (#ffe5b7) keeps navy ink so the gold state still contrasts.
+ */
+.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) {
+  background-color: #35373c !important;
+  color: #ffffff !important;
+}
+
+.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) > span {
+  background-color: #35373c !important;
+  border-color: #35373c !important;
+  color: #ffffff !important;
+}
+
+.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) .lsat-html-content,
+.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) .practice-session-content,
+.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) .lsat-html-content *,
+.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) .practice-session-content * {
+  color: #ffffff !important;
+}
+
 .dark .practice-session-card--official .practice-session-official-choice--selected,
 .dark .practice-session-card--official .practice-session-official-choice--selected .lsat-html-content,
-.dark .practice-session-card--official .practice-session-official-choice--selected .practice-session-content {
-  color: var(--primary-800) !important;
+.dark .practice-session-card--official .practice-session-official-choice--selected .practice-session-content,
+.dark .practice-session-card--official .practice-session-official-choice--selected .lsat-html-content *,
+.dark .practice-session-card--official .practice-session-official-choice--selected .practice-session-content * {
+  color: #041a44 !important;
 }
 
 .dark .practice-session-card--official .practice-session-official-choice-letter--selected {
-  color: var(--primary-800) !important;
+  color: #041a44 !important;
+}
+
+.dark .practice-session-card--official .practice-session-official-reset {
+  background-color: #35373c !important;
+  border-color: #35373c !important;
+  color: #ffffff !important;
+}
+
+.dark .practice-session-card--official .practice-session-official-reset:hover {
+  background-color: #3f4247 !important;
 }
 
 .dark .practice-session-card--official .practice-session-footer {
@@ -5341,7 +5429,7 @@ html.student-shell-immersive .practice-session-card--blind-review {
 }
 
 .practice-session-card--blind-review .practice-session-content mark[data-highlight="yellow"] {
-  background-color: #fef095;
+  background-color: #fdfac4;
 }
 
 .practice-session-card--blind-review .practice-session-content mark[data-highlight="green"] {
@@ -5361,7 +5449,7 @@ html.student-shell-immersive .practice-session-card--blind-review {
 }
 
 .practice-session-card--review .practice-session-content mark[data-highlight="yellow"] {
-  background-color: #fef095;
+  background-color: #fdfac4;
 }
 
 .practice-session-card--review .practice-session-content mark[data-highlight="green"] {
@@ -5388,7 +5476,7 @@ html.student-shell-immersive .practice-session-card--blind-review {
 }
 
 .lsat-html-content mark[data-highlight="yellow"] {
-  background-color: #fef095;
+  background-color: #fdfac4;
   color: inherit;
 }
 
