@@ -47,7 +47,7 @@ const LESSON_TAGS = [
   "code",
 ] as const
 
-const ALLOWED_ATTR = ["class", "style", "href", "target", "rel", "data-highlight"] as const
+const ALLOWED_ATTR = ["class", "style", "href", "target", "rel", "data-highlight", "data-underline"] as const
 
 const LESSON_ATTR = [
   ...ALLOWED_ATTR,

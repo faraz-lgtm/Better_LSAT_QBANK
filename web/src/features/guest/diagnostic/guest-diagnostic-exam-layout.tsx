@@ -270,7 +270,10 @@ function GuestDiagnosticExamLayout({
   const timerDisplaySeconds = countdown ?? timerBudgetSeconds
   const timerProgress = computeRemainingTimerProgress(timerDisplaySeconds, timerBudgetSeconds)
 
-  const highlights = usePracticeHighlights()
+  const highlights = usePracticeHighlights({
+    highlightMenuStartsExpanded: !officialInterface,
+    menuAnchorsToSelection: officialInterface,
+  })
   const accessibilityPanel = usePracticeSessionAccessibilityPanel(
     highlights.accessibilitySettings,
     highlights.applyAccessibilitySettings,
@@ -832,6 +835,7 @@ function GuestDiagnosticExamLayout({
         onSave={accessibilityPanel.saveSettings}
       />
       <PracticeSessionHighlightPopover
+        variant={officialChrome ? "official" : "default"}
         menu={highlights.selectionMenu}
         onApplyColor={highlights.applySelectionColor}
         onRemove={highlights.removeSelectionHighlight}

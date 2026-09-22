@@ -116,7 +116,7 @@ describe("PracticeSessionSideWidget LSAT default view", () => {
 })
 
 describe("PracticeSessionSideWidget official view", () => {
-  it("exposes LawHub tools including collapse and omits keyboard highlight", () => {
+  it("uses official LawHub tool icons without a left rail border", () => {
     render(
       <PracticeSessionSideWidget
         variant="official"
@@ -131,21 +131,38 @@ describe("PracticeSessionSideWidget official view", () => {
       />,
     )
 
-    expect(screen.getByRole("button", { name: "Full Screen" }).querySelector("img")).toHaveAttribute(
-      "src",
-      "/figma/exam-official/arrows-pointing-out.svg",
+    const rail = screen.getByRole("complementary", { name: "Exam tools" })
+    expect(rail).not.toHaveClass("border-l-2")
+    expect(rail).not.toHaveClass("border-[#8b919e]")
+    expect(rail).toHaveClass("absolute")
+
+    expect(screen.getByRole("button", { name: "Full Screen" }).querySelector("[data-official-rail-icon='expand']")).toHaveAttribute(
+      "viewBox",
+      "0 0 448 512",
     )
-    expect(screen.getByRole("button", { name: "Review" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Review" }).querySelector("[data-official-rail-icon='review']")).toHaveAttribute(
+      "viewBox",
+      "0 0 20 20",
+    )
+    expect(screen.getByRole("button", { name: "Accessibility" }).querySelector("[data-official-rail-icon='accessibility']")).toHaveAttribute(
+      "viewBox",
+      "0 0 512 512",
+    )
+    expect(screen.getByRole("button", { name: "Flag item" }).querySelector("[data-official-rail-icon='flag']")).toHaveAttribute(
+      "viewBox",
+      "0 0 448 512",
+    )
+    expect(screen.getByRole("button", { name: "Response Masking" }).querySelector("[data-official-rail-icon='masking']")).toHaveAttribute(
+      "viewBox",
+      "0 0 20 20",
+    )
+    expect(screen.getByRole("button", { name: "Open menu" }).querySelector("[data-official-rail-icon='open-menu']")).toBeTruthy()
+    expect(rail).toHaveClass("justify-between")
+    expect(screen.getAllByRole("button").at(-1)).toHaveAccessibleName("Open menu")
     expect(screen.queryByRole("button", { name: "Keyboard Highlight" })).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Open menu" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Open menu" }).querySelector("img")).toHaveAttribute(
-      "src",
-      "/figma/exam-side-widget/download-circle-01.svg",
-    )
     expect(screen.queryByRole("button", { name: /^Highlighter$/ })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Eraser" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Line focus" })).not.toBeInTheDocument()
-    expect(screen.getByRole("complementary", { name: "Exam tools" })).toHaveClass("absolute")
   })
 
   it("expands to labeled tools with collapse pinned to the bottom", async () => {
@@ -164,7 +181,8 @@ describe("PracticeSessionSideWidget official view", () => {
     await user.click(screen.getByRole("button", { name: "Open menu" }))
     const rail = screen.getByRole("complementary", { name: "Exam tools" })
     expect(rail).toHaveClass("w-[174px]", "justify-between")
-    expect(screen.getByRole("button", { name: "Collapse menu" })).toBeInTheDocument()
+    expect(rail).not.toHaveClass("border-l-2")
+    expect(screen.getByRole("button", { name: "Collapse menu" }).querySelector("[data-official-rail-icon='collapse-menu']")).toBeTruthy()
     expect(screen.queryByText("Keyboard Highlight")).not.toBeInTheDocument()
     expect(screen.getByText("Full Screen", { selector: "span" })).toBeInTheDocument()
     const buttons = screen.getAllByRole("button")
@@ -187,9 +205,9 @@ describe("PracticeSessionSideWidget official view", () => {
       />,
     )
 
-    expect(screen.getByRole("button", { name: "Normal view" }).querySelector("img")).toHaveAttribute(
-      "src",
-      "/figma/exam-official/arrows-pointing-in.svg",
+    expect(screen.getByRole("button", { name: "Normal view" }).querySelector("[data-official-rail-icon='collapse-view']")).toHaveAttribute(
+      "viewBox",
+      "0 0 448 512",
     )
     expect(screen.queryByRole("button", { name: "Full screen" })).not.toBeInTheDocument()
   })
@@ -208,7 +226,7 @@ describe("PracticeSessionSideWidget official view", () => {
 
     const flag = screen.getByRole("button", { name: "Flag item" })
     expect(flag).toHaveAttribute("aria-pressed", "true")
-    expect(flag.querySelector("img")).toHaveAttribute("src", "/figma/exam-official/review-flag.svg")
+    expect(flag.querySelector("[data-official-rail-icon='flag-active']")).toBeTruthy()
   })
 
   it("highlights Response Masking while the official tool is on", () => {
