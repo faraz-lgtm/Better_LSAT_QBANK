@@ -5,6 +5,7 @@ import { PracticeListFooter } from "@/features/student/components/practice-list-
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
 import {
+  TAG_DRILLS_PER_SECTION_EXPANDED,
   TAG_DRILLS_PER_SECTION_INITIAL,
   visibleTagDrillCount,
 } from "@/features/student/drills/tag-drills-priority"
@@ -46,8 +47,14 @@ function TagDrillsSectionCard({
 
   if (drills.length === 0) return null
 
-  const canExpand = drills.length > TAG_DRILLS_PER_SECTION_INITIAL
-  const visibleCount = visibleTagDrillCount(drills.length, expanded, TAG_DRILLS_PER_SECTION_INITIAL)
+  const cappedTotal = Math.min(drills.length, TAG_DRILLS_PER_SECTION_EXPANDED)
+  const canExpand = cappedTotal > TAG_DRILLS_PER_SECTION_INITIAL
+  const visibleCount = visibleTagDrillCount(
+    drills.length,
+    expanded,
+    TAG_DRILLS_PER_SECTION_INITIAL,
+    TAG_DRILLS_PER_SECTION_EXPANDED,
+  )
   const visible = drills.slice(0, visibleCount)
 
   return (
@@ -61,7 +68,7 @@ function TagDrillsSectionCard({
         </div>
         <p className="pl-[44px] text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
           {expanded && canExpand
-            ? "All priority types for you in this section"
+            ? "Your top priority types in this section"
             : "Your top 3 weakest types in this section"}
         </p>
       </div>

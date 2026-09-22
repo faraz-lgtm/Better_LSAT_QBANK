@@ -70,8 +70,39 @@ describe("PracticeTagDrillsSections", () => {
     await user.click(screen.getByRole("button", { name: "See more" }))
 
     expect(screen.getByText("Weaken")).toBeInTheDocument()
-    expect(screen.getByText("All priority types for you in this section")).toBeInTheDocument()
+    expect(screen.getByText("Your top priority types in this section")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "See less" })).toBeInTheDocument()
+  })
+
+  it("caps See more at 10 drills per LR/RC section", async () => {
+    const user = userEvent.setup()
+    const lr = Array.from({ length: 12 }, (_, i) =>
+      drill({ id: `lr${i}`, section: "LR", title: `LR Type ${i + 1}` }),
+    )
+    const rc = Array.from({ length: 12 }, (_, i) =>
+      drill({ id: `rc${i}`, section: "RC", title: `RC Type ${i + 1}` }),
+    )
+
+    render(
+      <PracticeTagDrillsSections
+        lr={lr}
+        rc={rc}
+        visibleSections={["lr", "rc"]}
+        onStart={() => undefined}
+        loading={false}
+      />,
+    )
+
+    const seeMoreButtons = screen.getAllByRole("button", { name: "See more" })
+    expect(seeMoreButtons).toHaveLength(2)
+    await user.click(seeMoreButtons[0]!)
+    await user.click(seeMoreButtons[1]!)
+
+    expect(screen.getByText("LR Type 10")).toBeInTheDocument()
+    expect(screen.queryByText("LR Type 11")).not.toBeInTheDocument()
+    expect(screen.getByText("RC Type 10")).toBeInTheDocument()
+    expect(screen.queryByText("RC Type 11")).not.toBeInTheDocument()
+    expect(screen.getAllByText("Your top priority types in this section")).toHaveLength(2)
   })
 
   it("hides a section when the page filter excludes it", () => {
