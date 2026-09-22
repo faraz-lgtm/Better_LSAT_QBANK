@@ -306,8 +306,8 @@ function PracticeBlindReviewQuestionPanel({
                   )}
                   aria-label={
                     stemExplanationOpen
-                      ? "Hide passage explanation"
-                      : "Show passage explanation"
+                      ? "Hide question explanation"
+                      : "Show question explanation"
                   }
                   aria-expanded={stemExplanationOpen}
                   onClick={() => setStemExplanationOpen((open) => !open)}
