@@ -210,7 +210,11 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
                   {
                     label: tab === "percent" ? "Score" : "PT equiv.",
                     value: tab === "percent" ? `${hovered.scorePct}%` : String(hovered.ptEquivalent),
-                    color: "#6d9bff",
+                    color: "var(--primary)",
+                    caption:
+                      hovered.questionsCorrect != null && hovered.questionsTotal != null
+                        ? `${hovered.questionsCorrect}/${hovered.questionsTotal} Correct`
+                        : null,
                   },
                 ]}
               />

@@ -10,8 +10,8 @@ import {
 function drill(partial: Partial<TagDrill> & Pick<TagDrill, "id" | "section" | "title">): TagDrill {
   return {
     questionTypeId: partial.id,
-    difficultyLabel: "High",
-    filledBars: 4,
+    difficultyLabel: "Hardest",
+    filledBars: 5,
     difficultyColor: "#df1c41",
     configPath: `/app/practice/drills/${partial.section.toLowerCase()}/new`,
     ...partial,
@@ -35,9 +35,9 @@ describe("PracticeTagDrillsSections", () => {
     expect(screen.getByText("Flaw")).toBeInTheDocument()
     expect(screen.getByText("Comparative")).toBeInTheDocument()
     expect(screen.getAllByText("Your top 3 weakest types in this section")).toHaveLength(2)
-    expect(screen.getAllByText("High").length).toBeGreaterThan(0)
-    expect(screen.queryByText("Easy")).not.toBeInTheDocument()
-    expect(screen.queryByText("Hardest")).not.toBeInTheDocument()
+    expect(screen.getAllByText("Hardest").length).toBeGreaterThan(0)
+    expect(screen.queryByText("High")).not.toBeInTheDocument()
+    expect(screen.queryByText("Low")).not.toBeInTheDocument()
     const lrCta = screen.getByRole("button", { name: /start lr drill/i })
     const rcCta = screen.getByRole("button", { name: /start rc drill/i })
     expect(lrCta).toHaveClass("w-[176px]", "whitespace-nowrap")
@@ -74,7 +74,7 @@ describe("PracticeTagDrillsSections", () => {
     expect(screen.getByRole("button", { name: "See less" })).toBeInTheDocument()
   })
 
-  it("caps See more at 10 drills per LR/RC section", async () => {
+  it("caps See more at 8 drills per LR/RC section", async () => {
     const user = userEvent.setup()
     const lr = Array.from({ length: 12 }, (_, i) =>
       drill({ id: `lr${i}`, section: "LR", title: `LR Type ${i + 1}` }),
@@ -98,10 +98,10 @@ describe("PracticeTagDrillsSections", () => {
     await user.click(seeMoreButtons[0]!)
     await user.click(seeMoreButtons[1]!)
 
-    expect(screen.getByText("LR Type 10")).toBeInTheDocument()
-    expect(screen.queryByText("LR Type 11")).not.toBeInTheDocument()
-    expect(screen.getByText("RC Type 10")).toBeInTheDocument()
-    expect(screen.queryByText("RC Type 11")).not.toBeInTheDocument()
+    expect(screen.getByText("LR Type 8")).toBeInTheDocument()
+    expect(screen.queryByText("LR Type 9")).not.toBeInTheDocument()
+    expect(screen.getByText("RC Type 8")).toBeInTheDocument()
+    expect(screen.queryByText("RC Type 9")).not.toBeInTheDocument()
     expect(screen.getAllByText("Your top priority types in this section")).toHaveLength(2)
   })
 

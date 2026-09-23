@@ -299,6 +299,8 @@ export function mapTrajectoryToScoreProgress(points: TrajectoryPoint[]): ScorePr
       completedAt: p.completedAt,
       percentile: p.percentile,
       blindReviewPercentile: p.blindReviewPercentile,
+      regularRawScore: p.regularRawScore ?? p.rawScore,
+      blindReviewRawScore: p.blindReviewRawScore,
     }
   })
 }

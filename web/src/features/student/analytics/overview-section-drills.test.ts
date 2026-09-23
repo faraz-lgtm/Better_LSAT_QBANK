@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  OVERVIEW_SECTION_DRILLS_EXPANDED,
   OVERVIEW_SECTION_DRILLS_MAX,
   averageSectionAccuracyPct,
   formatGapToTargetLabel,
@@ -16,6 +17,14 @@ describe("topOverviewSectionDrills", () => {
   it("keeps only the top 3 when there are more drills", () => {
     expect(topOverviewSectionDrills(["a", "b", "c", "d", "e"])).toEqual(["a", "b", "c"])
     expect(OVERVIEW_SECTION_DRILLS_MAX).toBe(3)
+  })
+
+  it("caps See More at 9 drills on Overview", () => {
+    const rows = Array.from({ length: 12 }, (_, i) => `r${i + 1}`)
+    expect(topOverviewSectionDrills(rows, OVERVIEW_SECTION_DRILLS_EXPANDED)).toEqual(
+      rows.slice(0, 9),
+    )
+    expect(OVERVIEW_SECTION_DRILLS_EXPANDED).toBe(9)
   })
 })
 

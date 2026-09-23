@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { LSAT_SCALED_Y_AXIS_LABELS } from "@/features/student/analytics/chart-y-axis"
 import { LSAT_GOAL_SCORE_OPTIONS } from "@/features/student/analytics/lsat-goal-score"
 import {
+  OVERVIEW_SECTION_DRILLS_EXPANDED,
   OVERVIEW_SECTION_DRILLS_MAX,
   averageSectionAccuracyPct,
   formatGapToTargetLabel,
@@ -358,7 +359,7 @@ function WeaknessCard({ row }: { row: QuestionTypeRowData }) {
           to={`/app/analytics/review/${encodeURIComponent(row.id)}`}
           className="inline-flex h-8 items-center justify-center rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 text-xs font-semibold tracking-[0.02em] text-[var(--primary)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-0)]"
         >
-          Review
+          History
         </Link>
         <Link
           to={`/app/analytics/drills?type=${encodeURIComponent(row.id)}`}
@@ -404,7 +405,10 @@ export function TargetGoalScoreControl({
 export function SectionCard({ section }: { section: AnalyticsSection }) {
   const [expanded, setExpanded] = useState(false)
   const hasMore = section.rows.length > OVERVIEW_SECTION_DRILLS_MAX
-  const visibleRows = expanded ? section.rows : topOverviewSectionDrills(section.rows)
+  const visibleRows = topOverviewSectionDrills(
+    section.rows,
+    expanded ? OVERVIEW_SECTION_DRILLS_EXPANDED : OVERVIEW_SECTION_DRILLS_MAX,
+  )
   const avgAccuracy = averageSectionAccuracyPct(section.rows)
 
   return (
@@ -455,9 +459,9 @@ function formatChartHoverDate(iso: string | null | undefined): string | null {
   if (!iso) return null
   try {
     return new Date(iso).toLocaleDateString(undefined, {
+      weekday: "long",
       month: "short",
       day: "numeric",
-      year: "numeric",
     })
   } catch {
     return null
@@ -466,13 +470,41 @@ function formatChartHoverDate(iso: string | null | undefined): string | null {
 
 export { formatChartHoverDate }
 
+function formatCorrectCaption(
+  correct: number | null | undefined,
+  total: number | null | undefined,
+  percentile?: number | null,
+): string | null {
+  if (correct != null && Number.isFinite(correct) && total != null && Number.isFinite(total) && total > 0) {
+    return `${Math.round(correct)}/${Math.round(total)} Correct`
+  }
+  if (correct != null && Number.isFinite(correct)) {
+    return `${Math.round(correct)} Correct`
+  }
+  if (percentile != null && Number.isFinite(percentile)) {
+    return `${Math.round(percentile)}th percentile`
+  }
+  return null
+}
+
 export type AnalyticsChartTooltipLine = {
   label: string
   value: string
   color: string
+  /** Secondary line under the label (e.g. "7/104 Correct"). */
+  caption?: string | null
 }
 
-/** Shared Overview-style dark tooltip for score-progress chart dots. */
+function ChartTooltipRadioDot({ color }: { color: string }) {
+  return (
+    <span className="relative size-4 shrink-0" aria-hidden>
+      <span className="absolute inset-0 rounded-full" style={{ backgroundColor: color }} />
+      <span className="absolute inset-[4.5px] rounded-full bg-[var(--greyscale-0)]" />
+    </span>
+  )
+}
+
+/** Figma `21114:21160` — light chart hover card used across Insights score charts. */
 export function AnalyticsChartTooltip({
   title,
   dateLabel,
@@ -493,23 +525,46 @@ export function AnalyticsChartTooltip({
       id={id}
       role="tooltip"
       className={cn(
-        "pointer-events-none absolute z-20 min-w-[160px] -translate-x-1/2 rounded-[10px] bg-[#062357] px-3 py-2 text-left shadow-md",
+        "pointer-events-none absolute z-20 w-[min(100%,260px)] -translate-x-1/2 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--primary-0)] p-3 text-left shadow-[0px_4px_15px_rgba(0,0,0,0.08)]",
         yPct < 28 ? "translate-y-3" : "-translate-y-[calc(100%+12px)]",
       )}
       style={{ left: `${Math.min(88, Math.max(12, xPct))}%`, top: `${yPct}%` }}
     >
-      <p className="m-0 text-xs font-bold text-white">{title}</p>
-      {dateLabel ? <p className="m-0 mt-0.5 text-[10px] text-white/70">{dateLabel}</p> : null}
+      <div className="flex items-center justify-between gap-3 pb-2">
+        <p className="m-0 min-w-0 truncate text-sm font-extrabold leading-[1.35] text-[var(--primary)]">
+          {title}
+        </p>
+        {dateLabel ? (
+          <p className="m-0 shrink-0 text-xs font-medium leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
+            {dateLabel}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="h-px w-full bg-[var(--greyscale-100)]" aria-hidden />
+
       {lines.length > 0 ? (
-        <div className="mt-1.5 space-y-1">
+        <div className="flex flex-col pt-1">
           {lines.map((line) => (
-            <p key={`${line.label}-${line.value}`} className="m-0 flex items-center justify-between gap-3 text-[11px] text-white">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="size-1.5 rounded-full" style={{ backgroundColor: line.color }} aria-hidden />
-                {line.label}
-              </span>
-              <strong className="font-semibold tabular-nums">{line.value}</strong>
-            </p>
+            <div key={`${line.label}-${line.value}`} className="flex flex-col justify-center py-2">
+              <div className="flex items-center gap-2">
+                <ChartTooltipRadioDot color={line.color} />
+                <p className="m-0 min-w-0 flex-1 truncate text-sm font-normal leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
+                  {line.label.endsWith(":") ? line.label : `${line.label}:`}
+                </p>
+                <p
+                  className="m-0 shrink-0 text-right text-xl font-extrabold leading-[1.5] tracking-[0.02em] tabular-nums"
+                  style={{ color: line.color }}
+                >
+                  {line.value}
+                </p>
+              </div>
+              {line.caption ? (
+                <p className="m-0 pl-6 text-xs font-medium leading-[1.5] tracking-[0.02em] text-[var(--color-student-heading)]">
+                  {line.caption}
+                </p>
+              ) : null}
+            </div>
           ))}
         </div>
       ) : null}
@@ -706,24 +761,28 @@ export function ScoreProgressChart({
                 ...(showRegular
                   ? [
                       {
-                        label: "Regular",
-                        value: `${hoveredPoint.regular}${
-                          hoveredPoint.percentile != null ? ` · ${Math.round(hoveredPoint.percentile)}th` : ""
-                        }`,
-                        color: "#6d9bff",
+                        label: "Regular Score",
+                        value: String(hoveredPoint.regular),
+                        color: "var(--primary)",
+                        caption: formatCorrectCaption(
+                          hoveredPoint.regularRawScore,
+                          hoveredPoint.questionCount,
+                          hoveredPoint.percentile,
+                        ),
                       },
                     ]
                   : []),
                 ...(showBlind
                   ? [
                       {
-                        label: "Untimed",
-                        value: `${hoveredPoint.blindReview}${
-                          hoveredPoint.blindReviewPercentile != null
-                            ? ` · ${Math.round(hoveredPoint.blindReviewPercentile)}th`
-                            : ""
-                        }`,
+                        label: "Untimed Review",
+                        value: String(hoveredPoint.blindReview),
                         color: "#ff6f00",
+                        caption: formatCorrectCaption(
+                          hoveredPoint.blindReviewRawScore,
+                          hoveredPoint.questionCount,
+                          hoveredPoint.blindReviewPercentile,
+                        ),
                       },
                     ]
                   : []),
