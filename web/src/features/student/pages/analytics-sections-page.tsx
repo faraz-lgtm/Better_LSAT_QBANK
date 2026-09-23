@@ -7,10 +7,17 @@ import { StudentMain } from "@/features/student/components/student-main"
 import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
 import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
 import {
-  TimeRangeFilter,
+  TimeRangeSegmented,
   takeLastByTimeRange,
   type TimeRangeValue,
 } from "@/features/student/components/time-range-filter"
+import {
+  AnalyticsChartTooltip,
+  StatTile,
+  analyticsSegmentedTabClass,
+  formatChartHoverDate,
+} from "@/features/student/analytics/components/analytics-overview-ui"
+import type { AnalyticsStat } from "@/features/student/lib/mock-analytics"
 import type { SectionProgressPoint, SectionSummary } from "@/features/student/lib/mock-analytics-sections"
 import { mapSectionSessionToHistoryEntry } from "@/features/student/analytics/map-analytics"
 import { HistorySortMenu } from "@/features/student/analytics/history-sort-menu"
@@ -48,11 +55,12 @@ type SectionScoreTab = (typeof SECTION_SCORE_TABS)[number]["id"]
 
 type SectionProgressPointWithCount = SectionProgressPoint & {
   questionCount: number
+  completedAt?: string | null
 }
 
 function SectionScoreTabs({ value, onChange }: { value: SectionScoreTab; onChange: (next: SectionScoreTab) => void }) {
   return (
-    <div className="flex h-8 flex-wrap items-center gap-1.5 rounded-[10px] bg-[var(--greyscale-0)] p-0.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       {SECTION_SCORE_TABS.map((tab) => {
         const active = value === tab.id
         return (
@@ -61,10 +69,7 @@ function SectionScoreTabs({ value, onChange }: { value: SectionScoreTab; onChang
             type="button"
             onClick={() => onChange(tab.id)}
             aria-pressed={active}
-            className={cn(
-              "flex min-h-7 items-center justify-center rounded-[8px] px-2.5 py-1 text-xs font-semibold leading-[1.4] tracking-[0.02em] transition-colors hover:rounded-[8px] active:rounded-[8px] focus-visible:rounded-[8px]",
-              active ? "bg-[var(--primary)] text-white" : "text-[var(--greyscale-500)] hover:bg-[var(--primary-0)]",
-            )}
+            className={analyticsSegmentedTabClass(active)}
           >
             {tab.label}
           </button>
@@ -119,6 +124,8 @@ function SectionProgressChart({
   const linePoints = points.map((p, i) => ({ x: xFor(i), y: yFor(pickValue(p)) }))
   const linePortion = linePoints.slice(0, Math.min(5, linePoints.length))
   const linePortionPolyline = linePortion.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ")
+  const hovered = hoverIndex != null ? points[hoverIndex] : null
+  const hoveredCoords = hoverIndex != null ? linePoints[hoverIndex] : null
 
   return (
     <div className="w-full">
@@ -130,7 +137,7 @@ function SectionProgressChart({
             </span>
           ))}
         </div>
-        <div className="relative flex-1">
+        <div className="relative flex-1 overflow-visible">
           <div className="absolute inset-0 flex flex-col justify-between" aria-hidden>
             {yAxisLabels.map((label, index) => (
               <div key={`${label}-${index}`} className="h-px w-full bg-[var(--greyscale-100)]" />
@@ -157,40 +164,43 @@ function SectionProgressChart({
               vectorEffect="non-scaling-stroke"
             />
           </svg>
-          <div className="absolute inset-0 flex">
-            {points.map((point, i) => {
+          <div className="absolute inset-0">
+            {linePoints.map((coords, i) => {
+              const point = points[i]!
               const value = formatValue(point)
               const isActive = hoverIndex === i
               return (
                 <button
                   key={`${point.label}-${i}`}
                   type="button"
+                  className={cn(
+                    "absolute z-10 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--primary)] outline-none ring-[var(--primary)]/30 transition-transform focus-visible:ring-2",
+                    isActive && "scale-125 ring-2",
+                  )}
+                  style={{ left: `${coords.x}%`, top: `${coords.y}%` }}
+                  aria-label={`${point.label}: ${value}`}
                   onMouseEnter={() => setHoverIndex(i)}
                   onMouseLeave={() => setHoverIndex(null)}
                   onFocus={() => setHoverIndex(i)}
                   onBlur={() => setHoverIndex(null)}
-                  className="group relative flex-1 cursor-default focus:outline-none"
-                  aria-label={`${point.label}: ${value}`}
-                >
-                  <span
-                    className={cn(
-                      "absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--destructive)] transition-transform",
-                      isActive ? "scale-150 ring-2 ring-[var(--destructive)]/30" : "",
-                    )}
-                    style={{ left: "50%", top: `${linePoints[i]!.y}%` }}
-                    aria-hidden
-                  />
-                  {isActive ? (
-                    <span
-                      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-[var(--color-student-heading)] px-2 py-1 text-xs font-semibold text-white shadow-lg"
-                      style={{ left: "50%", top: `calc(${linePoints[i]!.y}% - 8px)` }}
-                    >
-                      {point.label}: {value}
-                    </span>
-                  ) : null}
-                </button>
+                />
               )
             })}
+            {hovered && hoveredCoords ? (
+              <AnalyticsChartTooltip
+                title={hovered.label}
+                dateLabel={formatChartHoverDate(hovered.completedAt)}
+                xPct={hoveredCoords.x}
+                yPct={hoveredCoords.y}
+                lines={[
+                  {
+                    label: tab === "raw" ? "Raw" : "PT equiv.",
+                    value: formatValue(hovered),
+                    color: "#6d9bff",
+                  },
+                ]}
+              />
+            ) : null}
           </div>
         </div>
       </div>
@@ -199,20 +209,25 @@ function SectionProgressChart({
 }
 
 function SectionStatPair({ summary }: { summary: SectionSummary }) {
+  const stats: AnalyticsStat[] = [
+    {
+      id: "best-score",
+      label: "Best Score",
+      value: summary.bestScore,
+      accent: summary.bestAccent,
+    },
+    {
+      id: "average-score",
+      label: "Mean Score",
+      value: summary.averageScore,
+      accent: summary.averageAccent,
+    },
+  ]
   return (
-    <div className="grid grid-cols-2 gap-2">
-      <article className="ds-analytics-stat ds-analytics-stat--pair min-w-0">
-        <p className="ds-analytics-stat__label">BEST SCORE</p>
-        <p className="ds-analytics-stat__value" style={{ color: summary.bestAccent }}>
-          {summary.bestScore}
-        </p>
-      </article>
-      <article className="ds-analytics-stat ds-analytics-stat--pair min-w-0">
-        <p className="ds-analytics-stat__label">AVERAGE SCORE</p>
-        <p className="ds-analytics-stat__value" style={{ color: summary.averageAccent }}>
-          {summary.averageScore}
-        </p>
-      </article>
+    <div className="grid grid-cols-2 gap-3">
+      {stats.map((stat) => (
+        <StatTile key={stat.id} stat={stat} />
+      ))}
     </div>
   )
 }
@@ -244,28 +259,28 @@ function SectionColumn({
 }: SectionColumnProps) {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-3">
-      <div className="rounded-[12px] bg-[var(--greyscale-25)] px-3 py-2">
-        <div className="flex items-center gap-2">
-          <div
-            className="flex size-7 shrink-0 items-center justify-center rounded-[8px] border"
-            style={{ backgroundColor: badgeBg, borderColor: badgeColor }}
-          >
-            <span className="text-sm font-black leading-none tracking-[0.02em]" style={{ color: badgeColor }}>
-              {badge}
-            </span>
-          </div>
-          <h2 className="text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">{title}</h2>
+      <div className="flex items-center gap-2">
+        <div
+          className="flex size-7 shrink-0 items-center justify-center rounded-[8px] border"
+          style={{ backgroundColor: badgeBg, borderColor: badgeColor }}
+        >
+          <span className="text-sm font-black leading-none tracking-[0.02em]" style={{ color: badgeColor }}>
+            {badge}
+          </span>
         </div>
+        <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">{title}</h2>
       </div>
 
       <SectionStatPair summary={summary} />
 
-      <div className="flex min-h-[260px] flex-1 flex-col gap-3 rounded-[12px] bg-[var(--greyscale-25)] p-4">
+      <div className="flex min-h-[260px] flex-1 flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs font-semibold leading-[1.4] tracking-[0.06em] text-[var(--color-student-heading)]">{progressTitle}</p>
+          <p className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">{progressTitle}</p>
           <SectionScoreTabs value={scoreTab} onChange={onScoreTabChange} />
         </div>
-        <SectionProgressChart points={points} tab={scoreTab} rawYAxisLabels={yAxisLabels} />
+        <div className="rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 shadow-[0px_1px_2px_rgba(13,13,18,0.04)]">
+          <SectionProgressChart points={points} tab={scoreTab} rawYAxisLabels={yAxisLabels} />
+        </div>
       </div>
     </div>
   )
@@ -295,6 +310,7 @@ function sectionProgressFromSessions(
       rawScore: s.rawScore ?? 0,
       ptEquivalent: s.scaledScore ?? s.rawScore ?? 0,
       questionCount: sessionSectionQuestionCount(s, sectionType),
+      completedAt: s.completedAt,
     }))
 }
 
@@ -415,34 +431,38 @@ function AnalyticsSectionsPage() {
 
   return (
     <StudentMain>
-        <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
-          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by section">
-            <button
-              type="button"
-              onClick={() => handleSelectSection("all")}
-              className={drillFilterPillClass(sectionFilter === "all")}
-            >
-              All
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSelectSection("LR")}
-              className={drillFilterPillClass(sectionFilter === "LR")}
-            >
-              LR
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSelectSection("RC")}
-              className={drillFilterPillClass(sectionFilter === "RC")}
-            >
-              RC
-            </button>
+      <div className="flex flex-col gap-4">
+        <section className="flex w-full flex-col gap-4">
+          <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3 border-b border-[var(--greyscale-100)] pb-3">
+            <h1 className="!m-0 !text-lg !font-bold !leading-[1.3] text-[var(--color-student-heading)]">Sections</h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by section">
+                <button
+                  type="button"
+                  onClick={() => handleSelectSection("all")}
+                  className={drillFilterPillClass(sectionFilter === "all", "compact")}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectSection("LR")}
+                  className={drillFilterPillClass(sectionFilter === "LR", "compact")}
+                >
+                  LR
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectSection("RC")}
+                  className={drillFilterPillClass(sectionFilter === "RC", "compact")}
+                >
+                  RC
+                </button>
+              </div>
+              <TimeRangeSegmented value={timeRange} onChange={setTimeRange} className="shrink-0" />
+            </div>
           </div>
-          <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
-        </div>
 
-        <section className="mb-4 rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4">
           <div
             className={cn(
               "flex flex-col gap-4 xl:items-start",
@@ -455,7 +475,7 @@ function AnalyticsSectionsPage() {
                 title="Logical Reasoning"
                 badgeBg="var(--explanation-answered-bg)"
                 badgeColor="var(--explanation-answered)"
-                progressTitle="LR PROGRESS"
+                progressTitle="LR Progress"
                 summary={lrSummary}
                 points={lrPoints}
                 yAxisLabels={lrYAxisLabels}
@@ -472,7 +492,7 @@ function AnalyticsSectionsPage() {
                 title="Reading Comprehension"
                 badgeBg="var(--explanation-rc-badge-bg-light)"
                 badgeColor="var(--explanation-teal)"
-                progressTitle="RC PROGRESS"
+                progressTitle="RC Progress"
                 summary={rcSummary}
                 points={rcPoints}
                 yAxisLabels={rcYAxisLabels}
@@ -483,7 +503,7 @@ function AnalyticsSectionsPage() {
           </div>
         </section>
 
-        <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <HistorySortMenu
             value={historySort}
             onChange={setHistorySort}
@@ -503,7 +523,8 @@ function AnalyticsSectionsPage() {
           onSelectEntry={(id) => navigate(practiceSessionResultsPath(id, { source: "section" }))}
           brBarColor="var(--destructive)"
         />
-      </StudentMain>
+      </div>
+    </StudentMain>
   )
 }
 

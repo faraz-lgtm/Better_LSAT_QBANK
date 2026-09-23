@@ -59,6 +59,30 @@ export function formatOverviewPercentileCaption(n: number): string {
   return `PERCENTILE: ${rounded1.toFixed(1)}th`
 }
 
+/** Figma Overview: "94th percentile" / "90.6th percentile". */
+export function formatOverviewPercentilePlain(n: number): string {
+  const rounded1 = Math.round(n * 10) / 10
+  if (Number.isInteger(rounded1)) return `${ordinal(rounded1)} percentile`
+  return `${rounded1.toFixed(1)}th percentile`
+}
+
+function scoreProgressPct(scaled: number | null | undefined): number | undefined {
+  if (scaled == null || !Number.isFinite(scaled)) return undefined
+  const pct = ((scaled - LSAT_SCALED_MIN) / (LSAT_SCALED_MAX - LSAT_SCALED_MIN)) * 100
+  return Math.max(0, Math.min(100, Math.round(pct)))
+}
+
+function formatAvgTimePerQuestion(totalStudyMinutes: number, questionsAnswered: number): string {
+  if (!Number.isFinite(totalStudyMinutes) || !Number.isFinite(questionsAnswered) || questionsAnswered <= 0) {
+    return "—"
+  }
+  const totalSeconds = Math.max(0, Math.floor(totalStudyMinutes * 60))
+  const avgSeconds = Math.round(totalSeconds / questionsAnswered)
+  const minutes = Math.floor(avgSeconds / 60)
+  const seconds = avgSeconds % 60
+  return `${minutes}:${String(seconds).padStart(2, "0")}`
+}
+
 export function formatPrepTestChartLabel(prepTestTitle: string, moduleId: string | null): string {
   const moduleMatch = moduleId?.match(/^LSAC(\d+)$/i)
   if (moduleMatch) return `PT ${moduleMatch[1]}`
@@ -143,39 +167,52 @@ export function mapOverviewToHeadlineStats(overview: AnalyticsOverview): Analyti
   if (overview.bestScaledScore != null) {
     stats.push({
       id: "best-score",
-      label: "BEST SCORE",
+      label: "Best Score",
       value: String(overview.bestScaledScore),
       accent: "var(--primary)",
       caption:
         overview.bestPercentile != null
-          ? formatOverviewPercentileCaption(overview.bestPercentile)
+          ? formatOverviewPercentilePlain(overview.bestPercentile)
           : undefined,
+      captionDetail: "all-time high",
+      // Figma Mean Score has a progress bar — Best Score does not.
     })
   }
   if (overview.averageScaledScore != null) {
+    const deltaFromBest =
+      overview.bestScaledScore != null
+        ? Math.round(overview.averageScaledScore) - Math.round(overview.bestScaledScore)
+        : null
     stats.push({
       id: "average-score",
-      label: "AVERAGE SCORE",
+      label: "Mean Score",
       value: String(overview.averageScaledScore),
-      accent: "var(--primary-100)",
+      accent: "var(--primary)",
       caption:
         overview.averagePercentile != null
-          ? formatOverviewPercentileCaption(overview.averagePercentile)
+          ? formatOverviewPercentilePlain(overview.averagePercentile)
           : undefined,
+      deltaCaption:
+        deltaFromBest != null && deltaFromBest !== 0
+          ? `${formatSigned(deltaFromBest)} from best`
+          : undefined,
+      progressPct: scoreProgressPct(overview.averageScaledScore),
+      progressScaleMin: String(LSAT_SCALED_MIN),
+      progressScaleMax: String(LSAT_SCALED_MAX),
     })
   }
   if (stats.length === 0) {
     stats.push({
       id: "best-score",
-      label: "BEST SCORE",
+      label: "Best Score",
       value: "—",
       accent: "var(--primary)",
     })
     stats.push({
       id: "average-score",
-      label: "AVERAGE SCORE",
+      label: "Mean Score",
       value: "—",
-      accent: "var(--primary-100)",
+      accent: "var(--primary)",
     })
   }
   return stats
@@ -185,7 +222,7 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
   return [
     {
       id: "avg-lr",
-      label: "AVERAGE LR",
+      label: "Logical Reasoning Mean",
       value:
         overview.averageLrMissedPerPrepTest != null
           ? formatSigned(-Math.round(overview.averageLrMissedPerPrepTest))
@@ -194,7 +231,7 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
     },
     {
       id: "avg-rc",
-      label: "AVERAGE RC",
+      label: "Reading Comprehension Mean",
       value:
         overview.averageRcMissedPerPrepTest != null
           ? formatSigned(-Math.round(overview.averageRcMissedPerPrepTest))
@@ -202,16 +239,16 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
       accent: "var(--explanation-teal)",
     },
     {
-      id: "drilled",
-      label: "QUESTIONS DRILLED",
-      value: String(overview.totalDrillQuestionsAnswered),
-      accent: "var(--color-student-heading)",
+      id: "avg-time",
+      label: "Mean Time per Question",
+      value: formatAvgTimePerQuestion(overview.totalStudyMinutes, overview.totalQuestionsAnswered),
+      accent: "var(--primary)",
     },
     {
       id: "accuracy",
-      label: "DRILLING ACCURACY",
+      label: "Question Accuracy",
       value: overview.drillAccuracyPct != null ? `${overview.drillAccuracyPct}%` : "—",
-      accent: "var(--color-student-heading)",
+      accent: "var(--primary)",
     },
   ]
 }
@@ -259,6 +296,9 @@ export function mapTrajectoryToScoreProgress(points: TrajectoryPoint[]): ScorePr
       test: label,
       regular,
       blindReview: blind > 120 ? blind : regular,
+      completedAt: p.completedAt,
+      percentile: p.percentile,
+      blindReviewPercentile: p.blindReviewPercentile,
     }
   })
 }
@@ -293,6 +333,7 @@ export function mapPrioritiesToSections(priorities: PriorityRow[]): AnalyticsSec
       difficulty: numericToDifficulty(p.difficulty),
       accuracyPct: p.accuracyPct,
       goalPct: p.goalAccuracy,
+      gapPct: p.gap,
       reviewCount: p.reviewCount,
       unlocked: p.unlocked !== false && p.attemptCount >= 3,
       extraCorrectNeededPerTest: p.extraCorrectNeededPerTest,

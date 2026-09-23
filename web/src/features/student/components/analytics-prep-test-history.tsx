@@ -1,21 +1,31 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
-import { Bookmark, Calendar, ExternalLink, MoreVertical } from "lucide-react"
+import { Bookmark, Calendar, Check, ExternalLink, Eye, MoreVertical } from "lucide-react"
 
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
+import { analyticsSegmentedTabClass } from "@/features/student/analytics/components/analytics-overview-ui"
 import { checkedFromToggleEvent } from "@/features/student/analytics/session-bookmarks"
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 import type { AnalyticsSectionFilter } from "@/features/student/analytics/section-filter"
 
-const SCORE_BOX_WIDTH_PX = 148
+const SCORE_BOX_WIDTH_PX = 188
 
 const SECTION_FILTER_OPTIONS: Array<{ id: AnalyticsSectionFilter; label: string }> = [
   { id: "all", label: "All" },
   { id: "LR", label: "LR" },
   { id: "RC", label: "RC" },
 ]
+
+export const OVERVIEW_HISTORY_TABS = [
+  { id: "all", label: "All History" },
+  { id: "drill", label: "Drill History" },
+  { id: "section", label: "Section History" },
+  { id: "preptest", label: "PrepTest History" },
+] as const
+
+export type OverviewHistoryTab = (typeof OVERVIEW_HISTORY_TABS)[number]["id"]
 
 function HistorySectionFilter({
   value,
@@ -65,13 +75,14 @@ function ScoreMetric({
   const widthPct = Math.max(0, Math.min(100, (safeValue / safeMax) * 100))
   return (
     <div
-      className="flex h-10 shrink-0 flex-col justify-center gap-1 rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-2.5"
+      className="flex h-10 min-w-[188px] shrink-0 flex-col justify-center gap-1 rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-2.5"
       style={{ width: SCORE_BOX_WIDTH_PX }}
-      title={label === "UR" ? "Untimed Review" : undefined}
     >
       <div className="flex w-full items-center justify-between gap-2">
-        <span className="text-xs font-medium leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">{label}</span>
-        <span className="w-9 text-right text-xs font-semibold leading-normal tracking-[0.02em] text-[var(--color-student-heading)]">
+        <span className="whitespace-nowrap text-[10px] font-medium leading-normal tracking-[0.02em] text-[var(--greyscale-500)] sm:text-xs">
+          {label}
+        </span>
+        <span className="w-9 shrink-0 text-right text-xs font-semibold leading-normal tracking-[0.02em] text-[var(--color-student-heading)]">
           {safeValue}
         </span>
       </div>
@@ -117,7 +128,7 @@ function RowMenu({
       <button
         type="button"
         onClick={() => setOpen((c) => !c)}
-        className="flex size-8 items-center justify-center rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] text-[var(--greyscale-500)] transition-colors hover:bg-[var(--greyscale-0)]"
+        className="flex size-8 items-center justify-center rounded-[10px] text-[var(--greyscale-500)] transition-colors hover:bg-[var(--greyscale-25)]"
         aria-label="More options"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -188,27 +199,15 @@ function PrepTestHistoryRow({
   return (
     <div
       className={cn(
-        "grid grid-cols-1 gap-2 rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-2.5 lg:h-14 lg:grid-cols-[280px_minmax(0,1fr)_minmax(0,1fr)_72px] lg:items-center lg:gap-0 lg:p-0",
-        labelClickable && "hover:bg-[var(--primary-0)]",
+        "grid grid-cols-1 gap-2 border-b border-[var(--greyscale-100)] py-2.5 last:border-b-0 lg:h-14 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto] lg:items-center lg:gap-2 lg:py-0",
+        labelClickable && "hover:bg-[var(--primary-0)]/40",
       )}
     >
-      <div className="flex min-w-0 items-center gap-2 lg:h-14 lg:px-2.5">
-        <button
-          type="button"
-          onClick={() => onToggleBookmark(entry.id)}
-          className="flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] text-[var(--primary)] transition-colors hover:bg-[var(--greyscale-0)]"
-          aria-label={entry.bookmarked ? "Remove bookmark" : "Bookmark"}
-          aria-pressed={entry.bookmarked}
-        >
-          <Bookmark
-            className={cn("size-4", entry.bookmarked ? "fill-[var(--primary)] text-[var(--primary)]" : "text-[var(--greyscale-500)]")}
-            aria-hidden
-          />
-        </button>
+      <div className="flex min-w-0 items-center gap-2">
         {entry.sectionType === "LR" || entry.sectionType === "RC" ? (
           <SectionInitialBadge section={entry.sectionType} variant="compact" />
         ) : null}
-        <div className="min-w-0 flex flex-col gap-0">
+        <div className="flex min-w-0 flex-col gap-0">
           {labelClickable ? (
             <button
               type="button"
@@ -233,16 +232,46 @@ function PrepTestHistoryRow({
         </div>
       </div>
 
-      <div className="flex gap-2 lg:contents">
-        <div className="flex flex-1 items-center justify-center lg:h-14 lg:flex-none lg:px-2.5">
+      <div className="flex flex-wrap items-center gap-2 lg:contents">
+        <div className="flex items-center justify-center">
           <ScoreMetric label="Score" value={entry.score} max={entry.scoreMax} barColor="var(--primary)" />
         </div>
-        <div className="flex flex-1 items-center justify-center lg:h-14 lg:flex-none lg:px-2.5">
-          <ScoreMetric label="UR" value={entry.blindReviewScore} max={entry.blindReviewMax} barColor={brBarColor} />
+        <div className="flex items-center justify-center">
+          <ScoreMetric
+            label="Un-timed Review"
+            value={entry.blindReviewScore}
+            max={entry.blindReviewMax}
+            barColor={brBarColor}
+          />
         </div>
       </div>
 
-      <div className="flex items-center justify-end lg:h-14 lg:justify-center lg:px-2.5">
+      <div className="flex items-center justify-end gap-1.5 lg:justify-center">
+        <button
+          type="button"
+          onClick={() => onToggleBookmark(entry.id)}
+          className="flex size-8 shrink-0 items-center justify-center rounded-[10px] text-[var(--primary)] transition-colors hover:bg-[var(--greyscale-25)]"
+          aria-label={entry.bookmarked ? "Remove bookmark" : "Bookmark"}
+          aria-pressed={entry.bookmarked}
+        >
+          <Bookmark
+            className={cn(
+              "size-4",
+              entry.bookmarked ? "fill-[var(--primary)] text-[var(--primary)]" : "text-[var(--greyscale-500)]",
+            )}
+            aria-hidden
+          />
+        </button>
+        {onSelectEntry ? (
+          <button
+            type="button"
+            onClick={() => onSelectEntry(entry.id)}
+            className="flex size-8 shrink-0 items-center justify-center rounded-[10px] text-[var(--primary)] transition-colors hover:bg-[var(--greyscale-25)]"
+            aria-label={`View ${entry.testLabel}`}
+          >
+            <Eye className="size-4" aria-hidden />
+          </button>
+        ) : null}
         <RowMenu entry={entry} onToggleBookmark={onToggleBookmark} onOpenPractice={onOpenPractice} />
       </div>
     </div>
@@ -268,6 +297,8 @@ type AnalyticsPrepTestHistoryProps = {
   /** Overview preview: show this many rows, then a View more link. */
   previewLimit?: number
   viewMoreHref?: string
+  /** When true with viewMoreHref, always show View more (Overview Figma). */
+  alwaysShowViewMore?: boolean
 }
 
 function AnalyticsPrepTestHistory({
@@ -284,17 +315,19 @@ function AnalyticsPrepTestHistory({
   onSectionFilterChange,
   previewLimit,
   viewMoreHref,
+  alwaysShowViewMore = false,
 }: AnalyticsPrepTestHistoryProps) {
   const showSectionFilter = sectionFilter != null && onSectionFilterChange != null
   const displayedEntries =
     previewLimit != null ? visibleEntries.slice(0, previewLimit) : visibleEntries
   const showViewMore =
-    Boolean(viewMoreHref) && previewLimit != null && visibleEntries.length > previewLimit
+    Boolean(viewMoreHref) &&
+    (alwaysShowViewMore || (previewLimit != null && visibleEntries.length > previewLimit))
 
   return (
-    <section className="rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-[12px] bg-[var(--greyscale-25)] px-3 py-2">
-        <h2 className="text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">{title}</h2>
+    <section className="flex flex-col gap-3 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 shadow-[0px_1px_2px_rgba(13,13,18,0.04)]">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">{title}</h2>
         <div className="flex flex-wrap items-center gap-2">
           {showSectionFilter ? (
             <HistorySectionFilter value={sectionFilter} onChange={onSectionFilterChange} />
@@ -315,7 +348,7 @@ function AnalyticsPrepTestHistory({
 
       <div
         className={cn(
-          "flex flex-col gap-2 pr-1",
+          "flex flex-col pr-1",
           previewLimit == null && "max-h-[360px] overflow-y-auto",
         )}
       >
@@ -342,12 +375,12 @@ function AnalyticsPrepTestHistory({
       </div>
 
       {showViewMore && viewMoreHref ? (
-        <div className="mt-3 flex justify-center">
+        <div className="flex justify-center pt-1">
           <Link
             to={viewMoreHref}
-            className="inline-flex h-8 min-w-[120px] items-center justify-center rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 text-xs font-semibold leading-[1.4] tracking-[0.02em] text-[var(--primary)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)]"
+            className="text-xs font-semibold leading-[1.4] tracking-[0.02em] text-[var(--primary)] transition-colors hover:underline"
           >
-            View more
+            View More
           </Link>
         </div>
       ) : null}
@@ -355,4 +388,62 @@ function AnalyticsPrepTestHistory({
   )
 }
 
-export { AnalyticsPrepTestHistory }
+function OverviewHistoryTabs({
+  value,
+  onChange,
+}: {
+  value: OverviewHistoryTab
+  onChange: (next: OverviewHistoryTab) => void
+}) {
+  return (
+    <div role="tablist" aria-label="History type" className="flex flex-wrap items-center gap-2">
+      {OVERVIEW_HISTORY_TABS.map((tab) => {
+        const active = value === tab.id
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(tab.id)}
+            className={cn(
+              analyticsSegmentedTabClass(active),
+              "h-9 gap-1.5 rounded-[10px] px-4 text-xs",
+              !active && "text-[var(--primary)]",
+            )}
+          >
+            {active ? (
+              <span
+                className="inline-flex size-3.5 shrink-0 items-center justify-center rounded-full bg-white/20"
+                aria-hidden
+              >
+                <Check className="size-2.5 stroke-[3]" />
+              </span>
+            ) : null}
+            {tab.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+type OverviewHistoryShellProps = {
+  activeTab: OverviewHistoryTab
+  onTabChange: (next: OverviewHistoryTab) => void
+  children: ReactNode
+}
+
+function OverviewHistoryShell({ activeTab, onTabChange, children }: OverviewHistoryShellProps) {
+  return (
+    <section className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">History</h2>
+        <OverviewHistoryTabs value={activeTab} onChange={onTabChange} />
+      </div>
+      <div className="flex flex-col gap-4">{children}</div>
+    </section>
+  )
+}
+
+export { AnalyticsPrepTestHistory, OverviewHistoryShell, OverviewHistoryTabs }

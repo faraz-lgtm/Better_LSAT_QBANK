@@ -28,24 +28,54 @@ export type AnalyticsStat = {
   value: string
   accent: string
   caption?: string
+  /** Extra caption fragment (e.g. "all-time high") after the percentile. */
+  captionDetail?: string
+  /** Signed delta vs best score, e.g. "-16 from best". */
+  deltaCaption?: string
+  /** 0–100 fill for the score progress rail (Mean Score only in Figma). */
+  progressPct?: number
+  /** Scale labels under the progress rail (Figma Mean Score → "120" / "180"). */
+  progressScaleMin?: string
+  progressScaleMax?: string
 }
 
 export const mockAnalyticsHeadlineStats: AnalyticsStat[] = [
-  { id: "best-score", label: "BEST SCORE", value: "169", accent: "#0d47a1", caption: "PERCENTILE: 94th" },
-  { id: "average-score", label: "AVERAGE SCORE", value: "153", accent: "#5463a9", caption: "PERCENTILE: 49th" },
+  {
+    id: "best-score",
+    label: "Best Score",
+    value: "169",
+    accent: "#0d47a1",
+    caption: "94th percentile",
+    captionDetail: "all-time high",
+  },
+  {
+    id: "average-score",
+    label: "Mean Score",
+    value: "153",
+    accent: "#0d47a1",
+    caption: "49th percentile",
+    deltaCaption: "-16 from best",
+    progressPct: 55,
+    progressScaleMin: "120",
+    progressScaleMax: "180",
+  },
 ]
 
 export const mockAnalyticsSecondaryStats: AnalyticsStat[] = [
-  { id: "avg-lr", label: "AVERAGE LR", value: "-11", accent: "#00BC54" },
-  { id: "avg-rc", label: "AVERAGE RC", value: "-12", accent: "#0BBCC9" },
-  { id: "drilled", label: "QUESTIONS DRILLED", value: "740", accent: "#116b97" },
-  { id: "accuracy", label: "DRILLING ACCURACY", value: "64%", accent: "#956321" },
+  { id: "avg-lr", label: "Logical Reasoning Mean", value: "-11", accent: "#00BC54" },
+  { id: "avg-rc", label: "Reading Comprehension Mean", value: "-12", accent: "#0BBCC9" },
+  { id: "avg-time", label: "Mean Time per Question", value: "1:00", accent: "#0d47a1" },
+  { id: "accuracy", label: "Question Accuracy", value: "64%", accent: "#0d47a1" },
 ]
 
 export type ScoreProgressPoint = {
   test: string
   regular: number
   blindReview: number
+  /** ISO completedAt from trajectory — used for chart hover tooltips. */
+  completedAt?: string | null
+  percentile?: number | null
+  blindReviewPercentile?: number | null
 }
 
 export const mockScoreProgress: ScoreProgressPoint[] = [
@@ -68,6 +98,8 @@ export type QuestionTypeRow = {
   difficulty: Difficulty
   accuracyPct: number | null
   goalPct: number | null
+  /** Goal − accuracy (percentage points); null when locked / missing. */
+  gapPct: number | null
   reviewCount: number
   unlocked: boolean
   extraCorrectNeededPerTest: number | null
@@ -100,6 +132,7 @@ export const mockAnalyticsSections: AnalyticsSection[] = [
         difficulty: "Medium",
         accuracyPct: 50,
         goalPct: 86,
+        gapPct: 36,
         reviewCount: 549,
         unlocked: true,
         extraCorrectNeededPerTest: 3.7,
@@ -112,6 +145,7 @@ export const mockAnalyticsSections: AnalyticsSection[] = [
         difficulty: "Easiest",
         accuracyPct: 50,
         goalPct: 86,
+        gapPct: 36,
         reviewCount: 549,
         unlocked: true,
         extraCorrectNeededPerTest: 3.5,
@@ -124,6 +158,7 @@ export const mockAnalyticsSections: AnalyticsSection[] = [
         difficulty: "Hard",
         accuracyPct: 50,
         goalPct: 86,
+        gapPct: 36,
         reviewCount: 549,
         unlocked: true,
         extraCorrectNeededPerTest: 3.0,
@@ -136,6 +171,7 @@ export const mockAnalyticsSections: AnalyticsSection[] = [
         difficulty: "Hardest",
         accuracyPct: 50,
         goalPct: 86,
+        gapPct: 36,
         reviewCount: 549,
         unlocked: true,
         extraCorrectNeededPerTest: 1.4,
@@ -157,6 +193,7 @@ export const mockAnalyticsSections: AnalyticsSection[] = [
         difficulty: "Medium",
         accuracyPct: 50,
         goalPct: 86,
+        gapPct: 36,
         reviewCount: 549,
         unlocked: true,
         extraCorrectNeededPerTest: 3.7,
@@ -169,6 +206,7 @@ export const mockAnalyticsSections: AnalyticsSection[] = [
         difficulty: "Easiest",
         accuracyPct: 50,
         goalPct: 86,
+        gapPct: 36,
         reviewCount: 549,
         unlocked: true,
         extraCorrectNeededPerTest: 3.5,
@@ -181,6 +219,7 @@ export const mockAnalyticsSections: AnalyticsSection[] = [
         difficulty: "Hard",
         accuracyPct: 50,
         goalPct: 86,
+        gapPct: 36,
         reviewCount: 549,
         unlocked: true,
         extraCorrectNeededPerTest: 3.0,
@@ -193,6 +232,7 @@ export const mockAnalyticsSections: AnalyticsSection[] = [
         difficulty: "Hardest",
         accuracyPct: 50,
         goalPct: 86,
+        gapPct: 36,
         reviewCount: 549,
         unlocked: true,
         extraCorrectNeededPerTest: 1.4,

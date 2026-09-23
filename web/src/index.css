@@ -2255,6 +2255,18 @@ code {
   color: var(--color-student-heading);
 }
 
+.ds-analytics-stat__label--titlecase {
+  letter-spacing: 0.02em;
+}
+
+.ds-analytics-stat--metric {
+  padding: 12px 14px;
+}
+
+.ds-analytics-stat--metric .ds-analytics-stat__value {
+  font-size: 24px;
+}
+
 .ds-analytics-stat__value {
   font-size: 28px;
   font-weight: 800;

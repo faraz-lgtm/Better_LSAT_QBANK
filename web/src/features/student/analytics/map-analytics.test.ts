@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest"
 
 import {
   formatOverviewPercentileCaption,
+  formatOverviewPercentilePlain,
   formatPrepTestChartLabel,
   formatPrepTestHistoryLabel,
   formatSectionHistoryLabel,
   mapDrillSessionToHistoryEntry,
   mapOverviewToHeadlineStats,
+  mapOverviewToSecondaryStats,
   mapPrepTestSessionToHistoryEntry,
   mapSectionSessionToHistoryEntry,
   mapSessionToDrillRecord,
@@ -33,14 +35,50 @@ describe("map-analytics", () => {
       totalStudyMinutes: 0,
     }
     const stats = mapOverviewToHeadlineStats(overview)
+    expect(stats[0]?.label).toBe("Best Score")
     expect(stats[0]?.value).toBe("170")
-    expect(stats[0]?.caption).toContain("92nd")
+    expect(stats[0]?.caption).toBe("92nd percentile")
+    expect(stats[0]?.captionDetail).toBe("all-time high")
+    expect(stats[0]?.progressPct).toBeUndefined()
+    expect(stats[1]?.label).toBe("Mean Score")
+    expect(stats[1]?.deltaCaption).toBe("-5 from best")
+    expect(stats[1]?.progressPct).toBeTypeOf("number")
+    expect(stats[1]?.progressScaleMin).toBe("120")
+    expect(stats[1]?.progressScaleMax).toBe("180")
+  })
+
+  it("maps overview secondary stats to Figma labels with calculated time/accuracy", () => {
+    const overview: AnalyticsOverview = {
+      bestScaledScore: 170,
+      averageScaledScore: 165,
+      bestPercentile: 92,
+      averagePercentile: 80,
+      completedPrepTestCount: 2,
+      totalQuestionsAnswered: 120,
+      drillAccuracyPct: 64,
+      totalDrillQuestionsAnswered: 50,
+      averageLrMissedPerPrepTest: 11,
+      averageRcMissedPerPrepTest: 12,
+      totalStudyMinutes: 120,
+    }
+    const stats = mapOverviewToSecondaryStats(overview)
+    expect(stats.map((s) => s.label)).toEqual([
+      "Logical Reasoning Mean",
+      "Reading Comprehension Mean",
+      "Mean Time per Question",
+      "Question Accuracy",
+    ])
+    expect(stats[0]?.value).toBe("-11")
+    expect(stats[2]?.value).toBe("1:00")
+    expect(stats[3]?.value).toBe("64%")
   })
 
   it("formats overview percentile captions with ordinals", () => {
     expect(formatOverviewPercentileCaption(99)).toBe("PERCENTILE: 99th")
     expect(formatOverviewPercentileCaption(11)).toBe("PERCENTILE: 11th")
     expect(formatOverviewPercentileCaption(90.6)).toBe("PERCENTILE: 90.6th")
+    expect(formatOverviewPercentilePlain(94)).toBe("94th percentile")
+    expect(formatOverviewPercentilePlain(90.6)).toBe("90.6th percentile")
   })
 
   it("formats prep test chart labels as PT numbers", () => {
@@ -210,6 +248,9 @@ describe("map-analytics", () => {
     expect(mapped[0]?.test).toBe("PT 150")
     expect(mapped[0]?.regular).toBe(160)
     expect(mapped[0]?.blindReview).toBe(165)
+    expect(mapped[0]?.completedAt).toBe("2026-01-01T00:00:00Z")
+    expect(mapped[0]?.percentile).toBe(50)
+    expect(mapped[0]?.blindReviewPercentile).toBe(55)
   })
 
   it("lifts headline best score from a higher untimed-review trajectory point", () => {
@@ -324,6 +365,8 @@ describe("map-analytics", () => {
     expect(sections).toHaveLength(1)
     expect(sections[0]?.id).toBe("LR")
     expect(sections[0]?.rows.map((r) => r.id)).toEqual(["qt-high", "qt-low"])
+    expect(sections[0]?.rows[0]?.gapPct).toBe(36)
+    expect(sections[0]?.rows[1]?.gapPct).toBe(-4)
   })
 
   it("maps drill and section sessions into history entries", () => {

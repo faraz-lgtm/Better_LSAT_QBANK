@@ -4,7 +4,7 @@ import { useState } from "react"
 import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
 
-import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
+import { AnalyticsPrepTestHistory, OverviewHistoryShell } from "@/features/student/components/analytics-prep-test-history"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 
 const entries: PrepTestHistoryEntry[] = [
@@ -97,6 +97,23 @@ describe("AnalyticsPrepTestHistory", () => {
     expect(onToggleBookmark).toHaveBeenCalledWith("saved")
   })
 
+  it("shows a view eye button on the right when onSelectEntry is provided", async () => {
+    const user = userEvent.setup()
+    const onSelectEntry = vi.fn()
+    render(
+      <AnalyticsPrepTestHistory
+        visibleEntries={entries}
+        bookmarkedOnly={false}
+        onBookmarkedOnlyChange={() => {}}
+        onToggleBookmark={() => {}}
+        onSelectEntry={onSelectEntry}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "View Varied Mix" }))
+    expect(onSelectEntry).toHaveBeenCalledWith("saved")
+  })
+
   it("previews four rows and links View more to the Insights page", () => {
     const many = Array.from({ length: 5 }, (_, index) => ({
       ...entries[1]!,
@@ -122,7 +139,7 @@ describe("AnalyticsPrepTestHistory", () => {
     expect(screen.getByText("History 1")).toBeInTheDocument()
     expect(screen.getByText("History 4")).toBeInTheDocument()
     expect(screen.queryByText("History 5")).not.toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "View more" })).toHaveAttribute("href", "/app/analytics/drills")
+    expect(screen.getByRole("link", { name: /view more/i })).toHaveAttribute("href", "/app/analytics/drills")
   })
 
   it("shows the practice-page LR and RC badges beside drill titles", () => {
@@ -200,10 +217,28 @@ describe("AnalyticsPrepTestHistory", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.queryByRole("link", { name: "View more" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: /view more/i })).not.toBeInTheDocument()
   })
 
-  it("labels untimed review scores as UR instead of BR", () => {
+  it("shows View More when alwaysShowViewMore is set", () => {
+    render(
+      <MemoryRouter>
+        <AnalyticsPrepTestHistory
+          visibleEntries={entries}
+          bookmarkedOnly={false}
+          onBookmarkedOnlyChange={() => {}}
+          onToggleBookmark={() => {}}
+          previewLimit={4}
+          viewMoreHref="/app/analytics/drills"
+          alwaysShowViewMore
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole("link", { name: /view more/i })).toHaveAttribute("href", "/app/analytics/drills")
+  })
+
+  it("labels untimed review scores as Un-timed Review", () => {
     render(
       <AnalyticsPrepTestHistory
         visibleEntries={entries}
@@ -213,7 +248,35 @@ describe("AnalyticsPrepTestHistory", () => {
       />,
     )
 
-    expect(screen.getAllByText("UR")).toHaveLength(entries.length)
+    expect(screen.getAllByText("Un-timed Review")).toHaveLength(entries.length)
+    expect(screen.queryByText("UR")).not.toBeInTheDocument()
     expect(screen.queryByText("BR")).not.toBeInTheDocument()
+  })
+})
+
+describe("OverviewHistoryShell", () => {
+  it("renders Figma history type pills and switches the active tab", async () => {
+    const user = userEvent.setup()
+    function ShellHarness() {
+      const [tab, setTab] = useState<"all" | "drill" | "section" | "preptest">("all")
+      return (
+        <OverviewHistoryShell activeTab={tab} onTabChange={setTab}>
+          <p>{tab}</p>
+        </OverviewHistoryShell>
+      )
+    }
+
+    render(<ShellHarness />)
+
+    const all = screen.getByRole("tab", { name: "All History" })
+    const drill = screen.getByRole("tab", { name: "Drill History" })
+    expect(all).toHaveAttribute("aria-selected", "true")
+    expect(screen.getByRole("tab", { name: "Section History" })).toBeInTheDocument()
+    expect(screen.getByRole("tab", { name: "PrepTest History" })).toBeInTheDocument()
+
+    await user.click(drill)
+    expect(drill).toHaveAttribute("aria-selected", "true")
+    expect(all).toHaveAttribute("aria-selected", "false")
+    expect(screen.getByText("drill")).toBeInTheDocument()
   })
 })
