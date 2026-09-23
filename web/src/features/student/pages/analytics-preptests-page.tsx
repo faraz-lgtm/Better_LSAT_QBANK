@@ -18,8 +18,11 @@ import {
 import {
   computePrepTestStats,
   filterPrepTestsByTimeRange,
+  formatPrepTestChartValue,
   getPrepTestHistoryEntries,
   getPrepTestProgressPoints,
+  prepTestChartTooltipLines,
+  selectPrepTestChartPoints,
   type PrepTestProgressPoint,
   type PrepTestRecord,
 } from "@/features/student/lib/mock-analytics-preptests"
@@ -93,24 +96,29 @@ function PrepTestScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (ne
 }
 
 function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressPoint[]; tab: ScoreTab }) {
+  const chartPoints = selectPrepTestChartPoints(points, tab)
   const yAxisLabels =
     tab === "raw"
-      ? buildChartYAxisLabels(resolveRawScoreAxisMax(points.map((p) => p.rawMax)))
+      ? buildChartYAxisLabels(resolveRawScoreAxisMax(chartPoints.map((p) => p.rawMax)))
       : LSAT_SCALED_Y_AXIS_LABELS
   const minVal = yAxisLabels[yAxisLabels.length - 1] ?? 0
   const maxVal = yAxisLabels[0] ?? 1
   const range = Math.max(1, maxVal - minVal)
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
 
-  if (points.length === 0) {
+  if (chartPoints.length === 0) {
     return (
       <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-[var(--greyscale-100)] text-xs text-[var(--greyscale-500)]">
-        No PrepTests in the selected range.
+        {points.length === 0
+          ? "No PrepTests in the selected range."
+          : tab === "scaled"
+            ? "No scaled scores in this range. Switch to Raw score."
+            : "No PrepTests in the selected range."}
       </div>
     )
   }
 
-  const stepX = 100 / Math.max(1, points.length)
+  const stepX = 100 / Math.max(1, chartPoints.length)
 
   const yFor = (value: number) => {
     const clamped = Math.max(minVal, Math.min(maxVal, value))
@@ -120,13 +128,13 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
 
   const pickValue = (p: PrepTestProgressPoint) => (tab === "raw" ? p.rawScore : p.scaledScore)
 
-  const linePoints = points.map((p, i) => ({ x: xFor(i), y: yFor(pickValue(p)) }))
+  const linePoints = chartPoints.map((p, i) => ({ x: xFor(i), y: yFor(pickValue(p)) }))
   const polyline = linePoints.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ")
   const areaPolygon = `${linePoints[0].x},100 ${polyline} ${linePoints[linePoints.length - 1].x},100`
 
   return (
     <div className="w-full">
-      <div className="flex h-[220px] w-full items-stretch gap-3">
+      <div className="flex h-[220px] w-full items-stretch gap-3 overflow-visible">
         <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[var(--color-student-heading)]">
           {yAxisLabels.map((label, index) => (
             <span key={`${label}-${index}`} className="leading-5">
@@ -134,7 +142,7 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
             </span>
           ))}
         </div>
-        <div className="relative flex-1">
+        <div className="relative flex-1 overflow-visible">
           <div className="absolute inset-0 flex flex-col justify-between" aria-hidden>
             {yAxisLabels.map((label, index) => (
               <div key={`${label}-${index}`} className="h-px w-full bg-[var(--greyscale-100)]" />
@@ -157,9 +165,10 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
               vectorEffect="non-scaling-stroke"
             />
           </svg>
-          <div className="absolute inset-0 flex">
-            {points.map((point, i) => {
-              const value = tab === "raw" ? `${point.rawScore}/${point.rawMax}` : `${point.scaledScore}`
+          <div className="absolute inset-0 flex overflow-visible">
+            {chartPoints.map((point, i) => {
+              const value = formatPrepTestChartValue(point, tab)
+              const tooltipLines = prepTestChartTooltipLines(point, tab)
               const isActive = hoverIndex === i
               return (
                 <button
@@ -169,7 +178,7 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
                   onMouseLeave={() => setHoverIndex(null)}
                   onFocus={() => setHoverIndex(i)}
                   onBlur={() => setHoverIndex(null)}
-                  className="group relative flex-1 cursor-default focus:outline-none"
+                  className="group relative flex-1 cursor-default overflow-visible focus:outline-none"
                   aria-label={`${point.test}: ${value}`}
                 >
                   <span
@@ -182,10 +191,20 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
                   />
                   {isActive ? (
                     <span
-                      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-[var(--color-student-heading)] px-2 py-1 text-xs font-semibold text-white shadow-lg"
-                      style={{ left: "50%", top: `calc(${linePoints[i].y}% - 8px)` }}
+                      className="pointer-events-none absolute z-20 w-fit -translate-x-1/2 -translate-y-full rounded-xl bg-[var(--color-student-heading)] px-3 py-2 text-left shadow-[0px_12px_24px_rgba(13,13,18,0.18)]"
+                      style={{ left: "50%", top: `calc(${linePoints[i].y}% - 10px)` }}
                     >
-                      {point.test}: {value}
+                      <span className="block whitespace-nowrap text-[11px] font-semibold tracking-[0.04em] text-white/70">
+                        {point.test}
+                      </span>
+                      {tooltipLines.map((line) => (
+                        <span
+                          key={line}
+                          className="mt-0.5 block whitespace-nowrap text-sm font-semibold leading-5 text-white"
+                        >
+                          {line}
+                        </span>
+                      ))}
                     </span>
                   ) : null}
                 </button>
@@ -240,14 +259,14 @@ function AnalyticsPrepTestsPage() {
         label: "BEST SCORE",
         value: String(stats.bestScore),
         accent: "var(--primary)",
-        caption: `PERCENTILE: ${ordinal(stats.bestPercentile)}`,
+        caption: `PERCENTILE: ${ordinal(stats.bestPercentile)} · Raw ${stats.bestRawScore}/${stats.bestRawMax}`,
       },
       {
         id: "average-score",
         label: "AVERAGE SCORE",
         value: String(stats.averageScore),
         accent: "var(--primary-100)",
-        caption: `PERCENTILE: ${ordinal(stats.averagePercentile)}`,
+        caption: `PERCENTILE: ${ordinal(stats.averagePercentile)} · Raw avg ${stats.averageRawScore}`,
       },
     ]
   }, [stats])

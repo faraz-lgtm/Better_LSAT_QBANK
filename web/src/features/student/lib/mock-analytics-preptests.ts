@@ -40,8 +40,13 @@ export type PrepTestRecord = {
   /** RC section: raw correct out of rcMax. */
   rcCorrect: number
   rcMax: number
-  /** Scaled 120-180 LSAT score. */
+  /** Scaled 120-180 LSAT score when a conversion exists. */
   scaledScore: number
+  /** False when the attempt has only a raw score (no 120–180 conversion). */
+  hasScaledScore: boolean
+  /** Raw correct answers across the scored test. */
+  rawScore: number
+  rawMax: number
   /** Percentile for the scaled score (0-100). */
   percentile: number
   /** Blind review scaled 120-180 score. */
@@ -54,8 +59,19 @@ export type PrepTestRecord = {
  * time-range filter produces visibly different results. Scores trend upward
  * and then plateau, which matches the chart shape in the Figma design.
  */
+function withPrepTestScoreFields(
+  record: Omit<PrepTestRecord, "rawScore" | "rawMax" | "hasScaledScore">,
+): PrepTestRecord {
+  return {
+    ...record,
+    rawScore: record.lrCorrect + record.rcCorrect,
+    rawMax: Math.max(1, record.lrMax + record.rcMax),
+    hasScaledScore: record.scaledScore >= 120 && record.scaledScore <= 180,
+  }
+}
+
 export const mockPrepTestRecords: PrepTestRecord[] = [
-  {
+  withPrepTestScoreFields({
     id: "pt145",
     prepTestNumber: 145,
     takenAt: "2025-10-03",
@@ -68,8 +84,8 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     percentile: 90.6,
     blindReviewScaled: 167,
     blindReviewPercentile: 91,
-  },
-  {
+  }),
+  withPrepTestScoreFields({
     id: "pt150",
     prepTestNumber: 150,
     takenAt: "2025-11-04",
@@ -82,8 +98,8 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     percentile: 38,
     blindReviewScaled: 154,
     blindReviewPercentile: 56,
-  },
-  {
+  }),
+  withPrepTestScoreFields({
     id: "pt151",
     prepTestNumber: 151,
     takenAt: "2025-12-09",
@@ -96,8 +112,8 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     percentile: 47,
     blindReviewScaled: 156,
     blindReviewPercentile: 64,
-  },
-  {
+  }),
+  withPrepTestScoreFields({
     id: "pt152",
     prepTestNumber: 152,
     takenAt: "2026-01-13",
@@ -110,8 +126,8 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     percentile: 44,
     blindReviewScaled: 155,
     blindReviewPercentile: 60,
-  },
-  {
+  }),
+  withPrepTestScoreFields({
     id: "pt153",
     prepTestNumber: 153,
     takenAt: "2026-02-10",
@@ -124,8 +140,8 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     percentile: 53,
     blindReviewScaled: 158,
     blindReviewPercentile: 71,
-  },
-  {
+  }),
+  withPrepTestScoreFields({
     id: "pt154",
     prepTestNumber: 154,
     takenAt: "2026-03-03",
@@ -138,8 +154,8 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     percentile: 50,
     blindReviewScaled: 157,
     blindReviewPercentile: 67,
-  },
-  {
+  }),
+  withPrepTestScoreFields({
     id: "pt155",
     prepTestNumber: 155,
     takenAt: "2026-03-24",
@@ -152,8 +168,8 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     percentile: 73,
     blindReviewScaled: 163,
     blindReviewPercentile: 84,
-  },
-  {
+  }),
+  withPrepTestScoreFields({
     id: "pt156",
     prepTestNumber: 156,
     takenAt: "2026-04-14",
@@ -166,8 +182,8 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     percentile: 81,
     blindReviewScaled: 166,
     blindReviewPercentile: 90,
-  },
-  {
+  }),
+  withPrepTestScoreFields({
     id: "pt157",
     prepTestNumber: 157,
     takenAt: "2026-05-04",
@@ -180,7 +196,7 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     percentile: 94,
     blindReviewScaled: 173,
     blindReviewPercentile: 98,
-  },
+  }),
 ]
 
 const DAYS = 24 * 60 * 60 * 1000
@@ -228,6 +244,7 @@ export type PrepTestProgressPoint = {
   rawScore: number
   rawMax: number
   scaledScore: number
+  hasScaledScore: boolean
   takenAt: string
 }
 
@@ -239,11 +256,43 @@ export function getPrepTestProgressPoints(
     .map((record) => ({
       id: record.id,
       test: `PT ${record.prepTestNumber}`,
-      rawScore: record.lrCorrect + record.rcCorrect,
-      rawMax: record.lrMax + record.rcMax,
+      rawScore: record.rawScore,
+      rawMax: record.rawMax,
       scaledScore: record.scaledScore,
+      hasScaledScore: record.hasScaledScore,
       takenAt: record.takenAt,
     }))
+}
+
+export function selectPrepTestChartPoints(
+  points: readonly PrepTestProgressPoint[],
+  tab: "scaled" | "raw",
+): PrepTestProgressPoint[] {
+  if (tab === "scaled") return points.filter((point) => point.hasScaledScore)
+  return [...points]
+}
+
+export function formatPrepTestChartValue(
+  point: PrepTestProgressPoint,
+  tab: "scaled" | "raw",
+): string {
+  const raw = `Raw ${point.rawScore}/${point.rawMax}`
+  if (tab === "raw") {
+    return point.hasScaledScore ? `${raw} · Scaled ${point.scaledScore}` : raw
+  }
+  return point.hasScaledScore ? `Scaled ${point.scaledScore} · ${raw}` : raw
+}
+
+export function prepTestChartTooltipLines(
+  point: PrepTestProgressPoint,
+  tab: "scaled" | "raw",
+): string[] {
+  const raw = `Raw ${point.rawScore}/${point.rawMax}`
+  const scaled = `Scaled ${point.scaledScore}`
+  if (tab === "raw") {
+    return point.hasScaledScore ? [raw, scaled] : [raw]
+  }
+  return point.hasScaledScore ? [scaled, raw] : [raw]
 }
 
 function formatHistoryDate(iso: string): string {
@@ -259,7 +308,7 @@ function takenAtMs(iso: string): number {
 }
 
 function displayedHistoryScore(record: PrepTestRecord): number {
-  return record.lrCorrect + record.rcCorrect
+  return record.rawScore
 }
 
 export function sortPrepTestRecords(
@@ -302,8 +351,8 @@ export function getPrepTestHistoryEntries(
     dateLabel: formatHistoryDate(record.takenAt),
     takenAt: record.takenAt,
     bookmarked: Boolean(record.bookmarked),
-    score: displayedHistoryScore(record),
-    scoreMax: record.lrMax + record.rcMax,
+    score: record.rawScore,
+    scoreMax: record.rawMax,
     blindReviewScore: Math.round(
       ((record.blindReviewScaled - 120) / 60) * (record.lrMax + record.rcMax),
     ),
@@ -314,8 +363,11 @@ export function getPrepTestHistoryEntries(
 export type PrepTestStats = {
   bestScore: number
   bestPercentile: number
+  bestRawScore: number
+  bestRawMax: number
   averageScore: number
   averagePercentile: number
+  averageRawScore: number
   /** Signed missed count (e.g. -5). Null when no LawHub-valid LR section stats exist. */
   averageLrMissed: number | null
   averageRcMissed: number | null
@@ -336,8 +388,10 @@ function signed(value: number): number {
 
 export function computePrepTestStats(records: readonly PrepTestRecord[]): PrepTestStats | null {
   if (records.length === 0) return null
-  const scaled = records.map((r) => r.scaledScore)
-  const percentiles = records.map((r) => r.percentile)
+  const scaledRecords = records.filter((r) => r.hasScaledScore)
+  const scaled = scaledRecords.map((r) => r.scaledScore)
+  const percentiles = scaledRecords.map((r) => r.percentile)
+  const rawScores = records.map((r) => r.rawScore)
   const lrMissed = records
     .filter((r) => hasLawHubLrStats(r.lrMax) && r.lrCorrect >= 0 && r.lrCorrect <= r.lrMax)
     .map((r) => Math.max(-r.lrMax, Math.min(0, r.lrCorrect - r.lrMax)))
@@ -345,30 +399,38 @@ export function computePrepTestStats(records: readonly PrepTestRecord[]): PrepTe
     .filter((r) => hasLawHubRcStats(r.rcMax) && r.rcCorrect >= 0 && r.rcCorrect <= r.rcMax)
     .map((r) => Math.max(-r.rcMax, Math.min(0, r.rcCorrect - r.rcMax)))
   const brScaled = records.map((r) => r.blindReviewScaled)
-  const brDiffs = records.map((r) => r.blindReviewScaled - r.scaledScore)
+  const brDiffs = scaledRecords.map((r) => r.blindReviewScaled - r.scaledScore)
 
-  const bestIndex = scaled.reduce(
-    (best, current, index) => (current > scaled[best] ? index : best),
+  const bestIndex = scaled.length
+    ? scaled.reduce((best, current, index) => (current > scaled[best]! ? index : best), 0)
+    : 0
+  const bestRawIndex = rawScores.reduce(
+    (best, current, index) => (current > rawScores[best]! ? index : best),
     0,
   )
   const bestBrIndex = brScaled.reduce(
-    (best, current, index) => (current > brScaled[best] ? index : best),
+    (best, current, index) => (current > brScaled[best]! ? index : best),
     0,
   )
 
-  const avg = (values: number[]) => values.reduce((sum, v) => sum + v, 0) / values.length
+  const avg = (values: number[]) => (values.length === 0 ? 0 : values.reduce((sum, v) => sum + v, 0) / values.length)
+  const bestScaledRecord = scaledRecords[bestIndex]
+  const bestRawRecord = records[bestRawIndex]
 
   return {
-    bestScore: scaled[bestIndex],
-    bestPercentile: percentiles[bestIndex],
-    averageScore: round(avg(scaled)),
-    averagePercentile: round(avg(percentiles)),
+    bestScore: scaled[bestIndex] ?? 0,
+    bestPercentile: percentiles[bestIndex] ?? 0,
+    bestRawScore: bestScaledRecord?.rawScore ?? bestRawRecord?.rawScore ?? 0,
+    bestRawMax: bestScaledRecord?.rawMax ?? bestRawRecord?.rawMax ?? 1,
+    averageScore: scaled.length > 0 ? round(avg(scaled)) : 0,
+    averagePercentile: percentiles.length > 0 ? round(avg(percentiles)) : 0,
+    averageRawScore: round(avg(rawScores)),
     averageLrMissed: lrMissed.length > 0 ? signed(avg(lrMissed)) : null,
     averageRcMissed: rcMissed.length > 0 ? signed(avg(rcMissed)) : null,
-    bestBlindReview: brScaled[bestBrIndex],
+    bestBlindReview: brScaled[bestBrIndex] ?? 0,
     averageBlindReview: round(avg(brScaled)),
-    averageBlindReviewDifference: signed(avg(brDiffs)),
-    blindReviewDifferenceHigh: Math.max(...brDiffs),
-    blindReviewDifferenceLow: Math.min(...brDiffs),
+    averageBlindReviewDifference: brDiffs.length > 0 ? signed(avg(brDiffs)) : 0,
+    blindReviewDifferenceHigh: brDiffs.length > 0 ? Math.max(...brDiffs) : 0,
+    blindReviewDifferenceLow: brDiffs.length > 0 ? Math.min(...brDiffs) : 0,
   }
 }

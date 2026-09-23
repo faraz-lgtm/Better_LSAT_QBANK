@@ -67,6 +67,7 @@ function ScoreMetric({
     <div
       className="flex h-10 shrink-0 flex-col justify-center gap-1 rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-2.5"
       style={{ width: SCORE_BOX_WIDTH_PX }}
+      title={label === "UR" ? "Untimed Review" : undefined}
     >
       <div className="flex w-full items-center justify-between gap-2">
         <span className="text-xs font-medium leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">{label}</span>
@@ -237,7 +238,7 @@ function PrepTestHistoryRow({
           <ScoreMetric label="Score" value={entry.score} max={entry.scoreMax} barColor="var(--primary)" />
         </div>
         <div className="flex flex-1 items-center justify-center lg:h-14 lg:flex-none lg:px-2.5">
-          <ScoreMetric label="BR" value={entry.blindReviewScore} max={entry.blindReviewMax} barColor={brBarColor} />
+          <ScoreMetric label="UR" value={entry.blindReviewScore} max={entry.blindReviewMax} barColor={brBarColor} />
         </div>
       </div>
 
@@ -255,7 +256,7 @@ type AnalyticsPrepTestHistoryProps = {
   onToggleBookmark: (id: string) => void
   onSelectEntry?: (id: string) => void
   onOpenPractice?: (id: string) => void
-  /** BR progress bar fill — Sections uses red; Drills uses orange. */
+  /** Untimed Review progress bar fill — Sections uses red; Drills uses orange. */
   brBarColor?: string
   /** Insights tab heading — Drill / Section / PrepTest History. */
   title?: string

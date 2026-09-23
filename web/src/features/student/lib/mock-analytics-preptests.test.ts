@@ -3,20 +3,32 @@ import { describe, expect, it } from "vitest"
 import { withSessionBookmark } from "@/features/student/analytics/session-bookmarks"
 import {
   computePrepTestStats,
+  formatPrepTestChartValue,
   getPrepTestHistoryEntries,
+  getPrepTestProgressPoints,
+  prepTestChartTooltipLines,
+  selectPrepTestChartPoints,
   sortPrepTestRecords,
   type PrepTestRecord,
 } from "@/features/student/lib/mock-analytics-preptests"
 
 function record(partial: Partial<PrepTestRecord> & Pick<PrepTestRecord, "id" | "takenAt">): PrepTestRecord {
+  const lrCorrect = partial.lrCorrect ?? 0
+  const lrMax = partial.lrMax ?? 26
+  const rcCorrect = partial.rcCorrect ?? 0
+  const rcMax = partial.rcMax ?? 27
+  const scaledScore = partial.scaledScore ?? 120
   return {
     prepTestNumber: 100,
     bookmarked: false,
-    lrCorrect: 0,
-    lrMax: 26,
-    rcCorrect: 0,
-    rcMax: 27,
-    scaledScore: 120,
+    lrCorrect,
+    lrMax,
+    rcCorrect,
+    rcMax,
+    scaledScore,
+    hasScaledScore: scaledScore >= 120 && scaledScore <= 180,
+    rawScore: partial.rawScore ?? lrCorrect + rcCorrect,
+    rawMax: partial.rawMax ?? Math.max(1, lrMax + rcMax),
     percentile: 0,
     blindReviewScaled: 120,
     blindReviewPercentile: 0,
@@ -106,5 +118,68 @@ describe("computePrepTestStats LawHub LR/RC averages", () => {
     ])
     expect(stats?.averageLrMissed).toBeNull()
     expect(stats?.averageRcMissed).toBeNull()
+  })
+
+  it("keeps raw scores for attempts that have no scaled conversion", () => {
+    const stats = computePrepTestStats([
+      record({
+        id: "raw-only",
+        takenAt: "2026-01-01T00:00:00Z",
+        lrCorrect: 18,
+        lrMax: 25,
+        rcCorrect: 20,
+        rcMax: 27,
+        scaledScore: 0,
+        hasScaledScore: false,
+        rawScore: 38,
+        rawMax: 52,
+      }),
+      record({
+        id: "scaled",
+        takenAt: "2026-01-02T00:00:00Z",
+        lrCorrect: 22,
+        lrMax: 25,
+        rcCorrect: 21,
+        rcMax: 27,
+        scaledScore: 168,
+        hasScaledScore: true,
+        rawScore: 43,
+        rawMax: 52,
+      }),
+    ])
+    expect(stats?.bestScore).toBe(168)
+    expect(stats?.bestRawScore).toBe(43)
+    expect(stats?.bestRawMax).toBe(52)
+    expect(stats?.averageRawScore).toBe(41)
+  })
+})
+
+describe("PrepTest score progress points", () => {
+  it("plots every attempt on the raw tab, including tests without a scaled score", () => {
+    const points = getPrepTestProgressPoints([
+      record({
+        id: "raw-only",
+        prepTestNumber: 120,
+        takenAt: "2026-01-01T00:00:00Z",
+        scaledScore: 0,
+        hasScaledScore: false,
+        rawScore: 38,
+        rawMax: 52,
+      }),
+      record({
+        id: "scaled",
+        prepTestNumber: 157,
+        takenAt: "2026-01-02T00:00:00Z",
+        scaledScore: 168,
+        hasScaledScore: true,
+        rawScore: 43,
+        rawMax: 52,
+      }),
+    ])
+    expect(selectPrepTestChartPoints(points, "raw").map((point) => point.rawScore)).toEqual([38, 43])
+    expect(selectPrepTestChartPoints(points, "scaled").map((point) => point.id)).toEqual(["scaled"])
+    expect(formatPrepTestChartValue(points[0]!, "raw")).toBe("Raw 38/52")
+    expect(formatPrepTestChartValue(points[1]!, "scaled")).toBe("Scaled 168 · Raw 43/52")
+    expect(prepTestChartTooltipLines(points[1]!, "scaled")).toEqual(["Scaled 168", "Raw 43/52"])
   })
 })
