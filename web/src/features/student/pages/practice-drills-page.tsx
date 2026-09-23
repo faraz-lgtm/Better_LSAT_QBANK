@@ -15,8 +15,8 @@ import {
   type ContinueDrill,
 } from "@/features/student/drills/drill-dashboard-mappers"
 import {
+  difficultyMeterFromRow,
   groupPriorityRowsBySection,
-  priorityMeterFromRow,
 } from "@/features/student/drills/tag-drills-priority"
 import { createAnalyticsApi, type PriorityRow } from "@/lib/api/analytics"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -26,7 +26,7 @@ type SectionFilter = "all" | "lr" | "rc"
 function mapPriorityToTagDrill(row: PriorityRow): TagDrill | null {
   const section = row.sectionType === "LR" || row.sectionType === "RC" ? row.sectionType : null
   if (!section) return null
-  const visual = priorityMeterFromRow(row)
+  const visual = difficultyMeterFromRow(row)
   const configPath =
     section === "LR"
       ? `/app/practice/drills/lr/new?questionTypeId=${encodeURIComponent(row.questionTypeId)}&tag=${encodeURIComponent(row.name)}`

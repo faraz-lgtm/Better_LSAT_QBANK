@@ -1,3 +1,7 @@
+import {
+  difficultyLabelFromLevel,
+  type PracticeDifficultyLabel,
+} from "@/features/student/practice-session/practice-results-ui"
 import type { PriorityRow, PriorityTier } from "@/lib/api/analytics"
 
 const PRIORITY_RANK: Record<PriorityTier | "high" | "medium" | "low", number> = {
@@ -17,7 +21,7 @@ const TAG_DRILLS_VISIBLE_MAX = 5
 const TAG_DRILLS_PER_SECTION_INITIAL = 3
 
 /** Max LR/RC by-type drills shown after “See more”. */
-const TAG_DRILLS_PER_SECTION_EXPANDED = 10
+const TAG_DRILLS_PER_SECTION_EXPANDED = 8
 
 /** In-progress drills previewed under each LR/RC continue section. */
 const CONTINUE_DRILLS_PER_SECTION_INITIAL = 3
@@ -32,6 +36,18 @@ const PRIORITY_METER: Record<
   low: { label: "Low", filledBars: 2, color: "#ffbd4c" },
 }
 
+/** Same bar + label palette as continue-drill / question difficulty chips. */
+const DIFFICULTY_METER: Record<
+  PracticeDifficultyLabel,
+  { label: PracticeDifficultyLabel; filledBars: number; color: string }
+> = {
+  Easiest: { label: "Easiest", filledBars: 1, color: "#40c4aa" },
+  Easy: { label: "Easy", filledBars: 2, color: "#ffbd4c" },
+  Medium: { label: "Medium", filledBars: 3, color: "#ff6f00" },
+  Hard: { label: "Hard", filledBars: 4, color: "#df1c41" },
+  Hardest: { label: "Hardest", filledBars: 5, color: "#df1c41" },
+}
+
 function resolveTier(row: Pick<PriorityRow, "priorityTier" | "priorityLevel">): PriorityTier | "low" {
   if (row.priorityTier) return row.priorityTier
   return row.priorityLevel ?? "low"
@@ -40,6 +56,12 @@ function resolveTier(row: Pick<PriorityRow, "priorityTier" | "priorityLevel">): 
 /** Meter for how high-priority a tag is for this student (not how hard the type is). */
 function priorityMeterFromRow(row: Pick<PriorityRow, "priorityTier" | "priorityLevel">) {
   return PRIORITY_METER[resolveTier(row)]
+}
+
+/** Question-type difficulty meter (Easiest → Hardest), matching Pick My Own Drill chips. */
+function difficultyMeterFromRow(row: Pick<PriorityRow, "difficulty">) {
+  const label = difficultyLabelFromLevel(row.difficulty ?? 1)
+  return DIFFICULTY_METER[label]
 }
 
 function comparePriorityRows(a: PriorityRow, b: PriorityRow): number {
@@ -92,6 +114,7 @@ export {
   CONTINUE_DRILLS_PER_SECTION_INITIAL,
   TAG_DRILLS_VISIBLE_MAX,
   comparePriorityRows,
+  difficultyMeterFromRow,
   groupPriorityRowsBySection,
   orderPriorityRowsByWeakness,
   priorityMeterFromRow,

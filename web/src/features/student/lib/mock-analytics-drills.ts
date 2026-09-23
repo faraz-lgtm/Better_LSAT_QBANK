@@ -139,6 +139,8 @@ export type DrillProgressPoint = {
   takenAt: string
   scorePct: number
   ptEquivalent: number
+  questionsCorrect?: number
+  questionsTotal?: number
 }
 
 export function getDrillProgressPoints(records: readonly DrillRecord[]): DrillProgressPoint[] {
@@ -150,6 +152,8 @@ export function getDrillProgressPoints(records: readonly DrillRecord[]): DrillPr
       takenAt: record.takenAt,
       scorePct: Math.round((record.questionsCorrect / Math.max(1, record.questionsTotal)) * 100),
       ptEquivalent: record.ptEquivalentScore,
+      questionsCorrect: record.questionsCorrect,
+      questionsTotal: record.questionsTotal,
     }))
 }
 

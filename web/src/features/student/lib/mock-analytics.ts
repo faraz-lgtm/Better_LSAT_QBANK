@@ -76,6 +76,12 @@ export type ScoreProgressPoint = {
   completedAt?: string | null
   percentile?: number | null
   blindReviewPercentile?: number | null
+  /** Raw correct count for Regular Score tooltip caption. */
+  regularRawScore?: number | null
+  /** Raw correct count for Untimed Review tooltip caption. */
+  blindReviewRawScore?: number | null
+  /** Question total when known (e.g. PrepTest trajectory). */
+  questionCount?: number | null
 }
 
 export const mockScoreProgress: ScoreProgressPoint[] = [

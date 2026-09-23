@@ -5,6 +5,7 @@ import {
   TAG_DRILLS_INITIAL_VISIBLE,
   TAG_DRILLS_PER_SECTION_EXPANDED,
   TAG_DRILLS_PER_SECTION_INITIAL,
+  difficultyMeterFromRow,
   groupPriorityRowsBySection,
   orderPriorityRowsByWeakness,
   priorityMeterFromRow,
@@ -64,6 +65,26 @@ describe("priorityMeterFromRow", () => {
     expect(priorityMeterFromRow({ priorityTier: "high", priorityLevel: "high" }).filledBars).toBe(4)
     expect(priorityMeterFromRow({ priorityTier: "medium", priorityLevel: "medium" }).filledBars).toBe(3)
     expect(priorityMeterFromRow({ priorityTier: "low", priorityLevel: "low" }).filledBars).toBe(2)
+  })
+})
+
+describe("difficultyMeterFromRow", () => {
+  it("maps numeric difficulty to the same Hardest/Easy labels as continue drills", () => {
+    expect(difficultyMeterFromRow({ difficulty: 5 }).label).toBe("Hardest")
+    expect(difficultyMeterFromRow({ difficulty: 4 }).label).toBe("Hard")
+    expect(difficultyMeterFromRow({ difficulty: 3 }).label).toBe("Medium")
+    expect(difficultyMeterFromRow({ difficulty: 2 }).label).toBe("Easy")
+    expect(difficultyMeterFromRow({ difficulty: 1 }).label).toBe("Easiest")
+    expect(difficultyMeterFromRow({ difficulty: null }).label).toBe("Easiest")
+  })
+
+  it("fills bars and colors to match difficulty chips", () => {
+    expect(difficultyMeterFromRow({ difficulty: 5 })).toEqual({
+      label: "Hardest",
+      filledBars: 5,
+      color: "#df1c41",
+    })
+    expect(difficultyMeterFromRow({ difficulty: 2 }).filledBars).toBe(2)
   })
 })
 

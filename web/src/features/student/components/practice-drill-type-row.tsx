@@ -44,7 +44,7 @@ function PracticeDrillTypeRow({
             label={difficultyLabel}
             filledBars={difficultyFilledBars}
             color={difficultyColor}
-            surface="muted"
+            surface="white"
           />
           <button type="button" onClick={onStart} className={OUTLINE_CTA_CLASS}>
             {startLabel}

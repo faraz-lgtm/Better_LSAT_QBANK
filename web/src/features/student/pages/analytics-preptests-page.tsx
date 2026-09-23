@@ -195,34 +195,28 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
                 xPct={hoveredCoords.x}
                 yPct={hoveredCoords.y}
                 lines={[
-                  ...(tab === "scaled" || hovered.hasScaledScore
-                    ? [
-                        {
-                          label: "Scaled",
-                          value: `${hovered.scaledScore}${
-                            Number.isFinite(hovered.percentile)
-                              ? ` · ${Math.round(hovered.percentile)}th`
-                              : ""
-                          }`,
-                          color: "#6d9bff",
-                        },
-                      ]
-                    : []),
-                  {
-                    label: "Raw",
-                    value: `${hovered.rawScore}/${hovered.rawMax}`,
-                    color: "#6d9bff",
-                  },
+                  tab === "raw"
+                    ? {
+                        label: "Raw Score",
+                        value: String(hovered.rawScore),
+                        color: "var(--primary)",
+                        caption: `${hovered.rawScore}/${hovered.rawMax} Correct`,
+                      }
+                    : {
+                        label: "Regular Score",
+                        value: String(hovered.scaledScore),
+                        color: "var(--primary)",
+                        caption: `${hovered.rawScore}/${hovered.rawMax} Correct`,
+                      },
                   ...(hovered.blindReviewScaled > 0
                     ? [
                         {
-                          label: "Untimed",
-                          value: `${hovered.blindReviewScaled}${
-                            Number.isFinite(hovered.blindReviewPercentile)
-                              ? ` · ${Math.round(hovered.blindReviewPercentile)}th`
-                              : ""
-                          }`,
+                          label: "Untimed Review",
+                          value: String(hovered.blindReviewScaled),
                           color: "#ff6f00",
+                          caption: Number.isFinite(hovered.blindReviewPercentile)
+                            ? `${Math.round(hovered.blindReviewPercentile)}th percentile`
+                            : null,
                         },
                       ]
                     : []),

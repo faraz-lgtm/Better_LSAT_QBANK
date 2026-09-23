@@ -194,9 +194,13 @@ function SectionProgressChart({
                 yPct={hoveredCoords.y}
                 lines={[
                   {
-                    label: tab === "raw" ? "Raw" : "PT equiv.",
-                    value: formatValue(hovered),
-                    color: "#6d9bff",
+                    label: tab === "raw" ? "Raw Score" : "PT equiv.",
+                    value: tab === "raw" ? String(hovered.rawScore) : String(pickValue(hovered)),
+                    color: "var(--primary)",
+                    caption:
+                      hovered.questionCount > 0
+                        ? `${hovered.rawScore}/${hovered.questionCount} Correct`
+                        : null,
                   },
                 ]}
               />
