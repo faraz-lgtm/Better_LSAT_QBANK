@@ -92,7 +92,7 @@ describe("accessibility panel layout", () => {
 })
 
 describe("official exam dark-mode choice ink", () => {
-  it("uses Neutral-25 rows and white copy; selected peach keeps navy", () => {
+  it("uses Neutral-25 rows and white copy; selected yellow keeps navy", () => {
     const marker =
       ".dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected)"
     const start = examCss.indexOf(marker)

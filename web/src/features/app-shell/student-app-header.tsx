@@ -190,11 +190,11 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
               aria-expanded={openProfileMenu}
               onClick={() => setOpenProfileMenu((current) => !current)}
             >
-              <span className="flex size-[42px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--primary)] text-sm font-semibold text-white">
+              <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--primary)] text-[11px] font-semibold leading-none text-white">
                 {initials}
               </span>
               <span className="hidden min-w-0 flex-col items-start gap-0 text-left sm:flex">
-                <span className="text-base font-semibold leading-tight tracking-[0.32px] text-[color:var(--primary-800)]">
+                <span className="text-xs font-semibold leading-tight tracking-[0.24px] text-[color:var(--primary-800)]">
                   {displayName}
                 </span>
                 <span className="max-w-[220px] truncate text-xs font-normal leading-tight tracking-[0.24px] text-[color:var(--primary-800)]">

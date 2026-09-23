@@ -40,7 +40,7 @@ describe("map-analytics", () => {
     expect(stats[0]?.caption).toBe("92nd percentile")
     expect(stats[0]?.captionDetail).toBe("all-time high")
     expect(stats[0]?.progressPct).toBeUndefined()
-    expect(stats[1]?.label).toBe("Mean Score")
+    expect(stats[1]?.label).toBe("Average Score")
     expect(stats[1]?.deltaCaption).toBe("-5 from best")
     expect(stats[1]?.progressPct).toBeTypeOf("number")
     expect(stats[1]?.progressScaleMin).toBe("120")
@@ -63,9 +63,9 @@ describe("map-analytics", () => {
     }
     const stats = mapOverviewToSecondaryStats(overview)
     expect(stats.map((s) => s.label)).toEqual([
-      "Logical Reasoning Mean",
-      "Reading Comprehension Mean",
-      "Mean Time per Question",
+      "Logical Reasoning Average",
+      "Reading Comprehension Average",
+      "Average Time per Question",
       "Question Accuracy",
     ])
     expect(stats[0]?.value).toBe("-11")
@@ -367,6 +367,31 @@ describe("map-analytics", () => {
     expect(sections[0]?.rows.map((r) => r.id)).toEqual(["qt-high", "qt-low"])
     expect(sections[0]?.rows[0]?.gapPct).toBe(36)
     expect(sections[0]?.rows[1]?.gapPct).toBe(-4)
+  })
+
+  it("falls back to priorityLevel when priorityTier is null", () => {
+    const priorities: PriorityRow[] = [
+      {
+        questionTypeId: "qt-1",
+        name: "Flaw",
+        sectionType: "LR",
+        attemptCount: 10,
+        correctCount: 5,
+        accuracyPct: 50,
+        goalAccuracy: 86,
+        gap: 36,
+        priorityTier: null,
+        priorityLevel: "high",
+        priorityScore: 100,
+        extraCorrectNeededPerTest: 2,
+        unlocked: true,
+        difficulty: 3,
+        averagePerTest: 5,
+        reviewCount: 5,
+      },
+    ]
+    const sections = mapPrioritiesToSections(priorities)
+    expect(sections[0]?.rows[0]?.priorityTier).toBe("high")
   })
 
   it("maps drill and section sessions into history entries", () => {

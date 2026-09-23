@@ -50,7 +50,7 @@ export const mockAnalyticsHeadlineStats: AnalyticsStat[] = [
   },
   {
     id: "average-score",
-    label: "Mean Score",
+    label: "Average Score",
     value: "153",
     accent: "#0d47a1",
     caption: "49th percentile",
@@ -62,9 +62,9 @@ export const mockAnalyticsHeadlineStats: AnalyticsStat[] = [
 ]
 
 export const mockAnalyticsSecondaryStats: AnalyticsStat[] = [
-  { id: "avg-lr", label: "Logical Reasoning Mean", value: "-11", accent: "#00BC54" },
-  { id: "avg-rc", label: "Reading Comprehension Mean", value: "-12", accent: "#0BBCC9" },
-  { id: "avg-time", label: "Mean Time per Question", value: "1:00", accent: "#0d47a1" },
+  { id: "avg-lr", label: "Logical Reasoning Average", value: "-11", accent: "#00BC54" },
+  { id: "avg-rc", label: "Reading Comprehension Average", value: "-12", accent: "#0BBCC9" },
+  { id: "avg-time", label: "Average Time per Question", value: "1:00", accent: "#0d47a1" },
   { id: "accuracy", label: "Question Accuracy", value: "64%", accent: "#0d47a1" },
 ]
 

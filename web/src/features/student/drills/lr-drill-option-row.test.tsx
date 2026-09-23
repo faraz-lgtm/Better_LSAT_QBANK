@@ -355,8 +355,8 @@ describe("LrDrillOptionRow", () => {
       />,
     )
 
-    expect(container.firstElementChild).toHaveClass("bg-[#ffe5b7]", "relative")
-    expect(container.firstChild).toHaveClass("bg-[#ffe5b7]", "relative")
+    expect(container.firstElementChild).toHaveClass("bg-[#fdfac4]", "relative")
+    expect(container.firstChild).toHaveClass("bg-[#fdfac4]", "relative")
     expect(container.firstElementChild?.firstElementChild).toHaveClass(
       "w-[3px]",
       "absolute",
@@ -367,7 +367,7 @@ describe("LrDrillOptionRow", () => {
     expect(letter).toHaveClass(
       "w-[60px]",
       "min-h-[60px]",
-      "bg-[#ffe5b7]",
+      "bg-[#fdfac4]",
       "text-[#041a44]",
       "text-[28px]",
     )

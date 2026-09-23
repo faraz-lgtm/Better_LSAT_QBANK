@@ -13,6 +13,8 @@ import {
   formatGapToTargetLabel,
   topOverviewSectionDrills,
 } from "@/features/student/analytics/overview-section-drills"
+import { DrillDifficultyStatus } from "@/features/student/components/drill-difficulty-status"
+import { difficultyMeterFromLabel } from "@/features/student/drills/tag-drills-priority"
 import type {
   AnalyticsSection,
   AnalyticsStat,
@@ -29,7 +31,7 @@ export const SCORE_PROGRESS_TABS = [
 export type ScoreProgressTab = (typeof SCORE_PROGRESS_TABS)[number]["id"]
 
 const ANALYTICS_SEGMENTED_TAB_BUTTON_CLASS =
-  "flex h-8 items-center justify-center rounded-full px-3.5 text-[11px] font-semibold leading-none tracking-[0.02em] transition-colors"
+  "flex h-8 items-center justify-center rounded-[10px] px-3.5 text-[11px] font-semibold leading-none tracking-[0.02em] transition-colors"
 
 export function analyticsSegmentedTabClass(active: boolean): string {
   return cn(
@@ -148,61 +150,46 @@ export function AnalyticsStatsGrid({ stats }: { stats: AnalyticsStat[] }) {
   )
 }
 
+/** Figma `21113:22296` — title + tabs + chart (+ optional legend) in one bordered card. */
 export function AnalyticsScoreProgressPanel({
   title,
   legend,
   chart,
+  footer,
 }: {
   title: string
   legend: ReactNode
   chart: ReactNode
+  footer?: ReactNode
 }) {
   return (
-    <section className="flex h-full min-h-[200px] flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">{title}</h2>
+    <section className="flex h-full min-h-[200px] w-full flex-col gap-[18px] rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="m-0 text-base font-semibold leading-[1.5] tracking-[0.02em] text-[var(--color-student-heading)]">
+          {title}
+        </h2>
         {legend}
       </div>
-      <div className="min-h-0 flex-1 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 shadow-[0px_1px_2px_rgba(13,13,18,0.04)]">
-        {chart}
-      </div>
+      <div className="min-h-0 w-full flex-1">{chart}</div>
+      {footer ? (
+        <div className="flex flex-wrap items-center justify-center gap-2 border-t border-[var(--greyscale-100)] pt-6">
+          {footer}
+        </div>
+      ) : null}
     </section>
   )
 }
 
-const PRIORITY_SIGNAL_FILLED: Record<"highest" | "high" | "medium" | "low", number> = {
-  highest: 4,
-  high: 3,
-  medium: 2,
-  low: 1,
-}
-
-const PRIORITY_TIER_LABEL: Record<"highest" | "high" | "medium" | "low", string> = {
-  highest: "Highest",
-  high: "High",
-  medium: "Medium",
-  low: "Low",
-}
-
-function PrioritySignal({ tier }: { tier: QuestionTypeRowData["priorityTier"] }) {
-  if (!tier) return null
-  const filled = PRIORITY_SIGNAL_FILLED[tier]
+/** Same Easy/Medium/Hard chip as Drill by Types (question difficulty, not priority). */
+function WeaknessDifficultyLabel({ difficulty }: { difficulty: QuestionTypeRowData["difficulty"] }) {
+  const meter = difficultyMeterFromLabel(difficulty)
   return (
-    <div className="flex shrink-0 items-center gap-1.5">
-      <span className="text-[11px] font-semibold leading-none text-[#df1c41]">{PRIORITY_TIER_LABEL[tier]}</span>
-      <div className="flex h-3.5 items-end gap-0.5" aria-hidden>
-        {Array.from({ length: 4 }).map((_, i) => (
-          <span
-            key={i}
-            className="w-[3px] rounded-sm"
-            style={{
-              height: `${6 + i * 2}px`,
-              backgroundColor: i < filled ? "#df1c41" : "var(--greyscale-100)",
-            }}
-          />
-        ))}
-      </div>
-    </div>
+    <DrillDifficultyStatus
+      label={meter.label}
+      filledBars={meter.filledBars}
+      color={meter.color}
+      surface="white"
+    />
   )
 }
 
@@ -225,6 +212,7 @@ function AccuracyDonut({
   const goalValue = goalPct == null ? 0 : Math.max(0, Math.min(100, goalPct))
   const accuracyOffset = circumference - (accuracyValue / 100) * circumference
   const goalOffset = circumference - (goalValue / 100) * circumference
+  const centerLabel = accuracyPct != null ? `${Math.round(accuracyPct)}%` : "—"
 
   return (
     <div className="relative size-[92px] shrink-0">
@@ -264,19 +252,11 @@ function AccuracyDonut({
           />
         ) : null}
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center px-2 text-center">
-        {accuracyPct != null ? (
-          <>
-            <span className="text-sm font-extrabold leading-none text-[var(--color-student-heading)]">
-              {Math.round(accuracyPct)}%
-            </span>
-            <span className="mt-0.5 text-[10px] font-semibold leading-tight text-[var(--greyscale-500)]">
-              Accuracy
-            </span>
-          </>
-        ) : (
-          <span className="text-[10px] font-semibold text-[var(--greyscale-500)]">No data</span>
-        )}
+      <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center px-2 text-center">
+        <span className="text-base font-extrabold leading-none tracking-tight text-[var(--color-student-heading)]">
+          {centerLabel}
+        </span>
+        <span className="mt-1 text-[10px] font-semibold leading-none text-[var(--greyscale-500)]">Accuracy</span>
       </div>
     </div>
   )
@@ -291,24 +271,21 @@ function WeaknessCard({ row }: { row: QuestionTypeRowData }) {
 
   return (
     <article className="flex min-w-0 flex-col gap-3 rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-3.5 shadow-[0px_1px_2px_rgba(13,13,18,0.04)]">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+      <div className="flex flex-nowrap items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">
           <h3 className="m-0 truncate text-sm font-bold leading-[1.3] text-[var(--color-student-heading)]">
             {row.title}
           </h3>
           <p className="mt-0.5 text-[11px] font-medium leading-[1.4] text-[var(--greyscale-500)]">
-            {row.averagePerTest.toFixed(1)} mean / test
+            {row.averagePerTest.toFixed(1)} average / test
           </p>
         </div>
-        <PrioritySignal tier={row.priorityTier} />
+        <WeaknessDifficultyLabel difficulty={row.difficulty} />
       </div>
 
-      <div className="flex items-center gap-3">
-        <AccuracyDonut
-          accuracyPct={row.unlocked ? row.accuracyPct : null}
-          goalPct={row.unlocked ? row.goalPct : null}
-        />
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <div className="flex items-center justify-center gap-3">
+        <AccuracyDonut accuracyPct={row.accuracyPct} goalPct={row.unlocked ? row.goalPct : null} />
+        <div className="flex min-w-0 flex-col gap-1.5">
           {!row.unlocked ? (
             <p className="text-[11px] font-semibold leading-[1.4] text-[var(--greyscale-500)]">
               Keep practicing to unlock this.
@@ -317,7 +294,7 @@ function WeaknessCard({ row }: { row: QuestionTypeRowData }) {
             <>
               <div className="flex items-center gap-1.5 text-[11px] font-semibold leading-[1.4] text-[var(--color-student-heading)]">
                 <span
-                  className="size-2.5 shrink-0 rounded-[3px]"
+                  className="size-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: WEAKNESS_ACCURACY_COLOR }}
                   aria-hidden
                 />
@@ -330,7 +307,7 @@ function WeaknessCard({ row }: { row: QuestionTypeRowData }) {
               </div>
               <div className="flex items-center gap-1.5 text-[11px] font-semibold leading-[1.4] text-[var(--color-student-heading)]">
                 <span
-                  className="size-2.5 shrink-0 rounded-[3px]"
+                  className="size-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: WEAKNESS_TARGET_COLOR }}
                   aria-hidden
                 />
@@ -431,7 +408,7 @@ export function SectionCard({ section }: { section: AnalyticsSection }) {
           </h2>
         </div>
         <p className="m-0 text-[11px] font-semibold text-[var(--greyscale-500)]">
-          Mean accuracy: {avgAccuracy != null ? `${avgAccuracy}%` : "—"}
+          Avg accuracy: {avgAccuracy != null ? `${avgAccuracy}%` : "—"}
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -822,7 +799,12 @@ export function ScoreProgressTabs({
   const dashboard = variant === "dashboard"
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-1.5", dashboard && "gap-1")}>
+    <div
+      className={cn(
+        "flex h-10 flex-wrap items-center gap-2 rounded-[10px] bg-[var(--greyscale-0)] p-1",
+        dashboard && "gap-1",
+      )}
+    >
       {SCORE_PROGRESS_TABS.map((tab) => {
         const active = value === tab.id
         return (
@@ -830,7 +812,12 @@ export function ScoreProgressTabs({
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
-            className={analyticsSegmentedTabClass(active)}
+            className={cn(
+              "flex h-8 items-center justify-center rounded-[10px] px-3 text-xs leading-[1.5] tracking-[0.02em] transition-colors",
+              active
+                ? "bg-[var(--primary)] font-bold text-white"
+                : "font-normal text-[var(--color-student-heading)] hover:bg-[var(--primary-0)]",
+            )}
             aria-pressed={active}
           >
             {tab.label}

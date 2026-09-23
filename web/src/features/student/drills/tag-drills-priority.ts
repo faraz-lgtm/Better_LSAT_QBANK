@@ -64,6 +64,10 @@ function difficultyMeterFromRow(row: Pick<PriorityRow, "difficulty">) {
   return DIFFICULTY_METER[label]
 }
 
+function difficultyMeterFromLabel(label: PracticeDifficultyLabel) {
+  return DIFFICULTY_METER[label]
+}
+
 function comparePriorityRows(a: PriorityRow, b: PriorityRow): number {
   const rankDiff = PRIORITY_RANK[resolveTier(a)] - PRIORITY_RANK[resolveTier(b)]
   if (rankDiff !== 0) return rankDiff
@@ -115,6 +119,7 @@ export {
   TAG_DRILLS_VISIBLE_MAX,
   comparePriorityRows,
   difficultyMeterFromRow,
+  difficultyMeterFromLabel,
   groupPriorityRowsBySection,
   orderPriorityRowsByWeakness,
   priorityMeterFromRow,

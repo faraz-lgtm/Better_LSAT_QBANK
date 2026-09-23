@@ -185,7 +185,7 @@ export function mapOverviewToHeadlineStats(overview: AnalyticsOverview): Analyti
         : null
     stats.push({
       id: "average-score",
-      label: "Mean Score",
+      label: "Average Score",
       value: String(overview.averageScaledScore),
       accent: "var(--primary)",
       caption:
@@ -210,7 +210,7 @@ export function mapOverviewToHeadlineStats(overview: AnalyticsOverview): Analyti
     })
     stats.push({
       id: "average-score",
-      label: "Mean Score",
+      label: "Average Score",
       value: "—",
       accent: "var(--primary)",
     })
@@ -222,7 +222,7 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
   return [
     {
       id: "avg-lr",
-      label: "Logical Reasoning Mean",
+      label: "Logical Reasoning Average",
       value:
         overview.averageLrMissedPerPrepTest != null
           ? formatSigned(-Math.round(overview.averageLrMissedPerPrepTest))
@@ -231,7 +231,7 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
     },
     {
       id: "avg-rc",
-      label: "Reading Comprehension Mean",
+      label: "Reading Comprehension Average",
       value:
         overview.averageRcMissedPerPrepTest != null
           ? formatSigned(-Math.round(overview.averageRcMissedPerPrepTest))
@@ -240,7 +240,7 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
     },
     {
       id: "avg-time",
-      label: "Mean Time per Question",
+      label: "Average Time per Question",
       value: formatAvgTimePerQuestion(overview.totalStudyMinutes, overview.totalQuestionsAnswered),
       accent: "var(--primary)",
     },
@@ -339,7 +339,7 @@ export function mapPrioritiesToSections(priorities: PriorityRow[]): AnalyticsSec
       reviewCount: p.reviewCount,
       unlocked: p.unlocked !== false && p.attemptCount >= 3,
       extraCorrectNeededPerTest: p.extraCorrectNeededPerTest,
-      priorityTier: p.priorityTier ?? null,
+      priorityTier: p.priorityTier ?? p.priorityLevel ?? "low",
     })
     bySection.set(p.sectionType, rows)
   }

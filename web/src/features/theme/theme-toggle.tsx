@@ -16,7 +16,7 @@ function ThemeToggleButton({ className }: ThemeToggleButtonProps) {
     <button
       type="button"
       className={cn(
-        "inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--greyscale-100)] bg-[var(--primary-25)] text-[color:var(--primary)] transition-colors hover:bg-[color:var(--primary-25)]",
+        "inline-flex size-10 shrink-0 items-center justify-center rounded-[10px] border border-[color:var(--greyscale-100)] bg-[var(--primary-25)] text-[color:var(--primary)] transition-colors hover:bg-[color:var(--primary-25)]",
         className,
       )}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}

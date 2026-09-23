@@ -10,6 +10,7 @@ import {
   type OverviewHistoryTab,
 } from "@/features/student/components/analytics-prep-test-history"
 import {
+  AnalyticsScoreProgressPanel,
   ScoreProgressChart,
   ScoreProgressTabs,
   SectionCard,
@@ -389,9 +390,9 @@ function OverviewTab() {
   if (error) return <p className="text-sm text-red-600">{error}</p>
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6 pb-8">
       <section className="flex w-full flex-col gap-4">
-        <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3 border-b border-[var(--greyscale-100)] pb-3">
+        <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
           <h2 className="m-0 text-lg font-bold leading-[1.3] text-[var(--color-student-heading)]">Overview</h2>
           <TimeRangeSegmented value={timeRange} onChange={setTimeRange} className="shrink-0" />
         </div>
@@ -408,35 +409,31 @@ function OverviewTab() {
         </div>
       </section>
 
-      <section className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">
-            Test Performance History
-          </h2>
-          <ScoreProgressTabs value={scoreTab} onChange={setScoreTab} />
-        </div>
-        <div className="rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 shadow-[0px_1px_2px_rgba(13,13,18,0.04)]">
-          <ScoreProgressChart points={trajectory} tab={scoreTab} />
-          <div className="mt-1 flex flex-wrap items-center justify-center gap-4 pt-1">
-            <span className="flex items-center gap-1.5 text-xs leading-[1.4] tracking-[0.02em] text-[var(--greyscale-500)]">
-              <span className="size-2.5 rounded-full bg-[var(--primary)]" aria-hidden />
+      <AnalyticsScoreProgressPanel
+        title="Test Performance History"
+        legend={<ScoreProgressTabs value={scoreTab} onChange={setScoreTab} />}
+        chart={<ScoreProgressChart points={trajectory} tab={scoreTab} />}
+        footer={
+          <>
+            <span className="flex items-center gap-2 px-4 text-sm leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
+              <span className="size-4 shrink-0 rounded-full bg-[var(--primary)]" aria-hidden />
               Regular Score
             </span>
-            <span className="flex items-center gap-1.5 text-xs leading-[1.4] tracking-[0.02em] text-[var(--greyscale-500)]">
-              <span className="size-2.5 rounded-full bg-[#ff6f00]" aria-hidden />
+            <span className="flex items-center gap-2 px-4 text-sm leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
+              <span className="size-4 shrink-0 rounded-full bg-[#ff6f00]" aria-hidden />
               Untimed Review
             </span>
-          </div>
-        </div>
-      </section>
+          </>
+        }
+      />
 
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col gap-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">
               Top Weaknesses by Section
             </h2>
-            <p className="mt-0.5 text-xs text-[var(--primary-100)]">
+            <p className="mt-1 text-xs text-[var(--primary-100)]">
               Target % follows your target LSAT score. Open Review or Drill to practice.
             </p>
           </div>
@@ -452,7 +449,11 @@ function OverviewTab() {
             Question-type reports appear once you answer questions linked to LR/RC types.
           </p>
         ) : (
-          sections.map((section) => <SectionCard key={section.id} section={section} />)
+          <div className="flex flex-col gap-4">
+            {sections.map((section) => (
+              <SectionCard key={section.id} section={section} />
+            ))}
+          </div>
         )}
       </section>
 
@@ -517,7 +518,7 @@ function AnalyticsPage() {
   const tab = tabFromSearch(params.get("tab"))
 
   return (
-    <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
+    <StudentMain contentClassName="flex min-h-0 flex-1 flex-col pb-8">
       {tab === "overview" ? <OverviewTab /> : null}
       {tab === "priorities" ? <PrioritiesTab /> : null}
       {tab === "history" ? <HistoryTab /> : null}

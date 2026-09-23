@@ -4435,11 +4435,11 @@ section[data-lesson-section][data-variant="empty"] {
 }
 
 .practice-session-card--official .practice-session-official-choice--selected {
-  background-color: #ffe5b7;
+  background-color: #fdfac4;
 }
 
 .practice-session-card--official .practice-session-official-choice-letter--selected {
-  background-color: #ffe5b7;
+  background-color: #fdfac4;
   color: #041a44;
 }
 
@@ -5322,8 +5322,8 @@ html.student-shell-immersive .practice-session-card--blind-review {
 }
 
 /*
- * Dark official choices: Neutral-25 rows + white copy. Selected LawHub
- * peach (#ffe5b7) keeps navy ink so the gold state still contrasts.
+ * Dark official choices: Neutral-25 rows + white copy. Selected
+ * (#fdfac4) keeps navy ink so the gold state still contrasts.
  */
 .dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) {
   background-color: #35373c !important;

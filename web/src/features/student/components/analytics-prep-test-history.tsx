@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
-import { Bookmark, Calendar, Check, ExternalLink, Eye, MoreVertical } from "lucide-react"
+import { Bookmark, Check, ExternalLink, MoreVertical } from "lucide-react"
 
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
@@ -10,7 +10,7 @@ import { SectionInitialBadge } from "@/features/student/drills/section-initial-b
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 import type { AnalyticsSectionFilter } from "@/features/student/analytics/section-filter"
 
-const SCORE_BOX_WIDTH_PX = 188
+const SCORE_BOX_WIDTH_PX = 150
 
 const SECTION_FILTER_OPTIONS: Array<{ id: AnalyticsSectionFilter; label: string }> = [
   { id: "all", label: "All" },
@@ -37,7 +37,7 @@ function HistorySectionFilter({
   return (
     <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by section">
       {SECTION_FILTER_OPTIONS.map((option) => {
-        const active = value === option.id
+        const active = option.id === value
         return (
           <button
             key={option.id}
@@ -45,7 +45,7 @@ function HistorySectionFilter({
             onClick={() => onChange(option.id)}
             aria-pressed={active}
             className={cn(
-              "h-7 rounded-[8px] px-2.5 text-xs font-semibold leading-none tracking-[0.02em] transition-colors",
+              "inline-flex h-8 items-center justify-center rounded-[8px] px-2.5 text-xs font-semibold leading-none tracking-[0.02em] transition-colors",
               active
                 ? "bg-[var(--primary)] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
                 : "border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--primary)] hover:bg-[var(--primary-0)]",
@@ -59,6 +59,7 @@ function HistorySectionFilter({
   )
 }
 
+/** Figma `21117:25970` — labeled score chip; bar only for PrepTest-scale max (≥100). */
 function ScoreMetric({
   label,
   value,
@@ -72,23 +73,29 @@ function ScoreMetric({
 }) {
   const safeValue = Number.isFinite(value) ? value : 0
   const safeMax = Number.isFinite(max) && max > 0 ? max : 1
+  const showBar = safeMax >= 100
   const widthPct = Math.max(0, Math.min(100, (safeValue / safeMax) * 100))
   return (
     <div
-      className="flex h-10 min-w-[188px] shrink-0 flex-col justify-center gap-1 rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-2.5"
+      className={cn(
+        "flex min-w-[150px] shrink-0 flex-col justify-center rounded-[8px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-3 py-[7px]",
+        showBar ? "h-10 gap-1" : "h-[38.5px]",
+      )}
       style={{ width: SCORE_BOX_WIDTH_PX }}
     >
       <div className="flex w-full items-center justify-between gap-2">
-        <span className="whitespace-nowrap text-[10px] font-medium leading-normal tracking-[0.02em] text-[var(--greyscale-500)] sm:text-xs">
+        <span className="whitespace-nowrap text-[10px] font-medium capitalize leading-[16.5px] tracking-[0.04em] text-[var(--greyscale-500)]">
           {label}
         </span>
-        <span className="w-9 shrink-0 text-right text-xs font-semibold leading-normal tracking-[0.02em] text-[var(--color-student-heading)]">
+        <span className="shrink-0 text-base font-semibold leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
           {safeValue}
         </span>
       </div>
-      <div className="h-1 w-full overflow-hidden rounded-md bg-[var(--greyscale-100)]">
-        <div className="h-full rounded-lg" style={{ width: `${widthPct}%`, backgroundColor: barColor }} />
-      </div>
+      {showBar ? (
+        <div className="h-1 w-full overflow-hidden rounded-md bg-[var(--greyscale-100)]">
+          <div className="h-full rounded-lg" style={{ width: `${widthPct}%`, backgroundColor: barColor }} />
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -128,7 +135,7 @@ function RowMenu({
       <button
         type="button"
         onClick={() => setOpen((c) => !c)}
-        className="flex size-8 items-center justify-center rounded-[10px] text-[var(--greyscale-500)] transition-colors hover:bg-[var(--greyscale-25)]"
+        className="flex size-7 items-center justify-center rounded-[6px] text-[var(--greyscale-500)] transition-colors hover:bg-[var(--greyscale-25)]"
         aria-label="More options"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -182,6 +189,22 @@ function RowMenu({
   )
 }
 
+function HistoryDateMeta({ dateLabel }: { dateLabel: string }) {
+  return (
+    <div className="inline-flex min-w-0 items-center gap-1 text-[var(--greyscale-500)]">
+      {/* Figma `21117:25978` — calendar emoji glyph (not Lucide). */}
+      <span
+        className="shrink-0 text-[10px] font-normal leading-[15px]"
+        aria-hidden
+        style={{ fontFamily: '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif' }}
+      >
+        🗓
+      </span>
+      <span className="truncate text-xs font-normal leading-[1.5] tracking-[0.02em]">{dateLabel}</span>
+    </div>
+  )
+}
+
 function PrepTestHistoryRow({
   entry,
   onToggleBookmark,
@@ -199,58 +222,48 @@ function PrepTestHistoryRow({
   return (
     <div
       className={cn(
-        "grid grid-cols-1 gap-2 border-b border-[var(--greyscale-100)] py-2.5 last:border-b-0 lg:h-14 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto] lg:items-center lg:gap-2 lg:py-0",
+        "flex flex-col gap-2 border-t border-[var(--greyscale-100)] px-4 py-[10px] first:border-t-0 sm:flex-row sm:items-center sm:justify-between sm:gap-3",
         labelClickable && "hover:bg-[var(--primary-0)]/40",
       )}
     >
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         {entry.sectionType === "LR" || entry.sectionType === "RC" ? (
           <SectionInitialBadge section={entry.sectionType} variant="compact" />
         ) : null}
-        <div className="flex min-w-0 flex-col gap-0">
+        <div className="flex min-w-0 flex-col justify-center">
           {labelClickable ? (
             <button
               type="button"
               onClick={() => onSelectEntry?.(entry.id)}
               title={entry.testLabel}
-              className="truncate text-left text-sm font-semibold leading-[1.35] tracking-[0.02em] text-[var(--primary)] hover:underline focus-visible:underline focus-visible:outline-none"
+              className="truncate text-left text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[var(--primary)] hover:underline focus-visible:underline focus-visible:outline-none"
             >
               {entry.testLabel}
             </button>
           ) : (
             <p
               title={entry.testLabel}
-              className="truncate text-sm font-semibold leading-[1.35] tracking-[0.02em] text-[var(--primary)]"
+              className="truncate text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[var(--primary)]"
             >
               {entry.testLabel}
             </p>
           )}
-          <div className="inline-flex min-w-0 items-center gap-1.5 text-[11px] leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
-            <Calendar className="size-3.5 shrink-0" aria-hidden />
-            <span className="truncate">{entry.dateLabel}</span>
-          </div>
+          <HistoryDateMeta dateLabel={entry.dateLabel} />
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 lg:contents">
-        <div className="flex items-center justify-center">
-          <ScoreMetric label="Score" value={entry.score} max={entry.scoreMax} barColor="var(--primary)" />
-        </div>
-        <div className="flex items-center justify-center">
-          <ScoreMetric
-            label="Un-timed Review"
-            value={entry.blindReviewScore}
-            max={entry.blindReviewMax}
-            barColor={brBarColor}
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center justify-end gap-1.5 lg:justify-center">
+      <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+        <ScoreMetric label="Score" value={entry.score} max={entry.scoreMax} barColor="var(--primary)" />
+        <ScoreMetric
+          label="Untimed Review"
+          value={entry.blindReviewScore}
+          max={entry.blindReviewMax}
+          barColor={brBarColor}
+        />
         <button
           type="button"
           onClick={() => onToggleBookmark(entry.id)}
-          className="flex size-8 shrink-0 items-center justify-center rounded-[10px] text-[var(--primary)] transition-colors hover:bg-[var(--greyscale-25)]"
+          className="flex size-7 shrink-0 items-center justify-center rounded-[6px] text-[var(--primary)] transition-colors hover:bg-[var(--greyscale-25)]"
           aria-label={entry.bookmarked ? "Remove bookmark" : "Bookmark"}
           aria-pressed={entry.bookmarked}
         >
@@ -262,16 +275,6 @@ function PrepTestHistoryRow({
             aria-hidden
           />
         </button>
-        {onSelectEntry ? (
-          <button
-            type="button"
-            onClick={() => onSelectEntry(entry.id)}
-            className="flex size-8 shrink-0 items-center justify-center rounded-[10px] text-[var(--primary)] transition-colors hover:bg-[var(--greyscale-25)]"
-            aria-label={`View ${entry.testLabel}`}
-          >
-            <Eye className="size-4" aria-hidden />
-          </button>
-        ) : null}
         <RowMenu entry={entry} onToggleBookmark={onToggleBookmark} onOpenPractice={onOpenPractice} />
       </div>
     </div>
@@ -325,16 +328,15 @@ function AnalyticsPrepTestHistory({
     (alwaysShowViewMore || (previewLimit != null && visibleEntries.length > previewLimit))
 
   return (
-    <section className="flex flex-col gap-3 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 shadow-[0px_1px_2px_rgba(13,13,18,0.04)]">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <section className="flex flex-col gap-4 overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_2px_rgba(13,13,18,0.04)]">
+      <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3 px-4 py-3">
         <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">{title}</h2>
         <div className="flex flex-wrap items-center gap-2">
           {showSectionFilter ? (
             <HistorySectionFilter value={sectionFilter} onChange={onSectionFilterChange} />
           ) : null}
-          <div className="flex shrink-0 items-center gap-2">
-            <Bookmark className="size-3.5 shrink-0 text-[var(--color-student-heading)]" aria-hidden />
-            <span className="whitespace-nowrap text-xs font-semibold leading-normal tracking-[0.02em] text-[var(--color-student-heading)]">
+          <div className="flex h-8 shrink-0 items-center gap-2">
+            <span className="whitespace-nowrap text-xs font-semibold leading-none tracking-[0.02em] text-[var(--color-student-heading)]">
               Bookmarked only
             </span>
             <Switch
@@ -348,12 +350,12 @@ function AnalyticsPrepTestHistory({
 
       <div
         className={cn(
-          "flex flex-col pr-1",
+          "flex flex-col px-0",
           previewLimit == null && "max-h-[360px] overflow-y-auto",
         )}
       >
         {displayedEntries.length === 0 ? (
-          <p className="rounded-[12px] border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-5 text-center text-xs text-[var(--greyscale-500)]">
+          <p className="mx-4 mb-4 rounded-[12px] border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-5 text-center text-xs text-[var(--greyscale-500)]">
             {bookmarkedOnly
               ? `No bookmarked ${emptyNoun} in this range. Adjust the time range or bookmark a ${emptyNoun.replace(/s$/, "")}.`
               : showSectionFilter && sectionFilter !== "all"
@@ -375,7 +377,7 @@ function AnalyticsPrepTestHistory({
       </div>
 
       {showViewMore && viewMoreHref ? (
-        <div className="flex justify-center pt-1">
+        <div className="flex justify-center px-4 pb-4 pt-1">
           <Link
             to={viewMoreHref}
             className="text-xs font-semibold leading-[1.4] tracking-[0.02em] text-[var(--primary)] transition-colors hover:underline"
@@ -408,7 +410,7 @@ function OverviewHistoryTabs({
             onClick={() => onChange(tab.id)}
             className={cn(
               analyticsSegmentedTabClass(active),
-              "h-9 gap-1.5 rounded-[10px] px-4 text-xs",
+              "inline-flex h-9 items-center justify-center gap-1.5 rounded-[10px] px-4 py-0 text-xs leading-none",
               !active && "text-[var(--primary)]",
             )}
           >
@@ -436,7 +438,7 @@ type OverviewHistoryShellProps = {
 
 function OverviewHistoryShell({ activeTab, onTabChange, children }: OverviewHistoryShellProps) {
   return (
-    <section className="flex flex-col gap-4">
+    <section className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">History</h2>
         <OverviewHistoryTabs value={activeTab} onChange={onTabChange} />
