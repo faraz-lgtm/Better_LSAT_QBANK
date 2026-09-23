@@ -4,7 +4,7 @@ import { useState } from "react"
 import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
 
-import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
+import { AnalyticsPrepTestHistory, OverviewHistoryShell } from "@/features/student/components/analytics-prep-test-history"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 
 const entries: PrepTestHistoryEntry[] = [
@@ -95,6 +95,23 @@ describe("AnalyticsPrepTestHistory", () => {
 
     await user.click(screen.getByRole("button", { name: "Remove bookmark" }))
     expect(onToggleBookmark).toHaveBeenCalledWith("saved")
+  })
+
+  it("shows a view eye button on the right when onSelectEntry is provided", async () => {
+    const user = userEvent.setup()
+    const onSelectEntry = vi.fn()
+    render(
+      <AnalyticsPrepTestHistory
+        visibleEntries={entries}
+        bookmarkedOnly={false}
+        onBookmarkedOnlyChange={() => {}}
+        onToggleBookmark={() => {}}
+        onSelectEntry={onSelectEntry}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "View Varied Mix" }))
+    expect(onSelectEntry).toHaveBeenCalledWith("saved")
   })
 
   it("previews four rows and links View more to the Insights page", () => {
@@ -234,5 +251,32 @@ describe("AnalyticsPrepTestHistory", () => {
     expect(screen.getAllByText("Un-timed Review")).toHaveLength(entries.length)
     expect(screen.queryByText("UR")).not.toBeInTheDocument()
     expect(screen.queryByText("BR")).not.toBeInTheDocument()
+  })
+})
+
+describe("OverviewHistoryShell", () => {
+  it("renders Figma history type pills and switches the active tab", async () => {
+    const user = userEvent.setup()
+    function ShellHarness() {
+      const [tab, setTab] = useState<"all" | "drill" | "section" | "preptest">("all")
+      return (
+        <OverviewHistoryShell activeTab={tab} onTabChange={setTab}>
+          <p>{tab}</p>
+        </OverviewHistoryShell>
+      )
+    }
+
+    render(<ShellHarness />)
+
+    const all = screen.getByRole("tab", { name: "All History" })
+    const drill = screen.getByRole("tab", { name: "Drill History" })
+    expect(all).toHaveAttribute("aria-selected", "true")
+    expect(screen.getByRole("tab", { name: "Section History" })).toBeInTheDocument()
+    expect(screen.getByRole("tab", { name: "PrepTest History" })).toBeInTheDocument()
+
+    await user.click(drill)
+    expect(drill).toHaveAttribute("aria-selected", "true")
+    expect(all).toHaveAttribute("aria-selected", "false")
+    expect(screen.getByText("drill")).toBeInTheDocument()
   })
 })

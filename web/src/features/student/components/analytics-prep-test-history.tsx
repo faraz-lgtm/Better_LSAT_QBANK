@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
-import { Bookmark, Calendar, ExternalLink, MoreVertical } from "lucide-react"
+import { Bookmark, Calendar, Check, ExternalLink, Eye, MoreVertical } from "lucide-react"
 
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
+import { analyticsSegmentedTabClass } from "@/features/student/analytics/components/analytics-overview-ui"
 import { checkedFromToggleEvent } from "@/features/student/analytics/session-bookmarks"
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
@@ -261,6 +262,16 @@ function PrepTestHistoryRow({
             aria-hidden
           />
         </button>
+        {onSelectEntry ? (
+          <button
+            type="button"
+            onClick={() => onSelectEntry(entry.id)}
+            className="flex size-8 shrink-0 items-center justify-center rounded-[10px] text-[var(--primary)] transition-colors hover:bg-[var(--greyscale-25)]"
+            aria-label={`View ${entry.testLabel}`}
+          >
+            <Eye className="size-4" aria-hidden />
+          </button>
+        ) : null}
         <RowMenu entry={entry} onToggleBookmark={onToggleBookmark} onOpenPractice={onOpenPractice} />
       </div>
     </div>
@@ -385,7 +396,7 @@ function OverviewHistoryTabs({
   onChange: (next: OverviewHistoryTab) => void
 }) {
   return (
-    <div role="tablist" aria-label="History type" className="flex flex-wrap items-center gap-1.5">
+    <div role="tablist" aria-label="History type" className="flex flex-wrap items-center gap-2">
       {OVERVIEW_HISTORY_TABS.map((tab) => {
         const active = value === tab.id
         return (
@@ -396,12 +407,19 @@ function OverviewHistoryTabs({
             aria-selected={active}
             onClick={() => onChange(tab.id)}
             className={cn(
-              "flex h-8 items-center justify-center rounded-full px-3.5 text-[11px] font-semibold leading-none tracking-[0.02em] transition-colors",
-              active
-                ? "bg-[var(--primary)] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
-                : "border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--color-student-heading)] hover:bg-[var(--primary-0)] hover:text-[var(--primary)]",
+              analyticsSegmentedTabClass(active),
+              "h-9 gap-1.5 rounded-[10px] px-4 text-xs",
+              !active && "text-[var(--primary)]",
             )}
           >
+            {active ? (
+              <span
+                className="inline-flex size-3.5 shrink-0 items-center justify-center rounded-full bg-white/20"
+                aria-hidden
+              >
+                <Check className="size-2.5 stroke-[3]" />
+              </span>
+            ) : null}
             {tab.label}
           </button>
         )
