@@ -245,6 +245,9 @@ export type PrepTestProgressPoint = {
   rawMax: number
   scaledScore: number
   hasScaledScore: boolean
+  percentile: number
+  blindReviewScaled: number
+  blindReviewPercentile: number
   takenAt: string
 }
 
@@ -260,6 +263,9 @@ export function getPrepTestProgressPoints(
       rawMax: record.rawMax,
       scaledScore: record.scaledScore,
       hasScaledScore: record.hasScaledScore,
+      percentile: record.percentile,
+      blindReviewScaled: record.blindReviewScaled,
+      blindReviewPercentile: record.blindReviewPercentile,
       takenAt: record.takenAt,
     }))
 }

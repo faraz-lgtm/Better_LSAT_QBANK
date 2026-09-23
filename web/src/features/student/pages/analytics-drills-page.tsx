@@ -9,13 +9,16 @@ import { AnalyticsPrepTestHistory } from "@/features/student/components/analytic
 import { HistorySortMenu } from "@/features/student/analytics/history-sort-menu"
 import { sortHistoryEntries, type HistorySort } from "@/features/student/analytics/history-sort"
 import {
-  TimeRangeFilter,
-  type TimeRangeValue,
-} from "@/features/student/components/time-range-filter"
-import {
+  AnalyticsChartTooltip,
   AnalyticsScoreProgressPanel,
   AnalyticsStatsGrid,
+  analyticsSegmentedTabClass,
+  formatChartHoverDate,
 } from "@/features/student/analytics/components/analytics-overview-ui"
+import {
+  TimeRangeSegmented,
+  type TimeRangeValue,
+} from "@/features/student/components/time-range-filter"
 import {
   buildDrillStatTiles,
   computeDrillStats,
@@ -63,40 +66,23 @@ type ScoreTab = (typeof SCORE_TABS)[number]["id"]
 
 function DrillScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next: ScoreTab) => void }) {
   return (
-    <div className="flex h-8 flex-wrap items-center gap-1.5 rounded-[10px] bg-[var(--greyscale-0)] p-0.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       {SCORE_TABS.map((tab) => {
         const active = value === tab.id
-        if (tab.id === "percent") {
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => onChange(tab.id)}
-              aria-pressed={active}
-              className={cn(
-                "flex min-h-7 items-center justify-center gap-1.5 rounded-[10px] px-2.5 py-1 text-xs font-semibold leading-[1.4] tracking-[0.02em] transition-colors",
-                active ? "bg-[var(--primary)] text-white" : "text-[var(--greyscale-500)] hover:bg-[var(--primary-0)]",
-              )}
-            >
-              <span
-                className={cn("size-2.5 rounded-full", active ? "bg-white" : "bg-[var(--greyscale-400)]")}
-                aria-hidden
-              />
-              {tab.label}
-            </button>
-          )
-        }
         return (
           <button
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
             aria-pressed={active}
-            className={cn(
-              "rounded-[8px] px-2.5 py-1 text-xs font-semibold leading-[1.4] tracking-[0.02em] transition-colors hover:rounded-[8px] active:rounded-[8px] focus-visible:rounded-[8px]",
-              active ? "bg-[var(--primary)] text-white" : "border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--greyscale-500)] hover:bg-[var(--primary-0)]",
-            )}
+            className={cn(analyticsSegmentedTabClass(active), tab.id === "percent" && "gap-1.5")}
           >
+            {tab.id === "percent" ? (
+              <span
+                className={cn("size-2.5 rounded-full", active ? "bg-white" : "bg-[var(--greyscale-400)]")}
+                aria-hidden
+              />
+            ) : null}
             {tab.label}
           </button>
         )
@@ -134,6 +120,8 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
   const linePoints = points.map((p, i) => ({ x: xFor(i), y: yFor(pickValue(p)) }))
   const polyline = linePoints.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ")
   const areaPolygon = `${linePoints[0].x},100 ${polyline} ${linePoints[linePoints.length - 1].x},100`
+  const hovered = hoverIndex != null ? points[hoverIndex] : null
+  const hoveredCoords = hoverIndex != null ? linePoints[hoverIndex] : null
 
   return (
     <div className="w-full">
@@ -190,40 +178,43 @@ function DrillScoreProgressChart({ points, tab }: { points: DrillProgressPoint[]
               vectorEffect="non-scaling-stroke"
             />
           </svg>
-          <div className="absolute inset-0 flex">
-            {points.map((point, i) => {
+          <div className="absolute inset-0">
+            {linePoints.map((coords, i) => {
+              const point = points[i]!
               const value = tab === "percent" ? `${point.scorePct}%` : `${point.ptEquivalent}`
               const isActive = hoverIndex === i
               return (
                 <button
                   key={point.id}
                   type="button"
+                  className={cn(
+                    "absolute z-10 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--primary)] outline-none ring-[var(--primary)]/30 transition-transform focus-visible:ring-2",
+                    isActive && "scale-125 ring-2",
+                  )}
+                  style={{ left: `${coords.x}%`, top: `${coords.y}%` }}
+                  aria-label={`${point.label}: ${value}`}
                   onMouseEnter={() => setHoverIndex(i)}
                   onMouseLeave={() => setHoverIndex(null)}
                   onFocus={() => setHoverIndex(i)}
                   onBlur={() => setHoverIndex(null)}
-                  className="group relative flex-1 cursor-default focus:outline-none"
-                  aria-label={`${point.label}: ${value}`}
-                >
-                  <span
-                    className={cn(
-                      "absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--destructive)] transition-transform",
-                      isActive ? "scale-150 ring-2 ring-[var(--destructive)]/30" : "",
-                    )}
-                    style={{ left: "50%", top: `${linePoints[i].y}%` }}
-                    aria-hidden
-                  />
-                  {isActive ? (
-                    <span
-                      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-[var(--color-student-heading)] px-2 py-1 text-xs font-semibold text-white shadow-lg"
-                      style={{ left: "50%", top: `calc(${linePoints[i].y}% - 8px)` }}
-                    >
-                      {point.label}: {value}
-                    </span>
-                  ) : null}
-                </button>
+                />
               )
             })}
+            {hovered && hoveredCoords ? (
+              <AnalyticsChartTooltip
+                title={hovered.label}
+                dateLabel={formatChartHoverDate(hovered.takenAt)}
+                xPct={hoveredCoords.x}
+                yPct={hoveredCoords.y}
+                lines={[
+                  {
+                    label: tab === "percent" ? "Score" : "PT equiv.",
+                    value: tab === "percent" ? `${hovered.scorePct}%` : String(hovered.ptEquivalent),
+                    color: "#6d9bff",
+                  },
+                ]}
+              />
+            ) : null}
           </div>
         </div>
       </div>
@@ -484,90 +475,92 @@ function AnalyticsDrillsPage() {
 
   return (
     <StudentMain>
-      <section className="mb-4 flex flex-col gap-3 rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <h1 className="!m-0 !text-lg !font-bold !leading-[1.3] text-[var(--color-student-heading)]">Drills</h1>
-            {activeType ? (
-              <p className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--primary-0)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--primary)]">
-                <span>{activeType.section}</span>
-                <span aria-hidden>·</span>
-                <span className="normal-case tracking-normal">{activeType.label}</span>
+      <div className="flex flex-col gap-4">
+        <section className="flex w-full flex-col gap-4">
+          <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3 border-b border-[var(--greyscale-100)] pb-3">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <h1 className="!m-0 !text-lg !font-bold !leading-[1.3] text-[var(--color-student-heading)]">Drills</h1>
+              {activeType ? (
+                <p className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--primary-0)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--primary)]">
+                  <span>{activeType.section}</span>
+                  <span aria-hidden>·</span>
+                  <span className="normal-case tracking-normal">{activeType.label}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectType(null)}
+                    className="ml-1 inline-flex size-4 items-center justify-center rounded-full text-[var(--primary)] hover:bg-[var(--greyscale-0)]"
+                    aria-label="Clear drill type filter"
+                  >
+                    <X className="size-3" aria-hidden />
+                  </button>
+                </p>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by section">
                 <button
                   type="button"
-                  onClick={() => handleSelectType(null)}
-                  className="ml-1 inline-flex size-4 items-center justify-center rounded-full text-[var(--primary)] hover:bg-[var(--greyscale-0)]"
-                  aria-label="Clear drill type filter"
+                  onClick={() => handleSelectSection("all")}
+                  className={drillFilterPillClass(sectionFilter === "all", "compact")}
                 >
-                  <X className="size-3" aria-hidden />
+                  All
                 </button>
-              </p>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by section">
-              <button
-                type="button"
-                onClick={() => handleSelectSection("all")}
-                className={drillFilterPillClass(sectionFilter === "all")}
-              >
-                All
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSelectSection("LR")}
-                className={drillFilterPillClass(sectionFilter === "LR")}
-              >
-                LR
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSelectSection("RC")}
-                className={drillFilterPillClass(sectionFilter === "RC")}
-              >
-                RC
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectSection("LR")}
+                  className={drillFilterPillClass(sectionFilter === "LR", "compact")}
+                >
+                  LR
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectSection("RC")}
+                  className={drillFilterPillClass(sectionFilter === "RC", "compact")}
+                >
+                  RC
+                </button>
+              </div>
+              <DrillTypeMenu value={activeType?.id ?? null} onChange={handleSelectType} types={typesForSection} />
+              <TimeRangeSegmented value={timeRange} onChange={setTimeRange} className="shrink-0" />
             </div>
-            <DrillTypeMenu value={activeType?.id ?? null} onChange={handleSelectType} types={typesForSection} />
-            <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
           </div>
+
+          {statTiles ? (
+            <div className="grid gap-4 lg:grid-cols-[minmax(240px,360px)_1fr]">
+              <AnalyticsStatsGrid stats={statTiles} />
+              <AnalyticsScoreProgressPanel
+                title="Score Progress"
+                legend={<DrillScoreTabs value={scoreTab} onChange={setScoreTab} />}
+                chart={<DrillScoreProgressChart points={progressPoints} tab={scoreTab} />}
+              />
+            </div>
+          ) : (
+            <p className="rounded-2xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-8 text-center text-sm text-[var(--greyscale-500)]">
+              No drills match the current filters. Try widening the time range or clearing the section / drill type.
+            </p>
+          )}
+        </section>
+
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <HistorySortMenu
+            value={historySort}
+            onChange={setHistorySort}
+            ariaLabel="Sort drill history"
+          />
         </div>
 
-        {statTiles ? (
-          <div className="grid gap-3 lg:grid-cols-[minmax(240px,320px)_1fr]">
-            <AnalyticsStatsGrid stats={statTiles} />
-            <AnalyticsScoreProgressPanel
-              title="Score progress"
-              legend={<DrillScoreTabs value={scoreTab} onChange={setScoreTab} />}
-              chart={<DrillScoreProgressChart points={progressPoints} tab={scoreTab} />}
-            />
-          </div>
-        ) : (
-          <p className="rounded-2xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-6 py-8 text-center text-sm text-[var(--greyscale-500)]">
-            No drills match the current filters. Try widening the time range or clearing the section / drill type.
-          </p>
-        )}
-      </section>
-
-      <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
-        <HistorySortMenu
-          value={historySort}
-          onChange={setHistorySort}
-          ariaLabel="Sort drill history"
+        <AnalyticsPrepTestHistory
+          title="Drill History"
+          emptyNoun="drills"
+          visibleEntries={visibleEntries}
+          bookmarkedOnly={bookmarkedOnly}
+          onBookmarkedOnlyChange={setBookmarkedOnly}
+          sectionFilter={sectionFilter}
+          onSectionFilterChange={handleSelectSection}
+          onToggleBookmark={handleToggleBookmark}
+          onSelectEntry={handleSelectEntry}
         />
       </div>
-
-      <AnalyticsPrepTestHistory
-        title="Drill History"
-        emptyNoun="drills"
-        visibleEntries={visibleEntries}
-        bookmarkedOnly={bookmarkedOnly}
-        onBookmarkedOnlyChange={setBookmarkedOnly}
-        sectionFilter={sectionFilter}
-        onSectionFilterChange={handleSelectSection}
-        onToggleBookmark={handleToggleBookmark}
-        onSelectEntry={handleSelectEntry}
-      />
     </StudentMain>
   )
 }

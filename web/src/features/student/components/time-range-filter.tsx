@@ -18,6 +18,14 @@ export const TIME_RANGE_OPTIONS: readonly TimeRangeOption[] = [
   { value: "all", label: "All Time" },
 ] as const
 
+/** Overview Figma segmented control — omits Last 7 Days. */
+export const OVERVIEW_TIME_RANGE_OPTIONS: readonly TimeRangeOption[] = [
+  { value: "all", label: "All Time" },
+  { value: "30d", label: "Last 30 Days" },
+  { value: "90d", label: "Last 90 Days" },
+  { value: "ytd", label: "This Year" },
+] as const
+
 export function getTimeRangeLabel(value: TimeRangeValue): string {
   return TIME_RANGE_OPTIONS.find((option) => option.value === value)?.label ?? "All Time"
 }
@@ -146,4 +154,48 @@ function TimeRangeFilter({
   )
 }
 
-export { TimeRangeFilter }
+export { TimeRangeFilter, TimeRangeSegmented }
+
+function TimeRangeSegmented({
+  value,
+  onChange,
+  className,
+  ariaLabel = "Filter by time range",
+  options = OVERVIEW_TIME_RANGE_OPTIONS,
+}: TimeRangeFilterProps & { options?: readonly TimeRangeOption[] }) {
+  return (
+    <div
+      role="group"
+      aria-label={ariaLabel}
+      className={cn("flex flex-wrap items-center gap-1.5", className)}
+    >
+      {options.map((option) => {
+        const active = value === option.value
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            aria-pressed={active}
+            className={cn(
+              "flex h-8 items-center justify-center gap-1.5 rounded-full px-3.5 text-[11px] font-semibold leading-none tracking-[0.02em] transition-colors",
+              active
+                ? "bg-[var(--primary)] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
+                : "border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--color-student-heading)] hover:bg-[var(--primary-0)] hover:text-[var(--primary)]",
+            )}
+          >
+            {active ? (
+              <span
+                className="inline-flex size-3.5 shrink-0 items-center justify-center rounded-full bg-white/20"
+                aria-hidden
+              >
+                <Check className="size-2.5 stroke-[3]" />
+              </span>
+            ) : null}
+            {option.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}

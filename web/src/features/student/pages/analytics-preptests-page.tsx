@@ -4,15 +4,18 @@ import { useNavigate } from "react-router-dom"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
 import {
+  AnalyticsChartTooltip,
   AnalyticsScoreProgressPanel,
-  AnalyticsStatsGrid,
+  StatTile,
+  analyticsSegmentedTabClass,
+  formatChartHoverDate,
 } from "@/features/student/analytics/components/analytics-overview-ui"
 import { HistorySortMenu } from "@/features/student/analytics/history-sort-menu"
 import { sortHistoryEntries, type HistorySort } from "@/features/student/analytics/history-sort"
 import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
 import type { AnalyticsStat } from "@/features/student/lib/mock-analytics"
 import {
-  TimeRangeFilter,
+  TimeRangeSegmented,
   type TimeRangeValue,
 } from "@/features/student/components/time-range-filter"
 import {
@@ -21,7 +24,6 @@ import {
   formatPrepTestChartValue,
   getPrepTestHistoryEntries,
   getPrepTestProgressPoints,
-  prepTestChartTooltipLines,
   selectPrepTestChartPoints,
   type PrepTestProgressPoint,
   type PrepTestRecord,
@@ -73,7 +75,7 @@ function ordinal(n: number): string {
 
 function PrepTestScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (next: ScoreTab) => void }) {
   return (
-    <div className="flex h-8 flex-wrap items-center gap-1.5 rounded-[10px] bg-[var(--greyscale-0)] p-0.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       {SCORE_TABS.map((tab) => {
         const active = value === tab.id
         return (
@@ -82,10 +84,7 @@ function PrepTestScoreTabs({ value, onChange }: { value: ScoreTab; onChange: (ne
             type="button"
             onClick={() => onChange(tab.id)}
             aria-pressed={active}
-            className={cn(
-              "flex min-h-7 items-center justify-center rounded-[8px] px-2.5 py-1 text-xs font-semibold leading-[1.4] tracking-[0.02em] transition-colors hover:rounded-[8px] active:rounded-[8px] focus-visible:rounded-[8px]",
-              active ? "bg-[var(--primary)] text-white" : "text-[var(--greyscale-500)] hover:bg-[var(--primary-0)]",
-            )}
+            className={analyticsSegmentedTabClass(active)}
           >
             {tab.label}
           </button>
@@ -131,6 +130,8 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
   const linePoints = chartPoints.map((p, i) => ({ x: xFor(i), y: yFor(pickValue(p)) }))
   const polyline = linePoints.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ")
   const areaPolygon = `${linePoints[0].x},100 ${polyline} ${linePoints[linePoints.length - 1].x},100`
+  const hovered = hoverIndex != null ? chartPoints[hoverIndex] : null
+  const hoveredCoords = hoverIndex != null ? linePoints[hoverIndex] : null
 
   return (
     <div className="w-full">
@@ -165,51 +166,69 @@ function PrepTestScoreProgressChart({ points, tab }: { points: PrepTestProgressP
               vectorEffect="non-scaling-stroke"
             />
           </svg>
-          <div className="absolute inset-0 flex overflow-visible">
-            {chartPoints.map((point, i) => {
+          <div className="absolute inset-0 overflow-visible">
+            {linePoints.map((coords, i) => {
+              const point = chartPoints[i]!
               const value = formatPrepTestChartValue(point, tab)
-              const tooltipLines = prepTestChartTooltipLines(point, tab)
               const isActive = hoverIndex === i
               return (
                 <button
                   key={point.id}
                   type="button"
+                  className={cn(
+                    "absolute z-10 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--primary)] outline-none ring-[var(--primary)]/30 transition-transform focus-visible:ring-2",
+                    isActive && "scale-125 ring-2",
+                  )}
+                  style={{ left: `${coords.x}%`, top: `${coords.y}%` }}
+                  aria-label={`${point.test}: ${value}`}
                   onMouseEnter={() => setHoverIndex(i)}
                   onMouseLeave={() => setHoverIndex(null)}
                   onFocus={() => setHoverIndex(i)}
                   onBlur={() => setHoverIndex(null)}
-                  className="group relative flex-1 cursor-default overflow-visible focus:outline-none"
-                  aria-label={`${point.test}: ${value}`}
-                >
-                  <span
-                    className={cn(
-                      "absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--destructive)] transition-transform",
-                      isActive ? "scale-150 ring-2 ring-[var(--destructive)]/30" : "",
-                    )}
-                    style={{ left: "50%", top: `${linePoints[i].y}%` }}
-                    aria-hidden
-                  />
-                  {isActive ? (
-                    <span
-                      className="pointer-events-none absolute z-20 w-fit -translate-x-1/2 -translate-y-full rounded-xl bg-[var(--color-student-heading)] px-3 py-2 text-left shadow-[0px_12px_24px_rgba(13,13,18,0.18)]"
-                      style={{ left: "50%", top: `calc(${linePoints[i].y}% - 10px)` }}
-                    >
-                      <span className="block whitespace-nowrap text-[11px] font-semibold tracking-[0.04em] text-white/70">
-                        {point.test}
-                      </span>
-                      {tooltipLines.map((line) => (
-                        <span
-                          key={line}
-                          className="mt-0.5 block whitespace-nowrap text-sm font-semibold leading-5 text-white"
-                        >
-                          {line}
-                        </span>
-                      ))}
-                    </span>
-                  ) : null}
-                </button>
+                />
               )
             })}
+            {hovered && hoveredCoords ? (
+              <AnalyticsChartTooltip
+                title={hovered.test}
+                dateLabel={formatChartHoverDate(hovered.takenAt)}
+                xPct={hoveredCoords.x}
+                yPct={hoveredCoords.y}
+                lines={[
+                  ...(tab === "scaled" || hovered.hasScaledScore
+                    ? [
+                        {
+                          label: "Scaled",
+                          value: `${hovered.scaledScore}${
+                            Number.isFinite(hovered.percentile)
+                              ? ` · ${Math.round(hovered.percentile)}th`
+                              : ""
+                          }`,
+                          color: "#6d9bff",
+                        },
+                      ]
+                    : []),
+                  {
+                    label: "Raw",
+                    value: `${hovered.rawScore}/${hovered.rawMax}`,
+                    color: "#6d9bff",
+                  },
+                  ...(hovered.blindReviewScaled > 0
+                    ? [
+                        {
+                          label: "Untimed",
+                          value: `${hovered.blindReviewScaled}${
+                            Number.isFinite(hovered.blindReviewPercentile)
+                              ? ` · ${Math.round(hovered.blindReviewPercentile)}th`
+                              : ""
+                          }`,
+                          color: "#ff6f00",
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+            ) : null}
           </div>
         </div>
       </div>
@@ -256,17 +275,17 @@ function AnalyticsPrepTestsPage() {
     return [
       {
         id: "best-score",
-        label: "BEST SCORE",
+        label: "Best Score",
         value: String(stats.bestScore),
         accent: "var(--primary)",
-        caption: `PERCENTILE: ${ordinal(stats.bestPercentile)} · Raw ${stats.bestRawScore}/${stats.bestRawMax}`,
+        caption: `${ordinal(stats.bestPercentile)} percentile · Raw ${stats.bestRawScore}/${stats.bestRawMax}`,
       },
       {
         id: "average-score",
-        label: "AVERAGE SCORE",
+        label: "Mean Score",
         value: String(stats.averageScore),
-        accent: "var(--primary-100)",
-        caption: `PERCENTILE: ${ordinal(stats.averagePercentile)} · Raw avg ${stats.averageRawScore}`,
+        accent: "var(--primary)",
+        caption: `${ordinal(stats.averagePercentile)} percentile · Raw avg ${stats.averageRawScore}`,
       },
     ]
   }, [stats])
@@ -275,28 +294,28 @@ function AnalyticsPrepTestsPage() {
     return [
       {
         id: "avg-lr",
-        label: "AVERAGE LR",
+        label: "Logical Reasoning Mean",
         value:
           stats.averageLrMissed != null ? formatSignedNumber(stats.averageLrMissed) : "—",
         accent: "var(--explanation-answered)",
       },
       {
         id: "avg-rc",
-        label: "AVERAGE RC",
+        label: "Reading Comprehension Mean",
         value:
           stats.averageRcMissed != null ? formatSignedNumber(stats.averageRcMissed) : "—",
         accent: "var(--explanation-teal)",
       },
       {
         id: "best-br",
-        label: "BEST UNTIMED REVIEW",
+        label: "Best Untimed Review",
         value: String(stats.bestBlindReview),
         accent: "var(--destructive)",
-        caption: `Average Untimed Review: ${stats.averageBlindReview}`,
+        caption: `Mean Untimed Review: ${stats.averageBlindReview}`,
       },
       {
         id: "avg-br-diff",
-        label: "AVG. UNTIMED REVIEW DIFF.",
+        label: "Mean Untimed Review Diff.",
         value: formatSignedNumber(stats.averageBlindReviewDifference),
         accent: "var(--color-student-heading)",
         caption: `High: ${formatSignedNumber(stats.blindReviewDifferenceHigh)}  Low: ${formatSignedNumber(stats.blindReviewDifferenceLow)}`,
@@ -304,10 +323,6 @@ function AnalyticsPrepTestsPage() {
     ]
   }, [stats])
   const progressPoints = useMemo(() => getPrepTestProgressPoints(rangedRecords), [rangedRecords])
-  const allStatTiles = useMemo(
-    () => [...headlineStats, ...secondaryStats],
-    [headlineStats, secondaryStats],
-  )
 
   const historyEntries = useMemo(() => getPrepTestHistoryEntries(rangedRecords), [rangedRecords])
 
@@ -362,26 +377,41 @@ function AnalyticsPrepTestsPage() {
 
   return (
     <StudentMain>
-        <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
-          <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
-        </div>
+      <div className="flex flex-col gap-4">
+        <section className="flex w-full flex-col gap-4">
+          <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3 border-b border-[var(--greyscale-100)] pb-3">
+            <h1 className="!m-0 !text-lg !font-bold !leading-[1.3] text-[var(--color-student-heading)]">PrepTests</h1>
+            <TimeRangeSegmented value={timeRange} onChange={setTimeRange} className="shrink-0" />
+          </div>
 
-        {stats ? (
-          <section className="mb-4 grid gap-3 lg:grid-cols-[minmax(240px,360px)_1fr]">
-            <AnalyticsStatsGrid stats={allStatTiles} />
-            <AnalyticsScoreProgressPanel
-              title="Score progress"
-              legend={<PrepTestScoreTabs value={scoreTab} onChange={setScoreTab} />}
-              chart={<PrepTestScoreProgressChart points={progressPoints} tab={scoreTab} />}
-            />
-          </section>
-        ) : (
-          <p className="mb-6 rounded-2xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-6 py-8 text-center text-sm text-[var(--greyscale-500)]">
-            No PrepTests recorded in this range. Try widening the time range.
-          </p>
-        )}
+          {stats ? (
+            <div className="grid gap-4 lg:grid-cols-[minmax(280px,420px)_1fr]">
+              <div className="flex flex-col gap-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {headlineStats.map((stat) => (
+                    <StatTile key={stat.id} stat={stat} />
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {secondaryStats.map((stat) => (
+                    <StatTile key={stat.id} stat={stat} />
+                  ))}
+                </div>
+              </div>
+              <AnalyticsScoreProgressPanel
+                title="Score Progress"
+                legend={<PrepTestScoreTabs value={scoreTab} onChange={setScoreTab} />}
+                chart={<PrepTestScoreProgressChart points={progressPoints} tab={scoreTab} />}
+              />
+            </div>
+          ) : (
+            <p className="rounded-2xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-8 text-center text-sm text-[var(--greyscale-500)]">
+              No PrepTests recorded in this range. Try widening the time range.
+            </p>
+          )}
+        </section>
 
-        <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <HistorySortMenu
             value={historySort}
             onChange={setHistorySort}
@@ -399,7 +429,8 @@ function AnalyticsPrepTestsPage() {
           onSelectEntry={handleSelectEntry}
           onOpenPractice={handleOpenPractice}
         />
-      </StudentMain>
+      </div>
+    </StudentMain>
   )
 }
 

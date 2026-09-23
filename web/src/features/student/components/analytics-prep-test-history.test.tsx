@@ -122,7 +122,7 @@ describe("AnalyticsPrepTestHistory", () => {
     expect(screen.getByText("History 1")).toBeInTheDocument()
     expect(screen.getByText("History 4")).toBeInTheDocument()
     expect(screen.queryByText("History 5")).not.toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "View more" })).toHaveAttribute("href", "/app/analytics/drills")
+    expect(screen.getByRole("link", { name: /view more/i })).toHaveAttribute("href", "/app/analytics/drills")
   })
 
   it("shows the practice-page LR and RC badges beside drill titles", () => {
@@ -200,10 +200,28 @@ describe("AnalyticsPrepTestHistory", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.queryByRole("link", { name: "View more" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: /view more/i })).not.toBeInTheDocument()
   })
 
-  it("labels untimed review scores as UR instead of BR", () => {
+  it("shows View More when alwaysShowViewMore is set", () => {
+    render(
+      <MemoryRouter>
+        <AnalyticsPrepTestHistory
+          visibleEntries={entries}
+          bookmarkedOnly={false}
+          onBookmarkedOnlyChange={() => {}}
+          onToggleBookmark={() => {}}
+          previewLimit={4}
+          viewMoreHref="/app/analytics/drills"
+          alwaysShowViewMore
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole("link", { name: /view more/i })).toHaveAttribute("href", "/app/analytics/drills")
+  })
+
+  it("labels untimed review scores as Un-timed Review", () => {
     render(
       <AnalyticsPrepTestHistory
         visibleEntries={entries}
@@ -213,7 +231,8 @@ describe("AnalyticsPrepTestHistory", () => {
       />,
     )
 
-    expect(screen.getAllByText("UR")).toHaveLength(entries.length)
+    expect(screen.getAllByText("Un-timed Review")).toHaveLength(entries.length)
+    expect(screen.queryByText("UR")).not.toBeInTheDocument()
     expect(screen.queryByText("BR")).not.toBeInTheDocument()
   })
 })
