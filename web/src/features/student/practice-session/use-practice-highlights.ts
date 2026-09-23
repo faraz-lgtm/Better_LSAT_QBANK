@@ -78,6 +78,39 @@ function hasLayoutRect(rect: DOMRect): boolean {
   return rect.width > 0 || rect.height > 0
 }
 
+function selectionStartCaretRect(range: Range): DOMRect | null {
+  try {
+    const start = range.cloneRange()
+    start.collapse(true)
+    const caret = start.getBoundingClientRect()
+    if (caret && (caret.left !== 0 || caret.top !== 0 || caret.height > 0)) {
+      return caret
+    }
+  } catch {
+    // Detached range or jsdom without layout.
+  }
+  try {
+    if (typeof range.getClientRects === "function") {
+      for (const rect of Array.from(range.getClientRects())) {
+        if (rect.height > 1) return rect
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return null
+}
+
+function firstWordMenuAnchor(range: Range): Pick<PassageHighlightMenu, "x" | "y" | "below"> {
+  const caret = selectionStartCaretRect(range)
+  if (!caret) return { x: 0, y: 0, below: false }
+  return {
+    x: caret.left,
+    y: caret.top,
+    below: false,
+  }
+}
+
 function rangeClientRect(range: Range, x = 0, y = 0): DOMRect {
   try {
     if (typeof range.getClientRects === "function") {
@@ -100,6 +133,13 @@ function markLineRect(mark: Element, x: number, y: number): DOMRect {
   return nearestClientRect(mark.getClientRects(), x, y) ?? mark.getBoundingClientRect()
 }
 
+function markStartAnchor(mark: Element): Pick<PassageHighlightMenu, "x" | "y" | "below"> {
+  const rects = typeof mark.getClientRects === "function" ? Array.from(mark.getClientRects()) : []
+  const first = rects.find((rect) => rect.height > 1) ?? mark.getBoundingClientRect()
+  if (!hasLayoutRect(first)) return { x: 0, y: 0, below: false }
+  return { x: first.left, y: first.top, below: false }
+}
+
 function menuPositionFromPointer(clientX: number, clientY: number): Pick<PassageHighlightMenu, "x" | "y" | "below"> {
   const below = clientY < 96
   return { x: clientX, y: clientY, below }
@@ -114,15 +154,16 @@ function menuPositionFromRect(rect: DOMRect): Pick<PassageHighlightMenu, "x" | "
   }
 }
 
-/** Keep X on the pointer; pin Y to the selected/highlighted line so the menu hugs the text. */
+/** Pin Y to the selected line. Official also centers X so the pointer sits on the text. */
 function menuPositionFromPointerAndLine(
   clientX: number,
   clientY: number,
   rect: DOMRect,
+  centerOnSelection = false,
 ): Pick<PassageHighlightMenu, "x" | "y" | "below"> {
-  const below = rect.top < 96
+  const below = rect.top < 64
   return {
-    x: hasViewportPoint(clientX, clientY) ? clientX : rect.left + rect.width / 2,
+    x: centerOnSelection || !hasViewportPoint(clientX, clientY) ? rect.left + rect.width / 2 : clientX,
     y: below ? rect.bottom : rect.top,
     below,
   }
@@ -132,7 +173,12 @@ function hasViewportPoint(x: number, y: number): boolean {
   return Number.isFinite(x) && Number.isFinite(y) && (x !== 0 || y !== 0)
 }
 
-export function usePracticeHighlights() {
+export function usePracticeHighlights(options?: {
+  highlightMenuStartsExpanded?: boolean
+  menuAnchorsToSelection?: boolean
+}) {
+  const highlightMenuStartsExpanded = options?.highlightMenuStartsExpanded ?? true
+  const menuAnchorsToSelection = options?.menuAnchorsToSelection ?? false
   const [activeColor, setActiveColor] = useState<HighlightColor | null>(null)
   const [toolMode, setToolMode] = useState<PracticeToolMode>("none")
   const [accessibilitySettings, setAccessibilitySettings] = useState<PracticeSessionAccessibilitySettings>(
@@ -179,11 +225,11 @@ export function usePracticeHighlights() {
       const x = fromPointer ? pointer.x : fromEvent ? event.clientX : 0
       const y = fromPointer ? pointer.y : fromEvent ? event.clientY : 0
       const rect = fallbackRect(x, y)
-      if (hasLayoutRect(rect)) return menuPositionFromPointerAndLine(x, y, rect)
+      if (hasLayoutRect(rect)) return menuPositionFromPointerAndLine(x, y, rect, menuAnchorsToSelection)
       if (hasViewportPoint(x, y)) return menuPositionFromPointer(x, y)
       return menuPositionFromRect(rect)
     },
-    [],
+    [menuAnchorsToSelection],
   )
 
   const getRegionHtml = useCallback(
@@ -343,12 +389,14 @@ export function usePracticeHighlights() {
       markRef.current = null
       setSelectionMenu({
         mode: "highlight",
-        ...resolveMenuAnchor(event, (x, y) => rangeClientRect(range, x, y)),
-        expanded: true,
+        ...(menuAnchorsToSelection
+          ? firstWordMenuAnchor(range)
+          : resolveMenuAnchor(event, (x, y) => rangeClientRect(range, x, y))),
+        expanded: highlightMenuStartsExpanded,
         selectedColor,
       })
     },
-    [lastPassageColor, resolveMenuAnchor],
+    [highlightMenuStartsExpanded, lastPassageColor, menuAnchorsToSelection, resolveMenuAnchor],
   )
 
   const openRemoveMenu = useCallback(
@@ -359,10 +407,12 @@ export function usePracticeHighlights() {
       markRef.current = mark
       setSelectionMenu({
         mode: "remove",
-        ...resolveMenuAnchor(event, (x, y) => markLineRect(mark, x, y)),
+        ...(menuAnchorsToSelection
+          ? markStartAnchor(mark)
+          : resolveMenuAnchor(event, (x, y) => markLineRect(mark, x, y))),
       })
     },
-    [resolveMenuAnchor],
+    [menuAnchorsToSelection, resolveMenuAnchor],
   )
 
   const handleContentMouseUp = useCallback(
@@ -423,6 +473,7 @@ export function usePracticeHighlights() {
         }
         if (rangeSpansPartialAnnotation(range, container)) return
         const u = document.createElement("u")
+        u.setAttribute("data-underline", lastPassageColor)
         if (wrapRangeWithElement(range, u)) {
           saveRegionHtml(regionKey, container.innerHTML)
           clearSelection()
@@ -441,6 +492,7 @@ export function usePracticeHighlights() {
       activeColor,
       applyColorToRange,
       dismissSelectionMenu,
+      lastPassageColor,
       openHighlightMenu,
       openRemoveMenu,
       removeAnnotationElement,

@@ -228,7 +228,10 @@ function DrillSessionPage() {
     usePracticeSessionTimer()
   const appliedAccommodationScaleRef = useRef<number | null>(null)
   const pauseModal = usePracticeSessionPauseModal(pauseTimer, resumeTimer)
-  const highlights = usePracticeHighlights()
+  const highlights = usePracticeHighlights({
+    highlightMenuStartsExpanded: !officialInterface,
+    menuAnchorsToSelection: officialInterface,
+  })
   const accessibilityPanel = usePracticeSessionAccessibilityPanel(
     highlights.accessibilitySettings,
     highlights.applyAccessibilitySettings,
@@ -1368,6 +1371,7 @@ function DrillSessionPage() {
         )}
       </footer>
       <PracticeSessionHighlightPopover
+        variant={officialChrome ? "official" : "default"}
         menu={highlights.selectionMenu}
         onApplyColor={highlights.applySelectionColor}
         onRemove={highlights.removeSelectionHighlight}

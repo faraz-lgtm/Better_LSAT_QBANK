@@ -136,3 +136,25 @@ describe("exam chrome dark-mode glyphs", () => {
     expect(block).toContain("filter: brightness(0) invert(1)")
   })
 })
+
+describe("official highlighter stroke styles", () => {
+  it("underlines applied official highlights: solid, spaced dash, tight dash, dotted", () => {
+    const marker = ".practice-session-card--official .practice-session-content mark[data-highlight=\"yellow\"]"
+    const start = examCss.indexOf(marker)
+    expect(start).toBeGreaterThan(-1)
+    const block = examCss.slice(start, examCss.indexOf("/* Marketing homepage"))
+    expect(block).toContain("box-shadow: inset 0 -2px 0 #2c3143")
+    expect(block).toContain("mark[data-highlight=\"pink\"]")
+    expect(block).toContain("7px")
+    expect(block).toContain("14px")
+    expect(block).toContain("mark[data-highlight=\"green\"]")
+    expect(block).toContain("3px")
+    expect(block).toContain("5px")
+    expect(block).toContain("mark[data-highlight=\"blue\"]")
+    expect(block).toContain("radial-gradient")
+    expect(block).toContain("u[data-underline=\"pink\"]")
+    expect(block).toContain("text-decoration-style: dashed")
+    expect(block).toContain("u[data-underline=\"blue\"]")
+    expect(block).toContain("text-decoration-style: dotted")
+  })
+})

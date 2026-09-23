@@ -13,10 +13,15 @@ import {
   OFFICIAL_SIDE_WIDGET_ITEM_EXPANDED_CLASS,
 } from "@/features/student/practice-session/practice-session-official-styles"
 import {
+  OfficialRailAccessibilityIcon,
+  OfficialRailCollapseViewIcon,
+  OfficialRailDockIcon,
+  OfficialRailExpandIcon,
+  OfficialRailFlagIcon,
+  OfficialRailMaskingIcon,
+  OfficialRailReviewIcon,
   SideWidgetAccessibilityIcon,
-  SideWidgetArrowsPointingInIcon,
   SideWidgetCollapseDockIcon,
-  SideWidgetExpandIcon,
   SideWidgetFlagIcon,
   SideWidgetFullScreenIcon,
   SideWidgetMedSizeIcon,
@@ -82,8 +87,8 @@ function PracticeSessionSideWidget({
     label: fullView ? "Normal view" : "Full Screen",
     icon: officialChrome
       ? fullView
-        ? SideWidgetArrowsPointingInIcon
-        : SideWidgetExpandIcon
+        ? OfficialRailCollapseViewIcon
+        : OfficialRailExpandIcon
       : fullView
         ? SideWidgetMedSizeIcon
         : SideWidgetFullScreenIcon,
@@ -96,20 +101,20 @@ function PracticeSessionSideWidget({
     {
       id: "review",
       label: "Review",
-      icon: SideWidgetReviewIcon,
+      icon: OfficialRailReviewIcon,
       onClick: () => onReview?.(),
       active: reviewActive,
     },
     {
       id: "accessibility",
       label: "Accessibility",
-      icon: SideWidgetAccessibilityIcon,
+      icon: OfficialRailAccessibilityIcon,
       onClick: () => onAccessibility?.(),
     },
     {
       id: "flag",
       label: "Flag item",
-      icon: SideWidgetFlagIcon,
+      icon: OfficialRailFlagIcon,
       onClick: onToggleFlag,
       active: flagged,
       disabled: flagsDisabled,
@@ -117,7 +122,7 @@ function PracticeSessionSideWidget({
     {
       id: "masking",
       label: "Response Masking",
-      icon: SideWidgetResponseMaskingIcon,
+      icon: OfficialRailMaskingIcon,
       onClick: onToggleResponseMasking,
       active: responseMasking,
     },
@@ -132,7 +137,7 @@ function PracticeSessionSideWidget({
       : expanded
         ? "Collapse Menu"
         : "Open Menu",
-    icon: SideWidgetCollapseDockIcon,
+    icon: officialChrome ? OfficialRailDockIcon : SideWidgetCollapseDockIcon,
     onClick: () => setExpanded((open) => !open),
   }
 
@@ -204,7 +209,7 @@ function PracticeSessionSideWidget({
         <Icon
           className={cn("shrink-0", officialChrome && item.id === "flag" && item.active && "practice-session-side-widget__flag-active")}
           expanded={isCollapse ? expanded : undefined}
-          active={officialChrome && item.id === "flag" ? item.active : undefined}
+          active={item.id === "flag" ? item.active : undefined}
           aria-hidden
         />
         {expanded ? (
@@ -240,7 +245,7 @@ function PracticeSessionSideWidget({
       )}
       aria-label="Exam tools"
     >
-      {officialChrome && expanded ? (
+      {officialChrome ? (
         <>
           <div className="flex w-full flex-col">{officialTools.map(renderItem)}</div>
           {renderItem(collapseItem)}

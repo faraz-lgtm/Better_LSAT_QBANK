@@ -32,6 +32,11 @@ describe("sanitizeHtml", () => {
     expect(out).toContain("<mark")
   })
 
+  it("preserves underline color on u[data-underline]", () => {
+    const out = sanitizeHtml('<p>test <u data-underline="blue">hi</u></p>')
+    expect(out).toContain('data-underline="blue"')
+  })
+
   it("strips headings from question html", () => {
     const out = sanitizeHtml("<h1>Should not show in questions</h1><p>ok</p>")
     expect(out).not.toContain("<h1>")

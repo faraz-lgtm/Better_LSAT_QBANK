@@ -116,16 +116,16 @@ const OFFICIAL_RESET_RESPONSE_BUTTON_CLASS =
   "practice-session-official-reset inline-flex h-[34px] shrink-0 items-center justify-center rounded-[6px] border border-solid border-[#eceff3] bg-[#eceff3] px-[11px] pb-[5px] pt-[3px] text-[14px] font-normal leading-[20px] text-[#041a44] transition hover:bg-[#e2e6ec]"
 
 const OFFICIAL_SIDE_WIDGET_CLASS =
-  "practice-session-side-widget absolute bottom-0 right-0 top-0 z-10 flex w-[50px] flex-col items-center overflow-visible bg-[var(--greyscale-25)]"
+  "practice-session-side-widget absolute bottom-0 right-0 top-0 z-10 flex w-[50px] flex-col items-center justify-between overflow-visible bg-[var(--greyscale-25)]"
 
 const OFFICIAL_SIDE_WIDGET_EXPANDED_CLASS =
-  "practice-session-side-widget absolute bottom-0 right-0 top-0 z-10 flex w-[174px] flex-col items-start justify-between overflow-visible border-l border-[var(--greyscale-100)] bg-[var(--greyscale-25)]"
+  "practice-session-side-widget absolute bottom-0 right-0 top-0 z-10 flex w-[174px] flex-col items-start justify-between overflow-visible bg-[var(--greyscale-25)]"
 
 const OFFICIAL_SIDE_WIDGET_ITEM_CLASS =
-  "inline-flex h-10 w-[49px] items-center justify-center text-[var(--greyscale-500)] transition hover:bg-[var(--greyscale-0)]/70"
+  "inline-flex h-10 w-[49px] items-center justify-center text-[#2c3143] transition hover:bg-[var(--greyscale-0)]/70"
 
 const OFFICIAL_SIDE_WIDGET_ITEM_EXPANDED_CLASS =
-  "flex h-10 w-full items-center gap-3 px-[14px] text-left text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[var(--color-student-heading)] transition hover:bg-[var(--greyscale-0)]/70"
+  "flex h-10 w-full items-center gap-3 px-[14px] text-left text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[#2c3143] transition hover:bg-[var(--greyscale-0)]/70"
 
 /** Figma `20257:89990` — Review overlay stops above the 72px footer so question nav stays visible. */
 const OFFICIAL_REVIEW_PANEL_CLASS =
@@ -213,6 +213,24 @@ const OFFICIAL_QUESTION_NAV_CARET_CLASS =
 const OFFICIAL_PASSAGE_BREAK_CLASS =
   "practice-session-question-nav-passage-break h-7 w-[4px] min-w-[4px] max-w-[4px] shrink-0 self-end bg-[var(--greyscale-500)]"
 
+/** LawHub official highlighter tooltip — 216×56 chip, 8px radius, shadow only */
+const OFFICIAL_HIGHLIGHT_POPOVER_STACK_CLASS = "flex w-[216px] flex-col gap-2"
+
+const OFFICIAL_HIGHLIGHT_POPOVER_CARD_CLASS =
+  "flex w-full flex-col rounded-[8px] bg-[#ffffff] shadow-[0px_4px_16px_rgba(16,24,40,0.12),0px_1px_3px_rgba(16,24,40,0.06)]"
+
+const OFFICIAL_HIGHLIGHT_POPOVER_HEADER_CLASS =
+  "flex h-14 w-full items-center gap-3 px-5 text-[16px] font-normal leading-6 text-[#333333]"
+
+const OFFICIAL_HIGHLIGHT_POPOVER_SWATCH_ROW_CLASS =
+  "flex h-14 w-full items-center justify-between px-5"
+
+const OFFICIAL_HIGHLIGHT_POPOVER_SWATCH_CLASS =
+  "relative box-border size-6 shrink-0 overflow-visible rounded-full"
+
+const OFFICIAL_HIGHLIGHT_REMOVE_CARD_CLASS =
+  "relative inline-flex h-14 items-center gap-3 rounded-[8px] bg-[#ffffff] px-5 text-[16px] font-normal leading-6 text-[#333333] shadow-[0px_4px_16px_rgba(16,24,40,0.12),0px_1px_3px_rgba(16,24,40,0.06)]"
+
 export {
   EXAM_CARD_FULL_WIDTH_CLASS,
   OFFICIAL_BODY_GRID_CLASS,
@@ -241,6 +259,12 @@ export {
   OFFICIAL_HEADER_TITLE_CLASS,
   OFFICIAL_HEADER_TITLE_ROW_CLASS,
   OFFICIAL_HEADER_UTILITY_ROW_CLASS,
+  OFFICIAL_HIGHLIGHT_POPOVER_CARD_CLASS,
+  OFFICIAL_HIGHLIGHT_POPOVER_HEADER_CLASS,
+  OFFICIAL_HIGHLIGHT_POPOVER_STACK_CLASS,
+  OFFICIAL_HIGHLIGHT_POPOVER_SWATCH_CLASS,
+  OFFICIAL_HIGHLIGHT_POPOVER_SWATCH_ROW_CLASS,
+  OFFICIAL_HIGHLIGHT_REMOVE_CARD_CLASS,
   OFFICIAL_IMMERSIVE_FRAME_CLASS,
   OFFICIAL_OPTION_LETTER_SELECTED_CLASS,
   OFFICIAL_OPTION_LETTER_UNSELECTED_CLASS,

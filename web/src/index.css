@@ -5490,6 +5490,92 @@ html.student-shell-immersive .practice-session-card--blind-review {
   color: inherit;
 }
 
+.practice-session-card--official .practice-session-content mark[data-highlight],
+.practice-session-card--official .lsat-html-content mark[data-highlight],
+.practice-session-card--official .practice-session-content u[data-underline],
+.practice-session-card--official .lsat-html-content u[data-underline] {
+  color: inherit;
+  text-decoration: none;
+  background-repeat: repeat-x;
+  background-position: left bottom;
+  background-size: auto 2px;
+}
+
+.practice-session-card--official .practice-session-content mark[data-highlight="yellow"],
+.practice-session-card--official .lsat-html-content mark[data-highlight="yellow"] {
+  background-color: #fdfac4;
+  box-shadow: inset 0 -2px 0 #2c3143;
+}
+
+.practice-session-card--official .practice-session-content u[data-underline="yellow"],
+.practice-session-card--official .lsat-html-content u[data-underline="yellow"] {
+  text-decoration-line: underline;
+  text-decoration-style: solid;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.16em;
+  text-decoration-color: #2c3143;
+  box-shadow: inset 0 -2px 0 #2c3143;
+}
+
+.practice-session-card--official .practice-session-content mark[data-highlight="pink"],
+.practice-session-card--official .lsat-html-content mark[data-highlight="pink"],
+.practice-session-card--official .practice-session-content u[data-underline="pink"],
+.practice-session-card--official .lsat-html-content u[data-underline="pink"] {
+  background-image: repeating-linear-gradient(
+    to right,
+    #2c3143 0,
+    #2c3143 7px,
+    transparent 7px,
+    transparent 14px
+  );
+}
+
+.practice-session-card--official .practice-session-content mark[data-highlight="pink"],
+.practice-session-card--official .lsat-html-content mark[data-highlight="pink"] {
+  background-color: #f8e2e2;
+}
+
+.practice-session-card--official .practice-session-content u[data-underline="pink"],
+.practice-session-card--official .lsat-html-content u[data-underline="pink"] {
+  text-decoration-style: dashed;
+}
+
+.practice-session-card--official .practice-session-content mark[data-highlight="green"],
+.practice-session-card--official .lsat-html-content mark[data-highlight="green"],
+.practice-session-card--official .practice-session-content u[data-underline="green"],
+.practice-session-card--official .lsat-html-content u[data-underline="green"] {
+  background-image: repeating-linear-gradient(
+    to right,
+    #2c3143 0,
+    #2c3143 3px,
+    transparent 3px,
+    transparent 5px
+  );
+}
+
+.practice-session-card--official .practice-session-content mark[data-highlight="green"],
+.practice-session-card--official .lsat-html-content mark[data-highlight="green"] {
+  background-color: #c5eed6;
+}
+
+.practice-session-card--official .practice-session-content mark[data-highlight="blue"],
+.practice-session-card--official .lsat-html-content mark[data-highlight="blue"],
+.practice-session-card--official .practice-session-content u[data-underline="blue"],
+.practice-session-card--official .lsat-html-content u[data-underline="blue"] {
+  background-image: radial-gradient(circle closest-side, #2c3143 1.05px, transparent 1.15px);
+  background-size: 6px 2px;
+}
+
+.practice-session-card--official .practice-session-content mark[data-highlight="blue"],
+.practice-session-card--official .lsat-html-content mark[data-highlight="blue"] {
+  background-color: #c5e8f8;
+}
+
+.practice-session-card--official .practice-session-content u[data-underline="blue"],
+.practice-session-card--official .lsat-html-content u[data-underline="blue"] {
+  text-decoration-style: dotted;
+}
+
 /* Marketing homepage (ported landing) */
 .marketing-home {
   /* Reset :root's computed line-height length so headings/body scale normally */
