@@ -276,7 +276,7 @@ function AnalyticsPrepTestsPage() {
       },
       {
         id: "average-score",
-        label: "Mean Score",
+        label: "Average Score",
         value: String(stats.averageScore),
         accent: "var(--primary)",
         caption: `${ordinal(stats.averagePercentile)} percentile · Raw avg ${stats.averageRawScore}`,
@@ -288,14 +288,14 @@ function AnalyticsPrepTestsPage() {
     return [
       {
         id: "avg-lr",
-        label: "Logical Reasoning Mean",
+        label: "Logical Reasoning Average",
         value:
           stats.averageLrMissed != null ? formatSignedNumber(stats.averageLrMissed) : "—",
         accent: "var(--explanation-answered)",
       },
       {
         id: "avg-rc",
-        label: "Reading Comprehension Mean",
+        label: "Reading Comprehension Average",
         value:
           stats.averageRcMissed != null ? formatSignedNumber(stats.averageRcMissed) : "—",
         accent: "var(--explanation-teal)",
@@ -305,11 +305,11 @@ function AnalyticsPrepTestsPage() {
         label: "Best Untimed Review",
         value: String(stats.bestBlindReview),
         accent: "var(--destructive)",
-        caption: `Mean Untimed Review: ${stats.averageBlindReview}`,
+        caption: `Average Untimed Review: ${stats.averageBlindReview}`,
       },
       {
         id: "avg-br-diff",
-        label: "Mean Untimed Review Diff.",
+        label: "Average Untimed Review Diff.",
         value: formatSignedNumber(stats.averageBlindReviewDifference),
         accent: "var(--color-student-heading)",
         caption: `High: ${formatSignedNumber(stats.blindReviewDifferenceHigh)}  Low: ${formatSignedNumber(stats.blindReviewDifferenceLow)}`,

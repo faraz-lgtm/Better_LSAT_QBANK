@@ -222,7 +222,7 @@ function SectionStatPair({ summary }: { summary: SectionSummary }) {
     },
     {
       id: "average-score",
-      label: "Mean Score",
+      label: "Average Score",
       value: summary.averageScore,
       accent: summary.averageAccent,
     },

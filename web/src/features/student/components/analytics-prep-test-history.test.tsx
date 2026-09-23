@@ -97,7 +97,7 @@ describe("AnalyticsPrepTestHistory", () => {
     expect(onToggleBookmark).toHaveBeenCalledWith("saved")
   })
 
-  it("shows a view eye button on the right when onSelectEntry is provided", async () => {
+  it("opens results from the title when onSelectEntry is provided", async () => {
     const user = userEvent.setup()
     const onSelectEntry = vi.fn()
     render(
@@ -110,7 +110,8 @@ describe("AnalyticsPrepTestHistory", () => {
       />,
     )
 
-    await user.click(screen.getByRole("button", { name: "View Varied Mix" }))
+    expect(screen.queryByRole("button", { name: "View Varied Mix" })).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Varied Mix" }))
     expect(onSelectEntry).toHaveBeenCalledWith("saved")
   })
 
@@ -238,7 +239,7 @@ describe("AnalyticsPrepTestHistory", () => {
     expect(screen.getByRole("link", { name: /view more/i })).toHaveAttribute("href", "/app/analytics/drills")
   })
 
-  it("labels untimed review scores as Un-timed Review", () => {
+  it("labels untimed review scores as Untimed Review", () => {
     render(
       <AnalyticsPrepTestHistory
         visibleEntries={entries}
@@ -248,7 +249,7 @@ describe("AnalyticsPrepTestHistory", () => {
       />,
     )
 
-    expect(screen.getAllByText("Un-timed Review")).toHaveLength(entries.length)
+    expect(screen.getAllByText("Untimed Review")).toHaveLength(entries.length)
     expect(screen.queryByText("UR")).not.toBeInTheDocument()
     expect(screen.queryByText("BR")).not.toBeInTheDocument()
   })

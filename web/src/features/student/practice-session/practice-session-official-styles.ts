@@ -87,9 +87,9 @@ const OFFICIAL_OPTION_ROW_BASE_CLASS = "practice-session-official-choice flex w-
 /** Official LawHub unselected row */
 const OFFICIAL_OPTION_ROW_UNSELECTED_CLASS = `${OFFICIAL_OPTION_ROW_BASE_CLASS} bg-[#f2f3f8]`
 
-/** Figma `20243:23562` — selected row (warning-50 `#ffe5b7`) + 3px primary-800 bar */
+/** Selected row (`#fdfac4`) + 3px primary-800 bar */
 const OFFICIAL_OPTION_ROW_SELECTED_CLASS =
-  `${OFFICIAL_OPTION_ROW_BASE_CLASS} practice-session-official-choice--selected relative overflow-hidden bg-[#ffe5b7]`
+  `${OFFICIAL_OPTION_ROW_BASE_CLASS} practice-session-official-choice--selected relative overflow-hidden bg-[#fdfac4]`
 
 const OFFICIAL_OPTION_SELECTED_BAR_CLASS =
   "pointer-events-none absolute inset-y-0 left-0 z-[1] w-[3px] bg-[#041a44]"
@@ -104,7 +104,7 @@ const OFFICIAL_OPTION_LETTER_UNSELECTED_CLASS =
   `${OFFICIAL_OPTION_LETTER_TYPE_CLASS} box-border flex w-[60px] min-h-[60px] shrink-0 items-center justify-center self-stretch border-2 border-solid border-[#f2f3f8] bg-[#ffffff] text-[#666d80]`
 
 const OFFICIAL_OPTION_LETTER_SELECTED_CLASS =
-  `${OFFICIAL_OPTION_LETTER_TYPE_CLASS} practice-session-official-choice-letter--selected box-border flex w-[60px] min-h-[60px] shrink-0 items-center justify-center self-stretch border-2 border-solid border-transparent bg-[#ffe5b7] text-[#041a44]`
+  `${OFFICIAL_OPTION_LETTER_TYPE_CLASS} practice-session-official-choice-letter--selected box-border flex w-[60px] min-h-[60px] shrink-0 items-center justify-center self-stretch border-2 border-solid border-transparent bg-[#fdfac4] text-[#041a44]`
 
 /** Figma `20243:23545` — copy inset 6 / 12 / 8, min 60px. Type: 15 / 22 / regular. */
 const OFFICIAL_OPTION_TEXT_CLASS =
