@@ -88,7 +88,7 @@ import {
 } from "@/features/student/practice-session/use-practice-session-timer"
 import {
   createDiagnosticQuestions,
-  getDiagnosticExplanationHtml,
+  getDiagnosticStimulusAnalysisHtml,
   getDiagnosticQuestionMeta,
 } from "@/features/guest/diagnostic/mini-diagnostic-content"
 import { canShowDiagnosticExplanation } from "@/features/guest/diagnostic/diagnostic-explanation-access"
@@ -299,13 +299,14 @@ function GuestDiagnosticExamLayout({
     questionNumber: safeIndex,
     hasActiveCore,
   })
-  const explanationHtml =
+  // Analysis View: Stimulus Analysis only. Answer Choice Analysis lives on choice expanders.
+  const stimulusAnalysisHtml =
     current && explanationUnlocked
-      ? getDiagnosticExplanationHtml(current.id, config.intentId)
+      ? getDiagnosticStimulusAnalysisHtml(current.id, config.intentId)
       : null
   const questionMeta = current ? getDiagnosticQuestionMeta(current.id, config.intentId) : null
-  const analysisAvailable = isPostResultsMode && Boolean(explanationHtml?.trim())
-  const currentAnalysisHtml = analysisAvailable ? (explanationHtml?.trim() ?? "") : ""
+  const analysisAvailable = isPostResultsMode && Boolean(stimulusAnalysisHtml?.trim())
+  const currentAnalysisHtml = analysisAvailable ? (stimulusAnalysisHtml?.trim() ?? "") : ""
   const showAnalysisView = analysisViewOpen && currentAnalysisHtml.length > 0
   const actualOutcome = answerOutcome(isReviewMode ? scoredAnswer : currentAnswer)
   const showInsightsPanel = isPostResultsMode && reviewSidePanel === "insights"
@@ -478,7 +479,7 @@ function GuestDiagnosticExamLayout({
       showCorrectAnswer={showCorrectAnswer}
       onShowCorrectAnswerChange={setShowCorrectAnswer}
       blindReviewTabEnabled={false}
-      seedStemExplanationHtml={explanationUnlocked ? explanationHtml : null}
+      seedStemExplanationHtml={null}
       seedQuestionTypeLabel={explanationUnlocked ? (questionMeta?.questionType ?? null) : null}
       explanationsEnabled={explanationUnlocked}
       showStemExplanationAction={false}
@@ -739,7 +740,7 @@ function GuestDiagnosticExamLayout({
             className={cn(
               "practice-session-pane min-h-0 overflow-y-auto",
               passageOnlyView && "hidden",
-              questionRevealed && explanationHtml ? "practice-session-pane--scroll-visible" : null,
+              questionRevealed && stimulusAnalysisHtml ? "practice-session-pane--scroll-visible" : null,
               officialChrome ? OFFICIAL_QUESTION_PANE_CLASS : ACTIVE_DRILL_QUESTION_PANE_CLASS,
             )}
           >
@@ -771,14 +772,14 @@ function GuestDiagnosticExamLayout({
               fullView={isFullscreen}
               choicesDisabled={!canSelectAnswers || questionRevealed}
             />
-            {questionRevealed && explanationUnlocked && explanationHtml ? (
+            {questionRevealed && explanationUnlocked && stimulusAnalysisHtml ? (
               <div className="practice-session-explanation practice-session-inline-divider mt-6 border-t pt-6 pb-6">
                 <p className="practice-session-panel-label mb-3 text-xs font-semibold uppercase tracking-[0.04em]">
                   Explanation
                 </p>
                 <div className="practice-session-panel rounded-[16px] border p-5">
                   <HtmlContent
-                    html={explanationHtml}
+                    html={stimulusAnalysisHtml}
                     className="explanation-detail-body max-w-none text-[1.05rem] leading-[1.55]"
                   />
                 </div>
