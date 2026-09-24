@@ -170,6 +170,9 @@ function FigmaIcon({
   )
 }
 
+/** Match explanations tree PT chip (`PREP_TEST_BADGE_SIZE` 64×64, 14px radius). */
+const PT_BADGE_SIZE = { width: 64, height: 64, minWidth: 64, minHeight: 64, borderRadius: 14 } as const
+
 function PtBadge({ number, tone = "default" }: { number: number; tone?: BadgeTone }) {
   const palette =
     tone === "muted"
@@ -180,27 +183,11 @@ function PtBadge({ number, tone = "default" }: { number: number; tone?: BadgeTon
   return (
     <div
       data-pt-badge
-      className={cn("relative box-border shrink-0 overflow-hidden rounded-[8px] border", palette)}
-      style={{ width: 32, height: 32, minWidth: 32, minHeight: 32 }}
+      className={cn("flex shrink-0 flex-col items-center justify-center border p-px", palette)}
+      style={PT_BADGE_SIZE}
     >
-      {/* Figma `I19956:59132;20920:43051` — 24×24 stack inset 4px inside the 32px badge */}
-      <div
-        className="absolute flex flex-col items-center overflow-hidden"
-        style={{ top: 4, left: 4, width: 24, height: 24 }}
-      >
-        <span
-          className="flex items-center justify-center font-bold"
-          style={{ height: 10, fontSize: 10, lineHeight: "10px", letterSpacing: 0.2 }}
-        >
-          PT
-        </span>
-        <span
-          className="flex items-center justify-center font-bold"
-          style={{ height: 14, width: 24, fontSize: 12, lineHeight: "14px", letterSpacing: 0.24 }}
-        >
-          {number || "—"}
-        </span>
-      </div>
+      <span className="w-[35px] text-center text-[12px] font-semibold leading-[1.35]">PT</span>
+      <span className="text-[24px] font-bold leading-[1.3] tabular-nums">{number || "—"}</span>
     </div>
   )
 }
@@ -305,8 +292,8 @@ function PrepTestListCardShell({
     >
       <div
         className={cn(
-          "flex h-[82px] items-center transition-colors",
-          center ? "justify-between px-4" : "gap-4 p-4",
+          "flex h-[88px] items-center transition-colors",
+          center ? "justify-between px-4" : "gap-4 px-4",
           expanded ? "rounded-t-[16px]" : undefined,
           !expanded && badgeTone !== "muted" && "group-hover:bg-[var(--primary-25)]",
         )}

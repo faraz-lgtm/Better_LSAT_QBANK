@@ -92,7 +92,7 @@ describe("PracticePrepTestsListPage sort", () => {
     expect(screen.getByRole("button", { name: "Completed (0)" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Untimed Review" })).toBeInTheDocument()
     expect(screen.getAllByText("Ready to Take")).toHaveLength(2)
-    expect(screen.getByText("901").closest("[data-pt-badge]")).toHaveStyle({ width: "32px", height: "32px" })
+    expect(screen.getByText("901").closest("[data-pt-badge]")).toHaveStyle({ width: "64px", height: "64px" })
     expect(screen.getByTestId("preptest-list-row-pt-901").className).toMatch(/bg-\[var\(--greyscale-0\)\]/)
     expect(screen.getByTestId("preptest-list-row-pt-901").className).toMatch(/hover:bg-\[var\(--primary-25\)\]/)
     expect(screen.getByTestId("preptest-list-row-pt-901").className).toMatch(/hover:border-\[var\(--primary\)\]/)
