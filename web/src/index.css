@@ -3488,13 +3488,22 @@ select.ds-input {
   color: var(--color-student-heading);
 }
 
+/* Override Google Docs / paste inline font styles so all pairs share the
+   container 18px size (builder TipTap hides this difference with text-base). */
 .rep-work-question-body .lsat-html-content *,
 .rep-work-question-body .lesson-html-body *,
+.rep-work-question-body.lsat-html-content *,
+.rep-work-question-body.lesson-html-body *,
 .rep-work-answer-body .lsat-html-content *,
 .rep-work-answer-body .lesson-html-body *,
+.rep-work-answer-body.lsat-html-content *,
+.rep-work-answer-body.lesson-html-body *,
 .rep-work-instructions-body .lsat-html-content *,
-.rep-work-instructions-body .lesson-html-body * {
+.rep-work-instructions-body .lesson-html-body *,
+.rep-work-instructions-body.lsat-html-content *,
+.rep-work-instructions-body.lesson-html-body * {
   font-family: inherit !important;
+  font-size: inherit !important;
 }
 
 .rep-work-instructions-body.lsat-html-content p,
