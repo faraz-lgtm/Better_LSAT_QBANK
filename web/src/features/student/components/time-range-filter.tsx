@@ -30,10 +30,73 @@ export function getTimeRangeLabel(value: TimeRangeValue): string {
   return TIME_RANGE_OPTIONS.find((option) => option.value === value)?.label ?? "All Time"
 }
 
+const DAYS_MS = 24 * 60 * 60 * 1000
+
 /**
- * Returns the number of most-recent points to keep for a given range when
- * filtering a series of equally-spaced datapoints. Used to give immediate
- * visual feedback in mock-data charts and history lists.
+ * Calendar cutoff for a time-range preset relative to `reference` (default: now).
+ * Returns null for "all" (no filtering).
+ */
+export function getTimeRangeCutoff(
+  value: TimeRangeValue,
+  reference: Date = new Date(),
+): Date | null {
+  switch (value) {
+    case "7d":
+      return new Date(reference.getTime() - 7 * DAYS_MS)
+    case "30d":
+      return new Date(reference.getTime() - 30 * DAYS_MS)
+    case "90d":
+      return new Date(reference.getTime() - 90 * DAYS_MS)
+    case "ytd":
+      return new Date(reference.getFullYear(), 0, 1)
+    case "all":
+    default:
+      return null
+  }
+}
+
+export type FilterByTimeRangeOptions = {
+  /** When the strict window is empty, keep the newest dated item (charts). */
+  keepNewestIfEmpty?: boolean
+  /** Clock used for relative windows / YTD. Defaults to now. */
+  reference?: Date
+}
+
+/**
+ * Filters items by an ISO date field against a real calendar time range.
+ * Items without a parseable date are dropped. Result is ascending by date.
+ */
+export function filterByTimeRange<T>(
+  items: readonly T[],
+  value: TimeRangeValue,
+  getIso: (item: T) => string | null | undefined,
+  options?: FilterByTimeRangeOptions,
+): T[] {
+  if (items.length === 0) return []
+
+  const dated = items
+    .map((item) => {
+      const iso = getIso(item)
+      const ms = iso ? new Date(iso).getTime() : Number.NaN
+      return { item, ms }
+    })
+    .filter((row) => Number.isFinite(row.ms))
+    .sort((a, b) => a.ms - b.ms)
+
+  if (dated.length === 0) return []
+
+  const cutoff = getTimeRangeCutoff(value, options?.reference ?? new Date())
+  if (!cutoff) return dated.map((row) => row.item)
+
+  const cutoffMs = cutoff.getTime()
+  const filtered = dated.filter((row) => row.ms >= cutoffMs).map((row) => row.item)
+  if (filtered.length > 0) return filtered
+  if (options?.keepNewestIfEmpty) return [dated[dated.length - 1]!.item]
+  return []
+}
+
+/**
+ * @deprecated Prefer {@link filterByTimeRange}. Percentage slice for mock charts only.
  */
 export function getTimeRangeWindow(value: TimeRangeValue, total: number): number {
   if (total <= 0) return 0
@@ -52,6 +115,7 @@ export function getTimeRangeWindow(value: TimeRangeValue, total: number): number
   }
 }
 
+/** @deprecated Prefer {@link filterByTimeRange}. */
 export function takeLastByTimeRange<T>(items: readonly T[], value: TimeRangeValue): T[] {
   const window = getTimeRangeWindow(value, items.length)
   return items.slice(items.length - window)

@@ -20,6 +20,7 @@ import {
 } from "@/features/student/analytics/components/analytics-overview-ui"
 import { practiceSessionResultsPath } from "@/features/student/analytics/analytics-results-paths"
 import {
+  filterTrajectoryByTimeRange,
   mapDrillSessionToHistoryEntry,
   mapOverviewToHeadlineStats,
   mapOverviewToSecondaryStats,
@@ -27,6 +28,7 @@ import {
   mapPrioritiesToSections,
   mapSectionSessionToHistoryEntry,
   mapTrajectoryToScoreProgress,
+  overviewScoresForTrajectoryWindow,
   withBestScoreFromTrajectory,
 } from "@/features/student/analytics/map-analytics"
 import {
@@ -41,11 +43,16 @@ import {
 } from "@/features/student/analytics/section-filter"
 import { useAnalyticsApi, usePracticeApi, useUsersApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import {
+  filterByTimeRange,
   TimeRangeSegmented,
-  takeLastByTimeRange,
   type TimeRangeValue,
 } from "@/features/student/components/time-range-filter"
-import type { AnalyticsOverview, PracticeSessionSummary, PriorityRow } from "@/lib/api/analytics"
+import type {
+  AnalyticsOverview,
+  PracticeSessionSummary,
+  PriorityRow,
+  TrajectoryPoint,
+} from "@/lib/api/analytics"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 
 const VALID_TABS = new Set(["overview", "priorities", "history"])
@@ -70,6 +77,13 @@ function filterHistoryBySection(
   sectionFilter: AnalyticsSectionFilter,
 ): PrepTestHistoryEntry[] {
   return entries.filter((entry) => matchesAnalyticsSectionFilter(entry.sectionType, sectionFilter))
+}
+
+function filterHistoryByTimeRange(
+  entries: PrepTestHistoryEntry[],
+  timeRange: TimeRangeValue,
+): PrepTestHistoryEntry[] {
+  return filterByTimeRange(entries, timeRange, (entry) => entry.takenAt)
 }
 
 function PrioritiesTab() {
@@ -247,7 +261,7 @@ function OverviewTab() {
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null)
   const [scoreTab, setScoreTab] = useState<ScoreProgressTab>("both")
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
-  const [trajectory, setTrajectory] = useState<ReturnType<typeof mapTrajectoryToScoreProgress>>([])
+  const [trajectoryPoints, setTrajectoryPoints] = useState<TrajectoryPoint[]>([])
   const [sections, setSections] = useState<ReturnType<typeof mapPrioritiesToSections>>([])
   const [goalScore, setGoalScore] = useState<number | null>(null)
   const [savingGoalScore, setSavingGoalScore] = useState(false)
@@ -280,8 +294,7 @@ function OverviewTab() {
     ])
       .then(([o, t, p, drills, sectionSessions, prepTests, studyContext]) => {
         setOverview(withBestScoreFromTrajectory(o, t))
-        const filtered = takeLastByTimeRange(t, timeRange)
-        setTrajectory(mapTrajectoryToScoreProgress(filtered))
+        setTrajectoryPoints(t)
         setSections(mapPrioritiesToSections(p))
         setGoalScore(studyContext?.preferences?.goalScore ?? null)
         setGoalScoreError(null)
@@ -303,7 +316,7 @@ function OverviewTab() {
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
       .finally(() => setLoading(false))
-  }, [analyticsApi, timeRange, usersApi])
+  }, [analyticsApi, usersApi])
 
   const refreshPrioritySections = useCallback(async () => {
     if (!analyticsApi) return
@@ -335,9 +348,30 @@ function OverviewTab() {
     [goalScore, refreshPrioritySections, usersApi],
   )
 
+  const rangedTrajectoryPoints = useMemo(
+    () => filterTrajectoryByTimeRange(trajectoryPoints, timeRange),
+    [timeRange, trajectoryPoints],
+  )
+
+  const trajectory = useMemo(
+    () => mapTrajectoryToScoreProgress(rangedTrajectoryPoints),
+    [rangedTrajectoryPoints],
+  )
+
+  const rangedOverview = useMemo(() => {
+    if (!overview) return null
+    if (timeRange === "all") return overview
+    return overviewScoresForTrajectoryWindow(overview, rangedTrajectoryPoints)
+  }, [overview, rangedTrajectoryPoints, timeRange])
+
   const headlineStats = useMemo(
-    () => (overview ? mapOverviewToHeadlineStats(overview) : []),
-    [overview],
+    () =>
+      rangedOverview
+        ? mapOverviewToHeadlineStats(rangedOverview, {
+            bestCaptionDetail: timeRange === "all" ? "all-time high" : "in selected range",
+          })
+        : [],
+    [rangedOverview, timeRange],
   )
   const secondaryStats = useMemo(
     () => (overview ? mapOverviewToSecondaryStats(overview) : []),
@@ -347,22 +381,26 @@ function OverviewTab() {
   const visibleDrillHistory = useMemo(
     () =>
       filterBookmarkedOnly(
-        filterHistoryBySection(drillHistory, drillSectionFilter),
+        filterHistoryBySection(filterHistoryByTimeRange(drillHistory, timeRange), drillSectionFilter),
         drillBookmarkedOnly,
       ),
-    [drillBookmarkedOnly, drillHistory, drillSectionFilter],
+    [drillBookmarkedOnly, drillHistory, drillSectionFilter, timeRange],
   )
   const visibleSectionHistory = useMemo(
     () =>
       filterBookmarkedOnly(
-        filterHistoryBySection(sectionHistory, sectionSectionFilter),
+        filterHistoryBySection(
+          filterHistoryByTimeRange(sectionHistory, timeRange),
+          sectionSectionFilter,
+        ),
         sectionBookmarkedOnly,
       ),
-    [sectionBookmarkedOnly, sectionHistory, sectionSectionFilter],
+    [sectionBookmarkedOnly, sectionHistory, sectionSectionFilter, timeRange],
   )
   const visiblePrepTestHistory = useMemo(
-    () => filterBookmarkedOnly(prepTestHistory, prepTestBookmarkedOnly),
-    [prepTestBookmarkedOnly, prepTestHistory],
+    () =>
+      filterBookmarkedOnly(filterHistoryByTimeRange(prepTestHistory, timeRange), prepTestBookmarkedOnly),
+    [prepTestBookmarkedOnly, prepTestHistory, timeRange],
   )
 
   const toggleHistoryBookmark = useCallback(

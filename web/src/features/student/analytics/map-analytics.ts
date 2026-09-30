@@ -26,6 +26,10 @@ import {
 import { resolvePrepTestLrRcScores } from "@/features/student/analytics/prep-test-lr-rc-scores"
 import { LSAT_SCALED_MAX, LSAT_SCALED_MIN } from "@/features/student/analytics/chart-y-axis"
 import { formatSectionResultsTitle } from "@/features/student/practice-session/lr-drill-results-format"
+import {
+  filterByTimeRange,
+  type TimeRangeValue,
+} from "@/features/student/components/time-range-filter"
 
 function isLsatScaledScore(value: number | null | undefined): value is number {
   return value != null && value >= LSAT_SCALED_MIN && value <= LSAT_SCALED_MAX
@@ -162,7 +166,10 @@ function numericToDifficulty(n: number | null): Difficulty {
   return "Hardest"
 }
 
-export function mapOverviewToHeadlineStats(overview: AnalyticsOverview): AnalyticsStat[] {
+export function mapOverviewToHeadlineStats(
+  overview: AnalyticsOverview,
+  options?: { bestCaptionDetail?: string },
+): AnalyticsStat[] {
   const stats: AnalyticsStat[] = []
   if (overview.bestScaledScore != null) {
     stats.push({
@@ -174,7 +181,7 @@ export function mapOverviewToHeadlineStats(overview: AnalyticsOverview): Analyti
         overview.bestPercentile != null
           ? formatOverviewPercentilePlain(overview.bestPercentile)
           : undefined,
-      captionDetail: "all-time high",
+      captionDetail: options?.bestCaptionDetail ?? "all-time high",
       // Figma Mean Score has a progress bar — Best Score does not.
     })
   }
@@ -282,6 +289,68 @@ export function withBestScoreFromTrajectory(
   }
   if (bestScaled === overview.bestScaledScore) return overview
   return { ...overview, bestScaledScore: bestScaled, bestPercentile }
+}
+
+/**
+ * Recomputes best/average PrepTest scores (and percentiles) for a filtered
+ * trajectory window. Other overview fields stay as all-time until the API
+ * accepts a date range.
+ */
+export function overviewScoresForTrajectoryWindow(
+  overview: AnalyticsOverview,
+  points: readonly TrajectoryPoint[],
+): AnalyticsOverview {
+  if (points.length === 0) {
+    return {
+      ...overview,
+      bestScaledScore: null,
+      bestPercentile: null,
+      averageScaledScore: null,
+      averagePercentile: null,
+      completedPrepTestCount: 0,
+    }
+  }
+
+  let bestScaled: number | null = null
+  let bestPercentile: number | null = null
+  let sumScaled = 0
+  let scaledCount = 0
+  let sumPercentile = 0
+  let percentileCount = 0
+
+  for (const point of points) {
+    const regularScaled = point.regularScaledScore ?? point.scaledScore
+    const regularPercentile = point.percentile
+    if (regularScaled != null) {
+      sumScaled += regularScaled
+      scaledCount += 1
+      if (bestScaled == null || regularScaled > bestScaled) {
+        bestScaled = regularScaled
+        bestPercentile = regularPercentile
+      }
+    }
+    if (regularPercentile != null) {
+      sumPercentile += regularPercentile
+      percentileCount += 1
+    }
+
+    const blindScaled = point.blindReviewScaledScore
+    const blindPercentile = point.blindReviewPercentile
+    if (blindScaled != null && (bestScaled == null || blindScaled > bestScaled)) {
+      bestScaled = blindScaled
+      bestPercentile = blindPercentile
+    }
+  }
+
+  return {
+    ...overview,
+    bestScaledScore: bestScaled,
+    bestPercentile,
+    averageScaledScore: scaledCount > 0 ? Math.round(sumScaled / scaledCount) : null,
+    averagePercentile:
+      percentileCount > 0 ? Math.round((sumPercentile / percentileCount) * 10) / 10 : null,
+    completedPrepTestCount: points.length,
+  }
 }
 
 export function mapTrajectoryToScoreProgress(points: TrajectoryPoint[]): ScoreProgressPoint[] {
@@ -537,6 +606,18 @@ export function filterTrajectoryByRange(
   if (!cutoffIso) return points
   const cutoff = new Date(cutoffIso).getTime()
   return points.filter((p) => new Date(p.completedAt).getTime() >= cutoff)
+}
+
+/** Filters trajectory points by a calendar time-range preset (ascending by completedAt). */
+export function filterTrajectoryByTimeRange(
+  points: readonly TrajectoryPoint[],
+  value: TimeRangeValue,
+  reference: Date = new Date(),
+): TrajectoryPoint[] {
+  return filterByTimeRange(points, value, (point) => point.completedAt, {
+    reference,
+    keepNewestIfEmpty: true,
+  })
 }
 
 export { numericToDifficulty }
