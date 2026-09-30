@@ -3489,7 +3489,7 @@ select.ds-input {
 }
 
 /* Override Google Docs / paste inline font styles so all pairs share the
-   container 18px size (builder TipTap hides this difference with text-base). */
+   container 18px / 1.4 size (builder TipTap hides this difference with text-base). */
 .rep-work-question-body .lsat-html-content *,
 .rep-work-question-body .lesson-html-body *,
 .rep-work-question-body.lsat-html-content *,
@@ -3504,6 +3504,7 @@ select.ds-input {
 .rep-work-instructions-body.lesson-html-body * {
   font-family: inherit !important;
   font-size: inherit !important;
+  line-height: inherit !important;
 }
 
 .rep-work-instructions-body.lsat-html-content p,
