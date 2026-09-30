@@ -163,8 +163,15 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       return out
     },
 
-    async countAnswerEvents(userId: string): Promise<number> {
-      const { data, error } = await client.from('answer_events').select('question_id').eq('user_id', userId)
+    async countAnswerEvents(
+      userId: string,
+      opts?: { completedSince?: string },
+    ): Promise<number> {
+      let query = client.from('answer_events').select('question_id').eq('user_id', userId)
+      if (opts?.completedSince) {
+        query = query.gte('created_at', opts.completedSince)
+      }
+      const { data, error } = await query
       if (error) throw error
       const rows = (data as { question_id: string }[]) ?? []
       if (rows.length === 0) return 0
@@ -172,28 +179,43 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       return rows.filter((row) => visibility.get(row.question_id) === true).length
     },
 
-    async sumCompletedSessionStudyMinutes(userId: string): Promise<number> {
+    async sumCompletedSessionStudyMinutes(
+      userId: string,
+      opts?: { completedSince?: string },
+    ): Promise<number> {
       const { data, error } = await client.rpc('sum_user_practice_study_minutes', {
         p_user_id: userId,
+        p_completed_since: opts?.completedSince ?? null,
       })
       if (error) throw error
       return parseStudyMinutesRpcValue(data)
     },
 
-    async sumCompletedLessonStudyMinutes(userId: string): Promise<number> {
+    async sumCompletedLessonStudyMinutes(
+      userId: string,
+      opts?: { completedSince?: string },
+    ): Promise<number> {
       const { data, error } = await client.rpc('sum_user_lesson_study_minutes', {
         p_user_id: userId,
+        p_completed_since: opts?.completedSince ?? null,
       })
       if (error) throw error
       return parseStudyMinutesRpcValue(data)
     },
 
-    async countDrillAnswerEvents(userId: string): Promise<{ correct: number; total: number }> {
-      const { data, error } = await client
+    async countDrillAnswerEvents(
+      userId: string,
+      opts?: { completedSince?: string },
+    ): Promise<{ correct: number; total: number }> {
+      let query = client
         .from('answer_events')
         .select('is_correct, question_id')
         .eq('user_id', userId)
         .eq('session_kind', 'DRILL')
+      if (opts?.completedSince) {
+        query = query.gte('created_at', opts.completedSince)
+      }
+      const { data, error } = await query
       if (error) throw error
       const rows = (data as { is_correct: boolean; question_id: string }[]) ?? []
       if (rows.length === 0) return { correct: 0, total: 0 }
@@ -204,8 +226,11 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       return { correct, total }
     },
 
-    async listCompletedPreptests(userId: string): Promise<CompletedPreptestRow[]> {
-      const { data, error } = await client
+    async listCompletedPreptests(
+      userId: string,
+      opts?: { completedSince?: string },
+    ): Promise<CompletedPreptestRow[]> {
+      let query = client
         .from('practice_sessions')
         .select(
           `
@@ -226,7 +251,10 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         .eq('user_id', userId)
         .eq('kind', 'PREPTEST')
         .not('completed_at', 'is', null)
-        .order('completed_at', { ascending: true })
+      if (opts?.completedSince) {
+        query = query.gte('completed_at', opts.completedSince)
+      }
+      const { data, error } = await query.order('completed_at', { ascending: true })
       if (error) throw error
       return ((data as unknown as CompletedPreptestRow[]) ?? []).filter((row) =>
         isStudentVisiblePrepTest(prepTestModuleFromJoin(row.admin_prep_tests)),
@@ -457,10 +485,13 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       }[]) ?? []
     },
 
-    async listCompletedSectionSessions(userId: string) {
+    async listCompletedSectionSessions(
+      userId: string,
+      opts?: { completedSince?: string },
+    ) {
       const visiblePrepTestIds = await this.listStudentVisiblePrepTestIds()
       if (visiblePrepTestIds.length === 0) return []
-      const { data, error } = await client
+      let query = client
         .from('practice_sessions')
         .select(
           `
@@ -478,7 +509,10 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         .eq('kind', 'SECTION')
         .not('completed_at', 'is', null)
         .in('prep_test_id', visiblePrepTestIds)
-        .order('completed_at', { ascending: true })
+      if (opts?.completedSince) {
+        query = query.gte('completed_at', opts.completedSince)
+      }
+      const { data, error } = await query.order('completed_at', { ascending: true })
       if (error) throw error
       return (data as {
         id: string

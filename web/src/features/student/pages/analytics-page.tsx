@@ -28,7 +28,6 @@ import {
   mapPrioritiesToSections,
   mapSectionSessionToHistoryEntry,
   mapTrajectoryToScoreProgress,
-  overviewScoresForTrajectoryWindow,
   withBestScoreFromTrajectory,
 } from "@/features/student/analytics/map-analytics"
 import {
@@ -44,6 +43,7 @@ import {
 import { useAnalyticsApi, usePracticeApi, useUsersApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import {
   filterByTimeRange,
+  getTimeRangeCutoff,
   TimeRangeSegmented,
   type TimeRangeValue,
 } from "@/features/student/components/time-range-filter"
@@ -258,7 +258,7 @@ function OverviewTab() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [overview, setOverview] = useState<AnalyticsOverview | null>(null)
+  const [overviewRaw, setOverviewRaw] = useState<AnalyticsOverview | null>(null)
   const [scoreTab, setScoreTab] = useState<ScoreProgressTab>("both")
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
   const [trajectoryPoints, setTrajectoryPoints] = useState<TrajectoryPoint[]>([])
@@ -284,7 +284,6 @@ function OverviewTab() {
     }
     setLoading(true)
     void Promise.all([
-      analyticsApi.getOverview(),
       analyticsApi.getTrajectory(),
       analyticsApi.getPriorities(),
       analyticsApi.getSessions({ kind: "DRILL", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
@@ -292,8 +291,7 @@ function OverviewTab() {
       analyticsApi.getSessions({ kind: "PREPTEST", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
       usersApi?.getStudyContext() ?? Promise.resolve(null),
     ])
-      .then(([o, t, p, drills, sectionSessions, prepTests, studyContext]) => {
-        setOverview(withBestScoreFromTrajectory(o, t))
+      .then(([t, p, drills, sectionSessions, prepTests, studyContext]) => {
         setTrajectoryPoints(t)
         setSections(mapPrioritiesToSections(p))
         setGoalScore(studyContext?.preferences?.goalScore ?? null)
@@ -317,6 +315,32 @@ function OverviewTab() {
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
       .finally(() => setLoading(false))
   }, [analyticsApi, usersApi])
+
+  useEffect(() => {
+    if (!analyticsApi) return
+    let cancelled = false
+    const completedSince = getTimeRangeCutoff(timeRange)?.toISOString()
+    void analyticsApi
+      .getOverview(completedSince ? { completedSince } : undefined)
+      .then((o) => {
+        if (cancelled) return
+        setOverviewRaw(o)
+        setError(null)
+      })
+      .catch((e) => {
+        if (cancelled) return
+        setError(e instanceof Error ? e.message : "Failed to load overview")
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [analyticsApi, timeRange])
+
+  const overview = useMemo(() => {
+    if (!overviewRaw) return null
+    if (timeRange !== "all") return overviewRaw
+    return withBestScoreFromTrajectory(overviewRaw, trajectoryPoints)
+  }, [overviewRaw, timeRange, trajectoryPoints])
 
   const refreshPrioritySections = useCallback(async () => {
     if (!analyticsApi) return
@@ -358,20 +382,14 @@ function OverviewTab() {
     [rangedTrajectoryPoints],
   )
 
-  const rangedOverview = useMemo(() => {
-    if (!overview) return null
-    if (timeRange === "all") return overview
-    return overviewScoresForTrajectoryWindow(overview, rangedTrajectoryPoints)
-  }, [overview, rangedTrajectoryPoints, timeRange])
-
   const headlineStats = useMemo(
     () =>
-      rangedOverview
-        ? mapOverviewToHeadlineStats(rangedOverview, {
+      overview
+        ? mapOverviewToHeadlineStats(overview, {
             bestCaptionDetail: timeRange === "all" ? "all-time high" : "in selected range",
           })
         : [],
-    [rangedOverview, timeRange],
+    [overview, timeRange],
   )
   const secondaryStats = useMemo(
     () => (overview ? mapOverviewToSecondaryStats(overview) : []),
@@ -422,10 +440,10 @@ function OverviewTab() {
     [practiceApi],
   )
 
-  if (loading) {
+  if (error) return <p className="text-sm text-red-600">{error}</p>
+  if (loading || !overview) {
     return <StudentPageLoader centered className="min-h-0 flex-1" label="Loading overview…" />
   }
-  if (error) return <p className="text-sm text-red-600">{error}</p>
 
   return (
     <div className="flex flex-col gap-6 pb-8">

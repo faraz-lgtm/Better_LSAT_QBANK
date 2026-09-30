@@ -43,6 +43,34 @@ describe("createAnalyticsApi", () => {
     })
   })
 
+  it("getOverview forwards completedSince when provided", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        bestScaledScore: 160,
+        averageScaledScore: 158,
+        completedPrepTestCount: 1,
+        totalQuestionsAnswered: 10,
+        drillAccuracyPct: 70,
+        totalDrillQuestionsAnswered: 5,
+        averageLrMissedPerPrepTest: 4,
+        averageRcMissedPerPrepTest: 5,
+        totalStudyMinutes: 30,
+      },
+      error: null,
+    })
+    const api = createAnalyticsApi(mockSupabase(invoke))
+    const completedSince = "2026-08-31T12:00:00.000Z"
+
+    const out = await api.getOverview({ completedSince })
+
+    expect(out.bestScaledScore).toBe(160)
+    expect(invoke).toHaveBeenCalledWith("analytics-overview", {
+      method: "POST",
+      body: { completedSince },
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
+
   it("getQuestionTypeReview invokes analytics-question-type-review", async () => {
     const invoke = vi.fn().mockResolvedValue({
       data: {

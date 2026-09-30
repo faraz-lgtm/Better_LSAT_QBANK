@@ -45,7 +45,7 @@ function PracticePrepTestSectionIntroPanel({
       </div>
 
       <div className="flex w-full flex-col items-end gap-4">
-        <p className="w-full text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[#0d0d12]">
+        <p className="w-full text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
           Directions: {sectionIntroDirections(sectionType)}
         </p>
         <Button

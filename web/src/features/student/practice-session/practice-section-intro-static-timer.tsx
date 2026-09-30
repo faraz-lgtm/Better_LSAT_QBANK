@@ -37,7 +37,7 @@ function PracticeSectionIntroStaticTimer({
         <span className="shrink-0 whitespace-nowrap text-[14px] font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
           {label}
         </span>
-        <span className="w-[46px] shrink-0 whitespace-nowrap text-right text-[14px] font-semibold leading-[1.5] tabular-nums tracking-[0.28px] text-[#041a44]">
+        <span className="w-[46px] shrink-0 whitespace-nowrap text-right text-[14px] font-semibold leading-[1.5] tabular-nums tracking-[0.28px] text-[var(--color-student-heading)]">
           {formatPracticeElapsed(displaySeconds)}
         </span>
       </div>

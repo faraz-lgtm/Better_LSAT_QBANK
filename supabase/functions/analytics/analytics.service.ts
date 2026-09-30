@@ -363,7 +363,8 @@ function headlineFromQuestionMeta(row: QuestionExplanationMetaRow): {
 
 export function createAnalyticsService(deps: { repository: AnalyticsRepository }) {
   return {
-    async getOverview(userId: string) {
+    async getOverview(userId: string, opts?: { completedSince?: string }) {
+      const sinceOpts = opts?.completedSince ? { completedSince: opts.completedSince } : undefined
       const [
         totalQuestionsAnswered,
         drillStats,
@@ -372,12 +373,12 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
         practiceStudyMinutes,
         lessonStudyMinutes,
       ] = await Promise.all([
-        deps.repository.countAnswerEvents(userId),
-        deps.repository.countDrillAnswerEvents(userId),
-        deps.repository.listCompletedPreptests(userId),
-        deps.repository.listCompletedSectionSessions(userId),
-        deps.repository.sumCompletedSessionStudyMinutes(userId),
-        deps.repository.sumCompletedLessonStudyMinutes(userId),
+        deps.repository.countAnswerEvents(userId, sinceOpts),
+        deps.repository.countDrillAnswerEvents(userId, sinceOpts),
+        deps.repository.listCompletedPreptests(userId, sinceOpts),
+        deps.repository.listCompletedSectionSessions(userId, sinceOpts),
+        deps.repository.sumCompletedSessionStudyMinutes(userId, sinceOpts),
+        deps.repository.sumCompletedLessonStudyMinutes(userId, sinceOpts),
       ])
 
       const resolvedScores: { scaled: number; percentile: number | null; prepTestId: string | null }[] =
