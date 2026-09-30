@@ -22,21 +22,23 @@ const lesson: PrepLesson = {
 }
 
 describe("ActiveDrillIntroCard", () => {
-  it("keeps the current lesson body and Start CTA", () => {
+  it("shows shared intro copy without unlocking lesson body HTML", () => {
     render(<ActiveDrillIntroCard lesson={lesson} hideTitle onStartDrill={() => {}} />)
 
-    expect(screen.getByText("Stimulus Analysis")).toBeInTheDocument()
-    expect(screen.getByText("Hidden until complete.")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Start" })).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Start Active Drill" })).not.toBeInTheDocument()
+    expect(
+      screen.getByText("Work through this LSAT question with the concepts you've learned so far."),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("Stimulus Analysis")).not.toBeInTheDocument()
+    expect(screen.queryByText("Hidden until complete.")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Start Active Drill" })).toBeInTheDocument()
   })
 
-  it("starts from the current lesson Start button", async () => {
+  it("starts from Start Active Drill", async () => {
     const user = userEvent.setup()
     const onStartDrill = vi.fn()
     render(<ActiveDrillIntroCard lesson={lesson} hideTitle onStartDrill={onStartDrill} />)
 
-    await user.click(screen.getByRole("button", { name: "Start" }))
+    await user.click(screen.getByRole("button", { name: "Start Active Drill" }))
     expect(onStartDrill).toHaveBeenCalledTimes(1)
   })
 

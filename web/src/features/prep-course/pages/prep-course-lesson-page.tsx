@@ -23,7 +23,11 @@ import {
   isResolvedPrepCourseDrillLesson,
 } from "@/features/prep-course/lib/prep-course-format"
 import { mergeActiveDrillAttemptBlindReview } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
-import { resolveDisplayedActiveDrillAttempt } from "@/features/prep-course/lib/active-drill-results-query"
+import {
+  resolveActiveDrillLessonEntry,
+  resolveDisplayedActiveDrillAttempt,
+  withActiveDrillResultsQuery,
+} from "@/features/prep-course/lib/active-drill-results-query"
 import {
   activeDrillStartPath,
   resolveLessonDrillStartAction,
@@ -265,8 +269,32 @@ function PrepCourseLessonPage() {
     if (!course || !lesson || loading) return
     if (isStartScreen && resolveDrillLessonType(lesson) !== "active_drill") {
       navigate(`/app/prep-course/${course.slug}/${lesson.slug}`, { replace: true })
+      return
     }
-  }, [course, isStartScreen, lesson, loading, navigate])
+    if (resolveDrillLessonType(lesson) !== "active_drill") return
+    const entry = resolveActiveDrillLessonEntry({
+      isStartScreen,
+      search: location.search,
+      hasAttempt: Boolean(activeDrillAttempt),
+    })
+    if (entry === "start") {
+      navigate(activeDrillStartPath(course.slug, lesson.slug), { replace: true })
+      return
+    }
+    if (entry === "results") {
+      navigate(withActiveDrillResultsQuery(`/app/prep-course/${course.slug}/${lesson.slug}`), {
+        replace: true,
+      })
+    }
+  }, [
+    activeDrillAttempt,
+    course,
+    isStartScreen,
+    lesson,
+    loading,
+    location.search,
+    navigate,
+  ])
 
   const handleReviewDrill = useCallback(() => {
     lessonContentRef.current?.closest("section")?.scrollTo({ top: 0, behavior: "smooth" })
@@ -289,7 +317,7 @@ function PrepCourseLessonPage() {
     setError(null)
     try {
       const { session } = await practiceApi.startLessonDrill(startLessonDrillRequest(lesson, linkedQuestionRefs))
-      const returnTo = `/app/prep-course/${course.slug}/${lesson.slug}`
+      const returnTo = withActiveDrillResultsQuery(`/app/prep-course/${course.slug}/${lesson.slug}`)
       navigate(`/app/practice/drills/session/${session.id}?returnTo=${encodeURIComponent(returnTo)}`)
     } catch (e) {
       const msg = e instanceof Error ? formatSupabaseCallError(e) : "Failed to start drill"

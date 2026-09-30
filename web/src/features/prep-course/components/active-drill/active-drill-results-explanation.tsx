@@ -100,32 +100,34 @@ function ActiveDrillResultsExplanation({
   }
 
   return (
-    <article className="mx-auto flex w-full max-w-[888px] flex-col overflow-hidden rounded-[18px] bg-[var(--greyscale-0)]">
+    <article className="flex w-full min-w-0 max-w-full flex-col overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
       {embedSrc || stem ? (
-        <header className="flex flex-col items-center gap-5 px-8 pb-8 pt-12 md:px-16">
-          {embedSrc ? (
-            <div className="relative h-[310px] w-full max-w-[640px] overflow-hidden rounded-t-[18px] bg-[var(--primary-25)]">
-              <iframe
-                className="absolute inset-0 h-full w-full"
-                src={embedSrc}
-                title={videoTitle}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
-          ) : null}
-          {stem ? (
-            <div className="flex w-full max-w-[640px] flex-col gap-3">
-              <h2 className="m-0 text-[24px] font-bold leading-[1.3] text-[var(--primary-800)]">Question</h2>
-              <ExplanationCopy text={stem} className="active-drill-results-stem" />
-            </div>
-          ) : null}
+        <header className="flex w-full flex-col items-center px-6 pb-8 pt-10 md:px-8 md:pt-12">
+          <div className="flex w-full max-w-[640px] flex-col items-stretch gap-5">
+            {embedSrc ? (
+              <div className="relative h-[310px] w-full overflow-hidden rounded-t-[18px] bg-[var(--primary-25)]">
+                <iframe
+                  className="absolute inset-0 h-full w-full"
+                  src={embedSrc}
+                  title={videoTitle}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            ) : null}
+            {stem ? (
+              <div className="flex w-full flex-col gap-3">
+                <h2 className="m-0 text-[24px] font-bold leading-[1.3] text-[var(--primary-800)]">Question</h2>
+                <ExplanationCopy text={stem} className="active-drill-results-stem" />
+              </div>
+            ) : null}
+          </div>
         </header>
       ) : null}
 
       <div
         className={cn(
-          "flex w-full flex-col items-center px-8 py-8 md:px-[124px]",
+          "flex w-full flex-col items-center px-6 py-8 md:px-8",
           embedSrc || stem ? "border-t border-[var(--greyscale-100)]" : "pt-8",
         )}
       >

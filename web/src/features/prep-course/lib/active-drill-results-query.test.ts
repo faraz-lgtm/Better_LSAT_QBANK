@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   isActiveDrillResultsQuery,
+  resolveActiveDrillLessonEntry,
   resolveDisplayedActiveDrillAttempt,
   withActiveDrillResultsQuery,
 } from "@/features/prep-course/lib/active-drill-results-query"
@@ -23,6 +24,24 @@ describe("active drill results query", () => {
     expect(withActiveDrillResultsQuery("/app/prep-course/core/active-drill-1?tab=notes")).toBe(
       "/app/prep-course/core/active-drill-1?tab=notes&results=1",
     )
+  })
+
+  it("routes unfinished Active Drills to the shared start screen", () => {
+    expect(
+      resolveActiveDrillLessonEntry({ isStartScreen: false, search: "", hasAttempt: false }),
+    ).toBe("start")
+    expect(
+      resolveActiveDrillLessonEntry({ isStartScreen: true, search: "", hasAttempt: false }),
+    ).toBe("stay")
+  })
+
+  it("routes completed Active Drills to results + lesson content", () => {
+    expect(
+      resolveActiveDrillLessonEntry({ isStartScreen: false, search: "", hasAttempt: true }),
+    ).toBe("results")
+    expect(
+      resolveActiveDrillLessonEntry({ isStartScreen: false, search: "?results=1", hasAttempt: true }),
+    ).toBe("stay")
   })
 
   it("hides a stored active-drill attempt until after submit", () => {
