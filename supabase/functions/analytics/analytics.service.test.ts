@@ -250,6 +250,146 @@ Deno.test('getOverview returns null drill accuracy when zero drill events', asyn
   assertEquals(o.totalDrillQuestionsAnswered, 0)
 })
 
+Deno.test('getOverview with completedSince only aggregates in-range data', async () => {
+  const since = '2026-08-01T00:00:00.000Z'
+  const calls: {
+    countAnswerEvents?: { completedSince?: string }
+    countDrillAnswerEvents?: { completedSince?: string }
+    listCompletedPreptests?: { completedSince?: string }
+    listCompletedSectionSessions?: { completedSince?: string }
+    sumCompletedSessionStudyMinutes?: { completedSince?: string }
+    sumCompletedLessonStudyMinutes?: { completedSince?: string }
+  } = {}
+
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      countAnswerEvents: async (_userId, opts) => {
+        calls.countAnswerEvents = opts
+        return 4
+      },
+      countDrillAnswerEvents: async (_userId, opts) => {
+        calls.countDrillAnswerEvents = opts
+        return { correct: 3, total: 4 }
+      },
+      listCompletedPreptests: async (_userId, opts) => {
+        calls.listCompletedPreptests = opts
+        return [
+          completedPreptestRow({
+            id: 'recent',
+            completed_at: '2026-09-01T00:00:00Z',
+            raw_score: 80,
+            scaled_score: 165,
+            percentile: 80,
+            prep_test_id: 'pt-recent',
+            admin_prep_tests: { title: 'PT Recent', module_id: 'LSAC910' },
+          }),
+        ]
+      },
+      listCompletedSectionSessions: async (_userId, opts) => {
+        calls.listCompletedSectionSessions = opts
+        return [
+          {
+            id: 'sec-lr-recent',
+            prep_test_id: 'pt-recent',
+            section_id: 'section-lr',
+            started_at: '2026-09-01T00:10:00Z',
+            completed_at: '2026-09-01T00:40:00Z',
+            raw_score: 20,
+            metadata: {
+              sectionType: 'LR',
+              questionIds: Array.from({ length: 25 }, (_, i) => `lr${i}`),
+            },
+            admin_sections: { is_experimental: false, section_type: 'LR' as const },
+          },
+          {
+            id: 'sec-rc-recent',
+            prep_test_id: 'pt-recent',
+            section_id: 'section-rc',
+            started_at: '2026-09-01T00:45:00Z',
+            completed_at: '2026-09-01T01:15:00Z',
+            raw_score: 18,
+            metadata: {
+              sectionType: 'RC',
+              questionIds: Array.from({ length: 27 }, (_, i) => `rc${i}`),
+            },
+            admin_sections: { is_experimental: false, section_type: 'RC' as const },
+          },
+        ]
+      },
+      sumCompletedSessionStudyMinutes: async (_userId, opts) => {
+        calls.sumCompletedSessionStudyMinutes = opts
+        return 40
+      },
+      sumCompletedLessonStudyMinutes: async (_userId, opts) => {
+        calls.sumCompletedLessonStudyMinutes = opts
+        return 10
+      },
+      listAnswerEventsForSessions: async () => [
+        ...Array.from({ length: 5 }, (_, i) =>
+          answerEvent({
+            practice_session_id: 'sec-lr-recent',
+            question_id: `lr${i}`,
+            is_correct: false,
+            section_type: 'LR',
+          }),
+        ),
+        ...Array.from({ length: 9 }, (_, i) =>
+          answerEvent({
+            practice_session_id: 'sec-rc-recent',
+            question_id: `rc${i}`,
+            is_correct: false,
+            section_type: 'RC',
+          }),
+        ),
+      ],
+    }),
+  })
+
+  const o = await service.getOverview('user-1', { completedSince: since })
+
+  assertEquals(calls.countAnswerEvents?.completedSince, since)
+  assertEquals(calls.countDrillAnswerEvents?.completedSince, since)
+  assertEquals(calls.listCompletedPreptests?.completedSince, since)
+  assertEquals(calls.listCompletedSectionSessions?.completedSince, since)
+  assertEquals(calls.sumCompletedSessionStudyMinutes?.completedSince, since)
+  assertEquals(calls.sumCompletedLessonStudyMinutes?.completedSince, since)
+
+  assertEquals(o.completedPrepTestCount, 1)
+  assertEquals(o.bestScaledScore, 165)
+  assertEquals(o.averageScaledScore, 165)
+  assertEquals(o.totalQuestionsAnswered, 4)
+  assertEquals(o.drillAccuracyPct, 75)
+  assertEquals(o.averageLrMissedPerPrepTest, 5)
+  assertEquals(o.averageRcMissedPerPrepTest, 9)
+  assertEquals(o.totalStudyMinutes, 50)
+})
+
+Deno.test('getOverview with completedSince and empty window returns null scores', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      countAnswerEvents: async () => 0,
+      countDrillAnswerEvents: async () => ({ correct: 0, total: 0 }),
+      listCompletedPreptests: async () => [],
+      listCompletedSectionSessions: async () => [],
+      sumCompletedSessionStudyMinutes: async () => 0,
+      sumCompletedLessonStudyMinutes: async () => 0,
+    }),
+  })
+  const o = await service.getOverview('user-1', {
+    completedSince: '2026-09-01T00:00:00.000Z',
+  })
+  assertEquals(o.bestScaledScore, null)
+  assertEquals(o.averageScaledScore, null)
+  assertEquals(o.bestPercentile, null)
+  assertEquals(o.averagePercentile, null)
+  assertEquals(o.completedPrepTestCount, 0)
+  assertEquals(o.averageLrMissedPerPrepTest, null)
+  assertEquals(o.averageRcMissedPerPrepTest, null)
+  assertEquals(o.drillAccuracyPct, null)
+  assertEquals(o.totalQuestionsAnswered, 0)
+  assertEquals(o.totalStudyMinutes, 0)
+})
+
 Deno.test('getOverview uses scored section raw_score for LR/RC misses', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({

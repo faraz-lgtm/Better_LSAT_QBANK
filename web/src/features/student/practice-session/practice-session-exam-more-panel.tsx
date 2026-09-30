@@ -38,7 +38,15 @@ type PracticeSessionExamMorePanelProps = {
 function ExamMoreIcon({ src, size }: { src: string; size: number }) {
   return (
     <span className="relative flex shrink-0 items-center justify-center overflow-hidden" style={{ width: size, height: size }}>
-      <img src={src} alt="" width={size} height={size} className="size-full max-w-none" draggable={false} />
+      {/* Figma assets are dark navy; invert in dark mode so they match heading text. */}
+      <img
+        src={src}
+        alt=""
+        width={size}
+        height={size}
+        className="size-full max-w-none dark:brightness-0 dark:invert"
+        draggable={false}
+      />
     </span>
   )
 }

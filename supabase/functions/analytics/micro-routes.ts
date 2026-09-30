@@ -58,6 +58,7 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
   let sessionId: string | undefined
   let questionTypeId: string | undefined
   let includeKinds: PracticeSessionKind[] | undefined
+  let completedSince: string | undefined
 
   if (req.method === 'GET') {
     const kindParam = url.searchParams.get('kind')
@@ -74,6 +75,11 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
     questionTypeId = typeof qtid === 'string' && qtid.length > 0 ? qtid : undefined
     const kindsParam = url.searchParams.getAll('includeKinds').filter(isSessionKind)
     includeKinds = kindsParam.length > 0 ? kindsParam : undefined
+    const sinceParam = url.searchParams.get('completedSince')
+    completedSince =
+      typeof sinceParam === 'string' && sinceParam.length > 0 && !Number.isNaN(Date.parse(sinceParam))
+        ? sinceParam
+        : undefined
   } else {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
     const readNum = (v: unknown, fallback: number) => {
@@ -99,6 +105,9 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
       )
       includeKinds = parsed.length > 0 ? parsed : undefined
     }
+    const sinceRaw = typeof body.completedSince === 'string' ? body.completedSince : undefined
+    completedSince =
+      sinceRaw && sinceRaw.length > 0 && !Number.isNaN(Date.parse(sinceRaw)) ? sinceRaw : undefined
   }
 
   const service = createAnalyticsService({
@@ -107,7 +116,10 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
 
   try {
     if (resource === 'overview') {
-      const data = await service.getOverview(user.id)
+      const data = await service.getOverview(
+        user.id,
+        completedSince ? { completedSince } : undefined,
+      )
       return json(data, {}, corsHeaders)
     }
     if (resource === 'trajectory') {
