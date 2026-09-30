@@ -7,8 +7,8 @@ import { StudentMain } from "@/features/student/components/student-main"
 import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
 import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
 import {
+  filterByTimeRange,
   TimeRangeSegmented,
-  takeLastByTimeRange,
   type TimeRangeValue,
 } from "@/features/student/components/time-range-filter"
 import {
@@ -372,11 +372,23 @@ function AnalyticsSectionsPage() {
   )
 
   const lrPoints = useMemo(
-    () => takeLastByTimeRange(sectionProgressFromSessions(sectionSessions, "LR"), timeRange),
+    () =>
+      filterByTimeRange(
+        sectionProgressFromSessions(sectionSessions, "LR"),
+        timeRange,
+        (point) => point.completedAt,
+        { keepNewestIfEmpty: true },
+      ),
     [sectionSessions, timeRange],
   )
   const rcPoints = useMemo(
-    () => takeLastByTimeRange(sectionProgressFromSessions(sectionSessions, "RC"), timeRange),
+    () =>
+      filterByTimeRange(
+        sectionProgressFromSessions(sectionSessions, "RC"),
+        timeRange,
+        (point) => point.completedAt,
+        { keepNewestIfEmpty: true },
+      ),
     [sectionSessions, timeRange],
   )
   const lrYAxisLabels = useMemo(
@@ -409,7 +421,7 @@ function AnalyticsSectionsPage() {
   )
 
   const visibleEntries = useMemo(() => {
-    const ranged = takeLastByTimeRange(entries, timeRange)
+    const ranged = filterByTimeRange(entries, timeRange, (entry) => entry.takenAt)
     return filterBookmarkedOnly(sortHistoryEntries(ranged, historySort), bookmarkedOnly)
   }, [bookmarkedOnly, entries, historySort, timeRange])
 

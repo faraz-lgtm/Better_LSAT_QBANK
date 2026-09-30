@@ -16,6 +16,8 @@ import {
   mapTrajectoryToScoreProgress,
   mapPrioritiesToSections,
   withBestScoreFromTrajectory,
+  overviewScoresForTrajectoryWindow,
+  filterTrajectoryByTimeRange,
 } from "@/features/student/analytics/map-analytics"
 import type { AnalyticsOverview, PracticeSessionSummary, PriorityRow, TrajectoryPoint } from "@/lib/api/analytics"
 
@@ -320,6 +322,93 @@ describe("map-analytics", () => {
     ])
     expect(lifted.bestScaledScore).toBe(176)
     expect(lifted.bestPercentile).toBe(99.9)
+  })
+
+  it("recomputes best/average scores for a trajectory window", () => {
+    const overview: AnalyticsOverview = {
+      bestScaledScore: 176,
+      averageScaledScore: 150,
+      bestPercentile: 99,
+      averagePercentile: 50,
+      completedPrepTestCount: 10,
+      totalQuestionsAnswered: 100,
+      drillAccuracyPct: 70,
+      totalDrillQuestionsAnswered: 50,
+      averageLrMissedPerPrepTest: 5,
+      averageRcMissedPerPrepTest: 6,
+      totalStudyMinutes: 120,
+    }
+    const windowed = overviewScoresForTrajectoryWindow(overview, [
+      {
+        sessionId: "a",
+        prepTestTitle: "PrepTest 1",
+        moduleId: "LSAC1",
+        rawScore: 70,
+        scaledScore: 160,
+        percentile: 70,
+        regularRawScore: 70,
+        regularScaledScore: 160,
+        blindReviewRawScore: null,
+        blindReviewScaledScore: null,
+        blindReviewPercentile: null,
+        completedAt: "2026-09-01T00:00:00Z",
+      },
+      {
+        sessionId: "b",
+        prepTestTitle: "PrepTest 2",
+        moduleId: "LSAC2",
+        rawScore: 75,
+        scaledScore: 165,
+        percentile: 80,
+        regularRawScore: 75,
+        regularScaledScore: 165,
+        blindReviewRawScore: null,
+        blindReviewScaledScore: null,
+        blindReviewPercentile: null,
+        completedAt: "2026-09-15T00:00:00Z",
+      },
+    ])
+    expect(windowed.bestScaledScore).toBe(165)
+    expect(windowed.bestPercentile).toBe(80)
+    expect(windowed.averageScaledScore).toBe(163)
+    expect(windowed.averagePercentile).toBe(75)
+    expect(windowed.completedPrepTestCount).toBe(2)
+    expect(windowed.totalStudyMinutes).toBe(120)
+  })
+
+  it("filters trajectory by calendar time range", () => {
+    const points: TrajectoryPoint[] = [
+      {
+        sessionId: "old",
+        prepTestTitle: "PrepTest 1",
+        moduleId: "LSAC1",
+        rawScore: 70,
+        scaledScore: 160,
+        percentile: 70,
+        regularRawScore: 70,
+        regularScaledScore: 160,
+        blindReviewRawScore: null,
+        blindReviewScaledScore: null,
+        blindReviewPercentile: null,
+        completedAt: "2026-01-01T00:00:00Z",
+      },
+      {
+        sessionId: "new",
+        prepTestTitle: "PrepTest 2",
+        moduleId: "LSAC2",
+        rawScore: 75,
+        scaledScore: 165,
+        percentile: 80,
+        regularRawScore: 75,
+        regularScaledScore: 165,
+        blindReviewRawScore: null,
+        blindReviewScaledScore: null,
+        blindReviewPercentile: null,
+        completedAt: "2026-09-20T00:00:00Z",
+      },
+    ]
+    const filtered = filterTrajectoryByTimeRange(points, "30d", new Date("2026-09-30T00:00:00Z"))
+    expect(filtered.map((p) => p.sessionId)).toEqual(["new"])
   })
 
   it("groups priorities into LR and RC sections ordered by weakness", () => {

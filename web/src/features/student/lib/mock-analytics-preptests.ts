@@ -1,4 +1,7 @@
-import type { TimeRangeValue } from "@/features/student/components/time-range-filter"
+import {
+  filterByTimeRange,
+  type TimeRangeValue,
+} from "@/features/student/components/time-range-filter"
 import { hasLawHubLrStats, hasLawHubRcStats } from "@/features/student/analytics/prep-test-lr-rc-scores"
 
 /**
@@ -199,43 +202,17 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
   }),
 ]
 
-const DAYS = 24 * 60 * 60 * 1000
-
-function getTimeRangeCutoff(value: TimeRangeValue, reference: Date): Date | null {
-  switch (value) {
-    case "7d":
-      return new Date(reference.getTime() - 7 * DAYS)
-    case "30d":
-      return new Date(reference.getTime() - 30 * DAYS)
-    case "90d":
-      return new Date(reference.getTime() - 90 * DAYS)
-    case "ytd":
-      return new Date(reference.getFullYear(), 0, 1)
-    case "all":
-    default:
-      return null
-  }
-}
-
 /**
- * Filter PrepTest records by an actual date window relative to the most
- * recent record. Falls back to keeping the latest record when a strict
- * cutoff would otherwise yield an empty set so the chart never shows
- * nothing.
+ * Filter PrepTest records by a calendar time window relative to now
+ * (or an optional `reference` clock for tests). Empty windows stay empty
+ * so the page can show its "no PrepTests in this range" state.
  */
 export function filterPrepTestsByTimeRange(
   records: readonly PrepTestRecord[],
   value: TimeRangeValue,
+  reference: Date = new Date(),
 ): PrepTestRecord[] {
-  if (records.length === 0) return []
-  const sorted = [...records].sort(
-    (a, b) => new Date(a.takenAt).getTime() - new Date(b.takenAt).getTime(),
-  )
-  const newest = new Date(sorted[sorted.length - 1].takenAt)
-  const cutoff = getTimeRangeCutoff(value, newest)
-  if (!cutoff) return sorted
-  const filtered = sorted.filter((record) => new Date(record.takenAt).getTime() >= cutoff.getTime())
-  return filtered.length > 0 ? filtered : sorted.slice(-1)
+  return filterByTimeRange(records, value, (record) => record.takenAt, { reference })
 }
 
 export type PrepTestProgressPoint = {

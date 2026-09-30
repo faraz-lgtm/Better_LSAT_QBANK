@@ -59,6 +59,14 @@ function HistorySectionFilter({
   )
 }
 
+/** PrepTest scaled scores use max ≥100; drills/sections use raw correct/total. */
+function formatHistoryScoreDisplay(value: number, max: number): string {
+  const safeValue = Number.isFinite(value) ? value : 0
+  const safeMax = Number.isFinite(max) && max > 0 ? max : 1
+  if (safeMax >= 100) return String(safeValue)
+  return `${safeValue}/${safeMax}`
+}
+
 /** Figma `21117:25970` — labeled score chip; bar only for PrepTest-scale max (≥100). */
 function ScoreMetric({
   label,
@@ -75,20 +83,23 @@ function ScoreMetric({
   const safeMax = Number.isFinite(max) && max > 0 ? max : 1
   const showBar = safeMax >= 100
   const widthPct = Math.max(0, Math.min(100, (safeValue / safeMax) * 100))
+  const display = formatHistoryScoreDisplay(safeValue, safeMax)
   return (
     <div
       className={cn(
-        "flex min-w-[150px] shrink-0 flex-col justify-center rounded-[8px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-3 py-[7px]",
-        showBar ? "h-10 gap-1" : "h-[38.5px]",
+        "flex shrink-0 flex-col justify-center rounded-[8px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-3 py-[7px]",
+        // PrepTest chips keep a fixed width for the progress bar; raw correct/total
+        // chips grow so labels like "Untimed Review" + "25/25" stay inside the box.
+        showBar ? "h-10 w-[150px] gap-1" : "h-[38.5px] w-fit min-w-[150px]",
       )}
-      style={{ width: SCORE_BOX_WIDTH_PX }}
+      style={showBar ? { width: SCORE_BOX_WIDTH_PX } : undefined}
     >
       <div className="flex w-full items-center justify-between gap-2">
         <span className="whitespace-nowrap text-[10px] font-medium capitalize leading-[16.5px] tracking-[0.04em] text-[var(--greyscale-500)]">
           {label}
         </span>
-        <span className="shrink-0 text-base font-semibold leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
-          {safeValue}
+        <span className="shrink-0 whitespace-nowrap text-base font-semibold leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)] tabular-nums">
+          {display}
         </span>
       </div>
       {showBar ? (

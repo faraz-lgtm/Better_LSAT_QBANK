@@ -1,5 +1,8 @@
 import type { AnalyticsStat } from "@/features/student/lib/mock-analytics"
-import type { TimeRangeValue } from "@/features/student/components/time-range-filter"
+import {
+  filterByTimeRange,
+  type TimeRangeValue,
+} from "@/features/student/components/time-range-filter"
 import {
   getPrepTestHistoryEntries,
   mockPrepTestRecords,
@@ -84,37 +87,13 @@ export const mockDrillRecords: DrillRecord[] = [
   { id: "d24", typeId: "lr-conditional", section: "LR", takenAt: "2026-05-10", questionsTotal: 10, questionsCorrect: 9, durationSeconds: 520, ptEquivalentScore: 168 },
 ]
 
-const DAYS = 24 * 60 * 60 * 1000
-
-function getCutoff(value: TimeRangeValue, reference: Date): Date | null {
-  switch (value) {
-    case "7d":
-      return new Date(reference.getTime() - 7 * DAYS)
-    case "30d":
-      return new Date(reference.getTime() - 30 * DAYS)
-    case "90d":
-      return new Date(reference.getTime() - 90 * DAYS)
-    case "ytd":
-      return new Date(reference.getFullYear(), 0, 1)
-    case "all":
-    default:
-      return null
-  }
-}
-
+/** Filter drills by a calendar time window relative to now (optional `reference` for tests). */
 export function filterDrillsByTimeRange(
   records: readonly DrillRecord[],
   value: TimeRangeValue,
+  reference: Date = new Date(),
 ): DrillRecord[] {
-  if (records.length === 0) return []
-  const sorted = [...records].sort(
-    (a, b) => new Date(a.takenAt).getTime() - new Date(b.takenAt).getTime(),
-  )
-  const newest = new Date(sorted[sorted.length - 1].takenAt)
-  const cutoff = getCutoff(value, newest)
-  if (!cutoff) return sorted
-  const filtered = sorted.filter((record) => new Date(record.takenAt).getTime() >= cutoff.getTime())
-  return filtered.length > 0 ? filtered : sorted.slice(-1)
+  return filterByTimeRange(records, value, (record) => record.takenAt, { reference })
 }
 
 export function filterDrillsByType(

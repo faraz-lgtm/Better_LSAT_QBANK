@@ -253,6 +253,71 @@ describe("AnalyticsPrepTestHistory", () => {
     expect(screen.queryByText("UR")).not.toBeInTheDocument()
     expect(screen.queryByText("BR")).not.toBeInTheDocument()
   })
+
+  it("shows drill and section scores as correct/total", () => {
+    render(
+      <AnalyticsPrepTestHistory
+        visibleEntries={[
+          {
+            id: "drill",
+            testLabel: "Assumption Drill",
+            dateLabel: "Monday, Aug 25",
+            bookmarked: false,
+            score: 2,
+            scoreMax: 5,
+            blindReviewScore: 3,
+            blindReviewMax: 5,
+            sectionType: "LR",
+          },
+          {
+            id: "section",
+            testLabel: "PT141.S4",
+            dateLabel: "Sunday, Aug 24",
+            bookmarked: false,
+            score: 10,
+            scoreMax: 25,
+            blindReviewScore: 12,
+            blindReviewMax: 25,
+            sectionType: "LR",
+          },
+        ]}
+        bookmarkedOnly={false}
+        onBookmarkedOnlyChange={() => {}}
+        onToggleBookmark={() => {}}
+      />,
+    )
+
+    expect(screen.getByText("2/5")).toBeInTheDocument()
+    expect(screen.getByText("3/5")).toBeInTheDocument()
+    expect(screen.getByText("10/25")).toBeInTheDocument()
+    expect(screen.getByText("12/25")).toBeInTheDocument()
+  })
+
+  it("keeps PrepTest scaled scores as a single number", () => {
+    render(
+      <AnalyticsPrepTestHistory
+        visibleEntries={[
+          {
+            id: "pt",
+            testLabel: "PT158",
+            dateLabel: "Saturday, Aug 23",
+            bookmarked: false,
+            score: 162,
+            scoreMax: 180,
+            blindReviewScore: 168,
+            blindReviewMax: 180,
+          },
+        ]}
+        bookmarkedOnly={false}
+        onBookmarkedOnlyChange={() => {}}
+        onToggleBookmark={() => {}}
+      />,
+    )
+
+    expect(screen.getByText("162")).toBeInTheDocument()
+    expect(screen.getByText("168")).toBeInTheDocument()
+    expect(screen.queryByText("162/180")).not.toBeInTheDocument()
+  })
 })
 
 describe("OverviewHistoryShell", () => {

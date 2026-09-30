@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { withSessionBookmark } from "@/features/student/analytics/session-bookmarks"
 import {
   computePrepTestStats,
+  filterPrepTestsByTimeRange,
   formatPrepTestChartValue,
   getPrepTestHistoryEntries,
   getPrepTestProgressPoints,
@@ -181,5 +182,31 @@ describe("PrepTest score progress points", () => {
     expect(formatPrepTestChartValue(points[0]!, "raw")).toBe("Raw 38/52")
     expect(formatPrepTestChartValue(points[1]!, "scaled")).toBe("Scaled 168 · Raw 43/52")
     expect(prepTestChartTooltipLines(points[1]!, "scaled")).toEqual(["Scaled 168", "Raw 43/52"])
+  })
+})
+
+describe("filterPrepTestsByTimeRange", () => {
+  const reference = new Date("2026-09-30T12:00:00.000Z")
+  const rows = [
+    record({ id: "aug-18", takenAt: "2026-08-18T12:00:00.000Z", prepTestNumber: 150 }),
+    record({ id: "sep-10", takenAt: "2026-09-10T12:00:00.000Z", prepTestNumber: 151 }),
+    record({ id: "sep-25", takenAt: "2026-09-25T12:00:00.000Z", prepTestNumber: 152 }),
+  ]
+
+  it("uses calendar last-30-days from now, not from newest record", () => {
+    // Relative to newest (sep-25) would still include Aug 18; from Sep 30 it must not.
+    expect(
+      filterPrepTestsByTimeRange(rows, "30d", reference).map((row) => row.id),
+    ).toEqual(["sep-10", "sep-25"])
+  })
+
+  it("returns empty when nothing falls in the window", () => {
+    expect(
+      filterPrepTestsByTimeRange(
+        [record({ id: "aug-18", takenAt: "2026-08-18T12:00:00.000Z" })],
+        "30d",
+        reference,
+      ),
+    ).toEqual([])
   })
 })
