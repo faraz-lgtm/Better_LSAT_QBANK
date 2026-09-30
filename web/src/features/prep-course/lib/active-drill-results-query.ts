@@ -17,7 +17,21 @@ function withActiveDrillResultsQuery(path: string): string {
   return `${pathname}?${params.toString()}${hash}`
 }
 
-/** Active drill Figma results only after submit (`?results=1`). Course module keeps the lesson text. */
+/**
+ * Active Drill entry routing:
+ * start screen → singular question → results analytics + lesson content (`?results=1`).
+ * Lesson body stays hidden until after submit.
+ */
+function resolveActiveDrillLessonEntry(input: {
+  isStartScreen: boolean
+  search: string
+  hasAttempt: boolean
+}): "stay" | "start" | "results" {
+  if (input.isStartScreen || isActiveDrillResultsQuery(input.search)) return "stay"
+  return input.hasAttempt ? "results" : "start"
+}
+
+/** Active drill Figma results only after submit (`?results=1`). */
 function resolveDisplayedActiveDrillAttempt<T>(
   drillKind: string | null,
   attempt: T | null,
@@ -32,6 +46,7 @@ function resolveDisplayedActiveDrillAttempt<T>(
 export {
   ACTIVE_DRILL_RESULTS_PARAM,
   isActiveDrillResultsQuery,
+  resolveActiveDrillLessonEntry,
   resolveDisplayedActiveDrillAttempt,
   withActiveDrillResultsQuery,
 }

@@ -32,7 +32,7 @@ const lesson: PrepLesson = {
 }
 
 describe("PrepCourseLessonPanel active drill intro", () => {
-  it("keeps the current lesson screen instead of replacing it with the start overlay", () => {
+  it("keeps lesson body locked until after the drill", () => {
     render(
       <PrepCourseLessonPanel
         course={course}
@@ -47,12 +47,14 @@ describe("PrepCourseLessonPanel active drill intro", () => {
 
     expect(screen.getByText("Module 1 · Lesson 3 of 14")).toBeInTheDocument()
     expect(screen.getByRole("heading", { name: "Active Drill - Motivational Posters" })).toBeInTheDocument()
-    expect(screen.getByText("Hidden until complete.")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Start" })).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Start Active Drill" })).not.toBeInTheDocument()
+    expect(screen.queryByText("Hidden until complete.")).not.toBeInTheDocument()
+    expect(
+      screen.getByText("Work through this LSAT question with the concepts you've learned so far."),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Start Active Drill" })).toBeInTheDocument()
   })
 
-  it("starts from the current lesson Start button", async () => {
+  it("starts from Start Active Drill", async () => {
     const user = userEvent.setup()
     const onStartDrill = vi.fn()
     render(
@@ -64,7 +66,7 @@ describe("PrepCourseLessonPanel active drill intro", () => {
       />,
     )
 
-    await user.click(screen.getByRole("button", { name: "Start" }))
+    await user.click(screen.getByRole("button", { name: "Start Active Drill" }))
     expect(onStartDrill).toHaveBeenCalledTimes(1)
   })
 })

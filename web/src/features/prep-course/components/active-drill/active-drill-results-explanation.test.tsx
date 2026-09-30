@@ -73,6 +73,22 @@ describe("ActiveDrillResultsExplanation", () => {
     expect(screen.getByText("Hidden until complete.")).toBeInTheDocument()
   })
 
+  it("matches the score and analytics card column width", () => {
+    render(<ActiveDrillResultsExplanation detail={detail} />)
+
+    const question = screen.getByRole("heading", { level: 2, name: "Question" })
+    const stimulus = screen.getByRole("heading", { level: 3, name: "Stimulus" })
+    const article = question.closest("article")
+
+    expect(article).toHaveClass("w-full", "max-w-full", "rounded-[24px]")
+    expect(article?.className).not.toMatch(/max-w-\[888px\]/)
+
+    const questionColumn = question.closest(".max-w-\\[640px\\]") ?? question.parentElement?.parentElement
+    const stimulusColumn = stimulus.closest(".max-w-\\[640px\\]") ?? stimulus.parentElement?.parentElement
+    expect(questionColumn).toHaveClass("w-full", "max-w-[640px]")
+    expect(stimulusColumn).toHaveClass("w-full", "max-w-[640px]")
+  })
+
   it("embeds the explanation video in the Figma 640×310 frame", () => {
     render(
       <ActiveDrillResultsExplanation

@@ -1,9 +1,5 @@
-import { ArrowRight } from "lucide-react"
-
 import { Button } from "@/components/ui/button"
 import { activeDrillIntroCopy } from "@/features/prep-course/lib/active-drill-intro-copy"
-import { drillLessonHasBodyHtml } from "@/features/prep-course/lib/drill-lesson-body-html"
-import { LessonHtmlContent } from "@/lib/html/html-content"
 import { cn } from "@/lib/utils"
 import type { PrepLesson, PrepLessonLinkedQuestionRef } from "@/lib/api/prep-course"
 
@@ -23,6 +19,7 @@ function formatPtRef(linked: PrepLessonLinkedQuestionRef): string {
   return `${pt} · ${section} · ${q}`
 }
 
+/** Fallback intro only — lesson body HTML unlocks after the singular drill + results. */
 function ActiveDrillIntroCard({
   lesson,
   linked,
@@ -32,7 +29,6 @@ function ActiveDrillIntroCard({
   drillStartError = null,
 }: ActiveDrillIntroCardProps) {
   const body = activeDrillIntroCopy(lesson)
-  const showUploadedHtml = drillLessonHasBodyHtml(lesson.text_content)
 
   return (
     <article className="w-full bg-transparent">
@@ -44,13 +40,15 @@ function ActiveDrillIntroCard({
           {formatPtRef(linked)}
         </p>
       ) : null}
-      {showUploadedHtml ? (
-        <div className={cn((!hideTitle || Boolean(linked)) && "mt-6")}>
-          <LessonHtmlContent html={lesson.text_content} />
-        </div>
-      ) : (
-        <p className={`text-sm leading-7 text-[var(--color-student-heading)] ${hideTitle ? "mt-0" : "mt-6"}`}>{body}</p>
-      )}
+      <p
+        className={cn(
+          "text-[18px] font-normal leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]",
+          hideTitle ? "mt-0" : "mt-6",
+          linked && hideTitle && "mt-6",
+        )}
+      >
+        {body}
+      </p>
       {drillStartError ? (
         <p className="mt-6 text-sm text-[#95122b]" role="alert">
           {drillStartError}
@@ -61,10 +59,12 @@ function ActiveDrillIntroCard({
           type="button"
           onClick={() => onStartDrill?.()}
           disabled={startingDrill || !onStartDrill}
-          className="ds-btn-sm cursor-pointer gap-1 px-5 text-sm disabled:pointer-events-auto disabled:cursor-not-allowed"
+          className="ds-btn-sm h-10 cursor-pointer gap-2 rounded-[14px] px-4 py-2 text-sm font-semibold tracking-[0.28px] disabled:pointer-events-auto disabled:cursor-not-allowed"
         >
-          {startingDrill ? "Starting…" : "Start"}
-          <ArrowRight className="size-4" />
+          {startingDrill ? "Starting…" : "Start Active Drill"}
+          {startingDrill ? null : (
+            <img src="/figma/active-drill/chevron-right.svg" alt="" className="size-4 shrink-0" />
+          )}
         </Button>
       </div>
     </article>

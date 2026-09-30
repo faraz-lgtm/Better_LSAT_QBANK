@@ -236,7 +236,7 @@ function PracticeQuestionResultCard({
     return (
       <article
         className={cn(
-          "relative min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
+          "relative w-full min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
           className,
         )}
       >

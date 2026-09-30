@@ -67,17 +67,18 @@ const adaptiveAttempt: PrepLessonActiveDrillAttempt = {
 describe("LessonContentRenderer active_drill", () => {
   it("shows intro card when drill not attempted", () => {
     render(<LessonContentRenderer lesson={baseLesson} linkedQuestionRefs={[linked]} activeDrillAttempt={null} />)
-    expect(screen.getByRole("button", { name: /start/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /start active drill/i })).toBeInTheDocument()
     expect(screen.getByText("LSAC133 · S2 · Q5")).toBeInTheDocument()
-    expect(screen.getByText("Hidden until complete.")).toBeInTheDocument()
+    expect(screen.getByText("Try this question.")).toBeInTheDocument()
+    expect(screen.queryByText("Hidden until complete.")).not.toBeInTheDocument()
   })
 
-  it("renders uploaded drill HTML structure instead of flattened text", () => {
+  it("keeps uploaded drill HTML locked until after the attempt", () => {
     render(
       <LessonContentRenderer
         lesson={{
           ...baseLesson,
-          summary: "LSAC135 · S1 · Q2",
+          summary: "Work through this LSAT question with the concepts you've learned so far.",
           text_content: [
             "<p><strong>Florist:</strong> Some people like green carnations.</p>",
             "<h3>Stimulus Analysis</h3>",
@@ -91,11 +92,13 @@ describe("LessonContentRenderer active_drill", () => {
     )
 
     expect(screen.getByText("LSAC135 · S1 · Q2")).toBeInTheDocument()
-    expect(screen.getByRole("heading", { level: 3, name: "Stimulus Analysis" })).toBeInTheDocument()
-    expect(document.querySelector("article ol")).not.toBeNull()
-    expect(screen.getByText("It is a good idea to have green carnations.")).toBeInTheDocument()
-    expect(screen.queryByText(/&nbsp;/)).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /start/i })).toBeInTheDocument()
+    expect(screen.queryByRole("heading", { level: 3, name: "Stimulus Analysis" })).not.toBeInTheDocument()
+    expect(document.querySelector("article ol")).toBeNull()
+    expect(screen.queryByText("It is a good idea to have green carnations.")).not.toBeInTheDocument()
+    expect(
+      screen.getByText("Work through this LSAT question with the concepts you've learned so far."),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /start active drill/i })).toBeInTheDocument()
   })
 
   it("shows result and full content after drill", () => {
