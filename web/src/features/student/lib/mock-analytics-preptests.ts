@@ -24,6 +24,14 @@ export type PrepTestHistoryEntry = {
   sectionType?: "LR" | "RC" | "LG" | null
 }
 
+/** Per-section accuracy for PrepTest Insights (S1→S4 bars + drop-off). */
+export type PrepTestSectionAccuracy = {
+  /** 1-based section index within the attempt. */
+  number: number
+  correct: number
+  max: number
+}
+
 /**
  * Canonical PrepTest record used as the single source of truth for the
  * analytics PrepTests page. All stat tiles, the score-progress chart, and
@@ -55,6 +63,8 @@ export type PrepTestRecord = {
   /** Blind review scaled 120-180 score. */
   blindReviewScaled: number
   blindReviewPercentile: number
+  /** Linked section sessions (S1–S4) when available. */
+  sections?: PrepTestSectionAccuracy[]
 }
 
 /**
@@ -73,6 +83,20 @@ function withPrepTestScoreFields(
   }
 }
 
+function mockSections(
+  s1: [number, number],
+  s2: [number, number],
+  s3: [number, number],
+  s4: [number, number],
+): PrepTestSectionAccuracy[] {
+  return [
+    { number: 1, correct: s1[0], max: s1[1] },
+    { number: 2, correct: s2[0], max: s2[1] },
+    { number: 3, correct: s3[0], max: s3[1] },
+    { number: 4, correct: s4[0], max: s4[1] },
+  ]
+}
+
 export const mockPrepTestRecords: PrepTestRecord[] = [
   withPrepTestScoreFields({
     id: "pt145",
@@ -87,6 +111,7 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     percentile: 90.6,
     blindReviewScaled: 167,
     blindReviewPercentile: 91,
+    sections: mockSections([21, 25], [22, 27], [20, 26], [18, 25]),
   }),
   withPrepTestScoreFields({
     id: "pt150",
@@ -101,6 +126,7 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     percentile: 38,
     blindReviewScaled: 154,
     blindReviewPercentile: 56,
+    sections: mockSections([16, 25], [15, 27], [14, 26], [12, 25]),
   }),
   withPrepTestScoreFields({
     id: "pt151",
@@ -115,6 +141,7 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     percentile: 47,
     blindReviewScaled: 156,
     blindReviewPercentile: 64,
+    sections: mockSections([17, 25], [16, 27], [15, 26], [13, 25]),
   }),
   withPrepTestScoreFields({
     id: "pt152",
@@ -129,6 +156,7 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     percentile: 44,
     blindReviewScaled: 155,
     blindReviewPercentile: 60,
+    sections: mockSections([16, 25], [15, 27], [15, 26], [12, 25]),
   }),
   withPrepTestScoreFields({
     id: "pt153",
@@ -143,6 +171,7 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     percentile: 53,
     blindReviewScaled: 158,
     blindReviewPercentile: 71,
+    sections: mockSections([18, 25], [17, 27], [16, 26], [14, 25]),
   }),
   withPrepTestScoreFields({
     id: "pt154",
@@ -157,6 +186,7 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     percentile: 50,
     blindReviewScaled: 157,
     blindReviewPercentile: 67,
+    sections: mockSections([18, 25], [16, 27], [16, 26], [13, 25]),
   }),
   withPrepTestScoreFields({
     id: "pt155",
@@ -171,6 +201,7 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     percentile: 73,
     blindReviewScaled: 163,
     blindReviewPercentile: 84,
+    sections: mockSections([20, 25], [18, 27], [19, 26], [15, 25]),
   }),
   withPrepTestScoreFields({
     id: "pt156",
@@ -185,6 +216,7 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     percentile: 81,
     blindReviewScaled: 166,
     blindReviewPercentile: 90,
+    sections: mockSections([21, 25], [20, 27], [20, 26], [17, 25]),
   }),
   withPrepTestScoreFields({
     id: "pt157",
@@ -199,6 +231,7 @@ export const mockPrepTestRecords: PrepTestRecord[] = [
     percentile: 94,
     blindReviewScaled: 173,
     blindReviewPercentile: 98,
+    sections: mockSections([22, 25], [25, 27], [24, 26], [20, 25]),
   }),
 ]
 

@@ -23,7 +23,7 @@ import {
   typeNamesFromDrillMetadata,
   VARIED_MIX_DRILL_TITLE,
 } from "@/features/student/drills/format-drill-title"
-import { resolvePrepTestLrRcScores } from "@/features/student/analytics/prep-test-lr-rc-scores"
+import { resolvePrepTestLrRcScores, resolvePrepTestSectionAccuracies } from "@/features/student/analytics/prep-test-lr-rc-scores"
 import { LSAT_SCALED_MAX, LSAT_SCALED_MIN } from "@/features/student/analytics/chart-y-axis"
 import { formatSectionResultsTitle } from "@/features/student/practice-session/lr-drill-results-format"
 import {
@@ -480,6 +480,7 @@ export function mapSessionToPrepTestRecord(
   const scaled: number = isLsatScaledScore(s.scaledScore) ? s.scaledScore : 0
   const br: number = isLsatScaledScore(s.blindReviewScaledScore) ? s.blindReviewScaledScore : scaled
   const lrRc = resolvePrepTestLrRcScores(s, sectionSessions)
+  const sections = resolvePrepTestSectionAccuracies(s, sectionSessions)
   const sectionMax = lrRc.lrMax + lrRc.rcMax
   const sectionCorrect = lrRc.lrCorrect + lrRc.rcCorrect
   const rawScore = s.rawScore ?? sectionCorrect
@@ -501,6 +502,7 @@ export function mapSessionToPrepTestRecord(
     percentile: s.percentile ?? 0,
     blindReviewScaled: br,
     blindReviewPercentile: s.blindReviewPercentile ?? s.percentile ?? 0,
+    ...(sections.length > 0 ? { sections } : {}),
   }
 }
 
