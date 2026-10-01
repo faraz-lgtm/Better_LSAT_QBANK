@@ -136,7 +136,6 @@ export function computeSectionInsightStats(
 function attemptMomentum(
   session: PracticeSessionSummary,
   chronological: readonly PracticeSessionSummary[],
-  kind: SectionInsightKind,
 ): number | null {
   const correct = session.rawScore ?? 0
   const prior: number[] = []
@@ -184,7 +183,7 @@ export function buildSectionInsightAttempts(
         scaledEstimate: scaled,
         ptEquivalent: sectionPtEquivalentScore(correct, questionCount, scaled),
         untimedCorrectDelta,
-        momentum: attemptMomentum(session, chronological, kind),
+        momentum: attemptMomentum(session, chronological),
       } satisfies SectionInsightAttempt
     })
     .reverse()
