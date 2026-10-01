@@ -293,8 +293,8 @@ export function withBestScoreFromTrajectory(
 
 /**
  * Recomputes best/average PrepTest scores (and percentiles) for a filtered
- * trajectory window. Other overview fields stay as all-time until the API
- * accepts a date range.
+ * trajectory window. Used as an instant client-side fallback while ranged
+ * overview API responses are still loading.
  */
 export function overviewScoresForTrajectoryWindow(
   overview: AnalyticsOverview,
