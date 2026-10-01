@@ -5316,6 +5316,27 @@ html.student-shell-immersive .practice-session-card--blind-review {
   color: #ffffff;
 }
 
+/* Official rail SVGs use currentColor; item classes hardcode navy (#2c3143). */
+.dark .practice-session-side-widget button {
+  color: #ffffff;
+}
+
+.dark .practice-session-side-widget svg {
+  color: currentColor;
+}
+
+.dark .practice-session-side-widget button[aria-pressed="true"] {
+  color: #75a1e8;
+}
+
+.dark .practice-session-side-widget button[aria-pressed="true"] img {
+  filter: invert(58%) sepia(42%) saturate(650%) hue-rotate(184deg) brightness(100%) contrast(92%);
+}
+
+.dark .practice-session-side-widget button[aria-pressed="true"] .practice-session-side-widget__flag-active img {
+  filter: none;
+}
+
 .dark .practice-session-card--official .practice-session-body {
   background-color: var(--greyscale-0) !important;
   color: var(--color-student-heading) !important;

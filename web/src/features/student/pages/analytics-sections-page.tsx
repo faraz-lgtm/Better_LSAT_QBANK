@@ -1,321 +1,42 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 
-import { cn } from "@/lib/utils"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
-import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
-import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
 import {
-  filterByTimeRange,
   TimeRangeSegmented,
+  filterByTimeRange,
   type TimeRangeValue,
 } from "@/features/student/components/time-range-filter"
 import {
-  AnalyticsChartTooltip,
-  StatTile,
-  analyticsSegmentedTabClass,
-  formatChartHoverDate,
-} from "@/features/student/analytics/components/analytics-overview-ui"
-import type { AnalyticsStat } from "@/features/student/lib/mock-analytics"
-import type { SectionProgressPoint, SectionSummary } from "@/features/student/lib/mock-analytics-sections"
-import { mapSectionSessionToHistoryEntry } from "@/features/student/analytics/map-analytics"
-import { HistorySortMenu } from "@/features/student/analytics/history-sort-menu"
-import { sortHistoryEntries, type HistorySort } from "@/features/student/analytics/history-sort"
+  SectionAttemptArchive,
+  SectionInsightStatsRow,
+  SectionKindSwitcher,
+  SectionTrajectoryPanel,
+  type SectionArchiveSort,
+  type SectionTrajectoryTab,
+} from "@/features/student/analytics/components/section-insights-ui"
+import {
+  buildSectionInsightAttempts,
+  buildSectionTrajectoryPoints,
+  computeSectionInsightStats,
+  filterSectionSessions,
+  sortSectionInsightAttempts,
+  type SectionInsightKind,
+} from "@/features/student/analytics/section-insights"
 import { practiceSessionResultsPath } from "@/features/student/analytics/analytics-results-paths"
 import {
-  filterBookmarkedOnly,
   persistSessionBookmark,
   sessionBookmarkState,
   withSessionBookmark,
 } from "@/features/student/analytics/session-bookmarks"
-import {
-  matchesAnalyticsSectionFilter,
-  parseAnalyticsSectionParam,
-  type AnalyticsSectionFilter,
-} from "@/features/student/analytics/section-filter"
-import {
-  buildSectionYAxisLabels,
-  resolveSectionChartMax,
-  sessionSectionQuestionCount,
-} from "@/features/student/analytics/section-progress-axis"
-import { averageSectionMissedDisplay, bestSectionMissedDisplay } from "@/features/student/analytics/section-average-score"
-import { LSAT_SCALED_Y_AXIS_LABELS } from "@/features/student/analytics/chart-y-axis"
-import { DEFAULT_SECTION_SCORE_TAB } from "@/features/student/analytics/score-chart-defaults"
+import { parseAnalyticsSectionParam } from "@/features/student/analytics/section-filter"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import type { PracticeSessionSummary } from "@/lib/api/analytics"
-import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 
-const SECTION_SCORE_TABS = [
-  { id: "raw", label: "Raw Score" },
-  { id: "ptEquivalent", label: "PT equivalent score" },
-] as const
-
-type SectionScoreTab = (typeof SECTION_SCORE_TABS)[number]["id"]
-
-type SectionProgressPointWithCount = SectionProgressPoint & {
-  questionCount: number
-  completedAt?: string | null
-}
-
-function SectionScoreTabs({ value, onChange }: { value: SectionScoreTab; onChange: (next: SectionScoreTab) => void }) {
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {SECTION_SCORE_TABS.map((tab) => {
-        const active = value === tab.id
-        return (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => onChange(tab.id)}
-            aria-pressed={active}
-            className={analyticsSegmentedTabClass(active)}
-          >
-            {tab.label}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-function SectionProgressChart({
-  points,
-  tab,
-  rawYAxisLabels,
-}: {
-  points: SectionProgressPointWithCount[]
-  tab: SectionScoreTab
-  rawYAxisLabels: number[]
-}) {
-  const yAxisLabels = tab === "raw" ? rawYAxisLabels : LSAT_SCALED_Y_AXIS_LABELS
-  const minVal = yAxisLabels[yAxisLabels.length - 1] ?? 0
-  const maxVal = yAxisLabels[0] ?? 1
-  const range = Math.max(1, maxVal - minVal)
-  const stepX = 100 / Math.max(1, points.length)
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null)
-
-  if (points.length === 0) {
-    return (
-      <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-[var(--greyscale-100)] text-xs text-[var(--greyscale-500)]">
-        No sections in the selected range.
-      </div>
-    )
-  }
-
-  const yFor = (value: number) => {
-    const clamped = Math.max(minVal, Math.min(maxVal, value))
-    return ((maxVal - clamped) / range) * 100
-  }
-  const xFor = (index: number) => stepX * index + stepX / 2
-
-  const pickValue = (point: SectionProgressPointWithCount) => {
-    if (tab === "raw") return point.rawScore
-    // Prefer real LSAT scaled scores; fall back to raw when scaled is missing.
-    if (point.ptEquivalent >= 120) return point.ptEquivalent
-    return Math.min(maxVal, Math.max(minVal, Math.round(120 + (point.ptEquivalent / Math.max(1, point.questionCount)) * 60)))
-  }
-
-  const formatValue = (point: SectionProgressPointWithCount) => {
-    if (tab === "raw") return `${point.rawScore}/${point.questionCount}`
-    return String(pickValue(point))
-  }
-
-  const linePoints = points.map((p, i) => ({ x: xFor(i), y: yFor(pickValue(p)) }))
-  const linePortion = linePoints.slice(0, Math.min(5, linePoints.length))
-  const linePortionPolyline = linePortion.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ")
-  const hovered = hoverIndex != null ? points[hoverIndex] : null
-  const hoveredCoords = hoverIndex != null ? linePoints[hoverIndex] : null
-
-  return (
-    <div className="w-full">
-      <div className="flex h-[220px] w-full items-stretch gap-3">
-        <div className="flex h-full flex-col justify-between py-1 pr-2 text-sm font-medium text-[var(--color-student-heading)]">
-          {yAxisLabels.map((label, index) => (
-            <span key={`${label}-${index}`} className="leading-5">
-              {label}
-            </span>
-          ))}
-        </div>
-        <div className="relative flex-1 overflow-visible">
-          <div className="absolute inset-0 flex flex-col justify-between" aria-hidden>
-            {yAxisLabels.map((label, index) => (
-              <div key={`${label}-${index}`} className="h-px w-full bg-[var(--greyscale-100)]" />
-            ))}
-          </div>
-          <svg
-            className="absolute inset-0 h-full w-full"
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            aria-hidden
-          >
-            <polygon
-              points={`${linePortion[0]?.x ?? 0},100 ${linePortionPolyline} ${linePortion[linePortion.length - 1]?.x ?? 0},100`}
-              fill="var(--primary)"
-              fillOpacity="0.08"
-            />
-            <polyline
-              points={linePortionPolyline}
-              fill="none"
-              stroke="var(--primary)"
-              strokeWidth="0.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
-          <div className="absolute inset-0">
-            {linePoints.map((coords, i) => {
-              const point = points[i]!
-              const value = formatValue(point)
-              const isActive = hoverIndex === i
-              return (
-                <button
-                  key={`${point.label}-${i}`}
-                  type="button"
-                  className={cn(
-                    "absolute z-10 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--primary)] outline-none ring-[var(--primary)]/30 transition-transform focus-visible:ring-2",
-                    isActive && "scale-125 ring-2",
-                  )}
-                  style={{ left: `${coords.x}%`, top: `${coords.y}%` }}
-                  aria-label={`${point.label}: ${value}`}
-                  onMouseEnter={() => setHoverIndex(i)}
-                  onMouseLeave={() => setHoverIndex(null)}
-                  onFocus={() => setHoverIndex(i)}
-                  onBlur={() => setHoverIndex(null)}
-                />
-              )
-            })}
-            {hovered && hoveredCoords ? (
-              <AnalyticsChartTooltip
-                title={hovered.label}
-                dateLabel={formatChartHoverDate(hovered.completedAt)}
-                xPct={hoveredCoords.x}
-                yPct={hoveredCoords.y}
-                lines={[
-                  {
-                    label: tab === "raw" ? "Raw Score" : "PT equiv.",
-                    value: tab === "raw" ? String(hovered.rawScore) : String(pickValue(hovered)),
-                    color: "var(--primary)",
-                    caption:
-                      hovered.questionCount > 0
-                        ? `${hovered.rawScore}/${hovered.questionCount} Correct`
-                        : null,
-                  },
-                ]}
-              />
-            ) : null}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function SectionStatPair({ summary }: { summary: SectionSummary }) {
-  const stats: AnalyticsStat[] = [
-    {
-      id: "best-score",
-      label: "Best Score",
-      value: summary.bestScore,
-      accent: summary.bestAccent,
-    },
-    {
-      id: "average-score",
-      label: "Average Score",
-      value: summary.averageScore,
-      accent: summary.averageAccent,
-    },
-  ]
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      {stats.map((stat) => (
-        <StatTile key={stat.id} stat={stat} />
-      ))}
-    </div>
-  )
-}
-
-type SectionColumnProps = {
-  badge: "LR" | "RC"
-  title: string
-  badgeBg: string
-  badgeColor: string
-  progressTitle: string
-  summary: SectionSummary
-  points: SectionProgressPointWithCount[]
-  yAxisLabels: number[]
-  scoreTab: SectionScoreTab
-  onScoreTabChange: (next: SectionScoreTab) => void
-}
-
-function SectionColumn({
-  badge,
-  title,
-  badgeBg,
-  badgeColor,
-  progressTitle,
-  summary,
-  points,
-  yAxisLabels,
-  scoreTab,
-  onScoreTabChange,
-}: SectionColumnProps) {
-  return (
-    <div className="flex min-w-0 flex-1 flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <div
-          className="flex size-7 shrink-0 items-center justify-center rounded-[8px] border"
-          style={{ backgroundColor: badgeBg, borderColor: badgeColor }}
-        >
-          <span className="text-sm font-black leading-none tracking-[0.02em]" style={{ color: badgeColor }}>
-            {badge}
-          </span>
-        </div>
-        <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">{title}</h2>
-      </div>
-
-      <SectionStatPair summary={summary} />
-
-      <div className="flex min-h-[260px] flex-1 flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">{progressTitle}</p>
-          <SectionScoreTabs value={scoreTab} onChange={onScoreTabChange} />
-        </div>
-        <div className="rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 shadow-[0px_1px_2px_rgba(13,13,18,0.04)]">
-          <SectionProgressChart points={points} tab={scoreTab} rawYAxisLabels={yAxisLabels} />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function sectionSummaryFromSessions(
-  sessions: PracticeSessionSummary[],
-  sectionType: "LR" | "RC",
-): SectionSummary {
-  return {
-    bestScore: bestSectionMissedDisplay(sessions, sectionType),
-    bestAccent: "var(--primary)",
-    averageScore: averageSectionMissedDisplay(sessions, sectionType),
-    averageAccent: sectionType === "LR" ? "var(--explanation-answered)" : "var(--explanation-teal)",
-  }
-}
-
-function sectionProgressFromSessions(
-  sessions: PracticeSessionSummary[],
-  sectionType: "LR" | "RC",
-): SectionProgressPointWithCount[] {
-  return sessions
-    .filter((s) => s.sectionType === sectionType && s.completedAt)
-    .sort((a, b) => new Date(a.completedAt!).getTime() - new Date(b.completedAt!).getTime())
-    .map((s, i) => ({
-      label: s.sectionTitle?.slice(0, 8) ?? `Sec ${i + 1}`,
-      rawScore: s.rawScore ?? 0,
-      ptEquivalent: s.scaledScore ?? s.rawScore ?? 0,
-      questionCount: sessionSectionQuestionCount(s, sectionType),
-      completedAt: s.completedAt,
-    }))
+function resolveActiveKind(param: string | null): SectionInsightKind {
+  const parsed = parseAnalyticsSectionParam(param)
+  return parsed === "RC" ? "RC" : "LR"
 }
 
 function AnalyticsSectionsPage() {
@@ -323,15 +44,12 @@ function AnalyticsSectionsPage() {
   const analyticsApi = useAnalyticsApi()
   const practiceApi = usePracticeApi()
   const [searchParams, setSearchParams] = useSearchParams()
-  const sectionFilter = parseAnalyticsSectionParam(searchParams.get("section"))
+  const activeKind = resolveActiveKind(searchParams.get("section"))
   const [loading, setLoading] = useState(true)
   const [sectionSessions, setSectionSessions] = useState<PracticeSessionSummary[]>([])
-  const [sectionHistory, setSectionHistory] = useState<PrepTestHistoryEntry[]>([])
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
-  const [lrScoreTab, setLrScoreTab] = useState<SectionScoreTab>(DEFAULT_SECTION_SCORE_TAB)
-  const [rcScoreTab, setRcScoreTab] = useState<SectionScoreTab>(DEFAULT_SECTION_SCORE_TAB)
-  const [bookmarkedOnly, setBookmarkedOnly] = useState(false)
-  const [historySort, setHistorySort] = useState<HistorySort>("date-desc")
+  const [trajectoryTab, setTrajectoryTab] = useState<SectionTrajectoryTab>("correct")
+  const [archiveSort, setArchiveSort] = useState<SectionArchiveSort>("recent")
 
   useEffect(() => {
     if (!analyticsApi) {
@@ -341,101 +59,64 @@ function AnalyticsSectionsPage() {
     setLoading(true)
     void analyticsApi
       .getSessions({ kind: "SECTION", completedOnly: true, limit: 500 })
-      .then((sections) => {
-        setSectionSessions(sections.sessions)
-        setSectionHistory(
-          sections.sessions
-            .map(mapSectionSessionToHistoryEntry)
-            .filter((e): e is PrepTestHistoryEntry => e != null),
-        )
-      })
+      .then((sections) => setSectionSessions(sections.sessions))
       .finally(() => setLoading(false))
   }, [analyticsApi])
 
-  const handleSelectSection = (next: AnalyticsSectionFilter) => {
-    const params = new URLSearchParams(searchParams)
-    if (next === "all") params.delete("section")
-    else params.set("section", next.toLowerCase())
-    setSearchParams(params, { replace: true })
-  }
-
-  const showLr = sectionFilter === "all" || sectionFilter === "LR"
-  const showRc = sectionFilter === "all" || sectionFilter === "RC"
-
-  const lrSummary = useMemo(
-    () => sectionSummaryFromSessions(sectionSessions, "LR"),
-    [sectionSessions],
-  )
-  const rcSummary = useMemo(
-    () => sectionSummaryFromSessions(sectionSessions, "RC"),
-    [sectionSessions],
+  const handleSelectKind = useCallback(
+    (next: SectionInsightKind) => {
+      const params = new URLSearchParams(searchParams)
+      params.set("section", next.toLowerCase())
+      setSearchParams(params, { replace: true })
+    },
+    [searchParams, setSearchParams],
   )
 
-  const lrPoints = useMemo(
+  const rangedSessions = useMemo(
     () =>
-      filterByTimeRange(
-        sectionProgressFromSessions(sectionSessions, "LR"),
-        timeRange,
-        (point) => point.completedAt,
-        { keepNewestIfEmpty: true },
-      ),
+      filterByTimeRange(sectionSessions, timeRange, (session) => session.completedAt, {
+        keepNewestIfEmpty: false,
+      }),
     [sectionSessions, timeRange],
   )
-  const rcPoints = useMemo(
-    () =>
-      filterByTimeRange(
-        sectionProgressFromSessions(sectionSessions, "RC"),
-        timeRange,
-        (point) => point.completedAt,
-        { keepNewestIfEmpty: true },
-      ),
-    [sectionSessions, timeRange],
+
+  const lrCount = useMemo(() => filterSectionSessions(rangedSessions, "LR").length, [rangedSessions])
+  const rcCount = useMemo(() => filterSectionSessions(rangedSessions, "RC").length, [rangedSessions])
+
+  const stats = useMemo(
+    () => computeSectionInsightStats(rangedSessions, activeKind),
+    [activeKind, rangedSessions],
   )
-  const lrYAxisLabels = useMemo(
-    () =>
-      buildSectionYAxisLabels(
-        resolveSectionChartMax(
-          lrPoints.map((p) => p.questionCount),
-          lrPoints.map((p) => p.rawScore),
-          "LR",
-        ),
-      ),
-    [lrPoints],
+  const trajectoryPoints = useMemo(
+    () => buildSectionTrajectoryPoints(rangedSessions, activeKind),
+    [activeKind, rangedSessions],
   )
-  const rcYAxisLabels = useMemo(
-    () =>
-      buildSectionYAxisLabels(
-        resolveSectionChartMax(
-          rcPoints.map((p) => p.questionCount),
-          rcPoints.map((p) => p.rawScore),
-          "RC",
-        ),
-      ),
-    [rcPoints],
+  const archiveAttempts = useMemo(() => {
+    const rows = buildSectionInsightAttempts(rangedSessions, activeKind)
+    return sortSectionInsightAttempts(rows, archiveSort)
+  }, [activeKind, archiveSort, rangedSessions])
+
+  const handleToggleBookmark = useCallback(
+    (id: string) => {
+      const previous = sessionBookmarkState(sectionSessions, id)
+      const next = !previous
+      setSectionSessions((current) => withSessionBookmark(current, id, next))
+      void persistSessionBookmark({
+        sessionId: id,
+        bookmarked: next,
+        practiceApi,
+        onFailure: () => setSectionSessions((current) => withSessionBookmark(current, id, previous)),
+      })
+    },
+    [practiceApi, sectionSessions],
   )
 
-  const entries = useMemo(
-    () =>
-      sectionHistory.filter((entry) => matchesAnalyticsSectionFilter(entry.sectionType, sectionFilter)),
-    [sectionFilter, sectionHistory],
+  const handleSelectAttempt = useCallback(
+    (id: string) => {
+      navigate(practiceSessionResultsPath(id, { source: "section" }))
+    },
+    [navigate],
   )
-
-  const visibleEntries = useMemo(() => {
-    const ranged = filterByTimeRange(entries, timeRange, (entry) => entry.takenAt)
-    return filterBookmarkedOnly(sortHistoryEntries(ranged, historySort), bookmarkedOnly)
-  }, [bookmarkedOnly, entries, historySort, timeRange])
-
-  function handleToggleBookmark(id: string) {
-    const previous = sessionBookmarkState(sectionHistory, id)
-    const next = !previous
-    setSectionHistory((current) => withSessionBookmark(current, id, next))
-    void persistSessionBookmark({
-      sessionId: id,
-      bookmarked: next,
-      practiceApi,
-      onFailure: () => setSectionHistory((current) => withSessionBookmark(current, id, previous)),
-    })
-  }
 
   if (loading) {
     return (
@@ -447,97 +128,43 @@ function AnalyticsSectionsPage() {
 
   return (
     <StudentMain>
-      <div className="flex flex-col gap-4">
-        <section className="flex w-full flex-col gap-4">
-          <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3 border-b border-[var(--greyscale-100)] pb-3">
-            <h1 className="!m-0 !text-lg !font-bold !leading-[1.3] text-[var(--color-student-heading)]">Sections</h1>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by section">
-                <button
-                  type="button"
-                  onClick={() => handleSelectSection("all")}
-                  className={drillFilterPillClass(sectionFilter === "all", "compact")}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSelectSection("LR")}
-                  className={drillFilterPillClass(sectionFilter === "LR", "compact")}
-                >
-                  LR
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSelectSection("RC")}
-                  className={drillFilterPillClass(sectionFilter === "RC", "compact")}
-                >
-                  RC
-                </button>
-              </div>
-              <TimeRangeSegmented value={timeRange} onChange={setTimeRange} className="shrink-0" />
-            </div>
-          </div>
-
-          <div
-            className={cn(
-              "flex flex-col gap-4 xl:items-start",
-              showLr && showRc ? "xl:flex-row" : "",
-            )}
-          >
-            {showLr ? (
-              <SectionColumn
-                badge="LR"
-                title="Logical Reasoning"
-                badgeBg="var(--explanation-answered-bg)"
-                badgeColor="var(--explanation-answered)"
-                progressTitle="LR Progress"
-                summary={lrSummary}
-                points={lrPoints}
-                yAxisLabels={lrYAxisLabels}
-                scoreTab={lrScoreTab}
-                onScoreTabChange={setLrScoreTab}
-              />
-            ) : null}
-            {showLr && showRc ? (
-              <div className="hidden w-px shrink-0 self-stretch bg-[var(--greyscale-100)] xl:block" aria-hidden />
-            ) : null}
-            {showRc ? (
-              <SectionColumn
-                badge="RC"
-                title="Reading Comprehension"
-                badgeBg="var(--explanation-rc-badge-bg-light)"
-                badgeColor="var(--explanation-teal)"
-                progressTitle="RC Progress"
-                summary={rcSummary}
-                points={rcPoints}
-                yAxisLabels={rcYAxisLabels}
-                scoreTab={rcScoreTab}
-                onScoreTabChange={setRcScoreTab}
-              />
-            ) : null}
-          </div>
-        </section>
-
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          <HistorySortMenu
-            value={historySort}
-            onChange={setHistorySort}
-            ariaLabel="Sort section history"
-          />
+      <div className="flex flex-col gap-6">
+        <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
+          <h1 className="!m-0 !text-lg !font-semibold !leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]">
+            Section Insights
+          </h1>
+          <TimeRangeSegmented value={timeRange} onChange={setTimeRange} className="shrink-0" />
         </div>
 
-        <AnalyticsPrepTestHistory
-          title="Section History"
-          emptyNoun="sections"
-          visibleEntries={visibleEntries}
-          bookmarkedOnly={bookmarkedOnly}
-          onBookmarkedOnlyChange={setBookmarkedOnly}
-          sectionFilter={sectionFilter}
-          onSectionFilterChange={handleSelectSection}
+        <SectionKindSwitcher
+          active={activeKind}
+          lrCount={lrCount}
+          rcCount={rcCount}
+          onChange={handleSelectKind}
+        />
+
+        {stats ? (
+          <>
+            <SectionInsightStatsRow stats={stats} kind={activeKind} />
+            <SectionTrajectoryPanel
+              kind={activeKind}
+              points={trajectoryPoints}
+              tab={trajectoryTab}
+              onTabChange={setTrajectoryTab}
+            />
+          </>
+        ) : (
+          <p className="rounded-2xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-8 text-center text-sm text-[var(--greyscale-500)]">
+            No {activeKind} sections recorded in this range. Try widening the time range.
+          </p>
+        )}
+
+        <SectionAttemptArchive
+          attempts={archiveAttempts}
+          sort={archiveSort}
+          onSortChange={setArchiveSort}
+          onSelect={handleSelectAttempt}
           onToggleBookmark={handleToggleBookmark}
-          onSelectEntry={(id) => navigate(practiceSessionResultsPath(id, { source: "section" }))}
-          brBarColor="var(--destructive)"
         />
       </div>
     </StudentMain>

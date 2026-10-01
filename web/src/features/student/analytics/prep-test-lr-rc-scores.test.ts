@@ -4,6 +4,7 @@ import type { PracticeSessionSummary } from "@/lib/api/analytics"
 import {
   LAWHUB_SCORED_SECTION_QUESTION_MAX,
   resolvePrepTestLrRcScores,
+  resolvePrepTestSectionAccuracies,
 } from "@/features/student/analytics/prep-test-lr-rc-scores"
 
 function session(
@@ -186,5 +187,66 @@ describe("resolvePrepTestLrRcScores", () => {
       }),
     ])
     expect(scores.lrMax).toBe(0)
+  })
+
+  it("resolves ordered S1–S4 accuracies from linked section sessions", () => {
+    const sections = resolvePrepTestSectionAccuracies(
+      session({
+        ...prepTest,
+        startedAt: "2026-01-01T00:00:00Z",
+        completedAt: "2026-01-01T03:00:00Z",
+      }),
+      [
+      session({
+        id: "s1",
+        kind: "SECTION",
+        prepTestId: "pt-1",
+        sectionType: "LR",
+        sectionTitle: "Section 1",
+        rawScore: 21,
+        metadata: { questionCount: 25, sectionNumber: 1 },
+        startedAt: "2026-01-01T00:05:00Z",
+        completedAt: "2026-01-01T00:40:00Z",
+      }),
+      session({
+        id: "s2",
+        kind: "SECTION",
+        prepTestId: "pt-1",
+        sectionType: "RC",
+        sectionTitle: "Section 2",
+        rawScore: 22,
+        metadata: { questionCount: 27, sectionNumber: 2 },
+        startedAt: "2026-01-01T00:45:00Z",
+        completedAt: "2026-01-01T01:20:00Z",
+      }),
+      session({
+        id: "s3",
+        kind: "SECTION",
+        prepTestId: "pt-1",
+        sectionType: "LR",
+        sectionTitle: "Section 3",
+        rawScore: 19,
+        metadata: { questionCount: 26, sectionNumber: 3 },
+        startedAt: "2026-01-01T01:25:00Z",
+        completedAt: "2026-01-01T02:00:00Z",
+      }),
+      session({
+        id: "s4",
+        kind: "SECTION",
+        prepTestId: "pt-1",
+        sectionType: "LR",
+        sectionTitle: "Section 4",
+        rawScore: 15,
+        metadata: { questionCount: 25, sectionNumber: 4 },
+        startedAt: "2026-01-01T02:05:00Z",
+        completedAt: "2026-01-01T02:40:00Z",
+      }),
+    ])
+    expect(sections).toEqual([
+      { number: 1, correct: 21, max: 25 },
+      { number: 2, correct: 22, max: 27 },
+      { number: 3, correct: 19, max: 26 },
+      { number: 4, correct: 15, max: 25 },
+    ])
   })
 })

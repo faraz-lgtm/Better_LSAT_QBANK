@@ -150,6 +150,60 @@ function resolvePrepTestLrRcScores(
   )
 }
 
+function readSectionNumber(
+  metadata: Record<string, unknown>,
+  sectionTitle: string | null,
+): number | null {
+  const fromMeta =
+    typeof metadata.sectionNumber === "number"
+      ? metadata.sectionNumber
+      : typeof metadata.section_number === "number"
+        ? metadata.section_number
+        : null
+  if (fromMeta != null && Number.isFinite(fromMeta) && fromMeta > 0) {
+    return Math.round(fromMeta)
+  }
+  const match = sectionTitle?.match(/section\s*(\d+)/i)
+  if (!match?.[1]) return null
+  const parsed = Number.parseInt(match[1], 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+}
+
+/**
+ * Ordered S1–S4 accuracies for a PrepTest attempt from linked SECTION sessions.
+ * Falls back to empty when no linked sections exist (caller may omit drop-off).
+ */
+function resolvePrepTestSectionAccuracies(
+  prepTest: PracticeSessionSummary,
+  sectionSessions: readonly PracticeSessionSummary[] = [],
+): Array<{ number: number; correct: number; max: number }> {
+  const attempt = filterSectionSessionsForPrepTestAttempt(sectionSessions, prepTest)
+  if (attempt.length === 0) return []
+
+  const ordered = [...attempt].sort(
+    (a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt) || a.id.localeCompare(b.id),
+  )
+
+  const mapped = ordered.map((session, index) => {
+    const kind = session.sectionType === "RC" || session.sectionType === "LR" ? session.sectionType : null
+    const max = kind
+      ? Math.max(1, sessionSectionQuestionCount(session, kind))
+      : Math.max(1, session.rawScore ?? 0, DEFAULT_SECTION_QUESTION_COUNT.LR)
+    const correct = Math.max(0, Math.min(max, session.rawScore ?? 0))
+    return {
+      number: readSectionNumber(session.metadata, session.sectionTitle) ?? index + 1,
+      correct,
+      max,
+    }
+  })
+
+  const byNumber = new Map<number, { number: number; correct: number; max: number }>()
+  for (const row of mapped) {
+    if (!byNumber.has(row.number)) byNumber.set(row.number, row)
+  }
+  return [...byNumber.values()].sort((a, b) => a.number - b.number).slice(0, 4)
+}
+
 function hasLawHubLrStats(lrMax: number): boolean {
   return lrMax > 0 && lrMax <= LAWHUB_SCORED_SECTION_QUESTION_MAX.LR
 }
@@ -164,4 +218,5 @@ export {
   hasLawHubLrStats,
   hasLawHubRcStats,
   resolvePrepTestLrRcScores,
+  resolvePrepTestSectionAccuracies,
 }

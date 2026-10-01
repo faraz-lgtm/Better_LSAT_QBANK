@@ -131,9 +131,12 @@ describe("exam chrome dark-mode glyphs", () => {
     const marker = ".dark .practice-session-header img,"
     const start = examCss.indexOf(marker)
     expect(start).toBeGreaterThan(-1)
-    const block = examCss.slice(start, start + 280)
+    const block = examCss.slice(start, start + 900)
     expect(block).toContain(".dark .practice-session-side-widget img")
     expect(block).toContain("filter: brightness(0) invert(1)")
+    expect(block).toContain(".dark .practice-session-side-widget button")
+    expect(block).toContain("color: #ffffff")
+    expect(block).toContain(".dark .practice-session-side-widget svg")
   })
 })
 
