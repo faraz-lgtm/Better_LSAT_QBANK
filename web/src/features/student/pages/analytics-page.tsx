@@ -28,6 +28,7 @@ import {
   mapPrioritiesToSections,
   mapSectionSessionToHistoryEntry,
   mapTrajectoryToScoreProgress,
+  overviewScoresForTrajectoryWindow,
   withBestScoreFromTrajectory,
 } from "@/features/student/analytics/map-analytics"
 import {
@@ -44,6 +45,7 @@ import { useAnalyticsApi, usePracticeApi, useUsersApi } from "@/features/student
 import {
   filterByTimeRange,
   getTimeRangeCutoff,
+  OVERVIEW_TIME_RANGE_OPTIONS,
   TimeRangeSegmented,
   type TimeRangeValue,
 } from "@/features/student/components/time-range-filter"
@@ -258,7 +260,9 @@ function OverviewTab() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [overviewRaw, setOverviewRaw] = useState<AnalyticsOverview | null>(null)
+  const [overviewByRange, setOverviewByRange] = useState<
+    Partial<Record<TimeRangeValue, AnalyticsOverview>>
+  >({})
   const [scoreTab, setScoreTab] = useState<ScoreProgressTab>("both")
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
   const [trajectoryPoints, setTrajectoryPoints] = useState<TrajectoryPoint[]>([])
@@ -283,6 +287,7 @@ function OverviewTab() {
       return
     }
     setLoading(true)
+    let cancelled = false
     void Promise.all([
       analyticsApi.getTrajectory(),
       analyticsApi.getPriorities(),
@@ -290,8 +295,10 @@ function OverviewTab() {
       analyticsApi.getSessions({ kind: "SECTION", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
       analyticsApi.getSessions({ kind: "PREPTEST", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
       usersApi?.getStudyContext() ?? Promise.resolve(null),
+      analyticsApi.getOverview(),
     ])
-      .then(([t, p, drills, sectionSessions, prepTests, studyContext]) => {
+      .then(([t, p, drills, sectionSessions, prepTests, studyContext, allOverview]) => {
+        if (cancelled) return
         setTrajectoryPoints(t)
         setSections(mapPrioritiesToSections(p))
         setGoalScore(studyContext?.preferences?.goalScore ?? null)
@@ -311,36 +318,73 @@ function OverviewTab() {
             .map(mapPrepTestSessionToHistoryEntry)
             .filter((e): e is PrepTestHistoryEntry => e != null),
         )
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
-      .finally(() => setLoading(false))
-  }, [analyticsApi, usersApi])
+        setOverviewByRange({ all: allOverview })
 
-  useEffect(() => {
-    if (!analyticsApi) return
-    let cancelled = false
-    const completedSince = getTimeRangeCutoff(timeRange)?.toISOString()
-    void analyticsApi
-      .getOverview(completedSince ? { completedSince } : undefined)
-      .then((o) => {
-        if (cancelled) return
-        setOverviewRaw(o)
-        setError(null)
+        // Prefetch ranged overviews so filter switches update metrics instantly.
+        void Promise.all(
+          OVERVIEW_TIME_RANGE_OPTIONS.filter((option) => option.value !== "all").map(async (option) => {
+            const completedSince = getTimeRangeCutoff(option.value)?.toISOString()
+            const overview = await analyticsApi.getOverview(
+              completedSince ? { completedSince } : undefined,
+            )
+            return [option.value, overview] as const
+          }),
+        ).then((entries) => {
+          if (cancelled) return
+          setOverviewByRange((prev) => ({ ...prev, ...Object.fromEntries(entries) }))
+        })
       })
       .catch((e) => {
         if (cancelled) return
-        setError(e instanceof Error ? e.message : "Failed to load overview")
+        setError(e instanceof Error ? e.message : "Failed to load")
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
       })
     return () => {
       cancelled = true
     }
-  }, [analyticsApi, timeRange])
+  }, [analyticsApi, usersApi])
+
+  // If user picks a range before prefetch finishes, fetch that one immediately.
+  useEffect(() => {
+    if (!analyticsApi || timeRange === "all") return
+    if (overviewByRange[timeRange]) return
+    let cancelled = false
+    const completedSince = getTimeRangeCutoff(timeRange)?.toISOString()
+    void analyticsApi
+      .getOverview(completedSince ? { completedSince } : undefined)
+      .then((overview) => {
+        if (cancelled) return
+        setOverviewByRange((prev) =>
+          prev[timeRange] ? prev : { ...prev, [timeRange]: overview },
+        )
+      })
+      .catch(() => {
+        // Keep trajectory-derived fallback metrics; initial load error handling covers hard failures.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [analyticsApi, overviewByRange, timeRange])
+
+  const rangedTrajectoryPoints = useMemo(
+    () => filterTrajectoryByTimeRange(trajectoryPoints, timeRange),
+    [timeRange, trajectoryPoints],
+  )
 
   const overview = useMemo(() => {
-    if (!overviewRaw) return null
-    if (timeRange !== "all") return overviewRaw
-    return withBestScoreFromTrajectory(overviewRaw, trajectoryPoints)
-  }, [overviewRaw, timeRange, trajectoryPoints])
+    const cached = overviewByRange[timeRange]
+    if (cached) {
+      if (timeRange === "all") return withBestScoreFromTrajectory(cached, trajectoryPoints)
+      return cached
+    }
+    // Fallback while a range is still loading: recompute scores from trajectory instantly.
+    const allTime = overviewByRange.all
+    if (!allTime) return null
+    if (timeRange === "all") return withBestScoreFromTrajectory(allTime, trajectoryPoints)
+    return overviewScoresForTrajectoryWindow(allTime, rangedTrajectoryPoints)
+  }, [overviewByRange, rangedTrajectoryPoints, timeRange, trajectoryPoints])
 
   const refreshPrioritySections = useCallback(async () => {
     if (!analyticsApi) return
@@ -370,11 +414,6 @@ function OverviewTab() {
       }
     },
     [goalScore, refreshPrioritySections, usersApi],
-  )
-
-  const rangedTrajectoryPoints = useMemo(
-    () => filterTrajectoryByTimeRange(trajectoryPoints, timeRange),
-    [timeRange, trajectoryPoints],
   )
 
   const trajectory = useMemo(
