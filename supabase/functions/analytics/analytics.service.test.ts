@@ -1185,6 +1185,30 @@ Deno.test('getSessions maps practice session list row', async () => {
   assertEquals(out.sessions[0]?.bookmarked, true)
 })
 
+Deno.test('getSessions resolves section blind review raw score from metadata', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listSessions: async () => [
+        sessionListRow({
+          kind: 'SECTION',
+          prep_test_id: 'pt-1',
+          blind_review_raw_score: null,
+          admin_prep_tests: { title: 'PT 101' },
+          admin_sections: { title: 'LR Section 1', section_type: 'LR' },
+          metadata: { sectionBlindReviewRawScore: 21, questionIds: ['q1'] },
+        }),
+      ],
+      countSessions: async () => 1,
+    }),
+  })
+  const out = await service.getSessions('user-1', {
+    kind: 'SECTION',
+    limit: 20,
+    offset: 0,
+  })
+  assertEquals(out.sessions[0]?.blindReviewRawScore, 21)
+})
+
 Deno.test('getSessions enriches drill metadata with questionTypeName', async () => {
   const service = createAnalyticsService({
     repository: mockRepo({

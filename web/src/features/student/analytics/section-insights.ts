@@ -29,6 +29,8 @@ export type SectionInsightAttempt = {
   scaledEstimate: number | null
   /** Always a 120–180 PT-equivalent for display/charting. */
   ptEquivalent: number
+  /** Untimed-review correct count when completed; otherwise null. */
+  untimedCorrect: number | null
   untimedCorrectDelta: number | null
   /** Correct minus mean correct of up to 5 prior attempts (same section). */
   momentum: number | null
@@ -149,6 +151,21 @@ function attemptMomentum(
   return round1(correct - avg)
 }
 
+/** Prefer API column; section BR historically lived only in metadata. */
+export function resolveSectionBlindReviewRawScore(
+  session: Pick<PracticeSessionSummary, "blindReviewRawScore" | "metadata">,
+): number | null {
+  const fromColumn = session.blindReviewRawScore
+  if (typeof fromColumn === "number" && Number.isFinite(fromColumn)) {
+    return Math.round(fromColumn)
+  }
+  const fromMeta = session.metadata?.sectionBlindReviewRawScore
+  if (typeof fromMeta === "number" && Number.isFinite(fromMeta)) {
+    return Math.round(fromMeta)
+  }
+  return null
+}
+
 export function buildSectionInsightAttempts(
   sessions: readonly PracticeSessionSummary[],
   kind: SectionInsightKind,
@@ -158,9 +175,9 @@ export function buildSectionInsightAttempts(
     .map((session) => {
       const questionCount = sessionSectionQuestionCount(session, kind)
       const correct = Math.max(0, Math.min(questionCount, session.rawScore ?? 0))
-      const br = session.blindReviewRawScore
+      const br = resolveSectionBlindReviewRawScore(session)
       const untimedCorrectDelta =
-        br != null && Number.isFinite(br) ? Math.round(br - correct) : null
+        br != null ? Math.round(br - correct) : null
       const scaled =
         session.scaledScore != null && session.scaledScore >= 120 && session.scaledScore <= 180
           ? session.scaledScore
@@ -182,6 +199,7 @@ export function buildSectionInsightAttempts(
         missed: Math.max(0, questionCount - correct),
         scaledEstimate: scaled,
         ptEquivalent: sectionPtEquivalentScore(correct, questionCount, scaled),
+        untimedCorrect: br,
         untimedCorrectDelta,
         momentum: attemptMomentum(session, chronological),
       } satisfies SectionInsightAttempt

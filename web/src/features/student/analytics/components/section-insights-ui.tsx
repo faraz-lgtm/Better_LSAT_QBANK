@@ -443,11 +443,26 @@ function AttemptArchiveCard({
         {attempt.correct} of {attempt.questionCount} correct · {attempt.ptEquivalent} est.
       </p>
       <div className="mt-auto border-t border-[var(--greyscale-100)] pt-2.5">
-        <p className="m-0 text-xs font-medium leading-[1.5]" style={{ color: MUTED }}>
-          {attempt.untimedCorrectDelta == null
-            ? "No untimed review"
-            : `${attempt.untimedCorrectDelta > 0 ? "+" : ""}${attempt.untimedCorrectDelta} correct on untimed review`}
-        </p>
+        {attempt.untimedCorrect != null ? (
+          <div className="flex h-[38.5px] w-full min-w-0 items-center justify-between gap-2 rounded-[8px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-3 py-[7px]">
+            <span className="whitespace-nowrap text-[10px] font-medium capitalize leading-[16.5px] tracking-[0.04em] text-[var(--greyscale-500)]">
+              Untimed Review
+            </span>
+            <span className="shrink-0 whitespace-nowrap text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)] tabular-nums">
+              {attempt.untimedCorrect}/{attempt.questionCount}
+              {attempt.untimedCorrectDelta != null && attempt.untimedCorrectDelta !== 0 ? (
+                <span className="ml-1.5 font-medium text-[var(--primary)]">
+                  ({attempt.untimedCorrectDelta > 0 ? "+" : ""}
+                  {attempt.untimedCorrectDelta})
+                </span>
+              ) : null}
+            </span>
+          </div>
+        ) : (
+          <p className="m-0 text-xs font-medium leading-[1.5]" style={{ color: MUTED }}>
+            No untimed review
+          </p>
+        )}
       </div>
     </article>
   )

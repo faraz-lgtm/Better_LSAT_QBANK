@@ -480,6 +480,7 @@ Deno.test('completeSession uses latest answer per question for raw score', async
 
 Deno.test('completeSectionBlindReview stores blind review answers on completed section', async () => {
   let capturedMetadata: Record<string, unknown> | null = null
+  let capturedPatch: Record<string, unknown> | null = null
   const repo = {
     ...mockRepo(),
     getSessionById: async () =>
@@ -503,11 +504,15 @@ Deno.test('completeSectionBlindReview stores blind review answers on completed s
         admin_sections: { section_type: 'LR' as const, prep_test_id: 'pt-1' },
       }) satisfies QuestionDetailRow,
     updateSession: async (_id: string, _uid: string, patch: Record<string, unknown>) => {
+      capturedPatch = patch
       capturedMetadata = patch.metadata as Record<string, unknown>
       return baseSession({
         kind: 'SECTION',
         section_id: 'sec-1',
         completed_at: '2026-01-02T00:00:00Z',
+        blind_review_raw_score: typeof patch.blind_review_raw_score === 'number'
+          ? patch.blind_review_raw_score
+          : null,
         metadata: capturedMetadata ?? {},
       })
     },
@@ -519,6 +524,8 @@ Deno.test('completeSectionBlindReview stores blind review answers on completed s
   })
   assertEquals(out.session.kind, 'SECTION')
   assertEquals(capturedMetadata?.sectionBlindReviewRawScore, 1)
+  assertEquals(capturedPatch?.blind_review_raw_score, 1)
+  assertEquals(typeof capturedPatch?.blind_review_completed_at, 'string')
   const brAnswers = capturedMetadata?.sectionBlindReviewAnswers as Array<{ isCorrect: boolean }>
   assertEquals(brAnswers?.[0]?.isCorrect, true)
 })

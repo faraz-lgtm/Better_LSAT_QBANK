@@ -1828,6 +1828,8 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const rawScore = scoredWithFallback.filter((answer) => answer.isCorrect).length
       const now = new Date().toISOString()
       const sessionRow = await deps.repository.updateSession(sessionId, userId, {
+        blind_review_raw_score: rawScore,
+        blind_review_completed_at: now,
         metadata: {
           ...session.metadata,
           drillBlindReviewRawScore: rawScore,
@@ -1890,6 +1892,8 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const rawScore = scoredWithFallback.filter((answer) => answer.isCorrect).length
       const now = new Date().toISOString()
       const sessionRow = await deps.repository.updateSession(sessionId, userId, {
+        blind_review_raw_score: rawScore,
+        blind_review_completed_at: now,
         metadata: {
           ...session.metadata,
           sectionBlindReviewRawScore: rawScore,
