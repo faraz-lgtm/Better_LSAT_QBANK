@@ -586,7 +586,14 @@ export function mapSectionSessionToHistoryEntry(s: PracticeSessionSummary): Prep
     prepTestId: s.prepTestId,
     metadata: s.metadata,
   })
-  const br = s.blindReviewRawScore ?? correct
+  const fromColumn =
+    typeof s.blindReviewRawScore === "number" && Number.isFinite(s.blindReviewRawScore)
+      ? Math.round(s.blindReviewRawScore)
+      : null
+  const fromMeta = s.metadata?.sectionBlindReviewRawScore
+  const fromMetadata =
+    typeof fromMeta === "number" && Number.isFinite(fromMeta) ? Math.round(fromMeta) : null
+  const br = fromColumn ?? fromMetadata ?? correct
   return {
     id: s.id,
     testLabel,

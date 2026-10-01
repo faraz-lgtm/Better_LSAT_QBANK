@@ -80,6 +80,28 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10
 }
 
+/** Section/drill BR is stored in metadata; PrepTest uses the session column. */
+export function resolveSessionBlindReviewRawScore(
+  kind: PracticeSessionKind,
+  columnValue: number | null | undefined,
+  metadata: Record<string, unknown> | null | undefined,
+): number | null {
+  if (typeof columnValue === 'number' && Number.isFinite(columnValue)) {
+    return Math.round(columnValue)
+  }
+  const meta = metadata ?? {}
+  const fromMeta =
+    kind === 'SECTION'
+      ? meta.sectionBlindReviewRawScore
+      : kind === 'DRILL'
+        ? meta.drillBlindReviewRawScore
+        : null
+  if (typeof fromMeta === 'number' && Number.isFinite(fromMeta)) {
+    return Math.round(fromMeta)
+  }
+  return null
+}
+
 type PrepTestSectionRel = {
   id?: string | null
   section_type: 'LR' | 'RC' | 'LG' | null
@@ -860,7 +882,11 @@ export function createAnalyticsService(deps: { repository: AnalyticsRepository }
             rawScore: s.raw_score,
             scaledScore: s.scaled_score,
             percentile: s.percentile,
-            blindReviewRawScore: s.blind_review_raw_score,
+            blindReviewRawScore: resolveSessionBlindReviewRawScore(
+              s.kind,
+              s.blind_review_raw_score,
+              metadata,
+            ),
             blindReviewScaledScore: s.blind_review_scaled_score,
             blindReviewPercentile: s.blind_review_percentile,
             bookmarked: s.bookmarked,

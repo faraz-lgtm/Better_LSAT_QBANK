@@ -95,8 +95,30 @@ describe("buildSectionInsightAttempts + sort", () => {
       "LR",
     )
     expect(rows[0]?.id).toBe("b")
+    expect(rows[0]?.untimedCorrect).toBe(23)
     expect(rows[0]?.untimedCorrectDelta).toBe(1)
     expect(rows[0]?.missed).toBe(3)
+  })
+
+  it("reads untimed review from section metadata when the column is empty", () => {
+    const rows = buildSectionInsightAttempts(
+      [
+        session({
+          id: "meta-br",
+          completedAt: "2026-01-01T01:00:00Z",
+          rawScore: 18,
+          blindReviewRawScore: null,
+          metadata: {
+            questionCount: 25,
+            sectionNumber: 3,
+            sectionBlindReviewRawScore: 22,
+          },
+        }),
+      ],
+      "LR",
+    )
+    expect(rows[0]?.untimedCorrect).toBe(22)
+    expect(rows[0]?.untimedCorrectDelta).toBe(4)
   })
 
   it("sorts by biggest gains using momentum", () => {
