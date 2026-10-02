@@ -6,13 +6,8 @@ import {
 } from '../_shared/lawhub-student-identity.ts'
 import {
   BILLING_PLAN_CATALOG,
-  CHECKOUT_PLANS,
   type BillingPlanId,
-  type CheckoutPlanId,
-  checkoutPlanFromId,
-  priceIdForCheckoutPlan,
   resolvePlanFromPriceId,
-  storedPlanTierFromMetadata,
   type StripeRuntimeEnv,
 } from '../_shared/stripe-env.ts'
 import type { BillingRepository } from './billing.repository.ts'
@@ -43,9 +38,9 @@ function subscriptionPriceId(subscription: Stripe.Subscription): string {
   return item?.price?.id ?? ''
 }
 
-function parseCheckoutPlan(value: unknown): CheckoutPlanId {
-  if (value === 'monthly' || value === 'three_month' || value === 'six_month') return value
-  throw new Error('plan must be monthly, three_month, or six_month')
+function parseCheckoutPlan(value: unknown): BillingPlanId {
+  if (value === 'core' || value === 'live') return value
+  throw new Error('plan must be core or live')
 }
 
 const DEFAULT_CHECKOUT_SUCCESS_PATH = '/app?checkout=success'
@@ -63,29 +58,12 @@ function parseCheckoutSuccessPath(value: unknown): string {
   return trimmed
 }
 
-function expectedIntervalCount(plan: CheckoutPlanId): 1 | 3 | 6 {
-  return checkoutPlanFromId(plan).intervalCount
-}
-
-async function validatePlanPrice(
-  stripe: Stripe,
-  recurringPriceId: string,
-  plan: CheckoutPlanId,
-): Promise<Stripe.Price> {
+async function validatePlanPrice(stripe: Stripe, recurringPriceId: string): Promise<void> {
   const recurring = await stripe.prices.retrieve(recurringPriceId)
-  const intervalCount = recurring.recurring?.interval_count ?? 1
 
-  if (
-    recurring.type !== 'recurring' ||
-    recurring.recurring?.interval !== 'month' ||
-    intervalCount !== expectedIntervalCount(plan)
-  ) {
-    throw new Error(
-      `Core Stripe price must be a recurring charge every ${expectedIntervalCount(plan)} month(s).`,
-    )
+  if (recurring.type !== 'recurring' || recurring.recurring?.interval !== 'month') {
+    throw new Error('Core/Live Stripe price must be a recurring monthly price.')
   }
-
-  return recurring
 }
 
 const EXISTING_LSAC_CHECKOUT_NOTE =
@@ -95,25 +73,28 @@ const EXISTING_LSAC_CHECKOUT_NOTE =
 async function buildSubscriptionCheckoutLineItem(
   stripe: Stripe,
   priceId: string,
-  plan: CheckoutPlanId,
+  plan: BillingPlanId,
   includeLawHub: boolean,
 ): Promise<Stripe.Checkout.SessionCreateParams.LineItem> {
-  const price = await validatePlanPrice(stripe, priceId, plan)
   if (includeLawHub) {
     return { price: priceId, quantity: 1 }
   }
 
-  const catalog = checkoutPlanFromId(plan)
-  const intervalCount = price.recurring?.interval_count ?? catalog.intervalCount
+  const price = await stripe.prices.retrieve(priceId)
+  const catalog = plan === 'live' ? BILLING_PLAN_CATALOG.live : BILLING_PLAN_CATALOG.core
+
+  if (price.type !== 'recurring' || price.recurring?.interval !== 'month') {
+    throw new Error('Core/Live Stripe price must be a recurring monthly price.')
+  }
 
   return {
     price_data: {
       currency: price.currency ?? 'usd',
-      unit_amount: price.unit_amount ?? catalog.priceUsd * 100,
-      recurring: { interval: 'month', interval_count: intervalCount },
+      unit_amount: price.unit_amount ?? catalog.monthlyUsd * 100,
+      recurring: { interval: 'month' },
       product_data: {
         name: `Better LSAT ${catalog.name}`,
-        description: `${catalog.description} ${EXISTING_LSAC_CHECKOUT_NOTE}`,
+        description: `${catalog.tagline} ${EXISTING_LSAC_CHECKOUT_NOTE}`,
       },
     },
     quantity: 1,
@@ -200,22 +181,27 @@ export function createBillingService(deps: BillingServiceDeps) {
     },
 
     getPlans() {
-      const { lsacYearly } = BILLING_PLAN_CATALOG
+      const { core, live, lsacYearly } = BILLING_PLAN_CATALOG
       return {
-        plans: CHECKOUT_PLANS.map((plan) => ({
-          id: plan.id,
-          name: plan.name,
-          headline: plan.headline,
-          description: plan.description,
-          priceUsd: plan.priceUsd,
-          equivalentMonthlyUsd: plan.equivalentMonthlyUsd,
-          discountLabel: plan.discountLabel,
-          badge: plan.badge,
-          intervalCount: plan.intervalCount,
-          renewalNote: plan.renewalNote,
-          dueTodayUsd: plan.priceUsd + lsacYearly.yearlyUsd,
-          dueTodayUsdOwnLsac: plan.priceUsd,
-        })),
+        plans: [
+          {
+            id: core.id,
+            name: core.name,
+            tagline: core.tagline,
+            monthlyUsd: core.monthlyUsd,
+            dueTodayUsd: core.monthlyUsd + lsacYearly.yearlyUsd,
+            dueTodayUsdOwnLsac: core.monthlyUsd,
+          },
+          {
+            id: live.id,
+            name: live.name,
+            tagline: live.tagline,
+            monthlyUsd: live.monthlyUsd,
+            badge: live.badge,
+            dueTodayUsd: live.monthlyUsd + lsacYearly.yearlyUsd,
+            dueTodayUsdOwnLsac: live.monthlyUsd,
+          },
+        ],
         lsacYearly: {
           name: lsacYearly.name,
           description: lsacYearly.description,
@@ -247,7 +233,7 @@ export function createBillingService(deps: BillingServiceDeps) {
     async createCheckoutSession(
       userId: string,
       email: string | null,
-      plan: CheckoutPlanId,
+      plan: BillingPlanId,
       options: { includeLawHub?: boolean; successPath?: string } = {},
     ): Promise<{ url: string }> {
       const includeLawHub = options.includeLawHub !== false
@@ -280,7 +266,9 @@ export function createBillingService(deps: BillingServiceDeps) {
         })
       }
 
-      const recurringPriceId = priceIdForCheckoutPlan(env.priceIds, plan)
+      const recurringPriceId =
+        plan === 'live' ? env.priceIds.live : env.priceIds.core
+      await validatePlanPrice(deps.stripe, recurringPriceId)
 
       if (!includeLawHub) {
         await deps.repository.setPrepPlusSource(userId, 'existing_lsac')
@@ -356,7 +344,10 @@ export function createBillingService(deps: BillingServiceDeps) {
           if (customerId) {
             await deps.repository.setStripeCustomerId(userId, customerId)
           }
-          const planHint = storedPlanTierFromMetadata(session.metadata?.plan)
+          const planHint =
+            session.metadata?.plan === 'core' || session.metadata?.plan === 'live'
+              ? session.metadata.plan
+              : null
           const subscriptionId =
             typeof session.subscription === 'string'
               ? session.subscription
@@ -401,7 +392,10 @@ export function createBillingService(deps: BillingServiceDeps) {
               : subscription.customer.id
           const userId = await resolveUserIdFromCustomer(customerId)
           if (!userId) break
-          const planHint = storedPlanTierFromMetadata(subscription.metadata?.plan)
+          const planHint =
+            subscription.metadata?.plan === 'core' || subscription.metadata?.plan === 'live'
+              ? subscription.metadata.plan
+              : null
           await syncSubscription(userId, subscription, planHint)
           break
         }
@@ -419,7 +413,10 @@ export function createBillingService(deps: BillingServiceDeps) {
               : subscription.customer.id
           const userId = await resolveUserIdFromCustomer(customerId)
           if (!userId) break
-          const planHint = storedPlanTierFromMetadata(subscription.metadata?.plan)
+          const planHint =
+            subscription.metadata?.plan === 'core' || subscription.metadata?.plan === 'live'
+              ? subscription.metadata.plan
+              : null
           await syncSubscription(userId, subscription, planHint)
           break
         }

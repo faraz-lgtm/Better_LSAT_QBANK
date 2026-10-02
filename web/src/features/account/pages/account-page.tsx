@@ -23,7 +23,7 @@ import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-mod
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { ThemeToggleSwitch } from "@/features/theme/theme-toggle"
-import { createBillingApi, type CheckoutPlanId } from "@/lib/api/billing"
+import { createBillingApi, type BillingPlanId } from "@/lib/api/billing"
 import { createUsersApi, type UserProfile } from "@/lib/api/users"
 import { resolveAccountLsacLinkState } from "@/lib/auth/needs-lsac-link"
 import {
@@ -52,9 +52,8 @@ type EditableAccountField = "name" | "email" | "phone" | "password" | "lsacDate"
 const TIMEZONE_OPTIONS = northAmericanTimezones as AccountTimezone[]
 
 const PAYMENT_PLAN_OPTIONS: FigmaDropdownOption[] = [
-  { value: "monthly", label: "Monthly — $69/mo" },
-  { value: "three_month", label: "3 months — $192" },
-  { value: "six_month", label: "6 months — $354" },
+  { value: "core", label: "Core plan" },
+  { value: "live", label: "Live plan" },
 ]
 
 function getDisplayName(profile: UserProfile | null, email: string | null): string {
@@ -770,7 +769,7 @@ function AccountPage() {
   const [accommodationDraftCustomMinutes, setAccommodationDraftCustomMinutes] = useState("")
   const [savingAccommodations, setSavingAccommodations] = useState(false)
   const [addingPayment, setAddingPayment] = useState(false)
-  const [paymentPlan, setPaymentPlan] = useState<CheckoutPlanId>("monthly")
+  const [paymentPlan, setPaymentPlan] = useState<BillingPlanId>("core")
   const [paymentPlanMenuOpen, setPaymentPlanMenuOpen] = useState(false)
   const [startingPayment, setStartingPayment] = useState(false)
   const [paymentError, setPaymentError] = useState<string | null>(null)
@@ -1181,7 +1180,7 @@ function AccountPage() {
                         placeholder="Select a plan"
                         disabled={startingPayment}
                         onOpenChange={setPaymentPlanMenuOpen}
-                        onChange={(value) => setPaymentPlan(value as CheckoutPlanId)}
+                        onChange={(value) => setPaymentPlan(value as BillingPlanId)}
                       />
                       <p className="mt-2 text-xs leading-5 tracking-[0.24px] text-[var(--greyscale-500)]">
                         Card number, expiry, CVC, and billing details are collected on Stripe's secure checkout page.

@@ -20,23 +20,18 @@ describe('createBillingApi', () => {
       error: null,
     })
     const api = createBillingApi(mockSupabase(invoke))
-    const url = await api.createCheckoutSession('monthly')
+    const url = await api.createCheckoutSession('core')
     expect(url).toBe('https://checkout.stripe.test/session')
     expect(invoke).toHaveBeenCalledWith('billing-create-checkout-session', {
       method: 'POST',
-      body: {
-        plan: 'monthly',
-        includeLawHub: undefined,
-        appBaseUrl: window.location.origin,
-        successPath: undefined,
-      },
+      body: { plan: 'core' },
       headers: { Authorization: 'Bearer t1' },
     })
   })
 
   it('getPlans invokes billing-get-plans', async () => {
     const catalog = {
-      plans: [{ id: 'monthly', name: 'Monthly', headline: '', description: '', priceUsd: 69, equivalentMonthlyUsd: null, discountLabel: null, badge: null, intervalCount: 1, renewalNote: '', dueTodayUsd: 168, dueTodayUsdOwnLsac: 69 }],
+      plans: [{ id: 'core', name: 'Core', tagline: '', monthlyUsd: 70, dueTodayUsd: 169 }],
       lsacYearly: { name: 'LawHub Advantage', description: '', yearlyUsd: 99 },
     }
     const invoke = vi.fn().mockResolvedValue({ data: { catalog }, error: null })

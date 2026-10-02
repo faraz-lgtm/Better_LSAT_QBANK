@@ -1,25 +1,64 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
+import { ArrowRight, Check } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
-import { PricingPlanCard } from "@/features/billing/pricing-plan-card"
-import {
-  FREE_PRICING_PLAN,
-  PAID_PRICING_PLANS,
-  type PaidPricingPlan,
-} from "@/features/guest/pricing/guest-pricing-plans-data"
-import {
-  LAWHUB_ADVANTAGE_BILLING_NOTE,
-  LAWHUB_OWN_PREPPLUS_NOTE,
-} from "@/features/guest/pricing/guest-pricing-lawhub"
-import { createBillingApi, type BillingCatalog, type CheckoutPlanId } from "@/lib/api/billing"
+import { createBillingApi, type BillingCatalog, type BillingPlanId } from "@/lib/api/billing"
 import { createUsersApi } from "@/lib/api/users"
 import { logRouteRedirect } from "@/lib/auth/log-route-redirect"
 import { isInDiagnosticAcquisitionFunnel, readDiagnosticFunnelState } from "@/lib/auth/diagnostic-intent"
 import { emailAllowsLawHub, profileHasLawHubName } from "@/lib/lawhub-identity"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatEdgeFunctionError, formatSupabaseCallError } from "@/lib/supabase/format-call-error"
+import { cn } from "@/lib/utils"
+
+const CORE_FEATURES = [
+  "Full question bank — 6,000+ explanations",
+  "Official LSAC questions & full-length tests",
+  "Section drills & timed practice",
+  "Score analytics & performance tracking",
+  "Structured course curriculum",
+  "Written & video explanations (videos coming soon)",
+  "Personalized study plan from diagnostic",
+] as const
+
+const LIVE_FEATURES = [
+  "Everything in Core, plus:",
+  "Live weekly classes with LSAT instructors",
+  "Live Q&A and group sessions",
+  "Priority support",
+  "Live classes launching soon — lock in pricing now",
+] as const
+
+const FALLBACK_CATALOG: BillingCatalog = {
+  plans: [
+    {
+      id: "core",
+      name: "Core",
+      tagline: "Everything you need to improve your score.",
+      monthlyUsd: 70,
+      dueTodayUsd: 169,
+      dueTodayUsdOwnLsac: 70,
+    },
+    {
+      id: "live",
+      name: "Live",
+      tagline: "For students who want live instruction.",
+      monthlyUsd: 129,
+      dueTodayUsd: 228,
+      dueTodayUsdOwnLsac: 129,
+      badge: "Most Comprehensive",
+    },
+  ],
+  lsacYearly: {
+    name: "LawHub Advantage",
+    description:
+      "Official LSAT PrepPlus via LawHub. Fee goes to LSAC, not Better LSAT. Billed once per year.",
+    yearlyUsd: 99,
+  },
+}
 
 const pricingLayoutProps = {
   ctaLabel: "Log In" as const,
@@ -28,30 +67,14 @@ const pricingLayoutProps = {
   contentLayout: "wide" as const,
 }
 
-function mergePaidPlan(plan: PaidPricingPlan, catalog: BillingCatalog | null): PaidPricingPlan {
-  const remote = catalog?.plans.find((item) => item.id === plan.id)
-  if (!remote) return plan
-  return {
-    ...plan,
-    name: remote.name,
-    headline: remote.headline,
-    description: remote.description,
-    priceUsd: remote.priceUsd,
-    equivalentMonthlyUsd: remote.equivalentMonthlyUsd,
-    discountLabel: remote.discountLabel,
-    badge: plan.badge,
-    renewalNote: remote.renewalNote,
-  }
-}
-
 function PricingPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const checkoutCanceled = searchParams.get("checkout") === "cancel"
 
-  const [catalog, setCatalog] = useState<BillingCatalog | null>(null)
+  const [catalog, setCatalog] = useState<BillingCatalog>(FALLBACK_CATALOG)
   const [isLoading, setIsLoading] = useState(true)
-  const [checkoutPlan, setCheckoutPlan] = useState<CheckoutPlanId | null>(null)
+  const [checkoutPlan, setCheckoutPlan] = useState<BillingPlanId | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [existingLsacMode, setExistingLsacMode] = useState(false)
 
@@ -134,7 +157,7 @@ function PricingPage() {
     }
   }, [billingApi, navigate, usersApi])
 
-  async function startCheckout(plan: CheckoutPlanId) {
+  async function startCheckout(plan: BillingPlanId) {
     if (!billingApi) {
       setError("Billing is not available.")
       return
@@ -188,7 +211,8 @@ function PricingPage() {
     )
   }
 
-  const paidPlans = PAID_PRICING_PLANS.map((plan) => mergePaidPlan(plan, catalog))
+  const corePlan = catalog.plans.find((p) => p.id === "core") ?? FALLBACK_CATALOG.plans[0]!
+  const livePlan = catalog.plans.find((p) => p.id === "live") ?? FALLBACK_CATALOG.plans[1]!
 
   return (
     <AuthLayout {...pricingLayoutProps}>
@@ -197,8 +221,8 @@ function PricingPage() {
           <h1 className="pricing-page__title">Pricing</h1>
           <p className="pricing-page__subtitle">
             {existingLsacMode
-              ? "Choose a Core plan — you keep your own LawHub PrepPlus subscription."
-              : "Core plans include Official LSAT PrepPlus (LawHub Advantage) for year one at checkout."}
+              ? "Choose Core or Live — you keep your own LawHub PrepPlus subscription."
+              : "Includes Official LSAT PrepPlus (LawHub Advantage) for year one at checkout."}
           </p>
         </div>
 
@@ -208,43 +232,133 @@ function PricingPage() {
         {error && <p className="pricing-page__error">{error}</p>}
 
         <div className="pricing-page__grid">
-          <PricingPlanCard
-            plan={{ ...FREE_PRICING_PLAN, ctaLabel: "Continue Free" }}
+          <PricingCard
+            plan={corePlan}
+            lsacYearlyUsd={catalog.lsacYearly.yearlyUsd}
+            dueTodayUsd={existingLsacMode ? corePlan.dueTodayUsdOwnLsac : corePlan.dueTodayUsd}
+            includeLawHub={!existingLsacMode}
+            features={CORE_FEATURES}
+            ctaLabel="Get Core"
             ctaVariant="orange"
+            isLoading={checkoutPlan === "core"}
             disabled={checkoutPlan !== null}
-            onSelect={() => navigate("/app")}
+            onSelect={() => void startCheckout("core")}
           />
-          {paidPlans.map((plan) => (
-            <PricingPlanCard
-              key={plan.id}
-              plan={plan}
-              includeLawHub={!existingLsacMode}
-              highlighted={plan.featured}
-              ctaVariant={plan.id === "monthly" ? "orange" : "navy"}
-              isLoading={checkoutPlan === plan.id}
-              disabled={checkoutPlan !== null}
-              onSelect={() => void startCheckout(plan.id)}
-            />
-          ))}
+          <PricingCard
+            plan={livePlan}
+            lsacYearlyUsd={catalog.lsacYearly.yearlyUsd}
+            dueTodayUsd={existingLsacMode ? livePlan.dueTodayUsdOwnLsac : livePlan.dueTodayUsd}
+            includeLawHub={!existingLsacMode}
+            features={LIVE_FEATURES}
+            ctaLabel="Get Live"
+            ctaVariant="navy"
+            highlighted
+            isLoading={checkoutPlan === "live"}
+            disabled={checkoutPlan !== null}
+            onSelect={() => void startCheckout("live")}
+          />
         </div>
 
         <p className="pricing-page__footnote">
-          {existingLsacMode ? LAWHUB_OWN_PREPPLUS_NOTE : LAWHUB_ADVANTAGE_BILLING_NOTE}
+          {existingLsacMode ? (
+            <>
+              ${corePlan.dueTodayUsdOwnLsac} or ${livePlan.dueTodayUsdOwnLsac} due today for your first month. LawHub
+              PrepPlus is billed separately through LSAC.
+            </>
+          ) : (
+            <>
+              {catalog.lsacYearly.name} (${catalog.lsacYearly.yearlyUsd}/year) is billed once today, then $
+              {corePlan.monthlyUsd} or ${livePlan.monthlyUsd}/mo starting next month.
+            </>
+          )}
         </p>
 
         <div className="pricing-page__alt-link">
           {existingLsacMode ? (
-            <button type="button" onClick={() => setExistingLsacMode(false)}>
+            <button
+              type="button"
+              onClick={() => setExistingLsacMode(false)}
+            >
               Need LawHub PrepPlus included? View standard pricing
             </button>
           ) : (
-            <button type="button" onClick={() => setExistingLsacMode(true)}>
-              I already have LawHub PrepPlus — pay for Core only
+            <button
+              type="button"
+              onClick={() => setExistingLsacMode(true)}
+            >
+              I already have LawHub PrepPlus — pay for Core or Live only
             </button>
           )}
         </div>
       </div>
     </AuthLayout>
+  )
+}
+
+function PricingCard({
+  plan,
+  lsacYearlyUsd,
+  dueTodayUsd,
+  includeLawHub,
+  features,
+  ctaLabel,
+  ctaVariant,
+  highlighted = false,
+  isLoading,
+  disabled,
+  onSelect,
+}: {
+  plan: BillingCatalog["plans"][number]
+  lsacYearlyUsd: number
+  dueTodayUsd: number
+  includeLawHub: boolean
+  features: readonly string[]
+  ctaLabel: string
+  ctaVariant: "orange" | "navy"
+  highlighted?: boolean
+  isLoading: boolean
+  disabled: boolean
+  onSelect: () => void
+}) {
+  return (
+    <div
+      className={cn(
+        "pricing-card",
+        highlighted && "pricing-card--highlighted",
+      )}
+    >
+      {plan.badge && <span className="pricing-card__badge">{plan.badge}</span>}
+      <h2 className="pricing-card__name">{plan.name}</h2>
+      <p className="pricing-card__tagline">{plan.tagline}</p>
+      <p className="pricing-card__price">
+        ${plan.monthlyUsd}
+        <span>/month</span>
+      </p>
+      <p className="pricing-card__due-today">
+        {includeLawHub
+          ? `$${dueTodayUsd} due today (incl. $${lsacYearlyUsd} LawHub Advantage)`
+          : `$${dueTodayUsd} due today`}
+      </p>
+      <ul className="pricing-card__features">
+        {features.map((feature) => (
+          <li key={feature}>
+            <Check className="pricing-card__check" aria-hidden />
+            <span>{feature}</span>
+          </li>
+        ))}
+      </ul>
+      <Button
+        className={cn(
+          "pricing-card__cta",
+          ctaVariant === "orange" ? "pricing-card__cta--orange" : "pricing-card__cta--navy",
+        )}
+        disabled={disabled}
+        onClick={onSelect}
+      >
+        {isLoading ? "Redirecting…" : ctaLabel}
+        {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
+      </Button>
+    </div>
   )
 }
 

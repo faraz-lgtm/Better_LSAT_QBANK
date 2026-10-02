@@ -12,12 +12,12 @@ describe("guest premium account", () => {
   })
 
   it("persists selected plan in session storage", () => {
-    writeGuestPremiumAccount("three_month")
-    expect(readGuestPremiumAccount()?.planId).toBe("three_month")
+    writeGuestPremiumAccount("live")
+    expect(readGuestPremiumAccount()?.planId).toBe("live")
   })
 
   it("clears premium account state", () => {
-    writeGuestPremiumAccount("monthly")
+    writeGuestPremiumAccount("core")
     clearGuestPremiumAccount()
     expect(readGuestPremiumAccount()).toBeNull()
   })

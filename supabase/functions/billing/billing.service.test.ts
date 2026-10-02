@@ -7,11 +7,9 @@ const env: StripeRuntimeEnv = {
   secretKey: 'sk_test_x',
   webhookSecret: 'whsec_test',
   priceIds: {
-    monthly: 'price_core_test',
-    threeMonth: 'price_core_3_month_test',
-    sixMonth: 'price_core_6_month_test',
-    lsacYearly: 'price_lsac_test',
+    core: 'price_core_test',
     live: 'price_live_test',
+    lsacYearly: 'price_lsac_test',
   },
   publishableKey: 'pk_test_x',
   liveMode: false,
@@ -93,7 +91,7 @@ Deno.test('billing service createCheckoutSession creates customer and returns ur
             const lineItems = params.line_items as Array<Record<string, unknown>>
             assertEquals(lineItems[0], { price: 'price_core_test', quantity: 1 })
             assertEquals((lineItems[1]?.price_data as Record<string, unknown>)?.unit_amount, 9900)
-            assertEquals((params.metadata as Record<string, string>).plan, 'monthly')
+            assertEquals((params.metadata as Record<string, string>).plan, 'core')
             return { url: 'https://checkout.stripe.test/session' }
           },
         },
@@ -101,7 +99,7 @@ Deno.test('billing service createCheckoutSession creates customer and returns ur
     } as unknown as import('npm:stripe@17.7.0').default,
   })
 
-  const out = await service.createCheckoutSession('u-1', 'a@b.com', 'monthly')
+  const out = await service.createCheckoutSession('u-1', 'a@b.com', 'core')
   assertEquals(customerCreated, true)
   assertEquals(out.url, 'https://checkout.stripe.test/session')
 })
@@ -144,7 +142,7 @@ Deno.test('billing service createCheckoutSession accepts custom successPath', as
     } as unknown as import('npm:stripe@17.7.0').default,
   })
 
-  const out = await service.createCheckoutSession('u-1', 'a@b.com', 'monthly', {
+  const out = await service.createCheckoutSession('u-1', 'a@b.com', 'core', {
     successPath: '/app/diagnostic/results?checkout=success',
   })
   assertEquals(out.url, 'https://checkout.stripe.test/diagnostic')
@@ -181,11 +179,11 @@ Deno.test('billing service createCheckoutSession skips LawHub when includeLawHub
               id,
               type: 'recurring',
               recurring: { interval: 'month' },
-              unit_amount: 6900,
+              unit_amount: 7000,
               currency: 'usd',
             }
           }
-          return { id, type: 'recurring', recurring: { interval: 'month', interval_count: 1 } }
+          return { id, type: 'recurring', recurring: { interval: 'month' } }
         },
       },
       checkout: {
@@ -194,11 +192,10 @@ Deno.test('billing service createCheckoutSession skips LawHub when includeLawHub
             const lineItems = params.line_items as Array<Record<string, unknown>>
             assertEquals(lineItems.length, 1)
             const priceData = lineItems[0]?.price_data as Record<string, unknown>
-            assertEquals(priceData?.unit_amount, 6900)
-            assertEquals(priceData?.recurring, { interval: 'month', interval_count: 1 })
+            assertEquals(priceData?.unit_amount, 7000)
             assertEquals(
               (priceData?.product_data as Record<string, string>)?.name,
-              'Better LSAT Monthly',
+              'Better LSAT Core',
             )
             assertEquals((params.metadata as Record<string, string>).include_lawhub, 'false')
             assertEquals(
@@ -212,12 +209,12 @@ Deno.test('billing service createCheckoutSession skips LawHub when includeLawHub
     } as unknown as import('npm:stripe@17.7.0').default,
   })
 
-  const out = await service.createCheckoutSession('u-1', 'a@b.com', 'monthly', { includeLawHub: false })
+  const out = await service.createCheckoutSession('u-1', 'a@b.com', 'core', { includeLawHub: false })
   assertEquals(sourceSet, true)
   assertEquals(out.url, 'https://checkout.stripe.test/no-lsac')
 })
 
-Deno.test('billing service createCheckoutSession uses the 3-month Core price', async () => {
+Deno.test('billing service createCheckoutSession uses live plan price', async () => {
   let customerNameUpdated: string | null = null
   const service = createBillingService({
     getEnv: () => env,
@@ -255,95 +252,25 @@ Deno.test('billing service createCheckoutSession uses the 3-month Core price', a
               product: { name: 'LawHub Advantage' },
             }
           }
-          if (id === 'price_core_3_month_test') {
-            return { id, type: 'recurring', recurring: { interval: 'month', interval_count: 3 } }
-          }
-          return { id, type: 'recurring', recurring: { interval: 'month', interval_count: 1 } }
+          return { id, type: 'recurring', recurring: { interval: 'month' } }
         },
       },
       checkout: {
         sessions: {
           create: async (params: Record<string, unknown>) => {
             const lineItems = params.line_items as Array<{ price: string; quantity: number }>
-            assertEquals(lineItems[0], { price: 'price_core_3_month_test', quantity: 1 })
-            assertEquals((params.metadata as Record<string, string>).plan, 'three_month')
+            assertEquals(lineItems[0], { price: 'price_live_test', quantity: 1 })
             assertEquals('customer_details' in params, false)
-            return { url: 'https://checkout.stripe.test/three-month' }
+            return { url: 'https://checkout.stripe.test/live' }
           },
         },
       },
     } as unknown as import('npm:stripe@17.7.0').default,
   })
 
-  const out = await service.createCheckoutSession('u-1', 'a@b.com', 'three_month')
+  const out = await service.createCheckoutSession('u-1', 'a@b.com', 'live')
   assertEquals(customerNameUpdated, 'Ada Lovelace')
-  assertEquals(out.url, 'https://checkout.stripe.test/three-month')
-})
-
-Deno.test('billing service copies interval_count when LawHub is excluded', async () => {
-  const service = createBillingService({
-    getEnv: () => env,
-    getAppBaseUrl: () => 'http://localhost:5173',
-    repository: makeRepo(),
-    stripe: {
-      customers: {
-        create: async () => ({ id: 'cus_1' }),
-      },
-      prices: {
-        retrieve: async (id: string) => {
-          if (id === 'price_core_6_month_test') {
-            return {
-              id,
-              type: 'recurring',
-              recurring: { interval: 'month', interval_count: 6 },
-              unit_amount: 35400,
-              currency: 'usd',
-            }
-          }
-          return { id, type: 'recurring', recurring: { interval: 'month', interval_count: 1 } }
-        },
-      },
-      checkout: {
-        sessions: {
-          create: async (params: Record<string, unknown>) => {
-            const lineItems = params.line_items as Array<Record<string, unknown>>
-            const priceData = lineItems[0]?.price_data as Record<string, unknown>
-            assertEquals(priceData?.unit_amount, 35400)
-            assertEquals(priceData?.recurring, { interval: 'month', interval_count: 6 })
-            return { url: 'https://checkout.stripe.test/six-month' }
-          },
-        },
-      },
-    } as unknown as import('npm:stripe@17.7.0').default,
-  })
-
-  const out = await service.createCheckoutSession('u-1', 'a@b.com', 'six_month', { includeLawHub: false })
-  assertEquals(out.url, 'https://checkout.stripe.test/six-month')
-})
-
-Deno.test('billing service rejects a Core price with the wrong interval', async () => {
-  const service = createBillingService({
-    getEnv: () => env,
-    getAppBaseUrl: () => 'http://localhost:5173',
-    repository: makeRepo(),
-    stripe: {
-      customers: { create: async () => ({ id: 'cus_1' }) },
-      prices: {
-        retrieve: async () => ({
-          id: 'price_core_3_month_test',
-          type: 'recurring',
-          recurring: { interval: 'month', interval_count: 1 },
-        }),
-      },
-      checkout: { sessions: { create: async () => ({ url: 'https://should-not-run' }) } },
-    } as unknown as import('npm:stripe@17.7.0').default,
-  })
-
-  await assertRejects(
-    () => service.createCheckoutSession('u-1', 'a@b.com', 'three_month'),
-    Error,
-    'every 3 month',
-  )
+  assertEquals(out.url, 'https://checkout.stripe.test/live')
 })
 
 Deno.test('billing service createCheckoutSession rejects missing LawHub name', async () => {
@@ -372,7 +299,7 @@ Deno.test('billing service createCheckoutSession rejects missing LawHub name', a
   })
 
   await assertRejects(
-    () => service.createCheckoutSession('u-1', 'a@b.com', 'monthly'),
+    () => service.createCheckoutSession('u-1', 'a@b.com', 'core'),
     LawHubIdentityError,
   )
 })
@@ -391,7 +318,7 @@ Deno.test('billing service createCheckoutSession rejects plus email', async () =
   })
 
   await assertRejects(
-    () => service.createCheckoutSession('u-1', 'a+tag@b.com', 'monthly'),
+    () => service.createCheckoutSession('u-1', 'a+tag@b.com', 'core'),
     LawHubIdentityError,
   )
 })
@@ -419,7 +346,7 @@ Deno.test('billing service accepts one-time LawHub price', async () => {
     } as unknown as import('npm:stripe@17.7.0').default,
   })
 
-  const out = await service.createCheckoutSession('u-1', 'a@b.com', 'monthly')
+  const out = await service.createCheckoutSession('u-1', 'a@b.com', 'core')
   assertEquals(out.url, 'https://checkout.stripe.test/lsac-onetime')
 })
 
@@ -467,7 +394,7 @@ Deno.test('billing service checkout.session.completed syncs subscription', async
         client_reference_id: 'u-1',
         customer: 'cus_1',
         subscription: 'sub_1',
-        metadata: { plan: 'three_month' },
+        metadata: { plan: 'core' },
       },
     },
   } as unknown as import('npm:stripe@17.7.0').default.Event)
@@ -502,7 +429,7 @@ Deno.test('billing service skips duplicate webhook events', async () => {
 })
 
 Deno.test('billing service checkout.session.completed invokes onCheckoutCompleted', async () => {
-  const seen: { ctx: CheckoutCompletedContext | null } = { ctx: null }
+  let callbackCtx: CheckoutCompletedContext | null = null
   const service = createBillingService({
     getEnv: () => env,
     getAppBaseUrl: () => 'http://localhost:5173',
@@ -511,7 +438,7 @@ Deno.test('billing service checkout.session.completed invokes onCheckoutComplete
       async setPrepPlusSource() {},
     }),
     onCheckoutCompleted: async (ctx: CheckoutCompletedContext) => {
-      seen.ctx = { ...ctx }
+      callbackCtx = { ...ctx }
     },
     stripe: {
       subscriptions: {
@@ -542,13 +469,13 @@ Deno.test('billing service checkout.session.completed invokes onCheckoutComplete
         subscription: 'sub_1',
         customer_email: 'buyer@example.com',
         customer_details: { name: 'Buyer Name' },
-        metadata: { plan: 'monthly', include_lawhub: 'true' },
+        metadata: { plan: 'core', include_lawhub: 'true' },
       },
     },
   } as unknown as import('npm:stripe@17.7.0').default.Event)
 
-  assertEquals(seen.ctx?.userId, 'u-1')
-  assertEquals(seen.ctx?.email, 'buyer@example.com')
-  assertEquals(seen.ctx?.includeLawHub, true)
-  assertEquals(seen.ctx?.customerName, 'Buyer Name')
+  assertEquals(callbackCtx?.userId, 'u-1')
+  assertEquals(callbackCtx?.email, 'buyer@example.com')
+  assertEquals(callbackCtx?.includeLawHub, true)
+  assertEquals(callbackCtx?.customerName, 'Buyer Name')
 })

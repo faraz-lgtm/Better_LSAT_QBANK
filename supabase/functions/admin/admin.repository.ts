@@ -199,13 +199,10 @@ export function createAdminRepository(client: SupabaseClient) {
       return (data?.role as "student" | "admin" | "super_admin" | undefined) ?? null
     },
 
-    async ensureAdminProjectionFromLsac(moduleIds?: string[]): Promise<void> {
-      const moduleQuery = client
+    async ensureAdminProjectionFromLsac(): Promise<void> {
+      const { data: modules, error: moduleErr } = await client
         .from("lsac_content_modules")
         .select("module_id,module_name,imported_at")
-      const { data: modules, error: moduleErr } = moduleIds && moduleIds.length > 0
-        ? await moduleQuery.in("module_id", moduleIds)
-        : await moduleQuery
       if (moduleErr) throw moduleErr
       for (const module of modules ?? []) {
         const moduleId = String(module.module_id)
@@ -259,22 +256,22 @@ export function createAdminRepository(client: SupabaseClient) {
             .order("item_position", { ascending: true })
           if (itemErr) throw itemErr
 
-          const questionRows = (items ?? []).map((item) => ({
-            section_id: adminSection.id,
-            source_item_id: item.item_id,
-            source_group_id: item.group_id,
-            question_number: item.item_position,
-            stimulus_text: item.stimulus_text,
-            stem_text: item.stem_text,
-            choices: Array.isArray(item.options) ? item.options : [],
-            correct_answer: item.correct_answer,
-            source: "LSAC",
-            updated_at: new Date().toISOString(),
-          }))
-          if (questionRows.length > 0) {
-            const { error: upsertQuestionErr } = await client.from("admin_questions").upsert(questionRows, {
-              onConflict: "section_id,source_item_id",
-            })
+          for (const item of items ?? []) {
+            const { error: upsertQuestionErr } = await client.from("admin_questions").upsert(
+              {
+                section_id: adminSection.id,
+                source_item_id: item.item_id,
+                source_group_id: item.group_id,
+                question_number: item.item_position,
+                stimulus_text: item.stimulus_text,
+                stem_text: item.stem_text,
+                choices: Array.isArray(item.options) ? item.options : [],
+                correct_answer: item.correct_answer,
+                source: "LSAC",
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "section_id,source_item_id" },
+            )
             if (upsertQuestionErr) throw upsertQuestionErr
           }
         }

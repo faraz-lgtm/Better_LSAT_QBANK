@@ -4,7 +4,7 @@ import { createLsacContentImportService } from "../supabase/functions/lsac-conte
 import { createAdminRepository } from "../supabase/functions/admin/admin.repository.ts"
 
 async function main() {
-  const apiJsonDir = new URL("../api_json_new_batch/", import.meta.url)
+  const apiJsonDir = new URL("../api_json/", import.meta.url)
   const files: string[] = []
 
   for await (const entry of Deno.readDir(apiJsonDir)) {
@@ -24,10 +24,9 @@ async function main() {
   let imported = 0
   let sections = 0
   let items = 0
-  const importedModuleIds: string[] = []
 
   for (const file of files) {
-    const path = new URL(`../api_json_new_batch/${file}`, import.meta.url)
+    const path = new URL(`../api_json/${file}`, import.meta.url)
     const raw = await Deno.readTextFile(path)
     const payload = JSON.parse(raw) as unknown
     const result = await service.importPayload({ ...(payload as Record<string, unknown>), sourceFilename: file })
@@ -35,15 +34,13 @@ async function main() {
     for (const mod of result.modules) {
       sections += mod.sections
       items += mod.items
-      importedModuleIds.push(mod.moduleId)
     }
     console.log(`Imported ${file}`)
   }
 
-  // Project only the files just imported. A full-catalog projection rewrites every PrepTest.
-  console.log(`Projecting ${importedModuleIds.join(", ")} into admin_prep_tests...`)
+  // Keep admin projection in sync so /admin/preptests has rows after import.
   const adminRepo = createAdminRepository(createServiceRoleClient())
-  await adminRepo.ensureAdminProjectionFromLsac(importedModuleIds)
+  await adminRepo.ensureAdminProjectionFromLsac()
 
   console.log(`Done. Imported modules=${imported}, sections=${sections}, items=${items}`)
 }
