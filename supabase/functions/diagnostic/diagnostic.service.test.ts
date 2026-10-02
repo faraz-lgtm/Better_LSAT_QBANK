@@ -7,6 +7,8 @@ const STRIPE_TEST_ENV: Record<string, string> = {
   STRIPE_WEBHOOK_SECRET_TEST: 'whsec',
   STRIPE_PUBLISHABLE_KEY_TEST: 'pk_test',
   STRIPE_PRICE_ID_CORE_TEST: 'price_core_test',
+  STRIPE_PRICE_ID_CORE_3_MONTH_TEST: 'price_core_3_month_test',
+  STRIPE_PRICE_ID_CORE_6_MONTH_TEST: 'price_core_6_month_test',
   STRIPE_PRICE_ID_LIVE_MONTHLY_TEST: 'price_live_test',
   STRIPE_PRICE_ID_LSAC_YEARLY_TEST: 'price_lsac_test',
   SUPABASE_URL: 'https://abc.supabase.co',

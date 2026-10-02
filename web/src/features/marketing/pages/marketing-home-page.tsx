@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
+
+import { isPaidPricingPlan, PRICING_PLANS } from "@/features/guest/pricing/guest-pricing-plans-data"
 import {
   ArrowRight,
   Award,
@@ -9,7 +11,6 @@ import {
   ChevronRight,
   ClipboardList,
   FileText,
-  Lock,
   PlayCircle,
   Shield,
   Star,
@@ -121,24 +122,7 @@ const COMPARISON_ROWS = [
   { feature: '6,000+ explained questions', better: true, other: 'Some' },
   { feature: 'Monthly pricing (no lock-in)', better: true, other: false },
   { feature: 'Personalized analytics dashboard', better: true, other: 'Limited' },
-  { feature: 'Price', better: '$70/mo', other: '$99–$299/mo' },
-];
-
-const CORE_FEATURES = [
-  'Full question bank — 6,000+ explanations',
-  'Official LSAC questions & full-length tests',
-  'Section drills & timed practice',
-  'Score analytics & performance tracking',
-  'Structured course curriculum',
-  'Written & video explanations (videos coming soon)',
-  'Personalized study plan from diagnostic',
-];
-
-const LIVE_FEATURES = [
-  'Everything in Core, plus:',
-  'Live weekly classes with LSAT instructors',
-  'Live Q&A and group sessions',
-  'Priority support',
+  { feature: 'Price', better: 'From $59/mo', other: '$99–$299/mo' },
 ];
 
 function MarketingHomePage() {
@@ -626,118 +610,95 @@ function MarketingHomePage() {
             </p>
           </div>
 
-          <div className="mx-auto grid max-w-4xl items-stretch gap-6 md:grid-cols-2 md:gap-8">
-            {/* Core plan */}
-            <div
-              className="flex h-full flex-col rounded-2xl bg-white p-7 sm:p-8"
-              style={{ boxShadow: "0 2px 24px rgba(0,0,0,0.08)" }}
-            >
-              <div className="mb-6">
-                <h3 className="text-xl font-bold" style={{ color: "#0D47A1", lineHeight: 1.3 }}>
-                  Core
-                </h3>
-                <p className="mt-1 text-sm" style={{ color: "#6B7280", lineHeight: 1.5 }}>
-                  Everything you need to improve your score
-                </p>
-                <div className="mt-5 flex items-end gap-1">
-                  <span className="text-5xl font-extrabold" style={{ color: "#0D47A1", lineHeight: 1 }}>
-                    $70
-                  </span>
-                  <span className="pb-1.5 text-lg" style={{ color: "#9CA3AF", lineHeight: 1 }}>
-                    /month
-                  </span>
-                </div>
-              </div>
-
-              <ul className="mb-8 flex flex-1 flex-col gap-3">
-                {CORE_FEATURES.map((f) => (
-                  <li key={f} className="flex items-start gap-3">
-                    <CheckCircle className="mt-0.5 h-5 w-5 shrink-0" style={{ color: "#FF6F00" }} aria-hidden />
-                    <span className="text-sm" style={{ color: "#374151", lineHeight: 1.5 }}>
-                      {f}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="mt-auto">
-                <Link
-                  to="/intent"
-                  className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-bold leading-none text-white transition-opacity hover:opacity-90"
-                  style={{ background: "#FF6F00" }}
+          <div className="mx-auto grid max-w-7xl items-stretch gap-6 md:grid-cols-2 xl:grid-cols-4 md:gap-8">
+            {PRICING_PLANS.map((plan) => {
+              const featured = isPaidPricingPlan(plan) && plan.featured
+              const priceSuffix = plan.id === "monthly" ? "/mo" : null
+              return (
+                <div
+                  key={plan.id}
+                  className="relative flex h-full flex-col rounded-2xl bg-white p-7 sm:p-8"
+                  style={{
+                    boxShadow: "0 2px 24px rgba(0,0,0,0.08)",
+                    border: featured ? "2px solid #0D47A1" : undefined,
+                  }}
                 >
-                  <span>Start Free Diagnostic</span>
-                  <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
-                </Link>
-                <p className="text-center text-xs" style={{ color: "#9CA3AF", lineHeight: 1.5, marginTop: 20 }}>
-                  No credit card required to start
-                </p>
-              </div>
-            </div>
+                  {isPaidPricingPlan(plan) && plan.badge ? (
+                    <div
+                      className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-md px-4 py-1 text-xs font-bold whitespace-nowrap text-white"
+                      style={{ background: "#0D47A1" }}
+                    >
+                      {plan.badge}
+                    </div>
+                  ) : null}
 
-            {/* Live plan */}
-            <div
-              className="relative flex h-full flex-col rounded-2xl bg-white p-7 sm:p-8"
-              style={{
-                boxShadow: "0 2px 24px rgba(0,0,0,0.08)",
-                border: "2px solid #0D47A1",
-              }}
-            >
-              <div
-                className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-md px-4 py-1 text-xs font-bold whitespace-nowrap text-white"
-                style={{ background: "#0D47A1" }}
-              >
-                Most Comprehensive
-              </div>
+                  <div className="mb-6">
+                    <h3 className="text-xl font-bold" style={{ color: "#0D47A1", lineHeight: 1.3 }}>
+                      {plan.name}
+                    </h3>
+                    <p className="mt-1 text-sm font-semibold" style={{ color: "#374151", lineHeight: 1.5 }}>
+                      {plan.headline}
+                    </p>
+                    <p className="mt-1 text-sm" style={{ color: "#6B7280", lineHeight: 1.5 }}>
+                      {plan.description}
+                    </p>
+                    <div className="mt-5 flex items-end gap-1">
+                      <span className="text-5xl font-extrabold" style={{ color: "#0D47A1", lineHeight: 1 }}>
+                        ${plan.priceUsd}
+                      </span>
+                      {priceSuffix ? (
+                        <span className="pb-1.5 text-lg" style={{ color: "#9CA3AF", lineHeight: 1 }}>
+                          {priceSuffix}
+                        </span>
+                      ) : null}
+                    </div>
+                    {isPaidPricingPlan(plan) && plan.equivalentMonthlyUsd ? (
+                      <p className="mt-2 text-sm" style={{ color: "#6B7280" }}>
+                        Equivalent to ${plan.equivalentMonthlyUsd}/month
+                      </p>
+                    ) : null}
+                    {isPaidPricingPlan(plan) && plan.discountLabel ? (
+                      <p className="mt-1 text-sm font-semibold" style={{ color: "#0D47A1" }}>
+                        {plan.discountLabel}
+                      </p>
+                    ) : null}
+                  </div>
 
-              <div className="mb-6">
-                <h3 className="text-xl font-bold" style={{ color: "#0D47A1", lineHeight: 1.3 }}>
-                  Live
-                </h3>
-                <p className="mt-1 text-sm" style={{ color: "#6B7280", lineHeight: 1.5 }}>
-                  For students who want live instruction
-                </p>
-                <div className="mt-5 flex items-end gap-1">
-                  <span className="text-5xl font-extrabold" style={{ color: "#0D47A1", lineHeight: 1 }}>
-                    $129
-                  </span>
-                  <span className="pb-1.5 text-lg" style={{ color: "#9CA3AF", lineHeight: 1 }}>
-                    /month
-                  </span>
+                  <ul className="mb-8 flex flex-1 flex-col gap-3">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-3">
+                        <CheckCircle className="mt-0.5 h-5 w-5 shrink-0" style={{ color: "#FF6F00" }} aria-hidden />
+                        <span className="text-sm" style={{ color: "#374151", lineHeight: 1.5 }}>
+                          {feature}
+                        </span>
+                      </li>
+                    ))}
+                    {isPaidPricingPlan(plan) ? (
+                      <li className="flex items-start gap-3">
+                        <CheckCircle className="mt-0.5 h-5 w-5 shrink-0" style={{ color: "#FF6F00" }} aria-hidden />
+                        <span className="text-sm" style={{ color: "#374151", lineHeight: 1.5 }}>
+                          {plan.renewalNote}
+                        </span>
+                      </li>
+                    ) : null}
+                  </ul>
+
+                  <div className="mt-auto">
+                    <Link
+                      to="/signup"
+                      className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-bold leading-none text-white transition-opacity hover:opacity-90"
+                      style={{ background: plan.id === "free" || plan.id === "monthly" ? "#FF6F00" : "#0D47A1" }}
+                    >
+                      <span>{plan.ctaLabel}</span>
+                      <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+                    </Link>
+                    <p className="text-center text-xs" style={{ color: "#9CA3AF", lineHeight: 1.5, marginTop: 20 }}>
+                      {plan.lawHubNote}
+                    </p>
+                  </div>
                 </div>
-              </div>
-
-              <ul className="mb-8 flex flex-1 flex-col gap-3">
-                {LIVE_FEATURES.map((f) => (
-                  <li key={f} className="flex items-start gap-3">
-                    <CheckCircle className="mt-0.5 h-5 w-5 shrink-0" style={{ color: "#FF6F00" }} aria-hidden />
-                    <span className="text-sm font-medium" style={{ color: "#374151", lineHeight: 1.5 }}>
-                      {f}
-                    </span>
-                  </li>
-                ))}
-                <li className="flex items-start gap-3">
-                  <Lock className="mt-0.5 h-5 w-5 shrink-0" style={{ color: "#D97706" }} aria-hidden />
-                  <span className="text-sm" style={{ color: "#6B7280", lineHeight: 1.5 }}>
-                    Live classes launching soon — lock in pricing now
-                  </span>
-                </li>
-              </ul>
-
-              <div className="mt-auto">
-                <Link
-                  to="/signup"
-                  className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-bold leading-none text-white transition-opacity hover:opacity-90"
-                  style={{ background: "#0D47A1" }}
-                >
-                  <span>Join Waitlist</span>
-                  <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
-                </Link>
-                <p className="text-center text-xs" style={{ color: "#9CA3AF", lineHeight: 1.5, marginTop: 20 }}>
-                  Lock in $129/month before launch price increases
-                </p>
-              </div>
-            </div>
+              )
+            })}
           </div>
 
           <p

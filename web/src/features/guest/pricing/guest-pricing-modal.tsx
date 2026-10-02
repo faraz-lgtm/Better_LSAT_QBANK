@@ -1,73 +1,33 @@
 import { useEffect, useState } from "react"
-import { ArrowRight, Check, X } from "lucide-react"
+import { X } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
+import { PricingPlanCard } from "@/features/billing/pricing-plan-card"
 import {
-  LAWHUB_ADVANTAGE_YEARLY_PRICE,
-  resolveGuestPricingDueToday,
+  LAWHUB_ADVANTAGE_BILLING_NOTE,
+  LAWHUB_OWN_PREPPLUS_NOTE,
 } from "@/features/guest/pricing/guest-pricing-lawhub"
 import {
-  GUEST_PRICING_PLANS,
-  type GuestPricingPlan,
+  FREE_PRICING_PLAN,
+  PAID_PRICING_PLANS,
   type GuestPricingPlanId,
 } from "@/features/guest/pricing/guest-pricing-plans-data"
-import { cn } from "@/lib/utils"
 
 type GuestPricingModalProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSelectPlan?: (planId: GuestPricingPlanId, options?: { includeLawHub: boolean }) => Promise<void> | void
-}
-
-function PricingCard({
-  plan,
-  includeLawHub,
-  highlighted = false,
-  isLoading,
-  disabled,
-  onSelect,
-}: {
-  plan: GuestPricingPlan
-  includeLawHub: boolean
-  highlighted?: boolean
-  isLoading: boolean
-  disabled: boolean
-  onSelect: () => void
-}) {
-  const dueToday = resolveGuestPricingDueToday(plan, includeLawHub)
-
-  return (
-    <div className={cn("pricing-card", highlighted && "pricing-card--highlighted")}>
-      {plan.badge ? <span className="pricing-card__badge">{plan.badge}</span> : null}
-      <h2 className="pricing-card__name">{plan.name}</h2>
-      <p className="pricing-card__tagline">{plan.description}</p>
-      <p className="pricing-card__price">
-        ${plan.monthlyPrice}
-        <span>/month</span>
-      </p>
-      <p className="pricing-card__due-today">{dueToday.label}</p>
-      <ul className="pricing-card__features">
-        {plan.features.map((feature) => (
-          <li key={feature}>
-            <Check className="pricing-card__check" aria-hidden />
-            <span>{feature}</span>
-          </li>
-        ))}
-      </ul>
-      <Button
-        className="pricing-card__cta pricing-card__cta--navy"
-        disabled={disabled}
-        onClick={onSelect}
-      >
-        {isLoading ? "Redirecting..." : plan.ctaLabel}
-        {!isLoading ? <ArrowRight className="ml-2 h-4 w-4" aria-hidden /> : null}
-      </Button>
-    </div>
-  )
+  onContinueFree?: () => void
+  freeCtaLabel?: string
 }
 
 /** Pricing modal matched to the `/app/pricing` page card layout. */
-function GuestPricingModal({ open, onOpenChange, onSelectPlan }: GuestPricingModalProps) {
+function GuestPricingModal({
+  open,
+  onOpenChange,
+  onSelectPlan,
+  onContinueFree,
+  freeCtaLabel = FREE_PRICING_PLAN.ctaLabel,
+}: GuestPricingModalProps) {
   const [includeLawHub, setIncludeLawHub] = useState(true)
   const [checkoutPlan, setCheckoutPlan] = useState<GuestPricingPlanId | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -93,9 +53,6 @@ function GuestPricingModal({ open, onOpenChange, onSelectPlan }: GuestPricingMod
 
   if (!open) return null
 
-  const corePlan = GUEST_PRICING_PLANS.find((plan) => plan.id === "core")!
-  const livePlan = GUEST_PRICING_PLANS.find((plan) => plan.id === "live")!
-
   async function handleSelectPlan(planId: GuestPricingPlanId) {
     setCheckoutPlan(planId)
     setError(null)
@@ -116,7 +73,7 @@ function GuestPricingModal({ open, onOpenChange, onSelectPlan }: GuestPricingMod
       onClick={() => onOpenChange(false)}
     >
       <div
-        className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-[780px] flex-col overflow-hidden rounded-[20px] border border-[#dfe1e7] bg-[var(--primary-0)] p-6 shadow-[0px_24px_48px_rgba(13,13,18,0.16)] sm:p-8"
+        className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-[1180px] flex-col overflow-hidden rounded-[20px] border border-[#dfe1e7] bg-[var(--primary-0)] p-6 shadow-[0px_24px_48px_rgba(13,13,18,0.16)] sm:p-8"
         onClick={(event) => event.stopPropagation()}
       >
         <button
@@ -136,49 +93,45 @@ function GuestPricingModal({ open, onOpenChange, onSelectPlan }: GuestPricingMod
               </h1>
               <p className="pricing-page__subtitle ">
                 {includeLawHub
-                  ? "Includes Official LSAT PrepPlus (LawHub Advantage) for year one at checkout."
-                  : "Choose Core or Live — you keep your own LawHub PrepPlus subscription."}
+                  ? "Core plans include Official LSAT PrepPlus (LawHub Advantage) for year one at checkout."
+                  : "Choose a Core plan — you keep your own LawHub PrepPlus subscription."}
               </p>
             </div>
 
             {error ? <p className="pricing-page__error">{error}</p> : null}
 
             <div className="pricing-page__grid">
-              <PricingCard
-                plan={corePlan}
-                includeLawHub={includeLawHub}
-                isLoading={checkoutPlan === "core"}
+              <PricingPlanCard
+                plan={{ ...FREE_PRICING_PLAN, ctaLabel: freeCtaLabel }}
+                ctaVariant="orange"
                 disabled={checkoutPlan !== null}
-                onSelect={() => void handleSelectPlan("core")}
+                onSelect={() => {
+                  onOpenChange(false)
+                  onContinueFree?.()
+                }}
               />
-              <PricingCard
-                plan={livePlan}
-                includeLawHub={includeLawHub}
-                highlighted
-                isLoading={checkoutPlan === "live"}
-                disabled={checkoutPlan !== null}
-                onSelect={() => void handleSelectPlan("live")}
-              />
+              {PAID_PRICING_PLANS.map((plan) => (
+                <PricingPlanCard
+                  key={plan.id}
+                  plan={plan}
+                  includeLawHub={includeLawHub}
+                  highlighted={plan.featured}
+                  ctaVariant={plan.id === "monthly" ? "orange" : "navy"}
+                  isLoading={checkoutPlan === plan.id}
+                  disabled={checkoutPlan !== null}
+                  onSelect={() => void handleSelectPlan(plan.id)}
+                />
+              ))}
             </div>
 
             <p className="pricing-page__footnote mt-4">
-              {includeLawHub ? (
-                <>
-                  LawHub Advantage (${LAWHUB_ADVANTAGE_YEARLY_PRICE}/year) is billed once today, then $
-                  {corePlan.monthlyPrice} or ${livePlan.monthlyPrice}/mo starting next month.
-                </>
-              ) : (
-                <>
-                  ${corePlan.monthlyPrice} or ${livePlan.monthlyPrice} due today for your first month. LawHub
-                  PrepPlus is billed separately through LSAC.
-                </>
-              )}
+              {includeLawHub ? LAWHUB_ADVANTAGE_BILLING_NOTE : LAWHUB_OWN_PREPPLUS_NOTE}
             </p>
 
             <div className="pricing-page__alt-link">
               {includeLawHub ? (
                 <button type="button" onClick={() => setIncludeLawHub(false)}>
-                  I already have LawHub PrepPlus — pay for Core or Live only
+                  I already have LawHub PrepPlus — pay for Core only
                 </button>
               ) : (
                 <button type="button" onClick={() => setIncludeLawHub(true)}>

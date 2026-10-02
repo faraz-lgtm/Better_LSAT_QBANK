@@ -69,7 +69,7 @@ describe("ExplanationQuestionTabPanel", () => {
     expect(screen.queryByRole("button", { name: /show analysis/i })).not.toBeInTheDocument()
   })
 
-  it("toggles passage analysis with passage HTML and P1, P2 explanations", async () => {
+  it("shows passage analysis by default with P1, P2 explanations", async () => {
     const user = userEvent.setup()
     render(
       <ExplanationQuestionTabPanel
@@ -91,10 +91,7 @@ describe("ExplanationQuestionTabPanel", () => {
       />,
     )
 
-    expect(screen.getByText("Passage paragraph one")).toBeInTheDocument()
-    expect(screen.queryByText("First paragraph analysis")).not.toBeInTheDocument()
-
-    await user.click(screen.getByRole("button", { name: /show analysis/i }))
+    expect(screen.getByRole("button", { name: /hide analysis/i })).toHaveAttribute("aria-expanded", "true")
     expect(screen.getByText("P1")).toBeInTheDocument()
     expect(screen.getByText("P2")).toBeInTheDocument()
     expect(screen.getByText("Passage paragraph one")).toBeInTheDocument()
@@ -107,5 +104,8 @@ describe("ExplanationQuestionTabPanel", () => {
     await user.click(screen.getByRole("button", { name: /hide analysis/i }))
     expect(screen.queryByText("First paragraph analysis")).not.toBeInTheDocument()
     expect(screen.getByText("Passage paragraph one")).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: /show analysis/i }))
+    expect(screen.getByText("First paragraph analysis")).toBeInTheDocument()
   })
 })

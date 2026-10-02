@@ -82,9 +82,9 @@ function resolveAnalysisParagraphs(
 function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: ExplanationQuestionTabPanelProps) {
   const [showCorrect, setShowCorrect] = useState(false)
   const [stemExpanded, setStemExpanded] = useState(false)
-  const [analysisOpen, setAnalysisOpen] = useState(false)
   const stemExplanationAvailable = hasExplanationHtml(view.questionExplanationHtml)
   const analysisAvailable = hasPassageAnalysis(view.passageAnalysis)
+  const [analysisOpen, setAnalysisOpen] = useState(analysisAvailable)
   const analysisParagraphs =
     analysisAvailable && view.passageAnalysis
       ? resolveAnalysisParagraphs(view.passageAnalysis, view.passage.body)
@@ -119,18 +119,18 @@ function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: Explanat
                   <span className="inline-flex w-fit items-center rounded-md bg-[var(--primary-0)] px-2.5 py-1 text-xs font-semibold tracking-[0.24px] text-[var(--color-student-heading)]">
                     {paragraph.label}
                   </span>
-                  {paragraph.passageHtml ? (
-                    <HtmlContent
-                      html={paragraph.passageHtml}
-                      className="explanation-passage-body text-[var(--color-student-heading)]"
-                    />
-                  ) : null}
                   <div className="rounded-xl bg-[var(--greyscale-25)] px-4 py-3">
                     <HtmlContent
                       html={paragraph.explanationHtml}
                       className="explanation-review-body text-[var(--color-student-heading)]"
                     />
                   </div>
+                  {paragraph.passageHtml ? (
+                    <HtmlContent
+                      html={paragraph.passageHtml}
+                      className="explanation-passage-body text-[var(--color-student-heading)]"
+                    />
+                  ) : null}
                 </section>
               ))}
               {view.passageAnalysis.overallHtml?.trim() ? (

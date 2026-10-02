@@ -2,28 +2,34 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { handleUsersInvokeError } from '@/lib/auth/handle-unauthorized-session'
 
-export type BillingPlanId = 'core' | 'live'
+export type CheckoutPlanId = 'monthly' | 'three_month' | 'six_month'
+export type StoredPlanTier = 'core' | 'live'
 
 export type BillingStatus = {
   prepPlusSource: 'vendor_subscription' | 'existing_lsac' | null
   hasActiveSubscription: boolean
-  planTier: BillingPlanId | null
+  planTier: StoredPlanTier | null
   subscription: {
     status: string
     currentPeriodEnd: string | null
     cancelAtPeriodEnd: boolean
-    planTier: BillingPlanId | null
+    planTier: StoredPlanTier | null
   } | null
 }
 
 export type BillingPlanCatalogItem = {
-  id: BillingPlanId
+  id: CheckoutPlanId
   name: string
-  tagline: string
-  monthlyUsd: number
+  headline: string
+  description: string
+  priceUsd: number
+  equivalentMonthlyUsd: number | null
+  discountLabel: string | null
+  badge: string | null
+  intervalCount: 1 | 3 | 6
+  renewalNote: string
   dueTodayUsd: number
   dueTodayUsdOwnLsac: number
-  badge?: string
 }
 
 export type BillingCatalog = {
@@ -81,7 +87,7 @@ export function createBillingApi(supabase: SupabaseClient) {
     },
 
     async createCheckoutSession(
-      plan: BillingPlanId,
+      plan: CheckoutPlanId,
       options?: { includeLawHub?: boolean; appBaseUrl?: string; successPath?: string },
     ): Promise<string> {
       const { data, error } = await invokeBillingPost<{ url: string }>(

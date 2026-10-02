@@ -113,7 +113,21 @@ function GuestPricingModalProvider({ children }: { children: ReactNode }) {
         onOpenChange={setLockedContentOpen}
         onSubscribe={handleSubscribeFromLockedContent}
       />
-      <GuestPricingModal open={open} onOpenChange={setOpen} onSelectPlan={handleSelectPlan} />
+      <GuestPricingModal
+        open={open}
+        onOpenChange={setOpen}
+        onSelectPlan={handleSelectPlan}
+        freeCtaLabel={location.pathname.startsWith("/app") ? "Continue Free" : "Create Free Account"}
+        onContinueFree={() => {
+          setOpen(false)
+          if (location.pathname.startsWith("/app")) {
+            navigate("/app")
+            return
+          }
+          if (location.pathname.includes("/preview")) return
+          navigate("/signup")
+        }}
+      />
     </GuestPricingModalContext.Provider>
   )
 }

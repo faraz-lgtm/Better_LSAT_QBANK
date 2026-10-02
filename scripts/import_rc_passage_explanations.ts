@@ -242,9 +242,17 @@ async function main() {
   let imported = 0
   let passagesCreated = 0
   let skippedEmptySegments = 0
+  let skippedDuplicateGroups = 0
+  const seenSourceGroupIds = new Set<string>()
   const missingSamples: string[] = []
 
   for (const row of rows) {
+    if (seenSourceGroupIds.has(row.sourceGroupId)) {
+      skippedDuplicateGroups += 1
+      continue
+    }
+    seenSourceGroupIds.add(row.sourceGroupId)
+
     const segments = buildPassageParagraphAnalyses(row.passageHtml, row.explanationHtml)
     if (segments.length === 0) {
       skippedEmptySegments += 1
@@ -286,6 +294,7 @@ async function main() {
   console.log(`Passages created: ${passagesCreated}`)
   console.log(`Missing groups (no questions): ${missingGroup}`)
   console.log(`Skipped empty segment sets: ${skippedEmptySegments}`)
+  console.log(`Skipped duplicate source_group_id rows: ${skippedDuplicateGroups}`)
   if (missingSamples.length > 0) {
     console.log("Missing samples:")
     for (const sample of missingSamples) console.log(`  - ${sample}`)
