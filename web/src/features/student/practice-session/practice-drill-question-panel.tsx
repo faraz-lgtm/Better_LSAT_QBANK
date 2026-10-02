@@ -1,9 +1,10 @@
-import { useState, type MouseEvent } from "react"
+import { useEffect, useRef, useState, type MouseEvent } from "react"
 
 import { LrDrillOptionRow } from "@/features/student/drills/lr-drill-option-row"
 import type { DrillQuestion } from "@/features/student/drills/drill-types"
 import {
   ACTIVE_DRILL_OPTIONS_LIST_CLASS,
+  ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS,
   ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import {
@@ -73,6 +74,8 @@ type PracticeDrillQuestionPanelProps = {
   seedStemExplanationHtml?: string | null
   seedQuestionTypeLabel?: string | null
   explanationsEnabled?: boolean
+  showStemExplanationAction?: boolean
+  fetchRemoteExplanations?: boolean
   onAnnotateMouseUp?: (regionKey: RegionKey, container: HTMLElement | null, event?: MouseEvent) => void
   onAnnotateClick?: (regionKey: RegionKey, container: HTMLElement | null, event: MouseEvent) => void
 }
@@ -116,6 +119,8 @@ function PracticeDrillQuestionPanel({
   seedStemExplanationHtml = null,
   seedQuestionTypeLabel = null,
   explanationsEnabled = true,
+  showStemExplanationAction = true,
+  fetchRemoteExplanations = true,
   onAnnotateMouseUp,
   onAnnotateClick,
 }: PracticeDrillQuestionPanelProps) {
@@ -134,6 +139,14 @@ function PracticeDrillQuestionPanel({
   const isActiveDrillLayout = isExamChromeLayout(variant)
   const officialChrome = isOfficialLayout(variant)
   const canResetResponse = !choicesDisabled && (selectedIndex != null || hasMaskedChoices)
+  const optionsListRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    window.getSelection()?.removeAllRanges()
+    if (selectedIndex == null) return
+    const selected = optionsListRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]')
+    selected?.focus({ preventScroll: true })
+  }, [question.id, questionNumber, selectedIndex])
 
   function handleResetResponse() {
     resetMaskedChoices()
@@ -173,6 +186,8 @@ function PracticeDrillQuestionPanel({
         seedStemExplanationHtml={seedStemExplanationHtml}
         seedQuestionTypeLabel={seedQuestionTypeLabel}
         explanationsEnabled={explanationsEnabled}
+        showStemExplanationAction={showStemExplanationAction}
+        fetchRemoteExplanations={fetchRemoteExplanations}
         onAnnotateMouseUp={onAnnotateMouseUp}
         onAnnotateClick={onAnnotateClick}
         annotateToolMode={toolMode}
@@ -187,6 +202,8 @@ function PracticeDrillQuestionPanel({
         onOpenReview={onOpenReview}
         reviewActive={reviewActive}
         onOpenAccessibility={onOpenAccessibility}
+        onFullscreen={onFullscreen}
+        fullView={fullView}
       />
     )
   }
@@ -206,7 +223,7 @@ function PracticeDrillQuestionPanel({
             </span>
             {recommendedForBr ? (
               <span className="inline-flex rounded-full border border-[#ff9d51] bg-[#fff3ea] px-3 py-1 text-xs font-semibold text-[#c45a00]">
-                Recommended for BR
+                Recommended for Untimed Review
               </span>
             ) : null}
           </div>
@@ -216,6 +233,7 @@ function PracticeDrillQuestionPanel({
         </div>
       ) : null}
       <div className={cn(isActiveDrillLayout && (officialChrome ? OFFICIAL_QUESTION_PANEL_WITH_WIDGET_CLASS : ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS))}>
+        <div className={cn(isActiveDrillLayout && ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS)}>
         <PracticeQuestionStem
           questionNumber={questionNumber}
           regionKey={stemKey}
@@ -236,10 +254,13 @@ function PracticeDrillQuestionPanel({
             {isCorrect ? "Correct" : "Incorrect"}
           </p>
         ) : null}
-        <div className={officialChrome ? OFFICIAL_OPTIONS_LIST_CLASS : isActiveDrillLayout ? ACTIVE_DRILL_OPTIONS_LIST_CLASS : "flex flex-col gap-2"}>
+        <div
+          ref={optionsListRef}
+          className={officialChrome ? OFFICIAL_OPTIONS_LIST_CLASS : isActiveDrillLayout ? ACTIVE_DRILL_OPTIONS_LIST_CLASS : "flex flex-col gap-2"}
+        >
           {question.choices.map((choice, index) => (
             <LrDrillOptionRow
-              key={choice.id}
+              key={`${question.id}-${questionNumber}-${choice.id}`}
               index={index}
               html={getRegionHtml(regionKey(question.id, `choice-${choice.id}`), choice.text)}
               findQuery={findQuery}
@@ -270,6 +291,7 @@ function PracticeDrillQuestionPanel({
               onClick={handleResetResponse}
             />
           ) : null}
+        </div>
         </div>
         {isActiveDrillLayout ? (
           <PracticeSessionSideWidget

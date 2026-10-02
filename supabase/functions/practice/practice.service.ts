@@ -1,14 +1,29 @@
 import { extractPrepTestQuestionRef } from '../_shared/prep-question-ref.ts'
 import { resolvePrepDrillLessonType } from '../_shared/prep-lesson-type.ts'
-import { isStudentVisiblePrepTest } from '../_shared/prep-test-visibility.ts'
+import {
+  defaultPrepTestPoolMembership,
+  membershipEquals,
+  type PrepTestPoolMembership,
+} from '../_shared/prep-test-pool-defaults.ts'
+import {
+  isStudentVisiblePrepTest,
+  lsacPrepTestOrdinal,
+} from '../_shared/prep-test-visibility.ts'
 import { allocateQuestionTargetTimes } from '../_shared/question-target-time.ts'
 import {
   DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT,
   LR_DRILL_MAX_QUESTION_COUNT,
   PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT,
 } from './adaptive-drill-config.ts'
+import {
+  formatDrillTitleFromTypeNames,
+  formatPickMyOwnDrillTitle,
+  resolveDrillDisplayTitle,
+} from './format-drill-title.ts'
 import type {
   AnswerEventRow,
+  DrillPickerAnswerSummary,
+  DrillPickerPoolQuestionRow,
   DrillPoolQuestionRow,
   PracticeRepository,
   PracticeSessionKind,
@@ -44,15 +59,33 @@ function normalizeAnswer(value: string): string {
 }
 
 const SECTION_TIME_SPENT_CAP_SECONDS = 35 * 60
+const DRILL_TIME_SPENT_CAP_SECONDS = 10 * 60
 
+function parseAnswerTimeSpentSeconds(
+  raw: unknown,
+  sessionKind: PracticeSessionKind,
+  blindReview: boolean,
+): number | null {
+  if (blindReview) return null
+  const n =
+    typeof raw === 'number'
+      ? raw
+      : typeof raw === 'string' && raw.trim()
+        ? Number(raw)
+        : NaN
+  if (!Number.isFinite(n)) return null
+  const cap =
+    sessionKind === 'DRILL' ? DRILL_TIME_SPENT_CAP_SECONDS : SECTION_TIME_SPENT_CAP_SECONDS
+  return Math.min(cap, Math.max(0, Math.round(n)))
+}
+
+/** @deprecated Use parseAnswerTimeSpentSeconds — kept for call-site clarity in older tests. */
 function parseSectionTimeSpentSeconds(
   raw: unknown,
   sessionKind: PracticeSessionKind,
   blindReview: boolean,
 ): number | null {
-  if (blindReview || sessionKind !== 'SECTION') return null
-  if (typeof raw !== 'number' || !Number.isFinite(raw)) return null
-  return Math.min(SECTION_TIME_SPENT_CAP_SECONDS, Math.max(0, Math.round(raw)))
+  return parseAnswerTimeSpentSeconds(raw, sessionKind, blindReview)
 }
 
 function isValidKind(value: unknown): value is PracticeSessionKind {
@@ -270,6 +303,78 @@ function parsePassageCount(value: unknown): number | 'unlimited' {
   return Math.min(RC_DRILL_MAX_PASSAGES, Math.floor(n))
 }
 
+function parseStringIdList(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const item of value) {
+    if (typeof item !== 'string') continue
+    const trimmed = item.trim()
+    if (!trimmed || seen.has(trimmed)) continue
+    seen.add(trimmed)
+    out.push(trimmed)
+  }
+  return out
+}
+
+function formatDrillPickerLabel(row: DrillPickerPoolQuestionRow): string {
+  const pt = row.module_id ? prepTestNumberFromModuleId(row.module_id) : null
+  const ptPart = pt != null ? `PT${pt}` : 'PT?'
+  const sectionPart = row.section_number != null ? `S${row.section_number}` : 'S?'
+  const questionPart = row.question_number != null ? `Q${row.question_number}` : 'Q?'
+  return `${ptPart}.${sectionPart}.${questionPart}`
+}
+
+function stripHtml(raw: string): string {
+  return raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+export type DrillPickerQuestionItem = {
+  id: string
+  label: string
+  difficulty: number | null
+  questionTypeId: string | null
+  tagLabel: string | null
+  prepTestId: string | null
+  moduleId: string | null
+  prepTestNumber: number | null
+  status: 'fresh' | 'reviewed'
+  result: 'correct' | 'incorrect' | 'untouched'
+  timeSpentSeconds: number | null
+  bookmarked: boolean
+  hasNotes: boolean
+  searchText: string
+}
+
+export type DrillPickerListResult = {
+  questions: DrillPickerQuestionItem[]
+  total: number
+  page: number
+  pageSize: number
+  selectedCount: number
+}
+
+function resolveDrillQuestionTypeIds(
+  questionTypeIdRaw: unknown,
+  questionTypeIdsRaw: unknown,
+): string[] {
+  const fromList = parseStringIdList(questionTypeIdsRaw)
+  if (fromList.length > 0) return fromList
+  if (typeof questionTypeIdRaw === 'string' && questionTypeIdRaw.trim()) {
+    return [questionTypeIdRaw.trim()]
+  }
+  return []
+}
+
+function resolveDrillTagLabels(tagLabelRaw: unknown, tagLabelsRaw: unknown): string[] {
+  const fromList = parseStringIdList(tagLabelsRaw)
+  if (fromList.length > 0) return fromList
+  if (typeof tagLabelRaw === 'string' && tagLabelRaw.trim()) {
+    return [tagLabelRaw.trim()]
+  }
+  return []
+}
+
 function filterPoolByStatus(
   pool: DrillPoolQuestionRow[],
   status: unknown,
@@ -277,6 +382,98 @@ function filterPoolByStatus(
 ): DrillPoolQuestionRow[] {
   if (status !== 'fresh') return pool
   return pool.filter((q) => !answeredIds.has(q.id))
+}
+
+function prepTestOrdinalFromModuleId(moduleId: string | null | undefined): number | null {
+  if (!moduleId) return null
+  return lsacPrepTestOrdinal(moduleId.split(':')[0] ?? moduleId)
+}
+
+function overrideMembershipFromRow(row: {
+  in_drills: boolean
+  in_sections: boolean
+  in_tests: boolean
+}): PrepTestPoolMembership {
+  return {
+    inDrills: row.in_drills,
+    inSections: row.in_sections,
+    inTests: row.in_tests,
+  }
+}
+
+async function loadPoolOverrideMap(
+  repository: PracticeRepository,
+  userId: string,
+): Promise<Map<string, PrepTestPoolMembership>> {
+  const rows = await repository.listUserPrepTestPoolOverrides(userId)
+  const map = new Map<string, PrepTestPoolMembership>()
+  for (const row of rows) {
+    map.set(row.prep_test_id, overrideMembershipFromRow(row))
+  }
+  return map
+}
+
+function resolvePoolMembership(
+  prepTestId: string | null | undefined,
+  moduleId: string | null | undefined,
+  overrides: Map<string, PrepTestPoolMembership>,
+): PrepTestPoolMembership {
+  if (prepTestId && overrides.has(prepTestId)) {
+    return overrides.get(prepTestId)!
+  }
+  const n = prepTestOrdinalFromModuleId(moduleId)
+  if (n == null) return { inDrills: false, inSections: false, inTests: false }
+  return defaultPrepTestPoolMembership(n)
+}
+
+function filterDrillPoolByAvailability(
+  pool: DrillPoolQuestionRow[],
+  overrides: Map<string, PrepTestPoolMembership>,
+  availability: 'drills' | 'sections' | 'tests',
+): DrillPoolQuestionRow[] {
+  return pool.filter((q) => {
+    const membership = resolvePoolMembership(q.prep_test_id, q.module_id, overrides)
+    if (availability === 'sections') return membership.inSections
+    if (availability === 'tests') return membership.inTests
+    return membership.inDrills
+  })
+}
+
+function filterDrillPoolByMembership(
+  pool: DrillPoolQuestionRow[],
+  overrides: Map<string, PrepTestPoolMembership>,
+): DrillPoolQuestionRow[] {
+  return filterDrillPoolByAvailability(pool, overrides, 'drills')
+}
+
+function freshnessPercent(totalQuestions: number, answeredQuestions: number): number {
+  if (totalQuestions <= 0) return 100
+  const unanswered = Math.max(0, totalQuestions - answeredQuestions)
+  return Math.round((unanswered / totalQuestions) * 100)
+}
+
+export type PrepTestPoolSettingsItem = {
+  prepTestId: string
+  moduleId: string
+  prepTestNumber: string | null
+  title: string | null
+  inDrills: boolean
+  inSections: boolean
+  inTests: boolean
+  freshnessPercent: number
+  isDefault: boolean
+}
+
+export type PrepTestPoolSettingsListResult = {
+  prepTests: PrepTestPoolSettingsItem[]
+  counts: { drills: number; sections: number; tests: number }
+}
+
+export type PrepTestPoolSettingsUpdate = {
+  prepTestId: string
+  inDrills: boolean
+  inSections: boolean
+  inTests: boolean
 }
 
 export type DrillSessionMetadata = {
@@ -287,7 +484,9 @@ export type DrillSessionMetadata = {
   showAnswers: string
   selection?: string
   questionTypeId?: string | null
+  questionTypeIds?: string[] | null
   tagLabel?: string | null
+  tagLabels?: string[] | null
   difficulty?: string | null
   status?: string
   questionIds: string[]
@@ -412,6 +611,9 @@ export type PrepTestPoolItem = {
   completedAt: string | null
   attempts: PrepTestPoolAttempt[]
   openPrepTestSessionId: string | null
+  inDrills: boolean
+  inSections: boolean
+  inTests: boolean
 }
 
 export type PrepTestPoolStatusCounts = {
@@ -1292,7 +1494,11 @@ function groupSessionsByPrepTestId(sessions: PracticeSessionRow[]): Map<string, 
   return map
 }
 
-function poolItemFromRow(row: PrepTestPoolRow, sessions: PracticeSessionRow[]): PrepTestPoolItem {
+function poolItemFromRow(
+  row: PrepTestPoolRow,
+  sessions: PracticeSessionRow[],
+  membership: PrepTestPoolMembership = { inDrills: true, inSections: true, inTests: true },
+): PrepTestPoolItem {
   const practiceable = practiceableSectionsFromRow(row.sections)
   const practiceableIds = practiceable.map((s) => s.id)
   const {
@@ -1322,11 +1528,14 @@ function poolItemFromRow(row: PrepTestPoolRow, sessions: PracticeSessionRow[]): 
     completedAt,
     attempts: poolAttemptsFromSessions(sessions),
     openPrepTestSessionId,
+    inDrills: membership.inDrills,
+    inSections: membership.inSections,
+    inTests: membership.inTests,
   }
 }
 
 export function createPracticeService(deps: { repository: PracticeRepository }) {
-  return {
+  const service = {
     async createSession(
       userId: string,
       body: {
@@ -1416,20 +1625,20 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       if (blindReview) {
         if (session.kind !== 'SECTION' || !session.prep_test_id) {
-          throw new PracticeValidationError('Blind review answers require a section session tied to a PrepTest')
+          throw new PracticeValidationError('Untimed review answers require a section session tied to a PrepTest')
         }
         const ptSessions = await deps.repository.listUserSessionsForPrepTest(userId, session.prep_test_id)
         const prepTestSession = prepTestSessionEligibleToStartBlindReview(ptSessions)
         if (!prepTestSession) {
           const newest = sortedPrepTestSessions(ptSessions)[0]
           if (newest?.blind_review_completed_at) {
-            throw new PracticeValidationError('Blind review is already completed for this PrepTest')
+            throw new PracticeValidationError('Untimed review is already completed for this PrepTest')
           }
-          throw new PracticeValidationError('Complete the PrepTest before blind review')
+          throw new PracticeValidationError('Complete the PrepTest before untimed review')
         }
         const meta = prepTestSession.metadata
         if (meta.blindReviewActive !== true) {
-          throw new PracticeValidationError('Start blind review for this PrepTest first')
+          throw new PracticeValidationError('Start untimed review for this PrepTest first')
         }
       }
 
@@ -1583,10 +1792,10 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const session = await deps.repository.getSessionById(sessionId, userId)
       if (!session) throw new PracticeForbiddenError('Session not found')
       if (session.kind !== 'DRILL') {
-        throw new PracticeValidationError('Blind review is only available for drill sessions')
+        throw new PracticeValidationError('Untimed review is only available for drill sessions')
       }
       if (!session.completed_at) {
-        throw new PracticeValidationError('Complete the drill before blind review')
+        throw new PracticeValidationError('Complete the drill before untimed review')
       }
 
       const allowedQuestionIds = new Set(drillQuestionIdsFromMetadata(session.metadata))
@@ -1619,6 +1828,8 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const rawScore = scoredWithFallback.filter((answer) => answer.isCorrect).length
       const now = new Date().toISOString()
       const sessionRow = await deps.repository.updateSession(sessionId, userId, {
+        blind_review_raw_score: rawScore,
+        blind_review_completed_at: now,
         metadata: {
           ...session.metadata,
           drillBlindReviewRawScore: rawScore,
@@ -1645,10 +1856,10 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const session = await deps.repository.getSessionById(sessionId, userId)
       if (!session) throw new PracticeForbiddenError('Session not found')
       if (session.kind !== 'SECTION') {
-        throw new PracticeValidationError('Blind review is only available for section sessions')
+        throw new PracticeValidationError('Untimed review is only available for section sessions')
       }
       if (!session.completed_at) {
-        throw new PracticeValidationError('Complete the section before blind review')
+        throw new PracticeValidationError('Complete the section before untimed review')
       }
 
       const allowedQuestionIds = new Set(drillQuestionIdsFromMetadata(session.metadata))
@@ -1681,6 +1892,8 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const rawScore = scoredWithFallback.filter((answer) => answer.isCorrect).length
       const now = new Date().toISOString()
       const sessionRow = await deps.repository.updateSession(sessionId, userId, {
+        blind_review_raw_score: rawScore,
+        blind_review_completed_at: now,
         metadata: {
           ...session.metadata,
           sectionBlindReviewRawScore: rawScore,
@@ -1743,11 +1956,155 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       return { session: sessionRow }
     },
 
+    async listDrillPickerQuestions(
+      userId: string,
+      body: {
+        sectionType?: unknown
+        search?: unknown
+        status?: unknown
+        questionTypeIds?: unknown
+        difficultyLevels?: unknown
+        prepTestIds?: unknown
+        result?: unknown
+        availableForDrills?: unknown
+        availability?: unknown
+        sort?: unknown
+        page?: unknown
+        pageSize?: unknown
+      },
+    ): Promise<DrillPickerListResult> {
+      const sectionType = parseSectionType(body.sectionType)
+      if (!sectionType) throw new PracticeValidationError('sectionType must be LR or RC')
+
+      const page = Math.max(1, Math.floor(typeof body.page === 'number' ? body.page : Number(body.page) || 1))
+      const pageSize = Math.min(
+        50,
+        Math.max(1, Math.floor(typeof body.pageSize === 'number' ? body.pageSize : Number(body.pageSize) || 25)),
+      )
+      const search =
+        typeof body.search === 'string' ? body.search.trim().toLowerCase() : ''
+      const statusFilter =
+        body.status === 'fresh' || body.status === 'reviewed' || body.status === 'all'
+          ? body.status
+          : 'all'
+      const resultFilter =
+        body.result === 'correct' ||
+        body.result === 'incorrect' ||
+        body.result === 'untouched' ||
+        body.result === 'all'
+          ? body.result
+          : 'all'
+      const typeIds = parseStringIdList(body.questionTypeIds)
+      const prepTestIds = new Set(parseStringIdList(body.prepTestIds))
+      const difficultyLevels = Array.isArray(body.difficultyLevels)
+        ? body.difficultyLevels
+            .map((v) => (typeof v === 'number' ? v : Number.parseInt(String(v), 10)))
+            .filter((n) => Number.isFinite(n) && n >= 1 && n <= 5)
+        : []
+      const availability =
+        body.availability === 'sections' || body.availability === 'tests' || body.availability === 'drills'
+          ? body.availability
+          : body.availability === 'all'
+            ? 'all'
+            : body.availableForDrills === false
+              ? 'all'
+              : 'drills'
+      const sort = body.sort === 'oldest' ? 'oldest' : 'newest'
+
+      const poolRaw = await deps.repository.listDrillPickerPoolQuestions({ sectionType })
+      const overrides = await loadPoolOverrideMap(deps.repository, userId)
+      const pool = (
+        availability === 'all'
+          ? poolRaw
+          : filterDrillPoolByAvailability(poolRaw, overrides, availability)
+      ) as DrillPickerPoolQuestionRow[]
+
+      const answerSummaries = await deps.repository.listLatestAnswerSummariesForUser(userId)
+      const answerById = new Map<string, DrillPickerAnswerSummary>()
+      for (const row of answerSummaries) answerById.set(row.question_id, row)
+
+      let items: DrillPickerQuestionItem[] = pool.map((row) => {
+        const answer = answerById.get(row.id)
+        const reviewed = Boolean(answer)
+        const result: DrillPickerQuestionItem['result'] = !answer
+          ? 'untouched'
+          : answer.is_correct
+            ? 'correct'
+            : 'incorrect'
+        const label = formatDrillPickerLabel(row)
+        const searchText = [
+          label,
+          row.tag_label ?? '',
+          stripHtml(row.stimulus_text ?? ''),
+          stripHtml(row.stem_text ?? ''),
+        ]
+          .join(' ')
+          .toLowerCase()
+        return {
+          id: row.id,
+          label,
+          difficulty: row.difficulty,
+          questionTypeId: row.question_type_id,
+          tagLabel: row.tag_label,
+          prepTestId: row.prep_test_id,
+          moduleId: row.module_id,
+          prepTestNumber: prepTestOrdinalFromModuleId(row.module_id),
+          status: reviewed ? 'reviewed' : 'fresh',
+          result,
+          timeSpentSeconds: answer?.time_spent_seconds ?? null,
+          bookmarked: false,
+          hasNotes: false,
+          searchText,
+        }
+      })
+
+      if (search) {
+        items = items.filter((item) => item.searchText.includes(search))
+      }
+      if (statusFilter === 'fresh') {
+        items = items.filter((item) => item.status === 'fresh')
+      } else if (statusFilter === 'reviewed') {
+        items = items.filter((item) => item.status === 'reviewed')
+      }
+      if (resultFilter !== 'all') {
+        items = items.filter((item) => item.result === resultFilter)
+      }
+      if (typeIds.length > 0) {
+        const allowed = new Set(typeIds)
+        items = items.filter((item) => item.questionTypeId != null && allowed.has(item.questionTypeId))
+      }
+      if (difficultyLevels.length > 0) {
+        const allowed = new Set(difficultyLevels)
+        items = items.filter((item) => item.difficulty != null && allowed.has(item.difficulty))
+      }
+      if (prepTestIds.size > 0) {
+        items = items.filter((item) => item.prepTestId != null && prepTestIds.has(item.prepTestId))
+      }
+
+      items.sort((a, b) => {
+        const aNum = a.prepTestNumber ?? 0
+        const bNum = b.prepTestNumber ?? 0
+        if (aNum !== bNum) return sort === 'newest' ? bNum - aNum : aNum - bNum
+        return a.label.localeCompare(b.label)
+      })
+
+      const total = items.length
+      const start = (page - 1) * pageSize
+      return {
+        questions: items.slice(start, start + pageSize),
+        total,
+        page,
+        pageSize,
+        selectedCount: total,
+      }
+    },
+
     async getDrillPoolStats(
       userId: string,
       body: {
         sectionType?: unknown
         questionTypeId?: unknown
+        questionTypeIds?: unknown
         difficulty?: unknown
         status?: unknown
       },
@@ -1755,18 +2112,20 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const sectionType = parseSectionType(body.sectionType)
       if (!sectionType) throw new PracticeValidationError('sectionType must be LR or RC')
 
-      const questionTypeId =
-        typeof body.questionTypeId === 'string' && body.questionTypeId ? body.questionTypeId : null
+      const questionTypeIds = resolveDrillQuestionTypeIds(body.questionTypeId, body.questionTypeIds)
       const difficulty =
         body.difficulty === 'easy' || body.difficulty === 'hard' || body.difficulty === 'adaptive'
           ? body.difficulty
           : null
 
-      const totalPool = await deps.repository.listDrillPoolQuestions({
+      const totalPoolRaw = await deps.repository.listDrillPoolQuestions({
         sectionType,
-        questionTypeId,
+        questionTypeId: questionTypeIds[0] ?? null,
+        questionTypeIds,
         difficulty: difficulty === 'adaptive' ? null : difficulty,
       })
+      const overrides = await loadPoolOverrideMap(deps.repository, userId)
+      const totalPool = filterDrillPoolByMembership(totalPoolRaw, overrides)
 
       const answeredIds = new Set(await deps.repository.listUserAnsweredQuestionIds(userId))
       const selectedPool = filterPoolByStatus(totalPool, body.status ?? 'fresh', answeredIds)
@@ -1787,11 +2146,14 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         showAnswers?: unknown
         selection?: unknown
         questionTypeId?: unknown
+        questionTypeIds?: unknown
         tagLabel?: unknown
+        tagLabels?: unknown
         difficulty?: unknown
         status?: unknown
         title?: unknown
         source?: unknown
+        questionIds?: unknown
       },
     ): Promise<DrillSessionResponse> {
       const sectionType = parseSectionType(body.sectionType)
@@ -1815,23 +2177,37 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const timing = typeof body.timing === 'string' ? body.timing : 'unlimited'
       const showAnswers = typeof body.showAnswers === 'string' ? body.showAnswers : 'end'
       const selection = typeof body.selection === 'string' ? body.selection : 'auto'
-      const questionTypeId =
-        typeof body.questionTypeId === 'string' && body.questionTypeId ? body.questionTypeId : null
-      const tagLabel =
-        typeof body.tagLabel === 'string' && body.tagLabel.trim() ? body.tagLabel.trim() : null
+      const manualQuestionIds = parseStringIdList(body.questionIds).slice(0, LR_DRILL_MAX_QUESTION_COUNT)
+      const questionTypeIds = resolveDrillQuestionTypeIds(body.questionTypeId, body.questionTypeIds)
+      const questionTypeId = questionTypeIds[0] ?? null
+      const tagLabels = resolveDrillTagLabels(body.tagLabel, body.tagLabels)
+      const tagLabel = tagLabels[0] ?? null
+      const titleFromTypes = formatDrillTitleFromTypeNames(tagLabels)
       const titleRaw = typeof body.title === 'string' && body.title.trim() ? body.title.trim() : null
-      // Untyped / mixed-pool drills get a stable history label when the client omits title.
-      const title = titleRaw ?? tagLabel ?? (questionTypeId ? null : 'Varied Mix')
+      // Prefer authoritative title from selected type labels; manual title is finalized after picks resolve.
+      let title = resolveDrillDisplayTitle({
+        title: tagLabels.length > 0 ? titleFromTypes : titleRaw,
+        selection: manualQuestionIds.length > 0 ? 'manual' : selection,
+        tagLabels,
+      })
       const difficulty =
         body.difficulty === 'easy' || body.difficulty === 'hard' || body.difficulty === 'adaptive'
           ? body.difficulty
           : 'adaptive'
       const status = typeof body.status === 'string' ? body.status : 'fresh'
-      const pool = await deps.repository.listDrillPoolQuestions({
+      const poolRaw = await deps.repository.listDrillPoolQuestions({
         sectionType,
-        questionTypeId,
-        difficulty: difficulty === 'adaptive' ? null : difficulty,
+        questionTypeId: selection === 'manual' && manualQuestionIds.length > 0 ? null : questionTypeId,
+        questionTypeIds: selection === 'manual' && manualQuestionIds.length > 0 ? [] : questionTypeIds,
+        difficulty:
+          selection === 'manual' && manualQuestionIds.length > 0
+            ? null
+            : difficulty === 'adaptive'
+              ? null
+              : difficulty,
       })
+      const overrides = await loadPoolOverrideMap(deps.repository, userId)
+      const pool = filterDrillPoolByMembership(poolRaw, overrides)
 
       const answeredIds = new Set(await deps.repository.listUserAnsweredQuestionIds(userId))
       const filtered = filterPoolByStatus(pool, status, answeredIds)
@@ -1841,14 +2217,41 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         ? parsePassageCount(body.passageCount ?? body.questionCount)
         : null
 
-      let questionIds = useRcPassageCount
-        ? pickRcDrillQuestionIdsByPassageCount(filtered, passageCount ?? 1, answeredIds)
-        : pickDrillQuestionIds(
-            filtered,
-            sectionType,
-            isUnlimitedQuestionCount ? 'unlimited' : questionCount,
-          )
+      let questionIds: string[]
+      if (manualQuestionIds.length > 0) {
+        // Explicit picks from the question browser always win — do not re-roll from the pool.
+        const rows = await deps.repository.getDrillQuestionRowsByIds(manualQuestionIds)
+        const byId = new Map(rows.map((row) => [row.id, row]))
+        questionIds = manualQuestionIds.filter((id) => {
+          const row = byId.get(id)
+          if (!row) return false
+          const sec = Array.isArray(row.admin_sections) ? row.admin_sections[0] : row.admin_sections
+          const rowType =
+            sec && typeof sec === 'object' ? (sec as { section_type?: string }).section_type : null
+          return rowType === sectionType
+        })
+        if (questionIds.length === 0) {
+          throw new PracticeValidationError('None of the selected questions are available for this drill')
+        }
+        const poolById = new Map(poolRaw.map((q) => [q.id, q]))
+        const prepTestNumbers = questionIds
+          .map((id) => prepTestOrdinalFromModuleId(poolById.get(id)?.module_id))
+          .filter((n): n is number => n != null)
+        title = formatPickMyOwnDrillTitle({
+          questionCount: questionIds.length,
+          prepTestNumbers,
+        })
+      } else {
+        questionIds = useRcPassageCount
+          ? pickRcDrillQuestionIdsByPassageCount(filtered, passageCount ?? 1, answeredIds)
+          : pickDrillQuestionIds(
+              filtered,
+              sectionType,
+              isUnlimitedQuestionCount ? 'unlimited' : questionCount,
+            )
+      }
       if (
+        manualQuestionIds.length === 0 &&
         source === 'dashboard_adaptive_drill' &&
         questionIds.length < DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT
       ) {
@@ -1866,6 +2269,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         throw new PracticeValidationError('No questions available for this drill configuration')
       }
       if (
+        manualQuestionIds.length === 0 &&
         source === 'dashboard_adaptive_drill' &&
         questionIds.length < DASHBOARD_ADAPTIVE_DRILL_QUESTION_COUNT
       ) {
@@ -1876,13 +2280,17 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       const metadata: DrillSessionMetadata = {
         sectionType,
-        questionCount: isUnlimitedQuestionCount ? 'unlimited' : questionIds.length,
-        ...(passageCount != null ? { passageCount } : {}),
+        questionCount: isUnlimitedQuestionCount && manualQuestionIds.length === 0
+          ? 'unlimited'
+          : questionIds.length,
+        ...(passageCount != null && manualQuestionIds.length === 0 ? { passageCount } : {}),
         timing,
         showAnswers,
-        selection,
+        selection: manualQuestionIds.length > 0 ? 'manual' : selection,
         questionTypeId,
+        questionTypeIds,
         tagLabel,
+        tagLabels,
         difficulty,
         status,
         questionIds,
@@ -1935,7 +2343,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           throw new PracticeValidationError('Active drill lessons must have exactly one linked question')
         }
         const bodyQuestionId = typeof body.questionId === 'string' ? body.questionId.trim() : ''
-        let questionId = questionIds[0] ?? (bodyQuestionId || null)
+        let questionId = bodyQuestionId || questionIds[0] || null
         if (!questionId) {
           const ref = extractPrepTestQuestionRef(lesson.summary, lesson.text_content, lesson.title)
           if (ref) {
@@ -1947,8 +2355,8 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           } else {
             throw new PracticeValidationError('No PrepTest question reference found for this lesson')
           }
-          questionIds = [questionId]
         }
+        questionIds = [questionId]
       } else {
         if (questionIds.length === 0) {
           throw new PracticeValidationError('No questions are linked to this Smart Drill lesson')
@@ -1972,11 +2380,13 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (isAdaptive && questionIds.length < PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT) {
         const needed = PREP_COURSE_ADAPTIVE_DRILL_QUESTION_COUNT - questionIds.length
         const answeredIds = new Set(await deps.repository.listUserAnsweredQuestionIds(userId))
-        const pool = await deps.repository.listDrillPoolQuestions({
+        const poolRaw = await deps.repository.listDrillPoolQuestions({
           sectionType,
           questionTypeId: null,
           difficulty: null,
         })
+        const overrides = await loadPoolOverrideMap(deps.repository, userId)
+        const pool = filterDrillPoolByMembership(poolRaw, overrides)
         const linked = new Set(questionIds)
         const filtered = filterPoolByStatus(pool, 'fresh', answeredIds).filter((q) => !linked.has(q.id))
         const extraIds = pickDrillQuestionIds(filtered, sectionType, needed)
@@ -2033,6 +2443,8 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (!sectionType) throw new PracticeValidationError('Invalid drill session metadata')
 
       const questionIds = drillQuestionIdsFromMetadata(metaRaw)
+      const questionTypeIds = resolveDrillQuestionTypeIds(metaRaw.questionTypeId, metaRaw.questionTypeIds)
+      const tagLabels = resolveDrillTagLabels(metaRaw.tagLabel, metaRaw.tagLabels)
       const metadata: DrillSessionMetadata = {
         sectionType,
         questionCount:
@@ -2045,8 +2457,10 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         showAnswers: typeof metaRaw.showAnswers === 'string' ? metaRaw.showAnswers : 'end',
         selection: typeof metaRaw.selection === 'string' ? metaRaw.selection : 'auto',
         questionTypeId:
-          typeof metaRaw.questionTypeId === 'string' ? metaRaw.questionTypeId : null,
-        tagLabel: typeof metaRaw.tagLabel === 'string' ? metaRaw.tagLabel : null,
+          typeof metaRaw.questionTypeId === 'string' ? metaRaw.questionTypeId : questionTypeIds[0] ?? null,
+        questionTypeIds,
+        tagLabel: typeof metaRaw.tagLabel === 'string' ? metaRaw.tagLabel : tagLabels[0] ?? null,
+        tagLabels,
         difficulty: typeof metaRaw.difficulty === 'string' ? metaRaw.difficulty : null,
         status: typeof metaRaw.status === 'string' ? metaRaw.status : 'fresh',
         questionIds,
@@ -2108,19 +2522,22 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       const existingIds = drillQuestionIdsFromMetadata(metaRaw)
       const existingSet = new Set(existingIds)
-      const questionTypeId =
-        typeof metaRaw.questionTypeId === 'string' && metaRaw.questionTypeId ? metaRaw.questionTypeId : null
+      const questionTypeIds = resolveDrillQuestionTypeIds(metaRaw.questionTypeId, metaRaw.questionTypeIds)
+      const questionTypeId = questionTypeIds[0] ?? null
       const difficulty =
         metaRaw.difficulty === 'easy' || metaRaw.difficulty === 'hard' || metaRaw.difficulty === 'adaptive'
           ? metaRaw.difficulty
           : 'adaptive'
       const status = typeof metaRaw.status === 'string' ? metaRaw.status : 'fresh'
 
-      const pool = await deps.repository.listDrillPoolQuestions({
+      const poolRaw = await deps.repository.listDrillPoolQuestions({
         sectionType,
         questionTypeId,
+        questionTypeIds,
         difficulty: difficulty === 'adaptive' ? null : difficulty,
       })
+      const overrides = await loadPoolOverrideMap(deps.repository, userId)
+      const pool = filterDrillPoolByMembership(poolRaw, overrides)
       const answeredIds = new Set(await deps.repository.listUserAnsweredQuestionIds(userId))
       const filtered = filterPoolByStatus(pool, status, answeredIds).filter((q) => !existingSet.has(q.id))
 
@@ -2169,7 +2586,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
     },
 
     async listSectionPool(
-      _userId: string,
+      userId: string,
       body: { sectionType?: unknown; page?: unknown; pageSize?: unknown; sort?: unknown },
     ): Promise<SectionPoolListResult> {
       const page = Math.max(1, Math.floor(typeof body.page === 'number' ? body.page : 1))
@@ -2180,10 +2597,12 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       )
 
       const rows = await deps.repository.listSectionPoolRows({})
+      const overrides = await loadPoolOverrideMap(deps.repository, userId)
       const allItems = rows
         .map(mapSectionPoolRow)
         .filter((s): s is SectionPoolItem => s != null && s.questionCount > 0)
         .filter((s) => isStudentVisiblePrepTest(s.moduleId))
+        .filter((s) => resolvePoolMembership(s.prepTestId, s.moduleId, overrides).inSections)
 
       const sectionTypeCounts: SectionPoolTypeCounts = {
         all: allItems.length,
@@ -2217,7 +2636,12 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
 
       const section = await deps.repository.getSectionDetail(sectionId)
       if (!section) throw new PracticeValidationError('sectionId not found')
-      assertStudentVisiblePrepTest(prepTestModuleIdFromSection(section))
+      const sectionModuleId = prepTestModuleIdFromSection(section)
+      assertStudentVisiblePrepTest(sectionModuleId)
+      const sectionOverrides = await loadPoolOverrideMap(deps.repository, userId)
+      if (!resolvePoolMembership(section.prep_test_id, sectionModuleId, sectionOverrides).inSections) {
+        throw new PracticeValidationError('This section is not in your sections pool')
+      }
 
       const sectionType = sectionTypeForPool(section.section_type)
       if (!sectionType) {
@@ -2393,7 +2817,8 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       body: { filter?: unknown; page?: unknown; pageSize?: unknown; sort?: unknown },
     ): Promise<PrepTestPoolListResult> {
       const page = Math.max(1, Math.floor(typeof body.page === 'number' ? body.page : 1))
-      const pageSize = Math.min(50, Math.max(1, Math.floor(typeof body.pageSize === 'number' ? body.pageSize : 10)))
+      // Cap high enough that student “See more” can return the full visible pool in one page.
+      const pageSize = Math.min(200, Math.max(1, Math.floor(typeof body.pageSize === 'number' ? body.pageSize : 10)))
       const sort = body.sort === 'oldest' ? 'oldest' : 'newest'
       const filter =
         body.filter === 'fresh' ||
@@ -2407,13 +2832,15 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const rowsById = new Map(rows.map((row) => [row.id, row]))
       const allSessions = await deps.repository.listUserSessionsForPrepTests(userId)
       const sessionsByPrepTestId = groupSessionsByPrepTestId(allSessions)
+      const overrides = await loadPoolOverrideMap(deps.repository, userId)
 
       const items: PrepTestPoolItem[] = []
       for (const row of rows) {
         if (!isStudentVisiblePrepTest(row.moduleId)) continue
         if (practiceableSectionsFromRow(row.sections).length === 0) continue
+        const membership = resolvePoolMembership(row.id, row.moduleId, overrides)
         const sessions = sessionsByPrepTestId.get(row.id) ?? []
-        items.push(poolItemFromRow(row, sessions))
+        items.push(poolItemFromRow(row, sessions, membership))
       }
 
       const statusCounts: PrepTestPoolStatusCounts = {
@@ -2477,6 +2904,10 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const row = await deps.repository.getPrepTestDetailRow(prepTestId)
       if (!row) throw new PracticeValidationError('prepTestId not found')
       assertStudentVisiblePrepTest(row.moduleId)
+      const testOverrides = await loadPoolOverrideMap(deps.repository, userId)
+      if (!resolvePoolMembership(row.id, row.moduleId, testOverrides).inTests) {
+        throw new PracticeValidationError('This PrepTest is not in your tests pool')
+      }
 
       const practiceable = practiceableSectionsFromRow(row.sections)
       if (practiceable.length === 0) {
@@ -2614,6 +3045,120 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       return { session: sessionRow }
     },
 
+    async listPrepTestPoolSettings(userId: string): Promise<PrepTestPoolSettingsListResult> {
+      const [rows, overrides, freshnessRows] = await Promise.all([
+        deps.repository.listPrepTestPoolRows(),
+        loadPoolOverrideMap(deps.repository, userId),
+        deps.repository.listPrepTestFreshnessRows(userId),
+      ])
+      const freshnessById = new Map(
+        freshnessRows.map((row) => [row.prepTestId, row] as const),
+      )
+
+      const prepTests: PrepTestPoolSettingsItem[] = []
+      for (const row of rows) {
+        if (!isStudentVisiblePrepTest(row.moduleId)) continue
+        if (practiceableSectionsFromRow(row.sections).length === 0) continue
+        const prepTestNumber = prepTestNumberFromModuleId(row.moduleId)
+        const ordinal = prepTestOrdinalFromModuleId(row.moduleId)
+        const defaultMembership =
+          ordinal != null
+            ? defaultPrepTestPoolMembership(ordinal)
+            : { inDrills: false, inSections: false, inTests: false }
+        const membership = resolvePoolMembership(row.id, row.moduleId, overrides)
+        const freshness = freshnessById.get(row.id)
+        const totalFromSections = practiceableSectionsFromRow(row.sections).reduce(
+          (sum, s) => sum + s.questionCount,
+          0,
+        )
+        const totalQuestions = freshness?.totalQuestions ?? totalFromSections
+        const answeredQuestions = freshness?.answeredQuestions ?? 0
+        prepTests.push({
+          prepTestId: row.id,
+          moduleId: row.moduleId,
+          prepTestNumber,
+          title: row.title,
+          inDrills: membership.inDrills,
+          inSections: membership.inSections,
+          inTests: membership.inTests,
+          freshnessPercent: freshnessPercent(totalQuestions, answeredQuestions),
+          isDefault: membershipEquals(membership, defaultMembership),
+        })
+      }
+
+      prepTests.sort((a, b) => {
+        const na = Number.parseInt(a.prepTestNumber ?? '', 10)
+        const nb = Number.parseInt(b.prepTestNumber ?? '', 10)
+        const av = Number.isFinite(na) ? na : 0
+        const bv = Number.isFinite(nb) ? nb : 0
+        return bv - av
+      })
+
+      return {
+        prepTests,
+        counts: {
+          drills: prepTests.filter((pt) => pt.inDrills).length,
+          sections: prepTests.filter((pt) => pt.inSections).length,
+          tests: prepTests.filter((pt) => pt.inTests).length,
+        },
+      }
+    },
+
+    async updatePrepTestPoolSettings(
+      userId: string,
+      body: { updates?: unknown },
+    ): Promise<PrepTestPoolSettingsListResult> {
+      const rawUpdates = Array.isArray(body.updates) ? body.updates : null
+      if (!rawUpdates || rawUpdates.length === 0) {
+        throw new PracticeValidationError('updates must be a non-empty array')
+      }
+
+      const updates: PrepTestPoolSettingsUpdate[] = []
+      for (const item of rawUpdates) {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) {
+          throw new PracticeValidationError('each update must be an object')
+        }
+        const row = item as Record<string, unknown>
+        const prepTestId = typeof row.prepTestId === 'string' ? row.prepTestId.trim() : ''
+        if (!prepTestId) throw new PracticeValidationError('prepTestId is required')
+        if (typeof row.inDrills !== 'boolean') {
+          throw new PracticeValidationError('inDrills must be a boolean')
+        }
+        if (typeof row.inSections !== 'boolean') {
+          throw new PracticeValidationError('inSections must be a boolean')
+        }
+        if (typeof row.inTests !== 'boolean') {
+          throw new PracticeValidationError('inTests must be a boolean')
+        }
+        const detail = await deps.repository.getPrepTestDetailRow(prepTestId)
+        if (!detail) throw new PracticeValidationError(`prepTestId not found: ${prepTestId}`)
+        assertStudentVisiblePrepTest(detail.moduleId)
+        updates.push({
+          prepTestId,
+          inDrills: row.inDrills,
+          inSections: row.inSections,
+          inTests: row.inTests,
+        })
+      }
+
+      await deps.repository.upsertUserPrepTestPoolOverrides(
+        userId,
+        updates.map((u) => ({
+          prep_test_id: u.prepTestId,
+          in_drills: u.inDrills,
+          in_sections: u.inSections,
+          in_tests: u.inTests,
+        })),
+      )
+
+      return service.listPrepTestPoolSettings(userId)
+    },
+
+    async resetPrepTestPoolSettings(userId: string): Promise<PrepTestPoolSettingsListResult> {
+      await deps.repository.deleteUserPrepTestPoolOverrides(userId)
+      return service.listPrepTestPoolSettings(userId)
+    },
+
     async listBlindReviewPool(
       userId: string,
       body: { filter?: unknown; page?: unknown; pageSize?: unknown; sort?: unknown },
@@ -2677,7 +3222,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         prepTestSession = sortedPrepTestSessions(sessions).find((s) => Boolean(s.completed_at)) ?? null
       }
       if (!prepTestSession) {
-        throw new PracticeValidationError('Complete the PrepTest before blind review')
+        throw new PracticeValidationError('Complete the PrepTest before untimed review')
       }
 
       return buildBlindReviewDetail(row, sessions, prepTestSession)
@@ -2697,7 +3242,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
       const prepTestSession = prepTestSessionAwaitingBlindReview(sessions)
       if (!prepTestSession) {
-        throw new PracticeValidationError('No PrepTest awaiting blind review')
+        throw new PracticeValidationError('No PrepTest awaiting untimed review')
       }
 
       const sessionRow = await deps.repository.updateSession(prepTestSession.id, userId, {
@@ -2726,9 +3271,9 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (!prepTestSession) {
         const newest = sortedPrepTestSessions(sessions)[0]
         if (newest?.blind_review_completed_at) {
-          throw new PracticeValidationError('Blind review is already completed for this PrepTest')
+          throw new PracticeValidationError('Untimed review is already completed for this PrepTest')
         }
-        throw new PracticeValidationError('Complete the PrepTest before starting blind review')
+        throw new PracticeValidationError('Complete the PrepTest before starting untimed review')
       }
 
       const sessionRow = await deps.repository.updateSession(prepTestSession.id, userId, {
@@ -2773,7 +3318,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       if (!prepTestSession) {
         const newest = sortedPrepTestSessions(sessions)[0]
         if (newest?.blind_review_completed_at) {
-          throw new PracticeValidationError('Blind review is already completed for this PrepTest')
+          throw new PracticeValidationError('Untimed review is already completed for this PrepTest')
         }
         throw new PracticeValidationError('No completed PrepTest session found')
       }
@@ -2820,6 +3365,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       return { session: sessionRow }
     },
   }
+  return service
 }
 
 export type PracticeService = ReturnType<typeof createPracticeService>

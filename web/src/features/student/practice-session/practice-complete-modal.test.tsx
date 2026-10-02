@@ -51,7 +51,7 @@ describe("PracticeCompleteModal", () => {
     expect(screen.getByText("10/20")).toBeInTheDocument()
     expect(screen.getByLabelText("86.5 percentile")).toBeInTheDocument()
     expect(screen.getByText("percentile")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /Blind Review/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Untimed Review/i })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Skip to view details result/i })).toBeInTheDocument()
     expect(
       screen.getByText(/helps you identify reasoning errors before seeing your score/i),

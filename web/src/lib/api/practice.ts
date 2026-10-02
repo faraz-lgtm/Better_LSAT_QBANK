@@ -1,4 +1,6 @@
 import type {
+  DrillPickerListInput,
+  DrillPickerListResult,
   DrillPoolStats,
   DrillPoolStatsInput,
   DrillSessionResponse,
@@ -20,6 +22,10 @@ import type {
   BlindReviewPoolSort,
   BlindReviewPoolStatusCounts,
 } from "@/features/student/blind-review/blind-review-types"
+import type {
+  PrepTestPoolSettingsListResult,
+  PrepTestPoolSettingsUpdate,
+} from "@/features/account/prep-test-pool-types"
 import type {
   PrepTestDetailResponse,
   PrepTestPoolBlindReviewStatus,
@@ -167,6 +173,9 @@ function normalizePrepTestPoolItem(pt: PrepTestPoolItemRaw): PrepTestPoolItem {
         : typeof pt.open_prep_test_session_id === "string"
           ? pt.open_prep_test_session_id
           : null,
+    inDrills: typeof pt.inDrills === "boolean" ? pt.inDrills : Boolean(pt.in_drills ?? true),
+    inSections: typeof pt.inSections === "boolean" ? pt.inSections : Boolean(pt.in_sections ?? true),
+    inTests: typeof pt.inTests === "boolean" ? pt.inTests : Boolean(pt.in_tests ?? true),
   }
 }
 
@@ -416,11 +425,14 @@ export function createPracticeApi(supabase: SupabaseClient) {
           showAnswers: input.showAnswers,
           selection: input.selection,
           questionTypeId: input.questionTypeId,
+          questionTypeIds: input.questionTypeIds,
           tagLabel: input.tagLabel,
+          tagLabels: input.tagLabels,
           difficulty: input.difficulty,
           status: input.status,
           title: input.title,
           source: input.source,
+          ...(input.questionIds?.length ? { questionIds: input.questionIds } : {}),
         },
       })
       if (error) throw error
@@ -490,12 +502,36 @@ export function createPracticeApi(supabase: SupabaseClient) {
         body: {
           sectionType: input.sectionType,
           questionTypeId: input.questionTypeId,
+          questionTypeIds: input.questionTypeIds,
           difficulty: input.difficulty,
           status: input.status,
         },
       })
       if (error) throw error
       if (!data) throw new Error("No pool stats returned from practice")
+      return data
+    },
+
+    async listDrillPickerQuestions(input: DrillPickerListInput): Promise<DrillPickerListResult> {
+      const { data, error } = await invokePracticeFn<DrillPickerListResult>("practice-list-drill-picker", {
+        method: "POST",
+        body: {
+          sectionType: input.sectionType,
+          search: input.search,
+          status: input.status,
+          questionTypeIds: input.questionTypeIds,
+          difficultyLevels: input.difficultyLevels,
+          prepTestIds: input.prepTestIds,
+          result: input.result,
+          availableForDrills: input.availableForDrills,
+          availability: input.availability,
+          sort: input.sort,
+          page: input.page,
+          pageSize: input.pageSize,
+        },
+      })
+      if (error) throw error
+      if (!data?.questions) throw new Error("No drill picker questions returned from practice")
       return data
     },
 
@@ -584,6 +620,38 @@ export function createPracticeApi(supabase: SupabaseClient) {
       }
     },
 
+    async listPrepTestPoolSettings(): Promise<PrepTestPoolSettingsListResult> {
+      const { data, error } = await invokePracticeFn<PrepTestPoolSettingsListResult>(
+        "practice-list-prep-test-pool-settings",
+        { method: "POST", body: {} },
+      )
+      if (error) await throwIfEdgeInvokeFailed(error)
+      if (!data?.prepTests) throw new Error("No PrepTest pool settings returned from practice")
+      return data
+    },
+
+    async updatePrepTestPoolSettings(
+      updates: PrepTestPoolSettingsUpdate[],
+    ): Promise<PrepTestPoolSettingsListResult> {
+      const { data, error } = await invokePracticeFn<PrepTestPoolSettingsListResult>(
+        "practice-update-prep-test-pool-settings",
+        { method: "POST", body: { updates } },
+      )
+      if (error) await throwIfEdgeInvokeFailed(error)
+      if (!data?.prepTests) throw new Error("No PrepTest pool settings returned from practice")
+      return data
+    },
+
+    async resetPrepTestPoolSettings(): Promise<PrepTestPoolSettingsListResult> {
+      const { data, error } = await invokePracticeFn<PrepTestPoolSettingsListResult>(
+        "practice-reset-prep-test-pool-settings",
+        { method: "POST", body: {} },
+      )
+      if (error) await throwIfEdgeInvokeFailed(error)
+      if (!data?.prepTests) throw new Error("No PrepTest pool settings returned from practice")
+      return data
+    },
+
     async getPrepTestDetail(prepTestId: string): Promise<PrepTestDetailResponse> {
       const { data, error } = await invokePracticeFn<PrepTestDetailResponse>("practice-get-prep-test-detail", {
         method: "POST",
@@ -656,7 +724,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
         { method: "POST", body },
       )
       if (error) throw error
-      if (!data?.prepTests) throw new Error("No blind review pool returned from practice")
+      if (!data?.prepTests) throw new Error("No untimed review pool returned from practice")
       const normalized = {
         ...data,
         prepTests: data.prepTests.map((pt) =>
@@ -677,7 +745,7 @@ export function createPracticeApi(supabase: SupabaseClient) {
         body: { prepTestId },
       })
       if (error) await throwIfEdgeInvokeFailed(error)
-      if (!data?.prepTest) throw new Error("No blind review detail returned from practice")
+      if (!data?.prepTest) throw new Error("No untimed review detail returned from practice")
       return data
     },
 

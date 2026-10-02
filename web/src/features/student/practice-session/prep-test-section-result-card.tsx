@@ -1,8 +1,8 @@
 import { PracticeResultOutcomeIcon } from "@/features/student/practice-session/practice-result-outcome-icon"
 
-/** Figma `18942:44485` — results-by-section card (212×228) */
+/** Figma `18942:44485` — results-by-section card (fills row equally, no horizontal scroll) */
 const PREP_TEST_SECTION_RESULT_CARD_CLASS =
-  "flex h-[228px] w-[212px] shrink-0 flex-col gap-3 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4"
+  "flex h-[228px] min-w-0 flex-1 basis-0 flex-col gap-3 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4"
 
 const PREP_TEST_SECTION_KIND_BADGE_CLASS =
   "flex size-6 shrink-0 items-center justify-center rounded-[8px] border text-xs font-extrabold leading-[1.3]"
@@ -45,7 +45,7 @@ function PrepTestSectionResultCard({
         >
           {badge.short}
         </div>
-        <p className="text-[10px] font-bold leading-normal tracking-[0.2px] text-[var(--color-student-heading)]">{longName}</p>
+        <p className="min-w-0 truncate text-[10px] font-bold leading-normal tracking-[0.2px] text-[var(--color-student-heading)]">{longName}</p>
         {isExperimental ? (
           <span className="rounded-[6px] border border-[var(--blind-review-accent)] bg-[var(--blind-review-badge-bg)] px-1.5 py-0.5 text-[10px] font-extrabold leading-none tracking-[0.2px] text-[var(--blind-review-accent)]">
             EXP
@@ -76,13 +76,13 @@ function PrepTestSectionResultCard({
       </div>
 
       <div className="flex h-5 w-full items-center gap-2">
-        <div className="h-1.5 w-[134px] shrink-0 overflow-hidden rounded-[8px] bg-[var(--greyscale-25)]">
+        <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-[8px] bg-[var(--greyscale-25)]">
           <div
             className="h-full rounded-[8px] bg-[var(--primary)]"
             style={{ width: `${accuracyPct}%` }}
           />
         </div>
-        <p className="w-[38px] text-right text-sm font-medium leading-normal tracking-[0.28px] text-[var(--primary)]">
+        <p className="w-[38px] shrink-0 text-right text-sm font-medium leading-normal tracking-[0.28px] text-[var(--primary)]">
           {accuracyPct}%
         </p>
       </div>

@@ -194,10 +194,11 @@ describe("PracticeSessionActiveDrillFooterNav", () => {
     expect(screen.getByRole("button", { name: "Question 1" })).toHaveClass(
       ...ACTIVE_DRILL_QUESTION_NAV_BUTTON_ANSWERED_CLASS.split(" "),
     )
-    expect(screen.getByRole("button", { name: "Question 2" })).toHaveClass(
-      ...ACTIVE_DRILL_QUESTION_NAV_BUTTON_ACTIVE_CLASS.split(" "),
-    )
-    expect(screen.getByRole("button", { name: "Question 2" })).not.toHaveClass("bg-[#0d47a1]")
+    const current = screen.getByRole("button", { name: "Question 2" })
+    expect(current).toHaveClass(...ACTIVE_DRILL_QUESTION_NAV_BUTTON_ACTIVE_CLASS.split(" "))
+    expect(current).not.toHaveClass("bg-[#0d47a1]")
+    expect(current.querySelector('img[src="/figma/exam-official/current-caret.svg"]')).toBeInTheDocument()
+    expect(current.querySelector("span[aria-hidden]")).toHaveClass("h-[3px]", "bg-[var(--primary)]")
     expect(screen.getByRole("button", { name: "Question 3" })).toHaveClass(
       ...ACTIVE_DRILL_QUESTION_NAV_BUTTON_DEFAULT_CLASS.split(" "),
     )
@@ -220,6 +221,42 @@ describe("PracticeSessionActiveDrillFooterNav", () => {
     const current = screen.getByRole("button", { name: "Question 1" })
     expect(current).toHaveClass(...ACTIVE_DRILL_QUESTION_NAV_BUTTON_ACTIVE_CLASS.split(" "))
     expect(current).not.toHaveClass("bg-[#0d47a1]")
+    expect(current.querySelector('img[src="/figma/exam-official/current-caret.svg"]')).toBeInTheDocument()
+  })
+
+  it("marks the current question in the colour-coded review list", () => {
+    render(
+      <PracticeSessionActiveDrillFooterNav
+        questions={[{ id: "q1" }, { id: "q2" }, { id: "q3" }]}
+        safeIndex={2}
+        answersByQuestion={{
+          q1: { selectedAnswer: "A", isCorrect: true },
+          q2: { selectedAnswer: "B", isCorrect: false },
+        }}
+        isFlagged={() => false}
+        variant="active-drill"
+        outcomeForQuestion={(id) => {
+          if (id === "q1") return "correct"
+          if (id === "q2") return "incorrect"
+          return "unanswered"
+        }}
+        onSelectQuestion={() => undefined}
+        onPrev={() => undefined}
+        onNext={() => undefined}
+      />,
+    )
+
+    const current = screen.getByRole("button", { name: "Question 2, incorrect" })
+    expect(current).toHaveAttribute("aria-current", "true")
+    expect(current).toHaveClass("bg-[#feeff2]", "border-[#df1c41]")
+    expect(current).not.toHaveClass("bg-[var(--primary)]")
+    expect(current.previousElementSibling).toHaveClass(
+      "h-[10px]",
+      "w-1",
+      "bg-[var(--color-student-heading)]",
+    )
+    expect(screen.getByRole("button", { name: "Question 1, correct" })).not.toHaveAttribute("aria-current")
+    expect(screen.getByRole("button", { name: "Question 1, correct" })).toHaveClass("bg-[#effefa]")
   })
 
   it("places the Figma flag above flagged question pills", () => {
@@ -238,9 +275,11 @@ describe("PracticeSessionActiveDrillFooterNav", () => {
 
     const flaggedTwo = screen.getByRole("button", { name: "Question 2, flagged" })
     const flaggedThree = screen.getByRole("button", { name: "Question 3, flagged" })
-    expect(flaggedTwo.parentElement?.querySelector("img")).toHaveAttribute("src", "/figma/exam-review/flag.svg")
-    expect(flaggedThree.parentElement?.querySelector("img")).toHaveAttribute("src", "/figma/exam-review/flag.svg")
-    expect(screen.getByRole("button", { name: "Question 1" }).parentElement?.querySelector("img")).toBeNull()
+    expect(flaggedTwo.parentElement?.querySelector('img[src="/figma/exam-review/flag.svg"]')).toBeInTheDocument()
+    expect(flaggedThree.parentElement?.querySelector('img[src="/figma/exam-review/flag.svg"]')).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Question 1" }).parentElement?.querySelector('img[src="/figma/exam-review/flag.svg"]'),
+    ).toBeNull()
   })
 
   it("uses Prev/Next labels, in-pill current caret, and 4px passage breaks in official layout", () => {

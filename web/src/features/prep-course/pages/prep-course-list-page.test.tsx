@@ -7,7 +7,7 @@ import { PREP_COURSE_ESSENTIALS_SLUG } from "@/features/prep-course/lib/prep-cou
 import { PrepCourseListPage } from "./prep-course-list-page"
 
 describe("PrepCourseListPage", () => {
-  it("redirects to LSAT Essential Course", () => {
+  it("redirects to LSAT Essentials Course", () => {
     render(
       <MemoryRouter initialEntries={["/app/prep-course"]}>
         <Routes>

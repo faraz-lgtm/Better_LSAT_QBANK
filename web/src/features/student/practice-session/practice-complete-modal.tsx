@@ -246,7 +246,7 @@ function PracticeCompleteModal({
                 onClick={onBlindReview}
                 disabled={!onBlindReview}
               >
-                Blind Review
+                Untimed Review
               </button>
               {onSkipDetails ? (
                 <button type="button" className={SKIP_DETAILS_BTN_CLASS} onClick={onSkipDetails}>
@@ -259,7 +259,7 @@ function PracticeCompleteModal({
             <div className="flex w-full max-w-[608px] items-start gap-3 rounded-[16px] border border-[var(--explanation-in-process)] bg-[var(--explanation-in-process-bg)] p-4">
               <PracticeCompleteInfoIcon className="mt-0.5 text-[var(--explanation-in-process)]" />
               <p className="text-left text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
-                <span className="font-semibold">Blind Review</span> helps you identify reasoning
+                <span className="font-semibold">Untimed Review</span> helps you identify reasoning
                 errors before seeing your score. It&apos;s the most effective way to improve your
                 performance.
               </p>

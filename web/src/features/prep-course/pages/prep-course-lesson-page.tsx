@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { Link, useLocation, useMatch, useNavigate, useParams } from "react-router-dom"
 
 import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
 import { useGuestPremiumAccount } from "@/features/guest/premium/guest-premium-account"
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
+import { ActiveDrillStartScreen } from "@/features/prep-course/components/active-drill/active-drill-start-screen"
 import { PrepCourseLessonFooter } from "@/features/prep-course/components/prep-course-lesson-footer"
 import { PrepCourseLessonPanel } from "@/features/prep-course/components/prep-course-lesson-panel"
 import { PrepCourseLessonSidebar } from "@/features/prep-course/components/prep-course-lesson-sidebar"
@@ -22,12 +23,21 @@ import {
   isResolvedPrepCourseDrillLesson,
 } from "@/features/prep-course/lib/prep-course-format"
 import { mergeActiveDrillAttemptBlindReview } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
+import {
+  resolveActiveDrillLessonEntry,
+  resolveDisplayedActiveDrillAttempt,
+  withActiveDrillResultsQuery,
+} from "@/features/prep-course/lib/active-drill-results-query"
+import {
+  activeDrillStartPath,
+  resolveLessonDrillStartAction,
+  startLessonDrillRequest,
+} from "@/features/prep-course/lib/start-lesson-drill-request"
 import { isPrepCourseComingSoonSlug } from "@/features/prep-course/lib/prep-course-nav"
 import { isPrepCourseLessonLockedForFreePlan, shouldLimitFreePrepCourseAccess } from "@/features/prep-course/lib/prep-course-free-access"
 import { usePrepCourseBookmarks } from "@/features/prep-course/lib/use-prep-course-bookmarks"
 import { PrepCourseComingSoonPage } from "@/features/prep-course/pages/prep-course-coming-soon-page"
 import { StudentMain } from "@/features/student/components/student-main"
-import { STUDENT_PAGE_CONTAINER_CLASS } from "@/features/student/components/student-page-container"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createPracticeApi } from "@/lib/api/practice"
 import {
@@ -43,8 +53,13 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 import { cn } from "@/lib/utils"
 
+/** White course column on Primary/0 page canvas — no paper border */
 const PREP_COURSE_LESSON_CONTENT_CARD_CLASS =
-  "flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden rounded-t-[14px] rounded-b-none border border-b-0 border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]"
+  "flex min-w-0 w-full flex-col self-start overflow-hidden rounded-[20px] bg-[var(--greyscale-0)]"
+
+const PREP_COURSE_LESSON_CARD_WIDTH_CLASS = "mx-auto w-full max-w-[960px]"
+
+const PREP_COURSE_LESSON_WITH_SIDEBAR_WIDTH_CLASS = "mx-auto w-full max-w-[calc(960px+320px+24px)]"
 
 function PrepCourseLessonPage() {
   const navigate = useNavigate()
@@ -53,6 +68,9 @@ function PrepCourseLessonPage() {
     courseSlug: string
     lessonSlug: string
   }>()
+  const isStartScreen = Boolean(
+    useMatch({ path: "/app/prep-course/:courseSlug/:lessonSlug/start", end: true }),
+  )
   const courseSlug = courseSlugParam?.trim() ?? ""
   const lessonSlug = lessonSlugParam?.trim() ?? ""
   const paramsValid = courseSlug.length > 0 && lessonSlug.length > 0
@@ -235,16 +253,59 @@ function PrepCourseLessonPage() {
     }
   }, [comingSoon, paramsValid, courseSlug, lessonSlug, prepCourseApi, practiceApi, location.key, entitlementReady, limitFreeAccess, navigate, openLockedContentModal])
 
+  useLayoutEffect(() => {
+    document.documentElement.classList.add("prep-course-lesson-active")
+    return () => {
+      document.documentElement.classList.remove("prep-course-lesson-active")
+    }
+  }, [])
+
   useEffect(() => {
     setDrillStartError(null)
-  }, [lessonSlug])
+    lessonContentRef.current?.closest("section")?.scrollTo({ top: 0 })
+  }, [lessonSlug, isStartScreen])
+
+  useEffect(() => {
+    if (!course || !lesson || loading) return
+    if (isStartScreen && resolveDrillLessonType(lesson) !== "active_drill") {
+      navigate(`/app/prep-course/${course.slug}/${lesson.slug}`, { replace: true })
+      return
+    }
+    if (resolveDrillLessonType(lesson) !== "active_drill") return
+    const entry = resolveActiveDrillLessonEntry({
+      isStartScreen,
+      search: location.search,
+      hasAttempt: Boolean(activeDrillAttempt),
+    })
+    if (entry === "start") {
+      navigate(activeDrillStartPath(course.slug, lesson.slug), { replace: true })
+      return
+    }
+    if (entry === "results") {
+      navigate(withActiveDrillResultsQuery(`/app/prep-course/${course.slug}/${lesson.slug}`), {
+        replace: true,
+      })
+    }
+  }, [
+    activeDrillAttempt,
+    course,
+    isStartScreen,
+    lesson,
+    loading,
+    location.search,
+    navigate,
+  ])
 
   const handleReviewDrill = useCallback(() => {
-    lessonContentRef.current?.scrollTo({ top: 0, behavior: "smooth" })
+    lessonContentRef.current?.closest("section")?.scrollTo({ top: 0, behavior: "smooth" })
   }, [])
 
   const handleStartDrill = useCallback(async () => {
     if (!lesson || !course || startingDrill) return
+    if (resolveLessonDrillStartAction(lesson, isStartScreen) === "open-start-screen") {
+      navigate(activeDrillStartPath(course.slug, lesson.slug))
+      return
+    }
     if (!practiceApi) {
       const msg = "Practice API is unavailable. Check Supabase env configuration."
       setDrillStartError(msg)
@@ -255,14 +316,8 @@ function PrepCourseLessonPage() {
     setDrillStartError(null)
     setError(null)
     try {
-      const linkedQuestionId = linkedQuestionRefs[0]?.question_id ?? null
-      const { session } = await practiceApi.startLessonDrill({
-        lessonId: lesson.id,
-        ...(resolveDrillLessonType(lesson) === "active_drill" && linkedQuestionId
-          ? { questionId: linkedQuestionId }
-          : {}),
-      })
-      const returnTo = `/app/prep-course/${course.slug}/${lesson.slug}`
+      const { session } = await practiceApi.startLessonDrill(startLessonDrillRequest(lesson, linkedQuestionRefs))
+      const returnTo = withActiveDrillResultsQuery(`/app/prep-course/${course.slug}/${lesson.slug}`)
       navigate(`/app/practice/drills/session/${session.id}?returnTo=${encodeURIComponent(returnTo)}`)
     } catch (e) {
       const msg = e instanceof Error ? formatSupabaseCallError(e) : "Failed to start drill"
@@ -271,7 +326,7 @@ function PrepCourseLessonPage() {
     } finally {
       setStartingDrill(false)
     }
-  }, [course, lesson, linkedQuestionRefs, navigate, practiceApi, startingDrill])
+  }, [course, isStartScreen, lesson, linkedQuestionRefs, navigate, practiceApi, startingDrill])
 
   if (comingSoon) {
     return <PrepCourseComingSoonPage />
@@ -326,15 +381,25 @@ function PrepCourseLessonPage() {
     )
   }
 
-  const useSplitDrillLayout = Boolean(
-    activeDrillAttempt && showSidebar && isResolvedPrepCourseDrillLesson(lesson),
+  const showActiveDrillStart =
+    isStartScreen && resolveDrillLessonType(lesson) === "active_drill"
+  const lessonActiveDrillAttempt = resolveDisplayedActiveDrillAttempt(
+    resolveDrillLessonType(lesson),
+    activeDrillAttempt,
+    location.search,
   )
+  const isDrillResultsView = Boolean(
+    !showActiveDrillStart &&
+      lessonActiveDrillAttempt &&
+      isResolvedPrepCourseDrillLesson(lesson),
+  )
+  const useSplitDrillLayout = Boolean(isDrillResultsView && showSidebar)
 
   const lessonPanelProps = {
     course,
     lesson,
     linkedQuestionRefs,
-    activeDrillAttempt,
+    activeDrillAttempt: lessonActiveDrillAttempt,
     sectionSubtitle,
     moduleLessonLine,
     lessonSequence,
@@ -347,31 +412,34 @@ function PrepCourseLessonPage() {
   }
 
   return (
-    <StudentMain layout="locked" fullBleed contentClassName="bg-[var(--background)] px-0 pb-0">
-      <div className="prep-course-lesson-shell flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-y-hidden bg-[var(--background)]">
+    <StudentMain layout="locked" fullBleed contentClassName="bg-[var(--primary-0)] px-0 pb-0">
+      <div className="prep-course-lesson-shell flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden bg-[var(--primary-0)]">
         {error ? <p className="mb-4 shrink-0 text-xs text-[#95122b]">{error}</p> : null}
 
-        <section className="prep-course-lesson-frame practice-session-card flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden">
+        <section className="prep-course-lesson-frame practice-session-card flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-y-auto">
           <div
             className={cn(
-              "practice-session-body flex h-0 min-h-0 min-w-0 max-w-full flex-1 overflow-hidden bg-[var(--background)] px-[24px] pb-0",
+              "practice-session-body flex min-h-0 min-w-0 w-full max-w-full flex-col bg-[var(--primary-0)] px-4 pb-3",
               useSplitDrillLayout
                 ? "flex-col"
                 : showSidebar
-                  ? "practice-session-body--with-sidebar mx-auto w-full max-w-[calc(1168px+320px+24px)] flex-row items-stretch justify-center gap-6"
+                  ? cn(
+                      "practice-session-body--with-sidebar flex-row items-start justify-center gap-6",
+                      PREP_COURSE_LESSON_WITH_SIDEBAR_WIDTH_CLASS,
+                    )
                   : "flex-col items-center",
             )}
           >
             {useSplitDrillLayout ? (
               <div
                 ref={lessonContentRef}
-                className="practice-session-pane practice-session-scroll-hidden flex min-h-0 flex-1 flex-col gap-6 overflow-x-clip overflow-y-auto overscroll-contain bg-[var(--background)] [overflow-anchor:none]"
+                className="flex min-w-0 w-full flex-col gap-6 overflow-x-clip"
               >
-                <div className={cn(STUDENT_PAGE_CONTAINER_CLASS, "w-full")}>
+                <div className={cn(PREP_COURSE_LESSON_CARD_WIDTH_CLASS, "w-full")}>
                   <PrepCourseLessonPanel {...lessonPanelProps} drillResultsPart="cards" sidebarAdjacent={false} />
                 </div>
-                <div className="mx-auto flex w-full min-w-0 max-w-[calc(1168px+320px+24px)] gap-6">
-                  <div className={cn(STUDENT_PAGE_CONTAINER_CLASS, "min-w-0 flex-1")}>
+                <div className={cn(PREP_COURSE_LESSON_WITH_SIDEBAR_WIDTH_CLASS, "flex min-w-0 gap-6")}>
+                  <div className={cn(PREP_COURSE_LESSON_CARD_WIDTH_CLASS, "min-w-0 flex-1")}>
                     <PrepCourseLessonPanel
                       {...lessonPanelProps}
                       drillResultsPart="below"
@@ -379,7 +447,7 @@ function PrepCourseLessonPage() {
                     />
                   </div>
                   <div className="sticky top-0 flex w-[320px] shrink-0 self-start flex-col overflow-hidden">
-                    <div className="flex max-h-[calc(100svh-var(--nav-shell-height)-180px)] min-h-0 flex-col overflow-hidden">
+                    <div className="flex max-h-[calc(var(--app-svh)-var(--nav-shell-height)-120px)] min-h-0 flex-col overflow-hidden">
                       <PrepCourseLessonSidebar
                         lessons={sidebarLessons}
                         activeLessonSlug={lesson.slug}
@@ -398,31 +466,49 @@ function PrepCourseLessonPage() {
               <>
                 <div
                   className={cn(
-                    PREP_COURSE_LESSON_CONTENT_CARD_CLASS,
-                    STUDENT_PAGE_CONTAINER_CLASS,
-                    "w-full flex-1",
+                    isDrillResultsView ? null : PREP_COURSE_LESSON_CONTENT_CARD_CLASS,
+                    PREP_COURSE_LESSON_CARD_WIDTH_CLASS,
+                    "w-full",
                     !showSidebar && "mx-auto",
                   )}
                 >
-                  <PrepCourseLessonPanel
-                    {...lessonPanelProps}
-                    contentScrollRef={lessonContentRef}
-                    inLessonCard
-                  />
+                  {showActiveDrillStart ? (
+                    <div ref={lessonContentRef}>
+                      <ActiveDrillStartScreen
+                        lesson={lesson}
+                        moduleLessonLine={moduleLessonLine}
+                        sectionSubtitle={sectionSubtitle}
+                        lessonSequence={lessonSequence}
+                        lessonBookmarked={isLessonBookmarked(lesson.slug)}
+                        onToggleLessonBookmark={(next) => setLessonBookmarked(lesson.slug, next)}
+                        onStartDrill={() => void handleStartDrill()}
+                        startingDrill={startingDrill}
+                        drillStartError={drillStartError}
+                      />
+                    </div>
+                  ) : (
+                    <PrepCourseLessonPanel
+                      {...lessonPanelProps}
+                      contentScrollRef={lessonContentRef}
+                      inLessonCard
+                    />
+                  )}
                 </div>
 
                 {showSidebar ? (
-                  <div className="flex h-full min-h-0 w-[320px] shrink-0 flex-col self-stretch overflow-hidden">
-                    <PrepCourseLessonSidebar
-                      lessons={sidebarLessons}
-                      activeLessonSlug={lesson.slug}
-                      completedLessonSlugs={completedLessonSlugs}
-                      progressPercent={sectionProgressPercent}
-                      sectionTitle={sectionTitle}
-                      sectionSubtitle={sectionRemainingLabel}
-                      onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
-                      onClose={() => setShowSidebar(false)}
-                    />
+                  <div className="sticky top-0 flex w-[320px] shrink-0 self-start flex-col overflow-hidden">
+                    <div className="flex max-h-[calc(var(--app-svh)-var(--nav-shell-height)-120px)] min-h-0 flex-col overflow-hidden">
+                      <PrepCourseLessonSidebar
+                        lessons={sidebarLessons}
+                        activeLessonSlug={lesson.slug}
+                        completedLessonSlugs={completedLessonSlugs}
+                        progressPercent={sectionProgressPercent}
+                        sectionTitle={sectionTitle}
+                        sectionSubtitle={sectionRemainingLabel}
+                        onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
+                        onClose={() => setShowSidebar(false)}
+                      />
+                    </div>
                   </div>
                 ) : null}
               </>

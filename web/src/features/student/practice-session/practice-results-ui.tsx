@@ -2,7 +2,7 @@ import { Check, Minus, X } from "lucide-react"
 import type { ReactNode } from "react"
 
 import type { ExplanationAnswerPopularityRow, ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
-import { NOT_ENOUGH_ANSWERS_YET, hasEnoughPlatformAnswerSample, platformAnswerSampleSize } from "@/lib/platform-answer-sample"
+import { displayAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
 import { cn } from "@/lib/utils"
 
 export type PracticeDifficultyLabel = "Easiest" | "Easy" | "Medium" | "Hard" | "Hardest"
@@ -302,6 +302,7 @@ type PracticeQuestionResultStatsRowProps = {
   correctLetter: string
   selectedLetter?: string | null
   isUnanswered?: boolean
+  showPercentages?: boolean
   className?: string
 }
 
@@ -314,6 +315,7 @@ function PracticeQuestionResultStatsRow({
   correctLetter,
   selectedLetter = null,
   isUnanswered = false,
+  showPercentages = true,
   className,
 }: PracticeQuestionResultStatsRowProps) {
   return (
@@ -322,19 +324,19 @@ function PracticeQuestionResultStatsRow({
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Timing</p>
           <div className="flex flex-col gap-1">
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-nowrap items-center gap-1">
               <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>Target time:</span>
               <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
                 {targetTime}
               </span>
             </div>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-nowrap items-center gap-1">
               <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>Your time:</span>
               <span className="whitespace-nowrap text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--primary)]">
                 {yourTime}
               </span>
               {yourTimeNote ? (
-                <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
+                <span className="whitespace-nowrap text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
                   {yourTimeNote}
                 </span>
               ) : null}
@@ -354,6 +356,7 @@ function PracticeQuestionResultStatsRow({
             selectedLetter={selectedLetter}
             isUnanswered={isUnanswered}
             showLabel
+            showPercentages={showPercentages}
           />
         </div>
       </div>
@@ -367,6 +370,7 @@ export function PracticeAnswerPopularityBars({
   selectedLetter = null,
   isUnanswered = false,
   showLabel = true,
+  showPercentages = true,
   className,
 }: {
   rows: ExplanationAnswerPopularityRow[]
@@ -374,21 +378,12 @@ export function PracticeAnswerPopularityBars({
   selectedLetter?: string | null
   isUnanswered?: boolean
   showLabel?: boolean
+  showPercentages?: boolean
   className?: string
 }) {
-  const sampleSize = platformAnswerSampleSize(rows)
-  if (!hasEnoughPlatformAnswerSample(sampleSize)) {
-    return (
-      <div className={cn("flex min-w-0 flex-col gap-3", className)}>
-        {showLabel ? <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Answer Popularity</p> : null}
-        <p className="m-0 rounded-[14px] border border-dashed border-[#dfe1e7] bg-[#f6f8fa] px-4 py-6 text-center text-sm text-[#666d80]">
-          {NOT_ENOUGH_ANSWERS_YET}
-        </p>
-      </div>
-    )
-  }
+  const displayRows = displayAnswerPopularityRows(rows, correctLetter, correctLetter || "A")
 
-  const max = Math.max(1, ...rows.map((r) => r.pct))
+  const max = Math.max(1, ...displayRows.map((r) => r.pct))
   const normalizedSelected = selectedLetter?.trim().toUpperCase() ?? null
   const normalizedCorrect = correctLetter.trim().toUpperCase()
 
@@ -396,7 +391,7 @@ export function PracticeAnswerPopularityBars({
     <div className={cn("flex min-w-0 flex-col gap-3", className)}>
       {showLabel ? <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Answer Popularity</p> : null}
       <div className="flex w-full items-end gap-2">
-        {rows.map((row) => {
+        {displayRows.map((row) => {
           const h = Math.round((row.pct / max) * 100)
           const isCorrect = row.letter === normalizedCorrect
           const isUserWrong =
@@ -419,17 +414,25 @@ export function PracticeAnswerPopularityBars({
               key={row.letter}
               className={cn(
                 "flex min-w-0 flex-1 flex-col items-center gap-1",
-                hasOutcomeBadge ? "h-24" : "h-[88px]",
+                hasOutcomeBadge
+                  ? showPercentages
+                    ? "h-24"
+                    : "h-20"
+                  : showPercentages
+                    ? "h-[88px]"
+                    : "h-[68px]",
               )}
             >
-              <span
-                className={cn(
-                  "text-[11px] font-bold tabular-nums leading-none",
-                  isCorrect ? "text-[#00d492]" : "text-[var(--greyscale-500)]",
-                )}
-              >
-                {row.pct}%
-              </span>
+              {showPercentages ? (
+                <span
+                  className={cn(
+                    "text-[11px] font-bold tabular-nums leading-none",
+                    isCorrect ? "text-[#00d492]" : "text-[var(--greyscale-500)]",
+                  )}
+                >
+                  {row.pct}%
+                </span>
+              ) : null}
               <div className="flex min-h-0 w-full flex-1 flex-col justify-end overflow-hidden rounded-t-[10px] bg-[var(--greyscale-25)]">
                 {isUserWrong ? (
                   <div

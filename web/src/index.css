@@ -3,10 +3,19 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
+@font-face {
+  font-family: "halyard-text";
+  src: url("/fonts/HalyardText-Regular.woff2") format("woff2");
+  font-weight: 300 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
   --figma-base-w: 1920;
+  --exam-normal-w: 1440;
   --figma-base-h: 924;
   --text: #667085;
   --text-h: #121a26;
@@ -1602,7 +1611,10 @@ html.student-shell-active #root {
 }
 
 .intent-card__badge {
-  margin-bottom: 0.25rem;
+  position: absolute;
+  top: -0.5rem;
+  left: 1.5rem;
+  border: 1px solid #0d47a1;
   border-radius: 6px;
   background: #f3f7ff;
   padding: 0.125rem 0.5rem;
@@ -1826,6 +1838,10 @@ html.student-shell-active #root {
   border-bottom: 1px solid var(--greyscale-100);
 }
 
+.dark .auth-split-page--intent-only .auth-split-logo {
+  filter: brightness(0) invert(1);
+}
+
 .dark .auth-split-page--intent-only .auth-split-cta {
   color: var(--greyscale-500);
 }
@@ -1864,6 +1880,7 @@ html.student-shell-active #root {
 }
 
 .dark .intent-card__badge {
+  border-color: var(--primary);
   background: var(--primary-25);
   color: var(--primary);
 }
@@ -2126,14 +2143,14 @@ code {
   --popover: #303338;
   --popover-foreground: #ffffff;
 
-  --primary: #1a57b8;
+  --primary: #75A1E8;
   --primary-foreground: #ffffff;
-  --primary-500: #1a57b8;
+  --primary-500: #75A1E8;
   --primary-600: #0a357f;
   --primary-700: #ced0e7;
   --primary-800: #edf3ff;
   --primary-900: #f3f7ff;
-  --primary-border: #1a57b8;
+  --primary-border: #75A1E8;
   --btn-disabled-bg: #3f4247;
   --btn-disabled-border: #3f4247;
   --btn-disabled-fg: rgba(255, 255, 255, 0.45);
@@ -2156,7 +2173,7 @@ code {
 
   --sidebar: #303338;
   --sidebar-foreground: #ffffff;
-  --sidebar-primary: #1a57b8;
+  --sidebar-primary: #75A1E8;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #2e3033;
   --sidebar-accent-foreground: #ffffff;
@@ -2183,8 +2200,8 @@ code {
   --field-focus: #ced0e7;
 
   --color-student-heading: #edf3ff;
-  --color-student-cta: #1a57b8;
-  --color-student-accent: #1a57b8;
+  --color-student-cta: #75A1E8;
+  --color-student-accent: #75A1E8;
   --nav-surface: #303338;
 
   --explanation-list-row-alt: #272835;
@@ -2312,6 +2329,18 @@ code {
   line-height: 1.4;
   letter-spacing: 0.06em;
   color: var(--color-student-heading);
+}
+
+.ds-analytics-stat__label--titlecase {
+  letter-spacing: 0.02em;
+}
+
+.ds-analytics-stat--metric {
+  padding: 12px 14px;
+}
+
+.ds-analytics-stat--metric .ds-analytics-stat__value {
+  font-size: 24px;
 }
 
 .ds-analytics-stat__value {
@@ -2716,14 +2745,14 @@ select.ds-input {
   object-fit: contain;
 }
 
-/* Dark mode: inactive nav icons white; active icons brand blue (Figma 20645:65725). */
+/* Dark mode: inactive nav icons white; active icons --primary #75A1E8. */
 .dark .student-sidebar-link-icon img {
   filter: brightness(0) invert(1);
 }
 
 .dark .student-sidebar-link--active .student-sidebar-link-icon img,
 .dark .student-sidebar-logout-icon img {
-  filter: invert(28%) sepia(92%) saturate(1650%) hue-rotate(198deg) brightness(92%) contrast(92%);
+  filter: brightness(0) saturate(100%) invert(58.8%) sepia(100%) saturate(569.4%) hue-rotate(187.7deg) brightness(93.9%) contrast(92.9%);
 }
 
 .student-sidebar-link:hover {
@@ -3099,6 +3128,15 @@ select.ds-input {
   color: var(--color-student-heading);
 }
 
+.test-day-countdown__in-progress {
+  margin: 8px 0 0;
+  max-width: 22rem;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--color-student-heading);
+}
+
 .test-day-countdown__days-unit {
   padding-bottom: 4px;
   font-size: 16.875px;
@@ -3469,14 +3507,15 @@ select.ds-input {
 }
 
 .lsat-html-content p {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0;
 }
 
 .lsat-html-content p:last-child {
   margin-bottom: 0;
 }
 
-.lsat-html-content h1 {
+.lsat-html-content h1,
+.lsat-html-content h2 {
   margin: 0 0 12px;
   font-family: var(--sans);
   font-size: 24px;
@@ -3486,46 +3525,206 @@ select.ds-input {
   color: var(--color-student-heading);
 }
 
-.lsat-html-content h2,
-.lsat-html-content h3,
-.lsat-html-content h4 {
+.lsat-html-content h3 {
   margin: 0 0 8px;
   font-family: var(--sans);
-  font-weight: 700;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.4;
   color: var(--color-student-heading);
 }
 
-.rep-work-instructions-body.lsat-html-content {
+.lsat-html-content h4,
+.lsat-html-content h5,
+.lsat-html-content h6 {
+  margin: 0 0 8px;
+  font-family: var(--sans);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-student-heading);
+}
+
+.rep-work-question-input,
+.rep-work-question-body,
+.rep-work-answer-body,
+.rep-work-instructions-body.lsat-html-content,
+.rep-work-instructions-body .lsat-html-content,
+.rep-work-instructions-body .lesson-html-body,
+.rep-work-question-body .lsat-html-content,
+.rep-work-question-body .lesson-html-body,
+.rep-work-answer-body .lsat-html-content,
+.rep-work-answer-body .lesson-html-body {
   font-family: var(--sans);
   font-size: 18px;
   font-style: normal;
- 
+  font-weight: 400;
   line-height: 1.4;
   letter-spacing: 0.36px;
-  color: #1a1b25;
+  color: var(--color-student-heading);
 }
 
-.rep-work-instructions-body.lsat-html-content p {
-  margin: 0;
+/* Override Google Docs / paste inline font styles so all pairs share the
+   container 18px / 1.4 size (builder TipTap hides this difference with text-base). */
+.rep-work-question-body .lsat-html-content *,
+.rep-work-question-body .lesson-html-body *,
+.rep-work-question-body.lsat-html-content *,
+.rep-work-question-body.lesson-html-body *,
+.rep-work-answer-body .lsat-html-content *,
+.rep-work-answer-body .lesson-html-body *,
+.rep-work-answer-body.lsat-html-content *,
+.rep-work-answer-body.lesson-html-body *,
+.rep-work-instructions-body .lsat-html-content *,
+.rep-work-instructions-body .lesson-html-body *,
+.rep-work-instructions-body.lsat-html-content *,
+.rep-work-instructions-body.lesson-html-body * {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+.rep-work-instructions-body.lsat-html-content p,
+.rep-work-instructions-body .lsat-html-content p,
+.rep-work-instructions-body .lesson-html-body p,
+.rep-work-question-body .lsat-html-content p,
+.rep-work-question-body .lesson-html-body p,
+.rep-work-question-body.lsat-html-content p,
+.rep-work-question-body.lesson-html-body p,
+.rep-work-answer-body .lsat-html-content p,
+.rep-work-answer-body .lesson-html-body p {
+  margin: 0 0 0.75rem;
   font-family: inherit;
   font-size: 18px;
   font-style: normal;
-
   line-height: 1.4;
+  letter-spacing: 0.36px;
 }
 
-.rep-work-instructions-body.lsat-html-content p + p {
-  margin-top: 0;
+.rep-work-instructions-body.lsat-html-content p:last-child,
+.rep-work-instructions-body .lsat-html-content p:last-child,
+.rep-work-instructions-body .lesson-html-body p:last-child,
+.rep-work-question-body .lsat-html-content p:last-child,
+.rep-work-question-body .lesson-html-body p:last-child,
+.rep-work-answer-body .lsat-html-content p:last-child,
+.rep-work-answer-body .lesson-html-body p:last-child {
+  margin-bottom: 0;
 }
 
-.rep-work-instructions-body.lsat-html-content p:empty {
+.rep-work-instructions-body.lsat-html-content p:empty,
+.rep-work-instructions-body .lsat-html-content p:empty,
+.rep-work-question-body .lsat-html-content p:empty,
+.rep-work-answer-body .lsat-html-content p:empty {
   display: none;
 }
 
-.rep-work-question-input {
+.rep-work-instructions-body .lesson-html-body ul,
+.rep-work-instructions-body .lesson-html-body ol,
+.rep-work-question-body .lesson-html-body ul,
+.rep-work-question-body .lesson-html-body ol,
+.rep-work-answer-body .lesson-html-body ul,
+.rep-work-answer-body .lesson-html-body ol {
+  margin: 0 0 0.75rem;
+  padding-left: 1.5rem;
   font-size: 18px;
   line-height: 1.4;
+}
+
+.rep-work-instructions-body .lesson-html-body li,
+.rep-work-question-body .lesson-html-body li,
+.rep-work-answer-body .lesson-html-body li {
+  margin: 0 0 0.35rem;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.rep-work-instructions-body .lesson-html-body h1,
+.rep-work-instructions-body .lesson-html-body h2,
+.rep-work-question-body .lesson-html-body h1,
+.rep-work-question-body .lesson-html-body h2,
+.rep-work-question-body.lesson-html-body h1,
+.rep-work-question-body.lesson-html-body h2,
+.rep-work-question-body.lsat-html-content h1,
+.rep-work-question-body.lsat-html-content h2,
+.rep-work-answer-body .lesson-html-body h1,
+.rep-work-answer-body .lesson-html-body h2 {
+  margin: 0.5rem 0;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--color-student-heading);
+}
+
+.rep-work-instructions-body .lesson-html-body h3,
+.rep-work-question-body .lesson-html-body h3,
+.rep-work-question-body.lesson-html-body h3,
+.rep-work-question-body.lsat-html-content h3,
+.rep-work-answer-body .lesson-html-body h3 {
+  margin: 0.4rem 0;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-student-heading);
+}
+
+.rep-work-instructions-body .lesson-html-body h4,
+.rep-work-instructions-body .lesson-html-body h5,
+.rep-work-instructions-body .lesson-html-body h6,
+.rep-work-question-body .lesson-html-body h4,
+.rep-work-question-body .lesson-html-body h5,
+.rep-work-question-body .lesson-html-body h6,
+.rep-work-question-body.lesson-html-body h4,
+.rep-work-question-body.lesson-html-body h5,
+.rep-work-question-body.lesson-html-body h6,
+.rep-work-question-body.lsat-html-content h4,
+.rep-work-question-body.lsat-html-content h5,
+.rep-work-question-body.lsat-html-content h6,
+.rep-work-answer-body .lesson-html-body h4,
+.rep-work-answer-body .lesson-html-body h5,
+.rep-work-answer-body .lesson-html-body h6 {
+  margin: 0.35rem 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--color-student-heading);
+}
+
+.rep-work-question-body.lesson-html-body h1:first-child,
+.rep-work-question-body.lesson-html-body h2:first-child,
+.rep-work-question-body.lesson-html-body h3:first-child,
+.rep-work-question-body.lesson-html-body h4:first-child,
+.rep-work-question-body.lesson-html-body p:first-child,
+.rep-work-question-body .lesson-html-body h1:first-child,
+.rep-work-question-body .lesson-html-body h2:first-child,
+.rep-work-question-body .lesson-html-body h3:first-child,
+.rep-work-question-body .lesson-html-body p:first-child {
+  margin-top: 0;
+}
+
+.rep-work-question-body.lsat-html-content strong,
+.rep-work-question-body.lsat-html-content b,
+.rep-work-question-body .lsat-html-content strong,
+.rep-work-question-body .lsat-html-content b,
+.rep-work-question-body .lesson-html-body strong,
+.rep-work-question-body .lesson-html-body b {
+  font-weight: 700;
+}
+
+.rep-work-question-body.lsat-html-content hr,
+.rep-work-question-body.lesson-html-body hr,
+.rep-work-question-body .lesson-html-body hr {
+  margin: 16px 0;
+  border: 0;
+  border-top: 1px solid var(--greyscale-100);
+  height: 0;
+}
+
+.rep-work-question-input {
+  font-family: var(--sans);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.4;
   letter-spacing: 0.36px;
+  color: var(--color-student-heading);
   field-sizing: content;
   overflow: hidden;
   scrollbar-width: none;
@@ -3557,13 +3756,14 @@ select.ds-input {
 .explanation-passage-body.lsat-html-content {
   font-size: 14px;
   font-weight: 400;
-  line-height: 1.8;
+  line-height: 30px;
   letter-spacing: 0.28px;
   color: var(--color-student-heading);
 }
 
 .explanation-passage-body.lsat-html-content p {
   margin: 0 0 1em;
+  line-height: 30px;
 }
 
 .explanation-passage-body.lsat-html-content p:last-child {
@@ -3574,38 +3774,41 @@ select.ds-input {
 .explanation-question-stem.lsat-html-content {
   font-size: 16px;
   font-weight: 600;
-  line-height: 1.5;
+  line-height: 30px;
   letter-spacing: 0.32px;
   color: var(--color-student-heading);
 }
 
 .explanation-question-stem.lsat-html-content p {
   margin: 0;
+  line-height: 30px;
 }
 
 .explanation-choice-text.lsat-html-content {
   font-size: 14px;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 30px;
   letter-spacing: 0.28px;
   color: var(--color-student-heading);
 }
 
 .explanation-choice-text.lsat-html-content p {
   margin: 0;
+  line-height: 30px;
 }
 
 /* Figma 19432:17972 — option explanation under choice */
 .explanation-option-body.lsat-html-content {
   font-size: 14px;
   font-weight: 400;
-  line-height: 1.5;
+  line-height: 30px;
   letter-spacing: 0.28px;
   color: var(--color-student-heading);
 }
 
 .explanation-option-body.lsat-html-content p {
   margin: 0 0 0.5rem;
+  line-height: 30px;
 }
 
 .explanation-option-body.lsat-html-content p:last-child {
@@ -3616,7 +3819,7 @@ select.ds-input {
 .explanation-review-body.lsat-html-content {
   font-size: 14px;
   font-weight: 400;
-  line-height: 1.5;
+  line-height: 30px;
   letter-spacing: 0.28px;
   color: var(--color-student-heading);
 }
@@ -3642,6 +3845,7 @@ select.ds-input {
 
 .explanation-review-body.lsat-html-content p {
   margin: 0 0 0.75rem;
+  line-height: 30px;
 }
 
 .explanation-review-body.lsat-html-content p:last-child {
@@ -3677,6 +3881,56 @@ select.ds-input {
   color: var(--color-student-heading);
 }
 
+/* Figma 20966:45427 — Active Drill results explanation */
+.active-drill-results-stem.lsat-html-content,
+p.active-drill-results-stem {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.36px;
+  color: var(--greyscale-500);
+}
+
+.active-drill-results-stem.lsat-html-content p {
+  margin: 0;
+}
+
+.active-drill-results-choice.lsat-html-content,
+p.active-drill-results-choice {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0.32px;
+  color: var(--greyscale-500);
+}
+
+.active-drill-results-choice.lsat-html-content p {
+  margin: 0;
+}
+
+.active-drill-results-body.lsat-html-content {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.32px;
+  color: #36394a;
+}
+
+.active-drill-results-body.lsat-html-content p {
+  margin: 0 0 1rem;
+}
+
+.active-drill-results-body.lsat-html-content p:last-child {
+  margin-bottom: 0;
+}
+
+.active-drill-results-body.lsat-html-content strong,
+.active-drill-results-body.lsat-html-content b {
+  font-weight: 700;
+}
+
 .lsat-html-content ul,
 .lsat-html-content ol {
   margin: 0 0 0.75rem;
@@ -3697,6 +3951,109 @@ select.ds-input {
 
 .lsat-html-content li:last-child {
   margin-bottom: 0;
+}
+
+.lsat-html-content .tableWrapper {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.lsat-html-content table {
+  display: table;
+  width: 100%;
+  max-width: 100%;
+  margin: 0.5rem 0 1rem;
+  table-layout: auto;
+  border-collapse: collapse;
+  border: 1px solid var(--greyscale-100, #dfe1e7);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.lsat-html-content caption {
+  display: table-caption;
+  caption-side: top;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.lsat-html-content thead {
+  display: table-header-group;
+}
+
+.lsat-html-content tbody {
+  display: table-row-group;
+}
+
+.lsat-html-content tfoot {
+  display: table-footer-group;
+}
+
+.lsat-html-content colgroup {
+  display: table-column-group;
+}
+
+.lsat-html-content col {
+  display: table-column;
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+.lsat-html-content tr {
+  display: table-row;
+}
+
+.lsat-html-content th,
+.lsat-html-content td {
+  display: table-cell;
+  width: auto;
+  min-width: 0;
+  border: 1px solid var(--greyscale-100, #dfe1e7);
+  padding: 0.25rem 0.5rem;
+  vertical-align: top;
+}
+
+.lsat-html-content th:first-child,
+.lsat-html-content td:first-child {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.lsat-html-content th {
+  background: #f6f8fa;
+  font-weight: 600;
+  text-align: left;
+}
+
+.lsat-html-content th p,
+.lsat-html-content td p {
+  margin: 0;
+}
+
+.lsat-html-content th p + p,
+.lsat-html-content td p + p {
+  margin-top: 0.35rem;
+}
+
+.lsat-html-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.375rem;
+}
+
+.lsat-html-content pre {
+  margin: 0.75rem 0;
+  overflow-x: auto;
+  border-radius: 0.375rem;
+  background: #f6f8fa;
+  padding: 0.75rem;
+}
+
+.lsat-html-content code {
+  font-size: 0.875rem;
 }
 
 /* Portal scrollbars — soft grey thumb on a light/transparent track (no arrow buttons) */
@@ -3788,24 +4145,44 @@ html {
 }
 
 .lesson-html-body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  display: block;
+  overflow-x: auto;
 }
 
+.lesson-html-body h1,
 .lesson-html-body h2 {
-  margin: 0;
+  margin: 1rem 0 0.5rem;
   font-size: 24px;
   font-weight: 700;
   line-height: 1.3;
   color: var(--color-student-heading);
 }
 
-.lesson-html-body h3,
-.lesson-html-body h4 {
-  margin: 0;
-  font-weight: 700;
+.lesson-html-body h3 {
+  margin: 1rem 0 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.4;
   color: var(--color-student-heading);
+}
+
+.lesson-html-body h4,
+.lesson-html-body h5,
+.lesson-html-body h6 {
+  margin: 1rem 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-student-heading);
+}
+
+.lesson-html-body h1:first-child,
+.lesson-html-body h2:first-child,
+.lesson-html-body h3:first-child,
+.lesson-html-body h4:first-child,
+.lesson-html-body h5:first-child,
+.lesson-html-body h6:first-child {
+  margin-top: 0;
 }
 
 .lesson-html-body p {
@@ -3815,6 +4192,20 @@ html {
   line-height: 1.5;
   letter-spacing: 0.32px;
   color: var(--color-student-heading);
+}
+
+/* TipTap blank lines are empty <p> / <p><br></p>; without a line box they collapse to one gap. */
+.lesson-html-body p:empty,
+.lesson-html-body p:has(> br:only-child),
+.lesson-tiptap-editor p:empty,
+.lesson-tiptap-editor p:has(> br:only-child),
+.lesson-tiptap-editor p:has(> br.ProseMirror-trailingBreak:only-child) {
+  min-height: 0;
+  margin-bottom: 0;
+}
+
+.lesson-html-body p:last-child {
+  margin-bottom: 0;
 }
 
 .lesson-html-body hr,
@@ -3871,9 +4262,8 @@ section[data-lesson-section][data-variant="empty"] {
 }
 
 .lesson-section-body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  display: block;
+  overflow-x: auto;
   font-family: var(--sans);
   font-size: 16px;
   font-weight: 400;
@@ -3892,8 +4282,9 @@ section[data-lesson-section][data-variant="empty"] {
   color: #ffffff;
 }
 
-.lesson-section-body h1 {
-  margin: 0;
+.lesson-section-body h1,
+.lesson-section-body h2 {
+  margin: 1rem 0 0.5rem;
   font-family: var(--sans);
   font-size: 24px;
   font-weight: 700;
@@ -3902,13 +4293,33 @@ section[data-lesson-section][data-variant="empty"] {
   color: var(--color-student-heading);
 }
 
-.lesson-section-body h2,
-.lesson-section-body h3,
-.lesson-section-body h4 {
-  margin: 0;
+.lesson-section-body h3 {
+  margin: 1rem 0 0.5rem;
   font-family: var(--sans);
-  font-weight: 700;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.4;
   color: var(--color-student-heading);
+}
+
+.lesson-section-body h4,
+.lesson-section-body h5,
+.lesson-section-body h6 {
+  margin: 1rem 0 0.5rem;
+  font-family: var(--sans);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-student-heading);
+}
+
+.lesson-section-body h1:first-child,
+.lesson-section-body h2:first-child,
+.lesson-section-body h3:first-child,
+.lesson-section-body h4:first-child,
+.lesson-section-body h5:first-child,
+.lesson-section-body h6:first-child {
+  margin-top: 0;
 }
 
 .lesson-section-body p {
@@ -3958,6 +4369,54 @@ section[data-lesson-section][data-variant="empty"] {
   font-size: 14px;
   line-height: 23.2px;
   letter-spacing: 0;
+}
+
+/* After `.lesson-section-body p/li { color: heading }` and TipTap inline colors. */
+.lsat-html-content.passage-analysis-overall,
+.lsat-html-content.passage-analysis-overall * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Course HTML uses editor inline colors (#1a1b25 / #36394a). Force light text in student dark theme. */
+.dark .lesson-html-content {
+  color: var(--color-student-heading);
+}
+
+.dark .lesson-html-content * {
+  color: inherit !important;
+}
+
+.dark .lesson-html-content a {
+  color: var(--primary-700) !important;
+}
+
+.dark .lesson-html-content a * {
+  color: inherit !important;
+}
+
+.dark .lesson-html-content mark,
+.dark .lesson-html-content mark * {
+  color: #121a26 !important;
+}
+
+.dark .lesson-html-content .lesson-section-body--inverse,
+.dark .lesson-html-content .lesson-section-body--inverse * {
+  color: #ffffff !important;
+}
+
+.dark .lesson-html-content table,
+.dark .lesson-html-content th,
+.dark .lesson-html-content td {
+  border-color: var(--greyscale-100);
+}
+
+.dark .lesson-html-content th {
+  background: var(--greyscale-25);
+}
+
+.dark .lesson-html-content pre {
+  background: var(--greyscale-25);
 }
 
 .lsat-html-content .ss-line-number {
@@ -4013,19 +4472,42 @@ section[data-lesson-section][data-variant="empty"] {
   margin-bottom: 0;
 }
 
-/* LSAT Demon / LawHub: masked choices stay in layout but fade letter + copy. */
+/* LawHub response masking: keep the choice in layout, fade copy, overlay diagonal hatch. */
 .practice-session-choice-masked {
   position: relative;
   box-shadow: none;
+  isolation: isolate;
+}
+
+.practice-session-choice-masked::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background-color: rgb(180 186 196 / 12%);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgb(130 138 150 / 42%) 0,
+    rgb(130 138 150 / 42%) 1.5px,
+    transparent 1.5px,
+    transparent 11px
+  );
 }
 
 .practice-session-choice-masked-ink {
-  opacity: 0.3;
+  opacity: 0.7;
   user-select: none;
 }
 
 .practice-session-card--active-drill .practice-session-question-panel-with-widget {
   overflow: visible;
+}
+
+.practice-session-card--active-drill:not(.practice-session-card--official) .practice-session-question-panel-with-widget {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
 }
 
 /* Keep vertical scroll working; clip only the x-axis so side-widget labels can still paint. */
@@ -4034,8 +4516,52 @@ section[data-lesson-section][data-variant="empty"] {
   overflow-y: auto;
 }
 
+.practice-session-card--official .practice-session-official-choice {
+  background-color: #f2f3f8;
+}
+
+.practice-session-card--official .practice-session-official-choice--selected {
+  background-color: #fdfac4;
+}
+
+.practice-session-card--official .practice-session-official-choice-letter--selected {
+  background-color: #fdfac4;
+  color: #041a44;
+}
+
+/* Official exam body copy — LawHub Apostrophe / Halyard Text, 18 / 1.5 / 300. */
+.practice-session-card--official .practice-session-body {
+  font-family: Apostrophe, halyard-text, sans-serif;
+  font-weight: 300;
+  line-height: calc(1.5 * var(--practice-line-height-scale, 1));
+}
+
+.practice-session-card--official .practice-session-body .lsat-html-content,
+.practice-session-card--official .practice-session-body .practice-session-content {
+  font-family: Apostrophe, halyard-text, sans-serif;
+  font-size: calc(18px * var(--practice-font-scale, 1));
+  font-weight: 300;
+  line-height: calc(1.5 * var(--practice-line-height-scale, 1));
+  letter-spacing: 0;
+}
+
+.practice-session-card--official .practice-session-body .lsat-html-content p,
+.practice-session-card--official .practice-session-body .practice-session-content p {
+  line-height: calc(1.5 * var(--practice-line-height-scale, 1));
+}
+
+/* LawHub answer index: 28px Apostrophe, scaled with the same font-size control as stems. */
+.practice-session-card--official .practice-session-official-choice-letter {
+  font-family: Apostrophe, halyard-text, sans-serif;
+  font-size: calc(28px * var(--practice-font-scale, 1));
+  font-weight: 400;
+  line-height: calc(60px * var(--practice-font-scale, 1));
+  letter-spacing: 0;
+}
+
 .practice-session-card--official .practice-session-question-panel-with-widget {
   overflow: visible;
+  padding-right: 50px;
 }
 
 .practice-session-card--official .practice-session-pane:has(.practice-session-side-widget) {
@@ -4048,9 +4574,19 @@ section[data-lesson-section][data-variant="empty"] {
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0,
-    transparent 19px,
-    #eceff3 19px,
-    #eceff3 20px
+    transparent calc(30px * var(--practice-font-scale, 1) * var(--practice-line-height-scale, 1) - 1px),
+    #eceff3 calc(30px * var(--practice-font-scale, 1) * var(--practice-line-height-scale, 1) - 1px),
+    #eceff3 calc(30px * var(--practice-font-scale, 1) * var(--practice-line-height-scale, 1))
+  );
+}
+
+.practice-session-card--official .practice-session-pane--line-focus {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(18px * var(--practice-font-scale, 1) * 1.5 * var(--practice-line-height-scale, 1) - 1px),
+    #eceff3 calc(18px * var(--practice-font-scale, 1) * 1.5 * var(--practice-line-height-scale, 1) - 1px),
+    #eceff3 calc(18px * var(--practice-font-scale, 1) * 1.5 * var(--practice-line-height-scale, 1))
   );
 }
 
@@ -4073,6 +4609,22 @@ html.practice-finish-menu-open .practice-session-header--active-drill,
 html.practice-finish-menu-open .practice-session-header--active-drill > div {
   overflow: visible;
   z-index: 120;
+}
+
+/* Section select stays in-tree (app zoom breaks portaled fixed coords); lift header so menu paints above the card.
+   Do NOT raise z-index on every header child — the progress track is a later sibling and would paint over the menu. */
+html.practice-section-select-open .practice-session-header {
+  overflow: visible;
+  z-index: 120;
+}
+
+html.practice-section-select-open .practice-session-header > div:first-child,
+html.practice-section-select-open .practice-session-header .practice-session-scroll-hidden {
+  overflow: visible;
+}
+
+html.practice-section-select-open .practice-session-header > div:last-child {
+  z-index: 0;
 }
 
 /* Figma `20268:107290` — hide the exam side widget while the more panel is open */
@@ -4122,12 +4674,16 @@ html.practice-exam-more-open .practice-session-question-panel-with-widget {
 }
 
 /* Prep course lesson — clip horizontal bleed from toggles, shadows, or flex min-content */
-.prep-course-lesson-shell,
+.prep-course-lesson-shell {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
 .prep-course-lesson-shell .practice-session-card,
 .prep-course-lesson-shell .practice-session-body {
   min-width: 0;
   max-width: 100%;
-  overflow-x: clip;
 }
 
 .prep-course-lesson-shell .practice-session-body--with-sidebar > :first-child {
@@ -4137,11 +4693,11 @@ html.practice-exam-more-open .practice-session-question-panel-with-widget {
 
 .prep-course-lesson-shell .practice-session-body--with-sidebar > :last-child {
   min-height: 0;
-  align-self: stretch;
 }
 
 .prep-course-rep-work-pair {
   contain: inline-size;
+  font-family: var(--sans);
 }
 
 .practice-session-pane::-webkit-scrollbar {
@@ -4209,9 +4765,21 @@ html.portal-chat-hidden [class*="lc_text-widget"] {
   opacity: 0 !important;
 }
 
+/* Sit the chat bubble above the lesson footer so Mark Complete / Next stays clickable */
+html.prep-course-lesson-active chat-widget,
+html.prep-course-lesson-active iframe[src*="leadconnectorhq.com"],
+html.prep-course-lesson-active iframe[src*="msgsndr.com"],
+html.prep-course-lesson-active iframe[src*="chat-widget"],
+html.prep-course-lesson-active [id*="leadconnector"],
+html.prep-course-lesson-active [id*="lc_text"],
+html.prep-course-lesson-active [class*="lc_text-widget"] {
+  bottom: 112px !important;
+}
+
 html.student-shell-immersive .practice-session-card--active-drill {
   width: 100%;
-  max-width: 1440px;
+  max-width: calc(var(--exam-normal-w) * 1px);
+  margin-inline: auto;
   height: 100%;
   max-height: calc(var(--app-svh) - 32px);
   flex: 1 1 auto;
@@ -4222,10 +4790,22 @@ html.student-shell-immersive .practice-session-card--active-drill {
 }
 
 html.student-shell-immersive .practice-session-card--official {
-  max-width: 1440px;
-  max-height: calc(var(--app-svh) - 32px);
+  max-width: calc(var(--exam-normal-w) * 1px);
+  margin-inline: auto;
   height: 100%;
+  max-height: 100%;
   border-radius: 10px;
+}
+
+/* LawHub official chrome — cooler gray than --greyscale-100 (#dfe1e6). */
+.practice-session-card--official.border-\[var\(--greyscale-100\)\],
+.practice-session-card--official .border-\[var\(--greyscale-100\)\] {
+  border-color: #d4d7e2;
+}
+
+/* Figma full-width exam canvas — 1920px. Applied when Full Screen / full-width view is on. */
+html.student-shell-immersive .practice-session-card.practice-session-card--full-width {
+  max-width: calc(var(--figma-base-w) * 1px);
 }
 
 html.student-shell-immersive .practice-session-card--active-drill .practice-session-body {
@@ -4273,7 +4853,7 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
   }
 
   html.student-shell-immersive .practice-session-card--official {
-    max-height: calc(var(--app-svh) - 64px);
+    max-height: 100%;
   }
 }
 
@@ -4301,11 +4881,20 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
   height: 0;
   min-height: 0;
   max-height: none;
+  overflow-x: clip;
+  overflow-y: auto;
+}
+
+.prep-course-lesson-shell .practice-session-body {
+  flex: none;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
 }
 
 .prep-course-lesson-frame {
-  /* Figma: page gutter is Background (#121a26 dark); lesson card elevates as greyscale-0 */
-  background: var(--background);
+  /* Figma `20222:22512` — Primary/0 canvas behind elevated lesson card */
+  background: var(--primary-0);
   color: var(--color-student-heading);
 }
 
@@ -4318,7 +4907,7 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
   height: 0;
   min-height: 0;
   font-size: calc(16px * var(--practice-font-scale, 1));
-  line-height: calc(1.5 * var(--practice-line-height-scale, 1));
+  line-height: calc(30px * var(--practice-font-scale, 1) * var(--practice-line-height-scale, 1));
   background-color: var(--practice-accessibility-bg, transparent);
   color: var(--practice-accessibility-fg, inherit);
   zoom: var(--practice-zoom-scale, 1);
@@ -4328,6 +4917,13 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
 .practice-session-body .lsat-html-content,
 .practice-session-body .practice-session-content {
   color: inherit;
+  font-size: calc(0.875rem * var(--practice-font-scale, 1));
+  line-height: calc(30px * var(--practice-font-scale, 1) * var(--practice-line-height-scale, 1));
+}
+
+.practice-session-body .lsat-html-content p,
+.practice-session-body .practice-session-content p {
+  line-height: calc(30px * var(--practice-font-scale, 1) * var(--practice-line-height-scale, 1));
 }
 
 /* Selected / unselected choice chrome follows Accessibility color scheme tokens */
@@ -4542,7 +5138,7 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
 }
 
 .practice-session-card--active-drill .practice-session-content mark[data-highlight="yellow"] {
-  background-color: #fef095;
+  background-color: #fdfac4;
 }
 
 .practice-session-card--active-drill .practice-session-content mark[data-highlight="green"] {
@@ -4776,9 +5372,45 @@ html.student-shell-immersive .practice-session-card--blind-review {
   color: var(--color-student-heading);
 }
 
+.dark .practice-session-card--official.border-\[var\(--greyscale-100\)\],
+.dark .practice-session-card--official .border-\[var\(--greyscale-100\)\] {
+  border-color: var(--greyscale-100);
+}
+
 .dark .practice-session-header--official {
   background-color: var(--greyscale-0) !important;
   color: var(--color-student-heading);
+}
+
+/* Figma exam glyphs are navy/blue-gray; force white on dark chrome. */
+.dark .practice-session-header img,
+.dark .practice-session-side-widget img {
+  filter: brightness(0) invert(1);
+}
+
+.dark .practice-session-header svg {
+  color: #ffffff;
+}
+
+/* Official rail SVGs use currentColor; item classes hardcode navy (#2c3143). */
+.dark .practice-session-side-widget button {
+  color: #ffffff;
+}
+
+.dark .practice-session-side-widget svg {
+  color: currentColor;
+}
+
+.dark .practice-session-side-widget button[aria-pressed="true"] {
+  color: #75a1e8;
+}
+
+.dark .practice-session-side-widget button[aria-pressed="true"] img {
+  filter: invert(58%) sepia(42%) saturate(650%) hue-rotate(184deg) brightness(100%) contrast(92%);
+}
+
+.dark .practice-session-side-widget button[aria-pressed="true"] .practice-session-side-widget__flag-active img {
+  filter: none;
 }
 
 .dark .practice-session-card--official .practice-session-body {
@@ -4796,20 +5428,59 @@ html.student-shell-immersive .practice-session-card--blind-review {
   color: var(--color-student-heading) !important;
 }
 
-/* LawHub yellow selected row — keep dark ink for contrast on #fdfac4 */
+/*
+ * Dark official choices: Neutral-25 rows + white copy. Selected
+ * (#fdfac4) keeps navy ink so the gold state still contrasts.
+ */
+.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) {
+  background-color: #35373c !important;
+  color: #ffffff !important;
+}
+
+.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) > span {
+  background-color: #35373c !important;
+  border-color: #35373c !important;
+  color: #ffffff !important;
+}
+
+.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) .lsat-html-content,
+.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) .practice-session-content,
+.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) .lsat-html-content *,
+.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) .practice-session-content * {
+  color: #ffffff !important;
+}
+
 .dark .practice-session-card--official .practice-session-official-choice--selected,
 .dark .practice-session-card--official .practice-session-official-choice--selected .lsat-html-content,
-.dark .practice-session-card--official .practice-session-official-choice--selected .practice-session-content {
-  color: #2c3143 !important;
+.dark .practice-session-card--official .practice-session-official-choice--selected .practice-session-content,
+.dark .practice-session-card--official .practice-session-official-choice--selected .lsat-html-content *,
+.dark .practice-session-card--official .practice-session-official-choice--selected .practice-session-content * {
+  color: #041a44 !important;
 }
 
 .dark .practice-session-card--official .practice-session-official-choice-letter--selected {
-  color: #2c3143 !important;
+  color: #041a44 !important;
+}
+
+.dark .practice-session-card--official .practice-session-official-reset {
+  background-color: #35373c !important;
+  border-color: #35373c !important;
+  color: #ffffff !important;
+}
+
+.dark .practice-session-card--official .practice-session-official-reset:hover {
+  background-color: #3f4247 !important;
 }
 
 .dark .practice-session-card--official .practice-session-footer {
   background-color: var(--greyscale-0) !important;
   border-color: var(--greyscale-100);
+}
+
+.dark .practice-session-body .lsat-html-content.passage-analysis-overall,
+.dark .practice-session-body .lsat-html-content.passage-analysis-overall * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 .practice-session-card--blind-review .practice-session-pane--br-question {
@@ -4877,7 +5548,7 @@ html.student-shell-immersive .practice-session-card--blind-review {
 }
 
 .practice-session-card--blind-review .practice-session-content mark[data-highlight="yellow"] {
-  background-color: #fef095;
+  background-color: #fdfac4;
 }
 
 .practice-session-card--blind-review .practice-session-content mark[data-highlight="green"] {
@@ -4897,7 +5568,7 @@ html.student-shell-immersive .practice-session-card--blind-review {
 }
 
 .practice-session-card--review .practice-session-content mark[data-highlight="yellow"] {
-  background-color: #fef095;
+  background-color: #fdfac4;
 }
 
 .practice-session-card--review .practice-session-content mark[data-highlight="green"] {
@@ -4924,7 +5595,7 @@ html.student-shell-immersive .practice-session-card--blind-review {
 }
 
 .lsat-html-content mark[data-highlight="yellow"] {
-  background-color: #fef095;
+  background-color: #fdfac4;
   color: inherit;
 }
 
@@ -4936,6 +5607,92 @@ html.student-shell-immersive .practice-session-card--blind-review {
 .lsat-html-content mark[data-highlight="blue"] {
   background-color: #a6e1fd;
   color: inherit;
+}
+
+.practice-session-card--official .practice-session-content mark[data-highlight],
+.practice-session-card--official .lsat-html-content mark[data-highlight],
+.practice-session-card--official .practice-session-content u[data-underline],
+.practice-session-card--official .lsat-html-content u[data-underline] {
+  color: inherit;
+  text-decoration: none;
+  background-repeat: repeat-x;
+  background-position: left bottom;
+  background-size: auto 2px;
+}
+
+.practice-session-card--official .practice-session-content mark[data-highlight="yellow"],
+.practice-session-card--official .lsat-html-content mark[data-highlight="yellow"] {
+  background-color: #fdfac4;
+  box-shadow: inset 0 -2px 0 #2c3143;
+}
+
+.practice-session-card--official .practice-session-content u[data-underline="yellow"],
+.practice-session-card--official .lsat-html-content u[data-underline="yellow"] {
+  text-decoration-line: underline;
+  text-decoration-style: solid;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.16em;
+  text-decoration-color: #2c3143;
+  box-shadow: inset 0 -2px 0 #2c3143;
+}
+
+.practice-session-card--official .practice-session-content mark[data-highlight="pink"],
+.practice-session-card--official .lsat-html-content mark[data-highlight="pink"],
+.practice-session-card--official .practice-session-content u[data-underline="pink"],
+.practice-session-card--official .lsat-html-content u[data-underline="pink"] {
+  background-image: repeating-linear-gradient(
+    to right,
+    #2c3143 0,
+    #2c3143 7px,
+    transparent 7px,
+    transparent 14px
+  );
+}
+
+.practice-session-card--official .practice-session-content mark[data-highlight="pink"],
+.practice-session-card--official .lsat-html-content mark[data-highlight="pink"] {
+  background-color: #f8e2e2;
+}
+
+.practice-session-card--official .practice-session-content u[data-underline="pink"],
+.practice-session-card--official .lsat-html-content u[data-underline="pink"] {
+  text-decoration-style: dashed;
+}
+
+.practice-session-card--official .practice-session-content mark[data-highlight="green"],
+.practice-session-card--official .lsat-html-content mark[data-highlight="green"],
+.practice-session-card--official .practice-session-content u[data-underline="green"],
+.practice-session-card--official .lsat-html-content u[data-underline="green"] {
+  background-image: repeating-linear-gradient(
+    to right,
+    #2c3143 0,
+    #2c3143 3px,
+    transparent 3px,
+    transparent 5px
+  );
+}
+
+.practice-session-card--official .practice-session-content mark[data-highlight="green"],
+.practice-session-card--official .lsat-html-content mark[data-highlight="green"] {
+  background-color: #c5eed6;
+}
+
+.practice-session-card--official .practice-session-content mark[data-highlight="blue"],
+.practice-session-card--official .lsat-html-content mark[data-highlight="blue"],
+.practice-session-card--official .practice-session-content u[data-underline="blue"],
+.practice-session-card--official .lsat-html-content u[data-underline="blue"] {
+  background-image: radial-gradient(circle closest-side, #2c3143 1.05px, transparent 1.15px);
+  background-size: 6px 2px;
+}
+
+.practice-session-card--official .practice-session-content mark[data-highlight="blue"],
+.practice-session-card--official .lsat-html-content mark[data-highlight="blue"] {
+  background-color: #c5e8f8;
+}
+
+.practice-session-card--official .practice-session-content u[data-underline="blue"],
+.practice-session-card--official .lsat-html-content u[data-underline="blue"] {
+  text-decoration-style: dotted;
 }
 
 /* Marketing homepage (ported landing) */

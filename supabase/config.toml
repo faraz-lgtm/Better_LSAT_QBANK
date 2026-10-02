@@ -601,6 +601,9 @@ verify_jwt = false
 [functions.practice-drill-pool-stats]
 verify_jwt = false
 
+[functions.practice-list-drill-picker]
+verify_jwt = false
+
 [functions.practice-list-section-pool]
 verify_jwt = false
 
@@ -611,6 +614,15 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.practice-list-prep-test-pool]
+verify_jwt = false
+
+[functions.practice-list-prep-test-pool-settings]
+verify_jwt = false
+
+[functions.practice-update-prep-test-pool-settings]
+verify_jwt = false
+
+[functions.practice-reset-prep-test-pool-settings]
 verify_jwt = false
 
 [functions.practice-get-prep-test-detail]
@@ -716,6 +728,15 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.billing-get-plans]
+verify_jwt = false
+
+[functions.billing-get-payment-methods]
+verify_jwt = false
+
+[functions.billing-get-invoices]
+verify_jwt = false
+
+[functions.billing-create-portal-session]
 verify_jwt = false
 
 [functions.stripe-webhook]

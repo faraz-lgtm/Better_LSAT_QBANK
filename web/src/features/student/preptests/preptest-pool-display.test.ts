@@ -48,7 +48,7 @@ describe("preptest-pool-display", () => {
 
     expect(rows).toHaveLength(2)
     expect(poolCardDisplayScore({ scaledScore: 160, blindReviewScaledScore: null }, rows[0]!)).toBe(160)
-    expect(attemptScoreLabel(rows[1]!)).toBe("139 · 139 BR")
+    expect(attemptScoreLabel(rows[1]!)).toBe("139 · 139 Untimed")
   })
 
   it("hydrates missing attempt scores from the pool item", () => {
@@ -93,6 +93,9 @@ describe("preptest-pool-display", () => {
       completedAt: null,
       attempts: [],
       openPrepTestSessionId: "sess-open",
+      inDrills: false,
+      inSections: false,
+      inTests: true,
     }
     const blindReview: PrepTestPoolItem = {
       ...paused,

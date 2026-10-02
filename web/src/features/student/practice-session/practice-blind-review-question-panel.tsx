@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent } from "react"
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react"
 import { ChevronDown, ChevronUp } from "lucide-react"
 
 import { Switch } from "@/components/ui/switch"
@@ -15,7 +15,7 @@ import {
   BLIND_REVIEW_QUESTION_STEM_CLASS,
   BLIND_REVIEW_RECOMMENDED_BADGE_CLASS,
 } from "@/features/student/practice-session/practice-session-blind-review-styles"
-import { ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import { ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS, ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import { PracticeSessionSideWidget } from "@/features/student/practice-session/practice-session-side-action-rail"
 import { PracticeSessionResetResponseButton } from "@/features/student/practice-session/practice-session-reset-response-button"
 import type {
@@ -23,8 +23,8 @@ import type {
   RegionKey,
 } from "@/features/student/practice-session/practice-session-types"
 import { createExplanationsApi } from "@/lib/api/explanations"
+import { displayAnswerPopularityRows, resolveAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
 import { HtmlContent } from "@/lib/html/html-content"
-import { hasEnoughPlatformAnswerSample, platformAnswerSampleSize } from "@/lib/platform-answer-sample"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
@@ -56,6 +56,10 @@ type PracticeBlindReviewQuestionPanelProps = {
   seedQuestionTypeLabel?: string | null
   /** When false, hides question/answer explanation dropdowns (e.g. locked diagnostic). */
   explanationsEnabled?: boolean
+  /** Keep choice explanations while hiding the stem/question explanation action. */
+  showStemExplanationAction?: boolean
+  /** Diagnostic review supplies local explanations; only PrepTest review should fetch remote detail. */
+  fetchRemoteExplanations?: boolean
   onAnnotateMouseUp?: (regionKey: RegionKey, container: HTMLElement | null, event?: MouseEvent) => void
   onAnnotateClick?: (regionKey: RegionKey, container: HTMLElement | null, event: MouseEvent) => void
   annotateToolMode?: PracticeToolMode
@@ -71,6 +75,8 @@ type PracticeBlindReviewQuestionPanelProps = {
   onOpenReview?: () => void
   reviewActive?: boolean
   onOpenAccessibility?: () => void
+  onFullscreen?: () => void
+  fullView?: boolean
 }
 
 function regionKey(questionId: string, part: string) {
@@ -101,6 +107,8 @@ function PracticeBlindReviewQuestionPanel({
   seedStemExplanationHtml = null,
   seedQuestionTypeLabel = null,
   explanationsEnabled = true,
+  showStemExplanationAction = true,
+  fetchRemoteExplanations = true,
   onAnnotateMouseUp,
   onAnnotateClick,
   annotateToolMode = "none",
@@ -115,6 +123,8 @@ function PracticeBlindReviewQuestionPanel({
   onOpenReview,
   reviewActive = false,
   onOpenAccessibility,
+  onFullscreen,
+  fullView = false,
 }: PracticeBlindReviewQuestionPanelProps) {
   const [hiddenChoices, setHiddenChoices] = useState<Record<number, boolean>>({})
   const [expandedChoiceIds, setExpandedChoiceIds] = useState<Set<string>>(() => new Set())
@@ -127,17 +137,19 @@ function PracticeBlindReviewQuestionPanel({
 
   const stemKey = regionKey(question.id, "stem")
   const stemHtml = getRegionHtml(stemKey, question.stemText ?? "")
+  /** Exam tools rail stays available only on Blind Review — hide on Actual (and Clean). */
   const useSideWidget = showSideWidget && !reviewChrome
+  const showExamToolsRail = useSideWidget && answerView === "blind_review"
   const hasMaskedChoices = Object.values(maskedChoices).some(Boolean)
 
   const explanationsApi = useMemo(() => {
-    if (!reviewChrome) return null
+    if (!reviewChrome || !fetchRemoteExplanations) return null
     try {
       return createExplanationsApi(getSupabaseBrowserClient())
     } catch {
       return null
     }
-  }, [reviewChrome])
+  }, [fetchRemoteExplanations, reviewChrome])
 
   useEffect(() => {
     let cancelled = false
@@ -174,11 +186,23 @@ function PracticeBlindReviewQuestionPanel({
         }
         setChoiceExplanations(next)
         const popularity: Record<string, number | null> = {}
-        const sampleSize = detail.answerPopularityTotal ?? platformAnswerSampleSize(detail.answerPopularity)
-        if (hasEnoughPlatformAnswerSample(sampleSize)) {
-          for (const row of detail.answerPopularity) {
-            popularity[row.letter.trim().toUpperCase()] = row.pct
-          }
+        const resolved = resolveAnswerPopularityRows(
+          detail.answerPopularity,
+          detail.choices,
+          detail.correctChoiceId ?? "",
+        )
+        const correctLetter =
+          resolved.find((row) => row.highlight)?.letter ??
+          detail.correctChoiceId?.trim().toUpperCase().slice(0, 1) ??
+          null
+        const displayRows = displayAnswerPopularityRows(
+          resolved,
+          correctLetter,
+          detail.questionId,
+          detail.answerPopularityTotal,
+        )
+        for (const row of displayRows) {
+          popularity[row.letter.trim().toUpperCase()] = row.pct
         }
         setChoicePopularityPct(popularity)
       })
@@ -207,11 +231,20 @@ function PracticeBlindReviewQuestionPanel({
 
   const canResetResponse =
     !reviewChrome && !choicesDisabled && (selectedIndex != null || hasMaskedChoices)
+  const optionsListRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    window.getSelection()?.removeAllRanges()
+    if (displaySelectedIndex == null) return
+    const selected = optionsListRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]')
+    selected?.focus({ preventScroll: true })
+  }, [question.id, questionNumber, displaySelectedIndex])
 
   const panel = (
     <div
       className={cn(
         "flex h-full min-h-0 flex-col",
+        useSideWidget && ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS,
         reviewChrome ? "practice-session-scroll-hidden overflow-y-auto" : "overflow-hidden",
       )}
     >
@@ -257,7 +290,7 @@ function PracticeBlindReviewQuestionPanel({
                 </label>
               ) : recommendedForBr ? (
                 <span className={BLIND_REVIEW_RECOMMENDED_BADGE_CLASS}>
-                  Recommended for Blind Review
+                  Recommended for Untimed Review
                 </span>
               ) : null}
             </div>
@@ -290,7 +323,7 @@ function PracticeBlindReviewQuestionPanel({
                     : cn(BLIND_REVIEW_QUESTION_STEM_CLASS, "text-sm font-semibold leading-[1.5] tracking-[0.28px]")
                 }
               />
-              {reviewChrome && explanationsEnabled ? (
+              {reviewChrome && explanationsEnabled && showStemExplanationAction ? (
                 <button
                   type="button"
                   className={cn(
@@ -299,8 +332,8 @@ function PracticeBlindReviewQuestionPanel({
                   )}
                   aria-label={
                     stemExplanationOpen
-                      ? "Hide passage explanation"
-                      : "Show passage explanation"
+                      ? "Hide question explanation"
+                      : "Show question explanation"
                   }
                   aria-expanded={stemExplanationOpen}
                   onClick={() => setStemExplanationOpen((open) => !open)}
@@ -313,7 +346,7 @@ function PracticeBlindReviewQuestionPanel({
                 </button>
               ) : null}
             </div>
-            {reviewChrome && explanationsEnabled && stemExplanationOpen ? (
+            {reviewChrome && explanationsEnabled && showStemExplanationAction && stemExplanationOpen ? (
               <div className="mb-6 mt-6 rounded-[14px] bg-[var(--primary-0)] p-6 text-[var(--color-student-heading)]">
                 <p className="mb-6 text-base font-medium leading-[1.5] tracking-[0.32px]">
                   Question Type{questionTypeLabel ? ` - ${questionTypeLabel}` : ""}
@@ -340,7 +373,10 @@ function PracticeBlindReviewQuestionPanel({
           {isCorrect ? "Correct" : "Incorrect"}
         </p>
       ) : null}
-      <div className={cn(reviewChrome ? "flex shrink-0 flex-col gap-3 pb-6" : BLIND_REVIEW_OPTIONS_LIST_CLASS)}>
+      <div
+        ref={optionsListRef}
+        className={cn(reviewChrome ? "flex shrink-0 flex-col gap-3 pb-6" : BLIND_REVIEW_OPTIONS_LIST_CLASS)}
+      >
           {question.choices.map((choice, index) => {
             const isCorrectChoice = correctIndex === index
             const forceSelected =
@@ -357,7 +393,7 @@ function PracticeBlindReviewQuestionPanel({
 
             return (
               <LrDrillOptionRow
-                key={choice.id}
+                key={`${question.id}-${questionNumber}-${choice.id}`}
                 index={index}
                 html={getRegionHtml(regionKey(question.id, `choice-${choice.id}`), choice.text)}
                 findQuery={findQuery}
@@ -411,19 +447,28 @@ function PracticeBlindReviewQuestionPanel({
   if (!useSideWidget) return panel
 
   return (
-    <div className={cn(ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS, "h-full min-h-0 overflow-visible")}>
+    <div
+      className={cn(
+        showExamToolsRail ? ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS : "relative min-w-0",
+        "h-full min-h-0 overflow-visible",
+      )}
+    >
       {panel}
-      <PracticeSessionSideWidget
-        variant="active-drill"
-        flagged={flagged}
-        onToggleFlag={onToggleFlag ?? (() => undefined)}
-        flagsDisabled={flagsDisabled}
-        responseMasking={responseMasking}
-        onToggleResponseMasking={onToggleResponseMasking ?? (() => undefined)}
-        onReview={onOpenReview}
-        reviewActive={reviewActive}
-        onAccessibility={onOpenAccessibility}
-      />
+      {showExamToolsRail ? (
+        <PracticeSessionSideWidget
+          variant="active-drill"
+          flagged={flagged}
+          onToggleFlag={onToggleFlag ?? (() => undefined)}
+          flagsDisabled={flagsDisabled}
+          responseMasking={responseMasking}
+          onToggleResponseMasking={onToggleResponseMasking ?? (() => undefined)}
+          onReview={onOpenReview}
+          reviewActive={reviewActive}
+          onAccessibility={onOpenAccessibility}
+          onFullscreen={onFullscreen}
+          fullView={fullView}
+        />
+      ) : null}
     </div>
   )
 }

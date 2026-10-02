@@ -2,6 +2,44 @@ import type { PrepTestPoolAttempt } from "@/features/student/preptests/preptest-
 
 import { getAttemptDisplayScores } from "@/features/student/preptests/preptest-pool-display"
 
+function scoreOrDash(value: number | null): string {
+  return value == null ? "---" : String(value)
+}
+
+/** Figma `20933:22745` — compact “Score: N - Blind Review: N|---” line. */
+export function PrepTestScoreText({
+  test,
+  br,
+  variant,
+}: {
+  test: number | null
+  br: number | null
+  variant: "header" | "history"
+}) {
+  const scoreText = scoreOrDash(test)
+  const brText = scoreOrDash(br)
+
+  if (variant === "history") {
+    return (
+      <p className="whitespace-nowrap text-center text-[16px] font-semibold leading-[1.35]">
+        <span className="text-[#082c6b]">Score: {scoreText}</span>
+        <span className="text-[#082c6b]">{"\u00a0"}</span>
+        <span className="text-[var(--greyscale-400)]">- Untimed Review: {brText}</span>
+      </p>
+    )
+  }
+
+  return (
+    <p className="whitespace-nowrap text-center text-[16px] leading-[1.5] tracking-[0.32px]">
+      <span className="font-medium text-[#082c6b]">Score:</span>
+      <span className="font-semibold text-[#082c6b]">{` ${scoreText} `}</span>
+      <span className="text-[var(--greyscale-400)]">- </span>
+      <span className="font-medium text-[var(--greyscale-400)]">Untimed Review:</span>
+      <span className="text-[var(--greyscale-400)]">{` ${brText}`}</span>
+    </p>
+  )
+}
+
 /** Figma dark PrepTest list — score chrome uses primary blue (not green). */
 export function ScoreBadge({ score }: { score: number }) {
   return (
@@ -26,7 +64,7 @@ export function AttemptScoreBox({ attempt }: { attempt: PrepTestPoolAttempt }) {
     return (
       <span className={attemptScoreBoxClass}>
         <span className="text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">{test}</span>
-        <span className="text-2xl font-bold leading-[1.3] text-[var(--greyscale-400)]">{` · ${br} BR`}</span>
+        <span className="text-2xl font-bold leading-[1.3] text-[var(--greyscale-400)]">{` · ${br} Untimed`}</span>
       </span>
     )
   }
@@ -41,7 +79,7 @@ export function AttemptScoreBox({ attempt }: { attempt: PrepTestPoolAttempt }) {
 
   return (
     <span className={`${attemptScoreBoxClass} text-2xl font-bold leading-[1.3] text-[var(--greyscale-400)]`}>
-      {br} BR
+      {br} Untimed
     </span>
   )
 }

@@ -1,11 +1,42 @@
+import { percentileForScaledScore } from "./lsat-scaled-score-percentiles.ts"
+import { scaledRangeForIncorrectOnSection } from "./lsat-diagnostic-score-conversion.ts"
 import type { MiniDiagnosticQuestion, MiniDiagnosticScoreRange } from "./mini-marketing-types.ts"
-import { resolveMiniDiagnosticScoreRange } from "./mini-marketing-set.ts"
 
-/** Map section raw correct (0–25) → projected scaled LSAT band via mini-equivalent score. */
+export const SECTION_DIAGNOSTIC_QUESTION_COUNT = 25
+
+function withPercentilesFromScaled(range: {
+  correctCount: number
+  scaledLow: number
+  scaledHigh: number
+}): MiniDiagnosticScoreRange {
+  return {
+    ...range,
+    percentileLow: percentileForScaledScore(range.scaledLow),
+    percentileHigh: percentileForScaledScore(range.scaledHigh),
+  }
+}
+
+/**
+ * Map section performance → projected scaled LSAT band.
+ *
+ * Uses incorrect count (0–25) projected onto the Apr 2025 full-test conversion
+ * (77 scored Q → 120–180). Passing `correctCount` is converted as `25 − correct`.
+ */
 export function resolveSectionDiagnosticScoreRange(correctCount: number): MiniDiagnosticScoreRange {
-  const clamped = Math.min(Math.max(Math.floor(correctCount), 0), 25)
-  const miniEquivalent = Math.round((clamped / 25) * 10)
-  return resolveMiniDiagnosticScoreRange(miniEquivalent)
+  const clampedCorrect = Math.min(
+    Math.max(Math.floor(correctCount), 0),
+    SECTION_DIAGNOSTIC_QUESTION_COUNT,
+  )
+  const incorrect = SECTION_DIAGNOSTIC_QUESTION_COUNT - clampedCorrect
+  const { scaledLow, scaledHigh } = scaledRangeForIncorrectOnSection(
+    incorrect,
+    SECTION_DIAGNOSTIC_QUESTION_COUNT,
+  )
+  return withPercentilesFromScaled({
+    correctCount: clampedCorrect,
+    scaledLow,
+    scaledHigh,
+  })
 }
 
 export const SECTION_DIAGNOSTIC_MARKETING_META = {
@@ -15,14 +46,14 @@ export const SECTION_DIAGNOSTIC_MARKETING_META = {
   sectionId: "DIAG-SEC-LR-1",
   title: "Section Diagnostic for Marketing",
   timeMinutes: 35,
-  questionCount: 25,
+  questionCount: SECTION_DIAGNOSTIC_QUESTION_COUNT,
 }
 
 export function buildSectionDiagnosticMarketingSet(questions: MiniDiagnosticQuestion[]) {
   return {
     ...SECTION_DIAGNOSTIC_MARKETING_META,
     questions,
-    scoreRanges: Array.from({ length: 26 }, (_, correctCount) =>
+    scoreRanges: Array.from({ length: SECTION_DIAGNOSTIC_QUESTION_COUNT + 1 }, (_, correctCount) =>
       resolveSectionDiagnosticScoreRange(correctCount),
     ),
   }

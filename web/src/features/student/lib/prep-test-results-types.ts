@@ -43,6 +43,7 @@ export type PrepTestQuestionResultRow = {
   /** Heights 0–100 for A–E popularity bars */
   answerPopularity: [number, number, number, number, number]
   correctLetter: "A" | "B" | "C" | "D" | "E"
+  selectedLetter: string | null
 }
 
 export type PrepTestAboutMeta = {

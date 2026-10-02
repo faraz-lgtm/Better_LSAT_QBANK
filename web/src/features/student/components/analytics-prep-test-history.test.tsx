@@ -4,7 +4,7 @@ import { useState } from "react"
 import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
 
-import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
+import { AnalyticsPrepTestHistory, OverviewHistoryShell } from "@/features/student/components/analytics-prep-test-history"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 
 const entries: PrepTestHistoryEntry[] = [
@@ -21,7 +21,7 @@ const entries: PrepTestHistoryEntry[] = [
   },
   {
     id: "plain",
-    testLabel: "LR141B-4",
+    testLabel: "PT141.S4",
     dateLabel: "Thursday, Aug 27",
     bookmarked: false,
     score: 0,
@@ -63,13 +63,13 @@ describe("AnalyticsPrepTestHistory", () => {
     render(<HistoryHarness />)
 
     expect(screen.getByText("Varied Mix")).toBeInTheDocument()
-    expect(screen.getByText("LR141B-4")).toBeInTheDocument()
+    expect(screen.getByText("PT141.S4")).toBeInTheDocument()
 
     await user.click(screen.getByRole("switch", { name: "Show bookmarked only" }))
 
     expect(screen.getByRole("switch", { name: "Show bookmarked only" })).toBeChecked()
     expect(screen.getByText("Varied Mix")).toBeInTheDocument()
-    expect(screen.queryByText("LR141B-4")).not.toBeInTheDocument()
+    expect(screen.queryByText("PT141.S4")).not.toBeInTheDocument()
   })
 
   it("shows an empty state when nothing is bookmarked", async () => {
@@ -97,6 +97,24 @@ describe("AnalyticsPrepTestHistory", () => {
     expect(onToggleBookmark).toHaveBeenCalledWith("saved")
   })
 
+  it("opens results from the title when onSelectEntry is provided", async () => {
+    const user = userEvent.setup()
+    const onSelectEntry = vi.fn()
+    render(
+      <AnalyticsPrepTestHistory
+        visibleEntries={entries}
+        bookmarkedOnly={false}
+        onBookmarkedOnlyChange={() => {}}
+        onToggleBookmark={() => {}}
+        onSelectEntry={onSelectEntry}
+      />,
+    )
+
+    expect(screen.queryByRole("button", { name: "View Varied Mix" })).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Varied Mix" }))
+    expect(onSelectEntry).toHaveBeenCalledWith("saved")
+  })
+
   it("previews four rows and links View more to the Insights page", () => {
     const many = Array.from({ length: 5 }, (_, index) => ({
       ...entries[1]!,
@@ -122,7 +140,68 @@ describe("AnalyticsPrepTestHistory", () => {
     expect(screen.getByText("History 1")).toBeInTheDocument()
     expect(screen.getByText("History 4")).toBeInTheDocument()
     expect(screen.queryByText("History 5")).not.toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "View more" })).toHaveAttribute("href", "/app/analytics/drills")
+    expect(screen.getByRole("link", { name: /view more/i })).toHaveAttribute("href", "/app/analytics/drills")
+  })
+
+  it("shows the practice-page LR and RC badges beside drill titles", () => {
+    render(
+      <AnalyticsPrepTestHistory
+        title="Drill History"
+        emptyNoun="drills"
+        visibleEntries={[
+          entries[0]!,
+          {
+            ...entries[1]!,
+            id: "rc-mix",
+            testLabel: "Passage Mix",
+            sectionType: "RC",
+          },
+        ]}
+        bookmarkedOnly={false}
+        onBookmarkedOnlyChange={() => {}}
+        onToggleBookmark={() => {}}
+      />,
+    )
+
+    expect(screen.getByLabelText("LR")).toBeInTheDocument()
+    expect(screen.getByLabelText("RC")).toBeInTheDocument()
+  })
+
+  it("exposes the full truncated drill title on hover via title", () => {
+    const fullLabel = "Rule Application, Correct Answer, Flaw Drill"
+    render(
+      <AnalyticsPrepTestHistory
+        title="Drill History"
+        emptyNoun="drills"
+        visibleEntries={[
+          {
+            ...entries[0]!,
+            id: "long-drill",
+            testLabel: fullLabel,
+          },
+        ]}
+        bookmarkedOnly={false}
+        onBookmarkedOnlyChange={() => {}}
+        onToggleBookmark={() => {}}
+        onSelectEntry={() => {}}
+      />,
+    )
+
+    expect(screen.getByRole("button", { name: fullLabel })).toHaveAttribute("title", fullLabel)
+  })
+
+  it("omits the section badge when the history row has no section type", () => {
+    render(
+      <AnalyticsPrepTestHistory
+        visibleEntries={[{ ...entries[0]!, sectionType: null }]}
+        bookmarkedOnly={false}
+        onBookmarkedOnlyChange={() => {}}
+        onToggleBookmark={() => {}}
+      />,
+    )
+
+    expect(screen.queryByLabelText("LR")).not.toBeInTheDocument()
+    expect(screen.queryByLabelText("RC")).not.toBeInTheDocument()
   })
 
   it("hides View more when the preview already shows every row", () => {
@@ -139,6 +218,131 @@ describe("AnalyticsPrepTestHistory", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.queryByRole("link", { name: "View more" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: /view more/i })).not.toBeInTheDocument()
+  })
+
+  it("shows View More when alwaysShowViewMore is set", () => {
+    render(
+      <MemoryRouter>
+        <AnalyticsPrepTestHistory
+          visibleEntries={entries}
+          bookmarkedOnly={false}
+          onBookmarkedOnlyChange={() => {}}
+          onToggleBookmark={() => {}}
+          previewLimit={4}
+          viewMoreHref="/app/analytics/drills"
+          alwaysShowViewMore
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole("link", { name: /view more/i })).toHaveAttribute("href", "/app/analytics/drills")
+  })
+
+  it("labels untimed review scores as Untimed Review", () => {
+    render(
+      <AnalyticsPrepTestHistory
+        visibleEntries={entries}
+        bookmarkedOnly={false}
+        onBookmarkedOnlyChange={() => {}}
+        onToggleBookmark={() => {}}
+      />,
+    )
+
+    expect(screen.getAllByText("Untimed Review")).toHaveLength(entries.length)
+    expect(screen.queryByText("UR")).not.toBeInTheDocument()
+    expect(screen.queryByText("BR")).not.toBeInTheDocument()
+  })
+
+  it("shows drill and section scores as correct/total", () => {
+    render(
+      <AnalyticsPrepTestHistory
+        visibleEntries={[
+          {
+            id: "drill",
+            testLabel: "Assumption Drill",
+            dateLabel: "Monday, Aug 25",
+            bookmarked: false,
+            score: 2,
+            scoreMax: 5,
+            blindReviewScore: 3,
+            blindReviewMax: 5,
+            sectionType: "LR",
+          },
+          {
+            id: "section",
+            testLabel: "PT141.S4",
+            dateLabel: "Sunday, Aug 24",
+            bookmarked: false,
+            score: 10,
+            scoreMax: 25,
+            blindReviewScore: 12,
+            blindReviewMax: 25,
+            sectionType: "LR",
+          },
+        ]}
+        bookmarkedOnly={false}
+        onBookmarkedOnlyChange={() => {}}
+        onToggleBookmark={() => {}}
+      />,
+    )
+
+    expect(screen.getByText("2/5")).toBeInTheDocument()
+    expect(screen.getByText("3/5")).toBeInTheDocument()
+    expect(screen.getByText("10/25")).toBeInTheDocument()
+    expect(screen.getByText("12/25")).toBeInTheDocument()
+  })
+
+  it("keeps PrepTest scaled scores as a single number", () => {
+    render(
+      <AnalyticsPrepTestHistory
+        visibleEntries={[
+          {
+            id: "pt",
+            testLabel: "PT158",
+            dateLabel: "Saturday, Aug 23",
+            bookmarked: false,
+            score: 162,
+            scoreMax: 180,
+            blindReviewScore: 168,
+            blindReviewMax: 180,
+          },
+        ]}
+        bookmarkedOnly={false}
+        onBookmarkedOnlyChange={() => {}}
+        onToggleBookmark={() => {}}
+      />,
+    )
+
+    expect(screen.getByText("162")).toBeInTheDocument()
+    expect(screen.getByText("168")).toBeInTheDocument()
+    expect(screen.queryByText("162/180")).not.toBeInTheDocument()
+  })
+})
+
+describe("OverviewHistoryShell", () => {
+  it("renders Figma history type pills and switches the active tab", async () => {
+    const user = userEvent.setup()
+    function ShellHarness() {
+      const [tab, setTab] = useState<"all" | "drill" | "section" | "preptest">("all")
+      return (
+        <OverviewHistoryShell activeTab={tab} onTabChange={setTab}>
+          <p>{tab}</p>
+        </OverviewHistoryShell>
+      )
+    }
+
+    render(<ShellHarness />)
+
+    const all = screen.getByRole("tab", { name: "All History" })
+    const drill = screen.getByRole("tab", { name: "Drill History" })
+    expect(all).toHaveAttribute("aria-selected", "true")
+    expect(screen.getByRole("tab", { name: "Section History" })).toBeInTheDocument()
+    expect(screen.getByRole("tab", { name: "PrepTest History" })).toBeInTheDocument()
+
+    await user.click(drill)
+    expect(drill).toHaveAttribute("aria-selected", "true")
+    expect(all).toHaveAttribute("aria-selected", "false")
+    expect(screen.getByText("drill")).toBeInTheDocument()
   })
 })

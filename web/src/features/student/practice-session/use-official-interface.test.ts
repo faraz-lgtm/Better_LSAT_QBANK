@@ -1,8 +1,10 @@
 import { renderHook, act } from "@testing-library/react"
-import { describe, expect, it, beforeEach } from "vitest"
+import { describe, expect, it, beforeEach, vi } from "vitest"
 
 import {
   OFFICIAL_INTERFACE_STORAGE_KEY,
+  PRACTICE_SESSION_IMMERSIVE_FRAME_SELECTOR,
+  toggleExamFullscreen,
   useExamFullscreen,
   useOfficialInterfacePreference,
 } from "@/features/student/practice-session/use-official-interface"
@@ -39,5 +41,20 @@ describe("useExamFullscreen", () => {
   it("reports fullscreen from the document", () => {
     const { result } = renderHook(() => useExamFullscreen())
     expect(result.current.isFullscreen).toBe(false)
+  })
+
+  it("fullscreens the immersive frame so the exam card can keep its max-width cap", () => {
+    const frame = document.createElement("div")
+    frame.setAttribute("data-practice-session-immersive-frame", "")
+    const requestFullscreen = vi.fn().mockResolvedValue(undefined)
+    frame.requestFullscreen = requestFullscreen
+    document.body.append(frame)
+
+    toggleExamFullscreen()
+
+    expect(PRACTICE_SESSION_IMMERSIVE_FRAME_SELECTOR).toBe("[data-practice-session-immersive-frame]")
+    expect(requestFullscreen).toHaveBeenCalledOnce()
+
+    frame.remove()
   })
 })

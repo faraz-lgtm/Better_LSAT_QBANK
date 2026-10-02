@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
+import { PREP_TEST_POOLS_HREF } from "@/features/account/prep-test-pool-types"
 import { Button } from "@/components/ui/button"
 import { FigmaIcon } from "@/components/icons/figma-icons"
 import { DrillConfigField, DrillConfigSelectField } from "@/features/student/drills/drill-config-field"
@@ -234,7 +235,7 @@ function SectionConfigForm({ sectionType, initialSectionId = null }: SectionConf
         {poolTotal === 0 && !loadingPool ? (
           <p className="m-0 text-sm text-[var(--greyscale-500)]">
             No sections are available in your pool yet. Update your{" "}
-            <Link to="/app/practice/drills" className="font-semibold text-[var(--primary)] hover:underline">
+            <Link to={PREP_TEST_POOLS_HREF} className="font-semibold text-[var(--primary)] hover:underline">
               Prep pool settings
             </Link>{" "}
             to add sections.

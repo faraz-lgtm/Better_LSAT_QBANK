@@ -1,4 +1,8 @@
 import { estimatedDrillBudgetMinutes } from "@/features/student/drills/drill-timing"
+import {
+  ensureDrillTitleSuffix,
+  formatDrillTitleFromTypeNames,
+} from "@/features/student/drills/format-drill-title"
 import type { PracticeSessionSummary, PriorityRow } from "@/lib/api/analytics"
 
 export type ContinueDrill = {
@@ -116,9 +120,16 @@ export function mapSessionToContinueDrill(session: PracticeSessionSummary): Cont
   const answeredIds = Array.isArray(meta.answeredQuestionIds) ? meta.answeredQuestionIds.length : 0
   const progressPct = total > 0 ? Math.round((100 * answeredIds) / total) : 0
 
+  const tagLabels = Array.isArray(meta.tagLabels)
+    ? meta.tagLabels.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    : []
+  const titleFromTypes = tagLabels.length > 0 ? formatDrillTitleFromTypeNames(tagLabels) : null
+  const storedTitle = typeof meta.title === "string" && meta.title.trim() ? meta.title.trim() : null
+  const storedTag = typeof meta.tagLabel === "string" && meta.tagLabel.trim() ? meta.tagLabel.trim() : null
   const title =
-    (typeof meta.title === "string" && meta.title) ||
-    (typeof meta.tagLabel === "string" && meta.tagLabel) ||
+    titleFromTypes ||
+    (storedTitle ? ensureDrillTitleSuffix(storedTitle) : null) ||
+    (storedTag ? ensureDrillTitleSuffix(storedTag) : null) ||
     `${section} drill`
 
   return {
@@ -148,7 +159,7 @@ export function mapPriorityToSuggestedDrill(row: PriorityRow): SuggestedDrill | 
   return {
     id: row.questionTypeId,
     section,
-    title: row.name,
+    title: ensureDrillTitleSuffix(row.name),
     progressPct: row.accuracyPct ?? 0,
     answered: `${row.correctCount}/${row.attemptCount}`,
     timeLabel: "—",

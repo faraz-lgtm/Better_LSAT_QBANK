@@ -10,7 +10,7 @@ export type PrepCourseNavItem = {
 export const PREP_COURSE_NAV_ITEMS: readonly PrepCourseNavItem[] = [
   {
     slug: "betterlsat-core-syllabus-structure-content",
-    title: "LSAT Essential Course",
+    title: "LSAT Essentials Course",
     status: "available",
   },
   {
@@ -20,7 +20,7 @@ export const PREP_COURSE_NAV_ITEMS: readonly PrepCourseNavItem[] = [
   },
   {
     slug: "rc-mastery",
-    title: "RC Mastery",
+    title: "RC Mastery Course",
     status: "coming_soon",
   },
 ] as const

@@ -2,13 +2,14 @@ import type { ReactNode } from "react"
 import { BookOpen, Check, Clock, FileText, Users } from "lucide-react"
 
 import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
+import { displayAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
+import { resolveScoreBand } from "@/features/student/explanation-detail/provisional-score-band"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
 import {
   formatMmSs,
   formatPaddedTargetTime,
   formatYourTimeAgainstTarget,
 } from "@/features/student/practice-session/practice-results-ui"
-import { NOT_ENOUGH_ANSWERS_YET, hasEnoughPlatformAnswerSample } from "@/lib/platform-answer-sample"
 import { cn } from "@/lib/utils"
 
 type ExplanationAnalyticsTabPanelProps = {
@@ -86,14 +87,8 @@ function ScoreBandCard({
   range: string
   caption: string
 }) {
-  const score = Number.parseInt(headline, 10)
-  if (!Number.isFinite(score)) {
-    return (
-      <p className="m-0 rounded-[14px] border border-dashed border-[#dfe1e7] bg-[#f6f8fa] px-4 py-6 text-center text-sm text-[#666d80]">
-        {caption}
-      </p>
-    )
-  }
+  const resolved = resolveScoreBand({ headline, range, caption }, headline || "score", 3)
+  const score = Number.parseInt(resolved.headline, 10)
   const sliderPct = Math.max(0, Math.min(100, ((score - 120) / 60) * 100))
 
   return (
@@ -109,11 +104,11 @@ function ScoreBandCard({
           <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/10">
             <Users className="size-5 text-white" aria-hidden />
           </div>
-          <p className="m-0 max-w-[240px] text-[13px] leading-[17.875px] text-white/75">{caption}</p>
+          <p className="m-0 max-w-[240px] text-[13px] leading-[17.875px] text-white/75">{resolved.caption}</p>
         </div>
         <div className="text-right">
-          <p className="m-0 text-[34px] font-bold leading-[34px] text-white">{headline}</p>
-          <p className="m-0 pt-1 text-[11px] font-medium leading-[16.5px] text-[var(--primary-900)]">{range}</p>
+          <p className="m-0 text-[34px] font-bold leading-[34px] text-white">{resolved.headline}</p>
+          <p className="m-0 pt-1 text-[11px] font-medium leading-[16.5px] text-[var(--primary-900)]">{resolved.range}</p>
         </div>
       </div>
       <div className="relative mt-4 h-[43px] pt-4">
@@ -288,8 +283,11 @@ function TimingStat({
 function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: ExplanationAnalyticsTabPanelProps) {
   const { scaleFactor } = useAccommodations()
   const attemptCount = analytics.history.length
-  const showPopularity = hasEnoughPlatformAnswerSample(analytics.answerPopularityTotal)
-  const popularityRows = showPopularity ? analytics.answerPopularity : []
+  const popularityRows = displayAnswerPopularityRows(
+    analytics.answerPopularity,
+    correctChoiceLetter,
+    correctChoiceLetter || "A",
+  )
 
   const targetSec = Math.round(analytics.targetTimeSeconds * scaleFactor)
   const targetTime = formatPaddedTargetTime(targetSec)
@@ -356,20 +354,14 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
             ) : null}
           </div>
           <div className="flex items-start gap-5 pt-6">
-            {showPopularity && popularityRows.length > 0 ? (
-              popularityRows.map((row) => (
-                <TopAnswerBar
-                  key={row.letter}
-                  letter={row.letter}
-                  pct={row.pct}
-                  highlight={row.highlight}
-                />
-              ))
-            ) : (
-              <p className="m-0 w-full rounded-[14px] border border-dashed border-[#dfe1e7] bg-[#f6f8fa] px-4 py-6 text-center text-sm text-[#666d80]">
-                {NOT_ENOUGH_ANSWERS_YET}
-              </p>
-            )}
+            {popularityRows.map((row) => (
+              <TopAnswerBar
+                key={row.letter}
+                letter={row.letter}
+                pct={row.pct}
+                highlight={row.highlight}
+              />
+            ))}
           </div>
         </section>
       </div>

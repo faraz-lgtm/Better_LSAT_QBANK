@@ -37,7 +37,7 @@ export const MINI_DIAGNOSTIC_QUESTIONS: MiniDiagnosticQuestion[] = [
         letter: "E",
         text: "Doubling the production of cider is the only way to keep the customer base satisfied.",
         explanation:
-          "The author never claims this is the only way to satisfy customers, making this too extreme.",
+          "The author never claims this is the only way to satisfy customers, making this too extreme. It fundamentally misstates what the argument attempts to say.",
       },
     ],
     correctAnswer: "C",
@@ -493,19 +493,27 @@ export const MINI_DIAGNOSTIC_QUESTIONS: MiniDiagnosticQuestion[] = [
     ],
     correctAnswer: "A",
     explanationHtml: `<h3>Stimulus Analysis</h3>
-<p>Question Type: Sufficient Assumption. This type asks for a premise that, if added, proves the conclusion with 100% mathematical certainty. It completely bridges the gap. This is a hard question containing various conditional rules. First, let's translate the stimulus into diagrams:</p>
+<p>Question Type: Sufficient Assumption. This type asks for a premise that, if added, proves the conclusion with 100% mathematical certainty. It completely bridges the gap. This is a hard question containing various conditional rules. First, let's translate the stimulus into diagrams.</p>
+<p><strong>Premise 1:</strong> "No one who lacks a comprehensive understanding... can successfully navigate..."</p>
 <ul>
-<li><strong>Premise 1:</strong> Successfully Navigate → Comprehensive Understanding</li>
-<li><strong>Premise 2:</strong> Motivation to Acquire → Personally Financed</li>
-<li><strong>Conclusion:</strong> Independent Urban Planner → /Successfully Navigate</li>
+<li><strong>Translation:</strong> Successfully Navigate → Comprehensive Understanding</li>
+<li><strong>Contrapositive:</strong> /Comprehensive Understanding → /Successfully Navigate</li>
 </ul>
+<p><strong>Premise 2:</strong> "Only someone who has personally financed... has the motivation to acquire a comprehensive understanding..."</p>
+<ul>
+<li><strong>Translation:</strong> Motivation to Acquire → Personally Financed</li>
+<li><strong>Contrapositive:</strong> /Personally Financed → /Motivation to Acquire</li>
+</ul>
+<p><strong>The Conclusion:</strong> "Independent urban planners cannot successfully navigate..." → Independent Urban Planner → /Successfully Navigate</p>
 <p>Exposing the Missing Links (The Gap): To prove the conclusion (that Planners CANNOT navigate), we must trigger the contrapositive of Premise 1. That means we must prove that Planners lack understanding. But look at the evidence provided. The author gives us Premise 2, which is about having the motivation to acquire an understanding. Having the motivation to do something and actually having it are two entirely different concepts on the LSAT.</p>
-<p>Here is the chain we need to build, with the missing gaps highlighted: Independent Urban Planner [GAP 1] → /Personally Financed → /Motivation to Acquire [GAP 2] → /Comprehensive Understanding → /Successfully Navigate. To solve this question, the correct answer must fill both gaps simultaneously.</p>
+<p>Here is the chain we need to build, with the missing gaps highlighted:</p>
+<p>Independent Urban Planner [GAP 1] → /Personally Financed → /Motivation to Acquire [GAP 2] → /Comprehensive Understanding → /Successfully Navigate.</p>
+<p>To solve this question, the correct answer must fill both gaps simultaneously.</p>
 <h3>Answer Choice Analysis</h3>
-<p><strong>A)</strong> Correct. This answer perfectly fills both gaps to complete our chain. First half: "planners have never personally financed..." fills GAP 1. According to Premise 2, lacking financing means they lack motivation. Second half: "no one acquires a comprehensive understanding... without the motivation..." translates to: /Motivation to Acquire → /Comprehensive Understanding. This fills GAP 2. The chain is now closed and the conclusion is proven.</p>
-<p><strong>B)</strong> Incorrect. The first half flips the arrow of Premise 2. Premise 2 said financing is necessary for motivation; it did not say financing guarantees you have the understanding. Furthermore, stating that planners lack motivation doesn't help unless you also bridge the gap between lacking motivation and lacking understanding (Gap 2), which this answer fails to do.</p>
-<p><strong>C)</strong> Incorrect. This choice just creates a new rule about who gets to have motivation. It completely fails to tell us whether independent urban planners as a whole actually fail to meet this requirement or not.</p>
-<p><strong>D)</strong> Incorrect. While it states that planners lack motivation, it wastes the rest of the sentence explaining why they lack it. The reason something happens is irrelevant. This answer completely fails to address GAP 2.</p>
+<p><strong>A)</strong> Correct. This answer perfectly fills both gaps to complete our chain. First half: "planners have never personally financed..." fills GAP 1. It connects independent planners to a lack of personal financing. According to Premise 2, lacking financing means they lack motivation. Second half: "no one acquires a comprehensive understanding... without the motivation..." translates to: /Motivation to Acquire → /Comprehensive Understanding. This fills GAP 2. The chain is now closed and the conclusion is proven.</p>
+<p><strong>B)</strong> Incorrect. The first half flips the arrow of Premise 2. Premise 2 said financing is necessary for motivation; it did not say financing guarantees you have the understanding. Drawing the arrow the other way doesn't help us guarantee our conclusion. Furthermore, stating that planners lack motivation doesn't help unless you also bridge the gap between lacking motivation and lacking understanding (Gap 2), which this answer fails to do.</p>
+<p><strong>C)</strong> Incorrect. This choice just creates a new rule about who gets to have motivation (the ones who have personally financed). It completely fails to tell us whether independent urban planners as a whole actually fail to meet this requirement or not. To prove the planners will definitely fail, we need an answer that explicitly states they are missing a required piece of the puzzle, rather than just giving us another conditional rule.</p>
+<p><strong>D)</strong> Incorrect. While it states that planners lack motivation, it wastes the rest of the sentence explaining why they lack it (because they don't profit). The reason something happens is irrelevant. This answer completely fails to address GAP 2 (proving that lacking motivation means they lack the understanding).</p>
 <p><strong>E)</strong> Incorrect. This commits a reversing the arrow of Premise 1. Premise 1 states that an understanding is necessary to navigate (Navigate → Understanding). This answer flips it, claiming the understanding is sufficient to navigate (Understanding → Navigate). This does nothing to prove the conclusion that the independent planners cannot navigate.</p>`,
   },
   {

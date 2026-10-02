@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest"
 import { PracticeAnswerPopularityBars } from "@/features/student/practice-session/practice-results-ui"
 
 describe("PracticeAnswerPopularityBars", () => {
-  it("shows not enough answers yet below 5 unique responses", () => {
+  it("always renders bars even below 5 unique responses", () => {
     render(
       <PracticeAnswerPopularityBars
         rows={[
@@ -14,8 +14,10 @@ describe("PracticeAnswerPopularityBars", () => {
         correctLetter="A"
       />,
     )
-    expect(screen.getByText("Not enough answers yet")).toBeInTheDocument()
-    expect(screen.queryByText("A")).not.toBeInTheDocument()
+    expect(screen.queryByText("Not enough answers yet")).not.toBeInTheDocument()
+    expect(screen.getByText("A")).toBeInTheDocument()
+    expect(screen.getByText("B")).toBeInTheDocument()
+    expect(screen.getAllByText(/%$/).length).toBeGreaterThanOrEqual(2)
   })
 
   it("renders bars at 5 unique responses", () => {
@@ -31,5 +33,17 @@ describe("PracticeAnswerPopularityBars", () => {
     expect(screen.queryByText("Not enough answers yet")).not.toBeInTheDocument()
     expect(screen.getByText("A")).toBeInTheDocument()
     expect(screen.getByText("B")).toBeInTheDocument()
+    expect(screen.getByText("60%")).toBeInTheDocument()
+    expect(screen.getByText("40%")).toBeInTheDocument()
+  })
+
+  it("renders A–E provisional bars when rows are empty", () => {
+    render(<PracticeAnswerPopularityBars rows={[]} correctLetter="C" />)
+    expect(screen.queryByText("Not enough answers yet")).not.toBeInTheDocument()
+    expect(screen.getByText("A")).toBeInTheDocument()
+    expect(screen.getByText("B")).toBeInTheDocument()
+    expect(screen.getByText("C")).toBeInTheDocument()
+    expect(screen.getByText("D")).toBeInTheDocument()
+    expect(screen.getByText("E")).toBeInTheDocument()
   })
 })

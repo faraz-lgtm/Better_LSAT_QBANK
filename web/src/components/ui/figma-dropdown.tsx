@@ -11,6 +11,8 @@ type FigmaDropdownOption = {
 type FigmaDropdownVariant = "config" | "pill"
 type FigmaDropdownMenuAlign = "start" | "end"
 
+type FigmaDropdownSize = "default" | "sm"
+
 type FigmaDropdownProps = {
   id?: string
   value: string
@@ -24,6 +26,8 @@ type FigmaDropdownProps = {
   variant?: FigmaDropdownVariant
   /** Defaults to `end` for pills so the menu stays under the trigger on the right. */
   menuAlign?: FigmaDropdownMenuAlign
+  /** `sm` — 32px Figma PrepTest sort (`20933:20633`). */
+  size?: FigmaDropdownSize
 }
 
 /** Apply to the gray config card while its dropdown menu is open. */
@@ -51,6 +55,7 @@ function FigmaDropdown({
   onOpenChange,
   variant = "config",
   menuAlign,
+  size = "default",
 }: FigmaDropdownProps) {
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLDivElement | null>(null)
@@ -101,7 +106,10 @@ function FigmaDropdown({
         aria-expanded={open}
         aria-controls={open ? listboxId : undefined}
         className={cn(
-          "box-border flex h-[52px] w-full items-center gap-2 overflow-hidden rounded-[16px] border border-solid px-3 py-2 text-left text-[16px] font-normal leading-[1.5] tracking-[0.32px] transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+          "box-border flex w-full items-center gap-2 overflow-hidden border border-solid text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+          size === "sm"
+            ? "h-8 rounded-[10px] px-3 py-2 text-[12px] font-medium leading-[1.5] tracking-[0.24px]"
+            : "h-[52px] rounded-[16px] px-3 py-2 text-[16px] font-normal leading-[1.5] tracking-[0.32px]",
           open
             ? "border-[var(--primary)] bg-[var(--primary-25)] font-medium text-[var(--color-student-heading)]"
             : TRIGGER_CLOSED_CLASS[variant],
@@ -109,7 +117,16 @@ function FigmaDropdown({
         onClick={() => setOpen((current) => !current)}
       >
         <span className="min-w-0 flex-1 truncate">{displayLabel}</span>
-        {open ? (
+        {size === "sm" ? (
+          <img
+            src="/figma/preptest/chevron-down.svg"
+            alt=""
+            width={20}
+            height={20}
+            className={cn("size-5 max-w-none shrink-0 object-contain", open && "rotate-180")}
+            draggable={false}
+          />
+        ) : open ? (
           <ChevronUp className="size-5 shrink-0 text-[var(--primary)]" strokeWidth={2} aria-hidden />
         ) : (
           <ChevronDown className="size-5 shrink-0 text-[var(--greyscale-500)]" strokeWidth={2} aria-hidden />

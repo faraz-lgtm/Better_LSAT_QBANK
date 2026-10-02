@@ -55,7 +55,7 @@ const BLIND_REVIEW_NOTES_SIDEBAR_CLASS =
   `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]`
 
 const BLIND_REVIEW_PASSAGE_TEXT_CLASS =
-  "text-base font-normal leading-[26px] tracking-[0.02em] text-[var(--color-student-heading)]"
+  "text-base font-normal leading-[30px] tracking-[0.02em] text-[var(--color-student-heading)]"
 
 const BLIND_REVIEW_QUESTION_STEM_WRAP_CLASS =
   "flex min-h-[56px] w-full min-w-0 items-center"
@@ -73,9 +73,9 @@ const BLIND_REVIEW_RECOMMENDED_BADGE_CLASS =
 const BLIND_REVIEW_OPTIONS_LIST_CLASS =
   "practice-session-br-options flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-0 py-3"
 
-/** Choice rows grow with wrapped copy; letter and hide control stay top-aligned. */
+/** Choice rows grow with wrapped copy; letter, text, and hide control stay vertically centered. */
 const BLIND_REVIEW_OPTION_ROW_INNER_CLASS =
-  "flex items-start justify-between gap-4 py-3 pl-4 pr-4 text-left"
+  "flex items-center justify-between gap-4 py-3 pl-4 pr-4 text-left"
 
 /** Selected answer while viewing timed/actual responses — Figma primary-25 + primary */
 const BLIND_REVIEW_OPTION_ROW_SELECTED_ACTUAL_CLASS =
@@ -131,14 +131,15 @@ const BLIND_REVIEW_HEADER_NOTES_BUTTON_ACTIVE_CLASS =
 const BLIND_REVIEW_HEADER_EXIT_BUTTON_CLASS =
   "box-border inline-flex h-[52px] shrink-0 items-center justify-center rounded-[16px] border border-solid border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 py-2 text-base font-medium leading-normal tracking-[0.32px] text-[var(--color-student-heading)] transition hover:bg-[var(--greyscale-25)] disabled:opacity-50"
 
-/** Figma `18617:33464` / `18617:33586` — section selector (123×36 closed) */
-const BLIND_REVIEW_SECTION_SELECT_MIN_WIDTH_PX = 123
+/** Figma `18617:33464` / `18617:33586` — section selector (fit label + chevron; was 123×36) */
+const BLIND_REVIEW_SECTION_SELECT_MIN_WIDTH_PX = 136
 
 const BLIND_REVIEW_SECTION_SELECT_TRIGGER_CLASS =
-  "inline-flex h-9 min-w-[123px] items-center gap-2 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] py-1.5 pl-3 pr-3 text-base font-medium leading-6 tracking-[0.32px] text-[var(--color-student-heading)] transition-colors hover:bg-[var(--greyscale-25)]"
+  "inline-flex h-9 w-full min-w-[136px] items-center justify-between gap-2 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] py-1.5 pl-3 pr-2.5 text-base font-medium leading-6 tracking-[0.32px] text-[var(--color-student-heading)] transition-colors hover:bg-[var(--greyscale-25)]"
 
+/** Sit below the header progress track so open state is not clipped mid-item. */
 const BLIND_REVIEW_SECTION_SELECT_MENU_CLASS =
-  "absolute left-0 top-full z-[110] mt-2 min-w-full overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
+  "absolute left-0 top-[calc(100%+28px)] z-[210] min-w-full overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-1 shadow-[0px_24px_24px_rgba(13,13,18,0.12)]"
 
 /** Figma `20321:55044` / `20344:55732` — post-results Review tester chrome */
 const REVIEW_SHELL_CLASS = "relative h-full min-h-0 w-full flex-1 bg-[var(--background)]"

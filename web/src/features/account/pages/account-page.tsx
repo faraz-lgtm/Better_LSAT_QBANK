@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { Camera, Check, CreditCard, Calendar, Clock, Globe2, LockKeyhole, Mail, Moon, Phone, UserRound } from "lucide-react"
+import { Camera, Check, CreditCard, Calendar, ExternalLink, FileText, Globe2, LockKeyhole, Mail, Phone, UserRound } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,13 @@ import { Input } from "@/components/ui/input"
 import { PasswordInput } from "@/components/ui/password-input"
 import { Select } from "@/components/ui/select"
 import northAmericanTimezones from "@/features/account/data/north-american-timezones.json"
+import {
+  formatCardExpiry,
+  formatInvoiceAmount,
+  formatInvoiceMeta,
+  formatMaskedCardNumber,
+  invoiceStatusLabel,
+} from "@/features/account/format-billing-display"
 import { ONBOARDING_LSAT_DATE_OPTIONS } from "@/features/auth/onboarding/onboarding-lsat-date-options"
 import {
   findLsacTestWindow,
@@ -22,14 +29,14 @@ import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
-import { ThemeToggleSwitch } from "@/features/theme/theme-toggle"
-import { createBillingApi, type CheckoutPlanId } from "@/lib/api/billing"
+import {
+  createBillingApi,
+  type BillingInvoice,
+  type BillingPaymentMethod,
+  type CheckoutPlanId,
+} from "@/lib/api/billing"
 import { createUsersApi, type UserProfile } from "@/lib/api/users"
 import { resolveAccountLsacLinkState } from "@/lib/auth/needs-lsac-link"
-import {
-  useAccommodations,
-  type ExtraTimeSetting,
-} from "@/features/student/accommodations/accommodations-context"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
@@ -506,183 +513,6 @@ function TimezoneRow({
   )
 }
 
-const EXTRA_TIME_PRESETS: {
-  value: ExtraTimeSetting
-  label: string
-  detail: string
-  minutesLabel: string | null
-}[] = [
-  { value: "none", label: "Standard", detail: "Official LSAT timing", minutesLabel: "35 min" },
-  { value: "1.5x", label: "Time and a half", detail: "50% more time per section", minutesLabel: "53 min" },
-  { value: "2x", label: "Double time", detail: "Twice the standard time", minutesLabel: "70 min" },
-  { value: "custom", label: "Custom", detail: "Set your own section length", minutesLabel: null },
-]
-
-type AccommodationsRowProps = {
-  setting: ExtraTimeSetting
-  customMinutes: number | null
-  editing: boolean
-  saving?: boolean
-  draftSetting: ExtraTimeSetting
-  draftCustomMinutes: string
-  onDraftSettingChange: (value: ExtraTimeSetting) => void
-  onDraftCustomMinutesChange: (value: string) => void
-  onEdit: () => void
-  onCancel: () => void
-  onSave: () => void
-}
-
-function formatAccommodationsDisplay(setting: ExtraTimeSetting, customMinutes: number | null): string {
-  switch (setting) {
-    case "1.5x":
-      return "Time and a half (53 min)"
-    case "2x":
-      return "Double time (70 min)"
-    case "custom":
-      return customMinutes != null ? `Custom (${customMinutes} min)` : "Custom"
-    default:
-      return "Standard (35 min)"
-  }
-}
-
-function AccommodationsRow({
-  setting,
-  customMinutes,
-  editing,
-  saving = false,
-  draftSetting,
-  draftCustomMinutes,
-  onDraftSettingChange,
-  onDraftCustomMinutesChange,
-  onEdit,
-  onCancel,
-  onSave,
-}: AccommodationsRowProps) {
-  if (!editing) {
-    return (
-      <div className="flex items-center gap-4 px-6 py-[18px]">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
-          <Clock className="size-3.5" strokeWidth={1.75} />
-        </span>
-        <div className="flex min-w-0 flex-1 items-end gap-4">
-          <div className="min-w-0 flex-1 space-y-1">
-            <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">Extra Time</p>
-            <p className="truncate text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)]">
-              {formatAccommodationsDisplay(setting, customMinutes)}
-            </p>
-          </div>
-          <Button
-            type="button"
-            size="xs"
-            variant="outline"
-            className={cn(ACCOUNT_EDIT_BTN_CLASS, "shrink-0")}
-            onClick={onEdit}
-          >
-            Edit
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4 px-6 py-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
-              <Clock className="size-3.5" strokeWidth={1.75} />
-            </span>
-            <div>
-              <p className="text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">Extra Time</p>
-              <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
-                Applies to PrepTests, sections, and timed drills
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Button type="button" size="xs" disabled={saving} onClick={onSave}>
-            {saving ? "Saving…" : "Save"}
-          </Button>
-          <Button type="button" size="xs" variant="ghost" disabled={saving} className={ACCOUNT_CANCEL_BTN_CLASS} onClick={onCancel}>
-            Cancel
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid gap-2.5 sm:grid-cols-2">
-        {EXTRA_TIME_PRESETS.map((preset) => {
-          const selected = draftSetting === preset.value
-          return (
-            <label
-              key={preset.value}
-              className={cn(
-                "relative flex cursor-pointer flex-col gap-3 rounded-[10px] border p-3.5 transition-colors",
-                selected
-                  ? "border-[var(--primary)] bg-[var(--primary-25)] shadow-[0px_1px_2px_0px_rgba(13,71,161,0.12)]"
-                  : "border-[rgba(44,49,67,0.08)] bg-[var(--greyscale-0)] hover:border-[rgba(13,71,161,0.28)] hover:bg-[var(--greyscale-25)]",
-                saving && "pointer-events-none opacity-60",
-              )}
-            >
-              <input
-                type="radio"
-                name="extra-time-setting"
-                value={preset.value}
-                checked={selected}
-                disabled={saving}
-                onChange={() => onDraftSettingChange(preset.value)}
-                className="sr-only"
-              />
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 space-y-0.5">
-                  <p className="text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">{preset.label}</p>
-                  <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{preset.detail}</p>
-                </div>
-                <span
-                  className={cn(
-                    "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border",
-                    selected ? "border-[var(--primary)] bg-[var(--primary)]" : "border-[#c5cad3] bg-[var(--greyscale-0)]",
-                  )}
-                  aria-hidden
-                >
-                  {selected ? <span className="size-1.5 rounded-full bg-white" /> : null}
-                </span>
-              </div>
-              {preset.minutesLabel ? (
-                <span
-                  className={cn(
-                    "inline-flex w-fit rounded-md px-2 py-1 text-xs font-semibold tracking-[0.24px]",
-                    selected ? "bg-[var(--greyscale-0)] text-[var(--primary)]" : "bg-[var(--greyscale-50)] text-[var(--greyscale-500)]",
-                  )}
-                >
-                  {preset.minutesLabel}
-                </span>
-              ) : null}
-              {preset.value === "custom" && selected ? (
-                <div className="flex items-center gap-2 border-t border-[rgba(13,71,161,0.12)] pt-3">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={999}
-                    value={draftCustomMinutes}
-                    placeholder="e.g. 45"
-                    disabled={saving}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => onDraftCustomMinutesChange(e.target.value)}
-                    className="h-9 w-[88px] rounded-lg border border-[rgba(44,49,67,0.12)] bg-[var(--greyscale-0)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-1 focus-visible:ring-[var(--primary)]/30"
-                  />
-                  <span className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">minutes / section</span>
-                </div>
-              ) : null}
-            </label>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 function AccountSection({
   title,
   icon: Icon,
@@ -737,15 +567,88 @@ function CheckListItem({ children, muted = false }: { children: ReactNode; muted
   )
 }
 
+function PaymentMethodCardRow({
+  method,
+  onReplace,
+  replacing,
+}: {
+  method: BillingPaymentMethod
+  onReplace: () => void
+  replacing: boolean
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-3.5 rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-3.5">
+      <div className="flex h-8 w-12 shrink-0 items-center justify-center rounded-md bg-[var(--primary)]">
+        <span className="text-[9px] font-black tracking-[-0.03px] text-white">{method.brandLabel}</span>
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">
+          {formatMaskedCardNumber(method.last4)}
+        </p>
+        <p className="mt-px text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
+          {formatCardExpiry(method.expMonth, method.expYear)} · {method.displayLabel}
+        </p>
+      </div>
+      {method.isDefault ? (
+        <span className="rounded-full bg-[var(--explanation-answered-bg)] px-2.5 py-0.5 text-xs font-bold tracking-[0.24px] text-[var(--explanation-answered)]">
+          Default
+        </span>
+      ) : null}
+      <button
+        type="button"
+        className={ACCOUNT_EDIT_BTN_CLASS}
+        disabled={replacing}
+        onClick={onReplace}
+      >
+        {replacing ? "Opening…" : "Replace"}
+      </button>
+    </div>
+  )
+}
+
+function BillingHistoryRow({ invoice }: { invoice: BillingInvoice }) {
+  const pdfUrl = invoice.invoicePdfUrl ?? invoice.hostedInvoiceUrl
+  const isPaid = invoice.status === "paid"
+  return (
+    <div className="flex flex-wrap items-center gap-3.5 border-b border-[rgba(44,49,67,0.06)] px-6 py-3.5 last:border-b-0">
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold tracking-[0.24px] text-[var(--color-student-heading)]">{invoice.title}</p>
+        <p className="mt-0.5 text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{formatInvoiceMeta(invoice)}</p>
+      </div>
+      <p className="text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">
+        {formatInvoiceAmount(invoice.amountPaidCents, invoice.currency)}
+      </p>
+      <span
+        className={cn(
+          "rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-[0.24px]",
+          isPaid
+            ? "bg-[var(--explanation-answered-bg)] text-[var(--explanation-answered)]"
+            : "bg-[var(--greyscale-25)] text-[var(--greyscale-500)]",
+        )}
+      >
+        {invoiceStatusLabel(invoice.status)}
+      </span>
+      {pdfUrl ? (
+        <a
+          href={pdfUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-0.5 text-xs font-semibold tracking-[0.24px] text-[var(--primary)] hover:underline"
+        >
+          <ExternalLink className="size-[11px]" strokeWidth={2.25} />
+          PDF
+        </a>
+      ) : (
+        <span className="text-xs tracking-[0.24px] text-[var(--greyscale-300)]">PDF</span>
+      )}
+    </div>
+  )
+}
+
 function AccountPage() {
   const navigate = useNavigate()
   const { openPricingModal } = useGuestPricingModal()
   const { entitlement, loading: entitlementLoading } = useStudentEntitlement()
-  const {
-    extraTimeSetting,
-    extraTimeCustomMinutes,
-    updateAccommodations,
-  } = useAccommodations()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [email, setEmail] = useState<string | null>(null)
   const [phone, setPhone] = useState<string | null>(null)
@@ -765,15 +668,15 @@ function AccountPage() {
   const [timezoneValue, setTimezoneValue] = useState(getInitialTimezoneValue)
   const [timezoneDraft, setTimezoneDraft] = useState(timezoneValue)
   const [editingTimezone, setEditingTimezone] = useState(false)
-  const [editingAccommodations, setEditingAccommodations] = useState(false)
-  const [accommodationDraftSetting, setAccommodationDraftSetting] = useState<ExtraTimeSetting>("none")
-  const [accommodationDraftCustomMinutes, setAccommodationDraftCustomMinutes] = useState("")
-  const [savingAccommodations, setSavingAccommodations] = useState(false)
   const [addingPayment, setAddingPayment] = useState(false)
   const [paymentPlan, setPaymentPlan] = useState<CheckoutPlanId>("monthly")
   const [paymentPlanMenuOpen, setPaymentPlanMenuOpen] = useState(false)
   const [startingPayment, setStartingPayment] = useState(false)
   const [paymentError, setPaymentError] = useState<string | null>(null)
+  const [paymentMethods, setPaymentMethods] = useState<BillingPaymentMethod[]>([])
+  const [billingInvoices, setBillingInvoices] = useState<BillingInvoice[]>([])
+  const [billingDetailsLoading, setBillingDetailsLoading] = useState(false)
+  const [openingPortal, setOpeningPortal] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -817,6 +720,47 @@ function AccountPage() {
     () => resolveAccountLsacLinkState(profile, entitlement),
     [entitlement, profile],
   )
+
+  useEffect(() => {
+    if (!hasProPlan || entitlementLoading) return
+    let alive = true
+    async function loadBillingDetails() {
+      setBillingDetailsLoading(true)
+      try {
+        const billingApi = createBillingApi(getSupabaseBrowserClient())
+        const [methods, invoices] = await Promise.all([
+          billingApi.getPaymentMethods(),
+          billingApi.getInvoices(),
+        ])
+        if (!alive) return
+        setPaymentMethods(methods)
+        setBillingInvoices(invoices)
+      } catch {
+        if (!alive) return
+        setPaymentMethods([])
+        setBillingInvoices([])
+      } finally {
+        if (alive) setBillingDetailsLoading(false)
+      }
+    }
+    void loadBillingDetails()
+    return () => {
+      alive = false
+    }
+  }, [entitlementLoading, hasProPlan])
+
+  async function openBillingPortal() {
+    setOpeningPortal(true)
+    setPaymentError(null)
+    try {
+      const billingApi = createBillingApi(getSupabaseBrowserClient())
+      const url = await billingApi.createBillingPortalSession()
+      window.location.assign(url)
+    } catch (portalError) {
+      setPaymentError(portalError instanceof Error ? portalError.message : "Unable to open billing portal.")
+      setOpeningPortal(false)
+    }
+  }
 
   function startFieldEdit(field: EditableAccountField) {
     setAccountStatus(null)
@@ -931,40 +875,6 @@ function AccountPage() {
     setEditingTimezone(false)
   }
 
-  function startAccommodationsEdit() {
-    setAccommodationDraftSetting(extraTimeSetting)
-    setAccommodationDraftCustomMinutes(extraTimeCustomMinutes != null ? String(extraTimeCustomMinutes) : "")
-    setEditingAccommodations(true)
-  }
-
-  function cancelAccommodationsEdit() {
-    setEditingAccommodations(false)
-  }
-
-  async function saveAccommodationsEdit() {
-    const setting = accommodationDraftSetting
-    let customMinutes: number | null = null
-    if (setting === "custom") {
-      const parsed = parseInt(accommodationDraftCustomMinutes.trim(), 10)
-      if (!Number.isFinite(parsed) || parsed < 1 || parsed > 999) {
-        setError("Custom minutes must be a number between 1 and 999.")
-        return
-      }
-      customMinutes = parsed
-    }
-    setSavingAccommodations(true)
-    setError(null)
-    try {
-      await updateAccommodations(setting, customMinutes)
-      setAccountStatus("Accommodations updated.")
-      setEditingAccommodations(false)
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Failed to update accommodations.")
-    } finally {
-      setSavingAccommodations(false)
-    }
-  }
-
   async function startPaymentCheckout() {
     setStartingPayment(true)
     setPaymentError(null)
@@ -991,8 +901,8 @@ function AccountPage() {
 
   return (
     <StudentMain fullBleed contentClassName="px-6">
-      <div className="mx-auto w-full max-w-[1304px] rounded-3xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
-        <h1 className="m-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">Account</h1>
+      <div className="mx-auto w-full max-w-[1304px] rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
+        <h2 className="m-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">Account</h2>
 
         {error ? <p className="mt-4 text-sm text-[#95122b]">{error}</p> : null}
         {accountStatus ? <p className="mt-4 text-sm font-medium text-[var(--primary)]">{accountStatus}</p> : null}
@@ -1085,39 +995,6 @@ function AccountPage() {
               />
             </AccountSection>
 
-            <AccountSection title="Appearance" icon={Moon}>
-              <div className="flex items-center justify-between gap-4 px-6 py-[18px]">
-                <div className="min-w-0 space-y-1">
-                  <label
-                    htmlFor="account-dark-mode"
-                    className="text-sm font-medium tracking-[0.28px] text-[color:var(--color-student-heading)]"
-                  >
-                    Dark mode
-                  </label>
-                  <p className="text-xs tracking-[0.24px] text-[color:var(--greyscale-500)]">
-                    Switch between light and dark theme
-                  </p>
-                </div>
-                <ThemeToggleSwitch />
-              </div>
-            </AccountSection>
-
-            <AccountSection title="Accommodations" icon={Clock}>
-              <AccommodationsRow
-                setting={extraTimeSetting}
-                customMinutes={extraTimeCustomMinutes}
-                editing={editingAccommodations}
-                saving={savingAccommodations}
-                draftSetting={accommodationDraftSetting}
-                draftCustomMinutes={accommodationDraftCustomMinutes}
-                onDraftSettingChange={setAccommodationDraftSetting}
-                onDraftCustomMinutesChange={setAccommodationDraftCustomMinutes}
-                onEdit={startAccommodationsEdit}
-                onCancel={cancelAccommodationsEdit}
-                onSave={() => void saveAccommodationsEdit()}
-              />
-            </AccountSection>
-
             <section className="rounded-[10px] border border-[rgba(44,49,67,0.07)] bg-[var(--greyscale-0)] px-6 py-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 space-y-1">
@@ -1151,80 +1028,126 @@ function AccountPage() {
               </div>
             </section>
 
-            <AccountSection title="Payment Methods" icon={CreditCard}>
-              <div className="p-6">
-                <div className="flex min-h-[142px] flex-col items-center justify-center rounded-[10px] border-2 border-dashed border-[rgba(44,49,67,0.12)] p-6 text-center">
-                  <CreditCard className="size-7 text-[var(--greyscale-300)]" strokeWidth={1.75} />
-                  <p className="mt-2 text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">No payment method</p>
-                  <p className="mt-1 text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
-                    Add a card securely through Stripe Checkout.
-                  </p>
-
-                  {addingPayment ? (
-                    <div
-                      className={cn(
-                        "mt-4 w-full max-w-[460px] rounded-xl bg-[var(--greyscale-25)] p-4 text-left",
-                        paymentPlanMenuOpen && FIGMA_DROPDOWN_CARD_OPEN_CLASS,
-                      )}
-                    >
-                      <label
-                        className="block text-xs font-semibold tracking-[0.24px] text-[var(--color-student-heading)]"
-                        htmlFor="payment-plan"
-                      >
-                        Choose plan before entering card details
-                      </label>
-                      <FigmaDropdown
-                        id="payment-plan"
-                        className="mt-2"
-                        value={paymentPlan}
-                        options={PAYMENT_PLAN_OPTIONS}
-                        placeholder="Select a plan"
-                        disabled={startingPayment}
-                        onOpenChange={setPaymentPlanMenuOpen}
-                        onChange={(value) => setPaymentPlan(value as CheckoutPlanId)}
+            <AccountSection title="Payment Method" icon={CreditCard}>
+              <div className="px-6 py-5">
+                {hasProPlan && billingDetailsLoading ? (
+                  <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">Loading payment method…</p>
+                ) : hasProPlan && paymentMethods.length > 0 ? (
+                  <div className="flex flex-col gap-3">
+                    {paymentMethods.map((method) => (
+                      <PaymentMethodCardRow
+                        key={method.id}
+                        method={method}
+                        replacing={openingPortal}
+                        onReplace={() => void openBillingPortal()}
                       />
-                      <p className="mt-2 text-xs leading-5 tracking-[0.24px] text-[var(--greyscale-500)]">
-                        Card number, expiry, CVC, and billing details are collected on Stripe's secure checkout page.
-                      </p>
-                      {paymentError ? <p className="mt-2 text-xs text-[#95122b]">{paymentError}</p> : null}
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="h-[35px] rounded-lg px-4"
-                          disabled={startingPayment}
-                          onClick={() => void startPaymentCheckout()}
-                        >
-                          {startingPayment ? "Opening…" : "Enter Card Details"}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          disabled={startingPayment}
-                          onClick={() => {
-                            setAddingPayment(false)
-                            setPaymentPlanMenuOpen(false)
-                            setPaymentError(null)
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <Button
+                    ))}
+                    {paymentError ? <p className="text-xs text-[#95122b]">{paymentError}</p> : null}
+                    <button
                       type="button"
-                      size="sm"
-                      className="mt-4 h-[35px] rounded-lg px-4"
-                      onClick={() => setAddingPayment(true)}
+                      className="self-start text-[13px] font-semibold tracking-[-0.08px] text-[var(--primary)] hover:underline disabled:opacity-60"
+                      disabled={openingPortal}
+                      onClick={() => void openBillingPortal()}
                     >
-                      Add Payment Method
-                    </Button>
-                  )}
-                </div>
+                      + Add another card
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex min-h-[142px] flex-col items-center justify-center rounded-[10px] border-2 border-dashed border-[rgba(44,49,67,0.12)] p-6 text-center">
+                    <CreditCard className="size-7 text-[var(--greyscale-300)]" strokeWidth={1.75} />
+                    <p className="mt-2 text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">No payment method</p>
+                    <p className="mt-1 text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
+                      Add a card securely through Stripe Checkout.
+                    </p>
+
+                    {addingPayment ? (
+                      <div
+                        className={cn(
+                          "mt-4 w-full max-w-[460px] rounded-xl bg-[var(--greyscale-25)] p-4 text-left",
+                          paymentPlanMenuOpen && FIGMA_DROPDOWN_CARD_OPEN_CLASS,
+                        )}
+                      >
+                        <label
+                          className="block text-xs font-semibold tracking-[0.24px] text-[var(--color-student-heading)]"
+                          htmlFor="payment-plan"
+                        >
+                          Choose plan before entering card details
+                        </label>
+                        <FigmaDropdown
+                          id="payment-plan"
+                          className="mt-2"
+                          value={paymentPlan}
+                          options={PAYMENT_PLAN_OPTIONS}
+                          placeholder="Select a plan"
+                          disabled={startingPayment}
+                          onOpenChange={setPaymentPlanMenuOpen}
+                          onChange={(value) => setPaymentPlan(value as CheckoutPlanId)}
+                        />
+                        <p className="mt-2 text-xs leading-5 tracking-[0.24px] text-[var(--greyscale-500)]">
+                          Card number, expiry, CVC, and billing details are collected on Stripe&apos;s secure checkout page.
+                        </p>
+                        {paymentError ? <p className="mt-2 text-xs text-[#95122b]">{paymentError}</p> : null}
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="h-[35px] rounded-lg px-4"
+                            disabled={startingPayment}
+                            onClick={() => void startPaymentCheckout()}
+                          >
+                            {startingPayment ? "Opening…" : "Enter Card Details"}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            disabled={startingPayment}
+                            onClick={() => {
+                              setAddingPayment(false)
+                              setPaymentPlanMenuOpen(false)
+                              setPaymentError(null)
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="mt-4 h-[35px] rounded-lg px-4"
+                        onClick={() => setAddingPayment(true)}
+                      >
+                        Add Payment Method
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             </AccountSection>
+
+            {hasProPlan ? (
+              <AccountSection title="Billing History" icon={FileText}>
+                {billingDetailsLoading ? (
+                  <div className="px-6 py-5">
+                    <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">Loading billing history…</p>
+                  </div>
+                ) : billingInvoices.length > 0 ? (
+                  <div className="flex flex-col">
+                    {billingInvoices.map((invoice) => (
+                      <BillingHistoryRow key={invoice.id} invoice={invoice} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-6 py-5">
+                    <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
+                      No invoices yet. Paid invoices will appear here after your first billing cycle.
+                    </p>
+                  </div>
+                )}
+              </AccountSection>
+            ) : null}
           </div>
 
           <div className="flex min-w-0 flex-col gap-4">

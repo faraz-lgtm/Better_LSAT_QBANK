@@ -93,6 +93,8 @@ export type PrepTestSessionDetail = {
     targetTimeSeconds?: number
     /** Pause-aware dwell seconds on the scored attempt; omitted when unanswered. */
     yourTimeSeconds?: number
+    /** A–E popularity bar heights 0–100; zeros when platform sample is too small. */
+    answerPopularity?: [number, number, number, number, number]
   }>
 }
 
@@ -169,10 +171,12 @@ export function createAnalyticsApi(supabase: SupabaseClient) {
   }
 
   return {
-    async getOverview(): Promise<AnalyticsOverview> {
+    async getOverview(input?: { completedSince?: string }): Promise<AnalyticsOverview> {
       const { data, error } = await invokeAnalyticsFn<
         Omit<AnalyticsOverview, "totalStudyMinutes"> & { totalStudyMinutes?: unknown }
-      >("analytics-overview", {})
+      >("analytics-overview", {
+        ...(input?.completedSince ? { completedSince: input.completedSince } : {}),
+      })
       if (error) throw error
       if (!data) throw new Error("No overview returned from analytics")
       const raw = data.totalStudyMinutes

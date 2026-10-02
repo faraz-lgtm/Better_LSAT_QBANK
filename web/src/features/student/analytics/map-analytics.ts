@@ -16,7 +16,24 @@ import type { DrillRecord } from "@/features/student/lib/mock-analytics-drills"
 import type { PrepTestHistoryEntry, PrepTestRecord } from "@/features/student/lib/mock-analytics-preptests"
 import type { DrillType } from "@/features/student/lib/mock-analytics-drills"
 import { orderPriorityRowsByWeakness } from "@/features/student/drills/tag-drills-priority"
-import { resolvePrepTestLrRcScores } from "@/features/student/analytics/prep-test-lr-rc-scores"
+import {
+  ensureDrillTitleSuffix,
+  formatDrillTitleFromTypeNames,
+  isVariedMixTitle,
+  typeNamesFromDrillMetadata,
+  VARIED_MIX_DRILL_TITLE,
+} from "@/features/student/drills/format-drill-title"
+import { resolvePrepTestLrRcScores, resolvePrepTestSectionAccuracies } from "@/features/student/analytics/prep-test-lr-rc-scores"
+import { LSAT_SCALED_MAX, LSAT_SCALED_MIN } from "@/features/student/analytics/chart-y-axis"
+import { formatSectionResultsTitle } from "@/features/student/practice-session/lr-drill-results-format"
+import {
+  filterByTimeRange,
+  type TimeRangeValue,
+} from "@/features/student/components/time-range-filter"
+
+function isLsatScaledScore(value: number | null | undefined): value is number {
+  return value != null && value >= LSAT_SCALED_MIN && value <= LSAT_SCALED_MAX
+}
 
 function formatSigned(n: number): string {
   if (n > 0) return `+${n}`
@@ -46,6 +63,30 @@ export function formatOverviewPercentileCaption(n: number): string {
   return `PERCENTILE: ${rounded1.toFixed(1)}th`
 }
 
+/** Figma Overview: "94th percentile" / "90.6th percentile". */
+export function formatOverviewPercentilePlain(n: number): string {
+  const rounded1 = Math.round(n * 10) / 10
+  if (Number.isInteger(rounded1)) return `${ordinal(rounded1)} percentile`
+  return `${rounded1.toFixed(1)}th percentile`
+}
+
+function scoreProgressPct(scaled: number | null | undefined): number | undefined {
+  if (scaled == null || !Number.isFinite(scaled)) return undefined
+  const pct = ((scaled - LSAT_SCALED_MIN) / (LSAT_SCALED_MAX - LSAT_SCALED_MIN)) * 100
+  return Math.max(0, Math.min(100, Math.round(pct)))
+}
+
+function formatAvgTimePerQuestion(totalStudyMinutes: number, questionsAnswered: number): string {
+  if (!Number.isFinite(totalStudyMinutes) || !Number.isFinite(questionsAnswered) || questionsAnswered <= 0) {
+    return "—"
+  }
+  const totalSeconds = Math.max(0, Math.floor(totalStudyMinutes * 60))
+  const avgSeconds = Math.round(totalSeconds / questionsAnswered)
+  const minutes = Math.floor(avgSeconds / 60)
+  const seconds = avgSeconds % 60
+  return `${minutes}:${String(seconds).padStart(2, "0")}`
+}
+
 export function formatPrepTestChartLabel(prepTestTitle: string, moduleId: string | null): string {
   const moduleMatch = moduleId?.match(/^LSAC(\d+)$/i)
   if (moduleMatch) return `PT ${moduleMatch[1]}`
@@ -70,6 +111,53 @@ export function formatPrepTestHistoryLabel(
   return formatPrepTestChartLabel(prepTestTitle ?? "", moduleId).replace(/^PT\s+/i, "PT")
 }
 
+const LSAC_SECTION_ID_RE = /^(?:LR|RC|LG)(\d+)[A-Z]-(\d+)$/i
+
+/** `LR135A-1` → `PT135.S1` for Section History. */
+export function formatSectionHistoryLabel(input: {
+  sectionTitle?: string | null
+  prepTestTitle?: string | null
+  prepTestId?: string | null
+  metadata?: Record<string, unknown>
+}): string {
+  const meta = input.metadata ?? {}
+  const moduleId =
+    typeof meta.moduleId === "string"
+      ? meta.moduleId
+      : typeof input.prepTestId === "string"
+        ? input.prepTestId
+        : null
+  const sectionNumber =
+    typeof meta.sectionNumber === "number"
+      ? meta.sectionNumber
+      : typeof meta.section_number === "number"
+        ? meta.section_number
+        : null
+  const fromModule = moduleId ? /^LSAC(\d+)$/i.exec(moduleId)?.[1] : undefined
+  if (fromModule && sectionNumber != null) {
+    return formatSectionResultsTitle({ prepTestNumber: fromModule, sectionNumber })
+  }
+
+  const title = input.sectionTitle?.trim() ?? ""
+  if (/^PT\d+\.S\d+$/i.test(title)) {
+    return title.replace(/^pt/i, "PT")
+  }
+  const parsed = LSAC_SECTION_ID_RE.exec(title)
+  if (parsed?.[1] && parsed[2]) {
+    return formatSectionResultsTitle({
+      prepTestNumber: parsed[1],
+      sectionNumber: Number(parsed[2]),
+    })
+  }
+
+  const ptNum = input.prepTestTitle?.match(/\d+/)?.[0] ?? fromModule
+  if (ptNum && sectionNumber != null) {
+    return formatSectionResultsTitle({ prepTestNumber: ptNum, sectionNumber })
+  }
+
+  return title || "Section"
+}
+
 function numericToDifficulty(n: number | null): Difficulty {
   if (n == null || n <= 1) return "Easiest"
   if (n === 2) return "Easy"
@@ -78,44 +166,60 @@ function numericToDifficulty(n: number | null): Difficulty {
   return "Hardest"
 }
 
-export function mapOverviewToHeadlineStats(overview: AnalyticsOverview): AnalyticsStat[] {
+export function mapOverviewToHeadlineStats(
+  overview: AnalyticsOverview,
+  options?: { bestCaptionDetail?: string },
+): AnalyticsStat[] {
   const stats: AnalyticsStat[] = []
   if (overview.bestScaledScore != null) {
     stats.push({
       id: "best-score",
-      label: "BEST SCORE",
+      label: "Best Score",
       value: String(overview.bestScaledScore),
       accent: "var(--primary)",
       caption:
         overview.bestPercentile != null
-          ? formatOverviewPercentileCaption(overview.bestPercentile)
+          ? formatOverviewPercentilePlain(overview.bestPercentile)
           : undefined,
+      captionDetail: options?.bestCaptionDetail ?? "all-time high",
+      // Figma Mean Score has a progress bar — Best Score does not.
     })
   }
   if (overview.averageScaledScore != null) {
+    const deltaFromBest =
+      overview.bestScaledScore != null
+        ? Math.round(overview.averageScaledScore) - Math.round(overview.bestScaledScore)
+        : null
     stats.push({
       id: "average-score",
-      label: "AVERAGE SCORE",
+      label: "Average Score",
       value: String(overview.averageScaledScore),
-      accent: "var(--primary-100)",
+      accent: "var(--primary)",
       caption:
         overview.averagePercentile != null
-          ? formatOverviewPercentileCaption(overview.averagePercentile)
+          ? formatOverviewPercentilePlain(overview.averagePercentile)
           : undefined,
+      deltaCaption:
+        deltaFromBest != null && deltaFromBest !== 0
+          ? `${formatSigned(deltaFromBest)} from best`
+          : undefined,
+      progressPct: scoreProgressPct(overview.averageScaledScore),
+      progressScaleMin: String(LSAT_SCALED_MIN),
+      progressScaleMax: String(LSAT_SCALED_MAX),
     })
   }
   if (stats.length === 0) {
     stats.push({
       id: "best-score",
-      label: "BEST SCORE",
+      label: "Best Score",
       value: "—",
       accent: "var(--primary)",
     })
     stats.push({
       id: "average-score",
-      label: "AVERAGE SCORE",
+      label: "Average Score",
       value: "—",
-      accent: "var(--primary-100)",
+      accent: "var(--primary)",
     })
   }
   return stats
@@ -125,7 +229,7 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
   return [
     {
       id: "avg-lr",
-      label: "AVERAGE LR",
+      label: "Logical Reasoning Average",
       value:
         overview.averageLrMissedPerPrepTest != null
           ? formatSigned(-Math.round(overview.averageLrMissedPerPrepTest))
@@ -134,7 +238,7 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
     },
     {
       id: "avg-rc",
-      label: "AVERAGE RC",
+      label: "Reading Comprehension Average",
       value:
         overview.averageRcMissedPerPrepTest != null
           ? formatSigned(-Math.round(overview.averageRcMissedPerPrepTest))
@@ -142,16 +246,16 @@ export function mapOverviewToSecondaryStats(overview: AnalyticsOverview): Analyt
       accent: "var(--explanation-teal)",
     },
     {
-      id: "drilled",
-      label: "QUESTIONS DRILLED",
-      value: String(overview.totalDrillQuestionsAnswered),
-      accent: "var(--color-student-heading)",
+      id: "avg-time",
+      label: "Average Time per Question",
+      value: formatAvgTimePerQuestion(overview.totalStudyMinutes, overview.totalQuestionsAnswered),
+      accent: "var(--primary)",
     },
     {
       id: "accuracy",
-      label: "DRILLING ACCURACY",
+      label: "Question Accuracy",
       value: overview.drillAccuracyPct != null ? `${overview.drillAccuracyPct}%` : "—",
-      accent: "var(--color-student-heading)",
+      accent: "var(--primary)",
     },
   ]
 }
@@ -161,6 +265,92 @@ function toScaledProgressValue(scaled: number | null, raw: number | null): numbe
   // Rare fallback when only raw is present — keep it off the LSAT scale floor.
   if (raw != null && raw >= 120) return raw
   return 120
+}
+
+/** Headline Best Score must match the chart: max of stored timed and untimed-review scores. */
+export function withBestScoreFromTrajectory(
+  overview: AnalyticsOverview,
+  points: readonly TrajectoryPoint[],
+): AnalyticsOverview {
+  let bestScaled = overview.bestScaledScore
+  let bestPercentile = overview.bestPercentile
+  for (const point of points) {
+    const candidates: Array<{ scaled: number | null; percentile: number | null }> = [
+      { scaled: point.regularScaledScore ?? point.scaledScore, percentile: point.percentile },
+      { scaled: point.blindReviewScaledScore, percentile: point.blindReviewPercentile },
+    ]
+    for (const candidate of candidates) {
+      if (candidate.scaled == null) continue
+      if (bestScaled == null || candidate.scaled > bestScaled) {
+        bestScaled = candidate.scaled
+        bestPercentile = candidate.percentile
+      }
+    }
+  }
+  if (bestScaled === overview.bestScaledScore) return overview
+  return { ...overview, bestScaledScore: bestScaled, bestPercentile }
+}
+
+/**
+ * Recomputes best/average PrepTest scores (and percentiles) for a filtered
+ * trajectory window. Used as an instant client-side fallback while ranged
+ * overview API responses are still loading.
+ */
+export function overviewScoresForTrajectoryWindow(
+  overview: AnalyticsOverview,
+  points: readonly TrajectoryPoint[],
+): AnalyticsOverview {
+  if (points.length === 0) {
+    return {
+      ...overview,
+      bestScaledScore: null,
+      bestPercentile: null,
+      averageScaledScore: null,
+      averagePercentile: null,
+      completedPrepTestCount: 0,
+    }
+  }
+
+  let bestScaled: number | null = null
+  let bestPercentile: number | null = null
+  let sumScaled = 0
+  let scaledCount = 0
+  let sumPercentile = 0
+  let percentileCount = 0
+
+  for (const point of points) {
+    const regularScaled = point.regularScaledScore ?? point.scaledScore
+    const regularPercentile = point.percentile
+    if (regularScaled != null) {
+      sumScaled += regularScaled
+      scaledCount += 1
+      if (bestScaled == null || regularScaled > bestScaled) {
+        bestScaled = regularScaled
+        bestPercentile = regularPercentile
+      }
+    }
+    if (regularPercentile != null) {
+      sumPercentile += regularPercentile
+      percentileCount += 1
+    }
+
+    const blindScaled = point.blindReviewScaledScore
+    const blindPercentile = point.blindReviewPercentile
+    if (blindScaled != null && (bestScaled == null || blindScaled > bestScaled)) {
+      bestScaled = blindScaled
+      bestPercentile = blindPercentile
+    }
+  }
+
+  return {
+    ...overview,
+    bestScaledScore: bestScaled,
+    bestPercentile,
+    averageScaledScore: scaledCount > 0 ? Math.round(sumScaled / scaledCount) : null,
+    averagePercentile:
+      percentileCount > 0 ? Math.round((sumPercentile / percentileCount) * 10) / 10 : null,
+    completedPrepTestCount: points.length,
+  }
 }
 
 export function mapTrajectoryToScoreProgress(points: TrajectoryPoint[]): ScoreProgressPoint[] {
@@ -175,6 +365,11 @@ export function mapTrajectoryToScoreProgress(points: TrajectoryPoint[]): ScorePr
       test: label,
       regular,
       blindReview: blind > 120 ? blind : regular,
+      completedAt: p.completedAt,
+      percentile: p.percentile,
+      blindReviewPercentile: p.blindReviewPercentile,
+      regularRawScore: p.regularRawScore ?? p.rawScore,
+      blindReviewRawScore: p.blindReviewRawScore,
     }
   })
 }
@@ -209,10 +404,11 @@ export function mapPrioritiesToSections(priorities: PriorityRow[]): AnalyticsSec
       difficulty: numericToDifficulty(p.difficulty),
       accuracyPct: p.accuracyPct,
       goalPct: p.goalAccuracy,
+      gapPct: p.gap,
       reviewCount: p.reviewCount,
       unlocked: p.unlocked !== false && p.attemptCount >= 3,
       extraCorrectNeededPerTest: p.extraCorrectNeededPerTest,
-      priorityTier: p.priorityTier ?? null,
+      priorityTier: p.priorityTier ?? p.priorityLevel ?? "low",
     })
     bySection.set(p.sectionType, rows)
   }
@@ -280,9 +476,15 @@ export function mapSessionToPrepTestRecord(
 ): PrepTestRecord | null {
   if (s.kind !== "PREPTEST" || !s.completedAt) return null
   const numMatch = s.prepTestTitle?.match(/\d+/)
-  const scaled = s.scaledScore ?? s.rawScore ?? 0
-  const br = s.blindReviewScaledScore ?? s.blindReviewRawScore ?? scaled
+  const hasScaledScore = isLsatScaledScore(s.scaledScore)
+  const scaled: number = isLsatScaledScore(s.scaledScore) ? s.scaledScore : 0
+  const br: number = isLsatScaledScore(s.blindReviewScaledScore) ? s.blindReviewScaledScore : scaled
   const lrRc = resolvePrepTestLrRcScores(s, sectionSessions)
+  const sections = resolvePrepTestSectionAccuracies(s, sectionSessions)
+  const sectionMax = lrRc.lrMax + lrRc.rcMax
+  const sectionCorrect = lrRc.lrCorrect + lrRc.rcCorrect
+  const rawScore = s.rawScore ?? sectionCorrect
+  const rawMax = Math.max(sectionMax, rawScore, 1)
   return {
     id: s.id,
     prepTestId: s.prepTestId ?? null,
@@ -294,9 +496,13 @@ export function mapSessionToPrepTestRecord(
     rcCorrect: lrRc.rcCorrect,
     rcMax: lrRc.rcMax,
     scaledScore: scaled,
+    hasScaledScore,
+    rawScore,
+    rawMax,
     percentile: s.percentile ?? 0,
     blindReviewScaled: br,
     blindReviewPercentile: s.blindReviewPercentile ?? s.percentile ?? 0,
+    ...(sections.length > 0 ? { sections } : {}),
   }
 }
 
@@ -332,13 +538,20 @@ function questionCountFromSession(s: PracticeSessionSummary, correct: number): n
   return Math.max(correct, 1)
 }
 
-/** Prefer stored type/title fields; untyped pool drills show as Varied Mix. */
+/**
+ * Prefer selected type names / stored title.
+ * Ignore a stale stored "Varied Mix" title when type labels are present.
+ */
 export function formatDrillHistoryLabel(metadata: Record<string, unknown>): string {
-  for (const key of ["questionTypeName", "tagLabel", "title"] as const) {
-    const value = metadata[key]
-    if (typeof value === "string" && value.trim()) return value.trim()
+  const fromTypes = formatDrillTitleFromTypeNames(typeNamesFromDrillMetadata(metadata))
+  if (!isVariedMixTitle(fromTypes)) return fromTypes
+
+  const title = metadata.title
+  if (typeof title === "string" && title.trim() && !isVariedMixTitle(title)) {
+    return ensureDrillTitleSuffix(title)
   }
-  return "Varied Mix"
+
+  return VARIED_MIX_DRILL_TITLE
 }
 
 /** Completed drill → shared history-row shape (raw correct / total). */
@@ -367,11 +580,20 @@ export function mapSectionSessionToHistoryEntry(s: PracticeSessionSummary): Prep
   const correct = s.rawScore ?? 0
   const total = questionCountFromSession(s, correct)
   const resolved = resolveSessionSectionType(s)
-  const testLabel =
-    s.sectionTitle?.trim() ||
-    (resolved === "LR" || resolved === "RC" || resolved === "LG" ? `${resolved} Section` : null) ||
-    "Section"
-  const br = s.blindReviewRawScore ?? correct
+  const testLabel = formatSectionHistoryLabel({
+    sectionTitle: s.sectionTitle,
+    prepTestTitle: s.prepTestTitle,
+    prepTestId: s.prepTestId,
+    metadata: s.metadata,
+  })
+  const fromColumn =
+    typeof s.blindReviewRawScore === "number" && Number.isFinite(s.blindReviewRawScore)
+      ? Math.round(s.blindReviewRawScore)
+      : null
+  const fromMeta = s.metadata?.sectionBlindReviewRawScore
+  const fromMetadata =
+    typeof fromMeta === "number" && Number.isFinite(fromMeta) ? Math.round(fromMeta) : null
+  const br = fromColumn ?? fromMetadata ?? correct
   return {
     id: s.id,
     testLabel,
@@ -393,6 +615,18 @@ export function filterTrajectoryByRange(
   if (!cutoffIso) return points
   const cutoff = new Date(cutoffIso).getTime()
   return points.filter((p) => new Date(p.completedAt).getTime() >= cutoff)
+}
+
+/** Filters trajectory points by a calendar time-range preset (ascending by completedAt). */
+export function filterTrajectoryByTimeRange(
+  points: readonly TrajectoryPoint[],
+  value: TimeRangeValue,
+  reference: Date = new Date(),
+): TrajectoryPoint[] {
+  return filterByTimeRange(points, value, (point) => point.completedAt, {
+    reference,
+    keepNewestIfEmpty: true,
+  })
 }
 
 export { numericToDifficulty }

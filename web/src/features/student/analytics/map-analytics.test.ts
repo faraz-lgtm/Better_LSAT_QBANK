@@ -2,16 +2,22 @@ import { describe, expect, it } from "vitest"
 
 import {
   formatOverviewPercentileCaption,
+  formatOverviewPercentilePlain,
   formatPrepTestChartLabel,
   formatPrepTestHistoryLabel,
+  formatSectionHistoryLabel,
   mapDrillSessionToHistoryEntry,
   mapOverviewToHeadlineStats,
+  mapOverviewToSecondaryStats,
   mapPrepTestSessionToHistoryEntry,
   mapSectionSessionToHistoryEntry,
   mapSessionToDrillRecord,
   mapSessionToPrepTestRecord,
   mapTrajectoryToScoreProgress,
   mapPrioritiesToSections,
+  withBestScoreFromTrajectory,
+  overviewScoresForTrajectoryWindow,
+  filterTrajectoryByTimeRange,
 } from "@/features/student/analytics/map-analytics"
 import type { AnalyticsOverview, PracticeSessionSummary, PriorityRow, TrajectoryPoint } from "@/lib/api/analytics"
 
@@ -31,14 +37,50 @@ describe("map-analytics", () => {
       totalStudyMinutes: 0,
     }
     const stats = mapOverviewToHeadlineStats(overview)
+    expect(stats[0]?.label).toBe("Best Score")
     expect(stats[0]?.value).toBe("170")
-    expect(stats[0]?.caption).toContain("92nd")
+    expect(stats[0]?.caption).toBe("92nd percentile")
+    expect(stats[0]?.captionDetail).toBe("all-time high")
+    expect(stats[0]?.progressPct).toBeUndefined()
+    expect(stats[1]?.label).toBe("Average Score")
+    expect(stats[1]?.deltaCaption).toBe("-5 from best")
+    expect(stats[1]?.progressPct).toBeTypeOf("number")
+    expect(stats[1]?.progressScaleMin).toBe("120")
+    expect(stats[1]?.progressScaleMax).toBe("180")
+  })
+
+  it("maps overview secondary stats to Figma labels with calculated time/accuracy", () => {
+    const overview: AnalyticsOverview = {
+      bestScaledScore: 170,
+      averageScaledScore: 165,
+      bestPercentile: 92,
+      averagePercentile: 80,
+      completedPrepTestCount: 2,
+      totalQuestionsAnswered: 120,
+      drillAccuracyPct: 64,
+      totalDrillQuestionsAnswered: 50,
+      averageLrMissedPerPrepTest: 11,
+      averageRcMissedPerPrepTest: 12,
+      totalStudyMinutes: 120,
+    }
+    const stats = mapOverviewToSecondaryStats(overview)
+    expect(stats.map((s) => s.label)).toEqual([
+      "Logical Reasoning Average",
+      "Reading Comprehension Average",
+      "Average Time per Question",
+      "Question Accuracy",
+    ])
+    expect(stats[0]?.value).toBe("-11")
+    expect(stats[2]?.value).toBe("1:00")
+    expect(stats[3]?.value).toBe("64%")
   })
 
   it("formats overview percentile captions with ordinals", () => {
     expect(formatOverviewPercentileCaption(99)).toBe("PERCENTILE: 99th")
     expect(formatOverviewPercentileCaption(11)).toBe("PERCENTILE: 11th")
     expect(formatOverviewPercentileCaption(90.6)).toBe("PERCENTILE: 90.6th")
+    expect(formatOverviewPercentilePlain(94)).toBe("94th percentile")
+    expect(formatOverviewPercentilePlain(90.6)).toBe("90.6th percentile")
   })
 
   it("formats prep test chart labels as PT numbers", () => {
@@ -91,6 +133,10 @@ describe("map-analytics", () => {
     expect(record?.lrCorrect).toBe(0)
     expect(record?.lrMax).toBe(0)
     expect(record?.rcCorrect).not.toBe(80)
+    expect(record?.rawScore).toBe(80)
+    expect(record?.rawMax).toBe(80)
+    expect(record?.scaledScore).toBe(160)
+    expect(record?.hasScaledScore).toBe(true)
   })
 
   it("maps PrepTest LR/RC from scored section sessions, not a combined 51-question LR", () => {
@@ -151,6 +197,35 @@ describe("map-analytics", () => {
       lrMax: 25,
       rcCorrect: 18,
       rcMax: 27,
+      rawScore: 38,
+      rawMax: 52,
+      scaledScore: 160,
+      hasScaledScore: true,
+    })
+  })
+
+  it("keeps raw PrepTest scores when no scaled conversion exists", () => {
+    const record = mapSessionToPrepTestRecord({
+      id: "sess-raw",
+      kind: "PREPTEST",
+      prepTestId: "pt-120",
+      startedAt: "2026-01-01T00:00:00Z",
+      completedAt: "2026-01-02T00:00:00Z",
+      rawScore: 41,
+      scaledScore: null,
+      percentile: null,
+      bookmarked: false,
+      excluded: false,
+      metadata: {},
+      prepTestTitle: "The Official LSAT PrepTest 120",
+      sectionTitle: null,
+      sectionType: null,
+    })
+    expect(record).toMatchObject({
+      rawScore: 41,
+      rawMax: 41,
+      scaledScore: 0,
+      hasScaledScore: false,
     })
   })
 
@@ -175,6 +250,165 @@ describe("map-analytics", () => {
     expect(mapped[0]?.test).toBe("PT 150")
     expect(mapped[0]?.regular).toBe(160)
     expect(mapped[0]?.blindReview).toBe(165)
+    expect(mapped[0]?.completedAt).toBe("2026-01-01T00:00:00Z")
+    expect(mapped[0]?.percentile).toBe(50)
+    expect(mapped[0]?.blindReviewPercentile).toBe(55)
+  })
+
+  it("lifts headline best score from a higher untimed-review trajectory point", () => {
+    const overview: AnalyticsOverview = {
+      bestScaledScore: 161,
+      averageScaledScore: 123,
+      bestPercentile: 76,
+      averagePercentile: 10,
+      completedPrepTestCount: 31,
+      totalQuestionsAnswered: 100,
+      drillAccuracyPct: 70,
+      totalDrillQuestionsAnswered: 50,
+      averageLrMissedPerPrepTest: 23,
+      averageRcMissedPerPrepTest: 25,
+      totalStudyMinutes: 0,
+    }
+    const lifted = withBestScoreFromTrajectory(overview, [
+      {
+        sessionId: "s1",
+        prepTestTitle: "PrepTest 158",
+        moduleId: "LSAC158",
+        rawScore: 80,
+        scaledScore: 161,
+        percentile: 76,
+        regularRawScore: 80,
+        regularScaledScore: 161,
+        blindReviewRawScore: 99,
+        blindReviewScaledScore: 176,
+        blindReviewPercentile: 99.9,
+        completedAt: "2026-01-01T00:00:00Z",
+      },
+    ])
+    expect(lifted.bestScaledScore).toBe(176)
+    expect(lifted.bestPercentile).toBe(99.9)
+    expect(lifted.averageScaledScore).toBe(123)
+  })
+
+  it("lifts headline best score from a higher stored timed trajectory point", () => {
+    const overview: AnalyticsOverview = {
+      bestScaledScore: 161,
+      averageScaledScore: 123,
+      bestPercentile: 76,
+      averagePercentile: 10,
+      completedPrepTestCount: 1,
+      totalQuestionsAnswered: 100,
+      drillAccuracyPct: 70,
+      totalDrillQuestionsAnswered: 50,
+      averageLrMissedPerPrepTest: 5,
+      averageRcMissedPerPrepTest: 6,
+      totalStudyMinutes: 0,
+    }
+    const lifted = withBestScoreFromTrajectory(overview, [
+      {
+        sessionId: "s1",
+        prepTestTitle: "PrepTest 158",
+        moduleId: "LSAC158",
+        rawScore: 99,
+        scaledScore: 176,
+        percentile: 99.9,
+        regularRawScore: 99,
+        regularScaledScore: 176,
+        blindReviewRawScore: null,
+        blindReviewScaledScore: null,
+        blindReviewPercentile: null,
+        completedAt: "2026-01-01T00:00:00Z",
+      },
+    ])
+    expect(lifted.bestScaledScore).toBe(176)
+    expect(lifted.bestPercentile).toBe(99.9)
+  })
+
+  it("recomputes best/average scores for a trajectory window", () => {
+    const overview: AnalyticsOverview = {
+      bestScaledScore: 176,
+      averageScaledScore: 150,
+      bestPercentile: 99,
+      averagePercentile: 50,
+      completedPrepTestCount: 10,
+      totalQuestionsAnswered: 100,
+      drillAccuracyPct: 70,
+      totalDrillQuestionsAnswered: 50,
+      averageLrMissedPerPrepTest: 5,
+      averageRcMissedPerPrepTest: 6,
+      totalStudyMinutes: 120,
+    }
+    const windowed = overviewScoresForTrajectoryWindow(overview, [
+      {
+        sessionId: "a",
+        prepTestTitle: "PrepTest 1",
+        moduleId: "LSAC1",
+        rawScore: 70,
+        scaledScore: 160,
+        percentile: 70,
+        regularRawScore: 70,
+        regularScaledScore: 160,
+        blindReviewRawScore: null,
+        blindReviewScaledScore: null,
+        blindReviewPercentile: null,
+        completedAt: "2026-09-01T00:00:00Z",
+      },
+      {
+        sessionId: "b",
+        prepTestTitle: "PrepTest 2",
+        moduleId: "LSAC2",
+        rawScore: 75,
+        scaledScore: 165,
+        percentile: 80,
+        regularRawScore: 75,
+        regularScaledScore: 165,
+        blindReviewRawScore: null,
+        blindReviewScaledScore: null,
+        blindReviewPercentile: null,
+        completedAt: "2026-09-15T00:00:00Z",
+      },
+    ])
+    expect(windowed.bestScaledScore).toBe(165)
+    expect(windowed.bestPercentile).toBe(80)
+    expect(windowed.averageScaledScore).toBe(163)
+    expect(windowed.averagePercentile).toBe(75)
+    expect(windowed.completedPrepTestCount).toBe(2)
+    expect(windowed.totalStudyMinutes).toBe(120)
+  })
+
+  it("filters trajectory by calendar time range", () => {
+    const points: TrajectoryPoint[] = [
+      {
+        sessionId: "old",
+        prepTestTitle: "PrepTest 1",
+        moduleId: "LSAC1",
+        rawScore: 70,
+        scaledScore: 160,
+        percentile: 70,
+        regularRawScore: 70,
+        regularScaledScore: 160,
+        blindReviewRawScore: null,
+        blindReviewScaledScore: null,
+        blindReviewPercentile: null,
+        completedAt: "2026-01-01T00:00:00Z",
+      },
+      {
+        sessionId: "new",
+        prepTestTitle: "PrepTest 2",
+        moduleId: "LSAC2",
+        rawScore: 75,
+        scaledScore: 165,
+        percentile: 80,
+        regularRawScore: 75,
+        regularScaledScore: 165,
+        blindReviewRawScore: null,
+        blindReviewScaledScore: null,
+        blindReviewPercentile: null,
+        completedAt: "2026-09-20T00:00:00Z",
+      },
+    ]
+    const filtered = filterTrajectoryByTimeRange(points, "30d", new Date("2026-09-30T00:00:00Z"))
+    expect(filtered.map((p) => p.sessionId)).toEqual(["new"])
   })
 
   it("groups priorities into LR and RC sections ordered by weakness", () => {
@@ -220,6 +454,33 @@ describe("map-analytics", () => {
     expect(sections).toHaveLength(1)
     expect(sections[0]?.id).toBe("LR")
     expect(sections[0]?.rows.map((r) => r.id)).toEqual(["qt-high", "qt-low"])
+    expect(sections[0]?.rows[0]?.gapPct).toBe(36)
+    expect(sections[0]?.rows[1]?.gapPct).toBe(-4)
+  })
+
+  it("falls back to priorityLevel when priorityTier is null", () => {
+    const priorities: PriorityRow[] = [
+      {
+        questionTypeId: "qt-1",
+        name: "Flaw",
+        sectionType: "LR",
+        attemptCount: 10,
+        correctCount: 5,
+        accuracyPct: 50,
+        goalAccuracy: 86,
+        gap: 36,
+        priorityTier: null,
+        priorityLevel: "high",
+        priorityScore: 100,
+        extraCorrectNeededPerTest: 2,
+        unlocked: true,
+        difficulty: 3,
+        averagePerTest: 5,
+        reviewCount: 5,
+      },
+    ]
+    const sections = mapPrioritiesToSections(priorities)
+    expect(sections[0]?.rows[0]?.priorityTier).toBe("high")
   })
 
   it("maps drill and section sessions into history entries", () => {
@@ -240,7 +501,7 @@ describe("map-analytics", () => {
     })
     expect(drill).toMatchObject({
       id: "d1",
-      testLabel: "Flaw",
+      testLabel: "Flaw Drill",
       score: 3,
       scoreMax: 5,
       bookmarked: true,
@@ -262,7 +523,28 @@ describe("map-analytics", () => {
       sectionTitle: null,
       sectionType: null,
     })
-    expect(titled?.testLabel).toBe("Main Conclusion")
+    expect(titled?.testLabel).toBe("Main Conclusion Drill")
+
+    const multi = mapDrillSessionToHistoryEntry({
+      id: "d2b",
+      kind: "DRILL",
+      startedAt: "2026-01-01T00:00:00Z",
+      completedAt: "2026-01-02T00:00:00Z",
+      rawScore: 2,
+      scaledScore: null,
+      percentile: null,
+      bookmarked: false,
+      excluded: false,
+      metadata: {
+        title: "Varied Mix",
+        tagLabels: ["Flaw", "Assumption"],
+        questionIds: ["a", "b"],
+      },
+      prepTestTitle: null,
+      sectionTitle: null,
+      sectionType: "LR",
+    })
+    expect(multi?.testLabel).toBe("Flaw, Assumption Drill")
 
     const mixed = mapDrillSessionToHistoryEntry({
       id: "d3",
@@ -304,6 +586,36 @@ describe("map-analytics", () => {
       scoreMax: 25,
       sectionType: "LR",
     })
+
+    const lsacId = mapSectionSessionToHistoryEntry({
+      id: "sec2",
+      kind: "SECTION",
+      startedAt: "2026-01-01T00:00:00Z",
+      completedAt: "2026-01-03T00:00:00Z",
+      rawScore: 1,
+      scaledScore: null,
+      percentile: null,
+      bookmarked: false,
+      excluded: false,
+      metadata: {},
+      prepTestTitle: null,
+      sectionTitle: "LR135A-1",
+      sectionType: "LR",
+    })
+    expect(lsacId?.testLabel).toBe("PT135.S1")
+  })
+
+  it("formats LSAC section ids as PT#.S#", () => {
+    expect(formatSectionHistoryLabel({ sectionTitle: "LR135A-1" })).toBe("PT135.S1")
+    expect(formatSectionHistoryLabel({ sectionTitle: "LR155B-4" })).toBe("PT155.S4")
+    expect(formatSectionHistoryLabel({ sectionTitle: "RC155A-3" })).toBe("PT155.S3")
+    expect(formatSectionHistoryLabel({ sectionTitle: "LR155V-1" })).toBe("PT155.S1")
+    expect(
+      formatSectionHistoryLabel({
+        metadata: { moduleId: "LSAC128", sectionNumber: 3 },
+      }),
+    ).toBe("PT128.S3")
+    expect(formatSectionHistoryLabel({ sectionTitle: "LR Section 2" })).toBe("LR Section 2")
   })
 
   it("maps drill records with section from metadata when joined sectionType is null", () => {

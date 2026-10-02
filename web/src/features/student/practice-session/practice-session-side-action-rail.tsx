@@ -13,11 +13,18 @@ import {
   OFFICIAL_SIDE_WIDGET_ITEM_EXPANDED_CLASS,
 } from "@/features/student/practice-session/practice-session-official-styles"
 import {
+  OfficialRailAccessibilityIcon,
+  OfficialRailCollapseViewIcon,
+  OfficialRailDockIcon,
+  OfficialRailExpandIcon,
+  OfficialRailFlagIcon,
+  OfficialRailMaskingIcon,
+  OfficialRailReviewIcon,
   SideWidgetAccessibilityIcon,
-  SideWidgetArrowsPointingInIcon,
   SideWidgetCollapseDockIcon,
-  SideWidgetExpandIcon,
   SideWidgetFlagIcon,
+  SideWidgetFullScreenIcon,
+  SideWidgetMedSizeIcon,
   SideWidgetResponseMaskingIcon,
   SideWidgetReviewIcon,
 } from "@/features/student/practice-session/practice-session-side-widget-icons"
@@ -41,7 +48,7 @@ type PracticeSessionSideWidgetProps = {
   lineFocusActive?: boolean
   onLineFocus?: () => void
   onFullscreen?: () => void
-  /** Official full-page / browser-fullscreen chrome uses arrows-in. */
+  /** Full-width (1920) vs normal (1440) exam canvas; also enters browser fullscreen. */
   fullView?: boolean
 }
 
@@ -75,30 +82,39 @@ function PracticeSessionSideWidget({
   const [expanded, setExpanded] = useState(false)
   const officialChrome = isOfficialLayout(variant)
 
+  const fullscreenItem: SideWidgetItem = {
+    id: "fullscreen",
+    label: fullView ? "Normal view" : "Full Screen",
+    icon: officialChrome
+      ? fullView
+        ? OfficialRailCollapseViewIcon
+        : OfficialRailExpandIcon
+      : fullView
+        ? SideWidgetMedSizeIcon
+        : SideWidgetFullScreenIcon,
+    onClick: () => onFullscreen?.(),
+    active: fullView,
+  }
+
   const officialTools: SideWidgetItem[] = [
-    {
-      id: "fullscreen",
-      label: fullView ? "Normal view" : "Full Screen",
-      icon: fullView ? SideWidgetArrowsPointingInIcon : SideWidgetExpandIcon,
-      onClick: () => onFullscreen?.(),
-    },
+    fullscreenItem,
     {
       id: "review",
       label: "Review",
-      icon: SideWidgetReviewIcon,
+      icon: OfficialRailReviewIcon,
       onClick: () => onReview?.(),
       active: reviewActive,
     },
     {
       id: "accessibility",
       label: "Accessibility",
-      icon: SideWidgetAccessibilityIcon,
+      icon: OfficialRailAccessibilityIcon,
       onClick: () => onAccessibility?.(),
     },
     {
       id: "flag",
       label: "Flag item",
-      icon: SideWidgetFlagIcon,
+      icon: OfficialRailFlagIcon,
       onClick: onToggleFlag,
       active: flagged,
       disabled: flagsDisabled,
@@ -106,7 +122,7 @@ function PracticeSessionSideWidget({
     {
       id: "masking",
       label: "Response Masking",
-      icon: SideWidgetResponseMaskingIcon,
+      icon: OfficialRailMaskingIcon,
       onClick: onToggleResponseMasking,
       active: responseMasking,
     },
@@ -121,13 +137,14 @@ function PracticeSessionSideWidget({
       : expanded
         ? "Collapse Menu"
         : "Open Menu",
-    icon: SideWidgetCollapseDockIcon,
+    icon: officialChrome ? OfficialRailDockIcon : SideWidgetCollapseDockIcon,
     onClick: () => setExpanded((open) => !open),
   }
 
   const items: SideWidgetItem[] = officialChrome
     ? [...officialTools, collapseItem]
     : [
+        fullscreenItem,
         {
           id: "review",
           label: "Review",
@@ -192,7 +209,7 @@ function PracticeSessionSideWidget({
         <Icon
           className={cn("shrink-0", officialChrome && item.id === "flag" && item.active && "practice-session-side-widget__flag-active")}
           expanded={isCollapse ? expanded : undefined}
-          active={officialChrome && item.id === "flag" ? item.active : undefined}
+          active={item.id === "flag" ? item.active : undefined}
           aria-hidden
         />
         {expanded ? (
@@ -222,13 +239,13 @@ function PracticeSessionSideWidget({
             ? OFFICIAL_SIDE_WIDGET_EXPANDED_CLASS
             : OFFICIAL_SIDE_WIDGET_CLASS
           : cn(
-              "practice-session-side-widget absolute right-0 top-6 z-20 flex flex-col overflow-visible",
+              "practice-session-side-widget sticky top-6 z-20 flex shrink-0 flex-col overflow-visible",
               expanded ? ACTIVE_DRILL_SIDE_WIDGET_EXPANDED_CLASS : ACTIVE_DRILL_SIDE_WIDGET_COLLAPSED_CLASS,
             ),
       )}
       aria-label="Exam tools"
     >
-      {officialChrome && expanded ? (
+      {officialChrome ? (
         <>
           <div className="flex w-full flex-col">{officialTools.map(renderItem)}</div>
           {renderItem(collapseItem)}

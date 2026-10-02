@@ -10,6 +10,8 @@ type AuthSplitHeaderProps = {
   variant?: "auth" | "app" | "intent"
   /** Hide intent header sign-in prompt (e.g. user already authenticated). */
   hideIntentSignIn?: boolean
+  /** Hide intent Upgrade CTA for paid accounts (free / guests still see it). */
+  hideIntentUpgrade?: boolean
 }
 
 function AuthSplitHeader({
@@ -18,6 +20,7 @@ function AuthSplitHeader({
   ctaPrompt,
   variant = "auth",
   hideIntentSignIn = false,
+  hideIntentUpgrade = false,
 }: AuthSplitHeaderProps) {
   if (variant === "intent") {
     return (
@@ -26,9 +29,11 @@ function AuthSplitHeader({
           <img src="/betterLSAT_LOGO.png" alt="betterLSAT" className="auth-split-logo" />
         </Link>
         <div className="auth-split-header-intent-actions">
-          <Button asChild className="auth-split-header-intent-upgrade">
-            <Link to="/signup">Upgrade · $99/mo</Link>
-          </Button>
+          {!hideIntentUpgrade ? (
+            <Button asChild className="auth-split-header-intent-upgrade">
+              <Link to="/signup">Upgrade · $99/mo</Link>
+            </Button>
+          ) : null}
           {!hideIntentSignIn ? (
             <p className="auth-split-cta">
               Already have an account?{" "}

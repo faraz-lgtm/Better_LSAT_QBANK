@@ -91,7 +91,7 @@ function PracticeBlindReviewSessionHeader({
             <button
               type="button"
               className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] text-[var(--color-student-heading)] transition hover:bg-[var(--greyscale-25)]"
-              aria-label="Exit blind review"
+              aria-label="Exit untimed review"
               onClick={onExitSection}
               disabled={exiting}
             >

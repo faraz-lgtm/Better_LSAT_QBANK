@@ -3,21 +3,28 @@ import { ChevronDown, ChevronUp } from "lucide-react"
 
 import { ExplanationChoiceList } from "@/features/student/explanation-detail/explanation-choice-list"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
-import { extractHtmlParagraphs } from "@/lib/html/extract-html-paragraphs"
+import {
+  hasPassageAnalysis,
+  PassageAnalysisBody,
+} from "@/features/student/practice-session/passage-analysis-view"
 import { HtmlContent } from "@/lib/html/html-content"
 import { cn } from "@/lib/utils"
 
+type ExplanationQuestionTabPanelView = Pick<
+  ExplanationQuestionDetailView,
+  | "passage"
+  | "passageAnalysis"
+  | "questionStem"
+  | "questionExplanationHtml"
+  | "choices"
+  | "correctChoiceId"
+  | "questionNumber"
+> & {
+  analytics?: Pick<ExplanationQuestionDetailView["analytics"], "questionStemTags"> | null
+}
+
 type ExplanationQuestionTabPanelProps = {
-  view: Pick<
-    ExplanationQuestionDetailView,
-    | "passage"
-    | "passageAnalysis"
-    | "questionStem"
-    | "questionExplanationHtml"
-    | "choices"
-    | "correctChoiceId"
-    | "questionNumber"
-  >
+  view: ExplanationQuestionTabPanelView
   initialExpandedChoiceId?: string | null
 }
 
@@ -54,46 +61,53 @@ function RepWorkAnswerToggle({
   )
 }
 
-const paneScrollClass =
-  "practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain"
+const paneBodyClass = "flex flex-col gap-4 px-4 py-5"
 
 function hasExplanationHtml(html: string | null | undefined): boolean {
   return Boolean(html?.trim())
 }
 
-function hasPassageAnalysis(
-  analysis: ExplanationQuestionDetailView["passageAnalysis"],
-): boolean {
-  if (!analysis) return false
-  return analysis.paragraphs.length > 0 || Boolean(analysis.overallHtml?.trim())
-}
-
-function resolveAnalysisParagraphs(
-  analysis: NonNullable<ExplanationQuestionDetailView["passageAnalysis"]>,
-  passageBody: string,
-) {
-  const fromBody = extractHtmlParagraphs(passageBody)
-  return analysis.paragraphs.map((paragraph, index) => ({
-    ...paragraph,
-    passageHtml: paragraph.passageHtml?.trim() || fromBody[index] || null,
-  }))
+function QuestionExplanationPanel({
+  questionTypeLabel,
+  explanationHtml,
+}: {
+  questionTypeLabel: string | null
+  explanationHtml: string | null
+}) {
+  const hasExplanation = hasExplanationHtml(explanationHtml)
+  return (
+    <div className="rounded-[14px] bg-[var(--primary-0)] p-6 text-[var(--color-student-heading)]">
+      <p className="mb-6 text-base font-medium leading-[1.5] tracking-[0.32px]">
+        Question Type{questionTypeLabel ? ` - ${questionTypeLabel}` : ""}
+      </p>
+      <div className="text-sm font-normal leading-[1.5] tracking-[0.28px]">
+        {hasExplanation ? (
+          <HtmlContent
+            html={explanationHtml ?? ""}
+            className="explanation-review-body text-[var(--color-student-heading)]"
+          />
+        ) : (
+          <p className="m-0">No question explanation available yet.</p>
+        )}
+      </div>
+    </div>
+  )
 }
 
 function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: ExplanationQuestionTabPanelProps) {
   const [showCorrect, setShowCorrect] = useState(false)
   const [stemExpanded, setStemExpanded] = useState(false)
-  const stemExplanationAvailable = hasExplanationHtml(view.questionExplanationHtml)
   const analysisAvailable = hasPassageAnalysis(view.passageAnalysis)
   const [analysisOpen, setAnalysisOpen] = useState(analysisAvailable)
-  const analysisParagraphs =
-    analysisAvailable && view.passageAnalysis
-      ? resolveAnalysisParagraphs(view.passageAnalysis, view.passage.body)
-      : []
+  const [lrExplanationOpen, setLrExplanationOpen] = useState(false)
+  /** LR (and any non-RC): no passage analysis — show explanation toggle where RC puts “Reveal Passage Explanation”. */
+  const showLrPassageToggle = !analysisAvailable
+  const questionTypeLabel = view.analytics?.questionStemTags?.[0]?.trim() || null
 
   return (
-    <div className="grid h-full min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-5">
-      <article className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl bg-[var(--greyscale-0)] lg:h-full">
-        <div className={cn(paneScrollClass, "flex flex-col gap-4 px-4 py-5")}>
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-5">
+      <article className="min-w-0 rounded-2xl bg-[var(--greyscale-0)]">
+        <div className={paneBodyClass}>
           <div className="flex flex-wrap items-center gap-3">
             <span className="inline-flex h-8 items-center rounded-full bg-[var(--greyscale-25)] px-4 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
               PASSAGE {view.passage.displayNumber}
@@ -105,56 +119,39 @@ function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: Explanat
                 aria-expanded={analysisOpen}
                 onClick={() => setAnalysisOpen((prev) => !prev)}
               >
-                {analysisOpen ? "Hide analysis" : "Show analysis"}
+                {analysisOpen ? "Hide Passage Explanation" : "Reveal Passage Explanation"}
               </button>
-            ) : (
-              <span className="text-sm font-medium leading-5 text-[var(--greyscale-300)]">Show analysis</span>
-            )}
+            ) : null}
+            {showLrPassageToggle ? (
+              <button
+                type="button"
+                className="text-sm font-medium leading-5 text-[var(--primary)] hover:underline"
+                aria-expanded={lrExplanationOpen}
+                onClick={() => setLrExplanationOpen((prev) => !prev)}
+              >
+                {lrExplanationOpen ? "Hide explanation" : "Show explanation"}
+              </button>
+            ) : null}
           </div>
 
           {analysisOpen && analysisAvailable && view.passageAnalysis ? (
-            <div className="flex flex-col gap-6">
-              {analysisParagraphs.map((paragraph) => (
-                <section key={paragraph.label} className="flex flex-col gap-3">
-                  <span className="inline-flex w-fit items-center rounded-md bg-[var(--primary-0)] px-2.5 py-1 text-xs font-semibold tracking-[0.24px] text-[var(--color-student-heading)]">
-                    {paragraph.label}
-                  </span>
-                  <div className="rounded-xl bg-[var(--greyscale-25)] px-4 py-3">
-                    <HtmlContent
-                      html={paragraph.explanationHtml}
-                      className="explanation-review-body text-[var(--color-student-heading)]"
-                    />
-                  </div>
-                  {paragraph.passageHtml ? (
-                    <HtmlContent
-                      html={paragraph.passageHtml}
-                      className="explanation-passage-body text-[var(--color-student-heading)]"
-                    />
-                  ) : null}
-                </section>
-              ))}
-              {view.passageAnalysis.overallHtml?.trim() ? (
-                <section className="flex flex-col gap-3 border-t border-[var(--greyscale-100)] pt-5">
-                  <span className="inline-flex w-fit items-center rounded-md bg-[var(--greyscale-25)] px-2.5 py-1 text-xs font-semibold tracking-[0.24px] text-[var(--greyscale-500)]">
-                    Overall
-                  </span>
-                  <div className="rounded-xl bg-[var(--greyscale-25)] px-4 py-3">
-                    <HtmlContent
-                      html={view.passageAnalysis.overallHtml}
-                      className="explanation-review-body text-[var(--color-student-heading)]"
-                    />
-                  </div>
-                </section>
-              ) : null}
-            </div>
+            <PassageAnalysisBody analysis={view.passageAnalysis} passageBody={view.passage.body} />
           ) : (
-            <HtmlContent html={view.passage.body} className="explanation-passage-body" />
+            <>
+              <HtmlContent html={view.passage.body} className="explanation-passage-body" />
+              {showLrPassageToggle && lrExplanationOpen ? (
+                <QuestionExplanationPanel
+                  questionTypeLabel={questionTypeLabel}
+                  explanationHtml={view.questionExplanationHtml ?? null}
+                />
+              ) : null}
+            </>
           )}
         </div>
       </article>
 
-      <article className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl bg-[var(--greyscale-0)] lg:h-full">
-        <div className={cn(paneScrollClass, "flex flex-col gap-4 px-4 py-5")}>
+      <article className="min-w-0 rounded-2xl bg-[var(--greyscale-0)]">
+        <div className={paneBodyClass}>
           <div className="flex flex-col gap-3">
             <div className="flex h-8 items-center justify-between gap-3">
               <span className="inline-flex h-8 items-center rounded-xl bg-[var(--primary-0)] px-3 text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
@@ -172,35 +169,36 @@ function ExplanationQuestionTabPanel({ view, initialExpandedChoiceId }: Explanat
               </div>
             </div>
 
-            <div className="flex flex-col gap-3">
-              <button
-                type="button"
-                className={cn(
-                  "flex w-full items-center gap-2.5 text-left",
-                  stemExplanationAvailable ? "cursor-pointer hover:opacity-90" : "cursor-default",
-                )}
-                onClick={() => {
-                  if (!stemExplanationAvailable) return
-                  setStemExpanded((prev) => !prev)
-                }}
-                aria-expanded={stemExplanationAvailable ? stemExpanded : undefined}
-              >
+            {/* RC: stem chevron for question explanation (same as practice review). LR uses left PASSAGE toggle. */}
+            <div className="flex flex-col">
+              <div className="flex w-full items-start gap-3 text-left">
                 <HtmlContent html={view.questionStem} className="explanation-question-stem min-w-0 flex-1" />
-                {stemExplanationAvailable ? (
-                  stemExpanded ? (
-                    <ChevronUp className="size-6 shrink-0 text-[var(--greyscale-300)]" aria-hidden />
-                  ) : (
-                    <ChevronDown className="size-6 shrink-0 text-[var(--greyscale-300)]" aria-hidden />
-                  )
-                ) : (
-                  <ChevronDown className="size-6 shrink-0 text-[var(--greyscale-300)]" aria-hidden />
-                )}
-              </button>
-              {stemExpanded && stemExplanationAvailable ? (
-                <div className="text-left">
-                  <HtmlContent
-                    html={view.questionExplanationHtml ?? ""}
-                    className="explanation-review-body"
+                {!showLrPassageToggle ? (
+                  <button
+                    type="button"
+                    className={cn(
+                      "mt-1 inline-flex size-5 shrink-0 items-center justify-center transition",
+                      stemExpanded
+                        ? "text-[var(--primary)]"
+                        : "text-[var(--greyscale-500)] hover:text-[var(--color-student-heading)]",
+                    )}
+                    aria-label={stemExpanded ? "Hide question explanation" : "Show question explanation"}
+                    aria-expanded={stemExpanded}
+                    onClick={() => setStemExpanded((prev) => !prev)}
+                  >
+                    {stemExpanded ? (
+                      <ChevronUp className="size-5" strokeWidth={2} aria-hidden />
+                    ) : (
+                      <ChevronDown className="size-5" strokeWidth={2} aria-hidden />
+                    )}
+                  </button>
+                ) : null}
+              </div>
+              {!showLrPassageToggle && stemExpanded ? (
+                <div className="mb-2 mt-6">
+                  <QuestionExplanationPanel
+                    questionTypeLabel={questionTypeLabel}
+                    explanationHtml={view.questionExplanationHtml ?? null}
                   />
                 </div>
               ) : null}

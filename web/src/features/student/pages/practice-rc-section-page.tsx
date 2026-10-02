@@ -4,6 +4,7 @@ import { Play } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
+import { PREP_TEST_POOLS_HREF } from "@/features/account/prep-test-pool-types"
 import { drillSurfaceCard } from "@/features/student/drills/drill-surface-style"
 import { StudentMain } from "@/features/student/components/student-main"
 
@@ -49,7 +50,7 @@ function PracticeRcSectionPage() {
                   Reading Comprehension
                 </h2>
                 <p className="mt-2 text-sm leading-snug" style={{ color: "var(--muted-foreground)" }}>
-                  <Link to="/app/practice/drills" className="font-semibold hover:underline" style={{ color: "var(--color-student-accent)" }}>
+                  <Link to={PREP_TEST_POOLS_HREF} className="font-semibold hover:underline" style={{ color: "var(--color-student-accent)" }}>
                     Go to your practice pool settings
                   </Link>{" "}
                   to change what sections are available.

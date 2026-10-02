@@ -199,6 +199,8 @@ Deno.test('mapPrepTestTreeRows builds LR synthetic passage', () => {
   assertEquals(tree.sections[0]?.kind, 'LR')
   assertEquals(tree.sections[0]?.passages[0]?.id, 'lr-sec1')
   assertEquals(tree.sections[0]?.passages[0]?.questions.length, 2)
+  assertEquals(tree.sections[0]?.passages[0]?.questions[0]?.code, 'PT900.S1.Q1')
+  assertEquals(tree.sections[0]?.passages[0]?.questions[1]?.code, 'PT900.S1.Q2')
   assertEquals(tree.sections[0]?.passages[0]?.questions[0]?.topicName, 'Must Be True')
   assertEquals(tree.sections[0]?.passages[0]?.questions[1]?.topicName, '—')
   assertEquals(tree.sections[0]?.passages[0]?.questions[1]?.hasWrittenExplanation, true)
@@ -292,6 +294,7 @@ Deno.test('mapPrepTestTreeRows groups RC by source_group_id', () => {
   assertEquals(tree.sections[0]?.kind, 'RC')
   assertEquals(tree.sections[0]?.passages[0]?.id, 'pass1')
   assertEquals(tree.sections[0]?.passages[0]?.questions[0]?.hasWrittenExplanation, true)
+  assertEquals(tree.sections[0]?.passages[0]?.questions[0]?.code, 'PT901.S1.P1.Q1')
 })
 
 Deno.test('mapPrepTestTreeRows orders RC passages by first question number', () => {
@@ -369,7 +372,7 @@ Deno.test('mapPrepTestTreeRows orders RC passages by first question number', () 
 
 Deno.test('prepTestRowSubtitleFromStatuses matches Figma status tags', () => {
   assertEquals(prepTestRowSubtitleFromStatuses(['fresh', 'fresh']), 'Fresh')
-  assertEquals(prepTestRowSubtitleFromStatuses(['fresh', 'in_process']), 'In Process • Blind Review')
+  assertEquals(prepTestRowSubtitleFromStatuses(['fresh', 'in_process']), 'In Process • Untimed Review')
   assertEquals(prepTestRowSubtitleFromStatuses(['answered', 'seen']), 'Answered')
   assertEquals(prepTestRowSubtitleFromStatuses(['seen']), 'Seen')
   assertEquals(prepTestRowSubtitleFromStatuses([]), 'Fresh')

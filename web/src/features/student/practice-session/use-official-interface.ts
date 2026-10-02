@@ -20,13 +20,17 @@ export function writeOfficialInterfacePreference(enabled: boolean) {
   }
 }
 
+export const PRACTICE_SESSION_IMMERSIVE_FRAME_SELECTOR =
+  "[data-practice-session-immersive-frame]"
+
 export function toggleExamFullscreen() {
-  const node = document.querySelector(".practice-session-card")
-  if (!(node instanceof HTMLElement)) return
   if (document.fullscreenElement) {
     void document.exitFullscreen()
     return
   }
+  const frame = document.querySelector(PRACTICE_SESSION_IMMERSIVE_FRAME_SELECTOR)
+  const node = frame instanceof HTMLElement ? frame : document.documentElement
+  if (typeof node.requestFullscreen !== "function") return
   void node.requestFullscreen()
 }
 

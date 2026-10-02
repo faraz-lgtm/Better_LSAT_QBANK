@@ -6,8 +6,17 @@ import { PracticeAnnotatedContent } from "@/features/student/practice-session/pr
 import { PracticeSessionHighlightPopover } from "@/features/student/practice-session/practice-session-highlight-popover"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 
-function PassageHighlightHarness({ html = "<p>Hello world today</p>" }: { html?: string }) {
-  const highlights = usePracticeHighlights()
+function PassageHighlightHarness({
+  html = "<p>Hello world today</p>",
+  official = false,
+}: {
+  html?: string
+  official?: boolean
+}) {
+  const highlights = usePracticeHighlights({
+    highlightMenuStartsExpanded: !official,
+    menuAnchorsToSelection: official,
+  })
   return (
     <div className="practice-session-card practice-session-card--active-drill">
       <PracticeAnnotatedContent
@@ -17,6 +26,7 @@ function PassageHighlightHarness({ html = "<p>Hello world today</p>" }: { html?:
         onClickCapture={highlights.handleContentClick}
       />
       <PracticeSessionHighlightPopover
+        variant={official ? "official" : "default"}
         menu={highlights.selectionMenu}
         onApplyColor={highlights.applySelectionColor}
         onRemove={highlights.removeSelectionHighlight}
@@ -82,6 +92,25 @@ describe("passage selection highlighting", () => {
     expect(top).toBeLessThan(390)
     expect(390 - top).toBeGreaterThanOrEqual(2)
     expect(390 - top).toBeLessThanOrEqual(96)
+  })
+
+  it("pins the official Highlight chip to the first selected word", async () => {
+    const word = new DOMRect(200, 300, 64, 27)
+    const { container } = render(<PassageHighlightHarness official />)
+    const passage = container.querySelector(".practice-session-content") as HTMLElement
+
+    selectOffsets(passage, 0, 5)
+    const range = window.getSelection()?.getRangeAt(0)
+    if (range) {
+      range.getClientRects = () => mockClientRects(word)
+      range.getBoundingClientRect = () => word
+    }
+    fireEvent.mouseUp(passage, { clientX: 480, clientY: 390 })
+
+    await screen.findByRole("toolbar", { name: "Highlight" })
+    const root = document.querySelector("[data-passage-highlight-popover]") as HTMLElement
+    expect(Number.parseFloat(root.style.left)).toBe(200)
+    expect(Number.parseFloat(root.style.top)).toBe(300 - 56)
   })
 
   it("does not show the Highlight popover for a collapsed caret", () => {

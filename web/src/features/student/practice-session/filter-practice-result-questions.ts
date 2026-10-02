@@ -10,13 +10,15 @@ export function practiceResultQuestionBookmarkId(meta: PracticeQuestionResultMet
 export function filterPracticeResultQuestions(
   questions: readonly PracticeQuestionResultMeta[],
   options: {
-    incorrectOnly: boolean
+    incorrectOnly?: boolean
+    correctOnly?: boolean
     bookmarkedOnly: boolean
     bookmarkedIds: ReadonlySet<string>
   },
 ): PracticeQuestionResultMeta[] {
   return questions.filter((question) => {
     if (options.incorrectOnly && question.isCorrect) return false
+    if (options.correctOnly && !question.isCorrect) return false
     if (
       options.bookmarkedOnly &&
       !options.bookmarkedIds.has(practiceResultQuestionBookmarkId(question))
@@ -30,7 +32,8 @@ export function filterPracticeResultQuestions(
 export function filterPracticeResultPassages(
   passages: readonly PracticePassageQuestionGroup[],
   options: {
-    incorrectOnly: boolean
+    incorrectOnly?: boolean
+    correctOnly?: boolean
     bookmarkedOnly: boolean
     bookmarkedIds: ReadonlySet<string>
   },

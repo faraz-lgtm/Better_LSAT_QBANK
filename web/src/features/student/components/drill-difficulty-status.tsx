@@ -3,7 +3,7 @@ type DrillDifficultyStatusProps = {
   filledBars: number
   color: string
   layout?: "inline" | "stacked"
-  /** Figma “Drills by Types” uses muted primary-0 chip; continue rows use surface. */
+  /** Same chip surface as continue-row difficulty labels. */
   surface?: "white" | "muted"
 }
 

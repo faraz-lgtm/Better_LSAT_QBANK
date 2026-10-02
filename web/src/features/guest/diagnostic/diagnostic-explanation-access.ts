@@ -18,7 +18,8 @@ function freeDiagnosticExplanationLimit(intentId: GuestDiagnosticIntentId): numb
 
 /**
  * Premium students see every explanation. Free students only see the first N
- * questions (1-based index) for mini / full-section teaser access.
+ * questions (1-based index) for mini / full-section teaser access — including
+ * Review in Tester.
  */
 function canShowDiagnosticExplanation(input: {
   intentId: GuestDiagnosticIntentId

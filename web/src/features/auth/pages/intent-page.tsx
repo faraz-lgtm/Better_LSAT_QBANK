@@ -49,9 +49,11 @@ function intentNavigationState(tier: DiagnosticIntentTier) {
 
 type IntentPageProps = {
   isAuthenticated?: boolean
+  /** When false, hide header Upgrade CTA (paid / premium accounts). Defaults to true. */
+  showUpgradeCta?: boolean
 }
 
-function IntentPage({ isAuthenticated = false }: IntentPageProps) {
+function IntentPage({ isAuthenticated = false, showUpgradeCta = true }: IntentPageProps) {
   const navigate = useNavigate()
   const [selectedTier, setSelectedTier] = useState<DiagnosticIntentTier>("quick")
 
@@ -65,7 +67,13 @@ function IntentPage({ isAuthenticated = false }: IntentPageProps) {
   }
 
   return (
-    <AuthLayout headerVariant="intent" contentLayout="intent" hideSidebar hideIntentSignIn={isAuthenticated}>
+    <AuthLayout
+      headerVariant="intent"
+      contentLayout="intent"
+      hideSidebar
+      hideIntentSignIn={isAuthenticated}
+      hideIntentUpgrade={!showUpgradeCta}
+    >
       <div className="intent-page">
         <AuthCard className="intent-page__card">
           <Link

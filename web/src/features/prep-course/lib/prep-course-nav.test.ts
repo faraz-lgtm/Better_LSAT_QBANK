@@ -9,9 +9,9 @@ import {
 describe("prep-course-nav", () => {
   it("lists Essential, LR Mastery, then RC Mastery", () => {
     expect(PREP_COURSE_NAV_ITEMS.map((item) => item.title)).toEqual([
-      "LSAT Essential Course",
+      "LSAT Essentials Course",
       "LR Mastery Course",
-      "RC Mastery",
+      "RC Mastery Course",
     ])
   })
 
@@ -22,7 +22,7 @@ describe("prep-course-nav", () => {
   })
 
   it("resolves nav items by slug", () => {
-    expect(findPrepCourseNavItem("rc-mastery")?.title).toBe("RC Mastery")
+    expect(findPrepCourseNavItem("rc-mastery")?.title).toBe("RC Mastery Course")
     expect(findPrepCourseNavItem("missing")).toBeUndefined()
   })
 })

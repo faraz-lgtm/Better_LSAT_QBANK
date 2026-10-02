@@ -25,7 +25,7 @@ function ActiveDrillQuestionSummary({ linked, attempt }: ActiveDrillQuestionSumm
   const isCorrect = answer?.isCorrect ?? false
 
   return (
-    <article className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-5 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+    <article className="bg-transparent p-5">
       <div className="flex flex-wrap items-center gap-4">
         <div
           className={`flex size-12 shrink-0 items-center justify-center rounded-full ${isCorrect ? "bg-[var(--explanation-answered-bg)]" : "bg-[color-mix(in srgb, var(--destructive) 12%, var(--greyscale-0))]"}`}

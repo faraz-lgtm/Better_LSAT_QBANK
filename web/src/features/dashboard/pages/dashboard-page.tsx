@@ -15,6 +15,7 @@ import {
   daysUntilDate,
   formatLsacTestMeta,
   formatTestDateInputValue,
+  isCurrentLsacTestAdministrationInProgress,
   mapOverviewToDashboardStats,
   mapOverviewToPerformance,
 } from "@/features/dashboard/lib/map-dashboard-stats"
@@ -23,6 +24,7 @@ import {
   dashboardDrillMoreHref,
   pickDashboardActiveDrills,
 } from "@/features/dashboard/lib/pick-dashboard-drills"
+import { withBestScoreFromTrajectory } from "@/features/student/analytics/map-analytics"
 import { useAnalyticsApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import { ContinueDrillCard, continueDrillToCardDrill } from "@/features/student/components/continue-drill-card"
 import { StudentMain } from "@/features/student/components/student-main"
@@ -134,8 +136,9 @@ function DashboardPage() {
       setLoading(true)
       setError(null)
       try {
-        const [overviewData, drillSessions, priorities, context, profile] = await Promise.all([
+        const [overviewData, trajectoryPoints, drillSessions, priorities, context, profile] = await Promise.all([
           analyticsApi.getOverview(),
+          analyticsApi.getTrajectory(),
           analyticsApi.getSessions({ kind: "DRILL", limit: 50 }),
           analyticsApi.getPriorities(),
           usersApi.getStudyContext(),
@@ -143,7 +146,7 @@ function DashboardPage() {
         ])
         if (cancelled) return
 
-        setOverview(overviewData)
+        setOverview(withBestScoreFromTrajectory(overviewData, trajectoryPoints))
         setStudyContext(context)
         setFirstName(firstNameFromProfile(profile))
 
@@ -213,9 +216,19 @@ function DashboardPage() {
   }, [activeFilter, navigate, practiceApi, startingAdaptiveDrill])
 
   const preferences = studyContext?.preferences ?? null
-  const countdownDate =
-    findLsacTestWindow(preferences?.plannedLsatDate)?.value ?? preferences?.plannedLsatDate ?? null
+  const selectedLsacWindow = findLsacTestWindow(
+    preferences?.plannedLsatDate,
+    preferences?.plannedLsatWindow,
+  )
+  const countdownDate = selectedLsacWindow?.value ?? preferences?.plannedLsatDate ?? null
   const daysRemaining = daysUntilDate(countdownDate)
+  const administrationInProgress =
+    isCurrentLsacTestAdministrationInProgress(
+      preferences?.plannedLsatDate,
+      new Date(),
+      preferences?.plannedLsatWindow,
+    ) ||
+    (selectedLsacWindow != null && daysRemaining === 0)
   const testDateValue = resolveLsacTestWindowValue(
     preferences?.plannedLsatDate,
     preferences?.plannedLsatWindow,
@@ -268,6 +281,7 @@ function DashboardPage() {
         <div className="dashboard-page__top">
           <TestDayCountdownCard
             daysRemaining={daysRemaining}
+            administrationInProgress={administrationInProgress}
             firstName={firstName}
             testMeta={formatLsacTestMeta(
               preferences?.plannedLsatDate,

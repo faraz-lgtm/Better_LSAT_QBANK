@@ -86,7 +86,7 @@ export const mockExplanationPrepTests: ExplanationPrepTestNode[] = [
   {
     id: "pt-160",
     prepTestNumber: "160",
-    rowSubtitle: "In Process • Blind Review",
+    rowSubtitle: "In Process • Untimed Review",
     sections: [
       {
         id: "s1",

@@ -44,6 +44,10 @@ function mockRepo() {
     getPrepTestExists: async () => true,
     findPrepTestIdByModuleId: async () => null,
     getSectionExists: async () => true,
+    listUserPrepTestPoolOverrides: async () => [],
+    upsertUserPrepTestPoolOverrides: async () => {},
+    deleteUserPrepTestPoolOverrides: async () => {},
+    listPrepTestFreshnessRows: async () => [],
     getQuestionDetail: async () =>
       ({
         id: 'q-1',
@@ -172,7 +176,7 @@ Deno.test('submitAnswer clamps SECTION timeSpentSeconds to 0..35 minutes', async
   assertEquals(captured, [0, 35 * 60, null])
 })
 
-Deno.test('submitAnswer ignores timeSpentSeconds on drills', async () => {
+Deno.test('submitAnswer stores timeSpentSeconds on drills', async () => {
   let captured: number | null | undefined = 0
   const base = mockRepo()
   const repo = {
@@ -195,7 +199,7 @@ Deno.test('submitAnswer ignores timeSpentSeconds on drills', async () => {
     selectedAnswer: 'C',
     timeSpentSeconds: 40,
   })
-  assertEquals(captured, null)
+  assertEquals(captured, 40)
 })
 
 Deno.test('submitAnswer ignores timeSpentSeconds during blind review', async () => {
@@ -476,6 +480,7 @@ Deno.test('completeSession uses latest answer per question for raw score', async
 
 Deno.test('completeSectionBlindReview stores blind review answers on completed section', async () => {
   let capturedMetadata: Record<string, unknown> | null = null
+  let capturedPatch: Record<string, unknown> | null = null
   const repo = {
     ...mockRepo(),
     getSessionById: async () =>
@@ -499,11 +504,15 @@ Deno.test('completeSectionBlindReview stores blind review answers on completed s
         admin_sections: { section_type: 'LR' as const, prep_test_id: 'pt-1' },
       }) satisfies QuestionDetailRow,
     updateSession: async (_id: string, _uid: string, patch: Record<string, unknown>) => {
+      capturedPatch = patch
       capturedMetadata = patch.metadata as Record<string, unknown>
       return baseSession({
         kind: 'SECTION',
         section_id: 'sec-1',
         completed_at: '2026-01-02T00:00:00Z',
+        blind_review_raw_score: typeof patch.blind_review_raw_score === 'number'
+          ? patch.blind_review_raw_score
+          : null,
         metadata: capturedMetadata ?? {},
       })
     },
@@ -515,6 +524,8 @@ Deno.test('completeSectionBlindReview stores blind review answers on completed s
   })
   assertEquals(out.session.kind, 'SECTION')
   assertEquals(capturedMetadata?.sectionBlindReviewRawScore, 1)
+  assertEquals(capturedPatch?.blind_review_raw_score, 1)
+  assertEquals(typeof capturedPatch?.blind_review_completed_at, 'string')
   const brAnswers = capturedMetadata?.sectionBlindReviewAnswers as Array<{ isCorrect: boolean }>
   assertEquals(brAnswers?.[0]?.isCorrect, true)
 })
@@ -725,12 +736,12 @@ Deno.test('submitAnswer rejects question not in drill session', async () => {
 })
 
 const drillPool: DrillPoolQuestionRow[] = [
-  { id: 'q-1', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
-  { id: 'q-2', section_id: 's1', source_group_id: null, difficulty: 3, question_type_id: null },
-  { id: 'q-3', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
-  { id: 'q-4', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
-  { id: 'q-5', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
-  { id: 'q-6', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
+  { id: 'q-1', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+  { id: 'q-2', section_id: 's1', source_group_id: null, difficulty: 3, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+  { id: 'q-3', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+  { id: 'q-4', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+  { id: 'q-5', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+  { id: 'q-6', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
 ]
 
 const drillQuestionRow: DrillQuestionRow = {
@@ -829,12 +840,12 @@ Deno.test('startLessonDrill resolves question from PT reference when not linked'
 
 Deno.test('startLessonDrill creates adaptive drill session with multiple questions', async () => {
   const adaptivePool: DrillPoolQuestionRow[] = [
-    { id: 'q-1', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
-    { id: 'q-2', section_id: 's1', source_group_id: null, difficulty: 3, question_type_id: null },
-    { id: 'q-3', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
-    { id: 'q-4', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
-    { id: 'q-5', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
-    { id: 'q-6', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null },
+    { id: 'q-1', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+    { id: 'q-2', section_id: 's1', source_group_id: null, difficulty: 3, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+    { id: 'q-3', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+    { id: 'q-4', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+    { id: 'q-5', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+    { id: 'q-6', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
   ]
   const service = createPracticeService({
     repository: drillRepo({
@@ -867,7 +878,7 @@ Deno.test('startLessonDrill creates adaptive drill session with multiple questio
   assertEquals(out.metadata.questionIds.length, 5)
 })
 
-Deno.test('startLessonDrill creates adaptive drill session from Full Drill title on video_text lesson', async () => {
+Deno.test('startLessonDrill does not treat video_text lessons as drills from title or slug', async () => {
   const service = createPracticeService({
     repository: drillRepo({
       getPublishedPrepLessonById: async () => ({
@@ -875,58 +886,17 @@ Deno.test('startLessonDrill creates adaptive drill session from Full Drill title
         slug: 'full-drill-main-conclusion-questions',
         title: 'Full Drill: Main Conclusion Questions',
         lesson_type: 'video_text',
-        summary: '5 Basic Main Conclusion Questions',
-        text_content: '<p>5 Basic Main Conclusion Questions</p>',
+        summary: 'You try these questions.',
+        text_content: '<p>Active drill practice notes.</p>',
         is_published: true,
       }),
-      listLessonQuestionIds: async () => ['q-1', 'q-2'],
     }) as never,
   })
-  const out = await service.startLessonDrill('user-1', { lessonId: 'lesson-full-drill' })
-  assertEquals(out.metadata.source, 'prep_course_adaptive_drill')
-  assertEquals(out.metadata.questionIds.slice(0, 2), ['q-1', 'q-2'])
-  assertEquals(out.metadata.questionCount, 5)
-})
-
-Deno.test('startLessonDrill creates adaptive drill from slug when title is generic', async () => {
-  const service = createPracticeService({
-    repository: drillRepo({
-      getPublishedPrepLessonById: async () => ({
-        id: 'lesson-full-drill',
-        slug: 'full-drill-main-conclusion-questions',
-        title: 'Main Conclusion Questions',
-        lesson_type: 'video_text',
-        summary: 'Practice set',
-        text_content: '<p>Practice set</p>',
-        is_published: true,
-      }),
-      listLessonQuestionIds: async () => ['q-1'],
-    }) as never,
-  })
-  const out = await service.startLessonDrill('user-1', { lessonId: 'lesson-full-drill' })
-  assertEquals(out.metadata.source, 'prep_course_adaptive_drill')
-  assertEquals(out.metadata.questionIds[0], 'q-1')
-  assertEquals(out.metadata.questionCount, 5)
-})
-
-Deno.test('startLessonDrill creates adaptive drill from Adaptive Drill - title', async () => {
-  const service = createPracticeService({
-    repository: drillRepo({
-      getPublishedPrepLessonById: async () => ({
-        id: 'lesson-adaptive',
-        slug: 'adaptive-drill-mixed-prep',
-        title: 'Adaptive Drill - Mixed Prep (5 Qs)',
-        lesson_type: 'video_text',
-        summary: null,
-        text_content: null,
-        is_published: true,
-      }),
-      listLessonQuestionIds: async () => ['q-1', 'q-2', 'q-3'],
-    }) as never,
-  })
-  const out = await service.startLessonDrill('user-1', { lessonId: 'lesson-adaptive' })
-  assertEquals(out.metadata.source, 'prep_course_adaptive_drill')
-  assertEquals(out.metadata.questionCount, 5)
+  await assertRejects(
+    () => service.startLessonDrill('user-1', { lessonId: 'lesson-full-drill' }),
+    PracticeValidationError,
+    'Lesson is not a prep-course drill',
+  )
 })
 
 Deno.test('startLessonDrill rejects non-active-drill lessons', async () => {
@@ -960,6 +930,107 @@ Deno.test('startDrill creates session with question ids', async () => {
   assertEquals(out.questions.length, 1)
   assertEquals(out.questions[0]!.stemText, 'Stem?')
   assertEquals(out.questions[0]!.targetTimeSeconds, undefined)
+  assertEquals(out.drillLabel, 'Varied Mix')
+  assertEquals(out.metadata.title, 'Varied Mix')
+})
+
+Deno.test('startDrill manual selection uses provided questionIds', async () => {
+  const service = createPracticeService({
+    repository: drillRepo({
+      getDrillQuestionRowsByIds: async (ids: string[]) =>
+        ids
+          .filter((id) => drillPool.some((q) => q.id === id))
+          .map((id) => ({ ...drillQuestionRow, id })),
+    }) as never,
+  })
+  const out = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 5,
+    selection: 'manual',
+    questionIds: ['q-3', 'q-1', 'missing'],
+  })
+  assertEquals(out.metadata.selection, 'manual')
+  assertEquals(out.metadata.questionIds, ['q-3', 'q-1'])
+  assertEquals(out.metadata.questionCount, 2)
+  assertEquals(out.questions.map((q) => q.id), ['q-3', 'q-1'])
+  assertEquals(out.drillLabel, '2 Questions from PT 120')
+  assertEquals(out.metadata.title, '2 Questions from PT 120')
+})
+
+Deno.test('startDrill uses questionIds even when selection is auto', async () => {
+  const service = createPracticeService({
+    repository: drillRepo({
+      getDrillQuestionRowsByIds: async (ids: string[]) =>
+        ids
+          .filter((id) => drillPool.some((q) => q.id === id))
+          .map((id) => ({ ...drillQuestionRow, id })),
+    }) as never,
+  })
+  const out = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 5,
+    selection: 'auto',
+    questionIds: ['q-6', 'q-2'],
+  })
+  assertEquals(out.metadata.selection, 'manual')
+  assertEquals(out.metadata.questionIds, ['q-6', 'q-2'])
+  assertEquals(out.questions.map((q) => q.id), ['q-6', 'q-2'])
+})
+
+Deno.test('listDrillPickerQuestions filters and paginates', async () => {
+  const service = createPracticeService({
+    repository: drillRepo({
+      listDrillPickerPoolQuestions: async () =>
+        drillPool.map((q, index) => ({
+          ...q,
+          question_number: index + 1,
+          section_number: 2,
+          stimulus_text: `Stimulus ${index + 1}`,
+          stem_text: `Stem ${index + 1}`,
+          tag_label: index % 2 === 0 ? 'Flaw' : 'Assumption',
+        })),
+      listLatestAnswerSummariesForUser: async () => [
+        { question_id: 'q-1', is_correct: true, time_spent_seconds: 52, created_at: '2026-01-01T00:00:00Z' },
+      ],
+    }) as never,
+  })
+  const out = await service.listDrillPickerQuestions('user-1', {
+    sectionType: 'LR',
+    search: 'flaw',
+    page: 1,
+    pageSize: 10,
+  })
+  assertEquals(out.total, 3)
+  assertEquals(out.questions.every((q) => q.tagLabel === 'Flaw'), true)
+  assertEquals(out.questions.some((q) => q.id === 'q-1' && q.result === 'correct'), true)
+})
+
+Deno.test('startDrill titles 1–3 selected types and falls back for more', async () => {
+  const service = createPracticeService({ repository: drillRepo() as never })
+  const one = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 1,
+    questionTypeIds: ['qt-1'],
+    tagLabels: ['Flaw'],
+  })
+  assertEquals(one.drillLabel, 'Flaw Drill')
+  assertEquals(one.metadata.tagLabels, ['Flaw'])
+
+  const three = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 1,
+    questionTypeIds: ['qt-1', 'qt-2', 'qt-3'],
+    tagLabels: ['Flaw', 'Assumption', 'Strengthen'],
+  })
+  assertEquals(three.drillLabel, 'Flaw, Assumption, Strengthen Drill')
+
+  const many = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 1,
+    questionTypeIds: ['qt-1', 'qt-2', 'qt-3', 'qt-4'],
+    tagLabels: ['A', 'B', 'C', 'D'],
+  })
+  assertEquals(many.drillLabel, 'Varied Mix')
 })
 
 Deno.test('startDrill LR unlimited stores unlimited metadata and entire pool', async () => {
@@ -1043,10 +1114,10 @@ Deno.test('extendDrill returns empty batch when the pool is exhausted', async ()
 
 Deno.test('startDrill RC picks complete passages by passageCount', async () => {
   const rcPool: DrillPoolQuestionRow[] = [
-    { id: 'a1', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null },
-    { id: 'a2', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null },
-    { id: 'b1', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null },
-    { id: 'b2', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null },
+    { id: 'a1', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+    { id: 'a2', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+    { id: 'b1', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+    { id: 'b2', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
   ]
   const service = createPracticeService({
     repository: drillRepo({
@@ -1067,9 +1138,9 @@ Deno.test('startDrill RC picks complete passages by passageCount', async () => {
 
 Deno.test('startDrill RC unlimited includes every passage in the pool', async () => {
   const rcPool: DrillPoolQuestionRow[] = [
-    { id: 'a1', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null },
-    { id: 'a2', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null },
-    { id: 'b1', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null },
+    { id: 'a1', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+    { id: 'a2', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+    { id: 'b1', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
   ]
   const service = createPracticeService({
     repository: drillRepo({
@@ -1086,10 +1157,10 @@ Deno.test('startDrill RC unlimited includes every passage in the pool', async ()
 
 Deno.test('startDrill RC fresh excludes answered passages', async () => {
   const rcPool: DrillPoolQuestionRow[] = [
-    { id: 'a1', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null },
-    { id: 'a2', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null },
-    { id: 'b1', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null },
-    { id: 'b2', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null },
+    { id: 'a1', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+    { id: 'a2', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+    { id: 'b1', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+    { id: 'b2', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
   ]
   const service = createPracticeService({
     repository: drillRepo({
@@ -1108,10 +1179,10 @@ Deno.test('startDrill RC fresh excludes answered passages', async () => {
 
 Deno.test('startDrill RC include-reviewed orders fresh passages before answered', async () => {
   const rcPool: DrillPoolQuestionRow[] = [
-    { id: 'a1', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null },
-    { id: 'a2', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null },
-    { id: 'b1', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null },
-    { id: 'b2', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null },
+    { id: 'a1', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+    { id: 'a2', section_id: 's1', source_group_id: 'g1', difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+    { id: 'b1', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+    { id: 'b2', section_id: 's1', source_group_id: 'g2', difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
   ]
   const service = createPracticeService({
     repository: drillRepo({
@@ -1169,41 +1240,41 @@ Deno.test('getDrillPoolStats fresh filter reduces selected count', async () => {
     sectionType: 'LR',
     status: 'fresh',
   })
-  assertEquals(stats.totalCount, 2)
-  assertEquals(stats.selectedCount, 1)
+  assertEquals(stats.totalCount, 6)
+  assertEquals(stats.selectedCount, 5)
 })
 
 const sectionPoolRows: SectionPoolRow[] = [
   {
     id: 'sec-db-1',
-    sectionId: 'SEED900-LR-1',
+    sectionId: 'SEED140-LR-1',
     sectionNumber: 1,
     sectionType: 'LR',
     title: 'Logical Reasoning',
-    moduleId: 'LSAC900',
-    prepTestId: 'pt-900',
+    moduleId: 'LSAC140',
+    prepTestId: 'pt-140',
     prepTestTitle: 'Local Seed — PrepTest Alpha',
     questionCount: 3,
   },
   {
     id: 'sec-db-2',
-    sectionId: 'SEED900-RC-1',
+    sectionId: 'SEED140-RC-1',
     sectionNumber: 2,
     sectionType: 'RC',
     title: 'Reading Comprehension',
-    moduleId: 'LSAC900',
-    prepTestId: 'pt-900',
+    moduleId: 'LSAC140',
+    prepTestId: 'pt-140',
     prepTestTitle: 'Local Seed — PrepTest Alpha',
     questionCount: 2,
   },
   {
     id: 'sec-db-3',
-    sectionId: 'SEED901-LR-1',
+    sectionId: 'SEED141-LR-1',
     sectionNumber: 1,
     sectionType: 'LR',
     title: 'Logical Reasoning',
-    moduleId: 'LSAC901',
-    prepTestId: 'pt-901',
+    moduleId: 'LSAC141',
+    prepTestId: 'pt-141',
     prepTestTitle: 'Local Seed — PrepTest Beta',
     questionCount: 1,
   },
@@ -1217,13 +1288,13 @@ function sectionRepo(overrides: Record<string, unknown> = {}) {
       if (sectionId === 'sec-db-1') {
         return {
           id: 'sec-db-1',
-          section_id: 'SEED900-LR-1',
+          section_id: 'SEED140-LR-1',
           section_number: 1,
           section_type: 'LR' as const,
           title: 'Logical Reasoning',
-          module_id: 'LSAC900',
-          prep_test_id: 'pt-900',
-          admin_prep_tests: { id: 'pt-900', title: 'Local Seed — PrepTest Alpha', module_id: 'LSAC900' },
+          module_id: 'LSAC140',
+          prep_test_id: 'pt-140',
+          admin_prep_tests: { id: 'pt-140', title: 'Local Seed — PrepTest Alpha', module_id: 'LSAC140' },
         }
       }
       return null
@@ -1235,7 +1306,7 @@ function sectionRepo(overrides: Record<string, unknown> = {}) {
       baseSession({
         kind: 'SECTION',
         section_id: input.sectionId ?? 'sec-db-1',
-        prep_test_id: 'pt-900',
+        prep_test_id: 'pt-140',
         metadata: input.metadata,
       }),
     ...overrides,
@@ -1253,7 +1324,7 @@ Deno.test('listSectionPool returns LR and RC sections with counts', async () => 
   assertEquals(out.sectionTypeCounts.lr, 2)
   assertEquals(out.sectionTypeCounts.rc, 1)
   assertEquals(out.sections[0]!.sectionType, 'LR')
-  assertEquals(out.sections[0]!.moduleId, 'LSAC901')
+  assertEquals(out.sections[0]!.moduleId, 'LSAC141')
   assertEquals(out.sections[0]!.questionCount, 1)
   assertEquals(out.sections[0]!.timeMinutes, 35)
 })
@@ -2384,4 +2455,107 @@ Deno.test('submitAnswer rejects question outside section session', async () => {
       }),
     PracticeValidationError,
   )
+})
+
+Deno.test('listPrepTestPoolSettings applies defaults and freshness', async () => {
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listPrepTestFreshnessRows: async () => [
+        { prepTestId: 'pt-900', totalQuestions: 10, answeredQuestions: 3 },
+      ],
+    }) as never,
+  })
+  const out = await service.listPrepTestPoolSettings('user-1')
+  assertEquals(out.prepTests.length, 2)
+  const pt900 = out.prepTests.find((p) => p.prepTestId === 'pt-900')
+  assertEquals(pt900?.inDrills, false)
+  assertEquals(pt900?.inSections, false)
+  assertEquals(pt900?.inTests, true)
+  assertEquals(pt900?.isDefault, true)
+  assertEquals(pt900?.freshnessPercent, 70)
+  assertEquals(out.counts.tests, 2)
+  assertEquals(out.counts.drills, 0)
+})
+
+Deno.test('updatePrepTestPoolSettings persists overrides and reset clears them', async () => {
+  let stored: Array<{ prep_test_id: string; in_drills: boolean; in_sections: boolean; in_tests: boolean }> = []
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserPrepTestPoolOverrides: async () => stored,
+      upsertUserPrepTestPoolOverrides: async (_uid: string, rows: typeof stored) => {
+        stored = rows
+      },
+      deleteUserPrepTestPoolOverrides: async () => {
+        stored = []
+      },
+      getPrepTestDetailRow: async (id: string) => (id === 'pt-900' ? prepTestDetailRow : null),
+    }) as never,
+  })
+
+  const updated = await service.updatePrepTestPoolSettings('user-1', {
+    updates: [{ prepTestId: 'pt-900', inDrills: true, inSections: true, inTests: false }],
+  })
+  const pt900 = updated.prepTests.find((p) => p.prepTestId === 'pt-900')
+  assertEquals(pt900?.inDrills, true)
+  assertEquals(pt900?.inSections, true)
+  assertEquals(pt900?.inTests, false)
+  assertEquals(pt900?.isDefault, false)
+  assertEquals(stored.length, 1)
+
+  const reset = await service.resetPrepTestPoolSettings('user-1')
+  const afterReset = reset.prepTests.find((p) => p.prepTestId === 'pt-900')
+  assertEquals(afterReset?.inTests, true)
+  assertEquals(afterReset?.inDrills, false)
+  assertEquals(afterReset?.isDefault, true)
+  assertEquals(stored.length, 0)
+})
+
+Deno.test('listSectionPool excludes PrepTests not in sections membership', async () => {
+  const service = createPracticeService({
+    repository: sectionRepo({
+      listUserPrepTestPoolOverrides: async () => [
+        { prep_test_id: 'pt-141', in_drills: false, in_sections: false, in_tests: true },
+      ],
+    }) as never,
+  })
+  const out = await service.listSectionPool('user-1', {})
+  assertEquals(out.total, 2)
+  assertEquals(out.sections.every((s) => s.prepTestId === 'pt-140'), true)
+})
+
+Deno.test('listPrepTestPool keeps PrepTests outside tests pool but marks membership', async () => {
+  const service = createPracticeService({
+    repository: preptestRepo({
+      listUserPrepTestPoolOverrides: async () => [
+        { prep_test_id: 'pt-901', in_drills: false, in_sections: true, in_tests: false },
+      ],
+    }) as never,
+  })
+  const out = await service.listPrepTestPool('user-1', {})
+  assertEquals(out.total, 2)
+  const pt901 = out.prepTests.find((p) => p.id === 'pt-901')
+  assertEquals(pt901?.inTests, false)
+  assertEquals(pt901?.inSections, true)
+  assertEquals(pt901?.inDrills, false)
+})
+
+Deno.test('startDrill filters out questions outside drills pool', async () => {
+  const mixedPool: DrillPoolQuestionRow[] = [
+    { id: 'q-keep', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null, prep_test_id: 'pt-120', module_id: 'LSAC120' },
+    { id: 'q-drop', section_id: 's1', source_group_id: null, difficulty: 2, question_type_id: null, prep_test_id: 'pt-159', module_id: 'LSAC159' },
+  ]
+  const service = createPracticeService({
+    repository: drillRepo({
+      listDrillPoolQuestions: async () => mixedPool,
+      getDrillQuestionRowsByIds: async (ids: string[]) =>
+        ids.map((id) => ({ ...drillQuestionRow, id })),
+    }) as never,
+  })
+  const out = await service.startDrill('user-1', {
+    sectionType: 'LR',
+    questionCount: 1,
+    difficulty: 'easy',
+    status: 'fresh',
+  })
+  assertEquals(out.metadata.questionIds, ['q-keep'])
 })

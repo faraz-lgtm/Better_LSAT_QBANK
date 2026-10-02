@@ -5,13 +5,17 @@ import type {
   PrepLesson,
 } from "@/lib/api/prep-course"
 
-/** Sidebar / UI display title; maps legacy DB title until migration is applied everywhere. */
+/** Sidebar / UI display title; maps legacy DB titles until migration is applied everywhere. */
 export function prepCourseDisplayTitle(course: { slug: string; title: string }): string {
   if (
     course.slug === "betterlsat-core-syllabus-structure-content" ||
-    course.title === "BetterLSAT Core Syllabus Structure + Content"
+    course.title === "BetterLSAT Core Syllabus Structure + Content" ||
+    course.title === "LSAT Essential Course"
   ) {
-    return "LSAT Essential Course"
+    return "LSAT Essentials Course"
+  }
+  if (course.slug === "rc-mastery" || course.title === "RC Mastery") {
+    return "RC Mastery Course"
   }
   return course.title
 }
@@ -286,56 +290,9 @@ function parseLessonTitlePrefix(title: string): { cleanTitle: string; kind: Dril
   return null
 }
 
-function parseDrillKindFromSlug(slug: string): DrillLessonType | null {
-  const normalized = slug.trim().toLowerCase()
-  if (
-    normalized.startsWith("full-drill") ||
-    normalized.startsWith("adaptive-drill") ||
-    normalized.startsWith("smart-drill")
-  ) {
-    return "adaptive_drill"
-  }
-  if (normalized.startsWith("active-drill")) return "active_drill"
-  if (normalized.startsWith("rep-work")) return "rep_work"
-  return null
-}
-
-function stripHtmlForDrillInference(html: string): string {
-  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
-}
-
-function inferDrillKindFromContent(lesson: PrepLesson): DrillLessonType | null {
-  const haystack = [
-    lesson.title,
-    lesson.summary ?? "",
-    stripHtmlForDrillInference(lesson.text_content ?? ""),
-  ]
-    .join("\n")
-    .toLowerCase()
-
-  if (
-    /\bfull drill\b/.test(haystack) ||
-    /\bsmart drill\b/.test(haystack) ||
-    /\badaptive drill\b/.test(haystack)
-  ) {
-    return "adaptive_drill"
-  }
-  if (/\bactive drill\b/.test(haystack) || /\byou try\b/.test(haystack)) {
-    return "active_drill"
-  }
-  if (/\brep work\b/.test(haystack) || /\breview work\b/.test(haystack)) {
-    return "rep_work"
-  }
-  return null
-}
-
 function resolveDrillLessonType(lesson: PrepLesson): DrillLessonType | null {
   if (isDrillLessonType(lesson.lesson_type)) return lesson.lesson_type
-  const fromTitle = parseLessonTitlePrefix(lesson.title)?.kind
-  if (fromTitle) return fromTitle
-  const fromSlug = parseDrillKindFromSlug(lesson.slug)
-  if (fromSlug) return fromSlug
-  return inferDrillKindFromContent(lesson)
+  return null
 }
 
 export function isResolvedPrepCourseDrillLesson(lesson: PrepLesson): boolean {

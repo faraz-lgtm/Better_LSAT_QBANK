@@ -61,6 +61,7 @@ function AppRoutes() {
         <Route path="prep-course" element={<PrepCourseListPage />} />
         <Route path="prep-course/:courseSlug" element={<PrepCourseCoursePage />} />
         <Route path="prep-course/:courseSlug/:lessonSlug" element={<PrepCourseLessonPage />} />
+        <Route path="prep-course/:courseSlug/:lessonSlug/start" element={<PrepCourseLessonPage />} />
         <Route path="practice/drills" element={<PracticeDrillsPage />} />
         <Route path="practice/drills/lr/new" element={<LrNewDrillPage />} />
         <Route path="practice/drills/rc/new" element={<RcNewDrillPage />} />

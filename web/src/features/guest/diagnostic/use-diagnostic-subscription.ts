@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
+import { entitlementUnlocksDiagnosticResults } from '@/features/guest/diagnostic/diagnostic-premium-access'
+import { hasGuestPremiumAccess } from '@/features/guest/premium/guest-premium-account'
 import { createUsersApi } from '@/lib/api/users'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 
@@ -30,11 +32,11 @@ function useDiagnosticSubscription(): DiagnosticSubscriptionState {
       .getEntitlementState()
       .then((entitlement) => {
         if (!alive) return
-        setHasActiveCore(entitlement.hasActiveCore)
+        setHasActiveCore(entitlementUnlocksDiagnosticResults(entitlement))
       })
       .catch((err) => {
         if (!alive) return
-        setHasActiveCore(false)
+        setHasActiveCore(hasGuestPremiumAccess())
         setError(err instanceof Error ? err.message : String(err))
       })
       .finally(() => {

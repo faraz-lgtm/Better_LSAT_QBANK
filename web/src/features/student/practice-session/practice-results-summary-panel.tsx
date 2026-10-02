@@ -1,5 +1,6 @@
 import type { ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
 import {
+  PT_RESULTS_BY_SECTION_CARDS_ROW_CLASS,
   PT_RESULTS_BY_SECTION_PANEL_CLASS,
   PT_RESULTS_SUMMARY_ROW_CLASS,
 } from "@/features/student/analytics/prep-test-results-section-styles"
@@ -135,7 +136,7 @@ function PracticeResultsSummaryPanel({
 
       <div className={PT_RESULTS_BY_SECTION_PANEL_CLASS}>
         <h2 className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">RESULTS BY SECTION</h2>
-        <div className="flex min-w-0 gap-[7px] overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className={PT_RESULTS_BY_SECTION_CARDS_ROW_CLASS}>
           {sections.map((section) => (
             <PrepTestSectionResultCard
               key={section.id}

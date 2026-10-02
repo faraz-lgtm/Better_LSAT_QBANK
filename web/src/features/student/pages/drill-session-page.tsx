@@ -3,9 +3,11 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { ChevronLeft, ChevronRight, X } from "lucide-react"
 
 import { isQuestionRecommendedForBlindReview } from "@/features/student/blind-review/blind-review-navigation"
-import { isUnlimitedDrillQuestionCount, type DrillQuestion, type DrillSessionResponse } from "@/features/student/drills/drill-types"
-import { ACTIVE_DRILL_BODY_GRID_CLASS, ACTIVE_DRILL_FINISH_BUTTON_CLASS, ACTIVE_DRILL_FOOTER_CLASS, ACTIVE_DRILL_PASSAGE_PANE_CLASS, ACTIVE_DRILL_PASSAGE_TEXT_CLASS, ACTIVE_DRILL_QUESTION_PANE_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
+import { isUnlimitedDrillQuestionCount, type DrillSessionResponse } from "@/features/student/drills/drill-types"
+import { resolveDrillDisplayTitle } from "@/features/student/drills/format-drill-title"
+import { ACTIVE_DRILL_BODY_GRID_CLASS, ACTIVE_DRILL_FINISH_BUTTON_CLASS, ACTIVE_DRILL_FOOTER_CLASS, ACTIVE_DRILL_PASSAGE_PANE_CLASS, ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS, ACTIVE_DRILL_PASSAGE_TEXT_CLASS, ACTIVE_DRILL_QUESTION_PANE_CLASS } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import {
+  EXAM_CARD_FULL_WIDTH_CLASS,
   OFFICIAL_BODY_GRID_CLASS,
   OFFICIAL_CARD_CLASS,
   OFFICIAL_FOOTER_CLASS,
@@ -15,6 +17,9 @@ import {
 } from "@/features/student/practice-session/practice-session-official-styles"
 import { PracticeSessionActiveDrillFooterNav } from "@/features/student/practice-session/practice-session-active-drill-footer-nav"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
+import { PassageAnalysisBody } from "@/features/student/practice-session/passage-analysis-view"
+import { ReviewPassageCardHeader } from "@/features/student/practice-session/review-passage-card-header"
+import { useReviewPassageAnalysis } from "@/features/student/practice-session/use-review-passage-analysis"
 import { PracticeSessionHighlightPopover } from "@/features/student/practice-session/practice-session-highlight-popover"
 import type { BlindReviewAnswerView } from "@/features/student/practice-session/practice-blind-review-answer-toggle"
 import {
@@ -69,6 +74,7 @@ import {
   resolveExamSessionVariant,
   type PracticeSessionVariant,
 } from "@/features/student/practice-session/practice-session-types"
+import { choiceIndexFromAnswer, hasPracticeAnswer } from "@/features/student/practice-session/practice-choice-index"
 import { useExamFullscreen, useOfficialInterfacePreference } from "@/features/student/practice-session/use-official-interface"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { PracticeCompleteModal } from "@/features/student/practice-session/practice-complete-modal"
@@ -90,7 +96,9 @@ import {
   resolveTimerBudgetSeconds,
   usePracticeSessionTimer,
 } from "@/features/student/practice-session/use-practice-session-timer"
+import { practiceSessionResultsPath } from "@/features/student/analytics/analytics-results-paths"
 import { stashDrillBlindReviewResult } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
+import { withActiveDrillResultsQuery } from "@/features/prep-course/lib/active-drill-results-query"
 import {
   DASHBOARD_ADAPTIVE_DRILL_QUERY,
   drillSessionSupportsBlindReview,
@@ -110,53 +118,7 @@ import { useAccommodations } from "@/features/student/accommodations/accommodati
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
-function choiceIndexFromAnswer(choices: DrillQuestion["choices"], selectedAnswer: string): number | null {
-  const letter = selectedAnswer.trim().toUpperCase()
-  const byId = choices.findIndex((c) => c.id.toUpperCase() === letter)
-  if (byId >= 0) return byId
-  const idx = letter.charCodeAt(0) - 65
-  if (idx >= 0 && idx < choices.length) return idx
-  return null
-}
-
 type QuestionAnswerState = { selectedAnswer: string; isCorrect: boolean }
-
-function ReviewStaticSwitch({ checked = false }: { checked?: boolean }) {
-  return (
-    <span
-      role="switch"
-      aria-checked={checked}
-      aria-disabled="true"
-      className={cn(
-        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent",
-        checked ? "bg-[var(--primary)]" : "bg-[var(--greyscale-300)]",
-      )}
-    >
-      <span
-        className={cn(
-          "block size-4 rounded-full bg-[var(--greyscale-0)] shadow-sm dark:bg-[var(--greyscale-900)]",
-          checked ? "translate-x-4" : "translate-x-0",
-        )}
-      />
-    </span>
-  )
-}
-
-function ReviewPassageCardHeader() {
-  return (
-    <div className="mb-8 flex h-8 shrink-0 items-center justify-between gap-4">
-      <span className="inline-flex h-8 items-center rounded-[8px] bg-[var(--primary-25)] px-4 py-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)]">
-        Passage Only View
-      </span>
-      <span className="inline-flex h-8 items-center gap-4" aria-label="Analysis View is display only">
-        <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
-          Analysis View
-        </span>
-        <ReviewStaticSwitch />
-      </span>
-    </div>
-  )
-}
 
 function DrillSessionPage() {
   const { scaleFactor: accommodationScaleFactor } = useAccommodations()
@@ -195,6 +157,7 @@ function DrillSessionPage() {
   const [notesOpen, setNotesOpen] = useState(false)
   const [reviewSidePanel, setReviewSidePanel] = useState<PracticeReviewSidePanel>(null)
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false)
+  const [analysisViewOpen, setAnalysisViewOpen] = useState(false)
   const [reviewPanelOpen, setReviewPanelOpen] = useState(false)
   const [passageOnlyView, setPassageOnlyView] = useState(false)
   const [lineFocus, setLineFocus] = useState(false)
@@ -265,7 +228,10 @@ function DrillSessionPage() {
     usePracticeSessionTimer()
   const appliedAccommodationScaleRef = useRef<number | null>(null)
   const pauseModal = usePracticeSessionPauseModal(pauseTimer, resumeTimer)
-  const highlights = usePracticeHighlights()
+  const highlights = usePracticeHighlights({
+    highlightMenuStartsExpanded: !officialInterface,
+    menuAnchorsToSelection: officialInterface,
+  })
   const accessibilityPanel = usePracticeSessionAccessibilityPanel(
     highlights.accessibilitySettings,
     highlights.applyAccessibilitySettings,
@@ -288,6 +254,7 @@ function DrillSessionPage() {
 
   const loadGenerationRef = useRef(0)
   const prevQuestionIdRef = useRef<string | null>(null)
+  const autoAdvanceTimeoutRef = useRef<number | null>(null)
   const answerPersist = usePracticeAnswerPersist({
     sessionId: sessionId ?? null,
     enabled:
@@ -429,6 +396,17 @@ function DrillSessionPage() {
 
   const safeIndex = Math.min(Math.max(qIndex, 1), Math.max(questions.length, 1))
   const current = questions[safeIndex - 1]
+  const { passageAnalysis, analysisAvailable } = useReviewPassageAnalysis({
+    enabled: resultsReviewMode,
+    questionId: current?.id,
+    sectionType,
+  })
+  const showPassageAnalysis =
+    resultsReviewMode && analysisViewOpen && analysisAvailable && Boolean(passageAnalysis)
+
+  useEffect(() => {
+    setAnalysisViewOpen(false)
+  }, [current?.id])
 
   useEffect(() => {
     prevQuestionIdRef.current = null
@@ -439,6 +417,10 @@ function DrillSessionPage() {
     prevQuestionIdRef.current = current?.id ?? null
     if (prev && prev !== current?.id) {
       void answerPersist.flushQuestion(prev)
+    }
+    if (autoAdvanceTimeoutRef.current != null) {
+      window.clearTimeout(autoAdvanceTimeoutRef.current)
+      autoAdvanceTimeoutRef.current = null
     }
   }, [answerPersist, current?.id])
 
@@ -510,7 +492,7 @@ function DrillSessionPage() {
     : undefined
   const currentAnswer = displayAnswer
   const selectedIndex =
-    current && currentAnswer
+    current && hasPracticeAnswer(currentAnswer)
       ? choiceIndexFromAnswer(current.choices, currentAnswer.selectedAnswer)
       : null
   const recommendedForBr = Boolean(
@@ -526,7 +508,7 @@ function DrillSessionPage() {
   }
   const actualOutcome = current ? answerOutcome(actualAnswersByQuestion[current.id]) : null
   const blindReviewOutcome = current ? answerOutcome(answersByQuestion[current.id]) : null
-  const reviewNavOutcome = reviewAfterComplete || resultsReviewMode
+  const resultsReviewNavOutcome = resultsReviewMode
     ? (questionId: string) =>
         resolvePracticeSessionQuestionNavOutcome(
           answerViewTab === "blind_review"
@@ -537,7 +519,7 @@ function DrillSessionPage() {
   const revealed = reviewAfterComplete
     ? false
     : showAnswersMode === "each"
-      ? Boolean(currentAnswer)
+      ? hasPracticeAnswer(currentAnswer)
       : false
 
   const passageBody =
@@ -575,7 +557,7 @@ function DrillSessionPage() {
       })
       return
     }
-    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
+    if (!canChangePracticeAnswer(showAnswersMode, hasPracticeAnswer(currentAnswer), {
       blindReview: editingBlindReviewAnswers,
     })) {
       return
@@ -606,7 +588,11 @@ function DrillSessionPage() {
         },
       }))
       if (showAnswersMode === "each") {
-        window.setTimeout(() => {
+        if (autoAdvanceTimeoutRef.current != null) {
+          window.clearTimeout(autoAdvanceTimeoutRef.current)
+        }
+        autoAdvanceTimeoutRef.current = window.setTimeout(() => {
+          autoAdvanceTimeoutRef.current = null
           void goToNextQuestion()
         }, 600)
       }
@@ -625,7 +611,7 @@ function DrillSessionPage() {
   async function handleResetResponse() {
     if (!sessionId || !current) return
     if (reviewAfterComplete && !editingBlindReviewAnswers) return
-    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), { blindReview: editingBlindReviewAnswers })) {
+    if (!canChangePracticeAnswer(showAnswersMode, hasPracticeAnswer(currentAnswer), { blindReview: editingBlindReviewAnswers })) {
       return
     }
 
@@ -714,7 +700,7 @@ function DrillSessionPage() {
           stashDrillBlindReviewResult(session, lessonId)
         }
       } catch (e) {
-        setError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to save blind review")
+        setError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to save untimed review")
         setFinishing(false)
         return
       } finally {
@@ -726,11 +712,16 @@ function DrillSessionPage() {
     setReviewAfterComplete(false)
     const path = resolveReturnPath()
     if (path.startsWith("/app/prep-course/")) {
-      navigate(path, { replace: true })
+      navigate(withActiveDrillResultsQuery(path), { replace: true })
       return
     }
-    const params = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""
-    navigate(`/app/practice/results/${encodeURIComponent(sessionId)}${params}`, { replace: true })
+    navigate(
+      practiceSessionResultsPath(sessionId, {
+        source: "drill",
+        returnTo: returnTo || undefined,
+      }),
+      { replace: true },
+    )
   }
 
   const unansweredCount = useMemo(
@@ -742,9 +733,9 @@ function DrillSessionPage() {
     if (reviewAfterComplete) {
       if (unansweredCount > 0) {
         const noun = unansweredCount === 1 ? "question" : "questions"
-        return `Finish blind review and view your results? You have ${unansweredCount} unanswered ${noun} in blind review.`
+        return `Finish untimed review and view your results? You have ${unansweredCount} unanswered ${noun} in untimed review.`
       }
-      return "Finish blind review and view your results?"
+      return "Finish untimed review and view your results?"
     }
     if (unansweredCount > 0) {
       const noun = unansweredCount === 1 ? "question" : "questions"
@@ -862,7 +853,13 @@ function DrillSessionPage() {
     )
   }
 
-  const headerLabel = drill?.drillLabel ?? metadata?.title ?? (sectionType === "LR" ? "LR Drill" : "RC Drill")
+  const headerLabel = resolveDrillDisplayTitle({
+    title: drill?.drillLabel ?? metadata?.title ?? null,
+    selection: typeof metadata?.selection === "string" ? metadata.selection : null,
+    tagLabels: Array.isArray(metadata?.tagLabels)
+      ? metadata.tagLabels.filter((value): value is string => typeof value === "string")
+      : null,
+  }) || (sectionType === "LR" ? "LR Drill" : "RC Drill")
   const isPrepCourseDrill = Boolean(resolveReturnPath())
   const sessionMetadata =
     drill?.session.metadata != null && typeof drill.session.metadata === "object"
@@ -900,7 +897,7 @@ function DrillSessionPage() {
   const allowReselect =
     !resultsReviewMode &&
     (!answeringBlindReview || editingBlindReviewAnswers) &&
-    canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
+    canChangePracticeAnswer(showAnswersMode, hasPracticeAnswer(currentAnswer), {
       blindReview: editingBlindReviewAnswers,
     })
   const prepTestLabel = headerLabel.replace(/^PrepTest\s*/i, "PT ")
@@ -947,6 +944,20 @@ function DrillSessionPage() {
     />
   )
 
+  const blindReviewMoreMenu =
+    useBlindReviewLayout && !resultsReviewMode ? (
+      <PracticeSessionFinishMenu
+        finishing={finishing}
+        submitLabel="Submit Drill"
+        iconTrigger
+        variant="active-drill"
+        showInterfaceToggle={false}
+        onSubmitSection={requestSubmitDrill}
+        onExit={leaveDrillSession}
+        onExitWithoutSaving={leaveDrillSession}
+      />
+    ) : null
+
   const blindReviewHeader = useBlindReviewLayout ? (
     <PracticeBlindReviewSessionHeader
       prepTestLabel={prepTestLabel}
@@ -954,7 +965,7 @@ function DrillSessionPage() {
       activeSectionSessionId={sessionId ?? null}
       onSelectSection={() => {}}
       questionRef={questionRefLabel}
-      actualScoreLabel="Actual: BR"
+      actualScoreLabel="Actual: —"
       notesOpen={resultsReviewMode ? reviewSidePanel === "notes" : notesOpen}
       notesEnabled={resultsReviewMode || answerViewTab === "blind_review"}
       onToggleNotes={handleToggleNotes}
@@ -969,8 +980,41 @@ function DrillSessionPage() {
       findQuery={findQuery}
       onFindQueryChange={setFindQuery}
       questionProgressLabel={questions.length > 0 ? `${safeIndex} of ${questions.length}` : null}
+      moreMenu={blindReviewMoreMenu}
     />
   ) : null
+
+  const reviewPassageHeader = resultsReviewMode ? (
+    <ReviewPassageCardHeader
+      analysisEnabled={analysisAvailable}
+      analysisChecked={analysisViewOpen}
+      onAnalysisCheckedChange={setAnalysisViewOpen}
+    />
+  ) : null
+
+  const renderPassagePaneBody = (annotatedClassName: string | undefined) =>
+    showPassageAnalysis && passageAnalysis ? (
+      <>
+        {reviewPassageHeader}
+        <PassageAnalysisBody analysis={passageAnalysis} passageBody={passageBody} />
+      </>
+    ) : (
+      <>
+        {reviewPassageHeader}
+        {sectionType === "RC" && current?.passage ? (
+          <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
+        ) : null}
+        <PracticeAnnotatedContent
+          regionKey={passageKey}
+          html={passageHtml}
+          findQuery={findQuery}
+          toolMode={highlights.toolMode}
+          onMouseUp={highlights.handleContentMouseUp}
+          onClickCapture={highlights.handleContentClick}
+          className={annotatedClassName}
+        />
+      </>
+    )
 
   const sessionInnerContent = (
     <>
@@ -992,29 +1036,19 @@ function DrillSessionPage() {
                 ref={passagePaneRef}
                 className={resultsReviewMode ? REVIEW_PASSAGE_PANEL_CLASS : BLIND_REVIEW_NOTES_PASSAGE_PANEL_CLASS}
               >
-                {resultsReviewMode ? <ReviewPassageCardHeader /> : null}
-                {sectionType === "RC" && current.passage ? (
-                  <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
-                ) : null}
-                <PracticeAnnotatedContent
-                  regionKey={passageKey}
-                  html={passageHtml}
-                  findQuery={findQuery}
-                  toolMode={highlights.toolMode}
-                  onMouseUp={highlights.handleContentMouseUp}
-                  onClickCapture={highlights.handleContentClick}
-                  className={cn(
+                {renderPassagePaneBody(
+                  cn(
                     BLIND_REVIEW_PASSAGE_TEXT_CLASS,
                     resultsReviewMode && "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]",
-                  )}
-                />
+                  ),
+                )}
               </div>
               <div
                 ref={questionPaneRef}
                 className={resultsReviewMode ? REVIEW_QUESTION_PANEL_CLASS : BLIND_REVIEW_NOTES_QUESTION_PANEL_CLASS}
               >
                 <PracticeDrillQuestionPanel
-                  key={current.id}
+                  key={`${current.id}:${safeIndex}`}
                   question={current}
                   questionNumber={safeIndex}
                   findQuery={findQuery}
@@ -1075,23 +1109,16 @@ function DrillSessionPage() {
           <div className={REVIEW_SIDE_PANEL_LAYOUT_CLASS}>
             <div className="contents">
               <div ref={passagePaneRef} className={REVIEW_PASSAGE_PANEL_CLASS}>
-                <ReviewPassageCardHeader />
-                {sectionType === "RC" && current.passage ? (
-                  <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
-                ) : null}
-                <PracticeAnnotatedContent
-                  regionKey={passageKey}
-                  html={passageHtml}
-                  findQuery={findQuery}
-                  toolMode={highlights.toolMode}
-                  onMouseUp={highlights.handleContentMouseUp}
-                  onClickCapture={highlights.handleContentClick}
-                  className={cn(BLIND_REVIEW_PASSAGE_TEXT_CLASS, "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]")}
-                />
+                {renderPassagePaneBody(
+                  cn(
+                    BLIND_REVIEW_PASSAGE_TEXT_CLASS,
+                    "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]",
+                  ),
+                )}
               </div>
               <div ref={questionPaneRef} className={REVIEW_QUESTION_PANEL_CLASS}>
                 <PracticeDrillQuestionPanel
-                  key={current.id}
+                  key={`${current.id}:${safeIndex}`}
                   question={current}
                   questionNumber={safeIndex}
                   findQuery={findQuery}
@@ -1139,7 +1166,7 @@ function DrillSessionPage() {
                   : officialChrome
                     ? cn(OFFICIAL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1 lg:pr-0")
                   : useActiveDrillLayout
-                  ? ACTIVE_DRILL_BODY_GRID_CLASS
+                  ? cn(ACTIVE_DRILL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1")
                   : "lg:grid-cols-2 lg:divide-x divide-[var(--greyscale-100)] dark:divide-[var(--greyscale-600)]",
             )}
           >
@@ -1152,36 +1179,27 @@ function DrillSessionPage() {
                   : officialChrome
                     ? OFFICIAL_PASSAGE_PANE_CLASS
                   : useActiveDrillLayout
-                    ? ACTIVE_DRILL_PASSAGE_PANE_CLASS
+                    ? passageOnlyView
+                      ? ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS
+                      : ACTIVE_DRILL_PASSAGE_PANE_CLASS
                     : "border-b border-[var(--greyscale-100)] p-5 lg:border-b-0",
               )}
             >
-              {resultsReviewMode ? <ReviewPassageCardHeader /> : null}
-              {sectionType === "RC" && current.passage ? (
-                <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
-              ) : null}
-              <PracticeAnnotatedContent
-                regionKey={passageKey}
-                html={passageHtml}
-                findQuery={findQuery}
-                toolMode={highlights.toolMode}
-                onMouseUp={highlights.handleContentMouseUp}
-                onClickCapture={highlights.handleContentClick}
-                className={
-                  useBlindReviewLayout
-                    ? BLIND_REVIEW_PASSAGE_TEXT_CLASS
-                    : officialChrome
-                      ? OFFICIAL_PASSAGE_TEXT_CLASS
+              {renderPassagePaneBody(
+                useBlindReviewLayout
+                  ? BLIND_REVIEW_PASSAGE_TEXT_CLASS
+                  : officialChrome
+                    ? OFFICIAL_PASSAGE_TEXT_CLASS
                     : useActiveDrillLayout
                       ? ACTIVE_DRILL_PASSAGE_TEXT_CLASS
-                      : undefined
-                }
-              />
+                      : undefined,
+              )}
             </div>
             <div
               className={cn(
                 "practice-session-pane min-h-0",
                 officialChrome && passageOnlyView && "hidden",
+                useActiveDrillLayout && passageOnlyView && "hidden",
                 useBlindReviewLayout
                   ? BLIND_REVIEW_QUESTION_PANEL_CLASS
                   : officialChrome
@@ -1192,7 +1210,7 @@ function DrillSessionPage() {
               )}
             >
               <PracticeDrillQuestionPanel
-                key={current.id}
+                key={`${current.id}:${safeIndex}`}
                 question={current}
                 questionNumber={safeIndex}
                 findQuery={findQuery}
@@ -1279,7 +1297,7 @@ function DrillSessionPage() {
               recommendedForBr={(questionId) =>
                 isQuestionRecommendedForBlindReview(actualAnswersByQuestion[questionId])
               }
-              outcomeForQuestion={reviewNavOutcome}
+              outcomeForQuestion={resultsReviewNavOutcome}
               variant={sessionVariant}
               showPassageBreaks={sectionType === "RC"}
               onSelectQuestion={setQIndex}
@@ -1353,6 +1371,7 @@ function DrillSessionPage() {
         )}
       </footer>
       <PracticeSessionHighlightPopover
+        variant={officialChrome ? "official" : "default"}
         menu={highlights.selectionMenu}
         onApplyColor={highlights.applySelectionColor}
         onRemove={highlights.removeSelectionHighlight}
@@ -1460,7 +1479,7 @@ function DrillSessionPage() {
           </div>
         </div>
       ) : useActiveDrillLayout ? (
-        <PracticeSessionImmersiveFrame>
+        <PracticeSessionImmersiveFrame fullWidth={officialChrome}>
           {error ? (
             <p className="mb-3 shrink-0 text-sm text-red-600" role="alert">
               {error}
@@ -1470,7 +1489,8 @@ function DrillSessionPage() {
             className={cn(
               officialChrome
                 ? OFFICIAL_CARD_CLASS
-                : "practice-session-card practice-session-card--active-drill relative flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+                : "practice-session-card practice-session-card--active-drill relative mx-auto flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+              isFullscreen && EXAM_CARD_FULL_WIDTH_CLASS,
             )}
           >
             {sessionCardContent}

@@ -24,7 +24,8 @@ describe("guest diagnostic result storage", () => {
     const result = buildDefaultGuestDiagnosticResult("mini")
     expect(result.questionCount).toBe(10)
     expect(result.correctCount).toBe(3)
-    expect(result.scaledScoreLabel).toBe("135–139")
+    // 3/10 correct = 7 incorrect → Apr 2025 projection
+    expect(result.scaledScoreLabel).toBe("120–142")
     expect(result.outcomes[0]?.questionId).toBe("mini-diag-q1")
   })
 
@@ -40,10 +41,10 @@ describe("guest diagnostic result storage", () => {
 
     expect(result.questionCount).toBe(10)
     expect(result.correctCount).toBe(2)
-    expect(result.scaledScoreLabel).toBe("130–134")
-    // Scaled 130–134 → shared LSAT percentile map (prep-test / CSV)
-    expect(result.percentileLabel).toBe("2.3–4.4")
-    expect(result.percentileLow).toBe(2.27)
+    // 2/10 correct = 8 incorrect → Apr 2025 projection
+    expect(result.scaledScoreLabel).toBe("120–134")
+    expect(result.percentileLabel).toBe("0–4.4")
+    expect(result.percentileLow).toBe(0)
     expect(result.percentileHigh).toBe(4.38)
     expect(result.outcomes.filter((o) => o.isCorrect)).toHaveLength(2)
   })
@@ -55,7 +56,7 @@ describe("guest diagnostic result storage", () => {
     expect(result.scaledScoreLabel).toBe("120–124")
   })
 
-  it("maps section diagnostic correct count onto estimated score bands", () => {
+  it("maps section diagnostic incorrect count onto LSAT conversion bands", () => {
     const questions = Array.from({ length: 25 }, (_, index) => ({
       id: `section-diag-q${index + 1}`,
       questionNumber: index + 1,
@@ -65,22 +66,41 @@ describe("guest diagnostic result storage", () => {
       correctChoiceId: "C",
       choices: [{ id: "C", index: 0, text: "C", explanationHtml: null }],
     }))
-    // 5/25 correct → mini-equivalent 2 → 130–134
+    // 18/25 correct = 7 incorrect → ~160 on Apr 2025 curve
     const answersByQuestion = Object.fromEntries(
-      questions.slice(0, 5).map((q) => [q.id, buildGuestDiagnosticAnswerState(q, "C")]),
+      questions.slice(0, 18).map((q) => [q.id, buildGuestDiagnosticAnswerState(q, "C")]),
     )
 
     const result = buildGuestDiagnosticResultFromAnswers("quick", questions, answersByQuestion)
 
-    expect(result.correctCount).toBe(5)
-    expect(result.scaledScoreLabel).toBe("130–134")
-    expect(result.percentileLabel).toBe("2.3–4.4")
-    expect(result.percentileLow).toBe(2.27)
-    expect(result.percentileHigh).toBe(4.38)
+    expect(result.correctCount).toBe(18)
+    expect(result.scaledScoreLabel).toBe("158–162")
+    expect(result.percentileLabel).toBe("66.4–79")
+    expect(result.percentileLow).toBe(66.38)
+    expect(result.percentileHigh).toBe(79)
+  })
+
+  it("recomputes scaled bands when reading stored attempts (conversion updates)", () => {
+    const stale = {
+      ...buildDefaultGuestDiagnosticResult("quick"),
+      correctCount: 18,
+      questionCount: 25,
+      // Intentionally stale pre-conversion labels
+      scaledScore: 999,
+      scaledScoreLow: 1,
+      scaledScoreHigh: 2,
+      scaledScoreLabel: "stale",
+    }
+    localStorage.setItem(DIAGNOSTIC_ATTEMPT_HISTORY_STORAGE_KEY, JSON.stringify([stale]))
+
+    const loaded = getDiagnosticAttempt(stale.id)
+    expect(loaded?.scaledScoreLabel).toBe("158–162")
+    expect(loaded?.scaledScoreLow).toBe(158)
+    expect(loaded?.scaledScoreHigh).toBe(162)
   })
 
   it("formats diagnostic date labels", () => {
-    expect(formatDiagnosticDateLabel("2026-10-04T12:00:00.000Z")).toMatch(/^\d{1,2}\/\d{1,2}$/)
+    expect(formatDiagnosticDateLabel("2026-10-04T12:00:00.000Z")).toMatch(/^[A-Z][a-z]{2} \d{1,2}$/)
   })
 
   it("maps intent titles", () => {

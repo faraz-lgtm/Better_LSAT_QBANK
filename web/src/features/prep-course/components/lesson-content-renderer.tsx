@@ -3,8 +3,10 @@ import { memo, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type 
 import { resolveDrillLessonType } from "@/features/prep-course/lib/prep-course-format"
 import { cn } from "@/lib/utils"
 
+import { formatActiveDrillResultTitle } from "@/features/prep-course/lib/format-active-drill-result-title"
 import { ActiveDrillIntroCard } from "@/features/prep-course/components/active-drill/active-drill-intro-card"
 import { ActiveDrillQuestionResultDetail } from "@/features/prep-course/components/active-drill/active-drill-question-result-detail"
+import { ActiveDrillResultsExplanation } from "@/features/prep-course/components/active-drill/active-drill-results-explanation"
 import { resolveDrillQuestionOutcomes } from "@/features/prep-course/lib/resolve-drill-question-outcomes"
 import { resolveDrillResultLinkedRefs } from "@/features/prep-course/lib/resolve-drill-result-linked-refs"
 import { ActiveDrillResultBar } from "@/features/prep-course/components/active-drill/active-drill-result-bar"
@@ -15,7 +17,8 @@ import type {
   PrepLessonActiveDrillAttempt,
   PrepLessonLinkedQuestionRef,
 } from "@/lib/api/prep-course"
-import { HtmlContent, LessonHtmlContent } from "@/lib/html/html-content"
+import { LessonHtmlContent } from "@/lib/html/html-content"
+import { sanitizeLessonHtml } from "@/lib/html/sanitize-html"
 
 type DrillResultsPart = "cards" | "below" | "full"
 
@@ -39,8 +42,11 @@ type LessonContentRendererProps = {
 }
 
 function lessonArticleCardClass(edgeToSidebar: boolean, className: string) {
-  return cn(className, edgeToSidebar && "rounded-r-none border-r-0")
+  return cn(className, edgeToSidebar && "border-r-0")
 }
+
+/** Lesson body surface without a Google Doc paper frame. */
+const LESSON_OPEN_SURFACE_CLASS = "bg-transparent p-6"
 
 function youtubeEmbedUrl(url: string): string | null {
   try {
@@ -129,7 +135,7 @@ function LessonVideoBlock({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-hidden rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+      <div className="overflow-hidden bg-transparent">
         <div className="aspect-video w-full bg-[var(--primary-25)]">
           <iframe
             className="h-full w-full"
@@ -162,8 +168,6 @@ function CompletedDrillResultsSection({
   drillTitlePrefix,
   onStartDrill,
   startingDrill,
-  hideTitle,
-  belowVideo,
   showVideo,
   part = "full",
 }: {
@@ -173,19 +177,16 @@ function CompletedDrillResultsSection({
   drillTitlePrefix: string
   onStartDrill?: () => void
   startingDrill?: boolean
-  hideTitle?: boolean
-  belowVideo?: ReactNode
   showVideo: boolean
   part?: DrillResultsPart
 }) {
   const drillResultItems = resolveDrillResultLinkedRefs(linkedQuestionRefs, activeDrillAttempt)
-  const textClass = "text-[var(--color-student-heading)]"
 
   const resultCards = (
     <>
       <ActiveDrillResultBar
         attempt={activeDrillAttempt}
-        lessonTitle={`${drillTitlePrefix} - ${lesson.title}`}
+        lessonTitle={formatActiveDrillResultTitle(drillTitlePrefix, lesson.title)}
         questionOutcomes={resolveDrillQuestionOutcomes(linkedQuestionRefs, activeDrillAttempt)}
         onRetake={onStartDrill}
         retaking={startingDrill}
@@ -202,31 +203,37 @@ function CompletedDrillResultsSection({
     </>
   )
 
-  const lessonBelow =
-    showVideo ? (
-      <LessonVideoBlock lesson={lesson} belowVideo={belowVideo} hideTitle={hideTitle} />
-    ) : lesson.text_content ? (
-      <article className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
-        {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
-        <HtmlContent
-          html={lesson.text_content}
-          className={`${textClass} ${hideTitle ? "" : "mt-4"}`}
+  const explanations =
+    drillResultItems.length > 0 ? (
+      drillResultItems.map((linked, index) => (
+        <ActiveDrillResultsExplanation
+          key={linked.question_id}
+          questionId={linked.question_id}
+          videoUrl={showVideo && index === 0 ? lesson.video_url : null}
+          videoTitle={lesson.title}
+          fallbackHtml={index === 0 ? lesson.text_content : null}
         />
-      </article>
-    ) : null
+      ))
+    ) : (
+      <ActiveDrillResultsExplanation
+        videoUrl={showVideo ? lesson.video_url : null}
+        videoTitle={lesson.title}
+        fallbackHtml={lesson.text_content}
+      />
+    )
 
   if (part === "cards") {
     return <div className="flex min-w-0 max-w-full flex-col gap-6">{resultCards}</div>
   }
 
   if (part === "below") {
-    return lessonBelow
+    return <div className="flex min-w-0 max-w-full flex-col gap-6">{explanations}</div>
   }
 
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-6">
       {resultCards}
-      {lessonBelow}
+      {explanations}
     </div>
   )
 }
@@ -248,7 +255,7 @@ function RepWorkInstructions({ html }: { html: string }) {
   return (
     <div className="flex w-full flex-col gap-1">
       <p className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]">Instructions:</p>
-      <HtmlContent html={bodyHtml} className={repWorkBodyClass} />
+      <LessonHtmlContent html={bodyHtml} className={repWorkBodyClass} />
     </div>
   )
 }
@@ -288,44 +295,73 @@ function RepWorkResetIcon({ className, ...props }: SVGProps<SVGSVGElement>) {
   )
 }
 
-function resizeRepWorkTextarea(el: HTMLTextAreaElement) {
+function resizeRepWorkEditable(el: HTMLElement) {
+  el.style.minHeight = "88px"
   el.style.height = "auto"
-  el.style.overflow = "hidden"
   el.style.height = `${Math.max(88, el.scrollHeight)}px`
 }
 
 const RepWorkEditableQuestion = memo(function RepWorkEditableQuestion({
-  plainText,
+  html,
   questionLabel,
   showAnswer,
 }: {
-  plainText: string
+  html: string
   questionLabel: string
   showAnswer: boolean
 }) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const editorRef = useRef<HTMLDivElement>(null)
+  const safeHtml = useMemo(() => sanitizeLessonHtml(html) || "<p><br></p>", [html])
+  const [dirty, setDirty] = useState(false)
 
   useLayoutEffect(() => {
-    if (textareaRef.current) {
-      resizeRepWorkTextarea(textareaRef.current)
-    }
-  }, [plainText])
+    const el = editorRef.current
+    if (!el) return
+    if (document.activeElement === el) return
+    el.innerHTML = safeHtml
+    resizeRepWorkEditable(el)
+    setDirty(false)
+  }, [safeHtml])
 
   function handleReset() {
-    if (textareaRef.current) {
-      textareaRef.current.value = plainText
-      resizeRepWorkTextarea(textareaRef.current)
-    }
+    const el = editorRef.current
+    if (!el) return
+    el.innerHTML = safeHtml
+    resizeRepWorkEditable(el)
+    setDirty(false)
   }
 
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-2">
-      <textarea
-        ref={textareaRef}
-        defaultValue={plainText}
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        role="textbox"
+        aria-multiline="true"
         aria-label={questionLabel}
-        onInput={(event) => resizeRepWorkTextarea(event.currentTarget)}
-        className={`rep-work-question-input box-border max-w-full min-h-[88px] w-full resize-none overflow-hidden rounded-[16px] border bg-[var(--greyscale-0)] p-4 text-[var(--color-student-heading)] outline-none transition-colors focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]/15 ${
+        onInput={(event) => {
+          resizeRepWorkEditable(event.currentTarget)
+          setDirty(true)
+        }}
+        onPaste={(event) => {
+          event.preventDefault()
+          const text = event.clipboardData.getData("text/plain")
+          const selection = window.getSelection()
+          if (!selection?.rangeCount) return
+          const range = selection.getRangeAt(0)
+          range.deleteContents()
+          range.insertNode(document.createTextNode(text))
+          range.collapse(false)
+          selection.removeAllRanges()
+          selection.addRange(range)
+          const el = editorRef.current
+          if (el) {
+            resizeRepWorkEditable(el)
+            setDirty(true)
+          }
+        }}
+        className={`rep-work-question-input rep-work-question-body lsat-html-content lesson-html-body box-border max-w-full min-h-[88px] w-full overflow-hidden rounded-[16px] border bg-[var(--greyscale-0)] p-4 text-left text-[var(--color-student-heading)] outline-none transition-colors focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)]/15 ${
           showAnswer ? "border-[var(--primary)]" : "border-[color:var(--greyscale-100)]"
         }`}
       />
@@ -334,7 +370,7 @@ const RepWorkEditableQuestion = memo(function RepWorkEditableQuestion({
         <p className="m-0 min-w-0 text-right text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[var(--greyscale-300)]">
           Click box to edit the text.
         </p>
-        {showAnswer ? (
+        {showAnswer || dirty ? (
           <button
             type="button"
             className="inline-flex h-[22px] shrink-0 items-center justify-center gap-2 rounded-[16px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary)] transition-opacity hover:opacity-80"
@@ -397,8 +433,7 @@ function clampHorizontalScroll(origin: HTMLElement | null) {
 
 function RepWorkPairCard({ pair, index }: { pair: RepWorkPair; index: number }) {
   const cardRef = useRef<HTMLLIElement>(null)
-  const plainQuestionText = useMemo(() => htmlToPlainText(pair.question), [pair.question])
-  const answerText = useMemo(() => htmlToPlainText(pair.answer), [pair.answer])
+  const hasAnswer = Boolean(htmlToPlainText(pair.answer))
   const [showAnswer, setShowAnswer] = useState(false)
 
   useLayoutEffect(() => {
@@ -435,7 +470,7 @@ function RepWorkPairCard({ pair, index }: { pair: RepWorkPair; index: number }) 
         <div className="min-w-0 max-w-full overflow-x-clip rounded-[16px] border border-[color:var(--greyscale-100)] bg-[var(--secondary-0)] p-6">
           <div className="flex min-w-0 flex-col gap-3">
             <RepWorkEditableQuestion
-              plainText={plainQuestionText}
+              html={pair.question}
               questionLabel={`Question ${index + 1} text`}
               showAnswer={showAnswer}
             />
@@ -443,9 +478,13 @@ function RepWorkPairCard({ pair, index }: { pair: RepWorkPair; index: number }) 
             {showAnswer ? (
               <div className="flex min-w-0 flex-col gap-3">
                 <h3 className="m-0 text-[20px] font-bold leading-[1.35] text-[var(--color-student-heading)]">Answer</h3>
-                <p className="m-0 max-w-full break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-[18px] leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]">
-                  {answerText || "No answer provided."}
-                </p>
+                {hasAnswer ? (
+                  <LessonHtmlContent html={pair.answer} className="rep-work-answer-body" />
+                ) : (
+                  <p className="m-0 max-w-full break-words [overflow-wrap:anywhere] text-[18px] leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]">
+                    No answer provided.
+                  </p>
+                )}
               </div>
             ) : null}
           </div>
@@ -468,7 +507,7 @@ function LessonDrillLinkedQuestions({
 
   if (items.length === 0) {
     return (
-      <article className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+      <article className={LESSON_OPEN_SURFACE_CLASS}>
         <h3 className="ds-heading-4 ds-text-heading">PrepTest question</h3>
         <p className="ds-body-sm mt-3 text-[var(--greyscale-500)]">No PrepTest question is linked to this lesson yet.</p>
       </article>
@@ -481,7 +520,7 @@ function LessonDrillLinkedQuestions({
   const showNav = !isActive && items.length > 1
 
   return (
-    <article className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+    <article className={LESSON_OPEN_SURFACE_CLASS}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="ds-heading-4 ds-text-heading">{isActive ? "Your drill question" : "PrepTest questions"}</h3>
@@ -557,8 +596,6 @@ function LessonContentRenderer({
           drillTitlePrefix="Smart Drill"
           onStartDrill={onStartDrill}
           startingDrill={startingDrill}
-          hideTitle={hideTitle}
-          belowVideo={belowVideo}
           showVideo={showVideo}
           part={drillResultsPart}
         />
@@ -589,8 +626,6 @@ function LessonContentRenderer({
           drillTitlePrefix="Active Drill"
           onStartDrill={onStartDrill}
           startingDrill={startingDrill}
-          hideTitle={hideTitle}
-          belowVideo={belowVideo}
           showVideo={showVideo}
           part={drillResultsPart}
         />
@@ -612,7 +647,7 @@ function LessonContentRenderer({
     return (
       <div className="border-t border-[color:var(--greyscale-100)] pt-4">
         {lesson.text_content ? (
-          <HtmlContent html={lesson.text_content} className={repWorkBodyClass} />
+          <LessonHtmlContent html={lesson.text_content} className={repWorkBodyClass} />
         ) : (
           <p className={`m-0 ${repWorkBodyClass}`}>No notes available.</p>
         )}
@@ -672,7 +707,7 @@ function LessonContentRenderer({
             )}
           </div>
         ) : (
-          <article className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
+          <article className={LESSON_OPEN_SURFACE_CLASS}>
             {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}
             {lesson.text_content ? (
               <LessonHtmlContent
@@ -693,7 +728,7 @@ function LessonContentRenderer({
     )
   }
 
-  if (skipArticleShell) {
+  if (skipArticleShell || inLessonCard) {
     return lesson.text_content ? (
       <LessonHtmlContent html={lesson.text_content} className="text-[var(--color-student-heading)]" />
     ) : (
@@ -705,7 +740,7 @@ function LessonContentRenderer({
     <article
       className={lessonArticleCardClass(
         edgeToSidebar,
-        "rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]",
+        LESSON_OPEN_SURFACE_CLASS,
       )}
     >
       {hideTitle ? null : <h3 className="ds-heading-4 ds-text-heading">{lesson.title}</h3>}

@@ -24,6 +24,7 @@ type StudentOptionMenuProps<T extends string> = {
   ariaLabel: string
   className?: string
   triggerClassName?: string
+  menuClassName?: string
   menuAlign?: "left" | "right"
   size?: "default" | "lg"
   variant?: StudentOptionMenuVariant
@@ -36,6 +37,7 @@ function StudentOptionMenu<T extends string>({
   ariaLabel,
   className,
   triggerClassName,
+  menuClassName,
   menuAlign = "left",
   size = "default",
   variant = "default",
@@ -75,7 +77,7 @@ function StudentOptionMenu<T extends string>({
   }
 
   return (
-    <div ref={containerRef} className={cn("relative w-full min-w-0", className)}>
+    <div ref={containerRef} className={cn("relative w-auto min-w-0", className)}>
       <button
         ref={triggerRef}
         type="button"
@@ -112,9 +114,10 @@ function StudentOptionMenu<T extends string>({
           role="listbox"
           aria-label={ariaLabel}
           className={cn(
-            "absolute z-30 mt-2 flex max-h-[min(24rem,calc(100vh-8rem))] w-full max-w-full flex-col gap-1 overflow-y-auto border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-2 shadow-[0px_12px_24px_rgba(13,13,18,0.12)]",
+            "absolute top-full z-[200] mt-1 flex max-h-[min(24rem,calc(100vh-8rem))] min-w-full flex-col gap-1 overflow-y-auto border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-2 shadow-[0px_12px_24px_rgba(13,13,18,0.12)]",
             size === "lg" ? "rounded-[12px]" : "rounded-[10px]",
-            menuAlign === "right" ? "right-0" : "left-0",
+            menuAlign === "right" ? "right-0 left-auto" : "left-0 right-auto",
+            menuClassName,
           )}
         >
           {options.map((option) => {
@@ -127,10 +130,10 @@ function StudentOptionMenu<T extends string>({
                   aria-selected={active}
                   onClick={() => handleSelect(option.value)}
                   className={cn(
-                    "flex w-full min-w-0 items-start justify-between gap-3 px-3 py-3 font-medium tracking-[0.02em] transition-colors",
+                    "flex w-full min-w-0 items-start justify-between gap-3 px-3 py-2.5 font-medium tracking-[0.02em] transition-colors",
                     size === "lg"
                       ? "min-h-[44px] rounded-[8px] text-base font-normal tracking-[0.32px]"
-                      : "min-h-10 rounded-[8px] text-sm",
+                      : "min-h-9 rounded-[8px] text-sm",
                     active
                       ? "bg-[var(--primary-25)] text-[var(--color-student-heading)]"
                       : "text-[var(--color-student-heading)] hover:bg-[color:var(--primary-25)]/60",

@@ -4,16 +4,23 @@ import { Bookmark } from "lucide-react"
 
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
-import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
 import {
+  AnalyticsPrepTestHistory,
+  OverviewHistoryShell,
+  type OverviewHistoryTab,
+} from "@/features/student/components/analytics-prep-test-history"
+import {
+  AnalyticsScoreProgressPanel,
   ScoreProgressChart,
   ScoreProgressTabs,
   SectionCard,
   StatTile,
+  TargetGoalScoreControl,
   type ScoreProgressTab,
 } from "@/features/student/analytics/components/analytics-overview-ui"
 import { practiceSessionResultsPath } from "@/features/student/analytics/analytics-results-paths"
 import {
+  filterTrajectoryByTimeRange,
   mapDrillSessionToHistoryEntry,
   mapOverviewToHeadlineStats,
   mapOverviewToSecondaryStats,
@@ -21,6 +28,8 @@ import {
   mapPrioritiesToSections,
   mapSectionSessionToHistoryEntry,
   mapTrajectoryToScoreProgress,
+  overviewScoresForTrajectoryWindow,
+  withBestScoreFromTrajectory,
 } from "@/features/student/analytics/map-analytics"
 import {
   filterBookmarkedOnly,
@@ -32,13 +41,20 @@ import {
   matchesAnalyticsSectionFilter,
   type AnalyticsSectionFilter,
 } from "@/features/student/analytics/section-filter"
-import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
+import { useAnalyticsApi, usePracticeApi, useUsersApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import {
-  TimeRangeFilter,
-  takeLastByTimeRange,
+  filterByTimeRange,
+  getTimeRangeCutoff,
+  OVERVIEW_TIME_RANGE_OPTIONS,
+  TimeRangeSegmented,
   type TimeRangeValue,
 } from "@/features/student/components/time-range-filter"
-import type { AnalyticsOverview, PracticeSessionSummary, PriorityRow } from "@/lib/api/analytics"
+import type {
+  AnalyticsOverview,
+  PracticeSessionSummary,
+  PriorityRow,
+  TrajectoryPoint,
+} from "@/lib/api/analytics"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 
 const VALID_TABS = new Set(["overview", "priorities", "history"])
@@ -63,6 +79,13 @@ function filterHistoryBySection(
   sectionFilter: AnalyticsSectionFilter,
 ): PrepTestHistoryEntry[] {
   return entries.filter((entry) => matchesAnalyticsSectionFilter(entry.sectionType, sectionFilter))
+}
+
+function filterHistoryByTimeRange(
+  entries: PrepTestHistoryEntry[],
+  timeRange: TimeRangeValue,
+): PrepTestHistoryEntry[] {
+  return filterByTimeRange(entries, timeRange, (entry) => entry.takenAt)
 }
 
 function PrioritiesTab() {
@@ -233,14 +256,20 @@ function HistoryTab() {
 function OverviewTab() {
   const analyticsApi = useAnalyticsApi()
   const practiceApi = usePracticeApi()
+  const usersApi = useUsersApi()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [overview, setOverview] = useState<AnalyticsOverview | null>(null)
+  const [overviewByRange, setOverviewByRange] = useState<
+    Partial<Record<TimeRangeValue, AnalyticsOverview>>
+  >({})
   const [scoreTab, setScoreTab] = useState<ScoreProgressTab>("both")
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
-  const [trajectory, setTrajectory] = useState<ReturnType<typeof mapTrajectoryToScoreProgress>>([])
+  const [trajectoryPoints, setTrajectoryPoints] = useState<TrajectoryPoint[]>([])
   const [sections, setSections] = useState<ReturnType<typeof mapPrioritiesToSections>>([])
+  const [goalScore, setGoalScore] = useState<number | null>(null)
+  const [savingGoalScore, setSavingGoalScore] = useState(false)
+  const [goalScoreError, setGoalScoreError] = useState<string | null>(null)
   const [drillHistory, setDrillHistory] = useState<PrepTestHistoryEntry[]>([])
   const [sectionHistory, setSectionHistory] = useState<PrepTestHistoryEntry[]>([])
   const [prepTestHistory, setPrepTestHistory] = useState<PrepTestHistoryEntry[]>([])
@@ -249,6 +278,7 @@ function OverviewTab() {
   const [prepTestBookmarkedOnly, setPrepTestBookmarkedOnly] = useState(false)
   const [drillSectionFilter, setDrillSectionFilter] = useState<AnalyticsSectionFilter>("all")
   const [sectionSectionFilter, setSectionSectionFilter] = useState<AnalyticsSectionFilter>("all")
+  const [historyTab, setHistoryTab] = useState<OverviewHistoryTab>("all")
 
   useEffect(() => {
     if (!analyticsApi) {
@@ -257,19 +287,22 @@ function OverviewTab() {
       return
     }
     setLoading(true)
+    let cancelled = false
     void Promise.all([
-      analyticsApi.getOverview(),
       analyticsApi.getTrajectory(),
       analyticsApi.getPriorities(),
       analyticsApi.getSessions({ kind: "DRILL", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
       analyticsApi.getSessions({ kind: "SECTION", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
       analyticsApi.getSessions({ kind: "PREPTEST", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
+      usersApi?.getStudyContext() ?? Promise.resolve(null),
+      analyticsApi.getOverview(),
     ])
-      .then(([o, t, p, drills, sectionSessions, prepTests]) => {
-        setOverview(o)
-        const filtered = takeLastByTimeRange(t, timeRange)
-        setTrajectory(mapTrajectoryToScoreProgress(filtered))
+      .then(([t, p, drills, sectionSessions, prepTests, studyContext, allOverview]) => {
+        if (cancelled) return
+        setTrajectoryPoints(t)
         setSections(mapPrioritiesToSections(p))
+        setGoalScore(studyContext?.preferences?.goalScore ?? null)
+        setGoalScoreError(null)
         setDrillHistory(
           drills.sessions
             .map(mapDrillSessionToHistoryEntry)
@@ -285,14 +318,117 @@ function OverviewTab() {
             .map(mapPrepTestSessionToHistoryEntry)
             .filter((e): e is PrepTestHistoryEntry => e != null),
         )
+        setOverviewByRange({ all: allOverview })
+
+        // Prefetch ranged overviews so filter switches update metrics instantly.
+        void Promise.all(
+          OVERVIEW_TIME_RANGE_OPTIONS.filter((option) => option.value !== "all").map(async (option) => {
+            const completedSince = getTimeRangeCutoff(option.value)?.toISOString()
+            const overview = await analyticsApi.getOverview(
+              completedSince ? { completedSince } : undefined,
+            )
+            return [option.value, overview] as const
+          }),
+        ).then((entries) => {
+          if (cancelled) return
+          setOverviewByRange((prev) => ({ ...prev, ...Object.fromEntries(entries) }))
+        })
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
-      .finally(() => setLoading(false))
-  }, [analyticsApi, timeRange])
+      .catch((e) => {
+        if (cancelled) return
+        setError(e instanceof Error ? e.message : "Failed to load")
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [analyticsApi, usersApi])
+
+  // If user picks a range before prefetch finishes, fetch that one immediately.
+  useEffect(() => {
+    if (!analyticsApi || timeRange === "all") return
+    if (overviewByRange[timeRange]) return
+    let cancelled = false
+    const completedSince = getTimeRangeCutoff(timeRange)?.toISOString()
+    void analyticsApi
+      .getOverview(completedSince ? { completedSince } : undefined)
+      .then((overview) => {
+        if (cancelled) return
+        setOverviewByRange((prev) =>
+          prev[timeRange] ? prev : { ...prev, [timeRange]: overview },
+        )
+      })
+      .catch(() => {
+        // Keep trajectory-derived fallback metrics; initial load error handling covers hard failures.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [analyticsApi, overviewByRange, timeRange])
+
+  const rangedTrajectoryPoints = useMemo(
+    () => filterTrajectoryByTimeRange(trajectoryPoints, timeRange),
+    [timeRange, trajectoryPoints],
+  )
+
+  const overview = useMemo(() => {
+    const cached = overviewByRange[timeRange]
+    if (cached) {
+      if (timeRange === "all") return withBestScoreFromTrajectory(cached, trajectoryPoints)
+      return cached
+    }
+    // Fallback while a range is still loading: recompute scores from trajectory instantly.
+    const allTime = overviewByRange.all
+    if (!allTime) return null
+    if (timeRange === "all") return withBestScoreFromTrajectory(allTime, trajectoryPoints)
+    return overviewScoresForTrajectoryWindow(allTime, rangedTrajectoryPoints)
+  }, [overviewByRange, rangedTrajectoryPoints, timeRange, trajectoryPoints])
+
+  const refreshPrioritySections = useCallback(async () => {
+    if (!analyticsApi) return
+    const priorities = await analyticsApi.getPriorities()
+    setSections(mapPrioritiesToSections(priorities))
+  }, [analyticsApi])
+
+  const handleGoalScoreChange = useCallback(
+    async (nextScore: number) => {
+      if (!usersApi) {
+        setGoalScoreError("Unable to save goal score right now.")
+        return
+      }
+      const previous = goalScore
+      setGoalScore(nextScore)
+      setSavingGoalScore(true)
+      setGoalScoreError(null)
+      try {
+        const prefs = await usersApi.updateStudyPreferences({ goalScore: nextScore })
+        setGoalScore(prefs.goalScore)
+        await refreshPrioritySections()
+      } catch (e) {
+        setGoalScore(previous)
+        setGoalScoreError(e instanceof Error ? e.message : "Failed to update goal score")
+      } finally {
+        setSavingGoalScore(false)
+      }
+    },
+    [goalScore, refreshPrioritySections, usersApi],
+  )
+
+  const trajectory = useMemo(
+    () => mapTrajectoryToScoreProgress(rangedTrajectoryPoints),
+    [rangedTrajectoryPoints],
+  )
 
   const headlineStats = useMemo(
-    () => (overview ? mapOverviewToHeadlineStats(overview) : []),
-    [overview],
+    () =>
+      overview
+        ? mapOverviewToHeadlineStats(overview, {
+            bestCaptionDetail: timeRange === "all" ? "all-time high" : "in selected range",
+          })
+        : [],
+    [overview, timeRange],
   )
   const secondaryStats = useMemo(
     () => (overview ? mapOverviewToSecondaryStats(overview) : []),
@@ -302,22 +438,26 @@ function OverviewTab() {
   const visibleDrillHistory = useMemo(
     () =>
       filterBookmarkedOnly(
-        filterHistoryBySection(drillHistory, drillSectionFilter),
+        filterHistoryBySection(filterHistoryByTimeRange(drillHistory, timeRange), drillSectionFilter),
         drillBookmarkedOnly,
       ),
-    [drillBookmarkedOnly, drillHistory, drillSectionFilter],
+    [drillBookmarkedOnly, drillHistory, drillSectionFilter, timeRange],
   )
   const visibleSectionHistory = useMemo(
     () =>
       filterBookmarkedOnly(
-        filterHistoryBySection(sectionHistory, sectionSectionFilter),
+        filterHistoryBySection(
+          filterHistoryByTimeRange(sectionHistory, timeRange),
+          sectionSectionFilter,
+        ),
         sectionBookmarkedOnly,
       ),
-    [sectionBookmarkedOnly, sectionHistory, sectionSectionFilter],
+    [sectionBookmarkedOnly, sectionHistory, sectionSectionFilter, timeRange],
   )
   const visiblePrepTestHistory = useMemo(
-    () => filterBookmarkedOnly(prepTestHistory, prepTestBookmarkedOnly),
-    [prepTestBookmarkedOnly, prepTestHistory],
+    () =>
+      filterBookmarkedOnly(filterHistoryByTimeRange(prepTestHistory, timeRange), prepTestBookmarkedOnly),
+    [prepTestBookmarkedOnly, prepTestHistory, timeRange],
   )
 
   const toggleHistoryBookmark = useCallback(
@@ -339,112 +479,131 @@ function OverviewTab() {
     [practiceApi],
   )
 
-  if (loading) {
+  if (error) return <p className="text-sm text-red-600">{error}</p>
+  if (loading || !overview) {
     return <StudentPageLoader centered className="min-h-0 flex-1" label="Loading overview…" />
   }
-  if (error) return <p className="text-sm text-red-600">{error}</p>
 
   return (
-    <div className="flex flex-col gap-4">
-      <section className="flex w-full flex-col gap-3 rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">Overview</h2>
-          <TimeRangeFilter value={timeRange} onChange={setTimeRange} className="shrink-0" />
+    <div className="flex flex-col gap-6 pb-8">
+      <section className="flex w-full flex-col gap-4">
+        <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
+          <h2 className="m-0 text-lg font-bold leading-[1.3] text-[var(--color-student-heading)]">Overview</h2>
+          <TimeRangeSegmented value={timeRange} onChange={setTimeRange} className="shrink-0" />
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           {headlineStats.map((stat) => (
             <StatTile key={stat.id} stat={stat} />
           ))}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
           {secondaryStats.map((stat) => (
             <StatTile key={stat.id} stat={stat} />
           ))}
         </div>
       </section>
 
-      <section className="rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4">
-        <div className="flex flex-col gap-3 rounded-[12px] bg-[var(--greyscale-25)] p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xs font-semibold leading-[1.4] tracking-[0.06em] text-[var(--color-student-heading)]">
-              PREPTESTS SCORE PROGRESS
-            </h2>
-            <ScoreProgressTabs value={scoreTab} onChange={setScoreTab} />
-          </div>
-          <ScoreProgressChart points={trajectory} tab={scoreTab} />
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-4 border-t border-[var(--greyscale-100)] pt-3">
-            <span className="flex items-center gap-1.5 text-xs leading-[1.4] tracking-[0.02em] text-[var(--greyscale-500)]">
-              <span className="size-2.5 rounded-full bg-[var(--primary)]" aria-hidden />
+      <AnalyticsScoreProgressPanel
+        title="Test Performance History"
+        legend={<ScoreProgressTabs value={scoreTab} onChange={setScoreTab} />}
+        chart={<ScoreProgressChart points={trajectory} tab={scoreTab} />}
+        footer={
+          <>
+            <span className="flex items-center gap-2 px-4 text-sm leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
+              <span className="size-4 shrink-0 rounded-full bg-[var(--primary)]" aria-hidden />
               Regular Score
             </span>
-            <span className="flex items-center gap-1.5 text-xs leading-[1.4] tracking-[0.02em] text-[var(--greyscale-500)]">
-              <span className="size-2.5 rounded-full bg-[#ff6f00]" aria-hidden />
-              Blind Review
+            <span className="flex items-center gap-2 px-4 text-sm leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
+              <span className="size-4 shrink-0 rounded-full bg-[#ff6f00]" aria-hidden />
+              Untimed Review
             </span>
-          </div>
-        </div>
-      </section>
-
-      <AnalyticsPrepTestHistory
-        title="Drill History"
-        emptyNoun="drills"
-        visibleEntries={visibleDrillHistory}
-        bookmarkedOnly={drillBookmarkedOnly}
-        onBookmarkedOnlyChange={setDrillBookmarkedOnly}
-        sectionFilter={drillSectionFilter}
-        onSectionFilterChange={setDrillSectionFilter}
-        onToggleBookmark={(id) => toggleHistoryBookmark(id, setDrillHistory, drillHistory)}
-        onSelectEntry={(id) => navigate(practiceSessionResultsPath(id))}
-        previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
-        viewMoreHref="/app/analytics/drills"
+          </>
+        }
       />
 
-      <AnalyticsPrepTestHistory
-        title="Section History"
-        emptyNoun="sections"
-        brBarColor="var(--destructive)"
-        visibleEntries={visibleSectionHistory}
-        bookmarkedOnly={sectionBookmarkedOnly}
-        onBookmarkedOnlyChange={setSectionBookmarkedOnly}
-        sectionFilter={sectionSectionFilter}
-        onSectionFilterChange={setSectionSectionFilter}
-        onToggleBookmark={(id) => toggleHistoryBookmark(id, setSectionHistory, sectionHistory)}
-        onSelectEntry={(id) => navigate(practiceSessionResultsPath(id, { source: "section" }))}
-        previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
-        viewMoreHref="/app/analytics/sections"
-      />
-
-      <AnalyticsPrepTestHistory
-        title="PrepTest History"
-        emptyNoun="PrepTests"
-        visibleEntries={visiblePrepTestHistory}
-        bookmarkedOnly={prepTestBookmarkedOnly}
-        onBookmarkedOnlyChange={setPrepTestBookmarkedOnly}
-        onToggleBookmark={(id) => toggleHistoryBookmark(id, setPrepTestHistory, prepTestHistory)}
-        onSelectEntry={(id) => navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)}
-        onOpenPractice={(id) => navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)}
-        previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
-        viewMoreHref="/app/analytics/preptests"
-      />
-
-      <section className="flex flex-col gap-3">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">Reports overview</h2>
-            <p className="mt-0.5 text-xs text-[var(--greyscale-500)]">
-              Question-type accuracy by section — open Review or Drill from a row to practice weak areas.
+      <section className="flex flex-col gap-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">
+              Top Weaknesses by Section
+            </h2>
+            <p className="mt-1 text-xs text-[var(--primary-100)]">
+              Target % follows your target LSAT score. Open Review or Drill to practice.
             </p>
           </div>
+          <TargetGoalScoreControl
+            value={goalScore}
+            disabled={savingGoalScore || !usersApi}
+            onChange={(score) => void handleGoalScoreChange(score)}
+          />
         </div>
+        {goalScoreError ? <p className="text-sm text-red-600">{goalScoreError}</p> : null}
         {sections.length === 0 ? (
           <p className="rounded-xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-6 text-sm text-[var(--greyscale-500)]">
             Question-type reports appear once you answer questions linked to LR/RC types.
           </p>
         ) : (
-          sections.map((section) => <SectionCard key={section.id} section={section} />)
+          <div className="flex flex-col gap-4">
+            {sections.map((section) => (
+              <SectionCard key={section.id} section={section} />
+            ))}
+          </div>
         )}
       </section>
+
+      <OverviewHistoryShell activeTab={historyTab} onTabChange={setHistoryTab}>
+        {historyTab === "all" || historyTab === "drill" ? (
+          <AnalyticsPrepTestHistory
+            alwaysShowViewMore
+            title="Drill History"
+            emptyNoun="drills"
+            visibleEntries={visibleDrillHistory}
+            bookmarkedOnly={drillBookmarkedOnly}
+            onBookmarkedOnlyChange={setDrillBookmarkedOnly}
+            sectionFilter={drillSectionFilter}
+            onSectionFilterChange={setDrillSectionFilter}
+            onToggleBookmark={(id) => toggleHistoryBookmark(id, setDrillHistory, drillHistory)}
+            onSelectEntry={(id) => navigate(practiceSessionResultsPath(id, { source: "drill" }))}
+            previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
+            viewMoreHref="/app/analytics/drills"
+          />
+        ) : null}
+
+        {historyTab === "all" || historyTab === "section" ? (
+          <AnalyticsPrepTestHistory
+            alwaysShowViewMore
+            title="Section History"
+            emptyNoun="sections"
+            brBarColor="var(--destructive)"
+            visibleEntries={visibleSectionHistory}
+            bookmarkedOnly={sectionBookmarkedOnly}
+            onBookmarkedOnlyChange={setSectionBookmarkedOnly}
+            sectionFilter={sectionSectionFilter}
+            onSectionFilterChange={setSectionSectionFilter}
+            onToggleBookmark={(id) => toggleHistoryBookmark(id, setSectionHistory, sectionHistory)}
+            onSelectEntry={(id) => navigate(practiceSessionResultsPath(id, { source: "section" }))}
+            previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
+            viewMoreHref="/app/analytics/sections"
+          />
+        ) : null}
+
+        {historyTab === "all" || historyTab === "preptest" ? (
+          <AnalyticsPrepTestHistory
+            alwaysShowViewMore
+            title="PrepTest History"
+            emptyNoun="PrepTests"
+            visibleEntries={visiblePrepTestHistory}
+            bookmarkedOnly={prepTestBookmarkedOnly}
+            onBookmarkedOnlyChange={setPrepTestBookmarkedOnly}
+            onToggleBookmark={(id) => toggleHistoryBookmark(id, setPrepTestHistory, prepTestHistory)}
+            onSelectEntry={(id) => navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)}
+            onOpenPractice={(id) => navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)}
+            previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
+            viewMoreHref="/app/analytics/preptests"
+          />
+        ) : null}
+      </OverviewHistoryShell>
     </div>
   )
 }
@@ -454,7 +613,7 @@ function AnalyticsPage() {
   const tab = tabFromSearch(params.get("tab"))
 
   return (
-    <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
+    <StudentMain contentClassName="flex min-h-0 flex-1 flex-col pb-8">
       {tab === "overview" ? <OverviewTab /> : null}
       {tab === "priorities" ? <PrioritiesTab /> : null}
       {tab === "history" ? <HistoryTab /> : null}

@@ -595,7 +595,7 @@ Deno.test('prep-course getLesson allows unpaid students to open The Kickoff', as
         getPublishedCourseBySlug: async () => ({
           id: 'course-1',
           slug: FREE_PREP_COURSE_SLUG,
-          title: 'LSAT Essential Course',
+          title: 'LSAT Essentials Course',
           description: null,
           is_published: true,
           created_at: '2026-01-01T00:00:00Z',
@@ -657,7 +657,7 @@ Deno.test('prep-course getLesson blocks unpaid students from later modules', asy
         getPublishedCourseBySlug: async () => ({
           id: 'course-1',
           slug: FREE_PREP_COURSE_SLUG,
-          title: 'LSAT Essential Course',
+          title: 'LSAT Essentials Course',
           description: null,
           is_published: true,
           created_at: '2026-01-01T00:00:00Z',

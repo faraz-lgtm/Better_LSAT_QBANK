@@ -19,7 +19,7 @@ export const ACTIVE_DRILL_HIGHLIGHT_COLORS: { id: HighlightColor; hex: string }[
 
 /** Passage selection popover — yellow / pink / green / blue (Figma `20280:108155` highlight UI). */
 export const PASSAGE_HIGHLIGHT_COLORS: { id: PassageHighlightColor; hex: string; border: string }[] = [
-  { id: "yellow", hex: "#FEF095", border: "#C4A63A" },
+  { id: "yellow", hex: "#FDFAC4", border: "#C4A63A" },
   { id: "pink", hex: "#FFE2E2", border: "#E07070" },
   { id: "green", hex: "#AFE9C7", border: "#4D9A6E" },
   { id: "blue", hex: "#A6E1FD", border: "#4AA3D4" },

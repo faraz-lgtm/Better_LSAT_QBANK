@@ -3,10 +3,30 @@ import { describe, expect, it } from "vitest"
 import {
   buildDiagnosticResultExplanation,
   createDiagnosticQuestions,
+  createMiniDiagnosticQuestions,
   createSectionDiagnosticQuestions,
   getDiagnosticExplanationHtml,
+  MINI_DIAGNOSTIC_MARKETING_SET,
   SECTION_DIAGNOSTIC_MARKETING_SET,
 } from "@/features/guest/diagnostic/mini-diagnostic-content"
+
+describe("Mini diagnostic question content", () => {
+  it("loads all 10 mini diagnostic questions with explanations", () => {
+    const questions = createMiniDiagnosticQuestions()
+    expect(questions).toHaveLength(10)
+    expect(questions[0]?.id).toBe("mini-diag-q1")
+    expect(getDiagnosticExplanationHtml("mini-diag-q1", "mini")).toBeTruthy()
+    expect(getDiagnosticExplanationHtml("mini-diag-q10", "mini")).toBeTruthy()
+    expect(buildDiagnosticResultExplanation("mini-diag-q10", "mini")?.stemText).toBeTruthy()
+  })
+
+  it("creates mini intent questions from the mini set", () => {
+    const questions = createDiagnosticQuestions("mini")
+    expect(questions).toHaveLength(10)
+    expect(MINI_DIAGNOSTIC_MARKETING_SET.questionCount).toBe(10)
+    expect(MINI_DIAGNOSTIC_MARKETING_SET.timeMinutes).toBe(13)
+  })
+})
 
 describe("Section diagnostic question content", () => {
   it("loads all 25 section diagnostic questions with explanations", () => {

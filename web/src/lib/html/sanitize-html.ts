@@ -36,14 +36,18 @@ const LESSON_TAGS = [
   "table",
   "thead",
   "tbody",
+  "tfoot",
   "tr",
   "th",
   "td",
+  "colgroup",
+  "col",
+  "caption",
   "pre",
   "code",
 ] as const
 
-const ALLOWED_ATTR = ["class", "style", "href", "target", "rel", "data-highlight"] as const
+const ALLOWED_ATTR = ["class", "style", "href", "target", "rel", "data-highlight", "data-underline"] as const
 
 const LESSON_ATTR = [
   ...ALLOWED_ATTR,
@@ -54,10 +58,17 @@ const LESSON_ATTR = [
   "height",
   "colspan",
   "rowspan",
+  "colwidth",
+  "span",
+  "scope",
   "data-label",
   "data-lesson-section",
   "data-variant",
   "data-bg",
+  "data-mt",
+  "data-mr",
+  "data-mb",
+  "data-ml",
 ] as const
 
 function purify(input: unknown, tags: readonly string[], attrs: readonly string[]): string {
@@ -77,5 +88,7 @@ export function sanitizeHtml(input: unknown): string {
 }
 
 export function sanitizeLessonHtml(input: unknown): string {
-  return purify(input, LESSON_TAGS, LESSON_ATTR)
+  const safe = purify(input, LESSON_TAGS, LESSON_ATTR)
+  // Keep intentional blank lines from the lesson editor (empty <p> would collapse visually).
+  return safe.replace(/<p(\b[^>]*)?>\s*<\/p>/gi, "<p$1><br></p>")
 }

@@ -108,7 +108,7 @@ function PracticeBlindReviewAnswerToggle({
             if (blindReviewEnabled) onChange("blind_review")
           }}
         >
-          Blind Review
+          Untimed Review
         </button>
       </div>
     )
@@ -161,7 +161,7 @@ function PracticeBlindReviewAnswerToggle({
         }}
       >
         <OutcomeIcon outcome={blindReviewIcon} />
-        Blind Review
+        Untimed Review
       </button>
     </div>
   )

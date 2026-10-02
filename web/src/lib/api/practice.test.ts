@@ -469,4 +469,61 @@ describe("createPracticeApi", () => {
       headers: { Authorization: "Bearer token-1" },
     })
   })
+
+  it("listPrepTestPoolSettings invokes practice-list-prep-test-pool-settings", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        prepTests: [
+          {
+            prepTestId: "pt-1",
+            moduleId: "LSAC120",
+            prepTestNumber: "120",
+            title: null,
+            inDrills: true,
+            inSections: false,
+            inTests: false,
+            freshnessPercent: 100,
+            isDefault: true,
+          },
+        ],
+        counts: { drills: 1, sections: 0, tests: 0 },
+      },
+      error: null,
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+    const out = await api.listPrepTestPoolSettings()
+    expect(out.counts.drills).toBe(1)
+    expect(invoke).toHaveBeenCalledWith("practice-list-prep-test-pool-settings", {
+      method: "POST",
+      body: {},
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
+
+  it("updatePrepTestPoolSettings and resetPrepTestPoolSettings invoke matching functions", async () => {
+    const payload = {
+      prepTests: [],
+      counts: { drills: 0, sections: 0, tests: 0 },
+    }
+    const invoke = vi.fn().mockResolvedValue({ data: payload, error: null })
+    const api = createPracticeApi(mockSupabase(invoke))
+
+    await api.updatePrepTestPoolSettings([
+      { prepTestId: "pt-1", inDrills: true, inSections: true, inTests: false },
+    ])
+    await api.resetPrepTestPoolSettings()
+
+    expect(invoke).toHaveBeenNthCalledWith(1, "practice-update-prep-test-pool-settings", {
+      method: "POST",
+      body: {
+        updates: [{ prepTestId: "pt-1", inDrills: true, inSections: true, inTests: false }],
+      },
+      headers: { Authorization: "Bearer token-1" },
+    })
+    expect(invoke).toHaveBeenNthCalledWith(2, "practice-reset-prep-test-pool-settings", {
+      method: "POST",
+      body: {},
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
 })

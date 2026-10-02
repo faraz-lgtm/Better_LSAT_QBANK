@@ -5,20 +5,27 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { FigmaIcon, PlayCircleIcon } from "@/components/icons/figma-icons"
 import { Switch } from "@/components/ui/switch"
-import { DrillConfigField, DrillConfigSelectField } from "@/features/student/drills/drill-config-field"
+import {
+  DrillConfigField,
+  DrillConfigMultiSelectField,
+  DrillConfigSelectField,
+} from "@/features/student/drills/drill-config-field"
 import {
   clearSavedDrillConfig,
   readSavedDrillConfig,
   writeSavedDrillConfig,
   type SavedDrillConfig,
 } from "@/features/student/drills/drill-config-saved-settings"
+import { DrillSelectQuestionsModal } from "@/features/student/drills/drill-select-questions-modal"
 import {
   drillConfigOptions,
   type DrillDifficulty,
+  type DrillPickerQuestionItem,
   type DrillSectionType,
   type DrillShowAnswers,
   type DrillStatus,
 } from "@/features/student/drills/drill-types"
+import { formatDrillTitleFromTypeNames, formatPickMyOwnDrillTitle } from "@/features/student/drills/format-drill-title"
 import { DrillTimingMenu } from "@/features/student/drills/drill-timing-menu"
 import { isValidDrillTiming } from "@/features/student/drills/drill-timing"
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
@@ -51,7 +58,9 @@ function DrillConfigForm({
 
   const [bannerOpen, setBannerOpen] = useState(true)
   const [saveSettings, setSaveSettings] = useState(() => savedConfig != null)
-  const [customize, setCustomize] = useState(Boolean(initialQuestionTypeId) || Boolean(savedConfig?.customize))
+  const [customize, setCustomize] = useState(
+    Boolean(initialQuestionTypeId) || Boolean(savedConfig?.customize),
+  )
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [poolStats, setPoolStats] = useState({ selectedCount: 0, totalCount: 0 })
@@ -60,16 +69,27 @@ function DrillConfigForm({
   const [passageCount, setPassageCount] = useState(savedConfig?.passageCount ?? "1")
   const [timing, setTiming] = useState(savedConfig?.timing ?? "unlimited")
   const [showAnswers, setShowAnswers] = useState<DrillShowAnswers>(savedConfig?.showAnswers ?? "end")
-  const [selection, setSelection] = useState(savedConfig?.selection ?? "auto")
-  const [tags, setTags] = useState(initialQuestionTypeId ?? savedConfig?.tags ?? "any")
+  // Question Mix always opens on Priority mix; Pick my own is an explicit choice each visit.
+  const [selection, setSelection] = useState("auto")
+  const [tags, setTags] = useState<string[]>(() => {
+    if (initialQuestionTypeId) return [initialQuestionTypeId]
+    return savedConfig?.tags ?? []
+  })
   const [difficulty, setDifficulty] = useState<DrillDifficulty>(savedConfig?.difficulty ?? "adaptive")
   // Default to full pool so Start works even after prior practice; "Fresh" is opt-in via Customize.
   const [status, setStatus] = useState<DrillStatus>(savedConfig?.status ?? "all")
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [manualQuestionIds, setManualQuestionIds] = useState<string[]>(
+    () => savedConfig?.manualQuestionIds ?? [],
+  )
+  const [manualPrepTestNumbers, setManualPrepTestNumbers] = useState<number[]>(
+    () => savedConfig?.manualPrepTestNumbers ?? [],
+  )
 
   const copy = sectionCopy[sectionType]
 
   const tagSelectOptions = useMemo(() => {
-    const base = [{ label: "All skills", value: "any" }, ...tagOptions]
+    const base = [...tagOptions]
     if (initialQuestionTypeId && !tagOptions.some((t) => t.value === initialQuestionTypeId)) {
       return [{ label: initialTagLabel ?? "Selected tag", value: initialQuestionTypeId }, ...base]
     }
@@ -77,12 +97,20 @@ function DrillConfigForm({
   }, [tagOptions, initialQuestionTypeId, initialTagLabel])
 
   // Customize off = adaptive defaults over the full section pool (ignore tag/status filters).
-  const resolvedQuestionTypeId = customize && tags !== "any" ? tags : null
-  const resolvedTagLabel = resolvedQuestionTypeId
-    ? (tagSelectOptions.find((t) => t.value === resolvedQuestionTypeId)?.label ??
-        initialTagLabel ??
-        null)
-    : null
+  const resolvedQuestionTypeIds = useMemo(() => (customize ? tags : []), [customize, tags])
+  const resolvedTagLabels = useMemo(
+    () =>
+      resolvedQuestionTypeIds.map(
+        (id) =>
+          tagSelectOptions.find((option) => option.value === id)?.label ??
+          (id === initialQuestionTypeId ? initialTagLabel : null) ??
+          id,
+      ),
+    [resolvedQuestionTypeIds, tagSelectOptions, initialQuestionTypeId, initialTagLabel],
+  )
+  const resolvedQuestionTypeId = resolvedQuestionTypeIds[0] ?? null
+  const resolvedTagLabel = resolvedTagLabels[0] ?? null
+  const drillTitle = formatDrillTitleFromTypeNames(resolvedTagLabels)
   const resolvedDifficulty = customize ? difficulty : "adaptive"
   const resolvedStatus = customize ? status : "all"
   const resolvedShowAnswers = customize ? showAnswers : "end"
@@ -100,6 +128,7 @@ function DrillConfigForm({
       const stats = await practiceApi.getDrillPoolStats({
         sectionType,
         questionTypeId: resolvedQuestionTypeId,
+        questionTypeIds: resolvedQuestionTypeIds,
         difficulty: resolvedDifficulty,
         status: resolvedStatus,
       })
@@ -107,7 +136,14 @@ function DrillConfigForm({
     } catch {
       setPoolStats({ selectedCount: 0, totalCount: 0 })
     }
-  }, [practiceApi, sectionType, resolvedQuestionTypeId, resolvedDifficulty, resolvedStatus])
+  }, [
+    practiceApi,
+    sectionType,
+    resolvedQuestionTypeId,
+    resolvedQuestionTypeIds,
+    resolvedDifficulty,
+    resolvedStatus,
+  ])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -124,33 +160,94 @@ function DrillConfigForm({
       timing,
       showAnswers,
       customize,
-      selection,
+      // Always persist Priority mix as the restored Question Mix default.
+      selection: "auto",
       tags,
       difficulty,
       status,
+      manualQuestionIds,
+      manualPrepTestNumbers,
     }
     writeSavedDrillConfig(sectionType, config)
   }, [
     customize,
     difficulty,
+    manualPrepTestNumbers,
+    manualQuestionIds,
     passageCount,
     questionCount,
     saveSettings,
     sectionType,
-    selection,
     showAnswers,
     status,
     tags,
     timing,
   ])
 
-  function handleSaveSettingsChange(next: boolean) {
-    setSaveSettings(next)
-    if (!next) clearSavedDrillConfig(sectionType)
+  function applyManualPicks(questions: DrillPickerQuestionItem[]) {
+    const ids = questions.map((q) => q.id)
+    const pts = questions
+      .map((q) => q.prepTestNumber)
+      .filter((n): n is number => typeof n === "number" && Number.isFinite(n))
+    setManualQuestionIds(ids)
+    setManualPrepTestNumbers(pts)
+    if (ids.length > 0) {
+      setCustomize(true)
+    }
+    return { ids, pts }
   }
 
-  async function handleStart() {
-    if (poolStats.selectedCount === 0) {
+  function buildSavedConfig(overrides?: Partial<SavedDrillConfig>): SavedDrillConfig {
+    return {
+      questionCount: overrides?.questionCount ?? questionCount,
+      passageCount: overrides?.passageCount ?? passageCount,
+      timing: overrides?.timing ?? timing,
+      showAnswers: overrides?.showAnswers ?? showAnswers,
+      customize: overrides?.customize ?? customize,
+      selection: "auto",
+      tags: overrides?.tags ?? tags,
+      difficulty: overrides?.difficulty ?? difficulty,
+      status: overrides?.status ?? status,
+      manualQuestionIds: overrides?.manualQuestionIds ?? manualQuestionIds,
+      manualPrepTestNumbers: overrides?.manualPrepTestNumbers ?? manualPrepTestNumbers,
+    }
+  }
+
+  function handleSaveSettingsChange(next: boolean) {
+    setSaveSettings(next)
+    if (!next) {
+      clearSavedDrillConfig(sectionType)
+      return
+    }
+    try {
+      writeSavedDrillConfig(sectionType, buildSavedConfig())
+    } catch {
+      setError("Could not save settings. Check browser storage and try again.")
+    }
+  }
+
+  function handleSelectionChange(next: string) {
+    setSelection(next)
+    if (next === "manual") {
+      setPickerOpen(true)
+    }
+  }
+
+  async function handleStart(override?: { questionIds: string[]; prepTestNumbers?: number[] }) {
+    const fromModal = Boolean(override?.questionIds?.length)
+    const usingManual = fromModal || (selection === "manual" && manualQuestionIds.length > 0)
+    const pickedIds = fromModal ? (override?.questionIds ?? []) : usingManual ? manualQuestionIds : []
+    const pickedPts = fromModal
+      ? (override?.prepTestNumbers ?? [])
+      : usingManual
+        ? manualPrepTestNumbers
+        : []
+    if (selection === "manual" && !fromModal && pickedIds.length === 0) {
+      setError("Pick at least one question, or switch Question Mix back to Priority mix.")
+      setPickerOpen(true)
+      return
+    }
+    if (!usingManual && poolStats.selectedCount === 0) {
       setError(
         poolStats.totalCount > 0
           ? "No questions match these filters. Turn on Build My Own and set Question History to “New + reviewed”, or clear tag/difficulty filters."
@@ -167,15 +264,16 @@ function DrillConfigForm({
         passageCount === "unlimited" ? "unlimited" : Number.parseInt(passageCount, 10)
       const out = await practiceApi.startDrill({
         sectionType,
-        questionCount:
-          sectionType === "RC"
+        questionCount: usingManual
+          ? pickedIds.length
+          : sectionType === "RC"
             ? 1
             : parsedQuestionCount === "unlimited"
               ? "unlimited"
               : Number.isFinite(parsedQuestionCount)
                 ? parsedQuestionCount
                 : 5,
-        ...(sectionType === "RC"
+        ...(sectionType === "RC" && !usingManual
           ? {
               passageCount:
                 parsedPassageCount === "unlimited" || Number.isFinite(parsedPassageCount)
@@ -185,13 +283,22 @@ function DrillConfigForm({
           : {}),
         timing: isValidDrillTiming(timing) ? timing : "unlimited",
         showAnswers: resolvedShowAnswers,
-        selection: selection as "auto" | "manual",
-        questionTypeId: resolvedQuestionTypeId,
-        tagLabel: resolvedTagLabel,
-        difficulty: resolvedDifficulty,
-        status: resolvedStatus,
-        title: resolvedTagLabel ?? "Varied Mix",
+        selection: usingManual ? "manual" : "auto",
+        questionTypeId: usingManual ? null : resolvedQuestionTypeId,
+        questionTypeIds: usingManual ? [] : resolvedQuestionTypeIds,
+        tagLabel: usingManual ? null : resolvedTagLabel,
+        tagLabels: usingManual ? [] : resolvedTagLabels,
+        difficulty: usingManual ? "adaptive" : resolvedDifficulty,
+        status: usingManual ? "all" : resolvedStatus,
+        title: usingManual
+          ? formatPickMyOwnDrillTitle({
+              questionCount: pickedIds.length,
+              prepTestNumbers: pickedPts,
+            })
+          : drillTitle,
+        ...(usingManual ? { questionIds: pickedIds } : {}),
       })
+      setPickerOpen(false)
       navigate(`/app/practice/drills/session/${out.session.id}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to start drill")
@@ -292,17 +399,20 @@ function DrillConfigForm({
               label="Question Mix"
               description="Use our picks or choose your own."
               value={selection}
-              onChange={setSelection}
+              onChange={handleSelectionChange}
               options={[...drillConfigOptions.selection]}
             />
-            <DrillConfigSelectField
+            <DrillConfigMultiSelectField
               label={sectionType === "RC" ? "Reading Focus" : "Skill Focus"}
               description={
-                sectionType === "RC" ? "Choose the reading skills to practise." : "Filter by question type"
+                sectionType === "RC"
+                  ? "Choose up to three reading skills to name this drill."
+                  : "Choose up to three question types to name this drill."
               }
-              value={tags}
+              values={tags}
               onChange={setTags}
               options={tagSelectOptions}
+              emptyLabel="All skills"
             />
             <DrillConfigSelectField
               label="Challenge"
@@ -345,15 +455,42 @@ function DrillConfigForm({
           <Button
             type="button"
             variant="default"
-            disabled={starting || poolStats.selectedCount === 0}
+            disabled={
+              starting ||
+              (selection === "manual"
+                ? manualQuestionIds.length === 0
+                : poolStats.selectedCount === 0)
+            }
             className="ds-btn gap-2 text-base"
             onClick={() => void handleStart()}
           >
             <PlayCircleIcon className="size-5 shrink-0 text-white" />
-            {starting ? "Starting…" : "Begin Drill"}
+            {starting
+              ? "Starting…"
+              : selection === "manual" && manualQuestionIds.length > 0
+                ? `Begin Drill (${manualQuestionIds.length})`
+                : "Begin Drill"}
           </Button>
         </div>
       </section>
+
+      <DrillSelectQuestionsModal
+        open={pickerOpen}
+        sectionType={sectionType}
+        tagOptions={tagSelectOptions}
+        initialSelectedIds={manualQuestionIds}
+        onConfirmSelection={(questions) => {
+          applyManualPicks(questions)
+          setSelection(questions.length > 0 ? "manual" : "auto")
+          setPickerOpen(false)
+        }}
+        onStartDrill={(questions) => {
+          const { ids, pts } = applyManualPicks(questions)
+          setSelection(ids.length > 0 ? "manual" : "auto")
+          void handleStart({ questionIds: ids, prepTestNumbers: pts })
+        }}
+        starting={starting}
+      />
     </div>
   )
 }

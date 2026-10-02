@@ -19,15 +19,35 @@ function isMostlyStrikeHtml(html: string): boolean {
   return remaining.length === 0 || remaining.length / original.length < 0.25
 }
 
+/**
+ * True only when the block is essentially just the choice text (optional short
+ * label leftovers). Blocks that embed the choice *and* real analysis must not
+ * match — otherwise a single CMS `<p>` wipe leaves an empty explanation panel.
+ */
 function isChoiceRestatement(blockHtml: string, choicePlain: string): boolean {
   const blockPlain = normalizeComparable(plainTextFromHtml(blockHtml))
   const choice = normalizeComparable(choicePlain)
   if (!blockPlain || !choice) return false
   if (blockPlain === choice) return true
-  // Avoid false positives when choice text is a bare letter ("A") or other short stub.
-  if (choice.length >= 12 && (blockPlain.includes(choice) || choice.includes(blockPlain))) {
+
+  if (choice.length >= 12 && blockPlain.includes(choice)) {
+    const remainder = blockPlain.replace(choice, "").replace(/\s+/g, " ").trim()
+    if (!remainder) return true
+    // Tiny leftovers only (e.g. "answer choice (a).") — not a write-up.
+    if (remainder.length < 24 && remainder.length / blockPlain.length < 0.2) return true
+    return false
+  }
+
+  // Block is nearly the entire choice (not a short phrase that happens to appear in it).
+  if (
+    choice.length >= 12 &&
+    blockPlain.length >= 12 &&
+    choice.includes(blockPlain) &&
+    blockPlain.length / choice.length >= 0.85
+  ) {
     return true
   }
+
   return isMostlyStrikeHtml(blockHtml)
 }
 
@@ -60,7 +80,8 @@ export function stripLeadingChoiceRestatement(
   }
 
   if (start === 0) return html
-  if (start >= blocks.length) return ""
+  // Prefer showing original over a blank panel when every block looked like a restatement.
+  if (start >= blocks.length) return html
 
   const first = blocks[0]!
   const firstIndex = html.indexOf(first)

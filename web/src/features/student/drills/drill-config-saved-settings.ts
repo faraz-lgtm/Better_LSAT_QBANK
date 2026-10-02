@@ -17,9 +17,14 @@ export type SavedDrillConfig = {
   showAnswers: DrillShowAnswers
   customize: boolean
   selection: string
-  tags: string
+  /** Selected question-type ids; empty means all skills. */
+  tags: string[]
   difficulty: DrillDifficulty
   status: DrillStatus
+  /** Pick-my-own question ids when selection is `manual`. */
+  manualQuestionIds: string[]
+  /** PrepTest ordinals for the saved manual picks (for titles). */
+  manualPrepTestNumbers: number[]
 }
 
 export function drillConfigSettingsKey(sectionType: DrillSectionType): string {
@@ -28,6 +33,56 @@ export function drillConfigSettingsKey(sectionType: DrillSectionType): string {
 
 function optionValues(options: readonly { value: string }[]): Set<string> {
   return new Set(options.map((option) => option.value))
+}
+
+function normalizeTags(raw: unknown): string[] | null {
+  if (Array.isArray(raw)) {
+    const out: string[] = []
+    const seen = new Set<string>()
+    for (const item of raw) {
+      if (typeof item !== "string") continue
+      const trimmed = item.trim()
+      if (!trimmed || trimmed === "any" || seen.has(trimmed)) continue
+      seen.add(trimmed)
+      out.push(trimmed)
+    }
+    return out
+  }
+  if (typeof raw === "string") {
+    const trimmed = raw.trim()
+    if (!trimmed || trimmed === "any") return []
+    return [trimmed]
+  }
+  return null
+}
+
+function normalizeStringIdList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const item of raw) {
+    if (typeof item !== "string") continue
+    const trimmed = item.trim()
+    if (!trimmed || seen.has(trimmed)) continue
+    seen.add(trimmed)
+    out.push(trimmed)
+  }
+  return out
+}
+
+function normalizePrepTestNumbers(raw: unknown): number[] {
+  if (!Array.isArray(raw)) return []
+  const out: number[] = []
+  const seen = new Set<number>()
+  for (const item of raw) {
+    const n = typeof item === "number" ? item : Number.parseInt(String(item), 10)
+    if (!Number.isFinite(n) || n <= 0) continue
+    const rounded = Math.round(n)
+    if (seen.has(rounded)) continue
+    seen.add(rounded)
+    out.push(rounded)
+  }
+  return out
 }
 
 function parseSavedDrillConfig(raw: unknown): SavedDrillConfig | null {
@@ -54,9 +109,15 @@ function parseSavedDrillConfig(raw: unknown): SavedDrillConfig | null {
   }
   if (typeof parsed.customize !== "boolean") return null
   if (typeof parsed.selection !== "string" || !selectionValues.has(parsed.selection)) return null
-  if (typeof parsed.tags !== "string") return null
+  const tags = normalizeTags((raw as { tags?: unknown }).tags)
+  if (tags == null) return null
   if (typeof parsed.difficulty !== "string" || !difficultyValues.has(parsed.difficulty)) return null
   if (typeof parsed.status !== "string" || !statusValues.has(parsed.status)) return null
+
+  const manualQuestionIds = normalizeStringIdList((raw as { manualQuestionIds?: unknown }).manualQuestionIds)
+  const manualPrepTestNumbers = normalizePrepTestNumbers(
+    (raw as { manualPrepTestNumbers?: unknown }).manualPrepTestNumbers,
+  )
 
   return {
     questionCount: parsed.questionCount,
@@ -65,9 +126,11 @@ function parseSavedDrillConfig(raw: unknown): SavedDrillConfig | null {
     showAnswers: showAnswers as SavedDrillConfig["showAnswers"],
     customize: parsed.customize,
     selection: parsed.selection,
-    tags: parsed.tags,
+    tags,
     difficulty: parsed.difficulty,
     status: parsed.status,
+    manualQuestionIds,
+    manualPrepTestNumbers,
   }
 }
 

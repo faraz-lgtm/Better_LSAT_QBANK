@@ -50,7 +50,7 @@ export type ExplanationQuestionDetailView = {
     title: string
     body: string
   }
-  /** RC paragraph analysis shown via "Show analysis" (P1, P2, …). */
+  /** RC paragraph analysis shown via "Reveal Passage Explanation" (P1, P2, …). */
   passageAnalysis?: {
     paragraphs: Array<{
       label: string
@@ -98,5 +98,6 @@ export type ExplanationQuestionDetailView = {
     history: ExplanationHistoryRow[]
   }
   neighbors: { prevRouteKey: string | null; nextRouteKey: string | null }
+  /** True when a video URL exists — controls Video Explanation tab visibility. */
   hasExplanationTab: boolean
 }

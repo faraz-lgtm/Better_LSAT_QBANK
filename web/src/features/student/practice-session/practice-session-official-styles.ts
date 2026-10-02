@@ -2,8 +2,11 @@
 
 const OFFICIAL_IMMERSIVE_FRAME_CLASS = "bg-[var(--background)] p-0"
 
+/** Figma normal exam canvas is 1440px; Full Screen / full-width raises this to 1920px. */
+const EXAM_CARD_FULL_WIDTH_CLASS = "practice-session-card--full-width max-w-[1920px]"
+
 const OFFICIAL_CARD_CLASS =
-  "practice-session-card practice-session-card--active-drill practice-session-card--official relative flex h-full max-h-full min-h-0 w-full flex-col overflow-hidden rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
+  "practice-session-card practice-session-card--active-drill practice-session-card--official relative mx-auto flex h-full max-h-full min-h-0 w-full max-w-[1440px] flex-col overflow-hidden rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
 
 const OFFICIAL_HEADER_SHELL_CLASS =
   "practice-session-header practice-session-header--official box-border flex shrink-0 flex-col overflow-visible rounded-none bg-[var(--greyscale-0)]"
@@ -42,10 +45,11 @@ const OFFICIAL_HEADER_PAUSE_BUTTON_CLASS =
 const OFFICIAL_HEADER_MORE_BUTTON_CLASS =
   "inline-flex size-7 shrink-0 items-center justify-center rounded-[6px] p-1 transition hover:bg-[var(--greyscale-25)]"
 
-const OFFICIAL_HEADER_TITLE_ROW_CLASS = "flex h-[56px] w-full shrink-0 flex-col items-start overflow-hidden px-4 pb-4 pt-2"
+const OFFICIAL_HEADER_TITLE_ROW_CLASS =
+  "flex min-h-[56px] w-full shrink-0 flex-col items-start justify-center px-4 pb-4 pt-2"
 
 const OFFICIAL_HEADER_TITLE_CLASS =
-  "m-0 min-w-0 truncate text-[24px] font-normal leading-8 tracking-[-0.5px] text-[var(--color-student-heading)]"
+  "m-0 min-w-0 overflow-x-hidden text-ellipsis whitespace-nowrap text-[24px] font-normal leading-8 tracking-[-0.5px] text-[var(--color-student-heading)]"
 
 const OFFICIAL_HEADER_PROGRESS_TRACK_CLASS = "relative h-[5px] w-full overflow-hidden bg-[var(--greyscale-25)]"
 
@@ -59,61 +63,73 @@ const OFFICIAL_PASSAGE_PANE_CLASS =
 
 const OFFICIAL_QUESTION_PANE_CLASS = "min-h-0 overflow-y-auto py-[13px] pl-1.5"
 
+/** Official exam passage, stem, and choice copy: 18 / 1.5 / 300, LawHub stack. */
+const OFFICIAL_BODY_TYPE_CLASS =
+  "text-[18px] font-light leading-[1.5] tracking-normal [font-family:Apostrophe,halyard-text,sans-serif]"
+
 const OFFICIAL_PASSAGE_TEXT_CLASS =
-  "text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)] [&_p]:mb-0"
+  `${OFFICIAL_BODY_TYPE_CLASS} text-[var(--color-student-heading)] [&_p]:mb-0`
 
 const OFFICIAL_QUESTION_PANEL_WITH_WIDGET_CLASS = "practice-session-question-panel-with-widget relative min-w-0 pr-[50px]"
 
 const OFFICIAL_STEM_SECTION_CLASS = "w-full shrink-0 px-5"
 
-const OFFICIAL_STEM_NUMBER_CLASS = "shrink-0 pr-2 text-[14px] font-normal leading-5 text-[var(--color-student-heading)]"
+const OFFICIAL_STEM_NUMBER_CLASS = `shrink-0 pr-2 ${OFFICIAL_BODY_TYPE_CLASS} text-[var(--color-student-heading)]`
 
 const OFFICIAL_STEM_TEXT_CLASS =
-  "min-w-0 flex-1 text-[14px] font-normal leading-5 text-[var(--color-student-heading)] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-7 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"
+  `min-w-0 flex-1 ${OFFICIAL_BODY_TYPE_CLASS} text-[var(--color-student-heading)] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-7 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0`
 
-/** Figma `20243:23534` — choices + Reset, 20px x 16px inset */
-const OFFICIAL_OPTIONS_LIST_CLASS = "flex w-full flex-col items-stretch gap-[2px] px-5 pt-4"
+/** Figma `20243:23534` — choices + Reset, 20px × 16px inset, 2px row gaps */
+const OFFICIAL_OPTIONS_LIST_CLASS = "flex w-full flex-col items-stretch gap-[2px] px-[20px] py-[16px]"
 
-const OFFICIAL_OPTION_ROW_UNSELECTED_CLASS = "flex w-full items-stretch bg-[var(--greyscale-25)]"
+const OFFICIAL_OPTION_ROW_BASE_CLASS = "practice-session-official-choice flex w-full items-start"
 
+/** Official LawHub unselected row */
+const OFFICIAL_OPTION_ROW_UNSELECTED_CLASS = `${OFFICIAL_OPTION_ROW_BASE_CLASS} bg-[#f2f3f8]`
+
+/** Selected row (`#fdfac4`) + 3px primary-800 bar */
 const OFFICIAL_OPTION_ROW_SELECTED_CLASS =
-  "practice-session-official-choice--selected relative flex w-full items-stretch overflow-hidden bg-[#fdfac4]"
+  `${OFFICIAL_OPTION_ROW_BASE_CLASS} practice-session-official-choice--selected relative overflow-hidden bg-[#fdfac4]`
 
 const OFFICIAL_OPTION_SELECTED_BAR_CLASS =
-  "pointer-events-none absolute inset-y-0 left-0 z-[1] w-[3px] bg-[#12162a]"
+  "pointer-events-none absolute inset-y-0 left-0 z-[1] w-[3px] bg-[#041a44]"
 
 const OFFICIAL_OPTION_ROW_MASKED_CLASS =
-  "practice-session-choice-masked flex w-full items-stretch bg-[var(--greyscale-25)]"
+  `${OFFICIAL_OPTION_ROW_BASE_CLASS} practice-session-choice-masked relative overflow-hidden bg-[#f2f3f8]`
+
+const OFFICIAL_OPTION_LETTER_TYPE_CLASS =
+  "practice-session-official-choice-letter text-[28px] font-normal leading-[60px] [font-family:Apostrophe,halyard-text,sans-serif]"
 
 const OFFICIAL_OPTION_LETTER_UNSELECTED_CLASS =
-  "box-border flex w-[60px] min-h-[60px] shrink-0 items-center justify-center self-stretch border-2 border-[var(--greyscale-25)] bg-[var(--greyscale-0)] text-[28px] font-normal leading-[60px] text-[var(--greyscale-500)]"
+  `${OFFICIAL_OPTION_LETTER_TYPE_CLASS} box-border flex w-[60px] min-h-[60px] shrink-0 items-center justify-center self-stretch border-2 border-solid border-[#f2f3f8] bg-[#ffffff] text-[#666d80]`
 
 const OFFICIAL_OPTION_LETTER_SELECTED_CLASS =
-  "practice-session-official-choice-letter--selected box-border flex w-[60px] min-h-[60px] shrink-0 items-center justify-center self-stretch border-2 border-transparent bg-[#fdfac4] text-[28px] font-normal leading-[60px] text-[#2c3143]"
+  `${OFFICIAL_OPTION_LETTER_TYPE_CLASS} practice-session-official-choice-letter--selected box-border flex w-[60px] min-h-[60px] shrink-0 items-center justify-center self-stretch border-2 border-solid border-transparent bg-[#fdfac4] text-[#041a44]`
 
+/** Figma `20243:23545` — copy inset 6 / 12 / 8, min 60px. Type: 15 / 22 / regular. */
 const OFFICIAL_OPTION_TEXT_CLASS =
-  "box-border flex min-h-[60px] min-w-0 flex-1 flex-col justify-center self-stretch py-2 pl-1.5 pr-3 text-[14px] font-normal leading-5 text-[var(--color-student-heading)]"
+  `box-border flex min-h-[60px] min-w-0 flex-1 flex-col justify-center self-stretch py-[8px] pl-[6px] pr-[12px] ${OFFICIAL_BODY_TYPE_CLASS} text-[#041a44]`
 
-const OFFICIAL_RESET_RESPONSE_WRAP_CLASS = "flex h-[46px] w-full shrink-0 items-start justify-end pt-3"
+const OFFICIAL_RESET_RESPONSE_WRAP_CLASS = "flex h-[46px] w-full shrink-0 items-start justify-end pt-[12px]"
 
 const OFFICIAL_RESET_RESPONSE_BUTTON_CLASS =
-  "inline-flex h-[34px] shrink-0 items-center justify-center rounded-[6px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-[11px] pb-[5px] pt-[3px] text-[14px] font-normal leading-5 text-[var(--color-student-heading)] transition hover:bg-[var(--greyscale-50)]"
+  "practice-session-official-reset inline-flex h-[34px] shrink-0 items-center justify-center rounded-[6px] border border-solid border-[#eceff3] bg-[#eceff3] px-[11px] pb-[5px] pt-[3px] text-[14px] font-normal leading-[20px] text-[#041a44] transition hover:bg-[#e2e6ec]"
 
 const OFFICIAL_SIDE_WIDGET_CLASS =
-  "practice-session-side-widget absolute bottom-0 right-0 top-0 z-10 flex w-[50px] flex-col items-center overflow-visible bg-[var(--greyscale-25)]"
+  "practice-session-side-widget absolute bottom-0 right-0 top-0 z-10 flex w-[50px] flex-col items-center justify-between overflow-visible bg-[var(--greyscale-25)]"
 
 const OFFICIAL_SIDE_WIDGET_EXPANDED_CLASS =
-  "practice-session-side-widget absolute bottom-0 right-0 top-0 z-10 flex w-[174px] flex-col items-start justify-between overflow-visible border-l border-[var(--greyscale-100)] bg-[var(--greyscale-25)]"
+  "practice-session-side-widget absolute bottom-0 right-0 top-0 z-10 flex w-[174px] flex-col items-start justify-between overflow-visible bg-[var(--greyscale-25)]"
 
 const OFFICIAL_SIDE_WIDGET_ITEM_CLASS =
-  "inline-flex h-10 w-[49px] items-center justify-center text-[var(--greyscale-500)] transition hover:bg-[var(--greyscale-0)]/70"
+  "inline-flex h-10 w-[49px] items-center justify-center text-[#2c3143] transition hover:bg-[var(--greyscale-0)]/70"
 
 const OFFICIAL_SIDE_WIDGET_ITEM_EXPANDED_CLASS =
-  "flex h-10 w-full items-center gap-3 px-[14px] text-left text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[var(--color-student-heading)] transition hover:bg-[var(--greyscale-0)]/70"
+  "flex h-10 w-full items-center gap-3 px-[14px] text-left text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[#2c3143] transition hover:bg-[var(--greyscale-0)]/70"
 
-/** Figma `20257:89990` — official Review overlay (header 50+56+5, rail 50px) */
+/** Figma `20257:89990` — Review overlay stops above the 72px footer so question nav stays visible. */
 const OFFICIAL_REVIEW_PANEL_CLASS =
-  "practice-session-review-panel practice-session-review-panel--official absolute bottom-0 left-0 right-[50px] top-[111px] z-20 flex flex-col overflow-hidden bg-[var(--greyscale-25)]"
+  "practice-session-review-panel practice-session-review-panel--official absolute bottom-[72px] left-0 right-[50px] top-[111px] z-20 flex flex-col overflow-hidden bg-[var(--greyscale-25)]"
 
 const OFFICIAL_REVIEW_HEADER_CLASS =
   "flex min-h-[50px] w-full shrink-0 items-center justify-between border-b border-[var(--greyscale-100)] px-4"
@@ -137,13 +153,10 @@ const OFFICIAL_REVIEW_FILTER_BOX_CHECKED_CLASS = "border-[var(--primary)] bg-[va
 const OFFICIAL_REVIEW_GRID_WRAP_CLASS = "min-h-0 flex-1 overflow-auto px-[15px] pt-[15px]"
 
 const OFFICIAL_REVIEW_GRID_CLASS =
-  "practice-session-review-panel__grid grid w-full grid-cols-12 border-l border-t border-[var(--greyscale-300)]"
+  "practice-session-review-panel__grid grid w-full grid-cols-10 border-l border-t border-[var(--greyscale-300)]"
 
 const OFFICIAL_REVIEW_QUESTION_BUTTON_CLASS =
-  "practice-session-review-panel__question-btn relative flex h-[68px] min-w-0 w-full items-center justify-center border-b border-r border-[var(--greyscale-300)] bg-[var(--greyscale-0)] text-[20px] font-normal leading-6 tracking-[-0.5px] text-[var(--color-student-heading)]"
-
-const OFFICIAL_REVIEW_PASSAGE_BREAK_CLASS =
-  "practice-session-review-panel__passage-break h-[68px] border-b border-r border-[var(--greyscale-300)] bg-[var(--greyscale-25)]"
+  "practice-session-review-panel__question-btn relative flex h-[68px] min-w-0 w-full flex-col items-center justify-center gap-1 border-b border-r border-[var(--greyscale-300)] bg-[var(--greyscale-0)] text-[18px] font-normal leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]"
 
 const OFFICIAL_REVIEW_ANSWERED_BAR_CLASS = "absolute inset-x-0 bottom-0 h-[3px] bg-[var(--greyscale-300)]"
 
@@ -158,7 +171,7 @@ const OFFICIAL_REVIEW_FINISH_BUTTON_CLASS =
   "inline-flex h-10 min-w-[90px] shrink-0 items-center justify-center rounded-[6px] bg-[var(--primary)] px-4 text-base font-normal leading-6 text-white transition hover:bg-[var(--primary-600)]"
 
 const OFFICIAL_FOOTER_CLASS =
-  "box-border flex h-[72px] shrink-0 flex-col justify-center overflow-visible rounded-none border-t border-[var(--greyscale-50)] bg-[var(--greyscale-0)]"
+  "box-border relative z-30 flex h-[72px] shrink-0 flex-col justify-center overflow-visible rounded-none border-t border-[var(--greyscale-50)] bg-[var(--greyscale-0)]"
 
 const OFFICIAL_FOOTER_ROW_CLASS = "flex w-full min-w-0 items-center justify-center overflow-visible"
 
@@ -200,8 +213,28 @@ const OFFICIAL_QUESTION_NAV_CARET_CLASS =
 const OFFICIAL_PASSAGE_BREAK_CLASS =
   "practice-session-question-nav-passage-break h-7 w-[4px] min-w-[4px] max-w-[4px] shrink-0 self-end bg-[var(--greyscale-500)]"
 
+/** LawHub official highlighter tooltip — 216×56 chip, 8px radius, shadow only */
+const OFFICIAL_HIGHLIGHT_POPOVER_STACK_CLASS = "flex w-[216px] flex-col gap-2"
+
+const OFFICIAL_HIGHLIGHT_POPOVER_CARD_CLASS =
+  "flex w-full flex-col rounded-[8px] bg-[#ffffff] shadow-[0px_4px_16px_rgba(16,24,40,0.12),0px_1px_3px_rgba(16,24,40,0.06)]"
+
+const OFFICIAL_HIGHLIGHT_POPOVER_HEADER_CLASS =
+  "flex h-14 w-full items-center gap-3 px-5 text-[16px] font-normal leading-6 text-[#333333]"
+
+const OFFICIAL_HIGHLIGHT_POPOVER_SWATCH_ROW_CLASS =
+  "flex h-14 w-full items-center justify-between px-5"
+
+const OFFICIAL_HIGHLIGHT_POPOVER_SWATCH_CLASS =
+  "relative box-border size-6 shrink-0 overflow-visible rounded-full"
+
+const OFFICIAL_HIGHLIGHT_REMOVE_CARD_CLASS =
+  "relative inline-flex h-14 items-center gap-3 rounded-[8px] bg-[#ffffff] px-5 text-[16px] font-normal leading-6 text-[#333333] shadow-[0px_4px_16px_rgba(16,24,40,0.12),0px_1px_3px_rgba(16,24,40,0.06)]"
+
 export {
+  EXAM_CARD_FULL_WIDTH_CLASS,
   OFFICIAL_BODY_GRID_CLASS,
+  OFFICIAL_BODY_TYPE_CLASS,
   OFFICIAL_CARD_CLASS,
   OFFICIAL_FIND_TEXT_INPUT_CLASS,
   OFFICIAL_FIND_WRAP_CLASS,
@@ -226,6 +259,12 @@ export {
   OFFICIAL_HEADER_TITLE_CLASS,
   OFFICIAL_HEADER_TITLE_ROW_CLASS,
   OFFICIAL_HEADER_UTILITY_ROW_CLASS,
+  OFFICIAL_HIGHLIGHT_POPOVER_CARD_CLASS,
+  OFFICIAL_HIGHLIGHT_POPOVER_HEADER_CLASS,
+  OFFICIAL_HIGHLIGHT_POPOVER_STACK_CLASS,
+  OFFICIAL_HIGHLIGHT_POPOVER_SWATCH_CLASS,
+  OFFICIAL_HIGHLIGHT_POPOVER_SWATCH_ROW_CLASS,
+  OFFICIAL_HIGHLIGHT_REMOVE_CARD_CLASS,
   OFFICIAL_IMMERSIVE_FRAME_CLASS,
   OFFICIAL_OPTION_LETTER_SELECTED_CLASS,
   OFFICIAL_OPTION_LETTER_UNSELECTED_CLASS,
@@ -266,7 +305,6 @@ export {
   OFFICIAL_REVIEW_GRID_WRAP_CLASS,
   OFFICIAL_REVIEW_HEADER_CLASS,
   OFFICIAL_REVIEW_PANEL_CLASS,
-  OFFICIAL_REVIEW_PASSAGE_BREAK_CLASS,
   OFFICIAL_REVIEW_QUESTION_BUTTON_CLASS,
   OFFICIAL_REVIEW_TITLE_CLASS,
   OFFICIAL_SIDE_WIDGET_CLASS,

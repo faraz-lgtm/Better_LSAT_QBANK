@@ -32,10 +32,23 @@ describe("sanitizeHtml", () => {
     expect(out).toContain("<mark")
   })
 
+  it("preserves underline color on u[data-underline]", () => {
+    const out = sanitizeHtml('<p>test <u data-underline="blue">hi</u></p>')
+    expect(out).toContain('data-underline="blue"')
+  })
+
   it("strips headings from question html", () => {
     const out = sanitizeHtml("<h1>Should not show in questions</h1><p>ok</p>")
     expect(out).not.toContain("<h1>")
     expect(out).toContain("ok")
+  })
+
+  it("strips tables from question html", () => {
+    const out = sanitizeHtml("<table><tr><th>Choice</th></tr><tr><td>A</td></tr></table>")
+    expect(out).not.toContain("<table")
+    expect(out).not.toContain("<th")
+    expect(out).toContain("Choice")
+    expect(out).toContain("A")
   })
 })
 
@@ -58,9 +71,53 @@ describe("sanitizeLessonHtml", () => {
     expect(out).toContain('data-bg="#f3f7ff"')
   })
 
+  it("turns empty paragraphs into br spacers so multiple blank lines render", () => {
+    const out = sanitizeLessonHtml("<p>One</p><p></p><p></p><p>Two</p>")
+    expect(out).toBe("<p>One</p><p><br></p><p><br></p><p>Two</p>")
+  })
+
   it("strips script tags", () => {
     const out = sanitizeLessonHtml("<h1>Safe</h1><script>alert(1)</script>")
     expect(out).not.toContain("<script")
     expect(out).toContain("Safe")
+  })
+
+  it("keeps heading tags used in the lesson editor", () => {
+    const out = sanitizeLessonHtml("<h2>Myth #1</h2><h3>The Truth</h3><p>Body</p>")
+    expect(out).toContain("<h2>")
+    expect(out).toContain("Myth #1")
+    expect(out).toContain("<h3>")
+    expect(out).toContain("The Truth")
+  })
+
+  it("keeps TipTap table markup including colgroup", () => {
+    const html = [
+      '<table class="border-collapse border border-[#dfe1e7] text-sm">',
+      '<colgroup><col style="min-width: 150px"><col style="min-width: 150px"><col style="min-width: 150px"></colgroup>',
+      "<tbody>",
+      '<tr><th colspan="1" rowspan="1"><p>Choice</p></th><th><p>Verdict</p></th><th><p>Reason</p></th></tr>',
+      '<tr><td colspan="1" rowspan="1" colwidth="150"><p style="text-align: center">A</p></td><td><p>CORRECT</p></td><td><p>Value Judgment</p></td></tr>',
+      "</tbody>",
+      "</table>",
+    ].join("")
+    const out = sanitizeLessonHtml(html)
+    expect(out).toContain("<table")
+    expect(out).toContain("<colgroup")
+    expect(out).toContain("<th")
+    expect(out).toContain("<td")
+    expect(out).toContain("Choice")
+    expect(out).toContain("Verdict")
+    expect(out).toContain("colwidth")
+    expect(out).toContain("text-align: center")
+  })
+
+  it("keeps per-block margin styles and data attrs from the course builder", () => {
+    const out = sanitizeLessonHtml(
+      '<p data-mt="24px" data-mb="8px" style="margin-top: 24px; margin-bottom: 8px">Spaced</p>',
+    )
+    expect(out).toContain('data-mt="24px"')
+    expect(out).toContain('data-mb="8px"')
+    expect(out).toContain("margin-top: 24px")
+    expect(out).toContain("margin-bottom: 8px")
   })
 })

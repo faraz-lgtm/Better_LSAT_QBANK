@@ -81,7 +81,6 @@ function renderDrillResults(
           elapsedSeconds={12}
           timing="unlimited"
           take={1}
-          excluded={false}
           questions={questions}
           showBlindReview={false}
           bookmarkedIds={bookmarkedIds}
@@ -95,7 +94,6 @@ function renderDrillResults(
             })
           }}
           onReviewInTester={() => {}}
-          onExcludedChange={() => {}}
         />
       </MemoryRouter>
     )
@@ -151,23 +149,30 @@ describe("LrDrillResultsView bookmarks", () => {
 })
 
 describe("LrDrillResultsView question filter", () => {
-  it("shows full Incorrect only label and hides correct questions", async () => {
+  it("defaults to Both and filters when Correct or Incorrect is selected", async () => {
     const user = userEvent.setup()
     renderDrillResults(vi.fn(), "section")
 
-    await user.click(screen.getByRole("button", { name: "Question" }))
-    const incorrectOnly = screen.getByRole("option", { name: "Incorrect only" })
-    expect(incorrectOnly.textContent).toBe("Incorrect only")
-    expect(incorrectOnly.className).not.toMatch(/truncate/)
+    expect(screen.getByRole("button", { name: "Both" })).toBeInTheDocument()
+    expect(screen.getByText(/PT 129\s+\.\s+S1\s+\.\s+Q1/)).toBeInTheDocument()
+    expect(screen.getByText(/PT 129\s+\.\s+S1\s+\.\s+Q2/)).toBeInTheDocument()
 
-    await user.click(incorrectOnly)
+    await user.click(screen.getByRole("button", { name: "Both" }))
+    expect(screen.getByRole("option", { name: "Both" }).textContent).toBe("Both")
+    expect(screen.getByRole("option", { name: "Correct" }).textContent).toBe("Correct")
+    const incorrect = screen.getByRole("option", { name: "Incorrect" })
+    expect(incorrect.textContent).toBe("Incorrect")
+    expect(screen.queryByRole("option", { name: "Question" })).not.toBeInTheDocument()
+    expect(incorrect.className).not.toMatch(/truncate/)
 
+    await user.click(incorrect)
+
+    expect(screen.getByRole("button", { name: "Incorrect" })).toBeInTheDocument()
     expect(screen.queryByText(/PT 129\s+\.\s+S1\s+\.\s+Q1/)).not.toBeInTheDocument()
     expect(screen.getByText(/PT 129\s+\.\s+S1\s+\.\s+Q2/)).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Incorrect only" })).toBeInTheDocument()
   })
 
-  it("shows an empty state when Incorrect only matches nothing", async () => {
+  it("shows an empty state when Incorrect matches nothing", async () => {
     const user = userEvent.setup()
     function Harness() {
       return (
@@ -180,22 +185,21 @@ describe("LrDrillResultsView question filter", () => {
             elapsedSeconds={12}
             timing="unlimited"
             take={1}
-            excluded={false}
             questions={[meta("q1", 1, true)]}
             showBlindReview={false}
             bookmarkedIds={new Set()}
             onToggleBookmark={() => {}}
             onReviewInTester={() => {}}
-            onExcludedChange={() => {}}
           />
         </MemoryRouter>
       )
     }
     render(<Harness />)
 
-    await user.click(screen.getByRole("button", { name: "Question" }))
-    await user.click(screen.getByRole("option", { name: "Incorrect only" }))
+    await user.click(screen.getByRole("button", { name: "Both" }))
+    await user.click(screen.getByRole("option", { name: "Incorrect" }))
 
+    expect(screen.getByRole("button", { name: "Incorrect" })).toBeInTheDocument()
     expect(screen.getByText("No incorrect questions in this section.")).toBeInTheDocument()
     expect(screen.queryByText(/PT 129\s+\.\s+S1\s+\.\s+Q1/)).not.toBeInTheDocument()
   })

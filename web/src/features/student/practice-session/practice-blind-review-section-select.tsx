@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { ChevronDown, ChevronUp } from "lucide-react"
 
 import {
@@ -21,6 +21,9 @@ type PracticeBlindReviewSectionSelectProps = {
   fullWidth?: boolean
 }
 
+/** Mirrors finish-menu: keep menu in-tree so `html { zoom }` cannot misplace it. */
+const SECTION_SELECT_OPEN_CLASS = "practice-section-select-open"
+
 function PracticeBlindReviewSectionSelect({
   sections,
   activeSectionSessionId,
@@ -36,6 +39,14 @@ function PracticeBlindReviewSectionSelect({
   const triggerClass = fullWidth
     ? "inline-flex h-12 w-full items-center justify-between gap-2 rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)] transition-colors hover:bg-[var(--greyscale-25)]"
     : BLIND_REVIEW_SECTION_SELECT_TRIGGER_CLASS
+
+  useLayoutEffect(() => {
+    if (!open || fullWidth) return
+    document.documentElement.classList.add(SECTION_SELECT_OPEN_CLASS)
+    return () => {
+      document.documentElement.classList.remove(SECTION_SELECT_OPEN_CLASS)
+    }
+  }, [open, fullWidth])
 
   useEffect(() => {
     if (!open) return
@@ -66,7 +77,11 @@ function PracticeBlindReviewSectionSelect({
   return (
     <div
       ref={containerRef}
-      className={cn("relative inline-flex shrink-0 flex-col", fullWidth ? "w-full min-w-0" : "min-w-[123px]")}
+      className={cn(
+        "relative inline-flex shrink-0 flex-col",
+        fullWidth ? "w-full min-w-0" : "z-[1] w-max min-w-[136px]",
+        open && !fullWidth && "z-20",
+      )}
     >
       <button
         type="button"
@@ -75,7 +90,7 @@ function PracticeBlindReviewSectionSelect({
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
-        <span className="whitespace-nowrap">{activeLabel}</span>
+        <span className="min-w-0 flex-1 whitespace-nowrap text-left">{activeLabel}</span>
         {open ? (
           <ChevronUp className="size-5 shrink-0 text-[var(--greyscale-500)]" aria-hidden />
         ) : (

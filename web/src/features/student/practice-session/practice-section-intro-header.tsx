@@ -1,83 +1,68 @@
-import type { ReactNode } from "react"
-import { List } from "lucide-react"
-
-import { PracticeSectionIntroStaticTimer } from "@/features/student/practice-session/practice-section-intro-static-timer"
-import type { PracticeToolMode } from "@/features/student/practice-session/practice-session-types"
+import {
+  PracticeSectionIntroStaticTimer,
+  SECTION_INTRO_FIGMA,
+} from "@/features/student/practice-session/practice-section-intro-static-timer"
 import { cn } from "@/lib/utils"
 
 type PracticeSectionIntroHeaderProps = {
   title: string
-  fontScale: number
-  toolMode: PracticeToolMode
-  onFontSize: () => void
-  onLineSpacing: () => void
-  onUnderline: () => void
   timerLabel?: string
   timerDisplaySeconds: number
-  timerProgress?: number
-  closeButton: ReactNode
+  onPause: () => void
+  onClose: () => void
 }
 
-const toolGroupClass =
-  "flex h-[52px] items-center rounded-[16px] border border-[#dfe1e7] bg-[#f6f8fa] px-[13px]"
-const toolTextBtnClass =
-  "flex size-7 items-center justify-center rounded text-xs font-bold text-[#666d80] transition hover:bg-[#eceff3] hover:text-[#062357]"
+const iconButtonClass =
+  "inline-flex size-10 shrink-0 items-center justify-center rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] transition-colors hover:bg-[var(--greyscale-25)]"
 
+/** Figma `20596:139521` — section intro header (title + timer pill + pause + close). */
 function PracticeSectionIntroHeader({
   title,
-  fontScale,
-  toolMode,
-  onFontSize,
-  onLineSpacing,
-  onUnderline,
   timerLabel,
   timerDisplaySeconds,
-  timerProgress = 1,
-  closeButton,
+  onPause,
+  onClose,
 }: PracticeSectionIntroHeaderProps) {
   return (
-    <header className="practice-session-header flex h-[80px] w-full shrink-0 items-center rounded-t-[16px] border-b border-[#dfe1e7] bg-[#eceff3] px-6 py-3">
-      <div className="flex w-full min-w-0 items-center gap-6">
+    <header className="practice-session-header flex w-full shrink-0 items-center rounded-t-[16px] border-b border-[var(--greyscale-100)] bg-[#eceff3] px-6 py-3">
+      <div className="flex w-full min-w-0 items-center justify-between gap-4">
         <p
-          className="flex h-[52px] min-w-0 flex-1 items-center truncate text-[20px] font-bold leading-[1.35] text-[#062357]"
+          className="min-w-0 truncate text-[20px] font-bold leading-[1.35] text-[#041a44]"
           title={title}
         >
           {title}
         </p>
-        <div className="flex shrink-0 items-center gap-[24px]">
-          <div className={cn(toolGroupClass, "gap-1")}>
-            <button type="button" className={toolTextBtnClass} aria-label="Text size" onClick={onFontSize}>
-              Aa
-              <span className="sr-only"> ({fontScale}x)</span>
-            </button>
-            <button
-              type="button"
-              className={toolTextBtnClass}
-              aria-label="Line spacing"
-              onClick={onLineSpacing}
-            >
-              <List className="size-4" strokeWidth={2} aria-hidden />
-            </button>
-            <button
-              type="button"
-              className={cn(
-                toolTextBtnClass,
-                "underline",
-                toolMode === "underline" && "bg-[#eceff3] text-[#062357]",
-              )}
-              aria-label="Underline"
-              aria-pressed={toolMode === "underline"}
-              onClick={onUnderline}
-            >
-              U
-            </button>
-          </div>
-          <PracticeSectionIntroStaticTimer
-            label={timerLabel}
-            displaySeconds={timerDisplaySeconds}
-            progress={timerProgress}
-          />
-          {closeButton}
+        <div className="flex shrink-0 items-center gap-2.5">
+          <PracticeSectionIntroStaticTimer label={timerLabel} displaySeconds={timerDisplaySeconds} />
+          <button type="button" className={cn(iconButtonClass)} aria-label="Pause" onClick={onPause}>
+            <span className="relative inline-flex h-5 w-[22px] shrink-0 overflow-clip" aria-hidden>
+              <img
+                src={`${SECTION_INTRO_FIGMA}/pause.svg`}
+                alt=""
+                width={22}
+                height={20}
+                className="size-full max-w-none object-contain"
+                draggable={false}
+              />
+            </span>
+          </button>
+          <button
+            type="button"
+            className={cn(iconButtonClass)}
+            aria-label="Close section introduction"
+            onClick={onClose}
+          >
+            <span className="relative inline-flex size-5 shrink-0 overflow-clip" aria-hidden>
+              <img
+                src={`${SECTION_INTRO_FIGMA}/close.svg`}
+                alt=""
+                width={20}
+                height={20}
+                className="size-full max-w-none object-contain"
+                draggable={false}
+              />
+            </span>
+          </button>
         </div>
       </div>
     </header>

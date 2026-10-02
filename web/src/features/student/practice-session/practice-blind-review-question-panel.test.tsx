@@ -65,6 +65,48 @@ describe("PracticeBlindReviewQuestionPanel", () => {
     expect(onSelect).not.toHaveBeenCalled()
   })
 
+  it("hides the exam tools rail on Actual and shows it on Blind Review", () => {
+    const { rerender } = render(
+      <PracticeBlindReviewQuestionPanel
+        question={question}
+        questionNumber={1}
+        findQuery=""
+        selectedIndex={null}
+        revealed={false}
+        isCorrect={null}
+        submitting={false}
+        allowReselect
+        getRegionHtml={(_key, base) => base}
+        onSelect={() => undefined}
+        answerView="blind_review"
+        onAnswerViewChange={() => undefined}
+        showSideWidget
+      />,
+    )
+
+    expect(screen.getByRole("complementary", { name: /exam tools/i })).toBeInTheDocument()
+
+    rerender(
+      <PracticeBlindReviewQuestionPanel
+        question={question}
+        questionNumber={1}
+        findQuery=""
+        selectedIndex={null}
+        revealed={false}
+        isCorrect={null}
+        submitting={false}
+        allowReselect
+        getRegionHtml={(_key, base) => base}
+        onSelect={() => undefined}
+        answerView="actual"
+        onAnswerViewChange={() => undefined}
+        showSideWidget
+      />,
+    )
+
+    expect(screen.queryByRole("complementary", { name: /exam tools/i })).not.toBeInTheDocument()
+  })
+
   it("lets Remove erase highlights on the stem", async () => {
     const onAnnotateClick = vi.fn()
     const user = userEvent.setup()
@@ -158,5 +200,37 @@ describe("PracticeBlindReviewQuestionPanel", () => {
     expect(list).toBeTruthy()
     expect(list).not.toHaveClass("overflow-hidden")
     expect(list).toHaveClass("overflow-y-auto")
+  })
+
+  it("masks a locked choice from the exam tools rail instead of selecting it", async () => {
+    const onSelect = vi.fn()
+    const onToggleMasked = vi.fn()
+    const user = userEvent.setup()
+
+    render(
+      <PracticeBlindReviewQuestionPanel
+        question={question}
+        questionNumber={1}
+        findQuery=""
+        selectedIndex={null}
+        revealed={false}
+        isCorrect={null}
+        submitting={false}
+        allowReselect
+        getRegionHtml={(_key, base) => base}
+        onSelect={onSelect}
+        answerView="blind_review"
+        showSideWidget
+        responseMasking
+        maskedChoices={{}}
+        onToggleMasked={onToggleMasked}
+        choicesDisabled
+      />,
+    )
+
+    expect(screen.getByRole("button", { name: "Response Masking" })).toHaveAttribute("aria-pressed", "true")
+    await user.click(screen.getByRole("button", { name: "Answer choice A, click to mask" }))
+    expect(onToggleMasked).toHaveBeenCalledWith(0)
+    expect(onSelect).not.toHaveBeenCalled()
   })
 })

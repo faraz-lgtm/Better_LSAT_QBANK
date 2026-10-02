@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { StudentOptionMenu } from "@/features/student/components/student-option-menu"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
+import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
 import {
   cacheExplanationPrepTestTree,
   getCachedExplanationPrepTestTree,
@@ -21,6 +22,7 @@ import {
   readExplanationBookmarkCache,
   writeExplanationBookmarkCache,
 } from "@/features/student/explanation-detail/explanation-bookmark-cache"
+import { explanationListQuestionLabel } from "@/features/student/explanation-detail/explanation-list-question-label"
 import { filterPrepTestTreeToQuestionIds } from "@/features/student/explanation-detail/filter-explanation-tree"
 import { passagesInQuestionOrder, questionsInSectionOrder, shouldFlattenExplanationPassages } from "@/features/student/explanation-detail/order-explanation-passages"
 import type {
@@ -63,12 +65,6 @@ const PREP_TEST_BADGE_SIZE = {
   borderRadius: "14px",
 } as const
 
-const SECTION_BADGE_SIZE = {
-  width: "40px",
-  height: "40px",
-  borderRadius: "12px",
-} as const
-
 const TREE_BADGE_CLASS = "flex shrink-0 items-center justify-center"
 
 const SEEN_GRAY = "var(--greyscale-500)"
@@ -76,7 +72,7 @@ const SEEN_GRAY = "var(--greyscale-500)"
 function prepTestStatusTag(status: ExplanationQuestionStatus): string {
   switch (status) {
     case "in_process":
-      return "In Process • Blind Review"
+      return "In Process • Untimed Review"
     case "fresh":
       return "Fresh"
     case "answered":
@@ -226,17 +222,13 @@ function prepTestBadgeColors(status: ExplanationQuestionStatus): {
 }
 
 function SectionKindBadge({ kind }: { kind: ExplanationSectionNode["kind"] }) {
-  const accentColor =
-    kind === "RC" ? "#40c4aa" : "var(--explanation-lr-badge-bg)"
+  if (kind === "LR" || kind === "RC") {
+    return <SectionInitialBadge section={kind} variant="compact" />
+  }
   return (
     <span
-      className={`${TREE_BADGE_CLASS} text-sm font-bold leading-[1.5] tracking-[0.02em]`}
-      style={{
-        ...SECTION_BADGE_SIZE,
-        backgroundColor: accentColor,
-        color: "#ffffff",
-      }}
-      aria-hidden
+      aria-label={kind}
+      className="inline-flex size-[32px] shrink-0 items-center justify-center rounded-[8px] border-[0.5px] border-[var(--greyscale-100)] bg-[var(--greyscale-25)] p-[5px] text-[14px] font-black leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]"
     >
       {kind}
     </span>
@@ -336,9 +328,9 @@ function ExplanationTreeQuestionRow({
         <QuestionIndexBadge>{question.number}</QuestionIndexBadge>
         <Link
           to={detailHref}
-          className="block min-w-0 shrink truncate rounded-lg text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
+          className="block shrink-0 whitespace-nowrap rounded-lg text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
         >
-          {`Q${question.number}`}
+          {explanationListQuestionLabel(question)}
         </Link>
         <div className="shrink-0 px-4">
           <StatusBadge status={question.status} />
@@ -380,7 +372,9 @@ function ExplanationTreeQuestionRow({
                 : "size-9 rounded-xl text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)]"
             }
             aria-label={
-              bookmarked ? `Remove bookmark from Q${question.number}` : `Bookmark Q${question.number}`
+              bookmarked
+                ? `Remove bookmark from ${explanationListQuestionLabel(question)}`
+                : `Bookmark ${explanationListQuestionLabel(question)}`
             }
             aria-pressed={bookmarked}
             onClick={onToggleBookmark}
@@ -809,7 +803,7 @@ function ExplanationsPage() {
   }
 
   return (
-    <StudentMain className="bg-[var(--background)]" contentClassName="flex min-h-0 flex-1 flex-col pt-6 pb-6">
+    <StudentMain className="bg-[var(--primary-0)]" contentClassName="flex min-h-0 flex-1 flex-col bg-[var(--primary-0)] pt-6 pb-6">
       <div className="mx-auto flex w-full max-w-[1168px] flex-col gap-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

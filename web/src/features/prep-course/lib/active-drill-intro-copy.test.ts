@@ -35,7 +35,18 @@ describe("activeDrillIntroCopy", () => {
     ).toContain("Work through this LSAT question")
   })
 
-  it("uses text before The Question marker", () => {
+  it("uses text before The Question marker when it is not a PT reference", () => {
+    expect(
+      activeDrillIntroCopy(
+        lesson({
+          text_content: "<p>Read this stimulus carefully.</p><p>The Question:</p><p>Stem here</p>",
+        }),
+      ),
+    ).toBe("Read this stimulus carefully.")
+    expect(activeDrillIntroCopy(lesson({ text_content: "<p>The Question:</p><p>Stem</p>" }))).not.toContain("Stem")
+  })
+
+  it("does not use PT references or analysis HTML as the stem", () => {
     expect(
       activeDrillIntroCopy(
         lesson({
@@ -43,8 +54,18 @@ describe("activeDrillIntroCopy", () => {
             "<p>This Active Drill will be PT102.S2.Q1.</p><p>The Question:</p><p>Stem here</p>",
         }),
       ),
-    ).toContain("PT102.S2.Q1")
-    expect(activeDrillIntroCopy(lesson({ text_content: "<p>The Question:</p><p>Stem</p>" }))).not.toContain("Stem")
+    ).toContain("Work through this LSAT question")
+  })
+
+  it("does not dump analysis HTML as intro copy when The Question marker is missing", () => {
+    expect(
+      activeDrillIntroCopy(
+        lesson({
+          text_content:
+            "<p>The florist said green carnations.</p><h3>Stimulus Analysis</h3><p>Hidden until complete.</p>",
+        }),
+      ),
+    ).toContain("Work through this LSAT question")
   })
 
   it("falls back to default copy", () => {

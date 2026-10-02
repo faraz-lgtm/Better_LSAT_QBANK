@@ -1,4 +1,5 @@
-import { resolveAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
+import { resolveAnswerPopularityRows, displayAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
+import { resolveScoreBand } from "@/features/student/explanation-detail/provisional-score-band"
 import type { ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
 import type { LocatedExplanationQuestion } from "@/features/student/explanation-detail/explanation-question-index"
@@ -8,11 +9,7 @@ import {
   tagsFromTopicName,
   targetTimeSecondsForDifficulty,
 } from "@/features/student/practice-session/practice-results-ui"
-import {
-  NOT_ENOUGH_ANSWERS_YET,
-  hasEnoughPlatformAnswerSample,
-  platformAnswerSampleSize,
-} from "@/lib/platform-answer-sample"
+import { platformAnswerSampleSize } from "@/lib/platform-answer-sample"
 
 function passageDisplayNumber(loc: LocatedExplanationQuestion): number {
   const m = /^P(\d+)$/i.exec(loc.pass.label)
@@ -88,7 +85,19 @@ function buildAnalytics(
   )
 
   const totalResponses = detail?.answerPopularityTotal ?? platformAnswerSampleSize(resolvedPopularity)
-  const answerPopularity = hasEnoughPlatformAnswerSample(totalResponses) ? resolvedPopularity : []
+  const correctLetterForPopularity = (() => {
+    const raw = (detail?.correctChoiceId ?? "").trim().toUpperCase().slice(0, 1)
+    if (/^[A-E]$/.test(raw)) return raw
+    const match = choices.find((c) => c.id === detail?.correctChoiceId)
+    if (match && match.index >= 1 && match.index <= 5) return String.fromCharCode(64 + match.index)
+    return raw || null
+  })()
+  const answerPopularity = displayAnswerPopularityRows(
+    resolvedPopularity,
+    correctLetterForPopularity,
+    detail?.questionId ?? loc.routeKey,
+    totalResponses,
+  )
   const questionBand = difficultyDisplayLabel(diffLevel) as DifficultyBand
   const sectionType = detail?.sectionType ?? loc.sec.kind
   const showPassageDifficulty = sectionType === "RC"
@@ -116,11 +125,7 @@ function buildAnalytics(
       tone: difficultyTone(questionBand),
     },
     ...(passageDifficulty ? { passageDifficulty } : {}),
-    scoreBand: {
-      headline: "—",
-      range: "—",
-      caption: NOT_ENOUGH_ANSWERS_YET,
-    },
+    scoreBand: resolveScoreBand(null, detail?.questionId ?? loc.routeKey, diffLevel),
     answerPopularity,
     answerPopularityTotal: totalResponses,
     userSelectedLetter: (() => {
@@ -153,7 +158,6 @@ export function buildExplanationQuestionDetailView(
       explanationHtml: c.explanationHtml,
     })) ?? []
 
-  const hasWritten = Boolean(detail?.explanationHtml?.trim())
   const hasVideo = Boolean(detail?.videoUrl?.trim())
 
   const correctChoiceId = detail?.correctChoiceId ?? ""
@@ -212,6 +216,7 @@ export function buildExplanationQuestionDetailView(
     videos,
     analytics: buildAnalytics(loc, detail, choices),
     neighbors,
-    hasExplanationTab: hasWritten || hasVideo,
+    /** Video Explanation tab — only when a video URL exists (written content lives on Question). */
+    hasExplanationTab: hasVideo,
   }
 }

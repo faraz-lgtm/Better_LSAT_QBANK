@@ -12,7 +12,7 @@ describe("PracticeBlindReviewSessionHeader", () => {
         activeSectionSessionId={null}
         onSelectSection={() => undefined}
         questionRef="Q1"
-        actualScoreLabel="Actual: BR"
+        actualScoreLabel="Actual: —"
         notesOpen={false}
         notesEnabled
         onToggleNotes={() => undefined}
@@ -27,7 +27,7 @@ describe("PracticeBlindReviewSessionHeader", () => {
     expect(screen.getByPlaceholderText("Find Text, Type Here")).toBeInTheDocument()
     expect(screen.getByText("1 of 26")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Notes" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Exit blind review" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Exit untimed review" })).toBeInTheDocument()
     expect(screen.queryByText("Tools:")).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Highlight" })).not.toBeInTheDocument()
     expect(screen.queryByRole("toolbar", { name: "Highlight tools" })).not.toBeInTheDocument()

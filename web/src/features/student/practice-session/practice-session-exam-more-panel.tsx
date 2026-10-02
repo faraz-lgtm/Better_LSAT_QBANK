@@ -23,9 +23,11 @@ type PracticeSessionExamMorePanelProps = {
   exitOnly?: boolean
   officialInterface?: boolean
   onOfficialInterfaceChange?: (next: boolean) => void
+  /** When false, hides Official Testing Interface toggle (e.g. Blind Review). */
+  showInterfaceToggle?: boolean
   /** Figma `20596:145393` — section dropdown above exit actions */
   sectionSelect?: ReactNode
-  /** Defaults to "BetterLSAT Interface"; Blind Review Figma uses "Official Interface" */
+  /** Defaults to Official Testing Interface (on = official LSAC chrome). */
   interfaceToggleLabel?: string
   onClose: () => void
   onSubmit: () => void
@@ -36,7 +38,15 @@ type PracticeSessionExamMorePanelProps = {
 function ExamMoreIcon({ src, size }: { src: string; size: number }) {
   return (
     <span className="relative flex shrink-0 items-center justify-center overflow-hidden" style={{ width: size, height: size }}>
-      <img src={src} alt="" width={size} height={size} className="size-full max-w-none" draggable={false} />
+      {/* Figma assets are dark navy; invert in dark mode so they match heading text. */}
+      <img
+        src={src}
+        alt=""
+        width={size}
+        height={size}
+        className="size-full max-w-none dark:brightness-0 dark:invert"
+        draggable={false}
+      />
     </span>
   )
 }
@@ -81,8 +91,9 @@ function PracticeSessionExamMorePanel({
   exitOnly = false,
   officialInterface = true,
   onOfficialInterfaceChange,
+  showInterfaceToggle = true,
   sectionSelect = null,
-  interfaceToggleLabel = "BetterLSAT Interface",
+  interfaceToggleLabel = "Official Testing Interface",
   onClose,
   onSubmit,
   onSaveAndExit,
@@ -90,7 +101,6 @@ function PracticeSessionExamMorePanel({
 }: PracticeSessionExamMorePanelProps) {
   const { isDark, setTheme } = useTheme()
   const actionsDisabled = disabled || finishing
-  const officialToggleSemantics = interfaceToggleLabel === "Official Interface"
 
   return createPortal(
     <>
@@ -172,19 +182,18 @@ function PracticeSessionExamMorePanel({
           />
         </div>
 
-        <div className={EXAM_MORE_PANEL_TOGGLE_ROW_CLASS}>
-          <span id="exam-more-betterlsat-interface" className={EXAM_MORE_PANEL_TOGGLE_LABEL_CLASS}>
-            {interfaceToggleLabel}
-          </span>
-          <ExamMoreToggle
-            labelledBy="exam-more-betterlsat-interface"
-            checked={officialToggleSemantics ? officialInterface : !officialInterface}
-            onCheckedChange={(next) => {
-              if (officialToggleSemantics) onOfficialInterfaceChange?.(next)
-              else onOfficialInterfaceChange?.(!next)
-            }}
-          />
-        </div>
+        {showInterfaceToggle ? (
+          <div className={EXAM_MORE_PANEL_TOGGLE_ROW_CLASS}>
+            <span id="exam-more-official-interface" className={EXAM_MORE_PANEL_TOGGLE_LABEL_CLASS}>
+              {interfaceToggleLabel}
+            </span>
+            <ExamMoreToggle
+              labelledBy="exam-more-official-interface"
+              checked={officialInterface}
+              onCheckedChange={(next) => onOfficialInterfaceChange?.(next)}
+            />
+          </div>
+        ) : null}
       </div>
     </>,
     document.body,

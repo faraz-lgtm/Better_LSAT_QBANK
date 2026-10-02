@@ -24,7 +24,7 @@ export type ExplanationPrepTestListItem = {
   prepTestNumber: string | null
   questionCount: number
   explainedCount: number
-  /** Figma list subtitle — e.g. "Fresh", "In Process • Blind Review" */
+  /** Figma list subtitle — e.g. "Fresh", "In Process • Untimed Review" */
   rowSubtitle: string
 }
 
@@ -320,10 +320,11 @@ function mapQuestionNode(
   status: ExplanationQuestionStatus,
 ): ExplanationQuestionNode {
   const num = q.question_number ?? 0
+  const passagePart = ctx.passageLabel && ctx.passageLabel !== 'LR' ? `.${ctx.passageLabel}` : ''
   return {
     id: q.id,
     number: num,
-    code: `PT${ctx.ptNum}.S${ctx.secNum}.${ctx.passageLabel}.Q${num}`,
+    code: `PT${ctx.ptNum}.S${ctx.secNum}${passagePart}.Q${num}`,
     snippet: snippetFromQuestion(q),
     topicName: topicNameFromQuestion(q, ctx.typeNamesById),
     status,
@@ -719,7 +720,7 @@ export function prepTestRowSubtitleFromStatuses(
     else if (status === 'answered') hasAnswered = true
     else if (status === 'seen') hasSeen = true
   }
-  if (hasInProcess) return 'In Process • Blind Review'
+  if (hasInProcess) return 'In Process • Untimed Review'
   if (hasFresh) return 'Fresh'
   if (hasAnswered) return 'Answered'
   if (hasSeen) return 'Seen'

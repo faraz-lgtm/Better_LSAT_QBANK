@@ -15,6 +15,10 @@ import {
 import { SECTION_DIAGNOSTIC_QUESTIONS } from "@data/diagnostics/section-marketing-questions.ts"
 import type { MiniDiagnosticQuestion } from "@data/diagnostics/mini-marketing-types.ts"
 import type { MiniDiagnosticExplanation } from "@/lib/api/diagnostic"
+import {
+  parseAnswerChoiceExplanationMap,
+  splitDiagnosticExplanationHtml,
+} from "@/features/guest/diagnostic/split-diagnostic-explanation-html"
 
 const SECTION_DIAGNOSTIC_MARKETING_SET = buildSectionDiagnosticMarketingSet(
   SECTION_DIAGNOSTIC_QUESTIONS,
@@ -26,6 +30,9 @@ function getDiagnosticMarketingSet(intentId: GuestDiagnosticIntentId) {
 }
 
 function mapMiniDiagnosticQuestionToDrill(question: MiniDiagnosticQuestion): DrillQuestion {
+  const { answerChoiceAnalysisHtml } = splitDiagnosticExplanationHtml(question.explanationHtml)
+  const answerChoiceByLetter = parseAnswerChoiceExplanationMap(answerChoiceAnalysisHtml)
+
   return {
     id: question.sourceItemId,
     questionNumber: question.questionNumber,
@@ -37,7 +44,8 @@ function mapMiniDiagnosticQuestionToDrill(question: MiniDiagnosticQuestion): Dri
       id: choice.letter,
       index,
       text: choice.text,
-      explanationHtml: choice.explanation ?? null,
+      // Prefer Answer Choice Analysis (shown in answer explanation expanders).
+      explanationHtml: answerChoiceByLetter[choice.letter] ?? choice.explanation ?? null,
     })),
   }
 }
@@ -107,6 +115,16 @@ function getDiagnosticExplanationHtml(
   intentId?: GuestDiagnosticIntentId,
 ): string | null {
   return resolveDiagnosticSourceQuestion(questionId, intentId)?.explanationHtml ?? null
+}
+
+/** Stimulus Analysis only — for Review Analysis View. */
+function getDiagnosticStimulusAnalysisHtml(
+  questionId: string,
+  intentId?: GuestDiagnosticIntentId,
+): string | null {
+  const full = getDiagnosticExplanationHtml(questionId, intentId)
+  const { stimulusAnalysisHtml } = splitDiagnosticExplanationHtml(full)
+  return stimulusAnalysisHtml.trim() ? stimulusAnalysisHtml : null
 }
 
 /** @deprecated Use getDiagnosticExplanationHtml(questionId, intentId) */
@@ -185,6 +203,7 @@ export {
   formatMiniDiagnosticScoreRange,
   getDiagnosticExplanationHtml,
   getDiagnosticQuestionMeta,
+  getDiagnosticStimulusAnalysisHtml,
   getMiniDiagnosticExplanationHtml,
   getMiniDiagnosticQuestionMeta,
   mapMiniDiagnosticQuestionToDrill,

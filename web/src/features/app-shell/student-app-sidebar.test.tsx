@@ -12,7 +12,7 @@ vi.mock("@/lib/supabase/client", () => ({
 }))
 
 describe("StudentAppSidebar", () => {
-  it("shows premium navigation without diagnostic links", () => {
+  it("shows premium navigation including diagnostic links", () => {
     render(
       <MemoryRouter initialEntries={["/app"]}>
         <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
@@ -20,11 +20,11 @@ describe("StudentAppSidebar", () => {
     )
 
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument()
-    expect(screen.queryByRole("link", { name: "Diagnostic" })).not.toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: /Diagnostic Results/i })).not.toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Diagnostic" })).toHaveAttribute("href", "/intent")
+    expect(screen.getByRole("button", { name: /Diagnostic Results/i })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Prep Courses" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Explanations" })).toBeInTheDocument()
-    expect(screen.queryByRole("link", { name: "Blind Review" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "Untimed Review" })).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument()
   })
 
@@ -48,7 +48,7 @@ describe("StudentAppSidebar", () => {
     expect(screen.getByRole("button", { name: "Prep Courses" })).toHaveClass("student-sidebar-link--active")
     expect(screen.getByRole("link", { name: "Dashboard" })).not.toHaveClass("student-sidebar-link--active")
 
-    expect(screen.getByRole("link", { name: "LSAT Essential Course" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "LSAT Essentials Course" })).toHaveAttribute(
       "href",
       "/app/prep-course/betterlsat-core-syllabus-structure-content",
     )
@@ -56,11 +56,11 @@ describe("StudentAppSidebar", () => {
       "href",
       "/app/prep-course/lr-mastery-course",
     )
-    expect(screen.getByRole("link", { name: "RC Mastery" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "RC Mastery Course" })).toHaveAttribute(
       "href",
       "/app/prep-course/rc-mastery",
     )
-    expect(screen.getByRole("link", { name: "LSAT Essential Course" })).toHaveClass(
+    expect(screen.getByRole("link", { name: "LSAT Essentials Course" })).toHaveClass(
       "student-sidebar-link--active",
     )
     expect(screen.getByRole("link", { name: "LR Mastery Course" })).not.toHaveClass(
@@ -76,13 +76,13 @@ describe("StudentAppSidebar", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.queryByRole("link", { name: "LSAT Essential Course" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "LSAT Essentials Course" })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Prep Courses" }))
 
-    expect(screen.getByRole("link", { name: "LSAT Essential Course" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "LSAT Essentials Course" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "LR Mastery Course" })).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "RC Mastery" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "RC Mastery Course" })).toBeInTheDocument()
   })
 
   it("shows logout and version in the footer", () => {
@@ -96,11 +96,21 @@ describe("StudentAppSidebar", () => {
     expect(screen.getByText("Version 1.0.3")).toBeInTheDocument()
   })
 
+  it("inverts the brand logo in dark mode", () => {
+    render(
+      <MemoryRouter initialEntries={["/app"]}>
+        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole("img", { name: "betterLSAT" })).toHaveClass("dark:brightness-0", "dark:invert")
+  })
+
   it("expands Diagnostic Results to Mini and Full history links", async () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={["/app"]}>
-        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} showDiagnosticNav />
+        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
       </MemoryRouter>,
     )
 

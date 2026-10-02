@@ -30,12 +30,15 @@ import {
   ACTIVE_DRILL_FOOTER_CLASS,
   ACTIVE_DRILL_OPTIONS_LIST_CLASS,
   ACTIVE_DRILL_PASSAGE_PANE_CLASS,
+  ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS,
   ACTIVE_DRILL_PASSAGE_TEXT_CLASS,
+  ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS,
   ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS,
   ACTIVE_DRILL_QUESTION_PANE_CLASS,
   SESSION_FINISH_BUTTON_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import {
+  EXAM_CARD_FULL_WIDTH_CLASS,
   OFFICIAL_BODY_GRID_CLASS,
   OFFICIAL_CARD_CLASS,
   OFFICIAL_FOOTER_CLASS,
@@ -47,6 +50,9 @@ import {
 } from "@/features/student/practice-session/practice-session-official-styles"
 import { PracticeSessionActiveDrillFooterNav } from "@/features/student/practice-session/practice-session-active-drill-footer-nav"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
+import { PassageAnalysisBody } from "@/features/student/practice-session/passage-analysis-view"
+import { ReviewPassageCardHeader } from "@/features/student/practice-session/review-passage-card-header"
+import { useReviewPassageAnalysis } from "@/features/student/practice-session/use-review-passage-analysis"
 import { PracticeSessionHighlightPopover } from "@/features/student/practice-session/practice-session-highlight-popover"
 import { PracticeQuestionStem } from "@/features/student/practice-session/practice-question-stem"
 import { PracticeSessionAccessibilityPanel } from "@/features/student/practice-session/practice-session-accessibility-panel"
@@ -113,6 +119,7 @@ import {
   type PracticeToolMode,
   type RegionKey,
 } from "@/features/student/practice-session/practice-session-types"
+import { choiceIndexFromAnswer, hasPracticeAnswer } from "@/features/student/practice-session/practice-choice-index"
 import { useExamFullscreen, useOfficialInterfacePreference } from "@/features/student/practice-session/use-official-interface"
 import { usePracticeHighlights } from "@/features/student/practice-session/use-practice-highlights"
 import { useQuestionDwellTime } from "@/features/student/practice-session/use-question-dwell-time"
@@ -171,15 +178,6 @@ function countSectionIncorrect(
 
 function storePrepTestSectionScorePrediction(sessionId: string, score: number): void {
   sessionStorage.setItem(`preptest-section-prediction-${sessionId}`, String(score))
-}
-
-function choiceIndexFromAnswer(choices: DrillQuestion["choices"], selectedAnswer: string): number | null {
-  const letter = selectedAnswer.trim().toUpperCase()
-  const byId = choices.findIndex((c) => c.id.toUpperCase() === letter)
-  if (byId >= 0) return byId
-  const idx = letter.charCodeAt(0) - 65
-  if (idx >= 0 && idx < choices.length) return idx
-  return null
 }
 
 function regionKey(questionId: string, part: string) {
@@ -297,6 +295,14 @@ function SectionQuestionPanel({
   const officialChrome = isOfficialLayout(variant)
   const canResetResponse =
     !reviewChrome && !choicesDisabled && (selectedIndex != null || hasMaskedChoices)
+  const optionsListRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    window.getSelection()?.removeAllRanges()
+    if (selectedIndex == null) return
+    const selected = optionsListRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]')
+    selected?.focus({ preventScroll: true })
+  }, [question.id, questionNumber, selectedIndex])
 
   function handleResetResponse() {
     resetMaskedChoices()
@@ -347,6 +353,8 @@ function SectionQuestionPanel({
         onOpenReview={onOpenReview}
         reviewActive={reviewActive}
         onOpenAccessibility={onOpenAccessibility}
+        onFullscreen={onFullscreen}
+        fullView={fullView}
       />
     )
   }
@@ -366,7 +374,7 @@ function SectionQuestionPanel({
             </span>
             {recommendedForBr ? (
               <span className="inline-flex rounded-full border border-[#ff9d51] bg-[#fff3ea] px-3 py-1 text-xs font-semibold text-[#c45a00]">
-                Recommended for BR
+                Recommended for Untimed Review
               </span>
             ) : null}
           </div>
@@ -376,6 +384,7 @@ function SectionQuestionPanel({
         </div>
       ) : null}
       <div className={cn(isActiveDrillLayout && (officialChrome ? OFFICIAL_QUESTION_PANEL_WITH_WIDGET_CLASS : ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS))}>
+        <div className={cn(isActiveDrillLayout && ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS)}>
         <PracticeQuestionStem
           questionNumber={questionNumber}
           regionKey={stemKey}
@@ -396,10 +405,13 @@ function SectionQuestionPanel({
             {isCorrect ? "Correct" : "Incorrect"}
           </p>
         ) : null}
-        <div className={officialChrome ? OFFICIAL_OPTIONS_LIST_CLASS : isActiveDrillLayout ? ACTIVE_DRILL_OPTIONS_LIST_CLASS : "flex flex-col gap-2"}>
+        <div
+          ref={optionsListRef}
+          className={officialChrome ? OFFICIAL_OPTIONS_LIST_CLASS : isActiveDrillLayout ? ACTIVE_DRILL_OPTIONS_LIST_CLASS : "flex flex-col gap-2"}
+        >
           {question.choices.map((choice, index) => (
             <LrDrillOptionRow
-              key={choice.id}
+              key={`${question.id}-${questionNumber}-${choice.id}`}
               index={index}
               html={getRegionHtml(regionKey(question.id, `choice-${choice.id}`), choice.text)}
               findQuery={findQuery}
@@ -431,6 +443,7 @@ function SectionQuestionPanel({
             />
           ) : null}
         </div>
+        </div>
         {isActiveDrillLayout ? (
           <PracticeSessionSideWidget
             variant={variant}
@@ -452,43 +465,6 @@ function SectionQuestionPanel({
         ) : null}
       </div>
     </>
-  )
-}
-
-function ReviewStaticSwitch({ checked = false }: { checked?: boolean }) {
-  return (
-    <span
-      role="switch"
-      aria-checked={checked}
-      aria-disabled="true"
-      className={cn(
-        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent",
-        checked ? "bg-[var(--primary)]" : "bg-[var(--greyscale-300)]",
-      )}
-    >
-      <span
-        className={cn(
-          "block size-4 rounded-full bg-[var(--greyscale-0)] shadow-sm dark:bg-[var(--greyscale-900)]",
-          checked ? "translate-x-4" : "translate-x-0",
-        )}
-      />
-    </span>
-  )
-}
-
-function ReviewPassageCardHeader() {
-  return (
-    <div className="mb-8 flex h-8 shrink-0 items-center justify-between gap-4">
-      <span className="inline-flex h-8 items-center rounded-[8px] bg-[var(--primary-25)] px-4 py-1 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)]">
-        Passage Only View
-      </span>
-      <span className="inline-flex h-8 items-center gap-4" aria-label="Analysis View is display only">
-        <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
-          Analysis View
-        </span>
-        <ReviewStaticSwitch />
-      </span>
-    </div>
   )
 }
 
@@ -544,6 +520,7 @@ function SectionSessionPage() {
   const [notesOpen, setNotesOpen] = useState(false)
   const [reviewSidePanel, setReviewSidePanel] = useState<PracticeReviewSidePanel>(null)
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false)
+  const [analysisViewOpen, setAnalysisViewOpen] = useState(false)
   const [reviewPanelOpen, setReviewPanelOpen] = useState(false)
   const [passageOnlyView, setPassageOnlyView] = useState(false)
   const [lineFocus, setLineFocus] = useState(false)
@@ -557,6 +534,7 @@ function SectionSessionPage() {
   const loadGenerationRef = useRef(0)
   const dwellSecondsRef = useRef<(questionId: string) => number | undefined>(() => undefined)
   const prevQuestionIdRef = useRef<string | null>(null)
+  const autoAdvanceTimeoutRef = useRef<number | null>(null)
 
   const answerPersist = usePracticeAnswerPersist({
     sessionId: sessionId ?? null,
@@ -574,7 +552,7 @@ function SectionSessionPage() {
   })
 
   const submitModalTitle = postCompleteBlindReview
-    ? "Finish Blind Review"
+    ? "Finish Untimed Review"
     : blindReviewMode
       ? "Exit Section"
       : "Submit Section"
@@ -634,7 +612,7 @@ function SectionSessionPage() {
           await practiceApi.completeSectionBlindReview({ sessionId, answers })
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to save blind review")
+        setError(e instanceof Error ? e.message : "Failed to save untimed review")
         setFinishing(false)
         return
       } finally {
@@ -663,7 +641,10 @@ function SectionSessionPage() {
   })
   const appliedAccommodationScaleRef = useRef<number | null>(null)
   const pauseModal = usePracticeSessionPauseModal(pauseTimer, resumeTimer)
-  const highlights = usePracticeHighlights()
+  const highlights = usePracticeHighlights({
+    highlightMenuStartsExpanded: !officialInterface,
+    menuAnchorsToSelection: officialInterface,
+  })
   const accessibilityPanel = usePracticeSessionAccessibilityPanel(
     highlights.accessibilitySettings,
     highlights.applyAccessibilitySettings,
@@ -929,6 +910,17 @@ function SectionSessionPage() {
 
   const safeIndex = Math.min(Math.max(qIndex, 1), Math.max(questions.length, 1))
   const current = questions[safeIndex - 1]
+  const { passageAnalysis, analysisAvailable } = useReviewPassageAnalysis({
+    enabled: resultsReviewMode,
+    questionId: current?.id,
+    sectionType,
+  })
+  const showPassageAnalysis =
+    resultsReviewMode && analysisViewOpen && analysisAvailable && Boolean(passageAnalysis)
+
+  useEffect(() => {
+    setAnalysisViewOpen(false)
+  }, [current?.id])
   const scoredExamActive =
     !blindReviewMode &&
     !resultsReviewMode &&
@@ -951,6 +943,10 @@ function SectionSessionPage() {
     prevQuestionIdRef.current = current?.id ?? null
     if (prev && prev !== current?.id) {
       void answerPersist.flushQuestion(prev)
+    }
+    if (autoAdvanceTimeoutRef.current != null) {
+      window.clearTimeout(autoAdvanceTimeoutRef.current)
+      autoAdvanceTimeoutRef.current = null
     }
   }, [answerPersist, current?.id])
 
@@ -992,13 +988,13 @@ function SectionSessionPage() {
     : undefined
   const currentAnswer = displayAnswer
   const selectedIndex =
-    current && currentAnswer
+    current && hasPracticeAnswer(currentAnswer)
       ? choiceIndexFromAnswer(current.choices, currentAnswer.selectedAnswer)
       : null
   const revealed = blindReviewMode || resultsReviewMode
     ? false
     : showAnswersMode === "each"
-      ? Boolean(currentAnswer)
+      ? hasPracticeAnswer(currentAnswer)
       : false
   const recommendedForBr = Boolean(
     current && isQuestionRecommendedForBlindReview(actualAnswersByQuestion[current.id]),
@@ -1053,7 +1049,7 @@ function SectionSessionPage() {
       })
       return
     }
-    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
+    if (!canChangePracticeAnswer(showAnswersMode, hasPracticeAnswer(currentAnswer), {
       blindReview: editingBlindReviewAnswers,
     })) {
       return
@@ -1083,7 +1079,11 @@ function SectionSessionPage() {
         [current.id]: { selectedAnswer: event.selected_answer, isCorrect: event.is_correct },
       }))
       if (!blindReviewMode && showAnswersMode === "each") {
-        window.setTimeout(() => {
+        if (autoAdvanceTimeoutRef.current != null) {
+          window.clearTimeout(autoAdvanceTimeoutRef.current)
+        }
+        autoAdvanceTimeoutRef.current = window.setTimeout(() => {
+          autoAdvanceTimeoutRef.current = null
           setQIndex((i) => Math.min(questions.length, i + 1))
         }, 600)
       }
@@ -1104,7 +1104,7 @@ function SectionSessionPage() {
   async function handleResetResponse() {
     if (!sessionId || !current || resultsReviewMode) return
     if (answeringBlindReview && !editingBlindReviewAnswers) return
-    if (!canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
+    if (!canChangePracticeAnswer(showAnswersMode, hasPracticeAnswer(currentAnswer), {
       blindReview: editingBlindReviewAnswers,
     })) {
       return
@@ -1231,16 +1231,16 @@ function SectionSessionPage() {
     if (postCompleteBlindReview) {
       if (unansweredCount > 0) {
         const noun = unansweredCount === 1 ? "question" : "questions"
-        return `Finish blind review and view your results? You have ${unansweredCount} unanswered ${noun} in blind review.`
+        return `Finish untimed review and view your results? You have ${unansweredCount} unanswered ${noun} in untimed review.`
       }
-      return "Finish blind review and view your results?"
+      return "Finish untimed review and view your results?"
     }
     if (blindReviewMode) {
       if (unansweredCount > 0) {
         const noun = unansweredCount === 1 ? "question" : "questions"
-        return `Submit this section and return to blind review? You have ${unansweredCount} unanswered ${noun} in your blind review answers.`
+        return `Submit this section and return to untimed review? You have ${unansweredCount} unanswered ${noun} in your untimed review answers.`
       }
-      return "Submit this section and return to blind review?"
+      return "Submit this section and return to untimed review?"
     }
     if (unansweredCount > 0) {
       const noun = unansweredCount === 1 ? "question" : "questions"
@@ -1410,7 +1410,7 @@ function SectionSessionPage() {
       const detail = await practiceApi.getBlindReviewDetail(testId)
       const firstSessionId = firstBlindReviewSectionSessionId(detail)
       if (!firstSessionId) {
-        throw new Error("No sections available for blind review")
+        throw new Error("No sections available for untimed review")
       }
       setCompleteModal(null)
       const targetPath = blindReviewSectionSessionPath(testId, firstSessionId)
@@ -1420,7 +1420,7 @@ function SectionSessionPage() {
       }
       navigate(targetPath, { replace: true })
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to start blind review")
+      setError(e instanceof Error ? e.message : "Failed to start untimed review")
     } finally {
       setStartingBlindReview(false)
     }
@@ -1485,27 +1485,16 @@ function SectionSessionPage() {
       questionCount: questions.length,
       scaleFactor: accommodationScaleFactor,
     })
-    const introTimerLabel = timedSection ? "Time Left:" : "Elapsed"
+    const introTimerLabel = timedSection ? "Time Left" : "Elapsed"
     const introTimerDisplaySeconds = timedSection ? introTimerBudgetSeconds : elapsed
-    const introTimerProgress = timedSection ? 1 : computeElapsedTimerProgress(elapsed, introTimerBudgetSeconds)
-    const introCloseButton = (
-      <button
-        type="button"
-        className="inline-flex size-[52px] shrink-0 items-center justify-center rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] text-[var(--greyscale-500)] transition-colors hover:bg-[var(--greyscale-50)] hover:text-[var(--color-student-heading)]"
-        aria-label="Close section introduction"
-        onClick={handleExitSession}
-      >
-        <X className="size-5" strokeWidth={2} aria-hidden />
-      </button>
-    )
 
     return (
       <StudentMain
         layout="immersive"
-        className="flex min-h-0 max-w-none flex-1 flex-col overflow-hidden bg-[color-mix(in_srgb,var(--color-student-accent)_6%,var(--greyscale-25))] px-0 py-4 md:py-5"
+        className="flex min-h-0 max-w-none flex-1 flex-col overflow-hidden bg-[var(--greyscale-500)] px-0 py-4 md:py-5"
       >
         <div
-          className="fixed inset-0 z-[100] flex min-h-0 items-center justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-[3px] md:p-6"
+          className="fixed inset-0 z-[100] flex min-h-0 items-center justify-center overflow-y-auto bg-[rgba(0,0,0,0.3)] p-4 backdrop-blur-[3px] md:p-6"
           role="dialog"
           aria-modal="true"
           aria-label="PrepTest section introduction"
@@ -1514,15 +1503,10 @@ function SectionSessionPage() {
             header={
               <PracticeSectionIntroHeader
                 title={introHeaderLabel}
-                fontScale={highlights.fontScale}
-                toolMode={highlights.toolMode}
-                onFontSize={highlights.cycleFontSize}
-                onLineSpacing={highlights.cycleLineSpacing}
-                onUnderline={highlights.selectUnderline}
                 timerLabel={introTimerLabel}
                 timerDisplaySeconds={introTimerDisplaySeconds}
-                timerProgress={introTimerProgress}
-                closeButton={introCloseButton}
+                onPause={pauseModal.requestPause}
+                onClose={handleExitSession}
               />
             }
           >
@@ -1540,6 +1524,16 @@ function SectionSessionPage() {
           </PracticePrepTestSectionIntroFrame>
         </div>
 
+        <PracticeSessionPauseModal
+          open={pauseModal.open}
+          title="Section"
+          message="Your section is paused"
+          onResume={pauseModal.resume}
+          onSaveAndExit={() => {
+            pauseModal.close()
+            handleExitSession()
+          }}
+        />
       </StudentMain>
     )
   }
@@ -1575,7 +1569,7 @@ function SectionSessionPage() {
   const allowReselect =
     !resultsReviewMode &&
     (!answeringBlindReview || editingBlindReviewAnswers) &&
-    canChangePracticeAnswer(showAnswersMode, Boolean(currentAnswer), {
+    canChangePracticeAnswer(showAnswersMode, hasPracticeAnswer(currentAnswer), {
       blindReview: editingBlindReviewAnswers,
     })
 
@@ -1610,7 +1604,7 @@ function SectionSessionPage() {
     <PracticeSessionFinishMenu
       disabled={sessionCompleted && !postCompleteBlindReview}
       finishing={finishing}
-      submitLabel={postCompleteBlindReview ? "Finish Blind Review" : undefined}
+      submitLabel={postCompleteBlindReview ? "Finish Untimed Review" : undefined}
       buttonClassName={
         useActiveDrillLayout ? ACTIVE_DRILL_FINISH_BUTTON_CLASS : SESSION_FINISH_BUTTON_CLASS
       }
@@ -1631,9 +1625,7 @@ function SectionSessionPage() {
         exitOnly
         iconTrigger
         variant="active-drill"
-        officialInterface={officialInterface}
-        onOfficialInterfaceChange={setOfficialInterface}
-        morePanelInterfaceLabel="Official Interface"
+        showInterfaceToggle={false}
         morePanelSectionSelect={
           blindReviewSectionOptions.length > 0 ? (
             <PracticeBlindReviewSectionSelect
@@ -1684,7 +1676,7 @@ function SectionSessionPage() {
       activeSectionSessionId={sessionId ?? null}
       onSelectSection={navigateToBlindReviewSection}
       questionRef={questionRefLabel}
-      actualScoreLabel="Actual: BR"
+      actualScoreLabel="Actual: —"
       notesOpen={resultsReviewMode ? reviewSidePanel === "notes" : notesOpen}
       notesEnabled
       onToggleNotes={handleToggleNotes}
@@ -1704,6 +1696,38 @@ function SectionSessionPage() {
       moreMenu={blindReviewMoreMenu}
     />
   ) : null
+
+  const reviewPassageHeader = resultsReviewMode ? (
+    <ReviewPassageCardHeader
+      analysisEnabled={analysisAvailable}
+      analysisChecked={analysisViewOpen}
+      onAnalysisCheckedChange={setAnalysisViewOpen}
+    />
+  ) : null
+
+  const renderPassagePaneBody = (annotatedClassName: string | undefined) =>
+    showPassageAnalysis && passageAnalysis ? (
+      <>
+        {reviewPassageHeader}
+        <PassageAnalysisBody analysis={passageAnalysis} passageBody={passageBody} />
+      </>
+    ) : (
+      <>
+        {reviewPassageHeader}
+        {sectionType === "RC" && current?.passage ? (
+          <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
+        ) : null}
+        <PracticeAnnotatedContent
+          regionKey={passageKey}
+          html={passageHtml}
+          findQuery={findQuery}
+          toolMode={highlights.toolMode}
+          onMouseUp={highlights.handleContentMouseUp}
+          onClickCapture={highlights.handleContentClick}
+          className={annotatedClassName}
+        />
+      </>
+    )
 
   const sessionInnerContent = (
     <>
@@ -1726,29 +1750,19 @@ function SectionSessionPage() {
                 ref={passagePaneRef}
                 className={resultsReviewMode ? REVIEW_PASSAGE_PANEL_CLASS : BLIND_REVIEW_NOTES_PASSAGE_PANEL_CLASS}
               >
-                {resultsReviewMode ? <ReviewPassageCardHeader /> : null}
-                {sectionType === "RC" && current.passage ? (
-                  <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
-                ) : null}
-                <PracticeAnnotatedContent
-                  regionKey={passageKey}
-                  html={passageHtml}
-                  findQuery={findQuery}
-                  toolMode={highlights.toolMode}
-                  onMouseUp={highlights.handleContentMouseUp}
-                  onClickCapture={highlights.handleContentClick}
-                  className={cn(
+                {renderPassagePaneBody(
+                  cn(
                     BLIND_REVIEW_PASSAGE_TEXT_CLASS,
                     resultsReviewMode && "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]",
-                  )}
-                />
+                  ),
+                )}
               </div>
               <div
                 ref={questionPaneRef}
                 className={resultsReviewMode ? REVIEW_QUESTION_PANEL_CLASS : BLIND_REVIEW_NOTES_QUESTION_PANEL_CLASS}
               >
               <SectionQuestionPanel
-                key={current.id}
+                key={`${current.id}:${safeIndex}`}
                 question={current}
                 questionNumber={safeIndex}
                 findQuery={findQuery}
@@ -1812,29 +1826,19 @@ function SectionSessionPage() {
                 ref={passagePaneRef}
                 className={resultsReviewMode ? REVIEW_PASSAGE_PANEL_CLASS : BLIND_REVIEW_NOTES_PASSAGE_PANEL_CLASS}
               >
-                {resultsReviewMode ? <ReviewPassageCardHeader /> : null}
-                {sectionType === "RC" && current.passage ? (
-                  <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
-                ) : null}
-                <PracticeAnnotatedContent
-                  regionKey={passageKey}
-                  html={passageHtml}
-                  findQuery={findQuery}
-                  toolMode={highlights.toolMode}
-                  onMouseUp={highlights.handleContentMouseUp}
-                  onClickCapture={highlights.handleContentClick}
-                  className={cn(
+                {renderPassagePaneBody(
+                  cn(
                     BLIND_REVIEW_PASSAGE_TEXT_CLASS,
                     resultsReviewMode && "text-base leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]",
-                  )}
-                />
+                  ),
+                )}
               </div>
               <div
                 ref={questionPaneRef}
                 className={resultsReviewMode ? REVIEW_QUESTION_PANEL_CLASS : BLIND_REVIEW_NOTES_QUESTION_PANEL_CLASS}
               >
                 <SectionQuestionPanel
-                  key={current.id}
+                  key={`${current.id}:${safeIndex}`}
                   question={current}
                   questionNumber={safeIndex}
                   findQuery={findQuery}
@@ -1883,7 +1887,7 @@ function SectionSessionPage() {
                   : officialChrome
                     ? cn(OFFICIAL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1 lg:pr-0")
                     : useActiveDrillLayout
-                    ? ACTIVE_DRILL_BODY_GRID_CLASS
+                    ? cn(ACTIVE_DRILL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1")
                     : "lg:grid-cols-2 lg:divide-x divide-[var(--greyscale-100)] dark:divide-[var(--greyscale-600)]",
               ),
             )}
@@ -1898,37 +1902,28 @@ function SectionSessionPage() {
                   : officialChrome
                     ? OFFICIAL_PASSAGE_PANE_CLASS
                     : useActiveDrillLayout
-                    ? ACTIVE_DRILL_PASSAGE_PANE_CLASS
+                    ? passageOnlyView
+                      ? ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS
+                      : ACTIVE_DRILL_PASSAGE_PANE_CLASS
                     : "border-b border-[var(--greyscale-100)] p-5 lg:border-b-0",
               )}
             >
-              {resultsReviewMode ? <ReviewPassageCardHeader /> : null}
-              {sectionType === "RC" && current.passage ? (
-                <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{current.passage.title}</p>
-              ) : null}
-              <PracticeAnnotatedContent
-                regionKey={passageKey}
-                html={passageHtml}
-                findQuery={findQuery}
-                toolMode={highlights.toolMode}
-                onMouseUp={highlights.handleContentMouseUp}
-                onClickCapture={highlights.handleContentClick}
-                className={
-                  useBlindReviewLayout
-                    ? BLIND_REVIEW_PASSAGE_TEXT_CLASS
-                    : officialChrome
-                      ? OFFICIAL_PASSAGE_TEXT_CLASS
-                      : useActiveDrillLayout
+              {renderPassagePaneBody(
+                useBlindReviewLayout
+                  ? BLIND_REVIEW_PASSAGE_TEXT_CLASS
+                  : officialChrome
+                    ? OFFICIAL_PASSAGE_TEXT_CLASS
+                    : useActiveDrillLayout
                       ? ACTIVE_DRILL_PASSAGE_TEXT_CLASS
-                      : undefined
-                }
-              />
+                      : undefined,
+              )}
             </div>
             <div
               ref={questionPaneRef}
               className={cn(
                 "practice-session-pane min-h-0",
                 officialChrome && passageOnlyView && "hidden",
+                useActiveDrillLayout && passageOnlyView && "hidden",
                 useBlindReviewLayout
                   ? BLIND_REVIEW_QUESTION_PANEL_CLASS
                   : officialChrome
@@ -1939,7 +1934,7 @@ function SectionSessionPage() {
               )}
             >
               <SectionQuestionPanel
-                key={current.id}
+                key={`${current.id}:${safeIndex}`}
                 question={current}
                 questionNumber={safeIndex}
                 findQuery={findQuery}
@@ -2099,6 +2094,7 @@ function SectionSessionPage() {
         )}
       </footer>
       <PracticeSessionHighlightPopover
+        variant={officialChrome ? "official" : "default"}
         menu={highlights.selectionMenu}
         onApplyColor={highlights.applySelectionColor}
         onRemove={highlights.removeSelectionHighlight}
@@ -2210,7 +2206,7 @@ function SectionSessionPage() {
           </div>
         </div>
       ) : useActiveDrillLayout ? (
-        <PracticeSessionImmersiveFrame>
+        <PracticeSessionImmersiveFrame fullWidth={officialChrome}>
           {error ? (
             <p className="mb-3 shrink-0 text-sm text-red-600" role="alert">
               {error}
@@ -2220,7 +2216,8 @@ function SectionSessionPage() {
             className={cn(
               officialChrome
                 ? OFFICIAL_CARD_CLASS
-                : "practice-session-card practice-session-card--active-drill relative flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+                : "practice-session-card practice-session-card--active-drill relative mx-auto flex h-auto max-h-full min-h-0 w-full flex-col overflow-hidden rounded-none border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+              isFullscreen && EXAM_CARD_FULL_WIDTH_CLASS,
               timeUpFlow != null && "overflow-hidden",
             )}
           >
