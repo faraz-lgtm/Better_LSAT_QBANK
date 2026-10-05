@@ -83,7 +83,8 @@ describe("IntentPage", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole("link", { name: /upgrade/i })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Upgrade now" })).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: /\$99/i })).not.toBeInTheDocument()
   })
 
   it("hides Upgrade CTA for paid accounts", () => {

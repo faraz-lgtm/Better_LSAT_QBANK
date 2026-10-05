@@ -23,7 +23,7 @@ function GuestMarketingPanelHeader({ variant }: GuestMarketingPanelHeaderProps) 
       <div className="flex min-w-0 flex-wrap items-center justify-end gap-3">
         {variant === "intent" ? (
           <button type="button" className={GUEST_INTENT_UPGRADE_BUTTON_CLASS}>
-            Upgrade · $99/mo
+            Upgrade now
           </button>
         ) : null}
         <p className="m-0 text-base leading-6 tracking-[0.32px] text-[#666d80]">

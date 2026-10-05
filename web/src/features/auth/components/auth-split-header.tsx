@@ -31,7 +31,7 @@ function AuthSplitHeader({
         <div className="auth-split-header-intent-actions">
           {!hideIntentUpgrade ? (
             <Button asChild className="auth-split-header-intent-upgrade">
-              <Link to="/signup">Upgrade · $99/mo</Link>
+              <Link to="/signup">Upgrade now</Link>
             </Button>
           ) : null}
           {!hideIntentSignIn ? (
