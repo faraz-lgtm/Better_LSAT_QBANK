@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+import { AnalyticsEvent, captureEvent } from '@/lib/analytics/posthog'
 import { handleUsersInvokeError } from '@/lib/auth/handle-unauthorized-session'
 
 export type CheckoutPlanId = 'monthly' | 'three_month' | 'six_month'
@@ -125,6 +126,10 @@ export function createBillingApi(supabase: SupabaseClient) {
       )
       if (error) throw error
       if (!data?.url) throw new Error('No checkout URL in response')
+      captureEvent(AnalyticsEvent.checkoutStarted, {
+        plan,
+        include_law_hub: Boolean(options?.includeLawHub),
+      })
       return data.url
     },
 

@@ -8,6 +8,7 @@ import { PasswordInput } from "@/components/ui/password-input"
 import { SocialButton } from "@/components/ui/social-button"
 import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
+import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import { createAuthApi, getAuthCallbackUrl } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
 import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
@@ -104,16 +105,17 @@ function LoginPage() {
     }
     setError(null)
     setMessage(null)
-try {
-  const sent = await withSubmitLock(passwordLockRef, setIsPasswordLoading, async () => {
-    persistDiagnosticIntent()
-    await authApi.signInWithPassword(email.trim(), password)
-    navigate(await fetchPostAuthDestination(usersApi), { replace: true })
-  })
-  if (!sent) return
-} catch (authError) {
-  setError(authError instanceof Error ? formatSupabaseCallError(authError) : "Unable to sign in with email and password.")
-}
+    try {
+      const sent = await withSubmitLock(passwordLockRef, setIsPasswordLoading, async () => {
+        persistDiagnosticIntent()
+        await authApi.signInWithPassword(email.trim(), password)
+        captureEvent(AnalyticsEvent.userLoggedIn, { method: "password" })
+        navigate(await fetchPostAuthDestination(usersApi), { replace: true })
+      })
+      if (!sent) return
+    } catch (authError) {
+      setError(authError instanceof Error ? formatSupabaseCallError(authError) : "Unable to sign in with email and password.")
+    }
   }
 
   async function signInWithGoogle() {
@@ -128,6 +130,7 @@ try {
     setMessage(null)
     try {
       persistDiagnosticIntent()
+      captureEvent(AnalyticsEvent.userLoggedIn, { method: "google" })
       await authApi.signInWithGoogle(getAuthCallbackUrl())
     } catch (authError) {
       setError(authError instanceof Error ? formatSupabaseCallError(authError) : "Unable to continue with Google.")

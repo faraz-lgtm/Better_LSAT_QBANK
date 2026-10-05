@@ -1,6 +1,7 @@
 import { FunctionsHttpError } from '@supabase/functions-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+import { resetUser } from '@/lib/analytics/posthog'
 import { throwIfEdgeInvokeFailed } from '@/lib/api/edge-invoke-error'
 
 const LOGIN_PATH = '/login'
@@ -33,6 +34,7 @@ export async function logoutAndRedirectToLogin(supabase: SupabaseClient): Promis
   } catch {
     // Still redirect so stale UI cannot keep calling protected endpoints.
   }
+  resetUser()
   if (typeof window !== 'undefined' && window.location.pathname !== LOGIN_PATH) {
     window.location.replace(LOGIN_PATH)
   }

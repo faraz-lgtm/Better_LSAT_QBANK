@@ -39,6 +39,7 @@ import { usePrepCourseBookmarks } from "@/features/prep-course/lib/use-prep-cour
 import { PrepCourseComingSoonPage } from "@/features/prep-course/pages/prep-course-coming-soon-page"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
+import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import { createPracticeApi } from "@/lib/api/practice"
 import {
   createPrepCourseApi,
@@ -346,6 +347,11 @@ function PrepCourseLessonPage() {
     setError(null)
     try {
       const { completedLessonSlugs: slugs } = await prepCourseApi.completeLesson(course.slug, lesson.slug)
+      captureEvent(AnalyticsEvent.prepCourseLessonCompleted, {
+        lesson_id: lesson.id,
+        lesson_slug: lesson.slug,
+        course_slug: course.slug,
+      })
       setCompletedLessonSlugs(new Set(slugs))
       const nextSlug = nextLessonSlug(lessons, lesson.slug)
       if (nextSlug && isPrepCourseLessonLockedForFreePlan(curriculum, course.slug, nextSlug, limitFreeAccess)) {

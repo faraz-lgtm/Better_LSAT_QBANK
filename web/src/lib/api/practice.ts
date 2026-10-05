@@ -6,6 +6,7 @@ import type {
   DrillSessionResponse,
   StartDrillInput,
 } from "@/features/student/drills/drill-types"
+import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import type {
   ListSectionPoolInput,
   SectionPoolItem,
@@ -357,6 +358,10 @@ export function createPracticeApi(supabase: SupabaseClient) {
       })
       if (error) await throwIfEdgeInvokeFailed(error)
       if (!data?.session) throw new Error("No session returned from practice")
+      captureEvent(AnalyticsEvent.practiceSessionCompleted, {
+        session_type: data.session.kind,
+        session_id: data.session.id,
+      })
       return data.session
     },
 
@@ -437,6 +442,11 @@ export function createPracticeApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       if (!data?.session) throw new Error("No drill session returned from practice")
+      captureEvent(AnalyticsEvent.practiceSessionStarted, {
+        session_type: "DRILL",
+        session_id: data.session.id,
+        section_type: input.sectionType,
+      })
       if (data.metadata.sectionType !== "RC") return data
       return {
         ...data,
@@ -565,6 +575,11 @@ export function createPracticeApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       if (!data?.session) throw new Error("No section session returned from practice")
+      captureEvent(AnalyticsEvent.practiceSessionStarted, {
+        session_type: "SECTION",
+        session_id: data.session.id,
+        section_id: input.sectionId,
+      })
       if (data.metadata.sectionType !== "RC") return data
       return {
         ...data,
@@ -680,6 +695,11 @@ export function createPracticeApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       if (!data?.prepTestSession) throw new Error("No prep test session returned from practice")
+      captureEvent(AnalyticsEvent.practiceSessionStarted, {
+        session_type: "PREPTEST",
+        session_id: data.prepTestSession.id,
+        prep_test_id: input.prepTestId,
+      })
       return {
         ...data,
         detail: normalizePrepTestDetail(
@@ -700,6 +720,11 @@ export function createPracticeApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       if (!data?.session) throw new Error("No session returned from practice")
+      captureEvent(AnalyticsEvent.practiceSessionCompleted, {
+        session_type: "PREPTEST",
+        session_id: data.session.id,
+        prep_test_id: prepTestId,
+      })
       return data.session
     },
 

@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.8",
+    "@posthog/react": "^1.11.3",
     "@reduxjs/toolkit": "^2.11.2",
     "@supabase/functions-js": "^2.103.0",
     "@supabase/supabase-js": "^2.103.0",
@@ -36,6 +37,7 @@
     "clsx": "^2.1.1",
     "dompurify": "^3.4.5",
     "lucide-react": "^1.8.0",
+    "posthog-js": "^1.435.9",
     "radix-ui": "^1.4.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

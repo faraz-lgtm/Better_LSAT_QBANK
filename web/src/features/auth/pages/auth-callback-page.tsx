@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
+import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
 import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
@@ -94,6 +95,7 @@ function AuthCallbackPage() {
           return
         }
 
+        captureEvent(AnalyticsEvent.authCompleted)
         navigate(await fetchPostAuthDestination(usersApi), { replace: true })
       } catch (callbackError) {
         if (!isActive) return

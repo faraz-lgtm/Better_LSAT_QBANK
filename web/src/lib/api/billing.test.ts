@@ -2,6 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createBillingApi } from './billing'
 
+vi.mock('@/lib/analytics/posthog', () => ({
+  AnalyticsEvent: { checkoutStarted: 'checkout_started' },
+  captureEvent: vi.fn(),
+}))
+
 function mockSupabase(invokeImpl: ReturnType<typeof vi.fn>): SupabaseClient {
   return {
     auth: {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
 
 import { useAdminApi } from "@/features/admin/use-admin-api"
+import { resetUser } from "@/lib/analytics/posthog"
 import { filterStudentVisiblePrepTestRows } from "@/lib/prep-test-visibility"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -69,6 +70,7 @@ function AdminSidebar() {
     try {
       const supabase = getSupabaseBrowserClient()
       await supabase.auth.signOut()
+      resetUser()
     } finally {
       navigate("/login", { replace: true })
     }

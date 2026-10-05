@@ -9,6 +9,10 @@ import {
   resetUnauthorizedSessionHandlingForTests,
 } from './handle-unauthorized-session'
 
+vi.mock('@/lib/analytics/posthog', () => ({
+  resetUser: vi.fn(),
+}))
+
 function unauthorizedError(): FunctionsHttpError {
   return new FunctionsHttpError(
     new Response(JSON.stringify({ error: 'Unauthorized' }), {

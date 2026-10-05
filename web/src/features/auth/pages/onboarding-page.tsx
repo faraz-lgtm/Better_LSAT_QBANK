@@ -10,6 +10,7 @@ import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { ONBOARDING_RECOMMENDED_LSAT_DATE } from "@/features/auth/onboarding/onboarding-lsat-date-options"
 import { OnboardingWelcomeStep } from "@/features/auth/onboarding/onboarding-welcome-step"
 import { isGuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
+import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
 import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
@@ -143,6 +144,7 @@ function OnboardingPage() {
         wantsLessons: wantsLessons === "yes",
       })
       await usersApi.completeFirstLogin()
+      captureEvent(AnalyticsEvent.onboardingCompleted)
       navigate(await fetchPostAuthDestination(usersApi), { replace: true })
     } catch (e) {
       setError(e instanceof Error ? formatSupabaseCallError(e) : "Unable to complete onboarding.")

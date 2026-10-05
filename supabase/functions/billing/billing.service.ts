@@ -1,4 +1,5 @@
 import type Stripe from 'npm:stripe@17.7.0'
+import { capturePostHogEvent } from '../_shared/posthog.ts'
 import {
   assertLawHubEmailAllowed,
   joinLawHubFullName,
@@ -481,6 +482,15 @@ export function createBillingService(deps: BillingServiceDeps) {
             const subscription = await deps.stripe.subscriptions.retrieve(subscriptionId)
             await syncSubscription(userId, subscription, planHint)
           }
+          await capturePostHogEvent({
+            distinctId: userId,
+            event: 'subscription_completed',
+            properties: {
+              plan: planHint ?? session.metadata?.plan ?? null,
+              stripe_event_type: event.type,
+              include_law_hub: session.metadata?.include_lawhub !== 'false',
+            },
+          })
           if (deps.onCheckoutCompleted) {
             let customerName = session.customer_details?.name ?? null
             if (!customerName?.trim() && customerId) {

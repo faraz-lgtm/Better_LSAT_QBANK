@@ -23,6 +23,7 @@ import { shouldForceParentNav } from "@/features/student/preptests/preptest-rout
 import { PREP_COURSE_ESSENTIALS_SLUG, PREP_COURSE_NAV_ITEMS } from "@/features/prep-course/lib/prep-course-nav"
 import { DiagnosticResultsNavItem } from "@/features/student/diagnostic/diagnostic-results-nav-item"
 import { cn } from "@/lib/utils"
+import { resetUser } from "@/lib/analytics/posthog"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const PREP_COURSE_HREF = "/app/prep-course"
@@ -204,6 +205,7 @@ function StudentAppSidebar({
   async function handleLogout() {
     const supabase = getSupabaseBrowserClient()
     await supabase.auth.signOut()
+    resetUser()
     navigate("/login", { replace: true })
   }
 

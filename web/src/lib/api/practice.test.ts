@@ -3,6 +3,14 @@ import { FunctionsHttpError } from "@supabase/functions-js"
 import { describe, expect, it, vi } from "vitest"
 import { createPracticeApi } from "./practice"
 
+vi.mock("@/lib/analytics/posthog", () => ({
+  AnalyticsEvent: {
+    practiceSessionStarted: "practice_session_started",
+    practiceSessionCompleted: "practice_session_completed",
+  },
+  captureEvent: vi.fn(),
+}))
+
 function mockSupabase(functionsInvoke: ReturnType<typeof vi.fn>, accessToken = "token-1"): SupabaseClient {
   return {
     auth: {
@@ -348,7 +356,12 @@ describe("createPracticeApi", () => {
     const invoke = vi.fn().mockResolvedValue({
       data: {
         prepTestSession: { id: "pt-sess-1", kind: "PREPTEST", metadata: {} },
-        detail: { prepTest: { id: "pt-900", label: "PT 900" }, status: "in_progress" },
+        detail: {
+          prepTest: { id: "pt-900", label: "PT 900" },
+          status: "in_progress",
+          sections: [],
+          sectionBreak: null,
+        },
       },
       error: null,
     })

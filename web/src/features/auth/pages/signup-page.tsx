@@ -7,6 +7,7 @@ import { SocialButton } from "@/components/ui/social-button"
 import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthTermsCheckbox } from "@/features/auth/components/auth-terms-checkbox"
 import { GuestMarketingPanelLayout } from "@/features/guest/marketing/guest-marketing-panel-layout"
+import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import { createAuthApi, getAuthCallbackUrl } from "@/lib/api/auth"
 import { saveDiagnosticIntent, markDiagnosticFunnelActive } from "@/lib/auth/diagnostic-intent"
 import type { GuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-intent-types"
@@ -73,6 +74,7 @@ function SignupPage() {
       const sent = await withSubmitLock(async () => {
         persistDiagnosticIntent()
         await authApi.sendMagicLink(email.trim(), getAuthCallbackUrl())
+        captureEvent(AnalyticsEvent.signupStarted, { method: "magic_link" })
         navigate("/signup/check-email", {
           replace: true,
           state: { email: email.trim(), from: locationState?.from, intent: locationState?.intent },
@@ -99,6 +101,7 @@ function SignupPage() {
     setError(null)
     try {
       persistDiagnosticIntent()
+      captureEvent(AnalyticsEvent.signupStarted, { method: "google" })
       await authApi.signInWithGoogle(getAuthCallbackUrl())
     } catch (authError) {
       setError(authError instanceof Error ? formatSupabaseCallError(authError) : "Unable to continue with Google.")

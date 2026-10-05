@@ -12,6 +12,7 @@ import {
   STUDENT_SHELL_GUTTER_CLASS,
 } from "@/features/student/components/student-page-container"
 import { ThemeToggleButton } from "@/features/theme/theme-toggle"
+import { resetUser } from "@/lib/analytics/posthog"
 import { createUsersApi } from "@/lib/api/users"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -140,6 +141,7 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
   async function handleLogout() {
     const supabase = getSupabaseBrowserClient()
     await supabase.auth.signOut()
+    resetUser()
     setOpenProfileMenu(false)
     window.location.assign("/login")
   }

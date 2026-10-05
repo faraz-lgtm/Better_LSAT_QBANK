@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom"
 
 import { GuestDiagnosticExamLayout } from "@/features/guest/diagnostic/guest-diagnostic-exam-layout"
+import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import { clearDiagnosticFunnel, readDiagnosticIntent } from "@/lib/auth/diagnostic-intent"
 import { GuestDiagnosticTestInstructionsPanel } from "@/features/guest/diagnostic/guest-diagnostic-test-instructions-panel"
 import {
@@ -61,6 +62,7 @@ function GuestDiagnosticStartPage({ preview = false }: GuestDiagnosticStartPageP
   const config = getGuestDiagnosticTestConfig(resolvedIntentId)
 
   function handleGoToQuestions() {
+    captureEvent(AnalyticsEvent.diagnosticStarted, { intent: resolvedIntentId })
     setShowInstructions(false)
   }
 
@@ -77,6 +79,7 @@ function GuestDiagnosticStartPage({ preview = false }: GuestDiagnosticStartPageP
     )
     const saved = writeGuestDiagnosticResult(result)
     clearDiagnosticFunnel()
+    captureEvent(AnalyticsEvent.diagnosticCompleted, { intent: resolvedIntentId })
     navigate(preview ? "/diagnostic/results/preview" : diagnosticAttemptHref(saved.intentId, saved.id), { replace: true })
   }
 

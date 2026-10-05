@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useLayoutEffect, useState } from "react"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 
@@ -10,6 +10,7 @@ import {
   type DiagnosticIntentTierConfig,
 } from "@/features/auth/components/diagnostic-intent-card"
 import { STUDENT_DASHBOARD_HREF } from "@/features/app-shell/student-nav-config"
+import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import {
   saveDiagnosticIntent,
   type DiagnosticIntentTier,
@@ -57,8 +58,14 @@ function IntentPage({ isAuthenticated = false, showUpgradeCta = true }: IntentPa
   const navigate = useNavigate()
   const [selectedTier, setSelectedTier] = useState<DiagnosticIntentTier>("quick")
 
+  useLayoutEffect(() => {
+    document.documentElement.classList.add("intent-mobile-layout")
+    return () => document.documentElement.classList.remove("intent-mobile-layout")
+  }, [])
+
   function handleStart() {
     saveDiagnosticIntent(selectedTier)
+    captureEvent(AnalyticsEvent.intentSelected, { intent: selectedTier })
     if (isAuthenticated) {
       navigate(`/diagnostic/start?intent=${selectedTier}`, { replace: true })
       return
