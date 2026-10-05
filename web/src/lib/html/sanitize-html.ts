@@ -88,7 +88,18 @@ export function sanitizeHtml(input: unknown): string {
 }
 
 export function sanitizeLessonHtml(input: unknown): string {
-  const safe = purify(input, LESSON_TAGS, LESSON_ATTR)
+  if (typeof input !== "string") return ""
+  const trimmed = input.trim()
+  if (!trimmed) return ""
+
+  // data-label holds plain callout titles (e.g. "The Conclusion:"). Without URI-safe
+  // treatment, DOMPurify strips values that look like unknown protocols (word + ":").
+  const safe = DOMPurify.sanitize(trimmed, {
+    ALLOWED_TAGS: [...LESSON_TAGS],
+    ALLOWED_ATTR: [...LESSON_ATTR],
+    ALLOW_DATA_ATTR: false,
+    ADD_URI_SAFE_ATTR: ["data-label"],
+  })
   // Keep intentional blank lines from the lesson editor (empty <p> would collapse visually).
   return safe.replace(/<p(\b[^>]*)?>\s*<\/p>/gi, "<p$1><br></p>")
 }

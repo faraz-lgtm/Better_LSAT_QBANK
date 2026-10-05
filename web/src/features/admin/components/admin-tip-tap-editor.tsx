@@ -17,6 +17,10 @@ import {
   normalizeTipTapHtml,
   shouldApplyIncomingEditorHtml,
 } from "@/features/admin/lib/course-builder-utils"
+import {
+  LESSON_CALLOUT_LABEL_PLACEHOLDER,
+  resolveLessonCalloutLabel,
+} from "@/lib/html/lesson-callout-label"
 
 /** Safe CSS length for block margins (px / rem / em, or bare number → px). Max 240px equivalent. */
 function normalizeMarginValue(raw: string): string | null {
@@ -179,7 +183,7 @@ function LessonSectionView({ node, updateAttributes, deleteNode }: NodeViewProps
           <input
             aria-label="Callout label"
             className="w-full border-0 bg-transparent text-xs font-bold leading-[1.5] tracking-[0.24px] text-[#0d47a1] outline-none placeholder:text-[#9aa4b2]"
-            placeholder="Key term · stimulus"
+            placeholder={LESSON_CALLOUT_LABEL_PLACEHOLDER}
             value={label}
             onMouseDown={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.stopPropagation()}
@@ -266,9 +270,11 @@ const LessonSection = Node.create({
   addAttributes() {
     return {
       label: {
-        default: "Key term · stimulus",
-        parseHTML: (element) => element.getAttribute("data-label") ?? "Key term · stimulus",
-        renderHTML: (attributes) => ({ "data-label": attributes.label || "" }),
+        default: "",
+        parseHTML: (element) => resolveLessonCalloutLabel(element.getAttribute("data-label")),
+        renderHTML: (attributes) => ({
+          "data-label": resolveLessonCalloutLabel(String(attributes.label ?? "")),
+        }),
       },
       variant: {
         default: "heading",
@@ -486,7 +492,7 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
       .focus()
       .insertContent({
         type: "lessonSection",
-        attrs: { variant: "heading", label: "Key term · stimulus", backgroundColor: "#ffffff" },
+        attrs: { variant: "heading", label: "", backgroundColor: "#ffffff" },
         content: [
           {
             type: "paragraph",

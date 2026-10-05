@@ -1,10 +1,27 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
+import { throwIfEdgeInvokeFailed } from "@/lib/api/edge-invoke-error"
+
 /**
  * Centralized auth API wrapper for UI pages.
  */
 export function createAuthApi(supabase: SupabaseClient) {
   return {
+    async checkEmailExists(email: string): Promise<boolean> {
+      const { data, error } = await supabase.functions.invoke<{ exists?: boolean; error?: string }>(
+        "auth-check-email",
+        {
+          method: "POST",
+          body: { email: email.trim().toLowerCase() },
+        },
+      )
+      if (error) await throwIfEdgeInvokeFailed(error)
+      if (data && typeof data.error === "string" && data.error.trim()) {
+        throw new Error(data.error.trim())
+      }
+      return Boolean(data?.exists)
+    },
+
     async sendMagicLink(email: string, redirectTo: string): Promise<void> {
       const { error } = await supabase.auth.signInWithOtp({
         email,

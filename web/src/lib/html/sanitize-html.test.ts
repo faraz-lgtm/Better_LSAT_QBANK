@@ -63,6 +63,13 @@ describe("sanitizeLessonHtml", () => {
     expect(out).toContain("LSAC and the move")
   })
 
+  it("keeps callout titles that end with a colon (DOMPurify URI check)", () => {
+    const out = sanitizeLessonHtml(
+      '<section data-lesson-section="true" data-label="The Conclusion:"><p>Body</p></section>',
+    )
+    expect(out).toContain('data-label="The Conclusion:"')
+  })
+
   it("keeps empty section variant and background", () => {
     const out = sanitizeLessonHtml(
       '<section data-lesson-section="true" data-variant="empty" data-bg="#f3f7ff"><p></p></section>',

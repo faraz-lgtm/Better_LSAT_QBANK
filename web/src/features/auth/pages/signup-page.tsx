@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,6 +19,9 @@ type SignupLocationState = {
   intent?: GuestDiagnosticIntentId
 }
 
+const EXISTING_EMAIL_WARNING =
+  "An account with this email already exists. Please sign in instead."
+
 function SignupPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -26,6 +29,7 @@ function SignupPage() {
   const [email, setEmail] = useState("")
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [existingEmailWarning, setExistingEmailWarning] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const submitLockRef = useRef(false)
@@ -70,14 +74,25 @@ function SignupPage() {
     }
 
     setError(null)
+    setExistingEmailWarning(false)
     try {
       const sent = await withSubmitLock(async () => {
+        const normalizedEmail = email.trim()
+        try {
+          const exists = await authApi.checkEmailExists(normalizedEmail)
+          if (exists) {
+            setExistingEmailWarning(true)
+            return
+          }
+        } catch {
+          // Fail open: still send the magic link if the existence check is unavailable.
+        }
         persistDiagnosticIntent()
-        await authApi.sendMagicLink(email.trim(), getAuthCallbackUrl())
+        await authApi.sendMagicLink(normalizedEmail, getAuthCallbackUrl())
         captureEvent(AnalyticsEvent.signupStarted, { method: "magic_link" })
         navigate("/signup/check-email", {
           replace: true,
-          state: { email: email.trim(), from: locationState?.from, intent: locationState?.intent },
+          state: { email: normalizedEmail, from: locationState?.from, intent: locationState?.intent },
         })
       })
       if (!sent) return
@@ -99,6 +114,7 @@ function SignupPage() {
 
     setGoogleLoading(true)
     setError(null)
+    setExistingEmailWarning(false)
     try {
       persistDiagnosticIntent()
       captureEvent(AnalyticsEvent.signupStarted, { method: "google" })
@@ -128,7 +144,10 @@ function SignupPage() {
                 size="lg"
                 type="email"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => {
+                  setEmail(event.target.value)
+                  setExistingEmailWarning(false)
+                }}
                 placeholder="Enter your email"
                 disabled={isBusy}
               />
@@ -156,6 +175,15 @@ function SignupPage() {
               "Send Confirmation Link"
             )}
           </Button>
+
+          {existingEmailWarning ? (
+            <p className="figma-text-sm figma-track-sm text-center text-[#df1c41]" role="alert">
+              {EXISTING_EMAIL_WARNING}{" "}
+              <Link to="/login" className="font-semibold underline underline-offset-2">
+                Sign in
+              </Link>
+            </p>
+          ) : null}
 
           {error ? <p className="figma-text-sm figma-track-sm text-center text-[#df1c41]">{error}</p> : null}
 

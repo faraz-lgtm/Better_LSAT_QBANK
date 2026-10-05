@@ -1,5 +1,6 @@
 import type { ElementType, HTMLAttributes } from "react"
 
+import { resolveLessonCalloutLabel } from "@/lib/html/lesson-callout-label"
 import { cn } from "@/lib/utils"
 import { sanitizeHtml, sanitizeLessonHtml } from "@/lib/html/sanitize-html"
 
@@ -87,7 +88,7 @@ function parseLessonBlocks(html: string): LessonBlock[] {
           : DEFAULT_RECAP_BG
       blocks.push({
         kind: "section",
-        label: (el.getAttribute("data-label") ?? "").trim(),
+        label: resolveLessonCalloutLabel(el.getAttribute("data-label")),
         innerHtml: el.innerHTML,
         variant: el.getAttribute("data-variant") === "empty" ? "empty" : "heading",
         backgroundColor,

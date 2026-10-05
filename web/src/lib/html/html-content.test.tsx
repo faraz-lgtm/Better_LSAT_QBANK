@@ -27,18 +27,54 @@ describe("LessonHtmlContent", () => {
     render(
       <LessonHtmlContent
         html={[
-          '<section data-lesson-section="true" data-label="Key term · stimulus"><p>Body one</p></section>',
+          '<section data-lesson-section="true" data-label="Example Argument #1:"><p>Body one</p></section>',
           '<section data-lesson-section="true" data-label="Common trap"><p>Body two</p></section>',
         ].join("")}
       />,
     )
 
-    expect(screen.getByText("Key term · stimulus")).toBeInTheDocument()
+    expect(screen.getByText("Example Argument #1:")).toBeInTheDocument()
     expect(screen.getByText("Common trap")).toBeInTheDocument()
     expect(screen.getByText("Body one")).toBeInTheDocument()
     expect(screen.getByText("Body two")).toBeInTheDocument()
     expect(document.querySelectorAll(".lesson-callout")).toHaveLength(2)
     expect(screen.queryByText("1")).not.toBeInTheDocument()
+  })
+
+  it("keeps callout labels from production TipTap markup (style/class/data-bg)", () => {
+    render(
+      <LessonHtmlContent
+        html={[
+          '<p>Every argument is composed of at least two parts:</p>',
+          '<section data-label="The Conclusion:" data-variant="heading" data-bg="#ffffff" data-lesson-section="true" class="lesson-section" style="background-color: rgb(255, 255, 255);"><p><span style="color: rgb(0, 0, 0);">A claim that is supported by another claim (The Premise)</span></p></section>',
+          '<section data-label="The Premise:" data-variant="heading" data-bg="#ffffff" data-lesson-section="true" class="lesson-section" style="background-color: rgb(255, 255, 255);"><p><span style="color: rgb(0, 0, 0);">A claim that supports another claim (The Conclusion)</span></p></section>',
+        ].join("")}
+      />,
+    )
+
+    expect(screen.getByText("The Conclusion:")).toBeInTheDocument()
+    expect(screen.getByText("The Premise:")).toBeInTheDocument()
+    expect(document.querySelectorAll(".lesson-callout")).toHaveLength(2)
+    expect(document.querySelectorAll(".lesson-callout > p")).toHaveLength(2)
+  })
+
+  it("omits callout title when data-label is missing, blank, or the editor placeholder", () => {
+    render(
+      <LessonHtmlContent
+        html={[
+          '<section data-lesson-section="true"><p>No label attr</p></section>',
+          '<section data-lesson-section="true" data-label=""><p>Empty label</p></section>',
+          '<section data-lesson-section="true" data-label="Key term · stimulus"><p>Placeholder label</p></section>',
+        ].join("")}
+      />,
+    )
+
+    expect(screen.queryByText("Key term · stimulus")).not.toBeInTheDocument()
+    expect(document.querySelectorAll(".lesson-callout")).toHaveLength(3)
+    expect(document.querySelectorAll(".lesson-callout > p")).toHaveLength(0)
+    expect(screen.getByText("No label attr")).toBeInTheDocument()
+    expect(screen.getByText("Empty label")).toBeInTheDocument()
+    expect(screen.getByText("Placeholder label")).toBeInTheDocument()
   })
 
   it("renders empty sections with optional recap-style tag and background color", () => {

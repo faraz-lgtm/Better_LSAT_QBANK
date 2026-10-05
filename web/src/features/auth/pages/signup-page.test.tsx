@@ -14,14 +14,21 @@ const authMock = {
   getSession: vi.fn(),
 }
 
+const functionsInvoke = vi.fn()
+
 vi.mock("@/lib/supabase/client", () => ({
-  getSupabaseBrowserClient: () => ({ auth: authMock }),
+  getSupabaseBrowserClient: () => ({
+    auth: authMock,
+    functions: { invoke: functionsInvoke },
+  }),
 }))
 
 describe("SignupPage", () => {
   beforeEach(() => {
     authMock.signInWithOtp.mockReset()
     authMock.signInWithOAuth.mockReset()
+    functionsInvoke.mockReset()
+    functionsInvoke.mockResolvedValue({ data: { exists: false }, error: null })
   })
 
   it("renders figma signup surface", () => {
@@ -55,9 +62,41 @@ describe("SignupPage", () => {
     await user.click(screen.getAllByRole("checkbox")[0])
     await user.click(screen.getByRole("button", { name: /send confirmation link/i }))
 
+    expect(functionsInvoke).toHaveBeenCalledWith(
+      "auth-check-email",
+      expect.objectContaining({
+        method: "POST",
+        body: { email: "new@example.com" },
+      }),
+    )
     expect(authMock.signInWithOtp).toHaveBeenCalled()
     expect(await screen.findByRole("heading", { name: /check your email/i })).toBeInTheDocument()
     expect(screen.getByText(/we just sent you a login link/i)).toBeInTheDocument()
+  })
+
+  it("warns when the email already has an account", async () => {
+    functionsInvoke.mockResolvedValue({ data: { exists: true }, error: null })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={["/signup"]}>
+        <Routes>
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/signup/check-email" element={<SignupCheckEmailPage />} />
+          <Route path="/login" element={<div>Login page</div>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getByPlaceholderText(/enter your email/i), "existing@example.com")
+    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(screen.getByRole("button", { name: /send confirmation link/i }))
+
+    const alert = await screen.findByRole("alert")
+    expect(alert).toHaveTextContent(/already exists/i)
+    expect(alert.querySelector('a[href="/login"]')).not.toBeNull()
+    expect(authMock.signInWithOtp).not.toHaveBeenCalled()
+    expect(screen.queryByRole("heading", { name: /check your email/i })).not.toBeInTheDocument()
   })
 
   it("sends magic link only once on rapid double-click", async () => {

@@ -2,16 +2,32 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { describe, expect, it, vi } from "vitest"
 import { createAuthApi } from "./auth"
 
-function mockSupabase(authOverrides: Record<string, ReturnType<typeof vi.fn>>): SupabaseClient {
+function mockSupabase(overrides: {
+  auth?: Record<string, ReturnType<typeof vi.fn>>
+  functions?: { invoke: ReturnType<typeof vi.fn> }
+}): SupabaseClient {
   return {
-    auth: authOverrides,
+    auth: overrides.auth ?? {},
+    functions: overrides.functions ?? { invoke: vi.fn() },
   } as unknown as SupabaseClient
 }
 
 describe("createAuthApi", () => {
+  it("checkEmailExists invokes auth-check-email", async () => {
+    const invoke = vi.fn().mockResolvedValue({ data: { exists: true }, error: null })
+    const api = createAuthApi(mockSupabase({ functions: { invoke } }))
+
+    await expect(api.checkEmailExists("  Existing@Example.com ")).resolves.toBe(true)
+
+    expect(invoke).toHaveBeenCalledWith("auth-check-email", {
+      method: "POST",
+      body: { email: "existing@example.com" },
+    })
+  })
+
   it("sendMagicLink calls signInWithOtp with redirect", async () => {
     const signInWithOtp = vi.fn().mockResolvedValue({ error: null })
-    const api = createAuthApi(mockSupabase({ signInWithOtp }))
+    const api = createAuthApi(mockSupabase({ auth: { signInWithOtp } }))
 
     await api.sendMagicLink("test@example.com", "http://localhost:5173/auth/callback")
 
@@ -23,7 +39,7 @@ describe("createAuthApi", () => {
 
   it("signInWithPassword calls password auth", async () => {
     const signInWithPassword = vi.fn().mockResolvedValue({ error: null })
-    const api = createAuthApi(mockSupabase({ signInWithPassword }))
+    const api = createAuthApi(mockSupabase({ auth: { signInWithPassword } }))
 
     await api.signInWithPassword("test@example.com", "secret-password")
 
@@ -35,7 +51,7 @@ describe("createAuthApi", () => {
 
   it("signInWithGoogle calls oauth with google provider", async () => {
     const signInWithOAuth = vi.fn().mockResolvedValue({ error: null })
-    const api = createAuthApi(mockSupabase({ signInWithOAuth }))
+    const api = createAuthApi(mockSupabase({ auth: { signInWithOAuth } }))
 
     await api.signInWithGoogle("http://localhost:5173/auth/callback")
 
@@ -48,7 +64,7 @@ describe("createAuthApi", () => {
   it("getCurrentUser returns authenticated user", async () => {
     const user = { id: "u-1", email: "u@example.com" }
     const getUser = vi.fn().mockResolvedValue({ data: { user }, error: null })
-    const api = createAuthApi(mockSupabase({ getUser }))
+    const api = createAuthApi(mockSupabase({ auth: { getUser } }))
 
     const out = await api.getCurrentUser()
 
@@ -57,7 +73,7 @@ describe("createAuthApi", () => {
 
   it("updatePassword calls updateUser with password", async () => {
     const updateUser = vi.fn().mockResolvedValue({ error: null })
-    const api = createAuthApi(mockSupabase({ updateUser }))
+    const api = createAuthApi(mockSupabase({ auth: { updateUser } }))
 
     await api.updatePassword("super-secret")
 
@@ -66,7 +82,7 @@ describe("createAuthApi", () => {
 
   it("sendPasswordResetEmail calls resetPasswordForEmail with redirect", async () => {
     const resetPasswordForEmail = vi.fn().mockResolvedValue({ error: null })
-    const api = createAuthApi(mockSupabase({ resetPasswordForEmail }))
+    const api = createAuthApi(mockSupabase({ auth: { resetPasswordForEmail } }))
 
     await api.sendPasswordResetEmail(
       "user@example.com",
@@ -79,13 +95,11 @@ describe("createAuthApi", () => {
   })
 
   it("sendPasswordResetEmail surfaces supabase error", async () => {
-    const resetPasswordForEmail = vi
-      .fn()
-      .mockResolvedValue({ error: new Error("rate limit") })
-    const api = createAuthApi(mockSupabase({ resetPasswordForEmail }))
+    const resetPasswordForEmail = vi.fn().mockResolvedValue({ error: new Error("rate limit") })
+    const api = createAuthApi(mockSupabase({ auth: { resetPasswordForEmail } }))
 
-    await expect(
-      api.sendPasswordResetEmail("user@example.com", "http://localhost/cb"),
-    ).rejects.toThrow("rate limit")
+    await expect(api.sendPasswordResetEmail("user@example.com", "http://localhost/cb")).rejects.toThrow(
+      "rate limit",
+    )
   })
 })
