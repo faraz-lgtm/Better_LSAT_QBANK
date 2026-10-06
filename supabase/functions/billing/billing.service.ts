@@ -12,6 +12,7 @@ import {
   type CheckoutPlanId,
   checkoutPlanFromId,
   priceIdForCheckoutPlan,
+  resolveCheckoutPlanFromPriceId,
   resolvePlanFromPriceId,
   storedPlanTierFromMetadata,
   type StripeRuntimeEnv,
@@ -45,32 +46,100 @@ function unixToIso(seconds: number | null | undefined): string | null {
   return new Date(seconds * 1000).toISOString()
 }
 
-function subscriptionPriceId(subscription: Stripe.Subscription): string {
-  const item = subscription.items.data[0]
-  return item?.price?.id ?? ''
+function subscriptionItemPriceId(item: Stripe.SubscriptionItem): string {
+  return item.price?.id ?? ''
+}
+
+function subscriptionScheduleId(subscription: Stripe.Subscription): string | null {
+  if (!subscription.schedule) return null
+  return typeof subscription.schedule === 'string'
+    ? subscription.schedule
+    : subscription.schedule.id
+}
+
+function coreSubscriptionItem(
+  subscription: Stripe.Subscription,
+  env: StripeRuntimeEnv,
+): Stripe.SubscriptionItem | null {
+  return subscription.items.data.find((item) =>
+    resolveCheckoutPlanFromPriceId(env.priceIds, subscriptionItemPriceId(item)) != null
+  ) ?? null
+}
+
+function billingSubscriptionItem(
+  subscription: Stripe.Subscription,
+  env: StripeRuntimeEnv,
+): Stripe.SubscriptionItem | null {
+  return subscription.items.data.find((item) =>
+    resolvePlanFromPriceId(env.priceIds, subscriptionItemPriceId(item)) != null
+  ) ?? null
+}
+
+function scheduleItemPriceId(item: Stripe.SubscriptionSchedule.Phase.Item): string {
+  return typeof item.price === 'string' ? item.price : item.price?.id ?? ''
+}
+
+async function pendingPlanChange(
+  stripe: Stripe,
+  subscription: Stripe.Subscription,
+  env: StripeRuntimeEnv,
+): Promise<{ plan: CheckoutPlanId; effectiveAt: string } | null> {
+  const scheduleId = subscriptionScheduleId(subscription)
+  if (!scheduleId) return null
+
+  const schedule = await stripe.subscriptionSchedules.retrieve(scheduleId)
+  const nextPhase = schedule.phases
+    .filter((phase) => phase.start_date >= subscription.current_period_end)
+    .sort((a, b) => a.start_date - b.start_date)[0]
+  if (!nextPhase) return null
+
+  const nextPlan = nextPhase.items
+    .map((item) => resolveCheckoutPlanFromPriceId(env.priceIds, scheduleItemPriceId(item)))
+    .find((plan): plan is CheckoutPlanId => plan != null)
+  if (!nextPlan) return null
+
+  const currentItem = coreSubscriptionItem(subscription, env)
+  const currentPlan = currentItem
+    ? resolveCheckoutPlanFromPriceId(env.priceIds, subscriptionItemPriceId(currentItem))
+    : null
+  if (nextPlan === currentPlan) return null
+
+  return {
+    plan: nextPlan,
+    effectiveAt: unixToIso(nextPhase.start_date)!,
+  }
 }
 
 function parseCheckoutPlan(value: unknown): CheckoutPlanId {
-  if (value === 'monthly' || value === 'three_month' || value === 'six_month') return value
-  throw new Error('plan must be monthly, three_month, or six_month')
+  if (
+    value === 'monthly' ||
+    value === 'three_month' ||
+    value === 'six_month' ||
+    value === 'yearly'
+  ) return value
+  throw new Error('plan must be monthly, three_month, six_month, or yearly')
 }
 
-const DEFAULT_CHECKOUT_SUCCESS_PATH = '/app?checkout=success'
+const DEFAULT_CHECKOUT_SUCCESS_PATH = '/onboarding?checkout=success'
 
 function parseCheckoutSuccessPath(value: unknown): string {
   if (value == null || value === '') return DEFAULT_CHECKOUT_SUCCESS_PATH
   if (typeof value !== 'string') throw new Error('successPath must be a string')
   const trimmed = value.trim()
   if (trimmed.includes('..')) {
-    throw new Error('successPath must be an in-app path starting with /app')
+    throw new Error('successPath must be an allowed in-app path')
   }
-  if (!(trimmed === '/app' || trimmed.startsWith('/app/') || trimmed.startsWith('/app?'))) {
-    throw new Error('successPath must be an in-app path starting with /app')
+  const isAppPath =
+    trimmed === '/app' || trimmed.startsWith('/app/') || trimmed.startsWith('/app?')
+  const isOnboardingPath =
+    trimmed === '/onboarding' || trimmed.startsWith('/onboarding?')
+  if (!isAppPath && !isOnboardingPath) {
+    throw new Error('successPath must be an allowed in-app path')
   }
   return trimmed
 }
 
-function expectedIntervalCount(plan: CheckoutPlanId): 1 | 3 | 6 {
+function expectedIntervalCount(plan: CheckoutPlanId): 1 | 3 | 6 | 12 {
   return checkoutPlanFromId(plan).intervalCount
 }
 
@@ -81,14 +150,19 @@ async function validatePlanPrice(
 ): Promise<Stripe.Price> {
   const recurring = await stripe.prices.retrieve(recurringPriceId)
   const intervalCount = recurring.recurring?.interval_count ?? 1
+  const interval = recurring.recurring?.interval
+  const expectedInterval =
+    plan === 'yearly'
+      ? (interval === 'year' && intervalCount === 1) ||
+        (interval === 'month' && intervalCount === 12)
+      : interval === 'month' && intervalCount === expectedIntervalCount(plan)
 
   if (
     recurring.type !== 'recurring' ||
-    recurring.recurring?.interval !== 'month' ||
-    intervalCount !== expectedIntervalCount(plan)
+    !expectedInterval
   ) {
     throw new Error(
-      `Core Stripe price must be a recurring charge every ${expectedIntervalCount(plan)} month(s).`,
+      `Core Stripe price interval does not match the ${plan} plan.`,
     )
   }
 
@@ -97,6 +171,7 @@ async function validatePlanPrice(
 
 const EXISTING_LSAC_CHECKOUT_NOTE =
   'Better LSAT membership only. You keep your existing LawHub PrepPlus through LSAC — no LawHub fee from Better LSAT.'
+const BETTERLSAT_PLAN_CHANGE_SCHEDULE = 'betterlsat_plan_change'
 
 /** Vendor path uses stable Stripe Price IDs; existing-LSAC path uses inline product copy for Checkout display. */
 async function buildSubscriptionCheckoutLineItem(
@@ -175,7 +250,8 @@ export function createBillingService(deps: BillingServiceDeps) {
     planHint: BillingPlanId | null = null,
   ): Promise<void> {
     const env = deps.getEnv()
-    const stripePriceId = subscriptionPriceId(subscription)
+    const billingItem = billingSubscriptionItem(subscription, env)
+    const stripePriceId = billingItem ? subscriptionItemPriceId(billingItem) : ''
     const planTier =
       planHint ?? resolvePlanFromPriceId(env.priceIds, stripePriceId)
     await deps.repository.upsertSubscription({
@@ -232,23 +308,164 @@ export function createBillingService(deps: BillingServiceDeps) {
     },
 
     async getStatus(userId: string) {
+      const env = deps.getEnv()
       const profile = await deps.repository.getProfileBillingFields(userId)
-      const subscription = await deps.repository.getLatestSubscriptionByUserId(userId)
+      const storedSubscription = await deps.repository.getLatestSubscriptionByUserId(userId)
       const hasActiveSubscription =
-        subscription != null && isActiveSubscriptionStatus(subscription.status)
+        storedSubscription != null && isActiveSubscriptionStatus(storedSubscription.status)
+      const stripeSubscription = hasActiveSubscription
+        ? await deps.stripe.subscriptions.retrieve(storedSubscription!.stripe_subscription_id)
+        : null
+      const currentItem = stripeSubscription
+        ? coreSubscriptionItem(stripeSubscription, env)
+        : null
+      const checkoutPlan = currentItem
+        ? resolveCheckoutPlanFromPriceId(env.priceIds, subscriptionItemPriceId(currentItem))
+        : storedSubscription
+        ? resolveCheckoutPlanFromPriceId(env.priceIds, storedSubscription.stripe_price_id)
+        : null
+      const pendingChange = stripeSubscription
+        ? await pendingPlanChange(deps.stripe, stripeSubscription, env)
+        : null
       return {
         prepPlusSource: profile?.prep_plus_source ?? null,
         hasActiveSubscription,
-        planTier: subscription?.plan_tier ?? null,
-        subscription: subscription
+        planTier: storedSubscription?.plan_tier ?? null,
+        checkoutPlan,
+        pendingChange,
+        subscription: storedSubscription
           ? {
-              status: subscription.status,
-              currentPeriodEnd: subscription.current_period_end,
-              cancelAtPeriodEnd: subscription.cancel_at_period_end,
-              planTier: subscription.plan_tier,
+              status: stripeSubscription?.status ?? storedSubscription.status,
+              currentPeriodEnd:
+                unixToIso(stripeSubscription?.current_period_end) ??
+                storedSubscription.current_period_end,
+              cancelAtPeriodEnd:
+                stripeSubscription?.cancel_at_period_end ??
+                storedSubscription.cancel_at_period_end,
+              planTier: storedSubscription.plan_tier,
+              checkoutPlan,
             }
           : null,
       }
+    },
+
+    async schedulePlanChange(userId: string, plan: CheckoutPlanId) {
+      const env = deps.getEnv()
+      const storedSubscription = await deps.repository.getLatestSubscriptionByUserId(userId)
+      if (!storedSubscription || !isActiveSubscriptionStatus(storedSubscription.status)) {
+        throw new Error('An active BetterLSAT subscription is required to change plans.')
+      }
+
+      const subscription = await deps.stripe.subscriptions.retrieve(
+        storedSubscription.stripe_subscription_id,
+      )
+      if (!isActiveSubscriptionStatus(subscription.status)) {
+        throw new Error('An active BetterLSAT subscription is required to change plans.')
+      }
+      if (subscription.cancel_at_period_end) {
+        throw new Error('Reactivate the subscription before scheduling a plan change.')
+      }
+
+      const currentItem = coreSubscriptionItem(subscription, env)
+      if (!currentItem) {
+        throw new Error('The active subscription does not contain a supported BetterLSAT plan.')
+      }
+      const currentPlan = resolveCheckoutPlanFromPriceId(
+        env.priceIds,
+        subscriptionItemPriceId(currentItem),
+      )
+      if (currentPlan === plan) {
+        throw new Error('The selected plan is already active.')
+      }
+
+      const targetPriceId = priceIdForCheckoutPlan(env.priceIds, plan)
+      await validatePlanPrice(deps.stripe, targetPriceId, plan)
+
+      let scheduleId = subscriptionScheduleId(subscription)
+      let createdSchedule = false
+      let schedule: Stripe.SubscriptionSchedule
+      if (scheduleId) {
+        schedule = await deps.stripe.subscriptionSchedules.retrieve(scheduleId)
+        if (schedule.metadata?.managed_by !== BETTERLSAT_PLAN_CHANGE_SCHEDULE) {
+          throw new Error('This subscription already has a schedule managed outside BetterLSAT.')
+        }
+      } else {
+        schedule = await deps.stripe.subscriptionSchedules.create({
+          from_subscription: subscription.id,
+        })
+        scheduleId = schedule.id
+        createdSchedule = true
+      }
+
+      const currentPhaseStart =
+        schedule.current_phase?.start_date ?? subscription.current_period_start
+      const currentItems = subscription.items.data.map((item) => ({
+        price: subscriptionItemPriceId(item),
+        quantity: item.quantity ?? 1,
+      }))
+      const nextItems = subscription.items.data.map((item) => ({
+        price: item.id === currentItem.id ? targetPriceId : subscriptionItemPriceId(item),
+        quantity: item.quantity ?? 1,
+      }))
+
+      try {
+        await deps.stripe.subscriptionSchedules.update(scheduleId, {
+          metadata: {
+            managed_by: BETTERLSAT_PLAN_CHANGE_SCHEDULE,
+            user_id: userId,
+          },
+          end_behavior: 'release',
+          phases: [
+            {
+              start_date: currentPhaseStart,
+              end_date: subscription.current_period_end,
+              items: currentItems,
+              proration_behavior: 'none',
+            },
+            {
+              start_date: subscription.current_period_end,
+              items: nextItems,
+              proration_behavior: 'none',
+              metadata: { plan },
+            },
+          ],
+        })
+      } catch (error) {
+        if (createdSchedule) {
+          try {
+            await deps.stripe.subscriptionSchedules.release(scheduleId)
+          } catch (releaseError) {
+            console.error('Failed to release incomplete plan-change schedule:', releaseError)
+          }
+        }
+        throw error
+      }
+
+      return {
+        pendingChange: {
+          plan,
+          effectiveAt: unixToIso(subscription.current_period_end)!,
+        },
+      }
+    },
+
+    async cancelScheduledPlanChange(userId: string) {
+      const storedSubscription = await deps.repository.getLatestSubscriptionByUserId(userId)
+      if (!storedSubscription || !isActiveSubscriptionStatus(storedSubscription.status)) {
+        throw new Error('An active BetterLSAT subscription is required to change plans.')
+      }
+      const subscription = await deps.stripe.subscriptions.retrieve(
+        storedSubscription.stripe_subscription_id,
+      )
+      const scheduleId = subscriptionScheduleId(subscription)
+      if (scheduleId) {
+        const schedule = await deps.stripe.subscriptionSchedules.retrieve(scheduleId)
+        if (schedule.metadata?.managed_by !== BETTERLSAT_PLAN_CHANGE_SCHEDULE) {
+          throw new Error('This subscription already has a schedule managed outside BetterLSAT.')
+        }
+        await deps.stripe.subscriptionSchedules.release(scheduleId)
+      }
+      return { pendingChange: null }
     },
 
     async getPaymentMethods(userId: string): Promise<{ paymentMethods: BillingPaymentMethodDto[] }> {
@@ -424,7 +641,7 @@ export function createBillingService(deps: BillingServiceDeps) {
         client_reference_id: userId,
         line_items: lineItems,
         success_url: `${baseUrl}${successPath.startsWith('/') ? successPath : `/${successPath}`}`,
-        cancel_url: `${baseUrl}/app/pricing?checkout=cancel`,
+        cancel_url: `${baseUrl}/checkout?plan=${plan}&checkout=cancel`,
         metadata: { user_id: userId, plan, include_lawhub: includeLawHub ? 'true' : 'false' },
         subscription_data: {
           metadata: { user_id: userId, plan },

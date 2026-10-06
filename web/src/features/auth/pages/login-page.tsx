@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type MutableRefObject } from "react"
-import { Link, useLocation, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -13,6 +13,11 @@ import { createAuthApi, getAuthCallbackUrl } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
 import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
 import { saveDiagnosticIntent, markDiagnosticFunnelActive, type DiagnosticIntentTier } from "@/lib/auth/diagnostic-intent"
+import {
+  parseSignupPlan,
+  resolvePendingCheckoutDestination,
+  savePendingCheckoutPlan,
+} from "@/lib/auth/pending-checkout-plan"
 import { isGuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
@@ -25,7 +30,9 @@ type LoginLocationState = {
 function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const locationState = (location.state ?? null) as LoginLocationState | null
+  const selectedPlan = parseSignupPlan(searchParams.get("plan"))
   const [magicEmail, setMagicEmail] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -62,6 +69,10 @@ function LoginPage() {
     }
   }
 
+  function persistSelectedPlan() {
+    if (selectedPlan) savePendingCheckoutPlan(selectedPlan)
+  }
+
   async function withSubmitLock(
     lockRef: MutableRefObject<boolean>,
     setLoading: (loading: boolean) => void,
@@ -89,6 +100,7 @@ function LoginPage() {
     try {
       const sent = await withSubmitLock(magicLockRef, setIsMagicLoading, async () => {
         persistDiagnosticIntent()
+        persistSelectedPlan()
         await authApi.sendMagicLink(magicEmail.trim(), getAuthCallbackUrl())
         setMessage("Magic link sent. Check your inbox to continue.")
       })
@@ -108,9 +120,13 @@ function LoginPage() {
     try {
       const sent = await withSubmitLock(passwordLockRef, setIsPasswordLoading, async () => {
         persistDiagnosticIntent()
+        persistSelectedPlan()
         await authApi.signInWithPassword(email.trim(), password)
         captureEvent(AnalyticsEvent.userLoggedIn, { method: "password" })
-        navigate(await fetchPostAuthDestination(usersApi), { replace: true })
+        navigate(
+          resolvePendingCheckoutDestination(await fetchPostAuthDestination(usersApi)),
+          { replace: true },
+        )
       })
       if (!sent) return
     } catch (authError) {
@@ -130,6 +146,7 @@ function LoginPage() {
     setMessage(null)
     try {
       persistDiagnosticIntent()
+      persistSelectedPlan()
       captureEvent(AnalyticsEvent.userLoggedIn, { method: "google" })
       await authApi.signInWithGoogle(getAuthCallbackUrl())
     } catch (authError) {

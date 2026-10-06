@@ -5,6 +5,7 @@ import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
 import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
+import { resolvePendingCheckoutDestination } from "@/lib/auth/pending-checkout-plan"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
@@ -96,7 +97,10 @@ function AuthCallbackPage() {
         }
 
         captureEvent(AnalyticsEvent.authCompleted)
-        navigate(await fetchPostAuthDestination(usersApi), { replace: true })
+        navigate(
+          resolvePendingCheckoutDestination(await fetchPostAuthDestination(usersApi)),
+          { replace: true },
+        )
       } catch (callbackError) {
         if (!isActive) return
         setError(

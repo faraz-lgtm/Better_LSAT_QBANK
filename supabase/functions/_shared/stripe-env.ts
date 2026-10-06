@@ -3,13 +3,14 @@ export type PrepPlusSource = 'vendor_subscription' | 'existing_lsac'
 /** Stored on billing_subscriptions.plan_tier. New Core intervals all persist as core. */
 export type BillingPlanId = 'core' | 'live'
 
-/** Checkout selection. All three are prices on the Core product. */
-export type CheckoutPlanId = 'monthly' | 'three_month' | 'six_month'
+/** Checkout selection. All prices are on the Core product. */
+export type CheckoutPlanId = 'monthly' | 'three_month' | 'six_month' | 'yearly'
 
 export type StripePriceIds = {
   monthly: string
   threeMonth: string
   sixMonth: string
+  yearly: string
   lsacYearly: string
   /** Legacy Live price. Still mapped so existing subscriptions keep plan_tier live. */
   live?: string
@@ -32,7 +33,7 @@ export type BillingCatalogPlan = {
   equivalentMonthlyUsd: number | null
   discountLabel: string | null
   badge: string | null
-  intervalCount: 1 | 3 | 6
+  intervalCount: 1 | 3 | 6 | 12
   renewalNote: string
 }
 
@@ -74,6 +75,18 @@ export const BILLING_PLAN_CATALOG = {
     intervalCount: 6,
     renewalNote: 'Renews at $354 every 6 months.',
   },
+  yearly: {
+    id: 'yearly',
+    name: 'Yearly',
+    headline: 'The Best Value for a Full Year.',
+    description: 'Get a full year of BetterLSAT access at the lowest monthly equivalent.',
+    priceUsd: 624,
+    equivalentMonthlyUsd: 52,
+    discountLabel: '25% Ongoing Discount',
+    badge: null,
+    intervalCount: 12,
+    renewalNote: 'Renews at $624 every 12 months.',
+  },
   lsacYearly: {
     name: 'LawHub Advantage',
     description: 'Official LSAT PrepPlus via LawHub. Fee goes to LSAC, not Better LSAT. First year billed once at checkout.',
@@ -83,6 +96,7 @@ export const BILLING_PLAN_CATALOG = {
   monthly: BillingCatalogPlan
   threeMonth: BillingCatalogPlan
   sixMonth: BillingCatalogPlan
+  yearly: BillingCatalogPlan
   lsacYearly: { name: string; description: string; yearlyUsd: number }
 }
 
@@ -90,6 +104,7 @@ export const CHECKOUT_PLANS = [
   BILLING_PLAN_CATALOG.monthly,
   BILLING_PLAN_CATALOG.threeMonth,
   BILLING_PLAN_CATALOG.sixMonth,
+  BILLING_PLAN_CATALOG.yearly,
 ] as const
 
 function readLiveModeFlag(raw: Record<string, string | undefined>): boolean {
@@ -136,6 +151,9 @@ function resolvePriceIds(
   const sixMonth = liveMode
     ? readPrice(raw, 'STRIPE_PRICE_ID_CORE_6_MONTH_LIVE')
     : readPrice(raw, 'STRIPE_PRICE_ID_CORE_6_MONTH_TEST')
+  const yearly = liveMode
+    ? readPrice(raw, 'STRIPE_PRICE_ID_CORE_YEARLY_LIVE')
+    : readPrice(raw, 'STRIPE_PRICE_ID_CORE_YEARLY_TEST')
   const lsacYearly = liveMode
     ? readPrice(raw, 'STRIPE_PRICE_ID_LSAC_YEARLY_LIVE')
     : readPrice(raw, 'STRIPE_PRICE_ID_LSAC_YEARLY_TEST')
@@ -143,11 +161,12 @@ function resolvePriceIds(
     ? readPrice(raw, 'STRIPE_PRICE_ID_LIVE_MONTHLY_LIVE')
     : readPrice(raw, 'STRIPE_PRICE_ID_LIVE_MONTHLY_TEST')
 
-  if (!monthly || !threeMonth || !sixMonth || !lsacYearly) return null
+  if (!monthly || !threeMonth || !sixMonth || !yearly || !lsacYearly) return null
   return {
     monthly,
     threeMonth,
     sixMonth,
+    yearly,
     lsacYearly,
     ...(live ? { live } : {}),
   }
@@ -156,13 +175,26 @@ function resolvePriceIds(
 export function checkoutPlanFromId(plan: CheckoutPlanId): BillingCatalogPlan {
   if (plan === 'monthly') return BILLING_PLAN_CATALOG.monthly
   if (plan === 'three_month') return BILLING_PLAN_CATALOG.threeMonth
-  return BILLING_PLAN_CATALOG.sixMonth
+  if (plan === 'six_month') return BILLING_PLAN_CATALOG.sixMonth
+  return BILLING_PLAN_CATALOG.yearly
 }
 
 export function priceIdForCheckoutPlan(priceIds: StripePriceIds, plan: CheckoutPlanId): string {
   if (plan === 'monthly') return priceIds.monthly
   if (plan === 'three_month') return priceIds.threeMonth
-  return priceIds.sixMonth
+  if (plan === 'six_month') return priceIds.sixMonth
+  return priceIds.yearly
+}
+
+export function resolveCheckoutPlanFromPriceId(
+  priceIds: StripePriceIds,
+  priceId: string,
+): CheckoutPlanId | null {
+  if (priceId === priceIds.monthly) return 'monthly'
+  if (priceId === priceIds.threeMonth) return 'three_month'
+  if (priceId === priceIds.sixMonth) return 'six_month'
+  if (priceId === priceIds.yearly) return 'yearly'
+  return null
 }
 
 export function resolvePlanFromPriceId(
@@ -172,7 +204,8 @@ export function resolvePlanFromPriceId(
   if (
     priceId === priceIds.monthly ||
     priceId === priceIds.threeMonth ||
-    priceId === priceIds.sixMonth
+    priceId === priceIds.sixMonth ||
+    priceId === priceIds.yearly
   ) {
     return 'core'
   }
@@ -187,7 +220,8 @@ export function storedPlanTierFromMetadata(plan: string | undefined): BillingPla
     plan === 'core' ||
     plan === 'monthly' ||
     plan === 'three_month' ||
-    plan === 'six_month'
+    plan === 'six_month' ||
+    plan === 'yearly'
   ) {
     return 'core'
   }

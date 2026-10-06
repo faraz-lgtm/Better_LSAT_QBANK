@@ -13,7 +13,8 @@ Deno.test('isValidAppBaseUrl rejects supabase and placeholder hosts', () => {
   assertEquals(isValidAppBaseUrl('http://localhost:5173'), true)
 })
 
-Deno.test('isAllowedAppOrigin allows localhost and vercel deploys', () => {
+Deno.test('isAllowedAppOrigin allows the app, localhost, and vercel deploys', () => {
+  assertEquals(isAllowedAppOrigin('https://app.betterlsat.com'), true)
   assertEquals(isAllowedAppOrigin('http://localhost:5173'), true)
   assertEquals(isAllowedAppOrigin('https://better-lsat-qbank.vercel.app'), true)
   assertEquals(isAllowedAppOrigin('https://better-lsat-qbank-git-main.vercel.app'), true)
@@ -31,16 +32,16 @@ Deno.test('resolveAppBaseUrlFromEnv prefers APP_BASE_URL', () => {
   }
 })
 
-Deno.test('resolveAppBaseUrlForCheckout uses Origin when env missing', () => {
+Deno.test('resolveAppBaseUrlForCheckout prefers the session-owning Origin over env', () => {
   const prev = Deno.env.get('APP_BASE_URL')
-  Deno.env.delete('APP_BASE_URL')
+  Deno.env.set('APP_BASE_URL', 'https://better-lsat-qbank.vercel.app')
   try {
     const req = new Request('https://example.com', {
-      headers: { Origin: 'https://better-lsat-qbank.vercel.app' },
+      headers: { Origin: 'https://app.betterlsat.com' },
     })
     assertEquals(
       resolveAppBaseUrlForCheckout(req),
-      'https://better-lsat-qbank.vercel.app',
+      'https://app.betterlsat.com',
     )
   } finally {
     if (prev == null) Deno.env.delete('APP_BASE_URL')

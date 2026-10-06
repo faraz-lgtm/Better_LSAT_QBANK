@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react"
-import { Link, useLocation, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,10 @@ import { GuestMarketingPanelLayout } from "@/features/guest/marketing/guest-mark
 import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import { createAuthApi, getAuthCallbackUrl } from "@/lib/api/auth"
 import { saveDiagnosticIntent, markDiagnosticFunnelActive } from "@/lib/auth/diagnostic-intent"
+import {
+  parseSignupPlan,
+  savePendingCheckoutPlan,
+} from "@/lib/auth/pending-checkout-plan"
 import type { GuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-intent-types"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
@@ -25,7 +29,9 @@ const EXISTING_EMAIL_WARNING =
 function SignupPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const locationState = (location.state ?? null) as SignupLocationState | null
+  const selectedPlan = parseSignupPlan(searchParams.get("plan"))
   const [email, setEmail] = useState("")
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -48,6 +54,10 @@ function SignupPage() {
     if (locationState.intent) {
       saveDiagnosticIntent(locationState.intent)
     }
+  }
+
+  function persistSelectedPlan() {
+    if (selectedPlan) savePendingCheckoutPlan(selectedPlan)
   }
 
   async function withSubmitLock(task: () => Promise<void>): Promise<boolean> {
@@ -88,6 +98,7 @@ function SignupPage() {
           // Fail open: still send the magic link if the existence check is unavailable.
         }
         persistDiagnosticIntent()
+        persistSelectedPlan()
         await authApi.sendMagicLink(normalizedEmail, getAuthCallbackUrl())
         captureEvent(AnalyticsEvent.signupStarted, { method: "magic_link" })
         navigate("/signup/check-email", {
@@ -117,6 +128,7 @@ function SignupPage() {
     setExistingEmailWarning(false)
     try {
       persistDiagnosticIntent()
+      persistSelectedPlan()
       captureEvent(AnalyticsEvent.signupStarted, { method: "google" })
       await authApi.signInWithGoogle(getAuthCallbackUrl())
     } catch (authError) {
@@ -179,7 +191,10 @@ function SignupPage() {
           {existingEmailWarning ? (
             <p className="figma-text-sm figma-track-sm text-center text-[#df1c41]" role="alert">
               {EXISTING_EMAIL_WARNING}{" "}
-              <Link to="/login" className="font-semibold underline underline-offset-2">
+              <Link
+                to={selectedPlan ? `/login?plan=${selectedPlan}` : "/login"}
+                className="font-semibold underline underline-offset-2"
+              >
                 Sign in
               </Link>
             </p>

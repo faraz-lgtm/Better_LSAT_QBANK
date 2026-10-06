@@ -9,6 +9,8 @@ import { ForgotPasswordPage } from "@/features/auth/pages/forgot-password-page"
 import { ResetPasswordPage } from "@/features/auth/pages/reset-password-page"
 import { AuthCallbackPage } from "@/features/auth/pages/auth-callback-page"
 import { LsacLinkPage } from "@/features/auth/pages/lsac-link-page"
+import { CheckoutDetailsPage } from "@/features/billing/pages/checkout-details-page"
+import { CheckoutPage } from "@/features/billing/pages/checkout-page"
 import { PricingPage } from "@/features/billing/pages/pricing-page"
 import { AccountPage } from "@/features/account/pages/account-page"
 import { PrepTestPoolsPage } from "@/features/account/pages/prep-test-pools-page"
@@ -68,20 +70,31 @@ import { AdminUserDetailPage } from "@/features/admin/pages/admin-user-detail-pa
 import { createUsersApi, type UserEntitlement, type UserProfile } from "@/lib/api/users"
 import { readDiagnosticFunnelState } from "@/lib/auth/diagnostic-intent"
 import { shouldAllowAuthenticatedIntentPage } from "@/lib/auth/diagnostic-funnel-redirect"
-import { resolvePostAuthDestination, type PostAuthDestination } from "@/lib/auth/post-auth-redirect"
+import {
+  parseSignupPlan,
+  resolvePendingCheckoutDestination,
+  savePendingCheckoutPlan,
+} from "@/lib/auth/pending-checkout-plan"
+import {
+  resolvePostAuthDestination,
+  type PostAuthDestination,
+} from "@/lib/auth/post-auth-redirect"
 import { allowsPrepTestUnauthenticatedPreview } from "@/lib/dev/prep-test-ui-preview"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 function PublicOnly({ children }: { children: ReactElement }) {
+  const location = useLocation()
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [destination, setDestination] = useState<PostAuthDestination | null>(null)
+  const [destination, setDestination] = useState<string | null>(null)
 
   useEffect(() => {
     let alive = true
     const supabase = getSupabaseBrowserClient()
     const usersApi = createUsersApi(supabase)
+    const selectedPlan = parseSignupPlan(new URLSearchParams(location.search).get("plan"))
+    if (selectedPlan) savePendingCheckoutPlan(selectedPlan)
 
     const syncDestination = async (nextProfile: UserProfile | null) => {
       if (!nextProfile) {
@@ -91,10 +104,18 @@ function PublicOnly({ children }: { children: ReactElement }) {
       try {
         const nextEntitlement = await usersApi.getEntitlementState()
         if (!alive) return
-        setDestination(resolvePostAuthDestination(nextProfile, nextEntitlement, readDiagnosticFunnelState()))
+        setDestination(
+          resolvePendingCheckoutDestination(
+            resolvePostAuthDestination(nextProfile, nextEntitlement, readDiagnosticFunnelState()),
+          ),
+        )
       } catch {
         if (!alive) return
-        setDestination(resolvePostAuthDestination(nextProfile, null, readDiagnosticFunnelState()))
+        setDestination(
+          resolvePendingCheckoutDestination(
+            resolvePostAuthDestination(nextProfile, null, readDiagnosticFunnelState()),
+          ),
+        )
       }
     }
 
@@ -146,7 +167,7 @@ function PublicOnly({ children }: { children: ReactElement }) {
       alive = false
       authListener.subscription.unsubscribe()
     }
-  }, [])
+  }, [location.search])
 
   if (isAuthenticated === null) return null
   if (!isAuthenticated) return children
@@ -341,6 +362,46 @@ function RequireLsacEntitlement({ children }: { children: ReactElement }) {
   return children
 }
 
+function RequireAuthenticated({ children }: { children: ReactElement }) {
+  const location = useLocation()
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    const supabase = getSupabaseBrowserClient()
+
+    void supabase.auth.getSession().then(({ data }) => {
+      if (alive) setIsAuthenticated(Boolean(data.session))
+    })
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (alive) setIsAuthenticated(Boolean(session))
+    })
+
+    return () => {
+      alive = false
+      authListener.subscription.unsubscribe()
+    }
+  }, [])
+
+  if (isAuthenticated === null) {
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
+        <StudentPageLoader centered label="Loading…" />
+      </div>
+    )
+  }
+  if (!isAuthenticated) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: `${location.pathname}${location.search}` }}
+      />
+    )
+  }
+  return children
+}
+
 const router = createBrowserRouter([
   { path: "/", element: <MarketingHomePage /> },
   { path: "/login", element: <PublicOnly><LoginPage /></PublicOnly> },
@@ -361,6 +422,22 @@ const router = createBrowserRouter([
   { path: "/auth/callback", element: <AuthCallbackPage /> },
   { path: "/onboarding", element: <OnboardingPage /> },
   { path: "/onboarding/preview", element: <OnboardingWelcomePreviewPage /> },
+  {
+    path: "/checkout",
+    element: (
+      <RequireAuthenticated>
+        <CheckoutPage />
+      </RequireAuthenticated>
+    ),
+  },
+  {
+    path: "/checkout/details",
+    element: (
+      <RequireAuthenticated>
+        <CheckoutDetailsPage />
+      </RequireAuthenticated>
+    ),
+  },
   {
     path: "/diagnostic/start",
     element: (

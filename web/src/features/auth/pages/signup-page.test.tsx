@@ -29,6 +29,7 @@ describe("SignupPage", () => {
     authMock.signInWithOAuth.mockReset()
     functionsInvoke.mockReset()
     functionsInvoke.mockResolvedValue({ data: { exists: false }, error: null })
+    window.localStorage.clear()
   })
 
   it("renders figma signup surface", () => {
@@ -72,6 +73,28 @@ describe("SignupPage", () => {
     expect(authMock.signInWithOtp).toHaveBeenCalled()
     expect(await screen.findByRole("heading", { name: /check your email/i })).toBeInTheDocument()
     expect(screen.getByText(/we just sent you a login link/i)).toBeInTheDocument()
+  })
+
+  it("persists a validated selected plan before sending the magic link", async () => {
+    authMock.signInWithOtp.mockResolvedValue({ error: null })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={["/signup?plan=three_month"]}>
+        <Routes>
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/signup/check-email" element={<SignupCheckEmailPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getByPlaceholderText(/enter your email/i), "new@example.com")
+    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(screen.getByRole("button", { name: /send confirmation link/i }))
+
+    expect(window.localStorage.getItem("betterlsat:pending-checkout-plan")).toBe(
+      "three_month",
+    )
   })
 
   it("warns when the email already has an account", async () => {

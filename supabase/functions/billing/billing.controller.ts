@@ -128,6 +128,39 @@ export async function handleBillingGetStatus(req: Request): Promise<Response> {
   }
 }
 
+export async function handleBillingChangePlan(req: Request): Promise<Response> {
+  if (req.method === 'OPTIONS') return optionsOk(cors)
+  if (req.method !== 'POST') {
+    return json({ error: 'Method not allowed' }, { status: 405 }, cors)
+  }
+
+  const auth = await requireAuthUser(req, cors)
+  if (!auth.ok) return auth.response
+
+  const service = buildBillingService(() => resolveAppBaseUrlFromEnv() ?? 'http://localhost:5173')
+  if (!service) return stripeDisabled()
+
+  try {
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
+    const result = body.cancelPending === true
+      ? await service.cancelScheduledPlanChange(auth.user.id)
+      : await service.schedulePlanChange(auth.user.id, parseCheckoutPlan(body.plan))
+    return json(result, {}, cors)
+  } catch (error) {
+    const message = formatUnknownError(error)
+    const status =
+      message.includes('plan must be') ||
+        message.includes('active BetterLSAT subscription') ||
+        message.includes('already active') ||
+        message.includes('Reactivate') ||
+        message.includes('supported BetterLSAT plan') ||
+        message.includes('managed outside BetterLSAT')
+        ? 400
+        : 500
+    return json({ error: message }, { status }, cors)
+  }
+}
+
 export async function handleBillingGetPublicConfig(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return optionsOk(cors)
   if (req.method !== 'POST') {

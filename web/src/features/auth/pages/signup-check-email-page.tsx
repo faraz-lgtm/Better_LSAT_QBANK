@@ -70,7 +70,7 @@ function SignupCheckEmailPage() {
             </p>
             <p className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#062357]">
               If you don&apos;t see our email, check your spam for a message from{" "}
-              <span className="font-semibold text-[#0d47a1]">email@betterlsat.com</span>
+              <span className="font-semibold text-[#0d47a1]">support@betterlsat.com</span>
             </p>
 
             {email ? (

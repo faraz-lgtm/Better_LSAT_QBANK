@@ -4,6 +4,14 @@ import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import {
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogRoot,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   FIGMA_DROPDOWN_CARD_OPEN_CLASS,
   FigmaDropdown,
   type FigmaDropdownOption,
@@ -33,6 +41,7 @@ import {
   createBillingApi,
   type BillingInvoice,
   type BillingPaymentMethod,
+  type BillingStatus,
   type CheckoutPlanId,
 } from "@/lib/api/billing"
 import { createUsersApi, type UserProfile } from "@/lib/api/users"
@@ -60,9 +69,28 @@ const TIMEZONE_OPTIONS = northAmericanTimezones as AccountTimezone[]
 
 const PAYMENT_PLAN_OPTIONS: FigmaDropdownOption[] = [
   { value: "monthly", label: "Monthly — $69/mo" },
-  { value: "three_month", label: "3 months — $192" },
-  { value: "six_month", label: "6 months — $354" },
+  { value: "three_month", label: "Quarterly — $192" },
+  { value: "six_month", label: "Semiannual — $354" },
+  { value: "yearly", label: "Yearly — $624" },
 ]
+
+const PLAN_LABELS: Record<CheckoutPlanId, string> = {
+  monthly: "Monthly",
+  three_month: "Quarterly",
+  six_month: "Semiannual",
+  yearly: "Yearly",
+}
+
+function formatPlanChangeDate(value: string | null | undefined): string {
+  if (!value) return "your next renewal"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "your next renewal"
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(date)
+}
 
 function getDisplayName(profile: UserProfile | null, email: string | null): string {
   const joinedName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim()
@@ -675,8 +703,13 @@ function AccountPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null)
   const [paymentMethods, setPaymentMethods] = useState<BillingPaymentMethod[]>([])
   const [billingInvoices, setBillingInvoices] = useState<BillingInvoice[]>([])
+  const [billingStatus, setBillingStatus] = useState<BillingStatus | null>(null)
   const [billingDetailsLoading, setBillingDetailsLoading] = useState(false)
   const [openingPortal, setOpeningPortal] = useState(false)
+  const [planDialogOpen, setPlanDialogOpen] = useState(false)
+  const [selectedPlan, setSelectedPlan] = useState<CheckoutPlanId>("monthly")
+  const [changingPlan, setChangingPlan] = useState(false)
+  const [planChangeError, setPlanChangeError] = useState<string | null>(null)
 
   useEffect(() => {
     let alive = true
@@ -715,7 +748,11 @@ function AccountPage() {
   const displayName = useMemo(() => nameValue || getDisplayName(profile, email), [email, nameValue, profile])
   const initials = useMemo(() => getInitials(displayName), [displayName])
   const hasProPlan = Boolean(entitlement?.hasActiveCore || entitlement?.accessState === "FULL_ACCESS")
-  const planName = hasProPlan ? "Pro" : "Free"
+  const planName = hasProPlan
+    ? billingStatus?.checkoutPlan
+      ? PLAN_LABELS[billingStatus.checkoutPlan]
+      : "Premium"
+    : "Free"
   const lsacLinkState = useMemo(
     () => resolveAccountLsacLinkState(profile, entitlement),
     [entitlement, profile],
@@ -728,15 +765,18 @@ function AccountPage() {
       setBillingDetailsLoading(true)
       try {
         const billingApi = createBillingApi(getSupabaseBrowserClient())
-        const [methods, invoices] = await Promise.all([
+        const [status, methods, invoices] = await Promise.all([
+          billingApi.getStatus(),
           billingApi.getPaymentMethods(),
           billingApi.getInvoices(),
         ])
         if (!alive) return
+        setBillingStatus(status)
         setPaymentMethods(methods)
         setBillingInvoices(invoices)
       } catch {
         if (!alive) return
+        setBillingStatus(null)
         setPaymentMethods([])
         setBillingInvoices([])
       } finally {
@@ -759,6 +799,52 @@ function AccountPage() {
     } catch (portalError) {
       setPaymentError(portalError instanceof Error ? portalError.message : "Unable to open billing portal.")
       setOpeningPortal(false)
+    }
+  }
+
+  function openPlanChangeDialog() {
+    const currentPlan = billingStatus?.checkoutPlan
+    const nextPlan =
+      billingStatus?.pendingChange?.plan ??
+      PAYMENT_PLAN_OPTIONS.find((option) => option.value !== currentPlan)?.value ??
+      "monthly"
+    setSelectedPlan(nextPlan as CheckoutPlanId)
+    setPlanChangeError(null)
+    setPlanDialogOpen(true)
+  }
+
+  async function confirmPlanChange() {
+    setChangingPlan(true)
+    setPlanChangeError(null)
+    try {
+      const billingApi = createBillingApi(getSupabaseBrowserClient())
+      const pendingChange = await billingApi.schedulePlanChange(selectedPlan)
+      setBillingStatus((current) => current ? { ...current, pendingChange } : current)
+      setAccountStatus(
+        `${PLAN_LABELS[selectedPlan]} will start on ${formatPlanChangeDate(pendingChange.effectiveAt)}.`,
+      )
+      setPlanDialogOpen(false)
+    } catch (changeError) {
+      setPlanChangeError(changeError instanceof Error ? changeError.message : "Unable to change plan.")
+    } finally {
+      setChangingPlan(false)
+    }
+  }
+
+  async function cancelPendingPlanChange() {
+    setChangingPlan(true)
+    setPlanChangeError(null)
+    try {
+      const billingApi = createBillingApi(getSupabaseBrowserClient())
+      await billingApi.cancelScheduledPlanChange()
+      setBillingStatus((current) => current ? { ...current, pendingChange: null } : current)
+      setAccountStatus("Scheduled plan change canceled. Your current plan will continue.")
+    } catch (changeError) {
+      setPlanChangeError(
+        changeError instanceof Error ? changeError.message : "Unable to cancel the scheduled change.",
+      )
+    } finally {
+      setChangingPlan(false)
     }
   }
 
@@ -1154,6 +1240,11 @@ function AccountPage() {
             <PlanBanner>
               <p className="text-xs font-semibold tracking-[0.24px] text-[var(--primary)]">Current Plan</p>
               <h2 className="text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">{planName}</h2>
+              {hasProPlan && billingStatus?.subscription?.currentPeriodEnd ? (
+                <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
+                  Renews {formatPlanChangeDate(billingStatus.subscription.currentPeriodEnd)}
+                </p>
+              ) : null}
               <ul className="flex flex-col gap-2">
                 <CheckListItem muted>{hasProPlan ? "Unlimited questions & drills" : "50 questions/day"}</CheckListItem>
                 <CheckListItem muted>{hasProPlan ? "Advanced analytics" : "Basic analytics"}</CheckListItem>
@@ -1169,6 +1260,38 @@ function AccountPage() {
                     Upgrade
                   </Button>
                 </>
+              ) : billingStatus ? (
+                <div className="space-y-3">
+                  {billingStatus.pendingChange ? (
+                    <div className="rounded-[10px] bg-[var(--primary-25)] p-3">
+                      <p className="text-xs font-semibold text-[var(--color-student-heading)]">
+                        Changing to {PLAN_LABELS[billingStatus.pendingChange.plan]}
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-[var(--greyscale-500)]">
+                        Starts {formatPlanChangeDate(billingStatus.pendingChange.effectiveAt)}. No charge today.
+                      </p>
+                      <button
+                        type="button"
+                        className="mt-2 text-xs font-semibold text-[var(--primary)] hover:underline disabled:opacity-60"
+                        disabled={changingPlan}
+                        onClick={() => void cancelPendingPlanChange()}
+                      >
+                        {changingPlan ? "Canceling…" : "Cancel scheduled change"}
+                      </button>
+                    </div>
+                  ) : null}
+                  {planChangeError ? <p className="text-xs text-[#95122b]">{planChangeError}</p> : null}
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="outline"
+                    className="h-8 w-full rounded-[10px]"
+                    disabled={billingDetailsLoading || changingPlan}
+                    onClick={openPlanChangeDialog}
+                  >
+                    {billingStatus.pendingChange ? "Modify Plan Change" : "Change Plan"}
+                  </Button>
+                </div>
               ) : null}
             </PlanBanner>
 
@@ -1185,6 +1308,60 @@ function AccountPage() {
           </div>
         </div>
       </div>
+
+      <DialogRoot
+        open={planDialogOpen}
+        onOpenChange={(open) => {
+          if (!changingPlan) setPlanDialogOpen(open)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change your plan</DialogTitle>
+            <DialogDescription>
+              Your current {billingStatus?.checkoutPlan ? PLAN_LABELS[billingStatus.checkoutPlan] : "plan"} remains
+              active until {formatPlanChangeDate(billingStatus?.subscription?.currentPeriodEnd)}. You will not be
+              charged today.
+            </DialogDescription>
+          </DialogHeader>
+          <div>
+            <label
+              className="mb-2 block text-xs font-semibold tracking-[0.24px] text-[var(--color-student-heading)]"
+              htmlFor="change-plan"
+            >
+              New plan
+            </label>
+            <Select
+              id="change-plan"
+              value={selectedPlan}
+              disabled={changingPlan}
+              options={PAYMENT_PLAN_OPTIONS.filter((option) => option.value !== billingStatus?.checkoutPlan)}
+              onChange={(event) => setSelectedPlan(event.target.value as CheckoutPlanId)}
+            />
+            <p className="mt-3 text-xs leading-5 text-[var(--greyscale-500)]">
+              The new billing interval starts at your next renewal. Your LawHub fee will not be charged again.
+            </p>
+            {planChangeError ? <p className="mt-2 text-xs text-[#95122b]">{planChangeError}</p> : null}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={changingPlan}
+              onClick={() => setPlanDialogOpen(false)}
+            >
+              Keep Current Plan
+            </Button>
+            <Button
+              type="button"
+              disabled={changingPlan || selectedPlan === billingStatus?.checkoutPlan}
+              onClick={() => void confirmPlanChange()}
+            >
+              {changingPlan ? "Scheduling…" : "Confirm Plan Change"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
     </StudentMain>
   )
 }

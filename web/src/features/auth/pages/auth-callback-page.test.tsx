@@ -24,6 +24,7 @@ function renderCallback(initialEntry: string) {
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/onboarding" element={<p>Onboarding view</p>} />
         <Route path="/reset-password" element={<p>Reset password view</p>} />
+        <Route path="/checkout" element={<p>Checkout view</p>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -35,6 +36,7 @@ describe("AuthCallbackPage", () => {
     authMock.getSession.mockReset()
     invokeMock.mockReset()
     sessionStorage.clear()
+    localStorage.clear()
     window.history.pushState({}, "", "/")
   })
 
@@ -66,6 +68,46 @@ describe("AuthCallbackPage", () => {
     expect(await screen.findByText(/reset password view/i)).toBeInTheDocument()
     expect(authMock.exchangeCodeForSession).toHaveBeenCalledWith("test-code")
     expect(invokeMock).not.toHaveBeenCalled()
+  })
+
+  it("redirects a returning user to the selected paid checkout plan", async () => {
+    authMock.exchangeCodeForSession.mockResolvedValue({ error: null })
+    authMock.getSession.mockResolvedValue({
+      data: { session: { user: { id: "u1" } } },
+      error: null,
+    })
+    invokeMock.mockImplementation((functionName: string) => {
+      if (functionName === "users") {
+        return Promise.resolve({
+          data: {
+            profile: {
+              id: "u1",
+              role: "student",
+              is_first_time_login: false,
+            },
+          },
+          error: null,
+        })
+      }
+      return Promise.resolve({
+        data: {
+          entitlement: {
+            accessState: "PAYMENT_REQUIRED",
+            hasActiveCore: false,
+          },
+        },
+        error: null,
+      })
+    })
+    window.localStorage.setItem(
+      "betterlsat:pending-checkout-plan",
+      "three_month",
+    )
+    window.history.pushState({}, "", "/auth/callback?code=paid-code")
+
+    renderCallback("/auth/callback?code=paid-code")
+
+    expect(await screen.findByText(/checkout view/i)).toBeInTheDocument()
   })
 
   it("completes auth under React StrictMode with a single PKCE exchange", async () => {

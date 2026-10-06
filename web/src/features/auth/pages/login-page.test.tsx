@@ -24,6 +24,7 @@ describe("LoginPage", () => {
     authMock.signInWithPassword.mockReset()
     authMock.signInWithOAuth.mockReset()
     invokeMock.mockReset()
+    window.localStorage.clear()
   })
 
   it("renders figma login surface", () => {
@@ -55,6 +56,25 @@ describe("LoginPage", () => {
 
     expect(authMock.signInWithOtp).toHaveBeenCalled()
     expect(await screen.findByText(/magic link sent/i)).toBeInTheDocument()
+  })
+
+  it("retains selected checkout intent when an existing user signs in", async () => {
+    authMock.signInWithOtp.mockResolvedValue({ error: null })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={["/login?plan=six_month"]}>
+        <LoginPage />
+      </MemoryRouter>,
+    )
+
+    const emailInputs = screen.getAllByPlaceholderText(/enter your email/i)
+    await user.type(emailInputs[0], "login@example.com")
+    await user.click(screen.getByRole("button", { name: /send confirmation link/i }))
+
+    expect(window.localStorage.getItem("betterlsat:pending-checkout-plan")).toBe(
+      "six_month",
+    )
   })
 
   it("submits email and password login", async () => {

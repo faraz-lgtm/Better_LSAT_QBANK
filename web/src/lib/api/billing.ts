@@ -3,18 +3,26 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { AnalyticsEvent, captureEvent } from '@/lib/analytics/posthog'
 import { handleUsersInvokeError } from '@/lib/auth/handle-unauthorized-session'
 
-export type CheckoutPlanId = 'monthly' | 'three_month' | 'six_month'
+export type CheckoutPlanId = 'monthly' | 'three_month' | 'six_month' | 'yearly'
 export type StoredPlanTier = 'core' | 'live'
+
+export type PendingPlanChange = {
+  plan: CheckoutPlanId
+  effectiveAt: string
+}
 
 export type BillingStatus = {
   prepPlusSource: 'vendor_subscription' | 'existing_lsac' | null
   hasActiveSubscription: boolean
   planTier: StoredPlanTier | null
+  checkoutPlan: CheckoutPlanId | null
+  pendingChange: PendingPlanChange | null
   subscription: {
     status: string
     currentPeriodEnd: string | null
     cancelAtPeriodEnd: boolean
     planTier: StoredPlanTier | null
+    checkoutPlan: CheckoutPlanId | null
   } | null
 }
 
@@ -27,7 +35,7 @@ export type BillingPlanCatalogItem = {
   equivalentMonthlyUsd: number | null
   discountLabel: string | null
   badge: string | null
-  intervalCount: 1 | 3 | 6
+  intervalCount: 1 | 3 | 6 | 12
   renewalNote: string
   dueTodayUsd: number
   dueTodayUsdOwnLsac: number
@@ -138,6 +146,24 @@ export function createBillingApi(supabase: SupabaseClient) {
       if (error) throw error
       if (!data?.status) throw new Error('No billing status in response')
       return data.status
+    },
+
+    async schedulePlanChange(plan: CheckoutPlanId): Promise<PendingPlanChange> {
+      const { data, error } = await invokeBillingPost<{ pendingChange: PendingPlanChange }>(
+        'billing-change-plan',
+        { plan },
+      )
+      if (error) throw error
+      if (!data?.pendingChange) throw new Error('No pending plan change in response')
+      return data.pendingChange
+    },
+
+    async cancelScheduledPlanChange(): Promise<void> {
+      const { error } = await invokeBillingPost<{ pendingChange: null }>(
+        'billing-change-plan',
+        { cancelPending: true },
+      )
+      if (error) throw error
     },
 
     async getPaymentMethods(): Promise<BillingPaymentMethod[]> {

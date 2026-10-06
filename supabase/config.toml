@@ -724,6 +724,9 @@ verify_jwt = false
 [functions.billing-create-checkout-session]
 verify_jwt = false
 
+[functions.billing-change-plan]
+verify_jwt = false
+
 [functions.billing-get-status]
 verify_jwt = false
 

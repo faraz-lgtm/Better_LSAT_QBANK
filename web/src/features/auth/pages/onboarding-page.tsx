@@ -15,6 +15,7 @@ import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
 import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
 import { hasPendingDiagnosticIntent, isInDiagnosticAcquisitionFunnel, readDiagnosticIntent } from "@/lib/auth/diagnostic-intent"
+import { resolvePendingCheckoutDestination } from "@/lib/auth/pending-checkout-plan"
 import { userNeedsPasswordSetup } from "@/lib/auth/password-setup"
 import { splitFullName } from "@/lib/lawhub-identity"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -83,7 +84,10 @@ function OnboardingPage() {
           return
         }
         if (profile && !profile.is_first_time_login) {
-          navigate(await fetchPostAuthDestination(usersApi), { replace: true })
+          navigate(
+            resolvePendingCheckoutDestination(await fetchPostAuthDestination(usersApi)),
+            { replace: true },
+          )
           return
         }
         setRequiresPassword(userNeedsPasswordSetup(user, session))
@@ -145,7 +149,10 @@ function OnboardingPage() {
       })
       await usersApi.completeFirstLogin()
       captureEvent(AnalyticsEvent.onboardingCompleted)
-      navigate(await fetchPostAuthDestination(usersApi), { replace: true })
+      navigate(
+        resolvePendingCheckoutDestination(await fetchPostAuthDestination(usersApi)),
+        { replace: true },
+      )
     } catch (e) {
       setError(e instanceof Error ? formatSupabaseCallError(e) : "Unable to complete onboarding.")
     } finally {

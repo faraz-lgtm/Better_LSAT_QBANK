@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 
 import { isPaidPricingPlan, PRICING_PLANS } from "@/features/guest/pricing/guest-pricing-plans-data"
+import { signupPathForPlan } from "@/lib/auth/pending-checkout-plan"
 import {
   ArrowRight,
   Award,
@@ -685,7 +686,7 @@ function MarketingHomePage() {
 
                   <div className="mt-auto">
                     <Link
-                      to="/signup"
+                      to={signupPathForPlan(plan.id)}
                       className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-bold leading-none text-white transition-opacity hover:opacity-90"
                       style={{ background: plan.id === "free" || plan.id === "monthly" ? "#FF6F00" : "#0D47A1" }}
                     >

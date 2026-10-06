@@ -10,6 +10,7 @@ const env: StripeRuntimeEnv = {
     monthly: 'price_core_test',
     threeMonth: 'price_core_3_month_test',
     sixMonth: 'price_core_6_month_test',
+    yearly: 'price_core_yearly_test',
     lsacYearly: 'price_lsac_test',
     live: 'price_live_test',
   },
@@ -88,7 +89,11 @@ Deno.test('billing service createCheckoutSession creates customer and returns ur
             assertEquals(params.mode, 'subscription')
             assertEquals(
               params.success_url,
-              'http://localhost:5173/app?checkout=success',
+              'http://localhost:5173/onboarding?checkout=success',
+            )
+            assertEquals(
+              params.cancel_url,
+              'http://localhost:5173/checkout?plan=monthly&checkout=cancel',
             )
             const lineItems = params.line_items as Array<Record<string, unknown>>
             assertEquals(lineItems[0], { price: 'price_core_test', quantity: 1 })
@@ -151,11 +156,12 @@ Deno.test('billing service createCheckoutSession accepts custom successPath', as
 })
 
 Deno.test('parseCheckoutSuccessPath rejects unsafe paths', () => {
-  assertEquals(parseCheckoutSuccessPath(undefined), '/app?checkout=success')
+  assertEquals(parseCheckoutSuccessPath(undefined), '/onboarding?checkout=success')
   assertThrows(() => parseCheckoutSuccessPath('https://evil.test/nope'))
   assertThrows(() => parseCheckoutSuccessPath('/app/../admin'))
   assertEquals(parseCheckoutSuccessPath('/app/diagnostic/results?checkout=success'), '/app/diagnostic/results?checkout=success')
   assertEquals(parseCheckoutSuccessPath('/app?checkout=success'), '/app?checkout=success')
+  assertEquals(parseCheckoutSuccessPath('/onboarding?checkout=success'), '/onboarding?checkout=success')
 })
 
 Deno.test('billing service createCheckoutSession skips LawHub when includeLawHub is false', async () => {
@@ -342,7 +348,7 @@ Deno.test('billing service rejects a Core price with the wrong interval', async 
   await assertRejects(
     () => service.createCheckoutSession('u-1', 'a@b.com', 'three_month'),
     Error,
-    'every 3 month',
+    'does not match the three_month plan',
   )
 })
 
@@ -718,4 +724,306 @@ Deno.test('createBillingPortalSession returns portal url', async () => {
 
   const out = await service.createBillingPortalSession('u-1')
   assertEquals(out.url, 'https://billing.stripe.test/session')
+})
+
+function activeSubscription(
+  priceId = env.priceIds.monthly,
+  schedule: string | null = null,
+) {
+  return {
+    id: 'sub_1',
+    status: 'active',
+    customer: 'cus_1',
+    current_period_start: 1_790_000_000,
+    current_period_end: 1_792_678_400,
+    cancel_at_period_end: false,
+    livemode: false,
+    metadata: {},
+    schedule,
+    items: {
+      data: [
+        {
+          id: 'si_core',
+          price: { id: priceId },
+          quantity: 1,
+        },
+        {
+          id: 'si_other',
+          price: { id: 'price_unrelated' },
+          quantity: 2,
+        },
+      ],
+    },
+  }
+}
+
+function activeSubscriptionRow(priceId = env.priceIds.monthly) {
+  return {
+    id: 'sub-row-1',
+    user_id: 'u-1',
+    stripe_subscription_id: 'sub_1',
+    stripe_price_id: priceId,
+    status: 'active',
+    current_period_start: '2026-09-21T14:13:20.000Z',
+    current_period_end: '2026-10-22T14:13:20.000Z',
+    cancel_at_period_end: false,
+    livemode: false,
+    plan_tier: 'core' as const,
+    created_at: '2026-09-21T14:13:20.000Z',
+    updated_at: '2026-09-21T14:13:20.000Z',
+  }
+}
+
+function priceForPlan(id: string) {
+  if (id === env.priceIds.yearly) {
+    return { id, type: 'recurring', recurring: { interval: 'year', interval_count: 1 } }
+  }
+  const intervalCount =
+    id === env.priceIds.threeMonth ? 3 :
+    id === env.priceIds.sixMonth ? 6 :
+    1
+  return { id, type: 'recurring', recurring: { interval: 'month', interval_count: intervalCount } }
+}
+
+for (
+  const [currentPrice, targetPlan, targetPrice] of [
+    [env.priceIds.monthly, 'three_month', env.priceIds.threeMonth],
+    [env.priceIds.threeMonth, 'monthly', env.priceIds.monthly],
+    [env.priceIds.sixMonth, 'yearly', env.priceIds.yearly],
+  ] as const
+) {
+  Deno.test(`schedulePlanChange schedules ${currentPrice} to ${targetPlan} at renewal`, async () => {
+    let updateParams: Record<string, unknown> | null = null
+    const subscription = activeSubscription(currentPrice)
+    const service = createBillingService({
+      getEnv: () => env,
+      getAppBaseUrl: () => 'http://localhost:5173',
+      repository: makeRepo({
+        async getLatestSubscriptionByUserId() {
+          return activeSubscriptionRow(currentPrice)
+        },
+      }),
+      stripe: {
+        subscriptions: {
+          retrieve: async () => subscription,
+        },
+        prices: {
+          retrieve: async (id: string) => priceForPlan(id),
+        },
+        subscriptionSchedules: {
+          create: async (params: Record<string, unknown>) => {
+            assertEquals(params, { from_subscription: 'sub_1' })
+            return {
+              id: 'sub_sched_1',
+              current_phase: { start_date: subscription.current_period_start },
+            }
+          },
+          update: async (_id: string, params: Record<string, unknown>) => {
+            updateParams = params
+            return { id: 'sub_sched_1' }
+          },
+        },
+      } as unknown as import('npm:stripe@17.7.0').default,
+    })
+
+    const result = await service.schedulePlanChange('u-1', targetPlan)
+    assertEquals(result.pendingChange.plan, targetPlan)
+    const params = updateParams as unknown as Record<string, unknown>
+    const phases = params.phases as Array<Record<string, unknown>>
+    assertEquals(params.metadata, {
+      managed_by: 'betterlsat_plan_change',
+      user_id: 'u-1',
+    })
+    assertEquals(params.end_behavior, 'release')
+    assertEquals(phases[0]?.proration_behavior, 'none')
+    assertEquals(phases[1]?.start_date, subscription.current_period_end)
+    assertEquals(phases[1]?.proration_behavior, 'none')
+    assertEquals(phases[1]?.items, [
+      { price: targetPrice, quantity: 1 },
+      { price: 'price_unrelated', quantity: 2 },
+    ])
+  })
+}
+
+Deno.test('schedulePlanChange replaces an existing pending destination', async () => {
+  let created = false
+  let updatedScheduleId = ''
+  const subscription = activeSubscription(env.priceIds.monthly, 'sub_sched_existing')
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getLatestSubscriptionByUserId() {
+        return activeSubscriptionRow()
+      },
+    }),
+    stripe: {
+      subscriptions: { retrieve: async () => subscription },
+      prices: { retrieve: async (id: string) => priceForPlan(id) },
+      subscriptionSchedules: {
+        create: async () => {
+          created = true
+          return { id: 'unexpected' }
+        },
+        retrieve: async () => ({
+          id: 'sub_sched_existing',
+          current_phase: { start_date: subscription.current_period_start },
+          metadata: { managed_by: 'betterlsat_plan_change' },
+        }),
+        update: async (id: string) => {
+          updatedScheduleId = id
+          return { id }
+        },
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  await service.schedulePlanChange('u-1', 'yearly')
+  assertEquals(created, false)
+  assertEquals(updatedScheduleId, 'sub_sched_existing')
+})
+
+Deno.test('schedulePlanChange releases a newly created schedule when configuration fails', async () => {
+  let released = ''
+  const subscription = activeSubscription()
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getLatestSubscriptionByUserId() {
+        return activeSubscriptionRow()
+      },
+    }),
+    stripe: {
+      subscriptions: { retrieve: async () => subscription },
+      prices: { retrieve: async (id: string) => priceForPlan(id) },
+      subscriptionSchedules: {
+        create: async () => ({
+          id: 'sub_sched_incomplete',
+          current_phase: { start_date: subscription.current_period_start },
+        }),
+        update: async () => {
+          throw new Error('schedule update failed')
+        },
+        release: async (id: string) => {
+          released = id
+          return { id }
+        },
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  await assertRejects(
+    () => service.schedulePlanChange('u-1', 'three_month'),
+    Error,
+    'schedule update failed',
+  )
+  assertEquals(released, 'sub_sched_incomplete')
+})
+
+Deno.test('cancelScheduledPlanChange releases the schedule without canceling the subscription', async () => {
+  let released = ''
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getLatestSubscriptionByUserId() {
+        return activeSubscriptionRow()
+      },
+    }),
+    stripe: {
+      subscriptions: {
+        retrieve: async () => activeSubscription(env.priceIds.monthly, 'sub_sched_1'),
+      },
+      subscriptionSchedules: {
+        retrieve: async () => ({
+          id: 'sub_sched_1',
+          metadata: { managed_by: 'betterlsat_plan_change' },
+        }),
+        release: async (id: string) => {
+          released = id
+          return { id }
+        },
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  const result = await service.cancelScheduledPlanChange('u-1')
+  assertEquals(released, 'sub_sched_1')
+  assertEquals(result, { pendingChange: null })
+})
+
+Deno.test('getStatus reports the current plan and Stripe-backed pending plan separately', async () => {
+  const subscription = activeSubscription(env.priceIds.monthly, 'sub_sched_1')
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getLatestSubscriptionByUserId() {
+        return activeSubscriptionRow()
+      },
+    }),
+    stripe: {
+      subscriptions: { retrieve: async () => subscription },
+      subscriptionSchedules: {
+        retrieve: async () => ({
+          id: 'sub_sched_1',
+          phases: [
+            {
+              start_date: subscription.current_period_start,
+              end_date: subscription.current_period_end,
+              items: [{ price: env.priceIds.monthly, quantity: 1 }],
+            },
+            {
+              start_date: subscription.current_period_end,
+              items: [{ price: env.priceIds.yearly, quantity: 1 }],
+            },
+          ],
+        }),
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  const status = await service.getStatus('u-1')
+  assertEquals(status.checkoutPlan, 'monthly')
+  assertEquals(status.pendingChange?.plan, 'yearly')
+  assertEquals(status.pendingChange?.effectiveAt, '2026-10-22T14:13:20.000Z')
+})
+
+Deno.test('schedulePlanChange rejects users without an active subscription', async () => {
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo(),
+    stripe: {} as import('npm:stripe@17.7.0').default,
+  })
+
+  await assertRejects(
+    () => service.schedulePlanChange('u-1', 'monthly'),
+    Error,
+    'active BetterLSAT subscription',
+  )
+})
+
+Deno.test('schedulePlanChange rejects subscriptions without a supported BetterLSAT item', async () => {
+  const unsupported = activeSubscription('price_unknown')
+  unsupported.items.data = unsupported.items.data.filter((item) => item.id !== 'si_other')
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getLatestSubscriptionByUserId() {
+        return activeSubscriptionRow('price_unknown')
+      },
+    }),
+    stripe: {
+      subscriptions: { retrieve: async () => unsupported },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  await assertRejects(
+    () => service.schedulePlanChange('u-1', 'monthly'),
+    Error,
+    'supported BetterLSAT plan',
+  )
 })

@@ -37,6 +37,7 @@ export function isAllowedAppOrigin(origin: string): boolean {
       return true
     }
     if (protocol !== 'https:') return false
+    if (hostname === 'app.betterlsat.com') return true
     if (hostname === 'better-lsat-qbank.vercel.app') return true
     if (hostname.endsWith('.vercel.app')) return true
     return false
@@ -59,15 +60,13 @@ export function resolveAppBaseUrlFromEnv(): string | null {
 }
 
 /**
- * Prefer explicit env; otherwise use validated Origin / body appBaseUrl from the browser.
+ * Prefer the validated browser origin so Stripe returns to the same origin that owns
+ * the Supabase session. Environment configuration is the server-side fallback.
  */
 export function resolveAppBaseUrlForCheckout(
   request: Request,
   bodyAppBaseUrl?: unknown,
 ): string {
-  const fromEnv = resolveAppBaseUrlFromEnv()
-  if (fromEnv) return fromEnv
-
   const origin = request.headers.get('Origin')?.trim()
   if (origin && isAllowedAppOrigin(origin)) {
     return normalizeBaseUrl(origin)
@@ -76,6 +75,9 @@ export function resolveAppBaseUrlForCheckout(
   if (typeof bodyAppBaseUrl === 'string' && isAllowedAppOrigin(bodyAppBaseUrl)) {
     return normalizeBaseUrl(bodyAppBaseUrl)
   }
+
+  const fromEnv = resolveAppBaseUrlFromEnv()
+  if (fromEnv) return fromEnv
 
   throw new Error(
     'APP_BASE_URL is not configured. Set APP_BASE_URL on the server or call checkout from an allowed app origin.',

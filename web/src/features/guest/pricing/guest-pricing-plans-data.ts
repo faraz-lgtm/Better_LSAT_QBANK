@@ -1,4 +1,4 @@
-export type CheckoutPlanId = "monthly" | "three_month" | "six_month"
+export type CheckoutPlanId = "monthly" | "three_month" | "six_month" | "yearly"
 
 export type PaidPricingPlan = {
   id: CheckoutPlanId
@@ -105,6 +105,24 @@ const PAID_PRICING_PLANS: PaidPricingPlan[] = [
     ],
     renewalNote: "Renews at $354 every 6 months.",
     ctaLabel: "Choose 6 Months",
+    lawHubNote: LAWHUB_REQUIRED_NOTE,
+  },
+  {
+    id: "yearly",
+    name: "Yearly",
+    headline: "The Best Value for a Full Year.",
+    description: "Get a full year of BetterLSAT access at the lowest monthly equivalent.",
+    priceUsd: 624,
+    equivalentMonthlyUsd: 52,
+    discountLabel: "25% Ongoing Discount",
+    features: [
+      "Everything in Full Access",
+      "Best monthly value",
+      "Built for a full-year prep timeline",
+      "One upfront payment",
+    ],
+    renewalNote: "Renews at $624 every 12 months.",
+    ctaLabel: "Choose Yearly",
     lawHubNote: LAWHUB_REQUIRED_NOTE,
   },
 ]

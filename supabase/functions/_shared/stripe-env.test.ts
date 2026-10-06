@@ -2,6 +2,7 @@ import { assertEquals } from 'jsr:@std/assert@1'
 import {
   isLocalSupabaseHost,
   parseStripeEnv,
+  resolveCheckoutPlanFromPriceId,
   resolvePlanFromPriceId,
   resolveStripeLiveMode,
   storedPlanTierFromMetadata,
@@ -13,6 +14,7 @@ const testCredentials = {
   STRIPE_PRICE_ID_CORE_TEST: 'price_core_test',
   STRIPE_PRICE_ID_CORE_3_MONTH_TEST: 'price_core_3_month_test',
   STRIPE_PRICE_ID_CORE_6_MONTH_TEST: 'price_core_6_month_test',
+  STRIPE_PRICE_ID_CORE_YEARLY_TEST: 'price_core_yearly_test',
   STRIPE_PRICE_ID_LIVE_MONTHLY_TEST: 'price_live_test',
   STRIPE_PRICE_ID_LSAC_YEARLY_TEST: 'price_lsac_test',
   STRIPE_PUBLISHABLE_KEY_TEST: 'pk_test_x',
@@ -21,6 +23,7 @@ const testCredentials = {
   STRIPE_PRICE_ID_CORE_LIVE: 'price_core_live',
   STRIPE_PRICE_ID_CORE_3_MONTH_LIVE: 'price_core_3_month_live',
   STRIPE_PRICE_ID_CORE_6_MONTH_LIVE: 'price_core_6_month_live',
+  STRIPE_PRICE_ID_CORE_YEARLY_LIVE: 'price_core_yearly_live',
   STRIPE_PRICE_ID_LIVE_MONTHLY_LIVE: 'price_live_live',
   STRIPE_PRICE_ID_LSAC_YEARLY_LIVE: 'price_lsac_live',
   STRIPE_PUBLISHABLE_KEY_LIVE: 'pk_live_x',
@@ -68,6 +71,7 @@ Deno.test('parseStripeEnv returns test keys when live mode is false', () => {
   assertEquals(env?.priceIds.monthly, 'price_core_test')
   assertEquals(env?.priceIds.threeMonth, 'price_core_3_month_test')
   assertEquals(env?.priceIds.sixMonth, 'price_core_6_month_test')
+  assertEquals(env?.priceIds.yearly, 'price_core_yearly_test')
   assertEquals(env?.priceIds.live, 'price_live_test')
   assertEquals(env?.priceIds.lsacYearly, 'price_lsac_test')
   assertEquals(env?.publishableKey, 'pk_test_x')
@@ -84,6 +88,7 @@ Deno.test('parseStripeEnv returns live keys when STRIPE_LIVE_MODE=true on hosted
   assertEquals(env?.priceIds.monthly, 'price_core_live')
   assertEquals(env?.priceIds.threeMonth, 'price_core_3_month_live')
   assertEquals(env?.priceIds.sixMonth, 'price_core_6_month_live')
+  assertEquals(env?.priceIds.yearly, 'price_core_yearly_live')
 })
 
 Deno.test('parseStripeEnv does not require the legacy Live price', () => {
@@ -103,6 +108,7 @@ Deno.test('parseStripeEnv falls back to legacy STRIPE_PRICE_ID_TEST for monthly 
     STRIPE_PRICE_ID_TEST: 'price_legacy',
     STRIPE_PRICE_ID_CORE_3_MONTH_TEST: 'price_core_3_month_test',
     STRIPE_PRICE_ID_CORE_6_MONTH_TEST: 'price_core_6_month_test',
+    STRIPE_PRICE_ID_CORE_YEARLY_TEST: 'price_core_yearly_test',
     STRIPE_PRICE_ID_LSAC_YEARLY_TEST: 'price_lsac_test',
     STRIPE_PUBLISHABLE_KEY_TEST: 'pk_test_x',
     SUPABASE_URL: 'https://abc.supabase.co',
@@ -115,20 +121,27 @@ Deno.test('resolvePlanFromPriceId maps Core intervals and legacy Live', () => {
     monthly: 'price_monthly',
     threeMonth: 'price_3',
     sixMonth: 'price_6',
+    yearly: 'price_yearly',
     lsacYearly: 'price_lsac',
     live: 'price_live',
   }
   assertEquals(resolvePlanFromPriceId(priceIds, 'price_monthly'), 'core')
   assertEquals(resolvePlanFromPriceId(priceIds, 'price_3'), 'core')
   assertEquals(resolvePlanFromPriceId(priceIds, 'price_6'), 'core')
+  assertEquals(resolvePlanFromPriceId(priceIds, 'price_yearly'), 'core')
   assertEquals(resolvePlanFromPriceId(priceIds, 'price_live'), 'live')
   assertEquals(resolvePlanFromPriceId(priceIds, 'price_lsac'), null)
+  assertEquals(resolveCheckoutPlanFromPriceId(priceIds, 'price_monthly'), 'monthly')
+  assertEquals(resolveCheckoutPlanFromPriceId(priceIds, 'price_3'), 'three_month')
+  assertEquals(resolveCheckoutPlanFromPriceId(priceIds, 'price_6'), 'six_month')
+  assertEquals(resolveCheckoutPlanFromPriceId(priceIds, 'price_yearly'), 'yearly')
 })
 
 Deno.test('storedPlanTierFromMetadata maps new checkout ids onto core', () => {
   assertEquals(storedPlanTierFromMetadata('monthly'), 'core')
   assertEquals(storedPlanTierFromMetadata('three_month'), 'core')
   assertEquals(storedPlanTierFromMetadata('six_month'), 'core')
+  assertEquals(storedPlanTierFromMetadata('yearly'), 'core')
   assertEquals(storedPlanTierFromMetadata('core'), 'core')
   assertEquals(storedPlanTierFromMetadata('live'), 'live')
   assertEquals(storedPlanTierFromMetadata(undefined), null)

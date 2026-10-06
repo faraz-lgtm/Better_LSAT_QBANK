@@ -77,6 +77,38 @@ describe('createBillingApi', () => {
     })
   })
 
+  it('schedulePlanChange invokes billing-change-plan with the selected plan', async () => {
+    const pendingChange = {
+      plan: 'yearly' as const,
+      effectiveAt: '2026-11-06T00:00:00.000Z',
+    }
+    const invoke = vi.fn().mockResolvedValue({
+      data: { pendingChange },
+      error: null,
+    })
+    const api = createBillingApi(mockSupabase(invoke))
+    await expect(api.schedulePlanChange('yearly')).resolves.toEqual(pendingChange)
+    expect(invoke).toHaveBeenCalledWith('billing-change-plan', {
+      method: 'POST',
+      body: { plan: 'yearly' },
+      headers: { Authorization: 'Bearer t1' },
+    })
+  })
+
+  it('cancelScheduledPlanChange invokes billing-change-plan without a checkout', async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: { pendingChange: null },
+      error: null,
+    })
+    const api = createBillingApi(mockSupabase(invoke))
+    await expect(api.cancelScheduledPlanChange()).resolves.toBeUndefined()
+    expect(invoke).toHaveBeenCalledWith('billing-change-plan', {
+      method: 'POST',
+      body: { cancelPending: true },
+      headers: { Authorization: 'Bearer t1' },
+    })
+  })
+
   it('getPaymentMethods invokes billing-get-payment-methods', async () => {
     const invoke = vi.fn().mockResolvedValue({
       data: {
