@@ -475,6 +475,9 @@ verify_jwt = false
 [functions.admin-reserve-question-video-upload]
 verify_jwt = false
 
+[functions.admin-reserve-lesson-image-upload]
+verify_jwt = false
+
 [functions.admin-seed-default-question-types]
 verify_jwt = false
 

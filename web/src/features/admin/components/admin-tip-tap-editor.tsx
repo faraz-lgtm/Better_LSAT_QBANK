@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type ReactNode } from "react"
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react"
 import { Color } from "@tiptap/extension-color"
 import Highlight from "@tiptap/extension-highlight"
 import Image from "@tiptap/extension-image"
@@ -122,7 +122,7 @@ const BlockMargin = Extension.create({
   addGlobalAttributes() {
     return [
       {
-        types: ["paragraph", "heading", "lessonSection"],
+        types: ["paragraph", "heading", "lessonSection", "horizontalRule"],
         attributes: MARGIN_ATTR_DEFS,
       },
     ]
@@ -327,6 +327,8 @@ type AdminTipTapEditorProps = {
   onChange: (html: string) => void
   minHeight?: number
   placeholder?: string
+  /** When set, Img uses a device file picker and uploads via this callback (returns public URL). */
+  uploadImage?: (file: File) => Promise<string>
 }
 
 function ToolbarButton({
@@ -357,11 +359,19 @@ function ToolbarButton({
   )
 }
 
-function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "Start typing…" }: AdminTipTapEditorProps) {
+function AdminTipTapEditor({
+  value,
+  onChange,
+  minHeight = 140,
+  placeholder = "Start typing…",
+  uploadImage,
+}: AdminTipTapEditorProps) {
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
   const lastEmittedRef = useRef(normalizeTipTapHtml(value || "<p></p>"))
   const applyingExternalRef = useRef(false)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -452,13 +462,40 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
   }, [editor])
 
   const insertImage = useCallback(() => {
-    if (!editor) return
+    if (!editor || uploadingImage) return
+    if (uploadImage) {
+      imageInputRef.current?.click()
+      return
+    }
     const raw = window.prompt("Image URL (https://…)", "https://")
     if (raw === null) return
     const src = raw.trim()
     if (!src || !isSafeHttpUrl(src)) return
     editor.chain().focus().setImage({ src }).run()
-  }, [editor])
+  }, [editor, uploadImage, uploadingImage])
+
+  const onImageFileSelected = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0] ?? null
+      event.target.value = ""
+      if (!file || !editor || !uploadImage) return
+      if (!file.type.startsWith("image/")) {
+        window.alert("Please choose an image file (JPG, PNG, GIF, or WebP).")
+        return
+      }
+      try {
+        setUploadingImage(true)
+        const src = await uploadImage(file)
+        if (!src || !isSafeHttpUrl(src)) throw new Error("Upload did not return a usable image URL")
+        editor.chain().focus().setImage({ src }).run()
+      } catch (e) {
+        window.alert(e instanceof Error ? e.message : "Image upload failed")
+      } finally {
+        setUploadingImage(false)
+      }
+    },
+    [editor, uploadImage],
+  )
 
   const insertYoutube = useCallback(() => {
     if (!editor) return
@@ -516,9 +553,10 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
     [editor],
   )
 
-  const activeMarginBlockType = useCallback((): "lessonSection" | "heading" | "paragraph" | null => {
+  const activeMarginBlockType = useCallback((): "lessonSection" | "heading" | "paragraph" | "horizontalRule" | null => {
     if (!editor) return null
     if (editor.isActive("lessonSection")) return "lessonSection"
+    if (editor.isActive("horizontalRule")) return "horizontalRule"
     if (editor.isActive("heading")) return "heading"
     if (editor.isActive("paragraph")) return "paragraph"
     return null
@@ -554,6 +592,18 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
     },
     [activeMarginBlockType, editor],
   )
+
+  const insertDivider = useCallback(() => {
+    if (!editor) return
+    editor
+      .chain()
+      .focus()
+      .insertContent({
+        type: "horizontalRule",
+        attrs: { marginTop: "40px", marginBottom: "40px" },
+      })
+      .run()
+  }, [editor])
 
   const clearBlockMargins = useCallback(() => {
     if (!editor) return
@@ -598,8 +648,15 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
   }
 
   return (
-    <div className="overflow-hidden rounded-[10px] border border-[#dfe1e7] bg-white">
-      <div className="flex max-h-[220px] flex-wrap items-center gap-1 overflow-y-auto border-b border-[#dfe1e7] bg-[#f6f8fa] px-2 py-2">
+    <div className="flex h-[min(70vh,720px)] flex-col overflow-hidden rounded-[10px] border border-[#dfe1e7] bg-white">
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
+        className="hidden"
+        onChange={(e) => void onImageFileSelected(e)}
+      />
+      <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-[#dfe1e7] bg-[#f6f8fa] px-2 py-2">
         <ToolbarButton title="Undo" onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()}>
           Undo
         </ToolbarButton>
@@ -738,7 +795,7 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
         <ToolbarButton title="Blockquote" active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
           “”
         </ToolbarButton>
-        <ToolbarButton title="Insert divider" onClick={() => editor.chain().focus().setHorizontalRule().run()}>
+        <ToolbarButton title="Insert divider" onClick={insertDivider}>
           Divider
         </ToolbarButton>
         <ToolbarButton title="Code" active={editor.isActive("code")} onClick={() => editor.chain().focus().toggleCode().run()}>
@@ -775,8 +832,8 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
         <ToolbarButton title="Link" onClick={setLink}>
           Link
         </ToolbarButton>
-        <ToolbarButton title="Image" onClick={insertImage}>
-          Img
+        <ToolbarButton title="Image" onClick={insertImage} disabled={uploadingImage}>
+          {uploadingImage ? "…" : "Img"}
         </ToolbarButton>
         <ToolbarButton title="YouTube embed" onClick={insertYoutube}>
           YT
@@ -802,7 +859,9 @@ function AdminTipTapEditor({ value, onChange, minHeight = 140, placeholder = "St
           Clear
         </ToolbarButton>
       </div>
-      <EditorContent editor={editor} />
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <EditorContent editor={editor} />
+      </div>
     </div>
   )
 }

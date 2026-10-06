@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Eye } from "lucide-react"
 
 import { AdminCurriculumTree } from "@/features/admin/components/course-builder/admin-curriculum-tree"
@@ -131,17 +131,24 @@ function AdminRichBlock({
   value,
   onChange,
   minHeight = 140,
+  uploadImage,
 }: {
   label: string
   labelClassName?: string
   value: string
   onChange: (html: string) => void
   minHeight?: number
+  uploadImage?: (file: File) => Promise<string>
 }) {
   return (
     <div className="flex flex-col gap-4 rounded-[10px] border border-[#dfe1e7] bg-white p-4">
       <p className={labelClassName}>{label}</p>
-      <AdminTipTapEditor value={value || "<p></p>"} onChange={onChange} minHeight={minHeight} />
+      <AdminTipTapEditor
+        value={value || "<p></p>"}
+        onChange={onChange}
+        minHeight={minHeight}
+        uploadImage={uploadImage}
+      />
     </div>
   )
 }
@@ -327,6 +334,31 @@ function AdminCoursesPage() {
     () => lessons.find((lesson) => String(lesson.id) === selectedLessonId) ?? null,
     [lessons, selectedLessonId],
   )
+
+  const uploadLessonImage = useCallback(
+    async (file: File) => {
+      if (!adminApi) throw new Error("Admin API is not ready")
+      if (!selectedCourseId) throw new Error("Select a course first")
+      return adminApi.uploadLessonImageBlob(selectedCourseId, file)
+    },
+    [adminApi, selectedCourseId],
+  )
+
+  const pickAndUploadLessonImage = useCallback(async (): Promise<string | null> => {
+    const file = await new Promise<File | null>((resolve) => {
+      const input = document.createElement("input")
+      input.type = "file"
+      input.accept = "image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
+      input.onchange = () => resolve(input.files?.[0] ?? null)
+      input.click()
+    })
+    if (!file) return null
+    if (!file.type.startsWith("image/")) {
+      window.alert("Please choose an image file (JPG, PNG, GIF, or WebP).")
+      return null
+    }
+    return uploadLessonImage(file)
+  }, [uploadLessonImage])
 
   const linkedQuestionCap = useMemo(() => {
     if (lessonForm.lessonType === "adaptive_drill") return 5
@@ -720,8 +752,8 @@ function AdminCoursesPage() {
   }
 
   return (
-    <section className="space-y-4">
-      <div className="flex items-center justify-between">
+    <section className={mode === "builder" ? "flex min-h-0 flex-1 flex-col gap-4 overflow-hidden" : "space-y-4"}>
+      <div className="flex shrink-0 items-center justify-between">
         <div>
           <h1 className="admin-typo-h1">
             {mode === "create"
@@ -1054,8 +1086,8 @@ function AdminCoursesPage() {
       )}
 
       {mode === "builder" && selectedCourse && (
-        <div className="flex min-h-[min(720px,85vh)] flex-col overflow-hidden rounded-xl border border-[#dfe1e7] bg-white shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] lg:flex-row">
-          <div className="lesson-list flex max-h-[40vh] w-full flex-col overflow-y-auto border-b border-[#dfe1e7] lg:max-h-none lg:w-[min(300px,34vw)] lg:shrink-0 lg:border-b-0 lg:border-r lg:border-[#dfe1e7]">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#dfe1e7] bg-white shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] lg:flex-row">
+          <div className="lesson-list flex max-h-[40vh] w-full min-h-0 flex-col overflow-y-auto border-b border-[#dfe1e7] lg:max-h-none lg:w-[min(300px,34vw)] lg:shrink-0 lg:border-b-0 lg:border-r lg:border-[#dfe1e7]">
             <div className="lesson-head">
               <div>
                 <p className="lesson-title">Curriculum</p>
@@ -1097,7 +1129,7 @@ function AdminCoursesPage() {
             />
           </div>
           <div className="flex min-h-0 min-w-0 flex-1">
-            <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6">
+            <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6 sm:px-6">
               {builderSelection?.kind === "module" ? (
                 <CurriculumMetaEditor
                   badge="Editing module"
@@ -1229,6 +1261,7 @@ function AdminCoursesPage() {
                           value={lessonForm.repWorkInstructions}
                           onChange={(html) => setLessonForm((p) => ({ ...p, repWorkInstructions: html }))}
                           minHeight={160}
+                          uploadImage={uploadLessonImage}
                         />
                         {lessonForm.repWorkPairs.map((pair, idx) => (
                           <div
@@ -1245,6 +1278,7 @@ function AdminCoursesPage() {
                                   repWorkPairs: p.repWorkPairs.map((x, j) => (j === idx ? { ...x, question: html } : x)),
                                 }))
                               }
+                              uploadImage={uploadLessonImage}
                             />
                             <AdminRichBlock
                               label="Answer"
@@ -1256,6 +1290,7 @@ function AdminCoursesPage() {
                                   repWorkPairs: p.repWorkPairs.map((x, j) => (j === idx ? { ...x, answer: html } : x)),
                                 }))
                               }
+                              uploadImage={uploadLessonImage}
                             />
                           </div>
                         ))}
@@ -1291,6 +1326,7 @@ function AdminCoursesPage() {
                           value={lessonForm.textContent}
                           onChange={(html) => setLessonForm((p) => ({ ...p, textContent: html }))}
                           minHeight={lessonForm.lessonType === "video_text" ? 200 : 160}
+                          uploadImage={uploadLessonImage}
                         />
                       </>
                     )}
@@ -1527,21 +1563,28 @@ function AdminCoursesPage() {
                   if (p.lessonType === "rep_work") return p
                   return {
                     ...p,
-                    textContent: appendLessonHtmlBlock(p.textContent, "<hr><p></p>"),
+                    textContent: appendLessonHtmlBlock(
+                      p.textContent,
+                      '<hr data-mt="40px" data-mb="40px" style="margin-top: 40px; margin-bottom: 40px"><p></p>',
+                    ),
                   }
                 })
                 focusLessonBodyEditor()
               }}
               onAddImage={() => {
-                const raw = window.prompt("Image URL (https://…)", "https://")
-                if (raw == null) return
-                const url = raw.trim()
-                if (!url) return
-                setLessonForm((p) => ({
-                  ...p,
-                  textContent: appendLessonHtmlBlock(p.textContent, `<p><img src="${url}" alt="" /></p>`),
-                }))
-                focusLessonBodyEditor()
+                void (async () => {
+                  try {
+                    const url = await pickAndUploadLessonImage()
+                    if (!url) return
+                    setLessonForm((p) => ({
+                      ...p,
+                      textContent: appendLessonHtmlBlock(p.textContent, `<p><img src="${url}" alt="" /></p>`),
+                    }))
+                    focusLessonBodyEditor()
+                  } catch (e) {
+                    window.alert(e instanceof Error ? e.message : "Image upload failed")
+                  }
+                })()
               }}
               onAddQuestion={() => {
                 document.getElementById("lesson-link-questions")?.scrollIntoView({ behavior: "smooth" })
