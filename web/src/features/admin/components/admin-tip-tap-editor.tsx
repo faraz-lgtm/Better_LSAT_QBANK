@@ -600,7 +600,7 @@ function AdminTipTapEditor({
       .focus()
       .insertContent({
         type: "horizontalRule",
-        attrs: { marginTop: "40px", marginBottom: "40px" },
+        attrs: { marginTop: "80px", marginBottom: "80px" },
       })
       .run()
   }, [editor])

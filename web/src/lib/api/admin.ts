@@ -273,7 +273,11 @@ export function createAdminApi(supabase: SupabaseClient) {
       return pub.publicUrl
     },
 
-    /** Reserves a storage path (admin edge), uploads with the caller's session (RLS), returns public object URL for lesson <img src>. */
+    /**
+     * Uploads a lesson body image to the public `lesson_images` bucket (admin RLS).
+     * Path is reserved via edge function when available; falls back to a client path so
+     * uploads still work if that function is not deployed yet.
+     */
     async uploadLessonImageBlob(courseId: string, file: File) {
       const fromName = file.name.split(".").pop()?.trim().toLowerCase() ?? ""
       const mimeToExt: Record<string, string> = {
@@ -287,23 +291,39 @@ export function createAdminApi(supabase: SupabaseClient) {
       if (!fileExtension) throw new Error("Unsupported image type; use JPG, PNG, GIF, or WebP")
       if (fileExtension === "jpeg") fileExtension = "jpg"
 
-      const { data, error } = await invokeAdminFn<{ bucket: string; path: string; publicUrl: string }>(
-        "admin-reserve-lesson-image-upload",
-        {
+      const bucket = "lesson_images"
+      const contentType = file.type || `image/${fileExtension === "jpg" ? "jpeg" : fileExtension}`
+      let path = `${courseId}/${crypto.randomUUID()}.${fileExtension}`
+
+      try {
+        const { data: reserved, error: reserveError } = await invokeAdminFn<{
+          bucket: string
+          path: string
+          publicUrl: string
+        }>("admin-reserve-lesson-image-upload", {
           method: "POST",
           body: { courseId, fileExtension },
-        },
-      )
-      if (error) throw error
-      if (!data?.bucket || !data.path || !data.publicUrl) throw new Error("Invalid reserve response")
+        })
+        // Undeployed / unreachable function → client path (RLS still enforces admin write).
+        if (!reserveError && reserved?.path) path = reserved.path
+      } catch {
+        // ignore — fall back to client-generated path
+      }
 
-      const contentType = file.type || `image/${fileExtension === "jpg" ? "jpeg" : fileExtension}`
-      const { error: uploadError } = await supabase.storage.from(data.bucket).upload(data.path, file, {
+      const { error: uploadError } = await supabase.storage.from(bucket).upload(path, file, {
         contentType,
         upsert: true,
       })
-      if (uploadError) throw uploadError
-      const { data: pub } = supabase.storage.from(data.bucket).getPublicUrl(data.path)
+      if (uploadError) {
+        const msg = uploadError.message || "Image upload failed"
+        if (/bucket not found|not found/i.test(msg)) {
+          throw new Error(
+            "Lesson image storage is not set up yet. Apply the lesson_images migration, then try again.",
+          )
+        }
+        throw new Error(msg)
+      }
+      const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path)
       if (!pub?.publicUrl) throw new Error("Could not resolve public image URL")
       return pub.publicUrl
     },
