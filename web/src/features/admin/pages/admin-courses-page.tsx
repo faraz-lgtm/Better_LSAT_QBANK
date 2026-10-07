@@ -1565,7 +1565,7 @@ function AdminCoursesPage() {
                     ...p,
                     textContent: appendLessonHtmlBlock(
                       p.textContent,
-                      '<hr data-mt="40px" data-mb="40px" style="margin-top: 40px; margin-bottom: 40px"><p></p>',
+                      '<hr data-mt="80px" data-mb="80px" style="margin-top: 80px; margin-bottom: 80px"><p></p>',
                     ),
                   }
                 })
