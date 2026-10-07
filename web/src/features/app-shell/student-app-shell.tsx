@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom"
 
 import { StudentAppHeader } from "@/features/app-shell/student-app-header"
 import { PortalChatWidget } from "@/features/app-shell/portal-chat-widget"
+import { isPrepCourseLessonRoute } from "@/features/app-shell/prep-course-lesson-route"
 import { isPracticeImmersiveRoute } from "@/features/app-shell/practice-immersive-route"
 import { RequireLsacContentAccess } from "@/features/app-shell/require-lsac-content-access"
 import { StudentAppSidebar } from "@/features/app-shell/student-app-sidebar"
@@ -27,6 +28,7 @@ function StudentAppShellLayout() {
   useLawHubSessionLoginLog()
   const location = useLocation()
   const immersive = isPracticeImmersiveRoute(location.pathname)
+  const hidePortalChat = immersive || isPrepCourseLessonRoute(location.pathname)
   const premiumAccount = useGuestPremiumAccount()
   const { entitlement } = useStudentEntitlement()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -81,7 +83,7 @@ function StudentAppShellLayout() {
             </div>
           </div>
         </div>
-        <PortalChatWidget enabled={!immersive} />
+        <PortalChatWidget enabled={!hidePortalChat} />
       </GuestPricingModalProvider>
     </StudentPageHeaderSlotProvider>
   )

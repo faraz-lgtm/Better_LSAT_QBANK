@@ -31,6 +31,19 @@ function resolveActiveDrillLessonEntry(input: {
   return input.hasAttempt ? "results" : "start"
 }
 
+/**
+ * After Next / Mark Complete, React still holds the previous lesson until the load
+ * effect clears it. Never apply Active Drill entry redirects against that stale row.
+ */
+function isLoadedLessonMatchingUrl(input: {
+  urlLessonSlug: string
+  loadedLessonSlug: string | null | undefined
+}): boolean {
+  const urlSlug = input.urlLessonSlug.trim()
+  const loadedSlug = input.loadedLessonSlug?.trim() ?? ""
+  return urlSlug.length > 0 && loadedSlug.length > 0 && urlSlug === loadedSlug
+}
+
 /** Active drill Figma results only after submit (`?results=1`). */
 function resolveDisplayedActiveDrillAttempt<T>(
   drillKind: string | null,
@@ -46,6 +59,7 @@ function resolveDisplayedActiveDrillAttempt<T>(
 export {
   ACTIVE_DRILL_RESULTS_PARAM,
   isActiveDrillResultsQuery,
+  isLoadedLessonMatchingUrl,
   resolveActiveDrillLessonEntry,
   resolveDisplayedActiveDrillAttempt,
   withActiveDrillResultsQuery,

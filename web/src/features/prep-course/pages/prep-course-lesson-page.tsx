@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useLocation, useMatch, useNavigate, useParams } from "react-router-dom"
 
 import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
@@ -24,6 +24,7 @@ import {
 } from "@/features/prep-course/lib/prep-course-format"
 import { mergeActiveDrillAttemptBlindReview } from "@/features/prep-course/lib/merge-drill-blind-review-attempt"
 import {
+  isLoadedLessonMatchingUrl,
   resolveActiveDrillLessonEntry,
   resolveDisplayedActiveDrillAttempt,
   withActiveDrillResultsQuery,
@@ -213,6 +214,8 @@ function PrepCourseLessonPage() {
         setCourse(null)
         setLessons([])
         setLesson(null)
+        setLinkedQuestionRefs([])
+        setActiveDrillAttempt(null)
       }
       let redirected = false
       try {
@@ -254,13 +257,6 @@ function PrepCourseLessonPage() {
     }
   }, [comingSoon, paramsValid, courseSlug, lessonSlug, prepCourseApi, practiceApi, location.key, entitlementReady, limitFreeAccess, navigate, openLockedContentModal])
 
-  useLayoutEffect(() => {
-    document.documentElement.classList.add("prep-course-lesson-active")
-    return () => {
-      document.documentElement.classList.remove("prep-course-lesson-active")
-    }
-  }, [])
-
   useEffect(() => {
     setDrillStartError(null)
     lessonContentRef.current?.closest("section")?.scrollTo({ top: 0 })
@@ -268,6 +264,10 @@ function PrepCourseLessonPage() {
 
   useEffect(() => {
     if (!course || !lesson || loading) return
+    // URL already moved (Next / Mark Complete) but state still holds the prior lesson.
+    if (!isLoadedLessonMatchingUrl({ urlLessonSlug: lessonSlug, loadedLessonSlug: lesson.slug })) {
+      return
+    }
     if (isStartScreen && resolveDrillLessonType(lesson) !== "active_drill") {
       navigate(`/app/prep-course/${course.slug}/${lesson.slug}`, { replace: true })
       return
@@ -292,6 +292,7 @@ function PrepCourseLessonPage() {
     course,
     isStartScreen,
     lesson,
+    lessonSlug,
     loading,
     location.search,
     navigate,

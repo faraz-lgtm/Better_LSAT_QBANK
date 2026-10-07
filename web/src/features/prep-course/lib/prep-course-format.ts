@@ -73,7 +73,7 @@ export function lessonMetaLine(
 
 export function nextLessonSlug(lessons: PrepLesson[], currentSlug: string): string | null {
   const idx = lessons.findIndex((l) => l.slug === currentSlug)
-  if (idx < 0) return lessons[0]?.slug ?? null
+  if (idx < 0) return null
   return lessons[idx + 1]?.slug ?? null
 }
 

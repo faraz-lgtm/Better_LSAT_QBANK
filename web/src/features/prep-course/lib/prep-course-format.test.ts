@@ -7,6 +7,7 @@ import {
   isResolvedAdaptiveDrillLesson,
   lessonProgressPercent,
   lessonRowSubtitle,
+  nextLessonSlug,
   prepCourseDisplayTitle,
   resolveLessonRowDisplay,
   normalizeCurriculum,
@@ -206,5 +207,16 @@ describe("prepCourseDisplayTitle", () => {
     expect(prepCourseDisplayTitle({ slug: "rc-mastery", title: "RC Mastery" })).toBe("RC Mastery Course")
     expect(prepCourseDisplayTitle({ slug: "other", title: "RC Mastery" })).toBe("RC Mastery Course")
     expect(prepCourseDisplayTitle({ slug: "other", title: "Other Course" })).toBe("Other Course")
+  })
+
+  it("nextLessonSlug returns the following lesson and null when current is missing", () => {
+    const lessons = [
+      baseLesson,
+      { ...baseLesson, id: "l2", slug: "two", sort_order: 2 },
+      { ...baseLesson, id: "l3", slug: "three", sort_order: 3 },
+    ]
+    expect(nextLessonSlug(lessons, "intro")).toBe("two")
+    expect(nextLessonSlug(lessons, "three")).toBeNull()
+    expect(nextLessonSlug(lessons, "missing")).toBeNull()
   })
 })
