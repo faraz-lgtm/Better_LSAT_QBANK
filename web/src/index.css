@@ -4860,32 +4860,25 @@ html.student-shell-immersive .practice-session-card {
   min-height: 0;
 }
 
-/* Hide LeadConnector / portal chat bubble during exam & immersive practice */
+/* Hide LeadConnector / portal chat during exam and immersive practice. */
+html.student-shell-immersive chat-widget,
 html.student-shell-immersive iframe[src*="leadconnectorhq.com"],
 html.student-shell-immersive iframe[src*="msgsndr.com"],
 html.student-shell-immersive iframe[src*="chat-widget"],
+html.portal-chat-hidden chat-widget,
 html.portal-chat-hidden iframe[src*="leadconnectorhq.com"],
 html.portal-chat-hidden iframe[src*="msgsndr.com"],
 html.portal-chat-hidden iframe[src*="chat-widget"],
 html.student-shell-immersive [id*="leadconnector"],
 html.portal-chat-hidden [id*="leadconnector"],
+html.student-shell-immersive [id*="lc_text"],
+html.portal-chat-hidden [id*="lc_text"],
 html.student-shell-immersive [class*="lc_text-widget"],
 html.portal-chat-hidden [class*="lc_text-widget"] {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
   opacity: 0 !important;
-}
-
-/* Sit the chat bubble above the lesson footer so Mark Complete / Next stays clickable */
-html.prep-course-lesson-active chat-widget,
-html.prep-course-lesson-active iframe[src*="leadconnectorhq.com"],
-html.prep-course-lesson-active iframe[src*="msgsndr.com"],
-html.prep-course-lesson-active iframe[src*="chat-widget"],
-html.prep-course-lesson-active [id*="leadconnector"],
-html.prep-course-lesson-active [id*="lc_text"],
-html.prep-course-lesson-active [class*="lc_text-widget"] {
-  bottom: 112px !important;
 }
 
 html.student-shell-immersive .practice-session-card--active-drill {

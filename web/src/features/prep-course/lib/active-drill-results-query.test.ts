@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   isActiveDrillResultsQuery,
+  isLoadedLessonMatchingUrl,
   resolveActiveDrillLessonEntry,
   resolveDisplayedActiveDrillAttempt,
   withActiveDrillResultsQuery,
@@ -55,5 +56,22 @@ describe("active drill results query", () => {
 
   it("does not hide a stored attempt for other lesson types", () => {
     expect(resolveDisplayedActiveDrillAttempt("rep_work", attempt, "")).toEqual(attempt)
+  })
+
+  it("blocks Active Drill entry redirects when URL already left the loaded lesson", () => {
+    expect(
+      isLoadedLessonMatchingUrl({
+        urlLessonSlug: "next-lesson",
+        loadedLessonSlug: "active-drill-areas-of-mathematics",
+      }),
+    ).toBe(false)
+    expect(
+      isLoadedLessonMatchingUrl({
+        urlLessonSlug: "active-drill-areas-of-mathematics",
+        loadedLessonSlug: "active-drill-areas-of-mathematics",
+      }),
+    ).toBe(true)
+    expect(isLoadedLessonMatchingUrl({ urlLessonSlug: "next-lesson", loadedLessonSlug: null })).toBe(false)
+    expect(isLoadedLessonMatchingUrl({ urlLessonSlug: "", loadedLessonSlug: "x" })).toBe(false)
   })
 })
