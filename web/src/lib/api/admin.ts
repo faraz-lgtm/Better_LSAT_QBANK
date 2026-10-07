@@ -273,6 +273,41 @@ export function createAdminApi(supabase: SupabaseClient) {
       return pub.publicUrl
     },
 
+    /** Reserves a storage path (admin edge), uploads with the caller's session (RLS), returns public object URL for lesson <img src>. */
+    async uploadLessonImageBlob(courseId: string, file: File) {
+      const fromName = file.name.split(".").pop()?.trim().toLowerCase() ?? ""
+      const mimeToExt: Record<string, string> = {
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/gif": "gif",
+        "image/webp": "webp",
+      }
+      const allowed = new Set(["jpg", "jpeg", "png", "gif", "webp"])
+      let fileExtension = allowed.has(fromName) ? fromName : mimeToExt[file.type] ?? ""
+      if (!fileExtension) throw new Error("Unsupported image type; use JPG, PNG, GIF, or WebP")
+      if (fileExtension === "jpeg") fileExtension = "jpg"
+
+      const { data, error } = await invokeAdminFn<{ bucket: string; path: string; publicUrl: string }>(
+        "admin-reserve-lesson-image-upload",
+        {
+          method: "POST",
+          body: { courseId, fileExtension },
+        },
+      )
+      if (error) throw error
+      if (!data?.bucket || !data.path || !data.publicUrl) throw new Error("Invalid reserve response")
+
+      const contentType = file.type || `image/${fileExtension === "jpg" ? "jpeg" : fileExtension}`
+      const { error: uploadError } = await supabase.storage.from(data.bucket).upload(data.path, file, {
+        contentType,
+        upsert: true,
+      })
+      if (uploadError) throw uploadError
+      const { data: pub } = supabase.storage.from(data.bucket).getPublicUrl(data.path)
+      if (!pub?.publicUrl) throw new Error("Could not resolve public image URL")
+      return pub.publicUrl
+    },
+
     async getDashboard() {
       const { data, error } = await invokeAdminFn<{ prepTests: unknown[] }>("admin-dashboard", {
         method: "POST",

@@ -142,6 +142,21 @@ export async function handleAdminMicro(req: Request, slug: string): Promise<Resp
         throw e
       }
     }
+    if (action === "admin-reserve-lesson-image-upload") {
+      const courseId = readString(body, "courseId")
+      const fileExtension = readString(body, "fileExtension")
+      if (!courseId || !fileExtension) {
+        return json({ error: "courseId and fileExtension are required" }, { status: 400 }, corsHeaders)
+      }
+      try {
+        return json(await service.reserveLessonImageUpload(user.id, courseId, fileExtension), {}, corsHeaders)
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Reserve failed"
+        if (msg === "Course not found") return json({ error: msg }, { status: 404 }, corsHeaders)
+        if (msg.startsWith("Invalid file extension")) return json({ error: msg }, { status: 400 }, corsHeaders)
+        throw e
+      }
+    }
     if (action === "admin-dashboard") {
       return json(await service.getDashboard(user.id), {}, corsHeaders)
     }

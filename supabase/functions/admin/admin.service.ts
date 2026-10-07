@@ -1,4 +1,5 @@
 import { browserFacingSupabaseApiBaseUrl } from "../_shared/browser-facing-supabase-url.ts"
+import { LESSON_IMAGES_BUCKET } from "../_shared/lesson-images.ts"
 import { QUESTION_EXPLANATION_VIDEOS_BUCKET } from "../_shared/question-explanation-videos.ts"
 import { coercePrepLessonType, isPrepLessonType, type PrepLessonType } from "../_shared/prep-lesson-type.ts"
 import type { AdminRepository, BulkImportTokenCourse as RepoBulkImportTokenCourse } from "./admin.repository.ts"
@@ -506,6 +507,29 @@ export function createAdminService(deps: { repository: AdminRepository }) {
         `${supabaseUrl}/storage/v1/object/public/${QUESTION_EXPLANATION_VIDEOS_BUCKET}/${encodedPath}`
       return {
         bucket: QUESTION_EXPLANATION_VIDEOS_BUCKET,
+        path,
+        publicUrl,
+      }
+    },
+
+    async reserveLessonImageUpload(userId: string, courseId: string, fileExtension: string) {
+      await requireAdmin(userId)
+      const ext = fileExtension.replace(/^\./, "").trim().toLowerCase()
+      const allowed = new Set(["jpg", "jpeg", "png", "gif", "webp"])
+      if (!allowed.has(ext)) {
+        throw new Error("Invalid file extension; use jpg, jpeg, png, gif, or webp")
+      }
+      const course = await deps.repository.getCourseById(courseId)
+      if (!course) throw new Error("Course not found")
+      const normalizedExt = ext === "jpeg" ? "jpg" : ext
+      const path = `${courseId}/${crypto.randomUUID()}.${normalizedExt}`
+      const supabaseUrl = browserFacingSupabaseApiBaseUrl()
+      if (!supabaseUrl) throw new Error("SUPABASE_URL is not configured")
+      const encodedPath = path.split("/").map(encodeURIComponent).join("/")
+      const publicUrl =
+        `${supabaseUrl}/storage/v1/object/public/${LESSON_IMAGES_BUCKET}/${encodedPath}`
+      return {
+        bucket: LESSON_IMAGES_BUCKET,
         path,
         publicUrl,
       }
