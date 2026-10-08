@@ -87,6 +87,20 @@ describe("IntentPage", () => {
     expect(screen.queryByRole("link", { name: /\$99/i })).not.toBeInTheDocument()
   })
 
+  it("opens pricing modal when authenticated free user clicks Upgrade now", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <IntentPage isAuthenticated={true} showUpgradeCta={true} />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Upgrade now" }))
+
+    expect(screen.getByRole("dialog", { name: /pricing/i })).toBeInTheDocument()
+  })
+
   it("hides Upgrade CTA for paid accounts", () => {
     render(
       <MemoryRouter>
@@ -95,9 +109,10 @@ describe("IntentPage", () => {
     )
 
     expect(screen.queryByRole("link", { name: /upgrade/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /upgrade/i })).not.toBeInTheDocument()
   })
 
-  it("links back to the app home when authenticated", () => {
+  it("links back to the platform dashboard when authenticated", () => {
     render(
       <MemoryRouter>
         <IntentPage isAuthenticated={true} />
@@ -107,14 +122,17 @@ describe("IntentPage", () => {
     expect(screen.getByRole("link", { name: /back/i })).toHaveAttribute("href", "/app")
   })
 
-  it("links back to the marketing home when unauthenticated", () => {
+  it("links back to betterlsat.com when unauthenticated", () => {
     render(
       <MemoryRouter>
         <IntentPage isAuthenticated={false} />
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole("link", { name: /back/i })).toHaveAttribute("href", "/")
+    expect(screen.getByRole("link", { name: /back/i })).toHaveAttribute(
+      "href",
+      "https://betterlsat.com",
+    )
   })
 
   it("offers Mini and Full cards without the 115-question exam", () => {

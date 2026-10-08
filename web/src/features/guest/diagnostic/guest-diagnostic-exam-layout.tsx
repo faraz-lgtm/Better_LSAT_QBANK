@@ -11,6 +11,10 @@ import {
   resolveGuestDiagnosticPassageHtml,
 } from "@/features/guest/diagnostic/guest-diagnostic-exam-utils"
 import { hasPracticeAnswer } from "@/features/student/practice-session/practice-choice-index"
+import {
+  GuestDiagnosticExitModal,
+  type GuestDiagnosticExitMode,
+} from "@/features/guest/diagnostic/guest-diagnostic-exit-modal"
 import { GuestDiagnosticSubmitModal } from "@/features/guest/diagnostic/guest-diagnostic-submit-modal"
 import type { GuestDiagnosticTestConfig } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
 import {
@@ -133,6 +137,11 @@ function persistAnswers(intentId: string, answers: Record<string, GuestDiagnosti
   sessionStorage.setItem(`${GUEST_DIAGNOSTIC_ANSWERS_STORAGE_PREFIX}${intentId}`, JSON.stringify(answers))
 }
 
+function clearPersistedAnswers(intentId: string): void {
+  if (typeof window === "undefined") return
+  sessionStorage.removeItem(`${GUEST_DIAGNOSTIC_ANSWERS_STORAGE_PREFIX}${intentId}`)
+}
+
 function answerOutcome(answer: GuestDiagnosticAnswerState | undefined): BlindReviewAnswerOutcome {
   if (!answer) return "unanswered"
   return answer.isCorrect ? "correct" : "incorrect"
@@ -242,6 +251,7 @@ function GuestDiagnosticExamLayout({
   const { isFullscreen, toggleExamFullscreen } = useExamFullscreen()
   const [submitModalOpen, setSubmitModalOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [exitModalMode, setExitModalMode] = useState<GuestDiagnosticExitMode | null>(null)
   const [revealedByQuestion, setRevealedByQuestion] = useState<Record<string, boolean>>({})
   const [answerViewTab, setAnswerViewTab] = useState<BlindReviewAnswerView>("clean")
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false)
@@ -407,6 +417,25 @@ function GuestDiagnosticExamLayout({
   })
   const officialChrome = isOfficialLayout(sessionVariant)
 
+  function requestSaveAndExit() {
+    setExitModalMode("save")
+  }
+
+  function requestExitWithoutSaving() {
+    setExitModalMode("discard")
+  }
+
+  function handleConfirmExit() {
+    pauseModal.close()
+    if (exitModalMode === "discard") {
+      clearPersistedAnswers(config.intentId)
+    } else {
+      persistAnswers(config.intentId, answersByQuestion)
+    }
+    setExitModalMode(null)
+    navigate("/app", { replace: true })
+  }
+
   const finishButton = isPostResultsMode ? (
     <PracticeSessionFinishMenu
       iconTrigger
@@ -428,7 +457,8 @@ function GuestDiagnosticExamLayout({
       submitLabel="Submit Test"
       buttonClassName={ACTIVE_DRILL_FINISH_BUTTON_CLASS}
       onSubmitSection={() => setSubmitModalOpen(true)}
-      onExit={handleSaveAndExit}
+      onExit={requestSaveAndExit}
+      onExitWithoutSaving={requestExitWithoutSaving}
     />
   )
 
@@ -445,11 +475,6 @@ function GuestDiagnosticExamLayout({
     } finally {
       setSubmitting(false)
     }
-  }
-
-  function handleSaveAndExit() {
-    pauseModal.close()
-    navigate("/intent", { replace: true })
   }
 
   const questionPanel = (
@@ -697,7 +722,7 @@ function GuestDiagnosticExamLayout({
         questionNumber={safeIndex}
         questionCount={questions.length}
         finishButton={finishButton}
-        onClose={isPostResultsMode ? (onExitReview ?? (() => navigate(-1))) : handleSaveAndExit}
+        onClose={isPostResultsMode ? (onExitReview ?? (() => navigate(-1))) : requestSaveAndExit}
         passageOnlyView={passageOnlyView}
         onPassageOnlyViewChange={setPassageOnlyView}
       />
@@ -852,7 +877,10 @@ function GuestDiagnosticExamLayout({
         title="Diagnostic"
         message="Your diagnostic is paused"
         onResume={pauseModal.resume}
-        onSaveAndExit={handleSaveAndExit}
+        onSaveAndExit={() => {
+          pauseModal.close()
+          requestSaveAndExit()
+        }}
       />
       {mode === "exam" ? (
         <GuestDiagnosticSubmitModal
@@ -862,6 +890,12 @@ function GuestDiagnosticExamLayout({
           onConfirm={() => void handleConfirmSubmit()}
         />
       ) : null}
+      <GuestDiagnosticExitModal
+        open={exitModalMode != null}
+        mode={exitModalMode ?? "save"}
+        onCancel={() => setExitModalMode(null)}
+        onConfirm={handleConfirmExit}
+      />
     </div>
     </ResponseMaskingProvider>
   )
