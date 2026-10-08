@@ -706,6 +706,10 @@ verify_jwt = false
 [functions.auth-check-email]
 verify_jwt = false
 
+# Database Webhook (auth.users INSERT) → Slack; auth via SIGNUP_WEBHOOK_SECRET header.
+[functions.notify-signup-slack]
+verify_jwt = false
+
 [functions.users-save-onboarding]
 verify_jwt = false
 
