@@ -1,5 +1,4 @@
 import { render, screen } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
 import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
 
@@ -22,13 +21,8 @@ vi.mock("@/lib/supabase/client", () => ({
   getSupabaseBrowserClient: () => ({}),
 }))
 
-async function expandTotalQuestions() {
-  const user = userEvent.setup()
-  await user.click(screen.getByRole("button", { name: "Show All" }))
-}
-
 describe("GuestDiagnosticResultsView Section diagnostic", () => {
-  it("collapses Total Questions to 3 rows, then Show All reveals the rest", async () => {
+  it("shows unlocked rows then locked teasers under the free analytics limit overlay", () => {
     subscription.hasActiveCore = false
     const result = buildDefaultGuestDiagnosticResult("quick")
     render(
@@ -37,16 +31,14 @@ describe("GuestDiagnosticResultsView Section diagnostic", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole("button", { name: "Show All" })).toBeInTheDocument()
-    expect(screen.queryByLabelText(/Full Section Diagnostic question 4/i)).not.toBeInTheDocument()
-    expect(screen.queryByTestId("diagnostic-locked-question-row")).toBeNull()
-
-    await expandTotalQuestions()
-
-    expect(screen.getByRole("button", { name: "Show less" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Show All" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Show less" })).not.toBeInTheDocument()
     expect(screen.getByLabelText(/Full Section Diagnostic question 10/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/Full Section Diagnostic question 6/i)).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Subscribe" })).toBeInTheDocument()
+    expect(screen.getByTestId("guest-free-analytics-limit-cta")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Full Access" })).toBeInTheDocument()
+    expect(screen.getByText("You've reached your free analytics limit!")).toBeInTheDocument()
 
     const lockedRows = screen.getAllByTestId("diagnostic-locked-question-row")
     expect(lockedRows.length).toBeGreaterThan(0)
@@ -59,7 +51,7 @@ describe("GuestDiagnosticResultsView Section diagnostic", () => {
     }
   })
 
-  it("keeps all section rows unlocked for premium students after expand", async () => {
+  it("keeps all section rows unlocked for premium students with no limit overlay", () => {
     subscription.hasActiveCore = true
     const result = buildDefaultGuestDiagnosticResult("quick")
     render(
@@ -68,18 +60,19 @@ describe("GuestDiagnosticResultsView Section diagnostic", () => {
       </MemoryRouter>,
     )
 
-    await expandTotalQuestions()
-
     expect(screen.queryByTestId("diagnostic-locked-question-row")).toBeNull()
     expect(screen.getByLabelText(/Full Section Diagnostic question 11/i)).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Subscribe" })).not.toBeInTheDocument()
     expect(screen.queryByText("Take your first full exam to track progress")).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Unlock my full report" })).not.toBeInTheDocument()
+    expect(screen.queryByTestId("guest-free-analytics-limit-cta")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Show All" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Show less" })).not.toBeInTheDocument()
   })
 })
 
 describe("GuestDiagnosticResultsView Mini teaser", () => {
-  it("shows first 5 Mini rows open and Q6+ as dummy locked teasers after Show All", async () => {
+  it("shows first 5 Mini rows open and Q6+ as dummy locked teasers under the limit overlay", () => {
     subscription.hasActiveCore = false
     const result = buildDefaultGuestDiagnosticResult("mini")
     render(
@@ -88,13 +81,12 @@ describe("GuestDiagnosticResultsView Mini teaser", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole("button", { name: "Show All" })).toBeInTheDocument()
-    expect(screen.queryByLabelText(/Mini Diagnostic question 5/i)).not.toBeInTheDocument()
-
-    await expandTotalQuestions()
-
     expect(screen.getByLabelText(/Mini Diagnostic question 5/i)).toBeInTheDocument()
     expect(screen.getAllByTestId("diagnostic-locked-question-row").length).toBe(5)
+    expect(screen.getByTestId("guest-free-analytics-limit-cta")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Full Access" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Show All" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Show less" })).not.toBeInTheDocument()
 
     const realQ6Type = getDiagnosticQuestionMeta("mini-diag-q6", "mini")?.questionType
     expect(realQ6Type).toBeTruthy()
@@ -105,7 +97,7 @@ describe("GuestDiagnosticResultsView Mini teaser", () => {
 })
 
 describe("GuestDiagnosticResultsView Full teaser", () => {
-  it("shows first 10 Full Diagnostic rows open and later rows as dummy locked teasers after Show All", async () => {
+  it("shows first 10 Full Diagnostic rows open and later rows as dummy locked teasers under the limit overlay", () => {
     subscription.hasActiveCore = false
     const result = buildDefaultGuestDiagnosticResult("full")
     render(
@@ -114,9 +106,9 @@ describe("GuestDiagnosticResultsView Full teaser", () => {
       </MemoryRouter>,
     )
 
-    await expandTotalQuestions()
-
     expect(screen.getByLabelText(/Full Diagnostic question 10/i)).toBeInTheDocument()
     expect(screen.getAllByTestId("diagnostic-locked-question-row").length).toBeGreaterThan(0)
+    expect(screen.getByTestId("guest-free-analytics-limit-cta")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Show less" })).not.toBeInTheDocument()
   })
 })

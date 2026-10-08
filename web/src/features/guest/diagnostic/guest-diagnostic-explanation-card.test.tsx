@@ -40,7 +40,7 @@ describe('GuestDiagnosticExplanationCard', () => {
     expect(screen.getByRole('heading', { name: 'Q1' })).toBeInTheDocument()
     expect(screen.getByText('LR')).toBeInTheDocument()
     expect(screen.getByText('Main Conclusion')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Diagnostic Explanation' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Explanation' })).toBeDisabled()
     expect(screen.getByRole('link', { name: 'Review Tester' })).toHaveAttribute(
       'href',
       '/diagnostic/review?q=1',
@@ -91,7 +91,7 @@ describe('GuestDiagnosticExplanationCard', () => {
     )
   })
 
-  it('links Diagnostic Explanation to the diagnostic explanation detail page', () => {
+  it('links Explanation to the diagnostic explanation detail page', () => {
     render(
       <MemoryRouter>
         <GuestDiagnosticExplanationCard
@@ -105,7 +105,7 @@ describe('GuestDiagnosticExplanationCard', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole('link', { name: 'Diagnostic Explanation' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Explanation' })).toHaveAttribute(
       'href',
       '/app/diagnostic/explanations/q/mini-diag-q1',
     )
