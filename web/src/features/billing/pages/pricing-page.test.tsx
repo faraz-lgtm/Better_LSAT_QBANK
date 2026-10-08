@@ -1,8 +1,14 @@
 import { render, screen } from "@testing-library/react"
-import { MemoryRouter } from "react-router-dom"
+import userEvent from "@testing-library/user-event"
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { PricingPage } from "./pricing-page"
+
+function LocationProbe() {
+  const location = useLocation()
+  return <p>{`${location.pathname}${location.search}`}</p>
+}
 
 const authMock = {
   getSession: vi.fn(),
@@ -25,7 +31,7 @@ const profile = {
   is_first_time_login: false,
 }
 
-function mockPricingCalls(checkoutResult: { data: unknown; error: unknown }) {
+function mockPricingCalls() {
   invokeMock.mockImplementation((functionName: string) => {
     if (functionName === "users") {
       return Promise.resolve({ data: { profile }, error: null })
@@ -52,9 +58,6 @@ function mockPricingCalls(checkoutResult: { data: unknown; error: unknown }) {
         error: null,
       })
     }
-    if (functionName === "billing-create-checkout-session") {
-      return Promise.resolve(checkoutResult)
-    }
     throw new Error(`Unexpected function: ${functionName}`)
   })
 }
@@ -70,7 +73,7 @@ describe("PricingPage selected checkout", () => {
   })
 
   it("does not auto-start checkout from a plan query", async () => {
-    mockPricingCalls({ data: null, error: new Error("checkout unavailable") })
+    mockPricingCalls()
     window.localStorage.setItem(
       "betterlsat:pending-checkout-plan",
       "three_month",
@@ -94,7 +97,7 @@ describe("PricingPage selected checkout", () => {
   })
 
   it("ignores unsupported plan query values", async () => {
-    mockPricingCalls({ data: null, error: new Error("should not run") })
+    mockPricingCalls()
 
     render(
       <MemoryRouter initialEntries={["/app/pricing?plan=twelve_month"]}>
@@ -108,5 +111,51 @@ describe("PricingPage selected checkout", () => {
         ([functionName]) => functionName === "billing-create-checkout-session",
       ),
     ).toBe(false)
+  })
+
+  it("routes paid plan CTAs to the checkout handoff", async () => {
+    const user = userEvent.setup()
+    mockPricingCalls()
+
+    render(
+      <MemoryRouter initialEntries={["/app/pricing"]}>
+        <Routes>
+          <Route path="/app/pricing" element={<PricingPage />} />
+          <Route path="/checkout" element={<p>Checkout handoff view</p>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.click(await screen.findByRole("button", { name: /choose 3 months/i }))
+
+    expect(await screen.findByText(/checkout handoff view/i)).toBeInTheDocument()
+    expect(
+      invokeMock.mock.calls.some(
+        ([functionName]) => functionName === "billing-create-checkout-session",
+      ),
+    ).toBe(false)
+  })
+
+  it("passes includeLawHub=0 when Core-only mode is selected", async () => {
+    const user = userEvent.setup()
+    mockPricingCalls()
+
+    render(
+      <MemoryRouter initialEntries={["/app/pricing"]}>
+        <Routes>
+          <Route path="/app/pricing" element={<PricingPage />} />
+          <Route path="/checkout" element={<LocationProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /i already have lawhub prepplus — pay for core only/i,
+      }),
+    )
+    await user.click(await screen.findByRole("button", { name: /choose monthly/i }))
+
+    expect(await screen.findByText("/checkout?plan=monthly&includeLawHub=0")).toBeInTheDocument()
   })
 })

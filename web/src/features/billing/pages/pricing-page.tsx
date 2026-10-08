@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
@@ -16,13 +16,10 @@ import {
 import { createBillingApi, type BillingCatalog, type CheckoutPlanId } from "@/lib/api/billing"
 import { createUsersApi } from "@/lib/api/users"
 import { logRouteRedirect } from "@/lib/auth/log-route-redirect"
-import { isInDiagnosticAcquisitionFunnel, readDiagnosticFunnelState } from "@/lib/auth/diagnostic-intent"
-import {
-  clearPendingCheckoutPlan,
-} from "@/lib/auth/pending-checkout-plan"
-import { emailAllowsLawHub, profileHasLawHubName } from "@/lib/lawhub-identity"
+import { isInDiagnosticAcquisitionFunnel } from "@/lib/auth/diagnostic-intent"
+import { checkoutPathForPlan } from "@/lib/auth/pending-checkout-plan"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-import { formatEdgeFunctionError, formatSupabaseCallError } from "@/lib/supabase/format-call-error"
+import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
 const pricingLayoutProps = {
   ctaLabel: "Log In" as const,
@@ -54,10 +51,8 @@ function PricingPage() {
 
   const [catalog, setCatalog] = useState<BillingCatalog | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [checkoutPlan, setCheckoutPlan] = useState<CheckoutPlanId | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [existingLsacMode, setExistingLsacMode] = useState(false)
-  const checkoutLockRef = useRef(false)
 
   const billingApi = useMemo(() => {
     try {
@@ -138,57 +133,16 @@ function PricingPage() {
     }
   }, [billingApi, navigate, usersApi])
 
-  const startCheckout = useCallback(async (plan: CheckoutPlanId) => {
-    if (!billingApi) {
-      setError("Billing is not available.")
-      return
-    }
-    if (checkoutLockRef.current) return
-    checkoutLockRef.current = true
-    setCheckoutPlan(plan)
-    setError(null)
-    try {
-      if (usersApi) {
-        const profile = await usersApi.getMyProfile()
-        if (!emailAllowsLawHub(profile?.email)) {
-          setError(
-            'Your email uses a "+" tag, which LSAC does not allow. Update your account email before checkout.',
-          )
-          setCheckoutPlan(null)
-          checkoutLockRef.current = false
-          return
-        }
-        if (!profileHasLawHubName(profile)) {
-          logRouteRedirect("/app/pricing", "/onboarding", "missing LawHub first/last name before checkout")
-          navigate("/onboarding", { replace: true })
-          return
-        }
-      }
-      const funnel = readDiagnosticFunnelState()
-      const successPath = funnel.completedDiagnostic
-        ? '/app/diagnostic/results?checkout=success'
-        : undefined
-      const url = await billingApi.createCheckoutSession(plan, {
-        includeLawHub: !existingLsacMode,
-        successPath,
-      })
-      clearPendingCheckoutPlan()
-      window.location.assign(url)
-    } catch (checkoutError) {
-      const message =
-        checkoutError instanceof Error
-          ? formatEdgeFunctionError(checkoutError)
-          : "Unable to start checkout."
-      if (message.includes("First and last name") || message.includes("LAWHUB_NAME")) {
-        logRouteRedirect("/app/pricing", "/onboarding", "server rejected checkout: name required")
-        navigate("/onboarding", { replace: true })
-        return
-      }
-      setError(message.includes("not configured") ? "Billing is not configured on the server." : message)
-      setCheckoutPlan(null)
-      checkoutLockRef.current = false
-    }
-  }, [billingApi, existingLsacMode, navigate, usersApi])
+  const startCheckout = useCallback(
+    (plan: CheckoutPlanId) => {
+      navigate(
+        checkoutPathForPlan(plan, {
+          includeLawHub: !existingLsacMode,
+        }),
+      )
+    },
+    [existingLsacMode, navigate],
+  )
 
   if (isLoading) {
     return (
@@ -217,25 +171,25 @@ function PricingPage() {
         )}
         {error && <p className="pricing-page__error">{error}</p>}
 
-        <div className="pricing-page__grid">
+        <div className="pricing-page__stack">
           <PricingPlanCard
             plan={{ ...FREE_PRICING_PLAN, ctaLabel: "Continue Free" }}
+            layout="current"
             ctaVariant="orange"
-            disabled={checkoutPlan !== null}
             onSelect={() => navigate("/app")}
           />
-          {paidPlans.map((plan) => (
-            <PricingPlanCard
-              key={plan.id}
-              plan={plan}
-              includeLawHub={!existingLsacMode}
-              highlighted={plan.featured}
-              ctaVariant={plan.id === "monthly" ? "orange" : "navy"}
-              isLoading={checkoutPlan === plan.id}
-              disabled={checkoutPlan !== null}
-              onSelect={() => void startCheckout(plan.id)}
-            />
-          ))}
+          <div className="pricing-page__plans">
+            {paidPlans.map((plan) => (
+              <PricingPlanCard
+                key={plan.id}
+                plan={plan}
+                includeLawHub={!existingLsacMode}
+                highlighted={plan.featured}
+                ctaVariant={plan.id === "monthly" ? "orange" : "navy"}
+                onSelect={() => startCheckout(plan.id)}
+              />
+            ))}
+          </div>
         </div>
 
         <p className="pricing-page__footnote">

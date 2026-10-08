@@ -73,7 +73,7 @@ function GuestPricingModal({
       onClick={() => onOpenChange(false)}
     >
       <div
-        className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-[1180px] flex-col overflow-hidden rounded-[20px] border border-[#dfe1e7] bg-[var(--primary-0)] p-6 shadow-[0px_24px_48px_rgba(13,13,18,0.16)] sm:p-8"
+        className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-[1280px] flex-col overflow-hidden rounded-[20px] border border-[#dfe1e7] bg-[var(--primary-0)] p-6 shadow-[0px_24px_48px_rgba(13,13,18,0.16)] sm:p-8"
         onClick={(event) => event.stopPropagation()}
       >
         <button
@@ -100,9 +100,10 @@ function GuestPricingModal({
 
             {error ? <p className="pricing-page__error">{error}</p> : null}
 
-            <div className="pricing-page__grid">
+            <div className="pricing-page__stack">
               <PricingPlanCard
                 plan={{ ...FREE_PRICING_PLAN, ctaLabel: freeCtaLabel }}
+                layout="current"
                 ctaVariant="orange"
                 disabled={checkoutPlan !== null}
                 onSelect={() => {
@@ -110,18 +111,20 @@ function GuestPricingModal({
                   onContinueFree?.()
                 }}
               />
-              {PAID_PRICING_PLANS.map((plan) => (
-                <PricingPlanCard
-                  key={plan.id}
-                  plan={plan}
-                  includeLawHub={includeLawHub}
-                  highlighted={plan.featured}
-                  ctaVariant={plan.id === "monthly" ? "orange" : "navy"}
-                  isLoading={checkoutPlan === plan.id}
-                  disabled={checkoutPlan !== null}
-                  onSelect={() => void handleSelectPlan(plan.id)}
-                />
-              ))}
+              <div className="pricing-page__plans">
+                {PAID_PRICING_PLANS.map((plan) => (
+                  <PricingPlanCard
+                    key={plan.id}
+                    plan={plan}
+                    includeLawHub={includeLawHub}
+                    highlighted={plan.featured}
+                    ctaVariant={plan.id === "monthly" ? "orange" : "navy"}
+                    isLoading={checkoutPlan === plan.id}
+                    disabled={checkoutPlan !== null}
+                    onSelect={() => void handleSelectPlan(plan.id)}
+                  />
+                ))}
+              </div>
             </div>
 
             <p className="pricing-page__footnote mt-4">

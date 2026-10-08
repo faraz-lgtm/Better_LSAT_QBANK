@@ -123,7 +123,7 @@ const COMPARISON_ROWS = [
   { feature: '6,000+ explained questions', better: true, other: 'Some' },
   { feature: 'Monthly pricing (no lock-in)', better: true, other: false },
   { feature: 'Personalized analytics dashboard', better: true, other: 'Limited' },
-  { feature: 'Price', better: 'From $59/mo', other: '$99–$299/mo' },
+  { feature: 'Price', better: 'From $52/mo', other: '$99–$299/mo' },
 ];
 
 function MarketingHomePage() {

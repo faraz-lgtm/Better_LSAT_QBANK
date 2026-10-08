@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest"
 
 import {
+  checkoutPathForPlan,
   clearPendingCheckoutPlan,
   parseSignupPlan,
   readPendingCheckoutPlan,
@@ -68,6 +69,13 @@ describe("pending checkout plan", () => {
   it("builds canonical signup URLs", () => {
     expect(signupPathForPlan("three_month")).toBe(
       "/signup?plan=three_month",
+    )
+  })
+
+  it("builds checkout handoff URLs with optional LawHub flag", () => {
+    expect(checkoutPathForPlan("three_month")).toBe("/checkout?plan=three_month")
+    expect(checkoutPathForPlan("monthly", { includeLawHub: false })).toBe(
+      "/checkout?plan=monthly&includeLawHub=0",
     )
   })
 })

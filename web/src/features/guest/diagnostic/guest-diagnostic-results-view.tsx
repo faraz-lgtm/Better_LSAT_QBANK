@@ -1079,7 +1079,7 @@ function DiagnosticUpgradeCTA({
           onClick={onSubscribe}
           className="h-10 rounded-[10px] bg-white px-5 text-sm font-semibold text-[var(--primary)] transition-opacity hover:opacity-90"
         >
-          See plans from $59/mo
+          See plans from $52/mo
         </button>
         <p className="text-sm font-semibold text-[#c9d9f5]">
           Cancel anytime · your report stays saved either way
@@ -1490,7 +1490,7 @@ function BottomReportBar({
           onClick={onSubscribe}
           className="h-10 shrink-0 rounded-[10px] bg-[var(--primary)] px-5 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-600)]"
         >
-          Unlock full report · from $59/mo
+          Unlock full report · from $52/mo
         </button>
       </div>
     </div>
