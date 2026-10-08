@@ -6,6 +6,7 @@ import { AuthCard } from "@/features/auth/components/auth-card"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createBillingApi, type CheckoutPlanId } from "@/lib/api/billing"
 import { createUsersApi } from "@/lib/api/users"
+import { readDiagnosticFunnelState } from "@/lib/auth/diagnostic-intent"
 import {
   clearPendingCheckoutPlan,
   parseSignupPlan,
@@ -23,6 +24,7 @@ function CheckoutPage() {
   const parsedPlan = parseSignupPlan(searchParams.get("plan"))
   const plan: CheckoutPlanId | null =
     parsedPlan && parsedPlan !== "free" ? parsedPlan : null
+  const includeLawHub = searchParams.get("includeLawHub") !== "0"
   const checkoutCanceled = searchParams.get("checkout") === "cancel"
   const [isLoading, setIsLoading] = useState(!checkoutCanceled)
   const [error, setError] = useState<string | null>(
@@ -63,9 +65,13 @@ function CheckoutPage() {
         navigate(`/checkout/details?plan=${plan}`, { replace: true })
         return
       }
+      const funnel = readDiagnosticFunnelState()
+      const successPath = funnel.completedDiagnostic
+        ? "/app/diagnostic/results?checkout=success"
+        : "/onboarding?checkout=success"
       const url = await apis.billing.createCheckoutSession(plan, {
-        includeLawHub: true,
-        successPath: "/onboarding?checkout=success",
+        includeLawHub,
+        successPath,
       })
       clearPendingCheckoutPlan()
       window.location.assign(url)
@@ -86,7 +92,7 @@ function CheckoutPage() {
       checkoutLockRef.current = false
       setIsLoading(false)
     }
-  }, [apis, navigate, plan])
+  }, [apis, includeLawHub, navigate, plan])
 
   useEffect(() => {
     if (checkoutCanceled || !plan) {

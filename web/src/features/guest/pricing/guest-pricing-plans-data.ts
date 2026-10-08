@@ -77,8 +77,6 @@ const PAID_PRICING_PLANS: PaidPricingPlan[] = [
     priceUsd: 192,
     equivalentMonthlyUsd: 64,
     discountLabel: "7% Ongoing Discount",
-    badge: "Most Popular",
-    featured: true,
     features: [
       "Everything in Full Access",
       "Built for a focused prep block",
@@ -97,6 +95,8 @@ const PAID_PRICING_PLANS: PaidPricingPlan[] = [
     priceUsd: 354,
     equivalentMonthlyUsd: 59,
     discountLabel: "15% Ongoing Discount",
+    badge: "Most Popular",
+    featured: true,
     features: [
       "Everything in Full Access",
       "Built for a longer prep timeline",

@@ -59,3 +59,15 @@ export function resolvePendingCheckoutDestination(destination: string): string {
 export function signupPathForPlan(plan: SignupPlanId): string {
   return `/signup?plan=${plan}`
 }
+
+/** Authenticated checkout handoff URL for a paid plan selected on pricing. */
+export function checkoutPathForPlan(
+  plan: CheckoutPlanId,
+  options?: { includeLawHub?: boolean },
+): string {
+  const params = new URLSearchParams({ plan })
+  if (options?.includeLawHub === false) {
+    params.set("includeLawHub", "0")
+  }
+  return `/checkout?${params.toString()}`
+}

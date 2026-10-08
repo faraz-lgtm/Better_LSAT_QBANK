@@ -176,6 +176,9 @@
   --explanation-prep-test-card-radius: 20px;
   --explanation-badge-radius: 14px 14px 14px 14px;
 
+  /* Brand orange (pricing CTAs, feature checks, accents) */
+  --orange: #ff6f00;
+
   /* Blind Review (Figma secondary-orange / warning CTA) */
   --blind-review-accent: #ff6f00;
   --blind-review-badge-bg: #fff3ea;
@@ -1041,7 +1044,7 @@ html.student-shell-active #root {
 }
 
 .auth-content-shell--wide {
-  max-width: min(56rem, 100%);
+  max-width: min(80rem, 100%);
 }
 
 .auth-split-main--lsac-link {
@@ -1314,6 +1317,33 @@ html.student-shell-active #root {
   color: var(--primary-60);
 }
 
+.pricing-page__stack {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.85rem, 1.5vw, 1.15rem);
+  padding-top: 0.85rem;
+}
+
+.pricing-page__plans {
+  display: grid;
+  gap: clamp(0.85rem, 1.5vw, 1.15rem);
+  grid-template-columns: 1fr;
+  align-items: stretch;
+}
+
+@media (min-width: 768px) {
+  .pricing-page__plans {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .pricing-page__plans {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Legacy alias — prefer pricing-page__stack + pricing-page__plans */
 .pricing-page__grid {
   display: grid;
   gap: clamp(0.85rem, 1.5vw, 1.15rem);
@@ -1352,6 +1382,65 @@ html.student-shell-active #root {
   box-shadow:
     0 0 0 1px #0d47a1,
     0 12px 28px rgb(13 71 161 / 10%);
+}
+
+.pricing-card--current {
+  border-color: #ff6f00;
+  background: linear-gradient(180deg, #fff8f3 0%, #ffffff 55%);
+  box-shadow:
+    0 0 0 1px rgb(255 111 0 / 35%),
+    0 10px 24px rgb(255 111 0 / 8%);
+}
+
+.pricing-card--current .pricing-card__badge {
+  background: #ff6f00;
+}
+
+.pricing-card__current-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.pricing-card__current-main {
+  min-width: 0;
+}
+
+.pricing-card__current-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: auto;
+}
+
+@media (min-width: 768px) {
+  .pricing-card--current .pricing-card__current-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) minmax(12rem, 0.9fr);
+    align-items: center;
+    gap: 1.25rem 1.5rem;
+  }
+
+  .pricing-card--current .pricing-card__features {
+    margin-top: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem 0.85rem;
+  }
+
+  .pricing-card--current .pricing-card__current-cta {
+    margin-top: 0;
+  }
+
+  .pricing-card--current .pricing-card__cta {
+    margin-top: 0;
+  }
+
+  .pricing-card--current .pricing-card__note {
+    text-align: left;
+  }
 }
 
 .pricing-card__badge {
@@ -1454,10 +1543,18 @@ html.student-shell-active #root {
 }
 
 .pricing-card__cta {
+  display: inline-flex;
   margin-top: 1.15rem;
   width: 100%;
+  align-items: center;
+  justify-content: center;
+  border: 0;
   border-radius: 12px;
+  padding: 0.75rem 1rem;
   font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
 }
 
 .pricing-card__note {
@@ -1470,7 +1567,7 @@ html.student-shell-active #root {
   color: #fff;
 }
 
-.pricing-card__cta--orange:hover {
+.pricing-card__cta--orange:hover:not(:disabled) {
   background: color-mix(in srgb, var(--orange) 90%, #000);
 }
 
@@ -1479,8 +1576,13 @@ html.student-shell-active #root {
   color: #fff;
 }
 
-.pricing-card__cta--navy:hover {
+.pricing-card__cta--navy:hover:not(:disabled) {
   background: color-mix(in srgb, #0d47a1 90%, #000);
+}
+
+.pricing-card__cta:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .pricing-page__footnote {
