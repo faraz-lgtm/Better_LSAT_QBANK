@@ -498,6 +498,89 @@ export function createExplanationsRepository(client: SupabaseClient) {
       return answer || null
     },
 
+    /**
+     * Per-session attempt history for Insights Question History.
+     * Latest answer event per practice session (newest sessions first).
+     */
+    async listUserQuestionAttemptHistory(
+      userId: string,
+      questionId: string,
+    ): Promise<UserQuestionAttemptHistoryRow[]> {
+      const { data, error } = await client
+        .from('answer_events')
+        .select(
+          `practice_session_id, selected_answer, time_spent_seconds, created_at, session_kind,
+           practice_sessions!inner(
+             kind, completed_at, started_at,
+             admin_prep_tests(title, module_id),
+             admin_sections(title, section_type, section_number)
+           )`,
+        )
+        .eq('user_id', userId)
+        .eq('question_id', questionId)
+        .order('created_at', { ascending: false })
+        .limit(100)
+      if (error) throw error
+
+      type SessionJoin = {
+        kind: string
+        completed_at: string | null
+        started_at: string
+        admin_prep_tests:
+          | { title: string | null; module_id: string | null }
+          | { title: string | null; module_id: string | null }[]
+          | null
+        admin_sections:
+          | { title: string | null; section_type: string | null; section_number: number | null }
+          | { title: string | null; section_type: string | null; section_number: number | null }[]
+          | null
+      }
+
+      type Row = {
+        practice_session_id: string
+        selected_answer: string
+        time_spent_seconds: number | null
+        created_at: string
+        session_kind: string
+        practice_sessions: SessionJoin | SessionJoin[]
+      }
+
+      const latestBySession = new Map<string, UserQuestionAttemptHistoryRow>()
+      for (const row of (data ?? []) as Row[]) {
+        if (latestBySession.has(row.practice_session_id)) continue
+        const session = Array.isArray(row.practice_sessions)
+          ? row.practice_sessions[0]
+          : row.practice_sessions
+        if (!session) continue
+        const pt = Array.isArray(session.admin_prep_tests)
+          ? session.admin_prep_tests[0]
+          : session.admin_prep_tests
+        const sec = Array.isArray(session.admin_sections)
+          ? session.admin_sections[0]
+          : session.admin_sections
+        latestBySession.set(row.practice_session_id, {
+          practiceSessionId: row.practice_session_id,
+          kind: (session.kind || row.session_kind || 'DRILL') as UserQuestionAttemptHistoryRow['kind'],
+          completedAt: session.completed_at,
+          attemptedAt: session.completed_at ?? session.started_at ?? row.created_at,
+          timeSpentSeconds:
+            typeof row.time_spent_seconds === 'number' && Number.isFinite(row.time_spent_seconds)
+              ? Math.max(0, Math.round(row.time_spent_seconds))
+              : null,
+          selectedAnswer: row.selected_answer?.trim() || null,
+          prepTestTitle: pt?.title?.trim() || null,
+          prepTestModuleId: pt?.module_id?.trim() || null,
+          sectionTitle: sec?.title?.trim() || null,
+          sectionType: sec?.section_type?.trim() || null,
+          sectionNumber: typeof sec?.section_number === 'number' ? sec.section_number : null,
+        })
+      }
+
+      return [...latestBySession.values()].sort(
+        (a, b) => new Date(b.attemptedAt).getTime() - new Date(a.attemptedAt).getTime(),
+      )
+    },
+
     /** Latest published RC passage analysis (paragraph explanations + overall). */
     async getPublishedPassageAnalysis(passageId: string): Promise<PublishedPassageAnalysis | null> {
       const id = passageId.trim()
@@ -546,6 +629,20 @@ export function createExplanationsRepository(client: SupabaseClient) {
       return { analysisId, overallHtml, paragraphs }
     },
   }
+}
+
+export type UserQuestionAttemptHistoryRow = {
+  practiceSessionId: string
+  kind: 'PREPTEST' | 'SECTION' | 'DRILL'
+  completedAt: string | null
+  attemptedAt: string
+  timeSpentSeconds: number | null
+  selectedAnswer: string | null
+  prepTestTitle: string | null
+  prepTestModuleId: string | null
+  sectionTitle: string | null
+  sectionType: string | null
+  sectionNumber: number | null
 }
 
 export type ExplanationsRepository = ReturnType<typeof createExplanationsRepository>

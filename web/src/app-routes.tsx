@@ -21,6 +21,8 @@ import { AnalyticsPrepTestResultsPage } from "@/features/student/pages/analytics
 import { AnalyticsPrepTestsPage } from "@/features/student/pages/analytics-preptests-page"
 import { AnalyticsQuestionTypeReviewPage } from "@/features/student/pages/analytics-question-type-review-page"
 import { AnalyticsSectionsPage } from "@/features/student/pages/analytics-sections-page"
+import { DiagnosticExplanationQuestionDetailPage } from "@/features/student/pages/diagnostic-explanation-question-detail-page"
+import { DiagnosticExplanationsPage } from "@/features/student/pages/diagnostic-explanations-page"
 import { ExplanationQuestionDetailPage } from "@/features/student/pages/explanation-question-detail-page"
 import { ExplanationsPage } from "@/features/student/pages/explanations-page"
 import { DrillSessionPage } from "@/features/student/pages/drill-session-page"
@@ -56,6 +58,11 @@ function AppRoutes() {
       <Route path="/practice/rc-nav/preview" element={<RcQuestionNavPreviewPage />} />
       <Route path="/app" element={<StudentAppShell />}>
         <Route index element={<DashboardPage />} />
+        <Route path="diagnostic/explanations" element={<DiagnosticExplanationsPage />} />
+        <Route
+          path="diagnostic/explanations/q/:questionId"
+          element={<DiagnosticExplanationQuestionDetailPage />}
+        />
         <Route path="learn/explanations" element={<ExplanationsPage />} />
         <Route path="learn/explanations/q/:questionId" element={<ExplanationQuestionDetailPage />} />
         <Route path="prep-course" element={<PrepCourseListPage />} />

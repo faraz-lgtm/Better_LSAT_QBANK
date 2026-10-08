@@ -7,6 +7,7 @@ import {
   DiagnosticOutcomeIcon,
   diagnosticOutcomeKind,
 } from '@/features/guest/diagnostic/diagnostic-outcome-icon'
+import { diagnosticExplanationQuestionDetailHref } from '@/features/student/diagnostic/diagnostic-explanations-routes'
 import type { GuestDiagnosticResult } from '@/features/guest/diagnostic/guest-diagnostic-result-storage'
 import {
   buildDiagnosticResultExplanation,
@@ -32,6 +33,12 @@ type GuestDiagnosticResultsViewProps = {
   result: GuestDiagnosticResult
   reviewInTesterHref?: string
   refreshSubscription?: () => void
+}
+
+/** Deep-link Review Tester to a 1-based question index. */
+function reviewTesterHrefForQuestion(baseHref: string, questionNumber: number): string {
+  const sep = baseHref.includes('?') ? '&' : '?'
+  return `${baseHref}${sep}q=${questionNumber}`
 }
 
 type QuestionSortMode = 'number' | 'correct' | 'incorrect'
@@ -1252,6 +1259,7 @@ function WrongQuestionsReviewSection({
               intentId={result.intentId}
               explanation={null}
               outcome={outcome}
+              reviewInTesterHref={reviewInTesterHref}
               onSubscribe={onSubscribe}
               hideSensitiveMeta
             />
@@ -1291,6 +1299,7 @@ function WrongQuestionsReviewSection({
             intentId={result.intentId}
             explanation={explanation}
             outcome={outcome}
+            reviewInTesterHref={reviewInTesterHref}
             onSubscribe={onSubscribe}
           />
         )
@@ -1347,6 +1356,7 @@ function CompactReviewRow({
   intentId,
   explanation,
   outcome,
+  reviewInTesterHref,
   onSubscribe,
   hideSensitiveMeta = false,
 }: {
@@ -1357,6 +1367,7 @@ function CompactReviewRow({
   intentId: GuestDiagnosticIntentId
   explanation: MiniDiagnosticExplanation | null
   outcome: GuestDiagnosticResult['outcomes'][number]
+  reviewInTesterHref: string
   onSubscribe: () => void
   /** When true, skip real timing / answer tooltips (locked teaser). */
   hideSensitiveMeta?: boolean
@@ -1424,6 +1435,8 @@ function CompactReviewRow({
             selectedAnswer={outcome.selectedAnswer}
             targetTimeSeconds={meta?.targetTimeSeconds}
             yourTimeSeconds={outcome.timeSpentSeconds}
+            diagnosticExplanationHref={diagnosticExplanationQuestionDetailHref(outcome.questionId)}
+            reviewTesterHref={reviewTesterHrefForQuestion(reviewInTesterHref, questionNumber)}
             className="rounded-none border-0"
           />
         </div>
@@ -1706,6 +1719,8 @@ function GuestDiagnosticResultsView({
                 selectedAnswer={outcome.selectedAnswer}
                 targetTimeSeconds={meta?.targetTimeSeconds}
                 yourTimeSeconds={outcome.timeSpentSeconds}
+                diagnosticExplanationHref={diagnosticExplanationQuestionDetailHref(outcome.questionId)}
+                reviewTesterHref={reviewTesterHrefForQuestion(reviewInTesterHref, questionNumber)}
               />
             )
           })}

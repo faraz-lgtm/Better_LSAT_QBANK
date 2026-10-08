@@ -15,6 +15,7 @@ import type {
   PrepTestTreeQuestionRow,
   PrepTestTreeSectionRow,
   QuestionDetailRow,
+  UserQuestionAttemptHistoryRow,
 } from './explanations.repository.ts'
 
 export type ExplanationPrepTestListItem = {
@@ -106,7 +107,18 @@ export type ExplanationDetailPayload = {
   answerPopularityTotal: number
   /** Current user's latest submitted answer letter (A–E), or null if never answered. */
   userSelectedLetter: string | null
+  /** Latest attempt dwell seconds when tracked. */
+  yourTimeSeconds: number | null
+  /** Insights Question History — newest first. */
+  history: ExplanationHistoryRow[]
   difficulty: 1 | 2 | 3 | 4 | 5
+}
+
+export type ExplanationHistoryRow = {
+  source: string
+  dateLabel: string
+  status: 'in_process' | 'answered'
+  timeRange: string
 }
 
 export type ExplanationAnswerPopularityRow = {
@@ -764,6 +776,50 @@ export type ListPrepTestsResult = {
   statusCounts: ExplanationStatusCounts
 }
 
+export function formatExplanationHistoryDateLabel(isoDate: string): string {
+  const date = new Date(isoDate)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+export function formatExplanationHistoryTimeRange(seconds: number | null): string {
+  if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds < 0) return '—'
+  const safe = Math.round(seconds)
+  const m = Math.floor(safe / 60)
+  const s = safe % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+export function explanationHistorySourceLabel(row: UserQuestionAttemptHistoryRow): string {
+  if (row.kind === 'PREPTEST') {
+    const fromTitle = row.prepTestTitle?.trim()
+    if (fromTitle) return fromTitle
+    const n = row.prepTestModuleId ? prepTestNumberFromModuleId(row.prepTestModuleId) : null
+    return n ? `PrepTest ${n}` : 'PrepTest'
+  }
+  if (row.kind === 'SECTION') {
+    const fromTitle = row.sectionTitle?.trim()
+    if (fromTitle) return fromTitle
+    if (row.sectionType && row.sectionNumber != null) {
+      return `${row.sectionType} Section ${row.sectionNumber}`
+    }
+    return 'Section Practice'
+  }
+  if (row.sectionType === 'LR' || row.sectionType === 'RC') return `${row.sectionType} Drill`
+  return 'Drill'
+}
+
+export function mapUserQuestionAttemptHistory(
+  rows: readonly UserQuestionAttemptHistoryRow[],
+): ExplanationHistoryRow[] {
+  return rows.map((row) => ({
+    source: explanationHistorySourceLabel(row),
+    dateLabel: formatExplanationHistoryDateLabel(row.attemptedAt),
+    status: row.completedAt ? 'answered' : 'in_process',
+    timeRange: formatExplanationHistoryTimeRange(row.timeSpentSeconds),
+  }))
+}
+
 export function applyQuestionBookmarks(
   tree: ExplanationPrepTestNode,
   bookmarkedIds: ReadonlySet<string>,
@@ -917,9 +973,10 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
       const choices = parseQuestionChoices(row.choices, { includeOptionExplanations: true })
       const correctChoiceId = correctChoiceIdFromAnswer(row.correct_answer, choices)
       const letters = popularityLettersFromChoices(choices)
-      const [selections, rawUserSelection] = await Promise.all([
+      const [selections, rawUserSelection, attemptHistory] = await Promise.all([
         deps.repository.listLatestAnswerSelectionsForQuestion(questionId),
         deps.repository.getLatestUserAnswerSelection(userId, questionId),
+        deps.repository.listUserQuestionAttemptHistory(userId, questionId),
       ])
       const mappedSelections: string[] = []
       for (const raw of selections) {
@@ -931,6 +988,8 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
       const userSelectedLetter = rawUserSelection
         ? mapStoredAnswerToLetter(rawUserSelection, choices, letters)
         : null
+      const history = mapUserQuestionAttemptHistory(attemptHistory)
+      const yourTimeSeconds = attemptHistory[0]?.timeSpentSeconds ?? null
       const passage = resolvePassageForQuestion(row, sec)
       const topicName = qt?.name?.trim() || '—'
       const publishedAnalysis =
@@ -973,6 +1032,8 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
         answerPopularity,
         answerPopularityTotal,
         userSelectedLetter,
+        yourTimeSeconds,
+        history,
         difficulty: clampDifficulty(row.difficulty),
       }
     },

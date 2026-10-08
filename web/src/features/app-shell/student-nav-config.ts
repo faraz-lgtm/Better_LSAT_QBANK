@@ -3,6 +3,10 @@ import {
   DIAGNOSTIC_RESULTS_FULL_HREF,
   DIAGNOSTIC_RESULTS_MINI_HREF,
 } from "@/features/student/diagnostic/diagnostic-results-routes"
+import {
+  DIAGNOSTIC_EXPLANATIONS_HREF,
+  isDiagnosticExplanationsPath,
+} from "@/features/student/diagnostic/diagnostic-explanations-routes"
 
 export type StudentNavSectionKey = "academy" | "prep" | "insights"
 
@@ -67,6 +71,11 @@ export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
     items: [
       { label: "Prep Courses", href: "/app/prep-course", icon: "prep-course" },
       { label: "Explanations", href: "/app/learn/explanations", icon: "explanations" },
+      {
+        label: "Diagnostic Explanation",
+        href: DIAGNOSTIC_EXPLANATIONS_HREF,
+        icon: "explanations",
+      },
     ],
   },
   {
@@ -97,7 +106,13 @@ export function isDashboardActive(pathname: string): boolean {
 }
 
 export function getActiveSectionKey(pathname: string): StudentNavSectionKey | null {
-  if (pathname.startsWith("/app/prep-course") || pathname.startsWith("/app/learn")) return "academy"
+  if (
+    pathname.startsWith("/app/prep-course") ||
+    pathname.startsWith("/app/learn") ||
+    isDiagnosticExplanationsPath(pathname)
+  ) {
+    return "academy"
+  }
   if (pathname.startsWith("/app/practice") || isPrepTestStudentPath(pathname)) return "prep"
   if (pathname.startsWith("/app/analytics")) return "insights"
   return null
@@ -161,6 +176,7 @@ export function getStudentPageTitle(pathname: string, search = ""): string | nul
   if (isPrepTestHubDetailPath(pathname)) return null
   if (pathname.startsWith("/app/prep-course/") && pathname !== "/app/prep-course") return null
   if (pathname.startsWith("/app/prep-course")) return "Prep Courses"
+  if (isDiagnosticExplanationsPath(pathname)) return "Diagnostic Explanation"
   if (pathname.startsWith("/app/learn")) return "Explanations"
   if (pathname.startsWith("/app/analytics/preptests/results/")) return null
   if (pathname === "/app/practice/drills/lr/new" || pathname === "/app/practice/drills/rc/new") return null

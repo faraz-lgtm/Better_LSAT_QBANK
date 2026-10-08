@@ -18,6 +18,8 @@ type ExplanationDetailTabBarProps = {
   prevHref: string | null
   nextHref: string | null
   showExplanationTab?: boolean
+  /** Override jump-menu paths (default: Academy Explanations detail). */
+  questionHrefBuilder?: (questionId: string) => string
 }
 
 const TABS: { id: ExplanationDetailTabId; label: string }[] = [
@@ -42,9 +44,17 @@ function navArrowClass(enabled: boolean): string {
   )
 }
 
-function questionHref(questionId: string, tab: ExplanationDetailTabId): string {
+function defaultQuestionHref(questionId: string): string {
+  return `/app/learn/explanations/q/${encodeURIComponent(questionId)}`
+}
+
+function questionHref(
+  questionId: string,
+  tab: ExplanationDetailTabId,
+  hrefBuilder: (id: string) => string = defaultQuestionHref,
+): string {
   const q = tab === "question" ? "" : `?tab=${tab}`
-  return `/app/learn/explanations/q/${encodeURIComponent(questionId)}${q}`
+  return `${hrefBuilder(questionId)}${q}`
 }
 
 function ExplanationQuestionJumpMenu({
@@ -54,6 +64,7 @@ function ExplanationQuestionJumpMenu({
   tab,
   prevControl,
   nextControl,
+  questionHrefBuilder,
 }: {
   questionId: string
   questionNumber: number
@@ -61,6 +72,7 @@ function ExplanationQuestionJumpMenu({
   tab: ExplanationDetailTabId
   prevControl: ReactNode
   nextControl: ReactNode
+  questionHrefBuilder?: (questionId: string) => string
 }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -110,7 +122,7 @@ function ExplanationQuestionJumpMenu({
       return
     }
     setOpen(false)
-    void navigate(questionHref(id, tab))
+    void navigate(questionHref(id, tab, questionHrefBuilder))
   }
 
   return (
@@ -211,6 +223,7 @@ function ExplanationDetailTabBar({
   prevHref,
   nextHref,
   showExplanationTab = true,
+  questionHrefBuilder,
 }: ExplanationDetailTabBarProps) {
   const visibleTabs = TABS.filter((t) => t.id !== "explanation" || showExplanationTab)
 
@@ -251,6 +264,7 @@ function ExplanationDetailTabBar({
           tab={tab}
           prevControl={prevControl}
           nextControl={nextControl}
+          questionHrefBuilder={questionHrefBuilder}
         />
       </div>
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react"
-import { Navigate, useNavigate } from "react-router-dom"
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom"
 
 import {
   GuestDiagnosticExamLayout,
@@ -39,9 +39,18 @@ function answersFromResultOutcomes(
   return answers
 }
 
+function parseReviewQuestionIndex(raw: string | null): number {
+  if (!raw) return 1
+  const parsed = Number.parseInt(raw, 10)
+  if (!Number.isFinite(parsed) || parsed < 1) return 1
+  return parsed
+}
+
 function GuestDiagnosticReviewPage({ mode, preview = false }: GuestDiagnosticReviewPageProps) {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { hasActiveCore } = useDiagnosticSubscription()
+  const initialQuestionIndex = parseReviewQuestionIndex(searchParams.get("q"))
 
   const result = useMemo(() => {
     const stored = readGuestDiagnosticResult()
@@ -81,6 +90,7 @@ function GuestDiagnosticReviewPage({ mode, preview = false }: GuestDiagnosticRev
         mode={mode}
         interactive={false}
         initialAnswers={initialAnswers}
+        initialQuestionIndex={initialQuestionIndex}
         hasActiveCore={explanationsUnlocked}
         onExitReview={() => navigate(resultsReturnHref)}
       />

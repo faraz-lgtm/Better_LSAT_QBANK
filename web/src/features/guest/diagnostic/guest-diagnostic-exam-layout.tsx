@@ -104,6 +104,8 @@ type GuestDiagnosticExamLayoutProps = {
   /** exam = timed attempt; review = locked answers + explanations; tester = re-answer with reveal */
   mode?: GuestDiagnosticExamMode
   initialAnswers?: Record<string, GuestDiagnosticAnswerState>
+  /** 1-based question to open first (review/tester deep links). */
+  initialQuestionIndex?: number
   /** Premium unlocks all explanations on review/tester; free uses teaser limits. */
   hasActiveCore?: boolean
   onSubmitted?: (
@@ -211,6 +213,7 @@ function GuestDiagnosticExamLayout({
   className,
   mode = "exam",
   initialAnswers,
+  initialQuestionIndex = 1,
   hasActiveCore = false,
   onSubmitted,
   onExitReview,
@@ -230,7 +233,7 @@ function GuestDiagnosticExamLayout({
   const canNavigate = interactive || isPostResultsMode
   const canSelectAnswers = (interactive && mode === "exam") || isTesterMode
 
-  const [qIndex, setQIndex] = useState(1)
+  const [qIndex, setQIndex] = useState(() => Math.max(1, Math.floor(initialQuestionIndex)))
   const [findQuery, setFindQuery] = useState("")
   const [reviewPanelOpen, setReviewPanelOpen] = useState(false)
   const [passageOnlyView, setPassageOnlyView] = useState(false)
@@ -259,8 +262,8 @@ function GuestDiagnosticExamLayout({
     () => createDiagnosticQuestions(config.intentId),
     [config.intentId],
   )
-  const current = questions[qIndex - 1] ?? questions[0]
-  const safeIndex = Math.min(Math.max(qIndex, 1), questions.length)
+  const safeIndex = Math.min(Math.max(qIndex, 1), Math.max(questions.length, 1))
+  const current = questions[safeIndex - 1] ?? questions[0]
   const timerBudgetSeconds = config.timeMinutes * 60
 
   const { countdown, paused, pauseTimer, resumeTimer, setInitialCountdown } = usePracticeSessionTimer({

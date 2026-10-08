@@ -41,7 +41,7 @@ function HistoryRow({ attempt }: { attempt: GuestDiagnosticResult }) {
   return (
     <Link
       to={href}
-      className="grid grid-cols-1 gap-3 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 transition-colors hover:bg-[var(--greyscale-25)] lg:h-[72px] lg:grid-cols-[minmax(0,1fr)_179px_40px] lg:items-center lg:gap-0 lg:p-0"
+      className="grid grid-cols-1 gap-3 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 transition-colors hover:bg-[var(--greyscale-25)] lg:min-h-[72px] lg:grid-cols-[minmax(0,1fr)_179px_40px] lg:items-center lg:gap-0 lg:p-0"
     >
       <div className="flex min-w-0 flex-col gap-0.5 lg:px-4">
         <p className="truncate text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[var(--primary)]">
@@ -52,14 +52,14 @@ function HistoryRow({ attempt }: { attempt: GuestDiagnosticResult }) {
           <span className="truncate">{dateLabel || "—"}</span>
         </div>
       </div>
-      <div className="flex h-[52px] flex-col justify-center gap-1.5 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-3 lg:mx-3">
+      <div className="flex flex-col justify-center gap-1 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-3 py-4 lg:mx-3">
         <div className="flex w-full items-center justify-between gap-2">
-          <span className="text-sm font-medium leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">Score</span>
-          <span className="text-right text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--color-student-heading)]">
+          <span className="text-sm font-medium leading-none tracking-[0.02em] text-[var(--greyscale-500)]">Score</span>
+          <span className="text-right text-sm font-semibold leading-none tracking-[0.02em] text-[var(--color-student-heading)]">
             {attempt.scaledScoreLabel}
           </span>
         </div>
-        <p className="text-xs font-medium tracking-[0.02em] text-[var(--greyscale-500)]">
+        <p className="text-xs font-medium leading-none tracking-[0.02em] text-[var(--greyscale-500)]">
           {attempt.correctCount}/{attempt.questionCount} correct
         </p>
       </div>

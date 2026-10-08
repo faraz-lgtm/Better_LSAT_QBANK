@@ -34,6 +34,7 @@ function mockRepo(overrides: Partial<ExplanationsRepository> = {}): Explanations
     }),
     listLatestAnswerSelectionsForQuestion: async () => [],
     getLatestUserAnswerSelection: async () => null,
+    listUserQuestionAttemptHistory: async () => [],
     getPublishedPassageAnalysis: async () => null,
     listBookmarkedQuestionIds: async () => [],
     setQuestionBookmark: async () => {},
@@ -510,8 +511,86 @@ Deno.test('getExplanationDetail returns extended payload', async () => {
   assertEquals(d.answerPopularity.length, 0)
   assertEquals(d.answerPopularityTotal, 3)
   assertEquals(d.userSelectedLetter, 'A')
+  assertEquals(d.yourTimeSeconds, null)
+  assertEquals(d.history, [])
   assertEquals(d.tags, ['Flaw', 'LR'])
   assertEquals(d.passageAnalysis, null)
+})
+
+Deno.test('getExplanationDetail returns real question history and yourTimeSeconds', async () => {
+  const service = createExplanationsService({
+    repository: mockRepo({
+      listLatestAnswerSelectionsForQuestion: async () => ['A'],
+      getLatestUserAnswerSelection: async () => 'A',
+      listUserQuestionAttemptHistory: async () => [
+        {
+          practiceSessionId: 's-new',
+          kind: 'PREPTEST',
+          completedAt: '2026-02-15T12:00:00.000Z',
+          attemptedAt: '2026-02-15T12:00:00.000Z',
+          timeSpentSeconds: 55,
+          selectedAnswer: 'A',
+          prepTestTitle: 'PT 100',
+          prepTestModuleId: 'LSAC100',
+          sectionTitle: null,
+          sectionType: 'LR',
+          sectionNumber: 1,
+        },
+        {
+          practiceSessionId: 's-old',
+          kind: 'DRILL',
+          completedAt: null,
+          attemptedAt: '2026-01-01T12:00:00.000Z',
+          timeSpentSeconds: 40,
+          selectedAnswer: 'B',
+          prepTestTitle: null,
+          prepTestModuleId: null,
+          sectionTitle: null,
+          sectionType: 'LR',
+          sectionNumber: null,
+        },
+      ],
+      getQuestionDetail: async () => ({
+        id: 'q1',
+        question_number: 5,
+        source_group_id: null,
+        stimulus_text: 'Stim',
+        stem_text: 'Stem here',
+        choices: [
+          { optionLetter: 'A', optionContent: 'A text' },
+          { optionLetter: 'B', optionContent: 'B text' },
+        ],
+        correct_answer: 'B',
+        explanation: '<p>expl</p>',
+        video_url: null,
+        difficulty: 3,
+        question_types: { name: 'Flaw' },
+        admin_sections: {
+          id: 'sec1',
+          section_type: 'LR',
+          section_number: 1,
+          title: 'LR',
+          admin_prep_tests: { id: 'pt1', title: 'PT 100', module_id: 'LSAC100' },
+        },
+      }),
+    }),
+  })
+
+  const d = await service.getExplanationDetail('user-1', 'q1')
+  assertEquals(d.yourTimeSeconds, 55)
+  assertEquals(d.history.length, 2)
+  assertEquals(d.history[0], {
+    source: 'PT 100',
+    dateLabel: 'Feb 15',
+    status: 'answered',
+    timeRange: '0:55',
+  })
+  assertEquals(d.history[1], {
+    source: 'LR Drill',
+    dateLabel: 'Jan 1',
+    status: 'in_process',
+    timeRange: '0:40',
+  })
 })
 
 Deno.test('getExplanationDetail returns popularity percents at 5 unique answers', async () => {

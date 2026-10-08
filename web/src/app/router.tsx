@@ -36,6 +36,8 @@ import { AnalyticsPrepTestResultsPage } from "@/features/student/pages/analytics
 import { AnalyticsPrepTestsPage } from "@/features/student/pages/analytics-preptests-page"
 import { AnalyticsQuestionTypeReviewPage } from "@/features/student/pages/analytics-question-type-review-page"
 import { AnalyticsSectionsPage } from "@/features/student/pages/analytics-sections-page"
+import { DiagnosticExplanationQuestionDetailPage } from "@/features/student/pages/diagnostic-explanation-question-detail-page"
+import { DiagnosticExplanationsPage } from "@/features/student/pages/diagnostic-explanations-page"
 import { ExplanationQuestionDetailPage } from "@/features/student/pages/explanation-question-detail-page"
 import { ExplanationsPage } from "@/features/student/pages/explanations-page"
 import { PracticeBlindReviewPage } from "@/features/student/pages/practice-blind-review-page"
@@ -497,6 +499,11 @@ const router = createBrowserRouter([
           { path: "diagnostic/results", element: <GuestDiagnosticResultsPage /> },
           { path: "diagnostic/review", element: <Navigate to="/diagnostic/review" replace /> },
           { path: "diagnostic/tester", element: <Navigate to="/diagnostic/tester" replace /> },
+          { path: "diagnostic/explanations", element: <DiagnosticExplanationsPage /> },
+          {
+            path: "diagnostic/explanations/q/:questionId",
+            element: <DiagnosticExplanationQuestionDetailPage />,
+          },
           { path: "learn/explanations", element: <ExplanationsPage /> },
           { path: "learn/explanations/q/:questionId", element: <ExplanationQuestionDetailPage /> },
           { path: "prep-course", element: <PrepCourseListPage /> },
