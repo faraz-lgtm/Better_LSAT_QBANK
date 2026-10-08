@@ -16,16 +16,28 @@ type GuestPricingModalContextValue = {
 
 const GuestPricingModalContext = createContext<GuestPricingModalContextValue | null>(null)
 
-function GuestPricingModalProvider({ children }: { children: ReactNode }) {
+type GuestPricingModalProviderProps = {
+  children: ReactNode
+  /** When true, plan selection goes to authenticated checkout (e.g. intent page for logged-in free users). */
+  authenticatedCheckout?: boolean
+}
+
+function GuestPricingModalProvider({
+  children,
+  authenticatedCheckout = false,
+}: GuestPricingModalProviderProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const [open, setOpen] = useState(false)
   const [lockedContentOpen, setLockedContentOpen] = useState(false)
+  const useAuthenticatedCheckout =
+    authenticatedCheckout ||
+    (location.pathname.startsWith("/app") && !location.pathname.includes("/preview"))
 
   const openPricingModal = useCallback(() => {
-    if (location.pathname.startsWith("/app")) clearGuestPremiumAccount()
+    if (useAuthenticatedCheckout) clearGuestPremiumAccount()
     setOpen(true)
-  }, [location.pathname])
+  }, [useAuthenticatedCheckout])
   const openLockedContentModal = useCallback(() => setLockedContentOpen(true), [])
   const closePricingModal = useCallback(() => setOpen(false), [])
 
@@ -36,7 +48,7 @@ function GuestPricingModalProvider({ children }: { children: ReactNode }) {
 
   const handleSelectPlan = useCallback(
     async (planId: GuestPricingPlanId, options?: { includeLawHub: boolean }) => {
-      if (location.pathname.startsWith("/app") && !location.pathname.includes("/preview")) {
+      if (useAuthenticatedCheckout) {
         setOpen(false)
         navigate(
           checkoutPathForPlan(planId, {
@@ -54,7 +66,7 @@ function GuestPricingModalProvider({ children }: { children: ReactNode }) {
       }
       navigate(GUEST_FREE_PLAN_RESULTS_HREF, { replace: true })
     },
-    [location.pathname, navigate],
+    [location.pathname, navigate, useAuthenticatedCheckout],
   )
 
   const value = useMemo(
@@ -74,10 +86,10 @@ function GuestPricingModalProvider({ children }: { children: ReactNode }) {
         open={open}
         onOpenChange={setOpen}
         onSelectPlan={handleSelectPlan}
-        freeCtaLabel={location.pathname.startsWith("/app") ? "Continue Free" : "Create Free Account"}
+        freeCtaLabel={useAuthenticatedCheckout ? "Continue Free" : "Create Free Account"}
         onContinueFree={() => {
           setOpen(false)
-          if (location.pathname.startsWith("/app")) {
+          if (useAuthenticatedCheckout) {
             navigate("/app")
             return
           }

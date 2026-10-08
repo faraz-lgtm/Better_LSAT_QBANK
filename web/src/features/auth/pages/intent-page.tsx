@@ -10,11 +10,18 @@ import {
   type DiagnosticIntentTierConfig,
 } from "@/features/auth/components/diagnostic-intent-card"
 import { STUDENT_DASHBOARD_HREF } from "@/features/app-shell/student-nav-config"
+import {
+  GuestPricingModalProvider,
+  useGuestPricingModal,
+} from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import {
   saveDiagnosticIntent,
   type DiagnosticIntentTier,
 } from "@/lib/auth/diagnostic-intent"
+
+/** Public marketing site (apex); guests leave the app subdomain via Back. */
+const MARKETING_SITE_HREF = "https://betterlsat.com"
 
 const DIAGNOSTIC_TIERS: DiagnosticIntentTierConfig[] = [
   {
@@ -55,7 +62,20 @@ type IntentPageProps = {
 }
 
 function IntentPage({ isAuthenticated = false, showUpgradeCta = true }: IntentPageProps) {
+  if (isAuthenticated) {
+    return (
+      <GuestPricingModalProvider authenticatedCheckout>
+        <IntentPageContent isAuthenticated showUpgradeCta={showUpgradeCta} />
+      </GuestPricingModalProvider>
+    )
+  }
+
+  return <IntentPageContent isAuthenticated={false} showUpgradeCta={showUpgradeCta} />
+}
+
+function IntentPageContent({ isAuthenticated = false, showUpgradeCta = true }: IntentPageProps) {
   const navigate = useNavigate()
+  const { openPricingModal } = useGuestPricingModal()
   const [selectedTier, setSelectedTier] = useState<DiagnosticIntentTier>("quick")
 
   useLayoutEffect(() => {
@@ -80,16 +100,21 @@ function IntentPage({ isAuthenticated = false, showUpgradeCta = true }: IntentPa
       hideSidebar
       hideIntentSignIn={isAuthenticated}
       hideIntentUpgrade={!showUpgradeCta}
+      onIntentUpgrade={isAuthenticated && showUpgradeCta ? openPricingModal : undefined}
     >
       <div className="intent-page">
         <AuthCard className="intent-page__card">
-          <Link
-            to={isAuthenticated ? STUDENT_DASHBOARD_HREF : "/"}
-            className="intent-page__back"
-          >
-            <ArrowLeft className="intent-page__back-icon" aria-hidden />
-            Back
-          </Link>
+          {isAuthenticated ? (
+            <Link to={STUDENT_DASHBOARD_HREF} className="intent-page__back">
+              <ArrowLeft className="intent-page__back-icon" aria-hidden />
+              Back
+            </Link>
+          ) : (
+            <a href={MARKETING_SITE_HREF} className="intent-page__back">
+              <ArrowLeft className="intent-page__back-icon" aria-hidden />
+              Back
+            </a>
+          )}
           <div className="intent-page__header">
             <h1 className="intent-page__title">Take diagnostic</h1>
             <p className="intent-page__subtitle">

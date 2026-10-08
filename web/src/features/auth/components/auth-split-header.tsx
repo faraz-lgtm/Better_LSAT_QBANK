@@ -12,6 +12,8 @@ type AuthSplitHeaderProps = {
   hideIntentSignIn?: boolean
   /** Hide intent Upgrade CTA for paid accounts (free / guests still see it). */
   hideIntentUpgrade?: boolean
+  /** When set, Upgrade opens this handler (pricing modal) instead of linking to signup. */
+  onIntentUpgrade?: () => void
 }
 
 function AuthSplitHeader({
@@ -21,6 +23,7 @@ function AuthSplitHeader({
   variant = "auth",
   hideIntentSignIn = false,
   hideIntentUpgrade = false,
+  onIntentUpgrade,
 }: AuthSplitHeaderProps) {
   if (variant === "intent") {
     return (
@@ -30,9 +33,19 @@ function AuthSplitHeader({
         </Link>
         <div className="auth-split-header-intent-actions">
           {!hideIntentUpgrade ? (
-            <Button asChild className="auth-split-header-intent-upgrade">
-              <Link to="/signup">Upgrade now</Link>
-            </Button>
+            onIntentUpgrade ? (
+              <Button
+                type="button"
+                className="auth-split-header-intent-upgrade"
+                onClick={onIntentUpgrade}
+              >
+                Upgrade now
+              </Button>
+            ) : (
+              <Button asChild className="auth-split-header-intent-upgrade">
+                <Link to="/signup">Upgrade now</Link>
+              </Button>
+            )
           ) : null}
           {!hideIntentSignIn ? (
             <p className="auth-split-cta">
