@@ -125,12 +125,30 @@ describe("DashboardPage", () => {
     mocks.getPriorities.mockResolvedValue([])
   })
 
-  it("shows the same Figma welcome heading as premium when LSAC content is locked", async () => {
+  it("shows the free-plan dashboard when payment is required", async () => {
     renderDashboard()
 
     await waitFor(() => {
       expect(screen.getByRole("heading", { level: 1, name: "Welcome back, Assad" })).toBeInTheDocument()
-      expect(screen.getByText("Choose a plan to continue")).toBeInTheDocument()
+      expect(screen.getByText("Unlock full practice and analytics")).toBeInTheDocument()
+      expect(screen.getByRole("heading", { name: "Start a diagnostic" })).toBeInTheDocument()
+      expect(screen.queryByText("Choose a plan to continue")).not.toBeInTheDocument()
+    })
+  })
+
+  it("shows LawHub setup when payment is settled but LSAC content is still locked", async () => {
+    mocks.entitlement.isPaymentRequired = false
+    mocks.entitlement.entitlement = {
+      ...paymentRequiredEntitlement(),
+      accessState: "LSAC_REQUIRED",
+      hasActiveCore: true,
+    }
+
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { level: 1, name: "Welcome back, Assad" })).toBeInTheDocument()
+      expect(screen.getByRole("heading", { level: 2, name: "Complete LawHub setup" })).toBeInTheDocument()
     })
   })
 

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom"
 import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-context"
 import { DashboardAccessSetupCard } from "@/features/dashboard/components/dashboard-access-setup-card"
 import { DashboardQuickStats } from "@/features/dashboard/components/dashboard-quick-stats"
+import { FreePlanDashboard } from "@/features/dashboard/components/free-plan-dashboard"
 import { PerformanceOverviewCard } from "@/features/dashboard/components/performance-overview-card"
 import {
   findLsacTestWindow,
@@ -70,7 +71,11 @@ function firstNameFromProfile(profile: { first_name?: string | null; full_name?:
 
 function DashboardPage() {
   const navigate = useNavigate()
-  const { canAccessLsacContent, loading: entitlementLoading } = useStudentEntitlement()
+  const {
+    canAccessLsacContent,
+    isPaymentRequired,
+    loading: entitlementLoading,
+  } = useStudentEntitlement()
   const analyticsApi = useAnalyticsApi()
   const usersApi = useMemo(() => {
     try {
@@ -261,6 +266,14 @@ function DashboardPage() {
   }
 
   if (!canAccessLsacContent) {
+    if (isPaymentRequired) {
+      return (
+        <StudentMain>
+          <FreePlanDashboard firstName={firstName} />
+        </StudentMain>
+      )
+    }
+
     return (
       <StudentMain>
         <div className="dashboard-page flex flex-col gap-6">
