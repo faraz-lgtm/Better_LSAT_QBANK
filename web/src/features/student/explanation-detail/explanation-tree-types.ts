@@ -93,7 +93,18 @@ export type ExplanationDetailPayload = {
   answerPopularityTotal?: number
   /** Current user's latest submitted answer letter (A–E), or null if never answered. */
   userSelectedLetter?: string | null
+  /** Latest attempt dwell seconds when tracked. */
+  yourTimeSeconds?: number | null
+  /** Insights Question History — newest first. */
+  history?: ExplanationHistoryRow[]
   difficulty?: 1 | 2 | 3 | 4 | 5
+}
+
+export type ExplanationHistoryRow = {
+  source: string
+  dateLabel: string
+  status: "in_process" | "answered"
+  timeRange: string
 }
 
 export type ExplanationAnswerPopularityRow = {

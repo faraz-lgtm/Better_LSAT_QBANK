@@ -21,6 +21,7 @@ import { useStudentEntitlementOptional, isLsacLockedNavItem } from "@/features/a
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
 import { PREP_COURSE_ESSENTIALS_SLUG, PREP_COURSE_NAV_ITEMS } from "@/features/prep-course/lib/prep-course-nav"
+import { DIAGNOSTIC_EXPLANATIONS_HREF } from "@/features/student/diagnostic/diagnostic-explanations-routes"
 import { DiagnosticResultsNavItem } from "@/features/student/diagnostic/diagnostic-results-nav-item"
 import { cn } from "@/lib/utils"
 import { resetUser } from "@/lib/analytics/posthog"
@@ -48,6 +49,15 @@ function SidebarNavIcon({ icon }: { icon: StudentNavItemIconKey }) {
 
 function isPrepCourseNavItem(item: StudentNavItem): boolean {
   return item.href === PREP_COURSE_HREF
+}
+
+function isDiagnosticExplanationsNavItem(item: StudentNavItem): boolean {
+  return item.href === DIAGNOSTIC_EXPLANATIONS_HREF
+}
+
+/** Free-plan: keep Prep Course + Diagnostic Explanation clickable. */
+function isUnlockedOnFreePlan(item: StudentNavItem): boolean {
+  return isPrepCourseNavItem(item) || isDiagnosticExplanationsNavItem(item)
 }
 
 function isPrepCourseRoute(pathname: string): boolean {
@@ -296,7 +306,7 @@ function StudentAppSidebar({
               <div key={section.key} className="student-sidebar-section">
                 <p className="student-sidebar-heading">{section.label}</p>
                 {section.items.map((item) => {
-                  if (lockPremiumNav && !isPrepCourseNavItem(item)) {
+                  if (lockPremiumNav && !isUnlockedOnFreePlan(item)) {
                     return <LockedPremiumNavItem key={item.href} item={item} onLockedClick={handleLockedContentClick} />
                   }
 

@@ -208,6 +208,7 @@ export {
   getMiniDiagnosticQuestionMeta,
   mapMiniDiagnosticQuestionToDrill,
   resolveDiagnosticScoreRange,
+  resolveDiagnosticSourceQuestion,
   resolveMiniDiagnosticScoreRange,
   resolveSectionDiagnosticScoreRange,
 }

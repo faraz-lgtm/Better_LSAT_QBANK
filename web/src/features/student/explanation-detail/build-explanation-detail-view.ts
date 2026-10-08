@@ -133,10 +133,13 @@ function buildAnalytics(
       return /^[A-E]$/.test(letter) ? letter : null
     })(),
     targetTimeSeconds,
-    yourTimeSeconds: null,
+    yourTimeSeconds:
+      typeof detail?.yourTimeSeconds === "number" && Number.isFinite(detail.yourTimeSeconds)
+        ? Math.max(0, Math.round(detail.yourTimeSeconds))
+        : null,
     questionStemTags: tags,
     passageTags: [],
-    history: [],
+    history: detail?.history ?? [],
   }
 }
 

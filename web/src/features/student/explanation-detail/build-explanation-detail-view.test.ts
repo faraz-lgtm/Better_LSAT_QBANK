@@ -28,6 +28,53 @@ describe("buildExplanationQuestionDetailView", () => {
     const view = buildExplanationQuestionDetailView(loc, null)
     expect(view.analytics.targetTimeSeconds).toBe(105)
     expect(view.analytics.yourTimeSeconds).toBeNull()
+    expect(view.analytics.history).toEqual([])
+  })
+
+  it("maps real yourTimeSeconds and Question History from API detail", () => {
+    const detail: ExplanationDetailPayload = {
+      questionId: "q1",
+      prepTestId: "pt1",
+      prepTestTitle: "PT 129",
+      prepTestNumber: "129",
+      sectionId: "sec1",
+      sectionType: "LR",
+      sectionNumber: 1,
+      questionNumber: 19,
+      topicName: "Flaw",
+      explanationHtml: null,
+      videoUrl: null,
+      stimulusText: null,
+      stemText: "Stem",
+      choices: [
+        { id: "A", index: 1, text: "a", explanationHtml: null },
+        { id: "B", index: 2, text: "b", explanationHtml: null },
+      ],
+      correctChoiceId: "A",
+      passage: { id: "p1", displayNumber: 1, title: "P1", body: "" },
+      answerPopularity: [],
+      yourTimeSeconds: 52,
+      history: [
+        {
+          source: "PT 129",
+          dateLabel: "Feb 15",
+          status: "answered",
+          timeRange: "0:52",
+        },
+      ],
+      difficulty: 5,
+    }
+
+    const view = buildExplanationQuestionDetailView(loc, detail)
+    expect(view.analytics.yourTimeSeconds).toBe(52)
+    expect(view.analytics.history).toEqual([
+      {
+        source: "PT 129",
+        dateLabel: "Feb 15",
+        status: "answered",
+        timeRange: "0:52",
+      },
+    ])
   })
 
   it("maps answer popularity from API detail", () => {

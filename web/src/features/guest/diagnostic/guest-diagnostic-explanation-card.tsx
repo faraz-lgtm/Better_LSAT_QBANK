@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 import type { MiniDiagnosticExplanation } from '@/lib/api/diagnostic'
 import { buildDiagnosticAnswerPopularity } from '@/features/guest/diagnostic/diagnostic-answer-popularity'
 import {
@@ -22,8 +24,15 @@ type GuestDiagnosticExplanationCardProps = {
   selectedAnswer?: string | null
   targetTimeSeconds?: number | null
   yourTimeSeconds?: number | null
+  /** Opens Diagnostic Explanation detail for this question. */
+  diagnosticExplanationHref?: string
+  /** Opens Review Tester at this question. */
+  reviewTesterHref?: string
   className?: string
 }
+
+const CARD_ACTION_BUTTON_CLASS =
+  'inline-flex h-9 shrink-0 items-center justify-center rounded-[14px] bg-[#0d47a1] px-3 text-xs font-semibold tracking-[0.02em] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0d47a1]/90'
 
 const STATS_LABEL_CLASS =
   'm-0 text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]'
@@ -67,6 +76,8 @@ function GuestDiagnosticExplanationCard({
   selectedAnswer,
   targetTimeSeconds,
   yourTimeSeconds,
+  diagnosticExplanationHref,
+  reviewTesterHref,
   className,
 }: GuestDiagnosticExplanationCardProps) {
   const normalizedSelected = selectedAnswer?.trim().toUpperCase() ?? null
@@ -111,7 +122,7 @@ function GuestDiagnosticExplanationCard({
             />
           </div>
 
-          <div className="flex min-w-0 flex-col gap-2 xl:w-[146px] xl:shrink-0">
+          <div className="flex min-w-0 flex-col gap-3 xl:w-[200px] xl:shrink-0">
             <h3 className="m-0 text-base font-semibold leading-normal tracking-[0.02em] text-[var(--primary-800,#041a44)]">
               {title}
             </h3>
@@ -127,6 +138,26 @@ function GuestDiagnosticExplanationCard({
                 ))}
               </div>
             ) : null}
+            <div className="flex flex-col gap-2">
+              {diagnosticExplanationHref ? (
+                <Link to={diagnosticExplanationHref} className={CARD_ACTION_BUTTON_CLASS}>
+                  Diagnostic Explanation
+                </Link>
+              ) : (
+                <button type="button" className={CARD_ACTION_BUTTON_CLASS} disabled>
+                  Diagnostic Explanation
+                </button>
+              )}
+              {reviewTesterHref ? (
+                <Link to={reviewTesterHref} className={CARD_ACTION_BUTTON_CLASS}>
+                  Review Tester
+                </Link>
+              ) : (
+                <button type="button" className={CARD_ACTION_BUTTON_CLASS} disabled>
+                  Review Tester
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

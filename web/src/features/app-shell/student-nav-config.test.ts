@@ -25,6 +25,12 @@ describe("student-nav-config", () => {
     expect(getStudentPageTitle("/app/learn/explanations")).toBe("Explanations")
   })
 
+  it("maps diagnostic explanations under academy", () => {
+    expect(getActiveSectionKey("/app/diagnostic/explanations")).toBe("academy")
+    expect(getActiveSectionKey("/app/diagnostic/explanations/q/mini-1")).toBe("academy")
+    expect(getStudentPageTitle("/app/diagnostic/explanations")).toBe("Diagnostic Explanation")
+  })
+
   it("hides the prep course content page title", () => {
     expect(getStudentPageTitle("/app/prep-course/prep-course")).toBeNull()
   })

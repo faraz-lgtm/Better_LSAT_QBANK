@@ -115,6 +115,10 @@ function isLsacContentPath(pathname: string): boolean {
 function isLsacLockedNavItem(href: string): boolean {
   // Prep Course stays clickable while LSAC pool content remains locked.
   if (href === "/app/prep-course" || href.startsWith("/app/prep-course/")) return false
+  // Diagnostic explanations are BetterLSAT marketing content, not LawHub pool.
+  if (href === "/app/diagnostic/explanations" || href.startsWith("/app/diagnostic/explanations/")) {
+    return false
+  }
   return true
 }
 
