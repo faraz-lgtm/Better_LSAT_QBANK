@@ -110,4 +110,52 @@ function GuestDiagnosticResultsActions() {
   )
 }
 
-export { GuestDiagnosticResultsActions, GuestFreePlanUpgradeBanner, GuestUpgradeCta }
+/** Figma `20583:30156` — free-plan analytics / results limit CTA. */
+function GuestFreeAnalyticsLimitCta({
+  onSubscribe,
+  className,
+}: {
+  onSubscribe: () => void
+  className?: string
+}) {
+  return (
+    <div
+      className={cn('flex w-full flex-col items-center gap-6', className)}
+      data-testid="guest-free-analytics-limit-cta"
+    >
+      <img
+        src="/figma/diagnostic/analytics-limit-lock.svg"
+        alt=""
+        width={36}
+        height={36}
+        className="shrink-0"
+        aria-hidden
+      />
+      <div className="flex w-full flex-col items-center">
+        <h2 className="text-center text-2xl font-bold leading-[1.3] text-[var(--primary-800,#041a44)]">
+          You&apos;ve reached your free analytics limit!
+        </h2>
+      </div>
+      <div className="flex w-full max-w-[808px] flex-col items-center gap-4">
+        <p className="text-center text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--primary-800,#041a44)]">
+          Subscribe today for unlimited practice results, detailed analytics, and full access to
+          everything BetterLSAT has to offer.
+        </p>
+        <button
+          type="button"
+          onClick={onSubscribe}
+          className="inline-flex h-12 shrink-0 items-center justify-center rounded-[16px] border border-[var(--primary-border)] bg-[var(--primary)] px-4 text-base font-semibold leading-[1.5] tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-600)]"
+        >
+          Full Access
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export {
+  GuestDiagnosticResultsActions,
+  GuestFreeAnalyticsLimitCta,
+  GuestFreePlanUpgradeBanner,
+  GuestUpgradeCta,
+}

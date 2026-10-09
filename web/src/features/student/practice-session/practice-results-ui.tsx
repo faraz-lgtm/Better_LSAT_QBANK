@@ -1,4 +1,4 @@
-import { Check, Minus, X } from "lucide-react"
+import { Minus, X } from "lucide-react"
 import type { ReactNode } from "react"
 
 import type { ExplanationAnswerPopularityRow, ExplanationDetailPayload } from "@/features/student/explanation-detail/explanation-tree-types"
@@ -11,11 +11,11 @@ const DIFFICULTY_STYLE: Record<
   PracticeDifficultyLabel,
   { dots: number; color: string; inactive: string }
 > = {
-  Easiest: { dots: 1, color: "#40c4aa", inactive: "var(--greyscale-50)" },
-  Easy: { dots: 2, color: "#ffbd4c", inactive: "var(--greyscale-50)" },
-  Medium: { dots: 3, color: "#ff6f00", inactive: "var(--greyscale-50)" },
-  Hard: { dots: 4, color: "#df1c41", inactive: "var(--greyscale-50)" },
-  Hardest: { dots: 5, color: "#df1c41", inactive: "var(--greyscale-50)" },
+  Easiest: { dots: 1, color: "#40c4aa", inactive: "var(--primary-50,#ced0e7)" },
+  Easy: { dots: 2, color: "#ffbd4c", inactive: "var(--primary-50,#ced0e7)" },
+  Medium: { dots: 3, color: "#ff6f00", inactive: "var(--primary-50,#ced0e7)" },
+  Hard: { dots: 4, color: "#df1c41", inactive: "var(--primary-50,#ced0e7)" },
+  Hardest: { dots: 5, color: "#df1c41", inactive: "var(--primary-50,#ced0e7)" },
 }
 
 export function difficultyLabelFromLevel(level: number): PracticeDifficultyLabel {
@@ -132,7 +132,7 @@ export function correctChoiceLetter(
 export function PracticeDifficultyMeter({ difficulty }: { difficulty: PracticeDifficultyLabel }) {
   const { dots, color, inactive } = DIFFICULTY_STYLE[difficulty]
   return (
-    <div className="flex h-10 w-fit items-center gap-2.5 rounded-[10px] bg-[var(--primary-0)] px-3">
+    <div className="flex h-10 w-fit min-w-[132px] items-center gap-2.5 rounded-[10px] bg-[var(--primary-0,#f3f7ff)] px-2.5">
       <div className="flex shrink-0 items-center gap-1.5">
         {Array.from({ length: 5 }).map((_, i) => (
           <span
@@ -154,12 +154,14 @@ export function PracticeDifficultyMeter({ difficulty }: { difficulty: PracticeDi
 
 function CorrectAnswerPopularityBadge() {
   return (
-    <span
-      className="flex size-3 shrink-0 items-center justify-center rounded-full bg-[#00d492]"
+    <img
+      src="/figma/diagnostic/popularity-check.svg"
+      alt=""
+      width={12}
+      height={12}
+      className="size-3 shrink-0"
       aria-hidden
-    >
-      <Check className="size-2 text-white" strokeWidth={3} />
-    </span>
+    />
   )
 }
 
@@ -417,23 +419,23 @@ export function PracticeAnswerPopularityBars({
                 hasOutcomeBadge
                   ? showPercentages
                     ? "h-24"
-                    : "h-20"
+                    : "h-[62px]"
                   : showPercentages
                     ? "h-[88px]"
-                    : "h-[68px]",
+                    : "h-[53px]",
               )}
             >
               {showPercentages ? (
                 <span
                   className={cn(
                     "text-[11px] font-bold tabular-nums leading-none",
-                    isCorrect ? "text-[#00d492]" : "text-[var(--greyscale-500)]",
+                    isCorrect ? "text-[#40c4aa]" : "text-[var(--greyscale-500)]",
                   )}
                 >
                   {row.pct}%
                 </span>
               ) : null}
-              <div className="flex min-h-0 w-full flex-1 flex-col justify-end overflow-hidden rounded-t-[10px] bg-[var(--greyscale-25)]">
+              <div className="mx-auto flex min-h-0 w-full max-w-[31px] flex-1 flex-col justify-end overflow-hidden rounded-t-[10px] bg-[var(--primary-0,#f3f7ff)]">
                 {isUserWrong ? (
                   <div
                     className="w-full shrink-0 rounded-t-[10px] bg-[#ef4444]"
@@ -443,7 +445,7 @@ export function PracticeAnswerPopularityBars({
                   <div
                     className={cn(
                       "w-full shrink-0 rounded-t-[10px]",
-                      isCorrect ? "bg-[#00d492]" : "bg-[var(--greyscale-100)]",
+                      isCorrect ? "bg-[#40c4aa]" : "bg-[var(--greyscale-100)]",
                     )}
                     style={{ height: fillHeight }}
                   />
@@ -454,7 +456,7 @@ export function PracticeAnswerPopularityBars({
                   className={cn(
                     "text-xs leading-4",
                     isCorrect
-                      ? "font-bold text-[#00d492]"
+                      ? "font-bold text-[#40c4aa]"
                       : "font-normal text-[var(--greyscale-500)]",
                   )}
                 >

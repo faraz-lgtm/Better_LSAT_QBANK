@@ -19,6 +19,7 @@ import {
   getDiagnosticIntentTitle,
 } from '@/features/guest/diagnostic/guest-diagnostic-result-storage'
 import { useGuestPricingModal } from '@/features/guest/pricing/guest-pricing-modal-provider'
+import { GuestFreeAnalyticsLimitCta } from '@/features/guest/diagnostic/guest-upgrade-cta'
 import { useDiagnosticSubscription } from '@/features/guest/diagnostic/use-diagnostic-subscription'
 import { StudentMain } from '@/features/student/components/student-main'
 import { createDiagnosticApi, type MiniDiagnosticExplanation } from '@/lib/api/diagnostic'
@@ -70,9 +71,6 @@ type DifficultyAccuracy = {
 const LSAT_MIN = 120
 const LSAT_MAX = 180
 const LSAT_GOAL_SCORE = 165
-
-/** Collapsed question lists (Total Questions + review jump list) show this many rows before "Show All". */
-const DIAGNOSTIC_QUESTIONS_COLLAPSED_VISIBLE = 3
 
 const DIFFICULTY_LABELS: Record<number, string> = {
   1: 'Very Easy',
@@ -832,16 +830,16 @@ function AccuracyByDifficultySection({
           ))}
 
         {locked ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-[var(--greyscale-0)]/80">
-            <div className="text-center">
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--greyscale-0)]/80 px-4">
+            <div className="flex flex-col items-center gap-1 text-center">
               <h4 className="text-base font-bold text-[var(--color-student-heading)]">Where the easy points went</h4>
-              <p className="mt-1 text-sm text-[var(--greyscale-500)]">
+              <p className="text-sm text-[var(--greyscale-500)]">
                 See which difficulty bands are costing you the most
               </p>
               <button
                 type="button"
                 onClick={onSubscribe}
-                className="mt-4 mx-auto flex items-center gap-2 rounded-[10px] border border-[var(--primary)] bg-[var(--greyscale-0)] px-4 py-2 text-sm font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary-25)]"
+                className="mt-3 inline-flex items-center gap-2 rounded-[10px] border border-[var(--primary)] bg-[var(--greyscale-0)] px-4 py-2 text-sm font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary-25)]"
               >
                 <Lock className="size-3.5" />
                 Unlock
@@ -855,6 +853,70 @@ function AccuracyByDifficultySection({
 }
 
 // ─── Section 7: Timing Breakdown ─────────────────────────────────────────────
+
+type TimingBreakdownRow = {
+  difficulty: number
+  avgTime: number
+  avgTarget: number
+  overSeconds: number
+}
+
+const LOCKED_TIMING_PLACEHOLDER_ROWS: TimingBreakdownRow[] = [
+  { difficulty: 1, avgTime: 72, avgTarget: 80, overSeconds: 0 },
+  { difficulty: 2, avgTime: 95, avgTarget: 85, overSeconds: 10 },
+  { difficulty: 3, avgTime: 110, avgTarget: 90, overSeconds: 20 },
+]
+
+function TimingBreakdownRowView({
+  row,
+  blurred,
+  blurPx,
+  showBorder,
+}: {
+  row: TimingBreakdownRow
+  blurred?: boolean
+  blurPx?: number
+  showBorder?: boolean
+}) {
+  return (
+    <div
+      className={cn('flex items-center gap-4 px-6 py-4', showBorder && 'border-t border-[var(--greyscale-100)]')}
+      style={blurred ? { filter: `blur(${blurPx ?? 5}px)`, userSelect: 'none' } : undefined}
+    >
+      <div className="w-24 shrink-0">
+        <p className="text-sm font-semibold text-[var(--color-student-heading)]">
+          {DIFFICULTY_LABELS[row.difficulty] ?? `Level ${row.difficulty}`}
+        </p>
+        <p className="text-xs text-[var(--greyscale-400)]">avg {formatSeconds(row.avgTime)}</p>
+      </div>
+      <div className="flex-1">
+        <div className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--greyscale-100)]">
+          <div
+            className="absolute top-0 h-full rounded-full bg-[var(--primary)]"
+            style={{ width: `${Math.min(100, (row.avgTarget / 180) * 100)}%` }}
+          />
+          {row.overSeconds > 0 && (
+            <div
+              className="absolute top-0 h-full rounded-full bg-[#df1c41]"
+              style={{
+                left: `${Math.min(100, (row.avgTarget / 180) * 100)}%`,
+                width: `${Math.min(30, (row.overSeconds / 180) * 100)}%`,
+              }}
+            />
+          )}
+        </div>
+      </div>
+      <span
+        className={cn(
+          'w-16 shrink-0 text-right text-sm font-bold',
+          row.overSeconds > 10 ? 'text-[#df1c41]' : 'text-[#00bc54]',
+        )}
+      >
+        {row.overSeconds > 0 ? `+${formatSeconds(row.overSeconds)}` : 'On pace'}
+      </span>
+    </div>
+  )
+}
 
 function TimingBreakdownSection({
   outcomes,
@@ -892,6 +954,14 @@ function TimingBreakdownSection({
       .sort((a, b) => a.difficulty - b.difficulty)
   }, [outcomes, intentId])
 
+  // Locked state always shows 3 blurred teasers so the unlock CTA can overlay them.
+  const displayRows: TimingBreakdownRow[] = locked
+    ? [
+        ...(rows.length > 0 ? rows.slice(0, 3) : []),
+        ...LOCKED_TIMING_PLACEHOLDER_ROWS,
+      ].slice(0, 3)
+    : rows
+
   return (
     <div className="overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
       <div className="flex items-start justify-between border-b border-[var(--greyscale-100)] px-6 py-5">
@@ -905,57 +975,27 @@ function TimingBreakdownSection({
       </div>
 
       <div className="relative">
-        {(rows.length > 0 ? rows : locked ? [1, 2, 3].map((d) => ({ difficulty: d, avgTime: 90, avgTarget: 90, overSeconds: 0 })) : []).map((row, i) => (
-          <div
-            key={row.difficulty}
-            className={cn('flex items-center gap-4 px-6 py-4', i > 0 && 'border-t border-[var(--greyscale-100)]')}
-            style={locked ? { filter: `blur(${i === 0 ? 3 : 5}px)`, userSelect: 'none' } : undefined}
-          >
-            <div className="w-24 shrink-0">
-              <p className="text-sm font-semibold text-[var(--color-student-heading)]">
-                {DIFFICULTY_LABELS[row.difficulty] ?? `Level ${row.difficulty}`}
-              </p>
-              <p className="text-xs text-[var(--greyscale-400)]">avg {formatSeconds(row.avgTime)}</p>
-            </div>
-            <div className="flex-1">
-              <div className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--greyscale-100)]">
-                <div
-                  className="absolute top-0 h-full rounded-full bg-[var(--primary)]"
-                  style={{ width: `${Math.min(100, (row.avgTarget / 180) * 100)}%` }}
-                />
-                {row.overSeconds > 0 && (
-                  <div
-                    className="absolute top-0 h-full rounded-full bg-[#df1c41]"
-                    style={{
-                      left: `${Math.min(100, (row.avgTarget / 180) * 100)}%`,
-                      width: `${Math.min(30, (row.overSeconds / 180) * 100)}%`,
-                    }}
-                  />
-                )}
-              </div>
-            </div>
-            <span
-              className={cn(
-                'w-16 shrink-0 text-right text-sm font-bold',
-                row.overSeconds > 10 ? 'text-[#df1c41]' : 'text-[#00bc54]',
-              )}
-            >
-              {row.overSeconds > 0 ? `+${formatSeconds(row.overSeconds)}` : 'On pace'}
-            </span>
-          </div>
-        ))}
+        <div className={cn(locked && 'pointer-events-none select-none')} aria-hidden={locked || undefined}>
+          {displayRows.map((row, i) => (
+            <TimingBreakdownRowView
+              key={row.difficulty}
+              row={row}
+              blurred={locked}
+              blurPx={i === 0 ? 3 : 5}
+              showBorder={i > 0}
+            />
+          ))}
+        </div>
 
         {locked ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-[var(--greyscale-0)]/80">
-            <div className="text-center">
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--greyscale-0)]/80 px-4">
+            <div className="flex flex-col items-center gap-1 text-center">
               <h4 className="text-base font-bold text-[var(--color-student-heading)]">Where your clock broke</h4>
-              <p className="mt-1 text-sm text-[var(--greyscale-500)]">
-                Plus the drill set that targets each one
-              </p>
+              <p className="text-sm text-[var(--greyscale-500)]">Plus the drill set that targets each one</p>
               <button
                 type="button"
                 onClick={onSubscribe}
-                className="mt-4 mx-auto flex items-center gap-2 rounded-[10px] border border-[var(--primary)] bg-[var(--greyscale-0)] px-4 py-2 text-sm font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary-25)]"
+                className="mt-3 inline-flex items-center gap-2 rounded-[10px] border border-[var(--primary)] bg-[var(--greyscale-0)] px-4 py-2 text-sm font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary-25)]"
               >
                 <Lock className="size-3.5" />
                 Unlock
@@ -1135,8 +1175,6 @@ function WrongQuestionsReviewSection({
   reviewInTesterHref: string
   onSubscribe: () => void
 }) {
-  const [reviewExpanded, setReviewExpanded] = useState(false)
-
   const wrongOutcomes = result.outcomes
     .map((o, i) => ({ ...o, originalIndex: i }))
     .filter((o) => !o.isCorrect)
@@ -1159,11 +1197,6 @@ function WrongQuestionsReviewSection({
   const wrongLocked = wrongOutcomes.length - unlockedWrongCount
 
   if (wrongOutcomes.length === 0) return null
-
-  const visibleWrongOutcomes = reviewExpanded
-    ? wrongOutcomes
-    : wrongOutcomes.slice(0, DIAGNOSTIC_QUESTIONS_COLLAPSED_VISIBLE)
-  const hasHiddenWrong = wrongOutcomes.length > DIAGNOSTIC_QUESTIONS_COLLAPSED_VISIBLE
 
   return (
     <div className="overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
@@ -1239,7 +1272,7 @@ function WrongQuestionsReviewSection({
       </div>
 
       {/* Compact wrong-answer rows */}
-      {visibleWrongOutcomes.map((outcome) => {
+      {wrongOutcomes.map((outcome) => {
         const questionNumber = outcome.originalIndex + 1
         const unlocked = canShowDiagnosticResultDetails({
           intentId: result.intentId,
@@ -1304,21 +1337,6 @@ function WrongQuestionsReviewSection({
           />
         )
       })}
-
-      {hasHiddenWrong ? (
-        <div className="flex items-center justify-center border-t border-[var(--greyscale-100)] px-6 py-3">
-          <button
-            type="button"
-            onClick={() => setReviewExpanded((open) => !open)}
-            aria-expanded={reviewExpanded}
-            className="h-10 rounded-[10px] px-4 text-sm font-semibold text-[var(--primary-700,#082c6b)] transition-colors hover:bg-[var(--greyscale-25)]"
-          >
-            {reviewExpanded
-              ? 'Show less'
-              : `Show all ${result.questionCount} questions`}
-          </button>
-        </div>
-      ) : null}
 
       {/* Footer banner: locked explanations */}
       {totalLocked > 0 && (
@@ -1523,7 +1541,6 @@ function GuestDiagnosticResultsView({
   const [explanationsLoading, setExplanationsLoading] = useState(false)
   const [explanationsError, setExplanationsError] = useState<string | null>(null)
   const [sortMode, setSortMode] = useState<QuestionSortMode>('number')
-  const [questionsExpanded, setQuestionsExpanded] = useState(false)
 
   useEffect(() => {
     refreshSubscription?.()
@@ -1574,11 +1591,6 @@ function GuestDiagnosticResultsView({
     [result.outcomes, sortMode],
   )
 
-  const visibleOutcomes = questionsExpanded
-    ? sortedOutcomes
-    : sortedOutcomes.slice(0, DIAGNOSTIC_QUESTIONS_COLLAPSED_VISIBLE)
-  const hasHiddenQuestions = sortedOutcomes.length > DIAGNOSTIC_QUESTIONS_COLLAPSED_VISIBLE
-
   const pointLeaks = useMemo(
     () => computePointLeaks(result.outcomes, result.intentId),
     [result.outcomes, result.intentId],
@@ -1591,6 +1603,21 @@ function GuestDiagnosticResultsView({
 
   const showPaidContent = hasActiveCore && !subscriptionLoading
   const heading = getDiagnosticIntentTitle(result.intentId)
+
+  const { unlockedOutcomes, lockedOutcomes } = useMemo(() => {
+    const unlocked: SortedOutcome[] = []
+    const locked: SortedOutcome[] = []
+    for (const outcome of sortedOutcomes) {
+      const unlockedRow = canShowDiagnosticResultDetails({
+        intentId: result.intentId,
+        questionNumber: outcome.originalIndex + 1,
+        hasActiveCore: showPaidContent,
+      })
+      if (unlockedRow) unlocked.push(outcome)
+      else locked.push(outcome)
+    }
+    return { unlockedOutcomes: unlocked, lockedOutcomes: locked }
+  }, [result.intentId, showPaidContent, sortedOutcomes])
 
   return (
     <StudentMain
@@ -1640,7 +1667,7 @@ function GuestDiagnosticResultsView({
             </div>
             <Link
               to={reviewInTesterHref}
-              className="inline-flex h-10 w-[170px] shrink-0 items-center justify-center gap-2 self-center rounded-[14px] bg-[#0d47a1] px-4 text-sm font-semibold tracking-[0.02em] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0d47a1]/90 sm:self-auto"
+              className="inline-flex h-10 w-fit min-w-[170px] shrink-0 items-center justify-center gap-2 self-center text-nowrap whitespace-nowrap rounded-[14px] bg-[#0d47a1] px-4 text-sm font-semibold tracking-[0.02em] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0d47a1]/90 sm:self-auto"
             >
               Review Tester
             </Link>
@@ -1674,25 +1701,10 @@ function GuestDiagnosticResultsView({
           <p className="px-6 py-8 text-sm text-[#df1c41]">{explanationsError}</p>
         ) : null}
 
-        {/* ── Question rows (free: first N unlocked; remaining = dummy teaser only) ── */}
+        {/* ── Question rows (free: first N unlocked; remaining = dummy teasers under limit CTA) ── */}
         <div className="flex flex-col gap-4">
-          {visibleOutcomes.map((outcome) => {
+          {unlockedOutcomes.map((outcome) => {
             const questionNumber = outcome.originalIndex + 1
-            const unlocked = canShowDiagnosticResultDetails({
-              intentId: result.intentId,
-              questionNumber,
-              hasActiveCore: showPaidContent,
-            })
-            if (!unlocked) {
-              return (
-                <GuestDiagnosticLockedQuestionRow
-                  key={`locked-${questionNumber}`}
-                  number={questionNumber}
-                  heading={heading}
-                />
-              )
-            }
-
             const explanation =
               explanationsById.get(outcome.questionId) ??
               buildDiagnosticResultExplanation(outcome.questionId, result.intentId)
@@ -1725,16 +1737,24 @@ function GuestDiagnosticResultsView({
             )
           })}
 
-          {hasHiddenQuestions ? (
-            <div className="flex items-center justify-center py-2">
-              <button
-                type="button"
-                onClick={() => setQuestionsExpanded((open) => !open)}
-                aria-expanded={questionsExpanded}
-                className="text-base font-semibold leading-[1.35] text-[var(--primary-700,#082c6b)] transition-colors hover:text-[var(--primary)]"
-              >
-                {questionsExpanded ? 'Show less' : 'Show All'}
-              </button>
+          {lockedOutcomes.length > 0 ? (
+            <div className="relative">
+              <div className="flex flex-col gap-4" aria-hidden>
+                {lockedOutcomes.map((outcome) => {
+                  const questionNumber = outcome.originalIndex + 1
+                  return (
+                    <GuestDiagnosticLockedQuestionRow
+                      key={`locked-${questionNumber}`}
+                      number={questionNumber}
+                      heading={heading}
+                    />
+                  )
+                })}
+              </div>
+              {/* Figma `20583:30156` — free analytics limit overlay */}
+              <div className="absolute inset-0 flex items-center justify-center bg-[var(--primary-0)]/80 px-4 py-6">
+                <GuestFreeAnalyticsLimitCta onSubscribe={openPricingModal} />
+              </div>
             </div>
           ) : null}
         </div>
