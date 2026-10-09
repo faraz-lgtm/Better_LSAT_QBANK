@@ -1,3 +1,4 @@
+import { canShowDiagnosticExplanationForQuestionId } from "@/features/guest/diagnostic/diagnostic-explanation-access"
 import {
   getDiagnosticStimulusAnalysisHtml,
   resolveDiagnosticSourceQuestion,
@@ -45,23 +46,34 @@ export function buildDiagnosticExplanationDetailPayload(
   progress?: DiagnosticExplanationProgressMap,
   videoUrl: string | null = null,
   videoAspectRatio: string | null = null,
+  hasActiveCore = false,
 ): ExplanationDetailPayload | null {
   const source = resolveDiagnosticSourceQuestion(questionId)
   const loc = buildDiagnosticExplanationLocation(questionId, progress)
   if (!source || !loc) return null
 
+  const explanationsUnlocked = canShowDiagnosticExplanationForQuestionId({
+    questionId,
+    hasActiveCore,
+  })
+
   const { stimulusAnalysisHtml, answerChoiceAnalysisHtml } = splitDiagnosticExplanationHtml(
     source.explanationHtml,
   )
-  const choiceMap = parseAnswerChoiceExplanationMap(answerChoiceAnalysisHtml)
+  const choiceMap = explanationsUnlocked
+    ? parseAnswerChoiceExplanationMap(answerChoiceAnalysisHtml)
+    : {}
   const letters = source.choices.map((c) => c.letter)
   const popularity = buildDiagnosticAnswerPopularity(questionId, source.correctAnswer, letters)
   const { userSelectedLetter } = getDiagnosticExplanationQuestionProgress(
     progress ?? new Map(),
     questionId,
   )
-  const resolvedVideoUrl = videoUrl?.trim() || null
-  const resolvedAspectRatio = videoAspectRatio?.trim() || null
+  const resolvedVideoUrl = explanationsUnlocked ? videoUrl?.trim() || null : null
+  const resolvedAspectRatio = explanationsUnlocked ? videoAspectRatio?.trim() || null : null
+  const writtenExplanation = explanationsUnlocked
+    ? stimulusAnalysisHtml.trim() || source.explanationHtml || null
+    : null
 
   return {
     questionId,
@@ -74,7 +86,7 @@ export function buildDiagnosticExplanationDetailPayload(
     questionNumber: source.questionNumber,
     topicName: source.questionType || "Logical Reasoning",
     tags: source.questionType ? ["LR", source.questionType] : ["LR"],
-    explanationHtml: stimulusAnalysisHtml.trim() || source.explanationHtml || null,
+    explanationHtml: writtenExplanation,
     videoUrl: resolvedVideoUrl,
     videoAspectRatio: resolvedAspectRatio,
     stimulusText: source.stimulusText,
@@ -83,7 +95,9 @@ export function buildDiagnosticExplanationDetailPayload(
       id: choice.letter,
       index: index + 1,
       text: choice.text,
-      explanationHtml: choiceMap[choice.letter] ?? choice.explanation ?? null,
+      explanationHtml: explanationsUnlocked
+        ? (choiceMap[choice.letter] ?? choice.explanation ?? null)
+        : null,
     })),
     correctChoiceId: source.correctAnswer,
     passage: {
@@ -106,6 +120,7 @@ export function buildDiagnosticExplanationQuestionDetailView(
   attempts: readonly GuestDiagnosticResult[] = [],
   videoUrl: string | null = null,
   videoAspectRatio: string | null = null,
+  hasActiveCore = false,
 ): ExplanationQuestionDetailView | null {
   const loc = buildDiagnosticExplanationLocation(questionId, progress)
   const detail = buildDiagnosticExplanationDetailPayload(
@@ -113,12 +128,17 @@ export function buildDiagnosticExplanationQuestionDetailView(
     progress,
     videoUrl,
     videoAspectRatio,
+    hasActiveCore,
   )
   if (!loc || !detail) return null
 
+  const explanationsUnlocked = canShowDiagnosticExplanationForQuestionId({
+    questionId,
+    hasActiveCore,
+  })
   const view = buildExplanationQuestionDetailView(loc, detail)
   const neighbors = getDiagnosticExplanationNeighbors(questionId)
-  const stimulusOnly = getDiagnosticStimulusAnalysisHtml(questionId)
+  const stimulusOnly = explanationsUnlocked ? getDiagnosticStimulusAnalysisHtml(questionId) : null
   const { yourTimeSeconds } = getDiagnosticExplanationQuestionProgress(
     progress ?? new Map(),
     questionId,
@@ -130,6 +150,8 @@ export function buildDiagnosticExplanationQuestionDetailView(
     subtitleTrail: `${loc.pass.title} - Question ${view.questionNumber}`,
     neighbors,
     questionExplanationHtml: stimulusOnly?.trim() || view.questionExplanationHtml,
+    videos: explanationsUnlocked ? view.videos : [],
+    hasExplanationTab: explanationsUnlocked ? view.hasExplanationTab : false,
     analytics: {
       ...view.analytics,
       yourTimeSeconds,

@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
-import { BarChart3, ChevronDown, ChevronRight, PlayCircle } from "lucide-react"
+import { BarChart3, ChevronDown, ChevronRight, Lock, PlayCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { StudentMain } from "@/features/student/components/student-main"
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
+import { canShowDiagnosticExplanationForQuestionId } from "@/features/guest/diagnostic/diagnostic-explanation-access"
+import { useDiagnosticSubscription } from "@/features/guest/diagnostic/use-diagnostic-subscription"
+import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import {
   buildDiagnosticExplanationListItems,
   buildDiagnosticExplanationTrees,
@@ -196,39 +199,79 @@ function DifficultyMeter({ level }: { level: ExplanationQuestionNode["difficulty
 function DiagnosticTreeQuestionRow({
   question,
   indentClass,
+  unlocked,
+  onLockedClick,
 }: {
   question: ExplanationQuestionNode
   indentClass: string
+  unlocked: boolean
+  onLockedClick: () => void
 }) {
   const detailHref = diagnosticExplanationQuestionDetailHref(question.id)
   return (
-    <div className={cn(QUESTION_ROW_CLASS, indentClass)} data-tree-level="question" style={{ borderColor: S.border }}>
+    <div
+      className={cn(QUESTION_ROW_CLASS, indentClass)}
+      data-tree-level="question"
+      data-explanation-locked={unlocked ? undefined : "true"}
+      style={{ borderColor: S.border }}
+    >
       <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
         <QuestionIndexBadge>{question.number}</QuestionIndexBadge>
-        <Link
-          to={detailHref}
-          className="block shrink-0 whitespace-nowrap rounded-lg text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
-        >
-          {explanationListQuestionLabel(question)}
-        </Link>
+        {unlocked ? (
+          <Link
+            to={detailHref}
+            className="block shrink-0 whitespace-nowrap rounded-lg text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
+          >
+            {explanationListQuestionLabel(question)}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={onLockedClick}
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
+          >
+            <Lock className="size-3.5 shrink-0" aria-hidden />
+            {explanationListQuestionLabel(question)}
+          </button>
+        )}
         <div className="shrink-0 px-4">
-          <StatusBadge status={question.status} />
+          {unlocked ? <StatusBadge status={question.status} /> : (
+            <span className="inline-flex h-7 shrink-0 items-center gap-2 rounded-[10px] bg-[var(--primary-0)] px-4 text-xs font-semibold leading-[1.5] tracking-[0.24px] text-[var(--primary)]">
+              <Lock className="size-3 shrink-0" aria-hidden />
+              Locked
+            </span>
+          )}
         </div>
       </div>
 
       <div className="flex w-[412px] shrink-0 flex-nowrap items-center justify-end gap-6">
         <DifficultyMeter level={question.difficulty} />
         <div className="flex shrink-0 items-center gap-6">
-          <Button type="button" variant="ghost" size="icon" className="size-9 rounded-xl text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)]" asChild>
-            <Link to={`${detailHref}?tab=analytics`} aria-label="Open analytics tab">
-              <BarChart3 className="size-6" />
-            </Link>
-          </Button>
-          <Button type="button" variant="ghost" size="icon" className="size-9 rounded-xl text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)]" asChild>
-            <Link to={detailHref} aria-label="Open question">
-              <PlayCircle className="size-6" />
-            </Link>
-          </Button>
+          {unlocked ? (
+            <>
+              <Button type="button" variant="ghost" size="icon" className="size-9 rounded-xl text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)]" asChild>
+                <Link to={`${detailHref}?tab=analytics`} aria-label="Open analytics tab">
+                  <BarChart3 className="size-6" />
+                </Link>
+              </Button>
+              <Button type="button" variant="ghost" size="icon" className="size-9 rounded-xl text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)]" asChild>
+                <Link to={detailHref} aria-label="Open question">
+                  <PlayCircle className="size-6" />
+                </Link>
+              </Button>
+            </>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-9 rounded-xl text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)]"
+              aria-label="Unlock explanation"
+              onClick={onLockedClick}
+            >
+              <Lock className="size-5" />
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -236,8 +279,11 @@ function DiagnosticTreeQuestionRow({
 }
 
 function DiagnosticExplanationsPage() {
+  const { hasActiveCore, loading: subscriptionLoading } = useDiagnosticSubscription()
+  const { openPricingModal } = useGuestPricingModal()
   const progress = useMemo(() => readDiagnosticExplanationProgressMap(), [])
   const [videoUrlByQuestionId, setVideoUrlByQuestionId] = useState<Map<string, string>>(() => new Map())
+  const showPaidContent = hasActiveCore && !subscriptionLoading
 
   useEffect(() => {
     let cancelled = false
@@ -391,6 +437,11 @@ function DiagnosticExplanationsPage() {
                                   key={q.id}
                                   question={q}
                                   indentClass={EXPLANATION_TREE_PL_CLASS.question}
+                                  unlocked={canShowDiagnosticExplanationForQuestionId({
+                                    questionId: q.id,
+                                    hasActiveCore: showPaidContent,
+                                  })}
+                                  onLockedClick={openPricingModal}
                                 />
                               ))
                             : null}

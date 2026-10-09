@@ -3,6 +3,14 @@ import { parseQuestionChoices } from '../_shared/parse-question-choices.ts'
 import { parseStripeEnv } from '../_shared/stripe-env.ts'
 import type { DiagnosticRepository } from './diagnostic.repository.ts'
 
+/** Free Mini Diagnostic: first N written explanations unlocked. */
+const FREE_MINI_DIAGNOSTIC_EXPLANATION_LIMIT = 5
+/** Free Full Section / Full Diagnostic: first N explanations unlocked. */
+const FREE_SECTION_DIAGNOSTIC_EXPLANATION_LIMIT = 10
+
+const MINI_DIAG_VIDEO_ID = /^mini-diag-q(\d+)$/i
+const SECTION_DIAG_VIDEO_ID = /^section-diag-q(\d+)$/i
+
 export type MiniDiagnosticExplanationChoice = {
   letter: string
   text: string
@@ -96,14 +104,40 @@ function mapLockedVideoStub(
   }
 }
 
+function freeTeaserAllowsVideo(sourceItemId: string): boolean {
+  const mini = MINI_DIAG_VIDEO_ID.exec(sourceItemId)
+  if (mini) {
+    const n = Number.parseInt(mini[1] ?? '', 10)
+    return Number.isFinite(n) && n >= 1 && n <= FREE_MINI_DIAGNOSTIC_EXPLANATION_LIMIT
+  }
+  const section = SECTION_DIAG_VIDEO_ID.exec(sourceItemId)
+  if (section) {
+    const n = Number.parseInt(section[1] ?? '', 10)
+    return Number.isFinite(n) && n >= 1 && n <= FREE_SECTION_DIAGNOSTIC_EXPLANATION_LIMIT
+  }
+  return false
+}
+
+function mapFreeTeaserExplanation(
+  row: Awaited<ReturnType<DiagnosticRepository['listMiniDiagnosticQuestions']>>[number],
+): MiniDiagnosticExplanation {
+  const questionNumber = row.question_number ?? 0
+  if (questionNumber >= 1 && questionNumber <= FREE_MINI_DIAGNOSTIC_EXPLANATION_LIMIT) {
+    return mapQuestionRow(row)
+  }
+  return mapLockedVideoStub(row)
+}
+
 async function mapVideoUrlRows(
   rows: Awaited<ReturnType<DiagnosticRepository['listDiagnosticVideoUrls']>>,
   fetchFn: typeof fetch = fetch,
+  options: { freeTeaserOnly?: boolean } = {},
 ): Promise<DiagnosticVideoUrl[]> {
   const basic: { sourceItemId: string; videoUrl: string }[] = []
   for (const row of rows) {
     const videoUrl = row.video_url?.trim()
     if (!videoUrl) continue
+    if (options.freeTeaserOnly && !freeTeaserAllowsVideo(row.source_item_id)) continue
     basic.push({ sourceItemId: row.source_item_id, videoUrl })
   }
   const ratioByUrl = await resolveGumletCssAspectRatios(
@@ -132,16 +166,17 @@ export function createDiagnosticService(
         deps.repository.listMiniDiagnosticQuestions(),
         deps.repository.listDiagnosticVideoUrls(),
       ])
-      const videoUrls = await mapVideoUrlRows(videoRows, fetchFn)
-
       if (!hasActiveCore) {
+        const videoUrls = await mapVideoUrlRows(videoRows, fetchFn, { freeTeaserOnly: true })
         return {
+          // Still locked overall — free plan only gets the teaser window (Q1–5 mini).
           explanationsLocked: true,
-          explanations: rows.map(mapLockedVideoStub),
+          explanations: rows.map(mapFreeTeaserExplanation),
           videoUrls,
         }
       }
 
+      const videoUrls = await mapVideoUrlRows(videoRows, fetchFn)
       return {
         explanationsLocked: false,
         explanations: rows.map(mapQuestionRow),
