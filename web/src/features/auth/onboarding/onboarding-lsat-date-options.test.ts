@@ -12,11 +12,16 @@ describe("getRecommendedLsatDate", () => {
     expect(getRecommendedLsatDate(new Date(2026, 7, 24))).toBe("2027-02-12")
   })
 
-  it("falls back to the closest admin month when exact month is missing", () => {
+  it("falls back to the closest upcoming admin month when exact month is missing", () => {
     // Mar 2026 → Sep 2026 (exact)
     expect(getRecommendedLsatDate(new Date(2026, 2, 1))).toBe("2026-09-09")
     // Dec 2026 → Jun 2027
     expect(getRecommendedLsatDate(new Date(2026, 11, 1))).toBe("2027-06-09")
+  })
+
+  it("only recommends from future administrations", () => {
+    // After Sep 2026 started: 6 months → Mar 2027 → closest upcoming is Feb or Apr
+    expect(getRecommendedLsatDate(new Date(2026, 8, 21))).toBe("2027-02-12")
   })
 })
 
@@ -32,11 +37,13 @@ describe("buildOnboardingLsatDateOptions", () => {
     expect(options.filter((o) => o.label.includes("Recommended"))).toHaveLength(1)
   })
 
-  it("includes official LSAC registration windows with date ranges", () => {
-    const options = buildOnboardingLsatDateOptions(new Date(2026, 6, 15))
+  it("includes only future official LSAC registration windows", () => {
+    const options = buildOnboardingLsatDateOptions(new Date(2026, 8, 21)) // Sep 21, 2026
+    const values = options.map((o) => o.value)
     const labels = options.map((o) => o.label)
 
-    expect(labels.some((l) => l.includes("Sep 9–12, 2026"))).toBe(true)
+    expect(values).not.toContain("2026-09-09")
+    expect(labels.some((l) => l.includes("Sep 9–12, 2026"))).toBe(false)
     expect(labels.some((l) => l.includes("Oct 7–10, 2026"))).toBe(true)
     expect(labels.some((l) => l.includes("Nov 11–14, 2026"))).toBe(true)
     expect(labels.some((l) => l.includes("Jan 13–16, 2027"))).toBe(true)

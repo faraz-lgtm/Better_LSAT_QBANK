@@ -2,7 +2,7 @@ import { assertEquals } from 'jsr:@std/assert@1'
 import {
   authorizeSignupWebhook,
   notifySlackSignup,
-  parseAuthUsersSignupInsert,
+  parseAuthUsersConfirmedSignup,
 } from './slack-signup.ts'
 
 Deno.test('notifySlackSignup no-ops when webhook URL missing', async () => {
@@ -87,8 +87,8 @@ Deno.test('authorizeSignupWebhook rejects missing/wrong secret', () => {
   )
 })
 
-Deno.test('parseAuthUsersSignupInsert reads email signup', () => {
-  const parsed = parseAuthUsersSignupInsert({
+Deno.test('parseAuthUsersConfirmedSignup accepts INSERT when already confirmed', () => {
+  const parsed = parseAuthUsersConfirmedSignup({
     type: 'INSERT',
     schema: 'auth',
     table: 'users',
@@ -96,9 +96,55 @@ Deno.test('parseAuthUsersSignupInsert reads email signup', () => {
       id: 'user-1',
       email: 'Student@Example.com',
       created_at: '2026-10-08T10:00:00Z',
-      raw_app_meta_data: { provider: 'email', providers: ['email'] },
+      email_confirmed_at: '2026-10-08T10:00:01Z',
+      raw_app_meta_data: { provider: 'google', providers: ['google'] },
     },
     old_record: null,
+  })
+  assertEquals(parsed, {
+    email: 'student@example.com',
+    userId: 'user-1',
+    provider: 'google',
+    createdAt: '2026-10-08T10:00:00Z',
+  })
+})
+
+Deno.test('parseAuthUsersConfirmedSignup ignores INSERT before email confirm', () => {
+  assertEquals(
+    parseAuthUsersConfirmedSignup({
+      type: 'INSERT',
+      schema: 'auth',
+      table: 'users',
+      record: {
+        id: 'user-1',
+        email: 'student@example.com',
+        created_at: '2026-10-08T10:00:00Z',
+        email_confirmed_at: null,
+        raw_app_meta_data: { provider: 'email' },
+      },
+      old_record: null,
+    }),
+    null,
+  )
+})
+
+Deno.test('parseAuthUsersConfirmedSignup accepts UPDATE when email newly confirmed', () => {
+  const parsed = parseAuthUsersConfirmedSignup({
+    type: 'UPDATE',
+    schema: 'auth',
+    table: 'users',
+    record: {
+      id: 'user-1',
+      email: 'Student@Example.com',
+      created_at: '2026-10-08T10:00:00Z',
+      email_confirmed_at: '2026-10-08T10:05:00Z',
+      raw_app_meta_data: { provider: 'email', providers: ['email'] },
+    },
+    old_record: {
+      id: 'user-1',
+      email: 'Student@Example.com',
+      email_confirmed_at: null,
+    },
   })
   assertEquals(parsed, {
     email: 'student@example.com',
@@ -108,31 +154,43 @@ Deno.test('parseAuthUsersSignupInsert reads email signup', () => {
   })
 })
 
-Deno.test('parseAuthUsersSignupInsert ignores non-insert or non-auth.users', () => {
+Deno.test('parseAuthUsersConfirmedSignup ignores UPDATE when already confirmed', () => {
   assertEquals(
-    parseAuthUsersSignupInsert({
+    parseAuthUsersConfirmedSignup({
       type: 'UPDATE',
       schema: 'auth',
       table: 'users',
-      record: { id: 'u', email: 'a@b.com' },
+      record: {
+        id: 'user-1',
+        email: 'a@b.com',
+        email_confirmed_at: '2026-10-08T10:05:00Z',
+      },
+      old_record: {
+        id: 'user-1',
+        email: 'a@b.com',
+        email_confirmed_at: '2026-10-08T10:00:00Z',
+      },
     }),
     null,
   )
+})
+
+Deno.test('parseAuthUsersConfirmedSignup ignores non-auth.users payloads', () => {
   assertEquals(
-    parseAuthUsersSignupInsert({
+    parseAuthUsersConfirmedSignup({
       type: 'INSERT',
       schema: 'public',
       table: 'profiles',
-      record: { id: 'u', email: 'a@b.com' },
+      record: { id: 'u', email: 'a@b.com', email_confirmed_at: '2026-10-08T10:00:00Z' },
     }),
     null,
   )
   assertEquals(
-    parseAuthUsersSignupInsert({
+    parseAuthUsersConfirmedSignup({
       type: 'INSERT',
       schema: 'auth',
       table: 'users',
-      record: { id: 'u' },
+      record: { id: 'u', email_confirmed_at: '2026-10-08T10:00:00Z' },
     }),
     null,
   )

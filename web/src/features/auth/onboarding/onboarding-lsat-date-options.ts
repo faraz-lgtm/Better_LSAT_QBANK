@@ -1,5 +1,6 @@
 import {
   LSAC_OFFICIAL_TEST_WINDOWS,
+  listUpcomingLsacTestWindows,
   toLsacSelectOptions,
   type LsatTestWindowOption,
 } from "@/lib/lsac-test-window-options"
@@ -8,6 +9,10 @@ type LsatDateOption = { label: string; value: string }
 
 /** Admin LSAT windows shown on the welcome / onboarding signup step. */
 const LSAT_ADMIN_DATE_OPTIONS = LSAC_OFFICIAL_TEST_WINDOWS
+
+function upcomingAdminOptions(now: Date): LsatTestWindowOption[] {
+  return listUpcomingLsacTestWindows(now, LSAT_ADMIN_DATE_OPTIONS)
+}
 
 function addMonths(date: Date, months: number): Date {
   const next = new Date(date.getTime())
@@ -32,21 +37,25 @@ function monthsBetweenKeys(a: string, b: string): number {
 }
 
 /**
- * Pick the admin LSAT window closest to 6 months from `now`.
+ * Pick the upcoming admin LSAT window closest to 6 months from `now`.
  * Prefers an exact calendar-month match when one exists.
+ * Past / in-progress administrations are never recommended.
  */
 export function getRecommendedLsatDate(now: Date = new Date()): string {
+  const upcoming = upcomingAdminOptions(now)
+  if (upcoming.length === 0) return ""
+
   const targetKey = monthKeyFromDate(addMonths(now, 6))
 
-  const exact = LSAT_ADMIN_DATE_OPTIONS.find(
+  const exact = upcoming.find(
     (option) => monthKeyFromIso(option.value) === targetKey,
   )
   if (exact) return exact.value
 
-  let best = LSAT_ADMIN_DATE_OPTIONS[0]!
+  let best = upcoming[0]!
   let bestDistance = monthsBetweenKeys(monthKeyFromIso(best.value), targetKey)
 
-  for (const option of LSAT_ADMIN_DATE_OPTIONS.slice(1)) {
+  for (const option of upcoming.slice(1)) {
     const distance = monthsBetweenKeys(monthKeyFromIso(option.value), targetKey)
     if (distance < bestDistance) {
       best = option
@@ -57,13 +66,19 @@ export function getRecommendedLsatDate(now: Date = new Date()): string {
   return best.value
 }
 
+/** Future LSAC windows only — excludes administrations whose first test day has arrived. */
 export function buildOnboardingLsatDateOptions(
   now: Date = new Date(),
 ): LsatDateOption[] {
-  const recommendedValue = getRecommendedLsatDate(now)
-  const selectOptions = toLsacSelectOptions(LSAT_ADMIN_DATE_OPTIONS)
+  const upcoming = upcomingAdminOptions(now)
+  if (upcoming.length === 0) return []
 
-  const recommended = selectOptions.find((option) => option.value === recommendedValue)!
+  const recommendedValue = getRecommendedLsatDate(now)
+  const selectOptions = toLsacSelectOptions(upcoming)
+
+  const recommended = selectOptions.find((option) => option.value === recommendedValue)
+  if (!recommended) return selectOptions
+
   const rest = selectOptions.filter((option) => option.value !== recommendedValue)
 
   return [

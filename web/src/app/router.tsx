@@ -4,7 +4,10 @@ import { Navigate, Outlet, RouterProvider, createBrowserRouter, useLocation } fr
 import { StudentAppShell } from "@/features/app-shell/student-app-shell"
 import { LoginPage } from "@/features/auth/pages/login-page"
 import { SignupPage } from "@/features/auth/pages/signup-page"
-import { SignupCheckEmailPage } from "@/features/auth/pages/signup-check-email-page"
+import {
+  LoginEmailCheckPage,
+  SignupCheckEmailPage,
+} from "@/features/auth/pages/signup-check-email-page"
 import { ForgotPasswordPage } from "@/features/auth/pages/forgot-password-page"
 import { ResetPasswordPage } from "@/features/auth/pages/reset-password-page"
 import { AuthCallbackPage } from "@/features/auth/pages/auth-callback-page"
@@ -407,6 +410,7 @@ function RequireAuthenticated({ children }: { children: ReactElement }) {
 const router = createBrowserRouter([
   { path: "/", element: <MarketingHomePage /> },
   { path: "/login", element: <PublicOnly><LoginPage /></PublicOnly> },
+  { path: "/login/email-check", element: <LoginEmailCheckPage /> },
   {
     path: "/intent",
     element: (

@@ -9,7 +9,10 @@ import { OnboardingWelcomePreviewPage } from "@/features/auth/pages/onboarding-w
 import { GuestDiagnosticStartPage } from "@/features/guest/pages/guest-diagnostic-start-page"
 import { ResetPasswordPage } from "@/features/auth/pages/reset-password-page"
 import { SignupPage } from "@/features/auth/pages/signup-page"
-import { SignupCheckEmailPage } from "@/features/auth/pages/signup-check-email-page"
+import {
+  LoginEmailCheckPage,
+  SignupCheckEmailPage,
+} from "@/features/auth/pages/signup-check-email-page"
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
 import { PrepCourseCoursePage } from "@/features/prep-course/pages/prep-course-course-page"
 import { PrepCourseLessonPage } from "@/features/prep-course/pages/prep-course-lesson-page"
@@ -46,6 +49,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/login/email-check" element={<LoginEmailCheckPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/signup/check-email" element={<SignupCheckEmailPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />

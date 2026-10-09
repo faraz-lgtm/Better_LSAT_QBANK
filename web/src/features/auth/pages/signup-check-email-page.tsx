@@ -9,16 +9,21 @@ import { saveDiagnosticIntent, markDiagnosticFunnelActive } from "@/lib/auth/dia
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
-type SignupCheckEmailLocationState = {
+type CheckEmailLocationState = {
   email?: string
   from?: "intent"
   intent?: GuestDiagnosticIntentId
 }
 
-function SignupCheckEmailPage() {
+type CheckEmailPageProps = {
+  flow?: "signup" | "login"
+}
+
+function CheckEmailPage({ flow = "signup" }: CheckEmailPageProps) {
   const location = useLocation()
-  const locationState = (location.state ?? null) as SignupCheckEmailLocationState | null
+  const locationState = (location.state ?? null) as CheckEmailLocationState | null
   const email = locationState?.email?.trim() ?? ""
+  const authEntryPath = flow === "login" ? "/login" : "/signup"
   const [isResending, setIsResending] = useState(false)
   const [resendMessage, setResendMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -59,7 +64,7 @@ function SignupCheckEmailPage() {
   }
 
   return (
-    <GuestMarketingPanelLayout headerVariant="signup">
+    <GuestMarketingPanelLayout headerVariant={flow}>
       <AuthCard className="guest-marketing-signup-card">
         <div className="figma-gap-24 flex w-full flex-col items-center text-center">
           <h1 className="text-2xl font-bold leading-[1.3] text-[#062357]">Check your email</h1>
@@ -83,7 +88,7 @@ function SignupCheckEmailPage() {
                 {isResending ? "Sending..." : "Resend Email"}
               </button>
             ) : (
-              <Link to="/signup" className="guest-marketing-check-email-resend">
+              <Link to={authEntryPath} className="guest-marketing-check-email-resend">
                 Resend Email
               </Link>
             )}
@@ -109,4 +114,12 @@ function SignupCheckEmailPage() {
   )
 }
 
-export { SignupCheckEmailPage }
+function SignupCheckEmailPage() {
+  return <CheckEmailPage flow="signup" />
+}
+
+function LoginEmailCheckPage() {
+  return <CheckEmailPage flow="login" />
+}
+
+export { SignupCheckEmailPage, LoginEmailCheckPage, CheckEmailPage }

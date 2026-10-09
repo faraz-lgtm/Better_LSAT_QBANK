@@ -11,7 +11,7 @@ import { GuestMarketingPanelPattern } from "@/features/guest/marketing/guest-mar
 
 type GuestMarketingPanelLayoutProps = {
   children: ReactNode
-  headerVariant: "intent" | "signup"
+  headerVariant: "intent" | "signup" | "login"
 }
 
 function GuestMarketingPanelLayout({ children, headerVariant }: GuestMarketingPanelLayoutProps) {

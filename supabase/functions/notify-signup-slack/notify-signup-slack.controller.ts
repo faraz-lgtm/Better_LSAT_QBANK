@@ -1,7 +1,7 @@
 import {
   authorizeSignupWebhook,
   notifySlackSignup,
-  parseAuthUsersSignupInsert,
+  parseAuthUsersConfirmedSignup,
 } from '../_shared/slack-signup.ts'
 import { json } from '../_shared/edge-http.ts'
 
@@ -17,7 +17,7 @@ export type NotifySignupSlackDeps = {
   getEnv?: (key: string) => string | undefined
 }
 
-
+/** Database Webhook target for auth.users INSERT/UPDATE → Slack after email confirm. */
 export async function handleNotifySignupSlack(
   req: Request,
   deps: NotifySignupSlackDeps = {},
@@ -43,7 +43,7 @@ export async function handleNotifySignupSlack(
     return json({ error: 'Invalid JSON body' }, { status: 400 }, corsHeaders)
   }
 
-  const parsed = parseAuthUsersSignupInsert(body)
+  const parsed = parseAuthUsersConfirmedSignup(body)
   if (!parsed) {
     return json({ received: true, notified: false, reason: 'ignored' }, { status: 200 }, corsHeaders)
   }

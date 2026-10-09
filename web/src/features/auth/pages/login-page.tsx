@@ -99,10 +99,14 @@ function LoginPage() {
     setMessage(null)
     try {
       const sent = await withSubmitLock(magicLockRef, setIsMagicLoading, async () => {
+        const normalizedEmail = magicEmail.trim()
         persistDiagnosticIntent()
         persistSelectedPlan()
-        await authApi.sendMagicLink(magicEmail.trim(), getAuthCallbackUrl())
-        setMessage("Magic link sent. Check your inbox to continue.")
+        await authApi.sendMagicLink(normalizedEmail, getAuthCallbackUrl())
+        navigate("/login/email-check", {
+          replace: true,
+          state: { email: normalizedEmail, from: locationState?.from, intent: locationState?.intent },
+        })
       })
       if (!sent) return
     } catch (authError) {
