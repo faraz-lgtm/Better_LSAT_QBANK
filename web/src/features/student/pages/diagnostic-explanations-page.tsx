@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { BarChart3, ChevronDown, ChevronRight, PlayCircle } from "lucide-react"
 
@@ -11,8 +11,11 @@ import {
   countDiagnosticExplanationStatus,
   getDiagnosticExplanationTree,
 } from "@/features/student/diagnostic/build-diagnostic-explanation-catalog"
+import { collectMiniDiagnosticVideoUrls } from "@/features/student/diagnostic/mini-diagnostic-video-urls"
 import { readDiagnosticExplanationProgressMap } from "@/features/student/diagnostic/diagnostic-explanation-progress"
 import { diagnosticExplanationQuestionDetailHref } from "@/features/student/diagnostic/diagnostic-explanations-routes"
+import { createDiagnosticApi } from "@/lib/api/diagnostic"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { explanationListQuestionLabel } from "@/features/student/explanation-detail/explanation-list-question-label"
 import type {
   ExplanationPrepTestNode,
@@ -234,12 +237,36 @@ function DiagnosticTreeQuestionRow({
 
 function DiagnosticExplanationsPage() {
   const progress = useMemo(() => readDiagnosticExplanationProgressMap(), [])
-  const listItems = useMemo(() => buildDiagnosticExplanationListItems(progress), [progress])
+  const [videoUrlByQuestionId, setVideoUrlByQuestionId] = useState<Map<string, string>>(() => new Map())
+
+  useEffect(() => {
+    let cancelled = false
+    const diagnosticApi = createDiagnosticApi(getSupabaseBrowserClient())
+    void diagnosticApi
+      .getMiniDiagnosticExplanations()
+      .then((res) => {
+        if (cancelled) return
+        setVideoUrlByQuestionId(
+          collectMiniDiagnosticVideoUrls(res.explanations ?? [], res.videoUrls ?? []),
+        )
+      })
+      .catch(() => {
+        /* catalog still works without video badges */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const listItems = useMemo(
+    () => buildDiagnosticExplanationListItems(progress, videoUrlByQuestionId),
+    [progress, videoUrlByQuestionId],
+  )
   const treesById = useMemo(() => {
     const map = new Map<string, ExplanationPrepTestNode>()
-    for (const tree of buildDiagnosticExplanationTrees(progress)) map.set(tree.id, tree)
+    for (const tree of buildDiagnosticExplanationTrees(progress, videoUrlByQuestionId)) map.set(tree.id, tree)
     return map
-  }, [progress])
+  }, [progress, videoUrlByQuestionId])
   const statusCounts = useMemo(() => countDiagnosticExplanationStatus(progress), [progress])
   const [openPt, setOpenPt] = useState<Set<string>>(() => new Set())
   const [openSection, setOpenSection] = useState<Set<string>>(() => new Set())
@@ -294,7 +321,8 @@ function DiagnosticExplanationsPage() {
         >
           {listItems.map((row) => {
             const ptId = row.id
-            const tree = treesById.get(ptId) ?? getDiagnosticExplanationTree(ptId, progress)
+            const tree =
+              treesById.get(ptId) ?? getDiagnosticExplanationTree(ptId, progress, videoUrlByQuestionId)
             const ptIsOpen = openPt.has(ptId)
             const badge = prepTestBadgeColors()
             return (

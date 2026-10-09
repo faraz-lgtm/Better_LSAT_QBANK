@@ -33,6 +33,7 @@ function clampDifficulty(level: number): ExplanationQuestionNode["difficulty"] {
 function mapQuestion(
   question: MiniDiagnosticQuestion,
   status: ExplanationQuestionStatus = "fresh",
+  videoUrlByQuestionId?: ReadonlyMap<string, string>,
 ): ExplanationQuestionNode {
   const snippet = question.stemText.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
   return {
@@ -45,7 +46,7 @@ function mapQuestion(
     source: "Diagnostic",
     difficulty: clampDifficulty(question.difficulty),
     hasWrittenExplanation: Boolean(question.explanationHtml?.trim()),
-    hasVideo: false,
+    hasVideo: Boolean(videoUrlByQuestionId?.get(question.sourceItemId)?.trim()),
   }
 }
 
@@ -56,12 +57,14 @@ function buildSetTree(args: {
   title: string
   questions: MiniDiagnosticQuestion[]
   progress?: DiagnosticExplanationProgressMap
+  videoUrlByQuestionId?: ReadonlyMap<string, string>
 }): ExplanationPrepTestNode {
   const questions = args.questions.map((question) =>
     mapQuestion(
       question,
       getDiagnosticExplanationQuestionProgress(args.progress ?? new Map(), question.sourceItemId)
         .status,
+      args.videoUrlByQuestionId,
     ),
   )
   return {
@@ -108,6 +111,7 @@ function listItemFromTree(
 /** Catalog trees for Mini + Section diagnostic question banks. */
 export function buildDiagnosticExplanationTrees(
   progress?: DiagnosticExplanationProgressMap,
+  videoUrlByQuestionId?: ReadonlyMap<string, string>,
 ): ExplanationPrepTestNode[] {
   return [
     buildSetTree({
@@ -117,6 +121,7 @@ export function buildDiagnosticExplanationTrees(
       title: "Mini Diagnostic",
       questions: MINI_DIAGNOSTIC_MARKETING_SET.questions,
       progress,
+      videoUrlByQuestionId,
     }),
     buildSetTree({
       id: DIAGNOSTIC_EXPLANATION_SET_IDS.section,
@@ -125,14 +130,16 @@ export function buildDiagnosticExplanationTrees(
       title: "Section Diagnostic",
       questions: SECTION_DIAGNOSTIC_MARKETING_SET.questions,
       progress,
+      videoUrlByQuestionId,
     }),
   ]
 }
 
 export function buildDiagnosticExplanationListItems(
   progress?: DiagnosticExplanationProgressMap,
+  videoUrlByQuestionId?: ReadonlyMap<string, string>,
 ): ExplanationPrepTestListItem[] {
-  const [mini, section] = buildDiagnosticExplanationTrees(progress)
+  const [mini, section] = buildDiagnosticExplanationTrees(progress, videoUrlByQuestionId)
   return [
     listItemFromTree(mini!, "Mini Diagnostic", MINI_DIAGNOSTIC_MARKETING_SET.moduleId),
     listItemFromTree(section!, "Section Diagnostic", SECTION_DIAGNOSTIC_MARKETING_SET.moduleId),
@@ -142,18 +149,23 @@ export function buildDiagnosticExplanationListItems(
 export function getDiagnosticExplanationTree(
   setId: string,
   progress?: DiagnosticExplanationProgressMap,
+  videoUrlByQuestionId?: ReadonlyMap<string, string>,
 ): ExplanationPrepTestNode | null {
-  return buildDiagnosticExplanationTrees(progress).find((tree) => tree.id === setId) ?? null
+  return (
+    buildDiagnosticExplanationTrees(progress, videoUrlByQuestionId).find((tree) => tree.id === setId) ??
+    null
+  )
 }
 
 export function locateDiagnosticExplanationQuestion(
   questionId: string,
   progress?: DiagnosticExplanationProgressMap,
+  videoUrlByQuestionId?: ReadonlyMap<string, string>,
 ): {
   tree: ExplanationPrepTestNode
   question: ExplanationQuestionNode
 } | null {
-  for (const tree of buildDiagnosticExplanationTrees(progress)) {
+  for (const tree of buildDiagnosticExplanationTrees(progress, videoUrlByQuestionId)) {
     for (const sec of tree.sections) {
       for (const pass of sec.passages) {
         const question = pass.questions.find((q) => q.id === questionId)

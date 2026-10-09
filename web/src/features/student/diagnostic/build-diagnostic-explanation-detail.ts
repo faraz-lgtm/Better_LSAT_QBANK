@@ -43,6 +43,7 @@ export function buildDiagnosticExplanationLocation(
 export function buildDiagnosticExplanationDetailPayload(
   questionId: string,
   progress?: DiagnosticExplanationProgressMap,
+  videoUrl: string | null = null,
 ): ExplanationDetailPayload | null {
   const source = resolveDiagnosticSourceQuestion(questionId)
   const loc = buildDiagnosticExplanationLocation(questionId, progress)
@@ -58,6 +59,7 @@ export function buildDiagnosticExplanationDetailPayload(
     progress ?? new Map(),
     questionId,
   )
+  const resolvedVideoUrl = videoUrl?.trim() || null
 
   return {
     questionId,
@@ -71,7 +73,7 @@ export function buildDiagnosticExplanationDetailPayload(
     topicName: source.questionType || "Logical Reasoning",
     tags: source.questionType ? ["LR", source.questionType] : ["LR"],
     explanationHtml: stimulusAnalysisHtml.trim() || source.explanationHtml || null,
-    videoUrl: null,
+    videoUrl: resolvedVideoUrl,
     stimulusText: source.stimulusText,
     stemText: source.stemText,
     choices: source.choices.map((choice, index) => ({
@@ -99,9 +101,10 @@ export function buildDiagnosticExplanationQuestionDetailView(
   questionId: string,
   progress?: DiagnosticExplanationProgressMap,
   attempts: readonly GuestDiagnosticResult[] = [],
+  videoUrl: string | null = null,
 ): ExplanationQuestionDetailView | null {
   const loc = buildDiagnosticExplanationLocation(questionId, progress)
-  const detail = buildDiagnosticExplanationDetailPayload(questionId, progress)
+  const detail = buildDiagnosticExplanationDetailPayload(questionId, progress, videoUrl)
   if (!loc || !detail) return null
 
   const view = buildExplanationQuestionDetailView(loc, detail)
@@ -118,7 +121,6 @@ export function buildDiagnosticExplanationQuestionDetailView(
     subtitleTrail: `${loc.pass.title} - Question ${view.questionNumber}`,
     neighbors,
     questionExplanationHtml: stimulusOnly?.trim() || view.questionExplanationHtml,
-    hasExplanationTab: false,
     analytics: {
       ...view.analytics,
       yourTimeSeconds,

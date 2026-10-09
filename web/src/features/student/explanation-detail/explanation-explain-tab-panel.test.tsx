@@ -50,16 +50,44 @@ describe("ExplanationExplainTabPanel", () => {
           {
             ...baseVideos[1]!,
             videoUrl: "https://example.com/video.mp4",
+            postedLine: "Posted Wednesday, Jun 4, 2025 • Taken on Mini Diagnostic",
           },
         ]}
       />,
     )
 
     expect(screen.queryByText("No videos available yet")).not.toBeInTheDocument()
+    expect(screen.getByText("J.Y.'s explanation")).toBeInTheDocument()
+    expect(screen.getByText("Question explanation")).toBeInTheDocument()
+    expect(
+      screen.getByText("Posted Wednesday, Jun 4, 2025 • Taken on Mini Diagnostic"),
+    ).toBeInTheDocument()
     expect(document.querySelector("video")).toHaveAttribute("src", "https://example.com/video.mp4")
   })
 
-  it("videoOnly hides cards without a video url", () => {
+  it("renders Gumlet watch URLs as an iframe embed", () => {
+    render(
+      <ExplanationExplainTabPanel
+        videos={[
+          {
+            ...baseVideos[1]!,
+            videoUrl: "https://gumlet.tv/watch/6ac7f1fe2b2e8222c6c6e72d/",
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.queryByText("No videos available yet")).not.toBeInTheDocument()
+    const iframe = document.querySelector("iframe")
+    expect(iframe).toHaveAttribute(
+      "src",
+      "https://play.gumlet.io/embed/6ac7f1fe2b2e8222c6c6e72d",
+    )
+    expect(iframe?.parentElement).toHaveClass("aspect-video")
+    expect(iframe?.className).not.toContain("max-h-")
+  })
+
+  it("videoOnly hides cards without a video url and strips chrome text", () => {
     render(
       <ExplanationExplainTabPanel
         videoOnly
@@ -68,13 +96,18 @@ describe("ExplanationExplainTabPanel", () => {
           {
             ...baseVideos[1]!,
             videoUrl: "https://example.com/video.mp4",
+            postedLine: "Posted Wednesday, Jun 4, 2025 • Taken on Mini Diagnostic",
           },
         ]}
       />,
     )
 
     expect(screen.queryByText("Passage explanation")).not.toBeInTheDocument()
-    expect(screen.getByText("Question explanation")).toBeInTheDocument()
+    expect(screen.queryByText("Question explanation")).not.toBeInTheDocument()
+    expect(screen.queryByText("J.Y.'s explanation")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("Posted Wednesday, Jun 4, 2025 • Taken on Mini Diagnostic"),
+    ).not.toBeInTheDocument()
     expect(document.querySelector("video")).toHaveAttribute("src", "https://example.com/video.mp4")
   })
 
