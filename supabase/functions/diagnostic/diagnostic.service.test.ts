@@ -87,11 +87,30 @@ const mockOembedFetch: typeof fetch = async (input) => {
   return new Response(JSON.stringify({ width: 800, height: 392 }), { status: 200 })
 }
 
-Deno.test('getMiniDiagnosticExplanations returns locked payload when unpaid', async () => {
+Deno.test('getMiniDiagnosticExplanations returns free teaser for Q1–5 when unpaid', async () => {
   await withStripeTestEnv(async () => {
+    const lockedRow = {
+      ...SAMPLE_ROWS[0]!,
+      source_item_id: 'mini-diag-q6',
+      question_number: 6,
+      explanation: '<p>Locked explanation</p>',
+    }
     const service = createDiagnosticService(
       {
-        repository: mockRepository(),
+        repository: mockRepository(
+          [SAMPLE_ROWS[0]!, lockedRow],
+          [
+            ...SAMPLE_VIDEO_ROWS,
+            {
+              source_item_id: 'mini-diag-q6',
+              video_url: 'https://gumlet.tv/watch/locked-mini/',
+            },
+            {
+              source_item_id: 'section-diag-q11',
+              video_url: 'https://gumlet.tv/watch/locked-section/',
+            },
+          ],
+        ),
         hasActiveSubscription: async () => false,
       },
       { fetchFn: mockOembedFetch },
@@ -99,22 +118,16 @@ Deno.test('getMiniDiagnosticExplanations returns locked payload when unpaid', as
 
     const out = await service.getMiniDiagnosticExplanations('user-1')
     assertEquals(out.explanationsLocked, true)
-    assertEquals(out.explanations.length, 1)
+    assertEquals(out.explanations.length, 2)
     assertEquals(out.explanations[0]?.sourceItemId, 'mini-diag-q1')
-    assertEquals(out.explanations[0]?.videoUrl, 'https://gumlet.tv/watch/6ac7f1fe2b2e8222c6c6e72d/')
-    assertEquals(out.explanations[0]?.explanationHtml, null)
-    assertEquals(out.explanations[0]?.choices, [])
-    assertEquals(out.videoUrls, [
-      {
-        sourceItemId: 'mini-diag-q1',
-        videoUrl: 'https://gumlet.tv/watch/6ac7f1fe2b2e8222c6c6e72d/',
-        aspectRatio: '800 / 392',
-      },
-      {
-        sourceItemId: 'section-diag-q1',
-        videoUrl: 'https://gumlet.tv/watch/section-video/',
-        aspectRatio: '1920 / 1080',
-      },
+    assertEquals(out.explanations[0]?.explanationHtml, '<p>Full explanation</p>')
+    assertEquals(out.explanations[0]?.choices[0]?.letter, 'A')
+    assertEquals(out.explanations[1]?.sourceItemId, 'mini-diag-q6')
+    assertEquals(out.explanations[1]?.explanationHtml, null)
+    assertEquals(out.explanations[1]?.choices, [])
+    assertEquals(out.videoUrls.map((row) => row.sourceItemId).sort(), [
+      'mini-diag-q1',
+      'section-diag-q1',
     ])
   })
 })

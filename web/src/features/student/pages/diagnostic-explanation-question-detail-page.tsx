@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { Navigate, useParams, useSearchParams } from "react-router-dom"
+import { Lock } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
 import { StudentMain } from "@/features/student/components/student-main"
 import { buildExplanationQuestionNav } from "@/features/student/explanation-detail/build-explanation-question-nav"
 import { ExplanationAnalyticsTabPanel } from "@/features/student/explanation-detail/explanation-analytics-tab-panel"
@@ -12,7 +14,10 @@ import {
   buildDiagnosticExplanationLocation,
   buildDiagnosticExplanationQuestionDetailView,
 } from "@/features/student/diagnostic/build-diagnostic-explanation-detail"
+import { canShowDiagnosticExplanationForQuestionId } from "@/features/guest/diagnostic/diagnostic-explanation-access"
 import { listDiagnosticHistory } from "@/features/guest/diagnostic/guest-diagnostic-result-storage"
+import { useDiagnosticSubscription } from "@/features/guest/diagnostic/use-diagnostic-subscription"
+import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { readDiagnosticExplanationProgressMap } from "@/features/student/diagnostic/diagnostic-explanation-progress"
 import {
   DIAGNOSTIC_EXPLANATIONS_HREF,
@@ -41,12 +46,17 @@ function DiagnosticExplanationQuestionDetailPage() {
   const { questionId: questionIdParam } = useParams<{ questionId: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
   const questionId = questionIdParam ? decodeURIComponent(questionIdParam) : ""
+  const { hasActiveCore, loading: subscriptionLoading } = useDiagnosticSubscription()
+  const { openPricingModal } = useGuestPricingModal()
   const attempts = useMemo(() => listDiagnosticHistory(), [])
   const progress = useMemo(() => readDiagnosticExplanationProgressMap(), [])
   const [videoUrlByQuestionId, setVideoUrlByQuestionId] = useState<Map<string, string>>(() => new Map())
   const [videoAspectRatioByQuestionId, setVideoAspectRatioByQuestionId] = useState<Map<string, string>>(
     () => new Map(),
   )
+  const explanationsUnlocked =
+    !subscriptionLoading &&
+    canShowDiagnosticExplanationForQuestionId({ questionId, hasActiveCore })
 
   useEffect(() => {
     let cancelled = false
@@ -88,9 +98,10 @@ function DiagnosticExplanationQuestionDetailPage() {
             attempts,
             videoUrl,
             videoAspectRatio,
+            hasActiveCore && !subscriptionLoading,
           )
         : null,
-    [questionId, progress, attempts, videoUrl, videoAspectRatio],
+    [questionId, progress, attempts, videoUrl, videoAspectRatio, hasActiveCore, subscriptionLoading],
   )
 
   const setTab = (t: ExplanationDetailTabId) => {
@@ -131,6 +142,26 @@ function DiagnosticExplanationQuestionDetailPage() {
           showExplanationTab={view.hasExplanationTab}
           questionHrefBuilder={diagnosticExplanationQuestionDetailHref}
         />
+
+        {!explanationsUnlocked && !subscriptionLoading ? (
+          <div
+            className="flex flex-col items-start gap-3 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-5"
+            data-testid="diagnostic-explanation-locked-banner"
+          >
+            <div className="flex items-center gap-2 text-[var(--color-student-heading)]">
+              <Lock className="size-4 shrink-0 text-[var(--primary)]" aria-hidden />
+              <p className="m-0 text-sm font-semibold">Explanation locked on the free plan</p>
+            </div>
+            <p className="m-0 text-sm text-[var(--greyscale-500)]">
+              Free accounts can open the first 5 Mini Diagnostic explanations and the first 10 Full
+              Section / Full Diagnostic explanations. Upgrade to unlock every written explanation and
+              video.
+            </p>
+            <Button type="button" onClick={openPricingModal}>
+              See plans
+            </Button>
+          </div>
+        ) : null}
 
         <div>
           {tab === "question" ? (

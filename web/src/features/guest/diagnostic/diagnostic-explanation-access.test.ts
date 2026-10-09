@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   canShowDiagnosticExplanation,
+  canShowDiagnosticExplanationForQuestionId,
   canShowDiagnosticResultDetails,
   freeDiagnosticExplanationLimit,
   FREE_FULL_DIAGNOSTIC_EXPLANATION_LIMIT,
@@ -81,6 +82,50 @@ describe("canShowDiagnosticResultDetails", () => {
     ).toBe(true)
     expect(
       canShowDiagnosticResultDetails({ intentId: "full", questionNumber: 11, hasActiveCore: false }),
+    ).toBe(false)
+  })
+})
+
+describe("canShowDiagnosticExplanationForQuestionId", () => {
+  it("unlocks premium for any catalog question", () => {
+    expect(
+      canShowDiagnosticExplanationForQuestionId({
+        questionId: "mini-diag-q10",
+        hasActiveCore: true,
+      }),
+    ).toBe(true)
+    expect(
+      canShowDiagnosticExplanationForQuestionId({
+        questionId: "section-diag-q25",
+        hasActiveCore: true,
+      }),
+    ).toBe(true)
+  })
+
+  it("locks free Mini after Q5 and Full Section after Q10", () => {
+    expect(
+      canShowDiagnosticExplanationForQuestionId({
+        questionId: "mini-diag-q5",
+        hasActiveCore: false,
+      }),
+    ).toBe(true)
+    expect(
+      canShowDiagnosticExplanationForQuestionId({
+        questionId: "mini-diag-q6",
+        hasActiveCore: false,
+      }),
+    ).toBe(false)
+    expect(
+      canShowDiagnosticExplanationForQuestionId({
+        questionId: "section-diag-q10",
+        hasActiveCore: false,
+      }),
+    ).toBe(true)
+    expect(
+      canShowDiagnosticExplanationForQuestionId({
+        questionId: "section-diag-q11",
+        hasActiveCore: false,
+      }),
     ).toBe(false)
   })
 })
