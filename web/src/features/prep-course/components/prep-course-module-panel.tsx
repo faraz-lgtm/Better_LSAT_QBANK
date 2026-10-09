@@ -1,11 +1,8 @@
+import { Bookmark } from "lucide-react"
 import { useMemo } from "react"
 
 import { Switch } from "@/components/ui/switch"
 import { PrepCourseExpandButton } from "@/features/prep-course/components/prep-course-content-header"
-import {
-  PREP_COURSE_FIGMA,
-  PrepCourseFigmaIcon,
-} from "@/features/prep-course/components/prep-course-figma-icons"
 import { PrepCourseLessonRow } from "@/features/prep-course/components/prep-course-lesson-row"
 import { ProgressRing } from "@/features/prep-course/components/prep-course-lesson-sidebar"
 import { PrepCourseSectionAccordion } from "@/features/prep-course/components/prep-course-section-accordion"
@@ -133,9 +130,13 @@ function PrepCourseModulePanel({
 
   const bookmarkRow = (
     <div className="flex h-8 items-center gap-2">
-      <PrepCourseFigmaIcon
-        src={`${PREP_COURSE_FIGMA}/icon-bookmark.svg`}
-        className={cn("size-4", moduleBookmarked && "opacity-100")}
+      <Bookmark
+        className={cn(
+          "size-4",
+          moduleBookmarked ? "fill-current text-[var(--primary)]" : "text-[color:var(--greyscale-500)]",
+        )}
+        strokeWidth={2}
+        aria-hidden
       />
       <span className="text-xs font-medium tracking-[0.24px] text-[color:var(--greyscale-500)]">Bookmark</span>
       <Switch
@@ -152,7 +153,7 @@ function PrepCourseModulePanel({
   )
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
       <div className="shrink-0 border-b border-[var(--greyscale-100)] bg-[var(--primary-0)] p-[24px]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 flex-1 flex-col gap-2">
@@ -174,7 +175,7 @@ function PrepCourseModulePanel({
         </div>
       </div>
 
-      <div className="practice-session-pane--scroll-visible min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-[var(--greyscale-25)]">
+      <div className="overflow-x-hidden bg-[var(--greyscale-25)]">
         {!hasVisibleBookmarkedLessons ? (
           <p className="ds-body-sm ds-text-muted p-6">No bookmarked lessons in this module.</p>
         ) : null}

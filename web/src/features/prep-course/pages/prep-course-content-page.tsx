@@ -269,8 +269,8 @@ function PrepCourseContentPage() {
   }
 
   return (
-    <StudentMain layout="locked" contentClassName="flex min-h-0 flex-1 flex-col bg-[var(--primary-0)] pb-[24px]">
-      <section className="prep-course-shell-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
+    <StudentMain contentClassName="flex flex-col bg-[var(--primary-0)] pb-[24px]">
+      <section className="prep-course-shell-card flex w-full flex-col overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
         <div className="shrink-0">
           <PrepCourseContentHeader
             stats={stats}
@@ -278,8 +278,8 @@ function PrepCourseContentPage() {
             onToggleShowBookmarksOnly={setShowBookmarksOnly}
           />
         </div>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]">
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--primary-0)] lg:flex-row lg:items-stretch">
+        <div className="flex flex-col border-t border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]">
+          <div className="flex flex-col overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--primary-0)] lg:flex-row lg:items-start">
             {selectedModule ? (
               <PrepCourseModulePanel
                 course={course}
@@ -298,7 +298,7 @@ function PrepCourseContentPage() {
                 onLockedLessonClick={handleLockedContentClick}
               />
             ) : (
-              <p className="ds-body-sm ds-text-muted flex-1 p-6">Select a module to view sections.</p>
+              <p className="ds-body-sm ds-text-muted min-w-0 flex-1 p-6">Select a module to view sections.</p>
             )}
             <PrepCourseModuleSidebar
               modules={visibleModules}

@@ -5066,8 +5066,8 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
 
 .prep-course-shell-card {
   min-height: 0;
-  flex: 1 1 0;
-  height: 0;
+  flex: none;
+  height: auto;
   /* Figma dark: Neutral/0 #3f4247 elevated over Primary/0 shell #303338 */
   background-color: var(--greyscale-0);
   color: var(--color-student-heading);

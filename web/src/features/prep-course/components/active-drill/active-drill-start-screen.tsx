@@ -41,7 +41,6 @@ function ActiveDrillStartScreen({
           lessonSequence={lessonSequence}
           lessonBookmarked={lessonBookmarked}
           onToggleLessonBookmark={onToggleLessonBookmark}
-          bookmarkVariant="figma"
           contentClassName="w-full max-w-[640px]"
         />
       </header>

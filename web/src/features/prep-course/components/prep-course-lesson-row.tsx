@@ -1,3 +1,4 @@
+import { Bookmark } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import {
@@ -109,9 +110,10 @@ function PrepCourseLessonRow({
             )}
             onClick={() => onToggleBookmark(!bookmarked)}
           >
-            <PrepCourseFigmaIcon
-              src={`${PREP_COURSE_FIGMA}/icon-bookmark-sm.svg`}
-              className={cn("size-[18px]", bookmarked && "opacity-100")}
+            <Bookmark
+              className={cn("size-[18px]", bookmarked && "fill-current")}
+              strokeWidth={2}
+              aria-hidden
             />
           </button>
         ) : null}
