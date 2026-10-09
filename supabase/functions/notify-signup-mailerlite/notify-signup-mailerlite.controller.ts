@@ -1,8 +1,5 @@
-import {
-  authorizeSignupWebhook,
-  notifySlackSignup,
-  parseAuthUsersSignupInsert,
-} from '../_shared/slack-signup.ts'
+import { authorizeSignupWebhook, parseAuthUsersSignupInsert } from '../_shared/slack-signup.ts'
+import { notifyMailerLiteSignup } from '../_shared/mailerlite-signup.ts'
 import { json } from '../_shared/edge-http.ts'
 
 const corsHeaders: Record<string, string> = {
@@ -11,16 +8,16 @@ const corsHeaders: Record<string, string> = {
     'authorization, x-client-info, apikey, content-type, x-signup-webhook-secret',
 }
 
-export type NotifySignupSlackDeps = {
+export type NotifySignupMailerliteDeps = {
   authorize?: (req: Request) => boolean
-  notify?: typeof notifySlackSignup
+  notify?: typeof notifyMailerLiteSignup
   getEnv?: (key: string) => string | undefined
 }
 
-
-export async function handleNotifySignupSlack(
+/** Database Webhook target for auth.users INSERT → MailerLite Users group. */
+export async function handleNotifySignupMailerlite(
   req: Request,
-  deps: NotifySignupSlackDeps = {},
+  deps: NotifySignupMailerliteDeps = {},
 ): Promise<Response> {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -45,17 +42,14 @@ export async function handleNotifySignupSlack(
 
   const parsed = parseAuthUsersSignupInsert(body)
   if (!parsed) {
-    return json({ received: true, notified: false, reason: 'ignored' }, { status: 200 }, corsHeaders)
+    return json({ received: true, synced: false, reason: 'ignored' }, { status: 200 }, corsHeaders)
   }
 
-  const notify = deps.notify ?? notifySlackSignup
-  const notified = await notify({
+  const notify = deps.notify ?? notifyMailerLiteSignup
+  const synced = await notify({
     email: parsed.email,
-    userId: parsed.userId,
-    provider: parsed.provider,
-    createdAt: parsed.createdAt ?? undefined,
     getEnv,
   })
 
-  return json({ received: true, notified }, { status: 200 }, corsHeaders)
+  return json({ received: true, synced }, { status: 200 }, corsHeaders)
 }
