@@ -163,6 +163,7 @@ function buildDiagnosticResultExplanation(
     stemText: question.stemText,
     correctAnswer: question.correctAnswer,
     explanationHtml: question.explanationHtml,
+    videoUrl: null,
     choices: question.choices.map((choice) => ({
       letter: choice.letter,
       text: choice.text,

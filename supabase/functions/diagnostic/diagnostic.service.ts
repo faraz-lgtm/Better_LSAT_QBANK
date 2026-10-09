@@ -17,12 +17,20 @@ export type MiniDiagnosticExplanation = {
   stemText: string
   correctAnswer: string | null
   explanationHtml: string | null
+  videoUrl: string | null
   choices: MiniDiagnosticExplanationChoice[]
+}
+
+export type DiagnosticVideoUrl = {
+  sourceItemId: string
+  videoUrl: string
 }
 
 export type MiniDiagnosticExplanationsResponse = {
   explanationsLocked: boolean
   explanations: MiniDiagnosticExplanation[]
+  /** Mini + Section diagnostic videos (always returned when present, even if written explanations are locked). */
+  videoUrls: DiagnosticVideoUrl[]
 }
 
 export type DiagnosticServiceDeps = {
@@ -46,7 +54,9 @@ async function resolveHasActiveCore(
   return await hasActiveSubscription(userId)
 }
 
-function mapQuestionRow(row: Awaited<ReturnType<DiagnosticRepository['listMiniDiagnosticQuestions']>>[number]): MiniDiagnosticExplanation {
+function mapQuestionRow(
+  row: Awaited<ReturnType<DiagnosticRepository['listMiniDiagnosticQuestions']>>[number],
+): MiniDiagnosticExplanation {
   const parsedChoices = parseQuestionChoices(row.choices, { includeOptionExplanations: true })
   return {
     sourceItemId: row.source_item_id,
@@ -57,6 +67,7 @@ function mapQuestionRow(row: Awaited<ReturnType<DiagnosticRepository['listMiniDi
     stemText: row.stem_text ?? '',
     correctAnswer: row.correct_answer?.trim().toUpperCase() ?? null,
     explanationHtml: row.explanation?.trim() || null,
+    videoUrl: row.video_url?.trim() || null,
     choices: parsedChoices.map((choice) => ({
       letter: choice.id.toUpperCase(),
       text: choice.text,
@@ -65,18 +76,57 @@ function mapQuestionRow(row: Awaited<ReturnType<DiagnosticRepository['listMiniDi
   }
 }
 
+function mapLockedVideoStub(
+  row: Awaited<ReturnType<DiagnosticRepository['listMiniDiagnosticQuestions']>>[number],
+): MiniDiagnosticExplanation {
+  return {
+    sourceItemId: row.source_item_id,
+    questionNumber: row.question_number ?? 0,
+    questionType: null,
+    difficulty: null,
+    stimulusText: null,
+    stemText: '',
+    correctAnswer: null,
+    explanationHtml: null,
+    videoUrl: row.video_url?.trim() || null,
+    choices: [],
+  }
+}
+
+function mapVideoUrlRows(
+  rows: Awaited<ReturnType<DiagnosticRepository['listDiagnosticVideoUrls']>>,
+): DiagnosticVideoUrl[] {
+  const out: DiagnosticVideoUrl[] = []
+  for (const row of rows) {
+    const videoUrl = row.video_url?.trim()
+    if (!videoUrl) continue
+    out.push({ sourceItemId: row.source_item_id, videoUrl })
+  }
+  return out
+}
+
 export function createDiagnosticService(deps: DiagnosticServiceDeps) {
   return {
     async getMiniDiagnosticExplanations(userId: string): Promise<MiniDiagnosticExplanationsResponse> {
       const hasActiveCore = await resolveHasActiveCore(userId, deps.hasActiveSubscription)
+      const [rows, videoRows] = await Promise.all([
+        deps.repository.listMiniDiagnosticQuestions(),
+        deps.repository.listDiagnosticVideoUrls(),
+      ])
+      const videoUrls = mapVideoUrlRows(videoRows)
+
       if (!hasActiveCore) {
-        return { explanationsLocked: true, explanations: [] }
+        return {
+          explanationsLocked: true,
+          explanations: rows.map(mapLockedVideoStub),
+          videoUrls,
+        }
       }
 
-      const rows = await deps.repository.listMiniDiagnosticQuestions()
       return {
         explanationsLocked: false,
         explanations: rows.map(mapQuestionRow),
+        videoUrls,
       }
     },
   }

@@ -17,12 +17,20 @@ export type MiniDiagnosticExplanation = {
   stemText: string
   correctAnswer: string | null
   explanationHtml: string | null
+  videoUrl: string | null
   choices: MiniDiagnosticExplanationChoice[]
+}
+
+export type DiagnosticVideoUrl = {
+  sourceItemId: string
+  videoUrl: string
 }
 
 export type MiniDiagnosticExplanationsResponse = {
   explanationsLocked: boolean
   explanations: MiniDiagnosticExplanation[]
+  /** Mini + Section diagnostic videos for Video Explanation tab visibility. */
+  videoUrls?: DiagnosticVideoUrl[]
 }
 
 export function createDiagnosticApi(supabase: SupabaseClient) {

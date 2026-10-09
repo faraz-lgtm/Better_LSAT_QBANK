@@ -28,9 +28,24 @@ describe("diagnostic explanation catalog", () => {
     expect(view?.questionNumber).toBe(1)
     expect(view?.choices.length).toBeGreaterThan(0)
     expect(view?.analytics.userSelectedLetter).toBeNull()
+    expect(view?.hasExplanationTab).toBe(false)
     expect(diagnosticExplanationQuestionDetailHref(firstId!)).toBe(
       `/app/diagnostic/explanations/q/${encodeURIComponent(firstId!)}`,
     )
+
+    const withVideo = buildDiagnosticExplanationQuestionDetailView(
+      firstId!,
+      undefined,
+      [],
+      "https://gumlet.tv/watch/6ac7f1fe2b2e8222c6c6e72d/",
+    )
+    expect(withVideo?.hasExplanationTab).toBe(true)
+    expect(withVideo?.videos.some((v) => v.videoUrl?.includes("gumlet"))).toBe(true)
+
+    const videoMap = new Map([[firstId!, "https://gumlet.tv/watch/6ac7f1fe2b2e8222c6c6e72d/"]])
+    const treesWithVideo = buildDiagnosticExplanationTrees(undefined, videoMap)
+    expect(treesWithVideo[0]?.sections[0]?.passages[0]?.questions[0]?.hasVideo).toBe(true)
+    expect(treesWithVideo[0]?.sections[0]?.passages[0]?.questions[1]?.hasVideo).toBe(false)
   })
 
   it("applies real attempt status and selected letter onto catalog + detail", () => {

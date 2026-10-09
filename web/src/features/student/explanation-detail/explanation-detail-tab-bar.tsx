@@ -222,7 +222,7 @@ function ExplanationDetailTabBar({
   onTabChange,
   prevHref,
   nextHref,
-  showExplanationTab = true,
+  showExplanationTab = false,
   questionHrefBuilder,
 }: ExplanationDetailTabBarProps) {
   const visibleTabs = TABS.filter((t) => t.id !== "explanation" || showExplanationTab)

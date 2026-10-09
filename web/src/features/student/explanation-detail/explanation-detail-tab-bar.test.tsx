@@ -40,6 +40,26 @@ const questionNav: ExplanationQuestionNavSection[] = [
 ]
 
 describe("ExplanationDetailTabBar tabs", () => {
+  it("hides Video Explanation by default when showExplanationTab is omitted", () => {
+    render(
+      <MemoryRouter>
+        <ExplanationDetailTabBar
+          headingCode="PT 160 S1 P1 Q5"
+          subtitleTrail="PrepTest 160"
+          questionId="q5"
+          questionNumber={5}
+          questionNav={questionNav}
+          tab="question"
+          onTabChange={() => {}}
+          prevHref={null}
+          nextHref={null}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByRole("tab", { name: "Video Explanation" })).not.toBeInTheDocument()
+  })
+
   it("hides Video Explanation when showExplanationTab is false", () => {
     render(
       <MemoryRouter>

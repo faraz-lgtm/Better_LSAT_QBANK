@@ -14,6 +14,7 @@ const explanation: MiniDiagnosticExplanation = {
   stemText: 'Which conclusion?',
   correctAnswer: 'C',
   explanationHtml: '<p>Full write-up</p>',
+  videoUrl: null,
   choices: [
     { letter: 'A', text: 'Choice A', explanation: 'Wrong because premise' },
     { letter: 'C', text: 'Choice C', explanation: 'Matches the conclusion' },
