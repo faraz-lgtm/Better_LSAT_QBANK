@@ -3,9 +3,9 @@ export type SlackSignupNotifyInput = {
   userId?: string
   provider?: string
   createdAt?: string
-  /** Injected for tests; defaults to global fetch. */
+
   fetchImpl?: typeof fetch
-  /** Injected for tests; defaults to Deno.env.get. */
+  
   getEnv?: (key: string) => string | undefined
 }
 
@@ -24,10 +24,7 @@ export type ParsedSignupInsert = {
   createdAt: string | null
 }
 
-/**
- * Posts a signup notice to Slack via Incoming Webhook.
- * No-ops when SLACK_SIGNUP_WEBHOOK_URL is unset. Never throws.
- */
+
 export async function notifySlackSignup(input: SlackSignupNotifyInput): Promise<boolean> {
   const getEnv = input.getEnv ?? ((key: string) => Deno.env.get(key) ?? undefined)
   const webhookUrl = getEnv('SLACK_SIGNUP_WEBHOOK_URL')?.trim()
@@ -84,10 +81,7 @@ function readProvider(record: Record<string, unknown>): string {
   return 'unknown'
 }
 
-/**
- * Extracts signup fields from a Supabase Database Webhook payload for auth.users INSERT.
- * Returns null when the event is not a usable new-user insert.
- */
+
 export function parseAuthUsersSignupInsert(body: unknown): ParsedSignupInsert | null {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return null
   const payload = body as AuthUsersInsertPayload
