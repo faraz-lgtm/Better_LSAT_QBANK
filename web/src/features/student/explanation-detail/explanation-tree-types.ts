@@ -69,6 +69,8 @@ export type ExplanationDetailPayload = {
   tags?: string[]
   explanationHtml: string | null
   videoUrl: string | null
+  /** CSS aspect-ratio for the embedded player when known. */
+  videoAspectRatio?: string | null
   stimulusText: string | null
   stemText: string | null
   choices: { id: string; index: number; text: string; explanationHtml: string | null }[]

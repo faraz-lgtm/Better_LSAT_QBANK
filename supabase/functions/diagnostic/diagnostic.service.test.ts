@@ -79,12 +79,23 @@ function mockRepository(
   }
 }
 
+const mockOembedFetch: typeof fetch = async (input) => {
+  const url = String(input)
+  if (url.includes('section-video')) {
+    return new Response(JSON.stringify({ width: 1920, height: 1080 }), { status: 200 })
+  }
+  return new Response(JSON.stringify({ width: 800, height: 392 }), { status: 200 })
+}
+
 Deno.test('getMiniDiagnosticExplanations returns locked payload when unpaid', async () => {
   await withStripeTestEnv(async () => {
-    const service = createDiagnosticService({
-      repository: mockRepository(),
-      hasActiveSubscription: async () => false,
-    })
+    const service = createDiagnosticService(
+      {
+        repository: mockRepository(),
+        hasActiveSubscription: async () => false,
+      },
+      { fetchFn: mockOembedFetch },
+    )
 
     const out = await service.getMiniDiagnosticExplanations('user-1')
     assertEquals(out.explanationsLocked, true)
@@ -94,17 +105,28 @@ Deno.test('getMiniDiagnosticExplanations returns locked payload when unpaid', as
     assertEquals(out.explanations[0]?.explanationHtml, null)
     assertEquals(out.explanations[0]?.choices, [])
     assertEquals(out.videoUrls, [
-      { sourceItemId: 'mini-diag-q1', videoUrl: 'https://gumlet.tv/watch/6ac7f1fe2b2e8222c6c6e72d/' },
-      { sourceItemId: 'section-diag-q1', videoUrl: 'https://gumlet.tv/watch/section-video/' },
+      {
+        sourceItemId: 'mini-diag-q1',
+        videoUrl: 'https://gumlet.tv/watch/6ac7f1fe2b2e8222c6c6e72d/',
+        aspectRatio: '800 / 392',
+      },
+      {
+        sourceItemId: 'section-diag-q1',
+        videoUrl: 'https://gumlet.tv/watch/section-video/',
+        aspectRatio: '1920 / 1080',
+      },
     ])
   })
 })
 
 Deno.test('getMiniDiagnosticExplanations returns mapped explanations when paid', async () => {
-  const service = createDiagnosticService({
-    repository: mockRepository(),
-    hasActiveSubscription: async () => true,
-  })
+  const service = createDiagnosticService(
+    {
+      repository: mockRepository(),
+      hasActiveSubscription: async () => true,
+    },
+    { fetchFn: mockOembedFetch },
+  )
 
   const out = await service.getMiniDiagnosticExplanations('user-1')
   assertEquals(out.explanationsLocked, false)
@@ -117,13 +139,17 @@ Deno.test('getMiniDiagnosticExplanations returns mapped explanations when paid',
   assertEquals(out.explanations[0]?.choices[0]?.letter, 'A')
   assertEquals(out.explanations[0]?.choices[0]?.explanation, 'A why')
   assertEquals(out.videoUrls.length, 2)
+  assertEquals(out.videoUrls[0]?.aspectRatio, '800 / 392')
 })
 
 Deno.test('getMiniDiagnosticExplanations returns empty unlocked list when section missing', async () => {
-  const service = createDiagnosticService({
-    repository: mockRepository([], []),
-    hasActiveSubscription: async () => true,
-  })
+  const service = createDiagnosticService(
+    {
+      repository: mockRepository([], []),
+      hasActiveSubscription: async () => true,
+    },
+    { fetchFn: mockOembedFetch },
+  )
 
   const out = await service.getMiniDiagnosticExplanations('user-1')
   assertEquals(out.explanationsLocked, false)

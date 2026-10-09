@@ -184,6 +184,7 @@ export function buildExplanationQuestionDetailView(
       dropdownOptions: [{ value: "passage", label: "Passage explanation" }],
       postedLine: "Posted Friday, Apr 5 • Duration: 8:32",
       videoUrl: null,
+      aspectRatio: null,
       explanationHtml: detail?.explanationHtml ?? null,
     },
     {
@@ -196,6 +197,7 @@ export function buildExplanationQuestionDetailView(
         ? `Posted Wednesday, Jun 4, 2025 • Taken on ${detail.prepTestTitle}`
         : "Posted Wednesday, Jun 4, 2025 • Taken on LawHub",
       videoUrl: detail?.videoUrl ?? null,
+      aspectRatio: detail?.videoAspectRatio ?? null,
       explanationHtml: null,
     },
   ]

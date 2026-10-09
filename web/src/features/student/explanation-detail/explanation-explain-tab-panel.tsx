@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react"
 import { ChevronUp, Video } from "lucide-react"
 
+import { fetchGumletCssAspectRatio } from "@/features/student/explanation-detail/fetch-gumlet-aspect-ratio"
 import { resolveExplanationVideoPlayback } from "@/features/student/explanation-detail/resolve-explanation-video-playback"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
 import { cn } from "@/lib/utils"
@@ -14,6 +16,35 @@ function hasVideoContent(v: ExplanationQuestionDetailView["videos"][number]): bo
   return Boolean(v.videoUrl?.trim())
 }
 
+function usePlayerAspectRatio(
+  playbackSrc: string | null,
+  preferredAspectRatio: string | null | undefined,
+  fallbackAspectRatio: string,
+): string {
+  const preferred = preferredAspectRatio?.trim() || null
+  const [aspectRatio, setAspectRatio] = useState(preferred ?? fallbackAspectRatio)
+
+  useEffect(() => {
+    if (preferred) {
+      setAspectRatio(preferred)
+      return
+    }
+    if (!playbackSrc) {
+      setAspectRatio(fallbackAspectRatio)
+      return
+    }
+    let cancelled = false
+    void fetchGumletCssAspectRatio(playbackSrc).then((resolved) => {
+      if (!cancelled && resolved) setAspectRatio(resolved)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [playbackSrc, preferred, fallbackAspectRatio])
+
+  return aspectRatio
+}
+
 function VideoExplanationCard({
   v,
   hideChrome = false,
@@ -23,6 +54,11 @@ function VideoExplanationCard({
   hideChrome?: boolean
 }) {
   const playback = v.videoUrl?.trim() ? resolveExplanationVideoPlayback(v.videoUrl) : null
+  const aspectRatio = usePlayerAspectRatio(
+    playback?.kind === "iframe" ? playback.src : null,
+    v.aspectRatio,
+    playback?.aspectRatio ?? "16 / 9",
+  )
 
   return (
     <article className="overflow-hidden rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
@@ -51,14 +87,15 @@ function VideoExplanationCard({
           {playback.kind === "iframe" ? (
             <div
               className={cn(
-                "aspect-video w-full overflow-hidden bg-black",
+                "relative w-full overflow-hidden bg-[var(--greyscale-0)]",
                 hideChrome ? "rounded-none" : "rounded-xl",
               )}
+              style={{ aspectRatio }}
             >
               <iframe
                 title={v.dropdownLabel || "Explanation video"}
                 src={playback.src}
-                className="h-full w-full border-0"
+                className="absolute inset-0 h-full w-full border-0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 allowFullScreen
               />
@@ -66,7 +103,8 @@ function VideoExplanationCard({
           ) : (
             <video
               controls
-              className={cn("aspect-video w-full bg-black", hideChrome ? "rounded-none" : "rounded-xl")}
+              className={cn("w-full bg-[var(--greyscale-0)]", hideChrome ? "rounded-none" : "rounded-xl")}
+              style={{ aspectRatio }}
               src={playback.src}
             />
           )}

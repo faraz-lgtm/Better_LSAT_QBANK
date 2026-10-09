@@ -1,3 +1,4 @@
+import { resolveGumletCssAspectRatios } from '../_shared/gumlet-aspect-ratio.ts'
 import { parseQuestionChoices } from '../_shared/parse-question-choices.ts'
 import { parseStripeEnv } from '../_shared/stripe-env.ts'
 import type { DiagnosticRepository } from './diagnostic.repository.ts'
@@ -24,6 +25,8 @@ export type MiniDiagnosticExplanation = {
 export type DiagnosticVideoUrl = {
   sourceItemId: string
   videoUrl: string
+  /** CSS aspect-ratio from Gumlet oEmbed when available (e.g. `"800 / 392"`). */
+  aspectRatio: string | null
 }
 
 export type MiniDiagnosticExplanationsResponse = {
@@ -93,19 +96,35 @@ function mapLockedVideoStub(
   }
 }
 
-function mapVideoUrlRows(
+async function mapVideoUrlRows(
   rows: Awaited<ReturnType<DiagnosticRepository['listDiagnosticVideoUrls']>>,
-): DiagnosticVideoUrl[] {
-  const out: DiagnosticVideoUrl[] = []
+  fetchFn: typeof fetch = fetch,
+): Promise<DiagnosticVideoUrl[]> {
+  const basic: { sourceItemId: string; videoUrl: string }[] = []
   for (const row of rows) {
     const videoUrl = row.video_url?.trim()
     if (!videoUrl) continue
-    out.push({ sourceItemId: row.source_item_id, videoUrl })
+    basic.push({ sourceItemId: row.source_item_id, videoUrl })
   }
-  return out
+  const ratioByUrl = await resolveGumletCssAspectRatios(
+    basic.map((row) => row.videoUrl),
+    fetchFn,
+  )
+  return basic.map((row) => ({
+    ...row,
+    aspectRatio: ratioByUrl.get(row.videoUrl) ?? null,
+  }))
 }
 
-export function createDiagnosticService(deps: DiagnosticServiceDeps) {
+export type DiagnosticServiceOptions = {
+  fetchFn?: typeof fetch
+}
+
+export function createDiagnosticService(
+  deps: DiagnosticServiceDeps,
+  options: DiagnosticServiceOptions = {},
+) {
+  const fetchFn = options.fetchFn ?? fetch
   return {
     async getMiniDiagnosticExplanations(userId: string): Promise<MiniDiagnosticExplanationsResponse> {
       const hasActiveCore = await resolveHasActiveCore(userId, deps.hasActiveSubscription)
@@ -113,7 +132,7 @@ export function createDiagnosticService(deps: DiagnosticServiceDeps) {
         deps.repository.listMiniDiagnosticQuestions(),
         deps.repository.listDiagnosticVideoUrls(),
       ])
-      const videoUrls = mapVideoUrlRows(videoRows)
+      const videoUrls = await mapVideoUrlRows(videoRows, fetchFn)
 
       if (!hasActiveCore) {
         return {

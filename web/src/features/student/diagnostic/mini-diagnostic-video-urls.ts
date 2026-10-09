@@ -20,6 +20,14 @@ function readVideoUrl(row: VideoUrlLike): string {
   return ""
 }
 
+function readAspectRatio(row: VideoUrlLike): string {
+  const camel = (row as { aspectRatio?: unknown }).aspectRatio
+  if (typeof camel === "string" && camel.trim()) return camel.trim()
+  const snake = (row as { aspect_ratio?: unknown }).aspect_ratio
+  if (typeof snake === "string" && snake.trim()) return snake.trim()
+  return ""
+}
+
 /** Collect non-empty video URLs keyed by `sourceItemId` (supports camelCase or snake_case). */
 export function collectMiniDiagnosticVideoUrls(
   explanations: ReadonlyArray<VideoUrlLike>,
@@ -30,6 +38,20 @@ export function collectMiniDiagnosticVideoUrls(
     const sourceItemId = readSourceItemId(row)
     const url = readVideoUrl(row)
     if (sourceItemId && url) next.set(sourceItemId, url)
+  }
+  return next
+}
+
+/** Collect CSS aspect-ratio strings keyed by `sourceItemId` when present on video rows. */
+export function collectMiniDiagnosticVideoAspectRatios(
+  explanations: ReadonlyArray<VideoUrlLike>,
+  extraVideoUrls: ReadonlyArray<VideoUrlLike> = [],
+): Map<string, string> {
+  const next = new Map<string, string>()
+  for (const row of [...explanations, ...extraVideoUrls]) {
+    const sourceItemId = readSourceItemId(row)
+    const aspectRatio = readAspectRatio(row)
+    if (sourceItemId && aspectRatio) next.set(sourceItemId, aspectRatio)
   }
   return next
 }

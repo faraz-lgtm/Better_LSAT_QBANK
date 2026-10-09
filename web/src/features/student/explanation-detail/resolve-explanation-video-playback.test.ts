@@ -14,6 +14,7 @@ describe("resolveExplanationVideoPlayback", () => {
     ).toEqual({
       kind: "iframe",
       src: "https://play.gumlet.io/embed/6ac7f1fe2b2e8222c6c6e72d",
+      aspectRatio: "16 / 9",
     })
   })
 
@@ -23,6 +24,7 @@ describe("resolveExplanationVideoPlayback", () => {
     ).toEqual({
       kind: "iframe",
       src: "https://play.gumlet.io/embed/6ac7f1fe2b2e8222c6c6e72d",
+      aspectRatio: "16 / 9",
     })
   })
 
@@ -30,6 +32,7 @@ describe("resolveExplanationVideoPlayback", () => {
     expect(resolveExplanationVideoPlayback("https://www.youtube.com/watch?v=abc123XYZ")).toEqual({
       kind: "iframe",
       src: "https://www.youtube.com/embed/abc123XYZ",
+      aspectRatio: "16 / 9",
     })
   })
 
@@ -37,6 +40,7 @@ describe("resolveExplanationVideoPlayback", () => {
     expect(resolveExplanationVideoPlayback("https://cdn.example.com/v.mp4")).toEqual({
       kind: "file",
       src: "https://cdn.example.com/v.mp4",
+      aspectRatio: "16 / 9",
     })
   })
 })

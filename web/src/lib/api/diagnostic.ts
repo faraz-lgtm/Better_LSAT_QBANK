@@ -24,6 +24,8 @@ export type MiniDiagnosticExplanation = {
 export type DiagnosticVideoUrl = {
   sourceItemId: string
   videoUrl: string
+  /** CSS aspect-ratio from Gumlet oEmbed when available. */
+  aspectRatio?: string | null
 }
 
 export type MiniDiagnosticExplanationsResponse = {

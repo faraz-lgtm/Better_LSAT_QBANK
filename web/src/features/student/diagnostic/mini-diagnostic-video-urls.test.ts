@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest"
 
-import { collectMiniDiagnosticVideoUrls } from "./mini-diagnostic-video-urls"
+import {
+  collectMiniDiagnosticVideoAspectRatios,
+  collectMiniDiagnosticVideoUrls,
+} from "./mini-diagnostic-video-urls"
 
 describe("collectMiniDiagnosticVideoUrls", () => {
   it("keeps only rows with a video url", () => {
@@ -38,5 +41,19 @@ describe("collectMiniDiagnosticVideoUrls", () => {
       },
     ])
     expect(map.get("mini-diag-q1")).toBe("https://gumlet.tv/watch/xyz/")
+  })
+})
+
+describe("collectMiniDiagnosticVideoAspectRatios", () => {
+  it("keeps only rows with an aspect ratio", () => {
+    const map = collectMiniDiagnosticVideoAspectRatios(
+      [{ sourceItemId: "mini-diag-q1", videoUrl: "https://gumlet.tv/watch/a/", aspectRatio: null }],
+      [
+        { sourceItemId: "mini-diag-q1", videoUrl: "https://gumlet.tv/watch/a/", aspectRatio: "800 / 392" },
+        { sourceItemId: "section-diag-q1", videoUrl: "https://gumlet.tv/watch/b/", aspectRatio: "16 / 9" },
+      ],
+    )
+    expect(map.get("mini-diag-q1")).toBe("800 / 392")
+    expect(map.get("section-diag-q1")).toBe("16 / 9")
   })
 })
