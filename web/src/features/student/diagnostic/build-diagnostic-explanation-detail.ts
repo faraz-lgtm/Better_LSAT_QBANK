@@ -44,6 +44,7 @@ export function buildDiagnosticExplanationDetailPayload(
   questionId: string,
   progress?: DiagnosticExplanationProgressMap,
   videoUrl: string | null = null,
+  videoAspectRatio: string | null = null,
 ): ExplanationDetailPayload | null {
   const source = resolveDiagnosticSourceQuestion(questionId)
   const loc = buildDiagnosticExplanationLocation(questionId, progress)
@@ -60,6 +61,7 @@ export function buildDiagnosticExplanationDetailPayload(
     questionId,
   )
   const resolvedVideoUrl = videoUrl?.trim() || null
+  const resolvedAspectRatio = videoAspectRatio?.trim() || null
 
   return {
     questionId,
@@ -74,6 +76,7 @@ export function buildDiagnosticExplanationDetailPayload(
     tags: source.questionType ? ["LR", source.questionType] : ["LR"],
     explanationHtml: stimulusAnalysisHtml.trim() || source.explanationHtml || null,
     videoUrl: resolvedVideoUrl,
+    videoAspectRatio: resolvedAspectRatio,
     stimulusText: source.stimulusText,
     stemText: source.stemText,
     choices: source.choices.map((choice, index) => ({
@@ -102,9 +105,15 @@ export function buildDiagnosticExplanationQuestionDetailView(
   progress?: DiagnosticExplanationProgressMap,
   attempts: readonly GuestDiagnosticResult[] = [],
   videoUrl: string | null = null,
+  videoAspectRatio: string | null = null,
 ): ExplanationQuestionDetailView | null {
   const loc = buildDiagnosticExplanationLocation(questionId, progress)
-  const detail = buildDiagnosticExplanationDetailPayload(questionId, progress, videoUrl)
+  const detail = buildDiagnosticExplanationDetailPayload(
+    questionId,
+    progress,
+    videoUrl,
+    videoAspectRatio,
+  )
   if (!loc || !detail) return null
 
   const view = buildExplanationQuestionDetailView(loc, detail)

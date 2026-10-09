@@ -72,6 +72,7 @@ describe("ExplanationExplainTabPanel", () => {
           {
             ...baseVideos[1]!,
             videoUrl: "https://gumlet.tv/watch/6ac7f1fe2b2e8222c6c6e72d/",
+            aspectRatio: "800 / 392",
           },
         ]}
       />,
@@ -83,7 +84,9 @@ describe("ExplanationExplainTabPanel", () => {
       "src",
       "https://play.gumlet.io/embed/6ac7f1fe2b2e8222c6c6e72d",
     )
-    expect(iframe?.parentElement).toHaveClass("aspect-video")
+    expect(iframe?.parentElement).toHaveClass("relative")
+    expect(iframe?.parentElement).toHaveStyle({ aspectRatio: "800 / 392" })
+    expect(iframe).toHaveClass("absolute", "inset-0")
     expect(iframe?.className).not.toContain("max-h-")
   })
 

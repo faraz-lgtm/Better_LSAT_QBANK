@@ -18,7 +18,10 @@ import {
   DIAGNOSTIC_EXPLANATIONS_HREF,
   diagnosticExplanationQuestionDetailHref,
 } from "@/features/student/diagnostic/diagnostic-explanations-routes"
-import { collectMiniDiagnosticVideoUrls } from "@/features/student/diagnostic/mini-diagnostic-video-urls"
+import {
+  collectMiniDiagnosticVideoAspectRatios,
+  collectMiniDiagnosticVideoUrls,
+} from "@/features/student/diagnostic/mini-diagnostic-video-urls"
 import { createDiagnosticApi } from "@/lib/api/diagnostic"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -41,6 +44,9 @@ function DiagnosticExplanationQuestionDetailPage() {
   const attempts = useMemo(() => listDiagnosticHistory(), [])
   const progress = useMemo(() => readDiagnosticExplanationProgressMap(), [])
   const [videoUrlByQuestionId, setVideoUrlByQuestionId] = useState<Map<string, string>>(() => new Map())
+  const [videoAspectRatioByQuestionId, setVideoAspectRatioByQuestionId] = useState<Map<string, string>>(
+    () => new Map(),
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -50,8 +56,11 @@ function DiagnosticExplanationQuestionDetailPage() {
       .then((res) => {
         if (cancelled) return
         // Video URLs are returned even when written explanations are locked.
-        setVideoUrlByQuestionId(
-          collectMiniDiagnosticVideoUrls(res.explanations ?? [], res.videoUrls ?? []),
+        const explanations = res.explanations ?? []
+        const videoUrls = res.videoUrls ?? []
+        setVideoUrlByQuestionId(collectMiniDiagnosticVideoUrls(explanations, videoUrls))
+        setVideoAspectRatioByQuestionId(
+          collectMiniDiagnosticVideoAspectRatios(explanations, videoUrls),
         )
       })
       .catch(() => {
@@ -67,12 +76,21 @@ function DiagnosticExplanationQuestionDetailPage() {
     [questionId, progress],
   )
   const videoUrl = questionId ? (videoUrlByQuestionId.get(questionId) ?? null) : null
+  const videoAspectRatio = questionId
+    ? (videoAspectRatioByQuestionId.get(questionId) ?? null)
+    : null
   const view = useMemo(
     () =>
       questionId
-        ? buildDiagnosticExplanationQuestionDetailView(questionId, progress, attempts, videoUrl)
+        ? buildDiagnosticExplanationQuestionDetailView(
+            questionId,
+            progress,
+            attempts,
+            videoUrl,
+            videoAspectRatio,
+          )
         : null,
-    [questionId, progress, attempts, videoUrl],
+    [questionId, progress, attempts, videoUrl, videoAspectRatio],
   )
 
   const setTab = (t: ExplanationDetailTabId) => {

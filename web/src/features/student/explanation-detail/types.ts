@@ -18,6 +18,8 @@ export type ExplanationVideoBlock = {
   dropdownOptions: { value: string; label: string }[]
   postedLine: string
   videoUrl?: string | null
+  /** CSS aspect-ratio for the player box when known (e.g. `"800 / 392"`). */
+  aspectRatio?: string | null
   explanationHtml?: string | null
 }
 
