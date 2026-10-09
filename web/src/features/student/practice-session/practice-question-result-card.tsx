@@ -145,7 +145,10 @@ function PracticeQuestionResultCard({
       {isActiveDrill ? null : (
         <button
           type="button"
-          className="flex size-9 items-center justify-center rounded-xl border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] text-[var(--greyscale-500)]"
+          className={cn(
+            "flex size-9 items-center justify-center rounded-xl border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] transition-colors",
+            isBookmarked ? "text-[var(--primary)]" : "text-[var(--greyscale-500)]",
+          )}
           aria-label={isBookmarked ? "Remove bookmark" : "Bookmark question"}
           aria-pressed={isBookmarked}
           disabled={!canToggleBookmark}

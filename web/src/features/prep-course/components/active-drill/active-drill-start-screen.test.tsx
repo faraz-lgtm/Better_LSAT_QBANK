@@ -47,10 +47,8 @@ describe("ActiveDrillStartScreen", () => {
       "src",
       "/figma/active-drill/chevron-right.svg",
     )
-    expect(screen.getByRole("button", { name: "Save lesson" }).querySelector("img")).toHaveAttribute(
-      "src",
-      "/figma/active-drill/bookmark.svg",
-    )
+    expect(screen.getByRole("button", { name: "Save lesson" })).toHaveAttribute("aria-pressed", "false")
+    expect(screen.getByRole("button", { name: "Save lesson" }).querySelector("svg")).toBeTruthy()
     expect(screen.queryByText("Stimulus Analysis")).not.toBeInTheDocument()
     expect(screen.queryByText("Hidden until complete.")).not.toBeInTheDocument()
   })

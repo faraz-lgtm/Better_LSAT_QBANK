@@ -1,3 +1,4 @@
+import { Bookmark } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { Switch } from "@/components/ui/switch"
@@ -98,11 +99,18 @@ function PrepCourseContentHeader({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <PrepCourseFigmaIcon src={`${PREP_COURSE_FIGMA}/icon-bookmark.svg`} />
-          <span className="text-xs font-medium tracking-[0.24px] text-[color:var(--greyscale-500)]">
-            Show All Bookmark
-          </span>
+        <div
+          className={cn(
+            "flex shrink-0 items-center gap-2",
+            showBookmarksOnly ? "text-[var(--primary)]" : "text-[color:var(--greyscale-500)]",
+          )}
+        >
+          <Bookmark
+            className={cn("size-4", showBookmarksOnly && "fill-current")}
+            strokeWidth={2}
+            aria-hidden
+          />
+          <span className="text-xs font-medium tracking-[0.24px]">All Modules Bookmark</span>
           <Switch
             size="sm"
             checked={showBookmarksOnly}

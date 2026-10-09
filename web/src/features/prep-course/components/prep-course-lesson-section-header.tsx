@@ -10,7 +10,6 @@ type PrepCourseLessonSectionHeaderProps = {
   lessonSequence?: { current: number; total: number } | null
   lessonBookmarked?: boolean
   onToggleLessonBookmark?: (next: boolean) => void
-  bookmarkVariant?: "figma" | "lucide"
   contentClassName?: string
 }
 
@@ -22,7 +21,6 @@ function PrepCourseLessonSectionHeader({
   lessonSequence = null,
   lessonBookmarked = false,
   onToggleLessonBookmark,
-  bookmarkVariant = "lucide",
   contentClassName,
 }: PrepCourseLessonSectionHeaderProps) {
   return (
@@ -54,19 +52,11 @@ function PrepCourseLessonSectionHeader({
             )}
             onClick={() => onToggleLessonBookmark?.(!lessonBookmarked)}
           >
-            {bookmarkVariant === "figma" ? (
-              <span className="relative size-4 shrink-0 overflow-clip" aria-hidden>
-                <span className="absolute inset-[4.15%_12.5%_4.18%_12.5%]">
-                  <img
-                    src="/figma/active-drill/bookmark.svg"
-                    alt=""
-                    className="absolute inset-0 block size-full max-w-none"
-                  />
-                </span>
-              </span>
-            ) : (
-              <Bookmark className={cn("size-4", lessonBookmarked && "fill-current")} strokeWidth={2} />
-            )}
+            <Bookmark
+              className={cn("size-4", lessonBookmarked && "fill-current")}
+              strokeWidth={2}
+              aria-hidden
+            />
             <span>Save lesson</span>
           </button>
           {rightMeta ? (
