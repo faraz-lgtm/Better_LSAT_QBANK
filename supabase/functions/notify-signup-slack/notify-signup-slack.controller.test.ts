@@ -1,7 +1,7 @@
 import { assertEquals } from 'jsr:@std/assert@1'
 import { handleNotifySignupSlack } from './notify-signup-slack.controller.ts'
 
-const insertBody = {
+const confirmedInsertBody = {
   type: 'INSERT',
   schema: 'auth',
   table: 'users',
@@ -9,30 +9,49 @@ const insertBody = {
     id: 'user-1',
     email: 'new@example.com',
     created_at: '2026-10-08T12:00:00Z',
+    email_confirmed_at: '2026-10-08T12:00:01Z',
     raw_app_meta_data: { provider: 'google' },
   },
   old_record: null,
+}
+
+const confirmUpdateBody = {
+  type: 'UPDATE',
+  schema: 'auth',
+  table: 'users',
+  record: {
+    id: 'user-2',
+    email: 'confirm@example.com',
+    created_at: '2026-10-08T11:00:00Z',
+    email_confirmed_at: '2026-10-08T11:05:00Z',
+    raw_app_meta_data: { provider: 'email' },
+  },
+  old_record: {
+    id: 'user-2',
+    email: 'confirm@example.com',
+    email_confirmed_at: null,
+  },
 }
 
 Deno.test('handleNotifySignupSlack rejects unauthorized', async () => {
   const res = await handleNotifySignupSlack(
     new Request('https://example.com', {
       method: 'POST',
-      body: JSON.stringify(insertBody),
+      body: JSON.stringify(confirmedInsertBody),
     }),
     { authorize: () => false },
   )
   assertEquals(res.status, 401)
 })
 
-Deno.test('handleNotifySignupSlack notifies on auth.users INSERT', async () => {
+Deno.test('handleNotifySignupSlack notifies on confirmed INSERT', async () => {
   let notifiedEmail = ''
   let notifiedProvider = ''
   const res = await handleNotifySignupSlack(
     new Request('https://example.com', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(insertBody),
+      body: JSON.stringify(confirmedInsertBody),
     }),
     {
       authorize: () => true,
@@ -51,17 +70,44 @@ Deno.test('handleNotifySignupSlack notifies on auth.users INSERT', async () => {
   assertEquals(notifiedProvider, 'google')
 })
 
-Deno.test('handleNotifySignupSlack ignores non-signup payloads', async () => {
+Deno.test('handleNotifySignupSlack notifies on email confirmation UPDATE', async () => {
+  let notifiedEmail = ''
+  const res = await handleNotifySignupSlack(
+    new Request('https://example.com', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(confirmUpdateBody),
+    }),
+    {
+      authorize: () => true,
+      notify: async (input) => {
+        notifiedEmail = input.email
+        return true
+      },
+    },
+  )
+  assertEquals(res.status, 200)
+  const data = (await res.json()) as { received: boolean; notified: boolean }
+  assertEquals(data.received, true)
+  assertEquals(data.notified, true)
+  assertEquals(notifiedEmail, 'confirm@example.com')
+})
+
+Deno.test('handleNotifySignupSlack ignores unconfirmed INSERT', async () => {
   let notifyCalled = false
   const res = await handleNotifySignupSlack(
     new Request('https://example.com', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        type: 'UPDATE',
+        type: 'INSERT',
         schema: 'auth',
         table: 'users',
-        record: { id: 'user-1', email: 'a@b.com' },
+        record: {
+          id: 'user-1',
+          email: 'a@b.com',
+          email_confirmed_at: null,
+        },
       }),
     }),
     {

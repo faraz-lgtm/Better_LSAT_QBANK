@@ -9,7 +9,7 @@ export type SlackSignupNotifyInput = {
   getEnv?: (key: string) => string | undefined
 }
 
-export type AuthUsersInsertPayload = {
+export type AuthUsersWebhookPayload = {
   type: string
   table: string
   schema: string
@@ -81,14 +81,43 @@ function readProvider(record: Record<string, unknown>): string {
   return 'unknown'
 }
 
+function readConfirmedAt(record: Record<string, unknown> | null | undefined): string | null {
+  if (!record || typeof record !== 'object') return null
+  const value = record.email_confirmed_at
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed || null
+}
 
-export function parseAuthUsersSignupInsert(body: unknown): ParsedSignupInsert | null {
+function isEmailConfirmationEvent(payload: AuthUsersWebhookPayload): boolean {
+  const confirmedAt = readConfirmedAt(payload.record)
+  if (!confirmedAt) return false
+
+  if (payload.type === 'INSERT') {
+    // OAuth / confirmations-off: user is already verified on insert.
+    return true
+  }
+
+  if (payload.type === 'UPDATE') {
+    // Email/password: notify only when confirmation flips null → set.
+    return readConfirmedAt(payload.old_record) === null
+  }
+
+  return false
+}
+
+/**
+ * Parses auth.users Database Webhook payloads for confirmed signups only.
+ * - INSERT: email_confirmed_at already set (OAuth / auto-confirm)
+ * - UPDATE: email_confirmed_at newly set (email magic-link / confirm click)
+ */
+export function parseAuthUsersConfirmedSignup(body: unknown): ParsedSignupInsert | null {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return null
-  const payload = body as AuthUsersInsertPayload
-  if (payload.type !== 'INSERT') return null
+  const payload = body as AuthUsersWebhookPayload
   if (payload.table !== 'users') return null
   if (payload.schema !== 'auth') return null
   if (!payload.record || typeof payload.record !== 'object') return null
+  if (!isEmailConfirmationEvent(payload)) return null
 
   const record = payload.record
   const email = typeof record.email === 'string' ? record.email.trim().toLowerCase() : ''
@@ -107,3 +136,4 @@ export function parseAuthUsersSignupInsert(body: unknown): ParsedSignupInsert | 
     createdAt,
   }
 }
+

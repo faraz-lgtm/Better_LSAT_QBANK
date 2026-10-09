@@ -6,17 +6,15 @@ import {
 } from "@/features/guest/diagnostic/guest-diagnostic-intent-styles"
 
 type GuestMarketingPanelHeaderProps = {
-  variant: "intent" | "signup"
+  variant: "intent" | "signup" | "login"
 }
 
 function GuestMarketingPanelHeader({ variant }: GuestMarketingPanelHeaderProps) {
+  const logoHref = variant === "intent" ? "/intent" : variant === "login" ? "/login" : "/signup"
+
   return (
     <header className={GUEST_INTENT_HEADER_CLASS}>
-      <Link
-        to={variant === "intent" ? "/intent" : "/signup"}
-        className="flex shrink-0 items-center"
-        aria-label="betterLSAT home"
-      >
+      <Link to={logoHref} className="flex shrink-0 items-center" aria-label="betterLSAT home">
         <img src="/betterLSAT_LOGO.png" alt="betterLSAT" className="auth-split-logo" />
       </Link>
 
@@ -32,6 +30,13 @@ function GuestMarketingPanelHeader({ variant }: GuestMarketingPanelHeaderProps) 
               Already have an account?{" "}
               <Link to="/login" className="font-semibold text-[#0d47a1]">
                 Sign In
+              </Link>
+            </>
+          ) : variant === "login" ? (
+            <>
+              Don&apos;t have an account?{" "}
+              <Link to="/signup" className="font-semibold text-[#0d47a1]">
+                Sign Up
               </Link>
             </>
           ) : (

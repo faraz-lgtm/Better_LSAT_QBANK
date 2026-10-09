@@ -1,9 +1,10 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { MemoryRouter } from "react-router-dom"
+import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { LoginPage } from "./login-page"
+import { LoginEmailCheckPage } from "./signup-check-email-page"
 
 const authMock = {
   signInWithOtp: vi.fn(),
@@ -45,8 +46,11 @@ describe("LoginPage", () => {
     const user = userEvent.setup()
 
     render(
-      <MemoryRouter>
-        <LoginPage />
+      <MemoryRouter initialEntries={["/login"]}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login/email-check" element={<LoginEmailCheckPage />} />
+        </Routes>
       </MemoryRouter>,
     )
 
@@ -55,7 +59,8 @@ describe("LoginPage", () => {
     await user.click(screen.getByRole("button", { name: /send confirmation link/i }))
 
     expect(authMock.signInWithOtp).toHaveBeenCalled()
-    expect(await screen.findByText(/magic link sent/i)).toBeInTheDocument()
+    expect(await screen.findByRole("heading", { name: /check your email/i })).toBeInTheDocument()
+    expect(screen.getByText(/we just sent you a login link/i)).toBeInTheDocument()
   })
 
   it("retains selected checkout intent when an existing user signs in", async () => {
@@ -64,7 +69,10 @@ describe("LoginPage", () => {
 
     render(
       <MemoryRouter initialEntries={["/login?plan=six_month"]}>
-        <LoginPage />
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login/email-check" element={<LoginEmailCheckPage />} />
+        </Routes>
       </MemoryRouter>,
     )
 
@@ -75,6 +83,7 @@ describe("LoginPage", () => {
     expect(window.localStorage.getItem("betterlsat:pending-checkout-plan")).toBe(
       "six_month",
     )
+    expect(await screen.findByRole("heading", { name: /check your email/i })).toBeInTheDocument()
   })
 
   it("submits email and password login", async () => {
