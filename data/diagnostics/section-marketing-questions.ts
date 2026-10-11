@@ -241,7 +241,7 @@ export const SECTION_DIAGNOSTIC_QUESTIONS: MiniDiagnosticQuestion[] = [
     choices: [
       {
         letter: "A",
-        text: "Region X and Region Y were separated by a massive desert that was difficult for merchants to cross.",
+        text: "Region X and Region Y were separated by a massive desert that some considered difficult for merchants to cross.",
         explanation:
           "Pointing out that some considered the journey as \"difficult\" does not mean it could not have happened. This only introduces a potential logistical hurdle some had believed in; it does not weaken the conclusion that the merchants made the trip. And remember, some can mean as low as one person thought it was a difficult journey. This does not weaken whether or not the journey took place, it is only a belief of some people.",
       },
