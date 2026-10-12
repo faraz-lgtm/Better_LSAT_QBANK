@@ -122,6 +122,31 @@ describe("SignupPage", () => {
     expect(screen.queryByRole("heading", { name: /check your email/i })).not.toBeInTheDocument()
   })
 
+  it("routes try another way back to signup from check-email", async () => {
+    authMock.signInWithOtp.mockResolvedValue({ error: null })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={["/signup"]}>
+        <Routes>
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/signup/check-email" element={<SignupCheckEmailPage />} />
+          <Route path="/login" element={<div>Login page</div>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getByPlaceholderText(/enter your email/i), "new@example.com")
+    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(screen.getByRole("button", { name: /send confirmation link/i }))
+
+    expect(await screen.findByRole("heading", { name: /check your email/i })).toBeInTheDocument()
+    await user.click(screen.getByRole("link", { name: /try another way/i }))
+
+    expect(await screen.findByRole("heading", { name: /create an account/i })).toBeInTheDocument()
+    expect(screen.queryByText("Login page")).not.toBeInTheDocument()
+  })
+
   it("sends magic link only once on rapid double-click", async () => {
     let resolveOtp: (() => void) | undefined
     authMock.signInWithOtp.mockImplementation(
