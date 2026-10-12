@@ -86,6 +86,29 @@ describe("LoginPage", () => {
     expect(await screen.findByRole("heading", { name: /check your email/i })).toBeInTheDocument()
   })
 
+  it("routes try another way back to login from email-check", async () => {
+    authMock.signInWithOtp.mockResolvedValue({ error: null })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={["/login"]}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login/email-check" element={<LoginEmailCheckPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    const emailInputs = screen.getAllByPlaceholderText(/enter your email/i)
+    await user.type(emailInputs[0], "login@example.com")
+    await user.click(screen.getByRole("button", { name: /send confirmation link/i }))
+
+    expect(await screen.findByRole("heading", { name: /check your email/i })).toBeInTheDocument()
+    await user.click(screen.getByRole("link", { name: /try another way/i }))
+
+    expect(await screen.findByRole("heading", { name: /login with/i })).toBeInTheDocument()
+  })
+
   it("submits email and password login", async () => {
     authMock.signInWithPassword.mockResolvedValue({ error: null })
     invokeMock.mockResolvedValue({ data: { profile: null }, error: null })

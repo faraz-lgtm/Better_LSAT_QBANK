@@ -105,7 +105,7 @@ function CheckEmailPage({ flow = "signup" }: CheckEmailPageProps) {
             <div className="h-px flex-1 bg-[#dfe1e7]" />
           </div>
 
-          <Link to="/login" className="guest-marketing-check-email-alt">
+          <Link to={authEntryPath} className="guest-marketing-check-email-alt">
             Try another way
           </Link>
         </div>
