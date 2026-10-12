@@ -10,6 +10,7 @@ import {
   STUDENT_DASHBOARD_ICON,
   STUDENT_DIAGNOSTIC_HREF,
   STUDENT_DIAGNOSTIC_ICON,
+  STUDENT_DIAGNOSTIC_NAV_SECTION,
   STUDENT_MAIN_NAV_SECTION,
   STUDENT_NAV_ITEM_ICON_SRC,
   STUDENT_NAV_LOGOUT_ICON_SRC,
@@ -21,7 +22,10 @@ import { useStudentEntitlementOptional, isLsacLockedNavItem } from "@/features/a
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
 import { PREP_COURSE_ESSENTIALS_SLUG, PREP_COURSE_NAV_ITEMS } from "@/features/prep-course/lib/prep-course-nav"
-import { DIAGNOSTIC_EXPLANATIONS_HREF } from "@/features/student/diagnostic/diagnostic-explanations-routes"
+import {
+  DIAGNOSTIC_EXPLANATIONS_HREF,
+  isDiagnosticExplanationsPath,
+} from "@/features/student/diagnostic/diagnostic-explanations-routes"
 import { DiagnosticResultsNavItem } from "@/features/student/diagnostic/diagnostic-results-nav-item"
 import { cn } from "@/lib/utils"
 import { resetUser } from "@/lib/analytics/posthog"
@@ -51,13 +55,9 @@ function isPrepCourseNavItem(item: StudentNavItem): boolean {
   return item.href === PREP_COURSE_HREF
 }
 
-function isDiagnosticExplanationsNavItem(item: StudentNavItem): boolean {
-  return item.href === DIAGNOSTIC_EXPLANATIONS_HREF
-}
-
-/** Free-plan: keep Prep Course + Diagnostic Explanation clickable. */
+/** Free-plan: keep Prep Course clickable (Diagnostic items live under DIAGNOSTIC). */
 function isUnlockedOnFreePlan(item: StudentNavItem): boolean {
-  return isPrepCourseNavItem(item) || isDiagnosticExplanationsNavItem(item)
+  return isPrepCourseNavItem(item)
 }
 
 function isPrepCourseRoute(pathname: string): boolean {
@@ -283,23 +283,37 @@ function StudentAppSidebar({
               <SidebarNavIcon icon={STUDENT_DASHBOARD_ICON} />
               <span className="student-sidebar-label">Dashboard</span>
             </Link>
+
             {showDiagnosticNav ? (
-              <>
+              <div className="student-sidebar-section">
+                <p className="student-sidebar-heading">{STUDENT_DIAGNOSTIC_NAV_SECTION.label}</p>
                 <Link
                   to={STUDENT_DIAGNOSTIC_HREF}
                   className="student-sidebar-link"
-                  aria-label="Diagnostic"
-                  title="Diagnostic"
+                  aria-label="Diagnostic Test"
+                  title="Diagnostic Test"
                 >
                   <SidebarNavIcon icon={STUDENT_DIAGNOSTIC_ICON} />
-                  <span className="student-sidebar-label">Diagnostic</span>
+                  <span className="student-sidebar-label">Diagnostic Test</span>
                 </Link>
                 <DiagnosticResultsNavItem
                   showIcon
                   collapsed={collapsed}
                   onExpandSidebar={() => setCollapsed(false)}
                 />
-              </>
+                <Link
+                  to={DIAGNOSTIC_EXPLANATIONS_HREF}
+                  className={cn(
+                    "student-sidebar-link",
+                    isDiagnosticExplanationsPath(pathname) && "student-sidebar-link--active",
+                  )}
+                  aria-label="Diagnostic Explanation"
+                  title="Diagnostic Explanation"
+                >
+                  <SidebarNavIcon icon="explanations" />
+                  <span className="student-sidebar-label">Diagnostic Explanation</span>
+                </Link>
+              </div>
             ) : null}
 
             {STUDENT_NAV_SECTIONS.map((section) => (

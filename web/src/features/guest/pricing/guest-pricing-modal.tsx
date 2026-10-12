@@ -53,6 +53,9 @@ function GuestPricingModal({
 
   if (!open) return null
 
+  const featuredPlan = PAID_PRICING_PLANS.find((plan) => plan.featured) ?? PAID_PRICING_PLANS[0]
+  const gridPaidPlans = PAID_PRICING_PLANS.filter((plan) => plan.id !== featuredPlan.id)
+
   async function handleSelectPlan(planId: GuestPricingPlanId) {
     setCheckoutPlan(planId)
     setError(null)
@@ -73,25 +76,25 @@ function GuestPricingModal({
       onClick={() => onOpenChange(false)}
     >
       <div
-        className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-[1280px] flex-col overflow-hidden rounded-[20px] border border-[#dfe1e7] bg-[var(--primary-0)] p-6 shadow-[0px_24px_48px_rgba(13,13,18,0.16)] sm:p-8"
+        className="pricing-modal relative flex max-h-[calc(100dvh-2rem)] w-full max-w-[1280px] flex-col overflow-hidden rounded-[20px] border border-[#dfe1e7] bg-[var(--primary-0)] p-4 shadow-[0px_24px_48px_rgba(13,13,18,0.16)] sm:p-5"
         onClick={(event) => event.stopPropagation()}
       >
         <button
           type="button"
-          className="absolute right-4 top-4 z-10 inline-flex size-9 items-center justify-center rounded-full border border-[#dfe1e7] bg-white text-[#666d80] hover:bg-[#edf3ff]"
+          className="absolute right-3 top-3 z-10 inline-flex size-8 items-center justify-center rounded-full border border-[#dfe1e7] bg-white text-[#666d80] hover:bg-[#edf3ff]"
           aria-label="Close pricing"
           onClick={() => onOpenChange(false)}
         >
-          <X className="size-5" />
+          <X className="size-4" />
         </button>
 
-        <div className="student-scrollbar min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable]">
+        <div className="pricing-modal__body min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
           <div className="pricing-page">
-            <div className="pricing-page__header mb-4">
+            <div className="pricing-page__header">
               <h1 id="guest-pricing-modal-title" className="pricing-page__title">
                 Pricing
               </h1>
-              <p className="pricing-page__subtitle ">
+              <p className="pricing-page__subtitle">
                 {includeLawHub
                   ? "Core plans include Official LSAT PrepPlus (LawHub Advantage) for year one at checkout."
                   : "Choose a Core plan — you keep your own LawHub PrepPlus subscription."}
@@ -102,22 +105,31 @@ function GuestPricingModal({
 
             <div className="pricing-page__stack">
               <PricingPlanCard
-                plan={{ ...FREE_PRICING_PLAN, ctaLabel: freeCtaLabel }}
-                layout="current"
-                ctaVariant="orange"
+                plan={featuredPlan}
+                includeLawHub={includeLawHub}
+                layout="featured"
+                highlighted
+                ctaVariant="navy"
+                isLoading={checkoutPlan === featuredPlan.id}
                 disabled={checkoutPlan !== null}
-                onSelect={() => {
-                  onOpenChange(false)
-                  onContinueFree?.()
-                }}
+                onSelect={() => void handleSelectPlan(featuredPlan.id)}
               />
               <div className="pricing-page__plans">
-                {PAID_PRICING_PLANS.map((plan) => (
+                <PricingPlanCard
+                  plan={{ ...FREE_PRICING_PLAN, ctaLabel: freeCtaLabel }}
+                  isCurrent
+                  ctaVariant="orange"
+                  disabled={checkoutPlan !== null}
+                  onSelect={() => {
+                    onOpenChange(false)
+                    onContinueFree?.()
+                  }}
+                />
+                {gridPaidPlans.map((plan) => (
                   <PricingPlanCard
                     key={plan.id}
                     plan={plan}
                     includeLawHub={includeLawHub}
-                    highlighted={plan.featured}
                     ctaVariant={plan.id === "monthly" ? "orange" : "navy"}
                     isLoading={checkoutPlan === plan.id}
                     disabled={checkoutPlan !== null}
@@ -127,7 +139,7 @@ function GuestPricingModal({
               </div>
             </div>
 
-            <p className="pricing-page__footnote mt-4">
+            <p className="pricing-page__footnote">
               {includeLawHub ? LAWHUB_ADVANTAGE_BILLING_NOTE : LAWHUB_OWN_PREPPLUS_NOTE}
             </p>
 

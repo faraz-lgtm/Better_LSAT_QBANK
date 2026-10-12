@@ -26,7 +26,7 @@ describe("GuestFreePlanSidebar", () => {
     )
 
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/app")
-    expect(screen.getByRole("link", { name: "Diagnostic" })).toHaveAttribute("href", "/intent")
+    expect(screen.getByRole("link", { name: "Diagnostic Test" })).toHaveAttribute("href", "/intent")
     expect(screen.getByRole("button", { name: /Diagnostic Results/i })).toBeInTheDocument()
 
     expect(screen.getByRole("button", { name: "Prep Courses" })).toBeInTheDocument()
