@@ -113,6 +113,21 @@ describe("PricingPage selected checkout", () => {
     ).toBe(false)
   })
 
+  it("features Most Popular above Free Access in the plan stack", async () => {
+    mockPricingCalls()
+
+    render(
+      <MemoryRouter initialEntries={["/app/pricing"]}>
+        <PricingPage />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText(/most popular/i)).toBeInTheDocument()
+    expect(screen.getByText(/current plan/i)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /choose 6 months/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /continue free/i })).toBeInTheDocument()
+  })
+
   it("routes paid plan CTAs to the checkout handoff", async () => {
     const user = userEvent.setup()
     mockPricingCalls()

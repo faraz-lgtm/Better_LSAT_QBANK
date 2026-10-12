@@ -3,13 +3,14 @@ import { describe, expect, it } from "vitest"
 import { isFreePlanLockedNavHref } from "./guest-free-plan-nav-config"
 
 describe("isFreePlanLockedNavHref", () => {
-  it("keeps Dashboard, Diagnostic, and Diagnostic Results unlocked", () => {
+  it("keeps Dashboard, Diagnostic Test, Diagnostic Results, and Diagnostic Explanation unlocked", () => {
     expect(isFreePlanLockedNavHref("/app")).toBe(false)
     expect(isFreePlanLockedNavHref("/app/")).toBe(false)
     expect(isFreePlanLockedNavHref("/intent")).toBe(false)
     expect(isFreePlanLockedNavHref("/app/diagnostic/results")).toBe(false)
     expect(isFreePlanLockedNavHref("/app/diagnostic/results/mini")).toBe(false)
     expect(isFreePlanLockedNavHref("/app/diagnostic/results/full")).toBe(false)
+    expect(isFreePlanLockedNavHref("/app/diagnostic/explanations")).toBe(false)
   })
 
   it("keeps limited Prep Course (LSAT Essentials Course) unlocked", () => {

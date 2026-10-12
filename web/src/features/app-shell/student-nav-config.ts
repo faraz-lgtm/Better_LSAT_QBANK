@@ -3,10 +3,7 @@ import {
   DIAGNOSTIC_RESULTS_FULL_HREF,
   DIAGNOSTIC_RESULTS_MINI_HREF,
 } from "@/features/student/diagnostic/diagnostic-results-routes"
-import {
-  DIAGNOSTIC_EXPLANATIONS_HREF,
-  isDiagnosticExplanationsPath,
-} from "@/features/student/diagnostic/diagnostic-explanations-routes"
+import { isDiagnosticExplanationsPath } from "@/features/student/diagnostic/diagnostic-explanations-routes"
 
 export type StudentNavSectionKey = "academy" | "prep" | "insights"
 
@@ -56,6 +53,10 @@ export const STUDENT_MAIN_NAV_SECTION = {
   label: "MAIN",
 }
 
+export const STUDENT_DIAGNOSTIC_NAV_SECTION = {
+  label: "DIAGNOSTIC",
+}
+
 export const STUDENT_DASHBOARD_HREF = "/app"
 
 export const STUDENT_DASHBOARD_ICON: StudentNavItemIconKey = "dashboard"
@@ -71,11 +72,6 @@ export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
     items: [
       { label: "Prep Courses", href: "/app/prep-course", icon: "prep-course" },
       { label: "Explanations", href: "/app/learn/explanations", icon: "explanations" },
-      {
-        label: "Diagnostic Explanation",
-        href: DIAGNOSTIC_EXPLANATIONS_HREF,
-        icon: "explanations",
-      },
     ],
   },
   {
@@ -106,11 +102,7 @@ export function isDashboardActive(pathname: string): boolean {
 }
 
 export function getActiveSectionKey(pathname: string): StudentNavSectionKey | null {
-  if (
-    pathname.startsWith("/app/prep-course") ||
-    pathname.startsWith("/app/learn") ||
-    isDiagnosticExplanationsPath(pathname)
-  ) {
+  if (pathname.startsWith("/app/prep-course") || pathname.startsWith("/app/learn")) {
     return "academy"
   }
   if (pathname.startsWith("/app/practice") || isPrepTestStudentPath(pathname)) return "prep"

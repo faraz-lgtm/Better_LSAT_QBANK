@@ -20,16 +20,29 @@ describe("StudentAppSidebar", () => {
     )
 
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Diagnostic" })).toHaveAttribute("href", "/intent")
+    expect(screen.getByText("DIAGNOSTIC")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Diagnostic Test" })).toHaveAttribute("href", "/intent")
     expect(screen.getByRole("button", { name: /Diagnostic Results/i })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Prep Courses" })).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Explanations" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Diagnostic Explanation" })).toHaveAttribute(
       "href",
       "/app/diagnostic/explanations",
     )
+    expect(screen.getByText("ACADEMY")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Prep Courses" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Explanations" })).toBeInTheDocument()
     expect(screen.queryByRole("link", { name: "Untimed Review" })).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument()
+
+    const diagnosticHeading = screen.getByText("DIAGNOSTIC")
+    const diagnosticTest = screen.getByRole("link", { name: "Diagnostic Test" })
+    const results = screen.getByRole("button", { name: /Diagnostic Results/i })
+    const explanation = screen.getByRole("link", { name: "Diagnostic Explanation" })
+    expect(
+      diagnosticHeading.compareDocumentPosition(diagnosticTest) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      results.compareDocumentPosition(explanation) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
   })
 
   it("marks the dashboard link with the same active style as other items", () => {

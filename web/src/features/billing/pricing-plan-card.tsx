@@ -11,8 +11,10 @@ type PricingPlanCardProps = {
   plan: PricingPlan
   includeLawHub?: boolean
   highlighted?: boolean
-  /** Full-width current-plan banner (e.g. Free for free accounts). */
-  layout?: "default" | "current"
+  /** Full-width featured banner (e.g. Most Popular). */
+  layout?: "default" | "featured"
+  /** Orange "Current plan" treatment (typically Free in the grid). */
+  isCurrent?: boolean
   ctaVariant?: "orange" | "navy"
   isLoading?: boolean
   disabled?: boolean
@@ -24,6 +26,7 @@ function PricingPlanCard({
   includeLawHub = true,
   highlighted = false,
   layout = "default",
+  isCurrent = false,
   ctaVariant = "navy",
   isLoading = false,
   disabled = false,
@@ -31,7 +34,12 @@ function PricingPlanCard({
 }: PricingPlanCardProps) {
   const dueToday = isPaidPricingPlan(plan) ? resolveGuestPricingDueToday(plan, includeLawHub) : null
   const priceSuffix = plan.id === "monthly" ? "/mo" : null
-  const isCurrent = layout === "current"
+  const isFeatured = layout === "featured"
+  const badgeLabel = isCurrent
+    ? "Current plan"
+    : isPaidPricingPlan(plan) && plan.badge
+      ? plan.badge
+      : null
 
   return (
     <div
@@ -39,14 +47,14 @@ function PricingPlanCard({
         "pricing-card",
         highlighted && "pricing-card--highlighted",
         isCurrent && "pricing-card--current",
+        isFeatured && "pricing-card--featured",
       )}
     >
-      {isCurrent ? <span className="pricing-card__badge">Current plan</span> : null}
-      {isPaidPricingPlan(plan) && plan.badge && !isCurrent ? (
-        <span className="pricing-card__badge">{plan.badge}</span>
-      ) : null}
-      <div className={cn(isCurrent && "pricing-card__current-body")}>
-        <div className={cn(isCurrent && "pricing-card__current-main")}>
+      {badgeLabel ? <span className="pricing-card__badge">{badgeLabel}</span> : null}
+      <div
+        className={cn("pricing-card__body", isFeatured && "pricing-card__featured-body")}
+      >
+        <div className={cn(isFeatured && "pricing-card__featured-main")}>
           <h2 className="pricing-card__name">{plan.name}</h2>
           <p className="pricing-card__headline">{plan.headline}</p>
           <p className="pricing-card__tagline">{plan.description}</p>
@@ -78,7 +86,7 @@ function PricingPlanCard({
             </li>
           ) : null}
         </ul>
-        <div className={cn(isCurrent && "pricing-card__current-cta")}>
+        <div className={cn("pricing-card__cta-wrap", isFeatured && "pricing-card__featured-cta")}>
           <button
             type="button"
             className={cn(
