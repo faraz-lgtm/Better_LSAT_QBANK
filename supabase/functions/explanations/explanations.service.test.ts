@@ -26,6 +26,12 @@ function mockRepo(overrides: Partial<ExplanationsRepository> = {}): Explanations
     getQuestionDetail: async () => null,
     listLatestAnswerStatusByQuestionIds: async () => new Map(),
     listLsatCatalogQuestionIds: async () => [],
+    getExplanationStatusCounts: async () => ({
+      in_process: 0,
+      fresh: 0,
+      answered: 0,
+      seen: 0,
+    }),
     listDistinctAnsweredQuestionIdsForUser: async () => [],
     listPrepTestQuestionProgress: async () => ({
       seenQuestionIds: [],
@@ -429,11 +435,11 @@ Deno.test('listPrepTests hides pre-PT100 tests', async () => {
 Deno.test('getExplanationStatusCounts uses student-visible catalog only', async () => {
   const service = createExplanationsService({
     repository: mockRepo({
-      listLsatCatalogQuestionIds: async () => ['q100', 'q101'],
-      listPrepTestQuestionProgress: async () => ({
-        seenQuestionIds: ['q99-hidden'],
-        inProcessQuestionIds: ['q100'],
-        answeredQuestionIds: ['q101'],
+      getExplanationStatusCounts: async () => ({
+        answered: 1,
+        in_process: 1,
+        seen: 0,
+        fresh: 0,
       }),
     }),
   })
@@ -446,13 +452,23 @@ Deno.test('getExplanationStatusCounts uses student-visible catalog only', async 
 })
 
 Deno.test('listPrepTests returns global statusCounts for user', async () => {
+  let catalogFetched = false
   const service = createExplanationsService({
     repository: mockRepo({
       listAllPrepTestRows: async () => [
         { id: 'pt-1', module_id: 'LSAC158', title: 'PT 158', imported_at: null },
       ],
       fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 103, explainedCount: 3, questionIds: [] }),
-      listLsatCatalogQuestionIds: async () => ['q1', 'q2', 'q3'],
+      listLsatCatalogQuestionIds: async () => {
+        catalogFetched = true
+        return ['q1', 'q2', 'q3']
+      },
+      getExplanationStatusCounts: async () => ({
+        answered: 1,
+        in_process: 1,
+        seen: 1,
+        fresh: 0,
+      }),
       listPrepTestQuestionProgress: async () => ({
         seenQuestionIds: ['q3'],
         inProcessQuestionIds: ['q2'],
@@ -466,6 +482,7 @@ Deno.test('listPrepTests returns global statusCounts for user', async () => {
   assertEquals(out.statusCounts.in_process, 1)
   assertEquals(out.statusCounts.seen, 1)
   assertEquals(out.statusCounts.fresh, 0)
+  assertEquals(catalogFetched, false)
 })
 
 Deno.test('getExplanationDetail returns extended payload', async () => {

@@ -56,6 +56,7 @@ const mocks = vi.hoisted(() => ({
   getTrajectory: vi.fn(),
   getSessions: vi.fn(),
   getPriorities: vi.fn(),
+  getPageBundle: vi.fn(),
 }))
 
 vi.mock("@/lib/supabase/client", () => ({
@@ -80,6 +81,7 @@ vi.mock("@/lib/api/analytics", () => ({
     getTrajectory: mocks.getTrajectory,
     getSessions: mocks.getSessions,
     getPriorities: mocks.getPriorities,
+    getPageBundle: mocks.getPageBundle,
   }),
 }))
 
@@ -95,11 +97,6 @@ function renderDashboard() {
       </GuestPricingModalProvider>
     </MemoryRouter>,
   )
-}
-
-function expectDashboardLoader() {
-  expect(screen.getByRole("status")).toBeInTheDocument()
-  expect(screen.getAllByText("Loading dashboard…").length).toBeGreaterThan(0)
 }
 
 describe("DashboardPage", () => {
@@ -123,6 +120,25 @@ describe("DashboardPage", () => {
     mocks.getTrajectory.mockResolvedValue([])
     mocks.getSessions.mockResolvedValue({ sessions: [] })
     mocks.getPriorities.mockResolvedValue([])
+    mocks.getPageBundle.mockResolvedValue({
+      view: "dashboard",
+      overview: {
+        bestScaledScore: null,
+        averageScaledScore: null,
+        bestPercentile: null,
+        averagePercentile: null,
+        completedPrepTestCount: 0,
+        totalQuestionsAnswered: 0,
+        drillAccuracyPct: null,
+        totalDrillQuestionsAnswered: 0,
+        averageLrMissedPerPrepTest: null,
+        averageRcMissedPerPrepTest: null,
+        totalStudyMinutes: 0,
+      },
+      trajectory: [],
+      sessions: { sessions: [], total: 0, limit: 12, offset: 0 },
+      priorities: [],
+    })
   })
 
   it("shows the free-plan dashboard when payment is required", async () => {
@@ -152,71 +168,81 @@ describe("DashboardPage", () => {
     })
   })
 
-  it("keeps the loader up until dashboard data arrives instead of flashing empty drills", async () => {
+  it("paints the shell while analytics is still loading (no full-page loader)", async () => {
     mocks.entitlement.canAccessLsacContent = true
     mocks.entitlement.isPaymentRequired = false
     mocks.entitlement.entitlement = fullAccessEntitlement()
 
-    const overview = deferred<Record<string, unknown>>()
-    mocks.getOverview.mockReturnValue(overview.promise)
-    mocks.getTrajectory.mockReturnValue(new Promise(() => undefined))
-    mocks.getSessions.mockReturnValue(new Promise(() => undefined))
-    mocks.getPriorities.mockReturnValue(new Promise(() => undefined))
-    mocks.getStudyContext.mockReturnValue(new Promise(() => undefined))
-    mocks.getMyProfile.mockReturnValue(new Promise(() => undefined))
+    const bundle = deferred<{
+      view: string
+      overview: Record<string, unknown>
+      trajectory: unknown[]
+      sessions: { sessions: unknown[]; total: number; limit: number; offset: number }
+      priorities: unknown[]
+    }>()
+    mocks.getPageBundle.mockReturnValue(bundle.promise)
+    mocks.getStudyContext.mockResolvedValue({
+      preferences: { plannedLsatDate: "2026-10-01", plannedLsatWindow: null },
+      officialScores: [],
+    })
+    mocks.getMyProfile.mockResolvedValue({ first_name: "Assad", full_name: "Assad Siyal" })
 
     renderDashboard()
 
-    expectDashboardLoader()
-    expect(screen.queryByText(/No drills in progress/)).not.toBeInTheDocument()
-    expect(screen.queryByRole("heading", { name: /Welcome back/ })).not.toBeInTheDocument()
-
-    overview.resolve({
-      questionsAnswered: 0,
-      accuracyPct: 0,
-      studyMinutes: 0,
-      predictedScore: null,
-    })
     await waitFor(() => {
-      expectDashboardLoader()
+      expect(screen.getByRole("heading", { level: 1, name: /Welcome back/ })).toBeInTheDocument()
     })
+    expect(screen.queryByText("Loading dashboard…")).not.toBeInTheDocument()
     expect(screen.queryByText(/No drills in progress/)).not.toBeInTheDocument()
+    expect(screen.getByLabelText("Loading stats")).toBeInTheDocument()
+    expect(screen.getByLabelText("Loading drills")).toBeInTheDocument()
+
+    bundle.resolve({
+      view: "dashboard",
+      overview: {
+        bestScaledScore: 170,
+        averageScaledScore: 160,
+        bestPercentile: 90,
+        averagePercentile: 80,
+        completedPrepTestCount: 2,
+        totalQuestionsAnswered: 100,
+        drillAccuracyPct: 75,
+        totalDrillQuestionsAnswered: 40,
+        averageLrMissedPerPrepTest: 3,
+        averageRcMissedPerPrepTest: 4,
+        totalStudyMinutes: 120,
+      },
+      trajectory: [],
+      sessions: { sessions: [], total: 0, limit: 12, offset: 0 },
+      priorities: [],
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Loading stats")).not.toBeInTheDocument()
+      expect(screen.getByText(/No drills in progress/)).toBeInTheDocument()
+    })
   })
 
-  it("does not clear the loader when entitlement flips to premium before a stale fetch finishes", async () => {
-    mocks.entitlement.loading = true
-    mocks.entitlement.canAccessLsacContent = false
+  it("updates the welcome name as soon as profile resolves, even if study context is slow", async () => {
+    mocks.entitlement.canAccessLsacContent = true
+    mocks.entitlement.isPaymentRequired = false
+    mocks.entitlement.entitlement = fullAccessEntitlement()
 
     const profile = deferred<{ first_name: string }>()
     mocks.getMyProfile.mockReturnValue(profile.promise)
-    mocks.getOverview.mockReturnValue(new Promise(() => undefined))
-    mocks.getTrajectory.mockReturnValue(new Promise(() => undefined))
-    mocks.getSessions.mockReturnValue(new Promise(() => undefined))
-    mocks.getPriorities.mockReturnValue(new Promise(() => undefined))
     mocks.getStudyContext.mockReturnValue(new Promise(() => undefined))
+    mocks.getPageBundle.mockReturnValue(new Promise(() => undefined))
 
-    const view = renderDashboard()
-    expectDashboardLoader()
+    renderDashboard()
 
-    mocks.entitlement.loading = false
-    mocks.entitlement.canAccessLsacContent = true
-    mocks.entitlement.isPaymentRequired = false
-    view.rerender(
-      <MemoryRouter>
-        <GuestPricingModalProvider>
-          <DashboardPage />
-        </GuestPricingModalProvider>
-      </MemoryRouter>,
-    )
-
-    expectDashboardLoader()
-    expect(screen.queryByText(/No drills in progress/)).not.toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 1, name: "Welcome back" })).toBeInTheDocument()
+    expect(screen.getByLabelText("Loading stats")).toBeInTheDocument()
 
     profile.resolve({ first_name: "Assad" })
     await waitFor(() => {
-      expectDashboardLoader()
+      expect(screen.getByRole("heading", { level: 1, name: "Welcome back, Assad" })).toBeInTheDocument()
     })
+    expect(screen.getByLabelText("Loading stats")).toBeInTheDocument()
     expect(screen.queryByText(/No drills in progress/)).not.toBeInTheDocument()
-    expect(screen.queryByRole("heading", { name: /Welcome back/ })).not.toBeInTheDocument()
   })
 })

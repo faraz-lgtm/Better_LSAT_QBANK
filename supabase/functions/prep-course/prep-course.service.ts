@@ -217,15 +217,67 @@ export function createPrepCourseService(deps: {
       return await deps.repository.listPublishedCourses()
     },
 
-    async getCourseWithLessons(userId: string, courseSlug: string) {
+    async getCourseWithLessons(
+      userId: string,
+      courseSlug: string,
+      opts?: { hydrate?: 'first' | 'all'; moduleId?: string },
+    ) {
       await requireLearnerAccess(userId)
       const course = await deps.repository.getPublishedCourseBySlug(normalizeSlug(courseSlug))
       if (!course) throw new Error('Course not found')
-      const curriculum = await deps.repository.listPublishedCurriculum(course.id)
-      const lessons = await deps.repository.listPublishedLessonsByCourse(course.id)
-      const completedLessonSlugs = await deps.repository.listCompletedLessonSlugsByCourse(userId, course.id)
-      const bookmarks = await deps.repository.listBookmarksByCourse(userId, course.id)
-      return { course, lessons, curriculum, completedLessonSlugs, bookmarks }
+
+      const requestedModuleId = opts?.moduleId?.trim() || null
+      // Default to full hydrate for callers that omit the flag (e.g. lesson page).
+      // Course outline passes hydrate=first for a fast first paint.
+      const hydrateMode = opts?.hydrate ?? 'all'
+      const hydrateModuleIds: string[] | 'first' | undefined = requestedModuleId
+        ? [requestedModuleId]
+        : hydrateMode === 'first'
+          ? 'first'
+          : undefined
+
+      const curriculum = await deps.repository.listPublishedCurriculum(course.id, {
+        hydrateModuleIds,
+      })
+      if (requestedModuleId && !curriculum.modules.some((mod) => mod.id === requestedModuleId)) {
+        throw new Error('Module not found')
+      }
+
+      const lessons = deps.repository.flattenLessonsFromCurriculum(curriculum)
+      const needsModuleStats = hydrateModuleIds !== undefined
+      const [completedLessonSlugs, bookmarks, moduleStats] = await Promise.all([
+        deps.repository.listCompletedLessonSlugsByCourse(userId, course.id),
+        deps.repository.listBookmarksForCurriculum(userId, course.id, curriculum),
+        needsModuleStats
+          ? deps.repository.listModuleLessonStats(course.id)
+          : Promise.resolve(
+              curriculum.modules.map((mod) => ({
+                moduleId: mod.id,
+                lessonCount: mod.sections.reduce((sum, section) => sum + section.lessons.length, 0),
+                totalMinutes: mod.sections.reduce(
+                  (sum, section) =>
+                    sum +
+                    section.lessons.reduce((lessonSum, lesson) => lessonSum + (lesson.duration_minutes ?? 0), 0),
+                  0,
+                ),
+              })),
+            ),
+      ])
+      const hydratedModuleIds =
+        hydrateModuleIds === 'first'
+          ? curriculum.modules[0]
+            ? [curriculum.modules[0].id]
+            : []
+          : hydrateModuleIds ?? curriculum.modules.map((mod) => mod.id)
+      return {
+        course,
+        lessons,
+        curriculum,
+        completedLessonSlugs,
+        bookmarks,
+        hydratedModuleIds,
+        moduleStats,
+      }
     },
 
     async setModuleBookmark(userId: string, courseSlug: string, moduleId: string, bookmarked: boolean) {

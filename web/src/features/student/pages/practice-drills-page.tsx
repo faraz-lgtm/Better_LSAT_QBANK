@@ -68,18 +68,15 @@ function PracticeDrillsPage() {
     void (async () => {
       setLoading(true)
       try {
-        const [sessionsResult, priorities] = await Promise.all([
-          analyticsApi.getSessions({ kind: "DRILL", limit: 50 }),
-          analyticsApi.getPriorities(),
-        ])
+        const bundle = await analyticsApi.getPageBundle("drills")
         if (cancelled) return
-        const inProgress = sessionsResult.sessions
+        const inProgress = (bundle.sessions?.sessions ?? [])
           .filter((s) => !s.completedAt)
           .map(mapSessionToContinueDrill)
           .filter((d): d is ContinueDrill => d != null)
         setContinueDrills(inProgress)
         const grouped = groupPriorityRowsBySection(
-          priorities.filter((p) => p.sectionType === "LR" || p.sectionType === "RC"),
+          (bundle.priorities ?? []).filter((p) => p.sectionType === "LR" || p.sectionType === "RC"),
         )
         setLrTagDrills(grouped.lr.map(mapPriorityToTagDrill).filter((d): d is TagDrill => d != null))
         setRcTagDrills(grouped.rc.map(mapPriorityToTagDrill).filter((d): d is TagDrill => d != null))

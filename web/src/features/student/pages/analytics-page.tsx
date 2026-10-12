@@ -45,7 +45,6 @@ import { useAnalyticsApi, usePracticeApi, useUsersApi } from "@/features/student
 import {
   filterByTimeRange,
   getTimeRangeCutoff,
-  OVERVIEW_TIME_RANGE_OPTIONS,
   TimeRangeSegmented,
   type TimeRangeValue,
 } from "@/features/student/components/time-range-filter"
@@ -58,7 +57,6 @@ import type {
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
 
 const VALID_TABS = new Set(["overview", "priorities", "history"])
-const HISTORY_FETCH_LIMIT = 30
 const OVERVIEW_HISTORY_PREVIEW_LIMIT = 4
 
 function tabFromSearch(raw: string | null): string {
@@ -289,50 +287,33 @@ function OverviewTab() {
     setLoading(true)
     let cancelled = false
     void Promise.all([
-      analyticsApi.getTrajectory(),
-      analyticsApi.getPriorities(),
-      analyticsApi.getSessions({ kind: "DRILL", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
-      analyticsApi.getSessions({ kind: "SECTION", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
-      analyticsApi.getSessions({ kind: "PREPTEST", completedOnly: true, limit: HISTORY_FETCH_LIMIT, offset: 0 }),
+      analyticsApi.getPageBundle("overview"),
       usersApi?.getStudyContext() ?? Promise.resolve(null),
-      analyticsApi.getOverview(),
     ])
-      .then(([t, p, drills, sectionSessions, prepTests, studyContext, allOverview]) => {
+      .then(([bundle, studyContext]) => {
         if (cancelled) return
-        setTrajectoryPoints(t)
-        setSections(mapPrioritiesToSections(p))
+        const allOverview = bundle.overview
+        if (!allOverview) throw new Error("No overview returned from analytics")
+        setTrajectoryPoints(bundle.trajectory ?? [])
+        setSections(mapPrioritiesToSections(bundle.priorities ?? []))
         setGoalScore(studyContext?.preferences?.goalScore ?? null)
         setGoalScoreError(null)
         setDrillHistory(
-          drills.sessions
+          (bundle.drillSessions?.sessions ?? [])
             .map(mapDrillSessionToHistoryEntry)
             .filter((e): e is PrepTestHistoryEntry => e != null),
         )
         setSectionHistory(
-          sectionSessions.sessions
+          (bundle.sectionSessions?.sessions ?? [])
             .map(mapSectionSessionToHistoryEntry)
             .filter((e): e is PrepTestHistoryEntry => e != null),
         )
         setPrepTestHistory(
-          prepTests.sessions
+          (bundle.prepTestSessions?.sessions ?? [])
             .map(mapPrepTestSessionToHistoryEntry)
             .filter((e): e is PrepTestHistoryEntry => e != null),
         )
         setOverviewByRange({ all: allOverview })
-
-        // Prefetch ranged overviews so filter switches update metrics instantly.
-        void Promise.all(
-          OVERVIEW_TIME_RANGE_OPTIONS.filter((option) => option.value !== "all").map(async (option) => {
-            const completedSince = getTimeRangeCutoff(option.value)?.toISOString()
-            const overview = await analyticsApi.getOverview(
-              completedSince ? { completedSince } : undefined,
-            )
-            return [option.value, overview] as const
-          }),
-        ).then((entries) => {
-          if (cancelled) return
-          setOverviewByRange((prev) => ({ ...prev, ...Object.fromEntries(entries) }))
-        })
       })
       .catch((e) => {
         if (cancelled) return
@@ -346,7 +327,7 @@ function OverviewTab() {
     }
   }, [analyticsApi, usersApi])
 
-  // If user picks a range before prefetch finishes, fetch that one immediately.
+  // Fetch overview for the selected range on demand.
   useEffect(() => {
     if (!analyticsApi || timeRange === "all") return
     if (overviewByRange[timeRange]) return

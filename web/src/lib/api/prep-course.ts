@@ -83,6 +83,12 @@ export type PrepCourseCurriculum = {
   modules: PrepCourseModule[]
 }
 
+export type PrepCourseModuleLessonStats = {
+  moduleId: string
+  lessonCount: number
+  totalMinutes: number
+}
+
 export type PrepCourseBookmarks = {
   moduleIds: string[]
   lessonSlugs: string[]
@@ -128,20 +134,30 @@ export function createPrepCourseApi(supabase: SupabaseClient) {
       return data?.courses ?? []
     },
 
-    async getCourse(courseSlug: string): Promise<{
+    async getCourse(
+      courseSlug: string,
+      opts?: { hydrate?: "first" | "all"; moduleId?: string },
+    ): Promise<{
       course: PrepCourse
       lessons: PrepLesson[]
       curriculum?: PrepCourseCurriculum
       completedLessonSlugs?: string[]
       bookmarks?: PrepCourseBookmarks
+      hydratedModuleIds?: string[]
+      moduleStats?: PrepCourseModuleLessonStats[]
     }> {
+      const query: Record<string, string> = { courseSlug }
+      if (opts?.hydrate) query.hydrate = opts.hydrate
+      if (opts?.moduleId) query.moduleId = opts.moduleId
       const { data, error } = await invokePrepCourseFn<{
         course: PrepCourse
         lessons: PrepLesson[]
         curriculum?: PrepCourseCurriculum
         completedLessonSlugs?: string[]
         bookmarks?: PrepCourseBookmarks
-      }>(prepCourseGetName({ courseSlug }), { method: "GET" })
+        hydratedModuleIds?: string[]
+        moduleStats?: PrepCourseModuleLessonStats[]
+      }>(prepCourseGetName(query), { method: "GET" })
       if (error) throw error
       if (!data?.course) throw new Error("No course returned from prep-course")
       return data

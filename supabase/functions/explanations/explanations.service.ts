@@ -302,10 +302,12 @@ function snippetFromQuestion(q: PrepTestTreeQuestionRow): string {
 }
 
 function hasWrittenExplanation(q: PrepTestTreeQuestionRow): boolean {
+  if (typeof q.has_explanation === 'boolean') return q.has_explanation
   return (q.explanation?.trim() ?? '').length > 0
 }
 
 function hasVideo(q: PrepTestTreeQuestionRow): boolean {
+  if (typeof q.has_video === 'boolean') return q.has_video
   return (q.video_url?.trim() ?? '').length > 0
 }
 
@@ -462,11 +464,14 @@ function buildRcPassages(
     const gid = pass.source_group_id?.trim() ?? ''
     const qs = gid ? (byGroup.get(gid) ?? []) : []
     if (gid) byGroup.delete(gid)
-    if (qs.length === 0 && !pass.content?.trim()) continue
+    if (qs.length === 0 && !pass.content?.trim() && !pass.content_snippet?.trim()) continue
     drafts.push({
       id: pass.id,
       titleFromTag: pass.topic_tag?.trim() || null,
-      snippet: passageSnippet(pass.content) || passageSnippetFromQuestions([...qs].sort(sortQuestions)),
+      snippet:
+        pass.content_snippet?.trim() ||
+        passageSnippet(pass.content) ||
+        passageSnippetFromQuestions([...qs].sort(sortQuestions)),
       questions: qs,
     })
   }
@@ -751,6 +756,10 @@ export function buildExplanationStatusCounts(
   }
   for (const id of catalogQuestionIds) {
     const status = resolveExplanationQuestionStatus(id, progress)
+    if (status === 'not_started') {
+      counts.fresh += 1
+      continue
+    }
     counts[status] += 1
   }
   return counts
@@ -842,11 +851,7 @@ export function applyQuestionBookmarks(
 export function createExplanationsService(deps: { repository: ExplanationsRepository }) {
   return {
     async getExplanationStatusCounts(userId: string): Promise<ExplanationStatusCounts> {
-      const [catalogIds, progressLists] = await Promise.all([
-        deps.repository.listLsatCatalogQuestionIds(),
-        deps.repository.listPrepTestQuestionProgress(userId),
-      ])
-      return buildExplanationStatusCounts(catalogIds, progressFromLists(progressLists))
+      return await deps.repository.getExplanationStatusCounts(userId)
     },
 
     async listPrepTests(userId: string, options: ListPrepTestsOptions = {}): Promise<ListPrepTestsResult> {
@@ -874,7 +879,10 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
           : (page - 1) * pageSize
       const pageGroups = grouped.slice(start, start + pageSize)
 
-      const progressLists = await deps.repository.listPrepTestQuestionProgress(userId)
+      const [progressLists, statusCounts] = await Promise.all([
+        deps.repository.listPrepTestQuestionProgress(userId),
+        deps.repository.getExplanationStatusCounts(userId),
+      ])
       const progress = progressFromLists(progressLists)
 
       const prepTests: ExplanationPrepTestListItem[] = []
@@ -892,8 +900,6 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
         })
       }
 
-      const catalogIds = await deps.repository.listLsatCatalogQuestionIds()
-      const statusCounts = buildExplanationStatusCounts(catalogIds, progress)
       return { prepTests, total, page, pageSize, statusCounts }
     },
 

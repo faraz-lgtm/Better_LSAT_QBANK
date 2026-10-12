@@ -1,7 +1,5 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 
-import { isStudentVisiblePrepTest } from '../_shared/prep-test-visibility.ts'
-
 export function createServiceRoleClient(): SupabaseClient {
   const url = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -25,6 +23,8 @@ export type PrepTestTreeQuestionRow = {
   stem_text: string | null
   stimulus_text: string | null
   explanation: string | null
+  has_explanation?: boolean | null
+  has_video?: boolean | null
   video_url: string | null
   difficulty: number | null
   question_type_id?: string | null
@@ -35,6 +35,7 @@ export type PrepTestTreePassageRow = {
   id: string
   source_group_id: string | null
   content: string | null
+  content_snippet?: string | null
   topic_tag: string | null
 }
 
@@ -117,15 +118,15 @@ const prepTestTreeSelect = `
     section_number,
     section_type,
     title,
-    admin_passages ( id, source_group_id, content, topic_tag ),
-    admin_logic_games ( id, source_group_id, setup_text, rules_text ),
+    admin_passages ( id, source_group_id, content_snippet, topic_tag ),
+    admin_logic_games ( id, source_group_id ),
     admin_questions (
       id,
       question_number,
       source_group_id,
       stem_text,
-      stimulus_text,
-      explanation,
+      has_explanation,
+      has_video,
       video_url,
       difficulty,
       question_type_id
@@ -285,22 +286,23 @@ export function createExplanationsRepository(client: SupabaseClient) {
       const sectionIds = ((sections ?? []) as { id: string }[]).map((s) => s.id)
       if (sectionIds.length === 0) return { questionCount: 0, explainedCount: 0, questionIds: [] }
 
-      const { data: questions, error: qErr } = await client
-        .from('admin_questions')
-        .select('id,explanation,video_url')
-        .in('section_id', sectionIds)
+      const [{ data: questions, error: qErr }, { data: stats, error: statsErr }] = await Promise.all([
+        client.from('admin_questions').select('id').in('section_id', sectionIds),
+        client.rpc('admin_prep_test_question_stats', { p_prep_test_ids: prepTestIds }),
+      ])
       if (qErr) throw qErr
+      if (statsErr) throw statsErr
 
-      const rows = (questions ?? []) as { id: string; explanation: string | null; video_url: string | null }[]
-      let explainedCount = 0
-      const questionIds: string[] = []
-      for (const q of rows) {
-        questionIds.push(q.id)
-        const hasExpl = (q.explanation?.trim() ?? '').length > 0
-        const hasVid = (q.video_url?.trim() ?? '').length > 0
-        if (hasExpl || hasVid) explainedCount += 1
+      const rows = (questions ?? []) as { id: string }[]
+      const explainedCount = ((stats ?? []) as Array<{ explained_or_video?: number; explained?: number }>).reduce(
+        (sum, row) => sum + (Number(row.explained_or_video ?? row.explained) || 0),
+        0,
+      )
+      return {
+        questionCount: rows.length,
+        explainedCount,
+        questionIds: rows.map((q) => q.id),
       }
-      return { questionCount: rows.length, explainedCount, questionIds }
     },
 
     async getQuestionDetail(questionId: string): Promise<QuestionDetailRow | null> {
@@ -314,40 +316,36 @@ export function createExplanationsRepository(client: SupabaseClient) {
     },
 
     async listLsatCatalogQuestionIds(): Promise<string[]> {
-      const { data: prepRows, error: ptErr } = await client
-        .from('admin_prep_tests')
-        .select('id,module_id')
-        .ilike('module_id', 'LSAC%')
-      if (ptErr) throw ptErr
-      const prepTestIds = ((prepRows ?? []) as { id: string; module_id: string }[])
-        .filter((r) => isStudentVisiblePrepTest(r.module_id))
-        .map((r) => r.id)
-      if (prepTestIds.length === 0) return []
+      const { data, error } = await client.rpc('list_lsat_catalog_question_ids')
+      if (error) throw error
+      return ((data ?? []) as { id: string }[]).map((row) => String(row.id))
+    },
 
-      const sectionIds: string[] = []
-      const chunkSize = 100
-      for (let i = 0; i < prepTestIds.length; i += chunkSize) {
-        const chunk = prepTestIds.slice(i, i + chunkSize)
-        const { data: sections, error: secErr } = await client
-          .from('admin_sections')
-          .select('id')
-          .in('prep_test_id', chunk)
-        if (secErr) throw secErr
-        sectionIds.push(...((sections ?? []) as { id: string }[]).map((s) => s.id))
+    async getExplanationStatusCounts(userId: string): Promise<{
+      in_process: number
+      fresh: number
+      answered: number
+      seen: number
+    }> {
+      const { data, error } = await client.rpc('explanation_status_counts_for_user', {
+        p_user_id: userId,
+      })
+      if (error) throw error
+      const row = Array.isArray(data) ? data[0] : data
+      const parsed = (row ?? {}) as {
+        in_process?: unknown
+        fresh?: unknown
+        answered?: unknown
+        seen?: unknown
       }
-      if (sectionIds.length === 0) return []
-
-      const questionIds: string[] = []
-      for (let i = 0; i < sectionIds.length; i += chunkSize) {
-        const chunk = sectionIds.slice(i, i + chunkSize)
-        const { data: questions, error: qErr } = await client
-          .from('admin_questions')
-          .select('id')
-          .in('section_id', chunk)
-        if (qErr) throw qErr
-        questionIds.push(...((questions ?? []) as { id: string }[]).map((q) => q.id))
+      const asCount = (value: unknown) =>
+        typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0
+      return {
+        in_process: asCount(parsed.in_process),
+        fresh: asCount(parsed.fresh),
+        answered: asCount(parsed.answered),
+        seen: asCount(parsed.seen),
       }
-      return questionIds
     },
 
     async listDistinctAnsweredQuestionIdsForUser(userId: string): Promise<string[]> {
@@ -392,30 +390,14 @@ export function createExplanationsRepository(client: SupabaseClient) {
         }
       }
 
-      const { data: events, error: eventErr } = await client
-        .from('answer_events')
-        .select('question_id, created_at, practice_sessions!inner(prep_test_id, completed_at, kind)')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
+      const { data: events, error: eventErr } = await client.rpc('user_prep_test_question_progress', {
+        p_user_id: userId,
+      })
       if (eventErr) throw eventErr
 
-      type EventRow = {
-        question_id: string
-        created_at: string
-        practice_sessions:
-          | { prep_test_id: string | null; completed_at: string | null; kind: string }
-          | { prep_test_id: string | null; completed_at: string | null; kind: string }[]
-      }
-
       const latestAnswerByQuestion = new Map<string, boolean>()
-      for (const row of (events ?? []) as EventRow[]) {
-        const session = Array.isArray(row.practice_sessions)
-          ? row.practice_sessions[0]
-          : row.practice_sessions
-        if (!session?.prep_test_id) continue
-        if (session.kind !== 'SECTION' && session.kind !== 'PREPTEST') continue
-        if (latestAnswerByQuestion.has(row.question_id)) continue
-        latestAnswerByQuestion.set(row.question_id, session.completed_at != null)
+      for (const row of (events ?? []) as { question_id: string; session_completed: boolean }[]) {
+        latestAnswerByQuestion.set(String(row.question_id), Boolean(row.session_completed))
       }
 
       const answeredQuestionIds: string[] = []

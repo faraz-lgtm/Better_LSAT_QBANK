@@ -219,7 +219,7 @@ function PrepCourseLessonPage() {
       }
       let redirected = false
       try {
-        const courseData = await prepCourseApi.getCourse(courseSlug)
+        const courseData = await prepCourseApi.getCourse(courseSlug, { hydrate: "all" })
         if (!alive) return
         const normalized = normalizeCurriculum(courseData.curriculum, courseData.lessons, courseData.course.id)
         if (isPrepCourseLessonLockedForFreePlan(normalized, courseSlug, lessonSlug, limitFreeAccess)) {

@@ -328,16 +328,29 @@ export function createAdminRepository(client: SupabaseClient) {
       return (qResult.count ?? 0) + (gResult.count ?? 0)
     },
 
-    async listPrepTests(limit = 10, offset = 0, contentFilter?: string) {
+    async countVisiblePrepTests() {
+      const { data, error } = await client.from("admin_prep_tests").select("id,module_id")
+      if (error) throw error
+      return groupVisiblePrepTests(data ?? []).length
+    },
+
+    async listPrepTests(
+      limit = 10,
+      offset = 0,
+      contentFilter?: string,
+      options?: { search?: string; includeStats?: boolean },
+    ) {
       const from = Math.max(0, offset)
-      const safeLimit = Math.max(1, Math.min(limit, 100))
+      const safeLimit = Math.max(1, Math.min(limit, 10_000))
       const to = from + safeLimit - 1
       const filter = normalizeListPrepTestsContentFilter(contentFilter)
+      const includeStats = options?.includeStats !== false
+      const search = options?.search
 
       const fetchPrepTests = async () => {
         const { data, error } = await client
           .from("admin_prep_tests")
-          .select("id,module_id,title,imported_at,admin_sections(count)")
+          .select("id,module_id,title,imported_at")
         if (error) throw error
         return data ?? []
       }
@@ -346,87 +359,7 @@ export function createAdminRepository(client: SupabaseClient) {
         await this.ensureAdminProjectionFromLsac()
         data = await fetchPrepTests()
       }
-      const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" })
-      const lsacRows = data.filter((row) => {
-        const moduleId = String(row.module_id ?? "")
-        if (!/^LSAC\d+(:.*)?$/i.test(moduleId)) return false
-        const baseModuleId = moduleId.split(":")[0] ?? moduleId
-        return isStudentVisiblePrepTest(baseModuleId)
-      })
-
-      type GroupedPrepTest = {
-        id: string | null
-        prep_test_ids: string[]
-        module_id: string
-        imported_at: string | null
-        title: string
-        rawTitles: string[]
-      }
-
-      const grouped = new Map<string, GroupedPrepTest>()
-
-      for (const row of lsacRows) {
-        const moduleId = String(row.module_id ?? "")
-        const baseModuleId = moduleId.split(":")[0] ?? moduleId
-        const importedAt = row.imported_at ? String(row.imported_at) : null
-        const normalizedTitle = String(row.title ?? "")
-          .replace(/^(Logical Reasoning|Reading Comprehension|Analytical Reasoning|Logic Games)\s*-\s*/i, "")
-          .replace(/,\s*Section\s*\d+\s*$/i, "")
-          .trim()
-
-        const existing = grouped.get(baseModuleId)
-        if (!existing) {
-          grouped.set(baseModuleId, {
-            id: row.id ? String(row.id) : null,
-            prep_test_ids: row.id ? [String(row.id)] : [],
-            module_id: baseModuleId,
-            imported_at: importedAt,
-            title: normalizedTitle || baseModuleId,
-            rawTitles: normalizedTitle ? [normalizedTitle] : [],
-          })
-          continue
-        }
-
-        if (row.id) existing.prep_test_ids.push(String(row.id))
-        if (importedAt && (!existing.imported_at || importedAt > existing.imported_at)) {
-          existing.imported_at = importedAt
-        }
-        if (normalizedTitle) existing.rawTitles.push(normalizedTitle)
-        if (!existing.id && row.id) existing.id = String(row.id)
-      }
-
-      type NormalizedPrepTestRow = {
-        id: string | null
-        prep_test_ids: string[]
-        module_id: string
-        imported_at: string | null
-        title: string
-      }
-
-      const normalizedRows: NormalizedPrepTestRow[] = Array.from(grouped.values()).map((row) => {
-        if (row.rawTitles.length > 0) {
-          row.rawTitles.sort((a, b) => collator.compare(a, b))
-          row.title = row.rawTitles[0]
-        }
-        return {
-          id: row.id,
-          prep_test_ids: row.prep_test_ids,
-          module_id: row.module_id,
-          imported_at: row.imported_at,
-          title: row.title,
-        }
-      })
-
-      normalizedRows.sort((a, b) => {
-        const na = lsacPrepTestOrdinal(a.module_id)
-        const nb = lsacPrepTestOrdinal(b.module_id)
-        if (na !== null && nb !== null && na !== nb) return nb - na
-        if (na !== null && nb === null) return -1
-        if (na === null && nb !== null) return 1
-        const first = collator.compare(b.module_id, a.module_id)
-        if (first !== 0) return first
-        return collator.compare(a.title ?? "", b.title ?? "")
-      })
+      const normalizedRows = groupVisiblePrepTests(data).filter((row) => rowMatchesPrepTestSearch(row, search))
 
       type PrepStats = {
         sectionCount: number
@@ -487,47 +420,34 @@ export function createAdminRepository(client: SupabaseClient) {
         return rows
       }
 
-      async function fetchQuestionsForSectionIds(sectionIds: string[]) {
-        type QuestionRow = {
-          id: string
-          section_id: string
-          explanation: string | null
-          question_type_id: string | null
-        }
-        // Keep chunk size low enough to stay below PostgREST max_rows (1000)
-        // and paginate defensively in case a chunk still has >1000 rows.
-        const chunkSize = 20
-        const pageSize = 1000
-        const rows: QuestionRow[] = []
-        for (let i = 0; i < sectionIds.length; i += chunkSize) {
-          const chunk = sectionIds.slice(i, i + chunkSize)
-          if (chunk.length === 0) continue
-          let from = 0
-          while (true) {
-            const to = from + pageSize - 1
-            const { data: questions, error: questionsErr } = await client
-              .from("admin_questions")
-              .select("id,section_id,explanation,question_type_id")
-              .in("section_id", chunk)
-              .order("id", { ascending: true })
-              .range(from, to)
-            if (questionsErr) throw questionsErr
-            const page = (questions ?? []) as QuestionRow[]
-            rows.push(...page)
-            if (page.length < pageSize) break
-            from += pageSize
-          }
-        }
-        return rows
+      async function fetchQuestionStatsForPrepTestIds(prepTestIds: string[]) {
+        if (prepTestIds.length === 0) return []
+        const { data, error } = await client.rpc("admin_prep_test_question_stats", {
+          p_prep_test_ids: prepTestIds,
+        })
+        if (error) throw error
+        return (data ?? []) as Array<{
+          prep_test_id: string
+          total: number
+          explained: number
+          tagged: number
+        }>
       }
 
-      async function buildStatsByPrepTestId(prepTestIds: string[]) {
+      async function buildStatsByPrepTestId(
+        prepTestIds: string[],
+        statsOptions?: { includeQuestionStats?: boolean },
+      ) {
         const uniquePrepIds = [...new Set(prepTestIds)]
         if (uniquePrepIds.length === 0) {
           return { statsByPrep: new Map<string, PrepStats>(), sectionToPrep: new Map<string, string>() }
         }
 
-        const sectionRows = await fetchSectionsForPrepTestIds(uniquePrepIds)
+        const includeQuestionStats = statsOptions?.includeQuestionStats !== false
+        const [sectionRows, questionStats] = await Promise.all([
+          fetchSectionsForPrepTestIds(uniquePrepIds),
+          includeQuestionStats ? fetchQuestionStatsForPrepTestIds(uniquePrepIds) : Promise.resolve([]),
+        ])
         const sectionToPrep = new Map<string, string>()
         const statsByPrep = new Map<string, PrepStats>()
 
@@ -539,15 +459,12 @@ export function createAdminRepository(client: SupabaseClient) {
           statsByPrep.set(prepId, stats)
         }
 
-        const sectionIds = sectionRows.map((row) => String(row.id))
-        const questionRows = await fetchQuestionsForSectionIds(sectionIds)
-        for (const question of questionRows) {
-          const prepId = sectionToPrep.get(String(question.section_id))
-          if (!prepId) continue
+        for (const row of questionStats) {
+          const prepId = String(row.prep_test_id)
           const stats = statsByPrep.get(prepId) ?? emptyPrepStats()
-          stats.total += 1
-          if (typeof question.explanation === "string" && question.explanation.trim().length > 0) stats.explained += 1
-          if (question.question_type_id !== null) stats.tagged += 1
+          stats.total = Number(row.total) || 0
+          stats.explained = Number(row.explained) || 0
+          stats.tagged = Number(row.tagged) || 0
           statsByPrep.set(prepId, stats)
         }
 
@@ -595,33 +512,50 @@ export function createAdminRepository(client: SupabaseClient) {
         }
       }
 
-      if (filter !== "all") {
-        const allPrepTestIds = [...new Set(normalizedRows.flatMap((row) => row.prep_test_ids))]
-        const { statsByPrep } = await buildStatsByPrepTestId(allPrepTestIds)
-        const filteredRows = normalizedRows
-          .map((row) => ({ row, merged: mergeGroupedRowStats(row, statsByPrep) }))
-          .filter(({ merged }) => rowMatchesContentFilter(merged, filter))
-        const total = filteredRows.length
-        const paged = filteredRows.slice(from, to + 1).map(({ row, merged }) => toListRow(row, merged))
-        return { rows: paged, total }
-      }
-
-      const pagedRows = normalizedRows.slice(from, to + 1)
-      const prepTestIds = [...new Set(pagedRows.flatMap((row) => row.prep_test_ids))]
-      if (prepTestIds.length === 0) {
+      if (!includeStats) {
+        const pagedRows = normalizedRows.slice(from, to + 1)
         return {
           rows: pagedRows.map((row) => toListRow(row, emptyPrepStats())),
           total: normalizedRows.length,
         }
       }
 
-      const { statsByPrep } = await buildStatsByPrepTestId(prepTestIds)
-      const rowsWithStats = pagedRows.map((row) => {
-        const merged = mergeGroupedRowStats(row, statsByPrep)
-        return toListRow(row, merged)
-      })
+      let candidateRows = normalizedRows
+      if (filter === "lr" || filter === "rc" || filter === "lg") {
+        const allPrepTestIds = [...new Set(normalizedRows.flatMap((row) => row.prep_test_ids))]
+        const { statsByPrep } = await buildStatsByPrepTestId(allPrepTestIds, { includeQuestionStats: false })
+        candidateRows = normalizedRows.filter((row) =>
+          rowMatchesContentFilter(mergeGroupedRowStats(row, statsByPrep), filter),
+        )
+      } else if (filter === "missing-tags") {
+        const allPrepTestIds = [...new Set(normalizedRows.flatMap((row) => row.prep_test_ids))]
+        const { statsByPrep } = await buildStatsByPrepTestId(allPrepTestIds)
+        candidateRows = normalizedRows.filter((row) =>
+          rowMatchesContentFilter(mergeGroupedRowStats(row, statsByPrep), filter),
+        )
+        const total = candidateRows.length
+        const paged = candidateRows.slice(from, to + 1)
+        return {
+          rows: paged.map((row) => toListRow(row, mergeGroupedRowStats(row, statsByPrep))),
+          total,
+        }
+      }
 
-      return { rows: rowsWithStats, total: normalizedRows.length }
+      const total = candidateRows.length
+      const pagedRows = candidateRows.slice(from, to + 1)
+      const prepTestIds = [...new Set(pagedRows.flatMap((row) => row.prep_test_ids))]
+      if (prepTestIds.length === 0) {
+        return {
+          rows: pagedRows.map((row) => toListRow(row, emptyPrepStats())),
+          total,
+        }
+      }
+
+      const { statsByPrep } = await buildStatsByPrepTestId(prepTestIds)
+      return {
+        rows: pagedRows.map((row) => toListRow(row, mergeGroupedRowStats(row, statsByPrep))),
+        total,
+      }
     },
 
     async getPrepTestDetail(prepTestId: string) {
@@ -973,43 +907,29 @@ export function createAdminRepository(client: SupabaseClient) {
 
     async getPrepTestCompletionStats(prepTestId: string) {
       const grouped = await resolvePrepTestGroup(prepTestId)
-      const { data: sections, error: sectionErr } = await client
-        .from("admin_sections")
-        .select("id")
-        .in("prep_test_id", grouped.prepTestIds)
-      if (sectionErr) throw sectionErr
-      const sectionIds = (sections ?? []).map((s) => s.id)
-      if (sectionIds.length === 0) {
+      if (grouped.prepTestIds.length === 0) {
         return { total: 0, explained: 0, tagged: 0, difficultySet: 0 }
       }
-      const [totalR, explainedR, taggedR, diffR] = await Promise.all([
-        client.from("admin_questions").select("id", { count: "exact", head: true }).in("section_id", sectionIds),
-        client
-          .from("admin_questions")
-          .select("id", { count: "exact", head: true })
-          .in("section_id", sectionIds)
-          .not("explanation", "is", null),
-        client
-          .from("admin_questions")
-          .select("id", { count: "exact", head: true })
-          .in("section_id", sectionIds)
-          .not("question_type_id", "is", null),
-        client
-          .from("admin_questions")
-          .select("id", { count: "exact", head: true })
-          .in("section_id", sectionIds)
-          .not("difficulty", "is", null),
-      ])
-      if (totalR.error) throw totalR.error
-      if (explainedR.error) throw explainedR.error
-      if (taggedR.error) throw taggedR.error
-      if (diffR.error) throw diffR.error
-      return {
-        total: totalR.count ?? 0,
-        explained: explainedR.count ?? 0,
-        tagged: taggedR.count ?? 0,
-        difficultySet: diffR.count ?? 0,
+      const { data, error } = await client.rpc("admin_prep_test_question_stats", {
+        p_prep_test_ids: grouped.prepTestIds,
+      })
+      if (error) throw error
+      let total = 0
+      let explained = 0
+      let tagged = 0
+      let difficultySet = 0
+      for (const row of (data ?? []) as Array<{
+        total: number
+        explained: number
+        tagged: number
+        difficulty_set?: number
+      }>) {
+        total += Number(row.total) || 0
+        explained += Number(row.explained) || 0
+        tagged += Number(row.tagged) || 0
+        difficultySet += Number(row.difficulty_set) || 0
       }
+      return { total, explained, tagged, difficultySet }
     },
 
     async createYouTryQuestion(input: Json) {
@@ -1104,6 +1024,12 @@ export function createAdminRepository(client: SupabaseClient) {
       const { data, error } = await client.from("platform_config").select("*").eq("id", "singleton").maybeSingle()
       if (error) throw error
       return withPlatformConfigAliases((data as Record<string, unknown> | null) ?? null)
+    },
+
+    async countCourses() {
+      const { count, error } = await client.from("prep_courses").select("id", { count: "exact", head: true })
+      if (error) throw error
+      return count ?? 0
     },
 
     async listCourses() {
@@ -1726,6 +1652,89 @@ function normalizeListPrepTestsContentFilter(value: unknown): "all" | "lr" | "rc
   const v = typeof value === "string" ? value.trim().toLowerCase() : ""
   if (v === "lr" || v === "rc" || v === "lg" || v === "missing-tags") return v
   return "all"
+}
+
+type NormalizedPrepTestRow = {
+  id: string | null
+  prep_test_ids: string[]
+  module_id: string
+  imported_at: string | null
+  title: string
+}
+
+function rowMatchesPrepTestSearch(row: { module_id: string; title: string }, search?: string) {
+  const q = search?.trim().toLowerCase()
+  if (!q) return true
+  return row.title.toLowerCase().includes(q) || row.module_id.toLowerCase().includes(q)
+}
+
+function groupVisiblePrepTests(data: Array<Record<string, unknown> | { id?: unknown; module_id?: unknown; title?: unknown; imported_at?: unknown }>): NormalizedPrepTestRow[] {
+  const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" })
+  const lsacRows = data.filter((row) => {
+    const moduleId = String(row.module_id ?? "")
+    if (!/^LSAC\d+(:.*)?$/i.test(moduleId)) return false
+    const baseModuleId = moduleId.split(":")[0] ?? moduleId
+    return isStudentVisiblePrepTest(baseModuleId)
+  })
+
+  type GroupedPrepTest = NormalizedPrepTestRow & { rawTitles: string[] }
+  const grouped = new Map<string, GroupedPrepTest>()
+
+  for (const row of lsacRows) {
+    const moduleId = String(row.module_id ?? "")
+    const baseModuleId = moduleId.split(":")[0] ?? moduleId
+    const importedAt = row.imported_at ? String(row.imported_at) : null
+    const normalizedTitle = String(row.title ?? "")
+      .replace(/^(Logical Reasoning|Reading Comprehension|Analytical Reasoning|Logic Games)\s*-\s*/i, "")
+      .replace(/,\s*Section\s*\d+\s*$/i, "")
+      .trim()
+
+    const existing = grouped.get(baseModuleId)
+    if (!existing) {
+      grouped.set(baseModuleId, {
+        id: row.id ? String(row.id) : null,
+        prep_test_ids: row.id ? [String(row.id)] : [],
+        module_id: baseModuleId,
+        imported_at: importedAt,
+        title: normalizedTitle || baseModuleId,
+        rawTitles: normalizedTitle ? [normalizedTitle] : [],
+      })
+      continue
+    }
+
+    if (row.id) existing.prep_test_ids.push(String(row.id))
+    if (importedAt && (!existing.imported_at || importedAt > existing.imported_at)) {
+      existing.imported_at = importedAt
+    }
+    if (normalizedTitle) existing.rawTitles.push(normalizedTitle)
+    if (!existing.id && row.id) existing.id = String(row.id)
+  }
+
+  const normalizedRows: NormalizedPrepTestRow[] = Array.from(grouped.values()).map((row) => {
+    if (row.rawTitles.length > 0) {
+      row.rawTitles.sort((a, b) => collator.compare(a, b))
+      row.title = row.rawTitles[0]
+    }
+    return {
+      id: row.id,
+      prep_test_ids: row.prep_test_ids,
+      module_id: row.module_id,
+      imported_at: row.imported_at,
+      title: row.title,
+    }
+  })
+
+  normalizedRows.sort((a, b) => {
+    const na = lsacPrepTestOrdinal(a.module_id)
+    const nb = lsacPrepTestOrdinal(b.module_id)
+    if (na !== null && nb !== null && na !== nb) return nb - na
+    if (na !== null && nb === null) return -1
+    if (na === null && nb !== null) return 1
+    const first = collator.compare(b.module_id, a.module_id)
+    if (first !== 0) return first
+    return collator.compare(a.title ?? "", b.title ?? "")
+  })
+  return normalizedRows
 }
 
 function inferSectionType(sectionName: unknown): "LR" | "RC" | "LG" | null {

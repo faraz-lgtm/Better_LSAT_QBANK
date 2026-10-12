@@ -185,10 +185,10 @@ export function createAdminApi(supabase: SupabaseClient) {
       return data ?? { seeded: 0, skipped: 0 }
     },
 
-    async listPrepTests(limit = 10, offset = 0, contentFilter?: string) {
+    async listPrepTests(limit = 10, offset = 0, contentFilter?: string, search?: string) {
       const { data, error } = await invokeAdminFn<{ rows: unknown[]; total: number }>("admin-list-preptests", {
         method: "POST",
-        body: { limit, offset, contentFilter },
+        body: { limit, offset, contentFilter, search },
       })
       if (error) throw error
       return {
@@ -197,19 +197,22 @@ export function createAdminApi(supabase: SupabaseClient) {
       }
     },
 
-    async listAllPrepTests(contentFilter?: string) {
-      const pageSize = 100
-      const rows: unknown[] = []
-      let offset = 0
-      let total = Number.POSITIVE_INFINITY
-      while (offset < total) {
-        const page = await this.listPrepTests(pageSize, offset, contentFilter)
-        total = page.total
-        if (page.rows.length === 0) break
-        rows.push(...page.rows)
-        offset += page.rows.length
-      }
-      return rows
+    async countPrepTests() {
+      const { data, error } = await invokeAdminFn<{ rows: unknown[]; total: number }>("admin-list-preptests", {
+        method: "POST",
+        body: { countOnly: true },
+      })
+      if (error) throw error
+      return data?.total ?? 0
+    },
+
+    async listPrepTestSummaries() {
+      const { data, error } = await invokeAdminFn<{ rows: unknown[]; total: number }>("admin-list-preptests", {
+        method: "POST",
+        body: { summaryOnly: true },
+      })
+      if (error) throw error
+      return data?.rows ?? []
     },
 
     async getPrepTestDetail(prepTestId: string) {
@@ -344,6 +347,15 @@ export function createAdminApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       return data?.rows ?? []
+    },
+
+    async countCourses() {
+      const { data, error } = await invokeAdminFn<{ rows: unknown[]; total: number }>("admin-list-courses", {
+        method: "POST",
+        body: { countOnly: true },
+      })
+      if (error) throw error
+      return data?.total ?? 0
     },
 
     async bulkImportDryRun(payload: {

@@ -2,7 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import type { PracticeSessionKind } from '../practice/practice.repository.ts'
 import { CORS_EDGE_WIDE, json } from '../_shared/edge-http.ts'
 import { createAnalyticsRepository, createServiceRoleClient } from './analytics.repository.ts'
-import { createAnalyticsService } from './analytics.service.ts'
+import { createAnalyticsService, type AnalyticsPageBundleView } from './analytics.service.ts'
 
 const corsHeaders = CORS_EDGE_WIDE
 
@@ -16,6 +16,10 @@ function isSessionKind(value: string | null): value is PracticeSessionKind {
 function clampSessionsLimit(value: number, fallback = 20): number {
   const n = Number.isFinite(value) ? value : fallback
   return Math.min(MAX_SESSIONS_LIMIT, Math.max(1, n))
+}
+
+function isPageBundleView(value: string | null | undefined): value is AnalyticsPageBundleView {
+  return value === 'dashboard' || value === 'overview' || value === 'drills'
 }
 
 export async function handleAnalyticsMicro(req: Request, slug: string): Promise<Response> {
@@ -59,6 +63,7 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
   let questionTypeId: string | undefined
   let includeKinds: PracticeSessionKind[] | undefined
   let completedSince: string | undefined
+  let include: AnalyticsPageBundleView | undefined
 
   if (req.method === 'GET') {
     const kindParam = url.searchParams.get('kind')
@@ -80,6 +85,8 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
       typeof sinceParam === 'string' && sinceParam.length > 0 && !Number.isNaN(Date.parse(sinceParam))
         ? sinceParam
         : undefined
+    const includeParam = url.searchParams.get('include')
+    include = isPageBundleView(includeParam) ? includeParam : undefined
   } else {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
     const readNum = (v: unknown, fallback: number) => {
@@ -108,6 +115,8 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
     const sinceRaw = typeof body.completedSince === 'string' ? body.completedSince : undefined
     completedSince =
       sinceRaw && sinceRaw.length > 0 && !Number.isNaN(Date.parse(sinceRaw)) ? sinceRaw : undefined
+    const includeRaw = typeof body.include === 'string' ? body.include : undefined
+    include = isPageBundleView(includeRaw) ? includeRaw : undefined
   }
 
   const service = createAnalyticsService({
@@ -116,6 +125,10 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
 
   try {
     if (resource === 'overview') {
+      if (include) {
+        const data = await service.getPageBundle(user.id, include)
+        return json(data, {}, corsHeaders)
+      }
       const data = await service.getOverview(
         user.id,
         completedSince ? { completedSince } : undefined,

@@ -99,24 +99,29 @@ function AnalyticsQuestionTypeReviewPage() {
         const payload = await analyticsApi.getQuestionTypeReview(questionTypeId)
         if (!alive) return
         setReview(payload)
+        setLoading(false)
 
         if (explanationsApi && payload.attempts.length > 0) {
-          const detailEntries = await Promise.all(
-            payload.attempts.map(async (attempt) => {
-              try {
-                const detail = await explanationsApi.getExplanationDetail(attempt.questionId)
-                return [attempt.questionId, detail] as const
-              } catch {
-                return [attempt.questionId, null] as const
-              }
-            }),
-          )
-          if (!alive) return
-          const next: Record<string, ExplanationDetailPayload> = {}
-          for (const [id, detail] of detailEntries) {
-            if (detail) next[id] = detail
+          try {
+            const detailEntries = await Promise.all(
+              payload.attempts.slice(0, 12).map(async (attempt) => {
+                try {
+                  const detail = await explanationsApi.getExplanationDetail(attempt.questionId)
+                  return [attempt.questionId, detail] as const
+                } catch {
+                  return [attempt.questionId, null] as const
+                }
+              }),
+            )
+            if (!alive) return
+            const next: Record<string, ExplanationDetailPayload> = {}
+            for (const [id, detail] of detailEntries) {
+              if (detail) next[id] = detail
+            }
+            setDetailsByQuestion(next)
+          } catch {
+            if (alive) setDetailsByQuestion({})
           }
-          setDetailsByQuestion(next)
         } else {
           setDetailsByQuestion({})
         }
@@ -124,8 +129,7 @@ function AnalyticsQuestionTypeReviewPage() {
         if (!alive) return
         setError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to load review")
         setReview(null)
-      } finally {
-        if (alive) setLoading(false)
+        setLoading(false)
       }
     })()
 

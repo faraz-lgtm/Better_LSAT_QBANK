@@ -1124,13 +1124,73 @@ function rawScoreFromPrepTestAttempt(
   return raw
 }
 
-async function enrichPoolItemAttemptScores(
-  repository: PracticeRepository,
+type ScoreRowLookup = Map<string, { scaled_score: number | null; percentile: number | null } | null>
+
+function collectPoolScorePairs(
   prepTestId: string,
   practiceableSectionIds: string[],
   sessions: PracticeSessionRow[],
   item: PrepTestPoolItem,
-): Promise<PrepTestPoolItem> {
+): Array<{ prepTestId: string; rawScore: number }> {
+  const pairs: Array<{ prepTestId: string; rawScore: number }> = []
+  const completedPrepTests = sortedPrepTestSessions(sessions).filter((s) => s.completed_at)
+  let attempts = item.attempts
+  if (attempts.length === 0 && item.status === 'completed' && item.completedAt) {
+    const prepSession = completedPrepTests[0]
+    attempts = prepSession
+      ? [
+          {
+            sessionId: prepSession.id,
+            completedAt: prepSession.completed_at!,
+            scaledScore: prepSession.scaled_score,
+            blindReviewScaledScore: prepSession.blind_review_scaled_score,
+            attemptNumber: 1,
+          },
+        ]
+      : [
+          {
+            sessionId: item.openPrepTestSessionId ?? item.id,
+            completedAt: item.completedAt,
+            scaledScore: item.scaledScore,
+            blindReviewScaledScore: item.blindReviewScaledScore,
+            attemptNumber: 1,
+          },
+        ]
+  }
+
+  for (const attempt of attempts) {
+    const prepSession = sessions.find((s) => s.id === attempt.sessionId && s.kind === 'PREPTEST')
+    if (!prepSession?.completed_at) continue
+    const nextPrepTest =
+      completedPrepTests.find(
+        (p) => Date.parse(p.started_at) > Date.parse(prepSession.started_at),
+      ) ?? null
+    if (attempt.scaledScore == null) {
+      let raw = prepSession.raw_score
+      if (raw == null) {
+        raw = rawScoreFromPrepTestAttempt(
+          sessions,
+          prepSession,
+          nextPrepTest,
+          practiceableSectionIds,
+        )
+      }
+      if (raw != null) pairs.push({ prepTestId, rawScore: raw })
+    }
+    if (attempt.blindReviewScaledScore == null && prepSession.blind_review_raw_score != null) {
+      pairs.push({ prepTestId, rawScore: prepSession.blind_review_raw_score })
+    }
+  }
+  return pairs
+}
+
+function enrichPoolItemAttemptScoresWithLookup(
+  prepTestId: string,
+  practiceableSectionIds: string[],
+  sessions: PracticeSessionRow[],
+  item: PrepTestPoolItem,
+  scoreLookup: ScoreRowLookup,
+): PrepTestPoolItem {
   const completedPrepTests = sortedPrepTestSessions(sessions).filter((s) => s.completed_at)
   let attempts = item.attempts
 
@@ -1159,48 +1219,42 @@ async function enrichPoolItemAttemptScores(
     }
   }
 
-  const enrichedAttempts = await Promise.all(
-    attempts.map(async (attempt) => {
-      const prepSession = sessions.find((s) => s.id === attempt.sessionId && s.kind === 'PREPTEST')
-      if (!prepSession?.completed_at) return attempt
+  const enrichedAttempts = attempts.map((attempt) => {
+    const prepSession = sessions.find((s) => s.id === attempt.sessionId && s.kind === 'PREPTEST')
+    if (!prepSession?.completed_at) return attempt
 
-      let scaledScore = attempt.scaledScore
-      let blindReviewScaledScore = attempt.blindReviewScaledScore
+    let scaledScore = attempt.scaledScore
+    let blindReviewScaledScore = attempt.blindReviewScaledScore
 
-      const nextPrepTest =
-        completedPrepTests.find(
-          (p) => Date.parse(p.started_at) > Date.parse(prepSession.started_at),
-        ) ?? null
+    const nextPrepTest =
+      completedPrepTests.find(
+        (p) => Date.parse(p.started_at) > Date.parse(prepSession.started_at),
+      ) ?? null
 
-      if (scaledScore == null) {
-        let raw = prepSession.raw_score
-        if (raw == null) {
-          raw = rawScoreFromPrepTestAttempt(
-            sessions,
-            prepSession,
-            nextPrepTest,
-            practiceableSectionIds,
-          )
-        }
-        if (raw != null) {
-          const scoreRow = await repository.getScoreRowForRaw(prepTestId, raw)
-          scaledScore = scoreRow?.scaled_score ?? null
-        }
-      }
-
-      if (blindReviewScaledScore == null && prepSession.blind_review_raw_score != null) {
-        const scoreRow = await repository.getScoreRowForRaw(
-          prepTestId,
-          prepSession.blind_review_raw_score,
+    if (scaledScore == null) {
+      let raw = prepSession.raw_score
+      if (raw == null) {
+        raw = rawScoreFromPrepTestAttempt(
+          sessions,
+          prepSession,
+          nextPrepTest,
+          practiceableSectionIds,
         )
-        blindReviewScaledScore = scoreRow?.scaled_score ?? null
-      } else if (blindReviewScaledScore == null && prepSession.blind_review_scaled_score != null) {
-        blindReviewScaledScore = prepSession.blind_review_scaled_score
       }
+      if (raw != null) {
+        scaledScore = scoreLookup.get(`${prepTestId}:${raw}`)?.scaled_score ?? null
+      }
+    }
 
-      return { ...attempt, scaledScore, blindReviewScaledScore }
-    }),
-  )
+    if (blindReviewScaledScore == null && prepSession.blind_review_raw_score != null) {
+      blindReviewScaledScore =
+        scoreLookup.get(`${prepTestId}:${prepSession.blind_review_raw_score}`)?.scaled_score ?? null
+    } else if (blindReviewScaledScore == null && prepSession.blind_review_scaled_score != null) {
+      blindReviewScaledScore = prepSession.blind_review_scaled_score
+    }
+
+    return { ...attempt, scaledScore, blindReviewScaledScore }
+  })
 
   const newestAttempt = enrichedAttempts[0]
   const scaledScore = item.scaledScore ?? newestAttempt?.scaledScore ?? null
@@ -1208,6 +1262,48 @@ async function enrichPoolItemAttemptScores(
     item.blindReviewScaledScore ?? newestAttempt?.blindReviewScaledScore ?? null
 
   return { ...item, attempts: enrichedAttempts, scaledScore, blindReviewScaledScore }
+}
+
+async function enrichPoolItemAttemptScores(
+  repository: PracticeRepository,
+  prepTestId: string,
+  practiceableSectionIds: string[],
+  sessions: PracticeSessionRow[],
+  item: PrepTestPoolItem,
+): Promise<PrepTestPoolItem> {
+  const pairs = collectPoolScorePairs(prepTestId, practiceableSectionIds, sessions, item)
+  const scoreLookup = await repository.listScoreRowsForRaw(pairs)
+  return enrichPoolItemAttemptScoresWithLookup(
+    prepTestId,
+    practiceableSectionIds,
+    sessions,
+    item,
+    scoreLookup,
+  )
+}
+
+async function enrichPoolPageItems(
+  repository: PracticeRepository,
+  pageItems: Array<{
+    prepTestId: string
+    practiceableSectionIds: string[]
+    sessions: PracticeSessionRow[]
+    item: PrepTestPoolItem
+  }>,
+): Promise<PrepTestPoolItem[]> {
+  const pairs = pageItems.flatMap(({ prepTestId, practiceableSectionIds, sessions, item }) =>
+    collectPoolScorePairs(prepTestId, practiceableSectionIds, sessions, item),
+  )
+  const scoreLookup = await repository.listScoreRowsForRaw(pairs)
+  return pageItems.map(({ prepTestId, practiceableSectionIds, sessions, item }) =>
+    enrichPoolItemAttemptScoresWithLookup(
+      prepTestId,
+      practiceableSectionIds,
+      sessions,
+      item,
+      scoreLookup,
+    ),
+  )
 }
 
 function buildPrepTestDetail(
@@ -1390,6 +1486,7 @@ function buildBlindReviewDetail(
       completed,
       activeSectionSessionId: latest && !latest.completed_at ? latest.id : null,
       sectionSessionId: latest?.completed_at ? latest.id : null,
+      isExperimental: sec.isExperimental === true,
     }
   })
 
@@ -2035,6 +2132,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         const searchText = [
           label,
           row.tag_label ?? '',
+          row.search_text ?? '',
           stripHtml(row.stimulus_text ?? ''),
           stripHtml(row.stem_text ?? ''),
         ]
@@ -2860,20 +2958,20 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const total = sorted.length
       const start = (page - 1) * pageSize
       const pageItems = sorted.slice(start, start + pageSize)
-      const prepTests = await Promise.all(
+      const prepTests = await enrichPoolPageItems(
+        deps.repository,
         pageItems.map((item) => {
           const row = rowsById.get(item.id)
           const sessions = sessionsByPrepTestId.get(item.id) ?? []
           const practiceableIds = row
             ? practiceableSectionsFromRow(row.sections).map((s) => s.id)
             : []
-          return enrichPoolItemAttemptScores(
-            deps.repository,
-            item.id,
-            practiceableIds,
+          return {
+            prepTestId: item.id,
+            practiceableSectionIds: practiceableIds,
             sessions,
             item,
-          )
+          }
         }),
       )
 

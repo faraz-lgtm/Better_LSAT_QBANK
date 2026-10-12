@@ -167,16 +167,13 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       userId: string,
       opts?: { completedSince?: string },
     ): Promise<number> {
-      let query = client.from('answer_events').select('question_id').eq('user_id', userId)
-      if (opts?.completedSince) {
-        query = query.gte('created_at', opts.completedSince)
-      }
-      const { data, error } = await query
+      const { data, error } = await client.rpc('count_user_visible_answer_events', {
+        p_user_id: userId,
+        p_completed_since: opts?.completedSince ?? null,
+        p_session_kind: null,
+      })
       if (error) throw error
-      const rows = (data as { question_id: string }[]) ?? []
-      if (rows.length === 0) return 0
-      const visibility = await this.resolveQuestionVisibility(rows.map((row) => row.question_id))
-      return rows.filter((row) => visibility.get(row.question_id) === true).length
+      return parseStudyMinutesRpcValue(data)
     },
 
     async sumCompletedSessionStudyMinutes(
@@ -207,23 +204,48 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       userId: string,
       opts?: { completedSince?: string },
     ): Promise<{ correct: number; total: number }> {
-      let query = client
-        .from('answer_events')
-        .select('is_correct, question_id')
-        .eq('user_id', userId)
-        .eq('session_kind', 'DRILL')
-      if (opts?.completedSince) {
-        query = query.gte('created_at', opts.completedSince)
-      }
-      const { data, error } = await query
+      const { data, error } = await client.rpc('count_user_visible_drill_answer_events', {
+        p_user_id: userId,
+        p_completed_since: opts?.completedSince ?? null,
+      })
       if (error) throw error
-      const rows = (data as { is_correct: boolean; question_id: string }[]) ?? []
-      if (rows.length === 0) return { correct: 0, total: 0 }
-      const visibility = await this.resolveQuestionVisibility(rows.map((row) => row.question_id))
-      const visibleRows = rows.filter((row) => visibility.get(row.question_id) === true)
-      const total = visibleRows.length
-      const correct = visibleRows.filter((row) => row.is_correct).length
-      return { correct, total }
+      const row = Array.isArray(data) ? data[0] : data
+      const parsed = (row ?? {}) as { correct?: unknown; total?: unknown }
+      return {
+        correct: parseStudyMinutesRpcValue(parsed.correct),
+        total: parseStudyMinutesRpcValue(parsed.total),
+      }
+    },
+
+    async getOverviewCountStats(
+      userId: string,
+      opts?: { completedSince?: string },
+    ): Promise<{
+      totalQuestionsAnswered: number
+      drillCorrect: number
+      drillTotal: number
+      practiceStudyMinutes: number
+      lessonStudyMinutes: number
+    }> {
+      const { data, error } = await client.rpc('user_overview_count_stats', {
+        p_user_id: userId,
+        p_completed_since: opts?.completedSince ?? null,
+      })
+      if (error) throw error
+      const row = (Array.isArray(data) ? data[0] : data) as {
+        total_questions_answered?: unknown
+        drill_correct?: unknown
+        drill_total?: unknown
+        practice_study_minutes?: unknown
+        lesson_study_minutes?: unknown
+      } | null
+      return {
+        totalQuestionsAnswered: parseStudyMinutesRpcValue(row?.total_questions_answered),
+        drillCorrect: parseStudyMinutesRpcValue(row?.drill_correct),
+        drillTotal: parseStudyMinutesRpcValue(row?.drill_total),
+        practiceStudyMinutes: parseStudyMinutesRpcValue(row?.practice_study_minutes),
+        lessonStudyMinutes: parseStudyMinutesRpcValue(row?.lesson_study_minutes),
+      }
     },
 
     async listCompletedPreptests(
@@ -305,36 +327,21 @@ export function createAnalyticsRepository(client: SupabaseClient) {
     },
 
     async listAnswerEventsWithTypes(userId: string) {
-      const { data, error } = await client
-        .from('answer_events')
-        .select('question_type_id, is_correct, question_id, session_kind, practice_session_id')
-        .eq('user_id', userId)
-        .not('question_type_id', 'is', null)
+      const { data, error } = await client.rpc('list_user_visible_answer_events_with_types', {
+        p_user_id: userId,
+      })
       if (error) throw error
-      const rows = (data as {
+      return ((data ?? []) as {
         question_type_id: string
         is_correct: boolean
         question_id: string
         session_kind: PracticeSessionKind
-        practice_session_id: string
-      }[]) ?? []
-      if (rows.length === 0) return []
-      const [visibility, excludedIds] = await Promise.all([
-        this.resolveQuestionVisibility(rows.map((row) => row.question_id)),
-        this.listExcludedSessionIds(userId),
-      ])
-      return rows
-        .filter(
-          (row) =>
-            visibility.get(row.question_id) === true &&
-            !excludedIds.has(row.practice_session_id),
-        )
-        .map(({ question_type_id, is_correct, question_id, session_kind }) => ({
-          question_type_id,
-          is_correct,
-          question_id,
-          session_kind,
-        }))
+      }[]).map((row) => ({
+        question_type_id: String(row.question_type_id),
+        is_correct: Boolean(row.is_correct),
+        question_id: String(row.question_id),
+        session_kind: row.session_kind,
+      }))
     },
 
     async listAnswerEventsForQuestionType(userId: string, questionTypeId: string) {
@@ -374,30 +381,14 @@ export function createAnalyticsRepository(client: SupabaseClient) {
     },
 
     async listAnswerEventsWithTypeDifficulty(userId: string) {
-      const { data, error } = await client
-        .from('answer_events')
-        .select('question_type_id, difficulty, question_id, practice_session_id')
-        .eq('user_id', userId)
-        .not('question_type_id', 'is', null)
+      const { data, error } = await client.rpc('list_user_visible_answer_events_with_type_difficulty', {
+        p_user_id: userId,
+      })
       if (error) throw error
-      const rows = (data as {
-        question_type_id: string
-        difficulty: number | null
-        question_id: string
-        practice_session_id: string
-      }[]) ?? []
-      if (rows.length === 0) return []
-      const [visibility, excludedIds] = await Promise.all([
-        this.resolveQuestionVisibility(rows.map((row) => row.question_id)),
-        this.listExcludedSessionIds(userId),
-      ])
-      return rows
-        .filter(
-          (row) =>
-            visibility.get(row.question_id) === true &&
-            !excludedIds.has(row.practice_session_id),
-        )
-        .map(({ question_type_id, difficulty }) => ({ question_type_id, difficulty }))
+      return ((data ?? []) as { question_type_id: string; difficulty: number | null }[]).map((row) => ({
+        question_type_id: String(row.question_type_id),
+        difficulty: typeof row.difficulty === 'number' ? row.difficulty : null,
+      }))
     },
 
     async getPracticeSession(sessionId: string, userId: string) {
@@ -489,32 +480,12 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       userId: string,
       opts?: { completedSince?: string },
     ) {
-      const visiblePrepTestIds = await this.listStudentVisiblePrepTestIds()
-      if (visiblePrepTestIds.length === 0) return []
-      let query = client
-        .from('practice_sessions')
-        .select(
-          `
-          id,
-          prep_test_id,
-          section_id,
-          started_at,
-          completed_at,
-          raw_score,
-          metadata,
-          admin_sections ( is_experimental, section_type )
-        `,
-        )
-        .eq('user_id', userId)
-        .eq('kind', 'SECTION')
-        .not('completed_at', 'is', null)
-        .in('prep_test_id', visiblePrepTestIds)
-      if (opts?.completedSince) {
-        query = query.gte('completed_at', opts.completedSince)
-      }
-      const { data, error } = await query.order('completed_at', { ascending: true })
+      const { data, error } = await client.rpc('list_user_completed_section_sessions_slim', {
+        p_user_id: userId,
+        p_completed_since: opts?.completedSince ?? null,
+      })
       if (error) throw error
-      return (data as {
+      type SectionSessionRow = {
         id: string
         prep_test_id: string | null
         section_id: string | null
@@ -522,59 +493,178 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         completed_at: string
         raw_score: number | null
         metadata: Record<string, unknown>
-        admin_sections:
-          | { is_experimental: boolean | null; section_type?: 'LR' | 'RC' | 'LG' | null }
-          | { is_experimental: boolean | null; section_type?: 'LR' | 'RC' | 'LG' | null }[]
-          | null
-      }[]) ?? []
+        admin_sections: {
+          is_experimental: boolean | null
+          section_type?: 'LR' | 'RC' | 'LG' | null
+          question_count?: number | null
+        } | null
+      }
+      return ((data ?? []) as Array<{
+        id: string
+        prep_test_id: string | null
+        section_id: string | null
+        started_at: string
+        completed_at: string
+        raw_score: number | null
+        is_experimental: boolean | null
+        section_type: 'LR' | 'RC' | 'LG' | null
+        question_count: number | null
+      }>).map((row): SectionSessionRow => ({
+        id: row.id,
+        prep_test_id: row.prep_test_id,
+        section_id: row.section_id,
+        started_at: row.started_at,
+        completed_at: row.completed_at,
+        raw_score: row.raw_score,
+        /** Slim RPC omits metadata; helpers read section_type / question_count from admin_sections. */
+        metadata: {},
+        admin_sections: {
+          is_experimental: row.is_experimental,
+          section_type: row.section_type,
+          question_count: row.question_count ?? null,
+        },
+      }))
+    },
+
+    async listScoreRowsForRaw(
+      pairs: Array<{ prepTestId: string; rawScore: number }>,
+    ): Promise<Map<string, { scaled_score: number | null; percentile: number | null } | null>> {
+      const out = new Map<string, { scaled_score: number | null; percentile: number | null } | null>()
+      if (pairs.length === 0) return out
+
+      const prepTestIds = [...new Set(pairs.map((pair) => pair.prepTestId))]
+      const rawScores = [...new Set(pairs.map((pair) => pair.rawScore))]
+      const { data: tables, error: tableErr } = await client
+        .from('admin_score_tables')
+        .select('id, prep_test_id')
+        .in('prep_test_id', prepTestIds)
+      if (tableErr) throw tableErr
+
+      const tableIdByPrepTest = new Map<string, string>()
+      for (const table of (tables ?? []) as Array<{ id: string; prep_test_id: string }>) {
+        tableIdByPrepTest.set(String(table.prep_test_id), String(table.id))
+      }
+
+      const tableIds = [...new Set(tableIdByPrepTest.values())]
+      const byTableRaw = new Map<string, { scaled_score: number | null; percentile: number | null }>()
+      if (tableIds.length > 0) {
+        const { data: rows, error } = await client
+          .from('admin_score_rows')
+          .select('score_table_id, raw_score, scaled_score, percentile')
+          .in('score_table_id', tableIds)
+          .in('raw_score', rawScores)
+        if (error) throw error
+        for (const row of (rows ?? []) as Array<{
+          score_table_id: string
+          raw_score: number
+          scaled_score: number | null
+          percentile: number | null
+        }>) {
+          byTableRaw.set(`${row.score_table_id}:${row.raw_score}`, {
+            scaled_score: row.scaled_score,
+            percentile: row.percentile,
+          })
+        }
+      }
+
+      for (const pair of pairs) {
+        const key = `${pair.prepTestId}:${pair.rawScore}`
+        const tableId = tableIdByPrepTest.get(pair.prepTestId)
+        out.set(key, tableId ? byTableRaw.get(`${tableId}:${pair.rawScore}`) ?? null : null)
+      }
+      return out
     },
 
     async getScoreRowForRaw(prepTestId: string, rawScore: number): Promise<{
       scaled_score: number | null
       percentile: number | null
     } | null> {
-      const { data: table, error: tErr } = await client
-        .from('admin_score_tables')
-        .select('id')
-        .eq('prep_test_id', prepTestId)
-        .maybeSingle()
-      if (tErr) throw tErr
-      const tableRow = table as { id: string } | null
-      if (!tableRow) return null
-
-      const { data: row, error } = await client
+      const { data, error } = await client
         .from('admin_score_rows')
-        .select('scaled_score, percentile')
-        .eq('score_table_id', tableRow.id)
+        .select('scaled_score, percentile, admin_score_tables!inner(prep_test_id)')
+        .eq('admin_score_tables.prep_test_id', prepTestId)
         .eq('raw_score', rawScore)
         .maybeSingle()
       if (error) throw error
-      return (row as { scaled_score: number | null; percentile: number | null } | null) ?? null
+      const row = data as { scaled_score: number | null; percentile: number | null } | null
+      return row ? { scaled_score: row.scaled_score, percentile: row.percentile } : null
     },
 
     async getScoreRowForScaled(prepTestId: string, scaledScore: number): Promise<{
       scaled_score: number | null
       percentile: number | null
     } | null> {
-      const { data: table, error: tErr } = await client
-        .from('admin_score_tables')
-        .select('id')
-        .eq('prep_test_id', prepTestId)
-        .maybeSingle()
-      if (tErr) throw tErr
-      const tableRow = table as { id: string } | null
-      if (!tableRow) return null
+      const lookup = await this.listScoreRowsForScaled([{ prepTestId, scaledScore }])
+      return lookup.get(`${prepTestId}:${Math.round(scaledScore)}`) ?? null
+    },
 
-      const { data: row, error } = await client
-        .from('admin_score_rows')
-        .select('scaled_score, percentile')
-        .eq('score_table_id', tableRow.id)
-        .eq('scaled_score', Math.round(scaledScore))
-        .order('raw_score', { ascending: true })
-        .limit(1)
-        .maybeSingle()
-      if (error) throw error
-      return (row as { scaled_score: number | null; percentile: number | null } | null) ?? null
+    async listScoreRowsForScaled(
+      pairs: Array<{ prepTestId: string; scaledScore: number }>,
+    ): Promise<Map<string, { scaled_score: number | null; percentile: number | null } | null>> {
+      const out = new Map<string, { scaled_score: number | null; percentile: number | null } | null>()
+      if (pairs.length === 0) return out
+
+      const normalized = pairs.map((pair) => ({
+        prepTestId: pair.prepTestId,
+        scaledScore: Math.round(pair.scaledScore),
+      }))
+      const prepTestIds = [...new Set(normalized.map((pair) => pair.prepTestId))]
+      const scaledScores = [...new Set(normalized.map((pair) => pair.scaledScore))]
+
+      const { data: tables, error: tableErr } = await client
+        .from('admin_score_tables')
+        .select('id, prep_test_id')
+        .in('prep_test_id', prepTestIds)
+      if (tableErr) throw tableErr
+
+      const tableIdByPrepTest = new Map<string, string>()
+      for (const table of (tables ?? []) as Array<{ id: string; prep_test_id: string }>) {
+        tableIdByPrepTest.set(String(table.prep_test_id), String(table.id))
+      }
+
+      const tableIds = [...new Set(tableIdByPrepTest.values())]
+      /** Lowest raw_score wins when multiple rows share a scaled_score (matches prior .order/.limit(1)). */
+      const byTableScaled = new Map<
+        string,
+        { scaled_score: number | null; percentile: number | null; raw_score: number }
+      >()
+      if (tableIds.length > 0 && scaledScores.length > 0) {
+        const { data: rows, error } = await client
+          .from('admin_score_rows')
+          .select('score_table_id, raw_score, scaled_score, percentile')
+          .in('score_table_id', tableIds)
+          .in('scaled_score', scaledScores)
+        if (error) throw error
+        for (const row of (rows ?? []) as Array<{
+          score_table_id: string
+          raw_score: number
+          scaled_score: number | null
+          percentile: number | null
+        }>) {
+          const key = `${row.score_table_id}:${row.scaled_score}`
+          const existing = byTableScaled.get(key)
+          if (!existing || row.raw_score < existing.raw_score) {
+            byTableScaled.set(key, {
+              scaled_score: row.scaled_score,
+              percentile: row.percentile,
+              raw_score: row.raw_score,
+            })
+          }
+        }
+      }
+
+      for (const pair of normalized) {
+        const key = `${pair.prepTestId}:${pair.scaledScore}`
+        const tableId = tableIdByPrepTest.get(pair.prepTestId)
+        const hit = tableId ? byTableScaled.get(`${tableId}:${pair.scaledScore}`) : undefined
+        out.set(
+          key,
+          hit
+            ? { scaled_score: hit.scaled_score, percentile: hit.percentile }
+            : null,
+        )
+      }
+      return out
     },
 
     async listPrepTestQuestionsWithMeta(prepTestId: string) {
@@ -622,10 +712,15 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       bookmarked?: boolean
       /** When true, only completed sessions, ordered by completed_at desc. */
       completedOnly?: boolean
+      /** When true, only sessions with completed_at null (in progress). */
+      incompleteOnly?: boolean
       limit: number
       offset: number
     }): Promise<PracticeSessionListRow[]> {
-      const visiblePrepTestIds = await this.listStudentVisiblePrepTestIds()
+      const needsPrepVisibility = input.kind !== 'DRILL'
+      const visiblePrepTestIds = needsPrepVisibility
+        ? await this.listStudentVisiblePrepTestIds()
+        : []
       if (
         (input.kind === 'PREPTEST' || input.kind === 'SECTION') &&
         visiblePrepTestIds.length === 0
@@ -661,6 +756,8 @@ export function createAnalyticsRepository(client: SupabaseClient) {
 
       if (input.completedOnly) {
         q = q.not('completed_at', 'is', null)
+      } else if (input.incompleteOnly) {
+        q = q.is('completed_at', null)
       }
 
       if (input.kind === 'PREPTEST' || input.kind === 'SECTION') {
@@ -676,38 +773,11 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         q = q.eq('bookmarked', true)
       }
 
-      // SECTION/PREPTEST rows need no post-fetch visibility shrink — page at the DB.
-      const pageAtDb = input.kind === 'PREPTEST' || input.kind === 'SECTION'
-      if (pageAtDb) {
-        q = q.range(input.offset, input.offset + Math.max(0, input.limit) - 1)
-      }
+      q = q.range(input.offset, input.offset + Math.max(0, input.limit) - 1)
 
       const { data, error } = await q
       if (error) throw error
-      let rows = (data as unknown as PracticeSessionListRow[]) ?? []
-
-      if (!input.kind || input.kind === 'DRILL') {
-        const drillRows = rows.filter((row) => row.kind === 'DRILL')
-        const questionIds = drillRows.flatMap((row) => {
-          const ids = row.metadata?.questionIds
-          return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : []
-        })
-        const visibility = await this.resolveQuestionVisibility(questionIds)
-        rows = rows.filter((row) => {
-          if (row.kind !== 'DRILL') {
-            if (row.kind === 'PREPTEST' || row.kind === 'SECTION') {
-              return row.prep_test_id != null && visiblePrepTestIds.includes(row.prep_test_id)
-            }
-            return true
-          }
-          const ids = row.metadata?.questionIds
-          if (!Array.isArray(ids) || ids.length === 0) return true
-          return ids.every((id) => typeof id === 'string' && visibility.get(id) === true)
-        })
-      }
-
-      if (pageAtDb) return rows
-      return rows.slice(input.offset, input.offset + input.limit)
+      return (data as unknown as PracticeSessionListRow[]) ?? []
     },
 
     async countSessions(input: {
@@ -715,64 +785,50 @@ export function createAnalyticsRepository(client: SupabaseClient) {
       kind?: PracticeSessionKind
       bookmarked?: boolean
       completedOnly?: boolean
+      incompleteOnly?: boolean
     }): Promise<number> {
-      const visiblePrepTestIds = await this.listStudentVisiblePrepTestIds()
+      let q = client
+        .from('practice_sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', input.userId)
       if (input.kind === 'PREPTEST' || input.kind === 'SECTION') {
+        const visiblePrepTestIds = await this.listStudentVisiblePrepTestIds()
         if (visiblePrepTestIds.length === 0) return 0
-        let q = client
-          .from('practice_sessions')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', input.userId)
-          .eq('kind', input.kind)
-          .in('prep_test_id', visiblePrepTestIds)
-        if (input.completedOnly) q = q.not('completed_at', 'is', null)
-        if (input.bookmarked === true) q = q.eq('bookmarked', true)
-        const { count, error } = await q
-        if (error) throw error
-        return count ?? 0
+        q = q.eq('kind', input.kind).in('prep_test_id', visiblePrepTestIds)
+      } else if (input.kind) {
+        q = q.eq('kind', input.kind)
       }
-
-      const rows = await this.listSessions({
-        userId: input.userId,
-        kind: input.kind,
-        bookmarked: input.bookmarked,
-        completedOnly: input.completedOnly,
-        limit: 10_000,
-        offset: 0,
-      })
-      return rows.length
+      if (input.completedOnly) q = q.not('completed_at', 'is', null)
+      else if (input.incompleteOnly) q = q.is('completed_at', null)
+      if (input.bookmarked === true) q = q.eq('bookmarked', true)
+      const { count, error } = await q
+      if (error) throw error
+      return count ?? 0
     },
 
     async countAnswerEventsByKind(userId: string, sessionKind: PracticeSessionKind): Promise<number> {
-      const { data, error } = await client
-        .from('answer_events')
-        .select('question_id')
-        .eq('user_id', userId)
-        .eq('session_kind', sessionKind)
+      const { data, error } = await client.rpc('count_user_visible_answer_events', {
+        p_user_id: userId,
+        p_completed_since: null,
+        p_session_kind: sessionKind,
+      })
       if (error) throw error
-      const rows = (data as { question_id: string }[]) ?? []
-      if (rows.length === 0) return 0
-      const visibility = await this.resolveQuestionVisibility(rows.map((row) => row.question_id))
-      return rows.filter((row) => visibility.get(row.question_id) === true).length
+      return parseStudyMinutesRpcValue(data)
     },
 
     async fetchKindSectionAccuracy(userId: string, sessionKind: PracticeSessionKind) {
-      const { data, error } = await client
-        .from('answer_events')
-        .select('section_type, is_correct, question_id')
-        .eq('user_id', userId)
-        .eq('session_kind', sessionKind)
+      const { data, error } = await client.rpc('list_user_visible_kind_section_accuracy', {
+        p_user_id: userId,
+        p_session_kind: sessionKind,
+      })
       if (error) throw error
-      const rows = (data as {
+      return ((data ?? []) as {
         section_type: 'LR' | 'RC' | 'LG' | null
         is_correct: boolean
-        question_id: string
-      }[]) ?? []
-      if (rows.length === 0) return []
-      const visibility = await this.resolveQuestionVisibility(rows.map((row) => row.question_id))
-      return rows
-        .filter((row) => visibility.get(row.question_id) === true)
-        .map(({ section_type, is_correct }) => ({ section_type, is_correct }))
+      }[]).map((row) => ({
+        section_type: row.section_type,
+        is_correct: Boolean(row.is_correct),
+      }))
     },
 
     async listAnswerEventsForExplanationIndex(userId: string, limit: number) {

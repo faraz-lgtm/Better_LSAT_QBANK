@@ -149,6 +149,96 @@ export type KindBreakdownSection = {
   total: number
 }
 
+export type AnalyticsPageBundleView = "dashboard" | "overview" | "drills"
+
+export type AnalyticsSessionsPage = {
+  sessions: PracticeSessionSummary[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export type AnalyticsPageBundle = {
+  view: AnalyticsPageBundleView
+  overview?: AnalyticsOverview
+  trajectory?: TrajectoryPoint[]
+  priorities: PriorityRow[]
+  sessions?: AnalyticsSessionsPage
+  drillSessions?: AnalyticsSessionsPage
+  sectionSessions?: AnalyticsSessionsPage
+  prepTestSessions?: AnalyticsSessionsPage
+}
+
+const BUNDLE_TTL_MS = 30_000
+const pageBundleCache = new Map<string, { expiresAt: number; value: AnalyticsPageBundle }>()
+
+function readCachedBundle(view: AnalyticsPageBundleView): AnalyticsPageBundle | null {
+  const hit = pageBundleCache.get(view)
+  if (hit && hit.expiresAt > Date.now()) return hit.value
+  if (hit) pageBundleCache.delete(view)
+  if (view === "drills") {
+    const dashboard = pageBundleCache.get("dashboard")
+    if (dashboard && dashboard.expiresAt > Date.now() && dashboard.value.sessions) {
+      return {
+        view: "drills",
+        sessions: dashboard.value.sessions,
+        priorities: dashboard.value.priorities,
+      }
+    }
+  }
+  return null
+}
+
+function writeCachedBundle(view: AnalyticsPageBundleView, value: AnalyticsPageBundle) {
+  pageBundleCache.set(view, { expiresAt: Date.now() + BUNDLE_TTL_MS, value })
+}
+
+export function resetAnalyticsPageBundleCache() {
+  pageBundleCache.clear()
+}
+
+function normalizeOverview(data: Omit<AnalyticsOverview, "totalStudyMinutes"> & { totalStudyMinutes?: unknown }): AnalyticsOverview {
+  const raw = data.totalStudyMinutes
+  const totalStudyMinutes =
+    typeof raw === "number" && Number.isFinite(raw)
+      ? Math.max(0, Math.floor(raw))
+      : typeof raw === "string" && raw.trim() !== ""
+        ? Math.max(0, Number.parseInt(raw, 10) || 0)
+        : 0
+  return { ...data, totalStudyMinutes }
+}
+
+/** True when analytics-overview honored `include` and returned a page bundle. */
+function looksLikePageBundle(data: unknown): data is AnalyticsPageBundle {
+  if (!data || typeof data !== "object") return false
+  const d = data as Record<string, unknown>
+  return (
+    d.view === "dashboard" ||
+    d.view === "overview" ||
+    d.view === "drills" ||
+    (d.overview != null && typeof d.overview === "object") ||
+    (d.sessions != null && typeof d.sessions === "object") ||
+    (d.drillSessions != null && typeof d.drillSessions === "object")
+  )
+}
+
+/** True when the edge function ignored `include` and returned a flat overview. */
+function looksLikeFlatOverview(
+  data: unknown,
+): data is Omit<AnalyticsOverview, "totalStudyMinutes"> & { totalStudyMinutes?: unknown } {
+  if (!data || typeof data !== "object") return false
+  const d = data as Record<string, unknown>
+  return (
+    !("view" in d) &&
+    !("overview" in d) &&
+    !("sessions" in d) &&
+    typeof d.completedPrepTestCount === "number"
+  )
+}
+
+const DASHBOARD_DRILL_LIMIT = 50
+const OVERVIEW_HISTORY_LIMIT = 500
+
 export function createAnalyticsApi(supabase: SupabaseClient) {
   async function invokeAnalyticsFn<T>(
     functionName: string,
@@ -170,7 +260,7 @@ export function createAnalyticsApi(supabase: SupabaseClient) {
     })
   }
 
-  return {
+  const api = {
     async getOverview(input?: { completedSince?: string }): Promise<AnalyticsOverview> {
       const { data, error } = await invokeAnalyticsFn<
         Omit<AnalyticsOverview, "totalStudyMinutes"> & { totalStudyMinutes?: unknown }
@@ -179,14 +269,38 @@ export function createAnalyticsApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       if (!data) throw new Error("No overview returned from analytics")
-      const raw = data.totalStudyMinutes
-      const totalStudyMinutes =
-        typeof raw === "number" && Number.isFinite(raw)
-          ? Math.max(0, Math.floor(raw))
-          : typeof raw === "string" && raw.trim() !== ""
-            ? Math.max(0, Number.parseInt(raw, 10) || 0)
-            : 0
-      return { ...data, totalStudyMinutes }
+      return normalizeOverview(data)
+    },
+
+    async getPageBundle(view: AnalyticsPageBundleView): Promise<AnalyticsPageBundle> {
+      const cached = readCachedBundle(view)
+      if (cached) return cached
+      const { data, error } = await invokeAnalyticsFn<AnalyticsPageBundle | AnalyticsOverview>(
+        "analytics-overview",
+        {
+          include: view,
+        },
+      )
+      if (error) throw error
+      if (!data) throw new Error("No analytics bundle returned")
+
+      if (looksLikePageBundle(data)) {
+        const bundle: AnalyticsPageBundle = {
+          ...data,
+          view,
+          priorities: data.priorities ?? [],
+          overview: data.overview ? normalizeOverview(data.overview) : undefined,
+        }
+        writeCachedBundle(view, bundle)
+        return bundle
+      }
+
+      // Pre-bundle edge function ignored `include` and returned a flat overview.
+      // Compose the page payload from the existing single-purpose endpoints.
+      const overview = looksLikeFlatOverview(data) ? normalizeOverview(data) : await api.getOverview()
+      const composed = await composePageBundleFromParts(view, overview)
+      writeCachedBundle(view, composed)
+      return composed
     },
 
     async getTrajectory(): Promise<TrajectoryPoint[]> {
@@ -269,4 +383,45 @@ export function createAnalyticsApi(supabase: SupabaseClient) {
       return data
     },
   }
+
+  async function composePageBundleFromParts(
+    view: AnalyticsPageBundleView,
+    overview: AnalyticsOverview,
+  ): Promise<AnalyticsPageBundle> {
+    if (view === "drills") {
+      const [sessions, priorities] = await Promise.all([
+        api.getSessions({ kind: "DRILL", limit: DASHBOARD_DRILL_LIMIT, offset: 0 }),
+        api.getPriorities(),
+      ])
+      return { view, sessions, priorities }
+    }
+
+    if (view === "dashboard") {
+      const [trajectory, sessions, priorities] = await Promise.all([
+        api.getTrajectory(),
+        api.getSessions({ kind: "DRILL", limit: DASHBOARD_DRILL_LIMIT, offset: 0 }),
+        api.getPriorities(),
+      ])
+      return { view, overview, trajectory, sessions, priorities }
+    }
+
+    const [trajectory, priorities, drillSessions, sectionSessions, prepTestSessions] = await Promise.all([
+      api.getTrajectory(),
+      api.getPriorities(),
+      api.getSessions({ kind: "DRILL", completedOnly: true, limit: OVERVIEW_HISTORY_LIMIT, offset: 0 }),
+      api.getSessions({ kind: "SECTION", completedOnly: true, limit: OVERVIEW_HISTORY_LIMIT, offset: 0 }),
+      api.getSessions({ kind: "PREPTEST", completedOnly: true, limit: OVERVIEW_HISTORY_LIMIT, offset: 0 }),
+    ])
+    return {
+      view: "overview",
+      overview,
+      trajectory,
+      priorities,
+      drillSessions,
+      sectionSessions,
+      prepTestSessions,
+    }
+  }
+
+  return api
 }

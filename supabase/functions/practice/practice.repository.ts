@@ -69,6 +69,7 @@ export type DrillPickerPoolQuestionRow = DrillPoolQuestionRow & {
   stimulus_text: string | null
   stem_text: string | null
   tag_label: string | null
+  search_text?: string | null
 }
 
 export type DrillPickerAnswerSummary = {
@@ -149,6 +150,13 @@ function questionCountFromRelation(questions: unknown): number {
     return Number.isFinite(n) ? n : 0
   }
   return questions.length
+}
+
+export function sectionQuestionCount(row: { question_count?: unknown; admin_questions?: unknown }): number {
+  if (typeof row.question_count === 'number' && Number.isFinite(row.question_count)) {
+    return Math.max(0, Math.floor(row.question_count))
+  }
+  return questionCountFromRelation(row.admin_questions)
 }
 
 const drillQuestionSelect = `
@@ -460,101 +468,32 @@ export function createPracticeRepository(client: SupabaseClient) {
     async listDrillPickerPoolQuestions(input: {
       sectionType: 'LR' | 'RC'
     }): Promise<DrillPickerPoolQuestionRow[]> {
-      const { data, error } = await client
-        .from('admin_questions')
-        .select(
-          `
-          id,
-          section_id,
-          source_group_id,
-          difficulty,
-          question_type_id,
-          question_number,
-          stimulus_text,
-          stem_text,
-          question_types ( name ),
-          admin_sections!inner (
-            section_type,
-            section_number,
-            module_id,
-            prep_test_id,
-            admin_prep_tests ( id, module_id )
-          )
-        `,
-        )
-        .eq('admin_sections.section_type', input.sectionType)
-
+      const { data, error } = await client.rpc('list_drill_picker_pool_questions', {
+        p_section_type: input.sectionType,
+      })
       if (error) throw error
-
-      return ((data ?? []) as Array<Record<string, unknown>>)
-        .filter((row) => {
-          const secRaw = row.admin_sections
-          const sec = Array.isArray(secRaw) ? secRaw[0] : secRaw
-          const secObj = sec as
-            | {
-                module_id?: string | null
-                admin_prep_tests?:
-                  | { id?: string; module_id?: string }
-                  | { id?: string; module_id?: string }[]
-                  | null
-              }
-            | null
-            | undefined
-          const ptRaw = secObj?.admin_prep_tests
-          const pt = Array.isArray(ptRaw) ? ptRaw[0] : ptRaw
-          const moduleId = pt?.module_id ?? secObj?.module_id ?? null
-          return isStudentVisiblePrepTest(moduleId)
-        })
-        .map((row) => {
-          const secRaw = row.admin_sections
-          const sec = Array.isArray(secRaw) ? secRaw[0] : secRaw
-          const secObj = sec as
-            | {
-                prep_test_id?: string | null
-                module_id?: string | null
-                section_number?: number | null
-                admin_prep_tests?:
-                  | { id?: string; module_id?: string }
-                  | { id?: string; module_id?: string }[]
-                  | null
-              }
-            | null
-            | undefined
-          const ptRaw = secObj?.admin_prep_tests
-          const pt = Array.isArray(ptRaw) ? ptRaw[0] : ptRaw
-          const prepTestId = pt?.id ?? secObj?.prep_test_id ?? null
-          const moduleId = pt?.module_id ?? secObj?.module_id ?? null
-          const qtRaw = row.question_types
-          const qt = Array.isArray(qtRaw) ? qtRaw[0] : qtRaw
-          const tagLabel =
-            qt && typeof qt === 'object' && typeof (qt as { name?: unknown }).name === 'string'
-              ? String((qt as { name: string }).name)
-              : null
-          return {
-            id: String(row.id),
-            section_id: row.section_id != null ? String(row.section_id) : null,
-            source_group_id: row.source_group_id != null ? String(row.source_group_id) : null,
-            difficulty: typeof row.difficulty === 'number' ? row.difficulty : null,
-            question_type_id: row.question_type_id != null ? String(row.question_type_id) : null,
-            prep_test_id: prepTestId != null ? String(prepTestId) : null,
-            module_id: moduleId != null ? String(moduleId) : null,
-            question_number: typeof row.question_number === 'number' ? row.question_number : null,
-            section_number: typeof secObj?.section_number === 'number' ? secObj.section_number : null,
-            stimulus_text: row.stimulus_text != null ? String(row.stimulus_text) : null,
-            stem_text: row.stem_text != null ? String(row.stem_text) : null,
-            tag_label: tagLabel,
-          }
-        })
+      return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+        id: String(row.id),
+        section_id: row.section_id != null ? String(row.section_id) : null,
+        source_group_id: row.source_group_id != null ? String(row.source_group_id) : null,
+        difficulty: typeof row.difficulty === 'number' ? row.difficulty : null,
+        question_type_id: row.question_type_id != null ? String(row.question_type_id) : null,
+        prep_test_id: row.prep_test_id != null ? String(row.prep_test_id) : null,
+        module_id: row.module_id != null ? String(row.module_id) : null,
+        question_number: typeof row.question_number === 'number' ? row.question_number : null,
+        section_number: typeof row.section_number === 'number' ? row.section_number : null,
+        stimulus_text: null,
+        stem_text: null,
+        tag_label: row.tag_label != null ? String(row.tag_label) : null,
+        search_text: row.search_text != null ? String(row.search_text) : null,
+      }))
     },
 
     async listLatestAnswerSummariesForUser(userId: string): Promise<DrillPickerAnswerSummary[]> {
-      const { data, error } = await client
-        .from('answer_events')
-        .select('question_id, is_correct, time_spent_seconds, created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
+      const { data, error } = await client.rpc('latest_answer_summaries_for_user', {
+        p_user_id: userId,
+      })
       if (error) throw error
-
       const coerceSeconds = (value: unknown): number | null => {
         if (typeof value === 'number' && Number.isFinite(value)) return value
         if (typeof value === 'string' && value.trim()) {
@@ -563,28 +502,12 @@ export function createPracticeRepository(client: SupabaseClient) {
         }
         return null
       }
-
-      const latest = new Map<string, DrillPickerAnswerSummary>()
-      for (const row of (data ?? []) as Array<Record<string, unknown>>) {
-        const questionId = row.question_id != null ? String(row.question_id) : ''
-        if (!questionId) continue
-        const seconds = coerceSeconds(row.time_spent_seconds)
-        const existing = latest.get(questionId)
-        if (!existing) {
-          latest.set(questionId, {
-            question_id: questionId,
-            is_correct: Boolean(row.is_correct),
-            time_spent_seconds: seconds,
-            created_at: typeof row.created_at === 'string' ? row.created_at : '',
-          })
-          continue
-        }
-        // Keep newest correctness, but backfill timing from any older timed attempt.
-        if (existing.time_spent_seconds == null && seconds != null) {
-          existing.time_spent_seconds = seconds
-        }
-      }
-      return [...latest.values()]
+      return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+        question_id: String(row.question_id),
+        is_correct: Boolean(row.is_correct),
+        time_spent_seconds: coerceSeconds(row.time_spent_seconds),
+        created_at: typeof row.created_at === 'string' ? row.created_at : '',
+      }))
     },
 
     async listUserPrepTestPoolOverrides(userId: string): Promise<PrepTestPoolOverrideRow[]> {
@@ -629,58 +552,15 @@ export function createPracticeRepository(client: SupabaseClient) {
     },
 
     async listPrepTestFreshnessRows(userId: string): Promise<PrepTestFreshnessRow[]> {
-      const { data: questionRows, error: questionError } = await client
-        .from('admin_questions')
-        .select('id, admin_sections!inner ( prep_test_id, module_id, admin_prep_tests ( module_id ) )')
-      if (questionError) throw questionError
-
-      const totalByPrepTest = new Map<string, number>()
-      const questionsByPrepTest = new Map<string, Set<string>>()
-      for (const row of (questionRows ?? []) as Array<Record<string, unknown>>) {
-        const secRaw = row.admin_sections
-        const sec = Array.isArray(secRaw) ? secRaw[0] : secRaw
-        const secObj = sec as
-          | {
-              prep_test_id?: string | null
-              module_id?: string | null
-              admin_prep_tests?: { module_id?: string } | { module_id?: string }[] | null
-            }
-          | null
-          | undefined
-        const ptRaw = secObj?.admin_prep_tests
-        const pt = Array.isArray(ptRaw) ? ptRaw[0] : ptRaw
-        const moduleId = pt?.module_id ?? secObj?.module_id ?? null
-        if (!isStudentVisiblePrepTest(moduleId)) continue
-        const prepTestId = secObj?.prep_test_id != null ? String(secObj.prep_test_id) : null
-        if (!prepTestId) continue
-        const questionId = String(row.id)
-        totalByPrepTest.set(prepTestId, (totalByPrepTest.get(prepTestId) ?? 0) + 1)
-        let set = questionsByPrepTest.get(prepTestId)
-        if (!set) {
-          set = new Set()
-          questionsByPrepTest.set(prepTestId, set)
-        }
-        set.add(questionId)
-      }
-
-      const { data: answeredRows, error: answeredError } = await client
-        .from('answer_events')
-        .select('question_id')
-        .eq('user_id', userId)
-      if (answeredError) throw answeredError
-      const answeredIds = new Set(
-        ((answeredRows ?? []) as { question_id: string }[]).map((row) => row.question_id),
-      )
-      const out: PrepTestFreshnessRow[] = []
-      for (const [prepTestId, totalQuestions] of totalByPrepTest) {
-        const questionIds = questionsByPrepTest.get(prepTestId) ?? new Set()
-        let answeredQuestions = 0
-        for (const questionId of questionIds) {
-          if (answeredIds.has(questionId)) answeredQuestions += 1
-        }
-        out.push({ prepTestId, totalQuestions, answeredQuestions })
-      }
-      return out
+      const { data, error } = await client.rpc('prep_test_freshness_for_user', {
+        p_user_id: userId,
+      })
+      if (error) throw error
+      return ((data ?? []) as Array<{ prep_test_id: string; total: number; answered: number }>).map((row) => ({
+        prepTestId: String(row.prep_test_id),
+        totalQuestions: Number(row.total) || 0,
+        answeredQuestions: Number(row.answered) || 0,
+      }))
     },
 
     async listUserAnsweredQuestionIds(userId: string): Promise<string[]> {
@@ -708,8 +588,8 @@ export function createPracticeRepository(client: SupabaseClient) {
           title,
           module_id,
           prep_test_id,
-          admin_prep_tests ( id, title, module_id ),
-          admin_questions (count)
+          question_count,
+          admin_prep_tests ( id, title, module_id )
         `,
         )
         .in('section_type', ['LR', 'RC'])
@@ -724,8 +604,7 @@ export function createPracticeRepository(client: SupabaseClient) {
       if (error) throw error
 
       return ((data ?? []) as Array<Record<string, unknown>>).map((row) => {
-        const questions = row.admin_questions
-        const questionCount = questionCountFromRelation(questions)
+        const questionCount = sectionQuestionCount(row)
         const ptRaw = row.admin_prep_tests
         const pt = Array.isArray(ptRaw) ? ptRaw[0] : ptRaw
         const ptObj = pt as { id: string; title: string | null; module_id: string } | null | undefined
@@ -798,43 +677,38 @@ export function createPracticeRepository(client: SupabaseClient) {
     },
 
     async listPrepTestPoolRows(): Promise<PrepTestPoolRow[]> {
-      const { data, error } = await client
-        .from('admin_prep_tests')
-        .select(
-          `
-          id,
-          module_id,
-          title,
-          admin_sections (
-            id,
-            section_type,
-            admin_questions (count)
-          )
-        `,
-        )
-        .order('module_id', { ascending: true })
+      const { data, error } = await client.rpc('list_visible_prep_test_pool_rows')
       if (error) throw error
 
-      return ((data ?? []) as Array<Record<string, unknown>>).map((row) => {
-        const sectionsRaw = row.admin_sections
-        const sectionsArr = Array.isArray(sectionsRaw) ? sectionsRaw : sectionsRaw ? [sectionsRaw] : []
-        const sections = sectionsArr.map((s) => {
-          const sec = s as Record<string, unknown>
-          const questions = sec.admin_questions
-          const questionCount = questionCountFromRelation(questions)
-          return {
-            id: String(sec.id),
-            sectionType: sec.section_type as 'LR' | 'RC' | 'LG',
-            questionCount,
+      const byId = new Map<string, PrepTestPoolRow>()
+      for (const row of (data ?? []) as Array<{
+        id: string
+        module_id: string
+        title: string | null
+        section_id: string | null
+        section_type: string | null
+        question_count: number | null
+      }>) {
+        const id = String(row.id)
+        let entry = byId.get(id)
+        if (!entry) {
+          entry = {
+            id,
+            moduleId: String(row.module_id),
+            title: row.title != null ? String(row.title) : null,
+            sections: [],
           }
-        })
-        return {
-          id: String(row.id),
-          moduleId: String(row.module_id),
-          title: row.title != null ? String(row.title) : null,
-          sections,
+          byId.set(id, entry)
         }
-      })
+        if (row.section_id && row.section_type) {
+          entry.sections.push({
+            id: String(row.section_id),
+            sectionType: row.section_type as 'LR' | 'RC' | 'LG',
+            questionCount: typeof row.question_count === 'number' ? Math.max(0, row.question_count) : 0,
+          })
+        }
+      }
+      return [...byId.values()]
     },
 
     async getPrepTestDetailRow(prepTestId: string): Promise<PrepTestDetailRow | null> {
@@ -852,7 +726,7 @@ export function createPracticeRepository(client: SupabaseClient) {
             section_type,
             title,
             is_experimental,
-            admin_questions ( id )
+            question_count
           )
         `,
         )
@@ -867,8 +741,7 @@ export function createPracticeRepository(client: SupabaseClient) {
       const sections = sectionsArr
         .map((s) => {
           const sec = s as Record<string, unknown>
-          const questions = sec.admin_questions
-          const questionCount = Array.isArray(questions) ? questions.length : 0
+          const questionCount = sectionQuestionCount(sec)
           return {
             id: String(sec.id),
             sectionId: sec.section_id != null ? String(sec.section_id) : null,
@@ -904,13 +777,38 @@ export function createPracticeRepository(client: SupabaseClient) {
     async listUserSessionsForPrepTests(userId: string): Promise<PracticeSessionRow[]> {
       const { data, error } = await client
         .from('practice_sessions')
-        .select('*')
+        .select(
+          `
+          id,
+          user_id,
+          kind,
+          prep_test_id,
+          section_id,
+          started_at,
+          completed_at,
+          raw_score,
+          scaled_score,
+          percentile,
+          blind_review_raw_score,
+          blind_review_scaled_score,
+          blind_review_percentile,
+          blind_review_completed_at,
+          bookmarked,
+          excluded,
+          metadata,
+          created_at,
+          updated_at
+        `,
+        )
         .eq('user_id', userId)
         .not('prep_test_id', 'is', null)
         .in('kind', ['PREPTEST', 'SECTION'])
         .order('started_at', { ascending: false })
       if (error) throw error
-      return (data as PracticeSessionRow[]) ?? []
+      return ((data ?? []) as PracticeSessionRow[]).map((row) => ({
+        ...row,
+        metadata: (row.metadata ?? {}) as Record<string, unknown>,
+      }))
     },
 
     async getPublishedPrepLessonById(lessonId: string): Promise<{
@@ -1005,27 +903,61 @@ export function createPracticeRepository(client: SupabaseClient) {
         .filter((id) => id.length > 0)
     },
 
+    async listScoreRowsForRaw(
+      pairs: Array<{ prepTestId: string; rawScore: number }>,
+    ): Promise<Map<string, { scaled_score: number | null; percentile: number | null } | null>> {
+      const out = new Map<string, { scaled_score: number | null; percentile: number | null } | null>()
+      if (pairs.length === 0) return out
+
+      const prepTestIds = [...new Set(pairs.map((pair) => pair.prepTestId))]
+      const rawScores = [...new Set(pairs.map((pair) => pair.rawScore))]
+      const { data: tables, error: tableErr } = await client
+        .from('admin_score_tables')
+        .select('id, prep_test_id')
+        .in('prep_test_id', prepTestIds)
+      if (tableErr) throw tableErr
+
+      const tableIdByPrepTest = new Map<string, string>()
+      for (const table of (tables ?? []) as Array<{ id: string; prep_test_id: string }>) {
+        tableIdByPrepTest.set(String(table.prep_test_id), String(table.id))
+      }
+
+      const tableIds = [...new Set(tableIdByPrepTest.values())]
+      const byTableRaw = new Map<string, { scaled_score: number | null; percentile: number | null }>()
+      if (tableIds.length > 0) {
+        const { data: rows, error } = await client
+          .from('admin_score_rows')
+          .select('score_table_id, raw_score, scaled_score, percentile')
+          .in('score_table_id', tableIds)
+          .in('raw_score', rawScores)
+        if (error) throw error
+        for (const row of (rows ?? []) as Array<{
+          score_table_id: string
+          raw_score: number
+          scaled_score: number | null
+          percentile: number | null
+        }>) {
+          byTableRaw.set(`${row.score_table_id}:${row.raw_score}`, {
+            scaled_score: row.scaled_score,
+            percentile: row.percentile,
+          })
+        }
+      }
+
+      for (const pair of pairs) {
+        const key = `${pair.prepTestId}:${pair.rawScore}`
+        const tableId = tableIdByPrepTest.get(pair.prepTestId)
+        out.set(key, tableId ? byTableRaw.get(`${tableId}:${pair.rawScore}`) ?? null : null)
+      }
+      return out
+    },
+
     async getScoreRowForRaw(prepTestId: string, rawScore: number): Promise<{
       scaled_score: number | null
       percentile: number | null
     } | null> {
-      const { data: table, error: tErr } = await client
-        .from('admin_score_tables')
-        .select('id')
-        .eq('prep_test_id', prepTestId)
-        .maybeSingle()
-      if (tErr) throw tErr
-      const tableRow = table as { id: string } | null
-      if (!tableRow) return null
-
-      const { data: row, error } = await client
-        .from('admin_score_rows')
-        .select('scaled_score, percentile')
-        .eq('score_table_id', tableRow.id)
-        .eq('raw_score', rawScore)
-        .maybeSingle()
-      if (error) throw error
-      return (row as { scaled_score: number | null; percentile: number | null } | null) ?? null
+      const rows = await this.listScoreRowsForRaw([{ prepTestId, rawScore }])
+      return rows.get(`${prepTestId}:${rawScore}`) ?? null
     },
   }
 }

@@ -10,7 +10,10 @@ function mockRepo(
     listPublishedCourses: () => Promise<PrepCourseRow[]>
     getPublishedCourseBySlug: (slug: string) => Promise<PrepCourseRow | null>
     listPublishedLessonsByCourse: (courseId: string) => Promise<PrepLessonRow[]>
-    listPublishedCurriculum: (courseId: string) => Promise<{
+    listPublishedCurriculum: (
+      courseId: string,
+      opts?: { hydrateModuleIds?: string[] | 'first' },
+    ) => Promise<{
       modules: Array<{
         id: string
         course_id: string
@@ -27,9 +30,29 @@ function mockRepo(
         }>
       }>
     }>
+    flattenLessonsFromCurriculum: (curriculum: {
+      modules: Array<{ sections: Array<{ lessons: PrepLessonRow[] }> }>
+    }) => PrepLessonRow[]
+    listModuleLessonStats: (courseId: string) => Promise<
+      Array<{ moduleId: string; lessonCount: number; totalMinutes: number }>
+    >
     getPublishedLessonBySlug: (courseId: string, lessonSlug: string) => Promise<PrepLessonRow | null>
     listCompletedLessonSlugsByCourse: (userId: string, courseId: string) => Promise<string[]>
+    listCompletedLessonSlugsForLessons: (userId: string, lessons: PrepLessonRow[]) => Promise<string[]>
     listBookmarksByCourse: (userId: string, courseId: string) => Promise<{
+      moduleIds: string[]
+      lessonSlugs: string[]
+    }>
+    listBookmarksForCurriculum: (
+      userId: string,
+      courseId: string,
+      curriculum: {
+        modules: Array<{
+          id: string
+          sections: Array<{ lessons: PrepLessonRow[] }>
+        }>
+      },
+    ) => Promise<{
       moduleIds: string[]
       lessonSlugs: string[]
     }>
@@ -188,14 +211,31 @@ function mockRepo(
     listPublishedLessonsByCourse:
       overrides.listPublishedLessonsByCourse ??
       (async () => [lesson]),
+    flattenLessonsFromCurriculum:
+      overrides.flattenLessonsFromCurriculum ??
+      ((curriculum: {
+        modules: Array<{ sections: Array<{ lessons: PrepLessonRow[] }> }>
+      }) =>
+        curriculum.modules.flatMap((mod) =>
+          mod.sections.flatMap((section) => section.lessons),
+        )),
+    listModuleLessonStats:
+      overrides.listModuleLessonStats ??
+      (async () => [{ moduleId: 'mod-1', lessonCount: 1, totalMinutes: 5 }]),
     getPublishedLessonBySlug:
       overrides.getPublishedLessonBySlug ??
       (async (_courseId, slug) => (slug === lesson.slug ? lesson : null)),
     listCompletedLessonSlugsByCourse:
       overrides.listCompletedLessonSlugsByCourse ??
       (async () => []),
+    listCompletedLessonSlugsForLessons:
+      overrides.listCompletedLessonSlugsForLessons ??
+      (async () => []),
     listBookmarksByCourse:
       overrides.listBookmarksByCourse ??
+      (async () => ({ moduleIds: [], lessonSlugs: [] })),
+    listBookmarksForCurriculum:
+      overrides.listBookmarksForCurriculum ??
       (async () => ({ moduleIds: [], lessonSlugs: [] })),
     getPublishedModuleById:
       overrides.getPublishedModuleById ??
@@ -300,23 +340,146 @@ Deno.test('prep-course service validates lesson type payload', async () => {
 })
 
 Deno.test('prep-course service returns course and lessons by slug', async () => {
-  const service = createPrepCourseService({ repository: mockRepo() })
+  let curriculumLoads = 0
+  const service = createPrepCourseService({
+    repository: mockRepo({
+      listPublishedCurriculum: async () => {
+        curriculumLoads += 1
+        return {
+          modules: [
+            {
+              id: 'mod-1',
+              course_id: 'course-1',
+              title: 'Module 1',
+              sort_order: 1,
+              duration_minutes: null,
+              sections: [
+                {
+                  id: 'section-1',
+                  module_id: 'mod-1',
+                  title: 'General',
+                  sort_order: 1,
+                  duration_minutes: null,
+                  lessons: [
+                    {
+                      id: 'lesson-1',
+                      course_id: 'course-1',
+                      section_id: 'section-1',
+                      slug: 'lesson-1',
+                      title: 'Lesson 1',
+                      lesson_type: 'video_text',
+                      sort_order: 1,
+                      summary: null,
+                      duration_minutes: 3,
+                      video_url: 'https://example.com/video',
+                      text_content: '<p>Lesson body</p>',
+                      is_published: true,
+                      created_at: '2026-01-01T00:00:00Z',
+                      updated_at: '2026-01-01T00:00:00Z',
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        }
+      },
+    }),
+  })
   const out = await service.getCourseWithLessons('user-1', 'PREP COURSE')
   assertEquals(out.course.slug, 'prep-course')
   assertEquals(out.lessons.length, 1)
   assertEquals(out.curriculum.modules.length, 1)
   assertEquals(out.completedLessonSlugs, [])
   assertEquals(out.bookmarks, { moduleIds: [], lessonSlugs: [] })
+  assertEquals(curriculumLoads, 1)
 })
 
 Deno.test('prep-course service returns bookmarks with course', async () => {
   const service = createPrepCourseService({
     repository: mockRepo({
-      listBookmarksByCourse: async () => ({ moduleIds: ['mod-1'], lessonSlugs: ['lesson-1'] }),
+      listBookmarksForCurriculum: async () => ({ moduleIds: ['mod-1'], lessonSlugs: ['lesson-1'] }),
     }),
   })
   const out = await service.getCourseWithLessons('user-1', 'prep-course')
   assertEquals(out.bookmarks, { moduleIds: ['mod-1'], lessonSlugs: ['lesson-1'] })
+})
+
+Deno.test('prep-course service hydrate=first loads module stats and marks first module', async () => {
+  let hydrateOpts: unknown = null
+  const firstLesson: PrepLessonRow = {
+    id: 'lesson-1',
+    course_id: 'course-1',
+    section_id: 'section-1',
+    slug: 'lesson-1',
+    title: 'Lesson 1',
+    lesson_type: 'video_text',
+    sort_order: 1,
+    summary: null,
+    duration_minutes: 3,
+    video_url: 'https://example.com/video',
+    text_content: '<p>Lesson body</p>',
+    is_published: true,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  }
+  const service = createPrepCourseService({
+    repository: mockRepo({
+      listPublishedCurriculum: async (_courseId, opts) => {
+        hydrateOpts = opts
+        return {
+          modules: [
+            {
+              id: 'mod-1',
+              course_id: 'course-1',
+              title: 'Module 1',
+              sort_order: 1,
+              duration_minutes: null,
+              sections: [
+                {
+                  id: 'section-1',
+                  module_id: 'mod-1',
+                  title: 'General',
+                  sort_order: 1,
+                  duration_minutes: null,
+                  lessons: [firstLesson],
+                },
+              ],
+            },
+            {
+              id: 'mod-2',
+              course_id: 'course-1',
+              title: 'Module 2',
+              sort_order: 2,
+              duration_minutes: null,
+              sections: [
+                {
+                  id: 'section-2',
+                  module_id: 'mod-2',
+                  title: 'General',
+                  sort_order: 1,
+                  duration_minutes: null,
+                  lessons: [],
+                },
+              ],
+            },
+          ],
+        }
+      },
+      listModuleLessonStats: async () => [
+        { moduleId: 'mod-1', lessonCount: 1, totalMinutes: 5 },
+        { moduleId: 'mod-2', lessonCount: 4, totalMinutes: 20 },
+      ],
+    }),
+  })
+  const out = await service.getCourseWithLessons('user-1', 'prep-course', { hydrate: 'first' })
+  assertEquals(hydrateOpts, { hydrateModuleIds: 'first' })
+  assertEquals(out.hydratedModuleIds, ['mod-1'])
+  assertEquals(out.moduleStats, [
+    { moduleId: 'mod-1', lessonCount: 1, totalMinutes: 5 },
+    { moduleId: 'mod-2', lessonCount: 4, totalMinutes: 20 },
+  ])
+  assertEquals(out.lessons.length, 1)
 })
 
 Deno.test('prep-course service setModuleBookmark persists and returns bookmarks', async () => {
@@ -458,6 +621,7 @@ Deno.test('prep-course getLesson includes drill blind review attempt metadata', 
   const activeLesson = {
     id: 'lesson-drill',
     course_id: 'course-1',
+    section_id: 'section-1',
     slug: 'active-drill-1',
     title: 'Active Drill',
     lesson_type: 'active_drill' as const,
@@ -537,6 +701,7 @@ const STRIPE_TEST_ENV: Record<string, string> = {
   STRIPE_PRICE_ID_CORE_TEST: 'price_core_test',
   STRIPE_PRICE_ID_CORE_3_MONTH_TEST: 'price_core_3_month_test',
   STRIPE_PRICE_ID_CORE_6_MONTH_TEST: 'price_core_6_month_test',
+  STRIPE_PRICE_ID_CORE_YEARLY_TEST: 'price_core_yearly_test',
   STRIPE_PRICE_ID_LIVE_MONTHLY_TEST: 'price_live_test',
   STRIPE_PRICE_ID_LSAC_YEARLY_TEST: 'price_lsac_test',
   SUPABASE_URL: 'https://abc.supabase.co',

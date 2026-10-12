@@ -3,7 +3,6 @@ import { NavLink, useNavigate } from "react-router-dom"
 
 import { useAdminApi } from "@/features/admin/use-admin-api"
 import { resetUser } from "@/lib/analytics/posthog"
-import { filterStudentVisiblePrepTestRows } from "@/lib/prep-test-visibility"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const links: Array<{ to: string; label: string; section: "Content" | "Settings"; badge?: string }> = [
@@ -23,32 +22,29 @@ function AdminSidebar() {
 
   useEffect(() => {
     let alive = true
+    let inFlight = false
     async function loadCounts() {
-      if (!adminApi) return
+      if (!adminApi || inFlight) return
+      inFlight = true
       try {
-        const [prepTestRows, courses] = await Promise.all([
-          adminApi.listAllPrepTests(),
-          adminApi.listCourses(),
+        const [prepTestsCount, coursesCount] = await Promise.all([
+          adminApi.countPrepTests(),
+          adminApi.countCourses(),
         ])
         if (!alive) return
-        const visiblePrepTestCount = filterStudentVisiblePrepTestRows(
-          prepTestRows as Array<{ module_id?: unknown }>,
-        ).length
-        setPrepTestsCount(visiblePrepTestCount)
-        setCoursesCount(Array.isArray(courses) ? courses.length : 0)
+        setPrepTestsCount(prepTestsCount)
+        setCoursesCount(coursesCount)
       } catch {
         if (!alive) return
         setPrepTestsCount(null)
         setCoursesCount(null)
+      } finally {
+        inFlight = false
       }
     }
     void loadCounts()
-    const intervalId = window.setInterval(() => {
-      void loadCounts()
-    }, 15000)
     return () => {
       alive = false
-      window.clearInterval(intervalId)
     }
   }, [adminApi])
 

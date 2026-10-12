@@ -110,7 +110,16 @@ function mockRepo(overrides: Partial<AnalyticsRepository> = {}): AnalyticsReposi
     listSectionSessionsForPrepTest: async () => [],
     listCompletedSectionSessions: async () => [],
     getScoreRowForRaw: async () => null,
+    listScoreRowsForRaw: async () => new Map(),
     getScoreRowForScaled: async () => null,
+    listScoreRowsForScaled: async () => new Map(),
+    getOverviewCountStats: async () => ({
+      totalQuestionsAnswered: 10,
+      drillCorrect: 7,
+      drillTotal: 10,
+      practiceStudyMinutes: 60,
+      lessonStudyMinutes: 35,
+    }),
     listPrepTestQuestionsWithMeta: async () => [],
     listLatestAnswerSelectionsByQuestionIds: async () => new Map<string, string[]>(),
     listAnswerEventsWithTypes: async () => [
@@ -163,6 +172,46 @@ function mockRepo(overrides: Partial<AnalyticsRepository> = {}): AnalyticsReposi
       const direct = await base.getPracticeSession(sessionIdOrPrepTestId, userId)
       if (direct?.kind === 'PREPTEST' && direct.completed_at) return direct
       return null
+    }
+  }
+  if (overrides.listScoreRowsForRaw === undefined) {
+    base.listScoreRowsForRaw = async (pairs) => {
+      const out = new Map<string, { scaled_score: number | null; percentile: number | null } | null>()
+      for (const pair of pairs) {
+        out.set(`${pair.prepTestId}:${pair.rawScore}`, await base.getScoreRowForRaw(pair.prepTestId, pair.rawScore))
+      }
+      return out
+    }
+  }
+  if (overrides.listScoreRowsForScaled === undefined) {
+    base.listScoreRowsForScaled = async (pairs) => {
+      const out = new Map<string, { scaled_score: number | null; percentile: number | null } | null>()
+      for (const pair of pairs) {
+        const scaled = Math.round(pair.scaledScore)
+        out.set(
+          `${pair.prepTestId}:${scaled}`,
+          await base.getScoreRowForScaled(pair.prepTestId, scaled),
+        )
+      }
+      return out
+    }
+  }
+  if (overrides.getOverviewCountStats === undefined) {
+    base.getOverviewCountStats = async (userId, opts) => {
+      const [totalQuestionsAnswered, drill, practiceStudyMinutes, lessonStudyMinutes] =
+        await Promise.all([
+          base.countAnswerEvents(userId, opts),
+          base.countDrillAnswerEvents(userId, opts),
+          base.sumCompletedSessionStudyMinutes(userId, opts),
+          base.sumCompletedLessonStudyMinutes(userId, opts),
+        ])
+      return {
+        totalQuestionsAnswered,
+        drillCorrect: drill.correct,
+        drillTotal: drill.total,
+        practiceStudyMinutes,
+        lessonStudyMinutes,
+      }
     }
   }
   return base
@@ -1796,4 +1845,48 @@ Deno.test('getExplanationDetail rejects when question not found', async () => {
     Error,
     'Question not found',
   )
+})
+
+Deno.test('getPageBundle dashboard returns overview, drills, and priorities (no trajectory)', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listSessions: async () => [sessionListRow()],
+      countSessions: async () => 1,
+    }),
+  })
+  const bundle = await service.getPageBundle('user-1', 'dashboard')
+  assertEquals(bundle.view, 'dashboard')
+  assertEquals(bundle.overview?.completedPrepTestCount, 2)
+  assertEquals(bundle.trajectory, [])
+  assertEquals(bundle.sessions?.sessions.length, 1)
+  assertEquals(bundle.priorities?.length, 2)
+})
+
+Deno.test('getPageBundle drills returns sessions and priorities only', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listSessions: async () => [sessionListRow()],
+      countSessions: async () => 1,
+    }),
+  })
+  const bundle = await service.getPageBundle('user-1', 'drills')
+  assertEquals(bundle.view, 'drills')
+  assertEquals(bundle.overview, undefined)
+  assertEquals(bundle.sessions?.sessions.length, 1)
+  assertEquals(bundle.priorities?.length, 2)
+})
+
+Deno.test('getPageBundle overview includes completed history by kind', async () => {
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      listSessions: async () => [sessionListRow()],
+      countSessions: async () => 1,
+    }),
+  })
+  const bundle = await service.getPageBundle('user-1', 'overview')
+  assertEquals(bundle.view, 'overview')
+  assertEquals(bundle.overview?.completedPrepTestCount, 2)
+  assertEquals(bundle.drillSessions?.sessions.length, 1)
+  assertEquals(bundle.sectionSessions?.sessions.length, 1)
+  assertEquals(bundle.prepTestSessions?.sessions.length, 1)
 })

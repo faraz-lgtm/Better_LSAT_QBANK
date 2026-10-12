@@ -34,16 +34,23 @@ describe("createPrepCourseApi", () => {
         course: { id: "c1", slug: "prep-course" },
         lessons: [{ id: "l1", slug: "intro" }],
         completedLessonSlugs: ["intro"],
+        hydratedModuleIds: ["m1"],
+        moduleStats: [{ moduleId: "m1", lessonCount: 1, totalMinutes: 5 }],
       },
       error: null,
     })
     const api = createPrepCourseApi(mockSupabase(invoke))
 
-    const out = await api.getCourse("prep-course")
+    const out = await api.getCourse("prep-course", { hydrate: "first" })
 
+    expect(invoke).toHaveBeenCalledWith("prep-course?courseSlug=prep-course&hydrate=first", {
+      method: "GET",
+      headers: { Authorization: "Bearer token-1" },
+    })
     expect(out.course.slug).toBe("prep-course")
     expect(out.lessons).toHaveLength(1)
     expect(out.completedLessonSlugs).toEqual(["intro"])
+    expect(out.hydratedModuleIds).toEqual(["m1"])
   })
 
   it("setModuleBookmark POSTs bookmarkModuleId", async () => {

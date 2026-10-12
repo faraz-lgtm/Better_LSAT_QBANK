@@ -109,6 +109,15 @@ function mockRepo() {
         percentile: (patch.percentile as number | null) ?? null,
       }),
     getScoreRowForRaw: async () => ({ scaled_score: 170, percentile: 90 }),
+    listScoreRowsForRaw: async (
+      pairs: Array<{ prepTestId: string; rawScore: number }>,
+    ) => {
+      const out = new Map<string, { scaled_score: number | null; percentile: number | null } | null>()
+      for (const pair of pairs) {
+        out.set(`${pair.prepTestId}:${pair.rawScore}`, { scaled_score: 170, percentile: 90 })
+      }
+      return out
+    },
   }
 }
 
@@ -1523,7 +1532,7 @@ const prepTestDetailRow: PrepTestDetailRow = {
 }
 
 function preptestRepo(overrides: Record<string, unknown> = {}) {
-  return {
+  const base = {
     ...mockRepo(),
     listPrepTestPoolRows: async () => prepTestPoolRows,
     getPrepTestDetailRow: async (id: string) => (id === 'pt-900' ? prepTestDetailRow : null),
@@ -1537,6 +1546,23 @@ function preptestRepo(overrides: Record<string, unknown> = {}) {
       }),
     ...overrides,
   }
+  if (overrides.listScoreRowsForRaw === undefined) {
+    const getScore =
+      (overrides.getScoreRowForRaw as
+        | ((prepTestId: string, rawScore: number) => Promise<{
+            scaled_score: number | null
+            percentile: number | null
+          } | null>)
+        | undefined) ?? base.getScoreRowForRaw
+    base.listScoreRowsForRaw = async (pairs: Array<{ prepTestId: string; rawScore: number }>) => {
+      const out = new Map<string, { scaled_score: number | null; percentile: number | null } | null>()
+      for (const pair of pairs) {
+        out.set(`${pair.prepTestId}:${pair.rawScore}`, await getScore(pair.prepTestId, pair.rawScore))
+      }
+      return out
+    }
+  }
+  return base
 }
 
 Deno.test('listPrepTestPool returns practiceable prep tests with fresh status', async () => {
@@ -2158,17 +2184,14 @@ Deno.test('listBlindReviewPool returns completed prep tests eligible for blind r
   const service = createPracticeService({
     repository: preptestRepo({
       listPrepTestPoolRows: async () => [prepTestPoolRows[0]!],
-      listUserSessionsForPrepTest: async (_uid: string, prepTestId: string) =>
-        prepTestId === 'pt-900'
-          ? [
-              baseSession({
-                kind: 'PREPTEST',
-                prep_test_id: 'pt-900',
-                completed_at: '2026-01-03T00:00:00Z',
-                scaled_score: 160,
-              }),
-            ]
-          : [],
+      listUserSessionsForPrepTests: async () => [
+        baseSession({
+          kind: 'PREPTEST',
+          prep_test_id: 'pt-900',
+          completed_at: '2026-01-03T00:00:00Z',
+          scaled_score: 160,
+        }),
+      ],
     }) as never,
   })
   const out = await service.listBlindReviewPool('user-1', {})
@@ -2307,7 +2330,7 @@ Deno.test('getBlindReviewDetail works after blind review was skipped (post-resul
     }) as never,
   })
   const out = await service.getBlindReviewDetail('user-1', { prepTestId: 'pt-900' })
-  assertEquals(out.blindReview.status, 'completed')
+  assertEquals(out.blindReview.status, 'eligible')
   assertEquals(out.blindReview.prepTestSessionId, 'pt-sess-skipped')
   const lr = out.sections.find((s) => s.id === 'sec-lr')
   assertEquals(lr?.sectionSessionId, 'sec-sess-lr')
