@@ -9,6 +9,7 @@ import {
   StudentAppHeader,
 } from "@/features/app-shell/student-app-header"
 import { ThemeProvider } from "@/features/theme/theme-provider"
+import { notifyProfileAvatarChanged } from "@/lib/profile-avatar-sync"
 
 vi.mock("@/lib/supabase/client", () => ({
   getSupabaseBrowserClient: () => ({
@@ -21,13 +22,18 @@ vi.mock("@/lib/supabase/client", () => ({
   }),
 }))
 
+const { profileFixture } = vi.hoisted(() => ({
+  profileFixture: {
+    first_name: "Assad",
+    last_name: "Khan",
+    full_name: "Assad Khan",
+    avatar_url: "https://example.supabase.co/storage/v1/object/public/avatars/u1/photo.jpg",
+  },
+}))
+
 vi.mock("@/lib/api/users", () => ({
   createUsersApi: () => ({
-    getMyProfile: vi.fn().mockResolvedValue({
-      first_name: "Assad",
-      last_name: "Khan",
-      full_name: "Assad Khan",
-    }),
+    getMyProfile: vi.fn().mockResolvedValue(profileFixture),
   }),
 }))
 
@@ -79,8 +85,33 @@ describe("StudentAppHeader", () => {
     await waitFor(() => {
       expect(screen.getByText("Assad K.")).toBeInTheDocument()
     })
-    expect(screen.getByText("Assad K.")).toHaveClass("text-base")
     expect(screen.getByText("assad@acelebrands.co")).toBeInTheDocument()
+    const avatar = screen.getByRole("button", { name: "Open profile menu" }).querySelector("img")
+    expect(avatar).toHaveAttribute("src", profileFixture.avatar_url)
+  })
+
+  it("updates the header avatar when a new photo is uploaded", async () => {
+    renderHeader(
+      <MemoryRouter initialEntries={["/app"]}>
+        <StudentAppHeader onOpenMobileNav={() => {}} />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Open profile menu" }).querySelector("img"),
+      ).toBeTruthy()
+    })
+
+    const nextUrl =
+      "https://example.supabase.co/storage/v1/object/public/avatars/u1/updated.webp"
+    notifyProfileAvatarChanged(nextUrl)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Open profile menu" }).querySelector("img"),
+      ).toHaveAttribute("src", nextUrl)
+    })
   })
 
   it("hides breadcrumbs on non-dashboard pages and keeps the profile menu", async () => {

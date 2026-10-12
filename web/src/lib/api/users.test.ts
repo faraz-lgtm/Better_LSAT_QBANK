@@ -247,4 +247,89 @@ describe('createUsersApi', () => {
       headers: {},
     })
   })
+
+  it('updateAccountAvatar posts avatarUrl to users', async () => {
+    const profile = {
+      id: 'u1',
+      email: 'u@example.com',
+      full_name: 'User',
+      first_name: 'User',
+      last_name: null,
+      phone: null,
+      avatar_url: 'https://example.supabase.co/storage/v1/object/public/avatars/u1/a.jpg',
+      role: 'student' as const,
+      student_coaching_id: null,
+      is_first_time_login: false,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }
+    const invoke = vi.fn().mockResolvedValue({ data: { profile }, error: null })
+    const api = createUsersApi(mockSupabase(invoke, 't1'))
+    const out = await api.updateAccountAvatar(profile.avatar_url)
+    expect(out.avatar_url).toBe(profile.avatar_url)
+    expect(invoke).toHaveBeenCalledWith('users', {
+      method: 'POST',
+      body: { action: 'users-update-account-profile', avatarUrl: profile.avatar_url },
+      headers: { Authorization: 'Bearer t1' },
+    })
+  })
+
+  it('uploadAvatar uploads to storage then updates profile', async () => {
+    const publicUrl =
+      'https://example.supabase.co/storage/v1/object/public/avatars/user-1/photo.jpg'
+    const profile = {
+      id: 'user-1',
+      email: 'u@example.com',
+      full_name: 'User One',
+      first_name: 'User',
+      last_name: 'One',
+      phone: null,
+      avatar_url: publicUrl,
+      role: 'student' as const,
+      student_coaching_id: null,
+      is_first_time_login: false,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }
+    const upload = vi.fn().mockResolvedValue({ error: null })
+    const getPublicUrl = vi.fn().mockReturnValue({ data: { publicUrl } })
+    const single = vi.fn().mockResolvedValue({ data: profile, error: null })
+    const select = vi.fn().mockReturnValue({ single })
+    const eq = vi.fn().mockReturnValue({ select })
+    const update = vi.fn().mockReturnValue({ eq })
+    const from = vi.fn().mockReturnValue({ update })
+    const supabase = {
+      auth: {
+        getSession: vi.fn().mockResolvedValue({
+          data: { session: { access_token: 't1' } },
+        }),
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1' } },
+          error: null,
+        }),
+        signOut: vi.fn().mockResolvedValue({ error: null }),
+      },
+      functions: { invoke: vi.fn() },
+      storage: {
+        from: vi.fn().mockReturnValue({ upload, getPublicUrl }),
+      },
+      from,
+    } as unknown as SupabaseClient
+
+    const api = createUsersApi(supabase)
+    const file = new File(['avatar-bytes'], 'photo.jpg', { type: 'image/jpeg' })
+    const out = await api.uploadAvatar(file)
+
+    expect(out.avatar_url).toBe(publicUrl)
+    expect(supabase.storage.from).toHaveBeenCalledWith('avatars')
+    expect(upload).toHaveBeenCalledWith(
+      expect.stringMatching(/^user-1\/.+\.jpg$/),
+      file,
+      { contentType: 'image/jpeg', upsert: true },
+    )
+    expect(from).toHaveBeenCalledWith('profiles')
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ avatar_url: publicUrl }),
+    )
+  })
 })

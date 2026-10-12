@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { Camera, Check, CreditCard, Calendar, ExternalLink, FileText, Globe2, LockKeyhole, Mail, Phone, UserRound } from "lucide-react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { Camera, Check, CreditCard, Calendar, ExternalLink, FileText, Globe2, ImagePlus, LockKeyhole, Mail, Phone, UserRound } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
@@ -46,6 +46,7 @@ import {
 } from "@/lib/api/billing"
 import { createUsersApi, type UserProfile } from "@/lib/api/users"
 import { resolveAccountLsacLinkState } from "@/lib/auth/needs-lsac-link"
+import { notifyProfileAvatarChanged } from "@/lib/profile-avatar-sync"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
@@ -710,6 +711,11 @@ function AccountPage() {
   const [selectedPlan, setSelectedPlan] = useState<CheckoutPlanId>("monthly")
   const [changingPlan, setChangingPlan] = useState(false)
   const [planChangeError, setPlanChangeError] = useState<string | null>(null)
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const avatarMenuRef = useRef<HTMLDivElement | null>(null)
+  const galleryInputRef = useRef<HTMLInputElement | null>(null)
+  const cameraInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     let alive = true
@@ -747,7 +753,26 @@ function AccountPage() {
 
   const displayName = useMemo(() => nameValue || getDisplayName(profile, email), [email, nameValue, profile])
   const initials = useMemo(() => getInitials(displayName), [displayName])
+  const avatarUrl = profile?.avatar_url?.trim() || null
   const hasProPlan = Boolean(entitlement?.hasActiveCore || entitlement?.accessState === "FULL_ACCESS")
+
+  useEffect(() => {
+    if (!avatarMenuOpen) return
+    function handlePointerDown(event: MouseEvent) {
+      if (!avatarMenuRef.current?.contains(event.target as Node)) {
+        setAvatarMenuOpen(false)
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setAvatarMenuOpen(false)
+    }
+    document.addEventListener("mousedown", handlePointerDown)
+    document.addEventListener("keydown", handleKeyDown)
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown)
+      document.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [avatarMenuOpen])
   const planName = hasProPlan
     ? billingStatus?.checkoutPlan
       ? PLAN_LABELS[billingStatus.checkoutPlan]
@@ -961,6 +986,26 @@ function AccountPage() {
     setEditingTimezone(false)
   }
 
+  async function handleAvatarFileSelected(file: File | undefined) {
+    if (!file) return
+    setAvatarMenuOpen(false)
+    setUploadingAvatar(true)
+    setError(null)
+    setAccountStatus(null)
+    try {
+      const nextProfile = await createUsersApi(getSupabaseBrowserClient()).uploadAvatar(file)
+      setProfile(nextProfile)
+      notifyProfileAvatarChanged(nextProfile.avatar_url?.trim() || null)
+      setAccountStatus("Profile photo updated.")
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Failed to upload photo")
+    } finally {
+      setUploadingAvatar(false)
+      if (galleryInputRef.current) galleryInputRef.current.value = ""
+      if (cameraInputRef.current) cameraInputRef.current.value = ""
+    }
+  }
+
   async function startPaymentCheckout() {
     setStartingPayment(true)
     setPaymentError(null)
@@ -997,17 +1042,74 @@ function AccountPage() {
           <div className="flex min-w-0 flex-col gap-6">
             <AccountSection title="Profile" icon={UserRound}>
               <div className="flex items-center gap-4 border-b border-[rgba(44,49,67,0.07)] p-6">
-                <div className="relative shrink-0">
-                  <div className="flex size-16 items-center justify-center rounded-full bg-[var(--primary)] text-xl font-extrabold tracking-[-0.45px] text-[#f0f4ff]">
-                    {initials}
+                <div ref={avatarMenuRef} className="relative shrink-0">
+                  <div className="flex size-16 items-center justify-center overflow-hidden rounded-full bg-[var(--primary)] text-xl font-extrabold tracking-[-0.45px] text-[#f0f4ff]">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt={`${displayName} profile photo`} className="size-full object-cover" />
+                    ) : (
+                      initials
+                    )}
                   </div>
-                  <span className="absolute -bottom-0.5 -right-0.5 flex size-6 items-center justify-center rounded-full border-2 border-[var(--greyscale-25)] bg-[var(--primary)] text-white">
+                  <button
+                    type="button"
+                    className="absolute -bottom-0.5 -right-0.5 flex size-6 items-center justify-center rounded-full border-2 border-[var(--greyscale-25)] bg-[var(--primary)] text-white disabled:opacity-60"
+                    aria-label={uploadingAvatar ? "Uploading profile photo" : "Change profile photo"}
+                    aria-haspopup="menu"
+                    aria-expanded={avatarMenuOpen}
+                    disabled={uploadingAvatar}
+                    onClick={() => setAvatarMenuOpen((open) => !open)}
+                  >
                     <Camera className="size-3" strokeWidth={1.75} />
-                  </span>
+                  </button>
+                  <input
+                    ref={galleryInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    className="sr-only"
+                    tabIndex={-1}
+                    onChange={(event) => void handleAvatarFileSelected(event.target.files?.[0])}
+                  />
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="user"
+                    className="sr-only"
+                    tabIndex={-1}
+                    onChange={(event) => void handleAvatarFileSelected(event.target.files?.[0])}
+                  />
+                  {avatarMenuOpen ? (
+                    <div
+                      role="menu"
+                      className="absolute left-0 top-[calc(100%+8px)] z-20 flex min-w-[180px] flex-col rounded-xl border border-[rgba(44,49,67,0.12)] bg-[var(--greyscale-0)] p-1.5 shadow-[0px_8px_24px_rgba(13,13,18,0.12)]"
+                    >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium tracking-[0.24px] text-[var(--color-student-heading)] hover:bg-[var(--greyscale-25)]"
+                        onClick={() => galleryInputRef.current?.click()}
+                      >
+                        <ImagePlus className="size-3.5 text-[var(--muted-foreground)]" strokeWidth={1.75} />
+                        Upload from device
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium tracking-[0.24px] text-[var(--color-student-heading)] hover:bg-[var(--greyscale-25)]"
+                        onClick={() => cameraInputRef.current?.click()}
+                      >
+                        <Camera className="size-3.5 text-[var(--muted-foreground)]" strokeWidth={1.75} />
+                        Take photo
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-base font-semibold tracking-[0.32px] text-[var(--color-student-heading)]">{displayName}</p>
                   <p className="truncate text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{email ?? "No email on file"}</p>
+                  {uploadingAvatar ? (
+                    <p className="mt-1 text-xs tracking-[0.24px] text-[var(--primary)]">Uploading photo…</p>
+                  ) : null}
                 </div>
               </div>
               <NameRow

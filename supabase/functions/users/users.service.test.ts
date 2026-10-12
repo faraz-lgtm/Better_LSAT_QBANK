@@ -75,6 +75,7 @@ function mockRepo(overrides: Record<string, unknown> = {}): UsersRepository {
     first_name: null,
     last_name: null,
     phone: null,
+    avatar_url: null,
     role: 'student',
     student_coaching_id: null,
     stripe_customer_id: null,
@@ -315,6 +316,75 @@ Deno.test('createUsersService.updateAccountProfile rejects missing last name', a
     () => service.updateAccountProfile('user-1', { firstName: 'Jane', lastName: '   ' }),
     Error,
     'First and last name are required',
+  )
+})
+
+Deno.test('createUsersService.updateAccountProfile stores owned avatar URL', async () => {
+  let savedRow: { avatar_url?: string | null } | undefined
+  const avatarUrl =
+    'https://ymitqvbxrauychrkkhqp.supabase.co/storage/v1/object/public/avatars/user-1/abc.webp'
+  const repository = mockRepo({
+    getProfileById: async (id) => ({
+      id,
+      email: 'student@example.com',
+      full_name: 'Jane Student',
+      first_name: 'Jane',
+      last_name: 'Student',
+      phone: null,
+      avatar_url: null,
+      role: 'student',
+      student_coaching_id: null,
+      stripe_customer_id: null,
+      prep_plus_source: null,
+      lawhub_invite_status: null,
+      lawhub_invite_last_error: null,
+      lawhub_invited_at: null,
+      is_first_time_login: false,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }),
+    upsertProfile: async (row) => {
+      savedRow = row
+      return {
+        id: row.id,
+        email: row.email,
+        full_name: row.full_name,
+        first_name: row.first_name ?? null,
+        last_name: row.last_name ?? null,
+        phone: row.phone ?? null,
+        avatar_url: row.avatar_url ?? null,
+        role: 'student',
+        student_coaching_id: row.student_coaching_id,
+        stripe_customer_id: null,
+        prep_plus_source: null,
+        lawhub_invite_status: null,
+        lawhub_invite_last_error: null,
+        lawhub_invited_at: null,
+        is_first_time_login: false,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      }
+    },
+  })
+
+  const service = createUsersService({ repository })
+  const profile = await service.updateAccountProfile('user-1', { avatarUrl })
+
+  assertEquals(profile.avatar_url, avatarUrl)
+  assertEquals(savedRow?.avatar_url, avatarUrl)
+})
+
+Deno.test('createUsersService.updateAccountProfile rejects avatar URL outside own folder', async () => {
+  const service = createUsersService({ repository: mockRepo() })
+
+  await assertRejects(
+    () =>
+      service.updateAccountProfile('user-1', {
+        avatarUrl:
+          'https://ymitqvbxrauychrkkhqp.supabase.co/storage/v1/object/public/avatars/other-user/abc.webp',
+      }),
+    Error,
+    'Avatar must be uploaded to your profile storage folder',
   )
 })
 

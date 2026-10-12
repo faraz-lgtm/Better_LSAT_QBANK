@@ -11,6 +11,7 @@ const baseStudent: UserProfile = {
   first_name: "X",
   last_name: "Y",
   phone: null,
+  avatar_url: null,
   role: "student",
   is_first_time_login: false,
   student_coaching_id: null,
