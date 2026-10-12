@@ -8,6 +8,7 @@ import { store } from '@/app/store'
 import { ThemeProvider } from '@/features/theme/theme-provider'
 import { initPostHog, posthog } from '@/lib/analytics/posthog'
 import { PostHogAuthBridge } from '@/lib/analytics/posthog-auth-bridge'
+import { ProduktlyAuthBridge } from '@/lib/analytics/produktly-auth-bridge'
 
 const posthogClient = initPostHog()
 
@@ -18,6 +19,7 @@ createRoot(document.getElementById('root')!).render(
         <Provider store={store}>
           <ThemeProvider>
             <PostHogAuthBridge />
+            <ProduktlyAuthBridge />
             <App />
           </ThemeProvider>
         </Provider>

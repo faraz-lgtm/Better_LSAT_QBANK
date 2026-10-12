@@ -9,6 +9,34 @@
       name="description"
       content="6,000+ explained questions. Official LSAC tests. Adaptive analytics. A system designed around how you actually improve your LSAT score."
     />
+    <!-- Produktly -->
+    <script>
+      ;(function (w, d, f) {
+        w.Produktly =
+          w.Produktly ||
+          new Proxy(function () {}, {
+            get: function (_, n) {
+              return function () {
+                w.ProduktlyQ = (w.ProduktlyQ || []).concat([
+                  [n, Array.prototype.slice.call(arguments)],
+                ])
+              }
+            },
+            apply: function (_, __, a) {
+              w.ProduktlyQ = (w.ProduktlyQ || []).concat([["apply", a]])
+            },
+          })
+        var a = d.getElementsByTagName("head")[0]
+        var s = d.createElement("script")
+        s.async = 1
+        s.src = f
+        s.setAttribute("id", "produktlyScript")
+        s.dataset.clientToken =
+          "9e08adbf824344632c7fca853141ab11c29d3db8a720e9265f66cbc392db9c7ec3988e5ae51389b4fcce54341094c52c909558271bb189dcc6d64dec12e590e6"
+        a.appendChild(s)
+      })(window, document, "https://public.produktly.com/js/main.js")
+    </script>
+    <!-- End Produktly -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
