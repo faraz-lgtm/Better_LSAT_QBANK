@@ -407,8 +407,8 @@ export const SECTION_DIAGNOSTIC_QUESTIONS: MiniDiagnosticQuestion[] = [
     targetTimeSeconds: 65,
     difficulty: 2,
     questionType: "Method of Reasoning",
-    stimulusText: `Manager: Our main competitor recently launched a massive digital marketing campaign, and their quarterly sales immediately doubled. We should immediately redirect our print advertising budget into a similar digital marketing initiative to achieve the exact same sales boost.
-Consultant: Your competitor's quarterly sales doubled because they drastically lowered their retail prices on their flagship products at the exact same time they launched that digital campaign.`,
+    stimulusText: `<p>Manager: Our main competitor recently launched a massive digital marketing campaign, and their quarterly sales immediately doubled. We should immediately redirect our print advertising budget into a similar digital marketing initiative to achieve the exact same sales boost.</p>
+<p>Consultant: Your competitor's quarterly sales doubled because they drastically lowered their retail prices on their flagship products at the exact same time they launched that digital campaign.</p>`,
     stemText:
       "The consultant responds to the manager's argument by doing which one of the following?",
     choices: [
