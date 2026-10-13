@@ -64,13 +64,26 @@ type IntentPageProps = {
   isAuthenticated?: boolean
   /** When false, hide header Upgrade CTA (paid / premium accounts). Defaults to true. */
   showUpgradeCta?: boolean
+  /**
+   * Authenticated first-time users must finish welcome onboarding (name/password)
+   * before the exam — common after email magic-link when intent storage was lost.
+   */
+  requiresOnboarding?: boolean
 }
 
-function IntentPage({ isAuthenticated = false, showUpgradeCta = true }: IntentPageProps) {
+function IntentPage({
+  isAuthenticated = false,
+  showUpgradeCta = true,
+  requiresOnboarding = false,
+}: IntentPageProps) {
   if (isAuthenticated) {
     return (
       <GuestPricingModalProvider authenticatedCheckout>
-        <IntentPageContent isAuthenticated showUpgradeCta={showUpgradeCta} />
+        <IntentPageContent
+          isAuthenticated
+          showUpgradeCta={showUpgradeCta}
+          requiresOnboarding={requiresOnboarding}
+        />
       </GuestPricingModalProvider>
     )
   }
@@ -78,7 +91,11 @@ function IntentPage({ isAuthenticated = false, showUpgradeCta = true }: IntentPa
   return <IntentPageContent isAuthenticated={false} showUpgradeCta={showUpgradeCta} />
 }
 
-function IntentPageContent({ isAuthenticated = false, showUpgradeCta = true }: IntentPageProps) {
+function IntentPageContent({
+  isAuthenticated = false,
+  showUpgradeCta = true,
+  requiresOnboarding = false,
+}: IntentPageProps) {
   const navigate = useNavigate()
   const { openPricingModal } = useGuestPricingModal()
   const [selectedTier, setSelectedTier] = useState<DiagnosticIntentTier>("quick")
@@ -92,6 +109,10 @@ function IntentPageContent({ isAuthenticated = false, showUpgradeCta = true }: I
     saveDiagnosticIntent(selectedTier)
     captureEvent(AnalyticsEvent.intentSelected, { intent: selectedTier })
     if (isAuthenticated) {
+      if (requiresOnboarding) {
+        navigate("/onboarding", { replace: true })
+        return
+      }
       navigate(`/diagnostic/start?intent=${selectedTier}`, { replace: true })
       return
     }

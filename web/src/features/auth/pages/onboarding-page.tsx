@@ -23,8 +23,10 @@ import { getAppStore } from "@/app/store-ref"
 import { setProfile } from "@/features/student-session/studentSessionSlice"
 import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
 import {
+  ensureDiagnosticIntent,
   hasCompletedDiagnostic,
   hasPendingDiagnosticIntent,
+  isDiagnosticFunnelActive,
   isInDiagnosticAcquisitionFunnel,
   readDiagnosticIntent,
 } from "@/lib/auth/diagnostic-intent"
@@ -99,11 +101,9 @@ function OnboardingPage() {
         if (!alive) return
         if (!user) return navigate("/login", { replace: true })
         if (profile) hydrateSessionProfile(profile)
-        if (profile && (isInDiagnosticAcquisitionFunnel() || (profile.is_first_time_login && hasPendingDiagnosticIntent()))) {
-          navigate("/diagnostic/start", { replace: true })
-          return
-        }
-        // Exam finished but funnel flags cleared — don't trap first-time users on this form.
+        const needsPassword = userNeedsPasswordSetup(user, session)
+        // First-time users always stay for welcome + preference steps (goal/starting score).
+        // Do not auto-jump to diagnostic when Google already filled a name.
         if (profile && (hasCompletedDiagnostic() || !profile.is_first_time_login)) {
           if (profile.is_first_time_login) {
             const completed = await usersApi.completeFirstLogin()
@@ -116,7 +116,7 @@ function OnboardingPage() {
           navigate(appendCheckoutSuccessQuery(destination, searchParams), { replace: true })
           return
         }
-        setRequiresPassword(userNeedsPasswordSetup(user, session))
+        setRequiresPassword(needsPassword)
         if (profile?.first_name || profile?.last_name) {
           setFirstName(profile.first_name?.trim() ?? "")
           setLastName(profile.last_name?.trim() ?? "")
@@ -193,10 +193,15 @@ function OnboardingPage() {
       const completed = await usersApi.completeFirstLogin()
       hydrateSessionProfile(completed)
       captureEvent(AnalyticsEvent.onboardingCompleted)
-      navigate(
-        resolvePendingCheckoutDestination(await fetchPostAuthDestination(usersApi)),
-        { replace: true },
+      const destination = resolvePendingCheckoutDestination(
+        await fetchPostAuthDestination(usersApi),
       )
+      if (destination === "/diagnostic/start") {
+        const intent = ensureDiagnosticIntent()
+        navigate(`/diagnostic/start?intent=${intent}`, { replace: true })
+        return
+      }
+      navigate(destination, { replace: true })
     } catch (e) {
       setError(e instanceof Error ? formatSupabaseCallError(e) : "Unable to complete onboarding.")
     } finally {
@@ -204,45 +209,38 @@ function OnboardingPage() {
     }
   }
 
-  async function persistWelcomeProfileAndCompleteFirstLogin() {
-    if (!authApi || !usersApi) {
-      throw new Error("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
-    }
-    if (requiresPassword) await authApi.updatePassword(password)
-    const saved = await usersApi.saveOnboarding({
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      plannedLsatDate: plannedLsatDate || null,
-      plannedLsatWindow: null,
-    })
-    hydrateSessionProfile(saved.profile)
-    // Mark onboarding done before /app routes so RequireRole does not bounce here.
-    const completed = await usersApi.completeFirstLogin()
-    hydrateSessionProfile(completed)
+  function isDiagnosticFunnelOnboarding() {
+    const storedIntent = readDiagnosticIntent()
+    return (
+      isGuestDiagnosticIntentId(storedIntent) ||
+      isDiagnosticFunnelActive() ||
+      isInDiagnosticAcquisitionFunnel() ||
+      hasPendingDiagnosticIntent()
+    )
   }
 
   async function handleWelcomeContinue() {
     if (!validateStep1()) return
 
-    const storedIntent = readDiagnosticIntent()
-    const resumeDiagnostic = isGuestDiagnosticIntentId(storedIntent)
-    const resumeResults = !resumeDiagnostic && hasCompletedDiagnostic()
-
-    if (!resumeDiagnostic && !resumeResults) {
-      next()
-      return
-    }
-
-    if (!authApi || !usersApi) {
-      setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
-      return
-    }
-
-    setIsSubmitting(true)
-    setError(null)
-    try {
-      await persistWelcomeProfileAndCompleteFirstLogin()
-      if (resumeResults) {
+    // Recovery: exam already finished but user bounced back to welcome.
+    if (!isDiagnosticFunnelOnboarding() && hasCompletedDiagnostic()) {
+      if (!authApi || !usersApi) {
+        setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
+        return
+      }
+      setIsSubmitting(true)
+      setError(null)
+      try {
+        if (requiresPassword) await authApi.updatePassword(password)
+        const saved = await usersApi.saveOnboarding({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          plannedLsatDate: plannedLsatDate || null,
+          plannedLsatWindow: null,
+        })
+        hydrateSessionProfile(saved.profile)
+        const completed = await usersApi.completeFirstLogin()
+        hydrateSessionProfile(completed)
         const result = readGuestDiagnosticResult()
         navigate(
           result
@@ -250,19 +248,27 @@ function OnboardingPage() {
             : resolvePendingCheckoutDestination(await fetchPostAuthDestination(usersApi)),
           { replace: true },
         )
-        return
+      } catch (e) {
+        setError(e instanceof Error ? formatSupabaseCallError(e) : "Unable to continue to diagnostic.")
+      } finally {
+        setIsSubmitting(false)
       }
-      navigate("/diagnostic/start", { replace: true })
-    } catch (e) {
-      setError(e instanceof Error ? formatSupabaseCallError(e) : "Unable to continue to diagnostic.")
-    } finally {
-      setIsSubmitting(false)
+      return
     }
+
+    // Diagnostic + Google/email signup: walk preference steps (study plan, goal/starting score)
+    // before the exam — do not jump straight to /diagnostic/start after the welcome card.
+    next()
   }
 
   function next() {
     if (step === 1 && !validateStep1()) return
     if (step === 7) {
+      // Funnel users skip the legacy in-wizard diagnostic mock (steps 8–13) and take the real exam.
+      if (isDiagnosticFunnelOnboarding()) {
+        void completeOnboarding()
+        return
+      }
       if (startingScore === "I haven't taken an LSAT yet") return setStep(8)
       void completeOnboarding()
       return
@@ -378,7 +384,16 @@ function OnboardingPage() {
               {step === 8 && (
                 <>
                   <p className="text-sm text-[#082c6b]">Take a diagnostic LR section to personalize your study plan. About 35 minutes.</p>
-                  <Button type="button" className="ds-btn w-full" onClick={() => navigate("/diagnostic/start")}>Start Diagnostic</Button>
+                  <Button
+                    type="button"
+                    className="ds-btn w-full"
+                    onClick={() => {
+                      const intent = ensureDiagnosticIntent()
+                      navigate(`/diagnostic/start?intent=${intent}`)
+                    }}
+                  >
+                    Start Diagnostic
+                  </Button>
                   <Button type="button" variant="ghost" className="w-full text-[#0d47a1]" onClick={() => setStep(9)}>Skip</Button>
                 </>
               )}
