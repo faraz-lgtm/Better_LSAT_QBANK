@@ -43,7 +43,12 @@ export function resolvePostAuthDestination(
     return "/diagnostic/start"
   }
 
-  if (funnel.funnelActive && funnel.completedDiagnostic) {
+  // Prefer results when the exam is done. clearDiagnosticFunnel() clears funnelActive
+  // on submit, so first-time students must not fall through to /onboarding.
+  if (
+    funnel.completedDiagnostic &&
+    (funnel.funnelActive || profile.is_first_time_login)
+  ) {
     logRouteRedirect(from, "/app/diagnostic/results", "diagnostic funnel complete")
     return "/app/diagnostic/results"
   }

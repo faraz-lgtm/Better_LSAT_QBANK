@@ -91,6 +91,23 @@ describe("resolvePostAuthDestination", () => {
     ).toBe("/app/diagnostic/results")
   })
 
+  it("returns diagnostic results after funnel flags are cleared for first-time login", () => {
+    // clearDiagnosticFunnel() wipes funnelActive but leaves the stored result.
+    const clearedAfterSubmit: DiagnosticFunnelState = {
+      pendingIntent: null,
+      completedDiagnostic: true,
+      funnelActive: false,
+      inAcquisitionFunnel: false,
+    }
+    expect(
+      resolvePostAuthDestination(
+        { ...baseStudent, is_first_time_login: true },
+        lsacRequiredEntitlement,
+        clearedAfterSubmit,
+      ),
+    ).toBe("/app/diagnostic/results")
+  })
+
   it("returns onboarding when student is first-time login outside funnel", () => {
     expect(
       resolvePostAuthDestination(

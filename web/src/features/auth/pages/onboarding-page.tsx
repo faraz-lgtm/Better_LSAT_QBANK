@@ -9,7 +9,9 @@ import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { ONBOARDING_RECOMMENDED_LSAT_DATE } from "@/features/auth/onboarding/onboarding-lsat-date-options"
 import { OnboardingWelcomeStep } from "@/features/auth/onboarding/onboarding-welcome-step"
+import { readGuestDiagnosticResult } from "@/features/guest/diagnostic/guest-diagnostic-result-storage"
 import { isGuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
+import { diagnosticAttemptHref } from "@/features/student/diagnostic/diagnostic-results-routes"
 import {
   appendCheckoutSuccessQuery,
   useTrackCheckoutPurchase,
@@ -20,7 +22,12 @@ import { createUsersApi } from "@/lib/api/users"
 import { getAppStore } from "@/app/store-ref"
 import { setProfile } from "@/features/student-session/studentSessionSlice"
 import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
-import { hasPendingDiagnosticIntent, isInDiagnosticAcquisitionFunnel, readDiagnosticIntent } from "@/lib/auth/diagnostic-intent"
+import {
+  hasCompletedDiagnostic,
+  hasPendingDiagnosticIntent,
+  isInDiagnosticAcquisitionFunnel,
+  readDiagnosticIntent,
+} from "@/lib/auth/diagnostic-intent"
 import { resolvePendingCheckoutDestination } from "@/lib/auth/pending-checkout-plan"
 import { userNeedsPasswordSetup } from "@/lib/auth/password-setup"
 import { splitFullName } from "@/lib/lawhub-identity"
@@ -96,7 +103,13 @@ function OnboardingPage() {
           navigate("/diagnostic/start", { replace: true })
           return
         }
-        if (profile && !profile.is_first_time_login) {
+        // Exam finished but funnel flags cleared — don't trap first-time users on this form.
+        if (profile && (hasCompletedDiagnostic() || !profile.is_first_time_login)) {
+          if (profile.is_first_time_login) {
+            const completed = await usersApi.completeFirstLogin()
+            if (!alive) return
+            hydrateSessionProfile(completed)
+          }
           const destination = resolvePendingCheckoutDestination(
             await fetchPostAuthDestination(usersApi),
           )
@@ -191,11 +204,31 @@ function OnboardingPage() {
     }
   }
 
+  async function persistWelcomeProfileAndCompleteFirstLogin() {
+    if (!authApi || !usersApi) {
+      throw new Error("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
+    }
+    if (requiresPassword) await authApi.updatePassword(password)
+    const saved = await usersApi.saveOnboarding({
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      plannedLsatDate: plannedLsatDate || null,
+      plannedLsatWindow: null,
+    })
+    hydrateSessionProfile(saved.profile)
+    // Mark onboarding done before /app routes so RequireRole does not bounce here.
+    const completed = await usersApi.completeFirstLogin()
+    hydrateSessionProfile(completed)
+  }
+
   async function handleWelcomeContinue() {
     if (!validateStep1()) return
 
     const storedIntent = readDiagnosticIntent()
-    if (!isGuestDiagnosticIntentId(storedIntent)) {
+    const resumeDiagnostic = isGuestDiagnosticIntentId(storedIntent)
+    const resumeResults = !resumeDiagnostic && hasCompletedDiagnostic()
+
+    if (!resumeDiagnostic && !resumeResults) {
       next()
       return
     }
@@ -208,15 +241,17 @@ function OnboardingPage() {
     setIsSubmitting(true)
     setError(null)
     try {
-      if (requiresPassword) await authApi.updatePassword(password)
-      const saved = await usersApi.saveOnboarding({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        plannedLsatDate: plannedLsatDate || null,
-        plannedLsatWindow: null,
-      })
-      // Bust the "null profile" session cache so RequireRole does not bounce back here.
-      hydrateSessionProfile(saved.profile)
+      await persistWelcomeProfileAndCompleteFirstLogin()
+      if (resumeResults) {
+        const result = readGuestDiagnosticResult()
+        navigate(
+          result
+            ? diagnosticAttemptHref(result.intentId, result.id)
+            : resolvePendingCheckoutDestination(await fetchPostAuthDestination(usersApi)),
+          { replace: true },
+        )
+        return
+      }
       navigate("/diagnostic/start", { replace: true })
     } catch (e) {
       setError(e instanceof Error ? formatSupabaseCallError(e) : "Unable to continue to diagnostic.")
