@@ -102,4 +102,23 @@ describe("createAuthApi", () => {
       "rate limit",
     )
   })
+
+  it("verifyOtpWithTokenHash calls verifyOtp with token_hash and type", async () => {
+    const verifyOtp = vi.fn().mockResolvedValue({ error: null })
+    const api = createAuthApi(mockSupabase({ auth: { verifyOtp } }))
+
+    await api.verifyOtpWithTokenHash("hash-abc", "magiclink")
+
+    expect(verifyOtp).toHaveBeenCalledWith({
+      token_hash: "hash-abc",
+      type: "magiclink",
+    })
+  })
+
+  it("verifyOtpWithTokenHash surfaces supabase error", async () => {
+    const verifyOtp = vi.fn().mockResolvedValue({ error: new Error("otp expired") })
+    const api = createAuthApi(mockSupabase({ auth: { verifyOtp } }))
+
+    await expect(api.verifyOtpWithTokenHash("hash-abc", "recovery")).rejects.toThrow("otp expired")
+  })
 })

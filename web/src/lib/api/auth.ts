@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js"
+import type { EmailOtpType, SupabaseClient } from "@supabase/supabase-js"
 
 import { throwIfEdgeInvokeFailed } from "@/lib/api/edge-invoke-error"
 
@@ -55,6 +55,15 @@ export function createAuthApi(supabase: SupabaseClient) {
 
     async exchangeCodeForSession(code: string): Promise<void> {
       const { error } = await supabase.auth.exchangeCodeForSession(code)
+      if (error) throw error
+    },
+
+    /** Email magic-link / recovery via token_hash (works cross-browser; no PKCE verifier). */
+    async verifyOtpWithTokenHash(tokenHash: string, type: EmailOtpType): Promise<void> {
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type,
+      })
       if (error) throw error
     },
 

@@ -28,6 +28,28 @@ The frontend always passes the current-origin callback via
 production resolve to production and links sent from localhost resolve to
 localhost.
 
+### Email templates (cross-browser magic links)
+
+Default Supabase `{{ .ConfirmationURL }}` links complete with a PKCE `?code=`
+redirect. That requires the same browser that requested the email (local
+`code_verifier`). To allow opening magic links / reset links in any browser,
+hosted templates must use `token_hash` + `type` instead.
+
+In **Authentication → Email Templates** (hosted project), set:
+
+- **Magic link** button href:
+  `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=magiclink`
+- **Reset password** button href:
+  `{{ .RedirectTo }}&token_hash={{ .TokenHash }}`
+  (`RedirectTo` already includes `?type=recovery` from the app.)
+
+Local CLI templates live under `supabase/templates/` and are wired in
+`supabase/config.toml`. Hosted Dashboard templates are **not** updated by
+code deploy — update them in the Dashboard (or Management API) after shipping
+the `/auth/callback` `verifyOtp` support.
+
+Google OAuth continues to use PKCE `?code=` exchange on the same callback route.
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
