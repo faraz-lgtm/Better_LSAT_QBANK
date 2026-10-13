@@ -19,11 +19,21 @@ export type UserProfile = {
   first_name: string | null
   last_name: string | null
   phone: string | null
+  avatar_url: string | null
   role: 'student' | 'admin' | 'super_admin'
   student_coaching_id: string | null
   is_first_time_login: boolean
   created_at: string
   updated_at: string
+}
+
+const AVATAR_BUCKET = 'avatars'
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024
+const AVATAR_MIME_TO_EXT: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
 }
 
 export type AdminStudentSnapshot = {
@@ -294,6 +304,65 @@ export function createUsersApi(supabase: SupabaseClient) {
       if (error) throw error
       if (!data?.profile) throw new Error('No profile in response')
       return data.profile
+    },
+
+    async updateAccountAvatar(avatarUrl: string): Promise<UserProfile> {
+      const { data, error } = await invokeUsersPost<{ profile: UserProfile }>('users', {
+        action: 'users-update-account-profile',
+        avatarUrl,
+      })
+      if (error) throw error
+      if (!data?.profile) throw new Error('No profile in response')
+      return data.profile
+    },
+
+    /**
+     * Uploads a profile photo to the public `avatars` bucket (owner RLS), then
+     * persists `avatar_url` via the users edge function.
+     */
+    async uploadAvatar(file: File): Promise<UserProfile> {
+      const allowedExt = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp'])
+      const fromName = file.name.split('.').pop()?.trim().toLowerCase() ?? ''
+      let fileExtension = allowedExt.has(fromName) ? fromName : AVATAR_MIME_TO_EXT[file.type] ?? ''
+      if (!fileExtension) throw new Error('Unsupported image type; use JPG, PNG, GIF, or WebP')
+      if (fileExtension === 'jpeg') fileExtension = 'jpg'
+      if (file.size > AVATAR_MAX_BYTES) throw new Error('Image must be 5 MB or smaller')
+
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      if (userError) throw userError
+      const userId = userData.user?.id
+      if (!userId) throw new Error('You must be signed in to upload a photo')
+
+      const contentType = file.type || `image/${fileExtension === 'jpg' ? 'jpeg' : fileExtension}`
+      const path = `${userId}/${crypto.randomUUID()}.${fileExtension}`
+      const { error: uploadError } = await supabase.storage.from(AVATAR_BUCKET).upload(path, file, {
+        contentType,
+        upsert: true,
+      })
+      if (uploadError) {
+        const msg = uploadError.message || 'Photo upload failed'
+        if (/bucket not found|not found/i.test(msg)) {
+          throw new Error('Avatar storage is not set up yet. Apply the avatars migration, then try again.')
+        }
+        throw new Error(msg)
+      }
+
+      const { data: pub } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path)
+      if (!pub?.publicUrl) throw new Error('Could not resolve public photo URL')
+
+      // Owner RLS on profiles; edge `updateAccountAvatar` remains available after deploy.
+      const { data: updated, error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          avatar_url: pub.publicUrl,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+        .select('*')
+        .single()
+      if (profileError) throw profileError
+      if (!updated) throw new Error('No profile in response')
+      return updated as UserProfile
     },
 
     async updateAccountPassword(input: {

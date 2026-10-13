@@ -19,6 +19,8 @@ import {
 import { ThemeToggleButton } from "@/features/theme/theme-toggle"
 import { resetUser } from "@/lib/analytics/posthog"
 import { clearStudentSessionCaches } from "@/lib/auth/clear-student-session-caches"
+import { createUsersApi } from "@/lib/api/users"
+import { subscribeProfileAvatarChanged } from "@/lib/profile-avatar-sync"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -122,7 +124,9 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
     return () => {
       mounted = false
     }
-  }, [])
+  }, [pathname])
+
+  useEffect(() => subscribeProfileAvatarChanged(setAvatarUrl), [])
 
   useEffect(() => {
     queueMicrotask(() => setOpenProfileMenu(false))
@@ -197,7 +201,11 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
               onClick={() => setOpenProfileMenu((current) => !current)}
             >
               <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--primary)] text-[11px] font-semibold leading-none text-white">
-                {initials}
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="" className="size-full object-cover" />
+                ) : (
+                  initials
+                )}
               </span>
               <span className="hidden min-w-0 flex-col items-start gap-0 text-left sm:flex">
                 <span className="text-xs font-semibold leading-tight tracking-[0.24px] text-[color:var(--primary-800)]">

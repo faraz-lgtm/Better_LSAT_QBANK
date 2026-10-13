@@ -11,8 +11,8 @@ const GUEST_FREE_PLAN_PREP_COURSE_HREF = "/app/prep-course"
 const GUEST_FREE_PLAN_ESSENTIALS_HREF = `${GUEST_FREE_PLAN_PREP_COURSE_HREF}/${PREP_COURSE_ESSENTIALS_SLUG}`
 
 /**
- * Free-plan students keep Main (Dashboard, Diagnostic, Diagnostic Results)
- * and limited Prep Course (LSAT Essential Course / The Kickoff).
+ * Free-plan students keep Main (Dashboard), Diagnostic (Diagnostic Test, Results,
+ * Explanation), and limited Prep Course (LSAT Essential Course / The Kickoff).
  * Other Academy, Prep, and Insights destinations stay locked until payment.
  */
 function isFreePlanLockedNavHref(href: string): boolean {

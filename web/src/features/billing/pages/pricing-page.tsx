@@ -153,6 +153,8 @@ function PricingPage() {
   }
 
   const paidPlans = PAID_PRICING_PLANS.map((plan) => mergePaidPlan(plan, catalog))
+  const featuredPlan = paidPlans.find((plan) => plan.featured) ?? paidPlans[0]
+  const gridPaidPlans = paidPlans.filter((plan) => plan.id !== featuredPlan.id)
 
   return (
     <AuthLayout {...pricingLayoutProps}>
@@ -173,18 +175,25 @@ function PricingPage() {
 
         <div className="pricing-page__stack">
           <PricingPlanCard
-            plan={{ ...FREE_PRICING_PLAN, ctaLabel: "Continue Free" }}
-            layout="current"
-            ctaVariant="orange"
-            onSelect={() => navigate("/app")}
+            plan={featuredPlan}
+            includeLawHub={!existingLsacMode}
+            layout="featured"
+            highlighted
+            ctaVariant="navy"
+            onSelect={() => startCheckout(featuredPlan.id)}
           />
           <div className="pricing-page__plans">
-            {paidPlans.map((plan) => (
+            <PricingPlanCard
+              plan={{ ...FREE_PRICING_PLAN, ctaLabel: "Continue Free" }}
+              isCurrent
+              ctaVariant="orange"
+              onSelect={() => navigate("/app")}
+            />
+            {gridPaidPlans.map((plan) => (
               <PricingPlanCard
                 key={plan.id}
                 plan={plan}
                 includeLawHub={!existingLsacMode}
-                highlighted={plan.featured}
                 ctaVariant={plan.id === "monthly" ? "orange" : "navy"}
                 onSelect={() => startCheckout(plan.id)}
               />

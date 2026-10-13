@@ -14,6 +14,7 @@ function profile(overrides: Partial<UserProfile> = {}): UserProfile {
     first_name: "Test",
     last_name: "Student",
     phone: null,
+    avatar_url: null,
     role: "student",
     student_coaching_id: null,
     is_first_time_login: false,
