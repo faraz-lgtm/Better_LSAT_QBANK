@@ -1,5 +1,6 @@
 import { getAppStore } from "@/app/store-ref"
 import {
+  invalidateProfile,
   loadEntitlement,
   loadProfile,
   loadStudyContext,
@@ -32,14 +33,21 @@ async function waitWhile(
 
 /**
  * Return cached profile or share one in-flight load across login, route guards, and shell.
+ *
+ * A prior successful load that returned `null` (no row yet) is not treated as a permanent
+ * cache hit — Google signup → onboarding → saveOnboarding creates the row, and route guards
+ * must be able to see it without a full page reload.
  */
 export async function ensureProfile(): Promise<UserProfile | null> {
   const current = session()
-  if (current.profileStatus === "succeeded") return current.profile
+  if (current.profileStatus === "succeeded" && current.profile) return current.profile
   if (inflight.profile) return inflight.profile
 
   const store = getAppStore()
   inflight.profile = (async () => {
+    if (session().profileStatus === "succeeded" && session().profile === null) {
+      store.dispatch(invalidateProfile())
+    }
     if (session().profileStatus === "loading") {
       await waitWhile((s) => s.profileStatus === "loading")
       return session().profile

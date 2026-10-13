@@ -612,12 +612,14 @@ const router = createBrowserRouter([
   },
   {
     path: "/diagnostic/start",
+    // Session only — exam UI does not need a profiles row. Avoids onboarding↔diagnostic
+    // loops when the session cache still holds a pre-onboarding null profile.
     element: (
-      <RequireRole requiredRole="student">
+      <RequireAuthenticated>
         <LazyPage>
           <GuestDiagnosticStartPage />
         </LazyPage>
-      </RequireRole>
+      </RequireAuthenticated>
     ),
   },
   {
@@ -639,21 +641,21 @@ const router = createBrowserRouter([
   {
     path: "/diagnostic/review",
     element: (
-      <RequireRole requiredRole="student">
+      <RequireAuthenticated>
         <LazyPage>
           <GuestDiagnosticReviewPage mode="review" />
         </LazyPage>
-      </RequireRole>
+      </RequireAuthenticated>
     ),
   },
   {
     path: "/diagnostic/tester",
     element: (
-      <RequireRole requiredRole="student">
+      <RequireAuthenticated>
         <LazyPage>
           <GuestDiagnosticReviewPage mode="tester" />
         </LazyPage>
-      </RequireRole>
+      </RequireAuthenticated>
     ),
   },
   {
