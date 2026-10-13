@@ -30,6 +30,33 @@ export class AuthorizationError extends Error {
   }
 }
 
+/** Account display names must not include digits (e.g. "Assad1212"). */
+export function assertAccountNamePartsHaveNoDigits(firstName: string, lastName: string): void {
+  if (/\d/.test(firstName) || /\d/.test(lastName)) {
+    throw new Error('Name cannot include numbers')
+  }
+}
+
+/**
+ * Trims phone input; empty becomes null. Rejects letters and non-phone characters.
+ * Allows digits plus common formatting: spaces, +, (), ., -
+ */
+export function normalizeAccountPhone(phone: string): string | null {
+  const trimmed = phone.trim()
+  if (!trimmed) return null
+  if (/[A-Za-z]/.test(trimmed)) {
+    throw new Error('Phone number cannot include letters')
+  }
+  if (!/^[\d\s()+.\-]+$/.test(trimmed)) {
+    throw new Error('Enter a valid phone number')
+  }
+  const digitCount = trimmed.replace(/\D/g, '').length
+  if (digitCount < 7) {
+    throw new Error('Enter a valid phone number')
+  }
+  return trimmed
+}
+
 /** Ensures avatar URLs point at this user's folder in the public `avatars` bucket. */
 export function assertOwnedAvatarUrl(userId: string, avatarUrl: string): string {
   const trimmed = avatarUrl.trim()
@@ -257,6 +284,7 @@ export function createUsersService(deps: UsersServiceDeps) {
           firstName: input.firstName,
           lastName: input.lastName,
         })
+        assertAccountNamePartsHaveNoDigits(nameParts.firstName, nameParts.lastName)
         firstName = nameParts.firstName
         lastName = nameParts.lastName
         fullName = joinLawHubFullName(firstName, lastName)
@@ -265,7 +293,7 @@ export function createUsersService(deps: UsersServiceDeps) {
       const email = input.email?.trim().toLowerCase() || existing?.email || null
       const phone =
         input.phone !== undefined
-          ? input.phone.trim() || null
+          ? normalizeAccountPhone(input.phone)
           : existing?.phone ?? null
       const avatarUrl =
         input.avatarUrl !== undefined

@@ -45,6 +45,10 @@ import {
   type BillingStatus,
   type CheckoutPlanId,
 } from "@/lib/api/billing"
+import {
+  validateAccountNameParts,
+  validateAccountPhone,
+} from "@/lib/account/profile-field-validation"
 import { createUsersApi, type UserProfile } from "@/lib/api/users"
 import { resolveAccountLsacLinkState } from "@/lib/auth/needs-lsac-link"
 import { notifyProfileAvatarChanged } from "@/lib/profile-avatar-sync"
@@ -153,6 +157,7 @@ type NameRowProps = {
   lastNameDraft: string
   editing: boolean
   saving?: boolean
+  error?: string | null
   onFirstNameChange: (value: string) => void
   onLastNameChange: (value: string) => void
   onEdit: () => void
@@ -166,6 +171,7 @@ function NameRow({
   lastNameDraft,
   editing,
   saving = false,
+  error = null,
   onFirstNameChange,
   onLastNameChange,
   onEdit,
@@ -173,36 +179,41 @@ function NameRow({
   onSave,
 }: NameRowProps) {
   return (
-    <div className="flex items-center gap-4 border-b border-[rgba(44,49,67,0.07)] px-6 py-[18px]">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
+    <div className="flex items-start gap-4 border-b border-[rgba(44,49,67,0.07)] px-6 py-[18px]">
+      <span className="mt-5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
         <UserRound className="size-3.5" strokeWidth={1.75} />
       </span>
-      <div className="flex min-w-0 flex-1 items-end gap-4">
+      <div className="flex min-w-0 flex-1 items-start gap-4">
         <div className="min-w-0 flex-1 space-y-1">
           <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">Name</p>
           {editing ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Input
-                value={firstNameDraft}
-                placeholder="First name"
-                autoComplete="given-name"
-                onChange={(event) => onFirstNameChange(event.target.value)}
-                className="h-10 rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-0"
-              />
-              <Input
-                value={lastNameDraft}
-                placeholder="Last name"
-                autoComplete="family-name"
-                onChange={(event) => onLastNameChange(event.target.value)}
-                className="h-10 rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-0"
-              />
-            </div>
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Input
+                  value={firstNameDraft}
+                  placeholder="First name"
+                  autoComplete="given-name"
+                  aria-invalid={Boolean(error)}
+                  onChange={(event) => onFirstNameChange(event.target.value)}
+                  className="h-10 rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-0"
+                />
+                <Input
+                  value={lastNameDraft}
+                  placeholder="Last name"
+                  autoComplete="family-name"
+                  aria-invalid={Boolean(error)}
+                  onChange={(event) => onLastNameChange(event.target.value)}
+                  className="h-10 rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-0"
+                />
+              </div>
+              {error ? <p className="text-sm text-[#95122b]">{error}</p> : null}
+            </>
           ) : (
             <p className="truncate text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)]">{displayValue}</p>
           )}
         </div>
         {editing ? (
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="mt-5 flex shrink-0 items-center gap-2">
             <Button type="button" size="xs" disabled={saving} onClick={onSave}>
               {saving ? "Saving…" : "Save"}
             </Button>
@@ -215,7 +226,7 @@ function NameRow({
             type="button"
             size="xs"
             variant="outline"
-            className={ACCOUNT_EDIT_BTN_CLASS}
+            className={`mt-5 ${ACCOUNT_EDIT_BTN_CLASS}`}
             onClick={onEdit}
           >
             Edit
@@ -244,6 +255,7 @@ type LsatDateRowProps = {
   draftValue: string
   editing: boolean
   saving?: boolean
+  error?: string | null
   onDraftChange: (value: string) => void
   onEdit: () => void
   onCancel: () => void
@@ -255,34 +267,38 @@ function LsatDateRow({
   draftValue,
   editing,
   saving = false,
+  error = null,
   onDraftChange,
   onEdit,
   onCancel,
   onSave,
 }: LsatDateRowProps) {
   return (
-    <div className="flex items-center gap-4 border-b border-[rgba(44,49,67,0.07)] px-6 py-[18px]">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
+    <div className="flex items-start gap-4 border-b border-[rgba(44,49,67,0.07)] px-6 py-[18px]">
+      <span className="mt-5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
         <Calendar className="size-3.5" strokeWidth={1.75} />
       </span>
-      <div className="flex min-w-0 flex-1 items-end gap-4">
+      <div className="flex min-w-0 flex-1 items-start gap-4">
         <div className="min-w-0 flex-1 space-y-1">
           <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">LSAC Test Date</p>
           {editing ? (
-            <Select
-              value={draftValue}
-              onChange={(event) => onDraftChange(event.target.value)}
-              options={[...ONBOARDING_LSAT_DATE_OPTIONS]}
-              placeholder="Select a test date"
-              className="h-10 rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-0"
-              disabled={saving}
-            />
+            <>
+              <Select
+                value={draftValue}
+                onChange={(event) => onDraftChange(event.target.value)}
+                options={[...ONBOARDING_LSAT_DATE_OPTIONS]}
+                placeholder="Select a test date"
+                className="h-10 rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-0"
+                disabled={saving}
+              />
+              {error ? <p className="text-sm text-[#95122b]">{error}</p> : null}
+            </>
           ) : (
             <p className="truncate text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)]">{displayValue}</p>
           )}
         </div>
         {editing ? (
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="mt-5 flex shrink-0 items-center gap-2">
             <Button type="button" size="xs" disabled={saving} onClick={onSave}>
               {saving ? "Saving…" : "Save"}
             </Button>
@@ -295,7 +311,7 @@ function LsatDateRow({
             type="button"
             size="xs"
             variant="outline"
-            className={ACCOUNT_EDIT_BTN_CLASS}
+            className={`mt-5 ${ACCOUNT_EDIT_BTN_CLASS}`}
             onClick={onEdit}
           >
             Edit
@@ -317,6 +333,7 @@ type ProfileRowProps = {
   placeholder?: string
   saving?: boolean
   editable?: boolean
+  error?: string | null
   onDraftChange: (value: string) => void
   onEdit: () => void
   onCancel: () => void
@@ -334,6 +351,7 @@ function ProfileRow({
   placeholder,
   saving = false,
   editable = true,
+  error = null,
   onDraftChange,
   onEdit,
   onCancel,
@@ -341,27 +359,31 @@ function ProfileRow({
 }: ProfileRowProps) {
   const isEditing = editable && editing
   return (
-    <div className="flex items-center gap-4 border-b border-[rgba(44,49,67,0.07)] px-6 py-[18px] last:border-b-0">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
+    <div className="flex items-start gap-4 border-b border-[rgba(44,49,67,0.07)] px-6 py-[18px] last:border-b-0">
+      <span className="mt-5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
         <Icon className="size-3.5" strokeWidth={1.75} />
       </span>
-      <div className="flex min-w-0 flex-1 items-end gap-4">
+      <div className="flex min-w-0 flex-1 items-start gap-4">
         <div className="min-w-0 flex-1 space-y-1">
           <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{label}</p>
           {isEditing ? (
-            <Input
-              type={type}
-              value={draftValue}
-              placeholder={placeholder}
-              onChange={(event) => onDraftChange(event.target.value)}
-              className="h-10 rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-0"
-            />
+            <>
+              <Input
+                type={type}
+                value={draftValue}
+                placeholder={placeholder}
+                aria-invalid={Boolean(error)}
+                onChange={(event) => onDraftChange(event.target.value)}
+                className="h-10 rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-0"
+              />
+              {error ? <p className="text-sm text-[#95122b]">{error}</p> : null}
+            </>
           ) : (
             <p className="truncate text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)]">{displayValue}</p>
           )}
         </div>
         {!editable ? null : isEditing ? (
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="mt-5 flex shrink-0 items-center gap-2">
             <Button type="button" size="xs" disabled={saving} onClick={onSave}>
               {saving ? "Saving…" : "Save"}
             </Button>
@@ -374,7 +396,7 @@ function ProfileRow({
             type="button"
             size="xs"
             variant="outline"
-            className={ACCOUNT_EDIT_BTN_CLASS}
+            className={`mt-5 ${ACCOUNT_EDIT_BTN_CLASS}`}
             onClick={onEdit}
           >
             {actionLabel}
@@ -390,6 +412,7 @@ type PasswordRowProps = {
   newPasswordDraft: string
   editing: boolean
   saving?: boolean
+  error?: string | null
   onCurrentPasswordChange: (value: string) => void
   onNewPasswordChange: (value: string) => void
   onEdit: () => void
@@ -402,6 +425,7 @@ function PasswordRow({
   newPasswordDraft,
   editing,
   saving = false,
+  error = null,
   onCurrentPasswordChange,
   onNewPasswordChange,
   onEdit,
@@ -409,36 +433,41 @@ function PasswordRow({
   onSave,
 }: PasswordRowProps) {
   return (
-    <div className="flex items-center gap-4 border-b border-[rgba(44,49,67,0.07)] px-6 py-[18px]">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
+    <div className="flex items-start gap-4 border-b border-[rgba(44,49,67,0.07)] px-6 py-[18px]">
+      <span className="mt-5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
         <LockKeyhole className="size-3.5" strokeWidth={1.75} />
       </span>
-      <div className="flex min-w-0 flex-1 items-end gap-4">
+      <div className="flex min-w-0 flex-1 items-start gap-4">
         <div className="min-w-0 flex-1 space-y-1">
           <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">Password</p>
           {editing ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <PasswordInput
-                value={currentPasswordDraft}
-                placeholder="Current password"
-                autoComplete="current-password"
-                onChange={(event) => onCurrentPasswordChange(event.target.value)}
-                className="h-10 rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-0"
-              />
-              <PasswordInput
-                value={newPasswordDraft}
-                placeholder="New password"
-                autoComplete="new-password"
-                onChange={(event) => onNewPasswordChange(event.target.value)}
-                className="h-10 rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-0"
-              />
-            </div>
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <PasswordInput
+                  value={currentPasswordDraft}
+                  placeholder="Current password"
+                  autoComplete="current-password"
+                  aria-invalid={Boolean(error)}
+                  onChange={(event) => onCurrentPasswordChange(event.target.value)}
+                  className="h-10 rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-0"
+                />
+                <PasswordInput
+                  value={newPasswordDraft}
+                  placeholder="New password"
+                  autoComplete="new-password"
+                  aria-invalid={Boolean(error)}
+                  onChange={(event) => onNewPasswordChange(event.target.value)}
+                  className="h-10 rounded-lg border-0 bg-[var(--greyscale-25)] px-2.5 text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)] shadow-none focus-visible:ring-0"
+                />
+              </div>
+              {error ? <p className="text-sm text-[#95122b]">{error}</p> : null}
+            </>
           ) : (
             <p className="truncate text-sm font-medium tracking-[0.28px] text-[var(--color-student-heading)]">••••••••</p>
           )}
         </div>
         {editing ? (
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="mt-5 flex shrink-0 items-center gap-2">
             <Button type="button" size="xs" disabled={saving} onClick={onSave}>
               {saving ? "Saving…" : "Save"}
             </Button>
@@ -451,7 +480,7 @@ function PasswordRow({
             type="button"
             size="xs"
             variant="outline"
-            className={ACCOUNT_EDIT_BTN_CLASS}
+            className={`mt-5 ${ACCOUNT_EDIT_BTN_CLASS}`}
             onClick={onEdit}
           >
             Change
@@ -696,6 +725,7 @@ function AccountPage() {
   const [accountStatus, setAccountStatus] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [fieldError, setFieldError] = useState<string | null>(null)
   const [timezoneValue, setTimezoneValue] = useState(getInitialTimezoneValue)
   const [timezoneDraft, setTimezoneDraft] = useState(timezoneValue)
   const [editingTimezone, setEditingTimezone] = useState(false)
@@ -877,6 +907,7 @@ function AccountPage() {
 
   function startFieldEdit(field: EditableAccountField) {
     setAccountStatus(null)
+    setFieldError(null)
     setEditingField(field)
     if (field === "name") {
       const parts = getNameParts(profile, email)
@@ -894,6 +925,7 @@ function AccountPage() {
 
   function cancelFieldEdit() {
     setEditingField(null)
+    setFieldError(null)
     setFieldDraft("")
     setFirstNameDraft("")
     setLastNameDraft("")
@@ -901,31 +933,54 @@ function AccountPage() {
     setNewPasswordDraft("")
   }
 
+  function updateFirstNameDraft(value: string) {
+    setFieldError(null)
+    setFirstNameDraft(value)
+  }
+
+  function updateLastNameDraft(value: string) {
+    setFieldError(null)
+    setLastNameDraft(value)
+  }
+
+  function updateFieldDraft(value: string) {
+    setFieldError(null)
+    setFieldDraft(value)
+  }
+
   async function saveFieldEdit(field: EditableAccountField) {
     if (field === "name") {
-      if (!firstNameDraft.trim() || !lastNameDraft.trim()) {
-        setError("First and last name are required.")
+      const nameError = validateAccountNameParts(firstNameDraft, lastNameDraft)
+      if (nameError) {
+        setFieldError(nameError)
+        return
+      }
+    } else if (field === "phone") {
+      const phoneError = validateAccountPhone(fieldDraft)
+      if (phoneError) {
+        setFieldError(phoneError)
         return
       }
     } else if (field === "password") {
       if (!currentPasswordDraft.trim() || !newPasswordDraft.trim()) {
-        setError("Current and new password are required.")
+        setFieldError("Current and new password are required.")
         return
       }
     } else if (field === "lsacDate") {
       if (!fieldDraft.trim()) {
-        setError("LSAC test date is required.")
+        setFieldError("LSAC test date is required.")
         return
       }
     } else {
       const value = fieldDraft.trim()
       if (!value) {
-        setError(`${field} is required.`)
+        setFieldError(`${field} is required.`)
         return
       }
     }
 
     setSavingField(field)
+    setFieldError(null)
     setError(null)
     setAccountStatus(null)
     try {
@@ -966,7 +1021,7 @@ function AccountPage() {
       }
       cancelFieldEdit()
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Failed to update account")
+      setFieldError(saveError instanceof Error ? saveError.message : "Failed to update account")
     } finally {
       setSavingField(null)
     }
@@ -1120,8 +1175,9 @@ function AccountPage() {
                 lastNameDraft={lastNameDraft}
                 editing={editingField === "name"}
                 saving={savingField === "name"}
-                onFirstNameChange={setFirstNameDraft}
-                onLastNameChange={setLastNameDraft}
+                error={editingField === "name" ? fieldError : null}
+                onFirstNameChange={updateFirstNameDraft}
+                onLastNameChange={updateLastNameDraft}
                 onEdit={() => startFieldEdit("name")}
                 onCancel={cancelFieldEdit}
                 onSave={() => void saveFieldEdit("name")}
@@ -1134,7 +1190,8 @@ function AccountPage() {
                 draftValue={fieldDraft}
                 editing={editingField === "email"}
                 saving={savingField === "email"}
-                onDraftChange={setFieldDraft}
+                error={editingField === "email" ? fieldError : null}
+                onDraftChange={updateFieldDraft}
                 onEdit={() => startFieldEdit("email")}
                 onCancel={cancelFieldEdit}
                 onSave={() => void saveFieldEdit("email")}
@@ -1147,8 +1204,9 @@ function AccountPage() {
                 draftValue={fieldDraft}
                 editing={editingField === "phone"}
                 saving={savingField === "phone"}
+                error={editingField === "phone" ? fieldError : null}
                 placeholder="+1 555 123 4567"
-                onDraftChange={setFieldDraft}
+                onDraftChange={updateFieldDraft}
                 onEdit={() => startFieldEdit("phone")}
                 onCancel={cancelFieldEdit}
                 onSave={() => void saveFieldEdit("phone")}
@@ -1158,7 +1216,8 @@ function AccountPage() {
                 draftValue={fieldDraft}
                 editing={editingField === "lsacDate"}
                 saving={savingField === "lsacDate"}
-                onDraftChange={setFieldDraft}
+                error={editingField === "lsacDate" ? fieldError : null}
+                onDraftChange={updateFieldDraft}
                 onEdit={() => startFieldEdit("lsacDate")}
                 onCancel={cancelFieldEdit}
                 onSave={() => void saveFieldEdit("lsacDate")}
@@ -1168,8 +1227,15 @@ function AccountPage() {
                 newPasswordDraft={newPasswordDraft}
                 editing={editingField === "password"}
                 saving={savingField === "password"}
-                onCurrentPasswordChange={setCurrentPasswordDraft}
-                onNewPasswordChange={setNewPasswordDraft}
+                error={editingField === "password" ? fieldError : null}
+                onCurrentPasswordChange={(value) => {
+                  setFieldError(null)
+                  setCurrentPasswordDraft(value)
+                }}
+                onNewPasswordChange={(value) => {
+                  setFieldError(null)
+                  setNewPasswordDraft(value)
+                }}
                 onEdit={() => startFieldEdit("password")}
                 onCancel={cancelFieldEdit}
                 onSave={() => void saveFieldEdit("password")}
