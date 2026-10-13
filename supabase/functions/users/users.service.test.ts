@@ -319,6 +319,41 @@ Deno.test('createUsersService.updateAccountProfile rejects missing last name', a
   )
 })
 
+Deno.test('createUsersService.updateAccountProfile rejects names that include numbers', async () => {
+  const service = createUsersService({ repository: mockRepo() })
+
+  await assertRejects(
+    () => service.updateAccountProfile('user-1', { firstName: 'Assad1212', lastName: 'Siyi' }),
+    Error,
+    'Name cannot include numbers',
+  )
+  await assertRejects(
+    () => service.updateAccountProfile('user-1', { firstName: 'Assad', lastName: 'Siyi2' }),
+    Error,
+    'Name cannot include numbers',
+  )
+})
+
+Deno.test('createUsersService.updateAccountProfile rejects phone values with letters', async () => {
+  const service = createUsersService({ repository: mockRepo() })
+
+  await assertRejects(
+    () => service.updateAccountProfile('user-1', { phone: 'aaa1133' }),
+    Error,
+    'Phone number cannot include letters',
+  )
+})
+
+Deno.test('createUsersService.updateAccountProfile rejects phone values that are too short', async () => {
+  const service = createUsersService({ repository: mockRepo() })
+
+  await assertRejects(
+    () => service.updateAccountProfile('user-1', { phone: '123' }),
+    Error,
+    'Enter a valid phone number',
+  )
+})
+
 Deno.test('createUsersService.updateAccountProfile stores owned avatar URL', async () => {
   let savedRow: { avatar_url?: string | null } | undefined
   const avatarUrl =
