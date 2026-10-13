@@ -17,6 +17,8 @@ import {
 import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
+import { getAppStore } from "@/app/store-ref"
+import { setProfile } from "@/features/student-session/studentSessionSlice"
 import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
 import { hasPendingDiagnosticIntent, isInDiagnosticAcquisitionFunnel, readDiagnosticIntent } from "@/lib/auth/diagnostic-intent"
 import { resolvePendingCheckoutDestination } from "@/lib/auth/pending-checkout-plan"
@@ -24,6 +26,10 @@ import { userNeedsPasswordSetup } from "@/lib/auth/password-setup"
 import { splitFullName } from "@/lib/lawhub-identity"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
+
+function hydrateSessionProfile(profile: Parameters<typeof setProfile>[0]) {
+  getAppStore().dispatch(setProfile(profile))
+}
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13
 
@@ -85,6 +91,7 @@ function OnboardingPage() {
         ])
         if (!alive) return
         if (!user) return navigate("/login", { replace: true })
+        if (profile) hydrateSessionProfile(profile)
         if (profile && (isInDiagnosticAcquisitionFunnel() || (profile.is_first_time_login && hasPendingDiagnosticIntent()))) {
           navigate("/diagnostic/start", { replace: true })
           return
@@ -104,6 +111,22 @@ function OnboardingPage() {
           const names = splitFullName(profile.full_name)
           setFirstName(names.firstName)
           setLastName(names.lastName)
+        } else {
+          const meta = user.user_metadata as Record<string, unknown> | undefined
+          const metaFull =
+            (typeof meta?.full_name === "string" && meta.full_name) ||
+            (typeof meta?.name === "string" && meta.name) ||
+            ""
+          const metaGiven = typeof meta?.given_name === "string" ? meta.given_name : ""
+          const metaFamily = typeof meta?.family_name === "string" ? meta.family_name : ""
+          if (metaGiven || metaFamily) {
+            setFirstName(metaGiven.trim())
+            setLastName(metaFamily.trim())
+          } else if (metaFull) {
+            const names = splitFullName(metaFull)
+            setFirstName(names.firstName)
+            setLastName(names.lastName)
+          }
         }
       } catch (e) {
         if (!alive) return
@@ -141,7 +164,7 @@ function OnboardingPage() {
     setError(null)
     try {
       if (requiresPassword) await authApi.updatePassword(password)
-      await usersApi.saveOnboarding({
+      const saved = await usersApi.saveOnboarding({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         plannedLsatDate: plannedLsatDate || null,
@@ -153,7 +176,9 @@ function OnboardingPage() {
         studyHoursLabel: studyHours,
         wantsLessons: wantsLessons === "yes",
       })
-      await usersApi.completeFirstLogin()
+      hydrateSessionProfile(saved.profile)
+      const completed = await usersApi.completeFirstLogin()
+      hydrateSessionProfile(completed)
       captureEvent(AnalyticsEvent.onboardingCompleted)
       navigate(
         resolvePendingCheckoutDestination(await fetchPostAuthDestination(usersApi)),
@@ -184,12 +209,14 @@ function OnboardingPage() {
     setError(null)
     try {
       if (requiresPassword) await authApi.updatePassword(password)
-      await usersApi.saveOnboarding({
+      const saved = await usersApi.saveOnboarding({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         plannedLsatDate: plannedLsatDate || null,
         plannedLsatWindow: null,
       })
+      // Bust the "null profile" session cache so RequireRole does not bounce back here.
+      hydrateSessionProfile(saved.profile)
       navigate("/diagnostic/start", { replace: true })
     } catch (e) {
       setError(e instanceof Error ? formatSupabaseCallError(e) : "Unable to continue to diagnostic.")

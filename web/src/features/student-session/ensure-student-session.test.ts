@@ -79,4 +79,24 @@ describe("ensureStudentSession", () => {
 
     expect(getEntitlementState).toHaveBeenCalledTimes(1)
   })
+
+  it("refetches after a cached null profile so onboarding-created rows are visible", async () => {
+    getMyProfile.mockResolvedValueOnce(null).mockResolvedValueOnce({
+      id: "u1",
+      email: "a@b.com",
+      full_name: "Ada Lovelace",
+      first_name: "Ada",
+      last_name: "Lovelace",
+      phone: null,
+      role: "student",
+      student_coaching_id: null,
+      is_first_time_login: true,
+      created_at: "2026-01-01",
+      updated_at: "2026-01-01",
+    })
+
+    expect(await ensureProfile()).toBeNull()
+    expect(await ensureProfile()).toMatchObject({ id: "u1", first_name: "Ada" })
+    expect(getMyProfile).toHaveBeenCalledTimes(2)
+  })
 })
