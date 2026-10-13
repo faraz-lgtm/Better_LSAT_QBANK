@@ -316,8 +316,7 @@ function PublicOnly({ children }: { children: ReactElement }) {
       }
       // Defer: avoid getSession deadlock inside onAuthStateChange (common after Google OAuth).
       deferAuthWork(() => {
-        void usersApi
-          .getMyProfile()
+        void ensureProfile()
           .then(async (nextProfile) => {
             if (!alive) return
             // Never wipe a loaded profile with a null background refetch.
@@ -332,16 +331,6 @@ function PublicOnly({ children }: { children: ReactElement }) {
             // after edge function calls). Clearing profile here unmounts the whole app shell.
           })
       })
-      void ensureProfile()
-        .then(async (nextProfile) => {
-          if (!alive) return
-          setProfile(nextProfile)
-          await syncDestination(nextProfile)
-        })
-        .catch(() => {
-          // Keep the existing profile on transient refetch failures (e.g. token refresh
-          // after edge function calls). Clearing profile here unmounts the whole app shell.
-        })
     })
     return () => {
       alive = false
@@ -450,7 +439,7 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
   const studentPrepTestUiPreview =
     requiredRole === "student" &&
     allowsPrepTestUnauthenticatedPreview() &&
-    location.pathname.startsWith("/app/practice/preptest") || isPrepTestStudentPath(location.pathname)
+    (location.pathname.startsWith("/app/practice/preptest") || isPrepTestStudentPath(location.pathname))
 
   useEffect(() => {
     let alive = true
@@ -490,8 +479,7 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
       }
       // Defer: avoid getSession deadlock inside onAuthStateChange (common after Google OAuth).
       deferAuthWork(() => {
-        void usersApi
-          .getMyProfile()
+        void ensureProfile()
           .then((nextProfile) => {
             if (!alive) return
             // Never wipe a loaded profile with a null background refetch.
@@ -502,14 +490,6 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
             // Preserve profile during background refetches triggered by Supabase auth events.
           })
       })
-      void ensureProfile()
-        .then((nextProfile) => {
-          if (!alive) return
-          setProfile(nextProfile)
-        })
-        .catch(() => {
-          // Preserve profile during background refetches triggered by Supabase auth events.
-        })
     })
     return () => {
       alive = false
@@ -783,14 +763,6 @@ const router = createBrowserRouter([
           },
           { path: "account/prep-test-pools", element: <Navigate to="/app/settings" replace /> },
           { path: "account/settings", element: <Navigate to="/app/settings" replace /> },
-          {
-            path: "diagnostic/results",
-            element: (
-              <LazyPage>
-                <GuestDiagnosticResultsPage />
-              </LazyPage>
-            ),
-          },
           { path: "diagnostic/review", element: <Navigate to="/diagnostic/review" replace /> },
           { path: "diagnostic/tester", element: <Navigate to="/diagnostic/tester" replace /> },
           {
