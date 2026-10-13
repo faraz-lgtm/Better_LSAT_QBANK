@@ -832,12 +832,19 @@ function prepTestLabel(moduleId: string, title: string | null, prepTestNumber: s
 
 function answeredIdsFromMetadata(metadata: Record<string, unknown>): number {
   const ids = metadata.answeredQuestionIds
-  return Array.isArray(ids) ? ids.length : 0
+  if (Array.isArray(ids)) return ids.length
+  // Hub RPC returns a numeric count to avoid loading SECTION metadata TOAST.
+  return typeof metadata.answeredCount === 'number' && Number.isFinite(metadata.answeredCount)
+    ? Math.max(0, Math.floor(metadata.answeredCount))
+    : 0
 }
 
 function questionIdsFromMetadata(metadata: Record<string, unknown>): number {
   const ids = metadata.questionIds
-  return Array.isArray(ids) ? ids.length : 0
+  if (Array.isArray(ids)) return ids.length
+  return typeof metadata.questionCount === 'number' && Number.isFinite(metadata.questionCount)
+    ? Math.max(0, Math.floor(metadata.questionCount))
+    : 0
 }
 
 function prepTestSessionsFrom(sessions: PracticeSessionRow[]): PracticeSessionRow[] {
@@ -1327,9 +1334,17 @@ function buildPrepTestDetail(
     const isPracticeable = sec.sectionType === 'LR' || sec.sectionType === 'RC'
     const secSessions = sectionSessionsBySectionId.get(sec.id) ?? []
     const latest = secSessions[0] ?? null
-    const answeredCount = latest ? answeredIdsFromMetadata(latest.metadata) : 0
-    const totalQs = latest ? questionIdsFromMetadata(latest.metadata) : sec.questionCount
     const completed = Boolean(latest?.completed_at)
+    const totalQs = latest
+      ? questionIdsFromMetadata(latest.metadata) || sec.questionCount
+      : sec.questionCount
+    // Completed sections: prefer explicit counts, else assume full section answered.
+    // Open sections: hub RPC supplies metadata.answeredCount (no SECTION metadata TOAST).
+    const answeredCount = latest
+      ? completed
+        ? answeredIdsFromMetadata(latest.metadata) || totalQs
+        : answeredIdsFromMetadata(latest.metadata)
+      : 0
 
     return {
       id: sec.id,
@@ -1591,6 +1606,52 @@ function groupSessionsByPrepTestId(sessions: PracticeSessionRow[]): Map<string, 
   return map
 }
 
+function mapPoolItemFromRpc(raw: Record<string, unknown>): PrepTestPoolItem {
+  const attemptsRaw = Array.isArray(raw.attempts) ? raw.attempts : []
+  const status =
+    raw.status === 'fresh' || raw.status === 'in_progress' || raw.status === 'completed'
+      ? raw.status
+      : 'fresh'
+  const blindReviewStatus =
+    raw.blindReviewStatus === 'eligible' || raw.blindReviewStatus === 'in_progress'
+      ? raw.blindReviewStatus
+      : null
+  return {
+    id: String(raw.id),
+    moduleId: String(raw.moduleId ?? ''),
+    title: raw.title != null ? String(raw.title) : null,
+    prepTestNumber: raw.prepTestNumber != null ? String(raw.prepTestNumber) : null,
+    questionCount: typeof raw.questionCount === 'number' ? raw.questionCount : 0,
+    sectionCount: typeof raw.sectionCount === 'number' ? raw.sectionCount : 0,
+    practiceableSectionCount:
+      typeof raw.practiceableSectionCount === 'number' ? raw.practiceableSectionCount : 0,
+    timeMinutes: typeof raw.timeMinutes === 'number' ? raw.timeMinutes : 0,
+    status,
+    scaledScore: typeof raw.scaledScore === 'number' ? raw.scaledScore : null,
+    blindReviewScaledScore:
+      typeof raw.blindReviewScaledScore === 'number' ? raw.blindReviewScaledScore : null,
+    blindReviewStatus,
+    completedAt: raw.completedAt != null ? String(raw.completedAt) : null,
+    attempts: attemptsRaw.map((attempt, index) => {
+      const row = attempt as Record<string, unknown>
+      return {
+        sessionId: String(row.sessionId ?? ''),
+        completedAt: String(row.completedAt ?? ''),
+        scaledScore: typeof row.scaledScore === 'number' ? row.scaledScore : null,
+        blindReviewScaledScore:
+          typeof row.blindReviewScaledScore === 'number' ? row.blindReviewScaledScore : null,
+        attemptNumber:
+          typeof row.attemptNumber === 'number' ? row.attemptNumber : attemptsRaw.length - index,
+      }
+    }),
+    openPrepTestSessionId:
+      raw.openPrepTestSessionId != null ? String(raw.openPrepTestSessionId) : null,
+    inDrills: raw.inDrills === true,
+    inSections: raw.inSections === true,
+    inTests: raw.inTests === true,
+  }
+}
+
 function poolItemFromRow(
   row: PrepTestPoolRow,
   sessions: PracticeSessionRow[],
@@ -1623,7 +1684,8 @@ function poolItemFromRow(
     blindReviewScaledScore,
     blindReviewStatus,
     completedAt,
-    attempts: poolAttemptsFromSessions(sessions),
+    // Attempt history is filled only for the paginated page (see listPrepTestPool).
+    attempts: [],
     openPrepTestSessionId,
     inDrills: membership.inDrills,
     inSections: membership.inSections,
@@ -2566,11 +2628,13 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         flaggedQuestionIds: flaggedQuestionIdsFromMetadata(metaRaw),
       }
 
-      const rows = await deps.repository.getDrillQuestionRowsByIds(questionIds)
       const includeOptionExplanations = session.completed_at != null
+      const [rows, events] = await Promise.all([
+        deps.repository.getDrillQuestionRowsByIds(questionIds),
+        deps.repository.listAnswerEventsForSession(sessionId, userId),
+      ])
       const questions = mapDrillQuestionRows(rows, includeOptionExplanations)
 
-      const events = await deps.repository.listAnswerEventsForSession(sessionId, userId)
       const latest = latestAnswerByQuestion(events)
       const answers: DrillAnswerState[] = [...latest.values()].map((e) => ({
         questionId: e.question_id,
@@ -2776,7 +2840,9 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         metadata: metadata as unknown as Record<string, unknown>,
       })
 
-      const rows = await deps.repository.getDrillQuestionRowsByIds(questionIds)
+      const rows = await deps.repository.getDrillQuestionRowsByIds(questionIds, {
+        passageSectionIds: sectionType === 'RC' ? [sectionId] : [],
+      })
       const questions = withSectionTargetTimes(mapDrillQuestionRows(rows, false), rows)
 
       const poolItem: SectionPoolItem = {
@@ -2806,9 +2872,14 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       }
     },
 
-    async getSectionSession(userId: string, body: { sessionId?: unknown }): Promise<SectionSessionResponse> {
+    async getSectionSession(
+      userId: string,
+      body: { sessionId?: unknown; includeQuestions?: unknown },
+    ): Promise<SectionSessionResponse> {
       const sessionId = typeof body.sessionId === 'string' ? body.sessionId : ''
       if (!sessionId) throw new PracticeValidationError('sessionId is required')
+      // Intro screen only needs section chrome — skip ~100KB+ question HTML until needed.
+      const includeQuestions = body.includeQuestions !== false
 
       const session = await deps.repository.getSessionById(sessionId, userId)
       if (!session) throw new PracticeForbiddenError('Session not found')
@@ -2854,14 +2925,34 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         timeMinutes: defaultTimeMinutes(sectionType),
       }
 
-      const rows = await deps.repository.getDrillQuestionRowsByIds(questionIds)
+      const sessionLabel =
+        [metadata.prepTestTitle, metadata.sectionTitle].filter(Boolean).join(' — ') || null
+
+      if (!includeQuestions) {
+        return {
+          session,
+          metadata,
+          section: poolItem,
+          questions: [],
+          answers: [],
+          blindReviewAnswers: [],
+          blindReviewRawScore: null,
+          sessionLabel,
+        }
+      }
+
       const includeOptionExplanations = session.completed_at != null
+      const [rows, events] = await Promise.all([
+        deps.repository.getDrillQuestionRowsByIds(questionIds, {
+          passageSectionIds: sectionType === 'RC' ? [session.section_id] : [],
+        }),
+        deps.repository.listAnswerEventsForSession(sessionId, userId),
+      ])
+
       const questions = withSectionTargetTimes(
         mapDrillQuestionRows(rows, includeOptionExplanations),
         rows,
       )
-
-      const events = await deps.repository.listAnswerEventsForSession(sessionId, userId)
       const latest = latestAnswerByQuestion(events)
       const scoredEvents = session.completed_at
         ? answerEventsAtCompletion(events, session.completed_at)
@@ -2895,9 +2986,6 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
         blindReviewRawScore = blindReviewRawScoreFromStates(blindReviewAnswers)
       }
 
-      const sessionLabel =
-        [metadata.prepTestTitle, metadata.sectionTitle].filter(Boolean).join(' — ') || null
-
       return {
         session,
         metadata,
@@ -2926,11 +3014,30 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           ? body.filter
           : null
 
-      const rows = await deps.repository.listPrepTestPoolRows()
+      const fromRpc = await deps.repository.listStudentPrepTestPoolPage({
+        userId,
+        filter,
+        page,
+        pageSize,
+        sort,
+      })
+      if (fromRpc) {
+        return {
+          prepTests: fromRpc.prepTests.map((raw) => mapPoolItemFromRpc(raw)),
+          total: fromRpc.total,
+          page: fromRpc.page,
+          pageSize: fromRpc.pageSize,
+          statusCounts: fromRpc.statusCounts,
+        }
+      }
+
+      const [rows, allSessions, overrides] = await Promise.all([
+        deps.repository.listPrepTestPoolRows(),
+        deps.repository.listUserSessionsForPrepTests(userId),
+        loadPoolOverrideMap(deps.repository, userId),
+      ])
       const rowsById = new Map(rows.map((row) => [row.id, row]))
-      const allSessions = await deps.repository.listUserSessionsForPrepTests(userId)
       const sessionsByPrepTestId = groupSessionsByPrepTestId(allSessions)
-      const overrides = await loadPoolOverrideMap(deps.repository, userId)
 
       const items: PrepTestPoolItem[] = []
       for (const row of rows) {
@@ -2970,7 +3077,10 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
             prepTestId: item.id,
             practiceableSectionIds: practiceableIds,
             sessions,
-            item,
+            item: {
+              ...item,
+              attempts: poolAttemptsFromSessions(sessions),
+            },
           }
         }),
       )
@@ -2982,9 +3092,19 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       userId: string,
       body: { prepTestId?: unknown },
     ): Promise<PrepTestDetailResponse> {
-      const requestedId = typeof body.prepTestId === 'string' ? body.prepTestId : ''
-      const { prepTestId, row } = await resolveVisiblePrepTest(deps.repository, userId, requestedId)
+      const requestedId = typeof body.prepTestId === 'string' ? body.prepTestId.trim() : ''
+      if (!requestedId) throw new PracticeValidationError('prepTestId is required')
 
+      // Fast path: single RPC for admin_prep_tests.id hub URLs (avoids SECTION metadata TOAST).
+      const hub = await deps.repository.getPrepTestHubDetail(userId, requestedId)
+      if (hub) {
+        assertStudentVisiblePrepTest(hub.row.moduleId)
+        const prepTestSession =
+          hub.sessions.find((s) => s.kind === 'PREPTEST' && !s.completed_at) ?? null
+        return buildPrepTestDetail(hub.row, hub.sessions, prepTestSession)
+      }
+
+      const { prepTestId, row } = await resolveVisiblePrepTest(deps.repository, userId, requestedId)
       const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
       const prepTestSession =
         sessions.find((s) => s.kind === 'PREPTEST' && !s.completed_at) ?? null
@@ -2999,10 +3119,13 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const prepTestId = typeof body.prepTestId === 'string' ? body.prepTestId : ''
       if (!prepTestId) throw new PracticeValidationError('prepTestId is required')
 
-      const row = await deps.repository.getPrepTestDetailRow(prepTestId)
+      const [row, testOverrides, existingSessions] = await Promise.all([
+        deps.repository.getPrepTestDetailRow(prepTestId),
+        loadPoolOverrideMap(deps.repository, userId),
+        deps.repository.listUserSessionsForPrepTest(userId, prepTestId),
+      ])
       if (!row) throw new PracticeValidationError('prepTestId not found')
       assertStudentVisiblePrepTest(row.moduleId)
-      const testOverrides = await loadPoolOverrideMap(deps.repository, userId)
       if (!resolvePoolMembership(row.id, row.moduleId, testOverrides).inTests) {
         throw new PracticeValidationError('This PrepTest is not in your tests pool')
       }
@@ -3017,7 +3140,7 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
       const prepTestNumber = prepTestNumberFromModuleId(row.moduleId)
       const prepTestTitle = row.title?.trim() || prepTestLabel(row.moduleId, row.title, prepTestNumber)
 
-      const sessions = await deps.repository.listUserSessionsForPrepTest(userId, prepTestId)
+      const sessions = [...existingSessions]
       let prepTestSession =
         sessions.find((s) => s.kind === 'PREPTEST' && !s.completed_at) ?? null
 
@@ -3269,8 +3392,10 @@ export function createPracticeService(deps: { repository: PracticeRepository }) 
           ? body.filter
           : null
 
-      const rows = await deps.repository.listPrepTestPoolRows()
-      const allSessions = await deps.repository.listUserSessionsForPrepTests(userId)
+      const [rows, allSessions] = await Promise.all([
+        deps.repository.listPrepTestPoolRows(),
+        deps.repository.listUserSessionsForPrepTests(userId),
+      ])
       const sessionsByPrepTestId = groupSessionsByPrepTestId(allSessions)
 
       const items: BlindReviewPoolItem[] = []

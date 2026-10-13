@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 
+import {
+  consumePendingFreeDiagnosticSignup,
+  trackFreeDiagnosticSignup,
+} from "@/lib/analytics/gtm"
 import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
@@ -97,6 +101,9 @@ function AuthCallbackPage() {
         }
 
         captureEvent(AnalyticsEvent.authCompleted)
+        if (consumePendingFreeDiagnosticSignup()) {
+          trackFreeDiagnosticSignup()
+        }
         navigate(
           resolvePendingCheckoutDestination(await fetchPostAuthDestination(usersApi)),
           { replace: true },

@@ -37,7 +37,13 @@ function createClient(opts: { rpcDataByName?: Record<string, unknown> }) {
             return
           }
           if (table === 'admin_questions') {
-            resolve({ data: [{ id: 'q1' }, { id: 'q2' }], error: null })
+            resolve({
+              data: (inIds ?? []).flatMap((secId, i) => [
+                { id: `q${i * 2 + 1}`, section_id: secId },
+                { id: `q${i * 2 + 2}`, section_id: secId },
+              ]),
+              error: null,
+            })
             return
           }
           if (table === 'practice_sessions') {
@@ -68,6 +74,41 @@ Deno.test('fetchQuestionStatsForPrepTestIds does not download explanation HTML',
   assertEquals(stats.questionIds, ['q1', 'q2'])
   assertEquals(calls.some((c) => c.rpc === 'admin_prep_test_question_stats'), true)
   assertEquals(calls.some((c) => c.select?.includes('explanation')), false)
+})
+
+Deno.test('listExplanationQuestionStatusesForIds uses scoped progress RPC', async () => {
+  const { client, calls } = createClient({
+    rpcDataByName: {
+      user_explanation_question_progress_for_ids: [
+        { question_id: 'q1', status: 'answered' },
+        { question_id: 'q2', status: 'seen' },
+      ],
+    },
+  })
+  const repo = createExplanationsRepository(client as never)
+  const byId = await repo.listExplanationQuestionStatusesForIds('user-1', ['q1', 'q2', 'q3'])
+  assertEquals(byId.get('q1'), 'answered')
+  assertEquals(byId.get('q2'), 'seen')
+  assertEquals(byId.get('q3'), 'fresh')
+  assertEquals(calls.some((c) => c.rpc === 'user_explanation_question_progress_for_ids'), true)
+})
+
+Deno.test('fetchQuestionStatsByPrepTestId batches stats for multiple prep tests', async () => {
+  const { client, calls } = createClient({
+    rpcDataByName: {
+      admin_prep_test_question_stats: [
+        { prep_test_id: 'pt1', explained_or_video: 1 },
+        { prep_test_id: 'pt2', explained_or_video: 3 },
+      ],
+    },
+  })
+  const repo = createExplanationsRepository(client as never)
+  const byId = await repo.fetchQuestionStatsByPrepTestId(['pt1', 'pt2'])
+  assertEquals(byId.get('pt1')?.questionCount, 2)
+  assertEquals(byId.get('pt1')?.explainedCount, 1)
+  assertEquals(byId.get('pt2')?.questionCount, 2)
+  assertEquals(byId.get('pt2')?.explainedCount, 3)
+  assertEquals(calls.filter((c) => c.rpc === 'admin_prep_test_question_stats').length, 1)
 })
 
 Deno.test('listLsatCatalogQuestionIds uses catalog RPC', async () => {

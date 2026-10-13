@@ -1363,6 +1363,54 @@ Deno.test('startSection creates session with all section questions', async () =>
   assertEquals(out.section.sectionType, 'LR')
 })
 
+Deno.test('getSectionSession can skip question HTML for intro shell', async () => {
+  let questionLoads = 0
+  const service = createPracticeService({
+    repository: {
+      ...mockRepo(),
+      getSessionById: async () =>
+        baseSession({
+          id: 'sess-1',
+          kind: 'SECTION',
+          section_id: 'sec-1',
+          metadata: {
+            sectionType: 'RC',
+            timing: '35',
+            showAnswers: 'end',
+            questionIds: ['q1', 'q2'],
+            prepTestTitle: 'PT 159',
+            sectionTitle: 'Section 2',
+          },
+        }),
+      getSectionDetail: async () => ({
+        id: 'sec-1',
+        section_id: 'SEED-RC',
+        section_number: 2,
+        section_type: 'RC',
+        title: 'RC',
+        module_id: 'LSAC159',
+        prep_test_id: 'pt-159',
+        admin_prep_tests: { id: 'pt-159', title: 'PT 159', module_id: 'LSAC159' },
+      }),
+      getDrillQuestionRowsByIds: async () => {
+        questionLoads += 1
+        return []
+      },
+      listAnswerEventsForSession: async () => [],
+    } as never,
+  })
+
+  const out = await service.getSectionSession('user-1', {
+    sessionId: 'sess-1',
+    includeQuestions: false,
+  })
+  assertEquals(questionLoads, 0)
+  assertEquals(out.questions.length, 0)
+  assertEquals(out.section.sectionNumber, 2)
+  assertEquals(out.section.questionCount, 2)
+  assertEquals(out.metadata.sectionType, 'RC')
+})
+
 Deno.test('getSectionSession returns questions and resume answers', async () => {
   const service = createPracticeService({
     repository: sectionRepo({
@@ -1534,8 +1582,10 @@ const prepTestDetailRow: PrepTestDetailRow = {
 function preptestRepo(overrides: Record<string, unknown> = {}) {
   const base = {
     ...mockRepo(),
+    listStudentPrepTestPoolPage: async () => null,
     listPrepTestPoolRows: async () => prepTestPoolRows,
     getPrepTestDetailRow: async (id: string) => (id === 'pt-900' ? prepTestDetailRow : null),
+    getPrepTestHubDetail: async () => null,
     listUserSessionsForPrepTest: async () => [] as PracticeSessionRow[],
     listUserSessionsForPrepTests: async () => [] as PracticeSessionRow[],
     insertSession: async (input: { kind: string; prepTestId: string | null; metadata: Record<string, unknown> }) =>
@@ -2003,6 +2053,54 @@ Deno.test('getPrepTestDetail returns LR/RC sections only as practiceable', async
   assertEquals(out.sections.length, 3)
   assertEquals(out.sections.filter((s) => s.practiceable).length, 2)
   assertEquals(out.prepTest.label, 'PT 900')
+})
+
+Deno.test('getPrepTestDetail uses hub RPC payload when available', async () => {
+  let hubLoads = 0
+  const service = createPracticeService({
+    repository: preptestRepo({
+      getPrepTestHubDetail: async (userId: string, prepTestId: string) => {
+        hubLoads += 1
+        assertEquals(userId, 'user-1')
+        assertEquals(prepTestId, 'pt-900')
+        return {
+          row: prepTestDetailRow,
+          sessions: [
+            baseSession({
+              kind: 'SECTION',
+              prep_test_id: 'pt-900',
+              section_id: 'sec-lr',
+              completed_at: null,
+              metadata: { answeredCount: 12 },
+            }),
+          ],
+        }
+      },
+      getPrepTestDetailRow: async () => {
+        throw new Error('should not fall back when hub RPC hits')
+      },
+      listUserSessionsForPrepTest: async () => {
+        throw new Error('should not fall back when hub RPC hits')
+      },
+    }) as never,
+  })
+
+  const out = await service.getPrepTestDetail('user-1', { prepTestId: 'pt-900' })
+  assertEquals(hubLoads, 1)
+  assertEquals(out.prepTest.id, 'pt-900')
+  const lr = out.sections.find((s) => s.id === 'sec-lr')
+  assertEquals(lr?.answeredCount, 12)
+  assertEquals(lr?.activeSectionSessionId != null, true)
+})
+
+Deno.test('getPrepTestDetail falls back when hub RPC returns null', async () => {
+  const service = createPracticeService({
+    repository: preptestRepo({
+      getPrepTestHubDetail: async () => null,
+    }) as never,
+  })
+  const out = await service.getPrepTestDetail('user-1', { prepTestId: 'pt-900' })
+  assertEquals(out.prepTest.id, 'pt-900')
 })
 
 Deno.test('getPrepTestDetail resolves a PrepTest practice session id', async () => {

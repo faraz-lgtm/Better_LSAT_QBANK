@@ -49,6 +49,8 @@ export async function handlePrepExplanationsPrepTestsRequest(req: Request): Prom
     let offset: number | undefined
     let sort: 'newest' | 'oldest' | undefined
     let bookmarkedOnly = false
+    let includeStatusCounts: boolean | undefined
+    let includeDetails: boolean | undefined
     if (req.method === 'POST') {
       const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
       if (typeof body.page === 'number' && Number.isFinite(body.page)) page = body.page
@@ -56,19 +58,35 @@ export async function handlePrepExplanationsPrepTestsRequest(req: Request): Prom
       if (typeof body.offset === 'number' && Number.isFinite(body.offset)) offset = body.offset
       if (body.sort === 'newest' || body.sort === 'oldest') sort = body.sort
       bookmarkedOnly = body.bookmarkedOnly === true
+      if (typeof body.includeStatusCounts === 'boolean') includeStatusCounts = body.includeStatusCounts
+      if (typeof body.includeDetails === 'boolean') includeDetails = body.includeDetails
     } else {
       const url = new URL(req.url)
       const pageParam = url.searchParams.get('page')
       const pageSizeParam = url.searchParams.get('pageSize')
       const offsetParam = url.searchParams.get('offset')
       const sortParam = url.searchParams.get('sort')
+      const includeStatusCountsParam = url.searchParams.get('includeStatusCounts')
+      const includeDetailsParam = url.searchParams.get('includeDetails')
       if (pageParam) page = Number.parseInt(pageParam, 10)
       if (pageSizeParam) pageSize = Number.parseInt(pageSizeParam, 10)
       if (offsetParam) offset = Number.parseInt(offsetParam, 10)
       if (sortParam === 'newest' || sortParam === 'oldest') sort = sortParam
       bookmarkedOnly = url.searchParams.get('bookmarkedOnly') === 'true'
+      if (includeStatusCountsParam === 'true') includeStatusCounts = true
+      if (includeStatusCountsParam === 'false') includeStatusCounts = false
+      if (includeDetailsParam === 'true') includeDetails = true
+      if (includeDetailsParam === 'false') includeDetails = false
     }
-    const data = await explanationsService().listPrepTests(auth.user.id, { page, pageSize, offset, sort, bookmarkedOnly })
+    const data = await explanationsService().listPrepTests(auth.user.id, {
+      page,
+      pageSize,
+      offset,
+      sort,
+      bookmarkedOnly,
+      ...(typeof includeStatusCounts === 'boolean' ? { includeStatusCounts } : {}),
+      ...(typeof includeDetails === 'boolean' ? { includeDetails } : {}),
+    })
     return json(data, {}, cors)
   } catch (e) {
     console.error('prep-explanations-prep-tests', e)
@@ -142,6 +160,24 @@ export async function handlePrepExplanationDetailRequest(req: Request): Promise<
       return json({ error: msg }, { status: 404 }, cors)
     }
     console.error('prep-explanation-detail', e)
+    return json({ error: 'Internal server error' }, { status: 500 }, cors)
+  }
+}
+
+export async function handlePrepExplanationsStatusCountsRequest(req: Request): Promise<Response> {
+  if (req.method === 'OPTIONS') return optionsNoContent(cors)
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    return json({ error: 'Method not allowed' }, { status: 405 }, cors)
+  }
+
+  const auth = await requireAuthUser(req, cors)
+  if (!auth.ok) return auth.response
+
+  try {
+    const statusCounts = await explanationsService().getExplanationStatusCounts(auth.user.id)
+    return json({ statusCounts }, {}, cors)
+  } catch (e) {
+    console.error('prep-explanations-status-counts', e)
     return json({ error: 'Internal server error' }, { status: 500 }, cors)
   }
 }

@@ -53,6 +53,38 @@ describe("createPrepCourseApi", () => {
     expect(out.hydratedModuleIds).toEqual(["m1"])
   })
 
+  it("getCourse dedupes concurrent identical requests", async () => {
+    type InvokeResult = { data: unknown; error: null }
+    let resolveInvoke!: (value: InvokeResult) => void
+    const invoke = vi.fn().mockImplementation(
+      () =>
+        new Promise<InvokeResult>((resolve) => {
+          resolveInvoke = resolve
+        }),
+    )
+    const api = createPrepCourseApi(mockSupabase(invoke))
+
+    const p1 = api.getCourse("prep-course", { hydrate: "first" })
+    const p2 = api.getCourse("prep-course", { hydrate: "first" })
+
+    // Allow getSession microtasks to flush so invoke is scheduled once.
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(invoke).toHaveBeenCalledTimes(1)
+
+    resolveInvoke({
+      data: {
+        course: { id: "c1", slug: "prep-course" },
+        lessons: [],
+      },
+      error: null,
+    })
+    const [a, b] = await Promise.all([p1, p2])
+    expect(a.course.id).toBe("c1")
+    expect(b.course.id).toBe("c1")
+    expect(invoke).toHaveBeenCalledTimes(1)
+  })
+
   it("setModuleBookmark POSTs bookmarkModuleId", async () => {
     const invoke = vi.fn().mockResolvedValue({
       data: { bookmarks: { moduleIds: ["m1"], lessonSlugs: [] } },

@@ -110,6 +110,16 @@ function PrepCourseContentPage() {
   const bookmarkedLessonSlugs = useMemo(() => new Set(bookmarks.lessonSlugs), [bookmarks.lessonSlugs])
 
   const activeLessonSlug = locationState.activeLessonSlug
+  const activeLessonSlugRef = useRef(activeLessonSlug)
+  const limitFreeAccessRef = useRef(limitFreeAccess)
+
+  useEffect(() => {
+    activeLessonSlugRef.current = activeLessonSlug
+  }, [activeLessonSlug])
+
+  useEffect(() => {
+    limitFreeAccessRef.current = limitFreeAccess
+  }, [limitFreeAccess])
 
   useEffect(() => {
     hydratedModuleIdsRef.current = hydratedModuleIds
@@ -159,6 +169,8 @@ function PrepCourseContentPage() {
         return
       }
       try {
+        // Fetch once per courseSlug — do not re-run when entitlement/limitFreeAccess settles
+        // (that was causing a second full outline round-trip and ~2× perceived load time).
         const data = await prepCourseApi.getCourse(courseSlug, { hydrate: "first" })
         if (!alive) return
         const normalized = normalizeCurriculum(data.curriculum, data.lessons, data.course.id)
@@ -169,16 +181,18 @@ function PrepCourseContentPage() {
         setHydratedModuleIds(new Set(data.hydratedModuleIds ?? []))
         setModuleStats(data.moduleStats ?? [])
 
-        const lessonLoc = activeLessonSlug ? findLessonLocation(normalized, activeLessonSlug) : null
+        const lessonSlug = activeLessonSlugRef.current
+        const limitAccess = limitFreeAccessRef.current
+        const lessonLoc = lessonSlug ? findLessonLocation(normalized, lessonSlug) : null
         const firstUnlockedId =
           normalized.modules.find(
-            (module) => !isPrepCourseModuleLockedForFreePlan(courseSlug, module, limitFreeAccess),
+            (module) => !isPrepCourseModuleLockedForFreePlan(courseSlug, module, limitAccess),
           )?.id ?? null
         const lessonModule = lessonLoc
           ? normalized.modules.find((module) => module.id === lessonLoc.moduleId)
           : null
         const lessonUnlocked = lessonModule
-          ? !isPrepCourseModuleLockedForFreePlan(courseSlug, lessonModule, limitFreeAccess)
+          ? !isPrepCourseModuleLockedForFreePlan(courseSlug, lessonModule, limitAccess)
           : false
         const defaultModuleId = lessonUnlocked ? lessonLoc?.moduleId ?? firstUnlockedId : firstUnlockedId
         setSelectedModuleId(defaultModuleId)
@@ -211,7 +225,7 @@ function PrepCourseContentPage() {
     return () => {
       alive = false
     }
-  }, [activeLessonSlug, courseSlug, limitFreeAccess, prepCourseApi])
+  }, [courseSlug, prepCourseApi])
 
   const stats = useMemo(
     () => statsFromModuleStats(curriculum, moduleStats),

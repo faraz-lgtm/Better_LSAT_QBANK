@@ -159,6 +159,7 @@ export function sectionQuestionCount(row: { question_count?: unknown; admin_ques
   return questionCountFromRelation(row.admin_questions)
 }
 
+/** Questions only — passages load once per section (avoids RC content × N duplication). */
 const drillQuestionSelect = `
   id,
   question_number,
@@ -172,10 +173,57 @@ const drillQuestionSelect = `
     id,
     section_type,
     section_number,
-    title,
-    admin_passages ( id, source_group_id, content, topic_tag )
+    title
   )
 `
+
+type PassageDbRow = {
+  id: string
+  section_id: string
+  source_group_id: string | null
+  content: string | null
+  topic_tag: string | null
+}
+
+function sectionIdFromQuestionRow(row: DrillQuestionRow): string | null {
+  const sec = row.admin_sections
+  const one = Array.isArray(sec) ? sec[0] : sec
+  return one?.id ?? null
+}
+
+function isRcQuestionRow(row: DrillQuestionRow): boolean {
+  const sec = row.admin_sections
+  const one = Array.isArray(sec) ? sec[0] : sec
+  return one?.section_type === 'RC'
+}
+
+function attachPassagesToQuestionRows(
+  rows: DrillQuestionRow[],
+  passagesBySectionId: Map<string, PassageDbRow[]>,
+): DrillQuestionRow[] {
+  if (passagesBySectionId.size === 0) return rows
+  return rows.map((row) => {
+    const sectionId = sectionIdFromQuestionRow(row)
+    if (!sectionId || !isRcQuestionRow(row)) return row
+    const passages = passagesBySectionId.get(sectionId)
+    if (!passages?.length) return row
+    const sec = row.admin_sections
+    const one = Array.isArray(sec) ? sec[0] : sec
+    if (!one) return row
+    return {
+      ...row,
+      admin_sections: {
+        ...one,
+        admin_passages: passages.map((p) => ({
+          id: p.id,
+          source_group_id: p.source_group_id,
+          content: p.content,
+          topic_tag: p.topic_tag,
+        })),
+      },
+    }
+  })
+}
 
 export function createServiceRoleClient(): SupabaseClient {
   const url = Deno.env.get('SUPABASE_URL')
@@ -187,6 +235,23 @@ export function createServiceRoleClient(): SupabaseClient {
 }
 
 export function createPracticeRepository(client: SupabaseClient) {
+  async function listPassagesBySectionIds(sectionIds: string[]): Promise<Map<string, PassageDbRow[]>> {
+    const unique = [...new Set(sectionIds.filter(Boolean))]
+    const bySection = new Map<string, PassageDbRow[]>()
+    if (unique.length === 0) return bySection
+    const { data, error } = await client
+      .from('admin_passages')
+      .select('id, section_id, source_group_id, content, topic_tag')
+      .in('section_id', unique)
+    if (error) throw error
+    for (const row of (data as PassageDbRow[]) ?? []) {
+      const list = bySection.get(row.section_id) ?? []
+      list.push(row)
+      bySection.set(row.section_id, list)
+    }
+    return bySection
+  }
+
   return {
     async insertSession(input: {
       userId: string
@@ -664,19 +729,145 @@ export function createPracticeRepository(client: SupabaseClient) {
       return ((data ?? []) as { id: string }[]).map((r) => r.id)
     },
 
-    async getDrillQuestionRowsByIds(questionIds: string[]): Promise<DrillQuestionRow[]> {
+    listPassagesBySectionIds,
+
+    /**
+     * Loads drill/section questions. RC passage HTML is fetched once per section
+     * (optionally in parallel when `passageSectionIds` is known).
+     */
+    async getDrillQuestionRowsByIds(
+      questionIds: string[],
+      options?: { passageSectionIds?: string[] },
+    ): Promise<DrillQuestionRow[]> {
       if (questionIds.length === 0) return []
-      const { data, error } = await client
+
+      const knownPassageSectionIds = options?.passageSectionIds?.filter(Boolean) ?? []
+      const questionsQuery = client
         .from('admin_questions')
         .select(drillQuestionSelect)
         .in('id', questionIds)
-      if (error) throw error
-      const rows = (data as DrillQuestionRow[]) ?? []
+
+      const [questionsResult, knownPassages] = await Promise.all([
+        questionsQuery,
+        knownPassageSectionIds.length > 0
+          ? listPassagesBySectionIds(knownPassageSectionIds)
+          : Promise.resolve(new Map<string, PassageDbRow[]>()),
+      ])
+
+      if (questionsResult.error) throw questionsResult.error
+      const rows = (questionsResult.data as DrillQuestionRow[]) ?? []
       const byId = new Map(rows.map((r) => [r.id, r]))
-      return questionIds.map((id) => byId.get(id)).filter((r): r is DrillQuestionRow => Boolean(r))
+      const ordered = questionIds.map((id) => byId.get(id)).filter((r): r is DrillQuestionRow => Boolean(r))
+
+      let passagesBySectionId = knownPassages
+      if (passagesBySectionId.size === 0) {
+        const rcSectionIds = [
+          ...new Set(
+            ordered.filter(isRcQuestionRow).map(sectionIdFromQuestionRow).filter((id): id is string => Boolean(id)),
+          ),
+        ]
+        if (rcSectionIds.length > 0) {
+          passagesBySectionId = await listPassagesBySectionIds(rcSectionIds)
+        }
+      }
+
+      return attachPassagesToQuestionRows(ordered, passagesBySectionId)
+    },
+
+    async listStudentPrepTestPoolPage(input: {
+      userId: string
+      filter: 'fresh' | 'in_progress' | 'completed' | 'blind_review' | null
+      page: number
+      pageSize: number
+      sort: 'newest' | 'oldest'
+    }): Promise<{
+      prepTests: Array<Record<string, unknown>>
+      total: number
+      page: number
+      pageSize: number
+      statusCounts: {
+        all: number
+        fresh: number
+        in_progress: number
+        completed: number
+        blind_review: number
+      }
+    } | null> {
+      const { data, error } = await client.rpc('list_student_prep_test_pool', {
+        p_user_id: input.userId,
+        p_filter: input.filter,
+        p_page: input.page,
+        p_page_size: input.pageSize,
+        p_sort: input.sort,
+      })
+      if (error) {
+        const message = String(error.message ?? '')
+        // Older environments may not have the RPC yet — fall back to the JS path.
+        if (
+          error.code === 'PGRST202' ||
+          /could not find the function|does not exist/i.test(message)
+        ) {
+          return null
+        }
+        throw error
+      }
+      if (!data || typeof data !== 'object') return null
+      const payload = data as Record<string, unknown>
+      const statusCountsRaw = (payload.statusCounts ?? {}) as Record<string, unknown>
+      const prepTests = Array.isArray(payload.prepTests)
+        ? (payload.prepTests as Array<Record<string, unknown>>)
+        : []
+      return {
+        prepTests,
+        total: typeof payload.total === 'number' ? payload.total : prepTests.length,
+        page: typeof payload.page === 'number' ? payload.page : input.page,
+        pageSize: typeof payload.pageSize === 'number' ? payload.pageSize : input.pageSize,
+        statusCounts: {
+          all: typeof statusCountsRaw.all === 'number' ? statusCountsRaw.all : 0,
+          fresh: typeof statusCountsRaw.fresh === 'number' ? statusCountsRaw.fresh : 0,
+          in_progress:
+            typeof statusCountsRaw.in_progress === 'number' ? statusCountsRaw.in_progress : 0,
+          completed: typeof statusCountsRaw.completed === 'number' ? statusCountsRaw.completed : 0,
+          blind_review:
+            typeof statusCountsRaw.blind_review === 'number' ? statusCountsRaw.blind_review : 0,
+        },
+      }
     },
 
     async listPrepTestPoolRows(): Promise<PrepTestPoolRow[]> {
+      const catalog = await client.rpc('list_visible_prep_test_pool_catalog')
+      if (!catalog.error && Array.isArray(catalog.data)) {
+        return (catalog.data as Array<{
+          id: string
+          module_id: string
+          title: string | null
+          sections: unknown
+        }>).map((row) => {
+          const sectionsRaw = Array.isArray(row.sections) ? row.sections : []
+          return {
+            id: String(row.id),
+            moduleId: String(row.module_id),
+            title: row.title != null ? String(row.title) : null,
+            sections: sectionsRaw
+              .map((section) => {
+                const sec = section as Record<string, unknown>
+                const sectionType = sec.sectionType ?? sec.section_type
+                const id = sec.id
+                if (typeof id !== 'string' || typeof sectionType !== 'string') return null
+                const questionCountRaw = sec.questionCount ?? sec.question_count
+                return {
+                  id: String(id),
+                  sectionType: sectionType as 'LR' | 'RC' | 'LG',
+                  questionCount:
+                    typeof questionCountRaw === 'number' ? Math.max(0, questionCountRaw) : 0,
+                }
+              })
+              .filter((section): section is PrepTestPoolRow['sections'][number] => Boolean(section)),
+          }
+        })
+      }
+
+      // Fallback for environments that have not applied the catalog RPC yet.
       const { data, error } = await client.rpc('list_visible_prep_test_pool_rows')
       if (error) throw error
 
@@ -762,23 +953,96 @@ export function createPracticeRepository(client: SupabaseClient) {
       }
     },
 
-    async listUserSessionsForPrepTest(userId: string, prepTestId: string): Promise<PracticeSessionRow[]> {
-      const { data, error } = await client
-        .from('practice_sessions')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('prep_test_id', prepTestId)
-        .in('kind', ['PREPTEST', 'SECTION'])
-        .order('started_at', { ascending: false })
-      if (error) throw error
-      return (data as PracticeSessionRow[]) ?? []
+    /**
+     * Single-round-trip hub payload. Returns null when the RPC is missing or the
+     * id is not a visible admin_prep_tests.id (caller should fall back).
+     */
+    async getPrepTestHubDetail(
+      userId: string,
+      prepTestId: string,
+    ): Promise<{ row: PrepTestDetailRow; sessions: PracticeSessionRow[] } | null> {
+      const { data, error } = await client.rpc('get_student_prep_test_hub_detail', {
+        p_user_id: userId,
+        p_prep_test_id: prepTestId,
+      })
+      if (error) {
+        const message = String(error.message ?? '')
+        if (
+          error.code === 'PGRST202' ||
+          error.code === '22P02' || // invalid uuid input
+          /could not find the function|does not exist|invalid input syntax for type uuid/i.test(
+            message,
+          )
+        ) {
+          return null
+        }
+        throw error
+      }
+      if (!data || typeof data !== 'object') return null
+
+      const payload = data as Record<string, unknown>
+      const rowRaw = payload.row
+      if (!rowRaw || typeof rowRaw !== 'object') return null
+      const rowObj = rowRaw as Record<string, unknown>
+      const sectionsRaw = Array.isArray(rowObj.sections) ? rowObj.sections : []
+      const sections = sectionsRaw.map((s) => {
+        const sec = s as Record<string, unknown>
+        return {
+          id: String(sec.id),
+          sectionId: sec.sectionId != null ? String(sec.sectionId) : null,
+          sectionNumber: typeof sec.sectionNumber === 'number' ? sec.sectionNumber : null,
+          sectionType: sec.sectionType as 'LR' | 'RC' | 'LG',
+          title: sec.title != null ? String(sec.title) : null,
+          questionCount: typeof sec.questionCount === 'number' ? Math.max(0, sec.questionCount) : 0,
+          isExperimental: sec.isExperimental === true,
+        }
+      })
+
+      const sessionsRaw = Array.isArray(payload.sessions) ? payload.sessions : []
+      const sessions: PracticeSessionRow[] = sessionsRaw.map((raw) => {
+        const s = raw as Record<string, unknown>
+        return {
+          id: String(s.id),
+          user_id: String(s.user_id ?? userId),
+          kind: s.kind as PracticeSessionKind,
+          prep_test_id: s.prep_test_id != null ? String(s.prep_test_id) : null,
+          section_id: s.section_id != null ? String(s.section_id) : null,
+          started_at: String(s.started_at),
+          completed_at: s.completed_at != null ? String(s.completed_at) : null,
+          raw_score: typeof s.raw_score === 'number' ? s.raw_score : null,
+          scaled_score: typeof s.scaled_score === 'number' ? s.scaled_score : null,
+          percentile: typeof s.percentile === 'number' ? s.percentile : null,
+          blind_review_raw_score:
+            typeof s.blind_review_raw_score === 'number' ? s.blind_review_raw_score : null,
+          blind_review_scaled_score:
+            typeof s.blind_review_scaled_score === 'number' ? s.blind_review_scaled_score : null,
+          blind_review_percentile:
+            typeof s.blind_review_percentile === 'number' ? s.blind_review_percentile : null,
+          blind_review_completed_at:
+            s.blind_review_completed_at != null ? String(s.blind_review_completed_at) : null,
+          bookmarked: s.bookmarked === true,
+          excluded: s.excluded === true,
+          metadata: (s.metadata ?? {}) as Record<string, unknown>,
+          created_at: s.created_at != null ? String(s.created_at) : String(s.started_at),
+          updated_at: s.updated_at != null ? String(s.updated_at) : String(s.started_at),
+        }
+      })
+
+      return {
+        row: {
+          id: String(rowObj.id),
+          moduleId: String(rowObj.moduleId),
+          title: rowObj.title != null ? String(rowObj.title) : null,
+          sections,
+        },
+        sessions,
+      }
     },
 
-    async listUserSessionsForPrepTests(userId: string): Promise<PracticeSessionRow[]> {
-      const { data, error } = await client
-        .from('practice_sessions')
-        .select(
-          `
+    async listUserSessionsForPrepTest(userId: string, prepTestId: string): Promise<PracticeSessionRow[]> {
+      // Hub/detail only needs SECTION progress counts — not full answer metadata blobs.
+      // Fetch PREPTEST (full metadata for config/BR flags) + SECTION (slim) in parallel.
+      const prepTestSelect = `
           id,
           user_id,
           kind,
@@ -798,17 +1062,189 @@ export function createPracticeRepository(client: SupabaseClient) {
           metadata,
           created_at,
           updated_at
-        `,
-        )
-        .eq('user_id', userId)
-        .not('prep_test_id', 'is', null)
-        .in('kind', ['PREPTEST', 'SECTION'])
-        .order('started_at', { ascending: false })
-      if (error) throw error
-      return ((data ?? []) as PracticeSessionRow[]).map((row) => ({
-        ...row,
+        `
+      const sectionSelect = `
+          id,
+          user_id,
+          kind,
+          prep_test_id,
+          section_id,
+          started_at,
+          completed_at,
+          raw_score,
+          scaled_score,
+          answered_question_ids:metadata->answeredQuestionIds,
+          question_ids:metadata->questionIds
+        `
+
+      const [prepTests, sections] = await Promise.all([
+        client
+          .from('practice_sessions')
+          .select(prepTestSelect)
+          .eq('user_id', userId)
+          .eq('prep_test_id', prepTestId)
+          .eq('kind', 'PREPTEST')
+          .order('started_at', { ascending: false }),
+        client
+          .from('practice_sessions')
+          .select(sectionSelect)
+          .eq('user_id', userId)
+          .eq('prep_test_id', prepTestId)
+          .eq('kind', 'SECTION')
+          .order('started_at', { ascending: false }),
+      ])
+
+      if (prepTests.error) throw prepTests.error
+      if (sections.error) throw sections.error
+
+      const normalizePrepTest = (row: Record<string, unknown>): PracticeSessionRow => ({
+        id: String(row.id),
+        user_id: String(row.user_id ?? userId),
+        kind: 'PREPTEST',
+        prep_test_id: row.prep_test_id != null ? String(row.prep_test_id) : null,
+        section_id: row.section_id != null ? String(row.section_id) : null,
+        started_at: String(row.started_at),
+        completed_at: row.completed_at != null ? String(row.completed_at) : null,
+        raw_score: typeof row.raw_score === 'number' ? row.raw_score : null,
+        scaled_score: typeof row.scaled_score === 'number' ? row.scaled_score : null,
+        percentile: typeof row.percentile === 'number' ? row.percentile : null,
+        blind_review_raw_score:
+          typeof row.blind_review_raw_score === 'number' ? row.blind_review_raw_score : null,
+        blind_review_scaled_score:
+          typeof row.blind_review_scaled_score === 'number' ? row.blind_review_scaled_score : null,
+        blind_review_percentile:
+          typeof row.blind_review_percentile === 'number' ? row.blind_review_percentile : null,
+        blind_review_completed_at:
+          row.blind_review_completed_at != null ? String(row.blind_review_completed_at) : null,
+        bookmarked: row.bookmarked === true,
+        excluded: row.excluded === true,
         metadata: (row.metadata ?? {}) as Record<string, unknown>,
-      }))
+        created_at: row.created_at != null ? String(row.created_at) : String(row.started_at),
+        updated_at: row.updated_at != null ? String(row.updated_at) : String(row.started_at),
+      })
+
+      const normalizeSection = (row: Record<string, unknown>): PracticeSessionRow => ({
+        id: String(row.id),
+        user_id: String(row.user_id ?? userId),
+        kind: 'SECTION',
+        prep_test_id: row.prep_test_id != null ? String(row.prep_test_id) : null,
+        section_id: row.section_id != null ? String(row.section_id) : null,
+        started_at: String(row.started_at),
+        completed_at: row.completed_at != null ? String(row.completed_at) : null,
+        raw_score: typeof row.raw_score === 'number' ? row.raw_score : null,
+        scaled_score: typeof row.scaled_score === 'number' ? row.scaled_score : null,
+        percentile: null,
+        blind_review_raw_score: null,
+        blind_review_scaled_score: null,
+        blind_review_percentile: null,
+        blind_review_completed_at: null,
+        bookmarked: false,
+        excluded: false,
+        metadata: {
+          answeredQuestionIds: Array.isArray(row.answered_question_ids) ? row.answered_question_ids : [],
+          questionIds: Array.isArray(row.question_ids) ? row.question_ids : [],
+        },
+        created_at: String(row.started_at),
+        updated_at: String(row.started_at),
+      })
+
+      const prepTestRows = ((prepTests.data ?? []) as Record<string, unknown>[]).map(normalizePrepTest)
+      const sectionRows = ((sections.data ?? []) as Record<string, unknown>[]).map(normalizeSection)
+
+      return [...prepTestRows, ...sectionRows].sort(
+        (a, b) => Date.parse(b.started_at) - Date.parse(a.started_at),
+      )
+    },
+
+    async listUserSessionsForPrepTests(userId: string): Promise<PracticeSessionRow[]> {
+      // Pool listing only needs SECTION identity/scores — not multi-hundred-KB answer
+      // metadata. Fetch PREPTEST + SECTION in parallel with different column sets.
+      const prepTestSelect = `
+          id,
+          user_id,
+          kind,
+          prep_test_id,
+          section_id,
+          started_at,
+          completed_at,
+          raw_score,
+          scaled_score,
+          blind_review_raw_score,
+          blind_review_scaled_score,
+          blind_review_completed_at,
+          metadata
+        `
+      const sectionSelect = `
+          id,
+          user_id,
+          kind,
+          prep_test_id,
+          section_id,
+          started_at,
+          completed_at,
+          raw_score,
+          scaled_score
+        `
+
+      const [prepTests, sections] = await Promise.all([
+        client
+          .from('practice_sessions')
+          .select(prepTestSelect)
+          .eq('user_id', userId)
+          .not('prep_test_id', 'is', null)
+          .eq('kind', 'PREPTEST')
+          .order('started_at', { ascending: false }),
+        client
+          .from('practice_sessions')
+          .select(sectionSelect)
+          .eq('user_id', userId)
+          .not('prep_test_id', 'is', null)
+          .eq('kind', 'SECTION')
+          .order('started_at', { ascending: false }),
+      ])
+
+      if (prepTests.error) throw prepTests.error
+      if (sections.error) throw sections.error
+
+      const normalize = (
+        row: Record<string, unknown>,
+        kind: PracticeSessionKind,
+      ): PracticeSessionRow => ({
+        id: String(row.id),
+        user_id: String(row.user_id ?? userId),
+        kind,
+        prep_test_id: row.prep_test_id != null ? String(row.prep_test_id) : null,
+        section_id: row.section_id != null ? String(row.section_id) : null,
+        started_at: String(row.started_at),
+        completed_at: row.completed_at != null ? String(row.completed_at) : null,
+        raw_score: typeof row.raw_score === 'number' ? row.raw_score : null,
+        scaled_score: typeof row.scaled_score === 'number' ? row.scaled_score : null,
+        percentile: typeof row.percentile === 'number' ? row.percentile : null,
+        blind_review_raw_score:
+          typeof row.blind_review_raw_score === 'number' ? row.blind_review_raw_score : null,
+        blind_review_scaled_score:
+          typeof row.blind_review_scaled_score === 'number' ? row.blind_review_scaled_score : null,
+        blind_review_percentile:
+          typeof row.blind_review_percentile === 'number' ? row.blind_review_percentile : null,
+        blind_review_completed_at:
+          row.blind_review_completed_at != null ? String(row.blind_review_completed_at) : null,
+        bookmarked: row.bookmarked === true,
+        excluded: row.excluded === true,
+        metadata: ((row.metadata ?? {}) as Record<string, unknown>),
+        created_at: row.created_at != null ? String(row.created_at) : String(row.started_at),
+        updated_at: row.updated_at != null ? String(row.updated_at) : String(row.started_at),
+      })
+
+      const prepTestRows = ((prepTests.data ?? []) as Record<string, unknown>[]).map((row) =>
+        normalize(row, 'PREPTEST'),
+      )
+      const sectionRows = ((sections.data ?? []) as Record<string, unknown>[]).map((row) =>
+        normalize(row, 'SECTION'),
+      )
+
+      return [...prepTestRows, ...sectionRows].sort(
+        (a, b) => Date.parse(b.started_at) - Date.parse(a.started_at),
+      )
     },
 
     async getPublishedPrepLessonById(lessonId: string): Promise<{

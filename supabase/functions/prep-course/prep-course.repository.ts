@@ -150,6 +150,113 @@ export type ListPublishedCurriculumOptions = {
   hydrateModuleIds?: string[] | 'first'
 }
 
+export type PrepCourseOutline = {
+  course: PrepCourseRow
+  curriculum: PrepCourseCurriculum
+  lessons: PrepLessonRow[]
+  completedLessonSlugs: string[]
+  bookmarks: PrepCourseBookmarks
+  hydratedModuleIds: string[]
+  moduleStats: PrepCourseModuleLessonStats[]
+}
+
+export type GetCourseOutlineOptions = {
+  hydrate?: 'first' | 'all'
+  moduleId?: string
+}
+
+function mapOutlineLesson(raw: Record<string, unknown>): PrepLessonRow {
+  return mapListedLesson({
+    id: String(raw.id ?? ''),
+    course_id: String(raw.course_id ?? ''),
+    section_id: String(raw.section_id ?? ''),
+    slug: String(raw.slug ?? ''),
+    title: String(raw.title ?? ''),
+    lesson_type: raw.lesson_type as PrepLessonType,
+    sort_order: Number(raw.sort_order ?? 0),
+    summary: typeof raw.summary === 'string' ? raw.summary : null,
+    duration_minutes: typeof raw.duration_minutes === 'number' ? raw.duration_minutes : null,
+    video_url: typeof raw.video_url === 'string' ? raw.video_url : null,
+    text_content: typeof raw.text_content === 'string' ? raw.text_content : null,
+    is_published: Boolean(raw.is_published),
+    created_at: String(raw.created_at ?? ''),
+    updated_at: String(raw.updated_at ?? ''),
+  })
+}
+
+function mapPrepCourseOutline(data: Record<string, unknown>): PrepCourseOutline {
+  const courseRaw = (data.course ?? {}) as Record<string, unknown>
+  const curriculumRaw = (data.curriculum ?? {}) as { modules?: unknown[] }
+  const modules = (Array.isArray(curriculumRaw.modules) ? curriculumRaw.modules : []).map((modUnknown) => {
+    const mod = modUnknown as Record<string, unknown>
+    const sections = (Array.isArray(mod.sections) ? mod.sections : []).map((secUnknown) => {
+      const sec = secUnknown as Record<string, unknown>
+      const lessons = (Array.isArray(sec.lessons) ? sec.lessons : []).map((lessonUnknown) =>
+        mapOutlineLesson(lessonUnknown as Record<string, unknown>),
+      )
+      return {
+        id: String(sec.id ?? ''),
+        module_id: String(sec.module_id ?? ''),
+        title: String(sec.title ?? ''),
+        sort_order: Number(sec.sort_order ?? 0),
+        duration_minutes: typeof sec.duration_minutes === 'number' ? sec.duration_minutes : null,
+        lessons,
+      }
+    })
+    return {
+      id: String(mod.id ?? ''),
+      course_id: String(mod.course_id ?? ''),
+      title: String(mod.title ?? ''),
+      sort_order: Number(mod.sort_order ?? 0),
+      duration_minutes: typeof mod.duration_minutes === 'number' ? mod.duration_minutes : null,
+      sections,
+    }
+  })
+
+  const lessons = (Array.isArray(data.lessons) ? data.lessons : []).map((lessonUnknown) =>
+    mapOutlineLesson(lessonUnknown as Record<string, unknown>),
+  )
+
+  const bookmarksRaw = (data.bookmarks ?? {}) as { moduleIds?: unknown; lessonSlugs?: unknown }
+  const moduleStats = (Array.isArray(data.moduleStats) ? data.moduleStats : []).map((rowUnknown) => {
+    const row = rowUnknown as Record<string, unknown>
+    return {
+      moduleId: String(row.moduleId ?? ''),
+      lessonCount: Number(row.lessonCount ?? 0),
+      totalMinutes: Number(row.totalMinutes ?? 0),
+    }
+  })
+
+  return {
+    course: {
+      id: String(courseRaw.id ?? ''),
+      slug: String(courseRaw.slug ?? ''),
+      title: String(courseRaw.title ?? ''),
+      description: typeof courseRaw.description === 'string' ? courseRaw.description : null,
+      is_published: Boolean(courseRaw.is_published),
+      created_at: String(courseRaw.created_at ?? ''),
+      updated_at: String(courseRaw.updated_at ?? ''),
+    },
+    curriculum: { modules },
+    lessons,
+    completedLessonSlugs: Array.isArray(data.completedLessonSlugs)
+      ? data.completedLessonSlugs.filter((slug): slug is string => typeof slug === 'string')
+      : [],
+    bookmarks: {
+      moduleIds: Array.isArray(bookmarksRaw.moduleIds)
+        ? bookmarksRaw.moduleIds.filter((id): id is string => typeof id === 'string')
+        : [],
+      lessonSlugs: Array.isArray(bookmarksRaw.lessonSlugs)
+        ? bookmarksRaw.lessonSlugs.filter((slug): slug is string => typeof slug === 'string')
+        : [],
+    },
+    hydratedModuleIds: Array.isArray(data.hydratedModuleIds)
+      ? data.hydratedModuleIds.map((id) => String(id))
+      : [],
+    moduleStats,
+  }
+}
+
 export function createServiceRoleClient(): SupabaseClient {
   const url = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -202,6 +309,22 @@ export function createPrepCourseRepository(client: SupabaseClient) {
         .maybeSingle()
       if (error) throw error
       return data as PrepCourseRow | null
+    },
+
+    async getCourseOutline(
+      courseSlug: string,
+      userId: string,
+      opts?: GetCourseOutlineOptions,
+    ): Promise<PrepCourseOutline | null> {
+      const { data, error } = await client.rpc('get_prep_course_outline', {
+        p_course_slug: courseSlug,
+        p_user_id: userId,
+        p_hydrate: opts?.hydrate ?? 'all',
+        p_module_id: opts?.moduleId?.trim() || null,
+      })
+      if (error) throw error
+      if (data == null) return null
+      return mapPrepCourseOutline(data as Record<string, unknown>)
     },
 
     flattenLessonsFromCurriculum(curriculum: PrepCourseCurriculum): PrepLessonRow[] {

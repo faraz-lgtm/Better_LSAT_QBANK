@@ -2,7 +2,26 @@ import { StrictMode } from "react"
 import { render, screen } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { store } from "@/app/store"
+import { GTM_PENDING_FREE_DIAGNOSTIC_SIGNUP_KEY } from "@/lib/analytics/gtm"
+import { resetEnsureStudentSessionInflight } from "@/features/student-session/ensure-student-session"
+import { resetStudentSession } from "@/features/student-session/studentSessionSlice"
 import { AuthCallbackPage } from "./auth-callback-page"
+
+const trackFreeDiagnosticSignupMock = vi.fn()
+
+vi.mock("@/lib/analytics/gtm", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/analytics/gtm")>("@/lib/analytics/gtm")
+  return {
+    ...actual,
+    trackFreeDiagnosticSignup: (...args: unknown[]) => trackFreeDiagnosticSignupMock(...args),
+  }
+})
+
+vi.mock("@/lib/analytics/posthog", () => ({
+  AnalyticsEvent: { authCompleted: "auth_completed" },
+  captureEvent: vi.fn(),
+}))
 
 const authMock = {
   signInWithOtp: vi.fn(),
@@ -35,8 +54,12 @@ describe("AuthCallbackPage", () => {
     authMock.exchangeCodeForSession.mockReset()
     authMock.getSession.mockReset()
     invokeMock.mockReset()
+    trackFreeDiagnosticSignupMock.mockReset()
+    store.dispatch(resetStudentSession())
+    resetEnsureStudentSessionInflight()
     sessionStorage.clear()
     localStorage.clear()
+    window.dataLayer = []
     window.history.pushState({}, "", "/")
   })
 
@@ -148,5 +171,53 @@ describe("AuthCallbackPage", () => {
       await screen.findByText(/auth session not found/i),
     ).toBeInTheDocument()
     expect(authMock.exchangeCodeForSession).not.toHaveBeenCalled()
+  })
+
+  it("fires free_diagnostic_signup when pending signup flag is set", async () => {
+    authMock.exchangeCodeForSession.mockResolvedValue({ error: null })
+    authMock.getSession.mockResolvedValue({
+      data: { session: { user: { id: "u1" } } },
+      error: null,
+    })
+    invokeMock.mockResolvedValue({ data: { profile: null }, error: null })
+    sessionStorage.setItem(GTM_PENDING_FREE_DIAGNOSTIC_SIGNUP_KEY, "1")
+    window.history.pushState({}, "", "/auth/callback?code=gtm-code")
+
+    renderCallback("/auth/callback?code=gtm-code")
+
+    expect(await screen.findByText(/onboarding view/i)).toBeInTheDocument()
+    expect(trackFreeDiagnosticSignupMock).toHaveBeenCalledTimes(1)
+    expect(sessionStorage.getItem(GTM_PENDING_FREE_DIAGNOSTIC_SIGNUP_KEY)).toBeNull()
+  })
+
+  it("does not fire free_diagnostic_signup without pending flag", async () => {
+    authMock.exchangeCodeForSession.mockResolvedValue({ error: null })
+    authMock.getSession.mockResolvedValue({
+      data: { session: { user: { id: "u1" } } },
+      error: null,
+    })
+    invokeMock.mockResolvedValue({ data: { profile: null }, error: null })
+    window.history.pushState({}, "", "/auth/callback?code=no-gtm-code")
+
+    renderCallback("/auth/callback?code=no-gtm-code")
+
+    expect(await screen.findByText(/onboarding view/i)).toBeInTheDocument()
+    expect(trackFreeDiagnosticSignupMock).not.toHaveBeenCalled()
+  })
+
+  it("does not fire free_diagnostic_signup on recovery flow", async () => {
+    authMock.exchangeCodeForSession.mockResolvedValue({ error: null })
+    authMock.getSession.mockResolvedValue({
+      data: { session: { user: { id: "u1" } } },
+      error: null,
+    })
+    sessionStorage.setItem(GTM_PENDING_FREE_DIAGNOSTIC_SIGNUP_KEY, "1")
+    window.history.pushState({}, "", "/auth/callback?code=recovery-code&type=recovery")
+
+    renderCallback("/auth/callback?code=recovery-code&type=recovery")
+
+    expect(await screen.findByText(/reset password view/i)).toBeInTheDocument()
+    expect(trackFreeDiagnosticSignupMock).not.toHaveBeenCalled()
+    expect(sessionStorage.getItem(GTM_PENDING_FREE_DIAGNOSTIC_SIGNUP_KEY)).toBe("1")
   })
 })

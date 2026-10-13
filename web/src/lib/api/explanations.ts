@@ -59,6 +59,8 @@ export function createExplanationsApi(supabase: SupabaseClient) {
       offset?: number
       sort?: "newest" | "oldest"
       bookmarkedOnly?: boolean
+      includeStatusCounts?: boolean
+      includeDetails?: boolean
     }): Promise<{
       prepTests: ExplanationPrepTestListItem[]
       total: number
@@ -78,6 +80,12 @@ export function createExplanationsApi(supabase: SupabaseClient) {
         ...(typeof options?.offset === "number" ? { offset: options.offset } : {}),
         sort: options?.sort ?? "newest",
         ...(options?.bookmarkedOnly ? { bookmarkedOnly: true } : {}),
+        ...(typeof options?.includeStatusCounts === "boolean"
+          ? { includeStatusCounts: options.includeStatusCounts }
+          : {}),
+        ...(typeof options?.includeDetails === "boolean"
+          ? { includeDetails: options.includeDetails }
+          : {}),
       })
       if (error) throw error
       return {
@@ -111,6 +119,22 @@ export function createExplanationsApi(supabase: SupabaseClient) {
       if (error) await throwIfEdgeInvokeFailed(error)
       if (!data) throw new Error("No explanation detail returned")
       return data
+    },
+
+    async getStatusCounts(): Promise<ExplanationStatusCounts> {
+      const { data, error } = await invokeExplanationsFn<{ statusCounts: ExplanationStatusCounts }>(
+        "prep-explanations-status-counts",
+        {},
+      )
+      if (error) throw error
+      return (
+        data?.statusCounts ?? {
+          in_process: 0,
+          fresh: 0,
+          answered: 0,
+          seen: 0,
+        }
+      )
     },
 
     async listQuestionBookmarks(): Promise<{ questionIds: string[] }> {

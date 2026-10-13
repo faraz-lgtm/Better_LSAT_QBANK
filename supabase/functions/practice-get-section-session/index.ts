@@ -7,10 +7,12 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return optionsOk()
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, { status: 405 }, CORS_EDGE_NARROW)
 
-  const auth = await requireAuthUser(req)
+  const [auth, body] = await Promise.all([
+    requireAuthUser(req),
+    req.json().catch(() => ({})) as Promise<Record<string, unknown>>,
+  ])
   if (!auth.ok) return auth.response
 
-  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
   const service = createPracticeService({
     repository: createPracticeRepository(createServiceRoleClient()),
   })

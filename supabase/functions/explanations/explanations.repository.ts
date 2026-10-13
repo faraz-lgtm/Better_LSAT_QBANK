@@ -271,38 +271,79 @@ export function createExplanationsRepository(client: SupabaseClient) {
       return [...ids]
     },
 
+    async fetchQuestionStatsByPrepTestId(prepTestIds: string[]): Promise<
+      Map<string, { questionCount: number; explainedCount: number; questionIds: string[] }>
+    > {
+      const out = new Map<string, { questionCount: number; explainedCount: number; questionIds: string[] }>()
+      const uniqueIds = [...new Set(prepTestIds.map(String).filter(Boolean))]
+      for (const id of uniqueIds) {
+        out.set(id, { questionCount: 0, explainedCount: 0, questionIds: [] })
+      }
+      if (uniqueIds.length === 0) return out
+
+      const { data: sections, error: secErr } = await client
+        .from('admin_sections')
+        .select('id,prep_test_id')
+        .in('prep_test_id', uniqueIds)
+      if (secErr) throw secErr
+
+      const sectionRows = (sections ?? []) as Array<{ id: string; prep_test_id: string }>
+      if (sectionRows.length === 0) return out
+
+      const sectionIds = sectionRows.map((s) => s.id)
+      const prepTestIdBySectionId = new Map(
+        sectionRows.map((s) => [String(s.id), String(s.prep_test_id)] as const),
+      )
+
+      const [{ data: questions, error: qErr }, { data: stats, error: statsErr }] = await Promise.all([
+        client.from('admin_questions').select('id,section_id').in('section_id', sectionIds),
+        client.rpc('admin_prep_test_question_stats', { p_prep_test_ids: uniqueIds }),
+      ])
+      if (qErr) throw qErr
+      if (statsErr) throw statsErr
+
+      for (const row of (questions ?? []) as Array<{ id: string; section_id: string }>) {
+        const prepTestId = prepTestIdBySectionId.get(String(row.section_id))
+        if (!prepTestId) continue
+        const entry = out.get(prepTestId) ?? { questionCount: 0, explainedCount: 0, questionIds: [] }
+        entry.questionIds.push(String(row.id))
+        entry.questionCount = entry.questionIds.length
+        out.set(prepTestId, entry)
+      }
+
+      for (const row of (stats ?? []) as Array<{
+        prep_test_id?: string
+        explained_or_video?: number
+        explained?: number
+      }>) {
+        const prepTestId = row.prep_test_id ? String(row.prep_test_id) : ''
+        if (!prepTestId || !out.has(prepTestId)) continue
+        const entry = out.get(prepTestId)!
+        entry.explainedCount = Number(row.explained_or_video ?? row.explained) || 0
+        out.set(prepTestId, entry)
+      }
+
+      return out
+    },
+
     async fetchQuestionStatsForPrepTestIds(prepTestIds: string[]): Promise<{
       questionCount: number
       explainedCount: number
       questionIds: string[]
     }> {
       if (prepTestIds.length === 0) return { questionCount: 0, explainedCount: 0, questionIds: [] }
-
-      const { data: sections, error: secErr } = await client
-        .from('admin_sections')
-        .select('id')
-        .in('prep_test_id', prepTestIds)
-      if (secErr) throw secErr
-      const sectionIds = ((sections ?? []) as { id: string }[]).map((s) => s.id)
-      if (sectionIds.length === 0) return { questionCount: 0, explainedCount: 0, questionIds: [] }
-
-      const [{ data: questions, error: qErr }, { data: stats, error: statsErr }] = await Promise.all([
-        client.from('admin_questions').select('id').in('section_id', sectionIds),
-        client.rpc('admin_prep_test_question_stats', { p_prep_test_ids: prepTestIds }),
-      ])
-      if (qErr) throw qErr
-      if (statsErr) throw statsErr
-
-      const rows = (questions ?? []) as { id: string }[]
-      const explainedCount = ((stats ?? []) as Array<{ explained_or_video?: number; explained?: number }>).reduce(
-        (sum, row) => sum + (Number(row.explained_or_video ?? row.explained) || 0),
-        0,
-      )
-      return {
-        questionCount: rows.length,
-        explainedCount,
-        questionIds: rows.map((q) => q.id),
+      const byId = await this.fetchQuestionStatsByPrepTestId(prepTestIds)
+      let questionCount = 0
+      let explainedCount = 0
+      const questionIds: string[] = []
+      for (const id of prepTestIds) {
+        const entry = byId.get(String(id))
+        if (!entry) continue
+        questionCount += entry.questionCount
+        explainedCount += entry.explainedCount
+        questionIds.push(...entry.questionIds)
       }
+      return { questionCount, explainedCount, questionIds }
     },
 
     async getQuestionDetail(questionId: string): Promise<QuestionDetailRow | null> {
@@ -414,6 +455,37 @@ export function createExplanationsRepository(client: SupabaseClient) {
       )
 
       return { seenQuestionIds, inProcessQuestionIds, answeredQuestionIds }
+    },
+
+    /** Scoped statuses for PrepTest list row subtitles (page question ids only). */
+    async listExplanationQuestionStatusesForIds(
+      userId: string,
+      questionIds: string[],
+    ): Promise<Map<string, 'answered' | 'in_process' | 'seen' | 'fresh'>> {
+      const out = new Map<string, 'answered' | 'in_process' | 'seen' | 'fresh'>()
+      const unique = [...new Set(questionIds.map(String).filter(Boolean))]
+      for (const id of unique) out.set(id, 'fresh')
+      if (unique.length === 0) return out
+
+      const { data, error } = await client.rpc('user_explanation_question_progress_for_ids', {
+        p_user_id: userId,
+        p_question_ids: unique,
+      })
+      if (error) throw error
+
+      for (const row of (data ?? []) as Array<{ question_id: string; status: string }>) {
+        const id = String(row.question_id)
+        const status = String(row.status ?? 'fresh')
+        if (
+          status === 'answered' ||
+          status === 'in_process' ||
+          status === 'seen' ||
+          status === 'fresh'
+        ) {
+          out.set(id, status)
+        }
+      }
+      return out
     },
 
     async listLatestAnswerStatusByQuestionIds(

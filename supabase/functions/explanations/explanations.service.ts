@@ -698,6 +698,13 @@ export type ListPrepTestsOptions = {
   offset?: number
   sort?: 'newest' | 'oldest'
   bookmarkedOnly?: boolean
+  /** When false, skip statusCounts RPC (client keeps prior counts). Default true. */
+  includeStatusCounts?: boolean
+  /**
+   * When false, return PrepTest identity only (id/title/moduleId/number) and skip
+   * question stats + per-row status subtitles. Default true.
+   */
+  includeDetails?: boolean
 }
 
 export type ExplanationStatusCounts = {
@@ -848,6 +855,74 @@ export function applyQuestionBookmarks(
   }
 }
 
+function buildSlimListItemsForPageGroups(pageGroups: GroupedPrepTest[]): ExplanationPrepTestListItem[] {
+  return pageGroups.map((g) => ({
+    id: g.id,
+    title: g.title,
+    moduleId: g.moduleId,
+    prepTestNumber: prepTestNumberFromModuleId(g.moduleId),
+    questionCount: 0,
+    explainedCount: 0,
+    rowSubtitle: 'Fresh',
+  }))
+}
+
+async function buildListItemsForPageGroups(
+  repository: ExplanationsRepository,
+  userId: string,
+  pageGroups: GroupedPrepTest[],
+  includeDetails: boolean,
+): Promise<ExplanationPrepTestListItem[]> {
+  if (!includeDetails) return buildSlimListItemsForPageGroups(pageGroups)
+
+  const allPagePrepTestIds = pageGroups.flatMap((g) => g.prepTestIds)
+  const statsByPrepTestId = await repository.fetchQuestionStatsByPrepTestId(allPagePrepTestIds)
+
+  const questionIdsForPage: string[] = []
+  const groupQuestionIds: string[][] = []
+  for (const g of pageGroups) {
+    const ids: string[] = []
+    for (const prepTestId of g.prepTestIds) {
+      const stats = statsByPrepTestId.get(prepTestId)
+      if (!stats) continue
+      ids.push(...stats.questionIds)
+    }
+    groupQuestionIds.push(ids)
+    questionIdsForPage.push(...ids)
+  }
+
+  const statusByQuestionId = await repository.listExplanationQuestionStatusesForIds(
+    userId,
+    questionIdsForPage,
+  )
+
+  return pageGroups.map((g, index) => {
+    let questionCount = 0
+    let explainedCount = 0
+    for (const prepTestId of g.prepTestIds) {
+      const stats = statsByPrepTestId.get(prepTestId) ?? {
+        questionCount: 0,
+        explainedCount: 0,
+        questionIds: [],
+      }
+      questionCount += stats.questionCount
+      explainedCount += stats.explainedCount
+    }
+    const statuses = (groupQuestionIds[index] ?? []).map(
+      (id) => statusByQuestionId.get(id) ?? 'fresh',
+    )
+    return {
+      id: g.id,
+      title: g.title,
+      moduleId: g.moduleId,
+      prepTestNumber: prepTestNumberFromModuleId(g.moduleId),
+      questionCount,
+      explainedCount,
+      rowSubtitle: prepTestRowSubtitleFromStatuses(statuses),
+    }
+  })
+}
+
 export function createExplanationsService(deps: { repository: ExplanationsRepository }) {
   return {
     async getExplanationStatusCounts(userId: string): Promise<ExplanationStatusCounts> {
@@ -858,19 +933,55 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
       const page = Math.max(1, Math.floor(options.page ?? 1))
       const pageSize = Math.min(50, Math.max(1, Math.floor(options.pageSize ?? 5)))
       const sort = options.sort === 'oldest' ? 'oldest' : 'newest'
+      const includeStatusCounts = options.includeStatusCounts !== false
+      const includeDetails = options.includeDetails !== false
+      const emptyStatusCounts: ExplanationStatusCounts = {
+        in_process: 0,
+        fresh: 0,
+        answered: 0,
+        seen: 0,
+      }
 
-      const rows = await deps.repository.listAllPrepTestRows()
-      let grouped = groupPrepTestRows(rows).filter((g) => isStudentVisiblePrepTest(g.moduleId))
+      const rowsPromise = deps.repository.listAllPrepTestRows()
+      const statusCountsPromise = includeStatusCounts
+        ? deps.repository.getExplanationStatusCounts(userId)
+        : Promise.resolve(emptyStatusCounts)
+
+      let rows: PrepTestRow[]
+      let statusCounts: ExplanationStatusCounts
       if (options.bookmarkedOnly) {
-        const bookmarkedQuestionIds = await deps.repository.listBookmarkedQuestionIds(userId)
+        const [bookmarkedQuestionIds, allRows, counts] = await Promise.all([
+          deps.repository.listBookmarkedQuestionIds(userId),
+          rowsPromise,
+          statusCountsPromise,
+        ])
+        rows = allRows
+        statusCounts = counts
         const prepTestIds = new Set(
           await deps.repository.listPrepTestIdsForQuestionIds(bookmarkedQuestionIds),
         )
+        let grouped = groupPrepTestRows(rows).filter((g) => isStudentVisiblePrepTest(g.moduleId))
         grouped = grouped.filter((g) => g.prepTestIds.some((id) => prepTestIds.has(id)))
+        if (sort === 'oldest') grouped = [...grouped].reverse()
+
+        const total = grouped.length
+        const start =
+          typeof options.offset === 'number' && Number.isFinite(options.offset)
+            ? Math.max(0, Math.floor(options.offset))
+            : (page - 1) * pageSize
+        const pageGroups = grouped.slice(start, start + pageSize)
+        const prepTests = await buildListItemsForPageGroups(
+          deps.repository,
+          userId,
+          pageGroups,
+          includeDetails,
+        )
+        return { prepTests, total, page, pageSize, statusCounts }
       }
-      if (sort === 'oldest') {
-        grouped = [...grouped].reverse()
-      }
+
+      ;[rows, statusCounts] = await Promise.all([rowsPromise, statusCountsPromise])
+      let grouped = groupPrepTestRows(rows).filter((g) => isStudentVisiblePrepTest(g.moduleId))
+      if (sort === 'oldest') grouped = [...grouped].reverse()
 
       const total = grouped.length
       const start =
@@ -878,28 +989,12 @@ export function createExplanationsService(deps: { repository: ExplanationsReposi
           ? Math.max(0, Math.floor(options.offset))
           : (page - 1) * pageSize
       const pageGroups = grouped.slice(start, start + pageSize)
-
-      const [progressLists, statusCounts] = await Promise.all([
-        deps.repository.listPrepTestQuestionProgress(userId),
-        deps.repository.getExplanationStatusCounts(userId),
-      ])
-      const progress = progressFromLists(progressLists)
-
-      const prepTests: ExplanationPrepTestListItem[] = []
-      for (const g of pageGroups) {
-        const stats = await deps.repository.fetchQuestionStatsForPrepTestIds(g.prepTestIds)
-        const statuses = stats.questionIds.map((id) => resolveExplanationQuestionStatus(id, progress))
-        prepTests.push({
-          id: g.id,
-          title: g.title,
-          moduleId: g.moduleId,
-          prepTestNumber: prepTestNumberFromModuleId(g.moduleId),
-          questionCount: stats.questionCount,
-          explainedCount: stats.explainedCount,
-          rowSubtitle: prepTestRowSubtitleFromStatuses(statuses),
-        })
-      }
-
+      const prepTests = await buildListItemsForPageGroups(
+        deps.repository,
+        userId,
+        pageGroups,
+        includeDetails,
+      )
       return { prepTests, total, page, pageSize, statusCounts }
     },
 

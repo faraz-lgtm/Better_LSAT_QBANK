@@ -42,6 +42,7 @@ import {
   type AnalyticsSectionFilter,
 } from "@/features/student/analytics/section-filter"
 import { useAnalyticsApi, usePracticeApi, useUsersApi } from "@/features/student/analytics/hooks/use-analytics-api"
+import { ensureStudyContext } from "@/features/student-session/ensure-student-session"
 import {
   filterByTimeRange,
   getTimeRangeCutoff,
@@ -54,10 +55,34 @@ import type {
   PriorityRow,
   TrajectoryPoint,
 } from "@/lib/api/analytics"
+import { peekCachedAnalyticsOverview } from "@/lib/api/analytics"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
+import {
+  AnalyticsChartSkeleton,
+  AnalyticsHistorySkeleton,
+  AnalyticsSkeletonBlock,
+  AnalyticsStatsSkeleton,
+} from "@/features/student/analytics/components/analytics-insights-skeletons"
 
 const VALID_TABS = new Set(["overview", "priorities", "history"])
 const OVERVIEW_HISTORY_PREVIEW_LIMIT = 4
+
+function OverviewWeaknessesSkeleton() {
+  return (
+    <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading weaknesses">
+      {Array.from({ length: 2 }, (_, i) => (
+        <div
+          key={`weakness-skel-${i}`}
+          className="rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4"
+        >
+          <AnalyticsSkeletonBlock className="h-4 w-40" />
+          <AnalyticsSkeletonBlock className="mt-3 h-3 w-56" />
+          <AnalyticsSkeletonBlock className="mt-4 h-16 w-full rounded-[12px]" />
+        </div>
+      ))}
+    </div>
+  )
+}
 
 function tabFromSearch(raw: string | null): string {
   if (raw && VALID_TABS.has(raw)) return raw
@@ -256,11 +281,12 @@ function OverviewTab() {
   const practiceApi = usePracticeApi()
   const usersApi = useUsersApi()
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(true)
+  const [seededOverview] = useState(() => peekCachedAnalyticsOverview())
+  const [bundleReady, setBundleReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [overviewByRange, setOverviewByRange] = useState<
     Partial<Record<TimeRangeValue, AnalyticsOverview>>
-  >({})
+  >(() => (seededOverview ? { all: seededOverview } : {}))
   const [scoreTab, setScoreTab] = useState<ScoreProgressTab>("both")
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
   const [trajectoryPoints, setTrajectoryPoints] = useState<TrajectoryPoint[]>([])
@@ -280,24 +306,29 @@ function OverviewTab() {
 
   useEffect(() => {
     if (!analyticsApi) {
-      setLoading(false)
       setError("Supabase env is missing.")
       return
     }
-    setLoading(true)
     let cancelled = false
-    void Promise.all([
-      analyticsApi.getPageBundle("overview"),
-      usersApi?.getStudyContext() ?? Promise.resolve(null),
-    ])
-      .then(([bundle, studyContext]) => {
+    // Goal score is non-blocking — reuse shared student-session cache instead of a
+    // duplicate users-get-study-context call that delayed overview paint.
+    void ensureStudyContext()
+      .then((studyContext) => {
+        if (cancelled) return
+        setGoalScore(studyContext?.preferences?.goalScore ?? null)
+        setGoalScoreError(null)
+      })
+      .catch(() => {
+        if (!cancelled) setGoalScoreError(null)
+      })
+    void analyticsApi
+      .getPageBundle("overview")
+      .then((bundle) => {
         if (cancelled) return
         const allOverview = bundle.overview
         if (!allOverview) throw new Error("No overview returned from analytics")
         setTrajectoryPoints(bundle.trajectory ?? [])
         setSections(mapPrioritiesToSections(bundle.priorities ?? []))
-        setGoalScore(studyContext?.preferences?.goalScore ?? null)
-        setGoalScoreError(null)
         setDrillHistory(
           (bundle.drillSessions?.sessions ?? [])
             .map(mapDrillSessionToHistoryEntry)
@@ -314,18 +345,16 @@ function OverviewTab() {
             .filter((e): e is PrepTestHistoryEntry => e != null),
         )
         setOverviewByRange({ all: allOverview })
+        setBundleReady(true)
       })
       .catch((e) => {
         if (cancelled) return
         setError(e instanceof Error ? e.message : "Failed to load")
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
     return () => {
       cancelled = true
     }
-  }, [analyticsApi, usersApi])
+  }, [analyticsApi])
 
   // Fetch overview for the selected range on demand.
   useEffect(() => {
@@ -460,48 +489,62 @@ function OverviewTab() {
     [practiceApi],
   )
 
-  if (error) return <p className="text-sm text-red-600">{error}</p>
-  if (loading || !overview) {
-    return <StudentPageLoader centered className="min-h-0 flex-1" label="Loading overview…" />
+  if (error && !overview) {
+    return <p className="text-sm text-red-600">{error}</p>
   }
+
+  const showStats = overview != null
+  const showDetails = bundleReady
 
   return (
     <div className="flex flex-col gap-6 pb-8">
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
       <section className="flex w-full flex-col gap-4">
         <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
           <h2 className="m-0 text-lg font-bold leading-[1.3] text-[var(--color-student-heading)]">Overview</h2>
           <TimeRangeSegmented value={timeRange} onChange={setTimeRange} className="shrink-0" />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {headlineStats.map((stat) => (
-            <StatTile key={stat.id} stat={stat} />
-          ))}
-        </div>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-          {secondaryStats.map((stat) => (
-            <StatTile key={stat.id} stat={stat} />
-          ))}
-        </div>
+        {showStats ? (
+          <>
+            <div className="grid gap-4 md:grid-cols-2">
+              {headlineStats.map((stat) => (
+                <StatTile key={stat.id} stat={stat} />
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+              {secondaryStats.map((stat) => (
+                <StatTile key={stat.id} stat={stat} />
+              ))}
+            </div>
+          </>
+        ) : (
+          <AnalyticsStatsSkeleton label="Loading overview stats" />
+        )}
       </section>
 
-      <AnalyticsScoreProgressPanel
-        title="Test Performance History"
-        legend={<ScoreProgressTabs value={scoreTab} onChange={setScoreTab} />}
-        chart={<ScoreProgressChart points={trajectory} tab={scoreTab} />}
-        footer={
-          <>
-            <span className="flex items-center gap-2 px-4 text-sm leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
-              <span className="size-4 shrink-0 rounded-full bg-[var(--primary)]" aria-hidden />
-              Regular Score
-            </span>
-            <span className="flex items-center gap-2 px-4 text-sm leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
-              <span className="size-4 shrink-0 rounded-full bg-[#ff6f00]" aria-hidden />
-              Untimed Review
-            </span>
-          </>
-        }
-      />
+      {showDetails ? (
+        <AnalyticsScoreProgressPanel
+          title="Test Performance History"
+          legend={<ScoreProgressTabs value={scoreTab} onChange={setScoreTab} />}
+          chart={<ScoreProgressChart points={trajectory} tab={scoreTab} />}
+          footer={
+            <>
+              <span className="flex items-center gap-2 px-4 text-sm leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
+                <span className="size-4 shrink-0 rounded-full bg-[var(--primary)]" aria-hidden />
+                Regular Score
+              </span>
+              <span className="flex items-center gap-2 px-4 text-sm leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">
+                <span className="size-4 shrink-0 rounded-full bg-[#ff6f00]" aria-hidden />
+                Untimed Review
+              </span>
+            </>
+          }
+        />
+      ) : (
+        <AnalyticsChartSkeleton />
+      )}
 
       <section className="flex flex-col gap-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -515,12 +558,14 @@ function OverviewTab() {
           </div>
           <TargetGoalScoreControl
             value={goalScore}
-            disabled={savingGoalScore || !usersApi}
+            disabled={savingGoalScore || !usersApi || !showDetails}
             onChange={(score) => void handleGoalScoreChange(score)}
           />
         </div>
         {goalScoreError ? <p className="text-sm text-red-600">{goalScoreError}</p> : null}
-        {sections.length === 0 ? (
+        {!showDetails ? (
+          <OverviewWeaknessesSkeleton />
+        ) : sections.length === 0 ? (
           <p className="rounded-xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-6 text-sm text-[var(--greyscale-500)]">
             Question-type reports appear once you answer questions linked to LR/RC types.
           </p>
@@ -533,58 +578,62 @@ function OverviewTab() {
         )}
       </section>
 
-      <OverviewHistoryShell activeTab={historyTab} onTabChange={setHistoryTab}>
-        {historyTab === "all" || historyTab === "drill" ? (
-          <AnalyticsPrepTestHistory
-            alwaysShowViewMore
-            title="Drill History"
-            emptyNoun="drills"
-            visibleEntries={visibleDrillHistory}
-            bookmarkedOnly={drillBookmarkedOnly}
-            onBookmarkedOnlyChange={setDrillBookmarkedOnly}
-            sectionFilter={drillSectionFilter}
-            onSectionFilterChange={setDrillSectionFilter}
-            onToggleBookmark={(id) => toggleHistoryBookmark(id, setDrillHistory, drillHistory)}
-            onSelectEntry={(id) => navigate(practiceSessionResultsPath(id, { source: "drill" }))}
-            previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
-            viewMoreHref="/app/analytics/drills"
-          />
-        ) : null}
+      {!showDetails ? (
+        <AnalyticsHistorySkeleton />
+      ) : (
+        <OverviewHistoryShell activeTab={historyTab} onTabChange={setHistoryTab}>
+          {historyTab === "all" || historyTab === "drill" ? (
+            <AnalyticsPrepTestHistory
+              alwaysShowViewMore
+              title="Drill History"
+              emptyNoun="drills"
+              visibleEntries={visibleDrillHistory}
+              bookmarkedOnly={drillBookmarkedOnly}
+              onBookmarkedOnlyChange={setDrillBookmarkedOnly}
+              sectionFilter={drillSectionFilter}
+              onSectionFilterChange={setDrillSectionFilter}
+              onToggleBookmark={(id) => toggleHistoryBookmark(id, setDrillHistory, drillHistory)}
+              onSelectEntry={(id) => navigate(practiceSessionResultsPath(id, { source: "drill" }))}
+              previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
+              viewMoreHref="/app/analytics/drills"
+            />
+          ) : null}
 
-        {historyTab === "all" || historyTab === "section" ? (
-          <AnalyticsPrepTestHistory
-            alwaysShowViewMore
-            title="Section History"
-            emptyNoun="sections"
-            brBarColor="var(--destructive)"
-            visibleEntries={visibleSectionHistory}
-            bookmarkedOnly={sectionBookmarkedOnly}
-            onBookmarkedOnlyChange={setSectionBookmarkedOnly}
-            sectionFilter={sectionSectionFilter}
-            onSectionFilterChange={setSectionSectionFilter}
-            onToggleBookmark={(id) => toggleHistoryBookmark(id, setSectionHistory, sectionHistory)}
-            onSelectEntry={(id) => navigate(practiceSessionResultsPath(id, { source: "section" }))}
-            previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
-            viewMoreHref="/app/analytics/sections"
-          />
-        ) : null}
+          {historyTab === "all" || historyTab === "section" ? (
+            <AnalyticsPrepTestHistory
+              alwaysShowViewMore
+              title="Section History"
+              emptyNoun="sections"
+              brBarColor="var(--destructive)"
+              visibleEntries={visibleSectionHistory}
+              bookmarkedOnly={sectionBookmarkedOnly}
+              onBookmarkedOnlyChange={setSectionBookmarkedOnly}
+              sectionFilter={sectionSectionFilter}
+              onSectionFilterChange={setSectionSectionFilter}
+              onToggleBookmark={(id) => toggleHistoryBookmark(id, setSectionHistory, sectionHistory)}
+              onSelectEntry={(id) => navigate(practiceSessionResultsPath(id, { source: "section" }))}
+              previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
+              viewMoreHref="/app/analytics/sections"
+            />
+          ) : null}
 
-        {historyTab === "all" || historyTab === "preptest" ? (
-          <AnalyticsPrepTestHistory
-            alwaysShowViewMore
-            title="PrepTest History"
-            emptyNoun="PrepTests"
-            visibleEntries={visiblePrepTestHistory}
-            bookmarkedOnly={prepTestBookmarkedOnly}
-            onBookmarkedOnlyChange={setPrepTestBookmarkedOnly}
-            onToggleBookmark={(id) => toggleHistoryBookmark(id, setPrepTestHistory, prepTestHistory)}
-            onSelectEntry={(id) => navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)}
-            onOpenPractice={(id) => navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)}
-            previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
-            viewMoreHref="/app/analytics/preptests"
-          />
-        ) : null}
-      </OverviewHistoryShell>
+          {historyTab === "all" || historyTab === "preptest" ? (
+            <AnalyticsPrepTestHistory
+              alwaysShowViewMore
+              title="PrepTest History"
+              emptyNoun="PrepTests"
+              visibleEntries={visiblePrepTestHistory}
+              bookmarkedOnly={prepTestBookmarkedOnly}
+              onBookmarkedOnlyChange={setPrepTestBookmarkedOnly}
+              onToggleBookmark={(id) => toggleHistoryBookmark(id, setPrepTestHistory, prepTestHistory)}
+              onSelectEntry={(id) => navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)}
+              onOpenPractice={(id) => navigate(`/app/analytics/preptests/results/${encodeURIComponent(id)}`)}
+              previewLimit={OVERVIEW_HISTORY_PREVIEW_LIMIT}
+              viewMoreHref="/app/analytics/preptests"
+            />
+          ) : null}
+        </OverviewHistoryShell>
+      )}
     </div>
   )
 }

@@ -1,5 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import {
+  loadStudyContext,
+  patchStudyPreferences,
+  selectStudyContext,
+} from "@/features/student-session/studentSessionSlice"
 import { createUsersApi, type ExtraTimeSetting } from "@/lib/api/users"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -116,26 +122,21 @@ const defaultState: AccommodationsState = {
 const AccommodationsContext = createContext<AccommodationsState>(defaultState)
 
 export function AccommodationsProvider({ children }: { children: ReactNode }) {
+  const dispatch = useAppDispatch()
+  const studyContext = useAppSelector(selectStudyContext)
   const [extraTimeSetting, setExtraTimeSetting] = useState<ExtraTimeSetting>("none")
   const [extraTimeCustomMinutes, setExtraTimeCustomMinutes] = useState<number | null>(null)
 
   useEffect(() => {
-    let alive = true
-    void (async () => {
-      try {
-        const api = createUsersApi(getSupabaseBrowserClient())
-        const ctx = await api.getStudyContext()
-        if (!alive || !ctx.preferences) return
-        setExtraTimeSetting(ctx.preferences.extraTimeSetting ?? "none")
-        setExtraTimeCustomMinutes(ctx.preferences.extraTimeCustomMinutes ?? null)
-      } catch {
-        // silently keep defaults — no accommodation is safe fallback
-      }
-    })()
-    return () => {
-      alive = false
-    }
-  }, [])
+    void dispatch(loadStudyContext())
+  }, [dispatch])
+
+  useEffect(() => {
+    const prefs = studyContext?.preferences
+    if (!prefs) return
+    setExtraTimeSetting(prefs.extraTimeSetting ?? "none")
+    setExtraTimeCustomMinutes(prefs.extraTimeCustomMinutes ?? null)
+  }, [studyContext])
 
   const scaleFactor = useMemo(
     () => resolveTimerScaleFactor(extraTimeSetting, extraTimeCustomMinutes),
@@ -155,14 +156,15 @@ export function AccommodationsProvider({ children }: { children: ReactNode }) {
   const updateAccommodations = useCallback(
     async (setting: ExtraTimeSetting, customMinutes: number | null) => {
       const api = createUsersApi(getSupabaseBrowserClient())
-      await api.updateStudyPreferences({
+      const nextPreferences = await api.updateStudyPreferences({
         extraTimeSetting: setting,
         extraTimeCustomMinutes: customMinutes,
       })
+      dispatch(patchStudyPreferences(nextPreferences))
       setExtraTimeSetting(setting)
       setExtraTimeCustomMinutes(customMinutes)
     },
-    [],
+    [dispatch],
   )
 
   return (

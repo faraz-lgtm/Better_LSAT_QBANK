@@ -1,9 +1,12 @@
+import { configureStore } from "@reduxjs/toolkit"
 import { render, screen, waitFor } from "@testing-library/react"
+import { Provider } from "react-redux"
 import { MemoryRouter } from "react-router-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
 import { GuestPricingModalProvider } from "@/features/guest/pricing/guest-pricing-modal-provider"
+import studentSessionReducer from "@/features/student-session/studentSessionSlice"
 import type { UserEntitlement } from "@/lib/api/users"
 
 function deferred<T>() {
@@ -41,7 +44,11 @@ const mocks = vi.hoisted(() => ({
       isLsacLinked: false,
       isLsacEligible: false,
       hasActiveCore: false,
-      accessState: "PAYMENT_REQUIRED" as "AUTH_REQUIRED" | "PAYMENT_REQUIRED" | "LSAC_REQUIRED" | "FULL_ACCESS",
+      accessState: "PAYMENT_REQUIRED" as
+        | "AUTH_REQUIRED"
+        | "PAYMENT_REQUIRED"
+        | "LSAC_REQUIRED"
+        | "FULL_ACCESS",
     },
     loading: false,
     error: null as string | null,
@@ -83,6 +90,7 @@ vi.mock("@/lib/api/analytics", () => ({
     getPriorities: mocks.getPriorities,
     getPageBundle: mocks.getPageBundle,
   }),
+  resetAnalyticsPageBundleCache: vi.fn(),
 }))
 
 vi.mock("@/lib/api/practice", () => ({
@@ -90,12 +98,17 @@ vi.mock("@/lib/api/practice", () => ({
 }))
 
 function renderDashboard() {
+  const store = configureStore({
+    reducer: { studentSession: studentSessionReducer },
+  })
   return render(
-    <MemoryRouter>
-      <GuestPricingModalProvider>
-        <DashboardPage />
-      </GuestPricingModalProvider>
-    </MemoryRouter>,
+    <Provider store={store}>
+      <MemoryRouter>
+        <GuestPricingModalProvider>
+          <DashboardPage />
+        </GuestPricingModalProvider>
+      </MemoryRouter>
+    </Provider>,
   )
 }
 
@@ -105,10 +118,21 @@ describe("DashboardPage", () => {
     mocks.entitlement.canAccessLsacContent = false
     mocks.entitlement.isPaymentRequired = true
     mocks.entitlement.entitlement = paymentRequiredEntitlement()
+    mocks.getMyProfile.mockReset()
+    mocks.getStudyContext.mockReset()
+    mocks.getPageBundle.mockReset()
     mocks.getMyProfile.mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
       first_name: "Assad",
       last_name: "Siyal",
       full_name: "Assad Siyal",
+      phone: null,
+      role: "student",
+      student_coaching_id: null,
+      is_first_time_login: false,
+      created_at: "2026-01-01",
+      updated_at: "2026-01-01",
     })
     mocks.getStudyContext.mockResolvedValue({ preferences: null, officialScores: [] })
     mocks.getOverview.mockResolvedValue({
@@ -185,7 +209,6 @@ describe("DashboardPage", () => {
       preferences: { plannedLsatDate: "2026-10-01", plannedLsatWindow: null },
       officialScores: [],
     })
-    mocks.getMyProfile.mockResolvedValue({ first_name: "Assad", full_name: "Assad Siyal" })
 
     renderDashboard()
 
@@ -228,7 +251,19 @@ describe("DashboardPage", () => {
     mocks.entitlement.isPaymentRequired = false
     mocks.entitlement.entitlement = fullAccessEntitlement()
 
-    const profile = deferred<{ first_name: string }>()
+    const profile = deferred<{
+      id: string
+      email: string
+      first_name: string
+      last_name: string | null
+      full_name: string
+      phone: null
+      role: "student"
+      student_coaching_id: null
+      is_first_time_login: boolean
+      created_at: string
+      updated_at: string
+    }>()
     mocks.getMyProfile.mockReturnValue(profile.promise)
     mocks.getStudyContext.mockReturnValue(new Promise(() => undefined))
     mocks.getPageBundle.mockReturnValue(new Promise(() => undefined))
@@ -238,11 +273,53 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Welcome back" })).toBeInTheDocument()
     expect(screen.getByLabelText("Loading stats")).toBeInTheDocument()
 
-    profile.resolve({ first_name: "Assad" })
+    profile.resolve({
+      id: "u1",
+      email: "a@b.com",
+      first_name: "Assad",
+      last_name: null,
+      full_name: "Assad",
+      phone: null,
+      role: "student",
+      student_coaching_id: null,
+      is_first_time_login: false,
+      created_at: "2026-01-01",
+      updated_at: "2026-01-01",
+    })
     await waitFor(() => {
       expect(screen.getByRole("heading", { level: 1, name: "Welcome back, Assad" })).toBeInTheDocument()
     })
     expect(screen.getByLabelText("Loading stats")).toBeInTheDocument()
     expect(screen.queryByText(/No drills in progress/)).not.toBeInTheDocument()
+  })
+
+  it("loads analytics once after entitlement settles (not while loading)", async () => {
+    mocks.entitlement.loading = true
+    mocks.entitlement.canAccessLsacContent = false
+    mocks.entitlement.isPaymentRequired = false
+    mocks.entitlement.entitlement = fullAccessEntitlement()
+
+    const store = configureStore({ reducer: { studentSession: studentSessionReducer } })
+    const tree = (
+      <Provider store={store}>
+        <MemoryRouter>
+          <GuestPricingModalProvider>
+            <DashboardPage />
+          </GuestPricingModalProvider>
+        </MemoryRouter>
+      </Provider>
+    )
+    const { rerender } = render(tree)
+
+    expect(mocks.getPageBundle).not.toHaveBeenCalled()
+    expect(screen.getByRole("status")).toHaveTextContent("Loading dashboard…")
+
+    mocks.entitlement.loading = false
+    mocks.entitlement.canAccessLsacContent = true
+    rerender(tree)
+
+    await waitFor(() => {
+      expect(mocks.getPageBundle).toHaveBeenCalledTimes(1)
+    })
   })
 })

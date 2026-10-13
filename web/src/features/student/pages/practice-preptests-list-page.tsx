@@ -1,15 +1,16 @@
 import type { ReactNode } from "react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom"
 
 import { FigmaDropdown } from "@/components/ui/figma-dropdown"
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
-import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import type {
   PrepTestPoolAttempt,
   PrepTestPoolFilter,
   PrepTestPoolItem,
+  PrepTestPoolListResult,
+  PrepTestPoolSort,
   PrepTestPoolStatusCounts,
 } from "@/features/student/preptests/preptest-types"
 import {
@@ -24,6 +25,10 @@ import {
   poolCardDisplayScore,
 } from "@/features/student/preptests/preptest-pool-display"
 import { PrepTestScoreText } from "@/features/student/preptests/preptest-score-badge"
+import {
+  cachePrepTestPool,
+  getCachedPrepTestPool,
+} from "@/features/student/preptests/prep-test-pool-cache"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { prepTestFullTestUnavailableLabel } from "@/lib/prep-test-pool-availability"
@@ -140,11 +145,51 @@ function statusSubtitle(item: PrepTestPoolItem): string {
 function filterTabLabel(
   tab: (typeof FILTER_TABS)[number],
   counts: PrepTestPoolStatusCounts,
+  countsLoading = false,
 ): string {
   if (tab.id === "fresh" || tab.id === "in_progress" || tab.id === "completed") {
+    if (countsLoading) return tab.label
     return `${tab.label} (${counts[tab.id]})`
   }
   return tab.label
+}
+
+function PrepTestSkeletonBlock({ className }: { className?: string }) {
+  return <div className={cn("animate-pulse rounded-xl bg-[var(--greyscale-100)]", className)} />
+}
+
+function PrepTestListCardSkeleton() {
+  return (
+    <article
+      className="w-full overflow-hidden rounded-[16px] border border-solid border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
+      aria-hidden
+    >
+      <div className="flex h-[88px] items-center gap-4 px-4">
+        <PrepTestSkeletonBlock className="size-16 shrink-0 rounded-[14px]" />
+        <div className="flex min-w-0 flex-1 flex-col items-start justify-center gap-2">
+          <PrepTestSkeletonBlock className="h-5 w-28" />
+          <PrepTestSkeletonBlock className="h-3.5 w-40" />
+        </div>
+        <PrepTestSkeletonBlock className="h-10 w-[106px] shrink-0 rounded-[12px]" />
+        <PrepTestSkeletonBlock className="size-6 shrink-0 rounded-md" />
+      </div>
+    </article>
+  )
+}
+
+/** Share one in-flight pool request across StrictMode double-mounts. */
+let prepTestPoolInflight: { key: string; promise: Promise<PrepTestPoolListResult> } | null = null
+
+function loadPrepTestPoolShared(
+  key: string,
+  loader: () => Promise<PrepTestPoolListResult>,
+): Promise<PrepTestPoolListResult> {
+  if (prepTestPoolInflight?.key === key) return prepTestPoolInflight.promise
+  const promise = loader().finally(() => {
+    if (prepTestPoolInflight?.promise === promise) prepTestPoolInflight = null
+  })
+  prepTestPoolInflight = { key, promise }
+  return promise
 }
 
 function FigmaIcon({
@@ -246,6 +291,7 @@ function PrepTestListCardShell({
   interactive,
   starting,
   onActivate,
+  onPrefetch,
   center,
   actions,
   expanded,
@@ -261,6 +307,7 @@ function PrepTestListCardShell({
   interactive?: boolean
   starting?: boolean
   onActivate?: () => void
+  onPrefetch?: () => void
   center?: ReactNode
   actions: ReactNode
   expanded?: boolean
@@ -289,6 +336,8 @@ function PrepTestListCardShell({
       )}
       data-testid={`preptest-list-row-${testId}`}
       data-muted={badgeTone === "muted" ? "true" : undefined}
+      onMouseEnter={onPrefetch}
+      onFocus={onPrefetch}
     >
       <div
         className={cn(
@@ -333,6 +382,7 @@ function PrepTestListCard({
   expanded,
   onToggleExpanded,
   onPrimary,
+  onPrefetch,
   onBlindReview,
   onViewResult,
 }: {
@@ -342,6 +392,7 @@ function PrepTestListCard({
   expanded: boolean
   onToggleExpanded: () => void
   onPrimary: () => void
+  onPrefetch?: () => void
   onBlindReview: () => void
   onViewResult: (sessionId: string) => void
 }) {
@@ -491,6 +542,7 @@ function PrepTestListCard({
       interactive={isReadyToTake}
       starting={isReadyToTake && starting}
       onActivate={isReadyToTake ? onPrimary : undefined}
+      onPrefetch={onPrefetch}
       center={center}
       actions={action}
       expanded={expanded}
@@ -507,53 +559,90 @@ function PracticePrepTestsListPage() {
 
   const [filter, setFilter] = useState<PrepTestPoolFilter>("all")
   const [sort, setSort] = useState<(typeof SORT_OPTIONS)[number]>("Newest")
-  const [prepTests, setPrepTests] = useState<PrepTestPoolItem[]>([])
-  const [total, setTotal] = useState(0)
-  const [statusCounts, setStatusCounts] = useState<PrepTestPoolStatusCounts>(EMPTY_STATUS_COUNTS)
-  const [loading, setLoading] = useState(true)
+  const poolSort: PrepTestPoolSort = sort === "Newest" ? "newest" : "oldest"
+  const cacheKey = useMemo(
+    () => ({ filter, sort: poolSort, pageSize: INITIAL_PAGE_SIZE }),
+    [filter, poolSort],
+  )
+  const cached = getCachedPrepTestPool(cacheKey)
+  const [prepTests, setPrepTests] = useState<PrepTestPoolItem[]>(() => cached?.prepTests ?? [])
+  const [total, setTotal] = useState(() => cached?.total ?? 0)
+  const [statusCounts, setStatusCounts] = useState<PrepTestPoolStatusCounts>(
+    () => cached?.statusCounts ?? EMPTY_STATUS_COUNTS,
+  )
+  const [countsReady, setCountsReady] = useState(() => Boolean(cached?.statusCounts))
+  const [loading, setLoading] = useState(() => !cached)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [startingId, setStartingId] = useState<string | null>(null)
   const [startingBlindReviewId, setStartingBlindReviewId] = useState<string | null>(null)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set())
   const [error, setError] = useState<string | null>(null)
-
-  const poolSort = sort === "Newest" ? "newest" : "oldest"
+  const loadGenerationRef = useRef(0)
 
   useEffect(() => {
     let cancelled = false
-    void (async () => {
+    const generation = ++loadGenerationRef.current
+    const requestKey = `${filter}:${poolSort}:page1`
+    const warm = getCachedPrepTestPool(cacheKey)
+    if (warm) {
+      setPrepTests(warm.prepTests)
+      setTotal(warm.total)
+      setStatusCounts(warm.statusCounts ?? EMPTY_STATUS_COUNTS)
+      setCountsReady(true)
+      setLoading(false)
+    } else {
       setLoading(true)
-      setError(null)
+    }
+    setError(null)
+
+    void (async () => {
       try {
-        const out = await practiceApi.listPrepTestPool({
-          filter,
-          page: 1,
-          pageSize: INITIAL_PAGE_SIZE,
-          sort: poolSort,
+        const out = await loadPrepTestPoolShared(requestKey, () =>
+          practiceApi.listPrepTestPool({
+            filter,
+            page: 1,
+            pageSize: INITIAL_PAGE_SIZE,
+            sort: poolSort,
+          }),
+        )
+        if (cancelled || generation !== loadGenerationRef.current) return
+        setPrepTests(out.prepTests)
+        setTotal(out.total)
+        setStatusCounts(out.statusCounts ?? EMPTY_STATUS_COUNTS)
+        setCountsReady(true)
+        cachePrepTestPool(cacheKey, {
+          prepTests: out.prepTests,
+          total: out.total,
+          page: out.page,
+          pageSize: out.pageSize,
+          statusCounts: out.statusCounts ?? EMPTY_STATUS_COUNTS,
         })
-        if (!cancelled) {
-          setPrepTests(out.prepTests)
-          setTotal(out.total)
-          setStatusCounts(out.statusCounts ?? EMPTY_STATUS_COUNTS)
-        }
       } catch (e) {
-        if (!cancelled) {
+        if (cancelled || generation !== loadGenerationRef.current) return
+        if (!getCachedPrepTestPool(cacheKey)) {
           setPrepTests([])
           setTotal(0)
           setStatusCounts(EMPTY_STATUS_COUNTS)
-          setError(e instanceof Error ? e.message : "Failed to load PrepTests")
+          setCountsReady(true)
         }
+        setError(e instanceof Error ? e.message : "Failed to load PrepTests")
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled && generation === loadGenerationRef.current) setLoading(false)
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [practiceApi, filter, poolSort])
+  }, [practiceApi, filter, poolSort, cacheKey])
 
   const visiblePrepTests = useMemo(() => filterPrepTestPoolItems(prepTests, filter), [prepTests, filter])
   const hasMore = visiblePrepTests.length < total
+
+  // Warm hub detail for in-progress PTs so Continue paints without a blocking loader.
+  useEffect(() => {
+    for (const item of visiblePrepTests) {
+      if (item.status === "in_progress") practiceApi.prefetchPrepTestDetail(item.id)
+    }
+  }, [practiceApi, visiblePrepTests])
 
   async function handleSeeMore() {
     if (loadingMore || loading || !hasMore) return
@@ -598,21 +687,12 @@ function PracticePrepTestsListPage() {
     }
   }
 
-  async function handlePrimary(item: PrepTestPoolItem) {
-    setStartingId(item.id)
-    setError(null)
-    try {
-      if (item.status === "fresh" || item.status === "completed") {
-        await practiceApi.startPrepTest({ prepTestId: item.id })
-      }
-      navigate(
-        item.status === "completed" ? prepTestHubHref(item.id, { retake: true }) : prepTestHubHref(item.id),
-      )
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to start PrepTest")
-    } finally {
-      setStartingId(null)
-    }
+  function handlePrimary(item: PrepTestPoolItem) {
+    // Navigate immediately — hub paints from cache / list prefetch while refreshing.
+    if (item.status === "in_progress") practiceApi.prefetchPrepTestDetail(item.id)
+    navigate(
+      item.status === "completed" ? prepTestHubHref(item.id, { retake: true }) : prepTestHubHref(item.id),
+    )
   }
 
   async function handleBlindReview(item: PrepTestPoolItem) {
@@ -653,14 +733,6 @@ function PracticePrepTestsListPage() {
     return <Navigate to={prepTestHubHref(legacyTestId)} replace />
   }
 
-  if (loading) {
-    return (
-      <StudentMain>
-        <StudentPageLoader centered className="min-h-[min(480px,70vh)]" label="Loading PrepTests…" />
-      </StudentMain>
-    )
-  }
-
   return (
     <StudentMain>
       <div className="flex flex-col gap-6">
@@ -672,17 +744,41 @@ function PracticePrepTestsListPage() {
         <PrepTestListFilters
           filter={filter}
           setFilter={(f) => {
-            setLoading(true)
-            setPrepTests([])
+            const warm = getCachedPrepTestPool({ filter: f, sort: poolSort, pageSize: INITIAL_PAGE_SIZE })
+            if (warm) {
+              setPrepTests(warm.prepTests)
+              setTotal(warm.total)
+              setStatusCounts(warm.statusCounts ?? EMPTY_STATUS_COUNTS)
+              setCountsReady(true)
+              setLoading(false)
+            } else {
+              setLoading(true)
+              setPrepTests([])
+            }
             setFilter(f)
           }}
           sort={sort}
           setSort={(s) => {
-            setLoading(true)
-            setPrepTests([])
+            const nextSort = s === "Newest" ? "newest" : "oldest"
+            const warm = getCachedPrepTestPool({
+              filter,
+              sort: nextSort,
+              pageSize: INITIAL_PAGE_SIZE,
+            })
+            if (warm) {
+              setPrepTests(warm.prepTests)
+              setTotal(warm.total)
+              setStatusCounts(warm.statusCounts ?? EMPTY_STATUS_COUNTS)
+              setCountsReady(true)
+              setLoading(false)
+            } else {
+              setLoading(true)
+              setPrepTests([])
+            }
             setSort(s)
           }}
           statusCounts={statusCounts}
+          countsLoading={!countsReady}
         />
 
         {error ? (
@@ -691,7 +787,13 @@ function PracticePrepTestsListPage() {
           </p>
         ) : null}
 
-        {visiblePrepTests.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading PrepTests">
+            {Array.from({ length: INITIAL_PAGE_SIZE }, (_, index) => (
+              <PrepTestListCardSkeleton key={`preptest-skeleton-${index}`} />
+            ))}
+          </div>
+        ) : visiblePrepTests.length === 0 ? (
           <p className="text-sm text-[var(--greyscale-500)]">No PrepTests match this filter.</p>
         ) : (
           <>
@@ -700,11 +802,16 @@ function PracticePrepTestsListPage() {
                 <PrepTestListCard
                   key={item.id}
                   item={item}
-                  starting={startingId === item.id}
+                  starting={false}
                   startingBlindReview={startingBlindReviewId === item.id}
                   expanded={expandedIds.has(item.id)}
                   onToggleExpanded={() => toggleExpanded(item.id)}
-                  onPrimary={() => void handlePrimary(item)}
+                  onPrimary={() => handlePrimary(item)}
+                  onPrefetch={
+                    item.status === "in_progress"
+                      ? () => practiceApi.prefetchPrepTestDetail(item.id)
+                      : undefined
+                  }
                   onBlindReview={() => void handleBlindReview(item)}
                   onViewResult={viewResult}
                 />
@@ -735,12 +842,14 @@ function PrepTestListFilters({
   sort,
   setSort,
   statusCounts,
+  countsLoading = false,
 }: {
   filter: PrepTestPoolFilter
   setFilter: (f: PrepTestPoolFilter) => void
   sort: (typeof SORT_OPTIONS)[number]
   setSort: (s: (typeof SORT_OPTIONS)[number]) => void
   statusCounts: PrepTestPoolStatusCounts
+  countsLoading?: boolean
 }) {
   return (
     <div className="flex w-full flex-wrap items-center justify-between gap-4">
@@ -748,11 +857,14 @@ function PrepTestListFilters({
         Start your PrepTest
       </h2>
       <div className="flex min-w-0 flex-wrap items-center gap-6">
-        <div className="min-w-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div
+          className="min-w-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          aria-busy={countsLoading || undefined}
+        >
           <div className="flex w-max items-center gap-2">
             {FILTER_TABS.map((tab) => {
               const active = filter === tab.id
-              const label = filterTabLabel(tab, statusCounts)
+              const label = filterTabLabel(tab, statusCounts, countsLoading)
               return (
                 <button
                   key={tab.id}

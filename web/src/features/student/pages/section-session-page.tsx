@@ -490,6 +490,7 @@ function SectionSessionPage() {
   const questionPaneRef = useRef<HTMLDivElement>(null)
 
   const [loading, setLoading] = useState(true)
+  const [questionsLoading, setQuestionsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sectionSession, setSectionSession] = useState<SectionSessionResponse | null>(null)
   const [qIndex, setQIndex] = useState(1)
@@ -666,19 +667,51 @@ function SectionSessionPage() {
     handleZoomScaleChange,
   )
 
-  const load = useCallback(async () => {
-    if (!sessionId) return
-    const generation = ++loadGenerationRef.current
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await practiceApi.getSectionSession(sessionId)
-      if (generation !== loadGenerationRef.current) return
-      setSectionSession(data)
+  const hydrateAnswersFromSession = useCallback(
+    (data: SectionSessionResponse) => {
       const map: Record<string, QuestionAnswerState> = {}
       for (const a of data.answers) {
         map[a.questionId] = { selectedAnswer: a.selectedAnswer, isCorrect: a.isCorrect }
       }
+      return map
+    },
+    [],
+  )
+
+  const load = useCallback(async () => {
+    if (!sessionId) return
+    const generation = ++loadGenerationRef.current
+    setLoading(true)
+    setQuestionsLoading(false)
+    setError(null)
+    try {
+      // PrepTest intro only needs section chrome — paint it before ~100KB question HTML.
+      const wantsIntroFirst =
+        sectionIntroActive &&
+        searchParams.get("started") !== "1" &&
+        !blindReviewMode &&
+        !resultsReviewMode
+
+      let data: SectionSessionResponse
+      if (wantsIntroFirst) {
+        // Overlap full question fetch with intro shell so CTA unlocks as soon as HTML is ready.
+        const fullPromise = practiceApi.getSectionSession(sessionId, { includeQuestions: true })
+        const shell = await practiceApi.getSectionSession(sessionId, { includeQuestions: false })
+        if (generation !== loadGenerationRef.current) return
+        setSectionSession(shell)
+        setLoading(false)
+        setQuestionsLoading(true)
+        data = await fullPromise
+        if (generation !== loadGenerationRef.current) return
+        setSectionSession(data)
+        setQuestionsLoading(false)
+      } else {
+        data = await practiceApi.getSectionSession(sessionId)
+        if (generation !== loadGenerationRef.current) return
+        setSectionSession(data)
+      }
+
+      const map = hydrateAnswersFromSession(data)
       const hydrated = answerPersist.hydrate(map)
       if (searchParams.get("review") === "1" && sessionId) {
         const storageKey = `br-actual-${sessionId}`
@@ -753,10 +786,23 @@ function SectionSessionPage() {
     } catch (e) {
       if (generation !== loadGenerationRef.current) return
       setError(e instanceof Error ? e.message : "Failed to load section")
+      setQuestionsLoading(false)
     } finally {
       if (generation === loadGenerationRef.current) setLoading(false)
     }
-  }, [answerPersist, practiceApi, sessionId, searchParams, sectionPostBrActiveKey, sectionPostBrActualKey, sectionPostBrAnswersKey])
+  }, [
+    answerPersist,
+    practiceApi,
+    sessionId,
+    searchParams,
+    sectionIntroActive,
+    blindReviewMode,
+    resultsReviewMode,
+    hydrateAnswersFromSession,
+    sectionPostBrActiveKey,
+    sectionPostBrActualKey,
+    sectionPostBrAnswersKey,
+  ])
 
   useEffect(() => {
     void load()
@@ -841,6 +887,7 @@ function SectionSessionPage() {
   const prepTestFlowId = searchParams.get("prepTestId")
 
   function handleGoToSectionQuestions() {
+    if ((sectionSession?.questions.length ?? 0) === 0) return
     const params = new URLSearchParams(searchParams)
     params.set("started", "1")
     navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true })
@@ -1475,18 +1522,21 @@ function SectionSessionPage() {
     )
   }
 
-  if (sectionIntroActive && sectionSession && questions.length > 0) {
+  if (sectionIntroActive && sectionSession) {
+    const introQuestionCount =
+      questions.length > 0 ? questions.length : (sectionSession.section.questionCount ?? metadata?.questionIds.length ?? 0)
     const introHeaderLabel = prepTestHeaderLabel(
       sectionSession.section.moduleId ?? null,
       sectionSession.section.prepTestTitle ?? null,
     )
     const introTimerBudgetSeconds = resolveTimerBudgetSeconds({
       timing: metadata?.timing,
-      questionCount: questions.length,
+      questionCount: introQuestionCount,
       scaleFactor: accommodationScaleFactor,
     })
     const introTimerLabel = timedSection ? "Time Left" : "Elapsed"
     const introTimerDisplaySeconds = timedSection ? introTimerBudgetSeconds : elapsed
+    const questionsReady = questions.length > 0 && !questionsLoading
 
     return (
       <StudentMain
@@ -1513,12 +1563,14 @@ function SectionSessionPage() {
             <PracticePrepTestSectionIntroPanel
               sectionNumber={sectionSession.section.sectionNumber ?? null}
               sectionType={sectionType}
-              questionCount={questions.length}
+              questionCount={introQuestionCount}
               timeMinutes={
                 isUnlimitedPracticeTiming(metadata?.timing)
                   ? null
                   : Math.max(1, Math.round(introTimerBudgetSeconds / 60))
               }
+              goToQuestionsLabel={questionsReady ? "Go to Question" : "Preparing questions…"}
+              goToQuestionsDisabled={!questionsReady}
               onGoToQuestions={handleGoToSectionQuestions}
             />
           </PracticePrepTestSectionIntroFrame>

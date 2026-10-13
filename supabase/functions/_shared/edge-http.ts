@@ -1,5 +1,7 @@
 import { createClient, type User } from 'npm:@supabase/supabase-js@2'
 
+import { verifyAccessTokenLocally } from './verify-access-token.ts'
+
 /** CORS for typical browser + supabase-js invoke (narrow). */
 export const CORS_EDGE_NARROW: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
@@ -45,6 +47,20 @@ export function getSupabaseUrlAndAnonKey(): { url: string; anonKey: string } | n
   return { url, anonKey }
 }
 
+function userFromJwtClaims(claims: Record<string, unknown>): User | null {
+  const sub = typeof claims.sub === 'string' ? claims.sub : ''
+  if (!sub) return null
+  return {
+    id: sub,
+    aud: typeof claims.aud === 'string' ? claims.aud : 'authenticated',
+    role: typeof claims.role === 'string' ? claims.role : undefined,
+    email: typeof claims.email === 'string' ? claims.email : undefined,
+    app_metadata: (claims.app_metadata as Record<string, unknown>) ?? {},
+    user_metadata: (claims.user_metadata as Record<string, unknown>) ?? {},
+    created_at: '',
+  } as User
+}
+
 export async function requireAuthUser(
   req: Request,
   cors: Record<string, string> = CORS_EDGE_NARROW,
@@ -54,13 +70,33 @@ export async function requireAuthUser(
     return { ok: false, response: json({ error: 'Server misconfigured' }, { status: 500 }, cors) }
   }
   const authHeader = req.headers.get('Authorization') ?? ''
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim()
+  if (!token) {
+    return { ok: false, response: json({ error: 'Unauthorized' }, { status: 401 }, cors) }
+  }
+
+  // HS256 projects: verify with JWT secret (no network).
+  const hs256User = await verifyAccessTokenLocally(token)
+  if (hs256User) return { ok: true, user: hs256User }
+
   const userClient = createClient(env.url, env.anonKey, {
-    global: { headers: { Authorization: authHeader } },
+    global: { headers: { Authorization: `Bearer ${token}` } },
   })
+
+  // ES256/asymmetric projects: getClaims verifies via cached JWKS (much faster than getUser).
+  try {
+    const { data, error } = await userClient.auth.getClaims(token)
+    const claims = data?.claims as Record<string, unknown> | undefined
+    const claimsUser = !error && claims ? userFromJwtClaims(claims) : null
+    if (claimsUser) return { ok: true, user: claimsUser }
+  } catch {
+    // Fall through to getUser.
+  }
+
   const {
     data: { user },
     error: userErr,
-  } = await userClient.auth.getUser()
+  } = await userClient.auth.getUser(token)
   if (userErr || !user) {
     return { ok: false, response: json({ error: 'Unauthorized' }, { status: 401 }, cors) }
   }

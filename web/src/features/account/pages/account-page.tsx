@@ -37,6 +37,7 @@ import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
+import { useTrackCheckoutPurchase } from "@/lib/analytics/track-checkout-purchase"
 import {
   createBillingApi,
   type BillingInvoice,
@@ -675,6 +676,7 @@ function BillingHistoryRow({ invoice }: { invoice: BillingInvoice }) {
 
 function AccountPage() {
   const navigate = useNavigate()
+  useTrackCheckoutPurchase()
   const { openPricingModal } = useGuestPricingModal()
   const { entitlement, loading: entitlementLoading } = useStudentEntitlement()
   const [profile, setProfile] = useState<UserProfile | null>(null)

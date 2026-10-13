@@ -176,7 +176,11 @@ export function createPrepCourseService(deps: {
   async function requireLearnerAccess(userId: string): Promise<void> {
     if (!enforceEntitlement) return
 
-    const profile = await deps.repository.getProfileRole(userId)
+    // Profile + latest LSAC snapshot in parallel (was sequential + ~1 RTT extra).
+    const [profile, snapshot] = await Promise.all([
+      deps.repository.getProfileRole(userId),
+      deps.repository.getLatestStudentSnapshotByUserId(userId),
+    ])
     if (!profile) {
       throw new EntitlementError('LSAC account must be linked before accessing prep content')
     }
@@ -187,7 +191,6 @@ export function createPrepCourseService(deps: {
       throw new EntitlementError('LSAC account must be linked before accessing prep content')
     }
 
-    const snapshot = await deps.repository.getLatestStudentSnapshotByUserId(userId)
     const linkedInSnapshot = snapshot?.linked === true
     const subscriptionType = snapshot?.subscription_type?.trim().toLowerCase() ?? null
     const hasEligibleSubscription = subscriptionType
@@ -222,62 +225,25 @@ export function createPrepCourseService(deps: {
       courseSlug: string,
       opts?: { hydrate?: 'first' | 'all'; moduleId?: string },
     ) {
-      await requireLearnerAccess(userId)
-      const course = await deps.repository.getPublishedCourseBySlug(normalizeSlug(courseSlug))
-      if (!course) throw new Error('Course not found')
-
       const requestedModuleId = opts?.moduleId?.trim() || null
       // Default to full hydrate for callers that omit the flag (e.g. lesson page).
       // Course outline passes hydrate=first for a fast first paint.
       const hydrateMode = opts?.hydrate ?? 'all'
-      const hydrateModuleIds: string[] | 'first' | undefined = requestedModuleId
-        ? [requestedModuleId]
-        : hydrateMode === 'first'
-          ? 'first'
-          : undefined
-
-      const curriculum = await deps.repository.listPublishedCurriculum(course.id, {
-        hydrateModuleIds,
+      const slug = normalizeSlug(courseSlug)
+      // Overlap entitlement checks with the outline RPC when enforcement is on.
+      const outlinePromise = deps.repository.getCourseOutline(slug, userId, {
+        hydrate: hydrateMode,
+        moduleId: requestedModuleId ?? undefined,
       })
-      if (requestedModuleId && !curriculum.modules.some((mod) => mod.id === requestedModuleId)) {
+      const [, outline] = await Promise.all([requireLearnerAccess(userId), outlinePromise])
+      if (!outline) throw new Error('Course not found')
+      if (
+        requestedModuleId &&
+        !outline.curriculum.modules.some((mod) => mod.id === requestedModuleId)
+      ) {
         throw new Error('Module not found')
       }
-
-      const lessons = deps.repository.flattenLessonsFromCurriculum(curriculum)
-      const needsModuleStats = hydrateModuleIds !== undefined
-      const [completedLessonSlugs, bookmarks, moduleStats] = await Promise.all([
-        deps.repository.listCompletedLessonSlugsByCourse(userId, course.id),
-        deps.repository.listBookmarksForCurriculum(userId, course.id, curriculum),
-        needsModuleStats
-          ? deps.repository.listModuleLessonStats(course.id)
-          : Promise.resolve(
-              curriculum.modules.map((mod) => ({
-                moduleId: mod.id,
-                lessonCount: mod.sections.reduce((sum, section) => sum + section.lessons.length, 0),
-                totalMinutes: mod.sections.reduce(
-                  (sum, section) =>
-                    sum +
-                    section.lessons.reduce((lessonSum, lesson) => lessonSum + (lesson.duration_minutes ?? 0), 0),
-                  0,
-                ),
-              })),
-            ),
-      ])
-      const hydratedModuleIds =
-        hydrateModuleIds === 'first'
-          ? curriculum.modules[0]
-            ? [curriculum.modules[0].id]
-            : []
-          : hydrateModuleIds ?? curriculum.modules.map((mod) => mod.id)
-      return {
-        course,
-        lessons,
-        curriculum,
-        completedLessonSlugs,
-        bookmarks,
-        hydratedModuleIds,
-        moduleStats,
-      }
+      return outline
     },
 
     async setModuleBookmark(userId: string, courseSlug: string, moduleId: string, bookmarked: boolean) {

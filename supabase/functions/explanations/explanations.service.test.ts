@@ -23,6 +23,7 @@ function mockRepo(overrides: Partial<ExplanationsRepository> = {}): Explanations
     fetchPrepTestTreeRows: async () => [],
     listQuestionTypeNames: async () => new Map(),
     fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 0, explainedCount: 0, questionIds: [] }),
+    fetchQuestionStatsByPrepTestId: async () => new Map(),
     getQuestionDetail: async () => null,
     listLatestAnswerStatusByQuestionIds: async () => new Map(),
     listLsatCatalogQuestionIds: async () => [],
@@ -38,6 +39,11 @@ function mockRepo(overrides: Partial<ExplanationsRepository> = {}): Explanations
       inProcessQuestionIds: [],
       answeredQuestionIds: [],
     }),
+    listExplanationQuestionStatusesForIds: async (ids) => {
+      const map = new Map<string, 'answered' | 'in_process' | 'seen' | 'fresh'>()
+      for (const id of ids) map.set(id, 'fresh')
+      return map
+    },
     listLatestAnswerSelectionsForQuestion: async () => [],
     getLatestUserAnswerSelection: async () => null,
     listUserQuestionAttemptHistory: async () => [],
@@ -395,7 +401,11 @@ Deno.test('listPrepTests paginates grouped prep tests', async () => {
   const service = createExplanationsService({
     repository: mockRepo({
       listAllPrepTestRows: async () => rows,
-      fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 10, explainedCount: 2, questionIds: [] }),
+      fetchQuestionStatsByPrepTestId: async (ids) => {
+        const map = new Map<string, { questionCount: number; explainedCount: number; questionIds: string[] }>()
+        for (const id of ids) map.set(id, { questionCount: 10, explainedCount: 2, questionIds: [] })
+        return map
+      },
     }),
   })
 
@@ -423,7 +433,11 @@ Deno.test('listPrepTests hides pre-PT100 tests', async () => {
   const service = createExplanationsService({
     repository: mockRepo({
       listAllPrepTestRows: async () => rows,
-      fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 10, explainedCount: 2, questionIds: [] }),
+      fetchQuestionStatsByPrepTestId: async (ids) => {
+        const map = new Map<string, { questionCount: number; explainedCount: number; questionIds: string[] }>()
+        for (const id of ids) map.set(id, { questionCount: 10, explainedCount: 2, questionIds: [] })
+        return map
+      },
     }),
   })
 
@@ -453,22 +467,30 @@ Deno.test('getExplanationStatusCounts uses student-visible catalog only', async 
 
 Deno.test('listPrepTests returns global statusCounts for user', async () => {
   let catalogFetched = false
+  let statusCountsCalls = 0
   const service = createExplanationsService({
     repository: mockRepo({
       listAllPrepTestRows: async () => [
         { id: 'pt-1', module_id: 'LSAC158', title: 'PT 158', imported_at: null },
       ],
-      fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 103, explainedCount: 3, questionIds: [] }),
+      fetchQuestionStatsByPrepTestId: async (ids) => {
+        const map = new Map<string, { questionCount: number; explainedCount: number; questionIds: string[] }>()
+        for (const id of ids) map.set(id, { questionCount: 103, explainedCount: 3, questionIds: [] })
+        return map
+      },
       listLsatCatalogQuestionIds: async () => {
         catalogFetched = true
         return ['q1', 'q2', 'q3']
       },
-      getExplanationStatusCounts: async () => ({
-        answered: 1,
-        in_process: 1,
-        seen: 1,
-        fresh: 0,
-      }),
+      getExplanationStatusCounts: async () => {
+        statusCountsCalls += 1
+        return {
+          answered: 1,
+          in_process: 1,
+          seen: 1,
+          fresh: 0,
+        }
+      },
       listPrepTestQuestionProgress: async () => ({
         seenQuestionIds: ['q3'],
         inProcessQuestionIds: ['q2'],
@@ -478,11 +500,58 @@ Deno.test('listPrepTests returns global statusCounts for user', async () => {
   })
 
   const out = await service.listPrepTests('user-1', { page: 1, pageSize: 5 })
+  assertEquals(statusCountsCalls, 1)
   assertEquals(out.statusCounts.answered, 1)
   assertEquals(out.statusCounts.in_process, 1)
   assertEquals(out.statusCounts.seen, 1)
   assertEquals(out.statusCounts.fresh, 0)
   assertEquals(catalogFetched, false)
+
+  const pageMore = await service.listPrepTests('user-1', {
+    page: 1,
+    pageSize: 5,
+    includeStatusCounts: false,
+  })
+  assertEquals(statusCountsCalls, 1)
+  assertEquals(pageMore.statusCounts, { in_process: 0, fresh: 0, answered: 0, seen: 0 })
+})
+
+Deno.test('listPrepTests includeDetails false skips stats and returns Fresh subtitles', async () => {
+  let statsCalls = 0
+  let statusCalls = 0
+  const service = createExplanationsService({
+    repository: mockRepo({
+      listAllPrepTestRows: async () => [
+        { id: 'pt-1', module_id: 'LSAC159', title: 'PT 159', imported_at: null },
+        { id: 'pt-2', module_id: 'LSAC158', title: 'PT 158', imported_at: null },
+      ],
+      fetchQuestionStatsByPrepTestId: async (ids) => {
+        statsCalls += 1
+        const map = new Map<string, { questionCount: number; explainedCount: number; questionIds: string[] }>()
+        for (const id of ids) map.set(id, { questionCount: 10, explainedCount: 1, questionIds: ['q1'] })
+        return map
+      },
+      listExplanationQuestionStatusesForIds: async (ids) => {
+        statusCalls += 1
+        const map = new Map<string, 'answered' | 'in_process' | 'seen' | 'fresh'>()
+        for (const id of ids) map.set(id, 'answered')
+        return map
+      },
+    }),
+  })
+
+  const slim = await service.listPrepTests('user-1', {
+    page: 1,
+    pageSize: 5,
+    includeStatusCounts: false,
+    includeDetails: false,
+  })
+  assertEquals(statsCalls, 0)
+  assertEquals(statusCalls, 0)
+  assertEquals(slim.prepTests.length, 2)
+  assertEquals(slim.prepTests[0]?.prepTestNumber, '159')
+  assertEquals(slim.prepTests[0]?.rowSubtitle, 'Fresh')
+  assertEquals(slim.prepTests[0]?.questionCount, 0)
 })
 
 Deno.test('getExplanationDetail returns extended payload', async () => {
@@ -755,7 +824,11 @@ Deno.test('listPrepTests bookmarkedOnly keeps prep tests that contain bookmarks'
       ],
       listBookmarkedQuestionIds: async () => ['q-booked'],
       listPrepTestIdsForQuestionIds: async (ids) => (ids.includes('q-booked') ? ['pt-keep'] : []),
-      fetchQuestionStatsForPrepTestIds: async () => ({ questionCount: 4, explainedCount: 1, questionIds: [] }),
+      fetchQuestionStatsByPrepTestId: async (ids) => {
+        const map = new Map<string, { questionCount: number; explainedCount: number; questionIds: string[] }>()
+        for (const id of ids) map.set(id, { questionCount: 4, explainedCount: 1, questionIds: [] })
+        return map
+      },
     }),
   })
   const out = await service.listPrepTests('user-1', { page: 1, pageSize: 10, bookmarkedOnly: true })

@@ -15,6 +15,13 @@ import type {
   SectionSessionResponse,
   StartSectionInput,
 } from "@/features/student/sections/section-types"
+import {
+  cacheSectionSession,
+  getCachedSectionSession,
+  takeCachedSectionSession,
+} from "@/features/student/sections/section-session-cache"
+
+const sectionSessionInflight = new Map<string, Promise<SectionSessionResponse>>()
 import type {
   BlindReviewDetailResponse,
   BlindReviewPoolFilter,
@@ -39,6 +46,14 @@ import type {
   StartPrepTestResponse,
 } from "@/features/student/preptests/preptest-types"
 import { coercePoolScore, filterPrepTestPoolItems, adjustPrepTestPoolStatusCounts, adjustPrepTestPoolTotal } from "@/features/student/preptests/preptest-pool-display"
+import {
+  cachePrepTestDetail,
+  clearInflightPrepTestDetail,
+  clearPrepTestDetailCache,
+  getCachedPrepTestDetail,
+  getInflightPrepTestDetail,
+  setInflightPrepTestDetail,
+} from "@/features/student/preptests/prep-test-detail-cache"
 import { normalizePrepTestDetail } from "@/features/student/preptests/preptest-section-break"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
@@ -305,6 +320,41 @@ export function createPracticeApi(supabase: SupabaseClient) {
       : await supabase.functions.invoke<T>(functionName, options)
     if (result.error) await throwIfEdgeInvokeFailed(result.error)
     return result
+  }
+
+  async function fetchSectionSessionFromEdge(
+    sessionId: string,
+    opts: { includeQuestions?: boolean } = {},
+  ): Promise<SectionSessionResponse> {
+    const includeQuestions = opts.includeQuestions !== false
+    const { data, error } = await invokePracticeFn<SectionSessionResponse>("practice-get-section-session", {
+      method: "POST",
+      body: { sessionId, includeQuestions },
+    })
+    if (error) await throwIfEdgeInvokeFailed(error)
+    if (!data?.session) throw new Error("No section session returned from practice")
+    if (!includeQuestions || data.metadata.sectionType !== "RC" || data.questions.length === 0) {
+      return data
+    }
+    return {
+      ...data,
+      questions: await enrichRcPassageGroups(supabase, data.questions, data.session.section_id),
+    }
+  }
+
+  function loadSectionSessionShared(
+    sessionId: string,
+    opts: { includeQuestions?: boolean } = {},
+  ): Promise<SectionSessionResponse> {
+    const includeQuestions = opts.includeQuestions !== false
+    const inflightKey = `${sessionId}:${includeQuestions ? "full" : "shell"}`
+    const existing = sectionSessionInflight.get(inflightKey)
+    if (existing) return existing
+    const pending = fetchSectionSessionFromEdge(sessionId, { includeQuestions }).finally(() => {
+      sectionSessionInflight.delete(inflightKey)
+    })
+    sectionSessionInflight.set(inflightKey, pending)
+    return pending
   }
 
   return {
@@ -580,25 +630,51 @@ export function createPracticeApi(supabase: SupabaseClient) {
         session_id: data.session.id,
         section_id: input.sectionId,
       })
-      if (data.metadata.sectionType !== "RC") return data
-      return {
-        ...data,
-        questions: await enrichRcPassageGroups(supabase, data.questions, data.session.section_id),
-      }
+      const enriched =
+        data.metadata.sectionType !== "RC"
+          ? data
+          : {
+              ...data,
+              questions: await enrichRcPassageGroups(supabase, data.questions, data.session.section_id),
+            }
+      cacheSectionSession(enriched.session.id, enriched)
+      return enriched
     },
 
-    async getSectionSession(sessionId: string): Promise<SectionSessionResponse> {
-      const { data, error } = await invokePracticeFn<SectionSessionResponse>("practice-get-section-session", {
-        method: "POST",
-        body: { sessionId },
-      })
-      if (error) await throwIfEdgeInvokeFailed(error)
-      if (!data?.session) throw new Error("No section session returned from practice")
-      if (data.metadata.sectionType !== "RC") return data
-      return {
-        ...data,
-        questions: await enrichRcPassageGroups(supabase, data.questions, data.session.section_id),
+    async getSectionSession(
+      sessionId: string,
+      opts: { includeQuestions?: boolean } = {},
+    ): Promise<SectionSessionResponse> {
+      const includeQuestions = opts.includeQuestions !== false
+      // One-shot warm handoff from startSection / prefetch (do not re-cache network
+      // responses — answers would go stale across remounts).
+      if (includeQuestions) {
+        const cached = takeCachedSectionSession(sessionId)
+        if (cached) return cached
+      } else {
+        const cached = getCachedSectionSession(sessionId)
+        if (cached) {
+          return {
+            ...cached,
+            questions: [],
+            answers: [],
+            blindReviewAnswers: [],
+            blindReviewRawScore: null,
+          }
+        }
       }
+      return loadSectionSessionShared(sessionId, { includeQuestions })
+    },
+
+    /** Best-effort warm cache for continue / section-intro navigation. */
+    prefetchSectionSession(sessionId: string): void {
+      const id = sessionId.trim()
+      if (!id || getCachedSectionSession(id) || sectionSessionInflight.has(`${id}:full`)) return
+      void loadSectionSessionShared(id, { includeQuestions: true })
+        .then((data) => cacheSectionSession(id, data))
+        .catch(() => {
+          /* Prefetch is best-effort. */
+        })
     },
 
     async listPrepTestPool(
@@ -667,24 +743,58 @@ export function createPracticeApi(supabase: SupabaseClient) {
       return data
     },
 
-    async getPrepTestDetail(prepTestId: string): Promise<PrepTestDetailResponse> {
-      const { data, error } = await invokePracticeFn<PrepTestDetailResponse>("practice-get-prep-test-detail", {
-        method: "POST",
-        body: { prepTestId },
+    async getPrepTestDetail(
+      prepTestId: string,
+      opts: { forceRefresh?: boolean } = {},
+    ): Promise<PrepTestDetailResponse> {
+      if (!opts.forceRefresh) {
+        const cached = getCachedPrepTestDetail(prepTestId)
+        if (cached) return cached
+      }
+      const inflight = getInflightPrepTestDetail(prepTestId)
+      if (inflight) return inflight
+
+      const promise = (async () => {
+        const { data, error } = await invokePracticeFn<PrepTestDetailResponse>("practice-get-prep-test-detail", {
+          method: "POST",
+          body: { prepTestId },
+        })
+        if (error) await throwIfEdgeInvokeFailed(error)
+        if (!data?.prepTest) throw new Error("No prep test detail returned from practice")
+        const normalized = normalizePrepTestDetail(
+          {
+            ...data,
+            sectionBreak: data.sectionBreak ?? null,
+            sections: data.sections.map((s) => ({ ...s, onBreak: s.onBreak ?? false })),
+          },
+          { prepTestId },
+        )
+        cachePrepTestDetail(normalized.prepTest.id, normalized)
+        if (normalized.prepTest.id !== prepTestId) {
+          cachePrepTestDetail(prepTestId, normalized)
+        }
+        return normalized
+      })()
+
+      setInflightPrepTestDetail(prepTestId, promise)
+      try {
+        return await promise
+      } finally {
+        clearInflightPrepTestDetail(prepTestId)
+      }
+    },
+
+    /** Warm hub detail so Continue / back-nav paints without a blocking loader. */
+    prefetchPrepTestDetail(prepTestId: string): void {
+      const id = prepTestId.trim()
+      if (!id || getCachedPrepTestDetail(id) || getInflightPrepTestDetail(id)) return
+      void this.getPrepTestDetail(id).catch(() => {
+        /* Prefetch is best-effort. */
       })
-      if (error) await throwIfEdgeInvokeFailed(error)
-      if (!data?.prepTest) throw new Error("No prep test detail returned from practice")
-      return normalizePrepTestDetail(
-        {
-          ...data,
-          sectionBreak: data.sectionBreak ?? null,
-          sections: data.sections.map((s) => ({ ...s, onBreak: s.onBreak ?? false })),
-        },
-        { prepTestId },
-      )
     },
 
     async startPrepTest(input: StartPrepTestInput): Promise<StartPrepTestResponse> {
+      clearPrepTestDetailCache(input.prepTestId)
       const { data, error } = await invokePracticeFn<StartPrepTestResponse>("practice-start-prep-test", {
         method: "POST",
         body: {
@@ -695,6 +805,16 @@ export function createPracticeApi(supabase: SupabaseClient) {
       })
       if (error) throw error
       if (!data?.prepTestSession) throw new Error("No prep test session returned from practice")
+      if (!data.detail?.prepTest) throw new Error("No prep test detail returned from practice")
+      const normalizedDetail = normalizePrepTestDetail(
+        {
+          ...data.detail,
+          sectionBreak: data.detail.sectionBreak ?? null,
+          sections: data.detail.sections.map((s) => ({ ...s, onBreak: s.onBreak ?? false })),
+        },
+        { prepTestId: input.prepTestId },
+      )
+      cachePrepTestDetail(normalizedDetail.prepTest.id, normalizedDetail)
       captureEvent(AnalyticsEvent.practiceSessionStarted, {
         session_type: "PREPTEST",
         session_id: data.prepTestSession.id,
@@ -702,18 +822,12 @@ export function createPracticeApi(supabase: SupabaseClient) {
       })
       return {
         ...data,
-        detail: normalizePrepTestDetail(
-          {
-            ...data.detail,
-            sectionBreak: data.detail.sectionBreak ?? null,
-            sections: data.detail.sections.map((s) => ({ ...s, onBreak: s.onBreak ?? false })),
-          },
-          { prepTestId: input.prepTestId },
-        ),
+        detail: normalizedDetail,
       }
     },
 
     async completePrepTest(prepTestId: string): Promise<PracticeSession> {
+      clearPrepTestDetailCache(prepTestId)
       const { data, error } = await invokePracticeFn<{ session: PracticeSession }>("practice-complete-prep-test", {
         method: "POST",
         body: { prepTestId },

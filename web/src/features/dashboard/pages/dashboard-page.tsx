@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-context"
 import { DashboardAccessSetupCard } from "@/features/dashboard/components/dashboard-access-setup-card"
 import { DashboardQuickStats } from "@/features/dashboard/components/dashboard-quick-stats"
@@ -25,6 +26,13 @@ import {
   dashboardDrillMoreHref,
   pickDashboardActiveDrills,
 } from "@/features/dashboard/lib/pick-dashboard-drills"
+import {
+  loadProfile,
+  loadStudyContext,
+  patchStudyPreferences,
+  selectProfile,
+  selectStudyContext,
+} from "@/features/student-session/studentSessionSlice"
 import { withBestScoreFromTrajectory } from "@/features/student/analytics/map-analytics"
 import { useAnalyticsApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import { ContinueDrillCard, continueDrillToCardDrill } from "@/features/student/components/continue-drill-card"
@@ -39,7 +47,6 @@ import {
   type SuggestedDrill,
 } from "@/features/student/drills/drill-dashboard-mappers"
 import type { AnalyticsOverview } from "@/lib/api/analytics"
-import type { StudentStudyContext } from "@/lib/api/users"
 import { createUsersApi } from "@/lib/api/users"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -71,12 +78,15 @@ function firstNameFromProfile(profile: { first_name?: string | null; full_name?:
 
 function DashboardPage() {
   const navigate = useNavigate()
+  const dispatch = useAppDispatch()
   const {
     canAccessLsacContent,
     isPaymentRequired,
     loading: entitlementLoading,
   } = useStudentEntitlement()
   const analyticsApi = useAnalyticsApi()
+  const profile = useAppSelector(selectProfile)
+  const studyContext = useAppSelector(selectStudyContext)
   const usersApi = useMemo(() => {
     try {
       return createUsersApi(getSupabaseBrowserClient())
@@ -95,8 +105,7 @@ function DashboardPage() {
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null)
   const [continueDrills, setContinueDrills] = useState<ContinueDrill[]>([])
   const [suggestedDrills, setSuggestedDrills] = useState<SuggestedDrill[]>([])
-  const [studyContext, setStudyContext] = useState<StudentStudyContext | null>(null)
-  const [firstName, setFirstName] = useState("")
+  const firstName = firstNameFromProfile(profile)
   /** Stats / drills still loading — shell (welcome + countdown) paints without waiting. */
   const [analyticsLoading, setAnalyticsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -106,28 +115,26 @@ function DashboardPage() {
   const [savingTestDate, setSavingTestDate] = useState(false)
 
   useEffect(() => {
+    void dispatch(loadProfile())
+    void dispatch(loadStudyContext())
+  }, [dispatch])
+
+  useEffect(() => {
+    // Wait until entitlement is known so we do not start+cancel a full analytics load.
+    if (entitlementLoading) return
+
     let cancelled = false
 
-    async function loadDashboard() {
-      const canLoadAnalytics = entitlementLoading || canAccessLsacContent
-      if (!canLoadAnalytics) {
+    async function loadDashboardAnalytics() {
+      if (!canAccessLsacContent) {
         setOverview(null)
         setContinueDrills([])
         setSuggestedDrills([])
         setAnalyticsLoading(false)
-        if (usersApi) {
-          try {
-            const profile = await usersApi.getMyProfile()
-            if (cancelled) return
-            setFirstName(firstNameFromProfile(profile))
-          } catch {
-            if (!cancelled) setFirstName("")
-          }
-        }
         return
       }
 
-      if (!analyticsApi || !usersApi) {
+      if (!analyticsApi) {
         if (!cancelled) {
           setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
           setAnalyticsLoading(false)
@@ -138,31 +145,9 @@ function DashboardPage() {
       setAnalyticsLoading(true)
       setError(null)
 
-      const stillAllowed = () => !cancelled && (entitlementLoading || canAccessLsacContent)
-
-      // Shell pieces load independently so welcome/countdown aren't blocked by analytics.
-      void usersApi.getMyProfile().then(
-        (profile) => {
-          if (!stillAllowed()) return
-          setFirstName(firstNameFromProfile(profile))
-        },
-        () => {
-          /* keep prior firstName */
-        },
-      )
-      void usersApi.getStudyContext().then(
-        (context) => {
-          if (!stillAllowed()) return
-          setStudyContext(context)
-        },
-        () => {
-          /* countdown stays empty until retry */
-        },
-      )
-
       try {
         const bundle = await analyticsApi.getPageBundle("dashboard")
-        if (!stillAllowed()) return
+        if (cancelled) return
 
         const overviewData = bundle.overview
         if (!overviewData) throw new Error("No overview returned from analytics")
@@ -188,11 +173,11 @@ function DashboardPage() {
       }
     }
 
-    void loadDashboard()
+    void loadDashboardAnalytics()
     return () => {
       cancelled = true
     }
-  }, [analyticsApi, canAccessLsacContent, entitlementLoading, usersApi])
+  }, [analyticsApi, canAccessLsacContent, entitlementLoading])
 
   const statCards = useMemo(
     () => (overview ? mapOverviewToDashboardStats(overview) : []),
@@ -260,9 +245,7 @@ function DashboardPage() {
         plannedLsatDate: value.trim(),
         plannedLsatWindow: null,
       })
-      setStudyContext((prev) =>
-        prev ? { ...prev, preferences: nextPreferences } : { preferences: nextPreferences, officialScores: [] },
-      )
+      dispatch(patchStudyPreferences(nextPreferences))
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update test date")
     } finally {

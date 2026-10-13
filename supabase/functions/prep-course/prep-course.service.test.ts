@@ -1,7 +1,13 @@
 import { assertEquals, assertRejects } from 'jsr:@std/assert@1'
 import { FREE_PREP_COURSE_SLUG } from '../_shared/prep-course-free-access.ts'
 import type { PrepLessonType } from '../_shared/prep-lesson-type.ts'
-import type { PrepCourseRow, PrepLessonRow, ProfileRoleRow } from './prep-course.repository.ts'
+import type {
+  GetCourseOutlineOptions,
+  PrepCourseOutline,
+  PrepCourseRow,
+  PrepLessonRow,
+  ProfileRoleRow,
+} from './prep-course.repository.ts'
 import { createPrepCourseService, EntitlementError } from './prep-course.service.ts'
 
 function mockRepo(
@@ -9,6 +15,11 @@ function mockRepo(
     getProfileRole: (userId: string) => Promise<ProfileRoleRow | null>
     listPublishedCourses: () => Promise<PrepCourseRow[]>
     getPublishedCourseBySlug: (slug: string) => Promise<PrepCourseRow | null>
+    getCourseOutline: (
+      courseSlug: string,
+      userId: string,
+      opts?: GetCourseOutlineOptions,
+    ) => Promise<PrepCourseOutline | null>
     listPublishedLessonsByCourse: (courseId: string) => Promise<PrepLessonRow[]>
     listPublishedCurriculum: (
       courseId: string,
@@ -185,6 +196,37 @@ function mockRepo(
     getPublishedCourseBySlug:
       overrides.getPublishedCourseBySlug ??
       (async () => course),
+    getCourseOutline:
+      overrides.getCourseOutline ??
+      (async () => ({
+        course,
+        curriculum: {
+          modules: [
+            {
+              id: 'mod-1',
+              course_id: 'course-1',
+              title: 'Module 1',
+              sort_order: 1,
+              duration_minutes: null,
+              sections: [
+                {
+                  id: 'section-1',
+                  module_id: 'mod-1',
+                  title: 'General',
+                  sort_order: 1,
+                  duration_minutes: null,
+                  lessons: [lesson],
+                },
+              ],
+            },
+          ],
+        },
+        lessons: [lesson],
+        completedLessonSlugs: [],
+        bookmarks: { moduleIds: [], lessonSlugs: [] },
+        hydratedModuleIds: ['mod-1'],
+        moduleStats: [{ moduleId: 'mod-1', lessonCount: 1, totalMinutes: 5 }],
+      })),
     listPublishedCurriculum:
       overrides.listPublishedCurriculum ??
       (async () => ({
@@ -340,12 +382,111 @@ Deno.test('prep-course service validates lesson type payload', async () => {
 })
 
 Deno.test('prep-course service returns course and lessons by slug', async () => {
-  let curriculumLoads = 0
+  let outlineLoads = 0
+  let outlineSlug: string | null = null
   const service = createPrepCourseService({
     repository: mockRepo({
-      listPublishedCurriculum: async () => {
-        curriculumLoads += 1
+      getCourseOutline: async (courseSlug) => {
+        outlineLoads += 1
+        outlineSlug = courseSlug
         return {
+          course: {
+            id: 'course-1',
+            slug: 'prep-course',
+            title: 'Prep Course',
+            description: null,
+            is_published: true,
+            created_at: '2026-01-01T00:00:00Z',
+            updated_at: '2026-01-01T00:00:00Z',
+          },
+          curriculum: {
+            modules: [
+              {
+                id: 'mod-1',
+                course_id: 'course-1',
+                title: 'Module 1',
+                sort_order: 1,
+                duration_minutes: null,
+                sections: [
+                  {
+                    id: 'section-1',
+                    module_id: 'mod-1',
+                    title: 'General',
+                    sort_order: 1,
+                    duration_minutes: null,
+                    lessons: [
+                      {
+                        id: 'lesson-1',
+                        course_id: 'course-1',
+                        section_id: 'section-1',
+                        slug: 'lesson-1',
+                        title: 'Lesson 1',
+                        lesson_type: 'video_text',
+                        sort_order: 1,
+                        summary: null,
+                        duration_minutes: 3,
+                        video_url: 'https://example.com/video',
+                        text_content: '<p>Lesson body</p>',
+                        is_published: true,
+                        created_at: '2026-01-01T00:00:00Z',
+                        updated_at: '2026-01-01T00:00:00Z',
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          lessons: [
+            {
+              id: 'lesson-1',
+              course_id: 'course-1',
+              section_id: 'section-1',
+              slug: 'lesson-1',
+              title: 'Lesson 1',
+              lesson_type: 'video_text',
+              sort_order: 1,
+              summary: null,
+              duration_minutes: 3,
+              video_url: 'https://example.com/video',
+              text_content: '<p>Lesson body</p>',
+              is_published: true,
+              created_at: '2026-01-01T00:00:00Z',
+              updated_at: '2026-01-01T00:00:00Z',
+            },
+          ],
+          completedLessonSlugs: [],
+          bookmarks: { moduleIds: [], lessonSlugs: [] },
+          hydratedModuleIds: ['mod-1'],
+          moduleStats: [{ moduleId: 'mod-1', lessonCount: 1, totalMinutes: 5 }],
+        }
+      },
+    }),
+  })
+  const out = await service.getCourseWithLessons('user-1', 'PREP COURSE')
+  assertEquals(out.course.slug, 'prep-course')
+  assertEquals(out.lessons.length, 1)
+  assertEquals(out.curriculum.modules.length, 1)
+  assertEquals(out.completedLessonSlugs, [])
+  assertEquals(out.bookmarks, { moduleIds: [], lessonSlugs: [] })
+  assertEquals(outlineLoads, 1)
+  assertEquals(outlineSlug, 'prep-course')
+})
+
+Deno.test('prep-course service returns bookmarks with course', async () => {
+  const service = createPrepCourseService({
+    repository: mockRepo({
+      getCourseOutline: async () => ({
+        course: {
+          id: 'course-1',
+          slug: 'prep-course',
+          title: 'Prep Course',
+          description: null,
+          is_published: true,
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+        curriculum: {
           modules: [
             {
               id: 'mod-1',
@@ -360,45 +501,18 @@ Deno.test('prep-course service returns course and lessons by slug', async () => 
                   title: 'General',
                   sort_order: 1,
                   duration_minutes: null,
-                  lessons: [
-                    {
-                      id: 'lesson-1',
-                      course_id: 'course-1',
-                      section_id: 'section-1',
-                      slug: 'lesson-1',
-                      title: 'Lesson 1',
-                      lesson_type: 'video_text',
-                      sort_order: 1,
-                      summary: null,
-                      duration_minutes: 3,
-                      video_url: 'https://example.com/video',
-                      text_content: '<p>Lesson body</p>',
-                      is_published: true,
-                      created_at: '2026-01-01T00:00:00Z',
-                      updated_at: '2026-01-01T00:00:00Z',
-                    },
-                  ],
+                  lessons: [],
                 },
               ],
             },
           ],
-        }
-      },
-    }),
-  })
-  const out = await service.getCourseWithLessons('user-1', 'PREP COURSE')
-  assertEquals(out.course.slug, 'prep-course')
-  assertEquals(out.lessons.length, 1)
-  assertEquals(out.curriculum.modules.length, 1)
-  assertEquals(out.completedLessonSlugs, [])
-  assertEquals(out.bookmarks, { moduleIds: [], lessonSlugs: [] })
-  assertEquals(curriculumLoads, 1)
-})
-
-Deno.test('prep-course service returns bookmarks with course', async () => {
-  const service = createPrepCourseService({
-    repository: mockRepo({
-      listBookmarksForCurriculum: async () => ({ moduleIds: ['mod-1'], lessonSlugs: ['lesson-1'] }),
+        },
+        lessons: [],
+        completedLessonSlugs: [],
+        bookmarks: { moduleIds: ['mod-1'], lessonSlugs: ['lesson-1'] },
+        hydratedModuleIds: ['mod-1'],
+        moduleStats: [{ moduleId: 'mod-1', lessonCount: 0, totalMinutes: 0 }],
+      }),
     }),
   })
   const out = await service.getCourseWithLessons('user-1', 'prep-course')
@@ -406,7 +520,7 @@ Deno.test('prep-course service returns bookmarks with course', async () => {
 })
 
 Deno.test('prep-course service hydrate=first loads module stats and marks first module', async () => {
-  let hydrateOpts: unknown = null
+  let outlineOpts: GetCourseOutlineOptions | undefined
   const firstLesson: PrepLessonRow = {
     id: 'lesson-1',
     course_id: 'course-1',
@@ -425,55 +539,70 @@ Deno.test('prep-course service hydrate=first loads module stats and marks first 
   }
   const service = createPrepCourseService({
     repository: mockRepo({
-      listPublishedCurriculum: async (_courseId, opts) => {
-        hydrateOpts = opts
+      getCourseOutline: async (_slug, _userId, opts) => {
+        outlineOpts = opts
         return {
-          modules: [
-            {
-              id: 'mod-1',
-              course_id: 'course-1',
-              title: 'Module 1',
-              sort_order: 1,
-              duration_minutes: null,
-              sections: [
-                {
-                  id: 'section-1',
-                  module_id: 'mod-1',
-                  title: 'General',
-                  sort_order: 1,
-                  duration_minutes: null,
-                  lessons: [firstLesson],
-                },
-              ],
-            },
-            {
-              id: 'mod-2',
-              course_id: 'course-1',
-              title: 'Module 2',
-              sort_order: 2,
-              duration_minutes: null,
-              sections: [
-                {
-                  id: 'section-2',
-                  module_id: 'mod-2',
-                  title: 'General',
-                  sort_order: 1,
-                  duration_minutes: null,
-                  lessons: [],
-                },
-              ],
-            },
+          course: {
+            id: 'course-1',
+            slug: 'prep-course',
+            title: 'Prep Course',
+            description: null,
+            is_published: true,
+            created_at: '2026-01-01T00:00:00Z',
+            updated_at: '2026-01-01T00:00:00Z',
+          },
+          curriculum: {
+            modules: [
+              {
+                id: 'mod-1',
+                course_id: 'course-1',
+                title: 'Module 1',
+                sort_order: 1,
+                duration_minutes: null,
+                sections: [
+                  {
+                    id: 'section-1',
+                    module_id: 'mod-1',
+                    title: 'General',
+                    sort_order: 1,
+                    duration_minutes: null,
+                    lessons: [firstLesson],
+                  },
+                ],
+              },
+              {
+                id: 'mod-2',
+                course_id: 'course-1',
+                title: 'Module 2',
+                sort_order: 2,
+                duration_minutes: null,
+                sections: [
+                  {
+                    id: 'section-2',
+                    module_id: 'mod-2',
+                    title: 'General',
+                    sort_order: 1,
+                    duration_minutes: null,
+                    lessons: [],
+                  },
+                ],
+              },
+            ],
+          },
+          lessons: [firstLesson],
+          completedLessonSlugs: [],
+          bookmarks: { moduleIds: [], lessonSlugs: [] },
+          hydratedModuleIds: ['mod-1'],
+          moduleStats: [
+            { moduleId: 'mod-1', lessonCount: 1, totalMinutes: 5 },
+            { moduleId: 'mod-2', lessonCount: 4, totalMinutes: 20 },
           ],
         }
       },
-      listModuleLessonStats: async () => [
-        { moduleId: 'mod-1', lessonCount: 1, totalMinutes: 5 },
-        { moduleId: 'mod-2', lessonCount: 4, totalMinutes: 20 },
-      ],
     }),
   })
   const out = await service.getCourseWithLessons('user-1', 'prep-course', { hydrate: 'first' })
-  assertEquals(hydrateOpts, { hydrateModuleIds: 'first' })
+  assertEquals(outlineOpts, { hydrate: 'first', moduleId: undefined })
   assertEquals(out.hydratedModuleIds, ['mod-1'])
   assertEquals(out.moduleStats, [
     { moduleId: 'mod-1', lessonCount: 1, totalMinutes: 5 },
@@ -521,11 +650,80 @@ Deno.test('prep-course service setLessonBookmark persists and returns bookmarks'
 Deno.test('prep-course service returns completed lesson slugs with course', async () => {
   const service = createPrepCourseService({
     repository: mockRepo({
-      listCompletedLessonSlugsByCourse: async () => ['lesson-1'],
+      getCourseOutline: async () => ({
+        course: {
+          id: 'course-1',
+          slug: 'prep-course',
+          title: 'Prep Course',
+          description: null,
+          is_published: true,
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+        curriculum: { modules: [] },
+        lessons: [],
+        completedLessonSlugs: ['lesson-1'],
+        bookmarks: { moduleIds: [], lessonSlugs: [] },
+        hydratedModuleIds: [],
+        moduleStats: [],
+      }),
     }),
   })
   const out = await service.getCourseWithLessons('user-1', 'prep-course')
   assertEquals(out.completedLessonSlugs, ['lesson-1'])
+})
+
+Deno.test('prep-course service getCourseWithLessons throws when outline missing', async () => {
+  const service = createPrepCourseService({
+    repository: mockRepo({
+      getCourseOutline: async () => null,
+    }),
+  })
+  await assertRejects(
+    () => service.getCourseWithLessons('user-1', 'missing'),
+    Error,
+    'Course not found',
+  )
+})
+
+Deno.test('prep-course service getCourseWithLessons throws for unknown moduleId', async () => {
+  const service = createPrepCourseService({
+    repository: mockRepo({
+      getCourseOutline: async () => ({
+        course: {
+          id: 'course-1',
+          slug: 'prep-course',
+          title: 'Prep Course',
+          description: null,
+          is_published: true,
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+        curriculum: {
+          modules: [
+            {
+              id: 'mod-1',
+              course_id: 'course-1',
+              title: 'Module 1',
+              sort_order: 1,
+              duration_minutes: null,
+              sections: [],
+            },
+          ],
+        },
+        lessons: [],
+        completedLessonSlugs: [],
+        bookmarks: { moduleIds: [], lessonSlugs: [] },
+        hydratedModuleIds: [],
+        moduleStats: [],
+      }),
+    }),
+  })
+  await assertRejects(
+    () => service.getCourseWithLessons('user-1', 'prep-course', { moduleId: 'missing-mod' }),
+    Error,
+    'Module not found',
+  )
 })
 
 Deno.test('prep-course service completeLesson upserts and returns slugs', async () => {

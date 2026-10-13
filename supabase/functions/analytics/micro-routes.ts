@@ -56,12 +56,14 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
   let kind: PracticeSessionKind | undefined
   let bookmarkedOnly = false
   let completedOnly = false
+  let skipCount = false
   let limit = 20
   let offset = 0
   let sessionKind: PracticeSessionKind | undefined
   let sessionId: string | undefined
   let questionTypeId: string | undefined
   let includeKinds: PracticeSessionKind[] | undefined
+  let skipDifficulty = false
   let completedSince: string | undefined
   let include: AnalyticsPageBundleView | undefined
 
@@ -71,6 +73,8 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
     kind = kindParam && isSessionKind(kindParam) ? kindParam : undefined
     bookmarkedOnly = url.searchParams.get('bookmarked') === 'true'
     completedOnly = url.searchParams.get('completedOnly') === 'true'
+    skipCount = url.searchParams.get('skipCount') === 'true'
+    skipDifficulty = url.searchParams.get('skipDifficulty') === 'true'
     limit = clampSessionsLimit(Number(url.searchParams.get('limit')) || 20)
     offset = Math.max(0, Number(url.searchParams.get('offset')) || 0)
     sessionKind = sk && isSessionKind(sk) ? sk : undefined
@@ -98,6 +102,8 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
     kind = kindRaw && isSessionKind(kindRaw) ? kindRaw : undefined
     bookmarkedOnly = body.bookmarked === true
     completedOnly = body.completedOnly === true
+    skipCount = body.skipCount === true
+    skipDifficulty = body.skipDifficulty === true
     limit = clampSessionsLimit(readNum(body.limit, 20))
     offset = Math.max(0, readNum(body.offset, 0))
     sessionKind = skRaw && isSessionKind(skRaw) ? skRaw : undefined
@@ -140,7 +146,10 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
       return json({ points: data }, {}, corsHeaders)
     }
     if (resource === 'priorities') {
-      const data = await service.getPriorities(user.id, { includeKinds })
+      const data = await service.getPriorities(user.id, {
+        includeKinds,
+        skipDifficulty: skipDifficulty || undefined,
+      })
       return json(data, {}, corsHeaders)
     }
     if (resource === 'sessions') {
@@ -148,6 +157,7 @@ export async function handleAnalyticsMicro(req: Request, slug: string): Promise<
         kind,
         bookmarked: bookmarkedOnly ? true : undefined,
         completedOnly: completedOnly ? true : undefined,
+        skipCount: skipCount || undefined,
         limit,
         offset,
       })

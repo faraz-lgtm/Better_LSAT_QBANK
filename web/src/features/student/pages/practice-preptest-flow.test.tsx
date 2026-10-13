@@ -156,7 +156,7 @@ describe("PracticePrepTestPage + section navigation", () => {
   })
 
   it("shows only the first unlocked section during retake, same as a fresh attempt", async () => {
-    mockGetPrepTestDetail.mockResolvedValue({
+    const retakeDetail = {
       ...mockDetail,
       sections: [
         { ...mockDetail.sections[0], unlocked: true, completed: false },
@@ -176,17 +176,18 @@ describe("PracticePrepTestPage + section navigation", () => {
           activeSectionSessionId: null,
         },
       ],
-    })
+    }
+    mockStartPrepTest.mockResolvedValue({ prepTestSession: { id: "pt-sess" }, detail: retakeDetail })
 
     renderPrepTestRoutes("/app/preptest/pt-900?retake=1")
 
     await screen.findByRole("heading", { name: "Test Section" })
+    expect(mockStartPrepTest).toHaveBeenCalledWith({ prepTestId: "pt-900" })
     expect(screen.getAllByRole("button", { name: /Start Section/i })).toHaveLength(1)
     expect(screen.queryByRole("button", { name: /Continue Section/i })).not.toBeInTheDocument()
   })
 
   it("navigates to the section intro during retake", async () => {
-    mockGetPrepTestDetail.mockResolvedValue(mockDetail)
     mockStartPrepTest.mockResolvedValue({ prepTestSession: { id: "pt-sess" }, detail: mockDetail })
     mockStartSection.mockResolvedValue({ session: { id: "section-sess-1" } })
 

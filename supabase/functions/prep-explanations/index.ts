@@ -5,6 +5,7 @@ import {
   handlePrepExplanationsListRequest,
   handlePrepExplanationsPrepTestsRequest,
   handlePrepExplanationsPrepTestTreeRequest,
+  handlePrepExplanationsStatusCountsRequest,
 } from '../_shared/prep-explanations-http.ts'
 
 const cors = CORS_EDGE_WIDE
@@ -15,6 +16,7 @@ const handlers: Record<string, (req: Request) => Promise<Response>> = {
   'prep-explanation-detail': handlePrepExplanationDetailRequest,
   'prep-explanations-list': handlePrepExplanationsListRequest,
   'prep-explanations-bookmarks': handlePrepExplanationsBookmarksRequest,
+  'prep-explanations-status-counts': handlePrepExplanationsStatusCountsRequest,
 }
 
 async function handlePrepExplanationsGateway(req: Request): Promise<Response> {

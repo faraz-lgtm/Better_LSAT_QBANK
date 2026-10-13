@@ -4,7 +4,11 @@ import type {
   CompletedPreptestRow,
   PracticeSessionListRow,
 } from './analytics.repository.ts'
-import { answerPopularityPctTuple, createAnalyticsService } from './analytics.service.ts'
+import {
+  answerPopularityPctTuple,
+  buildPrioritiesFromAggregates,
+  createAnalyticsService,
+} from './analytics.service.ts'
 
 function completedPreptestRow(
   overrides: Partial<CompletedPreptestRow> = {},
@@ -165,6 +169,22 @@ function mockRepo(overrides: Partial<AnalyticsRepository> = {}): AnalyticsReposi
       for (const id of questionIds) out.set(id, true)
       return out
     },
+    fetchOverviewPageData: async () => ({
+      countStats: {
+        totalQuestionsAnswered: 10,
+        drillCorrect: 7,
+        drillTotal: 10,
+        practiceStudyMinutes: 60,
+        lessonStudyMinutes: 35,
+      },
+      goalScore: 165,
+      completedPreptests: [],
+      sectionSessions: [],
+      scoreRows: [],
+      history: { drill: [], section: [], preptest: [] },
+      historyQuestionTypes: [],
+      priorityRows: [],
+    }),
     ...overrides,
   }
   if (overrides.resolveCompletedPrepTestSession === undefined) {
@@ -211,6 +231,127 @@ function mockRepo(overrides: Partial<AnalyticsRepository> = {}): AnalyticsReposi
         drillTotal: drill.total,
         practiceStudyMinutes,
         lessonStudyMinutes,
+      }
+    }
+  }
+  if (overrides.fetchOverviewPageData === undefined) {
+    base.fetchOverviewPageData = async (userId, historyLimit = 8) => {
+      const [countStats, completedPreptests, sectionSessions, goalScore, events, diffEvents] =
+        await Promise.all([
+          base.getOverviewCountStats(userId),
+          base.listCompletedPreptests(userId),
+          base.listCompletedSectionSessions(userId),
+          base.getUserGoalScore(userId),
+          base.listAnswerEventsWithTypes(userId),
+          base.listAnswerEventsWithTypeDifficulty(userId),
+        ])
+      const [drill, section, preptest] = await Promise.all([
+        base.listSessions({
+          userId,
+          kind: 'DRILL',
+          completedOnly: true,
+          limit: historyLimit,
+          offset: 0,
+        }),
+        base.listSessions({
+          userId,
+          kind: 'SECTION',
+          completedOnly: true,
+          limit: historyLimit,
+          offset: 0,
+        }),
+        base.listSessions({
+          userId,
+          kind: 'PREPTEST',
+          completedOnly: true,
+          limit: historyLimit,
+          offset: 0,
+        }),
+      ])
+      const mapSession = (row: PracticeSessionListRow) => ({
+        id: row.id,
+        kind: row.kind,
+        prep_test_id: row.prep_test_id,
+        section_id: row.section_id,
+        started_at: row.started_at,
+        completed_at: row.completed_at,
+        raw_score: row.raw_score,
+        scaled_score: row.scaled_score,
+        percentile: row.percentile,
+        blind_review_raw_score: row.blind_review_raw_score,
+        blind_review_scaled_score: row.blind_review_scaled_score,
+        blind_review_percentile: row.blind_review_percentile,
+        bookmarked: row.bookmarked,
+        excluded: row.excluded,
+        metadata: row.metadata ?? {},
+        prep_test_title: Array.isArray(row.admin_prep_tests)
+          ? row.admin_prep_tests[0]?.title ?? null
+          : row.admin_prep_tests?.title ?? null,
+        section_title: Array.isArray(row.admin_sections)
+          ? row.admin_sections[0]?.title ?? null
+          : row.admin_sections?.title ?? null,
+        section_type: Array.isArray(row.admin_sections)
+          ? row.admin_sections[0]?.section_type ?? null
+          : row.admin_sections?.section_type ?? null,
+      })
+      const byType = new Map<
+        string,
+        { attempt_count: number; correct_count: number; unique: Set<string> }
+      >()
+      for (const e of events) {
+        const cur = byType.get(e.question_type_id) ?? {
+          attempt_count: 0,
+          correct_count: 0,
+          unique: new Set<string>(),
+        }
+        cur.attempt_count += 1
+        if (e.is_correct) cur.correct_count += 1
+        if (e.question_id) cur.unique.add(e.question_id)
+        byType.set(e.question_type_id, cur)
+      }
+      const difficultyByType = new Map<string, number[]>()
+      for (const e of diffEvents) {
+        if (e.difficulty == null) continue
+        const arr = difficultyByType.get(e.question_type_id) ?? []
+        arr.push(e.difficulty)
+        difficultyByType.set(e.question_type_id, arr)
+      }
+      const typeIds = [...byType.keys()]
+      const types = await base.listQuestionTypesByIds(typeIds)
+      const typeById = new Map(types.map((t) => [t.id, t]))
+      return {
+        countStats,
+        goalScore,
+        completedPreptests,
+        sectionSessions,
+        scoreRows: [],
+        history: {
+          drill: drill.map(mapSession),
+          section: section.map(mapSession),
+          preptest: preptest.map(mapSession),
+        },
+        historyQuestionTypes: types.map((t) => ({
+          id: t.id,
+          name: t.name,
+          section_type: t.section_type,
+        })),
+        priorityRows: typeIds.map((id) => {
+          const agg = byType.get(id)!
+          const diffs = difficultyByType.get(id) ?? []
+          const meta = typeById.get(id)
+          return {
+            question_type_id: id,
+            attempt_count: agg.attempt_count,
+            correct_count: agg.correct_count,
+            unique_question_count: agg.unique.size,
+            avg_difficulty:
+              diffs.length > 0 ? diffs.reduce((a, b) => a + b, 0) / diffs.length : null,
+            name: meta?.name ?? null,
+            section_type: meta?.section_type ?? null,
+            goal_accuracy: meta?.goal_accuracy ?? null,
+            avg_per_test: meta?.avg_per_test ?? null,
+          }
+        }),
       }
     }
   }
@@ -1295,6 +1436,32 @@ Deno.test('getSessions enriches drill metadata with questionTypeName', async () 
   assertEquals(out.sessions[0]?.sectionType, 'LR')
 })
 
+Deno.test('getSessions skipCount omits COUNT(*)', async () => {
+  const captured: { counted: boolean } = { counted: false }
+  const service = createAnalyticsService({
+    repository: {
+      ...mockRepo(),
+      listSessions: async () => [sessionListRow()],
+      countSessions: async () => {
+        captured.counted = true
+        return 1
+      },
+    },
+  })
+
+  const out = await service.getSessions('user-1', {
+    kind: 'DRILL',
+    completedOnly: true,
+    skipCount: true,
+    limit: 500,
+    offset: 0,
+  })
+
+  assertEquals(captured.counted, false)
+  assertEquals(out.sessions.length, 1)
+  assertEquals(out.limit, 500)
+})
+
 Deno.test('getSessions passes filters to repository', async () => {
   const captured: {
     list: {
@@ -1889,4 +2056,68 @@ Deno.test('getPageBundle overview includes completed history by kind', async () 
   assertEquals(bundle.drillSessions?.sessions.length, 1)
   assertEquals(bundle.sectionSessions?.sessions.length, 1)
   assertEquals(bundle.prepTestSessions?.sessions.length, 1)
+})
+
+Deno.test('getPageBundle overview uses one page-data RPC and history limit 8', async () => {
+  let pageDataCalls = 0
+  let listCompletedCalls = 0
+  let countSessionsCalls = 0
+  const service = createAnalyticsService({
+    repository: mockRepo({
+      fetchOverviewPageData: async (userId, historyLimit = 8) => {
+        pageDataCalls += 1
+        const base = mockRepo({
+          listSessions: async () => [sessionListRow()],
+          countSessions: async () => 1,
+        })
+        return base.fetchOverviewPageData(userId, historyLimit)
+      },
+      listCompletedPreptests: async () => {
+        listCompletedCalls += 1
+        return [completedPreptestRow({ id: 's1' })]
+      },
+      countSessions: async () => {
+        countSessionsCalls += 1
+        return 99
+      },
+    }),
+  })
+  const bundle = await service.getPageBundle('user-1', 'overview')
+  assertEquals(pageDataCalls, 1)
+  assertEquals(listCompletedCalls, 0)
+  assertEquals(countSessionsCalls, 0)
+  assertEquals(bundle.drillSessions?.limit, 8)
+  assertEquals(bundle.trajectory?.length, 2)
+})
+
+Deno.test('buildPrioritiesFromAggregates ranks unlocked types', () => {
+  const out = buildPrioritiesFromAggregates(
+    [
+      {
+        question_type_id: 't-high',
+        attempt_count: 10,
+        correct_count: 2,
+        unique_question_count: 8,
+        avg_difficulty: 4,
+        name: 'Hard type',
+        section_type: 'LR',
+        goal_accuracy: 90,
+        avg_per_test: 10,
+      },
+      {
+        question_type_id: 't-low',
+        attempt_count: 10,
+        correct_count: 9,
+        unique_question_count: 8,
+        avg_difficulty: 2,
+        name: 'Easy type',
+        section_type: 'LR',
+        goal_accuracy: 85,
+        avg_per_test: 8,
+      },
+    ],
+    165,
+  )
+  assertEquals(out.priorities[0]?.questionTypeId, 't-high')
+  assertEquals(out.priorities[0]?.unlocked, true)
 })

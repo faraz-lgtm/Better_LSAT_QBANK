@@ -96,6 +96,86 @@ export type QuestionExplanationMetaRow = {
   }[] | null
 }
 
+export type OverviewPageScoreRow = {
+  prep_test_id: string
+  raw_score: number
+  scaled_score: number | null
+  percentile: number | null
+}
+
+export type OverviewPageHistorySessionRow = {
+  id: string
+  kind: PracticeSessionKind
+  prep_test_id: string | null
+  section_id: string | null
+  started_at: string
+  completed_at: string | null
+  raw_score: number | null
+  scaled_score: number | null
+  percentile: number | null
+  blind_review_raw_score: number | null
+  blind_review_scaled_score: number | null
+  blind_review_percentile: number | null
+  bookmarked: boolean
+  excluded: boolean
+  metadata: Record<string, unknown>
+  prep_test_title: string | null
+  section_title: string | null
+  section_type: 'LR' | 'RC' | 'LG' | null
+}
+
+export type OverviewPagePriorityAggregateRow = {
+  question_type_id: string
+  attempt_count: number
+  correct_count: number
+  unique_question_count: number
+  avg_difficulty: number | null
+  name: string | null
+  section_type: 'LR' | 'RC' | 'LG' | null
+  goal_accuracy: number | null
+  avg_per_test: number | null
+}
+
+export type OverviewPageSectionSessionRow = {
+  id: string
+  prep_test_id: string | null
+  section_id: string | null
+  started_at: string
+  completed_at: string
+  raw_score: number | null
+  metadata: Record<string, unknown>
+  admin_sections: {
+    is_experimental: boolean | null
+    section_type?: 'LR' | 'RC' | 'LG' | null
+    question_count?: number | null
+  } | null
+}
+
+export type OverviewPageData = {
+  countStats: {
+    totalQuestionsAnswered: number
+    drillCorrect: number
+    drillTotal: number
+    practiceStudyMinutes: number
+    lessonStudyMinutes: number
+  }
+  goalScore: number | null
+  completedPreptests: CompletedPreptestRow[]
+  sectionSessions: OverviewPageSectionSessionRow[]
+  scoreRows: OverviewPageScoreRow[]
+  history: {
+    drill: OverviewPageHistorySessionRow[]
+    section: OverviewPageHistorySessionRow[]
+    preptest: OverviewPageHistorySessionRow[]
+  }
+  historyQuestionTypes: Array<{
+    id: string
+    name: string
+    section_type: 'LR' | 'RC' | 'LG' | null
+  }>
+  priorityRows: OverviewPagePriorityAggregateRow[]
+}
+
 export function createAnalyticsRepository(client: SupabaseClient) {
   function prepTestModuleFromJoin(
     adminPrepTests: { module_id?: string } | { module_id?: string }[] | null | undefined,
@@ -983,6 +1063,142 @@ export function createAnalyticsRepository(client: SupabaseClient) {
         }
       }
       return result
+    },
+
+    async fetchOverviewPageData(
+      userId: string,
+      historyLimit = 8,
+    ): Promise<OverviewPageData> {
+      const { data, error } = await client.rpc('get_analytics_overview_page_data', {
+        p_user_id: userId,
+        p_history_limit: historyLimit,
+      })
+      if (error) throw error
+      const payload = (data ?? {}) as Record<string, unknown>
+      const countRaw = (payload.count_stats ?? {}) as Record<string, unknown>
+
+      const asSectionType = (value: unknown): 'LR' | 'RC' | 'LG' | null =>
+        value === 'LR' || value === 'RC' || value === 'LG' ? value : null
+
+      const asKind = (value: unknown): PracticeSessionKind => {
+        if (value === 'DRILL' || value === 'SECTION' || value === 'PREPTEST') return value
+        return 'DRILL'
+      }
+
+      const mapHistory = (rows: unknown): OverviewPageHistorySessionRow[] => {
+        if (!Array.isArray(rows)) return []
+        return rows.map((raw) => {
+          const row = raw as Record<string, unknown>
+          const metadata =
+            row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+              ? (row.metadata as Record<string, unknown>)
+              : {}
+          return {
+            id: String(row.id),
+            kind: asKind(row.kind),
+            prep_test_id: row.prep_test_id != null ? String(row.prep_test_id) : null,
+            section_id: row.section_id != null ? String(row.section_id) : null,
+            started_at: String(row.started_at ?? ''),
+            completed_at: row.completed_at != null ? String(row.completed_at) : null,
+            raw_score: typeof row.raw_score === 'number' ? row.raw_score : null,
+            scaled_score: typeof row.scaled_score === 'number' ? row.scaled_score : null,
+            percentile: typeof row.percentile === 'number' ? row.percentile : null,
+            blind_review_raw_score:
+              typeof row.blind_review_raw_score === 'number' ? row.blind_review_raw_score : null,
+            blind_review_scaled_score:
+              typeof row.blind_review_scaled_score === 'number'
+                ? row.blind_review_scaled_score
+                : null,
+            blind_review_percentile:
+              typeof row.blind_review_percentile === 'number' ? row.blind_review_percentile : null,
+            bookmarked: Boolean(row.bookmarked),
+            excluded: Boolean(row.excluded),
+            metadata,
+            prep_test_title:
+              typeof row.prep_test_title === 'string' ? row.prep_test_title : null,
+            section_title: typeof row.section_title === 'string' ? row.section_title : null,
+            section_type: asSectionType(row.section_type),
+          }
+        })
+      }
+
+      const historyObj = (payload.history ?? {}) as Record<string, unknown>
+
+      return {
+        countStats: {
+          totalQuestionsAnswered: parseStudyMinutesRpcValue(countRaw.total_questions_answered),
+          drillCorrect: parseStudyMinutesRpcValue(countRaw.drill_correct),
+          drillTotal: parseStudyMinutesRpcValue(countRaw.drill_total),
+          practiceStudyMinutes: parseStudyMinutesRpcValue(countRaw.practice_study_minutes),
+          lessonStudyMinutes: parseStudyMinutesRpcValue(countRaw.lesson_study_minutes),
+        },
+        goalScore:
+          typeof payload.goal_score === 'number' && Number.isFinite(payload.goal_score)
+            ? Math.round(payload.goal_score)
+            : null,
+        completedPreptests: Array.isArray(payload.completed_preptests)
+          ? (payload.completed_preptests as CompletedPreptestRow[])
+          : [],
+        sectionSessions: (Array.isArray(payload.section_sessions)
+          ? (payload.section_sessions as Array<Record<string, unknown>>)
+          : []
+        ).map((row): OverviewPageSectionSessionRow => ({
+          id: String(row.id),
+          prep_test_id: row.prep_test_id != null ? String(row.prep_test_id) : null,
+          section_id: row.section_id != null ? String(row.section_id) : null,
+          started_at: String(row.started_at ?? ''),
+          completed_at: String(row.completed_at ?? ''),
+          raw_score: typeof row.raw_score === 'number' ? row.raw_score : null,
+          metadata: {},
+          admin_sections: {
+            is_experimental: row.is_experimental === true,
+            section_type: asSectionType(row.section_type),
+            question_count: typeof row.question_count === 'number' ? row.question_count : null,
+          },
+        })),
+        scoreRows: (Array.isArray(payload.score_rows)
+          ? (payload.score_rows as Array<Record<string, unknown>>)
+          : []
+        )
+          .map((row): OverviewPageScoreRow | null => {
+            if (row.prep_test_id == null || typeof row.raw_score !== 'number') return null
+            return {
+              prep_test_id: String(row.prep_test_id),
+              raw_score: row.raw_score,
+              scaled_score: typeof row.scaled_score === 'number' ? row.scaled_score : null,
+              percentile: typeof row.percentile === 'number' ? row.percentile : null,
+            }
+          })
+          .filter((row): row is OverviewPageScoreRow => row != null),
+        history: {
+          drill: mapHistory(historyObj.drill),
+          section: mapHistory(historyObj.section),
+          preptest: mapHistory(historyObj.preptest),
+        },
+        historyQuestionTypes: (Array.isArray(payload.history_question_types)
+          ? (payload.history_question_types as Array<Record<string, unknown>>)
+          : []
+        ).map((row) => ({
+          id: String(row.id),
+          name: typeof row.name === 'string' ? row.name : 'Unknown type',
+          section_type: asSectionType(row.section_type),
+        })),
+        priorityRows: (Array.isArray(payload.priority_rows)
+          ? (payload.priority_rows as Array<Record<string, unknown>>)
+          : []
+        ).map((row): OverviewPagePriorityAggregateRow => ({
+          question_type_id: String(row.question_type_id),
+          attempt_count: typeof row.attempt_count === 'number' ? row.attempt_count : 0,
+          correct_count: typeof row.correct_count === 'number' ? row.correct_count : 0,
+          unique_question_count:
+            typeof row.unique_question_count === 'number' ? row.unique_question_count : 0,
+          avg_difficulty: typeof row.avg_difficulty === 'number' ? row.avg_difficulty : null,
+          name: typeof row.name === 'string' ? row.name : null,
+          section_type: asSectionType(row.section_type),
+          goal_accuracy: typeof row.goal_accuracy === 'number' ? row.goal_accuracy : null,
+          avg_per_test: typeof row.avg_per_test === 'number' ? row.avg_per_test : null,
+        })),
+      }
     },
   }
 }

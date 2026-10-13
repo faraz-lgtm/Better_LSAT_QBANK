@@ -13,6 +13,10 @@ vi.mock('@/lib/analytics/posthog', () => ({
   resetUser: vi.fn(),
 }))
 
+vi.mock('@/lib/auth/clear-student-session-caches', () => ({
+  clearStudentSessionCaches: vi.fn(),
+}))
+
 function unauthorizedError(): FunctionsHttpError {
   return new FunctionsHttpError(
     new Response(JSON.stringify({ error: 'Unauthorized' }), {
