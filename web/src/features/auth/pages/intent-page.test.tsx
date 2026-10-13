@@ -66,6 +66,31 @@ describe("IntentPage", () => {
     expect(latestLocation?.search).toBe("?intent=quick")
   })
 
+  it("sends authenticated first-time users to onboarding after picking a diagnostic", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={["/intent"]}>
+        <LocationTracker />
+        <Routes>
+          <Route
+            path="/intent"
+            element={<IntentPage isAuthenticated={true} requiresOnboarding={true} />}
+          />
+          <Route path="/onboarding" element={<div data-testid="onboarding-page">onboarding</div>} />
+          <Route path="/diagnostic/start" element={<div data-testid="diag-start">start</div>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole("button", { name: /start full section diagnostic/i }))
+
+    expect(saveDiagnosticIntentMock).toHaveBeenCalledWith("quick")
+    expect(screen.getByTestId("onboarding-page")).toBeInTheDocument()
+    expect(latestLocation?.pathname).toBe("/onboarding")
+    expect(screen.queryByTestId("diag-start")).not.toBeInTheDocument()
+  })
+
   it("hides sign in link for authenticated users", () => {
     render(
       <MemoryRouter>

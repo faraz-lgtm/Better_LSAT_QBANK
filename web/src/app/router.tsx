@@ -351,7 +351,11 @@ function PublicOnly({ children }: { children: ReactElement }) {
 function IntentRouteGuard({
   render,
 }: {
-  render: (opts: { isAuthenticated: boolean; showUpgradeCta: boolean }) => ReactElement
+  render: (opts: {
+    isAuthenticated: boolean
+    showUpgradeCta: boolean
+    requiresOnboarding: boolean
+  }) => ReactElement
 }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -373,12 +377,10 @@ function IntentRouteGuard({
       const nextEntitlement = await ensureEntitlement()
       if (!alive) return
       setEntitlement(nextEntitlement)
-      // Finish welcome onboarding before starting (or restarting) a diagnostic from /intent.
-      if (nextProfile.is_first_time_login && !funnel.completedDiagnostic) {
-        setDestination("/onboarding")
-        return
-      }
       // Exam done but first-login flag still set — land on results, not the intent picker.
+      // Do NOT force /onboarding for all first-time users here: email magic-link flows often
+      // land on /intent to re-pick a tier after storage was lost, and blocking that loops
+      // diagnostic/start → intent → onboarding.
       if (nextProfile.is_first_time_login && funnel.completedDiagnostic) {
         setDestination(resolvePostAuthDestination(nextProfile, nextEntitlement, funnel))
         return
@@ -424,7 +426,9 @@ function IntentRouteGuard({
   }, [])
 
   if (isAuthenticated === null) return null
-  if (!isAuthenticated) return render({ isAuthenticated: false, showUpgradeCta: true })
+  if (!isAuthenticated) {
+    return render({ isAuthenticated: false, showUpgradeCta: true, requiresOnboarding: false })
+  }
   if (!profileChecked) return null
   if (shouldRedirectAuthenticatedUserToOnboarding(profileChecked, profile)) {
     return <Navigate to="/onboarding" replace />
@@ -435,7 +439,11 @@ function IntentRouteGuard({
       resolveStudentShellVariant({
         accessState: entitlement?.accessState ?? null,
       }) === "free-plan"
-    return render({ isAuthenticated: true, showUpgradeCta })
+    return render({
+      isAuthenticated: true,
+      showUpgradeCta,
+      requiresOnboarding: Boolean(profile?.is_first_time_login),
+    })
   }
   return null
 }
@@ -591,8 +599,12 @@ const router = createBrowserRouter([
     path: "/intent",
     element: (
       <IntentRouteGuard
-        render={({ isAuthenticated, showUpgradeCta }) => (
-          <IntentPage isAuthenticated={isAuthenticated} showUpgradeCta={showUpgradeCta} />
+        render={({ isAuthenticated, showUpgradeCta, requiresOnboarding }) => (
+          <IntentPage
+            isAuthenticated={isAuthenticated}
+            showUpgradeCta={showUpgradeCta}
+            requiresOnboarding={requiresOnboarding}
+          />
         )}
       />
     ),
