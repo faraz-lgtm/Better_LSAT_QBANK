@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
-import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
 import {
   PrepTestExamTrajectoryPanel,
@@ -11,6 +10,11 @@ import {
   type InsightHistorySort,
   type TrajectoryTab,
 } from "@/features/student/analytics/components/prep-test-insights-ui"
+import {
+  AnalyticsChartSkeleton,
+  AnalyticsHistorySkeleton,
+  AnalyticsStatsSkeleton,
+} from "@/features/student/analytics/components/analytics-insights-skeletons"
 import {
   TimeRangeSegmented,
   type TimeRangeValue,
@@ -29,18 +33,27 @@ import {
 import {
   useAnalyticsApi,
   usePracticeApi,
-  useUsersApi,
 } from "@/features/student/analytics/hooks/use-analytics-api"
+import { ensureStudyContext } from "@/features/student-session/ensure-student-session"
 import { computePrepTestInsightStats } from "@/features/student/analytics/prep-test-insights"
 import { DEFAULT_PREPTEST_SCORE_TAB } from "@/features/student/analytics/score-chart-defaults"
+import { peekCachedAnalyticsSessions } from "@/lib/api/analytics"
+
+function seedPrepRecords(): PrepTestRecord[] {
+  const preps = peekCachedAnalyticsSessions("PREPTEST", { completedOnly: true }) ?? []
+  const sections = peekCachedAnalyticsSessions("SECTION", { completedOnly: true }) ?? []
+  return preps
+    .map((s) => mapSessionToPrepTestRecord(s, sections))
+    .filter((r): r is PrepTestRecord => r != null)
+}
 
 function AnalyticsPrepTestsPage() {
   const navigate = useNavigate()
   const analyticsApi = useAnalyticsApi()
   const practiceApi = usePracticeApi()
-  const usersApi = useUsersApi()
-  const [loading, setLoading] = useState(true)
-  const [prepRecords, setPrepRecords] = useState<PrepTestRecord[]>([])
+  const [seededRecords] = useState(seedPrepRecords)
+  const [ready, setReady] = useState(() => seededRecords.length > 0)
+  const [prepRecords, setPrepRecords] = useState<PrepTestRecord[]>(seededRecords)
   const [goalScore, setGoalScore] = useState<number | null>(null)
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
   const [trajectoryTab, setTrajectoryTab] = useState<TrajectoryTab>(DEFAULT_PREPTEST_SCORE_TAB)
@@ -49,25 +62,37 @@ function AnalyticsPrepTestsPage() {
 
   useEffect(() => {
     if (!analyticsApi) {
-      setLoading(false)
+      setReady(true)
       return
     }
-    setLoading(true)
+    let cancelled = false
+    void ensureStudyContext()
+      .then((studyContext) => {
+        if (!cancelled) setGoalScore(studyContext?.preferences?.goalScore ?? null)
+      })
+      .catch(() => {
+        /* goal score stays null; page still usable */
+      })
     void Promise.all([
-      analyticsApi.getSessions({ kind: "PREPTEST", completedOnly: true, limit: 500 }),
-      analyticsApi.getSessions({ kind: "SECTION", completedOnly: true, limit: 500 }),
-      usersApi?.getStudyContext() ?? Promise.resolve(null),
+      analyticsApi.getSessions({ kind: "PREPTEST", completedOnly: true, limit: 500, skipCount: true }),
+      analyticsApi.getSessions({ kind: "SECTION", completedOnly: true, limit: 500, skipCount: true }),
     ])
-      .then(([prepTests, sections, studyContext]) => {
+      .then(([prepTests, sections]) => {
+        if (cancelled) return
         setPrepRecords(
           prepTests.sessions
             .map((s) => mapSessionToPrepTestRecord(s, sections.sessions))
             .filter((r): r is PrepTestRecord => r != null),
         )
-        setGoalScore(studyContext?.preferences?.goalScore ?? null)
+        setReady(true)
       })
-      .finally(() => setLoading(false))
-  }, [analyticsApi, usersApi])
+      .catch(() => {
+        if (!cancelled) setReady(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [analyticsApi])
 
   const rangedRecords = useMemo(
     () => filterPrepTestsByTimeRange(prepRecords, timeRange),
@@ -102,14 +127,6 @@ function AnalyticsPrepTestsPage() {
     [navigate],
   )
 
-  if (loading) {
-    return (
-      <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
-        <StudentPageLoader centered className="min-h-0 flex-1" label="Loading PrepTest analytics…" />
-      </StudentMain>
-    )
-  }
-
   return (
     <StudentMain>
       <div className="flex flex-col gap-[24px]">
@@ -120,31 +137,40 @@ function AnalyticsPrepTestsPage() {
           <TimeRangeSegmented value={timeRange} onChange={setTimeRange} className="shrink-0" />
         </div>
 
-        {stats ? (
+        {!ready && prepRecords.length === 0 ? (
           <>
-            <PrepTestInsightStatsRow stats={stats} />
-            <PrepTestExamTrajectoryPanel
-              points={progressPoints}
-              tab={trajectoryTab}
-              onTabChange={setTrajectoryTab}
-              goalScore={goalScore}
-            />
+            <AnalyticsStatsSkeleton headlineCount={0} secondaryCount={4} label="Loading PrepTest stats" />
+            <AnalyticsChartSkeleton label="Loading PrepTest chart" />
+            <AnalyticsHistorySkeleton label="Loading PrepTest history" />
           </>
         ) : (
-          <p className="rounded-2xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-8 text-center text-sm text-[var(--greyscale-500)]">
-            No PrepTests recorded in this range. Try widening the time range.
-          </p>
+          <>
+            {stats ? (
+              <>
+                <PrepTestInsightStatsRow stats={stats} />
+                <PrepTestExamTrajectoryPanel
+                  points={progressPoints}
+                  tab={trajectoryTab}
+                  onTabChange={setTrajectoryTab}
+                  goalScore={goalScore}
+                />
+              </>
+            ) : (
+              <p className="rounded-2xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-8 text-center text-sm text-[var(--greyscale-500)]">
+                No PrepTests recorded in this range. Try widening the time range.
+              </p>
+            )}
+            <PrepTestFullTestLog
+              rows={logRows}
+              bookmarkedOnly={bookmarkedOnly}
+              onBookmarkedOnlyChange={setBookmarkedOnly}
+              sort={historySort}
+              onSortChange={setHistorySort}
+              onSelectEntry={handleSelectEntry}
+              onToggleBookmark={handleToggleBookmark}
+            />
+          </>
         )}
-
-        <PrepTestFullTestLog
-          rows={logRows}
-          bookmarkedOnly={bookmarkedOnly}
-          onBookmarkedOnlyChange={setBookmarkedOnly}
-          sort={historySort}
-          onSortChange={setHistorySort}
-          onSelectEntry={handleSelectEntry}
-          onToggleBookmark={handleToggleBookmark}
-        />
       </div>
     </StudentMain>
   )

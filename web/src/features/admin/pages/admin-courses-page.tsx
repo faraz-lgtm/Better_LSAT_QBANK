@@ -220,7 +220,7 @@ function AdminCoursesPage() {
     async function loadPrepTests() {
       if (!adminApi) return
       try {
-        const fetched = await adminApi.listAllPrepTests()
+        const fetched = await adminApi.listPrepTestSummaries()
         if (!alive) return
         const rows = sortPrepTestsByNumberAsc(
           filterStudentVisiblePrepTestRows(fetched as Array<Record<string, unknown>>),

@@ -1,23 +1,32 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 import { useAdminApi } from "@/features/admin/use-admin-api"
-import {
-  filterStudentVisiblePrepTestRows,
-  sortPrepTestsByNumberAsc,
-} from "@/lib/prep-test-visibility"
 
 function AdminPrepTestsPage() {
   const adminApi = useAdminApi()
   const navigate = useNavigate()
-  const [allRows, setAllRows] = useState<Array<Record<string, unknown>>>([])
+  const [rows, setRows] = useState<Array<Record<string, unknown>>>([])
+  const [total, setTotal] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(false)
   const [openingPrepTestId, setOpeningPrepTestId] = useState<string | null>(null)
+  const [searchInput, setSearchInput] = useState("")
   const [search, setSearch] = useState("")
   const [activeFilter, setActiveFilter] = useState<"all" | "lr" | "rc" | "lg" | "missing-tags">("all")
   const pageSize = 10
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const next = searchInput.trim()
+      setSearch((current) => {
+        if (current !== next) setPage(0)
+        return next
+      })
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [searchInput])
 
   useEffect(() => {
     let alive = true
@@ -26,13 +35,10 @@ function AdminPrepTestsPage() {
       try {
         if (alive) setLoading(true)
         const contentFilter = activeFilter === "all" ? undefined : activeFilter
-        const rows = await adminApi.listAllPrepTests(contentFilter)
+        const result = await adminApi.listPrepTests(pageSize, page * pageSize, contentFilter, search || undefined)
         if (alive) {
-          const visibleRows = sortPrepTestsByNumberAsc(
-            filterStudentVisiblePrepTestRows(rows as Array<Record<string, unknown>>),
-          )
-          setAllRows(visibleRows)
-          setPage(0)
+          setRows(result.rows as Array<Record<string, unknown>>)
+          setTotal(result.total)
         }
       } catch (e) {
         if (alive) setError(e instanceof Error ? e.message : "Failed to load prep tests")
@@ -44,22 +50,9 @@ function AdminPrepTestsPage() {
     return () => {
       alive = false
     }
-  }, [adminApi, activeFilter])
+  }, [adminApi, activeFilter, page, search])
 
-  const filteredRows = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return allRows
-    return allRows.filter((row) => {
-      const title = String(row.title ?? "").toLowerCase()
-      const moduleId = String(row.module_id ?? "").toLowerCase()
-      return title.includes(q) || moduleId.includes(q)
-    })
-  }, [allRows, search])
-
-  const total = filteredRows.length
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const pageItems = Array.from({ length: totalPages }, (_, i) => i)
-  const pagedRows = filteredRows.slice(page * pageSize, page * pageSize + pageSize)
 
   function formatImportedDate(value: unknown) {
     if (typeof value !== "string") return "-"
@@ -116,11 +109,8 @@ function AdminPrepTestsPage() {
           <input
             className="search-box"
             placeholder="Search module or title..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
-              setPage(0)
-            }}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
           />
           <div className="flex items-center gap-1">
             <button
@@ -188,7 +178,7 @@ function AdminPrepTestsPage() {
             </tr>
           </thead>
           <tbody>
-            {pagedRows.map((row) => {
+            {rows.map((row) => {
               const sectionCount = getSectionCount(row)
               const questionCount = getQuestionCount(row, sectionCount)
               const explainedCount = Number(row.explained_count ?? 0)
@@ -235,7 +225,7 @@ function AdminPrepTestsPage() {
                 </tr>
               )
             })}
-            {!loading && pagedRows.length === 0 && (
+            {!loading && rows.length === 0 && (
               <tr>
                 <td className="px-3 py-3 text-[var(--text3)]" colSpan={7}>
                   No tests on this page.
@@ -254,17 +244,9 @@ function AdminPrepTestsPage() {
         >
           Previous
         </button>
-        {pageItems.map((pageIdx) => (
-          <button
-            key={pageIdx}
-            type="button"
-            className={`admin-btn ${pageIdx === page ? "admin-btn-primary" : "admin-btn-ghost"}`}
-            disabled={loading}
-            onClick={() => setPage(pageIdx)}
-          >
-            {pageIdx + 1}
-          </button>
-        ))}
+        <span className="text-xs text-[var(--text3)]">
+          Page {Math.min(page + 1, totalPages)} of {totalPages}
+        </span>
         <button
           type="button"
           className="admin-btn admin-btn-ghost"

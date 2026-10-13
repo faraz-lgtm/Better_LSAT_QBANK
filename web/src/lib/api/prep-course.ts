@@ -83,10 +83,29 @@ export type PrepCourseCurriculum = {
   modules: PrepCourseModule[]
 }
 
+export type PrepCourseModuleLessonStats = {
+  moduleId: string
+  lessonCount: number
+  totalMinutes: number
+}
+
 export type PrepCourseBookmarks = {
   moduleIds: string[]
   lessonSlugs: string[]
 }
+
+type GetCourseResult = {
+  course: PrepCourse
+  lessons: PrepLesson[]
+  curriculum?: PrepCourseCurriculum
+  completedLessonSlugs?: string[]
+  bookmarks?: PrepCourseBookmarks
+  hydratedModuleIds?: string[]
+  moduleStats?: PrepCourseModuleLessonStats[]
+}
+
+/** Dedupe concurrent identical outline fetches across remounts (React Strict Mode). */
+const inflightGetCourse = new Map<string, Promise<GetCourseResult>>()
 
 export function createPrepCourseApi(supabase: SupabaseClient) {
   async function invokePrepCourseFn<T>(
@@ -128,23 +147,36 @@ export function createPrepCourseApi(supabase: SupabaseClient) {
       return data?.courses ?? []
     },
 
-    async getCourse(courseSlug: string): Promise<{
-      course: PrepCourse
-      lessons: PrepLesson[]
-      curriculum?: PrepCourseCurriculum
-      completedLessonSlugs?: string[]
-      bookmarks?: PrepCourseBookmarks
-    }> {
-      const { data, error } = await invokePrepCourseFn<{
-        course: PrepCourse
-        lessons: PrepLesson[]
-        curriculum?: PrepCourseCurriculum
-        completedLessonSlugs?: string[]
-        bookmarks?: PrepCourseBookmarks
-      }>(prepCourseGetName({ courseSlug }), { method: "GET" })
-      if (error) throw error
-      if (!data?.course) throw new Error("No course returned from prep-course")
-      return data
+    async getCourse(
+      courseSlug: string,
+      opts?: { hydrate?: "first" | "all"; moduleId?: string },
+    ): Promise<GetCourseResult> {
+      const query: Record<string, string> = { courseSlug }
+      if (opts?.hydrate) query.hydrate = opts.hydrate
+      if (opts?.moduleId) query.moduleId = opts.moduleId
+      const key = prepCourseGetName(query)
+      const existing = inflightGetCourse.get(key)
+      if (existing) return existing
+
+      const request = (async () => {
+        const { data, error } = await invokePrepCourseFn<{
+          course: PrepCourse
+          lessons: PrepLesson[]
+          curriculum?: PrepCourseCurriculum
+          completedLessonSlugs?: string[]
+          bookmarks?: PrepCourseBookmarks
+          hydratedModuleIds?: string[]
+          moduleStats?: PrepCourseModuleLessonStats[]
+        }>(key, { method: "GET" })
+        if (error) throw error
+        if (!data?.course) throw new Error("No course returned from prep-course")
+        return data
+      })().finally(() => {
+        inflightGetCourse.delete(key)
+      })
+
+      inflightGetCourse.set(key, request)
+      return request
     },
 
     async completeLesson(

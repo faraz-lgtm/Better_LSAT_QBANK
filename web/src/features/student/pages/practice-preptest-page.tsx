@@ -38,6 +38,7 @@ import {
   PREPTEST_LIST_HREF,
   sectionSessionHref,
 } from "@/features/student/preptests/preptest-hub-navigation"
+import { getCachedPrepTestDetail } from "@/features/student/preptests/prep-test-detail-cache"
 import { useAccommodations, remapPrepTestTimingOptionLabel } from "@/features/student/accommodations/accommodations-context"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { ChevronRight, Timer, X } from "lucide-react"
@@ -134,6 +135,15 @@ function prepTestHubPageTitle(prepTest: { label: string; prepTestNumber: string 
   return prepTest.label
 }
 
+function readCachedHubDetail(
+  testId: string | undefined,
+  isRetake: boolean,
+): PrepTestDetailResponse | null {
+  if (!testId || isRetake) return null
+  const cached = getCachedPrepTestDetail(testId)
+  return cached ? normalizePrepTestDetail(cached, { prepTestId: testId }) : null
+}
+
 function sectionShortTitle(row: PrepTestDetailSection): string {
   if (row.sectionNumber != null) return `Section ${row.sectionNumber}`
   return row.title ? row.title : row.sectionType
@@ -152,11 +162,13 @@ function PrepTestSectionRow({
   starting,
   timingId,
   onStart,
+  onPrefetch,
 }: {
   row: PrepTestDetailSection
   starting: boolean
   timingId: string
   onStart: () => void
+  onPrefetch?: () => void
 }) {
   const { scaleFactor } = useAccommodations()
   const unlimited = timingId === "unlimited"
@@ -167,7 +179,11 @@ function PrepTestSectionRow({
   const activeSection = row.practiceable && row.unlocked && !row.completed
 
   return (
-    <div className="flex h-[100px] items-center gap-6 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-3 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)]">
+    <div
+      className="flex h-[100px] items-center gap-6 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-3 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)]"
+      onMouseEnter={canContinueSection ? onPrefetch : undefined}
+      onFocus={canContinueSection ? onPrefetch : undefined}
+    >
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
         <p
           className={cn(
@@ -218,11 +234,17 @@ function PracticePrepTestPage() {
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
   const { scaleFactor } = useAccommodations()
 
-  const [detail, setDetail] = useState<PrepTestDetailResponse | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [detail, setDetail] = useState<PrepTestDetailResponse | null>(() =>
+    readCachedHubDetail(testIdParam, isRetakeAttempt),
+  )
+  const [loading, setLoading] = useState(() => readCachedHubDetail(testIdParam, isRetakeAttempt) == null)
   const [error, setError] = useState<string | null>(null)
-  const [timingId, setTimingId] = useState("standard")
-  const [formatId, setFormatId] = useState("four")
+  const [timingId, setTimingId] = useState(
+    () => readCachedHubDetail(testIdParam, isRetakeAttempt)?.defaultTimingId ?? "standard",
+  )
+  const [formatId, setFormatId] = useState(
+    () => readCachedHubDetail(testIdParam, isRetakeAttempt)?.defaultFormatId ?? "four",
+  )
   const [startingSectionId, setStartingSectionId] = useState<string | null>(null)
   const [finishing, setFinishing] = useState(false)
   const [completeModal, setCompleteModal] = useState<{
@@ -244,32 +266,57 @@ function PracticePrepTestPage() {
     [detail?.timingOptions, scaleFactor],
   )
 
-  const load = useCallback(async () => {
-    if (!testIdParam) return
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await practiceApi.getPrepTestDetail(testIdParam)
-      if (data.prepTest.id && data.prepTest.id !== testIdParam) {
-        navigate(prepTestHubHref(data.prepTest.id, { retake: isRetakeAttempt }), { replace: true })
-        return
-      }
-      const normalized = normalizePrepTestDetail(data, { prepTestId: testIdParam })
+  const applyDetail = useCallback(
+    (data: PrepTestDetailResponse) => {
+      const normalized = normalizePrepTestDetail(data, { prepTestId: testIdParam ?? data.prepTest.id })
       setDetail(normalized)
       setTimingId(normalized.defaultTimingId)
       setFormatId(normalized.defaultFormatId)
       if (isRetakeAttempt && !isPrepTestConfigLocked(normalized)) {
-        clearStoredPrepTestConfigLock(testIdParam)
-      } else {
+        if (testIdParam) clearStoredPrepTestConfigLock(testIdParam)
+      } else if (testIdParam) {
         resolvePrepTestConfigLocked(normalized, testIdParam)
       }
+      return normalized
+    },
+    [isRetakeAttempt, testIdParam],
+  )
+
+  const load = useCallback(async () => {
+    if (!testIdParam) return
+    setError(null)
+
+    // Paint from cache immediately; refresh progress in the background.
+    if (!isRetakeAttempt) {
+      const cached = getCachedPrepTestDetail(testIdParam)
+      if (cached) {
+        applyDetail(cached)
+        setLoading(false)
+      } else {
+        setLoading(true)
+      }
+    } else {
+      setLoading(true)
+    }
+
+    try {
+      // Retake must open/create a fresh PREPTEST session so prior section progress
+      // is not shown — startPrepTest returns detail in one round-trip.
+      const data = isRetakeAttempt
+        ? (await practiceApi.startPrepTest({ prepTestId: testIdParam })).detail
+        : await practiceApi.getPrepTestDetail(testIdParam, { forceRefresh: true })
+      if (data.prepTest.id && data.prepTest.id !== testIdParam) {
+        navigate(prepTestHubHref(data.prepTest.id, { retake: isRetakeAttempt }), { replace: true })
+        return
+      }
+      applyDetail(data)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load PrepTest")
-      setDetail(null)
+      if (!getCachedPrepTestDetail(testIdParam)) setDetail(null)
     } finally {
       setLoading(false)
     }
-  }, [isRetakeAttempt, navigate, practiceApi, testIdParam])
+  }, [applyDetail, isRetakeAttempt, navigate, practiceApi, testIdParam])
 
   useEffect(() => {
     const stateRetake = (location.state as { retake?: boolean } | null)?.retake === true
@@ -341,8 +388,13 @@ function PracticePrepTestPage() {
     }
   }
 
+  function prefetchActiveSection(sessionId: string | null | undefined) {
+    if (sessionId) practiceApi.prefetchSectionSession(sessionId)
+  }
+
   function openPrepTestSection(row: PrepTestDetailSection) {
     if (row.activeSectionSessionId && testIdParam) {
+      prefetchActiveSection(row.activeSectionSessionId)
       if (row.answeredCount > 0) {
         navigate(
           sectionSessionHref(row.activeSectionSessionId, {
@@ -362,6 +414,7 @@ function PracticePrepTestPage() {
       return
     }
     if (row.activeSectionSessionId) {
+      prefetchActiveSection(row.activeSectionSessionId)
       navigate(sectionSessionHref(row.activeSectionSessionId, { retake: isRetakeAttempt }))
       return
     }
@@ -373,7 +426,7 @@ function PracticePrepTestPage() {
     clearStoredSectionBreak(testIdParam)
     setError(null)
     try {
-      const nextDetail = await practiceApi.getPrepTestDetail(testIdParam)
+      const nextDetail = await practiceApi.getPrepTestDetail(testIdParam, { forceRefresh: true })
       const normalized = normalizePrepTestDetail(nextDetail, { prepTestId: testIdParam })
       setDetail(normalized)
       const nextSection = findNextSectionAfterBreak(normalized, afterSectionRowId)
@@ -461,7 +514,8 @@ function PracticePrepTestPage() {
     return <Navigate to={PREPTEST_LIST_HREF} replace />
   }
 
-  if (loading) {
+  // Only block on a full-page loader when we have nothing to paint yet.
+  if (loading && !detail) {
     return (
       <StudentMain>
         <StudentPageLoader centered className="min-h-[min(480px,70vh)]" label="Loading PrepTest…" />
@@ -559,6 +613,7 @@ function PracticePrepTestPage() {
                     starting={startingSectionId === row.id}
                     timingId={timingId}
                     onStart={() => openPrepTestSection(row)}
+                    onPrefetch={() => prefetchActiveSection(row.activeSectionSessionId)}
                   />
                 </li>,
               ]

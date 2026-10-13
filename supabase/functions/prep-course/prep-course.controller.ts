@@ -33,7 +33,14 @@ export async function handlePrepCourseRequest(req: Request): Promise<Response> {
         const data = await service.getLesson(auth.user.id, courseSlug, lessonSlug)
         return json(data, {}, corsHeaders)
       }
-      const data = await service.getCourseWithLessons(auth.user.id, courseSlug)
+      const hydrateRaw = url.searchParams.get('hydrate')
+      const moduleId = url.searchParams.get('moduleId')
+      const hydrate =
+        hydrateRaw === 'all' || hydrateRaw === 'first' ? hydrateRaw : undefined
+      const data = await service.getCourseWithLessons(auth.user.id, courseSlug, {
+        hydrate,
+        moduleId: moduleId ?? undefined,
+      })
       return json(data, {}, corsHeaders)
     }
 

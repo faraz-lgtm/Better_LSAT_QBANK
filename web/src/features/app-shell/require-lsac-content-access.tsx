@@ -5,7 +5,6 @@ import {
   isLsacContentPath,
   useStudentEntitlement,
 } from "@/features/app-shell/student-entitlement-context"
-import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 
 /**
  * Blocks Academy / Prep / Insights routes until LawHub coach is eligible.
@@ -19,15 +18,7 @@ function RequireLsacContentAccess({ children }: { children: ReactElement }) {
     return children
   }
 
-  if (loading) {
-    return (
-      <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
-        <StudentPageLoader centered label="Loading…" />
-      </div>
-    )
-  }
-
-  if (!canAccessLsacContent) {
+  if (!loading && !canAccessLsacContent) {
     return <Navigate to="/app" replace />
   }
 

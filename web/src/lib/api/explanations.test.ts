@@ -134,6 +134,89 @@ describe("createExplanationsApi", () => {
     })
   })
 
+  it("getStatusCounts invokes prep-explanations-status-counts", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: { statusCounts: { in_process: 1, fresh: 2, answered: 3, seen: 4 } },
+      error: null,
+    })
+    const api = createExplanationsApi(mockSupabase(invoke))
+    expect(await api.getStatusCounts()).toEqual({
+      in_process: 1,
+      fresh: 2,
+      answered: 3,
+      seen: 4,
+    })
+    expect(invoke).toHaveBeenCalledWith("prep-explanations", {
+      method: "POST",
+      body: { action: "prep-explanations-status-counts" },
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
+
+  it("listPrepTests passes includeStatusCounts when set", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        prepTests: [],
+        total: 0,
+        page: 1,
+        pageSize: 50,
+        statusCounts: { in_process: 0, fresh: 0, answered: 0, seen: 0 },
+      },
+      error: null,
+    })
+    const api = createExplanationsApi(mockSupabase(invoke))
+    await api.listPrepTests({
+      offset: 5,
+      pageSize: 50,
+      sort: "newest",
+      includeStatusCounts: false,
+    })
+    expect(invoke).toHaveBeenCalledWith("prep-explanations", {
+      method: "POST",
+      body: {
+        action: "prep-explanations-prep-tests",
+        page: 1,
+        pageSize: 50,
+        offset: 5,
+        sort: "newest",
+        includeStatusCounts: false,
+      },
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
+
+  it("listPrepTests passes includeDetails when set", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        prepTests: [],
+        total: 0,
+        page: 1,
+        pageSize: 5,
+        statusCounts: { in_process: 0, fresh: 0, answered: 0, seen: 0 },
+      },
+      error: null,
+    })
+    const api = createExplanationsApi(mockSupabase(invoke))
+    await api.listPrepTests({
+      page: 1,
+      pageSize: 5,
+      includeStatusCounts: false,
+      includeDetails: false,
+    })
+    expect(invoke).toHaveBeenCalledWith("prep-explanations", {
+      method: "POST",
+      body: {
+        action: "prep-explanations-prep-tests",
+        page: 1,
+        pageSize: 5,
+        sort: "newest",
+        includeStatusCounts: false,
+        includeDetails: false,
+      },
+      headers: { Authorization: "Bearer token-1" },
+    })
+  })
+
   it("listQuestionBookmarks and setQuestionBookmark use prep-explanations-bookmarks", async () => {
     const invoke = vi
       .fn()

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-context"
 import { DashboardAccessSetupCard } from "@/features/dashboard/components/dashboard-access-setup-card"
 import { DashboardQuickStats } from "@/features/dashboard/components/dashboard-quick-stats"
@@ -25,6 +26,13 @@ import {
   dashboardDrillMoreHref,
   pickDashboardActiveDrills,
 } from "@/features/dashboard/lib/pick-dashboard-drills"
+import {
+  loadProfile,
+  loadStudyContext,
+  patchStudyPreferences,
+  selectProfile,
+  selectStudyContext,
+} from "@/features/student-session/studentSessionSlice"
 import { withBestScoreFromTrajectory } from "@/features/student/analytics/map-analytics"
 import { useAnalyticsApi } from "@/features/student/analytics/hooks/use-analytics-api"
 import { ContinueDrillCard, continueDrillToCardDrill } from "@/features/student/components/continue-drill-card"
@@ -39,7 +47,6 @@ import {
   type SuggestedDrill,
 } from "@/features/student/drills/drill-dashboard-mappers"
 import type { AnalyticsOverview } from "@/lib/api/analytics"
-import type { StudentStudyContext } from "@/lib/api/users"
 import { createUsersApi } from "@/lib/api/users"
 import { createPracticeApi } from "@/lib/api/practice"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -71,12 +78,15 @@ function firstNameFromProfile(profile: { first_name?: string | null; full_name?:
 
 function DashboardPage() {
   const navigate = useNavigate()
+  const dispatch = useAppDispatch()
   const {
     canAccessLsacContent,
     isPaymentRequired,
     loading: entitlementLoading,
   } = useStudentEntitlement()
   const analyticsApi = useAnalyticsApi()
+  const profile = useAppSelector(selectProfile)
+  const studyContext = useAppSelector(selectStudyContext)
   const usersApi = useMemo(() => {
     try {
       return createUsersApi(getSupabaseBrowserClient())
@@ -95,9 +105,9 @@ function DashboardPage() {
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null)
   const [continueDrills, setContinueDrills] = useState<ContinueDrill[]>([])
   const [suggestedDrills, setSuggestedDrills] = useState<SuggestedDrill[]>([])
-  const [studyContext, setStudyContext] = useState<StudentStudyContext | null>(null)
-  const [firstName, setFirstName] = useState("")
-  const [loading, setLoading] = useState(true)
+  const firstName = firstNameFromProfile(profile)
+  /** Stats / drills still loading — shell (welcome + countdown) paints without waiting. */
+  const [analyticsLoading, setAnalyticsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeFilter, setActiveFilter] = useState<"all" | "lr" | "rc">("all")
 
@@ -105,64 +115,52 @@ function DashboardPage() {
   const [savingTestDate, setSavingTestDate] = useState(false)
 
   useEffect(() => {
-    if (entitlementLoading) {
-      setLoading(true)
-      return
-    }
+    void dispatch(loadProfile())
+    void dispatch(loadStudyContext())
+  }, [dispatch])
+
+  useEffect(() => {
+    // Wait until entitlement is known so we do not start+cancel a full analytics load.
+    if (entitlementLoading) return
 
     let cancelled = false
 
-    async function loadDashboard() {
+    async function loadDashboardAnalytics() {
       if (!canAccessLsacContent) {
         setOverview(null)
         setContinueDrills([])
         setSuggestedDrills([])
-        if (usersApi) {
-          try {
-            const profile = await usersApi.getMyProfile()
-            if (cancelled) return
-            setFirstName(firstNameFromProfile(profile))
-          } catch {
-            if (!cancelled) setFirstName("")
-          }
-        }
-        if (!cancelled) setLoading(false)
+        setAnalyticsLoading(false)
         return
       }
 
-      if (!analyticsApi || !usersApi) {
+      if (!analyticsApi) {
         if (!cancelled) {
           setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
-          setLoading(false)
+          setAnalyticsLoading(false)
         }
         return
       }
 
-      setLoading(true)
+      setAnalyticsLoading(true)
       setError(null)
+
       try {
-        const [overviewData, trajectoryPoints, drillSessions, priorities, context, profile] = await Promise.all([
-          analyticsApi.getOverview(),
-          analyticsApi.getTrajectory(),
-          analyticsApi.getSessions({ kind: "DRILL", limit: 50 }),
-          analyticsApi.getPriorities(),
-          usersApi.getStudyContext(),
-          usersApi.getMyProfile(),
-        ])
+        const bundle = await analyticsApi.getPageBundle("dashboard")
         if (cancelled) return
 
-        setOverview(withBestScoreFromTrajectory(overviewData, trajectoryPoints))
-        setStudyContext(context)
-        setFirstName(firstNameFromProfile(profile))
+        const overviewData = bundle.overview
+        if (!overviewData) throw new Error("No overview returned from analytics")
+        setOverview(withBestScoreFromTrajectory(overviewData, bundle.trajectory ?? []))
 
-        const inProgress = drillSessions.sessions
+        const inProgress = (bundle.sessions?.sessions ?? [])
           .filter((s) => !s.completedAt)
           .map(mapSessionToContinueDrill)
           .filter((d): d is ContinueDrill => d != null)
         setContinueDrills(inProgress)
 
         setSuggestedDrills(
-          priorities
+          (bundle.priorities ?? [])
             .filter((p) => p.sectionType === "LR" || p.sectionType === "RC" || p.sectionType === null)
             .map(mapPriorityToSuggestedDrill)
             .filter((d): d is SuggestedDrill => d != null)
@@ -171,15 +169,15 @@ function DashboardPage() {
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load dashboard")
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setAnalyticsLoading(false)
       }
     }
 
-    void loadDashboard()
+    void loadDashboardAnalytics()
     return () => {
       cancelled = true
     }
-  }, [analyticsApi, canAccessLsacContent, entitlementLoading, usersApi])
+  }, [analyticsApi, canAccessLsacContent, entitlementLoading])
 
   const statCards = useMemo(
     () => (overview ? mapOverviewToDashboardStats(overview) : []),
@@ -247,9 +245,7 @@ function DashboardPage() {
         plannedLsatDate: value.trim(),
         plannedLsatWindow: null,
       })
-      setStudyContext((prev) =>
-        prev ? { ...prev, preferences: nextPreferences } : { preferences: nextPreferences, officialScores: [] },
-      )
+      dispatch(patchStudyPreferences(nextPreferences))
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update test date")
     } finally {
@@ -257,7 +253,7 @@ function DashboardPage() {
     }
   }
 
-  if (entitlementLoading || loading) {
+  if (entitlementLoading) {
     return (
       <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
         <StudentPageLoader centered className="min-h-0 flex-1" label="Loading dashboard…" />
@@ -306,17 +302,25 @@ function DashboardPage() {
             )}
             testDateValue={testDateValue}
             adaptiveLoading={startingAdaptiveDrill}
-            adaptiveDisabled={!practiceApi}
+            adaptiveDisabled={!practiceApi || analyticsLoading}
             savingTestDate={savingTestDate}
             onTestDateChange={(value) => void handleTestDateChange(value)}
             onStartAdaptiveDrill={() => void handleStartAdaptiveDrill()}
           />
 
-          <DashboardQuickStats cards={statCards} />
+          {analyticsLoading && statCards.length === 0 ? (
+            <DashboardQuickStatsSkeleton />
+          ) : (
+            <DashboardQuickStats cards={statCards} />
+          )}
         </div>
 
         <div className="dashboard-page__mid">
-          {performance ? <PerformanceOverviewCard overview={performance} /> : null}
+          {analyticsLoading && !performance ? (
+            <DashboardPerformanceSkeleton />
+          ) : performance ? (
+            <PerformanceOverviewCard overview={performance} />
+          ) : null}
         </div>
 
         <div className="dashboard-page__bottom">
@@ -351,7 +355,9 @@ function DashboardPage() {
               </div>
             </div>
 
-            {displayDrills.length === 0 ? (
+            {analyticsLoading && displayDrills.length === 0 ? (
+              <DashboardDrillsSkeleton />
+            ) : displayDrills.length === 0 ? (
               <p className="rounded-xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-4 py-6 text-sm text-[var(--greyscale-500)]">
                 No drills in progress. Start a new drill from{" "}
                 <button
@@ -389,6 +395,68 @@ function DashboardPage() {
         </div>
       </div>
     </StudentMain>
+  )
+}
+
+function DashboardSkeletonBlock({ className }: { className?: string }) {
+  return <div className={`animate-pulse rounded-xl bg-[var(--greyscale-100)] ${className ?? ""}`} />
+}
+
+function DashboardQuickStatsSkeleton() {
+  return (
+    <div
+      className="dashboard-page__quick-stats grid grid-cols-1 gap-4 sm:grid-cols-2"
+      aria-busy="true"
+      aria-label="Loading stats"
+    >
+      {Array.from({ length: 4 }, (_, i) => (
+        <article
+          key={i}
+          className="flex min-h-[120px] flex-col justify-center gap-2 rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6"
+        >
+          <DashboardSkeletonBlock className="h-3 w-24" />
+          <DashboardSkeletonBlock className="h-8 w-16" />
+          <DashboardSkeletonBlock className="h-3 w-28" />
+        </article>
+      ))}
+    </div>
+  )
+}
+
+function DashboardPerformanceSkeleton() {
+  return (
+    <section
+      className="min-w-0 rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6"
+      aria-busy="true"
+      aria-label="Loading performance"
+    >
+      <DashboardSkeletonBlock className="h-5 w-48" />
+      <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="flex flex-col gap-2 p-4">
+            <DashboardSkeletonBlock className="h-3 w-20" />
+            <DashboardSkeletonBlock className="h-8 w-14" />
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function DashboardDrillsSkeleton() {
+  return (
+    <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading drills">
+      {Array.from({ length: 2 }, (_, i) => (
+        <div
+          key={i}
+          className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] p-4"
+        >
+          <DashboardSkeletonBlock className="h-4 w-40" />
+          <DashboardSkeletonBlock className="mt-3 h-3 w-56" />
+          <DashboardSkeletonBlock className="mt-4 h-9 w-28" />
+        </div>
+      ))}
+    </div>
   )
 }
 

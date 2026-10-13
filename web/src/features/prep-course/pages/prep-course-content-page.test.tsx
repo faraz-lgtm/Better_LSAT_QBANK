@@ -159,11 +159,11 @@ describe("PrepCourseContentPage", () => {
     )
 
     await waitFor(() => {
-      expect(getCourseMock).toHaveBeenCalledWith("prep-course")
+      expect(getCourseMock).toHaveBeenCalledWith("prep-course", { hydrate: "first" })
     })
 
     expect(await screen.findByRole("heading", { name: "Course Content" })).toBeInTheDocument()
-    expect(screen.getByText("Show All Bookmark")).toBeInTheDocument()
+    expect(screen.getByText("All Modules Bookmark")).toBeInTheDocument()
     expect(screen.getByText("Modules")).toBeInTheDocument()
     expect(screen.getByText("Sections")).toBeInTheDocument()
 

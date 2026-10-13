@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { ChevronDown, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
+import {
+  AnalyticsDrillsHeroSkeleton,
+  AnalyticsHistorySkeleton,
+} from "@/features/student/analytics/components/analytics-insights-skeletons"
 import { AnalyticsPrepTestHistory } from "@/features/student/components/analytics-prep-test-history"
 import { HistorySortMenu } from "@/features/student/analytics/history-sort-menu"
 import { sortHistoryEntries, type HistorySort } from "@/features/student/analytics/history-sort"
@@ -56,6 +59,11 @@ import {
 import { DEFAULT_DRILL_SCORE_TAB } from "@/features/student/analytics/score-chart-defaults"
 import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
 import type { PrepTestHistoryEntry } from "@/features/student/lib/mock-analytics-preptests"
+import {
+  peekCachedAnalyticsPriorities,
+  peekCachedAnalyticsSessions,
+  type PracticeSessionSummary,
+} from "@/lib/api/analytics"
 
 const SCORE_TABS = [
   { id: "percent", label: "% Score" },
@@ -333,10 +341,24 @@ function AnalyticsDrillsPage() {
   const typeFromUrl = searchParams.get("type")
   const sectionFilter = parseAnalyticsSectionParam(searchParams.get("section"))
 
-  const [loading, setLoading] = useState(true)
-  const [drillRecords, setDrillRecords] = useState<DrillRecord[]>([])
-  const [drillTypes, setDrillTypes] = useState<DrillType[]>([])
-  const [drillHistory, setDrillHistory] = useState<PrepTestHistoryEntry[]>([])
+  const [seededSessions] = useState(
+    () => peekCachedAnalyticsSessions("DRILL", { completedOnly: true }) ?? [],
+  )
+  const [seededPriorities] = useState(() => peekCachedAnalyticsPriorities() ?? [])
+  const [ready, setReady] = useState(
+    () => seededSessions.length > 0 || seededPriorities.length > 0,
+  )
+  const [drillRecords, setDrillRecords] = useState<DrillRecord[]>(() =>
+    seededSessions.map(mapSessionToDrillRecord).filter((r): r is DrillRecord => r != null),
+  )
+  const [drillTypes, setDrillTypes] = useState<DrillType[]>(() =>
+    buildDrillTypesFromPriorities(seededPriorities),
+  )
+  const [drillHistory, setDrillHistory] = useState<PrepTestHistoryEntry[]>(() =>
+    seededSessions
+      .map(mapDrillSessionToHistoryEntry)
+      .filter((e): e is PrepTestHistoryEntry => e != null),
+  )
 
   const [scoreTab, setScoreTab] = useState<ScoreTab>(DEFAULT_DRILL_SCORE_TAB)
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
@@ -345,26 +367,62 @@ function AnalyticsDrillsPage() {
 
   useEffect(() => {
     if (!analyticsApi) {
-      setLoading(false)
+      setReady(true)
       return
     }
-    setLoading(true)
-    void Promise.all([
-      analyticsApi.getSessions({ kind: "DRILL", completedOnly: true, limit: 500 }),
-      analyticsApi.getPriorities(),
-    ])
-      .then(([drills, priorities]) => {
-        setDrillRecords(
-          drills.sessions.map(mapSessionToDrillRecord).filter((r): r is DrillRecord => r != null),
-        )
-        setDrillHistory(
-          drills.sessions
-            .map(mapDrillSessionToHistoryEntry)
-            .filter((e): e is PrepTestHistoryEntry => e != null),
-        )
-        setDrillTypes(buildDrillTypesFromPriorities(priorities))
+    let cancelled = false
+
+    const applySessions = (sessions: PracticeSessionSummary[]) => {
+      setDrillRecords(
+        sessions.map(mapSessionToDrillRecord).filter((r): r is DrillRecord => r != null),
+      )
+      setDrillHistory(
+        sessions
+          .map(mapDrillSessionToHistoryEntry)
+          .filter((e): e is PrepTestHistoryEntry => e != null),
+      )
+    }
+
+    /** First page paints quickly; full list backfills without blocking the shell. */
+    const FIRST_PAGE = 48
+    void analyticsApi
+      .getSessions({ kind: "DRILL", completedOnly: true, limit: FIRST_PAGE, skipCount: true })
+      .then((drills) => {
+        if (cancelled) return
+        applySessions(drills.sessions)
+        setReady(true)
+        if (drills.sessions.length < FIRST_PAGE) return
+        return analyticsApi.getSessions({
+          kind: "DRILL",
+          completedOnly: true,
+          limit: 500,
+          skipCount: true,
+        })
       })
-      .finally(() => setLoading(false))
+      .then((full) => {
+        if (cancelled || !full) return
+        applySessions(full.sessions)
+      })
+      .catch(() => {
+        if (!cancelled) setReady(true)
+      })
+
+    // Type menu only needs labels/sections — skip the slow difficulty join.
+    // Prefer seeded/cached priorities; only fetch when the catalog is empty.
+    if (seededPriorities.length === 0) {
+      void analyticsApi
+        .getPriorities({ skipDifficulty: true })
+        .then((priorities) => {
+          if (!cancelled) setDrillTypes(buildDrillTypesFromPriorities(priorities))
+        })
+        .catch(() => {
+          /* type menu stays empty / seeded */
+        })
+    }
+
+    return () => {
+      cancelled = true
+    }
   }, [analyticsApi])
 
   const typesForSection = useMemo(
@@ -469,13 +527,7 @@ function AnalyticsDrillsPage() {
     [navigate],
   )
 
-  if (loading) {
-    return (
-      <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
-        <StudentPageLoader centered className="min-h-0 flex-1" label="Loading drill analytics…" />
-      </StudentMain>
-    )
-  }
+  const showColdSkeleton = !ready && drillRecords.length === 0
 
   return (
     <StudentMain>
@@ -529,7 +581,9 @@ function AnalyticsDrillsPage() {
             </div>
           </div>
 
-          {statTiles ? (
+          {showColdSkeleton ? (
+            <AnalyticsDrillsHeroSkeleton />
+          ) : statTiles ? (
             <div className="grid gap-4 lg:grid-cols-[minmax(240px,360px)_1fr]">
               <AnalyticsStatsGrid stats={statTiles} />
               <AnalyticsScoreProgressPanel
@@ -545,25 +599,30 @@ function AnalyticsDrillsPage() {
           )}
         </section>
 
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          <HistorySortMenu
-            value={historySort}
-            onChange={setHistorySort}
-            ariaLabel="Sort drill history"
-          />
-        </div>
-
-        <AnalyticsPrepTestHistory
-          title="Drill History"
-          emptyNoun="drills"
-          visibleEntries={visibleEntries}
-          bookmarkedOnly={bookmarkedOnly}
-          onBookmarkedOnlyChange={setBookmarkedOnly}
-          sectionFilter={sectionFilter}
-          onSectionFilterChange={handleSelectSection}
-          onToggleBookmark={handleToggleBookmark}
-          onSelectEntry={handleSelectEntry}
-        />
+        {showColdSkeleton ? (
+          <AnalyticsHistorySkeleton label="Loading drill history" rows={5} />
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <HistorySortMenu
+                value={historySort}
+                onChange={setHistorySort}
+                ariaLabel="Sort drill history"
+              />
+            </div>
+            <AnalyticsPrepTestHistory
+              title="Drill History"
+              emptyNoun="drills"
+              visibleEntries={visibleEntries}
+              bookmarkedOnly={bookmarkedOnly}
+              onBookmarkedOnlyChange={setBookmarkedOnly}
+              sectionFilter={sectionFilter}
+              onSectionFilterChange={handleSelectSection}
+              onToggleBookmark={handleToggleBookmark}
+              onSelectEntry={handleSelectEntry}
+            />
+          </>
+        )}
       </div>
     </StudentMain>
   )

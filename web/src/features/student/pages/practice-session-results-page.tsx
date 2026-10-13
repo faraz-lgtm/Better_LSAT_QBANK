@@ -87,6 +87,21 @@ function parseTiming(metadata: Record<string, unknown>, fallback = "unlimited"):
   return typeof metadata.timing === "string" && metadata.timing.trim() ? metadata.timing : fallback
 }
 
+async function mapPool<T, R>(items: T[], concurrency: number, mapper: (item: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length)
+  let next = 0
+  async function worker() {
+    while (next < items.length) {
+      const index = next
+      next += 1
+      out[index] = await mapper(items[index]!)
+    }
+  }
+  const workers = Math.max(1, Math.min(concurrency, items.length))
+  await Promise.all(Array.from({ length: workers }, () => worker()))
+  return out
+}
+
 function sessionElapsedSeconds(startedAt: string, completedAt: string): number {
   const started = new Date(startedAt).getTime()
   const completed = new Date(completedAt).getTime()
@@ -267,29 +282,32 @@ function PracticeSessionResultsPage() {
 
         if (!alive || !loaded) return
         setResults(loaded)
+        setLoading(false)
 
-        const detailEntries = await Promise.all(
-          loaded.questions.map(async (q) => {
+        if (loaded.questions.length === 0) return
+        try {
+          const detailEntries = await mapPool(loaded.questions, 4, async (q) => {
             try {
               const detail = await explanationsApi.getExplanationDetail(q.id)
               return [q.id, detail] as const
             } catch {
               return [q.id, null] as const
             }
-          }),
-        )
-        if (!alive) return
-        const next: Record<string, ExplanationDetailPayload> = {}
-        for (const [id, detail] of detailEntries) {
-          if (detail) next[id] = detail
+          })
+          if (!alive) return
+          const next: Record<string, ExplanationDetailPayload> = {}
+          for (const [id, detail] of detailEntries) {
+            if (detail) next[id] = detail
+          }
+          setDetailsByQuestion(next)
+        } catch {
+          if (alive) setDetailsByQuestion({})
         }
-        setDetailsByQuestion(next)
       } catch (e) {
         if (!alive) return
         setError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to load results")
         setResults(null)
-      } finally {
-        if (alive) setLoading(false)
+        setLoading(false)
       }
     }
 

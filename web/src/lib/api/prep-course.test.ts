@@ -34,16 +34,55 @@ describe("createPrepCourseApi", () => {
         course: { id: "c1", slug: "prep-course" },
         lessons: [{ id: "l1", slug: "intro" }],
         completedLessonSlugs: ["intro"],
+        hydratedModuleIds: ["m1"],
+        moduleStats: [{ moduleId: "m1", lessonCount: 1, totalMinutes: 5 }],
       },
       error: null,
     })
     const api = createPrepCourseApi(mockSupabase(invoke))
 
-    const out = await api.getCourse("prep-course")
+    const out = await api.getCourse("prep-course", { hydrate: "first" })
 
+    expect(invoke).toHaveBeenCalledWith("prep-course?courseSlug=prep-course&hydrate=first", {
+      method: "GET",
+      headers: { Authorization: "Bearer token-1" },
+    })
     expect(out.course.slug).toBe("prep-course")
     expect(out.lessons).toHaveLength(1)
     expect(out.completedLessonSlugs).toEqual(["intro"])
+    expect(out.hydratedModuleIds).toEqual(["m1"])
+  })
+
+  it("getCourse dedupes concurrent identical requests", async () => {
+    type InvokeResult = { data: unknown; error: null }
+    let resolveInvoke!: (value: InvokeResult) => void
+    const invoke = vi.fn().mockImplementation(
+      () =>
+        new Promise<InvokeResult>((resolve) => {
+          resolveInvoke = resolve
+        }),
+    )
+    const api = createPrepCourseApi(mockSupabase(invoke))
+
+    const p1 = api.getCourse("prep-course", { hydrate: "first" })
+    const p2 = api.getCourse("prep-course", { hydrate: "first" })
+
+    // Allow getSession microtasks to flush so invoke is scheduled once.
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(invoke).toHaveBeenCalledTimes(1)
+
+    resolveInvoke({
+      data: {
+        course: { id: "c1", slug: "prep-course" },
+        lessons: [],
+      },
+      error: null,
+    })
+    const [a, b] = await Promise.all([p1, p2])
+    expect(a.course.id).toBe("c1")
+    expect(b.course.id).toBe("c1")
+    expect(invoke).toHaveBeenCalledTimes(1)
   })
 
   it("setModuleBookmark POSTs bookmarkModuleId", async () => {

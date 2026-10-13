@@ -4,12 +4,17 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from "react"
 
-import { createUsersApi, type UserEntitlement } from "@/lib/api/users"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import {
+  invalidateEntitlement,
+  loadEntitlement,
+  selectEntitlement,
+  type LoadStatus,
+} from "@/features/student-session/studentSessionSlice"
+import type { UserEntitlement } from "@/lib/api/users"
 
 type StudentEntitlementContextValue = {
   entitlement: UserEntitlement | null
@@ -25,42 +30,25 @@ type StudentEntitlementContextValue = {
 const StudentEntitlementContext = createContext<StudentEntitlementContextValue | null>(null)
 
 function StudentEntitlementProvider({ children }: { children: ReactNode }) {
-  const [entitlement, setEntitlement] = useState<UserEntitlement | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const usersApi = useMemo(() => {
-    try {
-      return createUsersApi(getSupabaseBrowserClient())
-    } catch {
-      return null
-    }
-  }, [])
-
-  const refresh = useCallback(async (): Promise<UserEntitlement | null> => {
-    if (!usersApi) {
-      setEntitlement(null)
-      setLoading(false)
-      setError("Supabase env is missing.")
-      return null
-    }
-
-    try {
-      const next = await usersApi.getEntitlementState()
-      setEntitlement(next)
-      setError(null)
-      return next
-    } catch (refreshError) {
-      setError(refreshError instanceof Error ? refreshError.message : "Unable to load entitlement.")
-      return null
-    } finally {
-      setLoading(false)
-    }
-  }, [usersApi])
+  const dispatch = useAppDispatch()
+  const entitlement = useAppSelector(selectEntitlement)
+  const entitlementStatus = useAppSelector(
+    (state) => state.studentSession.entitlementStatus as LoadStatus,
+  )
+  const entitlementError = useAppSelector((state) => state.studentSession.entitlementError)
 
   useEffect(() => {
-    void refresh()
-  }, [refresh])
+    void dispatch(loadEntitlement())
+  }, [dispatch])
+
+  const refresh = useCallback(async (): Promise<UserEntitlement | null> => {
+    dispatch(invalidateEntitlement())
+    const result = await dispatch(loadEntitlement())
+    if (loadEntitlement.fulfilled.match(result)) return result.payload
+    return null
+  }, [dispatch])
+
+  const loading = entitlementStatus === "idle" || entitlementStatus === "loading"
 
   const value = useMemo<StudentEntitlementContextValue>(() => {
     const canAccessLsacContent = Boolean(entitlement?.isLsacEligible)
@@ -70,13 +58,13 @@ function StudentEntitlementProvider({ children }: { children: ReactNode }) {
     return {
       entitlement,
       loading,
-      error,
+      error: entitlementError,
       canAccessLsacContent,
       isPaymentRequired,
       isLsacSetupRequired,
       refresh,
     }
-  }, [entitlement, error, loading, refresh])
+  }, [entitlement, entitlementError, loading, refresh])
 
   return (
     <StudentEntitlementContext.Provider value={value}>{children}</StudentEntitlementContext.Provider>

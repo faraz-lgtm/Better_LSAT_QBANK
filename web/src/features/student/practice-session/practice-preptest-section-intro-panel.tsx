@@ -17,6 +17,8 @@ type PracticePrepTestSectionIntroPanelProps = {
   questionCount: number
   timeMinutes: number | null
   onGoToQuestions: () => void
+  goToQuestionsLabel?: string
+  goToQuestionsDisabled?: boolean
 }
 
 /** Figma section-intro directions card — white elevated panel on exam chrome */
@@ -26,6 +28,8 @@ function PracticePrepTestSectionIntroPanel({
   questionCount,
   timeMinutes,
   onGoToQuestions,
+  goToQuestionsLabel = "Go to Question",
+  goToQuestionsDisabled = false,
 }: PracticePrepTestSectionIntroPanelProps) {
   return (
     <div className="flex w-full flex-col gap-6 bg-[var(--greyscale-0)]">
@@ -50,10 +54,11 @@ function PracticePrepTestSectionIntroPanel({
         </p>
         <Button
           type="button"
+          disabled={goToQuestionsDisabled}
           className="ds-btn h-12 gap-2 rounded-[16px] px-4 text-[16px] font-semibold leading-[1.5] tracking-[0.32px]"
           onClick={onGoToQuestions}
         >
-          Go to Question
+          {goToQuestionsLabel}
           <ChevronRight className="size-5" aria-hidden />
         </Button>
       </div>

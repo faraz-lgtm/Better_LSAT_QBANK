@@ -1,5 +1,7 @@
+import { configureStore } from "@reduxjs/toolkit"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { Provider } from "react-redux"
 import { MemoryRouter } from "react-router-dom"
 import { describe, expect, it, vi } from "vitest"
 import type { ReactElement } from "react"
@@ -8,6 +10,7 @@ import {
   formatHeaderProfileName,
   StudentAppHeader,
 } from "@/features/app-shell/student-app-header"
+import studentSessionReducer from "@/features/student-session/studentSessionSlice"
 import { ThemeProvider } from "@/features/theme/theme-provider"
 import { notifyProfileAvatarChanged } from "@/lib/profile-avatar-sync"
 
@@ -33,12 +36,35 @@ const { profileFixture } = vi.hoisted(() => ({
 
 vi.mock("@/lib/api/users", () => ({
   createUsersApi: () => ({
-    getMyProfile: vi.fn().mockResolvedValue(profileFixture),
+    getMyProfile: vi.fn().mockResolvedValue({
+      id: "u1",
+      email: "assad@acelebrands.co",
+      first_name: "Assad",
+      last_name: "Khan",
+      full_name: "Assad Khan",
+      phone: null,
+      role: "student",
+      student_coaching_id: null,
+      is_first_time_login: false,
+      created_at: "2026-01-01",
+      updated_at: "2026-01-01",
+    }),
   }),
 }))
 
+vi.mock("@/lib/auth/clear-student-session-caches", () => ({
+  clearStudentSessionCaches: vi.fn(),
+}))
+
 function renderHeader(ui: ReactElement) {
-  return render(<ThemeProvider>{ui}</ThemeProvider>)
+  const store = configureStore({
+    reducer: { studentSession: studentSessionReducer },
+  })
+  return render(
+    <Provider store={store}>
+      <ThemeProvider>{ui}</ThemeProvider>
+    </Provider>,
+  )
 }
 
 describe("formatHeaderProfileName", () => {

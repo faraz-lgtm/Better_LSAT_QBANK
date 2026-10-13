@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { FunctionsHttpError } from "@supabase/functions-js"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import { clearPrepTestDetailCache } from "@/features/student/preptests/prep-test-detail-cache"
+import { clearSectionSessionCache } from "@/features/student/sections/section-session-cache"
 import { createPracticeApi } from "./practice"
 
 vi.mock("@/lib/analytics/posthog", () => ({
@@ -25,6 +27,11 @@ function mockSupabase(functionsInvoke: ReturnType<typeof vi.fn>, accessToken = "
 }
 
 describe("createPracticeApi", () => {
+  afterEach(() => {
+    clearSectionSessionCache()
+    clearPrepTestDetailCache()
+  })
+
   it("createSession invokes practice-create-session", async () => {
     const invoke = vi.fn().mockResolvedValue({
       data: {
@@ -352,6 +359,68 @@ describe("createPracticeApi", () => {
     })
   })
 
+  it("getPrepTestDetail returns cache unless forceRefresh", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        prepTest: {
+          id: "pt-1",
+          label: "PT 1",
+          prepTestNumber: "1",
+          questionCount: 100,
+          timeMinutes: 140,
+        },
+        status: "in_progress",
+        sections: [],
+        sectionBreak: null,
+        timingOptions: [{ id: "standard", label: "Standard" }],
+        formatOptions: [{ id: "four", label: "4 sections" }],
+        defaultTimingId: "standard",
+        defaultFormatId: "four",
+        allPracticeableSectionsComplete: false,
+      },
+      error: null,
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+
+    await api.getPrepTestDetail("pt-1")
+    await api.getPrepTestDetail("pt-1")
+    expect(invoke).toHaveBeenCalledTimes(1)
+
+    await api.getPrepTestDetail("pt-1", { forceRefresh: true })
+    expect(invoke).toHaveBeenCalledTimes(2)
+  })
+
+  it("prefetchPrepTestDetail warms the cache without throwing", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        prepTest: {
+          id: "pt-2",
+          label: "PT 2",
+          prepTestNumber: "2",
+          questionCount: 100,
+          timeMinutes: 140,
+        },
+        status: "in_progress",
+        sections: [],
+        sectionBreak: null,
+        timingOptions: [{ id: "standard", label: "Standard" }],
+        formatOptions: [{ id: "four", label: "4 sections" }],
+        defaultTimingId: "standard",
+        defaultFormatId: "four",
+        allPracticeableSectionsComplete: false,
+      },
+      error: null,
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+
+    api.prefetchPrepTestDetail("pt-2")
+    await vi.waitFor(() => expect(invoke).toHaveBeenCalledTimes(1))
+    await expect(api.getPrepTestDetail("pt-2")).resolves.toMatchObject({
+      prepTest: { id: "pt-2" },
+    })
+    expect(invoke).toHaveBeenCalledTimes(1)
+  })
+
   it("startPrepTest invokes practice-start-prep-test", async () => {
     const invoke = vi.fn().mockResolvedValue({
       data: {
@@ -381,8 +450,8 @@ describe("createPracticeApi", () => {
     const invoke = vi.fn().mockResolvedValue({
       data: {
         session: { id: "section-sess-1", kind: "SECTION" },
-        metadata: { sectionType: "RC", questionIds: ["q1"] },
-        section: { id: "sec-2", sectionType: "RC", questionCount: 1, timeMinutes: 35 },
+        metadata: { sectionType: "LR", questionIds: ["q1"] },
+        section: { id: "sec-2", sectionType: "LR", questionCount: 1, timeMinutes: 35 },
         questions: [],
         answers: [],
         sessionLabel: null,
@@ -396,9 +465,34 @@ describe("createPracticeApi", () => {
     expect(out.session.id).toBe("section-sess-1")
     expect(invoke).toHaveBeenCalledWith("practice-get-section-session", {
       method: "POST",
-      body: { sessionId: "section-sess-1" },
+      body: { sessionId: "section-sess-1", includeQuestions: true },
       headers: { Authorization: "Bearer token-1" },
     })
+  })
+
+  it("getSectionSession reuses startSection cache without a second invoke", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        session: { id: "section-sess-2", kind: "SECTION", section_id: "sec-1" },
+        metadata: { sectionType: "LR", questionIds: ["q1"] },
+        section: { id: "sec-1", sectionType: "LR", questionCount: 1, timeMinutes: 35 },
+        questions: [],
+        answers: [],
+        sessionLabel: null,
+      },
+      error: null,
+    })
+    const api = createPracticeApi(mockSupabase(invoke))
+
+    await api.startSection({ sectionId: "sec-1", timing: "35", showAnswers: "end" })
+    const out = await api.getSectionSession("section-sess-2")
+
+    expect(out.session.id).toBe("section-sess-2")
+    expect(invoke).toHaveBeenCalledTimes(1)
+    expect(invoke).toHaveBeenCalledWith(
+      "practice-start-section",
+      expect.objectContaining({ method: "POST" }),
+    )
   })
 
   it("getDrillSession surfaces edge function error message on 400", async () => {

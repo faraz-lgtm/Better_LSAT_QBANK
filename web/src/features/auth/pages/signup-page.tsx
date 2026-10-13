@@ -7,6 +7,7 @@ import { SocialButton } from "@/components/ui/social-button"
 import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthTermsCheckbox } from "@/features/auth/components/auth-terms-checkbox"
 import { GuestMarketingPanelLayout } from "@/features/guest/marketing/guest-marketing-panel-layout"
+import { markPendingFreeDiagnosticSignup } from "@/lib/analytics/gtm"
 import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import { createAuthApi, getAuthCallbackUrl } from "@/lib/api/auth"
 import { saveDiagnosticIntent, markDiagnosticFunnelActive } from "@/lib/auth/diagnostic-intent"
@@ -98,6 +99,7 @@ function SignupPage() {
           // Fail open: still send the magic link if the existence check is unavailable.
         }
         persistDiagnosticIntent()
+        markPendingFreeDiagnosticSignup()
         persistSelectedPlan()
         await authApi.sendMagicLink(normalizedEmail, getAuthCallbackUrl())
         captureEvent(AnalyticsEvent.signupStarted, { method: "magic_link" })
@@ -128,6 +130,7 @@ function SignupPage() {
     setExistingEmailWarning(false)
     try {
       persistDiagnosticIntent()
+      markPendingFreeDiagnosticSignup()
       persistSelectedPlan()
       captureEvent(AnalyticsEvent.signupStarted, { method: "google" })
       await authApi.signInWithGoogle(getAuthCallbackUrl())

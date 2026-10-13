@@ -176,7 +176,11 @@ export function createPrepCourseService(deps: {
   async function requireLearnerAccess(userId: string): Promise<void> {
     if (!enforceEntitlement) return
 
-    const profile = await deps.repository.getProfileRole(userId)
+    // Profile + latest LSAC snapshot in parallel (was sequential + ~1 RTT extra).
+    const [profile, snapshot] = await Promise.all([
+      deps.repository.getProfileRole(userId),
+      deps.repository.getLatestStudentSnapshotByUserId(userId),
+    ])
     if (!profile) {
       throw new EntitlementError('LSAC account must be linked before accessing prep content')
     }
@@ -187,7 +191,6 @@ export function createPrepCourseService(deps: {
       throw new EntitlementError('LSAC account must be linked before accessing prep content')
     }
 
-    const snapshot = await deps.repository.getLatestStudentSnapshotByUserId(userId)
     const linkedInSnapshot = snapshot?.linked === true
     const subscriptionType = snapshot?.subscription_type?.trim().toLowerCase() ?? null
     const hasEligibleSubscription = subscriptionType
@@ -217,15 +220,30 @@ export function createPrepCourseService(deps: {
       return await deps.repository.listPublishedCourses()
     },
 
-    async getCourseWithLessons(userId: string, courseSlug: string) {
-      await requireLearnerAccess(userId)
-      const course = await deps.repository.getPublishedCourseBySlug(normalizeSlug(courseSlug))
-      if (!course) throw new Error('Course not found')
-      const curriculum = await deps.repository.listPublishedCurriculum(course.id)
-      const lessons = await deps.repository.listPublishedLessonsByCourse(course.id)
-      const completedLessonSlugs = await deps.repository.listCompletedLessonSlugsByCourse(userId, course.id)
-      const bookmarks = await deps.repository.listBookmarksByCourse(userId, course.id)
-      return { course, lessons, curriculum, completedLessonSlugs, bookmarks }
+    async getCourseWithLessons(
+      userId: string,
+      courseSlug: string,
+      opts?: { hydrate?: 'first' | 'all'; moduleId?: string },
+    ) {
+      const requestedModuleId = opts?.moduleId?.trim() || null
+      // Default to full hydrate for callers that omit the flag (e.g. lesson page).
+      // Course outline passes hydrate=first for a fast first paint.
+      const hydrateMode = opts?.hydrate ?? 'all'
+      const slug = normalizeSlug(courseSlug)
+      // Overlap entitlement checks with the outline RPC when enforcement is on.
+      const outlinePromise = deps.repository.getCourseOutline(slug, userId, {
+        hydrate: hydrateMode,
+        moduleId: requestedModuleId ?? undefined,
+      })
+      const [, outline] = await Promise.all([requireLearnerAccess(userId), outlinePromise])
+      if (!outline) throw new Error('Course not found')
+      if (
+        requestedModuleId &&
+        !outline.curriculum.modules.some((mod) => mod.id === requestedModuleId)
+      ) {
+        throw new Error('Module not found')
+      }
+      return outline
     },
 
     async setModuleBookmark(userId: string, courseSlug: string, moduleId: string, bookmarked: boolean) {

@@ -1,4 +1,4 @@
-import type { ElementType, HTMLAttributes } from "react"
+import { useMemo, type ElementType, type HTMLAttributes } from "react"
 
 import { resolveLessonCalloutLabel } from "@/lib/html/lesson-callout-label"
 import { cn } from "@/lib/utils"
@@ -12,7 +12,7 @@ type HtmlContentProps = Omit<HTMLAttributes<HTMLElement>, "children" | "dangerou
 }
 
 function HtmlContent({ html, as: Tag = "div", className, ...rest }: HtmlContentProps) {
-  const safe = sanitizeHtml(html)
+  const safe = useMemo(() => sanitizeHtml(html), [html])
   if (!safe) return null
 
   return (

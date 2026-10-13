@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { resetUser } from '@/lib/analytics/posthog'
 import { throwIfEdgeInvokeFailed } from '@/lib/api/edge-invoke-error'
+import { clearStudentSessionCaches } from '@/lib/auth/clear-student-session-caches'
 
 const LOGIN_PATH = '/login'
 
@@ -34,6 +35,7 @@ export async function logoutAndRedirectToLogin(supabase: SupabaseClient): Promis
   } catch {
     // Still redirect so stale UI cannot keep calling protected endpoints.
   }
+  clearStudentSessionCaches()
   resetUser()
   if (typeof window !== 'undefined' && window.location.pathname !== LOGIN_PATH) {
     window.location.replace(LOGIN_PATH)

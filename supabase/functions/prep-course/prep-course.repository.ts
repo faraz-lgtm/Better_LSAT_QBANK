@@ -53,6 +53,12 @@ export type PrepCourseModuleWithSections = PrepCourseModuleRow & {
   sections: PrepCourseSectionWithLessons[]
 }
 
+export type PrepCourseModuleLessonStats = {
+  moduleId: string
+  lessonCount: number
+  totalMinutes: number
+}
+
 export type PrepCourseCurriculum = {
   modules: PrepCourseModuleWithSections[]
 }
@@ -119,6 +125,138 @@ export type PrepCourseBookmarks = {
 
 const EMPTY_BOOKMARKS: PrepCourseBookmarks = { moduleIds: [], lessonSlugs: [] }
 
+/**
+ * Outline/list queries omit text_content, summary, and video_url (large payloads).
+ * Lesson detail still selects full rows.
+ */
+export const PREP_LESSON_LIST_SELECT =
+  'id,course_id,section_id,slug,title,lesson_type,sort_order,duration_minutes,is_published,created_at,updated_at'
+
+function mapListedLesson(row: PrepLessonRow): PrepLessonRow {
+  return {
+    ...row,
+    text_content: row.text_content ?? null,
+    summary: row.summary ?? null,
+    video_url: row.video_url ?? null,
+  }
+}
+
+export type ListPublishedCurriculumOptions = {
+  /**
+   * When set, only these modules include lessons; others keep empty lesson arrays.
+   * Use `'first'` to hydrate only the lowest sort_order module.
+   * Omit (or pass undefined) to hydrate every module.
+   */
+  hydrateModuleIds?: string[] | 'first'
+}
+
+export type PrepCourseOutline = {
+  course: PrepCourseRow
+  curriculum: PrepCourseCurriculum
+  lessons: PrepLessonRow[]
+  completedLessonSlugs: string[]
+  bookmarks: PrepCourseBookmarks
+  hydratedModuleIds: string[]
+  moduleStats: PrepCourseModuleLessonStats[]
+}
+
+export type GetCourseOutlineOptions = {
+  hydrate?: 'first' | 'all'
+  moduleId?: string
+}
+
+function mapOutlineLesson(raw: Record<string, unknown>): PrepLessonRow {
+  return mapListedLesson({
+    id: String(raw.id ?? ''),
+    course_id: String(raw.course_id ?? ''),
+    section_id: String(raw.section_id ?? ''),
+    slug: String(raw.slug ?? ''),
+    title: String(raw.title ?? ''),
+    lesson_type: raw.lesson_type as PrepLessonType,
+    sort_order: Number(raw.sort_order ?? 0),
+    summary: typeof raw.summary === 'string' ? raw.summary : null,
+    duration_minutes: typeof raw.duration_minutes === 'number' ? raw.duration_minutes : null,
+    video_url: typeof raw.video_url === 'string' ? raw.video_url : null,
+    text_content: typeof raw.text_content === 'string' ? raw.text_content : null,
+    is_published: Boolean(raw.is_published),
+    created_at: String(raw.created_at ?? ''),
+    updated_at: String(raw.updated_at ?? ''),
+  })
+}
+
+function mapPrepCourseOutline(data: Record<string, unknown>): PrepCourseOutline {
+  const courseRaw = (data.course ?? {}) as Record<string, unknown>
+  const curriculumRaw = (data.curriculum ?? {}) as { modules?: unknown[] }
+  const modules = (Array.isArray(curriculumRaw.modules) ? curriculumRaw.modules : []).map((modUnknown) => {
+    const mod = modUnknown as Record<string, unknown>
+    const sections = (Array.isArray(mod.sections) ? mod.sections : []).map((secUnknown) => {
+      const sec = secUnknown as Record<string, unknown>
+      const lessons = (Array.isArray(sec.lessons) ? sec.lessons : []).map((lessonUnknown) =>
+        mapOutlineLesson(lessonUnknown as Record<string, unknown>),
+      )
+      return {
+        id: String(sec.id ?? ''),
+        module_id: String(sec.module_id ?? ''),
+        title: String(sec.title ?? ''),
+        sort_order: Number(sec.sort_order ?? 0),
+        duration_minutes: typeof sec.duration_minutes === 'number' ? sec.duration_minutes : null,
+        lessons,
+      }
+    })
+    return {
+      id: String(mod.id ?? ''),
+      course_id: String(mod.course_id ?? ''),
+      title: String(mod.title ?? ''),
+      sort_order: Number(mod.sort_order ?? 0),
+      duration_minutes: typeof mod.duration_minutes === 'number' ? mod.duration_minutes : null,
+      sections,
+    }
+  })
+
+  const lessons = (Array.isArray(data.lessons) ? data.lessons : []).map((lessonUnknown) =>
+    mapOutlineLesson(lessonUnknown as Record<string, unknown>),
+  )
+
+  const bookmarksRaw = (data.bookmarks ?? {}) as { moduleIds?: unknown; lessonSlugs?: unknown }
+  const moduleStats = (Array.isArray(data.moduleStats) ? data.moduleStats : []).map((rowUnknown) => {
+    const row = rowUnknown as Record<string, unknown>
+    return {
+      moduleId: String(row.moduleId ?? ''),
+      lessonCount: Number(row.lessonCount ?? 0),
+      totalMinutes: Number(row.totalMinutes ?? 0),
+    }
+  })
+
+  return {
+    course: {
+      id: String(courseRaw.id ?? ''),
+      slug: String(courseRaw.slug ?? ''),
+      title: String(courseRaw.title ?? ''),
+      description: typeof courseRaw.description === 'string' ? courseRaw.description : null,
+      is_published: Boolean(courseRaw.is_published),
+      created_at: String(courseRaw.created_at ?? ''),
+      updated_at: String(courseRaw.updated_at ?? ''),
+    },
+    curriculum: { modules },
+    lessons,
+    completedLessonSlugs: Array.isArray(data.completedLessonSlugs)
+      ? data.completedLessonSlugs.filter((slug): slug is string => typeof slug === 'string')
+      : [],
+    bookmarks: {
+      moduleIds: Array.isArray(bookmarksRaw.moduleIds)
+        ? bookmarksRaw.moduleIds.filter((id): id is string => typeof id === 'string')
+        : [],
+      lessonSlugs: Array.isArray(bookmarksRaw.lessonSlugs)
+        ? bookmarksRaw.lessonSlugs.filter((slug): slug is string => typeof slug === 'string')
+        : [],
+    },
+    hydratedModuleIds: Array.isArray(data.hydratedModuleIds)
+      ? data.hydratedModuleIds.map((id) => String(id))
+      : [],
+    moduleStats,
+  }
+}
+
 export function createServiceRoleClient(): SupabaseClient {
   const url = Deno.env.get('SUPABASE_URL')
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -173,8 +311,23 @@ export function createPrepCourseRepository(client: SupabaseClient) {
       return data as PrepCourseRow | null
     },
 
-    async listPublishedLessonsByCourse(courseId: string): Promise<PrepLessonRow[]> {
-      const curriculum = await this.listPublishedCurriculum(courseId)
+    async getCourseOutline(
+      courseSlug: string,
+      userId: string,
+      opts?: GetCourseOutlineOptions,
+    ): Promise<PrepCourseOutline | null> {
+      const { data, error } = await client.rpc('get_prep_course_outline', {
+        p_course_slug: courseSlug,
+        p_user_id: userId,
+        p_hydrate: opts?.hydrate ?? 'all',
+        p_module_id: opts?.moduleId?.trim() || null,
+      })
+      if (error) throw error
+      if (data == null) return null
+      return mapPrepCourseOutline(data as Record<string, unknown>)
+    },
+
+    flattenLessonsFromCurriculum(curriculum: PrepCourseCurriculum): PrepLessonRow[] {
       const lessons: PrepLessonRow[] = []
       for (const mod of curriculum.modules) {
         for (const section of mod.sections) {
@@ -186,7 +339,15 @@ export function createPrepCourseRepository(client: SupabaseClient) {
       return lessons
     },
 
-    async listPublishedCurriculum(courseId: string): Promise<PrepCourseCurriculum> {
+    async listPublishedLessonsByCourse(courseId: string): Promise<PrepLessonRow[]> {
+      const curriculum = await this.listPublishedCurriculum(courseId)
+      return this.flattenLessonsFromCurriculum(curriculum)
+    },
+
+    async listPublishedCurriculum(
+      courseId: string,
+      opts?: ListPublishedCurriculumOptions,
+    ): Promise<PrepCourseCurriculum> {
       const { data: modules, error: modErr } = await client
         .from('prep_course_modules')
         .select('id,course_id,title,sort_order,duration_minutes')
@@ -199,6 +360,17 @@ export function createPrepCourseRepository(client: SupabaseClient) {
       }
 
       const moduleIds = moduleRows.map((m) => m.id)
+      const hydrateIds =
+        opts?.hydrateModuleIds === 'first'
+          ? moduleRows[0]
+            ? [moduleRows[0].id]
+            : []
+          : opts?.hydrateModuleIds
+      const hydrateSet =
+        hydrateIds === undefined
+          ? null
+          : new Set(hydrateIds)
+
       const { data: sections, error: secErr } = await client
         .from('prep_course_sections')
         .select('id,module_id,title,sort_order,duration_minutes')
@@ -207,17 +379,22 @@ export function createPrepCourseRepository(client: SupabaseClient) {
       if (secErr) throw secErr
 
       const sectionRows = (sections ?? []) as PrepCourseSectionRow[]
-      const sectionIds = sectionRows.map((s) => s.id)
+      const sectionIdsForLessons = (
+        hydrateSet
+          ? sectionRows.filter((section) => hydrateSet.has(section.module_id))
+          : sectionRows
+      ).map((s) => s.id)
+
       let lessonRows: PrepLessonRow[] = []
-      if (sectionIds.length > 0) {
+      if (sectionIdsForLessons.length > 0) {
         const { data: lessons, error: lessonErr } = await client
           .from('prep_lessons')
-          .select('*')
-          .in('section_id', sectionIds)
+          .select(PREP_LESSON_LIST_SELECT)
+          .in('section_id', sectionIdsForLessons)
           .eq('is_published', true)
           .order('sort_order', { ascending: true })
         if (lessonErr) throw lessonErr
-        lessonRows = (lessons ?? []) as PrepLessonRow[]
+        lessonRows = ((lessons ?? []) as PrepLessonRow[]).map(mapListedLesson)
       }
 
       const sectionsByModule = new Map<string, PrepCourseSectionRow[]>()
@@ -245,6 +422,61 @@ export function createPrepCourseRepository(client: SupabaseClient) {
       return { modules: nestedModules }
     },
 
+    async listModuleLessonStats(courseId: string): Promise<PrepCourseModuleLessonStats[]> {
+      const { data: modules, error: modErr } = await client
+        .from('prep_course_modules')
+        .select('id')
+        .eq('course_id', courseId)
+      if (modErr) throw modErr
+      const moduleRows = (modules ?? []) as Array<{ id: string }>
+      if (moduleRows.length === 0) return []
+
+      const { data: sections, error: secErr } = await client
+        .from('prep_course_sections')
+        .select('id,module_id')
+        .in(
+          'module_id',
+          moduleRows.map((m) => m.id),
+        )
+      if (secErr) throw secErr
+      const sectionRows = (sections ?? []) as Array<{ id: string; module_id: string }>
+      const sectionToModule = new Map(sectionRows.map((s) => [s.id, s.module_id]))
+      const stats = new Map<string, { lessonCount: number; totalMinutes: number }>()
+      for (const mod of moduleRows) stats.set(mod.id, { lessonCount: 0, totalMinutes: 0 })
+      if (sectionRows.length === 0) {
+        return moduleRows.map((mod) => ({
+          moduleId: mod.id,
+          lessonCount: 0,
+          totalMinutes: 0,
+        }))
+      }
+
+      const { data: lessonRows, error: lessonErr } = await client
+        .from('prep_lessons')
+        .select('section_id, duration_minutes')
+        .in(
+          'section_id',
+          sectionRows.map((s) => s.id),
+        )
+        .eq('is_published', true)
+      if (lessonErr) throw lessonErr
+      for (const row of (lessonRows ?? []) as Array<{
+        section_id: string
+        duration_minutes: number | null
+      }>) {
+        const moduleId = sectionToModule.get(row.section_id)
+        if (!moduleId) continue
+        const cur = stats.get(moduleId) ?? { lessonCount: 0, totalMinutes: 0 }
+        cur.lessonCount += 1
+        cur.totalMinutes += row.duration_minutes ?? 0
+        stats.set(moduleId, cur)
+      }
+      return moduleRows.map((mod) => {
+        const cur = stats.get(mod.id) ?? { lessonCount: 0, totalMinutes: 0 }
+        return { moduleId: mod.id, lessonCount: cur.lessonCount, totalMinutes: cur.totalMinutes }
+      })
+    },
+
     async getPublishedLessonBySlug(courseId: string, lessonSlug: string): Promise<PrepLessonRow | null> {
       const { data, error } = await client
         .from('prep_lessons')
@@ -257,8 +489,10 @@ export function createPrepCourseRepository(client: SupabaseClient) {
       return data as PrepLessonRow | null
     },
 
-    async listCompletedLessonSlugsByCourse(userId: string, courseId: string): Promise<string[]> {
-      const lessons = await this.listPublishedLessonsByCourse(courseId)
+    async listCompletedLessonSlugsForLessons(
+      userId: string,
+      lessons: PrepLessonRow[],
+    ): Promise<string[]> {
       if (lessons.length === 0) return []
       const lessonIds = lessons.map((l) => l.id)
       const { data, error } = await client
@@ -271,6 +505,27 @@ export function createPrepCourseRepository(client: SupabaseClient) {
         ((data ?? []) as Array<{ lesson_id: string }>).map((row) => row.lesson_id),
       )
       return lessons.filter((l) => completedIds.has(l.id)).map((l) => l.slug)
+    },
+
+    async listCompletedLessonSlugsByCourse(userId: string, courseId: string): Promise<string[]> {
+      const { data, error } = await client
+        .from('prep_lesson_completions')
+        .select('lesson_id, prep_lessons!inner(slug, course_id, is_published)')
+        .eq('user_id', userId)
+        .eq('prep_lessons.course_id', courseId)
+        .eq('prep_lessons.is_published', true)
+      if (error) throw error
+      const slugs: string[] = []
+      for (const row of (data ?? []) as Array<{
+        prep_lessons:
+          | { slug: string }
+          | { slug: string }[]
+          | null
+      }>) {
+        const lesson = Array.isArray(row.prep_lessons) ? row.prep_lessons[0] : row.prep_lessons
+        if (lesson?.slug) slugs.push(lesson.slug)
+      }
+      return slugs
     },
 
     async upsertLessonCompletion(userId: string, lessonId: string): Promise<void> {
@@ -294,12 +549,11 @@ export function createPrepCourseRepository(client: SupabaseClient) {
       return data as PrepCourseModuleRow | null
     },
 
-    async listBookmarksByCourse(userId: string, courseId: string): Promise<PrepCourseBookmarks> {
-      const curriculum = await this.listPublishedCurriculum(courseId)
-      const lessons = curriculum.modules.flatMap((mod) =>
-        mod.sections.flatMap((section) => section.lessons),
-      )
-
+    async listBookmarksForCurriculum(
+      userId: string,
+      courseId: string,
+      curriculum: PrepCourseCurriculum,
+    ): Promise<PrepCourseBookmarks> {
       try {
         const { data: moduleRows, error: moduleError } = await client
           .from('prep_course_module_bookmarks')
@@ -320,9 +574,14 @@ export function createPrepCourseRepository(client: SupabaseClient) {
           .map((row) => row.module_id)
           .filter((id) => courseModuleIds.has(id))
 
-        const lessonSlugById = new Map(lessons.map((lesson) => [lesson.id, lesson.slug]))
-        const bookmarkedLessonSlugs = ((lessonRows ?? []) as Array<{ lesson_id: string }>)
-          .map((row) => lessonSlugById.get(row.lesson_id))
+        const bookmarkedLessonSlugs = ((lessonRows ?? []) as Array<{
+          lesson_id: string
+          prep_lessons: { slug: string } | { slug: string }[] | null
+        }>)
+          .map((row) => {
+            const lesson = Array.isArray(row.prep_lessons) ? row.prep_lessons[0] : row.prep_lessons
+            return lesson?.slug
+          })
           .filter((slug): slug is string => typeof slug === 'string')
 
         return { moduleIds: bookmarkedModuleIds, lessonSlugs: bookmarkedLessonSlugs }
@@ -330,6 +589,11 @@ export function createPrepCourseRepository(client: SupabaseClient) {
         console.error('listBookmarksByCourse failed', error)
         return EMPTY_BOOKMARKS
       }
+    },
+
+    async listBookmarksByCourse(userId: string, courseId: string): Promise<PrepCourseBookmarks> {
+      const curriculum = await this.listPublishedCurriculum(courseId)
+      return this.listBookmarksForCurriculum(userId, courseId, curriculum)
     },
 
     async setModuleBookmark(userId: string, moduleId: string, bookmarked: boolean): Promise<void> {

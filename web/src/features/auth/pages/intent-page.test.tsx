@@ -146,4 +146,19 @@ describe("IntentPage", () => {
     expect(screen.getByText("Full Section Diagnostic", { selector: ".intent-card__name" })).toBeInTheDocument()
     expect(screen.queryByText("Full", { selector: ".intent-card__name" })).not.toBeInTheDocument()
   })
+
+  it("shows the LSAC terms disclaimer underneath the cards", () => {
+    render(
+      <MemoryRouter>
+        <IntentPage isAuthenticated={false} />
+      </MemoryRouter>,
+    )
+
+    expect(
+      screen.getByText(/BetterLSAT is an independent test-preparation company and is not affiliated with or endorsed by LSAC/),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/All actual LSAT® content reproduced within this work is used with the permission of Law School Admission Council/),
+    ).toBeInTheDocument()
+  })
 })

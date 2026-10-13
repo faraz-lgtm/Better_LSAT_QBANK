@@ -40,7 +40,6 @@ function ExplanationQuestionDetailPage() {
   const [detail, setDetail] = useState<ExplanationDetailPayload | null>(null)
   const [detailLoading, setDetailLoading] = useState(true)
   const [detailError, setDetailError] = useState<string | null>(null)
-  const [bootstrapLoading, setBootstrapLoading] = useState(false)
 
   const explanationsApi = useMemo(() => {
     try {
@@ -54,36 +53,6 @@ function ExplanationQuestionDetailPage() {
     if (t === "question") setSearchParams({}, { replace: true })
     else setSearchParams({ tab: t }, { replace: true })
   }
-
-  const loc = locateExplanationQuestion(questionId)
-
-  useEffect(() => {
-    if (!questionId || !explanationsApi) return
-    if (loc) return
-    if (getCachedExplanationPrepTestTree(detail?.prepTestId ?? "")) return
-
-    let alive = true
-    setBootstrapLoading(true)
-    void explanationsApi
-      .getExplanationDetail(questionId)
-      .then(async (d) => {
-        if (!alive) return
-        setDetail(d)
-        if (getCachedExplanationPrepTestTree(d.prepTestId)) return
-        const tree = await explanationsApi.getPrepTestTree(d.prepTestId)
-        if (!alive) return
-        cacheExplanationPrepTestTree(tree)
-      })
-      .catch(() => {
-        /* detail fetch may fail separately */
-      })
-      .finally(() => {
-        if (alive) setBootstrapLoading(false)
-      })
-    return () => {
-      alive = false
-    }
-  }, [questionId, explanationsApi, loc, detail?.prepTestId])
 
   useEffect(() => {
     if (!explanationsApi || !questionId) return
@@ -150,7 +119,7 @@ function ExplanationQuestionDetailPage() {
     return <Navigate to="/app/learn/explanations" replace />
   }
 
-  if (!resolvedLoc && (bootstrapLoading || detailLoading)) {
+  if (!resolvedLoc && detailLoading) {
     return (
       <StudentMain className="bg-[var(--primary-0)]" contentClassName="flex min-h-0 flex-1 flex-col bg-[var(--primary-0)]">
         <StudentPageLoader centered className="min-h-0 flex-1" label="Loading question…" />
