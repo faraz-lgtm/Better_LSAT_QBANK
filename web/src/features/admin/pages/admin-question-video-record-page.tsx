@@ -756,15 +756,15 @@ function AdminQuestionVideoRecordPage() {
       ) : null}
 
       <div ref={wrapRef} className="relative min-h-0 min-w-0 flex-1">
-        <div className="absolute inset-0 grid grid-cols-1 gap-0 overflow-auto md:grid-cols-2">
+        <div className="absolute inset-0 grid grid-cols-1 gap-0 overflow-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid-cols-2">
           <div
-            className="overflow-auto border-r border-border bg-background px-6 py-6 font-serif text-[15px] leading-relaxed text-foreground select-none"
+            className="overflow-auto border-r border-border bg-background px-6 py-6 font-serif text-[15px] leading-relaxed text-foreground select-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             style={{ pointerEvents: columnPointerEvents }}
           >
             <div dangerouslySetInnerHTML={{ __html: leftHtml || "<p></p>" }} />
           </div>
           <div
-            className="overflow-auto bg-background px-6 py-6 font-serif text-[15px] leading-relaxed text-foreground select-none"
+            className="overflow-auto bg-background px-6 py-6 font-serif text-[15px] leading-relaxed text-foreground select-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             style={{ pointerEvents: columnPointerEvents }}
           >
             <div dangerouslySetInnerHTML={{ __html: stemHtml || "<p></p>" }} />

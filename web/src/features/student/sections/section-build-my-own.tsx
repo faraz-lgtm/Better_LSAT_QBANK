@@ -17,9 +17,10 @@ type SectionBuildMyOwnHeaderProps = {
 function SectionBuildMyOwnHeader({ customize, onCustomizeChange, readyCount }: SectionBuildMyOwnHeaderProps) {
   return (
     <div className="flex w-full flex-col gap-0.5 lg:w-auto lg:shrink-0 lg:items-end">
-      <div className="flex w-full items-start justify-between gap-4">
-        <p className="m-0 text-xl font-bold leading-[1.35] text-[var(--primary)]">Build My Own</p>
+      <div className="flex w-full items-center justify-between gap-4">
+        <p className="m-0 text-[17px] font-bold leading-[1.35] text-[var(--primary)]">Build My Own</p>
         <Switch
+          size="sm"
           checked={customize}
           onChange={(e) => onCustomizeChange(e.target.checked)}
           className={customize ? "!bg-[var(--primary)]" : "!bg-[var(--greyscale-100)]"}

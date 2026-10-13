@@ -365,6 +365,49 @@ export function createUsersApi(supabase: SupabaseClient) {
       return updated as UserProfile
     },
 
+    /**
+     * Clears `avatar_url` on the profile (owner RLS) and best-effort removes
+     * the object from the public `avatars` bucket when the URL is owned.
+     */
+    async deleteAvatar(): Promise<UserProfile> {
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      if (userError) throw userError
+      const userId = userData.user?.id
+      if (!userId) throw new Error('You must be signed in to delete a photo')
+
+      const { data: existing, error: existingError } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', userId)
+        .maybeSingle()
+      if (existingError) throw existingError
+
+      const currentUrl = typeof existing?.avatar_url === 'string' ? existing.avatar_url.trim() : ''
+      if (currentUrl) {
+        const marker = `/storage/v1/object/public/${AVATAR_BUCKET}/${userId}/`
+        const markerIndex = currentUrl.indexOf(marker)
+        if (markerIndex >= 0) {
+          const objectPath = currentUrl.slice(markerIndex + `/storage/v1/object/public/${AVATAR_BUCKET}/`.length)
+          if (objectPath.startsWith(`${userId}/`)) {
+            await supabase.storage.from(AVATAR_BUCKET).remove([objectPath])
+          }
+        }
+      }
+
+      const { data: updated, error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          avatar_url: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+        .select('*')
+        .single()
+      if (profileError) throw profileError
+      if (!updated) throw new Error('No profile in response')
+      return updated as UserProfile
+    },
+
     async updateAccountPassword(input: {
       currentPassword: string
       newPassword: string

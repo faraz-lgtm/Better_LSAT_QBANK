@@ -95,7 +95,8 @@ function VideoExplanationCard({
               <iframe
                 title={v.dropdownLabel || "Explanation video"}
                 src={playback.src}
-                className="absolute inset-0 h-full w-full border-0"
+                className="absolute inset-0 h-full w-full overflow-hidden border-0"
+                scrolling="no"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 allowFullScreen
               />

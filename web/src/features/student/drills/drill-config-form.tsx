@@ -337,9 +337,10 @@ function DrillConfigForm({
             <p className="m-0 text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">{copy.title}</p>
           </div>
           <div className="flex w-full flex-col gap-0.5 lg:w-auto lg:shrink-0 lg:items-end">
-            <div className="flex w-full items-start justify-between gap-4">
-              <p className="m-0 text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">Build My Own</p>
+            <div className="flex w-full items-center justify-between gap-4">
+              <p className="m-0 text-[17px] font-bold leading-[1.35] text-[var(--color-student-heading)]">Build My Own</p>
               <Switch
+                size="sm"
                 checked={customize}
                 onChange={(e) => setCustomize(e.target.checked)}
                 className={customize ? "!bg-[var(--primary)]" : "!bg-[var(--greyscale-100)]"}

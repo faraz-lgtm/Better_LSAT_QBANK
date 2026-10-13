@@ -332,4 +332,68 @@ describe('createUsersApi', () => {
       expect.objectContaining({ avatar_url: publicUrl }),
     )
   })
+
+  it('deleteAvatar clears avatar_url and removes owned storage object', async () => {
+    const publicUrl =
+      'https://example.supabase.co/storage/v1/object/public/avatars/user-1/photo.jpg'
+    const clearedProfile = {
+      id: 'user-1',
+      email: 'u@example.com',
+      full_name: 'User One',
+      first_name: 'User',
+      last_name: 'One',
+      phone: null,
+      avatar_url: null,
+      role: 'student' as const,
+      student_coaching_id: null,
+      is_first_time_login: false,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }
+    const remove = vi.fn().mockResolvedValue({ data: [], error: null })
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: { avatar_url: publicUrl },
+      error: null,
+    })
+    const single = vi.fn().mockResolvedValue({ data: clearedProfile, error: null })
+    const selectAfterUpdate = vi.fn().mockReturnValue({ single })
+    const eqAfterUpdate = vi.fn().mockReturnValue({ select: selectAfterUpdate })
+    const update = vi.fn().mockReturnValue({ eq: eqAfterUpdate })
+    const selectBeforeUpdate = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({ maybeSingle }),
+    })
+    const from = vi.fn((table: string) => {
+      if (table === 'profiles') {
+        return { select: selectBeforeUpdate, update }
+      }
+      return {}
+    })
+    const supabase = {
+      auth: {
+        getSession: vi.fn().mockResolvedValue({
+          data: { session: { access_token: 't1' } },
+        }),
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1' } },
+          error: null,
+        }),
+        signOut: vi.fn().mockResolvedValue({ error: null }),
+      },
+      functions: { invoke: vi.fn() },
+      storage: {
+        from: vi.fn().mockReturnValue({ remove }),
+      },
+      from,
+    } as unknown as SupabaseClient
+
+    const api = createUsersApi(supabase)
+    const out = await api.deleteAvatar()
+
+    expect(out.avatar_url).toBeNull()
+    expect(supabase.storage.from).toHaveBeenCalledWith('avatars')
+    expect(remove).toHaveBeenCalledWith(['user-1/photo.jpg'])
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ avatar_url: null }),
+    )
+  })
 })

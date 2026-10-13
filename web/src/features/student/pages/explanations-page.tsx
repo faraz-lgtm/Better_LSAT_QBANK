@@ -404,7 +404,7 @@ function ExplanationTreeQuestionRow({
             className="size-9 rounded-xl text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)]"
             asChild
           >
-            <Link to={detailHref} aria-label="Open question">
+            <Link to={`${detailHref}?tab=explanation`} aria-label="Open video explanation">
               <PlayCircle className="size-6" />
             </Link>
           </Button>

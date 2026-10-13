@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { Camera, Check, CreditCard, Calendar, ExternalLink, FileText, Globe2, ImagePlus, LockKeyhole, Mail, Phone, UserRound } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { Camera, Check, CreditCard, Calendar, ExternalLink, FileText, Globe2, ImagePlus, LockKeyhole, Mail, Phone, Trash2, UserRound } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
@@ -45,6 +45,12 @@ import {
   type BillingStatus,
   type CheckoutPlanId,
 } from "@/lib/api/billing"
+import {
+  attachStreamToVideo,
+  capturePhotoFromVideo,
+  openDeviceCamera,
+  stopMediaStream,
+} from "@/lib/account/device-camera"
 import {
   validateAccountNameParts,
   validateAccountPhone,
@@ -745,9 +751,21 @@ function AccountPage() {
   const [planChangeError, setPlanChangeError] = useState<string | null>(null)
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [cameraDialogOpen, setCameraDialogOpen] = useState(false)
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
+  const [cameraStarting, setCameraStarting] = useState(false)
+  const [capturingCameraPhoto, setCapturingCameraPhoto] = useState(false)
   const avatarMenuRef = useRef<HTMLDivElement | null>(null)
   const galleryInputRef = useRef<HTMLInputElement | null>(null)
-  const cameraInputRef = useRef<HTMLInputElement | null>(null)
+  const cameraVideoRef = useRef<HTMLVideoElement | null>(null)
+  const cameraStreamRef = useRef<MediaStream | null>(null)
+  cameraStreamRef.current = cameraStream
+
+  const setCameraVideoNode = useCallback((node: HTMLVideoElement | null) => {
+    cameraVideoRef.current = node
+    // Dialog portals mount the <video> after open — attach here so we don't miss it.
+    attachStreamToVideo(node, cameraStreamRef.current)
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -805,6 +823,27 @@ function AccountPage() {
       document.removeEventListener("keydown", handleKeyDown)
     }
   }, [avatarMenuOpen])
+
+  useEffect(() => {
+    if (!cameraDialogOpen) return
+    attachStreamToVideo(cameraVideoRef.current, cameraStream)
+  }, [cameraDialogOpen, cameraStream])
+
+  useEffect(() => {
+    return () => {
+      stopMediaStream(cameraStreamRef.current)
+    }
+  }, [])
+
+  function closeCameraDialog() {
+    attachStreamToVideo(cameraVideoRef.current, null)
+    stopMediaStream(cameraStreamRef.current)
+    cameraStreamRef.current = null
+    setCameraStream(null)
+    setCameraDialogOpen(false)
+    setCameraStarting(false)
+    setCapturingCameraPhoto(false)
+  }
   const planName = hasProPlan
     ? billingStatus?.checkoutPlan
       ? PLAN_LABELS[billingStatus.checkoutPlan]
@@ -1059,7 +1098,64 @@ function AccountPage() {
     } finally {
       setUploadingAvatar(false)
       if (galleryInputRef.current) galleryInputRef.current.value = ""
-      if (cameraInputRef.current) cameraInputRef.current.value = ""
+    }
+  }
+
+  async function handleDeleteAvatar() {
+    if (!avatarUrl) {
+      setAvatarMenuOpen(false)
+      return
+    }
+    setAvatarMenuOpen(false)
+    setUploadingAvatar(true)
+    setError(null)
+    setAccountStatus(null)
+    try {
+      const nextProfile = await createUsersApi(getSupabaseBrowserClient()).deleteAvatar()
+      setProfile(nextProfile)
+      notifyProfileAvatarChanged(null)
+      setAccountStatus("Profile photo removed.")
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete photo")
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
+
+  async function handleTakePhoto() {
+    setAvatarMenuOpen(false)
+    setError(null)
+    setAccountStatus(null)
+    setCameraDialogOpen(true)
+    setCameraStarting(true)
+    try {
+      const stream = await openDeviceCamera()
+      cameraStreamRef.current = stream
+      setCameraStream(stream)
+      attachStreamToVideo(cameraVideoRef.current, stream)
+    } catch {
+      closeCameraDialog()
+      const useUpload = window.confirm(
+        "No camera available on this device. Upload a photo from your device instead?",
+      )
+      if (useUpload) galleryInputRef.current?.click()
+    } finally {
+      setCameraStarting(false)
+    }
+  }
+
+  async function handleCaptureCameraPhoto() {
+    const video = cameraVideoRef.current
+    if (!video) return
+    setCapturingCameraPhoto(true)
+    setError(null)
+    try {
+      const file = await capturePhotoFromVideo(video)
+      closeCameraDialog()
+      await handleAvatarFileSelected(file)
+    } catch (captureError) {
+      setError(captureError instanceof Error ? captureError.message : "Failed to capture photo")
+      setCapturingCameraPhoto(false)
     }
   }
 
@@ -1110,10 +1206,16 @@ function AccountPage() {
                   <button
                     type="button"
                     className="absolute -bottom-0.5 -right-0.5 flex size-6 items-center justify-center rounded-full border-2 border-[var(--greyscale-25)] bg-[var(--primary)] text-white disabled:opacity-60"
-                    aria-label={uploadingAvatar ? "Uploading profile photo" : "Change profile photo"}
+                    aria-label={
+                      uploadingAvatar
+                        ? "Uploading profile photo"
+                        : cameraStarting
+                          ? "Opening camera"
+                          : "Change profile photo"
+                    }
                     aria-haspopup="menu"
                     aria-expanded={avatarMenuOpen}
-                    disabled={uploadingAvatar}
+                    disabled={uploadingAvatar || cameraStarting}
                     onClick={() => setAvatarMenuOpen((open) => !open)}
                   >
                     <Camera className="size-3" strokeWidth={1.75} />
@@ -1122,15 +1224,6 @@ function AccountPage() {
                     ref={galleryInputRef}
                     type="file"
                     accept="image/jpeg,image/png,image/gif,image/webp"
-                    className="sr-only"
-                    tabIndex={-1}
-                    onChange={(event) => void handleAvatarFileSelected(event.target.files?.[0])}
-                  />
-                  <input
-                    ref={cameraInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="user"
                     className="sr-only"
                     tabIndex={-1}
                     onChange={(event) => void handleAvatarFileSelected(event.target.files?.[0])}
@@ -1153,10 +1246,20 @@ function AccountPage() {
                         type="button"
                         role="menuitem"
                         className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium tracking-[0.24px] text-[var(--color-student-heading)] hover:bg-[var(--greyscale-25)]"
-                        onClick={() => cameraInputRef.current?.click()}
+                        onClick={() => void handleTakePhoto()}
                       >
                         <Camera className="size-3.5 text-[var(--muted-foreground)]" strokeWidth={1.75} />
                         Take photo
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={!avatarUrl || uploadingAvatar}
+                        className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium tracking-[0.24px] text-[var(--color-student-heading)] hover:bg-[var(--greyscale-25)] disabled:pointer-events-none disabled:opacity-40"
+                        onClick={() => void handleDeleteAvatar()}
+                      >
+                        <Trash2 className="size-3.5 text-[var(--muted-foreground)]" strokeWidth={1.75} />
+                        Delete profile pic
                       </button>
                     </div>
                   ) : null}
@@ -1528,6 +1631,51 @@ function AccountPage() {
               onClick={() => void confirmPlanChange()}
             >
               {changingPlan ? "Scheduling…" : "Confirm Plan Change"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
+
+      <DialogRoot
+        open={cameraDialogOpen}
+        onOpenChange={(open) => {
+          if (!open && !capturingCameraPhoto) closeCameraDialog()
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Take photo</DialogTitle>
+            <DialogDescription>Center your face in the frame, then capture your profile photo.</DialogDescription>
+          </DialogHeader>
+          <div className="relative overflow-hidden rounded-xl bg-[var(--greyscale-900)]">
+            <video
+              ref={setCameraVideoNode}
+              className="aspect-square w-full scale-x-[-1] object-cover"
+              autoPlay
+              playsInline
+              muted
+            />
+            {cameraStarting || !cameraStream ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-[var(--greyscale-900)] text-sm text-white">
+                {cameraStarting ? "Starting camera…" : "Waiting for camera…"}
+              </div>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={capturingCameraPhoto || cameraStarting}
+              onClick={closeCameraDialog}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={capturingCameraPhoto || uploadingAvatar || cameraStarting || !cameraStream}
+              onClick={() => void handleCaptureCameraPhoto()}
+            >
+              {capturingCameraPhoto || uploadingAvatar ? "Saving…" : "Capture photo"}
             </Button>
           </DialogFooter>
         </DialogContent>
