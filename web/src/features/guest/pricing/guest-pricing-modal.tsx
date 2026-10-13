@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { X } from "lucide-react"
 
+import pricingModalCloseIcon from "@/assets/pricing-modal-close.svg"
 import { PricingPlanCard } from "@/features/billing/pricing-plan-card"
 import {
   LAWHUB_ADVANTAGE_BILLING_NOTE,
@@ -20,7 +20,7 @@ type GuestPricingModalProps = {
   freeCtaLabel?: string
 }
 
-/** Pricing modal matched to the `/app/pricing` page card layout. */
+/** Pricing modal matched to the Figma pricing frame (21427:23428). */
 function GuestPricingModal({
   open,
   onOpenChange,
@@ -69,34 +69,40 @@ function GuestPricingModal({
 
   return (
     <div
-      className="fixed inset-0 z-[130] flex items-center justify-center bg-black/30 p-4 backdrop-blur-[3px] sm:p-6"
+      className="fixed inset-0 z-[130] flex items-center justify-center bg-black/30 p-2 backdrop-blur-[3px] sm:p-3"
       role="dialog"
       aria-modal="true"
       aria-labelledby="guest-pricing-modal-title"
       onClick={() => onOpenChange(false)}
     >
       <div
-        className="pricing-modal relative flex max-h-[calc(100dvh-2rem)] w-full max-w-[1280px] flex-col overflow-hidden rounded-[20px] border border-[#dfe1e7] bg-[var(--primary-0)] p-4 shadow-[0px_24px_48px_rgba(13,13,18,0.16)] sm:p-5"
+        className="pricing-modal relative flex h-[min(100dvh-1rem,920px)] max-h-[calc(100dvh-1rem)] w-full max-w-[1284px] flex-col overflow-hidden rounded-[42px] border border-[#dde5f0] bg-[#f7faff] px-6 py-5 shadow-[0px_24px_48px_rgba(13,13,18,0.16)] sm:px-[52px] sm:py-5"
         onClick={(event) => event.stopPropagation()}
       >
         <button
           type="button"
-          className="absolute right-3 top-3 z-10 inline-flex size-8 items-center justify-center rounded-full border border-[#dfe1e7] bg-white text-[#666d80] hover:bg-[#edf3ff]"
+          className="pricing-modal__close"
           aria-label="Close pricing"
           onClick={() => onOpenChange(false)}
         >
-          <X className="size-4" />
+          <img
+            src={pricingModalCloseIcon}
+            alt=""
+            className="pricing-modal__close-icon"
+            width={36}
+            height={36}
+          />
         </button>
 
-        <div className="pricing-modal__body min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
+        <div className="pricing-modal__body min-h-0 flex-1 overflow-x-hidden overflow-y-hidden">
           <div className="pricing-page">
             <div className="pricing-page__header">
               <h1 id="guest-pricing-modal-title" className="pricing-page__title">
-                Pricing
+                Every Paid Plan Includes the Full Platform.
               </h1>
               <p className="pricing-page__subtitle">
                 {includeLawHub
-                  ? "Core plans include Official LSAT PrepPlus (LawHub Advantage) for year one at checkout."
+                  ? "Choose the access period that fits your prep timeline. Your tools stay the same."
                   : "Choose a Core plan — you keep your own LawHub PrepPlus subscription."}
               </p>
             </div>
@@ -109,7 +115,7 @@ function GuestPricingModal({
                 includeLawHub={includeLawHub}
                 layout="featured"
                 highlighted
-                ctaVariant="navy"
+                ctaVariant="orange"
                 isLoading={checkoutPlan === featuredPlan.id}
                 disabled={checkoutPlan !== null}
                 onSelect={() => void handleSelectPlan(featuredPlan.id)}
@@ -117,8 +123,7 @@ function GuestPricingModal({
               <div className="pricing-page__plans">
                 <PricingPlanCard
                   plan={{ ...FREE_PRICING_PLAN, ctaLabel: freeCtaLabel }}
-                  isCurrent
-                  ctaVariant="orange"
+                  ctaVariant="navy"
                   disabled={checkoutPlan !== null}
                   onSelect={() => {
                     onOpenChange(false)
@@ -130,7 +135,7 @@ function GuestPricingModal({
                     key={plan.id}
                     plan={plan}
                     includeLawHub={includeLawHub}
-                    ctaVariant={plan.id === "monthly" ? "orange" : "navy"}
+                    ctaVariant="navy"
                     isLoading={checkoutPlan === plan.id}
                     disabled={checkoutPlan !== null}
                     onSelect={() => void handleSelectPlan(plan.id)}

@@ -4,7 +4,10 @@ import { useLocation, useNavigate } from "react-router-dom"
 import { GUEST_FREE_PLAN_RESULTS_HREF } from "@/features/guest/diagnostic/guest-free-plan-nav-config"
 import { GuestLockedContentModal } from "@/features/guest/pricing/guest-locked-content-modal"
 import { GuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal"
-import type { GuestPricingPlanId } from "@/features/guest/pricing/guest-pricing-plans-data"
+import {
+  FREE_PRICING_PLAN,
+  type GuestPricingPlanId,
+} from "@/features/guest/pricing/guest-pricing-plans-data"
 import { clearGuestPremiumAccount, writeGuestPremiumAccount } from "@/features/guest/premium/guest-premium-account"
 import { checkoutPathForPlan } from "@/lib/auth/pending-checkout-plan"
 
@@ -86,7 +89,7 @@ function GuestPricingModalProvider({
         open={open}
         onOpenChange={setOpen}
         onSelectPlan={handleSelectPlan}
-        freeCtaLabel={useAuthenticatedCheckout ? "Continue Free" : "Create Free Account"}
+        freeCtaLabel={FREE_PRICING_PLAN.ctaLabel}
         onContinueFree={() => {
           setOpen(false)
           if (useAuthenticatedCheckout) {

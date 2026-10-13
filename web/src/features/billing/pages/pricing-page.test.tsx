@@ -85,7 +85,11 @@ describe("PricingPage selected checkout", () => {
       </MemoryRouter>,
     )
 
-    expect(await screen.findByRole("heading", { name: /pricing/i })).toBeInTheDocument()
+    expect(
+      await screen.findByRole("heading", {
+        name: /every paid plan includes the full platform/i,
+      }),
+    ).toBeInTheDocument()
     expect(
       invokeMock.mock.calls.some(
         ([functionName]) => functionName === "billing-create-checkout-session",
@@ -105,7 +109,11 @@ describe("PricingPage selected checkout", () => {
       </MemoryRouter>,
     )
 
-    expect(await screen.findByRole("heading", { name: /pricing/i })).toBeInTheDocument()
+    expect(
+      await screen.findByRole("heading", {
+        name: /every paid plan includes the full platform/i,
+      }),
+    ).toBeInTheDocument()
     expect(
       invokeMock.mock.calls.some(
         ([functionName]) => functionName === "billing-create-checkout-session",
@@ -123,9 +131,10 @@ describe("PricingPage selected checkout", () => {
     )
 
     expect(await screen.findByText(/most popular/i)).toBeInTheDocument()
-    expect(screen.getByText(/current plan/i)).toBeInTheDocument()
+    expect(screen.queryByText(/current plan/i)).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: /choose 6 months/i })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /continue free/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /try for free/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /choose 12 months/i })).toBeInTheDocument()
   })
 
   it("routes paid plan CTAs to the checkout handoff", async () => {
