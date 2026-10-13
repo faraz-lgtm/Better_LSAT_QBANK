@@ -177,12 +177,30 @@ function isPaidPricingPlan(plan: PricingPlan): plan is PaidPricingPlan {
   return plan.id !== "free"
 }
 
+function getPricingPlanById(id: PricingPlan["id"]): PricingPlan {
+  if (id === "free") return FREE_PRICING_PLAN
+  return PAID_PRICING_PLANS.find((plan) => plan.id === id) ?? PAID_PRICING_PLANS[0]
+}
+
+/** Resolve catalog package details for the user's current entitlement / Stripe plan. */
+function resolveCurrentPricingPlan(options: {
+  hasActiveCore: boolean
+  checkoutPlan?: CheckoutPlanId | null
+}): PricingPlan {
+  if (!options.hasActiveCore) return FREE_PRICING_PLAN
+  if (options.checkoutPlan) return getPricingPlanById(options.checkoutPlan)
+  // Paid access without a known checkout interval — show Full Access (monthly) package.
+  return getPricingPlanById("monthly")
+}
+
 export {
   FREE_PRICING_PLAN,
   GUEST_PRICING_TRUST_ITEMS,
   PAID_PRICING_PLANS,
   PRICING_PLANS,
+  getPricingPlanById,
   isPaidPricingPlan,
+  resolveCurrentPricingPlan,
 }
 
 export type GuestPricingPlanId = CheckoutPlanId

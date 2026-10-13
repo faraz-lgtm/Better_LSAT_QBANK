@@ -105,7 +105,7 @@ describe("StudentAppHeader", () => {
     expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).not.toBeInTheDocument()
     expect(screen.queryByText(/Welcome back/)).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Notifications" })).not.toBeInTheDocument()
-    expect(screen.getByLabelText("Plan: Premium")).toHaveTextContent("Premium")
+    expect(screen.getByLabelText("Plan: Paid")).toHaveTextContent("Paid")
     expect(screen.getByRole("banner").firstElementChild?.className).toMatch(/max-w-\[1168px\]/)
     expect(screen.getByRole("button", { name: "Switch to dark mode" })).toBeInTheDocument()
 
