@@ -30,6 +30,26 @@ export class AuthorizationError extends Error {
   }
 }
 
+/** Ensures avatar URLs point at this user's folder in the public `avatars` bucket. */
+export function assertOwnedAvatarUrl(userId: string, avatarUrl: string): string {
+  const trimmed = avatarUrl.trim()
+  if (!trimmed) throw new Error('Avatar URL is required')
+  let parsed: URL
+  try {
+    parsed = new URL(trimmed)
+  } catch {
+    throw new Error('Invalid avatar URL')
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('Invalid avatar URL')
+  }
+  const marker = `/storage/v1/object/public/avatars/${userId}/`
+  if (!parsed.pathname.includes(marker)) {
+    throw new Error('Avatar must be uploaded to your profile storage folder')
+  }
+  return trimmed
+}
+
 export type UsersServiceDeps = {
   repository: UsersRepository
   fetchImpl?: typeof fetch
@@ -223,6 +243,7 @@ export function createUsersService(deps: UsersServiceDeps) {
         lastName?: string
         email?: string
         phone?: string
+        avatarUrl?: string
       },
     ) {
       const existing = await deps.repository.getProfileById(userId)
@@ -246,6 +267,10 @@ export function createUsersService(deps: UsersServiceDeps) {
         input.phone !== undefined
           ? input.phone.trim() || null
           : existing?.phone ?? null
+      const avatarUrl =
+        input.avatarUrl !== undefined
+          ? assertOwnedAvatarUrl(userId, input.avatarUrl)
+          : existing?.avatar_url ?? null
 
       return await deps.repository.upsertProfile({
         id: userId,
@@ -254,6 +279,7 @@ export function createUsersService(deps: UsersServiceDeps) {
         first_name: firstName || null,
         last_name: lastName || null,
         phone,
+        avatar_url: avatarUrl,
         student_coaching_id: existing?.student_coaching_id ?? null,
       })
     },

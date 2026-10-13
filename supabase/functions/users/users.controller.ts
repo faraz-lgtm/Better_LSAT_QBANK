@@ -37,6 +37,7 @@ export async function handleUsersRequest(req: Request): Promise<Response> {
           ...(typeof body.lastName === 'string' ? { lastName: body.lastName } : {}),
           ...(typeof body.email === 'string' ? { email: body.email } : {}),
           ...(typeof body.phone === 'string' ? { phone: body.phone } : {}),
+          ...(typeof body.avatarUrl === 'string' ? { avatarUrl: body.avatarUrl } : {}),
         })
         return json({ profile }, {}, corsHeaders)
       }
