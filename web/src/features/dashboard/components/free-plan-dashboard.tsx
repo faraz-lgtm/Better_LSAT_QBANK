@@ -23,51 +23,60 @@ const LOCKED_STAT_CARDS = [
   {
     id: "study-time",
     label: "Total Study Time",
-    value: "142h",
     caption: "Needs improvement",
     iconSrc: "/dashboard/stat-study.svg",
+    skeletonWidthClass: "w-16",
   },
   {
     id: "avg-time",
     label: "Avg Time / Q",
-    value: "0:04",
     caption: "Per question",
     iconSrc: "/dashboard/stat-avg-time.svg",
+    skeletonWidthClass: "w-12",
   },
   {
     id: "questions-done",
     label: "Questions Done",
-    value: "271",
     caption: "+14 this week",
     iconSrc: "/dashboard/stat-questions.svg",
+    skeletonWidthClass: "w-14",
   },
   {
     id: "overall-accuracy",
     label: "Overall Accuracy",
-    value: "9%",
     caption: "Needs improvement",
     iconSrc: "/dashboard/stat-accuracy.svg",
+    skeletonWidthClass: "w-12",
   },
 ] as const
 
 const LOCKED_PERFORMANCE_METRICS = [
-  { id: "avg-score", label: "Avg Score", value: "169" },
-  { id: "percentile", label: "Percentile", value: "98th" },
-  {
-    id: "avg-lr",
-    label: "Average LR",
-    value: "-11",
-    valueClassName: "text-[var(--explanation-answered)]",
-  },
-  {
-    id: "avg-rc",
-    label: "Average RC",
-    value: "-12",
-    valueClassName: "text-[var(--explanation-teal)]",
-  },
-  { id: "questions-drilled", label: "Questions Drilled", value: "740" },
-  { id: "drilled-accuracy", label: "Drilled Accuracy", value: "64%" },
+  { id: "avg-score", label: "Avg Score", skeletonWidthClass: "w-14" },
+  { id: "percentile", label: "Percentile", skeletonWidthClass: "w-16" },
+  { id: "avg-lr", label: "Average LR", skeletonWidthClass: "w-12" },
+  { id: "avg-rc", label: "Average RC", skeletonWidthClass: "w-12" },
+  { id: "questions-drilled", label: "Questions Drilled", skeletonWidthClass: "w-16" },
+  { id: "drilled-accuracy", label: "Drilled Accuracy", skeletonWidthClass: "w-14" },
 ] as const
+
+/** Empty blurred bar — no metric text in the DOM (real or fake). */
+function LockedMetricSkeleton({
+  widthClass,
+  className,
+}: {
+  widthClass: string
+  className?: string
+}) {
+  return (
+    <div
+      className={cn("h-8 blur-[7px] select-none", widthClass, className)}
+      aria-hidden
+      data-testid="locked-metric-skeleton"
+    >
+      <div className="h-full w-full rounded-md bg-[var(--primary-800,#041a44)]/35" />
+    </div>
+  )
+}
 
 type HistoryFilter = "all" | "full" | "mini"
 
@@ -218,9 +227,7 @@ function FreePlanLockedQuickStats() {
               <img src={card.iconSrc} alt="" className="size-full" width={14} height={14} />
             </span>
           </div>
-          <p className="mt-[7.5px] blur-[7px] text-2xl font-bold leading-[1.3] text-[var(--primary-800,#041a44)] select-none">
-            {card.value}
-          </p>
+          <LockedMetricSkeleton widthClass={card.skeletonWidthClass} className="mt-[7.5px]" />
           <p className="mt-[3.75px] text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{card.caption}</p>
         </article>
       ))}
@@ -249,14 +256,7 @@ function FreePlanLockedPerformanceOverview() {
         {LOCKED_PERFORMANCE_METRICS.map((metric) => (
           <div key={metric.id} className="flex min-w-0 flex-col gap-1.5 bg-[var(--greyscale-0)] p-4">
             <p className="m-0 text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{metric.label}</p>
-            <p
-              className={cn(
-                "m-0 blur-[7px] text-2xl font-bold leading-[1.3] text-[var(--primary-800,#041a44)] select-none",
-                "valueClassName" in metric ? metric.valueClassName : undefined,
-              )}
-            >
-              {metric.value}
-            </p>
+            <LockedMetricSkeleton widthClass={metric.skeletonWidthClass} />
           </div>
         ))}
       </div>

@@ -93,14 +93,25 @@ describe("FreePlanDashboard", () => {
     expect(openPricingModal).toHaveBeenCalledTimes(1)
   })
 
-  it("shows locked analytics teasers with blurred placeholder values", () => {
+  it("shows locked analytics teasers with empty blurred skeletons (no metric text)", () => {
     renderFreeDashboard()
 
     expect(screen.getByText("Total Study Time")).toBeInTheDocument()
     expect(screen.getByText("Performance Overview")).toBeInTheDocument()
     expect(screen.getByText("Across 50 practice tests")).toBeInTheDocument()
-    expect(screen.getByText("142h").className).toMatch(/blur-\[7px\]/)
-    expect(screen.getByText("169").className).toMatch(/blur-\[7px\]/)
+
+    const skeletons = screen.getAllByTestId("locked-metric-skeleton")
+    expect(skeletons).toHaveLength(10)
+    for (const skeleton of skeletons) {
+      expect(skeleton.className).toMatch(/blur-\[7px\]/)
+      expect(skeleton.textContent).toBe("")
+    }
+
+    // No numeric teaser values in the DOM — blur removal must reveal nothing.
+    expect(screen.queryByText("142h")).not.toBeInTheDocument()
+    expect(screen.queryByText("169")).not.toBeInTheDocument()
+    expect(screen.queryByText("98th")).not.toBeInTheDocument()
+    expect(screen.queryByText("64%")).not.toBeInTheDocument()
   })
 
   it("lists diagnostic history and filters by kind", async () => {
