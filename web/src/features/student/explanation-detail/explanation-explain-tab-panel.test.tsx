@@ -86,7 +86,8 @@ describe("ExplanationExplainTabPanel", () => {
     )
     expect(iframe?.parentElement).toHaveClass("relative")
     expect(iframe?.parentElement).toHaveStyle({ aspectRatio: "800 / 392" })
-    expect(iframe).toHaveClass("absolute", "inset-0")
+    expect(iframe).toHaveClass("absolute", "inset-0", "overflow-hidden")
+    expect(iframe).toHaveAttribute("scrolling", "no")
     expect(iframe?.className).not.toContain("max-h-")
   })
 

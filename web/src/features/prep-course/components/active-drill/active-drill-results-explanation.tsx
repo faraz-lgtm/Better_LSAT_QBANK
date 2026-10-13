@@ -107,9 +107,10 @@ function ActiveDrillResultsExplanation({
             {embedSrc ? (
               <div className="relative h-[310px] w-full overflow-hidden rounded-t-[18px] bg-[var(--primary-25)]">
                 <iframe
-                  className="absolute inset-0 h-full w-full"
+                  className="absolute inset-0 h-full w-full overflow-hidden border-0"
                   src={embedSrc}
                   title={videoTitle}
+                  scrolling="no"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />
