@@ -160,11 +160,11 @@ function PricingPage() {
     <AuthLayout {...pricingLayoutProps}>
       <div className="pricing-page">
         <div className="pricing-page__header">
-          <h1 className="pricing-page__title">Pricing</h1>
+          <h1 className="pricing-page__title">Every Paid Plan Includes the Full Platform.</h1>
           <p className="pricing-page__subtitle">
             {existingLsacMode
               ? "Choose a Core plan — you keep your own LawHub PrepPlus subscription."
-              : "Core plans include Official LSAT PrepPlus (LawHub Advantage) for year one at checkout."}
+              : "Choose the access period that fits your prep timeline. Your tools stay the same."}
           </p>
         </div>
 
@@ -179,14 +179,13 @@ function PricingPage() {
             includeLawHub={!existingLsacMode}
             layout="featured"
             highlighted
-            ctaVariant="navy"
+            ctaVariant="orange"
             onSelect={() => startCheckout(featuredPlan.id)}
           />
           <div className="pricing-page__plans">
             <PricingPlanCard
-              plan={{ ...FREE_PRICING_PLAN, ctaLabel: "Continue Free" }}
-              isCurrent
-              ctaVariant="orange"
+              plan={{ ...FREE_PRICING_PLAN, ctaLabel: "Try For Free" }}
+              ctaVariant="navy"
               onSelect={() => navigate("/app")}
             />
             {gridPaidPlans.map((plan) => (
@@ -194,7 +193,7 @@ function PricingPage() {
                 key={plan.id}
                 plan={plan}
                 includeLawHub={!existingLsacMode}
-                ctaVariant={plan.id === "monthly" ? "orange" : "navy"}
+                ctaVariant="navy"
                 onSelect={() => startCheckout(plan.id)}
               />
             ))}

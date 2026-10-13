@@ -8,8 +8,17 @@ export type PaidPricingPlan = {
   priceUsd: number
   equivalentMonthlyUsd: number | null
   discountLabel: string | null
+  /** Callout under features for multi-month plans (continue at discounted monthly rate). */
+  continueDiscountNote?: {
+    title: string
+    bodyBefore: string
+    amountLabel: string
+    bodyAfter: string
+  }
   badge?: string
   featured?: boolean
+  /** Show due-today line under price (featured plan in Figma). */
+  showDueToday?: boolean
   features: string[]
   renewalNote: string
   ctaLabel: string
@@ -29,23 +38,24 @@ export type FreePricingPlan = {
 
 export type PricingPlan = FreePricingPlan | PaidPricingPlan
 
-const LAWHUB_REQUIRED_NOTE = "LawHub Advantage is required for official LSAT questions."
+const LAWHUB_REQUIRED_NOTE = "Official-question features require LawHub Advantage."
 
 const FREE_PRICING_PLAN: FreePricingPlan = {
   id: "free",
   name: "Free Access",
-  headline: "Start Free. See How BetterLSAT Works.",
+  headline: "BetterLSAT platform preview",
   description: "Get a feel for the BetterLSAT workflow before choosing a paid plan.",
   priceUsd: 0,
   features: [
+    "Get a feel for the BetterLSAT workflow before choosing a paid plan.",
     "Persistent free access",
-    "Free Diagnostic",
     "Essentials Module 1",
-    "Limited BetterLSAT access",
     "See how BetterLSAT guides your next step",
+    "Free Diagnostic",
+    "Limited BetterLSAT access",
   ],
-  ctaLabel: "Create Free Account",
-  lawHubNote: "Official-question features require LawHub Advantage.",
+  ctaLabel: "Try For Free",
+  lawHubNote: LAWHUB_REQUIRED_NOTE,
 }
 
 const PAID_PRICING_PLANS: PaidPricingPlan[] = [
@@ -60,9 +70,9 @@ const PAID_PRICING_PLANS: PaidPricingPlan[] = [
     features: [
       "Monthly access",
       "Structured courses + explanations",
-      "Drills, sections & full PrepTests",
+      "Drills, sections and full PrepTests",
       "Blind Review for deeper review",
-      "Weak-area & performance analytics",
+      "Weak-area and performance analytics",
       "Cancel anytime",
     ],
     renewalNote: "Renews at $69 every month. Cancel anytime.",
@@ -77,6 +87,12 @@ const PAID_PRICING_PLANS: PaidPricingPlan[] = [
     priceUsd: 192,
     equivalentMonthlyUsd: 64,
     discountLabel: "7% Ongoing Discount",
+    continueDiscountNote: {
+      title: "Need more time? Keep your discount.",
+      bodyBefore: "After your first 3 months, continue month-to-month at ",
+      amountLabel: "$64/month",
+      bodyAfter: ".",
+    },
     features: [
       "Everything in Full Access",
       "Built for a focused prep block",
@@ -97,6 +113,13 @@ const PAID_PRICING_PLANS: PaidPricingPlan[] = [
     discountLabel: "15% Ongoing Discount",
     badge: "Most Popular",
     featured: true,
+    showDueToday: true,
+    continueDiscountNote: {
+      title: "Need more time? Keep your discount.",
+      bodyBefore: "After your first 6 months, continue month-to-month at ",
+      amountLabel: "$59/month",
+      bodyAfter: ".",
+    },
     features: [
       "Everything in Full Access",
       "Built for a longer prep timeline",
@@ -109,12 +132,18 @@ const PAID_PRICING_PLANS: PaidPricingPlan[] = [
   },
   {
     id: "yearly",
-    name: "Yearly",
+    name: "12 Months",
     headline: "The Best Value for a Full Year.",
     description: "Get a full year of BetterLSAT access at the lowest monthly equivalent.",
     priceUsd: 624,
     equivalentMonthlyUsd: 52,
     discountLabel: "25% Ongoing Discount",
+    continueDiscountNote: {
+      title: "Need more time? Keep your discount.",
+      bodyBefore: "After your first 12 months, continue month-to-month at ",
+      amountLabel: "$52/month",
+      bodyAfter: ".",
+    },
     features: [
       "Everything in Full Access",
       "Best monthly value",
@@ -122,7 +151,7 @@ const PAID_PRICING_PLANS: PaidPricingPlan[] = [
       "One upfront payment",
     ],
     renewalNote: "Renews at $624 every 12 months.",
-    ctaLabel: "Choose Yearly",
+    ctaLabel: "Choose 12 Months",
     lawHubNote: LAWHUB_REQUIRED_NOTE,
   },
 ]
