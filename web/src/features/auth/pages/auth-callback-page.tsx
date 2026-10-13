@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
+import type { EmailOtpType } from "@supabase/supabase-js"
 
 import {
   consumePendingFreeDiagnosticSignup,
@@ -14,16 +15,59 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
 const PKCE_EXCHANGE_PREFIX = "betterlsat:pkce-exchanged:"
+const TOKEN_HASH_VERIFY_PREFIX = "betterlsat:token-hash-verified:"
 const inflightPkceExchanges = new Map<string, Promise<void>>()
+const inflightTokenHashVerifies = new Map<string, Promise<void>>()
+
+const EMAIL_OTP_TYPES = new Set<string>([
+  "signup",
+  "invite",
+  "magiclink",
+  "recovery",
+  "email_change",
+  "email",
+])
+
+function parseEmailOtpType(raw: string | null): EmailOtpType | null {
+  if (!raw || !EMAIL_OTP_TYPES.has(raw)) return null
+  return raw as EmailOtpType
+}
 
 function stripAuthParamsFromUrl() {
   const url = new URL(window.location.href)
   url.searchParams.delete("code")
   url.searchParams.delete("state")
+  url.searchParams.delete("token_hash")
+  url.searchParams.delete("type")
   url.searchParams.delete("error")
   url.searchParams.delete("error_description")
   const next = `${url.pathname}${url.search}${url.hash}`
   window.history.replaceState({}, "", next)
+}
+
+/** Deduplicates a one-shot auth exchange across React StrictMode double-mounts. */
+async function runAuthExchangeOnce(
+  storagePrefix: string,
+  inflightMap: Map<string, Promise<void>>,
+  key: string,
+  exchange: () => Promise<void>,
+): Promise<void> {
+  const storageKey = `${storagePrefix}${key}`
+  if (sessionStorage.getItem(storageKey) === "1") return
+
+  let inflight = inflightMap.get(key)
+  if (!inflight) {
+    inflight = exchange()
+      .then(() => {
+        sessionStorage.setItem(storageKey, "1")
+      })
+      .finally(() => {
+        inflightMap.delete(key)
+      })
+    inflightMap.set(key, inflight)
+  }
+
+  await inflight
 }
 
 /** Deduplicates PKCE exchange across React StrictMode double-mounts and remounts. */
@@ -31,22 +75,18 @@ async function exchangePkceCodeOnce(
   exchange: (code: string) => Promise<void>,
   code: string,
 ): Promise<void> {
-  const exchangeKey = `${PKCE_EXCHANGE_PREFIX}${code}`
-  if (sessionStorage.getItem(exchangeKey) === "1") return
+  await runAuthExchangeOnce(PKCE_EXCHANGE_PREFIX, inflightPkceExchanges, code, () => exchange(code))
+}
 
-  let inflight = inflightPkceExchanges.get(code)
-  if (!inflight) {
-    inflight = exchange(code)
-      .then(() => {
-        sessionStorage.setItem(exchangeKey, "1")
-      })
-      .finally(() => {
-        inflightPkceExchanges.delete(code)
-      })
-    inflightPkceExchanges.set(code, inflight)
-  }
-
-  await inflight
+async function verifyTokenHashOnce(
+  verify: (tokenHash: string, type: EmailOtpType) => Promise<void>,
+  tokenHash: string,
+  type: EmailOtpType,
+): Promise<void> {
+  const key = `${type}:${tokenHash}`
+  await runAuthExchangeOnce(TOKEN_HASH_VERIFY_PREFIX, inflightTokenHashVerifies, key, () =>
+    verify(tokenHash, type),
+  )
 }
 
 function AuthCallbackPage() {
@@ -80,12 +120,21 @@ function AuthCallbackPage() {
       try {
         const url = new URL(window.location.href)
         const code = url.searchParams.get("code")
+        const tokenHash = url.searchParams.get("token_hash")
         const flowType = url.searchParams.get("type")
+        const otpType = parseEmailOtpType(flowType)
         const authError = url.searchParams.get("error_description") ?? url.searchParams.get("error")
 
         if (authError) throw new Error(authError)
 
-        if (code) {
+        if (tokenHash && otpType) {
+          await verifyTokenHashOnce(
+            (hash, type) => authApi.verifyOtpWithTokenHash(hash, type),
+            tokenHash,
+            otpType,
+          )
+          stripAuthParamsFromUrl()
+        } else if (code) {
           await exchangePkceCodeOnce((authCode) => authApi.exchangeCodeForSession(authCode), code)
           stripAuthParamsFromUrl()
         }
@@ -141,4 +190,4 @@ function AuthCallbackPage() {
   )
 }
 
-export { AuthCallbackPage, exchangePkceCodeOnce }
+export { AuthCallbackPage, exchangePkceCodeOnce, verifyTokenHashOnce }

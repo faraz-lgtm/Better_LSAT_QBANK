@@ -233,6 +233,15 @@ otp_expiry = 1209600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# Cross-browser email auth: link with token_hash + verifyOtp (not PKCE ?code=).
+[auth.email.template.magic_link]
+subject = "Your betterLSAT sign-in link"
+content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.recovery]
+subject = "Reset your betterLSAT password"
+content_path = "./supabase/templates/recovery.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"

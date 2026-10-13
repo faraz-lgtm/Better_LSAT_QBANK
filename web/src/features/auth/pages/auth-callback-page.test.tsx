@@ -28,6 +28,7 @@ const authMock = {
   signInWithPassword: vi.fn(),
   signInWithOAuth: vi.fn(),
   exchangeCodeForSession: vi.fn(),
+  verifyOtp: vi.fn(),
   getSession: vi.fn(),
 }
 const invokeMock = vi.fn()
@@ -52,6 +53,7 @@ function renderCallback(initialEntry: string) {
 describe("AuthCallbackPage", () => {
   beforeEach(() => {
     authMock.exchangeCodeForSession.mockReset()
+    authMock.verifyOtp.mockReset()
     authMock.getSession.mockReset()
     invokeMock.mockReset()
     trackFreeDiagnosticSignupMock.mockReset()
@@ -219,5 +221,71 @@ describe("AuthCallbackPage", () => {
     expect(await screen.findByText(/reset password view/i)).toBeInTheDocument()
     expect(trackFreeDiagnosticSignupMock).not.toHaveBeenCalled()
     expect(sessionStorage.getItem(GTM_PENDING_FREE_DIAGNOSTIC_SIGNUP_KEY)).toBe("1")
+  })
+
+  it("verifies token_hash magic link and redirects to onboarding", async () => {
+    authMock.verifyOtp.mockResolvedValue({ error: null })
+    authMock.getSession.mockResolvedValue({
+      data: { session: { user: { id: "u1" } } },
+      error: null,
+    })
+    invokeMock.mockResolvedValue({ data: { profile: null }, error: null })
+    window.history.pushState({}, "", "/auth/callback?token_hash=ml-hash&type=magiclink")
+
+    renderCallback("/auth/callback?token_hash=ml-hash&type=magiclink")
+
+    expect(await screen.findByText(/onboarding view/i)).toBeInTheDocument()
+    expect(authMock.verifyOtp).toHaveBeenCalledWith({
+      token_hash: "ml-hash",
+      type: "magiclink",
+    })
+    expect(authMock.exchangeCodeForSession).not.toHaveBeenCalled()
+  })
+
+  it("verifies token_hash recovery and redirects to reset-password", async () => {
+    authMock.verifyOtp.mockResolvedValue({ error: null })
+    authMock.getSession.mockResolvedValue({
+      data: { session: { user: { id: "u1" } } },
+      error: null,
+    })
+    window.history.pushState({}, "", "/auth/callback?type=recovery&token_hash=rec-hash")
+
+    renderCallback("/auth/callback?type=recovery&token_hash=rec-hash")
+
+    expect(await screen.findByText(/reset password view/i)).toBeInTheDocument()
+    expect(authMock.verifyOtp).toHaveBeenCalledWith({
+      token_hash: "rec-hash",
+      type: "recovery",
+    })
+    expect(authMock.exchangeCodeForSession).not.toHaveBeenCalled()
+    expect(invokeMock).not.toHaveBeenCalled()
+  })
+
+  it("completes token_hash auth under React StrictMode with a single verifyOtp", async () => {
+    authMock.verifyOtp.mockResolvedValue({ error: null })
+    authMock.getSession.mockResolvedValue({
+      data: { session: { user: { id: "u1" } } },
+      error: null,
+    })
+    invokeMock.mockResolvedValue({ data: { profile: null }, error: null })
+    window.history.pushState({}, "", "/auth/callback?token_hash=strict-hash&type=magiclink")
+
+    render(
+      <StrictMode>
+        <MemoryRouter initialEntries={["/auth/callback?token_hash=strict-hash&type=magiclink"]}>
+          <Routes>
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
+            <Route path="/onboarding" element={<p>Onboarding view</p>} />
+          </Routes>
+        </MemoryRouter>
+      </StrictMode>,
+    )
+
+    expect(await screen.findByText(/onboarding view/i)).toBeInTheDocument()
+    expect(authMock.verifyOtp).toHaveBeenCalledTimes(1)
+    expect(authMock.verifyOtp).toHaveBeenCalledWith({
+      token_hash: "strict-hash",
+      type: "magiclink",
+    })
   })
 })
