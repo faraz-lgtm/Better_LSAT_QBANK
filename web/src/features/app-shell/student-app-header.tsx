@@ -19,7 +19,6 @@ import {
 import { ThemeToggleButton } from "@/features/theme/theme-toggle"
 import { resetUser } from "@/lib/analytics/posthog"
 import { clearStudentSessionCaches } from "@/lib/auth/clear-student-session-caches"
-import { createUsersApi } from "@/lib/api/users"
 import { subscribeProfileAvatarChanged } from "@/lib/profile-avatar-sync"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -103,12 +102,17 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
     }) === "premium"
   const planLabel = isPremium ? "Premium" : "Free"
   const [email, setEmail] = useState<string | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [openProfileMenu, setOpenProfileMenu] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     void dispatch(loadProfile())
   }, [dispatch])
+
+  useEffect(() => {
+    setAvatarUrl(profile?.avatar_url?.trim() || null)
+  }, [profile?.avatar_url])
 
   useEffect(() => {
     let mounted = true

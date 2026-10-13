@@ -40,6 +40,7 @@ function profile(overrides: Partial<UserProfile> = {}): UserProfile {
     first_name: "Ada",
     last_name: "Lovelace",
     phone: null,
+    avatar_url: null,
     role: "student",
     student_coaching_id: "c1",
     is_first_time_login: false,

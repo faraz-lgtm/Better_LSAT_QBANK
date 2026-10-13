@@ -43,6 +43,7 @@ vi.mock("@/lib/api/users", () => ({
       last_name: "Khan",
       full_name: "Assad Khan",
       phone: null,
+      avatar_url: profileFixture.avatar_url,
       role: "student",
       student_coaching_id: null,
       is_first_time_login: false,
