@@ -373,6 +373,16 @@ function IntentRouteGuard({
       const nextEntitlement = await ensureEntitlement()
       if (!alive) return
       setEntitlement(nextEntitlement)
+      // Finish welcome onboarding before starting (or restarting) a diagnostic from /intent.
+      if (nextProfile.is_first_time_login && !funnel.completedDiagnostic) {
+        setDestination("/onboarding")
+        return
+      }
+      // Exam done but first-login flag still set — land on results, not the intent picker.
+      if (nextProfile.is_first_time_login && funnel.completedDiagnostic) {
+        setDestination(resolvePostAuthDestination(nextProfile, nextEntitlement, funnel))
+        return
+      }
       if (shouldAllowAuthenticatedIntentPage(nextEntitlement, funnel)) {
         setDestination(null)
         return
