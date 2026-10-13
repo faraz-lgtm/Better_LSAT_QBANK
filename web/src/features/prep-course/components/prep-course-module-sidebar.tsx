@@ -16,6 +16,9 @@ type PrepCourseModuleSidebarProps = {
   modules: PrepCourseModule[]
   selectedModuleId: string | null
   completedLessonSlugs: Set<string>
+  /** Course-wide lesson counts (works before a module's lessons are hydrated). */
+  moduleLessonCountById?: ReadonlyMap<string, number>
+  hydratedModuleIds?: ReadonlySet<string>
   lockedModuleIds?: ReadonlySet<string>
   onSelectModule: (moduleId: string) => void
   onLockedModuleClick?: (moduleId: string) => void
@@ -29,6 +32,8 @@ function PrepCourseModuleSidebar({
   modules,
   selectedModuleId,
   completedLessonSlugs,
+  moduleLessonCountById,
+  hydratedModuleIds,
   lockedModuleIds,
   onSelectModule,
   onLockedModuleClick,
@@ -45,11 +50,12 @@ function PrepCourseModuleSidebar({
         {modules.map((mod) => {
           const isActive = mod.id === selectedModuleId
           const isLocked = lockedModuleIds?.has(mod.id) ?? false
+          const isHydrated = hydratedModuleIds?.has(mod.id) ?? true
           const lessons = moduleLessons(mod)
-          const lessonCount = moduleLessonCount(mod)
-          const completedCount = countCompletedLessons(lessons, completedLessonSlugs)
+          const lessonCount = moduleLessonCountById?.get(mod.id) ?? moduleLessonCount(mod)
+          const completedCount = isHydrated ? countCompletedLessons(lessons, completedLessonSlugs) : 0
           const progressPercent = lessonProgressPercent(completedCount, lessonCount)
-          const statusLabel = moduleStatusLabel(completedCount, lessonCount)
+          const statusLabel = isHydrated ? moduleStatusLabel(completedCount, lessonCount) : null
 
           return (
             <li key={mod.id}>

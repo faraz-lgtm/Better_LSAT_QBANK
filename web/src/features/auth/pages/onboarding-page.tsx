@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,10 @@ import { AuthLayout } from "@/features/auth/components/auth-layout"
 import { ONBOARDING_RECOMMENDED_LSAT_DATE } from "@/features/auth/onboarding/onboarding-lsat-date-options"
 import { OnboardingWelcomeStep } from "@/features/auth/onboarding/onboarding-welcome-step"
 import { isGuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
+import {
+  appendCheckoutSuccessQuery,
+  useTrackCheckoutPurchase,
+} from "@/lib/analytics/track-checkout-purchase"
 import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
@@ -27,6 +31,8 @@ const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"
 
 function OnboardingPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  useTrackCheckoutPurchase()
   const [step, setStep] = useState<Step>(1)
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
@@ -84,10 +90,10 @@ function OnboardingPage() {
           return
         }
         if (profile && !profile.is_first_time_login) {
-          navigate(
-            resolvePendingCheckoutDestination(await fetchPostAuthDestination(usersApi)),
-            { replace: true },
+          const destination = resolvePendingCheckoutDestination(
+            await fetchPostAuthDestination(usersApi),
           )
+          navigate(appendCheckoutSuccessQuery(destination, searchParams), { replace: true })
           return
         }
         setRequiresPassword(userNeedsPasswordSetup(user, session))
@@ -110,7 +116,7 @@ function OnboardingPage() {
     return () => {
       alive = false
     }
-  }, [authApi, navigate, usersApi])
+  }, [authApi, navigate, searchParams, usersApi])
 
   function validateStep1(): boolean {
     if (!firstName.trim() || !lastName.trim()) {

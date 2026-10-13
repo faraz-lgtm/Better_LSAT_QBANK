@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useLocation, useParams } from "react-router-dom"
 
 import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
@@ -16,6 +16,7 @@ import {
   curriculumStats,
   findLessonLocation,
   normalizeCurriculum,
+  type PrepCourseCurriculumStats,
 } from "@/features/prep-course/lib/prep-course-format"
 import { usePrepCourseBookmarks } from "@/features/prep-course/lib/use-prep-course-bookmarks"
 import { StudentMain } from "@/features/student/components/student-main"
@@ -25,11 +26,42 @@ import {
   type PrepCourse,
   type PrepCourseBookmarks,
   type PrepCourseCurriculum,
+  type PrepCourseModuleLessonStats,
 } from "@/lib/api/prep-course"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 type LocationState = {
   activeLessonSlug?: string
+}
+
+function mergeCurriculumModules(
+  current: PrepCourseCurriculum,
+  incoming: PrepCourseCurriculum | undefined,
+): PrepCourseCurriculum {
+  if (!incoming?.modules.length) return current
+  const byId = new Map(incoming.modules.map((mod) => [mod.id, mod]))
+  return {
+    modules: current.modules.map((mod) => {
+      const next = byId.get(mod.id)
+      if (!next) return mod
+      const nextLessonCount = next.sections.reduce((sum, section) => sum + section.lessons.length, 0)
+      const curLessonCount = mod.sections.reduce((sum, section) => sum + section.lessons.length, 0)
+      return nextLessonCount >= curLessonCount ? next : mod
+    }),
+  }
+}
+
+function statsFromModuleStats(
+  curriculum: PrepCourseCurriculum,
+  moduleStats: PrepCourseModuleLessonStats[],
+): PrepCourseCurriculumStats {
+  if (moduleStats.length === 0) return curriculumStats(curriculum)
+  return {
+    moduleCount: curriculum.modules.length,
+    sectionCount: curriculum.modules.reduce((sum, mod) => sum + mod.sections.length, 0),
+    lessonCount: moduleStats.reduce((sum, row) => sum + row.lessonCount, 0),
+    totalMinutes: moduleStats.reduce((sum, row) => sum + row.totalMinutes, 0),
+  }
 }
 
 function PrepCourseContentPage() {
@@ -53,8 +85,13 @@ function PrepCourseContentPage() {
   const [showBookmarksOnly, setShowBookmarksOnly] = useState(false)
   const [completedLessonSlugs, setCompletedLessonSlugs] = useState<Set<string>>(() => new Set())
   const [initialBookmarks, setInitialBookmarks] = useState<PrepCourseBookmarks | null>(null)
+  const [hydratedModuleIds, setHydratedModuleIds] = useState<Set<string>>(() => new Set())
+  const [moduleStats, setModuleStats] = useState<PrepCourseModuleLessonStats[]>([])
+  const [hydratingModuleId, setHydratingModuleId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const hydratingRef = useRef<Set<string>>(new Set())
+  const hydratedModuleIdsRef = useRef<Set<string>>(new Set())
 
   const prepCourseApi = useMemo(() => {
     try {
@@ -73,6 +110,46 @@ function PrepCourseContentPage() {
   const bookmarkedLessonSlugs = useMemo(() => new Set(bookmarks.lessonSlugs), [bookmarks.lessonSlugs])
 
   const activeLessonSlug = locationState.activeLessonSlug
+  const activeLessonSlugRef = useRef(activeLessonSlug)
+  const limitFreeAccessRef = useRef(limitFreeAccess)
+
+  useEffect(() => {
+    activeLessonSlugRef.current = activeLessonSlug
+  }, [activeLessonSlug])
+
+  useEffect(() => {
+    limitFreeAccessRef.current = limitFreeAccess
+  }, [limitFreeAccess])
+
+  useEffect(() => {
+    hydratedModuleIdsRef.current = hydratedModuleIds
+  }, [hydratedModuleIds])
+
+  const ensureModuleHydrated = useCallback(
+    async (moduleId: string) => {
+      if (!prepCourseApi || !courseSlug) return
+      if (hydratedModuleIdsRef.current.has(moduleId)) return
+      if (hydratingRef.current.has(moduleId)) return
+      hydratingRef.current.add(moduleId)
+      setHydratingModuleId(moduleId)
+      try {
+        const data = await prepCourseApi.getCourse(courseSlug, { moduleId })
+        const incoming = normalizeCurriculum(data.curriculum, data.lessons, data.course.id)
+        setCurriculum((prev) => mergeCurriculumModules(prev, incoming))
+        setHydratedModuleIds((prev) => {
+          const next = new Set(prev)
+          for (const id of data.hydratedModuleIds ?? [moduleId]) next.add(id)
+          hydratedModuleIdsRef.current = next
+          return next
+        })
+        if (data.moduleStats?.length) setModuleStats(data.moduleStats)
+      } finally {
+        hydratingRef.current.delete(moduleId)
+        setHydratingModuleId((current) => (current === moduleId ? null : current))
+      }
+    },
+    [courseSlug, prepCourseApi],
+  )
 
   useEffect(() => {
     let alive = true
@@ -92,24 +169,30 @@ function PrepCourseContentPage() {
         return
       }
       try {
-        const data = await prepCourseApi.getCourse(courseSlug)
+        // Fetch once per courseSlug — do not re-run when entitlement/limitFreeAccess settles
+        // (that was causing a second full outline round-trip and ~2× perceived load time).
+        const data = await prepCourseApi.getCourse(courseSlug, { hydrate: "first" })
         if (!alive) return
         const normalized = normalizeCurriculum(data.curriculum, data.lessons, data.course.id)
         setCourse(data.course)
         setCurriculum(normalized)
         setCompletedLessonSlugs(new Set(data.completedLessonSlugs ?? []))
         setInitialBookmarks(data.bookmarks ?? { moduleIds: [], lessonSlugs: [] })
+        setHydratedModuleIds(new Set(data.hydratedModuleIds ?? []))
+        setModuleStats(data.moduleStats ?? [])
 
-        const lessonLoc = activeLessonSlug ? findLessonLocation(normalized, activeLessonSlug) : null
+        const lessonSlug = activeLessonSlugRef.current
+        const limitAccess = limitFreeAccessRef.current
+        const lessonLoc = lessonSlug ? findLessonLocation(normalized, lessonSlug) : null
         const firstUnlockedId =
           normalized.modules.find(
-            (module) => !isPrepCourseModuleLockedForFreePlan(courseSlug, module, limitFreeAccess),
+            (module) => !isPrepCourseModuleLockedForFreePlan(courseSlug, module, limitAccess),
           )?.id ?? null
         const lessonModule = lessonLoc
           ? normalized.modules.find((module) => module.id === lessonLoc.moduleId)
           : null
         const lessonUnlocked = lessonModule
-          ? !isPrepCourseModuleLockedForFreePlan(courseSlug, lessonModule, limitFreeAccess)
+          ? !isPrepCourseModuleLockedForFreePlan(courseSlug, lessonModule, limitAccess)
           : false
         const defaultModuleId = lessonUnlocked ? lessonLoc?.moduleId ?? firstUnlockedId : firstUnlockedId
         setSelectedModuleId(defaultModuleId)
@@ -118,6 +201,19 @@ function PrepCourseContentPage() {
         setExpandedSectionIds(
           defaultModule ? new Set(defaultModule.sections.map((section) => section.id)) : new Set(),
         )
+
+        if (defaultModuleId && !(data.hydratedModuleIds ?? []).includes(defaultModuleId)) {
+          void prepCourseApi.getCourse(courseSlug, { moduleId: defaultModuleId }).then((extra) => {
+            if (!alive) return
+            const incoming = normalizeCurriculum(extra.curriculum, extra.lessons, extra.course.id)
+            setCurriculum((prev) => mergeCurriculumModules(prev, incoming))
+            setHydratedModuleIds((prev) => {
+              const next = new Set(prev)
+              for (const id of extra.hydratedModuleIds ?? [defaultModuleId]) next.add(id)
+              return next
+            })
+          })
+        }
       } catch (e) {
         if (!alive) return
         setError(e instanceof Error ? e.message : "Failed to load course")
@@ -129,9 +225,18 @@ function PrepCourseContentPage() {
     return () => {
       alive = false
     }
-  }, [activeLessonSlug, courseSlug, limitFreeAccess, prepCourseApi])
+  }, [courseSlug, prepCourseApi])
 
-  const stats = useMemo(() => curriculumStats(curriculum), [curriculum])
+  const stats = useMemo(
+    () => statsFromModuleStats(curriculum, moduleStats),
+    [curriculum, moduleStats],
+  )
+
+  const moduleLessonCountById = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const row of moduleStats) map.set(row.moduleId, row.lessonCount)
+    return map
+  }, [moduleStats])
 
   const lockedModuleIds = useMemo(() => {
     return new Set(
@@ -199,7 +304,25 @@ function PrepCourseContentPage() {
       for (const section of mod.sections) next.add(section.id)
       return next
     })
+    void ensureModuleHydrated(moduleId)
   }
+
+  useEffect(() => {
+    if (!selectedModuleId || !hydratedModuleIds.has(selectedModuleId)) return
+    const fresh = curriculum.modules.find((module) => module.id === selectedModuleId)
+    if (!fresh) return
+    setExpandedSectionIds((prev) => {
+      let changed = false
+      const next = new Set(prev)
+      for (const section of fresh.sections) {
+        if (!next.has(section.id)) {
+          next.add(section.id)
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+  }, [curriculum.modules, hydratedModuleIds, selectedModuleId])
 
   function handleLockedContentClick() {
     openLockedContentModal()
@@ -268,6 +391,12 @@ function PrepCourseContentPage() {
     )
   }
 
+  const selectedHydrated = selectedModule
+    ? hydratedModuleIds.has(selectedModule.id) ||
+      selectedModule.sections.some((section) => section.lessons.length > 0)
+    : false
+  const selectedHydrating = selectedModuleId !== null && hydratingModuleId === selectedModuleId
+
   return (
     <StudentMain contentClassName="flex flex-col bg-[var(--primary-0)] pb-[24px]">
       <section className="prep-course-shell-card flex w-full flex-col overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)]">
@@ -280,7 +409,7 @@ function PrepCourseContentPage() {
         </div>
         <div className="flex flex-col border-t border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]">
           <div className="flex flex-col overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--primary-0)] lg:flex-row lg:items-start">
-            {selectedModule ? (
+            {selectedModule && selectedHydrated && !selectedHydrating ? (
               <PrepCourseModulePanel
                 course={course}
                 module={selectedModule}
@@ -297,6 +426,10 @@ function PrepCourseContentPage() {
                 moduleLocked={lockedModuleIds.has(selectedModule.id)}
                 onLockedLessonClick={handleLockedContentClick}
               />
+            ) : selectedModule ? (
+              <div className="flex min-h-0 flex-1 items-center justify-center p-6">
+                <StudentPageLoader label="Loading module…" />
+              </div>
             ) : (
               <p className="ds-body-sm ds-text-muted min-w-0 flex-1 p-6">Select a module to view sections.</p>
             )}
@@ -304,6 +437,8 @@ function PrepCourseContentPage() {
               modules={visibleModules}
               selectedModuleId={selectedModuleId}
               completedLessonSlugs={completedLessonSlugs}
+              moduleLessonCountById={moduleLessonCountById}
+              hydratedModuleIds={hydratedModuleIds}
               lockedModuleIds={lockedModuleIds}
               onSelectModule={handleSelectModule}
               onLockedModuleClick={handleLockedContentClick}

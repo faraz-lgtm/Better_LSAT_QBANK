@@ -635,12 +635,14 @@ export function createBillingService(deps: BillingServiceDeps) {
       }
 
       const baseUrl = deps.getAppBaseUrl().replace(/\/$/, '')
+      const normalizedSuccessPath = successPath.startsWith('/') ? successPath : `/${successPath}`
+      const successUrlSeparator = normalizedSuccessPath.includes('?') ? '&' : '?'
       const session = await deps.stripe.checkout.sessions.create({
         mode: 'subscription',
         customer: customerId,
         client_reference_id: userId,
         line_items: lineItems,
-        success_url: `${baseUrl}${successPath.startsWith('/') ? successPath : `/${successPath}`}`,
+        success_url: `${baseUrl}${normalizedSuccessPath}${successUrlSeparator}session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/checkout?plan=${plan}&checkout=cancel`,
         metadata: { user_id: userId, plan, include_lawhub: includeLawHub ? 'true' : 'false' },
         subscription_data: {

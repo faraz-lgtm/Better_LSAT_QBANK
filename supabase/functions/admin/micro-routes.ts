@@ -94,12 +94,21 @@ export async function handleAdminMicro(req: Request, slug: string): Promise<Resp
       return json(await service.seedDefaultQuestionTypes(user.id), {}, corsHeaders)
     }
     if (action === "admin-list-preptests") {
+      if (readBoolean(body, "countOnly") === true) {
+        return json({
+          rows: [],
+          total: await service.countVisiblePrepTests(user.id),
+        }, {}, corsHeaders)
+      }
       const contentFilter = readString(body, "contentFilter")
+      const search = readString(body, "search")
+      const summaryOnly = readBoolean(body, "summaryOnly") === true
       const result = await service.listPrepTests(
         user.id,
-        readNumber(body, "limit") ?? 10,
-        readNumber(body, "offset") ?? 0,
+        summaryOnly ? 10_000 : (readNumber(body, "limit") ?? 10),
+        summaryOnly ? 0 : (readNumber(body, "offset") ?? 0),
         contentFilter,
+        { search, includeStats: !summaryOnly },
       )
       return json({
         rows: result.rows,
@@ -161,6 +170,9 @@ export async function handleAdminMicro(req: Request, slug: string): Promise<Resp
       return json(await service.getDashboard(user.id), {}, corsHeaders)
     }
     if (action === "admin-list-courses") {
+      if (readBoolean(body, "countOnly") === true) {
+        return json({ rows: [], total: await service.countCourses(user.id) }, {}, corsHeaders)
+      }
       return json({ rows: await service.listCourses(user.id) }, {}, corsHeaders)
     }
     if (action === "admin-bulk-import-dry-run") {

@@ -451,9 +451,20 @@ export function createAdminService(deps: { repository: AdminRepository }) {
       return { seeded, skipped: 0 }
     },
 
-    async listPrepTests(userId: string, limit = 10, offset = 0, contentFilter?: string) {
+    async listPrepTests(
+      userId: string,
+      limit = 10,
+      offset = 0,
+      contentFilter?: string,
+      options?: { search?: string; includeStats?: boolean },
+    ) {
       await requireAdmin(userId)
-      return deps.repository.listPrepTests(limit, offset, contentFilter)
+      return deps.repository.listPrepTests(limit, offset, contentFilter, options)
+    },
+
+    async countVisiblePrepTests(userId: string) {
+      await requireAdmin(userId)
+      return deps.repository.countVisiblePrepTests()
     },
 
     async getPrepTestDetail(userId: string, prepTestId: string) {
@@ -537,19 +548,28 @@ export function createAdminService(deps: { repository: AdminRepository }) {
 
     async getDashboard(userId: string) {
       await requireAdmin(userId)
-      const { rows: prepTests } = await deps.repository.listPrepTests()
-      const rows = await Promise.all(
-        prepTests.map(async (prepTest) => {
-          const stats = await deps.repository.getPrepTestCompletionStats(String(prepTest.id))
-          return { ...prepTest, stats }
-        }),
-      )
-      return { prepTests: rows }
+      const { rows: prepTests } = await deps.repository.listPrepTests(10_000, 0)
+      return {
+        prepTests: prepTests.map((prepTest) => ({
+          ...prepTest,
+          stats: {
+            total: Number(prepTest.question_count) || 0,
+            explained: Number(prepTest.explained_count) || 0,
+            tagged: Number(prepTest.tagged_count) || 0,
+            difficultySet: 0,
+          },
+        })),
+      }
     },
 
     async listCourses(userId: string) {
       await requireAdmin(userId)
       return deps.repository.listCourses()
+    },
+
+    async countCourses(userId: string) {
+      await requireAdmin(userId)
+      return deps.repository.countCourses()
     },
 
     async bulkImportDryRun(

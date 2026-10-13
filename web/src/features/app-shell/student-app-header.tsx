@@ -2,18 +2,23 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Menu } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { FigmaIcon } from "@/components/icons/figma-icons"
 import { PREP_TEST_POOLS_HREF } from "@/features/account/prep-test-pool-types"
 import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
 import { resolveStudentShellVariant } from "@/features/app-shell/student-shell-plan-variant"
 import { useGuestPremiumAccount } from "@/features/guest/premium/guest-premium-account"
 import {
+  loadProfile,
+  selectProfile,
+} from "@/features/student-session/studentSessionSlice"
+import {
   STUDENT_PAGE_CONTAINER_CLASS,
   STUDENT_SHELL_GUTTER_CLASS,
 } from "@/features/student/components/student-page-container"
 import { ThemeToggleButton } from "@/features/theme/theme-toggle"
 import { resetUser } from "@/lib/analytics/posthog"
-import { createUsersApi } from "@/lib/api/users"
+import { clearStudentSessionCaches } from "@/lib/auth/clear-student-session-caches"
 import { subscribeProfileAvatarChanged } from "@/lib/profile-avatar-sync"
 import { cn } from "@/lib/utils"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -85,8 +90,10 @@ type StudentAppHeaderProps = {
 }
 
 function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderProps) {
+  const dispatch = useAppDispatch()
   const { pathname, search } = useLocation()
   const entitlement = useStudentEntitlementOptional()?.entitlement ?? null
+  const profile = useAppSelector(selectProfile)
   const premiumAccount = useGuestPremiumAccount()
   const isPremium =
     resolveStudentShellVariant({
@@ -95,12 +102,17 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
     }) === "premium"
   const planLabel = isPremium ? "Premium" : "Free"
   const [email, setEmail] = useState<string | null>(null)
-  const [profileFirstName, setProfileFirstName] = useState("")
-  const [profileLastName, setProfileLastName] = useState("")
-  const [profileFullName, setProfileFullName] = useState("")
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [openProfileMenu, setOpenProfileMenu] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    void dispatch(loadProfile())
+  }, [dispatch])
+
+  useEffect(() => {
+    setAvatarUrl(profile?.avatar_url?.trim() || null)
+  }, [profile?.avatar_url])
 
   useEffect(() => {
     let mounted = true
@@ -110,16 +122,6 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
         if (!mounted) return
         setEmail(data.user?.email ?? null)
       })
-      void createUsersApi(supabase)
-        .getMyProfile()
-        .then((profile) => {
-          if (!mounted) return
-          setProfileFirstName(firstToken(profile?.first_name))
-          setProfileLastName(firstToken(profile?.last_name))
-          setProfileFullName(profile?.full_name?.trim() ?? "")
-          setAvatarUrl(profile?.avatar_url?.trim() || null)
-        })
-        .catch(() => undefined)
     } catch {
       // Missing Supabase env (e.g. isolated guest preview).
     }
@@ -146,10 +148,15 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
   async function handleLogout() {
     const supabase = getSupabaseBrowserClient()
     await supabase.auth.signOut()
+    clearStudentSessionCaches()
     resetUser()
     setOpenProfileMenu(false)
     window.location.assign("/login")
   }
+
+  const profileFirstName = firstToken(profile?.first_name)
+  const profileLastName = firstToken(profile?.last_name)
+  const profileFullName = profile?.full_name?.trim() ?? ""
 
   const displayName = useMemo(
     () =>
@@ -157,9 +164,9 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
         firstName: profileFirstName,
         lastName: profileLastName,
         fullName: profileFullName,
-        email,
+        email: email ?? profile?.email ?? null,
       }),
-    [email, profileFirstName, profileFullName, profileLastName],
+    [email, profile?.email, profileFirstName, profileFullName, profileLastName],
   )
   const initials = useMemo(() => getInitials(displayName), [displayName])
 

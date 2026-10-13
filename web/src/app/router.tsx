@@ -1,4 +1,12 @@
-import { type ReactElement, useEffect, useState } from "react"
+import {
+  lazy,
+  Suspense,
+  type ComponentType,
+  type LazyExoticComponent,
+  type ReactElement,
+  useEffect,
+  useState,
+} from "react"
 import { Navigate, Outlet, RouterProvider, createBrowserRouter, useLocation } from "react-router-dom"
 
 import { StudentAppShell } from "@/features/app-shell/student-app-shell"
@@ -15,64 +23,18 @@ import { LsacLinkPage } from "@/features/auth/pages/lsac-link-page"
 import { CheckoutDetailsPage } from "@/features/billing/pages/checkout-details-page"
 import { CheckoutPage } from "@/features/billing/pages/checkout-page"
 import { PricingPage } from "@/features/billing/pages/pricing-page"
-import { AccountPage } from "@/features/account/pages/account-page"
-import { PrepTestPoolsPage } from "@/features/account/pages/prep-test-pools-page"
 import { OnboardingPage } from "@/features/auth/pages/onboarding-page"
 import { OnboardingWelcomePreviewPage } from "@/features/auth/pages/onboarding-welcome-preview-page"
-import { GuestDiagnosticStartPage } from "@/features/guest/pages/guest-diagnostic-start-page"
-import { DiagnosticResultsHistoryPage, DiagnosticResultsIndexRedirect } from "@/features/student/pages/diagnostic-results-history-page"
-import { GuestDiagnosticResultsPage } from "@/features/guest/pages/guest-diagnostic-results-page"
-import { GuestDiagnosticResultsPreviewPage } from "@/features/guest/pages/guest-diagnostic-results-preview-page"
-import { GuestDiagnosticReviewPage } from "@/features/guest/pages/guest-diagnostic-review-page"
-import { MarketingHomePage } from "@/features/marketing/pages/marketing-home-page"
 import { IntentPage } from "@/features/auth/pages/intent-page"
 import { resolveStudentShellVariant } from "@/features/app-shell/student-shell-plan-variant"
-import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
-import { PrepCourseCoursePage } from "@/features/prep-course/pages/prep-course-course-page"
-import { PrepCourseLessonPage } from "@/features/prep-course/pages/prep-course-lesson-page"
-import { PrepCourseListPage } from "@/features/prep-course/pages/prep-course-list-page"
-import { AnalyticsDrillResultsPage } from "@/features/student/pages/analytics-drill-results-page"
-import { PracticeSessionResultsPage } from "@/features/student/pages/practice-session-results-page"
-import { AnalyticsDrillsPage } from "@/features/student/pages/analytics-drills-page"
-import { AnalyticsPage } from "@/features/student/pages/analytics-page"
-import { AnalyticsPrepTestResultsPage } from "@/features/student/pages/analytics-prep-test-results-page"
-import { AnalyticsPrepTestsPage } from "@/features/student/pages/analytics-preptests-page"
-import { AnalyticsQuestionTypeReviewPage } from "@/features/student/pages/analytics-question-type-review-page"
-import { AnalyticsSectionsPage } from "@/features/student/pages/analytics-sections-page"
-import { DiagnosticExplanationQuestionDetailPage } from "@/features/student/pages/diagnostic-explanation-question-detail-page"
-import { DiagnosticExplanationsPage } from "@/features/student/pages/diagnostic-explanations-page"
-import { ExplanationQuestionDetailPage } from "@/features/student/pages/explanation-question-detail-page"
-import { ExplanationsPage } from "@/features/student/pages/explanations-page"
-import { PracticeBlindReviewPage } from "@/features/student/pages/practice-blind-review-page"
-import { PracticeBlindReviewPrepTestPage } from "@/features/student/pages/practice-blind-review-prep-test-page"
-import { DrillSessionPage } from "@/features/student/pages/drill-session-page"
-import { LrNewDrillPage } from "@/features/student/pages/lr-new-drill-page"
-import { RcNewDrillPage } from "@/features/student/pages/rc-new-drill-page"
-import { PracticeDrillsPage } from "@/features/student/pages/practice-drills-page"
 import { LegacyPrepTestPathRedirect } from "@/features/student/preptests/legacy-preptest-path-redirect"
 import { isPrepTestStudentPath } from "@/features/student/preptests/preptest-routes"
-import { PracticePrepTestPage } from "@/features/student/pages/practice-preptest-page"
-import { PracticePrepTestsListPage } from "@/features/student/pages/practice-preptests-list-page"
-import { PracticePrepTestSectionPage } from "@/features/student/pages/practice-preptest-section-page"
-import { LrNewSectionPage } from "@/features/student/pages/lr-new-section-page"
-import { PracticeSectionsPage } from "@/features/student/pages/practice-sections-page"
-import { RcNewSectionPage } from "@/features/student/pages/rc-new-section-page"
-import { RcQuestionNavPreviewPage } from "@/features/student/pages/rc-question-nav-preview-page"
-import { SectionSessionPage } from "@/features/student/pages/section-session-page"
 import { AdminShell } from "@/features/admin/layout/admin-shell"
-import { AdminDashboardPage } from "@/features/admin/pages/admin-dashboard-page"
-import { AdminTaxonomyPage } from "@/features/admin/pages/admin-taxonomy-page"
-import { AdminPrepTestsPage } from "@/features/admin/pages/admin-preptests-page"
-import { AdminPrepTestDetailPage } from "@/features/admin/pages/admin-preptest-detail-page"
-import { AdminQuestionEditorPage } from "@/features/admin/pages/admin-question-editor-page"
-import { AdminQuestionVideoRecordPage } from "@/features/admin/pages/admin-question-video-record-page"
-import { AdminCoursesPage } from "@/features/admin/pages/admin-courses-page"
-import { AdminYouTryPage } from "@/features/admin/pages/admin-you-try-page"
-import { AdminConfigPage } from "@/features/admin/pages/admin-config-page"
-import { AdminScoreTablesPage } from "@/features/admin/pages/admin-score-tables-page"
-import { AdminUsersPage } from "@/features/admin/pages/admin-users-page"
-import { AdminUserDetailPage } from "@/features/admin/pages/admin-user-detail-page"
-import { createUsersApi, type UserEntitlement, type UserProfile } from "@/lib/api/users"
+import type { UserEntitlement, UserProfile } from "@/lib/api/users"
+import {
+  ensureEntitlement,
+  ensureProfile,
+} from "@/features/student-session/ensure-student-session"
 import { readDiagnosticFunnelState } from "@/lib/auth/diagnostic-intent"
 import { shouldAllowAuthenticatedIntentPage } from "@/lib/auth/diagnostic-funnel-redirect"
 import { shouldRedirectAuthenticatedUserToOnboarding } from "@/lib/auth/missing-profile-redirect"
@@ -97,6 +59,198 @@ function deferAuthWork(work: () => void) {
   window.setTimeout(work, 0)
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- lazy named exports keep page prop types loose at the route boundary
+function lazyNamed(
+  loader: () => Promise<Record<string, any>>,
+  name: string,
+): LazyExoticComponent<ComponentType<any>> {
+  return lazy(async () => {
+    const mod = await loader()
+    return { default: mod[name] as ComponentType<any> }
+  })
+}
+
+function LazyPage({ children }: { children: ReactElement }) {
+  return <Suspense fallback={<StudentPageLoader centered label="Loading…" />}>{children}</Suspense>
+}
+
+const AccountPage = lazyNamed(() => import("@/features/account/pages/account-page"), "AccountPage")
+const PrepTestPoolsPage = lazyNamed(
+  () => import("@/features/account/pages/prep-test-pools-page"),
+  "PrepTestPoolsPage",
+)
+const DashboardPage = lazyNamed(() => import("@/features/dashboard/pages/dashboard-page"), "DashboardPage")
+const GuestDiagnosticStartPage = lazyNamed(
+  () => import("@/features/guest/pages/guest-diagnostic-start-page"),
+  "GuestDiagnosticStartPage",
+)
+const GuestDiagnosticResultsPage = lazyNamed(
+  () => import("@/features/guest/pages/guest-diagnostic-results-page"),
+  "GuestDiagnosticResultsPage",
+)
+const GuestDiagnosticResultsPreviewPage = lazyNamed(
+  () => import("@/features/guest/pages/guest-diagnostic-results-preview-page"),
+  "GuestDiagnosticResultsPreviewPage",
+)
+const GuestDiagnosticReviewPage = lazyNamed(
+  () => import("@/features/guest/pages/guest-diagnostic-review-page"),
+  "GuestDiagnosticReviewPage",
+)
+const DiagnosticResultsHistoryPage = lazyNamed(
+  () => import("@/features/student/pages/diagnostic-results-history-page"),
+  "DiagnosticResultsHistoryPage",
+)
+const DiagnosticResultsIndexRedirect = lazyNamed(
+  () => import("@/features/student/pages/diagnostic-results-history-page"),
+  "DiagnosticResultsIndexRedirect",
+)
+const PrepCourseCoursePage = lazyNamed(
+  () => import("@/features/prep-course/pages/prep-course-course-page"),
+  "PrepCourseCoursePage",
+)
+const PrepCourseLessonPage = lazyNamed(
+  () => import("@/features/prep-course/pages/prep-course-lesson-page"),
+  "PrepCourseLessonPage",
+)
+const PrepCourseListPage = lazyNamed(
+  () => import("@/features/prep-course/pages/prep-course-list-page"),
+  "PrepCourseListPage",
+)
+const AnalyticsDrillResultsPage = lazyNamed(
+  () => import("@/features/student/pages/analytics-drill-results-page"),
+  "AnalyticsDrillResultsPage",
+)
+const PracticeSessionResultsPage = lazyNamed(
+  () => import("@/features/student/pages/practice-session-results-page"),
+  "PracticeSessionResultsPage",
+)
+const AnalyticsDrillsPage = lazyNamed(
+  () => import("@/features/student/pages/analytics-drills-page"),
+  "AnalyticsDrillsPage",
+)
+const AnalyticsPage = lazyNamed(() => import("@/features/student/pages/analytics-page"), "AnalyticsPage")
+const AnalyticsPrepTestResultsPage = lazyNamed(
+  () => import("@/features/student/pages/analytics-prep-test-results-page"),
+  "AnalyticsPrepTestResultsPage",
+)
+const AnalyticsPrepTestsPage = lazyNamed(
+  () => import("@/features/student/pages/analytics-preptests-page"),
+  "AnalyticsPrepTestsPage",
+)
+const AnalyticsQuestionTypeReviewPage = lazyNamed(
+  () => import("@/features/student/pages/analytics-question-type-review-page"),
+  "AnalyticsQuestionTypeReviewPage",
+)
+const AnalyticsSectionsPage = lazyNamed(
+  () => import("@/features/student/pages/analytics-sections-page"),
+  "AnalyticsSectionsPage",
+)
+const DiagnosticExplanationQuestionDetailPage = lazyNamed(
+  () => import("@/features/student/pages/diagnostic-explanation-question-detail-page"),
+  "DiagnosticExplanationQuestionDetailPage",
+)
+const DiagnosticExplanationsPage = lazyNamed(
+  () => import("@/features/student/pages/diagnostic-explanations-page"),
+  "DiagnosticExplanationsPage",
+)
+const ExplanationQuestionDetailPage = lazyNamed(
+  () => import("@/features/student/pages/explanation-question-detail-page"),
+  "ExplanationQuestionDetailPage",
+)
+const ExplanationsPage = lazyNamed(
+  () => import("@/features/student/pages/explanations-page"),
+  "ExplanationsPage",
+)
+const PracticeBlindReviewPage = lazyNamed(
+  () => import("@/features/student/pages/practice-blind-review-page"),
+  "PracticeBlindReviewPage",
+)
+const PracticeBlindReviewPrepTestPage = lazyNamed(
+  () => import("@/features/student/pages/practice-blind-review-prep-test-page"),
+  "PracticeBlindReviewPrepTestPage",
+)
+const DrillSessionPage = lazyNamed(
+  () => import("@/features/student/pages/drill-session-page"),
+  "DrillSessionPage",
+)
+const LrNewDrillPage = lazyNamed(() => import("@/features/student/pages/lr-new-drill-page"), "LrNewDrillPage")
+const RcNewDrillPage = lazyNamed(() => import("@/features/student/pages/rc-new-drill-page"), "RcNewDrillPage")
+const PracticeDrillsPage = lazyNamed(
+  () => import("@/features/student/pages/practice-drills-page"),
+  "PracticeDrillsPage",
+)
+const PracticePrepTestPage = lazyNamed(
+  () => import("@/features/student/pages/practice-preptest-page"),
+  "PracticePrepTestPage",
+)
+const PracticePrepTestsListPage = lazyNamed(
+  () => import("@/features/student/pages/practice-preptests-list-page"),
+  "PracticePrepTestsListPage",
+)
+const PracticePrepTestSectionPage = lazyNamed(
+  () => import("@/features/student/pages/practice-preptest-section-page"),
+  "PracticePrepTestSectionPage",
+)
+const LrNewSectionPage = lazyNamed(
+  () => import("@/features/student/pages/lr-new-section-page"),
+  "LrNewSectionPage",
+)
+const PracticeSectionsPage = lazyNamed(
+  () => import("@/features/student/pages/practice-sections-page"),
+  "PracticeSectionsPage",
+)
+const RcNewSectionPage = lazyNamed(
+  () => import("@/features/student/pages/rc-new-section-page"),
+  "RcNewSectionPage",
+)
+const RcQuestionNavPreviewPage = lazyNamed(
+  () => import("@/features/student/pages/rc-question-nav-preview-page"),
+  "RcQuestionNavPreviewPage",
+)
+const SectionSessionPage = lazyNamed(
+  () => import("@/features/student/pages/section-session-page"),
+  "SectionSessionPage",
+)
+const AdminDashboardPage = lazyNamed(
+  () => import("@/features/admin/pages/admin-dashboard-page"),
+  "AdminDashboardPage",
+)
+const AdminTaxonomyPage = lazyNamed(
+  () => import("@/features/admin/pages/admin-taxonomy-page"),
+  "AdminTaxonomyPage",
+)
+const AdminPrepTestsPage = lazyNamed(
+  () => import("@/features/admin/pages/admin-preptests-page"),
+  "AdminPrepTestsPage",
+)
+const AdminPrepTestDetailPage = lazyNamed(
+  () => import("@/features/admin/pages/admin-preptest-detail-page"),
+  "AdminPrepTestDetailPage",
+)
+const AdminQuestionEditorPage = lazyNamed(
+  () => import("@/features/admin/pages/admin-question-editor-page"),
+  "AdminQuestionEditorPage",
+)
+const AdminQuestionVideoRecordPage = lazyNamed(
+  () => import("@/features/admin/pages/admin-question-video-record-page"),
+  "AdminQuestionVideoRecordPage",
+)
+const AdminCoursesPage = lazyNamed(
+  () => import("@/features/admin/pages/admin-courses-page"),
+  "AdminCoursesPage",
+)
+const AdminYouTryPage = lazyNamed(() => import("@/features/admin/pages/admin-you-try-page"), "AdminYouTryPage")
+const AdminConfigPage = lazyNamed(() => import("@/features/admin/pages/admin-config-page"), "AdminConfigPage")
+const AdminScoreTablesPage = lazyNamed(
+  () => import("@/features/admin/pages/admin-score-tables-page"),
+  "AdminScoreTablesPage",
+)
+const AdminUsersPage = lazyNamed(() => import("@/features/admin/pages/admin-users-page"), "AdminUsersPage")
+const AdminUserDetailPage = lazyNamed(
+  () => import("@/features/admin/pages/admin-user-detail-page"),
+  "AdminUserDetailPage",
+)
+
 function PublicOnly({ children }: { children: ReactElement }) {
   const location = useLocation()
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
@@ -107,7 +261,6 @@ function PublicOnly({ children }: { children: ReactElement }) {
   useEffect(() => {
     let alive = true
     const supabase = getSupabaseBrowserClient()
-    const usersApi = createUsersApi(supabase)
     const selectedPlan = parseSignupPlan(new URLSearchParams(location.search).get("plan"))
     if (selectedPlan) savePendingCheckoutPlan(selectedPlan)
 
@@ -116,22 +269,13 @@ function PublicOnly({ children }: { children: ReactElement }) {
         setDestination(null)
         return
       }
-      try {
-        const nextEntitlement = await usersApi.getEntitlementState()
-        if (!alive) return
-        setDestination(
-          resolvePendingCheckoutDestination(
-            resolvePostAuthDestination(nextProfile, nextEntitlement, readDiagnosticFunnelState()),
-          ),
-        )
-      } catch {
-        if (!alive) return
-        setDestination(
-          resolvePendingCheckoutDestination(
-            resolvePostAuthDestination(nextProfile, null, readDiagnosticFunnelState()),
-          ),
-        )
-      }
+      const nextEntitlement = await ensureEntitlement()
+      if (!alive) return
+      setDestination(
+        resolvePendingCheckoutDestination(
+          resolvePostAuthDestination(nextProfile, nextEntitlement, readDiagnosticFunnelState()),
+        ),
+      )
     }
 
     const syncState = async () => {
@@ -146,7 +290,7 @@ function PublicOnly({ children }: { children: ReactElement }) {
         return
       }
       try {
-        const nextProfile = await usersApi.getMyProfile()
+        const nextProfile = await ensureProfile()
         if (!alive) return
         setProfile(nextProfile)
         await syncDestination(nextProfile)
@@ -188,6 +332,16 @@ function PublicOnly({ children }: { children: ReactElement }) {
             // after edge function calls). Clearing profile here unmounts the whole app shell.
           })
       })
+      void ensureProfile()
+        .then(async (nextProfile) => {
+          if (!alive) return
+          setProfile(nextProfile)
+          await syncDestination(nextProfile)
+        })
+        .catch(() => {
+          // Keep the existing profile on transient refetch failures (e.g. token refresh
+          // after edge function calls). Clearing profile here unmounts the whole app shell.
+        })
     })
     return () => {
       alive = false
@@ -219,7 +373,6 @@ function IntentRouteGuard({
   useEffect(() => {
     let alive = true
     const supabase = getSupabaseBrowserClient()
-    const usersApi = createUsersApi(supabase)
     const funnel = readDiagnosticFunnelState()
 
     const syncDestination = async (nextProfile: UserProfile | null) => {
@@ -228,24 +381,14 @@ function IntentRouteGuard({
         setDestination(null)
         return
       }
-      try {
-        const nextEntitlement = await usersApi.getEntitlementState()
-        if (!alive) return
-        setEntitlement(nextEntitlement)
-        if (shouldAllowAuthenticatedIntentPage(nextEntitlement, funnel)) {
-          setDestination(null)
-          return
-        }
-        setDestination(resolvePostAuthDestination(nextProfile, nextEntitlement, funnel))
-      } catch {
-        if (!alive) return
-        setEntitlement(null)
-        if (shouldAllowAuthenticatedIntentPage(null, funnel)) {
-          setDestination(null)
-          return
-        }
-        setDestination(resolvePostAuthDestination(nextProfile, null, funnel))
+      const nextEntitlement = await ensureEntitlement()
+      if (!alive) return
+      setEntitlement(nextEntitlement)
+      if (shouldAllowAuthenticatedIntentPage(nextEntitlement, funnel)) {
+        setDestination(null)
+        return
       }
+      setDestination(resolvePostAuthDestination(nextProfile, nextEntitlement, funnel))
     }
 
     const syncState = async () => {
@@ -261,7 +404,7 @@ function IntentRouteGuard({
         return
       }
       try {
-        const nextProfile = await usersApi.getMyProfile()
+        const nextProfile = await ensureProfile()
         if (!alive) return
         setProfile(nextProfile)
         await syncDestination(nextProfile)
@@ -312,7 +455,6 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
   useEffect(() => {
     let alive = true
     const supabase = getSupabaseBrowserClient()
-    const usersApi = createUsersApi(supabase)
 
     const syncAuthAndProfile = async () => {
       const { data } = await supabase.auth.getSession()
@@ -325,7 +467,7 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
         return
       }
       try {
-        const nextProfile = await usersApi.getMyProfile()
+        const nextProfile = await ensureProfile()
         if (!alive) return
         setProfile(nextProfile)
       } catch {
@@ -360,6 +502,14 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
             // Preserve profile during background refetches triggered by Supabase auth events.
           })
       })
+      void ensureProfile()
+        .then((nextProfile) => {
+          if (!alive) return
+          setProfile(nextProfile)
+        })
+        .catch(() => {
+          // Preserve profile during background refetches triggered by Supabase auth events.
+        })
     })
     return () => {
       alive = false
@@ -444,7 +594,7 @@ function RequireAuthenticated({ children }: { children: ReactElement }) {
 }
 
 const router = createBrowserRouter([
-  { path: "/", element: <MarketingHomePage /> },
+  { path: "/", element: <PublicOnly><LoginPage /></PublicOnly> },
   { path: "/login", element: <PublicOnly><LoginPage /></PublicOnly> },
   { path: "/login/email-check", element: <LoginEmailCheckPage /> },
   {
@@ -484,17 +634,35 @@ const router = createBrowserRouter([
     path: "/diagnostic/start",
     element: (
       <RequireRole requiredRole="student">
-        <GuestDiagnosticStartPage />
+        <LazyPage>
+          <GuestDiagnosticStartPage />
+        </LazyPage>
       </RequireRole>
     ),
   },
-  { path: "/diagnostic/start/preview", element: <GuestDiagnosticStartPage preview /> },
-  { path: "/diagnostic/results/preview", element: <GuestDiagnosticResultsPreviewPage /> },
+  {
+    path: "/diagnostic/start/preview",
+    element: (
+      <LazyPage>
+        <GuestDiagnosticStartPage preview />
+      </LazyPage>
+    ),
+  },
+  {
+    path: "/diagnostic/results/preview",
+    element: (
+      <LazyPage>
+        <GuestDiagnosticResultsPreviewPage />
+      </LazyPage>
+    ),
+  },
   {
     path: "/diagnostic/review",
     element: (
       <RequireRole requiredRole="student">
-        <GuestDiagnosticReviewPage mode="review" />
+        <LazyPage>
+          <GuestDiagnosticReviewPage mode="review" />
+        </LazyPage>
       </RequireRole>
     ),
   },
@@ -502,13 +670,36 @@ const router = createBrowserRouter([
     path: "/diagnostic/tester",
     element: (
       <RequireRole requiredRole="student">
-        <GuestDiagnosticReviewPage mode="tester" />
+        <LazyPage>
+          <GuestDiagnosticReviewPage mode="tester" />
+        </LazyPage>
       </RequireRole>
     ),
   },
-  { path: "/diagnostic/review/preview", element: <GuestDiagnosticReviewPage mode="review" preview /> },
-  { path: "/diagnostic/tester/preview", element: <GuestDiagnosticReviewPage mode="tester" preview /> },
-  { path: "/practice/rc-nav/preview", element: <RcQuestionNavPreviewPage /> },
+  {
+    path: "/diagnostic/review/preview",
+    element: (
+      <LazyPage>
+        <GuestDiagnosticReviewPage mode="review" preview />
+      </LazyPage>
+    ),
+  },
+  {
+    path: "/diagnostic/tester/preview",
+    element: (
+      <LazyPage>
+        <GuestDiagnosticReviewPage mode="tester" preview />
+      </LazyPage>
+    ),
+  },
+  {
+    path: "/practice/rc-nav/preview",
+    element: (
+      <LazyPage>
+        <RcQuestionNavPreviewPage />
+      </LazyPage>
+    ),
+  },
   {
     path: "/app",
     element: (
@@ -526,57 +717,327 @@ const router = createBrowserRouter([
           </RequireLsacEntitlement>
         ),
         children: [
-          { index: true, element: <DashboardPage /> },
-          { path: "diagnostic/results", element: <DiagnosticResultsIndexRedirect /> },
-          { path: "diagnostic/results/mini", element: <DiagnosticResultsHistoryPage section="mini" /> },
-          { path: "diagnostic/results/mini/:attemptId", element: <GuestDiagnosticResultsPage section="mini" /> },
-          { path: "diagnostic/results/full", element: <DiagnosticResultsHistoryPage section="full" /> },
-          { path: "diagnostic/results/full/:attemptId", element: <GuestDiagnosticResultsPage section="full" /> },
-          { path: "account", element: <AccountPage /> },
-          { path: "settings", element: <PrepTestPoolsPage /> },
+          {
+            index: true,
+            element: (
+              <LazyPage>
+                <DashboardPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "diagnostic/results",
+            element: (
+              <LazyPage>
+                <DiagnosticResultsIndexRedirect />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "diagnostic/results/mini",
+            element: (
+              <LazyPage>
+                <DiagnosticResultsHistoryPage section="mini" />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "diagnostic/results/mini/:attemptId",
+            element: (
+              <LazyPage>
+                <GuestDiagnosticResultsPage section="mini" />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "diagnostic/results/full",
+            element: (
+              <LazyPage>
+                <DiagnosticResultsHistoryPage section="full" />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "diagnostic/results/full/:attemptId",
+            element: (
+              <LazyPage>
+                <GuestDiagnosticResultsPage section="full" />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "account",
+            element: (
+              <LazyPage>
+                <AccountPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "settings",
+            element: (
+              <LazyPage>
+                <PrepTestPoolsPage />
+              </LazyPage>
+            ),
+          },
           { path: "account/prep-test-pools", element: <Navigate to="/app/settings" replace /> },
           { path: "account/settings", element: <Navigate to="/app/settings" replace /> },
-          { path: "diagnostic/results", element: <GuestDiagnosticResultsPage /> },
+          {
+            path: "diagnostic/results",
+            element: (
+              <LazyPage>
+                <GuestDiagnosticResultsPage />
+              </LazyPage>
+            ),
+          },
           { path: "diagnostic/review", element: <Navigate to="/diagnostic/review" replace /> },
           { path: "diagnostic/tester", element: <Navigate to="/diagnostic/tester" replace /> },
-          { path: "diagnostic/explanations", element: <DiagnosticExplanationsPage /> },
+          {
+            path: "diagnostic/explanations",
+            element: (
+              <LazyPage>
+                <DiagnosticExplanationsPage />
+              </LazyPage>
+            ),
+          },
           {
             path: "diagnostic/explanations/q/:questionId",
-            element: <DiagnosticExplanationQuestionDetailPage />,
+            element: (
+              <LazyPage>
+                <DiagnosticExplanationQuestionDetailPage />
+              </LazyPage>
+            ),
           },
-          { path: "learn/explanations", element: <ExplanationsPage /> },
-          { path: "learn/explanations/q/:questionId", element: <ExplanationQuestionDetailPage /> },
-          { path: "prep-course", element: <PrepCourseListPage /> },
-          { path: "prep-course/:courseSlug", element: <PrepCourseCoursePage /> },
-          { path: "prep-course/:courseSlug/:lessonSlug", element: <PrepCourseLessonPage /> },
-          { path: "prep-course/:courseSlug/:lessonSlug/start", element: <PrepCourseLessonPage /> },
-          { path: "practice/drills", element: <PracticeDrillsPage /> },
-          { path: "practice/drills/lr/new", element: <LrNewDrillPage /> },
-          { path: "practice/drills/rc/new", element: <RcNewDrillPage /> },
-          { path: "practice/drills/session/:sessionId", element: <DrillSessionPage /> },
-          { path: "practice/results/:sessionId", element: <PracticeSessionResultsPage /> },
-          { path: "practice/sections", element: <PracticeSectionsPage /> },
-          { path: "practice/sections/lr/new", element: <LrNewSectionPage /> },
-          { path: "practice/sections/rc/new", element: <RcNewSectionPage /> },
-          { path: "practice/sections/rc/nav-preview", element: <RcQuestionNavPreviewPage /> },
-          { path: "practice/sections/session/:sessionId", element: <SectionSessionPage /> },
+          {
+            path: "learn/explanations",
+            element: (
+              <LazyPage>
+                <ExplanationsPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "learn/explanations/q/:questionId",
+            element: (
+              <LazyPage>
+                <ExplanationQuestionDetailPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "prep-course",
+            element: (
+              <LazyPage>
+                <PrepCourseListPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "prep-course/:courseSlug",
+            element: (
+              <LazyPage>
+                <PrepCourseCoursePage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "prep-course/:courseSlug/:lessonSlug",
+            element: (
+              <LazyPage>
+                <PrepCourseLessonPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "prep-course/:courseSlug/:lessonSlug/start",
+            element: (
+              <LazyPage>
+                <PrepCourseLessonPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "practice/drills",
+            element: (
+              <LazyPage>
+                <PracticeDrillsPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "practice/drills/lr/new",
+            element: (
+              <LazyPage>
+                <LrNewDrillPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "practice/drills/rc/new",
+            element: (
+              <LazyPage>
+                <RcNewDrillPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "practice/drills/session/:sessionId",
+            element: (
+              <LazyPage>
+                <DrillSessionPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "practice/results/:sessionId",
+            element: (
+              <LazyPage>
+                <PracticeSessionResultsPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "practice/sections",
+            element: (
+              <LazyPage>
+                <PracticeSectionsPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "practice/sections/lr/new",
+            element: (
+              <LazyPage>
+                <LrNewSectionPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "practice/sections/rc/new",
+            element: (
+              <LazyPage>
+                <RcNewSectionPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "practice/sections/rc/nav-preview",
+            element: (
+              <LazyPage>
+                <RcQuestionNavPreviewPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "practice/sections/session/:sessionId",
+            element: (
+              <LazyPage>
+                <SectionSessionPage />
+              </LazyPage>
+            ),
+          },
           { path: "practice/sections/rc", element: <Navigate to="/app/practice/sections/rc/new" replace /> },
           { path: "practice/sections/rc/session", element: <Navigate to="/app/practice/sections/rc/new" replace /> },
-          { path: "preptest/:testId/section/:sectionId", element: <PracticePrepTestSectionPage /> },
-          { path: "preptest/:testId", element: <PracticePrepTestPage /> },
-          { path: "preptest", element: <PracticePrepTestsListPage /> },
+          {
+            path: "preptest/:testId/section/:sectionId",
+            element: (
+              <LazyPage>
+                <PracticePrepTestSectionPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "preptest/:testId",
+            element: (
+              <LazyPage>
+                <PracticePrepTestPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "preptest",
+            element: (
+              <LazyPage>
+                <PracticePrepTestsListPage />
+              </LazyPage>
+            ),
+          },
           { path: "practice/preptest/:testId/section/:sectionId", element: <LegacyPrepTestPathRedirect /> },
           { path: "practice/preptest/:testId", element: <LegacyPrepTestPathRedirect /> },
           { path: "practice/preptest", element: <LegacyPrepTestPathRedirect /> },
-          { path: "practice/blind-review", element: <PracticeBlindReviewPage /> },
-          { path: "practice/blind-review/:testId", element: <PracticeBlindReviewPrepTestPage /> },
-          { path: "analytics", element: <AnalyticsPage /> },
-          { path: "analytics/drills", element: <AnalyticsDrillsPage /> },
-          { path: "analytics/drills/results/:sessionId", element: <AnalyticsDrillResultsPage /> },
-          { path: "analytics/review/:questionTypeId", element: <AnalyticsQuestionTypeReviewPage /> },
-          { path: "analytics/sections", element: <AnalyticsSectionsPage /> },
-          { path: "analytics/preptests", element: <AnalyticsPrepTestsPage /> },
-          { path: "analytics/preptests/results/:testId", element: <AnalyticsPrepTestResultsPage /> },
+          {
+            path: "practice/blind-review",
+            element: (
+              <LazyPage>
+                <PracticeBlindReviewPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "practice/blind-review/:testId",
+            element: (
+              <LazyPage>
+                <PracticeBlindReviewPrepTestPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "analytics",
+            element: (
+              <LazyPage>
+                <AnalyticsPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "analytics/drills",
+            element: (
+              <LazyPage>
+                <AnalyticsDrillsPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "analytics/drills/results/:sessionId",
+            element: (
+              <LazyPage>
+                <AnalyticsDrillResultsPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "analytics/review/:questionTypeId",
+            element: (
+              <LazyPage>
+                <AnalyticsQuestionTypeReviewPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "analytics/sections",
+            element: (
+              <LazyPage>
+                <AnalyticsSectionsPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "analytics/preptests",
+            element: (
+              <LazyPage>
+                <AnalyticsPrepTestsPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "analytics/preptests/results/:testId",
+            element: (
+              <LazyPage>
+                <AnalyticsPrepTestResultsPage />
+              </LazyPage>
+            ),
+          },
         ],
       },
     ],
@@ -591,26 +1052,104 @@ const router = createBrowserRouter([
     children: [
       {
         path: "preptests/:prepTestId/sections/:sectionId/questions/:questionId/record",
-        element: <AdminQuestionVideoRecordPage />,
+        element: (
+          <LazyPage>
+            <AdminQuestionVideoRecordPage />
+          </LazyPage>
+        ),
       },
       {
         element: <AdminShell />,
         children: [
           { index: true, element: <Navigate to="/admin/dashboard" replace /> },
-          { path: "dashboard", element: <AdminDashboardPage /> },
-          { path: "taxonomy", element: <AdminTaxonomyPage /> },
-          { path: "preptests", element: <AdminPrepTestsPage /> },
-          { path: "preptests/:prepTestId", element: <AdminPrepTestDetailPage /> },
+          {
+            path: "dashboard",
+            element: (
+              <LazyPage>
+                <AdminDashboardPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "taxonomy",
+            element: (
+              <LazyPage>
+                <AdminTaxonomyPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "preptests",
+            element: (
+              <LazyPage>
+                <AdminPrepTestsPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "preptests/:prepTestId",
+            element: (
+              <LazyPage>
+                <AdminPrepTestDetailPage />
+              </LazyPage>
+            ),
+          },
           {
             path: "preptests/:prepTestId/sections/:sectionId/questions/:questionId",
-            element: <AdminQuestionEditorPage />,
+            element: (
+              <LazyPage>
+                <AdminQuestionEditorPage />
+              </LazyPage>
+            ),
           },
-          { path: "courses", element: <AdminCoursesPage /> },
-          { path: "you-try", element: <AdminYouTryPage /> },
-          { path: "config", element: <AdminConfigPage /> },
-          { path: "score-tables", element: <AdminScoreTablesPage /> },
-          { path: "users", element: <AdminUsersPage /> },
-          { path: "users/:userId", element: <AdminUserDetailPage /> },
+          {
+            path: "courses",
+            element: (
+              <LazyPage>
+                <AdminCoursesPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "you-try",
+            element: (
+              <LazyPage>
+                <AdminYouTryPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "config",
+            element: (
+              <LazyPage>
+                <AdminConfigPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "score-tables",
+            element: (
+              <LazyPage>
+                <AdminScoreTablesPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "users",
+            element: (
+              <LazyPage>
+                <AdminUsersPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "users/:userId",
+            element: (
+              <LazyPage>
+                <AdminUserDetailPage />
+              </LazyPage>
+            ),
+          },
         ],
       },
     ],

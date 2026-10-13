@@ -14,6 +14,10 @@ import { StudentPageLoader } from "@/features/student/components/student-page-lo
 import { StudentMain } from "@/features/student/components/student-main"
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
 import {
+  cacheExplanationPrepTestList,
+  getCachedExplanationPrepTestList,
+} from "@/features/student/explanation-detail/explanation-list-cache"
+import {
   cacheExplanationPrepTestTree,
   getCachedExplanationPrepTestTree,
 } from "@/features/student/explanation-detail/explanation-tree-cache"
@@ -86,14 +90,56 @@ function prepTestStatusTag(status: ExplanationQuestionStatus): string {
   }
 }
 
-function StatusStat({ dot, count, label }: { dot: string; count: number; label: string }) {
+function ExplanationsSkeletonBlock({ className }: { className?: string }) {
+  return <div className={cn("animate-pulse rounded-xl bg-[var(--greyscale-100)]", className)} />
+}
+
+function StatusStat({
+  dot,
+  count,
+  label,
+  loading = false,
+}: {
+  dot: string
+  count: number
+  label: string
+  loading?: boolean
+}) {
   return (
     <div className="flex items-center gap-2">
       <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: dot }} aria-hidden />
-      <span className="text-sm leading-[1.5] tracking-[0.28px] tabular-nums text-[var(--color-student-heading)]">
-        <span className="font-semibold">{count}</span>
-        <span className="font-normal"> {label}</span>
-      </span>
+      {loading ? (
+        <span className="flex items-center gap-2" aria-hidden>
+          <ExplanationsSkeletonBlock className="h-4 w-8 rounded-md" />
+          <span className="text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
+            {label}
+          </span>
+        </span>
+      ) : (
+        <span className="text-sm leading-[1.5] tracking-[0.28px] tabular-nums text-[var(--color-student-heading)]">
+          <span className="font-semibold">{count}</span>
+          <span className="font-normal"> {label}</span>
+        </span>
+      )}
+    </div>
+  )
+}
+
+function ExplanationsListRowSkeleton() {
+  return (
+    <div
+      className={cn(PREP_TEST_ROW_CLASS, EXPLANATION_TREE_PL_CLASS.prepTest, "pointer-events-none hover:bg-[var(--greyscale-0)]")}
+      style={{ borderColor: S.border }}
+      aria-hidden
+    >
+      <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
+        <ExplanationsSkeletonBlock className="size-16 shrink-0 rounded-[14px]" />
+        <div className="flex min-w-0 flex-col items-start justify-center gap-2 overflow-hidden">
+          <ExplanationsSkeletonBlock className="h-5 w-28" />
+          <ExplanationsSkeletonBlock className="h-3.5 w-40" />
+        </div>
+      </div>
+      <ExplanationsSkeletonBlock className="size-5 shrink-0 rounded-md" />
     </div>
   )
 }
@@ -458,6 +504,9 @@ function ExplanationsPage() {
   const [totalPrepTests, setTotalPrepTests] = useState(0)
   const [prepTestRows, setPrepTestRows] = useState<PrepTestRow[]>([])
   const [listLoading, setListLoading] = useState(true)
+  const [statusCountsLoading, setStatusCountsLoading] = useState(true)
+  const [rowDetailsLoading, setRowDetailsLoading] = useState(true)
+  const [hydratingRowIds, setHydratingRowIds] = useState(() => new Set<string>())
   const [loadingMore, setLoadingMore] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
   const [useMock, setUseMock] = useState(false)
@@ -566,6 +615,8 @@ function ExplanationsPage() {
         }
         setTreeVersion((v) => v + 1)
         setStatusCounts(countByStatus(mockExplanationPrepTests))
+        setStatusCountsLoading(false)
+        setRowDetailsLoading(false)
       } else {
         setListError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
       }
@@ -575,23 +626,72 @@ function ExplanationsPage() {
     }
 
     let alive = true
-    setListLoading(true)
     setLoadingMore(false)
     setListError(null)
-    setPrepTestRows([])
-    void explanationsApi
+    const cacheKey = { sort, bookmarkedOnly }
+    const cached = getCachedExplanationPrepTestList(cacheKey)
+    if (cached) {
+      setPrepTestRows(cached.prepTests.map(mapListItemToRow))
+      setTotalPrepTests(cached.total)
+      setStatusCounts(cached.statusCounts)
+      setListLoading(false)
+      setStatusCountsLoading(false)
+      setRowDetailsLoading(false)
+    } else {
+      setListLoading(true)
+      setStatusCountsLoading(true)
+      setRowDetailsLoading(true)
+    }
+    const slimPromise = explanationsApi.listPrepTests({
+      page: 1,
+      pageSize: INITIAL_PAGE_SIZE,
+      offset: 0,
+      sort,
+      bookmarkedOnly,
+      includeStatusCounts: false,
+      includeDetails: false,
+    })
+    const countsPromise = explanationsApi.getStatusCounts().catch(() => null)
+    const detailsPromise = explanationsApi
       .listPrepTests({
         page: 1,
         pageSize: INITIAL_PAGE_SIZE,
         offset: 0,
         sort,
         bookmarkedOnly,
+        includeStatusCounts: false,
+        includeDetails: true,
       })
-      .then((result) => {
+      .catch(() => null)
+
+    void slimPromise
+      .then(async (result) => {
         if (!alive) return
         setPrepTestRows(result.prepTests.map(mapListItemToRow))
         setTotalPrepTests(result.total)
-        setStatusCounts(result.statusCounts)
+        setListLoading(false)
+        setRowDetailsLoading(true)
+
+        const [statusCountsResult, detailed] = await Promise.all([countsPromise, detailsPromise])
+        if (!alive) return
+        const nextCounts = statusCountsResult ?? cached?.statusCounts ?? result.statusCounts
+        if (statusCountsResult || cached?.statusCounts) {
+          setStatusCounts(nextCounts)
+          setStatusCountsLoading(false)
+        } else {
+          setStatusCountsLoading(false)
+        }
+        const nextRows = detailed?.prepTests ?? result.prepTests
+        if (detailed?.prepTests) {
+          setPrepTestRows(detailed.prepTests.map(mapListItemToRow))
+          setTotalPrepTests(detailed.total)
+        }
+        setRowDetailsLoading(false)
+        cacheExplanationPrepTestList(cacheKey, {
+          prepTests: nextRows,
+          total: detailed?.total ?? result.total,
+          statusCounts: nextCounts,
+        })
       })
       .catch(async (e) => {
         if (!alive) return
@@ -602,24 +702,51 @@ function ExplanationsPage() {
               pageSize: INITIAL_PAGE_SIZE,
               offset: 0,
               sort,
+              includeStatusCounts: false,
+              includeDetails: false,
             })
             if (!alive) return
             setPrepTestRows(fallback.prepTests.map(mapListItemToRow))
             setTotalPrepTests(fallback.total)
-            setStatusCounts(fallback.statusCounts)
+            setListLoading(false)
+            setRowDetailsLoading(false)
+            const nextCounts =
+              (await countsPromise) ?? cached?.statusCounts ?? fallback.statusCounts
+            setStatusCounts(nextCounts)
+            setStatusCountsLoading(false)
+            cacheExplanationPrepTestList(
+              { sort, bookmarkedOnly: false },
+              {
+                prepTests: fallback.prepTests,
+                total: fallback.total,
+                statusCounts: nextCounts,
+              },
+            )
             return
           } catch {
             /* Use the original list error below. */
           }
         }
-        setPrepTestRows([])
-        setTotalPrepTests(0)
-        setStatusCounts(EMPTY_STATUS_COUNTS)
+        if (!cached) {
+          setPrepTestRows([])
+          setTotalPrepTests(0)
+          setStatusCounts(EMPTY_STATUS_COUNTS)
+        }
+        setStatusCountsLoading(false)
+        setRowDetailsLoading(false)
         setListError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to load explanations")
       })
       .finally(() => {
         if (alive) setListLoading(false)
       })
+
+    // Unblur chips as soon as counts resolve, even if details are still in flight.
+    void countsPromise.then((counts) => {
+      if (!alive || !counts) return
+      setStatusCounts(counts)
+      setStatusCountsLoading(false)
+    })
+
     return () => {
       alive = false
     }
@@ -651,20 +778,57 @@ function ExplanationsPage() {
     setLoadingMore(true)
     setListError(null)
     try {
-      const result = await explanationsApi.listPrepTests({
+      const slim = await explanationsApi.listPrepTests({
         offset,
         pageSize: SEE_MORE_PAGE_SIZE,
         sort,
         bookmarkedOnly,
+        includeStatusCounts: false,
+        includeDetails: false,
       })
-      const rows = result.prepTests.map(mapListItemToRow)
+      const slimRows = slim.prepTests.map(mapListItemToRow)
+      const appendedIds = slimRows.map((row) => row.id)
+      setHydratingRowIds((prev) => {
+        const next = new Set(prev)
+        for (const id of appendedIds) next.add(id)
+        return next
+      })
       setPrepTestRows((prev) => {
         const seen = new Set(prev.map((row) => row.id))
-        const appended = rows.filter((row) => !seen.has(row.id))
+        const appended = slimRows.filter((row) => !seen.has(row.id))
         return [...prev, ...appended]
       })
-      setTotalPrepTests(result.total)
-      setStatusCounts(result.statusCounts)
+      setTotalPrepTests(slim.total)
+      void explanationsApi
+        .listPrepTests({
+          offset,
+          pageSize: SEE_MORE_PAGE_SIZE,
+          sort,
+          bookmarkedOnly,
+          includeStatusCounts: false,
+          includeDetails: true,
+        })
+        .then((detailed) => {
+          const detailedById = new Map(detailed.prepTests.map((row) => [row.id, mapListItemToRow(row)]))
+          setPrepTestRows((prev) =>
+            prev.map((row) => {
+              const next = detailedById.get(row.id)
+              return next ?? row
+            }),
+          )
+          setHydratingRowIds((prev) => {
+            const next = new Set(prev)
+            for (const id of appendedIds) next.delete(id)
+            return next
+          })
+        })
+        .catch(() => {
+          setHydratingRowIds((prev) => {
+            const next = new Set(prev)
+            for (const id of appendedIds) next.delete(id)
+            return next
+          })
+        })
     } catch (e) {
       setListError(e instanceof Error ? formatSupabaseCallError(e) : "Failed to load more PrepTests")
     } finally {
@@ -808,9 +972,15 @@ function ExplanationsPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <h2 className="m-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">LSAT Question Explanations</h2>
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2" aria-busy={statusCountsLoading || undefined}>
               {statusStats.map((s) => (
-                <StatusStat key={s.label} dot={s.dot} count={s.count} label={s.label} />
+                <StatusStat
+                  key={s.label}
+                  dot={s.dot}
+                  count={s.count}
+                  label={s.label}
+                  loading={!useMock && statusCountsLoading}
+                />
               ))}
             </div>
           </div>
@@ -832,7 +1002,16 @@ function ExplanationsPage() {
       {listError ? <p className="text-sm text-[#95122b]">{listError}</p> : null}
 
       {listLoading ? (
-        <StudentPageLoader centered className="min-h-0 flex-1" label="Loading PrepTests…" />
+        <div
+          className="flex flex-col overflow-hidden border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
+          style={{ borderRadius: S.prepTestCardRadius }}
+          aria-busy="true"
+          aria-label="Loading PrepTests"
+        >
+          {Array.from({ length: INITIAL_PAGE_SIZE }, (_, index) => (
+            <ExplanationsListRowSkeleton key={`skeleton-${index}`} />
+          ))}
+        </div>
       ) : displayRows.length === 0 ? (
         <p className="max-w-xl text-sm text-[var(--greyscale-500)]">
           {bookmarkedOnly
@@ -860,6 +1039,8 @@ function ExplanationsPage() {
           const ptStatus = derivePrepTestStatus(ptTree)
           const ptBadgeColors = prepTestBadgeColors(ptStatus)
           const statusTag = ptTree ? prepTestStatusTag(ptStatus) : row.rowSubtitle
+          const subtitleLoading =
+            !useMock && !ptTree && (rowDetailsLoading || hydratingRowIds.has(ptId))
 
           return (
             <div key={ptId} className="explanations-tree-pt" data-tree-level="prep-test">
@@ -886,9 +1067,13 @@ function ExplanationsPage() {
                     <span className="text-[20px] font-bold leading-[1.35] whitespace-nowrap text-[var(--color-student-heading)]">
                       PT - {ptNum}
                     </span>
-                    <span className="truncate text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
-                      {statusTag}
-                    </span>
+                    {subtitleLoading ? (
+                      <ExplanationsSkeletonBlock className="h-3.5 w-36" />
+                    ) : (
+                      <span className="truncate text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
+                        {statusTag}
+                      </span>
+                    )}
                   </div>
                   {isLoadingTree ? <StudentPageLoader size="sm" /> : null}
                   {ptIsOpen ? (

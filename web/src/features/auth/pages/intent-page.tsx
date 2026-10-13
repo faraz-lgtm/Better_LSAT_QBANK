@@ -51,6 +51,11 @@ const TIER_LABELS: Record<DiagnosticIntentTier, string> = {
   full: "Full",
 }
 
+const INTENT_PAGE_DISCLAIMER = [
+  "BetterLSAT is an independent test-preparation company and is not affiliated with or endorsed by LSAC. Official LSAT® content is used under licence and is available only to students with an active subscription. All BetterLSAT practice questions, including our free diagnostics, are original works written by our instructors — they are not LSAT questions and are not derived from LSAT content.",
+  "All actual LSAT® content reproduced within this work is used with the permission of Law School Admission Council, Inc., the copyright owner. LSAC does not review or endorse specific test-preparation materials, companies, or services, and inclusion of Licensor Content within this work does not imply the review or endorsement of LSAC. LSAT (including variations) and LSAC are registered trademarks of LSAC.",
+] as const
+
 function intentNavigationState(tier: DiagnosticIntentTier) {
   return { from: "intent" as const, intent: tier }
 }
@@ -151,6 +156,12 @@ function IntentPageContent({ isAuthenticated = false, showUpgradeCta = true }: I
                 </Link>
               </p>
             ) : null}
+          </div>
+
+          <div className="intent-page__disclaimer">
+            {INTENT_PAGE_DISCLAIMER.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
           </div>
         </AuthCard>
       </div>

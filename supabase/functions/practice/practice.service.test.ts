@@ -109,6 +109,15 @@ function mockRepo() {
         percentile: (patch.percentile as number | null) ?? null,
       }),
     getScoreRowForRaw: async () => ({ scaled_score: 170, percentile: 90 }),
+    listScoreRowsForRaw: async (
+      pairs: Array<{ prepTestId: string; rawScore: number }>,
+    ) => {
+      const out = new Map<string, { scaled_score: number | null; percentile: number | null } | null>()
+      for (const pair of pairs) {
+        out.set(`${pair.prepTestId}:${pair.rawScore}`, { scaled_score: 170, percentile: 90 })
+      }
+      return out
+    },
   }
 }
 
@@ -1354,6 +1363,54 @@ Deno.test('startSection creates session with all section questions', async () =>
   assertEquals(out.section.sectionType, 'LR')
 })
 
+Deno.test('getSectionSession can skip question HTML for intro shell', async () => {
+  let questionLoads = 0
+  const service = createPracticeService({
+    repository: {
+      ...mockRepo(),
+      getSessionById: async () =>
+        baseSession({
+          id: 'sess-1',
+          kind: 'SECTION',
+          section_id: 'sec-1',
+          metadata: {
+            sectionType: 'RC',
+            timing: '35',
+            showAnswers: 'end',
+            questionIds: ['q1', 'q2'],
+            prepTestTitle: 'PT 159',
+            sectionTitle: 'Section 2',
+          },
+        }),
+      getSectionDetail: async () => ({
+        id: 'sec-1',
+        section_id: 'SEED-RC',
+        section_number: 2,
+        section_type: 'RC',
+        title: 'RC',
+        module_id: 'LSAC159',
+        prep_test_id: 'pt-159',
+        admin_prep_tests: { id: 'pt-159', title: 'PT 159', module_id: 'LSAC159' },
+      }),
+      getDrillQuestionRowsByIds: async () => {
+        questionLoads += 1
+        return []
+      },
+      listAnswerEventsForSession: async () => [],
+    } as never,
+  })
+
+  const out = await service.getSectionSession('user-1', {
+    sessionId: 'sess-1',
+    includeQuestions: false,
+  })
+  assertEquals(questionLoads, 0)
+  assertEquals(out.questions.length, 0)
+  assertEquals(out.section.sectionNumber, 2)
+  assertEquals(out.section.questionCount, 2)
+  assertEquals(out.metadata.sectionType, 'RC')
+})
+
 Deno.test('getSectionSession returns questions and resume answers', async () => {
   const service = createPracticeService({
     repository: sectionRepo({
@@ -1523,10 +1580,12 @@ const prepTestDetailRow: PrepTestDetailRow = {
 }
 
 function preptestRepo(overrides: Record<string, unknown> = {}) {
-  return {
+  const base = {
     ...mockRepo(),
+    listStudentPrepTestPoolPage: async () => null,
     listPrepTestPoolRows: async () => prepTestPoolRows,
     getPrepTestDetailRow: async (id: string) => (id === 'pt-900' ? prepTestDetailRow : null),
+    getPrepTestHubDetail: async () => null,
     listUserSessionsForPrepTest: async () => [] as PracticeSessionRow[],
     listUserSessionsForPrepTests: async () => [] as PracticeSessionRow[],
     insertSession: async (input: { kind: string; prepTestId: string | null; metadata: Record<string, unknown> }) =>
@@ -1537,6 +1596,23 @@ function preptestRepo(overrides: Record<string, unknown> = {}) {
       }),
     ...overrides,
   }
+  if (overrides.listScoreRowsForRaw === undefined) {
+    const getScore =
+      (overrides.getScoreRowForRaw as
+        | ((prepTestId: string, rawScore: number) => Promise<{
+            scaled_score: number | null
+            percentile: number | null
+          } | null>)
+        | undefined) ?? base.getScoreRowForRaw
+    base.listScoreRowsForRaw = async (pairs: Array<{ prepTestId: string; rawScore: number }>) => {
+      const out = new Map<string, { scaled_score: number | null; percentile: number | null } | null>()
+      for (const pair of pairs) {
+        out.set(`${pair.prepTestId}:${pair.rawScore}`, await getScore(pair.prepTestId, pair.rawScore))
+      }
+      return out
+    }
+  }
+  return base
 }
 
 Deno.test('listPrepTestPool returns practiceable prep tests with fresh status', async () => {
@@ -1979,6 +2055,54 @@ Deno.test('getPrepTestDetail returns LR/RC sections only as practiceable', async
   assertEquals(out.prepTest.label, 'PT 900')
 })
 
+Deno.test('getPrepTestDetail uses hub RPC payload when available', async () => {
+  let hubLoads = 0
+  const service = createPracticeService({
+    repository: preptestRepo({
+      getPrepTestHubDetail: async (userId: string, prepTestId: string) => {
+        hubLoads += 1
+        assertEquals(userId, 'user-1')
+        assertEquals(prepTestId, 'pt-900')
+        return {
+          row: prepTestDetailRow,
+          sessions: [
+            baseSession({
+              kind: 'SECTION',
+              prep_test_id: 'pt-900',
+              section_id: 'sec-lr',
+              completed_at: null,
+              metadata: { answeredCount: 12 },
+            }),
+          ],
+        }
+      },
+      getPrepTestDetailRow: async () => {
+        throw new Error('should not fall back when hub RPC hits')
+      },
+      listUserSessionsForPrepTest: async () => {
+        throw new Error('should not fall back when hub RPC hits')
+      },
+    }) as never,
+  })
+
+  const out = await service.getPrepTestDetail('user-1', { prepTestId: 'pt-900' })
+  assertEquals(hubLoads, 1)
+  assertEquals(out.prepTest.id, 'pt-900')
+  const lr = out.sections.find((s) => s.id === 'sec-lr')
+  assertEquals(lr?.answeredCount, 12)
+  assertEquals(lr?.activeSectionSessionId != null, true)
+})
+
+Deno.test('getPrepTestDetail falls back when hub RPC returns null', async () => {
+  const service = createPracticeService({
+    repository: preptestRepo({
+      getPrepTestHubDetail: async () => null,
+    }) as never,
+  })
+  const out = await service.getPrepTestDetail('user-1', { prepTestId: 'pt-900' })
+  assertEquals(out.prepTest.id, 'pt-900')
+})
+
 Deno.test('getPrepTestDetail resolves a PrepTest practice session id', async () => {
   const service = createPracticeService({
     repository: preptestRepo({
@@ -2158,17 +2282,14 @@ Deno.test('listBlindReviewPool returns completed prep tests eligible for blind r
   const service = createPracticeService({
     repository: preptestRepo({
       listPrepTestPoolRows: async () => [prepTestPoolRows[0]!],
-      listUserSessionsForPrepTest: async (_uid: string, prepTestId: string) =>
-        prepTestId === 'pt-900'
-          ? [
-              baseSession({
-                kind: 'PREPTEST',
-                prep_test_id: 'pt-900',
-                completed_at: '2026-01-03T00:00:00Z',
-                scaled_score: 160,
-              }),
-            ]
-          : [],
+      listUserSessionsForPrepTests: async () => [
+        baseSession({
+          kind: 'PREPTEST',
+          prep_test_id: 'pt-900',
+          completed_at: '2026-01-03T00:00:00Z',
+          scaled_score: 160,
+        }),
+      ],
     }) as never,
   })
   const out = await service.listBlindReviewPool('user-1', {})
@@ -2307,7 +2428,7 @@ Deno.test('getBlindReviewDetail works after blind review was skipped (post-resul
     }) as never,
   })
   const out = await service.getBlindReviewDetail('user-1', { prepTestId: 'pt-900' })
-  assertEquals(out.blindReview.status, 'completed')
+  assertEquals(out.blindReview.status, 'eligible')
   assertEquals(out.blindReview.prepTestSessionId, 'pt-sess-skipped')
   const lr = out.sections.find((s) => s.id === 'sec-lr')
   assertEquals(lr?.sectionSessionId, 'sec-sess-lr')

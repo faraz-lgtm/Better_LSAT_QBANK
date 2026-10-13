@@ -10,6 +10,7 @@ import {
 import { GuestDiagnosticResultsView } from '@/features/guest/diagnostic/guest-diagnostic-results-view'
 import { isGuestDiagnosticIntentId } from '@/features/guest/diagnostic/guest-diagnostic-test-config'
 import { useDiagnosticSubscription } from '@/features/guest/diagnostic/use-diagnostic-subscription'
+import { useTrackCheckoutPurchase } from '@/lib/analytics/track-checkout-purchase'
 import { readDiagnosticIntent } from '@/lib/auth/diagnostic-intent'
 import {
   CalculatingScoreLoader,
@@ -55,6 +56,7 @@ function markDiagnosticResultsSeen(intentId: string, completedAt: string): void 
 function GuestDiagnosticResultsPage({ preview = false, section }: GuestDiagnosticResultsPageProps) {
   const { attemptId } = useParams<{ attemptId: string }>()
   const [searchParams] = useSearchParams()
+  useTrackCheckoutPurchase()
   const { refresh } = useDiagnosticSubscription()
   const checkoutSuccess = searchParams.get('checkout') === 'success'
   const returningFromReview =

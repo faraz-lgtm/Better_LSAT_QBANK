@@ -5,6 +5,7 @@ import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
+import { useTrackCheckoutPurchase } from "@/lib/analytics/track-checkout-purchase"
 import { createUsersApi } from "@/lib/api/users"
 import { formatEdgeFunctionError } from "@/lib/supabase/format-call-error"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -22,6 +23,7 @@ function splitFullName(fullName: string | null | undefined): { firstName: string
 
 function DashboardAccessSetupCard() {
   const [searchParams, setSearchParams] = useSearchParams()
+  useTrackCheckoutPurchase()
   const { openPricingModal } = useGuestPricingModal()
   const checkoutSuccess = searchParams.get("checkout") === "success"
   const {
@@ -90,6 +92,7 @@ function DashboardAccessSetupCard() {
     if (next?.isLsacEligible && checkoutSuccess) {
       const nextParams = new URLSearchParams(searchParams)
       nextParams.delete("checkout")
+      nextParams.delete("session_id")
       setSearchParams(nextParams, { replace: true })
     }
     return next

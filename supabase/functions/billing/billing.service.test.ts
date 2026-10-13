@@ -89,7 +89,7 @@ Deno.test('billing service createCheckoutSession creates customer and returns ur
             assertEquals(params.mode, 'subscription')
             assertEquals(
               params.success_url,
-              'http://localhost:5173/onboarding?checkout=success',
+              'http://localhost:5173/onboarding?checkout=success&session_id={CHECKOUT_SESSION_ID}',
             )
             assertEquals(
               params.cancel_url,
@@ -140,7 +140,7 @@ Deno.test('billing service createCheckoutSession accepts custom successPath', as
           create: async (params: Record<string, unknown>) => {
             assertEquals(
               params.success_url,
-              'http://localhost:5173/app/diagnostic/results?checkout=success',
+              'http://localhost:5173/app/diagnostic/results?checkout=success&session_id={CHECKOUT_SESSION_ID}',
             )
             return { url: 'https://checkout.stripe.test/diagnostic' }
           },

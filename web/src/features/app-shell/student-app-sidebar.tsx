@@ -20,7 +20,7 @@ import {
 } from "@/features/app-shell/student-nav-config"
 import { useStudentEntitlementOptional, isLsacLockedNavItem } from "@/features/app-shell/student-entitlement-context"
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
-import { shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
+import { PREPTEST_LIST_HREF, shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
 import { PREP_COURSE_ESSENTIALS_SLUG, PREP_COURSE_NAV_ITEMS } from "@/features/prep-course/lib/prep-course-nav"
 import {
   DIAGNOSTIC_EXPLANATIONS_HREF,
@@ -29,6 +29,9 @@ import {
 import { DiagnosticResultsNavItem } from "@/features/student/diagnostic/diagnostic-results-nav-item"
 import { cn } from "@/lib/utils"
 import { resetUser } from "@/lib/analytics/posthog"
+import { prefetchExplanationList } from "@/features/student/explanation-detail/prefetch-explanation-list"
+import { prefetchPrepTestPool } from "@/features/student/preptests/prefetch-prep-test-pool"
+import { clearStudentSessionCaches } from "@/lib/auth/clear-student-session-caches"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const PREP_COURSE_HREF = "/app/prep-course"
@@ -215,6 +218,7 @@ function StudentAppSidebar({
   async function handleLogout() {
     const supabase = getSupabaseBrowserClient()
     await supabase.auth.signOut()
+    clearStudentSessionCaches()
     resetUser()
     navigate("/login", { replace: true })
   }
@@ -368,6 +372,14 @@ function StudentAppSidebar({
                       className={cn("student-sidebar-link", active && "student-sidebar-link--active")}
                       aria-label={item.label}
                       title={item.label}
+                      onPointerEnter={() => {
+                        if (item.href === "/app/learn/explanations") prefetchExplanationList()
+                        if (item.href === PREPTEST_LIST_HREF) prefetchPrepTestPool()
+                      }}
+                      onFocus={() => {
+                        if (item.href === "/app/learn/explanations") prefetchExplanationList()
+                        if (item.href === PREPTEST_LIST_HREF) prefetchPrepTestPool()
+                      }}
                       onClick={(event) => {
                         if (!shouldForceParentNav(pathname, item.href)) return
                         event.preventDefault()

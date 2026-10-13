@@ -1,9 +1,10 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { MemoryRouter } from "react-router-dom"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { PracticePrepTestsListPage } from "@/features/student/pages/practice-preptests-list-page"
+import { clearPrepTestPoolCache } from "@/features/student/preptests/prep-test-pool-cache"
 import type { PrepTestPoolItem, PrepTestPoolSort } from "@/features/student/preptests/preptest-types"
 
 const { listPrepTestPool } = vi.hoisted(() => ({
@@ -71,6 +72,43 @@ function renderPage() {
     </MemoryRouter>,
   )
 }
+
+beforeEach(() => {
+  clearPrepTestPoolCache()
+  listPrepTestPool.mockReset()
+})
+
+describe("PracticePrepTestsListPage loading shell", () => {
+  it("paints the page chrome with skeletons while the pool is loading", async () => {
+    let resolvePool: ((value: unknown) => void) | undefined
+    listPrepTestPool.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolvePool = resolve
+        }),
+    )
+    renderPage()
+
+    expect(screen.getByText(/all official Prep Tests from the Law School Admission Council/i)).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Start your PrepTest" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "All Test" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "In Progress" })).toBeInTheDocument()
+    expect(screen.getByLabelText("Loading PrepTests")).toBeInTheDocument()
+    expect(screen.queryByText("Loading PrepTests…")).not.toBeInTheDocument()
+
+    resolvePool?.({
+      prepTests: newestFirst,
+      total: newestFirst.length,
+      page: 1,
+      pageSize: 5,
+      statusCounts: { all: 2, fresh: 2, in_progress: 0, completed: 0, blind_review: 0 },
+    })
+
+    expect(await screen.findByTestId("preptest-list-row-pt-901")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "In Progress (0)" })).toBeInTheDocument()
+    expect(screen.queryByLabelText("Loading PrepTests")).not.toBeInTheDocument()
+  })
+})
 
 describe("PracticePrepTestsListPage sort", () => {
   it("does not show a PrepTest settings control on the list page", async () => {

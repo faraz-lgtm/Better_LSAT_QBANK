@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 
-import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
 import {
   TimeRangeSegmented,
@@ -16,6 +15,11 @@ import {
   type SectionArchiveSort,
   type SectionTrajectoryTab,
 } from "@/features/student/analytics/components/section-insights-ui"
+import {
+  AnalyticsChartSkeleton,
+  AnalyticsHistorySkeleton,
+  AnalyticsStatsSkeleton,
+} from "@/features/student/analytics/components/analytics-insights-skeletons"
 import {
   buildSectionInsightAttempts,
   buildSectionTrajectoryPoints,
@@ -32,7 +36,10 @@ import {
 } from "@/features/student/analytics/session-bookmarks"
 import { parseAnalyticsSectionParam } from "@/features/student/analytics/section-filter"
 import { useAnalyticsApi, usePracticeApi } from "@/features/student/analytics/hooks/use-analytics-api"
-import type { PracticeSessionSummary } from "@/lib/api/analytics"
+import {
+  peekCachedAnalyticsSessions,
+  type PracticeSessionSummary,
+} from "@/lib/api/analytics"
 
 function resolveActiveKind(param: string | null): SectionInsightKind {
   const parsed = parseAnalyticsSectionParam(param)
@@ -45,22 +52,36 @@ function AnalyticsSectionsPage() {
   const practiceApi = usePracticeApi()
   const [searchParams, setSearchParams] = useSearchParams()
   const activeKind = resolveActiveKind(searchParams.get("section"))
-  const [loading, setLoading] = useState(true)
-  const [sectionSessions, setSectionSessions] = useState<PracticeSessionSummary[]>([])
+  const [seededSessions] = useState(
+    () => peekCachedAnalyticsSessions("SECTION", { completedOnly: true }) ?? [],
+  )
+  const [ready, setReady] = useState(() => seededSessions.length > 0)
+  const [sectionSessions, setSectionSessions] =
+    useState<PracticeSessionSummary[]>(seededSessions)
   const [timeRange, setTimeRange] = useState<TimeRangeValue>("all")
   const [trajectoryTab, setTrajectoryTab] = useState<SectionTrajectoryTab>("correct")
   const [archiveSort, setArchiveSort] = useState<SectionArchiveSort>("recent")
 
   useEffect(() => {
     if (!analyticsApi) {
-      setLoading(false)
+      setReady(true)
       return
     }
-    setLoading(true)
+    let cancelled = false
     void analyticsApi
-      .getSessions({ kind: "SECTION", completedOnly: true, limit: 500 })
-      .then((sections) => setSectionSessions(sections.sessions))
-      .finally(() => setLoading(false))
+      .getSessions({ kind: "SECTION", completedOnly: true, limit: 500, skipCount: true })
+      .then((sections) => {
+        if (!cancelled) {
+          setSectionSessions(sections.sessions)
+          setReady(true)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setReady(true)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [analyticsApi])
 
   const handleSelectKind = useCallback(
@@ -118,14 +139,6 @@ function AnalyticsSectionsPage() {
     [navigate],
   )
 
-  if (loading) {
-    return (
-      <StudentMain contentClassName="flex min-h-0 flex-1 flex-col">
-        <StudentPageLoader centered className="min-h-0 flex-1" label="Loading section analytics…" />
-      </StudentMain>
-    )
-  }
-
   return (
     <StudentMain>
       <div className="flex flex-col gap-6">
@@ -143,29 +156,38 @@ function AnalyticsSectionsPage() {
           onChange={handleSelectKind}
         />
 
-        {stats ? (
+        {!ready && sectionSessions.length === 0 ? (
           <>
-            <SectionInsightStatsRow stats={stats} kind={activeKind} />
-            <SectionTrajectoryPanel
-              kind={activeKind}
-              points={trajectoryPoints}
-              tab={trajectoryTab}
-              onTabChange={setTrajectoryTab}
-            />
+            <AnalyticsStatsSkeleton headlineCount={0} secondaryCount={4} label="Loading section stats" />
+            <AnalyticsChartSkeleton label="Loading section chart" />
+            <AnalyticsHistorySkeleton label="Loading section history" />
           </>
         ) : (
-          <p className="rounded-2xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-8 text-center text-sm text-[var(--greyscale-500)]">
-            No {activeKind} sections recorded in this range. Try widening the time range.
-          </p>
+          <>
+            {stats ? (
+              <>
+                <SectionInsightStatsRow stats={stats} kind={activeKind} />
+                <SectionTrajectoryPanel
+                  kind={activeKind}
+                  points={trajectoryPoints}
+                  tab={trajectoryTab}
+                  onTabChange={setTrajectoryTab}
+                />
+              </>
+            ) : (
+              <p className="rounded-2xl border border-dashed border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-8 text-center text-sm text-[var(--greyscale-500)]">
+                No {activeKind} sections recorded in this range. Try widening the time range.
+              </p>
+            )}
+            <SectionAttemptArchive
+              attempts={archiveAttempts}
+              sort={archiveSort}
+              onSortChange={setArchiveSort}
+              onSelect={handleSelectAttempt}
+              onToggleBookmark={handleToggleBookmark}
+            />
+          </>
         )}
-
-        <SectionAttemptArchive
-          attempts={archiveAttempts}
-          sort={archiveSort}
-          onSortChange={setArchiveSort}
-          onSelect={handleSelectAttempt}
-          onToggleBookmark={handleToggleBookmark}
-        />
       </div>
     </StudentMain>
   )
