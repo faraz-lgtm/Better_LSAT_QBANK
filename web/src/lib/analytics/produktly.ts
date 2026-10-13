@@ -21,9 +21,20 @@ declare global {
   }
 }
 
+/** Last identified user — duplicate identify aborts in-flight fetchAll. */
+let lastIdentifiedUserId: string | null = null
+
 function getProduktly(): ProduktlyApi | undefined {
   if (typeof window === "undefined") return undefined
   return window.Produktly
+}
+
+/**
+ * Defer widget fetch until identifyUser runs (logged-in SPAs).
+ * Safe to call multiple times; prefer also setting data-wait-for-user on the script tag.
+ */
+export function configureProduktlyWaitForUser(): void {
+  getProduktly()?.configure({ waitForUser: true })
 }
 
 /** Identify the logged-in user for targeting and progress persistence. */
@@ -32,10 +43,14 @@ export function identifyProduktlyUser(
   metadata?: ProduktlyUserMetadata,
 ): void {
   if (!userId) return
+  // Same user again (auth TOKEN_REFRESHED / Strict Mode) — skip to avoid aborting fetchAll.
+  if (lastIdentifiedUserId === userId) return
+  lastIdentifiedUserId = userId
   getProduktly()?.identifyUser(userId, metadata)
 }
 
 /** Clear identity on logout so subsequent activity is anonymous. */
 export function clearProduktlyUser(): void {
+  lastIdentifiedUserId = null
   getProduktly()?.clearCurrentUser()
 }

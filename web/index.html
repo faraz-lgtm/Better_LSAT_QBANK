@@ -47,6 +47,8 @@
         s.setAttribute("id", "produktlyScript")
         s.dataset.clientToken =
           "9e08adbf824344632c7fca853141ab11c29d3db8a720e9265f66cbc392db9c7ec3988e5ae51389b4fcce54341094c52c909558271bb189dcc6d64dec12e590e6"
+        // Wait for identifyUser before fetching widgets (logged-in SPA).
+        s.dataset.waitForUser = "true"
         a.appendChild(s)
       })(window, document, "https://public.produktly.com/js/main.js")
     </script>
