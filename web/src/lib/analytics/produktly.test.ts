@@ -1,26 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import {
-  clearProduktlyUser,
-  configureProduktlyWaitForUser,
-  identifyProduktlyUser,
-} from "./produktly"
+import { clearProduktlyUser, identifyProduktlyUser } from "./produktly"
 
 describe("produktly helpers", () => {
   const identifyUser = vi.fn()
   const clearCurrentUser = vi.fn()
-  const configure = vi.fn()
 
   beforeEach(() => {
     identifyUser.mockReset()
     clearCurrentUser.mockReset()
-    configure.mockReset()
     clearProduktlyUser()
     clearCurrentUser.mockReset()
     window.Produktly = {
       identifyUser,
       clearCurrentUser,
-      configure,
+      configure: vi.fn(),
     }
   })
 
@@ -63,15 +57,9 @@ describe("produktly helpers", () => {
     expect(clearCurrentUser).toHaveBeenCalledTimes(1)
   })
 
-  it("configureProduktlyWaitForUser sets waitForUser", () => {
-    configureProduktlyWaitForUser()
-    expect(configure).toHaveBeenCalledWith({ waitForUser: true })
-  })
-
   it("helpers no-op when Produktly is missing", () => {
     delete window.Produktly
     expect(() => identifyProduktlyUser("user-1")).not.toThrow()
     expect(() => clearProduktlyUser()).not.toThrow()
-    expect(() => configureProduktlyWaitForUser()).not.toThrow()
   })
 })

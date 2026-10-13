@@ -29,14 +29,6 @@ function getProduktly(): ProduktlyApi | undefined {
   return window.Produktly
 }
 
-/**
- * Defer widget fetch until identifyUser runs (logged-in SPAs).
- * Safe to call multiple times; prefer also setting data-wait-for-user on the script tag.
- */
-export function configureProduktlyWaitForUser(): void {
-  getProduktly()?.configure({ waitForUser: true })
-}
-
 /** Identify the logged-in user for targeting and progress persistence. */
 export function identifyProduktlyUser(
   userId: string,

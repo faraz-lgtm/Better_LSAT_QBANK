@@ -1,23 +1,20 @@
 import { useEffect } from "react"
 
-import {
-  clearProduktlyUser,
-  configureProduktlyWaitForUser,
-  identifyProduktlyUser,
-} from "@/lib/analytics/produktly"
+import { clearProduktlyUser, identifyProduktlyUser } from "@/lib/analytics/produktly"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 /**
  * Keeps Produktly identity in sync with Supabase auth.
  * Identify on session; clear on sign-out.
- * waitForUser + deduped identify avoid aborting tour fetchAll on repeated auth events.
+ * Deduped identify avoids aborting tour fetchAll on repeated auth events.
+ * waitForUser is set via data-wait-for-user on the script tag (not configure —
+ * configure without token clears the client token and causes 403s).
  */
 export function ProduktlyAuthBridge() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined
 
     try {
-      configureProduktlyWaitForUser()
       const supabase = getSupabaseBrowserClient()
       const {
         data: { subscription },
