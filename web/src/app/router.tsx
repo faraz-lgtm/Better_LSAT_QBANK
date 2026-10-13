@@ -75,6 +75,7 @@ import { AdminUserDetailPage } from "@/features/admin/pages/admin-user-detail-pa
 import { createUsersApi, type UserEntitlement, type UserProfile } from "@/lib/api/users"
 import { readDiagnosticFunnelState } from "@/lib/auth/diagnostic-intent"
 import { shouldAllowAuthenticatedIntentPage } from "@/lib/auth/diagnostic-funnel-redirect"
+import { shouldRedirectAuthenticatedUserToOnboarding } from "@/lib/auth/missing-profile-redirect"
 import {
   parseSignupPlan,
   resolvePendingCheckoutDestination,
@@ -88,11 +89,20 @@ import { allowsPrepTestUnauthenticatedPreview } from "@/lib/dev/prep-test-ui-pre
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
+/**
+ * Defer work started from `onAuthStateChange`. Calling `getSession` / edge invokes
+ * synchronously inside that callback can deadlock the GoTrue client after OAuth.
+ */
+function deferAuthWork(work: () => void) {
+  window.setTimeout(work, 0)
+}
+
 function PublicOnly({ children }: { children: ReactElement }) {
   const location = useLocation()
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [destination, setDestination] = useState<string | null>(null)
+  const [profileChecked, setProfileChecked] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -132,6 +142,7 @@ function PublicOnly({ children }: { children: ReactElement }) {
       if (!hasSession) {
         setProfile(null)
         setDestination(null)
+        setProfileChecked(true)
         return
       }
       try {
@@ -143,6 +154,8 @@ function PublicOnly({ children }: { children: ReactElement }) {
         if (!alive) return
         setProfile(null)
         setDestination(null)
+      } finally {
+        if (alive) setProfileChecked(true)
       }
     }
 
@@ -154,19 +167,27 @@ function PublicOnly({ children }: { children: ReactElement }) {
       if (!hasSession) {
         setProfile(null)
         setDestination(null)
+        setProfileChecked(true)
         return
       }
-      void usersApi
-        .getMyProfile()
-        .then(async (nextProfile) => {
-          if (!alive) return
-          setProfile(nextProfile)
-          await syncDestination(nextProfile)
-        })
-        .catch(() => {
-          // Keep the existing profile on transient refetch failures (e.g. token refresh
-          // after edge function calls). Clearing profile here unmounts the whole app shell.
-        })
+      // Defer: avoid getSession deadlock inside onAuthStateChange (common after Google OAuth).
+      deferAuthWork(() => {
+        void usersApi
+          .getMyProfile()
+          .then(async (nextProfile) => {
+            if (!alive) return
+            // Never wipe a loaded profile with a null background refetch.
+            if (nextProfile) {
+              setProfile(nextProfile)
+              await syncDestination(nextProfile)
+            }
+            setProfileChecked(true)
+          })
+          .catch(() => {
+            // Keep the existing profile on transient refetch failures (e.g. token refresh
+            // after edge function calls). Clearing profile here unmounts the whole app shell.
+          })
+      })
     })
     return () => {
       alive = false
@@ -176,7 +197,11 @@ function PublicOnly({ children }: { children: ReactElement }) {
 
   if (isAuthenticated === null) return null
   if (!isAuthenticated) return children
-  if (!profile || !destination) return null
+  if (!profileChecked) return null
+  if (shouldRedirectAuthenticatedUserToOnboarding(profileChecked, profile)) {
+    return <Navigate to="/onboarding" replace />
+  }
+  if (!destination) return null
   return <Navigate to={destination} replace />
 }
 
@@ -189,6 +214,7 @@ function IntentRouteGuard({
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [entitlement, setEntitlement] = useState<UserEntitlement | null>(null)
   const [destination, setDestination] = useState<PostAuthDestination | null>(null)
+  const [profileChecked, setProfileChecked] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -231,6 +257,7 @@ function IntentRouteGuard({
         setProfile(null)
         setEntitlement(null)
         setDestination(null)
+        setProfileChecked(true)
         return
       }
       try {
@@ -243,6 +270,8 @@ function IntentRouteGuard({
         setProfile(null)
         setEntitlement(null)
         setDestination(null)
+      } finally {
+        if (alive) setProfileChecked(true)
       }
     }
 
@@ -254,7 +283,10 @@ function IntentRouteGuard({
 
   if (isAuthenticated === null) return null
   if (!isAuthenticated) return render({ isAuthenticated: false, showUpgradeCta: true })
-  if (!profile) return null
+  if (!profileChecked) return null
+  if (shouldRedirectAuthenticatedUserToOnboarding(profileChecked, profile)) {
+    return <Navigate to="/onboarding" replace />
+  }
   if (destination) return <Navigate to={destination} replace />
   if (shouldAllowAuthenticatedIntentPage(entitlement, readDiagnosticFunnelState())) {
     const showUpgradeCta =
@@ -289,6 +321,7 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
       setIsAuthenticated(hasSession)
       if (!hasSession) {
         setProfile(null)
+        setAuthChecked(true)
         return
       }
       try {
@@ -310,17 +343,23 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
       setIsAuthenticated(hasSession)
       if (!hasSession) {
         setProfile(null)
+        setAuthChecked(true)
         return
       }
-      void usersApi
-        .getMyProfile()
-        .then((nextProfile) => {
-          if (!alive) return
-          setProfile(nextProfile)
-        })
-        .catch(() => {
-          // Preserve profile during background refetches triggered by Supabase auth events.
-        })
+      // Defer: avoid getSession deadlock inside onAuthStateChange (common after Google OAuth).
+      deferAuthWork(() => {
+        void usersApi
+          .getMyProfile()
+          .then((nextProfile) => {
+            if (!alive) return
+            // Never wipe a loaded profile with a null background refetch.
+            if (nextProfile) setProfile(nextProfile)
+            setAuthChecked(true)
+          })
+          .catch(() => {
+            // Preserve profile during background refetches triggered by Supabase auth events.
+          })
+      })
     })
     return () => {
       alive = false
@@ -349,11 +388,8 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
         </div>
       )
     }
-    return (
-      <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
-        <StudentPageLoader centered label="Loading…" />
-      </div>
-    )
+    // Authenticated but no app profile yet (typical right after Google signup).
+    return <Navigate to="/onboarding" replace state={{ from: location.pathname }} />
   }
   if (requiredRole === "admin" && profile.role !== "admin" && profile.role !== "super_admin") {
     return <Navigate to="/app" replace />

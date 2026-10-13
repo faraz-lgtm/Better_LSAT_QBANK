@@ -134,6 +134,13 @@ describe("DashboardPage", () => {
       expect(screen.getByRole("heading", { name: "Start a diagnostic" })).toBeInTheDocument()
       expect(screen.queryByText("Choose a plan to continue")).not.toBeInTheDocument()
     })
+
+    // Free plan must not load real analytics — blur teasers use hardcoded placeholders only.
+    expect(mocks.getOverview).not.toHaveBeenCalled()
+    expect(mocks.getTrajectory).not.toHaveBeenCalled()
+    expect(mocks.getSessions).not.toHaveBeenCalled()
+    expect(mocks.getPriorities).not.toHaveBeenCalled()
+    expect(mocks.getStudyContext).not.toHaveBeenCalled()
   })
 
   it("shows LawHub setup when payment is settled but LSAC content is still locked", async () => {
