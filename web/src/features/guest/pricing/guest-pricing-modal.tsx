@@ -69,14 +69,14 @@ function GuestPricingModal({
 
   return (
     <div
-      className="fixed inset-0 z-[130] flex items-center justify-center bg-black/30 p-2 backdrop-blur-[3px] sm:p-3"
+      className="fixed inset-0 z-[130] flex items-end justify-center bg-black/30 p-0 backdrop-blur-[3px] sm:items-center sm:p-3 md:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="guest-pricing-modal-title"
       onClick={() => onOpenChange(false)}
     >
       <div
-        className="pricing-modal relative flex h-[min(100dvh-1rem,920px)] max-h-[calc(100dvh-1rem)] w-full max-w-[1284px] flex-col overflow-hidden rounded-[42px] border border-[#dde5f0] bg-[#f7faff] px-6 py-5 shadow-[0px_24px_48px_rgba(13,13,18,0.16)] sm:px-[52px] sm:py-5"
+        className="pricing-modal relative flex max-h-[100dvh] w-full max-w-[1284px] flex-col overflow-hidden rounded-t-[24px] border border-[#dde5f0] bg-[#f7faff] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-[0px_24px_48px_rgba(13,13,18,0.16)] sm:max-h-[calc(100dvh-1.5rem)] sm:rounded-[28px] sm:px-8 sm:py-5 md:rounded-[36px] lg:h-[min(100dvh-2rem,920px)] lg:rounded-[42px] lg:px-[52px]"
         onClick={(event) => event.stopPropagation()}
       >
         <button
@@ -94,7 +94,7 @@ function GuestPricingModal({
           />
         </button>
 
-        <div className="pricing-modal__body min-h-0 flex-1 overflow-x-hidden overflow-y-hidden">
+        <div className="pricing-modal__body min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
           <div className="pricing-page">
             <div className="pricing-page__header">
               <h1 id="guest-pricing-modal-title" className="pricing-page__title">

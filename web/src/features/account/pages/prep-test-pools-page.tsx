@@ -12,6 +12,12 @@ import type {
 } from "@/features/account/prep-test-pool-types"
 import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-context"
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
+import {
+  FREE_PRICING_PLAN,
+  getPricingPlanById,
+  isPaidPricingPlan,
+  resolveCurrentPricingPlan,
+} from "@/features/guest/pricing/guest-pricing-plans-data"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { AppToast } from "@/components/ui/app-toast"
@@ -345,45 +351,60 @@ function CheckListItem({ children, muted = false }: { children: ReactNode; muted
   )
 }
 
+const FULL_ACCESS_PLAN = getPricingPlanById("monthly")
+
 function SettingsPlanSidebar() {
   const { openPricingModal } = useGuestPricingModal()
   const { entitlement } = useStudentEntitlement()
   const hasProPlan = Boolean(entitlement?.hasActiveCore || entitlement?.accessState === "FULL_ACCESS")
-  const planName = hasProPlan ? "Pro" : "Free"
+  const currentPlan = useMemo(
+    () => resolveCurrentPricingPlan({ hasActiveCore: hasProPlan }),
+    [hasProPlan],
+  )
 
   return (
     <div className="flex w-full flex-col gap-4 xl:sticky xl:top-0">
       <PlanBanner>
         <p className="m-0 text-xs font-semibold tracking-[0.24px] text-[var(--primary)]">Current Plan</p>
-        <h2 className="m-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">{planName}</h2>
+        <h2 className="m-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">
+          {currentPlan.name}
+        </h2>
+        <p className="m-0 text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{currentPlan.headline}</p>
         <ul className="m-0 flex list-none flex-col gap-2 p-0">
-          <CheckListItem muted>{hasProPlan ? "Unlimited questions & drills" : "50 questions/day"}</CheckListItem>
-          <CheckListItem muted>{hasProPlan ? "Advanced analytics" : "Basic analytics"}</CheckListItem>
-          <CheckListItem muted>{hasProPlan ? "Full PrepTest library" : "3 practice tests"}</CheckListItem>
-          <CheckListItem muted>{hasProPlan ? "All lessons" : "Limited lessons"}</CheckListItem>
+          {currentPlan.features.map((feature) => (
+            <CheckListItem key={feature} muted>
+              {feature}
+            </CheckListItem>
+          ))}
+          {isPaidPricingPlan(currentPlan) ? (
+            <CheckListItem muted>{currentPlan.renewalNote}</CheckListItem>
+          ) : null}
         </ul>
         {!hasProPlan ? (
           <>
             <p className="m-0 text-xs font-medium tracking-[0.24px] text-[var(--greyscale-500)]">
-              <strong>79%</strong> Performance, <strong>30+</strong> Reports, and Score Tracker will be available.
+              {FREE_PRICING_PLAN.description}
             </p>
             <Button type="button" size="xs" className="h-8 w-full rounded-[10px]" onClick={openPricingModal}>
-              Upgrade · $99/mo
+              Upgrade
             </Button>
           </>
         ) : null}
       </PlanBanner>
 
-      <PlanBanner>
-        <p className="m-0 text-xs font-semibold tracking-[0.24px] text-[var(--primary)]">Pro includes everything, plus:</p>
-        <ul className="m-0 flex list-none flex-col gap-2 p-0">
-          <CheckListItem>Unlimited questions &amp; drills</CheckListItem>
-          <CheckListItem>Full PrepTest library (90+)</CheckListItem>
-          <CheckListItem>Advanced analytics &amp; weak areas</CheckListItem>
-          <CheckListItem>All lesson videos</CheckListItem>
-          <CheckListItem>Priority support</CheckListItem>
-        </ul>
-      </PlanBanner>
+      {!hasProPlan ? (
+        <PlanBanner>
+          <p className="m-0 text-xs font-semibold tracking-[0.24px] text-[var(--primary)]">
+            {FULL_ACCESS_PLAN.name} includes:
+          </p>
+          <p className="m-0 text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{FULL_ACCESS_PLAN.headline}</p>
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
+            {FULL_ACCESS_PLAN.features.map((feature) => (
+              <CheckListItem key={feature}>{feature}</CheckListItem>
+            ))}
+          </ul>
+        </PlanBanner>
+      ) : null}
     </div>
   )
 }

@@ -100,7 +100,7 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
       accessState: entitlement?.accessState ?? null,
       hasGuestPremiumAccount: Boolean(premiumAccount),
     }) === "premium"
-  const planLabel = isPremium ? "Premium" : "Free"
+  const planLabel = isPremium ? "Paid" : "Free"
   const [email, setEmail] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [openProfileMenu, setOpenProfileMenu] = useState(false)
@@ -271,7 +271,6 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
             className={cn(
               "inline-flex h-10 shrink-0 items-center justify-center rounded-[14px] bg-[var(--primary-25)] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[color:var(--primary)]",
               !isPremium && "hidden sm:inline-flex",
-              isPremium && "w-[97px]",
             )}
             aria-label={`Plan: ${planLabel}`}
           >
