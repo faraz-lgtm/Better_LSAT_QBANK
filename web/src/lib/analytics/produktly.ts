@@ -12,6 +12,8 @@ type ProduktlyApi = {
     redirect?: (url: string) => void
     waitForUser?: boolean
   }) => void
+  openFeedback?: (params: { id: number; ignorePublish?: boolean }) => void
+  closeFeedback?: (params: { id: number }) => void
 }
 
 declare global {
@@ -45,4 +47,16 @@ export function identifyProduktlyUser(
 export function clearProduktlyUser(): void {
   lastIdentifiedUserId = null
   getProduktly()?.clearCurrentUser()
+}
+
+/** Open a Produktly feedback collector widget by dashboard id. */
+export function openProduktlyFeedback(id: number, ignorePublish = true): void {
+  if (!id) return
+  getProduktly()?.openFeedback?.({ id, ignorePublish })
+}
+
+/** Close a Produktly feedback collector widget by dashboard id. */
+export function closeProduktlyFeedback(id: number): void {
+  if (!id) return
+  getProduktly()?.closeFeedback?.({ id })
 }

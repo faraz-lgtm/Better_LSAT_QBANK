@@ -108,6 +108,8 @@ function isLsacLockedNavItem(href: string): boolean {
   if (href === "/app/diagnostic/explanations" || href.startsWith("/app/diagnostic/explanations/")) {
     return false
   }
+  // Produktly feedback / roadmap are available without LawHub coach link.
+  if (href === "/app/feedback" || href === "/app/roadmap") return false
   return true
 }
 

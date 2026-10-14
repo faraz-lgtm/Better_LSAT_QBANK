@@ -1,20 +1,31 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { clearProduktlyUser, identifyProduktlyUser } from "./produktly"
+import {
+  clearProduktlyUser,
+  closeProduktlyFeedback,
+  identifyProduktlyUser,
+  openProduktlyFeedback,
+} from "./produktly"
 
 describe("produktly helpers", () => {
   const identifyUser = vi.fn()
   const clearCurrentUser = vi.fn()
+  const openFeedback = vi.fn()
+  const closeFeedback = vi.fn()
 
   beforeEach(() => {
     identifyUser.mockReset()
     clearCurrentUser.mockReset()
+    openFeedback.mockReset()
+    closeFeedback.mockReset()
     clearProduktlyUser()
     clearCurrentUser.mockReset()
     window.Produktly = {
       identifyUser,
       clearCurrentUser,
       configure: vi.fn(),
+      openFeedback,
+      closeFeedback,
     }
   })
 
@@ -61,5 +72,17 @@ describe("produktly helpers", () => {
     delete window.Produktly
     expect(() => identifyProduktlyUser("user-1")).not.toThrow()
     expect(() => clearProduktlyUser()).not.toThrow()
+    expect(() => openProduktlyFeedback(2722)).not.toThrow()
+    expect(() => closeProduktlyFeedback(2722)).not.toThrow()
+  })
+
+  it("openProduktlyFeedback forwards id", () => {
+    openProduktlyFeedback(2722)
+    expect(openFeedback).toHaveBeenCalledWith({ id: 2722, ignorePublish: true })
+  })
+
+  it("closeProduktlyFeedback forwards id", () => {
+    closeProduktlyFeedback(2722)
+    expect(closeFeedback).toHaveBeenCalledWith({ id: 2722 })
   })
 })

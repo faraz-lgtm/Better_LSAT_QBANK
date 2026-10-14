@@ -21,12 +21,6 @@ import { ResetPasswordPage } from "@/features/auth/pages/reset-password-page"
 import { AuthCallbackPage } from "@/features/auth/pages/auth-callback-page"
 import { LsacLinkPage } from "@/features/auth/pages/lsac-link-page"
 import { LsacLinkStepPage } from "@/features/auth/pages/lsac-link-step-page"
-import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import {
-  loadEntitlement,
-  selectEntitlement,
-  selectEntitlementLoading,
-} from "@/features/student-session/studentSessionSlice"
 import { CheckoutDetailsPage } from "@/features/billing/pages/checkout-details-page"
 import { CheckoutPage } from "@/features/billing/pages/checkout-page"
 import { PricingPage } from "@/features/billing/pages/pricing-page"
@@ -89,6 +83,8 @@ const PrepTestPoolsPage = lazyNamed(
   "PrepTestPoolsPage",
 )
 const DashboardPage = lazyNamed(() => import("@/features/dashboard/pages/dashboard-page"), "DashboardPage")
+const FeedbackPage = lazyNamed(() => import("@/features/feedback/pages/feedback-page"), "FeedbackPage")
+const RoadmapPage = lazyNamed(() => import("@/features/feedback/pages/roadmap-page"), "RoadmapPage")
 const GuestDiagnosticStartPage = lazyNamed(
   () => import("@/features/guest/pages/guest-diagnostic-start-page"),
   "GuestDiagnosticStartPage",
@@ -569,38 +565,6 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
   return children
 }
 
-function RequireLsacEntitlement({ children }: { children: ReactElement }) {
-  const location = useLocation()
-  const dispatch = useAppDispatch()
-  const entitlement = useAppSelector(selectEntitlement)
-  const loading = useAppSelector(selectEntitlementLoading)
-  const onLsacSetupPath = location.pathname.startsWith("/app/lsac-link-step")
-
-  useEffect(() => {
-    void dispatch(loadEntitlement())
-  }, [dispatch])
-
-  if (loading && !entitlement) {
-    return (
-      <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
-        <StudentPageLoader centered label="Loading…" />
-      </div>
-    )
-  }
-
-  // Prefer hasActiveCore + !isLsacEligible over accessState === LSAC_REQUIRED
-  // (link wall env flag defaults off). Allow the setup page itself through.
-  if (
-    !onLsacSetupPath &&
-    entitlement?.hasActiveCore &&
-    !entitlement.isLsacEligible
-  ) {
-    return <Navigate to="/app/lsac-link-step" replace />
-  }
-
-  return children
-}
-
 function RequireAuthenticated({ children }: { children: ReactElement }) {
   const location = useLocation()
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
@@ -802,11 +766,7 @@ const router = createBrowserRouter([
       { path: "pricing", element: <PricingPage /> },
       { path: "lsac-link", element: <LsacLinkPage /> },
       {
-        element: (
-          <RequireLsacEntitlement>
-            <StudentAppShell />
-          </RequireLsacEntitlement>
-        ),
+        element: <StudentAppShell />,
         children: [
           {
             path: "lsac-link-step",
@@ -857,6 +817,22 @@ const router = createBrowserRouter([
             element: (
               <LazyPage>
                 <GuestDiagnosticResultsPage section="full" />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "feedback",
+            element: (
+              <LazyPage>
+                <FeedbackPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "roadmap",
+            element: (
+              <LazyPage>
+                <RoadmapPage />
               </LazyPage>
             ),
           },

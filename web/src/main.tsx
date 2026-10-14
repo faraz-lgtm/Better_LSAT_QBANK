@@ -1,3 +1,6 @@
+// Must run before ProduktlyAuthBridge / openFeedback (localhost Origin → 403).
+import '@/lib/analytics/produktly-dev-proxy'
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Provider } from 'react-redux'

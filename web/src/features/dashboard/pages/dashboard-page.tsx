@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Navigate, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-context"
@@ -260,17 +260,12 @@ function DashboardPage() {
     )
   }
 
-  if (!canAccessLsacContent) {
-    if (isPaymentRequired) {
-      return (
-        <StudentMain>
-          <FreePlanDashboard firstName={firstName} />
-        </StudentMain>
-      )
-    }
-
-    // Paid but LawHub not eligible — hard wall lives on /app/lsac-link-step.
-    return <Navigate to="/app/lsac-link-step" replace />
+  if (!canAccessLsacContent && isPaymentRequired) {
+    return (
+      <StudentMain>
+        <FreePlanDashboard firstName={firstName} />
+      </StudentMain>
+    )
   }
 
   return (

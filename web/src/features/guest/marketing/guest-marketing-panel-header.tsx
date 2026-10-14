@@ -7,10 +7,11 @@ import {
 } from "@/features/guest/diagnostic/guest-diagnostic-intent-styles"
 
 type GuestMarketingPanelHeaderProps = {
-  variant: "intent" | "signup" | "login"
+  variant: "intent" | "signup" | "login" | "logout"
+  onLogout?: () => void
 }
 
-function GuestMarketingPanelHeader({ variant }: GuestMarketingPanelHeaderProps) {
+function GuestMarketingPanelHeader({ variant, onLogout }: GuestMarketingPanelHeaderProps) {
   return (
     <header className={GUEST_INTENT_HEADER_CLASS}>
       <Link to={STUDENT_DASHBOARD_HREF} className="flex shrink-0 items-center" aria-label="betterLSAT home">
@@ -23,30 +24,40 @@ function GuestMarketingPanelHeader({ variant }: GuestMarketingPanelHeaderProps) 
             Upgrade now
           </button>
         ) : null}
-        <p className="m-0 text-base leading-6 tracking-[0.32px] text-[#666d80]">
-          {variant === "signup" ? (
-            <>
-              Already have an account?{" "}
-              <Link to="/login" className="font-semibold text-[#0d47a1]">
-                Sign In
-              </Link>
-            </>
-          ) : variant === "login" ? (
-            <>
-              Don&apos;t have an account?{" "}
-              <Link to="/signup" className="font-semibold text-[#0d47a1]">
-                Sign Up
-              </Link>
-            </>
-          ) : (
-            <>
-              Don&apos;t have an account?{" "}
-              <Link to="/login" className="font-semibold text-[#0d47a1]">
-                Sign In
-              </Link>
-            </>
-          )}
-        </p>
+        {variant === "logout" ? (
+          <button
+            type="button"
+            className="m-0 cursor-pointer border-0 bg-transparent p-0 text-base font-semibold leading-6 tracking-[0.32px] text-[#0d47a1]"
+            onClick={onLogout}
+          >
+            Logout
+          </button>
+        ) : (
+          <p className="m-0 text-base leading-6 tracking-[0.32px] text-[#666d80]">
+            {variant === "signup" ? (
+              <>
+                Already have an account?{" "}
+                <Link to="/login" className="font-semibold text-[#0d47a1]">
+                  Sign In
+                </Link>
+              </>
+            ) : variant === "login" ? (
+              <>
+                Don&apos;t have an account?{" "}
+                <Link to="/signup" className="font-semibold text-[#0d47a1]">
+                  Sign Up
+                </Link>
+              </>
+            ) : (
+              <>
+                Don&apos;t have an account?{" "}
+                <Link to="/login" className="font-semibold text-[#0d47a1]">
+                  Sign In
+                </Link>
+              </>
+            )}
+          </p>
+        )}
       </div>
     </header>
   )

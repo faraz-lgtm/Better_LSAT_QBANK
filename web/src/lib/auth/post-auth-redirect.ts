@@ -19,8 +19,8 @@ export type PostAuthDestination =
 
 /**
  * Route students using diagnostic funnel progress when active.
- * Outside the funnel, payment stays soft-gated on the dashboard; LawHub coach
- * setup hard-redirects to /app/lsac-link-step when subscribed but not eligible.
+ * Outside the funnel, payment stays soft-gated on the dashboard; subscribed but
+ * not LawHub-eligible soft-lands on /app/lsac-link-step (navigation stays open).
  */
 export function resolvePostAuthDestination(
   profile: UserProfile | null,

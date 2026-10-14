@@ -51,6 +51,40 @@ describe("LsacLinkStepPage", () => {
     vi.stubGlobal("open", vi.fn())
   })
 
+  it("shows path instructions and labels on the invite step", async () => {
+    getMyProfile.mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      full_name: "Ada Lovelace",
+      first_name: "Ada",
+      last_name: "Lovelace",
+      phone: null,
+      avatar_url: null,
+      role: "student",
+      student_coaching_id: null,
+      is_first_time_login: false,
+      created_at: "",
+      updated_at: "",
+    })
+    getEntitlementState.mockResolvedValue({
+      isAuthenticated: true,
+      isLsacLinked: false,
+      isLsacEligible: false,
+      hasActiveCore: true,
+      accessState: "FULL_ACCESS",
+    })
+
+    renderPage()
+
+    expect(await screen.findByText(/choose one path/i)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Set up LawHub with my plan" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Link my existing PrepPlus" })).toBeInTheDocument()
+    expect(screen.getByText(/prepplus comes with your plan/i)).toBeInTheDocument()
+    expect(screen.getByText(/already pay lsac for prepplus/i)).toBeInTheDocument()
+    expect(screen.getByText(/lsac may also email you/i)).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Activate LawHub" })).not.toBeInTheDocument()
+  })
+
   it("shows Activate LawHub (not email copy) when coach invite is pending", async () => {
     getMyProfile.mockResolvedValue({
       id: "u1",
@@ -80,6 +114,7 @@ describe("LsacLinkStepPage", () => {
     renderPage()
 
     expect(await screen.findByRole("button", { name: "Activate LawHub" })).toBeInTheDocument()
+    expect(screen.getByText(/coach invite created/i)).toBeInTheDocument()
     expect(screen.queryByText(/check your email/i)).not.toBeInTheDocument()
     expect(screen.getByText(/open LSAC in a new tab/i)).toBeInTheDocument()
 

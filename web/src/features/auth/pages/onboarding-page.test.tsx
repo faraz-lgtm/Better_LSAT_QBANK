@@ -12,9 +12,14 @@ const getMyProfile = vi.fn()
 const getStudyContext = vi.fn()
 const saveOnboarding = vi.fn()
 const completeFirstLogin = vi.fn()
+const signOut = vi.fn()
+const clearStudentSessionCaches = vi.fn()
+const resetUser = vi.fn()
 
 vi.mock("@/lib/supabase/client", () => ({
-  getSupabaseBrowserClient: () => ({}),
+  getSupabaseBrowserClient: () => ({
+    auth: { signOut },
+  }),
 }))
 
 vi.mock("@/app/store-ref", () => ({
@@ -44,9 +49,14 @@ vi.mock("@/lib/auth/fetch-post-auth-destination", () => ({
   fetchPostAuthDestination: vi.fn(async () => "/app"),
 }))
 
+vi.mock("@/lib/auth/clear-student-session-caches", () => ({
+  clearStudentSessionCaches: () => clearStudentSessionCaches(),
+}))
+
 vi.mock("@/lib/analytics/posthog", () => ({
   AnalyticsEvent: { onboardingCompleted: "onboarding_completed" },
   captureEvent: vi.fn(),
+  resetUser: () => resetUser(),
 }))
 
 vi.mock("@/lib/analytics/track-checkout-purchase", () => ({
@@ -110,6 +120,10 @@ describe("OnboardingPage password setup", () => {
     getStudyContext.mockReset()
     saveOnboarding.mockReset()
     completeFirstLogin.mockReset()
+    signOut.mockReset()
+    clearStudentSessionCaches.mockReset()
+    resetUser.mockReset()
+    signOut.mockResolvedValue({ error: null })
     window.localStorage.clear()
     window.sessionStorage.clear()
 
@@ -141,6 +155,23 @@ describe("OnboardingPage password setup", () => {
       last_name: "Lovelace",
       full_name: "Ada Lovelace",
     })
+  })
+
+  it("shows logout instead of sign in and signs the user out", async () => {
+    const user = userEvent.setup()
+
+    renderOnboarding()
+
+    expect(await screen.findByRole("heading", { name: /welcome to betterlsat/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /^logout$/i })).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: /sign in/i })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: /^logout$/i }))
+
+    await waitFor(() => expect(signOut).toHaveBeenCalledOnce())
+    expect(clearStudentSessionCaches).toHaveBeenCalledOnce()
+    expect(resetUser).toHaveBeenCalledOnce()
+    expect(await screen.findByText(/login view/i)).toBeInTheDocument()
   })
 
   it("shows same_password error on the welcome step and does not advance", async () => {
