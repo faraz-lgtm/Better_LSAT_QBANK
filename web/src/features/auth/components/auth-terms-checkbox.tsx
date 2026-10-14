@@ -17,7 +17,14 @@ function AuthTermsCheckbox({ checked, onChange, disabled = false }: AuthTermsChe
       />
       <span>
         I agree to{" "}
-        <span className="font-semibold text-[#0d47a1]">BetterLSAT&apos;s Terms of Service</span>{" "}
+        <a
+          href="https://betterlsat.com/terms"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-[#0d47a1] hover:underline"
+        >
+          BetterLSAT&apos;s Terms of Service
+        </a>{" "}
         <span className="text-[#df1c41]">*</span>
       </span>
     </label>
