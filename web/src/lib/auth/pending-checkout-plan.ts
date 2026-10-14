@@ -4,6 +4,34 @@ export type SignupPlanId = "free" | CheckoutPlanId
 
 const PENDING_CHECKOUT_PLAN_KEY = "betterlsat:pending-checkout-plan"
 
+/** Default Stripe return when checkout was not started from diagnostic results. */
+export const DEFAULT_CHECKOUT_SUCCESS_PATH = "/app/lsac-link-step?checkout=success"
+
+/**
+ * Client-side allowlist mirroring billing.service parseCheckoutSuccessPath.
+ * Returns null when the value is missing or not an in-app success path.
+ */
+export function parseCheckoutSuccessPathParam(value: string | null): string | null {
+  if (value == null || value === "") return null
+  const trimmed = value.trim()
+  if (trimmed.includes("..")) return null
+  const isAppPath =
+    trimmed === "/app" || trimmed.startsWith("/app/") || trimmed.startsWith("/app?")
+  const isOnboardingPath =
+    trimmed === "/onboarding" || trimmed.startsWith("/onboarding?")
+  if (!isAppPath && !isOnboardingPath) return null
+  return trimmed
+}
+
+/** Results CTAs return to the current results URL; everything else → LSAC link step. */
+export function resolveCheckoutSuccessPath(pathname: string): string {
+  if (pathname.includes("/diagnostic/results")) {
+    const base = pathname.split("?")[0] || pathname
+    return `${base}?checkout=success`
+  }
+  return DEFAULT_CHECKOUT_SUCCESS_PATH
+}
+
 export function isSignupPlanId(value: unknown): value is SignupPlanId {
   return (
     value === "free" ||
@@ -80,11 +108,15 @@ export function signupPathFromCheckoutSearch(search: string): string {
 /** Authenticated checkout handoff URL for a paid plan selected on pricing. */
 export function checkoutPathForPlan(
   plan: CheckoutPlanId,
-  options?: { includeLawHub?: boolean },
+  options?: { includeLawHub?: boolean; successPath?: string },
 ): string {
   const params = new URLSearchParams({ plan })
   if (options?.includeLawHub === false) {
     params.set("includeLawHub", "0")
+  }
+  const successPath = parseCheckoutSuccessPathParam(options?.successPath ?? null)
+  if (successPath) {
+    params.set("successPath", successPath)
   }
   return `/checkout?${params.toString()}`
 }

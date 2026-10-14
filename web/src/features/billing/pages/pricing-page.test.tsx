@@ -180,6 +180,10 @@ describe("PricingPage selected checkout", () => {
     )
     await user.click(await screen.findByRole("button", { name: /choose monthly/i }))
 
-    expect(await screen.findByText("/checkout?plan=monthly&includeLawHub=0")).toBeInTheDocument()
+    expect(
+      await screen.findByText(
+        "/checkout?plan=monthly&includeLawHub=0&successPath=%2Fapp%2Flsac-link-step%3Fcheckout%3Dsuccess",
+      ),
+    ).toBeInTheDocument()
   })
 })

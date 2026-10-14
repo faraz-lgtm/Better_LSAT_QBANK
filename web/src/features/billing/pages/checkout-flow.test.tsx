@@ -43,7 +43,49 @@ describe("direct checkout flow", () => {
     window.localStorage.clear()
   })
 
-  it("keeps onboarding pending and creates one checkout session in StrictMode", async () => {
+  it("uses an explicit successPath from the checkout query when present", async () => {
+    invokeMock.mockImplementation((functionName: string) => {
+      if (functionName === "users") {
+        return Promise.resolve({
+          data: { profile: { ...completeProfile, email: null } },
+          error: null,
+        })
+      }
+      if (functionName === "billing-create-checkout-session") {
+        return Promise.resolve({ data: null, error: new Error("checkout unavailable") })
+      }
+      throw new Error(`Unexpected function: ${functionName}`)
+    })
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          "/checkout?plan=monthly&successPath=%2Fapp%2Fdiagnostic%2Fresults%3Fcheckout%3Dsuccess",
+        ]}
+      >
+        <CheckoutPage />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => {
+      expect(
+        invokeMock.mock.calls.some(
+          ([functionName]) => functionName === "billing-create-checkout-session",
+        ),
+      ).toBe(true)
+    })
+    const checkoutCall = invokeMock.mock.calls.find(
+      ([functionName]) => functionName === "billing-create-checkout-session",
+    )
+    expect(checkoutCall?.[1]?.body).toEqual(
+      expect.objectContaining({
+        plan: "monthly",
+        successPath: "/app/diagnostic/results?checkout=success",
+      }),
+    )
+  })
+
+  it("defaults to LSAC link step and creates one checkout session in StrictMode", async () => {
     invokeMock.mockImplementation((functionName: string, options?: { body?: { action?: string } }) => {
       if (functionName === "users" && options?.body?.action === "users-complete-first-login") {
         return Promise.resolve({
@@ -84,7 +126,7 @@ describe("direct checkout flow", () => {
     expect(checkoutCall?.[1]?.body).toEqual(
       expect.objectContaining({
         plan: "monthly",
-        successPath: "/onboarding?checkout=success",
+        successPath: "/app/lsac-link-step?checkout=success",
       }),
     )
     expect(

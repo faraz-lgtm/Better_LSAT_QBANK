@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { CheckoutPaymentSuccessDialog } from "@/features/billing/components/checkout-payment-success-dialog"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createUsersApi, type UserEntitlement, type UserProfile } from "@/lib/api/users"
@@ -302,16 +303,11 @@ function LsacLinkStepPage() {
 
   return (
     <StudentMain>
+      <CheckoutPaymentSuccessDialog confirmLabel="Continue to LawHub setup" />
       <h1 className="text-2xl font-semibold text-[var(--color-student-heading)]">Complete LawHub setup</h1>
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--greyscale-500)]">
         Link your Official LSAT PrepPlus through LawHub to unlock PrepTests, drills, and other LSAC content.
       </p>
-
-      {checkoutSuccess ? (
-        <p className="mt-4 rounded-xl bg-[var(--explanation-answered-bg)] px-3 py-2 text-sm font-medium text-[var(--explanation-answered)]">
-          Payment successful. Your Better LSAT subscription is active.
-        </p>
-      ) : null}
 
       {needsInvite ? (
         <div className="mt-6 max-w-3xl space-y-4">
