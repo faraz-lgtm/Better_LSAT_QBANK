@@ -57,6 +57,16 @@ function isPointerClick(pointer: PointerAnchor): boolean {
   return Math.hypot(pointer.x - pointer.downX, pointer.y - pointer.downY) < POINTER_CLICK_MAX_DISTANCE_PX
 }
 
+/** Phone / touch: show color swatches immediately (official desktop stays collapsed). */
+function preferExpandedHighlightMenu(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false
+  try {
+    return window.matchMedia("(max-width: 767px), (pointer: coarse)").matches
+  } catch {
+    return false
+  }
+}
+
 function nearestClientRect(rects: DOMRectList | undefined, x: number, y: number): DOMRect | null {
   if (!rects || rects.length === 0) return null
   let best = rects[0]!
@@ -382,7 +392,10 @@ export function usePracticeHighlights(options?: {
     (regionKey: RegionKey, container: HTMLElement, range: Range, event?: MouseEvent) => {
       const existingMark = highlightContainingRange(range, container)
       const markColor = existingMark?.getAttribute("data-highlight")
-      const selectedColor = isPassageHighlightColor(markColor) ? markColor : lastPassageColor
+      const toolColor = isPassageHighlightColor(activeColor) ? activeColor : null
+      const selectedColor = isPassageHighlightColor(markColor)
+        ? markColor
+        : (toolColor ?? lastPassageColor)
       rangeRef.current = range.cloneRange()
       containerRef.current = container
       regionKeyRef.current = regionKey
@@ -392,11 +405,20 @@ export function usePracticeHighlights(options?: {
         ...(menuAnchorsToSelection
           ? firstWordMenuAnchor(range)
           : resolveMenuAnchor(event, (x, y) => rangeClientRect(range, x, y))),
-        expanded: highlightMenuStartsExpanded,
+        // Keyboard Highlight / phone: always show yellow–blue swatches (screenshot UX).
+        expanded:
+          highlightMenuStartsExpanded || toolMode === "highlighter" || preferExpandedHighlightMenu(),
         selectedColor,
       })
     },
-    [highlightMenuStartsExpanded, lastPassageColor, menuAnchorsToSelection, resolveMenuAnchor],
+    [
+      activeColor,
+      highlightMenuStartsExpanded,
+      lastPassageColor,
+      menuAnchorsToSelection,
+      resolveMenuAnchor,
+      toolMode,
+    ],
   )
 
   const openRemoveMenu = useCallback(
@@ -482,15 +504,14 @@ export function usePracticeHighlights(options?: {
         return
       }
 
-      if (toolMode === "highlighter" && activeColor) {
-        if (applyColorToRange(regionKey, container, range, activeColor)) {
-          event?.stopPropagation()
-        }
+      // Highlighter mode (incl. Keyboard Highlight): open color popover instead of
+      // silently applying — official chrome has no header swatch toolbar on phone.
+      if (toolMode === "highlighter") {
+        openHighlightMenu(regionKey, container, range, event)
+        event?.stopPropagation()
       }
     },
     [
-      activeColor,
-      applyColorToRange,
       dismissSelectionMenu,
       lastPassageColor,
       openHighlightMenu,

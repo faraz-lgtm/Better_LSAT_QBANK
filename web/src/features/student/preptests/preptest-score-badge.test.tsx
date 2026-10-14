@@ -48,6 +48,6 @@ describe("PrepTestScoreText", () => {
   it("renders history score line with both values", () => {
     render(<PrepTestScoreText variant="history" test={139} br={139} />)
     expect(screen.getByText("Score: 139")).toBeInTheDocument()
-    expect(screen.getByText("- Untimed Review: 139")).toBeInTheDocument()
+    expect(screen.getByText(/Untimed Review:\s*139/)).toBeInTheDocument()
   })
 })

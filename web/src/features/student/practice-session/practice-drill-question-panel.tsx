@@ -60,6 +60,10 @@ type PracticeDrillQuestionPanelProps = {
   onLineFocus?: () => void
   onFullscreen?: () => void
   fullView?: boolean
+  toolsMenuExpanded?: boolean
+  onToolsMenuExpandedChange?: (expanded: boolean) => void
+  onKeyboardHighlight?: () => void
+  keyboardHighlightActive?: boolean
   blindReviewChrome?: boolean
   answerView?: BlindReviewAnswerView
   onAnswerViewChange?: (view: BlindReviewAnswerView) => void
@@ -105,6 +109,10 @@ function PracticeDrillQuestionPanel({
   onLineFocus,
   onFullscreen,
   fullView = false,
+  toolsMenuExpanded,
+  onToolsMenuExpandedChange,
+  onKeyboardHighlight,
+  keyboardHighlightActive = false,
   blindReviewChrome = false,
   answerView = "blind_review",
   onAnswerViewChange,
@@ -204,6 +212,8 @@ function PracticeDrillQuestionPanel({
         onOpenAccessibility={onOpenAccessibility}
         onFullscreen={onFullscreen}
         fullView={fullView}
+        toolsMenuExpanded={toolsMenuExpanded}
+        onToolsMenuExpandedChange={onToolsMenuExpandedChange}
       />
     )
   }
@@ -310,6 +320,10 @@ function PracticeDrillQuestionPanel({
             onLineFocus={onLineFocus}
             onFullscreen={onFullscreen}
             fullView={fullView}
+            expanded={toolsMenuExpanded}
+            onExpandedChange={onToolsMenuExpandedChange}
+            onKeyboardHighlight={onKeyboardHighlight}
+            keyboardHighlightActive={keyboardHighlightActive}
           />
         ) : null}
       </div>

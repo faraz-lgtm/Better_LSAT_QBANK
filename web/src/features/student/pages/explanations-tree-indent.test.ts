@@ -29,7 +29,7 @@ describe("EXPLANATION_TREE_PL_CLASS", () => {
 
   it("keeps shallower mobile indents that still increase by depth", () => {
     const steps = EXPLANATION_TREE_LEVELS.map((level) => paddingPx(EXPLANATION_TREE_PL_CLASS[level], false))
-    expect(steps).toEqual([16, 24, 32, 32])
+    expect(steps).toEqual([16, 20, 28, 28])
     for (let i = 1; i < steps.length; i += 1) {
       expect(steps[i]).toBeGreaterThanOrEqual(steps[i - 1]!)
     }

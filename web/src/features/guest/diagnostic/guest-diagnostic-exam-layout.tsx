@@ -29,11 +29,15 @@ import {
 import {
   EXAM_CARD_FULL_WIDTH_CLASS,
   OFFICIAL_BODY_GRID_CLASS,
+  OFFICIAL_BODY_GRID_MOBILE_STACKED_CLASS,
   OFFICIAL_CARD_CLASS,
   OFFICIAL_FOOTER_CLASS,
+  OFFICIAL_PANE_MOBILE_SOLO_CLASS,
   OFFICIAL_PASSAGE_PANE_CLASS,
+  OFFICIAL_PASSAGE_PANE_MOBILE_STACKED_CLASS,
   OFFICIAL_PASSAGE_TEXT_CLASS,
   OFFICIAL_QUESTION_PANE_CLASS,
+  OFFICIAL_QUESTION_PANE_MOBILE_STACKED_CLASS,
 } from "@/features/student/practice-session/practice-session-official-styles"
 import { PracticeSessionActiveDrillFooterNav } from "@/features/student/practice-session/practice-session-active-drill-footer-nav"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
@@ -47,6 +51,7 @@ import type {
   BlindReviewAnswerView,
 } from "@/features/student/practice-session/practice-blind-review-answer-toggle"
 import { PracticeDrillQuestionPanel, regionKey } from "@/features/student/practice-session/practice-drill-question-panel"
+import { PracticeSessionMobileToolsOverlay } from "@/features/student/practice-session/practice-session-mobile-tools-overlay"
 import { ResponseMaskingProvider } from "@/features/student/practice-session/use-response-masking"
 import { PracticeSessionAccessibilityPanel } from "@/features/student/practice-session/practice-session-accessibility-panel"
 import { PracticeSessionFinishMenu } from "@/features/student/practice-session/practice-session-finish-menu"
@@ -247,6 +252,8 @@ function GuestDiagnosticExamLayout({
   const [reviewPanelOpen, setReviewPanelOpen] = useState(false)
   const [passageOnlyView, setPassageOnlyView] = useState(false)
   const [lineFocus, setLineFocus] = useState(false)
+  const [toolsMenuOpen, setToolsMenuOpen] = useState(false)
+  const [mobilePane, setMobilePane] = useState<"passage" | "question" | null>(null)
   const { officialInterface, setOfficialInterface } = useOfficialInterfacePreference()
   const { isFullscreen, toggleExamFullscreen } = useExamFullscreen()
   const [submitModalOpen, setSubmitModalOpen] = useState(false)
@@ -494,7 +501,14 @@ function GuestDiagnosticExamLayout({
       flagged={isFlagged(current.id)}
       onToggleFlag={() => toggleFlag(current.id)}
       flagsDisabled={!canNavigate}
-      onOpenReview={canNavigate ? () => setReviewPanelOpen(true) : undefined}
+      onOpenReview={
+        canNavigate
+          ? () => {
+              setToolsMenuOpen(false)
+              setReviewPanelOpen(true)
+            }
+          : undefined
+      }
       onOpenAccessibility={canNavigate ? accessibilityPanel.openPanel : undefined}
       variant={isPostResultsMode ? "blind-review" : "active-drill"}
       blindReviewChrome={isPostResultsMode}
@@ -724,33 +738,82 @@ function GuestDiagnosticExamLayout({
         finishButton={finishButton}
         onClose={isPostResultsMode ? (onExitReview ?? (() => navigate(-1))) : requestSaveAndExit}
         passageOnlyView={passageOnlyView}
-        onPassageOnlyViewChange={setPassageOnlyView}
+        onPassageOnlyViewChange={(next) => {
+          setPassageOnlyView(next)
+          setMobilePane(next ? "passage" : null)
+        }}
+        onOpenToolsMenu={() => {
+          setReviewPanelOpen(false)
+          setToolsMenuOpen((open) => !open)
+        }}
+        toolsMenuOpen={toolsMenuOpen}
+        sectionLabel="Reading"
+        showMobilePaneTabs={officialChrome}
+        mobilePane={mobilePane}
+        onMobilePaneChange={(pane) => {
+          setMobilePane(pane)
+          setPassageOnlyView(pane === "passage")
+        }}
       />
 
       <div
-        className="practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden"
+        className={cn(
+          "practice-session-body relative flex min-h-0 flex-1 flex-col overflow-hidden",
+          officialChrome && mobilePane === null && "practice-session-body--mobile-stack-scroll",
+        )}
         data-color-scheme={highlights.accessibilitySettings.colorScheme}
         style={highlights.contentStyle}
       >
+        {officialChrome && toolsMenuOpen && !reviewPanelOpen && current ? (
+          <PracticeSessionMobileToolsOverlay
+            questionId={current.id}
+            flagged={isFlagged(current.id)}
+            onToggleFlag={() => toggleFlag(current.id)}
+            flagsDisabled={!canNavigate}
+            onReview={
+              canNavigate
+                ? () => {
+                    setToolsMenuOpen(false)
+                    setReviewPanelOpen(true)
+                  }
+                : undefined
+            }
+            reviewActive={reviewPanelOpen}
+            onAccessibility={canNavigate ? accessibilityPanel.openPanel : undefined}
+            onFullscreen={toggleExamFullscreen}
+            fullView={isFullscreen}
+            onExpandedChange={setToolsMenuOpen}
+            onKeyboardHighlight={() => highlights.selectColor("yellow")}
+            keyboardHighlightActive={highlights.toolMode === "highlighter" && highlights.activeColor === "yellow"}
+          />
+        ) : null}
         <div
           ref={sessionBodyRef}
           className={cn(
-            "grid min-h-0 min-w-0 flex-1 grid-cols-1 overflow-hidden",
+            "min-h-0 min-w-0 flex-1 grid-cols-1",
             officialChrome
-              ? cn(OFFICIAL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1 lg:pr-0")
-              : cn(ACTIVE_DRILL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1"),
+              ? cn(
+                  mobilePane === null ? OFFICIAL_BODY_GRID_MOBILE_STACKED_CLASS : "grid overflow-hidden",
+                  OFFICIAL_BODY_GRID_CLASS,
+                  passageOnlyView && "lg:grid-cols-1 lg:pr-0",
+                )
+              : cn("grid overflow-hidden", ACTIVE_DRILL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1"),
           )}
         >
           <div
             ref={passagePaneRef}
             className={cn(
-              "practice-session-pane min-h-0 overflow-y-auto",
+              "practice-session-pane",
+              !officialChrome && "min-h-0 overflow-y-auto",
               officialChrome && lineFocus && "practice-session-pane--line-focus",
+              officialChrome && mobilePane === "question" && "max-md:hidden",
               officialChrome
                 ? OFFICIAL_PASSAGE_PANE_CLASS
                 : passageOnlyView
                   ? ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS
                   : ACTIVE_DRILL_PASSAGE_PANE_CLASS,
+              officialChrome && mobilePane === null && OFFICIAL_PASSAGE_PANE_MOBILE_STACKED_CLASS,
+              officialChrome && mobilePane === "passage" && OFFICIAL_PANE_MOBILE_SOLO_CLASS,
             )}
           >
             <PracticeAnnotatedContent
@@ -766,10 +829,15 @@ function GuestDiagnosticExamLayout({
           <div
             ref={questionPaneRef}
             className={cn(
-              "practice-session-pane min-h-0 overflow-y-auto",
-              passageOnlyView && "hidden",
+              "practice-session-pane",
+              !officialChrome && "min-h-0 overflow-y-auto",
+              officialChrome
+                ? cn(mobilePane === "passage" && "max-md:hidden", passageOnlyView && "md:hidden")
+                : passageOnlyView && "hidden",
               questionRevealed && stimulusAnalysisHtml ? "practice-session-pane--scroll-visible" : null,
               officialChrome ? OFFICIAL_QUESTION_PANE_CLASS : ACTIVE_DRILL_QUESTION_PANE_CLASS,
+              officialChrome && mobilePane === null && OFFICIAL_QUESTION_PANE_MOBILE_STACKED_CLASS,
+              officialChrome && mobilePane === "question" && OFFICIAL_PANE_MOBILE_SOLO_CLASS,
             )}
           >
             <PracticeDrillQuestionPanel
@@ -788,7 +856,14 @@ function GuestDiagnosticExamLayout({
               flagged={isFlagged(current.id)}
               onToggleFlag={() => toggleFlag(current.id)}
               flagsDisabled={!canNavigate}
-              onOpenReview={canNavigate ? () => setReviewPanelOpen((open) => !open) : undefined}
+              onOpenReview={
+                canNavigate
+                  ? () => {
+                      setToolsMenuOpen(false)
+                      setReviewPanelOpen((open) => !open)
+                    }
+                  : undefined
+              }
               reviewActive={reviewPanelOpen}
               onOpenAccessibility={canNavigate ? accessibilityPanel.openPanel : undefined}
               variant={sessionVariant}
@@ -798,6 +873,8 @@ function GuestDiagnosticExamLayout({
               onLineFocus={() => setLineFocus((value) => !value)}
               onFullscreen={toggleExamFullscreen}
               fullView={isFullscreen}
+              onKeyboardHighlight={() => highlights.selectColor("yellow")}
+              keyboardHighlightActive={highlights.toolMode === "highlighter" && highlights.activeColor === "yellow"}
               choicesDisabled={!canSelectAnswers || questionRevealed}
             />
             {questionRevealed && explanationUnlocked && stimulusAnalysisHtml ? (
@@ -843,6 +920,15 @@ function GuestDiagnosticExamLayout({
             mode === "exam" && interactive ? () => setSubmitModalOpen(true) : undefined
           }
           submitLabel="Submit Test"
+          onOpenReview={
+            canNavigate
+              ? () => {
+                  setToolsMenuOpen(false)
+                  setReviewPanelOpen((open) => !open)
+                }
+              : undefined
+          }
+          reviewOpen={reviewPanelOpen}
         />
       </footer>
 

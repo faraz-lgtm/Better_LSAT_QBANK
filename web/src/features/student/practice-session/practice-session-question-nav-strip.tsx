@@ -93,7 +93,8 @@ function PracticeSessionQuestionNavStrip({
     return (
       <div
         className={cn(
-          "practice-session-scroll-hidden min-h-[51px] min-w-0 flex-1 overflow-x-auto overflow-y-hidden",
+          "practice-session-scroll-hidden min-h-[51px] min-w-0 flex-1",
+          "max-md:overflow-visible md:overflow-x-auto md:overflow-y-hidden",
           className
             ?.replace("practice-session-question-nav-grid", "")
             .replace("practice-session-review-nav-row", ""),

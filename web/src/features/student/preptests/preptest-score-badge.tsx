@@ -21,21 +21,28 @@ export function PrepTestScoreText({
 
   if (variant === "history") {
     return (
-      <p className="whitespace-nowrap text-center text-[16px] font-semibold leading-[1.35]">
+      <p className="text-left text-[13px] font-semibold leading-[1.35] max-md:flex max-md:min-w-0 max-md:flex-col max-md:gap-0.5 md:whitespace-nowrap md:text-center md:text-[16px]">
         <span className="text-[#082c6b]">Score: {scoreText}</span>
-        <span className="text-[#082c6b]">{"\u00a0"}</span>
-        <span className="text-[var(--greyscale-400)]">- Untimed Review: {brText}</span>
+        <span className="hidden text-[#082c6b] md:inline">{"\u00a0"}</span>
+        <span className="text-[var(--greyscale-400)]">
+          <span className="hidden md:inline">- </span>
+          Untimed Review: {brText}
+        </span>
       </p>
     )
   }
 
   return (
-    <p className="whitespace-nowrap text-center text-[16px] leading-[1.5] tracking-[0.32px]">
-      <span className="font-medium text-[#082c6b]">Score:</span>
-      <span className="font-semibold text-[#082c6b]">{` ${scoreText} `}</span>
-      <span className="text-[var(--greyscale-400)]">- </span>
-      <span className="font-medium text-[var(--greyscale-400)]">Untimed Review:</span>
-      <span className="text-[var(--greyscale-400)]">{` ${brText}`}</span>
+    <p className="text-left text-[13px] leading-[1.45] tracking-[0.26px] max-md:flex max-md:min-w-0 max-md:flex-col max-md:gap-0.5 md:whitespace-nowrap md:text-center md:text-[16px] md:leading-[1.5] md:tracking-[0.32px]">
+      <span className="min-w-0">
+        <span className="font-medium text-[#082c6b]">Score:</span>
+        <span className="font-semibold text-[#082c6b]">{` ${scoreText}`}</span>
+      </span>
+      <span className="hidden text-[var(--greyscale-400)] md:inline">{` - `}</span>
+      <span className="min-w-0 text-[var(--greyscale-400)]">
+        <span className="font-medium">Untimed Review:</span>
+        <span>{` ${brText}`}</span>
+      </span>
     </p>
   )
 }

@@ -1,4 +1,4 @@
-import { useMemo, type ElementType, type HTMLAttributes, type MouseEvent } from "react"
+import { useMemo, useRef, type ElementType, type HTMLAttributes, type MouseEvent } from "react"
 
 import type { PracticeToolMode, RegionKey } from "@/features/student/practice-session/practice-session-types"
 import { FindableHtmlContent } from "@/lib/html/findable-html-content"
@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 
 type PracticeAnnotatedContentProps = Omit<
   HTMLAttributes<HTMLElement>,
-  "children" | "dangerouslySetInnerHTML" | "onMouseUp" | "onClickCapture"
+  "children" | "dangerouslySetInnerHTML" | "onMouseUp" | "onClickCapture" | "onTouchEnd"
 > & {
   regionKey: RegionKey
   html: string
@@ -34,6 +34,8 @@ function PracticeAnnotatedContent({
 }: PracticeAnnotatedContentProps) {
   const normalizedHtml = useMemo(() => normalizePracticeSessionHtml(html), [html])
   const annotate = onMouseUp != null
+  /** Skip the synthetic mouseup that follows touchend so we don't open the menu twice. */
+  const skipNextMouseUpRef = useRef(false)
 
   return (
     <FindableHtmlContent
@@ -42,7 +44,31 @@ function PracticeAnnotatedContent({
       findQuery={findQuery}
       scrollAnchor={scrollAnchor}
       className={cn("practice-session-content", annotate && "select-text cursor-text", className)}
-      onMouseUp={annotate ? (e) => onMouseUp(regionKey, e.currentTarget as HTMLElement, e) : undefined}
+      onMouseUp={
+        annotate
+          ? (e) => {
+              if (skipNextMouseUpRef.current) {
+                skipNextMouseUpRef.current = false
+                return
+              }
+              onMouseUp(regionKey, e.currentTarget as HTMLElement, e)
+            }
+          : undefined
+      }
+      onTouchEnd={
+        annotate
+          ? (e) => {
+              const container = e.currentTarget as HTMLElement
+              // Let the browser finish updating the selection after a long-press drag.
+              window.setTimeout(() => {
+                const selection = window.getSelection()
+                if (!selection || selection.isCollapsed || selection.rangeCount === 0) return
+                skipNextMouseUpRef.current = true
+                onMouseUp(regionKey, container)
+              }, 0)
+            }
+          : undefined
+      }
       onClickCapture={
         annotate && toolMode === "eraser" && onClickCapture
           ? (e) => onClickCapture(regionKey, e.currentTarget as HTMLElement, e)

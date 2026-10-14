@@ -20,6 +20,7 @@ import {
   ACTIVE_DRILL_HEADER_TITLE_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import {
+  OFFICIAL_DESKTOP_HEADER_BLOCK_CLASS,
   OFFICIAL_FIND_TEXT_INPUT_CLASS,
   OFFICIAL_FIND_WRAP_CLASS,
   OFFICIAL_HEADER_CLOSE_BUTTON_CLASS,
@@ -36,6 +37,21 @@ import {
   OFFICIAL_HEADER_TITLE_CLASS,
   OFFICIAL_HEADER_TITLE_ROW_CLASS,
   OFFICIAL_HEADER_UTILITY_ROW_CLASS,
+  OFFICIAL_MOBILE_FIND_ICON_CLASS,
+  OFFICIAL_MOBILE_FIND_INPUT_CLASS,
+  OFFICIAL_MOBILE_FIND_WRAP_CLASS,
+  OFFICIAL_MOBILE_HEADER_CLASS,
+  OFFICIAL_MOBILE_HEADER_CLOSE_CLASS,
+  OFFICIAL_MOBILE_HEADER_TOOLS_CLASS,
+  OFFICIAL_MOBILE_HEADER_TITLE_BUTTON_CLASS,
+  OFFICIAL_MOBILE_HEADER_TITLE_CLASS,
+  OFFICIAL_MOBILE_META_RIGHT_CLASS,
+  OFFICIAL_MOBILE_META_ROW_CLASS,
+  OFFICIAL_MOBILE_META_SECTION_CLASS,
+  OFFICIAL_MOBILE_PANE_TAB_ACTIVE_CLASS,
+  OFFICIAL_MOBILE_PANE_TAB_CLASS,
+  OFFICIAL_MOBILE_PANE_TAB_INACTIVE_CLASS,
+  OFFICIAL_MOBILE_PANE_TABS_CLASS,
 } from "@/features/student/practice-session/practice-session-official-styles"
 import { resolveExamProgress } from "@/features/student/practice-session/practice-session-exam-progress"
 import {
@@ -43,6 +59,9 @@ import {
   ExamHeaderPauseIcon,
   OfficialHeaderCloseIcon,
   OfficialHeaderSearchIcon,
+  OfficialMobileFullscreenIcon,
+  OfficialMobilePassageTabIcon,
+  OfficialMobileTitleChevronIcon,
 } from "@/features/student/practice-session/practice-session-header-icons"
 import { PracticeSessionTimer } from "@/features/student/practice-session/practice-session-timer"
 import { PracticeSessionToolbar } from "@/features/student/practice-session/practice-session-toolbar"
@@ -89,6 +108,15 @@ type PracticeSessionHeaderProps = {
   passageOnlyView?: boolean
   onPassageOnlyViewChange?: (next: boolean) => void
   onDirections?: () => void
+  /** Figma `21453:49878` — mobile header opens the tools menu rail */
+  onOpenToolsMenu?: () => void
+  toolsMenuOpen?: boolean
+  /** Mobile meta row label — e.g. Reading / Logical Reasoning */
+  sectionLabel?: string | null
+  /** Figma `21452:48966` — Passage / Question tabs (mobile RC). `null` = both unselected. */
+  mobilePane?: "passage" | "question" | null
+  onMobilePaneChange?: (pane: "passage" | "question" | null) => void
+  showMobilePaneTabs?: boolean
 }
 
 function PracticeSessionHeader({
@@ -126,6 +154,12 @@ function PracticeSessionHeader({
   passageOnlyView = false,
   onPassageOnlyViewChange,
   onDirections,
+  onOpenToolsMenu,
+  toolsMenuOpen = false,
+  sectionLabel = null,
+  mobilePane = null,
+  onMobilePaneChange,
+  showMobilePaneTabs = false,
 }: PracticeSessionHeaderProps) {
   const isActiveDrill = variant === "active-drill"
   const officialChrome = isOfficialLayout(variant)
@@ -136,91 +170,244 @@ function PracticeSessionHeader({
   })
   const examProgressPct = examProgress.ratio * 100
   const [directionsOpen, setDirectionsOpen] = useState(false)
+  const [mobilePaneMenuOpen, setMobilePaneMenuOpen] = useState(false)
+
+  function openDirections() {
+    if (onDirections) onDirections()
+    else setDirectionsOpen(true)
+  }
 
   if (officialChrome) {
+    const canToggleMobilePaneMenu = Boolean(showMobilePaneTabs && onMobilePaneChange)
+
     return (
       <header className={OFFICIAL_HEADER_SHELL_CLASS}>
-        <div className={OFFICIAL_HEADER_UTILITY_ROW_CLASS}>
-          <div className={OFFICIAL_HEADER_LEFT_CLASS}>
-            {onClose ? (
-              <button
-                type="button"
-                className={OFFICIAL_HEADER_CLOSE_BUTTON_CLASS}
-                aria-label="Close exam"
-                onClick={onClose}
-              >
-                <OfficialHeaderCloseIcon />
-              </button>
-            ) : null}
+        {/* Figma `21453:49474` — mobile-only compact chrome */}
+        <div className={OFFICIAL_MOBILE_HEADER_CLASS}>
+          {onClose ? (
             <button
               type="button"
-              className={OFFICIAL_HEADER_PILL_BUTTON_CLASS}
-              onClick={() => {
-                if (onDirections) onDirections()
-                else setDirectionsOpen(true)
-              }}
+              className={OFFICIAL_MOBILE_HEADER_CLOSE_CLASS}
+              aria-label="Close exam"
+              onClick={onClose}
             >
-              Directions
+              <OfficialHeaderCloseIcon />
             </button>
+          ) : (
+            <span aria-hidden />
+          )}
+          {canToggleMobilePaneMenu ? (
             <button
               type="button"
-              className={cn(
-                OFFICIAL_HEADER_PILL_BUTTON_CLASS,
-                passageOnlyView && OFFICIAL_HEADER_PILL_BUTTON_PRESSED_CLASS,
-              )}
-              aria-pressed={passageOnlyView}
-              onClick={() => onPassageOnlyViewChange?.(!passageOnlyView)}
+              className={OFFICIAL_MOBILE_HEADER_TITLE_BUTTON_CLASS}
+              aria-label={`${title} menu`}
+              aria-expanded={mobilePaneMenuOpen}
+              aria-haspopup="listbox"
+              onClick={() => setMobilePaneMenuOpen((open) => !open)}
             >
-              Passage Only View
+              <span className={cn(OFFICIAL_MOBILE_HEADER_TITLE_CLASS, titleClassName)} title={title}>
+                {title}
+              </span>
+              <span className={cn("inline-flex transition-transform", mobilePaneMenuOpen && "rotate-180")}>
+                <OfficialMobileTitleChevronIcon />
+              </span>
             </button>
-            <label className={OFFICIAL_FIND_WRAP_CLASS}>
-              <input
-                type="search"
-                placeholder="Find Text, Type Here"
-                value={findQuery}
-                onChange={(e) => onFindQueryChange(e.target.value)}
-                className={OFFICIAL_FIND_TEXT_INPUT_CLASS}
-              />
-              <OfficialHeaderSearchIcon />
-            </label>
-          </div>
-          <div className={OFFICIAL_HEADER_RIGHT_CLASS}>
+          ) : (
+            <div className={OFFICIAL_MOBILE_HEADER_TITLE_BUTTON_CLASS}>
+              <span className={cn(OFFICIAL_MOBILE_HEADER_TITLE_CLASS, titleClassName)} title={title}>
+                {title}
+              </span>
+              <OfficialMobileTitleChevronIcon />
+            </div>
+          )}
+          {onOpenToolsMenu ? (
+            <button
+              type="button"
+              className={OFFICIAL_MOBILE_HEADER_TOOLS_CLASS}
+              aria-label={toolsMenuOpen ? "Collapse tools menu" : "Open tools menu"}
+              aria-expanded={toolsMenuOpen}
+              aria-pressed={toolsMenuOpen}
+              onClick={onOpenToolsMenu}
+            >
+              <OfficialMobileFullscreenIcon />
+            </button>
+          ) : (
+            <span aria-hidden />
+          )}
+        </div>
+
+        <div className={OFFICIAL_MOBILE_META_ROW_CLASS}>
+          <p className={OFFICIAL_MOBILE_META_SECTION_CLASS}>{sectionLabel?.trim() || "\u00A0"}</p>
+          <div className={OFFICIAL_MOBILE_META_RIGHT_CLASS}>
             {questionProgressLabel ? (
-              <span className={OFFICIAL_HEADER_PROGRESS_LABEL_CLASS}>{questionProgressLabel}</span>
+              <span className="whitespace-nowrap">
+                {/^\d+\s+of\s+\d+$/i.test(questionProgressLabel.trim())
+                  ? `Question ${questionProgressLabel.trim()}`
+                  : questionProgressLabel}
+              </span>
+            ) : null}
+            {questionProgressLabel && showTimer ? (
+              <span className="h-3 w-px shrink-0 bg-[var(--greyscale-100)]" aria-hidden />
             ) : null}
             {showTimer ? (
-              <div className={OFFICIAL_HEADER_TIMER_WRAP_CLASS}>
-                <PracticeSessionTimer
-                  layout="official"
-                  label=""
-                  displaySeconds={timerDisplaySeconds}
-                  paused={timerPaused}
-                  onPauseRequest={onTimerPauseRequest}
-                  onReset={onResetTimer}
-                  progress={timerProgress}
-                  displayClassName={timerDisplayClassName}
-                />
-                <button
-                  type="button"
-                  className={OFFICIAL_HEADER_PAUSE_BUTTON_CLASS}
-                  aria-label={timerPaused ? "Section paused" : "Pause section timer"}
-                  onClick={onTimerPauseRequest}
-                >
-                  {timerPaused ? (
-                    <Play className="size-6 text-[var(--color-student-heading)]" strokeWidth={1.5} aria-hidden />
-                  ) : (
-                    <ExamHeaderPauseIcon />
-                  )}
-                </button>
-              </div>
+              <PracticeSessionTimer
+                layout="official"
+                label=""
+                displaySeconds={timerDisplaySeconds}
+                paused={timerPaused}
+                onPauseRequest={onTimerPauseRequest}
+                onReset={onResetTimer}
+                progress={timerProgress}
+                displayClassName={cn("text-[12px] leading-[18px] text-[#526079]", timerDisplayClassName)}
+              />
+            ) : null}
+            {/* Same controls as desktop header right: pause + more menu */}
+            {showTimer ? (
+              <button
+                type="button"
+                className={OFFICIAL_HEADER_PAUSE_BUTTON_CLASS}
+                aria-label={timerPaused ? "Section paused" : "Pause section timer"}
+                onClick={onTimerPauseRequest}
+              >
+                {timerPaused ? (
+                  <Play className="size-5 text-[var(--color-student-heading)]" strokeWidth={1.5} aria-hidden />
+                ) : (
+                  <ExamHeaderPauseIcon />
+                )}
+              </button>
             ) : null}
             {finishButton}
           </div>
         </div>
-        <div className={OFFICIAL_HEADER_TITLE_ROW_CLASS}>
-          <p className={cn(OFFICIAL_HEADER_TITLE_CLASS, titleClassName)} title={title}>
-            {title}
-          </p>
+
+        <label className={OFFICIAL_MOBILE_FIND_WRAP_CLASS}>
+          <input
+            type="search"
+            placeholder="Find Text, Type Here"
+            value={findQuery}
+            onChange={(e) => onFindQueryChange(e.target.value)}
+            className={OFFICIAL_MOBILE_FIND_INPUT_CLASS}
+            aria-label="Find text"
+          />
+          <span className={OFFICIAL_MOBILE_FIND_ICON_CLASS}>
+            <OfficialHeaderSearchIcon />
+          </span>
+        </label>
+
+        {canToggleMobilePaneMenu && mobilePaneMenuOpen ? (
+          <div className={OFFICIAL_MOBILE_PANE_TABS_CLASS} role="listbox" aria-label="Reading view">
+            <button
+              type="button"
+              role="option"
+              aria-selected={mobilePane === "passage"}
+              className={cn(
+                OFFICIAL_MOBILE_PANE_TAB_CLASS,
+                mobilePane === "passage" ? OFFICIAL_MOBILE_PANE_TAB_ACTIVE_CLASS : OFFICIAL_MOBILE_PANE_TAB_INACTIVE_CLASS,
+              )}
+              onClick={() => {
+                // Tap again to unselect — both panes visible on mobile
+                onMobilePaneChange?.(mobilePane === "passage" ? null : "passage")
+                setMobilePaneMenuOpen(false)
+              }}
+            >
+              <OfficialMobilePassageTabIcon active={mobilePane === "passage"} />
+              Passage
+            </button>
+            <button
+              type="button"
+              role="option"
+              aria-selected={mobilePane === "question"}
+              className={cn(
+                OFFICIAL_MOBILE_PANE_TAB_CLASS,
+                mobilePane === "question" ? OFFICIAL_MOBILE_PANE_TAB_ACTIVE_CLASS : OFFICIAL_MOBILE_PANE_TAB_INACTIVE_CLASS,
+              )}
+              onClick={() => {
+                onMobilePaneChange?.(mobilePane === "question" ? null : "question")
+                setMobilePaneMenuOpen(false)
+              }}
+            >
+              Question
+            </button>
+          </div>
+        ) : null}
+
+        <div className={OFFICIAL_DESKTOP_HEADER_BLOCK_CLASS}>
+          <div className={OFFICIAL_HEADER_UTILITY_ROW_CLASS}>
+            <div className={OFFICIAL_HEADER_LEFT_CLASS}>
+              {onClose ? (
+                <button
+                  type="button"
+                  className={OFFICIAL_HEADER_CLOSE_BUTTON_CLASS}
+                  aria-label="Close exam"
+                  onClick={onClose}
+                >
+                  <OfficialHeaderCloseIcon />
+                </button>
+              ) : null}
+              <button type="button" className={OFFICIAL_HEADER_PILL_BUTTON_CLASS} onClick={openDirections}>
+                Directions
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  OFFICIAL_HEADER_PILL_BUTTON_CLASS,
+                  passageOnlyView && OFFICIAL_HEADER_PILL_BUTTON_PRESSED_CLASS,
+                )}
+                aria-pressed={passageOnlyView}
+                aria-label="Passage Only View"
+                onClick={() => onPassageOnlyViewChange?.(!passageOnlyView)}
+              >
+                Passage Only View
+              </button>
+              <label className={OFFICIAL_FIND_WRAP_CLASS}>
+                <input
+                  type="search"
+                  placeholder="Find Text, Type Here"
+                  value={findQuery}
+                  onChange={(e) => onFindQueryChange(e.target.value)}
+                  className={OFFICIAL_FIND_TEXT_INPUT_CLASS}
+                />
+                <OfficialHeaderSearchIcon />
+              </label>
+            </div>
+            <div className={OFFICIAL_HEADER_RIGHT_CLASS}>
+              {questionProgressLabel ? (
+                <span className={OFFICIAL_HEADER_PROGRESS_LABEL_CLASS}>{questionProgressLabel}</span>
+              ) : null}
+              {showTimer ? (
+                <div className={OFFICIAL_HEADER_TIMER_WRAP_CLASS}>
+                  <PracticeSessionTimer
+                    layout="official"
+                    label=""
+                    displaySeconds={timerDisplaySeconds}
+                    paused={timerPaused}
+                    onPauseRequest={onTimerPauseRequest}
+                    onReset={onResetTimer}
+                    progress={timerProgress}
+                    displayClassName={timerDisplayClassName}
+                  />
+                  <button
+                    type="button"
+                    className={OFFICIAL_HEADER_PAUSE_BUTTON_CLASS}
+                    aria-label={timerPaused ? "Section paused" : "Pause section timer"}
+                    onClick={onTimerPauseRequest}
+                  >
+                    {timerPaused ? (
+                      <Play className="size-6 text-[var(--color-student-heading)]" strokeWidth={1.5} aria-hidden />
+                    ) : (
+                      <ExamHeaderPauseIcon />
+                    )}
+                  </button>
+                </div>
+              ) : null}
+              {finishButton}
+            </div>
+          </div>
+          <div className={OFFICIAL_HEADER_TITLE_ROW_CLASS}>
+            <p className={cn(OFFICIAL_HEADER_TITLE_CLASS, titleClassName)} title={title}>
+              {title}
+            </p>
+          </div>
         </div>
         <div
           className={OFFICIAL_HEADER_PROGRESS_TRACK_CLASS}

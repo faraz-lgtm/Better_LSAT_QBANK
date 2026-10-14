@@ -11,6 +11,8 @@ import {
   OFFICIAL_SIDE_WIDGET_EXPANDED_CLASS,
   OFFICIAL_SIDE_WIDGET_ITEM_CLASS,
   OFFICIAL_SIDE_WIDGET_ITEM_EXPANDED_CLASS,
+  OFFICIAL_SIDE_WIDGET_MOBILE_BACKDROP_CLASS,
+  OFFICIAL_SIDE_WIDGET_MOBILE_OVERLAY_CLASS,
 } from "@/features/student/practice-session/practice-session-official-styles"
 import {
   OfficialRailAccessibilityIcon,
@@ -18,6 +20,7 @@ import {
   OfficialRailDockIcon,
   OfficialRailExpandIcon,
   OfficialRailFlagIcon,
+  OfficialRailHighlightIcon,
   OfficialRailMaskingIcon,
   OfficialRailReviewIcon,
   SideWidgetAccessibilityIcon,
@@ -50,6 +53,17 @@ type PracticeSessionSideWidgetProps = {
   onFullscreen?: () => void
   /** Full-width (1920) vs normal (1440) exam canvas; also enters browser fullscreen. */
   fullView?: boolean
+  /** Controlled expanded tools menu (mobile header opens this). */
+  expanded?: boolean
+  onExpandedChange?: (expanded: boolean) => void
+  /** Figma `21453:49430` — Keyboard Highlight */
+  onKeyboardHighlight?: () => void
+  keyboardHighlightActive?: boolean
+  /**
+   * Figma `21453:49252` — mobile floating tools panel (session-body overlay).
+   * When true, always renders the expanded mobile overlay chrome.
+   */
+  mobileOverlay?: boolean
 }
 
 type SideWidgetItem = {
@@ -78,9 +92,21 @@ function PracticeSessionSideWidget({
   variant = "default",
   onFullscreen,
   fullView = false,
+  expanded: expandedProp,
+  onExpandedChange,
+  onKeyboardHighlight,
+  keyboardHighlightActive = false,
+  mobileOverlay = false,
 }: PracticeSessionSideWidgetProps) {
-  const [expanded, setExpanded] = useState(false)
+  const [uncontrolledExpanded, setUncontrolledExpanded] = useState(false)
+  const isExpandedControlled = expandedProp !== undefined
+  const expanded = mobileOverlay ? true : isExpandedControlled ? expandedProp : uncontrolledExpanded
   const officialChrome = isOfficialLayout(variant)
+
+  function setExpanded(next: boolean) {
+    if (!isExpandedControlled && !mobileOverlay) setUncontrolledExpanded(next)
+    onExpandedChange?.(next)
+  }
 
   const fullscreenItem: SideWidgetItem = {
     id: "fullscreen",
@@ -123,8 +149,21 @@ function PracticeSessionSideWidget({
       id: "masking",
       label: "Response Masking",
       icon: OfficialRailMaskingIcon,
-      onClick: onToggleResponseMasking,
+      onClick: () => {
+        onToggleResponseMasking()
+        if (mobileOverlay) setExpanded(false)
+      },
       active: responseMasking,
+    },
+    {
+      id: "highlight",
+      label: "Keyboard Highlight",
+      icon: OfficialRailHighlightIcon,
+      onClick: () => {
+        onKeyboardHighlight?.()
+        if (mobileOverlay) setExpanded(false)
+      },
+      active: keyboardHighlightActive,
     },
   ]
 
@@ -138,7 +177,7 @@ function PracticeSessionSideWidget({
         ? "Collapse Menu"
         : "Open Menu",
     icon: officialChrome ? OfficialRailDockIcon : SideWidgetCollapseDockIcon,
-    onClick: () => setExpanded((open) => !open),
+    onClick: () => setExpanded(!expanded),
   }
 
   const items: SideWidgetItem[] = officialChrome
@@ -231,29 +270,43 @@ function PracticeSessionSideWidget({
     )
   }
 
+  const officialAsideClass = mobileOverlay
+    ? OFFICIAL_SIDE_WIDGET_MOBILE_OVERLAY_CLASS
+    : expanded
+      ? OFFICIAL_SIDE_WIDGET_EXPANDED_CLASS
+      : OFFICIAL_SIDE_WIDGET_CLASS
+
   return (
-    <aside
-      className={cn(
-        officialChrome
-          ? expanded
-            ? OFFICIAL_SIDE_WIDGET_EXPANDED_CLASS
-            : OFFICIAL_SIDE_WIDGET_CLASS
-          : cn(
-              "practice-session-side-widget sticky top-6 z-20 flex shrink-0 flex-col overflow-visible",
-              expanded ? ACTIVE_DRILL_SIDE_WIDGET_EXPANDED_CLASS : ACTIVE_DRILL_SIDE_WIDGET_COLLAPSED_CLASS,
-            ),
-      )}
-      aria-label="Exam tools"
-    >
-      {officialChrome ? (
-        <>
-          <div className="flex w-full flex-col">{officialTools.map(renderItem)}</div>
-          {renderItem(collapseItem)}
-        </>
-      ) : (
-        items.map(renderItem)
-      )}
-    </aside>
+    <>
+      {officialChrome && (mobileOverlay || expanded) ? (
+        <button
+          type="button"
+          className={OFFICIAL_SIDE_WIDGET_MOBILE_BACKDROP_CLASS}
+          aria-label="Close tools menu"
+          onClick={() => setExpanded(false)}
+        />
+      ) : null}
+      <aside
+        className={cn(
+          officialChrome
+            ? officialAsideClass
+            : cn(
+                "practice-session-side-widget sticky top-6 z-20 flex shrink-0 flex-col overflow-visible",
+                expanded ? ACTIVE_DRILL_SIDE_WIDGET_EXPANDED_CLASS : ACTIVE_DRILL_SIDE_WIDGET_COLLAPSED_CLASS,
+              ),
+        )}
+        aria-label="Exam tools"
+      >
+        {officialChrome ? (
+          <>
+            <div className="flex w-full flex-col">{officialTools.map(renderItem)}</div>
+            {renderItem(collapseItem)}
+          </>
+        ) : (
+          items.map(renderItem)
+        )}
+      </aside>
+    </>
   )
 }
 

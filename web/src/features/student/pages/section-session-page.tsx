@@ -40,13 +40,17 @@ import {
 import {
   EXAM_CARD_FULL_WIDTH_CLASS,
   OFFICIAL_BODY_GRID_CLASS,
+  OFFICIAL_BODY_GRID_MOBILE_STACKED_CLASS,
   OFFICIAL_CARD_CLASS,
   OFFICIAL_FOOTER_CLASS,
   OFFICIAL_OPTIONS_LIST_CLASS,
+  OFFICIAL_PANE_MOBILE_SOLO_CLASS,
   OFFICIAL_PASSAGE_PANE_CLASS,
+  OFFICIAL_PASSAGE_PANE_MOBILE_STACKED_CLASS,
   OFFICIAL_PASSAGE_TEXT_CLASS,
   OFFICIAL_QUESTION_PANEL_WITH_WIDGET_CLASS,
   OFFICIAL_QUESTION_PANE_CLASS,
+  OFFICIAL_QUESTION_PANE_MOBILE_STACKED_CLASS,
 } from "@/features/student/practice-session/practice-session-official-styles"
 import { PracticeSessionActiveDrillFooterNav } from "@/features/student/practice-session/practice-session-active-drill-footer-nav"
 import { PracticeAnnotatedContent } from "@/features/student/practice-session/practice-annotated-content"
@@ -62,6 +66,7 @@ import { usePracticeSessionZoomShortcuts } from "@/features/student/practice-ses
 import { PracticeSessionReviewPanel } from "@/features/student/practice-session/practice-session-review-panel"
 import { PracticeSessionResetResponseButton } from "@/features/student/practice-session/practice-session-reset-response-button"
 import { PracticeSessionSideWidget } from "@/features/student/practice-session/practice-session-side-action-rail"
+import { PracticeSessionMobileToolsOverlay } from "@/features/student/practice-session/practice-session-mobile-tools-overlay"
 import { ResponseMaskingProvider, useResponseMasking } from "@/features/student/practice-session/use-response-masking"
 import {
   PracticeBlindReviewAnswerToggle,
@@ -94,6 +99,7 @@ import {
   REVIEW_BODY_CLASS,
   REVIEW_CARD_CLASS,
   REVIEW_EXIT_BUTTON_CLASS,
+  REVIEW_FOOTER_CLASS,
   REVIEW_FOOTER_NAV_CLASS,
   REVIEW_FOOTER_ROW_CLASS,
   REVIEW_NAV_ARROW_BUTTON_CLASS,
@@ -228,6 +234,10 @@ type QuestionPanelProps = {
   onLineFocus?: () => void
   onFullscreen?: () => void
   fullView?: boolean
+  toolsMenuExpanded?: boolean
+  onToolsMenuExpandedChange?: (expanded: boolean) => void
+  onKeyboardHighlight?: () => void
+  keyboardHighlightActive?: boolean
   /** Results review: disable choice selection */
   reviewChrome?: boolean
   choicesDisabled?: boolean
@@ -269,6 +279,10 @@ function SectionQuestionPanel({
   onLineFocus,
   onFullscreen,
   fullView = false,
+  toolsMenuExpanded,
+  onToolsMenuExpandedChange,
+  onKeyboardHighlight,
+  keyboardHighlightActive = false,
   reviewChrome = false,
   choicesDisabled = false,
   actualOutcome = null,
@@ -355,6 +369,8 @@ function SectionQuestionPanel({
         onOpenAccessibility={onOpenAccessibility}
         onFullscreen={onFullscreen}
         fullView={fullView}
+        toolsMenuExpanded={toolsMenuExpanded}
+        onToolsMenuExpandedChange={onToolsMenuExpandedChange}
       />
     )
   }
@@ -461,6 +477,10 @@ function SectionQuestionPanel({
             onLineFocus={onLineFocus}
             onFullscreen={onFullscreen}
             fullView={fullView}
+            expanded={toolsMenuExpanded}
+            onExpandedChange={onToolsMenuExpandedChange}
+            onKeyboardHighlight={onKeyboardHighlight}
+            keyboardHighlightActive={keyboardHighlightActive}
           />
         ) : null}
       </div>
@@ -524,6 +544,8 @@ function SectionSessionPage() {
   const [analysisViewOpen, setAnalysisViewOpen] = useState(false)
   const [reviewPanelOpen, setReviewPanelOpen] = useState(false)
   const [passageOnlyView, setPassageOnlyView] = useState(false)
+  const [toolsMenuOpen, setToolsMenuOpen] = useState(false)
+  const [mobilePane, setMobilePane] = useState<"passage" | "question" | null>(null)
   const [lineFocus, setLineFocus] = useState(false)
   const { officialInterface, setOfficialInterface } = useOfficialInterfacePreference()
   const { isFullscreen, toggleExamFullscreen } = useExamFullscreen()
@@ -1789,12 +1811,42 @@ function SectionSessionPage() {
             ? resultsReviewMode
               ? REVIEW_BODY_CLASS
               : BLIND_REVIEW_BODY_CLASS
-            : "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--greyscale-0)] text-[var(--color-student-heading)]",
+            : cn(
+                "practice-session-body relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--greyscale-0)] text-[var(--color-student-heading)]",
+                officialChrome && mobilePane === null && "practice-session-body--mobile-stack-scroll",
+              ),
           timeUpFlow != null && "practice-session-body--scroll-locked",
         )}
         data-color-scheme={highlights.accessibilitySettings.colorScheme}
         style={highlights.contentStyle}
       >
+        {officialChrome && toolsMenuOpen && !reviewPanelOpen && current ? (
+          <PracticeSessionMobileToolsOverlay
+            questionId={current.id}
+            flagged={questionFlags.isFlagged(current.id)}
+            onToggleFlag={() => questionFlags.toggleFlag(current.id)}
+            flagsDisabled={sessionCompleted || resultsReviewMode}
+            onReview={
+              useActiveDrillLayout || (useBlindReviewLayout && !resultsReviewMode)
+                ? () => {
+                    setToolsMenuOpen(false)
+                    setReviewPanelOpen(true)
+                  }
+                : undefined
+            }
+            reviewActive={reviewPanelOpen}
+            onAccessibility={
+              useActiveDrillLayout || (useBlindReviewLayout && !resultsReviewMode)
+                ? accessibilityPanel.openPanel
+                : undefined
+            }
+            onFullscreen={toggleExamFullscreen}
+            fullView={isFullscreen}
+            onExpandedChange={setToolsMenuOpen}
+            onKeyboardHighlight={() => highlights.selectColor("yellow")}
+            keyboardHighlightActive={highlights.toolMode === "highlighter" && highlights.activeColor === "yellow"}
+          />
+        ) : null}
         {showNotesPanel && useBlindReviewLayout ? (
           <div className={resultsReviewMode ? REVIEW_SIDE_PANEL_LAYOUT_CLASS : BLIND_REVIEW_NOTES_LAYOUT_CLASS}>
             <div className={resultsReviewMode ? "contents" : BLIND_REVIEW_NOTES_STACK_CLASS}>
@@ -1831,7 +1883,10 @@ function SectionSessionPage() {
                 flagsDisabled={sessionCompleted || resultsReviewMode}
                 onOpenReview={
                   useActiveDrillLayout || (useBlindReviewLayout && !resultsReviewMode)
-                    ? () => setReviewPanelOpen((open) => !open)
+                    ? () => {
+                        setToolsMenuOpen(false)
+                        setReviewPanelOpen((open) => !open)
+                      }
                     : undefined
                 }
                 reviewActive={reviewPanelOpen}
@@ -1932,23 +1987,29 @@ function SectionSessionPage() {
           <div
             ref={sessionBodyRef}
             className={cn(
-              "grid min-h-0 min-w-0 flex-1 grid-cols-1 overflow-hidden",
+              "min-h-0 min-w-0 flex-1 grid-cols-1",
               cn(
                 useBlindReviewLayout
-                  ? BLIND_REVIEW_BODY_GRID_CLASS
+                  ? cn("grid overflow-hidden", BLIND_REVIEW_BODY_GRID_CLASS)
                   : officialChrome
-                    ? cn(OFFICIAL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1 lg:pr-0")
+                    ? cn(
+                        mobilePane === null ? OFFICIAL_BODY_GRID_MOBILE_STACKED_CLASS : "grid overflow-hidden",
+                        OFFICIAL_BODY_GRID_CLASS,
+                        passageOnlyView && "lg:grid-cols-1 lg:pr-0",
+                      )
                     : useActiveDrillLayout
-                    ? cn(ACTIVE_DRILL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1")
-                    : "lg:grid-cols-2 lg:divide-x divide-[var(--greyscale-100)] dark:divide-[var(--greyscale-600)]",
+                    ? cn("grid overflow-hidden", ACTIVE_DRILL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1")
+                    : "grid overflow-hidden lg:grid-cols-2 lg:divide-x divide-[var(--greyscale-100)] dark:divide-[var(--greyscale-600)]",
               ),
             )}
           >
             <div
               ref={passagePaneRef}
               className={cn(
-                "practice-session-pane min-h-0",
+                "practice-session-pane",
+                !officialChrome && "min-h-0",
                 officialChrome && lineFocus && "practice-session-pane--line-focus",
+                officialChrome && sectionType === "RC" && mobilePane === "question" && "max-md:hidden",
                 useBlindReviewLayout
                   ? BLIND_REVIEW_PASSAGE_PANEL_CLASS
                   : officialChrome
@@ -1958,6 +2019,8 @@ function SectionSessionPage() {
                       ? ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS
                       : ACTIVE_DRILL_PASSAGE_PANE_CLASS
                     : "border-b border-[var(--greyscale-100)] p-5 lg:border-b-0",
+                officialChrome && mobilePane === null && OFFICIAL_PASSAGE_PANE_MOBILE_STACKED_CLASS,
+                officialChrome && mobilePane === "passage" && OFFICIAL_PANE_MOBILE_SOLO_CLASS,
               )}
             >
               {renderPassagePaneBody(
@@ -1973,9 +2036,14 @@ function SectionSessionPage() {
             <div
               ref={questionPaneRef}
               className={cn(
-                "practice-session-pane min-h-0",
-                officialChrome && passageOnlyView && "hidden",
-                useActiveDrillLayout && passageOnlyView && "hidden",
+                "practice-session-pane",
+                !officialChrome && "min-h-0",
+                officialChrome
+                  ? cn(
+                      sectionType === "RC" && mobilePane === "passage" && "max-md:hidden",
+                      passageOnlyView && "md:hidden",
+                    )
+                  : useActiveDrillLayout && passageOnlyView && "hidden",
                 useBlindReviewLayout
                   ? BLIND_REVIEW_QUESTION_PANEL_CLASS
                   : officialChrome
@@ -1983,6 +2051,8 @@ function SectionSessionPage() {
                     : useActiveDrillLayout
                     ? ACTIVE_DRILL_QUESTION_PANE_CLASS
                     : "gap-4 border-[var(--greyscale-100)] p-5",
+                officialChrome && mobilePane === null && OFFICIAL_QUESTION_PANE_MOBILE_STACKED_CLASS,
+                officialChrome && mobilePane === "question" && OFFICIAL_PANE_MOBILE_SOLO_CLASS,
               )}
             >
               <SectionQuestionPanel
@@ -2003,7 +2073,10 @@ function SectionSessionPage() {
                 flagsDisabled={sessionCompleted || resultsReviewMode}
                 onOpenReview={
                   useActiveDrillLayout || (useBlindReviewLayout && !resultsReviewMode)
-                    ? () => setReviewPanelOpen((open) => !open)
+                    ? () => {
+                        setToolsMenuOpen(false)
+                        setReviewPanelOpen((open) => !open)
+                      }
                     : undefined
                 }
                 reviewActive={reviewPanelOpen}
@@ -2023,6 +2096,8 @@ function SectionSessionPage() {
                 onLineFocus={() => setLineFocus((value) => !value)}
                 onFullscreen={toggleExamFullscreen}
                 fullView={isFullscreen}
+                onKeyboardHighlight={() => highlights.selectColor("yellow")}
+                keyboardHighlightActive={highlights.toolMode === "highlighter" && highlights.activeColor === "yellow"}
                 reviewChrome={resultsReviewMode}
                 actualOutcome={actualOutcome}
                 blindReviewOutcome={blindReviewOutcome}
@@ -2041,13 +2116,15 @@ function SectionSessionPage() {
       <footer
         className={cn(
           "practice-session-footer relative z-10",
-          useBlindReviewLayout
-            ? BLIND_REVIEW_FOOTER_CLASS
-            : officialChrome
-              ? OFFICIAL_FOOTER_CLASS
-              : useActiveDrillLayout
-              ? ACTIVE_DRILL_FOOTER_CLASS
-              : "flex shrink-0 items-center justify-between gap-3 border-t border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-3 md:gap-4 md:px-6",
+          resultsReviewMode
+            ? REVIEW_FOOTER_CLASS
+            : useBlindReviewLayout
+              ? BLIND_REVIEW_FOOTER_CLASS
+              : officialChrome
+                ? OFFICIAL_FOOTER_CLASS
+                : useActiveDrillLayout
+                  ? ACTIVE_DRILL_FOOTER_CLASS
+                  : "flex shrink-0 items-center justify-between gap-3 border-t border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-3 md:gap-4 md:px-6",
         )}
       >
         {useActiveDrillLayout ? (
@@ -2067,6 +2144,11 @@ function SectionSessionPage() {
                 : () => setSubmitModalOpen(true)
             }
             submitLabel={postCompleteBlindReview ? "Finish Untimed Review" : "Submit Section"}
+            onOpenReview={() => {
+              setToolsMenuOpen(false)
+              setReviewPanelOpen((open) => !open)
+            }}
+            reviewOpen={reviewPanelOpen}
           />
         ) : useBlindReviewLayout ? (
           <div className={resultsReviewMode ? REVIEW_FOOTER_ROW_CLASS : BLIND_REVIEW_FOOTER_ROW_CLASS}>
@@ -2206,7 +2288,22 @@ function SectionSessionPage() {
           finishButton={finishButton}
           onClose={handleExitSession}
           passageOnlyView={passageOnlyView}
-          onPassageOnlyViewChange={setPassageOnlyView}
+          onPassageOnlyViewChange={(next) => {
+            setPassageOnlyView(next)
+            setMobilePane(next ? "passage" : null)
+          }}
+          onOpenToolsMenu={() => {
+            setReviewPanelOpen(false)
+            setToolsMenuOpen((open) => !open)
+          }}
+          toolsMenuOpen={toolsMenuOpen}
+          sectionLabel={sectionType === "RC" ? "Reading" : "Logical Reasoning"}
+          showMobilePaneTabs={officialChrome && sectionType === "RC"}
+          mobilePane={mobilePane}
+          onMobilePaneChange={(pane) => {
+            setMobilePane(pane)
+            setPassageOnlyView(pane === "passage")
+          }}
         />
       ) : null}
       {sessionInnerContent}

@@ -314,8 +314,8 @@ function PrepTestListCardShell({
   expandedContent?: ReactNode
 }) {
   const identityClass = cn(
-    "flex min-w-0 items-center gap-4",
-    center ? "w-[198px] shrink-0" : "min-h-0 flex-1",
+    "flex min-w-0 items-center gap-3 md:gap-4",
+    center ? "min-w-0 flex-1 md:w-[198px] md:flex-none md:shrink-0" : "min-h-0 flex-1",
   )
   const identity = (
     <PrepTestIdentity
@@ -325,6 +325,26 @@ function PrepTestListCardShell({
       titleClass={titleClass}
       subtitle={subtitle}
     />
+  )
+  const identityNode = interactive ? (
+    <button
+      type="button"
+      disabled={starting}
+      aria-busy={starting || undefined}
+      aria-label={`Take PrepTest ${ptNumber || ""}`.trim()}
+      onClick={onActivate}
+      className={cn(identityClass, "bg-transparent text-left")}
+    >
+      {identity}
+    </button>
+  ) : (
+    <div className={identityClass}>{identity}</div>
+  )
+  const actionsNode = (
+    <div className={cn("flex shrink-0 items-center", center ? "gap-2 md:gap-4" : "gap-4")}>
+      {actions}
+      <MoreMenuButton />
+    </div>
   )
 
   return (
@@ -341,33 +361,17 @@ function PrepTestListCardShell({
     >
       <div
         className={cn(
-          "flex h-[88px] items-center transition-colors",
-          center ? "justify-between px-4" : "gap-4 px-4",
+          "flex transition-colors",
+          center
+            ? "grid h-auto grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-3 px-3 py-3 md:flex md:h-[88px] md:flex-row md:justify-between md:gap-0 md:px-4 md:py-0"
+            : "h-[88px] items-center gap-4 px-4",
           expanded ? "rounded-t-[16px]" : undefined,
           !expanded && badgeTone !== "muted" && "group-hover:bg-[var(--primary-25)]",
         )}
       >
-        {interactive ? (
-          <button
-            type="button"
-            disabled={starting}
-            aria-busy={starting || undefined}
-            aria-label={`Take PrepTest ${ptNumber || ""}`.trim()}
-            onClick={onActivate}
-            className={cn(identityClass, "bg-transparent text-left")}
-          >
-            {identity}
-          </button>
-        ) : (
-          <div className={identityClass}>{identity}</div>
-        )}
-
-        {center}
-
-        <div className="flex shrink-0 items-center gap-4">
-          {actions}
-          <MoreMenuButton />
-        </div>
+        {identityNode}
+        {center ? <div className="col-start-2 row-start-1 md:contents">{actionsNode}</div> : actionsNode}
+        {center ? <div className="col-span-2 min-w-0 md:col-span-1 md:contents">{center}</div> : null}
       </div>
 
       {expandedContent}
@@ -459,8 +463,10 @@ function PrepTestListCard({
       onClick={onToggleExpanded}
       disabled={!canExpand}
       className={cn(
-        "inline-flex h-[52px] w-max shrink-0 items-center justify-center rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6",
-        expanded ? "gap-0" : "gap-4",
+        "inline-flex min-w-0 items-center justify-between rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]",
+        "h-auto min-h-[44px] w-full gap-2 px-3 py-2",
+        "md:h-[52px] md:w-max md:shrink-0 md:justify-center md:px-6 md:py-0",
+        expanded ? "md:gap-0" : "md:gap-4",
         canExpand ? "cursor-pointer" : "cursor-default",
       )}
       aria-expanded={canExpand ? expanded : undefined}
@@ -492,14 +498,15 @@ function PrepTestListCard({
             <li
               key={attempt.sessionId}
               className={cn(
-                "flex h-[68px] items-center justify-between bg-[var(--greyscale-25)] px-4 py-2",
+                "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 bg-[var(--greyscale-25)] px-3 py-3",
+                "md:flex md:h-[68px] md:flex-row md:justify-between md:gap-0 md:px-4 md:py-2",
                 isLast
                   ? "rounded-b-[16px] border-t border-[var(--greyscale-100)]"
                   : "border-t border-[var(--greyscale-100)]",
               )}
             >
-              <div className="flex w-[198px] shrink-0 items-center">
-                <div className="flex min-w-0 flex-col items-start justify-center gap-2">
+              <div className="flex min-w-0 items-center md:w-[198px] md:shrink-0">
+                <div className="flex min-w-0 flex-col items-start justify-center gap-1 md:gap-2">
                   <p className="truncate text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary-800)]">
                     {formatCompletedDate(attempt.completedAt)}
                   </p>
@@ -508,10 +515,7 @@ function PrepTestListCard({
                   </p>
                 </div>
               </div>
-              <div className="inline-flex h-10 w-max shrink-0 items-center justify-center rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6">
-                <PrepTestScoreText variant="history" test={scores.test} br={scores.br} />
-              </div>
-              <div className="flex shrink-0 items-center gap-4">
+              <div className="col-start-2 row-start-1 flex shrink-0 items-center gap-2 md:gap-4">
                 <button type="button" onClick={() => onViewResult(attempt.sessionId)} className={RESULT_ACTION_CLASS}>
                   Result
                   <span className="relative inline-flex size-4 shrink-0 items-center justify-center">
@@ -519,6 +523,9 @@ function PrepTestListCard({
                   </span>
                 </button>
                 <MoreMenuButton />
+              </div>
+              <div className="col-span-2 inline-flex h-auto min-h-10 w-full min-w-0 items-center justify-between rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 py-2 md:col-span-1 md:h-10 md:w-max md:shrink-0 md:justify-center md:px-6 md:py-0">
+                <PrepTestScoreText variant="history" test={scores.test} br={scores.br} />
               </div>
             </li>
           )
@@ -852,33 +859,31 @@ function PrepTestListFilters({
   countsLoading?: boolean
 }) {
   return (
-    <div className="flex w-full flex-wrap items-center justify-between gap-4">
+    <div className="flex w-full flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-4">
       <h2 className="shrink-0 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary-800)]">
         Start your PrepTest
       </h2>
-      <div className="flex min-w-0 flex-wrap items-center gap-6">
+      <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 md:w-auto md:gap-6">
         <div
-          className="min-w-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex min-w-0 flex-wrap items-center gap-2"
           aria-busy={countsLoading || undefined}
         >
-          <div className="flex w-max items-center gap-2">
-            {FILTER_TABS.map((tab) => {
-              const active = filter === tab.id
-              const label = filterTabLabel(tab, statusCounts, countsLoading)
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setFilter(tab.id)}
-                  className={active ? FILTER_PILL_ACTIVE_CLASS : FILTER_PILL_INACTIVE_CLASS}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
+          {FILTER_TABS.map((tab) => {
+            const active = filter === tab.id
+            const label = filterTabLabel(tab, statusCounts, countsLoading)
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setFilter(tab.id)}
+                className={active ? FILTER_PILL_ACTIVE_CLASS : FILTER_PILL_INACTIVE_CLASS}
+              >
+                {label}
+              </button>
+            )
+          })}
         </div>
-        <div className="relative z-20 w-[106px] shrink-0">
+        <div className="relative z-20 w-[106px] shrink-0 self-start sm:self-auto">
           <label htmlFor="preptest-sort" className="sr-only">
             Sort PrepTests
           </label>
