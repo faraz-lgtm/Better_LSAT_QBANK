@@ -62,6 +62,7 @@ function OnboardingPage() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [requiresPassword, setRequiresPassword] = useState(false)
+  const [passwordUpdated, setPasswordUpdated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -93,18 +94,23 @@ function OnboardingPage() {
         return
       }
       try {
-        const [user, session, profile] = await Promise.all([
+        const [user, session, profile, studyContext] = await Promise.all([
           authApi.getCurrentUser(),
           authApi.getSession(),
           usersApi.getMyProfile(),
+          usersApi.getStudyContext().catch(() => null),
         ])
         if (!alive) return
         if (!user) return navigate("/login", { replace: true })
         if (profile) hydrateSessionProfile(profile)
         const needsPassword = userNeedsPasswordSetup(user, session)
-        // First-time users always stay for welcome + preference steps (goal/starting score).
-        // Do not auto-jump to diagnostic when Google already filled a name.
-        if (profile && (hasCompletedDiagnostic() || !profile.is_first_time_login)) {
+        // Already finished welcome prefs (or diagnostic) — leave onboarding even if
+        // is_first_time_login was left true after a partial prior save.
+        const alreadyOnboarded =
+          Boolean(studyContext?.preferences) ||
+          hasCompletedDiagnostic() ||
+          Boolean(profile && !profile.is_first_time_login)
+        if (profile && alreadyOnboarded) {
           if (profile.is_first_time_login) {
             const completed = await usersApi.completeFirstLogin()
             if (!alive) return
@@ -176,7 +182,10 @@ function OnboardingPage() {
     setIsSubmitting(true)
     setError(null)
     try {
-      if (requiresPassword) await authApi.updatePassword(password)
+if (requiresPassword && !passwordUpdated) {
+        await authApi.updatePassword(password)
+        setPasswordUpdated(true)
+      }
       const saved = await usersApi.saveOnboarding({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -231,7 +240,10 @@ function OnboardingPage() {
       setIsSubmitting(true)
       setError(null)
       try {
-        if (requiresPassword) await authApi.updatePassword(password)
+        if (requiresPassword && !passwordUpdated) {
+          await authApi.updatePassword(password)
+          setPasswordUpdated(true)
+        }
         const saved = await usersApi.saveOnboarding({
           firstName: firstName.trim(),
           lastName: lastName.trim(),
@@ -250,6 +262,26 @@ function OnboardingPage() {
         )
       } catch (e) {
         setError(e instanceof Error ? formatSupabaseCallError(e) : "Unable to continue to diagnostic.")
+      } finally {
+        setIsSubmitting(false)
+      }
+      return
+    }
+
+    // Set password on welcome when required, then advance (avoids re-calling updatePassword at complete).
+    if (requiresPassword && !passwordUpdated) {
+      if (!authApi) {
+        setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
+        return
+      }
+      setIsSubmitting(true)
+      setError(null)
+      try {
+        await authApi.updatePassword(password)
+        setPasswordUpdated(true)
+        next()
+      } catch (e) {
+        setError(e instanceof Error ? formatSupabaseCallError(e) : "Unable to set password.")
       } finally {
         setIsSubmitting(false)
       }

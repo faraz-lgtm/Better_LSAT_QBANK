@@ -223,6 +223,13 @@ export function createUsersApi(supabase: SupabaseClient) {
       return data.profile
     },
 
+    async lawHubConfirmUrl(): Promise<string> {
+      const { data, error } = await invokeUsersPost<{ url: string }>('users-lawhub-confirm-url')
+      if (error) throw error
+      if (!data?.url) throw new Error('No confirm URL in response')
+      return data.url
+    },
+
     async lawHubInvite(input: {
       firstName: string
       lastName: string

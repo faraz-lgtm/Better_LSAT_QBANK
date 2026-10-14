@@ -685,6 +685,9 @@ verify_jwt = false
 [functions.users-get-entitlement-state]
 verify_jwt = false
 
+[functions.users-lawhub-confirm-url]
+verify_jwt = false
+
 [functions.users-lawhub-invite]
 verify_jwt = false
 

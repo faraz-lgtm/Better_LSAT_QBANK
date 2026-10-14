@@ -33,6 +33,7 @@ import {
   formatLsacTestWindowLabel,
   resolveLsacTestWindowValue,
 } from "@/lib/lsac-test-window-options"
+import { usePollEntitlementAfterCheckoutSuccess } from "@/features/app-shell/poll-entitlement-after-checkout"
 import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-context"
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { StudentMain } from "@/features/student/components/student-main"
@@ -714,7 +715,8 @@ function AccountPage() {
   const navigate = useNavigate()
   useTrackCheckoutPurchase()
   const { openPricingModal } = useGuestPricingModal()
-  const { entitlement, loading: entitlementLoading } = useStudentEntitlement()
+  const { entitlement, loading: entitlementLoading, refresh } = useStudentEntitlement()
+  usePollEntitlementAfterCheckoutSuccess({ entitlement, refresh })
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [email, setEmail] = useState<string | null>(null)
   const [phone, setPhone] = useState<string | null>(null)
@@ -1379,7 +1381,7 @@ function AccountPage() {
                     type="button"
                     size="xs"
                     className="h-[35px] rounded-lg px-4"
-                    onClick={() => navigate(lsacLinkState === "pending" ? "/app" : "/app/lsac-link")}
+                    onClick={() => navigate("/app/lsac-link-step")}
                   >
                     {lsacLinkState === "pending" ? "Finish setup" : "Link Account"}
                   </Button>

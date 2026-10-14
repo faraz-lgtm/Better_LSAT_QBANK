@@ -2,6 +2,10 @@ import {
   createLawHubClient,
   type LawHubClient,
 } from '../_shared/lawhub-client.ts'
+import {
+  buildLsacConfirmEmailUrl,
+  resolveLsacConfirmEmailBaseUrl,
+} from '../_shared/lsac-confirm-email-url.ts'
 import { shouldRequireLsacLinkWall } from '../_shared/lsac-link-wall.ts'
 import { parseLawHubEnv } from '../_shared/lawhub-env.ts'
 import {
@@ -376,6 +380,31 @@ export function createUsersService(deps: UsersServiceDeps) {
       return await syncRecordFromLawHub(userId, record)
     },
 
+    /**
+     * Builds the LSAC confirm_email activation URL for the user's coaching id.
+     * Does not call LawHub; only needs vendor id + profile coaching id.
+     */
+    async getLawHubConfirmEmailUrl(userId: string): Promise<string> {
+      const env = parseLawHubEnv(Deno.env.toObject())
+      if (!env) {
+        throw new Error(
+          'LawHub is not configured: set LAWHUB_SANDBOX (or LSAC_BASE_URL), LSAC_VENDOR_ID, LSAC_CLIENT_ID, LSAC_CLIENT_SECRET',
+        )
+      }
+      const profile = await deps.repository.getProfileById(userId)
+      const coachingId = profile?.student_coaching_id?.trim()
+      if (!coachingId) {
+        throw new Error(
+          'No student_coaching_id on profile; complete LawHub invite first',
+        )
+      }
+      return buildLsacConfirmEmailUrl({
+        studentCoachingId: coachingId,
+        vendorId: env.LSAC_VENDOR_ID,
+        baseUrl: resolveLsacConfirmEmailBaseUrl(Deno.env.toObject()),
+      })
+    },
+
     /** Invite with PrepPlus included (doc §5 scenario 1). */
     async inviteStudentWithPrepPlusIncluded(
       userId: string,
@@ -731,8 +760,14 @@ export function createUsersService(deps: UsersServiceDeps) {
         }
       }
 
+      // Clear first-login here so a failed follow-up completeFirstLogin cannot
+      // trap returning students on /onboarding forever.
+      const completedProfile = profile.is_first_time_login
+        ? await deps.repository.markFirstTimeLogin(userId, false)
+        : profile
+
       return {
-        profile,
+        profile: completedProfile,
         preferences: mapStudyPreferencesRow(preferencesRow),
       }
     },

@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Navigate, useNavigate } from "react-router-dom"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-context"
-import { DashboardAccessSetupCard } from "@/features/dashboard/components/dashboard-access-setup-card"
 import { DashboardQuickStats } from "@/features/dashboard/components/dashboard-quick-stats"
 import { FreePlanDashboard } from "@/features/dashboard/components/free-plan-dashboard"
 import { PerformanceOverviewCard } from "@/features/dashboard/components/performance-overview-card"
@@ -270,14 +269,8 @@ function DashboardPage() {
       )
     }
 
-    return (
-      <StudentMain>
-        <div className="dashboard-page flex flex-col gap-6">
-          <DashboardWelcomeHeading firstName={firstName} />
-          <DashboardAccessSetupCard />
-        </div>
-      </StudentMain>
-    )
+    // Paid but LawHub not eligible — hard wall lives on /app/lsac-link-step.
+    return <Navigate to="/app/lsac-link-step" replace />
   }
 
   return (

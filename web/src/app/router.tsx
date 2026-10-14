@@ -20,6 +20,13 @@ import { ForgotPasswordPage } from "@/features/auth/pages/forgot-password-page"
 import { ResetPasswordPage } from "@/features/auth/pages/reset-password-page"
 import { AuthCallbackPage } from "@/features/auth/pages/auth-callback-page"
 import { LsacLinkPage } from "@/features/auth/pages/lsac-link-page"
+import { LsacLinkStepPage } from "@/features/auth/pages/lsac-link-step-page"
+import { useAppDispatch, useAppSelector } from "@/app/hooks"
+import {
+  loadEntitlement,
+  selectEntitlement,
+  selectEntitlementLoading,
+} from "@/features/student-session/studentSessionSlice"
 import { CheckoutDetailsPage } from "@/features/billing/pages/checkout-details-page"
 import { CheckoutPage } from "@/features/billing/pages/checkout-page"
 import { PricingPage } from "@/features/billing/pages/pricing-page"
@@ -314,6 +321,10 @@ function PublicOnly({ children }: { children: ReactElement }) {
         setProfileChecked(true)
         return
       }
+      // Logged-out visit left profileChecked=true with a null profile. Clear that until
+      // the post-login fetch finishes — otherwise we flash /onboarding for returning users.
+      setProfileChecked(false)
+      setDestination(null)
       // Defer: avoid getSession deadlock inside onAuthStateChange (common after Google OAuth).
       deferAuthWork(() => {
         void ensureProfile()
@@ -323,12 +334,16 @@ function PublicOnly({ children }: { children: ReactElement }) {
             if (nextProfile) {
               setProfile(nextProfile)
               await syncDestination(nextProfile)
+            } else {
+              setProfile(null)
+              setDestination(null)
             }
             setProfileChecked(true)
           })
           .catch(() => {
             // Keep the existing profile on transient refetch failures (e.g. token refresh
             // after edge function calls). Clearing profile here unmounts the whole app shell.
+            if (alive) setProfileChecked(true)
           })
       })
     })
@@ -340,7 +355,9 @@ function PublicOnly({ children }: { children: ReactElement }) {
 
   if (isAuthenticated === null) return null
   if (!isAuthenticated) return children
-  if (!profileChecked) return null
+  // Keep login/signup mounted while the post-sign-in profile fetch runs so the
+  // page can finish navigate(); only redirect once profileChecked is true.
+  if (!profileChecked) return children
   if (shouldRedirectAuthenticatedUserToOnboarding(profileChecked, profile)) {
     return <Navigate to="/onboarding" replace />
   }
@@ -495,6 +512,9 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
         setAuthChecked(true)
         return
       }
+      // Avoid flashing /onboarding when a prior logged-out pass left authChecked=true
+      // with a null profile (same race as PublicOnly on /login).
+      setAuthChecked(false)
       // Defer: avoid getSession deadlock inside onAuthStateChange (common after Google OAuth).
       deferAuthWork(() => {
         void ensureProfile()
@@ -506,6 +526,7 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
           })
           .catch(() => {
             // Preserve profile during background refetches triggered by Supabase auth events.
+            if (alive) setAuthChecked(true)
           })
       })
     })
@@ -547,7 +568,34 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
 }
 
 function RequireLsacEntitlement({ children }: { children: ReactElement }) {
-  // Payment and LawHub linking are soft-gated in the dashboard — do not hard-block the app shell.
+  const location = useLocation()
+  const dispatch = useAppDispatch()
+  const entitlement = useAppSelector(selectEntitlement)
+  const loading = useAppSelector(selectEntitlementLoading)
+  const onLsacSetupPath = location.pathname.startsWith("/app/lsac-link-step")
+
+  useEffect(() => {
+    void dispatch(loadEntitlement())
+  }, [dispatch])
+
+  if (loading && !entitlement) {
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
+        <StudentPageLoader centered label="Loading…" />
+      </div>
+    )
+  }
+
+  // Prefer hasActiveCore + !isLsacEligible over accessState === LSAC_REQUIRED
+  // (link wall env flag defaults off). Allow the setup page itself through.
+  if (
+    !onLsacSetupPath &&
+    entitlement?.hasActiveCore &&
+    !entitlement.isLsacEligible
+  ) {
+    return <Navigate to="/app/lsac-link-step" replace />
+  }
+
   return children
 }
 
@@ -616,6 +664,7 @@ const router = createBrowserRouter([
   { path: "/auth/callback", element: <AuthCallbackPage /> },
   { path: "/onboarding", element: <OnboardingPage /> },
   { path: "/onboarding/preview", element: <OnboardingWelcomePreviewPage /> },
+  { path: "/lsac-link-step", element: <Navigate to="/app/lsac-link-step" replace /> },
   {
     path: "/checkout",
     element: (
@@ -721,6 +770,10 @@ const router = createBrowserRouter([
           </RequireLsacEntitlement>
         ),
         children: [
+          {
+            path: "lsac-link-step",
+            element: <LsacLinkStepPage />,
+          },
           {
             index: true,
             element: (

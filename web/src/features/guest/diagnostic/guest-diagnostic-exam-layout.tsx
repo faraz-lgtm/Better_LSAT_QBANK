@@ -839,6 +839,10 @@ function GuestDiagnosticExamLayout({
           onNext={
             canNavigate ? () => setQIndex((index) => Math.min(questions.length, index + 1)) : () => undefined
           }
+          onSubmit={
+            mode === "exam" && interactive ? () => setSubmitModalOpen(true) : undefined
+          }
+          submitLabel="Submit Test"
         />
       </footer>
 

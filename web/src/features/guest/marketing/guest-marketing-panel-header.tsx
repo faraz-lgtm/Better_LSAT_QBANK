@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom"
 
+import { STUDENT_DASHBOARD_HREF } from "@/features/app-shell/student-nav-config"
 import {
   GUEST_INTENT_HEADER_CLASS,
   GUEST_INTENT_UPGRADE_BUTTON_CLASS,
@@ -10,11 +11,9 @@ type GuestMarketingPanelHeaderProps = {
 }
 
 function GuestMarketingPanelHeader({ variant }: GuestMarketingPanelHeaderProps) {
-  const logoHref = variant === "intent" ? "/intent" : variant === "login" ? "/login" : "/signup"
-
   return (
     <header className={GUEST_INTENT_HEADER_CLASS}>
-      <Link to={logoHref} className="flex shrink-0 items-center" aria-label="betterLSAT home">
+      <Link to={STUDENT_DASHBOARD_HREF} className="flex shrink-0 items-center" aria-label="betterLSAT home">
         <img src="/betterLSAT_LOGO.png" alt="betterLSAT" className="auth-split-logo" />
       </Link>
 

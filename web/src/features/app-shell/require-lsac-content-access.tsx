@@ -8,7 +8,8 @@ import {
 
 /**
  * Blocks Academy / Prep / Insights routes until LawHub coach is eligible.
- * Dashboard stays open so the setup card can complete linking.
+ * Paid students who are not eligible are hard-redirected to `/app/lsac-link-step`
+ * by `RequireLsacEntitlement` (setup page stays inside the student shell).
  */
 function RequireLsacContentAccess({ children }: { children: ReactElement }) {
   const location = useLocation()

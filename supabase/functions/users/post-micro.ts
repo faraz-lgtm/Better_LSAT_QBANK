@@ -106,6 +106,12 @@ export async function handleUsersPostMicro(req: Request, slug: string): Promise<
       return json({ profile }, {}, corsHeaders)
     }
 
+    if (action === 'users-lawhub-confirm-url') {
+      if (!service.isLawHubConfigured()) return lawhubDisabled()
+      const url = await service.getLawHubConfirmEmailUrl(user.id)
+      return json({ url }, {}, corsHeaders)
+    }
+
     if (action === 'users-lawhub-invite') {
       if (!service.isLawHubConfigured()) return lawhubDisabled()
       const sessionEmail = user.email

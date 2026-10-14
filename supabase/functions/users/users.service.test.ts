@@ -978,6 +978,7 @@ Deno.test('createUsersService.linkLawHubWithExistingPrepPlus invites when LawHub
 
 Deno.test('saveOnboarding upserts profile and preferences and seeds starting score', async () => {
   let scoreUpserted = false
+  let firstLoginCleared = false
   const repository = mockRepo({
     upsertProfile: async (row) => ({
       id: row.id,
@@ -996,6 +997,26 @@ Deno.test('saveOnboarding upserts profile and preferences and seeds starting sco
       created_at: '2026-01-01T00:00:00Z',
       updated_at: '2026-01-01T00:00:00Z',
     }),
+    markFirstTimeLogin: async (userId, isFirstTimeLogin) => {
+      firstLoginCleared = isFirstTimeLogin === false
+      return {
+        id: userId,
+        email: null,
+        full_name: 'Ada Lovelace',
+        first_name: 'Ada',
+        last_name: 'Lovelace',
+        role: 'student',
+        student_coaching_id: null,
+        stripe_customer_id: null,
+        prep_plus_source: null,
+        lawhub_invite_status: null,
+        lawhub_invite_last_error: null,
+        lawhub_invited_at: null,
+        is_first_time_login: isFirstTimeLogin,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      }
+    },
     upsertOfficialLsatScore: async () => {
       scoreUpserted = true
       return {
@@ -1025,9 +1046,11 @@ Deno.test('saveOnboarding upserts profile and preferences and seeds starting sco
   assertEquals(out.profile.full_name, 'Ada Lovelace')
   assertEquals(out.profile.first_name, 'Ada')
   assertEquals(out.profile.last_name, 'Lovelace')
+  assertEquals(out.profile.is_first_time_login, false)
   assertEquals(out.preferences.goalScore, 170)
   assertEquals(out.preferences.startingScore, 155)
   assertEquals(scoreUpserted, true)
+  assertEquals(firstLoginCleared, true)
 })
 
 Deno.test('createUsersService.getEntitlementState returns PAYMENT_REQUIRED without billing access', async () => {

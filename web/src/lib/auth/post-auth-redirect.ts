@@ -12,14 +12,15 @@ export type PostAuthDestination =
   | "/onboarding"
   | "/app/pricing"
   | "/app/lsac-link"
+  | "/app/lsac-link-step"
   | "/intent"
   | "/diagnostic/start"
   | "/app/diagnostic/results"
 
 /**
  * Route students using diagnostic funnel progress when active.
- * Outside the funnel, payment and LawHub setup are soft-gated on the dashboard
- * — not hard walls after login.
+ * Outside the funnel, payment stays soft-gated on the dashboard; LawHub coach
+ * setup hard-redirects to /app/lsac-link-step when subscribed but not eligible.
  */
 export function resolvePostAuthDestination(
   profile: UserProfile | null,
@@ -67,6 +68,15 @@ export function resolvePostAuthDestination(
   if (funnel.completedDiagnostic && entitlement?.accessState === "PAYMENT_REQUIRED") {
     logRouteRedirect(from, "/app/diagnostic/results", "completed diagnostic; payment required")
     return "/app/diagnostic/results"
+  }
+
+  if (entitlement?.hasActiveCore && !entitlement.isLsacEligible) {
+    logRouteRedirect(from, "/app/lsac-link-step", "LawHub setup required", {
+      hasActiveCore: entitlement.hasActiveCore,
+      isLsacEligible: entitlement.isLsacEligible,
+      accessState: entitlement.accessState,
+    })
+    return "/app/lsac-link-step"
   }
 
   if (entitlement) {

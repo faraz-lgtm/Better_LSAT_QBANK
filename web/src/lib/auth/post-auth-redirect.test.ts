@@ -128,10 +128,20 @@ describe("resolvePostAuthDestination", () => {
     ).toBe("/app")
   })
 
-  it("returns app when entitlement is LSAC_REQUIRED outside funnel (soft-gate in dashboard)", () => {
+  it("returns app/lsac-link-step when subscribed but LawHub not eligible", () => {
     expect(
       resolvePostAuthDestination(baseStudent, lsacRequiredEntitlement, emptyFunnel),
-    ).toBe("/app")
+    ).toBe("/app/lsac-link-step")
+  })
+
+  it("returns app/lsac-link-step when accessState is FULL_ACCESS but not eligible", () => {
+    expect(
+      resolvePostAuthDestination(baseStudent, {
+        ...fullAccessEntitlement,
+        isLsacEligible: false,
+        isLsacLinked: true,
+      }, emptyFunnel),
+    ).toBe("/app/lsac-link-step")
   })
 
   it("returns app when entitlement is FULL_ACCESS", () => {

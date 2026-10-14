@@ -33,7 +33,7 @@ type PracticeSessionActiveDrillFooterNavProps = {
   onNext: () => void
   /** When false, Next stays enabled on the last question (e.g. unlimited drills). Default true. */
   disableNextAtLast?: boolean
-  /** Kept for callers; submit lives in the header more menu for LSAT default view. */
+  /** When set, last question morphs Next into Submit (header more menu remains available). */
   onSubmit?: () => void
   submitLabel?: string
   /** When set, question pills show correct / incorrect / unanswered chrome. */
@@ -52,14 +52,15 @@ function PracticeSessionActiveDrillFooterNav({
   onPrev,
   onNext,
   disableNextAtLast = true,
-  onSubmit: _onSubmit,
-  submitLabel: _submitLabel,
+  onSubmit,
+  submitLabel = "Submit",
   outcomeForQuestion,
   showPassageBreaks = true,
   className,
 }: PracticeSessionActiveDrillFooterNavProps) {
   const isLastQuestion = safeIndex >= questions.length
-  const nextDisabled = disableNextAtLast && isLastQuestion
+  const showSubmit = Boolean(isLastQuestion && disableNextAtLast && onSubmit)
+  const nextDisabled = disableNextAtLast && isLastQuestion && !showSubmit
   const officialChrome = isOfficialLayout(variant)
 
   if (officialChrome) {
@@ -86,15 +87,26 @@ function PracticeSessionActiveDrillFooterNav({
             showPassageBreaks={showPassageBreaks}
             className={OFFICIAL_FOOTER_NAV_GRID_CLASS}
           />
-          <button
-            type="button"
-            className={OFFICIAL_FOOTER_NAV_BUTTON_CLASS}
-            disabled={nextDisabled}
-            aria-label="Next question"
-            onClick={onNext}
-          >
-            Next
-          </button>
+          {showSubmit ? (
+            <button
+              type="button"
+              className={OFFICIAL_FOOTER_NAV_BUTTON_CLASS}
+              aria-label={submitLabel}
+              onClick={onSubmit}
+            >
+              {submitLabel}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={OFFICIAL_FOOTER_NAV_BUTTON_CLASS}
+              disabled={nextDisabled}
+              aria-label="Next question"
+              onClick={onNext}
+            >
+              Next
+            </button>
+          )}
         </div>
       </div>
     )
@@ -125,14 +137,25 @@ function PracticeSessionActiveDrillFooterNav({
           className={ACTIVE_DRILL_FOOTER_NAV_GRID_CLASS}
         />
         <div className={ACTIVE_DRILL_FOOTER_NAV_ARROW_COLUMN_CLASS}>
-          <PracticeSessionNavArrowButton
-            direction="next"
-            disabled={nextDisabled}
-            iconOnly
-            examArrow
-            className={ACTIVE_DRILL_FOOTER_NAV_ARROW_BUTTON_CLASS}
-            onClick={onNext}
-          />
+          {showSubmit ? (
+            <button
+              type="button"
+              className={OFFICIAL_FOOTER_NAV_BUTTON_CLASS}
+              aria-label={submitLabel}
+              onClick={onSubmit}
+            >
+              {submitLabel}
+            </button>
+          ) : (
+            <PracticeSessionNavArrowButton
+              direction="next"
+              disabled={nextDisabled}
+              iconOnly
+              examArrow
+              className={ACTIVE_DRILL_FOOTER_NAV_ARROW_BUTTON_CLASS}
+              onClick={onNext}
+            />
+          )}
         </div>
       </div>
     </div>
