@@ -793,8 +793,8 @@ html.student-shell-active #root {
 .guest-intent-card-grid {
   display: grid;
   width: 100%;
-  max-width: 632px;
-  grid-template-columns: repeat(3, minmax(0, 200px));
+  max-width: 416px;
+  grid-template-columns: repeat(2, minmax(0, 200px));
   justify-content: center;
   gap: 16px;
   padding-top: 32px;

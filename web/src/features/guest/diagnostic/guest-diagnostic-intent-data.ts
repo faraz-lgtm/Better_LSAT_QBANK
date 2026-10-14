@@ -5,7 +5,7 @@ import { DIAGNOSTIC_INTENT_STORAGE_KEY } from "@/lib/auth/diagnostic-intent"
 const GUEST_DIAGNOSTIC_INTENT_OPTIONS: ReadonlyArray<GuestDiagnosticIntentOption> = [
   {
     id: "mini",
-    title: "Mini",
+    title: "Quick Baseline",
     description: "Quick overview of your weakest areas",
     questionCount: "10q",
     duration: "~20 min",
@@ -13,20 +13,12 @@ const GUEST_DIAGNOSTIC_INTENT_OPTIONS: ReadonlyArray<GuestDiagnosticIntentOption
   },
   {
     id: "quick",
-    title: "Full Section Diagnostic",
+    title: "Full Section",
     description: "Find your biggest point leaks fast",
     questionCount: "25q",
     duration: "~35 min",
     recommended: true,
     features: ["All 4 sections covered", "Detailed score breakdown", "Point leak map"],
-  },
-  {
-    id: "full",
-    title: "Full",
-    description: "Comprehensive picture, no blind spots",
-    questionCount: "115q",
-    duration: "~90 min",
-    features: ["AAMC-style full exam", "Subsection deep dive", "Peer benchmarking"],
   },
 ] as const
 

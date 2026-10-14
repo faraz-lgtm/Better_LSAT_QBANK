@@ -3,9 +3,9 @@ import { parseQuestionChoices } from '../_shared/parse-question-choices.ts'
 import { parseStripeEnv } from '../_shared/stripe-env.ts'
 import type { DiagnosticRepository } from './diagnostic.repository.ts'
 
-/** Free Mini Diagnostic: first N written explanations unlocked. */
+/** Free Quick Baseline: first N written explanations unlocked. */
 const FREE_MINI_DIAGNOSTIC_EXPLANATION_LIMIT = 5
-/** Free Full Section / Full Diagnostic: first N explanations unlocked. */
+/** Free Full Section: first N explanations unlocked. */
 const FREE_SECTION_DIAGNOSTIC_EXPLANATION_LIMIT = 10
 
 const MINI_DIAG_VIDEO_ID = /^mini-diag-q(\d+)$/i

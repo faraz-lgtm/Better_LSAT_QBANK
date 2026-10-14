@@ -9,17 +9,17 @@ import {
 describe("guest diagnostic test config", () => {
   it("maps each intent to question count and time", () => {
     expect(getGuestDiagnosticTestConfig("mini")).toMatchObject({
-      title: "Mini Diagnostic - Test Instructions",
+      title: "Quick Baseline - Test Instructions",
       questionCount: 10,
       timeMinutes: 13,
     })
     expect(getGuestDiagnosticTestConfig("quick")).toMatchObject({
-      title: "Full Section Diagnostic - Test Instructions",
+      title: "Full Section - Test Instructions",
       questionCount: 25,
       timeMinutes: 35,
     })
     expect(getGuestDiagnosticTestConfig("full")).toMatchObject({
-      title: "Full Diagnostic - Test Instructions",
+      title: "Full Section - Test Instructions",
       questionCount: 115,
       timeMinutes: 90,
     })

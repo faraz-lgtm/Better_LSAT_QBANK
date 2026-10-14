@@ -45,9 +45,9 @@ export const MINI_DIAGNOSTIC_SCORE_RANGES: MiniDiagnosticScoreRange[] = Array.fr
 export const MINI_DIAGNOSTIC_MARKETING_SET: MiniDiagnosticMarketingSet = {
   intentId: "mini",
   moduleId: "DIAG-MINI",
-  moduleName: "Mini Diagnostic — Marketing",
+  moduleName: "Quick Baseline — Marketing",
   sectionId: "DIAG-MINI-LR-1",
-  title: "Mini Diagnostic for Marketing",
+  title: "Quick Baseline for Marketing",
   timeMinutes: 13,
   questionCount: MINI_DIAGNOSTIC_QUESTION_COUNT,
   questions: MINI_DIAGNOSTIC_QUESTIONS,

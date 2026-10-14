@@ -80,7 +80,7 @@ function DiagnosticResultsNavItem({
               isDiagnosticResultsSectionPath(pathname, "mini") && "student-sidebar-link--active",
             )}
           >
-            <span className="student-sidebar-label">Mini</span>
+            <span className="student-sidebar-label">Quick Baseline</span>
           </Link>
           <Link
             to={DIAGNOSTIC_RESULTS_FULL_HREF}
@@ -89,7 +89,7 @@ function DiagnosticResultsNavItem({
               isDiagnosticResultsSectionPath(pathname, "full") && "student-sidebar-link--active",
             )}
           >
-            <span className="student-sidebar-label">Full</span>
+            <span className="student-sidebar-label">Full Section</span>
           </Link>
         </div>
       ) : null}

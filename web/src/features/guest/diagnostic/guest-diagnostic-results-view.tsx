@@ -563,7 +563,7 @@ const LOCKED_TEASER_DUMMY_TYPES = ['Assumption', 'Inference', 'Flaw', 'Strengthe
 /** Placeholder row for gated questions. Never reads real question/explanation data. */
 function GuestDiagnosticLockedQuestionRow({
   number,
-  heading = 'Mini Diagnostic',
+  heading = 'Quick Baseline',
 }: {
   number: number
   heading?: string

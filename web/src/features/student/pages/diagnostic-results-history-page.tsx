@@ -21,17 +21,17 @@ type DiagnosticResultsHistoryPageProps = {
 function sectionCopy(section: DiagnosticResultsSection) {
   if (section === "mini") {
     return {
-      title: "Mini Diagnostic History",
-      empty: "No Mini diagnostics yet. Take the 10-question Mini diagnostic to see your score history here.",
+      title: "Quick Baseline History",
+      empty: "No Quick Baseline diagnostics yet. Take the 10-question Quick Baseline to see your score history here.",
       startHref: "/diagnostic/start?intent=mini",
-      startLabel: "Start Mini Diagnostic",
+      startLabel: "Start Quick Baseline",
     }
   }
   return {
-    title: "Full Diagnostic History",
-    empty: "No Full diagnostics yet. Take the 30-question Full diagnostic to see your score history here.",
+    title: "Full Section History",
+    empty: "No Full Section diagnostics yet. Take the 25-question Full Section to see your score history here.",
     startHref: "/diagnostic/start?intent=quick",
-    startLabel: "Start Full Diagnostic",
+    startLabel: "Start Full Section",
   }
 }
 

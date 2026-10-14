@@ -14,21 +14,21 @@ const DIAGNOSTIC_TEST_INSTRUCTIONS =
 const GUEST_DIAGNOSTIC_TEST_CONFIG: Record<GuestDiagnosticIntentId, GuestDiagnosticTestConfig> = {
   mini: {
     intentId: "mini",
-    title: "Mini Diagnostic - Test Instructions",
+    title: "Quick Baseline - Test Instructions",
     questionCount: 10,
     timeMinutes: 13,
     instructions: DIAGNOSTIC_TEST_INSTRUCTIONS,
   },
   quick: {
     intentId: "quick",
-    title: "Full Section Diagnostic - Test Instructions",
+    title: "Full Section - Test Instructions",
     questionCount: 25,
     timeMinutes: 35,
     instructions: DIAGNOSTIC_TEST_INSTRUCTIONS,
   },
   full: {
     intentId: "full",
-    title: "Full Diagnostic - Test Instructions",
+    title: "Full Section - Test Instructions",
     questionCount: 115,
     timeMinutes: 90,
     instructions: DIAGNOSTIC_TEST_INSTRUCTIONS,

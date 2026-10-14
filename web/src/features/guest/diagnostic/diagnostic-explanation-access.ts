@@ -1,11 +1,11 @@
 import type { GuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-intent-types"
 import { resolveDiagnosticSourceQuestion } from "@/features/guest/diagnostic/mini-diagnostic-content"
 
-/** Free Mini Diagnostic: first N result / Review explanations unlocked. */
+/** Free Quick Baseline: first N result / Review explanations unlocked. */
 const FREE_MINI_DIAGNOSTIC_EXPLANATION_LIMIT = 5
 
 /**
- * Free Full Section (`quick`) and Full Diagnostic (`full`): first N explanations unlocked.
+ * Free Full Section (`quick` / `full`): first N explanations unlocked.
  * Remaining rows stay blurred until upgrade.
  */
 const FREE_FULL_DIAGNOSTIC_EXPLANATION_LIMIT = 10
@@ -17,13 +17,13 @@ const PREVIEW_DIAG_QUESTION_ID = /^guest-diagnostic-preview-q/i
 /** Free-plan teaser: first N explanations unlocked on Review in Tester / results. */
 function freeDiagnosticExplanationLimit(intentId: GuestDiagnosticIntentId): number {
   if (intentId === "mini") return FREE_MINI_DIAGNOSTIC_EXPLANATION_LIMIT
-  // quick (Full Section) + full (Full Diagnostic)
+  // quick + full → Full Section
   return FREE_FULL_DIAGNOSTIC_EXPLANATION_LIMIT
 }
 
 /**
  * Map a catalog / review question id onto the diagnostic intent used for teaser limits.
- * Mini → 5; section + full (preview) → 10.
+ * Quick Baseline → 5; Full Section → 10.
  */
 function resolveDiagnosticExplanationIntentId(questionId: string): GuestDiagnosticIntentId | null {
   const id = questionId.trim()
@@ -54,8 +54,8 @@ function canShowDiagnosticExplanation(input: {
 }
 
 /**
- * Results-list access. Free students unlock the first 5 rows on Mini and the
- * first 10 on Full Section / Full. Remaining rows stay blurred until upgrade.
+ * Results-list access. Free students unlock the first 5 rows on Quick Baseline and the
+ * first 10 on Full Section. Remaining rows stay blurred until upgrade.
  */
 function canShowDiagnosticResultDetails(input: {
   intentId: GuestDiagnosticIntentId

@@ -11,29 +11,29 @@ describe("DiagnosticResultsHistoryPage", () => {
     localStorage.clear()
   })
 
-  it("shows an empty Mini history state", () => {
+  it("shows an empty Quick Baseline history state", () => {
     render(
       <MemoryRouter>
         <DiagnosticResultsHistoryPage section="mini" />
       </MemoryRouter>,
     )
-    expect(screen.getByRole("heading", { name: "Mini Diagnostic History" })).toBeInTheDocument()
-    expect(screen.getByText(/No Mini diagnostics yet/i)).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Start Mini Diagnostic" })).toHaveAttribute(
+    expect(screen.getByRole("heading", { name: "Quick Baseline History" })).toBeInTheDocument()
+    expect(screen.getByText(/No Quick Baseline diagnostics yet/i)).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Start Quick Baseline" })).toHaveAttribute(
       "href",
       "/diagnostic/start?intent=mini",
     )
   })
 
-  it("lists Full attempts and links to the attempt detail", () => {
+  it("lists Full Section attempts and links to the attempt detail", () => {
     const saved = writeGuestDiagnosticResult(buildDefaultGuestDiagnosticResult("quick"))
     render(
       <MemoryRouter>
         <DiagnosticResultsHistoryPage section="full" />
       </MemoryRouter>,
     )
-    expect(screen.getByRole("heading", { name: "Full Diagnostic History" })).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /Full Diagnostic #1/i })).toHaveAttribute(
+    expect(screen.getByRole("heading", { name: "Full Section History" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: /Full Section #1/i })).toHaveAttribute(
       "href",
       `/app/diagnostic/results/full/${saved.id}`,
     )
