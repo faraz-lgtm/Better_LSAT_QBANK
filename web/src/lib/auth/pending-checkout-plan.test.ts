@@ -8,6 +8,7 @@ import {
   resolvePendingCheckoutDestination,
   savePendingCheckoutPlan,
   signupPathForPlan,
+  signupPathFromCheckoutSearch,
 } from "./pending-checkout-plan"
 
 describe("pending checkout plan", () => {
@@ -77,5 +78,20 @@ describe("pending checkout plan", () => {
     expect(checkoutPathForPlan("monthly", { includeLawHub: false })).toBe(
       "/checkout?plan=monthly&includeLawHub=0",
     )
+  })
+
+  it("maps logged-out checkout search to signup with plan intent", () => {
+    expect(signupPathFromCheckoutSearch("?plan=three_month")).toBe(
+      "/signup?plan=three_month",
+    )
+    expect(readPendingCheckoutPlan()).toBe("three_month")
+
+    expect(signupPathFromCheckoutSearch("plan=monthly&includeLawHub=0")).toBe(
+      "/signup?plan=monthly&includeLawHub=0",
+    )
+    expect(readPendingCheckoutPlan()).toBe("monthly")
+
+    expect(signupPathFromCheckoutSearch("?plan=bogus")).toBe("/signup")
+    expect(signupPathFromCheckoutSearch("")).toBe("/signup")
   })
 })

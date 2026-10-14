@@ -49,6 +49,7 @@ import {
   parseSignupPlan,
   resolvePendingCheckoutDestination,
   savePendingCheckoutPlan,
+  signupPathFromCheckoutSearch,
 } from "@/lib/auth/pending-checkout-plan"
 import {
   resolvePostAuthDestination,
@@ -639,6 +640,41 @@ function RequireAuthenticated({ children }: { children: ReactElement }) {
   return children
 }
 
+/** Checkout handoff: logged-out LP visitors go to signup with plan intent, not login. */
+function RequireCheckoutAuth({ children }: { children: ReactElement }) {
+  const location = useLocation()
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    const supabase = getSupabaseBrowserClient()
+
+    void supabase.auth.getSession().then(({ data }) => {
+      if (alive) setIsAuthenticated(Boolean(data.session))
+    })
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (alive) setIsAuthenticated(Boolean(session))
+    })
+
+    return () => {
+      alive = false
+      authListener.subscription.unsubscribe()
+    }
+  }, [])
+
+  if (isAuthenticated === null) {
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
+        <StudentPageLoader centered label="Loading…" />
+      </div>
+    )
+  }
+  if (!isAuthenticated) {
+    return <Navigate to={signupPathFromCheckoutSearch(location.search)} replace />
+  }
+  return children
+}
+
 const router = createBrowserRouter([
   { path: "/", element: <PublicOnly><LoginPage /></PublicOnly> },
   { path: "/login", element: <PublicOnly><LoginPage /></PublicOnly> },
@@ -668,17 +704,17 @@ const router = createBrowserRouter([
   {
     path: "/checkout",
     element: (
-      <RequireAuthenticated>
+      <RequireCheckoutAuth>
         <CheckoutPage />
-      </RequireAuthenticated>
+      </RequireCheckoutAuth>
     ),
   },
   {
     path: "/checkout/details",
     element: (
-      <RequireAuthenticated>
+      <RequireCheckoutAuth>
         <CheckoutDetailsPage />
-      </RequireAuthenticated>
+      </RequireCheckoutAuth>
     ),
   },
   {

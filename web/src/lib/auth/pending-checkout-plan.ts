@@ -60,6 +60,23 @@ export function signupPathForPlan(plan: SignupPlanId): string {
   return `/signup?plan=${plan}`
 }
 
+/**
+ * Logged-out visitors hitting /checkout (e.g. LP purchase CTAs) should sign up
+ * with the plan preserved, then resume authenticated checkout after auth.
+ */
+export function signupPathFromCheckoutSearch(search: string): string {
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search)
+  const plan = parseSignupPlan(params.get("plan"))
+  if (!plan) return "/signup"
+
+  savePendingCheckoutPlan(plan)
+
+  if (params.get("includeLawHub") === "0") {
+    return `/signup?plan=${plan}&includeLawHub=0`
+  }
+  return signupPathForPlan(plan)
+}
+
 /** Authenticated checkout handoff URL for a paid plan selected on pricing. */
 export function checkoutPathForPlan(
   plan: CheckoutPlanId,

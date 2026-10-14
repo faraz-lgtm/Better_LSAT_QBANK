@@ -14,7 +14,7 @@ import {
   topOverviewSectionDrills,
 } from "@/features/student/analytics/overview-section-drills"
 import { DrillDifficultyStatus } from "@/features/student/components/drill-difficulty-status"
-import { difficultyMeterFromLabel } from "@/features/student/drills/tag-drills-priority"
+import { priorityMeterFromRow } from "@/features/student/drills/tag-drills-priority"
 import type {
   AnalyticsSection,
   AnalyticsStat,
@@ -180,9 +180,12 @@ export function AnalyticsScoreProgressPanel({
   )
 }
 
-/** Same Easy/Medium/Hard chip as Drill by Types (question difficulty, not priority). */
-function WeaknessDifficultyLabel({ difficulty }: { difficulty: QuestionTypeRowData["difficulty"] }) {
-  const meter = difficultyMeterFromLabel(difficulty)
+/** Priority tier chip (Highest/High/Medium/Low) for Top Weaknesses cards. */
+function WeaknessPriorityLabel({ priorityTier }: { priorityTier: QuestionTypeRowData["priorityTier"] }) {
+  const meter = priorityMeterFromRow({
+    priorityTier: priorityTier ?? "low",
+    priorityLevel: "low",
+  })
   return (
     <DrillDifficultyStatus
       label={meter.label}
@@ -280,7 +283,7 @@ function WeaknessCard({ row }: { row: QuestionTypeRowData }) {
             {row.averagePerTest.toFixed(1)} average / test
           </p>
         </div>
-        <WeaknessDifficultyLabel difficulty={row.difficulty} />
+        <WeaknessPriorityLabel priorityTier={row.priorityTier} />
       </div>
 
       <div className="flex items-center justify-center gap-3">
