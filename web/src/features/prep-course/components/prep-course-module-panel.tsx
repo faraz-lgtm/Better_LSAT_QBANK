@@ -32,6 +32,7 @@ type PrepCourseModulePanelProps = {
   onToggleSection: (sectionId: string) => void
   onExpandModuleSections: () => void
   onToggleModuleBookmark: (next: boolean) => void
+  onToggleShowBookmarksOnly?: (next: boolean) => void
   moduleLocked?: boolean
   onLockedLessonClick?: () => void
 }
@@ -62,9 +63,11 @@ function PrepCourseModulePanel({
   onToggleSection,
   onExpandModuleSections,
   onToggleModuleBookmark,
+  onToggleShowBookmarksOnly,
   moduleLocked = false,
   onLockedLessonClick,
 }: PrepCourseModulePanelProps) {
+  const bookmarkToggleOn = moduleBookmarked || showBookmarksOnly
   const lessons = moduleLessons(module)
   const lessonCount = moduleLessonCount(module)
   const completedCount = countCompletedLessons(lessons, completedLessonSlugs)
@@ -133,7 +136,7 @@ function PrepCourseModulePanel({
       <Bookmark
         className={cn(
           "size-4",
-          moduleBookmarked ? "fill-current text-[var(--primary)]" : "text-[color:var(--greyscale-500)]",
+          bookmarkToggleOn ? "fill-current text-[var(--primary)]" : "text-[color:var(--greyscale-500)]",
         )}
         strokeWidth={2}
         aria-hidden
@@ -141,11 +144,17 @@ function PrepCourseModulePanel({
       <span className="text-xs font-medium tracking-[0.24px] text-[color:var(--greyscale-500)]">Bookmark</span>
       <Switch
         size="sm"
-        checked={moduleBookmarked}
-        onChange={(event) => onToggleModuleBookmark(event.target.checked)}
+        checked={bookmarkToggleOn}
+        onChange={(event) => {
+          const next = event.target.checked
+          if (!next && showBookmarksOnly) {
+            onToggleShowBookmarksOnly?.(false)
+          }
+          onToggleModuleBookmark(next)
+        }}
         className={cn(
           "h-5 w-9 border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-0.5",
-          moduleBookmarked ? "bg-[var(--primary)]! border-[var(--primary)]!" : undefined,
+          bookmarkToggleOn ? "bg-[var(--primary)]! border-[var(--primary)]!" : undefined,
         )}
         aria-label="Bookmark module"
       />

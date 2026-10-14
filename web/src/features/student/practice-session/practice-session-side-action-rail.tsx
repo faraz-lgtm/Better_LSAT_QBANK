@@ -118,7 +118,10 @@ function PracticeSessionSideWidget({
       : fullView
         ? SideWidgetMedSizeIcon
         : SideWidgetFullScreenIcon,
-    onClick: () => onFullscreen?.(),
+    onClick: () => {
+      onFullscreen?.()
+      if (mobileOverlay) setExpanded(false)
+    },
     active: fullView,
   }
 

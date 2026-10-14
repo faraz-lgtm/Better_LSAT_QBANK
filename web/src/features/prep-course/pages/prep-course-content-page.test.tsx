@@ -382,6 +382,90 @@ describe("PrepCourseContentPage", () => {
     expect(bookmarkSwitch).not.toBeChecked()
   })
 
+  it("turns on the module Bookmark switch when All Modules Bookmark is on", async () => {
+    getCourseMock.mockResolvedValue({
+      course,
+      lessons: [lessonA],
+      curriculum: {
+        modules: [
+          {
+            id: "m1",
+            course_id: "c1",
+            title: "Module One",
+            sort_order: 1,
+            duration_minutes: null,
+            sections: [
+              {
+                id: "s1",
+                module_id: "m1",
+                title: "Section Alpha",
+                sort_order: 1,
+                duration_minutes: null,
+                lessons: [lessonA],
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={["/app/prep-course/prep-course"]}>
+        <Routes>
+          <Route path="/app/prep-course/:courseSlug" element={<PrepCourseContentPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    const moduleBookmarkSwitch = await screen.findByRole("switch", { name: "Bookmark module" })
+    expect(moduleBookmarkSwitch).not.toBeChecked()
+
+    await user.click(screen.getByRole("button", { name: "Bookmark Lesson A" }))
+    await user.click(screen.getByRole("switch", { name: "Show all bookmark" }))
+
+    expect(moduleBookmarkSwitch).toBeChecked()
+  })
+
+  it("keeps the module Bookmark switch off by default", async () => {
+    getCourseMock.mockResolvedValue({
+      course,
+      lessons: [lessonA],
+      curriculum: {
+        modules: [
+          {
+            id: "m1",
+            course_id: "c1",
+            title: "Module One",
+            sort_order: 1,
+            duration_minutes: null,
+            sections: [
+              {
+                id: "s1",
+                module_id: "m1",
+                title: "Section Alpha",
+                sort_order: 1,
+                duration_minutes: null,
+                lessons: [lessonA],
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    render(
+      <MemoryRouter initialEntries={["/app/prep-course/prep-course"]}>
+        <Routes>
+          <Route path="/app/prep-course/:courseSlug" element={<PrepCourseContentPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole("switch", { name: "Bookmark module" })).not.toBeChecked()
+    expect(screen.getByRole("switch", { name: "Show all bookmark" })).not.toBeChecked()
+  })
+
   it("shows only bookmarked lessons when module Bookmark toggle is on", async () => {
     getCourseMock.mockResolvedValue({
       course,
