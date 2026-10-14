@@ -58,9 +58,13 @@ function isPrepCourseNavItem(item: StudentNavItem): boolean {
   return item.href === PREP_COURSE_HREF
 }
 
-/** Free-plan: keep Prep Course clickable (Diagnostic items live under DIAGNOSTIC). */
+/** Free-plan: keep Prep Course + community links clickable (Diagnostic items live under DIAGNOSTIC). */
 function isUnlockedOnFreePlan(item: StudentNavItem): boolean {
-  return isPrepCourseNavItem(item)
+  return (
+    isPrepCourseNavItem(item) ||
+    item.href === "/app/feedback" ||
+    item.href === "/app/roadmap"
+  )
 }
 
 function isPrepCourseRoute(pathname: string): boolean {

@@ -25,6 +25,7 @@ type OnboardingWelcomeStepProps = {
   isSubmitting: boolean
   error: string | null
   onContinue: () => void
+  onLogout?: () => void
 }
 
 function OnboardingWelcomeStep({
@@ -43,9 +44,10 @@ function OnboardingWelcomeStep({
   isSubmitting,
   error,
   onContinue,
+  onLogout,
 }: OnboardingWelcomeStepProps) {
   return (
-    <GuestMarketingPanelLayout headerVariant="signup">
+    <GuestMarketingPanelLayout headerVariant="logout" onLogout={onLogout}>
       <AuthCard className="guest-marketing-signup-card">
         <div className="figma-gap-24 flex flex-col">
           <div className="figma-gap-16 flex flex-col items-center text-center">

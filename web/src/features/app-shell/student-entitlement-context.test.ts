@@ -32,6 +32,11 @@ describe("isLsacLockedNavItem", () => {
     expect(isLsacLockedNavItem("/app/diagnostic/explanations")).toBe(false)
   })
 
+  it("keeps feedback and roadmap unlocked", () => {
+    expect(isLsacLockedNavItem("/app/feedback")).toBe(false)
+    expect(isLsacLockedNavItem("/app/roadmap")).toBe(false)
+  })
+
   it("locks other academy and prep nav items", () => {
     expect(isLsacLockedNavItem("/app/learn/explanations")).toBe(true)
     expect(isLsacLockedNavItem("/app/preptest")).toBe(true)

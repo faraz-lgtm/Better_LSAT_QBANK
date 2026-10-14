@@ -5,7 +5,7 @@ import {
 } from "@/features/student/diagnostic/diagnostic-results-routes"
 import { isDiagnosticExplanationsPath } from "@/features/student/diagnostic/diagnostic-explanations-routes"
 
-export type StudentNavSectionKey = "academy" | "prep" | "insights"
+export type StudentNavSectionKey = "academy" | "prep" | "insights" | "community"
 
 /** Per-item icons from Figma sidebar node `19640:23125`. */
 export type StudentNavItemIconKey =
@@ -20,6 +20,8 @@ export type StudentNavItemIconKey =
   | "insights-drills"
   | "insights-sections"
   | "insights-preptest"
+  | "feedback"
+  | "roadmap"
 
 export const STUDENT_NAV_ITEM_ICON_SRC: Record<StudentNavItemIconKey, string> = {
   dashboard: "/nav/dashboard.svg",
@@ -33,6 +35,8 @@ export const STUDENT_NAV_ITEM_ICON_SRC: Record<StudentNavItemIconKey, string> = 
   "insights-drills": "/nav/insights-drills.svg",
   "insights-sections": "/nav/insights-sections.svg",
   "insights-preptest": "/nav/insights-preptest.svg",
+  feedback: "/nav/feedback.svg",
+  roadmap: "/nav/roadmap.svg",
 }
 
 export const STUDENT_NAV_LOGOUT_ICON_SRC = "/nav/logout.svg"
@@ -93,6 +97,14 @@ export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
       { label: "PrepTest", href: "/app/analytics/preptests", icon: "insights-preptest" },
     ],
   },
+  {
+    key: "community",
+    label: "COMMUNITY",
+    items: [
+      { label: "Feedback", href: "/app/feedback", icon: "feedback" },
+      { label: "Roadmap", href: "/app/roadmap", icon: "roadmap" },
+    ],
+  },
 ]
 
 export const STUDENT_APP_VERSION = "1.0.3"
@@ -107,6 +119,9 @@ export function getActiveSectionKey(pathname: string): StudentNavSectionKey | nu
   }
   if (pathname.startsWith("/app/practice") || isPrepTestStudentPath(pathname)) return "prep"
   if (pathname.startsWith("/app/analytics")) return "insights"
+  if (pathname.startsWith("/app/feedback") || pathname.startsWith("/app/roadmap")) {
+    return "community"
+  }
   return null
 }
 

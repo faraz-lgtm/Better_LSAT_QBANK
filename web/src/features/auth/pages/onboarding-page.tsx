@@ -16,11 +16,12 @@ import {
   appendCheckoutSuccessQuery,
   useTrackCheckoutPurchase,
 } from "@/lib/analytics/track-checkout-purchase"
-import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
+import { AnalyticsEvent, captureEvent, resetUser } from "@/lib/analytics/posthog"
 import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
 import { getAppStore } from "@/app/store-ref"
 import { setProfile } from "@/features/student-session/studentSessionSlice"
+import { clearStudentSessionCaches } from "@/lib/auth/clear-student-session-caches"
 import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
 import {
   ensureDiagnosticIntent,
@@ -317,6 +318,18 @@ if (requiresPassword && !passwordUpdated) {
     if (step > 1) setStep((step - 1) as Step)
   }
 
+  async function handleLogout() {
+    try {
+      const supabase = getSupabaseBrowserClient()
+      await supabase.auth.signOut()
+    } catch {
+      // Still clear local session state if sign-out fails.
+    }
+    clearStudentSessionCaches()
+    resetUser()
+    navigate("/login", { replace: true })
+  }
+
   function title() {
     if (step === 2) return "What days do you want to study?"
     if (step === 3 || step === 4) return "How many hours per day will you study?"
@@ -348,6 +361,7 @@ if (requiresPassword && !passwordUpdated) {
         isSubmitting={isSubmitting}
         error={error}
         onContinue={() => void handleWelcomeContinue()}
+        onLogout={() => void handleLogout()}
       />
     )
   }

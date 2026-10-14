@@ -32,6 +32,9 @@ describe("StudentAppSidebar", () => {
     expect(screen.getByRole("link", { name: "Explanations" })).toBeInTheDocument()
     expect(screen.queryByRole("link", { name: "Untimed Review" })).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument()
+    expect(screen.getByText("COMMUNITY")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Feedback" })).toHaveAttribute("href", "/app/feedback")
+    expect(screen.getByRole("link", { name: "Roadmap" })).toHaveAttribute("href", "/app/roadmap")
 
     const diagnosticHeading = screen.getByText("DIAGNOSTIC")
     const diagnosticTest = screen.getByRole("link", { name: "Diagnostic Test" })

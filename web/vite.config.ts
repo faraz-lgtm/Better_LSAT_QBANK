@@ -20,6 +20,22 @@ export default defineConfig({
       // Allow importing marketing diagnostic content from ../data
       allow: [repoRoot, dataRoot],
     },
+    // Produktly blocks Origin: localhost (403). Proxy API calls in dev with a
+    // production Origin so feedback widgets work on http://localhost:5173.
+    proxy: {
+      "/__produktly_api": {
+        target: "https://api.produktly.com",
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/__produktly_api/, ""),
+        configure: (proxy) => {
+          proxy.on("proxyReq", (proxyReq) => {
+            proxyReq.setHeader("Origin", "https://app.betterlsat.com")
+            proxyReq.setHeader("Referer", "https://app.betterlsat.com/")
+          })
+        },
+      },
+    },
   },
   test: {
     environment: 'jsdom',

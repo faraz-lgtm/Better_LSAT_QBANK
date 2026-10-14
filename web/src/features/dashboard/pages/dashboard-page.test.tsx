@@ -1,7 +1,7 @@
 import { configureStore } from "@reduxjs/toolkit"
 import { render, screen, waitFor } from "@testing-library/react"
 import { Provider } from "react-redux"
-import { MemoryRouter, Route, Routes } from "react-router-dom"
+import { MemoryRouter } from "react-router-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
@@ -183,31 +183,24 @@ describe("DashboardPage", () => {
     expect(mocks.getPageBundle).not.toHaveBeenCalled()
   })
 
-  it("redirects to LawHub setup when payment is settled but LSAC content is still locked", async () => {
+  it("renders the paid dashboard when payment is settled but LSAC content is still locked", async () => {
     mocks.entitlement.isPaymentRequired = false
+    mocks.entitlement.canAccessLsacContent = false
+    mocks.entitlement.isLsacSetupRequired = true
     mocks.entitlement.entitlement = {
       ...paymentRequiredEntitlement(),
       accessState: "LSAC_REQUIRED",
       hasActiveCore: true,
     }
 
-    render(
-      <Provider store={configureStore({ reducer: { studentSession: studentSessionReducer } })}>
-        <MemoryRouter initialEntries={["/app"]}>
-          <GuestPricingModalProvider>
-            <Routes>
-              <Route path="/app" element={<DashboardPage />} />
-              <Route path="/app/lsac-link-step" element={<div>LawHub step</div>} />
-            </Routes>
-          </GuestPricingModalProvider>
-        </MemoryRouter>
-      </Provider>,
-    )
+    renderDashboard()
 
     await waitFor(() => {
-      expect(screen.getByText("LawHub step")).toBeInTheDocument()
+      expect(screen.getByRole("heading", { level: 1, name: /Welcome back/ })).toBeInTheDocument()
     })
-    expect(screen.queryByRole("heading", { level: 2, name: "Complete LawHub setup" })).not.toBeInTheDocument()
+    expect(screen.queryByText("Unlock full practice and analytics")).not.toBeInTheDocument()
+    // LawHub analytics stay gated until eligible; shell + Link LSAC CTA remain reachable.
+    expect(mocks.getPageBundle).not.toHaveBeenCalled()
   })
 
   it("paints the shell while analytics is still loading (no full-page loader)", async () => {

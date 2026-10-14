@@ -7,9 +7,9 @@ import {
 } from "@/features/app-shell/student-entitlement-context"
 
 /**
- * Blocks Academy / Prep / Insights routes until LawHub coach is eligible.
- * Paid students who are not eligible are hard-redirected to `/app/lsac-link-step`
- * by `RequireLsacEntitlement` (setup page stays inside the student shell).
+ * Soft-locks Academy / Prep / Insights (LawHub pool) routes until coach is eligible.
+ * Sends locked visits back to `/app`. Account, settings, dashboard, and setup stay reachable;
+ * post-checkout soft-lands on `/app/lsac-link-step` with a Link LSAC header CTA.
  */
 function RequireLsacContentAccess({ children }: { children: ReactElement }) {
   const location = useLocation()

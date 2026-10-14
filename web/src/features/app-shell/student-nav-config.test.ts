@@ -41,6 +41,13 @@ describe("student-nav-config", () => {
     expect(getStudentPageTitle("/app/analytics/drills")).toBe("Drills")
   })
 
+  it("maps feedback and roadmap to community section", () => {
+    expect(getActiveSectionKey("/app/feedback")).toBe("community")
+    expect(getActiveSectionKey("/app/roadmap")).toBe("community")
+    expect(getStudentPageTitle("/app/feedback")).toBe("Feedback")
+    expect(getStudentPageTitle("/app/roadmap")).toBe("Roadmap")
+  })
+
   it("matches analytics tab query params", () => {
     expect(isNavItemActive("/app/analytics", "/app/analytics?tab=priorities", "?tab=priorities")).toBe(true)
     expect(isNavItemActive("/app/analytics", "/app/analytics?tab=priorities", "")).toBe(false)
