@@ -97,13 +97,13 @@ function PricingPage() {
         const entitlement = await usersApi.getEntitlementState()
         if (!alive) return
 
-        if (entitlement.accessState === "FULL_ACCESS") {
-          logRouteRedirect("/app/pricing", "/app", "FULL_ACCESS")
-          navigate("/app", { replace: true })
+        if (entitlement.hasActiveCore && !entitlement.isLsacEligible) {
+          logRouteRedirect("/app/pricing", "/app/lsac-link-step", "LawHub setup required")
+          navigate("/app/lsac-link-step", { replace: true })
           return
         }
-        if (entitlement.accessState === "LSAC_REQUIRED") {
-          logRouteRedirect("/app/pricing", "/app", "LSAC_REQUIRED; soft-gate on dashboard")
+        if (entitlement.accessState === "FULL_ACCESS" && entitlement.isLsacEligible) {
+          logRouteRedirect("/app/pricing", "/app", "FULL_ACCESS")
           navigate("/app", { replace: true })
           return
         }

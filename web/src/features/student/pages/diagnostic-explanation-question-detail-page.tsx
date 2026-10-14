@@ -4,6 +4,7 @@ import { Lock } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { StudentMain } from "@/features/student/components/student-main"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { buildExplanationQuestionNav } from "@/features/student/explanation-detail/build-explanation-question-nav"
 import { ExplanationAnalyticsTabPanel } from "@/features/student/explanation-detail/explanation-analytics-tab-panel"
 import { ExplanationDetailTabBar } from "@/features/student/explanation-detail/explanation-detail-tab-bar"
@@ -27,14 +28,9 @@ import {
   collectMiniDiagnosticVideoAspectRatios,
   collectMiniDiagnosticVideoUrls,
 } from "@/features/student/diagnostic/mini-diagnostic-video-urls"
+import { resolveDiagnosticExplanationTab } from "@/features/student/diagnostic/resolve-diagnostic-explanation-tab"
 import { createDiagnosticApi } from "@/lib/api/diagnostic"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-
-function parseTab(raw: string | null, showExplanationTab: boolean): ExplanationDetailTabId {
-  if (raw === "analytics") return "analytics"
-  if (raw === "explanation" && showExplanationTab) return "explanation"
-  return "question"
-}
 
 function neighborHref(questionId: string | null, tab: ExplanationDetailTabId): string | null {
   if (!questionId) return null
@@ -54,12 +50,14 @@ function DiagnosticExplanationQuestionDetailPage() {
   const [videoAspectRatioByQuestionId, setVideoAspectRatioByQuestionId] = useState<Map<string, string>>(
     () => new Map(),
   )
+  const [videosLoading, setVideosLoading] = useState(true)
   const explanationsUnlocked =
     !subscriptionLoading &&
     canShowDiagnosticExplanationForQuestionId({ questionId, hasActiveCore })
 
   useEffect(() => {
     let cancelled = false
+    setVideosLoading(true)
     const diagnosticApi = createDiagnosticApi(getSupabaseBrowserClient())
     void diagnosticApi
       .getMiniDiagnosticExplanations()
@@ -75,6 +73,9 @@ function DiagnosticExplanationQuestionDetailPage() {
       })
       .catch(() => {
         /* keep static detail without video tab */
+      })
+      .finally(() => {
+        if (!cancelled) setVideosLoading(false)
       })
     return () => {
       cancelled = true
@@ -109,9 +110,15 @@ function DiagnosticExplanationQuestionDetailPage() {
     else setSearchParams({ tab: t }, { replace: true })
   }
 
+  const requestedTab = searchParams.get("tab")
+  /** Keep Video Explanation selected while URLs / plan gate are still resolving. */
+  const awaitingExplanationTab =
+    requestedTab === "explanation" && (videosLoading || subscriptionLoading)
+  const showExplanationTab = (view?.hasExplanationTab ?? false) || awaitingExplanationTab
+
   const tab = useMemo(
-    () => parseTab(searchParams.get("tab"), view?.hasExplanationTab ?? false),
-    [searchParams, view?.hasExplanationTab],
+    () => resolveDiagnosticExplanationTab(requestedTab, showExplanationTab),
+    [requestedTab, showExplanationTab],
   )
 
   const initialExpandedChoiceId = useMemo(() => {
@@ -139,7 +146,7 @@ function DiagnosticExplanationQuestionDetailPage() {
           onTabChange={setTab}
           prevHref={neighborHref(view.neighbors.prevRouteKey, tab)}
           nextHref={neighborHref(view.neighbors.nextRouteKey, tab)}
-          showExplanationTab={view.hasExplanationTab}
+          showExplanationTab={showExplanationTab}
           questionHrefBuilder={diagnosticExplanationQuestionDetailHref}
         />
 
@@ -170,7 +177,12 @@ function DiagnosticExplanationQuestionDetailPage() {
               initialExpandedChoiceId={initialExpandedChoiceId}
             />
           ) : null}
-          {tab === "explanation" ? <ExplanationExplainTabPanel videoOnly videos={view.videos} /> : null}
+          {tab === "explanation" && awaitingExplanationTab ? (
+            <StudentPageLoader label="Loading video…" />
+          ) : null}
+          {tab === "explanation" && !awaitingExplanationTab ? (
+            <ExplanationExplainTabPanel videoOnly videos={view.videos} />
+          ) : null}
           {tab === "analytics" ? (
             <ExplanationAnalyticsTabPanel
               analytics={view.analytics}

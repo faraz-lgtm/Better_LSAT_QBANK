@@ -74,12 +74,13 @@ Quick reference:
 | `LSAC_SCOPE` | Optional override; otherwise derived from `LAWHUB_SANDBOX` |
 | `LSAC_VENDOR_SYSTEM` | Optional label for the required **logging** API |
 | `LSAC_DEEPLINK_BASE_URL` | Optional override for deep link host (default: `https://lawhub.org`) |
+| `LSAC_CONFIRM_EMAIL_BASE_URL` | Optional confirm_email activation host (default: `https://lawpath.azurewebsites.net/confirm_email`) |
 | `LSAC_SYNC_KEY` | Required shared secret header (`x-lsac-sync-key`) for `lsac-sync` |
 | `PREP_COURSE_ENFORCE_ENTITLEMENT` | When `true`, prep-course requires linked + eligible LSAC subscription |
 
 **Hosted sandbox:** `supabase secrets set LAWHUB_SANDBOX=true` plus `LSAC_VENDOR_ID`, `LSAC_CLIENT_ID`, `LSAC_CLIENT_SECRET`. **Production:** `LAWHUB_SANDBOX=false`. **Local:** `supabase/functions/.env` (gitignored).
 
-The `users` Edge Function exposes actions such as `lawhub-token-check`, `lawhub-lookup-email` (session email only), `lawhub-invite` (session email only), `lawhub-refresh`, `lawhub-upgrade-self`, `lawhub-test-instances`, and `lawhub-log-login`. See `web/src/lib/api/users.ts` for the typed client.
+The `users` Edge Function exposes actions such as `lawhub-token-check`, `lawhub-lookup-email` (session email only), `lawhub-invite` (session email only), `lawhub-refresh`, `lawhub-confirm-url`, `lawhub-upgrade-self`, `lawhub-test-instances`, and `lawhub-log-login`. See `web/src/lib/api/users.ts` for the typed client.
 
 Additional LSAC backend functions:
 - `lsac-deeplink` (POST, auth required): returns canonical LawHub deep-link URLs bound to the authenticated profile's `student_coaching_id`.
@@ -121,7 +122,7 @@ Emulator verification checklist:
 
 ## Stripe billing (Core intervals + LawHub Advantage)
 
-After signup and onboarding, students land on **`/app/pricing`**. Free access stays on the app. Paid checkout is one Core product with three recurring prices: **$69/month**, **$192 every 3 months**, and **$354 every 6 months**. Stripe Checkout adds **LawHub Advantage (~$99/year)** as a one-time line item on the first invoice unless the student already has PrepPlus. After payment, they complete LawHub linking on `/app/lsac-link`. Existing Live subscriptions still grant access; Live is not offered for new checkout.
+After signup and onboarding, students land on **`/app/pricing`**. Free access stays on the app. Paid checkout is one Core product with three recurring prices: **$69/month**, **$192 every 3 months**, and **$354 every 6 months**. Stripe Checkout adds **LawHub Advantage (~$99/year)** as a one-time line item on the first invoice unless the student already has PrepPlus. After payment, they complete LawHub linking on `/lsac-link-step`. Existing Live subscriptions still grant access; Live is not offered for new checkout.
 
 | Variable | Purpose |
 |----------|---------|

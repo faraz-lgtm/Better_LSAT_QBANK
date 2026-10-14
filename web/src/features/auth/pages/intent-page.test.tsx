@@ -147,6 +147,16 @@ describe("IntentPage", () => {
     expect(screen.getByRole("link", { name: /back/i })).toHaveAttribute("href", "/app")
   })
 
+  it("links the BetterLSAT logo to the platform home page", () => {
+    render(
+      <MemoryRouter>
+        <IntentPage isAuthenticated={true} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole("link", { name: "betterLSAT home" })).toHaveAttribute("href", "/app")
+  })
+
   it("links back to betterlsat.com when unauthenticated", () => {
     render(
       <MemoryRouter>
@@ -183,7 +193,7 @@ describe("IntentPage", () => {
       screen.getByText(/BetterLSAT is an independent test-preparation company and is not affiliated with or endorsed by LSAC/),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/All actual LSAT® content reproduced within this work is used with the permission of Law School Admission Council/),
+      screen.getByText(/All actual LSAT® content is used with the permission of Law School Admission Council/),
     ).toBeInTheDocument()
   })
 })

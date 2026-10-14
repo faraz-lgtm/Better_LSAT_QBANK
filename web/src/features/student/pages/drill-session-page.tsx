@@ -1286,6 +1286,8 @@ function DrillSessionPage() {
             onPrev={goToPreviousQuestion}
             onNext={() => void goToNextQuestion()}
             disableNextAtLast={disableNextAtLast}
+            onSubmit={requestSubmitDrill}
+            submitLabel="Submit Drill"
           />
         ) : useBlindReviewLayout ? (
           <div className={resultsReviewMode ? REVIEW_FOOTER_ROW_CLASS : BLIND_REVIEW_FOOTER_ROW_CLASS}>

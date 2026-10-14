@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { StudentMain } from "@/features/student/components/student-main"
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
 import { canShowDiagnosticExplanationForQuestionId } from "@/features/guest/diagnostic/diagnostic-explanation-access"
+import { GuestFreeAnalyticsLimitCta } from "@/features/guest/diagnostic/guest-upgrade-cta"
 import { useDiagnosticSubscription } from "@/features/guest/diagnostic/use-diagnostic-subscription"
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import {
@@ -131,6 +132,26 @@ const QUESTION_ROW_CLASS =
 const PREP_TEST_ROW_CLASS =
   "explanations-tree-row flex h-[88px] w-full flex-nowrap items-center justify-between gap-6 border-b bg-[var(--greyscale-0)] pr-6 text-left transition-colors hover:bg-[var(--primary-0)]"
 
+function sectionOpenKey(ptId: string, secId: string) {
+  return `${ptId}:${secId}`
+}
+
+/** Prep-test + section rows start expanded so the question list is visible on load. */
+function initialDiagnosticTreeOpenState(): {
+  openPt: Set<string>
+  openSection: Set<string>
+} {
+  const trees = buildDiagnosticExplanationTrees()
+  const openPt = new Set(trees.map((tree) => tree.id))
+  const openSection = new Set<string>()
+  for (const tree of trees) {
+    for (const sec of tree.sections) {
+      openSection.add(sectionOpenKey(tree.id, sec.id))
+    }
+  }
+  return { openPt, openSection }
+}
+
 function prepTestBadgeColors(): { backgroundColor: string; borderColor: string; color: string } {
   return { backgroundColor: "var(--primary-0)", borderColor: "var(--primary)", color: "var(--primary)" }
 }
@@ -193,6 +214,62 @@ function DifficultyMeter({ level }: { level: ExplanationQuestionNode["difficulty
         {label}
       </span>
     </div>
+  )
+}
+
+function DiagnosticSectionQuestionRows({
+  questions,
+  indentClass,
+  showPaidContent,
+  onLockedClick,
+}: {
+  questions: ExplanationQuestionNode[]
+  indentClass: string
+  showPaidContent: boolean
+  onLockedClick: () => void
+}) {
+  const unlockedQuestions: ExplanationQuestionNode[] = []
+  const lockedQuestions: ExplanationQuestionNode[] = []
+  for (const q of questions) {
+    const unlocked = canShowDiagnosticExplanationForQuestionId({
+      questionId: q.id,
+      hasActiveCore: showPaidContent,
+    })
+    if (unlocked) unlockedQuestions.push(q)
+    else lockedQuestions.push(q)
+  }
+
+  return (
+    <>
+      {unlockedQuestions.map((q) => (
+        <DiagnosticTreeQuestionRow
+          key={q.id}
+          question={q}
+          indentClass={indentClass}
+          unlocked
+          onLockedClick={onLockedClick}
+        />
+      ))}
+      {lockedQuestions.length > 0 ? (
+        <div className="relative">
+          <div aria-hidden>
+            {lockedQuestions.map((q) => (
+              <DiagnosticTreeQuestionRow
+                key={q.id}
+                question={q}
+                indentClass={indentClass}
+                unlocked={false}
+                onLockedClick={onLockedClick}
+              />
+            ))}
+          </div>
+          {/* Same free-limit overlay as diagnostic results report */}
+          <div className="absolute inset-0 flex items-center justify-center bg-[var(--primary-0)]/80 px-4 py-6">
+            <GuestFreeAnalyticsLimitCta onSubscribe={onLockedClick} />
+          </div>
+        </div>
+      ) : null}
+    </>
   )
 }
 
@@ -314,8 +391,12 @@ function DiagnosticExplanationsPage() {
     return map
   }, [progress, videoUrlByQuestionId])
   const statusCounts = useMemo(() => countDiagnosticExplanationStatus(progress), [progress])
-  const [openPt, setOpenPt] = useState<Set<string>>(() => new Set())
-  const [openSection, setOpenSection] = useState<Set<string>>(() => new Set())
+  const [openPt, setOpenPt] = useState<Set<string>>(() => {
+    return initialDiagnosticTreeOpenState().openPt
+  })
+  const [openSection, setOpenSection] = useState<Set<string>>(() => {
+    return initialDiagnosticTreeOpenState().openSection
+  })
 
   const statusStats = [
     { dot: "var(--explanation-in-process)", count: statusCounts.in_process, label: "In Process" },
@@ -333,10 +414,8 @@ function DiagnosticExplanationsPage() {
     })
   }
 
-  const secKey = (ptId: string, secId: string) => `${ptId}:${secId}`
-
   const toggleSection = (ptId: string, secId: string) => {
-    const key = secKey(ptId, secId)
+    const key = sectionOpenKey(ptId, secId)
     setOpenSection((prev) => {
       const next = new Set(prev)
       if (next.has(key)) next.delete(key)
@@ -408,7 +487,7 @@ function DiagnosticExplanationsPage() {
 
                 {ptIsOpen && tree
                   ? tree.sections.map((sec) => {
-                      const sectionOpen = openSection.has(secKey(ptId, sec.id))
+                      const sectionOpen = openSection.has(sectionOpenKey(ptId, sec.id))
                       const questions = sec.passages.flatMap((pass) => pass.questions)
                       return (
                         <div key={sec.id}>
@@ -431,20 +510,14 @@ function DiagnosticExplanationsPage() {
                               </span>
                             </div>
                           </button>
-                          {sectionOpen
-                            ? questions.map((q) => (
-                                <DiagnosticTreeQuestionRow
-                                  key={q.id}
-                                  question={q}
-                                  indentClass={EXPLANATION_TREE_PL_CLASS.question}
-                                  unlocked={canShowDiagnosticExplanationForQuestionId({
-                                    questionId: q.id,
-                                    hasActiveCore: showPaidContent,
-                                  })}
-                                  onLockedClick={openPricingModal}
-                                />
-                              ))
-                            : null}
+                          {sectionOpen ? (
+                            <DiagnosticSectionQuestionRows
+                              questions={questions}
+                              indentClass={EXPLANATION_TREE_PL_CLASS.question}
+                              showPaidContent={showPaidContent}
+                              onLockedClick={openPricingModal}
+                            />
+                          ) : null}
                         </div>
                       )
                     })

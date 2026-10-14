@@ -2,6 +2,7 @@ import { Link } from "react-router-dom"
 
 import { FigmaIcon } from "@/components/icons/figma-icons"
 import { Button } from "@/components/ui/button"
+import { STUDENT_DASHBOARD_HREF } from "@/features/app-shell/student-nav-config"
 
 type AuthSplitHeaderProps = {
   ctaLabel?: string
@@ -28,7 +29,7 @@ function AuthSplitHeader({
   if (variant === "intent") {
     return (
       <header className="auth-split-header auth-split-header--intent">
-        <Link to="/intent" className="flex shrink-0 items-center" aria-label="betterLSAT home">
+        <Link to={STUDENT_DASHBOARD_HREF} className="flex shrink-0 items-center" aria-label="betterLSAT home">
           <img src="/betterLSAT_LOGO.png" alt="betterLSAT" className="auth-split-logo" />
         </Link>
         <div className="auth-split-header-intent-actions">

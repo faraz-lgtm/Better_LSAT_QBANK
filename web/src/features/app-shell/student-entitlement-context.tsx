@@ -89,6 +89,7 @@ function isLsacContentPath(pathname: string): boolean {
   if (pathname.startsWith("/app/diagnostic")) return false
   if (pathname.startsWith("/app/pricing")) return false
   if (pathname.startsWith("/app/lsac-link")) return false
+  if (pathname.startsWith("/app/lsac-link-step")) return false
   // Academy Prep Course is BetterLSAT curriculum — available before LawHub coach link.
   if (pathname.startsWith("/app/prep-course")) return false
 

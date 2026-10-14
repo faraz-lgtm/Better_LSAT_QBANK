@@ -2061,6 +2061,12 @@ function SectionSessionPage() {
             onSelectQuestion={setQIndex}
             onPrev={() => setQIndex((i) => Math.max(1, i - 1))}
             onNext={() => setQIndex((i) => Math.min(questions.length, i + 1))}
+            onSubmit={
+              sessionCompleted && !postCompleteBlindReview
+                ? undefined
+                : () => setSubmitModalOpen(true)
+            }
+            submitLabel={postCompleteBlindReview ? "Finish Untimed Review" : "Submit Section"}
           />
         ) : useBlindReviewLayout ? (
           <div className={resultsReviewMode ? REVIEW_FOOTER_ROW_CLASS : BLIND_REVIEW_FOOTER_ROW_CLASS}>

@@ -1,7 +1,7 @@
 import { configureStore } from "@reduxjs/toolkit"
 import { render, screen, waitFor } from "@testing-library/react"
 import { Provider } from "react-redux"
-import { MemoryRouter } from "react-router-dom"
+import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
@@ -180,10 +180,10 @@ describe("DashboardPage", () => {
     expect(mocks.getTrajectory).not.toHaveBeenCalled()
     expect(mocks.getSessions).not.toHaveBeenCalled()
     expect(mocks.getPriorities).not.toHaveBeenCalled()
-    expect(mocks.getStudyContext).not.toHaveBeenCalled()
+    expect(mocks.getPageBundle).not.toHaveBeenCalled()
   })
 
-  it("shows LawHub setup when payment is settled but LSAC content is still locked", async () => {
+  it("redirects to LawHub setup when payment is settled but LSAC content is still locked", async () => {
     mocks.entitlement.isPaymentRequired = false
     mocks.entitlement.entitlement = {
       ...paymentRequiredEntitlement(),
@@ -191,12 +191,23 @@ describe("DashboardPage", () => {
       hasActiveCore: true,
     }
 
-    renderDashboard()
+    render(
+      <Provider store={configureStore({ reducer: { studentSession: studentSessionReducer } })}>
+        <MemoryRouter initialEntries={["/app"]}>
+          <GuestPricingModalProvider>
+            <Routes>
+              <Route path="/app" element={<DashboardPage />} />
+              <Route path="/app/lsac-link-step" element={<div>LawHub step</div>} />
+            </Routes>
+          </GuestPricingModalProvider>
+        </MemoryRouter>
+      </Provider>,
+    )
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { level: 1, name: "Welcome back, Assad" })).toBeInTheDocument()
-      expect(screen.getByRole("heading", { level: 2, name: "Complete LawHub setup" })).toBeInTheDocument()
+      expect(screen.getByText("LawHub step")).toBeInTheDocument()
     })
+    expect(screen.queryByRole("heading", { level: 2, name: "Complete LawHub setup" })).not.toBeInTheDocument()
   })
 
   it("paints the shell while analytics is still loading (no full-page loader)", async () => {
