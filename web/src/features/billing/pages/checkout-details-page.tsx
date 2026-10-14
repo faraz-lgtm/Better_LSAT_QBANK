@@ -6,7 +6,12 @@ import { Input } from "@/components/ui/input"
 import { AuthCard } from "@/features/auth/components/auth-card"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createUsersApi } from "@/lib/api/users"
-import { parseSignupPlan } from "@/lib/auth/pending-checkout-plan"
+import type { CheckoutPlanId } from "@/lib/api/billing"
+import {
+  checkoutPathForPlan,
+  parseCheckoutSuccessPathParam,
+  parseSignupPlan,
+} from "@/lib/auth/pending-checkout-plan"
 import { profileHasLawHubName, splitFullName } from "@/lib/lawhub-identity"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
@@ -15,7 +20,10 @@ function CheckoutDetailsPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const parsedPlan = parseSignupPlan(searchParams.get("plan"))
-  const plan = parsedPlan && parsedPlan !== "free" ? parsedPlan : null
+  const plan: CheckoutPlanId | null =
+    parsedPlan && parsedPlan !== "free" ? (parsedPlan as CheckoutPlanId) : null
+  const includeLawHub = searchParams.get("includeLawHub") !== "0"
+  const successPath = parseCheckoutSuccessPathParam(searchParams.get("successPath"))
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [isLoading, setIsLoading] = useState(true)
@@ -23,6 +31,13 @@ function CheckoutDetailsPage() {
   const [error, setError] = useState<string | null>(
     plan ? null : "This checkout plan is not available.",
   )
+
+  function resumeCheckoutHref(nextPlan: CheckoutPlanId): string {
+    return checkoutPathForPlan(nextPlan, {
+      includeLawHub,
+      successPath: successPath ?? undefined,
+    })
+  }
 
   const usersApi = useMemo(() => {
     try {
@@ -51,7 +66,7 @@ function CheckoutDetailsPage() {
           return
         }
         if (profileHasLawHubName(nextProfile)) {
-          navigate(`/checkout?plan=${plan}`, { replace: true })
+          navigate(resumeCheckoutHref(plan), { replace: true })
           return
         }
 
@@ -74,7 +89,7 @@ function CheckoutDetailsPage() {
     return () => {
       alive = false
     }
-  }, [navigate, plan, usersApi])
+  }, [includeLawHub, navigate, plan, successPath, usersApi])
 
   async function continueToCheckout() {
     if (!plan || !usersApi || isSubmitting) return
@@ -90,7 +105,7 @@ function CheckoutDetailsPage() {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
       })
-      navigate(`/checkout?plan=${plan}`, { replace: true })
+      navigate(resumeCheckoutHref(plan), { replace: true })
     } catch (submitError) {
       setError(
         submitError instanceof Error

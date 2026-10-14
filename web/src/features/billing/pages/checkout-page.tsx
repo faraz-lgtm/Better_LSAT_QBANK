@@ -6,9 +6,10 @@ import { AuthCard } from "@/features/auth/components/auth-card"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createBillingApi, type CheckoutPlanId } from "@/lib/api/billing"
 import { createUsersApi } from "@/lib/api/users"
-import { readDiagnosticFunnelState } from "@/lib/auth/diagnostic-intent"
 import {
   clearPendingCheckoutPlan,
+  DEFAULT_CHECKOUT_SUCCESS_PATH,
+  parseCheckoutSuccessPathParam,
   parseSignupPlan,
 } from "@/lib/auth/pending-checkout-plan"
 import { profileHasLawHubName } from "@/lib/lawhub-identity"
@@ -26,6 +27,7 @@ function CheckoutPage() {
     parsedPlan && parsedPlan !== "free" ? parsedPlan : null
   const includeLawHub = searchParams.get("includeLawHub") !== "0"
   const checkoutCanceled = searchParams.get("checkout") === "cancel"
+  const successPathParam = parseCheckoutSuccessPathParam(searchParams.get("successPath"))
   const [isLoading, setIsLoading] = useState(!checkoutCanceled)
   const [error, setError] = useState<string | null>(
     plan ? null : "This checkout plan is not available.",
@@ -52,23 +54,25 @@ function CheckoutPage() {
       return
     }
 
+    const detailsParams = new URLSearchParams({ plan })
+    if (!includeLawHub) detailsParams.set("includeLawHub", "0")
+    if (successPathParam) detailsParams.set("successPath", successPathParam)
+    const detailsHref = `/checkout/details?${detailsParams.toString()}`
+
     checkoutLockRef.current = true
     setIsLoading(true)
     setError(null)
     try {
       const profile = await apis.users.getMyProfile()
       if (!profile) {
-        navigate(`/checkout/details?plan=${plan}`, { replace: true })
+        navigate(detailsHref, { replace: true })
         return
       }
       if (!profileHasLawHubName(profile)) {
-        navigate(`/checkout/details?plan=${plan}`, { replace: true })
+        navigate(detailsHref, { replace: true })
         return
       }
-      const funnel = readDiagnosticFunnelState()
-      const successPath = funnel.completedDiagnostic
-        ? "/app/diagnostic/results?checkout=success"
-        : "/onboarding?checkout=success"
+      const successPath = successPathParam ?? DEFAULT_CHECKOUT_SUCCESS_PATH
       const url = await apis.billing.createCheckoutSession(plan, {
         includeLawHub,
         successPath,
@@ -81,7 +85,7 @@ function CheckoutPage() {
           ? formatEdgeFunctionError(checkoutError)
           : "Unable to start checkout."
       if (message.includes("First and last name") || message.includes("LAWHUB_NAME")) {
-        navigate(`/checkout/details?plan=${plan}`, { replace: true })
+        navigate(detailsHref, { replace: true })
         return
       }
       setError(
@@ -92,7 +96,7 @@ function CheckoutPage() {
       checkoutLockRef.current = false
       setIsLoading(false)
     }
-  }, [apis, includeLawHub, navigate, plan])
+  }, [apis, includeLawHub, navigate, plan, successPathParam])
 
   useEffect(() => {
     if (checkoutCanceled || !plan) {

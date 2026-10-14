@@ -30,7 +30,7 @@ function StudentAppShellLayout() {
   const immersive = isPracticeImmersiveRoute(location.pathname)
   const hidePortalChat = immersive || isPrepCourseLessonRoute(location.pathname)
   const premiumAccount = useGuestPremiumAccount()
-  const { entitlement } = useStudentEntitlement()
+  const { entitlement, isLsacSetupRequired } = useStudentEntitlement()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), [])
   const { headerActions, setHeaderActions } = useStudentPageHeaderSlotState()
@@ -40,6 +40,7 @@ function StudentAppShellLayout() {
       accessState: entitlement?.accessState ?? null,
       hasGuestPremiumAccount: Boolean(premiumAccount),
     }) === "free-plan"
+  const showUpgradeOrLsacCta = freePlanShell || isLsacSetupRequired
 
   useLayoutEffect(() => {
     document.documentElement.classList.add("student-shell-active")
@@ -73,7 +74,7 @@ function StudentAppShellLayout() {
             {immersive ? null : (
               <StudentAppHeader
                 onOpenMobileNav={() => setMobileNavOpen(true)}
-                headerActions={freePlanShell ? <GuestUpgradeCta /> : headerActions}
+                headerActions={showUpgradeOrLsacCta ? <GuestUpgradeCta /> : headerActions}
               />
             )}
             <div className="flex h-0 min-h-0 min-w-0 flex-1 flex-col overflow-hidden">

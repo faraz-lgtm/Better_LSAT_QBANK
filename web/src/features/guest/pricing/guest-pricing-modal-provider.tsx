@@ -9,7 +9,10 @@ import {
   type GuestPricingPlanId,
 } from "@/features/guest/pricing/guest-pricing-plans-data"
 import { clearGuestPremiumAccount, writeGuestPremiumAccount } from "@/features/guest/premium/guest-premium-account"
-import { checkoutPathForPlan } from "@/lib/auth/pending-checkout-plan"
+import {
+  checkoutPathForPlan,
+  resolveCheckoutSuccessPath,
+} from "@/lib/auth/pending-checkout-plan"
 
 type GuestPricingModalContextValue = {
   openPricingModal: () => void
@@ -56,6 +59,7 @@ function GuestPricingModalProvider({
         navigate(
           checkoutPathForPlan(planId, {
             includeLawHub: options?.includeLawHub ?? true,
+            successPath: resolveCheckoutSuccessPath(location.pathname),
           }),
         )
         return

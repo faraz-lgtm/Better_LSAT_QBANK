@@ -1,6 +1,11 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useParams, useSearchParams } from 'react-router-dom'
 
+import { useStudentEntitlementOptional } from '@/features/app-shell/student-entitlement-context'
+import {
+  pollEntitlementAfterCheckoutSuccess,
+} from '@/features/app-shell/poll-entitlement-after-checkout'
+import { CheckoutPaymentSuccessDialog } from '@/features/billing/components/checkout-payment-success-dialog'
 import {
   buildDefaultGuestDiagnosticResult,
   getDiagnosticAttempt,
@@ -11,6 +16,7 @@ import { GuestDiagnosticResultsView } from '@/features/guest/diagnostic/guest-di
 import { isGuestDiagnosticIntentId } from '@/features/guest/diagnostic/guest-diagnostic-test-config'
 import { useDiagnosticSubscription } from '@/features/guest/diagnostic/use-diagnostic-subscription'
 import { useTrackCheckoutPurchase } from '@/lib/analytics/track-checkout-purchase'
+import { createUsersApi } from '@/lib/api/users'
 import { readDiagnosticIntent } from '@/lib/auth/diagnostic-intent'
 import {
   CalculatingScoreLoader,
@@ -23,6 +29,7 @@ import {
   diagnosticResultsSectionFromIntent,
   type DiagnosticResultsSection,
 } from '@/features/student/diagnostic/diagnostic-results-routes'
+import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 
 type GuestDiagnosticResultsPageProps = {
   preview?: boolean
@@ -58,9 +65,44 @@ function GuestDiagnosticResultsPage({ preview = false, section }: GuestDiagnosti
   const [searchParams] = useSearchParams()
   useTrackCheckoutPurchase()
   const { refresh } = useDiagnosticSubscription()
-  const checkoutSuccess = searchParams.get('checkout') === 'success'
+  const entitlementCtx = useStudentEntitlementOptional()
+  const [unlockAfterCheckout] = useState(
+    () =>
+      searchParams.get('checkout') === 'success' || searchParams.get('payment') === 'success',
+  )
   const returningFromReview =
     searchParams.get('from') === 'review' || searchParams.get('from') === 'tester'
+
+  useEffect(() => {
+    if (!unlockAfterCheckout) return
+
+    const controller = new AbortController()
+    const usersApi = createUsersApi(getSupabaseBrowserClient())
+    const pollParams = new URLSearchParams('checkout=success')
+
+    void pollEntitlementAfterCheckoutSuccess(pollParams, {
+      getEntitlement: () => usersApi.getEntitlementState(),
+      refresh: async () => {
+        const next = entitlementCtx ? await entitlementCtx.refresh() : null
+        refresh()
+        return next
+      },
+      currentEntitlement: entitlementCtx?.entitlement ?? null,
+      signal: controller.signal,
+    })
+      .then((synced) => {
+        if (!synced) refresh()
+      })
+      .catch(() => {
+        refresh()
+      })
+
+    return () => {
+      controller.abort()
+    }
+    // Unlock once per return from Stripe; do not restart when dialog clears query params.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-once unlock
+  }, [unlockAfterCheckout])
 
   const result = useMemo(() => {
     if (attemptId) {
@@ -123,11 +165,14 @@ function GuestDiagnosticResultsPage({ preview = false, section }: GuestDiagnosti
   }
 
   return (
-    <GuestDiagnosticResultsView
-      result={result}
-      reviewInTesterHref={preview ? '/diagnostic/review/preview' : '/diagnostic/review'}
-      refreshSubscription={checkoutSuccess ? refresh : undefined}
-    />
+    <>
+      <CheckoutPaymentSuccessDialog confirmLabel="View results" />
+      <GuestDiagnosticResultsView
+        result={result}
+        reviewInTesterHref={preview ? '/diagnostic/review/preview' : '/diagnostic/review'}
+        refreshSubscription={unlockAfterCheckout ? refresh : undefined}
+      />
+    </>
   )
 }
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { useNavigate, useSearchParams } from "react-router-dom"
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
 
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
@@ -17,7 +17,10 @@ import { createBillingApi, type BillingCatalog, type CheckoutPlanId } from "@/li
 import { createUsersApi } from "@/lib/api/users"
 import { logRouteRedirect } from "@/lib/auth/log-route-redirect"
 import { isInDiagnosticAcquisitionFunnel } from "@/lib/auth/diagnostic-intent"
-import { checkoutPathForPlan } from "@/lib/auth/pending-checkout-plan"
+import {
+  checkoutPathForPlan,
+  resolveCheckoutSuccessPath,
+} from "@/lib/auth/pending-checkout-plan"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
@@ -46,6 +49,7 @@ function mergePaidPlan(plan: PaidPricingPlan, catalog: BillingCatalog | null): P
 
 function PricingPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const checkoutCanceled = searchParams.get("checkout") === "cancel"
 
@@ -138,10 +142,11 @@ function PricingPage() {
       navigate(
         checkoutPathForPlan(plan, {
           includeLawHub: !existingLsacMode,
+          successPath: resolveCheckoutSuccessPath(location.pathname),
         }),
       )
     },
-    [existingLsacMode, navigate],
+    [existingLsacMode, location.pathname, navigate],
   )
 
   if (isLoading) {
