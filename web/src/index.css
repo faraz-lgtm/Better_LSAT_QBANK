@@ -1338,7 +1338,8 @@ html.student-shell-active #root {
   padding-top: 16px;
 }
 
-@media (min-width: 640px) {
+/* Keep a single column on phones; 2-up from tablet. */
+@media (min-width: 768px) {
   .pricing-page__plans {
     gap: 14px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1360,7 +1361,7 @@ html.student-shell-active #root {
   padding-top: 16px;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 768px) {
   .pricing-page__grid {
     gap: 14px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1388,12 +1389,136 @@ html.student-shell-active #root {
 .pricing-modal .pricing-page__header {
   flex-shrink: 0;
   /* Keep title clear of the absolute close button. */
-  padding-inline: 1.75rem;
+  padding-inline: 2.25rem;
 }
 
 @media (min-width: 640px) {
   .pricing-modal .pricing-page__header {
     padding-inline: 2.5rem;
+  }
+}
+
+/* Phone: readable stacked cards, full-bleed sheet, no cramped multi-col. */
+@media (max-width: 767px) {
+  .pricing-modal .pricing-page__title {
+    font-size: 15px;
+    line-height: 1.35;
+    padding-inline: 0.25rem;
+  }
+
+  .pricing-modal .pricing-page__subtitle {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .pricing-modal .pricing-page__stack {
+    gap: 12px;
+    padding-top: 14px;
+  }
+
+  .pricing-modal .pricing-page__plans {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .pricing-modal .pricing-card {
+    padding: 14px 12px 12px;
+    border-radius: 16px;
+  }
+
+  .pricing-modal .pricing-card--highlighted,
+  .pricing-modal .pricing-card--featured {
+    padding: 18px 12px 14px;
+  }
+
+  .pricing-modal .pricing-card__badge {
+    top: -10px;
+    padding: 3px 10px;
+    font-size: 10px;
+  }
+
+  .pricing-modal .pricing-card__featured-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .pricing-modal .pricing-card__featured-cta {
+    max-width: none;
+    width: 100%;
+  }
+
+  .pricing-modal .pricing-card__name {
+    font-size: 14px;
+    padding-bottom: 4px;
+  }
+
+  .pricing-modal .pricing-card__headline {
+    font-size: 13px;
+    padding-bottom: 4px;
+  }
+
+  .pricing-modal .pricing-card__tagline {
+    font-size: 12px;
+  }
+
+  .pricing-modal .pricing-card__price {
+    font-size: 28px;
+    letter-spacing: -0.5px;
+  }
+
+  .pricing-modal .pricing-card__features {
+    gap: 8px;
+    padding: 8px 0 12px;
+  }
+
+  .pricing-modal .pricing-card__features li {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .pricing-modal .pricing-card__callout {
+    margin-bottom: 10px;
+    padding: 10px 12px;
+  }
+
+  .pricing-modal .pricing-card__callout-title {
+    font-size: 12px;
+  }
+
+  .pricing-modal .pricing-card__callout-body {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .pricing-modal .pricing-card__cta {
+    min-height: 44px;
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  .pricing-modal .pricing-card__note,
+  .pricing-modal .pricing-card__meta,
+  .pricing-modal .pricing-card__due-today {
+    font-size: 11px;
+  }
+
+  .pricing-modal .pricing-page__footnote {
+    margin-top: 12px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .pricing-modal .pricing-page__alt-link {
+    margin-top: 10px;
+  }
+
+  .pricing-modal .pricing-page__alt-link button {
+    font-size: 13px;
+    line-height: 1.4;
+    text-wrap: pretty;
   }
 }
 
@@ -1638,12 +1763,12 @@ html.student-shell-active #root {
 
 .pricing-modal__close {
   position: absolute;
-  right: 16px;
-  top: 12px;
+  right: max(8px, env(safe-area-inset-right));
+  top: max(8px, env(safe-area-inset-top));
   z-index: 10;
   display: inline-flex;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   align-items: center;
   justify-content: center;
   border: 0;
@@ -1657,6 +1782,8 @@ html.student-shell-active #root {
   .pricing-modal__close {
     right: 24px;
     top: 16px;
+    width: 36px;
+    height: 36px;
   }
 }
 
@@ -1746,8 +1873,8 @@ html.student-shell-active #root {
   margin-top: auto;
 }
 
-/* Tablet: price + features on top row, CTA full-width below. */
-@media (min-width: 640px) and (max-width: 1099px) {
+/* Tablet: price + features on top row, CTA full-width below. Phones stay stacked. */
+@media (min-width: 768px) and (max-width: 1099px) {
   .pricing-card--featured .pricing-card__featured-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -5694,6 +5821,28 @@ html.student-shell-immersive .practice-session-card--official {
 /* Figma full-width exam canvas — 1920px. Applied when Full Screen / full-width view is on. */
 html.student-shell-immersive .practice-session-card.practice-session-card--full-width {
   max-width: calc(var(--figma-base-w) * 1px);
+}
+
+/*
+  CSS Full Screen fallback (iOS / phone DevTools) when Element.requestFullscreen is unavailable.
+  Toggled via html.exam-session-fullscreen from useExamFullscreen.
+*/
+html.exam-session-fullscreen [data-practice-session-immersive-frame] {
+  padding: 0 !important;
+}
+
+html.exam-session-fullscreen.student-shell-immersive .practice-session-card,
+html.exam-session-fullscreen.student-shell-immersive .practice-session-card--active-drill,
+html.exam-session-fullscreen.student-shell-immersive .practice-session-card--official,
+html.exam-session-fullscreen.student-shell-immersive .practice-session-card.practice-session-card--full-width {
+  max-width: none;
+  width: 100%;
+  max-height: 100%;
+  height: 100%;
+  margin-inline: 0;
+  border-radius: 0;
+  border-left-width: 0;
+  border-right-width: 0;
 }
 
 html.student-shell-immersive .practice-session-card--active-drill .practice-session-body {
