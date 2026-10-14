@@ -265,7 +265,7 @@ function QuestionResultActionButtons({
   onToggleBookmark: (questionId: string) => void
 }) {
   return (
-    <div className="flex shrink-0 gap-4">
+    <div className="flex shrink-0 gap-4 max-md:gap-2">
       <Link
         to={explanationQuestionDetailHref(questionId)}
         className={PT_RESULTS_ACTION_BUTTON_CLASS}
@@ -317,16 +317,18 @@ function QuestionResultRow({
 
   return (
     <div className={cn(PT_RESULTS_QUESTION_ROW_PAD_CLASS, bordered && PT_RESULTS_QUESTION_ROW_BORDER_CLASS, className)}>
-      <div className="flex items-start gap-5">
+      <div className="flex min-w-0 items-start gap-5 max-md:gap-3">
         <div className={badgeClass}>
-          <span className="text-2xl font-bold leading-[1.3] text-white">{row.number}</span>
+          <span className="text-2xl font-bold leading-[1.3] text-white max-md:text-lg">{row.number}</span>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
-          <div className="flex w-full items-start">
-            <div className="flex w-[562px] shrink-0 flex-col justify-center gap-2">
-              <h3 className="m-0 text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">{row.title}</h3>
-              <div className="flex flex-wrap gap-2.5">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 max-md:gap-3">
+          <div className="flex w-full min-w-0 items-start max-md:flex-col max-md:gap-3">
+            <div className="flex min-w-0 w-full flex-col justify-center gap-2 max-md:gap-1.5 lg:max-w-[562px] lg:shrink-0">
+              <h3 className="m-0 truncate text-xl font-bold leading-[1.35] text-[var(--color-student-heading)] max-md:text-base md:overflow-visible md:whitespace-normal">
+                {row.title}
+              </h3>
+              <div className="flex flex-wrap gap-2.5 max-md:gap-2">
                 {row.tags.map((t) => (
                   <span key={t} className={PT_RESULTS_TAG_CLASS}>
                     {t}
@@ -335,42 +337,44 @@ function QuestionResultRow({
               </div>
             </div>
 
-            <div className="flex min-w-0 flex-1 flex-col items-start gap-3">
-              <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)]">Result</p>
-              <div className="flex flex-nowrap items-center gap-5">
-                <div className="flex shrink-0 items-center gap-2.5">
-                  <PracticeResultOutcomeIcon
-                    correct={row.actualCorrect}
-                    unanswered={row.isUnanswered}
-                    variant="stroke"
-                    className="size-6"
-                  />
-                  <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[var(--color-student-heading)]">
-                    Actual
-                  </span>
-                </div>
-                {showBlindReview ? (
-                  <div className="flex shrink-0 items-center gap-2.5">
+            <div className="flex min-w-0 flex-1 flex-col items-start gap-3 max-md:w-full max-md:gap-2">
+              <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.02em] text-[var(--greyscale-500)] max-md:text-[11px]">
+                Result
+              </p>
+              <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2 max-md:gap-2 md:flex-nowrap md:gap-4">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 md:gap-5">
+                  <div className="flex min-w-0 items-center gap-2 max-md:gap-1.5 md:gap-2.5">
                     <PracticeResultOutcomeIcon
-                      correct={row.blindReviewCorrect}
-                      unanswered={row.blindReviewUnanswered}
+                      correct={row.actualCorrect}
+                      unanswered={row.isUnanswered}
                       variant="stroke"
-                      className="size-6"
+                      className="size-6 max-md:size-4"
                     />
-                    <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[var(--color-student-heading)]">
-                      Untimed Review
+                    <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[var(--color-student-heading)] max-md:text-xs">
+                      Actual
                     </span>
                   </div>
-                ) : null}
-              </div>
-            </div>
+                  {showBlindReview ? (
+                    <div className="flex min-w-0 items-center gap-2 max-md:gap-1.5 md:gap-2.5">
+                      <PracticeResultOutcomeIcon
+                        correct={row.blindReviewCorrect}
+                        unanswered={row.blindReviewUnanswered}
+                        variant="stroke"
+                        className="size-6 max-md:size-4"
+                      />
+                      <span className="text-base font-semibold leading-[1.5] tracking-[0.02em] text-[var(--color-student-heading)] max-md:text-xs">
+                        Untimed Review
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
 
-            <div className="ml-4 shrink-0">
-              <QuestionResultActionButtons
-                questionId={row.id}
-                bookmarked={bookmarked}
-                onToggleBookmark={onToggleBookmark}
-              />
+                <QuestionResultActionButtons
+                  questionId={row.id}
+                  bookmarked={bookmarked}
+                  onToggleBookmark={onToggleBookmark}
+                />
+              </div>
             </div>
           </div>
 

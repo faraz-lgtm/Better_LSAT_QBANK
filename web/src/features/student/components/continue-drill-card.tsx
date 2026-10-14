@@ -125,26 +125,32 @@ function ContinueDrillCard({
   )
 
   return (
-    <article className="continue-drill-card rounded-[24px] bg-[var(--greyscale-25)]">
+    <article className="continue-drill-card min-w-0 w-full rounded-[24px] bg-[var(--greyscale-25)]">
       <div className="continue-drill-card__inner">
-        <div className="relative h-[156px] w-[80px] shrink-0">
+        <div className="continue-drill-card__media">
           <div
-            className={`absolute left-[8px] top-0 flex size-[64px] items-center justify-center rounded-[16px] text-[20px] font-bold leading-[1.35] ${sectionBadgeTone(drill.section)}`}
+            className={`continue-drill-card__badge flex items-center justify-center rounded-[16px] font-bold leading-[1.35] ${sectionBadgeTone(drill.section)}`}
           >
             {drill.section}
           </div>
-          <div
-            className="absolute left-0 top-[76px] flex size-[80px] items-center justify-center rounded-full"
-            style={{ background: ringFill }}
-          >
-            <div className="absolute inset-[6px] rounded-full bg-[var(--greyscale-25)]" />
-            <span className="relative text-[14px] font-bold leading-[20px] text-[var(--color-student-heading)]">{drill.progressPct}%</span>
+          <div className="continue-drill-card__ring flex items-center justify-center rounded-full" style={{ background: ringFill }}>
+            <div className="continue-drill-card__ring-hole absolute rounded-full bg-[var(--greyscale-25)]" />
+            <span className="continue-drill-card__ring-label relative font-bold text-[var(--color-student-heading)]">
+              {drill.progressPct}%
+            </span>
           </div>
         </div>
 
-        <div className="min-h-[156px] min-w-0 flex-1">
-          <div className="flex min-h-[52px] flex-wrap items-center gap-[24px]">
-            <h3 className="min-w-0 text-[20px] font-bold leading-[1.35] text-[var(--color-student-heading)]">{drill.title}</h3>
+        <div className="continue-drill-card__body min-w-0 flex-1">
+          <div className="continue-drill-card__title-row flex flex-wrap items-center gap-[12px]">
+            <div
+              className={`continue-drill-card__badge continue-drill-card__badge--inline flex items-center justify-center rounded-[12px] font-bold leading-[1.35] ${sectionBadgeTone(drill.section)}`}
+            >
+              {drill.section}
+            </div>
+            <h3 className="min-w-0 flex-1 text-[18px] font-bold leading-[1.35] text-[var(--color-student-heading)] sm:text-[20px]">
+              {drill.title}
+            </h3>
             <DrillDifficultyStatus
               label={difficultyLabelText}
               filledBars={difficultyFilledBars}
@@ -152,7 +158,7 @@ function ContinueDrillCard({
             />
           </div>
 
-          <div className="continue-drill-card__stats mt-[16px]">
+          <div className="continue-drill-card__stats mt-[12px]">
             <StatCell icon={<Target className="size-[16px]" />} label="Progress" value={`${drill.progressPct}%`} />
             <StatCell icon={<BarChart2 className="size-[16px]" />} label="Questions" value={drill.questions} />
             <StatCell icon={<Clock className="size-[16px]" />} label="Time" value={drill.timeLabel} />
@@ -162,7 +168,7 @@ function ContinueDrillCard({
             </p>
           </div>
 
-          <div className="mt-[16px] h-[8px] overflow-hidden rounded-full bg-[var(--greyscale-100)]">
+          <div className="mt-[12px] h-[8px] overflow-hidden rounded-full bg-[var(--greyscale-100)]">
             <div
               className="h-[8px] rounded-full"
               style={{ width: `${drill.progressPct}%`, backgroundColor: barColor }}

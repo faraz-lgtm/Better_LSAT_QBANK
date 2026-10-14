@@ -145,7 +145,7 @@ const BLIND_REVIEW_SECTION_SELECT_MENU_CLASS =
 const REVIEW_SHELL_CLASS = "relative h-full min-h-0 w-full flex-1 bg-[var(--background)]"
 
 const REVIEW_CARD_CLASS =
-  "practice-session-card practice-session-card--review absolute inset-x-0 bottom-0 top-[88px] flex min-h-0 flex-col bg-[var(--greyscale-0)]"
+  "practice-session-card practice-session-card--review absolute inset-x-0 bottom-0 top-[72px] flex min-h-0 flex-col bg-[var(--greyscale-0)] sm:top-[88px]"
 
 const REVIEW_BODY_CLASS =
   "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--greyscale-0)]"

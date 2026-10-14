@@ -132,18 +132,18 @@ export function correctChoiceLetter(
 export function PracticeDifficultyMeter({ difficulty }: { difficulty: PracticeDifficultyLabel }) {
   const { dots, color, inactive } = DIFFICULTY_STYLE[difficulty]
   return (
-    <div className="flex h-10 w-fit min-w-[132px] items-center gap-2.5 rounded-[10px] bg-[var(--primary-0,#f3f7ff)] px-2.5">
-      <div className="flex shrink-0 items-center gap-1.5">
+    <div className="flex h-7 w-fit max-w-full min-w-0 items-center gap-1 rounded-[8px] bg-[var(--primary-0,#f3f7ff)] px-1.5 sm:h-10 sm:gap-2.5 sm:rounded-[10px] sm:px-2.5">
+      <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5">
         {Array.from({ length: 5 }).map((_, i) => (
           <span
             key={i}
-            className="block h-4 w-1.5 rounded-full"
+            className="block h-3 w-1 rounded-full sm:h-4 sm:w-1.5"
             style={{ backgroundColor: i < dots ? color : inactive }}
           />
         ))}
       </div>
       <span
-        className="shrink-0 whitespace-nowrap text-xs font-semibold leading-normal tracking-[0.02em]"
+        className="min-w-0 truncate text-[10px] font-semibold leading-normal tracking-[0.02em] sm:text-xs"
         style={{ color }}
       >
         {difficulty}
@@ -166,10 +166,10 @@ function CorrectAnswerPopularityBadge() {
 }
 
 const PRACTICE_RESULT_STATS_LABEL_CLASS =
-  "m-0 text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]"
+  "m-0 text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)] max-sm:text-[11px]"
 
 const PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS =
-  "w-20 shrink-0 text-xs font-normal leading-normal tracking-[0.02em] text-[var(--greyscale-500)]"
+  "w-20 shrink-0 text-xs font-normal leading-normal tracking-[0.02em] text-[var(--greyscale-500)] max-sm:w-auto max-sm:text-[10px]"
 
 function WrongAnswerPopularityBadge() {
   return (
@@ -322,23 +322,29 @@ function PracticeQuestionResultStatsRow({
 }: PracticeQuestionResultStatsRowProps) {
   return (
     <div className={cn("w-full min-w-0", className)}>
-      <div className="flex w-full min-w-0 items-start gap-6 xl:gap-12">
-        <div className="flex min-w-0 flex-1 flex-col gap-3">
+      <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-6 xl:gap-12">
+        <div className="flex min-w-0 flex-col gap-1.5 sm:gap-3">
           <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Timing</p>
-          <div className="flex flex-col gap-1">
-            <div className="flex flex-nowrap items-center gap-1">
-              <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>Target time:</span>
-              <span className="text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
+          <div className="flex flex-col gap-0.5 sm:gap-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0">
+              <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>
+                <span className="max-sm:hidden">Target time:</span>
+                <span className="hidden max-sm:inline">Target:</span>
+              </span>
+              <span className="text-[11px] font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)] sm:text-sm">
                 {targetTime}
               </span>
             </div>
-            <div className="flex flex-nowrap items-center gap-1">
-              <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>Your time:</span>
-              <span className="whitespace-nowrap text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--primary)]">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0">
+              <span className={PRACTICE_RESULT_STATS_TIMING_LABEL_CLASS}>
+                <span className="max-sm:hidden">Your time:</span>
+                <span className="hidden max-sm:inline">Yours:</span>
+              </span>
+              <span className="text-[11px] font-semibold leading-normal tracking-[0.02em] text-[var(--primary)] sm:text-sm">
                 {yourTime}
               </span>
               {yourTimeNote ? (
-                <span className="whitespace-nowrap text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
+                <span className="hidden text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)] sm:inline">
                   {yourTimeNote}
                 </span>
               ) : null}
@@ -346,12 +352,12 @@ function PracticeQuestionResultStatsRow({
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-3">
+        <div className="flex min-w-0 flex-col gap-1.5 sm:gap-3">
           <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Difficulty</p>
           <PracticeDifficultyMeter difficulty={difficulty} />
         </div>
 
-        <div className="flex min-w-0 flex-[1.35] flex-col gap-3">
+        <div className="col-span-2 min-w-0 sm:col-span-1 sm:flex-[1.35]">
           <PracticeAnswerPopularityBars
             rows={popularityRows}
             correctLetter={correctLetter}
@@ -390,9 +396,9 @@ export function PracticeAnswerPopularityBars({
   const normalizedCorrect = correctLetter.trim().toUpperCase()
 
   return (
-    <div className={cn("flex min-w-0 flex-col gap-3", className)}>
+    <div className={cn("flex min-w-0 flex-col gap-3 max-sm:gap-1.5", className)}>
       {showLabel ? <p className={PRACTICE_RESULT_STATS_LABEL_CLASS}>Answer Popularity</p> : null}
-      <div className="flex w-full items-end gap-2">
+      <div className="flex w-full items-end gap-2 max-sm:min-w-0 max-sm:gap-0.5">
         {displayRows.map((row) => {
           const h = Math.round((row.pct / max) * 100)
           const isCorrect = row.letter === normalizedCorrect
@@ -415,46 +421,46 @@ export function PracticeAnswerPopularityBars({
             <div
               key={row.letter}
               className={cn(
-                "flex min-w-0 flex-1 flex-col items-center gap-1",
+                "flex min-w-0 flex-1 flex-col items-center gap-1 max-sm:gap-0.5",
                 hasOutcomeBadge
                   ? showPercentages
-                    ? "h-24"
-                    : "h-[62px]"
+                    ? "h-24 max-sm:h-16"
+                    : "h-[62px] max-sm:h-[48px]"
                   : showPercentages
-                    ? "h-[88px]"
-                    : "h-[53px]",
+                    ? "h-[88px] max-sm:h-14"
+                    : "h-[53px] max-sm:h-[40px]",
               )}
             >
               {showPercentages ? (
                 <span
                   className={cn(
-                    "text-[11px] font-bold tabular-nums leading-none",
+                    "text-[11px] font-bold tabular-nums leading-none max-sm:hidden",
                     isCorrect ? "text-[#40c4aa]" : "text-[var(--greyscale-500)]",
                   )}
                 >
                   {row.pct}%
                 </span>
               ) : null}
-              <div className="mx-auto flex min-h-0 w-full max-w-[31px] flex-1 flex-col justify-end overflow-hidden rounded-t-[10px] bg-[var(--primary-0,#f3f7ff)]">
+              <div className="mx-auto flex min-h-0 w-full max-w-[31px] flex-1 flex-col justify-end overflow-hidden rounded-t-[10px] bg-[var(--primary-0,#f3f7ff)] max-sm:max-w-[14px] max-sm:rounded-t-[6px]">
                 {isUserWrong ? (
                   <div
-                    className="w-full shrink-0 rounded-t-[10px] bg-[#ef4444]"
+                    className="w-full shrink-0 rounded-t-[10px] bg-[#ef4444] max-sm:rounded-t-[6px]"
                     style={{ height: fillHeight }}
                   />
                 ) : (
                   <div
                     className={cn(
-                      "w-full shrink-0 rounded-t-[10px]",
+                      "w-full shrink-0 rounded-t-[10px] max-sm:rounded-t-[6px]",
                       isCorrect ? "bg-[#40c4aa]" : "bg-[var(--greyscale-100)]",
                     )}
                     style={{ height: fillHeight }}
                   />
                 )}
               </div>
-              <div className={cn("flex flex-col items-center", hasOutcomeBadge ? "h-7" : "h-4")}>
+              <div className={cn("flex flex-col items-center", hasOutcomeBadge ? "h-7 max-sm:h-5" : "h-4 max-sm:h-3.5")}>
                 <span
                   className={cn(
-                    "text-xs leading-4",
+                    "text-xs leading-4 max-sm:text-[10px] max-sm:leading-3",
                     isCorrect
                       ? "font-bold text-[#40c4aa]"
                       : "font-normal text-[var(--greyscale-500)]",

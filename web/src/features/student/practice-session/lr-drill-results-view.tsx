@@ -18,8 +18,6 @@ import {
   PracticeResultsEmptyFilterMessage,
 } from "@/features/student/practice-session/practice-results-list-layout"
 import {
-  PT_RESULTS_DETAIL_GRID_CLASS,
-  PT_RESULTS_DETAIL_ROW_CLASS,
   PT_RESULTS_HERO_CARD_CLASS,
   PT_RESULTS_PAGE_GAP_CLASS,
   PT_RESULTS_SURFACE_CARD_CLASS,
@@ -114,9 +112,9 @@ function LrDrillCompactResultsCard({
 }
 
 const LR_RESULT_LABEL_CLASS =
-  "m-0 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]"
+  "m-0 text-[11px] font-semibold leading-[1.5] tracking-[0.22px] text-[var(--greyscale-500)] @[680px]:text-sm @[680px]:tracking-[0.28px]"
 const LR_RESULT_ACTION_CLASS =
-  "flex size-9 shrink-0 items-center justify-center rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] text-[var(--greyscale-500)] transition-colors hover:bg-[var(--greyscale-0)]"
+  "flex size-7 shrink-0 items-center justify-center rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] text-[var(--greyscale-500)] transition-colors hover:bg-[var(--greyscale-0)] @[680px]:size-9 @[680px]:rounded-[12px]"
 
 function DrillResultsQuestionRow({
   meta,
@@ -181,66 +179,104 @@ function DrillResultsQuestionRow({
     : true
   const blindReviewCorrect = showBlindReview ? Boolean(meta.blindReviewCorrect) : false
 
+  const actionButtons = (
+    <div className="flex shrink-0 items-center justify-end gap-1.5 @[680px]:h-9 @[680px]:gap-4">
+      {explanationHref ? (
+        <Link to={explanationHref} className={LR_RESULT_ACTION_CLASS} aria-label="View explanation">
+          <Pencil className="size-4 @[680px]:size-[18px]" aria-hidden />
+        </Link>
+      ) : (
+        <button type="button" className={LR_RESULT_ACTION_CLASS} aria-label="Edit question" disabled>
+          <Pencil className="size-4 @[680px]:size-[18px]" aria-hidden />
+        </button>
+      )}
+      <button
+        type="button"
+        className={LR_RESULT_ACTION_CLASS}
+        aria-label={bookmarked ? "Remove bookmark" : "Bookmark question"}
+        aria-pressed={bookmarked}
+        onClick={() => onToggleBookmark(bookmarkId)}
+      >
+        <Bookmark
+          className={cn(
+            "size-4 @[680px]:size-[18px]",
+            bookmarked ? "fill-[var(--primary)] text-[var(--primary)]" : "text-[var(--greyscale-500)]",
+          )}
+          aria-hidden
+        />
+      </button>
+    </div>
+  )
+
   return (
     <article
       className={cn(
-        "min-w-0 overflow-hidden border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6",
+        "drill-result-question @container min-w-0 w-full max-w-full overflow-x-clip border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-3 @[680px]:p-6",
         first ? "rounded-t-[24px]" : "border-t-0",
       )}
     >
-      <div className={PT_RESULTS_DETAIL_ROW_CLASS}>
+      <div className="flex w-full min-w-0 max-w-full items-start gap-3 @[680px]:gap-6">
         <div
           className={cn(
-            "flex size-14 shrink-0 items-center justify-center rounded-[14px]",
+            "flex size-9 shrink-0 items-center justify-center rounded-[10px] @[680px]:size-14 @[680px]:rounded-[14px]",
             badgeClass,
           )}
         >
-          <span className="text-2xl font-bold leading-[1.3] text-white">{meta.number}</span>
+          <span className="text-base font-bold leading-[1.3] text-white @[680px]:text-2xl">{meta.number}</span>
         </div>
 
-        <div className={PT_RESULTS_DETAIL_GRID_CLASS}>
-          <div className="flex min-w-0 flex-col justify-center gap-2">
-            <h3 className="m-0 text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">{title}</h3>
-            {tags.length > 0 ? (
-              <div className="flex flex-wrap gap-2.5">
-                {tags.map((tag) => (
-                  <span key={tag} className={PT_RESULTS_TAG_CLASS}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            ) : null}
+        <div className="grid min-w-0 max-w-full flex-1 grid-cols-1 items-start gap-2.5 @[680px]:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1.25fr)_auto] @[680px]:gap-x-6 @[680px]:gap-y-4">
+          <div className="flex min-w-0 items-start gap-1.5 @[680px]:contents">
+            <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 @[680px]:gap-2">
+              <h3 className="m-0 truncate text-sm font-bold leading-[1.35] text-[var(--color-student-heading)] @[680px]:overflow-visible @[680px]:text-xl @[680px]:whitespace-normal">
+                {title}
+              </h3>
+              {tags.length > 0 ? (
+                <div className="flex flex-wrap gap-1 @[680px]:gap-2.5">
+                  {tags.map((tag) => (
+                    <span key={tag} className={PT_RESULTS_TAG_CLASS}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <div className="shrink-0 @[680px]:col-start-4 @[680px]:row-start-1 @[680px]:justify-self-end">
+              {actionButtons}
+            </div>
           </div>
 
-          <div className="flex min-w-0 flex-col gap-3">
+          <div className="flex min-w-0 flex-col gap-1 @[680px]:gap-3">
             <p className={LR_RESULT_LABEL_CLASS}>Result</p>
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-              <div className="flex h-7 min-w-0 items-center gap-2.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 @[680px]:gap-x-5">
+              <div className="flex h-6 min-w-0 items-center gap-1 @[680px]:h-7 @[680px]:gap-2.5">
                 <PracticeResultOutcomeIcon
                   correct={meta.isCorrect}
                   unanswered={meta.isUnanswered}
                   variant="stroke"
-                  className="size-6 shrink-0"
+                  className="size-4 shrink-0 @[680px]:size-6"
                 />
-                <span className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
+                <span className="text-xs font-semibold leading-[1.5] tracking-[0.24px] text-[var(--color-student-heading)] @[680px]:text-base @[680px]:tracking-[0.32px]">
                   Actual
                 </span>
               </div>
-              <div className="flex min-w-0 items-center gap-2.5">
-                <PracticeResultOutcomeIcon
-                  correct={blindReviewCorrect}
-                  unanswered={blindReviewUnanswered}
-                  variant="stroke"
-                  className="size-6 shrink-0"
-                />
-                <span className="text-base font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
-                  Untimed Review
-                </span>
-              </div>
+              {showBlindReview ? (
+                <div className="flex min-w-0 items-center gap-1 @[680px]:gap-2.5">
+                  <PracticeResultOutcomeIcon
+                    correct={blindReviewCorrect}
+                    unanswered={blindReviewUnanswered}
+                    variant="stroke"
+                    className="size-4 shrink-0 @[680px]:size-6"
+                  />
+                  <span className="text-xs font-semibold leading-[1.5] tracking-[0.24px] text-[var(--color-student-heading)] @[680px]:text-base @[680px]:tracking-[0.32px]">
+                    Untimed Review
+                  </span>
+                </div>
+              ) : null}
             </div>
           </div>
 
-          <div className="min-w-0 row-span-2">
+          <div className="order-last min-w-0 @[680px]:order-none @[680px]:row-span-2">
             <PracticeAnswerPopularityBars
               rows={popularityRows}
               correctLetter={correctLetter}
@@ -250,61 +286,38 @@ function DrillResultsQuestionRow({
             />
           </div>
 
-          <div className="flex h-9 shrink-0 items-center justify-end gap-4">
-            {explanationHref ? (
-              <Link to={explanationHref} className={LR_RESULT_ACTION_CLASS} aria-label="View explanation">
-                <Pencil className="size-[18px]" aria-hidden />
-              </Link>
-            ) : (
-              <button type="button" className={LR_RESULT_ACTION_CLASS} aria-label="Edit question" disabled>
-                <Pencil className="size-[18px]" aria-hidden />
-              </button>
-            )}
-            <button
-              type="button"
-              className={LR_RESULT_ACTION_CLASS}
-              aria-label={bookmarked ? "Remove bookmark" : "Bookmark question"}
-              aria-pressed={bookmarked}
-              onClick={() => onToggleBookmark(bookmarkId)}
-            >
-              <Bookmark
-                className={cn(
-                  "size-[18px]",
-                  bookmarked ? "fill-[var(--primary)] text-[var(--primary)]" : "text-[var(--greyscale-500)]",
-                )}
-                aria-hidden
-              />
-            </button>
-          </div>
-
-          <div className="flex min-w-0 flex-col gap-3">
-            <p className={LR_RESULT_LABEL_CLASS}>Timing</p>
-            <div className="flex flex-wrap gap-1">
-              <span className="w-20 shrink-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
-                Target time:
-              </span>
-              <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
-                {targetTime}
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              <span className="w-20 shrink-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
-                Your time:
-              </span>
-              <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)]">
-                {yourTime}
-              </span>
-              {yourTimeNote ? (
-                <span className="text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
-                  {yourTimeNote}
+          <div className="grid min-w-0 grid-cols-2 gap-2 @[680px]:contents">
+            <div className="flex min-w-0 flex-col gap-1 @[680px]:gap-3">
+              <p className={LR_RESULT_LABEL_CLASS}>Timing</p>
+              <div className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0">
+                <span className="shrink-0 text-[10px] font-normal leading-[1.5] tracking-[0.2px] text-[var(--greyscale-500)] @[680px]:w-20 @[680px]:text-xs @[680px]:tracking-[0.24px]">
+                  <span className="@[680px]:hidden">Target:</span>
+                  <span className="hidden @[680px]:inline">Target time:</span>
                 </span>
-              ) : null}
+                <span className="text-[11px] font-semibold leading-[1.5] tracking-[0.22px] text-[var(--greyscale-500)] @[680px]:text-sm @[680px]:tracking-[0.28px]">
+                  {targetTime}
+                </span>
+              </div>
+              <div className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0">
+                <span className="shrink-0 text-[10px] font-normal leading-[1.5] tracking-[0.2px] text-[var(--greyscale-500)] @[680px]:w-20 @[680px]:text-xs @[680px]:tracking-[0.24px]">
+                  <span className="@[680px]:hidden">Yours:</span>
+                  <span className="hidden @[680px]:inline">Your time:</span>
+                </span>
+                <span className="text-[11px] font-semibold leading-[1.5] tracking-[0.22px] text-[var(--primary)] @[680px]:text-sm @[680px]:tracking-[0.28px]">
+                  {yourTime}
+                </span>
+                {yourTimeNote ? (
+                  <span className="hidden text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)] @[680px]:inline">
+                    {yourTimeNote}
+                  </span>
+                ) : null}
+              </div>
             </div>
-          </div>
 
-          <div className="flex min-w-0 flex-col gap-3">
-            <p className={LR_RESULT_LABEL_CLASS}>Difficulty</p>
-            <PracticeDifficultyMeter difficulty={difficulty} />
+            <div className="flex min-w-0 flex-col gap-1 @[680px]:gap-3">
+              <p className={LR_RESULT_LABEL_CLASS}>Difficulty</p>
+              <PracticeDifficultyMeter difficulty={difficulty} />
+            </div>
           </div>
         </div>
       </div>
@@ -353,14 +366,16 @@ function LrDrillResultsView({
     [bookmarkedIds, bookmarkedOnly, correctOnly, incorrectOnly, questions],
   )
   return (
-    <div className={PT_RESULTS_PAGE_GAP_CLASS}>
+    <div className={cn(PT_RESULTS_PAGE_GAP_CLASS, "min-w-0 max-w-full overflow-x-clip")}>
       <section className={PT_RESULTS_HERO_CARD_CLASS}>
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="!m-0 !text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">{heroTitle}</h1>
+        <div className="flex min-w-0 items-start justify-between gap-3 max-md:flex-col max-md:items-stretch sm:items-center">
+          <h1 className="!m-0 min-w-0 !text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)] max-md:!text-[20px]">
+            {heroTitle}
+          </h1>
           <button
             type="button"
             onClick={onReviewInTester}
-            className="inline-flex h-10 shrink-0 items-center rounded-[14px] bg-[#df1c41] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[color-mix(in_srgb,#df1c41_90%,black)]"
+            className="inline-flex h-10 shrink-0 items-center justify-center rounded-[14px] bg-[#df1c41] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[color-mix(in_srgb,#df1c41_90%,black)] max-md:h-9 max-md:w-full"
           >
             Review in tester
           </button>
@@ -421,8 +436,8 @@ function LrDrillResultsView({
       </section>
 
       {visibleQuestions.length > 0 ? (
-        <section className="min-w-0 overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
-          <div className="flex flex-col">
+        <section className="min-w-0 overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
+          <div className="flex min-w-0 flex-col">
             {visibleQuestions.map((q, index) => (
               <DrillResultsQuestionRow
                 key={q.question.id}

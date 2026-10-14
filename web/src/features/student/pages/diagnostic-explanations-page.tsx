@@ -113,23 +113,23 @@ function StatusBadge({ status }: { status: ExplanationQuestionStatus }) {
   const style = statusBadgeStyle(status)
   return (
     <span
-      className="inline-flex h-7 shrink-0 items-center gap-2 rounded-[10px] px-4 text-xs font-semibold leading-[1.5] tracking-[0.24px] whitespace-nowrap"
+      className="inline-flex h-5 shrink-0 items-center gap-1 rounded-[8px] px-1.5 text-[10px] font-semibold leading-[1.5] tracking-[0.2px] whitespace-nowrap sm:h-7 sm:gap-2 sm:rounded-[10px] sm:px-4 sm:text-xs sm:tracking-[0.24px]"
       style={{ backgroundColor: style.backgroundColor, color: style.color }}
     >
-      <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: style.dotColor }} aria-hidden />
+      <span className="size-1.5 shrink-0 rounded-full sm:size-2" style={{ backgroundColor: style.dotColor }} aria-hidden />
       {statusLabel(status)}
     </span>
   )
 }
 
 const TREE_ROW_CLASS =
-  "explanations-tree-row flex h-20 w-full flex-nowrap items-center justify-between gap-6 border-b pr-6 text-left"
+  "explanations-tree-row flex h-14 w-full flex-nowrap items-center justify-between gap-3 border-b pr-3 text-left sm:h-20 sm:gap-6 sm:pr-6"
 
 const QUESTION_ROW_CLASS =
-  "explanations-tree-row flex h-20 w-full flex-nowrap items-center justify-between gap-6 border-b bg-[var(--greyscale-0)] pr-6"
+  "explanations-tree-row flex h-14 w-full flex-nowrap items-center justify-between gap-3 border-b bg-[var(--greyscale-0)] pr-3 sm:h-20 sm:gap-6 sm:pr-6"
 
 const PREP_TEST_ROW_CLASS =
-  "explanations-tree-row flex h-[88px] w-full flex-nowrap items-center justify-between gap-6 border-b bg-[var(--greyscale-0)] pr-6 text-left transition-colors hover:bg-[var(--primary-0)]"
+  "explanations-tree-row flex h-[72px] w-full flex-nowrap items-center justify-between gap-3 border-b bg-[var(--greyscale-0)] pr-3 text-left transition-colors hover:bg-[var(--primary-0)] sm:h-[88px] sm:gap-6 sm:pr-6"
 
 function prepTestBadgeColors(): { backgroundColor: string; borderColor: string; color: string } {
   return { backgroundColor: "var(--primary-0)", borderColor: "var(--primary)", color: "var(--primary)" }
@@ -152,7 +152,7 @@ function SectionKindBadge({ kind }: { kind: ExplanationSectionNode["kind"] }) {
 function QuestionIndexBadge({ children }: { children: ReactNode }) {
   return (
     <span
-      className="flex size-8 shrink-0 items-center justify-center rounded-[10px] border text-sm font-semibold leading-[1.5] tracking-[0.28px]"
+      className="flex size-6 shrink-0 items-center justify-center rounded-[8px] border text-[11px] font-semibold leading-[1.5] tracking-[0.2px] sm:size-8 sm:rounded-[10px] sm:text-sm sm:tracking-[0.28px]"
       style={{
         borderColor: "var(--color-student-accent)",
         backgroundColor: "var(--primary-0)",
@@ -176,18 +176,18 @@ function DifficultyMeter({ level }: { level: ExplanationQuestionNode["difficulty
   const label = difficultyLabelFromLevel(level)
   const activeColor = DIFFICULTY_METER_COLORS[label]
   return (
-    <div className="flex h-10 w-fit shrink-0 items-center gap-2.5 overflow-visible rounded-[10px] bg-[var(--primary-0)] px-3">
-      <div className="flex shrink-0 items-center gap-1.5">
+    <div className="flex h-7 w-fit shrink-0 items-center gap-1 overflow-visible rounded-[8px] bg-[var(--primary-0)] px-1.5 sm:h-10 sm:gap-2.5 sm:rounded-[10px] sm:px-3">
+      <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5">
         {Array.from({ length: 5 }, (_, i) => (
           <span
             key={i}
-            className="block h-4 w-1.5 shrink-0 rounded-full"
+            className="block h-3 w-1 shrink-0 rounded-full sm:h-4 sm:w-1.5"
             style={{ backgroundColor: i < level ? activeColor : "var(--primary-50)" }}
           />
         ))}
       </div>
       <span
-        className="flex h-4 items-center whitespace-nowrap text-xs font-semibold leading-none tracking-[0.02em]"
+        className="flex h-3 items-center whitespace-nowrap text-[10px] font-semibold leading-none tracking-[0.02em] sm:h-4 sm:text-xs"
         style={{ color: activeColor }}
       >
         {label}
@@ -215,12 +215,12 @@ function DiagnosticTreeQuestionRow({
       data-explanation-locked={unlocked ? undefined : "true"}
       style={{ borderColor: S.border }}
     >
-      <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2.5 overflow-hidden sm:gap-6">
         <QuestionIndexBadge>{question.number}</QuestionIndexBadge>
         {unlocked ? (
           <Link
             to={detailHref}
-            className="block shrink-0 whitespace-nowrap rounded-lg text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
+            className="block min-w-0 truncate rounded-lg text-[11px] font-semibold leading-[1.5] tracking-[0.2px] text-[var(--primary)] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)] sm:shrink-0 sm:whitespace-nowrap sm:text-sm sm:tracking-[0.28px]"
           >
             {explanationListQuestionLabel(question)}
           </Link>
@@ -228,35 +228,35 @@ function DiagnosticTreeQuestionRow({
           <button
             type="button"
             onClick={onLockedClick}
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
+            className="inline-flex min-w-0 items-center gap-1 truncate rounded-lg text-[11px] font-semibold leading-[1.5] tracking-[0.2px] text-[var(--greyscale-500)] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)] sm:shrink-0 sm:gap-2 sm:whitespace-nowrap sm:text-sm sm:tracking-[0.28px]"
           >
-            <Lock className="size-3.5 shrink-0" aria-hidden />
+            <Lock className="size-3 shrink-0 sm:size-3.5" aria-hidden />
             {explanationListQuestionLabel(question)}
           </button>
         )}
-        <div className="shrink-0 px-4">
+        <div className="shrink-0 px-1 sm:px-4">
           {unlocked ? <StatusBadge status={question.status} /> : (
-            <span className="inline-flex h-7 shrink-0 items-center gap-2 rounded-[10px] bg-[var(--primary-0)] px-4 text-xs font-semibold leading-[1.5] tracking-[0.24px] text-[var(--primary)]">
-              <Lock className="size-3 shrink-0" aria-hidden />
+            <span className="inline-flex h-5 shrink-0 items-center gap-1 rounded-[8px] bg-[var(--primary-0)] px-1.5 text-[10px] font-semibold leading-[1.5] tracking-[0.2px] text-[var(--primary)] sm:h-7 sm:gap-2 sm:rounded-[10px] sm:px-4 sm:text-xs sm:tracking-[0.24px]">
+              <Lock className="size-2.5 shrink-0 sm:size-3" aria-hidden />
               Locked
             </span>
           )}
         </div>
       </div>
 
-      <div className="flex w-[412px] shrink-0 flex-nowrap items-center justify-end gap-6">
+      <div className="flex w-auto shrink-0 flex-nowrap items-center justify-end gap-2 sm:w-[412px] sm:gap-6">
         <DifficultyMeter level={question.difficulty} />
-        <div className="flex shrink-0 items-center gap-6">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-6">
           {unlocked ? (
             <>
-              <Button type="button" variant="ghost" size="icon" className="size-9 rounded-xl text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)]" asChild>
+              <Button type="button" variant="ghost" size="icon" className="size-7 rounded-lg text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)] sm:size-9 sm:rounded-xl" asChild>
                 <Link to={`${detailHref}?tab=analytics`} aria-label="Open analytics tab">
-                  <BarChart3 className="size-6" />
+                  <BarChart3 className="size-4 sm:size-6" />
                 </Link>
               </Button>
-              <Button type="button" variant="ghost" size="icon" className="size-9 rounded-xl text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)]" asChild>
+              <Button type="button" variant="ghost" size="icon" className="size-7 rounded-lg text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)] sm:size-9 sm:rounded-xl" asChild>
                 <Link to={`${detailHref}?tab=explanation`} aria-label="Open video explanation">
-                  <PlayCircle className="size-6" />
+                  <PlayCircle className="size-4 sm:size-6" />
                 </Link>
               </Button>
             </>
@@ -265,11 +265,11 @@ function DiagnosticTreeQuestionRow({
               type="button"
               variant="ghost"
               size="icon"
-              className="size-9 rounded-xl text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)]"
+              className="size-7 rounded-lg text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)] sm:size-9 sm:rounded-xl"
               aria-label="Unlock explanation"
               onClick={onLockedClick}
             >
-              <Lock className="size-5" />
+              <Lock className="size-4 sm:size-5" />
             </Button>
           )}
         </div>
