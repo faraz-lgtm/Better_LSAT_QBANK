@@ -72,6 +72,16 @@ const LSAT_MIN = 120
 const LSAT_MAX = 180
 const LSAT_GOAL_SCORE = 165
 
+/** Collapsed results list: Quick Baseline shows 3 rows before “See All”. */
+const RESULTS_LIST_PREVIEW_MINI = 3
+/** Collapsed results list: Full Section shows 5 rows before “See All”. */
+const RESULTS_LIST_PREVIEW_FULL = 5
+
+/** Initial visible question rows before expanding the rest of the report. */
+function resultsListPreviewCount(intentId: GuestDiagnosticIntentId): number {
+  return intentId === 'mini' ? RESULTS_LIST_PREVIEW_MINI : RESULTS_LIST_PREVIEW_FULL
+}
+
 const DIFFICULTY_LABELS: Record<number, string> = {
   1: 'Very Easy',
   2: 'Easy',
@@ -1541,6 +1551,7 @@ function GuestDiagnosticResultsView({
   const [explanationsLoading, setExplanationsLoading] = useState(false)
   const [explanationsError, setExplanationsError] = useState<string | null>(null)
   const [sortMode, setSortMode] = useState<QuestionSortMode>('number')
+  const [listExpanded, setListExpanded] = useState(false)
 
   useEffect(() => {
     refreshSubscription?.()
@@ -1618,6 +1629,14 @@ function GuestDiagnosticResultsView({
     }
     return { unlockedOutcomes: unlocked, lockedOutcomes: locked }
   }, [result.intentId, showPaidContent, sortedOutcomes])
+
+  const previewCount = resultsListPreviewCount(result.intentId)
+  const hasMoreResultsContent =
+    unlockedOutcomes.length > previewCount || lockedOutcomes.length > 0
+  const visibleUnlockedOutcomes = listExpanded
+    ? unlockedOutcomes
+    : unlockedOutcomes.slice(0, previewCount)
+  const showExpandedSections = listExpanded || !hasMoreResultsContent
 
   return (
     <StudentMain
@@ -1701,9 +1720,9 @@ function GuestDiagnosticResultsView({
           <p className="px-6 py-8 text-sm text-[#df1c41]">{explanationsError}</p>
         ) : null}
 
-        {/* ── Question rows (free: first N unlocked; remaining = dummy teasers under limit CTA) ── */}
+        {/* ── Question rows (collapsed preview, then See All for rest + locked CTA) ── */}
         <div className="flex flex-col gap-4">
-          {unlockedOutcomes.map((outcome) => {
+          {visibleUnlockedOutcomes.map((outcome) => {
             const questionNumber = outcome.originalIndex + 1
             const explanation =
               explanationsById.get(outcome.questionId) ??
@@ -1737,7 +1756,7 @@ function GuestDiagnosticResultsView({
             )
           })}
 
-          {lockedOutcomes.length > 0 ? (
+          {showExpandedSections && lockedOutcomes.length > 0 ? (
             <div className="relative">
               <div className="flex flex-col gap-4" aria-hidden>
                 {lockedOutcomes.map((outcome) => {
@@ -1757,51 +1776,74 @@ function GuestDiagnosticResultsView({
               </div>
             </div>
           ) : null}
+
+          {hasMoreResultsContent ? (
+            <div className="flex justify-center pt-2">
+              <a
+                href="#diagnostic-results-questions"
+                onClick={(event) => {
+                  event.preventDefault()
+                  setListExpanded((open) => !open)
+                }}
+                className="font-[family-name:var(--sans)] text-base font-semibold leading-[1.35] tracking-normal text-[#082c6b] transition-opacity hover:opacity-80"
+              >
+                {listExpanded ? 'See less' : 'See All'}
+              </a>
+            </div>
+          ) : null}
         </div>
       </div>
 
-      {/* 6. Point Leak Map */}
-      {pointLeaks.length > 0 ? (
-        <PointLeakMapSection leaks={pointLeaks} locked={!showPaidContent} onSubscribe={openPricingModal} />
+      {showExpandedSections ? (
+        <>
+          {/* 6. Point Leak Map */}
+          {pointLeaks.length > 0 ? (
+            <PointLeakMapSection
+              leaks={pointLeaks}
+              locked={!showPaidContent}
+              onSubscribe={openPricingModal}
+            />
+          ) : null}
+
+          {/* 7. Big Upgrade CTA — shown before locked sections, free only */}
+          {!showPaidContent && (
+            <DiagnosticUpgradeCTA result={result} onSubscribe={openPricingModal} />
+          )}
+
+          <AccuracyByDifficultySection
+            accuracyData={accuracyByDifficulty}
+            locked={!showPaidContent}
+            onSubscribe={openPricingModal}
+          />
+
+          <TimingBreakdownSection
+            outcomes={result.outcomes}
+            intentId={result.intentId}
+            locked={!showPaidContent}
+            onSubscribe={openPricingModal}
+          />
+
+          {/* 10. Your Plan (locked for free) */}
+          {!showPaidContent && <YourPlanSection onSubscribe={openPricingModal} />}
+
+          {/* 11. Review your test — compact wrong-answer jump list */}
+          <WrongQuestionsReviewSection
+            result={result}
+            explanationsById={explanationsById}
+            showPaidContent={showPaidContent}
+            reviewInTesterHref={reviewInTesterHref}
+            onSubscribe={openPricingModal}
+          />
+
+          {/* 12. Not ready to decide? */}
+          {!showPaidContent && <NotReadySection onSubscribe={openPricingModal} />}
+
+          {/* 13. Bottom sticky bar (free only) */}
+          {!showPaidContent && (
+            <BottomReportBar result={result} onSubscribe={openPricingModal} />
+          )}
+        </>
       ) : null}
-
-      {/* 7. Big Upgrade CTA — shown before locked sections, free only */}
-      {!showPaidContent && (
-        <DiagnosticUpgradeCTA result={result} onSubscribe={openPricingModal} />
-      )}
-
-      <AccuracyByDifficultySection
-        accuracyData={accuracyByDifficulty}
-        locked={!showPaidContent}
-        onSubscribe={openPricingModal}
-      />
-
-      <TimingBreakdownSection
-        outcomes={result.outcomes}
-        intentId={result.intentId}
-        locked={!showPaidContent}
-        onSubscribe={openPricingModal}
-      />
-
-      {/* 10. Your Plan (locked for free) */}
-      {!showPaidContent && <YourPlanSection onSubscribe={openPricingModal} />}
-
-      {/* 11. Review your test — compact wrong-answer jump list */}
-      <WrongQuestionsReviewSection
-        result={result}
-        explanationsById={explanationsById}
-        showPaidContent={showPaidContent}
-        reviewInTesterHref={reviewInTesterHref}
-        onSubscribe={openPricingModal}
-      />
-
-      {/* 12. Not ready to decide? */}
-      {!showPaidContent && <NotReadySection onSubscribe={openPricingModal} />}
-
-      {/* 13. Bottom sticky bar (free only) */}
-      {!showPaidContent && (
-        <BottomReportBar result={result} onSubscribe={openPricingModal} />
-      )}
     </StudentMain>
   )
 }
