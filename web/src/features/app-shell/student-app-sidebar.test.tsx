@@ -123,7 +123,7 @@ describe("StudentAppSidebar", () => {
     expect(screen.getByRole("img", { name: "betterLSAT" })).toHaveClass("dark:brightness-0", "dark:invert")
   })
 
-  it("expands Diagnostic Results to Mini and Full history links", async () => {
+  it("expands Diagnostic Results to Quick Baseline and Full Section history links", async () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={["/app"]}>
@@ -131,10 +131,10 @@ describe("StudentAppSidebar", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.queryByRole("link", { name: "Mini" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "Quick Baseline" })).not.toBeInTheDocument()
     await user.click(screen.getByRole("button", { name: /Diagnostic Results/i }))
-    expect(screen.getByRole("link", { name: "Mini" })).toHaveAttribute("href", "/app/diagnostic/results/mini")
-    expect(screen.getByRole("link", { name: "Full" })).toHaveAttribute("href", "/app/diagnostic/results/full")
+    expect(screen.getByRole("link", { name: "Quick Baseline" })).toHaveAttribute("href", "/app/diagnostic/results/mini")
+    expect(screen.getByRole("link", { name: "Full Section" })).toHaveAttribute("href", "/app/diagnostic/results/full")
   })
 
   it("collapses to icon rail and expands again", async () => {
@@ -152,7 +152,7 @@ describe("StudentAppSidebar", () => {
 
     expect(sidebar).toHaveClass("student-sidebar--collapsed")
     expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument()
-    expect(screen.queryByRole("link", { name: "Mini" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "Quick Baseline" })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Expand sidebar" }))
     expect(sidebar).not.toHaveClass("student-sidebar--collapsed")

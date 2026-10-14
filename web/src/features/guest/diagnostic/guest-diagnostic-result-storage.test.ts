@@ -104,9 +104,9 @@ describe("guest diagnostic result storage", () => {
   })
 
   it("maps intent titles", () => {
-    expect(getDiagnosticIntentTitle("mini")).toBe("Mini Diagnostic")
-    expect(getDiagnosticIntentTitle("quick")).toBe("Full Section Diagnostic")
-    expect(getDiagnosticIntentTitle("full")).toBe("Full Diagnostic")
+    expect(getDiagnosticIntentTitle("mini")).toBe("Quick Baseline")
+    expect(getDiagnosticIntentTitle("quick")).toBe("Full Section")
+    expect(getDiagnosticIntentTitle("full")).toBe("Full Section")
   })
 
   it("stores attempts in Mini and Full history with sequential numbers", () => {

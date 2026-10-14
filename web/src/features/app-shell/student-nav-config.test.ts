@@ -63,7 +63,7 @@ describe("student-nav-config", () => {
   })
 
   it("titles diagnostic results history", () => {
-    expect(getStudentPageTitle("/app/diagnostic/results/mini")).toBe("Mini Diagnostic History")
+    expect(getStudentPageTitle("/app/diagnostic/results/mini")).toBe("Quick Baseline History")
     expect(getStudentPageTitle("/app/diagnostic/results/full/attempt-1")).toBe("Diagnostic Results")
   })
 

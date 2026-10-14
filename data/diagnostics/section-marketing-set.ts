@@ -42,9 +42,9 @@ export function resolveSectionDiagnosticScoreRange(correctCount: number): MiniDi
 export const SECTION_DIAGNOSTIC_MARKETING_META = {
   intentId: "quick" as const,
   moduleId: "DIAG-SEC",
-  moduleName: "Section Diagnostic — Marketing",
+  moduleName: "Full Section — Marketing",
   sectionId: "DIAG-SEC-LR-1",
-  title: "Section Diagnostic for Marketing",
+  title: "Full Section for Marketing",
   timeMinutes: 35,
   questionCount: SECTION_DIAGNOSTIC_QUESTION_COUNT,
 }

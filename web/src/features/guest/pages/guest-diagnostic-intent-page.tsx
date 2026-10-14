@@ -14,11 +14,12 @@ import {
 } from "@/features/guest/diagnostic/guest-diagnostic-intent-styles"
 import type { GuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-intent-types"
 import { GuestDiagnosticOptionCard } from "@/features/guest/diagnostic/guest-diagnostic-option-card"
+import { getDiagnosticIntentTitle } from "@/features/guest/diagnostic/guest-diagnostic-result-storage"
 
 function getStartLabel(intentId: GuestDiagnosticIntentId): string {
   const option = GUEST_DIAGNOSTIC_INTENT_OPTIONS.find((entry) => entry.id === intentId)
-  if (!option) return "Start Diagnostic"
-  return option.title.endsWith("Diagnostic") ? `Start ${option.title}` : `Start ${option.title} Diagnostic`
+  if (option) return `Start ${option.title}`
+  return `Start ${getDiagnosticIntentTitle(intentId)}`
 }
 
 function GuestDiagnosticIntentPage() {

@@ -26,7 +26,7 @@ const MARKETING_SITE_HREF = "https://betterlsat.com"
 const DIAGNOSTIC_TIERS: DiagnosticIntentTierConfig[] = [
   {
     id: "mini",
-    name: "Mini",
+    name: "Quick Baseline",
     tagline: "Quick overview of your weakest areas",
     questions: "10q",
     duration: "~13 min",
@@ -35,7 +35,7 @@ const DIAGNOSTIC_TIERS: DiagnosticIntentTierConfig[] = [
   },
   {
     id: "quick",
-    name: "Full Section Diagnostic",
+    name: "Full Section",
     tagline: "Find your biggest point leaks fast",
     questions: "25q",
     duration: "~35 min",
@@ -46,9 +46,9 @@ const DIAGNOSTIC_TIERS: DiagnosticIntentTierConfig[] = [
 ]
 
 const TIER_LABELS: Record<DiagnosticIntentTier, string> = {
-  mini: "Mini",
+  mini: "Quick Baseline",
   quick: "Full Section",
-  full: "Full",
+  full: "Full Section",
 }
 
 const INTENT_PAGE_DISCLAIMER = [
@@ -161,7 +161,7 @@ function IntentPageContent({
 
           <div className="intent-page__cta-wrap">
             <Button type="button" className="intent-page__cta" onClick={handleStart}>
-              Start {TIER_LABELS[selectedTier]} Diagnostic
+              Start {TIER_LABELS[selectedTier]}
               <ArrowRight className="intent-page__cta-icon" aria-hidden />
             </Button>
             {!isAuthenticated ? (

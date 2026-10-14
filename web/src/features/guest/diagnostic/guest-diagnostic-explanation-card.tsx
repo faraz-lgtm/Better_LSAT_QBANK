@@ -77,7 +77,7 @@ function buildDiagnosticResultTags(explanation: MiniDiagnosticExplanation): stri
  */
 function GuestDiagnosticExplanationCard({
   number,
-  heading = 'Mini Diagnostic',
+  heading = 'Quick Baseline',
   explanation,
   isCorrect,
   isUnanswered = false,

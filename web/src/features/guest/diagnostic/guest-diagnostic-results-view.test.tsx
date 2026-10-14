@@ -33,8 +33,8 @@ describe("GuestDiagnosticResultsView Section diagnostic", () => {
 
     expect(screen.queryByRole("button", { name: "Show All" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Show less" })).not.toBeInTheDocument()
-    expect(screen.getByLabelText(/Full Section Diagnostic question 10/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/Full Section Diagnostic question 6/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Full Section question 10/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Full Section question 6/i)).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Subscribe" })).toBeInTheDocument()
     expect(screen.getByTestId("guest-free-analytics-limit-cta")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Full Access" })).toBeInTheDocument()
@@ -61,7 +61,7 @@ describe("GuestDiagnosticResultsView Section diagnostic", () => {
     )
 
     expect(screen.queryByTestId("diagnostic-locked-question-row")).toBeNull()
-    expect(screen.getByLabelText(/Full Section Diagnostic question 11/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Full Section question 11/i)).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Subscribe" })).not.toBeInTheDocument()
     expect(screen.queryByText("Take your first full exam to track progress")).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Unlock my full report" })).not.toBeInTheDocument()
@@ -81,7 +81,7 @@ describe("GuestDiagnosticResultsView Mini teaser", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByLabelText(/Mini Diagnostic question 5/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Quick Baseline question 5/i)).toBeInTheDocument()
     expect(screen.getAllByTestId("diagnostic-locked-question-row").length).toBe(5)
     expect(screen.getByTestId("guest-free-analytics-limit-cta")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Full Access" })).toBeInTheDocument()
@@ -97,7 +97,7 @@ describe("GuestDiagnosticResultsView Mini teaser", () => {
 })
 
 describe("GuestDiagnosticResultsView Full teaser", () => {
-  it("shows first 10 Full Diagnostic rows open and later rows as dummy locked teasers under the limit overlay", () => {
+  it("shows first 10 Full Section rows open and later rows as dummy locked teasers under the limit overlay", () => {
     subscription.hasActiveCore = false
     const result = buildDefaultGuestDiagnosticResult("full")
     render(
@@ -106,7 +106,7 @@ describe("GuestDiagnosticResultsView Full teaser", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByLabelText(/Full Diagnostic question 10/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Full Section question 10/i)).toBeInTheDocument()
     expect(screen.getAllByTestId("diagnostic-locked-question-row").length).toBeGreaterThan(0)
     expect(screen.getByTestId("guest-free-analytics-limit-cta")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Show less" })).not.toBeInTheDocument()

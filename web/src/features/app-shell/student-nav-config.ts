@@ -160,8 +160,8 @@ function sectionLabel(label: string): string {
 
 export function getStudentPageTitle(pathname: string, search = ""): string | null {
   if (isDashboardActive(pathname)) return "Dashboard"
-  if (pathname === DIAGNOSTIC_RESULTS_MINI_HREF) return "Mini Diagnostic History"
-  if (pathname === DIAGNOSTIC_RESULTS_FULL_HREF) return "Full Diagnostic History"
+  if (pathname === DIAGNOSTIC_RESULTS_MINI_HREF) return "Quick Baseline History"
+  if (pathname === DIAGNOSTIC_RESULTS_FULL_HREF) return "Full Section History"
   if (pathname.startsWith("/app/diagnostic/results/")) return "Diagnostic Results"
   if (pathname === "/app/account") return "Account"
   if (pathname === "/app/settings") return "Settings"

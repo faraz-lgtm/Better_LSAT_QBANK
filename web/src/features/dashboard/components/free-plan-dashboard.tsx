@@ -92,12 +92,12 @@ function formatHistoryDateLabel(isoDate: string): string {
 
 function formatHistoryTitle(attempt: GuestDiagnosticResult): string {
   const n = attempt.diagnosticNumber
-  if (attempt.intentId === "mini") return `Mini diagnostic #${n}`
-  return `Full section diagnostic #${n}`
+  if (attempt.intentId === "mini") return `Quick Baseline #${n}`
+  return `Full Section #${n}`
 }
 
 function historyKindBadge(attempt: GuestDiagnosticResult): string {
-  return attempt.intentId === "mini" ? "Mini" : "Full section"
+  return attempt.intentId === "mini" ? "Quick Baseline" : "Full Section"
 }
 
 function FreePlanUpgradeBanner() {
@@ -138,52 +138,15 @@ function FreePlanDiagnosticStartCards() {
         </p>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,618fr)_minmax(0,538fr)]">
-        <article className="flex min-h-[237px] flex-col rounded-[20px] border-2 border-[var(--primary)] bg-[var(--greyscale-0)] px-[21px] pb-[19px] pt-[21px]">
-          <div className="mb-2.5 flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-[var(--primary)] px-[10px] py-[3px] text-xs font-bold leading-[18px] text-white">
-              Recommended
-            </span>
-            <span className="rounded-full bg-[#f5f7fa] px-[10px] py-[3px] text-xs font-bold leading-[18px] text-[#4f5868]">
-              Full section
-            </span>
-          </div>
-          <h3 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.36px] text-[#0a2551]">
-            Deeper performance view
-          </h3>
-          <p className="mt-1 text-base leading-[1.5] tracking-[0.32px] text-[#4f5868]">
-            Get a fuller breakdown of the areas costing you points.
-          </p>
-          <div className="mt-[18px] flex flex-wrap items-center gap-[18px] text-sm">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="font-bold leading-[21px] text-[#0a2551]">25</span>
-              <span className="tracking-[0.28px] text-[#4f5868]">questions</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="font-bold leading-[21px] text-[#0a2551]">~35</span>
-              <span className="text-[#4f5868]">min</span>
-            </span>
-            <span className="tracking-[0.28px] text-[#4f5868]">Detailed breakdown</span>
-          </div>
-          <div className="mt-auto flex justify-end pt-5">
-            <Link
-              to={FREE_START_FULL_HREF}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] bg-[var(--primary)] px-[18px] text-[15px] font-bold leading-[22.5px] text-white hover:bg-[var(--primary-600)]"
-            >
-              Start full section
-              <ChevronRight className="size-4" aria-hidden />
-            </Link>
-          </div>
-        </article>
-
+      <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,538fr)_minmax(0,618fr)]">
         <article className="flex min-h-[237px] flex-col rounded-[20px] border border-[#e1e7f0] bg-[var(--greyscale-0)] px-[22px] pb-5 pt-[22px]">
           <div className="mb-2.5 flex items-center">
             <span className="rounded-full bg-[#f5f7fa] px-[10px] py-[3px] text-xs font-bold leading-[18px] text-[#4f5868]">
-              Mini
+              Quick Baseline
             </span>
           </div>
           <h3 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.36px] text-[#0a2551]">
-            Quick baseline
+            Quick Baseline
           </h3>
           <p className="mt-1 text-base leading-[1.5] tracking-[0.32px] text-[#4f5868]">
             See your weakest areas without committing to a full section.
@@ -204,7 +167,41 @@ function FreePlanDiagnosticStartCards() {
               to={FREE_START_MINI_HREF}
               className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[var(--greyscale-25)] px-[18px] text-[15px] font-bold leading-[22.5px] text-[var(--primary)] hover:bg-[var(--greyscale-50)]"
             >
-              Start mini
+              Start Quick Baseline
+            </Link>
+          </div>
+        </article>
+
+        <article className="flex min-h-[237px] flex-col rounded-[20px] border-2 border-[var(--primary)] bg-[var(--greyscale-0)] px-[21px] pb-[19px] pt-[21px]">
+          <div className="mb-2.5 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-[var(--primary)] px-[10px] py-[3px] text-xs font-bold leading-[18px] text-white">
+              Full Section
+            </span>
+          </div>
+          <h3 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.36px] text-[#0a2551]">
+            Full Section (Recommended)
+          </h3>
+          <p className="mt-1 text-base leading-[1.5] tracking-[0.32px] text-[#4f5868]">
+            Get a fuller breakdown of the areas costing you points.
+          </p>
+          <div className="mt-[18px] flex flex-wrap items-center gap-[18px] text-sm">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="font-bold leading-[21px] text-[#0a2551]">25</span>
+              <span className="tracking-[0.28px] text-[#4f5868]">questions</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="font-bold leading-[21px] text-[#0a2551]">~35</span>
+              <span className="text-[#4f5868]">min</span>
+            </span>
+            <span className="tracking-[0.28px] text-[#4f5868]">Detailed breakdown</span>
+          </div>
+          <div className="mt-auto flex justify-end pt-5">
+            <Link
+              to={FREE_START_FULL_HREF}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] bg-[var(--primary)] px-[18px] text-[15px] font-bold leading-[22.5px] text-white hover:bg-[var(--primary-600)]"
+            >
+              Start Full Section
+              <ChevronRight className="size-4" aria-hidden />
             </Link>
           </div>
         </article>
@@ -307,8 +304,8 @@ function FreePlanDiagnosticHistory() {
 
   const tabs: { id: HistoryFilter; label: string }[] = [
     { id: "all", label: "All" },
-    { id: "full", label: "Full section" },
-    { id: "mini", label: "Mini" },
+    { id: "full", label: "Full Section" },
+    { id: "mini", label: "Quick Baseline" },
   ]
 
   return (
@@ -344,7 +341,7 @@ function FreePlanDiagnosticHistory() {
       <div className="mt-4 rounded-[20px] border border-[#e1e7f0] bg-[var(--greyscale-0)] p-2">
         {attempts.length === 0 ? (
           <p className="m-0 rounded-[14px] px-4 py-8 text-center text-sm text-[#4f5868]">
-            No diagnostics yet. Start a Mini or Full section diagnostic above — both are free.
+            No diagnostics yet. Start a Quick Baseline or Full Section above — both are free.
           </p>
         ) : (
           <div className="flex flex-col">
