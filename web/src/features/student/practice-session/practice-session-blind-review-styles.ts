@@ -148,40 +148,41 @@ const REVIEW_CARD_CLASS =
   "practice-session-card practice-session-card--review absolute inset-x-0 bottom-0 top-[72px] flex min-h-0 flex-col bg-[var(--greyscale-0)] sm:top-[88px]"
 
 const REVIEW_BODY_CLASS =
-  "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--greyscale-0)]"
+  "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--greyscale-0)] max-md:overflow-y-auto max-md:overscroll-y-contain"
 
 const REVIEW_BODY_GRID_CLASS =
-  "grid min-h-0 min-w-0 flex-1 grid-cols-1 justify-center gap-[52px] px-[clamp(40px,10.25vw,197px)] pb-5 pt-9 lg:grid-cols-[minmax(0,736px)_minmax(0,736px)]"
+  "grid min-h-0 min-w-0 flex-1 grid-cols-1 justify-center gap-4 px-4 pb-5 pt-6 max-md:auto-rows-min md:gap-[52px] md:px-[clamp(40px,10.25vw,197px)] md:pt-9 lg:grid-cols-[minmax(0,736px)_minmax(0,736px)]"
 
 /** Full-bleed review body (diagnostic review / tester). */
 const REVIEW_BODY_GRID_FULL_CLASS =
-  "grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-6 px-6 pb-5 pt-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+  "grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-4 px-4 pb-5 pt-6 max-md:auto-rows-min md:gap-6 md:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
 
 const REVIEW_SIDE_PANEL_LAYOUT_FULL_CLASS =
-  "grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-6 px-6 pb-5 pt-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(300px,424px)]"
+  "grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-4 px-4 pb-5 pt-6 max-md:auto-rows-min md:gap-6 md:px-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(300px,424px)]"
 
 const REVIEW_SIDE_PANEL_LAYOUT_CLASS =
-  "grid min-h-0 min-w-0 flex-1 grid-cols-1 justify-center gap-[52px] px-10 pb-5 pt-9 xl:grid-cols-[minmax(0,656px)_minmax(0,656px)_424px]"
+  "grid min-h-0 min-w-0 flex-1 grid-cols-1 justify-center gap-4 px-4 pb-5 pt-6 max-md:auto-rows-min md:gap-[52px] md:px-10 md:pt-9 xl:grid-cols-[minmax(0,656px)_minmax(0,656px)_424px]"
 
 const REVIEW_PASSAGE_PANEL_CLASS =
-  "practice-session-pane practice-session-pane--review-column min-h-0 rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-9"
+  "practice-session-pane practice-session-pane--review-column min-h-0 rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 py-6 max-md:h-auto max-md:overflow-visible md:px-6 md:py-9"
 
 const REVIEW_QUESTION_PANEL_CLASS =
-  "practice-session-pane practice-session-pane--review-column flex min-h-0 flex-col overflow-hidden rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-6 py-9"
+  "practice-session-pane practice-session-pane--review-column flex min-h-0 flex-col overflow-hidden rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 py-6 max-md:h-auto max-md:overflow-visible md:px-6 md:py-9"
 
 const REVIEW_SIDEBAR_CLASS =
-  "practice-session-pane--review-column flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
+  "practice-session-pane--review-column flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] max-md:h-auto max-md:overflow-visible"
 
 const REVIEW_FOOTER_CLASS =
-  "practice-session-footer box-border flex min-h-[64px] shrink-0 items-center border-t border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-10 py-3"
+  "practice-session-footer box-border flex min-h-[64px] shrink-0 items-center border-t border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 py-3 md:px-10"
 
 const REVIEW_FOOTER_ROW_CLASS =
-  "flex w-full min-w-0 items-center justify-between gap-4"
+  "flex w-full min-w-0 flex-col items-stretch gap-3 md:flex-row md:items-center md:justify-between md:gap-4"
 
 const REVIEW_FOOTER_NAV_CLASS =
-  "practice-session-question-nav-grid practice-session-review-nav-row min-h-[51px] min-w-0 flex-1"
+  "practice-session-question-nav-grid practice-session-review-nav-row min-h-[51px] min-w-0 w-full flex-1"
 
-const REVIEW_NAV_ARROW_GROUP_CLASS = "flex shrink-0 items-center gap-4 self-center"
+const REVIEW_NAV_ARROW_GROUP_CLASS =
+  "flex shrink-0 items-center justify-end gap-3 self-stretch md:gap-4 md:self-center"
 
 const REVIEW_NAV_ARROW_BUTTON_CLASS =
   "box-border inline-flex size-10 shrink-0 items-center justify-center rounded-[10px] border border-solid border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-1 shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition hover:bg-[var(--greyscale-25)] disabled:opacity-40"

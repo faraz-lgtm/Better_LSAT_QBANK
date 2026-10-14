@@ -77,6 +77,8 @@ type PracticeBlindReviewQuestionPanelProps = {
   onOpenAccessibility?: () => void
   onFullscreen?: () => void
   fullView?: boolean
+  toolsMenuExpanded?: boolean
+  onToolsMenuExpandedChange?: (expanded: boolean) => void
 }
 
 function regionKey(questionId: string, part: string) {
@@ -125,6 +127,8 @@ function PracticeBlindReviewQuestionPanel({
   onOpenAccessibility,
   onFullscreen,
   fullView = false,
+  toolsMenuExpanded,
+  onToolsMenuExpandedChange,
 }: PracticeBlindReviewQuestionPanelProps) {
   const [hiddenChoices, setHiddenChoices] = useState<Record<number, boolean>>({})
   const [expandedChoiceIds, setExpandedChoiceIds] = useState<Set<string>>(() => new Set())
@@ -467,6 +471,8 @@ function PracticeBlindReviewQuestionPanel({
           onAccessibility={onOpenAccessibility}
           onFullscreen={onFullscreen}
           fullView={fullView}
+          expanded={toolsMenuExpanded}
+          onExpandedChange={onToolsMenuExpandedChange}
         />
       ) : null}
     </div>

@@ -313,6 +313,15 @@ function OfficialRailDockIcon({ className, expanded = false, ...props }: SideWid
   )
 }
 
+/** Figma `21453:49432` — Keyboard Highlight (pen outline) */
+function OfficialRailHighlightIcon({ className }: SideWidgetIconProps) {
+  return (
+    <span className={cn(officialRailIconClass(className), "inline-flex")} data-official-rail-icon="highlight" aria-hidden>
+      <img src="/figma/exam-official/rail/pen-outline.svg" alt="" width={20} height={20} className="size-5 max-w-none object-contain" draggable={false} />
+    </span>
+  )
+}
+
 export {
   OfficialRailAccessibilityIcon,
   OfficialRailCollapseMenuIcon,
@@ -320,6 +329,7 @@ export {
   OfficialRailDockIcon,
   OfficialRailExpandIcon,
   OfficialRailFlagIcon,
+  OfficialRailHighlightIcon,
   OfficialRailMaskingIcon,
   OfficialRailOpenMenuIcon,
   OfficialRailReviewIcon,

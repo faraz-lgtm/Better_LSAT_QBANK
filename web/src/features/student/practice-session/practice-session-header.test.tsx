@@ -191,14 +191,103 @@ describe("PracticeSessionHeader official view", () => {
 
     expect(screen.getByRole("button", { name: "Directions" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Passage Only View" })).toBeInTheDocument()
-    expect(screen.getByPlaceholderText("Find Text, Type Here")).toBeInTheDocument()
+    expect(screen.getAllByPlaceholderText("Find Text, Type Here").length).toBeGreaterThanOrEqual(1)
     expect(screen.queryByText("Time Left")).not.toBeInTheDocument()
-    expect(screen.getByText("32:20")).toBeInTheDocument()
+    expect(screen.getAllByText("32:20").length).toBeGreaterThanOrEqual(1)
     expect(container.querySelector('img[src="/figma/exam-official/close.svg"]')).toBeInTheDocument()
     expect(container.querySelector('img[src="/figma/exam-official/search.svg"]')).toBeInTheDocument()
-    const title = screen.getByText("Test 123")
-    expect(title).toHaveClass("text-[24px]", "leading-8")
-    expect(title.parentElement).toHaveClass("min-h-[56px]", "px-4")
-    expect(title.compareDocumentPosition(screen.getByPlaceholderText("Find Text, Type Here")) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy()
+    const titles = screen.getAllByText("Test 123")
+    expect(titles.length).toBeGreaterThanOrEqual(1)
+    expect(titles.some((node) => node.className.includes("sm:text-[24px]"))).toBe(true)
+    // Progress track stays in DOM for desktop, but is hidden on mobile chrome
+    expect(container.querySelector('[aria-label="Exam progress"]')).toHaveClass("hidden", "md:block")
+  })
+
+  it("renders Figma mobile header chrome with title menu, tools trigger, and Passage/Question tabs", async () => {
+    const user = userEvent.setup()
+    const onOpenToolsMenu = vi.fn()
+    const onMobilePaneChange = vi.fn()
+
+    render(
+      <PracticeSessionHeader
+        variant="official"
+        title="Test 123"
+        findQuery=""
+        onFindQueryChange={() => undefined}
+        {...highlightHandlers}
+        timerDisplaySeconds={1940}
+        timerPaused={false}
+        onTimerPauseRequest={() => undefined}
+        timerProgress={0.1}
+        questionProgressLabel="1 of 26"
+        questionNumber={1}
+        questionCount={26}
+        sectionLabel="Reading"
+        onClose={() => undefined}
+        onOpenToolsMenu={onOpenToolsMenu}
+        showMobilePaneTabs
+        mobilePane={null}
+        onMobilePaneChange={onMobilePaneChange}
+        finishButton={
+          <PracticeSessionFinishMenu
+            iconTrigger
+            variant="official"
+            onSubmitSection={() => undefined}
+            onExit={() => undefined}
+          />
+        }
+      />,
+    )
+
+    expect(screen.getAllByText("Test 123").length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByRole("button", { name: "Open tools menu" })).toBeInTheDocument()
+    expect(screen.getByText("Reading")).toBeInTheDocument()
+    expect(screen.getByText("Question 1 of 26")).toBeInTheDocument()
+    expect(screen.getAllByRole("button", { name: "Pause section timer" }).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByRole("button", { name: "More options" }).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByLabelText("Find text")).toBeInTheDocument()
+    expect(screen.getAllByPlaceholderText("Find Text, Type Here").length).toBeGreaterThanOrEqual(1)
+    // Passage / Question opens from the title chevron; both start unselected
+    expect(screen.queryByRole("option", { name: "Passage" })).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Test 123 menu" }))
+    expect(screen.getByRole("option", { name: "Passage" })).toHaveAttribute("aria-selected", "false")
+    expect(screen.getByRole("option", { name: "Question" })).toHaveAttribute("aria-selected", "false")
+    await user.click(screen.getByRole("option", { name: "Question" }))
+    expect(onMobilePaneChange).toHaveBeenCalledWith("question")
+    expect(screen.queryByRole("option", { name: "Question" })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Open tools menu" }))
+    expect(onOpenToolsMenu).toHaveBeenCalledTimes(1)
+  })
+
+  it("toggles Passage / Question off when the active option is tapped again", async () => {
+    const user = userEvent.setup()
+    const onMobilePaneChange = vi.fn()
+
+    render(
+      <PracticeSessionHeader
+        variant="official"
+        title="Test 123"
+        findQuery=""
+        onFindQueryChange={() => undefined}
+        {...highlightHandlers}
+        timerDisplaySeconds={1940}
+        timerPaused={false}
+        onTimerPauseRequest={() => undefined}
+        timerProgress={0.1}
+        questionProgressLabel="1 of 26"
+        sectionLabel="Reading"
+        onClose={() => undefined}
+        showMobilePaneTabs
+        mobilePane="passage"
+        onMobilePaneChange={onMobilePaneChange}
+        finishButton={null}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Test 123 menu" }))
+    expect(screen.getByRole("option", { name: "Passage" })).toHaveAttribute("aria-selected", "true")
+    await user.click(screen.getByRole("option", { name: "Passage" }))
+    expect(onMobilePaneChange).toHaveBeenCalledWith(null)
   })
 })

@@ -89,12 +89,14 @@ function SectionBreakRow({
   const progress = remainingSeconds / totalSeconds
 
   return (
-    <div className="flex h-[100px] items-center gap-6 rounded-[16px] border border-[#ffe5b7] bg-[#fff6e0] px-6 py-3 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)]">
-      <div className="flex min-w-0 flex-1 items-center">
-        <p className="text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">Section Break</p>
+    <div className="flex h-auto flex-col gap-3 rounded-[16px] border border-[#ffe5b7] bg-[#fff6e0] px-4 py-3 shadow-[0px_1px_1.5px_rgba(13,13,18,0.05),0px_1px_1px_rgba(13,13,18,0.04)] md:h-[100px] md:flex-row md:items-center md:gap-6 md:px-6">
+      <div className="flex min-w-0 shrink-0 items-center md:flex-1">
+        <p className="text-[20px] font-bold leading-[1.3] text-[var(--color-student-heading)] md:text-2xl">
+          Section Break
+        </p>
       </div>
-      <div className="flex w-full max-w-[398px] shrink-0 flex-col gap-3">
-        <div className="flex items-center gap-2.5">
+      <div className="flex w-full min-w-0 flex-col gap-3 md:max-w-[398px] md:shrink-0">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
           <p className="min-w-0 flex-1 text-sm font-medium leading-normal tracking-[0.28px] text-[var(--color-student-heading)]">
             Starting next section in {formatBreakCountdown(remainingSeconds)}
           </p>

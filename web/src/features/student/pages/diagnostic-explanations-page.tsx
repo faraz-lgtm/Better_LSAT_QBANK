@@ -41,11 +41,7 @@ const S = {
   prepTestCardRadius: "var(--explanation-prep-test-card-radius)",
 } as const
 
-const PREP_TEST_BADGE_SIZE = {
-  width: "64px",
-  height: "64px",
-  borderRadius: "14px",
-} as const
+const PREP_TEST_BADGE_RADIUS = "14px" as const
 
 function StatusStat({ dot, count, label }: { dot: string; count: number; label: string }) {
   return (
@@ -459,16 +455,19 @@ function DiagnosticExplanationsPage() {
                   onClick={() => togglePrepTest(ptId)}
                   aria-expanded={ptIsOpen}
                 >
-                  <div className="flex min-w-0 flex-1 items-center gap-6">
+                  <div
+                    className="explanations-tree-row__lead flex min-w-0 flex-1 items-center"
+                    style={{ columnGap: 20 }}
+                  >
                     {ptIsOpen ? (
-                      <ChevronDown className="size-5 shrink-0 text-[var(--greyscale-500)]" aria-hidden />
+                      <ChevronDown className="size-5 shrink-0 text-[var(--greyscale-500)] sm:size-6" aria-hidden />
                     ) : (
-                      <ChevronRight className="size-5 shrink-0 text-[var(--greyscale-500)]" aria-hidden />
+                      <ChevronRight className="size-5 shrink-0 text-[var(--greyscale-500)] sm:size-6" aria-hidden />
                     )}
                     <span
-                      className="flex shrink-0 items-center justify-center text-sm font-bold tracking-[0.02em]"
+                      className="flex size-12 shrink-0 items-center justify-center text-sm font-bold tracking-[0.02em] sm:size-16"
                       style={{
-                        ...PREP_TEST_BADGE_SIZE,
+                        borderRadius: PREP_TEST_BADGE_RADIUS,
                         backgroundColor: badge.backgroundColor,
                         border: `1px solid ${badge.borderColor}`,
                         color: badge.color,
@@ -476,7 +475,7 @@ function DiagnosticExplanationsPage() {
                     >
                       {row.prepTestNumber}
                     </span>
-                    <div className="min-w-0 text-left">
+                    <div className="min-w-0 flex-1 text-left">
                       <p className="m-0 truncate text-base font-semibold text-[var(--color-student-heading)]">{row.title}</p>
                       <p className="m-0 truncate text-sm text-[var(--greyscale-500)]">
                         {row.rowSubtitle} · {row.questionCount} questions
@@ -498,14 +497,17 @@ function DiagnosticExplanationsPage() {
                             onClick={() => toggleSection(ptId, sec.id)}
                             aria-expanded={sectionOpen}
                           >
-                            <div className="flex min-w-0 flex-1 items-center gap-6">
+                            <div
+                              className="explanations-tree-row__lead flex min-w-0 flex-1 items-center"
+                              style={{ columnGap: 20 }}
+                            >
                               {sectionOpen ? (
-                                <ChevronDown className="size-5 shrink-0 text-[var(--greyscale-500)]" aria-hidden />
+                                <ChevronDown className="size-5 shrink-0 text-[var(--greyscale-500)] sm:size-6" aria-hidden />
                               ) : (
-                                <ChevronRight className="size-5 shrink-0 text-[var(--greyscale-500)]" aria-hidden />
+                                <ChevronRight className="size-5 shrink-0 text-[var(--greyscale-500)] sm:size-6" aria-hidden />
                               )}
                               <SectionKindBadge kind={sec.kind} />
-                              <span className="truncate text-sm font-semibold text-[var(--color-student-heading)]">
+                              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--color-student-heading)]">
                                 Section {sec.sectionNumber} · {sec.sectionTitle}
                               </span>
                             </div>

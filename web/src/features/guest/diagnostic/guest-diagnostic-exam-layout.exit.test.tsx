@@ -44,7 +44,8 @@ describe("GuestDiagnosticExamLayout exit warning", () => {
 
     renderExam(<GuestDiagnosticExamLayout config={config} interactive />)
 
-    await user.click(screen.getByRole("button", { name: "Close exam" }))
+    // Official chrome mounts mobile + desktop close controls; both share this name.
+    await user.click(screen.getAllByRole("button", { name: "Close exam" })[0]!)
 
     expect(screen.getByRole("dialog", { name: "Leave Diagnostic" })).toBeInTheDocument()
     expect(screen.getByTestId("location")).toHaveTextContent("/diagnostic/start")

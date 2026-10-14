@@ -103,9 +103,9 @@ describe("PracticeSessionActiveDrillFooterNav", () => {
     )
 
     expect(screen.queryByRole("button", { name: "Next question" })).not.toBeInTheDocument()
-    const submitButton = screen.getByRole("button", { name: "Submit Section" })
-    expect(submitButton).toHaveTextContent("Submit Section")
-    await user.click(submitButton)
+    const submitButtons = screen.getAllByRole("button", { name: "Submit Section" })
+    expect(submitButtons.some((button) => button.textContent === "Submit Section")).toBe(true)
+    await user.click(submitButtons.find((button) => button.textContent === "Submit Section")!)
     expect(onSubmit).toHaveBeenCalledTimes(1)
   })
 
@@ -354,15 +354,15 @@ describe("PracticeSessionActiveDrillFooterNav", () => {
       />,
     )
 
-    const prev = screen.getByRole("button", { name: "Previous question" })
-    const next = screen.getByRole("button", { name: "Next question" })
+    const prev = screen.getAllByRole("button", { name: "Previous question" }).find((button) => button.textContent === "Prev")
+    const next = screen.getAllByRole("button", { name: "Next question" }).find((button) => button.textContent === "Next")
     const current = screen.getByRole("button", { name: "Question 1" })
     const answered = screen.getByRole("button", { name: "Question 2" })
 
-    expect(prev).toHaveTextContent("Prev")
-    expect(next).toHaveTextContent("Next")
+    expect(prev).toBeTruthy()
+    expect(next).toBeTruthy()
     expect(prev).toHaveClass("h-7", "rounded-[6px]", "bg-[var(--primary)]", "px-3", "pt-[3px]", "pb-[5px]")
-    expect(prev.parentElement).toHaveClass("gap-2", "px-2")
+    expect(prev?.parentElement).toHaveClass("gap-2", "px-2")
     expect(current.closest(".practice-session-question-nav-grid")).toHaveClass("items-end", "gap-2")
     expect(current).toHaveClass("bg-[var(--primary-25)]", "text-[var(--color-student-heading)]")
     expect(current).not.toHaveClass("border-[var(--greyscale-100)]")
@@ -374,6 +374,37 @@ describe("PracticeSessionActiveDrillFooterNav", () => {
       "w-[4px]",
       "bg-[var(--greyscale-500)]",
     )
+  })
+
+  it("renders Figma mobile official footer with Question N of M review trigger", async () => {
+    const user = userEvent.setup()
+    const onOpenReview = vi.fn()
+
+    render(
+      <PracticeSessionActiveDrillFooterNav
+        questions={questions}
+        safeIndex={1}
+        answersByQuestion={{}}
+        isFlagged={() => false}
+        variant="official"
+        onSelectQuestion={() => undefined}
+        onPrev={() => undefined}
+        onNext={() => undefined}
+        onOpenReview={onOpenReview}
+      />,
+    )
+
+    const reviewTrigger = screen.getByRole("button", { name: "Question 1 of 2" })
+    expect(reviewTrigger.querySelector('img[src="/figma/exam-official/mobile-footer-list.svg"]')).toBeInTheDocument()
+    expect(screen.getAllByRole("button", { name: "Previous question" }).some((button) =>
+      Boolean(button.querySelector('img[src="/figma/exam-official/mobile-footer-prev.svg"]')),
+    )).toBe(true)
+    expect(screen.getAllByRole("button", { name: "Next question" }).some((button) =>
+      Boolean(button.querySelector('img[src="/figma/exam-official/mobile-footer-next.svg"]')),
+    )).toBe(true)
+
+    await user.click(reviewTrigger)
+    expect(onOpenReview).toHaveBeenCalledTimes(1)
   })
 
   it("places the LawHub flag above flagged official question pills", () => {

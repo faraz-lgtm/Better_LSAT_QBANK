@@ -159,7 +159,7 @@ describe("PracticeSessionSideWidget official view", () => {
     expect(screen.getByRole("button", { name: "Open menu" }).querySelector("[data-official-rail-icon='open-menu']")).toBeTruthy()
     expect(rail).toHaveClass("justify-between")
     expect(screen.getAllByRole("button").at(-1)).toHaveAccessibleName("Open menu")
-    expect(screen.queryByRole("button", { name: "Keyboard Highlight" })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Keyboard Highlight" })).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: /^Highlighter$/ })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Eraser" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Line focus" })).not.toBeInTheDocument()
@@ -183,13 +183,84 @@ describe("PracticeSessionSideWidget official view", () => {
     expect(rail).toHaveClass("w-[174px]", "justify-between")
     expect(rail).not.toHaveClass("border-l-2")
     expect(screen.getByRole("button", { name: "Collapse menu" }).querySelector("[data-official-rail-icon='collapse-menu']")).toBeTruthy()
-    expect(screen.queryByText("Keyboard Highlight")).not.toBeInTheDocument()
+    expect(screen.getByText("Keyboard Highlight", { selector: "span" })).toBeInTheDocument()
     expect(screen.getByText("Full Screen", { selector: "span" })).toBeInTheDocument()
     const buttons = screen.getAllByRole("button")
     expect(buttons.at(-1)).toHaveAccessibleName("Collapse menu")
 
     await user.click(screen.getByRole("button", { name: "Collapse menu" }))
     expect(screen.getByRole("button", { name: "Open menu" })).toBeInTheDocument()
+  })
+
+  it("supports mobile overlay tools menu with Keyboard Highlight and collapse", async () => {
+    const user = userEvent.setup()
+    const onExpandedChange = vi.fn()
+
+    render(
+      <PracticeSessionSideWidget
+        variant="official"
+        mobileOverlay
+        onExpandedChange={onExpandedChange}
+        flagged={false}
+        onToggleFlag={() => undefined}
+        responseMasking={false}
+        onToggleResponseMasking={() => undefined}
+        onFullscreen={() => undefined}
+      />,
+    )
+
+    const rail = screen.getByRole("complementary", { name: "Exam tools" })
+    expect(rail).toHaveClass("w-[175px]")
+    expect(screen.getByRole("button", { name: "Close tools menu" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Collapse menu" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Keyboard Highlight" })).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Collapse menu" }))
+    expect(onExpandedChange).toHaveBeenCalledWith(false)
+  })
+
+  it("closes the mobile overlay after Response Masking or Keyboard Highlight", async () => {
+    const user = userEvent.setup()
+    const onExpandedChange = vi.fn()
+    const onToggleResponseMasking = vi.fn()
+    const onKeyboardHighlight = vi.fn()
+
+    const { rerender } = render(
+      <PracticeSessionSideWidget
+        variant="official"
+        mobileOverlay
+        onExpandedChange={onExpandedChange}
+        flagged={false}
+        onToggleFlag={() => undefined}
+        responseMasking={false}
+        onToggleResponseMasking={onToggleResponseMasking}
+        onKeyboardHighlight={onKeyboardHighlight}
+        onFullscreen={() => undefined}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Response Masking" }))
+    expect(onToggleResponseMasking).toHaveBeenCalledTimes(1)
+    expect(onExpandedChange).toHaveBeenCalledWith(false)
+
+    onExpandedChange.mockClear()
+    rerender(
+      <PracticeSessionSideWidget
+        variant="official"
+        mobileOverlay
+        onExpandedChange={onExpandedChange}
+        flagged={false}
+        onToggleFlag={() => undefined}
+        responseMasking={false}
+        onToggleResponseMasking={onToggleResponseMasking}
+        onKeyboardHighlight={onKeyboardHighlight}
+        onFullscreen={() => undefined}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Keyboard Highlight" }))
+    expect(onKeyboardHighlight).toHaveBeenCalledTimes(1)
+    expect(onExpandedChange).toHaveBeenCalledWith(false)
   })
 
   it("uses the Figma arrows-in icon in official full view", () => {

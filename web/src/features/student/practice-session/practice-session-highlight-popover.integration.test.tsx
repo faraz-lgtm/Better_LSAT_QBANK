@@ -139,6 +139,50 @@ describe("passage selection highlighting", () => {
     expect(screen.queryByRole("toolbar", { name: "Highlight" })).not.toBeInTheDocument()
   })
 
+  it("shows expanded color swatches after selection when Keyboard Highlight is on", async () => {
+    const user = userEvent.setup()
+    function KeyboardHighlightHarness() {
+      const highlights = usePracticeHighlights({
+        highlightMenuStartsExpanded: false,
+        menuAnchorsToSelection: true,
+      })
+      return (
+        <div>
+          <button type="button" onClick={() => highlights.selectColor("yellow")}>
+            Enable Keyboard Highlight
+          </button>
+          <PracticeAnnotatedContent
+            regionKey="passage"
+            html="<p>Hello world today</p>"
+            onMouseUp={highlights.handleContentMouseUp}
+          />
+          <PracticeSessionHighlightPopover
+            variant="official"
+            menu={highlights.selectionMenu}
+            onApplyColor={highlights.applySelectionColor}
+            onRemove={highlights.removeSelectionHighlight}
+            onToggleExpanded={highlights.toggleSelectionExpanded}
+            onDismiss={highlights.dismissSelectionMenu}
+            isAnchorConnected={highlights.isSelectionMenuAnchorConnected}
+          />
+        </div>
+      )
+    }
+
+    const { container } = render(<KeyboardHighlightHarness />)
+    await user.click(screen.getByRole("button", { name: "Enable Keyboard Highlight" }))
+
+    const passage = container.querySelector(".practice-session-content") as HTMLElement
+    selectOffsets(passage, 0, 5)
+    fireEvent.mouseUp(passage)
+
+    expect(await screen.findByRole("toolbar", { name: "Highlight" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Highlight yellow" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Highlight pink" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Highlight green" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Highlight blue" })).toBeInTheDocument()
+  })
+
   it("shows Remove on an existing highlight and unwraps it", async () => {
     const user = userEvent.setup()
     const { container } = render(
