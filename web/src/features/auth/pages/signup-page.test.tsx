@@ -42,7 +42,9 @@ describe("SignupPage", () => {
     expect(screen.getByRole("heading", { name: /create an account/i })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /send confirmation link/i })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /sign in with google/i })).toBeInTheDocument()
-    expect(screen.getAllByText(/terms of service/i).length).toBeGreaterThan(0)
+    const termsLinks = screen.getAllByRole("link", { name: /terms of service/i })
+    expect(termsLinks.length).toBeGreaterThan(0)
+    expect(termsLinks[0]).toHaveAttribute("href", "https://betterlsat.com/terms")
     expect(screen.getByText(/already have an account/i)).toBeInTheDocument()
   })
 
