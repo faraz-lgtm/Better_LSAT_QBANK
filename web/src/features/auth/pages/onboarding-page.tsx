@@ -426,7 +426,7 @@ if (requiresPassword && !passwordUpdated) {
                   >
                     Start Diagnostic
                   </Button>
-                  <Button type="button" variant="ghost" className="w-full text-[#0d47a1]" onClick={() => setStep(9)}>Skip</Button>
+                  <Button type="button" variant="outline" className="w-full rounded-2xl" onClick={() => setStep(9)}>Skip</Button>
                 </>
               )}
               {step === 9 && (
@@ -452,21 +452,23 @@ if (requiresPassword && !passwordUpdated) {
 
               {error && <p className="text-center text-sm text-[#df1c41]">{error}</p>}
 
-              <div className="flex w-full gap-3">
-                {step > 1 && step !== 8 && step !== 11 && (
-                  <Button type="button" variant="outline" className="flex-1 rounded-2xl" onClick={back} disabled={isSubmitting}>Back</Button>
-                )}
-                {step === 9 ? (
-                  <>
-                    <Button type="button" variant="outline" className="flex-1 rounded-2xl" onClick={() => setStep(8)}>Cancel</Button>
-                    <Button type="button" className="ds-btn flex-1" onClick={() => void completeOnboarding()} disabled={isSubmitting}>Skip</Button>
-                  </>
-                ) : (
-                  <Button type="button" className="ds-btn flex-1" onClick={next} disabled={isSubmitting}>
-                    {isSubmitting ? "Completing..." : "Continue"}
-                  </Button>
-                )}
-              </div>
+              {step !== 8 && (
+                <div className="flex w-full gap-3">
+                  {step > 1 && step !== 11 && (
+                    <Button type="button" variant="outline" className="flex-1 rounded-2xl" onClick={back} disabled={isSubmitting}>Back</Button>
+                  )}
+                  {step === 9 ? (
+                    <>
+                      <Button type="button" variant="outline" className="flex-1 rounded-2xl" onClick={() => setStep(8)}>Cancel</Button>
+                      <Button type="button" className="ds-btn flex-1" onClick={() => void completeOnboarding()} disabled={isSubmitting}>Skip</Button>
+                    </>
+                  ) : (
+                    <Button type="button" className="ds-btn flex-1" onClick={next} disabled={isSubmitting}>
+                      {isSubmitting ? "Completing..." : "Continue"}
+                    </Button>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>

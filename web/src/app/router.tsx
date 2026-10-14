@@ -31,6 +31,7 @@ import { CheckoutDetailsPage } from "@/features/billing/pages/checkout-details-p
 import { CheckoutPage } from "@/features/billing/pages/checkout-page"
 import { PricingPage } from "@/features/billing/pages/pricing-page"
 import { OnboardingPage } from "@/features/auth/pages/onboarding-page"
+import { OnboardingDiagnosticPreviewPage } from "@/features/auth/pages/onboarding-diagnostic-preview-page"
 import { OnboardingWelcomePreviewPage } from "@/features/auth/pages/onboarding-welcome-preview-page"
 import { IntentPage } from "@/features/auth/pages/intent-page"
 import { resolveStudentShellVariant } from "@/features/app-shell/student-shell-plan-variant"
@@ -700,6 +701,7 @@ const router = createBrowserRouter([
   { path: "/auth/callback", element: <AuthCallbackPage /> },
   { path: "/onboarding", element: <OnboardingPage /> },
   { path: "/onboarding/preview", element: <OnboardingWelcomePreviewPage /> },
+  { path: "/onboarding/diagnostic/preview", element: <OnboardingDiagnosticPreviewPage /> },
   { path: "/lsac-link-step", element: <Navigate to="/app/lsac-link-step" replace /> },
   {
     path: "/checkout",
