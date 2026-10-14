@@ -132,10 +132,10 @@ function ExplanationsListRowSkeleton() {
       style={{ borderColor: S.border }}
       aria-hidden
     >
-      <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
-        <ExplanationsSkeletonBlock className="size-16 shrink-0 rounded-[14px]" />
-        <div className="flex min-w-0 flex-col items-start justify-center gap-2 overflow-hidden">
-          <ExplanationsSkeletonBlock className="h-5 w-28" />
+      <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-3 overflow-hidden sm:gap-6">
+        <ExplanationsSkeletonBlock className="size-12 shrink-0 rounded-[14px] sm:size-16" />
+        <div className="flex min-w-0 flex-col items-start justify-center gap-1 overflow-hidden sm:gap-2">
+          <ExplanationsSkeletonBlock className="h-4 w-28 sm:h-5" />
           <ExplanationsSkeletonBlock className="h-3.5 w-40" />
         </div>
       </div>
@@ -202,23 +202,23 @@ function StatusBadge({ status }: { status: ExplanationQuestionStatus }) {
   const style = statusBadgeStyle(status)
   return (
     <span
-      className="inline-flex h-7 shrink-0 items-center gap-2 rounded-[10px] px-4 text-xs font-semibold leading-[1.5] tracking-[0.24px] whitespace-nowrap"
+      className="inline-flex h-5 shrink-0 items-center gap-1 rounded-[8px] px-1.5 text-[10px] font-semibold leading-[1.5] tracking-[0.2px] whitespace-nowrap sm:h-7 sm:gap-2 sm:rounded-[10px] sm:px-4 sm:text-xs sm:tracking-[0.24px]"
       style={{ backgroundColor: style.backgroundColor, color: style.color }}
     >
-      <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: style.dotColor }} aria-hidden />
+      <span className="size-1.5 shrink-0 rounded-full sm:size-2" style={{ backgroundColor: style.dotColor }} aria-hidden />
       {statusLabel(status)}
     </span>
   )
 }
 
 const TREE_ROW_CLASS =
-  "explanations-tree-row flex h-20 w-full flex-nowrap items-center justify-between gap-6 border-b pr-6 text-left"
+  "explanations-tree-row flex h-14 w-full flex-nowrap items-center justify-between gap-3 border-b pr-3 text-left sm:h-20 sm:gap-6 sm:pr-6"
 
 const QUESTION_ROW_CLASS =
-  "explanations-tree-row flex h-20 w-full flex-nowrap items-center justify-between gap-6 border-b bg-[var(--greyscale-0)] pr-6"
+  "explanations-tree-row flex h-14 w-full flex-nowrap items-center justify-between gap-3 border-b bg-[var(--greyscale-0)] pr-3 sm:h-20 sm:gap-6 sm:pr-6"
 
 const PREP_TEST_ROW_CLASS =
-  "explanations-tree-row flex h-[88px] w-full flex-nowrap items-center justify-between gap-6 border-b bg-[var(--greyscale-0)] pr-6 text-left transition-colors hover:bg-[var(--primary-0)]"
+  "explanations-tree-row flex h-[72px] w-full flex-nowrap items-center justify-between gap-3 border-b bg-[var(--greyscale-0)] pr-3 text-left transition-colors hover:bg-[var(--primary-0)] sm:h-[88px] sm:gap-6 sm:pr-6"
 
 function derivePrepTestStatus(tree: ExplanationPrepTestNode | null | undefined): ExplanationQuestionStatus {
   if (!tree) return "fresh"
@@ -284,7 +284,7 @@ function SectionKindBadge({ kind }: { kind: ExplanationSectionNode["kind"] }) {
 function PassageIndexBadge({ children }: { children: ReactNode }) {
   return (
     <span
-      className="flex size-8 shrink-0 items-center justify-center rounded-[10px] border text-sm font-semibold leading-[1.5] tracking-[0.28px]"
+      className="flex size-6 shrink-0 items-center justify-center rounded-[8px] border text-[11px] font-semibold leading-[1.5] tracking-[0.2px] sm:size-8 sm:rounded-[10px] sm:text-sm sm:tracking-[0.28px]"
       style={{
         borderColor: "var(--color-student-accent)",
         backgroundColor: "var(--primary-0)",
@@ -299,7 +299,7 @@ function PassageIndexBadge({ children }: { children: ReactNode }) {
 function QuestionIndexBadge({ children }: { children: ReactNode }) {
   return (
     <span
-      className="flex size-8 shrink-0 items-center justify-center rounded-[10px] border text-sm font-semibold leading-[1.5] tracking-[0.28px]"
+      className="flex size-6 shrink-0 items-center justify-center rounded-[8px] border text-[11px] font-semibold leading-[1.5] tracking-[0.2px] sm:size-8 sm:rounded-[10px] sm:text-sm sm:tracking-[0.28px]"
       style={{
         borderColor: "var(--color-student-accent)",
         backgroundColor: "var(--primary-0)",
@@ -323,18 +323,18 @@ function DifficultyMeter({ level }: { level: ExplanationQuestionNode["difficulty
   const label = difficultyLabelFromLevel(level)
   const activeColor = DIFFICULTY_METER_COLORS[label]
   return (
-    <div className="flex h-10 w-fit shrink-0 items-center gap-2.5 overflow-visible rounded-[10px] bg-[var(--primary-0)] px-3">
-      <div className="flex shrink-0 items-center gap-1.5">
+    <div className="flex h-7 w-fit shrink-0 items-center gap-1 overflow-visible rounded-[8px] bg-[var(--primary-0)] px-1.5 sm:h-10 sm:gap-2.5 sm:rounded-[10px] sm:px-3">
+      <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5">
         {Array.from({ length: 5 }, (_, i) => (
           <span
             key={i}
-            className="block h-4 w-1.5 shrink-0 rounded-full"
+            className="block h-3 w-1 shrink-0 rounded-full sm:h-4 sm:w-1.5"
             style={{ backgroundColor: i < level ? activeColor : "var(--primary-50)" }}
           />
         ))}
       </div>
       <span
-        className="flex h-4 items-center whitespace-nowrap text-xs font-semibold leading-none tracking-[0.02em]"
+        className="flex h-3 items-center whitespace-nowrap text-[10px] font-semibold leading-none tracking-[0.02em] sm:h-4 sm:text-xs"
         style={{ color: activeColor }}
       >
         {label}
@@ -370,42 +370,42 @@ function ExplanationTreeQuestionRow({
       style={{ borderColor: S.border }}
       title={questionRowHoverTitle(question.difficulty, scaleFactor)}
     >
-      <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2.5 overflow-hidden sm:gap-6">
         <QuestionIndexBadge>{question.number}</QuestionIndexBadge>
         <Link
           to={detailHref}
-          className="block shrink-0 whitespace-nowrap rounded-lg text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)]"
+          className="block min-w-0 truncate rounded-lg text-[11px] font-semibold leading-[1.5] tracking-[0.2px] text-[var(--primary)] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)] sm:shrink-0 sm:whitespace-nowrap sm:text-sm sm:tracking-[0.28px]"
         >
           {explanationListQuestionLabel(question)}
         </Link>
-        <div className="shrink-0 px-4">
+        <div className="shrink-0 px-1 sm:px-4">
           <StatusBadge status={question.status} />
         </div>
       </div>
 
-      <div className="flex w-[412px] shrink-0 flex-nowrap items-center justify-end gap-6">
+      <div className="flex w-auto shrink-0 flex-nowrap items-center justify-end gap-2 sm:w-[412px] sm:gap-6">
         <DifficultyMeter level={question.difficulty} />
-        <div className="flex shrink-0 items-center gap-6">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-6">
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="size-9 rounded-xl text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)]"
+            className="size-7 rounded-lg text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)] sm:size-9 sm:rounded-xl"
             asChild
           >
             <Link to={`${detailHref}?tab=analytics`} aria-label="Open analytics tab">
-              <BarChart3 className="size-6" />
+              <BarChart3 className="size-4 sm:size-6" />
             </Link>
           </Button>
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="size-9 rounded-xl text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)]"
+            className="size-7 rounded-lg text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)] sm:size-9 sm:rounded-xl"
             asChild
           >
             <Link to={`${detailHref}?tab=explanation`} aria-label="Open video explanation">
-              <PlayCircle className="size-6" />
+              <PlayCircle className="size-4 sm:size-6" />
             </Link>
           </Button>
           <Button
@@ -414,8 +414,8 @@ function ExplanationTreeQuestionRow({
             size="icon"
             className={
               bookmarked
-                ? "size-9 rounded-xl text-[var(--primary)] hover:text-[var(--primary)]"
-                : "size-9 rounded-xl text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)]"
+                ? "size-7 rounded-lg text-[var(--primary)] hover:text-[var(--primary)] sm:size-9 sm:rounded-xl"
+                : "size-7 rounded-lg text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)] sm:size-9 sm:rounded-xl"
             }
             aria-label={
               bookmarked
@@ -425,7 +425,7 @@ function ExplanationTreeQuestionRow({
             aria-pressed={bookmarked}
             onClick={onToggleBookmark}
           >
-            <Bookmark className="size-6" fill={bookmarked ? "currentColor" : "none"} />
+            <Bookmark className="size-4 sm:size-6" fill={bookmarked ? "currentColor" : "none"} />
           </Button>
         </div>
       </div>
@@ -1050,36 +1050,36 @@ function ExplanationsPage() {
                 style={{ borderColor: S.border }}
                 onClick={() => togglePrepTest(ptId)}
               >
-                <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
+                <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-3 overflow-hidden sm:gap-6">
                   <span
-                    className={`${TREE_BADGE_CLASS} flex-col border p-px`}
+                    className={`${TREE_BADGE_CLASS} size-12 flex-col border p-px sm:size-16`}
                     style={{
-                      ...PREP_TEST_BADGE_SIZE,
+                      borderRadius: PREP_TEST_BADGE_SIZE.borderRadius,
                       backgroundColor: ptBadgeColors.backgroundColor,
                       borderColor: ptBadgeColors.borderColor,
                       color: ptBadgeColors.color,
                     }}
                   >
-                    <span className="w-[35px] text-center text-[12px] font-semibold leading-[1.35]">PT</span>
-                    <span className="text-[24px] font-bold leading-[1.3] tabular-nums">{ptNum}</span>
+                    <span className="w-[28px] text-center text-[10px] font-semibold leading-[1.35] sm:w-[35px] sm:text-[12px]">PT</span>
+                    <span className="text-[18px] font-bold leading-[1.3] tabular-nums sm:text-[24px]">{ptNum}</span>
                   </span>
-                  <div className="flex min-w-0 flex-col items-start justify-center gap-2 overflow-hidden">
-                    <span className="text-[20px] font-bold leading-[1.35] whitespace-nowrap text-[var(--color-student-heading)]">
+                  <div className="flex min-w-0 flex-col items-start justify-center gap-1 overflow-hidden sm:gap-2">
+                    <span className="text-[16px] font-bold leading-[1.35] whitespace-nowrap text-[var(--color-student-heading)] sm:text-[20px]">
                       PT - {ptNum}
                     </span>
                     {subtitleLoading ? (
                       <ExplanationsSkeletonBlock className="h-3.5 w-36" />
                     ) : (
-                      <span className="truncate text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
+                      <span className="truncate text-xs font-medium leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)] sm:text-sm sm:tracking-[0.28px]">
                         {statusTag}
                       </span>
                     )}
                   </div>
-                  {isLoadingTree ? <StudentPageLoader size="sm" /> : null}
+                  {isLoadingTree ? <StudentPageLoader size="sm" className="ml-auto" /> : null}
                   {ptIsOpen ? (
-                    <ChevronDown className="size-6 shrink-0 text-[var(--color-student-heading)]" aria-hidden />
+                    <ChevronDown className="ml-auto size-5 shrink-0 text-[var(--color-student-heading)] sm:size-6" aria-hidden />
                   ) : (
-                    <ChevronRight className="size-6 shrink-0 text-[var(--color-student-heading)]" aria-hidden />
+                    <ChevronRight className="ml-auto size-5 shrink-0 text-[var(--color-student-heading)] sm:size-6" aria-hidden />
                   )}
                 </div>
               </button>
@@ -1107,23 +1107,23 @@ function ExplanationsPage() {
                           style={{ backgroundColor: secHeaderBg, borderColor: S.border }}
                           onClick={() => toggleSection(ptId, sec)}
                         >
-                          <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
+                          <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-3 overflow-hidden sm:gap-6">
                             <SectionKindBadge kind={sec.kind} />
-                            <div className="flex min-w-0 flex-col items-start gap-1.5 overflow-hidden">
-                              <span className="text-[20px] font-bold leading-[1.35] whitespace-nowrap text-[var(--color-student-heading)]">
+                            <div className="flex min-w-0 flex-col items-start gap-1 overflow-hidden sm:gap-1.5">
+                              <span className="text-[16px] font-bold leading-[1.35] whitespace-nowrap text-[var(--color-student-heading)] sm:text-[20px]">
                                 Section {sec.sectionNumber}
                               </span>
                               {sec.flags ? (
-                                <span className="truncate text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
+                                <span className="truncate text-xs font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)] sm:text-sm sm:tracking-[0.28px]">
                                   {sec.flags}
                                 </span>
                               ) : null}
                             </div>
                           </div>
                           {sOpen ? (
-                            <ChevronDown className="size-6 shrink-0 text-[var(--greyscale-500)]" />
+                            <ChevronDown className="size-5 shrink-0 text-[var(--greyscale-500)] sm:size-6" />
                           ) : (
-                            <ChevronRight className="size-6 shrink-0 text-[var(--greyscale-500)]" />
+                            <ChevronRight className="size-5 shrink-0 text-[var(--greyscale-500)] sm:size-6" />
                           )}
                         </button>
 
@@ -1161,20 +1161,20 @@ function ExplanationsPage() {
                                       })
                                     }
                                   >
-                                    <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-6 overflow-hidden">
+                                    <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-3 overflow-hidden sm:gap-6">
                                       <PassageIndexBadge>{pass.label}</PassageIndexBadge>
-                                      <span className="truncate text-lg font-semibold leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]">
+                                      <span className="truncate text-sm font-semibold leading-[1.4] tracking-[0.28px] text-[var(--color-student-heading)] sm:text-lg sm:tracking-[0.36px]">
                                         {pass.title}
                                       </span>
                                     </div>
-                                    <div className="flex shrink-0 items-center gap-6">
-                                      <span className="inline-flex h-8 shrink-0 items-center rounded-full bg-[var(--greyscale-0)] px-4 text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
+                                    <div className="flex shrink-0 items-center gap-2 sm:gap-6">
+                                      <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-[var(--greyscale-0)] px-2.5 text-[11px] font-medium leading-[1.5] tracking-[0.22px] text-[var(--greyscale-500)] sm:h-8 sm:px-4 sm:text-sm sm:tracking-[0.28px]">
                                         {questionCountLabel}
                                       </span>
                                       {pOpen ? (
-                                        <ChevronDown className="size-6 shrink-0 text-[var(--greyscale-500)]" aria-hidden />
+                                        <ChevronDown className="size-5 shrink-0 text-[var(--greyscale-500)] sm:size-6" aria-hidden />
                                       ) : (
-                                        <ChevronRight className="size-6 shrink-0 text-[var(--greyscale-500)]" aria-hidden />
+                                        <ChevronRight className="size-5 shrink-0 text-[var(--greyscale-500)] sm:size-6" aria-hidden />
                                       )}
                                     </div>
                                   </button>

@@ -4148,23 +4148,42 @@ select.ds-input {
 .continue-drill-card {
   container-type: inline-size;
   container-name: drill-card;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .continue-drill-card__inner {
   display: flex;
-  min-height: 204px;
+  min-height: 0;
   flex-direction: column;
   align-items: stretch;
-  gap: 24px;
-  padding: 24px;
+  gap: 16px;
+  padding: 16px;
   box-sizing: border-box;
 }
 
-@container drill-card (min-width: 40rem) {
-  .continue-drill-card__inner {
-    flex-direction: row;
-    align-items: flex-start;
-  }
+/* Mobile: hide tall stacked rail; show compact badge inline with title */
+.continue-drill-card__media {
+  display: none;
+}
+
+.continue-drill-card__badge--inline {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.continue-drill-card__body {
+  min-height: 0;
+  min-width: 0;
+  flex: 1;
+}
+
+.continue-drill-card__title-row {
+  min-height: 0;
+  gap: 12px;
 }
 
 .continue-drill-card__stats {
@@ -4172,13 +4191,7 @@ select.ds-input {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px 24px;
-}
-
-@container drill-card (min-width: 48rem) {
-  .continue-drill-card__stats {
-    flex-wrap: nowrap;
-  }
+  gap: 8px 16px;
 }
 
 .continue-drill-card__actions {
@@ -4195,6 +4208,65 @@ select.ds-input {
 }
 
 @container drill-card (min-width: 40rem) {
+  .continue-drill-card__inner {
+    min-height: 204px;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 24px;
+    padding: 24px;
+  }
+
+  .continue-drill-card__media {
+    position: relative;
+    display: block;
+    flex-shrink: 0;
+    width: 80px;
+    height: 156px;
+  }
+
+  .continue-drill-card__badge {
+    position: absolute;
+    left: 8px;
+    top: 0;
+    width: 64px;
+    height: 64px;
+    font-size: 20px;
+  }
+
+  .continue-drill-card__badge--inline {
+    display: none;
+  }
+
+  .continue-drill-card__ring {
+    position: absolute;
+    left: 0;
+    top: 76px;
+    width: 80px;
+    height: 80px;
+  }
+
+  .continue-drill-card__ring-hole {
+    inset: 6px;
+  }
+
+  .continue-drill-card__ring-label {
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .continue-drill-card__body {
+    min-height: 156px;
+  }
+
+  .continue-drill-card__title-row {
+    min-height: 52px;
+    gap: 24px;
+  }
+
+  .continue-drill-card__stats {
+    gap: 8px 24px;
+  }
+
   .continue-drill-card__actions {
     width: auto;
     align-self: flex-start;
@@ -4204,6 +4276,12 @@ select.ds-input {
   .continue-drill-card__more {
     width: auto;
     min-width: 148px;
+  }
+}
+
+@container drill-card (min-width: 48rem) {
+  .continue-drill-card__stats {
+    flex-wrap: nowrap;
   }
 }
 
@@ -5640,6 +5718,57 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
 
 .prep-course-lesson-footer {
   isolation: isolate;
+}
+
+/* Mobile: compact single-line lesson actions */
+.prep-course-lesson-footer__nav {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
+.prep-course-lesson-footer__outline,
+.prep-course-lesson-footer__primary {
+  height: 32px;
+  gap: 4px;
+  padding: 0 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  letter-spacing: 0.2px;
+}
+
+.prep-course-lesson-footer__back {
+  height: 32px;
+  padding: 0 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  letter-spacing: 0.2px;
+}
+
+@media (min-width: 640px) {
+  .prep-course-lesson-footer__nav {
+    width: 40px;
+    height: 40px;
+    padding: 4px 12px;
+  }
+
+  .prep-course-lesson-footer__outline,
+  .prep-course-lesson-footer__primary {
+    height: 40px;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: 0.28px;
+  }
+
+  .prep-course-lesson-footer__back {
+    height: 40px;
+    padding: 8px 16px;
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: 0.28px;
+  }
 }
 
 .practice-session-body {

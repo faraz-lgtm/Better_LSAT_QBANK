@@ -14,14 +14,15 @@ const PT_RESULTS_PAGE_CONTAINER_CLASS = "mx-auto w-full min-w-0 max-w-[1328px]"
 
 /** Figma `18644:33809` — hero card: title, actions, score + results-by-section */
 const PT_RESULTS_HERO_CARD_CLASS =
-  "flex w-full flex-col gap-[24px] overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]"
+  "flex w-full flex-col gap-[24px] overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px] max-md:gap-4 max-md:p-4"
 
 /** Figma `18644:33827` — panel behind section summary cards (grows to fill remaining row width) */
 const PT_RESULTS_BY_SECTION_PANEL_CLASS =
-  "flex min-w-0 w-full flex-1 flex-col gap-[18px] overflow-hidden rounded-[16px] bg-[var(--primary-0)] p-[24px]"
+  "flex min-w-0 w-full flex-1 flex-col gap-[18px] overflow-hidden rounded-[16px] bg-[var(--primary-0)] p-[24px] max-md:gap-3 max-md:p-3"
 
-/** Section summary cards row — equal flex children, no scroll */
-const PT_RESULTS_BY_SECTION_CARDS_ROW_CLASS = "flex w-full min-w-0 gap-[7px]"
+/** Section summary cards — desktop equal flex row; 2×2 grid on mobile only */
+const PT_RESULTS_BY_SECTION_CARDS_ROW_CLASS =
+  "flex w-full min-w-0 gap-[7px] max-md:grid max-md:grid-cols-2 max-md:gap-2"
 
 /** Figma `18644:33834` — secondary elevated surface (total questions, about, etc.) */
 const PT_RESULTS_SURFACE_CARD_CLASS =
@@ -43,19 +44,19 @@ const PT_RESULTS_SECTION_CLASS =
 const PT_RESULTS_SECTION_BODY_CLASS = "flex flex-col gap-[24px] p-[24px]"
 
 /** Passage + question result rows — equal columns that shrink instead of scrolling. */
-const PT_RESULTS_DETAIL_ROW_CLASS = "flex w-full min-w-0 max-w-full items-start gap-6"
+const PT_RESULTS_DETAIL_ROW_CLASS = "flex w-full min-w-0 max-w-full items-start gap-6 max-md:gap-3"
 
 const PT_RESULTS_DETAIL_GRID_CLASS =
-  "grid min-w-0 flex-1 grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1.25fr)_auto] items-start gap-x-6 gap-y-4"
+  "grid min-w-0 flex-1 grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1.25fr)_auto] items-start gap-x-6 gap-y-4 max-md:grid-cols-1 max-md:gap-x-4 max-md:gap-y-3"
 
 /** One grouped card: passage header + question rows */
 const PT_RESULTS_CARD_CLASS =
   "overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.10),0_4px_6px_-4px_rgba(0,0,0,0.10)]"
 
 const PT_RESULTS_PASSAGE_HEADER_CLASS =
-  "rounded-t-[24px] border border-b-0 border-[var(--greyscale-100)] bg-[var(--primary-0)] p-[24px]"
+  "rounded-t-[24px] border border-b-0 border-[var(--greyscale-100)] bg-[var(--primary-0)] p-[24px] max-md:p-4"
 
-const PT_RESULTS_QUESTION_ROW_PAD_CLASS = "p-6"
+const PT_RESULTS_QUESTION_ROW_PAD_CLASS = "p-6 max-md:p-3"
 
 const PT_RESULTS_QUESTION_ROW_BORDER_CLASS = "border-t border-[var(--greyscale-100)]"
 
@@ -66,16 +67,16 @@ const PT_RESULTS_ACTION_BUTTON_CLASS =
   "flex size-9 items-center justify-center rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] text-[var(--greyscale-500)] transition-colors hover:bg-[var(--greyscale-0)]"
 
 const PT_RESULTS_PASSAGE_BADGE_CLASS =
-  "flex size-14 shrink-0 items-center justify-center rounded-[14px] border border-[var(--primary)] bg-[var(--primary-0)]"
+  "flex size-14 shrink-0 items-center justify-center rounded-[14px] border border-[var(--primary)] bg-[var(--primary-0)] max-md:size-10 max-md:rounded-[12px]"
 
 const PT_RESULTS_QUESTION_BADGE_CORRECT_CLASS =
-  "flex size-14 shrink-0 items-center justify-center rounded-[14px] bg-[#00bc54]"
+  "flex size-14 shrink-0 items-center justify-center rounded-[14px] bg-[#00bc54] max-md:size-10 max-md:rounded-[12px]"
 
 const PT_RESULTS_QUESTION_BADGE_INCORRECT_CLASS =
-  "flex size-14 shrink-0 items-center justify-center rounded-[14px] bg-[#df1c41]"
+  "flex size-14 shrink-0 items-center justify-center rounded-[14px] bg-[#df1c41] max-md:size-10 max-md:rounded-[12px]"
 
 const PT_RESULTS_QUESTION_BADGE_UNANSWERED_CLASS =
-  "flex size-14 shrink-0 items-center justify-center rounded-[14px] bg-[#ff6683]"
+  "flex size-14 shrink-0 items-center justify-center rounded-[14px] bg-[#ff6683] max-md:size-10 max-md:rounded-[12px]"
 
 export {
   PT_RESULTS_ACTION_BUTTON_CLASS,

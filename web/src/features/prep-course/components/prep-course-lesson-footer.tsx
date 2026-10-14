@@ -54,19 +54,19 @@ function BookPlusOutlineIcon({ className, ...props }: SVGProps<SVGSVGElement>) {
 
 /** Figma `18624:73705` / `18781:28397` / `18781:28180` */
 const navBtnClass =
-  "box-border inline-flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 py-1 text-[var(--greyscale-500)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+  "prep-course-lesson-footer__nav box-border inline-flex shrink-0 items-center justify-center rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--greyscale-500)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none sm:rounded-[12px]"
 
 /** Figma `18624:73705` / `17802:2872` */
 const outlineActionBtnClass =
-  "box-border inline-flex h-[40px] shrink-0 items-center justify-center gap-2 rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 py-2 text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)]"
+  "prep-course-lesson-footer__outline box-border inline-flex min-w-0 shrink items-center justify-center rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] font-semibold text-[var(--primary)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)] sm:shrink-0 sm:rounded-[14px]"
 
 /** Figma `18624:73705` / `17802:2911` */
 const primaryBtnClass =
-  "box-border inline-flex h-[40px] shrink-0 items-center justify-center gap-2 rounded-[14px] border border-[var(--primary-border)] bg-[var(--primary)] px-4 py-2 text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-600)] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+  "prep-course-lesson-footer__primary box-border inline-flex min-w-0 flex-1 items-center justify-center rounded-[12px] border border-[var(--primary-border)] bg-[var(--primary)] font-semibold text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-600)] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none sm:flex-none sm:rounded-[14px]"
 
 /** Figma `18624:73566` / `19466:19273` — text action, no border */
 const backToModuleBtnClass =
-  "box-border inline-flex h-[40px] shrink-0 items-center justify-center rounded-[14px] px-4 py-2 text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] transition-colors hover:bg-[var(--primary-25)]"
+  "prep-course-lesson-footer__back box-border inline-flex shrink-0 items-center justify-center rounded-[14px] font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary-25)]"
 
 function PrepCourseLessonFooter({
   showSidebar,
@@ -80,10 +80,62 @@ function PrepCourseLessonFooter({
   nextDisabled = false,
   primaryAction = null,
 }: PrepCourseLessonFooterProps) {
+  function renderPrimary(compact: boolean) {
+    if (primaryAction) {
+      return (
+        <button
+          type="button"
+          onClick={primaryAction.onClick}
+          disabled={primaryAction.disabled}
+          className={cn(primaryBtnClass, "disabled:pointer-events-auto")}
+        >
+          <span className="truncate">{primaryAction.label}</span>
+          <ChevronRight className={cn("shrink-0", compact ? "size-3.5" : "size-4")} strokeWidth={2} aria-hidden />
+        </button>
+      )
+    }
+
+    return (
+      <button type="button" onClick={onMarkComplete} disabled={markCompleteDisabled} className={primaryBtnClass}>
+        <CheckCircle2 className={cn("shrink-0", compact ? "size-3.5" : "size-4")} strokeWidth={2} aria-hidden />
+        {compact ? (
+          <span className="whitespace-nowrap">Mark Complete</span>
+        ) : (
+          <span className="whitespace-nowrap">Mark Complete &amp; Continue</span>
+        )}
+      </button>
+    )
+  }
+
   return (
-    <footer className="practice-session-footer prep-course-lesson-footer relative z-20 box-border flex w-full min-w-0 shrink-0 flex-col items-center justify-center border-t border-[var(--greyscale-100)] bg-[var(--primary-0)] px-6 py-2">
-      <div className="flex min-h-[48px] w-full min-w-0 items-center justify-between gap-4">
-        <div className="flex min-w-0 flex-wrap items-center gap-6">
+    <footer className="practice-session-footer prep-course-lesson-footer relative z-20 box-border flex w-full min-w-0 shrink-0 flex-col items-center justify-center border-t border-[var(--greyscale-100)] bg-[var(--primary-0)] px-3 py-2 sm:px-6">
+      {/* Mobile: one compact action row + back link below */}
+      <div className="flex w-full min-w-0 flex-col gap-1 sm:hidden">
+        <div className="flex min-h-[36px] w-full min-w-0 flex-nowrap items-center gap-1.5">
+          <button type="button" onClick={onPrev} disabled={prevDisabled} className={navBtnClass} aria-label="Previous lesson">
+            <ChevronLeft className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
+          </button>
+          <button type="button" onClick={onToggleSidebar} className={outlineActionBtnClass}>
+            {showSidebar ? (
+              <BookMinusOutlineIcon className="size-3.5 shrink-0" />
+            ) : (
+              <BookPlusOutlineIcon className="size-3.5 shrink-0" />
+            )}
+            <span className="whitespace-nowrap">{showSidebar ? "Hide Lesson" : "Show Lesson"}</span>
+          </button>
+          {renderPrimary(true)}
+          <button type="button" onClick={onNext} disabled={nextDisabled} className={navBtnClass} aria-label="Next lesson">
+            <ChevronRight className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
+          </button>
+        </div>
+        <button type="button" onClick={onBackToCourseModule} className={backToModuleBtnClass}>
+          <span className="whitespace-nowrap">Back to Course Module</span>
+        </button>
+      </div>
+
+      {/* Desktop: original left / right layout */}
+      <div className="hidden min-h-[48px] w-full min-w-0 items-center justify-between gap-4 sm:flex">
+        <div className="flex min-w-0 items-center gap-6">
           <button type="button" onClick={onPrev} disabled={prevDisabled} className={navBtnClass} aria-label="Previous lesson">
             <ChevronLeft className="size-4 shrink-0" strokeWidth={2} aria-hidden />
           </button>
@@ -100,27 +152,7 @@ function PrepCourseLessonFooter({
           </button>
         </div>
         <div className="flex min-w-0 shrink-0 items-center gap-4">
-          {primaryAction ? (
-            <button
-              type="button"
-              onClick={primaryAction.onClick}
-              disabled={primaryAction.disabled}
-              className={cn(primaryBtnClass, "disabled:pointer-events-auto")}
-            >
-              <span className="truncate">{primaryAction.label}</span>
-              <ChevronRight className="size-4 shrink-0" strokeWidth={2} aria-hidden />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onMarkComplete}
-              disabled={markCompleteDisabled}
-              className={primaryBtnClass}
-            >
-              <CheckCircle2 className="size-4 shrink-0" strokeWidth={2} aria-hidden />
-              <span className="whitespace-nowrap">Mark Complete &amp; Continue</span>
-            </button>
-          )}
+          {renderPrimary(false)}
           <button type="button" onClick={onNext} disabled={nextDisabled} className={navBtnClass} aria-label="Next lesson">
             <ChevronRight className="size-4 shrink-0" strokeWidth={2} aria-hidden />
           </button>

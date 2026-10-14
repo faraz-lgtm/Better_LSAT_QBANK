@@ -1,11 +1,11 @@
 import { PracticeResultOutcomeIcon } from "@/features/student/practice-session/practice-result-outcome-icon"
 
-/** Figma `18942:44485` — results-by-section card (fills row equally, no horizontal scroll) */
+/** Figma `18942:44485` — results-by-section card (fills row equally; compact only on mobile) */
 const PREP_TEST_SECTION_RESULT_CARD_CLASS =
-  "flex h-[228px] min-w-0 flex-1 basis-0 flex-col gap-3 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4"
+  "flex h-[228px] min-w-0 flex-1 basis-0 flex-col gap-3 overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 max-md:h-auto max-md:gap-2 max-md:rounded-[12px] max-md:p-2.5"
 
 const PREP_TEST_SECTION_KIND_BADGE_CLASS =
-  "flex size-6 shrink-0 items-center justify-center rounded-[8px] border text-xs font-extrabold leading-[1.3]"
+  "flex size-6 shrink-0 items-center justify-center rounded-[8px] border text-xs font-extrabold leading-[1.3] max-md:size-5 max-md:rounded-[6px] max-md:text-[10px]"
 
 const SECTION_BADGE: Record<
   "LR" | "RC",
@@ -38,31 +38,35 @@ function PrepTestSectionResultCard({
 
   return (
     <article className={PREP_TEST_SECTION_RESULT_CARD_CLASS}>
-      <div className="flex h-8 items-center gap-1.5">
+      <div className="flex h-8 items-center gap-1.5 max-md:h-6 max-md:gap-1">
         <div
           className={PREP_TEST_SECTION_KIND_BADGE_CLASS}
           style={{ backgroundColor: badge.bg, color: badge.text, borderColor: badge.border }}
         >
           {badge.short}
         </div>
-        <p className="min-w-0 truncate text-[10px] font-bold leading-normal tracking-[0.2px] text-[var(--color-student-heading)]">{longName}</p>
+        <p className="min-w-0 truncate text-[10px] font-bold leading-normal tracking-[0.2px] text-[var(--color-student-heading)] max-md:text-[9px] max-md:tracking-[0.18px]">
+          {longName}
+        </p>
         {isExperimental ? (
-          <span className="rounded-[6px] border border-[var(--blind-review-accent)] bg-[var(--blind-review-badge-bg)] px-1.5 py-0.5 text-[10px] font-extrabold leading-none tracking-[0.2px] text-[var(--blind-review-accent)]">
+          <span className="shrink-0 rounded-[6px] border border-[var(--blind-review-accent)] bg-[var(--blind-review-badge-bg)] px-1.5 py-0.5 text-[10px] font-extrabold leading-none tracking-[0.2px] text-[var(--blind-review-accent)] max-md:px-1 max-md:text-[9px] max-md:tracking-[0.18px]">
             EXP
           </span>
         ) : null}
       </div>
 
-      <div className="flex h-8 w-full items-center justify-between gap-1.5">
-        <p className="shrink-0 text-xs font-semibold leading-normal tracking-[0.24px] text-[var(--color-student-heading)]">
+      <div className="flex h-8 w-full items-center justify-between gap-1.5 max-md:h-7 max-md:gap-1">
+        <p className="shrink-0 text-xs font-semibold leading-normal tracking-[0.24px] text-[var(--color-student-heading)] max-md:min-w-0 max-md:truncate max-md:text-[10px] max-md:tracking-[0.2px]">
           {sectionLabel}
         </p>
-        <p className="shrink-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">{scoreDelta}</p>
+        <p className="shrink-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)] max-md:text-lg">
+          {scoreDelta}
+        </p>
       </div>
 
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1 max-md:min-h-0 max-md:flex-1 max-md:gap-0.5">
         {questionRows.map((row, rowIndex) => (
-          <div key={rowIndex} className="flex flex-wrap gap-1">
+          <div key={rowIndex} className="flex flex-wrap gap-1 max-md:gap-0.5">
             {row.map((cell, cellIndex) => (
               <PracticeResultOutcomeIcon
                 key={`${rowIndex}-${cellIndex}`}
@@ -75,14 +79,14 @@ function PrepTestSectionResultCard({
         ))}
       </div>
 
-      <div className="flex h-5 w-full items-center gap-2">
-        <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-[8px] bg-[var(--greyscale-25)]">
+      <div className="flex h-5 w-full items-center gap-2 max-md:mt-auto max-md:h-4 max-md:gap-1.5">
+        <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-[8px] bg-[var(--greyscale-25)] max-md:h-1">
           <div
             className="h-full rounded-[8px] bg-[var(--primary)]"
             style={{ width: `${accuracyPct}%` }}
           />
         </div>
-        <p className="w-[38px] shrink-0 text-right text-sm font-medium leading-normal tracking-[0.28px] text-[var(--primary)]">
+        <p className="w-[38px] shrink-0 text-right text-sm font-medium leading-normal tracking-[0.28px] text-[var(--primary)] max-md:w-[32px] max-md:text-xs max-md:tracking-[0.24px]">
           {accuracyPct}%
         </p>
       </div>

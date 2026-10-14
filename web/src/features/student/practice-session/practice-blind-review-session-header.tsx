@@ -43,7 +43,7 @@ type PracticeBlindReviewSessionHeaderProps = {
 
 function reviewHeaderActionButtonClass(active: boolean) {
   return cn(
-    "box-border inline-flex h-10 shrink-0 items-center gap-2 rounded-[12px] border border-solid px-4 py-2 text-base font-medium leading-normal tracking-[0.32px] transition-colors",
+    "box-border inline-flex h-8 shrink-0 items-center gap-1 rounded-[10px] border border-solid px-2 py-1 text-[11px] font-medium leading-normal tracking-[0.2px] transition-colors sm:h-10 sm:gap-2 sm:rounded-[12px] sm:px-4 sm:py-2 sm:text-base sm:tracking-[0.32px]",
     active
       ? "border-[var(--primary-border)] bg-[var(--primary)] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
       : "border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--greyscale-500)] hover:bg-[var(--greyscale-25)] hover:text-[var(--color-student-heading)]",
@@ -141,43 +141,45 @@ function PracticeBlindReviewSessionHeader({
   }
 
   return (
-    <header className="practice-session-header absolute inset-x-0 top-0 z-10 flex h-[88px] flex-col bg-[var(--greyscale-0)]">
-      <div className="flex h-[84px] shrink-0 items-center justify-between gap-6 px-10 py-6">
-        <div className="practice-session-scroll-hidden flex min-w-0 flex-1 items-center gap-6 overflow-x-auto">
+    <header className="practice-session-header absolute inset-x-0 top-0 z-10 flex h-[72px] flex-col bg-[var(--greyscale-0)] sm:h-[88px]">
+      <div className="flex h-[68px] shrink-0 items-center justify-between gap-2 px-3 py-2 sm:h-[84px] sm:gap-6 sm:px-10 sm:py-6">
+        <div className="practice-session-scroll-hidden flex min-w-0 flex-1 items-center gap-2 overflow-x-auto sm:gap-6">
           <button
             type="button"
-            className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] text-[var(--color-student-heading)] transition hover:bg-[var(--greyscale-25)]"
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-[10px] text-[var(--color-student-heading)] transition hover:bg-[var(--greyscale-25)] sm:size-9"
             aria-label="Exit review"
             onClick={onExitSection}
             disabled={exiting}
           >
-            <X className="size-6" strokeWidth={2} aria-hidden />
+            <X className="size-5 sm:size-6" strokeWidth={2} aria-hidden />
           </button>
-          <p className="m-0 shrink-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">
+          <p className="m-0 shrink-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)] sm:text-2xl">
             {prepTestLabel}
           </p>
-          <span className="shrink-0 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
+          <span className="hidden shrink-0 text-xs font-medium leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)] sm:inline">
             {questionRef}
           </span>
           {showSectionSelect ? (
-            <PracticeBlindReviewSectionSelect
-              sections={sectionOptions}
-              activeSectionSessionId={activeSectionSessionId}
-              onSelect={onSelectSection}
-            />
+            <div className="hidden sm:block">
+              <PracticeBlindReviewSectionSelect
+                sections={sectionOptions}
+                activeSectionSessionId={activeSectionSessionId}
+                onSelect={onSelectSection}
+              />
+            </div>
           ) : null}
           <input
             type="search"
             value={findQuery}
             onChange={(event) => onFindQueryChange?.(event.target.value)}
             placeholder="Find Text, Type Here"
-            className="h-10 w-[262px] shrink-0 rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)] outline-none placeholder:text-[var(--greyscale-300)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10"
+            className="hidden h-10 w-[262px] shrink-0 rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)] outline-none placeholder:text-[var(--greyscale-300)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10 sm:block"
           />
         </div>
 
-        <div className="flex shrink-0 items-center gap-6">
+        <div className="flex min-w-0 shrink-0 flex-nowrap items-center gap-1 sm:gap-6">
           {questionProgressLabel ? (
-            <span className="text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
+            <span className="shrink-0 whitespace-nowrap text-[11px] font-medium leading-[1.5] tracking-[0.2px] text-[var(--greyscale-500)] sm:text-sm sm:tracking-[0.28px]">
               {questionProgressLabel}
             </span>
           ) : null}
@@ -188,10 +190,12 @@ function PracticeBlindReviewSessionHeader({
                   type="button"
                   className={reviewHeaderActionButtonClass(sidePanel === "explanation")}
                   aria-pressed={sidePanel === "explanation"}
+                  aria-label="Video Explanation"
                   onClick={() => toggleSidePanel("explanation")}
                 >
-                  <ReviewIdeaIcon className="size-5 shrink-0" />
-                  <span>Video Explanation</span>
+                  <ReviewIdeaIcon className="size-3.5 shrink-0 sm:size-5" />
+                  <span className="sm:hidden">Video</span>
+                  <span className="hidden sm:inline">Video Explanation</span>
                 </button>
               ) : null}
               {showInsightsAction ? (
@@ -199,9 +203,10 @@ function PracticeBlindReviewSessionHeader({
                   type="button"
                   className={reviewHeaderActionButtonClass(sidePanel === "insights")}
                   aria-pressed={sidePanel === "insights"}
+                  aria-label="Insights"
                   onClick={() => toggleSidePanel("insights")}
                 >
-                  <ReviewInsightsIcon className="size-5 shrink-0" />
+                  <ReviewInsightsIcon className="size-3.5 shrink-0 sm:size-5" />
                   <span>Insights</span>
                 </button>
               ) : null}
@@ -210,9 +215,10 @@ function PracticeBlindReviewSessionHeader({
                   type="button"
                   className={reviewHeaderActionButtonClass(sidePanel === "notes")}
                   aria-pressed={sidePanel === "notes"}
+                  aria-label="Notes"
                   onClick={() => toggleSidePanel("notes")}
                 >
-                  <BlindReviewNotesIcon className="size-5 shrink-0" />
+                  <BlindReviewNotesIcon className="size-3.5 shrink-0 sm:size-5" />
                   <span>Notes</span>
                 </button>
               ) : null}
@@ -221,7 +227,7 @@ function PracticeBlindReviewSessionHeader({
         </div>
       </div>
       <div className="relative h-1 shrink-0 bg-[var(--greyscale-100)]">
-        <div className="absolute inset-y-0 left-10 w-[176px] rounded-[5px] bg-[var(--primary)]" />
+        <div className="absolute inset-y-0 left-3 w-[120px] rounded-[5px] bg-[var(--primary)] sm:left-10 sm:w-[176px]" />
       </div>
     </header>
   )

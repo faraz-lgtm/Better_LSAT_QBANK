@@ -97,6 +97,9 @@ describe("PrepTestPoolsPage", () => {
 
     expect(await screen.findByText("PT120")).toBeInTheDocument()
     expect(screen.getByText("88%")).toBeInTheDocument()
+    expect(screen.getByText("Official PrepTests").closest("div")?.innerHTML ?? "").not.toMatch(
+      /min-w-\[560px\]/,
+    )
     expect(screen.getByRole("heading", { name: "Setting" })).toBeInTheDocument()
     expect(screen.getByRole("heading", { name: "Appearance" })).toBeInTheDocument()
     expect(screen.getByRole("heading", { name: "Accommodations" })).toBeInTheDocument()

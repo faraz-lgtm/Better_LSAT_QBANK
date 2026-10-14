@@ -272,7 +272,7 @@ function RcDrillResultsView({
         ? visiblePassages.map((group) => (
             <section
               key={group.passage.id}
-              className="min-w-0 overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6"
+              className="min-w-0 overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] max-md:p-0 p-6"
             >
               <RcDrillPassageHeader passage={group.passage} />
               {group.questions.map((q) => (

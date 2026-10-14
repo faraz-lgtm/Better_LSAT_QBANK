@@ -106,10 +106,10 @@ const RECOMMENDATIONS = [
 ] as const
 
 /** Figma `20961:27340` — Official PrepTests row shell */
-const POOL_TABLE_ROW_CLASS = "flex w-full items-center px-5"
+const POOL_TABLE_ROW_CLASS = "flex w-full min-w-0 items-center px-3 sm:px-5"
 
-/** Right cluster: Fresh (80) + D/S/P (36) with 16px gaps — Figma `20961:27377` */
-const POOL_TABLE_ACTIONS_CLASS = "flex shrink-0 items-center gap-4"
+/** Right cluster: Fresh + D/S/P — tighter on mobile so the table fits without horizontal scroll */
+const POOL_TABLE_ACTIONS_CLASS = "flex shrink-0 items-center gap-1.5 sm:gap-4"
 
 type BandMeta = {
   id: BandId
@@ -278,14 +278,14 @@ function FreshnessBar({ percent }: { percent: number }) {
   const color = freshnessTone(percent)
   const clamped = Math.max(0, Math.min(100, percent))
   return (
-    <div className="flex w-20 shrink-0 items-center gap-1.5">
-      <div className="h-[3px] w-[46px] shrink-0 overflow-hidden rounded-[2px] bg-[var(--greyscale-100)]">
+    <div className="flex w-14 shrink-0 items-center gap-1 sm:w-20 sm:gap-1.5">
+      <div className="h-[3px] w-7 shrink-0 overflow-hidden rounded-[2px] bg-[var(--greyscale-100)] sm:w-[46px]">
         <div
           className="h-[3px] rounded-[2px]"
           style={{ width: `${clamped}%`, backgroundColor: color }}
         />
       </div>
-      <span className="min-w-[28px] text-[10px] tracking-[0.2px]" style={{ color }}>
+      <span className="min-w-[24px] text-[10px] tracking-[0.2px] sm:min-w-[28px]" style={{ color }}>
         {Math.round(clamped)}%
       </span>
     </div>
@@ -549,9 +549,9 @@ export function PrepTestPoolsPage() {
   const totalTests = data?.prepTests.length ?? 0
 
   return (
-    <StudentMain fullBleed contentClassName="px-6">
+    <StudentMain fullBleed contentClassName="px-3 sm:px-6">
       {/* Figma `20933:22919` — white settings shell */}
-      <div className="mx-auto flex w-full max-w-[1304px] flex-col gap-6 rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
+      <div className="mx-auto flex w-full min-w-0 max-w-[1304px] flex-col gap-6 overflow-x-clip rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-3 sm:p-6">
         {/* Figma Heading/H4 — Setting */}
         <h2 className="m-0 text-[24px] font-bold leading-[1.3] text-[var(--primary-800)]">Setting</h2>
 
@@ -567,7 +567,7 @@ export function PrepTestPoolsPage() {
               }}
             />
 
-            <section className="flex flex-col gap-6 rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
+            <section className="flex min-w-0 flex-col gap-6 rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-3 sm:p-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 {/* Figma Heading/H4 — same size as page title */}
                 <h2 className="m-0 text-[24px] font-bold leading-[1.3] text-[var(--primary-800)]">
@@ -686,103 +686,103 @@ export function PrepTestPoolsPage() {
                   ) : null}
                 </div>
 
-                <div className="overflow-hidden rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.05)]">
-                  <div className="overflow-x-auto">
-                    <div className="min-w-[560px]">
-                      <div className={cn(POOL_TABLE_ROW_CLASS, "justify-between py-[13px]")}>
-                        <p className="m-0 text-sm tracking-[0.28px] text-[var(--primary-800)]">Official PrepTests</p>
-                        <div className={POOL_TABLE_ACTIONS_CLASS}>
-                          <span className="w-20 text-center text-xs tracking-[0.24px] text-[var(--primary-800)]">
-                            Fresh
+                <div className="min-w-0 overflow-hidden rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.05)]">
+                  <div className="min-w-0 w-full max-w-full">
+                    <div className={cn(POOL_TABLE_ROW_CLASS, "justify-between gap-2 py-[13px]")}>
+                      <p className="m-0 min-w-0 truncate text-sm tracking-[0.28px] text-[var(--primary-800)]">
+                        Official PrepTests
+                      </p>
+                      <div className={POOL_TABLE_ACTIONS_CLASS}>
+                        <span className="w-14 text-center text-[10px] tracking-[0.2px] text-[var(--primary-800)] sm:w-20 sm:text-xs sm:tracking-[0.24px]">
+                          Fresh
+                        </span>
+                        {POOL_TONES.map((tone) => (
+                          <span
+                            key={tone.key}
+                            className={cn(
+                              "w-7 text-center text-[10px] font-bold tracking-[0.2px] opacity-80 sm:w-9 sm:text-xs sm:tracking-[0.24px]",
+                              tone.activeText,
+                            )}
+                          >
+                            {tone.letter}
                           </span>
-                          {POOL_TONES.map((tone) => (
-                            <span
-                              key={tone.key}
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="border-t border-[var(--greyscale-100)]">
+                      {bands.map((band) => {
+                        const allFlags = {
+                          inDrills: band.items.every((item) => item.inDrills),
+                          inSections: band.items.every((item) => item.inSections),
+                          inTests: band.items.every((item) => item.inTests),
+                        }
+                        return (
+                          <div key={band.id} className="min-w-0">
+                            <div
                               className={cn(
-                                "w-9 text-center text-xs font-bold tracking-[0.24px] opacity-80",
-                                tone.activeText,
+                                POOL_TABLE_ROW_CLASS,
+                                "h-14 gap-2 border-b border-[var(--greyscale-100)] bg-[var(--primary-0)] py-[7px]",
                               )}
                             >
-                              {tone.letter}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="border-t border-[var(--greyscale-100)]">
-                        {bands.map((band) => {
-                          const allFlags = {
-                            inDrills: band.items.every((item) => item.inDrills),
-                            inSections: band.items.every((item) => item.inSections),
-                            inTests: band.items.every((item) => item.inTests),
-                          }
-                          return (
-                            <div key={band.id}>
-                              <div
-                                className={cn(
-                                  POOL_TABLE_ROW_CLASS,
-                                  "h-14 border-b border-[var(--greyscale-100)] bg-[var(--primary-0)] py-[7px]",
-                                )}
-                              >
-                                <div className="flex min-w-0 flex-1 items-center gap-[7px]">
-                                  <span className="text-xs font-semibold tracking-[0.24px] text-[var(--primary-800)]">
-                                    {band.title}
+                              <div className="flex min-w-0 flex-1 items-center gap-[7px]">
+                                <span className="shrink-0 text-xs font-semibold tracking-[0.24px] text-[var(--primary-800)]">
+                                  {band.title}
+                                </span>
+                                {band.rangeLabel ? (
+                                  <span className="truncate text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
+                                    {band.rangeLabel}
                                   </span>
-                                  {band.rangeLabel ? (
-                                    <span className="truncate text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
-                                      {band.rangeLabel}
-                                    </span>
-                                  ) : null}
-                                </div>
-                                <div className={POOL_TABLE_ACTIONS_CLASS}>
-                                  <span className="w-20" aria-hidden />
-                                  {POOL_TONES.map((tone) => (
-                                    <div key={tone.key} className="flex w-9 justify-center">
-                                      <BandBulkToggle
-                                        tone={tone}
-                                        checked={allFlags[tone.flag]}
-                                        label={`Toggle all ${band.title} ${tone.label}`}
-                                        disabled={saving}
-                                        onClick={() => onBandBulkToggle(band.items, tone.flag)}
-                                      />
-                                    </div>
-                                  ))}
-                                </div>
+                                ) : null}
                               </div>
-
-                              <ul className="m-0 list-none p-0">
-                                {band.items.map((item) => (
-                                  <li
-                                    key={item.prepTestId}
-                                    className={cn(
-                                      POOL_TABLE_ROW_CLASS,
-                                      "border-b border-[var(--greyscale-100)] py-[9px] last:border-b-0",
-                                    )}
-                                  >
-                                    <p className="m-0 min-w-0 flex-1 truncate text-sm font-medium leading-6 tracking-[0.28px] text-[var(--primary-800)]">
-                                      {prepTestLabel(item)}
-                                    </p>
-                                    <div className={POOL_TABLE_ACTIONS_CLASS}>
-                                      <FreshnessBar percent={item.freshnessPercent} />
-                                      {POOL_TONES.map((tone) => (
-                                        <div key={tone.key} className="flex w-9 justify-center">
-                                          <PoolPill
-                                            tone={tone}
-                                            active={item[tone.flag]}
-                                            label={`${prepTestLabel(item)} ${tone.label.toLowerCase()}`}
-                                            disabled={saving}
-                                            onClick={() => onToggle(item, tone.flag, !item[tone.flag])}
-                                          />
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </li>
+                              <div className={POOL_TABLE_ACTIONS_CLASS}>
+                                <span className="w-14 sm:w-20" aria-hidden />
+                                {POOL_TONES.map((tone) => (
+                                  <div key={tone.key} className="flex w-7 justify-center sm:w-9">
+                                    <BandBulkToggle
+                                      tone={tone}
+                                      checked={allFlags[tone.flag]}
+                                      label={`Toggle all ${band.title} ${tone.label}`}
+                                      disabled={saving}
+                                      onClick={() => onBandBulkToggle(band.items, tone.flag)}
+                                    />
+                                  </div>
                                 ))}
-                              </ul>
+                              </div>
                             </div>
-                          )
-                        })}
-                      </div>
+
+                            <ul className="m-0 list-none p-0">
+                              {band.items.map((item) => (
+                                <li
+                                  key={item.prepTestId}
+                                  className={cn(
+                                    POOL_TABLE_ROW_CLASS,
+                                    "gap-2 border-b border-[var(--greyscale-100)] py-[9px] last:border-b-0",
+                                  )}
+                                >
+                                  <p className="m-0 min-w-0 flex-1 truncate text-sm font-medium leading-6 tracking-[0.28px] text-[var(--primary-800)]">
+                                    {prepTestLabel(item)}
+                                  </p>
+                                  <div className={POOL_TABLE_ACTIONS_CLASS}>
+                                    <FreshnessBar percent={item.freshnessPercent} />
+                                    {POOL_TONES.map((tone) => (
+                                      <div key={tone.key} className="flex w-7 justify-center sm:w-9">
+                                        <PoolPill
+                                          tone={tone}
+                                          active={item[tone.flag]}
+                                          label={`${prepTestLabel(item)} ${tone.label.toLowerCase()}`}
+                                          disabled={saving}
+                                          onClick={() => onToggle(item, tone.flag, !item[tone.flag])}
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 </div>
