@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createUsersApi, type UserEntitlement, type UserProfile } from "@/lib/api/users"
+import { markLawHubLoginLoggedThisSession } from "@/lib/auth/lawhub-session-log"
 import { needsLsacSetupStep } from "@/lib/auth/needs-lsac-setup"
 import { splitFullName } from "@/lib/lawhub-identity"
 import { formatEdgeFunctionError } from "@/lib/supabase/format-call-error"
@@ -202,6 +203,7 @@ function LsacLinkStepPage() {
         path: "vendor",
       })
       await usersApi.lawHubLogLogin()
+      markLawHubLoginLoggedThisSession()
       await afterInvite(nextProfile)
     } catch (linkError) {
       setError(linkError instanceof Error ? formatEdgeFunctionError(linkError) : "Unable to link LawHub account.")
@@ -223,6 +225,7 @@ function LsacLinkStepPage() {
         path: "existing",
       })
       await usersApi.lawHubLogLogin()
+      markLawHubLoginLoggedThisSession()
       await afterInvite(nextProfile)
     } catch (linkError) {
       setError(linkError instanceof Error ? formatEdgeFunctionError(linkError) : "Unable to link LawHub account.")

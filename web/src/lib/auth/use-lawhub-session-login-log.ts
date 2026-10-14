@@ -40,10 +40,9 @@ export function useLawHubSessionLoginLog(): void {
   useEffect(() => {
     if (hasLawHubLoginBeenLoggedThisSession()) return
     if (profileStatus !== "succeeded") return
-    if (!profile || needsLsacLink(profile)) {
-      markLawHubLoginLoggedThisSession()
-      return
-    }
+    // Wait until coaching id exists; do not mark the session guard yet or a later
+    // link in this tab would never POST the required LSAC Login log.
+    if (!profile || needsLsacLink(profile)) return
 
     let alive = true
     const usersApi = createUsersApi(getSupabaseBrowserClient())
