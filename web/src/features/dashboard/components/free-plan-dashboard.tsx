@@ -271,30 +271,30 @@ function FreePlanDiagnosticHistoryRow({ attempt }: { attempt: GuestDiagnosticRes
   return (
     <Link
       to={href}
-      className="flex min-h-16 flex-col gap-3 rounded-[14px] px-4 py-3.5 transition-colors hover:bg-[var(--greyscale-25)] sm:flex-row sm:items-center sm:justify-between sm:gap-5"
+      className="flex items-start gap-3 rounded-[14px] px-3 py-3 transition-colors hover:bg-[var(--greyscale-25)] sm:min-h-16 sm:items-center sm:gap-5 sm:px-4 sm:py-3.5"
     >
       <div className="min-w-0 flex-1">
-        <p className="m-0 text-base font-bold leading-6 text-[var(--color-student-heading)]">
+        <p className="m-0 text-[15px] font-bold leading-6 text-[var(--color-student-heading)] sm:text-base">
           {formatHistoryTitle(attempt)}
         </p>
-        <div className="mt-0.5 flex items-center gap-2 text-sm tracking-[0.28px] text-[var(--greyscale-500)]">
+        <div className="mt-0.5 flex items-center gap-1.5 text-xs tracking-[0.24px] text-[var(--greyscale-500)] sm:gap-2 sm:text-sm sm:tracking-[0.28px]">
           <Calendar className="size-3.5 shrink-0" aria-hidden />
           <time dateTime={attempt.completedAt}>{formatHistoryDateLabel(attempt.completedAt)}</time>
         </div>
-      </div>
-      <div className="flex items-center gap-5">
-        <span className="inline-flex h-6 items-center rounded-full bg-[var(--greyscale-25)] px-[10px] py-[3px] text-xs font-bold tracking-[0.24px] text-[var(--greyscale-500)]">
+        <span className="mt-2 inline-flex h-6 max-w-full items-center truncate rounded-full bg-[var(--greyscale-25)] px-2.5 py-[3px] text-[11px] font-bold tracking-[0.22px] text-[var(--greyscale-500)] sm:mt-2.5 sm:px-[10px] sm:text-xs sm:tracking-[0.24px]">
           {historyKindBadge(attempt)}
         </span>
-        <div className="min-w-[88px] text-right">
-          <p className="m-0 text-base font-semibold tracking-[0.32px] text-[var(--color-student-heading)]">
+      </div>
+      <div className="flex shrink-0 items-center gap-2 sm:gap-5">
+        <div className="min-w-0 text-right">
+          <p className="m-0 text-[15px] font-semibold tracking-[0.3px] text-[var(--color-student-heading)] sm:text-base sm:tracking-[0.32px]">
             {attempt.scaledScoreLabel}
           </p>
-          <p className="m-0 text-sm tracking-[0.28px] text-[var(--greyscale-500)]">
+          <p className="m-0 max-w-[7.5rem] text-[11px] leading-snug tracking-[0.2px] text-[var(--greyscale-500)] sm:max-w-none sm:text-sm sm:tracking-[0.28px]">
             {attempt.correctCount} of {attempt.questionCount} correct
           </p>
         </div>
-        <ChevronRight className="size-[18px] shrink-0 text-[var(--greyscale-500)]" aria-hidden />
+        <ChevronRight className="size-4 shrink-0 text-[var(--greyscale-500)] sm:size-[18px]" aria-hidden />
       </div>
     </Link>
   )
@@ -315,13 +315,13 @@ function FreePlanDiagnosticHistory() {
   ]
 
   return (
-    <section className="w-full">
+    <section className="w-full min-w-0">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="m-0 text-lg font-bold leading-[1.35] text-[var(--color-student-heading)]">
           Diagnostic history
         </h2>
         <div
-          className="inline-flex w-fit gap-1 rounded-[14px] bg-[var(--greyscale-25)] p-1"
+          className="inline-flex max-w-full flex-wrap gap-1 rounded-[14px] bg-[var(--greyscale-25)] p-1"
           role="tablist"
           aria-label="Filter diagnostics"
         >
@@ -334,7 +334,7 @@ function FreePlanDiagnosticHistory() {
                 role="tab"
                 aria-selected={active}
                 className={cn(
-                  "min-h-9 rounded-[9px] px-3.5 text-sm font-semibold tracking-[0.28px]",
+                  "min-h-8 rounded-[9px] px-2.5 text-xs font-semibold tracking-[0.24px] sm:min-h-9 sm:px-3.5 sm:text-sm sm:tracking-[0.28px]",
                   active
                     ? "bg-[var(--greyscale-0)] text-[var(--color-student-heading)]"
                     : "bg-transparent text-[var(--greyscale-500)]",
@@ -348,7 +348,7 @@ function FreePlanDiagnosticHistory() {
         </div>
       </div>
 
-      <div className="mt-4 rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-2">
+      <div className="mt-4 overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-1.5 sm:rounded-[20px] sm:p-2">
         {attempts.length === 0 ? (
           <p className="m-0 rounded-[14px] px-4 py-8 text-center text-sm text-[var(--greyscale-500)]">
             No diagnostics yet. Start a Quick Baseline or Full Section above — both are free.

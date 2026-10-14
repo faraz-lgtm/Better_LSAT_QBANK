@@ -23,7 +23,7 @@ vi.mock("@/lib/supabase/client", () => ({
 }))
 
 describe("GuestDiagnosticResultsView Section diagnostic", () => {
-  it("shows 5 Full Section rows collapsed, then See All reveals locked teasers and report sections", async () => {
+  it("shows 5 Full Section rows collapsed with report sections visible, then See All reveals locked teasers only", async () => {
     const user = userEvent.setup()
     subscription.hasActiveCore = false
     const result = buildDefaultGuestDiagnosticResult("quick")
@@ -37,13 +37,13 @@ describe("GuestDiagnosticResultsView Section diagnostic", () => {
     expect(screen.queryByLabelText(/Full Section question 6/i)).not.toBeInTheDocument()
     expect(screen.queryByTestId("diagnostic-locked-question-row")).toBeNull()
     expect(screen.queryByTestId("guest-free-analytics-limit-cta")).not.toBeInTheDocument()
-    expect(screen.queryByText("Your point leak map")).not.toBeInTheDocument()
+    expect(screen.getByText("Your point leak map")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Subscribe" })).toBeInTheDocument()
 
     await user.click(screen.getByRole("link", { name: "See All" }))
 
     expect(screen.getByLabelText(/Full Section question 10/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/Full Section question 6/i)).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Subscribe" })).toBeInTheDocument()
     expect(screen.getByTestId("guest-free-analytics-limit-cta")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Full Access" })).toBeInTheDocument()
     expect(screen.getByText("You've reached your free analytics limit!")).toBeInTheDocument()
@@ -89,7 +89,7 @@ describe("GuestDiagnosticResultsView Section diagnostic", () => {
 })
 
 describe("GuestDiagnosticResultsView Mini teaser", () => {
-  it("shows 3 Quick Baseline rows collapsed, then See All reveals Q4–Q5, locked teasers, and report sections", async () => {
+  it("shows 3 Quick Baseline rows collapsed with report sections visible, then See All reveals Q4–Q5 and locked teasers only", async () => {
     const user = userEvent.setup()
     subscription.hasActiveCore = false
     const result = buildDefaultGuestDiagnosticResult("mini")
@@ -104,7 +104,7 @@ describe("GuestDiagnosticResultsView Mini teaser", () => {
     expect(screen.queryByLabelText(/Quick Baseline question 5/i)).not.toBeInTheDocument()
     expect(screen.queryByTestId("diagnostic-locked-question-row")).toBeNull()
     expect(screen.queryByTestId("guest-free-analytics-limit-cta")).not.toBeInTheDocument()
-    expect(screen.queryByText("Your point leak map")).not.toBeInTheDocument()
+    expect(screen.getByText("Your point leak map")).toBeInTheDocument()
 
     await user.click(screen.getByRole("link", { name: "See All" }))
 

@@ -77,7 +77,7 @@ const RESULTS_LIST_PREVIEW_MINI = 3
 /** Collapsed results list: Full Section shows 5 rows before “See All”. */
 const RESULTS_LIST_PREVIEW_FULL = 5
 
-/** Initial visible question rows before expanding the rest of the report. */
+/** Initial visible question rows before “See All” expands the rest of the list. */
 function resultsListPreviewCount(intentId: GuestDiagnosticIntentId): number {
   return intentId === 'mini' ? RESULTS_LIST_PREVIEW_MINI : RESULTS_LIST_PREVIEW_FULL
 }
@@ -1636,7 +1636,8 @@ function GuestDiagnosticResultsView({
   const visibleUnlockedOutcomes = listExpanded
     ? unlockedOutcomes
     : unlockedOutcomes.slice(0, previewCount)
-  const showExpandedSections = listExpanded || !hasMoreResultsContent
+  /** See All only expands question rows + locked teasers; report sections below stay visible. */
+  const showExpandedQuestionList = listExpanded || !hasMoreResultsContent
 
   return (
     <StudentMain
@@ -1720,7 +1721,7 @@ function GuestDiagnosticResultsView({
           <p className="px-6 py-8 text-sm text-[#df1c41]">{explanationsError}</p>
         ) : null}
 
-        {/* ── Question rows (collapsed preview, then See All for rest + locked CTA) ── */}
+        {/* ── Question rows (collapsed preview; See All expands remaining + locked CTA only) ── */}
         <div className="flex flex-col gap-4">
           {visibleUnlockedOutcomes.map((outcome) => {
             const questionNumber = outcome.originalIndex + 1
@@ -1756,7 +1757,7 @@ function GuestDiagnosticResultsView({
             )
           })}
 
-          {showExpandedSections && lockedOutcomes.length > 0 ? (
+          {showExpandedQuestionList && lockedOutcomes.length > 0 ? (
             <div className="relative">
               <div className="flex flex-col gap-4" aria-hidden>
                 {lockedOutcomes.map((outcome) => {
@@ -1794,56 +1795,47 @@ function GuestDiagnosticResultsView({
         </div>
       </div>
 
-      {showExpandedSections ? (
-        <>
-          {/* 6. Point Leak Map */}
-          {pointLeaks.length > 0 ? (
-            <PointLeakMapSection
-              leaks={pointLeaks}
-              locked={!showPaidContent}
-              onSubscribe={openPricingModal}
-            />
-          ) : null}
-
-          {/* 7. Big Upgrade CTA — shown before locked sections, free only */}
-          {!showPaidContent && (
-            <DiagnosticUpgradeCTA result={result} onSubscribe={openPricingModal} />
-          )}
-
-          <AccuracyByDifficultySection
-            accuracyData={accuracyByDifficulty}
-            locked={!showPaidContent}
-            onSubscribe={openPricingModal}
-          />
-
-          <TimingBreakdownSection
-            outcomes={result.outcomes}
-            intentId={result.intentId}
-            locked={!showPaidContent}
-            onSubscribe={openPricingModal}
-          />
-
-          {/* 10. Your Plan (locked for free) */}
-          {!showPaidContent && <YourPlanSection onSubscribe={openPricingModal} />}
-
-          {/* 11. Review your test — compact wrong-answer jump list */}
-          <WrongQuestionsReviewSection
-            result={result}
-            explanationsById={explanationsById}
-            showPaidContent={showPaidContent}
-            reviewInTesterHref={reviewInTesterHref}
-            onSubscribe={openPricingModal}
-          />
-
-          {/* 12. Not ready to decide? */}
-          {!showPaidContent && <NotReadySection onSubscribe={openPricingModal} />}
-
-          {/* 13. Bottom sticky bar (free only) */}
-          {!showPaidContent && (
-            <BottomReportBar result={result} onSubscribe={openPricingModal} />
-          )}
-        </>
+      {/* Report sections always stay visible; See All only expands the question list above. */}
+      {pointLeaks.length > 0 ? (
+        <PointLeakMapSection
+          leaks={pointLeaks}
+          locked={!showPaidContent}
+          onSubscribe={openPricingModal}
+        />
       ) : null}
+
+      {!showPaidContent && (
+        <DiagnosticUpgradeCTA result={result} onSubscribe={openPricingModal} />
+      )}
+
+      <AccuracyByDifficultySection
+        accuracyData={accuracyByDifficulty}
+        locked={!showPaidContent}
+        onSubscribe={openPricingModal}
+      />
+
+      <TimingBreakdownSection
+        outcomes={result.outcomes}
+        intentId={result.intentId}
+        locked={!showPaidContent}
+        onSubscribe={openPricingModal}
+      />
+
+      {!showPaidContent && <YourPlanSection onSubscribe={openPricingModal} />}
+
+      <WrongQuestionsReviewSection
+        result={result}
+        explanationsById={explanationsById}
+        showPaidContent={showPaidContent}
+        reviewInTesterHref={reviewInTesterHref}
+        onSubscribe={openPricingModal}
+      />
+
+      {!showPaidContent && <NotReadySection onSubscribe={openPricingModal} />}
+
+      {!showPaidContent && (
+        <BottomReportBar result={result} onSubscribe={openPricingModal} />
+      )}
     </StudentMain>
   )
 }
