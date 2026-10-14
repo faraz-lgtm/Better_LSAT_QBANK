@@ -5,6 +5,7 @@ import { AuthCallbackPage } from "@/features/auth/pages/auth-callback-page"
 import { ForgotPasswordPage } from "@/features/auth/pages/forgot-password-page"
 import { LoginPage } from "@/features/auth/pages/login-page"
 import { OnboardingPage } from "@/features/auth/pages/onboarding-page"
+import { OnboardingDiagnosticPreviewPage } from "@/features/auth/pages/onboarding-diagnostic-preview-page"
 import { OnboardingWelcomePreviewPage } from "@/features/auth/pages/onboarding-welcome-preview-page"
 import { GuestDiagnosticStartPage } from "@/features/guest/pages/guest-diagnostic-start-page"
 import { ResetPasswordPage } from "@/features/auth/pages/reset-password-page"
@@ -57,6 +58,7 @@ function AppRoutes() {
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route path="/onboarding" element={<OnboardingPage />} />
       <Route path="/onboarding/preview" element={<OnboardingWelcomePreviewPage />} />
+      <Route path="/onboarding/diagnostic/preview" element={<OnboardingDiagnosticPreviewPage />} />
       <Route path="/diagnostic/start" element={<GuestDiagnosticStartPage />} />
       <Route path="/diagnostic/start/preview" element={<GuestDiagnosticStartPage preview />} />
       <Route path="/practice/rc-nav/preview" element={<RcQuestionNavPreviewPage />} />
