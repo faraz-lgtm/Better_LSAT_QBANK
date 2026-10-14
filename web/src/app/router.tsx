@@ -9,6 +9,7 @@ import {
 } from "react"
 import { Navigate, Outlet, RouterProvider, createBrowserRouter, useLocation } from "react-router-dom"
 
+import { AppRouteErrorPage } from "@/features/app-shell/app-route-error-page"
 import { StudentAppShell } from "@/features/app-shell/student-app-shell"
 import { LoginPage } from "@/features/auth/pages/login-page"
 import { SignupPage } from "@/features/auth/pages/signup-page"
@@ -641,6 +642,10 @@ function RequireCheckoutAuth({ children }: { children: ReactElement }) {
 }
 
 const router = createBrowserRouter([
+  {
+    element: <Outlet />,
+    errorElement: <AppRouteErrorPage />,
+    children: [
   { path: "/", element: <PublicOnly><LoginPage /></PublicOnly> },
   { path: "/login", element: <PublicOnly><LoginPage /></PublicOnly> },
   { path: "/login/email-check", element: <LoginEmailCheckPage /> },
@@ -1218,6 +1223,8 @@ const router = createBrowserRouter([
     ],
   },
   { path: "*", element: <Navigate to="/login" replace /> },
+    ],
+  },
 ])
 
 function AppRouter() {

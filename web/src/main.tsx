@@ -8,6 +8,7 @@ import { PostHogErrorBoundary, PostHogProvider } from '@posthog/react'
 import './index.css'
 import App from './App.tsx'
 import { store } from '@/app/store'
+import { AppErrorScreen } from '@/features/app-shell/app-error-screen'
 import { ThemeProvider } from '@/features/theme/theme-provider'
 import { initPostHog, posthog } from '@/lib/analytics/posthog'
 import { PostHogAuthBridge } from '@/lib/analytics/posthog-auth-bridge'
@@ -18,7 +19,9 @@ const posthogClient = initPostHog()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <PostHogProvider client={posthogClient ?? posthog}>
-      <PostHogErrorBoundary>
+      <PostHogErrorBoundary
+        fallback={({ error }) => <AppErrorScreen error={error} />}
+      >
         <Provider store={store}>
           <ThemeProvider>
             <PostHogAuthBridge />
