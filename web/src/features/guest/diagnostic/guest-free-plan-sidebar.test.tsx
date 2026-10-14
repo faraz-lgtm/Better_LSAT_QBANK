@@ -42,9 +42,9 @@ describe("GuestFreePlanSidebar", () => {
     expect(screen.queryByRole("button", { name: /Question Bank/i })).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Upgrade to LSAT+" })).toBeInTheDocument()
     expect(screen.getByText("Unlock Analytics")).toBeInTheDocument()
-    expect(screen.getByText(/79%/)).toBeInTheDocument()
-    expect(screen.getByText(/30\+/)).toBeInTheDocument()
-    expect(screen.getByText(/Score Tracker will be available/)).toBeInTheDocument()
+    expect(
+      screen.getByText("Track weak areas, trends, and score progress."),
+    ).toBeInTheDocument()
     expect(screen.queryByText(/Free plan/i)).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: /\$79/ })).not.toBeInTheDocument()
   })

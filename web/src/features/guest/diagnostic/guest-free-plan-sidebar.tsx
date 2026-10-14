@@ -20,9 +20,7 @@ function FreePlanUpgradeCard() {
         Unlock Analytics
       </p>
       <p className="m-0 w-full text-xs font-medium leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
-        <span className="font-bold">79% </span>
-        Performance, <span className="font-bold">30+</span> Reports, and Score Tracker will be
-        available.
+        Track weak areas, trends, and score progress.
       </p>
       <GuestUpgradeCta variant="sidebar-primary" />
     </div>
