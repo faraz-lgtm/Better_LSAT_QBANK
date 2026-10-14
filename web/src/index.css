@@ -1043,7 +1043,9 @@ html.student-shell-active #root {
   padding: clamp(0.75rem, 1.5vh, 1.25rem) clamp(1rem, 2.5vw, 2rem);
 }
 
-.auth-content-shell--wide {
+/* Must beat `.auth-page .auth-content-shell` (500px) so pricing can fill the column. */
+.auth-page .auth-content-shell--wide {
+  width: 100%;
   max-width: min(80rem, 100%);
 }
 
@@ -1055,7 +1057,7 @@ html.student-shell-active #root {
   padding: clamp(0.5rem, 1vh, 0.875rem) clamp(1rem, 2.5vw, 2rem);
 }
 
-.auth-content-shell--lsac-link {
+.auth-page .auth-content-shell--lsac-link {
   width: 100%;
   max-width: min(52rem, 100%);
 }
@@ -1085,7 +1087,7 @@ html.student-shell-active #root {
   padding: clamp(0.5rem, 1vh, 0.875rem) clamp(1rem, 2.5vw, 2rem);
 }
 
-.auth-content-shell--intent {
+.auth-page .auth-content-shell--intent {
   width: 100%;
   max-width: min(72rem, 100%);
 }
