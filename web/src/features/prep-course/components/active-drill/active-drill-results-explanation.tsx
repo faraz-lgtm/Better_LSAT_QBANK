@@ -136,7 +136,7 @@ function ActiveDrillResultsExplanation({
           {explanationHtml || stimulus ? (
             <section className="flex w-full flex-col gap-4">
               {showStimulusHeading ? (
-                <h3 className="m-0 text-[24px] font-bold leading-[1.3] text-[#36394a]">Stimulus</h3>
+                <h3 className="m-0 text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading)]">Stimulus</h3>
               ) : null}
               {explanationHtml ? (
                 <HtmlContent html={explanationHtml} className="active-drill-results-body" />

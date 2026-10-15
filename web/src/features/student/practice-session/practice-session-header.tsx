@@ -270,7 +270,7 @@ function PracticeSessionHeader({
                 onPauseRequest={onTimerPauseRequest}
                 onReset={onResetTimer}
                 progress={timerProgress}
-                displayClassName={cn("text-[12px] leading-[18px] text-[#526079]", timerDisplayClassName)}
+                displayClassName={cn("text-[12px] leading-[18px] text-[var(--greyscale-500)]", timerDisplayClassName)}
               />
             ) : null}
             {/* Same controls as desktop header right: pause + more menu */}

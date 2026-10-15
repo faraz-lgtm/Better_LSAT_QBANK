@@ -18,7 +18,9 @@ type ExplanationAnalyticsTabPanelProps = {
 }
 
 const cardSurface =
-  "min-w-0 max-w-full rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 shadow-[0px_1px_1px_rgba(6,35,87,0.04),0px_12px_16px_rgba(6,35,87,0.22)] sm:rounded-[24px] sm:p-7"
+  "rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-7 shadow-[0px_1px_1px_rgba(6,35,87,0.04),0px_12px_16px_rgba(6,35,87,0.22)] dark:shadow-[0px_1px_1px_rgba(0,0,0,0.2),0px_12px_16px_rgba(0,0,0,0.35)]"
+
+const BAR_TRACK_HEIGHT = 200
 
 function difficultyToneStyles(tone: "green" | "teal" | "red"): {
   pillBg: string
@@ -26,12 +28,24 @@ function difficultyToneStyles(tone: "green" | "teal" | "red"): {
   bar: string
 } {
   if (tone === "red") {
-    return { pillBg: "bg-[rgba(239,68,68,0.1)]", pillText: "text-[#ef4444]", bar: "bg-[#ef4444]" }
+    return {
+      pillBg: "bg-[rgba(239,68,68,0.1)] dark:bg-[rgba(239,68,68,0.18)]",
+      pillText: "text-[#ef4444] dark:text-[#ff6683]",
+      bar: "bg-[#ef4444]",
+    }
   }
   if (tone === "teal") {
-    return { pillBg: "bg-[rgba(11,188,201,0.1)]", pillText: "text-[#0bbcc9]", bar: "bg-[#0bbcc9]" }
+    return {
+      pillBg: "bg-[rgba(11,188,201,0.1)] dark:bg-[rgba(11,188,201,0.18)]",
+      pillText: "text-[#0bbcc9]",
+      bar: "bg-[#0bbcc9]",
+    }
   }
-  return { pillBg: "bg-[rgba(64,196,170,0.12)]", pillText: "text-[#0f9d82]", bar: "bg-[#40c4aa]" }
+  return {
+    pillBg: "bg-[rgba(64,196,170,0.12)] dark:bg-[rgba(64,196,170,0.18)]",
+    pillText: "text-[#0f9d82] dark:text-[#40c4aa]",
+    bar: "bg-[#40c4aa]",
+  }
 }
 
 function ComplexityStat({
@@ -53,7 +67,7 @@ function ComplexityStat({
   const colors = difficultyToneStyles(tone)
 
   return (
-    <div className="min-w-0 rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 sm:p-5">
+    <div className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--primary-0)] p-5 dark:bg-[var(--greyscale-25)]">
       <div className="flex items-center justify-between gap-3">
         <p className="m-0 text-[13px] font-semibold uppercase tracking-[0.03em] text-[var(--greyscale-500)]">{label}</p>
         <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", colors.pillBg, colors.pillText)}>
@@ -64,7 +78,10 @@ function ComplexityStat({
         {Array.from({ length: max }, (_, i) => (
           <span
             key={i}
-            className={cn("h-2.5 min-w-0 flex-1 rounded-full", i < safe ? colors.bar : "bg-[var(--greyscale-100)]")}
+            className={cn(
+              "h-2.5 min-w-0 flex-1 rounded-full",
+              i < safe ? colors.bar : "bg-[var(--greyscale-100)] dark:bg-[var(--greyscale-50)]",
+            )}
           />
         ))}
       </div>
@@ -90,37 +107,29 @@ function ScoreBandCard({
   const sliderPct = Math.max(0, Math.min(100, ((score - 120) / 60) * 100))
 
   return (
-    <div
-      className="min-w-0 rounded-2xl border border-[rgba(13,71,161,0.15)] p-4 sm:p-5"
-      style={{
-        backgroundImage:
-          "linear-gradient(169.42deg, rgb(13, 71, 161) 0%, rgb(12, 68, 155) 7.14%, rgb(6, 35, 87) 100%)",
-      }}
-    >
-      <div className="flex items-start justify-between gap-3 sm:gap-4">
-        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/10 sm:size-11">
-            <Users className="size-4 text-white sm:size-5" aria-hidden />
+    <div className="rounded-2xl border border-[var(--primary)]/15 bg-[linear-gradient(169.42deg,#0d47a1_0%,#0c449b_7.14%,#062357_100%)] p-5 dark:border-[var(--primary)]/25 dark:bg-[linear-gradient(169.42deg,#0a357f_0%,#062357_55%,#041a44_100%)]">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/10">
+            <Users className="size-5 text-white" aria-hidden />
           </div>
           <p className="m-0 min-w-0 flex-1 text-[12px] leading-[16px] text-white/75 sm:max-w-[240px] sm:text-[13px] sm:leading-[17.875px]">
             {resolved.caption}
           </p>
         </div>
-        <div className="shrink-0 text-right">
-          <p className="m-0 text-[28px] font-bold leading-[28px] text-white sm:text-[34px] sm:leading-[34px]">
-            {resolved.headline}
-          </p>
-          <p className="m-0 pt-1 text-[11px] font-medium leading-[16.5px] text-[var(--primary-900)]">{resolved.range}</p>
+        <div className="text-right">
+          <p className="m-0 text-[34px] font-bold leading-[34px] text-white">{resolved.headline}</p>
+          <p className="m-0 pt-1 text-[11px] font-medium leading-[16.5px] text-white/70">{resolved.range}</p>
         </div>
       </div>
       <div className="relative mt-4 h-[43px] pt-4">
         <div className="absolute inset-x-0 top-[19px] h-1.5 rounded-full bg-white/15" />
         <div
-          className="absolute top-[19px] h-1.5 rounded-full bg-gradient-to-r from-[var(--primary)] to-[#419df8]"
+          className="absolute top-[19px] h-1.5 rounded-full bg-gradient-to-r from-[#419df8] to-[#75A1E8]"
           style={{ width: `${sliderPct}%` }}
         />
         <span
-          className="absolute top-4 size-3 rounded-full bg-[var(--greyscale-0)] shadow-sm"
+          className="absolute top-4 size-3 rounded-full bg-white shadow-sm"
           style={{ left: `calc(${sliderPct}% - 6px)` }}
           aria-hidden
         />
@@ -134,8 +143,8 @@ function ScoreBandCard({
   )
 }
 
-const BAR_GRAY_GRADIENT =
-  "linear-gradient(0deg, rgb(154, 163, 178) 0%, rgb(167, 175, 189) 33.333%, rgb(180, 188, 201) 66.667%, rgb(193, 200, 212) 100%)"
+const BAR_INACTIVE_FILL =
+  "bg-gradient-to-t from-[#9aa3b2] via-[#adb5c3] to-[#c1c8d4] dark:from-[#4a4f57] dark:via-[#565b64] dark:to-[#646a74]"
 
 function TopAnswerBar({
   letter,
@@ -158,22 +167,20 @@ function TopAnswerBar({
       >
         {pct}%
       </p>
-      <div className="relative flex h-[140px] w-full max-w-[64px] items-end justify-center overflow-hidden rounded-xl border border-[var(--greyscale-100)] bg-[rgba(243,247,255,0.6)] sm:h-[200px] sm:rounded-2xl">
-        {barPct > 0 ? (
+      <div className="relative flex h-[200px] w-16 max-w-[64px] items-end justify-center overflow-hidden rounded-2xl border border-[var(--greyscale-100)] bg-[rgba(243,247,255,0.6)] dark:bg-[var(--primary-25)]">
+        {barHeight > 0 ? (
           <div
             className={cn(
-              "relative w-[calc(100%-2px)] max-w-[62px] rounded-t-[10px]",
-              highlight && "bg-gradient-to-t from-[var(--primary-600)] to-[var(--primary)] shadow-[0px_-6px_18px_0px_rgba(11,188,201,0.6)]",
-            )}
-            style={
+              "relative w-[62px] rounded-t-[10px]",
               highlight
-                ? { height: `${barPct}%` }
-                : { height: `${barPct}%`, backgroundImage: BAR_GRAY_GRADIENT }
-            }
+                ? "bg-gradient-to-t from-[var(--primary-600)] to-[var(--primary)] shadow-[0px_-6px_18px_0px_rgba(11,188,201,0.6)] dark:shadow-[0px_-6px_18px_0px_rgba(117,161,232,0.35)]"
+                : BAR_INACTIVE_FILL,
+            )}
+            style={{ height: `${barHeight}px` }}
           />
         ) : null}
         {highlight ? (
-          <span className="absolute left-1/2 top-2 flex size-5 -translate-x-1/2 items-center justify-center rounded-full bg-[var(--greyscale-0)] shadow-[0px_1px_1.5px_rgba(0,0,0,0.1),0px_1px_1px_rgba(0,0,0,0.1)]">
+          <span className="absolute left-1/2 top-2 flex size-5 -translate-x-1/2 items-center justify-center rounded-full bg-[var(--greyscale-0)] shadow-[0px_1px_1.5px_rgba(0,0,0,0.1),0px_1px_1px_rgba(0,0,0,0.1)] dark:bg-[var(--greyscale-900)]">
             <Check className="size-3 text-[var(--primary)]" strokeWidth={3} aria-hidden />
           </span>
         ) : null}
@@ -183,7 +190,7 @@ function TopAnswerBar({
           "mt-2 flex size-8 items-center justify-center rounded-lg text-xs font-semibold leading-[18px] sm:mt-3 sm:size-9 sm:rounded-xl sm:text-sm sm:leading-[21px]",
           highlight
             ? "border border-[var(--primary)] bg-[var(--primary)] text-white shadow-[0px_4px_3px_rgba(11,188,201,0.3),0px_2px_2px_rgba(11,188,201,0.3)]"
-            : "border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--greyscale-500)]",
+            : "border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--greyscale-500)] dark:bg-[var(--greyscale-25)]",
         )}
       >
         {letter}
@@ -200,13 +207,15 @@ function historyStatusPill(status: "in_process" | "answered"): {
   if (status === "answered") {
     return {
       label: "Completed",
-      className: "bg-[rgba(64,196,170,0.12)] text-[#0f9d82]",
+      className:
+        "bg-[rgba(64,196,170,0.12)] text-[#0f9d82] dark:bg-[rgba(64,196,170,0.18)] dark:text-[#40c4aa]",
       dotClass: "bg-[#40c4aa]",
     }
   }
   return {
     label: "In progress",
-    className: "bg-[rgba(245,158,11,0.12)] text-[#c07a06]",
+    className:
+      "bg-[rgba(245,158,11,0.12)] text-[#c07a06] dark:bg-[rgba(245,158,11,0.18)] dark:text-[#f59e0b]",
     dotClass: "bg-[#f59e0b]",
   }
 }
@@ -225,7 +234,7 @@ function TagGroup({
   tagClassName: string
 }) {
   return (
-    <div className="rounded-2xl border border-[var(--greyscale-100)] bg-[rgba(243,247,255,0.4)] p-4">
+    <div className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--primary-25)]/40 p-4 dark:bg-[var(--greyscale-25)]">
       <div className="flex items-center gap-2.5">
         <span className={cn("flex size-7 items-center justify-center rounded-lg", iconBg)}>{icon}</span>
         <p className="m-0 text-[13px] font-semibold leading-[19.5px] text-[var(--color-student-heading)]">{title}</p>
@@ -261,7 +270,7 @@ function TimingStat({
   yourTimeNote: string
 }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 sm:p-5">
+    <div className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--primary-0)] p-5 dark:bg-[var(--greyscale-25)]">
       <p className="m-0 text-[13px] font-semibold uppercase tracking-[0.03em] text-[var(--greyscale-500)]">
         Timing
       </p>
@@ -349,7 +358,7 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
               </p>
             </div>
             {correctChoiceLetter ? (
-              <span className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-[10px] bg-[var(--primary-25)] px-3 py-1 text-xs font-semibold leading-[18px] text-[var(--primary)]">
+              <span className="inline-flex items-center gap-1.5 rounded-[10px] border border-[var(--primary)]/20 bg-[var(--primary-25)] px-3 py-1 text-xs font-semibold leading-[18px] text-[var(--primary)] dark:bg-[var(--secondary-0)]">
                 <Check className="size-3.5" aria-hidden />
                 {correctChoiceLetter} is correct
               </span>
@@ -386,7 +395,7 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
               <p className="m-0 py-6 text-sm text-[var(--greyscale-500)]">No attempts recorded yet.</p>
             ) : (
               <>
-                <span className="absolute bottom-2 left-[7px] top-2 w-px bg-[var(--greyscale-100)]" aria-hidden />
+                <span className="absolute bottom-2 left-[7px] top-2 w-px bg-[var(--greyscale-100)] dark:bg-[var(--greyscale-600)]" aria-hidden />
                 <div className="flex flex-col gap-6">
                   {analytics.history.map((h, i) => {
                     const pill = historyStatusPill(h.status)
@@ -401,7 +410,7 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
                         >
                           <span className="size-1.5 rounded-full bg-white/70" />
                         </span>
-                        <div className="rounded-2xl border border-[var(--greyscale-100)] bg-[rgba(243,247,255,0.4)] p-4">
+                        <div className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--primary-25)]/40 p-4 dark:bg-[var(--greyscale-25)]">
                           <div className="flex items-start justify-between gap-3">
                             <p className="m-0 max-w-[185px] text-sm font-semibold leading-[19.25px] text-[var(--color-student-heading)]">
                               {h.source}
@@ -442,17 +451,17 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
           <h3 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[var(--color-student-heading)]">Insights</h3>
           <TagGroup
             icon={<FileText className="size-4 text-[var(--primary)]" aria-hidden />}
-            iconBg="bg-[var(--primary-25)]"
+            iconBg="bg-[var(--primary-25)] dark:bg-[var(--secondary-0)]"
             title="Question Stem Tags"
             tags={analytics.questionStemTags}
-            tagClassName="border border-[rgba(13,71,161,0.15)] bg-[var(--primary-25)] text-[var(--primary)]"
+            tagClassName="border border-[var(--primary)]/20 bg-[var(--primary-25)] text-[var(--primary)] dark:bg-[var(--secondary-0)]"
           />
           <TagGroup
-            icon={<BookOpen className="size-4 text-[#0a8a94]" aria-hidden />}
-            iconBg="bg-[rgba(11,188,201,0.1)]"
+            icon={<BookOpen className="size-4 text-[#0a8a94] dark:text-[#0bbcc9]" aria-hidden />}
+            iconBg="bg-[rgba(11,188,201,0.1)] dark:bg-[rgba(11,188,201,0.18)]"
             title="Passage Tags"
             tags={analytics.passageTags}
-            tagClassName="border border-[rgba(11,188,201,0.2)] bg-[rgba(11,188,201,0.1)] text-[#0a8a94]"
+            tagClassName="border border-[rgba(11,188,201,0.2)] bg-[rgba(11,188,201,0.1)] text-[#0a8a94] dark:bg-[rgba(11,188,201,0.18)] dark:text-[#0bbcc9]"
           />
         </section>
       </div>

@@ -290,6 +290,9 @@ describe("PracticeSessionHeader official view", () => {
     // Passage / Question opens from the title chevron; both start unselected
     expect(screen.queryByRole("option", { name: "Passage" })).not.toBeInTheDocument()
     await user.click(screen.getByRole("button", { name: "Test 123 menu" }))
+    const paneTabs = screen.getByRole("listbox", { name: "Reading view" })
+    expect(paneTabs.className).toContain("bg-[var(--greyscale-25)]")
+    expect(paneTabs.className).toContain("border-[var(--greyscale-100)]")
     expect(screen.getByRole("option", { name: "Passage" })).toHaveAttribute("aria-selected", "false")
     expect(screen.getByRole("option", { name: "Question" })).toHaveAttribute("aria-selected", "false")
     await user.click(screen.getByRole("option", { name: "Question" }))

@@ -211,6 +211,8 @@ describe("PracticeSessionSideWidget official view", () => {
 
     const rail = screen.getByRole("complementary", { name: "Exam tools" })
     expect(rail).toHaveClass("w-[175px]")
+    expect(rail.className).toContain("bg-[var(--greyscale-25)]")
+    expect(rail.className).toContain("border-[var(--greyscale-25)]")
     expect(screen.getByRole("button", { name: "Close tools menu" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Collapse menu" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Keyboard Highlight" })).toBeInTheDocument()

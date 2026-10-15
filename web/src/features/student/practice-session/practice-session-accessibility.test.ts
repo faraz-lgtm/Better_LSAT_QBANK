@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest"
 
 import { buildAccessibilityContentStyle } from "@/features/student/practice-session/practice-session-accessibility"
 
-const examCss = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8")
+const examCss = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8").replace(/\r\n/g, "\n")
 
 describe("buildAccessibilityContentStyle", () => {
   it("maps color scheme and typography settings to css variables", () => {
@@ -92,19 +92,40 @@ describe("accessibility panel layout", () => {
 })
 
 describe("official exam dark-mode choice ink", () => {
-  it("uses Neutral-25 rows and white copy; selected yellow keeps navy", () => {
+  it("uses Neutral-25 rows and white copy for default schemes; selected yellow keeps navy", () => {
     const marker =
-      ".dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected)"
+      '.dark .practice-session-card--official .practice-session-body:is(\n  [data-color-scheme="black-on-white"],\n  [data-color-scheme="grey-on-light-grey"],\n  :not([data-color-scheme])\n) .practice-session-official-choice:not(.practice-session-official-choice--selected) {'
     const start = examCss.indexOf(marker)
     expect(start).toBeGreaterThan(-1)
     const unselected = examCss.slice(start, start + 700)
     expect(unselected).toContain("background-color: #35373c !important")
     expect(unselected).toContain("color: #ffffff !important")
     const selectedMarker =
-      ".dark .practice-session-card--official .practice-session-official-choice--selected,"
+      '.dark .practice-session-card--official .practice-session-body:is(\n  [data-color-scheme="black-on-white"],\n  [data-color-scheme="grey-on-light-grey"],\n  :not([data-color-scheme])\n) .practice-session-official-choice--selected,'
     const selectedStart = examCss.indexOf(selectedMarker)
     expect(selectedStart).toBeGreaterThan(-1)
-    expect(examCss.slice(selectedStart, selectedStart + 900)).toContain("color: #041a44 !important")
+    expect(examCss.slice(selectedStart, selectedStart + 1600)).toContain("color: #041a44 !important")
+  })
+
+  it("honors Accessibility color-scheme tokens on dark official exam for non-default schemes", () => {
+    expect(examCss).toContain(
+      '.dark .practice-session-card--official .practice-session-body:is(\n  [data-color-scheme="purple-on-light-green"],\n  [data-color-scheme="black-on-violet"],\n  [data-color-scheme="yellow-on-navy"],\n  [data-color-scheme="white-on-black"]\n) {',
+    )
+    expect(examCss).toContain("background-color: var(--practice-accessibility-bg) !important")
+    expect(examCss).toContain("color: var(--practice-accessibility-fg) !important")
+    expect(examCss).toContain(
+      "background-color: var(--practice-choice-unselected-bg) !important",
+    )
+    expect(examCss).toContain(
+      "background-color: var(--practice-choice-selected-bg) !important",
+    )
+    // Must not blanket-force heading ink on every official body in dark mode.
+    expect(examCss).not.toContain(
+      ".dark .practice-session-card--official .practice-session-body {\n  background-color: var(--greyscale-0) !important;\n  color: var(--color-student-heading) !important;\n}",
+    )
+    expect(examCss).not.toContain(
+      ".dark .practice-session-card--active-drill .practice-session-body .lsat-html-content,\n.dark .practice-session-card--active-drill .practice-session-body .practice-session-content {\n  color: var(--color-student-heading) !important;\n}",
+    )
   })
 })
 
@@ -137,6 +158,16 @@ describe("exam chrome dark-mode glyphs", () => {
     expect(block).toContain(".dark .practice-session-side-widget button")
     expect(block).toContain("color: #ffffff")
     expect(block).toContain(".dark .practice-session-side-widget svg")
+  })
+
+  it("inverts mobile footer prev/list icons but not the next chevron", () => {
+    expect(examCss).toContain(
+      '.dark .practice-session-card--official .practice-session-footer img[src*="mobile-footer-prev"]',
+    )
+    expect(examCss).toContain(
+      '.dark .practice-session-card--official .practice-session-footer img[src*="mobile-footer-list"]',
+    )
+    expect(examCss).not.toContain('img[src*="mobile-footer-next"]')
   })
 })
 

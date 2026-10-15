@@ -13,7 +13,7 @@ const OFFICIAL_HEADER_SHELL_CLASS =
 
 /** Figma `21453:49474` — mobile official header: close | title+chevron | tools menu */
 const OFFICIAL_MOBILE_HEADER_CLASS =
-  "grid w-full min-w-0 grid-cols-[40px_minmax(0,1fr)_44px] items-center border-b border-[#e7eaf0] px-3 pb-1 pt-2 md:hidden"
+  "grid w-full min-w-0 grid-cols-[40px_minmax(0,1fr)_44px] items-center border-b border-[var(--greyscale-100)] px-3 pb-1 pt-2 md:hidden"
 
 const OFFICIAL_MOBILE_HEADER_CLOSE_CLASS =
   "inline-flex size-10 items-center justify-center rounded-[12px] text-[var(--color-student-heading)] transition hover:bg-[var(--greyscale-25)]"
@@ -22,51 +22,52 @@ const OFFICIAL_MOBILE_HEADER_TITLE_BUTTON_CLASS =
   "inline-flex min-w-0 max-w-full items-center justify-center gap-[5px] justify-self-center px-1"
 
 const OFFICIAL_MOBILE_HEADER_TITLE_CLASS =
-  "m-0 min-w-0 truncate text-center text-[15px] font-bold leading-[22.5px] tracking-[-0.23px] text-[#16243b]"
+  "m-0 min-w-0 truncate text-center text-[15px] font-bold leading-[22.5px] tracking-[-0.23px] text-[var(--color-student-heading)]"
 
 const OFFICIAL_MOBILE_HEADER_TOOLS_CLASS =
-  "inline-flex size-9 items-center justify-center justify-self-center rounded-[10px] text-[#2c3143] transition hover:bg-[var(--greyscale-25)]"
+  "inline-flex size-9 items-center justify-center justify-self-center rounded-[10px] text-[var(--color-student-heading)] transition hover:bg-[var(--greyscale-25)]"
 
 /** Mobile meta row under title: section · Question N of M · timer */
 const OFFICIAL_MOBILE_META_ROW_CLASS =
   "flex w-full min-w-0 items-center justify-between gap-2 px-[18px] pb-2.5 pt-3 md:hidden"
 
 const OFFICIAL_MOBILE_META_SECTION_CLASS =
-  "m-0 shrink-0 text-[12px] font-bold leading-[18px] text-[#2f60a6]"
+  "m-0 shrink-0 text-[12px] font-bold leading-[18px] text-[var(--primary)]"
 
 const OFFICIAL_MOBILE_META_RIGHT_CLASS =
-  "flex min-w-0 items-center gap-2 text-[12px] font-normal leading-[18px] text-[#526079]"
+  "flex min-w-0 items-center gap-2 text-[12px] font-normal leading-[18px] text-[var(--greyscale-500)]"
 
 /** Figma mobile — pill Find Text under header */
 const OFFICIAL_MOBILE_FIND_WRAP_CLASS =
-  "relative mx-[18px] mb-2.5 mt-3 flex h-[34px] w-[calc(100%-2.25rem)] min-w-0 items-center rounded-full border border-[#ced0e7] bg-[var(--greyscale-0)] px-3 md:hidden"
+  "relative mx-[18px] mb-2.5 mt-3 flex h-[34px] w-[calc(100%-2.25rem)] min-w-0 items-center rounded-full border border-[var(--greyscale-300)] bg-[var(--greyscale-0)] px-3 md:hidden"
 
 const OFFICIAL_MOBILE_FIND_INPUT_CLASS =
-  "min-w-0 flex-1 bg-transparent pr-7 text-[14px] font-normal leading-normal text-[var(--color-student-heading)] outline-none placeholder:text-[rgba(44,49,67,0.5)]"
+  "min-w-0 flex-1 bg-transparent pr-7 text-[14px] font-normal leading-normal text-[var(--color-student-heading)] outline-none placeholder:text-[var(--greyscale-400)]"
 
 const OFFICIAL_MOBILE_FIND_ICON_CLASS =
   "pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
 
 /** Figma `21452:48964` — thin progress under find on mobile */
 const OFFICIAL_MOBILE_PROGRESS_TRACK_CLASS =
-  "relative mt-2.5 h-[3px] w-full overflow-hidden bg-[#e7ebf2] md:hidden"
+  "relative mt-2.5 h-[3px] w-full overflow-hidden bg-[var(--greyscale-25)] md:hidden"
 
 const OFFICIAL_MOBILE_PROGRESS_FILL_CLASS =
-  "absolute left-0 top-0 h-full min-w-[18px] rounded-br-[3px] rounded-tr-[3px] bg-[#2f60a6] transition-[width] duration-300 ease-linear"
+  "absolute left-0 top-0 h-full min-w-[18px] rounded-br-[3px] rounded-tr-[3px] bg-[var(--primary)] transition-[width] duration-300 ease-linear"
 
 /**
  * Figma `21452:48966` — Passage / Question segmented control (mobile only).
+ * Theme tokens so dark mode matches exam chrome (not hardcoded light #f0f3f7).
  */
 const OFFICIAL_MOBILE_PANE_TABS_CLASS =
-  "grid w-full min-w-0 grid-cols-2 gap-[5px] border-b border-[#e2e6ed] bg-[#f0f3f7] p-2 md:hidden"
+  "grid w-full min-w-0 grid-cols-2 gap-[5px] border-b border-[var(--greyscale-100)] bg-[var(--greyscale-25)] p-2 md:hidden"
 
 const OFFICIAL_MOBILE_PANE_TAB_CLASS =
   "inline-flex min-h-10 items-center justify-center gap-[7px] rounded-[8px] text-[13px] font-semibold leading-[19.5px] tracking-[-0.076px] transition"
 
 const OFFICIAL_MOBILE_PANE_TAB_ACTIVE_CLASS =
-  "bg-[var(--greyscale-0)] text-[#1e4f91] shadow-[0px_1px_2px_rgba(30,49,78,0.1)]"
+  "bg-[var(--greyscale-0)] text-[var(--primary)] shadow-[0px_1px_2px_rgba(30,49,78,0.1)]"
 
-const OFFICIAL_MOBILE_PANE_TAB_INACTIVE_CLASS = "bg-transparent text-[#657189]"
+const OFFICIAL_MOBILE_PANE_TAB_INACTIVE_CLASS = "bg-transparent text-[var(--greyscale-500)]"
 
 const OFFICIAL_DESKTOP_HEADER_BLOCK_CLASS = "hidden w-full min-w-0 flex-col md:flex"
 
@@ -209,18 +210,19 @@ const OFFICIAL_SIDE_WIDGET_EXPANDED_CLASS =
 /**
  * Figma `21453:49252` / `21453:49406` — mobile tools overlay panel (175×352).
  * Mounted at session-body level so it stays available on Passage tab.
+ * Uses greyscale tokens (not hardcoded #f2f3f8) so dark mode matches the desktop rail.
  */
 const OFFICIAL_SIDE_WIDGET_MOBILE_OVERLAY_CLASS =
-  "practice-session-side-widget practice-session-side-widget--mobile-overlay absolute right-0 top-0 z-40 flex h-[min(352px,100%)] max-h-[352px] w-[175px] flex-col items-start justify-between overflow-hidden border-l border-[#f2f3f8] bg-[#f2f3f8] md:hidden"
+  "practice-session-side-widget practice-session-side-widget--mobile-overlay absolute right-0 top-0 z-40 flex h-[min(352px,100%)] max-h-[352px] w-[175px] flex-col items-start justify-between overflow-hidden border-l border-[var(--greyscale-25)] bg-[var(--greyscale-25)] md:hidden"
 
 const OFFICIAL_SIDE_WIDGET_MOBILE_BACKDROP_CLASS =
   "absolute inset-0 z-30 bg-[rgba(0,0,0,0.3)] backdrop-blur-[3px] md:hidden"
 
 const OFFICIAL_SIDE_WIDGET_ITEM_CLASS =
-  "inline-flex h-10 w-[49px] items-center justify-center text-[#2c3143] transition hover:bg-[var(--greyscale-0)]/70"
+  "inline-flex h-10 w-[49px] items-center justify-center text-[var(--color-student-heading)] transition hover:bg-[var(--greyscale-0)]/70"
 
 const OFFICIAL_SIDE_WIDGET_ITEM_EXPANDED_CLASS =
-  "flex h-10 w-full items-center gap-3 px-[14px] text-left text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[#2c3143] transition hover:bg-[var(--greyscale-0)]/70"
+  "flex h-10 w-full items-center gap-3 px-[14px] text-left text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[var(--color-student-heading)] transition hover:bg-[var(--greyscale-0)]/70"
 
 /**
  * Figma `20257:89990` / mobile `21453:49659` — full-width on small screens (above tools menu).
@@ -270,7 +272,7 @@ const OFFICIAL_REVIEW_FINISH_BUTTON_CLASS =
   "inline-flex h-10 min-w-[90px] shrink-0 items-center justify-center rounded-[6px] bg-[var(--primary)] px-4 text-base font-normal leading-6 text-white transition hover:bg-[var(--primary-600)]"
 
 const OFFICIAL_FOOTER_CLASS =
-  "box-border relative z-30 flex h-[72px] shrink-0 flex-col justify-center overflow-visible rounded-none border-t border-[var(--greyscale-50)] bg-[var(--greyscale-0)] max-md:h-[76px] max-md:border-[#dde2ea] max-md:bg-[rgba(255,255,255,0.96)] max-md:shadow-[0px_-8px_24px_0px_rgba(27,42,65,0.06)] max-md:backdrop-blur-[12px]"
+  "box-border relative z-30 flex h-[72px] shrink-0 flex-col justify-center overflow-visible rounded-none border-t border-[var(--greyscale-50)] bg-[var(--greyscale-0)] max-md:h-[76px] max-md:border-[var(--greyscale-100)] max-md:bg-[var(--greyscale-0)] max-md:shadow-[0px_-8px_24px_0px_rgba(27,42,65,0.06)] max-md:backdrop-blur-[12px]"
 
 const OFFICIAL_FOOTER_ROW_CLASS = "flex w-full min-w-0 items-center justify-center overflow-visible"
 
@@ -288,13 +290,13 @@ const OFFICIAL_MOBILE_FOOTER_CLASS =
   "grid w-full min-w-0 grid-cols-[46px_minmax(0,1fr)_46px] items-center gap-2.5 px-4 py-2.5 md:hidden"
 
 const OFFICIAL_MOBILE_FOOTER_PREV_CLASS =
-  "inline-flex size-[46px] shrink-0 items-center justify-center rounded-[12px] border border-[#d8dee8] bg-[#f5f6f8] text-[#536078] transition hover:bg-[#eef0f4] disabled:pointer-events-none disabled:opacity-40"
+  "inline-flex size-[46px] shrink-0 items-center justify-center rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] text-[var(--color-student-heading)] transition hover:bg-[var(--greyscale-50)] disabled:pointer-events-none disabled:opacity-40"
 
 const OFFICIAL_MOBILE_FOOTER_NEXT_CLASS =
-  "inline-flex size-[46px] shrink-0 items-center justify-center rounded-[12px] border border-[#244f8d] bg-[#244f8d] text-white transition hover:bg-[#1e447a] disabled:pointer-events-none disabled:opacity-40"
+  "inline-flex size-[46px] shrink-0 items-center justify-center rounded-[12px] border border-[var(--primary)] bg-[var(--primary)] text-white transition hover:bg-[var(--primary-600)] disabled:pointer-events-none disabled:opacity-40"
 
 const OFFICIAL_MOBILE_FOOTER_CENTER_CLASS =
-  "inline-flex h-[46px] min-w-0 items-center justify-center gap-2 rounded-[10px] px-2 text-[13px] font-normal leading-[19.5px] tracking-[-0.076px] text-[#536078] transition hover:bg-[var(--greyscale-25)]"
+  "inline-flex h-[46px] min-w-0 items-center justify-center gap-2 rounded-[10px] px-2 text-[13px] font-normal leading-[19.5px] tracking-[-0.076px] text-[var(--greyscale-500)] transition hover:bg-[var(--greyscale-25)]"
 
 const OFFICIAL_QUESTION_NAV_ITEM_CLASS = "relative flex w-7 shrink-0 flex-col items-center gap-0.5"
 
