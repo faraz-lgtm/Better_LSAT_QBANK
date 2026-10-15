@@ -49,7 +49,7 @@ Deno.test('resolveInvoiceTitle prefers plan over LawHub-first combo lines', () =
   )
   assertEquals(
     resolveInvoiceTitle(['Better LSAT Core'], 'core', 'yearly'),
-    'Yearly',
+    '12 Months',
   )
   assertEquals(
     resolveInvoiceTitle(['1 x Better LSAT Core (at $70.00 / month)'], 'core'),

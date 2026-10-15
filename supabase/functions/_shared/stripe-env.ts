@@ -77,7 +77,7 @@ export const BILLING_PLAN_CATALOG = {
   },
   yearly: {
     id: 'yearly',
-    name: 'Yearly',
+    name: '12 Months',
     headline: 'The Best Value for a Full Year.',
     description: 'Get a full year of BetterLSAT access at the lowest monthly equivalent.',
     priceUsd: 624,
@@ -90,7 +90,7 @@ export const BILLING_PLAN_CATALOG = {
   lsacYearly: {
     name: 'LawHub Advantage',
     description: 'Official LSAT PrepPlus via LawHub. Fee goes to LSAC, not Better LSAT. First year billed once at checkout.',
-    yearlyUsd: 99,
+    yearlyUsd: 124,
   },
 } as const satisfies {
   monthly: BillingCatalogPlan
@@ -225,6 +225,38 @@ export function storedPlanTierFromMetadata(plan: string | undefined): BillingPla
   ) {
     return 'core'
   }
+  return null
+}
+
+/** Maps subscription/checkout metadata.plan onto a checkout interval. */
+export function checkoutPlanFromMetadata(plan: string | undefined): CheckoutPlanId | null {
+  if (
+    plan === 'monthly' ||
+    plan === 'three_month' ||
+    plan === 'six_month' ||
+    plan === 'yearly'
+  ) {
+    return plan
+  }
+  return null
+}
+
+/**
+ * Maps a Stripe Price's recurring interval onto a checkout plan.
+ * Prefers the real billing period over env price-ID matching when those disagree.
+ * Ignores yearly-interval prices (LawHub Advantage) — Core yearly is every 12 months.
+ */
+export function checkoutPlanFromRecurringPrice(price: {
+  type?: string | null
+  recurring?: { interval: string; interval_count?: number | null } | null
+} | null | undefined): CheckoutPlanId | null {
+  if (!price || price.type === 'one_time' || !price.recurring) return null
+  if (price.recurring.interval !== 'month') return null
+  const count = price.recurring.interval_count ?? 1
+  if (count === 1) return 'monthly'
+  if (count === 3) return 'three_month'
+  if (count === 6) return 'six_month'
+  if (count === 12) return 'yearly'
   return null
 }
 

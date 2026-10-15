@@ -11,6 +11,8 @@ import {
   type BillingPlanId,
   type CheckoutPlanId,
   checkoutPlanFromId,
+  checkoutPlanFromMetadata,
+  checkoutPlanFromRecurringPrice,
   priceIdForCheckoutPlan,
   resolveCheckoutPlanFromPriceId,
   resolvePlanFromPriceId,
@@ -47,7 +49,27 @@ function unixToIso(seconds: number | null | undefined): string | null {
 }
 
 function subscriptionItemPriceId(item: Stripe.SubscriptionItem): string {
-  return item.price?.id ?? ''
+  const price = item.price as string | Stripe.Price | null | undefined
+  if (!price) return ''
+  return typeof price === 'string' ? price : price.id ?? ''
+}
+
+function subscriptionItemPriceObject(
+  item: Stripe.SubscriptionItem,
+): Stripe.Price | null {
+  const price = item.price as string | Stripe.Price | null | undefined
+  if (!price || typeof price === 'string') return null
+  return price
+}
+
+function checkoutPlanFromSubscriptionItem(
+  item: Stripe.SubscriptionItem,
+  env: StripeRuntimeEnv,
+): CheckoutPlanId | null {
+  const fromRecurring = checkoutPlanFromRecurringPrice(subscriptionItemPriceObject(item))
+  if (fromRecurring) return fromRecurring
+  const priceId = subscriptionItemPriceId(item)
+  return priceId ? resolveCheckoutPlanFromPriceId(env.priceIds, priceId) : null
 }
 
 function invoiceLinePriceId(line: Stripe.InvoiceLineItem): string | null {
@@ -55,6 +77,24 @@ function invoiceLinePriceId(line: Stripe.InvoiceLineItem): string | null {
   if (!price) return null
   if (typeof price === 'string') return price
   return price.id ?? null
+}
+
+function checkoutPlanFromInvoiceLines(
+  lines: Stripe.InvoiceLineItem[],
+  env: StripeRuntimeEnv,
+): CheckoutPlanId | null {
+  for (const line of lines) {
+    const price = line.price
+    if (price && typeof price === 'object') {
+      const fromRecurring = checkoutPlanFromRecurringPrice(price)
+      if (fromRecurring) return fromRecurring
+    }
+    const priceId = invoiceLinePriceId(line)
+    if (!priceId) continue
+    const fromId = resolveCheckoutPlanFromPriceId(env.priceIds, priceId)
+    if (fromId) return fromId
+  }
+  return null
 }
 
 function subscriptionScheduleId(subscription: Stripe.Subscription): string | null {
@@ -69,7 +109,7 @@ function coreSubscriptionItem(
   env: StripeRuntimeEnv,
 ): Stripe.SubscriptionItem | null {
   return subscription.items.data.find((item) =>
-    resolveCheckoutPlanFromPriceId(env.priceIds, subscriptionItemPriceId(item)) != null
+    checkoutPlanFromSubscriptionItem(item, env) != null
   ) ?? null
 }
 
@@ -77,9 +117,10 @@ function billingSubscriptionItem(
   subscription: Stripe.Subscription,
   env: StripeRuntimeEnv,
 ): Stripe.SubscriptionItem | null {
-  return subscription.items.data.find((item) =>
-    resolvePlanFromPriceId(env.priceIds, subscriptionItemPriceId(item)) != null
-  ) ?? null
+  return subscription.items.data.find((item) => {
+    if (checkoutPlanFromSubscriptionItem(item, env) != null) return true
+    return resolvePlanFromPriceId(env.priceIds, subscriptionItemPriceId(item)) != null
+  }) ?? null
 }
 
 function scheduleItemPriceId(item: Stripe.SubscriptionSchedule.Phase.Item): string {
@@ -107,7 +148,7 @@ async function pendingPlanChange(
 
   const currentItem = coreSubscriptionItem(subscription, env)
   const currentPlan = currentItem
-    ? resolveCheckoutPlanFromPriceId(env.priceIds, subscriptionItemPriceId(currentItem))
+    ? checkoutPlanFromSubscriptionItem(currentItem, env)
     : null
   if (nextPlan === currentPlan) return null
 
@@ -180,33 +221,14 @@ const EXISTING_LSAC_CHECKOUT_NOTE =
   'Better LSAT membership only. You keep your existing LawHub PrepPlus through LSAC — no LawHub fee from Better LSAT.'
 const BETTERLSAT_PLAN_CHANGE_SCHEDULE = 'betterlsat_plan_change'
 
-/** Vendor path uses stable Stripe Price IDs; existing-LSAC path uses inline product copy for Checkout display. */
+/** Always uses stable catalog Price IDs so getStatus can resolve checkoutPlan. Existing-LSAC copy goes via session custom_text. */
 async function buildSubscriptionCheckoutLineItem(
   stripe: Stripe,
   priceId: string,
   plan: CheckoutPlanId,
-  includeLawHub: boolean,
 ): Promise<Stripe.Checkout.SessionCreateParams.LineItem> {
-  const price = await validatePlanPrice(stripe, priceId, plan)
-  if (includeLawHub) {
-    return { price: priceId, quantity: 1 }
-  }
-
-  const catalog = checkoutPlanFromId(plan)
-  const intervalCount = price.recurring?.interval_count ?? catalog.intervalCount
-
-  return {
-    price_data: {
-      currency: price.currency ?? 'usd',
-      unit_amount: price.unit_amount ?? catalog.priceUsd * 100,
-      recurring: { interval: 'month', interval_count: intervalCount },
-      product_data: {
-        name: `Better LSAT ${catalog.name}`,
-        description: `${catalog.description} ${EXISTING_LSAC_CHECKOUT_NOTE}`,
-      },
-    },
-    quantity: 1,
-  }
+  await validatePlanPrice(stripe, priceId, plan)
+  return { price: priceId, quantity: 1 }
 }
 
 /** LawHub cannot be a yearly recurring line item with a monthly plan — Stripe rejects mixed intervals. */
@@ -258,9 +280,22 @@ export function createBillingService(deps: BillingServiceDeps) {
   ): Promise<void> {
     const env = deps.getEnv()
     const billingItem = billingSubscriptionItem(subscription, env)
-    const stripePriceId = billingItem ? subscriptionItemPriceId(billingItem) : ''
+    const metadataCheckoutPlan = checkoutPlanFromMetadata(subscription.metadata?.plan)
+    const checkoutPlanFromItem = billingItem
+      ? checkoutPlanFromSubscriptionItem(billingItem, env)
+      : null
+    let stripePriceId = billingItem ? subscriptionItemPriceId(billingItem) : ''
+    if (!stripePriceId) {
+      const planForPrice = checkoutPlanFromItem ?? metadataCheckoutPlan
+      if (planForPrice) {
+        stripePriceId = priceIdForCheckoutPlan(env.priceIds, planForPrice)
+      }
+    }
     const planTier =
-      planHint ?? resolvePlanFromPriceId(env.priceIds, stripePriceId)
+      planHint ??
+      resolvePlanFromPriceId(env.priceIds, stripePriceId) ??
+      (checkoutPlanFromItem ? 'core' : null) ??
+      (metadataCheckoutPlan ? storedPlanTierFromMetadata(metadataCheckoutPlan) : null)
     await deps.repository.upsertSubscription({
       userId,
       stripeSubscriptionId: subscription.id,
@@ -326,11 +361,28 @@ export function createBillingService(deps: BillingServiceDeps) {
       const currentItem = stripeSubscription
         ? coreSubscriptionItem(stripeSubscription, env)
         : null
-      const checkoutPlan = currentItem
-        ? resolveCheckoutPlanFromPriceId(env.priceIds, subscriptionItemPriceId(currentItem))
-        : storedSubscription
+      const checkoutPlanFromLiveItem = currentItem
+        ? checkoutPlanFromSubscriptionItem(currentItem, env)
+        : null
+      const checkoutPlanFromStored = storedSubscription?.stripe_price_id
         ? resolveCheckoutPlanFromPriceId(env.priceIds, storedSubscription.stripe_price_id)
         : null
+      let checkoutPlan =
+        checkoutPlanFromLiveItem ??
+        checkoutPlanFromMetadata(stripeSubscription?.metadata?.plan) ??
+        checkoutPlanFromStored ??
+        null
+      if (!checkoutPlan && stripeSubscription) {
+        const latestInvoices = await deps.stripe.invoices.list({
+          subscription: stripeSubscription.id,
+          limit: 1,
+          status: 'paid',
+        })
+        checkoutPlan = checkoutPlanFromInvoiceLines(
+          latestInvoices.data[0]?.lines?.data ?? [],
+          env,
+        )
+      }
       const pendingChange = stripeSubscription
         ? await pendingPlanChange(deps.stripe, stripeSubscription, env)
         : null
@@ -543,11 +595,7 @@ export function createBillingService(deps: BillingServiceDeps) {
           return ''
         })
 
-        const checkoutPlanFromLines = lines
-          .map((line) => invoiceLinePriceId(line))
-          .filter((id): id is string => Boolean(id))
-          .map((priceId) => resolveCheckoutPlanFromPriceId(env.priceIds, priceId))
-          .find((plan): plan is CheckoutPlanId => plan != null)
+        const checkoutPlanFromLines = checkoutPlanFromInvoiceLines(lines, env)
 
         return mapStripeInvoice({
           id: invoice.id,
@@ -647,12 +695,7 @@ export function createBillingService(deps: BillingServiceDeps) {
       }
 
       const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
-        await buildSubscriptionCheckoutLineItem(
-          deps.stripe,
-          recurringPriceId,
-          plan,
-          includeLawHub,
-        ),
+        await buildSubscriptionCheckoutLineItem(deps.stripe, recurringPriceId, plan),
       ]
       if (includeLawHub) {
         lineItems.push(

@@ -41,8 +41,8 @@ describe('createBillingApi', () => {
 
   it('getPlans invokes billing-get-plans', async () => {
     const catalog = {
-      plans: [{ id: 'monthly', name: 'Monthly', headline: '', description: '', priceUsd: 69, equivalentMonthlyUsd: null, discountLabel: null, badge: null, intervalCount: 1, renewalNote: '', dueTodayUsd: 168, dueTodayUsdOwnLsac: 69 }],
-      lsacYearly: { name: 'LawHub Advantage', description: '', yearlyUsd: 99 },
+      plans: [{ id: 'monthly', name: 'Monthly', headline: '', description: '', priceUsd: 69, equivalentMonthlyUsd: null, discountLabel: null, badge: null, intervalCount: 1, renewalNote: '', dueTodayUsd: 193, dueTodayUsdOwnLsac: 69 }],
+      lsacYearly: { name: 'LawHub Advantage', description: '', yearlyUsd: 124 },
     }
     const invoke = vi.fn().mockResolvedValue({ data: { catalog }, error: null })
     const api = createBillingApi(mockSupabase(invoke))
