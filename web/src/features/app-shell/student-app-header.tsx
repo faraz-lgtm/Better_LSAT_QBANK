@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { createPortal } from "react-dom"
 import { Menu } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 
@@ -104,7 +105,9 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
   const [email, setEmail] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [openProfileMenu, setOpenProfileMenu] = useState(false)
-  const profileMenuRef = useRef<HTMLDivElement | null>(null)
+  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null)
+  const profileTriggerRef = useRef<HTMLDivElement | null>(null)
+  const profileMenuPanelRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     void dispatch(loadProfile())
@@ -136,14 +139,50 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
     queueMicrotask(() => setOpenProfileMenu(false))
   }, [pathname, search])
 
+  useLayoutEffect(() => {
+    if (!openProfileMenu) {
+      setMenuPosition(null)
+      return
+    }
+
+    function updateMenuPosition() {
+      const trigger = profileTriggerRef.current
+      if (!trigger) return
+      const rect = trigger.getBoundingClientRect()
+      const viewportPadding = 8
+      setMenuPosition({
+        top: rect.bottom + 8,
+        right: Math.max(viewportPadding, window.innerWidth - rect.right),
+      })
+    }
+
+    updateMenuPosition()
+    window.addEventListener("resize", updateMenuPosition)
+    window.addEventListener("scroll", updateMenuPosition, true)
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition)
+      window.removeEventListener("scroll", updateMenuPosition, true)
+    }
+  }, [openProfileMenu])
+
   useEffect(() => {
+    if (!openProfileMenu) return
     const handlePointerDown = (event: PointerEvent) => {
       if (!(event.target instanceof Node)) return
-      if (!profileMenuRef.current?.contains(event.target)) setOpenProfileMenu(false)
+      if (profileTriggerRef.current?.contains(event.target)) return
+      if (profileMenuPanelRef.current?.contains(event.target)) return
+      setOpenProfileMenu(false)
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenProfileMenu(false)
     }
     document.addEventListener("pointerdown", handlePointerDown)
-    return () => document.removeEventListener("pointerdown", handlePointerDown)
-  }, [])
+    document.addEventListener("keydown", handleKeyDown)
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown)
+      document.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [openProfileMenu])
 
   async function handleLogout() {
     const supabase = getSupabaseBrowserClient()
@@ -195,7 +234,7 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
 
           <ThemeToggleButton />
 
-          <div ref={profileMenuRef} className="relative">
+          <div ref={profileTriggerRef} className="relative">
             <button
               type="button"
               className="flex h-[60px] items-center gap-3 overflow-hidden rounded-[20px] px-3 hover:bg-[color:var(--primary-25)]/60"
@@ -228,43 +267,48 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
                 aria-hidden
               />
             </button>
-            {openProfileMenu ? (
-              <div
-                role="menu"
-                className="absolute right-0 top-[calc(100%+8px)] z-30 flex w-[246px] flex-col items-start rounded-[16px] border border-[color:var(--greyscale-100)] bg-[var(--primary-0)] p-3 shadow-[0px_4px_25px_rgba(0,0,0,0.25)]"
-              >
-                <Link
-                  to="/app/account"
-                  role="menuitem"
-                  className={PROFILE_MENU_ITEM_CLASS}
-                  onClick={() => setOpenProfileMenu(false)}
-                >
-                  <ProfileMenuIcon src={`${PROFILE_MENU_FIGMA}/shield-key-hole.svg`} />
-                  Account
-                </Link>
-                <Link
-                  to={PREP_TEST_POOLS_HREF}
-                  role="menuitem"
-                  className={PROFILE_MENU_ITEM_CLASS}
-                  onClick={() => setOpenProfileMenu(false)}
-                >
-                  <ProfileMenuIcon src={`${PROFILE_MENU_FIGMA}/gear.svg`} />
-                  Settings
-                </Link>
-                <div className="flex w-full flex-col items-start py-2" aria-hidden>
-                  <div className="h-px w-full border-t border-b-2 border-[color:var(--greyscale-50,#eceff3)]" />
-                </div>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => void handleLogout()}
-                  className={PROFILE_MENU_ITEM_CLASS}
-                >
-                  <ProfileMenuIcon src={`${PROFILE_MENU_FIGMA}/log-out-02.svg`} />
-                  Log out
-                </button>
-              </div>
-            ) : null}
+            {openProfileMenu && menuPosition
+              ? createPortal(
+                  <div
+                    ref={profileMenuPanelRef}
+                    role="menu"
+                    className="fixed z-50 flex w-[min(246px,calc(100vw-16px))] flex-col items-start rounded-[16px] border border-[color:var(--greyscale-100)] bg-[var(--primary-0)] p-3 shadow-[0px_4px_25px_rgba(0,0,0,0.25)]"
+                    style={{ top: menuPosition.top, right: menuPosition.right }}
+                  >
+                    <Link
+                      to="/app/account"
+                      role="menuitem"
+                      className={PROFILE_MENU_ITEM_CLASS}
+                      onClick={() => setOpenProfileMenu(false)}
+                    >
+                      <ProfileMenuIcon src={`${PROFILE_MENU_FIGMA}/shield-key-hole.svg`} />
+                      Account
+                    </Link>
+                    <Link
+                      to={PREP_TEST_POOLS_HREF}
+                      role="menuitem"
+                      className={PROFILE_MENU_ITEM_CLASS}
+                      onClick={() => setOpenProfileMenu(false)}
+                    >
+                      <ProfileMenuIcon src={`${PROFILE_MENU_FIGMA}/gear.svg`} />
+                      Settings
+                    </Link>
+                    <div className="flex w-full flex-col items-start py-2" aria-hidden>
+                      <div className="h-px w-full border-t border-b-2 border-[color:var(--greyscale-50,#eceff3)]" />
+                    </div>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => void handleLogout()}
+                      className={PROFILE_MENU_ITEM_CLASS}
+                    >
+                      <ProfileMenuIcon src={`${PROFILE_MENU_FIGMA}/log-out-02.svg`} />
+                      Log out
+                    </button>
+                  </div>,
+                  document.body,
+                )
+              : null}
           </div>
 
           <span

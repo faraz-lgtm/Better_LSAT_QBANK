@@ -64,9 +64,9 @@ function PrepTestSectionResultCard({
         </p>
       </div>
 
-      <div className="flex flex-col gap-1 max-md:min-h-0 max-md:flex-1 max-md:gap-0.5">
+      <div className="flex flex-col gap-1.5 max-md:min-h-0 max-md:flex-1 max-md:gap-1">
         {questionRows.map((row, rowIndex) => (
-          <div key={rowIndex} className="flex flex-wrap gap-1 max-md:gap-0.5">
+          <div key={rowIndex} className="flex flex-wrap gap-1.5 max-md:gap-1">
             {row.map((cell, cellIndex) => (
               <PracticeResultOutcomeIcon
                 key={`${rowIndex}-${cellIndex}`}

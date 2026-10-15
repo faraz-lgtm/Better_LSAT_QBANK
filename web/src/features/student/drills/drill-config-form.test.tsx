@@ -118,17 +118,19 @@ describe("DrillConfigForm save settings checkbox", () => {
     expect(screen.getByRole("button", { name: "Answer Check" })).toHaveTextContent("After each question")
   })
 
-  it("lays out questions and timing in two columns for LR and RC", async () => {
+  it("stacks questions and timing on mobile and uses two columns from sm up", async () => {
     const user = userEvent.setup()
     const { unmount } = renderForm("LR")
     const lrRow = screen.getByRole("button", { name: "Pace" }).closest(".grid")
-    expect(lrRow?.className).toMatch(/\bgrid-cols-2\b/)
+    expect(lrRow?.className).toMatch(/\bsm:grid-cols-2\b/)
+    expect(lrRow?.className).not.toMatch(/(?<!sm:)grid-cols-2\b/)
     expect(lrRow?.className).not.toMatch(/grid-cols-3/)
     unmount()
 
     renderForm("RC")
     const rcRow = screen.getByRole("button", { name: "Pace" }).closest(".grid")
-    expect(rcRow?.className).toMatch(/\bgrid-cols-2\b/)
+    expect(rcRow?.className).toMatch(/\bsm:grid-cols-2\b/)
+    expect(rcRow?.className).not.toMatch(/(?<!sm:)grid-cols-2\b/)
     expect(rcRow?.className).not.toMatch(/grid-cols-3/)
     expect(screen.getByRole("button", { name: "Passages" })).toBeInTheDocument()
 

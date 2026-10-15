@@ -449,32 +449,45 @@ function SectionBlock({
   return (
     <section className={cn(PT_RESULTS_SECTION_BLOCK_CLASS, className)}>
       <div className={PT_RESULTS_SECTION_HEADER_CLASS}>
-        <div className="flex flex-nowrap items-center justify-between gap-4">
-          <div className="flex min-w-0 shrink-0 items-center gap-2.5">
+        <div className="flex w-full flex-nowrap items-center justify-between gap-2 md:gap-4">
+          <div className="flex min-w-0 items-center gap-2 md:gap-2.5">
             <div
-              className="flex size-10 shrink-0 items-center justify-center rounded-[12px] border text-xl font-black leading-[1.5] tracking-[0.02em]"
+              className="flex size-8 shrink-0 items-center justify-center rounded-[10px] border text-base font-black leading-[1.5] tracking-[0.02em] md:size-10 md:rounded-[12px] md:text-xl"
               style={{ backgroundColor: badge.bg, color: badge.text, borderColor: badge.border }}
             >
               {badge.short}
             </div>
-            <h2 className="whitespace-nowrap text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">{sectionTitle}</h2>
+            <h2 className="min-w-0 truncate text-lg font-bold leading-[1.3] text-[var(--color-student-heading)] md:whitespace-nowrap md:text-2xl">
+              {sectionTitle}
+            </h2>
             {isExperimental ? (
-              <span className="rounded-[8px] border border-[var(--blind-review-accent)] bg-[var(--blind-review-badge-bg)] px-2 py-1 text-xs font-extrabold leading-none tracking-[0.24px] text-[var(--blind-review-accent)]">
+              <span className="shrink-0 rounded-[6px] border border-[var(--blind-review-accent)] bg-[var(--blind-review-badge-bg)] px-1.5 py-0.5 text-[10px] font-extrabold leading-none tracking-[0.2px] text-[var(--blind-review-accent)] md:rounded-[8px] md:px-2 md:py-1 md:text-xs md:tracking-[0.24px]">
                 EXP
               </span>
             ) : null}
           </div>
-          <div className="flex w-[258px] shrink-0 items-center justify-between">
-            <div className="flex flex-col gap-[5px] font-bold text-[var(--color-student-heading)]">
-              <p className="text-xs font-bold leading-[1.5] tracking-[0.24px]">SCORE</p>
-              <p className="text-2xl font-bold leading-[1.3]">{score}</p>
+          <div
+            className={cn(
+              "flex shrink-0 items-center",
+              showBlindReview
+                ? "gap-2 md:w-[258px] md:justify-between md:gap-0"
+                : "justify-end",
+            )}
+          >
+            <div className="flex flex-col items-end gap-0.5 font-bold text-[var(--color-student-heading)] md:items-start md:gap-[5px]">
+              <p className="text-[10px] font-bold leading-[1.5] tracking-[0.2px] md:text-xs md:tracking-[0.24px]">
+                SCORE
+              </p>
+              <p className="text-lg font-bold leading-[1.3] md:text-2xl">{score}</p>
             </div>
             {showBlindReview ? (
               <>
-                <div className="h-[32px] w-[2px] shrink-0 bg-[var(--greyscale-100)]" aria-hidden />
-                <div className="flex flex-col gap-[5px] font-bold text-[var(--color-student-heading)]">
-                  <p className="text-xs font-bold leading-[1.5] tracking-[0.24px]">BLIND REVIEW</p>
-                  <p className="text-2xl font-bold leading-[1.3]">{blind}</p>
+                <div className="h-6 w-0.5 shrink-0 bg-[var(--greyscale-100)] md:h-[32px] md:w-[2px]" aria-hidden />
+                <div className="flex flex-col items-end gap-0.5 font-bold text-[var(--color-student-heading)] md:items-start md:gap-[5px]">
+                  <p className="text-[10px] font-bold leading-[1.5] tracking-[0.2px] md:text-xs md:tracking-[0.24px]">
+                    BLIND REVIEW
+                  </p>
+                  <p className="text-lg font-bold leading-[1.3] md:text-2xl">{blind}</p>
                 </div>
               </>
             ) : null}
