@@ -3,6 +3,7 @@ import {
   isLocalSupabaseHost,
   parseStripeEnv,
   resolveCheckoutPlanFromPriceId,
+  resolveCheckoutPlanFromRecurring,
   resolvePlanFromPriceId,
   resolveStripeLiveMode,
   storedPlanTierFromMetadata,
@@ -135,6 +136,15 @@ Deno.test('resolvePlanFromPriceId maps Core intervals and legacy Live', () => {
   assertEquals(resolveCheckoutPlanFromPriceId(priceIds, 'price_3'), 'three_month')
   assertEquals(resolveCheckoutPlanFromPriceId(priceIds, 'price_6'), 'six_month')
   assertEquals(resolveCheckoutPlanFromPriceId(priceIds, 'price_yearly'), 'yearly')
+})
+
+Deno.test('resolveCheckoutPlanFromRecurring maps interval counts onto checkout plans', () => {
+  assertEquals(resolveCheckoutPlanFromRecurring({ interval: 'month', interval_count: 1 }), 'monthly')
+  assertEquals(resolveCheckoutPlanFromRecurring({ interval: 'month', interval_count: 3 }), 'three_month')
+  assertEquals(resolveCheckoutPlanFromRecurring({ interval: 'month', interval_count: 6 }), 'six_month')
+  assertEquals(resolveCheckoutPlanFromRecurring({ interval: 'month', interval_count: 12 }), 'yearly')
+  assertEquals(resolveCheckoutPlanFromRecurring({ interval: 'year', interval_count: 1 }), 'yearly')
+  assertEquals(resolveCheckoutPlanFromRecurring({ interval: 'week', interval_count: 1 }), null)
 })
 
 Deno.test('storedPlanTierFromMetadata maps new checkout ids onto core', () => {

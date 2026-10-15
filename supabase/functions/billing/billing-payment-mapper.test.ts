@@ -96,7 +96,6 @@ Deno.test('mapStripeInvoice uses resolved plan titles', () => {
     hostedInvoiceUrl: null,
     lineDescriptions: ['LawHub Advantage', 'Better LSAT Core'],
     planTierFallback: 'core',
-    checkoutPlan: 'monthly',
   })
   assertEquals(combo.title, 'Monthly + LawHub')
   assertEquals(combo.amountPaidCents, 16900)
@@ -112,22 +111,6 @@ Deno.test('mapStripeInvoice uses resolved plan titles', () => {
     hostedInvoiceUrl: null,
     lineDescriptions: ['1 x Better LSAT Core (at $70.00 / month)'],
     planTierFallback: 'core',
-    checkoutPlan: 'monthly',
-  })
-  assertEquals(renewal.title, 'Monthly')
-
-  const sixMonth = mapStripeInvoice({
-    id: 'in_3',
-    number: 'INV-006',
-    amountPaid: 35400,
-    currency: 'usd',
-    status: 'paid',
-    created: 1_724_500_000,
-    invoicePdf: null,
-    hostedInvoiceUrl: null,
-    lineDescriptions: ['Better LSAT Core'],
-    planTierFallback: 'core',
-    checkoutPlan: 'six_month',
   })
   assertEquals(renewal.title, 'Monthly')
 

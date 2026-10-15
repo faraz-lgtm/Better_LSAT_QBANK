@@ -197,6 +197,24 @@ export function resolveCheckoutPlanFromPriceId(
   return null
 }
 
+/**
+ * Resolve plan from recurring interval when Checkout used inline `price_data`
+ * (ad-hoc prices are not in STRIPE_PRICE_ID_* env).
+ */
+export function resolveCheckoutPlanFromRecurring(
+  recurring: { interval: string; interval_count?: number | null } | null | undefined,
+): CheckoutPlanId | null {
+  if (!recurring) return null
+  if (recurring.interval === 'year' && (recurring.interval_count ?? 1) === 1) return 'yearly'
+  if (recurring.interval !== 'month') return null
+  const count = recurring.interval_count ?? 1
+  if (count === 1) return 'monthly'
+  if (count === 3) return 'three_month'
+  if (count === 6) return 'six_month'
+  if (count === 12) return 'yearly'
+  return null
+}
+
 export function resolvePlanFromPriceId(
   priceIds: StripePriceIds,
   priceId: string,
