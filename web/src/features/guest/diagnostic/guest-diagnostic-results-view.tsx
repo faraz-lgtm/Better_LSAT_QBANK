@@ -1148,7 +1148,7 @@ function DiagnosticUpgradeCTA({
         <p className="text-xs leading-relaxed text-[#a9c0e8]">
           Plans include the betterLSAT platform. Official LSAC practice tests require{' '}
           LawHub Advantage{' '}
-          <strong className="font-bold">($99/yr, paid to LSAC)</strong>{' '}
+          <strong className="font-bold">($124/yr, paid to LSAC)</strong>{' '}
           — add it at checkout, or skip it if you already have PrepPlus.
         </p>
       </div>

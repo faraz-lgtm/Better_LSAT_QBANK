@@ -104,7 +104,7 @@ Practical implication:
 | Student choice | Stripe | LawHub `POST /students` flags |
 |----------------|--------|-------------------------------|
 | Subscribe with Better LSAT (LawHub included) | Active Core/Live subscription required | `isPrepPlusRequired=true`, `isPrepPlusIncludedFromVendor=true` |
-| Already have LawHub PrepPlus | Active Core/Live subscription required (no $99 LawHub line item at checkout) | `isPrepPlusRequired=true`, `isPrepPlusIncludedFromVendor=false` |
+| Already have LawHub PrepPlus | Active Core/Live subscription required (no $124 LawHub line item at checkout) | `isPrepPlusRequired=true`, `isPrepPlusIncludedFromVendor=false` |
 
 **Checkout gate:** `createCheckoutSession` requires a LawHub-valid email (no `+` in the local part) and both first + last name on the profile before opening Stripe. Onboarding collects first/last name; invite outcomes are stored on `profiles.lawhub_invite_*`.
 

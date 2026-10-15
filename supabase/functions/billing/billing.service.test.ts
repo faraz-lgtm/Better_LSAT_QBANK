@@ -75,7 +75,7 @@ Deno.test('billing service createCheckoutSession creates customer and returns ur
               id,
               type: 'recurring',
               recurring: { interval: 'year' },
-              unit_amount: 9900,
+              unit_amount: 12400,
               currency: 'usd',
               product: { name: 'LawHub Advantage' },
             }
@@ -101,7 +101,7 @@ Deno.test('billing service createCheckoutSession creates customer and returns ur
               (corePriceData?.product_data as Record<string, string>)?.name,
               'Better LSAT Monthly',
             )
-            assertEquals((lineItems[1]?.price_data as Record<string, unknown>)?.unit_amount, 9900)
+            assertEquals((lineItems[1]?.price_data as Record<string, unknown>)?.unit_amount, 12400)
             assertEquals((params.metadata as Record<string, string>).plan, 'monthly')
             return { url: 'https://checkout.stripe.test/session' }
           },
@@ -131,7 +131,7 @@ Deno.test('billing service createCheckoutSession accepts custom successPath', as
               id,
               type: 'recurring',
               recurring: { interval: 'year' },
-              unit_amount: 9900,
+              unit_amount: 12400,
               currency: 'usd',
               product: { name: 'LawHub Advantage' },
             }
@@ -261,7 +261,7 @@ Deno.test('billing service createCheckoutSession uses the 3-month Core price', a
               id,
               type: 'recurring',
               recurring: { interval: 'year' },
-              unit_amount: 9900,
+              unit_amount: 12400,
               currency: 'usd',
               product: { name: 'LawHub Advantage' },
             }

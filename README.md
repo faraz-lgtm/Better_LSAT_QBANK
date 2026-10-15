@@ -122,7 +122,7 @@ Emulator verification checklist:
 
 ## Stripe billing (Core intervals + LawHub Advantage)
 
-After signup and onboarding, students land on the free dashboard; paid upgrade opens the in-app pricing modal (same as **Upgrade to LSAT+**). Paid checkout is one Core product with three recurring prices: **$69/month**, **$192 every 3 months**, and **$354 every 6 months**. Stripe Checkout adds **LawHub Advantage (~$99/year)** as a one-time line item on the first invoice unless the student already has PrepPlus. After payment, they complete LawHub linking on `/lsac-link-step`. Existing Live subscriptions still grant access; Live is not offered for new checkout.
+After signup and onboarding, students land on the free dashboard; paid upgrade opens the in-app pricing modal (same as **Upgrade to LSAT+**). Paid checkout is one Core product with three recurring prices: **$69/month**, **$192 every 3 months**, and **$354 every 6 months**. Stripe Checkout adds **LawHub Advantage (~$124/year)** as a one-time line item on the first invoice unless the student already has PrepPlus. After payment, they complete LawHub linking on `/lsac-link-step`. Existing Live subscriptions still grant access; Live is not offered for new checkout.
 
 | Variable | Purpose |
 |----------|---------|
@@ -133,7 +133,7 @@ After signup and onboarding, students land on the free dashboard; paid upgrade o
 | `STRIPE_PRICE_ID_CORE_3_MONTH_TEST` / `STRIPE_PRICE_ID_CORE_3_MONTH_LIVE` | Core price billed every 3 months ($192) |
 | `STRIPE_PRICE_ID_CORE_6_MONTH_TEST` / `STRIPE_PRICE_ID_CORE_6_MONTH_LIVE` | Core price billed every 6 months ($354) |
 | `STRIPE_PRICE_ID_LIVE_MONTHLY_TEST` / `STRIPE_PRICE_ID_LIVE_MONTHLY_LIVE` | Optional. Legacy Live price, used only so existing subscriptions keep `plan_tier = live`. |
-| `STRIPE_PRICE_ID_LSAC_YEARLY_TEST` / `STRIPE_PRICE_ID_LSAC_YEARLY_LIVE` | LawHub Advantage (~$99/year). If stored as yearly recurring in Stripe, checkout bills year one as a **one-time** line item (Stripe cannot mix a subscription interval with a yearly price on one Checkout session). |
+| `STRIPE_PRICE_ID_LSAC_YEARLY_TEST` / `STRIPE_PRICE_ID_LSAC_YEARLY_LIVE` | LawHub Advantage (~$124/year). If stored as yearly recurring in Stripe, checkout bills year one as a **one-time** line item (Stripe cannot mix a subscription interval with a yearly price on one Checkout session). |
 | `STRIPE_PRICE_ID_TEST` / `STRIPE_PRICE_ID_LIVE` | Legacy fallback for the Core monthly price only |
 | `STRIPE_PUBLISHABLE_KEY_TEST` / `STRIPE_PUBLISHABLE_KEY_LIVE` | Returned by `billing-get-public-config`; optional `VITE_STRIPE_PUBLISHABLE_KEY` for local web |
 | `APP_BASE_URL` | Stripe Checkout success/cancel redirect base. Set to `https://better-lsat-qbank.vercel.app` on hosted Supabase. If unset/invalid, checkout uses the browser `Origin` from the pricing page (localhost or Vercel). Do **not** use `SUPABASE_PUBLIC_URL` — that is the API host, not the web app. |
