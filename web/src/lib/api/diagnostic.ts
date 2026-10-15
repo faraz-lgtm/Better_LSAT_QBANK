@@ -35,6 +35,21 @@ export type MiniDiagnosticExplanationsResponse = {
   videoUrls?: DiagnosticVideoUrl[]
 }
 
+export type MailerLiteDiagnosticType = 'mini' | 'full'
+
+export type DiagnosticSyncMailerliteInput = {
+  diagnosticDone: boolean
+  diagnosticType?: MailerLiteDiagnosticType | null
+  /** Guest intent id (`mini` | `quick` | `full`); mapped server-side when type omitted. */
+  intentId?: string | null
+  /** Scaled / final diagnostic LSAT score (typically 120–180). */
+  diagnosticScore?: number | null
+}
+
+export type DiagnosticSyncMailerliteResponse = {
+  synced: boolean
+}
+
 export function createDiagnosticApi(supabase: SupabaseClient) {
   async function invokeDiagnosticPost<T>(
     functionName: string,
@@ -65,6 +80,22 @@ export function createDiagnosticApi(supabase: SupabaseClient) {
       )
       if (error) throw error
       if (!data) throw new Error('No diagnostic explanations payload returned')
+      return data
+    },
+
+    /** Upserts MailerLite custom fields: email, diagnostic_done, diagnostic_type, diagnostic_score. */
+    async syncMailerlite(input: DiagnosticSyncMailerliteInput): Promise<DiagnosticSyncMailerliteResponse> {
+      const { data, error } = await invokeDiagnosticPost<DiagnosticSyncMailerliteResponse>(
+        'diagnostic-sync-mailerlite',
+        {
+          diagnosticDone: input.diagnosticDone,
+          diagnosticType: input.diagnosticType ?? undefined,
+          intentId: input.intentId ?? undefined,
+          diagnosticScore: input.diagnosticScore ?? undefined,
+        },
+      )
+      if (error) throw error
+      if (!data) throw new Error('No MailerLite diagnostic sync payload returned')
       return data
     },
   }

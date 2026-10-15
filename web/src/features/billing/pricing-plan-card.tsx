@@ -1,6 +1,5 @@
 import {
   isPaidPricingPlan,
-  type PaidPricingPlan,
   type PricingPlan,
 } from "@/features/guest/pricing/guest-pricing-plans-data"
 import { resolveGuestPricingDueToday } from "@/features/guest/pricing/guest-pricing-lawhub"
@@ -20,32 +19,11 @@ type PricingPlanCardProps = {
   onSelect: () => void
 }
 
-type ContinueDiscountNote = NonNullable<PaidPricingPlan["continueDiscountNote"]>
-
 function FeatureCheck() {
   return (
     <span className="pricing-card__check" aria-hidden>
       ✓
     </span>
-  )
-}
-
-function ContinueDiscountCallout({
-  note,
-  centered = false,
-}: {
-  note: ContinueDiscountNote
-  centered?: boolean
-}) {
-  return (
-    <div className={cn("pricing-card__callout", centered && "pricing-card__callout--centered")}>
-      <p className="pricing-card__callout-title">{note.title}</p>
-      <p className="pricing-card__callout-body">
-        {note.bodyBefore}
-        <strong>{note.amountLabel}</strong>
-        {note.bodyAfter}
-      </p>
-    </div>
   )
 }
 
@@ -73,7 +51,6 @@ function PricingPlanCard({
         : null
   const showDescriptionAbovePrice = isFeatured
   const showDescriptionBelowPrice = !isFeatured && (!isPaid || !plan.equivalentMonthlyUsd)
-  const continueNote = isPaid ? plan.continueDiscountNote : undefined
 
   return (
     <div
@@ -105,6 +82,9 @@ function PricingPlanCard({
             <p className="pricing-card__price">
               ${plan.priceUsd}
               {priceSuffix ? <span>{priceSuffix}</span> : null}
+              {isPaid && plan.listPriceUsd != null ? (
+                <span className="pricing-card__list-price">${plan.listPriceUsd}</span>
+              ) : null}
             </p>
             {showDescriptionBelowPrice ? (
               <p className="pricing-card__tagline pricing-card__tagline--under-price">
@@ -137,9 +117,6 @@ function PricingPlanCard({
         </ul>
 
         <div className={cn("pricing-card__cta-wrap", isFeatured && "pricing-card__featured-cta")}>
-          {continueNote ? (
-            <ContinueDiscountCallout note={continueNote} centered={isFeatured} />
-          ) : null}
           <button
             type="button"
             className={cn(

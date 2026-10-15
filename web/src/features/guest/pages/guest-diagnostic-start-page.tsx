@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useSearchParams } from "react-router-dom"
 
 import { GuestDiagnosticExamLayout } from "@/features/guest/diagnostic/guest-diagnostic-exam-layout"
 import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
+import { syncDiagnosticMailerliteIfAuthenticated } from "@/lib/analytics/sync-diagnostic-mailerlite"
 import { clearDiagnosticFunnel, readDiagnosticIntent } from "@/lib/auth/diagnostic-intent"
 import { GuestDiagnosticTestInstructionsPanel } from "@/features/guest/diagnostic/guest-diagnostic-test-instructions-panel"
 import {
@@ -17,6 +18,7 @@ import {
 import { diagnosticAttemptHref } from "@/features/student/diagnostic/diagnostic-results-routes"
 import type { GuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-intent-types"
 import { PracticeSessionImmersiveFrame } from "@/features/student/practice-session/practice-session-immersive-frame"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 type GuestDiagnosticStartPageProps = {
   preview?: boolean
@@ -80,6 +82,10 @@ function GuestDiagnosticStartPage({ preview = false }: GuestDiagnosticStartPageP
     const saved = writeGuestDiagnosticResult(result)
     clearDiagnosticFunnel()
     captureEvent(AnalyticsEvent.diagnosticCompleted, { intent: resolvedIntentId })
+    void syncDiagnosticMailerliteIfAuthenticated(getSupabaseBrowserClient(), {
+      intentId: saved.intentId,
+      diagnosticScore: saved.scaledScore,
+    })
     navigate(preview ? "/diagnostic/results/preview" : diagnosticAttemptHref(saved.intentId, saved.id), { replace: true })
   }
 

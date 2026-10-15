@@ -1,4 +1,4 @@
-import { authorizeSignupWebhook, parseAuthUsersConfirmedSignup } from '../_shared/slack-signup.ts'
+import { authorizeSignupWebhook, parseAuthUsersSignupCreated } from '../_shared/slack-signup.ts'
 import { notifyMailerLiteSignup } from '../_shared/mailerlite-signup.ts'
 import { json } from '../_shared/edge-http.ts'
 
@@ -14,7 +14,7 @@ export type NotifySignupMailerliteDeps = {
   getEnv?: (key: string) => string | undefined
 }
 
-/** Database Webhook target for auth.users INSERT/UPDATE → MailerLite after email confirm. */
+/** Database Webhook target for auth.users INSERT → MailerLite immediately after account creation. */
 export async function handleNotifySignupMailerlite(
   req: Request,
   deps: NotifySignupMailerliteDeps = {},
@@ -40,7 +40,7 @@ export async function handleNotifySignupMailerlite(
     return json({ error: 'Invalid JSON body' }, { status: 400 }, corsHeaders)
   }
 
-  const parsed = parseAuthUsersConfirmedSignup(body)
+  const parsed = parseAuthUsersSignupCreated(body)
   if (!parsed) {
     return json({ received: true, synced: false, reason: 'ignored' }, { status: 200 }, corsHeaders)
   }

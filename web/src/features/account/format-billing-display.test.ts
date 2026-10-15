@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  checkoutPlanFromInvoiceTitle,
   formatCardExpiry,
   formatInvoiceAmount,
   formatInvoiceMeta,
@@ -36,5 +37,13 @@ describe('format-billing-display', () => {
 
   it('labels invoice status', () => {
     expect(invoiceStatusLabel('paid')).toBe('Paid')
+  })
+
+  it('maps billing history titles onto checkout plan intervals', () => {
+    expect(checkoutPlanFromInvoiceTitle('3 Months + LawHub')).toBe('three_month')
+    expect(checkoutPlanFromInvoiceTitle('6 Months')).toBe('six_month')
+    expect(checkoutPlanFromInvoiceTitle('12 Months + LawHub')).toBe('yearly')
+    expect(checkoutPlanFromInvoiceTitle('Monthly + LawHub')).toBe('monthly')
+    expect(checkoutPlanFromInvoiceTitle('LawHub Advantage')).toBeNull()
   })
 })

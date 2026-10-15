@@ -67,8 +67,8 @@ Deno.test('handleNotifySignupMailerlite syncs on confirmed INSERT', async () => 
   assertEquals(syncedEmail, 'new@example.com')
 })
 
-Deno.test('handleNotifySignupMailerlite syncs on email confirmation UPDATE', async () => {
-  let syncedEmail = ''
+Deno.test('handleNotifySignupMailerlite ignores email confirmation UPDATE', async () => {
+  let notifyCalled = false
   const res = await handleNotifySignupMailerlite(
     new Request('https://example.com', {
       method: 'POST',
@@ -77,21 +77,22 @@ Deno.test('handleNotifySignupMailerlite syncs on email confirmation UPDATE', asy
     }),
     {
       authorize: () => true,
-      notify: async (input) => {
-        syncedEmail = input.email
+      notify: async () => {
+        notifyCalled = true
         return true
       },
     },
   )
   assertEquals(res.status, 200)
-  const data = (await res.json()) as { received: boolean; synced: boolean }
+  const data = (await res.json()) as { received: boolean; synced: boolean; reason?: string }
   assertEquals(data.received, true)
-  assertEquals(data.synced, true)
-  assertEquals(syncedEmail, 'confirm@example.com')
+  assertEquals(data.synced, false)
+  assertEquals(data.reason, 'ignored')
+  assertEquals(notifyCalled, false)
 })
 
-Deno.test('handleNotifySignupMailerlite ignores unconfirmed INSERT', async () => {
-  let notifyCalled = false
+Deno.test('handleNotifySignupMailerlite syncs on unconfirmed INSERT', async () => {
+  let syncedEmail = ''
   const res = await handleNotifySignupMailerlite(
     new Request('https://example.com', {
       method: 'POST',
@@ -109,17 +110,16 @@ Deno.test('handleNotifySignupMailerlite ignores unconfirmed INSERT', async () =>
     }),
     {
       authorize: () => true,
-      notify: async () => {
-        notifyCalled = true
+      notify: async (input) => {
+        syncedEmail = input.email
         return true
       },
     },
   )
   assertEquals(res.status, 200)
-  const data = (await res.json()) as { synced: boolean; reason?: string }
-  assertEquals(data.synced, false)
-  assertEquals(data.reason, 'ignored')
-  assertEquals(notifyCalled, false)
+  const data = (await res.json()) as { synced: boolean }
+  assertEquals(data.synced, true)
+  assertEquals(syncedEmail, 'a@b.com')
 })
 
 Deno.test('handleNotifySignupMailerlite rejects non-POST', async () => {
