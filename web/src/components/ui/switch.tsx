@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const switchVariants = cva(
-  "peer relative inline-flex shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-colors focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+  "peer relative inline-flex shrink-0 cursor-pointer items-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
   {
     variants: {
       size: {
@@ -44,7 +44,10 @@ function Switch({ className, size, onChange, ...props }: SwitchProps) {
         data-slot="switch"
         className={cn(
           switchVariants({ size }),
-          checked ? "bg-primary" : "bg-input",
+          // Dark: `--input` matches card surfaces (`--greyscale-0`); use a lighter track + border.
+          checked
+            ? "border-transparent bg-primary"
+            : "border-transparent bg-input dark:border-[var(--greyscale-400)] dark:bg-[var(--greyscale-300)]",
           "focus-visible:ring-inset",
           className,
         )}

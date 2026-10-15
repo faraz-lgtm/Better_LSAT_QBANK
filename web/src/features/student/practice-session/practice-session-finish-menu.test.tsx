@@ -81,7 +81,10 @@ describe("PracticeSessionFinishMenu", () => {
 
     await user.click(screen.getByRole("button", { name: "More options" }))
 
-    expect(screen.getByRole("dialog", { name: "More options" })).toBeInTheDocument()
+    const dialog = screen.getByRole("dialog", { name: "More options" })
+    expect(dialog).toBeInTheDocument()
+    expect(dialog.className).toMatch(/\bw-full\b/)
+    expect(dialog.className).toMatch(/max-w-\[360px\]/)
     expect(screen.getByRole("button", { name: "Submit" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Save and exit" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Exit without saving" })).toBeInTheDocument()

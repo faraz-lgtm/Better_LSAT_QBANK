@@ -21,9 +21,9 @@ export function PrepTestScoreText({
 
   if (variant === "history") {
     return (
-      <p className="text-left text-[13px] font-semibold leading-[1.35] max-md:flex max-md:min-w-0 max-md:flex-col max-md:gap-0.5 md:whitespace-nowrap md:text-center md:text-[16px]">
-        <span className="text-[#082c6b]">Score: {scoreText}</span>
-        <span className="hidden text-[#082c6b] md:inline">{"\u00a0"}</span>
+      <p className="text-left text-[14px] font-semibold leading-[1.35] max-md:flex max-md:min-w-0 max-md:flex-col max-md:gap-0.5 md:whitespace-nowrap md:text-center md:text-[16px]">
+        <span className="text-[var(--color-student-heading)]">Score: {scoreText}</span>
+        <span className="hidden text-[var(--color-student-heading)] md:inline">{"\u00a0"}</span>
         <span className="text-[var(--greyscale-400)]">
           <span className="hidden md:inline">- </span>
           Untimed Review: {brText}
@@ -33,10 +33,10 @@ export function PrepTestScoreText({
   }
 
   return (
-    <p className="text-left text-[13px] leading-[1.45] tracking-[0.26px] max-md:flex max-md:min-w-0 max-md:flex-col max-md:gap-0.5 md:whitespace-nowrap md:text-center md:text-[16px] md:leading-[1.5] md:tracking-[0.32px]">
+    <p className="text-left text-[14px] leading-[1.45] tracking-[0.28px] max-md:flex max-md:min-w-0 max-md:flex-col max-md:gap-0.5 md:whitespace-nowrap md:text-center md:text-[16px] md:leading-[1.5] md:tracking-[0.32px]">
       <span className="min-w-0">
-        <span className="font-medium text-[#082c6b]">Score:</span>
-        <span className="font-semibold text-[#082c6b]">{` ${scoreText}`}</span>
+        <span className="font-medium text-[var(--color-student-heading)]">Score:</span>
+        <span className="font-semibold text-[var(--color-student-heading)]">{` ${scoreText}`}</span>
       </span>
       <span className="hidden text-[var(--greyscale-400)] md:inline">{` - `}</span>
       <span className="min-w-0 text-[var(--greyscale-400)]">

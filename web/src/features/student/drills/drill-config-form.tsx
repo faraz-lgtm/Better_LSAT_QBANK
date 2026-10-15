@@ -358,7 +358,7 @@ function DrillConfigForm({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 items-stretch gap-6 overflow-visible">
+        <div className="grid items-stretch gap-6 overflow-visible sm:grid-cols-2">
           {sectionType === "RC" ? (
             <DrillConfigSelectField
               label="Passages"

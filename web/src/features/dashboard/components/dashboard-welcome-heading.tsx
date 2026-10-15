@@ -6,7 +6,7 @@ function formatDashboardWelcomeHeading(firstName: string): string {
 
 function DashboardWelcomeHeading({ firstName }: { firstName: string }) {
   return (
-    <h1 className="m-0 text-[48px] font-bold leading-[1.2] tracking-normal text-[var(--color-student-heading)]">
+    <h1 className="m-0 text-[28px] font-bold leading-[1.2] tracking-normal text-[var(--color-student-heading)] sm:text-[36px] md:text-[48px]">
       {formatDashboardWelcomeHeading(firstName)}
     </h1>
   )

@@ -57,7 +57,7 @@ function PracticeResultOutcomeIcon({
     return (
       <span
         className={cn(
-          "flex size-4 shrink-0 items-center justify-center rounded-full",
+          "flex size-3 shrink-0 items-center justify-center rounded-full",
           unanswered ? "bg-[#ff6683]" : correct ? "bg-[#00bc54]" : "bg-[#df1c41]",
           className,
         )}
@@ -66,11 +66,11 @@ function PracticeResultOutcomeIcon({
         aria-hidden
       >
         {unanswered ? (
-          <Minus className="size-2.5 text-white" strokeWidth={3} />
+          <Minus className="size-2 text-white" strokeWidth={3} />
         ) : correct ? (
-          <Check className="size-2.5 text-white" strokeWidth={3} />
+          <Check className="size-2 text-white" strokeWidth={3} />
         ) : (
-          <X className="size-2.5 text-white" strokeWidth={3} />
+          <X className="size-2 text-white" strokeWidth={3} />
         )}
       </span>
     )
