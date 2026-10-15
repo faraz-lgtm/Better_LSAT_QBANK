@@ -191,4 +191,15 @@ describe("official highlighter stroke styles", () => {
     expect(block).toContain("u[data-underline=\"blue\"]")
     expect(block).toContain("text-decoration-style: dotted")
   })
+
+  it("forces dark ink on pastel highlight marks in dark mode", () => {
+    const marker = ".dark .lsat-html-content mark[data-highlight],"
+    const start = examCss.indexOf(marker)
+    expect(start).toBeGreaterThan(-1)
+    const block = examCss.slice(start, start + 500)
+    expect(block).toContain(".dark .practice-session-content mark[data-highlight]")
+    expect(block).toContain("mark.practice-find-mark")
+    expect(block).toContain("color: #121a26 !important")
+    expect(block).toContain("-webkit-text-fill-color: #121a26 !important")
+  })
 })

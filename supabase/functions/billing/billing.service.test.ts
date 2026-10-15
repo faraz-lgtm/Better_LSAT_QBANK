@@ -96,7 +96,11 @@ Deno.test('billing service createCheckoutSession creates customer and returns ur
               'http://localhost:5173/checkout?plan=monthly&checkout=cancel',
             )
             const lineItems = params.line_items as Array<Record<string, unknown>>
-            assertEquals(lineItems[0], { price: 'price_core_test', quantity: 1 })
+            const corePriceData = lineItems[0]?.price_data as Record<string, unknown>
+            assertEquals(
+              (corePriceData?.product_data as Record<string, string>)?.name,
+              'Better LSAT Monthly',
+            )
             assertEquals((lineItems[1]?.price_data as Record<string, unknown>)?.unit_amount, 9900)
             assertEquals((params.metadata as Record<string, string>).plan, 'monthly')
             return { url: 'https://checkout.stripe.test/session' }
@@ -271,8 +275,13 @@ Deno.test('billing service createCheckoutSession uses the 3-month Core price', a
       checkout: {
         sessions: {
           create: async (params: Record<string, unknown>) => {
-            const lineItems = params.line_items as Array<{ price: string; quantity: number }>
-            assertEquals(lineItems[0], { price: 'price_core_3_month_test', quantity: 1 })
+            const lineItems = params.line_items as Array<Record<string, unknown>>
+            const corePriceData = lineItems[0]?.price_data as Record<string, unknown>
+            assertEquals(
+              (corePriceData?.product_data as Record<string, string>)?.name,
+              'Better LSAT 3 Months',
+            )
+            assertEquals(corePriceData?.recurring, { interval: 'month', interval_count: 3 })
             assertEquals((params.metadata as Record<string, string>).plan, 'three_month')
             assertEquals('customer_details' in params, false)
             return { url: 'https://checkout.stripe.test/three-month' }

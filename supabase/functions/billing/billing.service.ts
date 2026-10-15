@@ -13,6 +13,7 @@ import {
   checkoutPlanFromId,
   priceIdForCheckoutPlan,
   resolveCheckoutPlanFromPriceId,
+  resolveCheckoutPlanFromRecurring,
   resolvePlanFromPriceId,
   storedPlanTierFromMetadata,
   type StripeRuntimeEnv,
@@ -133,22 +134,34 @@ function subscriptionScheduleId(subscription: Stripe.Subscription): string | nul
     : subscription.schedule.id
 }
 
+function resolveItemCheckoutPlan(
+  item: Pick<Stripe.SubscriptionItem, 'price'>,
+  env: StripeRuntimeEnv,
+): CheckoutPlanId | null {
+  return (
+    resolveCheckoutPlanFromPriceId(env.priceIds, item.price?.id ?? '') ??
+    resolveCheckoutPlanFromRecurring(item.price?.recurring)
+  )
+}
+
 function coreSubscriptionItem(
   subscription: Stripe.Subscription,
   env: StripeRuntimeEnv,
 ): Stripe.SubscriptionItem | null {
-  return subscription.items.data.find((item) =>
-    resolveCheckoutPlanFromPriceId(env.priceIds, subscriptionItemPriceId(item)) != null
-  ) ?? null
+  return subscription.items.data.find((item) => resolveItemCheckoutPlan(item, env) != null) ?? null
 }
 
 function billingSubscriptionItem(
   subscription: Stripe.Subscription,
   env: StripeRuntimeEnv,
 ): Stripe.SubscriptionItem | null {
-  return subscription.items.data.find((item) =>
-    resolvePlanFromPriceId(env.priceIds, subscriptionItemPriceId(item)) != null
-  ) ?? null
+  return (
+    subscription.items.data.find((item) => {
+      if (resolvePlanFromPriceId(env.priceIds, subscriptionItemPriceId(item)) != null) return true
+      // Inline Checkout price_data creates ad-hoc Core prices outside STRIPE_PRICE_ID_*.
+      return resolveCheckoutPlanFromRecurring(item.price?.recurring) != null
+    }) ?? null
+  )
 }
 
 function scheduleItemPriceId(item: Stripe.SubscriptionSchedule.Phase.Item): string {
@@ -175,9 +188,7 @@ async function pendingPlanChange(
   if (!nextPlan) return null
 
   const currentItem = coreSubscriptionItem(subscription, env)
-  const currentPlan = currentItem
-    ? resolveCheckoutPlanFromPriceId(env.priceIds, subscriptionItemPriceId(currentItem))
-    : null
+  const currentPlan = currentItem ? resolveItemCheckoutPlan(currentItem, env) : null
   if (nextPlan === currentPlan) return null
 
   return {
@@ -249,7 +260,10 @@ const EXISTING_LSAC_CHECKOUT_NOTE =
   'Better LSAT membership only. You keep your existing LawHub PrepPlus through LSAC — no LawHub fee from Better LSAT.'
 const BETTERLSAT_PLAN_CHANGE_SCHEDULE = 'betterlsat_plan_change'
 
-/** Vendor path uses stable Stripe Price IDs; existing-LSAC path uses inline product copy for Checkout display. */
+/**
+ * Always use inline product copy so Checkout shows catalog names
+ * (`Better LSAT 6 Months`, etc.) instead of the shared Stripe product name (`Core`).
+ */
 async function buildSubscriptionCheckoutLineItem(
   stripe: Stripe,
   priceId: string,
@@ -257,21 +271,22 @@ async function buildSubscriptionCheckoutLineItem(
   includeLawHub: boolean,
 ): Promise<Stripe.Checkout.SessionCreateParams.LineItem> {
   const price = await validatePlanPrice(stripe, priceId, plan)
-  if (includeLawHub) {
-    return { price: priceId, quantity: 1 }
-  }
-
   const catalog = checkoutPlanFromId(plan)
-  const intervalCount = price.recurring?.interval_count ?? catalog.intervalCount
+  const interval = price.recurring?.interval === 'year' ? 'year' : 'month'
+  const intervalCount =
+    price.recurring?.interval_count ??
+    (interval === 'year' ? 1 : catalog.intervalCount)
 
   return {
     price_data: {
       currency: price.currency ?? 'usd',
       unit_amount: price.unit_amount ?? catalog.priceUsd * 100,
-      recurring: { interval: 'month', interval_count: intervalCount },
+      recurring: { interval, interval_count: intervalCount },
       product_data: {
         name: `Better LSAT ${catalog.name}`,
-        description: `${catalog.description} ${EXISTING_LSAC_CHECKOUT_NOTE}`,
+        description: includeLawHub
+          ? catalog.description
+          : `${catalog.description} ${EXISTING_LSAC_CHECKOUT_NOTE}`,
       },
     },
     quantity: 1,
@@ -329,7 +344,11 @@ export function createBillingService(deps: BillingServiceDeps) {
     const billingItem = billingSubscriptionItem(subscription, env)
     const stripePriceId = billingItem ? subscriptionItemPriceId(billingItem) : ''
     const planTier =
-      planHint ?? resolvePlanFromPriceId(env.priceIds, stripePriceId)
+      planHint ??
+      resolvePlanFromPriceId(env.priceIds, stripePriceId) ??
+      (billingItem && resolveCheckoutPlanFromRecurring(billingItem.price?.recurring)
+        ? 'core'
+        : null)
     await deps.repository.upsertSubscription({
       userId,
       stripeSubscriptionId: subscription.id,
@@ -396,7 +415,7 @@ export function createBillingService(deps: BillingServiceDeps) {
         ? coreSubscriptionItem(stripeSubscription, env)
         : null
       const checkoutPlan = currentItem
-        ? resolveCheckoutPlanFromPriceId(env.priceIds, subscriptionItemPriceId(currentItem))
+        ? resolveItemCheckoutPlan(currentItem, env)
         : storedSubscription
         ? resolveCheckoutPlanFromPriceId(env.priceIds, storedSubscription.stripe_price_id)
         : null
@@ -446,10 +465,7 @@ export function createBillingService(deps: BillingServiceDeps) {
       if (!currentItem) {
         throw new Error('The active subscription does not contain a supported BetterLSAT plan.')
       }
-      const currentPlan = resolveCheckoutPlanFromPriceId(
-        env.priceIds,
-        subscriptionItemPriceId(currentItem),
-      )
+      const currentPlan = resolveItemCheckoutPlan(currentItem, env)
       if (currentPlan === plan) {
         throw new Error('The selected plan is already active.')
       }

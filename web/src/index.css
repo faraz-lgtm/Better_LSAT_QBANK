@@ -7267,6 +7267,21 @@ html.student-shell-immersive .practice-session-card--blind-review {
   text-decoration-style: dotted;
 }
 
+/*
+ * Pastel highlight fills stay light; force dark ink in dark mode so exam body
+ * heading color (white) does not wash out on yellow/pink/green/blue marks.
+ * Matches `.dark .lesson-html-content mark`.
+ */
+.dark .lsat-html-content mark[data-highlight],
+.dark .lsat-html-content mark[data-highlight] *,
+.dark .practice-session-content mark[data-highlight],
+.dark .practice-session-content mark[data-highlight] *,
+.dark .lsat-html-content mark.practice-find-mark,
+.dark .lsat-html-content mark.practice-find-mark * {
+  color: #121a26 !important;
+  -webkit-text-fill-color: #121a26 !important;
+}
+
 /* Marketing homepage (ported landing) */
 .marketing-home {
   /* Reset :root's computed line-height length so headings/body scale normally */
