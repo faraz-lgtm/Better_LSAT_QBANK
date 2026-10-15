@@ -63,8 +63,11 @@ Deno.test('billing service createCheckoutSession creates customer and returns ur
     }),
     stripe: {
       customers: {
-        create: async () => {
+        create: async (params: Record<string, unknown>) => {
           customerCreated = true
+          const metadata = params.metadata as Record<string, string>
+          assertEquals(metadata.user_id, 'u-1')
+          assertEquals(metadata.posthog_person_distinct_id, 'u-1')
           return { id: 'cus_1' }
         },
       },
@@ -87,6 +90,7 @@ Deno.test('billing service createCheckoutSession creates customer and returns ur
         sessions: {
           create: async (params: Record<string, unknown>) => {
             assertEquals(params.mode, 'subscription')
+            assertEquals(params.client_reference_id, 'u-1')
             assertEquals(
               params.success_url,
               'http://localhost:5173/app/lsac-link-step?checkout=success&session_id={CHECKOUT_SESSION_ID}',
@@ -98,7 +102,16 @@ Deno.test('billing service createCheckoutSession creates customer and returns ur
             const lineItems = params.line_items as Array<Record<string, unknown>>
             assertEquals(lineItems[0], { price: 'price_core_test', quantity: 1 })
             assertEquals((lineItems[1]?.price_data as Record<string, unknown>)?.unit_amount, 9900)
-            assertEquals((params.metadata as Record<string, string>).plan, 'monthly')
+            const metadata = params.metadata as Record<string, string>
+            assertEquals(metadata.plan, 'monthly')
+            assertEquals(metadata.user_id, 'u-1')
+            assertEquals(metadata.posthog_person_distinct_id, 'u-1')
+            const subscriptionData = params.subscription_data as {
+              metadata: Record<string, string>
+            }
+            assertEquals(subscriptionData.metadata.user_id, 'u-1')
+            assertEquals(subscriptionData.metadata.posthog_person_distinct_id, 'u-1')
+            assertEquals(subscriptionData.metadata.plan, 'monthly')
             return { url: 'https://checkout.stripe.test/session' }
           },
         },
@@ -247,6 +260,9 @@ Deno.test('billing service createCheckoutSession uses the 3-month Core price', a
         update: async (customerId: string, params: Record<string, unknown>) => {
           assertEquals(customerId, 'cus_existing')
           customerNameUpdated = params.name as string
+          const metadata = params.metadata as Record<string, string>
+          assertEquals(metadata.user_id, 'u-1')
+          assertEquals(metadata.posthog_person_distinct_id, 'u-1')
           return { id: customerId }
         },
       },
@@ -273,7 +289,13 @@ Deno.test('billing service createCheckoutSession uses the 3-month Core price', a
           create: async (params: Record<string, unknown>) => {
             const lineItems = params.line_items as Array<{ price: string; quantity: number }>
             assertEquals(lineItems[0], { price: 'price_core_3_month_test', quantity: 1 })
-            assertEquals((params.metadata as Record<string, string>).plan, 'three_month')
+            const metadata = params.metadata as Record<string, string>
+            assertEquals(metadata.plan, 'three_month')
+            assertEquals(metadata.posthog_person_distinct_id, 'u-1')
+            const subscriptionData = params.subscription_data as {
+              metadata: Record<string, string>
+            }
+            assertEquals(subscriptionData.metadata.posthog_person_distinct_id, 'u-1')
             assertEquals('customer_details' in params, false)
             return { url: 'https://checkout.stripe.test/three-month' }
           },

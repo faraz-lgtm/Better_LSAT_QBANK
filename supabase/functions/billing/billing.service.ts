@@ -599,11 +599,17 @@ export function createBillingService(deps: BillingServiceDeps) {
       const profileName = joinLawHubFullName(nameParts.firstName, nameParts.lastName)
       let customerId = profile?.stripe_customer_id?.trim() ?? ''
 
+      // posthog_person_distinct_id must match browser identify(user.id) for Revenue Analytics join.
+      const identityMetadata = {
+        user_id: userId,
+        posthog_person_distinct_id: userId,
+      }
+
       if (!customerId) {
         const customer = await deps.stripe.customers.create({
           email: checkoutEmail,
           name: profileName,
-          metadata: { user_id: userId },
+          metadata: identityMetadata,
         })
         customerId = customer.id
         await deps.repository.setStripeCustomerId(userId, customerId)
@@ -611,6 +617,7 @@ export function createBillingService(deps: BillingServiceDeps) {
         await deps.stripe.customers.update(customerId, {
           email: checkoutEmail,
           name: profileName,
+          metadata: identityMetadata,
         })
       }
 
@@ -644,9 +651,13 @@ export function createBillingService(deps: BillingServiceDeps) {
         line_items: lineItems,
         success_url: `${baseUrl}${normalizedSuccessPath}${successUrlSeparator}session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/checkout?plan=${plan}&checkout=cancel`,
-        metadata: { user_id: userId, plan, include_lawhub: includeLawHub ? 'true' : 'false' },
+        metadata: {
+          ...identityMetadata,
+          plan,
+          include_lawhub: includeLawHub ? 'true' : 'false',
+        },
         subscription_data: {
-          metadata: { user_id: userId, plan },
+          metadata: { ...identityMetadata, plan },
         },
         ...(includeLawHub
           ? {}
