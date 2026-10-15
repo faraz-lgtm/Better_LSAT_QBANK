@@ -61,7 +61,15 @@ const PREP_COURSE_LESSON_CONTENT_CARD_CLASS =
 
 const PREP_COURSE_LESSON_CARD_WIDTH_CLASS = "mx-auto w-full max-w-[960px]"
 
-const PREP_COURSE_LESSON_WITH_SIDEBAR_WIDTH_CLASS = "mx-auto w-full max-w-[calc(960px+320px+24px)]"
+const PREP_COURSE_LESSON_WITH_SIDEBAR_WIDTH_CLASS =
+  "mx-auto w-full max-w-full md:max-w-[calc(960px+320px+24px)]"
+
+/** Mobile: full-width All Lessons sheet with explicit height (avoids flex min-h-0 collapse → blank screen). Desktop: 320px rail. */
+const PREP_COURSE_LESSON_SIDEBAR_SHELL_CLASS =
+  "prep-course-lesson-sidebar-shell sticky top-0 flex w-full shrink-0 flex-col self-stretch overflow-hidden max-md:h-[calc(var(--app-svh)-var(--nav-shell-height)-132px)] md:w-[320px] md:self-start"
+
+const PREP_COURSE_LESSON_SIDEBAR_HEIGHT_CLASS =
+  "flex h-full min-h-0 w-full flex-col overflow-hidden md:h-auto md:max-h-[calc(var(--app-svh)-var(--nav-shell-height)-120px)]"
 
 function PrepCourseLessonPage() {
   const navigate = useNavigate()
@@ -428,10 +436,11 @@ function PrepCourseLessonPage() {
             className={cn(
               "practice-session-body flex min-h-0 min-w-0 w-full max-w-full flex-col bg-[var(--primary-0)] px-4 pb-3",
               useSplitDrillLayout
-                ? "flex-col"
+                ? cn("flex-col", showSidebar && "practice-session-body--with-sidebar")
                 : showSidebar
                   ? cn(
-                      "practice-session-body--with-sidebar flex-row items-start justify-center gap-6",
+                      // Mobile: full-width All Lessons sheet. md+: side-by-side rail.
+                      "practice-session-body--with-sidebar flex-col items-stretch gap-4 md:flex-row md:items-start md:justify-center md:gap-6",
                       PREP_COURSE_LESSON_WITH_SIDEBAR_WIDTH_CLASS,
                     )
                   : "flex-col items-center",
@@ -442,19 +451,36 @@ function PrepCourseLessonPage() {
                 ref={lessonContentRef}
                 className="flex min-w-0 w-full flex-col gap-6 overflow-x-clip"
               >
-                <div className={cn(PREP_COURSE_LESSON_CARD_WIDTH_CLASS, "w-full")}>
+                <div
+                  className={cn(
+                    PREP_COURSE_LESSON_CARD_WIDTH_CLASS,
+                    "w-full",
+                    showSidebar && "max-md:hidden",
+                  )}
+                >
                   <PrepCourseLessonPanel {...lessonPanelProps} drillResultsPart="cards" sidebarAdjacent={false} />
                 </div>
-                <div className={cn(PREP_COURSE_LESSON_WITH_SIDEBAR_WIDTH_CLASS, "flex min-w-0 gap-6")}>
-                  <div className={cn(PREP_COURSE_LESSON_CARD_WIDTH_CLASS, "min-w-0 flex-1")}>
+                <div
+                  className={cn(
+                    PREP_COURSE_LESSON_WITH_SIDEBAR_WIDTH_CLASS,
+                    "flex min-w-0 flex-col gap-4 md:flex-row md:gap-6",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      PREP_COURSE_LESSON_CARD_WIDTH_CLASS,
+                      "min-w-0 flex-1",
+                      showSidebar && "max-md:hidden",
+                    )}
+                  >
                     <PrepCourseLessonPanel
                       {...lessonPanelProps}
                       drillResultsPart="below"
                       sidebarAdjacent
                     />
                   </div>
-                  <div className="sticky top-0 flex w-[320px] shrink-0 self-start flex-col overflow-hidden">
-                    <div className="flex max-h-[calc(var(--app-svh)-var(--nav-shell-height)-120px)] min-h-0 flex-col overflow-hidden">
+                  <div className={PREP_COURSE_LESSON_SIDEBAR_SHELL_CLASS}>
+                    <div className={PREP_COURSE_LESSON_SIDEBAR_HEIGHT_CLASS}>
                       <PrepCourseLessonSidebar
                         lessons={sidebarLessons}
                         activeLessonSlug={lesson.slug}
@@ -477,6 +503,7 @@ function PrepCourseLessonPage() {
                     PREP_COURSE_LESSON_CARD_WIDTH_CLASS,
                     "w-full",
                     !showSidebar && "mx-auto",
+                    showSidebar && "max-md:hidden",
                   )}
                 >
                   {showActiveDrillStart ? (
@@ -503,8 +530,8 @@ function PrepCourseLessonPage() {
                 </div>
 
                 {showSidebar ? (
-                  <div className="sticky top-0 flex w-[320px] shrink-0 self-start flex-col overflow-hidden">
-                    <div className="flex max-h-[calc(var(--app-svh)-var(--nav-shell-height)-120px)] min-h-0 flex-col overflow-hidden">
+                  <div className={PREP_COURSE_LESSON_SIDEBAR_SHELL_CLASS}>
+                    <div className={PREP_COURSE_LESSON_SIDEBAR_HEIGHT_CLASS}>
                       <PrepCourseLessonSidebar
                         lessons={sidebarLessons}
                         activeLessonSlug={lesson.slug}

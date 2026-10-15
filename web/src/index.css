@@ -5715,13 +5715,24 @@ html.practice-exam-more-open .practice-session-question-panel-with-widget {
   max-width: 100%;
 }
 
-.prep-course-lesson-shell .practice-session-body--with-sidebar > :first-child {
-  min-width: 0;
-  flex: 1 1 0;
+/* Desktop only — mobile uses a full-width All Lessons sheet (see lesson page classes). */
+@media (min-width: 768px) {
+  .prep-course-lesson-shell .practice-session-body--with-sidebar > :first-child {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  .prep-course-lesson-shell .practice-session-body--with-sidebar > :last-child {
+    min-height: 0;
+  }
 }
 
-.prep-course-lesson-shell .practice-session-body--with-sidebar > :last-child {
-  min-height: 0;
+@media (max-width: 767px) {
+  /* Keep body height:auto — do not flex-collapse children to 0 (blank All Lessons sheet). */
+  .prep-course-lesson-shell .practice-session-body--with-sidebar .prep-course-lesson-sidebar-shell {
+    width: 100%;
+    max-width: 100%;
+  }
 }
 
 .prep-course-rep-work-pair {

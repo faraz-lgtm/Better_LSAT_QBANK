@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react"
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react"
 import { Check, ChevronDown, Minus, Plus } from "lucide-react"
 
 import {
@@ -116,6 +116,7 @@ function DrillTimingMenu({
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
+  const menuRef = useRef<HTMLDivElement | null>(null)
   const listboxId = useId()
   const count = Math.max(1, questionCount)
   const standardSeconds = standardDrillSeconds(count, scaleFactor)
@@ -128,6 +129,24 @@ function DrillTimingMenu({
     DRILL_CUSTOM_PERCENT_MIN,
     Math.min(DRILL_CUSTOM_PERCENT_MAX, Math.round((customTime * 100) / standardSeconds)),
   )
+
+  useLayoutEffect(() => {
+    if (!open) return
+    const menu = menuRef.current
+    const trigger = triggerRef.current
+    if (!menu || !trigger) return
+
+    const pad = 8
+    const triggerRect = trigger.getBoundingClientRect()
+    const preferred = Math.min(26.25 * 16, window.innerWidth - pad * 2)
+    // End-aligned: width may grow left, but never past the viewport gutter.
+    const maxFromRightEdge = Math.max(triggerRect.width, triggerRect.right - pad)
+    const width = Math.min(preferred, maxFromRightEdge)
+    menu.style.width = `${width}px`
+    menu.style.maxWidth = `${width}px`
+    menu.style.right = "0"
+    menu.style.left = "auto"
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -178,14 +197,14 @@ function DrillTimingMenu({
         aria-controls={listboxId}
         aria-label={ariaLabel}
         className={cn(
-          "flex h-[52px] w-full min-w-[140px] items-center gap-2 border px-3 text-base font-normal tracking-[0.32px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--primary)]/30",
+          "flex h-[52px] w-full min-w-0 items-center gap-2 border px-3 text-base font-normal tracking-[0.32px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--primary)]/30",
           "rounded-[16px]",
           open
             ? "border-[var(--primary)] bg-[var(--primary-25)] font-medium text-[var(--color-student-heading)]"
             : "border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--color-student-heading)] hover:border-[color:var(--primary-100)]",
         )}
       >
-        <span className="flex-1 truncate text-left">{triggerLabel}</span>
+        <span className="min-w-0 flex-1 truncate text-left">{triggerLabel}</span>
         <ChevronDown
           className={cn("size-5 shrink-0 text-[var(--greyscale-500)] transition-transform", open && "rotate-180")}
           aria-hidden
@@ -194,10 +213,13 @@ function DrillTimingMenu({
 
       {open ? (
         <div
+          ref={menuRef}
           id={listboxId}
           role="listbox"
           aria-label={ariaLabel}
-          className="absolute left-0 z-40 mt-2 flex max-h-[min(32rem,calc(100vh-8rem))] w-max min-w-full max-w-[min(26.25rem,calc(100vw-2rem))] flex-col overflow-y-auto rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-2 shadow-[0px_12px_24px_rgba(13,13,18,0.12)]"
+          // Pace sits in the right column — end-align + layout clamp so the menu grows left
+          // into the card instead of past the viewport (mobile horizontal overflow).
+          className="absolute right-0 left-auto z-40 mt-2 flex max-h-[min(32rem,calc(100vh-8rem))] w-full min-w-full flex-col overflow-x-hidden overflow-y-auto rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-2 shadow-[0px_12px_24px_rgba(13,13,18,0.12)]"
         >
           <PresetRow
             selected={value === "pace"}
@@ -233,24 +255,24 @@ function DrillTimingMenu({
           })}
 
           <p className="mb-1 mt-2 px-3 text-[11px] font-semibold tracking-[0.08em] text-[var(--greyscale-500)]">CUSTOM</p>
-          <div className="flex items-center justify-between gap-3 rounded-[10px] px-2 py-2">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-[10px] px-2 py-2 sm:gap-3">
             <Stepper
               label={`${customPercent} %`}
               onDecrement={() => setPercent(customPercent - 1)}
               onIncrement={() => setPercent(customPercent + 1)}
             />
-            <p className="m-0 min-w-0 text-right text-xs leading-snug text-[var(--greyscale-500)]">
+            <p className="m-0 min-w-0 flex-1 text-right text-xs leading-snug text-[var(--greyscale-500)]">
               <span className="block font-semibold tabular-nums text-[var(--color-student-heading)]">{formatDrillMmSs(customPercentSeconds)}</span>
               {averageLabel(customPercentSeconds, count)}
             </p>
           </div>
-          <div className="flex items-center justify-between gap-3 rounded-[10px] px-2 py-2">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-[10px] px-2 py-2 sm:gap-3">
             <Stepper
               label={formatDrillMmSs(customTime)}
               onDecrement={() => setTime(customTime - DRILL_CUSTOM_TIME_STEP_SECONDS)}
               onIncrement={() => setTime(customTime + DRILL_CUSTOM_TIME_STEP_SECONDS)}
             />
-            <p className="m-0 min-w-0 text-right text-xs leading-snug text-[var(--greyscale-500)]">
+            <p className="m-0 min-w-0 flex-1 text-right text-xs leading-snug text-[var(--greyscale-500)]">
               <span className="block font-semibold text-[var(--color-student-heading)]">{customTimePercent}% standard</span>
               {formatDrillMmSs(customTime / count)}/question
             </p>
